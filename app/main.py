@@ -132,7 +132,7 @@ async def send_whatsapp_interactive(to: str, interactive: dict):
     })
 
 
-_ADMIN_HTML = '''<!DOCTYPE html>
+_ADMIN_HTML = r'''<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
