@@ -1,5 +1,10 @@
 # CLAUDE.md — Chatbot WhatsApp Centro Médico Carampangue (CMC)
 
+## Instrucciones para Claude Code
+- **Actualiza `## Sesión en curso`** cada vez que completes algo relevante (deploy, fix, feature, decisión importante). Hazlo antes de que el contexto se llene.
+- **Al iniciar una sesión nueva**, lee esta sección primero para retomar desde donde quedaste.
+- Mantén la sección concisa: qué se hizo, qué falta, qué decisiones se tomaron.
+
 ## Descripción del proyecto
 Chatbot de WhatsApp para el Centro Médico Carampangue (Carampangue, Región del Biobío, Chile).
 Permite a los pacientes agendar, cancelar y ver sus citas médicas directamente por WhatsApp.
@@ -167,6 +172,21 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - Ruta: `http://157.245.13.107:8001/admin?token=cmc_admin_2026`
 - Incluido en el mismo proceso del bot (no es proyecto separado)
 - Muestra métricas, conversaciones activas y estado del sistema
+
+## Sesión en curso
+**Fecha**: 2026-04-06
+
+**Hecho hoy**:
+- Commit inicial de todos los cambios acumulados (mensajes interactivos, reenganche, auditor, dashboard admin)
+- Deploy al servidor DigitalOcean (`157.245.13.107`) — bot corriendo como PID uvicorn
+- Fix `SyntaxWarning` en `main.py` (`_ADMIN_HTML` convertido a raw string `r'''...'''`)
+- Actualización de `CLAUDE.md` con estado real del proyecto
+
+**Estado del servidor**: corriendo, sin errores en logs, dashboard admin recibiendo tráfico real
+
+**Próximo paso sugerido**: probar flujo completo de mensajes interactivos con número de prueba de Meta (+1 555 641 7609)
+
+---
 
 ## Deuda técnica pendiente
 1. Precios en `claude_helper.py` hardcodeados en SYSTEM_PROMPT — actualizar manualmente cuando cambien
