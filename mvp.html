@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MVP — Chatbot WhatsApp CMC</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}
+
+.header{background:linear-gradient(135deg,#052e16 0%,#0f172a 100%);padding:24px 40px;border-bottom:1px solid #1e293b;display:flex;align-items:center;gap:16px}
+.header-icon{font-size:2.2rem}
+.header-title{font-size:1.4rem;font-weight:800;color:#f8fafc}
+.header-sub{font-size:.82rem;color:#94a3b8;margin-top:3px}
+.badge{background:#25d366;color:#fff;font-size:.62rem;font-weight:700;padding:3px 8px;border-radius:20px;letter-spacing:.5px;margin-left:8px}
+.badge-warn{background:#f59e0b;color:#0f172a;font-size:.62rem;font-weight:700;padding:3px 8px;border-radius:20px;letter-spacing:.5px;margin-left:8px}
+
+.nav{display:flex;gap:0;padding:0 40px;background:#0f172a;border-bottom:1px solid #1e293b;flex-wrap:wrap}
+.nav-tab{padding:12px 18px;font-size:.76rem;font-weight:600;cursor:pointer;color:#64748b;border-bottom:2px solid transparent;transition:.15s;white-space:nowrap}
+.nav-tab.active,.nav-tab:hover{color:#4ade80;border-bottom-color:#4ade80}
+
+.panel{display:none;padding:28px 40px}
+.panel.active{display:block}
+
+.sec-title{font-size:.95rem;font-weight:700;color:#f8fafc;margin-bottom:18px;display:flex;align-items:center;gap:8px}
+
+/* Cards */
+.card{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:20px}
+.card.green{border-color:#166534;background:#052e16}
+.card.yellow{border-color:#92400e;background:#1c1004}
+.card.blue{border-color:#1d4ed8;background:#0c1a2e}
+.card.purple{border-color:#6d28d9;background:#1a0a2e}
+.card.red{border-color:#991b1b;background:#1c0505}
+
+/* Step cards */
+.steps{display:flex;flex-direction:column;gap:14px}
+.step{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:18px 20px;display:grid;grid-template-columns:48px 1fr;gap:16px;align-items:flex-start}
+.step-num{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:800;flex-shrink:0}
+.step.s1 .step-num{background:#25d366;color:#052e16}
+.step.s2 .step-num{background:#38bdf8;color:#0c1a2e}
+.step.s3 .step-num{background:#a855f7;color:#1a0a2e}
+.step.s4 .step-num{background:#fb923c;color:#1c0f04}
+.step.s5 .step-num{background:#f59e0b;color:#1c1004}
+.step.s6 .step-num{background:#4ade80;color:#052e16}
+.step-title{font-size:.88rem;font-weight:700;color:#f1f5f9;margin-bottom:5px;display:flex;align-items:center;gap:8px}
+.step-desc{font-size:.72rem;color:#94a3b8;line-height:1.6;margin-bottom:10px}
+.step-tasks{list-style:none}
+.step-tasks li{font-size:.7rem;color:#cbd5e1;padding:3px 0;display:flex;gap:7px;align-items:flex-start;line-height:1.4}
+.step-tasks li::before{content:'▸';color:#4ade80;flex-shrink:0;margin-top:1px}
+.time-tag{font-size:.58rem;font-weight:700;padding:2px 7px;border-radius:4px;background:#1e3a5f;color:#38bdf8;flex-shrink:0}
+.time-tag.fast{background:#052e16;color:#4ade80}
+.time-tag.slow{background:#3f1515;color:#f87171}
+
+/* Code blocks */
+pre{background:#020617;border:1px solid #1e293b;border-radius:8px;padding:14px 16px;font-size:.68rem;color:#a5f3fc;overflow-x:auto;line-height:1.7;margin-top:10px;font-family:'Courier New',monospace}
+.kw{color:#c4b5fd}
+.fn{color:#4ade80}
+.str{color:#fbbf24}
+.cm{color:#475569}
+.hl{background:rgba(74,222,128,.1);display:block;margin:0 -16px;padding:0 16px}
+
+/* Grid layouts */
+.g2{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
+.g3{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+
+/* Architecture flow */
+.flow{display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin:16px 0}
+.fnode{background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 14px;text-align:center;min-width:110px}
+.fnode.green{border-color:#25d366;background:#052e16}
+.fnode.blue{border-color:#38bdf8;background:#0c1a2e}
+.fnode.purple{border-color:#a855f7;background:#1a0a2e}
+.fnode.orange{border-color:#fb923c;background:#1c0f04}
+.fnode-icon{font-size:1.3rem}
+.fnode-label{font-size:.65rem;font-weight:700;color:#f1f5f9;margin-top:3px}
+.fnode-sub{font-size:.58rem;color:#64748b;margin-top:2px}
+.farrow{color:#334155;font-size:1.2rem;flex-shrink:0}
+
+/* Conversation mock */
+.convo{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:16px;max-width:400px}
+.convo-head{font-size:.62rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px}
+.msg{margin-bottom:8px;display:flex;flex-direction:column}
+.msg.u{align-items:flex-end}
+.msg.b{align-items:flex-start}
+.bub{padding:8px 12px;border-radius:12px;font-size:.72rem;line-height:1.5;max-width:88%}
+.msg.u .bub{background:#25d366;color:#fff;border-bottom-right-radius:3px}
+.msg.b .bub{background:#2d3748;color:#e2e8f0;border-bottom-left-radius:3px}
+.bub code{background:rgba(255,255,255,.15);padding:0 4px;border-radius:3px;font-size:.68rem}
+.msg-tag{font-size:.55rem;color:#334155;margin-top:2px;padding:0 3px}
+
+/* Option comparison */
+.opt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:700px){.opt-grid{grid-template-columns:1fr}}
+.opt{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:18px;position:relative}
+.opt.recommended{border-color:#25d366;background:#052e16}
+.opt-badge{position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:#25d366;color:#052e16;font-size:.6rem;font-weight:800;padding:3px 10px;border-radius:20px;white-space:nowrap}
+.opt-title{font-size:.88rem;font-weight:700;color:#f1f5f9;margin-bottom:6px}
+.opt-desc{font-size:.7rem;color:#94a3b8;line-height:1.5;margin-bottom:10px}
+.opt-pros{list-style:none;margin-bottom:8px}
+.opt-pros li{font-size:.68rem;color:#86efac;padding:2px 0;display:flex;gap:6px}
+.opt-pros li::before{content:'✓';flex-shrink:0}
+.opt-cons{list-style:none}
+.opt-cons li{font-size:.68rem;color:#fca5a5;padding:2px 0;display:flex;gap:6px}
+.opt-cons li::before{content:'✗';flex-shrink:0}
+
+/* Checklist */
+.checklist{display:flex;flex-direction:column;gap:6px}
+.chk{display:flex;align-items:center;gap:10px;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:10px 14px;cursor:pointer;transition:.15s}
+.chk:hover{border-color:#4ade80}
+.chk.done{background:#052e16;border-color:#166534}
+.chk-box{width:18px;height:18px;border-radius:4px;border:2px solid #334155;display:flex;align-items:center;justify-content:center;font-size:.65rem;flex-shrink:0;transition:.15s}
+.chk.done .chk-box{background:#25d366;border-color:#25d366;color:#052e16}
+.chk-text{font-size:.73rem;color:#cbd5e1}
+.chk.done .chk-text{color:#4ade80;text-decoration:line-through;text-decoration-color:#166534}
+.chk-cat{font-size:.6rem;color:#475569;margin-left:auto;flex-shrink:0}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:#0f172a}
+::-webkit-scrollbar-thumb{background:#334155;border-radius:3px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-icon">🚀</div>
+  <div>
+    <div class="header-title">Chatbot WhatsApp CMC — MVP <span class="badge">IMPLEMENTACIÓN</span><span class="badge-warn">SIMPLE & RÁPIDO</span></div>
+    <div class="header-sub">API Medilink disponible · Opción C recomendada · Objetivo: funcionar en 2–3 semanas</div>
+  </div>
+</div>
+
+<div class="nav">
+  <div class="nav-tab active" onclick="show('arquitectura',this)">🏗️ Arquitectura MVP</div>
+  <div class="nav-tab" onclick="show('opciones',this)">🔀 Opciones A/B/C</div>
+  <div class="nav-tab" onclick="show('pasos',this)">📋 Pasos a seguir</div>
+  <div class="nav-tab" onclick="show('flujos',this)">💬 Flujos de chat</div>
+  <div class="nav-tab" onclick="show('codigo',this)">💻 Código base</div>
+  <div class="nav-tab" onclick="show('checklist',this)">✅ Checklist</div>
+</div>
+
+<!-- ══ ARQUITECTURA MVP ══ -->
+<div class="panel active" id="panel-arquitectura">
+  <div class="sec-title"><span>🏗️</span> Arquitectura MVP — 4 piezas solamente</div>
+
+  <div style="background:#1e293b;border:1px solid #334155;border-radius:14px;padding:22px;margin-bottom:18px">
+    <div style="font-size:.63rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">Flujo completo — sin Redis, sin dashboard, sin colas</div>
+    <div class="flow">
+      <div class="fnode green">
+        <div class="fnode-icon">📱</div>
+        <div class="fnode-label">Paciente</div>
+        <div class="fnode-sub">WhatsApp</div>
+      </div>
+      <div class="farrow">→</div>
+      <div class="fnode green">
+        <div class="fnode-icon">💬</div>
+        <div class="fnode-label">Twilio / Meta</div>
+        <div class="fnode-sub">webhook POST</div>
+      </div>
+      <div class="farrow">→</div>
+      <div class="fnode blue">
+        <div class="fnode-icon">⚡</div>
+        <div class="fnode-label">FastAPI</div>
+        <div class="fnode-sub">1 archivo main.py</div>
+      </div>
+      <div class="farrow">→</div>
+      <div class="fnode purple">
+        <div class="fnode-icon">🧠</div>
+        <div class="fnode-label">Claude</div>
+        <div class="fnode-sub">intención + FAQ</div>
+      </div>
+      <div class="farrow">→</div>
+      <div class="fnode orange">
+        <div class="fnode-icon">📅</div>
+        <div class="fnode-label">Medilink API</div>
+        <div class="fnode-sub">disponibilidad / citas</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+      <div style="width:18px;height:18px;border-radius:50%;background:#4ade80;flex-shrink:0;font-size:.65rem;display:flex;align-items:center;justify-content:center;color:#052e16;font-weight:800">↓</div>
+      <div style="font-size:.7rem;color:#94a3b8">Respuesta vuelve por el mismo canal en &lt; 3 segundos</div>
+    </div>
+  </div>
+
+  <div class="g3" style="margin-bottom:18px">
+    <div class="card green">
+      <div style="font-size:.63rem;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">💬 PIEZA 1 — WhatsApp</div>
+      <div style="font-size:.78rem;font-weight:700;color:#f1f5f9;margin-bottom:6px">Twilio Sandbox</div>
+      <div style="font-size:.7rem;color:#86efac;line-height:1.6;margin-bottom:8px">Listo en 10 minutos. Sin verificación Meta. Número real de WhatsApp para pruebas. Gratis para desarrollo.</div>
+      <div style="font-size:.65rem;color:#4ade80;background:#0d3320;border-radius:6px;padding:8px;font-family:monospace">pip install twilio<br>→ console.twilio.com<br>→ Sandbox WhatsApp</div>
+    </div>
+    <div class="card blue">
+      <div style="font-size:.63rem;font-weight:700;color:#38bdf8;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">⚡ PIEZA 2 — Backend</div>
+      <div style="font-size:.78rem;font-weight:700;color:#f1f5f9;margin-bottom:6px">FastAPI mínimo</div>
+      <div style="font-size:.7rem;color:#93c5fd;line-height:1.6;margin-bottom:8px">Un solo archivo. Recibe webhook, llama a Claude, llama a Medilink, responde. SQLite para historial simple (o PostgreSQL si ya lo tienes).</div>
+      <div style="font-size:.65rem;color:#38bdf8;background:#0a1628;border-radius:6px;padding:8px;font-family:monospace">main.py · medilink.py · claude_helper.py<br>→ 3 archivos nada más</div>
+    </div>
+    <div class="card purple">
+      <div style="font-size:.63rem;font-weight:700;color:#a855f7;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">🧠 PIEZA 3 — LLM</div>
+      <div style="font-size:.78rem;font-weight:700;color:#f1f5f9;margin-bottom:6px">Claude Haiku 4.5</div>
+      <div style="font-size:.7rem;color:#c4b5fd;line-height:1.6;margin-bottom:8px">Haiku es suficiente para detectar intención. 10x más barato que Sonnet. Solo se usa cuando el mensaje es texto libre — flujos guiados no consumen tokens.</div>
+      <div style="font-size:.65rem;color:#a855f7;background:#130720;border-radius:6px;padding:8px;font-family:monospace">~$0.0008 / 1K tokens<br>500 pacientes/mes ≈ $3–5 USD</div>
+    </div>
+    <div style="background:#1e293b;border:1px solid #fb923c;border-radius:12px;padding:20px;background:#1c0f04">
+      <div style="font-size:.63rem;font-weight:700;color:#fb923c;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">📅 PIEZA 4 — Medilink API</div>
+      <div style="font-size:.78rem;font-weight:700;color:#f1f5f9;margin-bottom:6px">Ya disponible ✓</div>
+      <div style="font-size:.7rem;color:#fed7aa;line-height:1.6;margin-bottom:8px">Wrapper Python simple. 5 funciones. Cada función es un "tool" que Claude puede llamar. Sin esta pieza el resto no tiene valor.</div>
+      <div style="font-size:.65rem;color:#fb923c;background:#0e0804;border-radius:6px;padding:8px;font-family:monospace">buscar_disponibilidad()<br>buscar_paciente(rut)<br>crear_cita()<br>cancelar_cita()<br>listar_reservas(rut)</div>
+    </div>
+  </div>
+
+  <!-- Qué NO incluir -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div class="card red">
+      <div style="font-size:.65rem;font-weight:700;color:#f87171;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">❌ Fuera del MVP</div>
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <div style="font-size:.7rem;color:#fca5a5;display:flex;gap:8px"><span>✗</span><span>Redis / Celery</span></div>
+        <div style="font-size:.7rem;color:#fca5a5;display:flex;gap:8px"><span>✗</span><span>Dashboard administrativo</span></div>
+        <div style="font-size:.7rem;color:#fca5a5;display:flex;gap:8px"><span>✗</span><span>Recordatorios automáticos</span></div>
+        <div style="font-size:.7rem;color:#fca5a5;display:flex;gap:8px"><span>✗</span><span>Soporte audio/imágenes</span></div>
+        <div style="font-size:.7rem;color:#fca5a5;display:flex;gap:8px"><span>✗</span><span>Multiagente / lógica compleja</span></div>
+        <div style="font-size:.7rem;color:#fca5a5;display:flex;gap:8px"><span>✗</span><span>Métricas y reportes</span></div>
+        <div style="font-size:.7rem;color:#fca5a5;display:flex;gap:8px"><span>✗</span><span>Reprogramación de citas</span></div>
+      </div>
+    </div>
+    <div class="card green">
+      <div style="font-size:.65rem;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">✅ Sí incluir en MVP</div>
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <div style="font-size:.7rem;color:#86efac;display:flex;gap:8px"><span>✓</span><span>Ver disponibilidad</span></div>
+        <div style="font-size:.7rem;color:#86efac;display:flex;gap:8px"><span>✓</span><span>Agendar hora (con confirmación)</span></div>
+        <div style="font-size:.7rem;color:#86efac;display:flex;gap:8px"><span>✓</span><span>Cancelar hora</span></div>
+        <div style="font-size:.7rem;color:#86efac;display:flex;gap:8px"><span>✓</span><span>Ver mis reservas</span></div>
+        <div style="font-size:.7rem;color:#86efac;display:flex;gap:8px"><span>✓</span><span>Preguntas frecuentes (precios, horarios)</span></div>
+        <div style="font-size:.7rem;color:#86efac;display:flex;gap:8px"><span>✓</span><span>Derivar a recepción humana</span></div>
+        <div style="font-size:.7rem;color:#86efac;display:flex;gap:8px"><span>✓</span><span>Persistencia mínima (número + RUT + último estado)</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ OPCIONES ══ -->
+<div class="panel" id="panel-opciones">
+  <div class="sec-title"><span>🔀</span> Opciones A / B / C — ¿Cuál elegir?</div>
+  <div class="opt-grid" style="margin-bottom:20px">
+    <div class="opt">
+      <div class="opt-title">Opción A — Backend + LLM libre</div>
+      <div class="opt-desc">Claude maneja toda la conversación con herramientas. Flujo completamente natural, sin menús.</div>
+      <ul class="opt-pros">
+        <li>Experiencia más natural</li>
+        <li>Un solo prompt lo controla todo</li>
+        <li>Fácil de extender</li>
+      </ul>
+      <ul class="opt-cons">
+        <li>Más tokens = más costo</li>
+        <li>Riesgo de alucinaciones en fechas/horas</li>
+        <li>Más difícil de depurar</li>
+      </ul>
+    </div>
+    <div class="opt">
+      <div class="opt-title">Opción B — Flujo guiado sin LLM</div>
+      <div class="opt-desc">Menú numerado: 1. Agendar / 2. Cancelar / 3. Ver horarios / 4. Hablar con recepción.</div>
+      <ul class="opt-pros">
+        <li>Costo prácticamente $0 en LLM</li>
+        <li>Sin errores de interpretación</li>
+        <li>Más fácil de implementar</li>
+      </ul>
+      <ul class="opt-cons">
+        <li>Experiencia rígida y fría</li>
+        <li>No entiende texto libre</li>
+        <li>Pacientes frustrados al salirse del flujo</li>
+      </ul>
+    </div>
+    <div class="opt recommended">
+      <div class="opt-badge">⭐ RECOMENDADA</div>
+      <div class="opt-title">Opción C — Mixta (LLM + flujo controlado)</div>
+      <div class="opt-desc">Claude detecta la intención y extrae datos. Luego el sistema toma el control con pasos guiados antes de ejecutar.</div>
+      <ul class="opt-pros">
+        <li>Natural al escribir, seguro al ejecutar</li>
+        <li>LLM solo en entrada → bajo costo</li>
+        <li>Confirmación explícita antes de crear cita</li>
+        <li>Fallback a humano cuando Claude no entiende</li>
+        <li>Mejor relación costo/beneficio</li>
+      </ul>
+      <ul class="opt-cons">
+        <li>Algo más de código (dos capas)</li>
+        <li>Estado de sesión necesario</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Cómo funciona la Opción C -->
+  <div class="card" style="margin-bottom:14px">
+    <div style="font-size:.7rem;font-weight:700;color:#4ade80;margin-bottom:14px">⚙️ Cómo funciona la Opción C por dentro</div>
+    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px">
+      <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px 14px;text-align:center;min-width:110px">
+        <div style="font-size:.65rem;color:#94a3b8;margin-bottom:3px">Paciente escribe</div>
+        <div style="font-size:.75rem;font-weight:700;color:#f1f5f9">"quiero hora con<br>kinesiólogo"</div>
+      </div>
+      <div style="color:#334155;font-size:1rem">→</div>
+      <div style="background:#1a0a2e;border:1px solid #7c3aed;border-radius:8px;padding:10px 14px;text-align:center;min-width:130px">
+        <div style="font-size:.65rem;color:#a855f7;margin-bottom:3px">Claude detecta</div>
+        <div style="font-size:.75rem;font-weight:700;color:#c4b5fd">intención: agendar<br>especialidad: kinesio</div>
+      </div>
+      <div style="color:#334155;font-size:1rem">→</div>
+      <div style="background:#0c1a2e;border:1px solid #1d4ed8;border-radius:8px;padding:10px 14px;text-align:center;min-width:130px">
+        <div style="font-size:.65rem;color:#38bdf8;margin-bottom:3px">Sistema guía</div>
+        <div style="font-size:.75rem;font-weight:700;color:#93c5fd">pregunta RUT<br>muestra slots</div>
+      </div>
+      <div style="color:#334155;font-size:1rem">→</div>
+      <div style="background:#1c0f04;border:1px solid #ea580c;border-radius:8px;padding:10px 14px;text-align:center;min-width:130px">
+        <div style="font-size:.65rem;color:#fb923c;margin-bottom:3px">Medilink API</div>
+        <div style="font-size:.75rem;font-weight:700;color:#fed7aa">crear_cita()<br>solo tras OK</div>
+      </div>
+      <div style="color:#334155;font-size:1rem">→</div>
+      <div style="background:#052e16;border:1px solid #166534;border-radius:8px;padding:10px 14px;text-align:center;min-width:110px">
+        <div style="font-size:.65rem;color:#4ade80;margin-bottom:3px">Resultado</div>
+        <div style="font-size:.75rem;font-weight:700;color:#86efac">✅ Confirmado<br>en WhatsApp</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div class="card blue">
+      <div style="font-size:.7rem;font-weight:700;color:#38bdf8;margin-bottom:10px">🧠 Lo que hace Claude (con tokens)</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="font-size:.7rem;color:#93c5fd;display:flex;gap:8px"><span style="color:#38bdf8">→</span><span>Detectar intención del texto libre</span></div>
+        <div style="font-size:.7rem;color:#93c5fd;display:flex;gap:8px"><span style="color:#38bdf8">→</span><span>Extraer especialidad, fecha aproximada, nombre</span></div>
+        <div style="font-size:.7rem;color:#93c5fd;display:flex;gap:8px"><span style="color:#38bdf8">→</span><span>Responder preguntas frecuentes (precios, horarios)</span></div>
+        <div style="font-size:.7rem;color:#93c5fd;display:flex;gap:8px"><span style="color:#38bdf8">→</span><span>Manejar texto que no encaja en ningún flujo</span></div>
+        <div style="font-size:.7rem;color:#93c5fd;display:flex;gap:8px"><span style="color:#38bdf8">→</span><span>Decidir si derivar a humano</span></div>
+      </div>
+    </div>
+    <div class="card green">
+      <div style="font-size:.7rem;font-weight:700;color:#4ade80;margin-bottom:10px">⚙️ Lo que hace el sistema (sin tokens)</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="font-size:.7rem;color:#86efac;display:flex;gap:8px"><span style="color:#4ade80">→</span><span>Pedir y validar RUT (módulo 11)</span></div>
+        <div style="font-size:.7rem;color:#86efac;display:flex;gap:8px"><span style="color:#4ade80">→</span><span>Mostrar lista de slots disponibles</span></div>
+        <div style="font-size:.7rem;color:#86efac;display:flex;gap:8px"><span style="color:#4ade80">→</span><span>Pedir selección de slot (respuesta 1, 2, 3...)</span></div>
+        <div style="font-size:.7rem;color:#86efac;display:flex;gap:8px"><span style="color:#4ade80">→</span><span>Mostrar resumen y pedir "Sí / No" para confirmar</span></div>
+        <div style="font-size:.7rem;color:#86efac;display:flex;gap:8px"><span style="color:#4ade80">→</span><span>Llamar a Medilink API solo tras confirmación</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PASOS ══ -->
+<div class="panel" id="panel-pasos">
+  <div class="sec-title"><span>📋</span> Pasos concretos para implementar</div>
+  <div class="steps">
+
+    <div class="step s1">
+      <div class="step-num">1</div>
+      <div>
+        <div class="step-title">🟢 Crear cuenta Twilio + conectar WhatsApp Sandbox <span class="time-tag fast">30 min</span></div>
+        <div class="step-desc">Twilio ofrece un sandbox de WhatsApp que funciona inmediatamente sin verificación Meta. Perfecto para desarrollar y probar con pacientes piloto.</div>
+        <ul class="step-tasks">
+          <li>Crear cuenta en twilio.com (gratis)</li>
+          <li>Ir a Messaging → Try it out → Send a WhatsApp message</li>
+          <li>Escanear QR con tu WhatsApp para unirte al sandbox</li>
+          <li>Anotar: Account SID, Auth Token, número sandbox (+14155238886)</li>
+          <li>Instalar: <code style="background:#0f172a;padding:1px 4px;border-radius:3px;color:#4ade80;font-size:.65rem">pip install twilio</code></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step s2">
+      <div class="step-num">2</div>
+      <div>
+        <div class="step-title">🔵 Levantar servidor FastAPI con endpoint /webhook <span class="time-tag fast">1 hora</span></div>
+        <div class="step-desc">FastAPI recibe el POST de Twilio con el mensaje del paciente y responde. Necesita URL pública HTTPS — usar ngrok en desarrollo.</div>
+        <ul class="step-tasks">
+          <li>Instalar: <code style="background:#0f172a;padding:1px 4px;border-radius:3px;color:#4ade80;font-size:.65rem">pip install fastapi uvicorn python-dotenv</code></li>
+          <li>Crear main.py con endpoint POST /webhook</li>
+          <li>Instalar ngrok: <code style="background:#0f172a;padding:1px 4px;border-radius:3px;color:#4ade80;font-size:.65rem">ngrok http 8000</code></li>
+          <li>Copiar URL pública de ngrok → pegar en Twilio Sandbox → "When a message comes in"</li>
+          <li>Probar: enviar "hola" desde WhatsApp y ver el log del servidor</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step s3">
+      <div class="step-num">3</div>
+      <div>
+        <div class="step-title">🟣 Crear wrapper de Medilink API <span class="time-tag fast">2–4 horas</span></div>
+        <div class="step-desc">Encapsular los endpoints de Medilink en 5 funciones Python simples. Esto desacopla el bot de los detalles de la API y facilita testear.</div>
+        <ul class="step-tasks">
+          <li>Crear medilink.py con las 5 funciones básicas</li>
+          <li>Usar httpx para llamadas async: <code style="background:#0f172a;padding:1px 4px;border-radius:3px;color:#4ade80;font-size:.65rem">pip install httpx</code></li>
+          <li>Guardar credenciales en .env (MEDILINK_API_URL, MEDILINK_TOKEN)</li>
+          <li>Crear medilink_mock.py con datos de prueba para desarrollo</li>
+          <li>Test unitario: llamar cada función y verificar respuesta</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step s4">
+      <div class="step-num">4</div>
+      <div>
+        <div class="step-title">🟠 Integrar Claude para detección de intención <span class="time-tag fast">2–3 horas</span></div>
+        <div class="step-desc">Claude recibe el mensaje y devuelve JSON estructurado con intención y datos extraídos. No responde al usuario directamente — solo clasifica.</div>
+        <ul class="step-tasks">
+          <li>Instalar: <code style="background:#0f172a;padding:1px 4px;border-radius:3px;color:#4ade80;font-size:.65rem">pip install anthropic</code></li>
+          <li>Crear claude_helper.py con función detect_intent(mensaje, historial)</li>
+          <li>Prompt devuelve JSON: {"intent": "agendar", "especialidad": "kinesiología", ...}</li>
+          <li>Usar claude-haiku-4-5 (más barato, suficiente para clasificación)</li>
+          <li>Probar con 20 mensajes de prueba típicos</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step s5">
+      <div class="step-num">5</div>
+      <div>
+        <div class="step-title">🟡 Implementar máquina de estados para flujos <span class="time-tag">4–6 horas</span></div>
+        <div class="step-desc">Cada conversación tiene un estado: IDLE → ESPERANDO_RUT → MOSTRANDO_SLOTS → CONFIRMANDO → DONE. SQLite guarda el estado por número de WhatsApp.</div>
+        <ul class="step-tasks">
+          <li>Crear tabla sessions: (phone, state, data_json, updated_at)</li>
+          <li>Implementar handle_message(phone, texto) con switch por estado</li>
+          <li>IDLE: llamar a Claude → detectar intención → cambiar estado</li>
+          <li>ESPERANDO_RUT: validar RUT → buscar_paciente() → mostrar slots</li>
+          <li>MOSTRANDO_SLOTS: usuario elige número → estado CONFIRMANDO</li>
+          <li>CONFIRMANDO: usuario dice "sí" → crear_cita() → DONE</li>
+          <li>Timeout de sesión: si no responde en 30 min → volver a IDLE</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step s6">
+      <div class="step-num">6</div>
+      <div>
+        <div class="step-title">🟢 Deploy y prueba con pacientes piloto <span class="time-tag">1–2 días</span></div>
+        <div class="step-desc">Deploy en VPS con Docker. Prueba con 5–10 pacientes conocidos del centro antes de lanzar públicamente.</div>
+        <ul class="step-tasks">
+          <li>Dockerizar: Dockerfile + docker-compose.yml (FastAPI + SQLite o PostgreSQL)</li>
+          <li>Deploy en VPS con dominio propio (HTTPS con Let's Encrypt)</li>
+          <li>Actualizar Twilio webhook a URL de producción</li>
+          <li>Prueba real: 5 pacientes conocidos agendan y cancelan</li>
+          <li>Monitorear logs manualmente al inicio</li>
+          <li>Cuando estable: iniciar verificación Meta para número propio del CMC</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ FLUJOS ══ -->
+<div class="panel" id="panel-flujos">
+  <div class="sec-title"><span>💬</span> Flujos de Conversación — Opción C</div>
+  <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start">
+
+    <div class="convo">
+      <div class="convo-head">📅 Flujo 1: Agendar hora</div>
+      <div class="msg u"><div class="bub">Hola, quiero pedir hora con el kinesiólogo</div></div>
+      <div class="msg b"><div class="bub">Hola 👋 Con gusto. Para kinesiología tenemos disponibilidad esta semana. ¿Cuál es tu RUT?</div><div class="msg-tag">Claude detectó: agendar / kinesiología → sistema toma el control</div></div>
+      <div class="msg u"><div class="bub">12.345.678-9</div></div>
+      <div class="msg b"><div class="bub">Gracias. Estos son los horarios disponibles:<br><br><code>1.</code> Mar 25 · 09:00 · Kine Leo<br><code>2.</code> Mar 25 · 10:30 · Kine Leo<br><code>3.</code> Jue 27 · 09:00 · Kine Leo<br><br>Responde 1, 2 o 3 para elegir.</div><div class="msg-tag">Sistema → buscar_disponibilidad("kinesiología")</div></div>
+      <div class="msg u"><div class="bub">2</div></div>
+      <div class="msg b"><div class="bub">Confirma tu reserva:<br>📅 Martes 25 · 10:30<br>👤 Kine Leo<br>🏥 CMC Carampangue<br><br>¿Confirmas? Responde <code>SÍ</code> o <code>NO</code></div></div>
+      <div class="msg u"><div class="bub">Sí</div></div>
+      <div class="msg b"><div class="bub">✅ ¡Hora reservada! Nos vemos el martes 25 a las 10:30. Hasta pronto 😊</div><div class="msg-tag">Sistema → crear_cita() en Medilink</div></div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px;flex:1;min-width:260px">
+      <div class="convo">
+        <div class="convo-head">❌ Flujo 2: Cancelar hora</div>
+        <div class="msg u"><div class="bub">Necesito cancelar mi hora de mañana</div></div>
+        <div class="msg b"><div class="bub">Claro. ¿Cuál es tu RUT?</div><div class="msg-tag">Claude detectó: cancelar → sistema</div></div>
+        <div class="msg u"><div class="bub">12.345.678-9</div></div>
+        <div class="msg b"><div class="bub">Encontré tu cita:<br>📅 Mié 26 · 10:00 · Kine Leo<br><br>¿La cancelo? Responde <code>SÍ</code> o <code>NO</code></div><div class="msg-tag">listar_reservas(rut)</div></div>
+        <div class="msg u"><div class="bub">Sí</div></div>
+        <div class="msg b"><div class="bub">✅ Hora cancelada. ¡Hasta pronto!</div><div class="msg-tag">cancelar_cita(id)</div></div>
+      </div>
+
+      <div class="convo">
+        <div class="convo-head">💰 Flujo 3: Pregunta frecuente (solo Claude)</div>
+        <div class="msg u"><div class="bub">Cuánto cuesta la consulta con psicólogo?</div></div>
+        <div class="msg b"><div class="bub">La consulta con psicología tiene un valor de <strong>$35.000</strong>. Si tienes Fonasa puedes usarlo como libre elección. ¿Quieres agendar?</div><div class="msg-tag">Claude responde desde el prompt — sin llamar Medilink</div></div>
+      </div>
+
+      <div class="convo">
+        <div class="convo-head">🤷 Flujo 4: No entiende → derivar</div>
+        <div class="msg u"><div class="bub">tengo un dolor muy fuerte en el pecho desde ayer</div></div>
+        <div class="msg b"><div class="bub">Entiendo que no te sientes bien. Para urgencias te recomiendo llamar directamente al centro: <strong>+56 XX XXX XXXX</strong>. ¿Quieres que te contacte recepción?</div><div class="msg-tag">Claude detecta: fuera de scope → fallback humano</div></div>
+      </div>
+
+      <!-- Estados del sistema -->
+      <div class="card" style="background:#0f172a">
+        <div style="font-size:.63rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">⚙️ Estados de la sesión</div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div style="font-size:.68rem;color:#94a3b8;display:flex;gap:8px;align-items:center"><span style="background:#1e293b;padding:2px 7px;border-radius:4px;color:#64748b;font-family:monospace;font-size:.62rem">IDLE</span><span>Esperando mensaje inicial</span></div>
+          <div style="font-size:.68rem;color:#94a3b8;display:flex;gap:8px;align-items:center"><span style="background:#1e293b;padding:2px 7px;border-radius:4px;color:#38bdf8;font-family:monospace;font-size:.62rem">WAIT_RUT</span><span>Pidiendo RUT al paciente</span></div>
+          <div style="font-size:.68rem;color:#94a3b8;display:flex;gap:8px;align-items:center"><span style="background:#1e293b;padding:2px 7px;border-radius:4px;color:#a855f7;font-family:monospace;font-size:.62rem">SHOW_SLOTS</span><span>Mostrando horarios disponibles</span></div>
+          <div style="font-size:.68rem;color:#94a3b8;display:flex;gap:8px;align-items:center"><span style="background:#1e293b;padding:2px 7px;border-radius:4px;color:#fb923c;font-family:monospace;font-size:.62rem">CONFIRMING</span><span>Esperando SÍ/NO del paciente</span></div>
+          <div style="font-size:.68rem;color:#94a3b8;display:flex;gap:8px;align-items:center"><span style="background:#052e16;padding:2px 7px;border-radius:4px;color:#4ade80;font-family:monospace;font-size:.62rem">DONE</span><span>Acción completada</span></div>
+          <div style="font-size:.68rem;color:#94a3b8;display:flex;gap:8px;align-items:center"><span style="background:#3f1515;padding:2px 7px;border-radius:4px;color:#f87171;font-family:monospace;font-size:.62rem">HUMAN</span><span>Derivado a recepción</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CÓDIGO ══ -->
+<div class="panel" id="panel-codigo">
+  <div class="sec-title"><span>💻</span> Estructura de código base</div>
+  <div class="g2">
+
+    <div>
+      <div style="font-size:.7rem;font-weight:700;color:#64748b;margin-bottom:8px">📁 Estructura de archivos</div>
+<pre><span class="cm"># chatbot-cmc/</span>
+├── main.py          <span class="cm"># FastAPI, webhook, orquestación</span>
+├── medilink.py      <span class="cm"># Wrapper API Medilink (5 funciones)</span>
+├── claude_helper.py <span class="cm"># Detección de intención</span>
+├── session.py       <span class="cm"># Estado de conversación (SQLite)</span>
+├── flows.py         <span class="cm"># Lógica de cada flujo (agendar, etc.)</span>
+├── config.py        <span class="cm"># Variables de entorno</span>
+├── .env             <span class="cm"># Credenciales (no subir a git)</span>
+├── requirements.txt
+└── Dockerfile</pre>
+
+      <div style="font-size:.7rem;font-weight:700;color:#64748b;margin:14px 0 8px">⚡ main.py — Webhook principal</div>
+<pre><span class="kw">from</span> fastapi <span class="kw">import</span> FastAPI, Form
+<span class="kw">from</span> twilio.rest <span class="kw">import</span> Client
+<span class="kw">from</span> session <span class="kw">import</span> get_session, save_session
+<span class="kw">from</span> flows <span class="kw">import</span> handle_message
+
+app = FastAPI()
+twilio_client = Client(ACCOUNT_SID, AUTH_TOKEN)
+
+<span class="kw">@app</span>.post(<span class="str">"/webhook"</span>)
+<span class="kw">async def</span> <span class="fn">webhook</span>(
+    From: str = Form(...),  <span class="cm"># número WhatsApp</span>
+    Body: str = Form(...),  <span class="cm"># texto del paciente</span>
+):
+    phone = From.replace(<span class="str">"whatsapp:"</span>, <span class="str">""</span>)
+    session = get_session(phone)
+
+    <span class="hl">    response = <span class="kw">await</span> <span class="fn">handle_message</span>(phone, Body, session)</span>
+
+    twilio_client.messages.create(
+        body=response,
+        from_=<span class="str">"whatsapp:+14155238886"</span>,
+        to=From
+    )
+    <span class="kw">return</span> {<span class="str">"ok"</span>: <span class="kw">True</span>}</pre>
+    </div>
+
+    <div>
+      <div style="font-size:.7rem;font-weight:700;color:#64748b;margin-bottom:8px">🧠 claude_helper.py — Detección de intención</div>
+<pre><span class="kw">import</span> anthropic, json
+
+client = anthropic.Anthropic()
+
+INTENTS = [<span class="str">"agendar"</span>, <span class="str">"cancelar"</span>, <span class="str">"ver_reservas"</span>,
+           <span class="str">"precio"</span>, <span class="str">"info"</span>, <span class="str">"humano"</span>, <span class="str">"otro"</span>]
+
+<span class="kw">async def</span> <span class="fn">detect_intent</span>(mensaje: str) -> dict:
+    resp = client.messages.create(
+        model=<span class="str">"claude-haiku-4-5-20251001"</span>,
+        max_tokens=200,
+        system=<span class="str">"""Eres clasificador para Centro Médico Carampangue.
+Devuelve SOLO JSON sin markdown:
+{"intent": "...", "especialidad": "...", "fecha": "..."}
+Intents válidos: agendar, cancelar, ver_reservas,
+precio, info, humano, otro"""</span>,
+        messages=[{<span class="str">"role"</span>: <span class="str">"user"</span>, <span class="str">"content"</span>: mensaje}]
+    )
+    <span class="kw">return</span> json.loads(resp.content[0].text)</pre>
+
+      <div style="font-size:.7rem;font-weight:700;color:#64748b;margin:14px 0 8px">📅 medilink.py — Wrapper API</div>
+<pre><span class="kw">import</span> httpx
+<span class="kw">from</span> config <span class="kw">import</span> MEDILINK_URL, MEDILINK_TOKEN
+
+headers = {<span class="str">"Authorization"</span>: <span class="str">f"Bearer {MEDILINK_TOKEN}"</span>}
+
+<span class="kw">async def</span> <span class="fn">buscar_disponibilidad</span>(especialidad, fecha=None):
+    r = <span class="kw">await</span> httpx.AsyncClient().get(
+        <span class="str">f"{MEDILINK_URL}/disponibilidad"</span>,
+        params={<span class="str">"especialidad"</span>: especialidad, <span class="str">"fecha"</span>: fecha},
+        headers=headers
+    )
+    <span class="kw">return</span> r.json()
+
+<span class="kw">async def</span> <span class="fn">crear_cita</span>(rut, profesional_id, slot_id):
+    r = <span class="kw">await</span> httpx.AsyncClient().post(
+        <span class="str">f"{MEDILINK_URL}/citas"</span>,
+        json={<span class="str">"rut"</span>: rut, <span class="str">"profesional_id"</span>: profesional_id,
+              <span class="str">"slot_id"</span>: slot_id},
+        headers=headers
+    )
+    <span class="kw">return</span> r.json()
+
+<span class="cm"># + buscar_paciente, cancelar_cita, listar_reservas</span></pre>
+    </div>
+
+    <div style="grid-column:1/-1">
+      <div style="font-size:.7rem;font-weight:700;color:#64748b;margin-bottom:8px">🔀 flows.py — Máquina de estados</div>
+<pre><span class="kw">async def</span> <span class="fn">handle_message</span>(phone: str, texto: str, session: dict) -> str:
+    state = session.get(<span class="str">"state"</span>, <span class="str">"IDLE"</span>)
+
+    <span class="cm"># ── Estado IDLE: detectar intención ─────────────────────────────</span>
+    <span class="kw">if</span> state == <span class="str">"IDLE"</span>:
+        intent_data = <span class="kw">await</span> detect_intent(texto)
+        intent = intent_data.get(<span class="str">"intent"</span>)
+
+        <span class="kw">if</span> intent == <span class="str">"agendar"</span>:
+            session.update({<span class="str">"state"</span>: <span class="str">"WAIT_RUT"</span>, <span class="str">"accion"</span>: <span class="str">"agendar"</span>,
+                            <span class="str">"especialidad"</span>: intent_data.get(<span class="str">"especialidad"</span>)})
+            save_session(phone, session)
+            <span class="kw">return</span> <span class="str">"¡Hola! Para agendar necesito tu RUT. ¿Cuál es?"</span>
+
+        <span class="kw">elif</span> intent == <span class="str">"cancelar"</span>:
+            session.update({<span class="str">"state"</span>: <span class="str">"WAIT_RUT"</span>, <span class="str">"accion"</span>: <span class="str">"cancelar"</span>})
+            save_session(phone, session)
+            <span class="kw">return</span> <span class="str">"Claro. Para cancelar necesito tu RUT. ¿Cuál es?"</span>
+
+        <span class="kw">elif</span> intent <span class="kw">in</span> (<span class="str">"precio"</span>, <span class="str">"info"</span>):
+            <span class="kw">return await</span> claude_faq(texto)  <span class="cm"># Claude responde directo</span>
+
+        <span class="kw">else</span>:
+            <span class="kw">return</span> <span class="str">"Hola 👋 Puedo ayudarte a:\n1. Agendar una hora\n2. Cancelar una hora\n3. Ver tus reservas\n4. Hablar con recepción\n\n¿Qué necesitas?"</span>
+
+    <span class="cm"># ── Estado WAIT_RUT ──────────────────────────────────────────────</span>
+    <span class="kw">elif</span> state == <span class="str">"WAIT_RUT"</span>:
+        rut = clean_rut(texto)
+        <span class="kw">if not</span> valid_rut(rut):
+            <span class="kw">return</span> <span class="str">"RUT inválido. Ingresa tu RUT (ej: 12.345.678-9)"</span>
+        paciente = <span class="kw">await</span> buscar_paciente(rut)
+        <span class="kw">if</span> session[<span class="str">"accion"</span>] == <span class="str">"agendar"</span>:
+            slots = <span class="kw">await</span> buscar_disponibilidad(session[<span class="str">"especialidad"</span>])
+            session.update({<span class="str">"state"</span>: <span class="str">"SHOW_SLOTS"</span>, <span class="str">"rut"</span>: rut, <span class="str">"slots"</span>: slots})
+            save_session(phone, session)
+            <span class="kw">return</span> <span class="fn">format_slots</span>(slots)  <span class="cm"># "1. Mar 25 · 09:00 ..."</span>
+
+    <span class="cm"># ── Estado CONFIRMING: crear cita ────────────────────────────────</span>
+    <span class="kw">elif</span> state == <span class="str">"CONFIRMING"</span>:
+        <span class="kw">if</span> texto.strip().lower() <span class="kw">in</span> (<span class="str">"sí"</span>, <span class="str">"si"</span>, <span class="str">"yes"</span>, <span class="str">"ok"</span>):
+<span class="hl">            resultado = <span class="kw">await</span> <span class="fn">crear_cita</span>(session[<span class="str">"rut"</span>], session[<span class="str">"slot"</span>])</span>
+            session[<span class="str">"state"</span>] = <span class="str">"IDLE"</span>
+            save_session(phone, session)
+            <span class="kw">return</span> <span class="str">f"✅ ¡Hora reservada! {resultado['confirmacion']}"</span></pre>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CHECKLIST ══ -->
+<div class="panel" id="panel-checklist">
+  <div class="sec-title"><span>✅</span> Checklist de implementación</div>
+  <div class="g2">
+    <div>
+      <div style="font-size:.7rem;font-weight:700;color:#4ade80;margin-bottom:10px">🟢 Fase 1 — WhatsApp + Backend base</div>
+      <div class="checklist" id="list1">
+        <div class="chk" onclick="toggle(this)"><div class="chk-box">✓</div><div class="chk-text">Crear cuenta Twilio</div><div class="chk-cat">Infraestructura</div></div>
+        <div class="chk" onclick="toggle(this)"><div class="chk-box">✓</div><div class="chk-text">Configurar WhatsApp Sandbox</div><div class="chk-cat">Infraestructura</div></div>
+        <div class="chk" onclick="toggle(this)"><div class="chk-box">✓</div><div class="chk-text">Crear repositorio Git chatbot-cmc</div><div class="chk-cat">Dev</div></div>
+        <div class="chk" onclick="toggle(this)"><div class="chk-box">✓</div><div class="chk-text">FastAPI con endpoint /webhook funcionando</div><div class="chk-cat">Dev</div></div>
+        <div class="chk" onclick="toggle(this)"><div class="chk-box">✓</div><div class="chk-text">ngrok expone localhost con HTTPS</div><div class="chk-cat">Dev</div></div>
+        <div class="chk" onclick="toggle(this)"><div class="chk-box">✓</div><div class="chk-text">Bot responde "Hola" desde WhatsApp</div><div class="chk-cat">Test</div></div>
+      </div>
+
+      <div style="font-size:.7rem;font-weight:700;color:#38bdf8;margin:16px 0 10px">🔵 Fase 2 — Medilink + Claude</div>
+      <div class="checklist">
+        <div class="chk" onclick="toggle(this)"><div class="chk-box">✓</div><div class="chk-text">Leer documentación API Medilink</div><div class="chk-cat">Medilink</div></div>
+        <div class="chk" onclick="toggle(this)"><div class="chk-box">✓</div><div class="chk-text">Crear medilink.py con datos mock</div><div class="chk-cat">Dev</div></div>
+        <div class="chk" onclick="toggle(this)"><div class="chk-box">✓</div><div class="chk-text">Integrar credenciales reales de Medilink</div><div class="chk-cat">Medilink</div></div>
+        <div class="chk" onclick="toggle(this)"><div class="chk-box">✓</div><div class="chk-text">Crear API key Anthropic</div><div class="chk-cat">IA</div></div>
+        <div class="chk" onclick="toggle(this)"><div class="chk-box">✓</div><div class="chk-text">claude_helper.py detecta intención básica</div><div class="chk-cat">Dev</div></div>
+        <div class="chk" onclick="toggle(this)"><div class="chk-box">✓</div><div class="chk-text">Probar 20 frases típicas de pacientes</div><div class="chk-cat">Test</div></div>
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size:.7rem;font-weight:700;color:#a855f7;margin-bottom:10px">🟣 Fase 3 — Flujos completos</div>
+      <div class="checklist">
+        <div class="chk" onclick="toggle(this)"><div class="chk-box">✓</div><div class="chk-text">session.py guarda estado por número</div><div class="chk-cat">Dev</div></div>
+        <div class="chk" onclick="toggle(this)"><div class="chk-box">✓</div><div class="chk-text">Flujo agendar funciona end-to-end</div><div class="chk-cat">Dev</div></div>
+        <div class="chk" onclick="toggle(this)"><div class="chk-box">✓</div><div class="chk-text">Flujo cancelar funciona end-to-end</div><div class="chk-cat">Dev</div></div>
+        <div class="chk" onclick="toggle(this)"><div class="chk-box">✓</div><div class="chk-text">Flujo "ver mis reservas" funciona</div><div class="chk-cat">Dev</div></div>
+        <div class="chk" onclick="toggle(this)"><div class="chk-box">✓</div><div class="chk-text">Validación de RUT implementada</div><div class="chk-cat">Dev</div></div>
+        <div class="chk" onclick="toggle(this)"><div class="chk-box">✓</div><div class="chk-text">Confirmación explícita antes de crear cita</div><div class="chk-cat">Dev</div></div>
+        <div class="chk" onclick="toggle(this)"><div class="chk-box">✓</div><div class="chk-text">Fallback "hablar con humano" funciona</div><div class="chk-cat">Dev</div></div>
+        <div class="chk" onclick="toggle(this)"><div class="chk-box">✓</div><div class="chk-text">Timeout de sesión (30 min inactivo)</div><div class="chk-cat">Dev</div></div>
+      </div>
+
+      <div style="font-size:.7rem;font-weight:700;color:#fb923c;margin:16px 0 10px">🟠 Fase 4 — Deploy y prueba</div>
+      <div class="checklist">
+        <div class="chk" onclick="toggle(this)"><div class="chk-box">✓</div><div class="chk-text">Dockerfile creado y probado</div><div class="chk-cat">Deploy</div></div>
+        <div class="chk" onclick="toggle(this)"><div class="chk-box">✓</div><div class="chk-text">VPS con HTTPS configurado</div><div class="chk-cat">Deploy</div></div>
+        <div class="chk" onclick="toggle(this)"><div class="chk-box">✓</div><div class="chk-text">Twilio apunta a URL de producción</div><div class="chk-cat">Deploy</div></div>
+        <div class="chk" onclick="toggle(this)"><div class="chk-box">✓</div><div class="chk-text">Prueba con 5 pacientes piloto</div><div class="chk-cat">Test</div></div>
+        <div class="chk" onclick="toggle(this)"><div class="chk-box">✓</div><div class="chk-text">Iniciar verificación Meta Business</div><div class="chk-cat">WhatsApp</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function show(id, tab){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  tab.classList.add('active');
+}
+function toggle(el){
+  el.classList.toggle('done');
+  if(el.classList.contains('done')) el.querySelector('.chk-box').textContent='✓';
+  else el.querySelector('.chk-box').textContent='✓';
+}
+</script>
+</body>
+</html>

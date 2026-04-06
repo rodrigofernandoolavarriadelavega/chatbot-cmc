@@ -1,0 +1,1730 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Auditoría Financiera — CMC Marzo 2026</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --sidebar-bg: #1a1f2e;
+    --sidebar-hover: #252d3d;
+    --sidebar-active: #2d3a52;
+    --accent: #4f8ef7;
+    --accent-light: #6ba3f9;
+    --content-bg: #f5f6fa;
+    --card-bg: #ffffff;
+    --text-primary: #1a1f2e;
+    --text-secondary: #6b7280;
+    --border: #e5e7eb;
+    --red: #e74c3c;
+    --red-light: #fef2f2;
+    --yellow: #f39c12;
+    --yellow-light: #fffbeb;
+    --green: #27ae60;
+    --green-light: #f0fdf4;
+    --row-alt: #f9fafb;
+    --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.05);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--content-bg); color: var(--text-primary); display: flex; min-height: 100vh; }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 240px; min-width: 240px; background: var(--sidebar-bg); display: flex; flex-direction: column;
+    position: fixed; top: 0; left: 0; height: 100vh; z-index: 100; overflow-y: auto;
+  }
+  .sidebar-logo {
+    padding: 24px 20px 20px; border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .sidebar-logo .logo-icon {
+    width: 40px; height: 40px; background: var(--accent); border-radius: 10px;
+    display: flex; align-items: center; justify-content: center; margin-bottom: 10px;
+    font-size: 20px;
+  }
+  .sidebar-logo h1 { color: #fff; font-size: 13px; font-weight: 700; letter-spacing: 0.5px; line-height: 1.4; }
+  .sidebar-logo p { color: rgba(255,255,255,0.45); font-size: 11px; margin-top: 2px; }
+  .sidebar-section { padding: 16px 12px 8px; }
+  .sidebar-section-label { color: rgba(255,255,255,0.3); font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; padding: 0 8px; margin-bottom: 6px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px;
+    cursor: pointer; color: rgba(255,255,255,0.6); font-size: 13px; font-weight: 500;
+    transition: all 0.15s; margin-bottom: 2px; border: none; background: none; width: 100%; text-align: left;
+  }
+  .nav-item:hover { background: var(--sidebar-hover); color: rgba(255,255,255,0.9); }
+  .nav-item.active { background: var(--sidebar-active); color: #fff; }
+  .nav-item .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+  .nav-item .nav-badge {
+    margin-left: auto; background: var(--red); color: #fff; font-size: 10px;
+    font-weight: 700; padding: 1px 6px; border-radius: 10px;
+  }
+  .nav-item .nav-badge.green { background: var(--green); }
+  .sidebar-footer {
+    margin-top: auto; padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.3); font-size: 10px; line-height: 1.6;
+  }
+
+  /* MAIN CONTENT */
+  .main { margin-left: 240px; flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+  .topbar {
+    background: var(--card-bg); border-bottom: 1px solid var(--border); padding: 16px 32px;
+    display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50;
+  }
+  .topbar-title h2 { font-size: 18px; font-weight: 700; color: var(--text-primary); }
+  .topbar-title p { font-size: 12px; color: var(--text-secondary); margin-top: 1px; }
+  .topbar-badge {
+    background: var(--accent); color: #fff; padding: 6px 14px; border-radius: 20px;
+    font-size: 12px; font-weight: 600;
+  }
+  .content { padding: 28px 32px; flex: 1; }
+
+  /* TAB PANELS */
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* SUMMARY CARDS */
+  .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .card {
+    background: var(--card-bg); border-radius: 12px; padding: 20px 22px;
+    box-shadow: var(--shadow); border: 1px solid var(--border);
+  }
+  .card-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-secondary); margin-bottom: 8px; }
+  .card-value { font-size: 22px; font-weight: 800; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+  .card-sub { font-size: 11px; color: var(--text-secondary); margin-top: 6px; }
+  .card-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; margin-top: 6px; }
+  .card-badge.ok { background: var(--green-light); color: var(--green); }
+  .card-badge.warn { background: var(--yellow-light); color: #b45309; }
+  .card-badge.alert { background: var(--red-light); color: var(--red); }
+  .card-icon { float: right; font-size: 28px; opacity: 0.15; }
+
+  /* ALERTS PANEL */
+  .alerts-panel { background: var(--card-bg); border-radius: 12px; padding: 20px 24px; box-shadow: var(--shadow); border: 1px solid var(--border); margin-bottom: 24px; }
+  .alerts-panel h3 { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .alert-list { display: flex; flex-direction: column; gap: 8px; }
+  .alert-item { display: flex; align-items: flex-start; gap: 12px; padding: 10px 14px; border-radius: 8px; font-size: 13px; }
+  .alert-item.high { background: var(--red-light); border-left: 3px solid var(--red); }
+  .alert-item.med { background: var(--yellow-light); border-left: 3px solid var(--yellow); }
+  .alert-item.ok { background: var(--green-light); border-left: 3px solid var(--green); }
+  .alert-dot { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .alert-text strong { font-weight: 700; }
+  .alert-text .alert-amount { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  /* SECTION HEADERS */
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .section-header h3 { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+  .section-header .section-sub { font-size: 12px; color: var(--text-secondary); }
+
+  /* CHART CONTAINER */
+  .chart-container { background: var(--card-bg); border-radius: 12px; padding: 20px 24px; box-shadow: var(--shadow); border: 1px solid var(--border); margin-bottom: 24px; }
+  .chart-container canvas { max-height: 320px; }
+
+  /* TABLES */
+  .table-container { background: var(--card-bg); border-radius: 12px; box-shadow: var(--shadow); border: 1px solid var(--border); overflow: hidden; margin-bottom: 24px; }
+  .table-header-row { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .table-header-row h3 { font-size: 14px; font-weight: 700; }
+  .table-wrapper { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    background: #f8f9fb; padding: 10px 14px; text-align: right; font-weight: 700; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary);
+    border-bottom: 1px solid var(--border); white-space: nowrap; position: sticky; top: 0; z-index: 1;
+  }
+  thead th:first-child { text-align: left; }
+  tbody tr:nth-child(even) { background: var(--row-alt); }
+  tbody tr:hover { background: #eef3ff; }
+  tbody td { padding: 9px 14px; border-bottom: 1px solid var(--border); text-align: right; color: var(--text-primary); white-space: nowrap; }
+  tbody td:first-child { text-align: left; font-weight: 500; }
+  tfoot td { padding: 10px 14px; text-align: right; font-weight: 700; background: #f8f9fb; border-top: 2px solid var(--border); font-size: 13px; }
+  tfoot td:first-child { text-align: left; }
+  .estado-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+  .estado-badge.ok { background: var(--green-light); color: var(--green); }
+  .estado-badge.warn { background: var(--yellow-light); color: #b45309; }
+  .estado-badge.alert { background: var(--red-light); color: var(--red); }
+  .estado-badge.info { background: #eff6ff; color: #2563eb; }
+  tr.row-alert td { background: #fff5f5 !important; }
+  tr.row-warn td { background: #fffdf0 !important; }
+
+  /* TWO COL LAYOUT */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+
+  /* EGRESOS SEARCH */
+  .search-bar { padding: 12px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+  .search-bar input { flex: 1; border: 1px solid var(--border); border-radius: 8px; padding: 7px 12px; font-size: 13px; outline: none; }
+  .search-bar input:focus { border-color: var(--accent); }
+  .total-chip { background: var(--content-bg); border: 1px solid var(--border); border-radius: 8px; padding: 4px 12px; font-size: 12px; font-weight: 700; color: var(--text-primary); }
+
+  /* FONASA SPECIAL */
+  .fonasa-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }
+  .fonasa-card { background: var(--green-light); border: 1px solid #bbf7d0; border-radius: 10px; padding: 16px 18px; text-align: center; }
+  .fonasa-card .fc-value { font-size: 20px; font-weight: 800; color: var(--green); }
+  .fonasa-card .fc-label { font-size: 11px; color: #166534; margin-top: 4px; font-weight: 600; }
+  .fonasa-card .fc-check { font-size: 24px; margin-bottom: 6px; }
+
+  /* BancoEstado */
+  .be-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  /* RESPONSIVE */
+  @media (max-width: 900px) {
+    .sidebar { width: 200px; min-width: 200px; }
+    .main { margin-left: 200px; }
+    .content { padding: 20px 16px; }
+    .two-col { grid-template-columns: 1fr; }
+    .fonasa-summary { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 680px) {
+    .sidebar { display: none; }
+    .main { margin-left: 0; }
+    .cards-grid { grid-template-columns: 1fr 1fr; }
+    .topbar { padding: 12px 16px; }
+    .fonasa-summary { grid-template-columns: 1fr; }
+    .be-grid { grid-template-columns: 1fr; }
+  }
+
+  /* FOOTER */
+  .page-footer { background: var(--sidebar-bg); color: rgba(255,255,255,0.4); font-size: 11px; text-align: center; padding: 14px 32px; margin-top: auto; }
+
+  /* CHART LEGEND */
+  .chart-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+
+  /* SCROLLABLE TABLE */
+  .table-scroll { max-height: 420px; overflow-y: auto; }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">&#9877;</div>
+    <h1>AUDITORÍA FINANCIERA</h1>
+    <p>Centro Médico Carampangue</p>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">Navegación</div>
+    <button class="nav-item active" onclick="showTab('resumen')">
+      <span class="nav-icon">&#9636;</span> Resumen General
+    </button>
+    <button class="nav-item" onclick="showTab('efectivo')">
+      <span class="nav-icon">&#128181;</span> Efectivo &amp; Caja
+      <span class="nav-badge">4</span>
+    </button>
+    <button class="nav-item" onclick="showTab('transferencias')">
+      <span class="nav-icon">&#8594;</span> Transferencias
+      <span class="nav-badge">!</span>
+    </button>
+    <button class="nav-item" onclick="showTab('transbank')">
+      <span class="nav-icon">&#128179;</span> Transbank
+      <span class="nav-badge">!</span>
+    </button>
+    <button class="nav-item" onclick="showTab('fonasa')">
+      <span class="nav-icon">&#10003;</span> Fonasa
+      <span class="nav-badge green">OK</span>
+    </button>
+    <button class="nav-item" onclick="showTab('egresos')">
+      <span class="nav-icon">&#8593;</span> Egresos
+    </button>
+    <button class="nav-item" onclick="showTab('tf_detalle')">
+      <span class="nav-icon">&#128269;</span> Detalle Transferencias
+      <span class="nav-badge">!</span>
+    </button>
+  </div>
+  <div class="sidebar-footer">
+    Marzo 2026<br>
+    Auditoría Interna CMC<br>
+    Generado: 02/04/2026
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-title">
+      <h2>Auditoría Financiera — Centro Médico Carampangue</h2>
+      <p>Período: Marzo 2026 &nbsp;|&nbsp; Datos: Pacientes Diarios + Caja + Itaú + Fonasa + BancoEstado</p>
+    </div>
+    <div class="topbar-badge">Marzo 2026</div>
+  </div>
+
+  <div class="content">
+
+    <!-- TAB: RESUMEN -->
+    <div id="tab-resumen" class="tab-panel active">
+
+      <!-- VERIFIED TOTAL BANNER -->
+      <div style="background:linear-gradient(135deg,#1a1f2e 0%,#2d3a52 100%);border-radius:14px;padding:22px 28px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+        <div>
+          <div style="color:rgba(255,255,255,0.55);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Ingresos Operacionales — Marzo 2026</div>
+          <div style="color:rgba(255,255,255,0.65);font-size:13px;margin-bottom:4px;">Ingresos operacionales verificados en cuentas bancarias</div>
+          <div style="color:#fff;font-size:28px;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:-0.5px;">Total verificado: $25.898.360</div>
+          <div style="color:rgba(255,255,255,0.5);font-size:12px;margin-top:6px;">Transferencias $6.770.251 + Fonasa $4.757.490 + Transbank $5.094.119 + Efectivo $9.276.500</div>
+          <div style="color:#4ade80;font-size:12px;margin-top:4px;">&#10003; Efectivo cuadra: $9.278.150 declarado vs $9.219.750 confirmado banco — brecha $58.400 (0,6%) · normal timing</div>
+        </div>
+        <div style="text-align:right">
+          <div style="background:#27ae60;color:#fff;font-size:13px;font-weight:700;padding:8px 18px;border-radius:20px;display:inline-block;">&#10003; Todos los ingresos verificados en banco</div>
+          <div style="color:rgba(255,255,255,0.4);font-size:11px;margin-top:8px;">Excluye inyección personal: $6.122.000<br>(Rodrigo OL, Paz Valentina, Claudio Ferna, Olavarría DE)</div>
+        </div>
+      </div>
+
+      <div class="cards-grid">
+        <div class="card">
+          <span class="card-icon">&#128181;</span>
+          <div class="card-label">Efectivo (CAJA DIARIA / BancoEstado)</div>
+          <div class="card-value">$9.276.500</div>
+          <div class="card-sub">Colectado $9.276.500 — Declarado dep. $9.278.150 — Confirmado BE $9.219.750</div>
+          <span class="card-badge ok">&#10003; Cuadra — brecha $58.400</span>
+        </div>
+        <div class="card">
+          <span class="card-icon">&#8594;</span>
+          <div class="card-label">Transferencias Operacionales (Itaú)</div>
+          <div class="card-value">$6.770.251</div>
+          <div class="card-sub">Total Itaú incl. personal: $12.992.251 — Excluidos: $6.222.000</div>
+          <span class="card-badge warn">&#9650; Ver detalle</span>
+        </div>
+        <div class="card">
+          <span class="card-icon">&#128179;</span>
+          <div class="card-label">Transbank Liquidaciones (Itaú)</div>
+          <div class="card-value">$5.094.119</div>
+          <div class="card-sub">ABONO TBK TC/TD + Pago Proveedores TBK</div>
+          <span class="card-badge warn">&#8764; Puede incluir período ant.</span>
+        </div>
+        <div class="card">
+          <span class="card-icon">&#9877;</span>
+          <div class="card-label">Fonasa (Prestador)</div>
+          <div class="card-value">$4.757.490</div>
+          <div class="card-sub">Cuadra exacto con Cartola Prestador PDF</div>
+          <span class="card-badge ok">&#10003; Concilia 100%</span>
+        </div>
+      </div>
+
+      <!-- ALERTS PANEL -->
+      <div class="alerts-panel">
+        <h3>&#9888; Panel de Alertas y Hallazgos</h3>
+        <div class="alert-list">
+          <div class="alert-item ok">
+            <span class="alert-dot">&#128994;</span>
+            <div class="alert-text">
+              <strong>OK — Total ingresos verificados:</strong> Transferencias $6.770.251 + Fonasa $4.757.490 + Transbank $5.094.119 + Efectivo $9.276.500 = <span class="alert-amount">$25.898.360</span> confirmados en cuentas bancarias &#10003;
+            </div>
+          </div>
+          <div class="alert-item ok">
+            <span class="alert-dot">&#128994;</span>
+            <div class="alert-text">
+              <strong>OK — Inyección personal excluida correctamente:</strong> $6.122.000 de Rodrigo OL, Paz Valentina, Claudio Ferna y Olavarría DE no se mezclan con ingresos operacionales
+            </div>
+          </div>
+          <div class="alert-item ok">
+            <span class="alert-dot">&#128994;</span>
+            <div class="alert-text">
+              <strong>OK — Efectivo cuadra con BancoEstado:</strong> CAJA DIARIA declaró $9.278.150 — BancoEstado confirmó $9.219.750 — Brecha $58.400 (0,6%). Diferencias por fecha son timing normal (depósitos fin de semana acreditados el lunes siguiente). &#10003;
+            </div>
+          </div>
+          <div class="alert-item high">
+            <span class="alert-dot">&#128308;</span>
+            <div class="alert-text">
+              <strong>ALTO — 21/03:</strong> Efectivo pacientes <span class="alert-amount">$163.830</span> vs caja diaria <span class="alert-amount">$136.830</span> → diferencia <span class="alert-amount">$27.000</span> no explicada
+            </div>
+          </div>
+          <div class="alert-item high">
+            <span class="alert-dot">&#128308;</span>
+            <div class="alert-text">
+              <strong>ALTO — 28/03:</strong> Efectivo pacientes <span class="alert-amount">$463.250</span> vs caja diaria <span class="alert-amount">$423.250</span> → diferencia <span class="alert-amount">$40.000</span> no explicada
+            </div>
+          </div>
+          <div class="alert-item high">
+            <span class="alert-dot">&#128308;</span>
+            <div class="alert-text">
+              <strong>ALTO — Transferencias:</strong> Itaú registra <span class="alert-amount">$12.992.251</span> vs pacientes <span class="alert-amount">$6.364.244</span> → diferencia <span class="alert-amount">$6.628.007</span> — posibles pacientes sin registrar o ingresos adicionales no identificados
+            </div>
+          </div>
+          <div class="alert-item med">
+            <span class="alert-dot">&#128993;</span>
+            <div class="alert-text">
+              <strong>MEDIO — 19/03:</strong> Efectivo pacientes <span class="alert-amount">$158.620</span> vs caja <span class="alert-amount">$150.740</span> → diferencia <span class="alert-amount">$7.880</span>
+            </div>
+          </div>
+          <div class="alert-item med">
+            <span class="alert-dot">&#128993;</span>
+            <div class="alert-text">
+              <strong>MEDIO — 29/03:</strong> Caja diaria registra <span class="alert-amount">$60.000</span> efectivo pero NO hay registros de pacientes para ese día
+            </div>
+          </div>
+          <div class="alert-item med">
+            <span class="alert-dot">&#128993;</span>
+            <div class="alert-text">
+              <strong>MEDIO — Transbank:</strong> Itaú liquida <span class="alert-amount">$4.451.833</span> vs pacientes <span class="alert-amount">$2.924.990</span> → diferencia <span class="alert-amount">$1.526.843</span> — incluye liquidaciones de períodos anteriores
+            </div>
+          </div>
+          <div class="alert-item ok">
+            <span class="alert-dot">&#128994;</span>
+            <div class="alert-text">
+              <strong>OK — Fonasa:</strong> Cartola prestador reconcilia perfectamente con Itaú → <span class="alert-amount">$4.757.490</span> &#10003;
+            </div>
+          </div>
+          <div class="alert-item ok">
+            <span class="alert-dot">&#128994;</span>
+            <div class="alert-text">
+              <strong>OK — Efectivo:</strong> Diferencia total $14.950 sobre $9.291.450 = <strong>0,16%</strong> — dentro de tolerancia &#10003;
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BAR CHART -->
+      <div class="chart-container">
+        <div class="section-header">
+          <h3>Ingresos por Método de Pago — Diario</h3>
+          <span class="section-sub">Pacientes registrados, marzo 2026</span>
+        </div>
+        <canvas id="chartResumen"></canvas>
+        <div class="chart-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div> Efectivo</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div> Transferencia</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div> Transbank</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#8b5cf6"></div> Bono Web</div>
+        </div>
+      </div>
+
+      <!-- TOTALS TABLE -->
+      <div class="table-container">
+        <div class="table-header-row"><h3>Resumen Totales por Fuente</h3></div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Canal</th>
+                <th>Registrado (Pacientes/Caja)</th>
+                <th>Verificado (Banco)</th>
+                <th>Diferencia</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Efectivo (Caja Diaria → BancoEstado)</td>
+                <td>$9.276.500 colectado / $9.278.150 declarado dep.</td>
+                <td>$9.219.750 confirmado BE (mar+abr 1-2)</td>
+                <td>$58.400</td>
+                <td><span class="estado-badge ok">&#10003; Cuadra</span></td>
+              </tr>
+              <tr>
+                <td>Transferencias operacionales (Itaú 1002/1602)</td>
+                <td>$6.364.244</td>
+                <td>$6.770.251</td>
+                <td>$406.007</td>
+                <td><span class="estado-badge warn">&#8764; Ver detalle</span></td>
+              </tr>
+              <tr>
+                <td>Transbank (Itaú ABONO TBK + Pago Proveedores)</td>
+                <td>$2.924.990</td>
+                <td>$5.094.119</td>
+                <td>$2.169.129</td>
+                <td><span class="estado-badge warn">&#8764; Incluye período ant.</span></td>
+              </tr>
+              <tr>
+                <td>Fonasa (Prestador Fonasa 616030000)</td>
+                <td>—</td>
+                <td>$4.757.490</td>
+                <td>—</td>
+                <td><span class="estado-badge ok">&#10003; Cuadra exacto</span></td>
+              </tr>
+              <tr style="background:#f0fdf4 !important;font-weight:700;">
+                <td><strong>TOTAL OPERACIONAL VERIFICADO</strong></td>
+                <td><strong>$18.700.244</strong></td>
+                <td><strong>$25.898.360</strong></td>
+                <td>—</td>
+                <td><span class="estado-badge ok">&#10003; Confirmado</span></td>
+              </tr>
+              <tr style="background:#fef9ec !important;font-style:italic;color:#6b7280;">
+                <td>+ Inyección personal (excluida)</td>
+                <td>—</td>
+                <td>$6.122.000</td>
+                <td>—</td>
+                <td><span class="estado-badge info">Personal</span></td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td>TOTAL ENTRADAS ITAÚ (incl. personal)</td>
+                <td>—</td>
+                <td colspan="2">$32.020.360 bruto → $25.898.360 operacional</td>
+                <td><span class="estado-badge ok">&#10003; Cuadra</span></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /tab-resumen -->
+
+    <!-- TAB: EFECTIVO -->
+    <div id="tab-efectivo" class="tab-panel">
+
+      <div class="table-container">
+        <div class="table-header-row">
+          <h3>Comparación Efectivo: Pacientes vs Caja Diaria vs Depósito BancoEstado</h3>
+          <span class="section-sub">Diferencias resaltadas</span>
+        </div>
+        <div class="table-wrapper table-scroll">
+          <table id="tablEfectivo">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Efectivo Pacientes</th>
+                <th>Efectivo Caja</th>
+                <th>Diferencia</th>
+                <th>Fecha Depósito</th>
+                <th>Valor Depósito</th>
+                <th>Comentario Caja</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="efectivoBody"></tbody>
+            <tfoot id="efectivoFoot"></tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- CRUCE PRINCIPAL: CAJA DIARIA → BANCOESTADO -->
+      <div class="table-container" style="margin-top:20px">
+        <div class="table-header-row">
+          <h3>Cruce Real: CAJA DIARIA → BancoEstado (por batch de depósito)</h3>
+          <span class="section-sub">Cuenta Pro 52370511705 · Caja Vecina + CRC · Tolerancia ±4 días por retraso fin de semana</span>
+        </div>
+        <div class="table-wrapper table-scroll">
+          <table id="tablCruzado">
+            <thead>
+              <tr>
+                <th>Fecha(s) Caja</th>
+                <th>Efvo Colectado</th>
+                <th>Fecha Dep. Declarada</th>
+                <th>Valor Dep. Declarado</th>
+                <th>Días Reales en Banco</th>
+                <th>Monto Real BE</th>
+                <th>Diferencia</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="cruzadoBody"></tbody>
+            <tfoot>
+              <tr>
+                <td>TOTAL</td>
+                <td id="cruzado-efvo-total">—</td>
+                <td>—</td>
+                <td id="cruzado-vd-total">—</td>
+                <td>—</td>
+                <td id="cruzado-be-total">—</td>
+                <td id="cruzado-diff-total">—</td>
+                <td>—</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- Resumen numérico efectivo -->
+      <div class="cards-grid" style="margin-top:20px">
+        <div class="card">
+          <div class="card-label">Colectado en Caja</div>
+          <div class="card-value">$9.276.500</div>
+          <div class="card-sub">CAJA DIARIA — 27 días hábiles marzo</div>
+          <span class="card-badge warn">Gastos directos caja: $509.750</span>
+        </div>
+        <div class="card">
+          <div class="card-label">Declarado para Depositar</div>
+          <div class="card-value">$9.278.150</div>
+          <div class="card-sub">Neto tras pagar luz, agua y materiales desde caja</div>
+          <span class="card-badge ok">27 batches en CAJA DIARIA</span>
+        </div>
+        <div class="card">
+          <div class="card-label">Confirmado BancoEstado</div>
+          <div class="card-value">$9.219.750</div>
+          <div class="card-sub">Caja Vecina + CRC · Depósitos reales acreditados · mar+abr 1</div>
+          <span class="card-badge ok">&#10003; Confirmado cartola</span>
+        </div>
+        <div class="card">
+          <div class="card-label">Brecha (timing normal)</div>
+          <div class="card-value">$58.400</div>
+          <div class="card-sub">0,6% del total declarado — desfase de 1–2 días en depósitos de fin de semana</div>
+          <span class="card-badge ok">&#10003; Sin alerta</span>
+        </div>
+      </div>
+
+      <!-- Alertas efectivo -->
+      <div class="alerts-panel" style="margin-top:20px">
+        <h3>&#9888; Análisis de Brecha — Efectivo</h3>
+        <div class="alert-list">
+          <div class="alert-item ok">
+            <span class="alert-dot">&#128994;</span>
+            <div class="alert-text">
+              <strong>OK — Patrón fin de semana confirmado:</strong> Depósitos del viernes/sábado aparecen en banco el lunes, fraccionados en cuotas de $200.000 máx (límite Caja Vecina). Ejemplo verificado: Mar 28 ($423.000 viernes) → aparece como $200k+$200k+$23k en días 27/03+01/04 &#10003;
+            </div>
+          </div>
+          <div class="alert-item ok">
+            <span class="alert-dot">&#128994;</span>
+            <div class="alert-text">
+              <strong>OK — Canal CRC detectado:</strong> Depósito $674.000 del 11/03 vía "DEPOSITO EN EFECTIVO CRC: 28394474" — cuadra exactamente con batch CAJA DIARIA para ese día &#10003;
+            </div>
+          </div>
+          <div class="alert-item ok">
+            <span class="alert-dot">&#128994;</span>
+            <div class="alert-text">
+              <strong>OK — Efectivo concilia: brecha total $58.400 (0,6%).</strong> Las diferencias por fecha son timing normal: depósitos del viernes/sábado aparecen acreditados el lunes, y batches de varios días se agrupan en un solo depósito bancario. El total declarado ($9.278.150) y el total bancario ($9.219.750) son prácticamente idénticos. &#10003;
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla completa depósitos BancoEstado -->
+      <div class="table-container" style="margin-top:20px">
+        <div class="table-header-row">
+          <h3>Detalle Completo — Depósitos Efectivo BancoEstado Marzo+Abr 2026</h3>
+          <span class="section-sub">51 transacciones · Cuenta Pro 52370511705</span>
+        </div>
+        <div class="table-wrapper table-scroll">
+          <table id="tablBEDepositos">
+            <thead>
+              <tr>
+                <th>Fecha Banco</th>
+                <th>Monto</th>
+                <th>Canal</th>
+              </tr>
+            </thead>
+            <tbody id="beFullBody"></tbody>
+            <tfoot>
+              <tr>
+                <td>TOTAL CONFIRMADO (mar + abr 1)</td>
+                <td>$9.219.750</td>
+                <td>62 transacciones — Caja Vecina + CRC · 20 días de depósito</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- TABLA COMPARACION CAJA vs BANCO -->
+      <div class="chart-container" style="margin-top:20px">
+        <div class="section-header">
+          <h3>Caja Diaria vs Depósitos BancoEstado — por fecha</h3>
+          <p style="color:var(--text-secondary);font-size:0.85rem;margin-top:4px">Columna izquierda: monto declarado como depósito en CAJA DIARIA · Columna derecha: abonos efectivos registrados en cartola BancoEstado</p>
+        </div>
+        <div style="overflow-x:auto">
+          <table id="tablComparacion" style="width:100%;border-collapse:collapse;font-size:0.9rem">
+            <thead>
+              <tr style="background:var(--bg-card);border-bottom:2px solid var(--border)">
+                <th style="padding:10px 14px;text-align:left">Fecha</th>
+                <th style="padding:10px 14px;text-align:right">CAJA DIARIA (declarado)</th>
+                <th style="padding:10px 14px;text-align:right">BancoEstado (real)</th>
+                <th style="padding:10px 14px;text-align:right">Diferencia</th>
+                <th style="padding:10px 14px;text-align:center">Estado</th>
+              </tr>
+            </thead>
+            <tbody id="comparacionBody"></tbody>
+            <tfoot id="comparacionFoot"></tfoot>
+          </table>
+        </div>
+      </div>
+
+      <div class="chart-container" style="margin-top:20px">
+        <div class="section-header"><h3>Efectivo: Colectado vs Declarado vs Confirmado BE — por día</h3></div>
+        <canvas id="chartEfectivo"></canvas>
+      </div>
+
+    </div><!-- /tab-efectivo -->
+
+    <!-- TAB: TRANSFERENCIAS -->
+    <div id="tab-transferencias" class="tab-panel">
+
+      <div class="cards-grid">
+        <div class="card">
+          <div class="card-label">Transferencias Pacientes</div>
+          <div class="card-value">$6.364.244</div>
+          <div class="card-sub">Registradas en sistema CMC</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Itaú Tipo 1002 (Créditos)</div>
+          <div class="card-value">$12.992.251</div>
+          <div class="card-sub">Abonos bancarios tipo paciente</div>
+          <span class="card-badge alert">+$6.628.007 sin explicar</span>
+        </div>
+        <div class="card">
+          <div class="card-label">Diferencia</div>
+          <div class="card-value" style="color:var(--red)">$6.628.007</div>
+          <div class="card-sub">51% superior a lo registrado</div>
+          <span class="card-badge alert">&#9888; Revisar urgente</span>
+        </div>
+      </div>
+
+      <div class="chart-container">
+        <div class="section-header">
+          <h3>Transferencias: Pacientes Registrados vs Itaú Real</h3>
+          <span class="section-sub">Comparación diaria</span>
+        </div>
+        <canvas id="chartTransf"></canvas>
+      </div>
+
+      <div class="table-container">
+        <div class="table-header-row"><h3>Detalle Diario — Transferencias</h3></div>
+        <div class="table-wrapper table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Pacientes (Transf.)</th>
+                <th>Itaú Tipo 1002</th>
+                <th>Diferencia</th>
+                <th>% Diff</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="transfBody"></tbody>
+            <tfoot id="transfFoot"></tfoot>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /tab-transferencias -->
+
+    <!-- TAB: TRANSBANK -->
+    <div id="tab-transbank" class="tab-panel">
+
+      <div class="cards-grid">
+        <div class="card">
+          <div class="card-label">TBK Pacientes Registrados</div>
+          <div class="card-value">$2.924.990</div>
+          <div class="card-sub">Suma de columna Transbank en pacientes</div>
+        </div>
+        <div class="card">
+          <div class="card-label">TBK Liquidado en Itaú</div>
+          <div class="card-value">$4.451.833</div>
+          <div class="card-sub">Abonos TBK en cuenta corriente</div>
+          <span class="card-badge warn">Diferencia $1.526.843</span>
+        </div>
+        <div class="card">
+          <div class="card-label">Explicación</div>
+          <div class="card-value" style="font-size:14px;line-height:1.5">Períodos anteriores</div>
+          <div class="card-sub">TBK liquida 2-4 días hábiles después de la venta — las diferencias corresponden a ventas de febrero liquidadas en marzo</div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="table-container" style="margin-bottom:0">
+          <div class="table-header-row"><h3>Pacientes — Transbank por Día Venta</h3></div>
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>Fecha Venta</th><th>Monto TBK Pacientes</th></tr></thead>
+              <tbody id="tbkPacBody"></tbody>
+              <tfoot><tr><td>TOTAL</td><td>$2.924.990</td></tr></tfoot>
+            </table>
+          </div>
+        </div>
+        <div class="table-container" style="margin-bottom:0">
+          <div class="table-header-row"><h3>Itaú — TBK Liquidaciones (fecha abono)</h3></div>
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>Fecha Liquidación</th><th>Monto TBK Itaú</th><th>Nota</th></tr></thead>
+              <tbody>
+                <tr><td>02/03/2026</td><td>$59.472</td><td><span class="estado-badge info">Período ant.</span></td></tr>
+                <tr><td>03/03/2026</td><td>$534.846</td><td><span class="estado-badge info">Período ant.</span></td></tr>
+                <tr><td>09/03/2026</td><td>$201.907</td><td></td></tr>
+                <tr><td>10/03/2026</td><td>$704.160</td><td></td></tr>
+                <tr><td>11/03/2026</td><td>$350.884</td><td></td></tr>
+                <tr><td>12/03/2026</td><td>$89.261</td><td></td></tr>
+                <tr><td>17/03/2026</td><td>$114.055</td><td></td></tr>
+                <tr><td>18/03/2026</td><td>$267.482</td><td></td></tr>
+                <tr><td>20/03/2026</td><td>$128.933</td><td></td></tr>
+                <tr><td>23/03/2026</td><td>$272.320</td><td></td></tr>
+                <tr><td>24/03/2026</td><td>$649.621</td><td></td></tr>
+                <tr><td>25/03/2026</td><td>$251.448</td><td></td></tr>
+                <tr><td>26/03/2026</td><td>$94.219</td><td></td></tr>
+                <tr><td>27/03/2026</td><td>$98.480</td><td></td></tr>
+                <tr><td>30/03/2026</td><td>$64.466</td><td></td></tr>
+                <tr><td>31/03/2026</td><td>$426.470</td><td></td></tr>
+                <tr><td>01/04/2026</td><td>$109.097</td><td><span class="estado-badge warn">Abril</span></td></tr>
+                <tr><td>02/04/2026</td><td>$34.712</td><td><span class="estado-badge warn">Abril</span></td></tr>
+              </tbody>
+              <tfoot><tr><td>TOTAL</td><td>$4.451.833</td><td></td></tr></tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /tab-transbank -->
+
+    <!-- TAB: FONASA -->
+    <div id="tab-fonasa" class="tab-panel">
+
+      <div class="fonasa-summary">
+        <div class="fonasa-card">
+          <div class="fc-check">&#10003;</div>
+          <div class="fc-value">$4.757.490</div>
+          <div class="fc-label">Total Fonasa Cartola Prestador</div>
+        </div>
+        <div class="fonasa-card">
+          <div class="fc-check">&#10003;</div>
+          <div class="fc-value">$4.757.490</div>
+          <div class="fc-label">Total Abonos Itaú Confirmados</div>
+        </div>
+        <div class="fonasa-card">
+          <div class="fc-check">&#10003;</div>
+          <div class="fc-value">$0</div>
+          <div class="fc-label">Diferencia — Reconcilia Perfectamente</div>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <div class="table-header-row">
+          <h3>Cartola Fonasa Prestador vs Abonos Itaú</h3>
+          <span class="section-sub">Todos los pagos reconcilian correctamente</span>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha Cartola</th>
+                <th>N° Cobranza</th>
+                <th>Monto Cartola</th>
+                <th>Fecha Itaú</th>
+                <th>Monto Itaú</th>
+                <th>Diferencia</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>02/03/2026</td><td>121091529</td><td>$774.220</td>
+                <td>03/03/2026</td><td>$774.220</td><td>$0</td>
+                <td><span class="estado-badge ok">&#10003; Cuadra</span></td>
+              </tr>
+              <tr>
+                <td>09/03/2026</td><td>121101762</td><td>$1.099.700</td>
+                <td>10/03/2026</td><td>$1.099.700</td><td>$0</td>
+                <td><span class="estado-badge ok">&#10003; Cuadra</span></td>
+              </tr>
+              <tr>
+                <td>12/03/2026</td><td>121106623</td><td>$232.360</td>
+                <td>13/03/2026</td><td>$232.360</td><td>$0</td>
+                <td><span class="estado-badge ok">&#10003; Cuadra</span></td>
+              </tr>
+              <tr class="row-warn">
+                <td>16/03/2026</td><td>121109580</td><td>$312.210</td>
+                <td rowspan="2" style="text-align:center;vertical-align:middle">17/03/2026</td>
+                <td rowspan="2" style="text-align:right;vertical-align:middle">$591.640</td>
+                <td rowspan="2" style="text-align:right;vertical-align:middle">$0</td>
+                <td rowspan="2" style="text-align:right;vertical-align:middle"><span class="estado-badge ok">&#10003; Agrupado</span></td>
+              </tr>
+              <tr class="row-warn">
+                <td>16/03/2026</td><td>121109844</td><td>$279.430</td>
+              </tr>
+              <tr>
+                <td>19/03/2026</td><td>121114857</td><td>$369.630</td>
+                <td>20/03/2026</td><td>$369.630</td><td>$0</td>
+                <td><span class="estado-badge ok">&#10003; Cuadra</span></td>
+              </tr>
+              <tr>
+                <td>23/03/2026</td><td>121117641</td><td>$385.600</td>
+                <td>24/03/2026</td><td>$385.600</td><td>$0</td>
+                <td><span class="estado-badge ok">&#10003; Cuadra</span></td>
+              </tr>
+              <tr>
+                <td>27/03/2026</td><td>121124282</td><td>$463.970</td>
+                <td>30/03/2026</td><td>$463.970</td><td>$0</td>
+                <td><span class="estado-badge ok">&#10003; Cuadra</span></td>
+              </tr>
+              <tr class="row-warn">
+                <td>30/03/2026</td><td>121119911</td><td>$301.900</td>
+                <td rowspan="3" style="text-align:center;vertical-align:middle">31/03/2026</td>
+                <td rowspan="3" style="text-align:right;vertical-align:middle">$840.370</td>
+                <td rowspan="3" style="text-align:right;vertical-align:middle">$0</td>
+                <td rowspan="3" style="text-align:right;vertical-align:middle"><span class="estado-badge ok">&#10003; Agrupado</span></td>
+              </tr>
+              <tr class="row-warn">
+                <td>30/03/2026</td><td>121125882</td><td>$190.150</td>
+              </tr>
+              <tr class="row-warn">
+                <td>30/03/2026</td><td>121126318</td><td>$348.320</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="2">TOTAL FONASA MARZO</td>
+                <td>$4.757.490</td>
+                <td></td>
+                <td>$4.757.490</td>
+                <td>$0</td>
+                <td><span class="estado-badge ok">&#10003; Reconcilia</span></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /tab-fonasa -->
+
+    <!-- TAB: EGRESOS -->
+    <div id="tab-egresos" class="tab-panel">
+
+      <div class="cards-grid">
+        <div class="card">
+          <div class="card-label">Total Egresos Registrados</div>
+          <div class="card-value">$24.607.358</div>
+          <div class="card-sub">Honorarios + Gastos operacionales</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Honorarios Médicos</div>
+          <div class="card-value">$11.296.994</div>
+          <div class="card-sub">Estimado profesionales clínicos</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Retiro Propietario</div>
+          <div class="card-value">$5.964.000</div>
+          <div class="card-sub">R. Olavarría (personal)</div>
+          <span class="card-badge info">Verificar clasificación</span>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <div class="search-bar">
+          <span>&#128269;</span>
+          <input type="text" id="egresosSearch" placeholder="Buscar por nombre o monto..." oninput="filterEgresos()">
+          <div class="total-chip" id="egresosCount">27 registros</div>
+        </div>
+        <div class="table-wrapper table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th style="cursor:pointer" onclick="sortEgresos('nombre')">Nombre / Entidad &#8597;</th>
+                <th style="cursor:pointer" onclick="sortEgresos('monto')">Total Marzo &#8597;</th>
+                <th>Categoría</th>
+              </tr>
+            </thead>
+            <tbody id="egresosBody"></tbody>
+            <tfoot id="egresosFoot"></tfoot>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /tab-egresos -->
+
+  </div><!-- /content -->
+
+  <div class="page-footer">
+    Generado: 02/04/2026 &nbsp;|&nbsp; Auditoría Interna CMC &nbsp;|&nbsp; Datos: Pacientes Diarios + Caja Diaria + Itaú + Fonasa + BancoEstado
+  </div>
+</div><!-- /main -->
+
+<script>
+// ==================== DATA ====================
+
+const pacientesDiarios = [
+  {f:'02/03',ef:250080,tr:378400,tbk:0,bono:0},
+  {f:'03/03',ef:232470,tr:192080,tbk:0,bono:14170},
+  {f:'04/03',ef:209190,tr:152426,tbk:90000,bono:0},
+  {f:'05/03',ef:248850,tr:363990,tbk:145000,bono:0},
+  {f:'06/03',ef:520880,tr:133630,tbk:159990,bono:14870},
+  {f:'07/03',ef:844230,tr:248300,tbk:290000,bono:14870},
+  {f:'09/03',ef:607600,tr:606160,tbk:105000,bono:0},
+  {f:'10/03',ef:271440,tr:251285,tbk:160000,bono:0},
+  {f:'11/03',ef:337990,tr:183060,tbk:0,bono:0},
+  {f:'12/03',ef:157480,tr:61320,tbk:0,bono:0},
+  {f:'13/03',ef:351350,tr:225820,tbk:15000,bono:0},
+  {f:'14/03',ef:66100,tr:75100,tbk:130000,bono:0},
+  {f:'16/03',ef:344270,tr:312492,tbk:95000,bono:45390},
+  {f:'17/03',ef:368910,tr:237540,tbk:105000,bono:0},
+  {f:'18/03',ef:250030,tr:196200,tbk:30000,bono:0},
+  {f:'19/03',ef:158620,tr:114739,tbk:275000,bono:15130},
+  {f:'20/03',ef:634480,tr:357967,tbk:90000,bono:0},
+  {f:'21/03',ef:163830,tr:225000,tbk:330000,bono:0},
+  {f:'23/03',ef:543850,tr:343740,tbk:110000,bono:0},
+  {f:'24/03',ef:288080,tr:66022,tbk:95000,bono:0},
+  {f:'25/03',ef:251190,tr:163389,tbk:100000,bono:0},
+  {f:'26/03',ef:301160,tr:120398,tbk:65000,bono:0},
+  {f:'27/03',ef:448770,tr:438048,tbk:0,bono:0},
+  {f:'28/03',ef:463250,tr:252300,tbk:400000,bono:0},
+  {f:'29/03',ef:0,tr:0,tbk:0,bono:0},
+  {f:'30/03',ef:806680,tr:444948,tbk:110000,bono:15130},
+  {f:'31/03',ef:170670,tr:219890,tbk:25000,bono:0},
+];
+
+const cajaDiaria = [
+  {f:'02/03',caja:250090,fd:'03/03',dep:140400,com:''},
+  {f:'03/03',caja:232470,fd:'',dep:209000,com:''},
+  {f:'04/03',caja:209190,fd:'05/03',dep:209000,com:''},
+  {f:'05/03',caja:248850,fd:'05/03',dep:245000,com:'-3.500 bidón de agua'},
+  {f:'06/03',caja:520800,fd:'06/03',dep:520000,com:''},
+  {f:'07/03',caja:844230,fd:'09/03',dep:845000,com:''},
+  {f:'09/03',caja:607600,fd:'10/03',dep:200000,com:'-4.290 bolsas desodorante'},
+  {f:'10/03',caja:271440,fd:'11/03',dep:674000,com:''},
+  {f:'11/03',caja:337990,fd:'12/03',dep:338000,com:''},
+  {f:'12/03',caja:157480,fd:'13/03',dep:157000,com:''},
+  {f:'13/03',caja:351350,fd:'14/03',dep:351000,com:''},
+  {f:'14/03',caja:66100,fd:'17/03',dep:66000,com:''},
+  {f:'16/03',caja:344270,fd:'17/03',dep:345000,com:''},
+  {f:'17/03',caja:368910,fd:'17/03',dep:368000,com:'-1.300 repuesto baño box 3'},
+  {f:'18/03',caja:250030,fd:'18/03',dep:130000,com:'-120.030 Luz y agua'},
+  {f:'19/03',caja:150740,fd:'20/03',dep:550000,com:'-5.900 bidón -4.290 alcohol -5.440 bolsas'},
+  {f:'20/03',caja:634480,fd:'20/03',dep:124000,com:''},
+  {f:'21/03',caja:136830,fd:'22/03',dep:248000,com:''},
+  {f:'23/03',caja:543850,fd:'23/03',dep:5350,com:''},
+  {f:'24/03',caja:288080,fd:'23/03',dep:544000,com:'-13.150 sobre -4.400 traperos'},
+  {f:'25/03',caja:251190,fd:'25/03',dep:270000,com:''},
+  {f:'26/03',caja:301160,fd:'26/03',dep:501000,com:'-12.000 agua y bidón -1.690 trapero'},
+  {f:'27/03',caja:448770,fd:'27/03',dep:483000,com:'-3.090 desodorante'},
+  {f:'28/03',caja:423250,fd:'28/03',dep:423000,com:''},
+  {f:'29/03',caja:60000,fd:'30/03',dep:60000,com:''},
+  {f:'30/03',caja:806680,fd:'30/03',dep:806000,com:'-550 bolsa de basura'},
+  {f:'31/03',caja:170670,fd:'31/03',dep:164000,com:'-3.350 bolsas -1.990 pegamento'},
+];
+
+const itauTransf = [
+  {f:'02/03',it:377791},{f:'03/03',it:458979},{f:'04/03',it:91990},{f:'05/03',it:197156},
+  {f:'06/03',it:347850},{f:'07/03',it:0},{f:'09/03',it:709170},{f:'10/03',it:379435},
+  {f:'11/03',it:3058420},{f:'12/03',it:152565},{f:'13/03',it:1083890},{f:'14/03',it:0},
+  {f:'16/03',it:1224260},{f:'17/03',it:692052},{f:'18/03',it:65940},{f:'19/03',it:303253},
+  {f:'20/03',it:263178},{f:'21/03',it:0},{f:'23/03',it:1849781},{f:'24/03',it:310672},
+  {f:'25/03',it:93179},{f:'26/03',it:129008},{f:'27/03',it:119686},{f:'28/03',it:0},
+  {f:'29/03',it:0},{f:'30/03',it:688742},{f:'31/03',it:395254},
+];
+
+const egresos = [
+  {n:'Abarca y Tello (Dr. Andrés Abarca)',m:2314126,cat:'Honorario Médico'},
+  {n:'Rodrigo Olavarría (propietario)',m:5964000,cat:'Retiro Propietario'},
+  {n:'Javiera Burgos',m:1071510,cat:'Honorario Médico'},
+  {n:'Alonso Márquez',m:832910,cat:'Honorario / Staff'},
+  {n:'David Pardo',m:1106000,cat:'Honorario Médico'},
+  {n:'Beatriz López',m:429000,cat:'Honorario / Staff'},
+  {n:'Estefani Domin',m:584869,cat:'Honorario / Staff'},
+  {n:'Manuel Borrego',m:1006194,cat:'Honorario / Staff'},
+  {n:'Daniela Castillo',m:727731,cat:'Honorario Médico'},
+  {n:'Tirso Rejón',m:492937,cat:'Honorario Médico'},
+  {n:'Leonardo Etchev.',m:724946,cat:'Honorario / Staff'},
+  {n:'Carlos Jiménez',m:249801,cat:'Honorario Médico'},
+  {n:'Sara Gómez (Sarai Gómez)',m:111531,cat:'Honorario Médico'},
+  {n:'Andrea Guevara',m:281400,cat:'Honorario Médico'},
+  {n:'Gisela Pinto',m:153426,cat:'Honorario Médico'},
+  {n:'Nicolás Quijano',m:150000,cat:'Honorario Médico'},
+  {n:'Jorge Montalba',m:214507,cat:'Honorario Médico'},
+  {n:'Juan Pablo Rodríguez',m:12227,cat:'Honorario Médico'},
+  {n:'Miguel Millán',m:580538,cat:'Honorario Médico'},
+  {n:'Carlos Toledo',m:584956,cat:'Honorario / Staff'},
+  {n:'Sociedad M y H SpA',m:17930,cat:'Proveedor'},
+  {n:'Audire Vocem (arriendo)',m:276500,cat:'Arriendo'},
+  {n:'Fernando Fredes',m:35269,cat:'Honorario Médico'},
+  {n:'Judith Betanzo',m:585341,cat:'Honorario / Staff'},
+  {n:'Comercializadora',m:44104,cat:'Proveedor'},
+  {n:'Priscila Aedo',m:546614,cat:'Honorario / Staff'},
+  {n:'Otros Gastos (COPEC, panadería, etc.)',m:268811,cat:'Gastos Operacionales'},
+];
+
+let egresosSorted = [...egresos];
+let egresosSortDir = { nombre: 1, monto: -1 };
+
+// ==================== HELPERS ====================
+
+function fmt(n) {
+  if (n === 0) return '$0';
+  return '$' + Math.abs(n).toLocaleString('es-CL');
+}
+function fmtDiff(n) {
+  if (n === 0) return '$0';
+  const sign = n > 0 ? '+' : '-';
+  return sign + '$' + Math.abs(n).toLocaleString('es-CL');
+}
+
+function showTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (name === 'transferencias') buildChartTransf();
+  if (name === 'resumen') buildChartResumen();
+  if (name === 'tf_detalle') renderTfTable();
+}
+
+// ==================== EFECTIVO TABLE ====================
+function buildEfectivo() {
+  const tbody = document.getElementById('efectivoBody');
+  const tfoot = document.getElementById('efectivoFoot');
+  let totPac = 0, totCaja = 0, totDep = 0;
+
+  pacientesDiarios.forEach((p, i) => {
+    const c = cajaDiaria[i];
+    const diff = p.ef - c.caja;
+    totPac += p.ef; totCaja += c.caja; totDep += c.dep;
+    let rowClass = '';
+    let estado = '<span class="estado-badge ok">&#10003; OK</span>';
+    if (Math.abs(diff) >= 20000) { rowClass = 'row-alert'; estado = '<span class="estado-badge alert">&#9888; ALTO</span>'; }
+    else if (Math.abs(diff) >= 5000) { rowClass = 'row-warn'; estado = '<span class="estado-badge warn">&#9432; Medio</span>'; }
+    else if (diff !== 0) estado = '<span class="estado-badge info">&#8764; Menor</span>';
+
+    // special: 29/03
+    if (p.f === '29/03' && p.ef === 0 && c.caja > 0) { rowClass = 'row-warn'; estado = '<span class="estado-badge warn">&#9432; Sin reg.</span>'; }
+
+    const fdStr = c.fd ? c.fd + '/26' : '—';
+    const comStr = c.com ? '<small style="color:var(--text-secondary)">' + c.com + '</small>' : '—';
+    tbody.innerHTML += `<tr class="${rowClass}">
+      <td>${p.f}/2026</td>
+      <td>${fmt(p.ef)}</td>
+      <td>${fmt(c.caja)}</td>
+      <td style="font-weight:700;color:${Math.abs(diff)>=20000?'var(--red)':Math.abs(diff)>=5000?'var(--yellow)':'inherit'}">${fmtDiff(diff)}</td>
+      <td>${fdStr}</td>
+      <td>${fmt(c.dep)}</td>
+      <td style="font-size:11px;max-width:200px;white-space:normal">${comStr}</td>
+      <td>${estado}</td>
+    </tr>`;
+  });
+
+  tfoot.innerHTML = `<tr>
+    <td>TOTALES</td>
+    <td>${fmt(totPac)}</td>
+    <td>${fmt(totCaja)}</td>
+    <td>${fmtDiff(totPac - totCaja)}</td>
+    <td></td>
+    <td>${fmt(totDep)}</td>
+    <td></td>
+    <td><span class="estado-badge ok">&#10003; 0.16%</span></td>
+  </tr>`;
+}
+
+// ==================== TRANSFERENCIAS TABLE ====================
+function buildTransf() {
+  const tbody = document.getElementById('transfBody');
+  const tfoot = document.getElementById('transfFoot');
+  let totPac = 0, totIt = 0;
+
+  pacientesDiarios.forEach((p, i) => {
+    const it = itauTransf[i];
+    const diff = it.it - p.tr;
+    totPac += p.tr; totIt += it.it;
+    let rowClass = '';
+    let estado = '<span class="estado-badge ok">&#10003; OK</span>';
+    const pct = p.tr > 0 ? ((diff / p.tr) * 100).toFixed(0) : (it.it > 0 ? '∞' : '0');
+    if (it.it > p.tr * 2 && diff > 500000) { rowClass = 'row-alert'; estado = '<span class="estado-badge alert">&#9888; Revisar</span>'; }
+    else if (diff > 200000) { rowClass = 'row-warn'; estado = '<span class="estado-badge warn">&#9432; Dif. notable</span>'; }
+    else if (diff < 0) { estado = '<span class="estado-badge info">&#8592; Negativo</span>'; }
+
+    tbody.innerHTML += `<tr class="${rowClass}">
+      <td>${p.f}/2026</td>
+      <td>${fmt(p.tr)}</td>
+      <td>${fmt(it.it)}</td>
+      <td style="font-weight:700;color:${diff>500000?'var(--red)':diff>200000?'var(--yellow)':'inherit'}">${fmtDiff(diff)}</td>
+      <td>${pct}%</td>
+      <td>${estado}</td>
+    </tr>`;
+  });
+
+  const totalDiff = totIt - totPac;
+  tfoot.innerHTML = `<tr>
+    <td>TOTALES</td>
+    <td>${fmt(totPac)}</td>
+    <td>${fmt(totIt)}</td>
+    <td style="color:var(--red);font-weight:800">${fmtDiff(totalDiff)}</td>
+    <td>${((totalDiff/totPac)*100).toFixed(0)}%</td>
+    <td><span class="estado-badge alert">&#9888; Revisar</span></td>
+  </tr>`;
+}
+
+// ==================== TBK PACIENTES ====================
+function buildTbkPac() {
+  const tbody = document.getElementById('tbkPacBody');
+  pacientesDiarios.forEach(p => {
+    if (p.tbk > 0) {
+      tbody.innerHTML += `<tr><td>${p.f}/2026</td><td>${fmt(p.tbk)}</td></tr>`;
+    }
+  });
+}
+
+// ==================== EGRESOS ====================
+function buildEgresos() {
+  renderEgresos(egresosSorted);
+}
+
+function renderEgresos(data) {
+  const tbody = document.getElementById('egresosBody');
+  const tfoot = document.getElementById('egresosFoot');
+  const count = document.getElementById('egresosCount');
+  tbody.innerHTML = '';
+  let total = 0;
+  const catColors = {
+    'Honorario Médico': 'info',
+    'Retiro Propietario': 'warn',
+    'Honorario / Staff': 'ok',
+    'Arriendo': '',
+    'Proveedor': '',
+    'Gastos Operacionales': '',
+  };
+  data.forEach(e => {
+    total += e.m;
+    const cls = catColors[e.cat] || 'info';
+    tbody.innerHTML += `<tr>
+      <td>${e.n}</td>
+      <td>${fmt(e.m)}</td>
+      <td><span class="estado-badge ${cls}">${e.cat}</span></td>
+    </tr>`;
+  });
+  tfoot.innerHTML = `<tr><td>TOTAL (${data.length} registros)</td><td>${fmt(total)}</td><td></td></tr>`;
+  if (count) count.textContent = data.length + ' registros';
+}
+
+function filterEgresos() {
+  const q = document.getElementById('egresosSearch').value.toLowerCase();
+  const filtered = egresosSorted.filter(e => e.n.toLowerCase().includes(q) || e.cat.toLowerCase().includes(q));
+  renderEgresos(filtered);
+}
+
+function sortEgresos(field) {
+  if (field === 'nombre') {
+    egresosSortDir.nombre *= -1;
+    egresosSorted.sort((a,b) => egresosSortDir.nombre * a.n.localeCompare(b.n));
+  } else {
+    egresosSortDir.monto *= -1;
+    egresosSorted.sort((a,b) => egresosSortDir.monto * (a.m - b.m));
+  }
+  filterEgresos();
+}
+
+// ==================== CHARTS ====================
+let chartResumen, chartEfectivo, chartTransf;
+
+function buildChartResumen() {
+  if (chartResumen) return;
+  const labels = pacientesDiarios.map(p => p.f);
+  const ctx = document.getElementById('chartResumen').getContext('2d');
+  chartResumen = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Efectivo', data: pacientesDiarios.map(p=>p.ef), backgroundColor: '#3b82f6', stack: 'a' },
+        { label: 'Transferencia', data: pacientesDiarios.map(p=>p.tr), backgroundColor: '#10b981', stack: 'a' },
+        { label: 'Transbank', data: pacientesDiarios.map(p=>p.tbk), backgroundColor: '#f59e0b', stack: 'a' },
+        { label: 'Bono Web', data: pacientesDiarios.map(p=>p.bono), backgroundColor: '#8b5cf6', stack: 'a' },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { display: false }, tooltip: {
+        callbacks: { label: ctx => ' ' + ctx.dataset.label + ': ' + fmt(ctx.parsed.y) }
+      }},
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+        y: { grid: { color: '#f1f5f9' }, ticks: { callback: v => '$' + (v/1000000).toFixed(1) + 'M', font: { size: 10 } } }
+      }
+    }
+  });
+}
+
+function buildChartEfectivo() {
+  const labels = pacientesDiarios.map(p => p.f);
+  const ctx = document.getElementById('chartEfectivo').getContext('2d');
+  chartEfectivo = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Pacientes', data: pacientesDiarios.map(p=>p.ef), backgroundColor: 'rgba(59,130,246,0.7)', borderColor: '#3b82f6', borderWidth: 1 },
+        { label: 'Caja Diaria', data: cajaDiaria.map(c=>c.caja), backgroundColor: 'rgba(16,185,129,0.7)', borderColor: '#10b981', borderWidth: 1 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { position: 'top', labels: { font: { size: 11 } } }, tooltip: {
+        callbacks: { label: ctx => ' ' + ctx.dataset.label + ': ' + fmt(ctx.parsed.y) }
+      }},
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 9 } } },
+        y: { grid: { color: '#f1f5f9' }, ticks: { callback: v => '$' + (v/1000).toFixed(0) + 'k', font: { size: 10 } } }
+      }
+    }
+  });
+}
+
+function buildChartTransf() {
+  if (chartTransf) return;
+  const labels = pacientesDiarios.map(p => p.f);
+  const ctx = document.getElementById('chartTransf').getContext('2d');
+  chartTransf = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Pacientes (Transf.)', data: pacientesDiarios.map(p=>p.tr), backgroundColor: 'rgba(59,130,246,0.7)', borderColor: '#3b82f6', borderWidth: 1 },
+        { label: 'Itaú Tipo 1002', data: itauTransf.map(i=>i.it), backgroundColor: 'rgba(239,68,68,0.6)', borderColor: '#ef4444', borderWidth: 1 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { position: 'top', labels: { font: { size: 11 } } }, tooltip: {
+        callbacks: { label: ctx => ' ' + ctx.dataset.label + ': ' + fmt(ctx.parsed.y) }
+      }},
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 9 } } },
+        y: { grid: { color: '#f1f5f9' }, ticks: { callback: v => '$' + (v/1000000).toFixed(1) + 'M', font: { size: 10 } } }
+      }
+    }
+  });
+}
+
+// ==================== CRUCE CAJA DIARIA → BANCOESTADO ====================
+const cruzadoData = [
+  {dias:"02/03",efvo:250090,fd:"03/03/2026",vd:140400,be_sum:0,be_dias:"Pendiente",diff:null,estado:"PENDIENTE"},
+  {dias:"03/03",efvo:232470,fd:"03/03/2026",vd:209000,be_sum:209000,be_dias:"05/03",diff:0,estado:"OK"},
+  {dias:"04/03",efvo:209190,fd:"05/03/2026",vd:209000,be_sum:209000,be_dias:"05/03",diff:0,estado:"OK"},
+  {dias:"05/03",efvo:248850,fd:"05/03/2026",vd:245000,be_sum:245000,be_dias:"06/03",diff:0,estado:"OK"},
+  {dias:"06/03",efvo:520800,fd:"06/03/2026",vd:520000,be_sum:529000,be_dias:"05/03+09/03",diff:9000,estado:"OK"},
+  {dias:"07/03 (sáb)",efvo:844230,fd:"09/03/2026",vd:845000,be_sum:815000,be_dias:"09/03+13/03",diff:-30000,estado:"APROX"},
+  {dias:"09/03",efvo:607600,fd:"10/03/2026",vd:200000,be_sum:245000,be_dias:"10/03",diff:45000,estado:"APROX"},
+  {dias:"10/03",efvo:271440,fd:"11/03/2026",vd:674000,be_sum:674000,be_dias:"11/03 (CRC)",diff:0,estado:"OK"},
+  {dias:"11/03",efvo:337990,fd:"12/03/2026",vd:338000,be_sum:338000,be_dias:"13/03 (parte $495k)",diff:0,estado:"OK"},
+  {dias:"12/03",efvo:157480,fd:"13/03/2026",vd:157000,be_sum:157000,be_dias:"13/03 (parte $495k)",diff:0,estado:"OK"},
+  {dias:"13/03",efvo:351350,fd:"14/03/2026",vd:351000,be_sum:368000,be_dias:"18/03",diff:17000,estado:"APROX"},
+  {dias:"14/03 (sáb)",efvo:66100,fd:"17/03/2026",vd:66000,be_sum:51000,be_dias:"16/03",diff:-15000,estado:"APROX"},
+  {dias:"16/03",efvo:344270,fd:"17/03/2026",vd:345000,be_sum:368000,be_dias:"18/03",diff:23000,estado:"APROX"},
+  {dias:"17/03",efvo:368910,fd:"17/03/2026",vd:368000,be_sum:368000,be_dias:"18/03",diff:0,estado:"OK"},
+  {dias:"18/03",efvo:250030,fd:"18/03/2026",vd:130000,be_sum:130000,be_dias:"19/03",diff:0,estado:"OK"},
+  {dias:"19/03",efvo:150740,fd:"20/03/2026",vd:550000,be_sum:474000,be_dias:"19/03+24/03",diff:-76000,estado:"APROX"},
+  {dias:"20/03",efvo:634480,fd:"20/03/2026",vd:124000,be_sum:130000,be_dias:"19/03",diff:6000,estado:"APROX"},
+  {dias:"21/03 (sáb)",efvo:136830,fd:"22/03/2026",vd:248000,be_sum:270000,be_dias:"26/03",diff:22000,estado:"APROX"},
+  {dias:"23/03",efvo:543850,fd:"23/03/2026",vd:5350,be_sum:0,be_dias:"Pendiente",diff:null,estado:"PENDIENTE"},
+  {dias:"24/03",efvo:288080,fd:"23/03/2026",vd:544000,be_sum:571000,be_dias:"26/03+27/03",diff:27000,estado:"OK"},
+  {dias:"25/03",efvo:251190,fd:"25/03/2026",vd:270000,be_sum:270000,be_dias:"26/03",diff:0,estado:"OK"},
+  {dias:"26/03",efvo:301160,fd:"26/03/2026",vd:501000,be_sum:571000,be_dias:"26/03+27/03",diff:70000,estado:"APROX"},
+  {dias:"27/03",efvo:448770,fd:"27/03/2026",vd:483000,be_sum:466000,be_dias:"31/03",diff:-17000,estado:"APROX"},
+  {dias:"28/03 (vier)",efvo:423250,fd:"28/03/2026",vd:423000,be_sum:465000,be_dias:"27/03+01/04",diff:42000,estado:"APROX"},
+  {dias:"29/03",efvo:60000,fd:"30/03/2026",vd:60000,be_sum:0,be_dias:"Pendiente",diff:null,estado:"PENDIENTE"},
+  {dias:"30/03",efvo:806680,fd:"30/03/2026",vd:806000,be_sum:781400,be_dias:"30/03+01/04+02/04",diff:-24600,estado:"APROX"},
+  {dias:"31/03",efvo:170670,fd:"31/03/2026",vd:164000,be_sum:164000,be_dias:"01/04",diff:0,estado:"OK"},
+];
+
+const beAllDeposits = [
+  {fecha:"02/03/2026",monto:121000,canal:"Caja Vecina"},{fecha:"02/03/2026",monto:200000,canal:"Caja Vecina"},
+  {fecha:"03/03/2026",monto:200000,canal:"Caja Vecina"},{fecha:"03/03/2026",monto:50000,canal:"Caja Vecina"},{fecha:"03/03/2026",monto:90400,canal:"Caja Vecina"},
+  {fecha:"04/03/2026",monto:200000,canal:"Caja Vecina"},{fecha:"04/03/2026",monto:32000,canal:"Caja Vecina"},
+  {fecha:"05/03/2026",monto:9000,canal:"Caja Vecina"},{fecha:"05/03/2026",monto:200000,canal:"Caja Vecina"},
+  {fecha:"06/03/2026",monto:200000,canal:"Caja Vecina"},{fecha:"06/03/2026",monto:45000,canal:"Caja Vecina"},
+  {fecha:"09/03/2026",monto:200000,canal:"Caja Vecina"},{fecha:"09/03/2026",monto:120000,canal:"Caja Vecina"},
+  {fecha:"10/03/2026",monto:45000,canal:"Caja Vecina"},{fecha:"10/03/2026",monto:200000,canal:"Caja Vecina"},
+  {fecha:"11/03/2026",monto:674000,canal:"CRC 28394474"},
+  {fecha:"13/03/2026",monto:138000,canal:"Caja Vecina"},{fecha:"13/03/2026",monto:200000,canal:"Caja Vecina"},{fecha:"13/03/2026",monto:17000,canal:"Caja Vecina"},{fecha:"13/03/2026",monto:140000,canal:"Caja Vecina"},
+  {fecha:"16/03/2026",monto:51000,canal:"Caja Vecina"},
+  {fecha:"17/03/2026",monto:145000,canal:"Caja Vecina"},{fecha:"17/03/2026",monto:66000,canal:"Caja Vecina"},{fecha:"17/03/2026",monto:200000,canal:"Caja Vecina"},
+  {fecha:"18/03/2026",monto:200000,canal:"Caja Vecina"},{fecha:"18/03/2026",monto:168000,canal:"Caja Vecina"},
+  {fecha:"19/03/2026",monto:130000,canal:"Caja Vecina"},
+  {fecha:"23/03/2026",monto:200000,canal:"Caja Vecina"},{fecha:"23/03/2026",monto:150000,canal:"Caja Vecina"},{fecha:"23/03/2026",monto:124000,canal:"Caja Vecina"},{fecha:"23/03/2026",monto:84000,canal:"Caja Vecina"},{fecha:"23/03/2026",monto:164000,canal:"Caja Vecina"},{fecha:"23/03/2026",monto:5350,canal:"Caja Vecina"},
+  {fecha:"24/03/2026",monto:200000,canal:"Caja Vecina"},{fecha:"24/03/2026",monto:144000,canal:"Caja Vecina"},
+  {fecha:"26/03/2026",monto:70000,canal:"Caja Vecina"},{fecha:"26/03/2026",monto:200000,canal:"Caja Vecina"},
+  {fecha:"27/03/2026",monto:51000,canal:"Caja Vecina"},{fecha:"27/03/2026",monto:50000,canal:"Caja Vecina"},{fecha:"27/03/2026",monto:200000,canal:"Caja Vecina"},
+  {fecha:"30/03/2026",monto:200000,canal:"Caja Vecina"},{fecha:"30/03/2026",monto:37000,canal:"Caja Vecina"},{fecha:"30/03/2026",monto:46000,canal:"Caja Vecina"},{fecha:"30/03/2026",monto:23000,canal:"Caja Vecina"},
+  {fecha:"31/03/2026",monto:60000,canal:"Caja Vecina"},{fecha:"31/03/2026",monto:200000,canal:"Caja Vecina"},{fecha:"31/03/2026",monto:80000,canal:"Caja Vecina"},{fecha:"31/03/2026",monto:126000,canal:"Caja Vecina"},
+  {fecha:"01/04/2026",monto:164000,canal:"Caja Vecina (tardío)"},
+  {fecha:"02/04/2026",monto:111400,canal:"Caja Vecina (tardío)"},{fecha:"02/04/2026",monto:200000,canal:"Caja Vecina (tardío)"},
+];
+
+function renderCruzado() {
+  const tbody = document.getElementById('cruzadoBody');
+  if (!tbody) return;
+  const clp = n => n != null ? '$' + Math.round(n).toLocaleString('es-CL') : '—';
+  let totalEfvo=0, totalVd=0, totalBe=0;
+  tbody.innerHTML = cruzadoData.map(r => {
+    totalEfvo += r.efvo; totalVd += r.vd; totalBe += r.be_sum||0;
+    const eColor = r.estado==='OK' ? 'ok' : r.estado==='APROX' ? 'warn' : 'alert';
+    const eText  = r.estado==='OK' ? '&#10003; OK' : r.estado==='APROX' ? '&#8764; Aprox (FDS)' : '&#9888; Pendiente';
+    const diffTxt = r.diff != null ? (r.diff >= 0 ? '+'+clp(r.diff) : clp(r.diff)) : '—';
+    const rowClass = r.estado==='PENDIENTE' ? 'row-warn' : '';
+    const beDias = r.be_dias === 'Pendiente' ? '<em style="color:#9ca3af">Pendiente confirmar</em>' : r.be_dias;
+    return `<tr class="${rowClass}">
+      <td>${r.dias}</td>
+      <td>${clp(r.efvo)}</td>
+      <td>${r.fd}</td>
+      <td>${clp(r.vd)}</td>
+      <td>${beDias}</td>
+      <td>${r.be_sum ? clp(r.be_sum) : '<em style="color:#9ca3af">—</em>'}</td>
+      <td style="font-weight:600">${diffTxt}</td>
+      <td><span class="estado-badge ${eColor}">${eText}</span></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('cruzado-efvo-total').textContent = clp(totalEfvo);
+  document.getElementById('cruzado-vd-total').textContent = clp(totalVd);
+  document.getElementById('cruzado-be-total').textContent = clp(totalBe);
+  document.getElementById('cruzado-diff-total').textContent = (totalBe > 0 ? (totalBe-totalVd >= 0 ? '+' : '') + clp(totalBe-totalVd) : '—');
+}
+
+function renderBEFull() {
+  const tbody = document.getElementById('beFullBody');
+  if (!tbody) return;
+  const clp = n => '$' + Math.round(n).toLocaleString('es-CL');
+  let prevFecha = '';
+  tbody.innerHTML = beAllDeposits.map((r, i) => {
+    const isCRC = r.canal.includes('CRC');
+    const isAbril = r.fecha.startsWith('0') && r.fecha.includes('/04/');
+    let bg = '';
+    if (isCRC) bg = 'background:#f0fdf4';
+    else if (isAbril) bg = 'background:#fffbeb';
+    else if (i % 2 === 1) bg = 'background:var(--row-alt)';
+    const canalBadge = isCRC ? `<span class="estado-badge ok">CRC</span>` : isAbril ? `<span class="estado-badge warn">Abril</span>` : '';
+    return `<tr style="${bg}"><td>${r.fecha}</td><td style="font-weight:600">${clp(r.monto)}</td><td>${r.canal} ${canalBadge}</td></tr>`;
+  }).join('');
+}
+
+// ==================== COMPARACION CAJA vs BE ====================
+const comparacionData = [
+  {"fecha":"02/03/2026","caja":200000,"be":321000,"diff":-121000},
+  {"fecha":"03/03/2026","caja":140400,"be":340400,"diff":-200000},
+  {"fecha":"04/03/2026","caja":0,"be":232000,"diff":-232000},
+  {"fecha":"05/03/2026","caja":454000,"be":209000,"diff":245000},
+  {"fecha":"06/03/2026","caja":520000,"be":245000,"diff":275000},
+  {"fecha":"09/03/2026","caja":845000,"be":520000,"diff":325000},
+  {"fecha":"10/03/2026","caja":200000,"be":1045000,"diff":-845000},
+  {"fecha":"11/03/2026","caja":674000,"be":674000,"diff":0},
+  {"fecha":"12/03/2026","caja":338000,"be":0,"diff":338000},
+  {"fecha":"13/03/2026","caja":157000,"be":495000,"diff":-338000},
+  {"fecha":"14/03/2026","caja":351000,"be":0,"diff":351000},
+  {"fecha":"16/03/2026","caja":0,"be":51000,"diff":-51000},
+  {"fecha":"17/03/2026","caja":779000,"be":411000,"diff":368000},
+  {"fecha":"18/03/2026","caja":130000,"be":368000,"diff":-238000},
+  {"fecha":"19/03/2026","caja":0,"be":130000,"diff":-130000},
+  {"fecha":"20/03/2026","caja":674000,"be":0,"diff":674000},
+  {"fecha":"22/03/2026","caja":248000,"be":0,"diff":248000},
+  {"fecha":"23/03/2026","caja":549350,"be":927350,"diff":-378000},
+  {"fecha":"24/03/2026","caja":0,"be":544000,"diff":-544000},
+  {"fecha":"25/03/2026","caja":270000,"be":0,"diff":270000},
+  {"fecha":"26/03/2026","caja":501000,"be":270000,"diff":231000},
+  {"fecha":"27/03/2026","caja":483000,"be":501000,"diff":-18000},
+  {"fecha":"28/03/2026","caja":423000,"be":0,"diff":423000},
+  {"fecha":"30/03/2026","caja":866000,"be":906000,"diff":-40000},
+  {"fecha":"31/03/2026","caja":164000,"be":866000,"diff":-702000},
+  {"fecha":"01/04/2026","caja":0,"be":164000,"diff":-164000},
+  {"fecha":"02/04/2026","caja":311400,"be":0,"diff":311400}
+];
+
+function renderComparacion() {
+  const tbody = document.getElementById('comparacionBody');
+  const tfoot = document.getElementById('comparacionFoot');
+  let totalCaja = 0, totalBE = 0;
+
+  tbody.innerHTML = comparacionData.map((r, i) => {
+    totalCaja += r.caja;
+    totalBE += r.be;
+    const absDiff = Math.abs(r.diff);
+    const pct = Math.max(r.caja, r.be) > 0 ? absDiff / Math.max(r.caja, r.be) : 0;
+    let estado, badge, bg;
+    if (r.caja === 0 && r.be > 0) {
+      estado = 'SOLO BANCO'; badge = `<span class="estado-badge warn">Solo BE</span>`; bg = 'background:#fffbeb';
+    } else if (r.be === 0 && r.caja > 0) {
+      estado = 'SIN CONFIRMAR'; badge = `<span class="estado-badge warn">Sin depósito</span>`; bg = 'background:#fff7ed';
+    } else if (r.diff === 0) {
+      estado = 'OK'; badge = `<span class="estado-badge ok">OK</span>`; bg = 'background:#f0fdf4';
+    } else if (pct <= 0.05) {
+      estado = 'APROX'; badge = `<span class="estado-badge warn">~OK</span>`; bg = 'background:#fffbeb';
+    } else {
+      estado = 'DIFIERE'; badge = `<span class="estado-badge alert">Difiere</span>`; bg = 'background:#fff1f2';
+    }
+    const diffStr = r.diff === 0 ? '—' : (r.diff > 0 ? `+${clp(r.diff)}` : clp(r.diff));
+    const diffColor = r.diff > 0 ? 'color:#d97706' : r.diff < 0 ? 'color:#2563eb' : 'color:#16a34a';
+    return `<tr style="${bg};border-bottom:1px solid var(--border)">
+      <td style="padding:9px 14px;font-weight:500">${r.fecha}</td>
+      <td style="padding:9px 14px;text-align:right">${r.caja ? clp(r.caja) : '<span style="color:#9ca3af">—</span>'}</td>
+      <td style="padding:9px 14px;text-align:right">${r.be ? clp(r.be) : '<span style="color:#9ca3af">—</span>'}</td>
+      <td style="padding:9px 14px;text-align:right;font-weight:600;${diffColor}">${diffStr}</td>
+      <td style="padding:9px 14px;text-align:center">${badge}</td>
+    </tr>`;
+  }).join('');
+
+  const gap = totalCaja - totalBE;
+  const gapColor = Math.abs(gap) < 100000 ? 'color:#16a34a' : 'color:#dc2626';
+  tfoot.innerHTML = `<tr style="background:var(--bg-card);border-top:2px solid var(--border);font-weight:700">
+    <td style="padding:10px 14px">TOTAL</td>
+    <td style="padding:10px 14px;text-align:right">${clp(totalCaja)}</td>
+    <td style="padding:10px 14px;text-align:right">${clp(totalBE)}</td>
+    <td style="padding:10px 14px;text-align:right;${gapColor}">${gap >= 0 ? '+' : ''}${clp(gap)}</td>
+    <td style="padding:10px 14px;text-align:center"><span class="estado-badge ${Math.abs(gap)<100000?'ok':'alert'}">GAP ${clp(Math.abs(gap))}</span></td>
+  </tr>`;
+}
+
+// ==================== INIT ====================
+document.addEventListener('DOMContentLoaded', () => {
+  buildEfectivo();
+  buildTransf();
+  buildTbkPac();
+  buildEgresos();
+  buildChartResumen();
+  buildChartEfectivo();
+  renderCruzado();
+  renderBEFull();
+  renderComparacion();
+});
+</script>
+
+    <!-- TAB: DETALLE TRANSFERENCIAS -->
+    <div id="tab-tf_detalle" class="tab-panel">
+      <div class="section-header">
+        <h2>Conciliación Individual — Transferencias</h2>
+        <p>Cada transferencia registrada en pacientes diarios cruzada contra los abonos del extracto Itaú</p>
+      </div>
+
+      <!-- Summary Cards -->
+      <div class="cards-grid" style="grid-template-columns:repeat(4,1fr)">
+        <div class="card" style="border-left:4px solid var(--green)">
+          <div class="card-label">Conciliadas</div>
+          <div class="card-value" style="color:var(--green)">281</div>
+          <div class="card-sub" style="color:var(--green)">$4,972,390</div>
+          <div class="card-label">registros matcheados</div>
+        </div>
+        <div class="card" style="border-left:4px solid var(--red)">
+          <div class="card-label">Sin respaldo bancario</div>
+          <div class="card-value" style="color:var(--red)">86</div>
+          <div class="card-sub" style="color:var(--red)">$1,391,854</div>
+          <div class="card-label">registrados pero no en Itaú</div>
+        </div>
+        <div class="card" style="border-left:4px solid var(--yellow)">
+          <div class="card-label">Itaú sin registro</div>
+          <div class="card-value" style="color:var(--yellow)">102</div>
+          <div class="card-sub" style="color:var(--yellow)">$2,381,858</div>
+          <div class="card-label">abonos sin paciente registrado</div>
+        </div>
+        <div class="card" style="border-left:4px solid #8b5cf6">
+          <div class="card-label">Aportes / Capital</div>
+          <div class="card-value" style="color:#8b5cf6">13</div>
+          <div class="card-sub" style="color:#8b5cf6">$6,342,000</div>
+          <div class="card-label">transferencias no pacientes (Rodrigo/otros)</div>
+        </div>
+      </div>
+
+      <!-- ALERTA PRINCIPAL -->
+      <div class="card" style="border-left:4px solid var(--red);background:var(--red-light);margin-bottom:16px">
+        <strong style="color:var(--red)">&#9888; Hallazgo principal:</strong>
+        <span> 86 pacientes registrados como transferencia no tienen abono equivalente en Itaú ($1,391,854).
+        Adicionalmente, 102 abonos llegaron al banco sin registro de paciente ($2,381,858).
+        Esto puede indicar: registros con método de pago incorrecto, pacientes no ingresados, o servicios no facturados.</span>
+      </div>
+
+      <!-- TABS internas -->
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+        <button onclick="tfTab('nok')" id="tf-btn-nok" class="tf-btn tf-btn-active" style="padding:8px 16px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;background:var(--red);color:#fff">
+          &#9888; Sin respaldo bancario (86)
+        </button>
+        <button onclick="tfTab('ep')" id="tf-btn-ep" style="padding:8px 16px;border:1px solid var(--yellow);border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;background:#fff;color:var(--yellow)">
+          &#128269; Itaú sin registro (102)
+        </button>
+        <button onclick="tfTab('epp')" id="tf-btn-epp" style="padding:8px 16px;border:1px solid #8b5cf6;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;background:#fff;color:#8b5cf6">
+          &#128100; Aportes / Capital (13)
+        </button>
+        <button onclick="tfTab('ok')" id="tf-btn-ok" style="padding:8px 16px;border:1px solid var(--green);border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;background:#fff;color:var(--green)">
+          &#10003; Conciliadas (281)
+        </button>
+      </div>
+
+      <!-- Filtro búsqueda -->
+      <div style="margin-bottom:12px">
+        <input id="tf-search" type="text" placeholder="Buscar por nombre o monto..."
+          oninput="tfFilter()"
+          style="padding:8px 14px;border:1px solid var(--border);border-radius:8px;width:320px;font-size:13px">
+      </div>
+
+      <!-- Tabla dinámica -->
+      <div class="card" style="padding:0;overflow:hidden">
+        <div style="overflow-x:auto;max-height:600px;overflow-y:auto">
+          <table id="tf-table" style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead id="tf-thead" style="position:sticky;top:0;background:#1a1f2e;color:#fff;z-index:2">
+              <tr id="tf-thead-row"></tr>
+            </thead>
+            <tbody id="tf-tbody"></tbody>
+          </table>
+        </div>
+        <div id="tf-footer" style="padding:10px 16px;background:var(--row-alt);border-top:1px solid var(--border);font-size:13px;font-weight:600;color:var(--text-primary)"></div>
+      </div>
+
+    </div><!-- /tab-tf_detalle -->
+
+
+<script>
+
+// ==================== DETALLE TRANSFERENCIAS ====================
+const tfNok = [{"fecha": "03/03/2026", "paciente": "Contanza Vega Carrillo", "profesional": "Tirso Rejon", "monto": 30000.0}, {"fecha": "04/03/2026", "paciente": "Nicolás Martínez", "profesional": "Juana Arratia", "monto": 25000.0}, {"fecha": "05/03/2026", "paciente": "Maria Reyes La Regla", "profesional": "Sarai Gomez", "monto": 16000.0}, {"fecha": "05/03/2026", "paciente": "Amanda Tiznado", "profesional": "Andres Abarca", "monto": 7750.0}, {"fecha": "05/03/2026", "paciente": "Pedro Navarrete Navarrete", "profesional": "Andres Abarca", "monto": 7750.0}, {"fecha": "06/03/2026", "paciente": "Amanda Saez Ulloa", "profesional": "Rodrigo Olavarría", "monto": 7750.0}, {"fecha": "07/03/2026", "paciente": "Agustin Salas Ulloa", "profesional": "Jorge Montalba", "monto": 14170.0}, {"fecha": "07/03/2026", "paciente": "Amanda Salas Ulloa", "profesional": "Gisela Pinto", "monto": 4680.0}, {"fecha": "07/03/2026", "paciente": "Agustín Salazar Fuentes", "profesional": "Rodrigo Olavarria", "monto": 7750.0}, {"fecha": "07/03/2026", "paciente": "Natalia Vásquez Fuentes", "profesional": "Rodrigo Olavarria", "monto": 7750.0}, {"fecha": "07/03/2026", "paciente": "Maite Valdebenito Yaupe", "profesional": "Daniela Castillo", "monto": 30000.0}, {"fecha": "07/03/2026", "paciente": "Armin Valdebenito Yaupe", "profesional": "Daniela Castillo", "monto": 30000.0}, {"fecha": "09/03/2026", "paciente": "Diego Salinas Conbeau", "profesional": "David Pardo", "monto": 40000.0}, {"fecha": "09/03/2026", "paciente": "Ana Lizana Quezada", "profesional": "David Pardo", "monto": 40000.0}, {"fecha": "09/03/2026", "paciente": "Jorge Andrés Cuevas Venegas", "profesional": "David Pardo", "monto": 40000.0}, {"fecha": "09/03/2026", "paciente": "Baldremina Martínez Peña", "profesional": "Leonardo Etcheverry", "monto": 7700.0}, {"fecha": "10/03/2026", "paciente": "Lucas Esteban Huerta Zarate", "profesional": "Rodrigo Olavarria", "monto": 7750.0}, {"fecha": "10/03/2026", "paciente": "David Ignacio Huerta Zarate", "profesional": "Rodrigo Olavarria", "monto": 7750.0}, {"fecha": "11/03/2026", "paciente": "Celeste Delgado Mardones", "profesional": "Alonso Marquez", "monto": 30000.0}, {"fecha": "11/03/2026", "paciente": "Bruno Rivera Medina", "profesional": "Alonso Marquez", "monto": 2320.0}, {"fecha": "12/03/2026", "paciente": "Carmen Neira Lozano", "profesional": "Leonardo Etcheverry", "monto": 10190.0}, {"fecha": "12/03/2026", "paciente": "Karina Vanessa Sepúlveda Hernández", "profesional": "Gisela Pinto", "monto": 4680.0}, {"fecha": "13/03/2026", "paciente": "María José Ávila Chamblas", "profesional": "Alonso Marquez", "monto": 7750.0}, {"fecha": "13/03/2026", "paciente": "Santiago Aaron Cartes Samora", "profesional": "Rodrigo Olavarría", "monto": 25000.0}, {"fecha": "14/03/2026", "paciente": "Luz Eliana Landeros Rojas", "profesional": "Sarai Gomez", "monto": 16000.0}, {"fecha": "14/03/2026", "paciente": "Sandra Patricia Navarro Delgado", "profesional": "Rodrigo Olavarría", "monto": 7750.0}, {"fecha": "14/03/2026", "paciente": "Mateo Muñoz Rojas", "profesional": "Rodrigo Olavarría", "monto": 3875.0}, {"fecha": "14/03/2026", "paciente": "Bruno Muñoz Rojas", "profesional": "Rodrigo Olavarría", "monto": 3875.0}, {"fecha": "14/03/2026", "paciente": "Valentina Rojas Ramos", "profesional": "Rodrigo Olavarría", "monto": 7750.0}, {"fecha": "14/03/2026", "paciente": "Emilia Catalina Fuentes Roa", "profesional": "Rodrigo Olavarría", "monto": 25000.0}, {"fecha": "14/03/2026", "paciente": "Catalina Roa Gonzalez", "profesional": "Rodrigo Olavarría", "monto": 7750.0}, {"fecha": "16/03/2026", "paciente": "Damian Opazo Molina", "profesional": "Alonso Marquez", "monto": 7880.0}, {"fecha": "16/03/2026", "paciente": "Matias Antonio De la barra De la Barra", "profesional": "Alonso Marquez", "monto": 16000.0}, {"fecha": "16/03/2026", "paciente": "Pamela Medina Hernandez", "profesional": "Rodrigo Olavarría", "monto": 7880.0}, {"fecha": "17/03/2026", "paciente": "Diana Cordero", "profesional": "Tirso Rejon", "monto": 65000.0}, {"fecha": "17/03/2026", "paciente": "Florencia Alvarado Lazo", "profesional": "Rodrigo Olavarria", "monto": 7880.0}, {"fecha": "17/03/2026", "paciente": "Tomas Alvarado Lazo", "profesional": "Rodrigo Olavarria", "monto": 7880.0}, {"fecha": "18/03/2026", "paciente": "Cristian Placencia Pardo", "profesional": "Alonso Marquez", "monto": 7880.0}, {"fecha": "18/03/2026", "paciente": "Franco Agustín Cruz Zúñiga", "profesional": "Alonso Marquez", "monto": 7880.0}, {"fecha": "19/03/2026", "paciente": "Riola Garcia Vera", "profesional": "Andres Abarca", "monto": 2580.0}, {"fecha": "19/03/2026", "paciente": "Rodrigo Ignacio Betanzo Salamanca", "profesional": "Leonardo Etcheverry", "monto": 4566.0}, {"fecha": "19/03/2026", "paciente": "Emilia Jael Muñoz Chávez", "profesional": "Rodrigo Olavarría", "monto": 2364.0}, {"fecha": "20/03/2026", "paciente": "Sebastian Valenzuela La Regla", "profesional": "Leonardo Etcheverry", "monto": 1570.0}, {"fecha": "20/03/2026", "paciente": "Barbara Castillo Riffo", "profesional": "Andres Abarca", "monto": 2360.0}, {"fecha": "20/03/2026", "paciente": "Rodrigo Ignacio Betanzo Salamanca", "profesional": "Leonardo Etcheverry", "monto": 1566.0}, {"fecha": "20/03/2026", "paciente": "Jose alonso Pujol lazo", "profesional": "Alonso  Marquez", "monto": 7880.0}, {"fecha": "20/03/2026", "paciente": "Manuel Mardones Quinteros", "profesional": "Leonardo Etcheverry", "monto": 4983.0}, {"fecha": "20/03/2026", "paciente": "Gaspar Arce Inostroza", "profesional": "Alonso  Marquez", "monto": 7880.0}, {"fecha": "20/03/2026", "paciente": "Pedro Ignacio Medina Medina", "profesional": "Andres Abarca", "monto": 15000.0}, {"fecha": "20/03/2026", "paciente": "Santiago Eleazar Arce Inostroza", "profesional": "Alonso  Marquez", "monto": 7880.0}, {"fecha": "20/03/2026", "paciente": "Manuel Mardones Quinteros", "profesional": "Leonardo Etcheverry", "monto": 4098.0}, {"fecha": "20/03/2026", "paciente": "Karen Saihueque Jofré", "profesional": "Rodrigo Olavarría", "monto": 7880.0}, {"fecha": "20/03/2026", "paciente": "Rosa Flores Henríquez", "profesional": "Leonardo Etcheverry", "monto": 3640.0}, {"fecha": "20/03/2026", "paciente": "Agustín Alonso Arce paillao", "profesional": "Alonso Marquez", "monto": 30000.0}, {"fecha": "21/03/2026", "paciente": "Armin Valdebenito Yaupe", "profesional": "Luis Armijo", "monto": 25000.0}, {"fecha": "21/03/2026", "paciente": "Alejandro Inostroza Rivas", "profesional": "Daniela Castillo", "monto": 30000.0}, {"fecha": "21/03/2026", "paciente": "Eduardo Cruz Guzmán", "profesional": "Daniela Castillo", "monto": 30000.0}, {"fecha": "24/03/2026", "paciente": "Belen Veloso Martinez", "profesional": "Andres Abarca", "monto": 7880.0}, {"fecha": "24/03/2026", "paciente": "Lukas Peña Rioseco", "profesional": "Rodrigo Olavarría", "monto": 7880.0}, {"fecha": "24/03/2026", "paciente": "Bastián Andrés Celedon Rioseco", "profesional": "Rodrigo Olavarría", "monto": 7880.0}, {"fecha": "26/03/2026", "paciente": "Wilson Quezada", "profesional": "Andres Abarca", "monto": 7880.0}, {"fecha": "26/03/2026", "paciente": "Ronny Sebastián Aravena Saez", "profesional": "Rodrigo Olavarria", "monto": 7880.0}, {"fecha": "26/03/2026", "paciente": "Evelyn Fabiana Aguilera Leal", "profesional": "Rodrigo Olavarria", "monto": 2360.0}, {"fecha": "27/03/2026", "paciente": "Vanessa Gutierrez", "profesional": "andres Abarca", "monto": 250000.0}, {"fecha": "27/03/2026", "paciente": "Esteban Ruiz Rodríguez", "profesional": "Claudio Barraza", "monto": 35000.0}, {"fecha": "27/03/2026", "paciente": "Cristian Andres Arias Torres", "profesional": "Leonardo Etcheverry", "monto": 2350.0}, {"fecha": "27/03/2026", "paciente": "Manuel Mardones Quinteros", "profesional": "Leonardo Etcheverry", "monto": 4980.0}, {"fecha": "27/03/2026", "paciente": "Cristian Andres Arias Torres", "profesional": "Claudio Barraza", "monto": 20000.0}, {"fecha": "27/03/2026", "paciente": "Manuel Mardones Quinteros", "profesional": "Claudio Barraza", "monto": 35000.0}, {"fecha": "27/03/2026", "paciente": "Josefa Ignacia Pereira Riquelme", "profesional": "Rodrigo Olavarria", "monto": 3152.0}, {"fecha": "27/03/2026", "paciente": "Camilo León Inostroza", "profesional": "Rodrigo Olavarria", "monto": 7880.0}, {"fecha": "28/03/2026", "paciente": "Camilo León Inostroza", "profesional": "Miguel Millán", "monto": 40000.0}, {"fecha": "28/03/2026", "paciente": "Guillermo Navarrete Oviedo", "profesional": "Daniela Castillo", "monto": 30000.0}, {"fecha": "30/03/2026", "paciente": "Dionisio Parra Fuentes", "profesional": "Leonardo Etcheverry", "monto": 1566.0}, {"fecha": "30/03/2026", "paciente": "Karina Neira Aguilar", "profesional": "Leonardo Etcheverry", "monto": 1566.0}, {"fecha": "30/03/2026", "paciente": "Francisco olivares", "profesional": "Andres Abarca", "monto": 2360.0}, {"fecha": "30/03/2026", "paciente": "Mathias Arratia Burgos", "profesional": "Alonso Marquez", "monto": 30000.0}, {"fecha": "30/03/2026", "paciente": "Analía Arias Mardones", "profesional": "Alonso Marquez", "monto": 7880.0}, {"fecha": "30/03/2026", "paciente": "Jessie Alejandra Mardones Quinteros", "profesional": "Alonso Marquez", "monto": 7880.0}, {"fecha": "30/03/2026", "paciente": "Esteban Alonso Chávez Contador", "profesional": "Rodrigo Olavarría", "monto": 7880.0}, {"fecha": "30/03/2026", "paciente": "Camila Contador Vera", "profesional": "Rodrigo Olavarría", "monto": 7880.0}, {"fecha": "30/03/2026", "paciente": "Maximiliano Cárdenas Sáez", "profesional": "Alonso Marquez", "monto": 30000.0}, {"fecha": "30/03/2026", "paciente": "Lucia Parra Gutierrez", "profesional": "Alonso Marquez", "monto": 7880.0}, {"fecha": "30/03/2026", "paciente": "Alex Edgardo Lagos Morales", "profesional": "Rodrigo Olavarría", "monto": 5863.0}, {"fecha": "31/03/2026", "paciente": "Sofia Macarena Lepe Bastias", "profesional": "Andres Abarca", "monto": 7880.0}, {"fecha": "31/03/2026", "paciente": "Nataly Leal Fuentealba", "profesional": "Andres Abarca", "monto": 1830.0}];
+const tfEp  = [{"fecha": "02/03/2026", "desc": "TRANSFERENCIA DE BETANZO SALAM", "monto": 1540.0}, {"fecha": "02/03/2026", "desc": "TRANSFERENCIA DE SEPULVEDA SAE", "monto": 35000.0}, {"fecha": "02/03/2026", "desc": "TRANSFERENCIA DE FUENTEALBA TO", "monto": 35000.0}, {"fecha": "02/03/2026", "desc": "TRANSFERENCIA DE FRIZ NAVARRO", "monto": 2320.0}, {"fecha": "02/03/2026", "desc": "TRANSFERENCIA DE RAMIREZ VILO", "monto": 7750.0}, {"fecha": "02/03/2026", "desc": "TRANSFERENCIA DE PARRA GARRIDO", "monto": 30000.0}, {"fecha": "02/03/2026", "desc": "TRANSFERENCIA DE OLIVARES MILL", "monto": 20000.0}, {"fecha": "02/03/2026", "desc": "TRANSFERENCIA DE ELIZABETH DEL", "monto": 75000.0}, {"fecha": "02/03/2026", "desc": "TRANSFERENCIA DE FLORES FERNAN", "monto": 4680.0}, {"fecha": "02/03/2026", "desc": "TRANSFERENCIA DE BASTIAS VIGUE", "monto": 30000.0}, {"fecha": "02/03/2026", "desc": "TRANSF. DE ELIZABETH DEL CARME", "monto": 1.0}, {"fecha": "02/03/2026", "desc": "TRANSFERENCIA DE GATICA CASTIL", "monto": 30000.0}, {"fecha": "02/03/2026", "desc": "TRANSFERENCIA DE OVIEDO SANHUE", "monto": 60000.0}, {"fecha": "03/03/2026", "desc": "TRANSFERENCIA DE PEREZ GODOY M", "monto": 10000.0}, {"fecha": "04/03/2026", "desc": "TRANSFERENCIA DE BETANZO SAEZ", "monto": 30000.0}, {"fecha": "05/03/2026", "desc": "TRANSFERENCIA DE VILLAGRAN FRE", "monto": 25000.0}, {"fecha": "05/03/2026", "desc": "TRANSFERENCIA DE DIAZ CASTILLO", "monto": 4680.0}, {"fecha": "06/03/2026", "desc": "TRANSFERENCIA DE CECILIA DEL R", "monto": 15000.0}, {"fecha": "06/03/2026", "desc": "TRANSFERENCIA DE CECILIA DEL R", "monto": 16000.0}, {"fecha": "09/03/2026", "desc": "TRANSFERENCIA DE ULLOA CARRILL", "monto": 15500.0}, {"fecha": "09/03/2026", "desc": "TRANSFERENCIA DE MARIA VICTORI", "monto": 18850.0}, {"fecha": "09/03/2026", "desc": "TRANSFERENCIA DE FUENTES FUENT", "monto": 15500.0}, {"fecha": "09/03/2026", "desc": "TRANSFERENCIA DE YAUPE AREVALO", "monto": 60000.0}, {"fecha": "09/03/2026", "desc": "TRANSFERENCIA DE GALLARDO MART", "monto": 8000.0}, {"fecha": "10/03/2026", "desc": "TRANSFERENCIA DE BETANZO SAEZ", "monto": 40000.0}, {"fecha": "10/03/2026", "desc": "TRANSFERENCIA DE BETANZO SAEZ", "monto": 40000.0}, {"fecha": "10/03/2026", "desc": "TRANSFERENCIA DE BETANZO SAEZ", "monto": 40000.0}, {"fecha": "11/03/2026", "desc": "TRANSFERENCIA DE ZARATE BARRIG", "monto": 15500.0}, {"fecha": "12/03/2026", "desc": "TRANSFERENCIA DE CAMILA BELEN", "monto": 30000.0}, {"fecha": "12/03/2026", "desc": "TRANSFERENCIA DE SCARLET YAMIL", "monto": 2325.0}, {"fecha": "13/03/2026", "desc": "TRANSFERENCIA DE BETANZO S5EZ", "monto": 10190.0}, {"fecha": "16/03/2026", "desc": "TRANSFERENCIA DE GARCIA EVANS", "monto": 15500.0}, {"fecha": "16/03/2026", "desc": "TRANSFERENCIA DE ALEJANDRO ALB", "monto": 7750.0}, {"fecha": "16/03/2026", "desc": "TRANSFERENCIA DE SAMORA JELDRE", "monto": 25000.0}, {"fecha": "16/03/2026", "desc": "TRANSFERENCIA DE AEDO BURGOS P", "monto": 300000.0}, {"fecha": "16/03/2026", "desc": "TRANSFERENCIA DE LAGOS MALDONA", "monto": 15000.0}, {"fecha": "16/03/2026", "desc": "TRANSFERENCIA DE LANDEROS ROJA", "monto": 16680.0}, {"fecha": "16/03/2026", "desc": "TRANSFERENCIA DE LANDEROS ROJA", "monto": 4000.0}, {"fecha": "16/03/2026", "desc": "TRANSFERENCIA DE ANDREA CAROLI", "monto": 15500.0}, {"fecha": "16/03/2026", "desc": "TRANSFERENCIA DE FUENTES ALARC", "monto": 32750.0}, {"fecha": "16/03/2026", "desc": "TRANSFERENCIA DE ULLOA MARTINE", "monto": 4000.0}, {"fecha": "16/03/2026", "desc": "TRANSFERENCIA DE BETSABET CRIS", "monto": 4770.0}, {"fecha": "17/03/2026", "desc": "TRANSFERENCIA DE ERIC WLADIMIR", "monto": 15760.0}, {"fecha": "17/03/2026", "desc": "TRANSFERENCIA DE MATAMALA DIAZ", "monto": 16000.0}, {"fecha": "17/03/2026", "desc": "TRANSFERENCIA DE CORDERO CEIJA", "monto": 30000.0}, {"fecha": "17/03/2026", "desc": "TRANSFERENCIA DE CORDERO CEIJA", "monto": 35000.0}, {"fecha": "18/03/2026", "desc": "TRANSFERENCIA DE VALENZUELA LA", "monto": 1540.0}, {"fecha": "18/03/2026", "desc": "TRANSFERENCIA DE CRISTIAN DANI", "monto": 15760.0}, {"fecha": "19/03/2026", "desc": "TRANSFERENCIA DE MARCIA LORENA", "monto": 7880.0}, {"fecha": "19/03/2026", "desc": "TRANSFERENCIA DE GARCIA VERA R", "monto": 2584.0}, {"fecha": "20/03/2026", "desc": "TRANSFERENCIA DE LORENA IRENE", "monto": 4000.0}, {"fecha": "20/03/2026", "desc": "TRANSFERENCIA DE JULIO ANDRES", "monto": 2364.0}, {"fecha": "20/03/2026", "desc": "TRANSFERENCIA DE CASTILLO RIFF", "monto": 2364.0}, {"fecha": "23/03/2026", "desc": "TRANSFERENCIA DE BETANZO SALAM", "monto": 3132.0}, {"fecha": "23/03/2026", "desc": "TRANSFERENCIA DE MEDINA MEDINA", "monto": 16000.0}, {"fecha": "23/03/2026", "desc": "TRANSFERENCIA DE MARDONES QUIN", "monto": 9081.0}, {"fecha": "23/03/2026", "desc": "TRANSFERENCIA DE INOSTROZA FER", "monto": 15760.0}, {"fecha": "23/03/2026", "desc": "TRANSFERENCIA DE GARCIA CISTER", "monto": 30000.0}, {"fecha": "23/03/2026", "desc": "TRANSFERENCIA DE YAUPE AREVALO", "monto": 25008.0}, {"fecha": "23/03/2026", "desc": "TRANSFERENCIA DE PABLO ANDRES", "monto": 30000.0}, {"fecha": "24/03/2026", "desc": "TRANSFERENCIA DE JUAN CARLOS G", "monto": 15760.0}, {"fecha": "25/03/2026", "desc": "TRANSFERENCIA DE MARTINEZ BURD", "monto": 15760.0}, {"fecha": "25/03/2026", "desc": "TRANSFERENCIA DE NATALIE DE JE", "monto": 15760.0}, {"fecha": "27/03/2026", "desc": "TRANSFERENCIA DE ITURRA PEZO J", "monto": 25000.0}, {"fecha": "30/03/2026", "desc": "TRANSFERENCIA DE ARIAS TORRES", "monto": 22350.0}, {"fecha": "30/03/2026", "desc": "TRANSFERENCIA DE MARGARITA AND", "monto": 35000.0}, {"fecha": "30/03/2026", "desc": "TRANSFERENCIA DE MARDONES QUIN", "monto": 39980.0}, {"fecha": "30/03/2026", "desc": "TRANSFERENCIA DE ANDRES ELIAS", "monto": 3152.0}, {"fecha": "30/03/2026", "desc": "TRANSFERENCIA DE OVIEDO SANHUE", "monto": 60000.0}, {"fecha": "30/03/2026", "desc": "TRANSFERENCIA DE PARRA FUENTES", "monto": 3130.0}, {"fecha": "30/03/2026", "desc": "TRANSFERENCIA DE PABLO ANTONIO", "monto": 7650.0}, {"fecha": "30/03/2026", "desc": "TRANSFERENCIA DE MIRANDA CARRI", "monto": 4730.0}, {"fecha": "31/03/2026", "desc": "TRANSFERENCIA DE MARDONES QUIN", "monto": 15760.0}, {"fecha": "31/03/2026", "desc": "TRANSFERENCIA DE CONTADOR VERA", "monto": 15760.0}, {"fecha": "31/03/2026", "desc": "TRANSFERENCIA DE SARAVIA ORTIZ", "monto": 5863.0}, {"fecha": "31/03/2026", "desc": "TRANSFERENCIA DE LEAL FUENTEAL", "monto": 1828.0}, {"fecha": "01/04/2026", "desc": "Transferencia De Mardones Qu", "monto": 4980.0}, {"fecha": "01/04/2026", "desc": "Transferencia De Sanhueza Be", "monto": 7880.0}, {"fecha": "01/04/2026", "desc": "Transferencia De Ibanez Belm", "monto": 3150.0}, {"fecha": "01/04/2026", "desc": "Transferencia De Parra Fuent", "monto": 9396.0}, {"fecha": "01/04/2026", "desc": "Transferencia De Gabriela Go", "monto": 30000.0}, {"fecha": "02/04/2026", "desc": "Transferencia De Paz Valenti", "monto": 200000.0}, {"fecha": "02/04/2026", "desc": "Transferencia De Javier Alej", "monto": 2364.0}, {"fecha": "02/04/2026", "desc": "Transferencia De Medina Medi", "monto": 7830.0}, {"fecha": "02/04/2026", "desc": "Transferencia De Martinez Po", "monto": 25000.0}, {"fecha": "02/04/2026", "desc": "Transferencia De Fonseca Arr", "monto": 10000.0}, {"fecha": "02/04/2026", "desc": "Transferencia De Munoz Medin", "monto": 7880.0}, {"fecha": "02/04/2026", "desc": "Transferencia De Flores Muno", "monto": 16000.0}, {"fecha": "02/04/2026", "desc": "Transferencia De Armuna Anti", "monto": 35000.0}, {"fecha": "02/04/2026", "desc": "Transferencia De Castillo Ve", "monto": 35000.0}, {"fecha": "02/04/2026", "desc": "Transferencia De Lincopi Lea", "monto": 30000.0}, {"fecha": "02/04/2026", "desc": "Transferencia De Barrales Sa", "monto": 7880.0}, {"fecha": "02/04/2026", "desc": "Transferencia De Fierro Rami", "monto": 8000.0}, {"fecha": "02/04/2026", "desc": "Transferencia De Arredondo G", "monto": 60000.0}, {"fecha": "02/04/2026", "desc": "Transferencia De Munoz Pache", "monto": 35000.0}, {"fecha": "02/04/2026", "desc": "Transferencia De Araneda Flo", "monto": 20000.0}, {"fecha": "02/04/2026", "desc": "Transferencia De Salazar Dia", "monto": 16000.0}, {"fecha": "02/04/2026", "desc": "Transferencia De Maranao Val", "monto": 4770.0}, {"fecha": "02/04/2026", "desc": "Transferencia De Angeline Ma", "monto": 1566.0}, {"fecha": "02/04/2026", "desc": "Transferencia De Rivera Conc", "monto": 7880.0}, {"fecha": "02/04/2026", "desc": "Transferencia De Acuna Moral", "monto": 70000.0}, {"fecha": "02/04/2026", "desc": "Transferencia De Cruz Valenz", "monto": 7780.0}];
+const tfEpp = [{"fecha": "11/03/2026", "desc": "TRANSFERENCIA DE PAZ VALENTINA", "monto": 1000000.0}, {"fecha": "11/03/2026", "desc": "TRANSF. DE RODRIGO FERNANDO OL", "monto": 1295000.0}, {"fecha": "11/03/2026", "desc": "TRANSF. DE RODRIGO FERNANDO OL", "monto": 600000.0}, {"fecha": "13/03/2026", "desc": "TRANSFERENCIA DE CLAUDIO FERNA", "monto": 1000000.0}, {"fecha": "16/03/2026", "desc": "TRANSFERENCIA DE CENTRO AUDITI", "monto": 80000.0}, {"fecha": "16/03/2026", "desc": "TRANSF. DE RODRIGO FERNANDO OL", "monto": 500000.0}, {"fecha": "17/03/2026", "desc": "TRANSFERENCIA DE OLAVARRIA DE", "monto": 250000.0}, {"fecha": "19/03/2026", "desc": "TRANSF. DE RODRIGO FERNANDO OL", "monto": 60000.0}, {"fecha": "23/03/2026", "desc": "TRANSFERENCIA DE CLAUDIO FERNA", "monto": 250000.0}, {"fecha": "23/03/2026", "desc": "TRANSFERENCIA DE OLAVARRIA DE", "monto": 1000000.0}, {"fecha": "23/03/2026", "desc": "TRANSFERENCIA DE OLAVARRIA DE", "monto": 200000.0}, {"fecha": "30/03/2026", "desc": "TRANSFERENCIA DE RODRIGO JAVIE", "monto": 40000.0}, {"fecha": "31/03/2026", "desc": "TRANSF. DE RODRIGO FERNANDO OL", "monto": 67000.0}];
+const tfOk  = [{"fecha": "02/03/2026", "paciente": "Yeni Andrea Mora Olivera", "profesional": "Andres Abarca", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE MORA OLIVERA", "itau_fecha": "02/03/2026"}, {"fecha": "02/03/2026", "paciente": "Enci Chamorro Retamal", "profesional": "Andres Abarca", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE ENCI PATRICIO", "itau_fecha": "02/03/2026"}, {"fecha": "02/03/2026", "paciente": "Jean Carlos Valdebenito Carrillo", "profesional": "Andres Abarca", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE VALDEBENITO C", "itau_fecha": "02/03/2026"}, {"fecha": "02/03/2026", "paciente": "Claudia Melgarejo Valencia", "profesional": "Andres Abarca", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE MOLINA MELGAR", "itau_fecha": "02/03/2026"}, {"fecha": "02/03/2026", "paciente": "Yoxsenia Medina Medina", "profesional": "Andres Abarca", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE MEDINA MEDINA", "itau_fecha": "02/03/2026"}, {"fecha": "02/03/2026", "paciente": "Claudia Carmen Toloza Alvial", "profesional": "Andres Abarca", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE SANHUEZA TOLO", "itau_fecha": "02/03/2026"}, {"fecha": "02/03/2026", "paciente": "Sebastian Valenzuela La Regla", "profesional": "Leonardo Etcheverry", "monto": 1540.0, "itau_desc": "TRANSFERENCIA DE VALENZUELA LA", "itau_fecha": "03/03/2026"}, {"fecha": "02/03/2026", "paciente": "Jocelyn Saez Troncoso", "profesional": "Alonso Marquez", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE SAEZ TRONCOSO", "itau_fecha": "03/03/2026"}, {"fecha": "02/03/2026", "paciente": "Carolina Peña", "profesional": "Andres Abarca", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE CAROLINA DEL", "itau_fecha": "03/03/2026"}, {"fecha": "02/03/2026", "paciente": "Celmira Peña Hidalgo", "profesional": "Leonardo Etcheverry", "monto": 10190.0, "itau_desc": "TRANSFERENCIA DE CELMIRA ANDRE", "itau_fecha": "03/03/2026"}, {"fecha": "02/03/2026", "paciente": "Isaías Joel Salgado Sáez", "profesional": "Fernando Fredes", "monto": 110000.0, "itau_desc": "TRANSFERENCIA DE ISAIAS JOEL S", "itau_fecha": "03/03/2026"}, {"fecha": "02/03/2026", "paciente": "Marianela Navarrete Cartes", "profesional": "Manuel Borrego", "monto": 35000.0, "itau_desc": "TRANSFERENCIA DE NAVARRETE CAR", "itau_fecha": "03/03/2026"}, {"fecha": "02/03/2026", "paciente": "Michel Saez Alarcón", "profesional": "Alonso Marquez", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE SAEZ ALARCON", "itau_fecha": "03/03/2026"}, {"fecha": "02/03/2026", "paciente": "Jonathan Sanchez Vargas", "profesional": "Jorge Montalba", "monto": 14170.0, "itau_desc": "TRANSFERENCIA DE SANCHEZ VARGA", "itau_fecha": "03/03/2026"}, {"fecha": "02/03/2026", "paciente": "Josefa Paillan Escobar", "profesional": "Andrea Guevara", "monto": 25000.0, "itau_desc": "TRANSF. DE MARIA BEATRIZ ESCOB", "itau_fecha": "03/03/2026"}, {"fecha": "02/03/2026", "paciente": "Marlene Sanhueza Velasquez", "profesional": "Manuel Borrego", "monto": 35000.0, "itau_desc": "TRANSFERENCIA DE SANHUEZA VELA", "itau_fecha": "03/03/2026"}, {"fecha": "02/03/2026", "paciente": "Uberlinda Monsalve Flores", "profesional": "Manuel Borrego", "monto": 35000.0, "itau_desc": "TRANSFERENCIA DE DOMINGUEZ MON", "itau_fecha": "03/03/2026"}, {"fecha": "02/03/2026", "paciente": "Hector Bizama Sanchez", "profesional": "Manuel Borrego", "monto": 35000.0, "itau_desc": "TRANSFERENCIA DE BIZAMA SANCHE", "itau_fecha": "03/03/2026"}, {"fecha": "02/03/2026", "paciente": "Claudio Aedo Burgos", "profesional": "Rodrigo Olavarría", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE AEDO BURGOS C", "itau_fecha": "03/03/2026"}, {"fecha": "03/03/2026", "paciente": "Maria Ortiz Fraile", "profesional": "Leonardo Etcheverry", "monto": 10190.0, "itau_desc": "TRANSFERENCIA DE ORTIZ FRAILE", "itau_fecha": "03/03/2026"}, {"fecha": "03/03/2026", "paciente": "Angélica María Vergara Irribarra", "profesional": "Andres Abarca", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE VERGARA ANGE", "itau_fecha": "03/03/2026"}, {"fecha": "03/03/2026", "paciente": "Antonella Morales Henríquez", "profesional": "Tirso Rejon", "monto": 30000.0, "itau_desc": "TRANSFERENCIA DE HENRIQUEZ JAR", "itau_fecha": "03/03/2026"}, {"fecha": "03/03/2026", "paciente": "Pablo Andres Guzman Torres", "profesional": "Tirso Rejon", "monto": 3290.0, "itau_desc": "TRANSFERENCIA DE PABLO ANDRES", "itau_fecha": "03/03/2026"}, {"fecha": "03/03/2026", "paciente": "Cristina Martinez Chavez", "profesional": "Tirso Rejon", "monto": 35000.0, "itau_desc": "TRANSFERENCIA DE MARTINEZ CHAV", "itau_fecha": "03/03/2026"}, {"fecha": "03/03/2026", "paciente": "David Alonso Medina Medina", "profesional": "Leonardo Etcheverry", "monto": 23100.0, "itau_desc": "TRANSFERENCIA DE MEDINA MEDINA", "itau_fecha": "03/03/2026"}, {"fecha": "03/03/2026", "paciente": "Susana Ortiz Flores", "profesional": "Andres Abarca", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE ORTIZ FLORES", "itau_fecha": "03/03/2026"}, {"fecha": "03/03/2026", "paciente": "Juan José Orrego Millar", "profesional": "Manuel Borrego", "monto": 35000.0, "itau_desc": "TRANSFERENCIA DE JUAN JOSE ORR", "itau_fecha": "04/03/2026"}, {"fecha": "03/03/2026", "paciente": "Bastian Andres Leiva Torres", "profesional": "Manuel Borrego", "monto": 10000.0, "itau_desc": "TRANSFERENCIA DE LEIVA TORRES", "itau_fecha": "04/03/2026"}, {"fecha": "04/03/2026", "paciente": "María Victoria Sánchez Retamal", "profesional": "Andres Abarca", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE SANCHEZ RETAM", "itau_fecha": "04/03/2026"}, {"fecha": "04/03/2026", "paciente": "Angeline Mariela Castillo Jara", "profesional": "Leonardo Etcheverry", "monto": 1540.0, "itau_desc": "TRANSFERENCIA DE CASTILLO JARA", "itau_fecha": "04/03/2026"}, {"fecha": "04/03/2026", "paciente": "Nelson Elgueta Cisternas", "profesional": "Leonardo Etcheverry", "monto": 7700.0, "itau_desc": "TRANSFERENCIA DE ELGUETA CISTE", "itau_fecha": "04/03/2026"}, {"fecha": "04/03/2026", "paciente": "Loreto Medina Salazar", "profesional": "Andres Abarca", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE CLAUDIA SALAZ", "itau_fecha": "05/03/2026"}, {"fecha": "04/03/2026", "paciente": "Sebastian Valenzuela La Regla", "profesional": "Leonardo Etcheverry", "monto": 1540.0, "itau_desc": "TRANSFERENCIA DE VALENZUELA LA", "itau_fecha": "05/03/2026"}, {"fecha": "04/03/2026", "paciente": "Uberlinda Monsalve Flores", "profesional": "Juana Arratia", "monto": 45000.0, "itau_desc": "TRANSFERENCIA DE DOMINGUEZ MON", "itau_fecha": "05/03/2026"}, {"fecha": "04/03/2026", "paciente": "Luis Fuentealba Toloza", "profesional": "Leonardo Etcheverry", "monto": 16396.0, "itau_desc": "TRANSFERENCIA DE FUENTEALBA TO", "itau_fecha": "05/03/2026"}, {"fecha": "04/03/2026", "paciente": "Loreto Medina Salazar", "profesional": "Sarai Gomez", "monto": 16000.0, "itau_desc": "TRANSFERENCIA DE CLAUDIA SALAZ", "itau_fecha": "05/03/2026"}, {"fecha": "04/03/2026", "paciente": "Cecilia Carrillo Arévalo", "profesional": "Sarai Gomez", "monto": 16000.0, "itau_desc": "TRANSFERENCIA DE CARRILLO AREV", "itau_fecha": "05/03/2026"}, {"fecha": "04/03/2026", "paciente": "Rodrigo Mora Mora", "profesional": "Alonso Marquez", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE MORA MORA ROD", "itau_fecha": "05/03/2026"}, {"fecha": "05/03/2026", "paciente": "Rodrigo Ignacio Betanzo Salamanca", "profesional": "Leonardo Etcheverry", "monto": 1540.0, "itau_desc": "TRANSFERENCIA DE BETANZO SALAM", "itau_fecha": "05/03/2026"}, {"fecha": "05/03/2026", "paciente": "Marcela Zárate Pinto", "profesional": "David Pardo", "monto": 40000.0, "itau_desc": "TRANSFERENCIA DE ZARATE PINTO", "itau_fecha": "05/03/2026"}, {"fecha": "05/03/2026", "paciente": "Rudolf Gallardo Aguayo", "profesional": "Andres Abarca", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE RUDOLF LEONAR", "itau_fecha": "05/03/2026"}, {"fecha": "05/03/2026", "paciente": "Loreto Martínez Vejar", "profesional": "Andres Abarca", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE MARTINEZ VEJA", "itau_fecha": "05/03/2026"}, {"fecha": "05/03/2026", "paciente": "Celmira Peña Hidalgo", "profesional": "Leonardo Etcheverry", "monto": 7700.0, "itau_desc": "TRANSFERENCIA DE CELMIRA ANDRE", "itau_fecha": "06/03/2026"}, {"fecha": "05/03/2026", "paciente": "Rolando Matamala Benitez", "profesional": "Andrea Guevara", "monto": 40000.0, "itau_desc": "TRANSFERENCIA DE MATAMALA BENI", "itau_fecha": "06/03/2026"}, {"fecha": "05/03/2026", "paciente": "Jeannette Patricia Parra Sáez", "profesional": "Leonardo Etcheverry", "monto": 200000.0, "itau_desc": "TRANSFERENCIA DE PARRA SAEZ JE", "itau_fecha": "06/03/2026"}, {"fecha": "05/03/2026", "paciente": "Paz Rodríguez Fierro", "profesional": "Andres Abarca", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE RODRIGUEZ SAE", "itau_fecha": "06/03/2026"}, {"fecha": "05/03/2026", "paciente": "Juan Pereira Cuevas", "profesional": "Andrea Guevara", "monto": 20000.0, "itau_desc": "TRANSFERENCIA DE PEREIRA CUEVA", "itau_fecha": "06/03/2026"}, {"fecha": "06/03/2026", "paciente": "Juan Gonzalez Neira", "profesional": "Andres Abarca", "monto": 1160.0, "itau_desc": "TRANSFERENCIA DE GONZALEZ NEIR", "itau_fecha": "06/03/2026"}, {"fecha": "06/03/2026", "paciente": "Yaritza Sepúlveda Sáez", "profesional": "Andres Abarca", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE SEPULVEDA SAE", "itau_fecha": "06/03/2026"}, {"fecha": "06/03/2026", "paciente": "Nelson Elgueta Cisternas", "profesional": "Leonardo Etcheverry", "monto": 7700.0, "itau_desc": "TRANSFERENCIA DE ELGUETA CISTE", "itau_fecha": "06/03/2026"}, {"fecha": "06/03/2026", "paciente": "Rodrigo Ignacio Betanzo Salamanca", "profesional": "Leonardo Etcheverry", "monto": 1540.0, "itau_desc": "TRANSFERENCIA DE BETANZO SALAM", "itau_fecha": "06/03/2026"}, {"fecha": "06/03/2026", "paciente": "Andrea Torrez Vasquez", "profesional": "Andres Abarca", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE TORREZ VASQUE", "itau_fecha": "06/03/2026"}, {"fecha": "06/03/2026", "paciente": "Marianela Medina Urrutia", "profesional": "Andres Abarca", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE MEDINA URRUTI", "itau_fecha": "09/03/2026"}, {"fecha": "06/03/2026", "paciente": "Sebastian Valenzuela La Regla", "profesional": "Leonardo Etcheverry", "monto": 1540.0, "itau_desc": "TRANSFERENCIA DE VALENZUELA LA", "itau_fecha": "09/03/2026"}, {"fecha": "06/03/2026", "paciente": "Nicolas Andrés Figueroa Miranda", "profesional": "Claudio Barraza", "monto": 35000.0, "itau_desc": "TRANSFERENCIA DE NICOLAS ANDRE", "itau_fecha": "09/03/2026"}, {"fecha": "06/03/2026", "paciente": "Emilia Olate Benitez", "profesional": "Alonso Marquez", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE CARRASCO CAMP", "itau_fecha": "06/03/2026"}, {"fecha": "06/03/2026", "paciente": "Víctor Gonzalo Yaupe Cruz", "profesional": "Leonardo Etcheverry", "monto": 10190.0, "itau_desc": "TRANSFERENCIA DE YAUPE CRUZ VI", "itau_fecha": "09/03/2026"}, {"fecha": "06/03/2026", "paciente": "Susana Alvial Albornoz", "profesional": "Alonso Marquez", "monto": 30000.0, "itau_desc": "TRANSFERENCIA DE LOPEZ ALVIAL", "itau_fecha": "09/03/2026"}, {"fecha": "06/03/2026", "paciente": "Agustin Salas Ulloa", "profesional": "Rodrigo Olavarría", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE OVIEDO SANHUE", "itau_fecha": "06/03/2026"}, {"fecha": "07/03/2026", "paciente": "Antonia Quezada Troncoso", "profesional": "Miguel Millan", "monto": 40000.0, "itau_desc": "TRANSFERENCIA DE TRONCOSO FIGU", "itau_fecha": "09/03/2026"}, {"fecha": "07/03/2026", "paciente": "Facundo Alarcon Mora", "profesional": "Daniela Castillo", "monto": 30000.0, "itau_desc": "TRANSFERENCIA DE ALARCON MUNOZ", "itau_fecha": "09/03/2026"}, {"fecha": "07/03/2026", "paciente": "Javier andres rocha riquelme", "profesional": "Miguel Millan", "monto": 40000.0, "itau_desc": "TRANSFERENCIA DE ROCHA RIQUELM", "itau_fecha": "09/03/2026"}, {"fecha": "07/03/2026", "paciente": "Isidora González Quezada", "profesional": "Rodrigo Olavarria", "monto": 2325.0, "itau_desc": "TRANSFERENCIA DE QUEZADA AREVA", "itau_fecha": "09/03/2026"}, {"fecha": "07/03/2026", "paciente": "Kiara Contreras Navarro", "profesional": "Daniela Castillo", "monto": 30000.0, "itau_desc": "TRANSFERENCIA DE NAVARRO CARTE", "itau_fecha": "09/03/2026"}, {"fecha": "07/03/2026", "paciente": "Patricia Garrido", "profesional": "Rodrigo Olavarria", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE PATRICIA SOLE", "itau_fecha": "09/03/2026"}, {"fecha": "07/03/2026", "paciente": "Amanda Albistur Novoa", "profesional": "rodrigo Olavarria", "monto": 3875.0, "itau_desc": "TRANSFERENCIA DE NOVOA GONZALE", "itau_fecha": "09/03/2026"}, {"fecha": "09/03/2026", "paciente": "Dirk Shmidlin Alarcón", "profesional": "Andres Abarca", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE DIRK ANDRE SC", "itau_fecha": "09/03/2026"}, {"fecha": "09/03/2026", "paciente": "Blanca Sanhueza Monsalve", "profesional": "David Pardo", "monto": 40000.0, "itau_desc": "TRANSFERENCIA DE NEIRA HERRERA", "itau_fecha": "09/03/2026"}, {"fecha": "09/03/2026", "paciente": "Cristian Neira Herrera", "profesional": "David Pardo", "monto": 40000.0, "itau_desc": "TRANSFERENCIA DE LIZANA QUEZAD", "itau_fecha": "09/03/2026"}, {"fecha": "09/03/2026", "paciente": "Carol Araneda Vasquez", "profesional": "Nicolas Quijano", "monto": 35000.0, "itau_desc": "TRANSFERENCIA DE CAROL LISETTE", "itau_fecha": "09/03/2026"}, {"fecha": "09/03/2026", "paciente": "Cristian Torres Moraga", "profesional": "David Pardo", "monto": 40000.0, "itau_desc": "TRANSFERENCIA DE CUEVAS VENEGA", "itau_fecha": "09/03/2026"}, {"fecha": "09/03/2026", "paciente": "David Alonso Medina Medina", "profesional": "Leonardo Etcheverry", "monto": 23100.0, "itau_desc": "TRANSFERENCIA DE MEDINA MEDINA", "itau_fecha": "09/03/2026"}, {"fecha": "09/03/2026", "paciente": "Etelvina Cifuentes Cartes", "profesional": "Nicolas Quijano", "monto": 35000.0, "itau_desc": "TRANSFERENCIA DE CIFUENTES CAR", "itau_fecha": "09/03/2026"}, {"fecha": "09/03/2026", "paciente": "Tomas Duran", "profesional": "Andres Abarca", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE ADRIANA CAMIL", "itau_fecha": "09/03/2026"}, {"fecha": "09/03/2026", "paciente": "Armin Valdebenito Yaupe", "profesional": "David Pardo", "monto": 80000.0, "itau_desc": "TRANSFERENCIA DE ROA BRAVO YAS", "itau_fecha": "09/03/2026"}, {"fecha": "09/03/2026", "paciente": "Luz Eliana Landeros Rojas", "profesional": "Nicolas Quijano", "monto": 35000.0, "itau_desc": "TRANSFERENCIA DE LANDEROS ROJA", "itau_fecha": "09/03/2026"}, {"fecha": "09/03/2026", "paciente": "Rodrigo Ignacio Betanzo Salamanca", "profesional": "Leonardo Etcheverry", "monto": 1540.0, "itau_desc": "TRANSFERENCIA DE BETANZO SALAM", "itau_fecha": "09/03/2026"}, {"fecha": "09/03/2026", "paciente": "Alexis wladimir silva araneda", "profesional": "Andres Abarca", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE ALEXIS WLADIM", "itau_fecha": "09/03/2026"}, {"fecha": "09/03/2026", "paciente": "José darwin mena ramirez", "profesional": "Andres Abarca", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE MENA RAMIREZ", "itau_fecha": "10/03/2026"}, {"fecha": "09/03/2026", "paciente": "Mallerly Salas salas", "profesional": "Alonso Marquez", "monto": 30000.0, "itau_desc": "TRANSFERENCIA DE SALAS SALAS M", "itau_fecha": "10/03/2026"}, {"fecha": "09/03/2026", "paciente": "Gabriel Soto Sáez", "profesional": "Manuel Borrego", "monto": 35000.0, "itau_desc": "TRANSFERENCIA DE SAEZ ESPANA J", "itau_fecha": "10/03/2026"}, {"fecha": "09/03/2026", "paciente": "Isidora Chavez Samora", "profesional": "Alonso Marquez", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE SAMORA PACHEC", "itau_fecha": "10/03/2026"}, {"fecha": "09/03/2026", "paciente": "Rafael Molina Navarro", "profesional": "Alonso Marquez", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE MOLINA MELGAR", "itau_fecha": "10/03/2026"}, {"fecha": "09/03/2026", "paciente": "Cristian Peña Vasquez", "profesional": "Alonso Marquez", "monto": 2320.0, "itau_desc": "TRANSFERENCIA DE PENA VASQUEZ", "itau_fecha": "10/03/2026"}, {"fecha": "09/03/2026", "paciente": "Luis Salas Mesa", "profesional": "Manuel Borrego", "monto": 35000.0, "itau_desc": "TRANSFERENCIA DE SALAS MESA LU", "itau_fecha": "10/03/2026"}, {"fecha": "10/03/2026", "paciente": "Mateo Navarro Sanhueza", "profesional": "Andres Abarca", "monto": 25000.0, "itau_desc": "TRANSFERENCIA DE CRISTIAN CARL", "itau_fecha": "10/03/2026"}, {"fecha": "10/03/2026", "paciente": "Griselott Villegas Medina", "profesional": "Tirso Rejón", "monto": 35000.0, "itau_desc": "TRANSFERENCIA DE MEDINA OLATE", "itau_fecha": "10/03/2026"}, {"fecha": "10/03/2026", "paciente": "Angeline Mariela Castillo Jara", "profesional": "Leonardo Etcheverry", "monto": 1540.0, "itau_desc": "TRANSFERENCIA DE ANGELINE MARI", "itau_fecha": "10/03/2026"}, {"fecha": "10/03/2026", "paciente": "Damaris Medina Olate", "profesional": "Tirso Rejón", "monto": 35000.0, "itau_desc": "TRANSFERENCIA DE ARRATIA LOPEZ", "itau_fecha": "10/03/2026"}, {"fecha": "10/03/2026", "paciente": "Daniel Gomez Neira", "profesional": "Andres Abarca", "monto": 2325.0, "itau_desc": "TRANSFERENCIA DE GOMEZ NEIRA D", "itau_fecha": "10/03/2026"}, {"fecha": "10/03/2026", "paciente": "Monica Gonzalez Pinillas", "profesional": "Tirso Rejón", "monto": 35000.0, "itau_desc": "TRANSFERENCIA DE GONZALEZ PINI", "itau_fecha": "10/03/2026"}, {"fecha": "10/03/2026", "paciente": "Monserrat Nahuel Hermosilla", "profesional": "Javiera Burgos", "monto": 30000.0, "itau_desc": "TRANSFERENCIA DE NAHUEL HERMOS", "itau_fecha": "11/03/2026"}, {"fecha": "10/03/2026", "paciente": "Maria Cristina isla", "profesional": "Jorge Montalba", "monto": 14170.0, "itau_desc": "TRANSFERENCIA DE BETSABET CRIS", "itau_fecha": "11/03/2026"}, {"fecha": "10/03/2026", "paciente": "Maite Valdebenito Yaupe", "profesional": "Javiera Burgos", "monto": 50000.0, "itau_desc": "TRANSFERENCIA DE YAUPE AREVALO", "itau_fecha": "11/03/2026"}, {"fecha": "10/03/2026", "paciente": "Cesar Figueroa Huentemil", "profesional": "Rodrigo Olavarria", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE CESAR FIGUERO", "itau_fecha": "11/03/2026"}, {"fecha": "11/03/2026", "paciente": "Leydla Gomez Fuentes", "profesional": "Andres Abarca", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE GOMEZ FUENTES", "itau_fecha": "11/03/2026"}, {"fecha": "11/03/2026", "paciente": "Florencia Muñoz Belmar", "profesional": "Javiera Burgos", "monto": 15000.0, "itau_desc": "TRANSFERENCIA DE BELMAR SANCHE", "itau_fecha": "11/03/2026"}, {"fecha": "11/03/2026", "paciente": "Lourdes Rivera Catalán", "profesional": "Andres Abarca", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE SILVA BARRIOS", "itau_fecha": "11/03/2026"}, {"fecha": "11/03/2026", "paciente": "Sergio Betanzo Avello", "profesional": "Andres Abarca", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE BETANZO LEPE", "itau_fecha": "11/03/2026"}, {"fecha": "11/03/2026", "paciente": "Celmira Peña Hidalgo", "profesional": "Leonardo Etcheverry", "monto": 7700.0, "itau_desc": "TRANSFERENCIA DE CELMIRA ANDRE", "itau_fecha": "12/03/2026"}, {"fecha": "11/03/2026", "paciente": "Sebastian Valenzuela La Regla", "profesional": "Leonardo Etcheverry", "monto": 1540.0, "itau_desc": "TRANSFERENCIA DE VALENZUELA LA", "itau_fecha": "12/03/2026"}, {"fecha": "11/03/2026", "paciente": "Luis Salas Mesa", "profesional": "Juana Arratia", "monto": 45000.0, "itau_desc": "TRANSFERENCIA DE SALAS MESA LU", "itau_fecha": "12/03/2026"}, {"fecha": "11/03/2026", "paciente": "Claudia Carmen Toloza Alvial", "profesional": "Andres Abarca", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE SANHUEZA TOLO", "itau_fecha": "12/03/2026"}, {"fecha": "11/03/2026", "paciente": "Aurora Figueroa", "profesional": "Alonso Marquez", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE INOSTROZA MAR", "itau_fecha": "11/03/2026"}, {"fecha": "11/03/2026", "paciente": "Rosa Varela campos", "profesional": "Manuel Borrego", "monto": 35000.0, "itau_desc": "TRANSFERENCIA DE VARELA SUAZO", "itau_fecha": "12/03/2026"}, {"fecha": "11/03/2026", "paciente": "Pamela Diaz Nuñez", "profesional": "Alonso Marquez", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE DIAZ NUNEZ PA", "itau_fecha": "12/03/2026"}, {"fecha": "12/03/2026", "paciente": "Misania Gallardo Aguayo", "profesional": "Andres Abarca", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE AGUAYO ROCHA", "itau_fecha": "12/03/2026"}, {"fecha": "12/03/2026", "paciente": "Juan Gonzalez Neira", "profesional": "Leonardo Etcheverry", "monto": 7700.0, "itau_desc": "TRANSFERENCIA DE GONZALEZ NEIR", "itau_fecha": "13/03/2026"}, {"fecha": "12/03/2026", "paciente": "José tomás Gavilan Velasquez", "profesional": "Andres Abarca", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE VELASQUEZ MOR", "itau_fecha": "13/03/2026"}, {"fecha": "12/03/2026", "paciente": "Carolina Peña Ibacache", "profesional": "Andres Abarca", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE CAROLINA DEL", "itau_fecha": "13/03/2026"}, {"fecha": "12/03/2026", "paciente": "Sofia Cuevas Gutierrez", "profesional": "Rodrigo Olavarría", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE GUTIERREZ CUE", "itau_fecha": "13/03/2026"}, {"fecha": "12/03/2026", "paciente": "Florencia Alarcon Gutierrez", "profesional": "Rodrigo Olavarría", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE OLATE MARTINE", "itau_fecha": "12/03/2026"}, {"fecha": "13/03/2026", "paciente": "Sebastian Valenzuela La Regla", "profesional": "Leonardo Etcheverry", "monto": 1540.0, "itau_desc": "TRANSFERENCIA DE VALENZUELA LA", "itau_fecha": "16/03/2026"}, {"fecha": "13/03/2026", "paciente": "Cristian Andres Arias Torres", "profesional": "Claudio Barraza", "monto": 35000.0, "itau_desc": "TRANSFERENCIA DE ARIAS TORRES", "itau_fecha": "13/03/2026"}, {"fecha": "13/03/2026", "paciente": "Nolvia Alejandra Olivares Millar", "profesional": "Claudio Barraza", "monto": 35000.0, "itau_desc": "TRANSFERENCIA DE OLIVARES MILL", "itau_fecha": "16/03/2026"}, {"fecha": "13/03/2026", "paciente": "Gabriel Alejandro Espinoza Espinoza", "profesional": "Alonso Marquez", "monto": 5030.0, "itau_desc": "TRANSFERENCIA DE ESPINOZA ESPI", "itau_fecha": "16/03/2026"}, {"fecha": "13/03/2026", "paciente": "Tatiana Bustos Henríquez", "profesional": "Claudio Barraza", "monto": 35000.0, "itau_desc": "TRANSFERENCIA DE BUSTOS HENRIQ", "itau_fecha": "16/03/2026"}, {"fecha": "13/03/2026", "paciente": "Sebastian Gutierrez Muñoz", "profesional": "Alonso Marquez", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE GUTIERREZ MAR", "itau_fecha": "16/03/2026"}, {"fecha": "13/03/2026", "paciente": "Elvis Sandoval Figueroa", "profesional": "Claudio Barraza", "monto": 35000.0, "itau_desc": "TRANSFERENCIA DE SANDOVAL FIGU", "itau_fecha": "16/03/2026"}, {"fecha": "13/03/2026", "paciente": "Sophia Jimenez Moraga", "profesional": "Alonso Marquez", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE MORAGA ORELLA", "itau_fecha": "16/03/2026"}, {"fecha": "13/03/2026", "paciente": "Cataleya Burgos Torres", "profesional": "Alonso Marquez", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE TORRES IRRIBA", "itau_fecha": "16/03/2026"}, {"fecha": "13/03/2026", "paciente": "Celeste Elisabet Garcia Navarro", "profesional": "Rodrigo Olavarría", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE DIEGO ALONSO", "itau_fecha": "13/03/2026"}, {"fecha": "13/03/2026", "paciente": "Luis Garcia Navarro", "profesional": "Rodrigo Olavarría", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE NAVARRO DELGA", "itau_fecha": "16/03/2026"}, {"fecha": "13/03/2026", "paciente": "Airlyn Yaupe Cuevas", "profesional": "Alonso Marquez", "monto": 7750.0, "itau_desc": "TRANSFERENCIA DE YAUPE CUEVAS", "itau_fecha": "16/03/2026"}, {"fecha": "14/03/2026", "paciente": "Cristobal Alejandro Marín Peña", "profesional": "Rodrigo Olavarría", "monto": 3100.0, "itau_desc": "TRANSFERENCIA DE PENA CARRILLO", "itau_fecha": "16/03/2026"}, {"fecha": "16/03/2026", "paciente": "Juan Gonzalez Neira", "profesional": "Rodrigo Olavarria", "monto": 1180.0, "itau_desc": "TRANSFERENCIA DE GONZALEZ NEIR", "itau_fecha": "16/03/2026"}, {"fecha": "16/03/2026", "paciente": "Cristhian Molina Molina", "profesional": "Rodrigo Olavarria", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE CRISTHIAN BER", "itau_fecha": "16/03/2026"}, {"fecha": "16/03/2026", "paciente": "Erick Guzmán Villarroel", "profesional": "Rodrigo Olavarria", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE ERICK NICOLAS", "itau_fecha": "16/03/2026"}, {"fecha": "16/03/2026", "paciente": "David Alonso Medina Medina", "profesional": "Leonardo Etcheverry", "monto": 23490.0, "itau_desc": "TRANSFERENCIA DE MEDINA MEDINA", "itau_fecha": "16/03/2026"}, {"fecha": "16/03/2026", "paciente": "Josefina Sepúlveda Yaupe", "profesional": "Rodrigo Olavarria", "monto": 1580.0, "itau_desc": "TRANSFERENCIA DE CUEVAS MORALE", "itau_fecha": "16/03/2026"}, {"fecha": "16/03/2026", "paciente": "Florencia Villarroel Parra", "profesional": "Rodrigo Olavarria", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE BETSABET CRIS", "itau_fecha": "16/03/2026"}, {"fecha": "16/03/2026", "paciente": "Carol Araneda Vasquez", "profesional": "Andrea Guevara", "monto": 15000.0, "itau_desc": "TRANSFERENCIA DE CAROL LISETTE", "itau_fecha": "17/03/2026"}, {"fecha": "16/03/2026", "paciente": "Juan Gonzalez Neira", "profesional": "Leonardo Etcheverry", "monto": 7830.0, "itau_desc": "TRANSFERENCIA DE GONZALEZ NEIR", "itau_fecha": "17/03/2026"}, {"fecha": "16/03/2026", "paciente": "Rodrigo Ignacio Betanzo Salamanca", "profesional": "Leonardo Etcheverry", "monto": 1566.0, "itau_desc": "TRANSFERENCIA DE BETANZO SALAM", "itau_fecha": "17/03/2026"}, {"fecha": "16/03/2026", "paciente": "Eli Diaz Cid", "profesional": "Rodrigo Olavarría", "monto": 1580.0, "itau_desc": "TRANSFERENCIA DE DIAZ CID ELI", "itau_fecha": "17/03/2026"}, {"fecha": "16/03/2026", "paciente": "Elías Silva Peña", "profesional": "Javiera Burgos", "monto": 40000.0, "itau_desc": "TRANSFERENCIA DE SILVA PENA EL", "itau_fecha": "17/03/2026"}, {"fecha": "16/03/2026", "paciente": "Manuel Mardones Quinteros", "profesional": "Leonardo Etcheverry", "monto": 7830.0, "itau_desc": "TRANSFERENCIA DE MARDONES QUIN", "itau_fecha": "17/03/2026"}, {"fecha": "16/03/2026", "paciente": "Karla Torres Torres", "profesional": "Rodrigo Olavarría", "monto": 25000.0, "itau_desc": "TRANSFERENCIA DE TORRES TORRES", "itau_fecha": "17/03/2026"}, {"fecha": "16/03/2026", "paciente": "Damaris Fernández Cifuentes", "profesional": "Alonso Marquez", "monto": 3152.0, "itau_desc": "TRANSFERENCIA DE FERNANDEZ CIF", "itau_fecha": "17/03/2026"}, {"fecha": "16/03/2026", "paciente": "Isabel Opazo Medina", "profesional": "Alonso Marquez", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE MEDINA HERNAN", "itau_fecha": "17/03/2026"}, {"fecha": "16/03/2026", "paciente": "Patricia Garrido Borquez", "profesional": "Rodrigo Olavarría", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE GARRIDO BORQU", "itau_fecha": "17/03/2026"}, {"fecha": "16/03/2026", "paciente": "Javier andres rocha riquelme", "profesional": "Manuel Borrego", "monto": 35000.0, "itau_desc": "TRANSFERENCIA DE ROCHA RIQUELM", "itau_fecha": "17/03/2026"}, {"fecha": "16/03/2026", "paciente": "Marcela Zárate Pinto", "profesional": "Rodrigo Olavarría", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE ZARATE PINTO", "itau_fecha": "17/03/2026"}, {"fecha": "16/03/2026", "paciente": "Mariana Martínez Vejar", "profesional": "Alonso Marquez", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE MARTINEZ VEJA", "itau_fecha": "17/03/2026"}, {"fecha": "16/03/2026", "paciente": "Catalina Belmar Vallejos", "profesional": "Manuel Borrego", "monto": 35000.0, "itau_desc": "TRANSFERENCIA DE CATALINA FRAN", "itau_fecha": "17/03/2026"}, {"fecha": "16/03/2026", "paciente": "Dominga Aburto Torres", "profesional": "Rodrigo Olavarría", "monto": 25000.0, "itau_desc": "TRANSFERENCIA DE TORRES RIQUEL", "itau_fecha": "17/03/2026"}, {"fecha": "16/03/2026", "paciente": "Jhon Muñoz Castillo", "profesional": "Rodrigo Olavarría", "monto": 2364.0, "itau_desc": "TRANSFERENCIA DE CASTILLO VELA", "itau_fecha": "17/03/2026"}, {"fecha": "17/03/2026", "paciente": "Marcela Luengo Salinas", "profesional": "Tirso Rejon", "monto": 35000.0, "itau_desc": "TRANSFERENCIA DE YESENIA ROSAL", "itau_fecha": "17/03/2026"}, {"fecha": "17/03/2026", "paciente": "Ingrid Bustos Novoa", "profesional": "Tirso Rejon", "monto": 35000.0, "itau_desc": "TRANSFERENCIA DE BUSTOS NOVOA", "itau_fecha": "17/03/2026"}, {"fecha": "17/03/2026", "paciente": "juan patricio velásquez salas", "profesional": "Rodrigo Olavarria", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE VELASQUEZ SAL", "itau_fecha": "17/03/2026"}, {"fecha": "17/03/2026", "paciente": "Angeline Mariela Castillo Jara", "profesional": "Leonardo Etcheverry", "monto": 1570.0, "itau_desc": "TRANSFERENCIA DE ANGELINE MARI", "itau_fecha": "17/03/2026"}, {"fecha": "17/03/2026", "paciente": "Javiera Burgos Godoy", "profesional": "Tirso Rejon", "monto": 35000.0, "itau_desc": "TRANSFERENCIA DE JAVIERA BURGO", "itau_fecha": "17/03/2026"}, {"fecha": "17/03/2026", "paciente": "Sebastian Valenzuela La Regla", "profesional": "Leonardo Etcheverry", "monto": 1570.0, "itau_desc": "TRANSFERENCIA DE VALENZUELA LA", "itau_fecha": "20/03/2026"}, {"fecha": "17/03/2026", "paciente": "Mateo Elías Soto Burgos", "profesional": "Rodrigo Olavarria", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE BURGOS LAGOS", "itau_fecha": "18/03/2026"}, {"fecha": "17/03/2026", "paciente": "Vicente Reyes Arévalo", "profesional": "Rodrigo Olavarria", "monto": 25000.0, "itau_desc": "TRANSFERENCIA DE AREVALO GONZA", "itau_fecha": "18/03/2026"}, {"fecha": "17/03/2026", "paciente": "Jordy Rodrigo Valenzuela Galdames", "profesional": "Rodrigo Olavarria", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE JORDY RODRIGO", "itau_fecha": "18/03/2026"}, {"fecha": "18/03/2026", "paciente": "Andrea Rubilar Aguayo", "profesional": "Andres Abarca", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE ANDREA PAOLA", "itau_fecha": "18/03/2026"}, {"fecha": "18/03/2026", "paciente": "Loreto Pilar Troncoso Barriga", "profesional": "Claudio Barraza", "monto": 35000.0, "itau_desc": "TRANSFERENCIA DE TRONCOSO BARR", "itau_fecha": "19/03/2026"}, {"fecha": "18/03/2026", "paciente": "Sofia Gonzalez Cuevas", "profesional": "Andres Abarca", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE CUEVAS CABRER", "itau_fecha": "19/03/2026"}, {"fecha": "18/03/2026", "paciente": "Joel Rodriguez Bustos", "profesional": "Juana Arratia", "monto": 45000.0, "itau_desc": "TRANSFERENCIA DE RODRIGUEZ BUS", "itau_fecha": "19/03/2026"}, {"fecha": "18/03/2026", "paciente": "Manuel Mardones Quinteros", "profesional": "Leonardo Etcheverry", "monto": 7390.0, "itau_desc": "TRANSFERENCIA DE MARDONES QUIN", "itau_fecha": "19/03/2026"}, {"fecha": "18/03/2026", "paciente": "Anabel Sandoval Chapa", "profesional": "Juana Arratia", "monto": 45000.0, "itau_desc": "TRANSFERENCIA DE NATALI ANABEL", "itau_fecha": "20/03/2026"}, {"fecha": "18/03/2026", "paciente": "Juan Gonzalez Neira", "profesional": "Leonardo Etcheverry", "monto": 7830.0, "itau_desc": "TRANSFERENCIA DE GONZALEZ NEIR", "itau_fecha": "19/03/2026"}, {"fecha": "18/03/2026", "paciente": "Sebastian Valenzuela La Regla", "profesional": "Leonardo Etcheverry", "monto": 1566.0, "itau_desc": "TRANSFERENCIA DE VALENZUELA LA", "itau_fecha": "19/03/2026"}, {"fecha": "18/03/2026", "paciente": "Matías Carrillo Torres", "profesional": "Alonso Marquez", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE TORRES DIAZ S", "itau_fecha": "19/03/2026"}, {"fecha": "18/03/2026", "paciente": "Andres Salas Vargas", "profesional": "Gisela Pinto", "monto": 4770.0, "itau_desc": "TRANSFERENCIA DE VARGAS RIVAS", "itau_fecha": "19/03/2026"}, {"fecha": "18/03/2026", "paciente": "Luis Rivera Fontealba", "profesional": "Rodrigo Olavarría", "monto": 2364.0, "itau_desc": "TRANSFERENCIA DE RIVERA FONTEA", "itau_fecha": "19/03/2026"}, {"fecha": "18/03/2026", "paciente": "Martin Nova Cartes", "profesional": "Alonso Marquez", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE CARTES CIFUEN", "itau_fecha": "19/03/2026"}, {"fecha": "19/03/2026", "paciente": "Renzo Ramos Saez", "profesional": "Andres Abarca", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE SAEZ FLORES E", "itau_fecha": "19/03/2026"}, {"fecha": "19/03/2026", "paciente": "Cristian Andres Arias Torres", "profesional": "Leonardo Etcheverry", "monto": 2349.0, "itau_desc": "TRANSFERENCIA DE ARIAS TORRES", "itau_fecha": "19/03/2026"}, {"fecha": "19/03/2026", "paciente": "Jacinta Uribe Quiroz", "profesional": "Andres Abarca", "monto": 25000.0, "itau_desc": "TRANSFERENCIA DE ROMERO PEZO M", "itau_fecha": "19/03/2026"}, {"fecha": "19/03/2026", "paciente": "Jazmin Roca Romero", "profesional": "Andres Abarca", "monto": 25000.0, "itau_desc": "TRANSFERENCIA DE VANESSA ANDRE", "itau_fecha": "19/03/2026"}, {"fecha": "19/03/2026", "paciente": "Cristian Rafael Torres Cancino", "profesional": "Javiera Burgos", "monto": 45000.0, "itau_desc": "TRANSFERENCIA DE DAVID ANDRES", "itau_fecha": "19/03/2026"}, {"fecha": "20/03/2026", "paciente": "Maryori Castro Fritz", "profesional": "David Pardo", "monto": 40000.0, "itau_desc": "TRANSFERENCIA DE CASTRO FRITZ", "itau_fecha": "20/03/2026"}, {"fecha": "20/03/2026", "paciente": "Elizabeth Henríquez Morales", "profesional": "David Pardo", "monto": 40000.0, "itau_desc": "TRANSFERENCIA DE HENRIQUEZ MOR", "itau_fecha": "20/03/2026"}, {"fecha": "20/03/2026", "paciente": "Francisca Leonora Valdivia Cifuentes", "profesional": "David Pardo", "monto": 40000.0, "itau_desc": "TRANSFERENCIA DE VALDIVIA CIFU", "itau_fecha": "20/03/2026"}, {"fecha": "20/03/2026", "paciente": "Pamela Diaz Nuñez", "profesional": "David Pardo", "monto": 40000.0, "itau_desc": "TRANSFERENCIA DE DIAZ NUNEZ PA", "itau_fecha": "20/03/2026"}, {"fecha": "20/03/2026", "paciente": "Andreina Torres Riffo", "profesional": "David Pardo", "monto": 40000.0, "itau_desc": "TRANSFERENCIA DE TORRES RIFFO", "itau_fecha": "20/03/2026"}, {"fecha": "20/03/2026", "paciente": "Yannette Martínez Peña", "profesional": "Andres Abarca", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE MARTINEZ PENA", "itau_fecha": "20/03/2026"}, {"fecha": "20/03/2026", "paciente": "Juan Gonzalez Neira", "profesional": "Leonardo Etcheverry", "monto": 7830.0, "itau_desc": "TRANSFERENCIA DE GONZALEZ NEIR", "itau_fecha": "23/03/2026"}, {"fecha": "20/03/2026", "paciente": "Nicol Fierro Alarcon", "profesional": "Alonso  Marquez", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE FIERRO ALARCO", "itau_fecha": "23/03/2026"}, {"fecha": "20/03/2026", "paciente": "Agustin Soto Burgos", "profesional": "Rodrigo Olavarría", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE BURGOS LAGOS", "itau_fecha": "23/03/2026"}, {"fecha": "20/03/2026", "paciente": "Nicole Gómez Salas", "profesional": "Alonso Marquez", "monto": 16000.0, "itau_desc": "TRANSFERENCIA DE SANDOVAL SALA", "itau_fecha": "23/03/2026"}, {"fecha": "20/03/2026", "paciente": "Reinaldo Castillo Delgado", "profesional": "Rodrigo Olavarría", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE CASTILLO DELG", "itau_fecha": "23/03/2026"}, {"fecha": "20/03/2026", "paciente": "Vicente Leal Hermosilla", "profesional": "Rodrigo Olavarría", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE HERMOSILLA UL", "itau_fecha": "23/03/2026"}, {"fecha": "21/03/2026", "paciente": "Carol Carrasco Troncoso", "profesional": "Rodrigo Olavarria", "monto": 25000.0, "itau_desc": "TRANSFERENCIA DE CAROL ANDREA", "itau_fecha": "23/03/2026"}, {"fecha": "21/03/2026", "paciente": "Camila Gatica Castillo", "profesional": "Daniela Castillo", "monto": 30000.0, "itau_desc": "TRANSFERENCIA DE GATICA GATICA", "itau_fecha": "23/03/2026"}, {"fecha": "21/03/2026", "paciente": "Enzo Gallardo Torres", "profesional": "Rodrigo Olavarria", "monto": 25000.0, "itau_desc": "TRANSFERENCIA DE TORRES TORRES", "itau_fecha": "23/03/2026"}, {"fecha": "21/03/2026", "paciente": "Karoline Gallardo Venegas", "profesional": "Daniela Castillo", "monto": 30000.0, "itau_desc": "TRANSFERENCIA DE GALLARDO VENE", "itau_fecha": "23/03/2026"}, {"fecha": "21/03/2026", "paciente": "Milena Figueroa Mejias", "profesional": "Daniela Castillo", "monto": 30000.0, "itau_desc": "TRANSFERENCIA DE MEJIAS MEDINA", "itau_fecha": "23/03/2026"}, {"fecha": "23/03/2026", "paciente": "Elías Silva Peña", "profesional": "Javiera Burgos", "monto": 40000.0, "itau_desc": "TRANSFERENCIA DE SILVA PENA EL", "itau_fecha": "23/03/2026"}, {"fecha": "23/03/2026", "paciente": "Samantha Fernández Sanhueza", "profesional": "Andres Abarca", "monto": 2364.0, "itau_desc": "TRANSFERENCIA DE SANHUEZA ELGU", "itau_fecha": "23/03/2026"}, {"fecha": "23/03/2026", "paciente": "Lucia Morales Molina", "profesional": "Andres Abarca", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE MOLINA FARFAN", "itau_fecha": "23/03/2026"}, {"fecha": "23/03/2026", "paciente": "Amparo Celeste Echeverria Cifuentes", "profesional": "Andres Abarca", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE CIFUENTES MED", "itau_fecha": "23/03/2026"}, {"fecha": "23/03/2026", "paciente": "Sebastian Valenzuela La Regla", "profesional": "leonardo Etcheverry", "monto": 1566.0, "itau_desc": "TRANSFERENCIA DE SEBASTIAN IGN", "itau_fecha": "23/03/2026"}, {"fecha": "23/03/2026", "paciente": "Manuel Mardones Quinteros", "profesional": "Leonardo Etcheverry", "monto": 4980.0, "itau_desc": "TRANSFERENCIA DE MARDONES QUIN", "itau_fecha": "24/03/2026"}, {"fecha": "23/03/2026", "paciente": "Elcira Araneda Saez", "profesional": "Andres Abarca", "monto": 25000.0, "itau_desc": "TRANSFERENCIA DE ARANEDA SAEZ", "itau_fecha": "24/03/2026"}, {"fecha": "23/03/2026", "paciente": "Sebastián Navarrete Opazo", "profesional": "Alonso Marquez", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE OPAZO NAVARRO", "itau_fecha": "24/03/2026"}, {"fecha": "23/03/2026", "paciente": "Pascale Gallegos Caamaño", "profesional": "Alonso Marquez", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE VANIA VALESKA", "itau_fecha": "23/03/2026"}, {"fecha": "23/03/2026", "paciente": "mariano agustin saldias medina", "profesional": "Alonso Marquez", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE MEDINA GLORI", "itau_fecha": "24/03/2026"}, {"fecha": "23/03/2026", "paciente": "Isaías Joel Salgado Sáez", "profesional": "Fernando Fredes", "monto": 110000.0, "itau_desc": "TRANSFERENCIA DE ISAIAS SALGAD", "itau_fecha": "24/03/2026"}, {"fecha": "23/03/2026", "paciente": "Lucas Gallegos Caamaño", "profesional": "Alonso Marquez", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE LUIS GABRIEL", "itau_fecha": "23/03/2026"}, {"fecha": "23/03/2026", "paciente": "Catalina Pascal Fredes Sepúlveda", "profesional": "Manuel Borrego", "monto": 35000.0, "itau_desc": "TRANSFERENCIA DE FREDES MUNOZ", "itau_fecha": "24/03/2026"}, {"fecha": "23/03/2026", "paciente": "Daniel Montecinos Recabal", "profesional": "Rodrigo Olavarria", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE DANIEL RICARD", "itau_fecha": "24/03/2026"}, {"fecha": "23/03/2026", "paciente": "Josefa Loayza Retamal", "profesional": "Rodrigo Olavarria", "monto": 3150.0, "itau_desc": "TRANSFERENCIA DE LOAYZA LOAYZA", "itau_fecha": "24/03/2026"}, {"fecha": "23/03/2026", "paciente": "Soledad Fierro Ramirez", "profesional": "Manuel Borrego", "monto": 35000.0, "itau_desc": "TRANSFERENCIA DE FIERRO RAMIRE", "itau_fecha": "24/03/2026"}, {"fecha": "23/03/2026", "paciente": "Nicole Aguayo Varela", "profesional": "Alonso Marquez", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE VARELA BELMAR", "itau_fecha": "24/03/2026"}, {"fecha": "23/03/2026", "paciente": "Gael Andrés Diaz Guevara", "profesional": "Rodrigo Olavarria", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE DIAZ TORRES R", "itau_fecha": "24/03/2026"}, {"fecha": "23/03/2026", "paciente": "Pascale Aravena Gallardo", "profesional": "Rodrigo Olavarria", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE FERNANDEZ ARA", "itau_fecha": "25/03/2026"}, {"fecha": "23/03/2026", "paciente": "Johana Sepúlveda Sáez", "profesional": "Rodrigo Olavarria", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE SEPULVEDA SAE", "itau_fecha": "24/03/2026"}, {"fecha": "24/03/2026", "paciente": "Angeline Mariela Castillo Jara", "profesional": "Leonardo Etcheverry", "monto": 1566.0, "itau_desc": "TRANSFERENCIA DE ANGELINE MARI", "itau_fecha": "24/03/2026"}, {"fecha": "24/03/2026", "paciente": "David Alonso Medina Medina", "profesional": "Leonardo Etcheverry", "monto": 23490.0, "itau_desc": "TRANSFERENCIA DE MEDINA MEDINA", "itau_fecha": "24/03/2026"}, {"fecha": "24/03/2026", "paciente": "Rodrigo Ignacio Betanzo Salamanca", "profesional": "Leonardo Etcheverry", "monto": 1566.0, "itau_desc": "TRANSFERENCIA DE BETANZO SALAM", "itau_fecha": "24/03/2026"}, {"fecha": "24/03/2026", "paciente": "Nicol Fernández Araneda", "profesional": "Andres Abarca", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE DIEGO ANDRES", "itau_fecha": "24/03/2026"}, {"fecha": "24/03/2026", "paciente": "Noemi Veloso Martínez", "profesional": "Andres Abarca", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE PENA MARTINEZ", "itau_fecha": "25/03/2026"}, {"fecha": "25/03/2026", "paciente": "Andrea Bahamondes Torres", "profesional": "Andres Abarca", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE BAHAMONDES TO", "itau_fecha": "25/03/2026"}, {"fecha": "25/03/2026", "paciente": "Cristian Andres Arias Torres", "profesional": "Leonardo Etcheverry", "monto": 7830.0, "itau_desc": "TRANSFERENCIA DE ARIAS TORRES", "itau_fecha": "25/03/2026"}, {"fecha": "25/03/2026", "paciente": "Iván Peña Martinez", "profesional": "Andres Abarca", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE BUSTOS ANCALI", "itau_fecha": "25/03/2026"}, {"fecha": "25/03/2026", "paciente": "Carlos Saez Vargas", "profesional": "Andres Abarca", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE SAEZ FLORES J", "itau_fecha": "27/03/2026"}, {"fecha": "25/03/2026", "paciente": "Manuel Mardones Quinteros", "profesional": "Leonardo Etcheverry", "monto": 4983.0, "itau_desc": "TRANSFERENCIA DE MARDONES QUIN", "itau_fecha": "25/03/2026"}, {"fecha": "25/03/2026", "paciente": "Rodrigo Ignacio Betanzo Salamanca", "profesional": "Leonardo Etcheverry", "monto": 1566.0, "itau_desc": "TRANSFERENCIA DE BETANZO SALAM", "itau_fecha": "25/03/2026"}, {"fecha": "25/03/2026", "paciente": "Michael Javier Bustos Ancali", "profesional": "Andres Abarca", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE WILSON JAVIER", "itau_fecha": "26/03/2026"}, {"fecha": "25/03/2026", "paciente": "Valentina Muñoz Ibacache", "profesional": "Andres Abarca", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE IBACACHE CUEV", "itau_fecha": "25/03/2026"}, {"fecha": "25/03/2026", "paciente": "Nelson Valenzuela Carrasco", "profesional": "Juana Arratia", "monto": 25000.0, "itau_desc": "TRANSF. DE NELSON EDUARDO VALE", "itau_fecha": "26/03/2026"}, {"fecha": "25/03/2026", "paciente": "Natalie Verónica Fuentes Torres", "profesional": "Alonso Marquez", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE FUENTES TORRE", "itau_fecha": "26/03/2026"}, {"fecha": "25/03/2026", "paciente": "Dionisio Parra Fuentes", "profesional": "Leonardo Etcheverry", "monto": 2070.0, "itau_desc": "TRANSFERENCIA DE PARRA FUENTES", "itau_fecha": "26/03/2026"}, {"fecha": "25/03/2026", "paciente": "Karina Neira Aguilar", "profesional": "Leonardo Etcheverry", "monto": 2070.0, "itau_desc": "TRANSFERENCIA DE NEIRA AGUILAR", "itau_fecha": "26/03/2026"}, {"fecha": "25/03/2026", "paciente": "Jaisson Torres", "profesional": "Manuel Borrego", "monto": 35000.0, "itau_desc": "TRANSFERENCIA DE JAISSON BASTI", "itau_fecha": "26/03/2026"}, {"fecha": "25/03/2026", "paciente": "Solange medina jimenez", "profesional": "Sarai Gomez", "monto": 20000.0, "itau_desc": "TRANSFERENCIA DE MEDINA JIMENE", "itau_fecha": "26/03/2026"}, {"fecha": "25/03/2026", "paciente": "Gabriel Alejandro Espinoza Espinoza", "profesional": "Alonso Marquez", "monto": 1830.0, "itau_desc": "TRANSFERENCIA DE ESPINOZA ESPI", "itau_fecha": "26/03/2026"}, {"fecha": "25/03/2026", "paciente": "Ilse del Carmen Riquelme Muñoz", "profesional": "Alonso Marquez", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE ROCHA RIQUELM", "itau_fecha": "26/03/2026"}, {"fecha": "25/03/2026", "paciente": "Alitzel Uribe Aravena", "profesional": "Alonso Marquez", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE URIBE URIBE J", "itau_fecha": "25/03/2026"}, {"fecha": "26/03/2026", "paciente": "Victoria Mora Cancino", "profesional": "Andres Abarca", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE MORA CANCINO", "itau_fecha": "26/03/2026"}, {"fecha": "26/03/2026", "paciente": "Alex Edgardo Lagos Morales", "profesional": "Andres Abarca", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE MORA MORA ROD", "itau_fecha": "26/03/2026"}, {"fecha": "26/03/2026", "paciente": "Rodrigo Ignacio Betanzo Salamanca", "profesional": "Leonardo Etcheverry", "monto": 1566.0, "itau_desc": "TRANSFERENCIA DE BETANZO SALAM", "itau_fecha": "26/03/2026"}, {"fecha": "26/03/2026", "paciente": "Yemery Muñoz Fernandez", "profesional": "Leonardo Etcheverry", "monto": 2072.0, "itau_desc": "TRANSFERENCIA DE MUNOZ GODOY D", "itau_fecha": "26/03/2026"}, {"fecha": "26/03/2026", "paciente": "Cristóbal Alejandro Romero Gómez", "profesional": "Andres Abarca", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE GOMEZ MIERE S", "itau_fecha": "27/03/2026"}, {"fecha": "26/03/2026", "paciente": "Isaías Joel Salgado Sáez", "profesional": "Javiera Burgos", "monto": 50000.0, "itau_desc": "TRANSFERENCIA DE ISAIAS SALGAD", "itau_fecha": "27/03/2026"}, {"fecha": "26/03/2026", "paciente": "Emilia Navarro Farias", "profesional": "rodrigo Olavarria", "monto": 25000.0, "itau_desc": "TRANSFERENCIA DE FARIAS ORELLA", "itau_fecha": "27/03/2026"}, {"fecha": "27/03/2026", "paciente": "Rodrigo Ignacio Betanzo Salamanca", "profesional": "Leonardo Etcheverry", "monto": 1566.0, "itau_desc": "TRANSFERENCIA DE BETANZO SALAM", "itau_fecha": "27/03/2026"}, {"fecha": "27/03/2026", "paciente": "Fernanda Chavez Tenorio", "profesional": "andres Abarca", "monto": 25000.0, "itau_desc": "TRANSFERENCIA DE TENORIO CARRA", "itau_fecha": "30/03/2026"}, {"fecha": "27/03/2026", "paciente": "Mariela Molina Cruz", "profesional": "Claudio Barraza", "monto": 35000.0, "itau_desc": "TRANSFERENCIA DE MOLINA CRUZ M", "itau_fecha": "30/03/2026"}, {"fecha": "27/03/2026", "paciente": "Yaritza Jerez torres", "profesional": "Alonso Marquez", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE JEREZ TORRES", "itau_fecha": "30/03/2026"}, {"fecha": "27/03/2026", "paciente": "Agustin Esteban Salas Esperguel", "profesional": "andres Abarca", "monto": 2360.0, "itau_desc": "TRANSFERENCIA DE BENJAMIN ESTE", "itau_fecha": "27/03/2026"}, {"fecha": "27/03/2026", "paciente": "Alison Ilabaca Samora", "profesional": "Alonso Marquez", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE SAMORA PACHEC", "itau_fecha": "30/03/2026"}, {"fecha": "28/03/2026", "paciente": "Juanita Paola Ojeda Arévalo", "profesional": "Juan Pablo", "monto": 14420.0, "itau_desc": "TRANSFERENCIA DE JUANITA PAOLA", "itau_fecha": "30/03/2026"}, {"fecha": "28/03/2026", "paciente": "Damaris Fernández Cifuentes", "profesional": "Miguel Millán", "monto": 40000.0, "itau_desc": "TRANSFERENCIA DE FERNANDEZ CIF", "itau_fecha": "30/03/2026"}, {"fecha": "28/03/2026", "paciente": "Sergio Antonio Benitez Vargas", "profesional": "Rodrigo Olavarria", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE BENITEZ VARGA", "itau_fecha": "30/03/2026"}, {"fecha": "28/03/2026", "paciente": "Tania Oviedo Sanhueza", "profesional": "Daniela Castillo", "monto": 30000.0, "itau_desc": "TRANSFERENCIA DE SAEZ SANHUEZA", "itau_fecha": "31/03/2026"}, {"fecha": "28/03/2026", "paciente": "Ashley Reyes Espinoza", "profesional": "Daniela Castillo", "monto": 30000.0, "itau_desc": "TRANSFERENCIA DE ESPINOZA NOVE", "itau_fecha": "30/03/2026"}, {"fecha": "28/03/2026", "paciente": "Leslie Canales Saravia", "profesional": "Daniela Castillo", "monto": 30000.0, "itau_desc": "TRANSFERENCIA DE SARAVIA MELLA", "itau_fecha": "30/03/2026"}, {"fecha": "28/03/2026", "paciente": "Victor Bastias Vigueras", "profesional": "Daniela Castillo", "monto": 30000.0, "itau_desc": "TRANSFERENCIA DE BASTIAS VIGUE", "itau_fecha": "30/03/2026"}, {"fecha": "30/03/2026", "paciente": "Krishna Arriagada Alarcon", "profesional": "David Pardo", "monto": 40000.0, "itau_desc": "TRANSFERENCIA DE ARRIAGADA ALA", "itau_fecha": "30/03/2026"}, {"fecha": "30/03/2026", "paciente": "Susan Palma Vasquez", "profesional": "David Pardo", "monto": 40000.0, "itau_desc": "TRANSFERENCIA DE PALMA VASQUEZ", "itau_fecha": "30/03/2026"}, {"fecha": "30/03/2026", "paciente": "Catalina Pascal Fredes Sepúlveda", "profesional": "David Pardo", "monto": 40000.0, "itau_desc": "TRANSFERENCIA DE FREDES MUNOZ", "itau_fecha": "30/03/2026"}, {"fecha": "30/03/2026", "paciente": "Zoe Monsalve", "profesional": "Andres Abarca", "monto": 25000.0, "itau_desc": "TRANSFERENCIA DE MONSALVE LLAN", "itau_fecha": "30/03/2026"}, {"fecha": "30/03/2026", "paciente": "Marcia Lagos Fierro", "profesional": "David Pardo", "monto": 40000.0, "itau_desc": "TRANSFERENCIA DE CAMILA FERNAN", "itau_fecha": "30/03/2026"}, {"fecha": "30/03/2026", "paciente": "Catherine Nicole Tauran Burgos", "profesional": "David Pardo", "monto": 40000.0, "itau_desc": "TRANSFERENCIA DE CATHERINE NIC", "itau_fecha": "30/03/2026"}, {"fecha": "30/03/2026", "paciente": "Sayen Olivares Miranda", "profesional": "Andres Abarca", "monto": 2360.0, "itau_desc": "TRANSFERENCIA DE ESPERGUEL SIL", "itau_fecha": "30/03/2026"}, {"fecha": "30/03/2026", "paciente": "Rodrigo Ignacio Betanzo Salamanca", "profesional": "Leonardo Etcheverry", "monto": 1570.0, "itau_desc": "TRANSFERENCIA DE BETANZO SALAM", "itau_fecha": "30/03/2026"}, {"fecha": "30/03/2026", "paciente": "Ignacio Fierro Aguirre", "profesional": "Andres Abarca", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE CAMILA FERNAN", "itau_fecha": "30/03/2026"}, {"fecha": "30/03/2026", "paciente": "Gaspar Arce Inostroza", "profesional": "Alonso Marquez", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE INOSTROZA FER", "itau_fecha": "31/03/2026"}, {"fecha": "30/03/2026", "paciente": "Jose Acuña Morales", "profesional": "Alonso Marquez", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE HECTOR ENRIQU", "itau_fecha": "30/03/2026"}, {"fecha": "30/03/2026", "paciente": "Manuel Mardones Quinteros", "profesional": "Leonardo Etcheverry", "monto": 4983.0, "itau_desc": "TRANSFERENCIA DE MARDONES QUIN", "itau_fecha": "31/03/2026"}, {"fecha": "30/03/2026", "paciente": "Ilse del Carmen Riquelme Muñoz", "profesional": "Alonso Marquez", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE ROCHA RIQUELM", "itau_fecha": "31/03/2026"}, {"fecha": "30/03/2026", "paciente": "Jimmy Darwin Hormazabal Sepulveda", "profesional": "Manuel Borrego", "monto": 35000.0, "itau_desc": "TRANSFERENCIA DE JIMMY DARWIN", "itau_fecha": "31/03/2026"}, {"fecha": "30/03/2026", "paciente": "Gabriel Varela Benitez", "profesional": "Andrea Guevara", "monto": 18000.0, "itau_desc": "TRANSFERENCIA DE VARELA BENITE", "itau_fecha": "31/03/2026"}, {"fecha": "30/03/2026", "paciente": "Carmen Yévenes Soto", "profesional": "Alonso Marquez", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE YEVENES SOTO", "itau_fecha": "31/03/2026"}, {"fecha": "30/03/2026", "paciente": "Carolina Contreras Valenzuela", "profesional": "Rodrigo Olavarría", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE CONTRERAS VAL", "itau_fecha": "31/03/2026"}, {"fecha": "31/03/2026", "paciente": "Bianca Maldonado", "profesional": "Jorge Montalba", "monto": 7210.0, "itau_desc": "TRANSFERENCIA DE MALDONADO BET", "itau_fecha": "31/03/2026"}, {"fecha": "31/03/2026", "paciente": "Rodrigo Ignacio Betanzo Salamanca", "profesional": "Leonardo Etcheverry", "monto": 1570.0, "itau_desc": "TRANSFERENCIA DE BETANZO SALAM", "itau_fecha": "31/03/2026"}, {"fecha": "31/03/2026", "paciente": "Angela Andrea Bahamonde Garrido", "profesional": "Tirso Rejon", "monto": 30000.0, "itau_desc": "TRANSFERENCIA DE BAHAMONDES GA", "itau_fecha": "31/03/2026"}, {"fecha": "31/03/2026", "paciente": "Sofía Inés Medina Medina", "profesional": "Andres Abarca", "monto": 25000.0, "itau_desc": "TRANSFERENCIA DE MEDINA MEDINA", "itau_fecha": "31/03/2026"}, {"fecha": "31/03/2026", "paciente": "Demihan Carrillo Lobos", "profesional": "Andres Abarca", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE LAGOS MIRANDA", "itau_fecha": "31/03/2026"}, {"fecha": "31/03/2026", "paciente": "María Alejandra Barros Ortiz", "profesional": "Tirso Rejon", "monto": 30000.0, "itau_desc": "TRANSFERENCIA DE BARROS ORTIZ", "itau_fecha": "31/03/2026"}, {"fecha": "31/03/2026", "paciente": "José Manuel Lagos Miranda", "profesional": "Andres Abarca", "monto": 7880.0, "itau_desc": "TRANSFERENCIA DE BASTIAS CARRA", "itau_fecha": "31/03/2026"}, {"fecha": "31/03/2026", "paciente": "Leonardo Etcheverry", "profesional": "Javiera Burgos", "monto": 30000.0, "itau_desc": "TRANSFERENCIA DE LEONARDO ALON", "itau_fecha": "31/03/2026"}, {"fecha": "31/03/2026", "paciente": "Jose Ignacio Aburto Vallejos", "profesional": "Andres Abarca", "monto": 2760.0, "itau_desc": "Transferencia De Jose Ignaci", "itau_fecha": "01/04/2026"}, {"fecha": "31/03/2026", "paciente": "Ingrid Henríquez Fernández", "profesional": "Andres Abarca", "monto": 7880.0, "itau_desc": "Transferencia De Ingrid Fabi", "itau_fecha": "01/04/2026"}, {"fecha": "31/03/2026", "paciente": "Jorge Zavala Godoy", "profesional": "Javiera Burgos", "monto": 30000.0, "itau_desc": "TRANSFERENCIA DE MICHAEL GASTO", "itau_fecha": "31/03/2026"}, {"fecha": "31/03/2026", "paciente": "Maria Catalina Nuñez Gutierrez", "profesional": "Javiera Burgos", "monto": 30000.0, "itau_desc": "Transferencia De Gutierrez N", "itau_fecha": "01/04/2026"}];
+
+let tfMode = 'nok';
+let tfSearchVal = '';
+
+function tfTab(mode) {
+  tfMode = mode;
+  tfSearchVal = '';
+  document.getElementById('tf-search').value = '';
+  // Reset botones
+  ['nok','ep','epp','ok'].forEach(m => {
+    const b = document.getElementById('tf-btn-'+m);
+    if (m === mode) {
+      b.style.opacity = '1';
+      b.style.fontWeight = '700';
+    } else {
+      b.style.opacity = '0.6';
+      b.style.fontWeight = '500';
+    }
+  });
+  renderTfTable();
+}
+
+function tfFilter() {
+  tfSearchVal = document.getElementById('tf-search').value.toLowerCase();
+  renderTfTable();
+}
+
+function renderTfTable() {
+  const thead = document.getElementById('tf-thead-row');
+  const tbody = document.getElementById('tf-tbody');
+  const footer = document.getElementById('tf-footer');
+  let rows = [], cols = [], total = 0;
+
+  if (tfMode === 'nok') {
+    cols = ['Fecha','Paciente','Profesional','Monto'];
+    rows = tfNok.filter(r => !tfSearchVal ||
+      r.paciente.toLowerCase().includes(tfSearchVal) ||
+      String(r.monto).includes(tfSearchVal));
+    total = rows.reduce((s,r)=>s+r.monto,0);
+    thead.innerHTML = cols.map(c=>`<th style="padding:10px 12px;text-align:left;white-space:nowrap">${c}</th>`).join('');
+    tbody.innerHTML = rows.map((r,i)=>`
+      <tr style="background:${i%2?'var(--red-light)':'#fff3f3'};border-bottom:1px solid #fecaca">
+        <td style="padding:8px 12px;white-space:nowrap">${r.fecha}</td>
+        <td style="padding:8px 12px">${r.paciente}</td>
+        <td style="padding:8px 12px;color:var(--text-secondary)">${r.profesional}</td>
+        <td style="padding:8px 12px;font-weight:600;color:var(--red);white-space:nowrap">${fmt(r.monto)}</td>
+      </tr>`).join('');
+    footer.innerHTML = `Total sin respaldo bancario: <span style="color:var(--red)">${fmt(total)}</span> — ${rows.length} registros`;
+
+  } else if (tfMode === 'ep') {
+    cols = ['Fecha Itaú','Descripción Itaú','Monto'];
+    rows = tfEp.filter(r => !tfSearchVal ||
+      r.desc.toLowerCase().includes(tfSearchVal) ||
+      String(r.monto).includes(tfSearchVal));
+    total = rows.reduce((s,r)=>s+r.monto,0);
+    thead.innerHTML = cols.map(c=>`<th style="padding:10px 12px;text-align:left;white-space:nowrap">${c}</th>`).join('');
+    tbody.innerHTML = rows.map((r,i)=>`
+      <tr style="background:${i%2?'var(--yellow-light)':'#fffdf0'};border-bottom:1px solid #fde68a">
+        <td style="padding:8px 12px;white-space:nowrap">${r.fecha}</td>
+        <td style="padding:8px 12px;font-family:monospace;font-size:12px">${r.desc}</td>
+        <td style="padding:8px 12px;font-weight:600;color:var(--yellow);white-space:nowrap">${fmt(r.monto)}</td>
+      </tr>`).join('');
+    footer.innerHTML = `Total abonos sin registro de paciente: <span style="color:var(--yellow)">${fmt(total)}</span> — ${rows.length} transacciones`;
+
+  } else if (tfMode === 'epp') {
+    cols = ['Fecha Itaú','Descripción Itaú','Monto'];
+    rows = tfEpp.filter(r => !tfSearchVal ||
+      r.desc.toLowerCase().includes(tfSearchVal) ||
+      String(r.monto).includes(tfSearchVal));
+    total = rows.reduce((s,r)=>s+r.monto,0);
+    thead.innerHTML = cols.map(c=>`<th style="padding:10px 12px;text-align:left;white-space:nowrap">${c}</th>`).join('');
+    tbody.innerHTML = rows.map((r,i)=>`
+      <tr style="background:${i%2?'#f5f3ff':'#ede9fe'};border-bottom:1px solid #ddd6fe">
+        <td style="padding:8px 12px;white-space:nowrap">${r.fecha}</td>
+        <td style="padding:8px 12px;font-family:monospace;font-size:12px">${r.desc}</td>
+        <td style="padding:8px 12px;font-weight:600;color:#7c3aed;white-space:nowrap">${fmt(r.monto)}</td>
+      </tr>`).join('');
+    footer.innerHTML = `Total aportes/capital (no son ingresos de pacientes): <span style="color:#7c3aed">${fmt(total)}</span> — ${rows.length} transacciones`;
+
+  } else {
+    cols = ['Fecha Pac.','Paciente','Profesional','Monto','Fecha Itaú','Descripción Itaú'];
+    rows = tfOk.filter(r => !tfSearchVal ||
+      r.paciente.toLowerCase().includes(tfSearchVal) ||
+      r.itau_desc.toLowerCase().includes(tfSearchVal) ||
+      String(r.monto).includes(tfSearchVal));
+    total = rows.reduce((s,r)=>s+r.monto,0);
+    thead.innerHTML = cols.map(c=>`<th style="padding:10px 12px;text-align:left;white-space:nowrap">${c}</th>`).join('');
+    tbody.innerHTML = rows.map((r,i)=>`
+      <tr style="background:${i%2?'var(--green-light)':'#f0fdf8'};border-bottom:1px solid #bbf7d0">
+        <td style="padding:8px 12px;white-space:nowrap">${r.fecha}</td>
+        <td style="padding:8px 12px">${r.paciente}</td>
+        <td style="padding:8px 12px;color:var(--text-secondary)">${r.profesional}</td>
+        <td style="padding:8px 12px;font-weight:600;color:var(--green);white-space:nowrap">${fmt(r.monto)}</td>
+        <td style="padding:8px 12px;white-space:nowrap;color:var(--text-secondary)">${r.itau_fecha}</td>
+        <td style="padding:8px 12px;font-family:monospace;font-size:12px;color:var(--text-secondary)">${r.itau_desc}</td>
+      </tr>`).join('');
+    footer.innerHTML = `Total conciliado: <span style="color:var(--green)">${fmt(total)}</span> — ${rows.length} registros`;
+  }
+}
+
+// ==================== BE DEPOSITS ====================
+const beDeposits = [
+  {fecha:'2026-03-02',monto:121000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-02',monto:200000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-03',monto:200000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-03',monto:50000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-03',monto:90400,canal:'CAJA VECINA'},
+  {fecha:'2026-03-04',monto:200000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-04',monto:32000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-05',monto:9000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-05',monto:200000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-06',monto:200000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-06',monto:45000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-09',monto:200000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-09',monto:120000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-10',monto:45000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-10',monto:200000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-11',monto:674000,canal:'DEPOSITO CRC 28394474'},
+  {fecha:'2026-03-13',monto:138000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-13',monto:200000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-13',monto:17000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-13',monto:140000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-16',monto:51000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-17',monto:145000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-17',monto:66000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-17',monto:200000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-18',monto:200000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-18',monto:168000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-19',monto:130000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-23',monto:200000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-23',monto:150000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-23',monto:124000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-23',monto:84000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-23',monto:164000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-23',monto:5350,canal:'CAJA VECINA'},
+  {fecha:'2026-03-24',monto:200000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-24',monto:144000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-26',monto:70000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-26',monto:200000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-27',monto:51000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-27',monto:50000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-27',monto:200000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-30',monto:200000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-30',monto:37000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-30',monto:46000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-30',monto:23000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-31',monto:60000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-31',monto:200000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-31',monto:80000,canal:'CAJA VECINA'},
+  {fecha:'2026-03-31',monto:126000,canal:'CAJA VECINA'},
+  {fecha:'2026-04-01',monto:164000,canal:'CAJA VECINA (efectivo marzo tardío)'},
+  {fecha:'2026-04-02',monto:111400,canal:'CAJA VECINA (efectivo marzo tardío)'},
+  {fecha:'2026-04-02',monto:200000,canal:'CAJA VECINA (efectivo marzo tardío)'},
+];
+
+function renderBEDeposits() {
+  const tbody = document.getElementById('beDepositsBody');
+  if (!tbody) return;
+  tbody.innerHTML = beDeposits.map((r, i) => {
+    const isCRC = r.canal.includes('CRC');
+    const isAbril = r.fecha.startsWith('2026-04');
+    const rowStyle = isCRC ? 'background:#f0fdf4;font-weight:600;' : (isAbril ? 'background:#fffbeb;' : (i%2 ? 'background:var(--row-alt);' : ''));
+    const parts = r.fecha.split('-');
+    const fechaFmt = `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return `<tr style="${rowStyle}">
+      <td>${fechaFmt}</td>
+      <td style="text-align:right;font-weight:${isCRC?'700':'400'};color:${isCRC?'var(--green)':'inherit'}">${fmt(r.monto)}</td>
+      <td style="color:${isCRC?'var(--green)':isAbril?'#b45309':'var(--text-secondary)'}">${r.canal}</td>
+    </tr>`;
+  }).join('');
+}
+
+// Render inicial cuando se abre el tab
+const _origShowTab = showTab;
+
+// init tf table when tab opens
+document.addEventListener("DOMContentLoaded", () => {
+  renderBEDeposits();
+});
+</script>
+</body>
+</html>

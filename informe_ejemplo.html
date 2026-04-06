@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Informe Conciliación — CMC</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 2em; color: #222; }
+  h1 { color: #2c3e50; }
+  h2 { color: #2980b9; border-bottom: 2px solid #2980b9; padding-bottom: 4px; }
+  table { border-collapse: collapse; width: 100%; margin-bottom: 2em; font-size: 0.9em; }
+  th { background: #2c3e50; color: white; padding: 8px; text-align: left; }
+  td { padding: 6px 8px; border-bottom: 1px solid #ddd; }
+  tr:hover { background: #f5f5f5; }
+  .meta { color: #666; margin-bottom: 1em; }
+</style>
+</head>
+<body>
+<h1>Informe de Conciliación Financiera</h1>
+<p class="meta">Centro Médico Carampangue — Generado: 02/04/2026 17:22</p>
+
+<h2>B. Resumen por medio de pago</h2>
+<table>
+<tr><th>Medio</th><th>Registrado</th><th>Respaldado</th><th>Diferencia</th><th>Estado</th></tr>
+<tr><td>TRANSFERENCIA</td><td>$43,000</td><td>$73,000</td><td>$-30,000</td><td style='color:#e74c3c;font-weight:bold'>REVISAR</td></tr>
+<tr><td>EFECTIVO</td><td>$40,000</td><td>$40,000</td><td>$0</td><td style='color:#2ecc71;font-weight:bold'>OK</td></tr>
+<tr><td>TRANSBANK_DEBITO</td><td>$75,000</td><td>$75,000</td><td>$0</td><td style='color:#2ecc71;font-weight:bold'>OK</td></tr>
+<tr><td>TRANSBANK_CREDITO</td><td>$20,000</td><td>$20,000</td><td>$0</td><td style='color:#2ecc71;font-weight:bold'>OK</td></tr>
+
+</table>
+
+<h2>C. Hallazgos detallados (1)</h2>
+<table>
+<tr><th>Fecha</th><th>Paciente</th><th>Monto interno</th><th>Monto externo</th>
+<th>Fuente interna</th><th>Fuente externa</th><th>Medio</th><th>Tipo</th><th>Comentario</th><th>Prioridad</th></tr>
+<tr><td>03/04/2026</td><td>—</td><td>—</td><td>$30,000</td><td>RECEPCION</td><td>ITAU</td><td>TRANSFERENCIA</td><td>SIN_RESPALDO_INTERNO</td><td>Abono $30,000 en Itaú sin registro en recepción. Glosa: TRANSFERENCIA RECIBIDA SIN IDENTIFICAR</td><td style='color:#f39c12;font-weight:bold'>MEDIA</td></tr>
+
+</table>
+
+<h2>D. Cuadre diario</h2>
+<table>
+<tr><th>Fecha</th><th>Recepción</th><th>Medilink</th><th>Itaú</th><th>BancoEstado</th><th>Transbank</th><th>Diferencia</th><th>Estado</th></tr>
+<tr><td>02/04/2026</td><td>$113,000</td><td>$113,000</td><td>$43,000</td><td>$15,000</td><td>$55,000</td><td>$0</td><td style='color:#2ecc71;font-weight:bold'>CUADRA</td></tr>
+<tr><td>03/04/2026</td><td>$65,000</td><td>$65,000</td><td>$30,000</td><td>$25,000</td><td>$40,000</td><td>$-30,000</td><td style='color:#e74c3c;font-weight:bold'>NO CUADRA</td></tr>
+
+</table>
+</body>
+</html>

@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flujos del Bot — Centro Médico Carampangue</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3350;
+    --text: #e8eaf6;
+    --muted: #8892b0;
+    --agendar: #4f8ef7;
+    --agendar-light: rgba(79,142,247,0.15);
+    --cancelar: #f76f6f;
+    --cancelar-light: rgba(247,111,111,0.15);
+    --ver: #4ecb8d;
+    --ver-light: rgba(78,203,141,0.15);
+    --faq: #f7b74f;
+    --faq-light: rgba(247,183,79,0.15);
+    --emergency: #ff6b6b;
+    --idle: #a78bfa;
+    --idle-light: rgba(167,139,250,0.15);
+    --end: #4ecb8d;
+    --end-light: rgba(78,203,141,0.12);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+
+  /* Layout */
+  .app { display: flex; height: 100vh; overflow: hidden; }
+  .sidebar { width: 260px; min-width: 260px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; }
+  .main { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+
+  /* Sidebar */
+  .sidebar-header { padding: 20px 16px 16px; border-bottom: 1px solid var(--border); }
+  .sidebar-header h1 { font-size: 14px; font-weight: 700; color: var(--text); letter-spacing: 0.5px; }
+  .sidebar-header p { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .nav-section { padding: 12px 8px 4px; }
+  .nav-label { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; padding: 0 8px 8px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; cursor: pointer; transition: all 0.15s; font-size: 13px; color: var(--muted); margin-bottom: 2px; }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { color: var(--text); font-weight: 600; }
+  .nav-item.active.agendar { background: var(--agendar-light); color: var(--agendar); }
+  .nav-item.active.cancelar { background: var(--cancelar-light); color: var(--cancelar); }
+  .nav-item.active.ver { background: var(--ver-light); color: var(--ver); }
+  .nav-item.active.faq { background: var(--faq-light); color: var(--faq); }
+  .nav-item.active.general { background: var(--idle-light); color: var(--idle); }
+  .nav-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .dot-agendar { background: var(--agendar); }
+  .dot-cancelar { background: var(--cancelar); }
+  .dot-ver { background: var(--ver); }
+  .dot-faq { background: var(--faq); }
+  .dot-general { background: var(--idle); }
+  .nav-badge { margin-left: auto; font-size: 10px; background: var(--surface2); color: var(--muted); padding: 2px 7px; border-radius: 20px; }
+
+  /* Top bar */
+  .topbar { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: var(--surface); }
+  .topbar-title { font-size: 16px; font-weight: 700; }
+  .topbar-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .topbar-badges { display: flex; gap: 8px; }
+  .badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: 600; }
+  .badge-agendar { background: var(--agendar-light); color: var(--agendar); border: 1px solid rgba(79,142,247,0.3); }
+  .badge-cancelar { background: var(--cancelar-light); color: var(--cancelar); border: 1px solid rgba(247,111,111,0.3); }
+  .badge-ver { background: var(--ver-light); color: var(--ver); border: 1px solid rgba(78,203,141,0.3); }
+  .badge-faq { background: var(--faq-light); color: var(--faq); border: 1px solid rgba(247,183,79,0.3); }
+  .badge-general { background: var(--idle-light); color: var(--idle); border: 1px solid rgba(167,139,250,0.3); }
+
+  /* Flow area */
+  .flow-area { flex: 1; overflow: auto; padding: 32px 24px; }
+
+  /* Flow diagrams */
+  .flow-view { display: none; }
+  .flow-view.active { display: block; }
+
+  /* Nodes */
+  .flow-row { display: flex; align-items: flex-start; gap: 0; margin-bottom: 0; }
+  .flow-col { display: flex; flex-direction: column; align-items: center; }
+  .node { border-radius: 12px; padding: 14px 18px; min-width: 200px; max-width: 280px; cursor: pointer; transition: all 0.2s; border: 1.5px solid transparent; position: relative; }
+  .node:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+  .node.selected { border-color: currentColor !important; }
+  .node-state { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; margin-bottom: 4px; }
+  .node-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .node-desc { font-size: 11px; opacity: 0.75; line-height: 1.5; }
+  .node-idle { background: var(--idle-light); border-color: rgba(167,139,250,0.3); color: var(--idle); }
+  .node-agendar { background: var(--agendar-light); border-color: rgba(79,142,247,0.3); color: var(--agendar); }
+  .node-cancelar { background: var(--cancelar-light); border-color: rgba(247,111,111,0.3); color: var(--cancelar); }
+  .node-ver { background: var(--ver-light); border-color: rgba(78,203,141,0.3); color: var(--ver); }
+  .node-faq { background: var(--faq-light); border-color: rgba(247,183,79,0.3); color: var(--faq); }
+  .node-end { background: var(--end-light); border-color: rgba(78,203,141,0.25); color: var(--end); }
+  .node-emergency { background: rgba(255,107,107,0.12); border-color: rgba(255,107,107,0.3); color: #ff6b6b; }
+
+  /* Arrows */
+  .arrow-down { display: flex; flex-direction: column; align-items: center; margin: 0; padding: 4px 0; }
+  .arrow-line { width: 2px; height: 28px; background: var(--border); }
+  .arrow-head { width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid var(--border); }
+  .arrow-label { font-size: 10px; color: var(--muted); background: var(--surface2); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border); white-space: nowrap; margin: 3px 0; }
+  .arrow-right { display: flex; align-items: center; gap: 0; padding: 0 4px; align-self: center; }
+  .arrow-h-line { height: 2px; width: 32px; background: var(--border); }
+  .arrow-h-head { width: 0; height: 0; border-top: 6px solid transparent; border-bottom: 6px solid transparent; border-left: 8px solid var(--border); }
+
+  /* Branching */
+  .branch { display: flex; flex-direction: column; align-items: flex-start; gap: 0; }
+  .branch-row { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 8px; }
+  .branch-item { display: flex; align-items: flex-start; gap: 0; }
+  .branch-label { font-size: 10px; color: var(--muted); background: var(--surface2); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border); white-space: nowrap; align-self: center; margin: 0 6px; }
+
+  /* Detail panel */
+  .detail-panel { width: 320px; min-width: 320px; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; display: flex; flex-direction: column; }
+  .detail-empty { flex: 1; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; color: var(--muted); padding: 24px; text-align: center; }
+  .detail-empty-icon { font-size: 36px; opacity: 0.4; }
+  .detail-content { padding: 20px; display: none; }
+  .detail-content.visible { display: block; }
+  .detail-state-tag { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 3px 10px; border-radius: 20px; display: inline-block; margin-bottom: 10px; }
+  .detail-title { font-size: 18px; font-weight: 800; margin-bottom: 6px; }
+  .detail-desc { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 16px; }
+  .detail-section { margin-bottom: 16px; }
+  .detail-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 8px; }
+  .message-bubble { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; font-size: 12px; line-height: 1.7; color: var(--text); margin-bottom: 8px; position: relative; }
+  .message-bubble.bot::before { content: '🤖'; position: absolute; top: -8px; left: 10px; font-size: 14px; }
+  .message-bubble.user::before { content: '👤'; position: absolute; top: -8px; right: 10px; font-size: 14px; }
+  .message-bubble.user { text-align: right; }
+  .transition-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 6px; font-size: 12px; }
+  .transition-arrow { color: var(--muted); font-size: 10px; }
+  .transition-condition { color: var(--muted); font-size: 11px; flex: 1; }
+  .transition-state { font-weight: 700; font-size: 11px; }
+
+  /* Inline flow grid */
+  .flow-grid { display: flex; flex-direction: column; gap: 0; align-items: flex-start; }
+  .flow-step { display: flex; align-items: flex-start; gap: 16px; }
+  .flow-step-nodes { display: flex; flex-direction: column; align-items: flex-start; gap: 0; }
+
+  /* Complete flow layout */
+  .full-flow { display: flex; flex-direction: column; align-items: flex-start; gap: 0; padding-bottom: 60px; }
+  .step-row { display: flex; align-items: center; gap: 0; }
+  .step-connector-v { display: flex; flex-direction: column; align-items: center; width: 220px; }
+
+  /* Branching layout */
+  .branch-container { display: flex; gap: 24px; align-items: flex-start; }
+  .branch-path { display: flex; flex-direction: column; align-items: center; }
+
+  /* Stats */
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
+  .stat-label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-value { font-size: 28px; font-weight: 800; margin: 6px 0 4px; }
+  .stat-sub { font-size: 11px; color: var(--muted); }
+
+  /* State grid for overview */
+  .states-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .state-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px; cursor: pointer; transition: all 0.15s; }
+  .state-card:hover { border-color: var(--agendar); transform: translateY(-1px); }
+  .state-card-tag { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+  .state-card-name { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .state-card-desc { font-size: 11px; color: var(--muted); line-height: 1.5; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* Responsive */
+  @media (max-width: 1200px) {
+    .detail-panel { width: 280px; min-width: 280px; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h1>CMC · Bot Flows</h1>
+      <p>Centro Médico Carampangue</p>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Vista</div>
+      <div class="nav-item general active" onclick="showFlow('overview', this)">
+        <div class="nav-dot dot-general"></div>
+        Vista General
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Flujos principales</div>
+      <div class="nav-item agendar" onclick="showFlow('agendar', this)">
+        <div class="nav-dot dot-agendar"></div>
+        Agendar hora
+        <span class="nav-badge">7 pasos</span>
+      </div>
+      <div class="nav-item cancelar" onclick="showFlow('cancelar', this)">
+        <div class="nav-dot dot-cancelar"></div>
+        Cancelar hora
+        <span class="nav-badge">4 pasos</span>
+      </div>
+      <div class="nav-item ver" onclick="showFlow('ver', this)">
+        <div class="nav-dot dot-ver"></div>
+        Ver reservas
+        <span class="nav-badge">2 pasos</span>
+      </div>
+      <div class="nav-item faq" onclick="showFlow('faq', this)">
+        <div class="nav-dot dot-faq"></div>
+        FAQ / Info / Precio
+        <span class="nav-badge">1 paso</span>
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Especiales</div>
+      <div class="nav-item general" onclick="showFlow('emergencia', this)">
+        <div class="nav-dot" style="background:#ff6b6b"></div>
+        Emergencias
+      </div>
+      <div class="nav-item general" onclick="showFlow('humano', this)">
+        <div class="nav-dot dot-general"></div>
+        Derivar a humano
+      </div>
+    </div>
+    <div style="margin-top:auto; padding:16px; border-top:1px solid var(--border);">
+      <div style="font-size:11px; color:var(--muted); line-height:1.7;">
+        <strong style="color:var(--text)">11 estados</strong> en la máquina<br>
+        IA: Claude Haiku (intención)<br>
+        API: Medilink 2 (slots / citas)<br>
+        Mensajería: Meta Cloud API
+      </div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title" id="topbar-title">Vista General — Flujos del Chatbot</div>
+        <div class="topbar-sub" id="topbar-sub">Selecciona un flujo en la barra lateral o haz clic en un estado para ver detalles</div>
+      </div>
+      <div class="topbar-badges" id="topbar-badges">
+        <span class="badge badge-agendar">Agendar</span>
+        <span class="badge badge-cancelar">Cancelar</span>
+        <span class="badge badge-ver">Ver reservas</span>
+        <span class="badge badge-faq">FAQ</span>
+      </div>
+    </div>
+
+    <div style="display:flex; flex:1; overflow:hidden;">
+      <!-- Flow area -->
+      <div class="flow-area" id="flow-area">
+
+        <!-- ═══════════════════════════════════════════════════════ OVERVIEW -->
+        <div class="flow-view active" id="view-overview">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-label">Estados totales</div>
+              <div class="stat-value" style="color:var(--agendar)">11</div>
+              <div class="stat-sub">máquina de estados</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Flujo más largo</div>
+              <div class="stat-value" style="color:var(--faq)">7</div>
+              <div class="stat-sub">pasos — agendar (nuevo paciente)</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Flujo más corto</div>
+              <div class="stat-value" style="color:var(--ver)">2</div>
+              <div class="stat-sub">pasos — ver reservas</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Escaladas</div>
+              <div class="stat-value" style="color:var(--idle)">3</div>
+              <div class="stat-sub">niveles antes de derivar humano</div>
+            </div>
+          </div>
+
+          <div style="margin-bottom:20px;">
+            <div style="font-size:13px; font-weight:700; margin-bottom:12px; color:var(--muted); text-transform:uppercase; letter-spacing:0.8px;">Todos los estados</div>
+            <div class="states-grid">
+              <div class="state-card" onclick="showFlow('overview', null); selectNode('idle')">
+                <div class="state-card-tag" style="color:var(--idle)">ENTRADA</div>
+                <div class="state-card-name">IDLE</div>
+                <div class="state-card-desc">Detecta intención con Claude Haiku. Punto de entrada de todos los flujos.</div>
+              </div>
+              <div class="state-card" onclick="showFlow('agendar', document.querySelector('.nav-item.agendar'))">
+                <div class="state-card-tag" style="color:var(--agendar)">AGENDAR</div>
+                <div class="state-card-name">WAIT_ESPECIALIDAD</div>
+                <div class="state-card-desc">Espera que el usuario indique qué especialidad necesita.</div>
+              </div>
+              <div class="state-card" onclick="showFlow('agendar', document.querySelector('.nav-item.agendar'))">
+                <div class="state-card-tag" style="color:var(--agendar)">AGENDAR</div>
+                <div class="state-card-name">WAIT_SLOT</div>
+                <div class="state-card-desc">Muestra horarios disponibles. Permite ver todos, otro día o día específico.</div>
+              </div>
+              <div class="state-card" onclick="showFlow('agendar', document.querySelector('.nav-item.agendar'))">
+                <div class="state-card-tag" style="color:var(--agendar)">AGENDAR</div>
+                <div class="state-card-name">WAIT_MODALIDAD</div>
+                <div class="state-card-desc">Pregunta si la atención es Fonasa o Particular.</div>
+              </div>
+              <div class="state-card" onclick="showFlow('agendar', document.querySelector('.nav-item.agendar'))">
+                <div class="state-card-tag" style="color:var(--agendar)">AGENDAR</div>
+                <div class="state-card-name">WAIT_RUT_AGENDAR</div>
+                <div class="state-card-desc">Solicita el RUT. Si el paciente ya agendó antes, ofrece usar datos guardados.</div>
+              </div>
+              <div class="state-card" onclick="showFlow('agendar', document.querySelector('.nav-item.agendar'))">
+                <div class="state-card-tag" style="color:var(--agendar)">AGENDAR</div>
+                <div class="state-card-name">WAIT_NOMBRE_NUEVO</div>
+                <div class="state-card-desc">Solo si el RUT no existe en Medilink. Registra al paciente nuevo.</div>
+              </div>
+              <div class="state-card" onclick="showFlow('agendar', document.querySelector('.nav-item.agendar'))">
+                <div class="state-card-tag" style="color:var(--agendar)">AGENDAR</div>
+                <div class="state-card-name">CONFIRMING_CITA</div>
+                <div class="state-card-desc">Muestra resumen y pide confirmación final antes de crear en Medilink.</div>
+              </div>
+              <div class="state-card" onclick="showFlow('cancelar', document.querySelector('.nav-item.cancelar'))">
+                <div class="state-card-tag" style="color:var(--cancelar)">CANCELAR</div>
+                <div class="state-card-name">WAIT_RUT_CANCELAR</div>
+                <div class="state-card-desc">Pide RUT para buscar las citas futuras del paciente.</div>
+              </div>
+              <div class="state-card" onclick="showFlow('cancelar', document.querySelector('.nav-item.cancelar'))">
+                <div class="state-card-tag" style="color:var(--cancelar)">CANCELAR</div>
+                <div class="state-card-name">WAIT_CITA_CANCELAR</div>
+                <div class="state-card-desc">Lista las citas futuras y espera que el paciente seleccione una.</div>
+              </div>
+              <div class="state-card" onclick="showFlow('cancelar', document.querySelector('.nav-item.cancelar'))">
+                <div class="state-card-tag" style="color:var(--cancelar)">CANCELAR</div>
+                <div class="state-card-name">CONFIRMING_CANCEL</div>
+                <div class="state-card-desc">Confirma antes de ejecutar PUT /citas/{id} con id_estado=1.</div>
+              </div>
+              <div class="state-card" onclick="showFlow('ver', document.querySelector('.nav-item.ver'))">
+                <div class="state-card-tag" style="color:var(--ver)">VER</div>
+                <div class="state-card-name">WAIT_RUT_VER</div>
+                <div class="state-card-desc">Pide RUT y muestra las próximas citas del paciente. No modifica nada.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Comandos globales -->
+          <div style="margin-top:24px;">
+            <div style="font-size:13px; font-weight:700; margin-bottom:12px; color:var(--muted); text-transform:uppercase; letter-spacing:0.8px;">Comandos globales (cualquier estado)</div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:10px 14px; font-size:12px;">
+                <span style="color:var(--idle); font-weight:700;">menu / hola / inicio</span>
+                <span style="color:var(--muted); margin-left:8px;">→ Resetea sesión, muestra menú</span>
+              </div>
+              <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:10px 14px; font-size:12px;">
+                <span style="color:#ff6b6b; font-weight:700;">Palabras de emergencia</span>
+                <span style="color:var(--muted); margin-left:8px;">→ Siempre deriva a SAMU 131</span>
+              </div>
+              <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:10px 14px; font-size:12px;">
+                <span style="color:var(--faq); font-weight:700;">Timeout 30 min</span>
+                <span style="color:var(--muted); margin-left:8px;">→ Sesión expira automáticamente</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════ AGENDAR -->
+        <div class="flow-view" id="view-agendar">
+          <div style="display:flex; flex-direction:column; align-items:flex-start; gap:0; padding-bottom:60px;">
+
+            <!-- IDLE -->
+            <div style="display:flex; flex-direction:column; align-items:center; width:220px;">
+              <div class="node node-idle" onclick="selectNode('idle')" style="width:220px;">
+                <div class="node-state">Entrada</div>
+                <div class="node-title">IDLE</div>
+                <div class="node-desc">Claude Haiku detecta intent="agendar" + especialidad opcional</div>
+              </div>
+              <div class="arrow-down">
+                <div class="arrow-line"></div>
+                <div class="arrow-label">intent = "agendar"</div>
+                <div class="arrow-line" style="height:12px"></div>
+                <div class="arrow-head"></div>
+              </div>
+            </div>
+
+            <!-- Branch: con/sin especialidad -->
+            <div style="display:flex; gap:40px; align-items:flex-start;">
+
+              <!-- Path A: sin especialidad -->
+              <div style="display:flex; flex-direction:column; align-items:center;">
+                <div class="node node-agendar" onclick="selectNode('wait_especialidad')" style="width:220px;">
+                  <div class="node-state">Estado · Path A</div>
+                  <div class="node-title">WAIT_ESPECIALIDAD</div>
+                  <div class="node-desc">Sin especialidad detectada. Muestra lista de especialidades disponibles.</div>
+                </div>
+                <div class="arrow-down">
+                  <div class="arrow-line"></div>
+                  <div class="arrow-label">usuario indica especialidad</div>
+                  <div class="arrow-line" style="height:12px"></div>
+                  <div class="arrow-head"></div>
+                </div>
+                <div style="font-size:11px; color:var(--muted); margin-bottom:8px; background:var(--surface2); padding:4px 10px; border-radius:6px;">↓ une con Path B</div>
+              </div>
+
+              <!-- Connector -->
+              <div style="display:flex; flex-direction:column; align-items:center; padding-top:70px;">
+                <div style="font-size:11px; color:var(--muted); writing-mode:vertical-rl; transform:rotate(180deg); padding:8px 4px; background:var(--surface2); border-radius:6px; border:1px solid var(--border);">Path B: con especialidad → salta directo</div>
+              </div>
+            </div>
+
+            <!-- WAIT_SLOT -->
+            <div style="display:flex; flex-direction:column; align-items:center; width:280px; margin-top:8px;">
+              <div class="node node-agendar" onclick="selectNode('wait_slot')" style="width:280px;">
+                <div class="node-state">Estado</div>
+                <div class="node-title">WAIT_SLOT</div>
+                <div class="node-desc">Muestra hasta 5 slots (⭐ recomendado). smart_select prioriza compactar agenda. Permite ver todos / otro día / día específico.</div>
+              </div>
+
+              <!-- Branch desde WAIT_SLOT -->
+              <div style="display:flex; gap:16px; align-items:flex-start; margin-top:4px;">
+                <div style="display:flex; flex-direction:column; align-items:center;">
+                  <div class="arrow-down" style="padding:2px 0;">
+                    <div class="arrow-line" style="height:16px;background:rgba(79,142,247,0.4)"></div>
+                    <div class="arrow-label" style="color:var(--agendar);border-color:rgba(79,142,247,0.3)">elige número</div>
+                    <div class="arrow-line" style="height:8px;background:rgba(79,142,247,0.4)"></div>
+                    <div class="arrow-head" style="border-top-color:rgba(79,142,247,0.6)"></div>
+                  </div>
+                </div>
+                <div style="display:flex; flex-direction:column; align-items:center; padding-top:4px; gap:4px;">
+                  <div style="font-size:10px; color:var(--muted); background:var(--surface2); padding:2px 8px; border-radius:4px; border:1px solid var(--border);">"ver todos" → mismo estado</div>
+                  <div style="font-size:10px; color:var(--muted); background:var(--surface2); padding:2px 8px; border-radius:4px; border:1px solid var(--border);">"otro día" → busca siguiente fecha</div>
+                  <div style="font-size:10px; color:var(--muted); background:var(--surface2); padding:2px 8px; border-radius:4px; border:1px solid var(--border);">"lunes/martes/..." → día específico</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- WAIT_MODALIDAD -->
+            <div style="display:flex; flex-direction:column; align-items:center; width:240px;">
+              <div class="node node-agendar" onclick="selectNode('wait_modalidad')" style="width:240px;">
+                <div class="node-state">Estado</div>
+                <div class="node-title">WAIT_MODALIDAD</div>
+                <div class="node-desc">Fonasa o Particular. Botones interactivos de WhatsApp.</div>
+              </div>
+              <div class="arrow-down">
+                <div class="arrow-line"></div>
+                <div class="arrow-label">fonasa / particular</div>
+                <div class="arrow-line" style="height:12px"></div>
+                <div class="arrow-head"></div>
+              </div>
+            </div>
+
+            <!-- WAIT_RUT_AGENDAR -->
+            <div style="display:flex; flex-direction:column; align-items:center; width:260px;">
+              <div class="node node-agendar" onclick="selectNode('wait_rut_agendar')" style="width:260px;">
+                <div class="node-state">Estado</div>
+                <div class="node-title">WAIT_RUT_AGENDAR</div>
+                <div class="node-desc">Solicita RUT. Si ya tiene perfil guardado, ofrece "usar datos anteriores" para saltar este paso.</div>
+              </div>
+
+              <div style="display:flex; gap:32px; align-items:flex-start; margin-top:4px;">
+                <!-- Path: paciente existe -->
+                <div style="display:flex; flex-direction:column; align-items:center;">
+                  <div class="arrow-down">
+                    <div class="arrow-line" style="background:rgba(79,142,247,0.4)"></div>
+                    <div class="arrow-label" style="color:var(--agendar);border-color:rgba(79,142,247,0.3)">RUT válido + existe</div>
+                    <div class="arrow-line" style="height:8px;background:rgba(79,142,247,0.4)"></div>
+                    <div class="arrow-head" style="border-top-color:rgba(79,142,247,0.6)"></div>
+                  </div>
+                  <div style="font-size:10px; color:var(--agendar); background:var(--agendar-light); padding:3px 10px; border-radius:6px; border:1px solid rgba(79,142,247,0.3); margin-bottom:6px;">→ CONFIRMING_CITA</div>
+                </div>
+                <!-- Path: paciente nuevo -->
+                <div style="display:flex; flex-direction:column; align-items:center; padding-top:4px;">
+                  <div class="arrow-down">
+                    <div class="arrow-line" style="background:rgba(247,183,79,0.4)"></div>
+                    <div class="arrow-label" style="color:var(--faq);border-color:rgba(247,183,79,0.3)">RUT no existe</div>
+                    <div class="arrow-line" style="height:8px;background:rgba(247,183,79,0.4)"></div>
+                    <div class="arrow-head" style="border-top-color:rgba(247,183,79,0.6)"></div>
+                  </div>
+                  <div class="node node-faq" onclick="selectNode('wait_nombre_nuevo')" style="width:200px;">
+                    <div class="node-state">Estado extra</div>
+                    <div class="node-title">WAIT_NOMBRE_NUEVO</div>
+                    <div class="node-desc">Registra al paciente nuevo vía POST /pacientes en Medilink.</div>
+                  </div>
+                  <div class="arrow-down">
+                    <div class="arrow-line" style="background:rgba(247,183,79,0.4); height:14px"></div>
+                    <div class="arrow-head" style="border-top-color:rgba(247,183,79,0.6)"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- CONFIRMING_CITA -->
+            <div style="display:flex; flex-direction:column; align-items:center; width:260px; margin-top:4px;">
+              <div class="node node-agendar" onclick="selectNode('confirming_cita')" style="width:260px;">
+                <div class="node-state">Estado</div>
+                <div class="node-title">CONFIRMING_CITA</div>
+                <div class="node-desc">"Estás a un paso de confirmar tu hora 👇" — botones ✅ Confirmar / ❌ Cambiar</div>
+              </div>
+              <div class="arrow-down">
+                <div class="arrow-line" style="background:rgba(79,142,247,0.4)"></div>
+                <div class="arrow-label" style="color:var(--agendar);border-color:rgba(79,142,247,0.3)">sí / confirmar</div>
+                <div class="arrow-line" style="height:8px;background:rgba(79,142,247,0.4)"></div>
+                <div class="arrow-head" style="border-top-color:rgba(79,142,247,0.6)"></div>
+              </div>
+            </div>
+
+            <!-- END -->
+            <div style="display:flex; flex-direction:column; align-items:center; width:240px;">
+              <div class="node node-end" onclick="selectNode('end_agendar')" style="width:240px;">
+                <div class="node-state">Fin</div>
+                <div class="node-title">✅ Cita creada</div>
+                <div class="node-desc">POST /citas en Medilink. Guarda perfil, tags y cita_bot. Sesión reseteada. Recordatorio automático 24h antes.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════ CANCELAR -->
+        <div class="flow-view" id="view-cancelar">
+          <div style="display:flex; flex-direction:column; align-items:flex-start; gap:0; padding-bottom:60px;">
+
+            <div style="display:flex; flex-direction:column; align-items:center; width:220px;">
+              <div class="node node-idle" onclick="selectNode('idle')" style="width:220px;">
+                <div class="node-state">Entrada</div>
+                <div class="node-title">IDLE</div>
+                <div class="node-desc">Claude detecta intent="cancelar"</div>
+              </div>
+              <div class="arrow-down">
+                <div class="arrow-line"></div>
+                <div class="arrow-label">intent = "cancelar"</div>
+                <div class="arrow-line" style="height:12px"></div>
+                <div class="arrow-head"></div>
+              </div>
+            </div>
+
+            <div style="display:flex; flex-direction:column; align-items:center; width:240px;">
+              <div class="node node-cancelar" onclick="selectNode('wait_rut_cancelar')" style="width:240px;">
+                <div class="node-state">Estado</div>
+                <div class="node-title">WAIT_RUT_CANCELAR</div>
+                <div class="node-desc">Pide RUT. Busca paciente en Medilink y lista sus citas futuras (estado_anulacion=0).</div>
+              </div>
+              <div class="arrow-down">
+                <div class="arrow-line"></div>
+                <div class="arrow-label">RUT válido + citas encontradas</div>
+                <div class="arrow-line" style="height:12px"></div>
+                <div class="arrow-head"></div>
+              </div>
+            </div>
+
+            <div style="display:flex; flex-direction:column; align-items:center; width:240px;">
+              <div class="node node-cancelar" onclick="selectNode('wait_cita_cancelar')" style="width:240px;">
+                <div class="node-state">Estado</div>
+                <div class="node-title">WAIT_CITA_CANCELAR</div>
+                <div class="node-desc">Lista interactiva con las próximas citas. Máximo 5 citas más cercanas.</div>
+              </div>
+              <div class="arrow-down">
+                <div class="arrow-line"></div>
+                <div class="arrow-label">elige número de cita</div>
+                <div class="arrow-line" style="height:12px"></div>
+                <div class="arrow-head"></div>
+              </div>
+            </div>
+
+            <div style="display:flex; flex-direction:column; align-items:center; width:240px;">
+              <div class="node node-cancelar" onclick="selectNode('confirming_cancel')" style="width:240px;">
+                <div class="node-state">Estado</div>
+                <div class="node-title">CONFIRMING_CANCEL</div>
+                <div class="node-desc">"Vas a cancelar esta hora" — botones ✅ Sí, cancelar / ❌ No, mantener</div>
+              </div>
+              <div class="arrow-down">
+                <div class="arrow-line" style="background:rgba(247,111,111,0.4)"></div>
+                <div class="arrow-label" style="color:var(--cancelar);border-color:rgba(247,111,111,0.3)">confirma cancelación</div>
+                <div class="arrow-line" style="height:8px;background:rgba(247,111,111,0.4)"></div>
+                <div class="arrow-head" style="border-top-color:rgba(247,111,111,0.6)"></div>
+              </div>
+            </div>
+
+            <div style="display:flex; flex-direction:column; align-items:center; width:240px;">
+              <div class="node node-end" onclick="selectNode('end_cancelar')" style="width:240px;">
+                <div class="node-state">Fin</div>
+                <div class="node-title">✅ Cita cancelada</div>
+                <div class="node-desc">PUT /citas/{id} con id_estado=1 en Medilink. Ofrece agendar una nueva hora.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════ VER -->
+        <div class="flow-view" id="view-ver">
+          <div style="display:flex; flex-direction:column; align-items:flex-start; gap:0; padding-bottom:60px;">
+
+            <div style="display:flex; flex-direction:column; align-items:center; width:220px;">
+              <div class="node node-idle" onclick="selectNode('idle')" style="width:220px;">
+                <div class="node-state">Entrada</div>
+                <div class="node-title">IDLE</div>
+                <div class="node-desc">Claude detecta intent="ver_reservas"</div>
+              </div>
+              <div class="arrow-down">
+                <div class="arrow-line"></div>
+                <div class="arrow-label">intent = "ver_reservas"</div>
+                <div class="arrow-line" style="height:12px"></div>
+                <div class="arrow-head"></div>
+              </div>
+            </div>
+
+            <div style="display:flex; flex-direction:column; align-items:center; width:260px;">
+              <div class="node node-ver" onclick="selectNode('wait_rut_ver')" style="width:260px;">
+                <div class="node-state">Estado</div>
+                <div class="node-title">WAIT_RUT_VER</div>
+                <div class="node-desc">Pide RUT. Busca paciente y lista sus citas futuras. No modifica nada en Medilink.</div>
+              </div>
+              <div class="arrow-down">
+                <div class="arrow-line" style="background:rgba(78,203,141,0.4)"></div>
+                <div class="arrow-label" style="color:var(--ver);border-color:rgba(78,203,141,0.3)">RUT válido</div>
+                <div class="arrow-line" style="height:8px;background:rgba(78,203,141,0.4)"></div>
+                <div class="arrow-head" style="border-top-color:rgba(78,203,141,0.6)"></div>
+              </div>
+            </div>
+
+            <div style="display:flex; flex-direction:column; align-items:center; width:260px;">
+              <div class="node node-end" onclick="selectNode('end_ver')" style="width:260px;">
+                <div class="node-state">Fin</div>
+                <div class="node-title">📋 Citas mostradas</div>
+                <div class="node-desc">Lista las próximas citas (máx 5). Si no hay citas, ofrece agendar una. Sesión reseteada.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════ FAQ -->
+        <div class="flow-view" id="view-faq">
+          <div style="display:flex; flex-direction:column; align-items:flex-start; gap:0; padding-bottom:60px;">
+
+            <div style="display:flex; flex-direction:column; align-items:center; width:220px;">
+              <div class="node node-idle" onclick="selectNode('idle')" style="width:220px;">
+                <div class="node-state">Entrada</div>
+                <div class="node-title">IDLE</div>
+                <div class="node-desc">Claude detecta intent="precio" o "info"</div>
+              </div>
+              <div class="arrow-down">
+                <div class="arrow-line"></div>
+                <div class="arrow-label">intent = "precio" / "info"</div>
+                <div class="arrow-line" style="height:12px"></div>
+                <div class="arrow-head"></div>
+              </div>
+            </div>
+
+            <div style="display:flex; flex-direction:column; align-items:center; width:280px;">
+              <div class="node node-faq" onclick="selectNode('faq')" style="width:280px;">
+                <div class="node-state">Sin estado — respuesta directa</div>
+                <div class="node-title">Claude Haiku responde</div>
+                <div class="node-desc">Si Claude ya tiene respuesta en el JSON del intent (respuesta_directa), la usa directamente. Si no, llama a respuesta_faq() con el contexto completo.</div>
+              </div>
+              <div class="arrow-down">
+                <div class="arrow-line" style="background:rgba(247,183,79,0.4)"></div>
+                <div class="arrow-line" style="height:8px;background:rgba(247,183,79,0.4)"></div>
+                <div class="arrow-head" style="border-top-color:rgba(247,183,79,0.6)"></div>
+              </div>
+            </div>
+
+            <div style="display:flex; flex-direction:column; align-items:center; width:280px;">
+              <div class="node node-end" onclick="selectNode('end_faq')" style="width:280px;">
+                <div class="node-state">Fin</div>
+                <div class="node-title">Respuesta + CTA</div>
+                <div class="node-desc">Responde la consulta + disclaimer + "¿Quieres agendar una hora? Escribe *1*". Sesión sigue en IDLE.</div>
+              </div>
+            </div>
+
+            <div style="margin-top:28px; padding:16px; background:var(--surface); border:1px solid var(--border); border-radius:10px; width:400px;">
+              <div style="font-size:12px; font-weight:700; color:var(--faq); margin-bottom:10px;">📋 Información disponible (hardcoded en claude_helper.py)</div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:11px; color:var(--muted);">
+                <div>• Precios por especialidad</div>
+                <div>• Horarios de atención</div>
+                <div>• Cobertura Fonasa</div>
+                <div>• Ubicación y cómo llegar</div>
+                <div>• Especialidades disponibles</div>
+                <div>• Qué traer a la cita</div>
+                <div>• Tiempo de traslado</div>
+                <div>• Diferenciadores del CMC</div>
+              </div>
+              <div style="margin-top:10px; font-size:10px; color:rgba(247,183,79,0.7); padding:6px 10px; background:var(--faq-light); border-radius:6px; border:1px solid rgba(247,183,79,0.2);">
+                ⚠️ Deuda técnica: los precios están hardcodeados. Actualizar manualmente cuando cambien.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════ EMERGENCIA -->
+        <div class="flow-view" id="view-emergencia">
+          <div style="display:flex; flex-direction:column; align-items:flex-start; gap:0; padding-bottom:60px;">
+            <div style="display:flex; flex-direction:column; align-items:center; width:280px;">
+              <div class="node" style="background:rgba(255,107,107,0.1);border-color:rgba(255,107,107,0.4);color:#ff6b6b;width:280px;">
+                <div class="node-state">Cualquier estado</div>
+                <div class="node-title">⚠️ Detección de emergencia</div>
+                <div class="node-desc">Se evalúa ANTES de cualquier lógica de estado. Palabras clave: urgencia, dolor muy fuerte, no puedo respirar, accidente, desmayo, convulsión...</div>
+              </div>
+              <div class="arrow-down">
+                <div class="arrow-line" style="background:rgba(255,107,107,0.4)"></div>
+                <div class="arrow-label" style="color:#ff6b6b;border-color:rgba(255,107,107,0.3)">palabra de emergencia detectada</div>
+                <div class="arrow-line" style="height:8px;background:rgba(255,107,107,0.4)"></div>
+                <div class="arrow-head" style="border-top-color:rgba(255,107,107,0.6)"></div>
+              </div>
+            </div>
+            <div style="display:flex; flex-direction:column; align-items:center; width:280px;">
+              <div class="node node-emergency" onclick="selectNode('emergency')" style="width:280px;">
+                <div class="node-state">Respuesta inmediata</div>
+                <div class="node-title">Derivación SAMU 131</div>
+                <div class="node-desc">Mensaje urgente con SAMU 131 + teléfonos del CMC. NO resetea sesión. NO usa Claude.</div>
+              </div>
+            </div>
+
+            <div style="margin-top:28px; padding:16px; background:var(--surface); border:1px solid rgba(255,107,107,0.3); border-radius:10px; width:380px;">
+              <div style="font-size:11px; font-weight:700; color:#ff6b6b; margin-bottom:8px;">Palabras que activan emergencia:</div>
+              <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                <span style="font-size:10px;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.2);padding:3px 8px;border-radius:4px;color:#ff9999;">emergencia</span>
+                <span style="font-size:10px;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.2);padding:3px 8px;border-radius:4px;color:#ff9999;">urgencia</span>
+                <span style="font-size:10px;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.2);padding:3px 8px;border-radius:4px;color:#ff9999;">dolor muy fuerte</span>
+                <span style="font-size:10px;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.2);padding:3px 8px;border-radius:4px;color:#ff9999;">no puedo respirar</span>
+                <span style="font-size:10px;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.2);padding:3px 8px;border-radius:4px;color:#ff9999;">estoy grave</span>
+                <span style="font-size:10px;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.2);padding:3px 8px;border-radius:4px;color:#ff9999;">mucho dolor</span>
+                <span style="font-size:10px;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.2);padding:3px 8px;border-radius:4px;color:#ff9999;">accidente</span>
+                <span style="font-size:10px;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.2);padding:3px 8px;border-radius:4px;color:#ff9999;">desmayo</span>
+                <span style="font-size:10px;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.2);padding:3px 8px;border-radius:4px;color:#ff9999;">convulsión</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════ HUMANO -->
+        <div class="flow-view" id="view-humano">
+          <div style="display:flex; flex-direction:column; align-items:flex-start; gap:0; padding-bottom:60px;">
+            <div style="display:flex; flex-direction:column; align-items:center; width:260px;">
+              <div class="node node-idle" style="width:260px;">
+                <div class="node-state">Tres orígenes posibles</div>
+                <div class="node-title">_derivar_humano()</div>
+                <div class="node-desc">Se activa desde 3 caminos distintos</div>
+              </div>
+            </div>
+            <div style="display:flex; gap:20px; align-items:flex-start; margin-top:16px;">
+              <div style="background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px; width:180px;">
+                <div style="font-size:11px; font-weight:700; color:var(--idle); margin-bottom:6px;">1. Intent "humano"</div>
+                <div style="font-size:11px; color:var(--muted); line-height:1.6;">Usuario pide hablar con recepción o escribe "4" en el menú</div>
+              </div>
+              <div style="background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px; width:180px;">
+                <div style="font-size:11px; font-weight:700; color:var(--faq); margin-bottom:6px;">2. Frustración (3 errores)</div>
+                <div style="font-size:11px; color:var(--muted); line-height:1.6;">Escalada automática: error 1 → error 2 → error 3 → recepción</div>
+              </div>
+              <div style="background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px; width:180px;">
+                <div style="font-size:11px; font-weight:700; color:var(--cancelar); margin-bottom:6px;">3. Sin disponibilidad</div>
+                <div style="font-size:11px; color:var(--muted); line-height:1.6;">No hay slots en los próximos 60 días para la especialidad pedida</div>
+              </div>
+            </div>
+            <div style="margin-top:20px; display:flex; flex-direction:column; align-items:center; width:260px;">
+              <div class="node node-end" style="width:260px;">
+                <div class="node-state">Respuesta</div>
+                <div class="node-title">📞 Datos de recepción</div>
+                <div class="node-desc">Muestra WhatsApp + fijo. Sesión reseteada. Log del contexto original para trazabilidad.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Detail panel -->
+      <div class="detail-panel" id="detail-panel">
+        <div class="detail-empty" id="detail-empty">
+          <div class="detail-empty-icon">👆</div>
+          <div style="font-size:13px; font-weight:600; color:var(--text);">Haz clic en un estado</div>
+          <div style="font-size:12px; color:var(--muted); line-height:1.6;">Ver mensajes del bot, transiciones y detalles técnicos de cada estado</div>
+        </div>
+        <div class="detail-content" id="detail-content"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const nodes = {
+  idle: {
+    title: "IDLE",
+    type: "general",
+    typeLabel: "Entrada",
+    desc: "Estado inicial y de reposo. Todo mensaje nuevo llega aquí. Claude Haiku analiza el texto libre del usuario y devuelve un JSON con intent + especialidad + respuesta_directa.",
+    messages: [
+      { who: "user", text: "quiero hora con el doctor" },
+      { who: "bot", text: 'Hola 👋 Soy el asistente del *Centro Médico Carampangue*.\n📍 *Monsalve 102, frente a la antigua estación de trenes*, Carampangue.\n¿En qué te ayudo hoy? [Lista interactiva con 4 opciones]' }
+    ],
+    transitions: [
+      { condition: '"1" o intent=agendar', to: "WAIT_ESPECIALIDAD / WAIT_SLOT", color: "#4f8ef7" },
+      { condition: '"2" o intent=cancelar', to: "WAIT_RUT_CANCELAR", color: "#f76f6f" },
+      { condition: '"3" o intent=ver_reservas', to: "WAIT_RUT_VER", color: "#4ecb8d" },
+      { condition: '"4" o intent=humano', to: "_derivar_humano()", color: "#a78bfa" },
+      { condition: 'intent=disponibilidad', to: "Respuesta directa", color: "#f7b74f" },
+      { condition: 'intent=precio/info', to: "Respuesta FAQ + CTA", color: "#f7b74f" },
+      { condition: 'intent=otro (fallback)', to: "Menú interactivo", color: "#8892b0" },
+    ],
+    tech: "Modelo: claude-haiku-4-5-20251001\nTimeout sesión: 30 minutos\nAtajos: 1,2,3,4 saltan la IA"
+  },
+  wait_especialidad: {
+    title: "WAIT_ESPECIALIDAD",
+    type: "agendar",
+    typeLabel: "Agendar",
+    desc: "Se activa cuando el usuario quiere agendar pero no especificó la especialidad en el mensaje inicial. Muestra la lista completa de especialidades disponibles.",
+    messages: [
+      { who: "bot", text: "Claro, te ayudo a agendar 😊\n\n¿Qué especialidad necesitas?\n\n• Cardiología\n• Ecografía\n• Fonoaudiología\n• Gastroenterología\n..." }
+    ],
+    transitions: [
+      { condition: "texto mapea directamente", to: "WAIT_SLOT", color: "#4f8ef7" },
+      { condition: "texto no mapea → Claude extrae especialidad", to: "WAIT_SLOT", color: "#4f8ef7" },
+    ],
+    tech: "_ids_para_especialidad() busca en ESPECIALIDADES_MAP\nSi no encuentra, llama detect_intent() de nuevo\nNo hay timeout especial para este estado"
+  },
+  wait_slot: {
+    title: "WAIT_SLOT",
+    type: "agendar",
+    typeLabel: "Agendar",
+    desc: "Estado central del agendamiento. Muestra hasta 5 slots usando smart_select() que prioriza compactar la agenda del profesional. Primer slot marcado con ⭐.",
+    messages: [
+      { who: "bot", text: "Te encontré estas opciones 👇\n\n*Lunes 30 de marzo* — Dr. Rodrigo Olavarría\n[Lista interactiva]\n⭐ 10:00 (recomendado)\n10:15\n10:30\n11:00\n11:15\n[Más opciones: Ver todos / Buscar otro día]" },
+      { who: "user", text: "otro día" },
+      { who: "bot", text: "Te encontré estas opciones 👇\n\n*Martes 31 de marzo* — Dr. Rodrigo Olavarría\n[Lista interactiva]\n..." }
+    ],
+    transitions: [
+      { condition: "número 1-5 (o con hora)", to: "WAIT_MODALIDAD", color: "#4f8ef7" },
+      { condition: '"ver todos"', to: "WAIT_SLOT (mismo, todos slots)", color: "#4f8ef7" },
+      { condition: '"otro día"', to: "WAIT_SLOT (siguiente fecha, excluye vistas)", color: "#4f8ef7" },
+      { condition: '"lunes/martes/..."', to: "WAIT_SLOT (día específico)", color: "#4f8ef7" },
+      { condition: "error ×1", to: "WAIT_SLOT + mensaje ayuda", color: "#f7b74f" },
+      { condition: "error ×2", to: "WAIT_SLOT + mensaje más directo", color: "#f7b74f" },
+      { condition: "error ×3", to: "_derivar_humano()", color: "#a78bfa" },
+    ],
+    tech: "smart_select(): prioriza slots adyacentes a citas tomadas\nbuscar_primer_dia(excluir=[fechas_vistas]): evita repetir días\nLimite de búsqueda: 60 días adelante\nFiltros: /citas + /horariosbloqueados"
+  },
+  wait_modalidad: {
+    title: "WAIT_MODALIDAD",
+    type: "agendar",
+    typeLabel: "Agendar",
+    desc: "Pregunta si la atención es Fonasa o Particular. Usa botones interactivos de WhatsApp para facilitar la selección.",
+    messages: [
+      { who: "bot", text: "Perfecto 🙌\n\n🏥 *Kinesiología* — Paola Acosta\n📅 *Lunes 30 de marzo*\n🕐 *10:00*\n\n¿Tu atención será Fonasa o Particular?\n[Botones: Fonasa / Particular]" },
+      { who: "user", text: "Fonasa" }
+    ],
+    transitions: [
+      { condition: '"1" / "fonasa"', to: "WAIT_RUT_AGENDAR (con perfil guardado o sin)", color: "#4f8ef7" },
+      { condition: '"2" / "particular"', to: "WAIT_RUT_AGENDAR (con perfil guardado o sin)", color: "#4f8ef7" },
+      { condition: "error ×3", to: "_derivar_humano()", color: "#a78bfa" },
+    ],
+    tech: "Si data[rut_conocido] existe: muestra botones\n'Sí, continuar' / 'Ingresar otro RUT'\nEvita volver a pedir el RUT a pacientes recurrentes"
+  },
+  wait_rut_agendar: {
+    title: "WAIT_RUT_AGENDAR",
+    type: "agendar",
+    typeLabel: "Agendar",
+    desc: "Solicita el RUT del paciente. Si el paciente ya agendó antes desde este número, ofrece usar los datos guardados con un botón de confirmación.",
+    messages: [
+      { who: "bot", text: "Perfecto, atención *Fonasa* 😊\n\nPara confirmar necesito tu RUT:\n(ej: *12.345.678-9*)" },
+      { who: "user", text: "12.345.678-9" }
+    ],
+    transitions: [
+      { condition: "RUT válido + paciente existe", to: "CONFIRMING_CITA", color: "#4f8ef7" },
+      { condition: "RUT válido + no existe en Medilink", to: "WAIT_NOMBRE_NUEVO", color: "#f7b74f" },
+      { condition: "RUT inválido", to: "WAIT_RUT_AGENDAR (reintento)", color: "#8892b0" },
+      { condition: "error ×3", to: "_derivar_humano()", color: "#a78bfa" },
+    ],
+    tech: "valid_rut(): módulo 11 chileno\nclean_rut(): normaliza formatos '12.345.678-9' → '12345678-9'\nbuscar_paciente(): GET /pacientes?q={rut:lk:...}"
+  },
+  wait_nombre_nuevo: {
+    title: "WAIT_NOMBRE_NUEVO",
+    type: "faq",
+    typeLabel: "Paciente nuevo",
+    desc: "Estado extra que solo aparece cuando el RUT no existe en Medilink. Registra al paciente con nombre y apellidos antes de confirmar la cita.",
+    messages: [
+      { who: "bot", text: "No encontré ese RUT en el sistema 🔎\n\nNo te preocupes, te registro ahora mismo.\n¿Cuál es tu nombre completo?\n(ej: *María González López*)" },
+      { who: "user", text: "María González López" },
+      { who: "bot", text: "¡Listo, *María*! Ya quedaste registrado/a 🙌\n\n¿Confirmas esta hora?\n[Botones: ✅ Confirmar / ❌ Cambiar]" }
+    ],
+    transitions: [
+      { condition: "nombre con al menos 2 palabras", to: "CONFIRMING_CITA", color: "#4f8ef7" },
+      { condition: "solo una palabra", to: "WAIT_NOMBRE_NUEVO (reintento)", color: "#8892b0" },
+    ],
+    tech: "crear_paciente(): POST /pacientes\nbody: {rut, nombre, apellidos}\nSi falla el POST → deriva a recepción"
+  },
+  confirming_cita: {
+    title: "CONFIRMING_CITA",
+    type: "agendar",
+    typeLabel: "Agendar",
+    desc: "Último paso antes de crear la cita. Muestra resumen completo con botones de WhatsApp. Después de confirmar ejecuta el POST a Medilink.",
+    messages: [
+      { who: "bot", text: "Estás a un paso de confirmar tu hora 👇\n\n👤 María González\n🏥 Kinesiología — Paola Acosta\n📅 Lunes 30 de marzo\n🕐 10:00–10:30\n💳 Fonasa\n\n¿La confirmo?\n[✅ Confirmar] [❌ Cambiar]" },
+      { who: "user", text: "Confirmar" },
+      { who: "bot", text: "✅ *¡Listo, María! Tu hora quedó reservada.*\n\n📅 Lunes 30 de marzo · 10:00\n📍 *Monsalve 102 esq. República, Carampangue*\n\nRecuerda llegar *15 minutos antes* con tu cédula 😊" }
+    ],
+    transitions: [
+      { condition: "SÍ / confirmar", to: "END — POST /citas + guardar perfil", color: "#4ecb8d" },
+      { condition: "NO / cambiar", to: "IDLE (reset) — ofrece otro día / menu", color: "#8892b0" },
+    ],
+    tech: "crear_cita(): POST /citas con duracion calculada\nsave_profile(): guarda RUT+nombre para próxima vez\nsave_cita_bot(): para recordatorios 24h antes\nSesión → reset después de confirmar"
+  },
+  wait_rut_cancelar: {
+    title: "WAIT_RUT_CANCELAR",
+    type: "cancelar",
+    typeLabel: "Cancelar",
+    desc: "Pide RUT para buscar las citas futuras del paciente. Solo muestra citas con estado_anulacion=0 y fecha >= hoy.",
+    messages: [
+      { who: "bot", text: "Claro, te ayudo a cancelar una hora.\n\nNecesito tu RUT para buscarte:\n(ej: *12.345.678-9*)" },
+      { who: "user", text: "12.345.678-9" }
+    ],
+    transitions: [
+      { condition: "RUT válido + citas encontradas", to: "WAIT_CITA_CANCELAR", color: "#f76f6f" },
+      { condition: "RUT válido + sin citas", to: "IDLE (reset) — ofrece agendar", color: "#8892b0" },
+      { condition: "Paciente no encontrado", to: "IDLE (reset) — muestra recepción", color: "#8892b0" },
+    ],
+    tech: "listar_citas_paciente(): GET /citas?id_paciente=X&fecha>=hoy&estado_anulacion=0\nLimite: 5 citas más cercanas"
+  },
+  wait_cita_cancelar: {
+    title: "WAIT_CITA_CANCELAR",
+    type: "cancelar",
+    typeLabel: "Cancelar",
+    desc: "Muestra las citas futuras como lista interactiva. El paciente selecciona cuál quiere cancelar.",
+    messages: [
+      { who: "bot", text: "*María*, encontré estas reservas 👇\n¿Cuál quieres cancelar?\n[Lista interactiva con citas]" },
+      { who: "user", text: "1" }
+    ],
+    transitions: [
+      { condition: "número válido", to: "CONFIRMING_CANCEL", color: "#f76f6f" },
+      { condition: "número fuera de rango", to: "WAIT_CITA_CANCELAR (reintento)", color: "#8892b0" },
+    ],
+    tech: "Formato: DD/MM + hora + nombre profesional\nMáximo 10 filas en lista interactiva\nFallback texto si hay más de 10 citas"
+  },
+  confirming_cancel: {
+    title: "CONFIRMING_CANCEL",
+    type: "cancelar",
+    typeLabel: "Cancelar",
+    desc: "Confirmación final antes de ejecutar la cancelación en Medilink.",
+    messages: [
+      { who: "bot", text: "Vas a cancelar esta hora:\n\n🏥 Paola Acosta\n📅 Lunes 30 de marzo\n🕐 10:00\n\n¿Confirmas la cancelación?\n[✅ Sí, cancelar] [❌ No, mantener]" },
+      { who: "user", text: "Sí, cancelar" },
+      { who: "bot", text: "✅ Cita cancelada correctamente.\n\n_Paola Acosta · Lunes 30 de marzo · 10:00_\n\n¿Quieres agendar otra hora? Escribe *1* o *menu* para volver." }
+    ],
+    transitions: [
+      { condition: "SÍ / confirmar", to: "END — PUT /citas/{id} + reset", color: "#4ecb8d" },
+      { condition: "NO / mantener", to: "IDLE (reset) — cita se mantiene", color: "#8892b0" },
+    ],
+    tech: "cancelar_cita(): PUT /citas/{id} con {id_estado: 1}\nNO usar {estado_anulacion: 1} → error 'Undefined index'\nlog_event + save_tag('canceló')"
+  },
+  wait_rut_ver: {
+    title: "WAIT_RUT_VER",
+    type: "ver",
+    typeLabel: "Ver reservas",
+    desc: "Pide RUT y muestra las próximas citas. No modifica nada en Medilink. Después resetea sesión.",
+    messages: [
+      { who: "bot", text: "Claro, te muestro tus reservas.\n\nNecesito tu RUT:\n(ej: *12.345.678-9*)" },
+      { who: "user", text: "12.345.678-9" },
+      { who: "bot", text: "📋 *Tus próximas citas, María:*\n\n• Lunes 30 de marzo 10:00 — Paola Acosta\n• Martes 15 de abril 09:00 — Dr. Rodrigo Olavarría\n\n_Escribe *menu* si necesitas algo más._" }
+    ],
+    transitions: [
+      { condition: "RUT válido + tiene citas", to: "END — muestra lista", color: "#4ecb8d" },
+      { condition: "RUT válido + sin citas", to: "END — ofrece agendar", color: "#4ecb8d" },
+      { condition: "Paciente no encontrado", to: "IDLE (reset)", color: "#8892b0" },
+    ],
+    tech: "Solo lectura — no modifica nada\nMuestra máx 5 citas más cercanas\nSesión resetea inmediatamente después de responder"
+  },
+  faq: {
+    title: "FAQ / Info / Precio",
+    type: "faq",
+    typeLabel: "Sin estado",
+    desc: "No hay estado persistente. Claude Haiku responde directamente la consulta y cierra con un CTA para agendar.",
+    messages: [
+      { who: "user", text: "¿cuánto cuesta la kinesiología con fonasa?" },
+      { who: "bot", text: "La consulta de Kinesiología con *Fonasa* tiene un copago de aprox. *$2.500* (bono tipo 3).\n\nEl valor particular es de *$18.000*.\n\n_Recuerda que soy un asistente virtual..._\n\n¿Quieres agendar una hora? Escribe *1* o *menu* para volver." }
+    ],
+    transitions: [
+      { condition: "siempre", to: "IDLE (sin cambio de estado)", color: "#f7b74f" },
+    ],
+    tech: "detect_intent() puede incluir 'respuesta_directa' en el JSON\nSi no → llama respuesta_faq() con contexto completo\n⚠️ Precios hardcodeados en SYSTEM_PROMPT de claude_helper.py"
+  },
+  emergency: {
+    title: "⚠️ Emergencia",
+    type: "emergency",
+    typeLabel: "Global — cualquier estado",
+    desc: "Interceptor de máxima prioridad. Se evalúa antes de cualquier lógica. Si detecta palabras clave de urgencia, responde inmediatamente con SAMU 131.",
+    messages: [
+      { who: "user", text: "tengo mucho dolor en el pecho" },
+      { who: "bot", text: "⚠️ Esto suena como una urgencia.\n\nLlama al *SAMU 131* o acude al servicio de urgencias más cercano ahora mismo.\n\nTambién puedes contactarnos:\n📞 *+56 9 8783 4148*\n☎️ *(41) 296 5226*" }
+    ],
+    transitions: [
+      { condition: "NO resetea sesión", to: "El estado se mantiene igual", color: "#ff6b6b" },
+    ],
+    tech: "Evaluado con any(p in tl for p in EMERGENCIAS)\nNO llama a Claude — respuesta hardcodeada\nNO modifica el estado de la sesión"
+  },
+  end_agendar: {
+    title: "Cita creada ✅",
+    type: "agendar",
+    typeLabel: "Fin de flujo",
+    desc: "La cita fue creada exitosamente en Medilink. Se guardan datos para recordatorios y métricas.",
+    messages: [
+      { who: "bot", text: "✅ *¡Listo, María! Tu hora quedó reservada.*\n\n👤 María González\n🏥 Kinesiología — Paola Acosta\n📅 Lunes 30 de marzo\n🕐 10:00\n💳 Fonasa\n\nRecuerda llegar *15 minutos antes* con tu cédula de identidad.\n\n📍 *Monsalve 102 esq. República, Carampangue*\n\n¡Te esperamos! 😊\n_Escribe *menu* si necesitas algo más._" }
+    ],
+    transitions: [],
+    tech: "save_profile(phone, rut, nombre) — para próximas visitas\nsave_tag(phone, 'cita-kinesiología')\nsave_cita_bot() — para recordatorio 24h antes\nSesión → IDLE (reset)"
+  },
+  end_cancelar: {
+    title: "Cita cancelada ✅",
+    type: "cancelar",
+    typeLabel: "Fin de flujo",
+    desc: "La cita fue cancelada en Medilink. Se ofrece agendar una nueva hora.",
+    messages: [
+      { who: "bot", text: "✅ Cita cancelada correctamente.\n\n_Paola Acosta · Lunes 30 de marzo · 10:00_\n\n¿Quieres agendar otra hora? Escribe *1* o *menu* para volver." }
+    ],
+    transitions: [],
+    tech: "cancelar_cita(): PUT /citas/{id} con {id_estado: 1}\nlog_event(phone, 'cita_cancelada')\nsave_tag(phone, 'canceló')\nSesión → IDLE (reset)"
+  },
+  end_ver: {
+    title: "Reservas mostradas 📋",
+    type: "ver",
+    typeLabel: "Fin de flujo",
+    desc: "Se muestran las próximas citas del paciente. Solo lectura.",
+    messages: [
+      { who: "bot", text: "📋 *Tus próximas citas, María:*\n\n• Lunes 30 de marzo 10:00 — Paola Acosta\n\n_Escribe *menu* si necesitas algo más._" }
+    ],
+    transitions: [],
+    tech: "Solo GET /citas — sin modificaciones\nMáx 5 citas futuras\nSesión → IDLE (reset)"
+  },
+  end_faq: {
+    title: "FAQ respondida ✅",
+    type: "faq",
+    typeLabel: "Fin de flujo",
+    desc: "Respuesta de información con disclaimer y CTA para agendar.",
+    messages: [],
+    transitions: [],
+    tech: "Sesión NO se resetea — queda en IDLE\nEl usuario puede continuar con otro intent"
+  }
+};
+
+const typeColors = {
+  agendar: '#4f8ef7',
+  cancelar: '#f76f6f',
+  ver: '#4ecb8d',
+  faq: '#f7b74f',
+  general: '#a78bfa',
+  emergency: '#ff6b6b'
+};
+
+function showFlow(name, el) {
+  document.querySelectorAll('.flow-view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  if (el) {
+    el.classList.add('active');
+  }
+  const titles = {
+    overview: ['Vista General — Flujos del Chatbot', 'Selecciona un flujo o haz clic en un estado para ver detalles'],
+    agendar: ['Flujo: Agendar hora', '7 pasos (con paciente nuevo) · smart_select() · slots en tiempo real de Medilink'],
+    cancelar: ['Flujo: Cancelar hora', '4 pasos · PUT /citas/{id} con id_estado=1'],
+    ver: ['Flujo: Ver reservas', '2 pasos · solo lectura · sin modificaciones en Medilink'],
+    faq: ['Flujo: FAQ / Precio / Info', 'Respuesta directa de Claude Haiku · sin estado · CTA para agendar'],
+    emergencia: ['Manejo de emergencias', 'Prioridad máxima · cualquier estado · siempre deriva a SAMU 131'],
+    humano: ['Derivar a humano', '3 orígenes: intent directo, frustración (3 errores), sin disponibilidad']
+  };
+  const [title, sub] = titles[name] || ['', ''];
+  document.getElementById('topbar-title').textContent = title;
+  document.getElementById('topbar-sub').textContent = sub;
+  clearDetail();
+}
+
+function selectNode(id) {
+  const node = nodes[id];
+  if (!node) return;
+  document.getElementById('detail-empty').style.display = 'none';
+  const content = document.getElementById('detail-content');
+  content.classList.add('visible');
+  const color = typeColors[node.type] || '#a78bfa';
+  let messagesHTML = '';
+  node.messages.forEach(m => {
+    const text = m.text.replace(/\*(.*?)\*/g, '<strong>$1</strong>').replace(/_(.*?)_/g, '<em>$1</em>').replace(/\n/g, '<br>');
+    messagesHTML += `<div class="message-bubble ${m.who}" style="margin-top:18px;">${text}</div>`;
+  });
+  let transitionsHTML = '';
+  node.transitions.forEach(t => {
+    transitionsHTML += `
+      <div class="transition-item">
+        <span class="transition-condition">${t.condition}</span>
+        <span class="transition-arrow">→</span>
+        <span class="transition-state" style="color:${t.color}">${t.to}</span>
+      </div>`;
+  });
+  content.innerHTML = `
+    <div class="detail-state-tag" style="background:${color}20;color:${color};border:1px solid ${color}40;">${node.typeLabel}</div>
+    <div class="detail-title">${node.title}</div>
+    <div class="detail-desc">${node.desc}</div>
+    ${messagesHTML ? `<div class="detail-section"><div class="detail-section-title">Ejemplo de conversación</div>${messagesHTML}</div>` : ''}
+    ${transitionsHTML ? `<div class="detail-section" style="margin-top:16px;"><div class="detail-section-title">Transiciones</div>${transitionsHTML}</div>` : ''}
+    ${node.tech ? `<div class="detail-section" style="margin-top:16px;"><div class="detail-section-title">Notas técnicas</div><div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:11px;color:var(--muted);line-height:1.8;font-family:monospace;">${node.tech.replace(/\n/g,'<br>').replace(/⚠️/g,'<span style="color:#f7b74f">⚠️</span>')}</div></div>` : ''}
+  `;
+}
+
+function clearDetail() {
+  document.getElementById('detail-empty').style.display = 'flex';
+  const content = document.getElementById('detail-content');
+  content.classList.remove('visible');
+  content.innerHTML = '';
+}
+</script>
+</body>
+</html>

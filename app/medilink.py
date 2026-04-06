@@ -307,7 +307,10 @@ async def _slots_para_fecha(client: httpx.AsyncClient, ids: list, horarios: dict
         horas_ocupadas |= ocupadas_citas
         horas_vistas    = {s["hora_inicio"] for s in todos_libres}
 
+        ahora_min = _h_to_min(datetime.now().strftime("%H:%M")) if fecha == datetime.now().date().strftime("%Y-%m-%d") else None
         for hi, hf in _generar_slots_horario(hi_dia, hf_dia, intervalo):
+            if ahora_min is not None and _h_to_min(hi) <= ahora_min:
+                continue  # slot ya pasó hoy
             if hi in ocupadas_citas:
                 horas_ocupadas.add(hi)
             elif not _slot_bloqueado(hi, hf, bloqueos) and hi not in horas_vistas:
@@ -380,14 +383,26 @@ async def buscar_primer_dia(especialidad: str, dias_adelante: int = 60,
                         primera_fecha = fecha_dt
                         break
 
-        if primera_fecha:
+        # Siempre escanear desde hoy, usando primera_fecha como límite superior o fallback
+        hoy = datetime.now().date()
+        limite = datetime.strptime(primera_fecha, "%Y-%m-%d").date() if primera_fecha else (hoy + timedelta(days=dias_adelante))
+
+        for delta in range(0, (limite - hoy).days + 1):
+            fecha = (hoy + timedelta(days=delta)).strftime("%Y-%m-%d")
+            if fecha in excluir_set:
+                continue
+            smart, todos = await _slots_para_fecha(client, ids, horarios, fecha)
+            if todos:
+                return smart, todos
+
+        # Si no hubo slots antes de primera_fecha, intentar exactamente esa fecha
+        if primera_fecha and primera_fecha not in excluir_set:
             smart, todos = await _slots_para_fecha(client, ids, horarios, primera_fecha)
             if todos:
                 return smart, todos
 
-        # Fallback: búsqueda día por día si /proxima no funcionó o dio fecha excluida
-        hoy = datetime.now().date()
-        for delta in range(1, dias_adelante + 1):
+        # Continuar día por día más allá
+        for delta in range((limite - hoy).days + 1, dias_adelante + 1):
             fecha = (hoy + timedelta(days=delta)).strftime("%Y-%m-%d")
             if fecha in excluir_set:
                 continue

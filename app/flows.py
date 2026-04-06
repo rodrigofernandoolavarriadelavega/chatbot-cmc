@@ -30,19 +30,6 @@ def _proxima_fecha_dia(weekday: int) -> str:
             return candidato.strftime("%Y-%m-%d")
     return None
 
-MENU = (
-    "¡Hola! 👋 Bienvenido al *Centro Médico Carampangue*.\n\n"
-    "Estamos en Carampangue, en el acceso a la Provincia de Arauco — un punto cómodo y fácil de llegar.\n"
-    "Nos encuentras en *Monsalve 102, frente a la antigua estación de trenes*.\n\n"
-    "¿En qué puedo ayudarte hoy?\n\n"
-    "1️⃣ Agendar una hora\n"
-    "2️⃣ Cancelar una hora\n"
-    "3️⃣ Ver mis reservas\n"
-    "4️⃣ Hablar con recepción\n\n"
-    "También puedes escribirme con tus propias palabras 😊\n\n"
-    "_Este chat es seguro y privado._"
-)
-
 AFIRMACIONES = {"si", "sí", "yes", "ok", "confirmo", "confirmar", "dale", "ya", "claro", "bueno"}
 NEGACIONES   = {"no", "nop", "nope", "cancelar", "cancel", "no gracias"}
 
@@ -51,6 +38,60 @@ EMERGENCIAS  = {"emergencia", "urgencia", "dolor muy fuerte", "no puedo respirar
                 "mucho dolor", "accidente", "desmayo", "convulsion", "convulsión"}
 
 DISCLAIMER = "_Recuerda que soy un asistente virtual, no un médico. Para consultas clínicas, habla siempre con un profesional de salud._"
+
+
+# ── Helpers de mensajes interactivos ──────────────────────────────────────────
+
+def _list_msg(body_text: str, button_label: str, sections: list) -> dict:
+    """Construye un mensaje de lista interactivo de WhatsApp."""
+    return {
+        "type": "interactive",
+        "interactive": {
+            "type": "list",
+            "body": {"text": body_text},
+            "action": {
+                "button": button_label[:20],
+                "sections": sections,
+            }
+        }
+    }
+
+
+def _btn_msg(body_text: str, buttons: list) -> dict:
+    """Construye un mensaje con botones de respuesta (máx 3)."""
+    return {
+        "type": "interactive",
+        "interactive": {
+            "type": "button",
+            "body": {"text": body_text},
+            "action": {
+                "buttons": [
+                    {"type": "reply", "reply": {"id": b["id"], "title": b["title"][:20]}}
+                    for b in buttons
+                ]
+            }
+        }
+    }
+
+
+def _menu_msg() -> dict:
+    return _list_msg(
+        body_text=(
+            "Hola 👋 Soy el asistente del *Centro Médico Carampangue*.\n\n"
+            "📍 *Monsalve 102, frente a la antigua estación de trenes*, Carampangue.\n\n"
+            "¿En qué te ayudo hoy?"
+        ),
+        button_label="Ver opciones",
+        sections=[{
+            "title": "¿En qué te ayudamos?",
+            "rows": [
+                {"id": "1", "title": "Agendar una hora"},
+                {"id": "2", "title": "Cancelar una hora"},
+                {"id": "3", "title": "Ver mis reservas"},
+                {"id": "4", "title": "Hablar con recepción"},
+            ]
+        }]
+    )
 
 
 async def handle_message(phone: str, texto: str, session: dict) -> str:
@@ -62,16 +103,15 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # ── Emergencias ───────────────────────────────────────────────────────────
     if any(p in tl for p in EMERGENCIAS):
         return (
-            "⚠️ Eso suena como una situación urgente.\n\n"
-            "Por favor llama al *SAMU: 131* o ve al servicio de urgencias más cercano de inmediato.\n\n"
-            f"También puedes llamar a nuestra recepción: 📞 *{CMC_TELEFONO}*\n\n"
-            "_Tu salud es lo primero._"
+            "⚠️ Esto suena como una urgencia.\n\n"
+            "Llama al *SAMU 131* o acude al servicio de urgencias más cercano ahora mismo.\n\n"
+            f"También puedes contactarnos:\n📞 *{CMC_TELEFONO}*\n☎️ *{CMC_TELEFONO_FIJO}*"
         )
 
     # ── Comandos globales ─────────────────────────────────────────────────────
     if tl in ("menu", "menú", "inicio", "reiniciar", "volver", "hola"):
         reset_session(phone)
-        return MENU
+        return _menu_msg()
 
     # ── IDLE: detectar intención ──────────────────────────────────────────────
     if state == "IDLE":
@@ -79,7 +119,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if txt == "1": return await _iniciar_agendar(phone, data, None)
         if txt == "2": return await _iniciar_cancelar(phone, data)
         if txt == "3": return await _iniciar_ver(phone, data)
-        if txt == "4": return _derivar_humano(contexto="menú opción 4")
+        if txt == "4": return _derivar_humano(phone=phone, contexto="menú opción 4")
 
         result = await detect_intent(txt)
         intent = result.get("intent", "otro")
@@ -102,8 +142,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return await _iniciar_ver(phone, data)
 
         if intent == "humano":
-            log_event(phone, "derivado_humano")
-            return _derivar_humano(contexto=txt)
+            return _derivar_humano(phone=phone, contexto=txt)
 
         if intent == "disponibilidad":
             especialidad = result.get("especialidad")
@@ -111,21 +150,25 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 fecha = await consultar_proxima_fecha(especialidad)
                 if fecha:
                     return (
-                        f"Para *{especialidad}* hay hora disponible el *{fecha}*. 📅\n\n"
-                        "¿La agendamos ahora? Solo toma un par de minutos 😊\n\n"
-                        "Escribe *1* para agendar o *menu* si necesitas algo más."
+                        f"Sí, para *{especialidad}* hay hora disponible el *{fecha}* 📅\n\n"
+                        "¿La agendamos ahora?\n"
+                        "Escribe *1* para continuar o *menu* si necesitas algo más."
                     )
             return (
-                f"Para consultar disponibilidad puedes llamar a recepción: 📞 *{CMC_TELEFONO}*\n\n"
-                "_Escribe *menu* si necesitas algo más._"
+                "Para consultar disponibilidad, dime qué especialidad necesitas 😊\n\n"
+                f"O llama a recepción: 📞 *{CMC_TELEFONO}*"
             )
 
         if intent in ("precio", "info"):
             resp = result.get("respuesta_directa") or await respuesta_faq(txt)
-            return resp + f"\n\n{DISCLAIMER}\n\n_Escribe *menu* si necesitas algo más._"
+            return (
+                f"{resp}\n\n"
+                f"{DISCLAIMER}\n\n"
+                "¿Quieres agendar una hora? Escribe *1* o *menu* para volver."
+            )
 
         # intent "otro" o "menu" (fallback de Claude) → mostrar menú
-        return MENU
+        return _menu_msg()
 
     # ── WAIT_ESPECIALIDAD ─────────────────────────────────────────────────────
     if state == "WAIT_ESPECIALIDAD":
@@ -144,10 +187,26 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         fechas_vistas   = data.get("fechas_vistas", [])
         especialidad    = data.get("especialidad", "")
 
+        # Respuesta al sugerido proactivo
+        if tl == "confirmar_sugerido":
+            slot = slots_mostrados[0]
+            data["slot_elegido"] = slot
+            save_session(phone, "WAIT_MODALIDAD", data)
+            return _btn_msg(
+                f"Perfecto 🙌\n\n"
+                f"🏥 *{slot['especialidad']}* — {slot['profesional']}\n"
+                f"📅 *{slot['fecha_display']}*\n"
+                f"🕐 *{slot['hora_inicio'][:5]}*\n\n"
+                "¿Tu atención será Fonasa o Particular?",
+                [{"id": "1", "title": "Fonasa"}, {"id": "2", "title": "Particular"}]
+            )
+        if tl == "ver_otros":
+            return _format_slots(slots_mostrados)
+
         # "ver todos" → mostrar todos los slots del día actual
         VER_TODOS = {"ver todos", "todos", "ver todo", "todos los horarios", "mostrar todos",
                      "ver horarios", "quiero ver los horarios", "ver todos los horarios",
-                     "mostrar horarios", "quiero ver horarios", "ver mas", "ver más"}
+                     "mostrar horarios", "quiero ver horarios", "ver mas", "ver más", "ver_todos"}
         if tl in VER_TODOS or any(p in tl for p in ["ver todos", "todos los horarios", "ver horarios", "ver mas", "ver más"]):
             data["slots"] = todos_slots
             save_session(phone, "WAIT_SLOT", data)
@@ -165,16 +224,19 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     data.update({"slots": smart_dia, "todos_slots": todos_dia, "fechas_vistas": fechas_vistas})
                     save_session(phone, "WAIT_SLOT", data)
                     return _format_slots(smart_dia)
-            return f"No encontré disponibilidad para ese día 😕 Escribe *otro día* para buscar el siguiente disponible."
+            return "Sin horarios disponibles para ese día.\n\nEscribe *otro día* para buscar el siguiente 😊"
 
         # "otro día" → primeras 5 del siguiente día disponible
         OTRO_DIA = {"otro dia", "otro día", "otro", "no puedo", "no me sirve",
-                    "no me acomoda", "cambiar dia", "cambiar día", "siguiente"}
+                    "no me acomoda", "cambiar dia", "cambiar día", "siguiente", "otro_dia"}
         if tl in OTRO_DIA or any(p in tl for p in ["otro dia", "otro día", "no puedo"]):
             smart_nuevo, todos_nuevo = await buscar_primer_dia(especialidad, excluir=fechas_vistas)
             if not todos_nuevo:
                 reset_session(phone)
-                return f"No encontré más disponibilidad 😕 Llama a recepción: 📞 {CMC_TELEFONO}"
+                return (
+                    "No encontré más disponibilidad en los próximos días 😕\n\n"
+                    f"Llama a recepción para más opciones:\n📞 *{CMC_TELEFONO}*"
+                )
             nueva_fecha = todos_nuevo[0]["fecha"]
             fechas_vistas = fechas_vistas + [nueva_fecha]
             data.update({"slots": smart_nuevo, "todos_slots": todos_nuevo, "fechas_vistas": fechas_vistas})
@@ -187,6 +249,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 result = await detect_intent(txt)
                 intent = result.get("intent", "otro")
                 if intent == "agendar" and result.get("especialidad"):
+                    from medilink import _ids_para_especialidad
+                    ids_nuevos = set(_ids_para_especialidad(result.get("especialidad", "")))
+                    ids_actuales = {s.get("id_profesional") for s in todos_slots}
+                    # Si el paciente menciona el mismo doctor/especialidad que ya está en pantalla,
+                    # no resetear — solo recordarle que elija un número
+                    if ids_nuevos and ids_nuevos & ids_actuales:
+                        save_session(phone, "WAIT_SLOT", data)
+                        return "Elige un número del listado, escribe *ver todos* para más horarios, u *otro día* si no te acomoda."
                     reset_session(phone)
                     return await _iniciar_agendar(phone, {}, result.get("especialidad"))
                 if intent == "cancelar":
@@ -199,31 +269,43 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     esp_display = todos_slots[0]["especialidad"] if todos_slots else especialidad
                     consulta = f"{txt} (especialidad: {esp_display})" if esp_display else txt
                     resp = result.get("respuesta_directa") or await respuesta_faq(consulta)
-                    return resp + f"\n\n{DISCLAIMER}\n\n_Cuando quieras, elige un número para continuar con tu reserva o escribe *menu* para volver al inicio._"
-            # Frustration detector
+                    return (
+                        f"{resp}\n\n"
+                        f"{DISCLAIMER}\n\n"
+                        "_Elige un número para continuar con tu reserva o escribe *menu* para volver._"
+                    )
+            # Frustration detector — escalada en 3 niveles
             data["intentos_fallidos"] = data.get("intentos_fallidos", 0) + 1
-            if data["intentos_fallidos"] >= 3:
-                reset_session(phone)
-                log_event(phone, "derivado_humano", {"razon": "frustración", "estado": "WAIT_SLOT"})
-                return (
-                    "Parece que estás teniendo dificultades 😕\n\n"
-                    "Te conecto con recepción para que te ayuden:\n"
-                    f"📞 *{CMC_TELEFONO}*\n\n"
-                    "_Escribe *menu* si quieres intentarlo de nuevo._"
-                )
+            intentos = data["intentos_fallidos"]
+            if intentos >= 3:
+                return _derivar_humano(phone=phone, contexto="frustración WAIT_SLOT")
             save_session(phone, "WAIT_SLOT", data)
-            return "Elige un número, escribe *ver todos* para ver todos los horarios del día, u *otro día* si no te acomoda."
+            if intentos == 2:
+                return (
+                    "Todavía no logro entenderte 😕\n\n"
+                    "Escribe el *número* del horario que prefieres, *otro día* para cambiar de día, o *menu* para reiniciar."
+                )
+            return (
+                "No te entendí bien 😅\n\n"
+                "Puedes:\n"
+                "• Escribir el *número* del horario\n"
+                "• Escribir *otro día*\n"
+                "• Escribir *ver todos* para más horarios"
+            )
 
         slot = slots_mostrados[idx]
         data["slot_elegido"] = slot
         save_session(phone, "WAIT_MODALIDAD", data)
-        return (
-            f"¡Excelente elección! 👍\n\n"
+        return _btn_msg(
+            f"Perfecto 🙌\n\n"
             f"🏥 *{slot['especialidad']}* — {slot['profesional']}\n"
-            f"📅 *{slot['fecha_display']}* a las *{slot['hora_inicio'][:5]}*\n\n"
-            "¿Tu atención será:\n\n"
-            "1️⃣ Fonasa\n"
-            "2️⃣ Particular"
+            f"📅 *{slot['fecha_display']}*\n"
+            f"🕐 *{slot['hora_inicio'][:5]}*\n\n"
+            "¿Tu atención será Fonasa o Particular?",
+            [
+                {"id": "1", "title": "Fonasa"},
+                {"id": "2", "title": "Particular"},
+            ]
         )
 
     # ── WAIT_MODALIDAD ────────────────────────────────────────────────────────
@@ -237,63 +319,58 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         else:
             data["intentos_fallidos"] = data.get("intentos_fallidos", 0) + 1
             if data["intentos_fallidos"] >= 3:
-                reset_session(phone)
-                log_event(phone, "derivado_humano", {"razon": "frustración", "estado": "WAIT_MODALIDAD"})
-                return (
-                    "Parece que estás teniendo dificultades 😕\n\n"
-                    "Te conecto con recepción:\n"
-                    f"📞 *{CMC_TELEFONO}*"
-                )
+                return _derivar_humano(phone=phone, contexto="frustración WAIT_MODALIDAD")
             save_session(phone, "WAIT_MODALIDAD", data)
-            return "Por favor responde *1* para Fonasa o *2* para Particular."
+            return "Responde *Fonasa* o *Particular* 😊"
 
         save_session(phone, "WAIT_RUT_AGENDAR", data)
-        modalidad_str = data["modalidad"]
+        modalidad_str = data["modalidad"].capitalize()
         # Si ya conocemos al paciente, mostrar su nombre y preguntar solo confirmación
         rut_conocido  = data.get("rut_conocido")
         nombre_conocido = data.get("nombre_conocido")
         if rut_conocido and nombre_conocido:
             nombre_corto = nombre_conocido.split()[0]
-            return (
+            return _btn_msg(
                 f"Perfecto, atención *{modalidad_str}*.\n\n"
-                f"¿Confirmo con tus datos anteriores, *{nombre_corto}*? Responde *sí* o escribe tu RUT si cambiaron."
+                f"¿Agendo con tus datos anteriores, *{nombre_corto}*?",
+                [
+                    {"id": "si", "title": "Sí, continuar"},
+                    {"id": "rut_nuevo", "title": "Ingresar otro RUT"},
+                ]
             )
         return (
-            f"Perfecto, atención *{modalidad_str}*.\n\n"
-            "Para confirmar tu hora necesito tu RUT. Tus datos se usan solo para gestionar esta cita y se tratan con total confidencialidad.\n\n"
-            "¿Cuál es tu RUT? (ej: 12.345.678-9)"
+            f"Perfecto, atención *{modalidad_str}* 😊\n\n"
+            "Para confirmar necesito tu RUT:\n"
+            "(ej: *12.345.678-9*)"
         )
 
     # ── WAIT_RUT_AGENDAR ──────────────────────────────────────────────────────
     if state == "WAIT_RUT_AGENDAR":
         # Si el paciente ya agendó antes y confirma con sí/ok, usar su RUT guardado
         rut_conocido = data.get("rut_conocido")
-        if rut_conocido and tl in AFIRMACIONES | {"si", "sí", "ok", "mismo", "el mismo"}:
+        if rut_conocido and tl in AFIRMACIONES | {"si", "sí", "ok", "mismo", "el mismo"} and tl != "rut_nuevo":
             rut = rut_conocido
         else:
             rut = clean_rut(txt)
         if not valid_rut(rut):
             data["intentos_fallidos"] = data.get("intentos_fallidos", 0) + 1
             if data["intentos_fallidos"] >= 3:
-                reset_session(phone)
-                log_event(phone, "derivado_humano", {"razon": "frustración", "estado": "WAIT_RUT_AGENDAR"})
-                return (
-                    "Parece que estás teniendo dificultades con el RUT 😕\n\n"
-                    "Te conecto con recepción:\n"
-                    f"📞 *{CMC_TELEFONO}*\n\n"
-                    "_Escribe *menu* para intentarlo de nuevo._"
-                )
+                return _derivar_humano(phone=phone, contexto="frustración WAIT_RUT_AGENDAR")
             save_session(phone, "WAIT_RUT_AGENDAR", data)
-            return "RUT inválido ❌ Por favor ingresa tu RUT con dígito verificador (ej: *12.345.678-9*)"
+            return (
+                "Ese RUT no quedó bien 😕\n"
+                "Escríbelo con dígito verificador, por ejemplo: *12.345.678-9*"
+            )
 
         paciente = await buscar_paciente(rut)
         if not paciente:
             data["rut"] = rut
             save_session(phone, "WAIT_NOMBRE_NUEVO", data)
             return (
-                "No encontré ese RUT en nuestro sistema 🔍\n\n"
-                "¡No te preocupes, te registro ahora mismo! 😊\n\n"
-                "¿Cuál es tu nombre completo? (ej: *María González López*)"
+                "No encontré ese RUT en el sistema 🔎\n\n"
+                "No te preocupes, te registro ahora mismo.\n"
+                "¿Cuál es tu nombre completo?\n"
+                "(ej: *María González López*)"
             )
 
         data.update({"paciente": paciente, "rut": rut})
@@ -301,14 +378,18 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
         slot = data["slot_elegido"]
         modalidad = data.get("modalidad", "particular").capitalize()
-        return (
-            f"¿Confirmas esta reserva? 📋\n\n"
-            f"👤 *{paciente['nombre']}*\n"
-            f"🏥 *{slot['especialidad']}* — {slot['profesional']}\n"
-            f"📅 *{slot['fecha_display']}*\n"
-            f"🕐 *{slot['hora_inicio'][:5]} – {slot['hora_fin'][:5]}*\n"
-            f"💳 *{modalidad}*\n\n"
-            "Responde *SÍ* para confirmar o *NO* para cancelar."
+        return _btn_msg(
+            f"Estás a un paso de confirmar tu hora 👇\n\n"
+            f"👤 {paciente['nombre']}\n"
+            f"🏥 {slot['especialidad']} — {slot['profesional']}\n"
+            f"📅 {slot['fecha_display']}\n"
+            f"🕐 {slot['hora_inicio'][:5]}–{slot['hora_fin'][:5]}\n"
+            f"💳 {modalidad}\n\n"
+            "¿La confirmo?",
+            [
+                {"id": "si", "title": "✅ Confirmar"},
+                {"id": "no", "title": "❌ Cambiar"},
+            ]
         )
 
     # ── CONFIRMING_CITA ───────────────────────────────────────────────────────
@@ -358,43 +439,50 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     f"🕐 {slot['hora_inicio'][:5]}\n"
                     f"💳 {modalidad}\n\n"
                     "Recuerda llegar *15 minutos antes* con tu cédula de identidad.\n\n"
-                    "📍 *Monsalve 102 esq. República, Carampangue* — frente a la antigua estación de trenes.\n\n"
-                    "¡Te esperamos! 😊\n\n"
+                    "📍 *Monsalve 102 esq. República, Carampangue*\n\n"
+                    "¡Te esperamos! 😊\n"
                     "_Escribe *menu* si necesitas algo más._"
                 )
             else:
                 return (
-                    "Ocurrió un problema al crear la cita 😕\n"
-                    f"Por favor llama a recepción: 📞 {CMC_TELEFONO}"
+                    "Hubo un problema al reservar la hora 😕\n"
+                    f"Llama a recepción: 📞 *{CMC_TELEFONO}*"
                 )
 
         if tl in NEGACIONES:
             reset_session(phone)
-            return "Entendido, no hay problema. Escribe *menu* cuando quieras intentar de nuevo 😊"
+            return (
+                "No hay problema 😊\n\n"
+                "• Escribe *otro día* para ver otros horarios\n"
+                "• Escribe *menu* para volver al inicio"
+            )
 
-        return "Responde *SÍ* para confirmar o *NO* para cancelar."
+        return "Responde *SÍ* para confirmar o *NO* para cambiar."
 
     # ── WAIT_RUT_CANCELAR ─────────────────────────────────────────────────────
     if state == "WAIT_RUT_CANCELAR":
         rut = clean_rut(txt)
         if not valid_rut(rut):
-            return "RUT inválido ❌ Ingresa tu RUT con dígito verificador (ej: *12.345.678-9*)"
+            return (
+                "Ese RUT no quedó bien 😕\n"
+                "Escríbelo así: *12.345.678-9*"
+            )
 
         paciente = await buscar_paciente(rut)
         if not paciente:
             reset_session(phone)
             return (
-                "No encontré ese RUT en nuestro sistema 🔍\n"
-                f"Llama a recepción: 📞 {CMC_TELEFONO}\n\n"
-                "_Escribe *menu* para volver al inicio._"
+                "No encontré ese RUT en el sistema 🔎\n\n"
+                f"Llama a recepción si necesitas ayuda:\n📞 *{CMC_TELEFONO}*\n\n"
+                "_Escribe *menu* para volver._"
             )
 
         citas = await listar_citas_paciente(paciente["id"])
         if not citas:
             reset_session(phone)
             return (
-                f"No encontré citas futuras para *{paciente['nombre']}* 📋\n\n"
-                "_Escribe *menu* para volver al inicio._"
+                f"No encontré citas futuras para *{paciente['nombre'].split()[0]}* 📋\n\n"
+                "¿Quieres agendar una nueva hora? Escribe *1* o *menu*."
             )
 
         data.update({"paciente": paciente, "citas": citas})
@@ -408,17 +496,21 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             idx = int(txt) - 1
             assert 0 <= idx < len(citas)
         except Exception:
-            return f"Por favor elige un número entre 1 y {len(citas)}."
+            return f"Elige un número entre 1 y {len(citas)} 😊"
 
         cita = citas[idx]
         data["cita_cancelar"] = cita
         save_session(phone, "CONFIRMING_CANCEL", data)
-        return (
-            f"¿Confirmas la cancelación? ❌\n\n"
-            f"🏥 *{cita['profesional']}*\n"
-            f"📅 *{cita['fecha_display']}*\n"
-            f"🕐 *{cita['hora_inicio']}*\n\n"
-            "Responde *SÍ* para cancelar o *NO* para mantener la cita."
+        return _btn_msg(
+            f"Vas a cancelar esta hora:\n\n"
+            f"🏥 {cita['profesional']}\n"
+            f"📅 {cita['fecha_display']}\n"
+            f"🕐 {cita['hora_inicio']}\n\n"
+            "¿Confirmas la cancelación?",
+            [
+                {"id": "si", "title": "✅ Sí, cancelar"},
+                {"id": "no", "title": "❌ No, mantener"},
+            ]
         )
 
     # ── CONFIRMING_CANCEL ─────────────────────────────────────────────────────
@@ -433,43 +525,50 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 return (
                     f"✅ Cita cancelada correctamente.\n\n"
                     f"_{cita['profesional']} · {cita['fecha_display']} · {cita['hora_inicio']}_\n\n"
-                    "_Escribe *menu* si necesitas algo más._"
+                    "¿Quieres agendar otra hora? Escribe *1* o *menu* para volver."
                 )
-            return f"Hubo un problema al cancelar 😕 Llama a recepción: 📞 {CMC_TELEFONO}"
+            return f"Hubo un problema al cancelar 😕\nLlama a recepción: 📞 *{CMC_TELEFONO}*"
 
         if tl in NEGACIONES:
             reset_session(phone)
-            return "Entendido, la cita se mantiene. ¡Hasta pronto! 😊"
+            return "Perfecto, tu cita se mantiene 😊\n_Escribe *menu* si necesitas algo más._"
 
-        return "Responde *SÍ* para cancelar la cita o *NO* para mantenerla."
+        return "Responde *SÍ* para cancelar o *NO* para mantener la cita."
 
     # ── WAIT_RUT_VER ──────────────────────────────────────────────────────────
     if state == "WAIT_RUT_VER":
         rut = clean_rut(txt)
         if not valid_rut(rut):
-            return "RUT inválido ❌ Ingresa tu RUT con dígito verificador (ej: *12.345.678-9*)"
+            return (
+                "Ese RUT no quedó bien 😕\n"
+                "Escríbelo así: *12.345.678-9*"
+            )
 
         paciente = await buscar_paciente(rut)
         if not paciente:
             reset_session(phone)
-            return "No encontré ese RUT en nuestro sistema 🔍\n_Escribe *menu* para volver al inicio._"
+            return "No encontré ese RUT 🔎\nEscribe *menu* para volver o intenta de nuevo."
 
         citas = await listar_citas_paciente(paciente["id"])
         reset_session(phone)
+        nombre_corto = paciente['nombre'].split()[0]
         if not citas:
-            return f"No tienes citas futuras agendadas, *{paciente['nombre']}* 📋\n_Escribe *menu* para volver al inicio._"
+            return (
+                f"No tienes citas futuras agendadas, *{nombre_corto}* 📋\n\n"
+                "¿Quieres agendar una ahora? Escribe *1* o *menu*."
+            )
 
-        lineas = [f"📋 *Tus próximas citas, {paciente['nombre'].split()[0]}:*\n"]
+        lineas = [f"📋 *Tus próximas citas, {nombre_corto}:*\n"]
         for c in citas:
             lineas.append(f"• {c['fecha_display']} {c['hora_inicio']} — {c['profesional']}")
-        lineas.append("\n_Escribe *menu* para volver al inicio._")
+        lineas.append("\n_Escribe *menu* si necesitas algo más._")
         return "\n".join(lineas)
 
     # ── WAIT_NOMBRE_NUEVO ─────────────────────────────────────────────────────
     if state == "WAIT_NOMBRE_NUEVO":
         partes = txt.strip().split()
         if len(partes) < 2:
-            return "Por favor escribe tu nombre completo con al menos nombre y apellido (ej: *María González*)."
+            return "Escribe tu nombre completo con nombre y apellido (ej: *María González*)."
         nombre   = partes[0].capitalize()
         apellidos = " ".join(p.capitalize() for p in partes[1:])
         rut = data.get("rut", "")
@@ -478,24 +577,42 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             reset_session(phone)
             return (
                 "Hubo un problema al registrarte 😕\n"
-                f"Por favor llama a recepción: 📞 *{CMC_TELEFONO}*"
+                f"Llama a recepción: 📞 *{CMC_TELEFONO}*"
             )
         data.update({"paciente": paciente, "rut": rut})
         save_session(phone, "CONFIRMING_CITA", data)
         slot = data["slot_elegido"]
-        return (
-            f"¡Bienvenido/a, *{nombre}*! Tu registro quedó listo 🎉\n\n"
-            f"¿Confirmas esta reserva?\n\n"
+        modalidad = data.get("modalidad", "particular").capitalize()
+        return _btn_msg(
+            f"¡Listo, *{nombre}*! Ya quedaste registrado/a 🙌\n\n"
+            f"¿Confirmas esta hora?\n\n"
             f"👤 *{paciente['nombre']}*\n"
             f"🏥 *{slot['especialidad']}* — {slot['profesional']}\n"
             f"📅 *{slot['fecha_display']}*\n"
-            f"🕐 *{slot['hora_inicio'][:5]} – {slot['hora_fin'][:5]}*\n\n"
-            "Responde *SÍ* para confirmar o *NO* para cancelar."
+            f"🕐 *{slot['hora_inicio'][:5]}*\n"
+            f"💳 *{modalidad}*",
+            [
+                {"id": "si", "title": "✅ Confirmar"},
+                {"id": "no", "title": "❌ Cambiar"},
+            ]
         )
+
+    # ── HUMAN_TAKEOVER ────────────────────────────────────────────────────────
+    if state == "HUMAN_TAKEOVER":
+        # Mensaje quedó guardado en el historial — recepcionista responde desde el panel
+        # Solo respondemos si el paciente sigue enviando mensajes para que no sienta silencio
+        msgs_sin_respuesta = data.get("msgs_sin_respuesta", 0) + 1
+        data["msgs_sin_respuesta"] = msgs_sin_respuesta
+        save_session(phone, "HUMAN_TAKEOVER", data)
+        if msgs_sin_respuesta == 1:
+            return "Recibido 🙏 Una recepcionista te responderá en este chat en breve."
+        if msgs_sin_respuesta % 3 == 0:
+            return f"Seguimos atentos 😊 Mientras esperas también puedes llamar: 📞 *{CMC_TELEFONO}*"
+        return ""  # silencio — no spamear
 
     # Fallback
     reset_session(phone)
-    return MENU
+    return _menu_msg()
 
 
 # ── Helpers de flujo ──────────────────────────────────────────────────────────
@@ -504,7 +621,7 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None) -> 
     if not especialidad:
         save_session(phone, "WAIT_ESPECIALIDAD", data)
         return (
-            "Con gusto te ayudo a agendar 📅\n\n"
+            "Claro, te ayudo a agendar 😊\n\n"
             "¿Qué especialidad necesitas?\n\n"
             f"{especialidades_disponibles()}"
         )
@@ -516,59 +633,101 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None) -> 
         save_tag(phone, "sin-disponibilidad")
         return (
             f"No encontré disponibilidad para *{especialidad}* en los próximos días 😕\n\n"
-            "Te recomiendo llamar a recepción para más opciones:\n"
-            f"📞 {CMC_TELEFONO}\n\n"
-            "_Escribe *menu* para volver al inicio._"
+            f"Llama a recepción para revisar más opciones:\n📞 *{CMC_TELEFONO}*\n\n"
+            "_Escribe *menu* para volver._"
         )
     fecha = todos[0]["fecha"]
     data.update({"especialidad": especialidad_lower, "slots": smart,
                  "todos_slots": todos, "fechas_vistas": [fecha]})
     save_session(phone, "WAIT_SLOT", data)
-    slots_msg = _format_slots(smart)
-    # Si tenemos RUT guardado, anticipar el paso siguiente
-    rut_conocido = data.get("rut_conocido")
-    nombre_conocido = data.get("nombre_conocido")
-    if rut_conocido and nombre_conocido:
-        nombre_corto = nombre_conocido.split()[0]
-        slots_msg += f"\n\n_Cuando elijas hora, usaré tus datos anteriores, {nombre_corto}_ 😊"
-    return slots_msg
+
+    # Sugerencia proactiva — mostrar el mejor slot con botón directo
+    mejor = smart[0]
+    nombre_conocido = data.get("nombre_conocido", "")
+    nombre_corto = nombre_conocido.split()[0] if nombre_conocido else ""
+    saludo = f"¡Hola de nuevo, *{nombre_corto}*! " if nombre_corto else ""
+    return _btn_msg(
+        f"{saludo}Encontré disponibilidad ✨\n\n"
+        f"🏥 *{mejor['especialidad']}* — {mejor['profesional']}\n"
+        f"📅 *{mejor['fecha_display']}*\n"
+        f"🕐 *{mejor['hora_inicio'][:5]}* ⭐\n\n"
+        "¿La agendo?",
+        [
+            {"id": "confirmar_sugerido", "title": "✅ Sí, esa hora"},
+            {"id": "ver_otros",          "title": "📋 Ver más opciones"},
+        ]
+    )
 
 
 async def _iniciar_cancelar(phone: str, data: dict) -> str:
     save_session(phone, "WAIT_RUT_CANCELAR", data)
-    return "Para cancelar una hora necesito tu RUT ¿Cuál es? (ej: 12.345.678-9)"
+    return (
+        "Claro, te ayudo a cancelar una hora.\n\n"
+        "Necesito tu RUT para buscarte:\n"
+        "(ej: *12.345.678-9*)"
+    )
 
 
 async def _iniciar_ver(phone: str, data: dict) -> str:
     save_session(phone, "WAIT_RUT_VER", data)
-    return "Para ver tus reservas necesito tu RUT ¿Cuál es? (ej: 12.345.678-9)"
-
-
-def _derivar_humano(contexto: str = "") -> str:
-    msg = (
-        "¡Claro, con mucho gusto te conecto! 🙋\n\n"
-        "Puedes llamar directamente a recepción:\n"
-        f"📞 Fijo: *{CMC_TELEFONO_FIJO}*\n"
-        f"📱 WhatsApp: *{CMC_TELEFONO}*\n\n"
-        "Nuestro equipo te atenderá de lunes a sábado. ¡Gracias por confiar en nosotros! 😊\n\n"
-        "_Escribe *menu* si necesitas algo más._"
+    return (
+        "Claro, te muestro tus reservas.\n\n"
+        "Necesito tu RUT:\n"
+        "(ej: *12.345.678-9*)"
     )
-    # Nota interna para trazabilidad (no visible al paciente, queda en el log)
-    if contexto:
-        log_event("_sistema", "handoff_contexto", {"mensaje_original": contexto})
+
+
+def _derivar_humano(phone: str = None, contexto: str = "") -> str:
+    if phone:
+        save_session(phone, "HUMAN_TAKEOVER", {"hold_sent": True, "handoff_reason": contexto[:200]})
+        log_event(phone, "derivado_humano", {"razon": contexto[:200]})
+    msg = (
+        "Claro, te conecto con recepción 🙋\n\n"
+        "Una recepcionista te responderá en este mismo chat en breve.\n\n"
+        f"Si prefieres llamar: 📞 *{CMC_TELEFONO}* · ☎️ *{CMC_TELEFONO_FIJO}*\n\n"
+        "_Atendemos de lunes a sábado._"
+    )
     return msg
 
 
-def _format_slots(slots: list, mostrar_todos: bool = False) -> str:
-    fecha = slots[0]["fecha_display"] if slots else ""
-    prof  = slots[0]["profesional"] if slots else ""
+def _format_slots(slots: list, mostrar_todos: bool = False):
+    if not slots:
+        return "No hay horarios disponibles."
+    fecha = slots[0]["fecha_display"]
+    prof  = slots[0]["profesional"]
+
+    # Usar lista interactiva cuando caben en el límite de 10 filas total
+    nav_rows = []
+    if not mostrar_todos:
+        nav_rows.append({"id": "ver_todos", "title": "Ver todos los horarios"})
+    nav_rows.append({"id": "otro_dia", "title": "Buscar otro día"})
+
+    max_slots = 10 - len(nav_rows)
+    if len(slots) <= max_slots:
+        slot_rows = []
+        for i, s in enumerate(slots, 1):
+            hora = s["hora_inicio"][:5]
+            title = f"⭐ {hora} (recomendado)" if i == 1 and not mostrar_todos else hora
+            slot_rows.append({"id": str(i), "title": title[:24]})
+        sections = [{"title": fecha[:24], "rows": slot_rows}]
+        if nav_rows:
+            sections.append({"title": "Más opciones", "rows": nav_rows})
+        return _list_msg(
+            body_text=f"Te encontré estas opciones 👇\n\n*{fecha}* — {prof}",
+            button_label="Ver horarios",
+            sections=sections,
+        )
+
+    # Fallback texto para listas muy largas
     lineas = [f"📅 *{fecha}* — {prof}\n"]
     for i, s in enumerate(slots, 1):
-        lineas.append(f"*{i}.* {s['hora_inicio'][:5]}")
+        hora = s['hora_inicio'][:5]
+        prefix = f"*{i}.* ⭐ {hora} (recomendado)" if i == 1 and not mostrar_todos else f"*{i}.* {hora}"
+        lineas.append(prefix)
     if mostrar_todos:
         lineas.append("\nElige un número o escribe *otro día* si no te acomoda.")
     else:
-        lineas.append("\nElige un número, escribe *ver todos* para ver todos los horarios del día, u *otro día* si no te acomoda.")
+        lineas.append("\nElige un número, escribe *ver todos* para ver todos los horarios, u *otro día* para cambiar de día.")
     return "\n".join(lineas)
 
 
@@ -610,8 +769,23 @@ def _parse_slot_selection(txt: str, slots: list) -> int | None:
     return None
 
 
-def _format_citas_cancelar(citas: list, nombre_paciente: str) -> str:
+def _format_citas_cancelar(citas: list, nombre_paciente: str):
     nombre = nombre_paciente.split()[0]
+    rows = []
+    for i, c in enumerate(citas, 1):
+        fecha_short = f"{c['fecha'][8:10]}/{c['fecha'][5:7]}" if c.get("fecha") else c.get("fecha_display", "")[:5]
+        rows.append({
+            "id": str(i),
+            "title": f"{fecha_short} {c['hora_inicio']}"[:24],
+            "description": c["profesional"][:72],
+        })
+    if len(rows) <= 10:
+        return _list_msg(
+            body_text=f"*{nombre}*, encontré estas reservas 👇\n¿Cuál quieres cancelar?",
+            button_label="Ver citas",
+            sections=[{"title": "Selecciona una cita", "rows": rows}],
+        )
+    # Fallback texto
     lineas = [f"*{nombre}*, estas son tus próximas citas:\n"]
     for i, c in enumerate(citas, 1):
         lineas.append(f"*{i}.* {c['fecha_display']} · {c['hora_inicio']} · {c['profesional']}")

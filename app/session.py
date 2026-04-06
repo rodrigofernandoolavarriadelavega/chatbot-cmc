@@ -68,6 +68,18 @@ def _conn():
             updated_at  TEXT DEFAULT (datetime('now'))
         )
     """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS messages (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            phone       TEXT NOT NULL,
+            direction   TEXT NOT NULL,
+            text        TEXT,
+            state       TEXT DEFAULT 'IDLE',
+            ts          TEXT DEFAULT (datetime('now'))
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_msg_phone ON messages(phone)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_msg_ts    ON messages(ts)")
     conn.commit()
     return conn
 
@@ -219,6 +231,97 @@ def log_event(phone: str, event: str, meta: dict = None):
             (phone, event, _json.dumps(meta or {}, ensure_ascii=False))
         )
         conn.commit()
+
+
+def log_message(phone: str, direction: str, text: str, state: str = "IDLE"):
+    """Registra un mensaje entrante ('in') o saliente ('out') en el historial."""
+    with _conn() as conn:
+        conn.execute(
+            "INSERT INTO messages (phone, direction, text, state) VALUES (?, ?, ?, ?)",
+            (phone, direction, str(text)[:2000], state)
+        )
+        conn.commit()
+
+
+def get_messages(phone: str, limit: int = 100) -> list[dict]:
+    """Retorna el historial de mensajes de un número (más reciente al final)."""
+    with _conn() as conn:
+        rows = conn.execute(
+            "SELECT id, phone, direction, text, state, ts FROM messages "
+            "WHERE phone=? ORDER BY id ASC LIMIT ?",
+            (phone, limit)
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_conversations(limit: int = 200) -> list[dict]:
+    """Lista todas las conversaciones con último mensaje y estado actual."""
+    with _conn() as conn:
+        rows = conn.execute("""
+            SELECT
+                s.phone,
+                s.state,
+                s.data,
+                s.updated_at,
+                m.text        AS last_text,
+                m.direction   AS last_dir,
+                m.ts          AS last_ts,
+                p.nombre,
+                p.rut,
+                (SELECT COUNT(*) FROM messages WHERE phone = s.phone) AS msg_count
+            FROM sessions s
+            LEFT JOIN messages m ON m.id = (
+                SELECT id FROM messages WHERE phone = s.phone ORDER BY id DESC LIMIT 1
+            )
+            LEFT JOIN contact_profiles p ON p.phone = s.phone
+            ORDER BY s.updated_at DESC
+            LIMIT ?
+        """, (limit,)).fetchall()
+        result = []
+        for r in rows:
+            d = dict(r)
+            try:
+                import json as _json
+                session_data = _json.loads(d.pop("data", "{}") or "{}")
+                d["msgs_sin_respuesta"] = session_data.get("msgs_sin_respuesta", 0)
+                slot = session_data.get("slot_elegido") or {}
+                d["flow_data"] = {
+                    "especialidad":      session_data.get("especialidad", ""),
+                    "profesional":       session_data.get("profesional_nombre", ""),
+                    "fecha_display":     slot.get("fecha_display", "") if isinstance(slot, dict) else "",
+                    "hora_inicio":       slot.get("hora_inicio", "")   if isinstance(slot, dict) else "",
+                    "modalidad":         session_data.get("modalidad", ""),
+                    "prev_state":        session_data.get("handoff_reason", ""),
+                }
+            except Exception:
+                d.pop("data", None)
+                d["msgs_sin_respuesta"] = 0
+                d["flow_data"] = {}
+            result.append(d)
+        return result
+
+
+def get_sesiones_abandonadas() -> list[dict]:
+    """Retorna sesiones activas sin actividad entre 10 y 60 minutos (candidatas a reenganche)."""
+    estados = ("WAIT_SLOT", "WAIT_MODALIDAD", "WAIT_RUT_AGENDAR", "WAIT_NOMBRE_NUEVO")
+    placeholders = ",".join("?" * len(estados))
+    with _conn() as conn:
+        rows = conn.execute(f"""
+            SELECT phone, state, data FROM sessions
+            WHERE state IN ({placeholders})
+            AND updated_at < datetime('now', '-10 minutes')
+            AND updated_at > datetime('now', '-60 minutes')
+        """, estados).fetchall()
+        result = []
+        for r in rows:
+            d = dict(r)
+            try:
+                d["data"] = json.loads(d.get("data") or "{}")
+            except Exception:
+                d["data"] = {}
+            if not d["data"].get("reenganche_sent"):
+                result.append(d)
+        return result
 
 
 def get_metricas(dias: int = 30) -> dict:

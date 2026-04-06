@@ -15,3 +15,5 @@ META_VERIFY_TOKEN    = os.getenv("META_VERIFY_TOKEN", "cmc_webhook_2026")
 
 CMC_TELEFONO       = os.getenv("CMC_TELEFONO", "+56 XX XXX XXXX")
 CMC_TELEFONO_FIJO  = os.getenv("CMC_TELEFONO_FIJO", "(41) 296 5226")
+
+ADMIN_TOKEN        = os.getenv("ADMIN_TOKEN", "cmc_admin_2026")
