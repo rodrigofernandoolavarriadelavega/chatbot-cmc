@@ -26,6 +26,9 @@ _MEDILINK_DIA_TO_WEEKDAY = {1:0, 2:1, 3:2, 4:3, 5:4, 6:5, 7:6}
 # Profesionales habilitados en el CMC (id → info)
 PROFESIONALES = {
      1: {"nombre": "Dr. Rodrigo Olavarría","especialidad": "Medicina General",  "intervalo": 15},
+    18: {"nombre": "Dr. Alonso Márquez",  "especialidad": "Medicina General",  "intervalo": 15},
+    26: {"nombre": "Leonardo Etcheverry", "especialidad": "Kinesiología",       "intervalo": 30},
+    28: {"nombre": "Dr. Manuel Borrego",  "especialidad": "Otorrinolaringología","intervalo": 30},
     59: {"nombre": "Paola Acosta",        "especialidad": "Kinesiología",       "intervalo": 30},
     77: {"nombre": "Dr. Luis Armijo",     "especialidad": "Kinesiología",       "intervalo": 30},
     73: {"nombre": "Dr. Andrés Abarca",   "especialidad": "Medicina General",   "intervalo": 15},
@@ -50,8 +53,9 @@ PROFESIONALES = {
 
 # Mapa de palabras clave → IDs de profesionales
 ESPECIALIDADES_MAP = {
-    "kinesiología": [59, 77], "kinesiólogo": [59, 77], "kinesiologa": [59, 77], "kine": [59, 77],
-    "medicina general": [1, 73], "médico": [1, 73], "medico general": [1, 73], "doctor": [1, 73],
+    "kinesiología": [59, 77, 26], "kinesiólogo": [59, 77, 26], "kinesiologa": [59, 77, 26], "kine": [59, 77, 26],
+    "medicina general": [1, 73, 18], "médico": [1, 73, 18], "medico general": [1, 73, 18], "doctor": [1, 73, 18],
+    "otorrinolaringología": [28], "otorrino": [28], "orl": [28],
     "olavarría": [1], "olavarria": [1],
     "odontología": [72, 55], "dentista": [72, 55], "odontólogo": [72, 55],
     "endodoncia": [75], "endodoncista": [75],
@@ -67,7 +71,6 @@ ESPECIALIDADES_MAP = {
     "podología": [56], "podólogo": [56],
     "ortodoncia": [66], "ortodoncista": [66],
     "ecografía": [68], "ecografista": [68], "tecnólogo": [68],
-    "otorrinolaringología": [], "otorrino": [], "orl": [],
 }
 
 # Mapa de palabras clave → ID de especialidad Medilink (para /especialidades/{id}/proxima)
