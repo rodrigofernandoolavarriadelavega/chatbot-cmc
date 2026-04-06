@@ -18,6 +18,8 @@ from fastapi.responses import HTMLResponse
 from config import META_ACCESS_TOKEN, META_PHONE_NUMBER_ID, META_VERIFY_TOKEN, CMC_TELEFONO, ADMIN_TOKEN
 from flows import handle_message
 from reminders import enviar_recordatorios
+from medilink import (buscar_paciente, crear_paciente, buscar_primer_dia,
+                      buscar_slots_dia, crear_cita, PROFESIONALES, ESPECIALIDADES_MAP)
 from session import get_session, is_duplicate, reset_session, save_session, get_metricas, log_message, get_messages, get_conversations, log_event, get_sesiones_abandonadas
 
 logging.config.dictConfig({
@@ -463,6 +465,44 @@ body {
     <div class="pill amber"><strong id="s-flujo">—</strong>&nbsp;en flujo</div>
     <div class="pill" id="pill-esperando"><strong id="s-takeover">—</strong>&nbsp;esperando atención</div>
     <div class="pill"><div class="live-dot"></div>&nbsp;Actualizado <span id="last-refresh">—</span></div>
+    <button class="btn btn-primary" onclick="abrirModalAgendar()" style="margin-left:8px;font-size:12px;padding:6px 14px;border-radius:8px;">+ Nueva Cita</button>
+  </div>
+</div>
+
+<!-- MODAL NUEVA CITA -->
+<div id="modal-agendar" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:14px;width:480px;max-width:95vw;padding:28px 28px 24px;box-shadow:0 20px 60px rgba(0,0,0,.2);position:relative;">
+    <button onclick="cerrarModalAgendar()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#94a3b8;">×</button>
+    <h2 style="font-size:16px;font-weight:700;margin-bottom:20px;">📅 Nueva Cita</h2>
+
+    <!-- PASO 1: RUT -->
+    <div id="paso1">
+      <label style="font-size:12px;font-weight:600;color:#475569;">RUT del paciente</label>
+      <div style="display:flex;gap:8px;margin-top:6px;">
+        <input id="m-rut" placeholder="12345678-9" style="flex:1;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;" onkeydown="if(event.key==='Enter')buscarPaciente()">
+        <button class="btn btn-primary" onclick="buscarPaciente()" style="padding:9px 16px;border-radius:8px;font-size:12px;">Buscar</button>
+      </div>
+      <div id="m-paciente-info" style="margin-top:10px;font-size:12px;"></div>
+    </div>
+
+    <!-- PASO 2: ESPECIALIDAD Y SLOTS -->
+    <div id="paso2" style="display:none;margin-top:16px;">
+      <label style="font-size:12px;font-weight:600;color:#475569;">Especialidad</label>
+      <select id="m-especialidad" style="width:100%;margin-top:6px;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;" onchange="buscarSlots()">
+        <option value="">— Selecciona —</option>
+      </select>
+      <div id="m-slots" style="margin-top:12px;"></div>
+    </div>
+
+    <!-- PASO 3: CONFIRMAR -->
+    <div id="paso3" style="display:none;margin-top:16px;">
+      <div id="m-resumen" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;font-size:13px;"></div>
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <button class="btn btn-outline" onclick="volverPaso2()" style="flex:1;padding:9px;border-radius:8px;font-size:12px;">← Atrás</button>
+        <button class="btn btn-primary" onclick="confirmarCita()" style="flex:2;padding:9px;border-radius:8px;font-size:12px;font-weight:600;">✅ Confirmar Cita</button>
+      </div>
+      <div id="m-resultado" style="margin-top:10px;font-size:12px;text-align:center;"></div>
+    </div>
   </div>
 </div>
 
@@ -931,6 +971,129 @@ loadConversations();
 loadMetrics();
 setInterval(loadConversations,10000);
 setInterval(loadMetrics,60000);
+
+// ── MODAL NUEVA CITA ─────────────────────────────────────────────────────────
+let slotSeleccionado = null;
+let pacienteActual = null;
+
+async function abrirModalAgendar(){
+  document.getElementById('modal-agendar').style.display='flex';
+  document.getElementById('paso1').style.display='block';
+  document.getElementById('paso2').style.display='none';
+  document.getElementById('paso3').style.display='none';
+  document.getElementById('m-rut').value='';
+  document.getElementById('m-paciente-info').innerHTML='';
+  document.getElementById('m-resultado').innerHTML='';
+  slotSeleccionado=null; pacienteActual=null;
+  // Cargar especialidades
+  const r=await fetch(`/admin/api/especialidades?token=${TOKEN}`);
+  const d=await r.json();
+  const sel=document.getElementById('m-especialidad');
+  sel.innerHTML='<option value="">— Selecciona —</option>';
+  d.especialidades.forEach(e=>{ const o=document.createElement('option'); o.value=e; o.textContent=e; sel.appendChild(o); });
+}
+
+function cerrarModalAgendar(){
+  document.getElementById('modal-agendar').style.display='none';
+}
+
+async function buscarPaciente(){
+  const rut=document.getElementById('m-rut').value.trim();
+  if(!rut) return;
+  const info=document.getElementById('m-paciente-info');
+  info.innerHTML='<span style="color:#94a3b8;">Buscando...</span>';
+  const r=await fetch(`/admin/api/paciente?rut=${encodeURIComponent(rut)}&token=${TOKEN}`);
+  if(r.ok){
+    pacienteActual=await r.json();
+    const nombre=pacienteActual.nombre+' '+(pacienteActual.apellido||pacienteActual.apellidos||'');
+    info.innerHTML=`<span style="color:#15803d;font-weight:600;">✅ ${nombre.trim()}</span>`;
+    document.getElementById('paso2').style.display='block';
+  } else if(r.status===404){
+    info.innerHTML=`<span style="color:#dc2626;">Paciente no encontrado. </span><span style="color:#2563eb;cursor:pointer;text-decoration:underline;" onclick="mostrarFormNuevoPaciente()">Registrar nuevo</span>`;
+    pacienteActual={rut:rut, nuevo:true};
+    document.getElementById('paso2').style.display='block';
+  } else {
+    info.innerHTML='<span style="color:#dc2626;">Error al buscar paciente.</span>';
+  }
+}
+
+function mostrarFormNuevoPaciente(){
+  const info=document.getElementById('m-paciente-info');
+  info.innerHTML=`
+    <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
+      <input id="m-nombre" placeholder="Nombre" style="padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;">
+      <input id="m-apellidos" placeholder="Apellidos" style="padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;">
+      <button class="btn btn-primary" onclick="registrarNuevoPaciente()" style="padding:7px;border-radius:6px;font-size:12px;">Registrar</button>
+    </div>`;
+}
+
+async function registrarNuevoPaciente(){
+  const nombre=document.getElementById('m-nombre').value.trim();
+  const apellidos=document.getElementById('m-apellidos').value.trim();
+  if(!nombre||!apellidos) return;
+  pacienteActual={...pacienteActual, nombre, apellidos};
+  document.getElementById('m-paciente-info').innerHTML=`<span style="color:#15803d;font-weight:600;">✅ ${nombre} ${apellidos} (nuevo)</span>`;
+}
+
+async function buscarSlots(){
+  const esp=document.getElementById('m-especialidad').value;
+  if(!esp) return;
+  const cont=document.getElementById('m-slots');
+  cont.innerHTML='<span style="color:#94a3b8;font-size:12px;">Buscando disponibilidad...</span>';
+  slotSeleccionado=null;
+  const r=await fetch(`/admin/api/slots?especialidad=${encodeURIComponent(esp)}&token=${TOKEN}`);
+  if(!r.ok){ cont.innerHTML='<span style="color:#dc2626;font-size:12px;">Sin disponibilidad.</span>'; return; }
+  const d=await r.json();
+  const fecha=d.fecha;
+  cont.innerHTML=`<div style="font-size:11px;color:#64748b;margin-bottom:6px;">📅 ${fecha}</div>`;
+  d.slots.forEach(s=>{
+    const btn=document.createElement('button');
+    btn.style.cssText='display:block;width:100%;text-align:left;padding:8px 12px;margin-bottom:4px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;cursor:pointer;font-size:12px;';
+    btn.innerHTML=`<strong>${s.hora_inicio.slice(0,5)}</strong> — ${s.profesional_nombre}`;
+    btn.onclick=()=>{ slotSeleccionado={...s, fecha}; mostrarConfirmacion(); };
+    cont.appendChild(btn);
+  });
+}
+
+function mostrarConfirmacion(){
+  document.getElementById('paso3').style.display='block';
+  const nombre = pacienteActual.nombre ? pacienteActual.nombre+' '+(pacienteActual.apellidos||'') : '(nuevo paciente)';
+  document.getElementById('m-resumen').innerHTML=`
+    <div style="font-weight:600;margin-bottom:6px;">Resumen de la cita</div>
+    <div>👤 <strong>${nombre.trim()}</strong></div>
+    <div>🩺 ${slotSeleccionado.profesional_nombre}</div>
+    <div>📅 ${slotSeleccionado.fecha} a las ${slotSeleccionado.hora_inicio.slice(0,5)}</div>`;
+}
+
+function volverPaso2(){ document.getElementById('paso3').style.display='none'; }
+
+async function confirmarCita(){
+  const res=document.getElementById('m-resultado');
+  res.innerHTML='<span style="color:#94a3b8;">Creando cita...</span>';
+  const duracion=(()=>{
+    const [h1,m1]=slotSeleccionado.hora_inicio.split(':').map(Number);
+    const [h2,m2]=slotSeleccionado.hora_fin.split(':').map(Number);
+    return (h2*60+m2)-(h1*60+m1);
+  })();
+  const body={
+    rut: pacienteActual.rut||document.getElementById('m-rut').value,
+    nombre: pacienteActual.nombre||'',
+    apellidos: pacienteActual.apellidos||'',
+    id_profesional: slotSeleccionado.id_profesional,
+    fecha: slotSeleccionado.fecha,
+    hora_inicio: slotSeleccionado.hora_inicio,
+    hora_fin: slotSeleccionado.hora_fin,
+    duracion,
+  };
+  const r=await fetch(`/admin/api/agendar?token=${TOKEN}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(r.ok){
+    res.innerHTML='<span style="color:#15803d;font-weight:600;">✅ Cita creada exitosamente</span>';
+    setTimeout(cerrarModalAgendar, 2000);
+  } else {
+    const e=await r.json();
+    res.innerHTML=`<span style="color:#dc2626;">Error: ${e.detail||'No se pudo crear la cita'}</span>`;
+  }
+}
 </script>
 </body>
 </html>'''
@@ -1050,6 +1213,72 @@ async def admin_resume(phone: str, token: str = Query(...)):
         "Escribe *menu* cuando quieras.")
     log_message(phone, "out", "[Bot reanudado por recepcionista]", "IDLE")
     return {"ok": True}
+
+
+@app.get("/admin/api/paciente")
+async def admin_buscar_paciente(rut: str, token: str = Query(...)):
+    """Busca un paciente en Medilink por RUT."""
+    _check_token(token)
+    paciente = await buscar_paciente(rut)
+    if not paciente:
+        raise HTTPException(status_code=404, detail="Paciente no encontrado")
+    return paciente
+
+
+@app.get("/admin/api/slots")
+async def admin_slots(especialidad: str, token: str = Query(...)):
+    """Retorna la próxima fecha disponible y sus slots para una especialidad."""
+    _check_token(token)
+    fecha = await buscar_primer_dia(especialidad)
+    if not fecha:
+        raise HTTPException(status_code=404, detail="Sin disponibilidad")
+    slots, _ = await buscar_slots_dia(especialidad, fecha)
+    # Incluir nombre del profesional en cada slot
+    for s in slots:
+        pid = s.get("id_profesional")
+        s["profesional_nombre"] = PROFESIONALES.get(pid, {}).get("nombre", f"Prof. {pid}")
+    return {"fecha": fecha, "slots": slots}
+
+
+@app.post("/admin/api/agendar")
+async def admin_agendar(request: Request, token: str = Query(...)):
+    """Crea una cita desde el panel de recepción."""
+    _check_token(token)
+    body = await request.json()
+    rut        = body.get("rut", "").strip()
+    nombre     = body.get("nombre", "").strip()
+    apellidos  = body.get("apellidos", "").strip()
+    id_prof    = int(body.get("id_profesional"))
+    fecha      = body.get("fecha", "").strip()
+    hora_ini   = body.get("hora_inicio", "").strip()
+    hora_fin   = body.get("hora_fin", "").strip()
+    duracion   = int(body.get("duracion", 30))
+
+    # Buscar o crear paciente
+    paciente = await buscar_paciente(rut)
+    if not paciente:
+        paciente = await crear_paciente(rut, nombre, apellidos)
+        if not paciente:
+            raise HTTPException(status_code=400, detail="No se pudo crear el paciente")
+
+    cita = await crear_cita(paciente["id"], id_prof, fecha, hora_ini, hora_fin, duracion)
+    if not cita:
+        raise HTTPException(status_code=400, detail="No se pudo crear la cita en Medilink")
+
+    log_event("admin", "cita_creada_panel", {
+        "rut": rut, "id_profesional": id_prof,
+        "fecha": fecha, "hora": hora_ini
+    })
+    return {"ok": True, "cita": cita}
+
+
+@app.get("/admin/api/especialidades")
+def admin_especialidades(token: str = Query(...)):
+    """Retorna la lista de especialidades únicas disponibles."""
+    _check_token(token)
+    from medilink import PROFESIONALES
+    esp = sorted({v["especialidad"] for v in PROFESIONALES.values()})
+    return {"especialidades": esp}
 
 
 @app.get("/admin", response_class=HTMLResponse)
