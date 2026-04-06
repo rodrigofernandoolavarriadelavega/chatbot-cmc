@@ -10,21 +10,23 @@ Permite a los pacientes agendar, cancelar y ver sus citas médicas directamente 
 - **Agendamiento**: API Medilink 2 (healthatom) — `https://api.medilink2.healthatom.com/api/v5`
 - **Mensajería**: Meta Cloud API (WhatsApp Business) — webhook `POST /webhook`
 - **Sesiones**: SQLite (`data/sessions.db`) con timeout de 30 minutos
-- **Deploy**: Docker, expone puerto 8001
+- **Deploy**: DigitalOcean VPS (`157.245.13.107`), uvicorn directo (sin Docker), puerto 8001
 - **HTTP client**: httpx (async)
 
 ## Estructura del proyecto
 ```
 /
 ├── app/
-│   ├── main.py          # FastAPI app, webhook Meta, envío de mensajes
-│   ├── flows.py         # Máquina de estados (lógica conversacional)
+│   ├── main.py          # FastAPI app, webhook Meta, mensajes interactivos, API admin, reenganche
+│   ├── flows.py         # Máquina de estados (lógica conversacional + mensajes lista/botones)
 │   ├── claude_helper.py # detect_intent() y respuesta_faq() con Claude Haiku
 │   ├── medilink.py      # Wrapper API Medilink (slots, pacientes, citas)
-│   ├── session.py       # Gestión de sesiones por número de teléfono (SQLite)
+│   ├── session.py       # Sesiones SQLite + log_message, get_conversations, log_event, get_sesiones_abandonadas
+│   ├── reminders.py     # Recordatorios automáticos de citas (APScheduler, 09:00 CLT)
 │   └── config.py        # Variables de entorno (.env)
+├── auditor.py           # Script de cuadre contable (Medilink vs Transbank/efectivo/transferencias)
 ├── data/
-│   └── sessions.db      # Base de datos SQLite de sesiones
+│   └── sessions.db      # Base de datos SQLite de sesiones (no se commitea)
 ├── Dockerfile
 ├── requirements.txt
 └── .env                 # No commitear — contiene tokens y API keys
@@ -40,24 +42,39 @@ META_ACCESS_TOKEN=...         # Token permanente del System User "Chatbotcmc-sys
 META_PHONE_NUMBER_ID=...      # ID del número WhatsApp activo
 META_VERIFY_TOKEN=cmc_webhook_2026
 CMC_TELEFONO=+56987834148
+ADMIN_TOKEN=cmc_admin_2026       # Token para endpoints /admin/*
 ```
 
 ## Cómo correr localmente
 ```bash
-# Sin Docker (desarrollo)
+# Desarrollo
 uvicorn app.main:app --port 8001 --reload
 # En otra terminal:
 ngrok http 8001
-
-# Con Docker
-docker build -t cmc-bot .
-docker run -p 8001:8001 --env-file .env cmc-bot
 ```
+
+## Deploy en producción (DigitalOcean)
+```bash
+# Desde el Mac — subir cambios
+git push origin main
+
+# En el servidor (157.245.13.107, usuario root)
+ssh root@157.245.13.107   # contraseña: ver .env local
+cd /opt/chatbot-cmc
+git pull
+kill $(ps aux | grep uvicorn | grep -v grep | awk '{print $2}')
+nohup venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8001 > /var/log/cmc-bot.log 2>&1 &
+```
+
+Los logs viven en `/var/log/cmc-bot.log` en el servidor.
 
 ## Endpoints
 - `GET /health` — health check
 - `GET /webhook` — verificación de webhook Meta (hub.verify_token = META_VERIFY_TOKEN)
 - `POST /webhook` — recibe mensajes de WhatsApp (Meta Cloud API)
+- `GET /admin` — panel web de recepción (requiere `?token=ADMIN_TOKEN`)
+- `GET /admin/api/metrics` — métricas JSON (requiere `?token=ADMIN_TOKEN`)
+- `GET /admin/api/conversations` — conversaciones JSON (requiere `?token=ADMIN_TOKEN`)
 
 ## Flujo de la conversación (máquina de estados en flows.py)
 ```
@@ -75,10 +92,12 @@ IDLE → detect_intent (Claude Haiku)
 ### Comportamientos especiales
 - Palabras de emergencia → siempre deriva a SAMU 131 (prioridad máxima)
 - "menu/hola/inicio" → resetea sesión y muestra menú
+- Menú y selecciones usan mensajes interactivos de WhatsApp (listas y botones)
 - Atajos numéricos en IDLE: 1=agendar, 2=cancelar, 3=ver reservas, 4=humano
 - "ver todos" en WAIT_SLOT → muestra todos los slots del día
 - "otro día" en WAIT_SLOT → busca siguiente día con disponibilidad
 - Paciente no encontrado por RUT → flujo de registro (WAIT_NOMBRE_NUEVO)
+- Reenganche automático: si un paciente abandona un flujo activo entre 10-60 min, el bot envía un recordatorio (cron cada 5 min)
 
 ## Lógica de slots (medilink.py)
 - `buscar_primer_dia(especialidad)` — primer día disponible vía `/especialidades/{id}/proxima`, con fallback día por día (60 días)
@@ -137,14 +156,17 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - [x] Registro de pacientes nuevos
 - [x] Manejo de emergencias
 - [x] Sesiones persistentes SQLite
-- [x] Dockerfile listo
-- [ ] Dashboard para secretarias (en desarrollo separado: `/dashboard-medilink/`)
-- [ ] Deploy en VPS (actualmente ngrok local)
-- [ ] Aprobación Display Name número prepago
+- [x] Mensajes interactivos (listas y botones de WhatsApp)
+- [x] Reenganche automático de pacientes que abandonan el flujo
+- [x] Panel admin web (`/admin`) con métricas y conversaciones
+- [x] Recordatorios automáticos de citas (09:00 CLT)
+- [x] Deploy en VPS DigitalOcean (`157.245.13.107`) corriendo con uvicorn
+- [ ] Aprobación Display Name número prepago (+56945886628)
 
-## Dashboard (proyecto paralelo)
-- Ruta: `/dashboard-medilink/` (repositorio/carpeta separada)
-- Estado: terminado ✅
+## Dashboard admin
+- Ruta: `http://157.245.13.107:8001/admin?token=cmc_admin_2026`
+- Incluido en el mismo proceso del bot (no es proyecto separado)
+- Muestra métricas, conversaciones activas y estado del sistema
 
 ## Deuda técnica pendiente
 1. Precios en `claude_helper.py` hardcodeados en SYSTEM_PROMPT — actualizar manualmente cuando cambien
