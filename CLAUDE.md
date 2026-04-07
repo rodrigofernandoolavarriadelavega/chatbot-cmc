@@ -117,26 +117,28 @@ IDLE → detect_intent (Claude Haiku)
 |----|--------|-------------|
 | 1 | Dr. Rodrigo Olavarría | Medicina General |
 | 73 | Dr. Andrés Abarca | Medicina General |
-| 77 | Dr. Luis Armijo | Medicina General |
-| 59 | Paola Acosta | Kinesiología |
-| 64 | Dr. Claudio Barraza | Traumatología |
-| 65 | Dr. Nicolás Quijano | Gastroenterología |
-| 61 | Dr. Tirso Rejón | Ginecología |
+| 18 | Dr. Alonso Márquez | Medicina General / Medicina Familiar |
+| 28 | Dr. Manuel Borrego | Otorrinolaringología |
 | 60 | Dr. Miguel Millán | Cardiología |
-| 70 | Juana Arratia | Fonoaudiología |
+| 64 | Dr. Claudio Barraza | Traumatología |
+| 61 | Dr. Tirso Rejón | Ginecología |
+| 65 | Dr. Nicolás Quijano | Gastroenterología |
+| 55 | Dra. Javiera Burgos | Odontología General |
+| 72 | Dr. Carlos Jiménez | Odontología General |
+| 66 | Dra. Daniela Castillo | Ortodoncia |
+| 75 | Dr. Fernando Fredes | Endodoncia |
+| 69 | Dra. Aurora Valdés | Implantología |
+| 76 | Dra. Valentina Fuentealba | Estética Facial |
+| 59 | Paola Acosta | Kinesiología |
+| 77 | Luis Armijo | Kinesiología |
+| 26 | Leonardo Etcheverry | Kinesiología |
 | 52 | Gisela Pinto | Nutrición |
-| 56 | Andrea Guevara | Podología |
+| 74 | Jorge Montalba | Psicología Adulto / Psicología Infantil |
+| 49 | Juan Pablo Rodríguez | Psicología Adulto |
+| 70 | Juana Arratia | Fonoaudiología |
 | 67 | Sarai Gómez | Matrona |
-| 74 | Jorge Montalba | Psicología |
-| 49 | Juan Pablo Rodríguez | Psicología |
-| 66 | Daniela Castillo | Ortodoncia |
-| 69 | Aurora Valdés | Implantología |
-| 57 | David Pardo Muñoz | Ecografía |
-| 68 | David Pardo | Tecnólogo Médico |
-| 76 | Valentina Fuentealba | Odontología General |
-| 75 | Fernando Fredes | Odontología General |
-| 72 | Carlos Jiménez | Odontología General |
-| 55 | Javiera Burgos | Odontología General |
+| 56 | Andrea Guevara | Podología |
+| 68 | David Pardo | Ecografía |
 
 ## Cancelación de citas en Medilink
 Usar `PUT /citas/{id}` con body `{"id_estado": 1}` — esto pone la cita en estado "Anulado" con `estado_anulacion=1`.
@@ -174,17 +176,24 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - Muestra métricas, conversaciones activas y estado del sistema
 
 ## Sesión en curso
-**Fecha**: 2026-04-06
+**Fecha**: 2026-04-07
 
 **Hecho hoy**:
-- Commit inicial de todos los cambios acumulados (mensajes interactivos, reenganche, auditor, dashboard admin)
-- Deploy al servidor DigitalOcean (`157.245.13.107`) — bot corriendo como PID uvicorn
-- Fix `SyntaxWarning` en `main.py` (`_ADMIN_HTML` convertido a raw string `r'''...'''`)
-- Actualización de `CLAUDE.md` con estado real del proyecto
+- Deploy completo en DigitalOcean con HTTPS — dominio `agentecmc.cl` con SSL Let's Encrypt, nginx como proxy, ngrok eliminado
+- Webhook Meta actualizado a `https://agentecmc.cl/webhook`
+- Agendamiento directo desde panel de recepción (`/admin`) — modal "Nueva Cita" con búsqueda por RUT, slots y confirmación
+- Lista de profesionales completamente actualizada: 24 profesionales, nombres con Dr./Dra. correctos, especialidades corregidas
+- Nuevos profesionales agregados: Dr. Alonso Márquez (ID 18), Leonardo Etcheverry (ID 26), Dr. Manuel Borrego (ID 28)
+- Correcciones: Luis Armijo → Kinesiología, Valentina Fuentealba → Estética Facial, Fernando Fredes → Endodoncia, David Pardo Muñoz eliminado (duplicado de ID 68)
+- Psicología dividida en Adulto e Infantil (Montalba atiende ambas)
+- Medicina Familiar agregada (Dr. Márquez)
 
-**Estado del servidor**: corriendo, sin errores en logs, dashboard admin recibiendo tráfico real
+**Estado del servidor**: corriendo en `https://agentecmc.cl`, sin errores
 
-**Próximo paso sugerido**: probar flujo completo de mensajes interactivos con número de prueba de Meta (+1 555 641 7609)
+**Pendiente**:
+- Revisar y actualizar precios en `claude_helper.py` (en curso)
+- IDs de nuevos profesionales ya agregados al código
+- Aprobación Display Name WhatsApp (+56945886628)
 
 ---
 
