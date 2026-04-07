@@ -47,8 +47,8 @@ PROFESIONALES = {
     60: {"nombre": "Dr. Miguel Millán",   "especialidad": "Cardiología",        "intervalo": 20, "dias": [5]},
     56: {"nombre": "Andrea Guevara",      "especialidad": "Podología",          "intervalo": 30},
     52: {"nombre": "Gisela Pinto",        "especialidad": "Nutrición",          "intervalo": 30},
-    74: {"nombre": "Jorge Montalba",      "especialidad": "Psicología",         "intervalo": 60},
-    49: {"nombre": "Juan Pablo Rodríguez","especialidad": "Psicología",         "intervalo": 60},
+    74: {"nombre": "Jorge Montalba",      "especialidad": "Psicología Adulto",  "intervalo": 60},
+    49: {"nombre": "Juan Pablo Rodríguez","especialidad": "Psicología Adulto",  "intervalo": 60},
 }
 
 # Mapa de palabras clave → IDs de profesionales
@@ -66,6 +66,8 @@ ESPECIALIDADES_MAP = {
     "traumatología": [64], "traumatólogo": [64],
     "cardiología": [60], "cardiólogo": [60],
     "gastroenterología": [65], "gastroenterólogo": [65],
+    "psicología adulto": [74, 49], "psicólogo adulto": [74, 49],
+    "psicología infantil": [74], "psicólogo infantil": [74],
     "psicología": [74, 49], "psicólogo": [74, 49], "psicóloga": [74, 49],
     "nutrición": [52], "nutricionista": [52],
     "podología": [56], "podólogo": [56],
