@@ -55,6 +55,7 @@ PROFESIONALES = {
 ESPECIALIDADES_MAP = {
     "kinesiología": [59, 77, 26], "kinesiólogo": [59, 77, 26], "kinesiologa": [59, 77, 26], "kine": [59, 77, 26],
     "medicina general": [1, 73, 18], "médico": [1, 73, 18], "medico general": [1, 73, 18], "doctor": [1, 73, 18],
+    "medicina familiar": [18], "médico familiar": [18],
     "otorrinolaringología": [28], "otorrino": [28], "orl": [28],
     "olavarría": [1], "olavarria": [1],
     "odontología": [72, 55], "dentista": [72, 55], "odontólogo": [72, 55],
