@@ -80,6 +80,17 @@ def _conn():
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_msg_phone ON messages(phone)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_msg_ts    ON messages(ts)")
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS fidelizacion_msgs (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            phone       TEXT,
+            tipo        TEXT,
+            cita_id     TEXT,
+            enviado_en  TEXT DEFAULT (datetime('now')),
+            respuesta   TEXT
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_fidel_phone ON fidelizacion_msgs(phone, tipo)")
     conn.commit()
     return conn
 
@@ -322,6 +333,82 @@ def get_sesiones_abandonadas() -> list[dict]:
             if not d["data"].get("reenganche_sent"):
                 result.append(d)
         return result
+
+
+# ── Fidelización ──────────────────────────────────────────────────────────────
+
+def get_citas_para_seguimiento(fecha_ayer: str) -> list[dict]:
+    """Citas del bot de ayer que aún no tienen seguimiento post-consulta enviado."""
+    with _conn() as conn:
+        rows = conn.execute("""
+            SELECT cb.id, cb.phone, cb.id_cita, cb.especialidad, cb.profesional, cb.fecha, cb.hora,
+                   p.nombre
+            FROM citas_bot cb
+            LEFT JOIN contact_profiles p ON p.phone = cb.phone
+            WHERE cb.fecha = ?
+            AND NOT EXISTS (
+                SELECT 1 FROM fidelizacion_msgs f
+                WHERE f.phone = cb.phone AND f.tipo = 'postconsulta' AND f.cita_id = cb.id_cita
+            )
+        """, (fecha_ayer,)).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_pacientes_inactivos(dias_min: int = 30, dias_max: int = 90) -> list[dict]:
+    """Pacientes cuya última cita fue entre dias_min y dias_max días atrás,
+    sin mensaje de reactivación enviado en los últimos 60 días."""
+    with _conn() as conn:
+        rows = conn.execute("""
+            SELECT cb.phone, MAX(cb.fecha) AS ultima_cita, MAX(cb.especialidad) AS especialidad,
+                   p.nombre
+            FROM citas_bot cb
+            LEFT JOIN contact_profiles p ON p.phone = cb.phone
+            WHERE cb.fecha <= date('now', ?)
+            AND   cb.fecha >= date('now', ?)
+            AND NOT EXISTS (
+                SELECT 1 FROM fidelizacion_msgs f
+                WHERE f.phone = cb.phone AND f.tipo = 'reactivacion'
+                AND   f.enviado_en >= datetime('now', '-60 days')
+            )
+            GROUP BY cb.phone
+        """, (f"-{dias_min} days", f"-{dias_max} days")).fetchall()
+        return [dict(r) for r in rows]
+
+
+def save_fidelizacion_msg(phone: str, tipo: str, cita_id: str = ""):
+    """Registra que se envió un mensaje de fidelización."""
+    with _conn() as conn:
+        conn.execute(
+            "INSERT INTO fidelizacion_msgs (phone, tipo, cita_id) VALUES (?, ?, ?)",
+            (phone, tipo, cita_id or "")
+        )
+        conn.commit()
+
+
+def save_fidelizacion_respuesta(phone: str, tipo: str, respuesta: str):
+    """Guarda la respuesta del paciente al último mensaje de fidelización."""
+    with _conn() as conn:
+        conn.execute("""
+            UPDATE fidelizacion_msgs SET respuesta = ?
+            WHERE id = (
+                SELECT id FROM fidelizacion_msgs WHERE phone = ? AND tipo = ?
+                ORDER BY enviado_en DESC LIMIT 1
+            )
+        """, (respuesta, phone, tipo))
+        conn.commit()
+
+
+def get_ultimo_seguimiento(phone: str) -> dict | None:
+    """Retorna el último seguimiento post-consulta sin respuesta para este paciente."""
+    with _conn() as conn:
+        row = conn.execute("""
+            SELECT f.phone, f.cita_id, f.enviado_en, cb.especialidad, cb.profesional
+            FROM fidelizacion_msgs f
+            LEFT JOIN citas_bot cb ON cb.id_cita = f.cita_id AND cb.phone = f.phone
+            WHERE f.phone = ? AND f.tipo = 'postconsulta' AND f.respuesta IS NULL
+            ORDER BY f.enviado_en DESC LIMIT 1
+        """, (phone,)).fetchone()
+        return dict(row) if row else None
 
 
 def get_metricas(dias: int = 30) -> dict:

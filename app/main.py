@@ -18,6 +18,7 @@ from fastapi.responses import HTMLResponse
 from config import META_ACCESS_TOKEN, META_PHONE_NUMBER_ID, META_VERIFY_TOKEN, CMC_TELEFONO, ADMIN_TOKEN
 from flows import handle_message
 from reminders import enviar_recordatorios
+from fidelizacion import enviar_seguimiento_postconsulta, enviar_reactivacion_pacientes
 from medilink import (buscar_paciente, crear_paciente, buscar_primer_dia,
                       buscar_slots_dia, crear_cita, PROFESIONALES, ESPECIALIDADES_MAP)
 from session import get_session, is_duplicate, reset_session, save_session, get_metricas, log_message, get_messages, get_conversations, log_event, get_sesiones_abandonadas
@@ -84,8 +85,22 @@ async def lifespan(app: FastAPI):
         id="reenganche",
         replace_existing=True,
     )
+    # Post-consulta: todos los días a las 10:00 AM (citas de ayer que fueron atendidas)
+    scheduler.add_job(
+        lambda: asyncio.create_task(enviar_seguimiento_postconsulta(send_whatsapp)),
+        CronTrigger(hour=10, minute=0),
+        id="seguimiento_postconsulta",
+        replace_existing=True,
+    )
+    # Reactivación: todos los lunes a las 10:30 AM (pacientes sin volver en 30–90 días)
+    scheduler.add_job(
+        lambda: asyncio.create_task(enviar_reactivacion_pacientes(send_whatsapp)),
+        CronTrigger(day_of_week="mon", hour=10, minute=30),
+        id="reactivacion_pacientes",
+        replace_existing=True,
+    )
     scheduler.start()
-    log.info("Scheduler iniciado — recordatorios 09:00 CLT · reenganche cada 5 min")
+    log.info("Scheduler iniciado — recordatorios 09:00 · post-consulta 10:00 · reactivación lunes 10:30")
     yield
     scheduler.shutdown()
 

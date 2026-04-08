@@ -11,7 +11,8 @@ from medilink import (buscar_primer_dia, buscar_slots_dia, buscar_slots_dia_por_
                       listar_citas_paciente, cancelar_cita,
                       valid_rut, clean_rut, especialidades_disponibles,
                       consultar_proxima_fecha)
-from session import save_session, reset_session, save_tag, save_cita_bot, log_event, save_profile, get_profile
+from session import (save_session, reset_session, save_tag, save_cita_bot, log_event,
+                     save_profile, get_profile, save_fidelizacion_respuesta, get_ultimo_seguimiento)
 from config import CMC_TELEFONO, CMC_TELEFONO_FIJO
 
 # Mapa de nombres de día en español → Python weekday (0=Lun..6=Dom)
@@ -120,6 +121,45 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if txt == "2": return await _iniciar_cancelar(phone, data)
         if txt == "3": return await _iniciar_ver(phone, data)
         if txt == "4": return _derivar_humano(phone=phone, contexto="menú opción 4")
+
+        # ── Respuestas de fidelización ────────────────────────────────────────
+        if tl == "seg_mejor":
+            save_fidelizacion_respuesta(phone, "postconsulta", "mejor")
+            seg = get_ultimo_seguimiento(phone)
+            esp = seg.get("especialidad", "") if seg else ""
+            log_event(phone, "seguimiento_mejor", {"especialidad": esp})
+            return _btn_msg(
+                "Qué bueno saberlo 😊 Nos alegra que te sientas mejor.\n\n"
+                "¿Quieres agendar tu control de seguimiento?",
+                [{"id": "1", "title": "Sí, agendar control"},
+                 {"id": "no_control", "title": "Por ahora no"}]
+            )
+        if tl in ("seg_igual", "seg_peor"):
+            save_fidelizacion_respuesta(phone, "postconsulta", tl.replace("seg_", ""))
+            seg = get_ultimo_seguimiento(phone)
+            esp = seg.get("especialidad", "") if seg else ""
+            prof = seg.get("profesional", "") if seg else ""
+            log_event(phone, "seguimiento_negativo", {"respuesta": tl, "especialidad": esp})
+            return _btn_msg(
+                "Lamentamos escuchar eso 😟\n\n"
+                f"¿Quieres reagendar una consulta{' con ' + prof if prof else ''}?",
+                [{"id": "1", "title": "Sí, reagendar"},
+                 {"id": "no_control", "title": "No por ahora"}]
+            )
+        if tl == "no_control":
+            return (
+                "Entendido 😊 Cuando lo necesites, estamos acá.\n"
+                "_Escribe *menu* para volver al inicio._"
+            )
+        if tl == "reac_si":
+            log_event(phone, "reactivacion_acepto", {})
+            return await _iniciar_agendar(phone, data, None)
+        if tl == "reac_luego":
+            log_event(phone, "reactivacion_rechazo", {})
+            return (
+                "Sin problema 😊 Cuando lo necesites escríbenos.\n"
+                "_Escribe *menu* para ver todas las opciones._"
+            )
 
         result = await detect_intent(txt)
         intent = result.get("intent", "otro")
