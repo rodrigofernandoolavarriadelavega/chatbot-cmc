@@ -647,7 +647,7 @@ def _especialidades_list_msg() -> dict:
         button_label="Ver especialidades",
         sections=[
             {
-                "title": "Medicina y especialidades",
+                "title": "Medicina y salud",
                 "rows": [
                     {"id": "esp_medgen",  "title": "Medicina General"},
                     {"id": "esp_medfam",  "title": "Medicina Familiar"},
