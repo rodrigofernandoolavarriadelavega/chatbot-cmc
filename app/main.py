@@ -22,7 +22,7 @@ from fidelizacion import enviar_seguimiento_postconsulta, enviar_reactivacion_pa
 from medilink import (buscar_paciente, crear_paciente, buscar_primer_dia,
                       buscar_slots_dia, crear_cita, listar_citas_paciente,
                       cancelar_cita, PROFESIONALES, ESPECIALIDADES_MAP)
-from session import get_session, is_duplicate, reset_session, save_session, get_metricas, log_message, get_messages, get_conversations, log_event, get_sesiones_abandonadas
+from session import get_session, is_duplicate, reset_session, save_session, get_metricas, log_message, get_messages, get_conversations, log_event, get_sesiones_abandonadas, get_tags, save_tag, delete_tag
 
 logging.config.dictConfig({
     "version": 1,
@@ -669,6 +669,16 @@ body {
           </div>
         </div>
         <div class="ctx-sec">
+          <div class="ctx-sec-title">Etiquetas</div>
+          <div id="ctx-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;min-height:24px;"></div>
+          <div style="display:flex;gap:6px;">
+            <input id="ctx-tag-input" type="text" placeholder="Nueva etiqueta..." maxlength="30"
+              style="flex:1;padding:6px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;"
+              onkeydown="if(event.key===\'Enter\'){event.preventDefault();addTag();}">
+            <button onclick="addTag()" style="background:var(--primary);color:#fff;border:none;border-radius:7px;padding:6px 12px;font-size:13px;cursor:pointer;font-weight:600;">+</button>
+          </div>
+        </div>
+        <div class="ctx-sec">
           <div class="ctx-sec-title">Notas internas</div>
           <textarea class="ctx-notes" id="ctx-notes" placeholder="Notas sobre este paciente..."></textarea>
         </div>
@@ -857,7 +867,7 @@ async function selectConv(phone) {
   document.getElementById("chat-sub").textContent=conv?.rut?`RUT ${conv.rut} · ${phone}`:phone;
   updateChatControls(conv?.state||"IDLE");
   updateContextPanel(conv);
-  await loadMessages(phone);
+  await Promise.all([loadMessages(phone), loadTags(phone)]);
 }
 function updateChatControls(state) {
   const isTakeover=state==="HUMAN_TAKEOVER";
@@ -1022,6 +1032,50 @@ loadConversations();
 loadMetrics();
 setInterval(loadConversations,10000);
 setInterval(loadMetrics,60000);
+
+// ── ETIQUETAS ────────────────────────────────────────────────────────────────
+const TAG_COLORS = ["#dbeafe","#dcfce7","#fef9c3","#fce7f3","#ede9fe","#ffedd5","#e0f2fe","#f1f5f9"];
+const TAG_TEXT   = ["#1d4ed8","#15803d","#854d0e","#9d174d","#6d28d9","#9a3412","#0369a1","#475569"];
+
+function renderTags(tags) {
+  const el = document.getElementById("ctx-tags");
+  if (!el) return;
+  if (!tags.length) { el.innerHTML = '<span style="font-size:11px;color:#94a3b8;">Sin etiquetas</span>'; return; }
+  el.innerHTML = tags.map((t,i) => {
+    const bg  = TAG_COLORS[i % TAG_COLORS.length];
+    const txt = TAG_TEXT[i % TAG_TEXT.length];
+    const enc = encodeURIComponent(t);
+    return `<span style="display:inline-flex;align-items:center;gap:4px;background:${bg};color:${txt};border-radius:20px;padding:3px 10px 3px 10px;font-size:11px;font-weight:600;">
+      ${t.replace(/</g,"&lt;")}
+      <span onclick="removeTag('${enc}')" style="cursor:pointer;opacity:.6;font-size:13px;line-height:1;margin-left:2px;" title="Eliminar">×</span>
+    </span>`;
+  }).join("");
+}
+
+async function loadTags(phone) {
+  try {
+    const r = await fetch(`/admin/api/tags/${encodeURIComponent(phone)}?token=${TOKEN}`);
+    const d = await r.json();
+    renderTags(d.tags);
+  } catch(e) { console.error(e); }
+}
+
+async function addTag() {
+  if (!selectedPhone) return;
+  const input = document.getElementById("ctx-tag-input");
+  const tag = input.value.trim();
+  if (!tag) return;
+  const r = await fetch(`/admin/api/tags/${encodeURIComponent(selectedPhone)}?token=${TOKEN}`,
+    {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({tag})});
+  if (r.ok) { const d=await r.json(); renderTags(d.tags); input.value=""; }
+}
+
+async function removeTag(encodedTag) {
+  if (!selectedPhone) return;
+  const r = await fetch(`/admin/api/tags/${encodeURIComponent(selectedPhone)}/${encodedTag}?token=${TOKEN}`,
+    {method:"DELETE"});
+  if (r.ok) { const d=await r.json(); renderTags(d.tags); }
+}
 
 // ── MODAL NUEVA CITA ─────────────────────────────────────────────────────────
 let slotSeleccionado = null;
@@ -1405,6 +1459,30 @@ def admin_especialidades(token: str = Query(...)):
     from medilink import PROFESIONALES
     esp = sorted({v["especialidad"] for v in PROFESIONALES.values()})
     return {"especialidades": esp}
+
+
+@app.get("/admin/api/tags/{phone}")
+def admin_get_tags(phone: str, token: str = Query(...)):
+    _check_token(token)
+    return {"tags": get_tags(phone)}
+
+
+@app.post("/admin/api/tags/{phone}")
+async def admin_add_tag(phone: str, request: Request, token: str = Query(...)):
+    _check_token(token)
+    body = await request.json()
+    tag = body.get("tag", "").strip()
+    if not tag:
+        raise HTTPException(status_code=400, detail="tag requerido")
+    save_tag(phone, tag)
+    return {"tags": get_tags(phone)}
+
+
+@app.delete("/admin/api/tags/{phone}/{tag}")
+def admin_delete_tag(phone: str, tag: str, token: str = Query(...)):
+    _check_token(token)
+    delete_tag(phone, tag)
+    return {"tags": get_tags(phone)}
 
 
 @app.get("/admin/api/citas-paciente")

@@ -174,6 +174,13 @@ def get_tags(phone: str) -> list[str]:
         return [r["tag"] for r in rows]
 
 
+def delete_tag(phone: str, tag: str):
+    """Elimina un tag de un contacto."""
+    with _conn() as conn:
+        conn.execute("DELETE FROM contact_tags WHERE phone=? AND tag=?", (phone, tag))
+        conn.commit()
+
+
 # ── Citas creadas por el bot ──────────────────────────────────────────────────
 
 def save_cita_bot(phone: str, id_cita: str, especialidad: str,
