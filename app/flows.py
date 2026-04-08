@@ -172,6 +172,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
     # ── WAIT_ESPECIALIDAD ─────────────────────────────────────────────────────
     if state == "WAIT_ESPECIALIDAD":
+        # Selección de categoría (paso intermedio)
+        if tl == "cat_medico":
+            save_session(phone, "WAIT_ESPECIALIDAD", data)
+            return _especialidades_medico_msg()
+        if tl == "cat_dental":
+            save_session(phone, "WAIT_ESPECIALIDAD", data)
+            return _especialidades_dental_msg()
+
         from medilink import _ids_para_especialidad
         # Traducir ID de lista interactiva al nombre real de especialidad
         especialidad_candidata = _ESP_ID_MAP.get(tl, tl)
@@ -642,40 +650,56 @@ _ESP_ID_MAP = {
 
 
 def _especialidades_list_msg() -> dict:
-    return _list_msg(
-        body_text="Claro, te ayudo a agendar 😊\n\n¿Qué especialidad necesitas?",
-        button_label="Ver especialidades",
-        sections=[
-            {
-                "title": "Medicina y salud",
-                "rows": [
-                    {"id": "esp_medgen",  "title": "Medicina General"},
-                    {"id": "esp_medfam",  "title": "Medicina Familiar"},
-                    {"id": "esp_orl",     "title": "Otorrinolaringología"},
-                    {"id": "esp_cardio",  "title": "Cardiología"},
-                    {"id": "esp_trauma",  "title": "Traumatología"},
-                    {"id": "esp_gineco",  "title": "Ginecología"},
-                    {"id": "esp_gastro",  "title": "Gastroenterología"},
-                    {"id": "esp_psico",   "title": "Psicología"},
-                    {"id": "esp_fono",    "title": "Fonoaudiología"},
-                    {"id": "esp_matrona", "title": "Matrona"},
-                ],
-            },
-            {
-                "title": "Dental, kine y otros",
-                "rows": [
-                    {"id": "esp_odonto",   "title": "Odontología General"},
-                    {"id": "esp_orto",     "title": "Ortodoncia"},
-                    {"id": "esp_endo",     "title": "Endodoncia"},
-                    {"id": "esp_implant",  "title": "Implantología"},
-                    {"id": "esp_estetica", "title": "Estética Facial"},
-                    {"id": "esp_kine",     "title": "Kinesiología"},
-                    {"id": "esp_nutri",    "title": "Nutrición"},
-                    {"id": "esp_podo",     "title": "Podología"},
-                    {"id": "esp_eco",      "title": "Ecografía"},
-                ],
-            },
+    """Paso 1: elige categoría (WhatsApp permite máx 10 filas en total)."""
+    return _btn_msg(
+        "Claro, te ayudo a agendar 😊\n\n¿Qué área necesitas?",
+        [
+            {"id": "cat_medico", "title": "Médico y salud"},
+            {"id": "cat_dental", "title": "Dental y kine"},
         ],
+    )
+
+
+def _especialidades_medico_msg() -> dict:
+    return _list_msg(
+        body_text="¿Qué especialidad médica necesitas?",
+        button_label="Ver especialidades",
+        sections=[{
+            "title": "Médico y salud",
+            "rows": [
+                {"id": "esp_medgen",  "title": "Medicina General"},
+                {"id": "esp_medfam",  "title": "Medicina Familiar"},
+                {"id": "esp_orl",     "title": "Otorrinolaringología"},
+                {"id": "esp_cardio",  "title": "Cardiología"},
+                {"id": "esp_trauma",  "title": "Traumatología"},
+                {"id": "esp_gineco",  "title": "Ginecología"},
+                {"id": "esp_gastro",  "title": "Gastroenterología"},
+                {"id": "esp_psico",   "title": "Psicología"},
+                {"id": "esp_fono",    "title": "Fonoaudiología"},
+                {"id": "esp_matrona", "title": "Matrona"},
+            ],
+        }],
+    )
+
+
+def _especialidades_dental_msg() -> dict:
+    return _list_msg(
+        body_text="¿Qué especialidad necesitas?",
+        button_label="Ver especialidades",
+        sections=[{
+            "title": "Dental, kine y otros",
+            "rows": [
+                {"id": "esp_odonto",   "title": "Odontología General"},
+                {"id": "esp_orto",     "title": "Ortodoncia"},
+                {"id": "esp_endo",     "title": "Endodoncia"},
+                {"id": "esp_implant",  "title": "Implantología"},
+                {"id": "esp_estetica", "title": "Estética Facial"},
+                {"id": "esp_kine",     "title": "Kinesiología"},
+                {"id": "esp_nutri",    "title": "Nutrición"},
+                {"id": "esp_podo",     "title": "Podología"},
+                {"id": "esp_eco",      "title": "Ecografía"},
+            ],
+        }],
     )
 
 
