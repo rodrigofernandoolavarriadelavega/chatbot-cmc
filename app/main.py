@@ -787,8 +787,8 @@ function sortedConvs(list) {
     const gA = STATE_GROUPS.findIndex(g=>g.states.includes(a.state));
     const gB = STATE_GROUPS.findIndex(g=>g.states.includes(b.state));
     if (gA!==gB) return gA-gB;
-    // Dentro del mismo grupo: mayor tiempo de espera primero
-    return waitMinutes(b.last_ts||b.updated_at) - waitMinutes(a.last_ts||a.updated_at);
+    // Dentro del mismo grupo: más reciente primero
+    return waitMinutes(a.last_ts||a.updated_at) - waitMinutes(b.last_ts||b.updated_at);
   });
 }
 function filtered() {
