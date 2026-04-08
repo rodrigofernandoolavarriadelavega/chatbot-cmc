@@ -617,14 +617,48 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
 # ── Helpers de flujo ──────────────────────────────────────────────────────────
 
+def _especialidades_list_msg() -> dict:
+    return _list_msg(
+        body_text="Claro, te ayudo a agendar 😊\n\n¿Qué especialidad necesitas?",
+        button_label="Ver especialidades",
+        sections=[
+            {
+                "title": "Medicina y especialidades",
+                "rows": [
+                    {"id": "medicina general",     "title": "Medicina General"},
+                    {"id": "medicina familiar",    "title": "Medicina Familiar"},
+                    {"id": "otorrinolaringología", "title": "Otorrinolaringología"},
+                    {"id": "cardiología",          "title": "Cardiología"},
+                    {"id": "traumatología",        "title": "Traumatología"},
+                    {"id": "ginecología",          "title": "Ginecología"},
+                    {"id": "gastroenterología",    "title": "Gastroenterología"},
+                    {"id": "psicología",           "title": "Psicología"},
+                    {"id": "fonoaudiología",       "title": "Fonoaudiología"},
+                    {"id": "matrona",              "title": "Matrona"},
+                ],
+            },
+            {
+                "title": "Dental, kine y otros",
+                "rows": [
+                    {"id": "odontología",          "title": "Odontología General"},
+                    {"id": "ortodoncia",           "title": "Ortodoncia"},
+                    {"id": "endodoncia",           "title": "Endodoncia"},
+                    {"id": "implantología",        "title": "Implantología"},
+                    {"id": "estética facial",      "title": "Estética Facial"},
+                    {"id": "kinesiología",         "title": "Kinesiología"},
+                    {"id": "nutrición",            "title": "Nutrición"},
+                    {"id": "podología",            "title": "Podología"},
+                    {"id": "ecografía",            "title": "Ecografía"},
+                ],
+            },
+        ],
+    )
+
+
 async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None) -> str:
     if not especialidad:
         save_session(phone, "WAIT_ESPECIALIDAD", data)
-        return (
-            "Claro, te ayudo a agendar 😊\n\n"
-            "¿Qué especialidad necesitas?\n\n"
-            f"{especialidades_disponibles()}"
-        )
+        return _especialidades_list_msg()
     especialidad_lower = especialidad.lower()
     smart, todos = await buscar_primer_dia(especialidad_lower)
     if not todos:
