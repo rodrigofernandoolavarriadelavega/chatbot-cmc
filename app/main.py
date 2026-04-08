@@ -727,11 +727,17 @@ function initials(name) {
 }
 function relTime(ts) {
   if (!ts) return "";
-  const diff = Math.floor((Date.now() - new Date(ts.replace(" ","T")+"Z")) / 1000);
+  const d = new Date(ts.replace(" ","T")+"Z");
+  const now = new Date();
+  const diff = Math.floor((Date.now() - d) / 1000);
   if (diff < 60) return "ahora";
   if (diff < 3600) return Math.floor(diff/60)+"m";
-  if (diff < 86400) return Math.floor(diff/3600)+"h";
-  return Math.floor(diff/86400)+"d";
+  // Si es hoy: mostrar hora
+  if (d.toDateString()===now.toDateString()) return d.toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit",timeZone:"America/Santiago"});
+  // Si es este año: mostrar día y mes
+  if (d.getFullYear()===now.getFullYear()) return d.toLocaleDateString("es-CL",{day:"numeric",month:"short",timeZone:"America/Santiago"});
+  // Otro año: fecha completa
+  return d.toLocaleDateString("es-CL",{day:"numeric",month:"short",year:"numeric",timeZone:"America/Santiago"});
 }
 function waitMinutes(ts) {
   if (!ts) return 0;
