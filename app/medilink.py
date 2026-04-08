@@ -27,8 +27,8 @@ _MEDILINK_DIA_TO_WEEKDAY = {1:0, 2:1, 3:2, 4:3, 5:4, 6:5, 7:6}
 PROFESIONALES = {
      1: {"nombre": "Dr. Rodrigo Olavarría", "especialidad": "Medicina General",      "intervalo": 15},
     73: {"nombre": "Dr. Andrés Abarca",     "especialidad": "Medicina General",      "intervalo": 15},
-    18: {"nombre": "Dr. Alonso Márquez",    "especialidad": "Medicina General",      "intervalo": 15},
-    28: {"nombre": "Dr. Manuel Borrego",    "especialidad": "Otorrinolaringología",  "intervalo": 30},
+    13: {"nombre": "Dr. Alonso Márquez",    "especialidad": "Medicina General",      "intervalo": 15},
+    23: {"nombre": "Dr. Manuel Borrego",    "especialidad": "Otorrinolaringología",  "intervalo": 30},
     60: {"nombre": "Dr. Miguel Millán",     "especialidad": "Cardiología",           "intervalo": 20, "dias": [5]},
     64: {"nombre": "Dr. Claudio Barraza",   "especialidad": "Traumatología",         "intervalo": 30},
     61: {"nombre": "Dr. Tirso Rejón",       "especialidad": "Ginecología",           "intervalo": 30},
@@ -41,7 +41,7 @@ PROFESIONALES = {
     76: {"nombre": "Dra. Valentina Fuentealba","especialidad": "Estética Facial",    "intervalo": 30},
     59: {"nombre": "Paola Acosta",          "especialidad": "Kinesiología",          "intervalo": 30},
     77: {"nombre": "Luis Armijo",           "especialidad": "Kinesiología",          "intervalo": 30},
-    26: {"nombre": "Leonardo Etcheverry",   "especialidad": "Kinesiología",          "intervalo": 30},
+    21: {"nombre": "Leonardo Etcheverry",   "especialidad": "Kinesiología",          "intervalo": 30},
     52: {"nombre": "Gisela Pinto",          "especialidad": "Nutrición",             "intervalo": 30},
     74: {"nombre": "Jorge Montalba",        "especialidad": "Psicología Adulto",     "intervalo": 60},
     49: {"nombre": "Juan Pablo Rodríguez",  "especialidad": "Psicología Adulto",     "intervalo": 60},
@@ -53,10 +53,10 @@ PROFESIONALES = {
 
 # Mapa de palabras clave → IDs de profesionales
 ESPECIALIDADES_MAP = {
-    "kinesiología": [59, 77, 26], "kinesiólogo": [59, 77, 26], "kinesiologa": [59, 77, 26], "kine": [59, 77, 26],
-    "medicina general": [73, 1, 18], "médico": [73, 1, 18], "medico general": [73, 1, 18], "doctor": [73, 1, 18],
-    "medicina familiar": [18], "médico familiar": [18],
-    "otorrinolaringología": [28], "otorrino": [28], "orl": [28],
+    "kinesiología": [59, 77, 21], "kinesiólogo": [59, 77, 21], "kinesiologa": [59, 77, 21], "kine": [59, 77, 21],
+    "medicina general": [73, 1, 13], "médico": [73, 1, 13], "medico general": [73, 1, 13], "doctor": [73, 1, 13],
+    "medicina familiar": [13], "médico familiar": [13],
+    "otorrinolaringología": [23], "otorrino": [23], "orl": [23],
     "olavarría": [1], "olavarria": [1],
     "odontología": [72, 55], "dentista": [72, 55], "odontólogo": [72, 55],
     "endodoncia": [75], "endodoncista": [75],

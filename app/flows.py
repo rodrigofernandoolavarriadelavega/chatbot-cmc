@@ -284,8 +284,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     return await _iniciar_ver(phone, {})
                 if intent in ("precio", "info"):
                     esp_display = todos_slots[0]["especialidad"] if todos_slots else especialidad
-                    consulta = f"{txt} (especialidad: {esp_display})" if esp_display else txt
-                    resp = result.get("respuesta_directa") or await respuesta_faq(consulta)
+                    # Siempre usar respuesta_faq con contexto de especialidad (ignorar respuesta_directa genérica)
+                    consulta = f"¿Cuánto cuesta una consulta de {esp_display}?" if esp_display else txt
+                    resp = await respuesta_faq(consulta)
                     return (
                         f"{resp}\n\n"
                         f"{DISCLAIMER}\n\n"
@@ -715,7 +716,7 @@ def _especialidades_dental_msg() -> dict:
 # Especialidades con expansión progresiva por profesional
 _ESPECIALIDADES_EXPANSION = {"medicina general"}
 # IDs de profesionales de Medicina General, en orden de prioridad
-_MED_GENERAL_IDS = [73, 1, 18]  # Abarca, Olavarría, Márquez
+_MED_GENERAL_IDS = [73, 1, 13]  # Abarca, Olavarría, Márquez
 
 
 _ESPECIALIDADES_TEXTO = (
@@ -807,7 +808,7 @@ async def _handle_expansion(phone: str, data: dict, slots_mostrados: list,
     elif next_stage == 2:
         # Smart de Abarca + smart de Olavarría
         smart_abarca = data.get("slots", [])
-        smart_ola, todos_ola = (await buscar_slots_dia_por_ids([1], fecha)) if fecha else ([], [])
+        smart_ola, todos_ola = (await buscar_slots_dia_por_ids([1],  fecha)) if fecha else ([], [])
 
         show_a = smart_abarca[:4]
         show_o = smart_ola[:4]
@@ -826,11 +827,11 @@ async def _handle_expansion(phone: str, data: dict, slots_mostrados: list,
         return _format_slots_expansion(groups, show_ver_mas=True) if groups else _format_slots(todos_slots, mostrar_todos=True)
 
     else:
-        # Todos los horarios de los 3 profesionales
+        # Todos los horarios de los 3 profesionales (cada uno en su próximo día disponible)
         _, todos_a = (await buscar_slots_dia_por_ids([73], fecha)) if fecha else ([], [])
         _, todos_o = (await buscar_slots_dia_por_ids([1],  fecha)) if fecha else ([], [])
-        _, todos_m = (await buscar_slots_dia_por_ids([18], fecha)) if fecha else ([], [])
-        # Si Márquez no trabaja ese día, buscar su próximo día disponible
+        # Márquez: siempre buscar su propio próximo día (puede no trabajar el mismo día que Abarca/Olavarría)
+        _, todos_m = (await buscar_slots_dia_por_ids([13], fecha)) if fecha else ([], [])
         if not todos_m:
             _, todos_m = await buscar_primer_dia("medicina familiar")
         todos_all = todos_a + todos_o + todos_m
