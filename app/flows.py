@@ -746,8 +746,9 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None) -> 
                  "todos_slots": todos, "fechas_vistas": [fecha]})
     save_session(phone, "WAIT_SLOT", data)
 
-    # Sugerencia proactiva — mostrar el mejor slot con botón directo
-    mejor = smart[0]
+    # Sugerencia proactiva — para medicina general el más próximo; resto compacta agenda
+    _esp_prox = {"medicina general", "medicina familiar"}
+    mejor = todos[0] if especialidad_lower in _esp_prox else smart[0]
     nombre_conocido = data.get("nombre_conocido", "")
     nombre_corto = nombre_conocido.split()[0] if nombre_conocido else ""
     saludo = f"¡Hola de nuevo, *{nombre_corto}*! " if nombre_corto else ""
