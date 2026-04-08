@@ -703,10 +703,33 @@ def _especialidades_dental_msg() -> dict:
     )
 
 
+_ESPECIALIDADES_TEXTO = (
+    "• Medicina General\n"
+    "• Medicina Familiar\n"
+    "• Otorrinolaringología\n"
+    "• Cardiología\n"
+    "• Traumatología\n"
+    "• Ginecología\n"
+    "• Gastroenterología\n"
+    "• Odontología General\n"
+    "• Ortodoncia\n"
+    "• Endodoncia\n"
+    "• Implantología\n"
+    "• Estética Facial\n"
+    "• Kinesiología\n"
+    "• Nutrición\n"
+    "• Psicología\n"
+    "• Fonoaudiología\n"
+    "• Matrona\n"
+    "• Podología\n"
+    "• Ecografía"
+)
+
+
 async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None) -> str:
     if not especialidad:
         save_session(phone, "WAIT_ESPECIALIDAD", data)
-        return _especialidades_list_msg()
+        return f"Claro, te ayudo a agendar 😊\n\n¿Qué especialidad necesitas?\n\n{_ESPECIALIDADES_TEXTO}"
     especialidad_lower = especialidad.lower()
     smart, todos = await buscar_primer_dia(especialidad_lower)
     if not todos:
