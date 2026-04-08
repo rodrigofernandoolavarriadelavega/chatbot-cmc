@@ -20,7 +20,8 @@ from flows import handle_message
 from reminders import enviar_recordatorios
 from fidelizacion import enviar_seguimiento_postconsulta, enviar_reactivacion_pacientes
 from medilink import (buscar_paciente, crear_paciente, buscar_primer_dia,
-                      buscar_slots_dia, crear_cita, PROFESIONALES, ESPECIALIDADES_MAP)
+                      buscar_slots_dia, crear_cita, listar_citas_paciente,
+                      cancelar_cita, PROFESIONALES, ESPECIALIDADES_MAP)
 from session import get_session, is_duplicate, reset_session, save_session, get_metricas, log_message, get_messages, get_conversations, log_event, get_sesiones_abandonadas
 
 logging.config.dictConfig({
@@ -481,6 +482,34 @@ body {
     <div class="pill" id="pill-esperando"><strong id="s-takeover">—</strong>&nbsp;esperando atención</div>
     <div class="pill"><div class="live-dot"></div>&nbsp;Actualizado <span id="last-refresh">—</span></div>
     <button class="btn btn-primary" onclick="abrirModalAgendar()" style="margin-left:8px;font-size:12px;padding:6px 14px;border-radius:8px;">+ Nueva Cita</button>
+    <button class="btn" onclick="abrirModalAnular()" style="margin-left:6px;font-size:12px;padding:6px 14px;border-radius:8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;">✕ Anular Hora</button>
+  </div>
+</div>
+
+<!-- MODAL ANULAR HORA -->
+<div id="modal-anular" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:14px;width:440px;max-width:95vw;padding:28px 28px 24px;box-shadow:0 20px 60px rgba(0,0,0,.2);position:relative;">
+    <button onclick="cerrarModalAnular()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#94a3b8;">×</button>
+    <h2 style="font-size:16px;font-weight:700;margin-bottom:20px;color:#dc2626;">✕ Anular Hora</h2>
+
+    <!-- PASO 1: BUSCAR RUT -->
+    <div id="an-paso1">
+      <label style="font-size:13px;font-weight:600;color:#374151;">RUT del paciente</label>
+      <div style="display:flex;gap:8px;margin-top:6px;">
+        <input id="an-rut" type="text" placeholder="12345678-9" style="flex:1;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;"
+          onkeydown="if(event.key===\'Enter\') buscarCitasPaciente()">
+        <button onclick="buscarCitasPaciente()" style="background:#1172AB;color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;">Buscar</button>
+      </div>
+      <div id="an-paciente-info" style="margin-top:8px;min-height:18px;"></div>
+    </div>
+
+    <!-- PASO 2: LISTA DE CITAS -->
+    <div id="an-paso2" style="display:none;">
+      <div id="an-lista-citas" style="max-height:260px;overflow-y:auto;"></div>
+      <div id="an-resultado" style="margin-top:4px;"></div>
+      <button onclick="document.getElementById(\'an-paso1\').style.display=\'block\';document.getElementById(\'an-paso2\').style.display=\'none\';"
+        style="margin-top:14px;background:none;border:none;color:#64748b;font-size:12px;cursor:pointer;text-decoration:underline;">← Buscar otro RUT</button>
+    </div>
   </div>
 </div>
 
@@ -1109,6 +1138,81 @@ async function confirmarCita(){
     res.innerHTML=`<span style="color:#dc2626;">Error: ${e.detail||'No se pudo crear la cita'}</span>`;
   }
 }
+
+// ── MODAL ANULAR HORA ─────────────────────────────────────────────────────────
+let citaAAnular = null;
+
+async function abrirModalAnular(){
+  document.getElementById('modal-anular').style.display='flex';
+  document.getElementById('an-paso1').style.display='block';
+  document.getElementById('an-paso2').style.display='none';
+  document.getElementById('an-rut').value='';
+  document.getElementById('an-paciente-info').innerHTML='';
+  document.getElementById('an-resultado').innerHTML='';
+  citaAAnular=null;
+}
+
+function cerrarModalAnular(){
+  document.getElementById('modal-anular').style.display='none';
+}
+
+async function buscarCitasPaciente(){
+  const rut=document.getElementById('an-rut').value.trim();
+  if(!rut) return;
+  document.getElementById('an-paciente-info').innerHTML='<span style="color:#64748b;font-size:13px;">Buscando...</span>';
+  const r=await fetch(`/admin/api/citas-paciente?rut=${encodeURIComponent(rut)}&token=${TOKEN}`);
+  if(!r.ok){
+    document.getElementById('an-paciente-info').innerHTML='<span style="color:#dc2626;font-size:13px;">Paciente no encontrado</span>';
+    return;
+  }
+  const d=await r.json();
+  document.getElementById('an-paciente-info').innerHTML=`<span style="font-size:13px;color:#15803d;">✓ ${d.paciente.nombre}</span>`;
+  const lista=document.getElementById('an-lista-citas');
+  if(!d.citas.length){
+    lista.innerHTML='<p style="color:#64748b;font-size:13px;text-align:center;padding:16px 0;">Sin citas próximas registradas</p>';
+    document.getElementById('an-paso1').style.display='none';
+    document.getElementById('an-paso2').style.display='block';
+    return;
+  }
+  lista.innerHTML=d.citas.map(c=>`
+    <div onclick="seleccionarCita(${c.id},'${c.profesional}','${c.fecha_display}','${c.hora_inicio}')"
+      style="border:1.5px solid #e2e8f0;border-radius:8px;padding:10px 14px;cursor:pointer;margin-bottom:8px;transition:border-color .15s;"
+      onmouseover="this.style.borderColor='#ef4444'" onmouseout="this.style.borderColor='#e2e8f0'"
+      id="cita-row-${c.id}">
+      <div style="font-weight:600;font-size:13px;">${c.profesional}</div>
+      <div style="font-size:12px;color:#64748b;">${c.fecha_display} — ${c.hora_inicio}</div>
+    </div>`).join('');
+  document.getElementById('an-paso1').style.display='none';
+  document.getElementById('an-paso2').style.display='block';
+}
+
+function seleccionarCita(id, prof, fecha, hora){
+  citaAAnular={id, prof, fecha, hora};
+  // Resaltar seleccionada
+  document.querySelectorAll('[id^="cita-row-"]').forEach(el=>el.style.background='');
+  const el=document.getElementById(`cita-row-${id}`);
+  if(el){ el.style.background='#fff1f2'; el.style.borderColor='#ef4444'; }
+  document.getElementById('an-resultado').innerHTML=`
+    <div style="background:#fff1f2;border:1px solid #fca5a5;border-radius:8px;padding:12px 14px;margin-top:12px;">
+      <div style="font-size:13px;font-weight:600;color:#dc2626;">¿Confirmar anulación?</div>
+      <div style="font-size:12px;color:#64748b;margin-top:4px;">${prof} — ${fecha} ${hora}</div>
+      <button onclick="confirmarAnular()" style="margin-top:10px;background:#dc2626;color:#fff;border:none;border-radius:7px;padding:7px 18px;font-size:13px;font-weight:600;cursor:pointer;">Anular esta hora</button>
+    </div>`;
+}
+
+async function confirmarAnular(){
+  if(!citaAAnular) return;
+  const res=document.getElementById('an-resultado');
+  res.innerHTML='<span style="color:#64748b;font-size:13px;">Anulando...</span>';
+  const r=await fetch(`/admin/api/anular?token=${TOKEN}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id_cita:citaAAnular.id})});
+  if(r.ok){
+    res.innerHTML='<span style="color:#15803d;font-weight:600;">✅ Hora anulada correctamente</span>';
+    setTimeout(cerrarModalAnular, 2000);
+  } else {
+    const e=await r.json();
+    res.innerHTML=`<span style="color:#dc2626;">Error: ${e.detail||'No se pudo anular la hora'}</span>`;
+  }
+}
 </script>
 </body>
 </html>'''
@@ -1294,6 +1398,30 @@ def admin_especialidades(token: str = Query(...)):
     from medilink import PROFESIONALES
     esp = sorted({v["especialidad"] for v in PROFESIONALES.values()})
     return {"especialidades": esp}
+
+
+@app.get("/admin/api/citas-paciente")
+async def admin_citas_paciente(rut: str, token: str = Query(...)):
+    """Retorna las citas futuras de un paciente buscado por RUT."""
+    _check_token(token)
+    paciente = await buscar_paciente(rut)
+    if not paciente:
+        raise HTTPException(status_code=404, detail="Paciente no encontrado")
+    citas = await listar_citas_paciente(paciente["id"])
+    return {"paciente": paciente, "citas": citas}
+
+
+@app.post("/admin/api/anular")
+async def admin_anular_cita(request: Request, token: str = Query(...)):
+    """Anula una cita por su ID de Medilink."""
+    _check_token(token)
+    body = await request.json()
+    id_cita = int(body.get("id_cita"))
+    ok = await cancelar_cita(id_cita)
+    if not ok:
+        raise HTTPException(status_code=400, detail="No se pudo anular la cita en Medilink")
+    log_event("admin", "cita_anulada_panel", {"id_cita": id_cita})
+    return {"ok": True}
 
 
 @app.get("/admin", response_class=HTMLResponse)
