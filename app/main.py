@@ -919,14 +919,15 @@ function renderQuickReplies(conv) {
 }
 
 /* ── MENSAJES ── */
-async function loadMessages(phone) {
+async function loadMessages(phone, preserveScroll=false) {
   try {
     const r=await fetch(`/admin/api/conversations/${encodeURIComponent(phone)}?token=${TOKEN}`);
-    renderMessages(await r.json());
+    renderMessages(await r.json(), preserveScroll);
   } catch(e){console.error(e);}
 }
-function renderMessages(msgs) {
+function renderMessages(msgs, preserveScroll=false) {
   const el=document.getElementById("chat-messages");
+  const prevScroll=el.scrollTop;
   if(!msgs.length){el.innerHTML=`<div style="text-align:center;color:var(--text-3);font-size:12px;padding:20px;">Sin mensajes registrados aún</div>`;return;}
   let html=""; let lastState=null;
   [...msgs].reverse().forEach(m=>{
@@ -938,7 +939,7 @@ function renderMessages(msgs) {
     const who=m.direction==="in"?"👤 Paciente":isRecep?"🙋 Recepcionista":"🤖 Bot";
     html+=`<div class="msg-row ${m.direction}${isRecep?" recep":""}"><div><div class="msg-bubble">${text}</div><div class="msg-meta">${who} · ${ts}</div></div></div>`;
   });
-  el.innerHTML=html; el.scrollTop=0;
+  el.innerHTML=html; el.scrollTop=preserveScroll ? prevScroll : 0;
 }
 function insertQR(text){document.getElementById("reply-input").value=text;document.getElementById("reply-input").focus();}
 
@@ -978,7 +979,7 @@ async function loadConversations(){
     renderStateButtons(); renderEspButtons(); renderList(); updateStats();
     if(selectedPhone){
       const still=convs.find(c=>c.phone===selectedPhone);
-      if(still){updateChatControls(still.state);updateContextPanel(still);await loadMessages(selectedPhone);}
+      if(still){updateChatControls(still.state);updateContextPanel(still);await loadMessages(selectedPhone,true);}
     }
   }catch(e){console.error(e);}
   document.getElementById("last-refresh").textContent=
