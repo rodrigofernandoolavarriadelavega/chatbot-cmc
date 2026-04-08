@@ -168,7 +168,7 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - [x] Panel admin web (`/admin`) con métricas y conversaciones
 - [x] Recordatorios automáticos de citas (09:00 CLT)
 - [x] Deploy en VPS DigitalOcean (`157.245.13.107`) corriendo con uvicorn
-- [ ] Aprobación Display Name número prepago (+56945886628)
+- [x] Aprobación Display Name número prepago (+56945886628) ✅
 
 ## Dashboard admin
 - Ruta: `http://157.245.13.107:8001/admin?token=cmc_admin_2026`
@@ -183,17 +183,30 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - Webhook Meta actualizado a `https://agentecmc.cl/webhook`
 - Agendamiento directo desde panel de recepción (`/admin`) — modal "Nueva Cita" con búsqueda por RUT, slots y confirmación
 - Lista de profesionales completamente actualizada: 24 profesionales, nombres con Dr./Dra. correctos, especialidades corregidas
-- Nuevos profesionales agregados: Dr. Alonso Márquez (ID 18), Leonardo Etcheverry (ID 26), Dr. Manuel Borrego (ID 28)
+- Nuevos profesionales: Dr. Alonso Márquez (ID 18), Leonardo Etcheverry (ID 26), Dr. Manuel Borrego (ID 28)
 - Correcciones: Luis Armijo → Kinesiología, Valentina Fuentealba → Estética Facial, Fernando Fredes → Endodoncia, David Pardo Muñoz eliminado (duplicado de ID 68)
-- Psicología dividida en Adulto e Infantil (Montalba atiende ambas)
-- Medicina Familiar agregada (Dr. Márquez)
+- Psicología: Jorge Montalba = Adulto e Infantil; Juan Pablo Rodríguez = solo Adulto
+- Medicina Familiar agregada (Dr. Márquez atiende con bono medicina general $7.880)
+- **Precios revisados uno a uno con Dr. Olavarría y actualizados en `claude_helper.py`** — todas las especialidades corregidas y desplegadas
 
-**Estado del servidor**: corriendo en `https://agentecmc.cl`, sin errores
+**Precios confirmados (resumen)**:
+- Medicina General: $25.000 particular / $7.880 Fonasa
+- Medicina Familiar (Márquez): $30.000 particular / $7.880 Fonasa
+- Kinesiología Luis/Leo: $7.830 Fonasa / $20.000 particular
+- Kinesiología Paola: masoterapia 20 min $17.990 / 40 min $26.990
+- Nutrición: $4.770 Fonasa / $20.000 particular + bioimpedanciometría $20.000
+- Psicología: $14.420 Fonasa / $20.000 particular
+- ORL: solo consulta $35.000 y control $8.000 (todo particular)
+- Odontología: evaluación $15.000, exodoncia $40.000–$60.000, blanqueamiento $75.000, destartraje+profilaxis $30.000, resina desde $35.000
+- Endodoncia: anterior $110.000 / premolar $150.000 / molar $220.000
+- Implantología: corona+tornillo desde $650.000
+- Ecografía: ecotomografías $40.000 / doppler $90.000
+
+**Estado del servidor**: corriendo en `https://agentecmc.cl` (`/opt/chatbot-cmc`), sin errores
 
 **Pendiente**:
-- Revisar y actualizar precios en `claude_helper.py` (en curso)
-- IDs de nuevos profesionales ya agregados al código
-- Aprobación Display Name WhatsApp (+56945886628)
+- Promover número +56945886628 a pacientes reales (redes sociales, recepción, etc.)
+- Monitorear primeras conversaciones reales y corregir lo que falle
 
 ---
 

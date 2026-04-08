@@ -54,7 +54,7 @@ PROFESIONALES = {
 # Mapa de palabras clave → IDs de profesionales
 ESPECIALIDADES_MAP = {
     "kinesiología": [59, 77, 26], "kinesiólogo": [59, 77, 26], "kinesiologa": [59, 77, 26], "kine": [59, 77, 26],
-    "medicina general": [1, 73, 18], "médico": [1, 73, 18], "medico general": [1, 73, 18], "doctor": [1, 73, 18],
+    "medicina general": [73, 1, 18], "médico": [73, 1, 18], "medico general": [73, 1, 18], "doctor": [73, 1, 18],
     "medicina familiar": [18], "médico familiar": [18],
     "otorrinolaringología": [28], "otorrino": [28], "orl": [28],
     "olavarría": [1], "olavarria": [1],
@@ -283,12 +283,18 @@ def _generar_slots_horario(hora_inicio: str, hora_fin: str, intervalo: int) -> l
 
 
 async def _slots_para_fecha(client: httpx.AsyncClient, ids: list, horarios: dict,
-                            fecha: str) -> tuple[list, list]:
+                            fecha: str, prioridad: bool = False) -> tuple[list, list]:
     """
     Retorna (smart_5, todos_libres) para la fecha dada.
-    Genera slots desde el horario del profesional y cruza con /citas y /horariosbloqueados.
-    NO usa /agendas (ese endpoint ignora el filtro de fecha en Medilink).
+    Si prioridad=True, itera los IDs en orden y retorna al primer profesional con disponibilidad.
     """
+    if prioridad:
+        for id_prof in ids:
+            smart, todos = await _slots_para_fecha(client, [id_prof], horarios, fecha, prioridad=False)
+            if todos:
+                return smart, todos
+        return [], []
+
     fecha_dt = datetime.strptime(fecha, "%Y-%m-%d").date()
     weekday = fecha_dt.weekday()
     todos_libres = []
@@ -349,6 +355,10 @@ def _id_especialidad(especialidad: str) -> Optional[int]:
     return None
 
 
+# Especialidades donde los profesionales se llenan en orden de prioridad (no mezclados)
+_ESPECIALIDADES_PRIORIDAD = {"medicina general", "medicina familiar"}
+
+
 async def buscar_primer_dia(especialidad: str, dias_adelante: int = 60,
                             excluir: list = None) -> tuple[list, list]:
     """
@@ -360,6 +370,7 @@ async def buscar_primer_dia(especialidad: str, dias_adelante: int = 60,
     if not ids:
         return [], []
 
+    usar_prioridad = especialidad.lower() in _ESPECIALIDADES_PRIORIDAD
     excluir_set = set(excluir or [])
     id_esp = _id_especialidad(especialidad)
 
@@ -398,13 +409,13 @@ async def buscar_primer_dia(especialidad: str, dias_adelante: int = 60,
             fecha = (hoy + timedelta(days=delta)).strftime("%Y-%m-%d")
             if fecha in excluir_set:
                 continue
-            smart, todos = await _slots_para_fecha(client, ids, horarios, fecha)
+            smart, todos = await _slots_para_fecha(client, ids, horarios, fecha, prioridad=usar_prioridad)
             if todos:
                 return smart, todos
 
         # Si no hubo slots antes de primera_fecha, intentar exactamente esa fecha
         if primera_fecha and primera_fecha not in excluir_set:
-            smart, todos = await _slots_para_fecha(client, ids, horarios, primera_fecha)
+            smart, todos = await _slots_para_fecha(client, ids, horarios, primera_fecha, prioridad=usar_prioridad)
             if todos:
                 return smart, todos
 
@@ -413,7 +424,7 @@ async def buscar_primer_dia(especialidad: str, dias_adelante: int = 60,
             fecha = (hoy + timedelta(days=delta)).strftime("%Y-%m-%d")
             if fecha in excluir_set:
                 continue
-            smart, todos = await _slots_para_fecha(client, ids, horarios, fecha)
+            smart, todos = await _slots_para_fecha(client, ids, horarios, fecha, prioridad=usar_prioridad)
             if todos:
                 return smart, todos
 
@@ -448,9 +459,10 @@ async def buscar_slots_dia(especialidad: str, fecha: str) -> tuple[list, list]:
     ids = _ids_para_especialidad(especialidad)
     if not ids:
         return [], []
+    usar_prioridad = especialidad.lower() in _ESPECIALIDADES_PRIORIDAD
     async with httpx.AsyncClient(timeout=15) as client:
         horarios = {i: await _get_horario(client, i) for i in ids}
-        return await _slots_para_fecha(client, ids, horarios, fecha)
+        return await _slots_para_fecha(client, ids, horarios, fecha, prioridad=usar_prioridad)
 
 
 async def crear_paciente(rut: str, nombre: str, apellidos: str) -> Optional[dict]:
