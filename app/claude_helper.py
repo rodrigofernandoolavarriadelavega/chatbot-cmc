@@ -144,13 +144,21 @@ INFO DEL CMC:
 
 PRECIOS (extraídos directamente del sistema):
 
-MEDICINA GENERAL:
-- Consulta médica particular: $20.000
-- Consulta médica Fonasa (copago paciente): $7.880
+MEDICINA GENERAL (Dr. Rodrigo Olavarría, Dr. Andrés Abarca, Dr. Alonso Márquez):
+- Consulta médica particular: $25.000
+- Consulta médica bono Fonasa: $7.880
 
-KINESIOLOGÍA:
-- Evaluación kinesiológica particular: $3.620 — Fonasa (copago): $2.530
-- Atención kinesiológica particular: $11.200 — Fonasa (copago): $7.830
+MEDICINA FAMILIAR (Dr. Alonso Márquez — también atiende con bono de Medicina General):
+- Consulta medicina familiar particular: $30.000
+- Consulta bono Fonasa (bono medicina general): $7.880
+
+KINESIOLOGÍA (Luis Armijo / Leonardo Etcheverry — bono Fonasa MLE nivel 3):
+- Atención kinesiológica bono Fonasa: $7.830
+- Primera / última sesión bono Fonasa: $10.360
+- 10 sesiones kinesiología bono Fonasa: $83.360
+- Sesión kinesiología particular: $20.000
+
+KINESIOLOGÍA (Paola Acosta — solo particular, masoterapia):
 - Masoterapia espalda y cuello 20 min: $17.990
 - Masoterapia espalda y cuello 40 min: $26.990
 
@@ -168,18 +176,20 @@ FONOAUDIOLOGÍA:
 - Calibración audífonos: $10.000
 - Revisión exámenes fonoaudiología: $10.000
 
-PSICOLOGÍA:
+PSICOLOGÍA ADULTO E INFANTIL (Jorge Montalba — bono Fonasa disponible):
 - Consulta psicología particular: $20.000
-- Consulta psicología Fonasa (copago paciente, sesión 45'): $14.420
+- Consulta psicología bono Fonasa (sesión 45'): $14.420
 - Informe psicológico: $25.000–$30.000
 
-NUTRICIÓN:
+PSICOLOGÍA ADULTO (Juan Pablo Rodríguez — bono Fonasa disponible):
+- Consulta psicología particular: $20.000
+- Consulta psicología bono Fonasa (sesión 45'): $14.420
+- Informe psicológico: $25.000–$30.000
+
+NUTRICIÓN (Gisela Pinto — bono Fonasa disponible):
+- Consulta nutricionista bono Fonasa: $4.770
 - Consulta nutricionista particular: $20.000
-- Consulta nutricionista Fonasa (copago paciente): $7.830
-- Consulta online: $20.000
-- Control online: $18.500
-- Promoción (2 consultas presenciales): $40.000
-- Promoción (1 presencial + 2 online): $60.000
+- Bioimpedanciometría: $20.000
 
 PODOLOGÍA:
 - Atención pediátrica: $13.000
@@ -199,18 +209,15 @@ GASTROENTEROLOGÍA:
 - Consulta: $35.000
 - Revisión de exámenes: $17.500
 
-ECOGRAFÍA:
-- Ecografía ginecológica: $35.000
-- Ecografía obstétrica: $35.000
-- Ecografía doppler ginecológica: $35.000
+ECOGRAFÍA (David Pardo — solo particular):
 - Ecotomografía abdominal: $40.000
-- Ecotomografía musculo-esquelética: $40.000
+- Ecotomografía de partes blandas: $40.000
 - Ecotomografía mamaria: $40.000
-- Ecotomografía pelviana: $40.000
+- Ecotomografía musculo-esquelética: $40.000
+- Ecotomografía pelviana (masculina y femenina): $40.000
 - Ecotomografía testicular: $40.000
 - Ecotomografía tiroidea: $40.000
 - Ecotomografía renal bilateral: $40.000
-- Ecotomografía partes blandas: $40.000
 - Ecotomografía doppler: $90.000
 
 CARDIOLOGÍA:
@@ -224,34 +231,16 @@ GINECOLOGÍA:
 TRAUMATOLOGÍA:
 - Consulta traumatología: $35.000
 
-OTORRINOLARINGOLOGÍA:
-- Audiometría adulto particular: $25.000
-- Audiometría niño particular: $25.000
-- Impedanciometría particular: $20.000
-- Maniobras: $40.000
-- Octavo par particular: $35.000
-- Rehabilitación vestibular (5 sesiones): $75.000
+OTORRINOLARINGOLOGÍA (Dr. Manuel Borrego — solo particular):
+- Consulta ORL: $35.000
 - Control ORL: $8.000
-- Lavado de oídos ORL: $10.000
-- Audiometría adulto Fonasa: $12.110
-- Audiometría niño Fonasa: $14.160
-- Impedanciometría Fonasa: $9.040
-- Octavo par Fonasa: $26.900
 
-ODONTOLOGÍA GENERAL:
-- Urgencia dental: $30.000
-- Restauración mínima intervención: $25.000
-- Radiografía retroalveolar: $5.000
-- Fluoración (promoción): $10.000
-- Exodoncia tercer molar: $90.000–$170.000
-- Drenaje de absceso: $30.000
-- Frenectomía: $65.000
-- Prótesis removible acrílica: $250.000
-- Juego de prótesis acrílica: $450.000
-- Ferulización: $25.000
-- Control postoperatorio + retiro sutura: $15.000
-- Promoción destartraje + profilaxis + blanqueamiento: $90.000
-- Promoción destartraje + profilaxis + fluoración: $40.000
+ODONTOLOGÍA GENERAL (Dra. Javiera Burgos, Dr. Carlos Jiménez — solo particular):
+- Evaluación dental: $15.000
+- Restauración de resina (tapadura): desde $35.000
+- Exodoncia simple: $40.000 — Exodoncia compleja: $60.000 (según evaluación)
+- Blanqueamiento dental: $75.000
+- Destartraje + profilaxis: $30.000
 
 ORTODONCIA:
 - Instalación brackets boca completa: $120.000
@@ -271,14 +260,8 @@ ENDODONCIA:
 - Endodoncia premolar: $150.000
 - Endodoncia molar: $220.000
 
-IMPLANTOLOGÍA / DENTAL AVANZADO:
-- Corona cerámica: $290.000
-- Incrustación cerámica: $220.000
-- Reparación menor prótesis: $20.000
-- Reparación mayor prótesis: $35.000
-- Reparación menor de contención: $20.000
-- Regularización de reborde: $50.000
-- Insumos y ropa de pabellón: $55.000
+IMPLANTOLOGÍA (Dra. Aurora Valdés — solo particular):
+- Implante dental (corona + tornillo): desde $650.000
 
 ARMONIZACIÓN FACIAL:
 - Evaluación: $15.000
@@ -290,17 +273,6 @@ ARMONIZACIÓN FACIAL:
 - Lipopapada (3 sesiones): $139.990
 - Exosomas: $349.900
 - Bioestimuladores (Hidroxiapatita): $450.000
-
-LABORATORIO:
-- Toma de muestra: $990
-- VDRL particular: $5.200
-- VIH particular: $9.070
-
-OTROS:
-- Bioimpedanciometría: $20.000
-- Aplicación de alta frecuencia: $20.000
-- Infiltración: $20.000
-- Control crónico Hipertensión Arterial: $7.000
 
 KINESIOLOGÍA ADICIONAL:
 - Masoterapia espalda 30 min: $17.990
