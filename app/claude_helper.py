@@ -96,17 +96,21 @@ Para intent "precio" o "info", incluye la respuesta_directa con información út
 Para intent "agendar", si menciona especialidad o nombre de profesional, extráela en "especialidad".
 Si mencionan un profesional por nombre, mapea al nombre de la especialidad:
 - Dr. Olavarría / Olavarría / Dr. Rodrigo → "olavarría"
-- Dr. Márquez / Márquez → "medicina general"
-- Dr. Barraza / Barraza → "medicina general"
-- Dr. Borrego / Borrego → "medicina general"
+- Dr. Abarca / Abarca / Dr. Andrés → "abarca"
+- Dr. Márquez / Márquez / Dr. Alonso → "medicina familiar"
+- Dr. Barraza / Barraza → "traumatología"
+- Dr. Borrego / Borrego → "otorrinolaringología"
 - Dr. Quijano / Quijano → "gastroenterología"
 - Dr. Tirso / Tirso → "ginecología"
-- Kine Leo / Kine Luis / Kine Paola → "kinesiología"
+- Kine Leo / Leo / Leonardo / Etcheverry → "etcheverry"
+- Kine Luis / Luis / Armijo → "armijo"
+- Kine Paola / Paola / Paola Acosta → "paola acosta"
 - Dra. Juana / Juana → "fonoaudiología"
 - Nutri Gise / nutricionista → "nutrición"
 - Matrona Saraí / Saraí → "matrona"
 - Podóloga Andrea / Andrea → "podología"
-- Psicologo Juan Pablo / Psicólogo Jorge → "psicología"
+- Psicólogo Juan Pablo / Juan Pablo / Rodríguez → "psicología adulto"
+- Psicólogo Jorge / Jorge Montalba / Montalba → "psicología"
 - David Pardo → "ecografía"
 Si preguntan por un precio que no está en la lista, responde que pueden consultar en recepción.
 
