@@ -741,8 +741,9 @@ _ESPECIALIDADES_TEXTO = (
 )
 
 
-def _format_slots_expansion(groups: list) -> str | dict:
-    """Formatea slots agrupados por profesional. groups = [{"slots": [...]}]."""
+def _format_slots_expansion(groups: list, show_ver_mas: bool = False) -> str | dict:
+    """Formatea slots agrupados por profesional. groups = [{"slots": [...]}].
+    show_ver_mas=True agrega botón 'Ver más profesionales' (id=ver_todos)."""
     groups = [g for g in groups if g.get("slots")]
     if not groups:
         return "No hay más horarios disponibles."
@@ -752,7 +753,13 @@ def _format_slots_expansion(groups: list) -> str | dict:
         flat_slots.extend(g["slots"])
 
     fecha_display = flat_slots[0]["fecha_display"]
-    total_rows = len(flat_slots) + 1  # +1 fila nav "Buscar otro día"
+
+    nav_rows = []
+    if show_ver_mas:
+        nav_rows.append({"id": "ver_todos", "title": "Ver más profesionales"})
+    nav_rows.append({"id": "otro_dia", "title": "Buscar otro día"})
+
+    total_rows = len(flat_slots) + len(nav_rows)
 
     if total_rows <= 10:
         sections = []
@@ -763,8 +770,7 @@ def _format_slots_expansion(groups: list) -> str | dict:
                     for i, s in enumerate(g["slots"])]
             offset += len(g["slots"])
             sections.append({"title": prof[:24], "rows": rows})
-        sections.append({"title": "Más opciones",
-                         "rows": [{"id": "otro_dia", "title": "Buscar otro día"}]})
+        sections.append({"title": "Más opciones", "rows": nav_rows})
         return _list_msg(
             body_text=f"Horarios disponibles — *{fecha_display}* 👇",
             button_label="Ver horarios",
@@ -780,7 +786,10 @@ def _format_slots_expansion(groups: list) -> str | dict:
         for s in g["slots"]:
             lineas.append(f"*{idx}.* {s['hora_inicio'][:5]}")
             idx += 1
-    lineas.append("\nElige un número o escribe *otro día* para cambiar de día.")
+    if show_ver_mas:
+        lineas.append("\nElige un número, escribe *ver más* para ver más profesionales, u *otro día* para cambiar de día.")
+    else:
+        lineas.append("\nElige un número o escribe *otro día* para cambiar de día.")
     return "\n".join(lineas)
 
 
@@ -814,7 +823,7 @@ async def _handle_expansion(phone: str, data: dict, slots_mostrados: list,
             groups.append({"slots": show_a})
         if show_o:
             groups.append({"slots": show_o})
-        return _format_slots_expansion(groups) if groups else _format_slots(todos_slots, mostrar_todos=True)
+        return _format_slots_expansion(groups, show_ver_mas=True) if groups else _format_slots(todos_slots, mostrar_todos=True)
 
     else:
         # Todos los horarios de los 3 profesionales
