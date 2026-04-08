@@ -6,7 +6,7 @@ import re
 from datetime import datetime, timedelta
 
 from claude_helper import detect_intent, respuesta_faq
-from medilink import (buscar_primer_dia, buscar_slots_dia,
+from medilink import (buscar_primer_dia, buscar_slots_dia, buscar_slots_dia_por_ids,
                       buscar_paciente, crear_paciente, crear_cita,
                       listar_citas_paciente, cancelar_cita,
                       valid_rut, clean_rut, especialidades_disponibles,
@@ -194,6 +194,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         todos_slots     = data.get("todos_slots", slots_mostrados)  # todos del día
         fechas_vistas   = data.get("fechas_vistas", [])
         especialidad    = data.get("especialidad", "")
+        fecha_actual    = todos_slots[0]["fecha"] if todos_slots else None
 
         # Respuesta al sugerido proactivo
         if tl == "confirmar_sugerido":
@@ -209,13 +210,19 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 [{"id": "1", "title": "Fonasa"}, {"id": "2", "title": "Particular"}]
             )
         if tl == "ver_otros":
+            if especialidad in _ESPECIALIDADES_EXPANSION:
+                return await _handle_expansion(phone, data, slots_mostrados, todos_slots,
+                                               data.get("expansion_stage", 0), fecha_actual)
             return _format_slots(slots_mostrados)
 
-        # "ver todos" → mostrar todos los slots del día actual
+        # "ver todos" / "ver más" → expansión progresiva para med general, o todos del día para el resto
         VER_TODOS = {"ver todos", "todos", "ver todo", "todos los horarios", "mostrar todos",
                      "ver horarios", "quiero ver los horarios", "ver todos los horarios",
                      "mostrar horarios", "quiero ver horarios", "ver mas", "ver más", "ver_todos"}
         if tl in VER_TODOS or any(p in tl for p in ["ver todos", "todos los horarios", "ver horarios", "ver mas", "ver más"]):
+            if especialidad in _ESPECIALIDADES_EXPANSION:
+                return await _handle_expansion(phone, data, slots_mostrados, todos_slots,
+                                               data.get("expansion_stage", 0), fecha_actual)
             data["slots"] = todos_slots
             save_session(phone, "WAIT_SLOT", data)
             return _format_slots(todos_slots, mostrar_todos=True)
@@ -229,7 +236,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 if todos_dia:
                     if fecha_dia not in fechas_vistas:
                         fechas_vistas = fechas_vistas + [fecha_dia]
-                    data.update({"slots": smart_dia, "todos_slots": todos_dia, "fechas_vistas": fechas_vistas})
+                    data.update({"slots": smart_dia, "todos_slots": todos_dia,
+                                 "fechas_vistas": fechas_vistas, "expansion_stage": 1})
                     save_session(phone, "WAIT_SLOT", data)
                     return _format_slots(smart_dia)
             return "Sin horarios disponibles para ese día.\n\nEscribe *otro día* para buscar el siguiente 😊"
@@ -247,7 +255,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 )
             nueva_fecha = todos_nuevo[0]["fecha"]
             fechas_vistas = fechas_vistas + [nueva_fecha]
-            data.update({"slots": smart_nuevo, "todos_slots": todos_nuevo, "fechas_vistas": fechas_vistas})
+            data.update({"slots": smart_nuevo, "todos_slots": todos_nuevo,
+                         "fechas_vistas": fechas_vistas, "expansion_stage": 0})
             save_session(phone, "WAIT_SLOT", data)
             return _format_slots(smart_nuevo)
 
@@ -703,6 +712,12 @@ def _especialidades_dental_msg() -> dict:
     )
 
 
+# Especialidades con expansión progresiva por profesional
+_ESPECIALIDADES_EXPANSION = {"medicina general"}
+# IDs de profesionales de Medicina General, en orden de prioridad
+_MED_GENERAL_IDS = [73, 1, 18]  # Abarca, Olavarría, Márquez
+
+
 _ESPECIALIDADES_TEXTO = (
     "• Medicina General\n"
     "• Medicina Familiar\n"
@@ -726,6 +741,100 @@ _ESPECIALIDADES_TEXTO = (
 )
 
 
+def _format_slots_expansion(groups: list) -> str | dict:
+    """Formatea slots agrupados por profesional. groups = [{"slots": [...]}]."""
+    groups = [g for g in groups if g.get("slots")]
+    if not groups:
+        return "No hay más horarios disponibles."
+
+    flat_slots = []
+    for g in groups:
+        flat_slots.extend(g["slots"])
+
+    fecha_display = flat_slots[0]["fecha_display"]
+    total_rows = len(flat_slots) + 1  # +1 fila nav "Buscar otro día"
+
+    if total_rows <= 10:
+        sections = []
+        offset = 0
+        for g in groups:
+            prof = g["slots"][0]["profesional"]
+            rows = [{"id": str(offset + i + 1), "title": s["hora_inicio"][:5]}
+                    for i, s in enumerate(g["slots"])]
+            offset += len(g["slots"])
+            sections.append({"title": prof[:24], "rows": rows})
+        sections.append({"title": "Más opciones",
+                         "rows": [{"id": "otro_dia", "title": "Buscar otro día"}]})
+        return _list_msg(
+            body_text=f"Horarios disponibles — *{fecha_display}* 👇",
+            button_label="Ver horarios",
+            sections=sections,
+        )
+
+    # Fallback texto para listas largas
+    lineas = [f"📅 *{fecha_display}*\n"]
+    idx = 1
+    for g in groups:
+        prof = g["slots"][0]["profesional"]
+        lineas.append(f"\n*{prof}*")
+        for s in g["slots"]:
+            lineas.append(f"*{idx}.* {s['hora_inicio'][:5]}")
+            idx += 1
+    lineas.append("\nElige un número o escribe *otro día* para cambiar de día.")
+    return "\n".join(lineas)
+
+
+async def _handle_expansion(phone: str, data: dict, slots_mostrados: list,
+                             todos_slots: list, stage: int, fecha: str | None) -> str | dict:
+    """Expande progresivamente los horarios de Medicina General."""
+    next_stage = stage + 1
+
+    if next_stage == 1:
+        # Mostrar smart de Abarca (ya guardado en data["slots"])
+        data["expansion_stage"] = 1
+        save_session(phone, "WAIT_SLOT", data)
+        return _format_slots(data["slots"])
+
+    elif next_stage == 2:
+        # Smart de Abarca + smart de Olavarría
+        smart_abarca = data.get("slots", [])
+        smart_ola, todos_ola = (await buscar_slots_dia_por_ids([1], fecha)) if fecha else ([], [])
+
+        show_a = smart_abarca[:4]
+        show_o = smart_ola[:4]
+        combined = show_a + show_o
+
+        data["expansion_stage"] = 2
+        data["slots"] = combined
+        data["todos_slots"] = todos_slots + todos_ola
+        save_session(phone, "WAIT_SLOT", data)
+
+        groups = []
+        if show_a:
+            groups.append({"slots": show_a})
+        if show_o:
+            groups.append({"slots": show_o})
+        return _format_slots_expansion(groups) if groups else _format_slots(todos_slots, mostrar_todos=True)
+
+    else:
+        # Todos los horarios de los 3 profesionales
+        _, todos_a = (await buscar_slots_dia_por_ids([73], fecha)) if fecha else ([], [])
+        _, todos_o = (await buscar_slots_dia_por_ids([1],  fecha)) if fecha else ([], [])
+        _, todos_m = (await buscar_slots_dia_por_ids([18], fecha)) if fecha else ([], [])
+        todos_all = todos_a + todos_o + todos_m
+
+        data["expansion_stage"] = 3
+        data["slots"] = todos_all
+        data["todos_slots"] = todos_all
+        save_session(phone, "WAIT_SLOT", data)
+
+        groups = []
+        if todos_a: groups.append({"slots": todos_a})
+        if todos_o: groups.append({"slots": todos_o})
+        if todos_m: groups.append({"slots": todos_m})
+        return _format_slots_expansion(groups) if groups else "No hay más horarios disponibles."
+
+
 async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None) -> str:
     if not especialidad:
         save_session(phone, "WAIT_ESPECIALIDAD", data)
@@ -743,7 +852,8 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None) -> 
         )
     fecha = todos[0]["fecha"]
     data.update({"especialidad": especialidad_lower, "slots": smart,
-                 "todos_slots": todos, "fechas_vistas": [fecha]})
+                 "todos_slots": todos, "fechas_vistas": [fecha],
+                 "expansion_stage": 0})
     save_session(phone, "WAIT_SLOT", data)
 
     # Sugerencia proactiva — para medicina general el más próximo; resto compacta agenda

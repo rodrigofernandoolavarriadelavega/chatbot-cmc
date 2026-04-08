@@ -465,6 +465,15 @@ async def buscar_slots_dia(especialidad: str, fecha: str) -> tuple[list, list]:
         return await _slots_para_fecha(client, ids, horarios, fecha, prioridad=usar_prioridad)
 
 
+async def buscar_slots_dia_por_ids(ids: list, fecha: str) -> tuple[list, list]:
+    """Retorna (smart_5, todos_libres) para una fecha y lista explícita de IDs de profesional."""
+    if not ids:
+        return [], []
+    async with httpx.AsyncClient(timeout=15) as client:
+        horarios = {i: await _get_horario(client, i) for i in ids}
+        return await _slots_para_fecha(client, ids, horarios, fecha)
+
+
 async def crear_paciente(rut: str, nombre: str, apellidos: str) -> Optional[dict]:
     """Crea un nuevo paciente en Medilink. Retorna dict con id, nombre, rut o None."""
     async with httpx.AsyncClient(timeout=10) as client:
