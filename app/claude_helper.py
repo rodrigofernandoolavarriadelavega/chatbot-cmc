@@ -104,7 +104,7 @@ Si mencionan un profesional por nombre, mapea al nombre de la especialidad:
 - Dr. Tirso / Tirso → "ginecología"
 - Kine Leo / Leo / Leonardo / Etcheverry → "etcheverry"
 - Kine Luis / Luis / Armijo → "armijo"
-- Kine Paola / Paola / Paola Acosta → "paola acosta"
+- Paola / Paola Acosta / masaje / masoterapia → "masoterapia"
 - Dra. Juana / Juana → "fonoaudiología"
 - Nutri Gise / nutricionista → "nutrición"
 - Matrona Saraí / Saraí → "matrona"

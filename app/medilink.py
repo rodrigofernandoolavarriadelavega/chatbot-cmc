@@ -39,7 +39,7 @@ PROFESIONALES = {
     75: {"nombre": "Dr. Fernando Fredes",   "especialidad": "Endodoncia",            "intervalo": 60},
     69: {"nombre": "Dra. Aurora Valdés",    "especialidad": "Implantología",         "intervalo": 60},
     76: {"nombre": "Dra. Valentina Fuentealba","especialidad": "Estética Facial",    "intervalo": 30},
-    59: {"nombre": "Paola Acosta",          "especialidad": "Kinesiología",          "intervalo": 30},
+    59: {"nombre": "Paola Acosta",          "especialidad": "Masoterapia",           "intervalo": 30},
     77: {"nombre": "Luis Armijo",           "especialidad": "Kinesiología",          "intervalo": 30},
     21: {"nombre": "Leonardo Etcheverry",   "especialidad": "Kinesiología",          "intervalo": 30},
     52: {"nombre": "Gisela Pinto",          "especialidad": "Nutrición",             "intervalo": 30},
@@ -53,7 +53,8 @@ PROFESIONALES = {
 
 # Mapa de palabras clave → IDs de profesionales
 ESPECIALIDADES_MAP = {
-    "kinesiología": [59, 77, 21], "kinesiólogo": [59, 77, 21], "kinesiologa": [59, 77, 21], "kine": [59, 77, 21],
+    "kinesiología": [77, 21], "kinesiólogo": [77, 21], "kinesiologa": [77, 21], "kine": [77, 21],
+    "masoterapia": [59], "masaje": [59], "masajes": [59], "masoterapeuta": [59],
     "medicina general": [73, 1, 13], "médico": [73, 1, 13], "medico general": [73, 1, 13], "doctor": [73, 1, 13],
     "medicina familiar": [13], "médico familiar": [13],
     "otorrinolaringología": [23], "otorrino": [23], "orl": [23],
