@@ -830,6 +830,9 @@ async def _handle_expansion(phone: str, data: dict, slots_mostrados: list,
         _, todos_a = (await buscar_slots_dia_por_ids([73], fecha)) if fecha else ([], [])
         _, todos_o = (await buscar_slots_dia_por_ids([1],  fecha)) if fecha else ([], [])
         _, todos_m = (await buscar_slots_dia_por_ids([18], fecha)) if fecha else ([], [])
+        # Si Márquez no trabaja ese día, buscar su próximo día disponible
+        if not todos_m:
+            _, todos_m = await buscar_primer_dia("medicina familiar")
         todos_all = todos_a + todos_o + todos_m
 
         data["expansion_stage"] = 3
