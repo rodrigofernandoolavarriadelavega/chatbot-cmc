@@ -389,7 +389,7 @@ body {
 .qr-btn:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
 .chat-messages {
   flex: 1; overflow-y: auto; padding: 16px;
-  display: flex; flex-direction: column-reverse; gap: 6px;
+  display: flex; flex-direction: column; gap: 6px;
   background: var(--bg);
 }
 .msg-row { display: flex; }
