@@ -928,9 +928,8 @@ async function loadMessages(phone) {
 function renderMessages(msgs) {
   const el=document.getElementById("chat-messages");
   if(!msgs.length){el.innerHTML=`<div style="text-align:center;color:var(--text-3);font-size:12px;padding:20px;">Sin mensajes registrados aún</div>`;return;}
-  const reversed=[...msgs].reverse();
   let html=""; let lastState=null;
-  reversed.forEach(m=>{
+  msgs.forEach(m=>{
     if(m.state&&m.state!==lastState){html+=`<div class="state-sep"><span class="state-pill">${stateLabel(m.state)}</span></div>`;lastState=m.state;}
     const isRecep=m.direction==="out"&&(m.text||"").startsWith("[Recepcionista]");
     const text=(m.text||"").replace(/^\[Recepcionista\] /,"").replace(/^\[.*?\] /,"")
@@ -939,7 +938,7 @@ function renderMessages(msgs) {
     const who=m.direction==="in"?"👤 Paciente":isRecep?"🙋 Recepcionista":"🤖 Bot";
     html+=`<div class="msg-row ${m.direction}${isRecep?" recep":""}"><div><div class="msg-bubble">${text}</div><div class="msg-meta">${who} · ${ts}</div></div></div>`;
   });
-  el.innerHTML=html; el.scrollTop=0;
+  el.innerHTML=html; setTimeout(()=>{ el.scrollTop=el.scrollHeight; },0);
 }
 function insertQR(text){document.getElementById("reply-input").value=text;document.getElementById("reply-input").focus();}
 
