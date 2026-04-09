@@ -849,10 +849,20 @@ function waitMinutes(ts) {
 }
 function waitLabel(mins) {
   if (mins < 60) return `${mins} min`;
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  const hStr = `${h} hora${h > 1 ? "s" : ""}`;
-  return m === 0 ? hStr : `${hStr} y ${m} min`;
+  if (mins < 1440) { // menos de 24h
+    const h = Math.floor(mins / 60), m = mins % 60;
+    const s = `${h} hora${h > 1 ? "s" : ""}`;
+    return m === 0 ? s : `${s} y ${m} min`;
+  }
+  if (mins < 10080) { // menos de 7 días
+    const d = Math.floor(mins / 1440), h = Math.floor((mins % 1440) / 60);
+    const s = `${d} día${d > 1 ? "s" : ""}`;
+    return h === 0 ? s : `${s} y ${h} hora${h > 1 ? "s" : ""}`;
+  }
+  // 7 días o más
+  const w = Math.floor(mins / 10080), d = Math.floor((mins % 10080) / 1440);
+  const s = `${w} semana${w > 1 ? "s" : ""}`;
+  return d === 0 ? s : `${s} y ${d} día${d > 1 ? "s" : ""}`;
 }
 
 /* ── FILTROS ── */
