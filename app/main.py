@@ -24,7 +24,7 @@ from fidelizacion import enviar_seguimiento_postconsulta, enviar_reactivacion_pa
 from medilink import (buscar_paciente, crear_paciente, buscar_primer_dia,
                       buscar_slots_dia, crear_cita, listar_citas_paciente,
                       cancelar_cita, PROFESIONALES, ESPECIALIDADES_MAP)
-from session import get_session, is_duplicate, reset_session, save_session, get_metricas, log_message, get_messages, get_conversations, log_event, get_sesiones_abandonadas, get_tags, save_tag, delete_tag
+from session import get_session, is_duplicate, reset_session, save_session, get_metricas, log_message, get_messages, get_conversations, log_event, get_sesiones_abandonadas, get_tags, save_tag, delete_tag, search_messages
 
 logging.config.dictConfig({
     "version": 1,
@@ -480,7 +480,25 @@ body {
     <div class="pill" id="pill-esperando"><strong id="s-takeover">—</strong>&nbsp;esperando atención</div>
     <div class="pill"><div class="live-dot"></div>&nbsp;Actualizado <span id="last-refresh">—</span></div>
     <button class="btn btn-primary" onclick="abrirModalAgendar()" style="margin-left:8px;font-size:12px;padding:6px 14px;border-radius:8px;">+ Nueva Cita</button>
+    <button class="btn" onclick="abrirBusquedaGlobal()" style="margin-left:6px;font-size:12px;padding:6px 14px;border-radius:8px;background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;">🔍 Buscar</button>
     <button class="btn" onclick="abrirModalAnular()" style="margin-left:6px;font-size:12px;padding:6px 14px;border-radius:8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;">✕ Anular Hora</button>
+  </div>
+</div>
+
+<!-- MODAL BÚSQUEDA GLOBAL -->
+<div id="modal-busqueda" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:flex-start;justify-content:center;padding-top:80px;">
+  <div style="background:#fff;border-radius:14px;width:560px;max-width:95vw;max-height:70vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.2);position:relative;">
+    <div style="padding:20px 20px 12px;border-bottom:1px solid var(--border);">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span style="font-size:18px;">🔍</span>
+        <input id="global-search-input" type="text" placeholder="Buscar en todas las conversaciones..."
+          style="flex:1;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;"
+          oninput="buscarGlobal()" onkeydown="if(event.key===\'Escape\') cerrarBusquedaGlobal()">
+        <button onclick="cerrarBusquedaGlobal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#94a3b8;">×</button>
+      </div>
+      <div id="global-search-meta" style="font-size:11px;color:#94a3b8;margin-top:8px;min-height:14px;"></div>
+    </div>
+    <div id="global-search-results" style="overflow-y:auto;padding:8px 0;flex:1;"></div>
   </div>
 </div>
 
@@ -606,6 +624,7 @@ body {
             <div class="ch-sub" id="chat-sub">—</div>
           </div>
           <div class="ch-actions">
+            <button onclick="toggleBusquedaChat()" title="Buscar en conversación" style="background:none;border:none;cursor:pointer;font-size:16px;padding:4px 6px;color:#64748b;border-radius:6px;" id="btn-chat-search">🔍</button>
             <span class="state-tag tag-slate" id="chat-state-tag">—</span>
             <button class="btn btn-danger" id="btn-takeover" onclick="doTakeover()">🎯 Tomar control</button>
             <button class="btn btn-outline" id="btn-resume" style="display:none;" onclick="doResume()">🤖 Devolver al bot</button>
@@ -615,6 +634,13 @@ body {
           🙋 Estás respondiendo como recepcionista — el bot está pausado para este paciente
         </div>
         <div class="quick-replies hidden" id="quick-replies"></div>
+        <div id="chat-search-bar" style="display:none;padding:6px 12px;border-bottom:1px solid var(--border);background:#f8fafc;gap:6px;align-items:center;flex-shrink:0;">
+          <input id="chat-search-input" type="text" placeholder="Buscar en esta conversación..."
+            style="flex:1;padding:5px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;width:100%;"
+            oninput="filtrarMensajesChat()" onkeydown="if(event.key===\'Escape\') cerrarBusquedaChat()">
+          <span id="chat-search-count" style="font-size:11px;color:#64748b;white-space:nowrap;margin-left:6px;"></span>
+          <button onclick="cerrarBusquedaChat()" style="background:none;border:none;font-size:16px;cursor:pointer;color:#94a3b8;margin-left:4px;">×</button>
+        </div>
         <div class="chat-messages" id="chat-messages"></div>
         <div class="reply-bar hidden" id="reply-bar">
           <textarea class="reply-textarea" id="reply-input" placeholder="Escribe tu respuesta..." rows="2"
@@ -942,6 +968,7 @@ async function loadMessages(phone, preserveScroll=false) {
 function renderMessages(msgs, preserveScroll=false) {
   const el=document.getElementById("chat-messages");
   const prevScroll=el.scrollTop;
+  if (msgs.length) allMsgsCache = msgs;
   if(!msgs.length){el.innerHTML=`<div style="text-align:center;color:var(--text-3);font-size:12px;padding:20px;">Sin mensajes registrados aún</div>`;return;}
   let html=""; let lastState=null;
   [...msgs].reverse().forEach(m=>{
@@ -1030,6 +1057,97 @@ loadConversations();
 loadMetrics();
 setInterval(loadConversations,10000);
 setInterval(loadMetrics,60000);
+
+// ── BÚSQUEDA EN CHAT ─────────────────────────────────────────────────────────
+let allMsgsCache = [];
+
+function toggleBusquedaChat() {
+  const bar = document.getElementById(\'chat-search-bar\');
+  const visible = bar.style.display === \'flex\';
+  if (visible) { cerrarBusquedaChat(); }
+  else { bar.style.display=\'flex\'; document.getElementById(\'chat-search-input\').focus(); }
+}
+function cerrarBusquedaChat() {
+  document.getElementById(\'chat-search-bar\').style.display=\'none\';
+  document.getElementById(\'chat-search-input\').value=\'\';
+  document.getElementById(\'chat-search-count\').textContent=\'\';
+  // Restaurar mensajes sin highlight
+  if (allMsgsCache.length) renderMessages(allMsgsCache, true);
+}
+function filtrarMensajesChat() {
+  const q = document.getElementById(\'chat-search-input\').value.trim().toLowerCase();
+  const el = document.getElementById(\'chat-messages\');
+  const countEl = document.getElementById(\'chat-search-count\');
+  if (!q) { if (allMsgsCache.length) renderMessages(allMsgsCache, true); countEl.textContent=\'\'; return; }
+  // Highlight en el HTML existente
+  let count = 0;
+  el.querySelectorAll(\'.msg-bubble\').forEach(b => {
+    const orig = b.getAttribute(\'data-orig\') || b.innerHTML;
+    b.setAttribute(\'data-orig\', orig);
+    const plain = b.textContent.toLowerCase();
+    if (plain.includes(q)) {
+      count++;
+      b.innerHTML = orig.replace(new RegExp(q.replace(/[.*+?^${}()|[\\]\\\\]/g,\'\\\\$&\'), \'gi\'),
+        m => `<mark style="background:#fef08a;border-radius:2px;padding:0 2px;">${m}</mark>`);
+      b.closest(\'.msg-row\')?.scrollIntoView({block:\'nearest\'});
+    } else {
+      b.innerHTML = orig;
+    }
+  });
+  countEl.textContent = count ? `${count} resultado${count>1?\'s\':\'\'}` : \'Sin resultados\';
+}
+
+// ── BÚSQUEDA GLOBAL ───────────────────────────────────────────────────────────
+let globalSearchTimer = null;
+
+function abrirBusquedaGlobal() {
+  document.getElementById(\'modal-busqueda\').style.display=\'flex\';
+  setTimeout(()=>document.getElementById(\'global-search-input\').focus(), 50);
+}
+function cerrarBusquedaGlobal() {
+  document.getElementById(\'modal-busqueda\').style.display=\'none\';
+  document.getElementById(\'global-search-input\').value=\'\';
+  document.getElementById(\'global-search-results\').innerHTML=\'\';
+  document.getElementById(\'global-search-meta\').textContent=\'\';
+}
+function buscarGlobal() {
+  clearTimeout(globalSearchTimer);
+  const q = document.getElementById(\'global-search-input\').value.trim();
+  if (q.length < 2) { document.getElementById(\'global-search-results\').innerHTML=\'\'; document.getElementById(\'global-search-meta\').textContent=\'\'; return; }
+  document.getElementById(\'global-search-meta\').textContent=\'Buscando...\';
+  globalSearchTimer = setTimeout(async ()=>{
+    try {
+      const r = await fetch(`/admin/api/search?q=${encodeURIComponent(q)}&token=${TOKEN}`);
+      const d = await r.json();
+      const results = d.results || [];
+      document.getElementById(\'global-search-meta\').textContent = results.length ? `${results.length} resultado${results.length>1?\'s\':\'\'}` : \'Sin resultados\';
+      if (!results.length) { document.getElementById(\'global-search-results\').innerHTML=\'<p style="text-align:center;color:#94a3b8;font-size:13px;padding:24px;">Sin resultados para "\'+q.replace(/</g,\'&lt;\')+\'"</p>\'; return; }
+      const re = new RegExp(q.replace(/[.*+?^${}()|[\\]\\\\]/g,\'\\\\$&\'), \'gi\');
+      document.getElementById(\'global-search-results\').innerHTML = results.map(m => {
+        const snippet = (m.text||\'\').replace(/</g,\'&lt;\').replace(re, match=>`<mark style="background:#fef08a;border-radius:2px;padding:0 1px;">${match.replace(/</g,\'&lt;\')}</mark>`);
+        const who = m.direction===\'in\'?\'👤\':\'🤖\';
+        const nombre = m.nombre ? `<strong>${m.nombre.replace(/</g,\'&lt;\')}</strong> · ` : \'\';
+        const ts = m.ts ? new Date(m.ts.replace(\' \',\'T\')+\'Z\').toLocaleString(\'es-CL\',{day:\'numeric\',month:\'short\',hour:\'2-digit\',minute:\'2-digit\',timeZone:\'America/Santiago\'}) : \'\';
+        return `<div onclick="seleccionarYCerrar(\'${m.phone}\')" style="padding:10px 20px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;" onmouseover="this.style.background=\'#f8fafc\'" onmouseout="this.style.background=\'\'">
+          <div style="font-size:11px;color:#64748b;margin-bottom:3px;">${nombre}${m.phone} · ${ts} ${who}</div>
+          <div style="font-size:13px;line-height:1.4;">${snippet}</div>
+        </div>`;
+      }).join(\'\');
+    } catch(e) { document.getElementById(\'global-search-meta\').textContent=\'Error al buscar\'; }
+  }, 350);
+}
+async function seleccionarYCerrar(phone) {
+  cerrarBusquedaGlobal();
+  const conv = convs.find(c=>c.phone===phone);
+  if (conv) { selectConv(conv); }
+  else {
+    // Conversación no está en la lista visible — cargarla igual
+    selectedPhone = phone;
+    document.getElementById(\'chat-empty\').style.display=\'none\';
+    document.getElementById(\'chat-active\').style.display=\'flex\';
+    await loadMessages(phone);
+  }
+}
 
 // ── ETIQUETAS ────────────────────────────────────────────────────────────────
 const TAG_COLORS = ["#dbeafe","#dcfce7","#fef9c3","#fce7f3","#ede9fe","#ffedd5","#e0f2fe","#f1f5f9"];
@@ -1481,6 +1599,16 @@ def admin_delete_tag(phone: str, tag: str, token: str = Query(...)):
     _check_token(token)
     delete_tag(phone, tag)
     return {"tags": get_tags(phone)}
+
+
+@app.get("/admin/api/search")
+def admin_search_messages(q: str, token: str = Query(...)):
+    """Busca texto en todos los mensajes de todas las conversaciones."""
+    _check_token(token)
+    if len(q.strip()) < 2:
+        raise HTTPException(status_code=400, detail="Mínimo 2 caracteres")
+    results = search_messages(q.strip())
+    return {"q": q, "results": results}
 
 
 @app.get("/admin/api/citas-paciente")

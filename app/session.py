@@ -272,6 +272,22 @@ def get_messages(phone: str, limit: int = 100) -> list[dict]:
         return [dict(r) for r in rows]
 
 
+def search_messages(query: str, limit: int = 50) -> list[dict]:
+    """Busca mensajes que contengan el texto en todas las conversaciones."""
+    with _conn() as conn:
+        rows = conn.execute(
+            """SELECT m.id, m.phone, m.direction, m.text, m.ts,
+                      p.nombre
+               FROM messages m
+               LEFT JOIN contact_profiles p ON p.phone = m.phone
+               WHERE m.text LIKE ?
+               ORDER BY m.ts DESC
+               LIMIT ?""",
+            (f"%{query}%", limit)
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
 def get_conversations(limit: int = 200) -> list[dict]:
     """Lista todas las conversaciones con último mensaje y estado actual."""
     with _conn() as conn:
