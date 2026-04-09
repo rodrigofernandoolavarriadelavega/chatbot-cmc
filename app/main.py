@@ -493,7 +493,7 @@ body {
         <span style="font-size:18px;">🔍</span>
         <input id="global-search-input" type="text" placeholder="Buscar en todas las conversaciones..."
           style="flex:1;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;"
-          oninput="buscarGlobal()" onkeydown="if(event.key===\'Escape\') cerrarBusquedaGlobal()">
+          oninput="buscarGlobal()" onkeydown="if(event.key==='Escape') cerrarBusquedaGlobal()">
         <button onclick="cerrarBusquedaGlobal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#94a3b8;">×</button>
       </div>
       <div id="global-search-meta" style="font-size:11px;color:#94a3b8;margin-top:8px;min-height:14px;"></div>
@@ -513,7 +513,7 @@ body {
       <label style="font-size:13px;font-weight:600;color:#374151;">RUT del paciente</label>
       <div style="display:flex;gap:8px;margin-top:6px;">
         <input id="an-rut" type="text" placeholder="12345678-9" style="flex:1;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;"
-          onkeydown="if(event.key===\'Enter\') buscarCitasPaciente()">
+          onkeydown="if(event.key==='Enter') buscarCitasPaciente()">
         <button onclick="buscarCitasPaciente()" style="background:#1172AB;color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;">Buscar</button>
       </div>
       <div id="an-paciente-info" style="margin-top:8px;min-height:18px;"></div>
@@ -523,7 +523,7 @@ body {
     <div id="an-paso2" style="display:none;">
       <div id="an-lista-citas" style="max-height:260px;overflow-y:auto;"></div>
       <div id="an-resultado" style="margin-top:4px;"></div>
-      <button onclick="document.getElementById(\'an-paso1\').style.display=\'block\';document.getElementById(\'an-paso2\').style.display=\'none\';"
+      <button onclick="document.getElementById('an-paso1').style.display='block';document.getElementById('an-paso2').style.display='none';"
         style="margin-top:14px;background:none;border:none;color:#64748b;font-size:12px;cursor:pointer;text-decoration:underline;">← Buscar otro RUT</button>
     </div>
   </div>
@@ -586,7 +586,7 @@ body {
     </div>
     <div class="filter-section">
       <div class="filter-label">Estado</div>
-      <button class="state-btn active" id="btn-all" onclick="setFilter(\'all\',this)">
+      <button class="state-btn active" id="btn-all" onclick="setFilter('all',this)">
         <span class="sdot" style="background:#94a3b8;"></span>
         <span style="flex:1;">Todos</span>
         <span class="scount" id="cnt-all">—</span>
@@ -637,16 +637,16 @@ body {
         <div id="chat-search-bar" style="display:none;padding:6px 12px;border-bottom:1px solid var(--border);background:#f8fafc;gap:6px;align-items:center;flex-shrink:0;">
           <input id="chat-search-input" type="text" placeholder="Buscar en esta conversación..."
             style="flex:1;padding:5px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;width:100%;"
-            oninput="filtrarMensajesChat()" onkeydown="if(event.key===\'Escape\') cerrarBusquedaChat()">
+            oninput="filtrarMensajesChat()" onkeydown="if(event.key==='Escape') cerrarBusquedaChat()">
           <span id="chat-search-count" style="font-size:11px;color:#64748b;white-space:nowrap;margin-left:6px;"></span>
           <button onclick="cerrarBusquedaChat()" style="background:none;border:none;font-size:16px;cursor:pointer;color:#94a3b8;margin-left:4px;">×</button>
         </div>
         <div class="chat-messages" id="chat-messages"></div>
         <div class="reply-bar hidden" id="reply-bar">
           <textarea class="reply-textarea" id="reply-input" placeholder="Escribe tu respuesta..." rows="2"
-            onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();sendReply();}"></textarea>
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendReply();}"></textarea>
           <div class="reply-actions">
-            <button class="btn btn-outline" onclick="document.getElementById(\'reply-input\').value=\'\'">Limpiar</button>
+            <button class="btn btn-outline" onclick="document.getElementById('reply-input').value=''">Limpiar</button>
             <button class="btn btn-primary btn-send" onclick="sendReply()">Enviar →</button>
           </div>
         </div>
@@ -698,7 +698,7 @@ body {
           <div style="display:flex;gap:6px;">
             <input id="ctx-tag-input" type="text" placeholder="Nueva etiqueta..." maxlength="30"
               style="flex:1;padding:6px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;"
-              onkeydown="if(event.key===\'Enter\'){event.preventDefault();addTag();}">
+              onkeydown="if(event.key==='Enter'){event.preventDefault();addTag();}">
             <button onclick="addTag()" style="background:var(--primary);color:#fff;border:none;border-radius:7px;padding:6px 12px;font-size:13px;cursor:pointer;font-weight:600;">+</button>
           </div>
         </div>
@@ -798,7 +798,7 @@ function renderStateButtons() {
   STATE_GROUPS.forEach(g => {
     const cnt = convs.filter(c => g.states.includes(c.state)).length;
     if (!cnt) return;
-    html += `<button class="state-btn${currentFilter===g.id?" active":""}" onclick="setFilter(\'${g.id}\',this)">
+    html += `<button class="state-btn${currentFilter===g.id?" active":""}" onclick="setFilter('${g.id}',this)">
       <span class="sdot" style="background:${g.dot};"></span>
       <span style="flex:1;">${g.label}</span>
       <span class="scount">${cnt}</span>
@@ -866,7 +866,7 @@ function convCard(c,g) {
   else if (mins>=5) badges+=`<span class="badge badge-warn">⏱ ${mins}m esperando</span>`;
   else if (mins>=1&&c.state!=="IDLE") badges+=`<span class="badge" style="background:#f8fafc;color:#94a3b8;border-color:#e2e8f0;">⏱ ${mins}m</span>`;
   if (fd.fecha_display&&fd.hora_inicio) badges+=`<span class="badge badge-prob">✅ Lista para agendar</span>`;
-  return `<div class="conv-card${selectedPhone===c.phone?" selected":""}" style="border-left-color:${g.dot};" onclick="selectConv(\'${c.phone}\')">
+  return `<div class="conv-card${selectedPhone===c.phone?" selected":""}" style="border-left-color:${g.dot};" onclick="selectConv('${c.phone}')">
     <div class="card-top">
       <span class="cdot" style="background:${dotColor(c.state)};"></span>
       <span class="cname">${name.replace(/</g,"&lt;")}</span>
@@ -1062,78 +1062,78 @@ setInterval(loadMetrics,60000);
 let allMsgsCache = [];
 
 function toggleBusquedaChat() {
-  const bar = document.getElementById(\'chat-search-bar\');
-  const visible = bar.style.display === \'flex\';
+  const bar = document.getElementById('chat-search-bar');
+  const visible = bar.style.display === 'flex';
   if (visible) { cerrarBusquedaChat(); }
-  else { bar.style.display=\'flex\'; document.getElementById(\'chat-search-input\').focus(); }
+  else { bar.style.display='flex'; document.getElementById('chat-search-input').focus(); }
 }
 function cerrarBusquedaChat() {
-  document.getElementById(\'chat-search-bar\').style.display=\'none\';
-  document.getElementById(\'chat-search-input\').value=\'\';
-  document.getElementById(\'chat-search-count\').textContent=\'\';
+  document.getElementById('chat-search-bar').style.display='none';
+  document.getElementById('chat-search-input').value='';
+  document.getElementById('chat-search-count').textContent='';
   // Restaurar mensajes sin highlight
   if (allMsgsCache.length) renderMessages(allMsgsCache, true);
 }
 function filtrarMensajesChat() {
-  const q = document.getElementById(\'chat-search-input\').value.trim().toLowerCase();
-  const el = document.getElementById(\'chat-messages\');
-  const countEl = document.getElementById(\'chat-search-count\');
-  if (!q) { if (allMsgsCache.length) renderMessages(allMsgsCache, true); countEl.textContent=\'\'; return; }
+  const q = document.getElementById('chat-search-input').value.trim().toLowerCase();
+  const el = document.getElementById('chat-messages');
+  const countEl = document.getElementById('chat-search-count');
+  if (!q) { if (allMsgsCache.length) renderMessages(allMsgsCache, true); countEl.textContent=''; return; }
   // Highlight en el HTML existente
   let count = 0;
-  el.querySelectorAll(\'.msg-bubble\').forEach(b => {
-    const orig = b.getAttribute(\'data-orig\') || b.innerHTML;
-    b.setAttribute(\'data-orig\', orig);
+  el.querySelectorAll('.msg-bubble').forEach(b => {
+    const orig = b.getAttribute('data-orig') || b.innerHTML;
+    b.setAttribute('data-orig', orig);
     const plain = b.textContent.toLowerCase();
     if (plain.includes(q)) {
       count++;
-      b.innerHTML = orig.replace(new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,\'\\$&\'), \'gi\'),
+      b.innerHTML = orig.replace(new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'gi'),
         m => `<mark style="background:#fef08a;border-radius:2px;padding:0 2px;">${m}</mark>`);
-      b.closest(\'.msg-row\')?.scrollIntoView({block:\'nearest\'});
+      b.closest('.msg-row')?.scrollIntoView({block:'nearest'});
     } else {
       b.innerHTML = orig;
     }
   });
-  countEl.textContent = count ? `${count} resultado${count>1?\'s\':\'\'}` : \'Sin resultados\';
+  countEl.textContent = count ? `${count} resultado${count>1?'s':''}` : 'Sin resultados';
 }
 
 // ── BÚSQUEDA GLOBAL ───────────────────────────────────────────────────────────
 let globalSearchTimer = null;
 
 function abrirBusquedaGlobal() {
-  document.getElementById(\'modal-busqueda\').style.display=\'flex\';
-  setTimeout(()=>document.getElementById(\'global-search-input\').focus(), 50);
+  document.getElementById('modal-busqueda').style.display='flex';
+  setTimeout(()=>document.getElementById('global-search-input').focus(), 50);
 }
 function cerrarBusquedaGlobal() {
-  document.getElementById(\'modal-busqueda\').style.display=\'none\';
-  document.getElementById(\'global-search-input\').value=\'\';
-  document.getElementById(\'global-search-results\').innerHTML=\'\';
-  document.getElementById(\'global-search-meta\').textContent=\'\';
+  document.getElementById('modal-busqueda').style.display='none';
+  document.getElementById('global-search-input').value='';
+  document.getElementById('global-search-results').innerHTML='';
+  document.getElementById('global-search-meta').textContent='';
 }
 function buscarGlobal() {
   clearTimeout(globalSearchTimer);
-  const q = document.getElementById(\'global-search-input\').value.trim();
-  if (q.length < 2) { document.getElementById(\'global-search-results\').innerHTML=\'\'; document.getElementById(\'global-search-meta\').textContent=\'\'; return; }
-  document.getElementById(\'global-search-meta\').textContent=\'Buscando...\';
+  const q = document.getElementById('global-search-input').value.trim();
+  if (q.length < 2) { document.getElementById('global-search-results').innerHTML=''; document.getElementById('global-search-meta').textContent=''; return; }
+  document.getElementById('global-search-meta').textContent='Buscando...';
   globalSearchTimer = setTimeout(async ()=>{
     try {
       const r = await fetch(`/admin/api/search?q=${encodeURIComponent(q)}&token=${TOKEN}`);
       const d = await r.json();
       const results = d.results || [];
-      document.getElementById(\'global-search-meta\').textContent = results.length ? `${results.length} resultado${results.length>1?\'s\':\'\'}` : \'Sin resultados\';
-      if (!results.length) { document.getElementById(\'global-search-results\').innerHTML=\'<p style="text-align:center;color:#94a3b8;font-size:13px;padding:24px;">Sin resultados para "\'+q.replace(/</g,\'&lt;\')+\'"</p>\'; return; }
-      const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,\'\\$&\'), \'gi\');
-      document.getElementById(\'global-search-results\').innerHTML = results.map(m => {
-        const snippet = (m.text||\'\').replace(/</g,\'&lt;\').replace(re, match=>`<mark style="background:#fef08a;border-radius:2px;padding:0 1px;">${match.replace(/</g,\'&lt;\')}</mark>`);
-        const who = m.direction===\'in\'?\'👤\':\'🤖\';
-        const nombre = m.nombre ? `<strong>${m.nombre.replace(/</g,\'&lt;\')}</strong> · ` : \'\';
-        const ts = m.ts ? new Date(m.ts.replace(\' \',\'T\')+\'Z\').toLocaleString(\'es-CL\',{day:\'numeric\',month:\'short\',hour:\'2-digit\',minute:\'2-digit\',timeZone:\'America/Santiago\'}) : \'\';
-        return `<div onclick="seleccionarYCerrar(\'${m.phone}\')" style="padding:10px 20px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;" onmouseover="this.style.background=\'#f8fafc\'" onmouseout="this.style.background=\'\'">
+      document.getElementById('global-search-meta').textContent = results.length ? `${results.length} resultado${results.length>1?'s':''}` : 'Sin resultados';
+      if (!results.length) { document.getElementById('global-search-results').innerHTML='<p style="text-align:center;color:#94a3b8;font-size:13px;padding:24px;">Sin resultados para "'+q.replace(/</g,'&lt;')+'"</p>'; return; }
+      const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'gi');
+      document.getElementById('global-search-results').innerHTML = results.map(m => {
+        const snippet = (m.text||'').replace(/</g,'&lt;').replace(re, match=>`<mark style="background:#fef08a;border-radius:2px;padding:0 1px;">${match.replace(/</g,'&lt;')}</mark>`);
+        const who = m.direction==='in'?'👤':'🤖';
+        const nombre = m.nombre ? `<strong>${m.nombre.replace(/</g,'&lt;')}</strong> · ` : '';
+        const ts = m.ts ? new Date(m.ts.replace(' ','T')+'Z').toLocaleString('es-CL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'America/Santiago'}) : '';
+        return `<div onclick="seleccionarYCerrar('${m.phone}')" style="padding:10px 20px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
           <div style="font-size:11px;color:#64748b;margin-bottom:3px;">${nombre}${m.phone} · ${ts} ${who}</div>
           <div style="font-size:13px;line-height:1.4;">${snippet}</div>
         </div>`;
-      }).join(\'\');
-    } catch(e) { document.getElementById(\'global-search-meta\').textContent=\'Error al buscar\'; }
+      }).join('');
+    } catch(e) { document.getElementById('global-search-meta').textContent='Error al buscar'; }
   }, 350);
 }
 async function seleccionarYCerrar(phone) {
@@ -1143,8 +1143,8 @@ async function seleccionarYCerrar(phone) {
   else {
     // Conversación no está en la lista visible — cargarla igual
     selectedPhone = phone;
-    document.getElementById(\'chat-empty\').style.display=\'none\';
-    document.getElementById(\'chat-active\').style.display=\'flex\';
+    document.getElementById('chat-empty').style.display='none';
+    document.getElementById('chat-active').style.display='flex';
     await loadMessages(phone);
   }
 }
