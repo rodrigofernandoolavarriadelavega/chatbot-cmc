@@ -1087,7 +1087,7 @@ function filtrarMensajesChat() {
     const plain = b.textContent.toLowerCase();
     if (plain.includes(q)) {
       count++;
-      b.innerHTML = orig.replace(new RegExp(q.replace(/[.*+?^${}()|[\\]\\\\]/g,\'\\\\$&\'), \'gi\'),
+      b.innerHTML = orig.replace(new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,\'\\$&\'), \'gi\'),
         m => `<mark style="background:#fef08a;border-radius:2px;padding:0 2px;">${m}</mark>`);
       b.closest(\'.msg-row\')?.scrollIntoView({block:\'nearest\'});
     } else {
@@ -1122,7 +1122,7 @@ function buscarGlobal() {
       const results = d.results || [];
       document.getElementById(\'global-search-meta\').textContent = results.length ? `${results.length} resultado${results.length>1?\'s\':\'\'}` : \'Sin resultados\';
       if (!results.length) { document.getElementById(\'global-search-results\').innerHTML=\'<p style="text-align:center;color:#94a3b8;font-size:13px;padding:24px;">Sin resultados para "\'+q.replace(/</g,\'&lt;\')+\'"</p>\'; return; }
-      const re = new RegExp(q.replace(/[.*+?^${}()|[\\]\\\\]/g,\'\\\\$&\'), \'gi\');
+      const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,\'\\$&\'), \'gi\');
       document.getElementById(\'global-search-results\').innerHTML = results.map(m => {
         const snippet = (m.text||\'\').replace(/</g,\'&lt;\').replace(re, match=>`<mark style="background:#fef08a;border-radius:2px;padding:0 1px;">${match.replace(/</g,\'&lt;\')}</mark>`);
         const who = m.direction===\'in\'?\'👤\':\'🤖\';
@@ -1139,7 +1139,7 @@ function buscarGlobal() {
 async function seleccionarYCerrar(phone) {
   cerrarBusquedaGlobal();
   const conv = convs.find(c=>c.phone===phone);
-  if (conv) { selectConv(conv); }
+  if (conv) { selectConv(conv.phone); }
   else {
     // Conversación no está en la lista visible — cargarla igual
     selectedPhone = phone;
