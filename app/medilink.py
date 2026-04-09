@@ -8,6 +8,9 @@ import logging
 import urllib.parse
 from datetime import datetime, timedelta
 from typing import Optional
+from zoneinfo import ZoneInfo
+
+_CHILE_TZ = ZoneInfo("America/Santiago")
 
 import httpx
 
@@ -324,7 +327,8 @@ async def _slots_para_fecha(client: httpx.AsyncClient, ids: list, horarios: dict
         horas_ocupadas |= ocupadas_citas
         horas_vistas    = {s["hora_inicio"] for s in todos_libres}
 
-        ahora_min = _h_to_min(datetime.now().strftime("%H:%M")) if fecha == datetime.now().date().strftime("%Y-%m-%d") else None
+        _ahora_cl = datetime.now(_CHILE_TZ)
+        ahora_min = _h_to_min(_ahora_cl.strftime("%H:%M")) if fecha == _ahora_cl.date().strftime("%Y-%m-%d") else None
         for hi, hf in _generar_slots_horario(hi_dia, hf_dia, intervalo):
             if ahora_min is not None and _h_to_min(hi) <= ahora_min:
                 continue  # slot ya pasó hoy
@@ -415,7 +419,7 @@ async def buscar_primer_dia(especialidad: str, dias_adelante: int = 60,
                         break
 
         # Siempre escanear desde hoy, usando primera_fecha como límite superior o fallback
-        hoy = datetime.now().date()
+        hoy = datetime.now(_CHILE_TZ).date()
         limite = datetime.strptime(primera_fecha, "%Y-%m-%d").date() if primera_fecha else (hoy + timedelta(days=dias_adelante))
 
         for delta in range(0, (limite - hoy).days + 1):
@@ -581,7 +585,7 @@ async def crear_cita(id_paciente: int, id_profesional: int, fecha: str,
 
 async def listar_citas_paciente(id_paciente: int) -> list:
     """Lista citas futuras de un paciente."""
-    hoy = datetime.now().date().strftime("%Y-%m-%d")
+    hoy = datetime.now(_CHILE_TZ).date().strftime("%Y-%m-%d")
     params = {
         "id_paciente": {"eq": id_paciente},
         "fecha":       {"gte": hoy},
