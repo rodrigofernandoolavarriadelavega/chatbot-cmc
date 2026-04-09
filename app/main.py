@@ -847,6 +847,13 @@ function waitMinutes(ts) {
   if (!ts) return 0;
   return Math.floor((Date.now() - new Date(ts.replace(" ","T")+"Z")) / 60000);
 }
+function waitLabel(mins) {
+  if (mins < 60) return `${mins} min`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  const hStr = `${h} hora${h > 1 ? "s" : ""}`;
+  return m === 0 ? hStr : `${hStr} y ${m} min`;
+}
 
 /* ── FILTROS ── */
 function setFilter(id, el) {
@@ -932,9 +939,9 @@ function convCard(c,g) {
   const mins = waitMinutes(c.last_ts||c.updated_at);
   let badges="";
   if (c.msgs_sin_respuesta>0) badges+=`<span class="badge badge-unread">${c.msgs_sin_respuesta}</span>`;
-  if (mins>=15) badges+=`<span class="badge badge-urgent">⏰ ${mins}m sin respuesta</span>`;
-  else if (mins>=5) badges+=`<span class="badge badge-warn">⏱ ${mins}m esperando</span>`;
-  else if (mins>=1&&c.state!=="IDLE") badges+=`<span class="badge" style="background:#f8fafc;color:#94a3b8;border-color:#e2e8f0;">⏱ ${mins}m</span>`;
+  if (mins>=15) badges+=`<span class="badge badge-urgent">⏰ ${waitLabel(mins)} sin respuesta</span>`;
+  else if (mins>=5) badges+=`<span class="badge badge-warn">⏱ ${waitLabel(mins)} esperando</span>`;
+  else if (mins>=1&&c.state!=="IDLE") badges+=`<span class="badge" style="background:#f8fafc;color:#94a3b8;border-color:#e2e8f0;">⏱ ${waitLabel(mins)}</span>`;
   if (fd.fecha_display&&fd.hora_inicio) badges+=`<span class="badge badge-prob">✅ Lista para agendar</span>`;
   return `<div class="conv-card${selectedPhone===c.phone?" selected":""}" style="border-left-color:${g.dot};" onclick="selectConv('${c.phone}')">
     <div class="card-top">
