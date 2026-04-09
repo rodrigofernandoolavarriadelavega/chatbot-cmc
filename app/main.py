@@ -720,6 +720,25 @@ let currentFilter = "all";
 let currentEsp = "all";
 let localNotes = {};
 
+const ESP_DISPLAY = {
+  "medicina general":"Medicina General","medicina familiar":"Medicina Familiar",
+  "kinesiología":"Kinesiología","masoterapia":"Masoterapia","masaje":"Masoterapia",
+  "etcheverry":"Kinesiología · Etcheverry","armijo":"Kinesiología · Luis Armijo",
+  "paola":"Masoterapia · Paola Acosta","paola acosta":"Masoterapia · Paola Acosta",
+  "abarca":"Medicina General · Dr. Abarca","olavarría":"Medicina General · Dr. Olavarría",
+  "otorrinolaringología":"ORL · Dr. Borrego","cardiología":"Cardiología",
+  "traumatología":"Traumatología · Dr. Barraza","ginecología":"Ginecología · Dr. Rejón",
+  "gastroenterología":"Gastroenterología · Dr. Quijano","odontología general":"Odontología General",
+  "ortodoncia":"Ortodoncia","endodoncia":"Endodoncia","implantología":"Implantología",
+  "estética facial":"Estética Facial","nutrición":"Nutrición","psicología":"Psicología",
+  "psicología adulto":"Psicología Adulto","fonoaudiología":"Fonoaudiología",
+  "matrona":"Matrona","podología":"Podología","ecografía":"Ecografía",
+};
+function espLabel(key) {
+  if (!key) return '';
+  return ESP_DISPLAY[key.toLowerCase()] || (key.charAt(0).toUpperCase() + key.slice(1));
+}
+
 const ACTIVE_STATES = ["WAIT_ESPECIALIDAD","WAIT_SLOT","WAIT_MODALIDAD","WAIT_RUT_AGENDAR",
   "WAIT_NOMBRE_NUEVO","CONFIRMING_CITA","WAIT_RUT_CANCELAR","WAIT_CITA_CANCELAR",
   "CONFIRMING_CANCEL","WAIT_RUT_VER"];
@@ -816,7 +835,7 @@ function renderEspButtons() {
   emptyEl.style.display="none";
   el.innerHTML = entries.map(([esp,cnt]) =>
     `<button class="esp-btn${currentEsp===esp?" active":""}" data-esp="${esp.replace(/"/g,"&quot;")}" onclick="setEspFilter(this.dataset.esp)">
-      🩺 ${esp} <span class="esp-btn-count">${cnt}</span>
+      🩺 ${espLabel(esp)} <span class="esp-btn-count">${cnt}</span>
     </button>`
   ).join("");
 }
@@ -873,7 +892,7 @@ function convCard(c,g) {
       <span class="ctime">${relTime(c.last_ts||c.updated_at)}</span>
     </div>
     <div class="cstate" style="color:${g.dot};">${stateLabel(c.state)}</div>
-    ${fd.especialidad?`<div class="cesp">🩺 ${fd.especialidad}</div>`:""}
+    ${fd.especialidad?`<div class="cesp">🩺 ${espLabel(fd.especialidad)}</div>`:""}
     <div class="cpreview">${dir}${preview.replace(/</g,"&lt;")}</div>
     ${badges?`<div class="cbadges">${badges}</div>`:""}
   </div>`;
@@ -922,7 +941,7 @@ function updateContextPanel(conv) {
   const hasFlow=fd.especialidad||fd.profesional||fd.fecha_display;
   document.getElementById("ctx-flow-section").style.display=hasFlow?"block":"none";
   const ew=document.getElementById("ctx-esp-wrap"); const pw=document.getElementById("ctx-prof-wrap"); const sw=document.getElementById("ctx-slot-wrap");
-  if(fd.especialidad){ew.style.display="flex";document.getElementById("ctx-especialidad").textContent=fd.especialidad;}else ew.style.display="none";
+  if(fd.especialidad){ew.style.display="flex";document.getElementById("ctx-especialidad").textContent=espLabel(fd.especialidad);}else ew.style.display="none";
   if(fd.profesional){pw.style.display="flex";document.getElementById("ctx-profesional").textContent=fd.profesional;}else pw.style.display="none";
   if(fd.fecha_display&&fd.hora_inicio){sw.style.display="flex";document.getElementById("ctx-horario").textContent=fd.fecha_display+" · "+fd.hora_inicio.substring(0,5);}else sw.style.display="none";
   // Checklist de progreso
