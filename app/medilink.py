@@ -654,36 +654,43 @@ async def get_citas_seguimiento_mes(year: int, month: int, especialidad: str = "
     fecha_fin  = f"{year}-{month:02d}-{last_day:02d}"
     citas_raw = []
 
-    # /citas en Medilink no soporta rango gte/lte por profesional — se consulta día a día
-    async with httpx.AsyncClient(timeout=120) as client:
-        for id_prof in cfg["ids"]:
-            for day in range(1, last_day + 1):
-                fecha = f"{year}-{month:02d}-{day:02d}"
-                params = {
-                    "id_sucursal":      {"eq": int(MEDILINK_SUCURSAL)},
-                    "id_profesional":   {"eq": id_prof},
-                    "fecha":            {"eq": fecha},
-                    "estado_anulacion": {"eq": 0},
+    async def _fetch_dia(client: httpx.AsyncClient, id_prof: int, fecha: str):
+        params = {
+            "id_sucursal":      {"eq": int(MEDILINK_SUCURSAL)},
+            "id_profesional":   {"eq": id_prof},
+            "fecha":            {"eq": fecha},
+            "estado_anulacion": {"eq": 0},
+        }
+        try:
+            r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
+                           params={"q": _q(params)}, headers=HEADERS)
+            if r.status_code != 200:
+                return []
+            return [
+                {
+                    "id_prof":         id_prof,
+                    "prof_nombre":     PROFESIONALES[id_prof]["nombre"],
+                    "fecha":           fecha,
+                    "id_paciente":     c.get("id_paciente"),
+                    "paciente_nombre": (c.get("nombre_paciente") or "").strip(),
                 }
-                try:
-                    r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
-                                   params={"q": _q(params)}, headers=HEADERS)
-                    if r.status_code != 200:
-                        continue
-                    for c in r.json().get("data", []):
-                        id_pac = c.get("id_paciente")
-                        nombre = (c.get("nombre_paciente") or "").strip()
-                        if not id_pac:
-                            continue
-                        citas_raw.append({
-                            "id_prof":         id_prof,
-                            "prof_nombre":     PROFESIONALES[id_prof]["nombre"],
-                            "fecha":           fecha,
-                            "id_paciente":     id_pac,
-                            "paciente_nombre": nombre,
-                        })
-                except Exception as e:
-                    log.error("get_citas_seguimiento esp=%s prof=%d %s: %s", especialidad, id_prof, fecha, e)
+                for c in r.json().get("data", [])
+                if c.get("id_paciente")
+            ]
+        except Exception as e:
+            log.error("get_citas_seguimiento esp=%s prof=%d %s: %s", especialidad, id_prof, fecha, e)
+            return []
+
+    # /citas no soporta rango por profesional — se consulta día a día en paralelo
+    async with httpx.AsyncClient(timeout=30) as client:
+        tasks = [
+            _fetch_dia(client, id_prof, f"{year}-{month:02d}-{day:02d}")
+            for id_prof in cfg["ids"]
+            for day in range(1, last_day + 1)
+        ]
+        resultados = await asyncio.gather(*tasks)
+        for grupo in resultados:
+            citas_raw.extend(grupo)
 
     grupos: dict = defaultdict(list)
     for c in citas_raw:
