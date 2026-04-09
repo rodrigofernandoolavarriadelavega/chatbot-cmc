@@ -1024,8 +1024,29 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None) -> 
                 {"id": "maso_40", "title": "40 minutos"},
             ]
         )
-    smart, todos = await buscar_primer_dia(especialidad_lower)
-    if not todos:
+    # Para medicina general: stage 0 siempre muestra el slot más próximo de Abarca (73),
+    # independiente de si Olavarría o Márquez tienen slots antes ese mismo día.
+    _esp_med_general = {"medicina general", "medicina familiar"}
+    if especialidad_lower in _esp_med_general:
+        smart_abarca, todos_abarca = await buscar_primer_dia(especialidad_lower, solo_ids=[73])
+        if todos_abarca:
+            # Cargar todos los doctores del día de Abarca para la expansión "Ver más"
+            fecha_abarca = todos_abarca[0]["fecha"]
+            smart_todos, todos_todos = await buscar_slots_dia_por_ids(
+                _MED_GENERAL_IDS, fecha_abarca
+            )
+            smart  = smart_abarca
+            todos  = todos_todos if todos_todos else todos_abarca
+            mejor  = todos_abarca[0]
+        else:
+            # Abarca sin disponibilidad en 60 días → fallback general
+            smart, todos = await buscar_primer_dia(especialidad_lower)
+            mejor = todos[0] if todos else None
+    else:
+        smart, todos = await buscar_primer_dia(especialidad_lower)
+        mejor = smart[0] if smart else (todos[0] if todos else None)
+
+    if not todos or not mejor:
         reset_session(phone)
         log_event(phone, "sin_disponibilidad", {"especialidad": especialidad})
         save_tag(phone, "sin-disponibilidad")
@@ -1034,15 +1055,11 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None) -> 
             f"Llama a recepción para revisar más opciones:\n📞 *{CMC_TELEFONO}*\n\n"
             "_Escribe *menu* para volver._"
         )
-    fecha = todos[0]["fecha"]
+    fecha = mejor["fecha"]
     data.update({"especialidad": especialidad_lower, "slots": smart,
                  "todos_slots": todos, "fechas_vistas": [fecha],
                  "expansion_stage": 0})
     save_session(phone, "WAIT_SLOT", data)
-
-    # Sugerencia proactiva — para medicina general el más próximo; resto compacta agenda
-    _esp_prox = {"medicina general", "medicina familiar"}
-    mejor = todos[0] if especialidad_lower in _esp_prox else smart[0]
     nombre_conocido = data.get("nombre_conocido", "")
     nombre_corto = nombre_conocido.split()[0] if nombre_conocido else ""
     saludo = f"¡Hola de nuevo, *{nombre_corto}*! " if nombre_corto else ""

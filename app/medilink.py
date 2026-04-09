@@ -365,18 +365,21 @@ _ESPECIALIDADES_PRIORIDAD = {"medicina general", "medicina familiar"}
 
 async def buscar_primer_dia(especialidad: str, dias_adelante: int = 60,
                             excluir: list = None,
-                            intervalo_override: dict = None) -> tuple[list, list]:
+                            intervalo_override: dict = None,
+                            solo_ids: list = None) -> tuple[list, list]:
     """
     Retorna (smart_5, todos_libres) del día disponible más próximo.
     Usa /especialidades/{id}/proxima para descubrir la primera fecha disponible,
     luego obtiene todos los slots reales de ese día cruzando con /citas.
     intervalo_override: {id_prof: minutos} para sobreescribir el intervalo de un profesional.
+    solo_ids: si se pasa, restringe la búsqueda a esos IDs (ignora ESPECIALIDADES_MAP).
     """
-    ids = _ids_para_especialidad(especialidad)
+    ids = solo_ids if solo_ids else _ids_para_especialidad(especialidad)
     if not ids:
         return [], []
 
-    usar_prioridad = especialidad.lower() in _ESPECIALIDADES_PRIORIDAD
+    # Con solo_ids no usar prioridad (ya viene filtrado)
+    usar_prioridad = (not solo_ids) and (especialidad.lower() in _ESPECIALIDADES_PRIORIDAD)
     excluir_set = set(excluir or [])
     id_esp = _id_especialidad(especialidad)
 
