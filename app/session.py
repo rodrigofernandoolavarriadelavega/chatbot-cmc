@@ -436,49 +436,43 @@ def get_ultimo_seguimiento(phone: str) -> dict | None:
 
 # ── Kinesiología tracking ──────────────────────────────────────────────────────
 
+def _ensure_kine_table(conn):
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS kine_tracking (
+            id_paciente INTEGER NOT NULL,
+            id_prof     INTEGER NOT NULL,
+            total_sesiones INTEGER DEFAULT 0,
+            modalidad   TEXT DEFAULT 'fonasa',
+            notas       TEXT DEFAULT '',
+            updated_at  TEXT DEFAULT (datetime('now')),
+            PRIMARY KEY (id_paciente, id_prof)
+        )
+    """)
+    conn.commit()
+
+
 def get_kine_tracking_all() -> list:
-    """Retorna todos los registros de seguimiento kinesiológico."""
+    """Retorna todos los registros de seguimiento de pacientes en control."""
     with _conn() as conn:
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS kine_tracking (
-                rut         TEXT NOT NULL,
-                id_prof     INTEGER NOT NULL,
-                total_sesiones INTEGER DEFAULT 0,
-                modalidad   TEXT DEFAULT 'fonasa',
-                notas       TEXT DEFAULT '',
-                updated_at  TEXT DEFAULT (datetime('now')),
-                PRIMARY KEY (rut, id_prof)
-            )
-        """)
-        conn.commit()
+        _ensure_kine_table(conn)
         rows = conn.execute("SELECT * FROM kine_tracking ORDER BY updated_at DESC").fetchall()
         return [dict(r) for r in rows]
 
 
-def save_kine_tracking(rut: str, id_prof: int, total_sesiones: int,
+def save_kine_tracking(id_paciente: int, id_prof: int, total_sesiones: int,
                        modalidad: str = "fonasa", notas: str = ""):
-    """Guarda o actualiza el seguimiento kinesiológico de un paciente."""
+    """Guarda o actualiza el seguimiento de un paciente en control."""
     with _conn() as conn:
+        _ensure_kine_table(conn)
         conn.execute("""
-            CREATE TABLE IF NOT EXISTS kine_tracking (
-                rut         TEXT NOT NULL,
-                id_prof     INTEGER NOT NULL,
-                total_sesiones INTEGER DEFAULT 0,
-                modalidad   TEXT DEFAULT 'fonasa',
-                notas       TEXT DEFAULT '',
-                updated_at  TEXT DEFAULT (datetime('now')),
-                PRIMARY KEY (rut, id_prof)
-            )
-        """)
-        conn.execute("""
-            INSERT INTO kine_tracking (rut, id_prof, total_sesiones, modalidad, notas, updated_at)
+            INSERT INTO kine_tracking (id_paciente, id_prof, total_sesiones, modalidad, notas, updated_at)
             VALUES (?, ?, ?, ?, ?, datetime('now'))
-            ON CONFLICT(rut, id_prof) DO UPDATE SET
+            ON CONFLICT(id_paciente, id_prof) DO UPDATE SET
                 total_sesiones=excluded.total_sesiones,
                 modalidad=excluded.modalidad,
                 notas=excluded.notas,
                 updated_at=excluded.updated_at
-        """, (rut, id_prof, total_sesiones, modalidad, notas))
+        """, (id_paciente, id_prof, total_sesiones, modalidad, notas))
         conn.commit()
 
 

@@ -486,7 +486,7 @@ body {
     <button class="btn btn-primary" onclick="abrirModalAgendar()" style="margin-left:8px;font-size:12px;padding:6px 14px;border-radius:8px;">+ Nueva Cita</button>
     <button class="btn" onclick="abrirBusquedaGlobal()" style="margin-left:6px;font-size:12px;padding:6px 14px;border-radius:8px;background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;">🔍 Buscar</button>
     <button class="btn" onclick="abrirModalAnular()" style="margin-left:6px;font-size:12px;padding:6px 14px;border-radius:8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;">✕ Anular Hora</button>
-    <button class="btn" onclick="abrirModalKine()" style="margin-left:6px;font-size:12px;padding:6px 14px;border-radius:8px;background:#f0fdf4;color:#15803d;border:1px solid #86efac;">🦵 Kinesiología</button>
+    <button class="btn" onclick="abrirModalKine()" style="margin-left:6px;font-size:12px;padding:6px 14px;border-radius:8px;background:#f0fdf4;color:#15803d;border:1px solid #86efac;">📋 Pacientes en Control</button>
   </div>
 </div>
 
@@ -1592,7 +1592,7 @@ function renderKine() {
 }
 async function guardarKine(i) {
   const p = kineDatos[i];
-  await fetch(`/admin/api/kine/${encodeURIComponent(p.rut)}/${p.id_prof}?token=${TOKEN}`, {
+  await fetch(`/admin/api/kine/${p.id_paciente}/${p.id_prof}?token=${TOKEN}`, {
     method: 'PUT',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({total_sesiones: p.total_sesiones, modalidad: p.modalidad, notas: p.notas})
@@ -1859,15 +1859,15 @@ async def admin_kine(mes: str = None, especialidad: str = "kinesiologia", token:
         hoy = date.today()
         year, month = hoy.year, hoy.month
     citas = await get_citas_seguimiento_mes(year, month, especialidad)
-    tracking = {(t["rut"], t["id_prof"]): t for t in get_kine_tracking_all()}
+    tracking = {(t["id_paciente"], t["id_prof"]): t for t in get_kine_tracking_all()}
     cfg = SEGUIMIENTO_ESPECIALIDADES.get(especialidad, {})
     for p in citas:
-        t = tracking.get((p["rut"], p["id_prof"]), {})
-        p["total_sesiones"]       = t.get("total_sesiones", 0)
-        p["modalidad"]            = t.get("modalidad", "fonasa")
-        p["notas"]                = t.get("notas", "")
-        p["precio_fonasa"]        = cfg.get("precio_fonasa")
-        p["precio_particular"]    = cfg.get("precio_particular")
+        t = tracking.get((p["id_paciente"], p["id_prof"]), {})
+        p["total_sesiones"]    = t.get("total_sesiones", 0)
+        p["modalidad"]         = t.get("modalidad", "fonasa")
+        p["notas"]             = t.get("notas", "")
+        p["precio_fonasa"]     = cfg.get("precio_fonasa")
+        p["precio_particular"] = cfg.get("precio_particular")
     return {"year": year, "month": month, "especialidad": especialidad,
             "especialidad_label": cfg.get("label", especialidad), "pacientes": citas}
 
@@ -1880,13 +1880,13 @@ def admin_kine_especialidades(token: str = Query(...)):
     ]}
 
 
-@app.put("/admin/api/kine/{rut}/{id_prof}")
-async def admin_kine_update(rut: str, id_prof: int, request: Request, token: str = Query(...)):
-    """Actualiza el tracking de sesiones de un paciente (cualquier especialidad recurrente)."""
+@app.put("/admin/api/kine/{id_paciente}/{id_prof}")
+async def admin_kine_update(id_paciente: int, id_prof: int, request: Request, token: str = Query(...)):
+    """Actualiza el tracking de sesiones de un paciente en control."""
     _check_token(token)
     body = await request.json()
     save_kine_tracking(
-        rut, id_prof,
+        id_paciente, id_prof,
         int(body.get("total_sesiones", 0)),
         body.get("modalidad", "fonasa"),
         body.get("notas", ""),

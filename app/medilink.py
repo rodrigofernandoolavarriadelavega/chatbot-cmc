@@ -364,11 +364,13 @@ _ESPECIALIDADES_PRIORIDAD = {"medicina general", "medicina familiar"}
 
 
 async def buscar_primer_dia(especialidad: str, dias_adelante: int = 60,
-                            excluir: list = None) -> tuple[list, list]:
+                            excluir: list = None,
+                            intervalo_override: dict = None) -> tuple[list, list]:
     """
     Retorna (smart_5, todos_libres) del día disponible más próximo.
     Usa /especialidades/{id}/proxima para descubrir la primera fecha disponible,
     luego obtiene todos los slots reales de ese día cruzando con /citas.
+    intervalo_override: {id_prof: minutos} para sobreescribir el intervalo de un profesional.
     """
     ids = _ids_para_especialidad(especialidad)
     if not ids:
@@ -380,6 +382,10 @@ async def buscar_primer_dia(especialidad: str, dias_adelante: int = 60,
 
     async with httpx.AsyncClient(timeout=15) as client:
         horarios = {i: await _get_horario(client, i) for i in ids}
+        if intervalo_override:
+            for id_prof, mins in intervalo_override.items():
+                if id_prof in horarios:
+                    horarios[id_prof] = {**horarios[id_prof], "intervalo": mins}
 
         # Intentar con /proxima para descubrir la fecha rápidamente
         primera_fecha = None
@@ -458,7 +464,8 @@ async def consultar_proxima_fecha(especialidad: str) -> str | None:
     return None
 
 
-async def buscar_slots_dia(especialidad: str, fecha: str) -> tuple[list, list]:
+async def buscar_slots_dia(especialidad: str, fecha: str,
+                           intervalo_override: dict = None) -> tuple[list, list]:
     """Retorna (smart_5, todos_libres) para una fecha específica."""
     ids = _ids_para_especialidad(especialidad)
     if not ids:
@@ -466,15 +473,24 @@ async def buscar_slots_dia(especialidad: str, fecha: str) -> tuple[list, list]:
     usar_prioridad = especialidad.lower() in _ESPECIALIDADES_PRIORIDAD
     async with httpx.AsyncClient(timeout=15) as client:
         horarios = {i: await _get_horario(client, i) for i in ids}
+        if intervalo_override:
+            for id_prof, mins in intervalo_override.items():
+                if id_prof in horarios:
+                    horarios[id_prof] = {**horarios[id_prof], "intervalo": mins}
         return await _slots_para_fecha(client, ids, horarios, fecha, prioridad=usar_prioridad)
 
 
-async def buscar_slots_dia_por_ids(ids: list, fecha: str) -> tuple[list, list]:
+async def buscar_slots_dia_por_ids(ids: list, fecha: str,
+                                   intervalo_override: dict = None) -> tuple[list, list]:
     """Retorna (smart_5, todos_libres) para una fecha y lista explícita de IDs de profesional."""
     if not ids:
         return [], []
     async with httpx.AsyncClient(timeout=15) as client:
         horarios = {i: await _get_horario(client, i) for i in ids}
+        if intervalo_override:
+            for id_prof, mins in intervalo_override.items():
+                if id_prof in horarios:
+                    horarios[id_prof] = {**horarios[id_prof], "intervalo": mins}
         return await _slots_para_fecha(client, ids, horarios, fecha)
 
 
@@ -631,49 +647,50 @@ async def get_citas_seguimiento_mes(year: int, month: int, especialidad: str = "
     fecha_fin  = f"{year}-{month:02d}-{last_day:02d}"
     citas_raw = []
 
-    async with httpx.AsyncClient(timeout=20) as client:
+    # /citas en Medilink no soporta rango gte/lte por profesional — se consulta día a día
+    async with httpx.AsyncClient(timeout=120) as client:
         for id_prof in cfg["ids"]:
-            params = {
-                "id_sucursal":      {"eq": MEDILINK_SUCURSAL},
-                "id_profesional":   {"eq": id_prof},
-                "fecha":            {"gte": fecha_ini, "lte": fecha_fin},
-                "estado_anulacion": {"eq": 0},
-            }
-            try:
-                r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
-                               params={"q": _q(params), "limit": 500}, headers=HEADERS)
-                if r.status_code != 200:
-                    log.warning("get_citas_seguimiento: prof %d → %s", id_prof, r.status_code)
-                    continue
-                for c in r.json().get("data", []):
-                    paciente = c.get("paciente") or {}
-                    rut = str(paciente.get("rut", "") or c.get("rut_paciente", ""))
-                    nombre = f"{paciente.get('nombre','') or ''} {paciente.get('apellidos','') or ''}".strip()
-                    citas_raw.append({
-                        "id_prof":         id_prof,
-                        "prof_nombre":     PROFESIONALES[id_prof]["nombre"],
-                        "fecha":           c.get("fecha", ""),
-                        "rut":             rut,
-                        "paciente_nombre": nombre,
-                        "id_paciente":     paciente.get("id"),
-                    })
-            except Exception as e:
-                log.error("get_citas_seguimiento esp=%s prof=%d: %s", especialidad, id_prof, e)
+            for day in range(1, last_day + 1):
+                fecha = f"{year}-{month:02d}-{day:02d}"
+                params = {
+                    "id_sucursal":      {"eq": int(MEDILINK_SUCURSAL)},
+                    "id_profesional":   {"eq": id_prof},
+                    "fecha":            {"eq": fecha},
+                    "estado_anulacion": {"eq": 0},
+                }
+                try:
+                    r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
+                                   params={"q": _q(params)}, headers=HEADERS)
+                    if r.status_code != 200:
+                        continue
+                    for c in r.json().get("data", []):
+                        id_pac = c.get("id_paciente")
+                        nombre = (c.get("nombre_paciente") or "").strip()
+                        if not id_pac:
+                            continue
+                        citas_raw.append({
+                            "id_prof":         id_prof,
+                            "prof_nombre":     PROFESIONALES[id_prof]["nombre"],
+                            "fecha":           fecha,
+                            "id_paciente":     id_pac,
+                            "paciente_nombre": nombre,
+                        })
+                except Exception as e:
+                    log.error("get_citas_seguimiento esp=%s prof=%d %s: %s", especialidad, id_prof, fecha, e)
 
     grupos: dict = defaultdict(list)
     for c in citas_raw:
-        key = (c["rut"], c["id_prof"])
+        key = (c["id_paciente"], c["id_prof"])
         grupos[key].append(c)
 
     result = []
-    for (rut, id_prof), citas in grupos.items():
+    for (id_pac, id_prof), citas in grupos.items():
         citas_sorted = sorted(citas, key=lambda x: x["fecha"])
         result.append({
-            "rut":             rut,
+            "id_paciente":     id_pac,
             "id_prof":         id_prof,
             "prof_nombre":     PROFESIONALES[id_prof]["nombre"],
             "paciente_nombre": citas_sorted[0]["paciente_nombre"],
-            "id_paciente":     citas_sorted[0]["id_paciente"],
             "sesiones_mes":    len(citas_sorted),
             "fechas":          [c["fecha"] for c in citas_sorted],
             "primera_fecha":   citas_sorted[0]["fecha"],
