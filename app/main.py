@@ -9,12 +9,14 @@ import asyncio
 import logging
 import logging.config
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import httpx
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from fastapi import FastAPI, Request, Response, Query, HTTPException
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from config import META_ACCESS_TOKEN, META_PHONE_NUMBER_ID, META_VERIFY_TOKEN, CMC_TELEFONO, ADMIN_TOKEN
 from flows import handle_message
 from reminders import enviar_recordatorios
@@ -107,6 +109,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="CMC WhatsApp Bot", lifespan=lifespan)
+app.mount("/static", StaticFiles(directory=str(Path(__file__).parent.parent / "static")), name="static")
 
 META_API_URL = f"https://graph.facebook.com/v22.0/{META_PHONE_NUMBER_ID}/messages"
 
@@ -466,13 +469,8 @@ body {
 <!-- TOPBAR -->
 <div class="topbar">
   <div class="brand">
-    <div class="brand-icon">
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-        <path d="M10 3v14M3 10h14" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
-      </svg>
-    </div>
-    <div class="brand-text">
-      <h1>Centro Médico Carampangue</h1>
+    <img src="/static/logo.png" alt="Centro Médico Carampangue" style="height:36px;object-fit:contain;">
+    <div class="brand-text" style="margin-left:4px;">
       <p>Panel de Recepción · WhatsApp Bot</p>
     </div>
   </div>
