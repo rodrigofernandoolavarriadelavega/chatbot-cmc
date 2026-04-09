@@ -23,7 +23,8 @@ from reminders import enviar_recordatorios
 from fidelizacion import enviar_seguimiento_postconsulta, enviar_reactivacion_pacientes
 from medilink import (buscar_paciente, crear_paciente, buscar_primer_dia,
                       buscar_slots_dia, crear_cita, listar_citas_paciente,
-                      cancelar_cita, get_citas_kine_mes, PROFESIONALES, ESPECIALIDADES_MAP)
+                      cancelar_cita, get_citas_seguimiento_mes, SEGUIMIENTO_ESPECIALIDADES,
+                      PROFESIONALES, ESPECIALIDADES_MAP)
 from session import (get_session, is_duplicate, reset_session, save_session, get_metricas,
                      log_message, get_messages, get_conversations, log_event,
                      get_sesiones_abandonadas, get_tags, save_tag, delete_tag, search_messages,
@@ -493,7 +494,13 @@ body {
 <div id="modal-kine" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:flex-start;justify-content:center;padding-top:40px;padding-bottom:40px;overflow-y:auto;">
   <div style="background:#fff;border-radius:14px;width:900px;max-width:96vw;box-shadow:0 20px 60px rgba(0,0,0,.2);position:relative;margin:auto;">
     <div style="padding:20px 24px 14px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-      <span style="font-size:16px;font-weight:700;color:#15803d;">🦵 Seguimiento Kinesiología</span>
+      <span style="font-size:16px;font-weight:700;color:#15803d;">📋 Pacientes en Tratamiento</span>
+      <select id="kine-esp-select" onchange="kineEspActual=this.value;cargarKine()" style="border:1px solid #e2e8f0;border-radius:8px;padding:5px 10px;font-size:13px;color:#334155;">
+        <option value="kinesiologia">🦵 Kinesiología</option>
+        <option value="ortodoncia">🦷 Ortodoncia</option>
+        <option value="psicologia">🧠 Psicología</option>
+        <option value="nutricion">🥗 Nutrición</option>
+      </select>
       <div style="display:flex;align-items:center;gap:6px;margin-left:auto;">
         <button onclick="kineNavMes(-1)" style="background:#f1f5f9;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:14px;">◀</button>
         <span id="kine-mes-label" style="font-size:13px;font-weight:600;color:#334155;min-width:100px;text-align:center;"></span>
@@ -1454,16 +1461,21 @@ async function confirmarAnular(){
   }
 }
 
-// ── MODAL KINESIOLOGÍA ────────────────────────────────────────────────────────
+// ── MODAL PACIENTES EN TRATAMIENTO ───────────────────────────────────────────
 const MESES_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio",
                   "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
-const PRECIO_KINE = {fonasa: 7830, particular: 20000};
 
 let kineMesActual = new Date();
 let kineDatos = [];
+let kineEspActual = "kinesiologia";
+let kineEspLabel = "Kinesiología";
+let kinePrecioFonasa = 7830;
+let kinePrecioParticular = 20000;
 
 function abrirModalKine() {
   kineMesActual = new Date();
+  kineEspActual = "kinesiologia";
+  document.getElementById('kine-esp-select').value = 'kinesiologia';
   document.getElementById('modal-kine').style.display = 'flex';
   cargarKine();
 }
@@ -1483,9 +1495,12 @@ async function cargarKine() {
   document.getElementById('kine-tbody').innerHTML = '';
   document.getElementById('kine-resumen').innerHTML = '';
   try {
-    const r = await fetch(`/admin/api/kine?mes=${y}-${m}&token=${TOKEN}`);
+    const r = await fetch(`/admin/api/kine?mes=${y}-${m}&especialidad=${kineEspActual}&token=${TOKEN}`);
     const d = await r.json();
     kineDatos = d.pacientes || [];
+    kineEspLabel = d.especialidad_label || kineEspActual;
+    kinePrecioFonasa = (d.pacientes[0]?.precio_fonasa) || 0;
+    kinePrecioParticular = (d.pacientes[0]?.precio_particular) || 0;
     renderKine();
   } catch(e) {
     document.getElementById('kine-loading').style.display = 'none';
@@ -1506,8 +1521,8 @@ function renderKine() {
   // Resumen
   const totalSesiones = kineDatos.reduce((s,p)=>s+p.sesiones_mes,0);
   const totalPacientes = kineDatos.length;
-  const ingFonasa = kineDatos.filter(p=>p.modalidad==='fonasa').reduce((s,p)=>s+p.sesiones_mes*7830,0);
-  const ingPart   = kineDatos.filter(p=>p.modalidad!=='fonasa').reduce((s,p)=>s+p.sesiones_mes*20000,0);
+  const ingFonasa = kineDatos.filter(p=>p.modalidad==='fonasa').reduce((s,p)=>s+p.sesiones_mes*(p.precio_fonasa||kinePrecioFonasa),0);
+  const ingPart   = kineDatos.filter(p=>p.modalidad!=='fonasa').reduce((s,p)=>s+p.sesiones_mes*(p.precio_particular||kinePrecioParticular),0);
   const ingTotal  = ingFonasa + ingPart;
   document.getElementById('kine-resumen').innerHTML = `
     <span>👤 <strong>${totalPacientes}</strong> pacientes</span>
@@ -1529,7 +1544,13 @@ function renderKine() {
         <span style="font-size:11px;color:#475569;white-space:nowrap;">${hechas}/${total}</span>
       </div>` : `<span style="font-size:11px;color:#94a3b8;">—</span>`;
 
-    const profShort = p.prof_nombre.includes('Etcheverry') ? 'Leo' : 'Luis';
+    const profNombre = p.prof_nombre || '—';
+    // Nombre corto: tomar primera palabra que no sea Dr/Dra
+    const profParts = profNombre.replace(/^Dr\.?\s*|^Dra\.?\s*/i,'').split(' ');
+    const profShort = profParts[profParts.length-1]; // apellido
+    const profColors = ['#dbeafe','#dcfce7','#fef9c3','#ede9fe','#ffedd5'];
+    const profTextColors = ['#1d4ed8','#15803d','#854d0e','#6d28d9','#9a3412'];
+    const profColorIdx = p.id_prof % profColors.length;
     const rut = p.rut || '—';
     const nombre = p.paciente_nombre || rut;
 
@@ -1539,7 +1560,7 @@ function renderKine() {
         <div style="font-size:11px;color:#94a3b8;">${rut}</div>
       </td>
       <td style="padding:10px 12px;">
-        <span style="background:${profShort==='Leo'?'#dbeafe':'#dcfce7'};color:${profShort==='Leo'?'#1d4ed8':'#15803d'};border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600;">${profShort}</span>
+        <span style="background:${profColors[profColorIdx]};color:${profTextColors[profColorIdx]};border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600;">${profShort}</span>
       </td>
       <td style="padding:10px 12px;text-align:center;">
         <span style="font-size:16px;font-weight:700;color:#1172AB;">${hechas}</span>
@@ -1825,8 +1846,8 @@ async def admin_anular_cita(request: Request, token: str = Query(...)):
 
 
 @app.get("/admin/api/kine")
-async def admin_kine(mes: str = None, token: str = Query(...)):
-    """Retorna citas de kinesiología del mes + datos de tracking manual."""
+async def admin_kine(mes: str = None, especialidad: str = "kinesiologia", token: str = Query(...)):
+    """Retorna citas de una especialidad recurrente del mes + datos de tracking manual."""
     _check_token(token)
     from datetime import date
     if mes:
@@ -1837,19 +1858,31 @@ async def admin_kine(mes: str = None, token: str = Query(...)):
     else:
         hoy = date.today()
         year, month = hoy.year, hoy.month
-    citas = await get_citas_kine_mes(year, month)
+    citas = await get_citas_seguimiento_mes(year, month, especialidad)
     tracking = {(t["rut"], t["id_prof"]): t for t in get_kine_tracking_all()}
+    cfg = SEGUIMIENTO_ESPECIALIDADES.get(especialidad, {})
     for p in citas:
         t = tracking.get((p["rut"], p["id_prof"]), {})
-        p["total_sesiones"]  = t.get("total_sesiones", 0)
-        p["modalidad"]       = t.get("modalidad", "fonasa")
-        p["notas"]           = t.get("notas", "")
-    return {"year": year, "month": month, "pacientes": citas}
+        p["total_sesiones"]       = t.get("total_sesiones", 0)
+        p["modalidad"]            = t.get("modalidad", "fonasa")
+        p["notas"]                = t.get("notas", "")
+        p["precio_fonasa"]        = cfg.get("precio_fonasa")
+        p["precio_particular"]    = cfg.get("precio_particular")
+    return {"year": year, "month": month, "especialidad": especialidad,
+            "especialidad_label": cfg.get("label", especialidad), "pacientes": citas}
+
+
+@app.get("/admin/api/kine/especialidades")
+def admin_kine_especialidades(token: str = Query(...)):
+    _check_token(token)
+    return {"especialidades": [
+        {"id": k, "label": v["label"]} for k, v in SEGUIMIENTO_ESPECIALIDADES.items()
+    ]}
 
 
 @app.put("/admin/api/kine/{rut}/{id_prof}")
 async def admin_kine_update(rut: str, id_prof: int, request: Request, token: str = Query(...)):
-    """Actualiza el tracking de sesiones de un paciente kine."""
+    """Actualiza el tracking de sesiones de un paciente (cualquier especialidad recurrente)."""
     _check_token(token)
     body = await request.json()
     save_kine_tracking(
@@ -1909,7 +1942,7 @@ async def webhook(request: Request):
         else:
             return Response(status_code=200)
 
-        phone = msg["from"]
+        phone = msg["from"].lstrip("+")  # normalizar: siempre sin + (ej: "56987834148")
         msg_id = msg.get("id", "")
 
         if msg_id and is_duplicate(msg_id):

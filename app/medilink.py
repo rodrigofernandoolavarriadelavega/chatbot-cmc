@@ -25,30 +25,30 @@ _MEDILINK_DIA_TO_WEEKDAY = {1:0, 2:1, 3:2, 4:3, 5:4, 6:5, 7:6}
 
 # Profesionales habilitados en el CMC (id → info)
 PROFESIONALES = {
-     1: {"nombre": "Dr. Rodrigo Olavarría", "especialidad": "Medicina General",      "intervalo": 15},
-    73: {"nombre": "Dr. Andrés Abarca",     "especialidad": "Medicina General",      "intervalo": 15},
-    13: {"nombre": "Dr. Alonso Márquez",    "especialidad": "Medicina General",      "intervalo": 15},
-    23: {"nombre": "Dr. Manuel Borrego",    "especialidad": "Otorrinolaringología",  "intervalo": 30},
-    60: {"nombre": "Dr. Miguel Millán",     "especialidad": "Cardiología",           "intervalo": 20, "dias": [5]},
-    64: {"nombre": "Dr. Claudio Barraza",   "especialidad": "Traumatología",         "intervalo": 30},
-    61: {"nombre": "Dr. Tirso Rejón",       "especialidad": "Ginecología",           "intervalo": 30},
-    65: {"nombre": "Dr. Nicolás Quijano",   "especialidad": "Gastroenterología",     "intervalo": 30},
-    55: {"nombre": "Dra. Javiera Burgos",   "especialidad": "Odontología General",   "intervalo": 30},
-    72: {"nombre": "Dr. Carlos Jiménez",    "especialidad": "Odontología General",   "intervalo": 30},
-    66: {"nombre": "Dra. Daniela Castillo", "especialidad": "Ortodoncia",            "intervalo": 60},
-    75: {"nombre": "Dr. Fernando Fredes",   "especialidad": "Endodoncia",            "intervalo": 60},
-    69: {"nombre": "Dra. Aurora Valdés",    "especialidad": "Implantología",         "intervalo": 60},
-    76: {"nombre": "Dra. Valentina Fuentealba","especialidad": "Estética Facial",    "intervalo": 30},
-    59: {"nombre": "Paola Acosta",          "especialidad": "Masoterapia",           "intervalo": 30},
-    77: {"nombre": "Luis Armijo",           "especialidad": "Kinesiología",          "intervalo": 40},
-    21: {"nombre": "Leonardo Etcheverry",   "especialidad": "Kinesiología",          "intervalo": 40},
-    52: {"nombre": "Gisela Pinto",          "especialidad": "Nutrición",             "intervalo": 30},
-    74: {"nombre": "Jorge Montalba",        "especialidad": "Psicología Adulto",     "intervalo": 60},
-    49: {"nombre": "Juan Pablo Rodríguez",  "especialidad": "Psicología Adulto",     "intervalo": 60},
-    70: {"nombre": "Juana Arratia",         "especialidad": "Fonoaudiología",        "intervalo": 30},
-    67: {"nombre": "Sarai Gómez",           "especialidad": "Matrona",               "intervalo": 30},
-    56: {"nombre": "Andrea Guevara",        "especialidad": "Podología",             "intervalo": 30},
-    68: {"nombre": "David Pardo",           "especialidad": "Ecografía",             "intervalo": 30},
+     1: {"nombre": "Dr. Rodrigo Olavarría",    "especialidad": "Medicina General",      "intervalo": 15},
+    73: {"nombre": "Dr. Andrés Abarca",        "especialidad": "Medicina General",      "intervalo": 15},
+    13: {"nombre": "Dr. Alonso Márquez",       "especialidad": "Medicina General",      "intervalo": 20},
+    23: {"nombre": "Dr. Manuel Borrego",       "especialidad": "Otorrinolaringología",  "intervalo": 20},
+    60: {"nombre": "Dr. Miguel Millán",        "especialidad": "Cardiología",           "intervalo": 20, "dias": [5]},
+    64: {"nombre": "Dr. Claudio Barraza",      "especialidad": "Traumatología",         "intervalo": 15},
+    61: {"nombre": "Dr. Tirso Rejón",          "especialidad": "Ginecología",           "intervalo": 20},
+    65: {"nombre": "Dr. Nicolás Quijano",      "especialidad": "Gastroenterología",     "intervalo": 20},
+    55: {"nombre": "Dra. Javiera Burgos",      "especialidad": "Odontología General",   "intervalo": 30},
+    72: {"nombre": "Dr. Carlos Jiménez",       "especialidad": "Odontología General",   "intervalo": 30},
+    66: {"nombre": "Dra. Daniela Castillo",    "especialidad": "Ortodoncia",            "intervalo": 30},
+    75: {"nombre": "Dr. Fernando Fredes",      "especialidad": "Endodoncia",            "intervalo": 30},
+    69: {"nombre": "Dra. Aurora Valdés",       "especialidad": "Implantología",         "intervalo": 30},
+    76: {"nombre": "Dra. Valentina Fuentealba","especialidad": "Estética Facial",       "intervalo": 30},
+    59: {"nombre": "Paola Acosta",             "especialidad": "Masoterapia",           "intervalo": 20},
+    77: {"nombre": "Luis Armijo",              "especialidad": "Kinesiología",          "intervalo": 40},
+    21: {"nombre": "Leonardo Etcheverry",      "especialidad": "Kinesiología",          "intervalo": 40},
+    52: {"nombre": "Gisela Pinto",             "especialidad": "Nutrición",             "intervalo": 60},
+    74: {"nombre": "Jorge Montalba",           "especialidad": "Psicología Adulto",     "intervalo": 45},
+    49: {"nombre": "Juan Pablo Rodríguez",     "especialidad": "Psicología Adulto",     "intervalo": 45},
+    70: {"nombre": "Juana Arratia",            "especialidad": "Fonoaudiología",        "intervalo": 30},
+    67: {"nombre": "Sarai Gómez",              "especialidad": "Matrona",               "intervalo": 30},
+    56: {"nombre": "Andrea Guevara",           "especialidad": "Podología",             "intervalo": 60},
+    68: {"nombre": "David Pardo",              "especialidad": "Ecografía",             "intervalo": 15},
 }
 
 # Mapa de palabras clave → IDs de profesionales
@@ -163,7 +163,6 @@ async def _get_horario(client: httpx.AsyncClient, id_prof: int) -> dict:
         data = r.json().get("data", [])
         sucursal_data = next((x for x in data if x.get("id_sucursal") == int(MEDILINK_SUCURSAL)), None)
         if sucursal_data:
-            intervalo = sucursal_data.get("intervalo", PROFESIONALES[id_prof]["intervalo"])
             dias_activos = set()
             horario_dia = {}
             for d in sucursal_data.get("dias", []):
@@ -175,7 +174,7 @@ async def _get_horario(client: httpx.AsyncClient, id_prof: int) -> dict:
                         dias_activos.add(wd)
                         horario_dia[wd] = (hi[:5], hf[:5])
             horario = {
-                "intervalo":   intervalo,
+                "intervalo":   PROFESIONALES[id_prof]["intervalo"],
                 "dias":        dias_activos if dias_activos else set(range(5)),
                 "horario_dia": horario_dia,
             }
@@ -609,21 +608,31 @@ async def cancelar_cita(id_cita: int) -> bool:
             return False
 
 
-async def get_citas_kine_mes(year: int, month: int) -> list:
-    """Retorna todas las citas de kinesiología (Luis y Leo) en el mes indicado,
-    agrupadas por paciente. Incluye también citas de Paola Acosta (masoterapia).
-    """
-    import calendar
-    last_day = calendar.monthrange(year, month)[1]
-    # Medilink fecha en formato YYYY-MM-DD para filtros gte/lte
-    fecha_ini = f"{year}-{month:02d}-01"
-    fecha_fin = f"{year}-{month:02d}-{last_day:02d}"
+# Especialidades con pacientes recurrentes — para el panel de seguimiento
+SEGUIMIENTO_ESPECIALIDADES = {
+    "kinesiologia":  {"label": "Kinesiología",  "ids": [77, 21],     "precio_fonasa": 7830,  "precio_particular": 20000},
+    "ortodoncia":    {"label": "Ortodoncia",     "ids": [66],         "precio_fonasa": None,  "precio_particular": 30000},
+    "psicologia":    {"label": "Psicología",     "ids": [74, 49],     "precio_fonasa": 14420, "precio_particular": 20000},
+    "nutricion":     {"label": "Nutrición",      "ids": [52],         "precio_fonasa": 4770,  "precio_particular": 20000},
+}
 
-    kine_ids = [77, 21]  # Luis Armijo, Leonardo Etcheverry
+
+async def get_citas_seguimiento_mes(year: int, month: int, especialidad: str = "kinesiologia") -> list:
+    """Retorna las citas del mes para una especialidad recurrente, agrupadas por paciente."""
+    import calendar
+    from collections import defaultdict
+
+    cfg = SEGUIMIENTO_ESPECIALIDADES.get(especialidad)
+    if not cfg:
+        return []
+
+    last_day = calendar.monthrange(year, month)[1]
+    fecha_ini = f"{year}-{month:02d}-01"
+    fecha_fin  = f"{year}-{month:02d}-{last_day:02d}"
     citas_raw = []
 
     async with httpx.AsyncClient(timeout=20) as client:
-        for id_prof in kine_ids:
+        for id_prof in cfg["ids"]:
             params = {
                 "id_sucursal":      {"eq": MEDILINK_SUCURSAL},
                 "id_profesional":   {"eq": id_prof},
@@ -634,27 +643,23 @@ async def get_citas_kine_mes(year: int, month: int) -> list:
                 r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
                                params={"q": _q(params), "limit": 500}, headers=HEADERS)
                 if r.status_code != 200:
-                    log.warning("get_citas_kine_mes: prof %d → %s", id_prof, r.status_code)
+                    log.warning("get_citas_seguimiento: prof %d → %s", id_prof, r.status_code)
                     continue
                 for c in r.json().get("data", []):
                     paciente = c.get("paciente") or {}
                     rut = str(paciente.get("rut", "") or c.get("rut_paciente", ""))
                     nombre = f"{paciente.get('nombre','') or ''} {paciente.get('apellidos','') or ''}".strip()
                     citas_raw.append({
-                        "id_cita":       c.get("id"),
-                        "id_prof":       id_prof,
-                        "prof_nombre":   PROFESIONALES[id_prof]["nombre"],
-                        "fecha":         c.get("fecha", ""),
-                        "hora_inicio":   (c.get("hora_inicio") or "")[:5],
-                        "rut":           rut,
+                        "id_prof":         id_prof,
+                        "prof_nombre":     PROFESIONALES[id_prof]["nombre"],
+                        "fecha":           c.get("fecha", ""),
+                        "rut":             rut,
                         "paciente_nombre": nombre,
-                        "id_paciente":   paciente.get("id"),
+                        "id_paciente":     paciente.get("id"),
                     })
             except Exception as e:
-                log.error("get_citas_kine_mes prof %d: %s", id_prof, e)
+                log.error("get_citas_seguimiento esp=%s prof=%d: %s", especialidad, id_prof, e)
 
-    # Agrupar por (rut, id_prof)
-    from collections import defaultdict
     grupos: dict = defaultdict(list)
     for c in citas_raw:
         key = (c["rut"], c["id_prof"])
@@ -664,18 +669,23 @@ async def get_citas_kine_mes(year: int, month: int) -> list:
     for (rut, id_prof), citas in grupos.items():
         citas_sorted = sorted(citas, key=lambda x: x["fecha"])
         result.append({
-            "rut":           rut,
-            "id_prof":       id_prof,
-            "prof_nombre":   PROFESIONALES[id_prof]["nombre"],
+            "rut":             rut,
+            "id_prof":         id_prof,
+            "prof_nombre":     PROFESIONALES[id_prof]["nombre"],
             "paciente_nombre": citas_sorted[0]["paciente_nombre"],
-            "id_paciente":   citas_sorted[0]["id_paciente"],
-            "sesiones_mes":  len(citas_sorted),
-            "fechas":        [c["fecha"] for c in citas_sorted],
-            "primera_fecha": citas_sorted[0]["fecha"],
-            "ultima_fecha":  citas_sorted[-1]["fecha"],
+            "id_paciente":     citas_sorted[0]["id_paciente"],
+            "sesiones_mes":    len(citas_sorted),
+            "fechas":          [c["fecha"] for c in citas_sorted],
+            "primera_fecha":   citas_sorted[0]["fecha"],
+            "ultima_fecha":    citas_sorted[-1]["fecha"],
         })
 
     return sorted(result, key=lambda x: x["primera_fecha"])
+
+
+# Mantener alias para compatibilidad
+async def get_citas_kine_mes(year: int, month: int) -> list:
+    return await get_citas_seguimiento_mes(year, month, "kinesiologia")
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
