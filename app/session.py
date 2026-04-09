@@ -91,6 +91,11 @@ def _conn():
         )
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_fidel_phone ON fidelizacion_msgs(phone, tipo)")
+    # Migración: agregar canal a messages si no existe
+    try:
+        conn.execute("ALTER TABLE messages ADD COLUMN canal TEXT DEFAULT 'whatsapp'")
+    except Exception:
+        pass  # ya existe
     conn.commit()
     return conn
 
@@ -251,12 +256,12 @@ def log_event(phone: str, event: str, meta: dict = None):
         conn.commit()
 
 
-def log_message(phone: str, direction: str, text: str, state: str = "IDLE"):
+def log_message(phone: str, direction: str, text: str, state: str = "IDLE", canal: str = "whatsapp"):
     """Registra un mensaje entrante ('in') o saliente ('out') en el historial."""
     with _conn() as conn:
         conn.execute(
-            "INSERT INTO messages (phone, direction, text, state) VALUES (?, ?, ?, ?)",
-            (phone, direction, str(text)[:2000], state)
+            "INSERT INTO messages (phone, direction, text, state, canal) VALUES (?, ?, ?, ?, ?)",
+            (phone, direction, str(text)[:2000], state, canal)
         )
         conn.commit()
 
@@ -265,7 +270,7 @@ def get_messages(phone: str, limit: int = 100) -> list[dict]:
     """Retorna el historial de mensajes de un número (más reciente al final)."""
     with _conn() as conn:
         rows = conn.execute(
-            "SELECT id, phone, direction, text, state, ts FROM messages "
+            "SELECT id, phone, direction, text, state, ts, COALESCE(canal,'whatsapp') AS canal FROM messages "
             "WHERE phone=? ORDER BY id ASC LIMIT ?",
             (phone, limit)
         ).fetchall()
@@ -300,6 +305,7 @@ def get_conversations(limit: int = 200) -> list[dict]:
                 m.text        AS last_text,
                 m.direction   AS last_dir,
                 m.ts          AS last_ts,
+                COALESCE(m.canal, 'whatsapp') AS canal,
                 p.nombre,
                 p.rut,
                 (SELECT COUNT(*) FROM messages WHERE phone = s.phone) AS msg_count
@@ -474,6 +480,105 @@ def save_kine_tracking(id_paciente: int, id_prof: int, total_sesiones: int,
                 updated_at=excluded.updated_at
         """, (id_paciente, id_prof, total_sesiones, modalidad, notas))
         conn.commit()
+
+
+def puede_enviar_campana(phone: str, tipo: str, dias_cooldown: int = 7) -> bool:
+    """True si no se envió este tipo de campaña en los últimos dias_cooldown días."""
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT 1 FROM fidelizacion_msgs WHERE phone=? AND tipo=? "
+            "AND enviado_en >= datetime('now', ?)",
+            (phone, tipo, f"-{dias_cooldown} days")
+        ).fetchone()
+        return row is None
+
+
+def get_kine_candidatos_adherencia(gap_dias: int = 4) -> list[dict]:
+    """
+    Pacientes con cita de kinesiología hace gap_dias+ días,
+    sin cita kine futura, sin mensaje de adherencia en últimos 7 días.
+    """
+    with _conn() as conn:
+        rows = conn.execute("""
+            SELECT cb.phone, MAX(cb.fecha) AS ultima_fecha, cb.profesional, p.nombre
+            FROM citas_bot cb
+            LEFT JOIN contact_profiles p ON p.phone = cb.phone
+            WHERE cb.especialidad LIKE 'Kinesiolog%'
+              AND cb.fecha <= date('now', ?)
+              AND cb.fecha >= date('now', '-60 days')
+              AND NOT EXISTS (
+                  SELECT 1 FROM citas_bot cb2
+                  WHERE cb2.phone = cb.phone
+                    AND cb2.especialidad LIKE 'Kinesiolog%'
+                    AND cb2.fecha > date('now')
+              )
+              AND NOT EXISTS (
+                  SELECT 1 FROM fidelizacion_msgs f
+                  WHERE f.phone = cb.phone AND f.tipo = 'adherencia_kine'
+                    AND f.enviado_en >= datetime('now', '-7 days')
+              )
+            GROUP BY cb.phone
+        """, (f"-{gap_dias} days",)).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_control_candidatos(especialidad: str, dias_control: int) -> list[dict]:
+    """
+    Pacientes cuya última cita de la especialidad fue hace dias_control+ días,
+    sin cita futura de esa especialidad, sin recordatorio de control en 15 días.
+    """
+    tipo_fidel = f"control_{especialidad.lower().replace(' ', '_')}"
+    with _conn() as conn:
+        rows = conn.execute("""
+            SELECT cb.phone, MAX(cb.fecha) AS ultima_fecha, cb.profesional, p.nombre
+            FROM citas_bot cb
+            LEFT JOIN contact_profiles p ON p.phone = cb.phone
+            WHERE cb.especialidad = ?
+              AND cb.fecha <= date('now', ?)
+              AND cb.fecha >= date('now', '-180 days')
+              AND NOT EXISTS (
+                  SELECT 1 FROM citas_bot cb2
+                  WHERE cb2.phone = cb.phone
+                    AND cb2.especialidad = ?
+                    AND cb2.fecha > date('now')
+              )
+              AND NOT EXISTS (
+                  SELECT 1 FROM fidelizacion_msgs f
+                  WHERE f.phone = cb.phone AND f.tipo = ?
+                    AND f.enviado_en >= datetime('now', '-15 days')
+              )
+            GROUP BY cb.phone
+        """, (especialidad, f"-{dias_control} days", especialidad, tipo_fidel)).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_crosssell_kine_candidatos() -> list[dict]:
+    """
+    Pacientes con cita de medicina/traumatología hace 1-5 días,
+    sin cita de kinesiología reciente, sin cross-sell enviado en 14 días.
+    """
+    with _conn() as conn:
+        rows = conn.execute("""
+            SELECT cb.phone, MAX(cb.fecha) AS ultima_fecha, cb.especialidad, p.nombre
+            FROM citas_bot cb
+            LEFT JOIN contact_profiles p ON p.phone = cb.phone
+            WHERE cb.especialidad IN ('Medicina General', 'Medicina Familiar', 'Traumatología')
+              AND cb.fecha >= date('now', '-5 days')
+              AND cb.fecha <= date('now', '-1 days')
+              AND NOT EXISTS (
+                  SELECT 1 FROM citas_bot cb2
+                  WHERE cb2.phone = cb.phone
+                    AND cb2.especialidad LIKE 'Kinesiolog%'
+                    AND cb2.fecha >= date('now', '-30 days')
+              )
+              AND NOT EXISTS (
+                  SELECT 1 FROM fidelizacion_msgs f
+                  WHERE f.phone = cb.phone AND f.tipo = 'crosssell_kine'
+                    AND f.enviado_en >= datetime('now', '-14 days')
+              )
+            GROUP BY cb.phone
+        """).fetchall()
+        return [dict(r) for r in rows]
 
 
 def get_metricas(dias: int = 30) -> dict:

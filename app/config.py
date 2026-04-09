@@ -12,6 +12,9 @@ ANTHROPIC_API_KEY  = os.getenv("ANTHROPIC_API_KEY", "")
 META_ACCESS_TOKEN    = os.getenv("META_ACCESS_TOKEN", "")
 META_PHONE_NUMBER_ID = os.getenv("META_PHONE_NUMBER_ID", "")
 META_VERIFY_TOKEN    = os.getenv("META_VERIFY_TOKEN", "cmc_webhook_2026")
+META_PAGE_ACCESS_TOKEN = os.getenv("META_PAGE_ACCESS_TOKEN", "") or os.getenv("META_ACCESS_TOKEN", "")
+INSTAGRAM_USER_ID    = os.getenv("INSTAGRAM_USER_ID", "")   # ID del usuario de Instagram Business
+META_PAGE_ID         = os.getenv("META_PAGE_ID", "")        # ID de la Página de Facebook
 
 CMC_TELEFONO       = os.getenv("CMC_TELEFONO", "+56 XX XXX XXXX")
 CMC_TELEFONO_FIJO  = os.getenv("CMC_TELEFONO_FIJO", "(41) 296 5226")

@@ -17,10 +17,14 @@ from apscheduler.triggers.cron import CronTrigger
 from fastapi import FastAPI, Request, Response, Query, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from config import META_ACCESS_TOKEN, META_PHONE_NUMBER_ID, META_VERIFY_TOKEN, CMC_TELEFONO, ADMIN_TOKEN
+from config import (META_ACCESS_TOKEN, META_PHONE_NUMBER_ID, META_VERIFY_TOKEN,
+                    META_PAGE_ACCESS_TOKEN, INSTAGRAM_USER_ID, META_PAGE_ID,
+                    CMC_TELEFONO, ADMIN_TOKEN)
 from flows import handle_message
 from reminders import enviar_recordatorios
-from fidelizacion import enviar_seguimiento_postconsulta, enviar_reactivacion_pacientes
+from fidelizacion import (enviar_seguimiento_postconsulta, enviar_reactivacion_pacientes,
+                          enviar_adherencia_kine, enviar_recordatorio_control,
+                          enviar_crosssell_kine)
 from medilink import (buscar_paciente, crear_paciente, buscar_primer_dia,
                       buscar_slots_dia, crear_cita, listar_citas_paciente,
                       cancelar_cita, get_citas_seguimiento_mes, SEGUIMIENTO_ESPECIALIDADES,
@@ -106,8 +110,32 @@ async def lifespan(app: FastAPI):
         id="reactivacion_pacientes",
         replace_existing=True,
     )
+    # Adherencia kine: diario a las 11:00 AM (kine pacientes con gap de 4+ días)
+    scheduler.add_job(
+        lambda: asyncio.create_task(enviar_adherencia_kine(send_whatsapp)),
+        CronTrigger(hour=11, minute=0),
+        id="adherencia_kine",
+        replace_existing=True,
+    )
+    # Control por especialidad: diario a las 11:30 AM (nutrición, psicología, cardiología, etc.)
+    scheduler.add_job(
+        lambda: asyncio.create_task(enviar_recordatorio_control(send_whatsapp)),
+        CronTrigger(hour=11, minute=30),
+        id="control_especialidad",
+        replace_existing=True,
+    )
+    # Cross-sell kine: miércoles a las 10:30 AM (medicina/traumatología → kine)
+    scheduler.add_job(
+        lambda: asyncio.create_task(enviar_crosssell_kine(send_whatsapp)),
+        CronTrigger(day_of_week="wed", hour=10, minute=30),
+        id="crosssell_kine",
+        replace_existing=True,
+    )
     scheduler.start()
-    log.info("Scheduler iniciado — recordatorios 09:00 · post-consulta 10:00 · reactivación lunes 10:30")
+    log.info(
+        "Scheduler iniciado — recordatorios 09:00 · post-consulta 10:00 · "
+        "reactivación lun 10:30 · adherencia kine 11:00 · control 11:30 · cross-sell kine mié 10:30"
+    )
     yield
     scheduler.shutdown()
 
@@ -155,6 +183,46 @@ async def send_whatsapp_interactive(to: str, interactive: dict):
         "type": "interactive",
         "interactive": interactive,
     })
+
+
+async def send_instagram(igsid: str, body: str):
+    """Envía mensaje de texto a un usuario de Instagram vía Graph API."""
+    if not INSTAGRAM_USER_ID:
+        log.error("INSTAGRAM_USER_ID no configurado en .env")
+        return
+    url = f"https://graph.facebook.com/v22.0/{INSTAGRAM_USER_ID}/messages"
+    for attempt in range(2):
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                r = await client.post(
+                    url,
+                    headers={"Authorization": f"Bearer {META_PAGE_ACCESS_TOKEN}"},
+                    json={"recipient": {"id": igsid}, "message": {"text": body}},
+                )
+            if r.status_code == 200:
+                return
+            log.error("Instagram API intento %d → %s: %s", attempt + 1, r.status_code, r.text[:200])
+        except (httpx.TimeoutException, httpx.NetworkError) as e:
+            log.error("Instagram API intento %d error: %s", attempt + 1, e)
+
+
+async def send_messenger(psid: str, body: str):
+    """Envía mensaje de texto a un usuario de Facebook Messenger vía Graph API."""
+    page_id = META_PAGE_ID or "me"
+    url = f"https://graph.facebook.com/v22.0/{page_id}/messages"
+    for attempt in range(2):
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                r = await client.post(
+                    url,
+                    headers={"Authorization": f"Bearer {META_PAGE_ACCESS_TOKEN}"},
+                    json={"recipient": {"id": psid}, "message": {"text": body}},
+                )
+            if r.status_code == 200:
+                return
+            log.error("Messenger API intento %d → %s: %s", attempt + 1, r.status_code, r.text[:200])
+        except (httpx.TimeoutException, httpx.NetworkError) as e:
+            log.error("Messenger API intento %d error: %s", attempt + 1, e)
 
 
 _ADMIN_HTML = r'''<!DOCTYPE html>
@@ -940,13 +1008,23 @@ function renderList() {
   });
   el.innerHTML=html;
 }
+function canalIcon(canal) {
+  if (canal==="instagram") return `<span title="Instagram" style="font-size:14px;">📷</span>`;
+  if (canal==="messenger") return `<span title="Facebook Messenger" style="font-size:14px;">💬</span>`;
+  return `<span title="WhatsApp" style="font-size:14px;">📱</span>`;
+}
+function canalLabel(canal) {
+  if (canal==="instagram") return "Instagram";
+  if (canal==="messenger") return "Messenger";
+  return "WhatsApp";
+}
 function convCard(c,g) {
-  const name = c.nombre||c.phone;
+  const name = c.nombre||(c.phone.startsWith("ig_")?"Instagram #"+c.phone.slice(3):c.phone.startsWith("fb_")?"Messenger #"+c.phone.slice(3):c.phone);
   const preview = c.last_text ? c.last_text.substring(0,60) : "Sin mensajes";
   const dir = c.last_dir==="in" ? "" : "← ";
-  const isTakeover = c.state==="HUMAN_TAKEOVER";
   const fd = c.flow_data||{};
   const mins = waitMinutes(c.last_ts||c.updated_at);
+  const canal = c.canal||"whatsapp";
   let badges="";
   if (c.msgs_sin_respuesta>0) badges+=`<span class="badge badge-unread">${c.msgs_sin_respuesta}</span>`;
   if (mins>=15) badges+=`<span class="badge badge-urgent">⏰ ${waitLabel(mins)} sin respuesta</span>`;
@@ -957,6 +1035,7 @@ function convCard(c,g) {
     <div class="card-top">
       <span class="cdot" style="background:${dotColor(c.state)};"></span>
       <span class="cname">${name.replace(/</g,"&lt;")}</span>
+      <span style="margin-left:4px;">${canalIcon(canal)}</span>
       <span class="ctime">${relTime(c.last_ts||c.updated_at)}</span>
     </div>
     <div class="cstate" style="color:${g.dot};">${stateLabel(c.state)}</div>
@@ -975,7 +1054,9 @@ async function selectConv(phone) {
   const name=conv?.nombre||phone;
   document.getElementById("chat-avatar-hdr").textContent=initials(name);
   document.getElementById("chat-name").textContent=name;
-  document.getElementById("chat-sub").textContent=conv?.rut?`RUT ${conv.rut} · ${phone}`:phone;
+  const canal = conv?.canal||"whatsapp";
+  const canalTxt = canalLabel(canal);
+  document.getElementById("chat-sub").textContent=(conv?.rut?`RUT ${conv.rut} · `:"")+`${phone} · ${canalTxt}`;
   updateChatControls(conv?.state||"IDLE");
   updateContextPanel(conv);
   await Promise.all([loadMessages(phone), loadTags(phone)]);
@@ -1064,7 +1145,9 @@ function renderMessages(msgs, preserveScroll=false) {
     const text=(m.text||"").replace(/^\[Recepcionista\] /,"").replace(/^\[.*?\] /,"")
       .replace(/</g,"&lt;").replace(/\\n/g,"<br>").replace(/\*(.*?)\*/g,"<strong>$1</strong>");
     const ts=m.ts?new Date(m.ts.replace(" ","T")+"Z").toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"}):"";
-    const who=m.direction==="in"?"👤 Paciente":isRecep?"🙋 Recepcionista":"🤖 Bot";
+    const mCanal=m.canal||"whatsapp";
+    const chanIco=m.direction==="in"?canalIcon(mCanal):"";
+    const who=m.direction==="in"?`${chanIco} Paciente`:isRecep?"🙋 Recepcionista":"🤖 Bot";
     html+=`<div class="msg-row ${m.direction}${isRecep?" recep":""}"><div><div class="msg-bubble">${text}</div><div class="msg-meta">${who} · ${ts}</div></div></div>`;
   });
   el.innerHTML=html; el.scrollTop=preserveScroll ? prevScroll : 0;
@@ -1711,16 +1794,28 @@ async def admin_takeover(phone: str, token: str = Query(...)):
 
 @app.post("/admin/api/reply")
 async def admin_reply(request: Request, token: str = Query(...)):
-    """Recepcionista envía un mensaje al paciente desde el panel."""
+    """Recepcionista envía un mensaje al paciente desde el panel (WhatsApp, Instagram o Messenger)."""
     _check_token(token)
     body = await request.json()
     phone = body.get("phone", "").strip()
     message = body.get("message", "").strip()
     if not phone or not message:
         raise HTTPException(status_code=400, detail="phone y message son requeridos")
-    await send_whatsapp(phone, message)
+
+    if phone.startswith("ig_"):
+        igsid = phone[3:]
+        await send_instagram(igsid, message)
+        canal = "instagram"
+    elif phone.startswith("fb_"):
+        psid = phone[3:]
+        await send_messenger(psid, message)
+        canal = "messenger"
+    else:
+        await send_whatsapp(phone, message)
+        canal = "whatsapp"
+
     state = get_session(phone).get("state", "HUMAN_TAKEOVER")
-    log_message(phone, "out", f"[Recepcionista] {message}", state)
+    log_message(phone, "out", f"[Recepcionista] {message}", state, canal=canal)
     log_event(phone, "recepcionista_respondio", {"mensaje": message[:200]})
     return {"ok": True}
 
@@ -1931,9 +2026,57 @@ def verify_webhook(
 
 @app.post("/webhook")
 async def webhook(request: Request):
-    """Recibe mensajes de Meta Cloud API."""
+    """Recibe mensajes de Meta Cloud API (WhatsApp, Instagram, Messenger)."""
     data = await request.json()
+    obj = data.get("object", "")
 
+    # ── Instagram DMs ────────────────────────────────────────────────────────
+    if obj == "instagram":
+        try:
+            for entry in data.get("entry", []):
+                for ev in entry.get("messaging", []):
+                    sender_id = ev.get("sender", {}).get("id", "")
+                    msg = ev.get("message", {})
+                    if not sender_id or not msg or msg.get("is_echo"):
+                        continue
+                    texto = msg.get("text", "")
+                    if not texto:
+                        continue
+                    msg_id = msg.get("mid", "")
+                    if msg_id and is_duplicate(msg_id):
+                        continue
+                    phone = f"ig_{sender_id}"
+                    log.info("INSTAGRAM from=%s text=%r", phone, texto[:80])
+                    save_session(phone, "HUMAN_TAKEOVER", {})
+                    log_message(phone, "in", texto, "HUMAN_TAKEOVER", canal="instagram")
+        except Exception as e:
+            log.warning("Error procesando Instagram webhook: %s", e)
+        return Response(status_code=200)
+
+    # ── Facebook Messenger ───────────────────────────────────────────────────
+    if obj == "page":
+        try:
+            for entry in data.get("entry", []):
+                for ev in entry.get("messaging", []):
+                    sender_id = ev.get("sender", {}).get("id", "")
+                    msg = ev.get("message", {})
+                    if not sender_id or not msg or msg.get("is_echo"):
+                        continue
+                    texto = msg.get("text", "")
+                    if not texto:
+                        continue
+                    msg_id = msg.get("mid", "")
+                    if msg_id and is_duplicate(msg_id):
+                        continue
+                    phone = f"fb_{sender_id}"
+                    log.info("MESSENGER from=%s text=%r", phone, texto[:80])
+                    save_session(phone, "HUMAN_TAKEOVER", {})
+                    log_message(phone, "in", texto, "HUMAN_TAKEOVER", canal="messenger")
+        except Exception as e:
+            log.warning("Error procesando Messenger webhook: %s", e)
+        return Response(status_code=200)
+
+    # ── WhatsApp ─────────────────────────────────────────────────────────────
     try:
         entry = data["entry"][0]
         change = entry["changes"][0]["value"]
@@ -1970,7 +2113,7 @@ async def webhook(request: Request):
 
         session = get_session(phone)
         state_before = session.get("state", "IDLE")
-        log_message(phone, "in", texto, state_before)
+        log_message(phone, "in", texto, state_before, canal="whatsapp")
 
         try:
             respuesta = await handle_message(phone, texto, session)
@@ -1992,7 +2135,7 @@ async def webhook(request: Request):
             resp_text = str(respuesta) if respuesta else ""
 
         if resp_text:
-            log_message(phone, "out", resp_text, state_after)
+            log_message(phone, "out", resp_text, state_after, canal="whatsapp")
         log.info("BOT to=%s state=%s reply=%r", phone, state_after, resp_text[:80])
 
         if not respuesta:

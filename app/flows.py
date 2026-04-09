@@ -114,6 +114,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         reset_session(phone)
         return _menu_msg()
 
+    # ── Detección pasiva de Arauco (guarda tag sin interrumpir el flujo) ──────
+    if "arauco" in tl:
+        save_tag(phone, "arauco")
+
     # ── IDLE: detectar intención ──────────────────────────────────────────────
     if state == "IDLE":
         # Atajos numéricos del menú
@@ -159,6 +163,51 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return (
                 "Sin problema 😊 Cuando lo necesites escríbenos.\n"
                 "_Escribe *menu* para ver todas las opciones._"
+            )
+
+        # ── Adherencia kinesiología ───────────────────────────────────────────
+        if tl == "kine_adh_si":
+            log_event(phone, "adherencia_kine_acepto", {})
+            perfil = get_profile(phone)
+            if perfil:
+                data["rut_conocido"] = perfil["rut"]
+                data["nombre_conocido"] = perfil["nombre"]
+            return await _iniciar_agendar(phone, data, "kinesiología")
+        if tl == "kine_adh_no":
+            log_event(phone, "adherencia_kine_rechazo", {})
+            return (
+                "Entendido 😊 Cuando estés listo/a, escríbenos.\n"
+                "_Escribe *menu* para volver al inicio._"
+            )
+
+        # ── Cross-sell kinesiología ───────────────────────────────────────────
+        if tl == "xkine_si":
+            log_event(phone, "crosssell_kine_acepto", {})
+            perfil = get_profile(phone)
+            if perfil:
+                data["rut_conocido"] = perfil["rut"]
+                data["nombre_conocido"] = perfil["nombre"]
+            return await _iniciar_agendar(phone, data, "kinesiología")
+        if tl == "xkine_no":
+            log_event(phone, "crosssell_kine_rechazo", {})
+            return (
+                "Sin problema 😊 Cuando lo necesites, estamos acá.\n"
+                "_Escribe *menu* para ver todas las opciones._"
+            )
+
+        # ── Recordatorio de control ───────────────────────────────────────────
+        if tl == "ctrl_si":
+            log_event(phone, "control_recordatorio_acepto", {})
+            perfil = get_profile(phone)
+            if perfil:
+                data["rut_conocido"] = perfil["rut"]
+                data["nombre_conocido"] = perfil["nombre"]
+            return await _iniciar_agendar(phone, data, None)
+        if tl == "ctrl_no":
+            log_event(phone, "control_recordatorio_rechazo", {})
+            return (
+                "Entendido 😊 Cuando lo necesites, estamos acá.\n"
+                "_Escribe *menu* para volver al inicio._"
             )
 
         result = await detect_intent(txt)
@@ -209,6 +258,49 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
         # intent "otro" o "menu" (fallback de Claude) → mostrar menú
         return _menu_msg()
+
+    # ── WAIT_DURACION_MASOTERAPIA ──────────────────────────────────────────────
+    if state == "WAIT_DURACION_MASOTERAPIA":
+        if tl in ("maso_20",) or "20" in txt:
+            duracion_maso = 20
+        elif tl in ("maso_40",) or "40" in txt:
+            duracion_maso = 40
+        else:
+            save_session(phone, "WAIT_DURACION_MASOTERAPIA", data)
+            return _btn_msg(
+                "Por favor elige la duración de tu sesión:",
+                [
+                    {"id": "maso_20", "title": "20 minutos"},
+                    {"id": "maso_40", "title": "40 minutos"},
+                ]
+            )
+        data["maso_duracion"] = duracion_maso
+        smart, todos = await buscar_primer_dia("masoterapia", intervalo_override={59: duracion_maso})
+        if not todos:
+            reset_session(phone)
+            log_event(phone, "sin_disponibilidad", {"especialidad": "masoterapia"})
+            save_tag(phone, "sin-disponibilidad")
+            return (
+                f"No encontré disponibilidad para masoterapia en los próximos días 😕\n\n"
+                f"Llama a recepción:\n📞 *{CMC_TELEFONO}*\n\n"
+                "_Escribe *menu* para volver._"
+            )
+        fecha = todos[0]["fecha"]
+        data.update({"especialidad": "masoterapia", "slots": smart,
+                     "todos_slots": todos, "fechas_vistas": [fecha], "expansion_stage": 0})
+        save_session(phone, "WAIT_SLOT", data)
+        mejor = smart[0]
+        return _btn_msg(
+            f"Encontré disponibilidad ✨\n\n"
+            f"🏥 *Masoterapia* — {mejor['profesional']}\n"
+            f"📅 *{mejor['fecha_display']}*\n"
+            f"🕐 *{mejor['hora_inicio'][:5]}* ({duracion_maso} min) ⭐\n\n"
+            "¿La agendo?",
+            [
+                {"id": "confirmar_sugerido", "title": "✅ Sí, esa hora"},
+                {"id": "ver_otros",          "title": "📋 Ver más opciones"},
+            ]
+        )
 
     # ── WAIT_ESPECIALIDAD ─────────────────────────────────────────────────────
     if state == "WAIT_ESPECIALIDAD":
@@ -268,11 +360,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return _format_slots(todos_slots, mostrar_todos=True)
 
         # Día específico → "para el viernes", "hay para el martes", etc.
+        _maso_override = {59: data["maso_duracion"]} if especialidad == "masoterapia" and data.get("maso_duracion") else None
         dia_pedido = next((wd for nombre, wd in _DIAS_SEMANA.items() if nombre in tl), None)
         if dia_pedido is not None:
             fecha_dia = _proxima_fecha_dia(dia_pedido)
             if fecha_dia:
-                smart_dia, todos_dia = await buscar_slots_dia(especialidad, fecha_dia)
+                smart_dia, todos_dia = await buscar_slots_dia(especialidad, fecha_dia, intervalo_override=_maso_override)
                 if todos_dia:
                     if fecha_dia not in fechas_vistas:
                         fechas_vistas = fechas_vistas + [fecha_dia]
@@ -286,7 +379,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         OTRO_DIA = {"otro dia", "otro día", "otro", "no puedo", "no me sirve",
                     "no me acomoda", "cambiar dia", "cambiar día", "siguiente", "otro_dia"}
         if tl in OTRO_DIA or any(p in tl for p in ["otro dia", "otro día", "no puedo"]):
-            smart_nuevo, todos_nuevo = await buscar_primer_dia(especialidad, excluir=fechas_vistas)
+            smart_nuevo, todos_nuevo = await buscar_primer_dia(especialidad, excluir=fechas_vistas,
+                                                               intervalo_override=_maso_override)
             if not todos_nuevo:
                 reset_session(phone)
                 return (
@@ -893,6 +987,17 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None) -> 
         save_session(phone, "WAIT_ESPECIALIDAD", data)
         return f"Claro, te ayudo a agendar 😊\n\n¿Qué especialidad necesitas?\n\n{_ESPECIALIDADES_TEXTO}"
     especialidad_lower = especialidad.lower()
+    # Masoterapia tiene duración variable — preguntar antes de buscar slots
+    if especialidad_lower in ("masoterapia", "masaje", "masajes"):
+        data["especialidad"] = "masoterapia"
+        save_session(phone, "WAIT_DURACION_MASOTERAPIA", data)
+        return _btn_msg(
+            "¿Cuánto tiempo necesitas para tu sesión de masoterapia?",
+            [
+                {"id": "maso_20", "title": "20 minutos"},
+                {"id": "maso_40", "title": "40 minutos"},
+            ]
+        )
     smart, todos = await buscar_primer_dia(especialidad_lower)
     if not todos:
         reset_session(phone)

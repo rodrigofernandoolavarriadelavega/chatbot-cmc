@@ -113,32 +113,34 @@ IDLE → detect_intent (Claude Haiku)
 - **IMPORTANTE**: la API Medilink devuelve fechas en `DD/MM/YYYY` en las respuestas; los slots usan la fecha real del API, no la fecha de consulta
 
 ## Profesionales habilitados (IDs Medilink)
-| ID | Nombre | Especialidad |
-|----|--------|-------------|
-| 1 | Dr. Rodrigo Olavarría | Medicina General |
-| 73 | Dr. Andrés Abarca | Medicina General |
-| 18 | Dr. Alonso Márquez | Medicina General / Medicina Familiar |
-| 28 | Dr. Manuel Borrego | Otorrinolaringología |
-| 60 | Dr. Miguel Millán | Cardiología |
-| 64 | Dr. Claudio Barraza | Traumatología |
-| 61 | Dr. Tirso Rejón | Ginecología |
-| 65 | Dr. Nicolás Quijano | Gastroenterología |
-| 55 | Dra. Javiera Burgos | Odontología General |
-| 72 | Dr. Carlos Jiménez | Odontología General |
-| 66 | Dra. Daniela Castillo | Ortodoncia |
-| 75 | Dr. Fernando Fredes | Endodoncia |
-| 69 | Dra. Aurora Valdés | Implantología |
-| 76 | Dra. Valentina Fuentealba | Estética Facial |
-| 59 | Paola Acosta | Kinesiología |
-| 77 | Luis Armijo | Kinesiología |
-| 26 | Leonardo Etcheverry | Kinesiología |
-| 52 | Gisela Pinto | Nutrición |
-| 74 | Jorge Montalba | Psicología Adulto / Psicología Infantil |
-| 49 | Juan Pablo Rodríguez | Psicología Adulto |
-| 70 | Juana Arratia | Fonoaudiología |
-| 67 | Sarai Gómez | Matrona |
-| 56 | Andrea Guevara | Podología |
-| 68 | David Pardo | Ecografía |
+El campo `intervalo` es la duración de cita por WhatsApp (en minutos). El bot **ignora el intervalo de Medilink** y siempre usa el del dict `PROFESIONALES` en `medilink.py`. Medilink tiene configuraciones de 5–10 min (bloques flexibles para recepcionistas) que no aplican al bot.
+
+| ID | Nombre | Especialidad | Intervalo (min) |
+|----|--------|-------------|----------------|
+| 1 | Dr. Rodrigo Olavarría | Medicina General | 15 |
+| 73 | Dr. Andrés Abarca | Medicina General | 15 |
+| 13 | Dr. Alonso Márquez | Medicina General / Medicina Familiar | 20 |
+| 23 | Dr. Manuel Borrego | Otorrinolaringología | 20 |
+| 60 | Dr. Miguel Millán | Cardiología | 20 |
+| 64 | Dr. Claudio Barraza | Traumatología | 15 |
+| 61 | Dr. Tirso Rejón | Ginecología | 20 |
+| 65 | Dr. Nicolás Quijano | Gastroenterología | 20 |
+| 55 | Dra. Javiera Burgos | Odontología General | 30 |
+| 72 | Dr. Carlos Jiménez | Odontología General | 30 |
+| 66 | Dra. Daniela Castillo | Ortodoncia | 30 |
+| 75 | Dr. Fernando Fredes | Endodoncia | 30 |
+| 69 | Dra. Aurora Valdés | Implantología | 30 |
+| 76 | Dra. Valentina Fuentealba | Estética Facial | 30 |
+| 59 | Paola Acosta | Masoterapia | 20 o 40 (pregunta al paciente) |
+| 77 | Luis Armijo | Kinesiología | 40 |
+| 21 | Leonardo Etcheverry | Kinesiología | 40 |
+| 52 | Gisela Pinto | Nutrición | 60 |
+| 74 | Jorge Montalba | Psicología Adulto / Psicología Infantil | 45 |
+| 49 | Juan Pablo Rodríguez | Psicología Adulto | 45 |
+| 70 | Juana Arratia | Fonoaudiología | 30 |
+| 67 | Sarai Gómez | Matrona | 30 |
+| 56 | Andrea Guevara | Podología | 60 |
+| 68 | David Pardo | Ecografía | 15 |
 
 ## Cancelación de citas en Medilink
 Usar `PUT /citas/{id}` con body `{"id_estado": 1}` — esto pone la cita en estado "Anulado" con `estado_anulacion=1`.
@@ -169,6 +171,7 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - [x] Recordatorios automáticos de citas (09:00 CLT)
 - [x] Deploy en VPS DigitalOcean (`157.245.13.107`) corriendo con uvicorn
 - [x] Aprobación Display Name número prepago (+56945886628) ✅
+- [x] Fidelización: seguimiento post-consulta (diario 10:00 AM) y reactivación inactivos (lunes 10:30 AM)
 
 ## Dashboard admin
 - Ruta: `http://157.245.13.107:8001/admin?token=cmc_admin_2026`
@@ -176,35 +179,23 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - Muestra métricas, conversaciones activas y estado del sistema
 
 ## Sesión en curso
-**Fecha**: 2026-04-07
+**Fecha**: 2026-04-08
 
 **Hecho hoy**:
-- Deploy completo en DigitalOcean con HTTPS — dominio `agentecmc.cl` con SSL Let's Encrypt, nginx como proxy, ngrok eliminado
-- Webhook Meta actualizado a `https://agentecmc.cl/webhook`
-- Agendamiento directo desde panel de recepción (`/admin`) — modal "Nueva Cita" con búsqueda por RUT, slots y confirmación
-- Lista de profesionales completamente actualizada: 24 profesionales, nombres con Dr./Dra. correctos, especialidades corregidas
-- Nuevos profesionales: Dr. Alonso Márquez (ID 18), Leonardo Etcheverry (ID 26), Dr. Manuel Borrego (ID 28)
-- Correcciones: Luis Armijo → Kinesiología, Valentina Fuentealba → Estética Facial, Fernando Fredes → Endodoncia, David Pardo Muñoz eliminado (duplicado de ID 68)
-- Psicología: Jorge Montalba = Adulto e Infantil; Juan Pablo Rodríguez = solo Adulto
-- Medicina Familiar agregada (Dr. Márquez atiende con bono medicina general $7.880)
-- **Precios revisados uno a uno con Dr. Olavarría y actualizados en `claude_helper.py`** — todas las especialidades corregidas y desplegadas
+- IDs Medilink corregidos consultando directamente la API: Márquez 18→**13**, Borrego 28→**23**, Etcheverry 26→**21**
+- Expansión progresiva de horarios Medicina General: sugerido Abarca → smart Abarca → smart Abarca+Olavarría → todos los 3 doctores
+- Botón "Ver más profesionales" en stage 2; stage 3 busca propio día de Márquez si no trabaja ese día
+- Precio en contexto mientras se ven horarios
+- Fidelización implementada (`app/fidelizacion.py`): post-consulta 10:00 AM y reactivación inactivos lunes 10:30 AM
+- Mapeo de profesionales por nombre (leo, armijo, abarca, paola, etc.)
+- **Intervalos de atención corregidos** — bot ignora intervalo de Medilink (5–10 min para bloques flexibles de recepción) y usa duraciones reales del dict `PROFESIONALES` en `medilink.py`
+- **Masoterapia con duración variable**: nuevo estado `WAIT_DURACION_MASOTERAPIA` pregunta 20 o 40 min antes de buscar slots. Implementado `intervalo_override` en `buscar_primer_dia`, `buscar_slots_dia` y `buscar_slots_dia_por_ids`
+- Documentación actualizada: CLAUDE.md, Notion (página principal, flujo conversacional, integración Medilink)
 
-**Precios confirmados (resumen)**:
-- Medicina General: $25.000 particular / $7.880 Fonasa
-- Medicina Familiar (Márquez): $30.000 particular / $7.880 Fonasa
-- Kinesiología Luis/Leo: $7.830 Fonasa / $20.000 particular
-- Kinesiología Paola: masoterapia 20 min $17.990 / 40 min $26.990
-- Nutrición: $4.770 Fonasa / $20.000 particular + bioimpedanciometría $20.000
-- Psicología: $14.420 Fonasa / $20.000 particular
-- ORL: solo consulta $35.000 y control $8.000 (todo particular)
-- Odontología: evaluación $15.000, exodoncia $40.000–$60.000, blanqueamiento $75.000, destartraje+profilaxis $30.000, resina desde $35.000
-- Endodoncia: anterior $110.000 / premolar $150.000 / molar $220.000
-- Implantología: corona+tornillo desde $650.000
-- Ecografía: ecotomografías $40.000 / doppler $90.000
-
-**Estado del servidor**: corriendo en `https://agentecmc.cl` (`/opt/chatbot-cmc`), sin errores
+**Estado del servidor**: corriendo en `https://agentecmc.cl` (`/opt/chatbot-cmc`), sin errores — **falta hacer deploy de los cambios de hoy**
 
 **Pendiente**:
+- Hacer deploy en servidor (git push + git pull + reiniciar uvicorn)
 - Promover número +56945886628 a pacientes reales (redes sociales, recepción, etc.)
 - Monitorear primeras conversaciones reales y corregir lo que falle
 
@@ -214,3 +205,4 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 1. Precios en `claude_helper.py` hardcodeados en SYSTEM_PROMPT — actualizar manualmente cuando cambien
 2. Dr. Luis Armijo (ID 77) aparece como Medicina General en Medilink pero es Kinesiólogo — error de datos en Medilink, no en el bot
 3. SQLite no escala bien con concurrencia alta — migrar a PostgreSQL o Redis si hay múltiples sucursales
+4. Verificar IDs de profesionales menos frecuentes (Millán, Barraza, Rejón, etc.) directamente en API para asegurar que sean correctos
