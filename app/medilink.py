@@ -640,6 +640,41 @@ SEGUIMIENTO_ESPECIALIDADES = {
 }
 
 
+async def sync_citas_dia(fecha: str, ids_prof: list[int]):
+    """Descarga las citas de una fecha desde Medilink y las guarda en caché.
+    Borra primero las existentes para esa fecha/profesional para mantener consistencia."""
+    from session import upsert_citas_cache, delete_citas_cache_fecha
+    async with httpx.AsyncClient(timeout=30) as client:
+        for id_prof in ids_prof:
+            delete_citas_cache_fecha(id_prof, fecha)
+            params = {
+                "id_sucursal":      {"eq": int(MEDILINK_SUCURSAL)},
+                "id_profesional":   {"eq": id_prof},
+                "fecha":            {"eq": fecha},
+                "estado_anulacion": {"eq": 0},
+            }
+            try:
+                r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
+                               params={"q": _q(params)}, headers=HEADERS)
+                if r.status_code != 200:
+                    continue
+                citas = [
+                    {
+                        "id_prof":         id_prof,
+                        "id_paciente":     c.get("id_paciente"),
+                        "paciente_nombre": (c.get("nombre_paciente") or "").strip(),
+                        "fecha":           fecha,
+                        "hora_inicio":     (c.get("hora_inicio") or "")[:5],
+                    }
+                    for c in r.json().get("data", [])
+                    if c.get("id_paciente")
+                ]
+                upsert_citas_cache(citas)
+                log.info("sync_citas_dia: prof=%d fecha=%s → %d citas", id_prof, fecha, len(citas))
+            except Exception as e:
+                log.error("sync_citas_dia prof=%d fecha=%s: %s", id_prof, fecha, e)
+
+
 async def get_citas_seguimiento_mes(year: int, month: int, especialidad: str = "kinesiologia") -> list:
     """Retorna las citas del mes para una especialidad recurrente, agrupadas por paciente."""
     import calendar
@@ -650,47 +685,73 @@ async def get_citas_seguimiento_mes(year: int, month: int, especialidad: str = "
         return []
 
     last_day = calendar.monthrange(year, month)[1]
-    fecha_ini = f"{year}-{month:02d}-01"
-    fecha_fin  = f"{year}-{month:02d}-{last_day:02d}"
-    citas_raw = []
+    ids_prof = cfg["ids"]
 
-    async def _fetch_dia(client: httpx.AsyncClient, id_prof: int, fecha: str):
-        params = {
-            "id_sucursal":      {"eq": int(MEDILINK_SUCURSAL)},
-            "id_profesional":   {"eq": id_prof},
-            "fecha":            {"eq": fecha},
-            "estado_anulacion": {"eq": 0},
-        }
-        try:
-            r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
-                           params={"q": _q(params)}, headers=HEADERS)
-            if r.status_code != 200:
-                return []
-            return [
-                {
-                    "id_prof":         id_prof,
-                    "prof_nombre":     PROFESIONALES[id_prof]["nombre"],
-                    "fecha":           fecha,
-                    "id_paciente":     c.get("id_paciente"),
-                    "paciente_nombre": (c.get("nombre_paciente") or "").strip(),
+    # Sincronizar días del mes actual que no estén en caché todavía
+    from session import get_citas_cache_mes, citas_cache_tiene_fecha
+    hoy_cl = datetime.now(_CHILE_TZ).date()
+    hoy_str = hoy_cl.strftime("%Y-%m-%d")
+
+    dias_a_sync = []
+    for id_prof in ids_prof:
+        for day in range(1, last_day + 1):
+            fecha = f"{year}-{month:02d}-{day:02d}"
+            # Solo sincronizar días pasados o de hoy, no días futuros sin datos
+            if fecha > hoy_str:
+                continue
+            if not citas_cache_tiene_fecha(id_prof, fecha):
+                dias_a_sync.append((id_prof, fecha))
+
+    if dias_a_sync:
+        log.info("get_citas_seguimiento_mes: sincronizando %d combos prof/fecha faltantes", len(dias_a_sync))
+        async with httpx.AsyncClient(timeout=30) as client:
+            async def _fetch_y_cache(id_prof: int, fecha: str):
+                from session import upsert_citas_cache, delete_citas_cache_fecha
+                params = {
+                    "id_sucursal":      {"eq": int(MEDILINK_SUCURSAL)},
+                    "id_profesional":   {"eq": id_prof},
+                    "fecha":            {"eq": fecha},
+                    "estado_anulacion": {"eq": 0},
                 }
-                for c in r.json().get("data", [])
-                if c.get("id_paciente")
-            ]
-        except Exception as e:
-            log.error("get_citas_seguimiento esp=%s prof=%d %s: %s", especialidad, id_prof, fecha, e)
-            return []
+                try:
+                    r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
+                                   params={"q": _q(params)}, headers=HEADERS)
+                    if r.status_code != 200:
+                        return
+                    citas = [
+                        {
+                            "id_prof":         id_prof,
+                            "id_paciente":     c.get("id_paciente"),
+                            "paciente_nombre": (c.get("nombre_paciente") or "").strip(),
+                            "fecha":           fecha,
+                            "hora_inicio":     (c.get("hora_inicio") or "")[:5],
+                        }
+                        for c in r.json().get("data", [])
+                        if c.get("id_paciente")
+                    ]
+                    # Guardar aunque esté vacío (marca el día como sincronizado)
+                    if citas:
+                        upsert_citas_cache(citas)
+                    else:
+                        # Insertar registro centinela para no re-sync días sin citas
+                        upsert_citas_cache([{
+                            "id_prof": id_prof, "id_paciente": 0,
+                            "paciente_nombre": "__empty__", "fecha": fecha, "hora_inicio": "00:00"
+                        }])
+                except Exception as e:
+                    log.error("sync mes esp=%s prof=%d %s: %s", especialidad, id_prof, fecha, e)
 
-    # /citas no soporta rango por profesional — se consulta día a día en paralelo
-    async with httpx.AsyncClient(timeout=30) as client:
-        tasks = [
-            _fetch_dia(client, id_prof, f"{year}-{month:02d}-{day:02d}")
-            for id_prof in cfg["ids"]
-            for day in range(1, last_day + 1)
-        ]
-        resultados = await asyncio.gather(*tasks)
-        for grupo in resultados:
-            citas_raw.extend(grupo)
+            await asyncio.gather(*[_fetch_y_cache(p, f) for p, f in dias_a_sync])
+
+    # Leer todo desde caché
+    citas_raw_cache = get_citas_cache_mes(year, month, ids_prof)
+    # Filtrar centinelas de días vacíos
+    citas_raw = [
+        {"id_prof": c["id_prof"], "prof_nombre": PROFESIONALES.get(c["id_prof"], {}).get("nombre", ""),
+         "fecha": c["fecha"], "id_paciente": c["id_paciente"], "paciente_nombre": c["paciente_nombre"]}
+        for c in citas_raw_cache
+        if c["id_paciente"] != 0
+    ]
 
     grupos: dict = defaultdict(list)
     for c in citas_raw:

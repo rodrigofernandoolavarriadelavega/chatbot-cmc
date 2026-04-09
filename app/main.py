@@ -27,8 +27,8 @@ from fidelizacion import (enviar_seguimiento_postconsulta, enviar_reactivacion_p
                           enviar_crosssell_kine)
 from medilink import (buscar_paciente, crear_paciente, buscar_primer_dia,
                       buscar_slots_dia, crear_cita, listar_citas_paciente,
-                      cancelar_cita, get_citas_seguimiento_mes, SEGUIMIENTO_ESPECIALIDADES,
-                      PROFESIONALES, ESPECIALIDADES_MAP)
+                      cancelar_cita, get_citas_seguimiento_mes, sync_citas_dia,
+                      SEGUIMIENTO_ESPECIALIDADES, PROFESIONALES, ESPECIALIDADES_MAP)
 from session import (get_session, is_duplicate, reset_session, save_session, get_metricas,
                      log_message, get_messages, get_conversations, log_event,
                      get_sesiones_abandonadas, get_tags, save_tag, delete_tag, search_messages,
@@ -131,10 +131,24 @@ async def lifespan(app: FastAPI):
         id="crosssell_kine",
         replace_existing=True,
     )
+    # Sync caché de citas: diario a las 23:50 CLT (sync del día en curso)
+    def _sync_hoy():
+        from datetime import date
+        from zoneinfo import ZoneInfo
+        hoy = date.today().strftime("%Y-%m-%d")  # servidor puede estar en UTC, sync igual
+        ids_todos = list({i for cfg in SEGUIMIENTO_ESPECIALIDADES.values() for i in cfg["ids"]})
+        asyncio.create_task(sync_citas_dia(hoy, ids_todos))
+    scheduler.add_job(
+        _sync_hoy,
+        CronTrigger(hour=2, minute=50),  # 23:50 CLT = 02:50 UTC
+        id="sync_citas_cache",
+        replace_existing=True,
+    )
     scheduler.start()
     log.info(
         "Scheduler iniciado — recordatorios 09:00 · post-consulta 10:00 · "
-        "reactivación lun 10:30 · adherencia kine 11:00 · control 11:30 · cross-sell kine mié 10:30"
+        "reactivación lun 10:30 · adherencia kine 11:00 · control 11:30 · "
+        "cross-sell kine mié 10:30 · sync caché 23:50"
     )
     yield
     scheduler.shutdown()
@@ -1990,6 +2004,19 @@ def admin_kine_especialidades(token: str = Query(...)):
     return {"especialidades": [
         {"id": k, "label": v["label"]} for k, v in SEGUIMIENTO_ESPECIALIDADES.items()
     ]}
+
+
+@app.post("/admin/api/kine/sync")
+async def admin_kine_sync(token: str = Query(...), fecha: str = None):
+    """Fuerza sincronización del caché de citas para una fecha (default: hoy)."""
+    _check_token(token)
+    from datetime import date
+    from zoneinfo import ZoneInfo
+    if not fecha:
+        fecha = date.today().strftime("%Y-%m-%d")
+    ids_todos = list({i for cfg in SEGUIMIENTO_ESPECIALIDADES.values() for i in cfg["ids"]})
+    await sync_citas_dia(fecha, ids_todos)
+    return {"ok": True, "fecha": fecha, "ids": ids_todos}
 
 
 @app.put("/admin/api/kine/{id_paciente}/{id_prof}")

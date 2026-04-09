@@ -91,6 +91,18 @@ def _conn():
         )
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_fidel_phone ON fidelizacion_msgs(phone, tipo)")
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS citas_cache (
+            id_prof         INTEGER,
+            id_paciente     INTEGER,
+            paciente_nombre TEXT,
+            fecha           TEXT,
+            hora_inicio     TEXT,
+            synced_at       TEXT DEFAULT (datetime('now')),
+            PRIMARY KEY (id_prof, id_paciente, fecha, hora_inicio)
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_cache_fecha ON citas_cache(fecha)")
     # Migración: agregar canal a messages si no existe
     try:
         conn.execute("ALTER TABLE messages ADD COLUMN canal TEXT DEFAULT 'whatsapp'")
@@ -606,3 +618,56 @@ def get_metricas(dias: int = 30) -> dict:
             "tasa_conversion_agendamiento": f"{tasa_conversion}%",
             "eventos": por_evento,
         }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Caché de citas Medilink (módulo pacientes en control)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def upsert_citas_cache(citas: list[dict]):
+    """Inserta o actualiza citas en el caché local. Cada cita debe tener:
+    id_prof, id_paciente, paciente_nombre, fecha, hora_inicio."""
+    if not citas:
+        return
+    with _conn() as conn:
+        conn.executemany("""
+            INSERT INTO citas_cache (id_prof, id_paciente, paciente_nombre, fecha, hora_inicio, synced_at)
+            VALUES (:id_prof, :id_paciente, :paciente_nombre, :fecha, :hora_inicio, datetime('now'))
+            ON CONFLICT(id_prof, id_paciente, fecha, hora_inicio) DO UPDATE SET
+                paciente_nombre=excluded.paciente_nombre,
+                synced_at=excluded.synced_at
+        """, citas)
+        conn.commit()
+
+
+def delete_citas_cache_fecha(id_prof: int, fecha: str):
+    """Borra todas las citas cacheadas de un profesional para una fecha (antes de re-sync)."""
+    with _conn() as conn:
+        conn.execute("DELETE FROM citas_cache WHERE id_prof=? AND fecha=?", (id_prof, fecha))
+        conn.commit()
+
+
+def citas_cache_tiene_fecha(id_prof: int, fecha: str) -> bool:
+    """True si ya hay datos cacheados para este profesional y fecha."""
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT 1 FROM citas_cache WHERE id_prof=? AND fecha=? LIMIT 1",
+            (id_prof, fecha)
+        ).fetchone()
+        return row is not None
+
+
+def get_citas_cache_mes(year: int, month: int, ids_prof: list[int]) -> list[dict]:
+    """Retorna citas del caché para el mes y profesionales dados."""
+    import calendar
+    last_day = calendar.monthrange(year, month)[1]
+    fecha_ini = f"{year}-{month:02d}-01"
+    fecha_fin = f"{year}-{month:02d}-{last_day:02d}"
+    placeholders = ",".join("?" * len(ids_prof))
+    with _conn() as conn:
+        rows = conn.execute(
+            f"SELECT * FROM citas_cache WHERE id_prof IN ({placeholders}) "
+            f"AND fecha >= ? AND fecha <= ? ORDER BY fecha, hora_inicio",
+            (*ids_prof, fecha_ini, fecha_fin)
+        ).fetchall()
+        return [dict(r) for r in rows]
