@@ -405,8 +405,15 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         OTRO_DIA = {"otro dia", "otro día", "otro", "no puedo", "no me sirve",
                     "no me acomoda", "cambiar dia", "cambiar día", "siguiente", "otro_dia"}
         if tl in OTRO_DIA or any(p in tl for p in ["otro dia", "otro día", "no puedo"]):
-            smart_nuevo, todos_nuevo = await buscar_primer_dia(especialidad, excluir=fechas_vistas,
-                                                               intervalo_override=_maso_override)
+            if especialidad in _ESP_MED_GENERAL:
+                smart_nuevo, todos_nuevo = await buscar_primer_dia(
+                    especialidad, excluir=fechas_vistas, solo_ids=_MED_AO_IDS)
+                if not todos_nuevo:  # overflow a Márquez
+                    smart_nuevo, todos_nuevo = await buscar_primer_dia(
+                        especialidad, excluir=fechas_vistas, solo_ids=[13])
+            else:
+                smart_nuevo, todos_nuevo = await buscar_primer_dia(
+                    especialidad, excluir=fechas_vistas, intervalo_override=_maso_override)
             if not todos_nuevo:
                 reset_session(phone)
                 return (
@@ -877,6 +884,8 @@ def _especialidades_dental_msg() -> dict:
 _ESPECIALIDADES_EXPANSION = {"medicina general"}
 # IDs de profesionales de Medicina General, en orden de prioridad
 _MED_GENERAL_IDS = [73, 1, 13]  # Abarca, Olavarría, Márquez
+_MED_AO_IDS      = [73, 1]      # Primarios: Abarca (08-16) + Olavarría (16-21)
+_ESP_MED_GENERAL = {"medicina general", "medicina familiar"}
 
 
 _ESPECIALIDADES_TEXTO = (
@@ -1024,23 +1033,15 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None) -> 
                 {"id": "maso_40", "title": "40 minutos"},
             ]
         )
-    # Para medicina general: stage 0 siempre muestra el slot más próximo de Abarca (73),
-    # independiente de si Olavarría o Márquez tienen slots antes ese mismo día.
-    _esp_med_general = {"medicina general", "medicina familiar"}
-    if especialidad_lower in _esp_med_general:
-        smart_abarca, todos_abarca = await buscar_primer_dia(especialidad_lower, solo_ids=[73])
-        if todos_abarca:
-            # Cargar todos los doctores del día de Abarca para la expansión "Ver más"
-            fecha_abarca = todos_abarca[0]["fecha"]
-            smart_todos, todos_todos = await buscar_slots_dia_por_ids(
-                _MED_GENERAL_IDS, fecha_abarca
-            )
-            smart  = smart_abarca
-            todos  = todos_todos if todos_todos else todos_abarca
-            mejor  = todos_abarca[0]
+    # Medicina general: stage 0 = slot más próximo entre Abarca (08-16) y Olavarría (16-21).
+    # Márquez (15-20) solo aparece como overflow si Abarca+Olavarría no tienen cupo.
+    if especialidad_lower in _ESP_MED_GENERAL:
+        smart, todos = await buscar_primer_dia(especialidad_lower, solo_ids=_MED_AO_IDS)
+        if todos:
+            mejor = todos[0]  # más próximo entre ambos doctores
         else:
-            # Abarca sin disponibilidad en 60 días → fallback general
-            smart, todos = await buscar_primer_dia(especialidad_lower)
+            # Abarca + Olavarría sin disponibilidad → Márquez como overflow
+            smart, todos = await buscar_primer_dia(especialidad_lower, solo_ids=[13])
             mejor = todos[0] if todos else None
     else:
         smart, todos = await buscar_primer_dia(especialidad_lower)
