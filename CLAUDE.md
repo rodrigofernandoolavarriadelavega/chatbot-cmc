@@ -153,7 +153,7 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - App ID: 804421499380432
 - System User: Chatbotcmc-systemuser (ID: 61576699507415) — token permanente
 - Números de prueba: +1 555 641 7609 (Meta test number, sin aprobación requerida)
-- Número prepago CMC: +56945886628 (Display Name en revisión)
+- Número prepago CMC: +56945886628 (Display Name APROBADO ✅)
 - **NO conectar** al +56966610737 (WhatsApp activo de secretarias del CMC)
 
 ## Estado actual del proyecto
@@ -171,7 +171,14 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - [x] Recordatorios automáticos de citas (09:00 CLT)
 - [x] Deploy en VPS DigitalOcean (`157.245.13.107`) corriendo con uvicorn
 - [x] Aprobación Display Name número prepago (+56945886628) ✅
-- [x] Fidelización: seguimiento post-consulta (diario 10:00 AM) y reactivación inactivos (lunes 10:30 AM)
+- [x] Fidelización completa: post-consulta · reactivación · adherencia kine · control por especialidad · cross-sell kine
+- [x] Clasificación de respuesta libre al seguimiento (texto libre → mejor/igual/peor via Claude)
+- [x] Panel admin: etiquetas de especialidad legibles, tiempo de espera en formato humano
+- [x] Panel "Pacientes en Control": seguimiento de sesiones recurrentes (kine, ortodoncia, psicología, nutrición)
+- [x] Instagram y Facebook Messenger: webhook unificado, respuesta desde panel admin
+- [x] Normalización de teléfono (sin prefijo `+`) para evitar sesiones duplicadas
+- [x] Detección pasiva de Arauco: si paciente menciona "arauco", guarda tag automáticamente
+- [x] Masoterapia con duración variable (20 o 40 min) antes de buscar slots
 
 ## Dashboard admin
 - Ruta: `http://157.245.13.107:8001/admin?token=cmc_admin_2026`
@@ -179,25 +186,34 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - Muestra métricas, conversaciones activas y estado del sistema
 
 ## Sesión en curso
-**Fecha**: 2026-04-08
+**Fecha**: 2026-04-09
 
-**Hecho hoy**:
-- IDs Medilink corregidos consultando directamente la API: Márquez 18→**13**, Borrego 28→**23**, Etcheverry 26→**21**
-- Expansión progresiva de horarios Medicina General: sugerido Abarca → smart Abarca → smart Abarca+Olavarría → todos los 3 doctores
-- Botón "Ver más profesionales" en stage 2; stage 3 busca propio día de Márquez si no trabaja ese día
-- Precio en contexto mientras se ven horarios
-- Fidelización implementada (`app/fidelizacion.py`): post-consulta 10:00 AM y reactivación inactivos lunes 10:30 AM
-- Mapeo de profesionales por nombre (leo, armijo, abarca, paola, etc.)
-- **Intervalos de atención corregidos** — bot ignora intervalo de Medilink (5–10 min para bloques flexibles de recepción) y usa duraciones reales del dict `PROFESIONALES` en `medilink.py`
-- **Masoterapia con duración variable**: nuevo estado `WAIT_DURACION_MASOTERAPIA` pregunta 20 o 40 min antes de buscar slots. Implementado `intervalo_override` en `buscar_primer_dia`, `buscar_slots_dia` y `buscar_slots_dia_por_ids`
-- Documentación actualizada: CLAUDE.md, Notion (página principal, flujo conversacional, integración Medilink)
+**Hecho (sesiones 2026-04-08 y 2026-04-09)**:
+- IDs Medilink corregidos: Márquez 18→**13**, Borrego 28→**23**, Etcheverry 26→**21**
+- Expansión progresiva Medicina General: sugerido Abarca → smart Abarca → smart Abarca+Olavarría → todos
+- Intervalos de atención corregidos (bot ignora intervalo Medilink de 5–10 min, usa dict `PROFESIONALES`)
+- Masoterapia con duración variable: estado `WAIT_DURACION_MASOTERAPIA` antes de buscar slots
+- Panel admin: etiquetas de especialidad legibles (`espLabel()`), tiempo de espera humano (`waitLabel()`)
+- Panel "Pacientes en Control" (`/admin` → botón): seguimiento de sesiones kine/ortodoncia/psicología/nutrición
+- Fix JS SyntaxError `\'` en panel admin (190 reemplazos)
+- Fix normalización teléfono: `phone = msg["from"].lstrip("+")` — evita sesiones duplicadas
+- Fix Medilink: queries día a día (range query devolvía 400), `nombre_paciente` en vez de `paciente` anidado
+- Instagram y Facebook Messenger integrados: webhook unificado, íconos en panel, `/admin/api/reply` enruta por canal
+- Fidelización completa en `app/fidelizacion.py`:
+  - Post-consulta (diario 10:00)
+  - Reactivación inactivos (lunes 10:30)
+  - Adherencia kinesiología (diario 11:00 — gap 4+ días sin sesión)
+  - Control por especialidad (diario 11:30 — Nutrición/Psicología/Cardiología/Ginecología/Traumatología)
+  - Cross-sell kine (miércoles 10:30 — tras medicina/traumatología)
+- Clasificación de texto libre en seguimiento: si paciente escribe "me siento peor" → Claude clasifica → flujo correcto
+- Detección pasiva de Arauco: cualquier mención guarda tag silenciosamente
 
-**Estado del servidor**: corriendo en `https://agentecmc.cl` (`/opt/chatbot-cmc`), sin errores — **falta hacer deploy de los cambios de hoy**
+**Estado del servidor**: ✅ corriendo en `https://agentecmc.cl`, deployado.
 
 **Pendiente**:
-- Hacer deploy en servidor (git push + git pull + reiniciar uvicorn)
-- Promover número +56945886628 a pacientes reales (redes sociales, recepción, etc.)
-- Monitorear primeras conversaciones reales y corregir lo que falle
+- Promover número +56945886628 a pacientes reales (redes sociales, recepción)
+- Monitorear primeras conversaciones reales
+- Tags clínicos automáticos (dolor lumbar, rehabilitación) — detectar con Claude y guardar en contact_tags
 
 ---
 
