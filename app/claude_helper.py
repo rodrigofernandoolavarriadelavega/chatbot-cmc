@@ -298,6 +298,76 @@ PODOLOGÍA ADICIONAL:
 Para otras especialidades no listadas: indicar que el precio se consulta en recepción al momento de agendar."""
 
 
+# Cache determinístico para respuestas comunes de seguimiento post-consulta
+_SEGUIMIENTO_CACHE: dict[str, str] = {
+    # mejor
+    "mejor":              "mejor",
+    "bien":               "mejor",
+    "ya estoy bien":      "mejor",
+    "me siento mejor":    "mejor",
+    "mejoré":             "mejor",
+    "mejore":             "mejor",
+    "me recuperé":        "mejor",
+    "me recupere":        "mejor",
+    "estoy bien":         "mejor",
+    "bastante mejor":     "mejor",
+    "mucho mejor":        "mejor",
+    # igual
+    "igual":              "igual",
+    "lo mismo":           "igual",
+    "sin cambios":        "igual",
+    "igual que antes":    "igual",
+    "más o menos":        "igual",
+    "mas o menos":        "igual",
+    "más o menos igual":  "igual",
+    # peor
+    "peor":               "peor",
+    "mal":                "peor",
+    "sigo mal":           "peor",
+    "me siento peor":     "peor",
+    "empeoré":            "peor",
+    "empeore":            "peor",
+    "peor que antes":     "peor",
+    "no mejoro":          "peor",
+    "no mejoré":          "peor",
+    "cada vez peor":      "peor",
+    "sigo igual de mal":  "peor",
+}
+
+
+async def clasificar_respuesta_seguimiento(mensaje: str) -> str | None:
+    """
+    Detecta si un mensaje libre es respuesta a '¿Cómo te sientes después de tu consulta?'
+    Retorna 'mejor', 'igual', 'peor', o None si el mensaje no es una respuesta de seguimiento.
+    Usa cache determinístico para casos obvios y Claude Haiku solo para ambiguos.
+    """
+    clave = mensaje.strip().lower()
+    if clave in _SEGUIMIENTO_CACHE:
+        log.info("seguimiento cache hit: %r → %s", clave, _SEGUIMIENTO_CACHE[clave])
+        return _SEGUIMIENTO_CACHE[clave]
+
+    try:
+        resp = await client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=10,
+            system=(
+                "Clasifica si el mensaje es una respuesta a '¿Cómo te sientes después de tu consulta médica?'. "
+                "Devuelve SOLO una de estas palabras exactas: mejor, igual, peor, ninguno. "
+                "Si el mensaje habla de cómo se siente el paciente → mejor/igual/peor. "
+                "Si el mensaje no tiene relación con sentirse bien o mal → ninguno."
+            ),
+            messages=[{"role": "user", "content": mensaje}],
+        )
+        resultado = resp.content[0].text.strip().lower()
+        if resultado in ("mejor", "igual", "peor"):
+            log.info("seguimiento Claude: %r → %s", mensaje[:40], resultado)
+            return resultado
+        return None
+    except Exception as e:
+        log.error("clasificar_respuesta_seguimiento falló: %s", e)
+        return None
+
+
 async def detect_intent(mensaje: str) -> dict:
     """Detecta intención del mensaje. Devuelve dict con intent, especialidad, respuesta_directa."""
     clave = mensaje.strip().lower()

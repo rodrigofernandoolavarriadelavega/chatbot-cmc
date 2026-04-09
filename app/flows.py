@@ -5,7 +5,7 @@ Opción C: Claude detecta intención → sistema guía el flujo → Medilink eje
 import re
 from datetime import datetime, timedelta
 
-from claude_helper import detect_intent, respuesta_faq
+from claude_helper import detect_intent, respuesta_faq, clasificar_respuesta_seguimiento
 from medilink import (buscar_primer_dia, buscar_slots_dia, buscar_slots_dia_por_ids,
                       buscar_paciente, crear_paciente, crear_cita,
                       listar_citas_paciente, cancelar_cita,
@@ -209,6 +209,32 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "Entendido 😊 Cuando lo necesites, estamos acá.\n"
                 "_Escribe *menu* para volver al inicio._"
             )
+
+        # ── Respuesta libre al seguimiento post-consulta ──────────────────────
+        seg_pendiente = get_ultimo_seguimiento(phone)
+        if seg_pendiente:
+            clasificacion = await clasificar_respuesta_seguimiento(txt)
+            if clasificacion:
+                esp  = seg_pendiente.get("especialidad", "")
+                prof = seg_pendiente.get("profesional", "")
+                save_fidelizacion_respuesta(phone, "postconsulta", clasificacion)
+                if clasificacion == "mejor":
+                    log_event(phone, "seguimiento_mejor", {"especialidad": esp, "fuente": "texto_libre"})
+                    return _btn_msg(
+                        "Qué bueno saberlo 😊 Nos alegra que te sientas mejor.\n\n"
+                        "¿Quieres agendar tu control de seguimiento?",
+                        [{"id": "1", "title": "Sí, agendar control"},
+                         {"id": "no_control", "title": "Por ahora no"}]
+                    )
+                else:  # igual o peor
+                    log_event(phone, "seguimiento_negativo",
+                              {"respuesta": clasificacion, "especialidad": esp, "fuente": "texto_libre"})
+                    return _btn_msg(
+                        "Lamentamos escuchar eso 😟\n\n"
+                        f"¿Quieres reagendar una consulta{' con ' + prof if prof else ''}?",
+                        [{"id": "1", "title": "Sí, reagendar"},
+                         {"id": "no_control", "title": "No por ahora"}]
+                    )
 
         result = await detect_intent(txt)
         intent = result.get("intent", "otro")
