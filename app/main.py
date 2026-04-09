@@ -23,8 +23,11 @@ from reminders import enviar_recordatorios
 from fidelizacion import enviar_seguimiento_postconsulta, enviar_reactivacion_pacientes
 from medilink import (buscar_paciente, crear_paciente, buscar_primer_dia,
                       buscar_slots_dia, crear_cita, listar_citas_paciente,
-                      cancelar_cita, PROFESIONALES, ESPECIALIDADES_MAP)
-from session import get_session, is_duplicate, reset_session, save_session, get_metricas, log_message, get_messages, get_conversations, log_event, get_sesiones_abandonadas, get_tags, save_tag, delete_tag, search_messages
+                      cancelar_cita, get_citas_kine_mes, PROFESIONALES, ESPECIALIDADES_MAP)
+from session import (get_session, is_duplicate, reset_session, save_session, get_metricas,
+                     log_message, get_messages, get_conversations, log_event,
+                     get_sesiones_abandonadas, get_tags, save_tag, delete_tag, search_messages,
+                     get_kine_tracking_all, save_kine_tracking)
 
 logging.config.dictConfig({
     "version": 1,
@@ -482,6 +485,47 @@ body {
     <button class="btn btn-primary" onclick="abrirModalAgendar()" style="margin-left:8px;font-size:12px;padding:6px 14px;border-radius:8px;">+ Nueva Cita</button>
     <button class="btn" onclick="abrirBusquedaGlobal()" style="margin-left:6px;font-size:12px;padding:6px 14px;border-radius:8px;background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;">🔍 Buscar</button>
     <button class="btn" onclick="abrirModalAnular()" style="margin-left:6px;font-size:12px;padding:6px 14px;border-radius:8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;">✕ Anular Hora</button>
+    <button class="btn" onclick="abrirModalKine()" style="margin-left:6px;font-size:12px;padding:6px 14px;border-radius:8px;background:#f0fdf4;color:#15803d;border:1px solid #86efac;">🦵 Kinesiología</button>
+  </div>
+</div>
+
+<!-- MODAL KINESIOLOGÍA -->
+<div id="modal-kine" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:flex-start;justify-content:center;padding-top:40px;padding-bottom:40px;overflow-y:auto;">
+  <div style="background:#fff;border-radius:14px;width:900px;max-width:96vw;box-shadow:0 20px 60px rgba(0,0,0,.2);position:relative;margin:auto;">
+    <div style="padding:20px 24px 14px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <span style="font-size:16px;font-weight:700;color:#15803d;">🦵 Seguimiento Kinesiología</span>
+      <div style="display:flex;align-items:center;gap:6px;margin-left:auto;">
+        <button onclick="kineNavMes(-1)" style="background:#f1f5f9;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:14px;">◀</button>
+        <span id="kine-mes-label" style="font-size:13px;font-weight:600;color:#334155;min-width:100px;text-align:center;"></span>
+        <button onclick="kineNavMes(1)" style="background:#f1f5f9;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:14px;">▶</button>
+      </div>
+      <button onclick="cerrarModalKine()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#94a3b8;margin-left:8px;">✕</button>
+    </div>
+    <!-- Resumen -->
+    <div id="kine-resumen" style="padding:12px 24px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;gap:24px;flex-wrap:wrap;font-size:12px;color:#475569;"></div>
+    <!-- Tabla -->
+    <div style="overflow-x:auto;max-height:60vh;overflow-y:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead style="position:sticky;top:0;background:#f8fafc;z-index:1;">
+          <tr>
+            <th style="text-align:left;padding:10px 12px;font-weight:600;color:#475569;border-bottom:2px solid #e2e8f0;">Paciente</th>
+            <th style="text-align:left;padding:10px 12px;font-weight:600;color:#475569;border-bottom:2px solid #e2e8f0;">Kinesiólogo</th>
+            <th style="text-align:center;padding:10px 12px;font-weight:600;color:#475569;border-bottom:2px solid #e2e8f0;">Sesiones mes</th>
+            <th style="text-align:center;padding:10px 12px;font-weight:600;color:#475569;border-bottom:2px solid #e2e8f0;">Total prescritas</th>
+            <th style="text-align:center;padding:10px 12px;font-weight:600;color:#475569;border-bottom:2px solid #e2e8f0;">Progreso</th>
+            <th style="text-align:center;padding:10px 12px;font-weight:600;color:#475569;border-bottom:2px solid #e2e8f0;">Modalidad</th>
+            <th style="text-align:left;padding:10px 12px;font-weight:600;color:#475569;border-bottom:2px solid #e2e8f0;">Notas</th>
+            <th style="padding:10px 8px;border-bottom:2px solid #e2e8f0;"></th>
+          </tr>
+        </thead>
+        <tbody id="kine-tbody"></tbody>
+      </table>
+      <div id="kine-empty" style="display:none;text-align:center;padding:40px;color:#94a3b8;font-size:14px;">Sin citas de kinesiología en este período</div>
+      <div id="kine-loading" style="text-align:center;padding:40px;color:#94a3b8;font-size:14px;">Cargando...</div>
+    </div>
+    <div style="padding:12px 24px;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8;">
+      💡 "Sesiones mes" se obtiene de Medilink. "Total prescritas" y "Notas" se guardan manualmente.
+    </div>
   </div>
 </div>
 
@@ -1409,6 +1453,132 @@ async function confirmarAnular(){
     res.innerHTML=`<span style="color:#dc2626;">Error: ${e.detail||'No se pudo anular la hora'}</span>`;
   }
 }
+
+// ── MODAL KINESIOLOGÍA ────────────────────────────────────────────────────────
+const MESES_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio",
+                  "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const PRECIO_KINE = {fonasa: 7830, particular: 20000};
+
+let kineMesActual = new Date();
+let kineDatos = [];
+
+function abrirModalKine() {
+  kineMesActual = new Date();
+  document.getElementById('modal-kine').style.display = 'flex';
+  cargarKine();
+}
+function cerrarModalKine() {
+  document.getElementById('modal-kine').style.display = 'none';
+}
+function kineNavMes(delta) {
+  kineMesActual.setMonth(kineMesActual.getMonth() + delta);
+  cargarKine();
+}
+async function cargarKine() {
+  const y = kineMesActual.getFullYear();
+  const m = String(kineMesActual.getMonth()+1).padStart(2,'0');
+  document.getElementById('kine-mes-label').textContent = `${MESES_ES[kineMesActual.getMonth()]} ${y}`;
+  document.getElementById('kine-loading').style.display = 'block';
+  document.getElementById('kine-empty').style.display = 'none';
+  document.getElementById('kine-tbody').innerHTML = '';
+  document.getElementById('kine-resumen').innerHTML = '';
+  try {
+    const r = await fetch(`/admin/api/kine?mes=${y}-${m}&token=${TOKEN}`);
+    const d = await r.json();
+    kineDatos = d.pacientes || [];
+    renderKine();
+  } catch(e) {
+    document.getElementById('kine-loading').style.display = 'none';
+    document.getElementById('kine-empty').style.display = 'block';
+    document.getElementById('kine-empty').textContent = 'Error al cargar datos';
+  }
+}
+function renderKine() {
+  document.getElementById('kine-loading').style.display = 'none';
+  const tbody = document.getElementById('kine-tbody');
+  if (!kineDatos.length) {
+    document.getElementById('kine-empty').style.display = 'block';
+    document.getElementById('kine-resumen').innerHTML = '';
+    return;
+  }
+  document.getElementById('kine-empty').style.display = 'none';
+
+  // Resumen
+  const totalSesiones = kineDatos.reduce((s,p)=>s+p.sesiones_mes,0);
+  const totalPacientes = kineDatos.length;
+  const ingFonasa = kineDatos.filter(p=>p.modalidad==='fonasa').reduce((s,p)=>s+p.sesiones_mes*7830,0);
+  const ingPart   = kineDatos.filter(p=>p.modalidad!=='fonasa').reduce((s,p)=>s+p.sesiones_mes*20000,0);
+  const ingTotal  = ingFonasa + ingPart;
+  document.getElementById('kine-resumen').innerHTML = `
+    <span>👤 <strong>${totalPacientes}</strong> pacientes</span>
+    <span>📋 <strong>${totalSesiones}</strong> sesiones realizadas</span>
+    <span>💰 Ingresos estimados: <strong>$${ingTotal.toLocaleString('es-CL')}</strong></span>
+    <span style="color:#64748b;">(Fonasa $${ingFonasa.toLocaleString('es-CL')} · Particular $${ingPart.toLocaleString('es-CL')})</span>
+  `;
+
+  tbody.innerHTML = kineDatos.map((p,i) => {
+    const total = p.total_sesiones || 0;
+    const hechas = p.sesiones_mes;
+    const pct = total ? Math.min(100, Math.round(hechas/total*100)) : 0;
+    const barColor = pct >= 100 ? '#16a34a' : pct >= 60 ? '#f59e0b' : '#3b82f6';
+    const progBar = total ? `
+      <div style="display:flex;align-items:center;gap:6px;">
+        <div style="flex:1;background:#e2e8f0;border-radius:99px;height:8px;min-width:60px;">
+          <div style="width:${pct}%;background:${barColor};border-radius:99px;height:8px;transition:width .3s;"></div>
+        </div>
+        <span style="font-size:11px;color:#475569;white-space:nowrap;">${hechas}/${total}</span>
+      </div>` : `<span style="font-size:11px;color:#94a3b8;">—</span>`;
+
+    const profShort = p.prof_nombre.includes('Etcheverry') ? 'Leo' : 'Luis';
+    const rut = p.rut || '—';
+    const nombre = p.paciente_nombre || rut;
+
+    return `<tr style="border-bottom:1px solid #f1f5f9;${i%2===1?'background:#fafafa':''}" id="kine-row-${i}">
+      <td style="padding:10px 12px;">
+        <div style="font-weight:600;color:#1e293b;font-size:13px;">${nombre}</div>
+        <div style="font-size:11px;color:#94a3b8;">${rut}</div>
+      </td>
+      <td style="padding:10px 12px;">
+        <span style="background:${profShort==='Leo'?'#dbeafe':'#dcfce7'};color:${profShort==='Leo'?'#1d4ed8':'#15803d'};border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600;">${profShort}</span>
+      </td>
+      <td style="padding:10px 12px;text-align:center;">
+        <span style="font-size:16px;font-weight:700;color:#1172AB;">${hechas}</span>
+        <div style="font-size:10px;color:#94a3b8;">sesiones</div>
+      </td>
+      <td style="padding:10px 12px;text-align:center;">
+        <input type="number" min="0" max="50" value="${total}"
+          style="width:56px;text-align:center;border:1px solid #e2e8f0;border-radius:6px;padding:4px;font-size:13px;"
+          onchange="kineDatos[${i}].total_sesiones=parseInt(this.value)||0;guardarKine(${i})">
+      </td>
+      <td style="padding:10px 12px;">${progBar}</td>
+      <td style="padding:10px 12px;text-align:center;">
+        <select style="border:1px solid #e2e8f0;border-radius:6px;padding:4px 6px;font-size:12px;"
+          onchange="kineDatos[${i}].modalidad=this.value;guardarKine(${i});renderKine()">
+          <option value="fonasa" ${p.modalidad==='fonasa'?'selected':''}>Fonasa</option>
+          <option value="particular" ${p.modalidad==='particular'?'selected':''}>Particular</option>
+        </select>
+      </td>
+      <td style="padding:10px 12px;">
+        <input type="text" placeholder="Notas..." value="${(p.notas||'').replace(/"/g,'&quot;')}"
+          style="width:100%;border:1px solid #e2e8f0;border-radius:6px;padding:4px 8px;font-size:12px;"
+          onchange="kineDatos[${i}].notas=this.value;guardarKine(${i})">
+      </td>
+      <td style="padding:10px 8px;text-align:center;">
+        <span id="kine-saved-${i}" style="font-size:11px;color:#16a34a;display:none;">✓</span>
+      </td>
+    </tr>`;
+  }).join('');
+}
+async function guardarKine(i) {
+  const p = kineDatos[i];
+  await fetch(`/admin/api/kine/${encodeURIComponent(p.rut)}/${p.id_prof}?token=${TOKEN}`, {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({total_sesiones: p.total_sesiones, modalidad: p.modalidad, notas: p.notas})
+  });
+  const el = document.getElementById(`kine-saved-${i}`);
+  if (el) { el.style.display='inline'; setTimeout(()=>el.style.display='none', 2000); }
+}
 </script>
 </body>
 </html>'''
@@ -1651,6 +1821,43 @@ async def admin_anular_cita(request: Request, token: str = Query(...)):
     if not ok:
         raise HTTPException(status_code=400, detail="No se pudo anular la cita en Medilink")
     log_event("admin", "cita_anulada_panel", {"id_cita": id_cita})
+    return {"ok": True}
+
+
+@app.get("/admin/api/kine")
+async def admin_kine(mes: str = None, token: str = Query(...)):
+    """Retorna citas de kinesiología del mes + datos de tracking manual."""
+    _check_token(token)
+    from datetime import date
+    if mes:
+        try:
+            year, month = int(mes.split("-")[0]), int(mes.split("-")[1])
+        except Exception:
+            raise HTTPException(status_code=400, detail="mes debe ser YYYY-MM")
+    else:
+        hoy = date.today()
+        year, month = hoy.year, hoy.month
+    citas = await get_citas_kine_mes(year, month)
+    tracking = {(t["rut"], t["id_prof"]): t for t in get_kine_tracking_all()}
+    for p in citas:
+        t = tracking.get((p["rut"], p["id_prof"]), {})
+        p["total_sesiones"]  = t.get("total_sesiones", 0)
+        p["modalidad"]       = t.get("modalidad", "fonasa")
+        p["notas"]           = t.get("notas", "")
+    return {"year": year, "month": month, "pacientes": citas}
+
+
+@app.put("/admin/api/kine/{rut}/{id_prof}")
+async def admin_kine_update(rut: str, id_prof: int, request: Request, token: str = Query(...)):
+    """Actualiza el tracking de sesiones de un paciente kine."""
+    _check_token(token)
+    body = await request.json()
+    save_kine_tracking(
+        rut, id_prof,
+        int(body.get("total_sesiones", 0)),
+        body.get("modalidad", "fonasa"),
+        body.get("notas", ""),
+    )
     return {"ok": True}
 
 

@@ -40,8 +40,8 @@ PROFESIONALES = {
     69: {"nombre": "Dra. Aurora Valdés",    "especialidad": "Implantología",         "intervalo": 60},
     76: {"nombre": "Dra. Valentina Fuentealba","especialidad": "Estética Facial",    "intervalo": 30},
     59: {"nombre": "Paola Acosta",          "especialidad": "Masoterapia",           "intervalo": 30},
-    77: {"nombre": "Luis Armijo",           "especialidad": "Kinesiología",          "intervalo": 30},
-    21: {"nombre": "Leonardo Etcheverry",   "especialidad": "Kinesiología",          "intervalo": 30},
+    77: {"nombre": "Luis Armijo",           "especialidad": "Kinesiología",          "intervalo": 40},
+    21: {"nombre": "Leonardo Etcheverry",   "especialidad": "Kinesiología",          "intervalo": 40},
     52: {"nombre": "Gisela Pinto",          "especialidad": "Nutrición",             "intervalo": 30},
     74: {"nombre": "Jorge Montalba",        "especialidad": "Psicología Adulto",     "intervalo": 60},
     49: {"nombre": "Juan Pablo Rodríguez",  "especialidad": "Psicología Adulto",     "intervalo": 60},
@@ -607,6 +607,75 @@ async def cancelar_cita(id_cita: int) -> bool:
         except httpx.RequestError as e:
             log.error("No se pudo cancelar cita %d: %s", id_cita, e)
             return False
+
+
+async def get_citas_kine_mes(year: int, month: int) -> list:
+    """Retorna todas las citas de kinesiología (Luis y Leo) en el mes indicado,
+    agrupadas por paciente. Incluye también citas de Paola Acosta (masoterapia).
+    """
+    import calendar
+    last_day = calendar.monthrange(year, month)[1]
+    # Medilink fecha en formato YYYY-MM-DD para filtros gte/lte
+    fecha_ini = f"{year}-{month:02d}-01"
+    fecha_fin = f"{year}-{month:02d}-{last_day:02d}"
+
+    kine_ids = [77, 21]  # Luis Armijo, Leonardo Etcheverry
+    citas_raw = []
+
+    async with httpx.AsyncClient(timeout=20) as client:
+        for id_prof in kine_ids:
+            params = {
+                "id_sucursal":      {"eq": MEDILINK_SUCURSAL},
+                "id_profesional":   {"eq": id_prof},
+                "fecha":            {"gte": fecha_ini, "lte": fecha_fin},
+                "estado_anulacion": {"eq": 0},
+            }
+            try:
+                r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
+                               params={"q": _q(params), "limit": 500}, headers=HEADERS)
+                if r.status_code != 200:
+                    log.warning("get_citas_kine_mes: prof %d → %s", id_prof, r.status_code)
+                    continue
+                for c in r.json().get("data", []):
+                    paciente = c.get("paciente") or {}
+                    rut = str(paciente.get("rut", "") or c.get("rut_paciente", ""))
+                    nombre = f"{paciente.get('nombre','') or ''} {paciente.get('apellidos','') or ''}".strip()
+                    citas_raw.append({
+                        "id_cita":       c.get("id"),
+                        "id_prof":       id_prof,
+                        "prof_nombre":   PROFESIONALES[id_prof]["nombre"],
+                        "fecha":         c.get("fecha", ""),
+                        "hora_inicio":   (c.get("hora_inicio") or "")[:5],
+                        "rut":           rut,
+                        "paciente_nombre": nombre,
+                        "id_paciente":   paciente.get("id"),
+                    })
+            except Exception as e:
+                log.error("get_citas_kine_mes prof %d: %s", id_prof, e)
+
+    # Agrupar por (rut, id_prof)
+    from collections import defaultdict
+    grupos: dict = defaultdict(list)
+    for c in citas_raw:
+        key = (c["rut"], c["id_prof"])
+        grupos[key].append(c)
+
+    result = []
+    for (rut, id_prof), citas in grupos.items():
+        citas_sorted = sorted(citas, key=lambda x: x["fecha"])
+        result.append({
+            "rut":           rut,
+            "id_prof":       id_prof,
+            "prof_nombre":   PROFESIONALES[id_prof]["nombre"],
+            "paciente_nombre": citas_sorted[0]["paciente_nombre"],
+            "id_paciente":   citas_sorted[0]["id_paciente"],
+            "sesiones_mes":  len(citas_sorted),
+            "fechas":        [c["fecha"] for c in citas_sorted],
+            "primera_fecha": citas_sorted[0]["fecha"],
+            "ultima_fecha":  citas_sorted[-1]["fecha"],
+        })
+
+    return sorted(result, key=lambda x: x["primera_fecha"])
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
