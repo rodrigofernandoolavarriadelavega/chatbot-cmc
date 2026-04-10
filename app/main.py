@@ -1236,11 +1236,17 @@ async function loadMessages(phone, preserveScroll=false) {
 }
 function renderMessages(msgs, preserveScroll=false) {
   const el=document.getElementById("chat-messages");
-  const prevScroll=el.scrollTop;
+  // Auto-scroll al fondo: siempre al abrir por primera vez; en refresh solo si
+  // el usuario ya estaba mirando los últimos mensajes (tolerancia 120px).
+  const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+  const stickyBottom = !preserveScroll || distFromBottom < 120;
+  const prevScroll = el.scrollTop;
   if (msgs.length) allMsgsCache = msgs;
   if(!msgs.length){el.innerHTML=`<div style="text-align:center;color:var(--text-3);font-size:12px;padding:20px;">Sin mensajes registrados aún</div>`;return;}
   let html=""; let lastState=null;
-  [...msgs].reverse().forEach(m=>{
+  // Orden cronológico (antiguo → nuevo), estilo WhatsApp: scroll hacia abajo
+  // para ver los mensajes más recientes.
+  msgs.forEach(m=>{
     if(m.state&&m.state!==lastState){html+=`<div class="state-sep"><span class="state-pill">${stateLabel(m.state)}</span></div>`;lastState=m.state;}
     const isRecep=m.direction==="out"&&(m.text||"").startsWith("[Recepcionista]");
     const text=(m.text||"").replace(/^\[Recepcionista\] /,"").replace(/^\[.*?\] /,"")
@@ -1251,7 +1257,8 @@ function renderMessages(msgs, preserveScroll=false) {
     const who=m.direction==="in"?`${chanIco} Paciente`:isRecep?"🙋 Recepcionista":"🤖 Bot";
     html+=`<div class="msg-row ${m.direction}${isRecep?" recep":""}"><div><div class="msg-bubble">${text}</div><div class="msg-meta">${who} · ${ts}</div></div></div>`;
   });
-  el.innerHTML=html; el.scrollTop=preserveScroll ? prevScroll : 0;
+  el.innerHTML=html;
+  el.scrollTop = stickyBottom ? el.scrollHeight : prevScroll;
 }
 function insertQR(text){document.getElementById("reply-input").value=text;document.getElementById("reply-input").focus();}
 

@@ -502,6 +502,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     # Siempre usar respuesta_faq con contexto de especialidad (ignorar respuesta_directa genérica)
                     consulta = f"¿Cuánto cuesta una consulta de {esp_display}?" if esp_display else txt
                     resp = await respuesta_faq(consulta)
+                    # Refrescar sesión para mantener el flujo vivo y que el panel
+                    # muestre esta conversación como "activa"
+                    save_session(phone, "WAIT_SLOT", data)
                     return (
                         f"{resp}\n\n"
                         f"{DISCLAIMER}\n\n"

@@ -350,14 +350,23 @@ def search_messages(query: str, limit: int = 50) -> list[dict]:
 
 
 def get_conversations(limit: int = 200) -> list[dict]:
-    """Lista todas las conversaciones con último mensaje y estado actual."""
+    """Lista todas las conversaciones con último mensaje y estado actual.
+
+    Ordena por la última actividad real (mayor entre session.updated_at
+    y messages.ts), para que un mensaje que no dispare save_session
+    (p.ej. una pregunta FAQ en mitad del flujo) igual "suba" la
+    conversación al tope del panel.
+    """
     with _conn() as conn:
         rows = conn.execute("""
             SELECT
                 s.phone,
                 s.state,
                 s.data,
-                s.updated_at,
+                CASE
+                    WHEN m.ts IS NOT NULL AND m.ts > s.updated_at THEN m.ts
+                    ELSE s.updated_at
+                END           AS updated_at,
                 m.text        AS last_text,
                 m.direction   AS last_dir,
                 m.ts          AS last_ts,
@@ -370,7 +379,7 @@ def get_conversations(limit: int = 200) -> list[dict]:
                 SELECT id FROM messages WHERE phone = s.phone ORDER BY id DESC LIMIT 1
             )
             LEFT JOIN contact_profiles p ON p.phone = s.phone
-            ORDER BY s.updated_at DESC
+            ORDER BY updated_at DESC
             LIMIT ?
         """, (limit,)).fetchall()
         result = []
