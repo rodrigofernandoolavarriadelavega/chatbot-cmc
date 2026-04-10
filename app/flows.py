@@ -34,9 +34,32 @@ def _proxima_fecha_dia(weekday: int) -> str:
 AFIRMACIONES = {"si", "sí", "yes", "ok", "confirmo", "confirmar", "dale", "ya", "claro", "bueno"}
 NEGACIONES   = {"no", "nop", "nope", "cancelar", "cancel", "no gracias"}
 
-EMERGENCIAS  = {"emergencia", "urgencia", "dolor muy fuerte", "no puedo respirar",
-                "estoy grave", "me estoy muriendo", "perdí el conocimiento",
-                "mucho dolor", "accidente", "desmayo", "convulsion", "convulsión"}
+EMERGENCIAS  = {
+    # generales
+    "emergencia", "urgencia", "dolor muy fuerte", "no puedo respirar",
+    "estoy grave", "me estoy muriendo", "perdí el conocimiento", "perdi el conocimiento",
+    "mucho dolor", "accidente", "desmayo", "convulsion", "convulsión",
+    # respiratorio severo
+    "me ahogo", "no me entra aire", "ahogo fuerte",
+    # cardiovascular severo
+    "dolor de pecho fuerte", "infarto", "me da un infarto",
+    # sangrado
+    "sangre en deposiciones", "vómito con sangre", "vomito con sangre",
+    "hemorragia", "sangrado abundante",
+    # trauma
+    "me golpeé la cabeza", "me golpee la cabeza", "caída fuerte", "caida fuerte",
+    "fractura", "hueso expuesto", "accidente grave",
+    # quemaduras / araña
+    "quemadura grave", "me quemé mucho", "me queme mucho",
+    "araña de rincón", "arana de rincon", "araña rincón", "arana rincon",
+    "mordedura de araña", "mordedura de arana", "loxosceles", "picó araña", "pico araña",
+    # intoxicaciones
+    "intoxicación por mariscos", "intoxicacion por mariscos", "marea roja",
+    # neurológico grave
+    "no despierta", "no reacciona", "perdida de conciencia",
+    # ocular urgente
+    "no veo", "perdí la vista", "perdi la vista", "ceguera súbita",
+}
 
 DISCLAIMER = "_Recuerda que soy un asistente virtual, no un médico. Para consultas clínicas, habla siempre con un profesional de salud._"
 

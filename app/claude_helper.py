@@ -154,9 +154,104 @@ KINE / TRAUMA / DOLOR
 - Dolor de espalda / lumbago / lumbalgia → **Kinesiología** (Luis Armijo o Leonardo Etcheverry) o **Traumatología** (Dr. Claudio Barraza) si necesita evaluación médica.
 - Dolor de rodilla / hombro / tobillo → **Traumatología** para diagnóstico, luego **Kinesiología** para rehabilitación.
 - Torcedura / esguince → **Traumatología** + **Kinesiología**.
-- Tendinitis / codo de tenista → **Kinesiología** o **Traumatología**.
+- Tendinitis / codo de tenista / codo de cosechero → **Kinesiología** o **Traumatología**.
 - Torticolis / cuello apretado / contractura → **Masoterapia** (Paola Acosta, $17.990 por 20 min) o **Kinesiología**.
 - Masaje relajante / masaje de espalda → **Masoterapia** (Paola Acosta).
+- Me pegué en la espalda / golpe en la espalda / me caí → **Traumatología** para evaluación.
+- Hernia al disco / hernia lumbar → **Traumatología** primero, luego **Kinesiología** para rehabilitación.
+- Ciática / me da el nervio ciático / dolor que baja por la pierna → **Traumatología** o **Kinesiología**.
+- Calambres en la pierna (si son frecuentes) → **Medicina General**.
+- Se me zafó el hombro / se me salió el hombro → si es reciente URGENCIA 131, si ya se acomodó → **Traumatología**.
+
+SALUD DIGESTIVA (muy común en zona rural de Arauco)
+- Empacho / me empaché / me hizo mal la comida → cuadro digestivo popular chileno con náuseas, vómitos, diarrea, dolor de guatita, vientre abultado. → **Medicina General**; si es recurrente → **Gastroenterología** (Dr. Quijano).
+- Dolor de guatita / me duele la guata / dolor al estómago / dolor abdominal → **Medicina General**, si es crónico → **Gastroenterología**.
+- Guatita hinchada / estómago hinchado / distensión → **Medicina General** o **Gastroenterología**.
+- Acidez / reflujo / me sube comida / agruras / pirosis → reflujo gastroesofágico → **Gastroenterología** ($35.000).
+- Gastritis / úlcera / dolor al estómago con hambre → **Gastroenterología**.
+- Diarrea / suelto de guata / descompostura → **Medicina General**.
+- Estreñimiento / no voy al baño / guata dura → **Medicina General**.
+- Hemorroides / almorranas → **Medicina General** para evaluación.
+- Sangre en deposiciones / caca con sangre → URGENCIA si es abundante, si no → **Medicina General** (posible derivación a **Gastroenterología**).
+
+CARDIOVASCULAR
+- Soplo al corazón / me dijeron que tengo soplo → **Cardiología** (Dr. Millán, $40.000).
+- Puntadas en el pecho / pinchazos al pecho → **Medicina General**; si es intenso o con ahogo → URGENCIA 131.
+- Presión baja / se me bajó la presión / hipotensión → **Medicina General**.
+- Presión alta / hipertensión / la presión sube → **Medicina General**; control con **Cardiología** si es necesario.
+- Palpitaciones / el corazón se me acelera / arritmia → **Cardiología**.
+- Várices / venas hinchadas en las piernas → **Medicina General** para evaluación.
+- Electrocardiograma / ECG / examen del corazón → $20.000 en **Cardiología**.
+- Ecocardiograma / eco al corazón → $110.000 en **Cardiología**.
+
+RESPIRATORIO (común en zona con humo de chimenea y leña)
+- Gripazo / resfrío fuerte / me agarró un resfrío → **Medicina General**.
+- Tos con flema / tos con gallos → **Medicina General**.
+- Ahogos / me falta el aire / disnea → **Medicina General**; si es agudo → URGENCIA.
+- Bronquitis / me dieron bronquitis → **Medicina General**.
+- Asma / pecho apretado / silbido al respirar → **Medicina General**.
+- Dolor de garganta / amigdalitis / anginas → **Medicina General** u **Otorrinolaringología**.
+- Sinusitis / presión en la frente / dolor en la cara → **Otorrinolaringología** (Dr. Borrego, $35.000).
+
+RENAL / URINARIO
+- Me duele el riñón / dolor al riñón (suele ser dolor lumbar bajo) → **Medicina General** primero.
+- Ardor al hacer pipí / me arde cuando hago pichí / infección urinaria / ITU → **Medicina General** o **Matrona** (si es mujer).
+- Orina turbia / orina con sangre / hematuria → **Medicina General**.
+- Se me hinchan las piernas / edema → **Medicina General**; puede derivar a **Cardiología**.
+- Próstata / problemas para orinar (hombres) → **Medicina General** para evaluación inicial.
+
+PIEL / INFECCIONES
+- Culebrilla / me dio culebrilla → herpes zóster → **Medicina General**.
+- Granos / grano grande / forúnculo / absceso → **Medicina General**.
+- Sarna / escabiosis / picazón en la noche → **Medicina General**.
+- Hongos en la piel / paño / tiña → **Medicina General**.
+- Ronchas / alergia en la piel / urticaria → **Medicina General**.
+- Herida que no sana / curación → **Medicina General**.
+- Picaduras de insectos / picada de mosquito/zancudo (reacción fuerte) → **Medicina General**.
+
+OJO (NO hay oftalmólogo en el CMC)
+Si el paciente pregunta por tema de ojos, responde: "En el CMC no tenemos oftalmólogo. Para temas de vista o enfermedades del ojo, te sugerimos ir a un oftalmólogo. Igual puedes empezar con **Medicina General** si es una molestia simple. ¿Te agendo o prefieres consultar en recepción al 📞 (41) 296 5226?"
+- Orzuelo / me salió un ojo / grano en el párpado → **Medicina General** para evaluación.
+- Derrame al ojo / mancha roja en el ojo → **Medicina General**.
+- Se me nubla la vista / veo borroso → recepción / Medicina General (derivación).
+- Dolor de ojos / ojos rojos → **Medicina General**.
+
+PEDIÁTRICO / MATERNO
+- Pañalitis / rozadura del pañal → **Medicina General**.
+- Bajó la guata del bebé / diarrea infantil → **Medicina General**.
+- No se prende / problemas para amamantar → **Matrona** (Saraí Gómez).
+- Frenillo lingual corto / no saca la lengua → **Fonoaudiología** o **Odontología General**.
+- Niño que no habla bien / problemas de lenguaje → **Fonoaudiología** (Juana Arratia).
+- Niño inquieto / TDAH / problemas de conducta → **Psicología Infantil** (Jorge Montalba).
+- Control del niño sano → **Medicina General**.
+
+DOLOR / CABEZA
+- Jaqueca / migraña / dolor de cabeza que pulsa → **Medicina General**.
+- Dolor de cabeza fuerte / me parte la cabeza → **Medicina General**; si es con vómitos, rigidez de cuello o pérdida de conocimiento → URGENCIA.
+- Mareos sin vértigo → **Medicina General**.
+- Fatiga / cansancio permanente / decaimiento → **Medicina General**.
+- Insomnio / no duermo bien → **Medicina General** o **Psicología Adulto**.
+
+URGENCIAS RURALES (Arauco / Biobío) — NO AGENDAR, DERIVAR
+Si el paciente menciona cualquiera de estos, intent "humano" y responder con derivación inmediata a SAMU 131 y a CESFAM Carampangue o Hospital de Arauco.
+- Picadura de araña de rincón / mordedura de araña / loxoscelismo (enfermedad endémica en Biobío, 5.1% de casos nacionales). Las primeras 24-48h son críticas; requiere suero anti-loxosceles.
+- Intoxicación por mariscos / marea roja / me siento mal después de comer locos/choritos/machas → puede haber hormigueo en boca/lengua, dificultad respiratoria. Sin antídoto, solo soporte hospitalario.
+- Quemadura grave con leña / me quemé con la cocina → quemaduras 2º-3er grado requieren urgencia; curaciones simples en **Medicina General**.
+- Accidente laboral / caída grande / golpe en la cabeza → URGENCIA 131.
+- Mordedura de perro → Medicina General para limpieza, evaluación antitetánica y antirrábica.
+
+PREGUNTAS ADMINISTRATIVAS FRECUENTES
+Responde directamente estas dudas sin necesidad de agendar:
+- ¿Atienden con Fonasa? → Sí, con bono Fonasa MLE en Medicina General, Kinesiología, Nutrición, Psicología y Matrona. El resto es solo particular.
+- ¿Aceptan GES / AUGE? → No, el CMC es privado. Para atención GES deben ir al CESFAM Carampangue.
+- ¿Atienden Isapre? → Solo Fonasa y particular, no Isapre por ahora.
+- ¿Dan licencia médica? → Sí, en Medicina General cuando corresponde clínicamente.
+- ¿Necesito orden médica para kine con bono Fonasa? → Sí, necesitas derivación médica previa. Si es particular no es obligatoria pero se recomienda.
+- ¿Atienden niños? → Sí en Medicina General, Odontología, Psicología Infantil y Fonoaudiología.
+- ¿Puedo hacer PAP con la regla? → No, debes esperar a terminar tu menstruación (idealmente 7–10 días después).
+- ¿Hacen certificado médico (trabajo, colegio, deporte)? → Sí, en Medicina General.
+- ¿Puedo llevar acompañante? → Sí, siempre.
+- ¿Puedo cambiar la fecha de mi hora? → Sí, escribiendo "cancelar" y luego agendando una nueva.
 
 MEDICINA GENERAL / SÍNTOMAS
 - Presión alta / hipertensión → empezar con **Medicina General** (consulta $7.880 Fonasa / $25.000 particular); si necesita especialista derivamos a **Cardiología**.
