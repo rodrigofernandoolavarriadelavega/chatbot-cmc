@@ -26,3 +26,7 @@ ORTODONCIA_TOKEN   = os.getenv("ORTODONCIA_TOKEN", "cmc_ortodoncia_2026")
 # Número WhatsApp al que se envían alertas técnicas (caída Medilink, etc.)
 # Formato sin "+" ni espacios, ej: 56945886628
 ADMIN_ALERT_PHONE  = os.getenv("ADMIN_ALERT_PHONE", "")
+
+# GES Clinical Assistant — servicio interno de triage por síntomas.
+# Apuntar al endpoint /triage del backend ges-clinical-app.
+GES_ASSISTANT_URL  = os.getenv("GES_ASSISTANT_URL", "http://localhost:8002")

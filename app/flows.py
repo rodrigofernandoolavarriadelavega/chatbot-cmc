@@ -16,12 +16,7 @@ from session import (save_session, reset_session, save_tag, save_cita_bot, log_e
                      enqueue_intent, add_to_waitlist, cancel_waitlist,
                      get_cita_bot_by_id_cita, mark_cita_confirmation)
 from resilience import is_medilink_down
-try:
-    from triage_ges import triage_sintomas
-except ImportError:
-    # Módulo GES opcional (WIP) — si no está disponible se omite el pre-triage
-    # y se cae directo a detect_intent().
-    triage_sintomas = None
+from triage_ges import triage_sintomas
 from config import CMC_TELEFONO, CMC_TELEFONO_FIJO
 
 # Mapa de nombres de día en español → Python weekday (0=Lun..6=Dom)
@@ -417,7 +412,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # Si devuelve una hipótesis con score suficiente → derivamos a la
         # especialidad correspondiente sin necesidad de más preguntas.
         # Cae silenciosamente a detect_intent si no hay match.
-        if triage_sintomas and len(txt) >= 10 and not txt.isdigit():
+        if len(txt) >= 10 and not txt.isdigit():
             triage = await triage_sintomas(txt)
             if triage:
                 log_event(phone, "triage_ges_match", {
