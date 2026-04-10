@@ -190,6 +190,12 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - [x] Vista Matriz estilo Excel: filas=pacientes, columnas=fechas, círculos I/C/? con colores
 - [x] Toggle Cards ▦ / Matriz ⊞ en modal Ortodoncia
 - [x] `ORTODONCIA_TOKEN` separado (`cmc_ortodoncia_2026`) para acceso al módulo
+- [x] SQLite WAL + busy_timeout=5000 para concurrencia
+- [x] Rate limiter sliding window (30 msg/min) en webhook WA/IG/FB
+- [x] Auth admin vía `Authorization: Bearer` (FastAPI `Depends`) + CORS restrictivo
+- [x] `/health` con ping real a Medilink y latencia
+- [x] Job semanal `purge_old_data` (dom 04:00): messages>90d, events>180d + VACUUM
+- [x] `valid_rut` endurecido y masoterapia con matching estricto
 
 ## Dashboard admin
 - Ruta: `http://157.245.13.107:8001/admin?token=cmc_admin_2026`
@@ -199,7 +205,22 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 ## Sesión en curso
 **Fecha**: 2026-04-10
 
-**Hecho (sesión 2026-04-10)**:
+**Hecho (sesión 2026-04-10 — hardening / deuda técnica)**:
+- **SQLite WAL + busy_timeout=5000** en `session.py::_conn()` → previene `database is locked` bajo concurrencia (verificado en prod: archivos `.db-wal`/`.db-shm` creados)
+- **Rate limiter sliding window** en `main.py` (30 msg/min por teléfono) aplicado a WhatsApp, Instagram y Messenger en el webhook
+- **Auth admin vía `Authorization: Bearer`**: 23 endpoints migrados a `Depends(require_admin)` / `Depends(require_ortodoncia)`; query param `?token=` sigue funcionando como fallback para el panel HTML
+- **CORSMiddleware** restrictivo con whitelist (`agentecmc.cl`, VPS, localhost)
+- **`/health` real**: ahora hace ping a Medilink `/sucursales` con timeout 3s y reporta `medilink_ms` (verificado: ~188ms en prod)
+- **`purge_old_data()`** semanal (domingos 04:00 CLT): borra `messages` > 90d y `conversation_events` > 180d + `VACUUM`
+- **`valid_rut()` endurecido**: rechaza vacíos, longitudes fuera de 8–9 chars, caracteres no numéricos, DV inválido
+- **Masoterapia validación estricta**: `re.findall(r"\b(20|40)\b", txt)` en `flows.py` (antes `"20" in txt` matcheaba "200", "2020")
+- **Bare `except Exception: pass`** reemplazados por excepciones específicas (`sqlite3.OperationalError`, `json.JSONDecodeError`, `ValueError`) con logging
+- **`print()` eliminado** en `medilink.crear_cita` → `log.error`
+- **`twilio==9.2.3`** quitado de `requirements.txt` (no se usaba)
+- **`sessions.db` huérfano** (0 bytes) eliminado de la raíz del repo
+- Commit `8b901dc` pusheado y deployado; verificado con `curl` los 4 caminos de auth (sin token 401, query 200, bearer 200, bearer inválido 401)
+
+**Hecho (sesión 2026-04-10 — anterior)**:
 - **Fix timezone crítico**: servidor corre en UTC → Olavarría (16-21 CLT) era filtrado como pasado. Fix: `ZoneInfo("America/Santiago")` en 3 `datetime.now()` en `medilink.py`
 - **Fix Medicina General**: `solo_ids=[73,1]` busca Abarca+Olavarría juntos (horarios complementarios 08-16 y 16-21); Márquez como overflow; slot más próximo entre ambos gana (`todos[0]`)
 - **Caché SQLite `citas_cache`**: tabla en `session.py`; primera carga sync Medilink, luego lectura local instantánea
@@ -225,7 +246,7 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - Fidelización completa en `app/fidelizacion.py` (post-consulta, reactivación, adherencia kine, control esp., cross-sell)
 - Detección pasiva de Arauco: cualquier mención guarda tag silenciosamente
 
-**Estado del servidor**: ✅ corriendo en `https://agentecmc.cl`, deployado.
+**Estado del servidor**: ✅ corriendo en `https://agentecmc.cl`, deployado commit `8b901dc`. Verificaciones OK: `/health` con ping Medilink, auth admin por query y header, WAL activo, scheduler con 9 jobs incluyendo `purge_old_data` dom 04:00.
 
 **Pendiente**:
 - Verificar ortodoncia modal en producción (hard refresh Cmd+Shift+R, sync puede tardar hasta 10-15 min)
@@ -236,7 +257,11 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 ---
 
 ## Deuda técnica pendiente
-1. Precios en `claude_helper.py` hardcodeados en SYSTEM_PROMPT — actualizar manualmente cuando cambien
-2. Dr. Luis Armijo (ID 77) aparece como Medicina General en Medilink pero es Kinesiólogo — error de datos en Medilink, no en el bot
-3. SQLite no escala bien con concurrencia alta — migrar a PostgreSQL o Redis si hay múltiples sucursales
-4. Verificar IDs de profesionales menos frecuentes (Millán, Barraza, Rejón, etc.) directamente en API para asegurar que sean correctos
+1. **Partir `main.py` (2.620 líneas)** — separar admin routes, HTML template, scheduler y webhook en módulos
+2. **Mover HTML del panel** (~1.700 líneas) a template externo con Jinja2 + static JS
+3. **Auth real del panel** — token embebido en el HTML es visible en DOM; migrar a cookie httpOnly firmada + login
+4. **Suite `pytest`** — cubrir `valid_rut`, `smart_select`, transiciones core de `flows.py`
+5. Precios en `claude_helper.py` hardcodeados en SYSTEM_PROMPT — actualizar manualmente cuando cambien
+6. Dr. Luis Armijo (ID 77) aparece como Medicina General en Medilink pero es Kinesiólogo — error de datos en Medilink, no en el bot
+7. SQLite no escala bien con concurrencia alta — migrar a PostgreSQL o Redis si hay múltiples sucursales
+8. Verificar IDs de profesionales menos frecuentes (Millán, Barraza, Rejón, etc.) directamente en API para asegurar que sean correctos
