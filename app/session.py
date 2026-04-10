@@ -125,6 +125,26 @@ def _conn():
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_ort_pac ON ortodoncia_cache(id_paciente)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_ort_fecha ON ortodoncia_cache(fecha)")
+    # Cola de intenciones recibidas durante caídas de Medilink (modo degradado)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS intent_queue (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            phone       TEXT NOT NULL,
+            intent      TEXT,
+            state_snap  TEXT DEFAULT '',
+            ts_enqueued TEXT DEFAULT (datetime('now')),
+            notified    INTEGER DEFAULT 0
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_queue_notified ON intent_queue(notified)")
+    # Estado del sistema (clave/valor): estado de Medilink, última notificación a recepción, etc.
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS system_state (
+            key         TEXT PRIMARY KEY,
+            value       TEXT,
+            updated_at  TEXT DEFAULT (datetime('now'))
+        )
+    """)
     # Migración: agregar canal a messages si no existe
     try:
         conn.execute("ALTER TABLE messages ADD COLUMN canal TEXT DEFAULT 'whatsapp'")
@@ -322,15 +342,18 @@ def log_message(phone: str, direction: str, text: str, state: str = "IDLE", cana
         conn.commit()
 
 
-def get_messages(phone: str, limit: int = 100) -> list[dict]:
-    """Retorna el historial de mensajes de un número (más reciente al final)."""
+def get_messages(phone: str, limit: int = 300) -> list[dict]:
+    """Retorna los últimos `limit` mensajes de un número, ordenados cronológicamente
+    (más antiguo primero, más reciente al final — lo que espera el panel para mostrar
+    estilo WhatsApp). Antes usaba ORDER BY id ASC LIMIT N lo que devolvía los MÁS
+    ANTIGUOS y cortaba los mensajes nuevos en conversaciones largas."""
     with _conn() as conn:
         rows = conn.execute(
             "SELECT id, phone, direction, text, state, ts, COALESCE(canal,'whatsapp') AS canal FROM messages "
-            "WHERE phone=? ORDER BY id ASC LIMIT ?",
+            "WHERE phone=? ORDER BY id DESC LIMIT ?",
             (phone, limit)
         ).fetchall()
-        return [dict(r) for r in rows]
+        return [dict(r) for r in reversed(rows)]
 
 
 def search_messages(query: str, limit: int = 50) -> list[dict]:
@@ -798,3 +821,87 @@ def get_citas_cache_mes(year: int, month: int, ids_prof: list[int]) -> list[dict
             (*ids_prof, fecha_ini, fecha_fin)
         ).fetchall()
         return [dict(r) for r in rows]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Modo degradado: cola de intenciones + estado del sistema
+# ─────────────────────────────────────────────────────────────────────────────
+
+def enqueue_intent(phone: str, intent: str, state_snap: str = ""):
+    """Guarda en la cola una intención recibida durante una caída de Medilink.
+    Se usa para avisar al paciente cuando el sistema vuelva a estar operativo."""
+    with _conn() as conn:
+        # Evitar duplicados: si el mismo teléfono ya tiene una intención pendiente
+        # en los últimos 10 min, no volver a encolar.
+        existing = conn.execute("""
+            SELECT id FROM intent_queue
+            WHERE phone = ? AND notified = 0
+              AND ts_enqueued >= datetime('now', '-10 minutes')
+            LIMIT 1
+        """, (phone,)).fetchone()
+        if existing:
+            return
+        conn.execute(
+            "INSERT INTO intent_queue (phone, intent, state_snap) VALUES (?, ?, ?)",
+            (phone, intent, state_snap)
+        )
+        conn.commit()
+
+
+def get_pending_intent_queue() -> list[dict]:
+    """Retorna todas las intenciones pendientes de notificar al paciente."""
+    with _conn() as conn:
+        rows = conn.execute("""
+            SELECT id, phone, intent, state_snap, ts_enqueued
+            FROM intent_queue
+            WHERE notified = 0
+            ORDER BY ts_enqueued ASC
+        """).fetchall()
+        return [dict(r) for r in rows]
+
+
+def mark_intent_notified(queue_id: int):
+    """Marca una entrada de la cola como notificada."""
+    with _conn() as conn:
+        conn.execute("UPDATE intent_queue SET notified = 1 WHERE id = ?", (queue_id,))
+        conn.commit()
+
+
+def intent_queue_depth() -> int:
+    """Cantidad de intenciones pendientes de notificar (para /health)."""
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT COUNT(*) FROM intent_queue WHERE notified = 0"
+        ).fetchone()
+        return int(row[0]) if row else 0
+
+
+def system_state_get(key: str) -> str | None:
+    """Lee un valor del estado del sistema."""
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT value FROM system_state WHERE key = ?", (key,)
+        ).fetchone()
+        return row["value"] if row else None
+
+
+def system_state_set(key: str, value: str):
+    """Escribe un valor en el estado del sistema (upsert)."""
+    with _conn() as conn:
+        conn.execute("""
+            INSERT INTO system_state (key, value, updated_at)
+            VALUES (?, ?, datetime('now'))
+            ON CONFLICT(key) DO UPDATE SET
+                value = excluded.value,
+                updated_at = excluded.updated_at
+        """, (key, value))
+        conn.commit()
+
+
+def system_state_updated_at(key: str) -> str | None:
+    """Retorna cuándo se actualizó por última vez un valor del estado."""
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT updated_at FROM system_state WHERE key = ?", (key,)
+        ).fetchone()
+        return row["updated_at"] if row else None
