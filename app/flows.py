@@ -12,7 +12,9 @@ from medilink import (buscar_primer_dia, buscar_slots_dia, buscar_slots_dia_por_
                       valid_rut, clean_rut, especialidades_disponibles,
                       consultar_proxima_fecha)
 from session import (save_session, reset_session, save_tag, save_cita_bot, log_event,
-                     save_profile, get_profile, save_fidelizacion_respuesta, get_ultimo_seguimiento)
+                     save_profile, get_profile, save_fidelizacion_respuesta, get_ultimo_seguimiento,
+                     enqueue_intent)
+from resilience import is_medilink_down
 from config import CMC_TELEFONO, CMC_TELEFONO_FIJO
 
 # Mapa de nombres de día en español → Python weekday (0=Lun..6=Dom)
@@ -143,6 +145,32 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
     # ── IDLE: detectar intención ──────────────────────────────────────────────
     if state == "IDLE":
+        # ── Seguimiento de FAQ con sugerencia de agendar ──────────────────────
+        # Debe ir ANTES de los atajos numéricos (1..4) porque aquí interpretamos
+        # "1"/"sí"/botón como "agendar la especialidad ya sugerida en el FAQ".
+        esp_sug_prev = data.get("especialidad_sugerida")
+        if esp_sug_prev:
+            if tl == "no_agendar" or tl in NEGACIONES:
+                data.pop("especialidad_sugerida", None)
+                save_session(phone, "IDLE", data)
+                log_event(phone, "faq_agendar_rechazo", {"esp": esp_sug_prev})
+                return (
+                    "Sin problema 😊 Cuando lo necesites, estamos acá.\n"
+                    "_Escribe *menu* para ver todas las opciones._"
+                )
+            if tl == "agendar_sugerido" or txt == "1" or tl in AFIRMACIONES:
+                data.pop("especialidad_sugerida", None)
+                log_event(phone, "faq_agendar_acepto", {"esp": esp_sug_prev})
+                perfil = get_profile(phone)
+                if perfil:
+                    data["rut_conocido"] = perfil["rut"]
+                    data["nombre_conocido"] = perfil["nombre"]
+                return await _iniciar_agendar(phone, data, esp_sug_prev)
+            # Cualquier otro mensaje: limpiamos la sugerencia y seguimos el flujo
+            # normal para no atrapar al paciente.
+            data.pop("especialidad_sugerida", None)
+            save_session(phone, "IDLE", data)
+
         # Atajos numéricos del menú
         if txt == "1": return await _iniciar_agendar(phone, data, None)
         if txt == "2": return await _iniciar_cancelar(phone, data)
@@ -283,6 +311,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return _derivar_humano(phone=phone, contexto=txt)
 
         if intent == "disponibilidad":
+            if is_medilink_down():
+                return _modo_degradado(phone, "disponibilidad", result.get("especialidad") or "")
             especialidad = result.get("especialidad")
             if especialidad:
                 fecha = await consultar_proxima_fecha(especialidad)
@@ -299,6 +329,54 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
         if intent in ("precio", "info"):
             resp = result.get("respuesta_directa") or await respuesta_faq(txt)
+            esp_sug = (result.get("especialidad") or "").strip()
+            # Si Claude infirió una especialidad, intentamos mostrar el próximo slot
+            # inline + botón para agendar directo.
+            if esp_sug and not is_medilink_down():
+                try:
+                    esp_lower = esp_sug.lower()
+                    if esp_lower in _ESP_MED_GENERAL:
+                        _smart, _todos = await buscar_primer_dia(esp_lower, solo_ids=_MED_AO_IDS)
+                        mejor = _todos[0] if _todos else None
+                    elif esp_lower in ("masoterapia", "masaje", "masajes"):
+                        # Masoterapia requiere preguntar duración: no pre-lookup.
+                        mejor = None
+                    else:
+                        _smart, _todos = await buscar_primer_dia(esp_lower)
+                        mejor = (_smart[0] if _smart else (_todos[0] if _todos else None))
+                except Exception as e:
+                    log_event(phone, "faq_slot_lookup_error", {"esp": esp_sug, "error": str(e)[:200]})
+                    mejor = None
+
+                if mejor:
+                    data["especialidad_sugerida"] = esp_lower
+                    save_session(phone, "IDLE", data)
+                    preview = (
+                        f"📅 *{mejor['fecha_display']}* · "
+                        f"🕐 *{mejor['hora_inicio'][:5]}* · "
+                        f"{mejor['profesional']}"
+                    )
+                    return _btn_msg(
+                        f"{resp}\n\n"
+                        f"Próxima hora disponible en *{esp_sug}*:\n{preview}\n\n"
+                        f"{DISCLAIMER}\n\n"
+                        "¿Quieres agendar?",
+                        [
+                            {"id": "agendar_sugerido", "title": "✅ Agendar ahora"},
+                            {"id": "no_agendar",      "title": "No por ahora"},
+                        ]
+                    )
+                # Fallback: guardamos la especialidad igual para que "sí" funcione
+                if esp_lower:
+                    data["especialidad_sugerida"] = esp_lower
+                    save_session(phone, "IDLE", data)
+                    return _btn_msg(
+                        f"{resp}\n\n{DISCLAIMER}\n\n¿Quieres agendar en *{esp_sug}*?",
+                        [
+                            {"id": "agendar_sugerido", "title": "✅ Sí, agendar"},
+                            {"id": "no_agendar",      "title": "No por ahora"},
+                        ]
+                    )
             return (
                 f"{resp}\n\n"
                 f"{DISCLAIMER}\n\n"
@@ -1092,7 +1170,25 @@ async def _handle_expansion(phone: str, data: dict, slots_mostrados: list,
         return _format_slots_expansion(groups) if groups else "No hay más horarios disponibles."
 
 
+def _modo_degradado(phone: str, intent: str, state_snap: str = "") -> str:
+    """Respuesta cuando Medilink está caído. Encola la intención y avisa al paciente.
+    Devuelve un mensaje graceful que el bot enviará por WhatsApp."""
+    enqueue_intent(phone, intent, state_snap)
+    log_event(phone, "modo_degradado", {"intent": intent})
+    reset_session(phone)
+    return (
+        "Nuestro sistema de citas está con un problema técnico en este momento 😕\n\n"
+        "Guardé tu mensaje y te avisaré apenas vuelva a estar operativo. "
+        "Mientras tanto puedes llamarnos:\n"
+        f"📞 *{CMC_TELEFONO}*\n"
+        f"☎️ *{CMC_TELEFONO_FIJO}*\n\n"
+        "_Gracias por tu paciencia._"
+    )
+
+
 async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None) -> str:
+    if is_medilink_down():
+        return _modo_degradado(phone, "agendar", especialidad or "")
     if not especialidad:
         save_session(phone, "WAIT_ESPECIALIDAD", data)
         return f"Claro, te ayudo a agendar 😊\n\n¿Qué especialidad necesitas?\n\n{_ESPECIALIDADES_TEXTO}"
@@ -1172,6 +1268,8 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None) -> 
 
 
 async def _iniciar_cancelar(phone: str, data: dict) -> str:
+    if is_medilink_down():
+        return _modo_degradado(phone, "cancelar")
     save_session(phone, "WAIT_RUT_CANCELAR", data)
     return (
         "Claro, te ayudo a cancelar una hora.\n\n"
@@ -1181,6 +1279,8 @@ async def _iniciar_cancelar(phone: str, data: dict) -> str:
 
 
 async def _iniciar_ver(phone: str, data: dict) -> str:
+    if is_medilink_down():
+        return _modo_degradado(phone, "ver_reservas")
     save_session(phone, "WAIT_RUT_VER", data)
     return (
         "Claro, te muestro tus reservas.\n\n"

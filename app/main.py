@@ -20,7 +20,8 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from config import (META_ACCESS_TOKEN, META_PHONE_NUMBER_ID, META_VERIFY_TOKEN,
                     META_PAGE_ACCESS_TOKEN, INSTAGRAM_USER_ID, META_PAGE_ID,
-                    CMC_TELEFONO, ADMIN_TOKEN, ORTODONCIA_TOKEN)
+                    CMC_TELEFONO, ADMIN_TOKEN, ORTODONCIA_TOKEN, OPENAI_API_KEY,
+                    ADMIN_ALERT_PHONE)
 from flows import handle_message
 from reminders import enviar_recordatorios
 from fidelizacion import (enviar_seguimiento_postconsulta, enviar_reactivacion_pacientes,
@@ -36,7 +37,10 @@ from session import (get_session, is_duplicate, reset_session, save_session, get
                      get_sesiones_abandonadas, get_tags, save_tag, delete_tag, search_messages,
                      get_kine_tracking_all, save_kine_tracking,
                      get_ortodoncia_pacientes, set_ortodoncia_tipo, get_ortodoncia_sync_max_fecha,
-                     purge_old_data)
+                     purge_old_data,
+                     get_pending_intent_queue, mark_intent_notified, intent_queue_depth)
+from resilience import (is_medilink_down, mark_medilink_up, medilink_down_since,
+                        should_notify_reception, mark_reception_notified)
 
 logging.config.dictConfig({
     "version": 1,
@@ -133,6 +137,74 @@ async def _job_control_especialidad():   await enviar_recordatorio_control(send_
 async def _job_crosssell_kine():         await enviar_crosssell_kine(send_whatsapp)
 
 
+async def _job_medilink_watchdog():
+    """Cada minuto: si Medilink está marcado como caído, prueba un ping.
+    - Si se recuperó: marca up, notifica a los pacientes encolados y avisa a recepción.
+    - Si sigue caído: notifica a recepción (como máximo 1 vez cada 30 min).
+    """
+    if not is_medilink_down():
+        return
+
+    # Ping rápido a /sucursales (endpoint liviano y estable)
+    from config import MEDILINK_BASE_URL
+    ok = False
+    try:
+        async with httpx.AsyncClient(timeout=4) as client:
+            r = await client.get(f"{MEDILINK_BASE_URL}/sucursales", headers=HEADERS_MEDILINK)
+        ok = r.status_code < 500
+    except (httpx.TimeoutException, httpx.NetworkError, httpx.RequestError):
+        ok = False
+
+    if not ok:
+        # Sigue caído → alerta a recepción con throttle
+        if ADMIN_ALERT_PHONE and should_notify_reception():
+            depth = intent_queue_depth()
+            since = medilink_down_since() or "?"
+            try:
+                await send_whatsapp(
+                    ADMIN_ALERT_PHONE,
+                    "⚠️ *Alerta técnica CMC bot*\n\n"
+                    f"Medilink no responde desde las {since} UTC.\n"
+                    f"Pacientes esperando: *{depth}*\n\n"
+                    "El bot avisó a cada paciente que guardó su solicitud y les "
+                    "pedirá volver a escribir cuando el sistema esté operativo."
+                )
+                mark_reception_notified()
+                log.warning("watchdog: recepción notificada — Medilink sigue caído, cola=%d", depth)
+            except Exception as e:
+                log.error("watchdog: no se pudo notificar a recepción: %s", e)
+        return
+
+    # Medilink respondió OK → recuperación
+    mark_medilink_up()
+    pendientes = get_pending_intent_queue()
+    log.info("watchdog: Medilink OPERATIVO de nuevo — notificando %d pacientes en cola", len(pendientes))
+    for row in pendientes:
+        phone_p = row["phone"]
+        try:
+            await send_whatsapp(
+                phone_p,
+                "✅ ¡Buenas noticias! Nuestro sistema de citas ya está operativo de nuevo 🎉\n\n"
+                "Si quieres retomar lo que estabas haciendo, escribe *menu* y te ayudo al tiro.\n\n"
+                "_Gracias por tu paciencia._"
+            )
+            mark_intent_notified(row["id"])
+        except Exception as e:
+            log.error("watchdog: fallo notificando paciente %s: %s", phone_p, e)
+
+    # Avisar a recepción que se recuperó
+    if ADMIN_ALERT_PHONE:
+        try:
+            await send_whatsapp(
+                ADMIN_ALERT_PHONE,
+                "✅ *Medilink recuperado*\n\n"
+                f"El bot ya está operativo de nuevo. Avisé a {len(pendientes)} paciente(s) "
+                "que estaban esperando."
+            )
+        except Exception:
+            pass
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # AsyncIOScheduler ejecuta coroutines directamente en su event loop.
@@ -202,11 +274,19 @@ async def lifespan(app: FastAPI):
         id="purge_old_data",
         replace_existing=True,
     )
+    # Watchdog Medilink: cada minuto chequea si se recuperó (solo si está down)
+    scheduler.add_job(
+        _job_medilink_watchdog,
+        "interval", minutes=1,
+        id="medilink_watchdog",
+        replace_existing=True,
+    )
     scheduler.start()
     log.info(
         "Scheduler iniciado — recordatorios 09:00 · post-consulta 10:00 · "
         "reactivación lun 10:30 · adherencia kine 11:00 · control 11:30 · "
-        "cross-sell kine mié 10:30 · sync caché 23:50 · purge dom 04:00"
+        "cross-sell kine mié 10:30 · sync caché 23:50 · purge dom 04:00 · "
+        "watchdog medilink 1min"
     )
     yield
     scheduler.shutdown()
@@ -265,6 +345,87 @@ async def send_whatsapp(to: str, body: str):
         "type": "text",
         "text": {"body": body},
     })
+
+
+# ── Multimodal: descarga de media + transcripción Whisper ───────────────────
+async def download_whatsapp_media(media_id: str) -> tuple[bytes, str] | None:
+    """Descarga un archivo de WhatsApp (audio/imagen/doc) por media_id.
+
+    Returns: (contenido_bytes, mime_type) o None si falla.
+    """
+    if not media_id:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            # Paso 1: obtener URL firmada del media
+            meta = await client.get(
+                f"https://graph.facebook.com/v22.0/{media_id}",
+                headers={"Authorization": f"Bearer {META_ACCESS_TOKEN}"},
+            )
+            if meta.status_code != 200:
+                log.error("Whisper media meta %s: %s", meta.status_code, meta.text[:200])
+                return None
+            info = meta.json()
+            url = info.get("url", "")
+            mime = info.get("mime_type", "audio/ogg")
+            if not url:
+                return None
+            # Paso 2: descargar el binario (requiere Authorization también)
+            blob = await client.get(
+                url,
+                headers={"Authorization": f"Bearer {META_ACCESS_TOKEN}"},
+            )
+            if blob.status_code != 200:
+                log.error("Whisper media blob %s", blob.status_code)
+                return None
+            return blob.content, mime
+    except Exception as e:
+        log.error("Error descargando media %s: %s", media_id, e)
+        return None
+
+
+async def transcribe_audio(audio_bytes: bytes, mime: str = "audio/ogg") -> str:
+    """Transcribe un audio a texto usando OpenAI Whisper.
+
+    WhatsApp envía notas de voz como audio/ogg (codec opus).
+    Devuelve "" si falla.
+    """
+    if not OPENAI_API_KEY:
+        log.error("OPENAI_API_KEY no configurado — no se puede transcribir audio")
+        return ""
+    try:
+        # Extensión según mime (Whisper la usa para elegir decoder)
+        ext = "ogg"
+        if "mp3" in mime or "mpeg" in mime:
+            ext = "mp3"
+        elif "wav" in mime:
+            ext = "wav"
+        elif "m4a" in mime or "mp4" in mime:
+            ext = "m4a"
+        elif "webm" in mime:
+            ext = "webm"
+
+        # Llamada HTTP directa (evita dependencia del SDK async del cliente openai)
+        async with httpx.AsyncClient(timeout=60) as client:
+            files = {
+                "file": (f"audio.{ext}", audio_bytes, mime or "application/octet-stream"),
+                "model": (None, "whisper-1"),
+                "language": (None, "es"),
+                "response_format": (None, "text"),
+            }
+            r = await client.post(
+                "https://api.openai.com/v1/audio/transcriptions",
+                headers={"Authorization": f"Bearer {OPENAI_API_KEY}"},
+                files=files,
+            )
+        if r.status_code != 200:
+            log.error("Whisper API %s: %s", r.status_code, r.text[:300])
+            return ""
+        # response_format=text devuelve texto plano
+        return r.text.strip()
+    except Exception as e:
+        log.error("Error transcribiendo audio: %s", e)
+        return ""
 
 
 async def send_whatsapp_interactive(to: str, interactive: dict):
@@ -2086,9 +2247,12 @@ async def health():
     except (httpx.TimeoutException, httpx.NetworkError, httpx.RequestError):
         medilink_ok = False
     return {
-        "status":   "ok",
-        "medilink": "ok" if medilink_ok else "degraded",
+        "status":      "ok",
+        "medilink":    "ok" if medilink_ok else "degraded",
         "medilink_ms": medilink_ms,
+        # Modo degradado: estado persistido en SQLite (lo que el bot usa) + cola
+        "medilink_state":   "down" if is_medilink_down() else "up",
+        "intent_queue_depth": intent_queue_depth(),
     }
 
 
@@ -2590,7 +2754,20 @@ async def webhook(request: Request):
         msg = change["messages"][0]
         msg_type = msg.get("type")
 
-        # Extraer texto de mensajes de texto o respuestas interactivas
+        phone = msg["from"].lstrip("+")  # normalizar: siempre sin + (ej: "56987834148")
+        msg_id = msg.get("id", "")
+        is_audio = False
+
+        # De-dup temprano: evita transcribir un mismo audio dos veces si Meta reintenta
+        if msg_id and is_duplicate(msg_id):
+            log.info("MSG duplicado ignorado id=%s from=%s", msg_id, phone)
+            return Response(status_code=200)
+
+        if _rate_limited(phone):
+            log.warning("Rate limit excedido WA phone=%s type=%s", phone, msg_type)
+            return Response(status_code=200)
+
+        # Extraer texto de mensajes de texto, respuestas interactivas o audio
         if msg_type == "text":
             texto = msg["text"]["body"].strip()
         elif msg_type == "interactive":
@@ -2602,25 +2779,38 @@ async def webhook(request: Request):
                 texto = interactive["list_reply"]["id"]
             else:
                 return Response(status_code=200)
+        elif msg_type == "audio":
+            # Nota de voz → transcribir con Whisper y procesar como texto
+            media_id = msg.get("audio", {}).get("id", "")
+            log.info("AUDIO recibido from=%s media_id=%s — transcribiendo...", phone, media_id)
+            media = await download_whatsapp_media(media_id)
+            if not media:
+                await send_whatsapp(
+                    phone,
+                    "No pude descargar tu audio 😕\nIntenta escribir el mensaje o grabar de nuevo."
+                )
+                return Response(status_code=200)
+            audio_bytes, mime = media
+            transcripcion = await transcribe_audio(audio_bytes, mime)
+            if not transcripcion:
+                await send_whatsapp(
+                    phone,
+                    "No logré entender el audio 😕\n¿Puedes escribirlo o grabarlo de nuevo un poco más claro?"
+                )
+                return Response(status_code=200)
+            texto = transcripcion
+            is_audio = True
+            log.info("AUDIO transcrito from=%s text=%r", phone, texto[:120])
         else:
             return Response(status_code=200)
 
-        phone = msg["from"].lstrip("+")  # normalizar: siempre sin + (ej: "56987834148")
-        msg_id = msg.get("id", "")
-
-        if msg_id and is_duplicate(msg_id):
-            log.info("MSG duplicado ignorado id=%s from=%s", msg_id, phone)
-            return Response(status_code=200)
-
-        if _rate_limited(phone):
-            log.warning("Rate limit excedido WA phone=%s text=%r", phone, texto[:80])
-            return Response(status_code=200)
-
-        log.info("MSG from=%s id=%s text=%r", phone, msg_id, texto[:100])
+        log.info("MSG from=%s id=%s type=%s text=%r", phone, msg_id, msg_type, texto[:100])
 
         session = get_session(phone)
         state_before = session.get("state", "IDLE")
-        log_message(phone, "in", texto, state_before, canal="whatsapp")
+        # Prefijo 🎤 solo para el panel/log, no afecta el texto que llega a handle_message
+        log_text = f"🎤 {texto}" if is_audio else texto
+        log_message(phone, "in", log_text, state_before, canal="whatsapp")
 
         try:
             respuesta = await handle_message(phone, texto, session)

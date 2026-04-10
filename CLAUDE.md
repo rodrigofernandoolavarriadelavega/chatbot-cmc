@@ -43,6 +43,7 @@ MEDILINK_BASE_URL=https://api.medilink2.healthatom.com/api/v5
 MEDILINK_TOKEN=...
 MEDILINK_SUCURSAL=1
 ANTHROPIC_API_KEY=...
+OPENAI_API_KEY=...            # Whisper — transcripción de audios WhatsApp
 META_ACCESS_TOKEN=...         # Token permanente del System User "Chatbotcmc-systemuser"
 META_PHONE_NUMBER_ID=...      # ID del número WhatsApp activo
 META_VERIFY_TOKEN=cmc_webhook_2026
@@ -205,6 +206,14 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 ## Sesión en curso
 **Fecha**: 2026-04-10
 
+**Hecho (sesión 2026-04-10 — glosario FAQ + Fase 1 multimodal)**:
+- **Panel conversaciones**: fix ordenamiento `get_conversations` usa `MAX(m.ts, s.updated_at)` para que FAQs en `WAIT_SLOT` (sin `save_session`) sigan burbujeando arriba; `save_session` forzado en el handler FAQ de `WAIT_SLOT`
+- **Panel chat**: orden cronológico estilo WhatsApp (antiguo arriba → nuevo abajo con auto-scroll sticky-bottom, tolerancia 120px)
+- **Scheduler fix**: `RuntimeError: no running event loop` resuelto — jobs pasados directamente como corutinas a `AsyncIOScheduler.add_job` (sin `lambda: asyncio.create_task(...)`); creados wrappers `_job_*` para los que requieren `send_whatsapp`
+- **Glosario clínico FAQ** en `claude_helper.SYSTEM_PROMPT` (~110 términos coloquiales chilenos de Arauco/Biobío): digestivo (empacho, guatita, reflujo), cardiovascular (soplo, presión), respiratorio (gripazo, bronquitis), renal, piel (culebrilla, sarna, tiña), ojo (con nota: NO hay oftalmólogo), pediátrico/materno, dolor/cabeza, urgencias rurales (araña de rincón, marea roja), preguntas admin (Fonasa/GES/Isapre/licencia/orden kine/PAP/certificados)
+- **`EMERGENCIAS` expandido** en `flows.py` con 30+ términos: respiratorio severo, cardiovascular, sangrado, trauma, quemaduras, **araña de rincón/loxosceles** (endémica Biobío), marea roja, neurológico, ocular urgente
+- **Fase 1 multimodal — Whisper**: `openai==1.51.0` en `requirements.txt`; `OPENAI_API_KEY` en `config.py`; helpers `download_whatsapp_media()` (Graph API 2 pasos: URL firmada + blob) y `transcribe_audio()` (Whisper-1, idioma es) en `main.py`; webhook maneja `msg_type == "audio"`: descarga media → Whisper → texto procesa por pipeline normal `handle_message`; prefijo 🎤 en log para visibilidad en el panel
+
 **Hecho (sesión 2026-04-10 — hardening / deuda técnica)**:
 - **SQLite WAL + busy_timeout=5000** en `session.py::_conn()` → previene `database is locked` bajo concurrencia (verificado en prod: archivos `.db-wal`/`.db-shm` creados)
 - **Rate limiter sliding window** en `main.py` (30 msg/min por teléfono) aplicado a WhatsApp, Instagram y Messenger en el webhook
@@ -248,11 +257,21 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 
 **Estado del servidor**: ✅ corriendo en `https://agentecmc.cl`, deployado commit `8b901dc`. Verificaciones OK: `/health` con ping Medilink, auth admin por query y header, WAL activo, scheduler con 9 jobs incluyendo `purge_old_data` dom 04:00.
 
-**Pendiente**:
+**Pendiente (corto plazo)**:
+- Agregar `OPENAI_API_KEY` al `.env` del servidor y deployar Fase 1 Whisper (commits locales listos, no pusheados)
 - Verificar ortodoncia modal en producción (hard refresh Cmd+Shift+R, sync puede tardar hasta 10-15 min)
 - Promover número +56945886628 a pacientes reales (redes sociales, recepción)
 - Monitorear primeras conversaciones reales
 - Tags clínicos automáticos (dolor lumbar, rehabilitación) — detectar con Claude y guardar en contact_tags
+
+**Próximo sprint (plan aprobado 2026-04-10, pendiente arranque)**:
+1. 🥇 **Modo degradado Medilink** — tabla `intent_queue` + wrapper `safe_medilink_call()` + mensaje graceful al paciente + notificación throttled a recepción + cron de recuperación (sin auto-replay). `/health` con profundidad de cola.
+2. 🥈 **Reagendar en un paso** — nuevo intent + estados `WAIT_RUT_REAGENDAR → WAIT_CITA_REAGENDAR → WAIT_NEW_SLOT → CONFIRMING_REAGENDAR`. Regla crítica: crear la nueva primero, cancelar anterior solo si OK.
+3. **Confirmación sí/no pre-cita** — botón `Confirmo` / `Cambiar hora` en el recordatorio de 09:00 AM del día anterior (reduce no-shows).
+4. **Copagos Fonasa/Isapre al confirmar** — requiere verificar si Medilink expone previsión del paciente.
+5. **Lista de espera** — tabla + cron de detección de cupo + notificación.
+6. **Dashboard métricas fidelización** — tasa respuesta post-consulta, conversión reactivación, adherencia kine.
+7. **Tests automatizados** — sprint dedicado, no intercalado con features.
 
 ---
 

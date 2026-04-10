@@ -93,6 +93,7 @@ REGLAS:
 - intent "otro": saludo genérico o mensaje que definitivamente no encaja con ninguna de las categorías anteriores
 
 Para intent "precio" o "info", incluye la respuesta_directa con información útil del CMC.
+MUY IMPORTANTE: Si el intent es "precio" o "info" y la consulta claramente apunta a una especialidad del CMC (ej: "tapadura"→odontología, "lumbago"→kinesiología, "ansiedad"→psicología adulto, "botox"→estética facial), SIEMPRE rellena también el campo "especialidad" con el nombre exacto. Esto permite ofrecer un botón de agendar directo sin volver a preguntar.
 Para intent "agendar", si menciona especialidad o nombre de profesional, extráela en "especialidad".
 Si mencionan un profesional por nombre, mapea al nombre de la especialidad:
 - Dr. Olavarría / Olavarría / Dr. Rodrigo → "olavarría"

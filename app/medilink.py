@@ -109,6 +109,37 @@ def _q(params: dict) -> str:
     return urllib.parse.quote(json.dumps(params))
 
 
+# ── Reporte de estado a resilience.py ────────────────────────────────────────
+# Cache in-process para evitar escribir en system_state en cada request.
+# Source of truth sigue siendo session_state (para que cron de recuperación
+# y /health vean lo mismo entre procesos), pero solo escribimos en cambios.
+_last_reported_status: Optional[str] = None  # None | "up" | "down"
+
+
+def _report_up() -> None:
+    global _last_reported_status
+    if _last_reported_status == "up":
+        return
+    try:
+        from app.resilience import mark_medilink_up
+        mark_medilink_up()
+    except Exception as e:  # pragma: no cover — nunca debe romper un call
+        log.error("resilience.mark_medilink_up falló: %s", e)
+    _last_reported_status = "up"
+
+
+def _report_down(reason: str) -> None:
+    global _last_reported_status
+    if _last_reported_status == "down":
+        return
+    try:
+        from app.resilience import mark_medilink_down
+        mark_medilink_down(reason)
+    except Exception as e:  # pragma: no cover
+        log.error("resilience.mark_medilink_down falló: %s", e)
+    _last_reported_status = "down"
+
+
 async def _get(client: httpx.AsyncClient, url: str, **kwargs) -> httpx.Response:
     """GET con 2 reintentos ante errores de red, 5xx o 429 (rate limit)."""
     for attempt in range(3):
@@ -120,12 +151,14 @@ async def _get(client: httpx.AsyncClient, url: str, **kwargs) -> httpx.Response:
                 await asyncio.sleep(wait)
                 continue
             if r.status_code < 500:
+                _report_up()
                 return r
             log.warning("Medilink GET %s → %s (intento %d/3)", url, r.status_code, attempt + 1)
         except (httpx.TimeoutException, httpx.NetworkError) as e:
             log.warning("Medilink GET %s error red: %s (intento %d/3)", url, e, attempt + 1)
         if attempt < 2:
             await asyncio.sleep(1.5 ** attempt)
+    _report_down(f"GET {url} sin respuesta tras 3 intentos")
     raise httpx.RequestError(f"Medilink no respondió tras 3 intentos: {url}")
 
 
@@ -140,12 +173,14 @@ async def _post(client: httpx.AsyncClient, url: str, **kwargs) -> httpx.Response
                 await asyncio.sleep(wait)
                 continue
             if r.status_code < 500:
+                _report_up()
                 return r
             log.warning("Medilink POST %s → %s (intento %d/2)", url, r.status_code, attempt + 1)
         except (httpx.TimeoutException, httpx.NetworkError) as e:
             log.warning("Medilink POST %s error red: %s (intento %d/2)", url, e, attempt + 1)
         if attempt < 1:
             await asyncio.sleep(1.5)
+    _report_down(f"POST {url} sin respuesta tras 2 intentos")
     raise httpx.RequestError(f"Medilink no respondió tras 2 intentos: {url}")
 
 
