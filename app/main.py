@@ -586,10 +586,17 @@ body {
         <option value="psicologia">🧠 Psicología</option>
         <option value="nutricion">🥗 Nutrición</option>
       </select>
-      <div style="display:flex;align-items:center;gap:6px;margin-left:auto;">
-        <button onclick="kineNavMes(-1)" style="background:#f1f5f9;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:14px;">◀</button>
-        <span id="kine-mes-label" style="font-size:13px;font-weight:600;color:#334155;min-width:100px;text-align:center;"></span>
-        <button onclick="kineNavMes(1)" style="background:#f1f5f9;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:14px;">▶</button>
+      <div style="display:flex;align-items:center;gap:4px;margin-left:auto;">
+        <div id="kine-nav-mes" style="display:flex;align-items:center;gap:4px;">
+          <button onclick="kineNavMes(-1)" style="background:#f1f5f9;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:14px;">◀</button>
+          <span id="kine-mes-label" style="font-size:13px;font-weight:600;color:#334155;min-width:100px;text-align:center;"></span>
+          <button onclick="kineNavMes(1)" style="background:#f1f5f9;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:14px;">▶</button>
+        </div>
+        <div style="display:flex;gap:2px;margin-left:8px;">
+          <button id="kine-btn-mes" onclick="kineSetModo('mes')" style="font-size:11px;padding:4px 8px;border-radius:6px 0 0 6px;border:1px solid #e2e8f0;cursor:pointer;background:#7c3aed;color:#fff;">Mes</button>
+          <button id="kine-btn-anio" onclick="kineSetModo('anio')" style="font-size:11px;padding:4px 8px;border:1px solid #e2e8f0;border-left:none;cursor:pointer;background:#f1f5f9;color:#475569;">Año</button>
+          <button id="kine-btn-todos" onclick="kineSetModo('todos')" style="font-size:11px;padding:4px 8px;border-radius:0 6px 6px 0;border:1px solid #e2e8f0;border-left:none;cursor:pointer;background:#f1f5f9;color:#475569;">Todos</button>
+        </div>
       </div>
       <button onclick="cerrarModalKine()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#94a3b8;margin-left:8px;">✕</button>
     </div>
@@ -630,7 +637,19 @@ body {
         <div style="font-size:16px;font-weight:700;color:#1e293b;">Ortodoncia — Dra. Daniela Castillo</div>
         <div style="font-size:12px;color:#94a3b8;" id="ort-ultima-sync"></div>
       </div>
-      <button onclick="cerrarModalOrtodoncia()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#94a3b8;">✕</button>
+      <div style="display:flex;align-items:center;gap:4px;">
+        <div id="ort-nav-mes" style="display:flex;align-items:center;gap:4px;">
+          <button onclick="ortNavPeriodo(-1)" style="background:#f1f5f9;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:14px;">◀</button>
+          <span id="ort-periodo-label" style="font-size:12px;font-weight:600;color:#334155;min-width:90px;text-align:center;"></span>
+          <button onclick="ortNavPeriodo(1)" style="background:#f1f5f9;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:14px;">▶</button>
+        </div>
+        <div style="display:flex;gap:2px;margin-left:6px;">
+          <button id="ort-btn-mes" onclick="ortSetModo('mes')" style="font-size:11px;padding:4px 8px;border-radius:6px 0 0 6px;border:1px solid #e2e8f0;cursor:pointer;background:#7e22ce;color:#fff;">Mes</button>
+          <button id="ort-btn-anio" onclick="ortSetModo('anio')" style="font-size:11px;padding:4px 8px;border:1px solid #e2e8f0;border-left:none;cursor:pointer;background:#f1f5f9;color:#475569;">Año</button>
+          <button id="ort-btn-todos" onclick="ortSetModo('todos')" style="font-size:11px;padding:4px 8px;border-radius:0 6px 6px 0;border:1px solid #e2e8f0;border-left:none;cursor:pointer;background:#f1f5f9;color:#475569;">Todos</button>
+        </div>
+      </div>
+      <button onclick="cerrarModalOrtodoncia()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#94a3b8;margin-left:8px;">✕</button>
     </div>
     <div id="ort-resumen" style="padding:12px 24px;background:#fdf4ff;border-bottom:1px solid #e9d5ff;display:flex;gap:24px;flex-wrap:wrap;font-size:13px;color:#6b21a8;"></div>
     <div id="ort-loading" style="padding:40px;text-align:center;color:#94a3b8;">Cargando pacientes...</div>
@@ -1599,12 +1618,34 @@ async function confirmarAnular(){
 }
 
 // ── MODAL ORTODONCIA ──────────────────────────────────────────────────────────
+let ortTodosPacientes = [];
+let ortModo = 'todos';
+let ortPeriodo = new Date();
+
 function abrirModalOrtodoncia() {
+  ortModo = 'todos';
+  ortPeriodo = new Date();
   document.getElementById('modal-ort').style.display = 'flex';
   cargarOrtodoncia();
 }
 function cerrarModalOrtodoncia() {
   document.getElementById('modal-ort').style.display = 'none';
+}
+function ortSetModo(modo) {
+  ortModo = modo;
+  const btns = {mes:'ort-btn-mes', anio:'ort-btn-anio', todos:'ort-btn-todos'};
+  Object.entries(btns).forEach(([k,id]) => {
+    const el = document.getElementById(id);
+    el.style.background = k===modo ? '#7e22ce' : '#f1f5f9';
+    el.style.color = k===modo ? '#fff' : '#475569';
+  });
+  document.getElementById('ort-nav-mes').style.display = modo==='todos' ? 'none' : 'flex';
+  renderOrtodoncia();
+}
+function ortNavPeriodo(delta) {
+  if (ortModo === 'mes') ortPeriodo.setMonth(ortPeriodo.getMonth() + delta);
+  else ortPeriodo.setFullYear(ortPeriodo.getFullYear() + delta);
+  renderOrtodoncia();
 }
 
 async function cargarOrtodoncia() {
@@ -1616,32 +1657,51 @@ async function cargarOrtodoncia() {
   if (d.ultima_sync) {
     document.getElementById('ort-ultima-sync').textContent = `Última sync: ${d.ultima_sync}`;
   }
-  const pacientes = d.pacientes || [];
-  // Stats
+  ortTodosPacientes = d.pacientes || [];
+  ortSetModo('todos');
+  document.getElementById('ort-loading').style.display = 'none';
+}
+
+function renderOrtodoncia() {
+  const y = ortPeriodo.getFullYear();
+  const m = ortPeriodo.getMonth();
+  let label, pacientes;
+  if (ortModo === 'todos') {
+    label = 'Histórico completo';
+    pacientes = ortTodosPacientes;
+  } else if (ortModo === 'anio') {
+    label = `Año ${y}`;
+    pacientes = ortTodosPacientes.map(p => ({
+      ...p, visitas: p.visitas.filter(v => v.fecha && v.fecha.startsWith(String(y)))
+    })).filter(p => p.visitas.length > 0);
+  } else {
+    const mes = String(m+1).padStart(2,'0');
+    label = `${MESES_ES[m]} ${y}`;
+    pacientes = ortTodosPacientes.map(p => ({
+      ...p, visitas: p.visitas.filter(v => v.fecha && v.fecha.startsWith(`${y}-${mes}`))
+    })).filter(p => p.visitas.length > 0);
+  }
+  document.getElementById('ort-periodo-label').textContent = label;
   const totalPac = pacientes.length;
-  const conInstalacion = pacientes.filter(p => p.visitas.some(v => v.tipo === 'instalacion')).length;
+  const conInstalacion = ortTodosPacientes.filter(p => p.visitas.some(v => v.tipo === 'instalacion')).length;
   const totalControles = pacientes.reduce((s,p) => s + p.visitas.filter(v => v.tipo==='control').length, 0);
   const pendientes = pacientes.reduce((s,p) => s + p.visitas.filter(v => v.tipo==='pendiente').length, 0);
   document.getElementById('ort-resumen').innerHTML = `
-    <span>🦷 <strong>${totalPac}</strong> pacientes</span>
-    <span>📦 <strong>${conInstalacion}</strong> con instalación registrada</span>
-    <span>⚙️ <strong>${totalControles}</strong> controles totales</span>
-    ${pendientes > 0 ? `<span style="color:#dc2626;">⚠️ <strong>${pendientes}</strong> visitas sin clasificar</span>` : ''}
+    <span>🦷 <strong>${totalPac}</strong> pacientes${ortModo!=='todos'?' en período':''}</span>
+    <span>📦 <strong>${conInstalacion}</strong> con instalación registrada (total)</span>
+    <span>⚙️ <strong>${totalControles}</strong> controles en período</span>
+    ${pendientes > 0 ? `<span style="color:#dc2626;">⚠️ <strong>${pendientes}</strong> sin clasificar</span>` : ''}
   `;
   const body = document.getElementById('ort-body');
   if (!pacientes.length) {
-    body.innerHTML = '<p style="color:#94a3b8;text-align:center;padding:40px;grid-column:1/-1;">Sin datos. Usa el botón de sync para cargar visitas.</p>';
+    body.innerHTML = '<p style="color:#94a3b8;text-align:center;padding:40px;grid-column:1/-1;">Sin visitas en este período.</p>';
     return;
   }
-  // Ordenar: primero los que tienen instalación, luego por fecha de última visita desc
   pacientes.sort((a,b) => {
     const aIns = a.visitas.find(v=>v.tipo==='instalacion');
     const bIns = b.visitas.find(v=>v.tipo==='instalacion');
-    if (aIns && !bIns) return -1;
-    if (!aIns && bIns) return 1;
-    const aUlt = a.visitas[a.visitas.length-1]?.fecha || '';
-    const bUlt = b.visitas[b.visitas.length-1]?.fecha || '';
-    return bUlt.localeCompare(aUlt);
+    if (aIns && !bIns) return -1; if (!aIns && bIns) return 1;
+    return (b.visitas[b.visitas.length-1]?.fecha||'').localeCompare(a.visitas[a.visitas.length-1]?.fecha||'');
   });
   body.innerHTML = pacientes.map(p => renderTarjetaPaciente(p)).join('');
 }
@@ -1710,31 +1770,50 @@ let kineEspActual = "kinesiologia";
 let kineEspLabel = "Kinesiología";
 let kinePrecioFonasa = 7830;
 let kinePrecioParticular = 20000;
+let kineModo = 'mes'; // 'mes' | 'anio' | 'todos'
 
 function abrirModalKine() {
   kineMesActual = new Date();
   kineEspActual = "kinesiologia";
+  kineModo = 'mes';
   document.getElementById('kine-esp-select').value = 'kinesiologia';
   document.getElementById('modal-kine').style.display = 'flex';
-  cargarKine();
+  kineSetModo('mes');
 }
 function cerrarModalKine() {
   document.getElementById('modal-kine').style.display = 'none';
 }
 function kineNavMes(delta) {
-  kineMesActual.setMonth(kineMesActual.getMonth() + delta);
+  if (kineModo === 'mes') kineMesActual.setMonth(kineMesActual.getMonth() + delta);
+  else if (kineModo === 'anio') kineMesActual.setFullYear(kineMesActual.getFullYear() + delta);
+  cargarKine();
+}
+function kineSetModo(modo) {
+  kineModo = modo;
+  const btns = {mes:'kine-btn-mes', anio:'kine-btn-anio', todos:'kine-btn-todos'};
+  Object.entries(btns).forEach(([k,id]) => {
+    const el = document.getElementById(id);
+    el.style.background = k===modo ? '#7c3aed' : '#f1f5f9';
+    el.style.color = k===modo ? '#fff' : '#475569';
+  });
+  const nav = document.getElementById('kine-nav-mes');
+  nav.style.display = modo === 'todos' ? 'none' : 'flex';
   cargarKine();
 }
 async function cargarKine() {
   const y = kineMesActual.getFullYear();
   const m = String(kineMesActual.getMonth()+1).padStart(2,'0');
-  document.getElementById('kine-mes-label').textContent = `${MESES_ES[kineMesActual.getMonth()]} ${y}`;
+  let mesParam, label;
+  if (kineModo === 'todos') { mesParam = 'todos'; label = 'Histórico completo'; }
+  else if (kineModo === 'anio') { mesParam = String(y); label = `Año ${y}`; }
+  else { mesParam = `${y}-${m}`; label = `${MESES_ES[kineMesActual.getMonth()]} ${y}`; }
+  document.getElementById('kine-mes-label').textContent = label;
   document.getElementById('kine-loading').style.display = 'block';
   document.getElementById('kine-empty').style.display = 'none';
   document.getElementById('kine-tbody').innerHTML = '';
   document.getElementById('kine-resumen').innerHTML = '';
   try {
-    const r = await fetch(`/admin/api/kine?mes=${y}-${m}&especialidad=${kineEspActual}&token=${TOKEN}`);
+    const r = await fetch(`/admin/api/kine?mes=${mesParam}&especialidad=${kineEspActual}&token=${TOKEN}`);
     const d = await r.json();
     kineDatos = d.pacientes || [];
     kineEspLabel = d.especialidad_label || kineEspActual;
@@ -2098,29 +2177,95 @@ async def admin_anular_cita(request: Request, token: str = Query(...)):
 
 @app.get("/admin/api/kine")
 async def admin_kine(mes: str = None, especialidad: str = "kinesiologia", token: str = Query(...)):
-    """Retorna citas de una especialidad recurrente del mes + datos de tracking manual."""
+    """Retorna citas de una especialidad recurrente.
+    mes=YYYY-MM → mes específico | mes=YYYY → año completo | mes=todos → todo el histórico"""
     _check_token(token)
     from datetime import date
+    from session import get_citas_cache_todos
+    import calendar as cal_mod
+
+    cfg = SEGUIMIENTO_ESPECIALIDADES.get(especialidad, {})
+    tracking = {(t["id_paciente"], t["id_prof"]): t for t in get_kine_tracking_all()}
+
+    def _enrich(citas):
+        for p in citas:
+            t = tracking.get((p["id_paciente"], p["id_prof"]), {})
+            p["total_sesiones"]    = t.get("total_sesiones", 0)
+            p["modalidad"]         = t.get("modalidad", "fonasa")
+            p["notas"]             = t.get("notas", "")
+            p["precio_fonasa"]     = cfg.get("precio_fonasa")
+            p["precio_particular"] = cfg.get("precio_particular")
+        return citas
+
+    # Modo "todos" — histórico completo desde caché
+    if mes == "todos":
+        from collections import defaultdict
+        ids_prof = cfg.get("ids", [])
+        raw = get_citas_cache_todos(ids_prof)
+        grupos: dict = defaultdict(list)
+        for c in raw:
+            key = (c["id_paciente"], c["id_prof"])
+            grupos[key].append(c)
+        citas = []
+        for (id_pac, id_prof), items in grupos.items():
+            items_sorted = sorted(items, key=lambda x: x["fecha"])
+            citas.append({
+                "id_paciente":     id_pac,
+                "id_prof":         id_prof,
+                "prof_nombre":     cfg.get("ids") and PROFESIONALES.get(id_prof, {}).get("nombre", ""),
+                "paciente_nombre": items_sorted[0]["paciente_nombre"],
+                "sesiones_mes":    len(items_sorted),
+                "fechas":          [c["fecha"] for c in items_sorted],
+                "primera_fecha":   items_sorted[0]["fecha"],
+                "ultima_fecha":    items_sorted[-1]["fecha"],
+            })
+        citas = sorted(citas, key=lambda x: x["primera_fecha"])
+        return {"mode": "todos", "especialidad": especialidad,
+                "especialidad_label": cfg.get("label", especialidad),
+                "pacientes": _enrich(citas)}
+
+    # Modo "año" — YYYY sin mes
+    if mes and len(mes) == 4 and mes.isdigit():
+        year = int(mes)
+        from collections import defaultdict
+        all_citas = []
+        for month in range(1, 13):
+            mc = await get_citas_seguimiento_mes(year, month, especialidad)
+            all_citas.extend(mc)
+        # Reagrupar por paciente+prof sumando sesiones
+        grupos: dict = defaultdict(list)
+        for c in all_citas:
+            key = (c["id_paciente"], c["id_prof"])
+            grupos[key].append(c)
+        citas = []
+        for (id_pac, id_prof), items in grupos.items():
+            fechas = sorted({f for i in items for f in i.get("fechas", [i.get("primera_fecha","")])} )
+            citas.append({
+                "id_paciente":     id_pac, "id_prof": id_prof,
+                "prof_nombre":     items[0].get("prof_nombre",""),
+                "paciente_nombre": items[0]["paciente_nombre"],
+                "sesiones_mes":    len(fechas),
+                "fechas":          fechas,
+                "primera_fecha":   fechas[0] if fechas else "",
+                "ultima_fecha":    fechas[-1] if fechas else "",
+            })
+        citas = sorted(citas, key=lambda x: x["primera_fecha"])
+        return {"mode": "anio", "year": year, "especialidad": especialidad,
+                "especialidad_label": cfg.get("label", especialidad),
+                "pacientes": _enrich(citas)}
+
+    # Modo mes (default)
     if mes:
         try:
             year, month = int(mes.split("-")[0]), int(mes.split("-")[1])
         except Exception:
-            raise HTTPException(status_code=400, detail="mes debe ser YYYY-MM")
+            raise HTTPException(status_code=400, detail="mes debe ser YYYY-MM, YYYY, o 'todos'")
     else:
         hoy = date.today()
         year, month = hoy.year, hoy.month
     citas = await get_citas_seguimiento_mes(year, month, especialidad)
-    tracking = {(t["id_paciente"], t["id_prof"]): t for t in get_kine_tracking_all()}
-    cfg = SEGUIMIENTO_ESPECIALIDADES.get(especialidad, {})
-    for p in citas:
-        t = tracking.get((p["id_paciente"], p["id_prof"]), {})
-        p["total_sesiones"]    = t.get("total_sesiones", 0)
-        p["modalidad"]         = t.get("modalidad", "fonasa")
-        p["notas"]             = t.get("notas", "")
-        p["precio_fonasa"]     = cfg.get("precio_fonasa")
-        p["precio_particular"] = cfg.get("precio_particular")
-    return {"year": year, "month": month, "especialidad": especialidad,
-            "especialidad_label": cfg.get("label", especialidad), "pacientes": citas}
+    return {"year": year, "month": month, "mode": "mes", "especialidad": especialidad,
+            "especialidad_label": cfg.get("label", especialidad), "pacientes": _enrich(citas)}
 
 
 @app.get("/admin/api/kine/especialidades")

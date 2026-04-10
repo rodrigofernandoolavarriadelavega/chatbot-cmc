@@ -732,6 +732,18 @@ def get_ortodoncia_sync_max_fecha() -> str | None:
         return row[0] if row else None
 
 
+def get_citas_cache_todos(ids_prof: list[int]) -> list[dict]:
+    """Retorna todas las citas cacheadas (sin filtro de mes) para los profesionales dados."""
+    placeholders = ",".join("?" * len(ids_prof))
+    with _conn() as conn:
+        rows = conn.execute(
+            f"SELECT * FROM citas_cache WHERE id_prof IN ({placeholders}) "
+            f"AND id_paciente != 0 ORDER BY fecha, hora_inicio",
+            (*ids_prof,)
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
 def get_citas_cache_mes(year: int, month: int, ids_prof: list[int]) -> list[dict]:
     """Retorna citas del caché para el mes y profesionales dados."""
     import calendar
