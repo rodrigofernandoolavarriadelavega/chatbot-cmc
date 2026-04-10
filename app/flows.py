@@ -44,10 +44,11 @@ EMERGENCIAS  = {
     # respiratorio severo
     "me ahogo", "no me entra aire", "ahogo fuerte",
     # cardiovascular severo
-    "dolor de pecho fuerte", "infarto", "me da un infarto",
+    "dolor de pecho fuerte", "dolor fuerte en el pecho", "dolor en el pecho fuerte",
+    "me duele mucho el pecho", "infarto", "me da un infarto",
     # sangrado
     "sangre en deposiciones", "vómito con sangre", "vomito con sangre",
-    "hemorragia", "sangrado abundante",
+    "hemorragia", "sangrado abundante", "mucho sangrado",
     # trauma
     "me golpeé la cabeza", "me golpee la cabeza", "caída fuerte", "caida fuerte",
     "fractura", "hueso expuesto", "accidente grave",
@@ -62,6 +63,18 @@ EMERGENCIAS  = {
     # ocular urgente
     "no veo", "perdí la vista", "perdi la vista", "ceguera súbita",
 }
+
+# Patrones regex para emergencias con redacción flexible
+# Capturan variantes como "dolor fuerte en el pecho", "mucho sangrado", "me sangra mucho", etc.
+EMERGENCIAS_PATRONES = [
+    re.compile(r"dolor.{0,20}fuerte.{0,20}pecho"),
+    re.compile(r"pecho.{0,20}dolor.{0,20}fuerte"),
+    re.compile(r"mucho.{0,10}sangr"),
+    re.compile(r"sangr\w*.{0,15}mucho"),
+    re.compile(r"sangr\w*.{0,15}no\s+para"),
+    re.compile(r"no\s+para.{0,15}sangr"),
+    re.compile(r"hemorragia"),
+]
 
 DISCLAIMER = "_Recuerda que soy un asistente virtual, no un médico. Para consultas clínicas, habla siempre con un profesional de salud._"
 
@@ -129,7 +142,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     tl    = txt.lower()
 
     # ── Emergencias ───────────────────────────────────────────────────────────
-    if any(p in tl for p in EMERGENCIAS):
+    if any(p in tl for p in EMERGENCIAS) or any(pat.search(tl) for pat in EMERGENCIAS_PATRONES):
         return (
             "⚠️ Esto suena como una urgencia.\n\n"
             "Llama al *SAMU 131* o acude al servicio de urgencias más cercano ahora mismo.\n\n"
@@ -474,8 +487,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         especialidad    = data.get("especialidad", "")
         fecha_actual    = todos_slots[0]["fecha"] if todos_slots else None
 
-        # Respuesta al sugerido proactivo
-        if tl == "confirmar_sugerido":
+        # Respuesta al sugerido proactivo (botón o texto libre "si"/"sí"/"confirmo"/...)
+        if (tl == "confirmar_sugerido" or tl in AFIRMACIONES) and slots_mostrados:
             slot = slots_mostrados[0]
             data["slot_elegido"] = slot
             save_session(phone, "WAIT_MODALIDAD", data)
@@ -873,6 +886,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # ── WAIT_CITA_CANCELAR ────────────────────────────────────────────────────
     if state == "WAIT_CITA_CANCELAR":
         citas = data.get("citas", [])
+        if tl in NEGACIONES or tl in {"menu", "menú", "salir", "atras", "atrás"}:
+            reset_session(phone)
+            return "Perfecto, no cancelamos nada 😊\n_Escribe *menu* si necesitas algo más._"
         try:
             idx = int(txt) - 1
             if not (0 <= idx < len(citas)):
@@ -950,6 +966,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # ── WAIT_CITA_REAGENDAR ───────────────────────────────────────────────────
     if state == "WAIT_CITA_REAGENDAR":
         citas = data.get("citas", [])
+        if tl in NEGACIONES or tl in {"menu", "menú", "salir", "atras", "atrás"}:
+            reset_session(phone)
+            return "Perfecto, dejamos tu cita como está 😊\n_Escribe *menu* si necesitas algo más._"
         try:
             idx = int(txt) - 1
             if not (0 <= idx < len(citas)):
