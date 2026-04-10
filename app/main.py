@@ -14,7 +14,8 @@ from pathlib import Path
 import httpx
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from fastapi import FastAPI, Request, Response, Query, HTTPException
+from fastapi import FastAPI, Request, Response, Query, HTTPException, Header, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from config import (META_ACCESS_TOKEN, META_PHONE_NUMBER_ID, META_VERIFY_TOKEN,
@@ -34,7 +35,8 @@ from session import (get_session, is_duplicate, reset_session, save_session, get
                      log_message, get_messages, get_conversations, log_event,
                      get_sesiones_abandonadas, get_tags, save_tag, delete_tag, search_messages,
                      get_kine_tracking_all, save_kine_tracking,
-                     get_ortodoncia_pacientes, set_ortodoncia_tipo, get_ortodoncia_sync_max_fecha)
+                     get_ortodoncia_pacientes, set_ortodoncia_tipo, get_ortodoncia_sync_max_fecha,
+                     purge_old_data)
 
 logging.config.dictConfig({
     "version": 1,
@@ -56,6 +58,39 @@ logging.config.dictConfig({
 log = logging.getLogger("bot")
 
 scheduler = AsyncIOScheduler(timezone="America/Santiago")
+
+
+# ── Rate limiter en memoria (sliding window por teléfono) ────────────────────
+from collections import deque
+from time import monotonic
+
+_RATE_WINDOW_SEC = 60
+_RATE_MAX_MSGS   = 30  # mensajes por minuto por número
+_rate_buckets: dict[str, deque] = {}
+
+
+def _rate_limited(phone: str) -> bool:
+    """True si el número superó _RATE_MAX_MSGS mensajes en la última ventana."""
+    now = monotonic()
+    bucket = _rate_buckets.get(phone)
+    if bucket is None:
+        bucket = deque()
+        _rate_buckets[phone] = bucket
+    # Descartar entradas fuera de la ventana
+    while bucket and now - bucket[0] > _RATE_WINDOW_SEC:
+        bucket.popleft()
+    if len(bucket) >= _RATE_MAX_MSGS:
+        return True
+    bucket.append(now)
+    # Limpieza oportunista: si el dict crece demasiado, purgar buckets vacíos
+    if len(_rate_buckets) > 5000:
+        for k in list(_rate_buckets.keys()):
+            b = _rate_buckets[k]
+            while b and now - b[0] > _RATE_WINDOW_SEC:
+                b.popleft()
+            if not b:
+                _rate_buckets.pop(k, None)
+    return False
 
 
 async def _enviar_reenganche():
@@ -146,11 +181,18 @@ async def lifespan(app: FastAPI):
         id="sync_citas_cache",
         replace_existing=True,
     )
+    # Retención: domingos 04:00 CLT borra mensajes > 90 días y eventos > 180 días
+    scheduler.add_job(
+        purge_old_data,
+        CronTrigger(day_of_week="sun", hour=4, minute=0),
+        id="purge_old_data",
+        replace_existing=True,
+    )
     scheduler.start()
     log.info(
         "Scheduler iniciado — recordatorios 09:00 · post-consulta 10:00 · "
         "reactivación lun 10:30 · adherencia kine 11:00 · control 11:30 · "
-        "cross-sell kine mié 10:30 · sync caché 23:50"
+        "cross-sell kine mié 10:30 · sync caché 23:50 · purge dom 04:00"
     )
     yield
     scheduler.shutdown()
@@ -159,7 +201,27 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="CMC WhatsApp Bot", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=str(Path(__file__).parent.parent / "static")), name="static")
 
+# CORS restrictivo: solo el propio dominio del panel y preview local
+_ALLOWED_ORIGINS = [
+    "https://agentecmc.cl",
+    "http://agentecmc.cl",
+    "http://157.245.13.107:8001",
+    "http://localhost:8001",
+    "http://127.0.0.1:8001",
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
+)
+
 META_API_URL = f"https://graph.facebook.com/v22.0/{META_PHONE_NUMBER_ID}/messages"
+
+# Reexportamos headers para healthcheck (evita import circular en runtime)
+from config import MEDILINK_TOKEN as _MEDILINK_TOKEN
+HEADERS_MEDILINK = {"Authorization": f"Token {_MEDILINK_TOKEN}"}
 
 
 async def _post_meta(payload: dict):
@@ -2018,8 +2080,25 @@ async function guardarKine(i) {
 
 
 @app.get("/health")
-def health():
-    return {"status": "ok"}
+async def health():
+    """Healthcheck básico + ping a Medilink con timeout corto.
+    Responde 200 siempre que el proceso esté vivo; reporta el estado de dependencias."""
+    from config import MEDILINK_BASE_URL
+    medilink_ok = False
+    medilink_ms = None
+    try:
+        t0 = monotonic()
+        async with httpx.AsyncClient(timeout=3) as client:
+            r = await client.get(f"{MEDILINK_BASE_URL}/sucursales", headers=HEADERS_MEDILINK)
+        medilink_ms = int((monotonic() - t0) * 1000)
+        medilink_ok = r.status_code < 500
+    except (httpx.TimeoutException, httpx.NetworkError, httpx.RequestError):
+        medilink_ok = False
+    return {
+        "status":   "ok",
+        "medilink": "ok" if medilink_ok else "degraded",
+        "medilink_ms": medilink_ms,
+    }
 
 
 @app.get("/privacidad", response_class=HTMLResponse)
@@ -2066,33 +2145,52 @@ def metrics(dias: int = Query(30, ge=1, le=365)):
 
 # ── Panel de recepcionistas ────────────────────────────────────────────────────
 
-def _check_token(token: str):
-    if token != ADMIN_TOKEN:
+def _extract_token(query_token: str | None, auth_header: str | None) -> str:
+    """Obtiene el token desde Authorization: Bearer ... o, como fallback,
+    desde el query param ?token=... (para mantener compatibilidad con el panel HTML).
+    """
+    if auth_header and auth_header.lower().startswith("bearer "):
+        return auth_header.split(None, 1)[1].strip()
+    return query_token or ""
+
+
+def require_admin(token: str | None = Query(None),
+                  authorization: str | None = Header(None)) -> str:
+    """Dependency FastAPI que valida token admin (header Bearer o query).
+    Retorna el token validado para quien lo necesite."""
+    tk = _extract_token(token, authorization)
+    if tk != ADMIN_TOKEN:
         raise HTTPException(status_code=401, detail="Token inválido")
+    return tk
+
+
+def require_ortodoncia(token: str | None = Query(None),
+                       authorization: str | None = Header(None)) -> str:
+    """Dependency FastAPI que valida token de ortodoncia o admin."""
+    tk = _extract_token(token, authorization)
+    if tk not in (ORTODONCIA_TOKEN, ADMIN_TOKEN):
+        raise HTTPException(status_code=403, detail="Acceso denegado")
+    return tk
 
 
 @app.get("/admin/api/conversations")
-def admin_conversations(token: str = Query(...)):
-    _check_token(token)
+def admin_conversations(_: str = Depends(require_admin)):
     return get_conversations()
 
 
 @app.get("/admin/api/conversations/{phone}")
-def admin_conversation_detail(phone: str, token: str = Query(...)):
-    _check_token(token)
+def admin_conversation_detail(phone: str, _: str = Depends(require_admin)):
     return get_messages(phone)
 
 
 @app.get("/admin/api/metrics")
-def admin_metrics(token: str = Query(...)):
-    _check_token(token)
+def admin_metrics(_: str = Depends(require_admin)):
     return get_metricas(dias=30)
 
 
 @app.post("/admin/api/takeover/{phone}")
-async def admin_takeover(phone: str, token: str = Query(...)):
+async def admin_takeover(phone: str, _: str = Depends(require_admin)):
     """Recepcionista toma control manual de una conversación."""
-    _check_token(token)
     session = get_session(phone)
     save_session(phone, "HUMAN_TAKEOVER", {"hold_sent": True, "msgs_sin_respuesta": 0,
                                             "handoff_reason": "manual (recepcionista)"})
@@ -2105,9 +2203,8 @@ async def admin_takeover(phone: str, token: str = Query(...)):
 
 
 @app.post("/admin/api/reply")
-async def admin_reply(request: Request, token: str = Query(...)):
+async def admin_reply(request: Request, _: str = Depends(require_admin)):
     """Recepcionista envía un mensaje al paciente desde el panel (WhatsApp, Instagram o Messenger)."""
-    _check_token(token)
     body = await request.json()
     phone = body.get("phone", "").strip()
     message = body.get("message", "").strip()
@@ -2133,9 +2230,8 @@ async def admin_reply(request: Request, token: str = Query(...)):
 
 
 @app.post("/admin/api/resume/{phone}")
-async def admin_resume(phone: str, token: str = Query(...)):
+async def admin_resume(phone: str, _: str = Depends(require_admin)):
     """Devuelve el control al bot y notifica al paciente."""
-    _check_token(token)
     reset_session(phone)
     log_event(phone, "bot_reanudado")
     await send_whatsapp(phone,
@@ -2146,9 +2242,8 @@ async def admin_resume(phone: str, token: str = Query(...)):
 
 
 @app.get("/admin/api/paciente")
-async def admin_buscar_paciente(rut: str, token: str = Query(...)):
+async def admin_buscar_paciente(rut: str, _: str = Depends(require_admin)):
     """Busca un paciente en Medilink por RUT."""
-    _check_token(token)
     paciente = await buscar_paciente(rut)
     if not paciente:
         raise HTTPException(status_code=404, detail="Paciente no encontrado")
@@ -2156,9 +2251,8 @@ async def admin_buscar_paciente(rut: str, token: str = Query(...)):
 
 
 @app.get("/admin/api/slots")
-async def admin_slots(especialidad: str, token: str = Query(...)):
+async def admin_slots(especialidad: str, _: str = Depends(require_admin)):
     """Retorna la próxima fecha disponible y sus slots para una especialidad."""
-    _check_token(token)
     fecha = await buscar_primer_dia(especialidad)
     if not fecha:
         raise HTTPException(status_code=404, detail="Sin disponibilidad")
@@ -2171,9 +2265,8 @@ async def admin_slots(especialidad: str, token: str = Query(...)):
 
 
 @app.post("/admin/api/agendar")
-async def admin_agendar(request: Request, token: str = Query(...)):
+async def admin_agendar(request: Request, _: str = Depends(require_admin)):
     """Crea una cita desde el panel de recepción."""
-    _check_token(token)
     body = await request.json()
     rut        = body.get("rut", "").strip()
     nombre     = body.get("nombre", "").strip()
@@ -2203,23 +2296,20 @@ async def admin_agendar(request: Request, token: str = Query(...)):
 
 
 @app.get("/admin/api/especialidades")
-def admin_especialidades(token: str = Query(...)):
+def admin_especialidades(_: str = Depends(require_admin)):
     """Retorna la lista de especialidades únicas disponibles."""
-    _check_token(token)
     from medilink import PROFESIONALES
     esp = sorted({v["especialidad"] for v in PROFESIONALES.values()})
     return {"especialidades": esp}
 
 
 @app.get("/admin/api/tags/{phone}")
-def admin_get_tags(phone: str, token: str = Query(...)):
-    _check_token(token)
+def admin_get_tags(phone: str, _: str = Depends(require_admin)):
     return {"tags": get_tags(phone)}
 
 
 @app.post("/admin/api/tags/{phone}")
-async def admin_add_tag(phone: str, request: Request, token: str = Query(...)):
-    _check_token(token)
+async def admin_add_tag(phone: str, request: Request, _: str = Depends(require_admin)):
     body = await request.json()
     tag = body.get("tag", "").strip()
     if not tag:
@@ -2229,16 +2319,14 @@ async def admin_add_tag(phone: str, request: Request, token: str = Query(...)):
 
 
 @app.delete("/admin/api/tags/{phone}/{tag}")
-def admin_delete_tag(phone: str, tag: str, token: str = Query(...)):
-    _check_token(token)
+def admin_delete_tag(phone: str, tag: str, _: str = Depends(require_admin)):
     delete_tag(phone, tag)
     return {"tags": get_tags(phone)}
 
 
 @app.get("/admin/api/search")
-def admin_search_messages(q: str, token: str = Query(...)):
+def admin_search_messages(q: str, _: str = Depends(require_admin)):
     """Busca texto en todos los mensajes de todas las conversaciones."""
-    _check_token(token)
     if len(q.strip()) < 2:
         raise HTTPException(status_code=400, detail="Mínimo 2 caracteres")
     results = search_messages(q.strip())
@@ -2246,9 +2334,8 @@ def admin_search_messages(q: str, token: str = Query(...)):
 
 
 @app.get("/admin/api/citas-paciente")
-async def admin_citas_paciente(rut: str, token: str = Query(...)):
+async def admin_citas_paciente(rut: str, _: str = Depends(require_admin)):
     """Retorna las citas futuras de un paciente buscado por RUT."""
-    _check_token(token)
     paciente = await buscar_paciente(rut)
     if not paciente:
         raise HTTPException(status_code=404, detail="Paciente no encontrado")
@@ -2257,9 +2344,8 @@ async def admin_citas_paciente(rut: str, token: str = Query(...)):
 
 
 @app.post("/admin/api/anular")
-async def admin_anular_cita(request: Request, token: str = Query(...)):
+async def admin_anular_cita(request: Request, _: str = Depends(require_admin)):
     """Anula una cita por su ID de Medilink."""
-    _check_token(token)
     body = await request.json()
     id_cita = int(body.get("id_cita"))
     ok = await cancelar_cita(id_cita)
@@ -2270,10 +2356,10 @@ async def admin_anular_cita(request: Request, token: str = Query(...)):
 
 
 @app.get("/admin/api/kine")
-async def admin_kine(mes: str = None, especialidad: str = "kinesiologia", token: str = Query(...)):
+async def admin_kine(mes: str = None, especialidad: str = "kinesiologia",
+                     _: str = Depends(require_admin)):
     """Retorna citas de una especialidad recurrente.
     mes=YYYY-MM → mes específico | mes=YYYY → año completo | mes=todos → todo el histórico"""
-    _check_token(token)
     from datetime import date
     from session import get_citas_cache_todos
     import calendar as cal_mod
@@ -2352,7 +2438,7 @@ async def admin_kine(mes: str = None, especialidad: str = "kinesiologia", token:
     if mes:
         try:
             year, month = int(mes.split("-")[0]), int(mes.split("-")[1])
-        except Exception:
+        except (ValueError, IndexError):
             raise HTTPException(status_code=400, detail="mes debe ser YYYY-MM, YYYY, o 'todos'")
     else:
         hoy = date.today()
@@ -2363,19 +2449,16 @@ async def admin_kine(mes: str = None, especialidad: str = "kinesiologia", token:
 
 
 @app.get("/admin/api/kine/especialidades")
-def admin_kine_especialidades(token: str = Query(...)):
-    _check_token(token)
+def admin_kine_especialidades(_: str = Depends(require_admin)):
     return {"especialidades": [
         {"id": k, "label": v["label"]} for k, v in SEGUIMIENTO_ESPECIALIDADES.items()
     ]}
 
 
 @app.post("/admin/api/kine/sync")
-async def admin_kine_sync(token: str = Query(...), fecha: str = None):
+async def admin_kine_sync(fecha: str = None, _: str = Depends(require_admin)):
     """Fuerza sincronización del caché de citas para una fecha (default: hoy)."""
-    _check_token(token)
     from datetime import date
-    from zoneinfo import ZoneInfo
     if not fecha:
         fecha = date.today().strftime("%Y-%m-%d")
     ids_todos = list({i for cfg in SEGUIMIENTO_ESPECIALIDADES.values() for i in cfg["ids"]})
@@ -2384,9 +2467,9 @@ async def admin_kine_sync(token: str = Query(...), fecha: str = None):
 
 
 @app.put("/admin/api/kine/{id_paciente}/{id_prof}")
-async def admin_kine_update(id_paciente: int, id_prof: int, request: Request, token: str = Query(...)):
+async def admin_kine_update(id_paciente: int, id_prof: int, request: Request,
+                            _: str = Depends(require_admin)):
     """Actualiza el tracking de sesiones de un paciente en control."""
-    _check_token(token)
     body = await request.json()
     save_kine_tracking(
         id_paciente, id_prof,
@@ -2399,22 +2482,16 @@ async def admin_kine_update(id_paciente: int, id_prof: int, request: Request, to
 
 # ─── Ortodoncia ──────────────────────────────────────────────────────────────
 
-def _check_ortodoncia_token(token: str):
-    if token not in (ORTODONCIA_TOKEN, ADMIN_TOKEN):
-        raise HTTPException(status_code=403, detail="Acceso denegado")
-
-
 @app.get("/admin/api/ortodoncia")
-def admin_ortodoncia_pacientes(token: str = Query(...)):
-    _check_ortodoncia_token(token)
+def admin_ortodoncia_pacientes(_: str = Depends(require_ortodoncia)):
     pacientes = get_ortodoncia_pacientes()
     ultima_sync = get_ortodoncia_sync_max_fecha()
     return {"pacientes": pacientes, "ultima_sync": ultima_sync}
 
 
 @app.put("/admin/api/ortodoncia/{id_atencion}")
-async def admin_ortodoncia_tipo(id_atencion: int, request: Request, token: str = Query(...)):
-    _check_ortodoncia_token(token)
+async def admin_ortodoncia_tipo(id_atencion: int, request: Request,
+                                _: str = Depends(require_ortodoncia)):
     body = await request.json()
     tipo = body.get("tipo")
     if tipo not in ("instalacion", "control", "pendiente"):
@@ -2424,8 +2501,8 @@ async def admin_ortodoncia_tipo(id_atencion: int, request: Request, token: str =
 
 
 @app.post("/admin/api/ortodoncia/sync")
-async def admin_ortodoncia_sync(token: str = Query(...), desde: str = "2025-01-01", hasta: str = None):
-    _check_ortodoncia_token(token)
+async def admin_ortodoncia_sync(desde: str = "2025-01-01", hasta: str = None,
+                                _: str = Depends(require_ortodoncia)):
     from datetime import date
     fin = hasta or date.today().isoformat()
     asyncio.create_task(sync_ortodoncia_rango(desde, fin))
@@ -2434,7 +2511,10 @@ async def admin_ortodoncia_sync(token: str = Query(...), desde: str = "2025-01-0
 
 @app.get("/admin", response_class=HTMLResponse)
 def admin_panel(token: str = Query(ADMIN_TOKEN)):
-    _check_token(token)
+    # El panel HTML requiere token por query param porque necesita inyectarlo
+    # en el JS embebido; las llamadas API del panel sí pueden usar Bearer header.
+    if token != ADMIN_TOKEN:
+        raise HTTPException(status_code=401, detail="Token inválido")
     return _ADMIN_HTML.replace("__TOKEN__", token)
 
 
@@ -2472,6 +2552,9 @@ async def webhook(request: Request):
                     if msg_id and is_duplicate(msg_id):
                         continue
                     phone = f"ig_{sender_id}"
+                    if _rate_limited(phone):
+                        log.warning("Rate limit excedido IG phone=%s", phone)
+                        continue
                     log.info("INSTAGRAM from=%s text=%r", phone, texto[:80])
                     save_session(phone, "HUMAN_TAKEOVER", {})
                     log_message(phone, "in", texto, "HUMAN_TAKEOVER", canal="instagram")
@@ -2495,6 +2578,9 @@ async def webhook(request: Request):
                     if msg_id and is_duplicate(msg_id):
                         continue
                     phone = f"fb_{sender_id}"
+                    if _rate_limited(phone):
+                        log.warning("Rate limit excedido FB phone=%s", phone)
+                        continue
                     log.info("MESSENGER from=%s text=%r", phone, texto[:80])
                     save_session(phone, "HUMAN_TAKEOVER", {})
                     log_message(phone, "in", texto, "HUMAN_TAKEOVER", canal="messenger")
@@ -2533,6 +2619,10 @@ async def webhook(request: Request):
 
         if msg_id and is_duplicate(msg_id):
             log.info("MSG duplicado ignorado id=%s from=%s", msg_id, phone)
+            return Response(status_code=200)
+
+        if _rate_limited(phone):
+            log.warning("Rate limit excedido WA phone=%s text=%r", phone, texto[:80])
             return Response(status_code=200)
 
         log.info("MSG from=%s id=%s text=%r", phone, msg_id, texto[:100])

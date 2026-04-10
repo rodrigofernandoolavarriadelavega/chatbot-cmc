@@ -3,9 +3,12 @@ Gestión de sesiones por número de WhatsApp usando SQLite.
 Cada sesión guarda: estado actual + datos del flujo en curso.
 """
 import json
+import logging
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+log = logging.getLogger("session")
 
 DB_PATH = Path(__file__).parent.parent / "data" / "sessions.db"
 SESSION_TIMEOUT_MIN = 30  # minutos sin actividad → volver a IDLE
@@ -13,8 +16,12 @@ SESSION_TIMEOUT_MIN = 30  # minutos sin actividad → volver a IDLE
 
 def _conn():
     DB_PATH.parent.mkdir(exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
+    # WAL mode + busy_timeout reducen "database is locked" bajo concurrencia
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=5000")
+    conn.execute("PRAGMA synchronous=NORMAL")
     conn.execute("""
         CREATE TABLE IF NOT EXISTS sessions (
             phone       TEXT PRIMARY KEY,
@@ -121,8 +128,8 @@ def _conn():
     # Migración: agregar canal a messages si no existe
     try:
         conn.execute("ALTER TABLE messages ADD COLUMN canal TEXT DEFAULT 'whatsapp'")
-    except Exception:
-        pass  # ya existe
+    except sqlite3.OperationalError:
+        pass  # columna ya existe, nada que hacer
     conn.commit()
     return conn
 
@@ -283,6 +290,28 @@ def log_event(phone: str, event: str, meta: dict = None):
         conn.commit()
 
 
+def purge_old_data(msgs_days: int = 90, events_days: int = 180) -> dict:
+    """Borra mensajes y eventos antiguos para evitar crecimiento ilimitado del SQLite.
+    Retorna conteos de filas eliminadas."""
+    with _conn() as conn:
+        cur = conn.execute(
+            "DELETE FROM messages WHERE ts < datetime('now', ?)",
+            (f"-{msgs_days} days",),
+        )
+        msgs_del = cur.rowcount
+        cur = conn.execute(
+            "DELETE FROM conversation_events WHERE ts < datetime('now', ?)",
+            (f"-{events_days} days",),
+        )
+        events_del = cur.rowcount
+        # Reconstruir espacio libre
+        conn.commit()
+    with _conn() as conn:
+        conn.execute("VACUUM")
+    log.info("purge_old_data: -%d messages, -%d events", msgs_del, events_del)
+    return {"messages_deleted": msgs_del, "events_deleted": events_del}
+
+
 def log_message(phone: str, direction: str, text: str, state: str = "IDLE", canal: str = "whatsapp"):
     """Registra un mensaje entrante ('in') o saliente ('out') en el historial."""
     with _conn() as conn:
@@ -360,7 +389,8 @@ def get_conversations(limit: int = 200) -> list[dict]:
                     "modalidad":         session_data.get("modalidad", ""),
                     "prev_state":        session_data.get("handoff_reason", ""),
                 }
-            except Exception:
+            except (json.JSONDecodeError, TypeError, AttributeError) as exc:
+                log.warning("session data corrupta phone=%s: %s", d.get("phone"), exc)
                 d.pop("data", None)
                 d["msgs_sin_respuesta"] = 0
                 d["flow_data"] = {}
@@ -384,7 +414,8 @@ def get_sesiones_abandonadas() -> list[dict]:
             d = dict(r)
             try:
                 d["data"] = json.loads(d.get("data") or "{}")
-            except Exception:
+            except json.JSONDecodeError as exc:
+                log.warning("session data corrupta phone=%s: %s", d.get("phone"), exc)
                 d["data"] = {}
             if not d["data"].get("reenganche_sent"):
                 result.append(d)

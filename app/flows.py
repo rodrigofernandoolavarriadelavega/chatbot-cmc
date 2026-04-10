@@ -287,9 +287,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
     # ── WAIT_DURACION_MASOTERAPIA ──────────────────────────────────────────────
     if state == "WAIT_DURACION_MASOTERAPIA":
-        if tl in ("maso_20",) or "20" in txt:
+        # Matchear palabra exacta, no substring (evita que "200" o "2040" entren)
+        num = re.findall(r"\b(20|40)\b", txt)
+        if tl == "maso_20" or (num and num[0] == "20"):
             duracion_maso = 20
-        elif tl in ("maso_40",) or "40" in txt:
+        elif tl == "maso_40" or (num and num[0] == "40"):
             duracion_maso = 40
         else:
             save_session(phone, "WAIT_DURACION_MASOTERAPIA", data)
@@ -679,8 +681,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         citas = data.get("citas", [])
         try:
             idx = int(txt) - 1
-            assert 0 <= idx < len(citas)
-        except Exception:
+            if not (0 <= idx < len(citas)):
+                raise ValueError("fuera de rango")
+        except (ValueError, TypeError):
             return f"Elige un número entre 1 y {len(citas)} 😊"
 
         cita = citas[idx]

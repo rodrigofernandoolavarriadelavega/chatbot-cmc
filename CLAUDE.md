@@ -179,6 +179,17 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - [x] Normalización de teléfono (sin prefijo `+`) para evitar sesiones duplicadas
 - [x] Detección pasiva de Arauco: si paciente menciona "arauco", guarda tag automáticamente
 - [x] Masoterapia con duración variable (20 o 40 min) antes de buscar slots
+- [x] Fix timezone: servidor UTC → medilink.py usa `ZoneInfo("America/Santiago")` para no filtrar slots de Olavarría
+- [x] Fix medicina general stage 0: slot más próximo entre Abarca (08-16) y Olavarría (16-21); Márquez solo como overflow
+- [x] Caché incremental de citas en SQLite (`citas_cache`): primera carga sincroniza desde Medilink, luego instantáneo
+- [x] Sync diario automático 23:50 CLT via APScheduler + endpoint `POST /admin/api/kine/sync`
+- [x] Paralelización de requests en módulo Pacientes en Control (asyncio.gather, 18s → ~1s)
+- [x] Filtros Mes / Año / Todos en modales Pacientes en Control y Ortodoncia
+- [x] Módulo Ortodoncia (`🦷` en admin): tabla `ortodoncia_cache` con monto desde `/atenciones`
+- [x] Auto-clasificación por monto: $120.000=Instalación, $30.000=Control, otro=Pendiente
+- [x] Vista Matriz estilo Excel: filas=pacientes, columnas=fechas, círculos I/C/? con colores
+- [x] Toggle Cards ▦ / Matriz ⊞ en modal Ortodoncia
+- [x] `ORTODONCIA_TOKEN` separado (`cmc_ortodoncia_2026`) para acceso al módulo
 
 ## Dashboard admin
 - Ruta: `http://157.245.13.107:8001/admin?token=cmc_admin_2026`
@@ -186,31 +197,38 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - Muestra métricas, conversaciones activas y estado del sistema
 
 ## Sesión en curso
-**Fecha**: 2026-04-09
+**Fecha**: 2026-04-10
+
+**Hecho (sesión 2026-04-10)**:
+- **Fix timezone crítico**: servidor corre en UTC → Olavarría (16-21 CLT) era filtrado como pasado. Fix: `ZoneInfo("America/Santiago")` en 3 `datetime.now()` en `medilink.py`
+- **Fix Medicina General**: `solo_ids=[73,1]` busca Abarca+Olavarría juntos (horarios complementarios 08-16 y 16-21); Márquez como overflow; slot más próximo entre ambos gana (`todos[0]`)
+- **Caché SQLite `citas_cache`**: tabla en `session.py`; primera carga sync Medilink, luego lectura local instantánea
+- **Sync incremental** en `get_citas_seguimiento_mes`: detecta días faltantes, sync paralelo con `asyncio.gather` (60 req secuenciales → paralelo, ~18s → ~1s); días vacíos marcados con fila sentinel `id_paciente=0`
+- **Cron 23:50 CLT** (02:50 UTC) en APScheduler para sync diario automático
+- **Endpoint `POST /admin/api/kine/sync`**: fuerza re-sync de una fecha específica
+- **Módulo Ortodoncia** (`🦷` en admin panel):
+  - Tabla `ortodoncia_cache` en SQLite con `total` desde `/atenciones/{id}` de Medilink
+  - Auto-clasificación: $120.000=Instalación (I), $30.000=Control (C), otro=Pendiente (?)
+  - `tipo_manual=1` protege overrides del usuario contra re-sync
+  - Vista Cards y Vista Matriz (estilo Excel): filas=pacientes, columnas=fechas, círculos con colores
+  - `ORTODONCIA_TOKEN` separado (`cmc_ortodoncia_2026`) para acceso independiente
+- **Filtros Mes/Año/Todos** en modales Pacientes en Control y Ortodoncia
+- **Sync histórico**: 108 combinaciones faltantes de Marzo 2026 re-sincronizadas; ortodoncia desde Ene 2025 en curso
+- **Endpoint** `POST /admin/api/ortodoncia/sync`: fuerza re-sync de Ortodoncia (Dra. Castillo, ID 66)
 
 **Hecho (sesiones 2026-04-08 y 2026-04-09)**:
 - IDs Medilink corregidos: Márquez 18→**13**, Borrego 28→**23**, Etcheverry 26→**21**
-- Expansión progresiva Medicina General: sugerido Abarca → smart Abarca → smart Abarca+Olavarría → todos
-- Intervalos de atención corregidos (bot ignora intervalo Medilink de 5–10 min, usa dict `PROFESIONALES`)
 - Masoterapia con duración variable: estado `WAIT_DURACION_MASOTERAPIA` antes de buscar slots
 - Panel admin: etiquetas de especialidad legibles (`espLabel()`), tiempo de espera humano (`waitLabel()`)
-- Panel "Pacientes en Control" (`/admin` → botón): seguimiento de sesiones kine/ortodoncia/psicología/nutrición
-- Fix JS SyntaxError `\'` en panel admin (190 reemplazos)
-- Fix normalización teléfono: `phone = msg["from"].lstrip("+")` — evita sesiones duplicadas
-- Fix Medilink: queries día a día (range query devolvía 400), `nombre_paciente` en vez de `paciente` anidado
-- Instagram y Facebook Messenger integrados: webhook unificado, íconos en panel, `/admin/api/reply` enruta por canal
-- Fidelización completa en `app/fidelizacion.py`:
-  - Post-consulta (diario 10:00)
-  - Reactivación inactivos (lunes 10:30)
-  - Adherencia kinesiología (diario 11:00 — gap 4+ días sin sesión)
-  - Control por especialidad (diario 11:30 — Nutrición/Psicología/Cardiología/Ginecología/Traumatología)
-  - Cross-sell kine (miércoles 10:30 — tras medicina/traumatología)
-- Clasificación de texto libre en seguimiento: si paciente escribe "me siento peor" → Claude clasifica → flujo correcto
+- Panel "Pacientes en Control": seguimiento de sesiones kine/ortodoncia/psicología/nutrición
+- Instagram y Facebook Messenger integrados: webhook unificado, íconos en panel
+- Fidelización completa en `app/fidelizacion.py` (post-consulta, reactivación, adherencia kine, control esp., cross-sell)
 - Detección pasiva de Arauco: cualquier mención guarda tag silenciosamente
 
 **Estado del servidor**: ✅ corriendo en `https://agentecmc.cl`, deployado.
 
 **Pendiente**:
+- Verificar ortodoncia modal en producción (hard refresh Cmd+Shift+R, sync puede tardar hasta 10-15 min)
 - Promover número +56945886628 a pacientes reales (redes sociales, recepción)
 - Monitorear primeras conversaciones reales
 - Tags clínicos automáticos (dolor lumbar, rehabilitación) — detectar con Claude y guardar en contact_tags

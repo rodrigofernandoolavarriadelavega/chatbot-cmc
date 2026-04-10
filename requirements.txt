@@ -3,6 +3,5 @@ uvicorn==0.29.0
 python-dotenv==1.0.1
 httpx==0.27.0
 anthropic==0.28.0
-twilio==9.2.3
 python-multipart==0.0.9
 apscheduler==3.10.4

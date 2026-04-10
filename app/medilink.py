@@ -579,7 +579,7 @@ async def crear_cita(id_paciente: int, id_profesional: int, fecha: str,
             if isinstance(cita, list) and cita:
                 cita = cita[0]
             return {"id": cita.get("id"), "confirmado": True}
-        print(f"[ERROR crear_cita] {r.status_code}: {r.text[:500]}")
+        log.error("crear_cita falló: %s %s", r.status_code, r.text[:500])
         return None
 
 
@@ -844,15 +844,22 @@ def _fmt_fecha(fecha: str) -> str:
         meses = ["enero","febrero","marzo","abril","mayo","junio",
                  "julio","agosto","septiembre","octubre","noviembre","diciembre"]
         return f"{dias[d.weekday()]} {d.day} de {meses[d.month-1]}"
-    except Exception:
+    except (ValueError, TypeError):
         return fecha
 
 
 def valid_rut(rut: str) -> bool:
-    """Valida RUT chileno con módulo 11."""
+    """Valida RUT chileno con módulo 11. Rechaza formatos inválidos y rangos absurdos."""
+    if not rut or not isinstance(rut, str):
+        return False
     try:
         rut = rut.replace(".", "").replace("-", "").strip().upper()
+        # Cuerpo numérico entre 7 y 8 dígitos; DV es dígito o K
+        if len(rut) < 8 or len(rut) > 9:
+            return False
         cuerpo, dv = rut[:-1], rut[-1]
+        if not cuerpo.isdigit() or not (dv.isdigit() or dv == "K"):
+            return False
         suma = 0
         multiplo = 2
         for c in reversed(cuerpo):
@@ -861,7 +868,7 @@ def valid_rut(rut: str) -> bool:
         resto = 11 - (suma % 11)
         dv_calc = "0" if resto == 11 else ("K" if resto == 10 else str(resto))
         return dv == dv_calc
-    except Exception:
+    except (ValueError, TypeError, IndexError):
         return False
 
 
