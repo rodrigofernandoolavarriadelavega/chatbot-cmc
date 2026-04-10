@@ -3,6 +3,7 @@ Máquina de estados para los flujos de conversación.
 Opción C: Claude detecta intención → sistema guía el flujo → Medilink ejecuta.
 """
 import re
+import time
 from datetime import datetime, timedelta
 
 from claude_helper import detect_intent, respuesta_faq, clasificar_respuesta_seguimiento
@@ -79,6 +80,17 @@ EMERGENCIAS_PATRONES = [
 ]
 
 DISCLAIMER = "_Recuerda que soy un asistente virtual, no un médico. Para consultas clínicas, habla siempre con un profesional de salud._"
+
+# Señales léxicas de síntoma — si el texto del paciente las contiene pero el
+# motor de triage NO produce match, vale la pena loggear el texto para revisar
+# los gaps de recall del corpus GES semanalmente.
+_SENALES_SINTOMA = re.compile(
+    r"\b(me\s+duele|me\s+siento|siento|dolor|molest|ardor|nause|mareo|"
+    r"fiebre|tos|flem|diarrea|vomit|sangr|picaz|inflam|hincha|"
+    r"no\s+puedo|no\s+me\s+puedo|no\s+para|hace\s+\w+\s+que|"
+    r"desde\s+hace|tengo\s+un|tengo\s+una|tengo\s+mucho)",
+    re.IGNORECASE,
+)
 
 
 # ── Helpers de mensajes interactivos ──────────────────────────────────────────
@@ -407,26 +419,37 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     )
 
         # ── Pre-triage por síntomas (GES Clinical Assistant) ─────────────────
-        # Si el paciente describe síntomas en texto libre (≥10 chars, no es
-        # un atajo/keyword), consultamos el motor de triage antes de Claude.
-        # Si devuelve una hipótesis con score suficiente → derivamos a la
-        # especialidad correspondiente sin necesidad de más preguntas.
-        # Cae silenciosamente a detect_intent si no hay match.
+        # Orden de prioridad en handle_message (NO mover sin coordinar con equipo
+        # clínico del CMC):
+        #   1. Emergencias hard-coded (EMERGENCIAS + regex) — síntomas obvios
+        #      que no dependen del motor GES, siempre ganan.
+        #   2. Comandos globales (menu/hola/...) — el paciente quiere reiniciar.
+        #   3. Pre-triage GES (este bloque) — consulta motor clínico y puede
+        #      derivar a SAMU, HOSPITAL o agendar según hipótesis.
+        #   4. detect_intent() con Claude — fallback general.
+        #
+        # Responsabilidad clínica: los mensajes al paciente NO nombran la
+        # patología sospechada (ej. "posible IAM") — eso es territorio médico
+        # y puede alarmar sin información diagnóstica real. La patología se
+        # registra en log_event para auditoría interna y revisión posterior.
         if len(txt) >= 10 and not txt.isdigit():
+            _t0 = time.monotonic()
             triage = await triage_sintomas(txt)
+            _elapsed_ms = int((time.monotonic() - _t0) * 1000)
             if triage:
                 log_event(phone, "triage_ges_match", {
                     "top": triage.get("top_pathology"),
                     "score": triage.get("top_score"),
                     "especialidad": triage.get("especialidad"),
                     "urgency": triage.get("needs_urgency"),
+                    "elapsed_ms": _elapsed_ms,
                 })
                 # Urgencia tiempo-dependiente → derivar a SAMU inmediatamente.
+                # NO nombramos la patología al paciente (responsabilidad clínica).
                 if triage.get("needs_urgency"):
                     save_tag(phone, "triage-urgencia")
                     return (
-                        "⚠️ Lo que describes puede ser una urgencia médica.\n\n"
-                        f"Posible causa: *{triage.get('top_pathology')}*\n\n"
+                        "⚠️ Lo que describes puede requerir atención médica urgente.\n\n"
                         "Por favor, llama al *SAMU 131* o acude al servicio de "
                         "urgencias más cercano ahora mismo.\n\n"
                         f"También puedes contactarnos:\n📞 *{CMC_TELEFONO}*\n"
@@ -434,14 +457,16 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         + DISCLAIMER
                     )
                 # Patología derivada a hospital → no se atiende en el CMC.
+                # Tampoco nombramos la patología; decimos "atención de mayor
+                # complejidad" para no alarmar ni dar un diagnóstico indirecto.
                 if triage.get("ges_specialty_raw") == "HOSPITAL":
                     save_tag(phone, "triage-hospital")
                     return (
-                        f"Lo que describes podría requerir atención de especialidad "
-                        f"hospitalaria (*{triage.get('top_pathology')}*), que no "
-                        f"atendemos en el CMC.\n\n"
+                        "Lo que describes podría requerir atención de mayor "
+                        "complejidad que no realizamos en el Centro Médico "
+                        "Carampangue.\n\n"
                         "Te recomiendo acudir a tu consultorio de referencia o al "
-                        "hospital base para evaluación.\n\n"
+                        "hospital base para una evaluación.\n\n"
                         f"Si necesitas orientación, llama a recepción:\n📞 *{CMC_TELEFONO}*\n\n"
                         + DISCLAIMER
                     )
@@ -454,6 +479,16 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         data["nombre_conocido"] = perfil["nombre"]
                     data["triage_motivo"] = triage.get("top_pathology")
                     return await _iniciar_agendar(phone, data, especialidad_triage)
+            else:
+                # Log de gaps de recall — sólo si el texto parece clínico. Así
+                # evitamos llenar el event stream con "hola, cómo están" y
+                # mantenemos un corpus limpio para revisar semanalmente qué
+                # frases sintomáticas no están capturadas por el motor GES.
+                if _SENALES_SINTOMA.search(txt):
+                    log_event(phone, "triage_ges_nomatch", {
+                        "texto": txt[:240],
+                        "elapsed_ms": _elapsed_ms,
+                    })
 
         result = await detect_intent(txt)
         intent = result.get("intent", "otro")
