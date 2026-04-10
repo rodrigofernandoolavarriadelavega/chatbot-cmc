@@ -375,6 +375,49 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                                                data.get("expansion_stage", 0), fecha_actual)
             return _format_slots(slots_mostrados)
 
+        # "Otro profesional" → muestra slots del/los otro(s) doctor(es) de la especialidad
+        if tl == "otro_prof":
+            from medilink import _ids_para_especialidad
+            prof_sugerido_id = data.get("prof_sugerido_id")
+            ids_esp = _ids_para_especialidad(especialidad)
+            if especialidad in _ESP_MED_GENERAL:
+                ids_esp = [73, 1, 13]
+            otros_ids = [i for i in ids_esp if i != prof_sugerido_id]
+            if not otros_ids:
+                return "Solo hay un profesional disponible para esta especialidad 😊"
+
+            # 1) Intentar con los slots que ya tenemos del mismo día (todos_slots)
+            slots_otros_mismo_dia = [s for s in todos_slots if s.get("id_profesional") in otros_ids]
+            if slots_otros_mismo_dia:
+                data["slots"] = slots_otros_mismo_dia
+                # Marcar al primer "otro" como el nuevo sugerido para seguir navegando
+                nuevo_sugerido_id = slots_otros_mismo_dia[0].get("id_profesional")
+                data["prof_sugerido_id"] = nuevo_sugerido_id
+                save_session(phone, "WAIT_SLOT", data)
+                return _format_slots(slots_otros_mismo_dia, mostrar_todos=True)
+
+            # 2) No hay cupo de los otros en ese día → buscar su próximo día disponible
+            _maso_override = {59: data["maso_duracion"]} if especialidad == "masoterapia" and data.get("maso_duracion") else None
+            smart_nuevo, todos_nuevo = await buscar_primer_dia(
+                especialidad, excluir=fechas_vistas,
+                solo_ids=otros_ids, intervalo_override=_maso_override)
+            if not todos_nuevo:
+                return (
+                    "No encontré disponibilidad con otros profesionales en los próximos días 😕\n\n"
+                    "Escribe *otro día* para seguir buscando con el mismo doctor, "
+                    f"o llama a recepción: 📞 *{CMC_TELEFONO}*"
+                )
+            nueva_fecha = todos_nuevo[0]["fecha"]
+            if nueva_fecha not in fechas_vistas:
+                fechas_vistas = fechas_vistas + [nueva_fecha]
+            nuevo_sugerido_id = todos_nuevo[0].get("id_profesional")
+            smart_nuevo_filtrado = [s for s in smart_nuevo if s.get("id_profesional") == nuevo_sugerido_id] or smart_nuevo
+            data.update({"slots": smart_nuevo_filtrado, "todos_slots": todos_nuevo,
+                         "fechas_vistas": fechas_vistas, "expansion_stage": 0,
+                         "prof_sugerido_id": nuevo_sugerido_id})
+            save_session(phone, "WAIT_SLOT", data)
+            return _format_slots(smart_nuevo_filtrado)
+
         # "ver todos" / "ver más" → expansión progresiva para med general, o todos del día para el resto
         VER_TODOS = {"ver todos", "todos", "ver todo", "todos los horarios", "mostrar todos",
                      "ver horarios", "quiero ver los horarios", "ver todos los horarios",
@@ -1060,23 +1103,41 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None) -> 
             "_Escribe *menu* para volver._"
         )
     fecha = mejor["fecha"]
-    data.update({"especialidad": especialidad_lower, "slots": smart,
+    # Al tocar "Ver más horarios" mostramos primero los del MISMO doctor del sugerido.
+    # Filtramos el smart combinado para quedarnos solo con ese doctor; si el filtro
+    # deja la lista vacía (raro), caemos al smart original.
+    prof_sugerido_id = mejor.get("id_profesional")
+    smart_sugerido = [s for s in smart if s.get("id_profesional") == prof_sugerido_id] or smart
+    data.update({"especialidad": especialidad_lower, "slots": smart_sugerido,
                  "todos_slots": todos, "fechas_vistas": [fecha],
-                 "expansion_stage": 0})
+                 "expansion_stage": 0, "prof_sugerido_id": prof_sugerido_id})
     save_session(phone, "WAIT_SLOT", data)
     nombre_conocido = data.get("nombre_conocido", "")
     nombre_corto = nombre_conocido.split()[0] if nombre_conocido else ""
     saludo = f"¡Hola de nuevo, *{nombre_corto}*! " if nombre_corto else ""
+    btn_ver_mas = "📋 Otros horarios"
+
+    # Tercer botón "Otro profesional" solo si la especialidad tiene >1 doctor
+    from medilink import _ids_para_especialidad
+    ids_esp = _ids_para_especialidad(especialidad_lower)
+    if especialidad_lower in _ESP_MED_GENERAL:
+        ids_esp = [73, 1, 13]  # Abarca, Olavarría, Márquez
+    hay_otros = len([i for i in ids_esp if i != prof_sugerido_id]) > 0
+
+    botones = [
+        {"id": "confirmar_sugerido", "title": "✅ Sí, esa hora"},
+        {"id": "ver_otros",          "title": btn_ver_mas},
+    ]
+    if hay_otros:
+        botones.append({"id": "otro_prof", "title": "👤 Otro profesional"})
+
     return _btn_msg(
         f"{saludo}Encontré disponibilidad ✨\n\n"
         f"🏥 *{mejor['especialidad']}* — {mejor['profesional']}\n"
         f"📅 *{mejor['fecha_display']}*\n"
         f"🕐 *{mejor['hora_inicio'][:5]}* ⭐\n\n"
         "¿La agendo?",
-        [
-            {"id": "confirmar_sugerido", "title": "✅ Sí, esa hora"},
-            {"id": "ver_otros",          "title": "📋 Ver más opciones"},
-        ]
+        botones
     )
 
 
