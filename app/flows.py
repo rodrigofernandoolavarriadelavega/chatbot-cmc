@@ -1106,11 +1106,12 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None) -> 
             "_Escribe *menu* para volver._"
         )
     fecha = mejor["fecha"]
-    # Al tocar "Ver más horarios" mostramos primero los del MISMO doctor del sugerido.
-    # Filtramos el smart combinado para quedarnos solo con ese doctor; si el filtro
-    # deja la lista vacía (raro), caemos al smart original.
+    # Al tocar "Ver más horarios" mostramos los del MISMO doctor del sugerido.
+    # smart_select del combinado puede sesgar hacia un doctor con más adyacencias;
+    # reconstruimos el smart usando solo los slots del doctor sugerido.
     prof_sugerido_id = mejor.get("id_profesional")
-    smart_sugerido = [s for s in smart if s.get("id_profesional") == prof_sugerido_id] or smart
+    slots_sugerido_todos = [s for s in todos if s.get("id_profesional") == prof_sugerido_id]
+    smart_sugerido = slots_sugerido_todos[:5] if slots_sugerido_todos else smart
     data.update({"especialidad": especialidad_lower, "slots": smart_sugerido,
                  "todos_slots": todos, "fechas_vistas": [fecha],
                  "expansion_stage": 0, "prof_sugerido_id": prof_sugerido_id})
