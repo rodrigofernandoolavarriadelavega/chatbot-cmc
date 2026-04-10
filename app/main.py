@@ -629,33 +629,53 @@ body {
 </div>
 
 <!-- MODAL ORTODONCIA -->
-<div id="modal-ort" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:flex-start;justify-content:center;padding-top:40px;padding-bottom:40px;overflow-y:auto;">
-  <div style="background:#fff;border-radius:14px;width:960px;max-width:97vw;box-shadow:0 20px 60px rgba(0,0,0,.2);position:relative;margin:auto;">
-    <div style="padding:20px 24px 14px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:12px;position:sticky;top:0;background:#fff;z-index:2;border-radius:14px 14px 0 0;">
-      <span style="font-size:22px;">🦷</span>
-      <div style="flex:1;">
-        <div style="font-size:16px;font-weight:700;color:#1e293b;">Ortodoncia — Dra. Daniela Castillo</div>
-        <div style="font-size:12px;color:#94a3b8;" id="ort-ultima-sync"></div>
+<div id="modal-ort" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:flex-start;justify-content:center;padding-top:30px;padding-bottom:30px;overflow-y:auto;">
+  <div style="background:#fff;border-radius:14px;width:1100px;max-width:98vw;box-shadow:0 20px 60px rgba(0,0,0,.2);position:relative;margin:auto;">
+    <!-- Header -->
+    <div style="padding:16px 20px 12px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:10px;position:sticky;top:0;background:#fff;z-index:2;border-radius:14px 14px 0 0;flex-wrap:wrap;gap:8px;">
+      <span style="font-size:20px;">🦷</span>
+      <div style="flex:1;min-width:160px;">
+        <div style="font-size:15px;font-weight:700;color:#1e293b;">Ortodoncia — Dra. Daniela Castillo</div>
+        <div style="font-size:11px;color:#94a3b8;" id="ort-ultima-sync"></div>
       </div>
-      <div style="display:flex;align-items:center;gap:4px;">
-        <div id="ort-nav-mes" style="display:flex;align-items:center;gap:4px;">
-          <button onclick="ortNavPeriodo(-1)" style="background:#f1f5f9;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:14px;">◀</button>
-          <span id="ort-periodo-label" style="font-size:12px;font-weight:600;color:#334155;min-width:90px;text-align:center;"></span>
-          <button onclick="ortNavPeriodo(1)" style="background:#f1f5f9;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:14px;">▶</button>
+      <!-- Filtro período -->
+      <div style="display:flex;align-items:center;gap:3px;">
+        <div id="ort-nav-mes" style="display:flex;align-items:center;gap:3px;">
+          <button onclick="ortNavPeriodo(-1)" style="background:#f1f5f9;border:none;border-radius:6px;padding:4px 9px;cursor:pointer;font-size:13px;">◀</button>
+          <span id="ort-periodo-label" style="font-size:12px;font-weight:600;color:#334155;min-width:80px;text-align:center;"></span>
+          <button onclick="ortNavPeriodo(1)" style="background:#f1f5f9;border:none;border-radius:6px;padding:4px 9px;cursor:pointer;font-size:13px;">▶</button>
         </div>
-        <div style="display:flex;gap:2px;margin-left:6px;">
-          <button id="ort-btn-mes" onclick="ortSetModo('mes')" style="font-size:11px;padding:4px 8px;border-radius:6px 0 0 6px;border:1px solid #e2e8f0;cursor:pointer;background:#7e22ce;color:#fff;">Mes</button>
-          <button id="ort-btn-anio" onclick="ortSetModo('anio')" style="font-size:11px;padding:4px 8px;border:1px solid #e2e8f0;border-left:none;cursor:pointer;background:#f1f5f9;color:#475569;">Año</button>
+        <div style="display:flex;gap:1px;margin-left:6px;">
+          <button id="ort-btn-mes"   onclick="ortSetModo('mes')"   style="font-size:11px;padding:4px 8px;border-radius:6px 0 0 6px;border:1px solid #e2e8f0;cursor:pointer;background:#7e22ce;color:#fff;">Mes</button>
+          <button id="ort-btn-anio"  onclick="ortSetModo('anio')"  style="font-size:11px;padding:4px 8px;border:1px solid #e2e8f0;border-left:none;cursor:pointer;background:#f1f5f9;color:#475569;">Año</button>
           <button id="ort-btn-todos" onclick="ortSetModo('todos')" style="font-size:11px;padding:4px 8px;border-radius:0 6px 6px 0;border:1px solid #e2e8f0;border-left:none;cursor:pointer;background:#f1f5f9;color:#475569;">Todos</button>
         </div>
       </div>
-      <button onclick="cerrarModalOrtodoncia()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#94a3b8;margin-left:8px;">✕</button>
+      <!-- Toggle vista -->
+      <div style="display:flex;gap:1px;margin-left:4px;">
+        <button id="ort-vista-cards"  onclick="ortSetVista('cards')"  title="Vista tarjetas" style="font-size:13px;padding:4px 9px;border-radius:6px 0 0 6px;border:1px solid #e2e8f0;cursor:pointer;background:#f1f5f9;color:#475569;">▦</button>
+        <button id="ort-vista-matriz" onclick="ortSetVista('matriz')" title="Vista matriz"   style="font-size:13px;padding:4px 9px;border-radius:0 6px 6px 0;border:1px solid #e2e8f0;border-left:none;cursor:pointer;background:#7e22ce;color:#fff;">⊞</button>
+      </div>
+      <button onclick="cerrarModalOrtodoncia()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#94a3b8;">✕</button>
     </div>
-    <div id="ort-resumen" style="padding:12px 24px;background:#fdf4ff;border-bottom:1px solid #e9d5ff;display:flex;gap:24px;flex-wrap:wrap;font-size:13px;color:#6b21a8;"></div>
+    <!-- Stats -->
+    <div id="ort-resumen" style="padding:10px 20px;background:#fdf4ff;border-bottom:1px solid #e9d5ff;display:flex;gap:20px;flex-wrap:wrap;font-size:12px;color:#6b21a8;"></div>
+    <!-- Leyenda -->
+    <div style="padding:8px 20px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;gap:16px;font-size:11px;color:#475569;align-items:center;">
+      <span><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#7e22ce;vertical-align:middle;margin-right:4px;"></span>Instalación $120.000</span>
+      <span><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#0369a1;vertical-align:middle;margin-right:4px;"></span>Control $30.000</span>
+      <span><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#94a3b8;vertical-align:middle;margin-right:4px;"></span>Sin clasificar</span>
+      <span style="margin-left:auto;color:#94a3b8;">Clic en visita para cambiar tipo</span>
+    </div>
     <div id="ort-loading" style="padding:40px;text-align:center;color:#94a3b8;">Cargando pacientes...</div>
-    <div id="ort-body" style="padding:20px 24px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;"></div>
-    <div style="padding:12px 24px;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8;">
-      💡 Clasificación automática por monto: $120.000 = Instalación · $30.000 = Control · Haz clic en cualquier visita para cambiarla manualmente.
+    <!-- Vista cards -->
+    <div id="ort-body-cards" style="padding:16px 20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;"></div>
+    <!-- Vista matriz -->
+    <div id="ort-body-matriz" style="display:none;overflow-x:auto;max-height:65vh;overflow-y:auto;">
+      <table id="ort-tabla-matriz" style="border-collapse:collapse;font-size:12px;width:100%;"></table>
+    </div>
+    <div style="padding:10px 20px;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8;">
+      💡 Clasificación automática por monto desde Medilink · Los cambios manuales se guardan permanentemente.
     </div>
   </div>
 </div>
@@ -1620,11 +1640,11 @@ async function confirmarAnular(){
 // ── MODAL ORTODONCIA ──────────────────────────────────────────────────────────
 let ortTodosPacientes = [];
 let ortModo = 'todos';
+let ortVista = 'matriz';
 let ortPeriodo = new Date();
 
 function abrirModalOrtodoncia() {
-  ortModo = 'todos';
-  ortPeriodo = new Date();
+  ortModo = 'todos'; ortVista = 'matriz'; ortPeriodo = new Date();
   document.getElementById('modal-ort').style.display = 'flex';
   cargarOrtodoncia();
 }
@@ -1633,13 +1653,20 @@ function cerrarModalOrtodoncia() {
 }
 function ortSetModo(modo) {
   ortModo = modo;
-  const btns = {mes:'ort-btn-mes', anio:'ort-btn-anio', todos:'ort-btn-todos'};
-  Object.entries(btns).forEach(([k,id]) => {
-    const el = document.getElementById(id);
+  ['mes','anio','todos'].forEach(k => {
+    const el = document.getElementById('ort-btn-'+k);
     el.style.background = k===modo ? '#7e22ce' : '#f1f5f9';
     el.style.color = k===modo ? '#fff' : '#475569';
   });
   document.getElementById('ort-nav-mes').style.display = modo==='todos' ? 'none' : 'flex';
+  renderOrtodoncia();
+}
+function ortSetVista(vista) {
+  ortVista = vista;
+  document.getElementById('ort-vista-cards').style.background  = vista==='cards'  ? '#7e22ce' : '#f1f5f9';
+  document.getElementById('ort-vista-cards').style.color       = vista==='cards'  ? '#fff'    : '#475569';
+  document.getElementById('ort-vista-matriz').style.background = vista==='matriz' ? '#7e22ce' : '#f1f5f9';
+  document.getElementById('ort-vista-matriz').style.color      = vista==='matriz' ? '#fff'    : '#475569';
   renderOrtodoncia();
 }
 function ortNavPeriodo(delta) {
@@ -1658,11 +1685,12 @@ async function cargarOrtodoncia() {
     document.getElementById('ort-ultima-sync').textContent = `Última sync: ${d.ultima_sync}`;
   }
   ortTodosPacientes = d.pacientes || [];
-  ortSetModo('todos');
   document.getElementById('ort-loading').style.display = 'none';
+  ortSetModo('todos');
+  ortSetVista('matriz');
 }
 
-function renderOrtodoncia() {
+function ortFiltrarPacientes() {
   const y = ortPeriodo.getFullYear();
   const m = ortPeriodo.getMonth();
   let label, pacientes;
@@ -1682,28 +1710,89 @@ function renderOrtodoncia() {
     })).filter(p => p.visitas.length > 0);
   }
   document.getElementById('ort-periodo-label').textContent = label;
-  const totalPac = pacientes.length;
+  return pacientes;
+}
+
+function renderOrtodoncia() {
+  const pacientes = ortFiltrarPacientes();
   const conInstalacion = ortTodosPacientes.filter(p => p.visitas.some(v => v.tipo === 'instalacion')).length;
   const totalControles = pacientes.reduce((s,p) => s + p.visitas.filter(v => v.tipo==='control').length, 0);
   const pendientes = pacientes.reduce((s,p) => s + p.visitas.filter(v => v.tipo==='pendiente').length, 0);
   document.getElementById('ort-resumen').innerHTML = `
-    <span>🦷 <strong>${totalPac}</strong> pacientes${ortModo!=='todos'?' en período':''}</span>
-    <span>📦 <strong>${conInstalacion}</strong> con instalación registrada (total)</span>
+    <span>🦷 <strong>${pacientes.length}</strong> pacientes${ortModo!=='todos'?' en período':''}</span>
+    <span>📦 <strong>${conInstalacion}</strong> con instalación (total histórico)</span>
     <span>⚙️ <strong>${totalControles}</strong> controles en período</span>
     ${pendientes > 0 ? `<span style="color:#dc2626;">⚠️ <strong>${pendientes}</strong> sin clasificar</span>` : ''}
   `;
-  const body = document.getElementById('ort-body');
-  if (!pacientes.length) {
-    body.innerHTML = '<p style="color:#94a3b8;text-align:center;padding:40px;grid-column:1/-1;">Sin visitas en este período.</p>';
-    return;
-  }
-  pacientes.sort((a,b) => {
-    const aIns = a.visitas.find(v=>v.tipo==='instalacion');
-    const bIns = b.visitas.find(v=>v.tipo==='instalacion');
-    if (aIns && !bIns) return -1; if (!aIns && bIns) return 1;
+  // Ordenar: instalación primero, luego por última visita desc
+  const sorted = [...pacientes].sort((a,b) => {
+    const aI = a.visitas.find(v=>v.tipo==='instalacion');
+    const bI = b.visitas.find(v=>v.tipo==='instalacion');
+    if (aI && !bI) return -1; if (!aI && bI) return 1;
     return (b.visitas[b.visitas.length-1]?.fecha||'').localeCompare(a.visitas[a.visitas.length-1]?.fecha||'');
   });
-  body.innerHTML = pacientes.map(p => renderTarjetaPaciente(p)).join('');
+
+  document.getElementById('ort-body-cards').style.display  = ortVista==='cards'  ? 'grid' : 'none';
+  document.getElementById('ort-body-matriz').style.display = ortVista==='matriz' ? 'block' : 'none';
+
+  if (!pacientes.length) {
+    document.getElementById('ort-body-cards').innerHTML = '<p style="color:#94a3b8;text-align:center;padding:40px;grid-column:1/-1;">Sin visitas en este período.</p>';
+    document.getElementById('ort-tabla-matriz').innerHTML = '';
+    return;
+  }
+  if (ortVista === 'cards') renderOrtCards(sorted);
+  else renderOrtMatriz(sorted);
+}
+
+function renderOrtCards(pacientes) {
+  document.getElementById('ort-body-cards').innerHTML = pacientes.map(p => renderTarjetaPaciente(p)).join('');
+}
+
+function renderOrtMatriz(pacientes) {
+  // Recopilar todas las fechas únicas ordenadas
+  const fechasSet = new Set();
+  pacientes.forEach(p => p.visitas.forEach(v => fechasSet.add(v.fecha)));
+  const fechas = [...fechasSet].sort();
+
+  // Construir tabla
+  let html = '<thead><tr style="position:sticky;top:0;z-index:3;background:#f8fafc;">';
+  html += '<th style="text-align:left;padding:8px 12px;font-size:12px;font-weight:600;color:#475569;border-bottom:2px solid #e2e8f0;border-right:2px solid #e2e8f0;position:sticky;left:0;background:#f8fafc;z-index:4;min-width:160px;">Paciente</th>';
+  fechas.forEach(f => {
+    const [yy,mm,dd] = f.split('-');
+    html += `<th style="padding:6px 4px;font-size:10px;color:#64748b;border-bottom:2px solid #e2e8f0;text-align:center;min-width:38px;font-weight:500;">${dd}/${mm}<br><span style="color:#94a3b8;">${yy}</span></th>`;
+  });
+  html += '<th style="padding:8px;font-size:11px;font-weight:700;color:#475569;border-bottom:2px solid #e2e8f0;border-left:2px solid #e2e8f0;text-align:center;position:sticky;right:0;background:#f8fafc;">Total</th>';
+  html += '</tr></thead><tbody>';
+
+  pacientes.forEach((p, pi) => {
+    const visitaMap = {};
+    p.visitas.forEach(v => { visitaMap[v.fecha] = v; });
+    const totalVisitas = p.visitas.length;
+    const bgRow = pi % 2 === 0 ? '#fff' : '#fafafa';
+    html += `<tr style="background:${bgRow};">`;
+    html += `<td style="padding:7px 12px;font-size:12px;font-weight:500;color:#1e293b;border-right:2px solid #e2e8f0;position:sticky;left:0;background:${bgRow};white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis;" title="${p.nombre}">${p.nombre}</td>`;
+    fechas.forEach(f => {
+      const v = visitaMap[f];
+      if (!v) {
+        html += '<td style="text-align:center;padding:4px;border-bottom:1px solid #f1f5f9;"></td>';
+      } else {
+        const color = v.tipo==='instalacion' ? '#7e22ce' : v.tipo==='control' ? '#0369a1' : '#94a3b8';
+        const bg    = v.tipo==='instalacion' ? '#f3e8ff' : v.tipo==='control' ? '#e0f2fe' : '#f1f5f9';
+        const title = v.tipo==='instalacion' ? 'Instalación' : v.tipo==='control' ? 'Control' : 'Sin clasificar';
+        html += `<td style="text-align:center;padding:4px;border-bottom:1px solid #f1f5f9;">
+          <div onclick="toggleOrtTipo(${v.id_atencion},'${v.tipo}',this)" title="${title} - ${fmtFecha(f)}\nClic para cambiar"
+            style="width:24px;height:24px;border-radius:50%;background:${bg};border:2px solid ${color};cursor:pointer;margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:9px;color:${color};font-weight:700;">
+            ${v.tipo==='instalacion'?'I':v.tipo==='control'?'C':'?'}
+          </div>
+        </td>`;
+      }
+    });
+    const insColor = p.visitas.some(v=>v.tipo==='instalacion') ? '#7e22ce' : '#94a3b8';
+    html += `<td style="text-align:center;padding:7px 10px;border-left:2px solid #e2e8f0;border-bottom:1px solid #f1f5f9;font-weight:700;font-size:13px;color:${insColor};position:sticky;right:0;background:${bgRow};">${totalVisitas}</td>`;
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  document.getElementById('ort-tabla-matriz').innerHTML = html;
 }
 
 function fmtFecha(f) {
@@ -1751,13 +1840,18 @@ async function toggleOrtTipo(idAtencion, tipoActual, el) {
   const orden = ['instalacion', 'control', 'pendiente'];
   const idx = orden.indexOf(tipoActual);
   const nuevoTipo = orden[(idx + 1) % orden.length];
-  el.style.opacity = '0.5';
+  el.style.opacity = '0.4';
   await fetch(`/admin/api/ortodoncia/${idAtencion}?token=${TOKEN}`, {
     method: 'PUT',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({tipo: nuevoTipo})
   });
-  await cargarOrtodoncia();
+  // Actualizar localmente sin recargar todo
+  for (const p of ortTodosPacientes) {
+    const v = p.visitas.find(v => v.id_atencion === idAtencion);
+    if (v) { v.tipo = nuevoTipo; v.tipo_manual = 1; break; }
+  }
+  renderOrtodoncia();
 }
 
 // ── MODAL PACIENTES EN TRATAMIENTO ───────────────────────────────────────────
