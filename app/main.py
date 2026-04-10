@@ -19,7 +19,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from config import (META_ACCESS_TOKEN, META_PHONE_NUMBER_ID, META_VERIFY_TOKEN,
                     META_PAGE_ACCESS_TOKEN, INSTAGRAM_USER_ID, META_PAGE_ID,
-                    CMC_TELEFONO, ADMIN_TOKEN)
+                    CMC_TELEFONO, ADMIN_TOKEN, ORTODONCIA_TOKEN)
 from flows import handle_message
 from reminders import enviar_recordatorios
 from fidelizacion import (enviar_seguimiento_postconsulta, enviar_reactivacion_pacientes,
@@ -28,11 +28,13 @@ from fidelizacion import (enviar_seguimiento_postconsulta, enviar_reactivacion_p
 from medilink import (buscar_paciente, crear_paciente, buscar_primer_dia,
                       buscar_slots_dia, crear_cita, listar_citas_paciente,
                       cancelar_cita, get_citas_seguimiento_mes, sync_citas_dia,
+                      sync_ortodoncia_rango,
                       SEGUIMIENTO_ESPECIALIDADES, PROFESIONALES, ESPECIALIDADES_MAP)
 from session import (get_session, is_duplicate, reset_session, save_session, get_metricas,
                      log_message, get_messages, get_conversations, log_event,
                      get_sesiones_abandonadas, get_tags, save_tag, delete_tag, search_messages,
-                     get_kine_tracking_all, save_kine_tracking)
+                     get_kine_tracking_all, save_kine_tracking,
+                     get_ortodoncia_pacientes, set_ortodoncia_tipo, get_ortodoncia_sync_max_fecha)
 
 logging.config.dictConfig({
     "version": 1,
@@ -569,6 +571,7 @@ body {
     <button class="btn" onclick="abrirBusquedaGlobal()" style="margin-left:6px;font-size:12px;padding:6px 14px;border-radius:8px;background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;">🔍 Buscar</button>
     <button class="btn" onclick="abrirModalAnular()" style="margin-left:6px;font-size:12px;padding:6px 14px;border-radius:8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;">✕ Anular Hora</button>
     <button class="btn" onclick="abrirModalKine()" style="margin-left:6px;font-size:12px;padding:6px 14px;border-radius:8px;background:#f0fdf4;color:#15803d;border:1px solid #86efac;">📋 Pacientes en Control</button>
+    <button class="btn" onclick="abrirModalOrtodoncia()" style="margin-left:6px;font-size:12px;padding:6px 14px;border-radius:8px;background:#fdf4ff;color:#7e22ce;border:1px solid #d8b4fe;">🦷 Ortodoncia</button>
   </div>
 </div>
 
@@ -614,6 +617,26 @@ body {
     </div>
     <div style="padding:12px 24px;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8;">
       💡 "Sesiones mes" se obtiene de Medilink. "Total prescritas" y "Notas" se guardan manualmente.
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ORTODONCIA -->
+<div id="modal-ort" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:flex-start;justify-content:center;padding-top:40px;padding-bottom:40px;overflow-y:auto;">
+  <div style="background:#fff;border-radius:14px;width:960px;max-width:97vw;box-shadow:0 20px 60px rgba(0,0,0,.2);position:relative;margin:auto;">
+    <div style="padding:20px 24px 14px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:12px;position:sticky;top:0;background:#fff;z-index:2;border-radius:14px 14px 0 0;">
+      <span style="font-size:22px;">🦷</span>
+      <div style="flex:1;">
+        <div style="font-size:16px;font-weight:700;color:#1e293b;">Ortodoncia — Dra. Daniela Castillo</div>
+        <div style="font-size:12px;color:#94a3b8;" id="ort-ultima-sync"></div>
+      </div>
+      <button onclick="cerrarModalOrtodoncia()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#94a3b8;">✕</button>
+    </div>
+    <div id="ort-resumen" style="padding:12px 24px;background:#fdf4ff;border-bottom:1px solid #e9d5ff;display:flex;gap:24px;flex-wrap:wrap;font-size:13px;color:#6b21a8;"></div>
+    <div id="ort-loading" style="padding:40px;text-align:center;color:#94a3b8;">Cargando pacientes...</div>
+    <div id="ort-body" style="padding:20px 24px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;"></div>
+    <div style="padding:12px 24px;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8;">
+      💡 Clasificación automática por monto: $120.000 = Instalación · $30.000 = Control · Haz clic en cualquier visita para cambiarla manualmente.
     </div>
   </div>
 </div>
@@ -1575,6 +1598,108 @@ async function confirmarAnular(){
   }
 }
 
+// ── MODAL ORTODONCIA ──────────────────────────────────────────────────────────
+function abrirModalOrtodoncia() {
+  document.getElementById('modal-ort').style.display = 'flex';
+  cargarOrtodoncia();
+}
+function cerrarModalOrtodoncia() {
+  document.getElementById('modal-ort').style.display = 'none';
+}
+
+async function cargarOrtodoncia() {
+  document.getElementById('ort-loading').style.display = 'block';
+  document.getElementById('ort-body').innerHTML = '';
+  const r = await fetch(`/admin/api/ortodoncia?token=${TOKEN}`);
+  const d = await r.json();
+  document.getElementById('ort-loading').style.display = 'none';
+  if (d.ultima_sync) {
+    document.getElementById('ort-ultima-sync').textContent = `Última sync: ${d.ultima_sync}`;
+  }
+  const pacientes = d.pacientes || [];
+  // Stats
+  const totalPac = pacientes.length;
+  const conInstalacion = pacientes.filter(p => p.visitas.some(v => v.tipo === 'instalacion')).length;
+  const totalControles = pacientes.reduce((s,p) => s + p.visitas.filter(v => v.tipo==='control').length, 0);
+  const pendientes = pacientes.reduce((s,p) => s + p.visitas.filter(v => v.tipo==='pendiente').length, 0);
+  document.getElementById('ort-resumen').innerHTML = `
+    <span>🦷 <strong>${totalPac}</strong> pacientes</span>
+    <span>📦 <strong>${conInstalacion}</strong> con instalación registrada</span>
+    <span>⚙️ <strong>${totalControles}</strong> controles totales</span>
+    ${pendientes > 0 ? `<span style="color:#dc2626;">⚠️ <strong>${pendientes}</strong> visitas sin clasificar</span>` : ''}
+  `;
+  const body = document.getElementById('ort-body');
+  if (!pacientes.length) {
+    body.innerHTML = '<p style="color:#94a3b8;text-align:center;padding:40px;grid-column:1/-1;">Sin datos. Usa el botón de sync para cargar visitas.</p>';
+    return;
+  }
+  // Ordenar: primero los que tienen instalación, luego por fecha de última visita desc
+  pacientes.sort((a,b) => {
+    const aIns = a.visitas.find(v=>v.tipo==='instalacion');
+    const bIns = b.visitas.find(v=>v.tipo==='instalacion');
+    if (aIns && !bIns) return -1;
+    if (!aIns && bIns) return 1;
+    const aUlt = a.visitas[a.visitas.length-1]?.fecha || '';
+    const bUlt = b.visitas[b.visitas.length-1]?.fecha || '';
+    return bUlt.localeCompare(aUlt);
+  });
+  body.innerHTML = pacientes.map(p => renderTarjetaPaciente(p)).join('');
+}
+
+function fmtFecha(f) {
+  if (!f) return '';
+  const [y,m,d] = f.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function renderTarjetaPaciente(p) {
+  const instalacion = p.visitas.find(v => v.tipo === 'instalacion');
+  const controles   = p.visitas.filter(v => v.tipo === 'control');
+  const pendientes  = p.visitas.filter(v => v.tipo === 'pendiente');
+  const ultimaVisita = p.visitas[p.visitas.length-1];
+
+  const visitasHtml = p.visitas.map((v,i) => {
+    const isIns = v.tipo === 'instalacion';
+    const isCtrl = v.tipo === 'control';
+    const ctrlNum = controles.indexOf(v) + 1;
+    const color = isIns ? '#7e22ce' : isCtrl ? '#0369a1' : '#94a3b8';
+    const bg    = isIns ? '#fdf4ff' : isCtrl ? '#f0f9ff' : '#f8fafc';
+    const label = isIns ? '📦 Instalación' : isCtrl ? `⚙️ Control ${ctrlNum}` : '❓ Sin clasificar';
+    const monto = v.total ? ` · $${v.total.toLocaleString('es-CL')}` : '';
+    return `<div style="display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;background:${bg};margin-bottom:4px;cursor:pointer;"
+                 onclick="toggleOrtTipo(${v.id_atencion}, '${v.tipo}', this)"
+                 title="Clic para cambiar tipo">
+      <span style="font-size:11px;color:${color};font-weight:600;min-width:100px;">${label}</span>
+      <span style="font-size:11px;color:#475569;">${fmtFecha(v.fecha)}${monto}</span>
+      <span style="font-size:10px;color:#cbd5e1;margin-left:auto;">✏️</span>
+    </div>`;
+  }).join('');
+
+  const bordeColor = instalacion ? '#d8b4fe' : '#e2e8f0';
+  return `<div style="border:1px solid ${bordeColor};border-radius:10px;padding:14px;background:#fff;">
+    <div style="font-weight:600;font-size:13px;color:#1e293b;margin-bottom:2px;">${p.nombre}</div>
+    <div style="font-size:11px;color:#94a3b8;margin-bottom:10px;">
+      ${instalacion ? `Instalación: ${fmtFecha(instalacion.fecha)}` : '<span style="color:#f59e0b;">Sin instalación</span>'}
+      · ${controles.length} control${controles.length!==1?'es':''}
+      · Última visita: ${fmtFecha(ultimaVisita?.fecha)}
+    </div>
+    ${visitasHtml}
+  </div>`;
+}
+
+async function toggleOrtTipo(idAtencion, tipoActual, el) {
+  const orden = ['instalacion', 'control', 'pendiente'];
+  const idx = orden.indexOf(tipoActual);
+  const nuevoTipo = orden[(idx + 1) % orden.length];
+  el.style.opacity = '0.5';
+  await fetch(`/admin/api/ortodoncia/${idAtencion}?token=${TOKEN}`, {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({tipo: nuevoTipo})
+  });
+  await cargarOrtodoncia();
+}
+
 // ── MODAL PACIENTES EN TRATAMIENTO ───────────────────────────────────────────
 const MESES_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio",
                   "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
@@ -2031,6 +2156,41 @@ async def admin_kine_update(id_paciente: int, id_prof: int, request: Request, to
         body.get("notas", ""),
     )
     return {"ok": True}
+
+
+# ─── Ortodoncia ──────────────────────────────────────────────────────────────
+
+def _check_ortodoncia_token(token: str):
+    if token not in (ORTODONCIA_TOKEN, ADMIN_TOKEN):
+        raise HTTPException(status_code=403, detail="Acceso denegado")
+
+
+@app.get("/admin/api/ortodoncia")
+def admin_ortodoncia_pacientes(token: str = Query(...)):
+    _check_ortodoncia_token(token)
+    pacientes = get_ortodoncia_pacientes()
+    ultima_sync = get_ortodoncia_sync_max_fecha()
+    return {"pacientes": pacientes, "ultima_sync": ultima_sync}
+
+
+@app.put("/admin/api/ortodoncia/{id_atencion}")
+async def admin_ortodoncia_tipo(id_atencion: int, request: Request, token: str = Query(...)):
+    _check_ortodoncia_token(token)
+    body = await request.json()
+    tipo = body.get("tipo")
+    if tipo not in ("instalacion", "control", "pendiente"):
+        raise HTTPException(status_code=400, detail="tipo debe ser instalacion, control o pendiente")
+    set_ortodoncia_tipo(id_atencion, tipo)
+    return {"ok": True}
+
+
+@app.post("/admin/api/ortodoncia/sync")
+async def admin_ortodoncia_sync(token: str = Query(...), desde: str = "2025-01-01", hasta: str = None):
+    _check_ortodoncia_token(token)
+    from datetime import date
+    fin = hasta or date.today().isoformat()
+    asyncio.create_task(sync_ortodoncia_rango(desde, fin))
+    return {"ok": True, "desde": desde, "hasta": fin}
 
 
 @app.get("/admin", response_class=HTMLResponse)

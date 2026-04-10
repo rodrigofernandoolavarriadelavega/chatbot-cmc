@@ -103,6 +103,21 @@ def _conn():
         )
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_cache_fecha ON citas_cache(fecha)")
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS ortodoncia_cache (
+            id_atencion     INTEGER PRIMARY KEY,
+            id_paciente     INTEGER,
+            paciente_nombre TEXT,
+            fecha           TEXT,
+            hora_inicio     TEXT,
+            total           INTEGER,
+            tipo            TEXT,
+            tipo_manual     INTEGER DEFAULT 0,
+            synced_at       TEXT DEFAULT (datetime('now'))
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_ort_pac ON ortodoncia_cache(id_paciente)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_ort_fecha ON ortodoncia_cache(fecha)")
     # Migración: agregar canal a messages si no existe
     try:
         conn.execute("ALTER TABLE messages ADD COLUMN canal TEXT DEFAULT 'whatsapp'")
@@ -655,6 +670,66 @@ def citas_cache_tiene_fecha(id_prof: int, fecha: str) -> bool:
             (id_prof, fecha)
         ).fetchone()
         return row is not None
+
+
+def upsert_ortodoncia_cache(visitas: list[dict]):
+    """Inserta o actualiza visitas de ortodoncia. No sobreescribe tipo_manual=1."""
+    if not visitas:
+        return
+    with _conn() as conn:
+        for v in visitas:
+            conn.execute("""
+                INSERT INTO ortodoncia_cache
+                    (id_atencion, id_paciente, paciente_nombre, fecha, hora_inicio, total, tipo, tipo_manual, synced_at)
+                VALUES (:id_atencion, :id_paciente, :paciente_nombre, :fecha, :hora_inicio, :total, :tipo, 0, datetime('now'))
+                ON CONFLICT(id_atencion) DO UPDATE SET
+                    paciente_nombre=excluded.paciente_nombre,
+                    total=excluded.total,
+                    tipo=CASE WHEN tipo_manual=1 THEN tipo ELSE excluded.tipo END,
+                    synced_at=excluded.synced_at
+            """, v)
+        conn.commit()
+
+
+def set_ortodoncia_tipo(id_atencion: int, tipo: str):
+    """Guarda clasificación manual de una visita (instalacion/control)."""
+    with _conn() as conn:
+        conn.execute(
+            "UPDATE ortodoncia_cache SET tipo=?, tipo_manual=1 WHERE id_atencion=?",
+            (tipo, id_atencion)
+        )
+        conn.commit()
+
+
+def get_ortodoncia_pacientes() -> list[dict]:
+    """Retorna todos los pacientes de ortodoncia con sus visitas agrupadas."""
+    with _conn() as conn:
+        rows = conn.execute("""
+            SELECT id_atencion, id_paciente, paciente_nombre, fecha, hora_inicio, total, tipo, tipo_manual
+            FROM ortodoncia_cache
+            ORDER BY id_paciente, fecha
+        """).fetchall()
+        pacientes: dict = {}
+        for r in rows:
+            pid = r["id_paciente"]
+            if pid not in pacientes:
+                pacientes[pid] = {"id_paciente": pid, "nombre": r["paciente_nombre"], "visitas": []}
+            pacientes[pid]["visitas"].append({
+                "id_atencion": r["id_atencion"],
+                "fecha": r["fecha"],
+                "hora_inicio": r["hora_inicio"],
+                "total": r["total"],
+                "tipo": r["tipo"],
+                "tipo_manual": r["tipo_manual"],
+            })
+        return list(pacientes.values())
+
+
+def get_ortodoncia_sync_max_fecha() -> str | None:
+    """Retorna la fecha más reciente sincronizada en ortodoncia_cache."""
+    with _conn() as conn:
+        row = conn.execute("SELECT MAX(fecha) FROM ortodoncia_cache").fetchone()
+        return row[0] if row else None
 
 
 def get_citas_cache_mes(year: int, month: int, ids_prof: list[int]) -> list[dict]:

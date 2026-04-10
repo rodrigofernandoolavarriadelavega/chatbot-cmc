@@ -640,6 +640,60 @@ SEGUIMIENTO_ESPECIALIDADES = {
 }
 
 
+async def sync_ortodoncia_rango(fecha_ini: str, fecha_fin: str, delay: float = 2.0):
+    """Sincroniza visitas de Daniela Castillo (id=66) con monto desde atenciones.
+    Llama a /citas por día y luego /atenciones/{id} para obtener el total.
+    Clasifica automáticamente: 120000=instalacion, 30000=control, otro=pendiente."""
+    from session import upsert_ortodoncia_cache, get_ortodoncia_sync_max_fecha
+    from datetime import datetime as dt, timedelta
+
+    inicio = dt.strptime(fecha_ini, "%Y-%m-%d").date()
+    fin    = dt.strptime(fecha_fin,  "%Y-%m-%d").date()
+
+    async with httpx.AsyncClient(timeout=20) as client:
+        d = inicio
+        while d <= fin:
+            fecha = d.isoformat()
+            params = {
+                "id_sucursal":    {"eq": int(MEDILINK_SUCURSAL)},
+                "id_profesional": {"eq": 66},
+                "fecha":          {"eq": fecha},
+                "estado_anulacion": {"eq": 0},
+            }
+            try:
+                r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
+                               params={"q": _q(params)}, headers=HEADERS)
+                if r.status_code == 200:
+                    citas = [c for c in r.json().get("data", []) if c.get("id_paciente")]
+                    visitas = []
+                    for c in citas:
+                        id_aten = c.get("id_atencion")
+                        total   = 0
+                        if id_aten:
+                            await asyncio.sleep(delay)
+                            ra = await _get(client, f"{MEDILINK_BASE_URL}/atenciones/{id_aten}",
+                                            headers=HEADERS)
+                            if ra.status_code == 200:
+                                total = ra.json().get("data", {}).get("total", 0)
+                        tipo = "instalacion" if total == 120000 else ("control" if total == 30000 else "pendiente")
+                        visitas.append({
+                            "id_atencion":     id_aten or 0,
+                            "id_paciente":     c["id_paciente"],
+                            "paciente_nombre": (c.get("nombre_paciente") or "").strip(),
+                            "fecha":           fecha,
+                            "hora_inicio":     (c.get("hora_inicio") or "")[:5],
+                            "total":           total,
+                            "tipo":            tipo,
+                        })
+                    if visitas:
+                        upsert_ortodoncia_cache(visitas)
+                        log.info("ortodoncia sync %s → %d visitas", fecha, len(visitas))
+            except Exception as e:
+                log.error("ortodoncia sync %s: %s", fecha, e)
+            await asyncio.sleep(delay)
+            d += timedelta(days=1)
+
+
 async def sync_citas_dia(fecha: str, ids_prof: list[int]):
     """Descarga las citas de una fecha desde Medilink y las guarda en caché.
     Borra primero las existentes para esa fecha/profesional para mantener consistencia."""
