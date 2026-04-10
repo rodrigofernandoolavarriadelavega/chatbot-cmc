@@ -633,111 +633,74 @@ body {
     <button class="btn" onclick="abrirBusquedaGlobal()" style="margin-left:6px;font-size:12px;padding:6px 14px;border-radius:8px;background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;">🔍 Buscar</button>
     <button class="btn" onclick="abrirModalAnular()" style="margin-left:6px;font-size:12px;padding:6px 14px;border-radius:8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;">✕ Anular Hora</button>
     <button class="btn" onclick="abrirModalKine()" style="margin-left:6px;font-size:12px;padding:6px 14px;border-radius:8px;background:#f0fdf4;color:#15803d;border:1px solid #86efac;">📋 Pacientes en Control</button>
-    <button class="btn" onclick="abrirModalOrtodoncia()" style="margin-left:6px;font-size:12px;padding:6px 14px;border-radius:8px;background:#fdf4ff;color:#7e22ce;border:1px solid #d8b4fe;">🦷 Ortodoncia</button>
   </div>
 </div>
 
 <!-- MODAL KINESIOLOGÍA -->
-<div id="modal-kine" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:flex-start;justify-content:center;padding-top:40px;padding-bottom:40px;overflow-y:auto;">
-  <div style="background:#fff;border-radius:14px;width:900px;max-width:96vw;box-shadow:0 20px 60px rgba(0,0,0,.2);position:relative;margin:auto;">
-    <div style="padding:20px 24px 14px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-      <span style="font-size:16px;font-weight:700;color:#15803d;">📋 Pacientes en Tratamiento</span>
+<div id="modal-kine" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:flex-start;justify-content:center;padding-top:30px;padding-bottom:30px;overflow-y:auto;">
+  <div id="modal-kine-inner" style="background:#fff;border-radius:14px;width:900px;max-width:98vw;box-shadow:0 20px 60px rgba(0,0,0,.2);position:relative;margin:auto;">
+    <div style="padding:18px 22px 12px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span id="kine-title-icon" style="font-size:18px;">📋</span>
+      <span id="kine-title" style="font-size:15px;font-weight:700;color:#15803d;">Pacientes en Control</span>
       <select id="kine-esp-select" onchange="kineEspActual=this.value;cargarKine()" style="border:1px solid #e2e8f0;border-radius:8px;padding:5px 10px;font-size:13px;color:#334155;">
         <option value="kinesiologia">🦵 Kinesiología</option>
         <option value="ortodoncia">🦷 Ortodoncia</option>
         <option value="psicologia">🧠 Psicología</option>
         <option value="nutricion">🥗 Nutrición</option>
       </select>
-      <div style="display:flex;align-items:center;gap:4px;margin-left:auto;">
-        <div id="kine-nav-mes" style="display:flex;align-items:center;gap:4px;">
-          <button onclick="kineNavMes(-1)" style="background:#f1f5f9;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:14px;">◀</button>
-          <span id="kine-mes-label" style="font-size:13px;font-weight:600;color:#334155;min-width:100px;text-align:center;"></span>
-          <button onclick="kineNavMes(1)" style="background:#f1f5f9;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:14px;">▶</button>
+      <div style="display:flex;align-items:center;gap:4px;margin-left:auto;flex-wrap:wrap;">
+        <div id="kine-nav-mes" style="display:flex;align-items:center;gap:3px;">
+          <button onclick="kineNavMes(-1)" style="background:#f1f5f9;border:none;border-radius:6px;padding:4px 9px;cursor:pointer;font-size:13px;">◀</button>
+          <span id="kine-mes-label" style="font-size:12px;font-weight:600;color:#334155;min-width:100px;text-align:center;"></span>
+          <button onclick="kineNavMes(1)" style="background:#f1f5f9;border:none;border-radius:6px;padding:4px 9px;cursor:pointer;font-size:13px;">▶</button>
         </div>
-        <div style="display:flex;gap:2px;margin-left:8px;">
-          <button id="kine-btn-mes" onclick="kineSetModo('mes')" style="font-size:11px;padding:4px 8px;border-radius:6px 0 0 6px;border:1px solid #e2e8f0;cursor:pointer;background:#7c3aed;color:#fff;">Mes</button>
-          <button id="kine-btn-anio" onclick="kineSetModo('anio')" style="font-size:11px;padding:4px 8px;border:1px solid #e2e8f0;border-left:none;cursor:pointer;background:#f1f5f9;color:#475569;">Año</button>
+        <div style="display:flex;gap:1px;margin-left:6px;">
+          <button id="kine-btn-mes"   onclick="kineSetModo('mes')"   style="font-size:11px;padding:4px 8px;border-radius:6px 0 0 6px;border:1px solid #e2e8f0;cursor:pointer;background:#7c3aed;color:#fff;">Mes</button>
+          <button id="kine-btn-anio"  onclick="kineSetModo('anio')"  style="font-size:11px;padding:4px 8px;border:1px solid #e2e8f0;border-left:none;cursor:pointer;background:#f1f5f9;color:#475569;">Año</button>
           <button id="kine-btn-todos" onclick="kineSetModo('todos')" style="font-size:11px;padding:4px 8px;border-radius:0 6px 6px 0;border:1px solid #e2e8f0;border-left:none;cursor:pointer;background:#f1f5f9;color:#475569;">Todos</button>
         </div>
+        <div style="display:flex;gap:1px;margin-left:6px;">
+          <button id="kine-vista-tabla"  onclick="kineSetVista('tabla')"  title="Vista tabla"  style="font-size:13px;padding:4px 9px;border-radius:6px 0 0 6px;border:1px solid #e2e8f0;cursor:pointer;background:#7c3aed;color:#fff;">▤</button>
+          <button id="kine-vista-matriz" onclick="kineSetVista('matriz')" title="Vista matriz" style="font-size:13px;padding:4px 9px;border-radius:0 6px 6px 0;border:1px solid #e2e8f0;border-left:none;cursor:pointer;background:#f1f5f9;color:#475569;">⊞</button>
+        </div>
       </div>
-      <button onclick="cerrarModalKine()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#94a3b8;margin-left:8px;">✕</button>
+      <button onclick="cerrarModalKine()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#94a3b8;">✕</button>
     </div>
     <!-- Resumen -->
-    <div id="kine-resumen" style="padding:12px 24px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;gap:24px;flex-wrap:wrap;font-size:12px;color:#475569;"></div>
-    <!-- Tabla -->
-    <div style="overflow-x:auto;max-height:60vh;overflow-y:auto;">
+    <div id="kine-resumen" style="padding:10px 22px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;gap:20px;flex-wrap:wrap;font-size:12px;color:#475569;"></div>
+    <!-- Leyenda (solo ortodoncia) -->
+    <div id="kine-leyenda-ort" style="display:none;padding:7px 22px;background:#fdf4ff;border-bottom:1px solid #e9d5ff;gap:14px;font-size:11px;color:#6b21a8;align-items:center;">
+      <span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#7e22ce;vertical-align:middle;margin-right:4px;"></span>Instalación $120.000</span>
+      <span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#0369a1;vertical-align:middle;margin-right:4px;"></span>Control $30.000</span>
+      <span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#94a3b8;vertical-align:middle;margin-right:4px;"></span>Sin clasificar</span>
+      <span style="margin-left:auto;color:#94a3b8;">Clic en visita para cambiar tipo</span>
+    </div>
+    <!-- Vista Tabla -->
+    <div id="kine-vista-tabla-wrap" style="overflow-x:auto;max-height:60vh;overflow-y:auto;">
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
         <thead style="position:sticky;top:0;background:#f8fafc;z-index:1;">
           <tr>
             <th style="text-align:left;padding:10px 12px;font-weight:600;color:#475569;border-bottom:2px solid #e2e8f0;">Paciente</th>
-            <th style="text-align:left;padding:10px 12px;font-weight:600;color:#475569;border-bottom:2px solid #e2e8f0;">Kinesiólogo</th>
-            <th style="text-align:center;padding:10px 12px;font-weight:600;color:#475569;border-bottom:2px solid #e2e8f0;">Sesiones mes</th>
-            <th style="text-align:center;padding:10px 12px;font-weight:600;color:#475569;border-bottom:2px solid #e2e8f0;">Total prescritas</th>
-            <th style="text-align:center;padding:10px 12px;font-weight:600;color:#475569;border-bottom:2px solid #e2e8f0;">Progreso</th>
-            <th style="text-align:center;padding:10px 12px;font-weight:600;color:#475569;border-bottom:2px solid #e2e8f0;">Modalidad</th>
-            <th style="text-align:left;padding:10px 12px;font-weight:600;color:#475569;border-bottom:2px solid #e2e8f0;">Notas</th>
+            <th id="kine-th-prof" style="text-align:left;padding:10px 12px;font-weight:600;color:#475569;border-bottom:2px solid #e2e8f0;">Profesional</th>
+            <th style="text-align:center;padding:10px 12px;font-weight:600;color:#475569;border-bottom:2px solid #e2e8f0;">Sesiones</th>
+            <th id="kine-th-total" style="text-align:center;padding:10px 12px;font-weight:600;color:#475569;border-bottom:2px solid #e2e8f0;">Total prescritas</th>
+            <th id="kine-th-prog" style="text-align:center;padding:10px 12px;font-weight:600;color:#475569;border-bottom:2px solid #e2e8f0;">Progreso</th>
+            <th id="kine-th-mod" style="text-align:center;padding:10px 12px;font-weight:600;color:#475569;border-bottom:2px solid #e2e8f0;">Modalidad</th>
+            <th id="kine-th-notas" style="text-align:left;padding:10px 12px;font-weight:600;color:#475569;border-bottom:2px solid #e2e8f0;">Notas</th>
             <th style="padding:10px 8px;border-bottom:2px solid #e2e8f0;"></th>
           </tr>
         </thead>
         <tbody id="kine-tbody"></tbody>
       </table>
-      <div id="kine-empty" style="display:none;text-align:center;padding:40px;color:#94a3b8;font-size:14px;">Sin citas de kinesiología en este período</div>
+      <div id="kine-empty" style="display:none;text-align:center;padding:40px;color:#94a3b8;font-size:14px;">Sin citas en este período</div>
       <div id="kine-loading" style="text-align:center;padding:40px;color:#94a3b8;font-size:14px;">Cargando...</div>
     </div>
-    <div style="padding:12px 24px;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8;">
-      💡 "Sesiones mes" se obtiene de Medilink. "Total prescritas" y "Notas" se guardan manualmente.
+    <!-- Vista Matriz -->
+    <div id="kine-vista-matriz-wrap" style="display:none;overflow-x:auto;max-height:65vh;overflow-y:auto;">
+      <table id="kine-tabla-matriz" style="border-collapse:collapse;font-size:12px;width:100%;"></table>
     </div>
-  </div>
-</div>
-
-<!-- MODAL ORTODONCIA -->
-<div id="modal-ort" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:flex-start;justify-content:center;padding-top:30px;padding-bottom:30px;overflow-y:auto;">
-  <div style="background:#fff;border-radius:14px;width:1100px;max-width:98vw;box-shadow:0 20px 60px rgba(0,0,0,.2);position:relative;margin:auto;">
-    <!-- Header -->
-    <div style="padding:16px 20px 12px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:10px;position:sticky;top:0;background:#fff;z-index:2;border-radius:14px 14px 0 0;flex-wrap:wrap;gap:8px;">
-      <span style="font-size:20px;">🦷</span>
-      <div style="flex:1;min-width:160px;">
-        <div style="font-size:15px;font-weight:700;color:#1e293b;">Ortodoncia — Dra. Daniela Castillo</div>
-        <div style="font-size:11px;color:#94a3b8;" id="ort-ultima-sync"></div>
-      </div>
-      <!-- Filtro período -->
-      <div style="display:flex;align-items:center;gap:3px;">
-        <div id="ort-nav-mes" style="display:flex;align-items:center;gap:3px;">
-          <button onclick="ortNavPeriodo(-1)" style="background:#f1f5f9;border:none;border-radius:6px;padding:4px 9px;cursor:pointer;font-size:13px;">◀</button>
-          <span id="ort-periodo-label" style="font-size:12px;font-weight:600;color:#334155;min-width:80px;text-align:center;"></span>
-          <button onclick="ortNavPeriodo(1)" style="background:#f1f5f9;border:none;border-radius:6px;padding:4px 9px;cursor:pointer;font-size:13px;">▶</button>
-        </div>
-        <div style="display:flex;gap:1px;margin-left:6px;">
-          <button id="ort-btn-mes"   onclick="ortSetModo('mes')"   style="font-size:11px;padding:4px 8px;border-radius:6px 0 0 6px;border:1px solid #e2e8f0;cursor:pointer;background:#7e22ce;color:#fff;">Mes</button>
-          <button id="ort-btn-anio"  onclick="ortSetModo('anio')"  style="font-size:11px;padding:4px 8px;border:1px solid #e2e8f0;border-left:none;cursor:pointer;background:#f1f5f9;color:#475569;">Año</button>
-          <button id="ort-btn-todos" onclick="ortSetModo('todos')" style="font-size:11px;padding:4px 8px;border-radius:0 6px 6px 0;border:1px solid #e2e8f0;border-left:none;cursor:pointer;background:#f1f5f9;color:#475569;">Todos</button>
-        </div>
-      </div>
-      <!-- Toggle vista -->
-      <div style="display:flex;gap:1px;margin-left:4px;">
-        <button id="ort-vista-cards"  onclick="ortSetVista('cards')"  title="Vista tarjetas" style="font-size:13px;padding:4px 9px;border-radius:6px 0 0 6px;border:1px solid #e2e8f0;cursor:pointer;background:#f1f5f9;color:#475569;">▦</button>
-        <button id="ort-vista-matriz" onclick="ortSetVista('matriz')" title="Vista matriz"   style="font-size:13px;padding:4px 9px;border-radius:0 6px 6px 0;border:1px solid #e2e8f0;border-left:none;cursor:pointer;background:#7e22ce;color:#fff;">⊞</button>
-      </div>
-      <button onclick="cerrarModalOrtodoncia()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#94a3b8;">✕</button>
-    </div>
-    <!-- Stats -->
-    <div id="ort-resumen" style="padding:10px 20px;background:#fdf4ff;border-bottom:1px solid #e9d5ff;display:flex;gap:20px;flex-wrap:wrap;font-size:12px;color:#6b21a8;"></div>
-    <!-- Leyenda -->
-    <div style="padding:8px 20px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;gap:16px;font-size:11px;color:#475569;align-items:center;">
-      <span><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#7e22ce;vertical-align:middle;margin-right:4px;"></span>Instalación $120.000</span>
-      <span><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#0369a1;vertical-align:middle;margin-right:4px;"></span>Control $30.000</span>
-      <span><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#94a3b8;vertical-align:middle;margin-right:4px;"></span>Sin clasificar</span>
-      <span style="margin-left:auto;color:#94a3b8;">Clic en visita para cambiar tipo</span>
-    </div>
-    <div id="ort-loading" style="padding:40px;text-align:center;color:#94a3b8;">Cargando pacientes...</div>
-    <!-- Vista cards -->
-    <div id="ort-body-cards" style="padding:16px 20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;"></div>
-    <!-- Vista matriz -->
-    <div id="ort-body-matriz" style="display:none;overflow-x:auto;max-height:65vh;overflow-y:auto;">
-      <table id="ort-tabla-matriz" style="border-collapse:collapse;font-size:12px;width:100%;"></table>
-    </div>
-    <div style="padding:10px 20px;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8;">
-      💡 Clasificación automática por monto desde Medilink · Los cambios manuales se guardan permanentemente.
+    <div id="kine-footer-note" style="padding:10px 22px;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8;">
+      💡 "Sesiones" se obtiene de Medilink. "Total prescritas" y "Notas" se guardan manualmente.
     </div>
   </div>
 </div>
@@ -1699,232 +1662,17 @@ async function confirmarAnular(){
   }
 }
 
-// ── MODAL ORTODONCIA ──────────────────────────────────────────────────────────
-let ortTodosPacientes = [];
-let ortModo = 'todos';
-let ortVista = 'matriz';
-let ortPeriodo = new Date();
-
-function abrirModalOrtodoncia() {
-  ortModo = 'todos'; ortVista = 'matriz'; ortPeriodo = new Date();
-  document.getElementById('modal-ort').style.display = 'flex';
-  cargarOrtodoncia();
-}
-function cerrarModalOrtodoncia() {
-  document.getElementById('modal-ort').style.display = 'none';
-}
-function ortSetModo(modo) {
-  ortModo = modo;
-  ['mes','anio','todos'].forEach(k => {
-    const el = document.getElementById('ort-btn-'+k);
-    el.style.background = k===modo ? '#7e22ce' : '#f1f5f9';
-    el.style.color = k===modo ? '#fff' : '#475569';
-  });
-  document.getElementById('ort-nav-mes').style.display = modo==='todos' ? 'none' : 'flex';
-  renderOrtodoncia();
-}
-function ortSetVista(vista) {
-  ortVista = vista;
-  document.getElementById('ort-vista-cards').style.background  = vista==='cards'  ? '#7e22ce' : '#f1f5f9';
-  document.getElementById('ort-vista-cards').style.color       = vista==='cards'  ? '#fff'    : '#475569';
-  document.getElementById('ort-vista-matriz').style.background = vista==='matriz' ? '#7e22ce' : '#f1f5f9';
-  document.getElementById('ort-vista-matriz').style.color      = vista==='matriz' ? '#fff'    : '#475569';
-  renderOrtodoncia();
-}
-function ortNavPeriodo(delta) {
-  if (ortModo === 'mes') ortPeriodo.setMonth(ortPeriodo.getMonth() + delta);
-  else ortPeriodo.setFullYear(ortPeriodo.getFullYear() + delta);
-  renderOrtodoncia();
-}
-
-async function cargarOrtodoncia() {
-  document.getElementById('ort-loading').style.display = 'block';
-  document.getElementById('ort-body-cards').innerHTML = '';
-  document.getElementById('ort-tabla-matriz').innerHTML = '';
-  try {
-    const r = await fetch(`/admin/api/ortodoncia?token=${TOKEN}`);
-    const d = await r.json();
-    if (d.ultima_sync) {
-      document.getElementById('ort-ultima-sync').textContent = `Última sync: ${d.ultima_sync}`;
-    }
-    ortTodosPacientes = d.pacientes || [];
-  } catch (e) {
-    console.error('cargarOrtodoncia:', e);
-    ortTodosPacientes = [];
-  } finally {
-    document.getElementById('ort-loading').style.display = 'none';
-  }
-  ortSetModo('todos');
-  ortSetVista('matriz');
-}
-
-function ortFiltrarPacientes() {
-  const y = ortPeriodo.getFullYear();
-  const m = ortPeriodo.getMonth();
-  let label, pacientes;
-  if (ortModo === 'todos') {
-    label = 'Histórico completo';
-    pacientes = ortTodosPacientes;
-  } else if (ortModo === 'anio') {
-    label = `Año ${y}`;
-    pacientes = ortTodosPacientes.map(p => ({
-      ...p, visitas: p.visitas.filter(v => v.fecha && v.fecha.startsWith(String(y)))
-    })).filter(p => p.visitas.length > 0);
-  } else {
-    const mes = String(m+1).padStart(2,'0');
-    label = `${MESES_ES[m]} ${y}`;
-    pacientes = ortTodosPacientes.map(p => ({
-      ...p, visitas: p.visitas.filter(v => v.fecha && v.fecha.startsWith(`${y}-${mes}`))
-    })).filter(p => p.visitas.length > 0);
-  }
-  document.getElementById('ort-periodo-label').textContent = label;
-  return pacientes;
-}
-
-function renderOrtodoncia() {
-  const pacientes = ortFiltrarPacientes();
-  const conInstalacion = ortTodosPacientes.filter(p => p.visitas.some(v => v.tipo === 'instalacion')).length;
-  const totalControles = pacientes.reduce((s,p) => s + p.visitas.filter(v => v.tipo==='control').length, 0);
-  const pendientes = pacientes.reduce((s,p) => s + p.visitas.filter(v => v.tipo==='pendiente').length, 0);
-  document.getElementById('ort-resumen').innerHTML = `
-    <span>🦷 <strong>${pacientes.length}</strong> pacientes${ortModo!=='todos'?' en período':''}</span>
-    <span>📦 <strong>${conInstalacion}</strong> con instalación (total histórico)</span>
-    <span>⚙️ <strong>${totalControles}</strong> controles en período</span>
-    ${pendientes > 0 ? `<span style="color:#dc2626;">⚠️ <strong>${pendientes}</strong> sin clasificar</span>` : ''}
-  `;
-  // Ordenar: instalación primero, luego por última visita desc
-  const sorted = [...pacientes].sort((a,b) => {
-    const aI = a.visitas.find(v=>v.tipo==='instalacion');
-    const bI = b.visitas.find(v=>v.tipo==='instalacion');
-    if (aI && !bI) return -1; if (!aI && bI) return 1;
-    return (b.visitas[b.visitas.length-1]?.fecha||'').localeCompare(a.visitas[a.visitas.length-1]?.fecha||'');
-  });
-
-  document.getElementById('ort-body-cards').style.display  = ortVista==='cards'  ? 'grid' : 'none';
-  document.getElementById('ort-body-matriz').style.display = ortVista==='matriz' ? 'block' : 'none';
-
-  if (!pacientes.length) {
-    document.getElementById('ort-body-cards').innerHTML = '<p style="color:#94a3b8;text-align:center;padding:40px;grid-column:1/-1;">Sin visitas en este período.</p>';
-    document.getElementById('ort-tabla-matriz').innerHTML = '';
-    return;
-  }
-  if (ortVista === 'cards') renderOrtCards(sorted);
-  else renderOrtMatriz(sorted);
-}
-
-function renderOrtCards(pacientes) {
-  document.getElementById('ort-body-cards').innerHTML = pacientes.map(p => renderTarjetaPaciente(p)).join('');
-}
-
-function renderOrtMatriz(pacientes) {
-  // Recopilar todas las fechas únicas ordenadas
-  const fechasSet = new Set();
-  pacientes.forEach(p => p.visitas.forEach(v => fechasSet.add(v.fecha)));
-  const fechas = [...fechasSet].sort();
-
-  // Construir tabla
-  let html = '<thead><tr style="position:sticky;top:0;z-index:3;background:#f8fafc;">';
-  html += '<th style="text-align:left;padding:8px 12px;font-size:12px;font-weight:600;color:#475569;border-bottom:2px solid #e2e8f0;border-right:2px solid #e2e8f0;position:sticky;left:0;background:#f8fafc;z-index:4;min-width:160px;">Paciente</th>';
-  fechas.forEach(f => {
-    const [yy,mm,dd] = f.split('-');
-    html += `<th style="padding:6px 4px;font-size:10px;color:#64748b;border-bottom:2px solid #e2e8f0;text-align:center;min-width:38px;font-weight:500;">${dd}/${mm}<br><span style="color:#94a3b8;">${yy}</span></th>`;
-  });
-  html += '<th style="padding:8px;font-size:11px;font-weight:700;color:#475569;border-bottom:2px solid #e2e8f0;border-left:2px solid #e2e8f0;text-align:center;position:sticky;right:0;background:#f8fafc;">Total</th>';
-  html += '</tr></thead><tbody>';
-
-  pacientes.forEach((p, pi) => {
-    const visitaMap = {};
-    p.visitas.forEach(v => { visitaMap[v.fecha] = v; });
-    const totalVisitas = p.visitas.length;
-    const bgRow = pi % 2 === 0 ? '#fff' : '#fafafa';
-    html += `<tr style="background:${bgRow};">`;
-    html += `<td style="padding:7px 12px;font-size:12px;font-weight:500;color:#1e293b;border-right:2px solid #e2e8f0;position:sticky;left:0;background:${bgRow};white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis;" title="${p.nombre}">${p.nombre}</td>`;
-    fechas.forEach(f => {
-      const v = visitaMap[f];
-      if (!v) {
-        html += '<td style="text-align:center;padding:4px;border-bottom:1px solid #f1f5f9;"></td>';
-      } else {
-        const color = v.tipo==='instalacion' ? '#7e22ce' : v.tipo==='control' ? '#0369a1' : '#94a3b8';
-        const bg    = v.tipo==='instalacion' ? '#f3e8ff' : v.tipo==='control' ? '#e0f2fe' : '#f1f5f9';
-        const title = v.tipo==='instalacion' ? 'Instalación' : v.tipo==='control' ? 'Control' : 'Sin clasificar';
-        html += `<td style="text-align:center;padding:4px;border-bottom:1px solid #f1f5f9;">
-          <div onclick="toggleOrtTipo(${v.id_atencion},'${v.tipo}',this)" title="${title} - ${fmtFecha(f)}\nClic para cambiar"
-            style="width:24px;height:24px;border-radius:50%;background:${bg};border:2px solid ${color};cursor:pointer;margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:9px;color:${color};font-weight:700;">
-            ${v.tipo==='instalacion'?'I':v.tipo==='control'?'C':'?'}
-          </div>
-        </td>`;
-      }
-    });
-    const insColor = p.visitas.some(v=>v.tipo==='instalacion') ? '#7e22ce' : '#94a3b8';
-    html += `<td style="text-align:center;padding:7px 10px;border-left:2px solid #e2e8f0;border-bottom:1px solid #f1f5f9;font-weight:700;font-size:13px;color:${insColor};position:sticky;right:0;background:${bgRow};">${totalVisitas}</td>`;
-    html += '</tr>';
-  });
-  html += '</tbody>';
-  document.getElementById('ort-tabla-matriz').innerHTML = html;
-}
-
-function fmtFecha(f) {
-  if (!f) return '';
-  const [y,m,d] = f.split('-');
-  return `${d}/${m}/${y}`;
-}
-
-function renderTarjetaPaciente(p) {
-  const instalacion = p.visitas.find(v => v.tipo === 'instalacion');
-  const controles   = p.visitas.filter(v => v.tipo === 'control');
-  const pendientes  = p.visitas.filter(v => v.tipo === 'pendiente');
-  const ultimaVisita = p.visitas[p.visitas.length-1];
-
-  const visitasHtml = p.visitas.map((v,i) => {
-    const isIns = v.tipo === 'instalacion';
-    const isCtrl = v.tipo === 'control';
-    const ctrlNum = controles.indexOf(v) + 1;
-    const color = isIns ? '#7e22ce' : isCtrl ? '#0369a1' : '#94a3b8';
-    const bg    = isIns ? '#fdf4ff' : isCtrl ? '#f0f9ff' : '#f8fafc';
-    const label = isIns ? '📦 Instalación' : isCtrl ? `⚙️ Control ${ctrlNum}` : '❓ Sin clasificar';
-    const monto = v.total ? ` · $${v.total.toLocaleString('es-CL')}` : '';
-    return `<div style="display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;background:${bg};margin-bottom:4px;cursor:pointer;"
-                 onclick="toggleOrtTipo(${v.id_atencion}, '${v.tipo}', this)"
-                 title="Clic para cambiar tipo">
-      <span style="font-size:11px;color:${color};font-weight:600;min-width:100px;">${label}</span>
-      <span style="font-size:11px;color:#475569;">${fmtFecha(v.fecha)}${monto}</span>
-      <span style="font-size:10px;color:#cbd5e1;margin-left:auto;">✏️</span>
-    </div>`;
-  }).join('');
-
-  const bordeColor = instalacion ? '#d8b4fe' : '#e2e8f0';
-  return `<div style="border:1px solid ${bordeColor};border-radius:10px;padding:14px;background:#fff;">
-    <div style="font-weight:600;font-size:13px;color:#1e293b;margin-bottom:2px;">${p.nombre}</div>
-    <div style="font-size:11px;color:#94a3b8;margin-bottom:10px;">
-      ${instalacion ? `Instalación: ${fmtFecha(instalacion.fecha)}` : '<span style="color:#f59e0b;">Sin instalación</span>'}
-      · ${controles.length} control${controles.length!==1?'es':''}
-      · Última visita: ${fmtFecha(ultimaVisita?.fecha)}
-    </div>
-    ${visitasHtml}
-  </div>`;
-}
-
-async function toggleOrtTipo(idAtencion, tipoActual, el) {
-  const orden = ['instalacion', 'control', 'pendiente'];
-  const idx = orden.indexOf(tipoActual);
-  const nuevoTipo = orden[(idx + 1) % orden.length];
-  el.style.opacity = '0.4';
-  await fetch(`/admin/api/ortodoncia/${idAtencion}?token=${TOKEN}`, {
-    method: 'PUT',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({tipo: nuevoTipo})
-  });
-  // Actualizar localmente sin recargar todo
-  for (const p of ortTodosPacientes) {
-    const v = p.visitas.find(v => v.id_atencion === idAtencion);
-    if (v) { v.tipo = nuevoTipo; v.tipo_manual = 1; break; }
-  }
-  renderOrtodoncia();
-}
-
-// ── MODAL PACIENTES EN TRATAMIENTO ───────────────────────────────────────────
+// ── MODAL PACIENTES EN CONTROL (unificado: kine / psi / nutri / ortodoncia) ─────
 const MESES_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio",
                   "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+
+// Paleta por especialidad (título, acento botones, celdas matriz)
+const KINE_ESP_STYLE = {
+  kinesiologia: {icon:'🦵', label:'Kinesiología', color:'#15803d', bg:'#f0fdf4', cellBg:'#dcfce7', cellBorder:'#16a34a'},
+  psicologia:   {icon:'🧠', label:'Psicología',   color:'#6d28d9', bg:'#faf5ff', cellBg:'#ede9fe', cellBorder:'#7c3aed'},
+  nutricion:    {icon:'🥗', label:'Nutrición',    color:'#c2410c', bg:'#fff7ed', cellBg:'#ffedd5', cellBorder:'#ea580c'},
+  ortodoncia:   {icon:'🦷', label:'Ortodoncia — Dra. Daniela Castillo', color:'#7e22ce', bg:'#fdf4ff', cellBg:'#f3e8ff', cellBorder:'#7e22ce'},
+};
 
 let kineMesActual = new Date();
 let kineDatos = [];
@@ -1932,15 +1680,19 @@ let kineEspActual = "kinesiologia";
 let kineEspLabel = "Kinesiología";
 let kinePrecioFonasa = 7830;
 let kinePrecioParticular = 20000;
-let kineModo = 'mes'; // 'mes' | 'anio' | 'todos'
+let kineModo = 'mes';    // 'mes' | 'anio' | 'todos'
+let kineVista = 'tabla'; // 'tabla' | 'matriz'
 
 function abrirModalKine() {
   kineMesActual = new Date();
   kineEspActual = "kinesiologia";
   kineModo = 'mes';
+  kineVista = 'tabla';
   document.getElementById('kine-esp-select').value = 'kinesiologia';
   document.getElementById('modal-kine').style.display = 'flex';
-  kineSetModo('mes');
+  kineAplicarEstiloEsp();
+  kineSetVista('tabla');   // sin recargar aún
+  kineSetModo('mes');      // dispara cargarKine
 }
 function cerrarModalKine() {
   document.getElementById('modal-kine').style.display = 'none';
@@ -1953,16 +1705,51 @@ function kineNavMes(delta) {
 function kineSetModo(modo) {
   kineModo = modo;
   const btns = {mes:'kine-btn-mes', anio:'kine-btn-anio', todos:'kine-btn-todos'};
+  const acc  = KINE_ESP_STYLE[kineEspActual]?.color || '#7c3aed';
   Object.entries(btns).forEach(([k,id]) => {
     const el = document.getElementById(id);
-    el.style.background = k===modo ? '#7c3aed' : '#f1f5f9';
+    el.style.background = k===modo ? acc : '#f1f5f9';
     el.style.color = k===modo ? '#fff' : '#475569';
   });
-  const nav = document.getElementById('kine-nav-mes');
-  nav.style.display = modo === 'todos' ? 'none' : 'flex';
+  document.getElementById('kine-nav-mes').style.display = modo === 'todos' ? 'none' : 'flex';
   cargarKine();
 }
+function kineSetVista(vista) {
+  kineVista = vista;
+  const acc = KINE_ESP_STYLE[kineEspActual]?.color || '#7c3aed';
+  ['tabla','matriz'].forEach(v => {
+    const el = document.getElementById('kine-vista-'+v);
+    el.style.background = v===vista ? acc : '#f1f5f9';
+    el.style.color = v===vista ? '#fff' : '#475569';
+  });
+  document.getElementById('kine-vista-tabla-wrap').style.display  = vista==='tabla'  ? 'block' : 'none';
+  document.getElementById('kine-vista-matriz-wrap').style.display = vista==='matriz' ? 'block' : 'none';
+  if (kineDatos.length) renderKine();
+}
+
+function kineAplicarEstiloEsp() {
+  const s = KINE_ESP_STYLE[kineEspActual] || KINE_ESP_STYLE.kinesiologia;
+  document.getElementById('kine-title-icon').textContent = s.icon;
+  document.getElementById('kine-title').textContent = s.label;
+  document.getElementById('kine-title').style.color = s.color;
+  // Header buttons ya se pintan al cambiar vista/modo
+  // Leyenda ortodoncia solo visible cuando aplica
+  document.getElementById('kine-leyenda-ort').style.display = kineEspActual==='ortodoncia' ? 'flex' : 'none';
+  // Ocultar columnas de tracking (total/progreso/modalidad/notas) para ortodoncia
+  const esOrt = kineEspActual === 'ortodoncia';
+  ['kine-th-total','kine-th-prog','kine-th-mod','kine-th-notas'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = esOrt ? 'none' : '';
+  });
+  // Profesional no aplica a ortodoncia (siempre es Dra. Castillo)
+  document.getElementById('kine-th-prof').style.display = esOrt ? 'none' : '';
+  document.getElementById('kine-footer-note').textContent = esOrt
+    ? '💡 Clasificación automática por monto desde Medilink · Los cambios manuales se guardan permanentemente.'
+    : '💡 "Sesiones" se obtiene de Medilink. "Total prescritas" y "Notas" se guardan manualmente.';
+}
+
 async function cargarKine() {
+  kineAplicarEstiloEsp();
   const y = kineMesActual.getFullYear();
   const m = String(kineMesActual.getMonth()+1).padStart(2,'0');
   let mesParam, label;
@@ -1974,33 +1761,85 @@ async function cargarKine() {
   document.getElementById('kine-empty').style.display = 'none';
   document.getElementById('kine-tbody').innerHTML = '';
   document.getElementById('kine-resumen').innerHTML = '';
+  document.getElementById('kine-tabla-matriz').innerHTML = '';
   try {
-    const r = await fetch(`/admin/api/kine?mes=${mesParam}&especialidad=${kineEspActual}&token=${TOKEN}`);
-    const d = await r.json();
-    kineDatos = d.pacientes || [];
-    kineEspLabel = d.especialidad_label || kineEspActual;
-    kinePrecioFonasa = (d.pacientes[0]?.precio_fonasa) || 0;
-    kinePrecioParticular = (d.pacientes[0]?.precio_particular) || 0;
+    if (kineEspActual === 'ortodoncia') {
+      // Ortodoncia usa su propio endpoint con visitas clasificadas
+      const r = await fetch(`/admin/api/ortodoncia?token=${TOKEN}`);
+      const d = await r.json();
+      kineDatos = (d.pacientes || []).map(p => {
+        const visitasFiltradas = ortFiltrarVisitasPeriodo(p.visitas || []);
+        return {
+          id_paciente: p.id_paciente,
+          paciente_nombre: p.nombre,
+          visitas: visitasFiltradas,
+          fechas: visitasFiltradas.map(v => v.fecha),
+          sesiones_mes: visitasFiltradas.length,
+        };
+      }).filter(p => p.sesiones_mes > 0);
+      kineEspLabel = 'Ortodoncia';
+    } else {
+      const r = await fetch(`/admin/api/kine?mes=${mesParam}&especialidad=${kineEspActual}&token=${TOKEN}`);
+      const d = await r.json();
+      kineDatos = d.pacientes || [];
+      kineEspLabel = d.especialidad_label || kineEspActual;
+      kinePrecioFonasa = (d.pacientes[0]?.precio_fonasa) || 0;
+      kinePrecioParticular = (d.pacientes[0]?.precio_particular) || 0;
+    }
     renderKine();
   } catch(e) {
+    console.error('cargarKine:', e);
     document.getElementById('kine-loading').style.display = 'none';
     document.getElementById('kine-empty').style.display = 'block';
     document.getElementById('kine-empty').textContent = 'Error al cargar datos';
   }
 }
+
+// Filtra visitas de ortodoncia por periodo (mes/anio/todos) usando la fecha seleccionada
+function ortFiltrarVisitasPeriodo(visitas) {
+  if (kineModo === 'todos') return visitas;
+  const y = kineMesActual.getFullYear();
+  if (kineModo === 'anio') return visitas.filter(v => v.fecha && v.fecha.startsWith(String(y)));
+  const mm = String(kineMesActual.getMonth()+1).padStart(2,'0');
+  return visitas.filter(v => v.fecha && v.fecha.startsWith(`${y}-${mm}`));
+}
+
 function renderKine() {
   document.getElementById('kine-loading').style.display = 'none';
-  const tbody = document.getElementById('kine-tbody');
   if (!kineDatos.length) {
     document.getElementById('kine-empty').style.display = 'block';
-    document.getElementById('kine-resumen').innerHTML = '';
+    document.getElementById('kine-tbody').innerHTML = '';
+    document.getElementById('kine-tabla-matriz').innerHTML = '';
+    renderKineResumen();
     return;
   }
   document.getElementById('kine-empty').style.display = 'none';
+  renderKineResumen();
+  if (kineVista === 'matriz') {
+    document.getElementById('kine-tbody').innerHTML = '';
+    renderKineMatriz();
+  } else {
+    document.getElementById('kine-tabla-matriz').innerHTML = '';
+    renderKineTabla();
+  }
+}
 
-  // Resumen
-  const totalSesiones = kineDatos.reduce((s,p)=>s+p.sesiones_mes,0);
+function renderKineResumen() {
+  const esOrt = kineEspActual === 'ortodoncia';
+  const totalSesiones = kineDatos.reduce((s,p)=>s+(p.sesiones_mes||0),0);
   const totalPacientes = kineDatos.length;
+  if (esOrt) {
+    const conInst = kineDatos.filter(p => (p.visitas||[]).some(v=>v.tipo==='instalacion')).length;
+    const controles = kineDatos.reduce((s,p)=>s+(p.visitas||[]).filter(v=>v.tipo==='control').length,0);
+    const pendientes = kineDatos.reduce((s,p)=>s+(p.visitas||[]).filter(v=>v.tipo==='pendiente').length,0);
+    document.getElementById('kine-resumen').innerHTML = `
+      <span>🦷 <strong>${totalPacientes}</strong> pacientes en período</span>
+      <span>📦 <strong>${conInst}</strong> con instalación</span>
+      <span>⚙️ <strong>${controles}</strong> controles</span>
+      ${pendientes > 0 ? `<span style="color:#dc2626;">⚠️ <strong>${pendientes}</strong> sin clasificar</span>` : ''}
+    `;
+    return;
+  }
   const ingFonasa = kineDatos.filter(p=>p.modalidad==='fonasa').reduce((s,p)=>s+p.sesiones_mes*(p.precio_fonasa||kinePrecioFonasa),0);
   const ingPart   = kineDatos.filter(p=>p.modalidad!=='fonasa').reduce((s,p)=>s+p.sesiones_mes*(p.precio_particular||kinePrecioParticular),0);
   const ingTotal  = ingFonasa + ingPart;
@@ -2010,10 +1849,34 @@ function renderKine() {
     <span>💰 Ingresos estimados: <strong>$${ingTotal.toLocaleString('es-CL')}</strong></span>
     <span style="color:#64748b;">(Fonasa $${ingFonasa.toLocaleString('es-CL')} · Particular $${ingPart.toLocaleString('es-CL')})</span>
   `;
+}
 
+function renderKineTabla() {
+  const tbody = document.getElementById('kine-tbody');
+  const esOrt = kineEspActual === 'ortodoncia';
   tbody.innerHTML = kineDatos.map((p,i) => {
-    const total = p.total_sesiones || 0;
     const hechas = p.sesiones_mes;
+    const rut = p.rut || '—';
+    const nombre = p.paciente_nombre || rut;
+
+    if (esOrt) {
+      const instalaciones = (p.visitas||[]).filter(v=>v.tipo==='instalacion').length;
+      const controles     = (p.visitas||[]).filter(v=>v.tipo==='control').length;
+      const pendientes    = (p.visitas||[]).filter(v=>v.tipo==='pendiente').length;
+      return `<tr style="border-bottom:1px solid #f1f5f9;${i%2===1?'background:#fafafa':''}">
+        <td style="padding:10px 12px;">
+          <div style="font-weight:600;color:#1e293b;font-size:13px;">${nombre}</div>
+        </td>
+        <td style="padding:10px 12px;text-align:center;">
+          <span style="font-size:16px;font-weight:700;color:#7e22ce;">${hechas}</span>
+          <div style="font-size:10px;color:#94a3b8;">
+            ${instalaciones>0?`<span style="color:#7e22ce;">${instalaciones}I</span> · `:''}${controles}C${pendientes>0?` · <span style="color:#dc2626;">${pendientes}?</span>`:''}
+          </div>
+        </td>
+      </tr>`;
+    }
+
+    const total = p.total_sesiones || 0;
     const pct = total ? Math.min(100, Math.round(hechas/total*100)) : 0;
     const barColor = pct >= 100 ? '#16a34a' : pct >= 60 ? '#f59e0b' : '#3b82f6';
     const progBar = total ? `
@@ -2025,14 +1888,11 @@ function renderKine() {
       </div>` : `<span style="font-size:11px;color:#94a3b8;">—</span>`;
 
     const profNombre = p.prof_nombre || '—';
-    // Nombre corto: tomar primera palabra que no sea Dr/Dra
     const profParts = profNombre.replace(/^Dr\.?\s*|^Dra\.?\s*/i,'').split(' ');
-    const profShort = profParts[profParts.length-1]; // apellido
+    const profShort = profParts[profParts.length-1];
     const profColors = ['#dbeafe','#dcfce7','#fef9c3','#ede9fe','#ffedd5'];
     const profTextColors = ['#1d4ed8','#15803d','#854d0e','#6d28d9','#9a3412'];
-    const profColorIdx = p.id_prof % profColors.length;
-    const rut = p.rut || '—';
-    const nombre = p.paciente_nombre || rut;
+    const profColorIdx = (p.id_prof||0) % profColors.length;
 
     return `<tr style="border-bottom:1px solid #f1f5f9;${i%2===1?'background:#fafafa':''}" id="kine-row-${i}">
       <td style="padding:10px 12px;">
@@ -2070,6 +1930,110 @@ function renderKine() {
     </tr>`;
   }).join('');
 }
+
+function kineFmtFecha(f) {
+  if (!f) return '';
+  const [y,m,d] = f.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function renderKineMatriz() {
+  const esOrt = kineEspActual === 'ortodoncia';
+  const style = KINE_ESP_STYLE[kineEspActual] || KINE_ESP_STYLE.kinesiologia;
+
+  // Ordenar pacientes: ortodoncia prioriza con instalación; otras por última fecha desc
+  const pacientes = [...kineDatos].sort((a,b) => {
+    if (esOrt) {
+      const aI = (a.visitas||[]).some(v=>v.tipo==='instalacion');
+      const bI = (b.visitas||[]).some(v=>v.tipo==='instalacion');
+      if (aI && !bI) return -1;
+      if (!aI && bI) return 1;
+    }
+    const aF = (a.fechas||[]).slice().sort().pop() || '';
+    const bF = (b.fechas||[]).slice().sort().pop() || '';
+    return bF.localeCompare(aF);
+  });
+
+  // Recopilar fechas únicas ordenadas
+  const fechasSet = new Set();
+  pacientes.forEach(p => (p.fechas || []).forEach(f => f && fechasSet.add(f)));
+  const fechas = [...fechasSet].sort();
+
+  if (!fechas.length) {
+    document.getElementById('kine-tabla-matriz').innerHTML =
+      '<tbody><tr><td style="text-align:center;padding:40px;color:#94a3b8;">Sin visitas en este período.</td></tr></tbody>';
+    return;
+  }
+
+  let html = '<thead><tr style="position:sticky;top:0;z-index:3;background:#f8fafc;">';
+  html += '<th style="text-align:left;padding:8px 12px;font-size:12px;font-weight:600;color:#475569;border-bottom:2px solid #e2e8f0;border-right:2px solid #e2e8f0;position:sticky;left:0;background:#f8fafc;z-index:4;min-width:180px;">Paciente</th>';
+  fechas.forEach(f => {
+    const [yy,mm,dd] = f.split('-');
+    html += `<th style="padding:6px 4px;font-size:10px;color:#64748b;border-bottom:2px solid #e2e8f0;text-align:center;min-width:38px;font-weight:500;">${dd}/${mm}<br><span style="color:#94a3b8;">${yy}</span></th>`;
+  });
+  html += '<th style="padding:8px;font-size:11px;font-weight:700;color:#475569;border-bottom:2px solid #e2e8f0;border-left:2px solid #e2e8f0;text-align:center;position:sticky;right:0;background:#f8fafc;">Total</th>';
+  html += '</tr></thead><tbody>';
+
+  pacientes.forEach((p, pi) => {
+    const visitaMap = {};
+    if (esOrt) {
+      (p.visitas||[]).forEach(v => { visitaMap[v.fecha] = v; });
+    } else {
+      (p.fechas||[]).forEach(f => { visitaMap[f] = {fecha:f}; });
+    }
+    const totalVisitas = (p.fechas||[]).length;
+    const bgRow = pi % 2 === 0 ? '#fff' : '#fafafa';
+    const nombre = p.paciente_nombre || p.nombre || '—';
+    html += `<tr style="background:${bgRow};">`;
+    html += `<td style="padding:7px 12px;font-size:12px;font-weight:500;color:#1e293b;border-right:2px solid #e2e8f0;position:sticky;left:0;background:${bgRow};white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis;" title="${nombre}">${nombre}</td>`;
+    fechas.forEach(f => {
+      const v = visitaMap[f];
+      if (!v) {
+        html += '<td style="text-align:center;padding:4px;border-bottom:1px solid #f1f5f9;"></td>';
+      } else if (esOrt) {
+        const color = v.tipo==='instalacion' ? '#7e22ce' : v.tipo==='control' ? '#0369a1' : '#94a3b8';
+        const bg    = v.tipo==='instalacion' ? '#f3e8ff' : v.tipo==='control' ? '#e0f2fe' : '#f1f5f9';
+        const title = v.tipo==='instalacion' ? 'Instalación' : v.tipo==='control' ? 'Control' : 'Sin clasificar';
+        html += `<td style="text-align:center;padding:4px;border-bottom:1px solid #f1f5f9;">
+          <div onclick="toggleOrtTipo(${v.id_atencion},'${v.tipo}',this)" title="${title} - ${kineFmtFecha(f)}&#10;Clic para cambiar"
+            style="width:24px;height:24px;border-radius:50%;background:${bg};border:2px solid ${color};cursor:pointer;margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:9px;color:${color};font-weight:700;">
+            ${v.tipo==='instalacion'?'I':v.tipo==='control'?'C':'?'}
+          </div>
+        </td>`;
+      } else {
+        html += `<td style="text-align:center;padding:4px;border-bottom:1px solid #f1f5f9;">
+          <div title="Sesión - ${kineFmtFecha(f)}"
+            style="width:22px;height:22px;border-radius:50%;background:${style.cellBg};border:2px solid ${style.cellBorder};margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:11px;color:${style.cellBorder};font-weight:700;">
+            ✓
+          </div>
+        </td>`;
+      }
+    });
+    const totalColor = esOrt && (p.visitas||[]).some(v=>v.tipo==='instalacion') ? '#7e22ce' : style.cellBorder;
+    html += `<td style="text-align:center;padding:7px 10px;border-left:2px solid #e2e8f0;border-bottom:1px solid #f1f5f9;font-weight:700;font-size:13px;color:${totalColor};position:sticky;right:0;background:${bgRow};">${totalVisitas}</td>`;
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  document.getElementById('kine-tabla-matriz').innerHTML = html;
+}
+
+async function toggleOrtTipo(idAtencion, tipoActual, el) {
+  const orden = ['instalacion', 'control', 'pendiente'];
+  const idx = orden.indexOf(tipoActual);
+  const nuevoTipo = orden[(idx + 1) % orden.length];
+  el.style.opacity = '0.4';
+  await fetch(`/admin/api/ortodoncia/${idAtencion}?token=${TOKEN}`, {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({tipo: nuevoTipo})
+  });
+  for (const p of kineDatos) {
+    const v = (p.visitas || []).find(v => v.id_atencion === idAtencion);
+    if (v) { v.tipo = nuevoTipo; v.tipo_manual = 1; break; }
+  }
+  renderKine();
+}
+
 async function guardarKine(i) {
   const p = kineDatos[i];
   await fetch(`/admin/api/kine/${p.id_paciente}/${p.id_prof}?token=${TOKEN}`, {
