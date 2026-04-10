@@ -314,10 +314,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "_Escribe *menu* para volver._"
             )
         fecha = todos[0]["fecha"]
-        data.update({"especialidad": "masoterapia", "slots": smart,
-                     "todos_slots": todos, "fechas_vistas": [fecha], "expansion_stage": 0})
-        save_session(phone, "WAIT_SLOT", data)
         mejor = smart[0]
+        prof_sugerido_id = mejor.get("id_profesional")
+        data.update({"especialidad": "masoterapia", "slots": smart,
+                     "todos_slots": todos, "fechas_vistas": [fecha],
+                     "expansion_stage": 0, "prof_sugerido_id": prof_sugerido_id})
+        save_session(phone, "WAIT_SLOT", data)
         return _btn_msg(
             f"Encontré disponibilidad ✨\n\n"
             f"🏥 *Masoterapia* — {mejor['profesional']}\n"
@@ -326,7 +328,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             "¿La agendo?",
             [
                 {"id": "confirmar_sugerido", "title": "✅ Sí, esa hora"},
-                {"id": "ver_otros",          "title": "📋 Ver más opciones"},
+                {"id": "ver_otros",          "title": "📋 Otros horarios"},
+                {"id": "otro_dia",           "title": "📅 Otro día"},
             ]
         )
 
@@ -1115,9 +1118,7 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None) -> 
     nombre_conocido = data.get("nombre_conocido", "")
     nombre_corto = nombre_conocido.split()[0] if nombre_conocido else ""
     saludo = f"¡Hola de nuevo, *{nombre_corto}*! " if nombre_corto else ""
-    btn_ver_mas = "📋 Otros horarios"
-
-    # Tercer botón "Otro profesional" solo si la especialidad tiene >1 doctor
+    # Tercer botón: "Otro profesional" si hay >1 doctor; si no, "Otro día"
     from medilink import _ids_para_especialidad
     ids_esp = _ids_para_especialidad(especialidad_lower)
     if especialidad_lower in _ESP_MED_GENERAL:
@@ -1126,10 +1127,12 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None) -> 
 
     botones = [
         {"id": "confirmar_sugerido", "title": "✅ Sí, esa hora"},
-        {"id": "ver_otros",          "title": btn_ver_mas},
+        {"id": "ver_otros",          "title": "📋 Otros horarios"},
     ]
     if hay_otros:
         botones.append({"id": "otro_prof", "title": "👤 Otro profesional"})
+    else:
+        botones.append({"id": "otro_dia", "title": "📅 Otro día"})
 
     return _btn_msg(
         f"{saludo}Encontré disponibilidad ✨\n\n"
