@@ -117,66 +117,80 @@ async def _enviar_reenganche():
         log.info("Reenganche enviado → %s (estado: %s)", phone, state)
 
 
+async def _sync_citas_hoy():
+    """Sync diario del caché de citas del día actual (job del scheduler)."""
+    from datetime import date
+    hoy = date.today().strftime("%Y-%m-%d")
+    ids_todos = list({i for cfg in SEGUIMIENTO_ESPECIALIDADES.values() for i in cfg["ids"]})
+    await sync_citas_dia(hoy, ids_todos)
+
+
+async def _job_recordatorios():          await enviar_recordatorios(send_whatsapp)
+async def _job_postconsulta():           await enviar_seguimiento_postconsulta(send_whatsapp)
+async def _job_reactivacion():           await enviar_reactivacion_pacientes(send_whatsapp)
+async def _job_adherencia_kine():        await enviar_adherencia_kine(send_whatsapp)
+async def _job_control_especialidad():   await enviar_recordatorio_control(send_whatsapp)
+async def _job_crosssell_kine():         await enviar_crosssell_kine(send_whatsapp)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # AsyncIOScheduler ejecuta coroutines directamente en su event loop.
+    # Pasamos la función async (NO una lambda que llame asyncio.create_task),
+    # porque ese patrón rompe con "RuntimeError: no running event loop" cuando
+    # el scheduler despacha jobs fuera del contexto del loop principal.
     # Recordatorios: todos los días a las 9:00 AM hora Chile
     scheduler.add_job(
-        lambda: asyncio.create_task(enviar_recordatorios(send_whatsapp)),
+        _job_recordatorios,
         CronTrigger(hour=9, minute=0),
         id="recordatorios_diarios",
         replace_existing=True,
     )
     # Reenganche: cada 5 minutos revisa sesiones abandonadas
     scheduler.add_job(
-        lambda: asyncio.create_task(_enviar_reenganche()),
+        _enviar_reenganche,
         "interval", minutes=5,
         id="reenganche",
         replace_existing=True,
     )
     # Post-consulta: todos los días a las 10:00 AM (citas de ayer que fueron atendidas)
     scheduler.add_job(
-        lambda: asyncio.create_task(enviar_seguimiento_postconsulta(send_whatsapp)),
+        _job_postconsulta,
         CronTrigger(hour=10, minute=0),
         id="seguimiento_postconsulta",
         replace_existing=True,
     )
     # Reactivación: todos los lunes a las 10:30 AM (pacientes sin volver en 30–90 días)
     scheduler.add_job(
-        lambda: asyncio.create_task(enviar_reactivacion_pacientes(send_whatsapp)),
+        _job_reactivacion,
         CronTrigger(day_of_week="mon", hour=10, minute=30),
         id="reactivacion_pacientes",
         replace_existing=True,
     )
     # Adherencia kine: diario a las 11:00 AM (kine pacientes con gap de 4+ días)
     scheduler.add_job(
-        lambda: asyncio.create_task(enviar_adherencia_kine(send_whatsapp)),
+        _job_adherencia_kine,
         CronTrigger(hour=11, minute=0),
         id="adherencia_kine",
         replace_existing=True,
     )
     # Control por especialidad: diario a las 11:30 AM (nutrición, psicología, cardiología, etc.)
     scheduler.add_job(
-        lambda: asyncio.create_task(enviar_recordatorio_control(send_whatsapp)),
+        _job_control_especialidad,
         CronTrigger(hour=11, minute=30),
         id="control_especialidad",
         replace_existing=True,
     )
     # Cross-sell kine: miércoles a las 10:30 AM (medicina/traumatología → kine)
     scheduler.add_job(
-        lambda: asyncio.create_task(enviar_crosssell_kine(send_whatsapp)),
+        _job_crosssell_kine,
         CronTrigger(day_of_week="wed", hour=10, minute=30),
         id="crosssell_kine",
         replace_existing=True,
     )
     # Sync caché de citas: diario a las 23:50 CLT (sync del día en curso)
-    def _sync_hoy():
-        from datetime import date
-        from zoneinfo import ZoneInfo
-        hoy = date.today().strftime("%Y-%m-%d")  # servidor puede estar en UTC, sync igual
-        ids_todos = list({i for cfg in SEGUIMIENTO_ESPECIALIDADES.values() for i in cfg["ids"]})
-        asyncio.create_task(sync_citas_dia(hoy, ids_todos))
     scheduler.add_job(
-        _sync_hoy,
+        _sync_citas_hoy,
         CronTrigger(hour=2, minute=50),  # 23:50 CLT = 02:50 UTC
         id="sync_citas_cache",
         replace_existing=True,
