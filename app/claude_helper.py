@@ -368,6 +368,19 @@ async def clasificar_respuesta_seguimiento(mensaje: str) -> str | None:
         return None
 
 
+def _strip_markdown_json(text: str) -> str:
+    """Quita envoltorios ```json ... ``` si Claude los agrega."""
+    text = text.strip()
+    if text.startswith("```"):
+        text = text[3:]
+        if text.lower().startswith("json"):
+            text = text[4:]
+        text = text.strip()
+        if text.endswith("```"):
+            text = text[:-3].strip()
+    return text
+
+
 async def detect_intent(mensaje: str) -> dict:
     """Detecta intención del mensaje. Devuelve dict con intent, especialidad, respuesta_directa."""
     clave = mensaje.strip().lower()
@@ -378,17 +391,18 @@ async def detect_intent(mensaje: str) -> dict:
     try:
         resp = await client.messages.create(
             model="claude-haiku-4-5-20251001",
-            max_tokens=300,
+            max_tokens=1024,
             system=SYSTEM_PROMPT,
             messages=[{"role": "user", "content": mensaje}],
         )
-        text = resp.content[0].text.strip()
-        # Limpiar posible markdown
-        if text.startswith("```"):
-            text = text.split("```")[1]
-            if text.startswith("json"):
-                text = text[4:]
+        text = _strip_markdown_json(resp.content[0].text)
+        if resp.stop_reason == "max_tokens":
+            log.warning("detect_intent truncado por max_tokens: %r", mensaje[:80])
         return json.loads(text)
+    except json.JSONDecodeError as e:
+        log.error("detect_intent JSON inválido para '%s': %s | respuesta: %r",
+                  mensaje[:80], e, text[:300] if 'text' in dir() else "")
+        return {"intent": "menu", "especialidad": None, "respuesta_directa": None}
     except Exception as e:
         log.error("detect_intent falló para '%s': %s", mensaje[:80], e)
         return {"intent": "menu", "especialidad": None, "respuesta_directa": None}
@@ -396,15 +410,23 @@ async def detect_intent(mensaje: str) -> dict:
 
 async def respuesta_faq(mensaje: str) -> str:
     """Responde preguntas frecuentes directamente con Claude."""
+    text = ""
     try:
         resp = await client.messages.create(
             model="claude-haiku-4-5-20251001",
-            max_tokens=200,
+            max_tokens=1024,
             system=SYSTEM_PROMPT,
             messages=[{"role": "user", "content": mensaje}],
         )
-        data = json.loads(resp.content[0].text.strip())
+        text = _strip_markdown_json(resp.content[0].text)
+        if resp.stop_reason == "max_tokens":
+            log.warning("respuesta_faq truncado por max_tokens: %r", mensaje[:80])
+        data = json.loads(text)
         return data.get("respuesta_directa") or "Para más información, comunícate con recepción 😊"
+    except json.JSONDecodeError as e:
+        log.error("respuesta_faq JSON inválido para '%s': %s | respuesta: %r",
+                  mensaje[:80], e, text[:300])
+        return "Para más información, comunícate con recepción 😊"
     except Exception as e:
         log.error("respuesta_faq falló para '%s': %s", mensaje[:80], e)
         return "Para más información, comunícate con recepción 😊"
