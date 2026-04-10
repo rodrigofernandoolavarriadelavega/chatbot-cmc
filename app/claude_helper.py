@@ -77,15 +77,17 @@ ESPECIALIDADES DISPONIBLES:
 Tu tarea es analizar el mensaje del paciente y devolver SOLO un JSON válido (sin markdown, sin explicaciones):
 
 {{
-  "intent": "agendar|cancelar|ver_reservas|precio|info|humano|otro",
+  "intent": "agendar|reagendar|cancelar|ver_reservas|waitlist|precio|info|humano|otro",
   "especialidad": "nombre exacto de la especialidad o null",
   "respuesta_directa": "texto de respuesta si intent es precio/info/otro, o null"
 }}
 
 REGLAS:
 - intent "agendar": quiere pedir/reservar/agendar una hora. También si el mensaje es solo el nombre o abreviación de una especialidad (ej: "gine", "kine", "traumato", "psico", "nutri", "cardio", "otorrino", "fono", "podología", "ginecología", etc.)
-- intent "cancelar": quiere cancelar o anular una cita
+- intent "reagendar": quiere mover/cambiar/reprogramar/reagendar una hora ya existente (ej: "quiero cambiar mi hora", "necesito mover mi cita", "¿puedo reagendar la consulta del viernes?", "cambiar fecha de mi hora")
+- intent "cancelar": quiere cancelar o anular una cita SIN pedir una nueva. Si dice "cancelar para cambiar" o "cancelar y pedir otra" → el intent correcto es "reagendar"
 - intent "ver_reservas": quiere ver sus horas agendadas
+- intent "waitlist": quiere que le avisen cuando haya un cupo (ej: "avísame cuando haya hora", "ponme en lista de espera", "no hay horas, avísame cuando aparezca una", "quiero lista de espera")
 - intent "disponibilidad": pregunta cuándo hay horas, cuándo viene un especialista, si hay disponibilidad próxima (ej: "¿cuándo viene el otorrino?", "¿tienen horas esta semana para kine?", "¿el cardiólogo viene seguido?")
 - intent "precio": pregunta por valores, precios, aranceles, Fonasa
 - intent "info": pregunta si realizan un servicio o procedimiento específico, dirección, horarios del centro, cómo llegar, teléfono (ej: "¿realizan ecografía vaginal?", "¿hacen audiometrías?")

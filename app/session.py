@@ -145,6 +145,21 @@ def _conn():
             updated_at  TEXT DEFAULT (datetime('now'))
         )
     """)
+    # Lista de espera: inscripciones de pacientes cuando no hay cupos
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS waitlist (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            phone           TEXT NOT NULL,
+            rut             TEXT,
+            nombre          TEXT,
+            especialidad    TEXT NOT NULL,
+            id_prof_pref    INTEGER,
+            created_at      TEXT DEFAULT (datetime('now')),
+            notified_at     TEXT,
+            canceled_at     TEXT
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_waitlist_active ON waitlist(canceled_at, notified_at)")
     # Migración: agregar canal a messages si no existe
     try:
         conn.execute("ALTER TABLE messages ADD COLUMN canal TEXT DEFAULT 'whatsapp'")
@@ -905,3 +920,89 @@ def system_state_updated_at(key: str) -> str | None:
             "SELECT updated_at FROM system_state WHERE key = ?", (key,)
         ).fetchone()
         return row["updated_at"] if row else None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Lista de espera (waitlist)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def add_to_waitlist(phone: str, rut: str, nombre: str,
+                    especialidad: str, id_prof_pref: int | None = None) -> int:
+    """Inscribe a un paciente en la lista de espera. Si ya existe una inscripción
+    activa (no notificada ni cancelada) para el mismo phone+especialidad, la
+    actualiza en lugar de duplicar. Retorna el id de la fila."""
+    with _conn() as conn:
+        existing = conn.execute("""
+            SELECT id FROM waitlist
+            WHERE phone = ? AND especialidad = ?
+              AND notified_at IS NULL AND canceled_at IS NULL
+            ORDER BY id DESC LIMIT 1
+        """, (phone, especialidad)).fetchone()
+        if existing:
+            conn.execute("""
+                UPDATE waitlist SET rut=?, nombre=?, id_prof_pref=?, created_at=datetime('now')
+                WHERE id=?
+            """, (rut, nombre, id_prof_pref, existing["id"]))
+            conn.commit()
+            return int(existing["id"])
+        cur = conn.execute("""
+            INSERT INTO waitlist (phone, rut, nombre, especialidad, id_prof_pref)
+            VALUES (?, ?, ?, ?, ?)
+        """, (phone, rut, nombre, especialidad, id_prof_pref))
+        conn.commit()
+        return int(cur.lastrowid)
+
+
+def get_waitlist_pending() -> list[dict]:
+    """Retorna todas las inscripciones activas (no notificadas ni canceladas)
+    ordenadas por antigüedad (FIFO). La usa el cron de chequeo diario."""
+    with _conn() as conn:
+        rows = conn.execute("""
+            SELECT id, phone, rut, nombre, especialidad, id_prof_pref, created_at
+            FROM waitlist
+            WHERE notified_at IS NULL AND canceled_at IS NULL
+            ORDER BY created_at ASC
+        """).fetchall()
+        return [dict(r) for r in rows]
+
+
+def mark_waitlist_notified(waitlist_id: int):
+    """Marca una entrada como notificada (ya se avisó al paciente)."""
+    with _conn() as conn:
+        conn.execute(
+            "UPDATE waitlist SET notified_at = datetime('now') WHERE id = ?",
+            (waitlist_id,)
+        )
+        conn.commit()
+
+
+def cancel_waitlist(waitlist_id: int):
+    """Marca una entrada como cancelada (por el paciente o la recepción)."""
+    with _conn() as conn:
+        conn.execute(
+            "UPDATE waitlist SET canceled_at = datetime('now') WHERE id = ?",
+            (waitlist_id,)
+        )
+        conn.commit()
+
+
+def get_waitlist_all(limit: int = 200) -> list[dict]:
+    """Retorna todas las entradas de waitlist (para el panel admin)."""
+    with _conn() as conn:
+        rows = conn.execute("""
+            SELECT w.*, p.nombre AS perfil_nombre
+            FROM waitlist w
+            LEFT JOIN contact_profiles p ON p.phone = w.phone
+            ORDER BY w.id DESC LIMIT ?
+        """, (limit,)).fetchall()
+        return [dict(r) for r in rows]
+
+
+def waitlist_depth() -> int:
+    """Cantidad de inscripciones activas (para /health)."""
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT COUNT(*) FROM waitlist "
+            "WHERE notified_at IS NULL AND canceled_at IS NULL"
+        ).fetchone()
+        return int(row[0]) if row else 0

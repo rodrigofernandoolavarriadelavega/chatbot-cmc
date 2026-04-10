@@ -38,7 +38,9 @@ from session import (get_session, is_duplicate, reset_session, save_session, get
                      get_kine_tracking_all, save_kine_tracking,
                      get_ortodoncia_pacientes, set_ortodoncia_tipo, get_ortodoncia_sync_max_fecha,
                      purge_old_data,
-                     get_pending_intent_queue, mark_intent_notified, intent_queue_depth)
+                     get_pending_intent_queue, mark_intent_notified, intent_queue_depth,
+                     get_waitlist_pending, mark_waitlist_notified, waitlist_depth,
+                     get_waitlist_all, cancel_waitlist)
 from resilience import (is_medilink_down, mark_medilink_up, medilink_down_since,
                         should_notify_reception, mark_reception_notified)
 
@@ -205,6 +207,71 @@ async def _job_medilink_watchdog():
             pass
 
 
+async def _job_waitlist_check():
+    """Cron diario 07:00 CLT: escanea inscripciones activas en la lista de espera
+    y notifica al paciente apenas se libera un cupo en los próximos 14 días.
+    Si la inscripción especifica un profesional (id_prof_pref), la búsqueda se
+    restringe solo a ese profesional. FIFO (más antiguas primero)."""
+    if is_medilink_down():
+        log.info("waitlist_check: Medilink caído, saltando ejecución")
+        return
+
+    pendientes = get_waitlist_pending()
+    if not pendientes:
+        return
+
+    log.info("waitlist_check: %d inscripciones activas por revisar", len(pendientes))
+    notificados = 0
+    for row in pendientes:
+        wl_id = row["id"]
+        phone_p = row["phone"]
+        esp = row["especialidad"]
+        id_prof_pref = row.get("id_prof_pref")
+        nombre = row.get("nombre") or ""
+
+        try:
+            solo_ids = [int(id_prof_pref)] if id_prof_pref else None
+            _, todos = await buscar_primer_dia(esp, dias_adelante=14, solo_ids=solo_ids)
+        except Exception as e:
+            log.error("waitlist_check: error buscando slots para %s (%s): %s", phone_p, esp, e)
+            continue
+
+        if not todos:
+            continue
+
+        # Hay slots disponibles → notificar y marcar
+        primero = todos[0]
+        fecha = primero.get("fecha", "")
+        hora  = primero.get("hora_inicio", "")
+        prof_nombre = primero.get("profesional") or (
+            PROFESIONALES.get(int(id_prof_pref), {}).get("nombre", "") if id_prof_pref else ""
+        )
+
+        saludo = f"Hola{' ' + nombre.split()[0] if nombre else ''} 👋"
+        prof_txt = f" con *{prof_nombre}*" if prof_nombre else ""
+        try:
+            await send_whatsapp(
+                phone_p,
+                f"{saludo}\n\n"
+                f"¡Buenas noticias! Se liberó un cupo para *{esp.title()}*{prof_txt}.\n\n"
+                f"📅 Primera hora disponible: *{fecha} a las {hora}*\n\n"
+                "Si quieres agendarla escribe *menu* y te ayudo al tiro. "
+                "También puedo buscarte otro horario si ese no te sirve 😊\n\n"
+                "_Te escribimos porque estás en nuestra lista de espera. "
+                "Si ya no la necesitas, ignora este mensaje._"
+            )
+            mark_waitlist_notified(wl_id)
+            log_event(phone_p, "waitlist_notificado", {
+                "waitlist_id": wl_id, "especialidad": esp,
+                "fecha": fecha, "hora": hora, "id_prof_pref": id_prof_pref,
+            })
+            notificados += 1
+        except Exception as e:
+            log.error("waitlist_check: fallo notificando %s: %s", phone_p, e)
+
+    log.info("waitlist_check: notificados %d/%d pacientes", notificados, len(pendientes))
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # AsyncIOScheduler ejecuta coroutines directamente en su event loop.
@@ -279,6 +346,13 @@ async def lifespan(app: FastAPI):
         _job_medilink_watchdog,
         "interval", minutes=1,
         id="medilink_watchdog",
+        replace_existing=True,
+    )
+    # Lista de espera: diario a las 07:00 CLT revisa cupos nuevos para inscripciones activas
+    scheduler.add_job(
+        _job_waitlist_check,
+        CronTrigger(hour=7, minute=0),
+        id="waitlist_check",
         replace_existing=True,
     )
     scheduler.start()
@@ -2253,6 +2327,7 @@ async def health():
         # Modo degradado: estado persistido en SQLite (lo que el bot usa) + cola
         "medilink_state":   "down" if is_medilink_down() else "up",
         "intent_queue_depth": intent_queue_depth(),
+        "waitlist_depth":     waitlist_depth(),
     }
 
 
@@ -2341,6 +2416,19 @@ def admin_conversation_detail(phone: str, _: str = Depends(require_admin)):
 @app.get("/admin/api/metrics")
 def admin_metrics(_: str = Depends(require_admin)):
     return get_metricas(dias=30)
+
+
+@app.get("/admin/api/waitlist")
+def admin_waitlist(_: str = Depends(require_admin)):
+    """Lista de espera completa (activas + notificadas + canceladas)."""
+    return get_waitlist_all()
+
+
+@app.post("/admin/api/waitlist/{wl_id}/cancel")
+def admin_waitlist_cancel(wl_id: int, _: str = Depends(require_admin)):
+    """Marca una entrada de waitlist como cancelada (por recepción)."""
+    cancel_waitlist(wl_id)
+    return {"ok": True}
 
 
 @app.post("/admin/api/takeover/{phone}")

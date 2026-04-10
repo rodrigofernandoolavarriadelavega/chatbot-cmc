@@ -13,7 +13,7 @@ from medilink import (buscar_primer_dia, buscar_slots_dia, buscar_slots_dia_por_
                       consultar_proxima_fecha)
 from session import (save_session, reset_session, save_tag, save_cita_bot, log_event,
                      save_profile, get_profile, save_fidelizacion_respuesta, get_ultimo_seguimiento,
-                     enqueue_intent)
+                     enqueue_intent, add_to_waitlist, cancel_waitlist)
 from resilience import is_medilink_down
 from config import CMC_TELEFONO, CMC_TELEFONO_FIJO
 
@@ -112,9 +112,11 @@ def _menu_msg() -> dict:
             "title": "¿En qué te ayudamos?",
             "rows": [
                 {"id": "1", "title": "Agendar una hora"},
-                {"id": "2", "title": "Cancelar una hora"},
-                {"id": "3", "title": "Ver mis reservas"},
-                {"id": "4", "title": "Hablar con recepción"},
+                {"id": "2", "title": "Reagendar una hora"},
+                {"id": "3", "title": "Cancelar una hora"},
+                {"id": "4", "title": "Ver mis reservas"},
+                {"id": "5", "title": "Lista de espera"},
+                {"id": "6", "title": "Hablar con recepción"},
             ]
         }]
     )
@@ -173,9 +175,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
         # Atajos numéricos del menú
         if txt == "1": return await _iniciar_agendar(phone, data, None)
-        if txt == "2": return await _iniciar_cancelar(phone, data)
-        if txt == "3": return await _iniciar_ver(phone, data)
-        if txt == "4": return _derivar_humano(phone=phone, contexto="menú opción 4")
+        if txt == "2": return await _iniciar_reagendar(phone, data)
+        if txt == "3": return await _iniciar_cancelar(phone, data)
+        if txt == "4": return await _iniciar_ver(phone, data)
+        if txt == "5": return await _iniciar_waitlist(phone, data, None)
+        if txt == "6": return _derivar_humano(phone=phone, contexto="menú opción 6")
 
         # ── Respuestas de fidelización ────────────────────────────────────────
         if tl == "seg_mejor":
@@ -198,7 +202,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return _btn_msg(
                 "Lamentamos escuchar eso 😟\n\n"
                 f"¿Quieres reagendar una consulta{' con ' + prof if prof else ''}?",
-                [{"id": "1", "title": "Sí, reagendar"},
+                [{"id": "2", "title": "Sí, reagendar"},
                  {"id": "no_control", "title": "No por ahora"}]
             )
         if tl == "no_control":
@@ -283,7 +287,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     return _btn_msg(
                         "Lamentamos escuchar eso 😟\n\n"
                         f"¿Quieres reagendar una consulta{' con ' + prof if prof else ''}?",
-                        [{"id": "1", "title": "Sí, reagendar"},
+                        [{"id": "2", "title": "Sí, reagendar"},
                          {"id": "no_control", "title": "No por ahora"}]
                     )
 
@@ -301,11 +305,18 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 data["nombre_conocido"] = perfil["nombre"]
             return await _iniciar_agendar(phone, data, especialidad)
 
+        if intent == "reagendar":
+            return await _iniciar_reagendar(phone, data)
+
         if intent == "cancelar":
             return await _iniciar_cancelar(phone, data)
 
         if intent == "ver_reservas":
             return await _iniciar_ver(phone, data)
+
+        if intent == "waitlist":
+            especialidad = result.get("especialidad")
+            return await _iniciar_waitlist(phone, data, especialidad)
 
         if intent == "humano":
             return _derivar_humano(phone=phone, contexto=txt)
@@ -450,6 +461,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if not _ids_para_especialidad(especialidad_candidata):
             result = await detect_intent(txt)
             especialidad_candidata = result.get("especialidad") or especialidad_candidata
+        # Si venimos del flujo de lista de espera, redirigir al confirming
+        if data.pop("from_waitlist", False):
+            return await _iniciar_waitlist(phone, data, especialidad_candidata)
         return await _iniciar_agendar(phone, data, especialidad_candidata)
 
     # ── WAIT_SLOT ─────────────────────────────────────────────────────────────
@@ -734,6 +748,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if tl in AFIRMACIONES:
             slot    = data["slot_elegido"]
             paciente = data["paciente"]
+            reagendar = bool(data.get("reagendar_mode"))
+            cita_old = data.get("cita_old") or {}
             resultado = await crear_cita(
                 id_paciente=paciente["id"],
                 id_profesional=slot["id_profesional"],
@@ -742,6 +758,15 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 hora_fin=slot["hora_fin"],
                 id_recurso=slot.get("id_recurso", 1),
             )
+            # Si estamos en reagendar, cancelamos la anterior SOLO si la nueva
+            # se creó bien. Si falla la nueva, la vieja queda intacta.
+            cancel_ok = False
+            if resultado and reagendar and cita_old.get("id"):
+                cancel_ok = await cancelar_cita(cita_old["id"])
+                if not cancel_ok:
+                    log_event(phone, "reagendar_cancel_old_fail",
+                              {"id_cita_old": cita_old.get("id"),
+                               "id_cita_new": resultado.get("id")})
             reset_session(phone)
             nombre_corto = paciente['nombre'].split()[0]
             modalidad = data.get("modalidad", "particular").capitalize()
@@ -762,12 +787,31 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     hora=slot["hora_inicio"],
                     modalidad=data.get("modalidad", "particular"),
                 )
-                log_event(phone, "cita_creada", {
+                log_event(phone, "cita_reagendada" if reagendar else "cita_creada", {
                     "especialidad": esp,
                     "profesional": slot["profesional"],
                     "fecha": slot["fecha"],
                     "modalidad": data.get("modalidad", "particular"),
+                    "id_cita_old": cita_old.get("id") if reagendar else None,
                 })
+                if reagendar:
+                    extra = ""
+                    if not cancel_ok:
+                        extra = (
+                            "\n\n⚠️ _Tuvimos un inconveniente cancelando la hora anterior; "
+                            "recepción la anulará de forma manual. No hay problema._"
+                        )
+                    return (
+                        f"🔄 *¡Listo, {nombre_corto}! Tu hora fue reagendada.*\n\n"
+                        f"👤 {paciente['nombre']}\n"
+                        f"🏥 {slot['especialidad']} — {slot['profesional']}\n"
+                        f"📅 {slot['fecha_display']}\n"
+                        f"🕐 {slot['hora_inicio'][:5]}\n\n"
+                        "Recuerda llegar *15 minutos antes* con tu cédula de identidad.\n\n"
+                        "📍 *Monsalve 102 esq. República, Carampangue*"
+                        f"{extra}\n\n"
+                        "_Escribe *menu* si necesitas algo más._"
+                    )
                 return (
                     f"✅ *¡Listo, {nombre_corto}! Tu hora quedó reservada.*\n\n"
                     f"👤 {paciente['nombre']}\n"
@@ -872,6 +916,116 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return "Perfecto, tu cita se mantiene 😊\n_Escribe *menu* si necesitas algo más._"
 
         return "Responde *SÍ* para cancelar o *NO* para mantener la cita."
+
+    # ── WAIT_RUT_REAGENDAR ────────────────────────────────────────────────────
+    if state == "WAIT_RUT_REAGENDAR":
+        rut = clean_rut(txt)
+        if not valid_rut(rut):
+            return (
+                "Ese RUT no quedó bien 😕\n"
+                "Escríbelo así: *12.345.678-9*"
+            )
+
+        paciente = await buscar_paciente(rut)
+        if not paciente:
+            reset_session(phone)
+            return (
+                "No encontré ese RUT en el sistema 🔎\n\n"
+                f"Llama a recepción si necesitas ayuda:\n📞 *{CMC_TELEFONO}*\n\n"
+                "_Escribe *menu* para volver._"
+            )
+
+        citas = await listar_citas_paciente(paciente["id"])
+        if not citas:
+            reset_session(phone)
+            return (
+                f"No encontré citas futuras para *{paciente['nombre'].split()[0]}* 📋\n\n"
+                "¿Quieres agendar una nueva hora? Escribe *1* o *menu*."
+            )
+
+        data.update({"paciente": paciente, "citas": citas, "rut": rut})
+        save_session(phone, "WAIT_CITA_REAGENDAR", data)
+        return _format_citas_reagendar(citas, paciente["nombre"])
+
+    # ── WAIT_CITA_REAGENDAR ───────────────────────────────────────────────────
+    if state == "WAIT_CITA_REAGENDAR":
+        citas = data.get("citas", [])
+        try:
+            idx = int(txt) - 1
+            if not (0 <= idx < len(citas)):
+                raise ValueError("fuera de rango")
+        except (ValueError, TypeError):
+            return f"Elige un número entre 1 y {len(citas)} 😊"
+
+        cita_old = citas[idx]
+        esp_lower = (cita_old.get("especialidad") or "").lower()
+        if not esp_lower:
+            reset_session(phone)
+            return (
+                "No pude identificar la especialidad de esa cita 😕\n"
+                f"Llama a recepción: 📞 *{CMC_TELEFONO}*"
+            )
+        data["cita_old"] = cita_old
+        data["reagendar_mode"] = True
+        # Pre-fill perfil para no volver a pedir RUT en el confirming
+        data["rut_conocido"] = data.get("rut", "")
+        data["nombre_conocido"] = data["paciente"]["nombre"]
+        log_event(phone, "reagendar_elegida_cita",
+                  {"id_cita": cita_old["id"], "especialidad": esp_lower})
+        return await _iniciar_agendar(phone, data, esp_lower)
+
+    # ── WAIT_WAITLIST_CONFIRM ─────────────────────────────────────────────────
+    if state == "WAIT_WAITLIST_CONFIRM":
+        if tl == "waitlist_si" or tl in AFIRMACIONES:
+            perfil = get_profile(phone)
+            if perfil:
+                data["rut"] = perfil["rut"]
+                data["paciente_nombre"] = perfil["nombre"]
+                return _inscribir_waitlist_y_responder(phone, data)
+            save_session(phone, "WAIT_WAITLIST_RUT", data)
+            return (
+                "Perfecto 👍 Para inscribirte necesito tu RUT:\n"
+                "(ej: *12.345.678-9*)"
+            )
+        if tl == "waitlist_no" or tl in NEGACIONES:
+            reset_session(phone)
+            return (
+                "Sin problema 😊 Cuando lo necesites, escríbenos.\n"
+                f"_Llama a recepción: 📞 *{CMC_TELEFONO}* · ☎️ *{CMC_TELEFONO_FIJO}*_"
+            )
+        return "Responde *SÍ* para inscribirte o *NO* si prefieres llamar a recepción."
+
+    # ── WAIT_WAITLIST_RUT ─────────────────────────────────────────────────────
+    if state == "WAIT_WAITLIST_RUT":
+        rut = clean_rut(txt)
+        if not valid_rut(rut):
+            return (
+                "Ese RUT no quedó bien 😕\n"
+                "Escríbelo así: *12.345.678-9*"
+            )
+        data["rut"] = rut
+        # Buscar paciente en Medilink para traer el nombre
+        paciente = await buscar_paciente(rut)
+        if paciente:
+            data["paciente_nombre"] = paciente["nombre"]
+            save_profile(phone, rut, paciente["nombre"])
+            return _inscribir_waitlist_y_responder(phone, data)
+        # Paciente no existe: pedir nombre
+        save_session(phone, "WAIT_WAITLIST_NOMBRE", data)
+        return (
+            "No encontré ese RUT en el sistema, pero igual te inscribo en la lista 😊\n\n"
+            "Escríbeme tu *nombre completo* (ej: *María González López*)"
+        )
+
+    # ── WAIT_WAITLIST_NOMBRE ──────────────────────────────────────────────────
+    if state == "WAIT_WAITLIST_NOMBRE":
+        partes = txt.strip().split()
+        if len(partes) < 2:
+            return "Escribe tu nombre completo con nombre y apellido (ej: *María González*)."
+        nombre = " ".join(p.capitalize() for p in partes)
+        data["paciente_nombre"] = nombre
+        save_profile(phone, data.get("rut", ""), nombre)
+        return _inscribir_waitlist_y_responder(phone, data)
 
     # ── WAIT_RUT_VER ──────────────────────────────────────────────────────────
     if state == "WAIT_RUT_VER":
@@ -1219,13 +1373,25 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None) -> 
         mejor = smart[0] if smart else (todos[0] if todos else None)
 
     if not todos or not mejor:
-        reset_session(phone)
         log_event(phone, "sin_disponibilidad", {"especialidad": especialidad})
         save_tag(phone, "sin-disponibilidad")
-        return (
-            f"No encontré disponibilidad para *{especialidad}* en los próximos días 😕\n\n"
-            f"Llama a recepción para revisar más opciones:\n📞 *{CMC_TELEFONO}*\n\n"
-            "_Escribe *menu* para volver._"
+        # Ofrecer lista de espera en lugar de terminar la conversación
+        # Si la especialidad resuelve a un único profesional (ej. "olavarria",
+        # "castillo"), lo guardamos como preferencia → el cron buscará solo a ese.
+        from medilink import _ids_para_especialidad
+        ids_resueltos = _ids_para_especialidad(especialidad_lower)
+        id_prof_pref = int(ids_resueltos[0]) if len(ids_resueltos) == 1 else None
+        data["waitlist_especialidad"] = especialidad_lower
+        data["waitlist_id_prof_pref"] = id_prof_pref
+        save_session(phone, "WAIT_WAITLIST_CONFIRM", data)
+        return _btn_msg(
+            f"No encontré horas disponibles para *{especialidad}* en los próximos días 😕\n\n"
+            "¿Quieres que te avise apenas se libere un cupo?\n"
+            "Te inscribo en nuestra lista de espera y te escribo por WhatsApp.",
+            [
+                {"id": "waitlist_si", "title": "📝 Sí, inscribirme"},
+                {"id": "waitlist_no", "title": "No, gracias"},
+            ]
         )
     fecha = mejor["fecha"]
     # Al tocar "Ver más horarios" mostramos los del MISMO doctor del sugerido.
@@ -1286,6 +1452,99 @@ async def _iniciar_ver(phone: str, data: dict) -> str:
         "Claro, te muestro tus reservas.\n\n"
         "Necesito tu RUT:\n"
         "(ej: *12.345.678-9*)"
+    )
+
+
+async def _iniciar_reagendar(phone: str, data: dict) -> str:
+    """Flujo de reagendar en un paso: lista tus citas, eliges una, buscamos
+    un nuevo slot para la misma especialidad y la reemplazamos (crea primero
+    la nueva, cancela la anterior solo si la nueva se creó con éxito)."""
+    if is_medilink_down():
+        return _modo_degradado(phone, "reagendar")
+    # Si ya conocemos el perfil, saltamos directo a mostrar sus citas
+    perfil = get_profile(phone)
+    if perfil and perfil.get("rut"):
+        paciente = await buscar_paciente(perfil["rut"])
+        if paciente:
+            citas = await listar_citas_paciente(paciente["id"])
+            if not citas:
+                reset_session(phone)
+                return (
+                    f"No encontré citas futuras para *{paciente['nombre'].split()[0]}* 📋\n\n"
+                    "¿Quieres agendar una nueva hora? Escribe *1* o *menu*."
+                )
+            data.update({"paciente": paciente, "citas": citas, "rut": perfil["rut"]})
+            save_session(phone, "WAIT_CITA_REAGENDAR", data)
+            return _format_citas_reagendar(citas, paciente["nombre"])
+    save_session(phone, "WAIT_RUT_REAGENDAR", data)
+    return (
+        "Claro, te ayudo a reagendar tu hora 🔄\n\n"
+        "Necesito tu RUT para buscar tus citas:\n"
+        "(ej: *12.345.678-9*)"
+    )
+
+
+async def _iniciar_waitlist(phone: str, data: dict, especialidad: str | None) -> str:
+    """Flujo de lista de espera: si ya sabemos la especialidad, preguntamos
+    confirmación; si no, pedimos que elija una del menú de agendar."""
+    if not especialidad:
+        # Reutilizamos el menú de elegir especialidad pero cambiamos la data
+        # con un flag para que al terminar vaya a WAIT_WAITLIST_CONFIRM.
+        data["from_waitlist"] = True
+        save_session(phone, "WAIT_ESPECIALIDAD", data)
+        return (
+            "Claro, te ayudo a inscribirte en la lista de espera 📝\n\n"
+            f"¿Para qué especialidad?\n\n{_ESPECIALIDADES_TEXTO}"
+        )
+    esp_lower = especialidad.lower()
+    data["waitlist_especialidad"] = esp_lower
+    data["waitlist_id_prof_pref"] = None
+    save_session(phone, "WAIT_WAITLIST_CONFIRM", data)
+    return _btn_msg(
+        f"Te voy a inscribir en la lista de espera de *{esp_lower}* 📝\n\n"
+        "Cuando se libere un cupo te aviso al tiro por aquí.\n\n"
+        "¿Confirmas?",
+        [
+            {"id": "waitlist_si", "title": "✅ Sí, inscribirme"},
+            {"id": "waitlist_no", "title": "No, gracias"},
+        ]
+    )
+
+
+def _inscribir_waitlist_y_responder(phone: str, data: dict) -> str:
+    """Inscribe al paciente en la tabla waitlist y responde con confirmación."""
+    esp = data.get("waitlist_especialidad", "")
+    rut = data.get("rut", "") or data.get("rut_conocido", "")
+    nombre = data.get("paciente_nombre", "") or data.get("nombre_conocido", "")
+    id_prof_pref = data.get("waitlist_id_prof_pref")
+    wid = add_to_waitlist(phone, rut, nombre, esp, id_prof_pref)
+    save_tag(phone, f"waitlist-{esp}")
+    log_event(phone, "waitlist_inscrito",
+              {"id": wid, "especialidad": esp, "id_prof_pref": id_prof_pref})
+    reset_session(phone)
+    nombre_corto = nombre.split()[0] if nombre else ""
+    saludo = f"*{nombre_corto}*, " if nombre_corto else ""
+    return (
+        f"✅ Listo {saludo}quedaste inscrito/a en la lista de espera de *{esp}*.\n\n"
+        "Apenas se libere un cupo te aviso por este mismo chat 📱\n\n"
+        "_Escribe *menu* si necesitas algo más._"
+    )
+
+
+def _format_citas_reagendar(citas: list, nombre_paciente: str) -> dict:
+    """Muestra las citas del paciente para que elija cuál reagendar."""
+    nombre = nombre_paciente.split()[0]
+    rows = []
+    for i, c in enumerate(citas, 1):
+        fecha_short = c.get("fecha_display", "")[:10]
+        hora = c.get("hora_inicio", "")[:5]
+        prof = c.get("profesional", "").split()[-1] if c.get("profesional") else ""
+        title = f"{fecha_short} {hora} {prof}"[:24]
+        rows.append({"id": str(i), "title": title})
+    return _list_msg(
+        body_text=f"¿Cuál cita quieres reagendar, *{nombre}*?",
+        button_label="Elegir cita",
+        sections=[{"title": "Tus citas", "rows": rows}],
     )
 
 

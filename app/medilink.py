@@ -638,9 +638,13 @@ async def listar_citas_paciente(id_paciente: int) -> list:
         data = r.json().get("data", [])
         citas = []
         for c in data:
+            id_prof = c.get("id_profesional")
+            prof_info = PROFESIONALES.get(id_prof, {}) if id_prof else {}
             citas.append({
                 "id":          c["id"],
-                "profesional": c.get("nombre_profesional", ""),
+                "id_profesional": id_prof,
+                "profesional": c.get("nombre_profesional", "") or prof_info.get("nombre", ""),
+                "especialidad": prof_info.get("especialidad", ""),
                 "fecha":       c.get("fecha", ""),
                 "fecha_display": _fmt_fecha(c.get("fecha", "")),
                 "hora_inicio": c.get("hora_inicio", "")[:5],
