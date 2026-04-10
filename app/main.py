@@ -1739,15 +1739,21 @@ function ortNavPeriodo(delta) {
 
 async function cargarOrtodoncia() {
   document.getElementById('ort-loading').style.display = 'block';
-  document.getElementById('ort-body').innerHTML = '';
-  const r = await fetch(`/admin/api/ortodoncia?token=${TOKEN}`);
-  const d = await r.json();
-  document.getElementById('ort-loading').style.display = 'none';
-  if (d.ultima_sync) {
-    document.getElementById('ort-ultima-sync').textContent = `Última sync: ${d.ultima_sync}`;
+  document.getElementById('ort-body-cards').innerHTML = '';
+  document.getElementById('ort-tabla-matriz').innerHTML = '';
+  try {
+    const r = await fetch(`/admin/api/ortodoncia?token=${TOKEN}`);
+    const d = await r.json();
+    if (d.ultima_sync) {
+      document.getElementById('ort-ultima-sync').textContent = `Última sync: ${d.ultima_sync}`;
+    }
+    ortTodosPacientes = d.pacientes || [];
+  } catch (e) {
+    console.error('cargarOrtodoncia:', e);
+    ortTodosPacientes = [];
+  } finally {
+    document.getElementById('ort-loading').style.display = 'none';
   }
-  ortTodosPacientes = d.pacientes || [];
-  document.getElementById('ort-loading').style.display = 'none';
   ortSetModo('todos');
   ortSetVista('matriz');
 }
