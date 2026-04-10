@@ -268,20 +268,38 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - Fidelización completa en `app/fidelizacion.py` (post-consulta, reactivación, adherencia kine, control esp., cross-sell)
 - Detección pasiva de Arauco: cualquier mención guarda tag silenciosamente
 
-**Estado del servidor**: ✅ corriendo en `https://agentecmc.cl`, deployado commit `e619125`. Verificaciones OK: `/health` reporta `medilink:ok`, `medilink_state:up`, `intent_queue_depth:0`, `waitlist_depth:0`; scheduler con 11 jobs registrados (incluye `waitlist_check` 07:00 CLT y `medilink_watchdog` cada 1 min).
+**Hecho (sesión 2026-04-10)**:
+- Harness `tests/harness_50.py`: 50 escenarios base + 8 regresión de bugs + 4 de confirmación pre-cita = 62/62 ✅
+- 4 bugs arreglados (commit `5c55d80`):
+  1. `WAIT_SLOT` acepta `si/sí/confirmo/dale/ok` libre → confirma el sugerido (antes solo botón)
+  2. `WAIT_CITA_CANCELAR` aborta con `no/menu/cancelar` (antes quedaba atrapado)
+  3. `WAIT_CITA_REAGENDAR` mismo fix
+  4. `EMERGENCIAS` + regex flexible: captura `dolor fuerte en el pecho`, `mucho sangrado`, `me sangra mucho la nariz` (riesgo clínico)
+- **Confirmación sí/no pre-cita** (feature #4 del sprint):
+  - Columnas `confirmation_status` + `confirmation_at` en `citas_bot` (migración in-place)
+  - Recordatorio 09:00 ahora es mensaje interactivo con 3 botones: ✅ Confirmo / 🔄 Cambiar hora / ❌ No podré ir
+  - IDs de botón embebidos (`cita_confirm:<id>` etc.) → funcionan sin sesión activa
+  - Handler `_handle_confirmacion_precita` en `flows.py` al inicio de `handle_message`
+  - Reagendar desde botón: pre-rellena `cita_old` + perfil del paciente → cero pasos extra
+  - Cancelar desde botón: salta directo a `CONFIRMING_CANCEL` con la cita cargada
+  - Endpoint `GET /admin/api/confirmaciones?fecha=YYYY-MM-DD` con resumen {confirmed, reagendar, cancelar, pendiente}
+
+**Estado del servidor**: ✅ corriendo en `https://agentecmc.cl`, deployado commit `5c55d80` (pendiente deploy de feature confirmación pre-cita).
 
 **Pendiente (corto plazo)**:
+- Deploy del feature confirmación pre-cita
+- Agregar columna "Confirmados mañana" al dashboard admin (frontend) — endpoint ya expuesto
 - Agregar `OPENAI_API_KEY` al `.env` del servidor y deployar Fase 1 Whisper (commits locales listos, no pusheados)
 - Verificar ortodoncia modal en producción (hard refresh Cmd+Shift+R, sync puede tardar hasta 10-15 min)
 - Promover número +56945886628 a pacientes reales (redes sociales, recepción)
 - Monitorear primeras conversaciones reales
 - Tags clínicos automáticos (dolor lumbar, rehabilitación) — detectar con Claude y guardar en contact_tags
 
-**Próximo sprint (plan aprobado 2026-04-10, pendiente arranque)**:
+**Próximo sprint (plan aprobado 2026-04-10)**:
 1. ✅ ~~Modo degradado Medilink~~ — DONE
 2. ✅ ~~Reagendar en un paso~~ — DONE
 3. ✅ ~~Lista de espera~~ — DONE
-4. **Confirmación sí/no pre-cita** — botón `Confirmo` / `Cambiar hora` en el recordatorio de 09:00 AM del día anterior (reduce no-shows).
+4. ✅ ~~Confirmación sí/no pre-cita~~ — DONE (backend + tests; falta columna frontend panel)
 5. **Copagos Fonasa/Isapre al confirmar** — requiere verificar si Medilink expone previsión del paciente.
 6. **Dashboard métricas fidelización** — tasa respuesta post-consulta, conversión reactivación, adherencia kine.
 7. **Tests automatizados** — sprint dedicado, no intercalado con features.

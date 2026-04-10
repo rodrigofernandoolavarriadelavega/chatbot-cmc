@@ -709,6 +709,48 @@ async def main():
         ("me sangra mucho la nariz y no para", ["SAMU", "131"]),
     ])
 
+    # ── Confirmación pre-cita (respuesta al recordatorio 09:00) ─────────────
+    def setup_cita_bot_confirm():
+        """Inserta una cita_bot en SQLite para probar los botones del recordatorio."""
+        from session import save_cita_bot, save_profile
+        phone_p = "56900000201"
+        save_profile(phone_p, "11.111.111-1", "Juan Pérez")
+        save_cita_bot(phone_p, "9001", "Medicina General", "Dr. Andrés Abarca",
+                      "2026-04-11", "10:00:00", "particular")
+
+    def setup_cita_bot_reagendar():
+        from session import save_cita_bot, save_profile
+        phone_p = "56900000202"
+        save_profile(phone_p, "11.111.111-1", "Juan Pérez")
+        save_cita_bot(phone_p, "9002", "Medicina General", "Dr. Andrés Abarca",
+                      "2026-04-11", "10:00:00", "particular")
+
+    def setup_cita_bot_cancelar():
+        from session import save_cita_bot, save_profile
+        phone_p = "56900000203"
+        save_profile(phone_p, "11.111.111-1", "Juan Pérez")
+        save_cita_bot(phone_p, "9003", "Medicina General", "Dr. Andrés Abarca",
+                      "2026-04-11", "10:00:00", "particular")
+
+    mk("51 confirma asistencia tocando botón", "56900000201", [
+        ("cita_confirm:9001", {"any": ["confirmada", "esperamos", "✅"], **NO_ERROR}),
+    ], setup=setup_cita_bot_confirm)
+
+    mk("52 cambiar hora desde recordatorio", "56900000202", [
+        # El botón dispara reagendar con la especialidad pre-cargada → debe mostrar slots
+        ("cita_reagendar:9002", {"any": ["Medicina", "09:", "10:", "slot", "horario", "fecha"],
+                                 **NO_ERROR}),
+    ], setup=setup_cita_bot_reagendar)
+
+    mk("53 no podré ir → cancelación pre-rellenada", "56900000203", [
+        ("cita_cancelar:9003", {"any": ["cancelar", "mantener", "Sí, cancelar"], **NO_ERROR}),
+        ("si", {"any": ["cancelada", "✅"], **NO_ERROR}),
+    ], setup=setup_cita_bot_cancelar)
+
+    mk("54 botón confirmar con cita inexistente", "56900000204", [
+        ("cita_confirm:99999", ["no encontré", "recepción"]),
+    ])
+
     # ── Run ─────────────────────────────────────────────────────────────────
     passed = 0
     failed = 0

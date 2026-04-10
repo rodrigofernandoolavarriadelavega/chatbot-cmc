@@ -13,8 +13,10 @@ from medilink import (buscar_primer_dia, buscar_slots_dia, buscar_slots_dia_por_
                       consultar_proxima_fecha)
 from session import (save_session, reset_session, save_tag, save_cita_bot, log_event,
                      save_profile, get_profile, save_fidelizacion_respuesta, get_ultimo_seguimiento,
-                     enqueue_intent, add_to_waitlist, cancel_waitlist)
+                     enqueue_intent, add_to_waitlist, cancel_waitlist,
+                     get_cita_bot_by_id_cita, mark_cita_confirmation)
 from resilience import is_medilink_down
+from triage_ges import triage_sintomas
 from config import CMC_TELEFONO, CMC_TELEFONO_FIJO
 
 # Mapa de nombres de día en español → Python weekday (0=Lun..6=Dom)
@@ -135,11 +137,111 @@ def _menu_msg() -> dict:
     )
 
 
+async def _handle_confirmacion_precita(phone: str, tl: str, data: dict) -> str:
+    """Procesa la respuesta del paciente a los botones del recordatorio de 09:00.
+    IDs: cita_confirm:<id_cita> / cita_reagendar:<id_cita> / cita_cancelar:<id_cita>"""
+    try:
+        accion, id_cita = tl.split(":", 1)
+    except ValueError:
+        return "No pude procesar tu respuesta 😕 Escribe *menu* para volver al inicio."
+
+    cita_bot = get_cita_bot_by_id_cita(id_cita, phone=phone)
+    if not cita_bot:
+        log_event(phone, "confirmacion_precita_notfound", {"id_cita": id_cita, "accion": accion})
+        return (
+            "No encontré esa cita en nuestros registros 😕\n"
+            f"Llama a recepción para ayudarte: 📞 *{CMC_TELEFONO}*"
+        )
+
+    fecha = cita_bot.get("fecha", "")
+    hora = (cita_bot.get("hora") or "")[:5]
+    esp = cita_bot.get("especialidad", "")
+    prof = cita_bot.get("profesional", "")
+
+    # ── Confirma asistencia ───────────────────────────────────────────────────
+    if accion == "cita_confirm":
+        mark_cita_confirmation(id_cita, phone, "confirmed")
+        log_event(phone, "cita_confirmada", {"id_cita": id_cita, "especialidad": esp})
+        reset_session(phone)
+        return (
+            f"¡Perfecto! Tu asistencia quedó confirmada ✅\n\n"
+            f"🏥 *{esp}* — {prof}\n"
+            f"🕐 *{hora}*\n\n"
+            "Te esperamos *15 minutos antes* con tu cédula de identidad.\n\n"
+            f"📍 Monsalve 102, Carampangue\n\n"
+            "_Si cambian tus planes, escríbenos para reagendar._"
+        )
+
+    # ── Quiere cambiar la hora (reagendar) ────────────────────────────────────
+    if accion == "cita_reagendar":
+        mark_cita_confirmation(id_cita, phone, "reagendar")
+        log_event(phone, "cita_reagendar_solicitado", {"id_cita": id_cita, "especialidad": esp})
+        esp_lower = (esp or "").lower()
+        if not esp_lower:
+            return (
+                "No pude identificar la especialidad de esa cita 😕\n"
+                f"Llama a recepción: 📞 *{CMC_TELEFONO}*"
+            )
+        # Construir la cita "vieja" mínima para reagendar sin pedir RUT
+        cita_old = {
+            "id": id_cita,
+            "especialidad": esp,
+            "profesional": prof,
+            "fecha": fecha,
+            "fecha_display": fecha,
+            "hora_inicio": hora,
+        }
+        data = dict(data or {})
+        data["cita_old"] = cita_old
+        data["reagendar_mode"] = True
+        perfil = get_profile(phone)
+        if perfil:
+            data["rut_conocido"] = perfil["rut"]
+            data["nombre_conocido"] = perfil["nombre"]
+        return await _iniciar_agendar(phone, data, esp_lower)
+
+    # ── No podrá ir (cancela) ─────────────────────────────────────────────────
+    if accion == "cita_cancelar":
+        mark_cita_confirmation(id_cita, phone, "cancelar")
+        log_event(phone, "cita_cancelar_solicitado", {"id_cita": id_cita, "especialidad": esp})
+        # Carga la cita directamente en CONFIRMING_CANCEL (sin pedir RUT)
+        cita_cancelar = {
+            "id": id_cita,
+            "especialidad": esp,
+            "profesional": prof,
+            "fecha": fecha,
+            "fecha_display": fecha,
+            "hora_inicio": hora,
+        }
+        data = dict(data or {})
+        data["cita_cancelar"] = cita_cancelar
+        save_session(phone, "CONFIRMING_CANCEL", data)
+        return _btn_msg(
+            f"Entendido 😕 Vamos a cancelar esta hora:\n\n"
+            f"🏥 {prof}\n"
+            f"📅 {fecha}\n"
+            f"🕐 {hora}\n\n"
+            "¿Confirmas la cancelación?",
+            [
+                {"id": "si", "title": "✅ Sí, cancelar"},
+                {"id": "no", "title": "❌ No, mantener"},
+            ]
+        )
+
+    return "No pude procesar tu respuesta 😕 Escribe *menu* para volver al inicio."
+
+
 async def handle_message(phone: str, texto: str, session: dict) -> str:
     state = session["state"]
     data  = session["data"]
     txt   = texto.strip()
     tl    = txt.lower()
+
+    # ── Confirmación pre-cita (respuesta al recordatorio de 09:00) ────────────
+    # Los botones del recordatorio llegan con ID "cita_confirm:<id>", etc.
+    # Debe ir ANTES de emergencias y comandos globales para que siempre se procese.
+    if tl.startswith(("cita_confirm:", "cita_reagendar:", "cita_cancelar:")):
+        return await _handle_confirmacion_precita(phone, tl, data)
 
     # ── Emergencias ───────────────────────────────────────────────────────────
     if any(p in tl for p in EMERGENCIAS) or any(pat.search(tl) for pat in EMERGENCIAS_PATRONES):
@@ -303,6 +405,55 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         [{"id": "2", "title": "Sí, reagendar"},
                          {"id": "no_control", "title": "No por ahora"}]
                     )
+
+        # ── Pre-triage por síntomas (GES Clinical Assistant) ─────────────────
+        # Si el paciente describe síntomas en texto libre (≥10 chars, no es
+        # un atajo/keyword), consultamos el motor de triage antes de Claude.
+        # Si devuelve una hipótesis con score suficiente → derivamos a la
+        # especialidad correspondiente sin necesidad de más preguntas.
+        # Cae silenciosamente a detect_intent si no hay match.
+        if len(txt) >= 10 and not txt.isdigit():
+            triage = await triage_sintomas(txt)
+            if triage:
+                log_event(phone, "triage_ges_match", {
+                    "top": triage.get("top_pathology"),
+                    "score": triage.get("top_score"),
+                    "especialidad": triage.get("especialidad"),
+                    "urgency": triage.get("needs_urgency"),
+                })
+                # Urgencia tiempo-dependiente → derivar a SAMU inmediatamente.
+                if triage.get("needs_urgency"):
+                    save_tag(phone, "triage-urgencia")
+                    return (
+                        "⚠️ Lo que describes puede ser una urgencia médica.\n\n"
+                        f"Posible causa: *{triage.get('top_pathology')}*\n\n"
+                        "Por favor, llama al *SAMU 131* o acude al servicio de "
+                        "urgencias más cercano ahora mismo.\n\n"
+                        f"También puedes contactarnos:\n📞 *{CMC_TELEFONO}*\n"
+                        f"☎️ *{CMC_TELEFONO_FIJO}*\n\n"
+                        + DISCLAIMER
+                    )
+                # Patología derivada a hospital → no se atiende en el CMC.
+                if triage.get("ges_specialty_raw") == "HOSPITAL":
+                    save_tag(phone, "triage-hospital")
+                    return (
+                        f"Lo que describes podría requerir atención de especialidad "
+                        f"hospitalaria (*{triage.get('top_pathology')}*), que no "
+                        f"atendemos en el CMC.\n\n"
+                        "Te recomiendo acudir a tu consultorio de referencia o al "
+                        "hospital base para evaluación.\n\n"
+                        f"Si necesitas orientación, llama a recepción:\n📞 *{CMC_TELEFONO}*\n\n"
+                        + DISCLAIMER
+                    )
+                # Especialidad agendable → iniciar flujo de agendar directo.
+                especialidad_triage = triage.get("especialidad")
+                if especialidad_triage:
+                    perfil = get_profile(phone)
+                    if perfil:
+                        data["rut_conocido"] = perfil["rut"]
+                        data["nombre_conocido"] = perfil["nombre"]
+                    data["triage_motivo"] = triage.get("top_pathology")
+                    return await _iniciar_agendar(phone, data, especialidad_triage)
 
         result = await detect_intent(txt)
         intent = result.get("intent", "otro")

@@ -165,6 +165,16 @@ def _conn():
         conn.execute("ALTER TABLE messages ADD COLUMN canal TEXT DEFAULT 'whatsapp'")
     except sqlite3.OperationalError:
         pass  # columna ya existe, nada que hacer
+    # Migración: confirmación de asistencia pre-cita
+    # Valores: NULL/pending (sin responder), confirmed, reagendar, cancelar
+    try:
+        conn.execute("ALTER TABLE citas_bot ADD COLUMN confirmation_status TEXT")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        conn.execute("ALTER TABLE citas_bot ADD COLUMN confirmation_at TEXT")
+    except sqlite3.OperationalError:
+        pass
     conn.commit()
     return conn
 
@@ -306,6 +316,51 @@ def mark_reminder_sent(cita_id: int):
     with _conn() as conn:
         conn.execute("UPDATE citas_bot SET reminder_sent=1 WHERE id=?", (cita_id,))
         conn.commit()
+
+
+def get_cita_bot_by_id_cita(id_cita: str, phone: str = None) -> dict | None:
+    """Busca una cita del bot por id_cita (id Medilink).
+    Si se pasa phone, además filtra por ese teléfono (seguridad)."""
+    with _conn() as conn:
+        if phone:
+            row = conn.execute(
+                "SELECT * FROM citas_bot WHERE id_cita=? AND phone=? ORDER BY id DESC LIMIT 1",
+                (str(id_cita), phone),
+            ).fetchone()
+        else:
+            row = conn.execute(
+                "SELECT * FROM citas_bot WHERE id_cita=? ORDER BY id DESC LIMIT 1",
+                (str(id_cita),),
+            ).fetchone()
+        return dict(row) if row else None
+
+
+def mark_cita_confirmation(id_cita: str, phone: str, status: str):
+    """Guarda la respuesta del paciente al recordatorio pre-cita.
+    status ∈ {'confirmed', 'reagendar', 'cancelar'}"""
+    with _conn() as conn:
+        conn.execute(
+            """UPDATE citas_bot
+               SET confirmation_status=?, confirmation_at=datetime('now')
+               WHERE id_cita=? AND phone=?""",
+            (status, str(id_cita), phone),
+        )
+        conn.commit()
+
+
+def get_confirmaciones_dia(fecha: str) -> list[dict]:
+    """Devuelve las citas del bot para una fecha con su estado de confirmación.
+    Usado por el panel admin para mostrar el estado."""
+    with _conn() as conn:
+        rows = conn.execute(
+            """SELECT id_cita, phone, especialidad, profesional, hora, modalidad,
+                      confirmation_status, confirmation_at
+               FROM citas_bot
+               WHERE fecha=?
+               ORDER BY hora""",
+            (fecha,),
+        ).fetchall()
+        return [dict(r) for r in rows]
 
 
 # ── Métricas de conversación ──────────────────────────────────────────────────

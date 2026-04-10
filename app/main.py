@@ -40,7 +40,8 @@ from session import (get_session, is_duplicate, reset_session, save_session, get
                      purge_old_data,
                      get_pending_intent_queue, mark_intent_notified, intent_queue_depth,
                      get_waitlist_pending, mark_waitlist_notified, waitlist_depth,
-                     get_waitlist_all, cancel_waitlist)
+                     get_waitlist_all, cancel_waitlist,
+                     get_confirmaciones_dia)
 from resilience import (is_medilink_down, mark_medilink_up, medilink_down_since,
                         should_notify_reception, mark_reception_notified)
 
@@ -131,7 +132,7 @@ async def _sync_citas_hoy():
     await sync_citas_dia(hoy, ids_todos)
 
 
-async def _job_recordatorios():          await enviar_recordatorios(send_whatsapp)
+async def _job_recordatorios():          await enviar_recordatorios(send_whatsapp, send_whatsapp_interactive)
 async def _job_postconsulta():           await enviar_seguimiento_postconsulta(send_whatsapp)
 async def _job_reactivacion():           await enviar_reactivacion_pacientes(send_whatsapp)
 async def _job_adherencia_kine():        await enviar_adherencia_kine(send_whatsapp)
@@ -2422,6 +2423,23 @@ def admin_metrics(_: str = Depends(require_admin)):
 def admin_waitlist(_: str = Depends(require_admin)):
     """Lista de espera completa (activas + notificadas + canceladas)."""
     return get_waitlist_all()
+
+
+@app.get("/admin/api/confirmaciones")
+def admin_confirmaciones(fecha: str = None, _: str = Depends(require_admin)):
+    """Estado de confirmación de las citas del bot para una fecha (default: mañana).
+    Retorna lista con id_cita, phone, especialidad, profesional, hora, modalidad,
+    confirmation_status (None/confirmed/reagendar/cancelar) y confirmation_at."""
+    from datetime import date, timedelta
+    if not fecha:
+        fecha = (date.today() + timedelta(days=1)).isoformat()
+    filas = get_confirmaciones_dia(fecha)
+    resumen = {"confirmed": 0, "reagendar": 0, "cancelar": 0, "pendiente": 0}
+    for f in filas:
+        estado = f.get("confirmation_status") or "pendiente"
+        if estado in resumen:
+            resumen[estado] += 1
+    return {"fecha": fecha, "total": len(filas), "resumen": resumen, "citas": filas}
 
 
 @app.post("/admin/api/waitlist/{wl_id}/cancel")
