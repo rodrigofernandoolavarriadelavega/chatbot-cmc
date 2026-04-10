@@ -206,6 +206,19 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 ## Sesión en curso
 **Fecha**: 2026-04-10
 
+**Hecho (sesión 2026-04-10 — reagendar + lista de espera)**:
+- **Reagendar en un paso** (menú opción 2): intent dedicado `reagendar` en Claude Haiku. Nuevos estados `WAIT_RUT_REAGENDAR` y `WAIT_CITA_REAGENDAR`. `_iniciar_reagendar` usa `contact_profiles` si existe (salta el paso del RUT). `CONFIRMING_CITA` crea la nueva cita PRIMERO y solo entonces cancela la vieja (si el rollback falla, se loggea `reagendar_cancel_old_fail` pero el paciente NUNCA queda sin cita).
+- **Lista de espera** (menú opción 5 + intent `waitlist` + oferta automática): nueva tabla `waitlist` en `session.py` con upsert por `phone+especialidad` (índice parcial sobre `notified_at IS NULL AND canceled_at IS NULL`). Tres entradas: (1) oferta automática en `_iniciar_agendar` cuando `buscar_primer_dia` no encuentra cupo —capturando `id_prof_pref` cuando la especialidad resuelve a un único doctor, ej. "olavarria" → 1—, (2) opción 5 del menú (pide especialidad si no viene), (3) intent `waitlist` del LLM.
+- **Cron `_job_waitlist_check` 07:00 CLT** en `main.py`: salta si Medilink está caído; recorre inscripciones FIFO; busca cupo a 14 días con `solo_ids=[id_prof_pref]` si aplica; notifica por WhatsApp con primer slot disponible y marca `notified_at`. Evento `waitlist_notificado` persiste en `conversation_events`.
+- **Panel admin**: endpoints `GET /admin/api/waitlist` y `POST /admin/api/waitlist/{id}/cancel`. `/health` expone `waitlist_depth`.
+- **`listar_citas_paciente` enriquecido** con `id_profesional` y `especialidad` (derivados de `PROFESIONALES`) → necesarios para que reagendar pueda reusar la especialidad sin preguntar.
+- **Menú ampliado a 6 opciones**: Agendar / Reagendar / Cancelar / Ver / Lista espera / Recepción. Atajos numéricos 1..6. Fidelización buttons reaccomodados (id "1" → "2" para "Sí, reagendar") para no colisionar con la nueva opción del menú.
+- Commit `e619125` deployado. Scheduler verificado con 11 jobs incluyendo `waitlist_check` y `medilink_watchdog`. `/health` reporta `waitlist_depth: 0` en verde.
+
+**Hecho (sesión 2026-04-10 — modo degradado + UX FAQ-to-agendar)**:
+- **Modo degradado Medilink**: tabla `intent_queue` + `resilience.py` (`is_medilink_down`, `mark_medilink_down/up`, throttle de alertas a recepción). Cuando el bot detecta fallo cascada, encola la intención del paciente, le responde "sistema temporalmente fuera de servicio, te escribo apenas vuelva" y dispara alerta a `ADMIN_ALERT_PHONE`. Cron `_job_medilink_watchdog` cada 1 min: si down, intenta `/sucursales`; al recuperar, avisa a cada paciente encolado y confirma a recepción.
+- **UX FAQ-to-agendar**: cuando el usuario pregunta por un tratamiento (ej. "¿qué es una tapadura?"), después de la respuesta el bot pre-busca el slot más próximo y ofrece botón "✅ Sí, agendar" con horario inline. `IDLE` handler prioritario antes de atajos numéricos captura `especialidad_sugerida` en `data` para que "1"/"sí"/tap al botón rutee directo a `_iniciar_agendar(..., esp_sug_prev)`.
+
 **Hecho (sesión 2026-04-10 — glosario FAQ + Fase 1 multimodal)**:
 - **Panel conversaciones**: fix ordenamiento `get_conversations` usa `MAX(m.ts, s.updated_at)` para que FAQs en `WAIT_SLOT` (sin `save_session`) sigan burbujeando arriba; `save_session` forzado en el handler FAQ de `WAIT_SLOT`
 - **Panel chat**: orden cronológico estilo WhatsApp (antiguo arriba → nuevo abajo con auto-scroll sticky-bottom, tolerancia 120px)
@@ -255,7 +268,7 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - Fidelización completa en `app/fidelizacion.py` (post-consulta, reactivación, adherencia kine, control esp., cross-sell)
 - Detección pasiva de Arauco: cualquier mención guarda tag silenciosamente
 
-**Estado del servidor**: ✅ corriendo en `https://agentecmc.cl`, deployado commit `8b901dc`. Verificaciones OK: `/health` con ping Medilink, auth admin por query y header, WAL activo, scheduler con 9 jobs incluyendo `purge_old_data` dom 04:00.
+**Estado del servidor**: ✅ corriendo en `https://agentecmc.cl`, deployado commit `e619125`. Verificaciones OK: `/health` reporta `medilink:ok`, `medilink_state:up`, `intent_queue_depth:0`, `waitlist_depth:0`; scheduler con 11 jobs registrados (incluye `waitlist_check` 07:00 CLT y `medilink_watchdog` cada 1 min).
 
 **Pendiente (corto plazo)**:
 - Agregar `OPENAI_API_KEY` al `.env` del servidor y deployar Fase 1 Whisper (commits locales listos, no pusheados)
@@ -265,11 +278,11 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - Tags clínicos automáticos (dolor lumbar, rehabilitación) — detectar con Claude y guardar en contact_tags
 
 **Próximo sprint (plan aprobado 2026-04-10, pendiente arranque)**:
-1. 🥇 **Modo degradado Medilink** — tabla `intent_queue` + wrapper `safe_medilink_call()` + mensaje graceful al paciente + notificación throttled a recepción + cron de recuperación (sin auto-replay). `/health` con profundidad de cola.
-2. 🥈 **Reagendar en un paso** — nuevo intent + estados `WAIT_RUT_REAGENDAR → WAIT_CITA_REAGENDAR → WAIT_NEW_SLOT → CONFIRMING_REAGENDAR`. Regla crítica: crear la nueva primero, cancelar anterior solo si OK.
-3. **Confirmación sí/no pre-cita** — botón `Confirmo` / `Cambiar hora` en el recordatorio de 09:00 AM del día anterior (reduce no-shows).
-4. **Copagos Fonasa/Isapre al confirmar** — requiere verificar si Medilink expone previsión del paciente.
-5. **Lista de espera** — tabla + cron de detección de cupo + notificación.
+1. ✅ ~~Modo degradado Medilink~~ — DONE
+2. ✅ ~~Reagendar en un paso~~ — DONE
+3. ✅ ~~Lista de espera~~ — DONE
+4. **Confirmación sí/no pre-cita** — botón `Confirmo` / `Cambiar hora` en el recordatorio de 09:00 AM del día anterior (reduce no-shows).
+5. **Copagos Fonasa/Isapre al confirmar** — requiere verificar si Medilink expone previsión del paciente.
 6. **Dashboard métricas fidelización** — tasa respuesta post-consulta, conversión reactivación, adherencia kine.
 7. **Tests automatizados** — sprint dedicado, no intercalado con features.
 
