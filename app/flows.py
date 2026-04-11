@@ -132,6 +132,70 @@ _SENALES_SINTOMA = re.compile(
 )
 
 
+# ── Precios por especialidad ──────────────────────────────────────────────────
+# Fuente: SYSTEM_PROMPT en claude_helper.py. Mayoría de pacientes son Fonasa,
+# los particulares pueden preguntar el precio particular en la conversación.
+# Formato: (modalidad, precio[, sufijo]) donde modalidad es "fonasa" o "particular"
+# y sufijo es opcional: "desde", "evaluación", "control".
+PRECIOS_SLOT = {
+    "Medicina General":       ("fonasa",     7880),
+    "Kinesiología":           ("fonasa",     7830),
+    "Psicología Adulto":      ("fonasa",    14420),
+    "Psicología Infantil":    ("fonasa",    14420),
+    "Nutrición":              ("fonasa",     4770),
+    "Matrona":                ("fonasa",    16000),
+    "Fonoaudiología":         ("particular", 25000),
+    "Podología":              ("particular", 20000, "desde"),
+    "Cardiología":            ("particular", 40000),
+    "Ginecología":            ("particular", 30000),
+    "Traumatología":          ("particular", 35000),
+    "Otorrinolaringología":   ("particular", 35000),
+    "Gastroenterología":      ("particular", 35000),
+    "Ecografía":              ("particular", 40000),
+    "Odontología General":    ("particular", 15000, "evaluación"),
+    "Ortodoncia":             ("particular", 30000, "control"),
+    "Endodoncia":             ("particular",110000, "desde"),
+    "Implantología":          ("particular",650000, "desde"),
+    "Estética Facial":        ("particular", 15000, "evaluación"),
+}
+
+
+def _precio_line(especialidad: str, slot: dict | None = None) -> str:
+    """Línea de precio para mostrar al ofrecer un slot. Empty string si no hay mapeo."""
+    if not especialidad:
+        return ""
+    esp = especialidad.strip()
+    # Masoterapia: precio depende de la duración del slot (20 o 40 min)
+    if esp.lower() == "masoterapia":
+        if not slot:
+            return ""
+        try:
+            hi = slot["hora_inicio"]
+            hf = slot["hora_fin"]
+            mins = (int(hf[:2]) * 60 + int(hf[3:5])) - (int(hi[:2]) * 60 + int(hi[3:5]))
+        except (KeyError, ValueError, IndexError):
+            return ""
+        if mins >= 35:
+            return "💰 Sesión 40 min: $26.990"
+        return "💰 Sesión 20 min: $17.990"
+    entry = PRECIOS_SLOT.get(esp)
+    if not entry:
+        return ""
+    modalidad = entry[0]
+    precio = entry[1]
+    sufijo = entry[2] if len(entry) > 2 else None
+    precio_str = f"${precio:,}".replace(",", ".")
+    if modalidad == "fonasa":
+        return f"💰 Fonasa: {precio_str}"
+    if sufijo == "desde":
+        return f"💰 Consulta: desde {precio_str}"
+    if sufijo == "evaluación":
+        return f"💰 Evaluación: {precio_str}"
+    if sufijo == "control":
+        return f"💰 Control: {precio_str}"
+    return f"💰 Consulta: {precio_str}"
+
+
 # ── Helpers de mensajes interactivos ──────────────────────────────────────────
 
 def _list_msg(body_text: str, button_label: str, sections: list) -> dict:
@@ -738,11 +802,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                      "todos_slots": todos, "fechas_vistas": [fecha],
                      "expansion_stage": 0, "prof_sugerido_id": prof_sugerido_id})
         save_session(phone, "WAIT_SLOT", data)
+        precio_linea = _precio_line("masoterapia", mejor)
+        precio_str = f"{precio_linea}\n\n" if precio_linea else ""
         return _btn_msg(
             f"Encontré disponibilidad ✨\n\n"
             f"🏥 *Masoterapia* — {mejor['profesional']}\n"
             f"📅 *{mejor['fecha_display']}*\n"
             f"🕐 *{mejor['hora_inicio'][:5]}* ({duracion_maso} min) ⭐\n\n"
+            f"{precio_str}"
             "¿La agendo?",
             [
                 {"id": "confirmar_sugerido", "title": "✅ Sí, esa hora"},
@@ -1791,11 +1858,14 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None) -> 
     else:
         botones.append({"id": "otro_dia", "title": "📅 Otro día"})
 
+    precio_linea = _precio_line(mejor.get("especialidad", ""), mejor)
+    precio_str = f"{precio_linea}\n\n" if precio_linea else ""
     return _btn_msg(
         f"{saludo}Encontré disponibilidad ✨\n\n"
         f"🏥 *{mejor['especialidad']}* — {mejor['profesional']}\n"
         f"📅 *{mejor['fecha_display']}*\n"
         f"🕐 *{mejor['hora_inicio'][:5]}* ⭐\n\n"
+        f"{precio_str}"
         "¿La agendo?",
         botones
     )
@@ -1934,6 +2004,7 @@ def _format_slots(slots: list, mostrar_todos: bool = False):
         return "No hay horarios disponibles."
     fecha = slots[0]["fecha_display"]
     prof  = slots[0]["profesional"]
+    precio_linea = _precio_line(slots[0].get("especialidad", ""), slots[0])
 
     # Usar lista interactiva cuando caben en el límite de 10 filas total
     nav_rows = []
@@ -1951,14 +2022,20 @@ def _format_slots(slots: list, mostrar_todos: bool = False):
         sections = [{"title": fecha[:24], "rows": slot_rows}]
         if nav_rows:
             sections.append({"title": "Más opciones", "rows": nav_rows})
+        body = f"Te encontré estas opciones 👇\n\n*{fecha}* — {prof}"
+        if precio_linea:
+            body += f"\n{precio_linea}"
         return _list_msg(
-            body_text=f"Te encontré estas opciones 👇\n\n*{fecha}* — {prof}",
+            body_text=body,
             button_label="Ver horarios",
             sections=sections,
         )
 
     # Fallback texto para listas muy largas
-    lineas = [f"📅 *{fecha}* — {prof}\n"]
+    lineas = [f"📅 *{fecha}* — {prof}"]
+    if precio_linea:
+        lineas.append(precio_linea)
+    lineas.append("")
     for i, s in enumerate(slots, 1):
         hora = s['hora_inicio'][:5]
         prefix = f"*{i}.* ⭐ {hora} (recomendado)" if i == 1 and not mostrar_todos else f"*{i}.* {hora}"
