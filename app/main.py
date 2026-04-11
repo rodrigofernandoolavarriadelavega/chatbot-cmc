@@ -23,7 +23,7 @@ from config import (META_ACCESS_TOKEN, META_PHONE_NUMBER_ID, META_VERIFY_TOKEN,
                     CMC_TELEFONO, ADMIN_TOKEN, ORTODONCIA_TOKEN, OPENAI_API_KEY,
                     ADMIN_ALERT_PHONE)
 from flows import handle_message
-from reminders import enviar_recordatorios
+from reminders import enviar_recordatorios, enviar_recordatorios_2h
 from fidelizacion import (enviar_seguimiento_postconsulta, enviar_reactivacion_pacientes,
                           enviar_adherencia_kine, enviar_recordatorio_control,
                           enviar_crosssell_kine)
@@ -133,6 +133,7 @@ async def _sync_citas_hoy():
 
 
 async def _job_recordatorios():          await enviar_recordatorios(send_whatsapp, send_whatsapp_interactive)
+async def _job_recordatorios_2h():       await enviar_recordatorios_2h(send_whatsapp)
 async def _job_postconsulta():           await enviar_seguimiento_postconsulta(send_whatsapp)
 async def _job_reactivacion():           await enviar_reactivacion_pacientes(send_whatsapp)
 async def _job_adherencia_kine():        await enviar_adherencia_kine(send_whatsapp)
@@ -279,11 +280,19 @@ async def lifespan(app: FastAPI):
     # Pasamos la función async (NO una lambda que llame asyncio.create_task),
     # porque ese patrón rompe con "RuntimeError: no running event loop" cuando
     # el scheduler despacha jobs fuera del contexto del loop principal.
-    # Recordatorios: todos los días a las 9:00 AM hora Chile
+    # Recordatorios 24h: todos los días a las 9:00 AM hora Chile
     scheduler.add_job(
         _job_recordatorios,
         CronTrigger(hour=9, minute=0),
         id="recordatorios_diarios",
+        replace_existing=True,
+    )
+    # Recordatorios 2h: cada 15 min entre 7:30 y 21:30 CLT (rango típico de atención)
+    # Busca citas cuyo horario caiga 1h45-2h15 en el futuro y las notifica.
+    scheduler.add_job(
+        _job_recordatorios_2h,
+        CronTrigger(hour="7-21", minute="0,15,30,45"),
+        id="recordatorios_2h",
         replace_existing=True,
     )
     # Reenganche: cada 5 minutos revisa sesiones abandonadas
@@ -358,10 +367,10 @@ async def lifespan(app: FastAPI):
     )
     scheduler.start()
     log.info(
-        "Scheduler iniciado — recordatorios 09:00 · post-consulta 10:00 · "
-        "reactivación lun 10:30 · adherencia kine 11:00 · control 11:30 · "
-        "cross-sell kine mié 10:30 · sync caché 23:50 · purge dom 04:00 · "
-        "watchdog medilink 1min"
+        "Scheduler iniciado — recordatorios 09:00 · recordatorios 2h cada 15min · "
+        "post-consulta 10:00 · reactivación lun 10:30 · adherencia kine 11:00 · "
+        "control 11:30 · cross-sell kine mié 10:30 · sync caché 23:50 · "
+        "purge dom 04:00 · watchdog medilink 1min"
     )
     yield
     scheduler.shutdown()

@@ -175,6 +175,11 @@ def _conn():
         conn.execute("ALTER TABLE citas_bot ADD COLUMN confirmation_at TEXT")
     except sqlite3.OperationalError:
         pass
+    # Migración: recordatorio 2 horas antes (separado del recordatorio 24h)
+    try:
+        conn.execute("ALTER TABLE citas_bot ADD COLUMN reminder_2h_sent INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass
     conn.commit()
     return conn
 
@@ -315,6 +320,28 @@ def mark_reminder_sent(cita_id: int):
     """Marca una cita como recordatorio enviado."""
     with _conn() as conn:
         conn.execute("UPDATE citas_bot SET reminder_sent=1 WHERE id=?", (cita_id,))
+        conn.commit()
+
+
+def get_citas_bot_para_2h_reminder(fecha: str, hora_min: str, hora_max: str) -> list[dict]:
+    """Devuelve citas del día `fecha` cuyo horario cae en [hora_min, hora_max]
+    y donde aún no se envió el recordatorio de 2 horas antes. Los rangos horarios
+    se comparan como string HH:MM:SS (formato en el que se almacenan en citas_bot)."""
+    with _conn() as conn:
+        rows = conn.execute(
+            """SELECT * FROM citas_bot
+               WHERE fecha=? AND hora>=? AND hora<=?
+                 AND (reminder_2h_sent IS NULL OR reminder_2h_sent=0)
+                 AND (confirmation_status IS NULL OR confirmation_status != 'cancelar')""",
+            (fecha, hora_min, hora_max),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def mark_reminder_2h_sent(cita_id: int):
+    """Marca una cita como recordatorio 2h enviado."""
+    with _conn() as conn:
+        conn.execute("UPDATE citas_bot SET reminder_2h_sent=1 WHERE id=?", (cita_id,))
         conn.commit()
 
 
