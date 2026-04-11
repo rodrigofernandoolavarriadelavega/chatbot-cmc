@@ -29,11 +29,22 @@ from config import GES_ASSISTANT_URL
 
 # Abreviaciones comunes en WhatsApp. Aplicar con word boundaries para no
 # destrozar palabras reales que contengan estas letras.
+#
+# Fuentes consultadas para el vocabulario chileno rural:
+#   - wikilengua.org (abreviaciones chat español)
+#   - apocatastasis.com (diccionario chilenismos)
+#   - doctoralia.cl / foros de salud (consultas reales de pacientes)
+#
+# Regla de oro: solo agregamos tokens que NO colisionan con palabras válidas
+# del español estándar. Si una abreviación podría ser otra palabra válida,
+# NO se agrega (ej. "as" podría ser "haz", mejor no tocarlo).
 _ABREVIACIONES = {
+    # ── Conectores / pronombres / auxiliares WhatsApp ─────────────────
     "q": "que",
     "xq": "porque",
     "pq": "porque",
     "xfa": "por favor",
+    "xfi": "por favor",
     "tb": "también",
     "tbn": "también",
     "tmb": "también",
@@ -50,31 +61,87 @@ _ABREVIACIONES = {
     "pa": "para",
     "tngo": "tengo",
     "tnga": "tenga",
-    "dlr": "dolor",
-    "dlor": "dolor",
-    "dlor": "dolor",
-    "kbza": "cabeza",
-    "cbza": "cabeza",
-    "cbz": "cabeza",
-    "grgnta": "garganta",
-    "grganta": "garganta",
-    "pcho": "pecho",
-    "pxo": "pecho",
-    "krzn": "corazon",
-    "korzn": "corazon",
-    "mucha": "mucha",   # placeholder — lo importante son los demás
-    "muxo": "mucho",
-    "mxo": "mucho",
-    "m": "me",          # ej "m duele"
-    "t": "te",          # ej "t siento"
+    "tngs": "tienes",
+    "tnes": "tienes",
+    "snto": "siento",
+    "sntir": "sentir",
+    "spro": "espero",
     "stoy": "estoy",
     "sta": "esta",
     "ta": "esta",       # "ta bien"
     "bn": "bien",
     "ml": "mal",
+    "muxo": "mucho",
+    "mxo": "mucho",
+    "mxa": "mucha",
+    "m": "me",          # ej "m duele"
+    "t": "te",          # ej "t siento"
     "kiero": "quiero",
     "kero": "quiero",
     "ke": "que",
+    "kmo": "como",
+    "komo": "como",
+    # Tiempo / fechas
+    "hrs": "horas",
+    "hs": "horas",
+    "ayr": "ayer",
+    "hoi": "hoy",
+    "mnna": "mañana",
+    "mana": "mañana",
+    "nxe": "noche",
+    "noxe": "noche",
+    # Personas de contexto clínico frecuente
+    "dr": "doctor",
+    "dra": "doctora",
+    "mjer": "mujer",
+    "mjr": "mujer",
+    "hno": "hermano",
+    "hna": "hermana",
+    "hijo": "hijo",     # placeholder, pero asegura que no se destroce
+    "ija": "hija",
+    "ijo": "hijo",
+    # ── Síntomas / dolor (abreviaciones WhatsApp) ─────────────────────
+    "dlr": "dolor",
+    "dlor": "dolor",
+    "dolr": "dolor",
+    "duel": "duele",
+    # ── Partes del cuerpo (abreviaciones WhatsApp) ────────────────────
+    "kbza": "cabeza",
+    "cbza": "cabeza",
+    "cbz": "cabeza",
+    "grgnta": "garganta",
+    "grganta": "garganta",
+    "grnta": "garganta",
+    "pcho": "pecho",
+    "pxo": "pecho",
+    "krzn": "corazon",
+    "korzn": "corazon",
+    "stmgo": "estomago",
+    "estmgo": "estomago",
+    "esplda": "espalda",
+    "rnion": "riñon",
+    "rniones": "riñones",
+    # ── Léxico rural chileno (modismos confirmados en foros de salud) ─
+    # Estos NO son abreviaciones sino sinónimos coloquiales que el motor
+    # GES no matchea en su forma chilena. Los mapeamos al término médico.
+    "guata": "estomago",
+    "guatita": "estomago",
+    "wata": "estomago",
+    "watita": "estomago",
+    "cototo": "hinchazon",     # chichón / bulto
+    "chichon": "hinchazon",
+    "empacho": "indigestion",  # indigestión rural chilena
+    "empachado": "indigestion",
+    "empacha": "indigestion",
+    "rasquiña": "picazon",     # picazón en modo rural
+    "rasca": "picazon",
+    "rascazon": "picazon",
+    "comezon": "picazon",
+    "comeson": "picazon",
+    "picason": "picazon",
+    "pikason": "picazon",
+    "escosor": "ardor",
+    "escozor": "ardor",
 }
 
 # Participios rurales chilenos: "sangrao" → "sangrado", "hinchao" → "hinchado".
@@ -83,21 +150,111 @@ _ABREVIACIONES = {
 _RE_PARTICIPIO = re.compile(r"\b([a-z]{3,})ao\b")
 
 # Errores ortográficos frecuentes (1-2 letras). Estos son seguros porque no
-# colisionan con palabras válidas del español.
+# colisionan con palabras válidas del español. Recopilados de consultas
+# reales en foros de salud (doctoralia, mispacientes) y patrones comunes
+# de escritura en WhatsApp rural.
 _TYPOS = {
+    # ── Fiebre ────────────────────────────────────────────────────────
     "feber": "fiebre",
     "fieber": "fiebre",
     "feiber": "fiebre",
+    "fieber": "fiebre",
+    "fievre": "fiebre",
+    "fievbre": "fiebre",
+    # ── Cabeza ────────────────────────────────────────────────────────
+    "cabesa": "cabeza",
+    "kabeza": "cabeza",
+    "kabesa": "cabeza",
+    "kabza": "cabeza",
+    "cbeza": "cabeza",
+    # ── Garganta ──────────────────────────────────────────────────────
     "gargnta": "garganta",
     "garnganta": "garganta",
+    "garnta": "garganta",
+    "gargant": "garganta",
+    # ── Estómago / barriga / abdomen ──────────────────────────────────
     "estomgo": "estomago",
     "estmago": "estomago",
+    "stomago": "estomago",
+    "estomao": "estomago",
     "barigga": "barriga",
+    "barriga": "barriga",
+    "abdomn": "abdomen",
+    "abdmn": "abdomen",
+    # ── Espalda / columna / riñón ─────────────────────────────────────
+    "espada": "espalda",       # typo común
+    "esplada": "espalda",
+    "columa": "columna",
+    "rinion": "riñon",
+    "riniones": "riñones",
+    # ── Rodilla / pierna ──────────────────────────────────────────────
+    "rodia": "rodilla",
+    "rodila": "rodilla",
+    "rodiya": "rodilla",
+    "piernaa": "pierna",
+    # ── Pecho / corazón ───────────────────────────────────────────────
+    "corazn": "corazon",
+    "corazion": "corazon",
+    "peccho": "pecho",
+    # ── Diarrea / vómitos / náuseas ───────────────────────────────────
     "diarea": "diarrea",
     "diarria": "diarrea",
-    "vomitos": "vomitos",  # ya está ok, placeholder
+    "diarre": "diarrea",
     "bomitos": "vomitos",
     "bomito": "vomito",
+    "vomitar": "vomitar",
+    "nausias": "nauseas",
+    "nauceas": "nauseas",
+    "nauzias": "nauseas",
+    "nauzeas": "nauseas",
+    "nausea": "nauseas",
+    # ── Enfermedades respiratorias ────────────────────────────────────
+    "gripa": "gripe",
+    "gripi": "gripe",
+    "resfrio": "resfriado",
+    "resfriao": "resfriado",
+    "pulmona": "pulmonia",
+    "pulmunia": "pulmonia",
+    "neumonia": "neumonia",    # ok, placeholder
+    "bronkitis": "bronquitis",
+    "brokitis": "bronquitis",
+    "bronqitis": "bronquitis",
+    "bronquits": "bronquitis",
+    "astma": "asma",
+    "tos": "tos",              # placeholder
+    # ── Crónicas / metabólicas ────────────────────────────────────────
+    "preson": "presion",
+    "precion": "presion",
+    "presionalta": "presion alta",
+    "hipertension": "hipertension",
+    "diabetis": "diabetes",
+    "diabete": "diabetes",
+    "dibetes": "diabetes",
+    "colesterl": "colesterol",
+    "tiroide": "tiroides",
+    # ── Alergias / piel ───────────────────────────────────────────────
+    "alerjia": "alergia",
+    "alergi": "alergia",
+    "urticria": "urticaria",
+    # ── Emergencias / eventos graves ──────────────────────────────────
+    "infrto": "infarto",
+    "infarto": "infarto",      # placeholder
+    "derame": "derrame",
+    "hemoragia": "hemorragia",
+    "hemrragia": "hemorragia",
+    "emorragia": "hemorragia",
+    "conbulsion": "convulsion",
+    "combulsion": "convulsion",
+    "convulcion": "convulsion",
+    "desmayo": "desmayo",      # placeholder
+    "desmallo": "desmayo",
+    # ── Infección / pus / hinchazón ───────────────────────────────────
+    "infecion": "infeccion",
+    "infeccon": "infeccion",
+    "hinxado": "hinchado",
+    "inchado": "hinchado",
+    "inchao": "hinchado",
+    "inflamao": "inflamado",
 }
 
 
