@@ -44,11 +44,6 @@ EMERGENCIAS  = {
     "emergencia", "urgencia", "dolor muy fuerte", "no puedo respirar",
     "estoy grave", "me estoy muriendo", "perdí el conocimiento", "perdi el conocimiento",
     "mucho dolor", "accidente", "desmayo", "convulsion", "convulsión",
-    # frases de amenaza vital — no son literalmente "muriendo" pero el paciente
-    # está señalando peligro vital en castellano chileno coloquial
-    "me muero", "me voy a morir", "voy a morir", "me siento morir",
-    "me quiero morir", "creo que me muero", "me estoy por morir",
-    "me estoy muriendo de", "no puedo mas", "no puedo más",
     # respiratorio severo
     "me ahogo", "no me entra aire", "ahogo fuerte",
     # cardiovascular severo
@@ -77,11 +72,50 @@ EMERGENCIAS  = {
 EMERGENCIAS_PATRONES = [
     re.compile(r"dolor.{0,20}fuerte.{0,20}pecho"),
     re.compile(r"pecho.{0,20}dolor.{0,20}fuerte"),
+    re.compile(r"duele.{0,20}pecho.{0,20}(fuerte|mucho|harto|arto|insoport|tanto)"),
+    re.compile(r"(fuerte|mucho|harto).{0,10}(me\s+)?duele.{0,20}pecho"),
+    re.compile(r"pecho.{0,15}(me\s+)?duele.{0,15}(fuerte|mucho|harto)"),
     re.compile(r"mucho.{0,10}sangr"),
     re.compile(r"sangr\w*.{0,15}mucho"),
     re.compile(r"sangr\w*.{0,15}no\s+para"),
     re.compile(r"no\s+para.{0,15}sangr"),
     re.compile(r"hemorragia"),
+]
+
+# Patrones de amenaza vital física con lookahead negativo para excluir
+# colloquialismos chilenos como "me muero de hambre/risa/sed/calor/sueño/frío".
+# Estos patrones tienen que ser regex (no substrings) porque el set EMERGENCIAS
+# hace match por substring y "me muero" estaría dentro de "me muero de hambre".
+_COLLOQ_MUERO = r"(hambre|sed|risa|calor|sueno|sueño|frio|frío|ganas|amor|pena|aburri|cansanci|nervios|ansi|susto|verguenza|vergüenza|pica|celos|rabia|emocion|emoción|alegria|alegría)"
+EMERGENCIAS_VITAL_PATRONES = [
+    re.compile(rf"\bme\s+muero(?!\s+de\s+{_COLLOQ_MUERO})"),
+    re.compile(rf"\bme\s+voy\s+a\s+morir(?!\s+de\s+{_COLLOQ_MUERO})"),
+    re.compile(rf"\bvoy\s+a\s+morir(?!\s+de\s+{_COLLOQ_MUERO})"),
+    re.compile(r"\bcreo\s+que\s+me\s+(muero|voy\s+a\s+morir)"),
+    re.compile(r"\bme\s+siento\s+morir"),
+    re.compile(rf"\bme\s+estoy\s+muriendo(?!\s+de\s+{_COLLOQ_MUERO})"),
+    re.compile(r"\bestoy\s+muri[eé]ndome"),
+    re.compile(r"\bme\s+estoy\s+por\s+morir"),
+]
+
+# Crisis de salud mental / ideación suicida — respuesta diferenciada con
+# Salud Responde 600 360 7777 además del SAMU. Tono de contención.
+# "me quiero morir" va acá, NO a amenaza vital física (merece otro mensaje).
+SALUD_MENTAL_CRISIS = {
+    "me quiero matar", "me quiero suicidar", "quiero suicidarme",
+    "quiero matarme", "voy a suicidarme", "voy a matarme",
+    "no quiero vivir", "no quiero seguir viviendo",
+    "pensamientos suicidas", "ideacion suicida", "ideación suicida",
+    "quiero acabar con todo", "quiero acabar con mi vida",
+    "no aguanto mas vivir", "no aguanto más vivir",
+}
+
+SALUD_MENTAL_PATRONES = [
+    re.compile(r"\b(me\s+quiero|quiero)\s+(morir|matar|suicidar)"),
+    re.compile(r"\b(me\s+voy\s+a|voy\s+a)\s+(matar|suicidar)(?:me)?"),
+    re.compile(r"\bno\s+quiero\s+(vivir|seguir\s+viviendo|estar\s+vivo)"),
+    re.compile(r"\bpensamientos?\s+suicida"),
+    re.compile(r"\bquiero\s+acabar\s+con\s+(todo|mi\s+vida)"),
 ]
 
 DISCLAIMER = "_Recuerda que soy un asistente virtual, no un médico. Para consultas clínicas, habla siempre con un profesional de salud._"
@@ -269,13 +303,40 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     if tl.startswith(("cita_confirm:", "cita_reagendar:", "cita_cancelar:")):
         return await _handle_confirmacion_precita(phone, tl, data)
 
-    # ── Emergencias ───────────────────────────────────────────────────────────
+    # ── Crisis de salud mental (prioridad 1) ─────────────────────────────────
+    # Ideación suicida merece un mensaje diferenciado con tono de contención
+    # + Salud Responde 600 360 7777 además de SAMU 131. Va ANTES que
+    # emergencias físicas porque "me quiero morir" y "me quiero matar" no son
+    # amenaza vital física sino crisis de salud mental.
+    if (any(p in tl_norm for p in SALUD_MENTAL_CRISIS)
+            or any(pat.search(tl_norm) for pat in SALUD_MENTAL_PATRONES)
+            or any(p in tl for p in SALUD_MENTAL_CRISIS)
+            or any(pat.search(tl) for pat in SALUD_MENTAL_PATRONES)):
+        save_tag(phone, "crisis-salud-mental")
+        log_event(phone, "crisis_salud_mental", {"texto": txt[:240]})
+        return (
+            "Lamento mucho lo que estás sintiendo 💙 Lo que me cuentas es muy "
+            "importante y no estás solo/a.\n\n"
+            "Por favor, habla ahora con alguien que pueda ayudarte:\n\n"
+            "🆘 *Salud Responde*: 600 360 7777 (24 h, atención en crisis)\n"
+            "🚑 *SAMU*: 131 (emergencias)\n"
+            f"📞 *CMC*: {CMC_TELEFONO}\n\n"
+            "Si puedes, acércate a un familiar, vecino o persona de confianza "
+            "mientras llamas. Buscar ayuda es un acto de valentía 💙"
+        )
+
+    # ── Emergencias físicas (prioridad 2) ─────────────────────────────────────
     # Usamos tl_norm para capturar variantes abreviadas ("dlor fuerte d pcho"),
     # y tl como fallback por si la normalización rompe algún match existente.
+    # `EMERGENCIAS_VITAL_PATRONES` tiene lookahead negativo para excluir
+    # colloquialismos como "me muero de hambre/risa/sed".
     if (any(p in tl_norm for p in EMERGENCIAS)
             or any(pat.search(tl_norm) for pat in EMERGENCIAS_PATRONES)
+            or any(pat.search(tl_norm) for pat in EMERGENCIAS_VITAL_PATRONES)
             or any(p in tl for p in EMERGENCIAS)
-            or any(pat.search(tl) for pat in EMERGENCIAS_PATRONES)):
+            or any(pat.search(tl) for pat in EMERGENCIAS_PATRONES)
+            or any(pat.search(tl) for pat in EMERGENCIAS_VITAL_PATRONES)):
+        log_event(phone, "emergencia_detectada", {"texto": txt[:240]})
         return (
             "⚠️ Esto suena como una urgencia.\n\n"
             "Llama al *SAMU 131* o acude al servicio de urgencias más cercano ahora mismo.\n\n"
@@ -538,6 +599,26 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return await _iniciar_waitlist(phone, data, especialidad)
 
         if intent == "humano":
+            # Override defensivo: Claude Haiku ocasionalmente clasifica
+            # frases con carga clínica/vital como "humano" cuando deberían ser
+            # emergencia. Las capas anteriores (SALUD_MENTAL_CRISIS + EMERGENCIAS)
+            # ya filtran lo obvio, pero si por alguna combinación rara algo se
+            # coló hasta acá, reroutear antes de mandar al paciente a recepción.
+            _DANGER_KW = (
+                "morir", "muero", "muerte", "super mal", "súper mal",
+                "muy mal", "muy grave", "estoy grave", "desmay",
+                "convuls", "ahogo", "no puedo respir", "sangre",
+                "dolor fuerte", "dolor muy fuerte",
+            )
+            if any(kw in tl_norm for kw in _DANGER_KW) or any(kw in tl for kw in _DANGER_KW):
+                log_event(phone, "humano_override_emergencia", {"texto": txt[:240]})
+                return (
+                    "⚠️ Lo que describes puede requerir atención urgente.\n\n"
+                    "Por favor, llama al *SAMU 131* o acude al servicio de "
+                    "urgencias más cercano ahora mismo.\n\n"
+                    f"También puedes contactarnos:\n📞 *{CMC_TELEFONO}*\n"
+                    f"☎️ *{CMC_TELEFONO_FIJO}*"
+                )
             return _derivar_humano(phone=phone, contexto=txt)
 
         if intent == "disponibilidad":
@@ -1327,11 +1408,62 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
     # ── HUMAN_TAKEOVER ────────────────────────────────────────────────────────
     if state == "HUMAN_TAKEOVER":
+        # Auto-escape: si el paciente cambió de tema y su mensaje tiene una
+        # intención accionable (agendar, cancelar, precio, info, etc.), NO lo
+        # dejamos atrapado esperando a la recepcionista — reseteamos la sesión
+        # y re-procesamos el mismo texto desde IDLE. Así el bot "entiende solo"
+        # cuando el paciente retoma el flujo, sin obligarlo a escribir "hola".
+        # Los botones de confirmación pre-cita ya se manejan arriba, por eso
+        # acá solo consultamos Claude si es texto libre de cierta longitud.
+        _es_boton_precita = tl.startswith(("cita_confirm:", "cita_reagendar:", "cita_cancelar:"))
+        if not _es_boton_precita and len(txt) >= 3:
+            try:
+                _result = await detect_intent(txt)
+                _intent = _result.get("intent", "otro")
+            except Exception:
+                _intent = "otro"
+            _ACCIONABLES = {
+                "agendar", "reagendar", "cancelar", "ver_reservas",
+                "waitlist", "disponibilidad", "precio", "info",
+            }
+            if _intent in _ACCIONABLES:
+                log_event(phone, "human_takeover_exit", {"intent": _intent, "texto": txt[:120]})
+                reset_session(phone)
+                fresh_session = {"state": "IDLE", "data": {}}
+                return await handle_message(phone, texto, fresh_session)
+
         # Mensaje quedó guardado en el historial — recepcionista responde desde el panel
         # Solo respondemos si el paciente sigue enviando mensajes para que no sienta silencio
         msgs_sin_respuesta = data.get("msgs_sin_respuesta", 0) + 1
         data["msgs_sin_respuesta"] = msgs_sin_respuesta
         save_session(phone, "HUMAN_TAKEOVER", data)
+
+        # Si el paciente escribe un mensaje con señal clínica (síntoma o
+        # palabra clave de patología) mientras está en HUMAN_TAKEOVER, no
+        # respondamos con "Recibido 🙏" porque se siente desatendido. Le
+        # damos un mensaje más específico que reconoce el contenido clínico
+        # y refuerza el canal de urgencia.
+        _CLINICAL_KWS = (
+            "diabet", "hipert", "presion", "presión", "azucar", "azúcar",
+            "colesterol", "tiroid", "asma", "epilep", "cancer", "cáncer",
+            "embaraz", "operac", "cirug", "medicament", "pastilla",
+            "remedio", "receta", "examen", "análisis", "analisis",
+            "control", "chequeo", "tratamient", "diagnost", "diagnóstic",
+        )
+        texto_clinico = (
+            _SENALES_SINTOMA.search(tl)
+            or any(kw in tl_norm for kw in _CLINICAL_KWS)
+            or any(kw in tl for kw in _CLINICAL_KWS)
+        )
+        if texto_clinico:
+            log_event(phone, "human_takeover_clinico", {"texto": txt[:240]})
+            return (
+                "Gracias por contarnos 🙏 Ya registré tu mensaje para que una "
+                "recepcionista te responda en este chat.\n\n"
+                f"*Si es urgente o empeora, llama ahora:*\n📞 *{CMC_TELEFONO}*\n"
+                "🚑 *SAMU*: 131"
+            )
+
         if msgs_sin_respuesta == 1:
             return "Recibido 🙏 Una recepcionista te responderá en este chat en breve."
         if msgs_sin_respuesta % 3 == 0:
