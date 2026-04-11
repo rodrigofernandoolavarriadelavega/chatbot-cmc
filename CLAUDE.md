@@ -222,7 +222,36 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - Muestra métricas, conversaciones activas y estado del sistema
 
 ## Sesión en curso
-**Fecha**: 2026-04-10
+**Fecha**: 2026-04-10 (continuación nocturna)
+
+**Hecho (sesión 2026-04-10/11 — git GES + swap + backup cron)**:
+- **Repo privado `ges-clinical-app` creado en GitHub**: https://github.com/rodrigofernandoolavarriadelavega/ges-clinical-app
+  - Monorepo con `backend/` (FastAPI) y `frontend/` (Next.js 14) en la raíz
+  - `.gitignore` completo cubriendo venv, node_modules, .next, `*.db`, `.env*`, `.DS_Store`
+  - Commit inicial `56983b0` con 77 archivos, cero secretos
+  - `backend/data/ges.db` gitignoreada (se regenera con `scripts/seed*.py`)
+  - Repo creado vía `POST /user/repos` de GitHub API, reutilizando el PAT que estaba embedded en el remote de `chatbot-cmc` por consistencia
+  - **⚠️ Deuda**: el PAT queda en plaintext en el `.git/config` del Mac y del VPS (`/opt/chatbot-cmc/`). Plan acordado: rotar → SSH keys → actualizar remotes en **ambos** lados (si se rota sin tocar el VPS, el próximo `git pull` en deploy falla).
+- **Swapfile 2 GB activo en el VPS**:
+  - `fallocate -l 2G /swapfile`, `chmod 600`, `mkswap`, `swapon`, entrada en `/etc/fstab`
+  - `vm.swappiness=10` (default era 60) persistida en `/etc/sysctl.d/99-swappiness.conf` — solo swapea en emergencia, mantiene RAM caliente
+  - Estado post: `961 MB RAM + 2.0 GB swap`. El GES Assistant sigue activo, sin downtime
+  - Esto desbloquea el deploy del frontend Next.js sin riesgo de OOM
+- **Cron de backup semanal del `ges.db`**:
+  - `sqlite3` CLI instalado en el VPS vía apt
+  - Script `/usr/local/bin/backup-ges-db.sh` usa `sqlite3 .backup` (online, seguro con el service corriendo) + gzip + retención de los últimos 8
+  - Cron en `/etc/cron.d/ges-assistant-backup` → **domingo 03:30 UTC** (00:30 hora Chile), ventana de baja actividad
+  - Destino: `/opt/backups/ges-assistant/ges_YYYYMMDD_HHMMSS.db.gz`
+  - Logs en `/var/log/ges-backup.log`
+  - Backup de prueba ejecutado: **412 KB comprimido** (DB cruda 1.1 MB)
+- **Docs sincronizados**: `docs/infra.md` agregó secciones de swap, backup y repo GitHub + plan de rotación de PAT. Memoria `vps_access.md` actualizada. Página Notion "8. Infraestructura VPS + GES Assistant" bajo "Documentación Técnica — Chatbot WhatsApp CMC".
+
+**Pendiente para la próxima ventana (Phase 2 — frontend GES en Vercel)**:
+- Frontend Next.js en Vercel → `ges.agentecmc.cl` (CNAME en Cloudflare)
+- nginx subdomain `api-ges.agentecmc.cl` exponiendo SOLO endpoints seguros del backend GES (NO `/triage`, ese sigue siendo localhost)
+- Let's Encrypt cert para el nuevo subdomain
+- CORS restrictivo al origen de Vercel en `backend/app/config.py` (`cors_origins`)
+- Rotación de PAT + migración a SSH keys (después del deploy del frontend, para no romper el `git pull` del chatbot mientras se hace el deploy)
 
 **Hecho (sesión 2026-04-10 — expansión normalizador triage + deploy fix)**:
 - **Diccionario de normalización expandido en `app/triage_ges.py`**: ~100 entradas nuevas repartidas entre `_ABREVIACIONES` y `_TYPOS`. Categorías:

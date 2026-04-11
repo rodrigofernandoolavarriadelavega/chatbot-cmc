@@ -7,8 +7,8 @@
 | Host | `root@157.245.13.107` |
 | Hostname | `cmc-bot` |
 | OS | Ubuntu 24.04 (kernel 6.8) |
-| RAM | 1 GB (sin swap) |
-| Disco | 24 GB (13% usado) |
+| RAM | 1 GB + 2 GB swap (agregado 2026-04-10) |
+| Disco | 24 GB (14% usado, incluye swapfile) |
 | Dominio | `agentecmc.cl` (DNS en Cloudflare, registrar NIC Chile) |
 
 ### Acceso SSH
@@ -103,19 +103,59 @@ ssh root@157.245.13.107 "systemctl restart ges-assistant"
 
 El resto (Meta tokens, Medilink, Anthropic) no documentado acá por seguridad — revisar el archivo directo con `cat /opt/chatbot-cmc/.env` vía SSH.
 
-## Memoria total (post-deploy GES)
+## Memoria total (post-swapfile)
 
 ```
-Total:     961 MB
-Usado:     ~500 MB
-Libre:     ~460 MB
-Sin swap — considerar agregar swapfile 2 GB si se deploya el frontend
+RAM:       961 MB  (~495 MB usado, ~466 MB disponible)
+Swap:      2.0 GB  (0 B usado — vm.swappiness=10, solo swapea en emergencia)
+Total ef.: ~3 GB disponibles para el frontend
 ```
+
+El swapfile está en `/swapfile` (2 GB, chmod 600), persistido en `/etc/fstab` y
+con `vm.swappiness=10` en `/etc/sysctl.d/99-swappiness.conf` para mantener la
+RAM caliente. Creado con `fallocate -l 2G`.
+
+## Backup automático del GES Assistant
+
+| | |
+|---|---|
+| Script | `/usr/local/bin/backup-ges-db.sh` |
+| Cron | `/etc/cron.d/ges-assistant-backup` — **domingo 03:30 UTC** (00:30 Chile) |
+| Destino | `/opt/backups/ges-assistant/ges_YYYYMMDD_HHMMSS.db.gz` |
+| Método | `sqlite3 .backup` (online, seguro con el service corriendo) + gzip |
+| Retención | Últimos **8 backups** (~2 meses con cron semanal) |
+| Logs | `/var/log/ges-backup.log` |
+| Tamaño típico | ~412 KB comprimido (DB cruda 1.1 MB, ratio 2.7x) |
+
+**Ejecución manual:**
+```bash
+ssh root@157.245.13.107 "/usr/local/bin/backup-ges-db.sh && ls -lh /opt/backups/ges-assistant/"
+```
+
+**Restore:**
+```bash
+ssh root@157.245.13.107
+systemctl stop ges-assistant
+gunzip -c /opt/backups/ges-assistant/ges_YYYYMMDD_HHMMSS.db.gz > /opt/ges-assistant/data/ges.db
+systemctl start ges-assistant
+```
+
+## Repo GitHub privado
+
+- `ges-clinical-app` → https://github.com/rodrigofernandoolavarriadelavega/ges-clinical-app (privado)
+- Init + primer commit `56983b0` el 2026-04-10 (monorepo: `backend/` + `frontend/`)
+- La DB `backend/data/ges.db` está gitignoreada — se regenera con `scripts/seed*.py`
+- `chatbot-cmc` también vive en GitHub privado (mismo owner)
+
+**⚠️ Deuda de seguridad** — el Personal Access Token está embedded en plaintext en el `remote.origin.url` de ambos repos (tanto en el Mac como en el VPS en `/opt/chatbot-cmc/.git/config`). Plan cuando haya ventana:
+
+1. Rotar el PAT en GitHub → Settings → Tokens
+2. Migrar `chatbot-cmc` + `ges-clinical-app` a SSH key: subir `~/.ssh/id_ed25519.pub` a GitHub y correr `git remote set-url origin git@github.com:...`
+3. **Actualizar el VPS también** — el `/opt/chatbot-cmc/.git/config` tiene el mismo PAT, si se rota sin actualizar ese remote el próximo `git pull` en deploy va a fallar
 
 ## Próximos pasos pendientes
 
-- [ ] Git init + push privado de `ges-clinical-app` a GitHub
 - [ ] Frontend Next.js del GES en Vercel → `ges.agentecmc.cl`
 - [ ] Exponer endpoints públicos del backend GES vía nginx subdomain `api-ges.agentecmc.cl` (solo los que usa el frontend, NO `/triage` que sigue siendo local)
-- [ ] Agregar swapfile 2 GB al VPS antes de montar el frontend
-- [ ] Cron backup semanal de `/opt/ges-assistant/data/ges.db`
+- [ ] CORS restrictivo en el backend GES para el origen de Vercel
+- [ ] Rotación de PAT + migración a SSH keys (chatbot-cmc + ges-clinical-app + VPS)
