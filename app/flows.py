@@ -17,7 +17,7 @@ from session import (save_session, reset_session, save_tag, save_cita_bot, log_e
                      enqueue_intent, add_to_waitlist, cancel_waitlist,
                      get_cita_bot_by_id_cita, mark_cita_confirmation)
 from resilience import is_medilink_down
-from triage_ges import triage_sintomas
+from triage_ges import triage_sintomas, normalizar_texto_paciente
 from config import CMC_TELEFONO, CMC_TELEFONO_FIJO
 
 # Mapa de nombres de día en español → Python weekday (0=Lun..6=Dom)
@@ -248,6 +248,15 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     data  = session["data"]
     txt   = texto.strip()
     tl    = txt.lower()
+    # tl_norm = texto del paciente normalizado léxicamente (sin tildes,
+    # abreviaciones WhatsApp expandidas, typos frecuentes corregidos,
+    # participios rurales arreglados). Lo usamos en los matches hard-coded
+    # (emergencias, comandos globales, afirmaciones, negaciones, arauco) para
+    # ganar recall con mensajes como "tngo dlor d pcho" o "sangrao mucho".
+    # OJO: mantenemos `tl`/`txt` para parseos estrictos (RUT, números, IDs de
+    # botón `cat_medico`/`cita_confirm:*`, selección de slot, captura de
+    # nombre) y para pasarle a `detect_intent` el texto original.
+    tl_norm = normalizar_texto_paciente(txt)
 
     # ── Confirmación pre-cita (respuesta al recordatorio de 09:00) ────────────
     # Los botones del recordatorio llegan con ID "cita_confirm:<id>", etc.
@@ -256,7 +265,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         return await _handle_confirmacion_precita(phone, tl, data)
 
     # ── Emergencias ───────────────────────────────────────────────────────────
-    if any(p in tl for p in EMERGENCIAS) or any(pat.search(tl) for pat in EMERGENCIAS_PATRONES):
+    # Usamos tl_norm para capturar variantes abreviadas ("dlor fuerte d pcho"),
+    # y tl como fallback por si la normalización rompe algún match existente.
+    if (any(p in tl_norm for p in EMERGENCIAS)
+            or any(pat.search(tl_norm) for pat in EMERGENCIAS_PATRONES)
+            or any(p in tl for p in EMERGENCIAS)
+            or any(pat.search(tl) for pat in EMERGENCIAS_PATRONES)):
         return (
             "⚠️ Esto suena como una urgencia.\n\n"
             "Llama al *SAMU 131* o acude al servicio de urgencias más cercano ahora mismo.\n\n"
@@ -264,12 +278,13 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         )
 
     # ── Comandos globales ─────────────────────────────────────────────────────
-    if tl in ("menu", "menú", "inicio", "reiniciar", "volver", "hola"):
+    _COMANDOS_GLOBALES = ("menu", "menú", "inicio", "reiniciar", "volver", "hola")
+    if tl in _COMANDOS_GLOBALES or tl_norm in _COMANDOS_GLOBALES:
         reset_session(phone)
         return _menu_msg()
 
     # ── Detección pasiva de Arauco (guarda tag sin interrumpir el flujo) ──────
-    if "arauco" in tl:
+    if "arauco" in tl_norm:
         save_tag(phone, "arauco")
 
     # ── IDLE: detectar intención ──────────────────────────────────────────────
@@ -279,7 +294,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # "1"/"sí"/botón como "agendar la especialidad ya sugerida en el FAQ".
         esp_sug_prev = data.get("especialidad_sugerida")
         if esp_sug_prev:
-            if tl == "no_agendar" or tl in NEGACIONES:
+            if tl == "no_agendar" or tl in NEGACIONES or tl_norm in NEGACIONES:
                 data.pop("especialidad_sugerida", None)
                 save_session(phone, "IDLE", data)
                 log_event(phone, "faq_agendar_rechazo", {"esp": esp_sug_prev})
@@ -287,7 +302,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "Sin problema 😊 Cuando lo necesites, estamos acá.\n"
                     "_Escribe *menu* para ver todas las opciones._"
                 )
-            if tl == "agendar_sugerido" or txt == "1" or tl in AFIRMACIONES:
+            if tl == "agendar_sugerido" or txt == "1" or tl in AFIRMACIONES or tl_norm in AFIRMACIONES:
                 data.pop("especialidad_sugerida", None)
                 log_event(phone, "faq_agendar_acepto", {"esp": esp_sug_prev})
                 perfil = get_profile(phone)
@@ -674,7 +689,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         fecha_actual    = todos_slots[0]["fecha"] if todos_slots else None
 
         # Respuesta al sugerido proactivo (botón o texto libre "si"/"sí"/"confirmo"/...)
-        if (tl == "confirmar_sugerido" or tl in AFIRMACIONES) and slots_mostrados:
+        if (tl == "confirmar_sugerido" or tl in AFIRMACIONES or tl_norm in AFIRMACIONES) and slots_mostrados:
             slot = slots_mostrados[0]
             data["slot_elegido"] = slot
             save_session(phone, "WAIT_MODALIDAD", data)
@@ -862,9 +877,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     if state == "WAIT_MODALIDAD":
         FONASA     = {"1", "fonasa", "fona"}
         PARTICULAR = {"2", "particular", "privado", "privada"}
-        if tl in FONASA:
+        if tl in FONASA or tl_norm in FONASA:
             data["modalidad"] = "fonasa"
-        elif tl in PARTICULAR:
+        elif tl in PARTICULAR or tl_norm in PARTICULAR:
             data["modalidad"] = "particular"
         else:
             data["intentos_fallidos"] = data.get("intentos_fallidos", 0) + 1
@@ -898,7 +913,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     if state == "WAIT_RUT_AGENDAR":
         # Si el paciente ya agendó antes y confirma con sí/ok, usar su RUT guardado
         rut_conocido = data.get("rut_conocido")
-        if rut_conocido and tl in AFIRMACIONES | {"si", "sí", "ok", "mismo", "el mismo"} and tl != "rut_nuevo":
+        _SET_CONTINUAR = AFIRMACIONES | {"si", "sí", "ok", "mismo", "el mismo"}
+        if rut_conocido and (tl in _SET_CONTINUAR or tl_norm in _SET_CONTINUAR) and tl != "rut_nuevo":
             rut = rut_conocido
         else:
             rut = clean_rut(txt)
@@ -944,7 +960,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
     # ── CONFIRMING_CITA ───────────────────────────────────────────────────────
     if state == "CONFIRMING_CITA":
-        if tl in AFIRMACIONES:
+        if tl in AFIRMACIONES or tl_norm in AFIRMACIONES:
             slot    = data["slot_elegido"]
             paciente = data["paciente"]
             reagendar = bool(data.get("reagendar_mode"))
@@ -1029,7 +1045,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     f"Llama a recepción: 📞 *{CMC_TELEFONO}*"
                 )
 
-        if tl in NEGACIONES:
+        if tl in NEGACIONES or tl_norm in NEGACIONES:
             reset_session(phone)
             return (
                 "No hay problema 😊\n\n"
@@ -1072,7 +1088,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # ── WAIT_CITA_CANCELAR ────────────────────────────────────────────────────
     if state == "WAIT_CITA_CANCELAR":
         citas = data.get("citas", [])
-        if tl in NEGACIONES or tl in {"menu", "menú", "salir", "atras", "atrás"}:
+        _SET_SALIR = {"menu", "menú", "salir", "atras", "atrás"}
+        if (tl in NEGACIONES or tl_norm in NEGACIONES
+                or tl in _SET_SALIR or tl_norm in _SET_SALIR):
             reset_session(phone)
             return "Perfecto, no cancelamos nada 😊\n_Escribe *menu* si necesitas algo más._"
         try:
@@ -1099,7 +1117,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
     # ── CONFIRMING_CANCEL ─────────────────────────────────────────────────────
     if state == "CONFIRMING_CANCEL":
-        if tl in AFIRMACIONES:
+        if tl in AFIRMACIONES or tl_norm in AFIRMACIONES:
             cita = data["cita_cancelar"]
             ok = await cancelar_cita(cita["id"])
             reset_session(phone)
@@ -1113,7 +1131,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 )
             return f"Hubo un problema al cancelar 😕\nLlama a recepción: 📞 *{CMC_TELEFONO}*"
 
-        if tl in NEGACIONES:
+        if tl in NEGACIONES or tl_norm in NEGACIONES:
             reset_session(phone)
             return "Perfecto, tu cita se mantiene 😊\n_Escribe *menu* si necesitas algo más._"
 
@@ -1152,7 +1170,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # ── WAIT_CITA_REAGENDAR ───────────────────────────────────────────────────
     if state == "WAIT_CITA_REAGENDAR":
         citas = data.get("citas", [])
-        if tl in NEGACIONES or tl in {"menu", "menú", "salir", "atras", "atrás"}:
+        _SET_SALIR = {"menu", "menú", "salir", "atras", "atrás"}
+        if (tl in NEGACIONES or tl_norm in NEGACIONES
+                or tl in _SET_SALIR or tl_norm in _SET_SALIR):
             reset_session(phone)
             return "Perfecto, dejamos tu cita como está 😊\n_Escribe *menu* si necesitas algo más._"
         try:
@@ -1181,7 +1201,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
     # ── WAIT_WAITLIST_CONFIRM ─────────────────────────────────────────────────
     if state == "WAIT_WAITLIST_CONFIRM":
-        if tl == "waitlist_si" or tl in AFIRMACIONES:
+        if tl == "waitlist_si" or tl in AFIRMACIONES or tl_norm in AFIRMACIONES:
             perfil = get_profile(phone)
             if perfil:
                 data["rut"] = perfil["rut"]
@@ -1192,7 +1212,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "Perfecto 👍 Para inscribirte necesito tu RUT:\n"
                 "(ej: *12.345.678-9*)"
             )
-        if tl == "waitlist_no" or tl in NEGACIONES:
+        if tl == "waitlist_no" or tl in NEGACIONES or tl_norm in NEGACIONES:
             reset_session(phone)
             return (
                 "Sin problema 😊 Cuando lo necesites, escríbenos.\n"

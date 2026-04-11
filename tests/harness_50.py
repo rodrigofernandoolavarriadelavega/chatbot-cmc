@@ -709,6 +709,52 @@ async def main():
         ("me sangra mucho la nariz y no para", ["SAMU", "131"]),
     ])
 
+    # ── Normalización global: typos/abreviaciones WhatsApp rural ────────────
+    # Estos tests cubren el wiring de `tl_norm` en las ramas hard-coded de
+    # handle_message (emergencias, comandos, AFIRMACIONES, NEGACIONES).
+
+    mk("NORM-01 emergencia 'dlor fuerte d pcho'", "56900000301", [
+        # "dlor d pcho" es cómo realmente escriben los pacientes en WhatsApp.
+        # Normalización: "dlor"→"dolor", "d"→"de", "pcho"→"pecho" → dispara
+        # el patrón regex `dolor.{0,20}fuerte.{0,20}pecho`.
+        ("tngo dlor fuerte d pcho", ["SAMU", "131"]),
+    ])
+
+    mk("NORM-02 emergencia 'sangrao mucho'", "56900000302", [
+        # Participio rural: "sangrao" → "sangrado" vía regex de participios,
+        # y luego "mucho sangrado" matchea el set EMERGENCIAS.
+        ("estoy sangrao mucho", ["SAMU", "131"]),
+    ])
+
+    mk("NORM-03 comando global sin tilde 'menú'", "56900000303", [
+        ("quiero agendar medicina general", ["09:"]),
+        # Paciente escribe "menú" con tilde. Debe resetear sesión.
+        ("menú", ["Agendar", "opciones"]),
+    ])
+
+    mk("NORM-04 afirmación con abreviación 'dale'", "56900000304", [
+        ("quiero agendar medicina general", ["09:"]),
+        # "dale" ya está en AFIRMACIONES, sirve de sanity check para
+        # confirmar que el branch `tl_norm in AFIRMACIONES` no rompe nada.
+        ("dale", {"any": ["Fonasa", "Particular"], **NO_ERROR}),
+    ])
+
+    mk("NORM-05 FONASA/PARTICULAR acepta 'fonaza' sin tilde", "56900000305", [
+        ("quiero agendar medicina general", ["09:"]),
+        ("si", {"any": ["Fonasa", "Particular"], **NO_ERROR}),
+        # "fonasa" directo debe funcionar (sanity). Queremos verificar que
+        # la nueva rama con tl_norm tampoco bloquea el caso normal.
+        ("fonasa", ["rut"]),
+    ])
+
+    mk("NORM-06 negación 'nop' en CONFIRMING_CITA", "56900000306", [
+        ("quiero agendar medicina general", ["09:"]),
+        ("si", {"any": ["Fonasa", "Particular"]}),
+        ("1", ["rut"]),
+        ("11111111-1", ["confirm"]),
+        ("nop", {"any": ["otro día", "menu", "problema"], **NO_ERROR}),
+    ])
+
     # ── Confirmación pre-cita (respuesta al recordatorio 09:00) ─────────────
     def setup_cita_bot_confirm():
         """Inserta una cita_bot en SQLite para probar los botones del recordatorio."""

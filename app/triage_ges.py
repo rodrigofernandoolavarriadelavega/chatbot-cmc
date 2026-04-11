@@ -58,6 +58,10 @@ _ABREVIACIONES = {
     "cbz": "cabeza",
     "grgnta": "garganta",
     "grganta": "garganta",
+    "pcho": "pecho",
+    "pxo": "pecho",
+    "krzn": "corazon",
+    "korzn": "corazon",
     "mucha": "mucha",   # placeholder — lo importante son los demás
     "muxo": "mucho",
     "mxo": "mucho",
