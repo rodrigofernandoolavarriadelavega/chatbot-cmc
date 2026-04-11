@@ -75,6 +75,7 @@ EMERGENCIAS_PATRONES = [
     re.compile(r"duele.{0,20}pecho.{0,20}(fuerte|mucho|harto|arto|insoport|tanto)"),
     re.compile(r"(fuerte|mucho|harto).{0,10}(me\s+)?duele.{0,20}pecho"),
     re.compile(r"pecho.{0,15}(me\s+)?duele.{0,15}(fuerte|mucho|harto)"),
+    re.compile(r"duele.{0,10}(fuerte|mucho|harto|arto).{0,15}pecho"),
     re.compile(r"mucho.{0,10}sangr"),
     re.compile(r"sangr\w*.{0,15}mucho"),
     re.compile(r"sangr\w*.{0,15}no\s+para"),
@@ -132,11 +133,14 @@ _SENALES_SINTOMA = re.compile(
 )
 
 
-# ── Precios por especialidad ──────────────────────────────────────────────────
-# Fuente: SYSTEM_PROMPT en claude_helper.py. Mayoría de pacientes son Fonasa,
-# los particulares pueden preguntar el precio particular en la conversación.
-# Formato: (modalidad, precio[, sufijo]) donde modalidad es "fonasa" o "particular"
-# y sufijo es opcional: "desde", "evaluación", "control".
+# ── Precios para mostrar en la oferta de slot ─────────────────────────────────
+# Se muestran en el mismo mensaje donde el bot ofrece horarios, para matar la
+# pregunta "¿cuánto cuesta?" antes de que el paciente la haga. La mayoría de
+# los pacientes CMC son Fonasa MLE N3 → cuando hay bono, mostramos el precio
+# Fonasa; cuando es solo particular, mostramos el precio particular. Los
+# pacientes particulares pueden preguntar por el valor particular.
+# Clave = valor exacto de PROFESIONALES[id]["especialidad"] en medilink.py
+# Valor = (modalidad, precio, sufijo_opcional)
 PRECIOS_SLOT = {
     "Medicina General":       ("fonasa",     7880),
     "Kinesiología":           ("fonasa",     7830),
@@ -157,15 +161,17 @@ PRECIOS_SLOT = {
     "Endodoncia":             ("particular",110000, "desde"),
     "Implantología":          ("particular",650000, "desde"),
     "Estética Facial":        ("particular", 15000, "evaluación"),
+    # Masoterapia se resuelve dinámicamente según la duración real del slot.
 }
 
 
 def _precio_line(especialidad: str, slot: dict | None = None) -> str:
-    """Línea de precio para mostrar al ofrecer un slot. Empty string si no hay mapeo."""
+    """Línea de precio para insertar en la oferta de slot.
+    Retorna string vacío si la especialidad no tiene precio registrado."""
     if not especialidad:
         return ""
     esp = especialidad.strip()
-    # Masoterapia: precio depende de la duración del slot (20 o 40 min)
+    # Masoterapia: el precio depende de la duración real del slot (20 o 40 min)
     if esp.lower() == "masoterapia":
         if not slot:
             return ""
@@ -187,6 +193,7 @@ def _precio_line(especialidad: str, slot: dict | None = None) -> str:
     precio_str = f"${precio:,}".replace(",", ".")
     if modalidad == "fonasa":
         return f"💰 Fonasa: {precio_str}"
+    # modalidad == particular
     if sufijo == "desde":
         return f"💰 Consulta: desde {precio_str}"
     if sufijo == "evaluación":
@@ -235,20 +242,30 @@ def _menu_msg() -> dict:
         body_text=(
             "Hola 👋 Soy el asistente del *Centro Médico Carampangue*.\n\n"
             "📍 *Monsalve 102, frente a la antigua estación de trenes*, Carampangue.\n\n"
-            "¿En qué te ayudo hoy?"
+            "¿Qué necesitas hoy?"
         ),
         button_label="Ver opciones",
-        sections=[{
-            "title": "¿En qué te ayudamos?",
-            "rows": [
-                {"id": "1", "title": "Agendar una hora"},
-                {"id": "2", "title": "Reagendar una hora"},
-                {"id": "3", "title": "Cancelar una hora"},
-                {"id": "4", "title": "Ver mis reservas"},
-                {"id": "5", "title": "Lista de espera"},
-                {"id": "6", "title": "Hablar con recepción"},
-            ]
-        }]
+        sections=[
+            {
+                "title": "Motivos rápidos",
+                "rows": [
+                    {"id": "motivo_resfrio",  "title": "🤒 Resfrío o malestar"},
+                    {"id": "motivo_kine",     "title": "🦴 Dolor muscular/espalda"},
+                    {"id": "motivo_hta",      "title": "🫀 Control HTA/diabetes"},
+                    {"id": "motivo_dental",   "title": "🦷 Revisión dental"},
+                    {"id": "motivo_mg_otra",  "title": "🩺 Otra consulta médica"},
+                    {"id": "motivo_otra_esp", "title": "➕ Otra especialidad"},
+                ],
+            },
+            {
+                "title": "Otras opciones",
+                "rows": [
+                    {"id": "accion_cambiar",   "title": "🔄 Cambiar/cancelar hora"},
+                    {"id": "accion_mis_citas", "title": "📅 Mis citas / espera"},
+                    {"id": "accion_recepcion", "title": "💬 Hablar con recepción"},
+                ],
+            },
+        ],
     )
 
 
@@ -445,13 +462,59 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             data.pop("especialidad_sugerida", None)
             save_session(phone, "IDLE", data)
 
-        # Atajos numéricos del menú
+        # Atajos numéricos del menú (compatibilidad + sub-menús "Cambiar/cancelar"
+        # y "Mis citas / espera" que devuelven botones con estos IDs)
         if txt == "1": return await _iniciar_agendar(phone, data, None)
         if txt == "2": return await _iniciar_reagendar(phone, data)
         if txt == "3": return await _iniciar_cancelar(phone, data)
         if txt == "4": return await _iniciar_ver(phone, data)
         if txt == "5": return await _iniciar_waitlist(phone, data, None)
         if txt == "6": return _derivar_humano(phone=phone, contexto="menú opción 6")
+
+        # ── Motivos rápidos del menú ──────────────────────────────────────────
+        # Cada motivo → ruta directa a _iniciar_agendar con la especialidad
+        # preseleccionada + saludo prefix ("pausa" estilo 5A: una línea de
+        # reconocimiento antes de mostrar el slot, todo en un solo mensaje).
+        # HTA/diabetes rutea a MG por ahora (la priorización de slots matinales
+        # para crónicos es un feature aparte — palanca 1 del plan estratégico).
+        _MOTIVOS = {
+            "motivo_resfrio":  ("medicina general", "🤒", "Medicina General"),
+            "motivo_kine":     ("kinesiología",     "🦴", "Kinesiología"),
+            "motivo_hta":      ("medicina general", "🫀", "Medicina General"),
+            "motivo_dental":   ("odontología",      "🦷", "Odontología"),
+            "motivo_mg_otra":  ("medicina general", "🩺", "Medicina General"),
+        }
+        if tl in _MOTIVOS:
+            esp, emoji, label = _MOTIVOS[tl]
+            prefix = f"{emoji} *Perfecto, te agendo con {label}*\n\n"
+            log_event(phone, "motivo_seleccionado", {"motivo": tl, "especialidad": esp})
+            return await _iniciar_agendar(phone, data, esp, saludo_prefix=prefix)
+        if tl == "motivo_otra_esp":
+            log_event(phone, "motivo_seleccionado", {"motivo": "otra_esp"})
+            return await _iniciar_agendar(phone, data, None)
+
+        # ── Sub-menús de "Otras opciones" ─────────────────────────────────────
+        # Los botones del sub-menú usan los mismos IDs numéricos que los atajos
+        # (txt == "2"/"3"/"4"/"5") — arriba ya están enrutados, acá solo
+        # mostramos el sub-menú al tocar la entrada agrupada.
+        if tl == "accion_cambiar":
+            return _btn_msg(
+                "¿Qué necesitas hacer con tu hora?",
+                [
+                    {"id": "2", "title": "🔄 Reagendar"},
+                    {"id": "3", "title": "❌ Cancelar"},
+                ]
+            )
+        if tl == "accion_mis_citas":
+            return _btn_msg(
+                "¿Qué quieres ver?",
+                [
+                    {"id": "4", "title": "📅 Mis reservas"},
+                    {"id": "5", "title": "⏰ Lista de espera"},
+                ]
+            )
+        if tl == "accion_recepcion":
+            return _derivar_humano(phone=phone, contexto="menú recepción")
 
         # ── Respuestas de fidelización ────────────────────────────────────────
         if tl == "seg_mejor":
@@ -802,14 +865,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                      "todos_slots": todos, "fechas_vistas": [fecha],
                      "expansion_stage": 0, "prof_sugerido_id": prof_sugerido_id})
         save_session(phone, "WAIT_SLOT", data)
-        precio_linea = _precio_line("masoterapia", mejor)
-        precio_str = f"{precio_linea}\n\n" if precio_linea else ""
+        precio_linea = _precio_line("Masoterapia", mejor)
+        precio_bloque = f"{precio_linea}\n" if precio_linea else ""
         return _btn_msg(
             f"Encontré disponibilidad ✨\n\n"
             f"🏥 *Masoterapia* — {mejor['profesional']}\n"
             f"📅 *{mejor['fecha_display']}*\n"
-            f"🕐 *{mejor['hora_inicio'][:5]}* ({duracion_maso} min) ⭐\n\n"
-            f"{precio_str}"
+            f"🕐 *{mejor['hora_inicio'][:5]}* ({duracion_maso} min) ⭐\n"
+            f"{precio_bloque}\n"
             "¿La agendo?",
             [
                 {"id": "confirmar_sugerido", "title": "✅ Sí, esa hora"},
@@ -1775,7 +1838,8 @@ def _modo_degradado(phone: str, intent: str, state_snap: str = "") -> str:
     )
 
 
-async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None) -> str:
+async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
+                            saludo_prefix: str | None = None) -> str:
     if is_medilink_down():
         return _modo_degradado(phone, "agendar", especialidad or "")
     if not especialidad:
@@ -1841,7 +1905,12 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None) -> 
     save_session(phone, "WAIT_SLOT", data)
     nombre_conocido = data.get("nombre_conocido", "")
     nombre_corto = nombre_conocido.split()[0] if nombre_conocido else ""
-    saludo = f"¡Hola de nuevo, *{nombre_corto}*! " if nombre_corto else ""
+    # Si viene con saludo_prefix (ej. desde un motivo del menú), el prefix
+    # actúa como header y se omite el "¡Hola de nuevo!" para no duplicar saludos.
+    if saludo_prefix:
+        header = saludo_prefix
+    else:
+        header = f"¡Hola de nuevo, *{nombre_corto}*! " if nombre_corto else ""
     # Tercer botón: "Otro profesional" si hay >1 doctor; si no, "Otro día"
     from medilink import _ids_para_especialidad
     ids_esp = _ids_para_especialidad(especialidad_lower)
@@ -1859,13 +1928,13 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None) -> 
         botones.append({"id": "otro_dia", "title": "📅 Otro día"})
 
     precio_linea = _precio_line(mejor.get("especialidad", ""), mejor)
-    precio_str = f"{precio_linea}\n\n" if precio_linea else ""
+    precio_bloque = f"{precio_linea}\n" if precio_linea else ""
     return _btn_msg(
-        f"{saludo}Encontré disponibilidad ✨\n\n"
+        f"{header}Encontré disponibilidad ✨\n\n"
         f"🏥 *{mejor['especialidad']}* — {mejor['profesional']}\n"
         f"📅 *{mejor['fecha_display']}*\n"
-        f"🕐 *{mejor['hora_inicio'][:5]}* ⭐\n\n"
-        f"{precio_str}"
+        f"🕐 *{mejor['hora_inicio'][:5]}* ⭐\n"
+        f"{precio_bloque}\n"
         "¿La agendo?",
         botones
     )
@@ -2022,11 +2091,11 @@ def _format_slots(slots: list, mostrar_todos: bool = False):
         sections = [{"title": fecha[:24], "rows": slot_rows}]
         if nav_rows:
             sections.append({"title": "Más opciones", "rows": nav_rows})
-        body = f"Te encontré estas opciones 👇\n\n*{fecha}* — {prof}"
+        body_text = f"Te encontré estas opciones 👇\n\n*{fecha}* — {prof}"
         if precio_linea:
-            body += f"\n{precio_linea}"
+            body_text += f"\n{precio_linea}"
         return _list_msg(
-            body_text=body,
+            body_text=body_text,
             button_label="Ver horarios",
             sections=sections,
         )
@@ -2035,7 +2104,7 @@ def _format_slots(slots: list, mostrar_todos: bool = False):
     lineas = [f"📅 *{fecha}* — {prof}"]
     if precio_linea:
         lineas.append(precio_linea)
-    lineas.append("")
+    lineas.append("")  # línea en blanco antes de los slots
     for i, s in enumerate(slots, 1):
         hora = s['hora_inicio'][:5]
         prefix = f"*{i}.* ⭐ {hora} (recomendado)" if i == 1 and not mostrar_todos else f"*{i}.* {hora}"

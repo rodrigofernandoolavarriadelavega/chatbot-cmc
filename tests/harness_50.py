@@ -394,7 +394,7 @@ async def main():
     ])
 
     mk("02 agendar odontologia via lista", "56900000002", [
-        ("menu", ["Agendar"]),
+        ("menu", ["Motivos"]),
         ("1", ["especialidad", "categoría", "categoria"]),
         ("odontología", {"any": ["Odonto", "09:"], **NO_ERROR}),
         ("confirmar_sugerido", ["Fonasa", "Particular"]),
@@ -417,7 +417,7 @@ async def main():
     ])
 
     mk("05 agendar atajo 1 -> lista esp", "56900000005", [
-        ("menu", ["Agendar"]),
+        ("menu", ["Motivos"]),
         ("1", ["especialidad"]),
         ("medicina general", {"any": ["09:"], **NO_ERROR}),
     ])
@@ -491,7 +491,7 @@ async def main():
     ])
 
     mk("19 cancelar desde atajo 3", "56900000019", [
-        ("menu", ["Agendar"]),
+        ("menu", ["Motivos"]),
         ("3", ["rut"]),
         ("11111111-1", {"any": ["Abarca", "cancel"], **NO_ERROR}),
     ], setup=setup_una_cita)
@@ -515,7 +515,7 @@ async def main():
 
     # ── REAGENDAR (7) ────────────────────────────────────────────────────────
     mk("23 reagendar atajo 2", "56900000023", [
-        ("menu", ["Reagend"]),
+        ("menu", ["Motivos"]),
         ("2", {"any": ["rut"], **NO_ERROR}),
     ])
 
@@ -559,7 +559,7 @@ async def main():
 
     # ── WAITLIST (5) ────────────────────────────────────────────────────────
     mk("30 waitlist atajo 5", "56900000030", [
-        ("menu", ["Lista de espera"]),
+        ("menu", ["espera"]),
         ("5", {"any": ["especialidad", "espera"], **NO_ERROR}),
         ("odontología", {"any": ["espera", "inscrib", "✅", "rut"], **NO_ERROR}),
     ])
@@ -647,7 +647,7 @@ async def main():
     ])
 
     mk("49 número fuera de rango en menu", "56900000049", [
-        ("menu", ["Agendar"]),
+        ("menu", ["Motivos"]),
         ("99", None),
     ])
 
@@ -801,6 +801,42 @@ async def main():
         ("1", ["rut"]),
         ("11111111-1", ["confirm"]),
         ("nop", {"any": ["otro día", "menu", "problema"], **NO_ERROR}),
+    ])
+
+    # ── Menú nuevo: motivos rápidos + acciones agrupadas ───────────────────
+    mk("MENU-01 motivo_kine → slot directo con pausa", "56900000401", [
+        ("menu", ["Motivos"]),
+        # Tap en motivo kine → saludo prefix + slot + precio en un solo mensaje
+        ("motivo_kine", {"all": ["Perfecto", "Kinesiología", "09:", "$"], **NO_ERROR}),
+    ])
+
+    mk("MENU-02 motivo_resfrio → MG con pausa", "56900000402", [
+        ("menu", ["Motivos"]),
+        ("motivo_resfrio", {"all": ["Perfecto", "Medicina General", "09:"], **NO_ERROR}),
+    ])
+
+    mk("MENU-03 motivo_otra_esp → selector tradicional", "56900000403", [
+        ("menu", ["Motivos"]),
+        ("motivo_otra_esp", {"any": ["especialidad", "categoría", "categoria"]}),
+    ])
+
+    mk("MENU-04 accion_cambiar → sub-menú reagendar/cancelar", "56900000404", [
+        ("menu", ["Motivos"]),
+        ("accion_cambiar", {"all": ["Reagendar", "Cancelar"], **NO_ERROR}),
+        # Tap "Cancelar" (id=3) desde el sub-menú debe iniciar flujo cancelar
+        ("3", ["rut"]),
+    ])
+
+    mk("MENU-05 accion_mis_citas → sub-menú ver/espera", "56900000405", [
+        ("menu", ["Motivos"]),
+        ("accion_mis_citas", {"all": ["reservas", "espera"], **NO_ERROR}),
+        # Tap "Ver mis reservas" (id=4) desde el sub-menú
+        ("4", ["rut"]),
+    ])
+
+    mk("MENU-06 accion_recepcion → handoff humano", "56900000406", [
+        ("menu", ["Motivos"]),
+        ("accion_recepcion", {"any": ["recepción", "recepcion", "llamará", "pronto"]}),
     ])
 
     # ── Confirmación pre-cita (respuesta al recordatorio 09:00) ─────────────
