@@ -627,6 +627,8 @@ body {
 .pill.red strong { color: var(--red); }
 .pill.amber { background: var(--amber-soft); border-color: #fcd34d; color: #92400e; }
 .pill.amber strong { color: #92400e; }
+.pill.green { background: #f0fdf4; border-color: #86efac; color: #15803d; }
+.pill.green strong { color: #15803d; }
 .live-dot { width:7px; height:7px; border-radius:50%; background:var(--green); animation:blink 2s infinite; }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
 /* LAYOUT 3 columnas */
@@ -887,6 +889,7 @@ body {
     <div class="pill"><strong id="s-total">—</strong>&nbsp;conversaciones</div>
     <div class="pill amber"><strong id="s-flujo">—</strong>&nbsp;en flujo</div>
     <div class="pill" id="pill-esperando"><strong id="s-takeover">—</strong>&nbsp;esperando atención</div>
+    <div class="pill green" id="pill-confirm" onclick="abrirModalConfirmaciones()" style="cursor:pointer;" title="Click para ver detalle">✅&nbsp;<strong id="s-confirm">—</strong>&nbsp;confirman mañana</div>
     <div class="pill"><div class="live-dot"></div>&nbsp;Actualizado <span id="last-refresh">—</span></div>
     <button class="btn btn-primary" onclick="abrirModalAgendar()" style="margin-left:8px;font-size:12px;padding:6px 14px;border-radius:8px;">+ Nueva Cita</button>
     <button class="btn" onclick="abrirBusquedaGlobal()" style="margin-left:6px;font-size:12px;padding:6px 14px;border-radius:8px;background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;">🔍 Buscar</button>
@@ -1005,6 +1008,20 @@ body {
       <button onclick="document.getElementById('an-paso1').style.display='block';document.getElementById('an-paso2').style.display='none';"
         style="margin-top:14px;background:none;border:none;color:#64748b;font-size:12px;cursor:pointer;text-decoration:underline;">← Buscar otro RUT</button>
     </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIRMACIONES MAÑANA -->
+<div id="modal-confirm" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:flex-start;justify-content:center;padding-top:40px;padding-bottom:40px;overflow-y:auto;">
+  <div style="background:#fff;border-radius:14px;width:760px;max-width:96vw;box-shadow:0 20px 60px rgba(0,0,0,.2);position:relative;margin:auto;">
+    <div style="padding:18px 22px 14px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:18px;">✅</span>
+      <span style="font-size:15px;font-weight:700;color:#15803d;">Confirmaciones para mañana</span>
+      <span id="confirm-fecha" style="font-size:12px;color:#64748b;"></span>
+      <button onclick="cerrarModalConfirmaciones()" style="margin-left:auto;background:none;border:none;font-size:20px;cursor:pointer;color:#94a3b8;">✕</button>
+    </div>
+    <div id="confirm-resumen" style="padding:12px 22px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:#475569;"></div>
+    <div id="confirm-lista" style="padding:14px 22px 22px;max-height:60vh;overflow-y:auto;"></div>
   </div>
 </div>
 
@@ -1566,6 +1583,69 @@ async function loadConversations(){
 async function loadMetrics(){
   try{const r=await fetch(`/admin/api/metrics?token=${TOKEN}`);await r.json();}catch(e){}
 }
+let confirmDataCache = null;
+async function loadConfirmaciones(){
+  try{
+    const r=await fetch(`/admin/api/confirmaciones?token=${TOKEN}`);
+    const d=await r.json();
+    confirmDataCache=d;
+    const res=d.resumen||{confirmed:0,reagendar:0,cancelar:0,pendiente:0};
+    const tot=d.total||0;
+    const pill=document.getElementById("pill-confirm");
+    document.getElementById("s-confirm").textContent=`${res.confirmed}/${tot}`;
+    pill.title=`✅ ${res.confirmed} confirman · 🔄 ${res.reagendar} reagendar · ❌ ${res.cancelar} cancelar · ⏳ ${res.pendiente} pendientes`;
+    if(tot===0){pill.style.opacity="0.55";} else {pill.style.opacity="1";}
+  }catch(e){console.error("loadConfirmaciones",e);}
+}
+function fmtPhone(p){return p?p.replace(/^56/,"+56 ").replace(/(\d{4})(\d{4})$/," $1 $2"):"—";}
+function abrirModalConfirmaciones(){
+  document.getElementById("modal-confirm").style.display="flex";
+  renderConfirmaciones();
+  loadConfirmaciones().then(renderConfirmaciones);
+}
+function cerrarModalConfirmaciones(){
+  document.getElementById("modal-confirm").style.display="none";
+}
+function renderConfirmaciones(){
+  const d=confirmDataCache;
+  const lista=document.getElementById("confirm-lista");
+  const resumen=document.getElementById("confirm-resumen");
+  const fechaEl=document.getElementById("confirm-fecha");
+  if(!d){lista.innerHTML='<div style="padding:18px;color:#94a3b8;font-size:13px;text-align:center;">Cargando…</div>';resumen.innerHTML="";fechaEl.textContent="";return;}
+  const r=d.resumen||{confirmed:0,reagendar:0,cancelar:0,pendiente:0};
+  fechaEl.textContent=`· ${d.fecha} · ${d.total} cita${d.total===1?"":"s"}`;
+  resumen.innerHTML=`
+    <span style="display:inline-flex;align-items:center;gap:5px;background:#dcfce7;border:1px solid #86efac;color:#15803d;border-radius:14px;padding:4px 11px;font-weight:600;">✅ <strong>${r.confirmed}</strong> confirman</span>
+    <span style="display:inline-flex;align-items:center;gap:5px;background:#fef3c7;border:1px solid #fcd34d;color:#92400e;border-radius:14px;padding:4px 11px;font-weight:600;">🔄 <strong>${r.reagendar}</strong> reagendar</span>
+    <span style="display:inline-flex;align-items:center;gap:5px;background:#fee2e2;border:1px solid #fca5a5;color:#dc2626;border-radius:14px;padding:4px 11px;font-weight:600;">❌ <strong>${r.cancelar}</strong> cancelan</span>
+    <span style="display:inline-flex;align-items:center;gap:5px;background:#f1f5f9;border:1px solid #cbd5e1;color:#475569;border-radius:14px;padding:4px 11px;font-weight:600;">⏳ <strong>${r.pendiente}</strong> pendientes</span>
+  `;
+  if(!d.citas||d.citas.length===0){
+    lista.innerHTML='<div style="padding:24px;color:#94a3b8;font-size:13px;text-align:center;">Sin citas del bot para mañana.</div>';
+    return;
+  }
+  const badge=(s)=>{
+    if(s==="confirmed") return '<span style="background:#dcfce7;color:#15803d;border:1px solid #86efac;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;">✅ Confirmó</span>';
+    if(s==="reagendar") return '<span style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;">🔄 Reagendar</span>';
+    if(s==="cancelar")  return '<span style="background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;">❌ Cancelar</span>';
+    return '<span style="background:#f1f5f9;color:#64748b;border:1px solid #cbd5e1;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;">⏳ Pendiente</span>';
+  };
+  let html='<table style="width:100%;border-collapse:collapse;font-size:12.5px;">';
+  html+='<thead><tr style="background:#f8fafc;color:#64748b;font-weight:600;text-align:left;border-bottom:1px solid #e2e8f0;">';
+  html+='<th style="padding:8px 10px;">Hora</th><th style="padding:8px 10px;">Profesional</th><th style="padding:8px 10px;">Especialidad</th><th style="padding:8px 10px;">Teléfono</th><th style="padding:8px 10px;">Estado</th>';
+  html+='</tr></thead><tbody>';
+  for(const c of d.citas){
+    html+=`<tr style="border-bottom:1px solid #f1f5f9;">
+      <td style="padding:9px 10px;font-weight:600;color:#1e293b;">${(c.hora||"—").slice(0,5)}</td>
+      <td style="padding:9px 10px;color:#334155;">${c.profesional||"—"}</td>
+      <td style="padding:9px 10px;color:#64748b;">${c.especialidad||"—"}</td>
+      <td style="padding:9px 10px;color:#64748b;font-family:ui-monospace,monospace;font-size:11.5px;">${fmtPhone(c.phone)}</td>
+      <td style="padding:9px 10px;">${badge(c.confirmation_status)}</td>
+    </tr>`;
+  }
+  html+='</tbody></table>';
+  lista.innerHTML=html;
+}
 function updateStats(){
   document.getElementById("s-total").textContent=convs.length;
   document.getElementById("s-flujo").textContent=convs.filter(c=>ACTIVE_STATES.includes(c.state)).length;
@@ -1592,8 +1672,10 @@ function updateStats(){
 
 loadConversations();
 loadMetrics();
+loadConfirmaciones();
 setInterval(loadConversations,10000);
 setInterval(loadMetrics,60000);
+setInterval(loadConfirmaciones,60000);
 
 // ── BÚSQUEDA EN CHAT ─────────────────────────────────────────────────────────
 let allMsgsCache = [];
