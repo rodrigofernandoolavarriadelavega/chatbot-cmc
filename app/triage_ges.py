@@ -74,6 +74,9 @@ _ABREVIACIONES = {
     "muxo": "mucho",
     "mxo": "mucho",
     "mxa": "mucha",
+    "muxa": "mucha",
+    "vces": "veces",
+    "vz": "vez",
     "m": "me",          # ej "m duele"
     "t": "te",          # ej "t siento"
     "kiero": "quiero",
@@ -196,6 +199,8 @@ _TYPOS = {
     "corazn": "corazon",
     "corazion": "corazon",
     "peccho": "pecho",
+    "naris": "nariz",
+    "narisz": "nariz",
     # ── Diarrea / vómitos / náuseas ───────────────────────────────────
     "diarea": "diarrea",
     "diarria": "diarrea",
