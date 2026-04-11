@@ -60,19 +60,37 @@ ngrok http 8001
 ```
 
 ## Deploy en producción (DigitalOcean)
-```bash
-# Desde el Mac — subir cambios
-git push origin main
 
-# En el servidor (157.245.13.107, usuario root)
-ssh root@157.245.13.107   # contraseña: ver .env local
+SSH ahora es **solo por llave pública** (Ed25519 en `~/.ssh/id_ed25519`, password deshabilitado el 2026-04-10). Conexión directa con `ssh root@157.245.13.107`.
+
+### Opción A — one-liner desde el Mac (recomendado)
+```bash
+git push origin main
+ssh root@157.245.13.107 "cd /opt/chatbot-cmc && git pull && pkill -f 'chatbot-cmc.*uvicorn'; sleep 2; cd /opt/chatbot-cmc && setsid nohup venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8001 </dev/null >/var/log/cmc-bot.log 2>&1 & disown"
+```
+
+### Opción B — sesión SSH interactiva
+```bash
+ssh root@157.245.13.107
 cd /opt/chatbot-cmc
 git pull
-kill $(ps aux | grep uvicorn | grep -v grep | awk '{print $2}')
-nohup venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8001 > /var/log/cmc-bot.log 2>&1 &
+pkill -f 'chatbot-cmc.*uvicorn'
+sleep 2
+setsid nohup venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8001 </dev/null >/var/log/cmc-bot.log 2>&1 &
+disown
+```
+
+**⚠️ Importante — usar `setsid`, no solo `nohup`**: cuando el comando se ejecuta dentro de `ssh "..."` (one-liner), un `nohup ... &` pelado deja el proceso asociado al pty remoto y éste se muere al cerrarse la sesión SSH — bot caído. `setsid` fuerza un nuevo process group, desligando el uvicorn del SSH. Verificado en prod 2026-04-10.
+
+**Verificación post-deploy**:
+```bash
+curl -s -o /dev/null -w 'HTTP %{http_code}\n' https://agentecmc.cl/health   # → 200
+ssh root@157.245.13.107 "ps aux | grep 'chatbot-cmc.*uvicorn' | grep -v grep"
 ```
 
 Los logs viven en `/var/log/cmc-bot.log` en el servidor.
+
+El GES Assistant corre por separado como **systemd** (`ges-assistant.service`, bind `127.0.0.1:8002`). Para sus propios restarts usar `systemctl restart ges-assistant` — no se ve afectado por deploys del chatbot.
 
 ## Endpoints
 - `GET /health` — health check
@@ -206,6 +224,35 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 ## Sesión en curso
 **Fecha**: 2026-04-10
 
+**Hecho (sesión 2026-04-10 — expansión normalizador triage + deploy fix)**:
+- **Diccionario de normalización expandido en `app/triage_ges.py`**: ~100 entradas nuevas repartidas entre `_ABREVIACIONES` y `_TYPOS`. Categorías:
+  - Abreviaciones WhatsApp adicionales (`tngs`, `snto`, `hrs`, `dr`, `dra`, `mjer`, `hno`, `kmo`, `mnna`, etc.)
+  - Modismos rurales chilenos confirmados en foros de salud: `guata`/`guatita`/`wata`→`estomago`, `cototo`→`hinchazon`, `empacho`→`indigestion`, `rasquiña`/`comeson`/`picason`→`picazon`, `escozor`/`escosor`→`ardor`
+  - Typos frecuentes de partes del cuerpo (`cabesa`, `gargnta`, `stomago`, `rodia`, `peccho`, `naris`, etc.) y enfermedades (`gripa`, `pulmona`, `bronkitis`, `astma`, `preson`, `diabetis`, `alerjia`, `hemoragia`, `convulcion`, `infrto`, `inchao`, `inflamao`)
+  - Regla aplicada: solo entradas que NO colisionan con palabras válidas del español (ej. se descartó `bota` por ambigüedad).
+- **Suite unitaria nueva `tests/test_normalizer.py`**: 52 casos cubriendo tildes/mayúsculas, abreviaciones, typos, participios rurales (`-ao→-ado`), modismos CL, edge cases (empty, solo puntuación, números), preservación de IDs de botón (`cat_medico`, `cita_confirm:9001`) y no-colisión con español estándar. Corre standalone: `PYTHONPATH=app:. venv/bin/python tests/test_normalizer.py`. **52/52 ✅**
+- **Harness principal intacto**: `harness_50.py` sigue en **68/68 ✅** post-cambios.
+- Commits `27a9651`, `50efa8c`, `68ce043` pusheados y **deployados a prod**.
+- **Fix de deploy procedure descubierto al vuelo**: el comando documentado (`nohup ... &` dentro de `ssh "..."`) deja el uvicorn asociado al pty remoto y muere al cerrarse la sesión SSH. Se corrigió a `setsid nohup ... & disown`. Docs y memoria actualizados:
+  - `CLAUDE.md` → sección "Deploy en producción" reescrita con Opción A (one-liner desde Mac) y Opción B (sesión interactiva), más la advertencia sobre `setsid`.
+  - `docs/infra.md` → mismo fix + warning.
+  - `~/.claude/.../memory/vps_access.md` → gotcha documentado.
+- **Verificación post-deploy**: `https://agentecmc.cl/health` → HTTP 200. Uvicorn PID activo. GES Assistant (systemd) intacto.
+
+**Hecho (sesión 2026-04-10 — deploy GES Assistant + SSH hardening)**:
+- **Fase 1 del GES Clinical Assistant deployada en producción**: servicio `ges-assistant.service` (systemd, auto-restart, arranque al boot) en `/opt/ges-assistant`, bindeado a `127.0.0.1:8002`, consumo ~70 MB RAM. El chatbot ya lo consume vía `GES_ASSISTANT_URL=http://localhost:8002` en `/opt/chatbot-cmc/.env`.
+- **Motor de triage validado end-to-end en prod** con 8 casos: "dolor pecho al apretar" → Osteocondritis/Traumatología sin urgencia, "opresivo al caminar" → IAM/URGENCIAS, "tngo muxo dlr d kbza" (normalización rural) → Cefalea tensional, meningitis → URGENCIAS, etc.
+- **Backend GES rsync** desde `/Users/rodrigoolavarria/ges-clinical-app/backend/` al VPS con venv dedicado. El repo local NO es git todavía (pendiente crear repo privado en GitHub).
+- **SSH hardening completo** en el VPS (venía con password auth habilitado):
+  - Ed25519 generada en Mac local (`~/.ssh/id_ed25519`, sin passphrase).
+  - `ssh-copy-id` al VPS, key auth verificada.
+  - `/etc/ssh/sshd_config.d/50-cloud-init.conf` → `PasswordAuthentication no`.
+  - Contraseña root rotada a 24 chars random (openssl). Guardada en password manager del usuario.
+  - Backup `sshd_config.bak.2026-04-10` por si acaso.
+  - Verificado: password auth devuelve `Permission denied (publickey)`, key sigue funcionando.
+- **Docs nuevos**: `docs/infra.md` con todo el detalle de VPS, servicios, redeploy procedures, memoria. Memoria persistente en `~/.claude/projects/.../memory/vps_access.md` como reference.
+- **Fase 2 pospuesta** (frontend GES en Vercel + `ges.agentecmc.cl`): DNS en Cloudflare (subdomain trivial), repo privado pendiente, API key + CORS restrictivo para endpoints expuestos, `/triage` permanece localhost.
+
 **Hecho (sesión 2026-04-10 — reagendar + lista de espera)**:
 - **Reagendar en un paso** (menú opción 2): intent dedicado `reagendar` en Claude Haiku. Nuevos estados `WAIT_RUT_REAGENDAR` y `WAIT_CITA_REAGENDAR`. `_iniciar_reagendar` usa `contact_profiles` si existe (salta el paso del RUT). `CONFIRMING_CITA` crea la nueva cita PRIMERO y solo entonces cancela la vieja (si el rollback falla, se loggea `reagendar_cancel_old_fail` pero el paciente NUNCA queda sin cita).
 - **Lista de espera** (menú opción 5 + intent `waitlist` + oferta automática): nueva tabla `waitlist` en `session.py` con upsert por `phone+especialidad` (índice parcial sobre `notified_at IS NULL AND canceled_at IS NULL`). Tres entradas: (1) oferta automática en `_iniciar_agendar` cuando `buscar_primer_dia` no encuentra cupo —capturando `id_prof_pref` cuando la especialidad resuelve a un único doctor, ej. "olavarria" → 1—, (2) opción 5 del menú (pide especialidad si no viene), (3) intent `waitlist` del LLM.
@@ -284,7 +331,7 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
   - Cancelar desde botón: salta directo a `CONFIRMING_CANCEL` con la cita cargada
   - Endpoint `GET /admin/api/confirmaciones?fecha=YYYY-MM-DD` con resumen {confirmed, reagendar, cancelar, pendiente}
 
-**Estado del servidor**: ✅ corriendo en `https://agentecmc.cl`, deployado commit `5c55d80` (pendiente deploy de feature confirmación pre-cita).
+**Estado del servidor**: ✅ corriendo en `https://agentecmc.cl`, deployado commit `68ce043` (triage normalizer expandido + test suite). GES Assistant en `127.0.0.1:8002` como systemd, activo.
 
 **Pendiente (corto plazo)**:
 - Deploy del feature confirmación pre-cita
