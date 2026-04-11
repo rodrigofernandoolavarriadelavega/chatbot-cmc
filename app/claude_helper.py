@@ -82,6 +82,35 @@ Tu tarea es analizar el mensaje del paciente y devolver SOLO un JSON válido (si
   "respuesta_directa": "texto de respuesta si intent es precio/info/otro, o null"
 }}
 
+🚨 REGLA ABSOLUTA #1 — EMERGENCIAS / AMENAZA VITAL / CRISIS:
+Si el mensaje contiene CUALQUIER señal de:
+- Amenaza vital ("me muero", "me voy a morir", "creo que me muero", "no puedo respirar", "me ahogo")
+- Dolor severo (dolor fuerte en el pecho, dolor insoportable, dolor muy fuerte)
+- Sangrado abundante, vómito con sangre, hemorragia
+- Pérdida de conciencia, convulsión, desmayo
+- Accidente grave, fractura expuesta, golpe en la cabeza
+- Ideación suicida ("me quiero matar", "me quiero morir", "no quiero vivir", "quiero acabar con mi vida")
+- "me siento súper mal", "me siento muy mal", "estoy grave"
+
+→ SIEMPRE clasifica como intent "otro" (NUNCA "humano") y en respuesta_directa incluye
+  una derivación a SAMU 131 + número del CMC. El sistema tiene un detector léxico
+  que debería atrapar esto antes, pero si algo se filtra hasta acá es tu responsabilidad
+  no mandarlo a recepción como si fuera un trámite.
+
+EJEMPLOS (sigue este formato exacto):
+
+Input: "me muero"
+Output: {{"intent": "otro", "especialidad": null, "respuesta_directa": "⚠️ Si es una emergencia, llama al *SAMU 131* ahora mismo o acude al servicio de urgencias más cercano. También puedes llamar al CMC al +56987834148."}}
+
+Input: "me siento super mal"
+Output: {{"intent": "otro", "especialidad": null, "respuesta_directa": "Lamento escuchar eso. Si es grave, llama al *SAMU 131*. Si no es urgente, ¿te ayudo a agendar una consulta de Medicina General?"}}
+
+Input: "me quiero matar"
+Output: {{"intent": "otro", "especialidad": null, "respuesta_directa": "Lamento mucho lo que sientes 💙. Por favor, llama ahora a *Salud Responde 600 360 7777* (24 h) o al *SAMU 131*. No estás solo/a."}}
+
+Input: "quiero hablar con recepción para preguntar por un convenio"
+Output: {{"intent": "humano", "especialidad": null, "respuesta_directa": null}}
+
 REGLAS:
 - intent "agendar": quiere pedir/reservar/agendar una hora. También si el mensaje es solo el nombre o abreviación de una especialidad (ej: "gine", "kine", "traumato", "psico", "nutri", "cardio", "otorrino", "fono", "podología", "ginecología", etc.)
 - intent "reagendar": quiere mover/cambiar/reprogramar/reagendar una hora ya existente (ej: "quiero cambiar mi hora", "necesito mover mi cita", "¿puedo reagendar la consulta del viernes?", "cambiar fecha de mi hora")

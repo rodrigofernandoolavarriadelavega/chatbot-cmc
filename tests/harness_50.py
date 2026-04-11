@@ -709,6 +709,54 @@ async def main():
         ("me sangra mucho la nariz y no para", ["SAMU", "131"]),
     ])
 
+    mk("BUG-09 amenaza vital 'me muero'", "56900000109", [
+        # Caso real de producción: paciente escribió "Me muero" y el bot lo
+        # clasificó como "humano" (derivar a recepción) en vez de urgencia.
+        ("me muero", ["SAMU", "131"]),
+    ])
+
+    mk("BUG-09b no confundir con coloquialismo 'me muero de hambre'", "56900000110", [
+        # Regression: el set EMERGENCIAS con substring "me muero" disparaba
+        # SAMU para "me muero de hambre" / "me muero de risa" (false positive).
+        # Con `EMERGENCIAS_VITAL_PATRONES` + lookahead negativo no debería.
+        ("me muero de hambre", {"none": ["SAMU", "urgencia"]}),
+    ])
+
+    mk("BUG-10 crisis salud mental 'me quiero matar'", "56900000111", [
+        # Ideación suicida debe disparar mensaje diferenciado con
+        # Salud Responde 600 360 7777 además de SAMU 131.
+        ("me quiero matar", {"all": ["Salud Responde", "600 360 7777"]}),
+    ])
+
+    mk("BUG-10b crisis salud mental 'quiero acabar con mi vida'", "56900000112", [
+        ("ya no aguanto mas, quiero acabar con mi vida",
+         {"all": ["Salud Responde", "600 360 7777"]}),
+    ])
+
+    mk("BUG-11 HUMAN_TAKEOVER + texto clinico no dice 'Recibido'", "56900000113", [
+        # Paciente pide hablar con recepción, queda en HUMAN_TAKEOVER, luego
+        # escribe "diabetes". Antes respondía "Recibido 🙏" sin reconocer el
+        # contenido clínico. Ahora debe referenciar el canal de urgencia.
+        ("quiero hablar con alguien", {"any": ["recepción", "recepcion"]}),
+        ("diabetes", {"any": ["SAMU", "urgente", "📞"],
+                      "none": ["Recibido 🙏"]}),
+    ])
+
+    mk("BUG-12 HUMAN_TAKEOVER + dolor pecho fuerte → emergencia", "56900000114", [
+        ("quiero hablar con alguien", {"any": ["recepción", "recepcion"]}),
+        # Estando en HUMAN_TAKEOVER, el paciente escribe un mensaje que es
+        # emergencia. La capa de emergencias está ANTES del handler de
+        # HUMAN_TAKEOVER en handle_message, así que debe disparar SAMU.
+        ("me duele el pecho fuerte", ["SAMU", "131"]),
+    ])
+
+    mk("BUG-13 override defensivo: humano + danger kw → emergencia", "56900000115", [
+        # Simulamos que Claude (vía fake_detect_intent) clasifica como
+        # "humano" por tener "hablar con alguien", pero el texto tiene
+        # "super mal" en _DANGER_KW. El override debe reroutear a emergencia.
+        ("hablar con alguien me siento super mal", ["SAMU", "131"]),
+    ])
+
     # ── Normalización global: typos/abreviaciones WhatsApp rural ────────────
     # Estos tests cubren el wiring de `tl_norm` en las ramas hard-coded de
     # handle_message (emergencias, comandos, AFIRMACIONES, NEGACIONES).
