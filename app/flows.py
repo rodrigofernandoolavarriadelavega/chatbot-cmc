@@ -44,6 +44,11 @@ EMERGENCIAS  = {
     "emergencia", "urgencia", "dolor muy fuerte", "no puedo respirar",
     "estoy grave", "me estoy muriendo", "perdí el conocimiento", "perdi el conocimiento",
     "mucho dolor", "accidente", "desmayo", "convulsion", "convulsión",
+    # frases de amenaza vital — no son literalmente "muriendo" pero el paciente
+    # está señalando peligro vital en castellano chileno coloquial
+    "me muero", "me voy a morir", "voy a morir", "me siento morir",
+    "me quiero morir", "creo que me muero", "me estoy por morir",
+    "me estoy muriendo de", "no puedo mas", "no puedo más",
     # respiratorio severo
     "me ahogo", "no me entra aire", "ahogo fuerte",
     # cardiovascular severo
@@ -608,7 +613,13 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "¿Quieres agendar una hora? Escribe *1* o *menu* para volver."
             )
 
-        # intent "otro" o "menu" (fallback de Claude) → mostrar menú
+        # intent "otro" — si Claude produjo una respuesta útil (p.ej. una
+        # emergencia que se filtró del detector léxico), la mostramos con
+        # el disclaimer y NO derivamos a recepción como si fuera un trámite.
+        resp_otro = (result.get("respuesta_directa") or "").strip()
+        if resp_otro:
+            return f"{resp_otro}\n\n{DISCLAIMER}"
+        # Fallback final (saludo o input incomprensible) → mostrar menú
         return _menu_msg()
 
     # ── WAIT_DURACION_MASOTERAPIA ──────────────────────────────────────────────

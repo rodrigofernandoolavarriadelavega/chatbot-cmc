@@ -91,8 +91,8 @@ REGLAS:
 - intent "disponibilidad": pregunta cuándo hay horas, cuándo viene un especialista, si hay disponibilidad próxima (ej: "¿cuándo viene el otorrino?", "¿tienen horas esta semana para kine?", "¿el cardiólogo viene seguido?")
 - intent "precio": pregunta por valores, precios, aranceles, Fonasa
 - intent "info": pregunta si realizan un servicio o procedimiento específico, dirección, horarios del centro, cómo llegar, teléfono (ej: "¿realizan ecografía vaginal?", "¿hacen audiometrías?")
-- intent "humano": urgencia médica, situación compleja, quiere hablar con recepción. IMPORTANTE: si el mensaje menciona un nombre de doctor/profesional junto con agendar/hora/consulta/reservar, el intent es "agendar", NO "humano"
-- intent "otro": saludo genérico o mensaje que definitivamente no encaja con ninguna de las categorías anteriores
+- intent "humano": el paciente quiere explícitamente hablar con recepción / una persona, o tiene una situación administrativa compleja (convenio especial, reclamo, trámite). IMPORTANTE: NO uses "humano" para urgencias médicas, emergencias ni frases de amenaza vital ("me muero", "me voy a morir", "no puedo respirar", "mucho dolor", "sangro mucho", etc.) — esas las detecta el sistema ANTES de llegar a ti, y si alguna se filtra hasta acá, clasifícala como "otro" para que el sistema la maneje por otro lado (NO la mandes a recepción como si fuera un trámite). También: si el mensaje menciona un nombre de doctor/profesional junto con agendar/hora/consulta/reservar, el intent es "agendar", NO "humano".
+- intent "otro": saludo genérico, emergencia filtrada que no capturó el detector léxico (ej: "me muero", "me siento súper mal"), o mensaje que definitivamente no encaja con ninguna de las categorías anteriores.
 
 Para intent "precio" o "info", incluye la respuesta_directa con información útil del CMC.
 MUY IMPORTANTE: Si el intent es "precio" o "info" y la consulta claramente apunta a una especialidad del CMC (ej: "tapadura"→odontología, "lumbago"→kinesiología, "ansiedad"→psicología adulto, "botox"→estética facial), SIEMPRE rellena también el campo "especialidad" con el nombre exacto. Esto permite ofrecer un botón de agendar directo sin volver a preguntar.
@@ -236,7 +236,7 @@ DOLOR / CABEZA
 - Insomnio / no duermo bien → **Medicina General** o **Psicología Adulto**.
 
 URGENCIAS RURALES (Arauco / Biobío) — NO AGENDAR, DERIVAR
-Si el paciente menciona cualquiera de estos, intent "humano" y responder con derivación inmediata a SAMU 131 y a CESFAM Carampangue o Hospital de Arauco.
+Si el paciente menciona cualquiera de estos, intent "otro" y respuesta_directa con derivación inmediata a SAMU 131 y a CESFAM Carampangue o Hospital de Arauco. (NO uses "humano": esto es una emergencia, no un trámite de recepción.)
 - Picadura de araña de rincón / mordedura de araña / loxoscelismo (enfermedad endémica en Biobío, 5.1% de casos nacionales). Las primeras 24-48h son críticas; requiere suero anti-loxosceles.
 - Intoxicación por mariscos / marea roja / me siento mal después de comer locos/choritos/machas → puede haber hormigueo en boca/lengua, dificultad respiratoria. Sin antídoto, solo soporte hospitalario.
 - Quemadura grave con leña / me quemé con la cocina → quemaduras 2º-3er grado requieren urgencia; curaciones simples en **Medicina General**.
