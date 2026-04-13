@@ -429,6 +429,10 @@ async def webhook(request: Request):
         log_text = f"🎤 {texto}" if is_audio else texto
         log_message(phone, "in", log_text, state_before, canal="whatsapp")
 
+        # Confirmar al paciente lo que se entendió del audio
+        if is_audio:
+            await send_whatsapp(phone, f"🎤 Entendí: _{texto}_")
+
         try:
             respuesta = await handle_message(phone, texto, session)
         except Exception as e:
