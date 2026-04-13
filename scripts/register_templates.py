@@ -60,9 +60,9 @@ TEMPLATES = [
             {
                 "type": "BUTTONS",
                 "buttons": [
-                    {"type": "QUICK_REPLY", "text": "✅ Confirmo"},
-                    {"type": "QUICK_REPLY", "text": "🔄 Cambiar hora"},
-                    {"type": "QUICK_REPLY", "text": "❌ No podré ir"},
+                    {"type": "QUICK_REPLY", "text": "Confirmo"},
+                    {"type": "QUICK_REPLY", "text": "Cambiar hora"},
+                    {"type": "QUICK_REPLY", "text": "No podre ir"},
                 ],
             },
         ],
@@ -103,15 +103,15 @@ TEMPLATES = [
                     "Tu opinión nos ayuda a mejorar 🙏"
                 ),
                 "example": {
-                    "body_text": [["*María*", "Traumatología", "Dr. Claudio Barraza"]]
+                    "body_text": [["Maria", "Traumatología", "Dr. Claudio Barraza"]]
                 },
             },
             {
                 "type": "BUTTONS",
                 "buttons": [
-                    {"type": "QUICK_REPLY", "text": "Mejor 😊"},
-                    {"type": "QUICK_REPLY", "text": "Igual 😐"},
-                    {"type": "QUICK_REPLY", "text": "Peor 😟"},
+                    {"type": "QUICK_REPLY", "text": "Mejor"},
+                    {"type": "QUICK_REPLY", "text": "Igual"},
+                    {"type": "QUICK_REPLY", "text": "Peor"},
                 ],
             },
         ],
@@ -130,7 +130,7 @@ TEMPLATES = [
                     "¿Quieres retomar tu atención de *{{2}}*? Puedo ayudarte a agendar ahora mismo."
                 ),
                 "example": {
-                    "body_text": [["*Pedro*", "Kinesiología"]]
+                    "body_text": [["Pedro", "Kinesiología"]]
                 },
             },
             {
@@ -161,7 +161,7 @@ TEMPLATES = [
                     "¿Quieres que te ayude a agendar la próxima?"
                 ),
                 "example": {
-                    "body_text": [["*Juan*"]]
+                    "body_text": [["Juan"]]
                 },
             },
             {
@@ -188,7 +188,7 @@ TEMPLATES = [
                     "¿Quieres ver horarios disponibles?"
                 ),
                 "example": {
-                    "body_text": [["*Ana*", "Nutrición"]]
+                    "body_text": [["Ana", "Nutrición"]]
                 },
             },
             {
@@ -215,7 +215,7 @@ TEMPLATES = [
                     "¿Te gustaría agendar con nuestros kinesiólogos?"
                 ),
                 "example": {
-                    "body_text": [["*Carlos*"]]
+                    "body_text": [["Carlos"]]
                 },
             },
             {
@@ -325,8 +325,11 @@ def register_template(tpl: dict) -> dict:
         "category": tpl["category"],
         "components": tpl["components"],
     }
-    r = httpx.post(API_URL, headers=HEADERS, json=payload, timeout=15)
-    return {"name": tpl["name"], "status": r.status_code, "response": r.json()}
+    try:
+        r = httpx.post(API_URL, headers=HEADERS, json=payload, timeout=30)
+        return {"name": tpl["name"], "status": r.status_code, "response": r.json()}
+    except httpx.TimeoutException:
+        return {"name": tpl["name"], "status": 0, "response": {"error": {"message": "Timeout"}}}
 
 
 def main():

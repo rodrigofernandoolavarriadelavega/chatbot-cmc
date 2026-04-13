@@ -15,9 +15,9 @@ from time import monotonic
 import httpx
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from fastapi import FastAPI, Request, Response, Query, HTTPException
+from fastapi import FastAPI, Request, Response, Query, HTTPException, Cookie
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from config import (META_VERIFY_TOKEN, CMC_TELEFONO, ADMIN_TOKEN,
@@ -285,10 +285,22 @@ def metrics(dias: int = Query(30, ge=1, le=365)):
 
 
 @app.get("/admin", response_class=HTMLResponse)
-def admin_panel(token: str = Query(ADMIN_TOKEN)):
-    if token != ADMIN_TOKEN:
-        raise HTTPException(status_code=401, detail="Token inválido")
-    return _ADMIN_HTML.replace("__TOKEN__", token)
+def admin_panel(token: str | None = Query(None),
+                cmc_session: str | None = Cookie(None)):
+    """Panel admin. Acepta auth via query param ?token= O cookie de sesión.
+    Si no hay auth válida, redirige a /admin/login."""
+    from admin_routes import _verify_cookie
+    # 1. Query param (backwards compat — also sets a cookie for subsequent loads)
+    if token and token == ADMIN_TOKEN:
+        return _ADMIN_HTML.replace("__TOKEN__", token)
+    # 2. Cookie
+    if cmc_session:
+        role = _verify_cookie(cmc_session)
+        if role in ("admin", "ortodoncia"):
+            # Authed via cookie — inject empty TOKEN so JS uses cookie-only path
+            return _ADMIN_HTML.replace("__TOKEN__", "")
+    # 3. No auth → redirect to login
+    return RedirectResponse(url="/admin/login", status_code=302)
 
 
 # ── Webhooks ─────────────────────────────────────────────────────────────────

@@ -7,6 +7,7 @@ import logging
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
+from config import USE_TEMPLATES
 from session import (
     get_citas_bot_pendientes,
     get_citas_bot_para_2h_reminder,
@@ -76,13 +77,15 @@ def _interactive_recordatorio(cita: dict) -> dict:
     }
 
 
-async def enviar_recordatorios(send_text_fn, send_interactive_fn=None):
+async def enviar_recordatorios(send_text_fn, send_interactive_fn=None,
+                               send_template_fn=None):
     """
     Busca citas para mañana y envía recordatorio por WhatsApp.
 
     - send_text_fn: fallback send_whatsapp(to, body) — usado si no hay send_interactive_fn.
     - send_interactive_fn: send_whatsapp_interactive(to, interactive_dict) — si se pasa,
       el recordatorio es un mensaje con 3 botones (confirmo / cambiar hora / no podré ir).
+    - send_template_fn: send_whatsapp_template — usado cuando USE_TEMPLATES=True.
     """
     manana = (date.today() + timedelta(days=1)).isoformat()
     citas = get_citas_bot_pendientes(manana)
@@ -94,7 +97,25 @@ async def enviar_recordatorios(send_text_fn, send_interactive_fn=None):
     log.info("Recordatorios: enviando %d recordatorio(s) para %s", len(citas), manana)
     for cita in citas:
         try:
-            if send_interactive_fn:
+            if USE_TEMPLATES and send_template_fn:
+                # Template: recordatorio_cita
+                # body_params: [nombre, especialidad, profesional, fecha_display, hora, modalidad]
+                # button_payloads: ["cita_confirm:{id}", "cita_reagendar:{id}", "cita_cancelar:{id}"]
+                nombre = _nombre_corto(cita.get("paciente_nombre")) or "paciente"
+                fecha_display = _fmt_fecha_display(cita["fecha"])
+                hora = _fmt_hora(cita["hora"])
+                modalidad = (cita.get("modalidad") or "particular").capitalize()
+                id_cita = cita["id_cita"]
+                await send_template_fn(
+                    cita["phone"],
+                    "recordatorio_cita",
+                    body_params=[nombre, cita["especialidad"], cita["profesional"],
+                                 fecha_display, hora, modalidad],
+                    button_payloads=[f"cita_confirm:{id_cita}",
+                                     f"cita_reagendar:{id_cita}",
+                                     f"cita_cancelar:{id_cita}"],
+                )
+            elif send_interactive_fn:
                 await send_interactive_fn(cita["phone"], _interactive_recordatorio(cita))
             else:
                 # Fallback texto plano
@@ -117,7 +138,7 @@ async def enviar_recordatorios(send_text_fn, send_interactive_fn=None):
             log.error("Error enviando recordatorio cita_id=%s: %s", cita.get("id"), e)
 
 
-async def enviar_recordatorios_2h(send_text_fn):
+async def enviar_recordatorios_2h(send_text_fn, send_template_fn=None):
     """Busca citas del día en la ventana [1h45, 2h15] desde ahora (CLT) y envía
     un recordatorio corto de "en 2 horas" al paciente. Se ejecuta cada 15 min.
 
@@ -144,16 +165,27 @@ async def enviar_recordatorios_2h(send_text_fn):
     for cita in citas:
         try:
             hora = _fmt_hora(cita["hora"])
-            nombre = _nombre_corto(cita.get("paciente_nombre"))
-            saludo = f"Hola {nombre}" if nombre else "Hola"
-            await send_text_fn(
-                cita["phone"],
-                f"{saludo} ⏰ *En 2 horas* tienes tu cita en el *Centro Médico Carampangue*:\n\n"
-                f"🏥 *{cita['especialidad']}* — {cita['profesional']}\n"
-                f"🕐 Hoy a las *{hora}*\n"
-                f"📍 Monsalve esquina República, Carampangue\n\n"
-                "Recuerda llegar *15 minutos antes* con tu cédula de identidad."
-            )
+            nombre = _nombre_corto(cita.get("paciente_nombre")) or "paciente"
+
+            if USE_TEMPLATES and send_template_fn:
+                # Template: recordatorio_cita_2h
+                # body_params: [nombre, especialidad, profesional, hora]
+                await send_template_fn(
+                    cita["phone"],
+                    "recordatorio_cita_2h",
+                    body_params=[nombre, cita["especialidad"],
+                                 cita["profesional"], hora],
+                )
+            else:
+                saludo = f"Hola {nombre}" if nombre != "paciente" else "Hola"
+                await send_text_fn(
+                    cita["phone"],
+                    f"{saludo} ⏰ *En 2 horas* tienes tu cita en el *Centro Médico Carampangue*:\n\n"
+                    f"🏥 *{cita['especialidad']}* — {cita['profesional']}\n"
+                    f"🕐 Hoy a las *{hora}*\n"
+                    f"📍 Monsalve esquina República, Carampangue\n\n"
+                    "Recuerda llegar *15 minutos antes* con tu cédula de identidad."
+                )
             mark_reminder_2h_sent(cita["id"])
             log.info("Recordatorio 2h enviado → %s cita_id=%s", cita["phone"], cita["id_cita"])
         except Exception as e:

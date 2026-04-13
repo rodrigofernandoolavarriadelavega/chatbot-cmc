@@ -1,13 +1,16 @@
 """Admin panel API routes — all /admin/api/* endpoints."""
 import asyncio
+import hashlib
+import hmac
 import logging
+import time
 from datetime import date, timedelta
 from collections import defaultdict
 
-from fastapi import APIRouter, Request, Query, HTTPException, Header, Depends
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Request, Query, HTTPException, Header, Depends, Cookie, Form
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
-from config import ADMIN_TOKEN, ORTODONCIA_TOKEN
+from config import ADMIN_TOKEN, ORTODONCIA_TOKEN, COOKIE_SECRET
 from messaging import send_whatsapp, send_instagram, send_messenger
 from session import (get_session, reset_session, save_session, get_metricas,
                      log_message, get_messages, get_conversations, log_event,
@@ -15,7 +18,8 @@ from session import (get_session, reset_session, save_session, get_metricas,
                      get_kine_tracking_all, save_kine_tracking,
                      get_ortodoncia_pacientes, set_ortodoncia_tipo, get_ortodoncia_sync_max_fecha,
                      get_waitlist_all, cancel_waitlist,
-                     get_confirmaciones_dia, get_citas_cache_todos)
+                     get_confirmaciones_dia, get_citas_cache_todos,
+                     get_metricas_fidelizacion)
 from medilink import (buscar_paciente, crear_paciente, buscar_primer_dia,
                       buscar_slots_dia, crear_cita, listar_citas_paciente,
                       cancelar_cita, get_citas_seguimiento_mes, sync_citas_dia,
@@ -25,6 +29,67 @@ from medilink import (buscar_paciente, crear_paciente, buscar_primer_dia,
 log = logging.getLogger("bot")
 
 router = APIRouter(tags=["admin"])
+
+
+# ── Cookie signing ───────────────────────────────────────────────────────────
+
+_COOKIE_NAME = "cmc_session"
+_COOKIE_MAX_AGE = 7 * 24 * 3600  # 7 days
+
+
+def _cookie_key() -> bytes:
+    """Derive a signing key from COOKIE_SECRET or ADMIN_TOKEN."""
+    secret = COOKIE_SECRET or ADMIN_TOKEN
+    return hashlib.sha256(f"cmc-cookie-sign:{secret}".encode()).digest()
+
+
+def _sign_cookie(role: str) -> str:
+    """Create a signed cookie value: role:expires:signature."""
+    expires = int(time.time()) + _COOKIE_MAX_AGE
+    payload = f"{role}:{expires}"
+    sig = hmac.new(_cookie_key(), payload.encode(), hashlib.sha256).hexdigest()
+    return f"{payload}:{sig}"
+
+
+def _verify_cookie(value: str) -> str | None:
+    """Verify a signed cookie. Returns role ('admin'|'ortodoncia') or None."""
+    if not value:
+        return None
+    parts = value.split(":")
+    if len(parts) != 3:
+        return None
+    role, expires_str, sig = parts
+    if role not in ("admin", "ortodoncia"):
+        return None
+    try:
+        expires = int(expires_str)
+    except ValueError:
+        return None
+    if time.time() > expires:
+        return None
+    payload = f"{role}:{expires_str}"
+    expected = hmac.new(_cookie_key(), payload.encode(), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(sig, expected):
+        return None
+    return role
+
+
+def _set_session_cookie(response: Response, role: str, is_https: bool) -> None:
+    """Set the signed httpOnly session cookie on a response."""
+    response.set_cookie(
+        key=_COOKIE_NAME,
+        value=_sign_cookie(role),
+        max_age=_COOKIE_MAX_AGE,
+        httponly=True,
+        samesite="lax",
+        secure=is_https,
+        path="/",
+    )
+
+
+def _clear_session_cookie(response: Response) -> None:
+    """Delete the session cookie."""
+    response.delete_cookie(key=_COOKIE_NAME, path="/")
 
 
 # ── Auth helpers ─────────────────────────────────────────────────────────────
@@ -38,23 +103,208 @@ def _extract_token(query_token: str | None, auth_header: str | None) -> str:
     return query_token or ""
 
 
-def require_admin(token: str | None = Query(None),
-                  authorization: str | None = Header(None)) -> str:
-    """Dependency FastAPI que valida token admin (header Bearer o query).
-    Retorna el token validado para quien lo necesite."""
-    tk = _extract_token(token, authorization)
-    if tk != ADMIN_TOKEN:
-        raise HTTPException(status_code=401, detail="Token inválido")
-    return tk
+def require_admin(request: Request,
+                  token: str | None = Query(None),
+                  authorization: str | None = Header(None),
+                  cmc_session: str | None = Cookie(None)) -> str:
+    """Dependency FastAPI que valida token admin.
+    Prioridad: Bearer header > cookie > query param.
+    Retorna el token validado."""
+    # 1. Bearer header
+    if authorization and authorization.lower().startswith("bearer "):
+        tk = authorization.split(None, 1)[1].strip()
+        if tk == ADMIN_TOKEN:
+            return tk
+    # 2. Cookie
+    if cmc_session:
+        role = _verify_cookie(cmc_session)
+        if role == "admin":
+            return ADMIN_TOKEN
+    # 3. Query param (backwards compat)
+    if token and token == ADMIN_TOKEN:
+        return token
+    raise HTTPException(status_code=401, detail="Token inválido")
 
 
-def require_ortodoncia(token: str | None = Query(None),
-                       authorization: str | None = Header(None)) -> str:
-    """Dependency FastAPI que valida token de ortodoncia o admin."""
-    tk = _extract_token(token, authorization)
-    if tk not in (ORTODONCIA_TOKEN, ADMIN_TOKEN):
-        raise HTTPException(status_code=403, detail="Acceso denegado")
-    return tk
+def require_ortodoncia(request: Request,
+                       token: str | None = Query(None),
+                       authorization: str | None = Header(None),
+                       cmc_session: str | None = Cookie(None)) -> str:
+    """Dependency FastAPI que valida token de ortodoncia o admin.
+    Prioridad: Bearer header > cookie > query param."""
+    # 1. Bearer header
+    if authorization and authorization.lower().startswith("bearer "):
+        tk = authorization.split(None, 1)[1].strip()
+        if tk in (ORTODONCIA_TOKEN, ADMIN_TOKEN):
+            return tk
+    # 2. Cookie
+    if cmc_session:
+        role = _verify_cookie(cmc_session)
+        if role in ("admin", "ortodoncia"):
+            return ORTODONCIA_TOKEN if role == "ortodoncia" else ADMIN_TOKEN
+    # 3. Query param (backwards compat)
+    if token and token in (ORTODONCIA_TOKEN, ADMIN_TOKEN):
+        return token
+    raise HTTPException(status_code=403, detail="Acceso denegado")
+
+
+# ── Login page & auth endpoints ──────────────────────────────────────────────
+
+_LOGIN_HTML = """\
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Iniciar sesion — Panel CMC</title>
+<style>
+:root {
+  --bg: #f1f5f9; --surface: #ffffff; --border: #e2e8f0;
+  --text: #1e293b; --text-2: #475569; --text-3: #94a3b8;
+  --primary: #1172AB; --primary-hover: #0e5f8f;
+  --red: #ef4444; --red-soft: #fef2f2;
+  --radius: 10px;
+  --shadow: 0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
+  --shadow-md: 0 4px 6px rgba(0,0,0,.07),0 2px 4px rgba(0,0,0,.06);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: "Inter", system-ui, sans-serif;
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+}
+.login-card {
+  background: var(--surface); border-radius: 14px;
+  box-shadow: var(--shadow-md); padding: 36px 32px 32px;
+  width: 360px; max-width: 92vw;
+}
+.login-logo {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 24px; justify-content: center;
+}
+.login-logo img { height: 40px; object-fit: contain; }
+.login-logo h1 { font-size: 15px; font-weight: 700; color: var(--text); }
+.login-subtitle {
+  text-align: center; font-size: 13px; color: var(--text-2);
+  margin-bottom: 20px;
+}
+label {
+  display: block; font-size: 12px; font-weight: 600;
+  color: var(--text-2); margin-bottom: 6px;
+}
+input[type="password"] {
+  width: 100%; padding: 10px 14px; border: 1px solid var(--border);
+  border-radius: 8px; font-family: inherit; font-size: 14px;
+  color: var(--text); background: var(--bg);
+  transition: border-color .15s;
+}
+input[type="password"]:focus {
+  outline: none; border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(17,114,171,.12);
+}
+.btn-login {
+  width: 100%; padding: 11px; border: none; border-radius: 8px;
+  background: var(--primary); color: #fff;
+  font-family: inherit; font-size: 14px; font-weight: 600;
+  cursor: pointer; margin-top: 16px; transition: background .15s;
+}
+.btn-login:hover { background: var(--primary-hover); }
+.btn-login:disabled { opacity: .6; cursor: not-allowed; }
+.error-msg {
+  margin-top: 12px; padding: 8px 12px; border-radius: 8px;
+  background: var(--red-soft); color: var(--red);
+  font-size: 12px; font-weight: 500; text-align: center;
+  display: none;
+}
+</style>
+</head>
+<body>
+<div class="login-card">
+  <div class="login-logo">
+    <img src="/static/logo.png" alt="CMC">
+    <h1>Panel de Recepcion</h1>
+  </div>
+  <p class="login-subtitle">Centro Medico Carampangue</p>
+  <form id="login-form" method="POST" action="/admin/login">
+    <label for="password">Contrasena</label>
+    <input type="password" id="password" name="password"
+           placeholder="Ingresa la contrasena" autocomplete="current-password" required autofocus>
+    <button type="submit" class="btn-login" id="btn-submit">Iniciar sesion</button>
+    <div class="error-msg" id="error-msg"></div>
+  </form>
+</div>
+<script>
+document.getElementById("login-form").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  const btn = document.getElementById("btn-submit");
+  const errDiv = document.getElementById("error-msg");
+  btn.disabled = true;
+  errDiv.style.display = "none";
+  try {
+    const r = await fetch("/admin/login", {
+      method: "POST",
+      headers: {"Content-Type": "application/x-www-form-urlencoded"},
+      body: "password=" + encodeURIComponent(document.getElementById("password").value),
+      redirect: "follow",
+    });
+    if (r.redirected) {
+      window.location.href = r.url;
+      return;
+    }
+    const data = await r.json().catch(() => null);
+    errDiv.textContent = (data && data.detail) || "Contrasena incorrecta";
+    errDiv.style.display = "block";
+  } catch (err) {
+    errDiv.textContent = "Error de conexion";
+    errDiv.style.display = "block";
+  }
+  btn.disabled = false;
+});
+</script>
+</body>
+</html>"""
+
+
+@router.get("/admin/login", response_class=HTMLResponse)
+def admin_login_page(cmc_session: str | None = Cookie(None)):
+    """Muestra la pagina de login. Si ya hay cookie valida, redirige al panel."""
+    role = _verify_cookie(cmc_session) if cmc_session else None
+    if role == "admin":
+        return RedirectResponse(url="/admin", status_code=302)
+    return HTMLResponse(content=_LOGIN_HTML)
+
+
+@router.post("/admin/login")
+def admin_login(request: Request, password: str = Form(...)):
+    """Valida la contrasena y setea la cookie de sesion."""
+    is_https = (request.url.scheme == "https"
+                or request.headers.get("x-forwarded-proto") == "https")
+
+    if password == ADMIN_TOKEN:
+        response = RedirectResponse(url="/admin", status_code=302)
+        _set_session_cookie(response, "admin", is_https)
+        log.info("Admin login OK (cookie set) ip=%s",
+                 request.client.host if request.client else "?")
+        return response
+
+    if password == ORTODONCIA_TOKEN:
+        response = RedirectResponse(url="/admin", status_code=302)
+        _set_session_cookie(response, "ortodoncia", is_https)
+        log.info("Ortodoncia login OK (cookie set) ip=%s",
+                 request.client.host if request.client else "?")
+        return response
+
+    raise HTTPException(status_code=401, detail="Contrasena incorrecta")
+
+
+@router.post("/admin/logout")
+def admin_logout():
+    """Borra la cookie de sesion y redirige al login."""
+    response = RedirectResponse(url="/admin/login", status_code=302)
+    _clear_session_cookie(response)
+    return response
 
 
 # ── Conversations & metrics ──────────────────────────────────────────────────
@@ -103,6 +353,18 @@ def admin_confirmaciones(fecha: str = None, _: str = Depends(require_admin)):
         if estado in resumen:
             resumen[estado] += 1
     return {"fecha": fecha, "total": len(filas), "resumen": resumen, "citas": filas}
+
+
+# ── Métricas fidelización ────────────────────────────────────────────────────
+
+@router.get("/admin/api/metricas-fidelizacion")
+def admin_metricas_fidelizacion(dias: int | None = None,
+                                _: str = Depends(require_admin)):
+    """Métricas de campañas de fidelización.
+    ?dias=7 → última semana, ?dias=30 → último mes, sin param → todo."""
+    if dias is not None and dias not in (7, 30):
+        dias = 30  # fallback a 30 si mandan algo raro
+    return get_metricas_fidelizacion(dias)
 
 
 # ── Takeover, reply, resume ──────────────────────────────────────────────────

@@ -3,8 +3,9 @@ import logging
 
 import httpx
 
-from config import MEDILINK_BASE_URL, MEDILINK_TOKEN, ADMIN_ALERT_PHONE
-from messaging import send_whatsapp, send_whatsapp_interactive
+from config import MEDILINK_BASE_URL, MEDILINK_TOKEN, ADMIN_ALERT_PHONE, USE_TEMPLATES
+from messaging import (send_whatsapp, send_whatsapp_interactive,
+                       send_whatsapp_template)
 from reminders import enviar_recordatorios, enviar_recordatorios_2h
 from fidelizacion import (enviar_seguimiento_postconsulta, enviar_reactivacion_pacientes,
                           enviar_adherencia_kine, enviar_recordatorio_control,
@@ -54,14 +55,31 @@ async def _sync_citas_hoy():
     await sync_citas_dia(hoy, ids_todos)
 
 
-# ── Wrappers de fidelización (pasan send_whatsapp como callback) ────────────
-async def _job_recordatorios():          await enviar_recordatorios(send_whatsapp, send_whatsapp_interactive)
-async def _job_recordatorios_2h():       await enviar_recordatorios_2h(send_whatsapp)
-async def _job_postconsulta():           await enviar_seguimiento_postconsulta(send_whatsapp)
-async def _job_reactivacion():           await enviar_reactivacion_pacientes(send_whatsapp)
-async def _job_adherencia_kine():        await enviar_adherencia_kine(send_whatsapp)
-async def _job_control_especialidad():   await enviar_recordatorio_control(send_whatsapp)
-async def _job_crosssell_kine():         await enviar_crosssell_kine(send_whatsapp)
+# ── Wrappers de fidelización (pasan send_whatsapp + send_whatsapp_template como callback) ──
+# Cuando USE_TEMPLATES=True, cada función interna usa send_whatsapp_template en vez de
+# mensajes free-form. El flag se evalúa dentro de cada función, no aquí.
+_tpl = send_whatsapp_template  # alias corto para los wrappers
+
+async def _job_recordatorios():
+    await enviar_recordatorios(send_whatsapp, send_whatsapp_interactive, send_template_fn=_tpl)
+
+async def _job_recordatorios_2h():
+    await enviar_recordatorios_2h(send_whatsapp, send_template_fn=_tpl)
+
+async def _job_postconsulta():
+    await enviar_seguimiento_postconsulta(send_whatsapp, send_template_fn=_tpl)
+
+async def _job_reactivacion():
+    await enviar_reactivacion_pacientes(send_whatsapp, send_template_fn=_tpl)
+
+async def _job_adherencia_kine():
+    await enviar_adherencia_kine(send_whatsapp, send_template_fn=_tpl)
+
+async def _job_control_especialidad():
+    await enviar_recordatorio_control(send_whatsapp, send_template_fn=_tpl)
+
+async def _job_crosssell_kine():
+    await enviar_crosssell_kine(send_whatsapp, send_template_fn=_tpl)
 
 
 async def _job_medilink_watchdog():
@@ -87,14 +105,23 @@ async def _job_medilink_watchdog():
             depth = intent_queue_depth()
             since = medilink_down_since() or "?"
             try:
-                await send_whatsapp(
-                    ADMIN_ALERT_PHONE,
-                    "⚠️ *Alerta técnica CMC bot*\n\n"
-                    f"Medilink no responde desde las {since} UTC.\n"
-                    f"Pacientes esperando: *{depth}*\n\n"
-                    "El bot avisó a cada paciente que guardó su solicitud y les "
-                    "pedirá volver a escribir cuando el sistema esté operativo."
-                )
+                if USE_TEMPLATES:
+                    # Template: alerta_tecnica_admin
+                    # body_params: [hora_caida, cantidad_cola]
+                    await send_whatsapp_template(
+                        ADMIN_ALERT_PHONE,
+                        "alerta_tecnica_admin",
+                        body_params=[since, str(depth)],
+                    )
+                else:
+                    await send_whatsapp(
+                        ADMIN_ALERT_PHONE,
+                        "⚠️ *Alerta técnica CMC bot*\n\n"
+                        f"Medilink no responde desde las {since} UTC.\n"
+                        f"Pacientes esperando: *{depth}*\n\n"
+                        "El bot avisó a cada paciente que guardó su solicitud y les "
+                        "pedirá volver a escribir cuando el sistema esté operativo."
+                    )
                 mark_reception_notified()
                 log.warning("watchdog: recepción notificada — Medilink sigue caído, cola=%d", depth)
             except Exception as e:
@@ -108,12 +135,16 @@ async def _job_medilink_watchdog():
     for row in pendientes:
         phone_p = row["phone"]
         try:
-            await send_whatsapp(
-                phone_p,
-                "✅ ¡Buenas noticias! Nuestro sistema de citas ya está operativo de nuevo 🎉\n\n"
-                "Si quieres retomar lo que estabas haciendo, escribe *menu* y te ayudo al tiro.\n\n"
-                "_Gracias por tu paciencia._"
-            )
+            if USE_TEMPLATES:
+                # Template: sistema_recuperado — no params
+                await send_whatsapp_template(phone_p, "sistema_recuperado")
+            else:
+                await send_whatsapp(
+                    phone_p,
+                    "✅ ¡Buenas noticias! Nuestro sistema de citas ya está operativo de nuevo 🎉\n\n"
+                    "Si quieres retomar lo que estabas haciendo, escribe *menu* y te ayudo al tiro.\n\n"
+                    "_Gracias por tu paciencia._"
+                )
             mark_intent_notified(row["id"])
         except Exception as e:
             log.error("watchdog: fallo notificando paciente %s: %s", phone_p, e)
@@ -121,12 +152,21 @@ async def _job_medilink_watchdog():
     # Avisar a recepción que se recuperó
     if ADMIN_ALERT_PHONE:
         try:
-            await send_whatsapp(
-                ADMIN_ALERT_PHONE,
-                "✅ *Medilink recuperado*\n\n"
-                f"El bot ya está operativo de nuevo. Avisé a {len(pendientes)} paciente(s) "
-                "que estaban esperando."
-            )
+            if USE_TEMPLATES:
+                # Template: sistema_recuperado_admin
+                # body_params: [cantidad_notificados]
+                await send_whatsapp_template(
+                    ADMIN_ALERT_PHONE,
+                    "sistema_recuperado_admin",
+                    body_params=[str(len(pendientes))],
+                )
+            else:
+                await send_whatsapp(
+                    ADMIN_ALERT_PHONE,
+                    "✅ *Medilink recuperado*\n\n"
+                    f"El bot ya está operativo de nuevo. Avisé a {len(pendientes)} paciente(s) "
+                    "que estaban esperando."
+                )
         except Exception:
             pass
 
@@ -171,19 +211,30 @@ async def _job_waitlist_check():
             PROFESIONALES.get(int(id_prof_pref), {}).get("nombre", "") if id_prof_pref else ""
         )
 
-        saludo = f"Hola{' ' + nombre.split()[0] if nombre else ''} 👋"
-        prof_txt = f" con *{prof_nombre}*" if prof_nombre else ""
+        nombre_corto = nombre.split()[0] if nombre else ""
         try:
-            await send_whatsapp(
-                phone_p,
-                f"{saludo}\n\n"
-                f"¡Buenas noticias! Se liberó un cupo para *{esp.title()}*{prof_txt}.\n\n"
-                f"📅 Primera hora disponible: *{fecha} a las {hora}*\n\n"
-                "Si quieres agendarla escribe *menu* y te ayudo al tiro. "
-                "También puedo buscarte otro horario si ese no te sirve 😊\n\n"
-                "_Te escribimos porque estás en nuestra lista de espera. "
-                "Si ya no la necesitas, ignora este mensaje._"
-            )
+            if USE_TEMPLATES:
+                # Template: lista_espera_cupo
+                # body_params: [nombre, especialidad, fecha, hora]
+                await send_whatsapp_template(
+                    phone_p,
+                    "lista_espera_cupo",
+                    body_params=[nombre_corto or "paciente",
+                                 esp.title(), fecha, hora],
+                )
+            else:
+                saludo = f"Hola{' ' + nombre_corto if nombre_corto else ''} 👋"
+                prof_txt = f" con *{prof_nombre}*" if prof_nombre else ""
+                await send_whatsapp(
+                    phone_p,
+                    f"{saludo}\n\n"
+                    f"¡Buenas noticias! Se liberó un cupo para *{esp.title()}*{prof_txt}.\n\n"
+                    f"📅 Primera hora disponible: *{fecha} a las {hora}*\n\n"
+                    "Si quieres agendarla escribe *menu* y te ayudo al tiro. "
+                    "También puedo buscarte otro horario si ese no te sirve 😊\n\n"
+                    "_Te escribimos porque estás en nuestra lista de espera. "
+                    "Si ya no la necesitas, ignora este mensaje._"
+                )
             mark_waitlist_notified(wl_id)
             log_event(phone_p, "waitlist_notificado", {
                 "waitlist_id": wl_id, "especialidad": esp,

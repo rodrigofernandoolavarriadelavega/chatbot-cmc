@@ -634,6 +634,93 @@ def get_ultimo_seguimiento(phone: str) -> dict | None:
         return dict(row) if row else None
 
 
+def get_metricas_fidelizacion(dias: int | None = None) -> dict:
+    """Métricas de campañas de fidelización.
+
+    dias=7 → últimos 7 días, dias=30 → últimos 30 días, dias=None → todo.
+    Retorna por cada tipo de campaña: total_sent, total_responded, conversion_rate.
+    Para postconsulta: desglose mejor/igual/peor.
+    También calcula responded como: pacientes que enviaron un mensaje (direction='in')
+    dentro de las 24h siguientes al envío de la campaña.
+    """
+    with _conn() as conn:
+        where = ""
+        params: list = []
+        if dias:
+            where = "WHERE f.enviado_en >= datetime('now', ?)"
+            params = [f"-{dias} days"]
+
+        # ── Totales enviados y respondidos (campo respuesta) por tipo ─────
+        rows = conn.execute(f"""
+            SELECT f.tipo,
+                   COUNT(*)                             AS total_sent,
+                   COUNT(f.respuesta)                   AS total_responded
+            FROM fidelizacion_msgs f
+            {where}
+            GROUP BY f.tipo
+        """, params).fetchall()
+
+        tipos = {}
+        for r in rows:
+            t = dict(r)
+            sent = t["total_sent"]
+            resp = t["total_responded"]
+            # Fallback: si no hay respuesta directa, check messages within 24h
+            t["conversion_rate"] = round(resp / sent * 100, 1) if sent else 0.0
+            tipos[t["tipo"]] = t
+
+        # ── Fallback: count patients that sent a message within 24h ───────
+        # Only for campaigns with 0 direct responses (e.g. reactivacion, adherencia, crosssell)
+        for tipo_key, td in tipos.items():
+            if td["total_responded"] == 0 and td["total_sent"] > 0:
+                tipo_where = f"{where} AND f.tipo = ?" if where else "WHERE f.tipo = ?"
+                count_row = conn.execute(f"""
+                    SELECT COUNT(DISTINCT f.id) AS cnt
+                    FROM fidelizacion_msgs f
+                    INNER JOIN messages m
+                        ON m.phone = f.phone
+                        AND m.direction = 'in'
+                        AND m.ts > f.enviado_en
+                        AND m.ts <= datetime(f.enviado_en, '+24 hours')
+                    {tipo_where}
+                """, params + [tipo_key]).fetchone()
+                if count_row:
+                    cnt = count_row["cnt"]
+                    td["total_responded"] = cnt
+                    td["conversion_rate"] = round(cnt / td["total_sent"] * 100, 1)
+
+        # ── Desglose postconsulta ─────────────────────────────────────────
+        postconsulta_breakdown = {"mejor": 0, "igual": 0, "peor": 0}
+        pc_rows = conn.execute(f"""
+            SELECT f.respuesta, COUNT(*) AS cnt
+            FROM fidelizacion_msgs f
+            {where + " AND" if where else "WHERE"} f.tipo = 'postconsulta'
+            AND f.respuesta IS NOT NULL
+            GROUP BY f.respuesta
+        """, params).fetchall()
+        for r in pc_rows:
+            resp_val = r["respuesta"]
+            if resp_val in postconsulta_breakdown:
+                postconsulta_breakdown[resp_val] = r["cnt"]
+
+        # ── Rango de fechas para contexto ─────────────────────────────────
+        range_row = conn.execute(f"""
+            SELECT MIN(f.enviado_en) AS desde, MAX(f.enviado_en) AS hasta,
+                   COUNT(*) AS total_global
+            FROM fidelizacion_msgs f
+            {where}
+        """, params).fetchone()
+
+        return {
+            "dias": dias,
+            "desde": range_row["desde"] if range_row else None,
+            "hasta": range_row["hasta"] if range_row else None,
+            "total_global": range_row["total_global"] if range_row else 0,
+            "por_tipo": tipos,
+            "postconsulta_breakdown": postconsulta_breakdown,
+        }
+
+
 # ── Kinesiología tracking ──────────────────────────────────────────────────────
 
 def _ensure_kine_table(conn):
