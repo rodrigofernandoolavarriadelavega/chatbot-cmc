@@ -170,13 +170,13 @@ Output: {{"intent": "info", "especialidad": "estética facial", "respuesta_direc
 No inventes términos que no estén acá; si no aparece, deriva a recepción.
 
 ODONTOLOGÍA / DENTAL
-- Tapadura / tapar muela / muela picada / caries → obturación con resina. Trata: **Odontología General** (Dra. Javiera Burgos o Dr. Carlos Jiménez). Desde $35.000.
-- Limpieza dental / sarro / profilaxis → destartraje + profilaxis, $30.000 en **Odontología General**.
-- Sacar muela / sacar diente / muela del juicio → exodoncia simple $40.000, compleja $60.000 en **Odontología General**.
-- Matar el nervio / tratamiento de conducto / dolor fuerte de muela → tratamiento de **Endodoncia** con Dr. Fernando Fredes ($110.000–$220.000 según diente).
-- Frenillos / fierros / brackets → tratamiento de **Ortodoncia** con Dra. Daniela Castillo (instalación $120.000, control $30.000).
-- Perdí un diente / diente nuevo / poner diente fijo → **Implantología** con Dra. Aurora Valdés (desde $650.000).
-- Blanqueamiento / aclarar dientes → **Odontología General**, $75.000.
+- Tapadura / tapar muela / muela picada / caries / se me cayó una tapadura / se me salió un empaste → obturación con resina. La dentista limpia la zona picada y la rellena con resina del color del diente, ~30 min, anestesia local, indoloro. Trata: **Odontología General** (Dra. Javiera Burgos o Dr. Carlos Jiménez). Desde $35.000.
+- Limpieza dental / sarro / profilaxis / me sangran las encías → destartraje + profilaxis, $30.000 en **Odontología General**. Duración ~40 min, sin dolor.
+- Sacar muela / sacar diente / muela del juicio / muela picada que no se puede arreglar → exodoncia simple $40.000, compleja $60.000 en **Odontología General**. Se usa anestesia local, ~30–45 min.
+- Matar el nervio / tratamiento de conducto / dolor fuerte de muela / caries profunda que llega al nervio → tratamiento de **Endodoncia** con Dr. Fernando Fredes ($110.000–$220.000 según diente). Se limpia y sella el interior del diente para evitar extraerlo.
+- Frenillos / fierros / brackets / dientes chuecos / quiero arreglarme los dientes / dientes torcidos / ortodoncia → tratamiento de **Ortodoncia** con Dra. Daniela Castillo (instalación $120.000, control $30.000). Corrige la posición de los dientes con brackets o ortopedia, duración 1–2 años.
+- Perdí un diente / diente nuevo / poner diente fijo / implante dental / quiero un implante → **Implantología** con Dra. Aurora Valdés (desde $650.000). Se instala un tornillo de titanio en el hueso y una corona encima. 2–3 sesiones separadas por meses.
+- Blanqueamiento / aclarar dientes / dientes amarillos → **Odontología General**, $75.000. Se aplica gel especial ~60 min, aclara varios tonos, indoloro.
 
 PODOLOGÍA
 - Uña encarnada / uñero / uña enterrada → Onicocriptosis. Trata: **Podología** (Andrea Guevara), $25.000–$35.000 según caso.
@@ -314,10 +314,16 @@ SALUD MENTAL
 - Problemas de aprendizaje en niño / conducta → **Psicología Infantil** (Jorge Montalba).
 - Problemas de lenguaje en niño → **Fonoaudiología** (Juana Arratia).
 
-ESTÉTICA
-- Arrugas / rejuvenecer / botox → Toxina botulínica $159.990 con **Estética Facial** (Dra. Valentina Fuentealba).
-- Relleno labios / ácido hialurónico → $159.990 con **Estética Facial**.
-- Mesoterapia / vitaminas piel → desde $80.000 con **Estética Facial**.
+ESTÉTICA / ARMONIZACIÓN FACIAL (Dra. Valentina Fuentealba)
+- Arrugas / rejuvenecer / botox / toxina botulínica / entrecejo / patas de gallo → Toxina botulínica en 3 zonas, relaja los músculos de la cara para suavizar arrugas, ~20 min, efecto dura 4–6 meses. $159.990 con **Estética Facial**.
+- Relleno labios / ácido hialurónico / rellenar pómulos / rellenar ojeras / surco nasogeniano → Ácido hialurónico inyectable que aumenta volumen y rellena arrugas profundas, ~20 min, efecto 6–12 meses. $159.990 con **Estética Facial**.
+- Mesoterapia / vitaminas piel / hidratación facial / piel opaca → Microinyecciones de vitaminas y nutrientes para revitalizar la piel, ~30 min. 1 sesión $80.000, 3 sesiones $179.990 con **Estética Facial**.
+- Hilos tensores / hilos revitalizantes / lifting sin cirugía → Filamentos que se colocan bajo la piel para tensar y rejuvenecer el rostro, ~40 min. $129.990 con **Estética Facial**.
+- Lipopapada / papada / doble mentón / bajar la papada → Inyecciones reductoras de grasa submentoniana, 3 sesiones. $139.990 con **Estética Facial**.
+- Exosomas / regeneración celular → Vesículas que estimulan colágeno y regeneración profunda de la piel, resultado acumulativo. $349.900 con **Estética Facial**.
+- Bioestimulador / hidroxiapatita / colágeno / Radiesse → Inyección que estimula la producción natural de colágeno para mejorar firmeza y elasticidad, efecto dura 12–18 meses. $450.000 con **Estética Facial**.
+- Armonización facial / quiero arreglarme la cara → Conjunto de tratamientos estéticos (botox + rellenos + bioestimuladores) para mejorar proporción y simetría facial. Evaluación $15.000, luego plan personalizado con **Estética Facial**.
+- Peeling / manchas en la cara / cicatrices de acné → Exfoliación química para remover células muertas y mejorar textura, manchas y marcas. Consultar precio con **Estética Facial**.
 
 DIFERENCIADORES CMC (usar cuando pregunten "¿por qué elegir CMC?" o comparen con otra clínica):
 - Atención rápida: hora disponible generalmente al día siguiente, sin largas esperas
