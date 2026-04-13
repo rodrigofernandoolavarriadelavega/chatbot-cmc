@@ -325,6 +325,7 @@ body {
     <div class="pill"><strong id="s-total">—</strong>&nbsp;conversaciones</div>
     <div class="pill amber"><strong id="s-flujo">—</strong>&nbsp;en flujo</div>
     <div class="pill" id="pill-esperando"><strong id="s-takeover">—</strong>&nbsp;esperando atención</div>
+    <div class="pill" id="pill-media" style="display:none;"><strong id="s-media">0</strong>&nbsp;📎 archivos pendientes</div>
     <div class="pill green" id="pill-confirm" onclick="abrirModalConfirmaciones()" style="cursor:pointer;" title="Click para ver detalle">✅&nbsp;<strong id="s-confirm">—</strong>&nbsp;confirman mañana</div>
     <div class="pill"><div class="live-dot"></div>&nbsp;Actualizado <span id="last-refresh">—</span></div>
     <button class="btn btn-primary" onclick="abrirModalAgendar()" style="margin-left:8px;font-size:12px;padding:6px 14px;border-radius:8px;">+ Nueva Cita</button>
@@ -844,6 +845,7 @@ function convCard(c,g) {
   else if (mins>=5) badges+=`<span class="badge badge-warn">⏱ ${waitLabel(mins)} esperando</span>`;
   else if (mins>=1&&c.state!=="IDLE") badges+=`<span class="badge" style="background:#f8fafc;color:#94a3b8;border-color:#e2e8f0;">⏱ ${waitLabel(mins)}</span>`;
   if (fd.fecha_display&&fd.hora_inicio) badges+=`<span class="badge badge-prob">✅ Lista para agendar</span>`;
+  if (fd.handoff_reason&&fd.handoff_reason.startsWith("media:")) badges+=`<span class="badge badge-urgent">📎 Archivo pendiente</span>`;
   return `<div class="conv-card${selectedPhone===c.phone?" selected":""}" style="border-left-color:${g.dot};" onclick="selectConv('${c.phone}')">
     <div class="card-top">
       <span class="cdot" style="background:${dotColor(c.state)};"></span>
@@ -1088,11 +1090,18 @@ function updateStats(){
   const tk=convs.filter(c=>c.state==="HUMAN_TAKEOVER").length;
   document.getElementById("s-takeover").textContent=tk;
   document.getElementById("pill-esperando").className="pill"+(tk>0?" red":"");
+  // Pill de archivos/media pendientes
+  const mediaPend=convs.filter(c=>c.state==="HUMAN_TAKEOVER"&&c.flow_data?.handoff_reason?.startsWith("media:")).length;
+  const pillMedia=document.getElementById("pill-media");
+  document.getElementById("s-media").textContent=mediaPend;
+  pillMedia.style.display=mediaPend>0?"":"none";
+  pillMedia.className="pill"+(mediaPend>0?" red":"");
   // Banner de alertas
   const alertBar=document.getElementById("alert-bar");
   const esperando5=convs.filter(c=>c.state!=="IDLE"&&waitMinutes(c.last_ts||c.updated_at)>=5).length;
   const listos=convs.filter(c=>(c.flow_data?.fecha_display)&&(c.flow_data?.hora_inicio)).length;
   const partes=[];
+  if(mediaPend>0) partes.push(`📎 ${mediaPend} archivo${mediaPend>1?"s":""} pendiente${mediaPend>1?"s":""} de revisión`);
   if(tk>0) partes.push(`${tk} paciente${tk>1?"s":""} esperando atención humana`);
   if(esperando5>0) partes.push(`${esperando5} sin respuesta hace más de 5 min`);
   if(listos>0) partes.push(`${listos} listo${listos>1?"s":""} para confirmar hora`);

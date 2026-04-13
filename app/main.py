@@ -26,7 +26,7 @@ from flows import handle_message
 from messaging import (send_whatsapp, send_whatsapp_interactive,
                        download_whatsapp_media, transcribe_audio)
 from session import (get_session, is_duplicate, reset_session, save_session,
-                     get_metricas, log_message,
+                     get_metricas, log_message, log_event,
                      intent_queue_depth, waitlist_depth, purge_old_data)
 from resilience import is_medilink_down
 from jobs import (_enviar_reenganche, _sync_citas_hoy,
@@ -419,7 +419,82 @@ async def webhook(request: Request):
             texto = transcripcion
             is_audio = True
             log.info("AUDIO transcrito from=%s text=%r", phone, texto[:120])
+        elif msg_type == "reaction":
+            # Reacciones (emoji a un mensaje) — ignorar silenciosamente
+            return Response(status_code=200)
+        elif msg_type in ("image", "video", "document"):
+            # Archivos que recepción necesita revisar → HUMAN_TAKEOVER
+            log.info("MEDIA recibido from=%s type=%s — derivando a recepción", phone, msg_type)
+            _MEDIA_LABELS = {"image": "imagen 📷", "video": "video 🎥", "document": "documento 📄"}
+            label = _MEDIA_LABELS[msg_type]
+            caption = ""
+            if msg_type == "image":
+                caption = msg.get("image", {}).get("caption", "")
+            elif msg_type == "video":
+                caption = msg.get("video", {}).get("caption", "")
+            elif msg_type == "document":
+                caption = msg.get("document", {}).get("filename", "")
+            log_text = f"[{msg_type}]" + (f" {caption}" if caption else "")
+            state_before = get_session(phone).get("state", "IDLE")
+            log_message(phone, "in", log_text, state_before, canal="whatsapp")
+            save_session(phone, "HUMAN_TAKEOVER", {
+                "hold_sent": True,
+                "handoff_reason": f"media:{msg_type}",
+                "media_caption": caption,
+            })
+            log_event(phone, "media_recibido", {"tipo": msg_type, "caption": caption[:200]})
+            reply = (
+                f"Recibí tu {label}, gracias.\n\n"
+                "Una recepcionista lo va a revisar y te responde a la brevedad 🙏\n"
+                "Si es urgente, puedes llamar al 📞 (41) 296 5226"
+            )
+            await send_whatsapp(phone, reply)
+            log_message(phone, "out", reply, "HUMAN_TAKEOVER", canal="whatsapp")
+            return Response(status_code=200)
+        elif msg_type in ("sticker", "location", "contacts"):
+            # Tipos livianos: responder amable sin derivar a recepción
+            log.info("MSG no soportado from=%s type=%s", phone, msg_type)
+            _LIGHT_REPLIES = {
+                "sticker": (
+                    "😄 ¡Gracias por el sticker!\n"
+                    "¿En qué puedo ayudarte? Escribe *menu* para ver las opciones."
+                ),
+                "location": None,  # se genera dinámicamente abajo
+                "contacts": (
+                    "Recibí el contacto 👤 pero no puedo procesarlo.\n"
+                    "¿En qué puedo ayudarte? Escribe *menu* para ver las opciones."
+                ),
+            }
+            reply = _LIGHT_REPLIES[msg_type]
+            if msg_type == "location":
+                loc = msg.get("location", {})
+                lat = loc.get("latitude")
+                lng = loc.get("longitude")
+                CMC_COORDS = "-37.2548769,-73.2355041"  # Monsalve 102, Carampangue
+                if lat and lng:
+                    maps_url = f"https://www.google.com/maps/dir/?api=1&origin={lat},{lng}&destination={CMC_COORDS}&travelmode=driving"
+                    reply = (
+                        "Gracias por compartir tu ubicación 📍\n\n"
+                        "El Centro Médico Carampangue está en:\n"
+                        "📍 Monsalve 102 esq. República, Carampangue\n\n"
+                        f"🗺️ *Cómo llegar desde tu ubicación:*\n{maps_url}\n\n"
+                        "¿Necesitas agendar una hora? Escribe *menu* para comenzar."
+                    )
+                else:
+                    maps_url = f"https://www.google.com/maps/dir/?api=1&destination={CMC_COORDS}"
+                    reply = (
+                        "Gracias por compartir tu ubicación 📍\n\n"
+                        "El Centro Médico Carampangue está en:\n"
+                        "📍 Monsalve 102 esq. República, Carampangue\n\n"
+                        f"🗺️ *Ver en Google Maps:*\n{maps_url}\n\n"
+                        "¿Necesitas agendar una hora? Escribe *menu* para comenzar."
+                    )
+            log_message(phone, "in", f"[{msg_type}]", get_session(phone).get("state", "IDLE"), canal="whatsapp")
+            await send_whatsapp(phone, reply)
+            log_message(phone, "out", reply, get_session(phone).get("state", "IDLE"), canal="whatsapp")
+            return Response(status_code=200)
         else:
+            log.info("MSG tipo desconocido from=%s type=%s — ignorado", phone, msg_type)
             return Response(status_code=200)
 
         log.info("MSG from=%s id=%s type=%s text=%r", phone, msg_id, msg_type, texto[:100])
