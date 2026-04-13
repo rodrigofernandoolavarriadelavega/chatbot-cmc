@@ -92,9 +92,18 @@ ssh root@157.245.13.107 "systemctl restart ges-assistant"
 
 ### 3. nginx
 
-- Config activa: `/etc/nginx/sites-enabled/agentecmc`
-- Certbot auto-renew configurado.
-- Futuro: subdomain `ges.agentecmc.cl` para el panel frontend (pendiente).
+Reverse proxy para ambos servicios:
+
+| Dominio | Destino | SSL | Config |
+|---|---|---|---|
+| `https://agentecmc.cl` | `:8001` (chatbot) | certbot | `/etc/nginx/sites-enabled/agentecmc` |
+| `https://api-ges.agentecmc.cl` | `:8002` (GES API) | certbot | `/etc/nginx/sites-enabled/api-ges.agentecmc.cl` |
+
+**API GES — whitelist de endpoints**:
+- Expuestos: `/health`, `/auth/*`, `/pathologies`, `/clinical/*`, `/symptoms`, `/calculators/*`, `/validation/*`
+- **`/triage` bloqueado** (404 vía nginx) — solo accesible desde localhost por el chatbot
+- Headers de seguridad: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`
+- DNS: registro A `api-ges` en Cloudflare (DNS only, sin proxy orange-cloud)
 
 ## Variables de entorno relevantes
 
@@ -153,9 +162,27 @@ systemctl start ges-assistant
 2. Migrar `chatbot-cmc` + `ges-clinical-app` a SSH key: subir `~/.ssh/id_ed25519.pub` a GitHub y correr `git remote set-url origin git@github.com:...`
 3. **Actualizar el VPS también** — el `/opt/chatbot-cmc/.git/config` tiene el mismo PAT, si se rota sin actualizar ese remote el próximo `git pull` en deploy va a fallar
 
+## Frontend GES en Vercel
+
+| | |
+|---|---|
+| URL principal | `https://ges.agentecmc.cl` (custom domain, CNAME en Cloudflare) |
+| Alias Vercel | `https://ges-clinical-app.vercel.app` |
+| Proyecto | `ges-clinical-app` en cuenta Vercel `rodrigofernandoolavarriadelavegas-projects` |
+| Root Directory | `frontend` |
+| Framework | Next.js |
+| Region | gru1 (São Paulo) |
+| Env var | `NEXT_PUBLIC_API_URL=https://api-ges.agentecmc.cl` (build-time) |
+| Auto-deploy | On push to `main` vía GitHub App |
+
+CORS del backend GES (`/opt/ges-assistant/.env`):
+```
+CORS_ORIGINS=http://localhost:3000,http://localhost:3001,https://ges.agentecmc.cl,https://ges-clinical-app.vercel.app
+```
+
 ## Próximos pasos pendientes
 
-- [ ] Frontend Next.js del GES en Vercel → `ges.agentecmc.cl`
-- [ ] Exponer endpoints públicos del backend GES vía nginx subdomain `api-ges.agentecmc.cl` (solo los que usa el frontend, NO `/triage` que sigue siendo local)
-- [ ] CORS restrictivo en el backend GES para el origen de Vercel
+- [x] ~~Frontend Next.js del GES en Vercel → `ges.agentecmc.cl`~~ — 2026-04-12
+- [x] ~~nginx subdomain `api-ges.agentecmc.cl` con whitelist~~ — 2026-04-11
+- [x] ~~CORS restrictivo en el backend GES~~ — 2026-04-11
 - [ ] Rotación de PAT + migración a SSH keys (chatbot-cmc + ges-clinical-app + VPS)

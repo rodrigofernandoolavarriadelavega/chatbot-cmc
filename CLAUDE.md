@@ -22,17 +22,27 @@ Permite a los pacientes agendar, cancelar y ver sus citas médicas directamente 
 ```
 /
 ├── app/
-│   ├── main.py          # FastAPI app, webhook Meta, mensajes interactivos, API admin, reenganche
+│   ├── main.py          # FastAPI app, webhook Meta, rate limiter, scheduler, health (468 líneas)
+│   ├── admin_routes.py  # 24 endpoints /admin/api/* (APIRouter) — auth, conversations, kine, ortodoncia
+│   ├── messaging.py     # send_whatsapp, send_instagram, send_messenger, Whisper transcripción
+│   ├── jobs.py          # 12 cron jobs: recordatorios, reenganche, watchdog, waitlist, fidelización
 │   ├── flows.py         # Máquina de estados (lógica conversacional + mensajes lista/botones)
 │   ├── claude_helper.py # detect_intent() y respuesta_faq() con Claude Haiku
 │   ├── medilink.py      # Wrapper API Medilink (slots, pacientes, citas)
-│   ├── session.py       # Sesiones SQLite + log_message, get_conversations, log_event, get_sesiones_abandonadas
-│   ├── reminders.py     # Recordatorios automáticos de citas (APScheduler, 09:00 CLT)
+│   ├── session.py       # Sesiones SQLite + log_message, get_conversations, log_event
+│   ├── fidelizacion.py  # Campañas: post-consulta, reactivación, adherencia kine, control, cross-sell
+│   ├── reminders.py     # Recordatorios automáticos de citas (09:00 CLT + 2h antes)
+│   ├── resilience.py    # Modo degradado Medilink (circuit breaker + cola de intenciones)
 │   └── config.py        # Variables de entorno (.env)
-├── auditor.py           # Script de cuadre contable (Medilink vs Transbank/efectivo/transferencias)
+├── templates/
+│   └── admin.html       # HTML del panel de recepción (~1.833 líneas)
+├── tests/
+│   ├── harness_50.py    # 81 tests offline del flujo conversacional
+│   ├── test_normalizer.py # 52 tests del normalizador léxico
+│   ├── test_foros_dental_estetica.py # 34 tests con frases reales de foros (requiere API key)
+│   └── harness_stress_200.py # 200 casos de stress test
 ├── data/
-│   └── sessions.db      # Base de datos SQLite de sesiones (no se commitea)
-├── Dockerfile
+│   └── sessions.db      # Base de datos SQLite (no se commitea)
 ├── requirements.txt
 └── .env                 # No commitear — contiene tokens y API keys
 ```
@@ -213,8 +223,17 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - [x] Rate limiter sliding window (30 msg/min) en webhook WA/IG/FB
 - [x] Auth admin vía `Authorization: Bearer` (FastAPI `Depends`) + CORS restrictivo
 - [x] `/health` con ping real a Medilink y latencia
-- [x] Job semanal `purge_old_data` (dom 04:00): messages>90d, events>180d + VACUUM
+- [x] ~~`purge_old_data`~~ desactivado — retención indefinida (~90 MB/año, manejable en SQLite)
 - [x] `valid_rut` endurecido y masoterapia con matching estricto
+- [x] Refactor main.py: 3,045 → 468 líneas; extraído messaging.py, jobs.py, admin_routes.py, templates/admin.html
+- [x] Confirmación de audio Whisper: bot responde "Entendí: _{texto}_" al recibir nota de voz
+- [x] Whisper deployado en producción (`OPENAI_API_KEY` en `.env` del VPS)
+- [x] Pill "Confirman mañana" en topbar admin + modal con detalle (endpoint `/admin/api/confirmaciones`)
+- [x] Fix "quiero tapadura" → glosario fuerza intent=info para cualquier mención de tratamiento (no solo preguntas)
+- [x] Glosario dental expandido: tapadura caída, dientes chuecos, implante, encías sangrantes, dientes amarillos
+- [x] Glosario estética expandido: 9 tratamientos con precios (hilos, lipopapada, exosomas, bioestimuladores, armonización, peeling)
+- [x] Suite test_foros_dental_estetica.py: 34/34 casos con frases reales de foros de salud
+- [x] Recordatorio 2 horas antes de la cita (cron cada 15 min 7:30-21:30)
 
 ## Dashboard admin
 - Ruta: `http://157.245.13.107:8001/admin?token=cmc_admin_2026`
@@ -222,7 +241,21 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - Muestra métricas, conversaciones activas y estado del sistema
 
 ## Sesión en curso
-**Fecha**: 2026-04-11
+**Fecha**: 2026-04-12
+
+**Hecho (sesión 2026-04-12 — features + fixes + deploy Whisper + docs sync)**:
+- **Pill "Confirman mañana"** en topbar admin: CSS `.pill.green`, modal con detalle por paciente, JS con refresh 60s. Endpoint `/admin/api/confirmaciones?fecha=YYYY-MM-DD`. Commit `c483c78`.
+- **Fix "quiero tapadura"**: glosario en `claude_helper.py` ahora fuerza `intent=info` para CUALQUIER mención de tratamiento del glosario (no solo preguntas "¿qué es...?"). Excepción: nombres de especialidad/profesional → siguen siendo `agendar`. Commit `c98bc93`.
+- **Glosario dental expandido**: tapadura caída, dientes chuecos/torcidos, implante dental, encías sangrantes, dientes amarillos, duraciones y anestesia en descripciones.
+- **Glosario estética expandido** (3→9 tratamientos): hilos tensores ($129.990), lipopapada ($139.990), exosomas ($349.900), bioestimuladores/hidroxiapatita ($450.000), armonización facial (eval $15.000), peeling + sinónimos. Commit `38291f9`.
+- **Suite `test_foros_dental_estetica.py`**: 34 casos (18 dental + 16 estética) con frases reales de foros de salud chilenos. Verifica intent=info con especialidad y respuesta_directa.
+- **Whisper deployado**: `OPENAI_API_KEY` agregada al `.env` del VPS. Bot transcribe audios en producción.
+- **Audio feedback**: bot responde "Entendí: _{texto}_" antes de procesar el mensaje. Commit `e892fdb`.
+- **Retención indefinida**: cron `purge_old_data` desactivado. ~90 MB/año, >100 años de capacidad. Commit `cbec378`.
+- **Fix bug emergencias**: `reset_session(phone)` en handlers de emergencia. Commit `cdba1a8`.
+- **Refactor main.py (3,045 → 468 líneas)**: extraídos `messaging.py`, `jobs.py`, `admin_routes.py`, `templates/admin.html`. Commit `6be5ae8`.
+- **Custom domain `ges.agentecmc.cl` activo**: CNAME Cloudflare + Vercel.
+- **Docs sync**: CLAUDE.md, memory files y 5 páginas Notion actualizadas con todo lo hecho en esta sesión.
 
 **Hecho (sesión 2026-04-10/11 — git GES + swap + backup cron)**:
 - **Repo privado `ges-clinical-app` creado en GitHub**: https://github.com/rodrigofernandoolavarriadelavega/ges-clinical-app
@@ -322,7 +355,7 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - **Auth admin vía `Authorization: Bearer`**: 23 endpoints migrados a `Depends(require_admin)` / `Depends(require_ortodoncia)`; query param `?token=` sigue funcionando como fallback para el panel HTML
 - **CORSMiddleware** restrictivo con whitelist (`agentecmc.cl`, VPS, localhost)
 - **`/health` real**: ahora hace ping a Medilink `/sucursales` con timeout 3s y reporta `medilink_ms` (verificado: ~188ms en prod)
-- **`purge_old_data()`** semanal (domingos 04:00 CLT): borra `messages` > 90d y `conversation_events` > 180d + `VACUUM`
+- **`purge_old_data()`** ~~semanal (domingos 04:00 CLT)~~ **desactivado** (2026-04-12): retención indefinida de datos. ~90 MB/año.
 - **`valid_rut()` endurecido**: rechaza vacíos, longitudes fuera de 8–9 chars, caracteres no numéricos, DV inválido
 - **Masoterapia validación estricta**: `re.findall(r"\b(20|40)\b", txt)` en `flows.py` (antes `"20" in txt` matcheaba "200", "2020")
 - **Bare `except Exception: pass`** reemplazados por excepciones específicas (`sqlite3.OperationalError`, `json.JSONDecodeError`, `ValueError`) con logging
@@ -373,26 +406,25 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
   - Cancelar desde botón: salta directo a `CONFIRMING_CANCEL` con la cita cargada
   - Endpoint `GET /admin/api/confirmaciones?fecha=YYYY-MM-DD` con resumen {confirmed, reagendar, cancelar, pendiente}
 
-**Estado del servidor**: ✅ Chatbot corriendo en `https://agentecmc.cl`. GES Assistant en `127.0.0.1:8002` (systemd). GES API pública en `https://api-ges.agentecmc.cl` (nginx+SSL). Frontend GES en `https://ges-clinical-app.vercel.app` (Vercel).
+**Estado del servidor**: ✅ Chatbot corriendo en `https://agentecmc.cl` (commit `e892fdb`, Whisper activo). GES Assistant en `127.0.0.1:8002` (systemd). GES API pública en `https://api-ges.agentecmc.cl` (nginx+SSL). Frontend GES en `https://ges.agentecmc.cl` (Vercel).
 
 **Pendiente (corto plazo)**:
-- Fix trailing space en `NEXT_PUBLIC_API_URL` en Vercel → redeploy (causa `%20` en URLs del API)
-- Custom domain `ges.agentecmc.cl` para el frontend Vercel (CNAME en Cloudflare + add domain en Vercel)
-- Deploy del feature confirmación pre-cita
-- Agregar columna "Confirmados mañana" al dashboard admin (frontend) — endpoint ya expuesto
-- Agregar `OPENAI_API_KEY` al `.env` del servidor y deployar Fase 1 Whisper (commits locales listos, no pusheados)
 - Rotación de PAT → SSH keys en remotes de `chatbot-cmc` y `ges-clinical-app` (Mac + VPS)
 - Promover número +56945886628 a pacientes reales (redes sociales, recepción)
+- Monitorear primeras conversaciones reales
 - Tags clínicos automáticos (dolor lumbar, rehabilitación) — detectar con Claude y guardar en contact_tags
 
-**Próximo sprint (plan aprobado 2026-04-10)**:
+**Próximo sprint (plan aprobado 2026-04-10, actualizado 2026-04-12)**:
 1. ✅ ~~Modo degradado Medilink~~ — DONE
 2. ✅ ~~Reagendar en un paso~~ — DONE
 3. ✅ ~~Lista de espera~~ — DONE
-4. ✅ ~~Confirmación sí/no pre-cita~~ — DONE (backend + tests; falta columna frontend panel)
-5. **Copagos Fonasa/Isapre al confirmar** — requiere verificar si Medilink expone previsión del paciente.
-6. **Dashboard métricas fidelización** — tasa respuesta post-consulta, conversión reactivación, adherencia kine.
-7. **Tests automatizados** — sprint dedicado, no intercalado con features.
+4. ✅ ~~Confirmación sí/no pre-cita~~ — DONE (backend + pill admin + modal)
+5. ✅ ~~Refactor main.py~~ — DONE (3,045 → 468 líneas)
+6. ✅ ~~Whisper (transcripción audios)~~ — DONE y deployado con feedback al paciente
+7. ✅ ~~Glosario dental + estética expandido~~ — DONE (34/34 tests foros)
+8. **Copagos Fonasa/Isapre al confirmar** — requiere verificar si Medilink expone previsión del paciente.
+9. **Dashboard métricas fidelización** — tasa respuesta post-consulta, conversión reactivación, adherencia kine.
+10. **Tests automatizados** — sprint dedicado, no intercalado con features.
 
 ---
 
@@ -427,11 +459,11 @@ Reemplazar substring matching por similitud coseno con embeddings multilingües 
 ---
 
 ## Deuda técnica pendiente
-1. **Partir `main.py` (2.620 líneas)** — separar admin routes, HTML template, scheduler y webhook en módulos
-2. **Mover HTML del panel** (~1.700 líneas) a template externo con Jinja2 + static JS
+1. ~~**Partir `main.py`**~~ — ✅ DONE (3,045 → 468 líneas, sesión 2026-04-12)
+2. ~~**Mover HTML del panel a template externo**~~ — ✅ DONE (templates/admin.html)
 3. **Auth real del panel** — token embebido en el HTML es visible en DOM; migrar a cookie httpOnly firmada + login
 4. **Suite `pytest`** — cubrir `valid_rut`, `smart_select`, transiciones core de `flows.py`
 5. Precios en `claude_helper.py` hardcodeados en SYSTEM_PROMPT — actualizar manualmente cuando cambien
 6. Dr. Luis Armijo (ID 77) aparece como Medicina General en Medilink pero es Kinesiólogo — error de datos en Medilink, no en el bot
 7. SQLite no escala bien con concurrencia alta — migrar a PostgreSQL o Redis si hay múltiples sucursales
-8. Verificar IDs de profesionales menos frecuentes (Millán, Barraza, Rejón, etc.) directamente en API para asegurar que sean correctos
+8. Verificar IDs de profesionales menos frecuentes (Millán, Barraza, Rejón, etc.) directamente en API
