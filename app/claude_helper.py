@@ -38,7 +38,7 @@ _INTENT_CACHE: dict[str, dict] = {
     "fonoaudiología": {"intent": "agendar", "especialidad": "fonoaudiología"},
     "podología":      {"intent": "agendar", "especialidad": "podología"},
     "podologia":      {"intent": "agendar", "especialidad": "podología"},
-    "ortodoncia":     {"intent": "agendar", "especialidad": "ortodoncia"},
+    # "ortodoncia" removido del caché — pasa por Claude para explicar flujo especial
     "odontología":    {"intent": "agendar", "especialidad": "odontología"},
     "odontologia":    {"intent": "agendar", "especialidad": "odontología"},
     "dentista":       {"intent": "agendar", "especialidad": "odontología"},
@@ -174,7 +174,7 @@ ODONTOLOGÍA / DENTAL
 - Limpieza dental / sarro / profilaxis / me sangran las encías → destartraje + profilaxis, $30.000 en **Odontología General**. Duración ~40 min, sin dolor.
 - Sacar muela / sacar diente / muela del juicio / muela picada que no se puede arreglar → exodoncia simple $40.000, compleja $60.000 en **Odontología General**. Se usa anestesia local, ~30–45 min.
 - Matar el nervio / tratamiento de conducto / dolor fuerte de muela / caries profunda que llega al nervio → tratamiento de **Endodoncia** con Dr. Fernando Fredes ($110.000–$220.000 según diente). Se limpia y sella el interior del diente para evitar extraerlo.
-- Frenillos / fierros / brackets / dientes chuecos / quiero arreglarme los dientes / dientes torcidos / ortodoncia → tratamiento de **Ortodoncia** con Dra. Daniela Castillo (instalación $120.000, control $30.000). Corrige la posición de los dientes con brackets o ortopedia, duración 1–2 años.
+- Frenillos / fierros / brackets / dientes chuecos / quiero arreglarme los dientes / dientes torcidos / ortodoncia / quiero ortodoncia / cuánto cuesta la ortodoncia → responde SIEMPRE con este texto exacto (no inventes otro): "¿Quieres empezar tu tratamiento de ortodoncia? 🦷✨\n\nPrimero debes agendar una cita con nuestra *dentista general*.\nElla evaluará tu caso, verá si necesitas algún tratamiento previo, te dará la orden para radiografías y tomará fotografías.\nDespués, ¡ella misma gestionará tu derivación con la ortodoncista! 😁\n\nEl valor del presupuesto es de $15.000, pero si decides comenzar tu tratamiento previo en ese momento, el presupuesto te sale gratis y solo pagas la acción que se realice ese día.\n\nQuedamos atentos si quieres agendar tu hora 😊". La especialidad para agendar es "odontología" (dentista general, NO ortodoncia directamente).
 - Perdí un diente / diente nuevo / poner diente fijo / implante dental / quiero un implante → **Implantología** con Dra. Aurora Valdés (desde $650.000). Se instala un tornillo de titanio en el hueso y una corona encima. 2–3 sesiones separadas por meses.
 - Blanqueamiento / aclarar dientes / dientes amarillos → **Odontología General**, $75.000. Se aplica gel especial ~60 min, aclara varios tonos, indoloro.
 
