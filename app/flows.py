@@ -165,6 +165,47 @@ PRECIOS_SLOT = {
 }
 
 
+# ── Cross-reference entre especialidades complementarias ─────────────────────
+# Tras confirmar una cita, el bot sugiere la especialidad complementaria.
+# Clave = valor exacto de PROFESIONALES[id]["especialidad"] en medilink.py.
+# Valor = mensaje de cross-reference. Extensible: agregar más pares aquí.
+CROSS_REFERENCE: dict[str, str] = {
+    "Otorrinolaringología": (
+        "\n\n💡 *¿Sabías que tenemos Fonoaudióloga?*\n"
+        "Juana Arratia atiende en el CMC y realiza:\n"
+        "• Audiometría ($25.000)\n"
+        "• Audiometría + Impedanciometría ($45.000)\n"
+        "• Impedanciometría ($20.000)\n"
+        "• Evaluación + Maniobra VPPB ($50.000)\n"
+        "• Octavo Par ($50.000)\n"
+        "• Evaluación infantil/adulto ($30.000)\n"
+        "• Sesión de terapia infantil/adulto ($25.000)\n"
+        "• Terapia vestibular / Terapia tinnitus ($25.000)\n"
+        "• Lavado de oídos ($25.000)\n"
+        "• Prueba y calibración de audífonos\n\n"
+        "Muchas atenciones de ORL se complementan con fonoaudiología. "
+        "Si te interesa, escribe *menu* y agenda con ella 😊"
+    ),
+    "Fonoaudiología": (
+        "\n\n💡 *¿Sabías que tenemos Otorrinolaringólogo?*\n"
+        "Dr. Manuel Borrego atiende en el CMC y puede ayudarte con:\n"
+        "• Evaluación de oído, nariz y garganta\n"
+        "• Sinusitis, rinitis, amigdalitis\n"
+        "• Problemas de audición\n"
+        "• Vértigo y mareos\n\n"
+        "Muchas atenciones de fonoaudiología se complementan con ORL. "
+        "Si te interesa, escribe *menu* y agenda con él 😊"
+    ),
+}
+
+
+def _cross_reference_msg(especialidad: str) -> str:
+    """Retorna el mensaje de cross-reference para la especialidad, o string vacío."""
+    if not especialidad:
+        return ""
+    return CROSS_REFERENCE.get(especialidad.strip(), "")
+
+
 def _precio_line(especialidad: str, slot: dict | None = None) -> str:
     """Línea de precio para insertar en la oferta de slot.
     Retorna string vacío si la especialidad no tiene precio registrado."""
@@ -1234,6 +1275,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "modalidad": data.get("modalidad", "particular"),
                     "id_cita_old": cita_old.get("id") if reagendar else None,
                 })
+                cross_ref = _cross_reference_msg(esp)
                 if reagendar:
                     extra = ""
                     if not cancel_ok:
@@ -1249,7 +1291,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         f"🕐 {slot['hora_inicio'][:5]}\n\n"
                         "Recuerda llegar *15 minutos antes* con tu cédula de identidad.\n\n"
                         "📍 *Monsalve 102 esq. República, Carampangue*"
-                        f"{extra}\n\n"
+                        f"{extra}"
+                        f"{cross_ref}\n\n"
                         "_Escribe *menu* si necesitas algo más._"
                     )
                 return (
@@ -1261,7 +1304,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     f"💳 {modalidad}\n\n"
                     "Recuerda llegar *15 minutos antes* con tu cédula de identidad.\n\n"
                     "📍 *Monsalve 102 esq. República, Carampangue*\n\n"
-                    "¡Te esperamos! 😊\n"
+                    f"¡Te esperamos! 😊{cross_ref}\n\n"
                     "_Escribe *menu* si necesitas algo más._"
                 )
             else:
