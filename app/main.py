@@ -24,6 +24,7 @@ from config import (META_VERIFY_TOKEN, CMC_TELEFONO, ADMIN_TOKEN,
                     MEDILINK_TOKEN)
 from flows import handle_message
 from messaging import (send_whatsapp, send_whatsapp_interactive,
+                       send_whatsapp_location,
                        download_whatsapp_media, transcribe_audio)
 from session import (get_session, is_duplicate, reset_session, save_session,
                      get_metricas, log_message, log_event,
@@ -459,36 +460,42 @@ async def webhook(request: Request):
                     "😄 ¡Gracias por el sticker!\n"
                     "¿En qué puedo ayudarte? Escribe *menu* para ver las opciones."
                 ),
-                "location": None,  # se genera dinámicamente abajo
                 "contacts": (
                     "Recibí el contacto 👤 pero no puedo procesarlo.\n"
                     "¿En qué puedo ayudarte? Escribe *menu* para ver las opciones."
                 ),
             }
-            reply = _LIGHT_REPLIES[msg_type]
             if msg_type == "location":
+                # Enviar ubicación del CMC como mapa nativo + link de ruta
+                log.info("LOCATION recibido from=%s", phone)
                 loc = msg.get("location", {})
                 lat = loc.get("latitude")
                 lng = loc.get("longitude")
-                CMC_COORDS = "-37.2548769,-73.2355041"  # Monsalve 102, Carampangue
+                CMC_LAT, CMC_LNG = -37.2548769, -73.2355041
+                log_message(phone, "in", "[ubicación]", get_session(phone).get("state", "IDLE"), canal="whatsapp")
+                # 1) Enviar pin del CMC como mensaje de ubicación nativo
+                await send_whatsapp_location(
+                    phone, CMC_LAT, CMC_LNG,
+                    name="Centro Médico Carampangue",
+                    address="Monsalve 102 esq. República, Carampangue",
+                )
+                # 2) Enviar link de ruta como texto
                 if lat and lng:
-                    maps_url = f"https://www.google.com/maps/dir/?api=1&origin={lat},{lng}&destination={CMC_COORDS}&travelmode=driving"
+                    maps_url = f"https://www.google.com/maps/dir/{lat},{lng}/{CMC_LAT},{CMC_LNG}"
                     reply = (
-                        "Gracias por compartir tu ubicación 📍\n\n"
-                        "El Centro Médico Carampangue está en:\n"
-                        "📍 Monsalve 102 esq. República, Carampangue\n\n"
                         f"🗺️ *Cómo llegar desde tu ubicación:*\n{maps_url}\n\n"
-                        "¿Necesitas agendar una hora? Escribe *menu* para comenzar."
+                        "¿Necesitas agendar una hora? Escribe *menu*"
                     )
                 else:
-                    maps_url = f"https://www.google.com/maps/dir/?api=1&destination={CMC_COORDS}"
+                    maps_url = f"https://www.google.com/maps/dir//{CMC_LAT},{CMC_LNG}"
                     reply = (
-                        "Gracias por compartir tu ubicación 📍\n\n"
-                        "El Centro Médico Carampangue está en:\n"
-                        "📍 Monsalve 102 esq. República, Carampangue\n\n"
                         f"🗺️ *Ver en Google Maps:*\n{maps_url}\n\n"
-                        "¿Necesitas agendar una hora? Escribe *menu* para comenzar."
+                        "¿Necesitas agendar una hora? Escribe *menu*"
                     )
+                await send_whatsapp(phone, reply)
+                log_message(phone, "out", f"[ubicación CMC] + {reply}", get_session(phone).get("state", "IDLE"), canal="whatsapp")
+                return Response(status_code=200)
+            reply = _LIGHT_REPLIES[msg_type]
             log_message(phone, "in", f"[{msg_type}]", get_session(phone).get("state", "IDLE"), canal="whatsapp")
             await send_whatsapp(phone, reply)
             log_message(phone, "out", reply, get_session(phone).get("state", "IDLE"), canal="whatsapp")

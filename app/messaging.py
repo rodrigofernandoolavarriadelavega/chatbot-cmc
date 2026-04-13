@@ -42,6 +42,22 @@ async def send_whatsapp(to: str, body: str):
     })
 
 
+async def send_whatsapp_location(to: str, latitude: float, longitude: float,
+                                  name: str = "", address: str = ""):
+    """Envía mensaje de ubicación nativo vía Meta Cloud API."""
+    location = {"latitude": latitude, "longitude": longitude}
+    if name:
+        location["name"] = name
+    if address:
+        location["address"] = address
+    await _post_meta({
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "location",
+        "location": location,
+    })
+
+
 async def send_whatsapp_interactive(to: str, interactive: dict):
     """Envía mensaje interactivo (botones o lista) vía Meta Cloud API."""
     await _post_meta({
