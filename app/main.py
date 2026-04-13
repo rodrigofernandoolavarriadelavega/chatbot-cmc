@@ -158,13 +158,9 @@ async def lifespan(app: FastAPI):
         id="sync_citas_cache",
         replace_existing=True,
     )
-    # Retención: domingos 04:00 CLT borra mensajes > 90 días y eventos > 180 días
-    scheduler.add_job(
-        purge_old_data,
-        CronTrigger(day_of_week="sun", hour=4, minute=0),
-        id="purge_old_data",
-        replace_existing=True,
-    )
+    # Retención desactivada: mensajes y eventos se mantienen indefinidamente.
+    # El crecimiento es ~90 MB/año para el volumen del CMC, manejable en SQLite.
+    # Para purgar manualmente: purge_old_data(msgs_days=N, events_days=N)
     # Watchdog Medilink: cada minuto chequea si se recuperó
     scheduler.add_job(
         _job_medilink_watchdog,
@@ -184,7 +180,7 @@ async def lifespan(app: FastAPI):
         "Scheduler iniciado — recordatorios 09:00 · recordatorios 2h cada 15min · "
         "post-consulta 10:00 · reactivación lun 10:30 · adherencia kine 11:00 · "
         "control 11:30 · cross-sell kine mié 10:30 · sync caché 23:50 · "
-        "purge dom 04:00 · watchdog medilink 1min"
+        "watchdog medilink 1min"
     )
     yield
     scheduler.shutdown()
