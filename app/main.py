@@ -544,8 +544,14 @@ async def webhook(request: Request):
         else:
             await send_whatsapp(phone, respuesta)
 
-        # Si la respuesta menciona la dirección del CMC, enviar también el pin del mapa
-        if resp_text and "Monsalve 102" in resp_text:
+        # Enviar pin del mapa solo en respuestas de ubicación o confirmación de cita
+        # (NO en el saludo que también menciona la dirección)
+        _location_ctx = resp_text and "Monsalve 102" in resp_text and (
+            "ubicado" in resp_text.lower()
+            or "recuerda llegar" in resp_text.lower()
+            or "tiempos de llegada" in resp_text.lower()
+        )
+        if _location_ctx:
             await send_whatsapp_location(
                 phone, -37.2548769, -73.2355041,
                 name="Centro Médico Carampangue",
