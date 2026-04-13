@@ -1365,6 +1365,15 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if not (0 <= idx < len(citas)):
                 raise ValueError("fuera de rango")
         except (ValueError, TypeError):
+            retries = data.get("cancel_retries", 0) + 1
+            if retries >= 3:
+                save_session(phone, "HUMAN_TAKEOVER", {"hold_sent": True, "handoff_reason": "cancel_retries"})
+                return (
+                    "No logro entender tu selección 😕\n"
+                    f"Te comunico con recepción para ayudarte.\n📞 *{CMC_TELEFONO}*"
+                )
+            data["cancel_retries"] = retries
+            save_session(phone, "WAIT_CITA_CANCELAR", data)
             return f"Elige un número entre 1 y {len(citas)} 😊"
 
         cita = citas[idx]
@@ -1447,6 +1456,15 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if not (0 <= idx < len(citas)):
                 raise ValueError("fuera de rango")
         except (ValueError, TypeError):
+            retries = data.get("reagendar_retries", 0) + 1
+            if retries >= 3:
+                save_session(phone, "HUMAN_TAKEOVER", {"hold_sent": True, "handoff_reason": "reagendar_retries"})
+                return (
+                    "No logro entender tu selección 😕\n"
+                    f"Te comunico con recepción para ayudarte.\n📞 *{CMC_TELEFONO}*"
+                )
+            data["reagendar_retries"] = retries
+            save_session(phone, "WAIT_CITA_REAGENDAR", data)
             return f"Elige un número entre 1 y {len(citas)} 😊"
 
         cita_old = citas[idx]

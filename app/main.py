@@ -433,6 +433,8 @@ async def webhook(request: Request):
         # Extraer texto de mensajes de texto, respuestas interactivas o audio
         if msg_type == "text":
             texto = msg["text"]["body"].strip()
+            if not texto:
+                return Response(status_code=200)
         elif msg_type == "interactive":
             interactive = msg.get("interactive", {})
             itype = interactive.get("type", "")
