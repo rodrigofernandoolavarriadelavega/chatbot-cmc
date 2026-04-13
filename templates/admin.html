@@ -703,6 +703,7 @@ body {
             <button class="btn btn-danger" id="btn-takeover" onclick="doTakeover()">🎯 Tomar control</button>
             <button class="btn btn-outline" id="btn-resume" style="display:none;" onclick="doResume()">🤖 Devolver al bot</button>
             <button class="btn btn-outline" id="btn-notify-informe" style="display:none;font-size:11px;padding:5px 10px;" onclick="notificarInforme()" title="Enviar template informe_listo al paciente">📄 Notificar informe</button>
+            <button class="btn btn-outline" id="btn-seguimiento" style="display:none;font-size:11px;padding:5px 10px;" onclick="seguimientoMedico()" title="Enviar seguimiento médico personalizado">🩺 Seguimiento</button>
             <button class="mobile-ctx-toggle" onclick="toggleCtxPanel()" title="Info paciente">ℹ️</button>
           </div>
         </div>
@@ -1097,6 +1098,7 @@ function updateChatControls(state) {
   document.getElementById("reply-bar").classList.toggle("hidden",!isTakeover);
   document.getElementById("quick-replies").classList.toggle("hidden",!isTakeover);
   document.getElementById("btn-notify-informe").style.display=isTakeover?"inline-flex":"none";
+  document.getElementById("btn-seguimiento").style.display=isTakeover?"inline-flex":"none";
 }
 function updateContextPanel(conv) {
   if (!conv) return;
@@ -1264,6 +1266,27 @@ async function notificarInforme(){
     if(r.ok){alert("Template enviado correctamente");await loadMessages(selectedPhone);}
     else{const d=await r.json().catch(()=>null);alert((d&&d.detail)||"Error al enviar template");}
   }finally{btn.disabled=false;btn.textContent="📄 Notificar informe";}
+}
+
+/* ── SEGUIMIENTO MÉDICO (template) ── */
+async function seguimientoMedico(){
+  if(!selectedPhone) return;
+  const doctor=prompt("Nombre del doctor (ej: Dr. Rodrigo Olavarría):");
+  if(!doctor||!doctor.trim()) return;
+  // Obtener nombre del paciente del contexto (convs es variable global)
+  const conv=convs.find(c=>c.phone===selectedPhone);
+  const nombre=(conv&&conv.nombre)?conv.nombre.split(" ")[0]:"paciente";
+  const btn=document.getElementById("btn-seguimiento");
+  btn.disabled=true; btn.textContent="...";
+  try{
+    const fd=new FormData();
+    fd.append("phone",selectedPhone);
+    fd.append("template_name","seguimiento_medico");
+    fd.append("params",JSON.stringify([nombre,doctor.trim()]));
+    const r=await fetch("/admin/api/send-template",{method:"POST",headers:authHeaders(),body:fd});
+    if(r.ok){alert("Seguimiento enviado correctamente");await loadMessages(selectedPhone);}
+    else{const d=await r.json().catch(()=>null);alert((d&&d.detail)||"Error al enviar seguimiento");}
+  }finally{btn.disabled=false;btn.textContent="🩺 Seguimiento";}
 }
 
 /* ── DATOS ── */
