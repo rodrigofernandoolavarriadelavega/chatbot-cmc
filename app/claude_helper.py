@@ -185,7 +185,7 @@ PODOLOGÍA
 - Verruga en la planta del pie → Verruga plantar, $10.000 por tratamiento en **Podología**.
 
 OTORRINO / OÍDO
-- Tapón de cera / no escucho / oído tapado → Lavado de oídos ($25.000) con **Fonoaudiología** (Juana Arratia) u **Otorrinolaringología** (Dr. Borrego).
+- Tapón de cera / no escucho / oído tapado → Lavado de oídos ($25.000) con **Otorrinolaringología** (Dr. Manuel Borrego).
 - Pito en el oído / zumbido / tinnitus → Terapia Tinnitus en **Fonoaudiología**, $25.000.
 - Mareos al girar la cabeza / vértigo / se mueve todo → Vértigo posicional (VPPB). Trata: **Fonoaudiología** (evaluación + maniobra $50.000) u **Otorrinolaringología**.
 - Examen de audición / sordera → Audiometría ($25.000) en **Fonoaudiología** u **ORL**.

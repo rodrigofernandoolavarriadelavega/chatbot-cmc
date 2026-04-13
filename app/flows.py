@@ -181,7 +181,6 @@ CROSS_REFERENCE: dict[str, str] = {
         "• Evaluación infantil/adulto ($30.000)\n"
         "• Sesión de terapia infantil/adulto ($25.000)\n"
         "• Terapia vestibular / Terapia tinnitus ($25.000)\n"
-        "• Lavado de oídos ($25.000)\n"
         "• Prueba y calibración de audífonos\n\n"
         "Muchas atenciones de ORL se complementan con fonoaudiología. "
         "Si te interesa, escribe *menu* y agenda con ella 😊"
