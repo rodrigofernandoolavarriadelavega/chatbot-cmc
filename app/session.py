@@ -285,10 +285,14 @@ def save_cita_bot(phone: str, id_cita: str, especialidad: str,
 
 
 def get_citas_bot_pendientes(fecha: str) -> list[dict]:
-    """Devuelve citas del bot para una fecha dada donde aún no se envió recordatorio."""
+    """Devuelve citas del bot para una fecha dada donde aún no se envió recordatorio.
+    Incluye nombre del paciente desde contact_profiles (LEFT JOIN)."""
     with _conn() as conn:
         rows = conn.execute(
-            "SELECT * FROM citas_bot WHERE fecha=? AND reminder_sent=0", (fecha,)
+            """SELECT c.*, cp.nombre AS paciente_nombre
+               FROM citas_bot c
+               LEFT JOIN contact_profiles cp ON c.phone = cp.phone
+               WHERE c.fecha=? AND c.reminder_sent=0""", (fecha,)
         ).fetchall()
         return [dict(r) for r in rows]
 
@@ -326,13 +330,16 @@ def mark_reminder_sent(cita_id: int):
 def get_citas_bot_para_2h_reminder(fecha: str, hora_min: str, hora_max: str) -> list[dict]:
     """Devuelve citas del día `fecha` cuyo horario cae en [hora_min, hora_max]
     y donde aún no se envió el recordatorio de 2 horas antes. Los rangos horarios
-    se comparan como string HH:MM:SS (formato en el que se almacenan en citas_bot)."""
+    se comparan como string HH:MM:SS (formato en el que se almacenan en citas_bot).
+    Incluye nombre del paciente desde contact_profiles (LEFT JOIN)."""
     with _conn() as conn:
         rows = conn.execute(
-            """SELECT * FROM citas_bot
-               WHERE fecha=? AND hora>=? AND hora<=?
-                 AND (reminder_2h_sent IS NULL OR reminder_2h_sent=0)
-                 AND (confirmation_status IS NULL OR confirmation_status != 'cancelar')""",
+            """SELECT c.*, cp.nombre AS paciente_nombre
+               FROM citas_bot c
+               LEFT JOIN contact_profiles cp ON c.phone = cp.phone
+               WHERE c.fecha=? AND c.hora>=? AND c.hora<=?
+                 AND (c.reminder_2h_sent IS NULL OR c.reminder_2h_sent=0)
+                 AND (c.confirmation_status IS NULL OR c.confirmation_status != 'cancelar')""",
             (fecha, hora_min, hora_max),
         ).fetchall()
         return [dict(r) for r in rows]

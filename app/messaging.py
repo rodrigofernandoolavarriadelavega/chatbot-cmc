@@ -68,6 +68,53 @@ async def send_whatsapp_interactive(to: str, interactive: dict):
     })
 
 
+async def send_whatsapp_template(to: str, template_name: str,
+                                  body_params: list[str] | None = None,
+                                  button_payloads: list[str] | None = None,
+                                  language: str = "es"):
+    """Envía un Message Template aprobado por Meta.
+
+    Usar para TODOS los mensajes proactivos (fuera de ventana 24h):
+    recordatorios, fidelización, lista de espera, alertas.
+
+    Args:
+        to: teléfono destino (sin +)
+        template_name: nombre del template registrado en Meta
+        body_params: lista de valores para {{1}}, {{2}}, etc.
+        button_payloads: payloads para botones QUICK_REPLY (índice 0, 1, 2)
+        language: código de idioma (default "es")
+    """
+    components = []
+
+    # Variables del body
+    if body_params:
+        components.append({
+            "type": "body",
+            "parameters": [{"type": "text", "text": p} for p in body_params],
+        })
+
+    # Payloads de botones QUICK_REPLY (dinámicos al enviar)
+    if button_payloads:
+        for idx, payload in enumerate(button_payloads):
+            components.append({
+                "type": "button",
+                "sub_type": "quick_reply",
+                "index": str(idx),
+                "parameters": [{"type": "payload", "payload": payload}],
+            })
+
+    await _post_meta({
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "template",
+        "template": {
+            "name": template_name,
+            "language": {"code": language},
+            "components": components,
+        },
+    })
+
+
 # ── Multimodal: descarga de media + transcripción Whisper ───────────────────
 async def download_whatsapp_media(media_id: str) -> tuple[bytes, str] | None:
     """Descarga un archivo de WhatsApp (audio/imagen/doc) por media_id.

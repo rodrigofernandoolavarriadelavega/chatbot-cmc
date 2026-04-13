@@ -309,18 +309,129 @@ body {
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ── MOBILE NAV ── */
+.mobile-hamburger {
+  display: none; background: none; border: none; font-size: 22px;
+  cursor: pointer; padding: 4px 6px; color: var(--text-2); line-height: 1;
+}
+.mobile-back {
+  display: none; background: none; border: none; font-size: 18px;
+  cursor: pointer; padding: 4px 8px; color: var(--primary); font-weight: 700;
+  margin-right: 4px; flex-shrink: 0;
+}
+.mobile-ctx-toggle {
+  display: none; background: none; border: none; font-size: 18px;
+  cursor: pointer; padding: 4px 6px; color: var(--text-2);
+}
+.mobile-pills-toggle { display: none; }
+.filters-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 50;
+}
+.ctx-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 50;
+}
+
+/* ── TABLET (768–1024px) ── */
+@media (max-width: 1024px) {
+  .col-filters { width: 180px; min-width: 180px; }
+  .col-convs { width: 240px; min-width: 240px; }
+  .ctx-panel { width: 200px; min-width: 200px; }
+  .topbar-pills { gap: 5px; flex-wrap: wrap; }
+  .pill { font-size: 11px; padding: 4px 8px; }
+  .btn { font-size: 11px; padding: 5px 10px; }
+}
+
+/* ── MOBILE (<768px) ── */
+@media (max-width: 767px) {
+  body { font-size: 14px; overflow: auto; }
+  .topbar {
+    height: auto; min-height: 50px; padding: 8px 12px; gap: 8px; flex-wrap: wrap;
+  }
+  .brand-text p { display: none; }
+  .mobile-hamburger { display: block; }
+  .mobile-ctx-toggle { display: block; }
+  .topbar-pills {
+    order: 10; width: 100%; gap: 6px; flex-wrap: wrap;
+    padding-top: 6px; border-top: 1px solid var(--border); margin-left: 0;
+    display: none;
+  }
+  .topbar-pills.show { display: flex; }
+  .topbar-pills .btn { font-size: 11px; padding: 5px 9px; white-space: nowrap; }
+  .pill { font-size: 11px; padding: 3px 8px; }
+  .mobile-pills-toggle {
+    display: inline-flex; background: none; border: 1px solid var(--border);
+    border-radius: 6px; font-size: 11px; padding: 3px 8px; cursor: pointer;
+    color: var(--text-2); margin-left: auto;
+  }
+  /* Layout → columna única */
+  .layout { flex-direction: column; height: auto; min-height: calc(100vh - 50px); }
+
+  /* Filtros: overlay lateral */
+  .col-filters {
+    position: fixed; top: 0; left: -280px; width: 270px; min-width: 270px;
+    height: 100vh; z-index: 60; transition: left .25s ease;
+    box-shadow: 4px 0 20px rgba(0,0,0,.15);
+  }
+  .col-filters.open { left: 0; }
+  .filters-overlay.open { display: block; }
+
+  /* Lista de conversaciones → full width */
+  .col-convs {
+    width: 100%; min-width: 100%; flex: none;
+    max-height: none; height: auto;
+  }
+  .col-convs.mob-hidden { display: none; }
+  .conv-scroll { max-height: calc(100vh - 140px); }
+
+  /* Chat → full width */
+  .col-main {
+    display: none; flex-direction: column; width: 100%;
+    position: fixed; inset: 0; z-index: 40; background: var(--surface);
+  }
+  .col-main.mob-show { display: flex; }
+  .chat-panel { border-right: none; }
+  .mobile-back { display: block; }
+
+  /* Contexto → overlay desde derecha */
+  .ctx-panel {
+    position: fixed; top: 0; right: -280px; width: 270px; min-width: 270px;
+    height: 100vh; z-index: 65; transition: right .25s ease;
+    box-shadow: -4px 0 20px rgba(0,0,0,.15);
+  }
+  .ctx-panel.open { right: 0; }
+  .ctx-overlay.open { display: block; }
+
+  /* Chat header ajustes */
+  .chat-header { padding: 8px 10px; gap: 6px; flex-wrap: wrap; }
+  .ch-actions { gap: 4px; flex-wrap: wrap; }
+  .ch-actions .btn { font-size: 11px; padding: 4px 8px; }
+  .ch-actions .state-tag { font-size: 10px; }
+
+  /* Mensajes */
+  .msg-bubble { max-width: 88%; font-size: 13px; }
+
+  /* Reply bar */
+  .reply-textarea { font-size: 14px; }
+  .reply-actions .btn { font-size: 12px; padding: 8px 14px; }
+
+  /* Modales */
+  #modal-kine-inner { width: 98vw !important; }
+}
 </style>
 </head>
 <body>
 
 <!-- TOPBAR -->
 <div class="topbar">
+  <button class="mobile-hamburger" onclick="toggleFilters()" title="Filtros">☰</button>
   <div class="brand">
     <img src="/static/logo.png" alt="Centro Médico Carampangue" style="height:36px;object-fit:contain;">
     <div class="brand-text" style="margin-left:4px;">
       <p>Panel de Recepción · WhatsApp Bot</p>
     </div>
   </div>
+  <button class="mobile-pills-toggle" onclick="this.nextElementSibling.classList.toggle('show')">▼ Info</button>
   <div class="topbar-pills">
     <div class="pill"><strong id="s-total">—</strong>&nbsp;conversaciones</div>
     <div class="pill amber"><strong id="s-flujo">—</strong>&nbsp;en flujo</div>
@@ -506,11 +617,15 @@ body {
   <span style="margin-left:auto; font-size:11px; color:#b91c1c; opacity:.7;">Se actualiza automáticamente</span>
 </div>
 
+<!-- OVERLAYS MOBILE -->
+<div class="filters-overlay" id="filters-overlay" onclick="toggleFilters()"></div>
+<div class="ctx-overlay" id="ctx-overlay" onclick="toggleCtxPanel()"></div>
+
 <!-- LAYOUT -->
 <div class="layout">
 
   <!-- COL 1: FILTROS -->
-  <div class="col-filters">
+  <div class="col-filters" id="col-filters">
     <div class="filter-search">
       <div class="search-box">
         <span style="font-size:13px;">🔍</span>
@@ -551,6 +666,7 @@ body {
       </div>
       <div id="chat-active" class="chat-active" style="display:none;">
         <div class="chat-header">
+          <button class="mobile-back" onclick="backToList()" title="Volver">←</button>
           <div class="ch-avatar" id="chat-avatar-hdr">?</div>
           <div class="ch-info">
             <div class="ch-name" id="chat-name">—</div>
@@ -561,6 +677,7 @@ body {
             <span class="state-tag tag-slate" id="chat-state-tag">—</span>
             <button class="btn btn-danger" id="btn-takeover" onclick="doTakeover()">🎯 Tomar control</button>
             <button class="btn btn-outline" id="btn-resume" style="display:none;" onclick="doResume()">🤖 Devolver al bot</button>
+            <button class="mobile-ctx-toggle" onclick="toggleCtxPanel()" title="Info paciente">ℹ️</button>
           </div>
         </div>
         <div id="takeover-banner" class="takeover-banner hidden">
@@ -1837,6 +1954,66 @@ async function guardarKine(i) {
   const el = document.getElementById(`kine-saved-${i}`);
   if (el) { el.style.display='inline'; setTimeout(()=>el.style.display='none', 2000); }
 }
+
+// ── RESPONSIVE / MOBILE NAV ─────────────────────────────────────────────────
+function isMobile() { return window.innerWidth < 768; }
+
+function toggleFilters() {
+  const col = document.getElementById('col-filters');
+  const overlay = document.getElementById('filters-overlay');
+  col.classList.toggle('open');
+  overlay.classList.toggle('open');
+}
+
+function toggleCtxPanel() {
+  const ctx = document.querySelector('.ctx-panel');
+  const overlay = document.getElementById('ctx-overlay');
+  ctx.classList.toggle('open');
+  overlay.classList.toggle('open');
+}
+
+function showMobileChat() {
+  if (!isMobile()) return;
+  document.querySelector('.col-convs').classList.add('mob-hidden');
+  document.querySelector('.col-main').classList.add('mob-show');
+}
+
+function backToList() {
+  document.querySelector('.col-main').classList.remove('mob-show');
+  document.querySelector('.col-convs').classList.remove('mob-hidden');
+  // Cerrar contexto si estaba abierto
+  document.querySelector('.ctx-panel').classList.remove('open');
+  document.getElementById('ctx-overlay').classList.remove('open');
+}
+
+// Patch selectConv para mostrar chat en mobile
+const _origSelectConv = selectConv;
+selectConv = async function(phone) {
+  await _origSelectConv(phone);
+  showMobileChat();
+};
+
+// Cerrar filtros al seleccionar uno en mobile
+const _origSetFilter = setFilter;
+setFilter = function(f, el) {
+  _origSetFilter(f, el);
+  if (isMobile()) {
+    document.getElementById('col-filters').classList.remove('open');
+    document.getElementById('filters-overlay').classList.remove('open');
+  }
+};
+
+// Reset layout on resize (prevent stuck states)
+window.addEventListener('resize', () => {
+  if (!isMobile()) {
+    document.querySelector('.col-convs').classList.remove('mob-hidden');
+    document.querySelector('.col-main').classList.remove('mob-show');
+    document.getElementById('col-filters').classList.remove('open');
+    document.getElementById('filters-overlay').classList.remove('open');
+    document.querySelector('.ctx-panel').classList.remove('open');
+    document.getElementById('ctx-overlay').classList.remove('open');
+  }
+});
 </script>
 </body>
 </html>

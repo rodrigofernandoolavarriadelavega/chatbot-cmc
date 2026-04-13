@@ -35,6 +35,13 @@ def _fmt_fecha_display(fecha: str) -> str:
         return fecha
 
 
+def _nombre_corto(nombre: str | None) -> str:
+    """'Sergio Carrasco Cordero' → 'Sergio'"""
+    if not nombre:
+        return ""
+    return nombre.strip().split()[0].capitalize()
+
+
 def _interactive_recordatorio(cita: dict) -> dict:
     """Construye un mensaje interactivo con 3 botones: confirmo / cambiar hora / no podré ir.
     Los IDs de botón incluyen el id_cita Medilink para poder resolver la cita en la respuesta,
@@ -45,11 +52,14 @@ def _interactive_recordatorio(cita: dict) -> dict:
     prof = cita["profesional"]
     modalidad = (cita.get("modalidad") or "particular").capitalize()
     id_cita = cita["id_cita"]
+    nombre = _nombre_corto(cita.get("paciente_nombre"))
+    saludo = f"Hola {nombre} 👋" if nombre else "Hola 👋"
     body = (
-        f"Hola 👋 Te recordamos tu cita en el *Centro Médico Carampangue*:\n\n"
+        f"{saludo} Te recordamos tu cita en el *Centro Médico Carampangue*:\n\n"
         f"🏥 *{esp}* — {prof}\n"
         f"📅 *{fecha_display}* a las *{hora}*\n"
-        f"💳 {modalidad}\n\n"
+        f"💳 {modalidad}\n"
+        "📍 Monsalve esquina República, Carampangue\n\n"
         "Recuerda llegar *15 minutos antes* con tu cédula de identidad.\n\n"
         "¿Nos confirmas tu asistencia?"
     )
@@ -90,11 +100,14 @@ async def enviar_recordatorios(send_text_fn, send_interactive_fn=None):
                 # Fallback texto plano
                 fecha_display = _fmt_fecha_display(cita["fecha"])
                 hora = _fmt_hora(cita["hora"])
+                nombre = _nombre_corto(cita.get("paciente_nombre"))
+                saludo = f"Hola {nombre} 👋" if nombre else "Hola 👋"
                 await send_text_fn(
                     cita["phone"],
-                    f"Hola 👋 Te recordamos tu cita en el *Centro Médico Carampangue*:\n\n"
+                    f"{saludo} Te recordamos tu cita en el *Centro Médico Carampangue*:\n\n"
                     f"🏥 *{cita['especialidad']}* — {cita['profesional']}\n"
-                    f"📅 *{fecha_display}* a las *{hora}*\n\n"
+                    f"📅 *{fecha_display}* a las *{hora}*\n"
+                    "📍 Monsalve esquina República, Carampangue\n\n"
                     "Recuerda llegar *15 minutos antes* con tu cédula de identidad.\n\n"
                     "¿Confirmas tu asistencia? Responde *SÍ* o *NO*."
                 )
@@ -131,12 +144,14 @@ async def enviar_recordatorios_2h(send_text_fn):
     for cita in citas:
         try:
             hora = _fmt_hora(cita["hora"])
+            nombre = _nombre_corto(cita.get("paciente_nombre"))
+            saludo = f"Hola {nombre}" if nombre else "Hola"
             await send_text_fn(
                 cita["phone"],
-                f"⏰ *En 2 horas* tienes tu cita en el *Centro Médico Carampangue*:\n\n"
+                f"{saludo} ⏰ *En 2 horas* tienes tu cita en el *Centro Médico Carampangue*:\n\n"
                 f"🏥 *{cita['especialidad']}* — {cita['profesional']}\n"
                 f"🕐 Hoy a las *{hora}*\n"
-                f"📍 Monsalve 102, frente a la antigua estación de trenes\n\n"
+                f"📍 Monsalve esquina República, Carampangue\n\n"
                 "Recuerda llegar *15 minutos antes* con tu cédula de identidad."
             )
             mark_reminder_2h_sent(cita["id"])
