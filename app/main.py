@@ -544,6 +544,14 @@ async def webhook(request: Request):
         else:
             await send_whatsapp(phone, respuesta)
 
+        # Si la respuesta menciona la dirección del CMC, enviar también el pin del mapa
+        if resp_text and "Monsalve 102" in resp_text:
+            await send_whatsapp_location(
+                phone, -37.2548769, -73.2355041,
+                name="Centro Médico Carampangue",
+                address="Monsalve 102 esq. República, Carampangue",
+            )
+
     except (KeyError, IndexError) as e:
         log.warning("Payload inesperado: %s | data=%s", e, str(data)[:200])
 
