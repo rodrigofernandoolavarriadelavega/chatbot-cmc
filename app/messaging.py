@@ -76,6 +76,91 @@ async def send_whatsapp_interactive(to: str, interactive: dict):
     })
 
 
+async def send_whatsapp_document(to: str, media_url: str, filename: str = "",
+                                  caption: str = "") -> str | None:
+    """Envía un documento (PDF, etc.) vía Meta Cloud API usando URL pública."""
+    doc = {"link": media_url}
+    if filename:
+        doc["filename"] = filename
+    if caption:
+        doc["caption"] = caption
+    return await _post_meta({
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "document",
+        "document": doc,
+    })
+
+
+async def send_whatsapp_image(to: str, media_url: str,
+                               caption: str = "") -> str | None:
+    """Envía una imagen vía Meta Cloud API usando URL pública."""
+    img = {"link": media_url}
+    if caption:
+        img["caption"] = caption
+    return await _post_meta({
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "image",
+        "image": img,
+    })
+
+
+async def upload_media_to_whatsapp(file_bytes: bytes, mime_type: str,
+                                    filename: str = "file") -> str | None:
+    """Sube un archivo a Meta Cloud API y retorna el media_id.
+    Luego se puede enviar con send_whatsapp_document_by_id()."""
+    if not META_ACCESS_TOKEN or not META_PHONE_NUMBER_ID:
+        return None
+    url = f"https://graph.facebook.com/v22.0/{META_PHONE_NUMBER_ID}/media"
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            r = await client.post(
+                url,
+                headers={"Authorization": f"Bearer {META_ACCESS_TOKEN}"},
+                data={"messaging_product": "whatsapp", "type": mime_type},
+                files={"file": (filename, file_bytes, mime_type)},
+            )
+        if r.status_code == 200:
+            return r.json().get("id")
+        log.error("Upload media %s: %s", r.status_code, r.text[:200])
+        return None
+    except Exception as e:
+        log.error("Error uploading media: %s", e)
+        return None
+
+
+async def send_whatsapp_document_by_id(to: str, media_id: str,
+                                        filename: str = "",
+                                        caption: str = "") -> str | None:
+    """Envía un documento usando un media_id ya subido a Meta."""
+    doc = {"id": media_id}
+    if filename:
+        doc["filename"] = filename
+    if caption:
+        doc["caption"] = caption
+    return await _post_meta({
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "document",
+        "document": doc,
+    })
+
+
+async def send_whatsapp_image_by_id(to: str, media_id: str,
+                                     caption: str = "") -> str | None:
+    """Envía una imagen usando un media_id ya subido a Meta."""
+    img = {"id": media_id}
+    if caption:
+        img["caption"] = caption
+    return await _post_meta({
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "image",
+        "image": img,
+    })
+
+
 async def send_whatsapp_template(to: str, template_name: str,
                                   body_params: list[str] | None = None,
                                   button_payloads: list[str] | None = None,

@@ -310,6 +310,54 @@ El bot ya está operativo. Se avisó a {{1}} paciente(s) que estaban esperando.
 
 ---
 
+### 12. `informe_listo` (UTILITY)
+
+Notificación al paciente de que su informe/resultado está disponible.
+Se usa fuera de la ventana 24h para que el paciente responda y abra la ventana,
+permitiendo después enviar el documento.
+
+**Body:**
+```
+Hola {{1}} 👋 Tu informe de *{{2}}* ya está disponible.
+
+Responde a este mensaje y te lo enviamos por aquí 📄
+```
+
+**Variables:**
+| # | Descripción | Ejemplo |
+|---|-------------|---------|
+| {{1}} | Nombre paciente | Sergio |
+| {{2}} | Tipo de examen | Ecografía |
+
+**Buttons:** ninguno (el paciente responde libre)
+
+---
+
+### 13. `seguimiento_medico` (UTILITY)
+
+Seguimiento médico personalizado — el doctor quiere saber cómo evoluciona
+un paciente días después de la consulta (ej. hepatitis, lesión, post-operatorio).
+Se envía desde el panel admin.
+
+**Body:**
+```
+Hola {{1}} 👋 El *{{2}}* del Centro Médico Carampangue quiere saber cómo has evolucionado desde tu última consulta.
+
+¿Cómo te has sentido? ¿Algún síntoma nuevo o cambio?
+
+Responde a este mensaje y te orientamos 🙏
+```
+
+**Variables:**
+| # | Descripción | Ejemplo |
+|---|-------------|---------|
+| {{1}} | Nombre paciente | Sergio |
+| {{2}} | Nombre doctor | Dr. Rodrigo Olavarría |
+
+**Buttons:** ninguno (el paciente responde libre, abre ventana 24h)
+
+---
+
 ## Cómo registrar los templates
 
 ### Opción A — Meta Business Manager (UI)

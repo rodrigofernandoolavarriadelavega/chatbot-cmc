@@ -310,6 +310,46 @@ TEMPLATES = [
             },
         ],
     },
+
+    # 12. Informe/resultado listo para retirar
+    {
+        "name": "informe_listo",
+        "language": "es",
+        "category": "UTILITY",
+        "components": [
+            {
+                "type": "BODY",
+                "text": (
+                    "Hola {{1}} 👋 Tu informe de *{{2}}* ya está disponible.\n\n"
+                    "Responde a este mensaje y te lo enviamos por aquí 📄"
+                ),
+                "example": {
+                    "body_text": [["Sergio", "Ecografía"]]
+                },
+            },
+        ],
+    },
+
+    # 13. Seguimiento médico personalizado (doctor quiere saber cómo está el paciente)
+    {
+        "name": "seguimiento_medico",
+        "language": "es",
+        "category": "UTILITY",
+        "components": [
+            {
+                "type": "BODY",
+                "text": (
+                    "Hola {{1}} 👋 El *{{2}}* del Centro Médico Carampangue quiere saber "
+                    "cómo has evolucionado desde tu última consulta.\n\n"
+                    "¿Cómo te has sentido? ¿Algún síntoma nuevo o cambio?\n\n"
+                    "Responde a este mensaje y te orientamos 🙏"
+                ),
+                "example": {
+                    "body_text": [["Sergio", "Dr. Rodrigo Olavarría"]]
+                },
+            },
+        ],
+    },
 ]
 
 

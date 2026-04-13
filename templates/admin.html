@@ -702,6 +702,7 @@ body {
             <span class="state-tag tag-slate" id="chat-state-tag">—</span>
             <button class="btn btn-danger" id="btn-takeover" onclick="doTakeover()">🎯 Tomar control</button>
             <button class="btn btn-outline" id="btn-resume" style="display:none;" onclick="doResume()">🤖 Devolver al bot</button>
+            <button class="btn btn-outline" id="btn-notify-informe" style="display:none;font-size:11px;padding:5px 10px;" onclick="notificarInforme()" title="Enviar template informe_listo al paciente">📄 Notificar informe</button>
             <button class="mobile-ctx-toggle" onclick="toggleCtxPanel()" title="Info paciente">ℹ️</button>
           </div>
         </div>
@@ -718,10 +719,19 @@ body {
         </div>
         <div class="chat-messages" id="chat-messages"></div>
         <div class="reply-bar hidden" id="reply-bar">
+          <input type="file" id="file-upload-input" style="display:none;"
+            accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+            onchange="handleFileSelected(this)">
+          <div id="file-preview" style="display:none;padding:6px 10px 8px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;margin-bottom:8px;font-size:12px;color:#0369a1;align-items:center;gap:8px;">
+            <span id="file-preview-name" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+            <span id="file-preview-size" style="color:#64748b;font-size:11px;flex-shrink:0;"></span>
+            <button onclick="clearFileUpload()" style="background:none;border:none;font-size:16px;cursor:pointer;color:#94a3b8;flex-shrink:0;" title="Quitar archivo">x</button>
+          </div>
           <textarea class="reply-textarea" id="reply-input" placeholder="Escribe tu respuesta..." rows="2"
             onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendReply();}"></textarea>
           <div class="reply-actions">
-            <button class="btn btn-outline" onclick="document.getElementById('reply-input').value=''">Limpiar</button>
+            <button class="btn btn-outline" onclick="document.getElementById('file-upload-input').click()" title="Adjuntar archivo" style="font-size:15px;padding:5px 10px;">📎</button>
+            <button class="btn btn-outline" onclick="document.getElementById('reply-input').value='';clearFileUpload();">Limpiar</button>
             <button class="btn btn-primary btn-send" onclick="sendReply()">Enviar →</button>
           </div>
         </div>
@@ -1086,6 +1096,7 @@ function updateChatControls(state) {
   document.getElementById("takeover-banner").classList.toggle("hidden",!isTakeover);
   document.getElementById("reply-bar").classList.toggle("hidden",!isTakeover);
   document.getElementById("quick-replies").classList.toggle("hidden",!isTakeover);
+  document.getElementById("btn-notify-informe").style.display=isTakeover?"inline-flex":"none";
 }
 function updateContextPanel(conv) {
   if (!conv) return;
@@ -1192,15 +1203,67 @@ async function doResume(){
 }
 async function sendReply(){
   if(!selectedPhone) return;
+  const fileInput=document.getElementById("file-upload-input");
+  const hasFile=fileInput.files&&fileInput.files.length>0;
   const input=document.getElementById("reply-input");
-  const msg=input.value.trim(); if(!msg) return;
+  const msg=input.value.trim();
+  if(!msg&&!hasFile) return;
   const btn=document.querySelector("#reply-bar .btn-send");
   btn.disabled=true; btn.textContent="...";
   try{
-    const r=await fetch(apiUrl(`/admin/api/reply`),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone:selectedPhone,message:msg})});
-    if(r.ok){input.value="";await loadMessages(selectedPhone);}
-    else alert("Error al enviar el mensaje");
+    if(hasFile){
+      // Send file (with optional caption from text input)
+      const fd=new FormData();
+      fd.append("phone",selectedPhone);
+      fd.append("file",fileInput.files[0]);
+      if(msg) fd.append("caption",msg);
+      const r=await fetch(apiUrl(`/admin/api/send-document`),{method:"POST",body:fd});
+      if(r.ok){input.value="";clearFileUpload();await loadMessages(selectedPhone);}
+      else{const d=await r.json().catch(()=>null);alert((d&&d.detail)||"Error al enviar archivo");}
+    } else {
+      // Send text only
+      const r=await fetch(apiUrl(`/admin/api/reply`),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone:selectedPhone,message:msg})});
+      if(r.ok){input.value="";await loadMessages(selectedPhone);}
+      else alert("Error al enviar el mensaje");
+    }
   }finally{btn.disabled=false;btn.textContent="Enviar →";}
+}
+
+/* ── FILE UPLOAD ── */
+let pendingFile=null;
+function handleFileSelected(input){
+  if(!input.files||!input.files.length){clearFileUpload();return;}
+  const f=input.files[0];
+  if(f.size>16*1024*1024){alert("El archivo excede 16 MB (limite de WhatsApp)");input.value="";return;}
+  pendingFile=f;
+  const preview=document.getElementById("file-preview");
+  document.getElementById("file-preview-name").textContent=(f.type.startsWith("image/")?"🖼 ":"📄 ")+f.name;
+  document.getElementById("file-preview-size").textContent=(f.size/1024<1024)?Math.round(f.size/1024)+"KB":((f.size/1024/1024).toFixed(1))+"MB";
+  preview.style.display="flex";
+}
+function clearFileUpload(){
+  pendingFile=null;
+  const input=document.getElementById("file-upload-input");
+  input.value="";
+  document.getElementById("file-preview").style.display="none";
+}
+
+/* ── NOTIFICAR INFORME (template) ── */
+async function notificarInforme(){
+  if(!selectedPhone) return;
+  const tipo=prompt("Tipo de examen/informe (ej: Ecografia, Examen de sangre):");
+  if(!tipo||!tipo.trim()) return;
+  const btn=document.getElementById("btn-notify-informe");
+  btn.disabled=true; btn.textContent="...";
+  try{
+    const fd=new FormData();
+    fd.append("phone",selectedPhone);
+    fd.append("template_name","informe_listo");
+    fd.append("params",JSON.stringify([tipo.trim()]));
+    const r=await fetch(apiUrl(`/admin/api/send-template`),{method:"POST",body:fd});
+    if(r.ok){alert("Template enviado correctamente");await loadMessages(selectedPhone);}
+    else{const d=await r.json().catch(()=>null);alert((d&&d.detail)||"Error al enviar template");}
+  }finally{btn.disabled=false;btn.textContent="📄 Notificar informe";}
 }
 
 /* ── DATOS ── */

@@ -7,7 +7,7 @@ import time
 from datetime import date, timedelta
 from collections import defaultdict
 
-from fastapi import APIRouter, Request, Query, HTTPException, Header, Depends, Cookie, Form
+from fastapi import APIRouter, Request, Query, HTTPException, Header, Depends, Cookie, Form, File, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from config import ADMIN_TOKEN, ORTODONCIA_TOKEN, COOKIE_SECRET
@@ -699,6 +699,60 @@ def api_message_statuses(phone: str = Query(...), _=Depends(require_admin)):
     """Resumen de estados de entrega de mensajes salientes (últimas 24h)."""
     from session import get_message_status_summary
     return get_message_status_summary(phone)
+
+
+@router.post("/admin/api/send-document")
+async def api_send_document(
+    phone: str = Form(...),
+    caption: str = Form(""),
+    file: UploadFile = File(...),
+    _=Depends(require_admin),
+):
+    """Sube un archivo y lo envía al paciente por WhatsApp."""
+    from messaging import upload_media_to_whatsapp, send_whatsapp_document_by_id, send_whatsapp_image_by_id
+
+    content = await file.read()
+    if len(content) > 16 * 1024 * 1024:  # 16 MB limit de Meta
+        raise HTTPException(status_code=413, detail="Archivo excede 16 MB")
+
+    mime = file.content_type or "application/octet-stream"
+    fname = file.filename or "archivo"
+
+    media_id = await upload_media_to_whatsapp(content, mime, fname)
+    if not media_id:
+        raise HTTPException(status_code=502, detail="Error subiendo archivo a Meta")
+
+    is_image = mime.startswith("image/")
+    if is_image:
+        await send_whatsapp_image_by_id(phone, media_id, caption=caption)
+        log_text = f"[imagen] {caption}" if caption else "[imagen]"
+    else:
+        await send_whatsapp_document_by_id(phone, media_id, filename=fname, caption=caption)
+        log_text = f"[documento: {fname}] {caption}" if caption else f"[documento: {fname}]"
+
+    log_message(phone, "out", log_text, "HUMAN_TAKEOVER", canal="whatsapp")
+    return {"ok": True, "media_id": media_id, "type": "image" if is_image else "document"}
+
+
+@router.post("/admin/api/send-template")
+async def api_send_template(
+    phone: str = Form(...),
+    template_name: str = Form(...),
+    params: str = Form("[]"),
+    _=Depends(require_admin),
+):
+    """Envía un Message Template aprobado al paciente (para mensajes fuera de ventana 24h)."""
+    import json as _json
+    from messaging import send_whatsapp_template
+
+    try:
+        body_params = _json.loads(params)
+    except _json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="params debe ser un JSON array")
+
+    await send_whatsapp_template(phone, template_name, body_params=body_params)
+    log_message(phone, "out", f"[template: {template_name}] {', '.join(body_params)}", "HUMAN_TAKEOVER", canal="whatsapp")
+    return {"ok": True}
 
 
 @router.post("/admin/api/ortodoncia/sync")
