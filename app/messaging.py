@@ -13,8 +13,8 @@ log = logging.getLogger("bot")
 META_API_URL = f"https://graph.facebook.com/v22.0/{META_PHONE_NUMBER_ID}/messages"
 
 
-async def _post_meta(payload: dict):
-    """POST a Meta Cloud API con 1 reintento."""
+async def _post_meta(payload: dict) -> str | None:
+    """POST a Meta Cloud API con 1 reintento. Returns wamid if available."""
     for attempt in range(2):
         try:
             async with httpx.AsyncClient(timeout=10) as client:
@@ -24,12 +24,20 @@ async def _post_meta(payload: dict):
                     json=payload,
                 )
             if r.status_code == 200:
-                return
+                try:
+                    data = r.json()
+                    messages = data.get("messages", [])
+                    if messages:
+                        return messages[0].get("id")
+                except Exception:
+                    pass
+                return None
             log.error("Meta API intento %d → %s: %s", attempt + 1, r.status_code, r.text[:200])
         except (httpx.TimeoutException, httpx.NetworkError) as e:
             log.error("Meta API intento %d error red: %s", attempt + 1, e)
         if attempt == 0:
             await asyncio.sleep(2)
+    return None
 
 
 async def send_whatsapp(to: str, body: str):
@@ -194,6 +202,27 @@ async def transcribe_audio(audio_bytes: bytes, mime: str = "audio/ogg") -> str:
     except Exception as e:
         log.error("Error transcribiendo audio: %s", e)
         return ""
+
+
+async def get_whatsapp_quality_rating() -> dict | None:
+    """Fetch quality rating and messaging limits from Meta API.
+    Returns dict with quality_rating, messaging_limit, etc. or None on error."""
+    if not META_PHONE_NUMBER_ID or not META_ACCESS_TOKEN:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get(
+                f"https://graph.facebook.com/v22.0/{META_PHONE_NUMBER_ID}"
+                "?fields=quality_rating,messaging_limit_tier,verified_name,code_verification_status,status",
+                headers={"Authorization": f"Bearer {META_ACCESS_TOKEN}"},
+            )
+        if r.status_code == 200:
+            return r.json()
+        log.error("Quality rating API %s: %s", r.status_code, r.text[:200])
+        return None
+    except (httpx.TimeoutException, httpx.NetworkError) as e:
+        log.error("Quality rating check error: %s", e)
+        return None
 
 
 async def send_instagram(igsid: str, body: str):

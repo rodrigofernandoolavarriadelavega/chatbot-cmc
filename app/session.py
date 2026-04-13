@@ -160,6 +160,29 @@ def _conn():
         )
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_waitlist_active ON waitlist(canceled_at, notified_at)")
+    # Tracking de estados de entrega de mensajes salientes (sent/delivered/read/failed)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS message_statuses (
+            wamid       TEXT PRIMARY KEY,
+            phone       TEXT NOT NULL,
+            status      TEXT NOT NULL,
+            ts          TEXT DEFAULT (datetime('now')),
+            error_code  TEXT,
+            error_title TEXT
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_msgstatus_phone ON message_statuses(phone)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_msgstatus_ts ON message_statuses(ts)")
+    # BSUID mapping (Business-Scoped User ID — Meta June 2026)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS bsuid_map (
+            bsuid       TEXT PRIMARY KEY,
+            phone       TEXT,
+            first_seen  TEXT DEFAULT (datetime('now')),
+            last_seen   TEXT DEFAULT (datetime('now'))
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_bsuid_phone ON bsuid_map(phone)")
     # Migración: agregar canal a messages si no existe
     try:
         conn.execute("ALTER TABLE messages ADD COLUMN canal TEXT DEFAULT 'whatsapp'")
@@ -444,6 +467,54 @@ def log_message(phone: str, direction: str, text: str, state: str = "IDLE", cana
             (phone, direction, str(text)[:2000], state, canal)
         )
         conn.commit()
+
+
+def upsert_message_status(wamid: str, phone: str, status: str,
+                          error_code: str = None, error_title: str = None):
+    """Upsert message delivery status from Meta webhook.
+    Statuses: sent -> delivered -> read (or failed).
+    Only upgrades status: sent < delivered < read. 'failed' always overwrites."""
+    _STATUS_ORDER = {"sent": 1, "delivered": 2, "read": 3, "failed": 0}
+    with _conn() as conn:
+        existing = conn.execute(
+            "SELECT status FROM message_statuses WHERE wamid=?", (wamid,)
+        ).fetchone()
+        if existing:
+            old_rank = _STATUS_ORDER.get(existing["status"], 0)
+            new_rank = _STATUS_ORDER.get(status, 0)
+            # failed always overwrites; otherwise only upgrade
+            if status != "failed" and new_rank <= old_rank:
+                return
+        conn.execute("""
+            INSERT INTO message_statuses (wamid, phone, status, ts, error_code, error_title)
+            VALUES (?, ?, ?, datetime('now'), ?, ?)
+            ON CONFLICT(wamid) DO UPDATE SET
+                status=excluded.status, ts=excluded.ts,
+                error_code=excluded.error_code, error_title=excluded.error_title
+        """, (wamid, phone, status, error_code, error_title))
+        conn.commit()
+
+
+def get_message_status_summary(phone: str) -> dict:
+    """Get delivery status summary for a phone's outgoing messages (last 24h)."""
+    with _conn() as conn:
+        rows = conn.execute("""
+            SELECT status, COUNT(*) as cnt
+            FROM message_statuses
+            WHERE phone=? AND ts > datetime('now', '-24 hours')
+            GROUP BY status
+        """, (phone,)).fetchall()
+        return {r["status"]: r["cnt"] for r in rows}
+
+
+def get_last_message_status(phone: str) -> str | None:
+    """Get the status of the last outgoing message to this phone."""
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT status FROM message_statuses WHERE phone=? ORDER BY ts DESC LIMIT 1",
+            (phone,)
+        ).fetchone()
+        return row["status"] if row else None
 
 
 def get_messages(phone: str, limit: int = 300) -> list[dict]:
@@ -1182,3 +1253,39 @@ def waitlist_depth() -> int:
             "WHERE notified_at IS NULL AND canceled_at IS NULL"
         ).fetchone()
         return int(row[0]) if row else 0
+
+
+# ── BSUID mapping ─────────────────────────────────────────────────────────
+
+def upsert_bsuid(bsuid: str, phone: str | None = None):
+    """Store or update a BSUID→phone mapping. phone can be None if hidden."""
+    if not bsuid:
+        return
+    with _conn() as conn:
+        conn.execute("""
+            INSERT INTO bsuid_map (bsuid, phone, last_seen)
+            VALUES (?, ?, datetime('now'))
+            ON CONFLICT(bsuid) DO UPDATE SET
+                phone = COALESCE(excluded.phone, bsuid_map.phone),
+                last_seen = datetime('now')
+        """, (bsuid, phone))
+        conn.commit()
+
+
+def resolve_phone_from_bsuid(bsuid: str) -> str | None:
+    """Look up the phone number for a BSUID. Returns None if unknown."""
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT phone FROM bsuid_map WHERE bsuid=?", (bsuid,)
+        ).fetchone()
+        return row["phone"] if row else None
+
+
+def get_bsuid_stats() -> dict:
+    """Return BSUID mapping statistics for /health endpoint."""
+    with _conn() as conn:
+        total = conn.execute("SELECT COUNT(*) as c FROM bsuid_map").fetchone()["c"]
+        with_phone = conn.execute(
+            "SELECT COUNT(*) as c FROM bsuid_map WHERE phone IS NOT NULL"
+        ).fetchone()["c"]
+        return {"total": total, "with_phone": with_phone, "phone_hidden": total - with_phone}

@@ -28,7 +28,8 @@ from messaging import (send_whatsapp, send_whatsapp_interactive,
                        download_whatsapp_media, transcribe_audio)
 from session import (get_session, is_duplicate, reset_session, save_session,
                      get_metricas, log_message, log_event,
-                     intent_queue_depth, waitlist_depth, purge_old_data)
+                     intent_queue_depth, waitlist_depth, purge_old_data,
+                     upsert_message_status, upsert_bsuid)
 from resilience import is_medilink_down
 from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_recordatorios, _job_recordatorios_2h,
@@ -232,6 +233,8 @@ async def health():
         medilink_ok = r.status_code < 500
     except (httpx.TimeoutException, httpx.NetworkError, httpx.RequestError):
         medilink_ok = False
+    from session import get_bsuid_stats
+    bsuid = get_bsuid_stats()
     return {
         "status":      "ok",
         "medilink":    "ok" if medilink_ok else "degraded",
@@ -239,6 +242,7 @@ async def health():
         "medilink_state":   "down" if is_medilink_down() else "up",
         "intent_queue_depth": intent_queue_depth(),
         "waitlist_depth":     waitlist_depth(),
+        "bsuid_mapped": bsuid["total"],
     }
 
 
@@ -380,6 +384,23 @@ async def webhook(request: Request):
         entry = data["entry"][0]
         change = entry["changes"][0]["value"]
 
+        # ── Message delivery statuses (sent/delivered/read/failed) ────────
+        if "statuses" in change:
+            for st in change["statuses"]:
+                wamid = st.get("id", "")
+                recipient = st.get("recipient_id", "").lstrip("+")
+                status = st.get("status", "")  # sent, delivered, read, failed
+                err = st.get("errors", [{}])[0] if st.get("errors") else {}
+                if wamid and recipient and status:
+                    upsert_message_status(
+                        wamid, recipient, status,
+                        error_code=str(err.get("code", "")) if err else None,
+                        error_title=err.get("title", "") if err else None,
+                    )
+                    if status == "failed":
+                        log.warning("MSG FAILED wamid=%s to=%s code=%s: %s",
+                                    wamid, recipient, err.get("code"), err.get("title"))
+
         if "messages" not in change:
             return Response(status_code=200)
 
@@ -387,6 +408,16 @@ async def webhook(request: Request):
         msg_type = msg.get("type")
 
         phone = msg["from"].lstrip("+")  # normalizar: siempre sin +
+
+        # Capture BSUID for future phone-number-hidden support (June 2026)
+        contacts = change.get("contacts", [])
+        if contacts:
+            contact = contacts[0]
+            bsuid = contact.get("user_id", "")
+            wa_id = contact.get("wa_id", "")
+            if bsuid:
+                upsert_bsuid(bsuid, phone or wa_id or None)
+
         msg_id = msg.get("id", "")
         is_audio = False
 

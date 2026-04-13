@@ -909,6 +909,34 @@ function waitLabel(mins) {
   return d === 0 ? s : `${s} y ${d} día${d > 1 ? "s" : ""}`;
 }
 
+/* ── DELIVERY STATUS (message read receipts) ── */
+const _deliveryStatusCache = {};  // phone -> {status, ts}
+async function fetchLastDeliveryStatus(phone) {
+  const cached = _deliveryStatusCache[phone];
+  if (cached && Date.now() - cached.ts < 30000) return cached.status;
+  try {
+    const r = await fetch(apiUrl(`/admin/api/message-statuses?phone=${encodeURIComponent(phone)}`));
+    if (!r.ok) return null;
+    const data = await r.json();
+    // Determine the "best" status from summary: failed > read > delivered > sent
+    let best = null;
+    if (data.failed) best = "failed";
+    else if (data.read) best = "read";
+    else if (data.delivered) best = "delivered";
+    else if (data.sent) best = "sent";
+    _deliveryStatusCache[phone] = { status: best, ts: Date.now() };
+    return best;
+  } catch { return null; }
+}
+function deliveryIcon(status) {
+  if (!status) return "";
+  if (status === "failed") return `<span title="Error de entrega" style="color:#ef4444;font-size:11px;margin-left:4px;">&#9888;</span>`;
+  if (status === "read") return `<span title="Leido" style="color:#53bdeb;font-size:11px;margin-left:4px;">&#10003;&#10003;</span>`;
+  if (status === "delivered") return `<span title="Entregado" style="color:#94a3b8;font-size:11px;margin-left:4px;">&#10003;&#10003;</span>`;
+  if (status === "sent") return `<span title="Enviado" style="color:#94a3b8;font-size:11px;margin-left:4px;">&#10003;</span>`;
+  return "";
+}
+
 /* ── FILTROS ── */
 function setFilter(id, el) {
   currentFilter = id; currentEsp = "all";
@@ -983,6 +1011,15 @@ function renderList() {
     html+=convCard(c,g);
   });
   el.innerHTML=html;
+  // Async: fill delivery status icons for outgoing messages
+  list.forEach(c => {
+    if (c.last_dir !== "out") return;
+    const elId = "dstatus-" + c.phone.replace(/[^a-zA-Z0-9_]/g, "_");
+    fetchLastDeliveryStatus(c.phone).then(st => {
+      const span = document.getElementById(elId);
+      if (span) span.innerHTML = deliveryIcon(st);
+    });
+  });
 }
 function canalIcon(canal) {
   if (canal==="instagram") return `<span title="Instagram" style="font-size:14px;">📷</span>`;
@@ -1017,7 +1054,7 @@ function convCard(c,g) {
     </div>
     <div class="cstate" style="color:${g.dot};">${stateLabel(c.state)}</div>
     ${fd.especialidad?`<div class="cesp">🩺 ${espLabel(fd.especialidad)}</div>`:""}
-    <div class="cpreview">${dir}${preview.replace(/</g,"&lt;")}</div>
+    <div class="cpreview">${dir}${preview.replace(/</g,"&lt;")}<span id="dstatus-${c.phone.replace(/[^a-zA-Z0-9_]/g,"_")}"></span></div>
     ${badges?`<div class="cbadges">${badges}</div>`:""}
   </div>`;
 }

@@ -684,6 +684,23 @@ async def admin_ortodoncia_tipo(id_atencion: int, request: Request,
     return {"ok": True}
 
 
+@router.get("/admin/api/whatsapp-quality")
+async def api_whatsapp_quality(_=Depends(require_admin)):
+    """Retorna quality rating y messaging limits del número WhatsApp."""
+    from messaging import get_whatsapp_quality_rating
+    data = await get_whatsapp_quality_rating()
+    if data is None:
+        raise HTTPException(status_code=502, detail="No se pudo obtener quality rating de Meta")
+    return data
+
+
+@router.get("/admin/api/message-statuses")
+def api_message_statuses(phone: str = Query(...), _=Depends(require_admin)):
+    """Resumen de estados de entrega de mensajes salientes (últimas 24h)."""
+    from session import get_message_status_summary
+    return get_message_status_summary(phone)
+
+
 @router.post("/admin/api/ortodoncia/sync")
 async def admin_ortodoncia_sync(desde: str = "2025-01-01", hasta: str = None,
                                 _: str = Depends(require_ortodoncia)):
