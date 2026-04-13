@@ -222,7 +222,7 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - Muestra métricas, conversaciones activas y estado del sistema
 
 ## Sesión en curso
-**Fecha**: 2026-04-10 (continuación nocturna)
+**Fecha**: 2026-04-11
 
 **Hecho (sesión 2026-04-10/11 — git GES + swap + backup cron)**:
 - **Repo privado `ges-clinical-app` creado en GitHub**: https://github.com/rodrigofernandoolavarriadelavega/ges-clinical-app
@@ -246,12 +246,25 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
   - Backup de prueba ejecutado: **412 KB comprimido** (DB cruda 1.1 MB)
 - **Docs sincronizados**: `docs/infra.md` agregó secciones de swap, backup y repo GitHub + plan de rotación de PAT. Memoria `vps_access.md` actualizada. Página Notion "8. Infraestructura VPS + GES Assistant" bajo "Documentación Técnica — Chatbot WhatsApp CMC".
 
-**Pendiente para la próxima ventana (Phase 2 — frontend GES en Vercel)**:
-- Frontend Next.js en Vercel → `ges.agentecmc.cl` (CNAME en Cloudflare)
-- nginx subdomain `api-ges.agentecmc.cl` exponiendo SOLO endpoints seguros del backend GES (NO `/triage`, ese sigue siendo localhost)
-- Let's Encrypt cert para el nuevo subdomain
-- CORS restrictivo al origen de Vercel en `backend/app/config.py` (`cors_origins`)
-- Rotación de PAT + migración a SSH keys (después del deploy del frontend, para no romper el `git pull` del chatbot mientras se hace el deploy)
+**Hecho (sesión 2026-04-11 — Phase 2: frontend GES en Vercel + API pública)**:
+- **Frontend Next.js deployado en Vercel**: `https://ges-clinical-app.vercel.app` (Production, build 45s, auto-deploy on push to `main`)
+  - Proyecto Vercel `ges-clinical-app` conectado al repo GitHub `ges-clinical-app`
+  - Root Directory = `frontend`, Framework Preset = Next.js
+  - Env var `NEXT_PUBLIC_API_URL=https://api-ges.agentecmc.cl` en Vercel (build-time, se embebe en el bundle)
+  - `vercel.json` simplificado: se eliminó referencia rota a Vercel Secret `@ges-api-url`
+  - **Bug encontrado**: trailing space en la env var causaba `ERR_NAME_NOT_RESOLVED` (`api-ges.agentecmc.cl%20`). Detectado via DevTools Console. Fix: quitar espacio en Vercel UI + redeploy.
+- **nginx subdomain `api-ges.agentecmc.cl`** activo con SSL:
+  - Proxy selectivo a `127.0.0.1:8002` (GES backend systemd)
+  - **Whitelist de endpoints**: `/health`, `/auth/*`, `/pathologies`, `/clinical/*`, `/symptoms`, `/calculators/*`, `/validation/*`
+  - **`/triage` bloqueado** (404) — solo accesible desde localhost por el chatbot
+  - Let's Encrypt cert via certbot, auto-renew, HTTP→HTTPS redirect
+  - Headers de seguridad: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`
+  - Snippet compartido `/etc/nginx/snippets/ges-proxy-headers.conf` para headers de proxy
+  - DNS: registro A `api-ges` → `157.245.13.107` en Cloudflare (DNS only, sin proxy)
+- **CORS actualizado** en `/opt/ges-assistant/.env`: `CORS_ORIGINS` incluye `https://ges.agentecmc.cl,https://ges-clinical-app.vercel.app` + localhost dev
+- **`GES_SECRET_KEY`** seteado a 64-char hex random en producción (JWT HS256, 12h expiry)
+- **Verificación end-to-end**: `/health` → 200, `/pathologies` → lista GES, `/triage` → 404 (bloqueado). CORS preflight OK desde origen Vercel.
+- Prototipos HTML del sitio web agrupados en `sitio-web/v2.html` y `sitio-web/v3.html`
 
 **Hecho (sesión 2026-04-10 — expansión normalizador triage + deploy fix)**:
 - **Diccionario de normalización expandido en `app/triage_ges.py`**: ~100 entradas nuevas repartidas entre `_ABREVIACIONES` y `_TYPOS`. Categorías:
@@ -360,15 +373,16 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
   - Cancelar desde botón: salta directo a `CONFIRMING_CANCEL` con la cita cargada
   - Endpoint `GET /admin/api/confirmaciones?fecha=YYYY-MM-DD` con resumen {confirmed, reagendar, cancelar, pendiente}
 
-**Estado del servidor**: ✅ corriendo en `https://agentecmc.cl`, deployado commit `68ce043` (triage normalizer expandido + test suite). GES Assistant en `127.0.0.1:8002` como systemd, activo.
+**Estado del servidor**: ✅ Chatbot corriendo en `https://agentecmc.cl`. GES Assistant en `127.0.0.1:8002` (systemd). GES API pública en `https://api-ges.agentecmc.cl` (nginx+SSL). Frontend GES en `https://ges-clinical-app.vercel.app` (Vercel).
 
 **Pendiente (corto plazo)**:
+- Fix trailing space en `NEXT_PUBLIC_API_URL` en Vercel → redeploy (causa `%20` en URLs del API)
+- Custom domain `ges.agentecmc.cl` para el frontend Vercel (CNAME en Cloudflare + add domain en Vercel)
 - Deploy del feature confirmación pre-cita
 - Agregar columna "Confirmados mañana" al dashboard admin (frontend) — endpoint ya expuesto
 - Agregar `OPENAI_API_KEY` al `.env` del servidor y deployar Fase 1 Whisper (commits locales listos, no pusheados)
-- Verificar ortodoncia modal en producción (hard refresh Cmd+Shift+R, sync puede tardar hasta 10-15 min)
+- Rotación de PAT → SSH keys en remotes de `chatbot-cmc` y `ges-clinical-app` (Mac + VPS)
 - Promover número +56945886628 a pacientes reales (redes sociales, recepción)
-- Monitorear primeras conversaciones reales
 - Tags clínicos automáticos (dolor lumbar, rehabilitación) — detectar con Claude y guardar en contact_tags
 
 **Próximo sprint (plan aprobado 2026-04-10)**:

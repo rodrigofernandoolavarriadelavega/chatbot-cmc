@@ -395,6 +395,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             or any(pat.search(tl) for pat in SALUD_MENTAL_PATRONES)):
         save_tag(phone, "crisis-salud-mental")
         log_event(phone, "crisis_salud_mental", {"texto": txt[:240]})
+        reset_session(phone)
         return (
             "Lamento mucho lo que estás sintiendo 💙 Lo que me cuentas es muy "
             "importante y no estás solo/a.\n\n"
@@ -418,10 +419,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             or any(pat.search(tl) for pat in EMERGENCIAS_PATRONES)
             or any(pat.search(tl) for pat in EMERGENCIAS_VITAL_PATRONES)):
         log_event(phone, "emergencia_detectada", {"texto": txt[:240]})
+        reset_session(phone)
         return (
             "⚠️ Esto suena como una urgencia.\n\n"
             "Llama al *SAMU 131* o acude al servicio de urgencias más cercano ahora mismo.\n\n"
-            f"También puedes contactarnos:\n📞 *{CMC_TELEFONO}*\n☎️ *{CMC_TELEFONO_FIJO}*"
+            f"También puedes contactarnos:\n📞 *{CMC_TELEFONO}*\n☎️ *{CMC_TELEFONO_FIJO}*\n\n"
+            "Si necesitas algo más, escribe *menú*."
         )
 
     # ── Comandos globales ─────────────────────────────────────────────────────
