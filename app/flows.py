@@ -1658,7 +1658,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # Auto-rellenar celular desde el número de WhatsApp
         cel = phone.lstrip("+")
         if cel.startswith("56") and len(cel) >= 10:
-            data["reg_celular"] = cel  # sin +, formato 56912345678
+            data["reg_celular"] = cel[2:]  # 9 dígitos sin código país (ej: 912345678)
         log_event(phone, "registro_inicio", {"rut": data.get("rut", ""), "step": "nombre"})
         save_session(phone, "WAIT_FECHA_NAC", data)
         return (

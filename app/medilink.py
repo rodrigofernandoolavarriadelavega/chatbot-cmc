@@ -539,14 +539,16 @@ async def buscar_slots_dia_por_ids(ids: list, fecha: str,
 async def crear_paciente(rut: str, nombre: str, apellidos: str, **kwargs) -> Optional[dict]:
     """Crea un nuevo paciente en Medilink. Retorna dict con id, nombre, rut o None.
     kwargs opcionales: fecha_nacimiento, sexo, celular, telefono, email, comuna, direccion, ciudad.
+    NOTA: Medilink POST /pacientes ignora campos opcionales, así que se hace un PUT después.
     """
     body: dict = {"rut": rut, "nombre": nombre, "apellidos": apellidos}
     _CAMPOS_OPCIONALES = ("fecha_nacimiento", "sexo", "celular", "telefono", "email",
                           "comuna", "direccion", "ciudad")
+    extras = {}
     for campo in _CAMPOS_OPCIONALES:
         val = kwargs.get(campo)
         if val:
-            body[campo] = val
+            extras[campo] = val
     async with httpx.AsyncClient(timeout=10) as client:
         try:
             r = await _post(client, f"{MEDILINK_BASE_URL}/pacientes",
@@ -554,15 +556,29 @@ async def crear_paciente(rut: str, nombre: str, apellidos: str, **kwargs) -> Opt
         except httpx.RequestError as e:
             log.error("No se pudo crear paciente rut=%s: %s", rut, e)
             return None
-        if r.status_code in (200, 201):
-            p = r.json().get("data", {})
-            return {
-                "id":     p["id"],
-                "nombre": f"{p.get('nombre','')} {p.get('apellidos','')}".strip(),
-                "rut":    p.get("rut", ""),
-            }
-        log.error("Error crear paciente rut=%s: %s %s", rut, r.status_code, r.text[:200])
-        return None
+        if r.status_code not in (200, 201):
+            log.error("Error crear paciente rut=%s: %s %s", rut, r.status_code, r.text[:200])
+            return None
+        p = r.json().get("data", {})
+        pac_id = p["id"]
+        result = {
+            "id":     pac_id,
+            "nombre": f"{p.get('nombre','')} {p.get('apellidos','')}".strip(),
+            "rut":    p.get("rut", ""),
+        }
+        # PUT para guardar campos opcionales (Medilink POST los ignora)
+        if extras:
+            try:
+                r2 = await client.put(
+                    f"{MEDILINK_BASE_URL}/pacientes/{pac_id}",
+                    json=extras, headers=HEADERS, timeout=10,
+                )
+                if r2.status_code not in (200, 201):
+                    log.warning("PUT extras paciente %s falló: %s %s",
+                                pac_id, r2.status_code, r2.text[:200])
+            except httpx.RequestError as e:
+                log.warning("PUT extras paciente %s error: %s", pac_id, e)
+        return result
 
 
 async def buscar_paciente(rut: str) -> Optional[dict]:
