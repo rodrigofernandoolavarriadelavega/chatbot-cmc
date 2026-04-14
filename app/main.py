@@ -100,17 +100,18 @@ def _rate_limited(phone: str) -> bool:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Recordatorios 24h: todos los días a las 9:00 AM hora Chile
+    _CLT = "America/Santiago"
+    # Recordatorios 24h: todos los días a las 9:00 AM CLT
     scheduler.add_job(
         _job_recordatorios,
-        CronTrigger(hour=9, minute=0),
+        CronTrigger(hour=9, minute=0, timezone=_CLT),
         id="recordatorios_diarios",
         replace_existing=True,
     )
     # Recordatorios 2h: cada 15 min entre 7:30 y 21:30 CLT
     scheduler.add_job(
         _job_recordatorios_2h,
-        CronTrigger(hour="7-21", minute="0,15,30,45"),
+        CronTrigger(hour="7-21", minute="0,15,30,45", timezone=_CLT),
         id="recordatorios_2h",
         replace_existing=True,
     )
@@ -121,45 +122,45 @@ async def lifespan(app: FastAPI):
         id="reenganche",
         replace_existing=True,
     )
-    # Post-consulta: todos los días a las 10:00 AM
+    # Post-consulta: todos los días a las 10:00 AM CLT
     scheduler.add_job(
         _job_postconsulta,
-        CronTrigger(hour=10, minute=0),
+        CronTrigger(hour=10, minute=0, timezone=_CLT),
         id="seguimiento_postconsulta",
         replace_existing=True,
     )
-    # Reactivación: todos los lunes a las 10:30 AM
+    # Reactivación: todos los lunes a las 10:30 AM CLT
     scheduler.add_job(
         _job_reactivacion,
-        CronTrigger(day_of_week="mon", hour=10, minute=30),
+        CronTrigger(day_of_week="mon", hour=10, minute=30, timezone=_CLT),
         id="reactivacion_pacientes",
         replace_existing=True,
     )
-    # Adherencia kine: diario a las 11:00 AM
+    # Adherencia kine: diario a las 11:00 AM CLT
     scheduler.add_job(
         _job_adherencia_kine,
-        CronTrigger(hour=11, minute=0),
+        CronTrigger(hour=11, minute=0, timezone=_CLT),
         id="adherencia_kine",
         replace_existing=True,
     )
-    # Control por especialidad: diario a las 11:30 AM
+    # Control por especialidad: diario a las 11:30 AM CLT
     scheduler.add_job(
         _job_control_especialidad,
-        CronTrigger(hour=11, minute=30),
+        CronTrigger(hour=11, minute=30, timezone=_CLT),
         id="control_especialidad",
         replace_existing=True,
     )
-    # Cross-sell kine: miércoles a las 10:30 AM
+    # Cross-sell kine: miércoles a las 10:30 AM CLT
     scheduler.add_job(
         _job_crosssell_kine,
-        CronTrigger(day_of_week="wed", hour=10, minute=30),
+        CronTrigger(day_of_week="wed", hour=10, minute=30, timezone=_CLT),
         id="crosssell_kine",
         replace_existing=True,
     )
-    # Sync caché de citas: diario a las 23:50 CLT (02:50 UTC)
+    # Sync caché de citas: diario a las 23:50 CLT
     scheduler.add_job(
         _sync_citas_hoy,
-        CronTrigger(hour=2, minute=50),
+        CronTrigger(hour=23, minute=50, timezone=_CLT),
         id="sync_citas_cache",
         replace_existing=True,
     )
@@ -176,29 +177,29 @@ async def lifespan(app: FastAPI):
     # Lista de espera: diario a las 07:00 CLT
     scheduler.add_job(
         _job_waitlist_check,
-        CronTrigger(hour=7, minute=0),
+        CronTrigger(hour=7, minute=0, timezone=_CLT),
         id="waitlist_check",
         replace_existing=True,
     )
     # Doctor alerts: resumen pre-cita cada 5 min (lun-sáb 07:30-21:30 CLT)
     scheduler.add_job(
         _job_doctor_resumen_precita,
-        CronTrigger(minute="*/5", hour="7-21", day_of_week="mon-sat"),
+        CronTrigger(minute="*/5", hour="7-21", day_of_week="mon-sat", timezone=_CLT),
         id="doctor_resumen_precita",
         replace_existing=True,
     )
-    # Doctor alerts: reporte progreso 08:00, 12:00, 16:00, 20:00 CLT
+    # Doctor alerts: reporte progreso 09:00, 12:00, 16:00, 20:00 CLT
     for h in (9, 12, 16, 20):
         scheduler.add_job(
             _job_doctor_reporte_progreso,
-            CronTrigger(hour=h, minute=0),
+            CronTrigger(hour=h, minute=0, timezone=_CLT),
             id=f"doctor_reporte_{h}",
             replace_existing=True,
         )
-    # Doctor alerts: reset diario a medianoche
+    # Doctor alerts: reset diario a medianoche CLT
     scheduler.add_job(
         _job_doctor_reset_diario,
-        CronTrigger(hour=0, minute=0),
+        CronTrigger(hour=0, minute=0, timezone=_CLT),
         id="doctor_reset_diario",
         replace_existing=True,
     )
