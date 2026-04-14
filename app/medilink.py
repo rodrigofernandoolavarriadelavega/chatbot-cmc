@@ -604,11 +604,14 @@ async def buscar_paciente(rut: str) -> Optional[dict]:
         if not data:
             return None
         p = data[0]
-        return {
+        result = {
             "id":     p["id"],
             "nombre": f"{p.get('nombre','')} {p.get('apellidos','')}".strip(),
             "rut":    p.get("rut", ""),
         }
+        if p.get("fecha_nacimiento"):
+            result["fecha_nacimiento"] = p["fecha_nacimiento"]
+        return result
 
 
 async def crear_cita(id_paciente: int, id_profesional: int, fecha: str,

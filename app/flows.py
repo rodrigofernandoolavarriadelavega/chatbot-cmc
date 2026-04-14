@@ -18,6 +18,7 @@ from session import (save_session, reset_session, save_tag, save_cita_bot, log_e
                      get_cita_bot_by_id_cita, mark_cita_confirmation)
 from resilience import is_medilink_down
 from triage_ges import triage_sintomas, normalizar_texto_paciente
+from pni import get_vaccine_reminder
 from config import CMC_TELEFONO, CMC_TELEFONO_FIJO
 
 # Mapa de nombres de día en español → Python weekday (0=Lun..6=Dom)
@@ -1355,6 +1356,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "id_cita_old": cita_old.get("id") if reagendar else None,
                 })
                 cross_ref = _cross_reference_msg(esp)
+                # Recordatorio PNI para pacientes pediátricos
+                fecha_nac = (data.get("reg_fecha_nacimiento")
+                             or paciente.get("fecha_nacimiento", ""))
+                pni_msg = ""
+                if fecha_nac:
+                    _pni = get_vaccine_reminder(fecha_nac, paciente["nombre"])
+                    if _pni:
+                        pni_msg = f"\n\n{_pni}"
                 if reagendar:
                     extra = ""
                     if not cancel_ok:
@@ -1371,7 +1380,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         "Recuerda llegar *15 minutos antes* con tu cédula de identidad.\n\n"
                         "📍 *Monsalve 102 esq. República, Carampangue*"
                         f"{extra}"
-                        f"{cross_ref}\n\n"
+                        f"{cross_ref}"
+                        f"{pni_msg}\n\n"
                         "_Escribe *menu* si necesitas algo más._"
                     )
                 return (
@@ -1383,7 +1393,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     f"💳 {modalidad}\n\n"
                     "Recuerda llegar *15 minutos antes* con tu cédula de identidad.\n\n"
                     "📍 *Monsalve 102 esq. República, Carampangue*\n\n"
-                    f"¡Te esperamos! 😊{cross_ref}\n\n"
+                    f"¡Te esperamos! 😊{cross_ref}"
+                    f"{pni_msg}\n\n"
                     "_Escribe *menu* si necesitas algo más._"
                 )
             else:
