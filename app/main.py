@@ -25,6 +25,7 @@ from config import (META_VERIFY_TOKEN, CMC_TELEFONO, ADMIN_TOKEN,
 from flows import handle_message
 from messaging import (send_whatsapp, send_whatsapp_interactive,
                        send_whatsapp_location,
+                       react_whatsapp, unreact_whatsapp,
                        download_whatsapp_media, transcribe_audio)
 from session import (get_session, is_duplicate, reset_session, save_session,
                      get_metricas, log_message, log_event,
@@ -556,6 +557,9 @@ async def webhook(request: Request):
         log_text = f"🎤 {texto}" if is_audio else texto
         log_message(phone, "in", log_text, state_before, canal="whatsapp")
 
+        # Indicador de "pensando" — reacción ⏳ al mensaje del paciente
+        await react_whatsapp(phone, msg_id)
+
         # Confirmar al paciente lo que se entendió del audio
         if is_audio:
             await send_whatsapp(phone, f"🎤 Entendí: _{texto}_")
@@ -570,6 +574,9 @@ async def webhook(request: Request):
                 "Por favor intenta de nuevo o llama a recepción:\n"
                 f"📞 {CMC_TELEFONO}"
             )
+
+        # Quitar indicador de "pensando"
+        await unreact_whatsapp(phone, msg_id)
 
         state_after = get_session(phone).get("state", "IDLE")
 

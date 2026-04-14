@@ -40,6 +40,26 @@ async def _post_meta(payload: dict) -> str | None:
     return None
 
 
+async def react_whatsapp(to: str, message_id: str, emoji: str = "⏳"):
+    """Reacciona a un mensaje con un emoji (indicador de 'pensando')."""
+    await _post_meta({
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "reaction",
+        "reaction": {"message_id": message_id, "emoji": emoji},
+    })
+
+
+async def unreact_whatsapp(to: str, message_id: str):
+    """Quita la reacción de un mensaje (emoji vacío)."""
+    await _post_meta({
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "reaction",
+        "reaction": {"message_id": message_id, "emoji": ""},
+    })
+
+
 async def send_whatsapp(to: str, body: str):
     """Envía mensaje de texto vía Meta Cloud API."""
     await _post_meta({
