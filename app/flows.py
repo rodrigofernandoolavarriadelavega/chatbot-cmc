@@ -638,16 +638,13 @@ async def _handle_doctor_buscar(nombre: str) -> str:
 
 def _doctor_mode_menu() -> dict:
     """Menú de modo para el doctor: Agente CMC (probar flujo) o Asistente Clínico."""
-    return {
-        "type": "button",
-        "body": {"text": "Hola Rodrigo 👋 ¿Qué necesitas?"},
-        "action": {
-            "buttons": [
-                {"type": "reply", "reply": {"id": "doc_modo_agente", "title": "🤖 Agente CMC"}},
-                {"type": "reply", "reply": {"id": "doc_modo_asistente", "title": "👨‍⚕️ Asistente Clínico"}},
-            ]
-        },
-    }
+    return _btn_msg(
+        "Hola Rodrigo 👋 ¿Qué necesitas?",
+        [
+            {"id": "doc_modo_agente", "title": "🤖 Agente CMC"},
+            {"id": "doc_modo_asistente", "title": "👨‍⚕️ Asistente"},
+        ]
+    )
 
 
 async def _handle_doctor_command(phone: str, txt: str, tl: str, data: dict, state: str) -> str | None:
