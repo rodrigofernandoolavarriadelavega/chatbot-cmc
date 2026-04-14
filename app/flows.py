@@ -12,10 +12,11 @@ from medilink import (buscar_primer_dia, buscar_slots_dia, buscar_slots_dia_por_
                       listar_citas_paciente, cancelar_cita,
                       valid_rut, clean_rut, especialidades_disponibles,
                       consultar_proxima_fecha)
-from session import (save_session, reset_session, save_tag, save_cita_bot, log_event,
+from session import (save_session, reset_session, save_tag, delete_tag, get_tags,
+                     save_cita_bot, log_event,
                      save_profile, get_profile, save_fidelizacion_respuesta, get_ultimo_seguimiento,
                      enqueue_intent, add_to_waitlist, cancel_waitlist,
-                     get_cita_bot_by_id_cita, mark_cita_confirmation)
+                     get_cita_bot_by_id_cita, mark_cita_confirmation, get_phone_by_rut)
 from resilience import is_medilink_down
 from triage_ges import triage_sintomas, normalizar_texto_paciente
 from pni import get_vaccine_reminder
@@ -390,6 +391,102 @@ def _menu_msg() -> dict:
     )
 
 
+# ── Patologías válidas para comandos dx ──────────────────────────────────────
+_DX_VALIDOS = {
+    "dm2": "Diabetes Mellitus 2",
+    "dm1": "Diabetes Mellitus 1",
+    "hta": "Hipertensión Arterial",
+    "asma": "Asma",
+    "epoc": "EPOC",
+    "hipotiroidismo": "Hipotiroidismo",
+    "hipertiroidismo": "Hipertiroidismo",
+    "dislipidemia": "Dislipidemia",
+    "depresion": "Depresión",
+    "epilepsia": "Epilepsia",
+    "artrosis": "Artrosis",
+    "irc": "Insuficiencia Renal Crónica",
+    "erc": "Enfermedad Renal Crónica",
+    "ic": "Insuficiencia Cardíaca",
+    "fa": "Fibrilación Auricular",
+    "gota": "Gota",
+    "lupus": "Lupus",
+    "ar": "Artritis Reumatoide",
+    "obesidad": "Obesidad",
+    "tabaquismo": "Tabaquismo",
+    "oh": "OH Crónico",
+    "anemia": "Anemia",
+    "rinitis": "Rinitis Alérgica",
+}
+
+
+def _handle_doctor_dx(phone: str, txt: str) -> str:
+    """Comando: dx <RUT> [patología1 patología2 ...]
+    Sin patologías: muestra tags actuales. Con patologías: las agrega."""
+    partes = txt.strip().split()
+    if len(partes) < 2:
+        return (
+            "📋 *Comando dx*\n\n"
+            "• `dx 12345678-9` → ver diagnósticos\n"
+            "• `dx 12345678-9 dm2 hta asma` → agregar\n"
+            "• `dxborrar 12345678-9 dm2` → eliminar\n\n"
+            f"*Códigos válidos:*\n" +
+            "\n".join(f"  `{k}` = {v}" for k, v in sorted(_DX_VALIDOS.items()))
+        )
+
+    rut = partes[1].strip().upper()
+    phone_pac = get_phone_by_rut(rut)
+
+    if not phone_pac:
+        return f"❌ No encontré un paciente con RUT *{rut}* en el sistema."
+
+    # Sin patologías → mostrar tags actuales
+    if len(partes) == 2:
+        tags = get_tags(phone_pac)
+        dx_tags = [t for t in tags if t.startswith("dx:")]
+        if not dx_tags:
+            return f"ℹ️ *{rut}* no tiene diagnósticos registrados."
+        lista = "\n".join(f"  • {t.replace('dx:', '').upper()}" for t in dx_tags)
+        return f"📋 *Diagnósticos de {rut}:*\n{lista}"
+
+    # Con patologías → agregar
+    nuevos = []
+    invalidos = []
+    for dx in partes[2:]:
+        dx_lower = dx.lower().strip()
+        if dx_lower in _DX_VALIDOS:
+            save_tag(phone_pac, f"dx:{dx_lower}")
+            nuevos.append(dx_lower.upper())
+        else:
+            invalidos.append(dx)
+
+    msg = ""
+    if nuevos:
+        msg += f"✅ Agregados a *{rut}*: {', '.join(nuevos)}"
+    if invalidos:
+        msg += f"\n⚠️ No reconocidos: {', '.join(invalidos)}\nEscribe `dx` para ver códigos válidos."
+    return msg.strip()
+
+
+def _handle_doctor_dxborrar(phone: str, txt: str) -> str:
+    """Comando: dxborrar <RUT> <patología>"""
+    partes = txt.strip().split()
+    if len(partes) < 3:
+        return "Uso: `dxborrar 12345678-9 dm2`"
+
+    rut = partes[1].strip().upper()
+    phone_pac = get_phone_by_rut(rut)
+    if not phone_pac:
+        return f"❌ No encontré un paciente con RUT *{rut}* en el sistema."
+
+    eliminados = []
+    for dx in partes[2:]:
+        dx_lower = dx.lower().strip()
+        delete_tag(phone_pac, f"dx:{dx_lower}")
+        eliminados.append(dx_lower.upper())
+
+    return f"🗑️ Eliminados de *{rut}*: {', '.join(eliminados)}"
+
+
 async def _handle_confirmacion_precita(phone: str, tl: str, data: dict) -> str:
     """Procesa la respuesta del paciente a los botones del recordatorio de 09:00.
     IDs: cita_confirm:<id_cita> / cita_reagendar:<id_cita> / cita_cancelar:<id_cita>"""
@@ -504,6 +601,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # Debe ir ANTES de emergencias y comandos globales para que siempre se procese.
     if tl.startswith(("cita_confirm:", "cita_reagendar:", "cita_cancelar:")):
         return await _handle_confirmacion_precita(phone, tl, data)
+
+    # ── Comandos del doctor (solo desde su número) ──────────────────────────
+    _doctor_phone = CMC_TELEFONO.replace("+", "").replace(" ", "")
+    if phone == _doctor_phone:
+        if tl.startswith("dx ") or tl == "dx":
+            return _handle_doctor_dx(phone, txt)
+        if tl.startswith("dxborrar "):
+            return _handle_doctor_dxborrar(phone, txt)
 
     # ── Crisis de salud mental (prioridad 1) ─────────────────────────────────
     # Ideación suicida merece un mensaje diferenciado con tono de contención
