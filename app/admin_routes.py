@@ -20,7 +20,8 @@ from session import (get_session, reset_session, save_session, get_metricas,
                      get_waitlist_all, cancel_waitlist,
                      get_confirmaciones_dia, get_citas_cache_todos,
                      get_metricas_fidelizacion,
-                     get_notes, save_notes, get_patient_context, get_registration_stats)
+                     get_notes, save_notes, get_patient_context, get_registration_stats,
+                     get_referral_stats)
 from medilink import (buscar_paciente, crear_paciente, buscar_primer_dia,
                       buscar_slots_dia, crear_cita, listar_citas_paciente,
                       cancelar_cita, get_citas_seguimiento_mes, sync_citas_dia,
@@ -782,6 +783,12 @@ def admin_patient_context(phone: str, _: str = Depends(require_admin)):
 @router.get("/admin/api/registration-stats")
 def admin_registration_stats(dias: int = 30, _: str = Depends(require_admin)):
     return get_registration_stats(dias)
+
+
+@router.get("/admin/api/referral-stats")
+def admin_referral_stats(dias: int = 30, _: str = Depends(require_admin)):
+    """Estadísticas de cómo nos conocieron los pacientes nuevos."""
+    return get_referral_stats(dias)
 
 
 @router.post("/admin/api/ortodoncia/sync")

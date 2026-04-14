@@ -646,6 +646,24 @@ def get_registration_stats(dias: int = 30) -> dict:
                 "total": total, "tasa_completado": tasa}
 
 
+def get_referral_stats(dias: int = 30) -> dict:
+    """Estadísticas de cómo nos conocieron los pacientes nuevos."""
+    with _conn() as conn:
+        rows = conn.execute(
+            "SELECT tag, COUNT(*) as cnt FROM contact_tags "
+            "WHERE tag LIKE 'referido:%' AND ts >= datetime('now', ?) "
+            "GROUP BY tag ORDER BY cnt DESC",
+            (f"-{dias} days",)
+        ).fetchall()
+        by_source = {}
+        total = 0
+        for r in rows:
+            source = r["tag"].replace("referido:", "")
+            by_source[source] = r["cnt"]
+            total += r["cnt"]
+        return {"by_source": by_source, "total": total, "dias": dias}
+
+
 def get_conversations(limit: int = 200) -> list[dict]:
     """Lista todas las conversaciones con último mensaje y estado actual.
 

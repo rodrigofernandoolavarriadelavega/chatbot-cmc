@@ -25,13 +25,16 @@ Permite a los pacientes agendar, cancelar y ver sus citas médicas directamente 
 │   ├── main.py          # FastAPI app, webhook Meta, rate limiter, scheduler, health (468 líneas)
 │   ├── admin_routes.py  # 24 endpoints /admin/api/* (APIRouter) — auth, conversations, kine, ortodoncia
 │   ├── messaging.py     # send_whatsapp, send_instagram, send_messenger, Whisper transcripción
-│   ├── jobs.py          # 12 cron jobs: recordatorios, reenganche, watchdog, waitlist, fidelización
-│   ├── flows.py         # Máquina de estados (lógica conversacional + mensajes lista/botones)
+│   ├── jobs.py          # 15 cron jobs: recordatorios, reenganche, watchdog, waitlist, fidelización, doctor alerts
+│   ├── flows.py         # Máquina de estados (lógica conversacional + mensajes lista/botones + comando dx)
 │   ├── claude_helper.py # detect_intent() y respuesta_faq() con Claude Haiku
-│   ├── medilink.py      # Wrapper API Medilink (slots, pacientes, citas)
-│   ├── session.py       # Sesiones SQLite + log_message, get_conversations, log_event
+│   ├── medilink.py      # Wrapper API Medilink (slots, pacientes, citas, agenda del día)
+│   ├── session.py       # Sesiones SQLite + log_message, get_conversations, log_event, get_phone_by_rut
 │   ├── fidelizacion.py  # Campañas: post-consulta, reactivación, adherencia kine, control, cross-sell
 │   ├── reminders.py     # Recordatorios automáticos de citas (09:00 CLT + 2h antes)
+│   ├── doctor_alerts.py # Alertas personales doctor: resumen pre-cita + reportes progreso + guías crónicas
+│   ├── pni.py           # Programa Nacional de Inmunización: calendario vacunas por edad
+│   ├── autocuidado.py   # Tips de autocuidado post-consulta por edad/sexo/especialidad
 │   ├── resilience.py    # Modo degradado Medilink (circuit breaker + cola de intenciones)
 │   └── config.py        # Variables de entorno (.env)
 ├── templates/
@@ -73,34 +76,23 @@ ngrok http 8001
 
 SSH ahora es **solo por llave pública** (Ed25519 en `~/.ssh/id_ed25519`, password deshabilitado el 2026-04-10). Conexión directa con `ssh root@157.245.13.107`.
 
-### Opción A — one-liner desde el Mac (recomendado)
+### Deploy con systemd (recomendado)
 ```bash
 git push origin main
-ssh root@157.245.13.107 "cd /opt/chatbot-cmc && git pull && pkill -f 'chatbot-cmc.*uvicorn'; sleep 2; cd /opt/chatbot-cmc && setsid nohup venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8001 </dev/null >/var/log/cmc-bot.log 2>&1 & disown"
+ssh root@157.245.13.107 "cd /opt/chatbot-cmc && git pull && systemctl restart chatbot-cmc"
 ```
-
-### Opción B — sesión SSH interactiva
-```bash
-ssh root@157.245.13.107
-cd /opt/chatbot-cmc
-git pull
-pkill -f 'chatbot-cmc.*uvicorn'
-sleep 2
-setsid nohup venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8001 </dev/null >/var/log/cmc-bot.log 2>&1 &
-disown
-```
-
-**⚠️ Importante — usar `setsid`, no solo `nohup`**: cuando el comando se ejecuta dentro de `ssh "..."` (one-liner), un `nohup ... &` pelado deja el proceso asociado al pty remoto y éste se muere al cerrarse la sesión SSH — bot caído. `setsid` fuerza un nuevo process group, desligando el uvicorn del SSH. Verificado en prod 2026-04-10.
 
 **Verificación post-deploy**:
 ```bash
 curl -s -o /dev/null -w 'HTTP %{http_code}\n' https://agentecmc.cl/health   # → 200
-ssh root@157.245.13.107 "ps aux | grep 'chatbot-cmc.*uvicorn' | grep -v grep"
+ssh root@157.245.13.107 "systemctl is-active chatbot-cmc"                    # → active
 ```
 
 Los logs viven en `/var/log/cmc-bot.log` en el servidor.
 
-El GES Assistant corre por separado como **systemd** (`ges-assistant.service`, bind `127.0.0.1:8002`). Para sus propios restarts usar `systemctl restart ges-assistant` — no se ve afectado por deploys del chatbot.
+Ambos servicios corren como **systemd** con auto-restart:
+- `chatbot-cmc.service` — uvicorn en `0.0.0.0:8001`, Restart=always, RestartSec=3s. Ruta: `/opt/chatbot-cmc/`
+- `ges-assistant.service` — uvicorn en `127.0.0.1:8002`, auto-restart. Ruta: `/opt/ges-assistant/`
 
 ## Endpoints
 - `GET /health` — health check
@@ -255,6 +247,19 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - [x] Panel admin: contexto enriquecido (historial citas, lista espera, progreso registro)
 - [x] Panel admin: badges canal WA/IG/FB visibles en lista de conversaciones
 - [x] Fix celular registro: sin `+`, enviado en campos `celular` y `telefono` a Medilink
+- [x] Recordatorio vacunas PNI al confirmar cita pediátrica (calendario completo, vacunas escolares condicionales)
+- [x] Tips de autocuidado post-consulta personalizados por edad/sexo/especialidad
+- [x] Descripciones de cada procedimiento en glosario de precios del SYSTEM_PROMPT
+- [x] Fix ecografías: ginecológica/obstétrica → Ginecología (Dr. Tirso Rejón), no Ecografía (David Pardo)
+- [x] Indicador de pensando (⏳ reacción WhatsApp) mientras el bot procesa
+- [x] Alertas personales Dr. Olavarría: resumen pre-cita 10 min antes + reportes progreso 09/12/16/20
+- [x] Exámenes preventivos por edad/sexo en resumen pre-cita (PAP, mamografía, PSA, EMPAM, PNI específico)
+- [x] Detección pasiva de patologías crónicas (DM2, HTA, asma, EPOC, +7 más) por keywords en conversación
+- [x] Guías clínicas por patología en resumen pre-cita (examen físico, exámenes, metas, recomendaciones)
+- [x] Comando `dx` del doctor por WhatsApp: registrar/ver/borrar diagnósticos crónicos por RUT
+- [x] Systemd service `chatbot-cmc.service`: auto-restart, arranque al boot, deploy limpio
+- [x] Fix timezone: todos los CronTrigger con `timezone="America/Santiago"` (antes corrían en UTC)
+- [x] Fix mensajes fidelización en panel admin: log_message en todos los envíos (post-consulta, recordatorios, etc.)
 
 ## Dashboard admin
 - Ruta: `http://157.245.13.107:8001/admin?token=cmc_admin_2026`
@@ -262,7 +267,24 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - Muestra métricas, conversaciones activas y estado del sistema
 
 ## Sesión en curso
-**Fecha**: 2026-04-13
+**Fecha**: 2026-04-14
+
+**Hecho (sesión 2026-04-14 — alertas doctor + patologías crónicas + systemd + fixes)**:
+- **PNI pediátrico**: recordatorio de vacunas del Programa Nacional de Inmunización al confirmar cita pediátrica. Calendario completo (RN→8°Básico), vacunas escolares con mensaje condicional. Módulo `app/pni.py`.
+- **Tips autocuidado post-consulta**: módulo `app/autocuidado.py` con tips personalizados por edad/sexo/especialidad + exámenes preventivos. Se envía como segundo mensaje tras el seguimiento post-consulta.
+- **Descripciones de procedimientos**: cada procedimiento del glosario de precios en `claude_helper.py` ahora tiene descripción para el paciente (qué es, si duele, cuánto dura).
+- **Fix ecografías**: ginecológica/obstétrica redirigida a Ginecología (Dr. Tirso Rejón), no a Ecografía (David Pardo).
+- **Indicador de pensando**: reacción ⏳ en WhatsApp mientras el bot procesa, se quita al responder.
+- **Alertas personales Dr. Olavarría** (`app/doctor_alerts.py`): resumen del paciente 10 min antes de cada cita (nombre, RUT, edad, sexo + exámenes preventivos por edad/sexo + vacunas PNI específicas + guías clínicas por patología crónica). Reportes de progreso a las 09:00, 12:00, 16:00, 20:00 (agendados/atendidos/pendientes + próximos 3). `app/medilink.py::obtener_agenda_dia()` consulta citas + datos del paciente.
+- **Detección pasiva de patologías crónicas**: 10 patologías (DM2, HTA, asma, EPOC, hipotiroidismo, dislipidemia, depresión, epilepsia, artrosis, IRC) detectadas por keywords en conversación → tag `dx:*` automático.
+- **Guías clínicas por patología**: cada patología tiene examen físico, exámenes a pedir, metas terapéuticas y recomendaciones. Se muestran en el resumen pre-cita del doctor.
+- **Comando `dx` por WhatsApp**: el doctor puede escribir `dx RUT dm2 hta` para registrar diagnósticos, `dx RUT` para ver, `dxborrar RUT dm2` para eliminar. Solo funciona desde su número. 24 patologías válidas.
+- **Screening por edad**: siempre visible en resumen pre-cita (glicemia, PA, IMC según rango etario).
+- **Systemd service** (`chatbot-cmc.service`): Restart=always, RestartSec=3s, arranque al boot. Deploy limpio con `systemctl restart chatbot-cmc`. Ya no hay problemas de setsid/nohup/SSH.
+- **Fix timezone CronTrigger**: todos los jobs cron ahora usan `timezone="America/Santiago"`. Antes corrían en UTC del servidor (post-consulta llegaba a las 06:00 AM en vez de 10:00 AM).
+- **Fix mensajes fidelización en panel**: `log_message()` agregado en los 5 flujos de fidelización + 2 recordatorios. Ahora todos los envíos automáticos del bot aparecen en el chat del panel admin.
+- **`get_phone_by_rut()`**: búsqueda inversa RUT→teléfono en `session.py` para vincular tags del paciente con su historial de conversación.
+- Commits: `d4ef903`→`58ea618`. Deployados todos. Tests 90/90.
 
 **Hecho (sesión 2026-04-13 — WA Business features + registro expandido + stress tests)**:
 - **WhatsApp Business features**: message status webhooks (delivered/read/failed), tabla `message_statuses` en SQLite, BSUID capture para migración junio 2026, quality rating endpoint, delivery status icons en panel admin.
@@ -457,7 +479,7 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
   - Cancelar desde botón: salta directo a `CONFIRMING_CANCEL` con la cita cargada
   - Endpoint `GET /admin/api/confirmaciones?fecha=YYYY-MM-DD` con resumen {confirmed, reagendar, cancelar, pendiente}
 
-**Estado del servidor**: ✅ Chatbot corriendo en `https://agentecmc.cl` (commit `e892fdb`, Whisper activo). GES Assistant en `127.0.0.1:8002` (systemd). GES API pública en `https://api-ges.agentecmc.cl` (nginx+SSL). Frontend GES en `https://ges.agentecmc.cl` (Vercel).
+**Estado del servidor**: ✅ Chatbot corriendo en `https://agentecmc.cl` (commit `58ea618`, systemd). GES Assistant en `127.0.0.1:8002` (systemd). GES API pública en `https://api-ges.agentecmc.cl` (nginx+SSL). Frontend GES en `https://ges.agentecmc.cl` (Vercel).
 
 **Pendiente (corto plazo)**:
 - Rotación de PAT → SSH keys en remotes de `chatbot-cmc` y `ges-clinical-app` (Mac + VPS)

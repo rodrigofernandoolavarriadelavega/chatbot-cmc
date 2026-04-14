@@ -2,6 +2,8 @@
 Máquina de estados para los flujos de conversación.
 Opción C: Claude detecta intención → sistema guía el flujo → Medilink ejecuta.
 """
+import asyncio
+import logging
 import re
 import time
 from datetime import datetime, timedelta
@@ -21,6 +23,12 @@ from resilience import is_medilink_down
 from triage_ges import triage_sintomas, normalizar_texto_paciente
 from pni import get_vaccine_reminder
 from config import CMC_TELEFONO, CMC_TELEFONO_FIJO
+from messaging import send_whatsapp
+
+log = logging.getLogger("bot.flows")
+
+# Teléfono del médico director para alertas clínicas (Dr. Olavarría)
+ADMIN_ALERT_PHONE = "56987834148"
 
 # Mapa de nombres de día en español → Python weekday (0=Lun..6=Dom)
 _DIAS_SEMANA = {
@@ -196,6 +204,47 @@ CROSS_REFERENCE: dict[str, str] = {
         "• Vértigo y mareos\n\n"
         "Muchas atenciones de fonoaudiología se complementan con ORL. "
         "Si te interesa, escribe *menu* y agenda con él 😊"
+    ),
+}
+
+# Cross-sell inteligente post-consulta: cuando el paciente responde "Mejor",
+# le sugerimos un servicio complementario en vez de un control genérico.
+# Clave = especialidad (lowercase), Valor = (mensaje, especialidad_destino)
+UPSELL_POSTCONSULTA: dict[str, tuple[str, str]] = {
+    "traumatología": (
+        "Para consolidar tu recuperación, la kinesiología puede marcar la diferencia 💪\n\n"
+        "¿Quieres agendar con nuestros kinesiólogos?",
+        "kinesiología",
+    ),
+    "medicina general": (
+        "Ya que estás bien, ¿qué tal un chequeo preventivo anual? 🩺\n"
+        "Incluye evaluación cardiovascular, metabólica y según tu edad.\n\n"
+        "¿Te gustaría agendarlo?",
+        "medicina general",
+    ),
+    "odontología general": (
+        "Ahora que estás bien, ¿te gustaría mejorar la estética de tu sonrisa? ✨\n"
+        "Tenemos blanqueamiento y estética dental.\n\n"
+        "¿Te interesa agendar una evaluación?",
+        "odontología general",
+    ),
+    "kinesiología": (
+        "Para complementar tu mejoría, una sesión de masoterapia puede ayudarte "
+        "a mantener los resultados 🙌\n\n"
+        "¿Te interesa agendar con nuestra masoterapeuta?",
+        "masoterapia",
+    ),
+    "otorrinolaringología": (
+        "Muchas atenciones de ORL se complementan con fonoaudiología 🗣️\n"
+        "Tenemos audiometría, terapia vestibular y más.\n\n"
+        "¿Te gustaría agendar con nuestra fonoaudióloga?",
+        "fonoaudiología",
+    ),
+    "fonoaudiología": (
+        "Si necesitas evaluación de oído o garganta, nuestro otorrinolaringólogo "
+        "puede complementar tu atención 👂\n\n"
+        "¿Te interesa agendar?",
+        "otorrinolaringología",
     ),
 }
 
@@ -764,10 +813,25 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
         # ── Respuestas de fidelización ────────────────────────────────────────
         if tl == "seg_mejor":
-            save_fidelizacion_respuesta(phone, "postconsulta", "mejor")
+            # IMPORTANTE: obtener seguimiento ANTES de guardar respuesta
+            # (get_ultimo_seguimiento busca respuesta IS NULL)
             seg = get_ultimo_seguimiento(phone)
+            save_fidelizacion_respuesta(phone, "postconsulta", "mejor")
             esp = seg.get("especialidad", "") if seg else ""
             log_event(phone, "seguimiento_mejor", {"especialidad": esp})
+            # Cross-sell inteligente según especialidad
+            upsell = UPSELL_POSTCONSULTA.get(esp.lower()) if esp else None
+            if upsell:
+                upsell_msg, upsell_esp = upsell
+                data["upsell_especialidad"] = upsell_esp
+                save_session(phone, "IDLE", data)
+                log_event(phone, "upsell_postconsulta_ofrecido",
+                          {"especialidad_origen": esp, "especialidad_destino": upsell_esp})
+                return _btn_msg(
+                    f"Qué bueno saberlo 😊 Nos alegra que te sientas mejor.\n\n{upsell_msg}",
+                    [{"id": "upsell_si", "title": "Sí, me interesa"},
+                     {"id": "no_control", "title": "No por ahora"}]
+                )
             return _btn_msg(
                 "Qué bueno saberlo 😊 Nos alegra que te sientas mejor.\n\n"
                 "¿Quieres agendar tu control de seguimiento?",
@@ -775,18 +839,43 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                  {"id": "no_control", "title": "Por ahora no"}]
             )
         if tl in ("seg_igual", "seg_peor"):
-            save_fidelizacion_respuesta(phone, "postconsulta", tl.replace("seg_", ""))
             seg = get_ultimo_seguimiento(phone)
+            save_fidelizacion_respuesta(phone, "postconsulta", tl.replace("seg_", ""))
             esp = seg.get("especialidad", "") if seg else ""
             prof = seg.get("profesional", "") if seg else ""
             log_event(phone, "seguimiento_negativo", {"respuesta": tl, "especialidad": esp})
+            # Si responde PEOR, alertar al doctor
+            if tl == "seg_peor" and ADMIN_ALERT_PHONE:
+                perfil = get_profile(phone)
+                nombre_pac = perfil["nombre"] if perfil else phone
+                alerta = (
+                    f"⚠️ *Alerta seguimiento*\n\n"
+                    f"Paciente *{nombre_pac}* ({phone}) reporta sentirse *PEOR* "
+                    f"después de {esp} con {prof}.\n"
+                    f"Revisar situación clínica."
+                )
+                log_event(phone, "seguimiento_alerta_peor",
+                          {"especialidad": esp, "profesional": prof})
+                try:
+                    asyncio.create_task(send_whatsapp(ADMIN_ALERT_PHONE, alerta))
+                except Exception:
+                    log.warning("No se pudo enviar alerta peor a %s", ADMIN_ALERT_PHONE)
             return _btn_msg(
                 "Lamentamos escuchar eso 😟\n\n"
                 f"¿Quieres reagendar una consulta{' con ' + prof if prof else ''}?",
                 [{"id": "2", "title": "Sí, reagendar"},
                  {"id": "no_control", "title": "No por ahora"}]
             )
+        if tl == "upsell_si":
+            upsell_esp = data.pop("upsell_especialidad", None)
+            log_event(phone, "upsell_postconsulta_acepto", {"especialidad": upsell_esp})
+            perfil = get_profile(phone)
+            if perfil:
+                data["rut_conocido"] = perfil["rut"]
+                data["nombre_conocido"] = perfil["nombre"]
+            return await _iniciar_agendar(phone, data, upsell_esp)
         if tl == "no_control":
+            data.pop("upsell_especialidad", None)
             return (
                 "Entendido 😊 Cuando lo necesites, estamos acá.\n"
                 "_Escribe *menu* para volver al inicio._"
@@ -856,6 +945,19 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 save_fidelizacion_respuesta(phone, "postconsulta", clasificacion)
                 if clasificacion == "mejor":
                     log_event(phone, "seguimiento_mejor", {"especialidad": esp, "fuente": "texto_libre"})
+                    upsell = UPSELL_POSTCONSULTA.get(esp.lower()) if esp else None
+                    if upsell:
+                        upsell_msg, upsell_esp = upsell
+                        data["upsell_especialidad"] = upsell_esp
+                        save_session(phone, "IDLE", data)
+                        log_event(phone, "upsell_postconsulta_ofrecido",
+                                  {"especialidad_origen": esp, "especialidad_destino": upsell_esp,
+                                   "fuente": "texto_libre"})
+                        return _btn_msg(
+                            f"Qué bueno saberlo 😊 Nos alegra que te sientas mejor.\n\n{upsell_msg}",
+                            [{"id": "upsell_si", "title": "Sí, me interesa"},
+                             {"id": "no_control", "title": "No por ahora"}]
+                        )
                     return _btn_msg(
                         "Qué bueno saberlo 😊 Nos alegra que te sientas mejor.\n\n"
                         "¿Quieres agendar tu control de seguimiento?",
@@ -865,6 +967,21 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 else:  # igual o peor
                     log_event(phone, "seguimiento_negativo",
                               {"respuesta": clasificacion, "especialidad": esp, "fuente": "texto_libre"})
+                    if clasificacion == "peor" and ADMIN_ALERT_PHONE:
+                        perfil = get_profile(phone)
+                        nombre_pac = perfil["nombre"] if perfil else phone
+                        alerta = (
+                            f"⚠️ *Alerta seguimiento*\n\n"
+                            f"Paciente *{nombre_pac}* ({phone}) reporta sentirse *PEOR* "
+                            f"después de {esp} con {prof}.\n"
+                            f"Revisar situación clínica."
+                        )
+                        log_event(phone, "seguimiento_alerta_peor",
+                                  {"especialidad": esp, "profesional": prof, "fuente": "texto_libre"})
+                        try:
+                            asyncio.create_task(send_whatsapp(ADMIN_ALERT_PHONE, alerta))
+                        except Exception:
+                            log.warning("No se pudo enviar alerta peor a %s", ADMIN_ALERT_PHONE)
                     return _btn_msg(
                         "Lamentamos escuchar eso 😟\n\n"
                         f"¿Quieres reagendar una consulta{' con ' + prof if prof else ''}?",
@@ -1868,6 +1985,48 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             else:
                 # No parece correo válido, lo ignoramos y seguimos
                 log_event(phone, "registro_skip", {"step": "email", "raw": email[:60]})
+        save_session(phone, "WAIT_REFERRAL", data)
+        return _list_msg(
+            "📢 *Última pregunta:* ¿Cómo nos conociste?\n(Esto nos ayuda a mejorar nuestro servicio)",
+            "Elegir",
+            [{"title": "Opciones", "rows": [
+                {"id": "ref_amigo",      "title": "Amigo o familiar"},
+                {"id": "ref_google",     "title": "Google / internet"},
+                {"id": "ref_rrss",       "title": "Redes sociales"},
+                {"id": "ref_recurrente", "title": "Ya me atendí antes"},
+                {"id": "ref_saltar",     "title": "Prefiero no decir"},
+            ]}]
+        )
+
+    # ── WAIT_REFERRAL ─────────────────────────────────────────────────────
+    if state == "WAIT_REFERRAL":
+        _REF_MAP = {
+            "ref_amigo": "amigo", "ref_google": "google",
+            "ref_rrss": "rrss", "ref_recurrente": "recurrente",
+        }
+        ref_source = _REF_MAP.get(tl)
+        if not ref_source and tl in ("saltar", "skip", "paso", "no", "ref_saltar"):
+            log_event(phone, "registro_skip", {"step": "referral"})
+        elif ref_source:
+            save_tag(phone, f"referido:{ref_source}")
+            log_event(phone, "registro_referral", {"source": ref_source})
+        else:
+            # Texto libre: intentar mapear
+            tl_ref = tl
+            if any(w in tl_ref for w in ("amig", "famili", "conoci", "vecin")):
+                save_tag(phone, "referido:amigo")
+                log_event(phone, "registro_referral", {"source": "amigo", "raw": txt[:60]})
+            elif any(w in tl_ref for w in ("google", "internet", "busq", "web")):
+                save_tag(phone, "referido:google")
+                log_event(phone, "registro_referral", {"source": "google", "raw": txt[:60]})
+            elif any(w in tl_ref for w in ("instagram", "facebook", "tiktok", "red")):
+                save_tag(phone, "referido:rrss")
+                log_event(phone, "registro_referral", {"source": "rrss", "raw": txt[:60]})
+            elif any(w in tl_ref for w in ("antes", "siempre", "años", "venia", "venía")):
+                save_tag(phone, "referido:recurrente")
+                log_event(phone, "registro_referral", {"source": "recurrente", "raw": txt[:60]})
+            else:
+                log_event(phone, "registro_skip", {"step": "referral", "raw": txt[:60]})
         # Crear paciente con todos los datos recopilados
         rut = data.get("rut", "")
         nombre = data.get("reg_nombre", "")

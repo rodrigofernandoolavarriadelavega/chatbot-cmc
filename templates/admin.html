@@ -897,7 +897,7 @@ function espLabel(key) {
 }
 
 const ACTIVE_STATES = ["WAIT_ESPECIALIDAD","WAIT_SLOT","WAIT_MODALIDAD","WAIT_RUT_AGENDAR",
-  "WAIT_NOMBRE_NUEVO","WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL",
+  "WAIT_NOMBRE_NUEVO","WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL","WAIT_REFERRAL",
   "CONFIRMING_CITA","WAIT_RUT_CANCELAR","WAIT_CITA_CANCELAR",
   "CONFIRMING_CANCEL","WAIT_RUT_VER","WAIT_RUT_REAGENDAR","WAIT_CITA_REAGENDAR",
   "WAIT_DURACION_MASOTERAPIA"];
@@ -907,7 +907,7 @@ const STATE_GROUPS = [
     states:["HUMAN_TAKEOVER"] },
   { id:"agendando", label:"Agendando",              dot:"#f59e0b", tag:"tag-amber",
     states:["WAIT_ESPECIALIDAD","WAIT_SLOT","WAIT_MODALIDAD","WAIT_RUT_AGENDAR",
-            "WAIT_NOMBRE_NUEVO","WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL",
+            "WAIT_NOMBRE_NUEVO","WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL","WAIT_REFERRAL",
             "CONFIRMING_CITA","WAIT_DURACION_MASOTERAPIA"] },
   { id:"reagendando",label:"Reagendando",           dot:"#06b6d4", tag:"tag-cyan",
     states:["WAIT_RUT_REAGENDAR","WAIT_CITA_REAGENDAR"] },
@@ -925,7 +925,7 @@ const STATE_LABELS = {
   WAIT_DURACION_MASOTERAPIA:"Eligiendo duración masoterapia",
   WAIT_RUT_AGENDAR:"Ingresando RUT", WAIT_NOMBRE_NUEVO:"Registro paciente nuevo",
   WAIT_FECHA_NAC:"Registro — fecha nacimiento", WAIT_SEXO:"Registro — sexo",
-  WAIT_COMUNA:"Registro — comuna", WAIT_EMAIL:"Registro — email",
+  WAIT_COMUNA:"Registro — comuna", WAIT_EMAIL:"Registro — email", WAIT_REFERRAL:"Registro — referencia",
   CONFIRMING_CITA:"Confirmando cita", WAIT_RUT_CANCELAR:"Cancelando — ingresa RUT",
   WAIT_CITA_CANCELAR:"Elige cita a cancelar", CONFIRMING_CANCEL:"Confirmando cancelación",
   WAIT_RUT_VER:"Consultando reservas", WAIT_RUT_REAGENDAR:"Reagendando — ingresa RUT",
@@ -1198,10 +1198,10 @@ function updateContextPanel(conv) {
   if(fd.fecha_display&&fd.hora_inicio){sw.style.display="flex";document.getElementById("ctx-horario").textContent=fd.fecha_display+" · "+fd.hora_inicio.substring(0,5);}else sw.style.display="none";
   // Checklist de progreso
   const agendarStates = ["WAIT_ESPECIALIDAD","WAIT_SLOT","WAIT_MODALIDAD","WAIT_RUT_AGENDAR",
-    "WAIT_NOMBRE_NUEVO","WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL",
+    "WAIT_NOMBRE_NUEVO","WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL","WAIT_REFERRAL",
     "CONFIRMING_CITA","WAIT_DURACION_MASOTERAPIA"];
   const isAgendar = agendarStates.includes(conv.state);
-  const isRegistro = ["WAIT_NOMBRE_NUEVO","WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL"].includes(conv.state);
+  const isRegistro = ["WAIT_NOMBRE_NUEVO","WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL","WAIT_REFERRAL"].includes(conv.state);
   const progSec = document.getElementById("ctx-progress-section");
   if(isAgendar){
     progSec.style.display="block";
@@ -1211,10 +1211,11 @@ function updateContextPanel(conv) {
       {label:"Previsión / RUT", done:!!conv.rut},
     ];
     if(isRegistro) steps.push(
-      {label:"Registro: nombre", done:["WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL"].includes(conv.state)},
-      {label:"Registro: fecha nac.", done:["WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL"].includes(conv.state)},
-      {label:"Registro: sexo", done:["WAIT_COMUNA","WAIT_EMAIL"].includes(conv.state)},
-      {label:"Registro: comuna/email", done:conv.state==="WAIT_EMAIL"},
+      {label:"Registro: nombre", done:["WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL","WAIT_REFERRAL"].includes(conv.state)},
+      {label:"Registro: fecha nac.", done:["WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL","WAIT_REFERRAL"].includes(conv.state)},
+      {label:"Registro: sexo", done:["WAIT_COMUNA","WAIT_EMAIL","WAIT_REFERRAL"].includes(conv.state)},
+      {label:"Registro: comuna/email", done:["WAIT_EMAIL","WAIT_REFERRAL"].includes(conv.state)},
+      {label:"Registro: referencia", done:conv.state==="WAIT_REFERRAL"},
     );
     steps.push({label:"Confirmación pendiente", done:conv.state==="CONFIRMING_CITA"});
     document.getElementById("ctx-progress-steps").innerHTML=steps.map(s=>`

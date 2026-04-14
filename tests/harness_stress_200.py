@@ -399,6 +399,14 @@ import resilience  # noqa: E402
 resilience.is_medilink_down = lambda: False
 flows.is_medilink_down = lambda: False
 
+# Mock send_whatsapp para evitar llamadas HTTP reales
+async def fake_send_whatsapp(to, body):
+    pass
+
+import messaging  # noqa: E402
+messaging.send_whatsapp = fake_send_whatsapp
+flows.send_whatsapp = fake_send_whatsapp
+
 # ── Harness ──────────────────────────────────────────────────────────────────
 from session import get_session, reset_session, save_profile, log_event  # noqa: E402
 
@@ -1025,7 +1033,8 @@ async def main():
         ("saltar", ["sexo"]),
         ("sexo_f", ["comuna"]),
         ("saltar", ["correo"]),
-        ("saltar", {"any": ["confirm", "cita", "reserv"], **NO_ERROR}),
+        ("saltar", {"any": ["conociste", "conocist"], **NO_ERROR}),
+        ("ref_rrss", {"any": ["confirm", "cita", "reserv"], **NO_ERROR}),
         ("confirmar", ["reserv", "✅", "cita"]),
     ])
 

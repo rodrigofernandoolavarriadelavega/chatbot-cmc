@@ -228,6 +228,14 @@ import resilience  # noqa: E402
 resilience.is_medilink_down = lambda: False
 flows.is_medilink_down = lambda: False
 
+# Mock send_whatsapp para evitar llamadas HTTP reales (usado por alerta peor)
+async def fake_send_whatsapp(to, body):
+    pass
+
+import messaging  # noqa: E402
+messaging.send_whatsapp = fake_send_whatsapp
+flows.send_whatsapp = fake_send_whatsapp
+
 # ── Harness ──────────────────────────────────────────────────────────────────
 from session import get_session, reset_session, save_profile, log_event  # noqa: E402
 
@@ -412,7 +420,8 @@ async def main():
         ("15/03/1990", ["sexo"]),
         ("sexo_m", ["comuna"]),
         ("Arauco", ["correo"]),
-        ("saltar", {"any": ["confirm", "cita", "reserv"], **NO_ERROR}),
+        ("saltar", {"any": ["conociste", "conocist"], **NO_ERROR}),
+        ("ref_amigo", {"any": ["confirm", "cita", "reserv"], **NO_ERROR}),
         ("confirmar", ["reserv", "✅", "cita"]),
     ])
 
@@ -895,6 +904,7 @@ async def main():
         ("15/03/1990", ["sexo"]),
         ("saltar", ["comuna"]),
         ("saltar", ["correo"]),
+        ("saltar", {"any": ["conociste", "conocist"], **NO_ERROR}),
         ("saltar", {"any": ["confirm", "cita", "reserv"], **NO_ERROR}),
     ])
 
@@ -907,6 +917,7 @@ async def main():
         ("15 de marzo de 1990", ["sexo"]),
         ("sexo_m", ["comuna"]),
         ("saltar", ["correo"]),
+        ("saltar", {"any": ["conociste", "conocist"], **NO_ERROR}),
         ("saltar", {"any": ["confirm"], **NO_ERROR}),
     ])
 
@@ -919,7 +930,8 @@ async def main():
         ("15-03-1990", ["sexo"]),
         ("sexo_f", ["comuna"]),
         ("Arauco", ["correo"]),
-        ("maria@gmail.com", {"any": ["confirm"], **NO_ERROR}),
+        ("maria@gmail.com", {"any": ["conociste", "conocist"], **NO_ERROR}),
+        ("ref_google", {"any": ["confirm"], **NO_ERROR}),
     ])
 
     mk("REG-04 fecha corta dd/mm/yy", "56900000504", [
@@ -931,6 +943,7 @@ async def main():
         ("15/03/90", ["sexo"]),
         ("saltar", ["comuna"]),
         ("saltar", ["correo"]),
+        ("saltar", {"any": ["conociste", "conocist"], **NO_ERROR}),
         ("saltar", {"any": ["confirm"], **NO_ERROR}),
     ])
 
@@ -943,6 +956,7 @@ async def main():
         ("15031990", ["sexo"]),
         ("saltar", ["comuna"]),
         ("saltar", ["correo"]),
+        ("saltar", {"any": ["conociste", "conocist"], **NO_ERROR}),
         ("saltar", {"any": ["confirm"], **NO_ERROR}),
     ])
 
@@ -956,6 +970,7 @@ async def main():
         ("saltar", ["sexo"]),
         ("saltar", ["comuna"]),
         ("saltar", ["correo"]),
+        ("saltar", {"any": ["conociste", "conocist"], **NO_ERROR}),
         ("saltar", {"any": ["confirm"], **NO_ERROR}),
     ])
 
@@ -968,7 +983,8 @@ async def main():
         ("saltar", ["sexo"]),
         ("saltar", ["comuna"]),
         ("saltar", ["correo"]),
-        ("miCorreo", {"any": ["confirm"], **NO_ERROR}),
+        ("miCorreo", {"any": ["conociste", "conocist"], **NO_ERROR}),
+        ("saltar", {"any": ["confirm"], **NO_ERROR}),
     ])
 
     mk("REG-08 todo saltado → registra igual", "56900000508", [
@@ -980,6 +996,7 @@ async def main():
         ("saltar", ["sexo"]),
         ("saltar", ["comuna"]),
         ("saltar", ["correo"]),
+        ("saltar", {"any": ["conociste", "conocist"], **NO_ERROR}),
         ("saltar", {"any": ["confirm"], **NO_ERROR}),
     ])
 
@@ -992,6 +1009,7 @@ async def main():
         ("15 mar 1990", ["sexo"]),
         ("saltar", ["comuna"]),
         ("saltar", ["correo"]),
+        ("saltar", {"any": ["conociste", "conocist"], **NO_ERROR}),
         ("saltar", {"any": ["confirm"], **NO_ERROR}),
     ])
 
