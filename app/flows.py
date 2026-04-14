@@ -889,9 +889,13 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # ── Comandos globales ─────────────────────────────────────────────────────
     _COMANDOS_GLOBALES = ("menu", "menú", "inicio", "reiniciar", "volver", "hola")
     if tl in _COMANDOS_GLOBALES or tl_norm in _COMANDOS_GLOBALES:
+        doctor_mode_antes = data.get("doctor_mode")
         reset_session(phone)
-        # Doctor: "menu" lo lleva al selector de modo (no al menú de pacientes)
         if phone == _doctor_phone:
+            if doctor_mode_antes == "agente":
+                # En modo agente: "hola/menu" muestra el menú normal de pacientes
+                return _menu_msg()
+            # Sin modo o en modo asistente: vuelve al selector de modo
             return _doctor_mode_menu()
         return _menu_msg()
 
