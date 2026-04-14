@@ -13,6 +13,7 @@ from session import (
     get_citas_bot_para_2h_reminder,
     mark_reminder_sent,
     mark_reminder_2h_sent,
+    log_message,
 )
 
 log = logging.getLogger("bot.reminders")
@@ -132,6 +133,11 @@ async def enviar_recordatorios(send_text_fn, send_interactive_fn=None,
                     "Recuerda llegar *15 minutos antes* con tu cédula de identidad.\n\n"
                     "¿Confirmas tu asistencia? Responde *SÍ* o *NO*."
                 )
+            fecha_d = _fmt_fecha_display(cita["fecha"])
+            hora_d = _fmt_hora(cita["hora"])
+            log_message(cita["phone"], "out",
+                        f"[Recordatorio] {cita['especialidad']} con {cita['profesional']} — {fecha_d} a las {hora_d}",
+                        "IDLE")
             mark_reminder_sent(cita["id"])
             log.info("Recordatorio enviado → %s cita_id=%s", cita["phone"], cita["id_cita"])
         except Exception as e:
@@ -186,6 +192,9 @@ async def enviar_recordatorios_2h(send_text_fn, send_template_fn=None):
                     f"📍 Monsalve esquina República, Carampangue\n\n"
                     "Recuerda llegar *15 minutos antes* con tu cédula de identidad."
                 )
+            log_message(cita["phone"], "out",
+                        f"[Recordatorio 2h] {cita['especialidad']} con {cita['profesional']} — hoy a las {hora}",
+                        "IDLE")
             mark_reminder_2h_sent(cita["id"])
             log.info("Recordatorio 2h enviado → %s cita_id=%s", cita["phone"], cita["id_cita"])
         except Exception as e:

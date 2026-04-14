@@ -13,7 +13,7 @@ from config import USE_TEMPLATES
 from session import (get_citas_para_seguimiento, get_pacientes_inactivos,
                      save_fidelizacion_msg, puede_enviar_campana,
                      get_kine_candidatos_adherencia, get_control_candidatos,
-                     get_crosssell_kine_candidatos, get_profile)
+                     get_crosssell_kine_candidatos, get_profile, log_message)
 from autocuidado import get_tips_autocuidado
 
 log = logging.getLogger("bot.fidelizacion")
@@ -127,9 +127,14 @@ async def enviar_seguimiento_postconsulta(send_fn, send_template_fn=None,
                     body_params=[nombre, esp, prof],
                     button_payloads=["seg_mejor", "seg_igual", "seg_peor"],
                 )
+                log_message(cita["phone"], "out",
+                            f"[Post-consulta] ¿Cómo te sientes después de tu consulta de {esp} con {prof}?",
+                            "IDLE")
             else:
                 msg = _msg_postconsulta(cita)
                 await send_fn(cita["phone"], msg)
+                body = msg.get("interactive", {}).get("body", {}).get("text", "[Post-consulta]")
+                log_message(cita["phone"], "out", body, "IDLE")
 
             # Tips de autocuidado personalizados (segundo mensaje)
             if send_text_fn:
@@ -152,6 +157,7 @@ async def enviar_seguimiento_postconsulta(send_fn, send_template_fn=None,
                     nombre=cita.get("nombre"),
                 )
                 await send_text_fn(cita["phone"], tips)
+                log_message(cita["phone"], "out", tips, "IDLE")
 
             save_fidelizacion_msg(cita["phone"], "postconsulta", str(cita.get("id_cita", "")))
             log.info("Seguimiento enviado → %s (%s)", cita["phone"], cita.get("especialidad"))
@@ -174,9 +180,6 @@ async def enviar_reactivacion_pacientes(send_fn, send_template_fn=None):
     for p in pacientes:
         try:
             if USE_TEMPLATES and send_template_fn:
-                # Template: reactivacion_paciente
-                # body_params: [nombre, especialidad]
-                # button_payloads: ["reac_si", "reac_luego"]
                 nombre = _nombre_corto(p.get("nombre")) or "paciente"
                 esp = p.get("especialidad", "")
                 await send_template_fn(
@@ -185,9 +188,14 @@ async def enviar_reactivacion_pacientes(send_fn, send_template_fn=None):
                     body_params=[nombre, esp],
                     button_payloads=["reac_si", "reac_luego"],
                 )
+                log_message(p["phone"], "out",
+                            f"[Reactivación] Hace un tiempo no te vemos. ¿Quieres retomar tu atención de {esp}?",
+                            "IDLE")
             else:
                 msg = _msg_reactivacion(p)
                 await send_fn(p["phone"], msg)
+                body = msg.get("interactive", {}).get("body", {}).get("text", "[Reactivación]")
+                log_message(p["phone"], "out", body, "IDLE")
             save_fidelizacion_msg(p["phone"], "reactivacion")
             log.info("Reactivación enviada → %s (%s)", p["phone"], p.get("especialidad"))
         except Exception as e:
@@ -237,9 +245,6 @@ async def enviar_adherencia_kine(send_fn, send_template_fn=None):
     for p in candidatos:
         try:
             if USE_TEMPLATES and send_template_fn:
-                # Template: adherencia_kine
-                # body_params: [nombre]
-                # button_payloads: ["kine_adh_si", "kine_adh_no"]
                 nombre = _nombre_corto(p.get("nombre")) or "paciente"
                 await send_template_fn(
                     p["phone"],
@@ -247,9 +252,14 @@ async def enviar_adherencia_kine(send_fn, send_template_fn=None):
                     body_params=[nombre],
                     button_payloads=["kine_adh_si", "kine_adh_no"],
                 )
+                log_message(p["phone"], "out",
+                            "[Adherencia kine] Es importante mantener continuidad en las sesiones. ¿Agendamos la próxima?",
+                            "IDLE")
             else:
                 msg = _msg_adherencia_kine(p)
                 await send_fn(p["phone"], msg)
+                body = msg.get("interactive", {}).get("body", {}).get("text", "[Adherencia kine]")
+                log_message(p["phone"], "out", body, "IDLE")
             save_fidelizacion_msg(p["phone"], "adherencia_kine")
             log.info("Adherencia kine enviada → %s", p["phone"])
         except Exception as e:
@@ -308,9 +318,6 @@ async def enviar_recordatorio_control(send_fn, send_template_fn=None):
         for p in candidatos:
             try:
                 if USE_TEMPLATES and send_template_fn:
-                    # Template: control_especialidad
-                    # body_params: [nombre, especialidad]
-                    # button_payloads: ["ctrl_si", "ctrl_no"]
                     nombre = _nombre_corto(p.get("nombre")) or "paciente"
                     await send_template_fn(
                         p["phone"],
@@ -318,9 +325,14 @@ async def enviar_recordatorio_control(send_fn, send_template_fn=None):
                         body_params=[nombre, especialidad],
                         button_payloads=["ctrl_si", "ctrl_no"],
                     )
+                    log_message(p["phone"], "out",
+                                f"[Control {especialidad}] Ya corresponde tu control. ¿Quieres ver horarios?",
+                                "IDLE")
                 else:
                     msg = _msg_control(p, especialidad)
                     await send_fn(p["phone"], msg)
+                    body = msg.get("interactive", {}).get("body", {}).get("text", f"[Control {especialidad}]")
+                    log_message(p["phone"], "out", body, "IDLE")
                 save_fidelizacion_msg(p["phone"], tipo_fidel)
                 log.info("Control %s enviado → %s", especialidad, p["phone"])
             except Exception as e:
@@ -370,9 +382,6 @@ async def enviar_crosssell_kine(send_fn, send_template_fn=None):
     for p in candidatos:
         try:
             if USE_TEMPLATES and send_template_fn:
-                # Template: crosssell_kine
-                # body_params: [nombre]
-                # button_payloads: ["xkine_si", "xkine_no"]
                 nombre = _nombre_corto(p.get("nombre")) or "paciente"
                 await send_template_fn(
                     p["phone"],
@@ -380,9 +389,14 @@ async def enviar_crosssell_kine(send_fn, send_template_fn=None):
                     body_params=[nombre],
                     button_payloads=["xkine_si", "xkine_no"],
                 )
+                log_message(p["phone"], "out",
+                            "[Cross-sell kine] Tras tu consulta, ¿te gustaría agendar con nuestros kinesiólogos?",
+                            "IDLE")
             else:
                 msg = _msg_crosssell_kine(p)
                 await send_fn(p["phone"], msg)
+                body = msg.get("interactive", {}).get("body", {}).get("text", "[Cross-sell kine]")
+                log_message(p["phone"], "out", body, "IDLE")
             save_fidelizacion_msg(p["phone"], "crosssell_kine")
             log.info("Cross-sell kine enviado → %s (%s)", p["phone"], p.get("especialidad"))
         except Exception as e:
