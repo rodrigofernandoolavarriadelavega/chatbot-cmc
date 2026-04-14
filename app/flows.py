@@ -2446,34 +2446,40 @@ def _format_slots_expansion(groups: list, show_ver_mas: bool = False) -> str | d
 
 async def _handle_expansion(phone: str, data: dict, slots_mostrados: list,
                              todos_slots: list, stage: int, fecha: str | None) -> str | dict:
-    """Expande progresivamente los horarios de Medicina General."""
+    """Expande progresivamente los horarios de Medicina General.
+    Stage 0→1: muestra slots del doctor sugerido (ya cargados).
+    Stage 1→2: busca el OTRO doctor primario (Abarca↔Olavarría) y muestra ambos.
+    Stage 2→3: muestra los 3 (Abarca + Olavarría + Márquez) con todos los horarios."""
     next_stage = stage + 1
+    prof_sugerido_id = data.get("prof_sugerido_id")
 
     if next_stage == 1:
-        # Mostrar smart de Abarca (ya guardado en data["slots"])
+        # Mostrar los slots del doctor sugerido (ya guardados en data["slots"])
         data["expansion_stage"] = 1
         save_session(phone, "WAIT_SLOT", data)
         return _format_slots(data["slots"])
 
     elif next_stage == 2:
-        # Smart de Abarca + smart de Olavarría
-        smart_abarca = data.get("slots", [])
-        smart_ola, todos_ola = (await buscar_slots_dia_por_ids([1],  fecha)) if fecha else ([], [])
+        # Buscar el OTRO doctor primario (el que NO fue sugerido)
+        slots_sugerido = data.get("slots", [])
+        # Determinar quién es el otro: si sugerido es Olavarría(1) → buscar Abarca(73), y viceversa
+        otro_id = 73 if prof_sugerido_id == 1 else 1
+        smart_otro, todos_otro = (await buscar_slots_dia_por_ids([otro_id], fecha)) if fecha else ([], [])
 
-        show_a = smart_abarca[:4]
-        show_o = smart_ola[:4]
-        combined = show_a + show_o
+        show_sug = slots_sugerido[:4]
+        show_otro = smart_otro[:4]
+        combined = show_sug + show_otro
 
         data["expansion_stage"] = 2
         data["slots"] = combined
-        data["todos_slots"] = todos_slots + todos_ola
+        data["todos_slots"] = todos_slots + todos_otro
         save_session(phone, "WAIT_SLOT", data)
 
         groups = []
-        if show_a:
-            groups.append({"slots": show_a})
-        if show_o:
-            groups.append({"slots": show_o})
+        if show_sug:
+            groups.append({"slots": show_sug})
+        if show_otro:
+            groups.append({"slots": show_otro})
         return _format_slots_expansion(groups, show_ver_mas=True) if groups else _format_slots(todos_slots, mostrar_todos=True)
 
     else:
