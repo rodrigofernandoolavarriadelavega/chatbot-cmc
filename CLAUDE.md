@@ -245,6 +245,16 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - [x] Retry limit (3 intentos) en WAIT_CITA_CANCELAR/REAGENDAR → escalación a HUMAN_TAKEOVER
 - [x] Filtro texto vacío en webhook (whitespace-only)
 - [x] Stress test 200 casos (all specialties, professionals, colloquial, edge cases)
+- [x] Panel admin: notas persistentes en SQLite (tabla `contact_notes`), autosave con debounce
+- [x] Panel admin: notificaciones sonoras (Web Audio beep) + Browser Notification para mensajes nuevos, toggle mute
+- [x] Panel admin: pulse animation en botón "Tomar control" cuando hay mensajes pendientes
+- [x] Panel admin: atajos teclado Ctrl+K (búsqueda) + Escape (cerrar modales)
+- [x] Panel admin: dropdown "Seguimiento" agrupa Pacientes en Control + Fidelización
+- [x] Panel admin: tablet responsive (contexto como overlay en 768-1024px)
+- [x] Panel admin: pills conversión agendamiento + registros completados/abandonados
+- [x] Panel admin: contexto enriquecido (historial citas, lista espera, progreso registro)
+- [x] Panel admin: badges canal WA/IG/FB visibles en lista de conversaciones
+- [x] Fix celular registro: sin `+`, enviado en campos `celular` y `telefono` a Medilink
 
 ## Dashboard admin
 - Ruta: `http://157.245.13.107:8001/admin?token=cmc_admin_2026`
@@ -265,6 +275,24 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - **Registro expandido paciente nuevo**: 5 estados nuevos (WAIT_FECHA_NAC → WAIT_SEXO → WAIT_COMUNA → WAIT_EMAIL). Parser robusto de fecha (DD/MM/YYYY, DD-MM-YYYY, DD/MM/YY, 8 dígitos pegados, "15 de marzo de 1990", mes abreviado). Todo saltable. Email no bloquea si es inválido. Celular auto-relleno desde WhatsApp. Abandonment tracking via log_event.
 - **`crear_paciente()` expandido**: acepta `**kwargs` (fecha_nacimiento, sexo, celular, email, comuna, direccion, ciudad) → envía todos los campos a Medilink.
 - **Tests**: 90/90 harness_50 + 200/200 stress = 290/290 ✅. Commit `943d2e9` deployado.
+
+**Hecho (sesión 2026-04-13 — 11 mejoras panel admin + fix celular)**:
+- **Notas persistentes**: tabla `contact_notes` en SQLite, endpoints GET/PUT `/admin/api/notes/{phone}`, autosave con debounce 1s. Eliminado `localNotes` en memoria.
+- **Notificaciones mensajes nuevos**: beep via Web Audio API (880Hz, 0.15s) + Browser Notification al detectar mensaje entrante. Toggle mute con estado en localStorage.
+- **Pulse animation**: botón "Tomar control" pulsa cuando hay mensajes sin responder. CSS `@keyframes pulse-glow`.
+- **Atajos teclado**: `Ctrl+K`/`Cmd+K` → búsqueda global, `Escape` → cierra modal/overlay. Hint `<kbd>` en botón buscar.
+- **Dropdown "Seguimiento"**: Pacientes en Control + Fidelización agrupados. Cierre automático al hacer click fuera.
+- **Tablet responsive (768-1024px)**: panel de contexto como overlay (mismo mecanismo que mobile), botón ℹ️ visible.
+- **Matrix table mobile**: `min-width: max-content` + `-webkit-overflow-scrolling: touch`.
+- **Pill conversión**: `📈 X% (citas/intentos)` usando datos de `/admin/api/metrics`.
+- **Pill registros**: `📝 X% (completados/total)` con nuevo endpoint `/admin/api/registration-stats`.
+- **Contexto enriquecido**: sección "Historial" con última cita, total citas por bot, lista de espera activa. Endpoint `/admin/api/patient-context/{phone}`. Checklist de progreso expandido con pasos de registro.
+- **Badges canal**: `WA`/`IG`/`FB` como badges coloreados en vez de emojis.
+- **7 estados faltantes** agregados a STATE_LABELS/ACTIVE_STATES/STATE_GROUPS (registro, reagendar, masoterapia).
+- **Grupo "Reagendando"** (cyan) en filtros de estado.
+- **Fix `authHeaders()`**: reemplazado por `apiUrl()` en `seguimientoMedico()`.
+- **Fix celular registro**: formato sin `+` (ej: `56912345678`), enviado en ambos campos `celular` y `telefono` a Medilink.
+- Commit `f7e3d67` deployado. `/health` → 200.
 
 **Hecho (sesión 2026-04-12 — features + fixes + deploy Whisper + docs sync)**:
 - **Pill "Confirman mañana"** en topbar admin: CSS `.pill.green`, modal con detalle por paciente, JS con refresh 60s. Endpoint `/admin/api/confirmaciones?fecha=YYYY-MM-DD`. Commit `c483c78`.
