@@ -115,6 +115,7 @@ El GES Assistant corre por separado como **systemd** (`ges-assistant.service`, b
 IDLE → detect_intent (Claude Haiku)
   → agendar       → WAIT_ESPECIALIDAD → WAIT_SLOT → WAIT_RUT_AGENDAR
                                                    → WAIT_NOMBRE_NUEVO (paciente nuevo)
+                                                   → WAIT_FECHA_NAC → WAIT_SEXO → WAIT_COMUNA → WAIT_EMAIL
                                                    → CONFIRMING_CITA → reserva creada
   → cancelar      → WAIT_RUT_CANCELAR → WAIT_CITA_CANCELAR → CONFIRMING_CANCEL
   → ver_reservas  → WAIT_RUT_VER
@@ -234,6 +235,16 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - [x] Glosario estética expandido: 9 tratamientos con precios (hilos, lipopapada, exosomas, bioestimuladores, armonización, peeling)
 - [x] Suite test_foros_dental_estetica.py: 34/34 casos con frases reales de foros de salud
 - [x] Recordatorio 2 horas antes de la cita (cron cada 15 min 7:30-21:30)
+- [x] Registro expandido paciente nuevo: fecha_nacimiento, sexo, comuna, email + celular auto-WA. Todo saltable.
+- [x] Parser robusto de fecha nacimiento (DD/MM/YYYY, DD-MM-YYYY, DD/MM/YY, 8 dígitos, "15 de marzo de 1990", mes abreviado)
+- [x] Abandonment tracking: log_event en cada paso del registro (inicio, skip, completo, abandono por timeout)
+- [x] WhatsApp Business features: message status webhooks, BSUID prep, quality rating, document/image sending
+- [x] Cross-sell ORL↔Fonoaudiología con prestaciones y precios reales
+- [x] Templates `informe_listo` y `seguimiento_medico` registrados y aprobados por Meta
+- [x] Panel admin: delivery status icons, envío documentos, botones notificar informe y seguimiento médico
+- [x] Retry limit (3 intentos) en WAIT_CITA_CANCELAR/REAGENDAR → escalación a HUMAN_TAKEOVER
+- [x] Filtro texto vacío en webhook (whitespace-only)
+- [x] Stress test 200 casos (all specialties, professionals, colloquial, edge cases)
 
 ## Dashboard admin
 - Ruta: `http://157.245.13.107:8001/admin?token=cmc_admin_2026`
@@ -241,7 +252,19 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - Muestra métricas, conversaciones activas y estado del sistema
 
 ## Sesión en curso
-**Fecha**: 2026-04-12
+**Fecha**: 2026-04-13
+
+**Hecho (sesión 2026-04-13 — WA Business features + registro expandido + stress tests)**:
+- **WhatsApp Business features**: message status webhooks (delivered/read/failed), tabla `message_statuses` en SQLite, BSUID capture para migración junio 2026, quality rating endpoint, delivery status icons en panel admin.
+- **Envío de documentos desde panel admin**: `POST /admin/api/send-document` (upload + send PDF/imagen), botón 📎 en chat del panel.
+- **Templates Meta aprobados**: `informe_listo` (notificar informe listo) y `seguimiento_medico` (seguimiento médico personalizado). Botones en panel admin. Endpoint `POST /admin/api/send-template`.
+- **Cross-sell ORL↔Fonoaudiología**: dict `CROSS_REFERENCE` en flows.py con prestaciones reales y precios de Fono (audiometría $25k, impedanciometría $20k, VPPB $50k, etc.) y mención de ORL desde Fono. Se agrega al confirmar cita.
+- **Retry limit WAIT_CITA_CANCELAR/REAGENDAR**: 3 intentos → escalación a HUMAN_TAKEOVER (previene loops infinitos).
+- **Filtro texto vacío**: whitespace-only messages retornan 200 sin procesar.
+- **Stress test 200 casos** (`harness_stress_200.py`): 13 bloques cubriendo todas las especialidades, profesionales, variantes coloquiales, FAQ, flujos completos, emergencias, edge cases, masoterapia, cross-sell, fidelización.
+- **Registro expandido paciente nuevo**: 5 estados nuevos (WAIT_FECHA_NAC → WAIT_SEXO → WAIT_COMUNA → WAIT_EMAIL). Parser robusto de fecha (DD/MM/YYYY, DD-MM-YYYY, DD/MM/YY, 8 dígitos pegados, "15 de marzo de 1990", mes abreviado). Todo saltable. Email no bloquea si es inválido. Celular auto-relleno desde WhatsApp. Abandonment tracking via log_event.
+- **`crear_paciente()` expandido**: acepta `**kwargs` (fecha_nacimiento, sexo, celular, email, comuna, direccion, ciudad) → envía todos los campos a Medilink.
+- **Tests**: 90/90 harness_50 + 200/200 stress = 290/290 ✅. Commit `943d2e9` deployado.
 
 **Hecho (sesión 2026-04-12 — features + fixes + deploy Whisper + docs sync)**:
 - **Pill "Confirman mañana"** en topbar admin: CSS `.pill.green`, modal con detalle por paciente, JS con refresh 60s. Endpoint `/admin/api/confirmaciones?fecha=YYYY-MM-DD`. Commit `c483c78`.
@@ -414,7 +437,7 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - Monitorear primeras conversaciones reales
 - Tags clínicos automáticos (dolor lumbar, rehabilitación) — detectar con Claude y guardar en contact_tags
 
-**Próximo sprint (plan aprobado 2026-04-10, actualizado 2026-04-12)**:
+**Próximo sprint (plan aprobado 2026-04-10, actualizado 2026-04-13)**:
 1. ✅ ~~Modo degradado Medilink~~ — DONE
 2. ✅ ~~Reagendar en un paso~~ — DONE
 3. ✅ ~~Lista de espera~~ — DONE
@@ -422,9 +445,13 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 5. ✅ ~~Refactor main.py~~ — DONE (3,045 → 468 líneas)
 6. ✅ ~~Whisper (transcripción audios)~~ — DONE y deployado con feedback al paciente
 7. ✅ ~~Glosario dental + estética expandido~~ — DONE (34/34 tests foros)
-8. **Copagos Fonasa/Isapre al confirmar** — requiere verificar si Medilink expone previsión del paciente.
-9. **Dashboard métricas fidelización** — tasa respuesta post-consulta, conversión reactivación, adherencia kine.
-10. **Tests automatizados** — sprint dedicado, no intercalado con features.
+8. ✅ ~~WhatsApp Business features~~ — DONE (status webhooks, BSUID, quality, docs, templates)
+9. ✅ ~~Cross-sell ORL↔Fono~~ — DONE (prestaciones reales + precios)
+10. ✅ ~~Registro expandido paciente nuevo~~ — DONE (fecha_nac, sexo, comuna, email, abandonment tracking)
+11. ✅ ~~Stress test 200 casos~~ — DONE (290/290 total)
+12. **Copagos Fonasa/Isapre al confirmar** — requiere verificar si Medilink expone previsión del paciente.
+13. **Dashboard métricas fidelización** — tasa respuesta post-consulta, conversión reactivación, adherencia kine.
+14. **Migración número WhatsApp** — backup conversaciones + delete WA Business + registrar en Cloud API.
 
 ---
 
