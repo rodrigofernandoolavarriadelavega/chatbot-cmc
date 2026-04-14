@@ -17,6 +17,9 @@ from session import (get_sesiones_abandonadas, save_session, log_event,
                      get_waitlist_pending, mark_waitlist_notified)
 from resilience import (is_medilink_down, mark_medilink_up, medilink_down_since,
                         should_notify_reception, mark_reception_notified)
+from doctor_alerts import (enviar_resumen_precita, enviar_reporte_progreso,
+                           reset_resumenes_diarios)
+from config import CMC_TELEFONO
 
 log = logging.getLogger("bot")
 
@@ -83,6 +86,18 @@ async def _job_control_especialidad():
 
 async def _job_crosssell_kine():
     await enviar_crosssell_kine(send_whatsapp, send_template_fn=_tpl)
+
+# ── Doctor alerts ────────────────────────────────────────────────────────────
+_doctor_phone = CMC_TELEFONO.replace("+", "").replace(" ", "")
+
+async def _job_doctor_resumen_precita():
+    await enviar_resumen_precita(send_whatsapp, _doctor_phone)
+
+async def _job_doctor_reporte_progreso():
+    await enviar_reporte_progreso(send_whatsapp, _doctor_phone)
+
+async def _job_doctor_reset_diario():
+    reset_resumenes_diarios()
 
 
 async def _job_medilink_watchdog():

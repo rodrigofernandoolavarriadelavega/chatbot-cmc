@@ -37,7 +37,9 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_postconsulta, _job_reactivacion,
                   _job_adherencia_kine, _job_control_especialidad,
                   _job_crosssell_kine, _job_medilink_watchdog,
-                  _job_waitlist_check)
+                  _job_waitlist_check,
+                  _job_doctor_resumen_precita, _job_doctor_reporte_progreso,
+                  _job_doctor_reset_diario)
 import admin_routes
 
 logging.config.dictConfig({
@@ -178,12 +180,34 @@ async def lifespan(app: FastAPI):
         id="waitlist_check",
         replace_existing=True,
     )
+    # Doctor alerts: resumen pre-cita cada 5 min (lun-sáb 07:30-21:30 CLT)
+    scheduler.add_job(
+        _job_doctor_resumen_precita,
+        CronTrigger(minute="*/5", hour="7-21", day_of_week="mon-sat"),
+        id="doctor_resumen_precita",
+        replace_existing=True,
+    )
+    # Doctor alerts: reporte progreso 08:00, 12:00, 16:00, 20:00 CLT
+    for h in (8, 12, 16, 20):
+        scheduler.add_job(
+            _job_doctor_reporte_progreso,
+            CronTrigger(hour=h, minute=0),
+            id=f"doctor_reporte_{h}",
+            replace_existing=True,
+        )
+    # Doctor alerts: reset diario a medianoche
+    scheduler.add_job(
+        _job_doctor_reset_diario,
+        CronTrigger(hour=0, minute=0),
+        id="doctor_reset_diario",
+        replace_existing=True,
+    )
     scheduler.start()
     log.info(
         "Scheduler iniciado — recordatorios 09:00 · recordatorios 2h cada 15min · "
         "post-consulta 10:00 · reactivación lun 10:30 · adherencia kine 11:00 · "
         "control 11:30 · cross-sell kine mié 10:30 · sync caché 23:50 · "
-        "watchdog medilink 1min"
+        "watchdog medilink 1min · doctor alerts cada 5min + reportes 08/12/16/20"
     )
     yield
     scheduler.shutdown()

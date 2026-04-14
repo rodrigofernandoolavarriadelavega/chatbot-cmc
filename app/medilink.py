@@ -682,6 +682,74 @@ async def listar_citas_paciente(id_paciente: int) -> list:
         return citas[:5]
 
 
+async def obtener_agenda_dia(id_prof: int, fecha: str | None = None) -> list[dict]:
+    """Obtiene la agenda completa de un profesional para una fecha, con datos del paciente.
+    Retorna lista de dicts con id_cita, hora, paciente (nombre, rut, edad, sexo), estado."""
+    if not fecha:
+        fecha = datetime.now(_CHILE_TZ).date().strftime("%Y-%m-%d")
+    params = {
+        "id_sucursal":      {"eq": MEDILINK_SUCURSAL},
+        "id_profesional":   {"eq": id_prof},
+        "fecha":            {"eq": fecha},
+        "estado_anulacion": {"eq": 0},
+    }
+    async with httpx.AsyncClient(timeout=15) as client:
+        try:
+            r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
+                           params={"q": _q(params)}, headers=HEADERS)
+        except httpx.RequestError as e:
+            log.error("obtener_agenda_dia prof=%d fecha=%s: %s", id_prof, fecha, e)
+            return []
+        if r.status_code != 200:
+            return []
+        citas_raw = r.json().get("data", [])
+
+        agenda = []
+        for c in citas_raw:
+            pac_id = c.get("id_paciente")
+            pac_nombre = c.get("nombre_paciente", "")
+            pac_rut = ""
+            pac_edad = ""
+            pac_sexo = ""
+            pac_fecha_nac = ""
+            # Obtener datos extra del paciente
+            if pac_id:
+                try:
+                    rp = await _get(client, f"{MEDILINK_BASE_URL}/pacientes/{pac_id}",
+                                    headers=HEADERS)
+                    if rp.status_code == 200:
+                        p = rp.json().get("data", {})
+                        if isinstance(p, list) and p:
+                            p = p[0]
+                        pac_nombre = f"{p.get('nombre','')} {p.get('apellidos','')}".strip() or pac_nombre
+                        pac_rut = p.get("rut", "")
+                        pac_sexo = p.get("sexo", "")
+                        pac_fecha_nac = p.get("fecha_nacimiento", "")
+                        if pac_fecha_nac:
+                            try:
+                                fn = datetime.strptime(pac_fecha_nac[:10], "%Y-%m-%d").date()
+                                hoy = datetime.now(_CHILE_TZ).date()
+                                edad = hoy.year - fn.year - ((hoy.month, hoy.day) < (fn.month, fn.day))
+                                pac_edad = f"{edad} años"
+                            except ValueError:
+                                pass
+                except httpx.RequestError:
+                    pass
+
+            agenda.append({
+                "id_cita":    c["id"],
+                "hora":       c.get("hora_inicio", "")[:5],
+                "hora_fin":   c.get("hora_fin", "")[:5],
+                "paciente":   pac_nombre,
+                "rut":        pac_rut,
+                "edad":       pac_edad,
+                "sexo":       pac_sexo,
+                "estado":     c.get("estado_cita", ""),
+            })
+        agenda.sort(key=lambda x: x["hora"])
+        return agenda
+
+
 async def cancelar_cita(id_cita: int) -> bool:
     """Cancela una cita por su ID."""
     async with httpx.AsyncClient(timeout=10) as client:
