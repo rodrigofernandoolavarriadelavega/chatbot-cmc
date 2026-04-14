@@ -45,14 +45,6 @@ body {
   box-shadow: var(--shadow); z-index: 10; position: relative;
   flex-wrap: wrap; min-height: 48px;
 }
-.brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-.brand-icon {
-  width: 34px; height: 34px; border-radius: 9px;
-  background: var(--primary); display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
-.brand-text h1 { font-size: 13px; font-weight: 700; color: var(--text); }
-.brand-text p { font-size: 11px; color: var(--text-3); }
 .topbar-pills {
   display: flex; gap: 6px; margin-left: auto; align-items: center;
   flex-wrap: wrap;
@@ -471,9 +463,6 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
 <!-- TOPBAR -->
 <div class="topbar">
   <button class="mobile-hamburger" onclick="toggleFilters()" title="Filtros">☰</button>
-  <div class="brand">
-    <img src="/static/logo.png" alt="Centro Médico Carampangue" style="height:34px;object-fit:contain;">
-  </div>
   <button class="mobile-pills-toggle" onclick="this.nextElementSibling.classList.toggle('show')">▼ Info</button>
   <div class="topbar-pills">
     <div class="pill"><strong id="s-total">—</strong>&nbsp;conv.</div>
@@ -723,6 +712,9 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
       <div class="filter-label">Especialidad</div>
       <div id="esp-buttons"></div>
       <div id="esp-empty" style="font-size:11px;color:var(--text-3);display:none;">Sin especialidad registrada</div>
+    </div>
+    <div style="margin-top:auto;padding:12px;border-top:1px solid var(--border);text-align:center;opacity:.5;">
+      <img src="/static/logo.png" alt="CMC" style="height:28px;object-fit:contain;">
     </div>
   </div>
 
