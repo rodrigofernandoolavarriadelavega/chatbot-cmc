@@ -34,33 +34,28 @@
 |---|---|
 | Ruta | `/opt/chatbot-cmc/` |
 | Puerto | `0.0.0.0:8001` |
-| Ejecución | `nohup venv/bin/uvicorn app.main:app ...` (proceso suelto, no systemd) |
+| Ejecución | systemd — `chatbot-cmc.service` (Restart=always, RestartSec=3s) |
+| Autostart | enabled |
 | Logs | `/var/log/cmc-bot.log` |
 | Reverse proxy | nginx → `https://agentecmc.cl` (certbot Let's Encrypt) |
 
-**Redeploy — one-liner desde el Mac (recomendado):**
+**Redeploy (systemd — recomendado):**
 ```bash
 git push origin main
-ssh root@157.245.13.107 "cd /opt/chatbot-cmc && git pull && pkill -f 'chatbot-cmc.*uvicorn'; sleep 2; cd /opt/chatbot-cmc && setsid nohup venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8001 </dev/null >/var/log/cmc-bot.log 2>&1 & disown"
+ssh root@157.245.13.107 "cd /opt/chatbot-cmc && git pull && systemctl restart chatbot-cmc"
 ```
-
-**Redeploy — sesión SSH interactiva:**
-```bash
-ssh root@157.245.13.107
-cd /opt/chatbot-cmc
-git pull
-pkill -f 'chatbot-cmc.*uvicorn'
-sleep 2
-setsid nohup venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8001 </dev/null >/var/log/cmc-bot.log 2>&1 &
-disown
-```
-
-**⚠️ `setsid` no es opcional cuando el comando viaja dentro de `ssh "..."`:** un `nohup ... &` pelado deja el uvicorn asociado al pty remoto, y éste se muere al cerrarse la sesión SSH → bot caído. `setsid` fuerza un nuevo process group, desligando el proceso del SSH. Verificado en prod el 2026-04-10 (8 s de downtime recuperado re-levantando con setsid).
 
 **Verificación post-deploy:**
 ```bash
 curl -s -o /dev/null -w 'HTTP %{http_code}\n' https://agentecmc.cl/health   # → 200
-ssh root@157.245.13.107 "ps aux | grep 'chatbot-cmc.*uvicorn' | grep -v grep"
+ssh root@157.245.13.107 "systemctl is-active chatbot-cmc"                    # → active
+```
+
+**Gestión:**
+```bash
+systemctl status chatbot-cmc
+systemctl restart chatbot-cmc
+tail -50 /var/log/cmc-bot.log
 ```
 
 ### 2. GES Clinical Assistant (backend API de triage)
