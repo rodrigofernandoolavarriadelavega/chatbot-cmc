@@ -183,6 +183,14 @@ def _conn():
         )
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_bsuid_phone ON bsuid_map(phone)")
+    # Notas internas de recepción por paciente (persistentes)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS contact_notes (
+            phone       TEXT PRIMARY KEY,
+            notes       TEXT DEFAULT '',
+            updated_at  TEXT DEFAULT (datetime('now'))
+        )
+    """)
     # Migración: agregar canal a messages si no existe
     try:
         conn.execute("ALTER TABLE messages ADD COLUMN canal TEXT DEFAULT 'whatsapp'")
@@ -555,6 +563,76 @@ def search_messages(query: str, limit: int = 50) -> list[dict]:
             (f"%{query}%", limit)
         ).fetchall()
         return [dict(r) for r in rows]
+
+
+# ── Notas internas de recepción ──────────────────────────────────────────────
+
+def get_notes(phone: str) -> str:
+    """Retorna las notas internas de un paciente."""
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT notes FROM contact_notes WHERE phone=?", (phone,)
+        ).fetchone()
+        return row["notes"] if row else ""
+
+
+def save_notes(phone: str, notes: str):
+    """Guarda notas internas de un paciente (upsert)."""
+    with _conn() as conn:
+        conn.execute(
+            """INSERT INTO contact_notes (phone, notes, updated_at)
+               VALUES (?, ?, datetime('now'))
+               ON CONFLICT(phone) DO UPDATE SET notes=excluded.notes, updated_at=excluded.updated_at""",
+            (phone, notes)
+        )
+        conn.commit()
+
+
+# ── Contexto del paciente (panel admin) ──────────────────────────────────────
+
+def get_patient_context(phone: str) -> dict:
+    """Datos enriquecidos de un paciente para el panel de contexto admin."""
+    with _conn() as conn:
+        last_cita = conn.execute(
+            "SELECT especialidad, profesional, fecha, hora FROM citas_bot "
+            "WHERE phone=? ORDER BY fecha DESC, hora DESC LIMIT 1",
+            (phone,)
+        ).fetchone()
+        total_citas = conn.execute(
+            "SELECT COUNT(*) FROM citas_bot WHERE phone=?", (phone,)
+        ).fetchone()[0]
+        waitlist_row = conn.execute(
+            "SELECT especialidad, created_at FROM waitlist "
+            "WHERE phone=? AND notified_at IS NULL AND canceled_at IS NULL "
+            "ORDER BY id DESC LIMIT 1",
+            (phone,)
+        ).fetchone()
+        return {
+            "last_cita": dict(last_cita) if last_cita else None,
+            "total_citas": total_citas,
+            "waitlist": dict(waitlist_row) if waitlist_row else None,
+        }
+
+
+# ── Estadísticas de registro de pacientes ────────────────────────────────────
+
+def get_registration_stats(dias: int = 30) -> dict:
+    """Completados vs abandonados en el flujo de registro."""
+    with _conn() as conn:
+        completados = conn.execute(
+            "SELECT COUNT(*) FROM conversation_events "
+            "WHERE event='registro_completo' AND ts >= datetime('now', ?)",
+            (f"-{dias} days",)
+        ).fetchone()[0]
+        abandonados = conn.execute(
+            "SELECT COUNT(*) FROM conversation_events "
+            "WHERE event='registro_abandono' AND ts >= datetime('now', ?)",
+            (f"-{dias} days",)
+        ).fetchone()[0]
+        total = completados + abandonados
+        tasa = round(completados / total * 100, 1) if total else 0
+        return {"completados": completados, "abandonados": abandonados,
+                "total": total, "tasa_completado": tasa}
 
 
 def get_conversations(limit: int = 200) -> list[dict]:

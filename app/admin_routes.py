@@ -19,7 +19,8 @@ from session import (get_session, reset_session, save_session, get_metricas,
                      get_ortodoncia_pacientes, set_ortodoncia_tipo, get_ortodoncia_sync_max_fecha,
                      get_waitlist_all, cancel_waitlist,
                      get_confirmaciones_dia, get_citas_cache_todos,
-                     get_metricas_fidelizacion)
+                     get_metricas_fidelizacion,
+                     get_notes, save_notes, get_patient_context, get_registration_stats)
 from medilink import (buscar_paciente, crear_paciente, buscar_primer_dia,
                       buscar_slots_dia, crear_cita, listar_citas_paciente,
                       cancelar_cita, get_citas_seguimiento_mes, sync_citas_dia,
@@ -753,6 +754,34 @@ async def api_send_template(
     await send_whatsapp_template(phone, template_name, body_params=body_params)
     log_message(phone, "out", f"[template: {template_name}] {', '.join(body_params)}", "HUMAN_TAKEOVER", canal="whatsapp")
     return {"ok": True}
+
+
+# ── Notas internas ───────────────────────────────────────────────────────────
+
+@router.get("/admin/api/notes/{phone}")
+def admin_get_notes(phone: str, _: str = Depends(require_admin)):
+    return {"notes": get_notes(phone)}
+
+
+@router.put("/admin/api/notes/{phone}")
+async def admin_save_notes(phone: str, request: Request, _: str = Depends(require_admin)):
+    body = await request.json()
+    save_notes(phone, body.get("notes", ""))
+    return {"ok": True}
+
+
+# ── Contexto del paciente ────────────────────────────────────────────────────
+
+@router.get("/admin/api/patient-context/{phone}")
+def admin_patient_context(phone: str, _: str = Depends(require_admin)):
+    return get_patient_context(phone)
+
+
+# ── Estadísticas de registro ─────────────────────────────────────────────────
+
+@router.get("/admin/api/registration-stats")
+def admin_registration_stats(dias: int = 30, _: str = Depends(require_admin)):
+    return get_registration_stats(dias)
 
 
 @router.post("/admin/api/ortodoncia/sync")

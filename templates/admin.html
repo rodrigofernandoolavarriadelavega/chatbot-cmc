@@ -208,6 +208,7 @@ body {
 .tag-slate { background: #f8fafc; color: var(--text-3); border-color: var(--border); }
 .tag-blue { background: var(--blue-soft); color: #1d4ed8; border-color: #bfdbfe; }
 .tag-purple { background: var(--purple-soft); color: #6d28d9; border-color: #ddd6fe; }
+.tag-cyan { background: #ecfeff; color: #0e7490; border-color: #a5f3fc; }
 .btn {
   display: inline-flex; align-items: center; gap: 5px;
   padding: 6px 12px; border-radius: 7px; border: 1px solid transparent;
@@ -310,6 +311,33 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
+/* ── PULSE ANIMATION ── */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,.4); }
+  50% { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+}
+.btn-danger.pulse { animation: pulse-glow 1.5s infinite; }
+.btn-outline.pulse { animation: pulse-glow 1.5s infinite; }
+/* ── DROPDOWN ── */
+.dropdown { position: relative; display: inline-flex; }
+.dropdown-menu {
+  display: none; position: absolute; top: 100%; right: 0;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; box-shadow: var(--shadow-md);
+  min-width: 200px; z-index: 20; padding: 6px 0; margin-top: 4px;
+}
+.dropdown.open .dropdown-menu { display: block; }
+.dropdown-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 14px; font-size: 12px; font-weight: 500;
+  color: var(--text-2); cursor: pointer; border: none;
+  background: none; width: 100%; font-family: inherit; text-align: left;
+}
+.dropdown-item:hover { background: var(--bg); }
+/* ── KBD HINT ── */
+kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inherit;
+  background: rgba(0,0,0,.06); border: 1px solid rgba(0,0,0,.1); border-radius: 4px;
+  color: var(--text-3); margin-left: 4px; font-weight: 500; }
 /* ── MOBILE NAV ── */
 .mobile-hamburger {
   display: none; background: none; border: none; font-size: 22px;
@@ -336,7 +364,15 @@ body {
 @media (max-width: 1024px) {
   .col-filters { width: 180px; min-width: 180px; }
   .col-convs { width: 240px; min-width: 240px; }
-  .ctx-panel { width: 200px; min-width: 200px; }
+  /* Context panel as overlay on tablets */
+  .ctx-panel {
+    position: fixed; top: 0; right: -280px; width: 270px; min-width: 270px;
+    height: 100vh; z-index: 65; transition: right .25s ease;
+    box-shadow: -4px 0 20px rgba(0,0,0,.15);
+  }
+  .ctx-panel.open { right: 0; }
+  .ctx-overlay.open { display: block; }
+  .mobile-ctx-toggle { display: block; }
   .topbar-pills { gap: 5px; flex-wrap: wrap; }
   .pill { font-size: 11px; padding: 4px 8px; }
   .btn { font-size: 11px; padding: 5px 10px; }
@@ -417,6 +453,8 @@ body {
 
   /* Modales */
   #modal-kine-inner { width: 98vw !important; }
+  #kine-vista-matriz-wrap { -webkit-overflow-scrolling: touch; }
+  #kine-tabla-matriz { min-width: max-content; }
 }
 </style>
 </head>
@@ -438,13 +476,21 @@ body {
     <div class="pill" id="pill-esperando"><strong id="s-takeover">—</strong>&nbsp;esperando atención</div>
     <div class="pill" id="pill-media" style="display:none;"><strong id="s-media">0</strong>&nbsp;📎 archivos pendientes</div>
     <div class="pill green" id="pill-confirm" onclick="abrirModalConfirmaciones()" style="cursor:pointer;" title="Click para ver detalle">✅&nbsp;<strong id="s-confirm">—</strong>&nbsp;confirman mañana</div>
+    <div class="pill" id="pill-conversion" title="Tasa de conversión agendamiento (30 días)">📈&nbsp;<strong id="s-conversion">—</strong>&nbsp;conversión</div>
+    <div class="pill" id="pill-registro" title="Registros de pacientes nuevos (30 días)">📝&nbsp;<strong id="s-registro">—</strong>&nbsp;registros</div>
     <div class="pill"><div class="live-dot"></div>&nbsp;Actualizado <span id="last-refresh">—</span></div>
-    <button class="btn btn-primary" onclick="abrirModalAgendar()" style="margin-left:8px;font-size:12px;padding:6px 14px;border-radius:8px;">+ Nueva Cita</button>
-    <button class="btn" onclick="abrirBusquedaGlobal()" style="margin-left:6px;font-size:12px;padding:6px 14px;border-radius:8px;background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;">🔍 Buscar</button>
-    <button class="btn" onclick="abrirModalAnular()" style="margin-left:6px;font-size:12px;padding:6px 14px;border-radius:8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;">✕ Anular Hora</button>
-    <button class="btn" onclick="abrirModalKine()" style="margin-left:6px;font-size:12px;padding:6px 14px;border-radius:8px;background:#f0fdf4;color:#15803d;border:1px solid #86efac;">📋 Pacientes en Control</button>
-    <button class="btn" onclick="abrirModalFidelizacion()" style="margin-left:6px;font-size:12px;padding:6px 14px;border-radius:8px;background:#f5f3ff;color:#7c3aed;border:1px solid #c4b5fd;">📊 Fidelización</button>
-    <button class="btn" onclick="doLogout()" style="margin-left:6px;font-size:12px;padding:6px 14px;border-radius:8px;background:#f8fafc;color:#64748b;border:1px solid #e2e8f0;" title="Cerrar sesion">Salir</button>
+    <button id="btn-notif-mute" onclick="toggleNotifMute()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:14px;color:var(--text-2);" title="Activar/silenciar notificaciones">🔔</button>
+    <button class="btn btn-primary" onclick="abrirModalAgendar()" style="margin-left:4px;font-size:12px;padding:6px 14px;border-radius:8px;">+ Nueva Cita</button>
+    <button class="btn" onclick="abrirBusquedaGlobal()" style="margin-left:4px;font-size:12px;padding:6px 14px;border-radius:8px;background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;">🔍 Buscar<kbd>Ctrl+K</kbd></button>
+    <button class="btn" onclick="abrirModalAnular()" style="margin-left:4px;font-size:12px;padding:6px 14px;border-radius:8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;">✕ Anular</button>
+    <div class="dropdown" id="dropdown-seguimiento">
+      <button class="btn" onclick="this.parentElement.classList.toggle('open')" style="margin-left:4px;font-size:12px;padding:6px 14px;border-radius:8px;background:#f0fdf4;color:#15803d;border:1px solid #86efac;">📋 Seguimiento ▾</button>
+      <div class="dropdown-menu">
+        <button class="dropdown-item" onclick="abrirModalKine();this.closest('.dropdown').classList.remove('open')">📋 Pacientes en Control</button>
+        <button class="dropdown-item" onclick="abrirModalFidelizacion();this.closest('.dropdown').classList.remove('open')">📊 Fidelización</button>
+      </div>
+    </div>
+    <button class="btn" onclick="doLogout()" style="margin-left:4px;font-size:12px;padding:6px 14px;border-radius:8px;background:#f8fafc;color:#64748b;border:1px solid #e2e8f0;" title="Cerrar sesion">Salir</button>
   </div>
 </div>
 
@@ -771,6 +817,10 @@ body {
           <div class="ctx-sec-title">Progreso del flujo</div>
           <div id="ctx-progress-steps"></div>
         </div>
+        <div class="ctx-sec" id="ctx-history-section" style="display:none;">
+          <div class="ctx-sec-title">Historial</div>
+          <div id="ctx-history-content"></div>
+        </div>
         <div class="ctx-sec">
           <div class="ctx-sec-title">Acciones</div>
           <div class="ctx-actions">
@@ -824,7 +874,9 @@ let convs = [];
 let selectedPhone = null;
 let currentFilter = "all";
 let currentEsp = "all";
-let localNotes = {};
+let _notesSaveTimer = null;
+let _prevIncomingTs = {};  // phone -> last_ts for new-message detection
+let _notifMuted = localStorage.getItem("cmc_notif_muted") === "1";
 
 const ESP_DISPLAY = {
   "medicina general":"Medicina General","medicina familiar":"Medicina Familiar",
@@ -846,14 +898,20 @@ function espLabel(key) {
 }
 
 const ACTIVE_STATES = ["WAIT_ESPECIALIDAD","WAIT_SLOT","WAIT_MODALIDAD","WAIT_RUT_AGENDAR",
-  "WAIT_NOMBRE_NUEVO","CONFIRMING_CITA","WAIT_RUT_CANCELAR","WAIT_CITA_CANCELAR",
-  "CONFIRMING_CANCEL","WAIT_RUT_VER"];
+  "WAIT_NOMBRE_NUEVO","WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL",
+  "CONFIRMING_CITA","WAIT_RUT_CANCELAR","WAIT_CITA_CANCELAR",
+  "CONFIRMING_CANCEL","WAIT_RUT_VER","WAIT_RUT_REAGENDAR","WAIT_CITA_REAGENDAR",
+  "WAIT_DURACION_MASOTERAPIA"];
 
 const STATE_GROUPS = [
   { id:"takeover",  label:"Esperando atención",    dot:"#ef4444", tag:"tag-red",
     states:["HUMAN_TAKEOVER"] },
   { id:"agendando", label:"Agendando",              dot:"#f59e0b", tag:"tag-amber",
-    states:["WAIT_ESPECIALIDAD","WAIT_SLOT","WAIT_MODALIDAD","WAIT_RUT_AGENDAR","WAIT_NOMBRE_NUEVO","CONFIRMING_CITA"] },
+    states:["WAIT_ESPECIALIDAD","WAIT_SLOT","WAIT_MODALIDAD","WAIT_RUT_AGENDAR",
+            "WAIT_NOMBRE_NUEVO","WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL",
+            "CONFIRMING_CITA","WAIT_DURACION_MASOTERAPIA"] },
+  { id:"reagendando",label:"Reagendando",           dot:"#06b6d4", tag:"tag-cyan",
+    states:["WAIT_RUT_REAGENDAR","WAIT_CITA_REAGENDAR"] },
   { id:"cancelando",label:"Cancelando",             dot:"#8b5cf6", tag:"tag-purple",
     states:["WAIT_RUT_CANCELAR","WAIT_CITA_CANCELAR","CONFIRMING_CANCEL"] },
   { id:"reservas",  label:"Consultando reservas",   dot:"#3b82f6", tag:"tag-blue",
@@ -865,10 +923,14 @@ const STATE_GROUPS = [
 const STATE_LABELS = {
   IDLE:"Sin actividad", WAIT_ESPECIALIDAD:"Eligiendo especialidad",
   WAIT_SLOT:"Eligiendo horario", WAIT_MODALIDAD:"Fonasa / Particular",
+  WAIT_DURACION_MASOTERAPIA:"Eligiendo duración masoterapia",
   WAIT_RUT_AGENDAR:"Ingresando RUT", WAIT_NOMBRE_NUEVO:"Registro paciente nuevo",
+  WAIT_FECHA_NAC:"Registro — fecha nacimiento", WAIT_SEXO:"Registro — sexo",
+  WAIT_COMUNA:"Registro — comuna", WAIT_EMAIL:"Registro — email",
   CONFIRMING_CITA:"Confirmando cita", WAIT_RUT_CANCELAR:"Cancelando — ingresa RUT",
   WAIT_CITA_CANCELAR:"Elige cita a cancelar", CONFIRMING_CANCEL:"Confirmando cancelación",
-  WAIT_RUT_VER:"Consultando reservas", HUMAN_TAKEOVER:"Esperando recepcionista"
+  WAIT_RUT_VER:"Consultando reservas", WAIT_RUT_REAGENDAR:"Reagendando — ingresa RUT",
+  WAIT_CITA_REAGENDAR:"Elige cita a reagendar", HUMAN_TAKEOVER:"Esperando recepcionista"
 };
 
 function stateLabel(s) { return STATE_LABELS[s] || s; }
@@ -1033,9 +1095,9 @@ function renderList() {
   });
 }
 function canalIcon(canal) {
-  if (canal==="instagram") return `<span title="Instagram" style="font-size:14px;">📷</span>`;
-  if (canal==="messenger") return `<span title="Facebook Messenger" style="font-size:14px;">💬</span>`;
-  return `<span title="WhatsApp" style="font-size:14px;">📱</span>`;
+  if (canal==="instagram") return `<span title="Instagram" style="font-size:10px;background:#fce7f3;color:#9d174d;border-radius:4px;padding:1px 5px;font-weight:700;">IG</span>`;
+  if (canal==="messenger") return `<span title="Messenger" style="font-size:10px;background:#dbeafe;color:#1d4ed8;border-radius:4px;padding:1px 5px;font-weight:700;">FB</span>`;
+  return `<span title="WhatsApp" style="font-size:10px;background:#dcfce7;color:#15803d;border-radius:4px;padding:1px 5px;font-weight:700;">WA</span>`;
 }
 function canalLabel(canal) {
   if (canal==="instagram") return "Instagram";
@@ -1084,7 +1146,7 @@ async function selectConv(phone) {
   document.getElementById("chat-sub").textContent=(conv?.rut?`RUT ${conv.rut} · `:"")+`${phone} · ${canalTxt}`;
   updateChatControls(conv?.state||"IDLE");
   updateContextPanel(conv);
-  await Promise.all([loadMessages(phone), loadTags(phone)]);
+  await Promise.all([loadMessages(phone), loadTags(phone), loadNotes(phone), loadPatientContext(phone)]);
 }
 function updateChatControls(state) {
   const isTakeover=state==="HUMAN_TAKEOVER";
@@ -1099,6 +1161,15 @@ function updateChatControls(state) {
   document.getElementById("quick-replies").classList.toggle("hidden",!isTakeover);
   document.getElementById("btn-notify-informe").style.display=isTakeover?"inline-flex":"none";
   document.getElementById("btn-seguimiento").style.display=isTakeover?"inline-flex":"none";
+  // Pulse animation: draw attention when patient is waiting
+  const conv = convs.find(c=>c.phone===selectedPhone);
+  const needsAttention = isTakeover && conv && conv.msgs_sin_respuesta > 0;
+  document.getElementById("btn-resume").classList.toggle("pulse", needsAttention);
+  document.getElementById("ctx-btn-resume").classList.toggle("pulse", needsAttention);
+  // Pulse takeover if patient waiting in non-takeover state with msgs
+  const urgentTakeover = !isTakeover && conv && conv.msgs_sin_respuesta > 0 && state !== "IDLE";
+  document.getElementById("btn-takeover").classList.toggle("pulse", urgentTakeover);
+  document.getElementById("ctx-btn-takeover").classList.toggle("pulse", urgentTakeover);
 }
 function updateContextPanel(conv) {
   if (!conv) return;
@@ -1111,8 +1182,14 @@ function updateContextPanel(conv) {
   const sb=document.getElementById("ctx-state-badge");
   sb.textContent=stateLabel(conv.state); sb.className="state-tag "+stateTagClass(conv.state);
   const notesEl=document.getElementById("ctx-notes");
-  notesEl.value=localNotes[conv.phone]||"";
-  notesEl.oninput=()=>{localNotes[conv.phone]=notesEl.value;};
+  notesEl.value=""; // will be loaded async
+  notesEl.oninput=()=>{
+    clearTimeout(_notesSaveTimer);
+    _notesSaveTimer=setTimeout(()=>{
+      fetch(apiUrl(`/admin/api/notes/${encodeURIComponent(conv.phone)}`),
+        {method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({notes:notesEl.value})});
+    },1000);
+  };
   const fd=conv.flow_data||{};
   const hasFlow=fd.especialidad||fd.profesional||fd.fecha_display;
   document.getElementById("ctx-flow-section").style.display=hasFlow?"block":"none";
@@ -1121,16 +1198,26 @@ function updateContextPanel(conv) {
   if(fd.profesional){pw.style.display="flex";document.getElementById("ctx-profesional").textContent=fd.profesional;}else pw.style.display="none";
   if(fd.fecha_display&&fd.hora_inicio){sw.style.display="flex";document.getElementById("ctx-horario").textContent=fd.fecha_display+" · "+fd.hora_inicio.substring(0,5);}else sw.style.display="none";
   // Checklist de progreso
-  const isAgendar = ["WAIT_ESPECIALIDAD","WAIT_SLOT","WAIT_MODALIDAD","WAIT_RUT_AGENDAR","WAIT_NOMBRE_NUEVO","CONFIRMING_CITA"].includes(conv.state);
+  const agendarStates = ["WAIT_ESPECIALIDAD","WAIT_SLOT","WAIT_MODALIDAD","WAIT_RUT_AGENDAR",
+    "WAIT_NOMBRE_NUEVO","WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL",
+    "CONFIRMING_CITA","WAIT_DURACION_MASOTERAPIA"];
+  const isAgendar = agendarStates.includes(conv.state);
+  const isRegistro = ["WAIT_NOMBRE_NUEVO","WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL"].includes(conv.state);
   const progSec = document.getElementById("ctx-progress-section");
   if(isAgendar){
     progSec.style.display="block";
-    const steps=[
+    let steps=[
       {label:"Especialidad elegida", done:!!fd.especialidad},
       {label:"Horario seleccionado", done:!!(fd.fecha_display&&fd.hora_inicio)},
       {label:"Previsión / RUT", done:!!conv.rut},
-      {label:"Confirmación pendiente", done:conv.state==="CONFIRMING_CITA"},
     ];
+    if(isRegistro) steps.push(
+      {label:"Registro: nombre", done:["WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL"].includes(conv.state)},
+      {label:"Registro: fecha nac.", done:["WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL"].includes(conv.state)},
+      {label:"Registro: sexo", done:["WAIT_COMUNA","WAIT_EMAIL"].includes(conv.state)},
+      {label:"Registro: comuna/email", done:conv.state==="WAIT_EMAIL"},
+    );
+    steps.push({label:"Confirmación pendiente", done:conv.state==="CONFIRMING_CITA"});
     document.getElementById("ctx-progress-steps").innerHTML=steps.map(s=>`
       <div class="progress-step ${s.done?"done":"pending"}">
         <span class="progress-step-icon">${s.done?"✓":"·"}</span>
@@ -1283,7 +1370,7 @@ async function seguimientoMedico(){
     fd.append("phone",selectedPhone);
     fd.append("template_name","seguimiento_medico");
     fd.append("params",JSON.stringify([nombre,doctor.trim()]));
-    const r=await fetch("/admin/api/send-template",{method:"POST",headers:authHeaders(),body:fd});
+    const r=await fetch(apiUrl(`/admin/api/send-template`),{method:"POST",body:fd});
     if(r.ok){alert("Seguimiento enviado correctamente");await loadMessages(selectedPhone);}
     else{const d=await r.json().catch(()=>null);alert((d&&d.detail)||"Error al enviar seguimiento");}
   }finally{btn.disabled=false;btn.textContent="🩺 Seguimiento";}
@@ -1293,7 +1380,23 @@ async function seguimientoMedico(){
 async function loadConversations(){
   try{
     const r=await fetch(apiUrl(`/admin/api/conversations`));
-    convs=await r.json();
+    const newConvs=await r.json();
+    // Detect new incoming messages for notification
+    let hasNew=false; let newName="";
+    for(const c of newConvs){
+      if(c.last_dir==="in"&&c.last_ts){
+        const prev=_prevIncomingTs[c.phone];
+        if(prev&&c.last_ts>prev){hasNew=true;newName=c.nombre||c.phone;}
+        _prevIncomingTs[c.phone]=c.last_ts;
+      }
+    }
+    convs=newConvs;
+    if(hasNew&&!_notifMuted){
+      _playNotifBeep();
+      if("Notification" in window && Notification.permission==="granted"){
+        new Notification("Nuevo mensaje",{body:newName,icon:"/static/logo.png",tag:"cmc-new-msg"});
+      }
+    }
     renderStateButtons(); renderEspButtons(); renderList(); updateStats();
     if(selectedPhone){
       const still=convs.find(c=>c.phone===selectedPhone);
@@ -1304,7 +1407,24 @@ async function loadConversations(){
     new Date().toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
 }
 async function loadMetrics(){
-  try{const r=await fetch(apiUrl(`/admin/api/metrics`));await r.json();}catch(e){}
+  try{
+    const r=await fetch(apiUrl(`/admin/api/metrics`));
+    const d=await r.json();
+    const ev=d.eventos||{};
+    const citas=ev.cita_creada||0;
+    const intentos=ev.intent_agendar||0;
+    const tasa=intentos>0?Math.round(citas/intentos*100):0;
+    document.getElementById('s-conversion').textContent=`${tasa}% (${citas}/${intentos})`;
+  }catch(e){console.error("loadMetrics",e);}
+  // Registration stats
+  try{
+    const r2=await fetch(apiUrl(`/admin/api/registration-stats?dias=30`));
+    const rs=await r2.json();
+    const txt=rs.total>0?`${rs.tasa_completado}% (${rs.completados}/${rs.total})`:"—";
+    document.getElementById('s-registro').textContent=txt;
+    document.getElementById('pill-registro').title=
+      `Registros 30d: ${rs.completados} completados, ${rs.abandonados} abandonados`;
+  }catch(e){}
 }
 let confirmDataCache = null;
 async function loadConfirmaciones(){
@@ -1400,7 +1520,18 @@ function updateStats(){
   }
 }
 
-loadConversations();
+// Seed incoming timestamps to prevent false notification on first load
+(async function(){
+  try{
+    const r=await fetch(apiUrl(`/admin/api/conversations`));
+    const data=await r.json();
+    data.forEach(c=>{if(c.last_dir==="in"&&c.last_ts)_prevIncomingTs[c.phone]=c.last_ts;});
+    convs=data;
+    renderStateButtons(); renderEspButtons(); renderList(); updateStats();
+  }catch(e){console.error(e);}
+  document.getElementById("last-refresh").textContent=
+    new Date().toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+})();
 loadMetrics();
 loadConfirmaciones();
 setInterval(loadConversations,10000);
@@ -2286,6 +2417,90 @@ async function guardarKine(i) {
   if (el) { el.style.display='inline'; setTimeout(()=>el.style.display='none', 2000); }
 }
 
+// ── NOTES PERSISTENCE ────────────────────────────────────────────────────────
+async function loadNotes(phone){
+  try{
+    const r=await fetch(apiUrl(`/admin/api/notes/${encodeURIComponent(phone)}`));
+    const d=await r.json();
+    const el=document.getElementById("ctx-notes");
+    if(el&&selectedPhone===phone) el.value=d.notes||"";
+  }catch(e){}
+}
+
+// ── PATIENT CONTEXT (historial) ─────────────────────────────────────────────
+async function loadPatientContext(phone){
+  const sec=document.getElementById("ctx-history-section");
+  const content=document.getElementById("ctx-history-content");
+  try{
+    const r=await fetch(apiUrl(`/admin/api/patient-context/${encodeURIComponent(phone)}`));
+    const d=await r.json();
+    if(selectedPhone!==phone) return;
+    let html="";
+    if(d.total_citas>0){
+      html+=`<div class="flow-row"><span class="flow-row-icon">📅</span><div><div class="flow-row-label">Total citas por bot</div><div class="flow-row-value">${d.total_citas}</div></div></div>`;
+    }
+    if(d.last_cita){
+      html+=`<div class="flow-row"><span class="flow-row-icon">🕐</span><div><div class="flow-row-label">Última cita</div><div class="flow-row-value">${d.last_cita.especialidad||""} — ${d.last_cita.fecha||""}</div></div></div>`;
+    }
+    if(d.waitlist){
+      html+=`<div class="flow-row" style="background:#fffbeb;"><span class="flow-row-icon">⏳</span><div><div class="flow-row-label">Lista de espera</div><div class="flow-row-value">${d.waitlist.especialidad}</div></div></div>`;
+    }
+    if(!html) html='<div style="font-size:11px;color:#94a3b8;">Sin historial de citas</div>';
+    content.innerHTML=html;
+    sec.style.display="block";
+  }catch(e){sec.style.display="none";}
+}
+
+// ── NOTIFICATION MUTE TOGGLE ────────────────────────────────────────────────
+function _updateMuteBtn(){
+  const btn=document.getElementById("btn-notif-mute");
+  if(btn){btn.textContent=_notifMuted?"🔕":"🔔";btn.title=_notifMuted?"Notificaciones silenciadas":"Notificaciones activas";}
+}
+function toggleNotifMute(){
+  _notifMuted=!_notifMuted;
+  localStorage.setItem("cmc_notif_muted",_notifMuted?"1":"0");
+  _updateMuteBtn();
+}
+_updateMuteBtn();
+
+// Request notification permission on first user interaction
+if("Notification" in window && Notification.permission==="default"){
+  document.addEventListener("click",function _reqNotif(){
+    Notification.requestPermission();
+    document.removeEventListener("click",_reqNotif);
+  },{once:true});
+}
+
+// ── KEYBOARD SHORTCUTS ──────────────────────────────────────────────────────
+document.addEventListener("keydown",function(e){
+  // Skip if user is typing in an input/textarea
+  const tag=document.activeElement?.tagName;
+  if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT"){
+    if(e.key==="Escape"){document.activeElement.blur();return;}
+    if(!((e.ctrlKey||e.metaKey)&&e.key==="k")) return;
+  }
+  // Ctrl+K / Cmd+K → search
+  if((e.ctrlKey||e.metaKey)&&e.key==="k"){e.preventDefault();abrirBusquedaGlobal();return;}
+  // Escape → close modals
+  if(e.key==="Escape"){
+    if(document.getElementById("modal-busqueda").style.display==="flex"){cerrarBusquedaGlobal();return;}
+    if(document.getElementById("modal-confirm").style.display==="flex"){cerrarModalConfirmaciones();return;}
+    if(document.getElementById("modal-fidel").style.display==="flex"){cerrarModalFidelizacion();return;}
+    if(document.getElementById("modal-kine").style.display==="flex"){cerrarModalKine();return;}
+    if(document.getElementById("modal-agendar").style.display==="flex"){cerrarModalAgendar();return;}
+    if(document.getElementById("modal-anular").style.display==="flex"){cerrarModalAnular();return;}
+    if(document.querySelector(".ctx-panel.open")){toggleCtxPanel();return;}
+    if(document.querySelector(".col-filters.open")){toggleFilters();return;}
+  }
+});
+
+// Close dropdown on outside click
+document.addEventListener("click",function(e){
+  document.querySelectorAll(".dropdown.open").forEach(d=>{
+    if(!d.contains(e.target)) d.classList.remove("open");
+  });
+});
+
 // ── RESPONSIVE / MOBILE NAV ─────────────────────────────────────────────────
 function isMobile() { return window.innerWidth < 768; }
 
@@ -2336,15 +2551,34 @@ setFilter = function(f, el) {
 
 // Reset layout on resize (prevent stuck states)
 window.addEventListener('resize', () => {
-  if (!isMobile()) {
+  if (window.innerWidth > 1024) {
+    // Full desktop — close all overlays
     document.querySelector('.col-convs').classList.remove('mob-hidden');
     document.querySelector('.col-main').classList.remove('mob-show');
     document.getElementById('col-filters').classList.remove('open');
     document.getElementById('filters-overlay').classList.remove('open');
     document.querySelector('.ctx-panel').classList.remove('open');
     document.getElementById('ctx-overlay').classList.remove('open');
+  } else if (!isMobile()) {
+    // Tablet — keep context as overlay, reset mobile-specific stuff
+    document.querySelector('.col-convs').classList.remove('mob-hidden');
+    document.querySelector('.col-main').classList.remove('mob-show');
+    document.getElementById('col-filters').classList.remove('open');
+    document.getElementById('filters-overlay').classList.remove('open');
   }
 });
+/* ── NOTIFICATION SOUND (Web Audio API beep) ── */
+function _playNotifBeep(){
+  try{
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const osc=ctx.createOscillator();
+    const gain=ctx.createGain();
+    osc.connect(gain);gain.connect(ctx.destination);
+    osc.frequency.value=880;osc.type="sine";
+    gain.gain.value=0.15;
+    osc.start();osc.stop(ctx.currentTime+0.15);
+  }catch(e){}
+}
 </script>
 </body>
 </html>
