@@ -8,6 +8,7 @@ from datetime import datetime, date
 from zoneinfo import ZoneInfo
 
 from medilink import obtener_agenda_dia
+from pni import _PNI_CALENDARIO
 
 log = logging.getLogger("bot.doctor_alerts")
 _CHILE_TZ = ZoneInfo("America/Santiago")
@@ -24,12 +25,20 @@ _PREVENTIVOS = [
     (65, 99, None, "EMPAM anual"),
     (65, 99, None, "Vacuna influenza + neumococo"),
     (18, 39, None, "EMP (examen preventivo)"),
-    # Pediátricos
-    (0, 1,   None, "RN: BCG + Hepatitis B"),
+    # Pediátricos (screening neonatal)
     (0, 0,   None, "Screening neonatal (TSH, PKU)"),
-    (1, 6,   None, "PNI según calendario"),
-    (6, 15,  None, "PNI escolar (ver calendario)"),
 ]
+
+
+def _get_vacunas_pni(edad_anios: int) -> list[str]:
+    """Retorna vacunas PNI específicas para la edad (en años)."""
+    edad_meses = edad_anios * 12
+    vacunas = []
+    for m_min, m_max, vacuna, _desc, escolar in _PNI_CALENDARIO:
+        if m_min <= edad_meses < m_max:
+            tag = " (escolar)" if escolar else ""
+            vacunas.append(f"{vacuna}{tag}")
+    return vacunas
 
 
 def _get_preventivos_doctor(edad_str: str, sexo: str) -> list[str]:
@@ -46,6 +55,11 @@ def _get_preventivos_doctor(edad_str: str, sexo: str) -> list[str]:
         if e_min <= edad <= e_max:
             if e_sexo is None or e_sexo == sexo_upper:
                 result.append(msg)
+    # Vacunas PNI específicas para menores de 15 años
+    if edad <= 15:
+        vacunas = _get_vacunas_pni(edad)
+        for v in vacunas:
+            result.append(f"PNI: {v}")
     return result
 
 # Dr. Olavarría — ID 1 en Medilink
