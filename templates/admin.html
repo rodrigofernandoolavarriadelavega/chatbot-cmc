@@ -35,15 +35,17 @@ body {
   background: var(--bg); color: var(--text);
   font-family: "Inter", system-ui, sans-serif;
   height: 100vh; overflow: hidden; font-size: 13px;
+  display: flex; flex-direction: column;
 }
 /* TOPBAR */
 .topbar {
-  height: 54px; background: var(--surface);
+  background: var(--surface);
   border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; padding: 0 20px; gap: 14px;
+  display: flex; align-items: center; padding: 6px 16px; gap: 10px;
   box-shadow: var(--shadow); z-index: 10; position: relative;
+  flex-wrap: wrap; min-height: 48px;
 }
-.brand { display: flex; align-items: center; gap: 10px; }
+.brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .brand-icon {
   width: 34px; height: 34px; border-radius: 9px;
   background: var(--primary); display: flex; align-items: center; justify-content: center;
@@ -51,7 +53,13 @@ body {
 }
 .brand-text h1 { font-size: 13px; font-weight: 700; color: var(--text); }
 .brand-text p { font-size: 11px; color: var(--text-3); }
-.topbar-pills { display: flex; gap: 8px; margin-left: auto; align-items: center; }
+.topbar-pills {
+  display: flex; gap: 6px; margin-left: auto; align-items: center;
+  flex-wrap: wrap;
+}
+.topbar-actions {
+  display: flex; gap: 4px; align-items: center; flex-wrap: wrap;
+}
 .pill {
   display: flex; align-items: center; gap: 6px;
   padding: 5px 12px; border-radius: 20px;
@@ -68,7 +76,7 @@ body {
 .live-dot { width:7px; height:7px; border-radius:50%; background:var(--green); animation:blink 2s infinite; }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
 /* LAYOUT 3 columnas */
-.layout { display: flex; height: calc(100vh - 54px - var(--alert-h, 0px)); }
+.layout { display: flex; flex: 1; overflow: hidden; }
 .progress-step {
   display: flex; align-items: center; gap: 10px;
   padding: 7px 10px; border-radius: 8px; margin-bottom: 4px;
@@ -464,33 +472,32 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
 <div class="topbar">
   <button class="mobile-hamburger" onclick="toggleFilters()" title="Filtros">☰</button>
   <div class="brand">
-    <img src="/static/logo.png" alt="Centro Médico Carampangue" style="height:36px;object-fit:contain;">
-    <div class="brand-text" style="margin-left:4px;">
-      <p>Panel de Recepción · WhatsApp Bot</p>
-    </div>
+    <img src="/static/logo.png" alt="Centro Médico Carampangue" style="height:34px;object-fit:contain;">
   </div>
   <button class="mobile-pills-toggle" onclick="this.nextElementSibling.classList.toggle('show')">▼ Info</button>
   <div class="topbar-pills">
-    <div class="pill"><strong id="s-total">—</strong>&nbsp;conversaciones</div>
+    <div class="pill"><strong id="s-total">—</strong>&nbsp;conv.</div>
     <div class="pill amber"><strong id="s-flujo">—</strong>&nbsp;en flujo</div>
-    <div class="pill" id="pill-esperando"><strong id="s-takeover">—</strong>&nbsp;esperando atención</div>
-    <div class="pill" id="pill-media" style="display:none;"><strong id="s-media">0</strong>&nbsp;📎 archivos pendientes</div>
-    <div class="pill green" id="pill-confirm" onclick="abrirModalConfirmaciones()" style="cursor:pointer;" title="Click para ver detalle">✅&nbsp;<strong id="s-confirm">—</strong>&nbsp;confirman mañana</div>
-    <div class="pill" id="pill-conversion" title="Tasa de conversión agendamiento (30 días)">📈&nbsp;<strong id="s-conversion">—</strong>&nbsp;conversión</div>
-    <div class="pill" id="pill-registro" title="Registros de pacientes nuevos (30 días)">📝&nbsp;<strong id="s-registro">—</strong>&nbsp;registros</div>
-    <div class="pill"><div class="live-dot"></div>&nbsp;Actualizado <span id="last-refresh">—</span></div>
+    <div class="pill" id="pill-esperando"><strong id="s-takeover">—</strong>&nbsp;esperando</div>
+    <div class="pill" id="pill-media" style="display:none;"><strong id="s-media">0</strong>&nbsp;📎</div>
+    <div class="pill green" id="pill-confirm" onclick="abrirModalConfirmaciones()" style="cursor:pointer;" title="Click para ver detalle">✅&nbsp;<strong id="s-confirm">—</strong>&nbsp;mañana</div>
+    <div class="pill" id="pill-conversion" title="Tasa de conversión agendamiento (30 días)">📈&nbsp;<strong id="s-conversion">—</strong></div>
+    <div class="pill" id="pill-registro" title="Registros de pacientes nuevos (30 días)">📝&nbsp;<strong id="s-registro">—</strong></div>
+    <div class="pill"><div class="live-dot"></div>&nbsp;<span id="last-refresh">—</span></div>
+  </div>
+  <div class="topbar-actions">
     <button id="btn-notif-mute" onclick="toggleNotifMute()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:14px;color:var(--text-2);" title="Activar/silenciar notificaciones">🔔</button>
-    <button class="btn btn-primary" onclick="abrirModalAgendar()" style="margin-left:4px;font-size:12px;padding:6px 14px;border-radius:8px;">+ Nueva Cita</button>
-    <button class="btn" onclick="abrirBusquedaGlobal()" style="margin-left:4px;font-size:12px;padding:6px 14px;border-radius:8px;background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;">🔍 Buscar<kbd>Ctrl+K</kbd></button>
-    <button class="btn" onclick="abrirModalAnular()" style="margin-left:4px;font-size:12px;padding:6px 14px;border-radius:8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;">✕ Anular</button>
+    <button class="btn btn-primary" onclick="abrirModalAgendar()" style="font-size:11px;padding:5px 10px;border-radius:8px;">+ Cita</button>
+    <button class="btn" onclick="abrirBusquedaGlobal()" style="font-size:11px;padding:5px 10px;border-radius:8px;background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;">🔍<kbd>Ctrl+K</kbd></button>
+    <button class="btn" onclick="abrirModalAnular()" style="font-size:11px;padding:5px 10px;border-radius:8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;">✕ Anular</button>
     <div class="dropdown" id="dropdown-seguimiento">
-      <button class="btn" onclick="this.parentElement.classList.toggle('open')" style="margin-left:4px;font-size:12px;padding:6px 14px;border-radius:8px;background:#f0fdf4;color:#15803d;border:1px solid #86efac;">📋 Seguimiento ▾</button>
+      <button class="btn" onclick="this.parentElement.classList.toggle('open')" style="font-size:11px;padding:5px 10px;border-radius:8px;background:#f0fdf4;color:#15803d;border:1px solid #86efac;">📋 Seguimiento ▾</button>
       <div class="dropdown-menu">
         <button class="dropdown-item" onclick="abrirModalKine();this.closest('.dropdown').classList.remove('open')">📋 Pacientes en Control</button>
         <button class="dropdown-item" onclick="abrirModalFidelizacion();this.closest('.dropdown').classList.remove('open')">📊 Fidelización</button>
       </div>
     </div>
-    <button class="btn" onclick="doLogout()" style="margin-left:4px;font-size:12px;padding:6px 14px;border-radius:8px;background:#f8fafc;color:#64748b;border:1px solid #e2e8f0;" title="Cerrar sesion">Salir</button>
+    <button class="btn" onclick="doLogout()" style="font-size:11px;padding:5px 10px;border-radius:8px;background:#f8fafc;color:#64748b;border:1px solid #e2e8f0;" title="Cerrar sesion">Salir</button>
   </div>
 </div>
 
