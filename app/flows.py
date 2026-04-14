@@ -636,9 +636,55 @@ async def _handle_doctor_buscar(nombre: str) -> str:
     return msg
 
 
-async def _handle_doctor_command(phone: str, txt: str, tl: str) -> str | None:
-    """Procesa todos los comandos del doctor. Retorna respuesta o None si no es comando."""
-    # dx / dxborrar (ya existentes)
+def _doctor_mode_menu() -> dict:
+    """Menú de modo para el doctor: Agente CMC (probar flujo) o Asistente Clínico."""
+    return {
+        "type": "button",
+        "body": {"text": "Hola Rodrigo 👋 ¿Qué necesitas?"},
+        "action": {
+            "buttons": [
+                {"type": "reply", "reply": {"id": "doc_modo_agente", "title": "🤖 Agente CMC"}},
+                {"type": "reply", "reply": {"id": "doc_modo_asistente", "title": "👨‍⚕️ Asistente Clínico"}},
+            ]
+        },
+    }
+
+
+async def _handle_doctor_command(phone: str, txt: str, tl: str, data: dict, state: str) -> str | None:
+    """Procesa comandos del doctor. Retorna respuesta, dict interactivo, o None para pasar al flujo normal."""
+
+    # ── Selección de modo ──────────────────────────────────────────────────
+    if tl == "doc_modo_agente":
+        data["doctor_mode"] = "agente"
+        save_session(phone, "IDLE", data)
+        return "🤖 *Modo Agente CMC* activado. Estás en el flujo de pacientes para probar.\nEscribe *menu* para volver a elegir modo."
+
+    if tl == "doc_modo_asistente":
+        data["doctor_mode"] = "asistente"
+        save_session(phone, "IDLE", data)
+        return (
+            "👨‍⚕️ *Asistente Clínico* activado.\n\n"
+            "📋 `agenda` — tu agenda de hoy\n"
+            "📋 `agenda mañana` — agenda de mañana\n"
+            "👤 `paciente 12345678-9` — ficha del paciente\n"
+            "🔍 `buscar María González` — buscar por nombre\n"
+            "🏷️ `dx RUT dm2 hta` — agregar diagnósticos\n"
+            "🗑️ `dxborrar RUT dm2` — eliminar diagnóstico\n"
+            "💬 Cualquier otra cosa → pregunta clínica IA\n\n"
+            "Escribe *menu* para volver a elegir modo."
+        )
+
+    # ── Si no tiene modo elegido y está en IDLE → mostrar menú de modo ────
+    doctor_mode = data.get("doctor_mode")
+    if not doctor_mode and state == "IDLE":
+        return _doctor_mode_menu()
+
+    # ── Modo Agente CMC → pasar al flujo normal de pacientes ──────────────
+    if doctor_mode == "agente":
+        return None  # None = seguir con el flujo normal de handle_message
+
+    # ── Modo Asistente Clínico ────────────────────────────────────────────
+    # dx / dxborrar
     if tl.startswith("dx ") or tl == "dx":
         return _handle_doctor_dx(phone, txt)
     if tl.startswith("dxborrar "):
@@ -670,7 +716,8 @@ async def _handle_doctor_command(phone: str, txt: str, tl: str) -> str | None:
             "🔍 `buscar María González` — buscar por nombre\n"
             "🏷️ `dx 12345678-9 dm2 hta` — agregar diagnósticos\n"
             "🗑️ `dxborrar 12345678-9 dm2` — eliminar diagnóstico\n"
-            "💬 Cualquier otra cosa → asistente clínico IA"
+            "💬 Cualquier otra cosa → asistente clínico IA\n\n"
+            "Escribe *menu* para volver a elegir modo."
         )
 
     # Cualquier otro texto → asistente clínico con Haiku
@@ -795,7 +842,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # ── Comandos del doctor (solo desde su número) ──────────────────────────
     _doctor_phone = CMC_TELEFONO.replace("+", "").replace(" ", "")
     if phone == _doctor_phone:
-        resp = await _handle_doctor_command(phone, txt, tl)
+        resp = await _handle_doctor_command(phone, txt, tl, data, state)
         if resp is not None:
             return resp
 
@@ -846,6 +893,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     _COMANDOS_GLOBALES = ("menu", "menú", "inicio", "reiniciar", "volver", "hola")
     if tl in _COMANDOS_GLOBALES or tl_norm in _COMANDOS_GLOBALES:
         reset_session(phone)
+        # Doctor: "menu" lo lleva al selector de modo (no al menú de pacientes)
+        if phone == _doctor_phone:
+            return _doctor_mode_menu()
         return _menu_msg()
 
     # ── Detección pasiva de Arauco (guarda tag sin interrumpir el flujo) ──────
@@ -1438,7 +1488,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             prof_sugerido_id = data.get("prof_sugerido_id")
             ids_esp = _ids_para_especialidad(especialidad)
             if especialidad in _ESP_MED_GENERAL:
-                ids_esp = [73, 1, 13]
+                ids_esp = list(_MED_GENERAL_IDS)
             otros_ids = [i for i in ids_esp if i != prof_sugerido_id]
             if not otros_ids:
                 return "Solo hay un profesional disponible para esta especialidad 😊"
@@ -1512,7 +1562,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     especialidad, excluir=fechas_vistas, solo_ids=_MED_AO_IDS)
                 if not todos_nuevo:  # overflow a Márquez
                     smart_nuevo, todos_nuevo = await buscar_primer_dia(
-                        especialidad, excluir=fechas_vistas, solo_ids=[13])
+                        especialidad, excluir=fechas_vistas, solo_ids=[_MED_OVERFLOW_ID])
             else:
                 smart_nuevo, todos_nuevo = await buscar_primer_dia(
                     especialidad, excluir=fechas_vistas, intervalo_override=_maso_override)
@@ -2366,6 +2416,7 @@ _ESPECIALIDADES_EXPANSION = {"medicina general"}
 # IDs de profesionales de Medicina General, en orden de prioridad
 _MED_GENERAL_IDS = [73, 1, 13]  # Abarca, Olavarría, Márquez
 _MED_AO_IDS      = [73, 1]      # Primarios: Abarca (08-16) + Olavarría (16-21)
+_MED_OVERFLOW_ID = 13            # Márquez: overflow cuando Abarca+Olavarría no tienen cupo
 _ESP_MED_GENERAL = {"medicina general", "medicina familiar"}
 
 
@@ -2462,9 +2513,8 @@ async def _handle_expansion(phone: str, data: dict, slots_mostrados: list,
     elif next_stage == 2:
         # Buscar el OTRO doctor primario (el que NO fue sugerido)
         slots_sugerido = data.get("slots", [])
-        # Determinar quién es el otro: si sugerido es Olavarría(1) → buscar Abarca(73), y viceversa
-        otro_id = 73 if prof_sugerido_id == 1 else 1
-        smart_otro, todos_otro = (await buscar_slots_dia_por_ids([otro_id], fecha)) if fecha else ([], [])
+        otros_primarios = [i for i in _MED_AO_IDS if i != prof_sugerido_id]
+        smart_otro, todos_otro = (await buscar_slots_dia_por_ids(otros_primarios, fecha)) if (fecha and otros_primarios) else ([], [])
 
         show_sug = slots_sugerido[:4]
         show_otro = smart_otro[:4]
@@ -2484,24 +2534,22 @@ async def _handle_expansion(phone: str, data: dict, slots_mostrados: list,
 
     else:
         # Todos los horarios de los 3 profesionales (cada uno en su próximo día disponible)
-        _, todos_a = (await buscar_slots_dia_por_ids([73], fecha)) if fecha else ([], [])
-        _, todos_o = (await buscar_slots_dia_por_ids([1],  fecha)) if fecha else ([], [])
-        # Márquez: siempre buscar su propio próximo día (puede no trabajar el mismo día que Abarca/Olavarría)
-        _, todos_m = (await buscar_slots_dia_por_ids([13], fecha)) if fecha else ([], [])
-        if not todos_m:
-            _, todos_m = await buscar_primer_dia("medicina familiar")
-        todos_all = todos_a + todos_o + todos_m
+        all_groups = []
+        todos_all = []
+        for pid in _MED_GENERAL_IDS:
+            _, slots_pid = (await buscar_slots_dia_por_ids([pid], fecha)) if fecha else ([], [])
+            if not slots_pid and pid == _MED_OVERFLOW_ID:
+                _, slots_pid = await buscar_primer_dia("medicina familiar")
+            if slots_pid:
+                all_groups.append({"slots": slots_pid})
+                todos_all.extend(slots_pid)
 
         data["expansion_stage"] = 3
         data["slots"] = todos_all
         data["todos_slots"] = todos_all
         save_session(phone, "WAIT_SLOT", data)
 
-        groups = []
-        if todos_a: groups.append({"slots": todos_a})
-        if todos_o: groups.append({"slots": todos_o})
-        if todos_m: groups.append({"slots": todos_m})
-        return _format_slots_expansion(groups) if groups else "No hay más horarios disponibles."
+        return _format_slots_expansion(all_groups) if all_groups else "No hay más horarios disponibles."
 
 
 def _modo_degradado(phone: str, intent: str, state_snap: str = "") -> str:
@@ -2547,7 +2595,7 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
             mejor = todos[0]  # más próximo entre ambos doctores
         else:
             # Abarca + Olavarría sin disponibilidad → Márquez como overflow
-            smart, todos = await buscar_primer_dia(especialidad_lower, solo_ids=[13])
+            smart, todos = await buscar_primer_dia(especialidad_lower, solo_ids=[_MED_OVERFLOW_ID])
             mejor = todos[0] if todos else None
     else:
         smart, todos = await buscar_primer_dia(especialidad_lower)
@@ -2597,7 +2645,7 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
     from medilink import _ids_para_especialidad
     ids_esp = _ids_para_especialidad(especialidad_lower)
     if especialidad_lower in _ESP_MED_GENERAL:
-        ids_esp = [73, 1, 13]  # Abarca, Olavarría, Márquez
+        ids_esp = list(_MED_GENERAL_IDS)  # Abarca, Olavarría, Márquez
     hay_otros = len([i for i in ids_esp if i != prof_sugerido_id]) > 0
 
     botones = [
