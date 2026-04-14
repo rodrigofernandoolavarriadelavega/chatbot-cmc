@@ -41,16 +41,15 @@ body {
 .topbar {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; padding: 6px 16px; gap: 10px;
+  display: flex; align-items: center; padding: 6px 12px; gap: 6px;
   box-shadow: var(--shadow); z-index: 10; position: relative;
-  flex-wrap: wrap; min-height: 48px;
+  flex-wrap: wrap; min-height: 42px;
 }
 .topbar-pills {
-  display: flex; gap: 6px; margin-left: auto; align-items: center;
-  flex-wrap: wrap;
+  display: contents;
 }
 .topbar-actions {
-  display: flex; gap: 4px; align-items: center; flex-wrap: wrap;
+  display: contents;
 }
 .pill {
   display: flex; align-items: center; gap: 6px;
@@ -474,6 +473,7 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
     <div class="pill" id="pill-registro" title="Registros de pacientes nuevos (30 días)">📝&nbsp;<strong id="s-registro">—</strong></div>
     <div class="pill"><div class="live-dot"></div>&nbsp;<span id="last-refresh">—</span></div>
   </div>
+  <div style="margin-left:auto;"></div>
   <div class="topbar-actions">
     <button id="btn-notif-mute" onclick="toggleNotifMute()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:14px;color:var(--text-2);" title="Activar/silenciar notificaciones">🔔</button>
     <button class="btn btn-primary" onclick="abrirModalAgendar()" style="font-size:11px;padding:5px 10px;border-radius:8px;">+ Cita</button>
