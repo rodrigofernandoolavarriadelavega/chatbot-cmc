@@ -48,7 +48,7 @@ async def fake_buscar_paciente(rut: str):
         return {"id": 200, "nombre": "María Multi Citas", "rut": "22222222-2"}
     return None
 
-async def fake_crear_paciente(rut: str, nombre: str, apellidos: str):
+async def fake_crear_paciente(rut: str, nombre: str, apellidos: str, **kwargs):
     return {"id": 999, "nombre": f"{nombre} {apellidos}".strip(), "rut": rut}
 
 async def fake_crear_cita(id_paciente, id_profesional, fecha, hora_inicio, hora_fin, id_recurso=1):
@@ -1021,7 +1021,11 @@ async def main():
         ("confirmar_sugerido", ["Fonasa"]),
         ("1", ["rut"]),
         ("99999999-9", ["nombre", "encontr", "registrar"]),
-        ("Pedro Pérez González", {"any": ["confirm", "cita", "reserv"], **NO_ERROR}),
+        ("Pedro Pérez González", ["fecha de nacimiento"]),
+        ("saltar", ["sexo"]),
+        ("sexo_f", ["comuna"]),
+        ("saltar", ["correo"]),
+        ("saltar", {"any": ["confirm", "cita", "reserv"], **NO_ERROR}),
         ("confirmar", ["reserv", "✅", "cita"]),
     ])
 

@@ -198,6 +198,86 @@ CROSS_REFERENCE: dict[str, str] = {
 }
 
 
+_MESES_ES = {
+    "enero": 1, "febrero": 2, "marzo": 3, "abril": 4, "mayo": 5, "junio": 6,
+    "julio": 7, "agosto": 8, "septiembre": 9, "octubre": 10, "noviembre": 11, "diciembre": 12,
+    "ene": 1, "feb": 2, "mar": 3, "abr": 4, "may": 5, "jun": 6,
+    "jul": 7, "ago": 8, "sep": 9, "sept": 9, "oct": 10, "nov": 11, "dic": 12,
+}
+
+
+def _parsear_fecha_nacimiento(texto: str):
+    """Parsea fecha de nacimiento en múltiples formatos comunes de WhatsApp.
+    Retorna datetime.date o None si no puede parsear.
+    Formatos soportados:
+      - DD/MM/YYYY, DD-MM-YYYY, DD.MM.YYYY (con o sin ceros)
+      - DDMMYYYY (8 dígitos pegados)
+      - DD de mes YYYY, DD mes YYYY, DD-mes-YYYY
+      - DD/MM/YY (año corto)
+      - YYYY-MM-DD (ISO)
+    """
+    from datetime import date as _date
+    txt = texto.strip().lower().replace("del", "de").replace(",", " ").replace("  ", " ")
+
+    # 1) DD/MM/YYYY o DD-MM-YYYY o DD.MM.YYYY (separador / - .)
+    m = re.match(r"^(\d{1,2})[/\-.\s](\d{1,2})[/\-.\s](\d{4})$", txt)
+    if m:
+        try:
+            return _date(int(m.group(3)), int(m.group(2)), int(m.group(1)))
+        except ValueError:
+            return None
+
+    # 2) DD/MM/YY (año corto: 00-30 → 2000s, 31-99 → 1900s)
+    m = re.match(r"^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2})$", txt)
+    if m:
+        try:
+            yy = int(m.group(3))
+            anio = 2000 + yy if yy <= 30 else 1900 + yy
+            return _date(anio, int(m.group(2)), int(m.group(1)))
+        except ValueError:
+            return None
+
+    # 3) YYYY-MM-DD (ISO)
+    m = re.match(r"^(\d{4})[/\-.](\d{1,2})[/\-.](\d{1,2})$", txt)
+    if m:
+        try:
+            return _date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+        except ValueError:
+            return None
+
+    # 4) 8 dígitos pegados: DDMMYYYY
+    m = re.match(r"^(\d{2})(\d{2})(\d{4})$", txt)
+    if m:
+        try:
+            return _date(int(m.group(3)), int(m.group(2)), int(m.group(1)))
+        except ValueError:
+            return None
+
+    # 5) "15 de marzo de 1990", "15 marzo 1990", "15-marzo-1990"
+    m = re.match(r"^(\d{1,2})[\s\-/]+(?:de\s+)?([a-záéíóúñ]+)[\s\-/]+(?:de\s+)?(\d{4})$", txt)
+    if m:
+        dia, mes_str, anio = m.group(1), m.group(2), m.group(3)
+        mes_num = _MESES_ES.get(mes_str)
+        if mes_num:
+            try:
+                return _date(int(anio), mes_num, int(dia))
+            except ValueError:
+                return None
+
+    # 6) "marzo 15 1990" (mes primero en texto)
+    m = re.match(r"^([a-záéíóúñ]+)[\s\-/]+(\d{1,2})[\s,\-/]+(\d{4})$", txt)
+    if m:
+        mes_str, dia, anio = m.group(1), m.group(2), m.group(3)
+        mes_num = _MESES_ES.get(mes_str)
+        if mes_num:
+            try:
+                return _date(int(anio), mes_num, int(dia))
+            except ValueError:
+                return None
+
+    return None
+
+
 def _cross_reference_msg(especialidad: str) -> str:
     """Retorna el mensaje de cross-reference para la especialidad, o string vacío."""
     if not especialidad:
@@ -1573,8 +1653,108 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return "Escribe tu nombre completo con nombre y apellido (ej: *María González*)."
         nombre   = partes[0].capitalize()
         apellidos = " ".join(p.capitalize() for p in partes[1:])
+        data["reg_nombre"] = nombre
+        data["reg_apellidos"] = apellidos
+        # Auto-rellenar celular desde el número de WhatsApp
+        cel = phone.lstrip("+")
+        if cel.startswith("56") and len(cel) >= 10:
+            data["reg_celular"] = f"+{cel}"
+        log_event(phone, "registro_inicio", {"rut": data.get("rut", ""), "step": "nombre"})
+        save_session(phone, "WAIT_FECHA_NAC", data)
+        return (
+            f"Gracias, *{nombre}* 😊\n\n"
+            "Para completar tu ficha, necesito algunos datos más.\n"
+            "Si no quieres responder alguno, escribe *saltar*.\n\n"
+            "📅 *¿Cuál es tu fecha de nacimiento?*\n"
+            "(ej: *15/03/1990* o *15-03-1990*)"
+        )
+
+    # ── WAIT_FECHA_NAC ─────────────────────────────────────────────────────
+    if state == "WAIT_FECHA_NAC":
+        if tl in ("saltar", "no", "no tengo", "skip", "paso"):
+            log_event(phone, "registro_skip", {"step": "fecha_nacimiento"})
+        else:
+            fecha_nac = _parsear_fecha_nacimiento(txt.strip())
+            if not fecha_nac:
+                return (
+                    "No entendí la fecha 😕\n"
+                    "Escríbela así: *15/03/1990* o *15 marzo 1990*\n"
+                    "(o escribe *saltar*)"
+                )
+            from datetime import date as _date
+            if fecha_nac.year < 1920 or fecha_nac > datetime.now().date():
+                return "Esa fecha no parece correcta 🤔 Intenta de nuevo (ej: *15/03/1990*)"
+            data["reg_fecha_nacimiento"] = fecha_nac.strftime("%Y-%m-%d")
+        save_session(phone, "WAIT_SEXO", data)
+        return _btn_msg(
+            "👤 *¿Cuál es tu sexo?*",
+            [
+                {"id": "sexo_m", "title": "Masculino"},
+                {"id": "sexo_f", "title": "Femenino"},
+                {"id": "sexo_skip", "title": "Saltar"},
+            ]
+        )
+
+    # ── WAIT_SEXO ──────────────────────────────────────────────────────────
+    if state == "WAIT_SEXO":
+        if tl in ("saltar", "no", "skip", "paso", "sexo_skip"):
+            log_event(phone, "registro_skip", {"step": "sexo"})
+        elif tl in ("m", "masculino", "hombre", "sexo_m"):
+            data["reg_sexo"] = "M"
+        elif tl in ("f", "femenino", "mujer", "sexo_f"):
+            data["reg_sexo"] = "F"
+        else:
+            return _btn_msg(
+                "No entendí. Selecciona una opción:",
+                [
+                    {"id": "sexo_m", "title": "Masculino"},
+                    {"id": "sexo_f", "title": "Femenino"},
+                    {"id": "sexo_skip", "title": "Saltar"},
+                ]
+            )
+        save_session(phone, "WAIT_COMUNA", data)
+        return "🏘️ *¿De qué comuna eres?*\n(ej: *Arauco*, *Curanilahue*, *Cañete*. O escribe *saltar*)"
+
+    # ── WAIT_COMUNA ────────────────────────────────────────────────────────
+    if state == "WAIT_COMUNA":
+        if tl in ("saltar", "no", "skip", "paso", "no tengo"):
+            log_event(phone, "registro_skip", {"step": "comuna"})
+        else:
+            data["reg_comuna"] = txt.strip().title()
+        save_session(phone, "WAIT_EMAIL", data)
+        return "📧 *¿Cuál es tu correo electrónico?*\n(ej: *maria@gmail.com*. O escribe *saltar*)"
+
+    # ── WAIT_EMAIL ─────────────────────────────────────────────────────────
+    if state == "WAIT_EMAIL":
+        if tl in ("saltar", "no", "skip", "paso", "no tengo", "no se", "no sé"):
+            log_event(phone, "registro_skip", {"step": "email"})
+        else:
+            email = txt.strip().lower()
+            if "@" in email and "." in email:
+                data["reg_email"] = email
+            else:
+                # No parece correo válido, lo ignoramos y seguimos
+                log_event(phone, "registro_skip", {"step": "email", "raw": email[:60]})
+        # Crear paciente con todos los datos recopilados
         rut = data.get("rut", "")
-        paciente = await crear_paciente(rut, nombre, apellidos)
+        nombre = data.get("reg_nombre", "")
+        apellidos = data.get("reg_apellidos", "")
+        extra = {}
+        if data.get("reg_fecha_nacimiento"):
+            extra["fecha_nacimiento"] = data["reg_fecha_nacimiento"]
+        if data.get("reg_sexo"):
+            extra["sexo"] = data["reg_sexo"]
+        if data.get("reg_celular"):
+            extra["celular"] = data["reg_celular"]
+        if data.get("reg_comuna"):
+            extra["comuna"] = data["reg_comuna"]
+        if data.get("reg_email"):
+            extra["email"] = data["reg_email"]
+        log_event(phone, "registro_completo", {
+            "rut": rut, "campos_extra": list(extra.keys()),
+            "total_campos": len(extra),
+        })
+        paciente = await crear_paciente(rut, nombre, apellidos, **extra)
         if not paciente:
             reset_session(phone)
             return (

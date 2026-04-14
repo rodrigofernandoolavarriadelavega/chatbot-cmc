@@ -536,13 +536,21 @@ async def buscar_slots_dia_por_ids(ids: list, fecha: str,
         return await _slots_para_fecha(client, ids, horarios, fecha)
 
 
-async def crear_paciente(rut: str, nombre: str, apellidos: str) -> Optional[dict]:
-    """Crea un nuevo paciente en Medilink. Retorna dict con id, nombre, rut o None."""
+async def crear_paciente(rut: str, nombre: str, apellidos: str, **kwargs) -> Optional[dict]:
+    """Crea un nuevo paciente en Medilink. Retorna dict con id, nombre, rut o None.
+    kwargs opcionales: fecha_nacimiento, sexo, celular, telefono, email, comuna, direccion, ciudad.
+    """
+    body: dict = {"rut": rut, "nombre": nombre, "apellidos": apellidos}
+    _CAMPOS_OPCIONALES = ("fecha_nacimiento", "sexo", "celular", "telefono", "email",
+                          "comuna", "direccion", "ciudad")
+    for campo in _CAMPOS_OPCIONALES:
+        val = kwargs.get(campo)
+        if val:
+            body[campo] = val
     async with httpx.AsyncClient(timeout=10) as client:
         try:
             r = await _post(client, f"{MEDILINK_BASE_URL}/pacientes",
-                            json={"rut": rut, "nombre": nombre, "apellidos": apellidos},
-                            headers=HEADERS)
+                            json=body, headers=HEADERS)
         except httpx.RequestError as e:
             log.error("No se pudo crear paciente rut=%s: %s", rut, e)
             return None

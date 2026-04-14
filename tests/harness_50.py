@@ -47,7 +47,7 @@ async def fake_buscar_paciente(rut: str):
         return {"id": 200, "nombre": "María Multi Citas", "rut": "22222222-2"}
     return None
 
-async def fake_crear_paciente(rut: str, nombre: str, apellidos: str):
+async def fake_crear_paciente(rut: str, nombre: str, apellidos: str, **kwargs):
     return {"id": 999, "nombre": f"{nombre} {apellidos}".strip(), "rut": rut}
 
 async def fake_crear_cita(id_paciente, id_profesional, fecha, hora_inicio, hora_fin, id_recurso=1):
@@ -408,7 +408,11 @@ async def main():
         ("confirmar_sugerido", ["Fonasa"]),
         ("1", ["rut"]),
         ("99999999-9", ["nombre", "encontr", "registrar"]),
-        ("Pedro Pérez González", {"any": ["confirm", "cita", "reserv"], **NO_ERROR}),
+        ("Pedro Pérez González", ["fecha de nacimiento"]),
+        ("15/03/1990", ["sexo"]),
+        ("sexo_m", ["comuna"]),
+        ("Arauco", ["correo"]),
+        ("saltar", {"any": ["confirm", "cita", "reserv"], **NO_ERROR}),
         ("confirmar", ["reserv", "✅", "cita"]),
     ])
 
@@ -879,6 +883,116 @@ async def main():
 
     mk("54 botón confirmar con cita inexistente", "56900000204", [
         ("cita_confirm:99999", ["no encontré", "recepción"]),
+    ])
+
+    # ── Registro paciente nuevo: variantes fecha nacimiento ──────────────
+    mk("REG-01 fecha dd/mm/yyyy", "56900000501", [
+        ("quiero agendar kine", {"any": ["Kine", "09:"], **NO_ERROR}),
+        ("confirmar_sugerido", ["Fonasa"]),
+        ("1", ["rut"]),
+        ("99999999-9", ["nombre", "encontr", "registrar"]),
+        ("Ana López", ["fecha de nacimiento"]),
+        ("15/03/1990", ["sexo"]),
+        ("saltar", ["comuna"]),
+        ("saltar", ["correo"]),
+        ("saltar", {"any": ["confirm", "cita", "reserv"], **NO_ERROR}),
+    ])
+
+    mk("REG-02 fecha texto '15 de marzo de 1990'", "56900000502", [
+        ("quiero agendar kine", {"any": ["Kine", "09:"], **NO_ERROR}),
+        ("confirmar_sugerido", ["Fonasa"]),
+        ("1", ["rut"]),
+        ("99999999-9", ["nombre", "encontr", "registrar"]),
+        ("Luis Pérez", ["fecha de nacimiento"]),
+        ("15 de marzo de 1990", ["sexo"]),
+        ("sexo_m", ["comuna"]),
+        ("saltar", ["correo"]),
+        ("saltar", {"any": ["confirm"], **NO_ERROR}),
+    ])
+
+    mk("REG-03 fecha con guión dd-mm-yyyy", "56900000503", [
+        ("quiero agendar kine", {"any": ["Kine", "09:"], **NO_ERROR}),
+        ("confirmar_sugerido", ["Fonasa"]),
+        ("1", ["rut"]),
+        ("99999999-9", ["nombre", "encontr", "registrar"]),
+        ("María Soto", ["fecha de nacimiento"]),
+        ("15-03-1990", ["sexo"]),
+        ("sexo_f", ["comuna"]),
+        ("Arauco", ["correo"]),
+        ("maria@gmail.com", {"any": ["confirm"], **NO_ERROR}),
+    ])
+
+    mk("REG-04 fecha corta dd/mm/yy", "56900000504", [
+        ("quiero agendar kine", {"any": ["Kine", "09:"], **NO_ERROR}),
+        ("confirmar_sugerido", ["Fonasa"]),
+        ("1", ["rut"]),
+        ("99999999-9", ["nombre", "encontr", "registrar"]),
+        ("Juan Muñoz", ["fecha de nacimiento"]),
+        ("15/03/90", ["sexo"]),
+        ("saltar", ["comuna"]),
+        ("saltar", ["correo"]),
+        ("saltar", {"any": ["confirm"], **NO_ERROR}),
+    ])
+
+    mk("REG-05 fecha 8 digitos pegados", "56900000505", [
+        ("quiero agendar kine", {"any": ["Kine", "09:"], **NO_ERROR}),
+        ("confirmar_sugerido", ["Fonasa"]),
+        ("1", ["rut"]),
+        ("99999999-9", ["nombre", "encontr", "registrar"]),
+        ("Rosa Díaz", ["fecha de nacimiento"]),
+        ("15031990", ["sexo"]),
+        ("saltar", ["comuna"]),
+        ("saltar", ["correo"]),
+        ("saltar", {"any": ["confirm"], **NO_ERROR}),
+    ])
+
+    mk("REG-06 fecha inválida → pide de nuevo", "56900000506", [
+        ("quiero agendar kine", {"any": ["Kine", "09:"], **NO_ERROR}),
+        ("confirmar_sugerido", ["Fonasa"]),
+        ("1", ["rut"]),
+        ("99999999-9", ["nombre", "encontr", "registrar"]),
+        ("Carlos Vega", ["fecha de nacimiento"]),
+        ("mañana", ["No entendí"]),
+        ("saltar", ["sexo"]),
+        ("saltar", ["comuna"]),
+        ("saltar", ["correo"]),
+        ("saltar", {"any": ["confirm"], **NO_ERROR}),
+    ])
+
+    mk("REG-07 email inválido → sigue igual", "56900000507", [
+        ("quiero agendar kine", {"any": ["Kine", "09:"], **NO_ERROR}),
+        ("confirmar_sugerido", ["Fonasa"]),
+        ("1", ["rut"]),
+        ("99999999-9", ["nombre", "encontr", "registrar"]),
+        ("Sofía Paredes", ["fecha de nacimiento"]),
+        ("saltar", ["sexo"]),
+        ("saltar", ["comuna"]),
+        ("saltar", ["correo"]),
+        ("miCorreo", {"any": ["confirm"], **NO_ERROR}),
+    ])
+
+    mk("REG-08 todo saltado → registra igual", "56900000508", [
+        ("quiero agendar kine", {"any": ["Kine", "09:"], **NO_ERROR}),
+        ("confirmar_sugerido", ["Fonasa"]),
+        ("1", ["rut"]),
+        ("99999999-9", ["nombre", "encontr", "registrar"]),
+        ("Pedro Nada", ["fecha de nacimiento"]),
+        ("saltar", ["sexo"]),
+        ("saltar", ["comuna"]),
+        ("saltar", ["correo"]),
+        ("saltar", {"any": ["confirm"], **NO_ERROR}),
+    ])
+
+    mk("REG-09 fecha con mes abreviado '15 mar 1990'", "56900000509", [
+        ("quiero agendar kine", {"any": ["Kine", "09:"], **NO_ERROR}),
+        ("confirmar_sugerido", ["Fonasa"]),
+        ("1", ["rut"]),
+        ("99999999-9", ["nombre", "encontr", "registrar"]),
+        ("Tomás Rojas", ["fecha de nacimiento"]),
+        ("15 mar 1990", ["sexo"]),
+        ("saltar", ["comuna"]),
+        ("saltar", ["correo"]),
+        ("saltar", {"any": ["confirm"], **NO_ERROR}),
     ])
 
     # ── Run ─────────────────────────────────────────────────────────────────

@@ -222,6 +222,9 @@ def is_duplicate(msg_id: str) -> bool:
         return False
 
 
+_REGISTRO_STATES = {"WAIT_NOMBRE_NUEVO", "WAIT_FECHA_NAC", "WAIT_SEXO", "WAIT_COMUNA", "WAIT_EMAIL"}
+
+
 def get_session(phone: str) -> dict:
     """Devuelve la sesión actual del número. Si expiró o no existe, retorna sesión limpia."""
     with _conn() as conn:
@@ -231,6 +234,13 @@ def get_session(phone: str) -> dict:
         # Verificar timeout
         updated = datetime.fromisoformat(row["updated_at"])
         if datetime.now(timezone.utc) - updated.replace(tzinfo=timezone.utc) > timedelta(minutes=SESSION_TIMEOUT_MIN):
+            old_state = row["state"]
+            # Trackear abandono en flujo de registro de paciente nuevo
+            if old_state in _REGISTRO_STATES:
+                try:
+                    log_event(phone, "registro_abandono", {"step": old_state})
+                except Exception:
+                    pass
             _reset(conn, phone)
             return {"state": "IDLE", "data": {}}
         return {"state": row["state"], "data": json.loads(row["data"])}
