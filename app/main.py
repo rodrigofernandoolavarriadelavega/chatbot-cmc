@@ -188,7 +188,7 @@ async def lifespan(app: FastAPI):
         replace_existing=True,
     )
     # Doctor alerts: reporte progreso 08:00, 12:00, 16:00, 20:00 CLT
-    for h in (8, 12, 16, 20):
+    for h in (9, 12, 16, 20):
         scheduler.add_job(
             _job_doctor_reporte_progreso,
             CronTrigger(hour=h, minute=0),
@@ -207,7 +207,7 @@ async def lifespan(app: FastAPI):
         "Scheduler iniciado — recordatorios 09:00 · recordatorios 2h cada 15min · "
         "post-consulta 10:00 · reactivación lun 10:30 · adherencia kine 11:00 · "
         "control 11:30 · cross-sell kine mié 10:30 · sync caché 23:50 · "
-        "watchdog medilink 1min · doctor alerts cada 5min + reportes 08/12/16/20"
+        "watchdog medilink 1min · doctor alerts cada 5min + reportes 09/12/16/20"
     )
     yield
     scheduler.shutdown()
