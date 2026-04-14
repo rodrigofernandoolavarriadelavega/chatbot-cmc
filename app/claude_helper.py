@@ -363,69 +363,69 @@ INFO DEL CMC:
 PRECIOS (extraídos directamente del sistema):
 
 MEDICINA GENERAL (Dr. Rodrigo Olavarría, Dr. Andrés Abarca, Dr. Alonso Márquez):
-- Consulta médica particular: $25.000
-- Consulta médica bono Fonasa: $7.880
+- Consulta médica particular: $25.000 — atención médica general: diagnóstico, tratamiento, licencias médicas, recetas, derivaciones a especialista.
+- Consulta médica bono Fonasa: $7.880 — misma consulta, copago Fonasa MLE nivel 3.
 
 MEDICINA FAMILIAR (Dr. Alonso Márquez — también atiende con bono de Medicina General):
-- Consulta medicina familiar particular: $30.000
-- Consulta bono Fonasa (bono medicina general): $7.880
+- Consulta medicina familiar particular: $30.000 — enfoque integral del paciente y su familia; manejo de enfermedades crónicas, controles preventivos, salud mental leve.
+- Consulta bono Fonasa (bono medicina general): $7.880 — copago Fonasa MLE nivel 3.
 
 KINESIOLOGÍA (Luis Armijo / Leonardo Etcheverry — bono Fonasa MLE nivel 3):
-- Atención kinesiológica bono Fonasa: $7.830
-- Primera / última sesión bono Fonasa: $10.360
-- 10 sesiones kinesiología bono Fonasa: $83.360
-- Sesión kinesiología particular: $20.000
+- Atención kinesiológica bono Fonasa: $7.830 — sesión de rehabilitación física (ejercicios, electroterapia, ultrasonido, etc.) para lesiones, dolor muscular o post-operatorio.
+- Primera / última sesión bono Fonasa: $10.360 — incluye evaluación inicial o informe de alta.
+- 10 sesiones kinesiología bono Fonasa: $83.360 — pack completo de rehabilitación (habitualmente prescrito por traumatólogo o médico general).
+- Sesión kinesiología particular: $20.000 — misma sesión de rehabilitación sin bono Fonasa.
 
 KINESIOLOGÍA (Paola Acosta — solo particular, masoterapia):
-- Masoterapia espalda y cuello 20 min: $17.990
-- Masoterapia espalda y cuello 40 min: $26.990
+- Masoterapia espalda y cuello 20 min: $17.990 — masaje terapéutico enfocado en contracturas, tensión cervical y dolor de espalda alta.
+- Masoterapia espalda y cuello 40 min: $26.990 — masaje más extenso, incluye zona lumbar. Ideal para contracturas severas o estrés acumulado.
 
-FONOAUDIOLOGÍA:
-- Evaluación infantil/adulto: $30.000
-- Sesión de terapia infantil/adulto: $25.000
-- Terapia Tinnitus: $25.000
-- Lavado de oídos: $25.000
-- Audiometría: $25.000
-- Audiometría + impedanciometría: $45.000
-- Impedanciometría: $20.000
-- Evaluación + maniobra VPPB: $50.000
-- Terapia vestibular: $25.000
-- Octavo par: $50.000
-- Calibración audífonos: $10.000
-- Revisión exámenes fonoaudiología: $10.000
+FONOAUDIOLOGÍA (Juana Arratia):
+- Evaluación infantil/adulto: $30.000 — evaluación completa de lenguaje, habla, voz o deglución. Determina si necesitas terapia y de qué tipo.
+- Sesión de terapia infantil/adulto: $25.000 — sesión de rehabilitación de lenguaje, habla, voz o deglución según el plan de tratamiento.
+- Terapia Tinnitus: $25.000 — tratamiento para el zumbido en los oídos (tinnitus/acúfenos). Incluye técnicas de habituación y manejo.
+- Lavado de oídos: $25.000 — extracción de cerumen (cera) acumulado mediante irrigación. Mejora la audición cuando hay tapón de cerumen.
+- Audiometría: $25.000 — examen auditivo que mide cuánto escuchas en cada oído. Se hace en cabina silente con audífonos; dura ~20 min, no duele.
+- Audiometría + impedanciometría: $45.000 — audiometría combinada con impedanciometría. Evaluación auditiva completa.
+- Impedanciometría: $20.000 — mide la movilidad del tímpano y la función del oído medio. Detecta otitis serosa, disfunción tubárica o perforación. Rápido e indoloro.
+- Evaluación + maniobra VPPB: $50.000 — evaluación del vértigo posicional (mareo al girar la cabeza o acostarse). Incluye la maniobra de Epley para reposicionar los cristales del oído interno. Alivio frecuente en la misma sesión.
+- Terapia vestibular: $25.000 — ejercicios de rehabilitación para mareos, vértigo o problemas de equilibrio. Se hace después de la evaluación.
+- Octavo par: $50.000 — batería de exámenes del nervio vestibulococlear (VIII par craneal). Evalúa audición y equilibrio en profundidad; indicado cuando hay vértigo recurrente o pérdida auditiva inexplicada.
+- Calibración audífonos: $10.000 — ajuste y programación de audífonos según audiometría actualizada.
+- Revisión exámenes fonoaudiología: $10.000 — revisión de resultados de exámenes auditivos o de lenguaje previamente realizados.
 
 PSICOLOGÍA ADULTO E INFANTIL (Jorge Montalba — bono Fonasa disponible):
-- Consulta psicología particular: $20.000
-- Consulta psicología bono Fonasa (sesión 45'): $14.420
-- Informe psicológico: $25.000–$30.000
+- Consulta psicología particular: $20.000 — sesión de psicoterapia (45 min). Trata ansiedad, depresión, duelo, estrés, problemas de pareja, crianza, etc.
+- Consulta psicología bono Fonasa (sesión 45'): $14.420 — misma sesión con copago Fonasa.
+- Informe psicológico: $25.000–$30.000 — informe escrito para trámites legales, laborales, escolares o de salud.
 
 PSICOLOGÍA ADULTO (Juan Pablo Rodríguez — bono Fonasa disponible):
-- Consulta psicología particular: $20.000
-- Consulta psicología bono Fonasa (sesión 45'): $14.420
-- Informe psicológico: $25.000–$30.000
+- Consulta psicología particular: $20.000 — sesión de psicoterapia adultos (45 min). Ansiedad, depresión, estrés, duelo, problemas interpersonales.
+- Consulta psicología bono Fonasa (sesión 45'): $14.420 — misma sesión con copago Fonasa.
+- Informe psicológico: $25.000–$30.000 — informe escrito para trámites legales, laborales o de salud.
 
 NUTRICIÓN (Gisela Pinto — bono Fonasa disponible):
-- Consulta nutricionista bono Fonasa: $4.770
-- Consulta nutricionista particular: $20.000
-- Bioimpedanciometría: $20.000
+- Consulta nutricionista bono Fonasa: $4.770 — evaluación nutricional, plan alimentario personalizado, control de peso, manejo de diabetes, hipertensión u otras patologías dietéticas.
+- Consulta nutricionista particular: $20.000 — misma consulta sin bono Fonasa.
+- Bioimpedanciometría: $20.000 — examen que mide composición corporal (% grasa, músculo, agua) mediante una balanza especial. Indoloro, toma 5 min.
 
-PODOLOGÍA:
-- Atención pediátrica: $13.000
-- Verruga plantar (por tratamiento): $10.000
-- Masaje podal 30 min: $15.000
-- Onicoplastia (reconstrucción ungueal): $8.000
-- Podología básica + queratiolítico: $20.000
+PODOLOGÍA (Andrea Guevara):
+- Atención pediátrica: $13.000 — cuidado de pies en niños: corte de uñas, revisión de callosidades o alteraciones del pie infantil.
+- Verruga plantar (por tratamiento): $10.000 — eliminación de verrugas en la planta del pie mediante queratolítico o cauterización. Puede requerir varias sesiones.
+- Masaje podal 30 min: $15.000 — masaje relajante y terapéutico de pies. Alivia tensión, mejora circulación.
+- Onicoplastia (reconstrucción ungueal): $8.000 — reconstrucción estética de uña dañada o con hongos usando resina acrílica.
+- Podología básica + queratiolítico: $20.000 — corte de uñas, retiro de callosidades y aplicación de tratamiento para callos/durezas.
 
-MATRONA:
-- Consulta particular + PAP: $30.000
-- Consulta + PAP Fonasa preferencial: $25.000
-- Consulta Fonasa preferencial: $16.000
-- Revisión de exámenes: $10.000
-- PAP / Papanicolau: $20.000
+MATRONA (Saraí Gómez):
+- Consulta particular + PAP: $30.000 — control ginecológico con toma de Papanicolau incluida. Examen preventivo de cáncer cervicouterino.
+- Consulta + PAP Fonasa preferencial: $25.000 — misma atención con descuento Fonasa preferencial.
+- Consulta Fonasa preferencial: $16.000 — consulta de matrona sin PAP. Control ginecológico, anticoncepción, orientación en salud sexual.
+- Revisión de exámenes: $10.000 — revisión de resultados de PAP, ecografías u otros exámenes ginecológicos.
+- PAP / Papanicolau: $20.000 — toma de muestra del cuello uterino para detección precoz de cáncer cervicouterino. Rápido, leve molestia.
 
-GASTROENTEROLOGÍA:
-- Consulta: $35.000
-- Revisión de exámenes: $17.500
+GASTROENTEROLOGÍA (Dr. Nicolás Quijano):
+- Consulta: $35.000 — evaluación de problemas digestivos: reflujo, gastritis, colon irritable, hígado graso, dolor abdominal crónico, etc.
+- Revisión de exámenes: $17.500 — revisión de endoscopías, ecografías abdominales u otros exámenes digestivos.
 
 ECOGRAFÍA — David Pardo (solo particular, ecografías generales):
 - Ecotomografía abdominal: $40.000 — evalúa hígado, vesícula, páncreas, bazo y riñones. Se usa para dolor abdominal, cálculos o control general.
@@ -443,76 +443,77 @@ ECOGRAFÍA GINECOLÓGICA Y OBSTÉTRICA — Dr. Tirso Rejón (Ginecología, solo 
 - Ecografía ginecológica (transvaginal): $35.000 — evalúa útero y ovarios. Detecta quistes, miomas, endometriosis o irregularidades menstruales.
 - Ecografía obstétrica: $35.000 — control prenatal, permite ver al bebé, evaluar crecimiento, latidos y bienestar fetal.
 
-CARDIOLOGÍA:
-- Consulta cardiología: $40.000
-- Electrocardiograma informado por cardiólogo: $20.000
-- Ecocardiograma: $110.000
+CARDIOLOGÍA (Dr. Miguel Millán — solo particular):
+- Consulta cardiología: $40.000 — evaluación cardiovascular: hipertensión, arritmias, soplos, dolor de pecho, control de factores de riesgo cardíaco.
+- Electrocardiograma informado por cardiólogo: $20.000 — registro eléctrico del corazón. Detecta arritmias, infartos, bloqueos. Rápido (10 min), indoloro, con electrodos adhesivos en el pecho.
+- Ecocardiograma: $110.000 — ecografía del corazón en tiempo real. Evalúa válvulas, tamaño de cavidades, función cardíaca y flujo sanguíneo. Dura ~30 min, indoloro.
 
-GINECOLOGÍA:
-- Consulta ginecología: $30.000
+GINECOLOGÍA (Dr. Tirso Rejón — solo particular):
+- Consulta ginecología: $30.000 — control ginecológico, trastornos menstruales, anticoncepción, menopausia, dolor pélvico, infecciones.
 
-TRAUMATOLOGÍA:
-- Consulta traumatología: $35.000
+TRAUMATOLOGÍA (Dr. Claudio Barraza — solo particular):
+- Consulta traumatología: $35.000 — evaluación de lesiones óseas, articulares, musculares: fracturas, esguinces, tendinitis, hernias de disco, artrosis, dolor articular.
 
 OTORRINOLARINGOLOGÍA (Dr. Manuel Borrego — solo particular):
-- Consulta ORL: $35.000
-- Control ORL: $8.000
+- Consulta ORL: $35.000 — evaluación de oído, nariz y garganta: sinusitis, amigdalitis, otitis, ronquidos, pólipos nasales, desviación de tabique, vértigo.
+- Control ORL: $8.000 — control post-consulta o seguimiento de tratamiento ORL.
 
 ODONTOLOGÍA GENERAL (Dra. Javiera Burgos, Dr. Carlos Jiménez — solo particular):
-- Evaluación dental: $15.000
-- Restauración de resina (tapadura): desde $35.000
-- Exodoncia simple: $40.000 — Exodoncia compleja: $60.000 (según evaluación)
-- Blanqueamiento dental: $75.000
-- Destartraje + profilaxis: $30.000
+- Evaluación dental: $15.000 — revisión completa de dientes, encías y mordida. Incluye diagnóstico y plan de tratamiento.
+- Restauración de resina (tapadura): desde $35.000 — reparación de caries o dientes rotos con resina del color del diente. Con anestesia local, sin dolor.
+- Exodoncia simple: $40.000 — extracción de diente con anestesia local. Para dientes que ya no se pueden reparar.
+- Exodoncia compleja: $60.000 — extracción quirúrgica (muelas del juicio, raíces difíciles). Puede requerir sutura.
+- Blanqueamiento dental: $75.000 — aclaramiento del color de los dientes. Se aplica gel blanqueador en consulta. Dura ~1 hora.
+- Destartraje + profilaxis: $30.000 — limpieza dental profesional: retiro de sarro y placa bacteriana con ultrasonido + pulido. Se recomienda cada 6 meses.
 
-ORTODONCIA:
-- Instalación brackets boca completa: $120.000
-- Instalación brackets 1 arcada: $60.000
-- Control ortodoncia: $30.000
-- Control ortopedia: $20.000
-- Retiro brackets + contención: $120.000
-- Retiro arcada superior: $60.000
-- Retiro arcada inferior: $60.000
-- Contención fija lingual: $60.000
-- Contención maxilar removible: $60.000
-- Disyuntor palatino: $180.000
-- Ortodoncia especial: $45.000
+ORTODONCIA (Dra. Daniela Castillo — solo particular):
+- Instalación brackets boca completa: $120.000 — colocación de brackets metálicos arriba y abajo para corregir posición dental. Incluye arco inicial.
+- Instalación brackets 1 arcada: $60.000 — brackets solo arriba o solo abajo.
+- Control ortodoncia: $30.000 — ajuste mensual de arcos y elásticos. Necesario durante todo el tratamiento (~18-24 meses).
+- Control ortopedia: $20.000 — control de aparatos ortopédicos (niños/adolescentes en crecimiento).
+- Retiro brackets + contención: $120.000 — retiro de brackets al finalizar tratamiento + instalación de contención para mantener los dientes en su nueva posición.
+- Retiro arcada superior: $60.000 — retiro parcial, solo arriba.
+- Retiro arcada inferior: $60.000 — retiro parcial, solo abajo.
+- Contención fija lingual: $60.000 — alambre fino pegado por detrás de los dientes para evitar que se muevan. Invisible.
+- Contención maxilar removible: $60.000 — placa transparente removible de uso nocturno para mantener la posición dental.
+- Disyuntor palatino: $180.000 — aparato fijo que ensancha el paladar en niños/adolescentes. Corrige mordida cruzada y falta de espacio.
+- Ortodoncia especial: $45.000 — procedimientos ortodóncicos puntuales fuera de los estándar.
 
-ENDODONCIA:
-- Endodoncia anterior: $110.000
-- Endodoncia premolar: $150.000
-- Endodoncia molar: $220.000
+ENDODONCIA (Dr. Fernando Fredes — solo particular):
+- Endodoncia anterior: $110.000 — tratamiento de conducto en dientes delanteros (1 raíz). Se retira el nervio infectado, se limpia y sella el conducto. Con anestesia, sin dolor.
+- Endodoncia premolar: $150.000 — tratamiento de conducto en premolares (1-2 raíces). Mismo procedimiento, más complejo por tener más conductos.
+- Endodoncia molar: $220.000 — tratamiento de conducto en molares (3-4 raíces). El más complejo. Puede requerir 2 sesiones.
 
 IMPLANTOLOGÍA (Dra. Aurora Valdés — solo particular):
-- Implante dental (corona + tornillo): desde $650.000
+- Implante dental (corona + tornillo): desde $650.000 — reemplazo permanente de un diente perdido. Se coloca un tornillo de titanio en el hueso y sobre él una corona de porcelana. Proceso total ~3-6 meses (tiempo de cicatrización del hueso).
 
-ARMONIZACIÓN FACIAL:
-- Evaluación: $15.000
-- Ácido hialurónico: $159.990
-- Toxina botulínica (3 zonas): $159.990
-- Mesoterapia/vitaminas (1 sesión): $80.000
-- Mesoterapia/vitaminas (3 sesiones): $179.990
-- Hilos revitalizantes: $129.990
-- Lipopapada (3 sesiones): $139.990
-- Exosomas: $349.900
-- Bioestimuladores (Hidroxiapatita): $450.000
+ARMONIZACIÓN FACIAL (Dra. Valentina Fuentealba — solo particular):
+- Evaluación: $15.000 — evaluación facial personalizada para determinar qué tratamientos estéticos son los más indicados.
+- Ácido hialurónico: $159.990 — relleno inyectable para labios, surcos nasogenianos, ojeras o pómulos. Resultado inmediato, dura 8-12 meses.
+- Toxina botulínica (3 zonas): $159.990 — "botox" en frente, entrecejo y patas de gallo. Relaja las arrugas de expresión. Efecto en 3-7 días, dura 4-6 meses.
+- Mesoterapia/vitaminas (1 sesión): $80.000 — microinyecciones de vitaminas y ácido hialurónico en la piel del rostro. Hidrata, da luminosidad y mejora la textura.
+- Mesoterapia/vitaminas (3 sesiones): $179.990 — pack de 3 sesiones para mejor resultado acumulativo.
+- Hilos revitalizantes: $129.990 — hilos finos reabsorbibles que se insertan bajo la piel para estimular colágeno. Mejoran firmeza y textura sin cirugía.
+- Lipopapada (3 sesiones): $139.990 — inyecciones de ácido deoxicólico que disuelven la grasa bajo el mentón (papada). Resultado progresivo en 3 sesiones.
+- Exosomas: $349.900 — tratamiento regenerativo con nanopartículas que estimulan la reparación celular. Mejora textura, manchas y signos de envejecimiento.
+- Bioestimuladores (Hidroxiapatita): $450.000 — inyección que estimula la producción de colágeno propio. Efecto tensor y rejuvenecedor progresivo, dura 12-18 meses.
 
-KINESIOLOGÍA ADICIONAL:
-- Masoterapia espalda 30 min: $17.990
-- Masoterapia espalda 20 min: $14.990
-- Masoterapia cuerpo completo 30 min: $34.990
-- Pack 4 masoterapias espalda 30 min: $54.990
-- Drenaje linfático manual 1 sesión: $15.000
-- Drenaje linfático manual 5 sesiones: $75.000
-- Drenaje linfático manual 10 sesiones: $125.000
+KINESIOLOGÍA ADICIONAL (Paola Acosta — solo particular):
+- Masoterapia espalda 30 min: $17.990 — masaje terapéutico de espalda completa (cervical, dorsal y lumbar).
+- Masoterapia espalda 20 min: $14.990 — masaje focalizado en zona de mayor tensión.
+- Masoterapia cuerpo completo 30 min: $34.990 — masaje relajante de cuerpo entero: espalda, piernas, brazos.
+- Pack 4 masoterapias espalda 30 min: $54.990 — 4 sesiones con descuento. Ideal para contracturas recurrentes.
+- Drenaje linfático manual 1 sesión: $15.000 — masaje suave que estimula el sistema linfático. Reduce retención de líquidos, hinchazón post-operatoria o piernas cansadas.
+- Drenaje linfático manual 5 sesiones: $75.000 — pack 5 sesiones para tratamiento progresivo.
+- Drenaje linfático manual 10 sesiones: $125.000 — pack 10 sesiones, mayor descuento.
 
-PODOLOGÍA ADICIONAL:
-- Onicocriptosis (uña encarnada) unilateral: $25.000
-- Onicocriptosis (uña encarnada) bilateral: $30.000
-- Onicocriptosis bilateral (ambos hallux): $35.000
-- Micosis 1-5 uñas: $18.000
-- Micosis 6-9 uñas: $20.000
-- Micosis todas las uñas: $25.000
+PODOLOGÍA ADICIONAL (Andrea Guevara):
+- Onicocriptosis (uña encarnada) unilateral: $25.000 — tratamiento de uña encarnada en un dedo. Incluye corte, limpieza y curación. Con anestesia local si es necesario.
+- Onicocriptosis (uña encarnada) bilateral: $30.000 — tratamiento en ambos lados del mismo dedo.
+- Onicocriptosis bilateral (ambos hallux): $35.000 — tratamiento en ambos dedos gordos.
+- Micosis 1-5 uñas: $18.000 — tratamiento de hongos en uñas (onicomicosis). Fresado de uñas afectadas + aplicación de antifúngico tópico.
+- Micosis 6-9 uñas: $20.000 — mismo tratamiento para más uñas afectadas.
+- Micosis todas las uñas: $25.000 — tratamiento completo de todas las uñas.
 
 Para otras especialidades no listadas: indicar que el precio se consulta en recepción al momento de agendar."""
 
