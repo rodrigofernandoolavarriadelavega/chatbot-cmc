@@ -143,7 +143,9 @@ Si mencionan un profesional por nombre, mapea al nombre de la especialidad:
 - Podóloga Andrea / Andrea → "podología"
 - Psicólogo Juan Pablo / Juan Pablo / Rodríguez → "psicología adulto"
 - Psicólogo Jorge / Jorge Montalba / Montalba → "psicología"
-- David Pardo → "ecografía"
+- David Pardo → "ecografía" (ecografías generales: abdominal, tiroidea, renal, mamaria, partes blandas, doppler, etc.)
+- Ecografía ginecológica / transvaginal / vaginal → "ginecología" (Dr. Tirso Rejón, NO David Pardo)
+- Ecografía obstétrica / embarazo / ver al bebé → "ginecología" (Dr. Tirso Rejón, NO David Pardo)
 Si preguntan por un precio que no está en la lista, responde que pueden consultar en recepción.
 
 GLOSARIO DE TÉRMINOS CLÍNICOS COLOQUIALES (chileno)
@@ -195,8 +197,8 @@ GINECOLOGÍA / MATRONA
 - Pap / papanicolau / examen del cuello del útero → $20.000 en **Matrona** (Saraí Gómez) o en **Ginecología**.
 - Control ginecológico / revisión mujer → **Matrona** (consulta Fonasa $16.000) o **Ginecología** (Dr. Tirso Rejón, $30.000).
 - Retraso menstrual / no me llega la regla / test de embarazo → **Matrona** para evaluación.
-- Ecografía del embarazo / ver al bebé → Ecografía obstétrica $35.000 (solo particular) con **Ecografía** (David Pardo).
-- Ecografía vaginal → Ecografía ginecológica $35.000 (solo particular) con **Ecografía**.
+- Ecografía del embarazo / ver al bebé → Ecografía obstétrica $35.000 (solo particular) con **Ginecología** (Dr. Tirso Rejón). Permite ver al bebé, evaluar crecimiento y bienestar fetal.
+- Ecografía vaginal / transvaginal → Ecografía ginecológica $35.000 (solo particular) con **Ginecología** (Dr. Tirso Rejón). Evalúa útero, ovarios y detecta quistes, miomas o irregularidades.
 
 KINE / TRAUMA / DOLOR
 - Dolor de espalda / lumbago / lumbalgia → **Kinesiología** (Luis Armijo o Leonardo Etcheverry) o **Traumatología** (Dr. Claudio Barraza) si necesita evaluación médica.
@@ -353,8 +355,9 @@ INFO DEL CMC:
 - Fonasa: atención como libre elección disponible en varias especialidades
 - Solo tienen Fonasa (MLE): Medicina General, Kinesiología, Nutrición y Psicología. Todo lo demás es SOLO PARTICULAR.
 - Los copagos Fonasa indicados son lo que paga el paciente (beneficiario nivel 3 MLE 2026)
-- Ecografía vaginal = Ecografía ginecológica ($35.000, solo particular). Sí se realiza.
-- Ecografía obstétrica ($35.000, solo particular). Sí se realiza.
+- Ecografía vaginal = Ecografía ginecológica ($35.000, solo particular) con Dr. Tirso Rejón (Ginecología). Evalúa útero y ovarios.
+- Ecografía obstétrica ($35.000, solo particular) con Dr. Tirso Rejón (Ginecología). Control prenatal, ver al bebé.
+- Las ecografías generales (abdominal, tiroidea, renal, etc.) las realiza David Pardo.
 - Audiometría: disponible en Fonoaudiología y Otorrinolaringología
 
 PRECIOS (extraídos directamente del sistema):
@@ -424,16 +427,21 @@ GASTROENTEROLOGÍA:
 - Consulta: $35.000
 - Revisión de exámenes: $17.500
 
-ECOGRAFÍA (David Pardo — solo particular):
-- Ecotomografía abdominal: $40.000
-- Ecotomografía de partes blandas: $40.000
-- Ecotomografía mamaria: $40.000
-- Ecotomografía musculo-esquelética: $40.000
-- Ecotomografía pelviana (masculina y femenina): $40.000
-- Ecotomografía testicular: $40.000
-- Ecotomografía tiroidea: $40.000
-- Ecotomografía renal bilateral: $40.000
-- Ecotomografía doppler: $90.000
+ECOGRAFÍA — David Pardo (solo particular, ecografías generales):
+- Ecotomografía abdominal: $40.000 — evalúa hígado, vesícula, páncreas, bazo y riñones. Se usa para dolor abdominal, cálculos o control general.
+- Ecotomografía de partes blandas: $40.000 — evalúa bultos, ganglios, hernias o lesiones superficiales en cualquier zona del cuerpo.
+- Ecotomografía mamaria: $40.000 — complementa la mamografía, detecta nódulos o quistes mamarios.
+- Ecotomografía musculo-esquelética: $40.000 — evalúa tendones, músculos y articulaciones (hombro, rodilla, codo, etc.). Útil en tendinitis, desgarros o esguinces.
+- Ecotomografía pelviana (masculina y femenina): $40.000 — evalúa vejiga y próstata (hombre) o útero y ovarios por vía abdominal (mujer).
+- Ecotomografía testicular: $40.000 — evalúa testículos y epidídimo. Se usa para dolor, hinchazón o bultos testiculares.
+- Ecotomografía tiroidea: $40.000 — evalúa tamaño y nódulos de la tiroides. Indicada si hay alteraciones hormonales o nódulo palpable.
+- Ecotomografía renal bilateral: $40.000 — evalúa ambos riñones y vías urinarias. Detecta cálculos, quistes o dilatación.
+- Ecotomografía doppler: $90.000 — evalúa el flujo sanguíneo en arterias y venas. Se usa para várices, trombosis o insuficiencia venosa.
+NOTA: David Pardo NO realiza ecografías ginecológicas ni obstétricas; esas las hace el Dr. Tirso Rejón (Ginecología).
+
+ECOGRAFÍA GINECOLÓGICA Y OBSTÉTRICA — Dr. Tirso Rejón (Ginecología, solo particular):
+- Ecografía ginecológica (transvaginal): $35.000 — evalúa útero y ovarios. Detecta quistes, miomas, endometriosis o irregularidades menstruales.
+- Ecografía obstétrica: $35.000 — control prenatal, permite ver al bebé, evaluar crecimiento, latidos y bienestar fetal.
 
 CARDIOLOGÍA:
 - Consulta cardiología: $40.000
