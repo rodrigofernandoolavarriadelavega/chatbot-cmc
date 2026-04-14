@@ -8,10 +8,10 @@ import re
 import time
 from datetime import datetime, timedelta
 
-from claude_helper import detect_intent, respuesta_faq, clasificar_respuesta_seguimiento
+from claude_helper import detect_intent, respuesta_faq, clasificar_respuesta_seguimiento, consulta_clinica_doctor
 from medilink import (buscar_primer_dia, buscar_slots_dia, buscar_slots_dia_por_ids,
-                      buscar_paciente, crear_paciente, crear_cita,
-                      listar_citas_paciente, cancelar_cita,
+                      buscar_paciente, buscar_paciente_por_nombre, crear_paciente, crear_cita,
+                      listar_citas_paciente, cancelar_cita, obtener_agenda_dia,
                       valid_rut, clean_rut, especialidades_disponibles,
                       consultar_proxima_fecha)
 from session import (save_session, reset_session, save_tag, delete_tag, get_tags,
@@ -536,6 +536,147 @@ def _handle_doctor_dxborrar(phone: str, txt: str) -> str:
     return f"🗑️ Eliminados de *{rut}*: {', '.join(eliminados)}"
 
 
+async def _handle_doctor_paciente(rut_raw: str) -> str:
+    """Comando: paciente <RUT> — ficha rápida del paciente."""
+    pac = await buscar_paciente(rut_raw)
+    if not pac:
+        return f"❌ No encontré paciente con RUT *{rut_raw}*"
+
+    nombre = pac["nombre"]
+    rut = pac.get("rut", rut_raw)
+    edad = ""
+    sexo = ""
+    if pac.get("fecha_nacimiento"):
+        try:
+            from zoneinfo import ZoneInfo
+            fn = datetime.strptime(pac["fecha_nacimiento"][:10], "%Y-%m-%d").date()
+            hoy = datetime.now(ZoneInfo("America/Santiago")).date()
+            edad_n = hoy.year - fn.year - ((hoy.month, hoy.day) < (fn.month, fn.day))
+            edad = f"{edad_n} años"
+        except (ValueError, KeyError):
+            pass
+    if pac.get("sexo"):
+        sexo = {"M": "Masculino", "F": "Femenino"}.get(pac["sexo"], pac["sexo"])
+
+    msg = f"👤 *{nombre}*\n🪪 RUT: {rut}\n"
+    if edad:
+        msg += f"🎂 {edad}\n"
+    if sexo:
+        msg += f"⚧ {sexo}\n"
+
+    # Tags dx
+    phone_pac = get_phone_by_rut(rut)
+    if phone_pac:
+        tags = get_tags(phone_pac)
+        dx_tags = [t for t in tags if t.startswith("dx:")]
+        if dx_tags:
+            msg += "\n🏷️ *Diagnósticos:*\n"
+            for t in dx_tags:
+                msg += f"  • {t.replace('dx:', '').upper()}\n"
+
+    # Citas futuras
+    citas = await listar_citas_paciente(pac["id"])
+    if citas:
+        msg += f"\n📅 *Próximas citas ({len(citas)}):*\n"
+        for c in citas[:3]:
+            msg += f"  • {c['fecha_display']} {c['hora_inicio']} — {c['profesional']}\n"
+    else:
+        msg += "\n📅 Sin citas futuras"
+
+    return msg
+
+
+async def _handle_doctor_agenda(fecha_label: str = "hoy") -> str:
+    """Comando: agenda [mañana] — agenda del doctor."""
+    from zoneinfo import ZoneInfo
+    ahora = datetime.now(ZoneInfo("America/Santiago"))
+    if fecha_label == "mañana":
+        fecha = (ahora + timedelta(days=1)).strftime("%Y-%m-%d")
+        titulo = f"📋 *Agenda mañana* ({(ahora + timedelta(days=1)).strftime('%d/%m')})"
+    else:
+        fecha = ahora.strftime("%Y-%m-%d")
+        titulo = f"📋 *Agenda hoy* ({ahora.strftime('%d/%m')})"
+
+    # Dr. Olavarría = ID 1
+    agenda = await obtener_agenda_dia(1, fecha)
+    if not agenda:
+        return f"{titulo}\n\nSin pacientes agendados 🎉"
+
+    msg = f"{titulo}\n{len(agenda)} pacientes\n"
+    for cita in agenda:
+        pac = cita["paciente"] or "Sin nombre"
+        edad = f" ({cita['edad']})" if cita.get("edad") else ""
+        msg += f"\n🕐 *{cita['hora']}* — {pac}{edad}"
+
+        # Tags dx si hay
+        if cita.get("rut"):
+            phone_pac = get_phone_by_rut(cita["rut"])
+            if phone_pac:
+                tags = get_tags(phone_pac)
+                dx_tags = [t.replace("dx:", "").upper() for t in tags if t.startswith("dx:")]
+                if dx_tags:
+                    msg += f" 🏷️{','.join(dx_tags)}"
+
+    return msg
+
+
+async def _handle_doctor_buscar(nombre: str) -> str:
+    """Comando: buscar <nombre> — busca paciente por nombre."""
+    if len(nombre) < 2:
+        return "Escribe al menos 2 caracteres. Ej: `buscar maría gonzález`"
+
+    resultados = await buscar_paciente_por_nombre(nombre)
+    if not resultados:
+        return f"❌ No encontré pacientes con *{nombre}*"
+
+    msg = f"🔍 *Resultados para \"{nombre}\"* ({len(resultados)}):\n"
+    for r in resultados:
+        msg += f"\n  • *{r['nombre']}* — RUT: {r['rut']}"
+    msg += "\n\nUsa `paciente <RUT>` para ver la ficha completa."
+    return msg
+
+
+async def _handle_doctor_command(phone: str, txt: str, tl: str) -> str | None:
+    """Procesa todos los comandos del doctor. Retorna respuesta o None si no es comando."""
+    # dx / dxborrar (ya existentes)
+    if tl.startswith("dx ") or tl == "dx":
+        return _handle_doctor_dx(phone, txt)
+    if tl.startswith("dxborrar "):
+        return _handle_doctor_dxborrar(phone, txt)
+
+    # paciente <RUT>
+    if tl.startswith("paciente "):
+        rut_raw = txt.strip().split(maxsplit=1)[1].strip()
+        return await _handle_doctor_paciente(rut_raw)
+
+    # agenda / agenda mañana
+    if tl in ("agenda", "mi agenda", "agenda hoy"):
+        return await _handle_doctor_agenda("hoy")
+    if tl in ("agenda mañana", "agenda manana", "mañana"):
+        return await _handle_doctor_agenda("mañana")
+
+    # buscar <nombre>
+    if tl.startswith("buscar "):
+        nombre = txt.strip().split(maxsplit=1)[1].strip()
+        return await _handle_doctor_buscar(nombre)
+
+    # ayuda
+    if tl in ("ayuda", "help", "comandos"):
+        return (
+            "🩺 *Comandos disponibles:*\n\n"
+            "📋 `agenda` — tu agenda de hoy\n"
+            "📋 `agenda mañana` — agenda de mañana\n"
+            "👤 `paciente 12345678-9` — ficha del paciente\n"
+            "🔍 `buscar María González` — buscar por nombre\n"
+            "🏷️ `dx 12345678-9 dm2 hta` — agregar diagnósticos\n"
+            "🗑️ `dxborrar 12345678-9 dm2` — eliminar diagnóstico\n"
+            "💬 Cualquier otra cosa → asistente clínico IA"
+        )
+
+    # Cualquier otro texto → asistente clínico con Haiku
+    return await consulta_clinica_doctor(txt)
+
+
 async def _handle_confirmacion_precita(phone: str, tl: str, data: dict) -> str:
     """Procesa la respuesta del paciente a los botones del recordatorio de 09:00.
     IDs: cita_confirm:<id_cita> / cita_reagendar:<id_cita> / cita_cancelar:<id_cita>"""
@@ -654,10 +795,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # ── Comandos del doctor (solo desde su número) ──────────────────────────
     _doctor_phone = CMC_TELEFONO.replace("+", "").replace(" ", "")
     if phone == _doctor_phone:
-        if tl.startswith("dx ") or tl == "dx":
-            return _handle_doctor_dx(phone, txt)
-        if tl.startswith("dxborrar "):
-            return _handle_doctor_dxborrar(phone, txt)
+        resp = await _handle_doctor_command(phone, txt, tl)
+        if resp is not None:
+            return resp
 
     # ── Crisis de salud mental (prioridad 1) ─────────────────────────────────
     # Ideación suicida merece un mensaje diferenciado con tono de contención

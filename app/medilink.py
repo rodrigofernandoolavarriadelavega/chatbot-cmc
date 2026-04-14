@@ -616,6 +616,30 @@ async def buscar_paciente(rut: str) -> Optional[dict]:
         return result
 
 
+async def buscar_paciente_por_nombre(nombre: str) -> list[dict]:
+    """Busca pacientes por nombre/apellido en Medilink. Devuelve hasta 10 resultados."""
+    async with httpx.AsyncClient(timeout=10) as client:
+        params = {"nombre": {"lk": nombre}}
+        try:
+            r = await _get(client, f"{MEDILINK_BASE_URL}/pacientes",
+                           params={"q": _q(params)}, headers=HEADERS)
+        except httpx.RequestError as e:
+            log.error("buscar_paciente_por_nombre '%s': %s", nombre, e)
+            return []
+        if r.status_code != 200:
+            return []
+        data = r.json().get("data", [])
+        results = []
+        for p in data[:10]:
+            nombre_full = f"{p.get('nombre', '')} {p.get('apellidos', '')}".strip()
+            results.append({
+                "id": p["id"],
+                "nombre": nombre_full,
+                "rut": p.get("rut", ""),
+            })
+        return results
+
+
 async def crear_cita(id_paciente: int, id_profesional: int, fecha: str,
                      hora_inicio: str, hora_fin: str, id_recurso: int = 1) -> Optional[dict]:
     """Crea una cita en Medilink. Devuelve dict con id de la cita o None si falla."""

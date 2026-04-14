@@ -628,6 +628,29 @@ async def detect_intent(mensaje: str) -> dict:
         return {"intent": "menu", "especialidad": None, "respuesta_directa": None}
 
 
+async def consulta_clinica_doctor(pregunta: str) -> str:
+    """Asistente clínico para el doctor — responde preguntas médicas con Haiku."""
+    system = (
+        "Eres un asistente clínico para el Dr. Rodrigo Olavarría, médico general en el "
+        "Centro Médico Carampangue, Región del Biobío, Chile. "
+        "Responde preguntas médicas de forma concisa y práctica, orientada a atención primaria chilena. "
+        "Usa guías GES/MINSAL cuando aplique. Incluye dosis, exámenes y derivaciones cuando sea relevante. "
+        "Formato: texto plano con negritas (*texto*) para WhatsApp. Máximo 500 palabras. "
+        "Si la pregunta no es clínica, responde brevemente que solo puedes ayudar con consultas médicas."
+    )
+    try:
+        resp = await client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=1024,
+            system=system,
+            messages=[{"role": "user", "content": pregunta}],
+        )
+        return resp.content[0].text
+    except Exception as e:
+        log.error("consulta_clinica_doctor falló: %s", e)
+        return "⚠️ Error al procesar tu consulta. Intenta de nuevo."
+
+
 async def respuesta_faq(mensaje: str) -> str:
     """Responde preguntas frecuentes directamente con Claude."""
     text = ""
