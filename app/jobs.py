@@ -10,7 +10,7 @@ from reminders import enviar_recordatorios, enviar_recordatorios_2h
 from fidelizacion import (enviar_seguimiento_postconsulta, enviar_reactivacion_pacientes,
                           enviar_adherencia_kine, enviar_recordatorio_control,
                           enviar_crosssell_kine)
-from medilink import (buscar_primer_dia, sync_citas_dia,
+from medilink import (buscar_primer_dia, buscar_paciente, sync_citas_dia,
                       SEGUIMIENTO_ESPECIALIDADES, PROFESIONALES)
 from session import (get_sesiones_abandonadas, save_session, log_event,
                      get_pending_intent_queue, mark_intent_notified, intent_queue_depth,
@@ -67,7 +67,10 @@ async def _job_recordatorios_2h():
     await enviar_recordatorios_2h(send_whatsapp, send_template_fn=_tpl)
 
 async def _job_postconsulta():
-    await enviar_seguimiento_postconsulta(send_whatsapp, send_template_fn=_tpl)
+    await enviar_seguimiento_postconsulta(
+        send_whatsapp, send_template_fn=_tpl,
+        send_text_fn=send_whatsapp, buscar_paciente_fn=buscar_paciente,
+    )
 
 async def _job_reactivacion():
     await enviar_reactivacion_pacientes(send_whatsapp, send_template_fn=_tpl)

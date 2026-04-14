@@ -13,7 +13,8 @@ from config import USE_TEMPLATES
 from session import (get_citas_para_seguimiento, get_pacientes_inactivos,
                      save_fidelizacion_msg, puede_enviar_campana,
                      get_kine_candidatos_adherencia, get_control_candidatos,
-                     get_crosssell_kine_candidatos)
+                     get_crosssell_kine_candidatos, get_profile)
+from autocuidado import get_tips_autocuidado
 
 log = logging.getLogger("bot.fidelizacion")
 
@@ -97,10 +98,14 @@ def _msg_reactivacion(paciente: dict) -> dict:
     }
 
 
-async def enviar_seguimiento_postconsulta(send_fn, send_template_fn=None):
+async def enviar_seguimiento_postconsulta(send_fn, send_template_fn=None,
+                                          send_text_fn=None, buscar_paciente_fn=None):
     """
     Ejecutar diariamente a las 10:00 AM.
-    Busca citas de ayer y envía seguimiento post-consulta.
+    Busca citas de ayer y envía seguimiento post-consulta + tips de autocuidado.
+    send_fn: envía mensaje interactivo (dict con botones)
+    send_text_fn: envía mensaje de texto plano (para tips)
+    buscar_paciente_fn: async fn(rut) → dict con fecha_nacimiento, sexo, etc.
     """
     ayer = (date.today() - timedelta(days=1)).isoformat()
     citas = get_citas_para_seguimiento(ayer)
@@ -113,9 +118,6 @@ async def enviar_seguimiento_postconsulta(send_fn, send_template_fn=None):
     for cita in citas:
         try:
             if USE_TEMPLATES and send_template_fn:
-                # Template: postconsulta_seguimiento
-                # body_params: [nombre, especialidad, profesional]
-                # button_payloads: ["seg_mejor", "seg_igual", "seg_peor"]
                 nombre = _nombre_corto(cita.get("nombre")) or "paciente"
                 esp = cita.get("especialidad", "tu consulta")
                 prof = cita.get("profesional", "el profesional")
@@ -128,6 +130,29 @@ async def enviar_seguimiento_postconsulta(send_fn, send_template_fn=None):
             else:
                 msg = _msg_postconsulta(cita)
                 await send_fn(cita["phone"], msg)
+
+            # Tips de autocuidado personalizados (segundo mensaje)
+            if send_text_fn:
+                fecha_nac = None
+                sexo = None
+                # Intentar obtener datos del paciente desde Medilink
+                profile = get_profile(cita["phone"])
+                if profile and profile.get("rut") and buscar_paciente_fn:
+                    try:
+                        pac = await buscar_paciente_fn(profile["rut"])
+                        if pac:
+                            fecha_nac = pac.get("fecha_nacimiento")
+                            sexo = pac.get("sexo")
+                    except Exception as e:
+                        log.debug("No se pudo obtener datos Medilink para tips: %s", e)
+                tips = get_tips_autocuidado(
+                    fecha_nacimiento=fecha_nac,
+                    sexo=sexo,
+                    especialidad=cita.get("especialidad"),
+                    nombre=cita.get("nombre"),
+                )
+                await send_text_fn(cita["phone"], tips)
+
             save_fidelizacion_msg(cita["phone"], "postconsulta", str(cita.get("id_cita", "")))
             log.info("Seguimiento enviado → %s (%s)", cita["phone"], cita.get("especialidad"))
         except Exception as e:

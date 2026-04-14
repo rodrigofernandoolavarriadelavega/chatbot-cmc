@@ -611,6 +611,8 @@ async def buscar_paciente(rut: str) -> Optional[dict]:
         }
         if p.get("fecha_nacimiento"):
             result["fecha_nacimiento"] = p["fecha_nacimiento"]
+        if p.get("sexo"):
+            result["sexo"] = p["sexo"]
         return result
 
 
