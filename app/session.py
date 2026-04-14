@@ -361,6 +361,17 @@ def get_profile(phone: str) -> dict | None:
         return dict(row) if row else None
 
 
+def get_phone_by_rut(rut: str) -> str | None:
+    """Busca el teléfono asociado a un RUT en contact_profiles."""
+    if not rut:
+        return None
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT phone FROM contact_profiles WHERE rut=? LIMIT 1", (rut,)
+        ).fetchone()
+        return row["phone"] if row else None
+
+
 def mark_reminder_sent(cita_id: int):
     """Marca una cita como recordatorio enviado."""
     with _conn() as conn:

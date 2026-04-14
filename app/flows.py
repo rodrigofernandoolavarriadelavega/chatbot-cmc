@@ -558,6 +558,23 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     if "arauco" in tl_norm:
         save_tag(phone, "arauco")
 
+    # ── Detección pasiva de patologías crónicas ────────────────────────────────
+    _PATOLOGIAS_KEYWORDS = {
+        "dm2":  ["diabete", "diabetico", "diabetica", "diabetes", "insulina", "glicemia alta", "azucar alta", "azucar en la sangre"],
+        "hta":  ["hipertens", "presion alta", "presión alta", "hipertenso", "hipertensa", "antihipertensivo"],
+        "asma": ["asma", "asmatico", "asmatica", "inhalador", "salbutamol", "broncodilatador"],
+        "epoc": ["epoc", "enfisema", "bronquitis cronica"],
+        "hipotiroidismo": ["hipotiroid", "levotiroxina", "eutirox", "tiroides baja"],
+        "dislipidemia": ["colesterol alto", "trigliceridos alto", "dislipidemia", "estatina", "atorvastatina"],
+        "depresion": ["depresion", "antidepresivo", "sertralina", "fluoxetina", "escitalopram"],
+        "epilepsia": ["epilepsia", "epileptico", "convulsion", "anticonvulsivante"],
+        "artrosis": ["artrosis", "desgaste articular", "osteoartrosis"],
+        "irc": ["insuficiencia renal", "dialisis", "hemodialisis"],
+    }
+    for tag, keywords in _PATOLOGIAS_KEYWORDS.items():
+        if any(kw in tl_norm for kw in keywords):
+            save_tag(phone, f"dx:{tag}")
+
     # ── IDLE: detectar intención ──────────────────────────────────────────────
     if state == "IDLE":
         # ── Seguimiento de FAQ con sugerencia de agendar ──────────────────────
