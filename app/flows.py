@@ -2534,13 +2534,14 @@ async def _handle_expansion(phone: str, data: dict, slots_mostrados: list,
         return _format_slots_expansion(groups, show_ver_mas=True) if groups else _format_slots(todos_slots, mostrar_todos=True)
 
     else:
-        # Todos los horarios de los 3 profesionales (cada uno en su próximo día disponible)
+        # Todos los horarios de los 3 profesionales QUE ATIENDEN ESE DÍA.
+        # NO hacer fallback a buscar_primer_dia para el overflow — si Márquez
+        # no atiende ese día, no se muestra (evita mostrar slots de otro día
+        # bajo el header de fecha equivocado).
         all_groups = []
         todos_all = []
         for pid in _MED_GENERAL_IDS:
             _, slots_pid = (await buscar_slots_dia_por_ids([pid], fecha)) if fecha else ([], [])
-            if not slots_pid and pid == _MED_OVERFLOW_ID:
-                _, slots_pid = await buscar_primer_dia("medicina familiar")
             if slots_pid:
                 all_groups.append({"slots": slots_pid})
                 todos_all.extend(slots_pid)
