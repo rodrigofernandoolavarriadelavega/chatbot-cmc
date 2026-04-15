@@ -472,6 +472,8 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
   }
   .topbar-pills.show { display: flex !important; }
   .pill { font-size: 10px; padding: 3px 7px; }
+  /* Spacer hidden on mobile */
+  .topbar-spacer { display: none; }
   /* Actions: horizontal scroll row */
   .topbar-actions {
     display: flex !important; flex-wrap: nowrap; gap: 6px; align-items: center;
@@ -483,11 +485,8 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
   .topbar-actions::-webkit-scrollbar { display: none; }
   .topbar-actions .btn { font-size: 11px; padding: 7px 10px; flex: 0 0 auto; white-space: nowrap; }
   .topbar-actions kbd { display: none; }
-  .topbar-actions > div[style*="margin-left:auto"] { display: none; }
-  /* Hide search text, keep icon */
-  .topbar-actions .btn:has(kbd) { padding: 7px 10px; }
-  /* Notification bell */
-  #btn-notif-mute { flex: 0 0 auto; }
+  /* Notification bell: compact */
+  #btn-notif-mute { flex: 0 0 auto; padding: 4px 8px !important; font-size: 14px !important; }
   /* Alert bar */
   #alert-bar {
     flex-wrap: wrap !important; padding: 8px 12px !important;
@@ -739,7 +738,7 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
     <div class="pill" id="pill-trabados" style="display:none;cursor:pointer;" onclick="setFilter('trabados',document.getElementById('pill-trabados'))" title="Pacientes >5 min sin avanzar en un flujo activo">🚧&nbsp;<strong id="s-trabados">0</strong>&nbsp;trabados</div>
     <div class="pill"><div class="live-dot"></div>&nbsp;<span id="last-refresh">—</span></div>
   </div>
-  <div style="margin-left:auto;"></div>
+  <div class="topbar-spacer" style="margin-left:auto;"></div>
   <div class="topbar-actions">
     <button id="btn-notif-mute" onclick="toggleNotifMute()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:14px;color:var(--text-2);" title="Activar/silenciar notificaciones">🔔</button>
     <button class="btn btn-primary" onclick="abrirModalAgendar()" style="font-size:11px;padding:5px 10px;border-radius:8px;">+ Cita</button>
@@ -1001,7 +1000,7 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
 </div>
 
 <!-- BANNER DE ALERTAS -->
-<div id="alert-bar" style="display:none; background:#fef2f2; border-bottom:1px solid #fca5a5; padding:7px 20px; display:flex; align-items:center; gap:16px; font-size:12px; font-weight:500; color:#991b1b;">
+<div id="alert-bar" style="display:none; background:#fef2f2; border-bottom:1px solid #fca5a5; padding:7px 20px; align-items:center; gap:16px; font-size:12px; font-weight:500; color:#991b1b;">
   <span style="font-size:14px;">🚨</span>
   <span id="alert-text"></span>
   <span style="margin-left:auto; font-size:11px; color:#b91c1c; opacity:.7;">Se actualiza automáticamente</span>
