@@ -11,6 +11,7 @@ import json
 import logging
 import sqlite3
 import urllib.parse
+from pathlib import Path
 
 import httpx
 
@@ -289,6 +290,107 @@ async def main():
     log.info("Puntos para el mapa: %d, sin coordenadas válidas: %d", len(points), sin_geo)
 
     generate_address_map(points)
+    update_dashboard_pts(points)
+
+
+def update_dashboard_pts(points: list[dict]):
+    """Actualiza ptsData en dashboard.html con datos enriquecidos (detalle pacientes)."""
+    import re
+    dashboard_path = Path(__file__).parent.parent / "templates" / "dashboard.html"
+    if not dashboard_path.exists():
+        log.warning("dashboard.html no encontrado, omitiendo update")
+        return
+
+    content = dashboard_path.read_text(encoding="utf-8")
+
+    # Generar ptsData con formato del dashboard + detalle nuevo
+    pts_dash = []
+    for p in points:
+        pts_dash.append({
+            "lat": round(p["lat"], 3),
+            "lng": round(p["lng"], 3),
+            "d": p["direccion"].strip(),
+            "p": p["pacientes"],
+            "c": p["citas"],
+            "det": p.get("detalle", []),
+        })
+
+    pts_json = json.dumps(pts_dash, ensure_ascii=False)
+    new_line = f"const ptsData = {pts_json};"
+
+    # Reemplazar la línea existente de ptsData
+    pattern = r"const ptsData = \[.*?\];"
+    if re.search(pattern, content, re.DOTALL):
+        content = re.sub(pattern, new_line, content, count=1, flags=re.DOTALL)
+
+        # Actualizar popups para mostrar detalle de pacientes
+        # Clusters popup
+        old_popup_cluster = '`<b>${p.d}</b><br><b>${p.p}</b> pac, <b>${p.c}</b> citas`'
+        new_popup_cluster = 'buildDashPopup(p)'
+        content = content.replace(old_popup_cluster, new_popup_cluster)
+
+        # Points popup
+        old_popup_points = '`<b>${p.d}</b><br>${p.p} pac, ${p.c} citas`'
+        new_popup_points = 'buildDashPopup(p)'
+        content = content.replace(old_popup_points, new_popup_points)
+
+        # Insertar función buildDashPopup y buildDashTooltip antes de initMaps
+        if 'function buildDashPopup' not in content:
+            helper_js = """
+function buildDashTooltip(p) {
+  let h = '<b>' + p.d + '</b><br>' + p.p + ' pac, ' + p.c + ' citas';
+  if (p.det && p.det.length > 0) {
+    h += '<br><span style="color:#94a3b8;font-size:12px">';
+    p.det.slice(0, 3).forEach(function(d) {
+      h += d.n + (d.a && d.a[0] ? ' — ' + d.a[0].split(' — ')[1] : '') + '<br>';
+    });
+    if (p.det.length > 3) h += '... +' + (p.det.length - 3) + ' más';
+    h += '</span>';
+  }
+  return h;
+}
+
+function buildDashPopup(p) {
+  let h = '<div style="max-width:320px;font-size:13px"><b style="font-size:14px">' + p.d + '</b>';
+  h += '<br><span style="color:#64748b">' + p.p + ' paciente' + (p.p > 1 ? 's' : '') + ' · ' + p.c + ' cita' + (p.c > 1 ? 's' : '') + '</span>';
+  if (p.det && p.det.length > 0) {
+    p.det.forEach(function(d) {
+      h += '<div style="margin-top:8px;padding-top:6px;border-top:1px solid #e2e8f0">';
+      h += '<b style="color:#1e293b">' + d.n + '</b> <span style="color:#94a3b8">(' + d.c + ' cita' + (d.c > 1 ? 's' : '') + ')</span>';
+      if (d.a && d.a.length > 0) {
+        d.a.forEach(function(at) {
+          var parts = at.split(' — ');
+          h += '<div style="padding-left:10px;font-size:12px;color:#475569">';
+          h += '<span style="color:#3b82f6">' + (parts[0] || '') + '</span>';
+          if (parts[1]) h += ' — <span style="color:#8b5cf6">' + parts[1] + '</span>';
+          h += '</div>';
+        });
+      }
+      h += '</div>';
+    });
+  }
+  h += '</div>';
+  return h;
+}
+
+"""
+            content = content.replace('function initMaps() {', helper_js + 'function initMaps() {')
+
+        # Add bindTooltip where we have clusters and points
+        # For clusters: add tooltip after popup
+        old_cluster_bind = ".bindPopup(buildDashPopup(p));\n      dirClusters"
+        new_cluster_bind = ".bindTooltip(buildDashTooltip(p), {sticky:true, direction:'top', offset:[0,-10]}).bindPopup(buildDashPopup(p), {maxWidth:360, maxHeight:400});\n      dirClusters"
+        content = content.replace(old_cluster_bind, new_cluster_bind)
+
+        # For points: add tooltip after popup
+        old_points_bind = ".bindPopup(buildDashPopup(p));\n      dirPoints"
+        new_points_bind = ".bindTooltip(buildDashTooltip(p), {sticky:true, direction:'top', offset:[0,-10]}).bindPopup(buildDashPopup(p), {maxWidth:360, maxHeight:400});\n      dirPoints"
+        content = content.replace(old_points_bind, new_points_bind)
+
+        dashboard_path.write_text(content, encoding="utf-8")
+        log.info("dashboard.html actualizado con %d puntos enriquecidos", len(pts_dash))
+    else:
+        log.warning("No se encontró ptsData en dashboard.html")
 
 
 def generate_address_map(points: list[dict]):
