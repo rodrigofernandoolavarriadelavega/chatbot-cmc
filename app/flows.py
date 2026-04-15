@@ -131,6 +131,80 @@ SALUD_MENTAL_PATRONES = [
 
 DISCLAIMER = "_Recuerda que soy un asistente virtual, no un médico. Para consultas clínicas, habla siempre con un profesional de salud._"
 
+# 200+ variaciones de saludo (chileno, coloquial, typos, WhatsApp).
+# Cualquiera de estos → resetea sesión y muestra menú principal.
+_SALUDOS_SET = frozenset({
+    # ── "Hola" con typos, repeticiones y teclado ──
+    "hola", "hol", "holaa", "holaaa", "holaaaa", "holaaaaa", "holas", "holaz",
+    "holla", "hila", "hoka", "hoal", "hloa", "holq", "jola", "gola", "hiola",
+    "hoola", "hpla", "hols", "hoia", "hla", "hkla", "hopa", "hala", "hela",
+    "hula", "holo", "hoña", "hol a", "holahola", "hola hola",
+    # con puntuación
+    "hola!", "hola!!", "hola!!!", "hola!!!!", "hola.", "hola..", "hola...",
+    "hola,", "hola?", "jola!", "ola!", "ola!!", "ola.", "ola..", "ola...", "ola?",
+    # ── "Ola" (sin H, muy frecuente en WhatsApp chileno) ──
+    "ola", "olaa", "olaaa", "olaaaa", "ols", "ole",
+    # ── Variantes informales / juveniles ──
+    "holi", "holii", "holiii", "holis", "holiss", "holip", "holap", "holiwi",
+    "holiwis", "holu", "jelou", "jelouuu", "hello", "hellou", "hi", "hai",
+    "hey", "hey!", "ey", "ei", "eii",
+    # ── Chileno "wena/wenas" ──
+    "wena", "wenas", "wenaa", "wenaaa", "wenaaaa", "wenass", "weena", "weenas",
+    "wenis", "weno", "guena", "güena", "güenas", "guenas", "wenah", "wen",
+    "wena!", "wena!!", "wena po", "wenaa po", "wenah po", "wena ahi",
+    "wena ahí", "wenas tardes", "wenas noches", "wenas doc",
+    "wena doc", "wena doctor",
+    # ── "Buenas" solo ──
+    "buenas", "buena", "bnas", "bns", "buenaa", "buenass",
+    # ── "Buenas tardes" y variantes ──
+    "buenas tardes", "buenas tarde", "buena tardes", "buena tarde",
+    "buenas tards", "buenas tardess", "buenas tardes!", "buenas tardes!!",
+    "bnas tardes", "bnas tards", "bnas tds", "bns tardes", "bns tards",
+    "bns tds", "bn tarde", "bn tardes",
+    "bueas tardes", "bueas tarde", "buenaa tardes",
+    # ── "Buenos días" y variantes ──
+    "buenos dias", "buenos días", "buenos dia", "buen dia", "buen día",
+    "buens dias", "buens días", "bunos dias", "buemos dias", "beunos dias",
+    "bienos dias", "benos dias", "buenos díaz",
+    "bns dias", "bns días", "bn dia", "bn dias",
+    "buenos dias!", "buenos días!", "buen dia!", "buen día!",
+    # ── "Buenas noches" y variantes ──
+    "buenas noches", "buenas noche", "buena noches", "buena noche",
+    "buenas noch", "bnas noches", "bns noches", "bns nch", "bn noche", "bn noches",
+    "bueas noches", "buenas noches!",
+    # ── Con "doc/doctor/doctora" ──
+    "hola doc", "hola doctor", "hola doctora", "ola doc", "ola doctor",
+    "hola señorita", "hola srta", "hola seño", "hola sr", "ola seño",
+    "buen dia doc", "buen día doc", "buenos dias doc", "buenos días doc",
+    "buenas tardes doc", "buenas tardes doctor", "buenas tardes doctora",
+    "buenas noches doc", "buenas noches doctor",
+    "bnas tds doc", "bnas doc", "buenas doc",
+    # ── Con "centro médico" ──
+    "hola centro medico", "hola centro", "hola cmc", "ola cmc",
+    "hola consultorio", "hola clinica", "hola clínica",
+    # ── Combinaciones ──
+    "hola buenas", "hola buenas tardes", "hola buenas noches",
+    "hola buenos dias", "hola buenos días", "hola buen dia", "hola buen día",
+    "hola que tal", "hola como estan", "hola como están",
+    "hola wena", "hola wenas", "ola buenas", "ola buenas tardes",
+    "ola buenos dias", "ola wena", "hola buenas buenas", "buenas buenas",
+    # ── "Cómo estai" (chileno) ──
+    "como estai", "como estái", "como andai", "como andái", "como vai",
+    "como estay", "como estás", "como estas", "como esta", "como le va",
+    "como les va", "como anda", "kmo estai", "kmo andai", "kmo vai",
+    "kmo estas", "kmo andan", "como andan",
+    # ── "Qué tal" ──
+    "que tal", "qué tal", "que tal?", "qué tal?", "ke tal", "q tal", "qtal", "k tal",
+    # ── "Aló" (teléfono/WhatsApp) ──
+    "aló", "alo", "alo?", "aló?", "alo buenas", "aló buenas",
+    # ── Formales ──
+    "saludos", "slds", "un saludo", "salu2", "saludo",
+    # ── Oiga / atención (solos, sin mensaje adicional) ──
+    "oie", "oie hola", "oiga hola", "hola oiga", "oye",
+    # ── Extras coloquiales ──
+    "good", "gd", "bn", "bkn", "ta bueno",
+})
+
 # Señales léxicas de síntoma — si el texto del paciente las contiene pero el
 # motor de triage NO produce match, vale la pena loggear el texto para revisar
 # los gaps de recall del corpus GES semanalmente.
@@ -888,9 +962,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
     # ── Comandos globales ─────────────────────────────────────────────────────
     _COMANDOS_GLOBALES = ("menu", "menú", "inicio", "reiniciar", "volver", "hola")
-    _SALUDOS = ("buenas tardes", "buenos dias", "buenos días", "buenas noches",
-                "buen dia", "buen día", "buenas", "wena", "wenas", "ola", "alo", "aló")
-    if tl in _COMANDOS_GLOBALES or tl_norm in _COMANDOS_GLOBALES or tl in _SALUDOS or tl_norm in _SALUDOS:
+    if tl in _COMANDOS_GLOBALES or tl_norm in _COMANDOS_GLOBALES or tl in _SALUDOS_SET or tl_norm in _SALUDOS_SET:
         doctor_mode_antes = data.get("doctor_mode")
         reset_session(phone)
         if phone == _doctor_phone:
