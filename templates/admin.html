@@ -1567,7 +1567,7 @@ async function selectConv(phone) {
   document.getElementById("chat-sub").textContent=(conv?.rut?`RUT ${conv.rut} · `:"")+`${phone} · ${canalTxt}${staffTxt}`;
   updateChatControls(conv?.state||"IDLE");
   updateContextPanel(conv);
-  await Promise.all([loadMessages(phone), loadTags(phone), loadNotes(phone), loadPatientContext(phone)]);
+  await Promise.all([loadMessages(phone), loadTags(phone), loadNotes(phone), loadPatientContext(phone), loadPatientFiles(phone)]);
 }
 function updateChatControls(state) {
   const isTakeover=state==="HUMAN_TAKEOVER";
@@ -1712,16 +1712,53 @@ function renderMessages(msgs, preserveScroll=false) {
   msgs.forEach(m=>{
     if(m.state&&m.state!==lastState){html+=`<div class="state-sep"><span class="state-pill">${stateLabel(m.state)}</span></div>`;lastState=m.state;}
     const isRecep=m.direction==="out"&&(m.text||"").startsWith("[Recepcionista]");
-    const text=(m.text||"").replace(/^\[Recepcionista\] /,"").replace(/^\[.*?\] /,"")
-      .replace(/</g,"&lt;").replace(/\\n/g,"<br>").replace(/\*(.*?)\*/g,"<strong>$1</strong>");
+    let rawText=(m.text||"").replace(/^\[Recepcionista\] /,"").replace(/^\[.*?\] /,"");
+    // Detectar media inline: [image:filename] o [document:filename]
+    let mediaHtml="";
+    const mediaMatch=rawText.match(/^\[(image|document|video):([^\]]+)\]/);
+    if(mediaMatch){
+      const mtype=mediaMatch[1];
+      const mfile=mediaMatch[2];
+      rawText=rawText.replace(mediaMatch[0],"").trim();
+      // Buscar file_id en patient_files cargados
+      const fileUrl=apiUrl(`/admin/api/patient-files/${encodeURIComponent(selectedPhone)}`);
+      if(mtype==="image"){
+        mediaHtml=`<div style="margin-bottom:6px;"><img src="" data-media-file="${mfile}" style="max-width:240px;max-height:180px;border-radius:6px;cursor:pointer;" loading="lazy" onerror="this.style.display='none'" onclick="window.open(this.src,'_blank')"></div>`;
+      } else {
+        mediaHtml=`<div style="margin-bottom:6px;padding:8px;background:#f1f5f9;border-radius:6px;font-size:12px;">📄 <a href="#" data-media-file="${mfile}" style="color:#2563eb;" target="_blank">${mfile}</a></div>`;
+      }
+    }
+    const text=rawText.replace(/</g,"&lt;").replace(/\\n/g,"<br>").replace(/\*(.*?)\*/g,"<strong>$1</strong>");
     const ts=m.ts?new Date(m.ts.replace(" ","T")+"Z").toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"}):"";
     const mCanal=m.canal||"whatsapp";
     const chanIco=m.direction==="in"?canalIcon(mCanal):"";
     const who=m.direction==="in"?`${chanIco} Paciente`:isRecep?"🙋 Recepcionista":"🤖 Bot";
-    html+=`<div class="msg-row ${m.direction}${isRecep?" recep":""}"><div><div class="msg-bubble">${text}</div><div class="msg-meta">${who} · ${ts}</div></div></div>`;
+    html+=`<div class="msg-row ${m.direction}${isRecep?" recep":""}"><div><div class="msg-bubble">${mediaHtml}${text}</div><div class="msg-meta">${who} · ${ts}</div></div></div>`;
   });
   el.innerHTML=html;
   el.scrollTop = stickyBottom ? el.scrollHeight : prevScroll;
+  // Resolver URLs de media inline
+  _resolveMediaUrls();
+}
+async function _resolveMediaUrls(){
+  if(!selectedPhone) return;
+  const mediaEls=document.querySelectorAll("[data-media-file]");
+  if(!mediaEls.length) return;
+  try{
+    const r=await fetch(apiUrl(`/admin/api/patient-files/${encodeURIComponent(selectedPhone)}`));
+    const files=await r.json();
+    const byName={};
+    files.forEach(f=>{byName[f.filename]=f.id;});
+    mediaEls.forEach(el=>{
+      const fname=el.getAttribute("data-media-file");
+      const fid=byName[fname];
+      if(fid){
+        const url=apiUrl(`/admin/api/file/${fid}`);
+        if(el.tagName==="IMG") el.src=url;
+        else if(el.tagName==="A") el.href=url;
+      }
+    });
+  }catch(e){}
 }
 function insertQR(text){document.getElementById("reply-input").value=text;document.getElementById("reply-input").focus();}
 
