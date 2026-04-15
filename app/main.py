@@ -26,7 +26,8 @@ from flows import handle_message
 from messaging import (send_whatsapp, send_whatsapp_interactive,
                        send_whatsapp_location,
                        react_whatsapp, unreact_whatsapp,
-                       download_whatsapp_media, transcribe_audio)
+                       download_whatsapp_media, transcribe_audio,
+                       extract_text_from_pdf, extract_text_from_docx)
 from session import (get_session, is_duplicate, reset_session, save_session,
                      get_metricas, log_message, log_event,
                      intent_queue_depth, waitlist_depth, purge_old_data,
@@ -451,8 +452,12 @@ async def webhook(request: Request):
     # ── Helper: obtener nombre de usuario IG/FB ─────────────────────────────
     async def _fetch_social_name(sender_id: str, phone: str, platform: str):
         """Obtiene nombre/username de IG o FB via Graph API y lo guarda en contact_profiles."""
-        if get_profile(phone):
-            return  # ya tenemos el nombre
+        existing = get_profile(phone)
+        if existing:
+            n = existing.get("nombre", "")
+            # Refrescar si el nombre guardado es un ID crudo (ig_XXXXX / fb_XXXXX)
+            if not (n.startswith("ig_") or n.startswith("fb_")):
+                return  # ya tenemos un nombre real
         from config import META_ACCESS_TOKEN
         try:
             import httpx
@@ -617,8 +622,8 @@ async def webhook(request: Request):
             # Reacciones (emoji a un mensaje) — ignorar silenciosamente
             return Response(status_code=200)
         elif msg_type in ("image", "video", "document"):
-            # Archivos: descargar, almacenar y derivar a recepción
-            log.info("MEDIA recibido from=%s type=%s — descargando y derivando", phone, msg_type)
+            # Archivos: descargar, almacenar. PDF/Word → extraer texto como audio.
+            log.info("MEDIA recibido from=%s type=%s", phone, msg_type)
             _MEDIA_LABELS = {"image": "imagen 📷", "video": "video 🎥", "document": "documento 📄"}
             label = _MEDIA_LABELS[msg_type]
             caption = ""
@@ -636,16 +641,16 @@ async def webhook(request: Request):
                 media_id = msg.get("document", {}).get("id", "")
             # Descargar y guardar archivo
             saved_filename = ""
+            blob = None
+            mime = ""
             if media_id:
                 try:
                     result = await download_whatsapp_media(media_id)
                     if result:
                         blob, mime = result
                         from session import save_patient_file
-                        # Crear directorio uploads/{phone}/
                         _UPLOAD_DIR = Path(__file__).parent.parent / "data" / "uploads" / phone
                         _UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-                        # Determinar extensión
                         _MIME_EXT = {
                             "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp",
                             "video/mp4": ".mp4", "video/3gpp": ".3gp",
@@ -657,7 +662,6 @@ async def webhook(request: Request):
                         ext = _MIME_EXT.get(mime, ".bin")
                         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
                         saved_filename = orig_filename or f"{msg_type}_{ts}{ext}"
-                        # Evitar colisiones
                         file_path = _UPLOAD_DIR / saved_filename
                         if file_path.exists():
                             saved_filename = f"{ts}_{saved_filename}"
@@ -669,6 +673,43 @@ async def webhook(request: Request):
                         log.info("MEDIA guardado from=%s path=%s size=%d", phone, rel_path, len(blob))
                 except Exception as e:
                     log.error("Error descargando/guardando media from=%s: %s", phone, e)
+
+            # PDF/Word → extraer texto y procesar como mensaje (igual que audio)
+            if blob and mime in ("application/pdf",
+                                  "application/vnd.openxmlformats-officedocument.wordprocessingml.document"):
+                extracted = ""
+                if "pdf" in mime:
+                    extracted = extract_text_from_pdf(blob)
+                else:
+                    extracted = extract_text_from_docx(blob)
+                if extracted:
+                    # Truncar a 2000 chars para no exceder límites
+                    if len(extracted) > 2000:
+                        extracted = extracted[:2000] + "…"
+                    texto = extracted
+                    log.info("📄 Texto extraído from=%s (%d chars): %s", phone, len(extracted), extracted[:120])
+                    state_before = get_session(phone).get("state", "IDLE")
+                    log_text = f"[{msg_type}:{saved_filename}]"
+                    log_message(phone, "in", log_text, state_before, canal="whatsapp")
+                    # Feedback al paciente (como con audio)
+                    preview = extracted[:300] + ("…" if len(extracted) > 300 else "")
+                    confirm_msg = f"📄 *Tu documento dice:*\n_{preview}_"
+                    await send_whatsapp(phone, confirm_msg)
+                    log_message(phone, "out", confirm_msg, state_before, canal="whatsapp")
+                    # Procesar el texto extraído por el pipeline normal
+                    session = get_session(phone)
+                    respuesta = await handle_message(phone, texto, session)
+                    if respuesta:
+                        if isinstance(respuesta, dict):
+                            await send_whatsapp_interactive(phone, respuesta)
+                            body = respuesta.get("interactive", {}).get("body", {}).get("text", "")
+                            log_message(phone, "out", body, get_session(phone).get("state", "IDLE"), canal="whatsapp")
+                        else:
+                            await send_whatsapp(phone, respuesta)
+                            log_message(phone, "out", respuesta, get_session(phone).get("state", "IDLE"), canal="whatsapp")
+                    return Response(status_code=200)
+
+            # Imágenes y otros → guardar + derivar a recepción (sin extracción)
             log_text = f"[{msg_type}]" + (f" {caption}" if caption else "")
             if saved_filename:
                 log_text = f"[{msg_type}:{saved_filename}]" + (f" {caption}" if caption and caption != saved_filename else "")
