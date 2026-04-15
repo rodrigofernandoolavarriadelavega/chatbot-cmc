@@ -33,7 +33,7 @@ PROFESIONALES = {
     13: {"nombre": "Dr. Alonso Márquez",       "especialidad": "Medicina General",      "intervalo": 20},
     23: {"nombre": "Dr. Manuel Borrego",       "especialidad": "Otorrinolaringología",  "intervalo": 20},
     60: {"nombre": "Dr. Miguel Millán",        "especialidad": "Cardiología",           "intervalo": 20, "dias": [5]},
-    64: {"nombre": "Dr. Claudio Barraza",      "especialidad": "Traumatología",         "intervalo": 15},
+    # 64: Dr. Claudio Barraza — Traumatología — temporalmente deshabilitado
     61: {"nombre": "Dr. Tirso Rejón",          "especialidad": "Ginecología",           "intervalo": 20},
     65: {"nombre": "Dr. Nicolás Quijano",      "especialidad": "Gastroenterología",     "intervalo": 20},
     55: {"nombre": "Dra. Javiera Burgos",      "especialidad": "Odontología General",   "intervalo": 30},
@@ -72,7 +72,8 @@ ESPECIALIDADES_MAP = {
     "fonoaudiología": [70], "fonoaudiólogo": [70], "fonoaudiologa": [70],
     "implantología": [69], "implantes": [69],
     "matrona": [67], "ginecología": [61], "ginecólogo": [61],
-    "traumatología": [64], "traumatólogo": [64],
+    # traumatología deshabilitada → redirigir a medicina general
+    "traumatología": [73, 1], "traumatólogo": [73, 1],
     "cardiología": [60], "cardiólogo": [60],
     "gastroenterología": [65], "gastroenterólogo": [65],
     "psicología adulto": [74, 49], "psicólogo adulto": [74, 49],
@@ -93,7 +94,7 @@ ESPECIALIDADES_ID = {
     "implantología": 20, "implantes": 20,
     "matrona": 11,
     "ginecología": 14, "ginecólogo": 14,
-    "traumatología": 17, "traumatólogo": 17,
+    "traumatología": 10, "traumatólogo": 10,  # redirigido a medicina general (ID 10)
     "cardiología": 16, "cardiólogo": 16,
     "gastroenterología": 18, "gastroenterólogo": 18,
     "psicología": 5, "psicólogo": 5, "psicóloga": 5,
@@ -830,20 +831,31 @@ async def obtener_agenda_dia(id_prof: int, fecha: str | None = None) -> list[dic
 
 
 async def cancelar_cita(id_cita: int) -> bool:
-    """Cancela una cita por su ID."""
+    """Cancela una cita por su ID, con reintentos ante errores transitorios."""
+    url = f"{MEDILINK_BASE_URL}/citas/{id_cita}"
     async with httpx.AsyncClient(timeout=10) as client:
-        try:
-            r = await client.put(
-                f"{MEDILINK_BASE_URL}/citas/{id_cita}",
-                json={"id_estado": 1},
-                headers=HEADERS,
-            )
-            if r.status_code not in (200, 201):
-                log.error("Error cancelar cita %d: %s %s", id_cita, r.status_code, r.text[:200])
-            return r.status_code in (200, 201)
-        except httpx.RequestError as e:
-            log.error("No se pudo cancelar cita %d: %s", id_cita, e)
-            return False
+        for attempt in range(3):
+            try:
+                r = await client.put(url, json={"id_estado": 1}, headers=HEADERS)
+                if r.status_code == 429:
+                    wait = 3.0 * (2 ** attempt)
+                    log.warning("Medilink PUT %s → 429 rate limit, esperando %.0fs (intento %d/3)", url, wait, attempt + 1)
+                    await asyncio.sleep(wait)
+                    continue
+                if r.status_code in (200, 201):
+                    _report_up()
+                    return True
+                if r.status_code >= 500:
+                    log.warning("Medilink PUT %s → %s (intento %d/3)", url, r.status_code, attempt + 1)
+                else:
+                    log.error("Error cancelar cita %d: %s %s", id_cita, r.status_code, r.text[:200])
+                    return False
+            except (httpx.TimeoutException, httpx.NetworkError) as e:
+                log.warning("Medilink PUT %s error red: %s (intento %d/3)", url, e, attempt + 1)
+            if attempt < 2:
+                await asyncio.sleep(1.5 ** attempt)
+        log.error("No se pudo cancelar cita %d tras 3 intentos", id_cita)
+        return False
 
 
 # Especialidades con pacientes recurrentes — para el panel de seguimiento

@@ -356,7 +356,7 @@ def _msg_crosssell_kine(paciente: dict) -> dict:
             "type": "button",
             "body": {
                 "text": (
-                    f"{saludo}Muchas veces, tras una consulta de medicina o traumatología "
+                    f"{saludo}Muchas veces, tras una consulta médica "
                     "se recomienda continuar con kinesiología para avanzar mejor.\n\n"
                     "¿Te gustaría agendar con nuestros kinesiólogos?"
                 )

@@ -97,7 +97,7 @@ async def enviar_recordatorios(send_text_fn, send_interactive_fn=None,
       el recordatorio es un mensaje con 3 botones (confirmo / cambiar hora / no podré ir).
     - send_template_fn: send_whatsapp_template — usado cuando USE_TEMPLATES=True.
     """
-    manana = (date.today() + timedelta(days=1)).isoformat()
+    manana = (datetime.now(ZoneInfo("America/Santiago")).date() + timedelta(days=1)).isoformat()
     citas = get_citas_bot_pendientes(manana)
 
     if not citas:

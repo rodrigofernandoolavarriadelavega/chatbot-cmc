@@ -511,26 +511,39 @@ async def webhook(request: Request):
         existing = get_profile(phone)
         if existing:
             n = existing.get("nombre", "")
-            # Refrescar si el nombre guardado es un ID crudo (ig_XXXXX / fb_XXXXX)
             if not (n.startswith("ig_") or n.startswith("fb_")):
                 return  # ya tenemos un nombre real
-        from config import META_ACCESS_TOKEN
+        from config import META_ACCESS_TOKEN, META_PAGE_ACCESS_TOKEN
+        # Para Messenger: intentar con system user token y page token
+        tokens = [META_ACCESS_TOKEN]
+        if META_PAGE_ACCESS_TOKEN and META_PAGE_ACCESS_TOKEN != META_ACCESS_TOKEN:
+            tokens.append(META_PAGE_ACCESS_TOKEN)
         try:
             import httpx
             fields = "name,username" if platform == "instagram" else "name,first_name,last_name"
             async with httpx.AsyncClient(timeout=5) as client:
-                r = await client.get(
-                    f"https://graph.facebook.com/v21.0/{sender_id}",
-                    params={"fields": fields, "access_token": META_ACCESS_TOKEN},
-                )
-                if r.status_code == 200:
-                    info = r.json()
-                    if platform == "instagram":
-                        nombre = info.get("username") or info.get("name", sender_id)
+                for token in tokens:
+                    if not token:
+                        continue
+                    r = await client.get(
+                        f"https://graph.facebook.com/v22.0/{sender_id}",
+                        params={"fields": fields, "access_token": token},
+                    )
+                    if r.status_code == 200:
+                        info = r.json()
+                        if info.get("error"):
+                            continue
+                        if platform == "instagram":
+                            nombre = info.get("username") or info.get("name", "")
+                        else:
+                            nombre = info.get("name") or f"{info.get('first_name', '')} {info.get('last_name', '')}".strip()
+                        if nombre and nombre != sender_id:
+                            save_profile(phone, "", nombre)
+                            log.info("%s perfil guardado: %s → %s", platform.upper(), phone, nombre)
+                            return
                     else:
-                        nombre = info.get("name") or f"{info.get('first_name', '')} {info.get('last_name', '')}".strip() or sender_id
-                    save_profile(phone, "", nombre)
-                    log.info("%s perfil guardado: %s → %s", platform.upper(), phone, nombre)
+                        log.debug("_fetch_social_name %s token attempt %s: %s",
+                                  platform, r.status_code, r.text[:120])
         except Exception as e:
             log.debug("No se pudo obtener perfil %s %s: %s", platform, sender_id, e)
 
@@ -587,8 +600,15 @@ async def webhook(request: Request):
                     if _rate_limited(phone):
                         log.warning("Rate limit excedido FB phone=%s", phone)
                         continue
-                    log.info("MESSENGER from=%s text=%r", phone, texto[:80])
-                    await _fetch_social_name(sender_id, phone, "facebook")
+                    log.info("MESSENGER from=%s sender=%s text=%r",
+                             phone, ev.get("sender", {}), texto[:80])
+                    # Guardar nombre si viene en el webhook
+                    sender_obj = ev.get("sender", {})
+                    sender_name = sender_obj.get("name", "") or sender_obj.get("first_name", "")
+                    if sender_name and not get_profile(phone):
+                        save_profile(phone, "", sender_name)
+                    elif not sender_name:
+                        await _fetch_social_name(sender_id, phone, "facebook")
                     from messaging import send_messenger
                     await _process_social(phone, sender_id, texto, "messenger", send_messenger)
         except Exception as e:
@@ -904,6 +924,46 @@ async def webhook(request: Request):
                 name="Centro Médico Carampangue",
                 address="Monsalve 102 esq. República, Carampangue",
             )
+
+        # C4 fix: process remaining messages in batch (Meta can send 2+ per payload)
+        for _xm in change["messages"][1:]:
+            try:
+                _xphone = _xm["from"].lstrip("+")
+                _xid = _xm.get("id", "")
+                if _xid and is_duplicate(_xid):
+                    continue
+                if _rate_limited(_xphone):
+                    continue
+                _xtype = _xm.get("type", "")
+                _xtxt = ""
+                if _xtype == "text":
+                    _xtxt = _xm.get("text", {}).get("body", "").strip()
+                elif _xtype == "interactive":
+                    _xi = _xm.get("interactive", {})
+                    _xit = _xi.get("type", "")
+                    if _xit == "button_reply":
+                        _xtxt = _xi["button_reply"]["id"]
+                    elif _xit == "list_reply":
+                        _xtxt = _xi["list_reply"]["id"]
+                if not _xtxt:
+                    log.info("MSG extra en batch ignorado from=%s type=%s", _xphone, _xtype)
+                    continue
+                log.info("MSG extra en batch from=%s type=%s text=%r", _xphone, _xtype, _xtxt[:80])
+                _xs = get_session(_xphone)
+                _xstate = _xs.get("state", "IDLE")
+                log_message(_xphone, "in", _xtxt, _xstate, canal="whatsapp")
+                _xresp = await handle_message(_xphone, _xtxt, _xs)
+                _xstate_after = get_session(_xphone).get("state", "IDLE")
+                if _xresp:
+                    if isinstance(_xresp, dict) and _xresp.get("type") == "interactive":
+                        await send_whatsapp_interactive(_xphone, _xresp["interactive"])
+                        _xrt = _xresp["interactive"].get("body", {}).get("text", "")
+                    else:
+                        await send_whatsapp(_xphone, str(_xresp))
+                        _xrt = str(_xresp)
+                    log_message(_xphone, "out", _xrt, _xstate_after, canal="whatsapp")
+            except Exception as _xe:
+                log.warning("Error procesando msg extra en batch WA: %s", _xe)
 
     except (KeyError, IndexError) as e:
         log.warning("Payload inesperado: %s | data=%s", e, str(data)[:200])

@@ -25,8 +25,8 @@ _INTENT_CACHE: dict[str, dict] = {
     "nutri":          {"intent": "agendar", "especialidad": "nutrición"},
     "nutrición":      {"intent": "agendar", "especialidad": "nutrición"},
     "nutricion":      {"intent": "agendar", "especialidad": "nutrición"},
-    "traumato":       {"intent": "agendar", "especialidad": "traumatología"},
-    "traumatología":  {"intent": "agendar", "especialidad": "traumatología"},
+    "traumato":       {"intent": "agendar", "especialidad": "medicina general"},
+    "traumatología":  {"intent": "agendar", "especialidad": "medicina general"},
     "cardio":         {"intent": "agendar", "especialidad": "cardiología"},
     "cardiología":    {"intent": "agendar", "especialidad": "cardiología"},
     "gine":           {"intent": "agendar", "especialidad": "ginecología"},
@@ -130,7 +130,7 @@ Si mencionan un profesional por nombre, mapea al nombre de la especialidad:
 - Dr. Olavarría / Olavarría / Dr. Rodrigo → "olavarría"
 - Dr. Abarca / Abarca / Dr. Andrés → "abarca"
 - Dr. Márquez / Márquez / Dr. Alonso → "medicina familiar"
-- Dr. Barraza / Barraza → "traumatología"
+- Dr. Barraza / Barraza / traumatología / traumatólogo → "medicina general" (traumatología temporalmente no disponible, derivar a medicina general)
 - Dr. Borrego / Borrego → "otorrinolaringología"
 - Dr. Quijano / Quijano → "gastroenterología"
 - Dr. Tirso / Tirso → "ginecología"
@@ -201,17 +201,17 @@ GINECOLOGÍA / MATRONA
 - Ecografía vaginal / transvaginal → Ecografía ginecológica $35.000 (solo particular) con **Ginecología** (Dr. Tirso Rejón). Evalúa útero, ovarios y detecta quistes, miomas o irregularidades.
 
 KINE / TRAUMA / DOLOR
-- Dolor de espalda / lumbago / lumbalgia → **Kinesiología** (Luis Armijo o Leonardo Etcheverry) o **Traumatología** (Dr. Claudio Barraza) si necesita evaluación médica.
-- Dolor de rodilla / hombro / tobillo → **Traumatología** para diagnóstico, luego **Kinesiología** para rehabilitación.
-- Torcedura / esguince → **Traumatología** + **Kinesiología**.
-- Tendinitis / codo de tenista / codo de cosechero → **Kinesiología** o **Traumatología**.
+- Dolor de espalda / lumbago / lumbalgia → **Kinesiología** (Luis Armijo o Leonardo Etcheverry) o **Medicina General** si necesita evaluación médica.
+- Dolor de rodilla / hombro / tobillo → **Medicina General** para diagnóstico, luego **Kinesiología** para rehabilitación.
+- Torcedura / esguince → **Medicina General** + **Kinesiología**.
+- Tendinitis / codo de tenista / codo de cosechero → **Kinesiología** o **Medicina General**.
 - Torticolis / cuello apretado / contractura → **Masoterapia** (Paola Acosta, $17.990 por 20 min) o **Kinesiología**.
 - Masaje relajante / masaje de espalda → **Masoterapia** (Paola Acosta).
-- Me pegué en la espalda / golpe en la espalda / me caí → **Traumatología** para evaluación.
-- Hernia al disco / hernia lumbar → **Traumatología** primero, luego **Kinesiología** para rehabilitación.
-- Ciática / me da el nervio ciático / dolor que baja por la pierna → **Traumatología** o **Kinesiología**.
+- Me pegué en la espalda / golpe en la espalda / me caí → **Medicina General** para evaluación.
+- Hernia al disco / hernia lumbar → **Medicina General** primero, luego **Kinesiología** para rehabilitación.
+- Ciática / me da el nervio ciático / dolor que baja por la pierna → **Medicina General** o **Kinesiología**.
 - Calambres en la pierna (si son frecuentes) → **Medicina General**.
-- Se me zafó el hombro / se me salió el hombro → si es reciente URGENCIA 131, si ya se acomodó → **Traumatología**.
+- Se me zafó el hombro / se me salió el hombro → si es reciente URGENCIA 131, si ya se acomodó → **Medicina General**.
 
 SALUD DIGESTIVA (muy común en zona rural de Arauco)
 - Empacho / me empaché / me hizo mal la comida → cuadro digestivo popular chileno con náuseas, vómitos, diarrea, dolor de guatita, vientre abultado. → **Medicina General**; si es recurrente → **Gastroenterología** (Dr. Quijano).
@@ -302,6 +302,7 @@ Responde directamente estas dudas sin necesidad de agendar:
 - ¿Hacen certificado médico (trabajo, colegio, deporte)? → Sí, en Medicina General.
 - ¿Puedo llevar acompañante? → Sí, siempre.
 - ¿Puedo cambiar la fecha de mi hora? → Sí, escribiendo "cancelar" y luego agendando una nueva.
+- ¿Tienen radiografía? / radiografía / rayos X / Rx / radiografía panorámica / radiografía de tórax / radiografía de columna → En el CMC no tenemos equipo de radiografía propio, pero nuestros médicos pueden darte la *orden médica* para que te la tomes en laboratorios cercanos en Carampangue o Arauco (como Rayos X Arauco o el Hospital de Arauco). Para radiografías **dentales** (panorámica, periapical, etc.), nuestros dentistas también dan la orden. Primero agenda con el especialista que corresponda para que te evalúe y te dé la orden. ¿Te ayudo a agendar?
 
 MEDICINA GENERAL / SÍNTOMAS
 - Presión alta / hipertensión → empezar con **Medicina General** (consulta $7.880 Fonasa / $25.000 particular); si necesita especialista derivamos a **Cardiología**.
@@ -451,8 +452,7 @@ CARDIOLOGÍA (Dr. Miguel Millán — solo particular):
 GINECOLOGÍA (Dr. Tirso Rejón — solo particular):
 - Consulta ginecología: $30.000 — control ginecológico, trastornos menstruales, anticoncepción, menopausia, dolor pélvico, infecciones.
 
-TRAUMATOLOGÍA (Dr. Claudio Barraza — solo particular):
-- Consulta traumatología: $35.000 — evaluación de lesiones óseas, articulares, musculares: fracturas, esguinces, tendinitis, hernias de disco, artrosis, dolor articular.
+TRAUMATOLOGÍA — temporalmente no disponible como especialidad separada. Derivar a **Medicina General** para evaluación de lesiones óseas, articulares, musculares (fracturas, esguinces, tendinitis, hernias de disco, artrosis, dolor articular). El médico general evaluará y derivará si es necesario.
 
 OTORRINOLARINGOLOGÍA (Dr. Manuel Borrego — solo particular):
 - Consulta ORL: $35.000 — evaluación de oído, nariz y garganta: sinusitis, amigdalitis, otitis, ronquidos, pólipos nasales, desviación de tabique, vértigo.

@@ -237,7 +237,7 @@ PRECIOS_SLOT = {
     "Podología":              ("particular", 20000, "desde"),
     "Cardiología":            ("particular", 40000),
     "Ginecología":            ("particular", 30000),
-    "Traumatología":          ("particular", 35000),
+    # "Traumatología" — temporalmente deshabilitada (Dr. Barraza no disponible)
     "Otorrinolaringología":   ("particular", 35000),
     "Gastroenterología":      ("particular", 35000),
     "Ecografía":              ("particular", 40000),
@@ -338,6 +338,7 @@ CROSS_REFERENCE: dict[str, str] = {
 # le sugerimos un servicio complementario en vez de un control genérico.
 # Clave = especialidad (lowercase), Valor = (mensaje, especialidad_destino)
 UPSELL_POSTCONSULTA: dict[str, tuple[str, str]] = {
+    # traumatología → redirigida a medicina general (Dr. Barraza no disponible)
     "traumatología": (
         "Para consolidar tu recuperación, la kinesiología puede marcar la diferencia 💪\n\n"
         "¿Quieres agendar con nuestros kinesiólogos?",
@@ -966,6 +967,10 @@ async def _handle_confirmacion_precita(phone: str, tl: str, data: dict) -> str:
         data = dict(data or {})
         data["cita_old"] = cita_old
         data["reagendar_mode"] = True
+        # Propagar es_tercero desde citas_bot para no pisar el perfil del dueño del celular
+        cita_bot_row = get_cita_bot_by_id_cita(str(id_cita), phone)
+        if cita_bot_row and cita_bot_row.get("es_tercero"):
+            data["booking_for_other"] = True
         perfil = get_profile(phone)
         if perfil:
             data["rut_conocido"] = perfil["rut"]
@@ -2737,7 +2742,7 @@ _ESP_ID_MAP = {
     "esp_medfam":  "medicina familiar",
     "esp_orl":     "otorrinolaringología",
     "esp_cardio":  "cardiología",
-    "esp_trauma":  "traumatología",
+    "esp_trauma":  "medicina general",  # traumatología redirigida
     "esp_gineco":  "ginecología",
     "esp_gastro":  "gastroenterología",
     "esp_psico":   "psicología",
@@ -2777,7 +2782,7 @@ def _especialidades_medico_msg() -> dict:
                 {"id": "esp_medfam",  "title": "Medicina Familiar"},
                 {"id": "esp_orl",     "title": "Otorrinolaringología"},
                 {"id": "esp_cardio",  "title": "Cardiología"},
-                {"id": "esp_trauma",  "title": "Traumatología"},
+                # Traumatología temporalmente deshabilitada (Dr. Barraza no disponible)
                 {"id": "esp_gineco",  "title": "Ginecología"},
                 {"id": "esp_gastro",  "title": "Gastroenterología"},
                 {"id": "esp_psico",   "title": "Psicología"},
@@ -2823,7 +2828,7 @@ _ESPECIALIDADES_TEXTO = (
     "• Medicina Familiar\n"
     "• Otorrinolaringología\n"
     "• Cardiología\n"
-    "• Traumatología\n"
+    # "• Traumatología\n"  # temporalmente deshabilitada
     "• Ginecología\n"
     "• Gastroenterología\n"
     "• Odontología General\n"
