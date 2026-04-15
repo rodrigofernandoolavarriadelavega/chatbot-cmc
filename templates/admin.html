@@ -474,21 +474,17 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
   .pill { font-size: 10px; padding: 3px 7px; }
   /* Spacer hidden on mobile */
   .topbar-spacer { display: none; }
-  /* Actions: 2-row grid layout */
+  /* Actions: simple wrap — each button on its own space */
   .topbar-actions {
-    display: grid !important;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 5px;
+    display: flex !important; flex-wrap: wrap; gap: 5px; align-items: center;
     order: 10; width: 100%;
     padding: 6px 0 2px; border-top: 1px solid var(--border);
   }
-  .topbar-actions .btn { font-size: 11px; padding: 8px 6px; white-space: nowrap; text-align: center; border-radius: 8px; }
+  .topbar-actions .btn { font-size: 11px; padding: 8px 12px; white-space: nowrap; border-radius: 8px; }
   .topbar-actions kbd { display: none; }
-  /* Notification bell inline with grid */
-  #btn-notif-mute { padding: 6px 8px !important; font-size: 14px !important; border-radius: 8px !important; }
-  /* Dropdown takes full cell */
-  .topbar-actions .dropdown { display: contents; }
-  .topbar-actions .dropdown > button { grid-column: auto; }
+  #btn-notif-mute { padding: 6px 10px !important; font-size: 14px !important; border-radius: 8px !important; }
+  /* Alert bar below topbar, not overlapping */
+  #alert-bar { position: relative; z-index: 9; }
   /* Alert bar */
   #alert-bar {
     flex-wrap: wrap !important; padding: 8px 12px !important;
@@ -756,6 +752,10 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
     </div>
     <button class="btn" onclick="doLogout()" style="font-size:11px;padding:5px 10px;border-radius:8px;background:#f8fafc;color:#64748b;border:1px solid #e2e8f0;" title="Cerrar sesion">Salir</button>
   </div>
+  <div id="alert-bar" style="display:none; background:#fef2f2; border:1px solid #fca5a5; border-radius:8px; padding:6px 12px; align-items:center; gap:8px; font-size:11px; font-weight:500; color:#991b1b; width:100%; order:30;">
+    <span style="font-size:12px;">🚨</span>
+    <span id="alert-text"></span>
+  </div>
 </div>
 
 <!-- MODAL KINESIOLOGÍA -->
@@ -1001,12 +1001,6 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
   </div>
 </div>
 
-<!-- BANNER DE ALERTAS -->
-<div id="alert-bar" style="display:none; background:#fef2f2; border-bottom:1px solid #fca5a5; padding:7px 20px; align-items:center; gap:16px; font-size:12px; font-weight:500; color:#991b1b;">
-  <span style="font-size:14px;">🚨</span>
-  <span id="alert-text"></span>
-  <span style="margin-left:auto; font-size:11px; color:#b91c1c; opacity:.7;">Se actualiza automáticamente</span>
-</div>
 
 <!-- OVERLAYS MOBILE -->
 <div class="filters-overlay" id="filters-overlay" onclick="toggleFilters()"></div>
