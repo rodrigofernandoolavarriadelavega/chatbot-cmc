@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Portal del Paciente — Centro Médico Carampangue</title>
+<style>
+:root {
+  --bg: #f1f5f9; --surface: #ffffff; --border: #e2e8f0;
+  --text: #1e293b; --text-2: #475569; --text-3: #94a3b8;
+  --primary: #1172AB; --primary-hover: #0e5f8f; --primary-light: #e8f4fb;
+  --green: #10b981; --green-soft: #ecfdf5;
+  --amber: #f59e0b; --amber-soft: #fffbeb;
+  --red: #ef4444; --red-soft: #fef2f2;
+  --blue: #3b82f6; --blue-soft: #eff6ff;
+  --radius: 12px;
+  --shadow: 0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
+  --shadow-md: 0 4px 6px rgba(0,0,0,.07),0 2px 4px rgba(0,0,0,.06);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  min-height: 100vh; min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Login ──────────────────────────────────────────────── */
+.screen { display: none; }
+.screen.active { display: flex; }
+
+#login-screen {
+  flex-direction: column; align-items: center; justify-content: center;
+  min-height: 100vh; min-height: 100dvh; padding: 20px;
+}
+.login-card {
+  background: var(--surface); border-radius: 16px;
+  box-shadow: var(--shadow-md); padding: 36px 28px 32px;
+  width: 380px; max-width: 100%;
+}
+.login-logo {
+  text-align: center; margin-bottom: 24px;
+}
+.login-logo img { height: 56px; object-fit: contain; margin-bottom: 8px; }
+.login-logo h1 { font-size: 18px; font-weight: 700; color: var(--text); }
+.login-logo p { font-size: 13px; color: var(--text-2); margin-top: 4px; }
+
+.form-group { margin-bottom: 16px; }
+.form-group label {
+  display: block; font-size: 12px; font-weight: 600;
+  color: var(--text-2); margin-bottom: 6px;
+}
+.form-group input {
+  width: 100%; padding: 12px 14px; border: 1px solid var(--border);
+  border-radius: 10px; font-family: inherit; font-size: 16px;
+  color: var(--text); background: var(--bg); transition: border-color .15s;
+}
+.form-group input:focus {
+  outline: none; border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(17,114,171,.12);
+}
+.btn {
+  width: 100%; padding: 13px; border: none; border-radius: 10px;
+  font-family: inherit; font-size: 15px; font-weight: 600;
+  cursor: pointer; transition: background .15s, opacity .15s;
+}
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-hover); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.error-msg {
+  margin-top: 12px; padding: 10px 14px; border-radius: 10px;
+  background: var(--red-soft); color: var(--red);
+  font-size: 13px; font-weight: 500; text-align: center;
+  display: none;
+}
+.info-msg {
+  margin-top: 12px; padding: 10px 14px; border-radius: 10px;
+  background: var(--primary-light); color: var(--primary);
+  font-size: 13px; font-weight: 500; text-align: center;
+  display: none;
+}
+
+/* OTP input */
+.otp-section { display: none; margin-top: 20px; }
+.otp-section.show { display: block; }
+.otp-label {
+  font-size: 13px; color: var(--text-2); text-align: center;
+  margin-bottom: 12px;
+}
+.otp-boxes {
+  display: flex; gap: 8px; justify-content: center; margin-bottom: 16px;
+}
+.otp-boxes input {
+  width: 48px; height: 56px; text-align: center;
+  font-size: 24px; font-weight: 700; font-family: inherit;
+  border: 2px solid var(--border); border-radius: 12px;
+  background: var(--bg); color: var(--text);
+  transition: border-color .15s;
+}
+.otp-boxes input:focus {
+  outline: none; border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(17,114,171,.12);
+}
+.resend-link {
+  display: block; text-align: center; margin-top: 12px;
+  font-size: 12px; color: var(--text-3); cursor: pointer;
+}
+.resend-link:hover { color: var(--primary); }
+
+/* ── Dashboard ──────────────────────────────────────────── */
+#dashboard-screen {
+  flex-direction: column; min-height: 100vh; min-height: 100dvh;
+}
+.dash-header {
+  background: var(--primary); color: #fff;
+  padding: 20px 20px 24px; position: relative;
+}
+.dash-header-top {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 12px;
+}
+.dash-header-top img { height: 32px; }
+.btn-logout {
+  background: rgba(255,255,255,.15); color: #fff; border: none;
+  padding: 6px 14px; border-radius: 8px; font-family: inherit;
+  font-size: 12px; font-weight: 500; cursor: pointer;
+}
+.btn-logout:hover { background: rgba(255,255,255,.25); }
+.dash-greeting { font-size: 22px; font-weight: 700; }
+.dash-subtitle { font-size: 13px; opacity: .8; margin-top: 2px; }
+
+.dash-content { flex: 1; padding: 16px 16px 100px; }
+
+/* Cards */
+.section { margin-bottom: 20px; }
+.section-title {
+  font-size: 14px; font-weight: 700; color: var(--text);
+  margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+}
+.section-title .icon { font-size: 18px; }
+.section-badge {
+  background: var(--primary-light); color: var(--primary);
+  font-size: 11px; font-weight: 700; padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.card {
+  background: var(--surface); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 14px 16px;
+  margin-bottom: 8px; border-left: 4px solid transparent;
+}
+.card.upcoming { border-left-color: var(--green); }
+.card.past { border-left-color: var(--border); }
+
+.card-date {
+  font-size: 14px; font-weight: 600; color: var(--text);
+}
+.card-time {
+  font-size: 13px; color: var(--primary); font-weight: 600;
+  margin-top: 2px;
+}
+.card-detail {
+  font-size: 13px; color: var(--text-2); margin-top: 4px;
+}
+.card-specialty {
+  display: inline-block; font-size: 11px; font-weight: 600;
+  padding: 2px 8px; border-radius: 20px; margin-top: 6px;
+  background: var(--blue-soft); color: var(--blue);
+}
+
+/* Diagnósticos */
+.dx-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.dx-pill {
+  display: inline-block; font-size: 12px; font-weight: 600;
+  padding: 5px 12px; border-radius: 20px;
+  background: var(--amber-soft); color: #92400e;
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center; padding: 24px 16px;
+  background: var(--surface); border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.empty-state .icon { font-size: 32px; margin-bottom: 8px; }
+.empty-state p { font-size: 13px; color: var(--text-3); }
+
+/* CTA flotante */
+.cta-float {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  padding: 12px 16px; padding-bottom: max(12px, env(safe-area-inset-bottom));
+  background: linear-gradient(transparent, var(--bg) 20%);
+}
+.btn-whatsapp {
+  width: 100%; padding: 15px; border: none; border-radius: 14px;
+  background: #25D366; color: #fff;
+  font-family: inherit; font-size: 16px; font-weight: 700;
+  cursor: pointer; display: flex; align-items: center;
+  justify-content: center; gap: 10px;
+  box-shadow: 0 4px 12px rgba(37,211,102,.3);
+  transition: transform .1s;
+}
+.btn-whatsapp:active { transform: scale(.97); }
+.btn-whatsapp svg { width: 22px; height: 22px; fill: #fff; }
+
+/* Loading spinner */
+.spinner {
+  display: inline-block; width: 20px; height: 20px;
+  border: 2px solid rgba(255,255,255,.3);
+  border-top-color: #fff; border-radius: 50%;
+  animation: spin .6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-screen {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-height: 100vh; gap: 16px;
+}
+.loading-screen .spinner {
+  width: 36px; height: 36px;
+  border-color: var(--border); border-top-color: var(--primary);
+}
+.loading-screen p { font-size: 14px; color: var(--text-3); }
+
+/* Collapsible historial */
+.historial-toggle {
+  background: none; border: none; color: var(--primary);
+  font-family: inherit; font-size: 13px; font-weight: 600;
+  cursor: pointer; padding: 8px 0; display: flex;
+  align-items: center; gap: 4px;
+}
+.historial-list { display: none; }
+.historial-list.open { display: block; }
+</style>
+</head>
+<body>
+
+<!-- ── Screen: Loading ────────────────────────────────────── -->
+<div id="loading-screen" class="loading-screen">
+  <div class="spinner"></div>
+  <p>Cargando portal...</p>
+</div>
+
+<!-- ── Screen: Login ──────────────────────────────────────── -->
+<div id="login-screen" class="screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <img src="/static/logo.png" alt="CMC">
+      <h1>Portal del Paciente</h1>
+      <p>Centro Medico Carampangue</p>
+    </div>
+
+    <!-- Step 1: RUT -->
+    <div id="step-rut">
+      <div class="form-group">
+        <label for="rut-input">Ingresa tu RUT</label>
+        <input type="text" id="rut-input" placeholder="12.345.678-9"
+               inputmode="text" autocomplete="off" maxlength="12">
+      </div>
+      <button class="btn btn-primary" id="btn-send-code" onclick="requestCode()">
+        Enviar codigo por WhatsApp
+      </button>
+    </div>
+
+    <!-- Step 2: OTP -->
+    <div class="otp-section" id="otp-section">
+      <div class="otp-label">
+        Ingresa el codigo de 6 digitos que recibiste por WhatsApp
+      </div>
+      <div class="otp-boxes" id="otp-boxes">
+        <input type="text" inputmode="numeric" maxlength="1" data-idx="0">
+        <input type="text" inputmode="numeric" maxlength="1" data-idx="1">
+        <input type="text" inputmode="numeric" maxlength="1" data-idx="2">
+        <input type="text" inputmode="numeric" maxlength="1" data-idx="3">
+        <input type="text" inputmode="numeric" maxlength="1" data-idx="4">
+        <input type="text" inputmode="numeric" maxlength="1" data-idx="5">
+      </div>
+      <button class="btn btn-primary" id="btn-verify" onclick="verifyCode()">
+        Verificar
+      </button>
+      <span class="resend-link" onclick="requestCode()">Reenviar codigo</span>
+    </div>
+
+    <div class="error-msg" id="error-msg"></div>
+    <div class="info-msg" id="info-msg"></div>
+  </div>
+</div>
+
+<!-- ── Screen: Dashboard ──────────────────────────────────── -->
+<div id="dashboard-screen" class="screen">
+  <div class="dash-header">
+    <div class="dash-header-top">
+      <img src="/static/logo.png" alt="CMC" style="filter: brightness(10);">
+      <button class="btn-logout" onclick="doLogout()">Cerrar sesion</button>
+    </div>
+    <div class="dash-greeting" id="dash-greeting">Hola</div>
+    <div class="dash-subtitle" id="dash-subtitle"></div>
+  </div>
+
+  <div class="dash-content" id="dash-content">
+    <!-- Populated by JS -->
+  </div>
+
+  <div class="cta-float">
+    <button class="btn-whatsapp" id="btn-agendar" onclick="agendar()">
+      <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      Agendar nueva cita
+    </button>
+  </div>
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────
+let currentRut = '';
+let patientData = null;
+
+// ── Init ──────────────────────────────────────────────────
+(async function init() {
+  try {
+    const r = await fetch('/portal/api/datos', { credentials: 'same-origin' });
+    if (r.ok) {
+      patientData = await r.json();
+      showDashboard();
+    } else {
+      showLogin();
+    }
+  } catch {
+    showLogin();
+  }
+})();
+
+function showLogin() {
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('login-screen').classList.add('active');
+  document.getElementById('dashboard-screen').classList.remove('active');
+  document.getElementById('rut-input').focus();
+}
+
+function showDashboard() {
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('login-screen').classList.remove('active');
+  document.getElementById('dashboard-screen').classList.add('active');
+  renderDashboard();
+}
+
+// ── RUT formatter ─────────────────────────────────────────
+document.getElementById('rut-input').addEventListener('input', function(e) {
+  let v = e.target.value.replace(/[^0-9kK]/g, '').toUpperCase();
+  if (v.length > 9) v = v.slice(0, 9);
+  if (v.length > 1) {
+    const dv = v.slice(-1);
+    const body = v.slice(0, -1);
+    let formatted = '';
+    const reversed = body.split('').reverse();
+    for (let i = 0; i < reversed.length; i++) {
+      if (i > 0 && i % 3 === 0) formatted = '.' + formatted;
+      formatted = reversed[i] + formatted;
+    }
+    e.target.value = formatted + '-' + dv;
+  }
+});
+
+document.getElementById('rut-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') requestCode();
+});
+
+// ── OTP auto-advance ──────────────────────────────────────
+const otpInputs = document.querySelectorAll('#otp-boxes input');
+otpInputs.forEach((inp, i) => {
+  inp.addEventListener('input', function() {
+    this.value = this.value.replace(/[^0-9]/g, '');
+    if (this.value && i < 5) otpInputs[i + 1].focus();
+    // Auto-verify when all filled
+    if (i === 5 && this.value) {
+      const code = Array.from(otpInputs).map(x => x.value).join('');
+      if (code.length === 6) verifyCode();
+    }
+  });
+  inp.addEventListener('keydown', function(e) {
+    if (e.key === 'Backspace' && !this.value && i > 0) {
+      otpInputs[i - 1].focus();
+    }
+  });
+  // Paste support
+  inp.addEventListener('paste', function(e) {
+    e.preventDefault();
+    const paste = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+    for (let j = 0; j < 6 && j < paste.length; j++) {
+      otpInputs[j].value = paste[j];
+    }
+    if (paste.length >= 6) verifyCode();
+    else if (paste.length > 0) otpInputs[Math.min(paste.length, 5)].focus();
+  });
+});
+
+// ── API calls ─────────────────────────────────────────────
+async function requestCode() {
+  const rut = document.getElementById('rut-input').value.trim();
+  if (!rut || rut.length < 9) {
+    showError('Ingresa un RUT valido');
+    return;
+  }
+  currentRut = rut;
+  const btn = document.getElementById('btn-send-code');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+  hideMessages();
+
+  try {
+    const r = await fetch('/portal/api/request-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rut }),
+    });
+    const data = await r.json();
+    if (!r.ok) {
+      showError(data.detail || 'Error enviando codigo');
+      btn.disabled = false;
+      btn.textContent = 'Enviar codigo por WhatsApp';
+      return;
+    }
+    // Show OTP section
+    document.getElementById('step-rut').style.display = 'none';
+    document.getElementById('otp-section').classList.add('show');
+    showInfo('Codigo enviado a tu WhatsApp');
+    otpInputs.forEach(x => x.value = '');
+    otpInputs[0].focus();
+  } catch {
+    showError('Error de conexion');
+  }
+  btn.disabled = false;
+  btn.textContent = 'Enviar codigo por WhatsApp';
+}
+
+async function verifyCode() {
+  const code = Array.from(otpInputs).map(x => x.value).join('');
+  if (code.length !== 6) {
+    showError('Ingresa los 6 digitos');
+    return;
+  }
+  const btn = document.getElementById('btn-verify');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+  hideMessages();
+
+  try {
+    const r = await fetch('/portal/api/verify-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rut: currentRut, code }),
+      credentials: 'same-origin',
+    });
+    const data = await r.json();
+    if (!r.ok) {
+      showError(data.detail || 'Codigo incorrecto');
+      btn.disabled = false;
+      btn.textContent = 'Verificar';
+      otpInputs.forEach(x => x.value = '');
+      otpInputs[0].focus();
+      return;
+    }
+    // Load patient data
+    const r2 = await fetch('/portal/api/datos', { credentials: 'same-origin' });
+    if (r2.ok) {
+      patientData = await r2.json();
+      showDashboard();
+    } else {
+      showError('Error cargando datos');
+    }
+  } catch {
+    showError('Error de conexion');
+  }
+  btn.disabled = false;
+  btn.textContent = 'Verificar';
+}
+
+async function doLogout() {
+  await fetch('/portal/api/logout', { method: 'POST', credentials: 'same-origin' });
+  patientData = null;
+  // Reset login state
+  document.getElementById('step-rut').style.display = 'block';
+  document.getElementById('otp-section').classList.remove('show');
+  document.getElementById('rut-input').value = '';
+  hideMessages();
+  showLogin();
+}
+
+function agendar() {
+  if (patientData && patientData.whatsapp_url) {
+    window.open(patientData.whatsapp_url, '_blank');
+  }
+}
+
+// ── Render dashboard ──────────────────────────────────────
+function renderDashboard() {
+  if (!patientData) return;
+  const d = patientData;
+
+  // Header
+  const firstName = d.nombre.split(' ')[0];
+  document.getElementById('dash-greeting').textContent = `Hola, ${firstName}`;
+  const parts = [];
+  if (d.rut) parts.push(`RUT ${d.rut}`);
+  document.getElementById('dash-subtitle').textContent = parts.join(' · ');
+
+  const container = document.getElementById('dash-content');
+  let html = '';
+
+  // ── Próximas citas
+  html += `<div class="section">
+    <div class="section-title">
+      <span class="icon">📅</span> Proximas citas
+      <span class="section-badge">${d.citas_futuras.length}</span>
+    </div>`;
+
+  if (d.citas_futuras.length === 0) {
+    html += `<div class="empty-state">
+      <div class="icon">📭</div>
+      <p>No tienes citas agendadas</p>
+    </div>`;
+  } else {
+    for (const c of d.citas_futuras) {
+      html += `<div class="card upcoming">
+        <div class="card-date">${c.fecha_display || c.fecha}</div>
+        <div class="card-time">${c.hora_inicio} hrs</div>
+        <div class="card-detail">${c.profesional}</div>
+        ${c.especialidad ? `<span class="card-specialty">${c.especialidad}</span>` : ''}
+      </div>`;
+    }
+  }
+  html += '</div>';
+
+  // ── Diagnósticos crónicos
+  if (d.diagnosticos && d.diagnosticos.length > 0) {
+    html += `<div class="section">
+      <div class="section-title">
+        <span class="icon">🩺</span> Diagnosticos cronicos
+      </div>
+      <div class="dx-pills">`;
+    for (const dx of d.diagnosticos) {
+      html += `<span class="dx-pill">${dx}</span>`;
+    }
+    html += '</div></div>';
+  }
+
+  // ── Historial de atenciones
+  html += `<div class="section">
+    <div class="section-title">
+      <span class="icon">📋</span> Historial de atenciones
+      <span class="section-badge">${d.historial.length}</span>
+    </div>`;
+
+  if (d.historial.length === 0) {
+    html += `<div class="empty-state">
+      <div class="icon">📝</div>
+      <p>Sin atenciones recientes</p>
+    </div>`;
+  } else {
+    // Mostrar las primeras 3, el resto colapsado
+    const show = d.historial.slice(0, 3);
+    const rest = d.historial.slice(3);
+
+    for (const c of show) {
+      html += `<div class="card past">
+        <div class="card-date">${c.fecha_display || c.fecha}</div>
+        <div class="card-time">${c.hora_inicio} hrs</div>
+        <div class="card-detail">${c.profesional}</div>
+        ${c.especialidad ? `<span class="card-specialty">${c.especialidad}</span>` : ''}
+      </div>`;
+    }
+
+    if (rest.length > 0) {
+      html += `<button class="historial-toggle" onclick="toggleHistorial()">
+        Ver ${rest.length} mas ▼
+      </button>
+      <div class="historial-list" id="historial-rest">`;
+      for (const c of rest) {
+        html += `<div class="card past">
+          <div class="card-date">${c.fecha_display || c.fecha}</div>
+          <div class="card-time">${c.hora_inicio} hrs</div>
+          <div class="card-detail">${c.profesional}</div>
+          ${c.especialidad ? `<span class="card-specialty">${c.especialidad}</span>` : ''}
+        </div>`;
+      }
+      html += '</div>';
+    }
+  }
+  html += '</div>';
+
+  container.innerHTML = html;
+}
+
+function toggleHistorial() {
+  const list = document.getElementById('historial-rest');
+  const btn = event.target;
+  if (list.classList.contains('open')) {
+    list.classList.remove('open');
+    btn.innerHTML = `Ver ${patientData.historial.length - 3} mas ▼`;
+  } else {
+    list.classList.add('open');
+    btn.innerHTML = 'Ver menos ▲';
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────
+function showError(msg) {
+  const el = document.getElementById('error-msg');
+  el.textContent = msg;
+  el.style.display = 'block';
+  document.getElementById('info-msg').style.display = 'none';
+}
+function showInfo(msg) {
+  const el = document.getElementById('info-msg');
+  el.textContent = msg;
+  el.style.display = 'block';
+  document.getElementById('error-msg').style.display = 'none';
+}
+function hideMessages() {
+  document.getElementById('error-msg').style.display = 'none';
+  document.getElementById('info-msg').style.display = 'none';
+}
+</script>
+</body>
+</html>

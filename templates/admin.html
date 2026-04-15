@@ -169,6 +169,8 @@ body {
 .badge-urgent { background: var(--red-soft); color: var(--red); border-color: #fca5a5; }
 .badge-warn { background: var(--amber-soft); color: #92400e; border-color: #fcd34d; }
 .badge-prob { background: var(--green-soft); color: #15803d; border-color: #86efac; }
+.badge-staff { background: var(--purple-soft); color: var(--purple); border-color: #c4b5fd; font-weight: 800; }
+.conv-card.staff-card { border-left-color: var(--purple) !important; background: #faf8ff; }
 .no-results { text-align: center; color: var(--text-3); font-size: 12px; padding: 30px 0; }
 /* COL 3: CHAT + CONTEXTO */
 .col-main { flex: 1; display: flex; overflow: hidden; }
@@ -1110,14 +1112,16 @@ function convCard(c,g) {
   const fd = c.flow_data||{};
   const mins = waitMinutes(c.last_ts||c.updated_at);
   const canal = c.canal||"whatsapp";
+  const isStaff = !!c.is_staff;
   let badges="";
+  if (isStaff) badges+=`<span class="badge badge-staff">\u{1F9D1}\u200D\u2695\uFE0F ${(c.staff_role||"Staff").replace(/</g,"&lt;")}</span>`;
   if (c.msgs_sin_respuesta>0) badges+=`<span class="badge badge-unread">${c.msgs_sin_respuesta}</span>`;
   if (mins>=15) badges+=`<span class="badge badge-urgent">⏰ ${waitLabel(mins)} sin respuesta</span>`;
   else if (mins>=5) badges+=`<span class="badge badge-warn">⏱ ${waitLabel(mins)} esperando</span>`;
   else if (mins>=1&&c.state!=="IDLE") badges+=`<span class="badge" style="background:#f8fafc;color:#94a3b8;border-color:#e2e8f0;">⏱ ${waitLabel(mins)}</span>`;
   if (fd.fecha_display&&fd.hora_inicio) badges+=`<span class="badge badge-prob">✅ Lista para agendar</span>`;
   if (fd.handoff_reason&&fd.handoff_reason.startsWith("media:")) badges+=`<span class="badge badge-urgent">📎 Archivo pendiente</span>`;
-  return `<div class="conv-card${selectedPhone===c.phone?" selected":""}" style="border-left-color:${g.dot};" onclick="selectConv('${c.phone}')">
+  return `<div class="conv-card${selectedPhone===c.phone?" selected":""}${isStaff?" staff-card":""}" style="border-left-color:${isStaff?"var(--purple)":g.dot};" onclick="selectConv('${c.phone}')">
     <div class="card-top">
       <span class="cdot" style="background:${dotColor(c.state)};"></span>
       <span class="cname">${name.replace(/</g,"&lt;")}</span>
@@ -1142,7 +1146,8 @@ async function selectConv(phone) {
   document.getElementById("chat-name").textContent=name;
   const canal = conv?.canal||"whatsapp";
   const canalTxt = canalLabel(canal);
-  document.getElementById("chat-sub").textContent=(conv?.rut?`RUT ${conv.rut} · `:"")+`${phone} · ${canalTxt}`;
+  const staffTxt = conv?.is_staff ? ` · \u{1F9D1}\u200D\u2695\uFE0F ${conv.staff_role}` : "";
+  document.getElementById("chat-sub").textContent=(conv?.rut?`RUT ${conv.rut} · `:"")+`${phone} · ${canalTxt}${staffTxt}`;
   updateChatControls(conv?.state||"IDLE");
   updateContextPanel(conv);
   await Promise.all([loadMessages(phone), loadTags(phone), loadNotes(phone), loadPatientContext(phone)]);

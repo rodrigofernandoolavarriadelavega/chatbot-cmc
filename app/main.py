@@ -41,6 +41,7 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_doctor_resumen_precita, _job_doctor_reporte_progreso,
                   _job_doctor_reset_diario)
 import admin_routes
+import portal_routes
 
 logging.config.dictConfig({
     "version": 1,
@@ -235,12 +236,14 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 
-# Registrar rutas admin
+# Registrar rutas admin + portal
 app.include_router(admin_routes.router)
+app.include_router(portal_routes.router)
 
-# Cargar HTML del panel admin
+# Cargar HTML del panel admin y portal paciente
 _TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
 _ADMIN_HTML = (_TEMPLATE_DIR / "admin.html").read_text(encoding="utf-8")
+_PORTAL_HTML = (_TEMPLATE_DIR / "portal.html").read_text(encoding="utf-8")
 
 
 # ── Endpoints ────────────────────────────────────────────────────────────────
@@ -331,6 +334,12 @@ def admin_panel(token: str | None = Query(None),
             return _ADMIN_HTML.replace("__TOKEN__", "")
     # 3. No auth → redirect to login
     return RedirectResponse(url="/admin/login", status_code=302)
+
+
+@app.get("/portal", response_class=HTMLResponse)
+def portal_page():
+    """Portal del paciente — webapp pública (auth se maneja client-side con OTP)."""
+    return _PORTAL_HTML
 
 
 # ── Webhooks ─────────────────────────────────────────────────────────────────

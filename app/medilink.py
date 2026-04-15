@@ -706,6 +706,43 @@ async def listar_citas_paciente(id_paciente: int) -> list:
         return citas[:5]
 
 
+async def listar_historial_paciente(id_paciente: int, meses: int = 6) -> list:
+    """Lista citas pasadas de un paciente (últimos N meses)."""
+    hoy = datetime.now(_CHILE_TZ).date()
+    desde = (hoy - timedelta(days=meses * 30)).strftime("%Y-%m-%d")
+    hasta = hoy.strftime("%Y-%m-%d")
+    params = {
+        "id_paciente": {"eq": id_paciente},
+        "fecha":       {"gte": desde, "lte": hasta},
+        "estado_anulacion": {"eq": 0},
+    }
+    async with httpx.AsyncClient(timeout=10) as client:
+        try:
+            r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
+                           params={"q": _q(params)}, headers=HEADERS)
+        except httpx.RequestError as e:
+            log.error("listar_historial paciente=%d: %s", id_paciente, e)
+            return []
+        if r.status_code != 200:
+            return []
+        data = r.json().get("data", [])
+        citas = []
+        for c in data:
+            id_prof = c.get("id_profesional")
+            prof_info = PROFESIONALES.get(id_prof, {}) if id_prof else {}
+            citas.append({
+                "id":           c["id"],
+                "profesional":  c.get("nombre_profesional", "") or prof_info.get("nombre", ""),
+                "especialidad": prof_info.get("especialidad", ""),
+                "fecha":        c.get("fecha", ""),
+                "fecha_display": _fmt_fecha(c.get("fecha", "")),
+                "hora_inicio":  c.get("hora_inicio", "")[:5],
+            })
+        # Ordenar por fecha descendente (más reciente primero)
+        citas.sort(key=lambda x: x["fecha"], reverse=True)
+        return citas[:20]
+
+
 async def obtener_agenda_dia(id_prof: int, fecha: str | None = None) -> list[dict]:
     """Obtiene la agenda completa de un profesional para una fecha, con datos del paciente.
     Retorna lista de dicts con id_cita, hora, paciente (nombre, rut, edad, sexo), estado."""

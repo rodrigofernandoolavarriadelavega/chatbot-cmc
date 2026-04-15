@@ -191,6 +191,18 @@ def _conn():
             updated_at  TEXT DEFAULT (datetime('now'))
         )
     """)
+    # OTP para portal del paciente
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS portal_otp (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            rut         TEXT NOT NULL,
+            phone       TEXT NOT NULL,
+            code        TEXT NOT NULL,
+            created_at  TEXT DEFAULT (datetime('now')),
+            used        INTEGER DEFAULT 0
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_portal_otp_rut ON portal_otp(rut, created_at)")
     # Migración: agregar canal a messages si no existe
     try:
         conn.execute("ALTER TABLE messages ADD COLUMN canal TEXT DEFAULT 'whatsapp'")
@@ -1406,3 +1418,57 @@ def get_bsuid_stats() -> dict:
             "SELECT COUNT(*) as c FROM bsuid_map WHERE phone IS NOT NULL"
         ).fetchone()["c"]
         return {"total": total, "with_phone": with_phone, "phone_hidden": total - with_phone}
+
+
+# ── Portal del paciente — OTP ────────────────────────────────────────────────
+
+def save_portal_otp(rut: str, phone: str, code: str):
+    """Guarda un OTP para el portal del paciente."""
+    with _conn() as conn:
+        conn.execute(
+            "INSERT INTO portal_otp (rut, phone, code) VALUES (?, ?, ?)",
+            (rut, phone, code)
+        )
+        conn.commit()
+
+
+def verify_portal_otp(rut: str, code: str) -> str | None:
+    """Verifica un OTP. Retorna el phone si es válido, None si no.
+    Válido = código correcto, < 5 min, no usado."""
+    with _conn() as conn:
+        # Limpiar expirados
+        conn.execute(
+            "DELETE FROM portal_otp WHERE created_at < datetime('now', '-10 minutes')"
+        )
+        row = conn.execute(
+            """SELECT phone FROM portal_otp
+               WHERE rut=? AND code=? AND used=0
+               AND created_at >= datetime('now', '-5 minutes')
+               ORDER BY created_at DESC LIMIT 1""",
+            (rut, code)
+        ).fetchone()
+        if not row:
+            return None
+        # Marcar como usado
+        conn.execute(
+            "UPDATE portal_otp SET used=1 WHERE rut=? AND code=? AND used=0",
+            (rut, code)
+        )
+        conn.commit()
+        return row["phone"]
+
+
+def count_portal_otps(rut: str, minutes: int = 60) -> int:
+    """Cuenta OTPs enviados a un RUT en los últimos N minutos (rate limit)."""
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT COUNT(*) as c FROM portal_otp WHERE rut=? AND created_at >= datetime('now', ?)",
+            (rut, f"-{minutes} minutes")
+        ).fetchone()
+        return row["c"]
+
+
+def get_dx_tags(phone: str) -> list[str]:
+    """Retorna los tags dx:* de un paciente, con nombres limpios."""
+    tags = get_tags(phone)
+    return [t.replace("dx:", "").upper() for t in tags if t.startswith("dx:")]

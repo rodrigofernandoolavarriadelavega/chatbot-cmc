@@ -10,7 +10,7 @@ from collections import defaultdict
 from fastapi import APIRouter, Request, Query, HTTPException, Header, Depends, Cookie, Form, File, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
-from config import ADMIN_TOKEN, ORTODONCIA_TOKEN, COOKIE_SECRET
+from config import ADMIN_TOKEN, ORTODONCIA_TOKEN, COOKIE_SECRET, STAFF_PHONES
 from messaging import send_whatsapp, send_instagram, send_messenger
 from session import (get_session, reset_session, save_session, get_metricas,
                      log_message, get_messages, get_conversations, log_event,
@@ -313,7 +313,13 @@ def admin_logout():
 
 @router.get("/admin/api/conversations")
 def admin_conversations(_: str = Depends(require_admin)):
-    return get_conversations()
+    convs = get_conversations()
+    for c in convs:
+        role = STAFF_PHONES.get(c.get("phone", ""), "")
+        if role:
+            c["is_staff"] = True
+            c["staff_role"] = role
+    return convs
 
 
 @router.get("/admin/api/conversations/{phone}")

@@ -27,6 +27,9 @@ ORTODONCIA_TOKEN   = os.getenv("ORTODONCIA_TOKEN", "cmc_ortodoncia_2026")
 # Si no se define, se deriva automáticamente del ADMIN_TOKEN.
 COOKIE_SECRET      = os.getenv("COOKIE_SECRET", "")
 
+# Secreto para firmar cookies del portal del paciente.
+PORTAL_SESSION_SECRET = os.getenv("PORTAL_SESSION_SECRET", "")
+
 # Número WhatsApp al que se envían alertas técnicas (caída Medilink, etc.)
 # Formato sin "+" ni espacios, ej: 56945886628
 ADMIN_ALERT_PHONE  = os.getenv("ADMIN_ALERT_PHONE", "")
@@ -34,6 +37,12 @@ ADMIN_ALERT_PHONE  = os.getenv("ADMIN_ALERT_PHONE", "")
 # GES Clinical Assistant — servicio interno de triage por síntomas.
 # Apuntar al endpoint /triage del backend ges-clinical-app.
 GES_ASSISTANT_URL  = os.getenv("GES_ASSISTANT_URL", "http://localhost:8002")
+
+# Teléfonos de profesionales/staff del CMC.
+# JSON: {"56912345678": "Dr. Olavarría", "56987654321": "Dra. Burgos", ...}
+# Se muestra como badge en el panel admin para que recepción los identifique.
+import json as _json
+STAFF_PHONES: dict[str, str] = _json.loads(os.getenv("STAFF_PHONES", "{}"))
 
 # Mensajes proactivos: usar Message Templates aprobados por Meta (fuera de ventana 24h).
 # Poner en True SOLO cuando los templates estén aprobados en Meta Business Manager.

@@ -260,6 +260,10 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - [x] Systemd service `chatbot-cmc.service`: auto-restart, arranque al boot, deploy limpio
 - [x] Fix timezone: todos los CronTrigger con `timezone="America/Santiago"` (antes corrían en UTC)
 - [x] Fix mensajes fidelización en panel admin: log_message en todos los envíos (post-consulta, recordatorios, etc.)
+- [x] Referral tracking: pregunta "¿Cómo nos conociste?" en registro (WAIT_REFERRAL), tags referido:*, endpoint /admin/api/referral-stats
+- [x] Upsell inteligente post-consulta: cross-sell contextual por especialidad al responder "Mejor" (traumato→kine, MG→chequeo, odonto→estética, kine→masoterapia, ORL↔fono)
+- [x] Alerta automática al doctor cuando paciente reporta sentirse "Peor" en seguimiento post-consulta
+- [x] Fix get_ultimo_seguimiento: se llama antes de save_fidelizacion_respuesta (antes devolvía None)
 
 ## Dashboard admin
 - Ruta: `http://157.245.13.107:8001/admin?token=cmc_admin_2026`
@@ -268,6 +272,14 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 
 ## Sesión en curso
 **Fecha**: 2026-04-14
+
+**Hecho (sesión 2026-04-14 — referral tracking + upsell inteligente)**:
+- **Referral tracking** ("¿Cómo nos conociste?"): nuevo estado `WAIT_REFERRAL` en el flujo de registro de paciente nuevo, después de email y antes de crear paciente. Lista interactiva con 5 opciones (Amigo/familiar, Google/internet, Redes sociales, Ya me atendí antes, Prefiero no decir). Matching inteligente de texto libre (detecta "vecino", "instagram", "google", etc.). Guarda como `contact_tag` (`referido:amigo`, `referido:google`, `referido:rrss`, `referido:recurrente`). Endpoint `GET /admin/api/referral-stats?dias=30` con desglose por fuente. Panel admin actualizado (ACTIVE_STATES, STATE_GROUPS, STATE_LABELS, checklist progreso).
+- **Upsell inteligente post-consulta**: cuando paciente responde "Mejor" al seguimiento, ofrece cross-sell contextual según especialidad en vez de control genérico: Traumatología→Kinesiología, Medicina General→Chequeo preventivo, Odontología→Estética dental, Kinesiología→Masoterapia, ORL↔Fonoaudiología. Nuevo handler `upsell_si` inicia agendamiento directo. Dict `UPSELL_POSTCONSULTA` extensible.
+- **Alerta seguimiento peor**: cuando paciente responde "Peor" (botón o texto libre), envía WhatsApp automático al Dr. Olavarría con datos del paciente, especialidad y profesional. Log `seguimiento_alerta_peor`.
+- **Fix bug `get_ultimo_seguimiento`**: se llama ANTES de `save_fidelizacion_respuesta()` (antes devolvía None porque buscaba `respuesta IS NULL` post-save). Afectaba tanto botones como texto libre.
+- **Mock `send_whatsapp` en tests**: evita llamadas HTTP reales en harness_50 y harness_stress_200.
+- **Tests**: 342/342 (90 harness + 200 stress + 52 normalizer). Commit `2eacf76` deployado.
 
 **Hecho (sesión 2026-04-14 — alertas doctor + patologías crónicas + systemd + fixes)**:
 - **PNI pediátrico**: recordatorio de vacunas del Programa Nacional de Inmunización al confirmar cita pediátrica. Calendario completo (RN→8°Básico), vacunas escolares con mensaje condicional. Módulo `app/pni.py`.
@@ -479,7 +491,7 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
   - Cancelar desde botón: salta directo a `CONFIRMING_CANCEL` con la cita cargada
   - Endpoint `GET /admin/api/confirmaciones?fecha=YYYY-MM-DD` con resumen {confirmed, reagendar, cancelar, pendiente}
 
-**Estado del servidor**: ✅ Chatbot corriendo en `https://agentecmc.cl` (commit `58ea618`, systemd). GES Assistant en `127.0.0.1:8002` (systemd). GES API pública en `https://api-ges.agentecmc.cl` (nginx+SSL). Frontend GES en `https://ges.agentecmc.cl` (Vercel).
+**Estado del servidor**: ✅ Chatbot corriendo en `https://agentecmc.cl` (commit `2eacf76`, systemd). GES Assistant en `127.0.0.1:8002` (systemd). GES API pública en `https://api-ges.agentecmc.cl` (nginx+SSL). Frontend GES en `https://ges.agentecmc.cl` (Vercel).
 
 **Pendiente (corto plazo)**:
 - Rotación de PAT → SSH keys en remotes de `chatbot-cmc` y `ges-clinical-app` (Mac + VPS)
@@ -499,9 +511,14 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 9. ✅ ~~Cross-sell ORL↔Fono~~ — DONE (prestaciones reales + precios)
 10. ✅ ~~Registro expandido paciente nuevo~~ — DONE (fecha_nac, sexo, comuna, email, abandonment tracking)
 11. ✅ ~~Stress test 200 casos~~ — DONE (290/290 total)
-12. **Copagos Fonasa/Isapre al confirmar** — requiere verificar si Medilink expone previsión del paciente.
-13. **Dashboard métricas fidelización** — tasa respuesta post-consulta, conversión reactivación, adherencia kine.
-14. **Migración número WhatsApp** — backup conversaciones + delete WA Business + registrar en Cloud API.
+12. ❌ ~~Copagos Fonasa/Isapre al confirmar~~ — DESCARTADO: previsión del paciente solo se obtiene con huella biométrica presencial. Solo aplicaría a particulares (<20% de pacientes Fonasa).
+13. ✅ ~~Referral tracking~~ — DONE (WAIT_REFERRAL + tags referido:* + endpoint stats)
+14. ✅ ~~Upsell inteligente post-consulta~~ — DONE (cross-sell contextual + alerta peor)
+15. **Dashboard métricas fidelización** — tasa respuesta post-consulta, conversión reactivación, adherencia kine.
+16. **Migración número WhatsApp** — backup conversaciones + delete WA Business + registrar en Cloud API.
+17. **Sitio web SEO** — landing page agentecmc.cl + blogs por especialidad + botón "Agendar por WhatsApp".
+18. **Programa de referidos** — código único por paciente, descuento mutuo, tracking automático.
+19. **Campañas estacionales** — invierno, vuelta a clases, mes del corazón, segmentadas por tags.
 
 ---
 
