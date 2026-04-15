@@ -472,17 +472,22 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
   }
   .topbar-pills.show { display: flex !important; }
   .pill { font-size: 10px; padding: 3px 7px; }
-  /* Actions: compact row below hamburger */
+  /* Actions: horizontal scroll row */
   .topbar-actions {
-    display: flex !important; flex-wrap: wrap; gap: 4px; align-items: center;
+    display: flex !important; flex-wrap: nowrap; gap: 6px; align-items: center;
     order: 10; width: 100%;
-    padding: 4px 0 0; border-top: 1px solid var(--border);
+    padding: 6px 0 2px; border-top: 1px solid var(--border);
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
   }
-  .topbar-actions .btn { font-size: 10px; padding: 6px 8px; flex: 0 0 auto; }
+  .topbar-actions::-webkit-scrollbar { display: none; }
+  .topbar-actions .btn { font-size: 11px; padding: 7px 10px; flex: 0 0 auto; white-space: nowrap; }
   .topbar-actions kbd { display: none; }
   .topbar-actions > div[style*="margin-left:auto"] { display: none; }
   /* Hide search text, keep icon */
-  .topbar-actions .btn:has(kbd) { padding: 6px 10px; }
+  .topbar-actions .btn:has(kbd) { padding: 7px 10px; }
+  /* Notification bell */
+  #btn-notif-mute { flex: 0 0 auto; }
   /* Alert bar */
   #alert-bar {
     flex-wrap: wrap !important; padding: 8px 12px !important;
@@ -669,7 +674,7 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
 @media (max-width: 400px) {
   .topbar { padding: 6px 8px; gap: 4px; }
   .pill { font-size: 10px; padding: 2px 6px; }
-  .topbar-actions .btn { font-size: 10px; padding: 4px 6px; }
+  .topbar-actions .btn { font-size: 10px; padding: 6px 8px; }
   .conv-card { padding: 10px 12px; }
   .cname { font-size: 13px; }
   .msg-bubble { max-width: 92%; padding: 8px 12px; }
