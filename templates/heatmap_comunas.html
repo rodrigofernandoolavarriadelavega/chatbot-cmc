@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mapa de Calor — Pacientes CMC — Abril 2026</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; }
+  .map-container { width: 100%; height: 55vh; border-radius: 12px; margin: 16px auto; max-width: 1200px; }
+  #map { width: 100%; height: 100%; border-radius: 12px; }
+  #map2 { width: 100%; height: 100%; border-radius: 12px; }
+  .section-title { text-align: center; margin: 30px 16px 10px; font-size: 1.3rem; color: #f59e0b; }
+  .header { text-align: center; padding: 20px 16px 0; }
+  .header h1 { font-size: 1.6rem; color: #38bdf8; }
+  .header p { color: #94a3b8; margin-top: 4px; }
+  .stats { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin: 16px; }
+  .stat-card { background: #1e293b; border-radius: 10px; padding: 14px 24px; text-align: center; min-width: 130px; }
+  .stat-card .num { font-size: 1.8rem; font-weight: 700; color: #38bdf8; }
+  .stat-card .label { font-size: 0.8rem; color: #94a3b8; margin-top: 2px; }
+  .table-container { max-width: 950px; margin: 20px auto; padding: 0 16px; }
+  table { width: 100%; border-collapse: collapse; background: #1e293b; border-radius: 10px; overflow: hidden; }
+  th { background: #334155; color: #38bdf8; padding: 10px 14px; text-align: left; font-size: 0.85rem; }
+  td { padding: 8px 14px; border-top: 1px solid #334155; font-size: 0.85rem; }
+  tr:hover { background: #334155; }
+  .bar { height: 8px; background: #38bdf8; border-radius: 4px; display: inline-block; vertical-align: middle; }
+  .bar-bg { height: 8px; background: #334155; border-radius: 4px; width: 120px; display: inline-block; vertical-align: middle; }
+  .legend { max-width: 950px; margin: 10px auto; padding: 0 16px 20px; color: #64748b; font-size: 0.75rem; text-align: center; }
+  .sin-coords { background: #1e293b; border-radius: 10px; padding: 12px 20px; max-width: 950px; margin: 12px auto; }
+  .sin-coords h3 { color: #f59e0b; font-size: 0.9rem; margin-bottom: 6px; }
+  .sin-coords p { color: #94a3b8; font-size: 0.8rem; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Mapa de Calor — Pacientes CMC</h1>
+  <p>Abril 2026 · Centro Medico Carampangue</p>
+</div>
+
+<div class="stats">
+  <div class="stat-card"><div class="num">447</div><div class="label">Citas totales</div></div>
+  <div class="stat-card"><div class="num">342</div><div class="label">Pacientes unicos</div></div>
+  <div class="stat-card"><div class="num">299</div><div class="label">Con comuna</div></div>
+  <div class="stat-card"><div class="num">43</div><div class="label">Sin comuna</div></div>
+</div>
+
+<div class="section-title">Mapa por Comunas</div>
+<div class="map-container"><div id="map"></div></div>
+
+<div class="table-container">
+<table>
+  <thead>
+    <tr><th>#</th><th>Comuna</th><th>Pacientes</th><th>Citas</th><th>%</th><th>Distribucion</th></tr>
+  </thead>
+  <tbody id="tabla-comunas"></tbody>
+</table>
+</div>
+
+
+
+<div class="section-title">Localidades dentro de Arauco</div>
+<div class="map-container"><div id="map2"></div></div>
+
+<div class="table-container">
+<table>
+  <thead>
+    <tr><th>#</th><th>Localidad</th><th>Pacientes</th><th>% de Arauco</th><th>Distribucion</th></tr>
+  </thead>
+  <tbody id="tabla-localidades"></tbody>
+</table>
+</div>
+
+<div class="legend">
+  Datos extraidos de Medilink. Las coordenadas son aproximadas al centro de cada comuna.
+  Pacientes sin comuna registrada no se incluyen en la distribucion.
+</div>
+
+<script>
+const comunas = [{"comuna": "ARAUCO", "lat": -37.2467, "lng": -73.3178, "pacientes": 271, "citas": 309, "porcentaje": 90.6, "direcciones": ["Calle conumo", "Conumo Alto S/N, Carampangue", "Cerro colorado s/n", "El Arrayán 188 Villa Bosques de Montemar", "Conumo Alto S/N, Carampangue"]}, {"comuna": "CURANILAHUE", "lat": -37.4744, "lng": -73.3481, "pacientes": 20, "citas": 27, "porcentaje": 6.7, "direcciones": ["san José de cólico", "Av.las estrella s/n San José de colico", "Ortalisa", "Sargento Aldea 1250B, Curanilahue", "San José de colico"]}, {"comuna": "LOS ALAMOS", "lat": -37.62, "lng": -73.47, "pacientes": 3, "citas": 4, "porcentaje": 1.0, "direcciones": ["los alamos", "Fundo cheñeco s/n, San José de colico.", "Los álamos, población Caupolicán los tulipanes 94"]}, {"comuna": "CAÑETE", "lat": -37.8009, "lng": -73.3967, "pacientes": 2, "citas": 2, "porcentaje": 0.7, "direcciones": ["Bella Hortencia 075", "Lautaro"]}, {"comuna": "LOTA", "lat": -37.0833, "lng": -73.15, "pacientes": 1, "citas": 1, "porcentaje": 0.3, "direcciones": ["Población frecia calle villa las estrellas"]}, {"comuna": "CORONEL", "lat": -37.0167, "lng": -73.15, "pacientes": 1, "citas": 1, "porcentaje": 0.3, "direcciones": ["los radales 340"]}, {"comuna": "LEBU", "lat": -37.6083, "lng": -73.65, "pacientes": 1, "citas": 1, "porcentaje": 0.3, "direcciones": ["Yani"]}];
+const sinCoords = [];
+
+// Mapa centrado en Carampangue
+const map = L.map('map').setView([-37.27, -73.28], 10);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap',
+  maxZoom: 18,
+}).addTo(map);
+
+// Heat layer
+const maxPac = Math.max(...comunas.map(c => c.pacientes), 1);
+const heatData = [];
+comunas.forEach(c => {
+  const intensity = c.pacientes / maxPac;
+  heatData.push([c.lat, c.lng, intensity]);
+});
+
+L.heatLayer(heatData, {
+  radius: 35,
+  blur: 25,
+  maxZoom: 13,
+  max: 1.0,
+  gradient: {0.2: '#2563eb', 0.4: '#38bdf8', 0.6: '#fbbf24', 0.8: '#f97316', 1.0: '#ef4444'},
+}).addTo(map);
+
+// Marcadores circulares con popup
+comunas.forEach(c => {
+  const radius = Math.max(8, Math.min(30, Math.sqrt(c.pacientes) * 6));
+  const circle = L.circleMarker([c.lat, c.lng], {
+    radius: radius,
+    fillColor: '#38bdf8',
+    color: '#1e293b',
+    weight: 2,
+    opacity: 0.9,
+    fillOpacity: 0.6,
+  }).addTo(map);
+
+  let popup = `<b style="font-size:14px">${c.comuna}</b><br>
+    <b>${c.pacientes}</b> pacientes (${c.porcentaje}%)<br>
+    <b>${c.citas}</b> citas en el mes`;
+  if (c.direcciones && c.direcciones.length > 0) {
+    popup += `<br><br><small><b>Direcciones ejemplo:</b><br>${c.direcciones.join('<br>')}</small>`;
+  }
+  circle.bindPopup(popup);
+});
+
+// Tabla
+const tbody = document.getElementById('tabla-comunas');
+const allComunas = [...comunas.map(c => ({...c})), ...sinCoords];
+allComunas.sort((a, b) => b.pacientes - a.pacientes);
+const totalPac = allComunas.reduce((s, c) => s + c.pacientes, 0);
+allComunas.forEach((c, i) => {
+  const pct = totalPac ? (c.pacientes / totalPac * 100).toFixed(1) : 0;
+  const barW = totalPac ? Math.max(2, c.pacientes / allComunas[0].pacientes * 120) : 0;
+  const row = document.createElement('tr');
+  row.innerHTML = `<td>${i+1}</td><td>${c.comuna}</td><td>${c.pacientes}</td><td>${c.citas || '-'}</td><td>${pct}%</td>
+    <td><div class="bar-bg"><div class="bar" style="width:${barW}px"></div></div></td>`;
+  tbody.appendChild(row);
+});
+
+// Auto-fit bounds
+if (comunas.length > 0) {
+  const bounds = comunas.map(c => [c.lat, c.lng]);
+  map.fitBounds(bounds, { padding: [30, 30] });
+}
+
+// ── Mapa 2: Localidades de Arauco ──
+const localidades = [{"localidad": "CARAMPANGUE", "lat": -37.265, "lng": -73.28, "pacientes": 129, "porcentaje": 47.6, "direcciones": ["Calle conumo", "Conumo Alto S/N, Carampangue", "Conumo Alto S/N, Carampangue"]}, {"localidad": "ARAUCO URBANO", "lat": -37.2467, "lng": -73.3178, "pacientes": 51, "porcentaje": 18.8, "direcciones": ["Calle fresia 59", "Las Peñas", "Covadonga 83 la quinta"]}, {"localidad": "LARAQUETE", "lat": -37.17, "lng": -73.1833, "pacientes": 36, "porcentaje": 13.3, "direcciones": ["El Arrayán 188 Villa Bosques de Montemar", "Los mañios 561 Villa el Bosque Laraquete", "Fundó el boldo s/n"]}, {"localidad": "ARAUCO (OTRO)", "lat": -37.2467, "lng": -73.3178, "pacientes": 18, "porcentaje": 6.6, "direcciones": ["Cerro colorado s/n", "Población unión Carampanguina calle 27 de octubre", "Horconoes"]}, {"localidad": "ARAUCO (SIN DETALLE)", "lat": -37.2467, "lng": -73.3178, "pacientes": 18, "porcentaje": 6.6, "direcciones": ["Arauco", "Arauco", "ARAUCO"]}, {"localidad": "RAMADILLAS", "lat": -37.22, "lng": -73.21, "pacientes": 16, "porcentaje": 5.9, "direcciones": ["Villa molino del Sol 79 Ramadillas", "Los pintores 111 ramadillas", "los artesanos 158 ramadillas"]}, {"localidad": "TUBUL", "lat": -37.23, "lng": -73.44, "pacientes": 1, "porcentaje": 0.4, "direcciones": ["Tubul calle los sauces casa 165 población san jose"]}, {"localidad": "COLICO", "lat": -37.3833, "lng": -73.25, "pacientes": 1, "porcentaje": 0.4, "direcciones": ["El amanecer 22 san jose colico"]}, {"localidad": "LLICO", "lat": -37.195, "lng": -73.565, "pacientes": 1, "porcentaje": 0.4, "direcciones": ["Llico sector los martinez s/n"]}];
+
+const map2 = L.map('map2').setView([-37.24, -73.30], 12);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap',
+  maxZoom: 18,
+}).addTo(map2);
+
+const colorsLoc = ['#ef4444','#f97316','#fbbf24','#38bdf8','#2563eb','#8b5cf6','#ec4899','#10b981'];
+const maxLocPac = Math.max(...localidades.map(l => l.pacientes), 1);
+
+// Heat layer localidades
+const heatDataLoc = [];
+localidades.forEach(l => {
+  const intensity = l.pacientes / maxLocPac;
+  heatDataLoc.push([l.lat, l.lng, intensity]);
+});
+L.heatLayer(heatDataLoc, {
+  radius: 30,
+  blur: 20,
+  maxZoom: 14,
+  max: 1.0,
+  gradient: {0.2: '#2563eb', 0.4: '#38bdf8', 0.6: '#fbbf24', 0.8: '#f97316', 1.0: '#ef4444'},
+}).addTo(map2);
+
+localidades.forEach((l, i) => {
+  const radius = Math.max(10, Math.min(35, Math.sqrt(l.pacientes) * 5));
+  const color = colorsLoc[i % colorsLoc.length];
+  const circle = L.circleMarker([l.lat, l.lng], {
+    radius: radius,
+    fillColor: color,
+    color: '#1e293b',
+    weight: 2,
+    opacity: 0.9,
+    fillOpacity: 0.65,
+  }).addTo(map2);
+
+  // Label permanente
+  const label = L.divIcon({
+    className: '',
+    html: `<div style="color:#fff;font-size:11px;font-weight:700;text-shadow:1px 1px 3px #000;white-space:nowrap">${l.localidad} (${l.pacientes})</div>`,
+    iconSize: [120, 20],
+    iconAnchor: [60, -radius - 4],
+  });
+  L.marker([l.lat, l.lng], { icon: label, interactive: false }).addTo(map2);
+
+  let popup = `<b style="font-size:14px">${l.localidad}</b><br>
+    <b>${l.pacientes}</b> pacientes (${l.porcentaje}% de Arauco)`;
+  if (l.direcciones && l.direcciones.length > 0) {
+    popup += `<br><br><small><b>Ej:</b><br>${l.direcciones.join('<br>')}</small>`;
+  }
+  circle.bindPopup(popup);
+});
+
+if (localidades.length > 0) {
+  const boundsLoc = localidades.map(l => [l.lat, l.lng]);
+  map2.fitBounds(boundsLoc, { padding: [40, 40] });
+}
+
+// Tabla localidades
+const tbodyLoc = document.getElementById('tabla-localidades');
+localidades.sort((a, b) => b.pacientes - a.pacientes);
+const totalLocPac = localidades.reduce((s, l) => s + l.pacientes, 0);
+localidades.forEach((l, i) => {
+  const barW = totalLocPac ? Math.max(2, l.pacientes / localidades[0].pacientes * 120) : 0;
+  const row = document.createElement('tr');
+  row.innerHTML = `<td>${i+1}</td><td>${l.localidad}</td><td>${l.pacientes}</td><td>${l.porcentaje}%</td>
+    <td><div class="bar-bg"><div class="bar" style="width:${barW}px;background:${colorsLoc[i % colorsLoc.length]}"></div></div></td>`;
+  tbodyLoc.appendChild(row);
+});
+</script>
+</body>
+</html>

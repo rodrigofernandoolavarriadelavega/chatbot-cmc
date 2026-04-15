@@ -262,6 +262,8 @@ _PORTAL_HTML = (_TEMPLATE_DIR / "portal.html").read_text(encoding="utf-8")
 _ECOSISTEMA_HTML = (_TEMPLATE_DIR / "ecosistema.html").read_text(encoding="utf-8")
 _DASHBOARD_HTML = (_TEMPLATE_DIR / "dashboard.html").read_text(encoding="utf-8")
 _LANDING_HTML = (_TEMPLATE_DIR / "landing.html").read_text(encoding="utf-8")
+_HEATMAP_COMUNAS_HTML = (_TEMPLATE_DIR / "heatmap_comunas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "heatmap_comunas.html").exists() else ""
+_HEATMAP_DIRECCIONES_HTML = (_TEMPLATE_DIR / "heatmap_direcciones.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "heatmap_direcciones.html").exists() else ""
 
 
 # ── Endpoints ────────────────────────────────────────────────────────────────
@@ -371,6 +373,38 @@ def admin_dashboard(token: str | None = Query(None),
         role = _verify_cookie(cmc_session)
         if role in ("admin", "ortodoncia"):
             return _DASHBOARD_HTML.replace("__TOKEN__", "")
+    return RedirectResponse(url="/admin/login", status_code=302)
+
+
+@app.get("/admin/mapa-comunas", response_class=HTMLResponse)
+def admin_mapa_comunas(token: str | None = Query(None),
+                       cmc_session: str | None = Cookie(None)):
+    """Mapa de calor por comunas/localidades. Misma auth que /admin."""
+    from admin_routes import _verify_cookie
+    if not _HEATMAP_COMUNAS_HTML:
+        raise HTTPException(404, "Mapa no generado aún. Ejecutar: python scripts/heatmap_comunas.py map")
+    if token and token == ADMIN_TOKEN:
+        return _HEATMAP_COMUNAS_HTML
+    if cmc_session:
+        role = _verify_cookie(cmc_session)
+        if role in ("admin", "ortodoncia"):
+            return _HEATMAP_COMUNAS_HTML
+    return RedirectResponse(url="/admin/login", status_code=302)
+
+
+@app.get("/admin/mapa-direcciones", response_class=HTMLResponse)
+def admin_mapa_direcciones(token: str | None = Query(None),
+                           cmc_session: str | None = Cookie(None)):
+    """Mapa de direcciones exactas geocodificadas. Misma auth que /admin."""
+    from admin_routes import _verify_cookie
+    if not _HEATMAP_DIRECCIONES_HTML:
+        raise HTTPException(404, "Mapa no generado aún. Ejecutar: python scripts/geocode_direcciones.py")
+    if token and token == ADMIN_TOKEN:
+        return _HEATMAP_DIRECCIONES_HTML
+    if cmc_session:
+        role = _verify_cookie(cmc_session)
+        if role in ("admin", "ortodoncia"):
+            return _HEATMAP_DIRECCIONES_HTML
     return RedirectResponse(url="/admin/login", status_code=302)
 
 
