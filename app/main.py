@@ -449,6 +449,62 @@ async def webhook(request: Request):
     data = await request.json()
     obj = data.get("object", "")
 
+    # ── Helper: convertir mensaje interactivo WA a texto plano ──────────────
+    _SOCIAL_PROMO = (
+        "\n\n✨ *Nutricionista bono Fonasa $4.680*\n"
+        "😁 *Ortodoncia:* completa $120.000 / controles $30.000"
+    )
+
+    def _interactive_to_text(resp: dict) -> str:
+        """Convierte un mensaje interactivo de WhatsApp a texto plano para IG/FB."""
+        inter = resp.get("interactive", {})
+        itype = inter.get("type", "")
+        body = inter.get("body", {}).get("text", "")
+        if itype == "button":
+            btns = inter.get("action", {}).get("buttons", [])
+            opts = "\n".join(f"  → {b['reply']['title']}" for b in btns)
+            return f"{body}\n\n{opts}" if opts else body
+        elif itype == "list":
+            sections = inter.get("action", {}).get("sections", [])
+            opts = []
+            for sec in sections:
+                for row in sec.get("rows", []):
+                    desc = f" — {row['description']}" if row.get("description") else ""
+                    opts.append(f"  • {row['title']}{desc}")
+            items = "\n".join(opts)
+            # Agregar promo al menú principal
+            is_menu = "¿Qué necesitas hoy?" in body
+            promo = _SOCIAL_PROMO if is_menu else ""
+            return f"{body}{promo}\n\n{items}" if items else body + promo
+        return body
+
+    # ── Helper: procesar mensaje de IG/FB con el chatbot ─────────────────────
+    async def _process_social(phone: str, sender_id: str, texto: str,
+                              canal: str, send_fn):
+        """Procesa un mensaje de IG/FB usando handle_message y responde."""
+        session = get_session(phone)
+        state_before = session.get("state", "IDLE")
+        log_message(phone, "in", texto, state_before, canal=canal)
+        try:
+            respuesta = await handle_message(phone, texto, session)
+        except Exception as e:
+            log.error("Error procesando %s msg from=%s: %s", canal, phone, e, exc_info=True)
+            reset_session(phone)
+            respuesta = (
+                "Tuve un problema técnico 😕\n\n"
+                "Por favor intenta de nuevo o llama a recepción:\n"
+                f"📞 {CMC_TELEFONO}"
+            )
+        state_after = get_session(phone).get("state", "IDLE")
+        if isinstance(respuesta, dict) and respuesta.get("type") == "interactive":
+            resp_text = _interactive_to_text(respuesta)
+        else:
+            resp_text = str(respuesta) if respuesta else ""
+        if resp_text:
+            await send_fn(sender_id, resp_text)
+            log_message(phone, "out", resp_text, state_after, canal=canal)
+            log.info("BOT %s to=%s state=%s reply=%r", canal.upper(), phone, state_after, resp_text[:80])
+
     # ── Helper: obtener nombre de usuario IG/FB ─────────────────────────────
     async def _fetch_social_name(sender_id: str, phone: str, platform: str):
         """Obtiene nombre/username de IG o FB via Graph API y lo guarda en contact_profiles."""
@@ -500,30 +556,14 @@ async def webhook(request: Request):
                         continue
                     log.info("INSTAGRAM from=%s name=%r text=%r sender=%s",
                              phone, sender_name, texto[:80], ev.get("sender", {}))
-                    # Si el webhook trae el username, guardarlo directamente
+                    # Guardar perfil si viene en el webhook
                     if sender_name and not get_profile(phone):
                         save_profile(phone, "", sender_name)
-                        log.info("IG perfil desde webhook: %s → %s", phone, sender_name)
                     elif not sender_name:
                         await _fetch_social_name(sender_id, phone, "instagram")
-                    save_session(phone, "HUMAN_TAKEOVER", {})
-                    log_message(phone, "in", texto, "HUMAN_TAKEOVER", canal="instagram")
-                    # Auto-reply por Instagram
+                    # Procesar con el chatbot completo
                     from messaging import send_instagram
-                    auto_reply = (
-                        "👋 Hola, gracias por comunicarte con Centro Médico Carampangue.\n\n"
-                        "📲 Solicita horas o info aquí: https://wa.me/+56966610737\n"
-                        "👩🏻‍💻 Agenda online med general/familiar: https://ff.healthatom.io/OUalFx\n\n"
-                        "✨ Nutricionista bono Fonasa $4.680\n"
-                        "😁 Ortodoncia: completa $120.000 / controles $30.000\n\n"
-                        "Atendemos: médico gral. y familiar, odontología, ortodoncia, "
-                        "kinesiología, nutrición, psicología (adulto e infantil), "
-                        "traumatología, otorrino, cardiología, ecografía, audiometría, "
-                        "matrona, ginecología y gastro.\n\n"
-                        "Una recepcionista te responderá pronto 🙏"
-                    )
-                    await send_instagram(sender_id, auto_reply)
-                    log_message(phone, "out", auto_reply, "HUMAN_TAKEOVER", canal="instagram")
+                    await _process_social(phone, sender_id, texto, "instagram", send_instagram)
         except Exception as e:
             log.warning("Error procesando Instagram webhook: %s", e)
         return Response(status_code=200)
@@ -549,8 +589,8 @@ async def webhook(request: Request):
                         continue
                     log.info("MESSENGER from=%s text=%r", phone, texto[:80])
                     await _fetch_social_name(sender_id, phone, "facebook")
-                    save_session(phone, "HUMAN_TAKEOVER", {})
-                    log_message(phone, "in", texto, "HUMAN_TAKEOVER", canal="messenger")
+                    from messaging import send_messenger
+                    await _process_social(phone, sender_id, texto, "messenger", send_messenger)
         except Exception as e:
             log.warning("Error procesando Messenger webhook: %s", e)
         return Response(status_code=200)
