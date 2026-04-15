@@ -286,6 +286,15 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 ## Sesión en curso
 **Fecha**: 2026-04-15
 
+**Hecho (sesión 2026-04-15 — mapas dinámicos con filtros + datos marzo)**:
+- **Endpoint API `/admin/api/map-data`**: consulta `heatmap_cache.db` en tiempo real con parámetros `desde` y `hasta`. Retorna comunas, localidades y direcciones geocodificadas con detalle de pacientes (nombre, profesional, fecha). Incluye normalización de comunas, detección de localidades dentro de Arauco, y cruce con `geocode_cache`.
+- **Filtros de fecha en dashboard**: barra de filtros con botones Hoy/Semana/Mes/Año/Todo + selector de mes. Los mapas, tablas y KPIs se recargan dinámicamente al cambiar filtro. Reemplaza datos hardcodeados por fetch al API.
+- **Datos marzo 2026 descargados**: `heatmap_comunas.py download 2026 3` → 1,158 citas, 786 pacientes. DB ahora tiene 1,605 citas totales (marzo+abril), 1,025 pacientes únicos.
+- **Script acepta año/mes**: `heatmap_comunas.py download YYYY M` para descargar cualquier mes.
+- **`geocode_direcciones.py` actualiza dashboard**: función `update_dashboard_pts()` inyecta datos enriquecidos (nombre+doctor+fecha) en `templates/dashboard.html` automáticamente.
+- **Guía paso a paso en Notion**: página "Guía: Pipeline de Mapas Geográficos" con comandos exactos, arquitectura, y flujo completo para agregar meses nuevos.
+- DB copiada a producción vía `scp` (con WAL checkpoint previo).
+
 **Hecho (sesión 2026-04-15 — dashboard mapas + sitio web + mobile fix)**:
 - **Dashboard KPIs con mapas embebidos**: heatmaps de comunas y direcciones incrustados en `/admin/dashboard` con Leaflet.js interactivo (lado izquierdo) + tabla de estadísticas (lado derecho). Toggle heatmap/clusters/puntos. Sin navegación separada.
 - **Rutas `/admin/mapa-comunas` y `/admin/mapa-direcciones`**: páginas standalone protegidas con auth admin.
