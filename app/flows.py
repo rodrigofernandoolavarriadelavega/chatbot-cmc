@@ -1495,11 +1495,13 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
     # ── WAIT_DURACION_MASOTERAPIA ──────────────────────────────────────────────
     if state == "WAIT_DURACION_MASOTERAPIA":
-        # Matchear palabra exacta, no substring (evita que "200" o "2040" entren)
+        # Matchear número exacto o texto escrito
         num = re.findall(r"\b(20|40)\b", txt)
-        if tl == "maso_20" or (num and num[0] == "20"):
+        _es_20 = tl == "maso_20" or (num and num[0] == "20") or "veinte" in tl
+        _es_40 = tl == "maso_40" or (num and num[0] == "40") or "cuarenta" in tl
+        if _es_20:
             duracion_maso = 20
-        elif tl == "maso_40" or (num and num[0] == "40"):
+        elif _es_40:
             duracion_maso = 40
         else:
             save_session(phone, "WAIT_DURACION_MASOTERAPIA", data)
@@ -1836,7 +1838,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             f"📅 {slot['fecha_display']}\n"
             f"🕐 {slot['hora_inicio'][:5]}–{slot['hora_fin'][:5]}\n"
             f"💳 {modalidad}\n\n"
-            "¿La confirmo?",
+            "¿Confirmas tu hora?",
             [
                 {"id": "si", "title": "✅ Confirmar"},
                 {"id": "no", "title": "❌ Cambiar"},
@@ -2004,7 +2006,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 )
             data["cancel_retries"] = retries
             save_session(phone, "WAIT_CITA_CANCELAR", data)
-            return f"Elige un número entre 1 y {len(citas)} 😊"
+            return f"Elige un número entre 1 y {len(citas)} 😊\n_(o escribe *menu* para volver al inicio)_"
 
         cita = citas[idx]
         data["cita_cancelar"] = cita
@@ -2095,7 +2097,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 )
             data["reagendar_retries"] = retries
             save_session(phone, "WAIT_CITA_REAGENDAR", data)
-            return f"Elige un número entre 1 y {len(citas)} 😊"
+            return f"Elige un número entre 1 y {len(citas)} 😊\n_(o escribe *menu* para volver al inicio)_"
 
         cita_old = citas[idx]
         esp_lower = (cita_old.get("especialidad") or "").lower()
@@ -2198,7 +2200,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
     # ── WAIT_NOMBRE_NUEVO ─────────────────────────────────────────────────────
     if state == "WAIT_NOMBRE_NUEVO":
-        partes = txt.strip().split()
+        nombre_raw = txt.strip()
+        # Validar que solo tenga letras, espacios, guiones y apóstrofes
+        if not re.match(r"^[a-záéíóúñüA-ZÁÉÍÓÚÑÜ\s\-']{3,60}$", nombre_raw):
+            return "Escribe tu nombre usando solo letras (ej: *María González*)."
+        partes = nombre_raw.split()
         if len(partes) < 2:
             return "Escribe tu nombre completo con nombre y apellido (ej: *María González*)."
         nombre   = partes[0].capitalize()
@@ -2280,7 +2286,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             log_event(phone, "registro_skip", {"step": "email"})
         else:
             email = txt.strip().lower()
-            if "@" in email and "." in email:
+            if re.match(r"^[^@\s]+@[^@\s]+\.[a-z]{2,}$", email):
                 data["reg_email"] = email
             else:
                 # No parece correo válido, lo ignoramos y seguimos
@@ -2557,9 +2563,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
         if msgs_sin_respuesta == 1:
             return "Recibido 🙏 Una recepcionista te responderá en este chat en breve."
-        if msgs_sin_respuesta % 3 == 0:
+        if msgs_sin_respuesta == 2:
             return f"Seguimos atentos 😊 Mientras esperas también puedes llamar: 📞 *{CMC_TELEFONO}*"
-        return ""  # silencio — no spamear
+        if msgs_sin_respuesta % 5 == 0:
+            return f"Seguimos aquí 🙌 Si es urgente, llama al 📞 *{CMC_TELEFONO}*"
+        return ""  # silencio desde msg 3+ — no spamear
 
     # Fallback
     reset_session(phone)

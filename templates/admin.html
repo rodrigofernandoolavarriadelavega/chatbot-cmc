@@ -1282,7 +1282,7 @@ const STATE_LABELS = {
   WAIT_DURACION_MASOTERAPIA:"Eligiendo duración masoterapia",
   WAIT_RUT_AGENDAR:"Ingresando RUT", WAIT_NOMBRE_NUEVO:"Registro paciente nuevo",
   WAIT_FECHA_NAC:"Registro — fecha nacimiento", WAIT_SEXO:"Registro — sexo",
-  WAIT_COMUNA:"Registro — comuna", WAIT_EMAIL:"Registro — email", WAIT_REFERRAL:"Registro — referencia", WAIT_REFERRAL_CODE:"Registro — código referido",
+  WAIT_COMUNA:"Registro — comuna", WAIT_EMAIL:"Registro — email", WAIT_REFERRAL:"Registro — ¿cómo nos conociste?", WAIT_REFERRAL_CODE:"Registro — código referido",
   CONFIRMING_CITA:"Confirmando cita", WAIT_RUT_CANCELAR:"Cancelando — ingresa RUT",
   WAIT_CITA_CANCELAR:"Elige cita a cancelar", CONFIRMING_CANCEL:"Confirmando cancelación",
   WAIT_RUT_VER:"Consultando reservas", WAIT_RUT_REAGENDAR:"Reagendando — ingresa RUT",
@@ -1703,10 +1703,11 @@ function insertQR(text){document.getElementById("reply-input").value=text;docume
 /* ── ACCIONES ── */
 async function doTakeover(){
   if(!selectedPhone) return;
-  if(!confirm("¿Tomar esta conversación? El bot se pausará.")) return;
+  const convName=(convs.find(c=>c.phone===selectedPhone)||{}).nombre||selectedPhone;
+  if(!confirm(`¿Tomar control de ${convName}? El bot se pausará para este paciente.`)) return;
   const r=await fetch(apiUrl(`/admin/api/takeover/${encodeURIComponent(selectedPhone)}`),{method:"POST"});
   if(r.ok){updateChatControls("HUMAN_TAKEOVER");await loadConversations();}
-  else alert("Error al tomar la conversación");
+  else alert("No se pudo tomar el control. Intenta de nuevo.");
 }
 async function doResume(){
   if(!selectedPhone) return;
@@ -1776,7 +1777,7 @@ async function notificarInforme(){
     fd.append("params",JSON.stringify([tipo.trim()]));
     const r=await fetch(apiUrl(`/admin/api/send-template`),{method:"POST",body:fd});
     if(r.ok){alert("Template enviado correctamente");await loadMessages(selectedPhone);}
-    else{const d=await r.json().catch(()=>null);alert((d&&d.detail)||"Error al enviar template");}
+    else{const d=await r.json().catch(()=>null);alert((d&&d.detail)||"No se pudo enviar. Verifica que el paciente tenga WhatsApp activo.");}
   }finally{btn.disabled=false;btn.textContent="📄 Notificar informe";}
 }
 
@@ -3251,6 +3252,23 @@ setFilter = function(f, el) {
     document.getElementById('filters-overlay').classList.remove('open');
   }
 };
+
+// Detección offline — aviso a la recepcionista
+window.addEventListener('offline', () => {
+  const b = document.createElement('div');
+  b.id = 'offline-banner';
+  b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:#fff;text-align:center;padding:10px;font-weight:600;font-size:14px;';
+  b.textContent = '⚠️ Sin conexión a internet — Los mensajes no se enviarán hasta que vuelvas a conectarte';
+  document.body.prepend(b);
+  const ri = document.getElementById('reply-input');
+  if (ri) ri.disabled = true;
+});
+window.addEventListener('online', () => {
+  const b = document.getElementById('offline-banner');
+  if (b) b.remove();
+  const ri = document.getElementById('reply-input');
+  if (ri) ri.disabled = false;
+});
 
 // Reset layout on resize (prevent stuck states)
 window.addEventListener('resize', () => {

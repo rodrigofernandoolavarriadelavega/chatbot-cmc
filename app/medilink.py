@@ -304,9 +304,9 @@ async def _get_horas_ocupadas(client: httpx.AsyncClient, id_prof: int, fecha: st
                        params={"q": _q(params)}, headers=HEADERS)
     except httpx.RequestError as e:
         log.error("No se pudo obtener horas ocupadas prof %d fecha %s: %s", id_prof, fecha, e)
-        return set()
+        raise  # Propagar error — no asumir que todo está libre
     if r.status_code != 200:
-        return set()
+        raise httpx.RequestError(f"GET horas_ocupadas prof={id_prof} fecha={fecha} → {r.status_code}")
     return {c["hora_inicio"][:5] for c in r.json().get("data", [])}
 
 
@@ -604,6 +604,9 @@ async def buscar_paciente(rut: str) -> Optional[dict]:
         if not data:
             return None
         p = data[0]
+        if not p.get("id"):
+            log.error("buscar_paciente: registro sin id para rut=%s: %s", rut_clean, p)
+            return None
         result = {
             "id":     p["id"],
             "nombre": f"{p.get('nombre','')} {p.get('apellidos','')}".strip(),
@@ -666,7 +669,11 @@ async def crear_cita(id_paciente: int, id_profesional: int, fecha: str,
             cita = data.get("data", data)
             if isinstance(cita, list) and cita:
                 cita = cita[0]
-            return {"id": cita.get("id"), "confirmado": True}
+            cita_id = cita.get("id") if isinstance(cita, dict) else None
+            if not cita_id:
+                log.error("crear_cita: respuesta sin id — %s", data)
+                return None
+            return {"id": cita_id, "confirmado": True}
         log.error("crear_cita falló: %s %s", r.status_code, r.text[:500])
         return None
 
@@ -765,16 +772,14 @@ async def obtener_agenda_dia(id_prof: int, fecha: str | None = None) -> list[dic
             return []
         citas_raw = r.json().get("data", [])
 
-        agenda = []
-        for c in citas_raw:
-            pac_id = c.get("id_paciente")
-            pac_nombre = c.get("nombre_paciente", "")
-            pac_rut = ""
-            pac_edad = ""
-            pac_sexo = ""
-            pac_fecha_nac = ""
-            # Obtener datos extra del paciente
-            if pac_id:
+        # Obtener datos de pacientes en paralelo (máx 5 concurrentes)
+        import asyncio as _aio
+        _sem = _aio.Semaphore(5)
+
+        async def _fetch_pac(pac_id):
+            if not pac_id:
+                return {}
+            async with _sem:
                 try:
                     rp = await _get(client, f"{MEDILINK_BASE_URL}/pacientes/{pac_id}",
                                     headers=HEADERS)
@@ -782,20 +787,33 @@ async def obtener_agenda_dia(id_prof: int, fecha: str | None = None) -> list[dic
                         p = rp.json().get("data", {})
                         if isinstance(p, list) and p:
                             p = p[0]
-                        pac_nombre = f"{p.get('nombre','')} {p.get('apellidos','')}".strip() or pac_nombre
-                        pac_rut = p.get("rut", "")
-                        pac_sexo = p.get("sexo", "")
-                        pac_fecha_nac = p.get("fecha_nacimiento", "")
-                        if pac_fecha_nac:
-                            try:
-                                fn = datetime.strptime(pac_fecha_nac[:10], "%Y-%m-%d").date()
-                                hoy = datetime.now(_CHILE_TZ).date()
-                                edad = hoy.year - fn.year - ((hoy.month, hoy.day) < (fn.month, fn.day))
-                                pac_edad = f"{edad} años"
-                            except ValueError:
-                                pass
+                        return p
                 except httpx.RequestError:
                     pass
+            return {}
+
+        pac_tasks = [_fetch_pac(c.get("id_paciente")) for c in citas_raw]
+        pac_results = await _aio.gather(*pac_tasks)
+
+        agenda = []
+        for c, p in zip(citas_raw, pac_results):
+            pac_nombre = c.get("nombre_paciente", "")
+            pac_rut = ""
+            pac_edad = ""
+            pac_sexo = ""
+            if p:
+                pac_nombre = f"{p.get('nombre','')} {p.get('apellidos','')}".strip() or pac_nombre
+                pac_rut = p.get("rut", "")
+                pac_sexo = p.get("sexo", "")
+                pac_fecha_nac = p.get("fecha_nacimiento", "")
+                if pac_fecha_nac:
+                    try:
+                        fn = datetime.strptime(pac_fecha_nac[:10], "%Y-%m-%d").date()
+                        hoy = datetime.now(_CHILE_TZ).date()
+                        edad = hoy.year - fn.year - ((hoy.month, hoy.day) < (fn.month, fn.day))
+                        pac_edad = f"{edad} años"
+                    except ValueError:
+                        pass
 
             agenda.append({
                 "id_cita":    c["id"],

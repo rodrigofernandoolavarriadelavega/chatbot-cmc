@@ -60,9 +60,9 @@ async def unreact_whatsapp(to: str, message_id: str):
     })
 
 
-async def send_whatsapp(to: str, body: str):
-    """Envía mensaje de texto vía Meta Cloud API."""
-    await _post_meta({
+async def send_whatsapp(to: str, body: str) -> str | None:
+    """Envía mensaje de texto vía Meta Cloud API. Retorna wamid o None si falla."""
+    return await _post_meta({
         "messaging_product": "whatsapp",
         "to": to,
         "type": "text",
