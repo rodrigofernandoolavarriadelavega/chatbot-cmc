@@ -1904,11 +1904,17 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             # Limpiar RUT/nombre conocido para pedir datos del paciente real
             data.pop("rut_conocido", None)
             data.pop("nombre_conocido", None)
-            save_session(phone, "WAIT_RUT_AGENDAR", data)
-            return (
-                "Sin problema 😊 Necesito el RUT de la persona que se va a atender:\n"
-                "(ej: *12.345.678-9*)"
-            )
+            # Verificar si ya conocemos el nombre del dueño del celular
+            perfil_owner = get_profile(phone)
+            if perfil_owner and perfil_owner.get("nombre"):
+                save_session(phone, "WAIT_RUT_AGENDAR", data)
+                return (
+                    "Sin problema 😊 Necesito el RUT de la persona que se va a atender:\n"
+                    "(ej: *12.345.678-9*)"
+                )
+            # No conocemos al dueño del celular → preguntar su nombre
+            save_session(phone, "WAIT_PHONE_OWNER_NAME", data)
+            return "Sin problema 😊 ¿Cuál es tu nombre? (el de quien nos escribe, para enviarte los recordatorios)"
         save_session(phone, "WAIT_BOOKING_FOR", data)
         return _btn_msg(
             "Responde *Para mí* o *Para otra persona* 😊",
@@ -1916,6 +1922,21 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 {"id": "booking_self", "title": "Para mí"},
                 {"id": "booking_other", "title": "Para otra persona"},
             ]
+        )
+
+    # ── WAIT_PHONE_OWNER_NAME ────────────────────────────────────────────────
+    if state == "WAIT_PHONE_OWNER_NAME":
+        nombre_owner = txt.strip()
+        if len(nombre_owner) < 2 or nombre_owner.isdigit():
+            save_session(phone, "WAIT_PHONE_OWNER_NAME", data)
+            return "¿Cuál es tu nombre? (el de quien nos escribe, para enviarte los recordatorios)"
+        # Guardar el nombre del dueño del celular (sin RUT, no es el paciente)
+        save_profile(phone, "", nombre_owner)
+        save_session(phone, "WAIT_RUT_AGENDAR", data)
+        nombre_corto = nombre_owner.split()[0].capitalize()
+        return (
+            f"Gracias {nombre_corto} 😊 Ahora necesito el RUT de la persona que se va a atender:\n"
+            "(ej: *12.345.678-9*)"
         )
 
     # ── WAIT_RUT_AGENDAR ──────────────────────────────────────────────────────

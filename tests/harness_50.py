@@ -1028,6 +1028,36 @@ async def main():
         ("saltar", {"any": ["confirm"], **NO_ERROR}),
     ])
 
+    # ── Tercero (booking for another person) ────────────────────────────────
+    mk("TERC-01 tercero sin perfil → pide nombre owner", "56900000601", [
+        ("quiero agendar kine", {"any": ["Kine", "09:"], **NO_ERROR}),
+        ("confirmar_sugerido", ["Fonasa"]),
+        ("1", ["para ti", "otra persona"]),
+        ("booking_other", ["nombre", "celular"]),  # no tiene perfil → pregunta nombre del dueño
+        ("Ana López", ["RUT", "atender"]),  # guarda nombre, pide RUT del paciente
+        ("99999999-9", ["nombre", "encontr", "registrar"]),
+        ("Daniel López", ["fecha de nacimiento"]),
+        ("saltar", ["sexo"]),
+        ("saltar", ["comuna"]),
+        ("saltar", ["correo"]),
+        ("saltar", {"any": ["conociste", "conocist"], **NO_ERROR}),
+        ("saltar", {"any": ["Daniel", "confirm"], **NO_ERROR}),
+    ])
+
+    mk("TERC-02 tercero con perfil conocido → salta nombre owner", "56900000602", [
+        ("quiero agendar kine", {"any": ["Kine", "09:"], **NO_ERROR}),
+        ("confirmar_sugerido", ["Fonasa"]),
+        ("1", ["para ti", "otra persona"]),
+        ("booking_other", ["RUT", "atender"]),  # ya tiene perfil → directo a RUT
+        ("99999999-9", ["nombre", "encontr", "registrar"]),
+        ("Carlos Pérez", ["fecha de nacimiento"]),
+        ("saltar", ["sexo"]),
+        ("saltar", ["comuna"]),
+        ("saltar", ["correo"]),
+        ("saltar", {"any": ["conociste", "conocist"], **NO_ERROR}),
+        ("saltar", {"any": ["Carlos", "confirm"], **NO_ERROR}),
+    ], setup=lambda: save_profile("56900000602", "11111111-1", "María Gómez")),
+
     # ── Run ─────────────────────────────────────────────────────────────────
     passed = 0
     failed = 0

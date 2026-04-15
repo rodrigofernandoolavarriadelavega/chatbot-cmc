@@ -137,6 +137,46 @@ KNOWN_LOCATIONS = {
     # Tubul
     "TUBUL": (-37.2300, -73.4400),
     "SAN JOSE": (-37.2280, -73.4350),
+    "SAN JOSE DE COLICO": (-37.2270, -73.4350),
+    "SAN JOSÉ DE COLICO": (-37.2270, -73.4350),
+    # Carampangue calles adicionales
+    "REPUBLICA": (-37.2640, -73.2800),
+    "CARMAPANGUE": (-37.2650, -73.2800),  # typo frecuente
+    "CARAMPANGUE": (-37.2650, -73.2800),
+    "EL PARRON": (-37.2630, -73.2760),
+    "EL PARRÓN": (-37.2630, -73.2760),
+    "MAQUEHUA": (-37.2600, -73.2850),
+    "CALLEJON MAQUEHUA": (-37.2600, -73.2850),
+    "COVADONGA": (-37.2580, -73.2770),
+    "LA QUINTA": (-37.2580, -73.2770),
+    "CALLE MAITEN": (-37.2645, -73.2810),
+    "VILLA AMANECER": (-37.2670, -73.2840),
+    "LAS HORTENSIAS": (-37.2660, -73.2790),
+    "PASAJE ZARATE": (-37.2635, -73.2805),
+    "ZÁRATE": (-37.2635, -73.2805),
+    "HORCONOES": (-37.2850, -73.2600),  # typo de Horcones
+    "10 DE JULIO": (-37.2200, -73.2070),
+    "RAMADILLAS": (-37.2200, -73.2080),
+    # Laraquete calles adicionales
+    "LOS MAÑIOS": (-37.1680, -73.1850),
+    "PEDRO PRADO": (-37.1670, -73.1830),
+    "LAS ARAUCARIAS": (-37.1700, -73.1860),
+    "LAGO CALAFQUEN": (-37.1720, -73.1870),
+    "POBLACIÓN EL PINAR": (-37.1650, -73.1800),
+    "POBLACION EL PINAR": (-37.1650, -73.1800),
+    # Volcan Antuco / Villa Don Carlos
+    "VOLCAN ANTUCO": (-37.2430, -73.3050),
+    "VOLCÁN ANTUCO": (-37.2430, -73.3050),
+    # Curanilahue
+    "AV.LAS ESTRELLA": (-37.4744, -73.3481),
+    "AV. LAS ESTRELLA": (-37.4744, -73.3481),
+    "JUAN BENITEZ": (-37.4750, -73.3490),
+    "ELEUTERIO RAMIREZ": (-37.4740, -73.3475),
+    # Lota
+    "POLVORIN": (-37.0850, -73.1500),
+    # Coronel
+    "SCHWAGER": (-37.0300, -73.1550),
+    "LAGUNILLAS": (-37.0400, -73.1450),
 }
 
 import random
