@@ -474,19 +474,21 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
   .pill { font-size: 10px; padding: 3px 7px; }
   /* Spacer hidden on mobile */
   .topbar-spacer { display: none; }
-  /* Actions: horizontal scroll row */
+  /* Actions: 2-row grid layout */
   .topbar-actions {
-    display: flex !important; flex-wrap: nowrap; gap: 6px; align-items: center;
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
     order: 10; width: 100%;
     padding: 6px 0 2px; border-top: 1px solid var(--border);
-    overflow-x: auto; -webkit-overflow-scrolling: touch;
-    scrollbar-width: none; /* Firefox */
   }
-  .topbar-actions::-webkit-scrollbar { display: none; }
-  .topbar-actions .btn { font-size: 11px; padding: 7px 10px; flex: 0 0 auto; white-space: nowrap; }
+  .topbar-actions .btn { font-size: 11px; padding: 8px 6px; white-space: nowrap; text-align: center; border-radius: 8px; }
   .topbar-actions kbd { display: none; }
-  /* Notification bell: compact */
-  #btn-notif-mute { flex: 0 0 auto; padding: 4px 8px !important; font-size: 14px !important; }
+  /* Notification bell inline with grid */
+  #btn-notif-mute { padding: 6px 8px !important; font-size: 14px !important; border-radius: 8px !important; }
+  /* Dropdown takes full cell */
+  .topbar-actions .dropdown { display: contents; }
+  .topbar-actions .dropdown > button { grid-column: auto; }
   /* Alert bar */
   #alert-bar {
     flex-wrap: wrap !important; padding: 8px 12px !important;
