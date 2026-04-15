@@ -481,17 +481,20 @@ def _msg_winback(paciente: dict) -> dict:
         # Mensaje personalizado para crónicos
         patologia = dx_tags[0].upper()
         body = (
-            f"{saludo}Hace bastante que no vienes al *Centro Médico Carampangue*.\n\n"
-            f"Como paciente con *{patologia}*, es importante mantener tus controles al día "
-            "para cuidar tu salud a largo plazo.\n\n"
-            "¿Te ayudo a agendar un control?"
+            f"{saludo}Del *Centro Médico Carampangue*.\n\n"
+            f"Como paciente con *{patologia}*, recuerda que es importante "
+            "mantener tus controles al día, hidratarte bien y cuidar tu "
+            "alimentación 💪\n\n"
+            "También se recomienda una *limpieza dental* cada 6 meses "
+            "para prevenir caries y problemas de encías 🦷\n\n"
+            "¿Quieres agendar una hora con odontólogo o con otro profesional del centro?"
         )
     else:
         body = (
-            f"{saludo}Hace un buen tiempo que no te vemos en el *Centro Médico Carampangue*.\n\n"
-            "Queremos saber cómo estás 😊 Recuerda que puedes agendar una hora "
-            "por aquí mismo, a cualquier hora del día.\n\n"
-            "¿Te agendamos?"
+            f"{saludo}Del *Centro Médico Carampangue*.\n\n"
+            "¿Sabías que se recomienda una *limpieza dental* cada 6 meses? "
+            "Es clave para prevenir caries y problemas de encías 🦷\n\n"
+            "¿Quieres que te agende una hora con el odontólogo?"
         )
 
     return {
