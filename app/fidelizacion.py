@@ -483,8 +483,8 @@ def _msg_winback(paciente: dict) -> dict:
         body = (
             f"{saludo}Del *Centro Médico Carampangue*.\n\n"
             f"Como paciente con *{patologia}*, recuerda que es importante "
-            "mantener tus controles al día, hidratarte bien y cuidar tu "
-            "alimentación 💪\n\n"
+            "mantener tus controles al día, hidratarte bien, cuidar tu "
+            "alimentación y realizar actividad física con regularidad 💪\n\n"
             "También se recomienda una *limpieza dental* cada 6 meses "
             "para prevenir caries y problemas de encías 🦷\n\n"
             "¿Quieres agendar una hora con odontólogo o con otro profesional del centro?"
@@ -492,8 +492,10 @@ def _msg_winback(paciente: dict) -> dict:
     else:
         body = (
             f"{saludo}Del *Centro Médico Carampangue*.\n\n"
-            "¿Sabías que se recomienda una *limpieza dental* cada 6 meses? "
-            "Es clave para prevenir caries y problemas de encías 🦷\n\n"
+            "Recuerda hidratarte bien, cuidar tu alimentación "
+            "y realizar actividad física con regularidad 💪\n\n"
+            "También se recomienda una *limpieza dental* cada 6 meses "
+            "para prevenir caries y problemas de encías 🦷\n\n"
             "¿Quieres que te agende una hora con el odontólogo?"
         )
 
