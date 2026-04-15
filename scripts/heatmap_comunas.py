@@ -803,10 +803,13 @@ localidades.forEach((l, i) => {{
 
 async def main():
     cmd = sys.argv[1] if len(sys.argv) > 1 else "all"
+    # Opcional: año y mes como 3er y 4to argumento  (ej: download 2026 3)
+    year = int(sys.argv[2]) if len(sys.argv) > 2 else 2026
+    month = int(sys.argv[3]) if len(sys.argv) > 3 else datetime.now().month
 
     if cmd in ("download", "all"):
-        log.info("=== FASE 1: Descarga de datos de Medilink ===")
-        await fase_download()
+        log.info("=== FASE 1: Descarga de datos de Medilink (%d-%02d) ===", year, month)
+        await fase_download(year, month)
 
     if cmd in ("map", "all"):
         log.info("=== FASE 2: Generacion del mapa de calor ===")

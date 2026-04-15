@@ -30,7 +30,8 @@ from messaging import (send_whatsapp, send_whatsapp_interactive,
 from session import (get_session, is_duplicate, reset_session, save_session,
                      get_metricas, log_message, log_event,
                      intent_queue_depth, waitlist_depth, purge_old_data,
-                     upsert_message_status, upsert_bsuid)
+                     upsert_message_status, upsert_bsuid,
+                     get_profile, save_profile)
 from resilience import is_medilink_down
 from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_recordatorios, _job_recordatorios_2h,
@@ -447,6 +448,31 @@ async def webhook(request: Request):
     data = await request.json()
     obj = data.get("object", "")
 
+    # ── Helper: obtener nombre de usuario IG/FB ─────────────────────────────
+    async def _fetch_social_name(sender_id: str, phone: str, platform: str):
+        """Obtiene nombre/username de IG o FB via Graph API y lo guarda en contact_profiles."""
+        if get_profile(phone):
+            return  # ya tenemos el nombre
+        from config import META_ACCESS_TOKEN
+        try:
+            import httpx
+            fields = "name,username" if platform == "instagram" else "name,first_name,last_name"
+            async with httpx.AsyncClient(timeout=5) as client:
+                r = await client.get(
+                    f"https://graph.facebook.com/v21.0/{sender_id}",
+                    params={"fields": fields, "access_token": META_ACCESS_TOKEN},
+                )
+                if r.status_code == 200:
+                    info = r.json()
+                    if platform == "instagram":
+                        nombre = info.get("username") or info.get("name", sender_id)
+                    else:
+                        nombre = info.get("name") or f"{info.get('first_name', '')} {info.get('last_name', '')}".strip() or sender_id
+                    save_profile(phone, "", nombre)
+                    log.info("%s perfil guardado: %s → %s", platform.upper(), phone, nombre)
+        except Exception as e:
+            log.debug("No se pudo obtener perfil %s %s: %s", platform, sender_id, e)
+
     # ── Instagram DMs ────────────────────────────────────────────────────────
     if obj == "instagram":
         try:
@@ -467,6 +493,7 @@ async def webhook(request: Request):
                         log.warning("Rate limit excedido IG phone=%s", phone)
                         continue
                     log.info("INSTAGRAM from=%s text=%r", phone, texto[:80])
+                    await _fetch_social_name(sender_id, phone, "instagram")
                     save_session(phone, "HUMAN_TAKEOVER", {})
                     log_message(phone, "in", texto, "HUMAN_TAKEOVER", canal="instagram")
         except Exception as e:
@@ -493,6 +520,7 @@ async def webhook(request: Request):
                         log.warning("Rate limit excedido FB phone=%s", phone)
                         continue
                     log.info("MESSENGER from=%s text=%r", phone, texto[:80])
+                    await _fetch_social_name(sender_id, phone, "facebook")
                     save_session(phone, "HUMAN_TAKEOVER", {})
                     log_message(phone, "in", texto, "HUMAN_TAKEOVER", canal="messenger")
         except Exception as e:
@@ -589,18 +617,61 @@ async def webhook(request: Request):
             # Reacciones (emoji a un mensaje) — ignorar silenciosamente
             return Response(status_code=200)
         elif msg_type in ("image", "video", "document"):
-            # Archivos que recepción necesita revisar → HUMAN_TAKEOVER
-            log.info("MEDIA recibido from=%s type=%s — derivando a recepción", phone, msg_type)
+            # Archivos: descargar, almacenar y derivar a recepción
+            log.info("MEDIA recibido from=%s type=%s — descargando y derivando", phone, msg_type)
             _MEDIA_LABELS = {"image": "imagen 📷", "video": "video 🎥", "document": "documento 📄"}
             label = _MEDIA_LABELS[msg_type]
             caption = ""
+            media_id = ""
+            orig_filename = ""
             if msg_type == "image":
                 caption = msg.get("image", {}).get("caption", "")
+                media_id = msg.get("image", {}).get("id", "")
             elif msg_type == "video":
                 caption = msg.get("video", {}).get("caption", "")
+                media_id = msg.get("video", {}).get("id", "")
             elif msg_type == "document":
-                caption = msg.get("document", {}).get("filename", "")
+                orig_filename = msg.get("document", {}).get("filename", "")
+                caption = orig_filename
+                media_id = msg.get("document", {}).get("id", "")
+            # Descargar y guardar archivo
+            saved_filename = ""
+            if media_id:
+                try:
+                    result = await download_whatsapp_media(media_id)
+                    if result:
+                        blob, mime = result
+                        from session import save_patient_file
+                        # Crear directorio uploads/{phone}/
+                        _UPLOAD_DIR = Path(__file__).parent.parent / "data" / "uploads" / phone
+                        _UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+                        # Determinar extensión
+                        _MIME_EXT = {
+                            "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp",
+                            "video/mp4": ".mp4", "video/3gpp": ".3gp",
+                            "application/pdf": ".pdf",
+                            "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+                            "application/msword": ".doc",
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+                        }
+                        ext = _MIME_EXT.get(mime, ".bin")
+                        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+                        saved_filename = orig_filename or f"{msg_type}_{ts}{ext}"
+                        # Evitar colisiones
+                        file_path = _UPLOAD_DIR / saved_filename
+                        if file_path.exists():
+                            saved_filename = f"{ts}_{saved_filename}"
+                            file_path = _UPLOAD_DIR / saved_filename
+                        file_path.write_bytes(blob)
+                        rel_path = f"data/uploads/{phone}/{saved_filename}"
+                        save_patient_file(phone, saved_filename, msg_type, mime,
+                                          rel_path, len(blob), caption[:200])
+                        log.info("MEDIA guardado from=%s path=%s size=%d", phone, rel_path, len(blob))
+                except Exception as e:
+                    log.error("Error descargando/guardando media from=%s: %s", phone, e)
             log_text = f"[{msg_type}]" + (f" {caption}" if caption else "")
+            if saved_filename:
+                log_text = f"[{msg_type}:{saved_filename}]" + (f" {caption}" if caption and caption != saved_filename else "")
             state_before = get_session(phone).get("state", "IDLE")
             log_message(phone, "in", log_text, state_before, canal="whatsapp")
             save_session(phone, "HUMAN_TAKEOVER", {
@@ -608,10 +679,11 @@ async def webhook(request: Request):
                 "handoff_reason": f"media:{msg_type}",
                 "media_caption": caption,
             })
-            log_event(phone, "media_recibido", {"tipo": msg_type, "caption": caption[:200]})
+            log_event(phone, "media_recibido", {"tipo": msg_type, "caption": caption[:200],
+                                                 "filename": saved_filename})
             reply = (
                 f"Recibí tu {label}, gracias.\n\n"
-                "Una recepcionista lo va a revisar y te responde a la brevedad 🙏\n"
+                "Lo guardé en tu ficha y una recepcionista lo va a revisar 🙏\n"
                 "Si es urgente, puedes llamar al 📞 (41) 296 5226"
             )
             await send_whatsapp(phone, reply)

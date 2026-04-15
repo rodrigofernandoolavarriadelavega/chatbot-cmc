@@ -47,3 +47,9 @@ STAFF_PHONES: dict[str, str] = _json.loads(os.getenv("STAFF_PHONES", "{}"))
 # Mensajes proactivos: usar Message Templates aprobados por Meta (fuera de ventana 24h).
 # Poner en True SOLO cuando los templates estén aprobados en Meta Business Manager.
 USE_TEMPLATES = os.getenv("USE_TEMPLATES", "false").lower() in ("true", "1", "yes")
+
+# Google Analytics Data API — para mostrar métricas web en el panel admin.
+# GA4_PROPERTY_ID: solo el número (ej: "529028500")
+# GA4_CREDENTIALS_PATH: ruta al JSON de la cuenta de servicio
+GA4_PROPERTY_ID      = os.getenv("GA4_PROPERTY_ID", "529028500")
+GA4_CREDENTIALS_PATH = os.getenv("GA4_CREDENTIALS_PATH", "")

@@ -21,7 +21,8 @@ from session import (get_session, reset_session, save_session, get_metricas,
                      get_confirmaciones_dia, get_citas_cache_todos,
                      get_metricas_fidelizacion, get_nps_por_profesional,
                      get_notes, save_notes, get_patient_context, get_registration_stats,
-                     get_referral_stats, get_case_study_report)
+                     get_referral_stats, get_case_study_report,
+                     get_patient_files)
 from medilink import (buscar_paciente, crear_paciente, buscar_primer_dia,
                       buscar_slots_dia, crear_cita, listar_citas_paciente,
                       cancelar_cita, get_citas_seguimiento_mes, sync_citas_dia,
@@ -1051,3 +1052,392 @@ def admin_fidelizacion_trends(semanas: int = 4,
     """Tendencias semanales de campañas de fidelización."""
     from session import get_fidelizacion_trends
     return get_fidelizacion_trends(semanas)
+
+
+# ── Google Analytics Data API ────────────────────────────────────────────────
+
+@router.get("/admin/api/analytics")
+def admin_analytics(dias: int = 30, _: str = Depends(require_admin)):
+    """Métricas web desde GA4 Data API."""
+    from config import GA4_PROPERTY_ID, GA4_CREDENTIALS_PATH
+    if not GA4_CREDENTIALS_PATH:
+        raise HTTPException(503, "GA4_CREDENTIALS_PATH no configurado en .env")
+
+    try:
+        from google.analytics.data_v1beta import BetaAnalyticsDataClient
+        from google.analytics.data_v1beta.types import (
+            RunReportRequest, DateRange, Metric, Dimension, OrderBy,
+            RunRealtimeReportRequest,
+        )
+        import os
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GA4_CREDENTIALS_PATH
+
+        client = BetaAnalyticsDataClient()
+        prop = f"properties/{GA4_PROPERTY_ID}"
+
+        # ── 1. Métricas generales (últimos N días) ──
+        general = client.run_report(RunReportRequest(
+            property=prop,
+            date_ranges=[DateRange(start_date=f"{dias}daysAgo", end_date="today")],
+            metrics=[
+                Metric(name="activeUsers"),
+                Metric(name="sessions"),
+                Metric(name="screenPageViews"),
+                Metric(name="averageSessionDuration"),
+                Metric(name="bounceRate"),
+            ],
+        ))
+        g_row = general.rows[0] if general.rows else None
+        resumen = {
+            "usuarios": int(g_row.metric_values[0].value) if g_row else 0,
+            "sesiones": int(g_row.metric_values[1].value) if g_row else 0,
+            "paginas_vistas": int(g_row.metric_values[2].value) if g_row else 0,
+            "duracion_promedio_seg": round(float(g_row.metric_values[3].value), 1) if g_row else 0,
+            "tasa_rebote": round(float(g_row.metric_values[4].value) * 100, 1) if g_row else 0,
+        }
+
+        # ── 2. Páginas más visitadas ──
+        pages_rpt = client.run_report(RunReportRequest(
+            property=prop,
+            date_ranges=[DateRange(start_date=f"{dias}daysAgo", end_date="today")],
+            dimensions=[Dimension(name="pagePath")],
+            metrics=[Metric(name="screenPageViews"), Metric(name="activeUsers")],
+            order_bys=[OrderBy(metric=OrderBy.MetricOrderBy(metric_name="screenPageViews"), desc=True)],
+            limit=10,
+        ))
+        paginas = [
+            {"pagina": r.dimension_values[0].value,
+             "vistas": int(r.metric_values[0].value),
+             "usuarios": int(r.metric_values[1].value)}
+            for r in pages_rpt.rows
+        ]
+
+        # ── 3. Fuentes de tráfico ──
+        src_rpt = client.run_report(RunReportRequest(
+            property=prop,
+            date_ranges=[DateRange(start_date=f"{dias}daysAgo", end_date="today")],
+            dimensions=[Dimension(name="sessionSource")],
+            metrics=[Metric(name="sessions")],
+            order_bys=[OrderBy(metric=OrderBy.MetricOrderBy(metric_name="sessions"), desc=True)],
+            limit=10,
+        ))
+        fuentes = [
+            {"fuente": r.dimension_values[0].value or "(directo)",
+             "sesiones": int(r.metric_values[0].value)}
+            for r in src_rpt.rows
+        ]
+
+        # ── 4. Dispositivos ──
+        dev_rpt = client.run_report(RunReportRequest(
+            property=prop,
+            date_ranges=[DateRange(start_date=f"{dias}daysAgo", end_date="today")],
+            dimensions=[Dimension(name="deviceCategory")],
+            metrics=[Metric(name="sessions")],
+            order_bys=[OrderBy(metric=OrderBy.MetricOrderBy(metric_name="sessions"), desc=True)],
+        ))
+        dispositivos = [
+            {"dispositivo": r.dimension_values[0].value,
+             "sesiones": int(r.metric_values[0].value)}
+            for r in dev_rpt.rows
+        ]
+
+        # ── 5. Tendencia diaria (últimos N días) ──
+        trend_rpt = client.run_report(RunReportRequest(
+            property=prop,
+            date_ranges=[DateRange(start_date=f"{dias}daysAgo", end_date="today")],
+            dimensions=[Dimension(name="date")],
+            metrics=[Metric(name="activeUsers"), Metric(name="sessions")],
+            order_bys=[OrderBy(dimension=OrderBy.DimensionOrderBy(dimension_name="date"))],
+        ))
+        tendencia = [
+            {"fecha": r.dimension_values[0].value,
+             "usuarios": int(r.metric_values[0].value),
+             "sesiones": int(r.metric_values[1].value)}
+            for r in trend_rpt.rows
+        ]
+
+        # ── 6. Usuarios en tiempo real ──
+        try:
+            rt = client.run_realtime_report(RunRealtimeReportRequest(
+                property=prop,
+                metrics=[Metric(name="activeUsers")],
+            ))
+            realtime = int(rt.rows[0].metric_values[0].value) if rt.rows else 0
+        except Exception:
+            realtime = None
+
+        return {
+            "dias": dias,
+            "resumen": resumen,
+            "paginas_top": paginas,
+            "fuentes": fuentes,
+            "dispositivos": dispositivos,
+            "tendencia": tendencia,
+            "realtime": realtime,
+        }
+
+    except ImportError:
+        raise HTTPException(503, "google-analytics-data no instalado. Ejecutar: pip install google-analytics-data")
+    except Exception as e:
+        log.error("GA4 API error: %s", e)
+        raise HTTPException(502, f"Error consultando GA4: {e}")
+
+
+# ── Mapa dinámico (datos filtrados por fecha) ─────────────────────────────
+
+@router.get("/admin/api/map-data")
+def admin_map_data(desde: str = Query(None), hasta: str = Query(None),
+                   _: str = Depends(require_admin)):
+    """Devuelve datos de comunas, localidades y direcciones filtrados por rango de fechas.
+
+    Parámetros:
+        desde: fecha inicio YYYY-MM-DD (default: todo)
+        hasta: fecha fin YYYY-MM-DD (default: hoy)
+    """
+    import sqlite3 as _sqlite3
+    from pathlib import Path
+    from collections import Counter
+    from random import uniform
+
+    db_path = Path(__file__).parent.parent / "data" / "heatmap_cache.db"
+    if not db_path.exists():
+        raise HTTPException(404, "heatmap_cache.db no encontrado. Ejecutar scripts/heatmap_comunas.py download")
+
+    conn = _sqlite3.connect(str(db_path))
+    conn.row_factory = _sqlite3.Row
+
+    # ── Rango de fechas disponible ──
+    rango = conn.execute("SELECT MIN(fecha) as mn, MAX(fecha) as mx FROM citas_heatmap").fetchone()
+    fecha_min = rango["mn"] or "2026-01-01"
+    fecha_max = rango["mx"] or date.today().isoformat()
+
+    f_desde = desde or fecha_min
+    f_hasta = hasta or fecha_max
+
+    # ── Citas en rango ──
+    citas_rango = conn.execute("""
+        SELECT c.id, c.id_paciente, c.id_profesional, c.nombre_profesional, c.fecha, c.hora_inicio
+        FROM citas_heatmap c
+        WHERE c.fecha BETWEEN ? AND ?
+    """, (f_desde, f_hasta)).fetchall()
+
+    pac_ids_en_rango = {c["id_paciente"] for c in citas_rango if c["id_paciente"]}
+
+    # ── Pacientes con datos ──
+    if not pac_ids_en_rango:
+        conn.close()
+        return {
+            "fecha_min": fecha_min, "fecha_max": fecha_max,
+            "filtro": {"desde": f_desde, "hasta": f_hasta},
+            "total_citas": 0, "pacientes_unicos": 0,
+            "comunas": [], "localidades": [], "direcciones": [],
+        }
+
+    placeholders = ",".join("?" * len(pac_ids_en_rango))
+    pacs = conn.execute(f"""
+        SELECT id, nombre, apellidos, comuna, ciudad, direccion
+        FROM pacientes_heatmap WHERE id IN ({placeholders})
+    """, list(pac_ids_en_rango)).fetchall()
+    pac_map = {p["id"]: dict(p) for p in pacs}
+
+    # ── Indexar atenciones por paciente (solo en rango) ──
+    atenciones_por_pac = {}
+    for c in citas_rango:
+        pid = c["id_paciente"]
+        if not pid:
+            continue
+        if pid not in atenciones_por_pac:
+            atenciones_por_pac[pid] = []
+        atenciones_por_pac[pid].append({
+            "prof": (c["nombre_profesional"] or "").strip(),
+            "fecha": c["fecha"],
+            "hora": c["hora_inicio"][:5] if c["hora_inicio"] else "",
+        })
+
+    # ── Normalización de comunas ──
+    COMUNA_NORMALIZE = {
+        "ARAUVO": "ARAUCO", "LARAQUETE": "ARAUCO", "CARAMPANGUE": "ARAUCO",
+        "CONUMO": "ARAUCO", "HORCONES": "ARAUCO", "RAMADILLAS": "ARAUCO",
+        "TUBUL": "ARAUCO", "LLICO": "ARAUCO", "PICHILO": "ARAUCO",
+        "COLICO": "ARAUCO", "SAN JOSÉ DE COLICO": "ARAUCO",
+        "SAN JOSE DE COLICO": "ARAUCO",
+    }
+    COMUNA_COORDS = {
+        "ARAUCO": (-37.2467, -73.3178), "CURANILAHUE": (-37.4744, -73.3481),
+        "LOS ALAMOS": (-37.62, -73.47), "CAÑETE": (-37.8009, -73.3967),
+        "LEBU": (-37.6083, -73.65), "CORONEL": (-37.0167, -73.15),
+        "LOTA": (-37.0833, -73.15), "CONTULMO": (-38.0131, -73.2292),
+        "TIRUA": (-38.3333, -73.5), "CONCEPCION": (-36.8201, -73.0444),
+    }
+    LOC_CARAMPANGUE = {"CONUMO","MONSALVE","MANUEL LUENGO","LOS MAITENES","CRUCE NORTE",
+                       "LOS SILOS","LOS BOLDOS","LA MESETA","CHILLANCITO","DUARTE","PRAT 1"}
+    LOC_LARAQUETE = {"EL PINAR","VILLA BOSQUE","GONZALO ROJAS","PABLO NERUDA","LOS LINGUES",
+                     "LOS MAÑIOS","VISTA HERMOSA","PLAYA NORTE","EL BOLDO","SAN PEDRO","COPIHUE"}
+    LOC_RAMADILLAS = {"LOS ARTESANOS","MOLINO DEL SOL","IGNACIO CARRERA","ARTURO PEREZ","JULIO MONTT"}
+    LOC_URBANO = {"VILLA PEHUEN","VILLA DON CARLOS","PORTAL DEL VALLE","VILLA EL MIRADOR",
+                  "VILLA LAS ARAUCARIAS","VILLA LOS TRONCOS","VILLA RADIATA","VOLCÁN","VOLCAN",
+                  "LAS AMAPOLAS","LOS CANELOS","COVADONGA","CAUPOLICAN","FRESIA","SERRANO",
+                  "SAN MARTIN","PEDRO AGUIRRE","PUNTA CARAMPANGUE","AV PRAT","CALIFORNIA",
+                  "TUCAPEL","BLANCO","SCHNIER","ARRAYAN","LAS PEÑAS","ALTO LOS PADRES"}
+    LOC_COORDS = {
+        "CARAMPANGUE": (-37.265, -73.28), "LARAQUETE": (-37.17, -73.1833),
+        "RAMADILLAS": (-37.307, -73.258), "ARAUCO URBANO": (-37.2467, -73.3178),
+        "TUBUL": (-37.23, -73.44), "LLICO": (-37.195, -73.565), "COLICO": (-37.3833, -73.25),
+    }
+
+    def norm_comuna(c):
+        c = (c or "").strip().upper()
+        if not c or c.isdigit() or len(c) < 3:
+            return ""
+        return COMUNA_NORMALIZE.get(c, c)
+
+    def detect_loc(dir_str, comuna_norm):
+        if comuna_norm != "ARAUCO":
+            return None
+        d = (dir_str or "").upper()
+        for kw in LOC_CARAMPANGUE:
+            if kw in d:
+                return "CARAMPANGUE"
+        for kw in LOC_LARAQUETE:
+            if kw in d:
+                return "LARAQUETE"
+        for kw in LOC_RAMADILLAS:
+            if kw in d:
+                return "RAMADILLAS"
+        for kw in LOC_URBANO:
+            if kw in d:
+                return "ARAUCO URBANO"
+        if "TUBUL" in d:
+            return "TUBUL"
+        if "LLICO" in d:
+            return "LLICO"
+        if "COLICO" in d:
+            return "COLICO"
+        return None
+
+    # ── Contar por comuna y localidad ──
+    comuna_counter = Counter()
+    comuna_citas = Counter()
+    loc_counter = Counter()
+    for pid in pac_ids_en_rango:
+        p = pac_map.get(pid)
+        if not p:
+            continue
+        cu = norm_comuna(p["comuna"])
+        if cu:
+            comuna_counter[cu] += 1
+            comuna_citas[cu] += len(atenciones_por_pac.get(pid, []))
+            loc = detect_loc(p.get("direccion", ""), cu)
+            if loc:
+                loc_counter[loc] += 1
+
+    total_con_comuna = sum(comuna_counter.values()) or 1
+    comunas_out = []
+    for cu, cnt in comuna_counter.most_common():
+        coords = COMUNA_COORDS.get(cu)
+        if coords:
+            comunas_out.append({
+                "comuna": cu, "pacientes": cnt,
+                "citas": comuna_citas[cu],
+                "porcentaje": round(cnt / total_con_comuna * 100, 1),
+                "lat": coords[0], "lng": coords[1],
+            })
+
+    arauco_total = comuna_counter.get("ARAUCO", 1)
+    locs_out = []
+    for loc, cnt in loc_counter.most_common():
+        coords = LOC_COORDS.get(loc)
+        if coords:
+            locs_out.append({
+                "localidad": loc, "pacientes": cnt,
+                "porcentaje": round(cnt / arauco_total * 100, 1),
+                "lat": coords[0], "lng": coords[1],
+            })
+
+    # ── Direcciones geocodificadas ──
+    dir_groups = {}
+    for pid in pac_ids_en_rango:
+        p = pac_map.get(pid)
+        if not p or not p.get("direccion") or not p["direccion"].strip():
+            continue
+        key = p["direccion"].strip().upper()
+        if key not in dir_groups:
+            dir_groups[key] = {"dir": p["direccion"], "comuna": p.get("comuna", ""), "pacs": []}
+        nombre = f"{p.get('nombre', '')} {p.get('apellidos', '')}".strip()
+        ats = atenciones_por_pac.get(pid, [])[:5]
+        dir_groups[key]["pacs"].append({"nombre": nombre, "citas": len(ats), "ats": ats})
+
+    # Leer geocode_cache
+    geo_cache = {}
+    try:
+        for row in conn.execute("SELECT direccion_key, lat, lng FROM geocode_cache").fetchall():
+            geo_cache[row["direccion_key"]] = (row["lat"], row["lng"])
+    except Exception:
+        pass
+
+    dirs_out = []
+    for key, info in dir_groups.items():
+        coords = geo_cache.get(key)
+        if not coords:
+            continue
+        lat, lng = coords
+        if not (-39.0 < lat < -36.0 and -74.0 < lng < -71.0):
+            continue
+        total_citas_dir = sum(p["citas"] for p in info["pacs"])
+        detalle = []
+        for p in info["pacs"][:8]:
+            det = {"n": p["nombre"], "c": p["citas"], "a": []}
+            for at in p["ats"][:5]:
+                f = at["fecha"]
+                if f and len(f) >= 10:
+                    f = f[8:10] + "/" + f[5:7]
+                prof = at["prof"].split()
+                prof_short = " ".join(prof[:2]) if len(prof) >= 2 else at["prof"]
+                det["a"].append(f"{f} {at['hora']} — {prof_short}")
+            detalle.append(det)
+        dirs_out.append({
+            "lat": round(lat, 4), "lng": round(lng, 4),
+            "d": info["dir"].strip(), "p": len(info["pacs"]),
+            "c": total_citas_dir, "det": detalle,
+        })
+
+    conn.close()
+
+    return {
+        "fecha_min": fecha_min, "fecha_max": fecha_max,
+        "filtro": {"desde": f_desde, "hasta": f_hasta},
+        "total_citas": len(citas_rango),
+        "pacientes_unicos": len(pac_ids_en_rango),
+        "comunas": comunas_out,
+        "localidades": locs_out,
+        "direcciones": dirs_out,
+    }
+
+
+# ── Patient files (media recibido) ───────────────────────────────────────────
+
+@router.get("/admin/api/patient-files/{phone}")
+def api_patient_files(phone: str, _=Depends(require_admin)):
+    """Lista archivos recibidos de un paciente."""
+    return get_patient_files(phone)
+
+
+@router.get("/admin/api/file/{file_id}")
+def api_serve_file(file_id: int, _=Depends(require_admin)):
+    """Sirve un archivo almacenado por ID."""
+    from session import _conn
+    from pathlib import Path
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT file_path, mime_type, filename FROM patient_files WHERE id=?",
+            (file_id,)
+        ).fetchone()
+    if not row:
+        raise HTTPException(404, "Archivo no encontrado")
+    fpath = Path(__file__).parent.parent / row["file_path"]
+    if not fpath.exists():
+        raise HTTPException(404, "Archivo eliminado del disco")
+    content = fpath.read_bytes()
+    mime = row["mime_type"] or "application/octet-stream"
+    headers = {"Content-Disposition": f'inline; filename="{row["filename"]}"'}
+    return Response(content=content, media_type=mime, headers=headers)

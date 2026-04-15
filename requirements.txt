@@ -6,3 +6,4 @@ anthropic==0.28.0
 openai==1.51.0
 python-multipart==0.0.9
 apscheduler==3.10.4
+google-analytics-data==0.18.15

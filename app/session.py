@@ -231,6 +231,21 @@ def _conn():
         )
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_camp_id ON campanas_envios(campana_id)")
+    # Archivos de pacientes (fotos, PDFs, docs enviados por WhatsApp)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS patient_files (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            phone       TEXT NOT NULL,
+            filename    TEXT NOT NULL,
+            media_type  TEXT NOT NULL,
+            mime_type   TEXT DEFAULT '',
+            file_path   TEXT NOT NULL,
+            file_size   INTEGER DEFAULT 0,
+            caption     TEXT DEFAULT '',
+            created_at  TEXT DEFAULT (datetime('now'))
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_pf_phone ON patient_files(phone)")
     # Migración: agregar fecha_nacimiento a contact_profiles
     try:
         conn.execute("ALTER TABLE contact_profiles ADD COLUMN fecha_nacimiento TEXT")
@@ -2005,4 +2020,34 @@ def get_fidelizacion_trends(semanas: int = 4) -> list[dict]:
             GROUP BY semana, tipo
             ORDER BY semana ASC
         """, (f"-{semanas * 7} days",)).fetchall()
+        return [dict(r) for r in rows]
+
+
+# ── Patient files (media recibido por WhatsApp) ──────────────────────────────
+
+def save_patient_file(phone: str, filename: str, media_type: str,
+                      mime_type: str, file_path: str, file_size: int,
+                      caption: str = "") -> int:
+    """Guarda referencia a un archivo recibido del paciente."""
+    with _conn() as conn:
+        cur = conn.execute("""
+            INSERT INTO patient_files (phone, filename, media_type, mime_type,
+                                       file_path, file_size, caption)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (phone, filename, media_type, mime_type, file_path, file_size, caption))
+        conn.commit()
+        return cur.lastrowid
+
+
+def get_patient_files(phone: str, limit: int = 50) -> list[dict]:
+    """Lista archivos de un paciente, más recientes primero."""
+    with _conn() as conn:
+        rows = conn.execute("""
+            SELECT id, filename, media_type, mime_type, file_path,
+                   file_size, caption, created_at
+            FROM patient_files
+            WHERE phone = ?
+            ORDER BY created_at DESC
+            LIMIT ?
+        """, (phone, limit)).fetchall()
         return [dict(r) for r in rows]
