@@ -18,7 +18,8 @@ from session import (save_session, reset_session, save_tag, delete_tag, get_tags
                      save_cita_bot, log_event,
                      save_profile, get_profile, save_fidelizacion_respuesta, get_ultimo_seguimiento,
                      enqueue_intent, add_to_waitlist, cancel_waitlist,
-                     get_cita_bot_by_id_cita, mark_cita_confirmation, get_phone_by_rut)
+                     get_cita_bot_by_id_cita, mark_cita_confirmation, get_phone_by_rut,
+                     save_demanda_no_disponible)
 from resilience import is_medilink_down
 from triage_ges import triage_sintomas, normalizar_texto_paciente
 from pni import get_vaccine_reminder
@@ -1518,6 +1519,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if esp_sug and not is_medilink_down():
                 try:
                     esp_lower = esp_sug.lower()
+                    # Detectar si la especialidad no existe en nuestro catálogo
+                    from medilink import _ids_para_especialidad as _ids_chk
+                    if not _ids_chk(esp_lower):
+                        save_demanda_no_disponible(phone, esp_sug, "especialidad")
+                        log_event(phone, "demanda_no_disponible",
+                                  {"solicitud": esp_sug, "tipo": "info"})
                     if esp_lower in _ESP_MED_GENERAL:
                         _smart, _todos = await buscar_primer_dia(esp_lower, solo_ids=_MED_AO_IDS)
                         mejor = _todos[0] if _todos else None
@@ -2902,6 +2909,19 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
         save_session(phone, "WAIT_ESPECIALIDAD", data)
         return f"Claro, te ayudo a agendar 😊\n\n¿Qué especialidad necesitas?\n\n{_ESPECIALIDADES_TEXTO}"
     especialidad_lower = especialidad.lower()
+    # Detectar si la especialidad no existe en nuestro catálogo
+    from medilink import _ids_para_especialidad as _ids_esp_check
+    if not _ids_esp_check(especialidad_lower):
+        # Especialidad que no tenemos → registrar demanda
+        save_demanda_no_disponible(phone, especialidad, "especialidad")
+        log_event(phone, "demanda_no_disponible", {"solicitud": especialidad, "tipo": "especialidad"})
+        reset_session(phone)
+        return (
+            f"En el CMC no contamos con *{especialidad}* por el momento 😔\n\n"
+            f"Te sugerimos consultar con *Medicina General* para orientarte, "
+            f"o llamar a recepción:\n📞 *{CMC_TELEFONO}*\n\n"
+            "_Escribe *menu* para ver las opciones._"
+        )
     # Masoterapia tiene duración variable — preguntar antes de buscar slots
     if especialidad_lower in ("masoterapia", "masaje", "masajes"):
         data["especialidad"] = "masoterapia"

@@ -246,6 +246,17 @@ def _conn():
         )
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_pf_phone ON patient_files(phone)")
+    # Demanda de especialistas/exámenes que no tenemos
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS demanda_no_disponible (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            phone       TEXT NOT NULL,
+            solicitud   TEXT NOT NULL,
+            tipo        TEXT DEFAULT 'especialidad',
+            created_at  TEXT DEFAULT (datetime('now'))
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_dnd_ts ON demanda_no_disponible(created_at)")
     # Migración: agregar fecha_nacimiento a contact_profiles
     try:
         conn.execute("ALTER TABLE contact_profiles ADD COLUMN fecha_nacimiento TEXT")
@@ -2050,4 +2061,67 @@ def get_patient_files(phone: str, limit: int = 50) -> list[dict]:
             ORDER BY created_at DESC
             LIMIT ?
         """, (phone, limit)).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_media_stats(dias: int = 30) -> dict:
+    """Estadísticas de archivos media recibidos (imágenes, docs, etc.)."""
+    with _conn() as conn:
+        since = (datetime.now(timezone.utc) - timedelta(days=dias)).strftime("%Y-%m-%d")
+        # Total por tipo
+        totals = conn.execute("""
+            SELECT media_type, COUNT(*) as cnt
+            FROM patient_files WHERE created_at >= ?
+            GROUP BY media_type
+        """, (since,)).fetchall()
+        # Detalle de imágenes por paciente
+        images = conn.execute("""
+            SELECT pf.phone, cp.nombre, COUNT(*) as cnt,
+                   MAX(pf.created_at) as last_at
+            FROM patient_files pf
+            LEFT JOIN contact_profiles cp ON cp.phone = pf.phone
+            WHERE pf.media_type = 'image' AND pf.created_at >= ?
+            GROUP BY pf.phone
+            ORDER BY cnt DESC
+        """, (since,)).fetchall()
+        # Lista reciente de imágenes
+        recent = conn.execute("""
+            SELECT pf.id, pf.phone, cp.nombre, pf.filename,
+                   pf.created_at
+            FROM patient_files pf
+            LEFT JOIN contact_profiles cp ON cp.phone = pf.phone
+            WHERE pf.media_type = 'image' AND pf.created_at >= ?
+            ORDER BY pf.created_at DESC
+            LIMIT 50
+        """, (since,)).fetchall()
+        return {
+            "totals": {r["media_type"]: r["cnt"] for r in totals},
+            "images_by_patient": [dict(r) for r in images],
+            "recent_images": [dict(r) for r in recent],
+            "total_images": sum(r["cnt"] for r in images),
+        }
+
+
+def save_demanda_no_disponible(phone: str, solicitud: str,
+                                tipo: str = "especialidad"):
+    """Registra un especialista o examen solicitado que no tenemos."""
+    with _conn() as conn:
+        conn.execute("""
+            INSERT INTO demanda_no_disponible (phone, solicitud, tipo)
+            VALUES (?, ?, ?)
+        """, (phone, solicitud, tipo))
+        conn.commit()
+
+
+def get_demanda_no_disponible(dias: int = 90) -> list[dict]:
+    """Lista demanda de especialistas/exámenes no disponibles."""
+    with _conn() as conn:
+        since = (datetime.now(timezone.utc) - timedelta(days=dias)).strftime("%Y-%m-%d")
+        rows = conn.execute("""
+            SELECT d.id, d.phone, cp.nombre, d.solicitud, d.tipo,
+                   d.created_at
+            FROM demanda_no_disponible d
+            LEFT JOIN contact_profiles cp ON cp.phone = d.phone
+            ORDER BY d.created_at DESC
+        """).fetchall()
         return [dict(r) for r in rows]

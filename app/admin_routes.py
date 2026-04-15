@@ -22,7 +22,7 @@ from session import (get_session, reset_session, save_session, get_metricas,
                      get_metricas_fidelizacion, get_nps_por_profesional,
                      get_notes, save_notes, get_patient_context, get_registration_stats,
                      get_referral_stats, get_case_study_report,
-                     get_patient_files)
+                     get_patient_files, get_media_stats, get_demanda_no_disponible)
 from medilink import (buscar_paciente, crear_paciente, buscar_primer_dia,
                       buscar_slots_dia, crear_cita, listar_citas_paciente,
                       cancelar_cita, get_citas_seguimiento_mes, sync_citas_dia,
@@ -1441,3 +1441,20 @@ def api_serve_file(file_id: int, _=Depends(require_admin)):
     mime = row["mime_type"] or "application/octet-stream"
     headers = {"Content-Disposition": f'inline; filename="{row["filename"]}"'}
     return Response(content=content, media_type=mime, headers=headers)
+
+
+# ── Media stats (image counter) ──────────────────────────────────────────────
+
+@router.get("/admin/api/media-stats")
+def api_media_stats(dias: int = Query(30, ge=1, le=365), _=Depends(require_admin)):
+    """Estadísticas de archivos media recibidos (imágenes, documentos, etc.)."""
+    return get_media_stats(dias)
+
+
+# ── Demanda no disponible ────────────────────────────────────────────────────
+
+@router.get("/admin/api/demanda-no-disponible")
+def api_demanda_no_disponible(dias: int = Query(90, ge=1, le=365),
+                               _=Depends(require_admin)):
+    """Lista demanda de especialistas/exámenes que no tenemos."""
+    return get_demanda_no_disponible(dias)
