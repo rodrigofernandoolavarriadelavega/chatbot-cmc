@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <title>Panel Recepción — CMC</title>
@@ -31,6 +31,7 @@
   --shadow-md: 0 4px 6px rgba(0,0,0,.07),0 2px 4px rgba(0,0,0,.06);
 }
 * { margin:0; padding:0; box-sizing:border-box; }
+html { -webkit-text-size-adjust: 100%; }
 body {
   background: var(--bg); color: var(--text);
   font-family: "Inter", system-ui, sans-serif;
@@ -401,6 +402,29 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
   display: none; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 50;
 }
 
+/* ── MODAL RESPONSIVE (clases reutilizables) ── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.45); z-index: 1000;
+  align-items: flex-start; justify-content: center;
+  padding: 30px 16px; overflow-y: auto;
+}
+.modal-box {
+  background: #fff; border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.2);
+  position: relative; margin: auto; width: 100%;
+}
+.modal-header {
+  padding: 16px 20px 12px; border-bottom: 1px solid #e2e8f0;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.modal-close {
+  margin-left: auto; background: none; border: none;
+  font-size: 22px; cursor: pointer; color: #94a3b8;
+  padding: 4px 8px; min-width: 36px; min-height: 36px;
+  display: flex; align-items: center; justify-content: center;
+}
+
 /* ── TABLET (768–1024px) ── */
 @media (max-width: 1024px) {
   .col-filters { width: 180px; min-width: 180px; }
@@ -417,19 +441,25 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
   .topbar-pills { gap: 5px; flex-wrap: wrap; }
   .pill { font-size: 11px; padding: 4px 8px; }
   .btn { font-size: 11px; padding: 5px 10px; }
+  /* Topbar actions: wrap on tablet */
+  .topbar-actions { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  /* Modals: constrain width */
+  .modal-box { max-width: 96vw; }
 }
 
 /* ── MOBILE (<768px) ── */
 @media (max-width: 767px) {
   body { font-size: 14px; overflow: auto; }
+
+  /* ── TOPBAR ── */
   .topbar {
-    height: auto; min-height: 50px; padding: 8px 12px; gap: 8px; flex-wrap: wrap;
+    height: auto; min-height: 50px; padding: 8px 10px; gap: 6px; flex-wrap: wrap;
   }
   .brand-text p { display: none; }
   .mobile-hamburger { display: block; }
   .mobile-ctx-toggle { display: block; }
   .topbar-pills {
-    order: 10; width: 100%; gap: 6px; flex-wrap: wrap;
+    order: 10; width: 100%; gap: 5px; flex-wrap: wrap;
     padding-top: 6px; border-top: 1px solid var(--border); margin-left: 0;
     display: none;
   }
@@ -441,7 +471,16 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
     border-radius: 6px; font-size: 11px; padding: 3px 8px; cursor: pointer;
     color: var(--text-2); margin-left: auto;
   }
-  /* Layout → columna única */
+  /* Topbar actions: collapsible row */
+  .topbar-actions {
+    display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
+    order: 5; width: 100%;
+    padding-top: 6px; border-top: 1px solid var(--border);
+  }
+  .topbar-actions .btn { font-size: 11px; padding: 5px 8px; flex: 0 0 auto; }
+  .topbar-actions kbd { display: none; }
+
+  /* ── LAYOUT → columna única ── */
   .layout { flex-direction: column; height: auto; min-height: calc(100vh - 50px); }
 
   /* Filtros: overlay lateral */
@@ -461,7 +500,13 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
   .col-convs.mob-hidden { display: none; }
   .conv-scroll { max-height: calc(100vh - 140px); }
 
-  /* Chat → full width */
+  /* Conversation cards: touch-friendly */
+  .conv-card { padding: 12px 14px; margin-bottom: 8px; }
+  .cname { font-size: 14px; }
+  .cpreview { font-size: 12px; }
+  .cbadges { gap: 4px; margin-top: 3px; }
+
+  /* Chat → full screen overlay */
   .col-main {
     display: none; flex-direction: column; width: 100%;
     position: fixed; inset: 0; z-index: 40; background: var(--surface);
@@ -472,30 +517,192 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
 
   /* Contexto → overlay desde derecha */
   .ctx-panel {
-    position: fixed; top: 0; right: -280px; width: 270px; min-width: 270px;
-    height: 100vh; z-index: 65; transition: right .25s ease;
+    position: fixed; top: 0; right: -300px; width: 85vw; min-width: auto;
+    max-width: 320px; height: 100vh; z-index: 65;
+    transition: right .25s ease;
     box-shadow: -4px 0 20px rgba(0,0,0,.15);
   }
   .ctx-panel.open { right: 0; }
   .ctx-overlay.open { display: block; }
+  /* Context panel touch-friendly */
+  .ctx-sec { padding: 16px; }
+  .ctx-notes { min-height: 90px; font-size: 13px; padding: 10px 12px; }
+  .ctx-actions .btn { padding: 10px 14px; font-size: 13px; }
+  .flow-row { padding: 10px; }
 
-  /* Chat header ajustes */
+  /* ── CHAT HEADER ── */
   .chat-header { padding: 8px 10px; gap: 6px; flex-wrap: wrap; }
-  .ch-actions { gap: 4px; flex-wrap: wrap; }
-  .ch-actions .btn { font-size: 11px; padding: 4px 8px; }
+  .ch-avatar { width: 32px; height: 32px; font-size: 12px; }
+  .ch-name { font-size: 13px; }
+  .ch-sub { font-size: 10px; }
+  .ch-actions { gap: 4px; flex-wrap: wrap; width: 100%; justify-content: flex-end; }
+  .ch-actions .btn { font-size: 11px; padding: 6px 10px; }
   .ch-actions .state-tag { font-size: 10px; }
+  /* Hide secondary action text on small screens */
+  #btn-notify-informe span.btn-label,
+  #btn-seguimiento span.btn-label { display: none; }
 
-  /* Mensajes */
-  .msg-bubble { max-width: 88%; font-size: 13px; }
+  /* ── MENSAJES ── */
+  .msg-bubble { max-width: 88%; font-size: 13px; padding: 10px 14px; }
+  .msg-meta { font-size: 10px; }
+  .chat-messages { padding: 12px 10px; gap: 5px; }
 
-  /* Reply bar */
-  .reply-textarea { font-size: 14px; }
+  /* ── REPLY BAR ── */
+  .reply-bar { padding: 8px 10px; }
+  .reply-textarea { font-size: 14px; padding: 10px 12px; min-height: 44px; }
+  .reply-actions { gap: 6px; margin-top: 6px; }
   .reply-actions .btn { font-size: 12px; padding: 8px 14px; }
+  .btn-send { flex: 1; justify-content: center; }
 
-  /* Modales */
-  #modal-kine-inner { width: 98vw !important; }
+  /* ── QUICK REPLIES ── */
+  .quick-replies { padding: 6px 10px 0; gap: 4px; }
+  .qr-btn { padding: 6px 12px; font-size: 12px; }
+
+  /* ── MODALS: FULLSCREEN ON MOBILE ── */
+  .modal-overlay { padding: 0; }
+  .modal-box {
+    max-width: 100vw; min-height: 100vh;
+    border-radius: 0; margin: 0;
+  }
+  .modal-header { padding: 14px 16px 10px; }
+
+  /* Specific modals — override inline styles */
+  #modal-kine, #modal-confirm, #modal-fidel, #modal-nps,
+  #modal-timeline, #modal-agendar, #modal-anular, #modal-busqueda {
+    padding: 0 !important;
+  }
+  #modal-kine > div, #modal-confirm > div, #modal-fidel > div,
+  #modal-nps > div, #modal-timeline > div {
+    width: 100vw !important; max-width: 100vw !important;
+    min-height: 100vh; border-radius: 0 !important;
+    margin: 0 !important;
+  }
+  #modal-agendar > div, #modal-anular > div {
+    width: 100vw !important; max-width: 100vw !important;
+    min-height: auto; border-radius: 0 !important;
+    margin: 0 !important; padding: 20px 16px !important;
+  }
+  #modal-busqueda > div {
+    width: 100vw !important; max-width: 100vw !important;
+    max-height: 100vh !important; border-radius: 0 !important;
+    margin: 0 !important;
+  }
+  /* Modal internal padding */
+  #modal-kine-inner { width: 100vw !important; }
   #kine-vista-matriz-wrap { -webkit-overflow-scrolling: touch; }
   #kine-tabla-matriz { min-width: max-content; }
+  /* Kine modal header: stack controls */
+  #modal-kine-inner > div:first-child {
+    flex-direction: column !important; align-items: flex-start !important;
+    gap: 8px !important; padding: 14px 16px 10px !important;
+  }
+  #modal-kine-inner > div:first-child select { width: 100%; }
+  /* Kine summary bar */
+  #kine-resumen { padding: 8px 16px !important; gap: 10px !important; }
+  /* Kine table */
+  #kine-vista-tabla-wrap { max-height: 65vh; }
+  #kine-vista-tabla-wrap table { font-size: 12px; }
+  #kine-vista-tabla-wrap th,
+  #kine-vista-tabla-wrap td { padding: 8px 10px !important; }
+
+  /* Fidelización tabs */
+  .fidel-tab { padding: 8px 10px; font-size: 12px; }
+  /* Fidelización campaign cards */
+  .camp-card { padding: 12px 14px; }
+  .camp-btn { padding: 8px 14px; font-size: 12px; }
+
+  /* Confirm modal */
+  #confirm-resumen { padding: 10px 16px !important; }
+  #confirm-lista { padding: 12px 16px 16px !important; }
+
+  /* NPS modal */
+  #nps-resumen { padding: 10px 16px !important; }
+  #nps-body { padding: 12px 16px 16px !important; }
+
+  /* Timeline modal */
+  #timeline-body { padding: 14px 16px 16px !important; }
+
+  /* Search modal */
+  #modal-busqueda > div > div:first-child { padding: 16px !important; }
+  #global-search-input { font-size: 16px !important; padding: 12px !important; }
+
+  /* Agendar/Anular modals: form touch-friendly */
+  #modal-agendar input, #modal-anular input,
+  #modal-agendar select, #modal-anular select {
+    font-size: 16px !important; padding: 12px !important;
+    min-height: 44px;
+  }
+  #modal-agendar .btn, #modal-anular .btn {
+    min-height: 44px; font-size: 13px !important;
+  }
+  .slot-pick { padding: 10px 12px; font-size: 13px; min-height: 44px; }
+
+  /* State filter buttons: larger touch target */
+  .state-btn { padding: 11px 12px; font-size: 13px; }
+  .esp-btn { padding: 9px 12px; font-size: 13px; }
+
+  /* Dropdown menu */
+  .dropdown-menu { min-width: 180px; }
+  .dropdown-item { padding: 10px 16px; font-size: 13px; }
+
+  /* Alert bar */
+  #alert-bar { padding: 10px 16px !important; font-size: 13px !important; }
+
+  /* Scrollbar wider for touch */
+  ::-webkit-scrollbar { width: 6px; }
+
+  /* Prevent iOS zoom on input focus */
+  input, select, textarea { font-size: 16px; }
+}
+
+/* ── SMALL PHONES (<400px) ── */
+@media (max-width: 400px) {
+  .topbar { padding: 6px 8px; gap: 4px; }
+  .pill { font-size: 10px; padding: 2px 6px; }
+  .topbar-actions .btn { font-size: 10px; padding: 4px 6px; }
+  .conv-card { padding: 10px 12px; }
+  .cname { font-size: 13px; }
+  .msg-bubble { max-width: 92%; padding: 8px 12px; }
+  .ch-actions .btn { font-size: 10px; padding: 5px 7px; }
+  .ctx-panel { width: 90vw; max-width: 300px; }
+  .col-filters { width: 85vw; min-width: auto; max-width: 280px; left: -300px; }
+  .col-filters.open { left: 0; }
+}
+
+/* ── LANDSCAPE PHONE ── */
+@media (max-height: 500px) and (max-width: 900px) {
+  .topbar { min-height: 40px; padding: 4px 10px; }
+  .topbar-pills { padding-top: 4px; }
+  .chat-header { padding: 6px 10px; }
+  .msg-bubble { max-width: 80%; }
+  .reply-textarea { min-height: 36px; }
+  /* Modals: don't force full height in landscape */
+  #modal-agendar > div, #modal-anular > div {
+    min-height: auto !important; max-height: 95vh; overflow-y: auto;
+  }
+}
+
+/* ── SAFE AREA (notch devices) ── */
+@supports(padding: env(safe-area-inset-top)) {
+  @media (max-width: 767px) {
+    .topbar { padding-top: calc(8px + env(safe-area-inset-top)); }
+    .col-main.mob-show { padding-top: env(safe-area-inset-top); }
+    .reply-bar { padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
+    .col-filters { padding-top: env(safe-area-inset-top); }
+    .ctx-panel { padding-top: env(safe-area-inset-top); }
+  }
+}
+
+/* ── PRINT ── */
+@media print {
+  .topbar, .col-filters, .ctx-panel, .reply-bar,
+  .mobile-hamburger, .mobile-back, .mobile-ctx-toggle,
+  .filters-overlay, .ctx-overlay { display: none !important; }
+  .layout { display: block; }
+  .col-convs { display: none; }
+  .col-main { display: block !important; position: static !important; }
+  .chat-messages { overflow: visible; max-height: none; }
+  .msg-bubble { max-width: 100%; }
 }
 </style>
 </head>
@@ -3030,6 +3237,38 @@ window.addEventListener('resize', () => {
     document.getElementById('filters-overlay').classList.remove('open');
   }
 });
+/* ── TOUCH SWIPE GESTURES ── */
+(function(){
+  let startX=0,startY=0,tracking=false;
+  const MIN_SWIPE=60, MAX_Y=80;
+  document.addEventListener("touchstart",function(e){
+    if(e.touches.length!==1)return;
+    startX=e.touches[0].clientX;startY=e.touches[0].clientY;tracking=true;
+  },{passive:true});
+  document.addEventListener("touchend",function(e){
+    if(!tracking||!isMobile())return;tracking=false;
+    const dx=e.changedTouches[0].clientX-startX;
+    const dy=Math.abs(e.changedTouches[0].clientY-startY);
+    if(dy>MAX_Y)return; // not a horizontal swipe
+    const filters=document.getElementById("col-filters");
+    const ctx=document.querySelector(".ctx-panel");
+    // Swipe left → close context panel
+    if(dx<-MIN_SWIPE && ctx.classList.contains("open")){
+      ctx.classList.remove("open");
+      document.getElementById("ctx-overlay").classList.remove("open");
+    }
+    // Swipe right → close filters panel
+    if(dx>MIN_SWIPE && filters.classList.contains("open")){
+      filters.classList.remove("open");
+      document.getElementById("filters-overlay").classList.remove("open");
+    }
+    // Swipe right on chat → back to list
+    if(dx>MIN_SWIPE && document.querySelector(".col-main").classList.contains("mob-show") &&
+       !ctx.classList.contains("open") && !filters.classList.contains("open")){
+      backToList();
+    }
+  },{passive:true});
+})();
 /* ── NOTIFICATION SOUND (Web Audio API beep) ── */
 function _playNotifBeep(){
   try{
