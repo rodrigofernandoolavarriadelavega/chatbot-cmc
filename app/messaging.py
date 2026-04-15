@@ -363,13 +363,13 @@ async def send_instagram(igsid: str, body: str):
     if not INSTAGRAM_USER_ID:
         log.error("INSTAGRAM_USER_ID no configurado en .env")
         return
-    url = f"https://graph.facebook.com/v22.0/{INSTAGRAM_USER_ID}/messages"
+    url = f"https://graph.instagram.com/v22.0/{INSTAGRAM_USER_ID}/messages"
     for attempt in range(2):
         try:
             async with httpx.AsyncClient(timeout=10) as client:
                 r = await client.post(
                     url,
-                    headers={"Authorization": f"Bearer {META_PAGE_ACCESS_TOKEN}"},
+                    params={"access_token": META_PAGE_ACCESS_TOKEN},
                     json={"recipient": {"id": igsid}, "message": {"text": body}},
                 )
             if r.status_code == 200:

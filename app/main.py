@@ -481,9 +481,6 @@ async def webhook(request: Request):
     # ── Instagram DMs ────────────────────────────────────────────────────────
     if obj == "instagram":
         try:
-            # Log temporal: capturar entry.id (IGBA ID) y recipient.id
-            import json as _json
-            log.info("IG WEBHOOK payload: %s", _json.dumps(data, default=str)[:1000])
             for entry in data.get("entry", []):
                 for ev in entry.get("messaging", []):
                     sender_id = ev.get("sender", {}).get("id", "")
@@ -511,6 +508,22 @@ async def webhook(request: Request):
                         await _fetch_social_name(sender_id, phone, "instagram")
                     save_session(phone, "HUMAN_TAKEOVER", {})
                     log_message(phone, "in", texto, "HUMAN_TAKEOVER", canal="instagram")
+                    # Auto-reply por Instagram
+                    from messaging import send_instagram
+                    auto_reply = (
+                        "👋 Hola, gracias por comunicarte con Centro Médico Carampangue.\n\n"
+                        "📲 Solicita horas o info aquí: https://wa.me/+56966610737\n"
+                        "👩🏻‍💻 Agenda online med general/familiar: https://ff.healthatom.io/OUalFx\n\n"
+                        "✨ Nutricionista bono Fonasa $4.680\n"
+                        "😁 Ortodoncia: completa $120.000 / controles $30.000\n\n"
+                        "Atendemos: médico gral. y familiar, odontología, ortodoncia, "
+                        "kinesiología, nutrición, psicología (adulto e infantil), "
+                        "traumatología, otorrino, cardiología, ecografía, audiometría, "
+                        "matrona, ginecología y gastro.\n\n"
+                        "Una recepcionista te responderá pronto 🙏"
+                    )
+                    await send_instagram(sender_id, auto_reply)
+                    log_message(phone, "out", auto_reply, "HUMAN_TAKEOVER", canal="instagram")
         except Exception as e:
             log.warning("Error procesando Instagram webhook: %s", e)
         return Response(status_code=200)
