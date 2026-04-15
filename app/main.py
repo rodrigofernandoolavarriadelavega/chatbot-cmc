@@ -244,6 +244,7 @@ app.include_router(portal_routes.router)
 _TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
 _ADMIN_HTML = (_TEMPLATE_DIR / "admin.html").read_text(encoding="utf-8")
 _PORTAL_HTML = (_TEMPLATE_DIR / "portal.html").read_text(encoding="utf-8")
+_ECOSISTEMA_HTML = (_TEMPLATE_DIR / "ecosistema.html").read_text(encoding="utf-8")
 
 
 # ── Endpoints ────────────────────────────────────────────────────────────────
@@ -340,6 +341,12 @@ def admin_panel(token: str | None = Query(None),
 def portal_page():
     """Portal del paciente — webapp pública (auth se maneja client-side con OTP)."""
     return _PORTAL_HTML
+
+
+@app.get("/ecosistema", response_class=HTMLResponse)
+def ecosistema_page():
+    """Dashboard visual del ecosistema digital CMC."""
+    return _ECOSISTEMA_HTML
 
 
 # ── Webhooks ─────────────────────────────────────────────────────────────────

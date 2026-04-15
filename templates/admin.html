@@ -495,6 +495,7 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
     <div class="pill green" id="pill-confirm" onclick="abrirModalConfirmaciones()" style="cursor:pointer;" title="Click para ver detalle">✅&nbsp;<strong id="s-confirm">—</strong>&nbsp;mañana</div>
     <div class="pill" id="pill-conversion" title="Tasa de conversión agendamiento (30 días)">📈&nbsp;<strong id="s-conversion">—</strong></div>
     <div class="pill" id="pill-registro" title="Registros de pacientes nuevos (30 días)">📝&nbsp;<strong id="s-registro">—</strong></div>
+    <div class="pill" id="pill-trabados" style="display:none;cursor:pointer;" onclick="setFilter('trabados',document.getElementById('pill-trabados'))" title="Pacientes >5 min sin avanzar en un flujo activo">🚧&nbsp;<strong id="s-trabados">0</strong>&nbsp;trabados</div>
     <div class="pill"><div class="live-dot"></div>&nbsp;<span id="last-refresh">—</span></div>
   </div>
   <div style="margin-left:auto;"></div>
@@ -731,6 +732,11 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
         <span class="scount" id="cnt-all">—</span>
       </button>
       <div id="state-buttons"></div>
+      <button class="state-btn" id="btn-pendientes" onclick="setFilter('pendientes',this)" title="Pacientes que enviaron el último mensaje y esperan respuesta" style="margin-top:4px;border-top:1px dashed var(--border);padding-top:8px;">
+        <span class="sdot" style="background:#f97316;"></span>
+        <span style="flex:1;">Solo pendientes</span>
+        <span class="scount" id="cnt-pendientes">—</span>
+      </button>
     </div>
     <div class="filter-section">
       <div class="filter-label">Especialidad</div>
@@ -1130,7 +1136,11 @@ function filtered() {
   const group = STATE_GROUPS.find(g=>g.id===currentFilter);
   return convs.filter(c => {
     if (q && !(c.phone||"").includes(q) && !(c.nombre||"").toLowerCase().includes(q)) return false;
-    if (group && !group.states.includes(c.state)) return false;
+    if (currentFilter==="trabados") {
+      if (!ACTIVE_STATES.includes(c.state) || waitMinutes(c.last_ts||c.updated_at)<5) return false;
+    } else if (currentFilter==="pendientes") {
+      if (c.last_dir!=="in" || c.state==="IDLE") return false;
+    } else if (group && !group.states.includes(c.state)) return false;
     if (currentEsp!=="all" && (c.flow_data?.especialidad||"")!==currentEsp) return false;
     return true;
   });
@@ -1169,7 +1179,7 @@ function canalLabel(canal) {
 function convCard(c,g) {
   const name = c.nombre||(c.phone.startsWith("ig_")?"Instagram #"+c.phone.slice(3):c.phone.startsWith("fb_")?"Messenger #"+c.phone.slice(3):c.phone);
   const preview = c.last_text ? c.last_text.substring(0,60) : "Sin mensajes";
-  const dir = c.last_dir==="in" ? "" : "← ";
+  const dir = c.last_dir==="in" ? "👤 " : "🤖 ← ";
   const fd = c.flow_data||{};
   const mins = waitMinutes(c.last_ts||c.updated_at);
   const canal = c.canal||"whatsapp";
@@ -1294,13 +1304,38 @@ function updateContextPanel(conv) {
 }
 function renderQuickReplies(conv) {
   const fd=conv.flow_data||{};
-  const replies=["En un momento te atiendo 😊"];
-  if(fd.especialidad) replies.push(`Te busco disponibilidad para ${fd.especialidad} 👍`);
-  else replies.push("¿En qué especialidad necesitas hora?");
-  if(!conv.rut) replies.push("¿Cuál es tu RUT para buscarte en el sistema?");
-  if(fd.fecha_display&&fd.hora_inicio) replies.push(`Tu hora el ${fd.fecha_display} a las ${fd.hora_inicio.substring(0,5)} está confirmada ✅`);
+  const st=conv.state||"IDLE";
+  let replies=[];
+  if(st==="HUMAN_TAKEOVER") {
+    replies.push("En un momento te atiendo 😊");
+    if(fd.especialidad) replies.push(`Te busco disponibilidad para ${espLabel(fd.especialidad)} 👍`);
+    if(!conv.rut) replies.push("¿Me indicas tu RUT para buscarte en el sistema?");
+    if(fd.fecha_display&&fd.hora_inicio) replies.push(`Tu hora el ${fd.fecha_display} a las ${fd.hora_inicio.substring(0,5)} está confirmada ✅`);
+    replies.push("Listo, ya te agendé tu hora ✅");
+    replies.push("Voy a revisar y te aviso enseguida");
+    replies.push("Para más información llama al (41) 296 5226");
+  } else if(["WAIT_ESPECIALIDAD","WAIT_DURACION_MASOTERAPIA"].includes(st)) {
+    replies.push("¿En qué especialidad necesitas atenderte?");
+    replies.push("Te puedo ayudar a agendar hora, ¿qué necesitas?");
+  } else if(st==="WAIT_SLOT") {
+    replies.push("Te busco otro horario disponible 👍");
+    replies.push("¿Prefieres en la mañana o en la tarde?");
+    if(fd.fecha_display) replies.push(`¿Te sirve alguno de los horarios del ${fd.fecha_display}?`);
+  } else if(["WAIT_RUT_AGENDAR","WAIT_RUT_CANCELAR","WAIT_RUT_VER","WAIT_RUT_REAGENDAR"].includes(st)) {
+    replies.push("¿Me indicas tu RUT para buscarte en el sistema?");
+    replies.push("Necesito tu RUT con guión (ej: 12345678-9)");
+  } else if(["WAIT_NOMBRE_NUEVO","WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL","WAIT_REFERRAL"].includes(st)) {
+    replies.push("Para registrarte necesito unos datos 📋");
+    replies.push("Si prefieres, puedes saltarte este paso escribiendo 'saltar'");
+  } else if(st==="CONFIRMING_CITA") {
+    replies.push("¿Confirmas la hora? Responde Sí o No");
+  } else if(["WAIT_CITA_CANCELAR","WAIT_CITA_REAGENDAR"].includes(st)) {
+    replies.push("¿Cuál cita deseas cancelar/reagendar?");
+  } else {
+    replies.push("En un momento te atiendo 😊");
+    replies.push("¿En qué te puedo ayudar?");
+  }
   replies.push("Tu consulta fue registrada, te llamamos pronto.");
-  replies.push("Para más información llama al (41) 296 5226");
   document.getElementById("quick-replies").innerHTML=replies.map(r=>
     `<button class="qr-btn" onclick="insertQR(${JSON.stringify(r)})">${r.replace(/</g,"&lt;")}</button>`
   ).join("");
@@ -1561,6 +1596,15 @@ function updateStats(){
   const tk=convs.filter(c=>c.state==="HUMAN_TAKEOVER").length;
   document.getElementById("s-takeover").textContent=tk;
   document.getElementById("pill-esperando").className="pill"+(tk>0?" red":"");
+  // Count pendientes (patient sent last msg + not IDLE)
+  const pend=convs.filter(c=>c.last_dir==="in"&&c.state!=="IDLE").length;
+  document.getElementById("cnt-pendientes").textContent=pend;
+  // Pill de pacientes trabados (>5 min en flujo activo sin avanzar)
+  const trabados=convs.filter(c=>ACTIVE_STATES.includes(c.state)&&waitMinutes(c.last_ts||c.updated_at)>=5).length;
+  const pillTrab=document.getElementById("pill-trabados");
+  document.getElementById("s-trabados").textContent=trabados;
+  pillTrab.style.display=trabados>0?"":"none";
+  pillTrab.className="pill"+(trabados>0?" amber":"");
   // Pill de archivos/media pendientes
   const mediaPend=convs.filter(c=>c.state==="HUMAN_TAKEOVER"&&c.flow_data?.handoff_reason?.startsWith("media:")).length;
   const pillMedia=document.getElementById("pill-media");

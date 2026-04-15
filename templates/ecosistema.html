@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<title>Ecosistema Digital — Centro Medico Carampangue</title>
+<style>
+:root {
+  --bg: #0f172a; --bg-2: #1e293b; --bg-3: #334155;
+  --surface: #1e293b; --surface-hover: #273548;
+  --border: #334155; --border-light: #475569;
+  --text: #f1f5f9; --text-2: #94a3b8; --text-3: #64748b;
+  --primary: #38bdf8; --primary-dim: rgba(56,189,248,.12);
+  --green: #34d399; --green-dim: rgba(52,211,153,.12);
+  --amber: #fbbf24; --amber-dim: rgba(251,191,36,.12);
+  --red: #f87171; --red-dim: rgba(248,113,113,.12);
+  --purple: #a78bfa; --purple-dim: rgba(167,139,250,.12);
+  --pink: #f472b6; --pink-dim: rgba(244,114,182,.12);
+  --cyan: #22d3ee; --cyan-dim: rgba(34,211,238,.12);
+  --orange: #fb923c; --orange-dim: rgba(251,146,60,.12);
+  --radius: 16px; --radius-sm: 10px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: "Inter", system-ui, sans-serif;
+  min-height: 100vh; overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Header ────────────────────────────── */
+.header {
+  padding: 32px 32px 0; text-align: center;
+  position: relative;
+}
+.header::after {
+  content: ''; position: absolute; top: 0; left: 0; right: 0;
+  height: 300px; background: radial-gradient(ellipse at 50% 0%, rgba(56,189,248,.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+.header-logo {
+  display: flex; align-items: center; justify-content: center;
+  gap: 16px; margin-bottom: 8px; position: relative; z-index: 1;
+}
+.header-logo img {
+  height: 52px; border-radius: 12px;
+  box-shadow: 0 0 24px rgba(56,189,248,.2);
+}
+.header-logo h1 {
+  font-size: 24px; font-weight: 800; letter-spacing: -.5px;
+  background: linear-gradient(135deg, #f1f5f9 0%, #94a3b8 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.header-sub {
+  font-size: 14px; color: var(--text-2); font-weight: 400;
+  position: relative; z-index: 1;
+}
+.header-sub span {
+  display: inline-block; padding: 3px 10px; border-radius: 20px;
+  background: var(--green-dim); color: var(--green); font-weight: 600;
+  font-size: 11px; margin-left: 8px; vertical-align: middle;
+}
+
+/* ── Stats bar ─────────────────────────── */
+.stats-bar {
+  display: flex; justify-content: center; gap: 8px;
+  padding: 20px 24px; flex-wrap: wrap; position: relative; z-index: 1;
+}
+.stat {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 12px 20px;
+  text-align: center; min-width: 120px;
+}
+.stat-value {
+  font-size: 28px; font-weight: 800; line-height: 1;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--cyan) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.stat-label { font-size: 11px; color: var(--text-3); font-weight: 500; margin-top: 4px; text-transform: uppercase; letter-spacing: .5px; }
+
+/* ── Grid ──────────────────────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px; padding: 8px 24px 40px; max-width: 1400px; margin: 0 auto;
+}
+
+/* ── Node card ─────────────────────────── */
+.node {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px;
+  transition: transform .15s, border-color .15s, box-shadow .15s;
+  position: relative; overflow: hidden;
+}
+.node:hover {
+  transform: translateY(-2px); border-color: var(--border-light);
+  box-shadow: 0 8px 32px rgba(0,0,0,.3);
+}
+.node::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0;
+  height: 3px; border-radius: var(--radius) var(--radius) 0 0;
+}
+.node.n-chatbot::before { background: linear-gradient(90deg, var(--primary), var(--cyan)); }
+.node.n-ges::before { background: linear-gradient(90deg, var(--green), #6ee7b7); }
+.node.n-admin::before { background: linear-gradient(90deg, var(--purple), var(--pink)); }
+.node.n-portal::before { background: linear-gradient(90deg, var(--cyan), var(--primary)); }
+.node.n-medilink::before { background: linear-gradient(90deg, var(--orange), var(--amber)); }
+.node.n-meta::before { background: linear-gradient(90deg, #25D366, #128C7E); }
+.node.n-claude::before { background: linear-gradient(90deg, #d4a574, #c9956b); }
+.node.n-whisper::before { background: linear-gradient(90deg, var(--text-3), var(--text-2)); }
+.node.n-infra::before { background: linear-gradient(90deg, var(--red), var(--orange)); }
+.node.n-web::before { background: linear-gradient(90deg, var(--pink), var(--purple)); }
+.node.n-cron::before { background: linear-gradient(90deg, var(--amber), var(--green)); }
+.node.n-data::before { background: linear-gradient(90deg, var(--cyan), var(--green)); }
+
+.node-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.node-icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+}
+.n-chatbot .node-icon { background: var(--primary-dim); }
+.n-ges .node-icon { background: var(--green-dim); }
+.n-admin .node-icon { background: var(--purple-dim); }
+.n-portal .node-icon { background: var(--cyan-dim); }
+.n-medilink .node-icon { background: var(--orange-dim); }
+.n-meta .node-icon { background: rgba(37,211,102,.12); }
+.n-claude .node-icon { background: rgba(212,165,116,.12); }
+.n-whisper .node-icon { background: rgba(100,116,139,.15); }
+.n-infra .node-icon { background: var(--red-dim); }
+.n-web .node-icon { background: var(--pink-dim); }
+.n-cron .node-icon { background: var(--amber-dim); }
+.n-data .node-icon { background: var(--cyan-dim); }
+
+.node-title { font-size: 15px; font-weight: 700; }
+.node-badge {
+  display: inline-block; font-size: 10px; font-weight: 700;
+  padding: 2px 8px; border-radius: 20px; margin-left: auto;
+  text-transform: uppercase; letter-spacing: .5px;
+}
+.badge-prod { background: var(--green-dim); color: var(--green); }
+.badge-proto { background: var(--amber-dim); color: var(--amber); }
+.badge-new { background: var(--primary-dim); color: var(--primary); }
+
+.node-desc { font-size: 13px; color: var(--text-2); line-height: 1.5; margin-bottom: 12px; }
+
+.node-items { list-style: none; }
+.node-items li {
+  font-size: 12px; color: var(--text-2); padding: 5px 0;
+  border-top: 1px solid rgba(51,65,85,.5);
+  display: flex; align-items: center; gap: 8px;
+}
+.node-items li:first-child { border-top: none; }
+.node-items .dot {
+  width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+}
+.dot-green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.dot-blue { background: var(--primary); box-shadow: 0 0 6px var(--primary); }
+.dot-amber { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+.dot-purple { background: var(--purple); box-shadow: 0 0 6px var(--purple); }
+.dot-cyan { background: var(--cyan); box-shadow: 0 0 6px var(--cyan); }
+.dot-pink { background: var(--pink); box-shadow: 0 0 6px var(--pink); }
+.dot-red { background: var(--red); box-shadow: 0 0 6px var(--red); }
+
+.node-url {
+  display: inline-block; font-size: 11px; color: var(--primary);
+  background: var(--primary-dim); padding: 3px 10px; border-radius: 6px;
+  margin-top: 8px; font-weight: 500; text-decoration: none;
+  word-break: break-all;
+}
+
+/* ── Connections section ───────────────── */
+.connections {
+  max-width: 1400px; margin: 0 auto; padding: 0 24px 40px;
+}
+.conn-title {
+  font-size: 18px; font-weight: 700; margin-bottom: 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+.conn-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+.conn-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px 16px;
+  display: flex; align-items: center; gap: 12px;
+}
+.conn-from, .conn-to {
+  font-size: 12px; font-weight: 600; padding: 4px 10px;
+  border-radius: 6px; white-space: nowrap;
+}
+.conn-from { background: var(--primary-dim); color: var(--primary); }
+.conn-to { background: var(--green-dim); color: var(--green); }
+.conn-arrow { color: var(--text-3); font-size: 18px; flex-shrink: 0; }
+.conn-label { font-size: 11px; color: var(--text-3); margin-left: auto; }
+
+/* ── Footer ────────────────────────────── */
+.footer {
+  text-align: center; padding: 24px; font-size: 12px; color: var(--text-3);
+  border-top: 1px solid var(--border);
+}
+
+/* ── Section titles ────────────────────── */
+.section-divider {
+  max-width: 1400px; margin: 0 auto;
+  padding: 24px 24px 12px;
+  display: flex; align-items: center; gap: 12px;
+}
+.section-divider h2 {
+  font-size: 13px; font-weight: 700; color: var(--text-3);
+  text-transform: uppercase; letter-spacing: 1px; white-space: nowrap;
+}
+.section-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+
+/* ── Live indicator ────────────────────── */
+.live-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--green); display: inline-block;
+  animation: pulse-live 2s ease-in-out infinite;
+  margin-right: 4px; vertical-align: middle;
+}
+@keyframes pulse-live {
+  0%, 100% { opacity: 1; box-shadow: 0 0 4px var(--green); }
+  50% { opacity: .5; box-shadow: 0 0 8px var(--green); }
+}
+
+/* ── Responsive ────────────────────────── */
+@media (max-width: 768px) {
+  .header { padding: 20px 16px 0; }
+  .header-logo h1 { font-size: 18px; }
+  .grid { grid-template-columns: 1fr; padding: 8px 16px 32px; }
+  .stats-bar { padding: 16px; }
+  .stat { min-width: 90px; padding: 10px 14px; }
+  .stat-value { font-size: 22px; }
+  .conn-grid { grid-template-columns: 1fr; }
+  .connections { padding: 0 16px 32px; }
+  .section-divider { padding: 20px 16px 8px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <div class="header-logo">
+    <img src="/static/logo.png" alt="CMC">
+    <h1>Ecosistema Digital CMC</h1>
+  </div>
+  <p class="header-sub">
+    Centro Medico Carampangue — Arauco, Region del Biobio
+    <span><span class="live-dot"></span> EN VIVO</span>
+  </p>
+</header>
+
+<!-- Stats -->
+<div class="stats-bar" id="stats-bar">
+  <div class="stat">
+    <div class="stat-value">24</div>
+    <div class="stat-label">Profesionales</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">18</div>
+    <div class="stat-label">Especialidades</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">15</div>
+    <div class="stat-label">Cron Jobs</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">5</div>
+    <div class="stat-label">Canales</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" id="stat-medilink">--</div>
+    <div class="stat-label">Medilink (ms)</div>
+  </div>
+</div>
+
+<!-- Productos en produccion -->
+<div class="section-divider"><h2>Productos en produccion</h2></div>
+<div class="grid">
+
+  <!-- Chatbot CMC -->
+  <div class="node n-chatbot">
+    <div class="node-header">
+      <div class="node-icon">🤖</div>
+      <div class="node-title">Chatbot WhatsApp</div>
+      <span class="node-badge badge-prod">PROD</span>
+    </div>
+    <div class="node-desc">Motor conversacional con 20+ estados. Agendamiento, cancelacion, reagendamiento, lista de espera, registro de pacientes.</div>
+    <ul class="node-items">
+      <li><span class="dot dot-green"></span>flows.py — maquina de estados</li>
+      <li><span class="dot dot-blue"></span>claude_helper.py — deteccion de intencion</li>
+      <li><span class="dot dot-cyan"></span>medilink.py — wrapper API agenda</li>
+      <li><span class="dot dot-purple"></span>messaging.py — envio WA/IG/FB</li>
+      <li><span class="dot dot-amber"></span>resilience.py — circuit breaker</li>
+    </ul>
+    <a class="node-url" href="https://agentecmc.cl/health" target="_blank">agentecmc.cl</a>
+  </div>
+
+  <!-- Panel Admin -->
+  <div class="node n-admin">
+    <div class="node-header">
+      <div class="node-icon">📊</div>
+      <div class="node-title">Panel de Recepcion</div>
+      <span class="node-badge badge-prod">PROD</span>
+    </div>
+    <div class="node-desc">24 endpoints API. Conversaciones en tiempo real, metricas, citas, fidelizacion, kine, ortodoncia.</div>
+    <ul class="node-items">
+      <li><span class="dot dot-purple"></span>Conversaciones WA/IG/FB en tiempo real</li>
+      <li><span class="dot dot-green"></span>Metricas de conversion + funnel</li>
+      <li><span class="dot dot-cyan"></span>Pacientes en Control (kine, psico, nutri)</li>
+      <li><span class="dot dot-amber"></span>Ortodoncia — Matriz I/C/? </li>
+      <li><span class="dot dot-pink"></span>Notas, tags, documentos, templates</li>
+    </ul>
+    <a class="node-url" href="https://agentecmc.cl/admin" target="_blank">agentecmc.cl/admin</a>
+  </div>
+
+  <!-- Portal Paciente -->
+  <div class="node n-portal">
+    <div class="node-header">
+      <div class="node-icon">👤</div>
+      <div class="node-title">Portal del Paciente</div>
+      <span class="node-badge badge-new">NUEVO</span>
+    </div>
+    <div class="node-desc">Webapp para pacientes. Auth por OTP via WhatsApp. Proximas citas, historial, diagnosticos cronicos.</div>
+    <ul class="node-items">
+      <li><span class="dot dot-cyan"></span>Login por RUT + codigo WhatsApp</li>
+      <li><span class="dot dot-green"></span>Citas futuras y pasadas (Medilink)</li>
+      <li><span class="dot dot-amber"></span>Diagnosticos cronicos (dx tags)</li>
+      <li><span class="dot dot-green"></span>Boton "Agendar" abre WhatsApp</li>
+    </ul>
+    <a class="node-url" href="https://agentecmc.cl/portal" target="_blank">agentecmc.cl/portal</a>
+  </div>
+
+  <!-- GES Clinical -->
+  <div class="node n-ges">
+    <div class="node-header">
+      <div class="node-icon">🏥</div>
+      <div class="node-title">GES Clinical Assistant</div>
+      <span class="node-badge badge-prod">PROD</span>
+    </div>
+    <div class="node-desc">Motor de triage clinico. 140+ patologias GES, calculadoras (Wells, CHA2DS2, CURB-65), guias de urgencia.</div>
+    <ul class="node-items">
+      <li><span class="dot dot-green"></span>Backend FastAPI en VPS :8002</li>
+      <li><span class="dot dot-blue"></span>Frontend Next.js 14 en Vercel</li>
+      <li><span class="dot dot-amber"></span>API publica (nginx whitelist)</li>
+      <li><span class="dot dot-red"></span>/triage bloqueado externamente</li>
+    </ul>
+    <a class="node-url" href="https://ges.agentecmc.cl" target="_blank">ges.agentecmc.cl</a>
+  </div>
+
+  <!-- Sitio web -->
+  <div class="node n-web">
+    <div class="node-header">
+      <div class="node-icon">🌐</div>
+      <div class="node-title">Sitio Web CMC</div>
+      <span class="node-badge badge-prod">PROD</span>
+    </div>
+    <div class="node-desc">Pagina publica del centro medico. Especialidades, equipo, ubicacion, contacto.</div>
+    <ul class="node-items">
+      <li><span class="dot dot-green"></span>Pagina de especialidades</li>
+      <li><span class="dot dot-amber"></span>20 blog posts pendientes de publicar</li>
+      <li><span class="dot dot-pink"></span>Pendiente: SEO local + boton WA</li>
+    </ul>
+    <a class="node-url" href="https://centromedicocarampangue.cl" target="_blank">centromedicocarampangue.cl</a>
+  </div>
+
+  <!-- Fidelizacion -->
+  <div class="node n-cron">
+    <div class="node-header">
+      <div class="node-icon">💛</div>
+      <div class="node-title">Motor de Fidelizacion</div>
+      <span class="node-badge badge-prod">PROD</span>
+    </div>
+    <div class="node-desc">5 campanas automaticas + upsell post-consulta + alerta al doctor. Segmentacion por tags, especialidad, historial.</div>
+    <ul class="node-items">
+      <li><span class="dot dot-green"></span>Post-consulta (Mejor/Igual/Peor)</li>
+      <li><span class="dot dot-cyan"></span>Upsell contextual (trauma→kine, etc)</li>
+      <li><span class="dot dot-amber"></span>Reactivacion inactivos (30-90 dias)</li>
+      <li><span class="dot dot-purple"></span>Adherencia kine + control periodico</li>
+      <li><span class="dot dot-pink"></span>Cross-sell kine + ORL↔Fono</li>
+      <li><span class="dot dot-red"></span>Alerta doctor si paciente "Peor"</li>
+    </ul>
+  </div>
+
+  <!-- Doctor Alerts -->
+  <div class="node n-chatbot">
+    <div class="node-header">
+      <div class="node-icon">👨‍⚕️</div>
+      <div class="node-title">Alertas Clinicas</div>
+      <span class="node-badge badge-prod">PROD</span>
+    </div>
+    <div class="node-desc">Resumenes pre-cita, reportes de progreso, deteccion pasiva de patologias cronicas, comando dx.</div>
+    <ul class="node-items">
+      <li><span class="dot dot-green"></span>Resumen 30 min antes de cada cita</li>
+      <li><span class="dot dot-blue"></span>Preventivos + vacunas PNI por edad</li>
+      <li><span class="dot dot-amber"></span>Guias cronicas (DM2, HTA, asma...)</li>
+      <li><span class="dot dot-cyan"></span>Reportes progreso 4x dia</li>
+      <li><span class="dot dot-purple"></span>Comando dx (24 patologias)</li>
+    </ul>
+  </div>
+
+  <!-- Referral -->
+  <div class="node n-portal">
+    <div class="node-header">
+      <div class="node-icon">📈</div>
+      <div class="node-title">Referral Tracking</div>
+      <span class="node-badge badge-new">NUEVO</span>
+    </div>
+    <div class="node-desc">"Como nos conociste?" en registro de paciente nuevo. Tags referido:amigo/google/rrss/recurrente/otro.</div>
+    <ul class="node-items">
+      <li><span class="dot dot-cyan"></span>Lista interactiva 5 opciones</li>
+      <li><span class="dot dot-green"></span>Texto libre con keyword matching</li>
+      <li><span class="dot dot-amber"></span>Endpoint /admin/api/referral-stats</li>
+    </ul>
+  </div>
+</div>
+
+<!-- APIs externas -->
+<div class="section-divider"><h2>APIs y servicios externos</h2></div>
+<div class="grid">
+
+  <div class="node n-medilink">
+    <div class="node-header">
+      <div class="node-icon">📋</div>
+      <div class="node-title">Medilink 2 API</div>
+      <span class="node-badge badge-prod">API</span>
+    </div>
+    <div class="node-desc">Sistema de agenda medica HealthAtom. Pacientes, citas, slots, atenciones, horarios bloqueados.</div>
+    <ul class="node-items">
+      <li><span class="dot dot-green"></span>/pacientes — buscar/crear por RUT</li>
+      <li><span class="dot dot-green"></span>/citas — crear, listar, cancelar</li>
+      <li><span class="dot dot-blue"></span>/agendas — disponibilidad por dia</li>
+      <li><span class="dot dot-amber"></span>/atenciones — historial clinico</li>
+      <li><span class="dot dot-cyan"></span>/especialidades — proximo dia</li>
+    </ul>
+    <span class="node-url">api.medilink2.healthatom.com/api/v5</span>
+  </div>
+
+  <div class="node n-meta">
+    <div class="node-header">
+      <div class="node-icon">💬</div>
+      <div class="node-title">Meta Cloud API</div>
+      <span class="node-badge badge-prod">API</span>
+    </div>
+    <div class="node-desc">WhatsApp Business, Instagram DMs, Facebook Messenger. Token permanente via System User.</div>
+    <ul class="node-items">
+      <li><span class="dot dot-green"></span>WhatsApp: mensajes + botones + listas</li>
+      <li><span class="dot dot-blue"></span>Instagram: DMs → panel admin</li>
+      <li><span class="dot dot-purple"></span>Messenger: DMs → panel admin</li>
+      <li><span class="dot dot-amber"></span>Templates aprobados (2)</li>
+      <li><span class="dot dot-cyan"></span>Delivery status webhooks</li>
+    </ul>
+  </div>
+
+  <div class="node n-claude">
+    <div class="node-header">
+      <div class="node-icon">🧠</div>
+      <div class="node-title">Anthropic — Claude Haiku</div>
+      <span class="node-badge badge-prod">API</span>
+    </div>
+    <div class="node-desc">IA para deteccion de intencion, FAQ, clasificacion de respuestas libres. Cache de 60+ frases comunes.</div>
+    <ul class="node-items">
+      <li><span class="dot dot-green"></span>detect_intent() — 7 intenciones</li>
+      <li><span class="dot dot-blue"></span>respuesta_faq() — precios, info</li>
+      <li><span class="dot dot-amber"></span>clasificar_respuesta() — mejor/igual/peor</li>
+      <li><span class="dot dot-cyan"></span>~$5-10/mes costo estimado</li>
+    </ul>
+  </div>
+
+  <div class="node n-whisper">
+    <div class="node-header">
+      <div class="node-icon">🎤</div>
+      <div class="node-title">OpenAI — Whisper</div>
+      <span class="node-badge badge-prod">API</span>
+    </div>
+    <div class="node-desc">Transcripcion de notas de voz de WhatsApp. Idioma espanol, feedback al paciente.</div>
+    <ul class="node-items">
+      <li><span class="dot dot-green"></span>transcribe_audio() — Whisper-1</li>
+      <li><span class="dot dot-blue"></span>Feedback: "Entendi: texto"</li>
+      <li><span class="dot dot-amber"></span>~$1-3/mes costo estimado</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Infraestructura -->
+<div class="section-divider"><h2>Infraestructura</h2></div>
+<div class="grid">
+
+  <div class="node n-infra">
+    <div class="node-header">
+      <div class="node-icon">🖥️</div>
+      <div class="node-title">VPS DigitalOcean</div>
+      <span class="node-badge badge-prod">INFRA</span>
+    </div>
+    <div class="node-desc">Ubuntu 24.04. SSH solo por llave Ed25519. Nginx reverse proxy + SSL Let's Encrypt.</div>
+    <ul class="node-items">
+      <li><span class="dot dot-green"></span>1 GB RAM + 2 GB swap</li>
+      <li><span class="dot dot-blue"></span>chatbot-cmc.service (systemd :8001)</li>
+      <li><span class="dot dot-green"></span>ges-assistant.service (systemd :8002)</li>
+      <li><span class="dot dot-amber"></span>nginx — SSL + reverse proxy</li>
+      <li><span class="dot dot-cyan"></span>Backup semanal sqlite3 + gzip</li>
+    </ul>
+    <span class="node-url">157.245.13.107</span>
+  </div>
+
+  <div class="node n-data">
+    <div class="node-header">
+      <div class="node-icon">🗄️</div>
+      <div class="node-title">SQLite Databases</div>
+      <span class="node-badge badge-prod">DATA</span>
+    </div>
+    <div class="node-desc">WAL mode + busy_timeout. Retencion indefinida (~90 MB/ano). 18 tablas en sessions.db.</div>
+    <ul class="node-items">
+      <li><span class="dot dot-green"></span>sessions.db — sesiones, tags, eventos, citas</li>
+      <li><span class="dot dot-blue"></span>ges.db — patologias, calculadoras</li>
+      <li><span class="dot dot-amber"></span>citas_cache — cache incremental Medilink</li>
+      <li><span class="dot dot-cyan"></span>ortodoncia_cache — atenciones I/C/?</li>
+      <li><span class="dot dot-purple"></span>portal_otp — codigos OTP efimeros</li>
+    </ul>
+  </div>
+
+  <div class="node n-ges">
+    <div class="node-header">
+      <div class="node-icon">☁️</div>
+      <div class="node-title">Servicios Cloud</div>
+      <span class="node-badge badge-prod">INFRA</span>
+    </div>
+    <div class="node-desc">DNS, SSL, hosting frontend, repositorios de codigo.</div>
+    <ul class="node-items">
+      <li><span class="dot dot-blue"></span>Cloudflare — DNS (3 subdominios)</li>
+      <li><span class="dot dot-green"></span>Let's Encrypt — SSL auto-renew</li>
+      <li><span class="dot dot-purple"></span>Vercel — frontend GES (Next.js)</li>
+      <li><span class="dot dot-amber"></span>GitHub — 2 repos privados</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Conexiones -->
+<div class="section-divider"><h2>Conexiones entre sistemas</h2></div>
+<div class="connections">
+  <div class="conn-grid">
+    <div class="conn-card">
+      <span class="conn-from">Paciente</span>
+      <span class="conn-arrow">→</span>
+      <span class="conn-to">Chatbot</span>
+      <span class="conn-label">WhatsApp / Audio</span>
+    </div>
+    <div class="conn-card">
+      <span class="conn-from">Chatbot</span>
+      <span class="conn-arrow">→</span>
+      <span class="conn-to">Medilink</span>
+      <span class="conn-label">Buscar slots, crear cita</span>
+    </div>
+    <div class="conn-card">
+      <span class="conn-from">Chatbot</span>
+      <span class="conn-arrow">→</span>
+      <span class="conn-to">Claude Haiku</span>
+      <span class="conn-label">Detectar intencion</span>
+    </div>
+    <div class="conn-card">
+      <span class="conn-from">Chatbot</span>
+      <span class="conn-arrow">→</span>
+      <span class="conn-to">GES</span>
+      <span class="conn-label">Triage sintomas</span>
+    </div>
+    <div class="conn-card">
+      <span class="conn-from">Chatbot</span>
+      <span class="conn-arrow">→</span>
+      <span class="conn-to">Doctor</span>
+      <span class="conn-label">Alertas + resumenes</span>
+    </div>
+    <div class="conn-card">
+      <span class="conn-from">Fidelizacion</span>
+      <span class="conn-arrow">→</span>
+      <span class="conn-to">Paciente</span>
+      <span class="conn-label">Campanas automaticas</span>
+    </div>
+    <div class="conn-card">
+      <span class="conn-from">Portal</span>
+      <span class="conn-arrow">→</span>
+      <span class="conn-to">Medilink</span>
+      <span class="conn-label">Citas + historial</span>
+    </div>
+    <div class="conn-card">
+      <span class="conn-from">Admin</span>
+      <span class="conn-arrow">→</span>
+      <span class="conn-to">Chatbot</span>
+      <span class="conn-label">Takeover, respuestas</span>
+    </div>
+    <div class="conn-card">
+      <span class="conn-from">GES frontend</span>
+      <span class="conn-arrow">→</span>
+      <span class="conn-to">GES API</span>
+      <span class="conn-label">nginx whitelist</span>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  Centro Medico Carampangue — Monsalve 102 esq. Republica, Carampangue<br>
+  Ecosistema Digital actualizado 2026-04-14
+</footer>
+
+<script>
+// Fetch live health data
+(async function() {
+  try {
+    const r = await fetch('/health');
+    if (r.ok) {
+      const d = await r.json();
+      const el = document.getElementById('stat-medilink');
+      if (d.medilink_ms) {
+        el.textContent = d.medilink_ms;
+        el.style.background = 'linear-gradient(135deg, #34d399 0%, #6ee7b7 100%)';
+        el.style.webkitBackgroundClip = 'text';
+        el.style.webkitTextFillColor = 'transparent';
+      } else {
+        el.textContent = 'DOWN';
+        el.style.background = 'linear-gradient(135deg, #f87171 0%, #fca5a5 100%)';
+        el.style.webkitBackgroundClip = 'text';
+        el.style.webkitTextFillColor = 'transparent';
+      }
+    }
+  } catch {}
+})();
+</script>
+</body>
+</html>
