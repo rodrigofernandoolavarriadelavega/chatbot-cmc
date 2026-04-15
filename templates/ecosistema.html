@@ -242,27 +242,41 @@ const CATEGORIES = {
 const NODES = [
   // ── Productos ──
   { id: 'chatbot', label: 'Chatbot\nWhatsApp', icon: '\u{1F916}', cat: 'producto', badge: 'PROD', badgeColor: '#4ade80',
-    desc: 'Motor conversacional con 20+ estados. Agendamiento, cancelacion, reagendamiento, lista de espera, registro de pacientes nuevos.',
+    desc: 'Motor conversacional con 25+ estados. Agendamiento propio o para terceros, cancelacion, reagendamiento, lista de espera, registro expandido.',
     items: [
-      { dot: '#4ade80', text: 'flows.py — maquina de estados (20+ estados)' },
+      { dot: '#4ade80', text: 'flows.py — maquina de estados (25+ estados)' },
       { dot: '#38bdf8', text: 'claude_helper.py — deteccion de intencion' },
       { dot: '#22d3ee', text: 'medilink.py — wrapper API agenda' },
       { dot: '#a78bfa', text: 'messaging.py — envio WA/IG/FB' },
       { dot: '#fbbf24', text: 'resilience.py — circuit breaker Medilink' },
+      { dot: '#f472b6', text: 'Agendar para terceros (hijo, familiar)' },
     ],
     url: 'https://agentecmc.cl/health', urlLabel: 'agentecmc.cl',
     size: 32 },
   { id: 'admin', label: 'Panel\nRecepcion', icon: '\u{1F4CA}', cat: 'producto', badge: 'PROD', badgeColor: '#4ade80',
-    desc: '24 endpoints API. Conversaciones en tiempo real, metricas, citas, fidelizacion, pacientes en control, ortodoncia.',
+    desc: '30+ endpoints API. Conversaciones en tiempo real, metricas, citas, fidelizacion, pacientes en control, ortodoncia, media stats, demanda, NPS.',
     items: [
       { dot: '#a78bfa', text: 'Conversaciones WA/IG/FB en tiempo real' },
       { dot: '#4ade80', text: 'Metricas de conversion + funnel' },
       { dot: '#22d3ee', text: 'Pacientes en Control (kine, psico, nutri)' },
       { dot: '#fbbf24', text: 'Ortodoncia — Matriz I/C/?' },
       { dot: '#f472b6', text: 'Notas, tags, documentos, templates' },
+      { dot: '#38bdf8', text: 'Pills: imagenes, demanda, NPS, confirmaciones' },
     ],
     url: 'https://agentecmc.cl/admin', urlLabel: 'agentecmc.cl/admin',
     size: 26 },
+  { id: 'dashboard', label: 'Dashboard\nKPIs + Mapas', icon: '\u{1F5FA}\uFE0F', cat: 'producto', badge: 'PROD', badgeColor: '#4ade80',
+    desc: 'Dashboard ejecutivo con KPIs del chatbot + mapas geograficos interactivos (heatmap, clusters, puntos). Filtros por dia/semana/mes/ano.',
+    items: [
+      { dot: '#4ade80', text: 'Mapas Leaflet.js: heatmap + clusters + puntos' },
+      { dot: '#38bdf8', text: 'Filtros: Hoy / Semana / Mes / Ano / Todo' },
+      { dot: '#fbbf24', text: '3,359 citas Ene-Abr 2026, 986 direcciones' },
+      { dot: '#22d3ee', text: '9 comunas, 7 localidades de Arauco' },
+      { dot: '#a78bfa', text: 'Detalle por paciente: nombre, doctor, fecha' },
+      { dot: '#f472b6', text: 'Case-study: 20+ KPIs consolidados' },
+    ],
+    url: 'https://agentecmc.cl/admin/dashboard', urlLabel: 'agentecmc.cl/admin/dashboard',
+    size: 24 },
   { id: 'portal', label: 'Portal\nPaciente', icon: '\u{1F464}', cat: 'producto', badge: 'NUEVO', badgeColor: '#38bdf8',
     desc: 'Webapp para pacientes. Auth por OTP via WhatsApp. Proximas citas, historial, diagnosticos cronicos.',
     items: [
@@ -323,6 +337,34 @@ const NODES = [
       { dot: '#fbbf24', text: 'Endpoint /admin/api/referral-stats' },
     ],
     size: 16 },
+  { id: 'demanda', label: 'Demanda\nNo Disponible', icon: '\u{1F50E}', cat: 'modulo', badge: 'NUEVO', badgeColor: '#38bdf8',
+    desc: 'Tracking de especialidades y examenes que pacientes solicitan pero el CMC no ofrece. Data para decidir nuevas contrataciones.',
+    items: [
+      { dot: '#4ade80', text: 'Deteccion en agendar + FAQ' },
+      { dot: '#38bdf8', text: 'Tabla demanda_no_disponible' },
+      { dot: '#fbbf24', text: 'Pill + modal en panel admin' },
+    ],
+    size: 16 },
+  { id: 'mapas', label: 'Pipeline\nGeografico', icon: '\u{1F30D}', cat: 'modulo', badge: 'PROD', badgeColor: '#4ade80',
+    desc: 'Pipeline de datos geograficos: descarga Medilink, geocodificacion Nominatim + fallback por sector/comuna, heatmap_cache.db.',
+    items: [
+      { dot: '#4ade80', text: 'heatmap_cache.db — citas + pacientes + geocode' },
+      { dot: '#38bdf8', text: 'Nominatim + fallback sector + fallback comuna' },
+      { dot: '#fbbf24', text: '1,028 direcciones geocodificadas' },
+      { dot: '#22d3ee', text: 'Endpoint /admin/api/map-data (filtros fecha)' },
+    ],
+    size: 18 },
+  { id: 'marketing', label: 'Motor\nMarketing', icon: '\u{1F4E3}', cat: 'modulo', badge: 'PROD', badgeColor: '#4ade80',
+    desc: 'Campanas automaticas estacionales, cumpleanos, win-back, NPS, referidos con codigo CMC-XXXX, landing SEO.',
+    items: [
+      { dot: '#4ade80', text: '8 campanas estacionales (invierno, dental...)' },
+      { dot: '#38bdf8', text: 'Cumpleanos diario 08:00 + tips por edad' },
+      { dot: '#fbbf24', text: 'Win-back >90 dias (primer lunes mes)' },
+      { dot: '#22d3ee', text: 'NPS por profesional + pill admin' },
+      { dot: '#a78bfa', text: 'Referidos codigo CMC-XXXX' },
+      { dot: '#f472b6', text: 'Landing /landing con JSON-LD SEO' },
+    ],
+    size: 20 },
   { id: 'cron', label: '15 Cron\nJobs', icon: '\u{23F0}', cat: 'modulo', badge: 'PROD', badgeColor: '#4ade80',
     desc: 'Recordatorios, reenganche, watchdog Medilink, waitlist check, sync citas, fidelizacion, backup.',
     items: [
@@ -393,6 +435,7 @@ const NODES = [
       { dot: '#fbbf24', text: 'citas_cache — cache incremental Medilink' },
       { dot: '#22d3ee', text: 'ortodoncia_cache — atenciones I/C/?' },
       { dot: '#a78bfa', text: 'portal_otp — codigos OTP efimeros' },
+      { dot: '#f87171', text: 'heatmap_cache.db — mapas geograficos' },
     ],
     size: 22 },
   { id: 'cloud', label: 'Cloudflare\nVercel\nGitHub', icon: '\u2601\uFE0F', cat: 'infra', badge: 'INFRA', badgeColor: '#f87171',
@@ -419,6 +462,8 @@ const EDGES = [
   { from: 'chatbot', to: 'alertas',  label: 'Pre-cita, dx' },
   { from: 'chatbot', to: 'cron',     label: 'Scheduler' },
   { from: 'chatbot', to: 'referral', label: 'Tags referido' },
+  { from: 'chatbot', to: 'demanda', label: 'Log esp. no disponible' },
+  { from: 'demanda', to: 'sqlite', label: 'demanda_no_disponible' },
   // admin
   { from: 'admin', to: 'sqlite',   label: 'Metricas, notas' },
   { from: 'admin', to: 'medilink', label: 'Sync citas' },
@@ -443,6 +488,17 @@ const EDGES = [
   { from: 'cron', to: 'meta',    label: 'Recordatorios' },
   // web
   { from: 'web', to: 'cloud', label: 'Hosting' },
+  // dashboard
+  { from: 'dashboard', to: 'mapas', label: 'Datos geograficos' },
+  { from: 'dashboard', to: 'sqlite', label: 'KPIs, metricas' },
+  { from: 'admin', to: 'dashboard', label: 'Dashboard link' },
+  // mapas
+  { from: 'mapas', to: 'sqlite', label: 'heatmap_cache.db' },
+  { from: 'mapas', to: 'medilink', label: 'Citas + pacientes' },
+  // marketing
+  { from: 'marketing', to: 'meta', label: 'Enviar campanas' },
+  { from: 'marketing', to: 'sqlite', label: 'Tags, perfiles' },
+  { from: 'chatbot', to: 'marketing', label: 'Campanas auto' },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -966,7 +1022,7 @@ document.getElementById('detail-close').onclick = () => {
 (async function loadStats() {
   const el = document.getElementById('stats-overlay');
   el.innerHTML = `
-    <span><span class="val">17</span> nodos</span>
+    <span><span class="val">22</span> nodos</span>
     <span><span class="val">${EDGES.length}</span> conexiones</span>
     <span><span class="val">24</span> profesionales</span>
     <span><span class="val">18</span> especialidades</span>
