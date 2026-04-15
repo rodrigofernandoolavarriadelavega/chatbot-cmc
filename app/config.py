@@ -14,6 +14,7 @@ META_ACCESS_TOKEN    = os.getenv("META_ACCESS_TOKEN", "")
 META_PHONE_NUMBER_ID = os.getenv("META_PHONE_NUMBER_ID", "")
 META_VERIFY_TOKEN    = os.getenv("META_VERIFY_TOKEN", "cmc_webhook_2026")
 META_PAGE_ACCESS_TOKEN = os.getenv("META_PAGE_ACCESS_TOKEN", "") or os.getenv("META_ACCESS_TOKEN", "")
+META_MESSENGER_TOKEN = os.getenv("META_MESSENGER_TOKEN", "")  # Page token para Messenger Send API
 INSTAGRAM_USER_ID    = os.getenv("INSTAGRAM_USER_ID", "")   # ID del usuario de Instagram Business
 META_PAGE_ID         = os.getenv("META_PAGE_ID", "")        # ID de la Página de Facebook
 
