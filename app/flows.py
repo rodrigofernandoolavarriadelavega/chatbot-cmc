@@ -728,7 +728,7 @@ async def _handle_doctor_command(phone: str, txt: str, tl: str, data: dict, stat
     if tl == "doc_modo_agente":
         data["doctor_mode"] = "agente"
         save_session(phone, "IDLE", data)
-        return "🤖 *Modo Agente CMC* activado. Estás en el flujo de pacientes para probar.\nEscribe *menu* para volver a elegir modo."
+        return "🤖 *Modo Agente CMC* activado. Estás en el flujo de pacientes para probar.\nEscribe *modo* para cambiar."
 
     if tl == "doc_modo_asistente":
         data["doctor_mode"] = "asistente"
@@ -742,8 +742,14 @@ async def _handle_doctor_command(phone: str, txt: str, tl: str, data: dict, stat
             "🏷️ `dx RUT dm2 hta` — agregar diagnósticos\n"
             "🗑️ `dxborrar RUT dm2` — eliminar diagnóstico\n"
             "💬 Cualquier otra cosa → pregunta clínica IA\n\n"
-            "Escribe *menu* para volver a elegir modo."
+            "Escribe *modo* para cambiar."
         )
+
+    # ── Cambiar modo explícito ───────────────────────────────────────────
+    if tl in ("modo", "cambiar modo", "cambiar"):
+        data.pop("doctor_mode", None)
+        save_session(phone, "IDLE", data)
+        return _doctor_mode_menu()
 
     # ── Si no tiene modo elegido y está en IDLE → mostrar menú de modo ────
     doctor_mode = data.get("doctor_mode")
@@ -788,7 +794,7 @@ async def _handle_doctor_command(phone: str, txt: str, tl: str, data: dict, stat
             "🏷️ `dx 12345678-9 dm2 hta` — agregar diagnósticos\n"
             "🗑️ `dxborrar 12345678-9 dm2` — eliminar diagnóstico\n"
             "💬 Cualquier otra cosa → asistente clínico IA\n\n"
-            "Escribe *menu* para volver a elegir modo."
+            "Escribe *modo* para cambiar de modo."
         )
 
     # Cualquier otro texto → asistente clínico con Haiku
@@ -966,10 +972,19 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         doctor_mode_antes = data.get("doctor_mode")
         reset_session(phone)
         if phone == _doctor_phone:
+            # Preservar doctor_mode tras reset
+            if doctor_mode_antes:
+                save_session(phone, "IDLE", {"doctor_mode": doctor_mode_antes})
             if doctor_mode_antes == "agente":
                 # En modo agente: "hola/menu" muestra el menú normal de pacientes
                 return _menu_msg()
-            # Sin modo o en modo asistente: vuelve al selector de modo
+            if doctor_mode_antes == "asistente":
+                # En modo asistente: seguir en asistente sin preguntar
+                return (
+                    "👨‍⚕️ *Asistente Clínico* listo.\n"
+                    "Escribe *modo* para cambiar."
+                )
+            # Sin modo → selector
             return _doctor_mode_menu()
         return _menu_msg()
 

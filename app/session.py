@@ -288,13 +288,20 @@ def get_session(phone: str) -> dict:
         updated = datetime.fromisoformat(row["updated_at"])
         if datetime.now(timezone.utc) - updated.replace(tzinfo=timezone.utc) > timedelta(minutes=SESSION_TIMEOUT_MIN):
             old_state = row["state"]
+            old_data = json.loads(row["data"])
             # Trackear abandono en flujo de registro de paciente nuevo
             if old_state in _REGISTRO_STATES:
                 try:
                     log_event(phone, "registro_abandono", {"step": old_state})
                 except Exception:
                     pass
+            # Preservar doctor_mode tras timeout (es preferencia, no estado de flujo)
+            preserved = {}
+            if old_data.get("doctor_mode"):
+                preserved["doctor_mode"] = old_data["doctor_mode"]
             _reset(conn, phone)
+            if preserved:
+                return {"state": "IDLE", "data": preserved}
             return {"state": "IDLE", "data": {}}
         return {"state": row["state"], "data": json.loads(row["data"])}
 
