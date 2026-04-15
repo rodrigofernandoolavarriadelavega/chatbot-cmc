@@ -269,6 +269,14 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - [x] Programa de referidos: código CMC-XXXX auto-generado al registrarse, WAIT_REFERRAL_CODE, validación + tags
 - [x] Campañas estacionales: 8 campañas (invierno, vuelta a clases, corazón, diabetes, salud mental, dental, mujer), segmentación por tags, preview + envío manual desde panel
 - [x] Cron cumpleaños diario 08:00 CLT + win-back mensual primer lunes 10:00 CLT
+- [x] NPS dashboard: pill en topbar admin + modal con NPS por profesional (endpoint /admin/api/nps)
+- [x] Campaña cumpleaños: cron diario 08:00 CLT con tips preventivos por edad
+- [x] Campaña win-back >90 días: cron primer lunes del mes 10:00 CLT, personalizado por dx:* tags
+- [x] Mensaje de bienvenida post-registro en WAIT_REFERRAL
+- [x] fecha_nacimiento persistida en contact_profiles para campaña cumpleaños
+- [x] Panel admin responsive completo: 6 breakpoints (desktop/tablet/mobile/small phone/landscape/notch)
+- [x] Modals fullscreen en mobile, swipe gestures, safe-area padding, touch targets 44px
+- [x] Doctor mode persistente con tags (sobrevive resets/timeouts), comando "cambiar modo"
 
 ## Dashboard admin
 - Ruta: `http://157.245.13.107:8001/admin?token=cmc_admin_2026`
@@ -277,6 +285,28 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 
 ## Sesión en curso
 **Fecha**: 2026-04-15
+
+**Hecho (sesión 2026-04-15 — dashboard mapas + sitio web + mobile fix)**:
+- **Dashboard KPIs con mapas embebidos**: heatmaps de comunas y direcciones incrustados en `/admin/dashboard` con Leaflet.js interactivo (lado izquierdo) + tabla de estadísticas (lado derecho). Toggle heatmap/clusters/puntos. Sin navegación separada.
+- **Rutas `/admin/mapa-comunas` y `/admin/mapa-direcciones`**: páginas standalone protegidas con auth admin.
+- **Sitio web v3 público**: `/sitio` sirve el prototipo v3 del sitio web para revisión de amigos. Sin auth.
+- **Mobile topbar fix definitivo**: botones con `<span class="btn-label">` oculto en mobile → solo iconos (🔔 + 📅 🔍 ✕ 📋▾ 🚪). Topbar `position: sticky` en mobile. Layout `flex:1` dinámico (sin `min-height` hardcodeado). Alert bar ya no se superpone a las tarjetas. Dropdown centrado con `z-index: 200`.
+
+**Hecho (sesión 2026-04-15 — mapas + ecosistema Obsidian + Notion)**:
+- **Mapa de direcciones mejorado**: tooltips al hover con nombres de pacientes + profesional que los atendió. Popup al click con detalle completo de atenciones (fecha, hora, profesional). Script `geocode_direcciones.py` actualizado para extraer atenciones desde `citas_heatmap`.
+- **Ecosistema Obsidian**: reescritura completa de `/ecosistema` como grafo interactivo estilo Obsidian. 17 nodos con física de fuerza, 27 conexiones animadas, drag & drop, zoom/pan, filtros por categoría, panel de detalle al click, partículas en conexiones al hover.
+- **Endpoint `/admin/api/case-study`**: reporte consolidado de KPIs (funnel agendamiento, confirmaciones, fidelización, cross-sell, referral, canales, horas pico, especialidades top).
+- **Plan 40 pasos en Notion**: página "Plan 40 pasos — Marketing y Fidelización CMC" con checkboxes, 6 fases, estado de cada paso.
+
+**Hecho (sesión 2026-04-15 — marketing Phase 1 + responsive + doctor mode)**:
+- **NPS Dashboard** (pill + modal): endpoint `GET /admin/api/nps?dias=30`, pill en topbar con color coding (verde >=50, rojo <0), modal con tabla por profesional (mejor/igual/peor/total/NPS), alerta roja si >20% peor.
+- **Campaña cumpleaños**: `enviar_cumpleanos()` en fidelizacion.py, query `get_cumpleanos_hoy()` con cooldown 330 días, tips preventivos por edad (65+: EMPAM/influenza, 50+: chequeo, 40+: preventivo). Cron diario 08:00 CLT.
+- **Campaña win-back >90 días**: `enviar_winback()` en fidelizacion.py, query `get_pacientes_winback(91-365 días)` excluye reactivados recientes. Mensaje personalizado para crónicos (dx:* tags). Cron primer lunes del mes 10:00 CLT.
+- **Mensaje bienvenida post-registro**: se envía al crear paciente nuevo en WAIT_REFERRAL con info del centro + canales de contacto.
+- **`fecha_nacimiento` en `contact_profiles`**: migración ALTER TABLE + persistencia desde WAIT_FECHA_NAC → save_profile().
+- **Panel admin responsive completo**: 6 breakpoints (1024px tablet, 767px mobile, 400px small, landscape, safe-area notch, print). Modals fullscreen en mobile. Swipe gestures (derecha→back/cerrar filtros, izquierda→cerrar contexto). Touch targets 44px. iOS zoom prevention. Topbar actions en fila compacta. viewport-fit=cover.
+- **Doctor mode persistente con tags**: `doctor_mode:agente`/`doctor_mode:asistente` como tag en `contact_tags` (no en session data). Sobrevive timeouts, resets y cualquier cambio de estado. Único comando para cambiar: "cambiar modo". En modo agente, "hola/menu" muestra menú de pacientes igual que cualquier otro teléfono.
+- **Tests**: 90/90 harness + 52/52 normalizer. Commits `5fe1986` deployado.
 
 **Hecho (sesión 2026-04-14/15 — sprint #15-19 completado)**:
 - **Dashboard métricas fidelización** (#15): modal con 3 tabs — Métricas (trends semanal con `get_fidelizacion_trends`), Campañas (8 campañas estacionales con preview de audiencia y envío manual), Referidos (stats de códigos CMC-XXXX). Endpoints: `/admin/api/fidelizacion-trends`, `/admin/api/campanas`, `/admin/api/campanas/enviar`, `/admin/api/campanas/preview`.

@@ -171,15 +171,37 @@ async def main():
 
     log.info("Pacientes con dirección: %d", len(rows))
 
+    # Obtener detalle de atenciones por paciente (profesional + fecha)
+    atenciones_rows = conn.execute("""
+        SELECT c.id_paciente, c.nombre_profesional, c.fecha, c.hora_inicio
+        FROM citas_heatmap c
+        WHERE c.id_paciente IS NOT NULL
+        ORDER BY c.fecha DESC, c.hora_inicio DESC
+    """).fetchall()
+
+    # Indexar atenciones por paciente
+    atenciones_por_pac = {}
+    for a in atenciones_rows:
+        pid = a["id_paciente"]
+        if pid not in atenciones_por_pac:
+            atenciones_por_pac[pid] = []
+        atenciones_por_pac[pid].append({
+            "prof": a["nombre_profesional"].strip(),
+            "fecha": a["fecha"],
+            "hora": a["hora_inicio"][:5] if a["hora_inicio"] else "",
+        })
+
     # Agrupar por dirección normalizada para no geocodificar duplicados
     dir_groups = {}
     for r in rows:
         key = r["direccion"].strip().upper()
         if key not in dir_groups:
             dir_groups[key] = {"direccion": r["direccion"], "comuna": r["comuna"] or "", "pacientes": []}
+        pac_id = r["id"]
         dir_groups[key]["pacientes"].append({
             "nombre": f"{r['nombre']} {r['apellidos']}".strip(),
             "citas": r["num_citas"],
+            "atenciones": atenciones_por_pac.get(pac_id, [])[:8],
         })
 
     log.info("Direcciones únicas: %d", len(dir_groups))
@@ -234,15 +256,29 @@ async def main():
             # Verificar que las coordenadas estén en rango razonable (Chile, Biobío)
             if -39.0 < lat < -36.0 and -74.0 < lng < -71.0:
                 total_citas = sum(p["citas"] for p in info["pacientes"])
-                nombres = [p["nombre"] for p in info["pacientes"]]
+                # Armar detalle por paciente con sus atenciones
+                detalle = []
+                for p in info["pacientes"][:8]:
+                    det = {"n": p["nombre"], "c": p["citas"], "a": []}
+                    for at in p.get("atenciones", [])[:5]:
+                        # Formato fecha corta: "11/04 10:30 — Dra. Castillo"
+                        f = at["fecha"]
+                        if f and len(f) >= 10:
+                            f = f[8:10] + "/" + f[5:7]
+                        prof = at["prof"].split()
+                        # Abreviar: primer nombre + primer apellido
+                        prof_short = " ".join(prof[:2]) if len(prof) >= 2 else at["prof"]
+                        det["a"].append(f"{f} {at['hora']} — {prof_short}")
+                    detalle.append(det)
                 points.append({
                     "lat": lat,
                     "lng": lng,
                     "direccion": info["direccion"],
                     "comuna": info["comuna"],
                     "pacientes": len(info["pacientes"]),
-                    "nombres": nombres[:5],
+                    "nombres": [p["nombre"] for p in info["pacientes"]][:5],
                     "citas": total_citas,
+                    "detalle": detalle,
                 })
             else:
                 sin_geo += 1
@@ -256,7 +292,11 @@ async def main():
 
 
 def generate_address_map(points: list[dict]):
-    """Genera un HTML con mapa de direcciones exactas."""
+    """Genera un HTML con mapa de direcciones exactas, tooltip hover y popup click."""
+    total_dirs = len(points)
+    total_pacs = sum(p['pacientes'] for p in points)
+    total_citas = sum(p['citas'] for p in points)
+
     html = f"""<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -275,6 +315,9 @@ def generate_address_map(points: list[dict]):
   .header {{ text-align: center; padding: 20px 16px 10px; }}
   .header h1 {{ font-size: 1.5rem; color: #38bdf8; }}
   .header p {{ color: #94a3b8; margin-top: 4px; font-size: 0.9rem; }}
+  .nav-links {{ display: flex; gap: 12px; justify-content: center; margin-top: 10px; }}
+  .nav-links a {{ color: #38bdf8; text-decoration: none; font-size: 0.85rem; padding: 5px 14px; border: 1px solid #334155; border-radius: 6px; transition: all 0.2s; }}
+  .nav-links a:hover {{ background: #334155; }}
   .stats {{ display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin: 10px 16px; }}
   .stat-card {{ background: #1e293b; border-radius: 8px; padding: 10px 20px; text-align: center; }}
   .stat-card .num {{ font-size: 1.5rem; font-weight: 700; color: #38bdf8; }}
@@ -286,26 +329,36 @@ def generate_address_map(points: list[dict]):
   .btn:hover {{ background: #475569; }}
   .btn.active {{ background: #2563eb; border-color: #3b82f6; }}
   .legend {{ text-align: center; padding: 8px; color: #64748b; font-size: 0.75rem; }}
-  .leaflet-popup-content {{ font-size: 13px; }}
+  .leaflet-popup-content {{ font-size: 13px; max-width: 340px; max-height: 350px; overflow-y: auto; }}
+  .leaflet-tooltip {{ font-size: 12px; max-width: 280px; white-space: normal; line-height: 1.4; }}
   .marker-cluster-small {{ background-color: rgba(56,189,248,0.6); }}
   .marker-cluster-small div {{ background-color: rgba(56,189,248,0.8); }}
   .marker-cluster-medium {{ background-color: rgba(251,191,36,0.6); }}
   .marker-cluster-medium div {{ background-color: rgba(251,191,36,0.8); }}
   .marker-cluster-large {{ background-color: rgba(239,68,68,0.6); }}
   .marker-cluster-large div {{ background-color: rgba(239,68,68,0.8); }}
+  .pac-name {{ font-weight: 600; color: #1e293b; margin-top: 6px; }}
+  .atencion {{ color: #555; font-size: 11px; padding-left: 10px; }}
+  .atencion .fecha {{ color: #2563eb; font-weight: 500; }}
+  .atencion .prof {{ color: #7c3aed; }}
 </style>
 </head>
 <body>
 
 <div class="header">
   <h1>Mapa de Direcciones — Pacientes CMC</h1>
-  <p>Abril 2026 — Cada punto es una direccion con pacientes</p>
+  <p>Abril 2026 — Hover para resumen, click para detalle de atenciones</p>
+  <div class="nav-links">
+    <a href="/admin/mapa-comunas">Mapa comunas</a>
+    <a href="/admin/dashboard">Dashboard KPIs</a>
+    <a href="/admin">Panel admin</a>
+  </div>
 </div>
 
 <div class="stats">
-  <div class="stat-card"><div class="num">{len(points)}</div><div class="label">Direcciones</div></div>
-  <div class="stat-card"><div class="num">{sum(p['pacientes'] for p in points)}</div><div class="label">Pacientes</div></div>
-  <div class="stat-card"><div class="num">{sum(p['citas'] for p in points)}</div><div class="label">Citas</div></div>
+  <div class="stat-card"><div class="num">{total_dirs}</div><div class="label">Direcciones</div></div>
+  <div class="stat-card"><div class="num">{total_pacs}</div><div class="label">Pacientes</div></div>
+  <div class="stat-card"><div class="num">{total_citas}</div><div class="label">Citas</div></div>
 </div>
 
 <div class="controls">
@@ -318,11 +371,52 @@ def generate_address_map(points: list[dict]):
 
 <div class="legend">
   Datos geocodificados desde Nominatim (OpenStreetMap) + coordenadas manuales de sectores.
-  Click en cada punto/cluster para ver detalle.
+  Hover para ver nombres, click para detalle completo de atenciones.
 </div>
 
 <script>
 const pts = {json.dumps(points, ensure_ascii=False)};
+
+// ── Helpers para construir tooltip y popup ──
+function buildTooltip(p) {{
+  let html = '<b>' + p.direccion + '</b><br>';
+  html += '<span style="color:#888">' + (p.comuna || 'Sin comuna') + '</span> · ';
+  html += '<b>' + p.pacientes + '</b> pac · <b>' + p.citas + '</b> citas<br>';
+  if (p.detalle && p.detalle.length > 0) {{
+    html += '<hr style="margin:4px 0;border-color:#ddd">';
+    p.detalle.forEach(function(d) {{
+      html += '<b>' + d.n + '</b>';
+      if (d.a && d.a.length > 0) {{
+        html += ' — <span style="color:#7c3aed">' + d.a[0].split(' — ')[1] + '</span>';
+      }}
+      html += '<br>';
+    }});
+  }}
+  return html;
+}}
+
+function buildPopup(p) {{
+  let html = '<div style="min-width:220px">';
+  html += '<b style="font-size:14px">' + p.direccion + '</b><br>';
+  html += '<span style="color:#888">' + (p.comuna || 'Sin comuna') + '</span><br>';
+  html += '<b>' + p.pacientes + '</b> paciente(s), <b>' + p.citas + '</b> cita(s)';
+  if (p.detalle && p.detalle.length > 0) {{
+    html += '<hr style="margin:8px 0;border-color:#eee">';
+    p.detalle.forEach(function(d) {{
+      html += '<div class="pac-name">' + d.n + ' <span style="color:#888;font-weight:400">(' + d.c + ' cita' + (d.c > 1 ? 's' : '') + ')</span></div>';
+      if (d.a && d.a.length > 0) {{
+        d.a.forEach(function(at) {{
+          var parts = at.split(' — ');
+          html += '<div class="atencion"><span class="fecha">' + parts[0] + '</span>';
+          if (parts[1]) html += ' — <span class="prof">' + parts[1] + '</span>';
+          html += '</div>';
+        }});
+      }}
+    }});
+  }}
+  html += '</div>';
+  return html;
+}}
 
 const map = L.map('map').setView([-37.25, -73.28], 13);
 
@@ -343,7 +437,7 @@ const clusters = L.markerClusterGroup({{
   showCoverageOnHover: false,
 }});
 
-pts.forEach(p => {{
+pts.forEach(function(p) {{
   const marker = L.circleMarker([p.lat, p.lng], {{
     radius: Math.max(5, Math.min(12, p.pacientes * 4)),
     fillColor: p.pacientes > 2 ? '#ef4444' : p.pacientes > 1 ? '#fbbf24' : '#38bdf8',
@@ -352,20 +446,15 @@ pts.forEach(p => {{
     fillOpacity: 0.8,
   }});
 
-  let popup = `<b>${{p.direccion}}</b><br>`;
-  popup += `<span style="color:#666">${{p.comuna || 'Sin comuna'}}</span><br>`;
-  popup += `<b>${{p.pacientes}}</b> paciente(s), <b>${{p.citas}}</b> cita(s)<br>`;
-  if (p.nombres.length > 0) {{
-    popup += `<br><small>${{p.nombres.join('<br>')}}</small>`;
-  }}
-  marker.bindPopup(popup);
+  marker.bindTooltip(buildTooltip(p), {{ sticky: true, direction: 'top', offset: [0, -10] }});
+  marker.bindPopup(buildPopup(p), {{ maxWidth: 360, maxHeight: 400 }});
   clusters.addLayer(marker);
 }});
 
 clusters.addTo(map);
 
 // Heat layer (oculto por defecto)
-const heatData = pts.map(p => [p.lat, p.lng, p.pacientes]);
+const heatData = pts.map(function(p) {{ return [p.lat, p.lng, p.pacientes]; }});
 const heatLayer = L.heatLayer(heatData, {{
   radius: 25, blur: 20, maxZoom: 16, max: 5,
   gradient: {{0.2:'#2563eb', 0.4:'#38bdf8', 0.6:'#fbbf24', 0.8:'#f97316', 1:'#ef4444'}},
@@ -373,14 +462,14 @@ const heatLayer = L.heatLayer(heatData, {{
 
 // Points layer (oculto por defecto)
 const pointsLayer = L.layerGroup();
-pts.forEach(p => {{
+pts.forEach(function(p) {{
   const dot = L.circleMarker([p.lat, p.lng], {{
     radius: Math.max(4, Math.min(10, p.pacientes * 3)),
     fillColor: p.pacientes > 2 ? '#ef4444' : p.pacientes > 1 ? '#fbbf24' : '#38bdf8',
     color: '#fff', weight: 1, fillOpacity: 0.85,
   }});
-  let popup = `<b>${{p.direccion}}</b><br>${{p.pacientes}} pac, ${{p.citas}} citas`;
-  dot.bindPopup(popup);
+  dot.bindTooltip(buildTooltip(p), {{ sticky: true, direction: 'top', offset: [0, -10] }});
+  dot.bindPopup(buildPopup(p), {{ maxWidth: 360, maxHeight: 400 }});
   pointsLayer.addLayer(dot);
 }});
 
@@ -393,13 +482,13 @@ function toggleLayer(name) {{
   else if (name === 'heat') heatLayer.addTo(map);
   else if (name === 'points') pointsLayer.addTo(map);
   activeLayer = name;
-  document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.btn').forEach(function(b) {{ b.classList.remove('active'); }});
   event.target.classList.add('active');
 }}
 
 // Fit bounds
 if (pts.length > 0) {{
-  const bounds = pts.map(p => [p.lat, p.lng]);
+  const bounds = pts.map(function(p) {{ return [p.lat, p.lng]; }});
   map.fitBounds(bounds, {{ padding: [30, 30] }});
 }}
 </script>
