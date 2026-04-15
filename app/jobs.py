@@ -9,7 +9,7 @@ from messaging import (send_whatsapp, send_whatsapp_interactive,
 from reminders import enviar_recordatorios, enviar_recordatorios_2h
 from fidelizacion import (enviar_seguimiento_postconsulta, enviar_reactivacion_pacientes,
                           enviar_adherencia_kine, enviar_recordatorio_control,
-                          enviar_crosssell_kine)
+                          enviar_crosssell_kine, enviar_cumpleanos, enviar_winback)
 from medilink import (buscar_primer_dia, buscar_paciente, sync_citas_dia,
                       SEGUIMIENTO_ESPECIALIDADES, PROFESIONALES)
 from session import (get_sesiones_abandonadas, save_session, log_event,
@@ -86,6 +86,12 @@ async def _job_control_especialidad():
 
 async def _job_crosssell_kine():
     await enviar_crosssell_kine(send_whatsapp, send_template_fn=_tpl)
+
+async def _job_cumpleanos():
+    await enviar_cumpleanos(send_whatsapp)
+
+async def _job_winback():
+    await enviar_winback(send_whatsapp)
 
 # ── Doctor alerts ────────────────────────────────────────────────────────────
 _doctor_phone = CMC_TELEFONO.replace("+", "").replace(" ", "")

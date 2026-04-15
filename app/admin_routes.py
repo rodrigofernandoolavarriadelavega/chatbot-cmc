@@ -19,7 +19,7 @@ from session import (get_session, reset_session, save_session, get_metricas,
                      get_ortodoncia_pacientes, set_ortodoncia_tipo, get_ortodoncia_sync_max_fecha,
                      get_waitlist_all, cancel_waitlist,
                      get_confirmaciones_dia, get_citas_cache_todos,
-                     get_metricas_fidelizacion,
+                     get_metricas_fidelizacion, get_nps_por_profesional,
                      get_notes, save_notes, get_patient_context, get_registration_stats,
                      get_referral_stats, get_case_study_report)
 from medilink import (buscar_paciente, crear_paciente, buscar_primer_dia,
@@ -378,6 +378,15 @@ def admin_metricas_fidelizacion(dias: int | None = None,
     if dias is not None and dias not in (7, 30):
         dias = 30  # fallback a 30 si mandan algo raro
     return get_metricas_fidelizacion(dias)
+
+
+# ── NPS por profesional ──────────────────────────────────────────────────────
+
+@router.get("/admin/api/nps")
+def admin_nps(dias: int | None = None, _: str = Depends(require_admin)):
+    """NPS por profesional basado en respuestas post-consulta (mejor/igual/peor).
+    ?dias=30 → último mes, sin param → todo el histórico."""
+    return get_nps_por_profesional(dias)
 
 
 # ── Takeover, reply, resume ──────────────────────────────────────────────────
@@ -932,3 +941,113 @@ async def admin_agenda_dia(fecha: str = None, _: str = Depends(require_admin)):
     agenda = [a for a in agenda if a["citas"]]
     agenda.sort(key=lambda a: a["nombre"])
     return {"fecha": fecha, "profesionales": agenda}
+
+
+# ── Campañas estacionales ────────────────────────────────────────────────────
+
+@router.get("/admin/api/campanas")
+def admin_campanas(_: str = Depends(require_admin)):
+    """Lista todas las campañas estacionales disponibles con stats de envío."""
+    from fidelizacion import CAMPANAS_ESTACIONALES
+    from session import get_campana_envio_stats
+    stats = {s["campana_id"]: s for s in get_campana_envio_stats()}
+    result = []
+    for cid, camp in CAMPANAS_ESTACIONALES.items():
+        s = stats.get(cid, {})
+        result.append({
+            "id": cid,
+            "nombre": camp["nombre"],
+            "temporada": camp["temporada"],
+            "icono": camp["icono"],
+            "descripcion": camp["descripcion"],
+            "meses_sugeridos": camp["meses_sugeridos"],
+            "segmento": camp.get("segmento", {}),
+            "enviados": s.get("enviados", 0),
+            "ultimo_envio": s.get("ultimo_envio"),
+        })
+    return {"campanas": result}
+
+
+@router.post("/admin/api/campanas/enviar")
+async def admin_enviar_campana(request: Request, _: str = Depends(require_admin)):
+    """Dispara una campaña estacional manualmente.
+    Body: {campana_id, tags?: [...], dias_sin_visita?: int}"""
+    from fidelizacion import enviar_campana_estacional, CAMPANAS_ESTACIONALES
+    from session import get_segmented_phones
+
+    body = await request.json()
+    campana_id = body.get("campana_id", "")
+
+    if campana_id not in CAMPANAS_ESTACIONALES:
+        raise HTTPException(status_code=400,
+                            detail=f"Campaña no encontrada: {campana_id}")
+
+    camp = CAMPANAS_ESTACIONALES[campana_id]
+    seg = camp.get("segmento", {})
+    tags = body.get("tags") or seg.get("tags")
+    dias_sin_visita = body.get("dias_sin_visita") or seg.get("dias_sin_visita")
+
+    pacientes = get_segmented_phones(tags=tags, dias_sin_visita=dias_sin_visita)
+
+    if not pacientes:
+        return {"ok": True, "enviados": 0, "errores": 0, "audiencia": 0,
+                "mensaje": "Sin pacientes que cumplan los criterios"}
+
+    enviados, errores = await enviar_campana_estacional(
+        campana_id, pacientes, send_whatsapp
+    )
+    return {"ok": True, "enviados": enviados, "errores": errores,
+            "audiencia": len(pacientes), "campana": camp["nombre"]}
+
+
+@router.get("/admin/api/campanas/preview")
+def admin_campana_preview(campana_id: str, _: str = Depends(require_admin)):
+    """Preview de audiencia de una campaña sin enviarla."""
+    from fidelizacion import CAMPANAS_ESTACIONALES
+    from session import get_segmented_phones
+
+    if campana_id not in CAMPANAS_ESTACIONALES:
+        raise HTTPException(status_code=400, detail="Campaña no encontrada")
+
+    camp = CAMPANAS_ESTACIONALES[campana_id]
+    seg = camp.get("segmento", {})
+    pacientes = get_segmented_phones(
+        tags=seg.get("tags"), dias_sin_visita=seg.get("dias_sin_visita"))
+
+    return {"campana": camp["nombre"], "audiencia": len(pacientes),
+            "ejemplo_mensaje": camp["mensaje"].format(saludo="Hola *Juan* \U0001f44b ")}
+
+
+# ── Programa de referidos ────────────────────────────────────────────────────
+
+@router.post("/admin/api/referral-code/{phone}")
+def admin_generate_referral_code(phone: str, _: str = Depends(require_admin)):
+    """Genera un código de referido para un paciente."""
+    from session import generate_referral_code
+    code = generate_referral_code(phone)
+    return {"code": code, "phone": phone}
+
+
+@router.get("/admin/api/referral-code/{phone}")
+def admin_get_referral_code(phone: str, _: str = Depends(require_admin)):
+    """Retorna el código de referido de un paciente."""
+    from session import get_referral_code
+    code = get_referral_code(phone)
+    return {"code": code, "phone": phone}
+
+
+@router.get("/admin/api/referral-code-stats")
+def admin_referral_code_stats(dias: int = 30, _: str = Depends(require_admin)):
+    """Estadísticas del programa de referidos (códigos)."""
+    from session import get_referral_code_stats
+    return get_referral_code_stats(dias)
+
+
+# ── Métricas fidelización enhanced ───────────────────────────────────────────
+
+@router.get("/admin/api/fidelizacion-trends")
+def admin_fidelizacion_trends(semanas: int = 4,
+                               _: str = Depends(require_admin)):
+    """Tendencias semanales de campañas de fidelización."""
+    from session import get_fidelizacion_trends
+    return get_fidelizacion_trends(semanas)

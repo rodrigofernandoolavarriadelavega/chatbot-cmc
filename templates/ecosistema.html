@@ -2,634 +2,996 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Ecosistema Digital — Centro Medico Carampangue</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<title>Ecosistema Digital — Centro Medico Carampangue</title>
 <style>
 :root {
-  --bg: #0f172a; --bg-2: #1e293b; --bg-3: #334155;
-  --surface: #1e293b; --surface-hover: #273548;
-  --border: #334155; --border-light: #475569;
-  --text: #f1f5f9; --text-2: #94a3b8; --text-3: #64748b;
-  --primary: #38bdf8; --primary-dim: rgba(56,189,248,.12);
-  --green: #34d399; --green-dim: rgba(52,211,153,.12);
-  --amber: #fbbf24; --amber-dim: rgba(251,191,36,.12);
-  --red: #f87171; --red-dim: rgba(248,113,113,.12);
-  --purple: #a78bfa; --purple-dim: rgba(167,139,250,.12);
-  --pink: #f472b6; --pink-dim: rgba(244,114,182,.12);
-  --cyan: #22d3ee; --cyan-dim: rgba(34,211,238,.12);
-  --orange: #fb923c; --orange-dim: rgba(251,146,60,.12);
-  --radius: 16px; --radius-sm: 10px;
+  --bg: #191919; --bg-lighter: #1e1e1e; --bg-panel: #252525;
+  --border: #333; --border-light: #444;
+  --text: #dcddde; --text-dim: #999; --text-muted: #666;
+  --accent: #a882ff; --accent-dim: rgba(168,130,255,.15);
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
   background: var(--bg); color: var(--text);
-  font-family: "Inter", system-ui, sans-serif;
-  min-height: 100vh; overflow-x: hidden;
+  font-family: "Inter", -apple-system, system-ui, sans-serif;
+  overflow: hidden; height: 100vh; width: 100vw;
   -webkit-font-smoothing: antialiased;
+  cursor: grab;
 }
+body.dragging { cursor: grabbing; }
 
-/* ── Header ────────────────────────────── */
-.header {
-  padding: 32px 32px 0; text-align: center;
-  position: relative;
-}
-.header::after {
-  content: ''; position: absolute; top: 0; left: 0; right: 0;
-  height: 300px; background: radial-gradient(ellipse at 50% 0%, rgba(56,189,248,.08) 0%, transparent 70%);
+canvas { display: block; position: absolute; top: 0; left: 0; }
+
+/* ── Overlay header ──────────────────────── */
+.overlay-header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+  padding: 16px 24px; display: flex; align-items: center; gap: 12px;
+  background: linear-gradient(180deg, rgba(25,25,25,.95) 0%, rgba(25,25,25,.7) 70%, transparent 100%);
   pointer-events: none;
 }
-.header-logo {
+.overlay-header > * { pointer-events: auto; }
+.overlay-header img { height: 32px; border-radius: 8px; }
+.overlay-header h1 {
+  font-size: 16px; font-weight: 700; color: var(--text);
+  letter-spacing: -.3px;
+}
+.overlay-header .sub {
+  font-size: 11px; color: var(--text-muted); font-weight: 400;
+  margin-left: 4px;
+}
+.live-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10px; font-weight: 700; color: #4ade80;
+  background: rgba(74,222,128,.1); padding: 3px 10px; border-radius: 20px;
+  margin-left: auto; text-transform: uppercase; letter-spacing: .5px;
+}
+.live-badge::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+  background: #4ade80; animation: pulse-dot 2s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%,100% { opacity: 1; box-shadow: 0 0 4px #4ade80; }
+  50% { opacity: .4; box-shadow: 0 0 8px #4ade80; }
+}
+
+/* ── Controls ─────────────────────────────── */
+.controls {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  z-index: 10; display: flex; gap: 6px; align-items: center;
+  background: var(--bg-panel); border: 1px solid var(--border);
+  border-radius: 10px; padding: 6px 10px;
+}
+.controls button {
+  background: none; border: 1px solid var(--border); color: var(--text-dim);
+  border-radius: 6px; width: 32px; height: 32px; font-size: 16px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.controls button:hover {
+  background: var(--accent-dim); color: var(--accent); border-color: var(--accent);
+}
+.controls .zoom-label {
+  font-size: 11px; color: var(--text-muted); min-width: 40px;
+  text-align: center; font-weight: 600; font-variant-numeric: tabular-nums;
+}
+.controls .sep {
+  width: 1px; height: 20px; background: var(--border); margin: 0 4px;
+}
+
+/* ── Filter pills ─────────────────────────── */
+.filters {
+  position: fixed; top: 64px; left: 24px; z-index: 10;
+  display: flex; flex-wrap: wrap; gap: 6px; max-width: 500px;
+  pointer-events: none;
+}
+.filters > * { pointer-events: auto; }
+.filter-pill {
+  font-size: 11px; font-weight: 600; padding: 4px 12px;
+  border-radius: 20px; cursor: pointer; border: 1px solid transparent;
+  transition: all .15s; user-select: none; letter-spacing: .2px;
+}
+.filter-pill.active { border-color: currentColor; }
+.filter-pill:not(.active) { opacity: .5; }
+.filter-pill:hover { opacity: 1; }
+
+/* ── Detail panel ─────────────────────────── */
+.detail-panel {
+  position: fixed; top: 60px; right: 20px; z-index: 20;
+  width: 320px; max-height: calc(100vh - 100px);
+  background: var(--bg-panel); border: 1px solid var(--border);
+  border-radius: 14px; padding: 0; overflow: hidden;
+  opacity: 0; transform: translateX(20px) scale(.97);
+  transition: opacity .2s, transform .2s;
+  pointer-events: none;
+  box-shadow: 0 16px 48px rgba(0,0,0,.5);
+}
+.detail-panel.visible {
+  opacity: 1; transform: translateX(0) scale(1);
+  pointer-events: auto;
+}
+.detail-header {
+  padding: 16px 18px; display: flex; align-items: center; gap: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.detail-icon {
+  width: 36px; height: 36px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
-  gap: 16px; margin-bottom: 8px; position: relative; z-index: 1;
+  font-size: 18px; flex-shrink: 0;
 }
-.header-logo img {
-  height: 52px; border-radius: 12px;
-  box-shadow: 0 0 24px rgba(56,189,248,.2);
+.detail-title { font-size: 14px; font-weight: 700; }
+.detail-badge {
+  font-size: 9px; font-weight: 700; padding: 2px 8px;
+  border-radius: 20px; margin-left: auto; text-transform: uppercase;
+  letter-spacing: .5px;
 }
-.header-logo h1 {
-  font-size: 24px; font-weight: 800; letter-spacing: -.5px;
-  background: linear-gradient(135deg, #f1f5f9 0%, #94a3b8 100%);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+.detail-close {
+  position: absolute; top: 12px; right: 12px;
+  background: none; border: none; color: var(--text-muted);
+  font-size: 18px; cursor: pointer; width: 28px; height: 28px;
+  border-radius: 6px; display: flex; align-items: center; justify-content: center;
 }
-.header-sub {
-  font-size: 14px; color: var(--text-2); font-weight: 400;
-  position: relative; z-index: 1;
+.detail-close:hover { background: rgba(255,255,255,.05); color: var(--text); }
+.detail-body {
+  padding: 14px 18px; overflow-y: auto;
+  max-height: calc(100vh - 200px);
 }
-.header-sub span {
-  display: inline-block; padding: 3px 10px; border-radius: 20px;
-  background: var(--green-dim); color: var(--green); font-weight: 600;
-  font-size: 11px; margin-left: 8px; vertical-align: middle;
+.detail-desc {
+  font-size: 12px; color: var(--text-dim); line-height: 1.6;
+  margin-bottom: 14px;
 }
-
-/* ── Stats bar ─────────────────────────── */
-.stats-bar {
-  display: flex; justify-content: center; gap: 8px;
-  padding: 20px 24px; flex-wrap: wrap; position: relative; z-index: 1;
-}
-.stat {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius-sm); padding: 12px 20px;
-  text-align: center; min-width: 120px;
-}
-.stat-value {
-  font-size: 28px; font-weight: 800; line-height: 1;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--cyan) 100%);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-}
-.stat-label { font-size: 11px; color: var(--text-3); font-weight: 500; margin-top: 4px; text-transform: uppercase; letter-spacing: .5px; }
-
-/* ── Grid ──────────────────────────────── */
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 16px; padding: 8px 24px 40px; max-width: 1400px; margin: 0 auto;
-}
-
-/* ── Node card ─────────────────────────── */
-.node {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 20px;
-  transition: transform .15s, border-color .15s, box-shadow .15s;
-  position: relative; overflow: hidden;
-}
-.node:hover {
-  transform: translateY(-2px); border-color: var(--border-light);
-  box-shadow: 0 8px 32px rgba(0,0,0,.3);
-}
-.node::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0;
-  height: 3px; border-radius: var(--radius) var(--radius) 0 0;
-}
-.node.n-chatbot::before { background: linear-gradient(90deg, var(--primary), var(--cyan)); }
-.node.n-ges::before { background: linear-gradient(90deg, var(--green), #6ee7b7); }
-.node.n-admin::before { background: linear-gradient(90deg, var(--purple), var(--pink)); }
-.node.n-portal::before { background: linear-gradient(90deg, var(--cyan), var(--primary)); }
-.node.n-medilink::before { background: linear-gradient(90deg, var(--orange), var(--amber)); }
-.node.n-meta::before { background: linear-gradient(90deg, #25D366, #128C7E); }
-.node.n-claude::before { background: linear-gradient(90deg, #d4a574, #c9956b); }
-.node.n-whisper::before { background: linear-gradient(90deg, var(--text-3), var(--text-2)); }
-.node.n-infra::before { background: linear-gradient(90deg, var(--red), var(--orange)); }
-.node.n-web::before { background: linear-gradient(90deg, var(--pink), var(--purple)); }
-.node.n-cron::before { background: linear-gradient(90deg, var(--amber), var(--green)); }
-.node.n-data::before { background: linear-gradient(90deg, var(--cyan), var(--green)); }
-
-.node-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-.node-icon {
-  width: 40px; height: 40px; border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 20px; flex-shrink: 0;
-}
-.n-chatbot .node-icon { background: var(--primary-dim); }
-.n-ges .node-icon { background: var(--green-dim); }
-.n-admin .node-icon { background: var(--purple-dim); }
-.n-portal .node-icon { background: var(--cyan-dim); }
-.n-medilink .node-icon { background: var(--orange-dim); }
-.n-meta .node-icon { background: rgba(37,211,102,.12); }
-.n-claude .node-icon { background: rgba(212,165,116,.12); }
-.n-whisper .node-icon { background: rgba(100,116,139,.15); }
-.n-infra .node-icon { background: var(--red-dim); }
-.n-web .node-icon { background: var(--pink-dim); }
-.n-cron .node-icon { background: var(--amber-dim); }
-.n-data .node-icon { background: var(--cyan-dim); }
-
-.node-title { font-size: 15px; font-weight: 700; }
-.node-badge {
-  display: inline-block; font-size: 10px; font-weight: 700;
-  padding: 2px 8px; border-radius: 20px; margin-left: auto;
-  text-transform: uppercase; letter-spacing: .5px;
-}
-.badge-prod { background: var(--green-dim); color: var(--green); }
-.badge-proto { background: var(--amber-dim); color: var(--amber); }
-.badge-new { background: var(--primary-dim); color: var(--primary); }
-
-.node-desc { font-size: 13px; color: var(--text-2); line-height: 1.5; margin-bottom: 12px; }
-
-.node-items { list-style: none; }
-.node-items li {
-  font-size: 12px; color: var(--text-2); padding: 5px 0;
-  border-top: 1px solid rgba(51,65,85,.5);
+.detail-items { list-style: none; }
+.detail-items li {
+  font-size: 12px; color: var(--text-dim); padding: 6px 0;
+  border-top: 1px solid rgba(255,255,255,.04);
   display: flex; align-items: center; gap: 8px;
 }
-.node-items li:first-child { border-top: none; }
-.node-items .dot {
+.detail-items li:first-child { border-top: none; }
+.detail-dot {
   width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
 }
-.dot-green { background: var(--green); box-shadow: 0 0 6px var(--green); }
-.dot-blue { background: var(--primary); box-shadow: 0 0 6px var(--primary); }
-.dot-amber { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
-.dot-purple { background: var(--purple); box-shadow: 0 0 6px var(--purple); }
-.dot-cyan { background: var(--cyan); box-shadow: 0 0 6px var(--cyan); }
-.dot-pink { background: var(--pink); box-shadow: 0 0 6px var(--pink); }
-.dot-red { background: var(--red); box-shadow: 0 0 6px var(--red); }
-
-.node-url {
-  display: inline-block; font-size: 11px; color: var(--primary);
-  background: var(--primary-dim); padding: 3px 10px; border-radius: 6px;
-  margin-top: 8px; font-weight: 500; text-decoration: none;
-  word-break: break-all;
-}
-
-/* ── Connections section ───────────────── */
-.connections {
-  max-width: 1400px; margin: 0 auto; padding: 0 24px 40px;
-}
-.conn-title {
-  font-size: 18px; font-weight: 700; margin-bottom: 16px;
-  display: flex; align-items: center; gap: 8px;
-}
-.conn-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 12px;
-}
-.conn-card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius-sm); padding: 14px 16px;
-  display: flex; align-items: center; gap: 12px;
-}
-.conn-from, .conn-to {
-  font-size: 12px; font-weight: 600; padding: 4px 10px;
-  border-radius: 6px; white-space: nowrap;
-}
-.conn-from { background: var(--primary-dim); color: var(--primary); }
-.conn-to { background: var(--green-dim); color: var(--green); }
-.conn-arrow { color: var(--text-3); font-size: 18px; flex-shrink: 0; }
-.conn-label { font-size: 11px; color: var(--text-3); margin-left: auto; }
-
-/* ── Footer ────────────────────────────── */
-.footer {
-  text-align: center; padding: 24px; font-size: 12px; color: var(--text-3);
+.detail-connections {
+  margin-top: 14px; padding-top: 14px;
   border-top: 1px solid var(--border);
 }
+.detail-connections h4 {
+  font-size: 10px; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;
+}
+.detail-conn-item {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; color: var(--text-dim); padding: 4px 0;
+}
+.detail-conn-arrow { color: var(--text-muted); font-size: 10px; }
+.detail-url {
+  display: inline-block; font-size: 11px; color: var(--accent);
+  background: var(--accent-dim); padding: 4px 12px; border-radius: 6px;
+  margin-top: 12px; text-decoration: none; font-weight: 500;
+  word-break: break-all; transition: background .15s;
+}
+.detail-url:hover { background: rgba(168,130,255,.25); }
 
-/* ── Section titles ────────────────────── */
-.section-divider {
-  max-width: 1400px; margin: 0 auto;
-  padding: 24px 24px 12px;
-  display: flex; align-items: center; gap: 12px;
+/* ── Stats bottom-left ───────────────────── */
+.stats-overlay {
+  position: fixed; bottom: 20px; left: 20px; z-index: 10;
+  display: flex; flex-direction: column; gap: 4px;
+  font-size: 11px; color: var(--text-muted); font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
-.section-divider h2 {
-  font-size: 13px; font-weight: 700; color: var(--text-3);
-  text-transform: uppercase; letter-spacing: 1px; white-space: nowrap;
-}
-.section-divider::after {
-  content: ''; flex: 1; height: 1px; background: var(--border);
-}
+.stats-overlay span { display: flex; align-items: center; gap: 6px; }
+.stats-overlay .val { color: var(--text-dim); font-weight: 600; }
 
-/* ── Live indicator ────────────────────── */
-.live-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--green); display: inline-block;
-  animation: pulse-live 2s ease-in-out infinite;
-  margin-right: 4px; vertical-align: middle;
-}
-@keyframes pulse-live {
-  0%, 100% { opacity: 1; box-shadow: 0 0 4px var(--green); }
-  50% { opacity: .5; box-shadow: 0 0 8px var(--green); }
-}
-
-/* ── Responsive ────────────────────────── */
+/* ── Responsive ──────────────────────────── */
 @media (max-width: 768px) {
-  .header { padding: 20px 16px 0; }
-  .header-logo h1 { font-size: 18px; }
-  .grid { grid-template-columns: 1fr; padding: 8px 16px 32px; }
-  .stats-bar { padding: 16px; }
-  .stat { min-width: 90px; padding: 10px 14px; }
-  .stat-value { font-size: 22px; }
-  .conn-grid { grid-template-columns: 1fr; }
-  .connections { padding: 0 16px 32px; }
-  .section-divider { padding: 20px 16px 8px; }
+  .detail-panel { right: 10px; left: 10px; width: auto; top: auto; bottom: 70px; max-height: 50vh; }
+  .filters { top: 56px; left: 12px; }
+  .overlay-header { padding: 12px 16px; }
+  .overlay-header h1 { font-size: 14px; }
 }
 </style>
 </head>
 <body>
 
-<!-- Header -->
-<header class="header">
-  <div class="header-logo">
-    <img src="/static/logo.png" alt="CMC">
+<canvas id="graph"></canvas>
+
+<!-- Overlay header -->
+<div class="overlay-header">
+  <img src="/static/logo.png" alt="CMC">
+  <div>
     <h1>Ecosistema Digital CMC</h1>
+    <span class="sub">Centro Medico Carampangue</span>
   </div>
-  <p class="header-sub">
-    Centro Medico Carampangue — Arauco, Region del Biobio
-    <span><span class="live-dot"></span> EN VIVO</span>
-  </p>
-</header>
-
-<!-- Stats -->
-<div class="stats-bar" id="stats-bar">
-  <div class="stat">
-    <div class="stat-value">24</div>
-    <div class="stat-label">Profesionales</div>
-  </div>
-  <div class="stat">
-    <div class="stat-value">18</div>
-    <div class="stat-label">Especialidades</div>
-  </div>
-  <div class="stat">
-    <div class="stat-value">15</div>
-    <div class="stat-label">Cron Jobs</div>
-  </div>
-  <div class="stat">
-    <div class="stat-value">5</div>
-    <div class="stat-label">Canales</div>
-  </div>
-  <div class="stat">
-    <div class="stat-value" id="stat-medilink">--</div>
-    <div class="stat-label">Medilink (ms)</div>
-  </div>
+  <div class="live-badge">En vivo</div>
 </div>
 
-<!-- Productos en produccion -->
-<div class="section-divider"><h2>Productos en produccion</h2></div>
-<div class="grid">
+<!-- Category filters -->
+<div class="filters" id="filters"></div>
 
-  <!-- Chatbot CMC -->
-  <div class="node n-chatbot">
-    <div class="node-header">
-      <div class="node-icon">🤖</div>
-      <div class="node-title">Chatbot WhatsApp</div>
-      <span class="node-badge badge-prod">PROD</span>
-    </div>
-    <div class="node-desc">Motor conversacional con 20+ estados. Agendamiento, cancelacion, reagendamiento, lista de espera, registro de pacientes.</div>
-    <ul class="node-items">
-      <li><span class="dot dot-green"></span>flows.py — maquina de estados</li>
-      <li><span class="dot dot-blue"></span>claude_helper.py — deteccion de intencion</li>
-      <li><span class="dot dot-cyan"></span>medilink.py — wrapper API agenda</li>
-      <li><span class="dot dot-purple"></span>messaging.py — envio WA/IG/FB</li>
-      <li><span class="dot dot-amber"></span>resilience.py — circuit breaker</li>
-    </ul>
-    <a class="node-url" href="https://agentecmc.cl/health" target="_blank">agentecmc.cl</a>
-  </div>
-
-  <!-- Panel Admin -->
-  <div class="node n-admin">
-    <div class="node-header">
-      <div class="node-icon">📊</div>
-      <div class="node-title">Panel de Recepcion</div>
-      <span class="node-badge badge-prod">PROD</span>
-    </div>
-    <div class="node-desc">24 endpoints API. Conversaciones en tiempo real, metricas, citas, fidelizacion, kine, ortodoncia.</div>
-    <ul class="node-items">
-      <li><span class="dot dot-purple"></span>Conversaciones WA/IG/FB en tiempo real</li>
-      <li><span class="dot dot-green"></span>Metricas de conversion + funnel</li>
-      <li><span class="dot dot-cyan"></span>Pacientes en Control (kine, psico, nutri)</li>
-      <li><span class="dot dot-amber"></span>Ortodoncia — Matriz I/C/? </li>
-      <li><span class="dot dot-pink"></span>Notas, tags, documentos, templates</li>
-    </ul>
-    <a class="node-url" href="https://agentecmc.cl/admin" target="_blank">agentecmc.cl/admin</a>
-  </div>
-
-  <!-- Portal Paciente -->
-  <div class="node n-portal">
-    <div class="node-header">
-      <div class="node-icon">👤</div>
-      <div class="node-title">Portal del Paciente</div>
-      <span class="node-badge badge-new">NUEVO</span>
-    </div>
-    <div class="node-desc">Webapp para pacientes. Auth por OTP via WhatsApp. Proximas citas, historial, diagnosticos cronicos.</div>
-    <ul class="node-items">
-      <li><span class="dot dot-cyan"></span>Login por RUT + codigo WhatsApp</li>
-      <li><span class="dot dot-green"></span>Citas futuras y pasadas (Medilink)</li>
-      <li><span class="dot dot-amber"></span>Diagnosticos cronicos (dx tags)</li>
-      <li><span class="dot dot-green"></span>Boton "Agendar" abre WhatsApp</li>
-    </ul>
-    <a class="node-url" href="https://agentecmc.cl/portal" target="_blank">agentecmc.cl/portal</a>
-  </div>
-
-  <!-- GES Clinical -->
-  <div class="node n-ges">
-    <div class="node-header">
-      <div class="node-icon">🏥</div>
-      <div class="node-title">GES Clinical Assistant</div>
-      <span class="node-badge badge-prod">PROD</span>
-    </div>
-    <div class="node-desc">Motor de triage clinico. 140+ patologias GES, calculadoras (Wells, CHA2DS2, CURB-65), guias de urgencia.</div>
-    <ul class="node-items">
-      <li><span class="dot dot-green"></span>Backend FastAPI en VPS :8002</li>
-      <li><span class="dot dot-blue"></span>Frontend Next.js 14 en Vercel</li>
-      <li><span class="dot dot-amber"></span>API publica (nginx whitelist)</li>
-      <li><span class="dot dot-red"></span>/triage bloqueado externamente</li>
-    </ul>
-    <a class="node-url" href="https://ges.agentecmc.cl" target="_blank">ges.agentecmc.cl</a>
-  </div>
-
-  <!-- Sitio web -->
-  <div class="node n-web">
-    <div class="node-header">
-      <div class="node-icon">🌐</div>
-      <div class="node-title">Sitio Web CMC</div>
-      <span class="node-badge badge-prod">PROD</span>
-    </div>
-    <div class="node-desc">Pagina publica del centro medico. Especialidades, equipo, ubicacion, contacto.</div>
-    <ul class="node-items">
-      <li><span class="dot dot-green"></span>Pagina de especialidades</li>
-      <li><span class="dot dot-amber"></span>20 blog posts pendientes de publicar</li>
-      <li><span class="dot dot-pink"></span>Pendiente: SEO local + boton WA</li>
-    </ul>
-    <a class="node-url" href="https://centromedicocarampangue.cl" target="_blank">centromedicocarampangue.cl</a>
-  </div>
-
-  <!-- Fidelizacion -->
-  <div class="node n-cron">
-    <div class="node-header">
-      <div class="node-icon">💛</div>
-      <div class="node-title">Motor de Fidelizacion</div>
-      <span class="node-badge badge-prod">PROD</span>
-    </div>
-    <div class="node-desc">5 campanas automaticas + upsell post-consulta + alerta al doctor. Segmentacion por tags, especialidad, historial.</div>
-    <ul class="node-items">
-      <li><span class="dot dot-green"></span>Post-consulta (Mejor/Igual/Peor)</li>
-      <li><span class="dot dot-cyan"></span>Upsell contextual (trauma→kine, etc)</li>
-      <li><span class="dot dot-amber"></span>Reactivacion inactivos (30-90 dias)</li>
-      <li><span class="dot dot-purple"></span>Adherencia kine + control periodico</li>
-      <li><span class="dot dot-pink"></span>Cross-sell kine + ORL↔Fono</li>
-      <li><span class="dot dot-red"></span>Alerta doctor si paciente "Peor"</li>
-    </ul>
-  </div>
-
-  <!-- Doctor Alerts -->
-  <div class="node n-chatbot">
-    <div class="node-header">
-      <div class="node-icon">👨‍⚕️</div>
-      <div class="node-title">Alertas Clinicas</div>
-      <span class="node-badge badge-prod">PROD</span>
-    </div>
-    <div class="node-desc">Resumenes pre-cita, reportes de progreso, deteccion pasiva de patologias cronicas, comando dx.</div>
-    <ul class="node-items">
-      <li><span class="dot dot-green"></span>Resumen 30 min antes de cada cita</li>
-      <li><span class="dot dot-blue"></span>Preventivos + vacunas PNI por edad</li>
-      <li><span class="dot dot-amber"></span>Guias cronicas (DM2, HTA, asma...)</li>
-      <li><span class="dot dot-cyan"></span>Reportes progreso 4x dia</li>
-      <li><span class="dot dot-purple"></span>Comando dx (24 patologias)</li>
-    </ul>
-  </div>
-
-  <!-- Referral -->
-  <div class="node n-portal">
-    <div class="node-header">
-      <div class="node-icon">📈</div>
-      <div class="node-title">Referral Tracking</div>
-      <span class="node-badge badge-new">NUEVO</span>
-    </div>
-    <div class="node-desc">"Como nos conociste?" en registro de paciente nuevo. Tags referido:amigo/google/rrss/recurrente/otro.</div>
-    <ul class="node-items">
-      <li><span class="dot dot-cyan"></span>Lista interactiva 5 opciones</li>
-      <li><span class="dot dot-green"></span>Texto libre con keyword matching</li>
-      <li><span class="dot dot-amber"></span>Endpoint /admin/api/referral-stats</li>
-    </ul>
-  </div>
+<!-- Bottom controls -->
+<div class="controls">
+  <button id="btn-zoom-out" title="Alejar">-</button>
+  <span class="zoom-label" id="zoom-label">100%</span>
+  <button id="btn-zoom-in" title="Acercar">+</button>
+  <div class="sep"></div>
+  <button id="btn-reset" title="Centrar">&#8982;</button>
 </div>
 
-<!-- APIs externas -->
-<div class="section-divider"><h2>APIs y servicios externos</h2></div>
-<div class="grid">
+<!-- Stats bottom-left -->
+<div class="stats-overlay" id="stats-overlay"></div>
 
-  <div class="node n-medilink">
-    <div class="node-header">
-      <div class="node-icon">📋</div>
-      <div class="node-title">Medilink 2 API</div>
-      <span class="node-badge badge-prod">API</span>
-    </div>
-    <div class="node-desc">Sistema de agenda medica HealthAtom. Pacientes, citas, slots, atenciones, horarios bloqueados.</div>
-    <ul class="node-items">
-      <li><span class="dot dot-green"></span>/pacientes — buscar/crear por RUT</li>
-      <li><span class="dot dot-green"></span>/citas — crear, listar, cancelar</li>
-      <li><span class="dot dot-blue"></span>/agendas — disponibilidad por dia</li>
-      <li><span class="dot dot-amber"></span>/atenciones — historial clinico</li>
-      <li><span class="dot dot-cyan"></span>/especialidades — proximo dia</li>
-    </ul>
-    <span class="node-url">api.medilink2.healthatom.com/api/v5</span>
-  </div>
-
-  <div class="node n-meta">
-    <div class="node-header">
-      <div class="node-icon">💬</div>
-      <div class="node-title">Meta Cloud API</div>
-      <span class="node-badge badge-prod">API</span>
-    </div>
-    <div class="node-desc">WhatsApp Business, Instagram DMs, Facebook Messenger. Token permanente via System User.</div>
-    <ul class="node-items">
-      <li><span class="dot dot-green"></span>WhatsApp: mensajes + botones + listas</li>
-      <li><span class="dot dot-blue"></span>Instagram: DMs → panel admin</li>
-      <li><span class="dot dot-purple"></span>Messenger: DMs → panel admin</li>
-      <li><span class="dot dot-amber"></span>Templates aprobados (2)</li>
-      <li><span class="dot dot-cyan"></span>Delivery status webhooks</li>
-    </ul>
-  </div>
-
-  <div class="node n-claude">
-    <div class="node-header">
-      <div class="node-icon">🧠</div>
-      <div class="node-title">Anthropic — Claude Haiku</div>
-      <span class="node-badge badge-prod">API</span>
-    </div>
-    <div class="node-desc">IA para deteccion de intencion, FAQ, clasificacion de respuestas libres. Cache de 60+ frases comunes.</div>
-    <ul class="node-items">
-      <li><span class="dot dot-green"></span>detect_intent() — 7 intenciones</li>
-      <li><span class="dot dot-blue"></span>respuesta_faq() — precios, info</li>
-      <li><span class="dot dot-amber"></span>clasificar_respuesta() — mejor/igual/peor</li>
-      <li><span class="dot dot-cyan"></span>~$5-10/mes costo estimado</li>
-    </ul>
-  </div>
-
-  <div class="node n-whisper">
-    <div class="node-header">
-      <div class="node-icon">🎤</div>
-      <div class="node-title">OpenAI — Whisper</div>
-      <span class="node-badge badge-prod">API</span>
-    </div>
-    <div class="node-desc">Transcripcion de notas de voz de WhatsApp. Idioma espanol, feedback al paciente.</div>
-    <ul class="node-items">
-      <li><span class="dot dot-green"></span>transcribe_audio() — Whisper-1</li>
-      <li><span class="dot dot-blue"></span>Feedback: "Entendi: texto"</li>
-      <li><span class="dot dot-amber"></span>~$1-3/mes costo estimado</li>
-    </ul>
-  </div>
+<!-- Detail panel -->
+<div class="detail-panel" id="detail-panel">
+  <button class="detail-close" id="detail-close">&times;</button>
+  <div class="detail-header" id="detail-header"></div>
+  <div class="detail-body" id="detail-body"></div>
 </div>
-
-<!-- Infraestructura -->
-<div class="section-divider"><h2>Infraestructura</h2></div>
-<div class="grid">
-
-  <div class="node n-infra">
-    <div class="node-header">
-      <div class="node-icon">🖥️</div>
-      <div class="node-title">VPS DigitalOcean</div>
-      <span class="node-badge badge-prod">INFRA</span>
-    </div>
-    <div class="node-desc">Ubuntu 24.04. SSH solo por llave Ed25519. Nginx reverse proxy + SSL Let's Encrypt.</div>
-    <ul class="node-items">
-      <li><span class="dot dot-green"></span>1 GB RAM + 2 GB swap</li>
-      <li><span class="dot dot-blue"></span>chatbot-cmc.service (systemd :8001)</li>
-      <li><span class="dot dot-green"></span>ges-assistant.service (systemd :8002)</li>
-      <li><span class="dot dot-amber"></span>nginx — SSL + reverse proxy</li>
-      <li><span class="dot dot-cyan"></span>Backup semanal sqlite3 + gzip</li>
-    </ul>
-    <span class="node-url">157.245.13.107</span>
-  </div>
-
-  <div class="node n-data">
-    <div class="node-header">
-      <div class="node-icon">🗄️</div>
-      <div class="node-title">SQLite Databases</div>
-      <span class="node-badge badge-prod">DATA</span>
-    </div>
-    <div class="node-desc">WAL mode + busy_timeout. Retencion indefinida (~90 MB/ano). 18 tablas en sessions.db.</div>
-    <ul class="node-items">
-      <li><span class="dot dot-green"></span>sessions.db — sesiones, tags, eventos, citas</li>
-      <li><span class="dot dot-blue"></span>ges.db — patologias, calculadoras</li>
-      <li><span class="dot dot-amber"></span>citas_cache — cache incremental Medilink</li>
-      <li><span class="dot dot-cyan"></span>ortodoncia_cache — atenciones I/C/?</li>
-      <li><span class="dot dot-purple"></span>portal_otp — codigos OTP efimeros</li>
-    </ul>
-  </div>
-
-  <div class="node n-ges">
-    <div class="node-header">
-      <div class="node-icon">☁️</div>
-      <div class="node-title">Servicios Cloud</div>
-      <span class="node-badge badge-prod">INFRA</span>
-    </div>
-    <div class="node-desc">DNS, SSL, hosting frontend, repositorios de codigo.</div>
-    <ul class="node-items">
-      <li><span class="dot dot-blue"></span>Cloudflare — DNS (3 subdominios)</li>
-      <li><span class="dot dot-green"></span>Let's Encrypt — SSL auto-renew</li>
-      <li><span class="dot dot-purple"></span>Vercel — frontend GES (Next.js)</li>
-      <li><span class="dot dot-amber"></span>GitHub — 2 repos privados</li>
-    </ul>
-  </div>
-</div>
-
-<!-- Conexiones -->
-<div class="section-divider"><h2>Conexiones entre sistemas</h2></div>
-<div class="connections">
-  <div class="conn-grid">
-    <div class="conn-card">
-      <span class="conn-from">Paciente</span>
-      <span class="conn-arrow">→</span>
-      <span class="conn-to">Chatbot</span>
-      <span class="conn-label">WhatsApp / Audio</span>
-    </div>
-    <div class="conn-card">
-      <span class="conn-from">Chatbot</span>
-      <span class="conn-arrow">→</span>
-      <span class="conn-to">Medilink</span>
-      <span class="conn-label">Buscar slots, crear cita</span>
-    </div>
-    <div class="conn-card">
-      <span class="conn-from">Chatbot</span>
-      <span class="conn-arrow">→</span>
-      <span class="conn-to">Claude Haiku</span>
-      <span class="conn-label">Detectar intencion</span>
-    </div>
-    <div class="conn-card">
-      <span class="conn-from">Chatbot</span>
-      <span class="conn-arrow">→</span>
-      <span class="conn-to">GES</span>
-      <span class="conn-label">Triage sintomas</span>
-    </div>
-    <div class="conn-card">
-      <span class="conn-from">Chatbot</span>
-      <span class="conn-arrow">→</span>
-      <span class="conn-to">Doctor</span>
-      <span class="conn-label">Alertas + resumenes</span>
-    </div>
-    <div class="conn-card">
-      <span class="conn-from">Fidelizacion</span>
-      <span class="conn-arrow">→</span>
-      <span class="conn-to">Paciente</span>
-      <span class="conn-label">Campanas automaticas</span>
-    </div>
-    <div class="conn-card">
-      <span class="conn-from">Portal</span>
-      <span class="conn-arrow">→</span>
-      <span class="conn-to">Medilink</span>
-      <span class="conn-label">Citas + historial</span>
-    </div>
-    <div class="conn-card">
-      <span class="conn-from">Admin</span>
-      <span class="conn-arrow">→</span>
-      <span class="conn-to">Chatbot</span>
-      <span class="conn-label">Takeover, respuestas</span>
-    </div>
-    <div class="conn-card">
-      <span class="conn-from">GES frontend</span>
-      <span class="conn-arrow">→</span>
-      <span class="conn-to">GES API</span>
-      <span class="conn-label">nginx whitelist</span>
-    </div>
-  </div>
-</div>
-
-<footer class="footer">
-  Centro Medico Carampangue — Monsalve 102 esq. Republica, Carampangue<br>
-  Ecosistema Digital actualizado 2026-04-14
-</footer>
 
 <script>
-// Fetch live health data
-(async function() {
+// ─────────────────────────────────────────────────────────────────────────────
+// DATA — nodes & edges
+// ─────────────────────────────────────────────────────────────────────────────
+const CATEGORIES = {
+  producto:  { label: 'Productos', color: '#a882ff' },
+  api:       { label: 'APIs externas', color: '#fb923c' },
+  infra:     { label: 'Infraestructura', color: '#f87171' },
+  modulo:    { label: 'Modulos', color: '#38bdf8' },
+};
+
+const NODES = [
+  // ── Productos ──
+  { id: 'chatbot', label: 'Chatbot\nWhatsApp', icon: '\u{1F916}', cat: 'producto', badge: 'PROD', badgeColor: '#4ade80',
+    desc: 'Motor conversacional con 20+ estados. Agendamiento, cancelacion, reagendamiento, lista de espera, registro de pacientes nuevos.',
+    items: [
+      { dot: '#4ade80', text: 'flows.py — maquina de estados (20+ estados)' },
+      { dot: '#38bdf8', text: 'claude_helper.py — deteccion de intencion' },
+      { dot: '#22d3ee', text: 'medilink.py — wrapper API agenda' },
+      { dot: '#a78bfa', text: 'messaging.py — envio WA/IG/FB' },
+      { dot: '#fbbf24', text: 'resilience.py — circuit breaker Medilink' },
+    ],
+    url: 'https://agentecmc.cl/health', urlLabel: 'agentecmc.cl',
+    size: 32 },
+  { id: 'admin', label: 'Panel\nRecepcion', icon: '\u{1F4CA}', cat: 'producto', badge: 'PROD', badgeColor: '#4ade80',
+    desc: '24 endpoints API. Conversaciones en tiempo real, metricas, citas, fidelizacion, pacientes en control, ortodoncia.',
+    items: [
+      { dot: '#a78bfa', text: 'Conversaciones WA/IG/FB en tiempo real' },
+      { dot: '#4ade80', text: 'Metricas de conversion + funnel' },
+      { dot: '#22d3ee', text: 'Pacientes en Control (kine, psico, nutri)' },
+      { dot: '#fbbf24', text: 'Ortodoncia — Matriz I/C/?' },
+      { dot: '#f472b6', text: 'Notas, tags, documentos, templates' },
+    ],
+    url: 'https://agentecmc.cl/admin', urlLabel: 'agentecmc.cl/admin',
+    size: 26 },
+  { id: 'portal', label: 'Portal\nPaciente', icon: '\u{1F464}', cat: 'producto', badge: 'NUEVO', badgeColor: '#38bdf8',
+    desc: 'Webapp para pacientes. Auth por OTP via WhatsApp. Proximas citas, historial, diagnosticos cronicos.',
+    items: [
+      { dot: '#22d3ee', text: 'Login por RUT + codigo OTP WhatsApp' },
+      { dot: '#4ade80', text: 'Citas futuras y pasadas (Medilink)' },
+      { dot: '#fbbf24', text: 'Diagnosticos cronicos (dx tags)' },
+      { dot: '#4ade80', text: 'Boton "Agendar" abre WhatsApp' },
+    ],
+    url: 'https://agentecmc.cl/portal', urlLabel: 'agentecmc.cl/portal',
+    size: 22 },
+  { id: 'ges', label: 'GES Clinical\nAssistant', icon: '\u{1F3E5}', cat: 'producto', badge: 'PROD', badgeColor: '#4ade80',
+    desc: 'Motor de triage clinico. 140+ patologias GES, calculadoras clinicas (Wells, CHA2DS2, CURB-65), guias de urgencia.',
+    items: [
+      { dot: '#4ade80', text: 'Backend FastAPI en VPS :8002' },
+      { dot: '#38bdf8', text: 'Frontend Next.js 14 en Vercel' },
+      { dot: '#fbbf24', text: 'API publica (nginx whitelist)' },
+      { dot: '#f87171', text: '/triage bloqueado externamente' },
+    ],
+    url: 'https://ges.agentecmc.cl', urlLabel: 'ges.agentecmc.cl',
+    size: 24 },
+  { id: 'web', label: 'Sitio Web\nCMC', icon: '\u{1F310}', cat: 'producto', badge: 'PROD', badgeColor: '#4ade80',
+    desc: 'Pagina publica del centro medico. Especialidades, equipo, ubicacion, contacto.',
+    items: [
+      { dot: '#4ade80', text: 'Pagina de especialidades' },
+      { dot: '#fbbf24', text: '20 blog posts pendientes' },
+      { dot: '#f472b6', text: 'Pendiente: SEO local + boton WA' },
+    ],
+    url: 'https://centromedicocarampangue.cl', urlLabel: 'centromedicocarampangue.cl',
+    size: 20 },
+
+  // ── Modulos internos ──
+  { id: 'fidelizacion', label: 'Motor\nFidelizacion', icon: '\u{1F49B}', cat: 'modulo', badge: 'PROD', badgeColor: '#4ade80',
+    desc: '5 campanas automaticas + upsell post-consulta + alerta al doctor. Segmentacion por tags, especialidad, historial.',
+    items: [
+      { dot: '#4ade80', text: 'Post-consulta (Mejor/Igual/Peor)' },
+      { dot: '#22d3ee', text: 'Upsell contextual (trauma\u2192kine)' },
+      { dot: '#fbbf24', text: 'Reactivacion inactivos (30-90 dias)' },
+      { dot: '#a78bfa', text: 'Adherencia kine + control periodico' },
+      { dot: '#f472b6', text: 'Cross-sell kine + ORL\u2194Fono' },
+      { dot: '#f87171', text: 'Alerta doctor si paciente "Peor"' },
+    ],
+    size: 22 },
+  { id: 'alertas', label: 'Alertas\nClinicas', icon: '\u{1FA7A}', cat: 'modulo', badge: 'PROD', badgeColor: '#4ade80',
+    desc: 'Resumenes pre-cita, reportes de progreso, deteccion pasiva de patologias cronicas, comando dx.',
+    items: [
+      { dot: '#4ade80', text: 'Resumen 30 min antes de cada cita' },
+      { dot: '#38bdf8', text: 'Preventivos + vacunas PNI por edad' },
+      { dot: '#fbbf24', text: 'Guias cronicas (DM2, HTA, asma...)' },
+      { dot: '#22d3ee', text: 'Reportes progreso 4x dia' },
+      { dot: '#a78bfa', text: 'Comando dx (24 patologias)' },
+    ],
+    size: 20 },
+  { id: 'referral', label: 'Referral\nTracking', icon: '\u{1F4C8}', cat: 'modulo', badge: 'NUEVO', badgeColor: '#38bdf8',
+    desc: '"Como nos conociste?" en registro de paciente nuevo. Tags referido:amigo/google/rrss/recurrente/otro.',
+    items: [
+      { dot: '#22d3ee', text: 'Lista interactiva 5 opciones' },
+      { dot: '#4ade80', text: 'Texto libre con keyword matching' },
+      { dot: '#fbbf24', text: 'Endpoint /admin/api/referral-stats' },
+    ],
+    size: 16 },
+  { id: 'cron', label: '15 Cron\nJobs', icon: '\u{23F0}', cat: 'modulo', badge: 'PROD', badgeColor: '#4ade80',
+    desc: 'Recordatorios, reenganche, watchdog Medilink, waitlist check, sync citas, fidelizacion, backup.',
+    items: [
+      { dot: '#4ade80', text: 'Recordatorios 09:00 + 2h antes' },
+      { dot: '#fbbf24', text: 'Reenganche abandonos (5 min)' },
+      { dot: '#f87171', text: 'Watchdog Medilink (1 min)' },
+      { dot: '#22d3ee', text: 'Waitlist check 07:00' },
+      { dot: '#a78bfa', text: 'Sync citas 23:50' },
+    ],
+    size: 18 },
+
+  // ── APIs externas ──
+  { id: 'medilink', label: 'Medilink 2\nAPI', icon: '\u{1F4CB}', cat: 'api', badge: 'API', badgeColor: '#fb923c',
+    desc: 'Sistema de agenda medica HealthAtom. Pacientes, citas, slots, atenciones, horarios bloqueados.',
+    items: [
+      { dot: '#4ade80', text: '/pacientes — buscar/crear por RUT' },
+      { dot: '#4ade80', text: '/citas — crear, listar, cancelar' },
+      { dot: '#38bdf8', text: '/agendas — disponibilidad por dia' },
+      { dot: '#fbbf24', text: '/atenciones — historial clinico' },
+      { dot: '#22d3ee', text: '/especialidades — proximo dia' },
+    ],
+    url: 'https://api.medilink2.healthatom.com/api/v5', urlLabel: 'medilink2.healthatom.com',
+    size: 26 },
+  { id: 'meta', label: 'Meta\nCloud API', icon: '\u{1F4AC}', cat: 'api', badge: 'API', badgeColor: '#fb923c',
+    desc: 'WhatsApp Business, Instagram DMs, Facebook Messenger. Token permanente via System User.',
+    items: [
+      { dot: '#25D366', text: 'WhatsApp: mensajes + botones + listas' },
+      { dot: '#38bdf8', text: 'Instagram: DMs \u2192 panel admin' },
+      { dot: '#a78bfa', text: 'Messenger: DMs \u2192 panel admin' },
+      { dot: '#fbbf24', text: '2 templates aprobados por Meta' },
+      { dot: '#22d3ee', text: 'Delivery status webhooks' },
+    ],
+    size: 24 },
+  { id: 'claude', label: 'Claude\nHaiku', icon: '\u{1F9E0}', cat: 'api', badge: 'API', badgeColor: '#fb923c',
+    desc: 'IA para deteccion de intencion, FAQ, clasificacion de respuestas libres. Cache de 60+ frases comunes.',
+    items: [
+      { dot: '#4ade80', text: 'detect_intent() — 7 intenciones' },
+      { dot: '#38bdf8', text: 'respuesta_faq() — precios, info' },
+      { dot: '#fbbf24', text: 'clasificar_respuesta() — mejor/igual/peor' },
+      { dot: '#22d3ee', text: '~$5-10/mes costo estimado' },
+    ],
+    size: 22 },
+  { id: 'whisper', label: 'OpenAI\nWhisper', icon: '\u{1F3A4}', cat: 'api', badge: 'API', badgeColor: '#fb923c',
+    desc: 'Transcripcion de notas de voz de WhatsApp. Idioma espanol, feedback al paciente "Entendi: ...".',
+    items: [
+      { dot: '#4ade80', text: 'transcribe_audio() — Whisper-1' },
+      { dot: '#38bdf8', text: 'Feedback: "Entendi: texto"' },
+      { dot: '#fbbf24', text: '~$1-3/mes costo estimado' },
+    ],
+    size: 18 },
+
+  // ── Infraestructura ──
+  { id: 'vps', label: 'VPS\nDigitalOcean', icon: '\u{1F5A5}\uFE0F', cat: 'infra', badge: 'INFRA', badgeColor: '#f87171',
+    desc: 'Ubuntu 24.04. SSH solo por llave Ed25519. Nginx reverse proxy + SSL Let\'s Encrypt.',
+    items: [
+      { dot: '#4ade80', text: '1 GB RAM + 2 GB swap' },
+      { dot: '#38bdf8', text: 'chatbot-cmc.service (systemd :8001)' },
+      { dot: '#4ade80', text: 'ges-assistant.service (systemd :8002)' },
+      { dot: '#fbbf24', text: 'nginx — SSL + reverse proxy' },
+      { dot: '#22d3ee', text: 'Backup semanal sqlite3 + gzip' },
+    ],
+    size: 24 },
+  { id: 'sqlite', label: 'SQLite\nDatabases', icon: '\u{1F5C4}\uFE0F', cat: 'infra', badge: 'DATA', badgeColor: '#f87171',
+    desc: 'WAL mode + busy_timeout. Retencion indefinida (~90 MB/ano). 18 tablas en sessions.db.',
+    items: [
+      { dot: '#4ade80', text: 'sessions.db — sesiones, tags, eventos, citas' },
+      { dot: '#38bdf8', text: 'ges.db — patologias, calculadoras' },
+      { dot: '#fbbf24', text: 'citas_cache — cache incremental Medilink' },
+      { dot: '#22d3ee', text: 'ortodoncia_cache — atenciones I/C/?' },
+      { dot: '#a78bfa', text: 'portal_otp — codigos OTP efimeros' },
+    ],
+    size: 22 },
+  { id: 'cloud', label: 'Cloudflare\nVercel\nGitHub', icon: '\u2601\uFE0F', cat: 'infra', badge: 'INFRA', badgeColor: '#f87171',
+    desc: 'DNS, SSL, hosting frontend, repositorios de codigo.',
+    items: [
+      { dot: '#38bdf8', text: 'Cloudflare — DNS (3 subdominios)' },
+      { dot: '#4ade80', text: "Let's Encrypt — SSL auto-renew" },
+      { dot: '#a78bfa', text: 'Vercel — frontend GES (Next.js)' },
+      { dot: '#fbbf24', text: 'GitHub — 2 repos privados' },
+    ],
+    size: 20 },
+];
+
+const EDGES = [
+  // core flows
+  { from: 'chatbot', to: 'medilink', label: 'Slots, citas' },
+  { from: 'chatbot', to: 'meta',     label: 'Enviar/recibir msgs' },
+  { from: 'chatbot', to: 'claude',   label: 'Detectar intencion' },
+  { from: 'chatbot', to: 'whisper',  label: 'Transcribir audio' },
+  { from: 'chatbot', to: 'ges',      label: 'Triage sintomas' },
+  { from: 'chatbot', to: 'sqlite',   label: 'Sesiones, eventos' },
+  { from: 'chatbot', to: 'admin',    label: 'API endpoints' },
+  { from: 'chatbot', to: 'fidelizacion', label: 'Campanas auto' },
+  { from: 'chatbot', to: 'alertas',  label: 'Pre-cita, dx' },
+  { from: 'chatbot', to: 'cron',     label: 'Scheduler' },
+  { from: 'chatbot', to: 'referral', label: 'Tags referido' },
+  // admin
+  { from: 'admin', to: 'sqlite',   label: 'Metricas, notas' },
+  { from: 'admin', to: 'medilink', label: 'Sync citas' },
+  // portal
+  { from: 'portal', to: 'medilink', label: 'Citas, historial' },
+  { from: 'portal', to: 'sqlite',   label: 'OTP, dx tags' },
+  // ges
+  { from: 'ges', to: 'cloud', label: 'Vercel deploy' },
+  // fidelizacion
+  { from: 'fidelizacion', to: 'meta', label: 'Enviar seguimiento' },
+  { from: 'fidelizacion', to: 'claude', label: 'Clasificar respuesta' },
+  // alertas
+  { from: 'alertas', to: 'meta', label: 'WA al doctor' },
+  { from: 'alertas', to: 'medilink', label: 'Agenda del dia' },
+  // infra
+  { from: 'vps', to: 'chatbot', label: 'systemd :8001' },
+  { from: 'vps', to: 'ges',     label: 'systemd :8002' },
+  { from: 'vps', to: 'sqlite',  label: 'Disk storage' },
+  { from: 'cloud', to: 'vps',   label: 'DNS + SSL' },
+  // cron
+  { from: 'cron', to: 'medilink', label: 'Sync, watchdog' },
+  { from: 'cron', to: 'meta',    label: 'Recordatorios' },
+  // web
+  { from: 'web', to: 'cloud', label: 'Hosting' },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GRAPH ENGINE
+// ─────────────────────────────────────────────────────────────────────────────
+const canvas = document.getElementById('graph');
+const ctx = canvas.getContext('2d');
+let W, H, dpr;
+
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  W = window.innerWidth; H = window.innerHeight;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+resize();
+window.addEventListener('resize', resize);
+
+// State
+let camera = { x: 0, y: 0, zoom: 1 };
+let nodes = [], edges = [];
+let hoveredNode = null, selectedNode = null, dragNode = null;
+let isDragging = false, isPanning = false;
+let panStart = { x: 0, y: 0 }, camStart = { x: 0, y: 0 };
+let activeCategories = new Set(Object.keys(CATEGORIES));
+let animTime = 0;
+
+// Initialize node positions in a circle
+function initGraph() {
+  const cx = 0, cy = 0;
+  const R = 260;
+  nodes = NODES.map((d, i) => {
+    const angle = (i / NODES.length) * Math.PI * 2 - Math.PI / 2;
+    return {
+      ...d,
+      x: cx + R * Math.cos(angle) * (0.6 + Math.random() * 0.8),
+      y: cy + R * Math.sin(angle) * (0.6 + Math.random() * 0.8),
+      vx: 0, vy: 0,
+      targetX: 0, targetY: 0,
+    };
+  });
+  edges = EDGES.map(e => ({
+    ...e,
+    source: nodes.find(n => n.id === e.from),
+    target: nodes.find(n => n.id === e.to),
+  })).filter(e => e.source && e.target);
+}
+initGraph();
+
+// ── Force simulation ──────────────────────
+const SIM = {
+  repulsion: 8000,
+  attraction: 0.008,
+  centerForce: 0.002,
+  damping: 0.85,
+  minDist: 80,
+};
+
+function simulate() {
+  const active = nodes.filter(n => activeCategories.has(n.cat));
+
+  // Repulsion (all pairs)
+  for (let i = 0; i < active.length; i++) {
+    for (let j = i + 1; j < active.length; j++) {
+      const a = active[i], b = active[j];
+      let dx = b.x - a.x, dy = b.y - a.y;
+      let dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      if (dist < SIM.minDist) dist = SIM.minDist;
+      const force = SIM.repulsion / (dist * dist);
+      const fx = (dx / dist) * force;
+      const fy = (dy / dist) * force;
+      a.vx -= fx; a.vy -= fy;
+      b.vx += fx; b.vy += fy;
+    }
+  }
+
+  // Attraction along edges
+  for (const e of edges) {
+    if (!activeCategories.has(e.source.cat) || !activeCategories.has(e.target.cat)) continue;
+    const dx = e.target.x - e.source.x;
+    const dy = e.target.y - e.source.y;
+    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+    const force = (dist - 120) * SIM.attraction;
+    const fx = (dx / dist) * force;
+    const fy = (dy / dist) * force;
+    e.source.vx += fx; e.source.vy += fy;
+    e.target.vx -= fx; e.target.vy -= fy;
+  }
+
+  // Center force
+  for (const n of active) {
+    n.vx -= n.x * SIM.centerForce;
+    n.vy -= n.y * SIM.centerForce;
+  }
+
+  // Integration
+  for (const n of active) {
+    if (n === dragNode) continue;
+    n.vx *= SIM.damping;
+    n.vy *= SIM.damping;
+    n.x += n.vx;
+    n.y += n.vy;
+  }
+}
+
+// ── Rendering ─────────────────────────────
+function worldToScreen(wx, wy) {
+  return {
+    x: (wx - camera.x) * camera.zoom + W / 2,
+    y: (wy - camera.y) * camera.zoom + H / 2,
+  };
+}
+function screenToWorld(sx, sy) {
+  return {
+    x: (sx - W / 2) / camera.zoom + camera.x,
+    y: (sy - H / 2) / camera.zoom + camera.y,
+  };
+}
+
+function getNodeAt(sx, sy) {
+  const wp = screenToWorld(sx, sy);
+  let closest = null, minD = Infinity;
+  for (const n of nodes) {
+    if (!activeCategories.has(n.cat)) continue;
+    const dx = n.x - wp.x, dy = n.y - wp.y;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    const r = n.size + 8;
+    if (d < r && d < minD) { closest = n; minD = d; }
+  }
+  return closest;
+}
+
+function draw() {
+  animTime += 0.015;
+  ctx.clearRect(0, 0, W, H);
+
+  // Background subtle grid
+  const gridSize = 40 * camera.zoom;
+  if (gridSize > 15) {
+    ctx.strokeStyle = 'rgba(255,255,255,.018)';
+    ctx.lineWidth = 1;
+    const offX = ((-camera.x * camera.zoom + W / 2) % gridSize + gridSize) % gridSize;
+    const offY = ((-camera.y * camera.zoom + H / 2) % gridSize + gridSize) % gridSize;
+    for (let x = offX; x < W; x += gridSize) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+    }
+    for (let y = offY; y < H; y += gridSize) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+  }
+
+  const focus = hoveredNode || selectedNode;
+
+  // ── Draw edges ──
+  for (const e of edges) {
+    if (!activeCategories.has(e.source.cat) || !activeCategories.has(e.target.cat)) continue;
+    const s = worldToScreen(e.source.x, e.source.y);
+    const t = worldToScreen(e.target.x, e.target.y);
+
+    const isFocused = focus && (e.source === focus || e.target === focus);
+    const dimmed = focus && !isFocused;
+
+    ctx.beginPath();
+    ctx.moveTo(s.x, s.y);
+    ctx.lineTo(t.x, t.y);
+
+    if (isFocused) {
+      const catColor = CATEGORIES[e.source.cat]?.color || '#a882ff';
+      ctx.strokeStyle = catColor + '80';
+      ctx.lineWidth = 2 * camera.zoom;
+    } else {
+      ctx.strokeStyle = dimmed ? 'rgba(255,255,255,.02)' : 'rgba(255,255,255,.07)';
+      ctx.lineWidth = 1 * camera.zoom;
+    }
+    ctx.stroke();
+
+    // Animated particles on focused edges
+    if (isFocused) {
+      const dx = t.x - s.x, dy = t.y - s.y;
+      const len = Math.sqrt(dx * dx + dy * dy);
+      for (let p = 0; p < 3; p++) {
+        const progress = ((animTime * 0.5 + p * 0.33) % 1);
+        const px = s.x + dx * progress;
+        const py = s.y + dy * progress;
+        ctx.beginPath();
+        ctx.arc(px, py, 2 * camera.zoom, 0, Math.PI * 2);
+        const catColor = CATEGORIES[e.source.cat]?.color || '#a882ff';
+        ctx.fillStyle = catColor;
+        ctx.fill();
+      }
+    }
+
+    // Edge label on focused
+    if (isFocused && e.label && camera.zoom > 0.6) {
+      const mx = (s.x + t.x) / 2, my = (s.y + t.y) / 2;
+      ctx.font = `${10 * camera.zoom}px Inter, system-ui`;
+      ctx.fillStyle = 'rgba(255,255,255,.5)';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      // background pill
+      const tw = ctx.measureText(e.label).width + 10 * camera.zoom;
+      const th = 16 * camera.zoom;
+      ctx.fillStyle = 'rgba(25,25,25,.85)';
+      ctx.beginPath();
+      ctx.roundRect(mx - tw/2, my - th/2, tw, th, 4 * camera.zoom);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.55)';
+      ctx.fillText(e.label, mx, my);
+    }
+  }
+
+  // ── Draw nodes ──
+  for (const n of nodes) {
+    if (!activeCategories.has(n.cat)) continue;
+    const p = worldToScreen(n.x, n.y);
+    const r = n.size * camera.zoom;
+    const catColor = CATEGORIES[n.cat]?.color || '#a882ff';
+    const isFocused = n === focus;
+    const isConnected = focus && edges.some(e =>
+      (e.source === focus && e.target === n) || (e.target === focus && e.source === n)
+    );
+    const dimmed = focus && !isFocused && !isConnected;
+
+    const alpha = dimmed ? 0.12 : 1;
+
+    // Outer glow
+    if (!dimmed) {
+      const grad = ctx.createRadialGradient(p.x, p.y, r * 0.5, p.x, p.y, r * 2.5);
+      grad.addColorStop(0, catColor + (isFocused ? '30' : '15'));
+      grad.addColorStop(1, catColor + '00');
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, r * 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+    }
+
+    // Circle
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = isFocused ? catColor + '35' : `rgba(30,30,30,${alpha})`;
+    ctx.fill();
+    ctx.strokeStyle = dimmed ? catColor + '20' : (isFocused ? catColor : catColor + '70');
+    ctx.lineWidth = isFocused ? 2.5 : 1.5;
+    ctx.stroke();
+
+    // Icon
+    if (r > 8) {
+      ctx.font = `${r * 0.7}px serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.globalAlpha = dimmed ? 0.15 : 1;
+      ctx.fillText(n.icon, p.x, p.y);
+      ctx.globalAlpha = 1;
+    }
+
+    // Label
+    if (camera.zoom > 0.35 && !dimmed) {
+      const lines = n.label.split('\n');
+      const fontSize = Math.max(9, Math.min(12, 11 * camera.zoom));
+      ctx.font = `600 ${fontSize}px Inter, system-ui`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillStyle = isFocused ? '#fff' : 'rgba(220,221,222,.75)';
+      lines.forEach((line, i) => {
+        ctx.fillText(line, p.x, p.y + r + 6 + i * (fontSize + 2));
+      });
+    }
+  }
+
+  simulate();
+  requestAnimationFrame(draw);
+}
+
+// ── Interaction ───────────────────────────
+
+canvas.addEventListener('mousedown', e => {
+  const n = getNodeAt(e.clientX, e.clientY);
+  if (n) {
+    dragNode = n;
+    isDragging = true;
+    document.body.classList.add('dragging');
+  } else {
+    isPanning = true;
+    panStart = { x: e.clientX, y: e.clientY };
+    camStart = { x: camera.x, y: camera.y };
+    document.body.classList.add('dragging');
+  }
+});
+
+canvas.addEventListener('mousemove', e => {
+  if (dragNode) {
+    const wp = screenToWorld(e.clientX, e.clientY);
+    dragNode.x = wp.x;
+    dragNode.y = wp.y;
+    dragNode.vx = 0; dragNode.vy = 0;
+  } else if (isPanning) {
+    camera.x = camStart.x - (e.clientX - panStart.x) / camera.zoom;
+    camera.y = camStart.y - (e.clientY - panStart.y) / camera.zoom;
+  } else {
+    const n = getNodeAt(e.clientX, e.clientY);
+    if (n !== hoveredNode) {
+      hoveredNode = n;
+      canvas.style.cursor = n ? 'pointer' : 'grab';
+    }
+  }
+});
+
+window.addEventListener('mouseup', () => {
+  if (dragNode && !isPanning) {
+    // If we barely moved, treat as click
+  }
+  dragNode = null;
+  isPanning = false;
+  isDragging = false;
+  document.body.classList.remove('dragging');
+});
+
+canvas.addEventListener('click', e => {
+  const n = getNodeAt(e.clientX, e.clientY);
+  if (n) {
+    selectedNode = (selectedNode === n) ? null : n;
+    showDetail(selectedNode);
+  } else if (!isPanning) {
+    selectedNode = null;
+    hideDetail();
+  }
+});
+
+canvas.addEventListener('dblclick', e => {
+  const n = getNodeAt(e.clientX, e.clientY);
+  if (n && n.url) {
+    window.open(n.url, '_blank');
+  }
+});
+
+// Zoom
+function applyZoom(delta, cx, cy) {
+  const oldZoom = camera.zoom;
+  camera.zoom = Math.max(0.2, Math.min(4, camera.zoom * (1 + delta)));
+  // Zoom toward cursor
+  const wp = screenToWorld(cx || W/2, cy || H/2);
+  camera.x += (wp.x - camera.x) * (1 - oldZoom / camera.zoom) * 0.3;
+  camera.y += (wp.y - camera.y) * (1 - oldZoom / camera.zoom) * 0.3;
+  updateZoomLabel();
+}
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  applyZoom(e.deltaY < 0 ? 0.08 : -0.08, e.clientX, e.clientY);
+}, { passive: false });
+
+// Touch support
+let touches = [];
+let lastPinchDist = 0;
+
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  touches = [...e.touches];
+  if (touches.length === 1) {
+    const t = touches[0];
+    const n = getNodeAt(t.clientX, t.clientY);
+    if (n) {
+      dragNode = n;
+    } else {
+      isPanning = true;
+      panStart = { x: t.clientX, y: t.clientY };
+      camStart = { x: camera.x, y: camera.y };
+    }
+  } else if (touches.length === 2) {
+    const dx = touches[1].clientX - touches[0].clientX;
+    const dy = touches[1].clientY - touches[0].clientY;
+    lastPinchDist = Math.sqrt(dx*dx + dy*dy);
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  const ts = [...e.touches];
+  if (ts.length === 1 && dragNode) {
+    const wp = screenToWorld(ts[0].clientX, ts[0].clientY);
+    dragNode.x = wp.x; dragNode.y = wp.y;
+    dragNode.vx = 0; dragNode.vy = 0;
+  } else if (ts.length === 1 && isPanning) {
+    camera.x = camStart.x - (ts[0].clientX - panStart.x) / camera.zoom;
+    camera.y = camStart.y - (ts[0].clientY - panStart.y) / camera.zoom;
+  } else if (ts.length === 2) {
+    const dx = ts[1].clientX - ts[0].clientX;
+    const dy = ts[1].clientY - ts[0].clientY;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (lastPinchDist) {
+      const delta = (dist - lastPinchDist) * 0.003;
+      const cx = (ts[0].clientX + ts[1].clientX) / 2;
+      const cy = (ts[0].clientY + ts[1].clientY) / 2;
+      applyZoom(delta, cx, cy);
+    }
+    lastPinchDist = dist;
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => {
+  if (e.touches.length === 0) {
+    if (dragNode) {
+      // check if tap
+    }
+    dragNode = null; isPanning = false;
+    lastPinchDist = 0;
+  }
+  touches = [...e.touches];
+});
+
+// ── Tap to select on touch ──
+canvas.addEventListener('touchend', e => {
+  if (e.changedTouches.length === 1 && !isPanning) {
+    const t = e.changedTouches[0];
+    const n = getNodeAt(t.clientX, t.clientY);
+    if (n) {
+      selectedNode = (selectedNode === n) ? null : n;
+      showDetail(selectedNode);
+    } else {
+      selectedNode = null;
+      hideDetail();
+    }
+  }
+});
+
+// ── Controls ──────────────────────────────
+document.getElementById('btn-zoom-in').onclick = () => applyZoom(0.2);
+document.getElementById('btn-zoom-out').onclick = () => applyZoom(-0.2);
+document.getElementById('btn-reset').onclick = () => {
+  camera = { x: 0, y: 0, zoom: 1 };
+  updateZoomLabel();
+};
+
+function updateZoomLabel() {
+  document.getElementById('zoom-label').textContent = Math.round(camera.zoom * 100) + '%';
+}
+
+// ── Filter pills ──────────────────────────
+const filtersEl = document.getElementById('filters');
+for (const [key, cat] of Object.entries(CATEGORIES)) {
+  const pill = document.createElement('span');
+  pill.className = 'filter-pill active';
+  pill.style.color = cat.color;
+  pill.style.background = cat.color + '15';
+  pill.textContent = cat.label;
+  pill.dataset.cat = key;
+  pill.onclick = () => {
+    if (activeCategories.has(key)) {
+      activeCategories.delete(key);
+      pill.classList.remove('active');
+    } else {
+      activeCategories.add(key);
+      pill.classList.add('active');
+    }
+  };
+  filtersEl.appendChild(pill);
+}
+
+// ── Detail panel ──────────────────────────
+const detailPanel = document.getElementById('detail-panel');
+const detailHeader = document.getElementById('detail-header');
+const detailBody = document.getElementById('detail-body');
+
+function showDetail(node) {
+  if (!node) { hideDetail(); return; }
+  const catColor = CATEGORIES[node.cat]?.color || '#a882ff';
+
+  detailHeader.innerHTML = `
+    <div class="detail-icon" style="background:${catColor}15">${node.icon}</div>
+    <div>
+      <div class="detail-title">${node.label.replace(/\n/g, ' ')}</div>
+    </div>
+    <span class="detail-badge" style="background:${node.badgeColor}20;color:${node.badgeColor}">${node.badge}</span>
+  `;
+
+  let html = `<div class="detail-desc">${node.desc}</div>`;
+
+  if (node.items?.length) {
+    html += '<ul class="detail-items">';
+    for (const item of node.items) {
+      html += `<li><span class="detail-dot" style="background:${item.dot};box-shadow:0 0 6px ${item.dot}"></span>${item.text}</li>`;
+    }
+    html += '</ul>';
+  }
+
+  // Connections
+  const conns = edges.filter(e => e.source === node || e.target === node);
+  if (conns.length) {
+    html += '<div class="detail-connections"><h4>Conexiones</h4>';
+    for (const e of conns) {
+      const other = e.source === node ? e.target : e.source;
+      const dir = e.source === node ? '\u2192' : '\u2190';
+      html += `<div class="detail-conn-item">
+        <span class="detail-conn-arrow">${dir}</span>
+        <span>${other.icon} ${other.label.replace(/\n/g, ' ')}</span>
+        <span style="margin-left:auto;color:var(--text-muted);font-size:10px">${e.label}</span>
+      </div>`;
+    }
+    html += '</div>';
+  }
+
+  if (node.url) {
+    html += `<a class="detail-url" href="${node.url}" target="_blank">${node.urlLabel || node.url}</a>`;
+  }
+
+  detailBody.innerHTML = html;
+  detailPanel.classList.add('visible');
+}
+
+function hideDetail() {
+  detailPanel.classList.remove('visible');
+}
+
+document.getElementById('detail-close').onclick = () => {
+  selectedNode = null;
+  hideDetail();
+};
+
+// ── Stats overlay ─────────────────────────
+(async function loadStats() {
+  const el = document.getElementById('stats-overlay');
+  el.innerHTML = `
+    <span><span class="val">17</span> nodos</span>
+    <span><span class="val">${EDGES.length}</span> conexiones</span>
+    <span><span class="val">24</span> profesionales</span>
+    <span><span class="val">18</span> especialidades</span>
+  `;
   try {
     const r = await fetch('/health');
     if (r.ok) {
       const d = await r.json();
-      const el = document.getElementById('stat-medilink');
       if (d.medilink_ms) {
-        el.textContent = d.medilink_ms;
-        el.style.background = 'linear-gradient(135deg, #34d399 0%, #6ee7b7 100%)';
-        el.style.webkitBackgroundClip = 'text';
-        el.style.webkitTextFillColor = 'transparent';
-      } else {
-        el.textContent = 'DOWN';
-        el.style.background = 'linear-gradient(135deg, #f87171 0%, #fca5a5 100%)';
-        el.style.webkitBackgroundClip = 'text';
-        el.style.webkitTextFillColor = 'transparent';
+        el.innerHTML += `<span>Medilink <span class="val" style="color:#4ade80">${d.medilink_ms}ms</span></span>`;
       }
     }
   } catch {}
 })();
+
+// ── Keyboard shortcuts ────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { selectedNode = null; hideDetail(); }
+  if (e.key === '+' || e.key === '=') applyZoom(0.15);
+  if (e.key === '-') applyZoom(-0.15);
+  if (e.key === '0') { camera = { x: 0, y: 0, zoom: 1 }; updateZoomLabel(); }
+});
+
+// ── Start ─────────────────────────────────
+draw();
 </script>
 </body>
 </html>

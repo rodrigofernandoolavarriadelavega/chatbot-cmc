@@ -39,7 +39,8 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_crosssell_kine, _job_medilink_watchdog,
                   _job_waitlist_check,
                   _job_doctor_resumen_precita, _job_doctor_reporte_progreso,
-                  _job_doctor_reset_diario)
+                  _job_doctor_reset_diario,
+                  _job_cumpleanos, _job_winback)
 import admin_routes
 import portal_routes
 
@@ -158,6 +159,20 @@ async def lifespan(app: FastAPI):
         id="crosssell_kine",
         replace_existing=True,
     )
+    # Cumpleaños: diario a las 08:00 CLT
+    scheduler.add_job(
+        _job_cumpleanos,
+        CronTrigger(hour=8, minute=0, timezone=_CLT),
+        id="cumpleanos_diario",
+        replace_existing=True,
+    )
+    # Win-back >90 días: primer lunes de cada mes a las 10:00 CLT
+    scheduler.add_job(
+        _job_winback,
+        CronTrigger(day_of_week="mon", day="1-7", hour=10, minute=0, timezone=_CLT),
+        id="winback_mensual",
+        replace_existing=True,
+    )
     # Sync caché de citas: diario a las 23:50 CLT
     scheduler.add_job(
         _sync_citas_hoy,
@@ -206,9 +221,9 @@ async def lifespan(app: FastAPI):
     )
     scheduler.start()
     log.info(
-        "Scheduler iniciado — recordatorios 09:00 · recordatorios 2h cada 15min · "
+        "Scheduler iniciado — cumpleaños 08:00 · recordatorios 09:00 · recordatorios 2h cada 15min · "
         "post-consulta 10:00 · reactivación lun 10:30 · adherencia kine 11:00 · "
-        "control 11:30 · cross-sell kine mié 10:30 · sync caché 23:50 · "
+        "control 11:30 · cross-sell kine mié 10:30 · winback 1er lun mes 10:00 · sync caché 23:50 · "
         "watchdog medilink 1min · doctor alerts cada 5min + reportes 09/12/16/20"
     )
     yield
@@ -246,6 +261,7 @@ _ADMIN_HTML = (_TEMPLATE_DIR / "admin.html").read_text(encoding="utf-8")
 _PORTAL_HTML = (_TEMPLATE_DIR / "portal.html").read_text(encoding="utf-8")
 _ECOSISTEMA_HTML = (_TEMPLATE_DIR / "ecosistema.html").read_text(encoding="utf-8")
 _DASHBOARD_HTML = (_TEMPLATE_DIR / "dashboard.html").read_text(encoding="utf-8")
+_LANDING_HTML = (_TEMPLATE_DIR / "landing.html").read_text(encoding="utf-8")
 
 
 # ── Endpoints ────────────────────────────────────────────────────────────────
@@ -275,6 +291,12 @@ async def health():
         "waitlist_depth":     waitlist_depth(),
         "bsuid_mapped": bsuid["total"],
     }
+
+
+@app.get("/landing", response_class=HTMLResponse)
+def landing():
+    """Landing page SEO del Centro Médico Carampangue."""
+    return _LANDING_HTML
 
 
 @app.get("/privacidad", response_class=HTMLResponse)

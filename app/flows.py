@@ -2259,6 +2259,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 {"id": "ref_google",     "title": "Google / internet"},
                 {"id": "ref_rrss",       "title": "Redes sociales"},
                 {"id": "ref_recurrente", "title": "Ya me atendí antes"},
+                {"id": "ref_codigo",     "title": "Tengo un código"},
                 {"id": "ref_saltar",     "title": "Prefiero no decir"},
             ]}]
         )
@@ -2270,24 +2271,44 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             "ref_rrss": "rrss", "ref_recurrente": "recurrente",
         }
         ref_source = _REF_MAP.get(tl)
+        if tl == "ref_codigo":
+            # Pedir que escriba el código
+            save_session(phone, "WAIT_REFERRAL_CODE", data)
+            return "Escribe tu código de referido (ej: *CMC-A1B2*):"
         if not ref_source and tl in ("saltar", "skip", "paso", "no", "ref_saltar"):
             log_event(phone, "registro_skip", {"step": "referral"})
         elif ref_source:
             save_tag(phone, f"referido:{ref_source}")
             log_event(phone, "registro_referral", {"source": ref_source})
         else:
+            # Código de referido (CMC-XXXX)
+            import re as _re_ref
+            _code_match = _re_ref.match(r"^CMC-[A-Z0-9]{4}$", txt.upper().strip())
+            if _code_match:
+                from session import validate_referral_code, use_referral_code
+                _code = _code_match.group(0)
+                _ref_data = validate_referral_code(_code)
+                if _ref_data:
+                    use_referral_code(_code, phone)
+                    save_tag(phone, "referido:codigo")
+                    log_event(phone, "registro_referral", {
+                        "source": "codigo", "code": _code,
+                        "referrer": _ref_data["phone"]})
+                else:
+                    log_event(phone, "registro_skip", {
+                        "step": "referral", "raw": txt[:60],
+                        "invalid_code": True})
             # Texto libre: intentar mapear
-            tl_ref = tl
-            if any(w in tl_ref for w in ("amig", "famili", "conoci", "vecin")):
+            elif any(w in tl for w in ("amig", "famili", "conoci", "vecin")):
                 save_tag(phone, "referido:amigo")
                 log_event(phone, "registro_referral", {"source": "amigo", "raw": txt[:60]})
-            elif any(w in tl_ref for w in ("google", "internet", "busq", "web")):
+            elif any(w in tl for w in ("google", "internet", "busq", "web")):
                 save_tag(phone, "referido:google")
                 log_event(phone, "registro_referral", {"source": "google", "raw": txt[:60]})
-            elif any(w in tl_ref for w in ("instagram", "facebook", "tiktok", "red")):
+            elif any(w in tl for w in ("instagram", "facebook", "tiktok", "red")):
                 save_tag(phone, "referido:rrss")
                 log_event(phone, "registro_referral", {"source": "rrss", "raw": txt[:60]})
-            elif any(w in tl_ref for w in ("antes", "siempre", "años", "venia", "venía")):
+            elif any(w in tl for w in ("antes", "siempre", "años", "venia", "venía")):
                 save_tag(phone, "referido:recurrente")
                 log_event(phone, "registro_referral", {"source": "recurrente", "raw": txt[:60]})
             else:
@@ -2319,6 +2340,41 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "Hubo un problema al registrarte 😕\n"
                 f"Llama a recepción: 📞 *{CMC_TELEFONO}*"
             )
+        # Guardar perfil con fecha_nacimiento para campaña de cumpleaños
+        save_profile(phone, rut, paciente["nombre"],
+                     fecha_nacimiento=data.get("reg_fecha_nacimiento"))
+        # Enviar mensaje de bienvenida (no-blocking)
+        try:
+            bienvenida = (
+                f"¡Bienvenido/a al *Centro Médico Carampangue*, *{nombre}*! 🏥\n\n"
+                "Desde ahora puedes:\n"
+                "• Agendar, cancelar o reagendar citas\n"
+                "• Consultar horarios y precios\n"
+                "• Recibir recordatorios automáticos\n\n"
+                "Todo escribiéndonos aquí por WhatsApp, a cualquier hora.\n"
+                "Si necesitas hablar con recepción, escribe *recepción*.\n\n"
+                f"📍 Monsalve 102 esq. República, Carampangue\n"
+                f"📞 {CMC_TELEFONO}"
+            )
+            await send_whatsapp(phone, bienvenida)
+            from session import log_message as _log_msg
+            _log_msg(phone, "out", bienvenida, "CONFIRMING_CITA")
+            log_event(phone, "bienvenida_enviada", {})
+        except Exception as e:
+            log.warning("Error enviando bienvenida phone=%s: %s", phone, e)
+        # Generar código de referido para el nuevo paciente
+        try:
+            from session import generate_referral_code
+            ref_code = generate_referral_code(phone)
+            ref_msg = (
+                f"🎁 *Tu código de referido: {ref_code}*\n\n"
+                "Compártelo con amigos y familiares. "
+                "Cuando alguien se registre con tu código, "
+                "ambos recibirán un beneficio."
+            )
+            await send_whatsapp(phone, ref_msg)
+        except Exception as e:
+            log.warning("Error generando código referido phone=%s: %s", phone, e)
         data.update({"paciente": paciente, "rut": rut})
         save_session(phone, "CONFIRMING_CITA", data)
         slot = data["slot_elegido"]
@@ -2334,6 +2390,75 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             [
                 {"id": "si", "title": "✅ Confirmar"},
                 {"id": "no", "title": "❌ Cambiar"},
+            ]
+        )
+
+    # ── WAIT_REFERRAL_CODE ────────────────────────────────────────────────────
+    if state == "WAIT_REFERRAL_CODE":
+        import re as _re_ref2
+        _code_match2 = _re_ref2.match(r"^CMC-[A-Z0-9]{4}$", txt.upper().strip())
+        if _code_match2:
+            from session import validate_referral_code, use_referral_code
+            _code2 = _code_match2.group(0)
+            _ref_data2 = validate_referral_code(_code2)
+            if _ref_data2:
+                use_referral_code(_code2, phone)
+                save_tag(phone, "referido:codigo")
+                log_event(phone, "registro_referral", {
+                    "source": "codigo", "code": _code2,
+                    "referrer": _ref_data2["phone"]})
+            else:
+                log_event(phone, "registro_skip", {
+                    "step": "referral_code", "invalid_code": _code2})
+        elif tl in ("saltar", "skip", "no", "paso"):
+            log_event(phone, "registro_skip", {"step": "referral_code"})
+        else:
+            log_event(phone, "registro_skip", {
+                "step": "referral_code", "raw": txt[:60]})
+        # Continuar con creación del paciente (mismo código que WAIT_REFERRAL)
+        rut = data.get("rut", "")
+        nombre = data.get("reg_nombre", "")
+        apellidos = data.get("reg_apellidos", "")
+        extra = {}
+        if data.get("reg_fecha_nacimiento"):
+            extra["fecha_nacimiento"] = data["reg_fecha_nacimiento"]
+        if data.get("reg_sexo"):
+            extra["sexo"] = data["reg_sexo"]
+        if data.get("reg_celular"):
+            extra["celular"] = data["reg_celular"]
+            extra["telefono"] = data["reg_celular"]
+        if data.get("reg_comuna"):
+            extra["comuna"] = data["reg_comuna"]
+        if data.get("reg_email"):
+            extra["email"] = data["reg_email"]
+        log_event(phone, "registro_completo", {
+            "rut": rut, "campos_extra": list(extra.keys()),
+            "total_campos": len(extra),
+        })
+        paciente = await crear_paciente(rut, nombre, apellidos, **extra)
+        if not paciente:
+            reset_session(phone)
+            return (
+                "Hubo un problema al registrarte \U0001f615\n"
+                f"Llama a recepción: \U0001f4de *{CMC_TELEFONO}*"
+            )
+        save_profile(phone, rut, paciente["nombre"],
+                     fecha_nacimiento=data.get("reg_fecha_nacimiento"))
+        data.update({"paciente": paciente, "rut": rut})
+        save_session(phone, "CONFIRMING_CITA", data)
+        slot = data["slot_elegido"]
+        modalidad = data.get("modalidad", "particular").capitalize()
+        return _btn_msg(
+            f"\u00a1Listo, *{nombre}*! Ya quedaste registrado/a \U0001f64c\n\n"
+            f"\u00bfConfirmas esta hora?\n\n"
+            f"\U0001f464 *{paciente['nombre']}*\n"
+            f"\U0001f3e5 *{slot['especialidad']}* \u2014 {slot['profesional']}\n"
+            f"\U0001f4c5 *{slot['fecha_display']}*\n"
+            f"\U0001f550 *{slot['hora_inicio'][:5]}*\n"
+            f"\U0001f4b3 *{modalidad}*",
+            [
+                {"id": "si", "title": "\u2705 Confirmar"},
+                {"id": "no", "title": "\u274c Cambiar"},
             ]
         )
 

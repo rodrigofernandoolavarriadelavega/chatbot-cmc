@@ -203,6 +203,39 @@ def _conn():
         )
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_portal_otp_rut ON portal_otp(rut, created_at)")
+    # Códigos de referido (programa de referidos)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS referral_codes (
+            phone       TEXT PRIMARY KEY,
+            code        TEXT UNIQUE NOT NULL,
+            created_at  TEXT DEFAULT (datetime('now'))
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS referral_uses (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            code            TEXT NOT NULL,
+            referrer_phone  TEXT NOT NULL,
+            referred_phone  TEXT NOT NULL,
+            created_at      TEXT DEFAULT (datetime('now'))
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_refuse_code ON referral_uses(code)")
+    # Campañas estacionales — registro de envíos
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS campanas_envios (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            phone       TEXT NOT NULL,
+            campana_id  TEXT NOT NULL,
+            enviado_en  TEXT DEFAULT (datetime('now'))
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_camp_id ON campanas_envios(campana_id)")
+    # Migración: agregar fecha_nacimiento a contact_profiles
+    try:
+        conn.execute("ALTER TABLE contact_profiles ADD COLUMN fecha_nacimiento TEXT")
+    except sqlite3.OperationalError:
+        pass
     # Migración: agregar canal a messages si no existe
     try:
         conn.execute("ALTER TABLE messages ADD COLUMN canal TEXT DEFAULT 'whatsapp'")
@@ -352,15 +385,25 @@ def get_citas_bot_pendientes(fecha: str) -> list[dict]:
 
 # ── Perfiles de paciente ──────────────────────────────────────────────────────
 
-def save_profile(phone: str, rut: str, nombre: str):
+def save_profile(phone: str, rut: str, nombre: str, fecha_nacimiento: str = None):
     """Guarda o actualiza el perfil del paciente asociado al número."""
     with _conn() as conn:
-        conn.execute("""
-            INSERT INTO contact_profiles (phone, rut, nombre, updated_at)
-            VALUES (?, ?, ?, datetime('now'))
-            ON CONFLICT(phone) DO UPDATE SET
-                rut=excluded.rut, nombre=excluded.nombre, updated_at=excluded.updated_at
-        """, (phone, rut, nombre))
+        if fecha_nacimiento:
+            conn.execute("""
+                INSERT INTO contact_profiles (phone, rut, nombre, fecha_nacimiento, updated_at)
+                VALUES (?, ?, ?, ?, datetime('now'))
+                ON CONFLICT(phone) DO UPDATE SET
+                    rut=excluded.rut, nombre=excluded.nombre,
+                    fecha_nacimiento=excluded.fecha_nacimiento,
+                    updated_at=excluded.updated_at
+            """, (phone, rut, nombre, fecha_nacimiento))
+        else:
+            conn.execute("""
+                INSERT INTO contact_profiles (phone, rut, nombre, updated_at)
+                VALUES (?, ?, ?, datetime('now'))
+                ON CONFLICT(phone) DO UPDATE SET
+                    rut=excluded.rut, nombre=excluded.nombre, updated_at=excluded.updated_at
+            """, (phone, rut, nombre))
         conn.commit()
 
 
@@ -1062,6 +1105,105 @@ def get_crosssell_kine_candidatos() -> list[dict]:
         return [dict(r) for r in rows]
 
 
+def get_cumpleanos_hoy() -> list[dict]:
+    """Pacientes cuya fecha_nacimiento coincide con el día y mes de hoy,
+    sin mensaje de cumpleaños enviado en los últimos 330 días."""
+    with _conn() as conn:
+        rows = conn.execute("""
+            SELECT p.phone, p.nombre, p.fecha_nacimiento, p.rut
+            FROM contact_profiles p
+            WHERE p.fecha_nacimiento IS NOT NULL
+              AND strftime('%m-%d', p.fecha_nacimiento) = strftime('%m-%d', 'now')
+              AND NOT EXISTS (
+                  SELECT 1 FROM fidelizacion_msgs f
+                  WHERE f.phone = p.phone AND f.tipo = 'cumpleanos'
+                    AND f.enviado_en >= datetime('now', '-330 days')
+              )
+        """).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_pacientes_winback(dias_min: int = 91, dias_max: int = 365) -> list[dict]:
+    """Pacientes cuya última cita fue entre dias_min y dias_max días atrás,
+    sin mensaje de winback en los últimos 90 días, sin cita futura."""
+    with _conn() as conn:
+        rows = conn.execute("""
+            SELECT cb.phone, MAX(cb.fecha) AS ultima_cita,
+                   MAX(cb.especialidad) AS especialidad, p.nombre
+            FROM citas_bot cb
+            LEFT JOIN contact_profiles p ON p.phone = cb.phone
+            WHERE cb.fecha <= date('now', ?)
+              AND cb.fecha >= date('now', ?)
+              AND NOT EXISTS (
+                  SELECT 1 FROM citas_bot cb2
+                  WHERE cb2.phone = cb.phone AND cb2.fecha > date('now')
+              )
+              AND NOT EXISTS (
+                  SELECT 1 FROM fidelizacion_msgs f
+                  WHERE f.phone = cb.phone AND f.tipo = 'winback'
+                    AND f.enviado_en >= datetime('now', '-90 days')
+              )
+              AND NOT EXISTS (
+                  SELECT 1 FROM fidelizacion_msgs f
+                  WHERE f.phone = cb.phone AND f.tipo = 'reactivacion'
+                    AND f.enviado_en >= datetime('now', '-30 days')
+              )
+            GROUP BY cb.phone
+        """, (f"-{dias_min} days", f"-{dias_max} days")).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_nps_por_profesional(dias: int | None = None) -> dict:
+    """NPS por profesional basado en respuestas postconsulta (mejor/igual/peor).
+    NPS = (mejor - peor) / total * 100.  Retorna global + desglose por profesional."""
+    with _conn() as conn:
+        where = ""
+        params: list = []
+        if dias:
+            where = "AND f.enviado_en >= datetime('now', ?)"
+            params = [f"-{dias} days"]
+
+        rows = conn.execute(f"""
+            SELECT cb.profesional,
+                   COUNT(*) AS total,
+                   SUM(CASE WHEN f.respuesta = 'mejor' THEN 1 ELSE 0 END) AS mejor,
+                   SUM(CASE WHEN f.respuesta = 'igual' THEN 1 ELSE 0 END) AS igual,
+                   SUM(CASE WHEN f.respuesta = 'peor'  THEN 1 ELSE 0 END) AS peor
+            FROM fidelizacion_msgs f
+            INNER JOIN citas_bot cb ON cb.id_cita = f.cita_id AND cb.phone = f.phone
+            WHERE f.tipo = 'postconsulta' AND f.respuesta IS NOT NULL
+            {where}
+            GROUP BY cb.profesional
+            ORDER BY total DESC
+        """, params).fetchall()
+
+        profesionales = []
+        global_mejor = global_igual = global_peor = 0
+        for r in rows:
+            d = dict(r)
+            total = d["total"]
+            mejor = d["mejor"]
+            peor = d["peor"]
+            d["nps"] = round((mejor - peor) / total * 100, 1) if total else 0
+            profesionales.append(d)
+            global_mejor += mejor
+            global_igual += d["igual"]
+            global_peor += peor
+
+        global_total = global_mejor + global_igual + global_peor
+        global_nps = round((global_mejor - global_peor) / global_total * 100, 1) if global_total else 0
+
+        return {
+            "dias": dias,
+            "global_nps": global_nps,
+            "global_total": global_total,
+            "global_mejor": global_mejor,
+            "global_igual": global_igual,
+            "global_peor": global_peor,
+            "por_profesional": profesionales,
+        }
+
+
 def get_metricas(dias: int = 30) -> dict:
     """Resumen de métricas de los últimos N días."""
     with _conn() as conn:
@@ -1666,3 +1808,201 @@ def get_dx_tags(phone: str) -> list[str]:
     """Retorna los tags dx:* de un paciente, con nombres limpios."""
     tags = get_tags(phone)
     return [t.replace("dx:", "").upper() for t in tags if t.startswith("dx:")]
+
+
+# ── Programa de referidos ────────────────────────────────────────────────────
+
+def generate_referral_code(phone: str) -> str:
+    """Genera un código de referido único para un paciente.
+    Si ya tiene uno, retorna el existente."""
+    import random
+    import string as _string
+    with _conn() as conn:
+        existing = conn.execute(
+            "SELECT code FROM referral_codes WHERE phone=?", (phone,)
+        ).fetchone()
+        if existing:
+            return existing["code"]
+        while True:
+            code = "CMC-" + "".join(random.choices(
+                _string.ascii_uppercase + _string.digits, k=4))
+            dup = conn.execute(
+                "SELECT 1 FROM referral_codes WHERE code=?", (code,)
+            ).fetchone()
+            if not dup:
+                break
+        conn.execute(
+            "INSERT INTO referral_codes (phone, code) VALUES (?, ?)",
+            (phone, code)
+        )
+        conn.commit()
+        return code
+
+
+def get_referral_code(phone: str) -> str | None:
+    """Retorna el código de referido de un paciente, o None."""
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT code FROM referral_codes WHERE phone=?", (phone,)
+        ).fetchone()
+        return row["code"] if row else None
+
+
+def validate_referral_code(code: str) -> dict | None:
+    """Valida un código de referido. Retorna {phone, code} o None."""
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT phone, code FROM referral_codes WHERE code=?",
+            (code.upper().strip(),)
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def use_referral_code(code: str, referred_phone: str) -> bool:
+    """Registra el uso de un código de referido. Retorna True si es válido."""
+    code = code.upper().strip()
+    with _conn() as conn:
+        ref = conn.execute(
+            "SELECT phone FROM referral_codes WHERE code=?", (code,)
+        ).fetchone()
+        if not ref or ref["phone"] == referred_phone:
+            return False
+        existing = conn.execute(
+            "SELECT 1 FROM referral_uses WHERE code=? AND referred_phone=?",
+            (code, referred_phone)
+        ).fetchone()
+        if existing:
+            return True
+        conn.execute(
+            "INSERT INTO referral_uses (code, referrer_phone, referred_phone) "
+            "VALUES (?, ?, ?)",
+            (code, ref["phone"], referred_phone)
+        )
+        conn.commit()
+        return True
+
+
+def get_referral_code_stats(dias: int = 30) -> dict:
+    """Estadísticas del programa de referidos."""
+    with _conn() as conn:
+        since = f"-{dias} days"
+        total_codes = conn.execute(
+            "SELECT COUNT(*) FROM referral_codes"
+        ).fetchone()[0]
+        total_uses = conn.execute(
+            "SELECT COUNT(*) FROM referral_uses "
+            "WHERE created_at >= datetime('now', ?)", (since,)
+        ).fetchone()[0]
+        top = conn.execute("""
+            SELECT rc.code, rc.phone, COUNT(ru.id) as referidos,
+                   cp.nombre
+            FROM referral_codes rc
+            INNER JOIN referral_uses ru ON ru.code = rc.code
+            LEFT JOIN contact_profiles cp ON cp.phone = rc.phone
+            WHERE ru.created_at >= datetime('now', ?)
+            GROUP BY rc.code
+            ORDER BY referidos DESC LIMIT 10
+        """, (since,)).fetchall()
+        return {
+            "dias": dias,
+            "total_codigos": total_codes,
+            "usos_periodo": total_uses,
+            "top_referidores": [dict(r) for r in top],
+        }
+
+
+# ── Campañas estacionales ────────────────────────────────────────────────────
+
+def save_campana_envio(phone: str, campana_id: str):
+    """Registra un envío de campaña estacional."""
+    with _conn() as conn:
+        conn.execute(
+            "INSERT INTO campanas_envios (phone, campana_id) VALUES (?, ?)",
+            (phone, campana_id)
+        )
+        conn.commit()
+
+
+def get_campana_envio_stats(campana_id: str | None = None) -> list[dict]:
+    """Estadísticas de envíos de campañas estacionales."""
+    with _conn() as conn:
+        if campana_id:
+            rows = conn.execute("""
+                SELECT campana_id, COUNT(*) as enviados,
+                       MIN(enviado_en) as primer_envio,
+                       MAX(enviado_en) as ultimo_envio
+                FROM campanas_envios WHERE campana_id = ?
+                GROUP BY campana_id
+            """, (campana_id,)).fetchall()
+        else:
+            rows = conn.execute("""
+                SELECT campana_id, COUNT(*) as enviados,
+                       MIN(enviado_en) as primer_envio,
+                       MAX(enviado_en) as ultimo_envio
+                FROM campanas_envios
+                GROUP BY campana_id ORDER BY ultimo_envio DESC
+            """).fetchall()
+        return [dict(r) for r in rows]
+
+
+def puede_enviar_campana_estacional(phone: str, campana_id: str,
+                                     dias_cooldown: int = 30) -> bool:
+    """True si no se ha enviado esta campaña al teléfono en los últimos N días."""
+    with _conn() as conn:
+        row = conn.execute("""
+            SELECT 1 FROM campanas_envios
+            WHERE phone = ? AND campana_id = ?
+              AND enviado_en >= datetime('now', ?)
+            LIMIT 1
+        """, (phone, campana_id, f"-{dias_cooldown} days")).fetchone()
+        return row is None
+
+
+def get_segmented_phones(tags: list[str] | None = None,
+                         dias_sin_visita: int | None = None) -> list[dict]:
+    """Retorna pacientes que cumplen los criterios de segmentación.
+    Retorna list[{phone, nombre}]."""
+    with _conn() as conn:
+        base = conn.execute("""
+            SELECT DISTINCT cp.phone, cp.nombre
+            FROM contact_profiles cp
+            INNER JOIN messages m ON m.phone = cp.phone AND m.direction = 'in'
+        """).fetchall()
+        phones_map = {r["phone"]: r["nombre"] or "" for r in base}
+
+        if tags:
+            placeholders = ",".join("?" * len(tags))
+            tag_phones = {r["phone"] for r in conn.execute(
+                f"SELECT DISTINCT phone FROM contact_tags "
+                f"WHERE tag IN ({placeholders})", tags
+            ).fetchall()}
+            phones_map = {p: n for p, n in phones_map.items() if p in tag_phones}
+
+        if dias_sin_visita:
+            cutoff = (datetime.now(timezone.utc) -
+                      timedelta(days=dias_sin_visita)).strftime("%Y-%m-%d")
+            active = {r["phone"] for r in conn.execute(
+                "SELECT DISTINCT phone FROM citas_bot WHERE fecha >= ?",
+                (cutoff,)
+            ).fetchall()}
+            phones_map = {p: n for p, n in phones_map.items()
+                          if p not in active}
+
+        return [{"phone": p, "nombre": n} for p, n in phones_map.items()]
+
+
+def get_fidelizacion_trends(semanas: int = 4) -> list[dict]:
+    """Retorna tendencias semanales de fidelización."""
+    with _conn() as conn:
+        rows = conn.execute("""
+            SELECT
+                strftime('%%Y-%%W', enviado_en) as semana,
+                tipo,
+                COUNT(*) as enviados,
+                COUNT(respuesta) as respondidos
+            FROM fidelizacion_msgs
+            WHERE enviado_en >= datetime('now', ?)
+            GROUP BY semana, tipo
+            ORDER BY semana ASC
+        """, (f"-{semanas * 7} days",)).fetchall()
+        return [dict(r) for r in rows]
