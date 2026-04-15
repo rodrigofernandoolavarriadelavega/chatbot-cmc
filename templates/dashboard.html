@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<title>Dashboard KPIs — CMC</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #f1f5f9;
+  --surface: #ffffff;
+  --border: #e2e8f0;
+  --text: #1e293b;
+  --text-2: #475569;
+  --text-3: #94a3b8;
+  --primary: #1172AB;
+  --red: #ef4444;
+  --red-soft: #fef2f2;
+  --amber: #f59e0b;
+  --amber-soft: #fffbeb;
+  --green: #10b981;
+  --green-soft: #f0fdf4;
+  --blue: #3b82f6;
+  --blue-soft: #eff6ff;
+  --purple: #8b5cf6;
+  --purple-soft: #f5f3ff;
+  --cyan: #06b6d4;
+  --cyan-soft: #ecfeff;
+  --radius: 12px;
+  --shadow: 0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
+  --shadow-md: 0 4px 6px rgba(0,0,0,.07),0 2px 4px rgba(0,0,0,.06);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 14px; line-height: 1.5;
+}
+
+/* HEADER */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  box-shadow: var(--shadow);
+  position: sticky; top: 0; z-index: 10;
+}
+.header-left { display: flex; align-items: center; gap: 16px; }
+.header h1 { font-size: 18px; font-weight: 700; }
+.header .subtitle { font-size: 13px; color: var(--text-3); }
+.back-link {
+  color: var(--primary); text-decoration: none; font-size: 13px; font-weight: 500;
+  display: flex; align-items: center; gap: 4px;
+}
+.back-link:hover { text-decoration: underline; }
+.periodo-select {
+  padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border);
+  font-size: 13px; font-family: inherit; background: var(--surface);
+  cursor: pointer;
+}
+
+/* CONTAINER */
+.container {
+  max-width: 1280px; margin: 0 auto;
+  padding: 24px;
+}
+
+/* KPI CARDS */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px; margin-bottom: 24px;
+}
+.kpi-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  transition: transform .15s;
+}
+.kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.kpi-label {
+  font-size: 12px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .5px; color: var(--text-3); margin-bottom: 8px;
+}
+.kpi-value {
+  font-size: 32px; font-weight: 800; line-height: 1;
+}
+.kpi-sub {
+  font-size: 12px; color: var(--text-2); margin-top: 6px;
+}
+.kpi-card.green .kpi-value { color: var(--green); }
+.kpi-card.blue .kpi-value { color: var(--blue); }
+.kpi-card.purple .kpi-value { color: var(--purple); }
+.kpi-card.amber .kpi-value { color: var(--amber); }
+.kpi-card.red .kpi-value { color: var(--red); }
+.kpi-card.cyan .kpi-value { color: var(--cyan); }
+.kpi-card.primary .kpi-value { color: var(--primary); }
+
+/* CHART SECTIONS */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 20px; margin-bottom: 24px;
+}
+.chart-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+}
+.chart-card h3 {
+  font-size: 14px; font-weight: 700; margin-bottom: 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+.chart-wrap { position: relative; height: 260px; }
+
+/* TABLES */
+.table-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  margin-bottom: 20px;
+}
+.table-card h3 {
+  font-size: 14px; font-weight: 700; margin-bottom: 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+.data-table {
+  width: 100%; border-collapse: collapse; font-size: 13px;
+}
+.data-table th {
+  text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--border);
+  font-weight: 600; color: var(--text-2); font-size: 11px;
+  text-transform: uppercase; letter-spacing: .5px;
+}
+.data-table td {
+  padding: 8px 12px; border-bottom: 1px solid var(--border);
+}
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover { background: #f8fafc; }
+
+/* FUNNEL */
+.funnel { margin-top: 8px; }
+.funnel-step {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 8px;
+}
+.funnel-bar-wrap {
+  flex: 1; height: 32px; background: #f1f5f9; border-radius: 6px;
+  overflow: hidden; position: relative;
+}
+.funnel-bar {
+  height: 100%; border-radius: 6px;
+  display: flex; align-items: center; padding: 0 10px;
+  font-size: 12px; font-weight: 600; color: #fff;
+  min-width: 40px; transition: width .6s ease;
+}
+.funnel-label {
+  width: 140px; font-size: 12px; font-weight: 500; color: var(--text-2);
+  text-align: right; flex-shrink: 0;
+}
+.funnel-count {
+  width: 50px; font-size: 13px; font-weight: 700; text-align: right; flex-shrink: 0;
+}
+
+/* SEGURIDAD BADGE */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 20px;
+  font-size: 12px; font-weight: 600;
+}
+.badge.green { background: var(--green-soft); color: #15803d; }
+.badge.red { background: var(--red-soft); color: var(--red); }
+.badge.amber { background: var(--amber-soft); color: #92400e; }
+
+/* LOADING */
+.loading {
+  display: flex; align-items: center; justify-content: center;
+  height: 300px; color: var(--text-3); font-size: 14px;
+}
+.spinner {
+  width: 24px; height: 24px; border: 3px solid var(--border);
+  border-top-color: var(--primary); border-radius: 50%;
+  animation: spin .7s linear infinite; margin-right: 10px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .container { padding: 12px; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .charts-grid { grid-template-columns: 1fr; }
+  .kpi-value { font-size: 24px; }
+  .header { padding: 12px 16px; flex-wrap: wrap; gap: 8px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div>
+      <h1>Dashboard KPIs — Centro Medico Carampangue</h1>
+      <div class="subtitle" id="periodo-label">Cargando...</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <select class="periodo-select" id="periodo-select" onchange="loadData()">
+      <option value="7">Últimos 7 días</option>
+      <option value="30" selected>Últimos 30 días</option>
+      <option value="90">Últimos 90 días</option>
+      <option value="365">Último año</option>
+    </select>
+    <a href="/admin" class="back-link">← Panel admin</a>
+  </div>
+</div>
+
+<div class="container" id="main-content">
+  <div class="loading"><div class="spinner"></div> Cargando métricas...</div>
+</div>
+
+<script>
+const TOKEN = "__TOKEN__";
+
+function apiUrl(path) {
+  if (TOKEN) return path + (path.includes('?') ? '&' : '?') + 'token=' + TOKEN;
+  return path;
+}
+
+function fetchApi(path) {
+  const opts = {};
+  if (!TOKEN) opts.credentials = 'include';
+  return fetch(apiUrl(path), opts).then(r => r.json());
+}
+
+let charts = {};
+
+function destroyCharts() {
+  Object.values(charts).forEach(c => { try { c.destroy(); } catch(e){} });
+  charts = {};
+}
+
+async function loadData() {
+  const dias = document.getElementById('periodo-select').value;
+  const data = await fetchApi('/admin/api/case-study?dias=' + dias);
+  document.getElementById('periodo-label').textContent =
+    `Período: últimos ${dias} días`;
+  destroyCharts();
+  render(data);
+}
+
+function render(d) {
+  const r = d.resumen;
+  const f = d.funnel_agendamiento;
+  const conf = d.confirmacion_precita;
+  const cs = d.crosssell;
+  const reg = d.registro_pacientes;
+  const fid = d.fidelizacion;
+  const seg = d.seguridad;
+
+  document.getElementById('main-content').innerHTML = `
+    <!-- KPI CARDS -->
+    <div class="kpi-grid">
+      <div class="kpi-card primary">
+        <div class="kpi-label">Conversaciones</div>
+        <div class="kpi-value">${r.conversaciones_unicas}</div>
+        <div class="kpi-sub">Pacientes únicos</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-label">Citas agendadas</div>
+        <div class="kpi-value">${r.citas_agendadas}</div>
+        <div class="kpi-sub">Por el bot</div>
+      </div>
+      <div class="kpi-card blue">
+        <div class="kpi-label">Conversión</div>
+        <div class="kpi-value">${r.tasa_conversion}</div>
+        <div class="kpi-sub">Intent → cita creada</div>
+      </div>
+      <div class="kpi-card cyan">
+        <div class="kpi-label">Confirmación pre-cita</div>
+        <div class="kpi-value">${conf.tasa_confirmacion}</div>
+        <div class="kpi-sub">${conf.confirmados} de ${conf.total_recordatorios_enviados} confirmaron</div>
+      </div>
+      <div class="kpi-card purple">
+        <div class="kpi-label">No-shows evitados</div>
+        <div class="kpi-value">${conf.noshows_evitados}</div>
+        <div class="kpi-sub">Cancelaron o reagendaron a tiempo</div>
+      </div>
+      <div class="kpi-card amber">
+        <div class="kpi-label">Derivaciones humano</div>
+        <div class="kpi-value">${r.derivaciones_humano}</div>
+        <div class="kpi-sub">Escaladas a recepción</div>
+      </div>
+    </div>
+
+    <!-- CHARTS ROW 1 -->
+    <div class="charts-grid">
+      <!-- FUNNEL -->
+      <div class="chart-card">
+        <h3>Funnel de agendamiento</h3>
+        <div class="funnel" id="funnel-container"></div>
+      </div>
+      <!-- ESPECIALIDADES -->
+      <div class="chart-card">
+        <h3>Especialidades más solicitadas</h3>
+        <div class="chart-wrap"><canvas id="chart-esp"></canvas></div>
+      </div>
+    </div>
+
+    <!-- CHARTS ROW 2 -->
+    <div class="charts-grid">
+      <!-- HORAS PICO -->
+      <div class="chart-card">
+        <h3>Horarios pico de mensajes</h3>
+        <div class="chart-wrap"><canvas id="chart-horas"></canvas></div>
+      </div>
+      <!-- CONFIRMACIONES -->
+      <div class="chart-card">
+        <h3>Confirmaciones pre-cita</h3>
+        <div class="chart-wrap"><canvas id="chart-conf"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ROW 3: TABLES -->
+    <div class="charts-grid">
+      <!-- FIDELIZACIÓN -->
+      <div class="table-card">
+        <h3>Fidelización por campaña</h3>
+        <table class="data-table">
+          <thead><tr><th>Campaña</th><th>Enviados</th><th>Respondidos</th><th>Tasa</th></tr></thead>
+          <tbody id="fidel-tbody"></tbody>
+        </table>
+        ${Object.keys(fid.postconsulta_desglose).length ? `
+        <h3 style="margin-top:16px">Post-consulta: ¿Cómo se siente?</h3>
+        <div class="chart-wrap" style="height:180px"><canvas id="chart-postconsulta"></canvas></div>
+        ` : ''}
+      </div>
+
+      <!-- CROSS-SELL -->
+      <div class="table-card">
+        <h3>Cross-sell & upsell</h3>
+        <table class="data-table">
+          <thead><tr><th>Métrica</th><th>Valor</th></tr></thead>
+          <tbody>
+            <tr><td>Upsell post-consulta ofrecidos</td><td><strong>${cs.upsell_ofrecidos}</strong></td></tr>
+            <tr><td>Upsell aceptados</td><td><strong>${cs.upsell_aceptados}</strong></td></tr>
+            <tr><td>Tasa conversión upsell</td><td><span class="badge ${parseFloat(cs.tasa_upsell)>10?'green':'amber'}">${cs.tasa_upsell}</span></td></tr>
+            <tr><td>FAQ → agendar (aceptados)</td><td><strong>${cs.faq_to_agendar_aceptados}</strong></td></tr>
+            <tr><td>FAQ → agendar (rechazados)</td><td><strong>${cs.faq_to_agendar_rechazados}</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ROW 4 -->
+    <div class="charts-grid">
+      <!-- REFERRAL -->
+      <div class="table-card">
+        <h3>¿Cómo nos conocieron?</h3>
+        ${Object.keys(d.referral).length ? `
+        <table class="data-table">
+          <thead><tr><th>Fuente</th><th>Pacientes</th></tr></thead>
+          <tbody id="referral-tbody"></tbody>
+        </table>
+        ` : '<div style="color:var(--text-3);font-size:13px;padding:20px 0;text-align:center">Sin datos de referral aún</div>'}
+      </div>
+
+      <!-- CANALES -->
+      <div class="table-card">
+        <h3>Canales de mensajería</h3>
+        <table class="data-table">
+          <thead><tr><th>Canal</th><th>Usuarios</th><th>Mensajes</th></tr></thead>
+          <tbody id="canales-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ROW 5 -->
+    <div class="charts-grid">
+      <!-- REGISTRO -->
+      <div class="table-card">
+        <h3>Registro de pacientes nuevos</h3>
+        <table class="data-table">
+          <thead><tr><th>Métrica</th><th>Valor</th></tr></thead>
+          <tbody>
+            <tr><td>Completados</td><td><strong>${reg.completados}</strong></td></tr>
+            <tr><td>Abandonados</td><td><strong>${reg.abandonados}</strong></td></tr>
+            <tr><td>Tasa completado</td><td><span class="badge ${parseFloat(reg.tasa_completado)>=50?'green':'amber'}">${reg.tasa_completado}</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- SEGURIDAD -->
+      <div class="table-card">
+        <h3>Seguridad clínica</h3>
+        <table class="data-table">
+          <thead><tr><th>Evento</th><th>Detecciones</th><th>Estado</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Emergencias detectadas</td>
+              <td><strong>${seg.emergencias}</strong></td>
+              <td><span class="badge green">Derivadas a SAMU 131</span></td>
+            </tr>
+            <tr>
+              <td>Crisis salud mental</td>
+              <td><strong>${seg.crisis_salud_mental}</strong></td>
+              <td><span class="badge green">Derivadas a Salud Responde</span></td>
+            </tr>
+          </tbody>
+        </table>
+        ${d.triage_ges.match + d.triage_ges.nomatch > 0 ? `
+        <h3 style="margin-top:16px">Triage GES</h3>
+        <table class="data-table">
+          <thead><tr><th>Métrica</th><th>Valor</th></tr></thead>
+          <tbody>
+            <tr><td>Síntomas reconocidos</td><td><strong>${d.triage_ges.match}</strong></td></tr>
+            <tr><td>Sin match</td><td><strong>${d.triage_ges.nomatch}</strong></td></tr>
+            <tr><td>Cobertura</td><td><span class="badge ${parseFloat(d.triage_ges.cobertura)>=80?'green':'amber'}">${d.triage_ges.cobertura}</span></td></tr>
+          </tbody>
+        </table>
+        ` : ''}
+      </div>
+    </div>
+  `;
+
+  // ── FUNNEL ──
+  const funnelSteps = [
+    { label: 'Intent agendar', value: f.intent_agendar, color: '#3b82f6' },
+    { label: 'Citas creadas', value: f.citas_creadas, color: '#10b981' },
+    { label: 'Sin disponibilidad', value: f.sin_disponibilidad, color: '#f59e0b' },
+    { label: 'Lista de espera', value: f.waitlist_inscritos, color: '#8b5cf6' },
+    { label: 'Waitlist notificados', value: f.waitlist_notificados, color: '#06b6d4' },
+  ];
+  const maxFunnel = Math.max(...funnelSteps.map(s => s.value), 1);
+  const fc = document.getElementById('funnel-container');
+  if (fc) {
+    fc.innerHTML = funnelSteps.map(s => `
+      <div class="funnel-step">
+        <div class="funnel-label">${s.label}</div>
+        <div class="funnel-bar-wrap">
+          <div class="funnel-bar" style="width:${Math.max(s.value/maxFunnel*100,4)}%;background:${s.color}">
+            ${s.value}
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // ── ESPECIALIDADES (doughnut) ──
+  const espLabels = d.especialidades_top.map(e => e.especialidad);
+  const espData = d.especialidades_top.map(e => e.citas);
+  const espColors = ['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ef4444','#06b6d4','#f97316','#ec4899'];
+  const espCtx = document.getElementById('chart-esp');
+  if (espCtx && espLabels.length) {
+    charts.esp = new Chart(espCtx, {
+      type: 'doughnut',
+      data: {
+        labels: espLabels,
+        datasets: [{ data: espData, backgroundColor: espColors.slice(0, espLabels.length), borderWidth: 0 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'right', labels: { font: { family: 'Inter', size: 12 }, padding: 12 } }
+        }
+      }
+    });
+  }
+
+  // ── HORAS PICO (bar) ──
+  const horasCtx = document.getElementById('chart-horas');
+  if (horasCtx && d.horas_pico.length) {
+    const sortedHoras = [...d.horas_pico].sort((a,b) => a.hora - b.hora);
+    charts.horas = new Chart(horasCtx, {
+      type: 'bar',
+      data: {
+        labels: sortedHoras.map(h => `${String(h.hora).padStart(2,'0')}:00`),
+        datasets: [{
+          label: 'Mensajes',
+          data: sortedHoras.map(h => h.mensajes),
+          backgroundColor: '#3b82f6',
+          borderRadius: 6, borderSkipped: false
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  // ── CONFIRMACIONES (doughnut) ──
+  const confCtx = document.getElementById('chart-conf');
+  if (confCtx && conf.total_recordatorios_enviados > 0) {
+    const pendiente = conf.total_recordatorios_enviados - conf.confirmados - conf.reagendaron - conf.cancelaron;
+    charts.conf = new Chart(confCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Confirmados', 'Reagendaron', 'Cancelaron', 'Pendientes'],
+        datasets: [{
+          data: [conf.confirmados, conf.reagendaron, conf.cancelaron, Math.max(pendiente,0)],
+          backgroundColor: ['#10b981', '#3b82f6', '#ef4444', '#e2e8f0'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'right', labels: { font: { family: 'Inter', size: 12 }, padding: 12 } }
+        }
+      }
+    });
+  } else if (confCtx) {
+    confCtx.parentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-3);font-size:13px">Sin recordatorios enviados aún</div>';
+  }
+
+  // ── FIDELIZACIÓN tabla ──
+  const ftbody = document.getElementById('fidel-tbody');
+  if (ftbody) {
+    const campanaNombres = { postconsulta:'Post-consulta', reactivacion:'Reactivación', adherencia_kine:'Adherencia kine', control:'Control', crosssell:'Cross-sell' };
+    const filas = Object.entries(fid.por_campana);
+    if (filas.length === 0) {
+      ftbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-3)">Sin datos</td></tr>';
+    } else {
+      ftbody.innerHTML = filas.map(([k,v]) => `
+        <tr>
+          <td>${campanaNombres[k]||k}</td>
+          <td><strong>${v.enviados}</strong></td>
+          <td><strong>${v.respondidos}</strong></td>
+          <td><span class="badge ${v.tasa>=30?'green':v.tasa>=10?'amber':'red'}">${v.tasa}%</span></td>
+        </tr>
+      `).join('');
+    }
+  }
+
+  // ── POST-CONSULTA desglose (pie) ──
+  const pcCtx = document.getElementById('chart-postconsulta');
+  if (pcCtx) {
+    const pcLabels = Object.keys(fid.postconsulta_desglose);
+    const pcData = Object.values(fid.postconsulta_desglose);
+    const pcColors = { mejor:'#10b981', igual:'#f59e0b', peor:'#ef4444' };
+    charts.pc = new Chart(pcCtx, {
+      type: 'doughnut',
+      data: {
+        labels: pcLabels.map(l => l.charAt(0).toUpperCase() + l.slice(1)),
+        datasets: [{
+          data: pcData,
+          backgroundColor: pcLabels.map(l => pcColors[l] || '#94a3b8'),
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'right', labels: { font: { family: 'Inter', size: 12 } } }
+        }
+      }
+    });
+  }
+
+  // ── REFERRAL tabla ──
+  const rtbody = document.getElementById('referral-tbody');
+  if (rtbody) {
+    const refNombres = { amigo:'Amigo/familiar', google:'Google/internet', rrss:'Redes sociales', recurrente:'Paciente recurrente' };
+    rtbody.innerHTML = Object.entries(d.referral).map(([k,v]) => `
+      <tr><td>${refNombres[k]||k}</td><td><strong>${v}</strong></td></tr>
+    `).join('');
+  }
+
+  // ── CANALES tabla ──
+  const ctbody = document.getElementById('canales-tbody');
+  if (ctbody) {
+    const canalNombres = { whatsapp:'WhatsApp', instagram:'Instagram', messenger:'Messenger' };
+    const canalColors = { whatsapp:'green', instagram:'purple', messenger:'blue' };
+    ctbody.innerHTML = Object.entries(d.canales).map(([k,v]) => `
+      <tr>
+        <td><span class="badge ${canalColors[k]||''}">${canalNombres[k]||k}</span></td>
+        <td><strong>${v.usuarios}</strong></td>
+        <td>${v.mensajes}</td>
+      </tr>
+    `).join('');
+  }
+}
+
+// Init
+loadData();
+</script>
+</body>
+</html>

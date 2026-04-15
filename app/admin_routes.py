@@ -814,3 +814,116 @@ async def admin_ortodoncia_sync(desde: str = "2025-01-01", hasta: str = None,
     fin = hasta or date.today().isoformat()
     asyncio.create_task(sync_ortodoncia_rango(desde, fin))
     return {"ok": True, "desde": desde, "hasta": fin}
+
+
+# ── "Agendar por ella" — slots del flujo activo del paciente ────────────────
+
+@router.get("/admin/api/flow-slots/{phone}")
+def admin_flow_slots(phone: str, _: str = Depends(require_admin)):
+    """Retorna los slots actuales en la sesión del paciente (si está en WAIT_SLOT)."""
+    sess = get_session(phone)
+    state = sess.get("state", "IDLE")
+    data = sess.get("data", {})
+    if state != "WAIT_SLOT":
+        raise HTTPException(status_code=409,
+                            detail=f"El paciente no está eligiendo horario (estado: {state})")
+    slots = data.get("slots", [])
+    todos = data.get("todos_slots", slots)
+    return {
+        "state": state,
+        "especialidad": data.get("especialidad", ""),
+        "slots": slots,
+        "todos_slots": todos,
+    }
+
+
+@router.post("/admin/api/select-slot/{phone}")
+async def admin_select_slot(phone: str, request: Request, _: str = Depends(require_admin)):
+    """Recepcionista selecciona un slot por el paciente: avanza el flujo a WAIT_RUT o confirma."""
+    body = await request.json()
+    slot_idx = body.get("slot_index")
+    if slot_idx is None:
+        raise HTTPException(status_code=400, detail="slot_index requerido")
+
+    sess = get_session(phone)
+    state = sess.get("state", "IDLE")
+    data = sess.get("data", {})
+
+    if state != "WAIT_SLOT":
+        raise HTTPException(status_code=409,
+                            detail=f"El paciente no está eligiendo horario (estado: {state})")
+
+    todos = data.get("todos_slots", data.get("slots", []))
+    if slot_idx < 0 or slot_idx >= len(todos):
+        raise HTTPException(status_code=400, detail="Índice de slot inválido")
+
+    slot = todos[slot_idx]
+    data["slot_elegido"] = slot
+    data["fecha_display"] = slot.get("fecha_display", "")
+    data["hora_inicio"] = slot.get("hora_inicio", "")
+    data["profesional"] = slot.get("profesional", "")
+
+    # Si ya tenemos RUT del paciente, saltar a confirmar directo
+    rut = data.get("rut")
+    if rut:
+        save_session(phone, "CONFIRMING_CITA", data)
+        await send_whatsapp(phone,
+            f"La recepcionista te agendó hora 📋\n\n"
+            f"🏥 *{slot.get('especialidad','')}* — {slot.get('profesional','')}\n"
+            f"📅 *{slot.get('fecha_display','')}*\n"
+            f"🕐 *{slot.get('hora_inicio','')[:5]}*\n\n"
+            "¿Confirmas? Responde *Sí* o *No*")
+        log_message(phone, "out", "[Recepcionista seleccionó slot]", "CONFIRMING_CITA")
+    else:
+        save_session(phone, "WAIT_RUT_AGENDAR", data)
+        await send_whatsapp(phone,
+            f"Te busqué hora 📋\n\n"
+            f"🏥 *{slot.get('especialidad','')}* — {slot.get('profesional','')}\n"
+            f"📅 *{slot.get('fecha_display','')}*\n"
+            f"🕐 *{slot.get('hora_inicio','')[:5]}*\n\n"
+            "Para confirmar necesito tu RUT (ej: 12345678-9)")
+        log_message(phone, "out", "[Recepcionista seleccionó slot, esperando RUT]", "WAIT_RUT_AGENDAR")
+
+    log_event(phone, "slot_seleccionado_panel", {
+        "profesional": slot.get("profesional", ""),
+        "hora": slot.get("hora_inicio", ""),
+        "fecha": slot.get("fecha_display", ""),
+    })
+    return {"ok": True, "new_state": "CONFIRMING_CITA" if rut else "WAIT_RUT_AGENDAR"}
+
+
+# ── Timeline / Agenda del día ──────────────────────────────────────────────
+
+@router.get("/admin/api/agenda-dia")
+async def admin_agenda_dia(fecha: str = None, _: str = Depends(require_admin)):
+    """Retorna la agenda de todos los profesionales para una fecha.
+    Resultado: [{id, nombre, especialidad, citas: [{hora, hora_fin, paciente, rut, estado}]}]
+    """
+    from medilink import obtener_agenda_dia
+    if not fecha:
+        from zoneinfo import ZoneInfo
+        from datetime import datetime as _dt
+        fecha = _dt.now(ZoneInfo("America/Santiago")).strftime("%Y-%m-%d")
+
+    # Solo consultar profesionales que atienden ese día de la semana
+    agenda = []
+    tasks = []
+    for pid, pinfo in PROFESIONALES.items():
+        tasks.append((pid, pinfo, obtener_agenda_dia(pid, fecha)))
+
+    results = await asyncio.gather(*[t[2] for t in tasks], return_exceptions=True)
+
+    for (pid, pinfo, _), result in zip(tasks, results):
+        if isinstance(result, Exception):
+            result = []
+        agenda.append({
+            "id": pid,
+            "nombre": pinfo.get("nombre", f"Prof. {pid}"),
+            "especialidad": pinfo.get("especialidad", ""),
+            "citas": result,
+        })
+
+    # Filtrar profesionales sin citas para no saturar
+    agenda = [a for a in agenda if a["citas"]]
+    agenda.sort(key=lambda a: a["nombre"])
+    return {"fecha": fecha, "profesionales": agenda}
