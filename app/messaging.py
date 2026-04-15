@@ -309,6 +309,34 @@ async def transcribe_audio(audio_bytes: bytes, mime: str = "audio/ogg") -> str:
         return ""
 
 
+def extract_text_from_pdf(pdf_bytes: bytes) -> str:
+    """Extrae texto de un PDF usando PyMuPDF. Retorna "" si falla."""
+    try:
+        import fitz  # PyMuPDF
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        text_parts = []
+        for page in doc:
+            text_parts.append(page.get_text())
+        doc.close()
+        return "\n".join(text_parts).strip()
+    except Exception as e:
+        log.error("Error extrayendo texto de PDF: %s", e)
+        return ""
+
+
+def extract_text_from_docx(docx_bytes: bytes) -> str:
+    """Extrae texto de un archivo Word (.docx) usando python-docx. Retorna "" si falla."""
+    try:
+        from docx import Document
+        from io import BytesIO
+        doc = Document(BytesIO(docx_bytes))
+        text_parts = [p.text for p in doc.paragraphs if p.text.strip()]
+        return "\n".join(text_parts).strip()
+    except Exception as e:
+        log.error("Error extrayendo texto de DOCX: %s", e)
+        return ""
+
+
 async def get_whatsapp_quality_rating() -> dict | None:
     """Fetch quality rating and messaging limits from Meta API.
     Returns dict with quality_rating, messaging_limit, etc. or None on error."""
