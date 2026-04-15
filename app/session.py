@@ -282,6 +282,15 @@ def _conn():
         conn.execute("ALTER TABLE citas_bot ADD COLUMN reminder_2h_sent INTEGER DEFAULT 0")
     except sqlite3.OperationalError:
         pass
+    # Migración: nombre paciente + es_tercero (cita para otra persona)
+    try:
+        conn.execute("ALTER TABLE citas_bot ADD COLUMN paciente_nombre TEXT DEFAULT ''")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        conn.execute("ALTER TABLE citas_bot ADD COLUMN es_tercero INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass
     conn.commit()
     return conn
 
@@ -385,23 +394,33 @@ def delete_tag(phone: str, tag: str):
 # ── Citas creadas por el bot ──────────────────────────────────────────────────
 
 def save_cita_bot(phone: str, id_cita: str, especialidad: str,
-                  profesional: str, fecha: str, hora: str, modalidad: str):
-    """Registra una cita creada por el bot para tracking y recordatorios."""
+                  profesional: str, fecha: str, hora: str, modalidad: str,
+                  paciente_nombre: str = "", es_tercero: bool = False):
+    """Registra una cita creada por el bot para tracking y recordatorios.
+    paciente_nombre: nombre del paciente real (puede ser distinto del dueño del celular).
+    es_tercero: True si quien agenda es un familiar/tercero (el celular no es del paciente).
+    """
     with _conn() as conn:
         conn.execute(
-            """INSERT INTO citas_bot (phone, id_cita, especialidad, profesional, fecha, hora, modalidad)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (phone, id_cita, especialidad, profesional, fecha, hora, modalidad)
+            """INSERT INTO citas_bot (phone, id_cita, especialidad, profesional,
+                                       fecha, hora, modalidad, paciente_nombre, es_tercero)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (phone, id_cita, especialidad, profesional, fecha, hora, modalidad,
+             paciente_nombre or "", 1 if es_tercero else 0)
         )
         conn.commit()
 
 
 def get_citas_bot_pendientes(fecha: str) -> list[dict]:
     """Devuelve citas del bot para una fecha dada donde aún no se envió recordatorio.
-    Incluye nombre del paciente desde contact_profiles (LEFT JOIN)."""
+    Usa paciente_nombre de citas_bot si existe; fallback a contact_profiles.
+    Incluye phone_owner (nombre del dueño del celular) para recordatorios de terceros."""
     with _conn() as conn:
         rows = conn.execute(
-            """SELECT c.*, cp.nombre AS paciente_nombre
+            """SELECT c.*,
+                      CASE WHEN c.paciente_nombre != '' THEN c.paciente_nombre
+                           ELSE cp.nombre END AS paciente_nombre,
+                      cp.nombre AS phone_owner
                FROM citas_bot c
                LEFT JOIN contact_profiles cp ON c.phone = cp.phone
                WHERE c.fecha=? AND c.reminder_sent=0""", (fecha,)
@@ -462,12 +481,14 @@ def mark_reminder_sent(cita_id: int):
 
 def get_citas_bot_para_2h_reminder(fecha: str, hora_min: str, hora_max: str) -> list[dict]:
     """Devuelve citas del día `fecha` cuyo horario cae en [hora_min, hora_max]
-    y donde aún no se envió el recordatorio de 2 horas antes. Los rangos horarios
-    se comparan como string HH:MM:SS (formato en el que se almacenan en citas_bot).
-    Incluye nombre del paciente desde contact_profiles (LEFT JOIN)."""
+    y donde aún no se envió el recordatorio de 2 horas antes.
+    Incluye paciente_nombre y phone_owner para terceros."""
     with _conn() as conn:
         rows = conn.execute(
-            """SELECT c.*, cp.nombre AS paciente_nombre
+            """SELECT c.*,
+                      CASE WHEN c.paciente_nombre != '' THEN c.paciente_nombre
+                           ELSE cp.nombre END AS paciente_nombre,
+                      cp.nombre AS phone_owner
                FROM citas_bot c
                LEFT JOIN contact_profiles cp ON c.phone = cp.phone
                WHERE c.fecha=? AND c.hora>=? AND c.hora<=?

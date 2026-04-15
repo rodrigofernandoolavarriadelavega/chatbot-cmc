@@ -47,17 +47,26 @@ def _nombre_corto(nombre: str | None) -> str:
 def _interactive_recordatorio(cita: dict) -> dict:
     """Construye un mensaje interactivo con 3 botones: confirmo / cambiar hora / no podré ir.
     Los IDs de botón incluyen el id_cita Medilink para poder resolver la cita en la respuesta,
-    incluso si el paciente no tiene una sesión activa."""
+    incluso si el paciente no tiene una sesión activa.
+    Si es_tercero=1, el recordatorio va dirigido al dueño del celular (phone_owner)
+    mencionando al paciente por nombre."""
     fecha_display = _fmt_fecha_display(cita["fecha"])
     hora = _fmt_hora(cita["hora"])
     esp = cita["especialidad"]
     prof = cita["profesional"]
     modalidad = (cita.get("modalidad") or "particular").capitalize()
     id_cita = cita["id_cita"]
-    nombre = _nombre_corto(cita.get("paciente_nombre"))
-    saludo = f"Hola {nombre} 👋" if nombre else "Hola 👋"
+    es_tercero = cita.get("es_tercero", 0)
+    nombre_paciente = _nombre_corto(cita.get("paciente_nombre"))
+    nombre_owner = _nombre_corto(cita.get("phone_owner"))
+    if es_tercero and nombre_owner and nombre_paciente:
+        saludo = f"Hola {nombre_owner} 👋"
+        intro = f"Recuerda que *{nombre_paciente}* tiene cita"
+    else:
+        saludo = f"Hola {nombre_paciente} 👋" if nombre_paciente else "Hola 👋"
+        intro = "Te recordamos tu cita"
     body = (
-        f"{saludo} Te recordamos tu cita en el *Centro Médico Carampangue*:\n\n"
+        f"{saludo} {intro} en el *Centro Médico Carampangue*:\n\n"
         f"🏥 *{esp}* — {prof}\n"
         f"📅 *{fecha_display}* a las *{hora}*\n"
         f"💳 {modalidad}\n"
@@ -122,11 +131,18 @@ async def enviar_recordatorios(send_text_fn, send_interactive_fn=None,
                 # Fallback texto plano
                 fecha_display = _fmt_fecha_display(cita["fecha"])
                 hora = _fmt_hora(cita["hora"])
-                nombre = _nombre_corto(cita.get("paciente_nombre"))
-                saludo = f"Hola {nombre} 👋" if nombre else "Hola 👋"
+                nombre_pac = _nombre_corto(cita.get("paciente_nombre"))
+                nombre_own = _nombre_corto(cita.get("phone_owner"))
+                es_terc = cita.get("es_tercero", 0)
+                if es_terc and nombre_own and nombre_pac:
+                    saludo = f"Hola {nombre_own} 👋"
+                    intro = f"Recuerda que *{nombre_pac}* tiene cita"
+                else:
+                    saludo = f"Hola {nombre_pac} 👋" if nombre_pac else "Hola 👋"
+                    intro = "Te recordamos tu cita"
                 await send_text_fn(
                     cita["phone"],
-                    f"{saludo} Te recordamos tu cita en el *Centro Médico Carampangue*:\n\n"
+                    f"{saludo} {intro} en el *Centro Médico Carampangue*:\n\n"
                     f"🏥 *{cita['especialidad']}* — {cita['profesional']}\n"
                     f"📅 *{fecha_display}* a las *{hora}*\n"
                     "📍 Monsalve esquina República, Carampangue\n\n"
@@ -171,22 +187,27 @@ async def enviar_recordatorios_2h(send_text_fn, send_template_fn=None):
     for cita in citas:
         try:
             hora = _fmt_hora(cita["hora"])
-            nombre = _nombre_corto(cita.get("paciente_nombre")) or "paciente"
+            nombre_pac = _nombre_corto(cita.get("paciente_nombre")) or "paciente"
+            nombre_own = _nombre_corto(cita.get("phone_owner"))
+            es_terc = cita.get("es_tercero", 0)
 
             if USE_TEMPLATES and send_template_fn:
-                # Template: recordatorio_cita_2h
-                # body_params: [nombre, especialidad, profesional, hora]
                 await send_template_fn(
                     cita["phone"],
                     "recordatorio_cita_2h",
-                    body_params=[nombre, cita["especialidad"],
+                    body_params=[nombre_pac, cita["especialidad"],
                                  cita["profesional"], hora],
                 )
             else:
-                saludo = f"Hola {nombre}" if nombre != "paciente" else "Hola"
+                if es_terc and nombre_own and nombre_pac:
+                    saludo = f"Hola {nombre_own}"
+                    intro = f"⏰ *En 2 horas* *{nombre_pac}* tiene cita"
+                else:
+                    saludo = f"Hola {nombre_pac}" if nombre_pac != "paciente" else "Hola"
+                    intro = "⏰ *En 2 horas* tienes tu cita"
                 await send_text_fn(
                     cita["phone"],
-                    f"{saludo} ⏰ *En 2 horas* tienes tu cita en el *Centro Médico Carampangue*:\n\n"
+                    f"{saludo} {intro} en el *Centro Médico Carampangue*:\n\n"
                     f"🏥 *{cita['especialidad']}* — {cita['profesional']}\n"
                     f"🕐 Hoy a las *{hora}*\n"
                     f"📍 Monsalve esquina República, Carampangue\n\n"

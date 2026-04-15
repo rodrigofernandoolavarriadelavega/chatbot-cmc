@@ -1864,25 +1864,58 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             save_session(phone, "WAIT_MODALIDAD", data)
             return "Responde *Fonasa* o *Particular* 😊"
 
-        save_session(phone, "WAIT_RUT_AGENDAR", data)
         modalidad_str = data["modalidad"].capitalize()
-        # Si ya conocemos al paciente, mostrar su nombre y preguntar solo confirmación
-        rut_conocido  = data.get("rut_conocido")
-        nombre_conocido = data.get("nombre_conocido")
-        if rut_conocido and nombre_conocido:
-            nombre_corto = nombre_conocido.split()[0]
-            return _btn_msg(
-                f"Perfecto, atención *{modalidad_str}*.\n\n"
-                f"¿Agendo con tus datos anteriores, *{nombre_corto}*?",
-                [
-                    {"id": "si", "title": "Sí, continuar"},
-                    {"id": "rut_nuevo", "title": "Ingresar otro RUT"},
-                ]
-            )
-        return (
+        save_session(phone, "WAIT_BOOKING_FOR", data)
+        return _btn_msg(
             f"Perfecto, atención *{modalidad_str}* 😊\n\n"
-            "Para confirmar necesito tu RUT:\n"
-            "(ej: *12.345.678-9*)"
+            "¿La hora es para ti o para otra persona?",
+            [
+                {"id": "booking_self", "title": "Para mí"},
+                {"id": "booking_other", "title": "Para otra persona"},
+            ]
+        )
+
+    # ── WAIT_BOOKING_FOR ───────────────────────────────────────────────────────
+    if state == "WAIT_BOOKING_FOR":
+        _SELF = {"booking_self", "para mi", "para mí", "yo", "mio", "mía", "mia"}
+        _OTHER = {"booking_other", "otra persona", "otro", "otra", "familiar",
+                  "hijo", "hija", "papa", "papá", "mama", "mamá", "hermano", "hermana",
+                  "esposo", "esposa", "abuelo", "abuela"}
+        if tl in _SELF or tl_norm in _SELF:
+            data["booking_for_other"] = False
+            save_session(phone, "WAIT_RUT_AGENDAR", data)
+            rut_conocido = data.get("rut_conocido")
+            nombre_conocido = data.get("nombre_conocido")
+            if rut_conocido and nombre_conocido:
+                nombre_corto = nombre_conocido.split()[0]
+                return _btn_msg(
+                    f"¿Agendo con tus datos anteriores, *{nombre_corto}*?",
+                    [
+                        {"id": "si", "title": "Sí, continuar"},
+                        {"id": "rut_nuevo", "title": "Ingresar otro RUT"},
+                    ]
+                )
+            return (
+                "Para confirmar necesito tu RUT:\n"
+                "(ej: *12.345.678-9*)"
+            )
+        if tl in _OTHER or tl_norm in _OTHER:
+            data["booking_for_other"] = True
+            # Limpiar RUT/nombre conocido para pedir datos del paciente real
+            data.pop("rut_conocido", None)
+            data.pop("nombre_conocido", None)
+            save_session(phone, "WAIT_RUT_AGENDAR", data)
+            return (
+                "Sin problema 😊 Necesito el RUT de la persona que se va a atender:\n"
+                "(ej: *12.345.678-9*)"
+            )
+        save_session(phone, "WAIT_BOOKING_FOR", data)
+        return _btn_msg(
+            "Responde *Para mí* o *Para otra persona* 😊",
+            [
+                {"id": "booking_self", "title": "Para mí"},
+                {"id": "booking_other", "title": "Para otra persona"},
+            ]
         )
 
     # ── WAIT_RUT_AGENDAR ──────────────────────────────────────────────────────
@@ -1961,9 +1994,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             reset_session(phone)
             nombre_corto = paciente['nombre'].split()[0]
             modalidad = data.get("modalidad", "particular").capitalize()
+            es_tercero = bool(data.get("booking_for_other"))
             if resultado:
-                # Guardar perfil para no volver a pedir el RUT
-                save_profile(phone, data.get("rut", ""), paciente["nombre"])
+                # Guardar perfil solo si agenda para sí mismo
+                if not es_tercero:
+                    save_profile(phone, data.get("rut", ""), paciente["nombre"])
                 # Registrar tag y cita para tracking/recordatorios
                 esp = slot["especialidad"]
                 save_tag(phone, f"cita-{esp.lower()}")
@@ -1977,6 +2012,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     fecha=slot["fecha"],
                     hora=slot["hora_inicio"],
                     modalidad=data.get("modalidad", "particular"),
+                    paciente_nombre=paciente["nombre"],
+                    es_tercero=es_tercero,
                 )
                 log_event(phone, "cita_reagendada" if reagendar else "cita_creada", {
                     "especialidad": esp,
@@ -2001,27 +2038,35 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                             "\n\n⚠️ _Tuvimos un inconveniente cancelando la hora anterior; "
                             "recepción la anulará de forma manual. No hay problema._"
                         )
+                    if es_tercero:
+                        titulo = f"🔄 *¡Listo! La hora de {nombre_corto} fue reagendada.*"
+                    else:
+                        titulo = f"🔄 *¡Listo, {nombre_corto}! Tu hora fue reagendada.*"
                     return (
-                        f"🔄 *¡Listo, {nombre_corto}! Tu hora fue reagendada.*\n\n"
+                        f"{titulo}\n\n"
                         f"👤 {paciente['nombre']}\n"
                         f"🏥 {slot['especialidad']} — {slot['profesional']}\n"
                         f"📅 {slot['fecha_display']}\n"
                         f"🕐 {slot['hora_inicio'][:5]}\n\n"
-                        "Recuerda llegar *15 minutos antes* con tu cédula de identidad.\n\n"
+                        "Recuerda llegar *15 minutos antes* con cédula de identidad.\n\n"
                         "📍 *Monsalve 102 esq. República, Carampangue*"
                         f"{extra}"
                         f"{cross_ref}"
                         f"{pni_msg}\n\n"
                         "_Escribe *menu* si necesitas algo más._"
                     )
+                if es_tercero:
+                    titulo = f"✅ *¡Listo! La hora de {nombre_corto} quedó reservada.*"
+                else:
+                    titulo = f"✅ *¡Listo, {nombre_corto}! Tu hora quedó reservada.*"
                 return (
-                    f"✅ *¡Listo, {nombre_corto}! Tu hora quedó reservada.*\n\n"
+                    f"{titulo}\n\n"
                     f"👤 {paciente['nombre']}\n"
                     f"🏥 {slot['especialidad']} — {slot['profesional']}\n"
                     f"📅 {slot['fecha_display']}\n"
                     f"🕐 {slot['hora_inicio'][:5]}\n"
                     f"💳 {modalidad}\n\n"
-                    "Recuerda llegar *15 minutos antes* con tu cédula de identidad.\n\n"
+                    "Recuerda llegar *15 minutos antes* con cédula de identidad.\n\n"
                     "📍 *Monsalve 102 esq. República, Carampangue*\n\n"
                     f"¡Te esperamos! 😊{cross_ref}"
                     f"{pni_msg}\n\n"
