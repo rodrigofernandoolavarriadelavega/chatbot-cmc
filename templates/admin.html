@@ -496,6 +496,9 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
   .topbar-pills.show { display: flex !important; }
   .pill { font-size: 10px; padding: 3px 7px; }
 
+  /* Topbar sticky so content scrolls below it */
+  .topbar { position: sticky; top: 0; z-index: 50; }
+
   /* Row 4: Alert bar */
   #alert-bar {
     order: 25; width: 100%;
@@ -505,8 +508,14 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
     border-top: 1px solid #fca5a5 !important;
   }
 
+  /* Dropdown: centered, above everything */
+  .dropdown-menu {
+    min-width: 210px !important; z-index: 200;
+    right: auto !important; left: 50% !important; transform: translateX(-50%);
+  }
+
   /* ── LAYOUT → columna única ── */
-  .layout { flex-direction: column; height: auto; min-height: calc(100vh - 50px); }
+  .layout { flex-direction: column; height: auto; flex: 1; min-height: 0; }
 
   /* Filtros: overlay lateral */
   .col-filters {
@@ -523,7 +532,7 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
     max-height: none; height: auto;
   }
   .col-convs.mob-hidden { display: none; }
-  .conv-scroll { max-height: calc(100vh - 140px); }
+  .conv-scroll { max-height: none; }
 
   /* Conversation cards: touch-friendly */
   .conv-card { padding: 12px 14px; margin-bottom: 8px; }
