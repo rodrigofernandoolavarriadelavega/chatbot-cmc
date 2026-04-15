@@ -264,6 +264,11 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - [x] Upsell inteligente post-consulta: cross-sell contextual por especialidad al responder "Mejor" (traumato→kine, MG→chequeo, odonto→estética, kine→masoterapia, ORL↔fono)
 - [x] Alerta automática al doctor cuando paciente reporta sentirse "Peor" en seguimiento post-consulta
 - [x] Fix get_ultimo_seguimiento: se llama antes de save_fidelizacion_respuesta (antes devolvía None)
+- [x] Dashboard métricas fidelización: 3 tabs (métricas trends, campañas estacionales, referidos) en modal Fidelización
+- [x] Landing page SEO /landing: JSON-LD MedicalClinic, 16 especialidades, hero con CTA WhatsApp, Open Graph, responsive
+- [x] Programa de referidos: código CMC-XXXX auto-generado al registrarse, WAIT_REFERRAL_CODE, validación + tags
+- [x] Campañas estacionales: 8 campañas (invierno, vuelta a clases, corazón, diabetes, salud mental, dental, mujer), segmentación por tags, preview + envío manual desde panel
+- [x] Cron cumpleaños diario 08:00 CLT + win-back mensual primer lunes 10:00 CLT
 
 ## Dashboard admin
 - Ruta: `http://157.245.13.107:8001/admin?token=cmc_admin_2026`
@@ -271,7 +276,16 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - Muestra métricas, conversaciones activas y estado del sistema
 
 ## Sesión en curso
-**Fecha**: 2026-04-14
+**Fecha**: 2026-04-15
+
+**Hecho (sesión 2026-04-14/15 — sprint #15-19 completado)**:
+- **Dashboard métricas fidelización** (#15): modal con 3 tabs — Métricas (trends semanal con `get_fidelizacion_trends`), Campañas (8 campañas estacionales con preview de audiencia y envío manual), Referidos (stats de códigos CMC-XXXX). Endpoints: `/admin/api/fidelizacion-trends`, `/admin/api/campanas`, `/admin/api/campanas/enviar`, `/admin/api/campanas/preview`.
+- **Landing page SEO** (#17): `/landing` con hero + CTA WhatsApp (wa.me/56945886628), 16 tarjetas de especialidades con profesionales, sección "cómo funciona", ubicación con Google Maps embed, JSON-LD `MedicalClinic`, Open Graph, responsive. Template en `templates/landing.html`.
+- **Programa de referidos** (#18): generación automática de código `CMC-XXXX` al registrar paciente nuevo (tablas `referral_codes` + `referral_uses`). Opción "Tengo un código" en WAIT_REFERRAL → nuevo estado WAIT_REFERRAL_CODE. Validación, registro de uso, tags `referido:codigo`. Endpoints: `/admin/api/referral-code/{phone}`, `/admin/api/referral-code-stats`.
+- **Campañas estacionales** (#19): dict `CAMPANAS_ESTACIONALES` en `fidelizacion.py` con 8 campañas (invierno influenza, invierno respiratorio, vuelta a clases, mes del corazón, diabetes noviembre, salud mental, dental marzo, mujer octubre). Segmentación por `contact_tags` (dx:*, referido:*). Cooldown configurable. Tabla `campanas_envios` para tracking. Preview de audiencia sin enviar.
+- **Cron cumpleaños + win-back**: cumpleaños diario 08:00 CLT, win-back (>90 días sin visita) primer lunes de cada mes 10:00 CLT.
+- **Tareas pendientes en Notion**: página creada con 5 secciones (Corto Plazo, Sprint, Deuda Técnica, Normalización, Marketing).
+- **Tests**: 342/342 (90 harness + 200 stress + 52 normalizer). Commit `bc987f3` deployado.
 
 **Hecho (sesión 2026-04-14 — referral tracking + upsell inteligente)**:
 - **Referral tracking** ("¿Cómo nos conociste?"): nuevo estado `WAIT_REFERRAL` en el flujo de registro de paciente nuevo, después de email y antes de crear paciente. Lista interactiva con 5 opciones (Amigo/familiar, Google/internet, Redes sociales, Ya me atendí antes, Prefiero no decir). Matching inteligente de texto libre (detecta "vecino", "instagram", "google", etc.). Guarda como `contact_tag` (`referido:amigo`, `referido:google`, `referido:rrss`, `referido:recurrente`). Endpoint `GET /admin/api/referral-stats?dias=30` con desglose por fuente. Panel admin actualizado (ACTIVE_STATES, STATE_GROUPS, STATE_LABELS, checklist progreso).
@@ -514,11 +528,11 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 12. ❌ ~~Copagos Fonasa/Isapre al confirmar~~ — DESCARTADO: previsión del paciente solo se obtiene con huella biométrica presencial. Solo aplicaría a particulares (<20% de pacientes Fonasa).
 13. ✅ ~~Referral tracking~~ — DONE (WAIT_REFERRAL + tags referido:* + endpoint stats)
 14. ✅ ~~Upsell inteligente post-consulta~~ — DONE (cross-sell contextual + alerta peor)
-15. **Dashboard métricas fidelización** — tasa respuesta post-consulta, conversión reactivación, adherencia kine.
+15. ✅ ~~Dashboard métricas fidelización~~ — DONE (3 tabs: trends, campañas estacionales, referidos)
 16. **Migración número WhatsApp** — backup conversaciones + delete WA Business + registrar en Cloud API.
-17. **Sitio web SEO** — landing page agentecmc.cl + blogs por especialidad + botón "Agendar por WhatsApp".
-18. **Programa de referidos** — código único por paciente, descuento mutuo, tracking automático.
-19. **Campañas estacionales** — invierno, vuelta a clases, mes del corazón, segmentadas por tags.
+17. ✅ ~~Sitio web SEO~~ — DONE (landing page /landing con JSON-LD, 16 especialidades, CTA WhatsApp)
+18. ✅ ~~Programa de referidos~~ — DONE (CMC-XXXX auto, WAIT_REFERRAL_CODE, tags, stats)
+19. ✅ ~~Campañas estacionales~~ — DONE (8 campañas, segmentación por tags, preview + envío manual)
 
 ---
 
