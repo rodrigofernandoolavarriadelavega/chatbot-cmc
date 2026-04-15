@@ -1446,9 +1446,9 @@ def api_serve_file(file_id: int, _=Depends(require_admin)):
 # ── Media stats (image counter) ──────────────────────────────────────────────
 
 @router.get("/admin/api/media-stats")
-def api_media_stats(dias: int = Query(30, ge=1, le=365), _=Depends(require_admin)):
-    """Estadísticas de archivos media recibidos (imágenes, documentos, etc.)."""
-    return get_media_stats(dias)
+def api_media_stats(_=Depends(require_admin)):
+    """Estadísticas de archivos media recibidos — historial completo."""
+    return get_media_stats()
 
 
 # ── Demanda no disponible ────────────────────────────────────────────────────

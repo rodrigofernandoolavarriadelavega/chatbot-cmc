@@ -3747,7 +3747,7 @@ function _playUrgentBeep(){
 let mediaStatsCache = null;
 async function loadMediaStats(){
   try{
-    const r=await fetch(apiUrl("/admin/api/media-stats?dias=30"));
+    const r=await fetch(apiUrl("/admin/api/media-stats"));
     if(r.ok) mediaStatsCache=await r.json();
     const cnt=mediaStatsCache?.total_images||0;
     document.getElementById("s-imagenes").textContent=cnt;
@@ -3765,7 +3765,7 @@ function renderImagenes(){
   const label=document.getElementById("img-count-label");
   if(!d){lista.innerHTML='<div style="padding:18px;color:#94a3b8;text-align:center;">Cargando…</div>';return;}
   const tot=d.totals||{};
-  label.textContent=`· ${d.total_images} imágenes (30 días)`;
+  label.textContent=`· ${d.total_images} imágenes`;
   let resHtml='';
   for(const[tipo,cnt] of Object.entries(tot)){
     const icons={image:'📷',document:'📄',video:'🎥'};
@@ -3773,7 +3773,7 @@ function renderImagenes(){
   }
   resumen.innerHTML=resHtml;
   if(!d.recent_images||d.recent_images.length===0){
-    lista.innerHTML='<div style="padding:24px;color:#94a3b8;text-align:center;">Sin imágenes recibidas en los últimos 30 días.</div>';
+    lista.innerHTML='<div style="padding:24px;color:#94a3b8;text-align:center;">Sin imágenes recibidas aún.</div>';
     return;
   }
   let html='<table style="width:100%;border-collapse:collapse;font-size:12.5px;">';

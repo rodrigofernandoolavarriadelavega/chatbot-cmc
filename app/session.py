@@ -2064,36 +2064,32 @@ def get_patient_files(phone: str, limit: int = 50) -> list[dict]:
         return [dict(r) for r in rows]
 
 
-def get_media_stats(dias: int = 30) -> dict:
-    """Estadísticas de archivos media recibidos (imágenes, docs, etc.)."""
+def get_media_stats() -> dict:
+    """Estadísticas de archivos media recibidos (imágenes, docs, etc.) — todo el historial."""
     with _conn() as conn:
-        since = (datetime.now(timezone.utc) - timedelta(days=dias)).strftime("%Y-%m-%d")
-        # Total por tipo
         totals = conn.execute("""
             SELECT media_type, COUNT(*) as cnt
-            FROM patient_files WHERE created_at >= ?
+            FROM patient_files
             GROUP BY media_type
-        """, (since,)).fetchall()
-        # Detalle de imágenes por paciente
+        """).fetchall()
         images = conn.execute("""
             SELECT pf.phone, cp.nombre, COUNT(*) as cnt,
                    MAX(pf.created_at) as last_at
             FROM patient_files pf
             LEFT JOIN contact_profiles cp ON cp.phone = pf.phone
-            WHERE pf.media_type = 'image' AND pf.created_at >= ?
+            WHERE pf.media_type = 'image'
             GROUP BY pf.phone
             ORDER BY cnt DESC
-        """, (since,)).fetchall()
-        # Lista reciente de imágenes
+        """).fetchall()
         recent = conn.execute("""
             SELECT pf.id, pf.phone, cp.nombre, pf.filename,
                    pf.created_at
             FROM patient_files pf
             LEFT JOIN contact_profiles cp ON cp.phone = pf.phone
-            WHERE pf.media_type = 'image' AND pf.created_at >= ?
+            WHERE pf.media_type = 'image'
             ORDER BY pf.created_at DESC
-            LIMIT 50
-        """, (since,)).fetchall()
+            LIMIT 100
+        """).fetchall()
         return {
             "totals": {r["media_type"]: r["cnt"] for r in totals},
             "images_by_patient": [dict(r) for r in images],
