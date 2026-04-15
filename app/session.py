@@ -1089,6 +1089,200 @@ def get_metricas(dias: int = 30) -> dict:
         }
 
 
+def get_case_study_report(dias: int = 30) -> dict:
+    """Reporte consolidado de KPIs para caso de éxito / documentación."""
+    with _conn() as conn:
+        since = f"-{dias} days"
+
+        # ── Funnel de agendamiento ────────────────────────────────────────
+        def _count(ev):
+            return conn.execute(
+                "SELECT COUNT(*) FROM conversation_events "
+                "WHERE event=? AND ts >= datetime('now', ?)", (ev, since)
+            ).fetchone()[0]
+
+        conversaciones = conn.execute(
+            "SELECT COUNT(DISTINCT phone) FROM conversation_events "
+            "WHERE ts >= datetime('now', ?)", (since,)
+        ).fetchone()[0]
+
+        intent_agendar = _count("intent_agendar")
+        citas_creadas = _count("cita_creada")
+        citas_canceladas = _count("cita_cancelada")
+        citas_reagendadas = _count("cita_reagendada")
+        sin_disponibilidad = _count("sin_disponibilidad")
+        waitlist_inscritos = _count("waitlist_inscrito")
+        waitlist_notificados = _count("waitlist_notificado")
+
+        tasa_conversion = round(citas_creadas / intent_agendar * 100, 1) if intent_agendar else 0
+
+        # ── Confirmaciones pre-cita ───────────────────────────────────────
+        conf_rows = conn.execute("""
+            SELECT confirmation_status, COUNT(*) as cnt
+            FROM citas_bot
+            WHERE created_at >= datetime('now', ?) AND confirmation_status IS NOT NULL
+            GROUP BY confirmation_status
+        """, (since,)).fetchall()
+        confirmaciones = {r["confirmation_status"]: r["cnt"] for r in conf_rows}
+        total_con_reminder = conn.execute(
+            "SELECT COUNT(*) FROM citas_bot "
+            "WHERE created_at >= datetime('now', ?) AND reminder_sent=1",
+            (since,)
+        ).fetchone()[0]
+        tasa_confirmacion = round(
+            confirmaciones.get("confirmed", 0) / total_con_reminder * 100, 1
+        ) if total_con_reminder else 0
+
+        # ── No-shows evitados (cancelaciones + reagendamientos pre-cita) ──
+        noshows_evitados = confirmaciones.get("cancelar", 0) + confirmaciones.get("reagendar", 0)
+
+        # ── Registro pacientes nuevos ─────────────────────────────────────
+        reg_completos = _count("registro_completo")
+        reg_abandonos = _count("registro_abandono")
+        reg_total = reg_completos + reg_abandonos
+        tasa_registro = round(reg_completos / reg_total * 100, 1) if reg_total else 0
+
+        # ── Derivaciones a humano ─────────────────────────────────────────
+        derivaciones = _count("derivado_humano")
+        emergencias = _count("emergencia_detectada")
+        crisis = _count("crisis_salud_mental")
+
+        # ── Fidelización ──────────────────────────────────────────────────
+        fidel_rows = conn.execute("""
+            SELECT tipo, COUNT(*) as enviados,
+                   COUNT(respuesta) as respondidos
+            FROM fidelizacion_msgs
+            WHERE enviado_en >= datetime('now', ?)
+            GROUP BY tipo
+        """, (since,)).fetchall()
+        fidelizacion = {}
+        for r in fidel_rows:
+            env = r["enviados"]
+            resp = r["respondidos"]
+            fidelizacion[r["tipo"]] = {
+                "enviados": env, "respondidos": resp,
+                "tasa": round(resp / env * 100, 1) if env else 0
+            }
+
+        # Desglose postconsulta
+        pc_rows = conn.execute("""
+            SELECT respuesta, COUNT(*) as cnt FROM fidelizacion_msgs
+            WHERE tipo='postconsulta' AND respuesta IS NOT NULL
+            AND enviado_en >= datetime('now', ?)
+            GROUP BY respuesta
+        """, (since,)).fetchall()
+        postconsulta_desglose = {r["respuesta"]: r["cnt"] for r in pc_rows}
+
+        # ── Cross-sell / upsell ───────────────────────────────────────────
+        upsell_ofrecidos = _count("upsell_postconsulta_ofrecido")
+        upsell_aceptados = _count("upsell_postconsulta_acepto")
+        faq_agendar_acepto = _count("faq_agendar_acepto")
+        faq_agendar_rechazo = _count("faq_agendar_rechazo")
+
+        # ── Referral (cómo nos conocieron) ────────────────────────────────
+        ref_rows = conn.execute(
+            "SELECT tag, COUNT(*) as cnt FROM contact_tags "
+            "WHERE tag LIKE 'referido:%' AND ts >= datetime('now', ?) "
+            "GROUP BY tag ORDER BY cnt DESC", (since,)
+        ).fetchall()
+        referral = {r["tag"].replace("referido:", ""): r["cnt"] for r in ref_rows}
+
+        # ── Canales ───────────────────────────────────────────────────────
+        canal_rows = conn.execute("""
+            SELECT canal, COUNT(DISTINCT phone) as usuarios, COUNT(*) as mensajes
+            FROM messages
+            WHERE ts >= datetime('now', ?) AND direction='in'
+            GROUP BY canal
+        """, (since,)).fetchall()
+        canales = {r["canal"]: {"usuarios": r["usuarios"], "mensajes": r["mensajes"]}
+                   for r in canal_rows}
+
+        # ── Triage GES ────────────────────────────────────────────────────
+        triage_match = _count("triage_ges_match")
+        triage_nomatch = _count("triage_ges_nomatch")
+
+        # ── Horarios pico ─────────────────────────────────────────────────
+        hora_rows = conn.execute("""
+            SELECT CAST(strftime('%%H', ts) AS INTEGER) as hora,
+                   COUNT(*) as msgs
+            FROM messages
+            WHERE ts >= datetime('now', ?) AND direction='in'
+            GROUP BY hora ORDER BY msgs DESC LIMIT 5
+        """, (since,)).fetchall()
+        horas_pico = [{"hora": r["hora"], "mensajes": r["msgs"]} for r in hora_rows]
+
+        # ── Especialidades más solicitadas ────────────────────────────────
+        esp_rows = conn.execute("""
+            SELECT json_extract(meta, '$.especialidad') as esp, COUNT(*) as cnt
+            FROM conversation_events
+            WHERE event='cita_creada' AND ts >= datetime('now', ?)
+            AND json_extract(meta, '$.especialidad') IS NOT NULL
+            GROUP BY esp ORDER BY cnt DESC
+        """, (since,)).fetchall()
+        especialidades_top = [{"especialidad": r["esp"], "citas": r["cnt"]}
+                              for r in esp_rows]
+
+        return {
+            "periodo_dias": dias,
+            "resumen": {
+                "conversaciones_unicas": conversaciones,
+                "citas_agendadas": citas_creadas,
+                "citas_canceladas": citas_canceladas,
+                "citas_reagendadas": citas_reagendadas,
+                "tasa_conversion": f"{tasa_conversion}%",
+                "pacientes_nuevos_registrados": reg_completos,
+                "tasa_registro_completado": f"{tasa_registro}%",
+                "derivaciones_humano": derivaciones,
+                "emergencias_detectadas": emergencias,
+            },
+            "funnel_agendamiento": {
+                "intent_agendar": intent_agendar,
+                "citas_creadas": citas_creadas,
+                "sin_disponibilidad": sin_disponibilidad,
+                "waitlist_inscritos": waitlist_inscritos,
+                "waitlist_notificados": waitlist_notificados,
+                "tasa_conversion": f"{tasa_conversion}%",
+            },
+            "confirmacion_precita": {
+                "total_recordatorios_enviados": total_con_reminder,
+                "confirmados": confirmaciones.get("confirmed", 0),
+                "reagendaron": confirmaciones.get("reagendar", 0),
+                "cancelaron": confirmaciones.get("cancelar", 0),
+                "tasa_confirmacion": f"{tasa_confirmacion}%",
+                "noshows_evitados": noshows_evitados,
+            },
+            "fidelizacion": {
+                "por_campana": fidelizacion,
+                "postconsulta_desglose": postconsulta_desglose,
+            },
+            "crosssell": {
+                "upsell_ofrecidos": upsell_ofrecidos,
+                "upsell_aceptados": upsell_aceptados,
+                "tasa_upsell": f"{round(upsell_aceptados / upsell_ofrecidos * 100, 1) if upsell_ofrecidos else 0}%",
+                "faq_to_agendar_aceptados": faq_agendar_acepto,
+                "faq_to_agendar_rechazados": faq_agendar_rechazo,
+            },
+            "registro_pacientes": {
+                "completados": reg_completos,
+                "abandonados": reg_abandonos,
+                "tasa_completado": f"{tasa_registro}%",
+            },
+            "referral": referral,
+            "canales": canales,
+            "especialidades_top": especialidades_top,
+            "horas_pico": horas_pico,
+            "triage_ges": {
+                "match": triage_match,
+                "nomatch": triage_nomatch,
+                "cobertura": f"{round(triage_match / (triage_match + triage_nomatch) * 100, 1) if (triage_match + triage_nomatch) else 0}%",
+            },
+            "seguridad": {
+                "emergencias": emergencias,
+                "crisis_salud_mental": crisis,
+            },
+        }
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Caché de citas Medilink (módulo pacientes en control)
 # ─────────────────────────────────────────────────────────────────────────────
