@@ -711,8 +711,7 @@ function render(d) {
     `).join('');
   }
 
-  // ── MAPAS ──
-  initMaps();
+  // ── MAPAS ── (se cargan dinámicamente via loadMapData)
 }
 
 // ── DATOS GEOGRÁFICOS (dinámicos desde API) ──
@@ -896,8 +895,140 @@ function toggleDirLayer(name, btn) {
   btn.classList.add('active');
 }
 
+// ── MAP DATE FILTERS ──
+let mapPeriod = 'month';
+let mapDesde = null, mapHasta = null;
+let mapFechaMin = null, mapFechaMax = null;
+
+function initMapFilters() {
+  // Default: current month
+  const now = new Date();
+  mapHasta = now.toISOString().slice(0, 10);
+  const y = now.getFullYear(), m = now.getMonth();
+  mapDesde = new Date(y, m, 1).toISOString().slice(0, 10);
+}
+
+function setMapPeriod(period, btn) {
+  mapPeriod = period;
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth(), d = now.getDate();
+  const dow = now.getDay() || 7; // Mon=1
+
+  switch (period) {
+    case 'day':
+      mapDesde = mapHasta = now.toISOString().slice(0, 10);
+      break;
+    case 'week':
+      const mon = new Date(y, m, d - dow + 1);
+      mapDesde = mon.toISOString().slice(0, 10);
+      mapHasta = now.toISOString().slice(0, 10);
+      break;
+    case 'month':
+      mapDesde = new Date(y, m, 1).toISOString().slice(0, 10);
+      mapHasta = now.toISOString().slice(0, 10);
+      break;
+    case 'year':
+      mapDesde = y + '-01-01';
+      mapHasta = now.toISOString().slice(0, 10);
+      break;
+    case 'all':
+      mapDesde = mapFechaMin || '2026-01-01';
+      mapHasta = mapFechaMax || now.toISOString().slice(0, 10);
+      break;
+  }
+
+  // Update month selector to match
+  const sel = document.getElementById('map-month-select');
+  if (period === 'month') {
+    sel.value = mapDesde.slice(0, 7);
+  }
+
+  if (btn) {
+    btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  loadMapData();
+}
+
+function setMapMonth() {
+  const val = document.getElementById('map-month-select').value;
+  if (!val) return;
+  const [y, m] = val.split('-').map(Number);
+  const now = new Date();
+  mapDesde = val + '-01';
+  const lastDay = new Date(y, m, 0).getDate();
+  const endDate = new Date(y, m - 1, lastDay);
+  mapHasta = endDate > now ? now.toISOString().slice(0, 10) : val + '-' + String(lastDay).padStart(2, '0');
+  mapPeriod = 'month';
+
+  // Highlight month button
+  document.querySelectorAll('#map-period-btns button').forEach(b => {
+    b.classList.toggle('active', b.textContent === 'Mes');
+  });
+  loadMapData();
+}
+
+function populateMonthSelect(fechaMin, fechaMax) {
+  const sel = document.getElementById('map-month-select');
+  sel.innerHTML = '';
+  const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const [yMin, mMin] = fechaMin.split('-').map(Number);
+  const [yMax, mMax] = fechaMax.split('-').map(Number);
+  const now = new Date();
+  const curMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+
+  for (let y = yMax; y >= yMin; y--) {
+    const mStart = (y === yMax) ? mMax : 12;
+    const mEnd = (y === yMin) ? mMin : 1;
+    for (let m = mStart; m >= mEnd; m--) {
+      const val = y + '-' + String(m).padStart(2, '0');
+      const opt = document.createElement('option');
+      opt.value = val;
+      opt.textContent = meses[m - 1] + ' ' + y;
+      if (val === curMonth) opt.selected = true;
+      sel.appendChild(opt);
+    }
+  }
+}
+
+async function loadMapData() {
+  const url = apiUrl('/admin/api/map-data?desde=' + mapDesde + '&hasta=' + mapHasta);
+  try {
+    const res = await fetch(url, { credentials: 'include' });
+    if (!res.ok) return;
+    const md = await res.json();
+
+    // Store date range
+    if (!mapFechaMin) {
+      mapFechaMin = md.fecha_min;
+      mapFechaMax = md.fecha_max;
+      populateMonthSelect(md.fecha_min, md.fecha_max);
+    }
+
+    // Update data
+    comunasData = md.comunas || [];
+    localidadesData = md.localidades || [];
+    ptsData = md.direcciones || [];
+
+    // Update KPI cards
+    document.getElementById('kpi-dirs').textContent = ptsData.length;
+    document.getElementById('kpi-pacs').textContent = md.pacientes_unicos;
+    document.getElementById('kpi-citas-map').textContent = md.total_citas;
+
+    // Update range label
+    const lbl = document.getElementById('map-range-label');
+    lbl.textContent = md.filtro.desde + ' → ' + md.filtro.hasta + ' · ' + md.total_citas + ' citas · ' + md.pacientes_unicos + ' pacientes';
+
+    initMaps();
+  } catch (e) {
+    console.error('Error loading map data:', e);
+  }
+}
+
 // Init
+initMapFilters();
 loadData();
+loadMapData();
 </script>
 </body>
 </html>
