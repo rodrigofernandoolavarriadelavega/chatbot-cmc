@@ -127,6 +127,13 @@ body {
 .staff-item .staff-phone { font-size: 10px; color: var(--text-3); }
 .staff-item .staff-online { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 .staff-item .staff-online.active { background: var(--green); }
+.slot-pick {
+  display: block; width: 100%; text-align: left; padding: 7px 10px; margin-bottom: 3px;
+  border: 1px solid var(--border); border-radius: 7px; background: #f8fafc;
+  cursor: pointer; font-size: 11px; font-family: inherit; color: var(--text);
+  transition: all .15s;
+}
+.slot-pick:hover { background: var(--green-soft); border-color: #86efac; }
 .state-btn {
   display: flex; align-items: center; gap: 9px; width: 100%;
   padding: 9px 10px; border-radius: 8px; border: none;
@@ -502,6 +509,7 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
   <div class="topbar-actions">
     <button id="btn-notif-mute" onclick="toggleNotifMute()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:14px;color:var(--text-2);" title="Activar/silenciar notificaciones">🔔</button>
     <button class="btn btn-primary" onclick="abrirModalAgendar()" style="font-size:11px;padding:5px 10px;border-radius:8px;">+ Cita</button>
+    <button class="btn" onclick="abrirTimeline()" style="font-size:11px;padding:5px 10px;border-radius:8px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">📅 Agenda</button>
     <button class="btn" onclick="abrirBusquedaGlobal()" style="font-size:11px;padding:5px 10px;border-radius:8px;background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;">🔍<kbd>Ctrl+K</kbd></button>
     <button class="btn" onclick="abrirModalAnular()" style="font-size:11px;padding:5px 10px;border-radius:8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;">✕ Anular</button>
     <div class="dropdown" id="dropdown-seguimiento">
@@ -702,6 +710,22 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
   </div>
 </div>
 
+<!-- MODAL AGENDA DEL DÍA (TIMELINE) -->
+<div id="modal-timeline" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:flex-start;justify-content:center;padding-top:30px;padding-bottom:30px;overflow-y:auto;">
+  <div style="background:#fff;border-radius:14px;width:920px;max-width:98vw;box-shadow:0 20px 60px rgba(0,0,0,.2);position:relative;margin:auto;">
+    <div style="padding:18px 22px 14px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span style="font-size:18px;">📅</span>
+      <span style="font-size:15px;font-weight:700;color:#1172AB;">Agenda del Día</span>
+      <input type="date" id="timeline-fecha" onchange="cargarTimeline(this.value)" style="border:1px solid #e2e8f0;border-radius:8px;padding:5px 10px;font-size:13px;color:#334155;">
+      <span id="timeline-count" style="font-size:12px;color:#64748b;"></span>
+      <button onclick="document.getElementById('modal-timeline').style.display='none'" style="margin-left:auto;background:none;border:none;font-size:20px;cursor:pointer;color:#94a3b8;">✕</button>
+    </div>
+    <div id="timeline-body" style="padding:18px 22px 22px;max-height:70vh;overflow-y:auto;">
+      <div style="text-align:center;padding:30px;color:#94a3b8;">Cargando...</div>
+    </div>
+  </div>
+</div>
+
 <!-- BANNER DE ALERTAS -->
 <div id="alert-bar" style="display:none; background:#fef2f2; border-bottom:1px solid #fca5a5; padding:7px 20px; display:flex; align-items:center; gap:16px; font-size:12px; font-weight:500; color:#991b1b;">
   <span style="font-size:14px;">🚨</span>
@@ -859,9 +883,14 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
         <div class="ctx-sec">
           <div class="ctx-sec-title">Acciones</div>
           <div class="ctx-actions">
+            <button class="btn btn-primary btn-full" id="ctx-btn-agendar-por" style="display:none;" onclick="abrirAgendarPorElla()">📋 Agendar por el paciente</button>
             <button class="btn btn-danger btn-full" id="ctx-btn-takeover" onclick="doTakeover()">🎯 Tomar control</button>
             <button class="btn btn-outline btn-full" id="ctx-btn-resume" style="display:none;" onclick="doResume()">🤖 Devolver al bot</button>
           </div>
+        </div>
+        <div class="ctx-sec" id="ctx-slots-section" style="display:none;">
+          <div class="ctx-sec-title">Horarios disponibles</div>
+          <div id="ctx-slots-list"></div>
         </div>
         <div class="ctx-sec">
           <div class="ctx-sec-title">Etiquetas</div>
@@ -1272,6 +1301,9 @@ function updateContextPanel(conv) {
   if(fd.especialidad){ew.style.display="flex";document.getElementById("ctx-especialidad").textContent=espLabel(fd.especialidad);}else ew.style.display="none";
   if(fd.profesional){pw.style.display="flex";document.getElementById("ctx-profesional").textContent=fd.profesional;}else pw.style.display="none";
   if(fd.fecha_display&&fd.hora_inicio){sw.style.display="flex";document.getElementById("ctx-horario").textContent=fd.fecha_display+" · "+fd.hora_inicio.substring(0,5);}else sw.style.display="none";
+  // "Agendar por ella" button — visible only when patient is in WAIT_SLOT
+  document.getElementById("ctx-btn-agendar-por").style.display=conv.state==="WAIT_SLOT"?"block":"none";
+  document.getElementById("ctx-slots-section").style.display="none"; // reset on conv switch
   // Checklist de progreso
   const agendarStates = ["WAIT_ESPECIALIDAD","WAIT_SLOT","WAIT_MODALIDAD","WAIT_RUT_AGENDAR",
     "WAIT_NOMBRE_NUEVO","WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL","WAIT_REFERRAL",
@@ -1483,19 +1515,23 @@ async function loadConversations(){
     const r=await fetch(apiUrl(`/admin/api/conversations`));
     const newConvs=await r.json();
     // Detect new incoming messages for notification
-    let hasNew=false; let newName="";
+    let hasNew=false; let newName=""; let isUrgent=false;
     for(const c of newConvs){
       if(c.last_dir==="in"&&c.last_ts){
         const prev=_prevIncomingTs[c.phone];
-        if(prev&&c.last_ts>prev){hasNew=true;newName=c.nombre||c.phone;}
+        if(prev&&c.last_ts>prev){
+          hasNew=true;newName=c.nombre||c.phone;
+          if(c.state==="HUMAN_TAKEOVER"||c.is_staff) isUrgent=true;
+        }
         _prevIncomingTs[c.phone]=c.last_ts;
       }
     }
     convs=newConvs;
     if(hasNew&&!_notifMuted){
-      _playNotifBeep();
+      if(isUrgent) _playUrgentBeep(); else _playNotifBeep();
       if("Notification" in window && Notification.permission==="granted"){
-        new Notification("Nuevo mensaje",{body:newName,icon:"/static/logo.png",tag:"cmc-new-msg"});
+        const title=isUrgent?"⚠️ Mensaje urgente":"Nuevo mensaje";
+        new Notification(title,{body:newName,icon:"/static/logo.png",tag:"cmc-new-msg"});
       }
     }
     renderStateButtons(); renderEspButtons(); renderStaffList(); renderList(); updateStats();
@@ -1997,17 +2033,38 @@ function mostrarFormNuevoPaciente(){
   const info=document.getElementById('m-paciente-info');
   info.innerHTML=`
     <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
-      <input id="m-nombre" placeholder="Nombre" style="padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;">
-      <input id="m-apellidos" placeholder="Apellidos" style="padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;">
-      <button class="btn btn-primary" onclick="registrarNuevoPaciente()" style="padding:7px;border-radius:6px;font-size:12px;">Registrar</button>
+      <div style="display:flex;gap:6px;">
+        <input id="m-nombre" placeholder="Nombre *" style="flex:1;padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;">
+        <input id="m-apellidos" placeholder="Apellidos *" style="flex:1;padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;">
+      </div>
+      <div style="display:flex;gap:6px;">
+        <input id="m-celular" placeholder="Celular (56912345678)" style="flex:1;padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;">
+        <input id="m-email" placeholder="Email (opcional)" type="email" style="flex:1;padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;">
+      </div>
+      <div style="display:flex;gap:6px;">
+        <input id="m-fecha-nac" placeholder="Fecha nac. (DD/MM/YYYY)" style="flex:1;padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;">
+        <select id="m-sexo" style="flex:1;padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;color:#475569;">
+          <option value="">Sexo (opcional)</option>
+          <option value="masculino">Masculino</option>
+          <option value="femenino">Femenino</option>
+        </select>
+      </div>
+      <input id="m-comuna" placeholder="Comuna (opcional)" style="padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;">
+      <button class="btn btn-primary" onclick="registrarNuevoPaciente()" style="padding:7px;border-radius:6px;font-size:12px;">Registrar en Medilink</button>
+      <div id="m-registro-error" style="font-size:11px;color:#dc2626;display:none;"></div>
     </div>`;
 }
 
 async function registrarNuevoPaciente(){
   const nombre=document.getElementById('m-nombre').value.trim();
   const apellidos=document.getElementById('m-apellidos').value.trim();
-  if(!nombre||!apellidos) return;
-  pacienteActual={...pacienteActual, nombre, apellidos};
+  if(!nombre||!apellidos){document.getElementById('m-registro-error').textContent="Nombre y apellidos son obligatorios";document.getElementById('m-registro-error').style.display="block";return;}
+  const celular=document.getElementById('m-celular')?.value.trim()||"";
+  const email=document.getElementById('m-email')?.value.trim()||"";
+  const fechaNac=document.getElementById('m-fecha-nac')?.value.trim()||"";
+  const sexo=document.getElementById('m-sexo')?.value||"";
+  const comuna=document.getElementById('m-comuna')?.value.trim()||"";
+  pacienteActual={...pacienteActual, nombre, apellidos, celular, email, fecha_nacimiento:fechaNac, sexo, comuna};
   document.getElementById('m-paciente-info').innerHTML=`<span style="color:#15803d;font-weight:600;">✅ ${nombre} ${apellidos} (nuevo)</span>`;
 }
 
@@ -2060,6 +2117,11 @@ async function confirmarCita(){
     hora_inicio: slotSeleccionado.hora_inicio,
     hora_fin: slotSeleccionado.hora_fin,
     duracion,
+    celular: pacienteActual.celular||'',
+    email: pacienteActual.email||'',
+    fecha_nacimiento: pacienteActual.fecha_nacimiento||'',
+    sexo: pacienteActual.sexo||'',
+    comuna: pacienteActual.comuna||'',
   };
   const r=await fetch(apiUrl(`/admin/api/agendar`),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   if(r.ok){
@@ -2689,6 +2751,130 @@ function _playNotifBeep(){
     osc.frequency.value=880;osc.type="sine";
     gain.gain.value=0.15;
     osc.start();osc.stop(ctx.currentTime+0.15);
+  }catch(e){}
+}
+// ── AGENDAR POR ELLA ─────────────────────────────────────────────────────────
+async function abrirAgendarPorElla(){
+  if(!selectedPhone) return;
+  const conv=convs.find(c=>c.phone===selectedPhone);
+  if(!conv||conv.state!=="WAIT_SLOT"){alert("El paciente no está eligiendo horario.");return;}
+  const sec=document.getElementById("ctx-slots-section");
+  const list=document.getElementById("ctx-slots-list");
+  sec.style.display="block";
+  list.innerHTML='<div style="font-size:11px;color:#94a3b8;padding:6px;">Cargando slots...</div>';
+  try{
+    const r=await fetch(apiUrl(`/admin/api/flow-slots/${encodeURIComponent(selectedPhone)}`));
+    if(!r.ok){const d=await r.json().catch(()=>({}));list.innerHTML=`<div style="font-size:11px;color:#dc2626;padding:6px;">${d.detail||"Error"}</div>`;return;}
+    const d=await r.json();
+    const slots=d.todos_slots||d.slots||[];
+    if(!slots.length){list.innerHTML='<div style="font-size:11px;color:#94a3b8;padding:6px;">Sin slots disponibles</div>';return;}
+    list.innerHTML=`<div style="font-size:10px;color:#64748b;margin-bottom:4px;">🩺 ${espLabel(d.especialidad)} — ${slots.length} horarios</div>`+
+      slots.map((s,i)=>`<button class="slot-pick" onclick="seleccionarSlotPorElla(${i})">
+        <strong>${(s.hora_inicio||"").slice(0,5)}</strong> — ${(s.profesional||"Prof.")} · ${s.fecha_display||""}
+      </button>`).join("");
+  }catch(e){list.innerHTML='<div style="font-size:11px;color:#dc2626;padding:6px;">Error de red</div>';}
+}
+async function seleccionarSlotPorElla(idx){
+  if(!selectedPhone) return;
+  if(!confirm("¿Seleccionar este horario para el paciente?")) return;
+  const list=document.getElementById("ctx-slots-list");
+  list.innerHTML='<div style="font-size:11px;color:#94a3b8;padding:6px;">Agendando...</div>';
+  try{
+    const r=await fetch(apiUrl(`/admin/api/select-slot/${encodeURIComponent(selectedPhone)}`),
+      {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({slot_index:idx})});
+    if(r.ok){
+      const d=await r.json();
+      list.innerHTML=`<div style="font-size:11px;color:#15803d;padding:6px;font-weight:600;">✅ Slot seleccionado — estado: ${d.new_state}</div>`;
+      await loadConversations();
+    } else {
+      const d=await r.json().catch(()=>({}));
+      list.innerHTML=`<div style="font-size:11px;color:#dc2626;padding:6px;">${d.detail||"Error"}</div>`;
+    }
+  }catch(e){list.innerHTML='<div style="font-size:11px;color:#dc2626;padding:6px;">Error de red</div>';}
+}
+
+// ── TIMELINE / AGENDA DEL DÍA ────────────────────────────────────────────────
+function abrirTimeline(){
+  document.getElementById("modal-timeline").style.display="flex";
+  const hoy=new Date();
+  const fecha=hoy.toLocaleDateString("en-CA"); // YYYY-MM-DD
+  document.getElementById("timeline-fecha").value=fecha;
+  cargarTimeline(fecha);
+}
+async function cargarTimeline(fecha){
+  const body=document.getElementById("timeline-body");
+  const countEl=document.getElementById("timeline-count");
+  body.innerHTML='<div style="text-align:center;padding:30px;color:#94a3b8;">Cargando agenda...</div>';
+  countEl.textContent="";
+  try{
+    const r=await fetch(apiUrl(`/admin/api/agenda-dia?fecha=${fecha}`));
+    const d=await r.json();
+    const profs=d.profesionales||[];
+    const totalCitas=profs.reduce((s,p)=>s+p.citas.length,0);
+    countEl.textContent=`${profs.length} profesionales · ${totalCitas} citas`;
+    if(!profs.length){body.innerHTML='<div style="text-align:center;padding:40px;color:#94a3b8;font-size:13px;">Sin citas para esta fecha.</div>';return;}
+    // Hours range: 7:00 - 21:00
+    const hStart=7, hEnd=21;
+    let html='<div style="display:flex;flex-direction:column;gap:12px;">';
+    for(const p of profs){
+      html+=`<div style="border:1px solid #e2e8f0;border-radius:10px;padding:12px;background:#fafbfc;">`;
+      html+=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">`;
+      html+=`<span style="font-size:13px;font-weight:700;color:#1e293b;">${p.nombre}</span>`;
+      html+=`<span style="font-size:11px;color:#64748b;background:#f1f5f9;padding:2px 8px;border-radius:4px;">${p.especialidad}</span>`;
+      html+=`<span style="font-size:11px;color:#94a3b8;margin-left:auto;">${p.citas.length} cita${p.citas.length!==1?"s":""}</span>`;
+      html+=`</div>`;
+      // Timeline bar
+      const totalMin=(hEnd-hStart)*60;
+      html+=`<div style="position:relative;height:32px;background:#f1f5f9;border-radius:6px;overflow:hidden;border:1px solid #e2e8f0;">`;
+      // Hour marks
+      for(let h=hStart;h<=hEnd;h++){
+        const pct=((h-hStart)*60/totalMin)*100;
+        html+=`<div style="position:absolute;left:${pct}%;top:0;bottom:0;width:1px;background:#e2e8f0;"></div>`;
+        if(h<hEnd) html+=`<div style="position:absolute;left:${pct+0.5}%;top:1px;font-size:8px;color:#94a3b8;">${h}</div>`;
+      }
+      // Appointments
+      for(const c of p.citas){
+        const [ch,cm]=(c.hora||"08:00").split(":").map(Number);
+        const [fh,fm]=(c.hora_fin||"08:30").split(":").map(Number);
+        const startMin=(ch-hStart)*60+cm;
+        const endMin=(fh-hStart)*60+fm;
+        const left=(startMin/totalMin)*100;
+        const width=Math.max(((endMin-startMin)/totalMin)*100, 1.5);
+        const col=c.estado==="Confirmada"?"#10b981":"#3b82f6";
+        const nombre=(c.paciente||"").split(" ").slice(0,2).join(" ");
+        html+=`<div title="${c.hora} - ${c.hora_fin} · ${c.paciente||'—'}${c.rut?' · RUT '+c.rut:''}" style="position:absolute;left:${left}%;width:${width}%;top:4px;bottom:4px;background:${col};border-radius:4px;overflow:hidden;padding:0 4px;display:flex;align-items:center;">`;
+        html+=`<span style="font-size:9px;color:#fff;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.hora} ${nombre}</span>`;
+        html+=`</div>`;
+      }
+      html+=`</div>`;
+      // Cita list below bar
+      html+=`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">`;
+      for(const c of p.citas){
+        const nombre=(c.paciente||"Sin nombre").replace(/</g,"&lt;");
+        const badgeCol=c.estado==="Confirmada"?"#dcfce7;color:#15803d":"#dbeafe;color:#1d4ed8";
+        html+=`<span style="font-size:10px;padding:2px 7px;border-radius:5px;background:${badgeCol};font-weight:600;" title="RUT: ${c.rut||'—'}">${c.hora} ${nombre}</span>`;
+      }
+      html+=`</div></div>`;
+    }
+    html+=`</div>`;
+    body.innerHTML=html;
+  }catch(e){body.innerHTML='<div style="text-align:center;padding:30px;color:#dc2626;">Error al cargar agenda</div>';console.error(e);}
+}
+
+function _playUrgentBeep(){
+  try{
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const gain=ctx.createGain();
+    gain.connect(ctx.destination);gain.gain.value=0.2;
+    // Double beep: high-low-high for urgency
+    [0, 0.2, 0.4].forEach((t,i)=>{
+      const osc=ctx.createOscillator();
+      osc.connect(gain);
+      osc.frequency.value=i%2===0?1046:880; // C6 / A5
+      osc.type="sine";
+      osc.start(ctx.currentTime+t);
+      osc.stop(ctx.currentTime+t+0.12);
+    });
   }catch(e){}
 }
 </script>

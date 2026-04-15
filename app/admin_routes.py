@@ -475,7 +475,12 @@ async def admin_agendar(request: Request, _: str = Depends(require_admin)):
     # Buscar o crear paciente
     paciente = await buscar_paciente(rut)
     if not paciente:
-        paciente = await crear_paciente(rut, nombre, apellidos)
+        extra = {}
+        for k in ("celular", "email", "fecha_nacimiento", "sexo", "comuna"):
+            v = body.get(k, "").strip() if isinstance(body.get(k), str) else ""
+            if v:
+                extra[k] = v
+        paciente = await crear_paciente(rut, nombre, apellidos, **extra)
         if not paciente:
             raise HTTPException(status_code=400, detail="No se pudo crear el paciente")
 
