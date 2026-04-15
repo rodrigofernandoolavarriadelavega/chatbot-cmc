@@ -159,10 +159,10 @@ async def lifespan(app: FastAPI):
         id="crosssell_kine",
         replace_existing=True,
     )
-    # Cumpleaños: diario a las 08:00 CLT
+    # Cumpleaños: diario a las 10:00 CLT
     scheduler.add_job(
         _job_cumpleanos,
-        CronTrigger(hour=8, minute=0, timezone=_CLT),
+        CronTrigger(hour=10, minute=0, timezone=_CLT),
         id="cumpleanos_diario",
         replace_existing=True,
     )
@@ -221,7 +221,7 @@ async def lifespan(app: FastAPI):
     )
     scheduler.start()
     log.info(
-        "Scheduler iniciado — cumpleaños 08:00 · recordatorios 09:00 · recordatorios 2h cada 15min · "
+        "Scheduler iniciado — recordatorios 09:00 · recordatorios 2h cada 15min · cumpleaños 10:00 · "
         "post-consulta 10:00 · reactivación lun 10:30 · adherencia kine 11:00 · "
         "control 11:30 · cross-sell kine mié 10:30 · winback 1er lun mes 10:00 · sync caché 23:50 · "
         "watchdog medilink 1min · doctor alerts cada 5min + reportes 09/12/16/20"
