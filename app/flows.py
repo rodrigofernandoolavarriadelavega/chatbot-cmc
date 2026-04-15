@@ -279,6 +279,58 @@ CROSS_REFERENCE: dict[str, str] = {
         "Muchas atenciones de fonoaudiología se complementan con ORL. "
         "Si te interesa, escribe *menu* y agenda con él 😊"
     ),
+    "Odontología General": (
+        "\n\n✨ *¿Sabías que hacemos Blanqueamiento Dental?*\n"
+        "Dra. Javiera Burgos y Dr. Carlos Jiménez realizan:\n"
+        "• Blanqueamiento dental ($120.000)\n"
+        "• Carillas de resina (desde $50.000)\n\n"
+        "Aprovecha tu visita y mejora tu sonrisa. "
+        "Escribe *menu* para agendar 😊"
+    ),
+    "Ortodoncia": (
+        "\n\n✨ *¿Sabías que tenemos Estética Facial?*\n"
+        "Dra. Valentina Fuentealba atiende en el CMC:\n"
+        "• Armonización facial (eval $15.000)\n"
+        "• Hilos tensores ($129.990)\n"
+        "• Bioestimuladores ($450.000)\n"
+        "• Peeling químico ($50.000)\n\n"
+        "Complementa tu nueva sonrisa con estética facial. "
+        "Escribe *menu* para agendar 😊"
+    ),
+    "Endodoncia": (
+        "\n\n💡 *Después de una endodoncia se recomienda proteger el diente*\n"
+        "Consulta con nuestros odontólogos sobre coronas y restauraciones "
+        "para que tu diente quede fuerte y estético.\n\n"
+        "Escribe *menu* para agendar un control 😊"
+    ),
+    "Implantología": (
+        "\n\n✨ *¿Sabías que tenemos Estética Facial?*\n"
+        "Complementa tu implante con una sonrisa completa. "
+        "Dra. Valentina Fuentealba realiza blanqueamiento, "
+        "armonización facial y más.\n\n"
+        "Escribe *menu* para agendar 😊"
+    ),
+    "Ginecología": (
+        "\n\n💡 *¿Sabías que tenemos Matrona?*\n"
+        "Sarai Gómez atiende en el CMC y realiza:\n"
+        "• Control ginecológico\n"
+        "• PAP\n"
+        "• Ecografía ginecológica\n"
+        "• Control prenatal\n"
+        "• Planificación familiar\n\n"
+        "Complementa tu atención ginecológica. "
+        "Escribe *menu* para agendar con ella 😊"
+    ),
+    "Matrona": (
+        "\n\n💡 *¿Sabías que tenemos Ginecólogo?*\n"
+        "Dr. Tirso Rejón atiende en el CMC y puede ayudarte con:\n"
+        "• Evaluación ginecológica especializada\n"
+        "• Ecografía obstétrica y ginecológica\n"
+        "• Patología cervical\n"
+        "• Control de embarazo de alto riesgo\n\n"
+        "Si necesitas atención más especializada, "
+        "escribe *menu* para agendar con él 😊"
+    ),
 }
 
 # Cross-sell inteligente post-consulta: cuando el paciente responde "Mejor",
@@ -319,6 +371,36 @@ UPSELL_POSTCONSULTA: dict[str, tuple[str, str]] = {
         "puede complementar tu atención 👂\n\n"
         "¿Te interesa agendar?",
         "otorrinolaringología",
+    ),
+    "ortodoncia": (
+        "Ahora que tu sonrisa está mejor, ¿te gustaría complementarla con estética facial? ✨\n"
+        "Tenemos armonización facial, hilos tensores, peeling y más.\n\n"
+        "¿Te interesa agendar una evaluación?",
+        "estética facial",
+    ),
+    "endodoncia": (
+        "Después de una endodoncia es importante proteger el diente 🦷\n"
+        "¿Te gustaría agendar un control para evaluar si necesitas corona?\n\n"
+        "¿Te agendo?",
+        "odontología general",
+    ),
+    "implantología": (
+        "Ahora que tienes tu implante, ¿qué tal mejorar el resto de tu sonrisa? ✨\n"
+        "Tenemos blanqueamiento dental y estética facial.\n\n"
+        "¿Te interesa?",
+        "odontología general",
+    ),
+    "ginecología": (
+        "¿Sabías que nuestra matrona Sarai Gómez complementa la atención ginecológica? 👩‍⚕️\n"
+        "Realiza controles, PAP, ecografías y más.\n\n"
+        "¿Te gustaría agendar con ella?",
+        "matrona",
+    ),
+    "matrona": (
+        "Si necesitas una evaluación más especializada, nuestro ginecólogo "
+        "Dr. Tirso Rejón puede ayudarte 🩺\n\n"
+        "¿Te interesa agendar?",
+        "ginecología",
     ),
 }
 
