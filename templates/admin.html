@@ -453,44 +453,57 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
 
   /* ── TOPBAR ── */
   .topbar {
-    height: auto; min-height: 44px; padding: 6px 10px; gap: 4px;
-    flex-wrap: wrap; align-items: center;
+    height: auto; padding: 0; gap: 0;
+    display: flex; flex-wrap: wrap; align-items: center;
   }
   .brand-text p { display: none; }
-  .mobile-hamburger { display: block; order: 1; }
+
+  /* Row 1: hamburger (left) + info toggle (right) */
+  .mobile-hamburger { display: block; order: 1; padding: 10px 12px; }
   .mobile-ctx-toggle { display: block; }
   .mobile-pills-toggle {
-    display: inline-flex; background: none; border: 1px solid var(--border);
+    display: inline-flex; order: 2;
+    margin-left: auto; margin-right: 10px; margin-top: 8px; margin-bottom: 8px;
+    background: none; border: 1px solid var(--border);
     border-radius: 6px; font-size: 11px; padding: 4px 10px; cursor: pointer;
-    color: var(--text-2); order: 2; margin-left: auto;
+    color: var(--text-2);
   }
-  /* Pills: hidden by default, expand below */
+
+  /* Row 2: Action buttons — icon-only toolbar */
+  .topbar-actions {
+    display: flex !important; flex-wrap: nowrap;
+    align-items: center; justify-content: space-evenly;
+    order: 10; width: 100%;
+    padding: 6px 2px; border-top: 1px solid var(--border);
+    background: var(--surface); gap: 2px;
+  }
+  .topbar-actions .btn {
+    padding: 8px 10px !important; font-size: 16px !important;
+    white-space: nowrap; border-radius: 8px !important;
+    flex: 0 0 auto; line-height: 1;
+  }
+  .btn-label { display: none !important; }
+  #btn-notif-mute { padding: 8px 10px !important; font-size: 16px !important; border-radius: 8px !important; }
+  .topbar-actions .dropdown { flex: 0 0 auto; }
+  .topbar-spacer { display: none; }
+
+  /* Row 3: Pills (hidden by default, toggled) */
   .topbar-pills {
     display: none !important; order: 20; width: 100%;
     gap: 5px; flex-wrap: wrap;
-    padding: 8px 0 4px; border-top: 1px solid var(--border); margin: 0;
+    padding: 8px 10px; border-top: 1px solid var(--border); margin: 0;
   }
   .topbar-pills.show { display: flex !important; }
   .pill { font-size: 10px; padding: 3px 7px; }
-  /* Spacer hidden on mobile */
-  .topbar-spacer { display: none; }
-  /* Actions: simple wrap — each button on its own space */
-  .topbar-actions {
-    display: flex !important; flex-wrap: wrap; gap: 5px; align-items: center;
-    order: 10; width: 100%;
-    padding: 6px 0 2px; border-top: 1px solid var(--border);
-  }
-  .topbar-actions .btn { font-size: 11px; padding: 8px 12px; white-space: nowrap; border-radius: 8px; }
-  .topbar-actions kbd { display: none; }
-  #btn-notif-mute { padding: 6px 10px !important; font-size: 14px !important; border-radius: 8px !important; }
-  /* Alert bar below topbar, not overlapping */
-  #alert-bar { position: relative; z-index: 9; }
-  /* Alert bar */
+
+  /* Row 4: Alert bar */
   #alert-bar {
-    flex-wrap: wrap !important; padding: 8px 12px !important;
-    font-size: 11px !important; gap: 6px !important;
+    order: 25; width: 100%;
+    padding: 6px 10px !important; font-size: 11px !important;
+    gap: 6px !important; border-radius: 0 !important;
+    border-left: none !important; border-right: none !important;
+    border-top: 1px solid #fca5a5 !important;
   }
-  #alert-bar > span:last-child { width: 100%; text-align: left; margin-left: 0 !important; }
 
   /* ── LAYOUT → columna única ── */
   .layout { flex-direction: column; height: auto; min-height: calc(100vh - 50px); }
@@ -669,9 +682,10 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
 
 /* ── SMALL PHONES (<400px) ── */
 @media (max-width: 400px) {
-  .topbar { padding: 6px 8px; gap: 4px; }
-  .pill { font-size: 10px; padding: 2px 6px; }
-  .topbar-actions .btn { font-size: 10px; padding: 6px 8px; }
+  .topbar { padding: 0; gap: 0; }
+  .pill { font-size: 9px; padding: 2px 5px; }
+  .topbar-actions .btn { padding: 6px 8px !important; font-size: 14px !important; }
+  #btn-notif-mute { padding: 6px 8px !important; font-size: 14px !important; }
   .conv-card { padding: 10px 12px; }
   .cname { font-size: 13px; }
   .msg-bubble { max-width: 92%; padding: 8px 12px; }
@@ -739,18 +753,18 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
   <div class="topbar-spacer" style="margin-left:auto;"></div>
   <div class="topbar-actions">
     <button id="btn-notif-mute" onclick="toggleNotifMute()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:14px;color:var(--text-2);" title="Activar/silenciar notificaciones">🔔</button>
-    <button class="btn btn-primary" onclick="abrirModalAgendar()" style="font-size:11px;padding:5px 10px;border-radius:8px;">+ Cita</button>
-    <button class="btn" onclick="abrirTimeline()" style="font-size:11px;padding:5px 10px;border-radius:8px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">📅 Agenda</button>
-    <button class="btn" onclick="abrirBusquedaGlobal()" style="font-size:11px;padding:5px 10px;border-radius:8px;background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;">🔍<kbd>Ctrl+K</kbd></button>
-    <button class="btn" onclick="abrirModalAnular()" style="font-size:11px;padding:5px 10px;border-radius:8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;">✕ Anular</button>
+    <button class="btn btn-primary" onclick="abrirModalAgendar()" style="font-size:11px;padding:5px 10px;border-radius:8px;">+<span class="btn-label"> Cita</span></button>
+    <button class="btn" onclick="abrirTimeline()" style="font-size:11px;padding:5px 10px;border-radius:8px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">📅<span class="btn-label"> Agenda</span></button>
+    <button class="btn" onclick="abrirBusquedaGlobal()" style="font-size:11px;padding:5px 10px;border-radius:8px;background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;">🔍<kbd class="btn-label">Ctrl+K</kbd></button>
+    <button class="btn" onclick="abrirModalAnular()" style="font-size:11px;padding:5px 10px;border-radius:8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;">✕<span class="btn-label"> Anular</span></button>
     <div class="dropdown" id="dropdown-seguimiento">
-      <button class="btn" onclick="this.parentElement.classList.toggle('open')" style="font-size:11px;padding:5px 10px;border-radius:8px;background:#f0fdf4;color:#15803d;border:1px solid #86efac;">📋 Seguimiento ▾</button>
+      <button class="btn" onclick="this.parentElement.classList.toggle('open')" style="font-size:11px;padding:5px 10px;border-radius:8px;background:#f0fdf4;color:#15803d;border:1px solid #86efac;">📋<span class="btn-label"> Seguimiento</span> ▾</button>
       <div class="dropdown-menu">
         <button class="dropdown-item" onclick="abrirModalKine();this.closest('.dropdown').classList.remove('open')">📋 Pacientes en Control</button>
         <button class="dropdown-item" onclick="abrirModalFidelizacion();this.closest('.dropdown').classList.remove('open')">📊 Fidelización</button>
       </div>
     </div>
-    <button class="btn" onclick="doLogout()" style="font-size:11px;padding:5px 10px;border-radius:8px;background:#f8fafc;color:#64748b;border:1px solid #e2e8f0;" title="Cerrar sesion">Salir</button>
+    <button class="btn" onclick="doLogout()" style="font-size:11px;padding:5px 10px;border-radius:8px;background:#f8fafc;color:#64748b;border:1px solid #e2e8f0;" title="Cerrar sesion">🚪<span class="btn-label"> Salir</span></button>
   </div>
   <div id="alert-bar" style="display:none; background:#fef2f2; border:1px solid #fca5a5; border-radius:8px; padding:6px 12px; align-items:center; gap:8px; font-size:11px; font-weight:500; color:#991b1b; width:100%; order:30;">
     <span style="font-size:12px;">🚨</span>
