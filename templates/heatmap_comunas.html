@@ -17,6 +17,9 @@
   .header { text-align: center; padding: 20px 16px 0; }
   .header h1 { font-size: 1.6rem; color: #38bdf8; }
   .header p { color: #94a3b8; margin-top: 4px; }
+  .nav-links { display: flex; gap: 12px; justify-content: center; margin-top: 10px; }
+  .nav-links a { color: #38bdf8; text-decoration: none; font-size: 0.85rem; padding: 5px 14px; border: 1px solid #334155; border-radius: 6px; transition: all 0.2s; }
+  .nav-links a:hover { background: #334155; }
   .stats { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin: 16px; }
   .stat-card { background: #1e293b; border-radius: 10px; padding: 14px 24px; text-align: center; min-width: 130px; }
   .stat-card .num { font-size: 1.8rem; font-weight: 700; color: #38bdf8; }
@@ -39,6 +42,11 @@
 <div class="header">
   <h1>Mapa de Calor — Pacientes CMC</h1>
   <p>Abril 2026 · Centro Medico Carampangue</p>
+  <div class="nav-links">
+    <a href="/admin/mapa-direcciones">📍 Mapa direcciones</a>
+    <a href="/admin/dashboard">📊 Dashboard KPIs</a>
+    <a href="/admin">← Panel admin</a>
+  </div>
 </div>
 
 <div class="stats">
