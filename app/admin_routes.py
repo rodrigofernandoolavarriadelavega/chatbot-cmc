@@ -327,6 +327,11 @@ def admin_conversation_detail(phone: str, _: str = Depends(require_admin)):
     return get_messages(phone)
 
 
+@router.get("/admin/api/staff-phones")
+def admin_staff_phones(_: str = Depends(require_admin)):
+    return STAFF_PHONES
+
+
 @router.get("/admin/api/metrics")
 def admin_metrics(_: str = Depends(require_admin)):
     return get_metricas(dias=30)

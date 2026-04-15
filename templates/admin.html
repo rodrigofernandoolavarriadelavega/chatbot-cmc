@@ -105,6 +105,28 @@ body {
   font-size: 10px; font-weight: 700; letter-spacing: .8px;
   color: var(--text-3); text-transform: uppercase; margin-bottom: 8px;
 }
+.staff-toggle {
+  display: flex; align-items: center; gap: 6px; width: 100%;
+  padding: 0; border: none; background: transparent; cursor: pointer;
+  font-family: inherit; font-size: 10px; font-weight: 700; letter-spacing: .8px;
+  color: var(--text-3); text-transform: uppercase; margin-bottom: 8px;
+}
+.staff-toggle .arrow { transition: transform .2s; font-size: 9px; }
+.staff-toggle.open .arrow { transform: rotate(90deg); }
+.staff-list { display: none; }
+.staff-list.open { display: block; }
+.staff-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px; border-radius: 6px; margin-bottom: 2px;
+  font-size: 11px; color: var(--text-2); cursor: pointer;
+  transition: background .15s; border-left: 3px solid var(--purple);
+}
+.staff-item:hover { background: var(--purple-soft); }
+.staff-item .staff-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--purple); flex-shrink: 0; }
+.staff-item .staff-name { flex: 1; font-weight: 600; }
+.staff-item .staff-phone { font-size: 10px; color: var(--text-3); }
+.staff-item .staff-online { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.staff-item .staff-online.active { background: var(--green); }
 .state-btn {
   display: flex; align-items: center; gap: 9px; width: 100%;
   padding: 9px 10px; border-radius: 8px; border: none;
@@ -715,6 +737,12 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
       <div id="esp-buttons"></div>
       <div id="esp-empty" style="font-size:11px;color:var(--text-3);display:none;">Sin especialidad registrada</div>
     </div>
+    <div class="filter-section" id="staff-section" style="display:none;">
+      <button class="staff-toggle" onclick="toggleStaffList()">
+        <span class="arrow">▶</span> Profesionales CMC
+      </button>
+      <div class="staff-list" id="staff-list"></div>
+    </div>
     <div style="margin-top:auto;padding:12px;border-top:1px solid var(--border);text-align:center;opacity:.5;">
       <img src="/static/logo.png" alt="CMC" style="height:28px;object-fit:contain;">
     </div>
@@ -1052,6 +1080,39 @@ function renderEspButtons() {
       🩺 ${espLabel(esp)} <span class="esp-btn-count">${cnt}</span>
     </button>`
   ).join("");
+}
+function renderStaffList() {
+  const staffConvs = convs.filter(c => c.is_staff);
+  const section = document.getElementById("staff-section");
+  if (!staffConvs.length && !window._staffPhonesCache) { section.style.display="none"; return; }
+  section.style.display="block";
+  // Build unique staff map from conversations
+  const staffMap = {};
+  convs.forEach(c => {
+    if (c.is_staff) staffMap[c.phone] = { role: c.staff_role||"Staff", phone: c.phone, hasConv: true, state: c.state, lastTs: c.last_ts||c.updated_at };
+  });
+  if (window._staffPhonesCache) {
+    Object.entries(window._staffPhonesCache).forEach(([ph, role]) => {
+      if (!staffMap[ph]) staffMap[ph] = { role, phone: ph, hasConv: false };
+    });
+  }
+  const items = Object.values(staffMap).sort((a,b) => a.role.localeCompare(b.role));
+  const el = document.getElementById("staff-list");
+  el.innerHTML = items.map(s => {
+    const isActive = s.hasConv && s.state !== "IDLE";
+    const ph = s.phone.replace(/(\d{2})(\d)(\d{4})(\d{4})/, "+$1 $2 $3 $4");
+    return `<div class="staff-item" onclick="selectConv('${s.phone}')">
+      <span class="staff-dot"></span>
+      <span class="staff-name">${s.role.replace(/</g,"&lt;")}</span>
+      <span class="staff-online${isActive?" active":""}"></span>
+    </div>`;
+  }).join("");
+}
+function toggleStaffList() {
+  const btn = document.querySelector(".staff-toggle");
+  const list = document.getElementById("staff-list");
+  btn.classList.toggle("open");
+  list.classList.toggle("open");
 }
 
 /* ── LISTA ── */
@@ -1402,7 +1463,7 @@ async function loadConversations(){
         new Notification("Nuevo mensaje",{body:newName,icon:"/static/logo.png",tag:"cmc-new-msg"});
       }
     }
-    renderStateButtons(); renderEspButtons(); renderList(); updateStats();
+    renderStateButtons(); renderEspButtons(); renderStaffList(); renderList(); updateStats();
     if(selectedPhone){
       const still=convs.find(c=>c.phone===selectedPhone);
       if(still){updateChatControls(still.state);updateContextPanel(still);await loadMessages(selectedPhone,true);}
@@ -1532,13 +1593,15 @@ function updateStats(){
     const data=await r.json();
     data.forEach(c=>{if(c.last_dir==="in"&&c.last_ts)_prevIncomingTs[c.phone]=c.last_ts;});
     convs=data;
-    renderStateButtons(); renderEspButtons(); renderList(); updateStats();
+    renderStateButtons(); renderEspButtons(); renderStaffList(); renderList(); updateStats();
   }catch(e){console.error(e);}
   document.getElementById("last-refresh").textContent=
     new Date().toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
 })();
 loadMetrics();
 loadConfirmaciones();
+// Load staff phones once at init
+(async()=>{try{const r=await fetch(apiUrl("/admin/api/staff-phones"));if(r.ok)window._staffPhonesCache=await r.json();}catch(e){}})();
 setInterval(loadConversations,10000);
 setInterval(loadMetrics,60000);
 setInterval(loadConfirmaciones,60000);
