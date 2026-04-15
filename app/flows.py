@@ -888,7 +888,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
     # ── Comandos globales ─────────────────────────────────────────────────────
     _COMANDOS_GLOBALES = ("menu", "menú", "inicio", "reiniciar", "volver", "hola")
-    if tl in _COMANDOS_GLOBALES or tl_norm in _COMANDOS_GLOBALES:
+    _SALUDOS = ("buenas tardes", "buenos dias", "buenos días", "buenas noches",
+                "buen dia", "buen día", "buenas", "wena", "wenas", "ola", "alo", "aló")
+    if tl in _COMANDOS_GLOBALES or tl_norm in _COMANDOS_GLOBALES or tl in _SALUDOS or tl_norm in _SALUDOS:
         doctor_mode_antes = data.get("doctor_mode")
         reset_session(phone)
         if phone == _doctor_phone:
