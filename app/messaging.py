@@ -383,12 +383,14 @@ async def send_messenger(psid: str, body: str):
     """Envía mensaje de texto a un usuario de Facebook Messenger vía Graph API."""
     page_id = META_PAGE_ID or "me"
     url = f"https://graph.facebook.com/v22.0/{page_id}/messages"
+    # Messenger usa el System User token (META_ACCESS_TOKEN), no el IG token
+    token = META_ACCESS_TOKEN or META_PAGE_ACCESS_TOKEN
     for attempt in range(2):
         try:
             async with httpx.AsyncClient(timeout=10) as client:
                 r = await client.post(
                     url,
-                    headers={"Authorization": f"Bearer {META_PAGE_ACCESS_TOKEN}"},
+                    headers={"Authorization": f"Bearer {token}"},
                     json={"recipient": {"id": psid}, "message": {"text": body}},
                 )
             if r.status_code == 200:
