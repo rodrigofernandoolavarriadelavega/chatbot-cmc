@@ -1307,7 +1307,7 @@ function espLabel(key) {
   return ESP_DISPLAY[key.toLowerCase()] || (key.charAt(0).toUpperCase() + key.slice(1));
 }
 
-const ACTIVE_STATES = ["WAIT_ESPECIALIDAD","WAIT_SLOT","WAIT_MODALIDAD","WAIT_RUT_AGENDAR",
+const ACTIVE_STATES = ["WAIT_ESPECIALIDAD","WAIT_SLOT","WAIT_MODALIDAD","WAIT_BOOKING_FOR","WAIT_RUT_AGENDAR",
   "WAIT_NOMBRE_NUEVO","WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL","WAIT_REFERRAL","WAIT_REFERRAL_CODE",
   "CONFIRMING_CITA","WAIT_RUT_CANCELAR","WAIT_CITA_CANCELAR",
   "CONFIRMING_CANCEL","WAIT_RUT_VER","WAIT_RUT_REAGENDAR","WAIT_CITA_REAGENDAR",
@@ -1317,7 +1317,7 @@ const STATE_GROUPS = [
   { id:"takeover",  label:"Esperando atención",    dot:"#ef4444", tag:"tag-red",
     states:["HUMAN_TAKEOVER"] },
   { id:"agendando", label:"Agendando",              dot:"#f59e0b", tag:"tag-amber",
-    states:["WAIT_ESPECIALIDAD","WAIT_SLOT","WAIT_MODALIDAD","WAIT_RUT_AGENDAR",
+    states:["WAIT_ESPECIALIDAD","WAIT_SLOT","WAIT_MODALIDAD","WAIT_BOOKING_FOR","WAIT_RUT_AGENDAR",
             "WAIT_NOMBRE_NUEVO","WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL","WAIT_REFERRAL","WAIT_REFERRAL_CODE",
             "CONFIRMING_CITA","WAIT_DURACION_MASOTERAPIA"] },
   { id:"reagendando",label:"Reagendando",           dot:"#06b6d4", tag:"tag-cyan",
@@ -1332,7 +1332,7 @@ const STATE_GROUPS = [
 
 const STATE_LABELS = {
   IDLE:"Sin actividad", WAIT_ESPECIALIDAD:"Eligiendo especialidad",
-  WAIT_SLOT:"Eligiendo horario", WAIT_MODALIDAD:"Fonasa / Particular",
+  WAIT_SLOT:"Eligiendo horario", WAIT_MODALIDAD:"Fonasa / Particular", WAIT_BOOKING_FOR:"¿Para ti o para otro?",
   WAIT_DURACION_MASOTERAPIA:"Eligiendo duración masoterapia",
   WAIT_RUT_AGENDAR:"Ingresando RUT", WAIT_NOMBRE_NUEVO:"Registro paciente nuevo",
   WAIT_FECHA_NAC:"Registro — fecha nacimiento", WAIT_SEXO:"Registro — sexo",
@@ -1627,12 +1627,12 @@ function updateChatControls(state) {
   document.getElementById("ctx-btn-takeover").classList.toggle("pulse", urgentTakeover);
 }
 function editarNombreContacto() {
-  if (!selPhone) return;
+  if (!selectedPhone) return;
   const el = document.getElementById("ctx-nombre");
-  const current = el.textContent;
-  const nuevo = prompt("Nombre del contacto:", current === selPhone ? "" : current);
+  const current = el.textContent.replace(" ✏️","");
+  const nuevo = prompt("Nombre del contacto:", current === friendlyPhone(selectedPhone) ? "" : current);
   if (nuevo === null || !nuevo.trim()) return;
-  fetch(apiUrl(`/admin/api/profile/${encodeURIComponent(selPhone)}/name`),
+  fetch(apiUrl(`/admin/api/profile/${encodeURIComponent(selectedPhone)}/name`),
     {method:"PUT", headers:{"Content-Type":"application/json"},
      body: JSON.stringify({nombre: nuevo.trim()})})
   .then(r => r.json())
@@ -1640,10 +1640,11 @@ function editarNombreContacto() {
     if (d.ok) {
       el.textContent = d.nombre;
       document.getElementById("ctx-avatar").textContent = initials(d.nombre);
-      // Actualizar nombre en la lista de conversaciones
-      const conv = convs.find(c => c.phone === selPhone);
+      document.getElementById("chat-name").textContent = d.nombre;
+      document.getElementById("chat-avatar-hdr").textContent = initials(d.nombre);
+      const conv = convs.find(c => c.phone === selectedPhone);
       if (conv) conv.nombre = d.nombre;
-      renderConvList();
+      renderList();
     }
   });
 }
@@ -1680,7 +1681,7 @@ function updateContextPanel(conv) {
   document.getElementById("ctx-btn-agendar-por").style.display=conv.state==="WAIT_SLOT"?"block":"none";
   document.getElementById("ctx-slots-section").style.display="none"; // reset on conv switch
   // Checklist de progreso
-  const agendarStates = ["WAIT_ESPECIALIDAD","WAIT_SLOT","WAIT_MODALIDAD","WAIT_RUT_AGENDAR",
+  const agendarStates = ["WAIT_ESPECIALIDAD","WAIT_SLOT","WAIT_MODALIDAD","WAIT_BOOKING_FOR","WAIT_RUT_AGENDAR",
     "WAIT_NOMBRE_NUEVO","WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL","WAIT_REFERRAL",
     "CONFIRMING_CITA","WAIT_DURACION_MASOTERAPIA"];
   const isAgendar = agendarStates.includes(conv.state);
