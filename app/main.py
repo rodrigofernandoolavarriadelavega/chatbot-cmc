@@ -481,6 +481,9 @@ async def webhook(request: Request):
     # ── Instagram DMs ────────────────────────────────────────────────────────
     if obj == "instagram":
         try:
+            # Log temporal: capturar entry.id (IGBA ID) y recipient.id
+            import json as _json
+            log.info("IG WEBHOOK payload: %s", _json.dumps(data, default=str)[:1000])
             for entry in data.get("entry", []):
                 for ev in entry.get("messaging", []):
                     sender_id = ev.get("sender", {}).get("id", "")
