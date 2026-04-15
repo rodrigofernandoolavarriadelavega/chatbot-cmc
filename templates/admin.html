@@ -1195,7 +1195,7 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
       <div id="ctx-content" class="ctx-content">
         <div class="ctx-sec">
           <div class="ctx-avatar" id="ctx-avatar">?</div>
-          <div class="ctx-name" id="ctx-nombre">—</div>
+          <div class="ctx-name" id="ctx-nombre" style="cursor:pointer;" title="Click para editar nombre" onclick="editarNombreContacto()">—</div>
           <div class="ctx-sub" id="ctx-sub-info">—</div>
           <div class="ctx-state-wrap"><span class="state-tag tag-slate" id="ctx-state-badge">—</span></div>
         </div>
@@ -1355,6 +1355,11 @@ function initials(name) {
   if (!name) return "?";
   const p = name.trim().split(/\s+/);
   return p.length >= 2 ? (p[0][0]+p[1][0]).toUpperCase() : name.substring(0,2).toUpperCase();
+}
+function friendlyPhone(ph) {
+  if (ph.startsWith("ig_")) return "Instagram #" + ph.slice(3,13);
+  if (ph.startsWith("fb_")) return "Messenger #" + ph.slice(3,13);
+  return ph;
 }
 function relTime(ts) {
   if (!ts) return "";
@@ -1587,7 +1592,7 @@ async function selectConv(phone) {
   const conv=convs.find(c=>c.phone===phone);
   document.getElementById("chat-empty").style.display="none";
   document.getElementById("chat-active").style.display="flex";
-  const name=conv?.nombre||phone;
+  const name=conv?.nombre||friendlyPhone(phone);
   document.getElementById("chat-avatar-hdr").textContent=initials(name);
   document.getElementById("chat-name").textContent=name;
   const canal = conv?.canal||"whatsapp";
@@ -1621,13 +1626,37 @@ function updateChatControls(state) {
   document.getElementById("btn-takeover").classList.toggle("pulse", urgentTakeover);
   document.getElementById("ctx-btn-takeover").classList.toggle("pulse", urgentTakeover);
 }
+function editarNombreContacto() {
+  if (!selPhone) return;
+  const el = document.getElementById("ctx-nombre");
+  const current = el.textContent;
+  const nuevo = prompt("Nombre del contacto:", current === selPhone ? "" : current);
+  if (nuevo === null || !nuevo.trim()) return;
+  fetch(apiUrl(`/admin/api/profile/${encodeURIComponent(selPhone)}/name`),
+    {method:"PUT", headers:{"Content-Type":"application/json"},
+     body: JSON.stringify({nombre: nuevo.trim()})})
+  .then(r => r.json())
+  .then(d => {
+    if (d.ok) {
+      el.textContent = d.nombre;
+      document.getElementById("ctx-avatar").textContent = initials(d.nombre);
+      // Actualizar nombre en la lista de conversaciones
+      const conv = convs.find(c => c.phone === selPhone);
+      if (conv) conv.nombre = d.nombre;
+      renderConvList();
+    }
+  });
+}
 function updateContextPanel(conv) {
   if (!conv) return;
   document.getElementById("ctx-empty").style.display="none";
   document.getElementById("ctx-content").style.display="block";
-  const name=conv.nombre||conv.phone;
+  const name=conv.nombre||friendlyPhone(conv.phone);
   document.getElementById("ctx-avatar").textContent=initials(name);
-  document.getElementById("ctx-nombre").textContent=name;
+  const nameEl = document.getElementById("ctx-nombre");
+  const isSocial = conv.phone.startsWith("ig_") || conv.phone.startsWith("fb_");
+  nameEl.textContent = (isSocial && !conv.nombre) ? name + " ✏️" : name;
+  nameEl.title = "Click para editar nombre";
   document.getElementById("ctx-sub-info").textContent=(conv.rut?`RUT ${conv.rut} · `:"")+conv.phone;
   const sb=document.getElementById("ctx-state-badge");
   sb.textContent=stateLabel(conv.state); sb.className="state-tag "+stateTagClass(conv.state);

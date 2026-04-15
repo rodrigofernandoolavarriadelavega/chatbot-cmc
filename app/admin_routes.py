@@ -22,7 +22,8 @@ from session import (get_session, reset_session, save_session, get_metricas,
                      get_metricas_fidelizacion, get_nps_por_profesional,
                      get_notes, save_notes, get_patient_context, get_registration_stats,
                      get_referral_stats, get_case_study_report,
-                     get_patient_files, get_media_stats, get_demanda_no_disponible)
+                     get_patient_files, get_media_stats, get_demanda_no_disponible,
+                     save_profile)
 from medilink import (buscar_paciente, crear_paciente, buscar_primer_dia,
                       buscar_slots_dia, crear_cita, listar_citas_paciente,
                       cancelar_cita, get_citas_seguimiento_mes, sync_citas_dia,
@@ -795,6 +796,17 @@ async def admin_save_notes(phone: str, request: Request, _: str = Depends(requir
     body = await request.json()
     save_notes(phone, body.get("notes", ""))
     return {"ok": True}
+
+
+@router.put("/admin/api/profile/{phone}/name")
+async def admin_set_display_name(phone: str, request: Request, _: str = Depends(require_admin)):
+    """Establece o actualiza el nombre visible de un contacto."""
+    body = await request.json()
+    nombre = body.get("nombre", "").strip()
+    if not nombre:
+        raise HTTPException(400, "nombre es requerido")
+    save_profile(phone, "", nombre)
+    return {"ok": True, "nombre": nombre}
 
 
 # ── Contexto del paciente ────────────────────────────────────────────────────

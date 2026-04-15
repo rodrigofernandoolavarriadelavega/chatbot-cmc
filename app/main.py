@@ -484,6 +484,7 @@ async def webhook(request: Request):
             for entry in data.get("entry", []):
                 for ev in entry.get("messaging", []):
                     sender_id = ev.get("sender", {}).get("id", "")
+                    sender_name = ev.get("sender", {}).get("username", "") or ev.get("sender", {}).get("name", "")
                     msg = ev.get("message", {})
                     if not sender_id or not msg or msg.get("is_echo"):
                         continue
@@ -497,8 +498,14 @@ async def webhook(request: Request):
                     if _rate_limited(phone):
                         log.warning("Rate limit excedido IG phone=%s", phone)
                         continue
-                    log.info("INSTAGRAM from=%s text=%r", phone, texto[:80])
-                    await _fetch_social_name(sender_id, phone, "instagram")
+                    log.info("INSTAGRAM from=%s name=%r text=%r sender=%s",
+                             phone, sender_name, texto[:80], ev.get("sender", {}))
+                    # Si el webhook trae el username, guardarlo directamente
+                    if sender_name and not get_profile(phone):
+                        save_profile(phone, "", sender_name)
+                        log.info("IG perfil desde webhook: %s → %s", phone, sender_name)
+                    elif not sender_name:
+                        await _fetch_social_name(sender_id, phone, "instagram")
                     save_session(phone, "HUMAN_TAKEOVER", {})
                     log_message(phone, "in", texto, "HUMAN_TAKEOVER", canal="instagram")
         except Exception as e:
