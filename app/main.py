@@ -265,6 +265,7 @@ _ECOSISTEMA_HTML = (_TEMPLATE_DIR / "ecosistema.html").read_text(encoding="utf-8
 _DASHBOARD_HTML = (_TEMPLATE_DIR / "dashboard.html").read_text(encoding="utf-8")
 _MEULEN_ECOSISTEMA_HTML = (_TEMPLATE_DIR / "meulen_ecosistema.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "meulen_ecosistema.html").exists() else ""
 _MEULEN_DASHBOARD_HTML = (_TEMPLATE_DIR / "meulen_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "meulen_dashboard.html").exists() else ""
+_MENU_HTML = (_TEMPLATE_DIR / "menu.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "menu.html").exists() else ""
 _LANDING_HTML = (_TEMPLATE_DIR / "landing.html").read_text(encoding="utf-8")
 _SITIO_V3_HTML = (_TEMPLATE_DIR / "sitio-v3.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio-v3.html").exists() else ""
 _HEATMAP_COMUNAS_HTML = (_TEMPLATE_DIR / "heatmap_comunas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "heatmap_comunas.html").exists() else ""
@@ -441,6 +442,12 @@ def meulen_ecosistema_page():
 def meulen_dashboard_page():
     """Dashboard de planificación del MVP Meulen."""
     return _MEULEN_DASHBOARD_HTML
+
+
+@app.get("/menu", response_class=HTMLResponse)
+def menu_page():
+    """Landing esquemático con todas las rutas desplegadas en agentecmc.cl."""
+    return _MENU_HTML
 
 
 # ── Webhooks ─────────────────────────────────────────────────────────────────
