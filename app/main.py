@@ -266,6 +266,7 @@ _DASHBOARD_HTML = (_TEMPLATE_DIR / "dashboard.html").read_text(encoding="utf-8")
 _MEULEN_ECOSISTEMA_HTML = (_TEMPLATE_DIR / "meulen_ecosistema.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "meulen_ecosistema.html").exists() else ""
 _MEULEN_DASHBOARD_HTML = (_TEMPLATE_DIR / "meulen_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "meulen_dashboard.html").exists() else ""
 _MENU_HTML = (_TEMPLATE_DIR / "menu.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "menu.html").exists() else ""
+_PROYECTOS2026_HTML = (_TEMPLATE_DIR / "proyectos2026.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "proyectos2026.html").exists() else ""
 _LANDING_HTML = (_TEMPLATE_DIR / "landing.html").read_text(encoding="utf-8")
 _SITIO_V3_HTML = (_TEMPLATE_DIR / "sitio-v3.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio-v3.html").exists() else ""
 _HEATMAP_COMUNAS_HTML = (_TEMPLATE_DIR / "heatmap_comunas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "heatmap_comunas.html").exists() else ""
@@ -448,6 +449,12 @@ def meulen_dashboard_page():
 def menu_page():
     """Landing esquemático con todas las rutas desplegadas en agentecmc.cl."""
     return _MENU_HTML
+
+
+@app.get("/proyectos2026", response_class=HTMLResponse)
+def proyectos2026_page():
+    """Visualización Canvas 2D de CMC y Meulen como proyectos hermanos."""
+    return _PROYECTOS2026_HTML
 
 
 # ── Webhooks ─────────────────────────────────────────────────────────────────

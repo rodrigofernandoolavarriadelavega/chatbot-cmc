@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>Proyectos 2026 — agentecmc.cl</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #191919;
+    --panel: rgba(26, 26, 30, 0.9);
+    --panel-solid: #1b1b1f;
+    --text: #f5f5f5;
+    --text-dim: #a0a0a8;
+    --border: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    overflow: hidden;
+    width: 100vw; height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  canvas { display: block; cursor: grab; }
+  canvas:active { cursor: grabbing; }
+
+  .overlay-header {
+    position: fixed; top: 0; left: 0; right: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px;
+    background: linear-gradient(to bottom, rgba(25,25,25,0.95), rgba(25,25,25,0));
+    z-index: 10;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand-logo {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #38bdf8 0%, #a882ff 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    box-shadow: 0 4px 16px rgba(56, 189, 248, 0.35);
+  }
+  .brand-text { display: flex; flex-direction: column; }
+  .brand-title { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+  .brand-subtitle { font-size: 11px; color: var(--text-dim); }
+
+  .year-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px;
+    background: rgba(74, 222, 128, 0.12);
+    border: 1px solid rgba(74, 222, 128, 0.3);
+    border-radius: 999px;
+    font-size: 11px; font-weight: 600;
+    color: #86efac;
+  }
+
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; max-width: 60%; }
+  .filter-pill {
+    padding: 6px 14px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 12px; font-weight: 500;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .filter-pill:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+  .filter-pill.active { background: rgba(56,189,248,0.15); border-color: rgba(56,189,248,0.4); color: #7dd3fc; }
+  .filter-pill .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 6px; }
+
+  .controls {
+    position: fixed; bottom: 24px; right: 24px;
+    display: flex; flex-direction: column; gap: 6px;
+    z-index: 10;
+  }
+  .control-btn {
+    width: 36px; height: 36px;
+    background: var(--panel);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 18px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .control-btn:hover { background: rgba(255,255,255,0.08); }
+  .zoom-label { font-size: 10px; color: var(--text-dim); text-align: center; font-variant-numeric: tabular-nums; }
+
+  .stats-overlay {
+    position: fixed; bottom: 24px; left: 24px;
+    display: flex; gap: 20px;
+    padding: 12px 18px;
+    background: var(--panel);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    z-index: 10;
+    font-size: 11px;
+  }
+  .stat-item { display: flex; flex-direction: column; gap: 2px; }
+  .stat-value { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat-label { color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; font-size: 9px; font-weight: 600; }
+
+  .detail-panel {
+    position: fixed; top: 0; right: 0; bottom: 0;
+    width: 380px;
+    background: var(--panel-solid);
+    border-left: 1px solid var(--border);
+    transform: translateX(100%);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 20;
+    display: flex; flex-direction: column;
+  }
+  .detail-panel.open { transform: translateX(0); }
+  .detail-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; gap: 14px; align-items: flex-start;
+  }
+  .detail-icon {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px;
+  }
+  .detail-title { font-size: 18px; font-weight: 700; margin: 0 0 4px; white-space: pre-line; }
+  .detail-subtitle { font-size: 12px; color: var(--text-dim); display: flex; gap: 8px; flex-wrap: wrap; }
+  .detail-badge { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+  .detail-close { background: transparent; border: none; color: var(--text-dim); font-size: 20px; cursor: pointer; padding: 4px; }
+  .detail-close:hover { color: var(--text); }
+  .detail-body { padding: 20px 24px; overflow-y: auto; flex: 1; }
+  .detail-section { margin-bottom: 22px; }
+  .detail-section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); margin: 0 0 10px; }
+  .detail-desc { font-size: 13px; line-height: 1.6; margin: 0; }
+  .detail-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+  .detail-list li {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 12px;
+  }
+  .detail-link-group { display: flex; flex-direction: column; gap: 8px; }
+  .detail-link {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px;
+    background: rgba(168, 130, 255, 0.12);
+    border: 1px solid rgba(168, 130, 255, 0.3);
+    border-radius: 8px;
+    color: #c4b2ff;
+    text-decoration: none;
+    font-size: 12px; font-weight: 600;
+    transition: all 0.15s;
+  }
+  .detail-link:hover { background: rgba(168, 130, 255, 0.22); }
+  .detail-link.cmc { background: rgba(56, 189, 248, 0.12); border-color: rgba(56, 189, 248, 0.3); color: #7dd3fc; }
+  .detail-link.cmc:hover { background: rgba(56, 189, 248, 0.22); }
+
+  @media (max-width: 720px) {
+    .overlay-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .filters { max-width: 100%; }
+    .detail-panel { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<header class="overlay-header">
+  <div class="brand">
+    <div class="brand-logo">🧭</div>
+    <div class="brand-text">
+      <div class="brand-title">Proyectos 2026</div>
+      <div class="brand-subtitle">Portafolio agentecmc.cl</div>
+    </div>
+    <span class="year-badge">2 proyectos activos</span>
+  </div>
+  <div class="filters" id="filters"></div>
+</header>
+
+<div class="controls">
+  <button class="control-btn" id="zoom-in">+</button>
+  <div class="zoom-label" id="zoom-label">100%</div>
+  <button class="control-btn" id="zoom-out">−</button>
+  <button class="control-btn" id="zoom-reset">↺</button>
+</div>
+
+<div class="stats-overlay">
+  <div class="stat-item"><span class="stat-value" id="stat-nodes">0</span><span class="stat-label">Componentes</span></div>
+  <div class="stat-item"><span class="stat-value" id="stat-edges">0</span><span class="stat-label">Conexiones</span></div>
+  <div class="stat-item"><span class="stat-value">2</span><span class="stat-label">Proyectos</span></div>
+  <div class="stat-item"><span class="stat-value">1</span><span class="stat-label">En prod</span></div>
+  <div class="stat-item"><span class="stat-value">1</span><span class="stat-label">En MVP</span></div>
+</div>
+
+<aside class="detail-panel" id="detail-panel">
+  <div class="detail-header">
+    <div class="detail-icon" id="detail-icon"></div>
+    <div style="flex:1;min-width:0;">
+      <h2 class="detail-title" id="detail-title"></h2>
+      <div class="detail-subtitle" id="detail-subtitle"></div>
+    </div>
+    <button class="detail-close" id="detail-close">✕</button>
+  </div>
+  <div class="detail-body" id="detail-body"></div>
+</aside>
+
+<script>
+const CATEGORIES = {
+  cmc:      { label: 'CMC Salud',    color: '#38bdf8' },
+  meulen:   { label: 'Meulen Retail', color: '#a882ff' },
+  shared:   { label: 'Stack común',   color: '#4ade80' },
+  external: { label: 'Integraciones', color: '#fb923c' },
+};
+
+const NODES = [
+  // =========== CMC PROJECT HUB ===========
+  { id: 'cmc-hub', label: 'CMC\nCentro Médico', icon: '🏥', cat: 'cmc', size: 46,
+    badge: 'PROD', badgeColor: '#38bdf8',
+    desc: 'Chatbot WhatsApp + panel admin + GES Assistant para Centro Médico Carampangue (Biobío, Chile). En producción hace más de un año, deployado en VPS DigitalOcean, dominio agentecmc.cl.',
+    items: [
+      { icon: '📱', text: 'WhatsApp: agendar/cancelar/ver citas' },
+      { icon: '🩺', text: 'Integración API Medilink 2' },
+      { icon: '🧠', text: 'Claude Haiku para intención + FAQ' },
+      { icon: '📊', text: 'Panel admin + reportes operativos' },
+      { icon: '🎯', text: 'Fidelización + recordatorios + adherencia' },
+    ],
+    links: [
+      { label: 'Ecosistema CMC', href: '/ecosistema', kind: 'cmc' },
+      { label: 'Panel admin',    href: '/admin?token=cmc_admin_2026', kind: 'cmc' },
+      { label: 'Landing',        href: '/',         kind: 'cmc' },
+    ],
+  },
+  { id: 'cmc-chatbot', label: 'Chatbot\nWhatsApp', icon: '💬', cat: 'cmc', size: 28,
+    desc: '15 cron jobs: recordatorios, reenganche, watchdog, fidelización. Máquina de estados conversacional. Transcripción Whisper.',
+    items: [
+      { icon: '🔄', text: 'Máquina de estados (flows.py)' },
+      { icon: '🎤', text: 'Whisper para audios' },
+      { icon: '⏰', text: 'APScheduler con 15 jobs' },
+    ],
+  },
+  { id: 'cmc-medilink', label: 'API\nMedilink', icon: '🩺', cat: 'cmc', size: 22,
+    desc: 'Wrapper async sobre Medilink 2 (healthatom): slots, pacientes, citas, agenda del día. Circuit breaker + cola de intenciones en modo degradado.',
+  },
+  { id: 'cmc-ges', label: 'GES\nAssistant', icon: '🧠', cat: 'cmc', size: 22,
+    desc: 'Asistente clínico GES deployado como microservicio aparte (systemd, 127.0.0.1:8002). Consume del chatbot via HTTP.',
+  },
+  { id: 'cmc-admin', label: 'Admin\npanel', icon: '🖥️', cat: 'cmc', size: 22,
+    desc: '24 endpoints /admin/api/* con auth por cookie HMAC. Conversaciones, kine, ortodoncia, analytics.',
+  },
+
+  // =========== MEULEN PROJECT HUB ===========
+  { id: 'meulen-hub', label: 'Meulen\nMinimarket', icon: '🛒', cat: 'meulen', size: 46,
+    badge: 'MVP', badgeColor: '#a882ff',
+    desc: 'POS + control de inventario para Supermercado Meulen, minimarket familiar en Puerto Montt. MVP Fase 1 completo: 7 módulos backend, 18 tablas SQLite, ~30 endpoints, 19 tests de integración.',
+    items: [
+      { icon: '🧾', text: 'POS con pistoleo (React + Vite)' },
+      { icon: '📦', text: 'Kardex completo + avg_cost ponderado' },
+      { icon: '💰', text: 'Caja: apertura, cierre, arqueo con diferencia' },
+      { icon: '🚚', text: 'Recepción de mercadería' },
+      { icon: '📊', text: 'Reportes: ventas, stock, margen' },
+    ],
+    links: [
+      { label: 'Ecosistema Meulen',    href: '/meulen/ecosistemameulen',       kind: 'meulen' },
+      { label: 'Dashboard planificación', href: '/meulen/dashboardplanificacion', kind: 'meulen' },
+    ],
+  },
+  { id: 'meulen-pos', label: 'POS\npistoleo', icon: '🧾', cat: 'meulen', size: 28,
+    desc: 'Pantalla venta React con captura HID invisible, atajos F2/F3/F4/F9/Esc, modal de cobro con vuelto. Diseñada para operadores no técnicos.',
+  },
+  { id: 'meulen-inventory', label: 'Inventory\n+ kardex', icon: '📋', cat: 'meulen', size: 24,
+    desc: 'Corazón del sistema: stock_balances + inventory_movements, ajustes, mermas, conteos físicos. apply_movement() atómico con validación stock no negativo.',
+  },
+  { id: 'meulen-admin', label: 'Backoffice\nadmin', icon: '🖥️', cat: 'meulen', size: 22,
+    desc: 'React + Tailwind. CRUD productos + CSV, inventario, compras, reportes, usuarios, auditoría.',
+  },
+  { id: 'meulen-audit', label: 'Audit\nlogs', icon: '📝', cat: 'meulen', size: 18,
+    desc: 'Bitácora con before/after JSON de ventas, ajustes, cierres, logins. IP capturada.',
+  },
+
+  // =========== STACK COMPARTIDO ===========
+  { id: 'fastapi', label: 'FastAPI\nPython 3.11', icon: '⚡', cat: 'shared', size: 28,
+    desc: 'Framework backend común a ambos proyectos. Async, OpenAPI auto, routers modulares.',
+    items: [
+      { icon: '🚀', text: 'uvicorn + async workers' },
+      { icon: '📘', text: 'Swagger UI autogenerado' },
+      { icon: '🧩', text: 'Dependency injection' },
+    ],
+  },
+  { id: 'sqlalchemy', label: 'SQLAlchemy\n2.0', icon: '🔗', cat: 'shared', size: 22,
+    desc: 'ORM común. Meulen usa Alembic; CMC usa modelo flat (sin migraciones formales aún).',
+  },
+  { id: 'jwt', label: 'JWT +\nargon2', icon: '🔐', cat: 'shared', size: 20,
+    desc: 'Meulen: JWT con role + email. CMC: cookies HMAC firmadas (patrón equivalente).',
+  },
+  { id: 'sqlite', label: 'SQLite\nWAL mode', icon: '🗄️', cat: 'shared', size: 24,
+    desc: 'Base de datos en ambos proyectos. WAL + busy_timeout=5000. Archivo único + backup trivial.',
+  },
+  { id: 'do-vps', label: 'DigitalOcean\nVPS', icon: '🖥️', cat: 'shared', size: 24,
+    desc: '157.245.13.107. Ubuntu + systemd + nginx + uvicorn. Hostea CMC (prod) y visualizaciones Meulen.',
+    items: [
+      { icon: '🔒', text: 'SSH solo por llave Ed25519' },
+      { icon: '🔄', text: 'systemd: chatbot-cmc.service' },
+      { icon: '🌐', text: 'nginx reverse proxy + TLS' },
+    ],
+  },
+  { id: 'claude', label: 'Claude\nAPI', icon: '🧠', cat: 'shared', size: 22,
+    desc: 'Haiku en CMC para detección de intención + FAQ. Opus 4.6 para Claude Code durante desarrollo.',
+  },
+  { id: 'notion', label: 'Notion\ndocs', icon: '📚', cat: 'shared', size: 20,
+    desc: 'Documentación viva en jerarquía "Empresas". Tanto CMC como Meulen tienen espacios técnicos espejados.',
+  },
+
+  // =========== INTEGRACIONES EXTERNAS ===========
+  { id: 'whatsapp', label: 'WhatsApp\nMeta Cloud', icon: '📱', cat: 'external', size: 22,
+    desc: 'API oficial de Meta. Webhook POST /webhook. Token dedicado para Messenger.',
+  },
+  { id: 'medilink-ext', label: 'Medilink 2\nhealthatom', icon: '🏥', cat: 'external', size: 20,
+    desc: 'API externa de agendamiento. Base URL: api.medilink2.healthatom.com/api/v5.',
+  },
+  { id: 'bsale', label: 'Bsale\n(Meulen)', icon: '🧾', cat: 'external', size: 18,
+    desc: 'Sistema paralelo para emisión tributaria durante transición MVP. Reemplazo en Fase 3 con LibreDTE/Haulmer.',
+  },
+  { id: 'transbank', label: 'Transbank\n(Meulen)', icon: '💳', cat: 'external', size: 18,
+    desc: 'Máquina standalone en MVP. Integración SDK planificada para Fase 3.',
+  },
+];
+
+const EDGES = [
+  // CMC interno
+  { from: 'cmc-hub', to: 'cmc-chatbot' },
+  { from: 'cmc-hub', to: 'cmc-admin' },
+  { from: 'cmc-chatbot', to: 'cmc-medilink' },
+  { from: 'cmc-chatbot', to: 'cmc-ges' },
+
+  // Meulen interno
+  { from: 'meulen-hub', to: 'meulen-pos' },
+  { from: 'meulen-hub', to: 'meulen-admin' },
+  { from: 'meulen-hub', to: 'meulen-inventory' },
+  { from: 'meulen-hub', to: 'meulen-audit' },
+  { from: 'meulen-pos', to: 'meulen-inventory', label: 'descuenta stock' },
+
+  // Stack compartido (ambos proyectos apuntan acá)
+  { from: 'cmc-chatbot', to: 'fastapi' },
+  { from: 'meulen-pos', to: 'fastapi' },
+  { from: 'meulen-admin', to: 'fastapi' },
+  { from: 'cmc-chatbot', to: 'sqlalchemy' },
+  { from: 'meulen-inventory', to: 'sqlalchemy' },
+  { from: 'cmc-admin', to: 'jwt' },
+  { from: 'meulen-pos', to: 'jwt' },
+  { from: 'cmc-chatbot', to: 'sqlite' },
+  { from: 'meulen-inventory', to: 'sqlite' },
+  { from: 'cmc-hub', to: 'do-vps', label: 'prod' },
+  { from: 'meulen-hub', to: 'do-vps', label: 'visualizaciones' },
+  { from: 'cmc-chatbot', to: 'claude', label: 'Haiku' },
+  { from: 'cmc-hub', to: 'notion' },
+  { from: 'meulen-hub', to: 'notion' },
+
+  // Externas
+  { from: 'cmc-chatbot', to: 'whatsapp' },
+  { from: 'cmc-medilink', to: 'medilink-ext' },
+  { from: 'meulen-pos', to: 'bsale' },
+  { from: 'meulen-pos', to: 'transbank' },
+];
+
+/* ===== CANVAS ===== */
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let camera = { x: 0, y: 0, zoom: 1 };
+let dpr = Math.max(1, window.devicePixelRatio || 1);
+
+function resize() {
+  dpr = Math.max(1, window.devicePixelRatio || 1);
+  canvas.width = window.innerWidth * dpr;
+  canvas.height = window.innerHeight * dpr;
+  canvas.style.width = window.innerWidth + 'px';
+  canvas.style.height = window.innerHeight + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+const nodeMap = new Map();
+NODES.forEach((n, i) => {
+  // Posicionar CMC en la izquierda y Meulen en la derecha, shared al medio-abajo
+  let bias = { x: 0, y: 0 };
+  if (n.cat === 'cmc') bias = { x: -300, y: 0 };
+  else if (n.cat === 'meulen') bias = { x: 300, y: 0 };
+  else if (n.cat === 'shared') bias = { x: 0, y: 250 };
+  else if (n.cat === 'external') bias = { x: (Math.random() > 0.5 ? 550 : -550), y: -250 };
+  const angle = (i / NODES.length) * Math.PI * 2;
+  n.x = bias.x + Math.cos(angle) * 120 + (Math.random() - 0.5) * 60;
+  n.y = bias.y + Math.sin(angle) * 120 + (Math.random() - 0.5) * 60;
+  n.vx = 0; n.vy = 0; n.hidden = false;
+  nodeMap.set(n.id, n);
+});
+
+const SIM = { repulsion: 9000, attraction: 0.009, centerForce: 0.0018, damping: 0.85, minDist: 90 };
+let focusedNodeId = null, hoveredNodeId = null, draggingNodeId = null;
+let panning = false, lastPointer = { x: 0, y: 0 };
+let activeFilters = new Set(Object.keys(CATEGORIES));
+
+function simulate() {
+  for (let i = 0; i < NODES.length; i++) {
+    const a = NODES[i];
+    if (a.hidden || a.id === draggingNodeId) continue;
+    for (let j = i + 1; j < NODES.length; j++) {
+      const b = NODES[j];
+      if (b.hidden) continue;
+      const dx = b.x - a.x, dy = b.y - a.y;
+      let d2 = dx*dx + dy*dy;
+      if (d2 < SIM.minDist * SIM.minDist) d2 = SIM.minDist * SIM.minDist;
+      const d = Math.sqrt(d2);
+      const f = SIM.repulsion / d2;
+      const fx = (dx / d) * f, fy = (dy / d) * f;
+      a.vx -= fx; a.vy -= fy;
+      if (b.id !== draggingNodeId) { b.vx += fx; b.vy += fy; }
+    }
+  }
+  for (const e of EDGES) {
+    const a = nodeMap.get(e.from), b = nodeMap.get(e.to);
+    if (!a || !b || a.hidden || b.hidden) continue;
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const f = SIM.attraction;
+    if (a.id !== draggingNodeId) { a.vx += dx * f; a.vy += dy * f; }
+    if (b.id !== draggingNodeId) { b.vx -= dx * f; b.vy -= dy * f; }
+  }
+  for (const n of NODES) {
+    if (n.hidden) continue;
+    if (n.id !== draggingNodeId) {
+      n.vx -= n.x * SIM.centerForce;
+      n.vy -= n.y * SIM.centerForce;
+      n.vx *= SIM.damping; n.vy *= SIM.damping;
+      n.x += n.vx; n.y += n.vy;
+    }
+  }
+}
+
+function worldToScreen(x, y) { return { x: (x - camera.x) * camera.zoom + window.innerWidth / 2, y: (y - camera.y) * camera.zoom + window.innerHeight / 2 }; }
+function screenToWorld(x, y) { return { x: (x - window.innerWidth / 2) / camera.zoom + camera.x, y: (y - window.innerHeight / 2) / camera.zoom + camera.y }; }
+function getNodeAt(sx, sy) {
+  for (let i = NODES.length - 1; i >= 0; i--) {
+    const n = NODES[i];
+    if (n.hidden) continue;
+    const s = worldToScreen(n.x, n.y);
+    const r = n.size * camera.zoom;
+    const dx = sx - s.x, dy = sy - s.y;
+    if (dx*dx + dy*dy <= r * r) return n;
+  }
+  return null;
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y, x + w, y + r, r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h);
+  ctx.arcTo(x, y + h, x, y + h - r, r);
+  ctx.lineTo(x, y + r); ctx.arcTo(x, y, x + r, y, r);
+  ctx.closePath();
+}
+function hexToRgba(hex, alpha) {
+  const c = hex.replace('#', '');
+  return `rgba(${parseInt(c.substr(0,2),16)}, ${parseInt(c.substr(2,2),16)}, ${parseInt(c.substr(4,2),16)}, ${alpha})`;
+}
+
+let frame = 0;
+function draw() {
+  frame++;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Grid
+  const gridSize = 40 * camera.zoom;
+  if (gridSize > 8) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.025)';
+    ctx.lineWidth = 1;
+    const ox = (window.innerWidth / 2 - camera.x * camera.zoom) % gridSize;
+    const oy = (window.innerHeight / 2 - camera.y * camera.zoom) % gridSize;
+    ctx.beginPath();
+    for (let x = ox; x < window.innerWidth; x += gridSize) { ctx.moveTo(x, 0); ctx.lineTo(x, window.innerHeight); }
+    for (let y = oy; y < window.innerHeight; y += gridSize) { ctx.moveTo(0, y); ctx.lineTo(window.innerWidth, y); }
+    ctx.stroke();
+  }
+
+  // Edges
+  for (const e of EDGES) {
+    const a = nodeMap.get(e.from), b = nodeMap.get(e.to);
+    if (!a || !b || a.hidden || b.hidden) continue;
+    const sa = worldToScreen(a.x, a.y), sb = worldToScreen(b.x, b.y);
+    const isFocused = focusedNodeId && (e.from === focusedNodeId || e.to === focusedNodeId);
+    const isHover = hoveredNodeId && (e.from === hoveredNodeId || e.to === hoveredNodeId);
+
+    ctx.lineWidth = isFocused ? 2 : (isHover ? 1.5 : 1);
+    // Edges entre categorías distintas con color especial (shared connections)
+    if ((a.cat === 'cmc' && b.cat === 'meulen') || (a.cat === 'meulen' && b.cat === 'cmc')) {
+      ctx.strokeStyle = isFocused ? 'rgba(74, 222, 128, 0.8)' : 'rgba(74, 222, 128, 0.2)';
+    } else if (a.cat === 'shared' || b.cat === 'shared') {
+      ctx.strokeStyle = isFocused ? 'rgba(74, 222, 128, 0.7)' : (isHover ? 'rgba(74, 222, 128, 0.3)' : 'rgba(255, 255, 255, 0.08)');
+    } else {
+      ctx.strokeStyle = isFocused ? 'rgba(168, 130, 255, 0.7)' : (isHover ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.08)');
+    }
+    ctx.beginPath(); ctx.moveTo(sa.x, sa.y); ctx.lineTo(sb.x, sb.y); ctx.stroke();
+
+    if (isFocused) {
+      for (let i = 0; i < 3; i++) {
+        const t = ((frame / 60) + i / 3) % 1;
+        const px = sa.x + (sb.x - sa.x) * t;
+        const py = sa.y + (sb.y - sa.y) * t;
+        ctx.fillStyle = CATEGORIES[a.cat].color;
+        ctx.beginPath(); ctx.arc(px, py, 2.2, 0, Math.PI * 2); ctx.fill();
+      }
+      if (e.label) {
+        const mx = (sa.x + sb.x) / 2, my = (sa.y + sb.y) / 2;
+        ctx.font = '10px Inter';
+        const w = ctx.measureText(e.label).width + 12;
+        ctx.fillStyle = 'rgba(26, 26, 30, 0.9)';
+        ctx.strokeStyle = 'rgba(168, 130, 255, 0.3)';
+        ctx.lineWidth = 1;
+        roundRect(ctx, mx - w/2, my - 8, w, 16, 8);
+        ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#c4b2ff';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(e.label, mx, my);
+      }
+    }
+  }
+
+  // Nodes
+  for (const n of NODES) {
+    if (n.hidden) continue;
+    const s = worldToScreen(n.x, n.y);
+    const r = n.size * camera.zoom;
+    const color = CATEGORIES[n.cat].color;
+    const isFocused = n.id === focusedNodeId;
+    const isHover = n.id === hoveredNodeId;
+    const isHub = n.id === 'cmc-hub' || n.id === 'meulen-hub';
+
+    if (isFocused || isHover || isHub) {
+      const grad = ctx.createRadialGradient(s.x, s.y, r, s.x, s.y, r * 2.4);
+      grad.addColorStop(0, hexToRgba(color, isHub ? 0.35 : 0.45));
+      grad.addColorStop(1, hexToRgba(color, 0));
+      ctx.fillStyle = grad;
+      ctx.beginPath(); ctx.arc(s.x, s.y, r * 2.4, 0, Math.PI * 2); ctx.fill();
+    }
+
+    ctx.fillStyle = '#1b1b1f';
+    ctx.strokeStyle = color;
+    ctx.lineWidth = isFocused ? 3 : (isHub ? 2.5 : 1.5);
+    ctx.beginPath(); ctx.arc(s.x, s.y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+    ctx.font = `${r * 0.9}px sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(n.icon, s.x, s.y);
+
+    ctx.font = isHub ? '700 13px Inter' : '600 11px Inter';
+    ctx.fillStyle = isFocused || isHub ? '#fff' : '#e5e5e5';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    const lines = n.label.split('\n');
+    lines.forEach((line, i) => ctx.fillText(line, s.x, s.y + r + 6 + i * (isHub ? 16 : 13)));
+
+    if (n.badge && r > 14) {
+      const badgeY = s.y - r - 10;
+      ctx.font = '700 9px Inter';
+      const bw = ctx.measureText(n.badge).width + 10;
+      ctx.fillStyle = hexToRgba(n.badgeColor || color, 0.2);
+      ctx.strokeStyle = hexToRgba(n.badgeColor || color, 0.5);
+      ctx.lineWidth = 1;
+      roundRect(ctx, s.x - bw/2, badgeY - 7, bw, 14, 7);
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = n.badgeColor || color;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(n.badge, s.x, badgeY);
+    }
+  }
+}
+
+function loop() { simulate(); draw(); requestAnimationFrame(loop); }
+loop();
+
+// Interaction
+canvas.addEventListener('mousedown', (e) => {
+  const node = getNodeAt(e.clientX, e.clientY);
+  lastPointer = { x: e.clientX, y: e.clientY };
+  if (node) { draggingNodeId = node.id; canvas.style.cursor = 'grabbing'; }
+  else { panning = true; canvas.style.cursor = 'grabbing'; }
+});
+canvas.addEventListener('mousemove', (e) => {
+  if (draggingNodeId) {
+    const n = nodeMap.get(draggingNodeId);
+    n.x += (e.clientX - lastPointer.x) / camera.zoom;
+    n.y += (e.clientY - lastPointer.y) / camera.zoom;
+    n.vx = 0; n.vy = 0;
+    lastPointer = { x: e.clientX, y: e.clientY };
+  } else if (panning) {
+    camera.x -= (e.clientX - lastPointer.x) / camera.zoom;
+    camera.y -= (e.clientY - lastPointer.y) / camera.zoom;
+    lastPointer = { x: e.clientX, y: e.clientY };
+  } else {
+    const node = getNodeAt(e.clientX, e.clientY);
+    hoveredNodeId = node ? node.id : null;
+    canvas.style.cursor = node ? 'pointer' : 'grab';
+  }
+});
+canvas.addEventListener('mouseup', (e) => {
+  const moved = Math.abs(e.clientX - lastPointer.x) > 3 || Math.abs(e.clientY - lastPointer.y) > 3;
+  if (draggingNodeId && !moved) openDetail(draggingNodeId);
+  else if (panning && !moved) {
+    const node = getNodeAt(e.clientX, e.clientY);
+    if (node) openDetail(node.id);
+  }
+  draggingNodeId = null; panning = false;
+  canvas.style.cursor = getNodeAt(e.clientX, e.clientY) ? 'pointer' : 'grab';
+});
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const zd = e.deltaY < 0 ? 1.1 : 0.9;
+  const before = screenToWorld(e.clientX, e.clientY);
+  camera.zoom = Math.max(0.25, Math.min(3, camera.zoom * zd));
+  const after = screenToWorld(e.clientX, e.clientY);
+  camera.x += before.x - after.x;
+  camera.y += before.y - after.y;
+  updateZoomLabel();
+}, { passive: false });
+
+// Touch
+let touchState = null;
+canvas.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 1) {
+    const t = e.touches[0];
+    const node = getNodeAt(t.clientX, t.clientY);
+    lastPointer = { x: t.clientX, y: t.clientY };
+    if (node) draggingNodeId = node.id; else panning = true;
+  } else if (e.touches.length === 2) {
+    const a = e.touches[0], b = e.touches[1];
+    touchState = { dist: Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY), zoom: camera.zoom };
+  }
+}, { passive: false });
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  if (e.touches.length === 1 && !touchState) {
+    const t = e.touches[0];
+    if (draggingNodeId) {
+      const n = nodeMap.get(draggingNodeId);
+      n.x += (t.clientX - lastPointer.x) / camera.zoom;
+      n.y += (t.clientY - lastPointer.y) / camera.zoom;
+      lastPointer = { x: t.clientX, y: t.clientY };
+    } else if (panning) {
+      camera.x -= (t.clientX - lastPointer.x) / camera.zoom;
+      camera.y -= (t.clientY - lastPointer.y) / camera.zoom;
+      lastPointer = { x: t.clientX, y: t.clientY };
+    }
+  } else if (e.touches.length === 2 && touchState) {
+    const a = e.touches[0], b = e.touches[1];
+    const d = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+    camera.zoom = Math.max(0.25, Math.min(3, touchState.zoom * (d / touchState.dist)));
+    updateZoomLabel();
+  }
+}, { passive: false });
+canvas.addEventListener('touchend', (e) => {
+  if (e.touches.length === 0) { draggingNodeId = null; panning = false; touchState = null; }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeDetail();
+  else if (e.key === '+' || e.key === '=') { camera.zoom = Math.min(3, camera.zoom * 1.15); updateZoomLabel(); }
+  else if (e.key === '-' || e.key === '_') { camera.zoom = Math.max(0.25, camera.zoom * 0.85); updateZoomLabel(); }
+  else if (e.key === '0') { camera = { x: 0, y: 0, zoom: 1 }; updateZoomLabel(); }
+});
+
+// Detail panel
+const panel = document.getElementById('detail-panel');
+const detailIcon = document.getElementById('detail-icon');
+const detailTitle = document.getElementById('detail-title');
+const detailSubtitle = document.getElementById('detail-subtitle');
+const detailBody = document.getElementById('detail-body');
+document.getElementById('detail-close').addEventListener('click', closeDetail);
+
+function openDetail(nodeId) {
+  const n = nodeMap.get(nodeId);
+  if (!n) return;
+  focusedNodeId = nodeId;
+  const color = CATEGORIES[n.cat].color;
+  detailIcon.textContent = n.icon;
+  detailIcon.style.background = hexToRgba(color, 0.15);
+  detailIcon.style.border = `1px solid ${hexToRgba(color, 0.4)}`;
+  detailTitle.textContent = n.label.replace('\n', ' ');
+  detailSubtitle.innerHTML = `
+    ${n.badge ? `<span class="detail-badge" style="background:${hexToRgba(n.badgeColor || color, 0.15)};color:${n.badgeColor || color};border:1px solid ${hexToRgba(n.badgeColor || color, 0.4)};">${n.badge}</span>` : ''}
+    <span>${CATEGORIES[n.cat].label}</span>
+  `;
+  let html = '';
+  html += `<div class="detail-section"><h3 class="detail-section-title">Descripción</h3><p class="detail-desc">${n.desc || ''}</p></div>`;
+  if (n.items && n.items.length) {
+    html += `<div class="detail-section"><h3 class="detail-section-title">Detalles</h3><ul class="detail-list">`;
+    for (const it of n.items) html += `<li><span>${it.icon}</span><span>${it.text}</span></li>`;
+    html += `</ul></div>`;
+  }
+  if (n.links && n.links.length) {
+    html += `<div class="detail-section"><h3 class="detail-section-title">Abrir</h3><div class="detail-link-group">`;
+    for (const l of n.links) html += `<a class="detail-link ${l.kind || ''}" href="${l.href}"><span>${l.label}</span><span>→</span></a>`;
+    html += `</div></div>`;
+  }
+  const incoming = EDGES.filter(e => e.to === nodeId);
+  const outgoing = EDGES.filter(e => e.from === nodeId);
+  if (incoming.length || outgoing.length) {
+    html += `<div class="detail-section"><h3 class="detail-section-title">Conexiones</h3><ul class="detail-list">`;
+    for (const c of incoming) { const o = nodeMap.get(c.from); if (o) html += `<li data-node="${c.from}" style="cursor:pointer;"><span>${o.icon}</span><span>${o.label.replace('\n',' ')}</span><span style="margin-left:auto;color:var(--text-dim);">←</span></li>`; }
+    for (const c of outgoing) { const o = nodeMap.get(c.to);   if (o) html += `<li data-node="${c.to}" style="cursor:pointer;"><span>${o.icon}</span><span>${o.label.replace('\n',' ')}</span><span style="margin-left:auto;color:var(--text-dim);">→</span></li>`; }
+    html += `</ul></div>`;
+  }
+  detailBody.innerHTML = html;
+  panel.classList.add('open');
+  detailBody.querySelectorAll('li[data-node]').forEach(el => el.addEventListener('click', () => openDetail(el.dataset.node)));
+}
+function closeDetail() { panel.classList.remove('open'); focusedNodeId = null; }
+
+// Controls
+function updateZoomLabel() { document.getElementById('zoom-label').textContent = Math.round(camera.zoom * 100) + '%'; }
+document.getElementById('zoom-in').onclick = () => { camera.zoom = Math.min(3, camera.zoom * 1.2); updateZoomLabel(); };
+document.getElementById('zoom-out').onclick = () => { camera.zoom = Math.max(0.25, camera.zoom * 0.8); updateZoomLabel(); };
+document.getElementById('zoom-reset').onclick = () => { camera = { x: 0, y: 0, zoom: 1 }; updateZoomLabel(); };
+
+// Filters
+const filtersEl = document.getElementById('filters');
+for (const [key, cat] of Object.entries(CATEGORIES)) {
+  const pill = document.createElement('div');
+  pill.className = 'filter-pill active';
+  pill.innerHTML = `<span class="dot" style="background:${cat.color}"></span>${cat.label}`;
+  pill.addEventListener('click', () => {
+    if (activeFilters.has(key)) { activeFilters.delete(key); pill.classList.remove('active'); }
+    else { activeFilters.add(key); pill.classList.add('active'); }
+    NODES.forEach(n => n.hidden = !activeFilters.has(n.cat));
+    updateStats();
+  });
+  filtersEl.appendChild(pill);
+}
+
+function updateStats() {
+  const visibleNodes = NODES.filter(n => !n.hidden).length;
+  const visibleIds = new Set(NODES.filter(n => !n.hidden).map(n => n.id));
+  const visibleEdges = EDGES.filter(e => visibleIds.has(e.from) && visibleIds.has(e.to)).length;
+  document.getElementById('stat-nodes').textContent = visibleNodes;
+  document.getElementById('stat-edges').textContent = visibleEdges;
+}
+updateStats();
+
+// Auto-abrir cmc-hub al cargar para que se vea algo
+setTimeout(() => openDetail('meulen-hub'), 600);
+</script>
+</body>
+</html>
