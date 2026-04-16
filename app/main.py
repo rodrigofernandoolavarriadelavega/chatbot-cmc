@@ -272,6 +272,7 @@ _SITIO_V3_HTML = (_TEMPLATE_DIR / "sitio-v3.html").read_text(encoding="utf-8") i
 _HEATMAP_COMUNAS_HTML = (_TEMPLATE_DIR / "heatmap_comunas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "heatmap_comunas.html").exists() else ""
 _HEATMAP_DIRECCIONES_HTML = (_TEMPLATE_DIR / "heatmap_direcciones.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "heatmap_direcciones.html").exists() else ""
 _SEO_DASHBOARD_HTML = (_TEMPLATE_DIR / "seo_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "seo_dashboard.html").exists() else ""
+_PRIVACIDAD_HTML = (_TEMPLATE_DIR / "privacidad.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "privacidad.html").exists() else ""
 
 
 # ── Endpoints ────────────────────────────────────────────────────────────────
@@ -317,38 +318,9 @@ def sitio_v3():
 
 @app.get("/privacidad", response_class=HTMLResponse)
 def privacidad():
-    return """<!DOCTYPE html>
-<html lang="es">
-<head><meta charset="UTF-8"><title>Política de Privacidad — Centro Médico Carampangue</title>
-<style>body{font-family:Arial,sans-serif;max-width:800px;margin:40px auto;padding:0 20px;color:#333;line-height:1.6}h1{color:#1a5276}h2{color:#2874a6;margin-top:30px}</style>
-</head>
-<body>
-<h1>Política de Privacidad</h1>
-<p><strong>Centro Médico Carampangue</strong> — Monsalve 102 esq. República, Carampangue, Chile<br>
-Última actualización: marzo 2026</p>
-
-<h2>1. Información que recopilamos</h2>
-<p>A través de nuestro asistente de WhatsApp recopilamos: número de teléfono, RUT, nombre completo y los datos necesarios para agendar, modificar o cancelar citas médicas.</p>
-
-<h2>2. Uso de la información</h2>
-<p>Los datos recopilados se usan exclusivamente para gestionar citas médicas en el Centro Médico Carampangue. No compartimos su información con terceros salvo lo estrictamente necesario para prestar el servicio (sistema de agendamiento Medilink/HealthAtom).</p>
-
-<h2>3. Retención de datos</h2>
-<p>Los datos de sesión se conservan por 30 minutos de inactividad. Los registros de citas se mantienen según la normativa sanitaria chilena vigente.</p>
-
-<h2>4. Seguridad</h2>
-<p>Las comunicaciones a través de WhatsApp están cifradas de extremo a extremo por Meta. Los datos almacenados en nuestros servidores se protegen con controles de acceso adecuados.</p>
-
-<h2>5. Derechos del usuario</h2>
-<p>Puede solicitar acceso, rectificación o eliminación de sus datos contactándonos en: <strong>+56 9 8783 4148</strong> o en nuestra dirección física.</p>
-
-<h2>6. Contacto</h2>
-<p>Centro Médico Carampangue<br>
-Monsalve 102 esq. República, Carampangue, Región del Biobío, Chile<br>
-Teléfono: (41) 296 5226<br>
-WhatsApp: +56 9 8783 4148</p>
-</body>
-</html>"""
+    """Política de Privacidad v1.0 — Ley 19.628 (Chile). Referenciada desde el
+    prompt de consent del bot y desde el footer del sitio web."""
+    return _PRIVACIDAD_HTML
 
 
 @app.get("/metrics")

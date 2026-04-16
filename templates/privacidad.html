@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Política de Privacidad — Centro Médico Carampangue</title>
+<meta name="description" content="Política de Privacidad del Centro Médico Carampangue conforme a la Ley 19.628 (Chile) y su reforma 2024.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://agentecmc.cl/privacidad">
+<style>
+  :root { --primary:#1a5276; --secondary:#2874a6; --accent:#16a085; --text:#2c3e50; --muted:#7f8c8d; --bg:#fafbfc; --border:#e1e8ed; }
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;max-width:860px;margin:0 auto;padding:40px 24px;color:var(--text);line-height:1.65;background:var(--bg)}
+  header{border-bottom:3px solid var(--primary);padding-bottom:20px;margin-bottom:30px}
+  header .badge{display:inline-block;background:var(--primary);color:#fff;padding:4px 12px;border-radius:12px;font-size:.8rem;font-weight:600;letter-spacing:.5px;margin-bottom:12px}
+  h1{color:var(--primary);font-size:2rem;margin:.2em 0}
+  h2{color:var(--secondary);font-size:1.35rem;margin-top:2.2em;border-left:4px solid var(--accent);padding-left:12px}
+  h3{color:var(--secondary);font-size:1.05rem;margin-top:1.4em}
+  p,li{font-size:1rem}
+  a{color:var(--secondary);text-decoration:none;border-bottom:1px dashed var(--secondary)}
+  a:hover{color:var(--primary)}
+  strong{color:var(--text)}
+  hr{border:none;border-top:1px solid var(--border);margin:2.5em 0}
+  table{width:100%;border-collapse:collapse;margin:1em 0;font-size:.93rem;background:#fff;border:1px solid var(--border);border-radius:6px;overflow:hidden}
+  th{background:var(--primary);color:#fff;padding:10px 12px;text-align:left;font-weight:600}
+  td{padding:10px 12px;border-top:1px solid var(--border);vertical-align:top}
+  tr:nth-child(even) td{background:#f8f9fa}
+  code{background:#ecf0f1;padding:1px 6px;border-radius:3px;font-size:.9em;color:#c0392b}
+  ul,ol{padding-left:1.4em}
+  li{margin:.3em 0}
+  .callout{background:#fff3cd;border-left:4px solid #ffc107;padding:12px 16px;border-radius:0 6px 6px 0;margin:1em 0}
+  .callout-green{background:#d4edda;border-left-color:#28a745}
+  .meta{color:var(--muted);font-size:.9rem}
+  footer{margin-top:4em;padding-top:1em;border-top:1px solid var(--border);color:var(--muted);font-size:.88rem;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="badge">Versión 1.0 · Vigente desde 2026-04-16</span>
+  <h1>Política de Privacidad — Centro Médico Carampangue</h1>
+  <p class="meta">Cumple con la <strong>Ley 19.628 sobre Protección de la Vida Privada</strong> (Chile) y su reforma de 2024 (Ley 21.719).</p>
+</header>
+
+<h2>1. Responsable del tratamiento</h2>
+<p><strong>Centro Médico Carampangue SpA</strong></p>
+<ul>
+  <li>Dirección: Monsalve 102 esq. República, Carampangue, Región del Biobío</li>
+  <li>Representante legal: Dr. Rodrigo Olavarría de la Vega</li>
+  <li>Email DPO: <a href="mailto:privacidad@centromedicocarampangue.cl">privacidad@centromedicocarampangue.cl</a></li>
+  <li>Teléfono: <a href="tel:+56987834148">+56 9 8783 4148</a></li>
+</ul>
+<p>El CMC actúa como <strong>responsable</strong> del tratamiento de los datos personales recolectados a través de:</p>
+<ul>
+  <li>Chatbot WhatsApp (+56 9 4588 6628 — en migración a +56 9 6661 0737)</li>
+  <li>Panel admin interno (<code>/admin</code>) y Portal del paciente (<code>/portal</code>)</li>
+  <li>Sitio web <a href="https://centromedicocarampangue.cl">centromedicocarampangue.cl</a> y <a href="https://agentecmc.cl">agentecmc.cl</a></li>
+</ul>
+
+<h2>2. Datos que recolectamos</h2>
+<table>
+  <thead><tr><th>Categoría</th><th>Datos específicos</th><th>Fuente</th></tr></thead>
+  <tbody>
+    <tr><td>Identificación</td><td>Nombre, RUT, fecha de nacimiento, sexo, comuna, email</td><td>Registro del paciente</td></tr>
+    <tr><td>Contacto</td><td>Número de WhatsApp, dirección</td><td>Meta Cloud API + paciente</td></tr>
+    <tr><td>Conversación</td><td>Mensajes de texto, audios transcritos (Whisper), imágenes, PDFs</td><td>WhatsApp, Instagram, Messenger</td></tr>
+    <tr><td>Clínicos</td><td>Especialidad, profesional, motivo de consulta, diagnósticos crónicos inferidos (HTA, DM2, asma, etc.)</td><td>Conversación + tags automáticos</td></tr>
+    <tr><td>Comportamiento</td><td>Historial de citas, asistencia, NPS, abandonos de flujo</td><td>Registro interno</td></tr>
+    <tr><td>Técnicos</td><td>ID de mensaje, timestamps, estado de entrega</td><td>Meta Cloud API</td></tr>
+  </tbody>
+</table>
+<div class="callout callout-green"><strong>No recolectamos</strong> datos bancarios, medios de pago, geolocalización en tiempo real, ni datos de otros servicios de salud fuera del CMC.</div>
+
+<h2>3. Finalidad del tratamiento</h2>
+<p>Los datos se usan exclusivamente para:</p>
+<ol>
+  <li><strong>Coordinar atención médica</strong>: agendar, cancelar y reagendar citas en Medilink.</li>
+  <li><strong>Recordatorios y confirmaciones</strong>: avisos 24 h y 2 h antes de la cita.</li>
+  <li><strong>Seguimiento post-consulta</strong>: evolución (mejor/igual/peor), recordatorios de control.</li>
+  <li><strong>Programas preventivos</strong>: calendario PNI, campañas estacionales (influenza, chequeo).</li>
+  <li><strong>Mejora del servicio</strong>: análisis agregado (no individual).</li>
+  <li><strong>Obligaciones legales</strong>: ficha clínica (Ley 20.584), reportes ISP cuando corresponda.</li>
+</ol>
+<div class="callout"><strong>No usamos los datos para</strong> venta a terceros, publicidad ajena al CMC ni perfilamiento automatizado con efectos jurídicos.</div>
+
+<h2>4. Base legal</h2>
+<p>Conforme al art. 12 de la Ley 19.628 (reformada), el tratamiento se realiza bajo:</p>
+<ul>
+  <li><strong>Consentimiento explícito</strong>: aceptación registrada al primer mensaje.</li>
+  <li><strong>Relación contractual</strong>: necesario para agendar y ejecutar la prestación.</li>
+  <li><strong>Obligación legal</strong>: ficha clínica (Ley 20.584), reporte MINSAL/ISP.</li>
+  <li><strong>Interés vital</strong>: emergencias (SAMU 131) procedentes sin consentimiento previo.</li>
+</ul>
+
+<h2>5. Retención de datos</h2>
+<table>
+  <thead><tr><th>Categoría</th><th>Plazo mínimo</th><th>Plazo máximo</th><th>Justificación</th></tr></thead>
+  <tbody>
+    <tr><td>Ficha clínica</td><td>15 años</td><td>Indefinido anonimizado</td><td>Ley 20.584</td></tr>
+    <tr><td>Conversación WhatsApp</td><td>24 meses</td><td>60 meses</td><td>Continuidad del cuidado</td></tr>
+    <tr><td>Audios originales</td><td>7 días</td><td>30 días</td><td>Solo se conserva el texto</td></tr>
+    <tr><td>Marketing (NPS, campañas)</td><td>12 meses</td><td>24 meses</td><td>Análisis de retención</td></tr>
+    <tr><td>Consent records</td><td>Relación + 6 años</td><td>—</td><td>Prueba de cumplimiento</td></tr>
+    <tr><td>Audit log de borrados</td><td>Indefinido</td><td>—</td><td>Prueba legal</td></tr>
+  </tbody>
+</table>
+<p>Los datos que excedan el plazo máximo son <strong>anonimizados</strong> (se remueven nombre, RUT, teléfono) y se conservan solo para estadísticas agregadas.</p>
+
+<h2>6. Transferencias a terceros</h2>
+<p>Compartimos datos mínimos e indispensables con los siguientes proveedores:</p>
+<table>
+  <thead><tr><th>Proveedor</th><th>Datos compartidos</th><th>Finalidad</th><th>País</th></tr></thead>
+  <tbody>
+    <tr><td>Meta (WhatsApp)</td><td>Mensajes, ID, teléfono</td><td>Entrega de mensajería</td><td>Irlanda/EEUU</td></tr>
+    <tr><td>Anthropic (Claude)</td><td>Texto del mensaje</td><td>Detección de intención + FAQ</td><td>EEUU</td></tr>
+    <tr><td>OpenAI (Whisper)</td><td>Audios de WhatsApp</td><td>Transcripción a texto</td><td>EEUU</td></tr>
+    <tr><td>healthatom (Medilink)</td><td>RUT, nombre, fecha, celular, motivo</td><td>Sistema de agendamiento</td><td>Chile</td></tr>
+    <tr><td>DigitalOcean</td><td>Base de datos SQLite encriptada</td><td>Hosting</td><td>EEUU</td></tr>
+    <tr><td>Cloudflare</td><td>Headers HTTP, IP</td><td>DNS y CDN</td><td>EEUU</td></tr>
+    <tr><td>Vercel</td><td>Logs frontend GES</td><td>Hosting asistente clínico</td><td>EEUU</td></tr>
+    <tr><td>Google Analytics</td><td>Eventos web anónimos</td><td>Analítica agregada</td><td>EEUU</td></tr>
+  </tbody>
+</table>
+<p><strong>No hay</strong> transferencias a terceros con fines comerciales propios del tercero.</p>
+
+<h2>7. Derechos del titular (ARCOP)</h2>
+<p>Conforme al art. 12 de la Ley 19.628 (reformada 2024), tienes derecho a:</p>
+<ul>
+  <li><strong>Acceso</strong>: solicitar copia de todos tus datos en 10 días hábiles.</li>
+  <li><strong>Rectificación</strong>: corregir datos inexactos.</li>
+  <li><strong>Cancelación / Supresión</strong> (derecho al olvido): eliminar tus datos.</li>
+  <li><strong>Oposición</strong>: rechazar el uso para marketing.</li>
+  <li><strong>Portabilidad</strong>: obtener tus datos en JSON/CSV.</li>
+</ul>
+<h3>Cómo ejercerlos</h3>
+<table>
+  <thead><tr><th>Canal</th><th>Método</th></tr></thead>
+  <tbody>
+    <tr><td>WhatsApp</td><td>Escribe <strong>"borrar mis datos"</strong> o <strong>"quiero mi información"</strong> al bot</td></tr>
+    <tr><td>Email</td><td><a href="mailto:privacidad@centromedicocarampangue.cl">privacidad@centromedicocarampangue.cl</a></td></tr>
+    <tr><td>Teléfono</td><td><a href="tel:+56987834148">+56 9 8783 4148</a></td></tr>
+    <tr><td>Presencial</td><td>En recepción del CMC con tu cédula de identidad</td></tr>
+  </tbody>
+</table>
+<p class="meta"><strong>Plazo de respuesta</strong>: 10 días hábiles (prorrogables por 10 días más).<br>
+<strong>Costo</strong>: gratuito. <strong>Validación de identidad</strong>: obligatoria.</p>
+
+<h2>8. Seguridad</h2>
+<ul>
+  <li><strong>En tránsito</strong>: HTTPS/TLS 1.3 en todos los endpoints (Let's Encrypt).</li>
+  <li><strong>En reposo</strong>: SQLite en VPS con plan de cifrado SQLCipher (ver <code>docs/encryption_at_rest.md</code>).</li>
+  <li><strong>Autenticación</strong>: panel admin con token + cookie HMAC-SHA256; portal paciente con OTP; SSH solo con llave Ed25519.</li>
+  <li><strong>Rate limiting</strong>: 30 mensajes/min por teléfono.</li>
+  <li><strong>Aislamiento</strong>: circuit breaker ante fallos de proveedores.</li>
+  <li><strong>Audit logging</strong>: eventos clave con timestamp.</li>
+</ul>
+<div class="callout"><strong>Breach notification</strong>: en caso de incidente que afecte datos personales, notificaremos a la Agencia de Protección de Datos Personales dentro de 72 horas y a los titulares cuando el riesgo sea alto.</div>
+
+<h2>9. Menores de edad</h2>
+<p>Si eres menor de 14 años, necesitas que un adulto responsable consienta en tu nombre. En pediatría el consentimiento lo otorga el padre, madre o tutor legal.</p>
+
+<h2>10. Cambios a esta política</h2>
+<p>Cuando haya cambios sustantivos:</p>
+<ol>
+  <li>Incrementaremos <code>PRIVACY_POLICY_VERSION</code> en el código.</li>
+  <li>Solicitaremos <strong>re-consentimiento</strong> a pacientes activos.</li>
+  <li>Publicaremos el nuevo texto en <code>agentecmc.cl/privacidad</code>.</li>
+</ol>
+
+<h2>11. Reclamos</h2>
+<ol>
+  <li>Reclamar al CMC: <a href="mailto:privacidad@centromedicocarampangue.cl">privacidad@centromedicocarampangue.cl</a></li>
+  <li>Ante la Agencia de Protección de Datos Personales (plena operación dic. 2026).</li>
+  <li>Tribunales civiles (art. 23 Ley 19.628).</li>
+</ol>
+
+<h2>12. Contacto DPO</h2>
+<p><strong>Dr. Rodrigo Olavarría de la Vega</strong> (responsable interino)</p>
+<ul>
+  <li>Email: <a href="mailto:privacidad@centromedicocarampangue.cl">privacidad@centromedicocarampangue.cl</a></li>
+  <li>Teléfono: <a href="tel:+56987834148">+56 9 8783 4148</a></li>
+</ul>
+
+<hr>
+<footer>
+  <p>Centro Médico Carampangue · Monsalve 102 esq. República, Carampangue, Región del Biobío, Chile<br>
+  Última revisión: 2026-04-16</p>
+</footer>
+
+</body>
+</html>
