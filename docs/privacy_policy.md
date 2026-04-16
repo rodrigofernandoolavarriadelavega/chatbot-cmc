@@ -136,7 +136,7 @@ Medidas técnicas implementadas:
 
 - **En tránsito**: HTTPS/TLS 1.3 en todos los endpoints (Let's Encrypt).
 - **En reposo**:
-  - Base de datos SQLite en VPS DigitalOcean (cifrado a nivel de disco: pendiente LUKS o SQLCipher — ver `docs/encryption_at_rest.md`).
+  - Base de datos SQLite encriptada con **SQLCipher (AES-256)** desde 2026-04-16. La key vive en `/opt/chatbot-cmc/.env` con permisos 600. Detalles técnicos en `docs/encryption_at_rest.md`.
   - Backup semanal encriptado (AES-256) en `/opt/backups/`.
 - **Autenticación**:
   - Panel admin: token Bearer + cookie firmada HMAC-SHA256 (7 días).

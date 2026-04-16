@@ -148,7 +148,7 @@
 <h2>8. Seguridad</h2>
 <ul>
   <li><strong>En tránsito</strong>: HTTPS/TLS 1.3 en todos los endpoints (Let's Encrypt).</li>
-  <li><strong>En reposo</strong>: SQLite en VPS con plan de cifrado SQLCipher (ver <code>docs/encryption_at_rest.md</code>).</li>
+  <li><strong>En reposo</strong>: SQLite encriptada con <strong>SQLCipher (AES-256)</strong> desde 2026-04-16.</li>
   <li><strong>Autenticación</strong>: panel admin con token + cookie HMAC-SHA256; portal paciente con OTP; SSH solo con llave Ed25519.</li>
   <li><strong>Rate limiting</strong>: 30 mensajes/min por teléfono.</li>
   <li><strong>Aislamiento</strong>: circuit breaker ante fallos de proveedores.</li>
