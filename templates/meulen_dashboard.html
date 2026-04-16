@@ -85,12 +85,12 @@
       </div>
       <div class="kpi-card tone-slate p-5 rounded-xl">
         <div class="text-xs uppercase tracking-wide font-semibold opacity-80">Endpoints</div>
-        <div class="text-3xl font-bold mt-2">52 <span class="text-lg text-slate-400">/ 52</span></div>
+        <div class="text-3xl font-bold mt-2">54 <span class="text-lg text-slate-400">/ 54</span></div>
         <div class="text-xs opacity-75 mt-1">API MVP implementada</div>
       </div>
       <div class="kpi-card tone-emerald p-5 rounded-xl">
         <div class="text-xs uppercase tracking-wide font-semibold opacity-80">Tests passing</div>
-        <div class="text-3xl font-bold mt-2">181 <span class="text-lg opacity-60">/ 181</span></div>
+        <div class="text-3xl font-bold mt-2">192 <span class="text-lg opacity-60">/ 192</span></div>
         <div class="text-xs opacity-75 mt-1">166 backend · 11 vitest · 4 e2e</div>
       </div>
       <div class="kpi-card tone-amber p-5 rounded-xl">
@@ -223,7 +223,7 @@ const DATA = {
     { id: "inventory",  name: "Inventory",  phase: 1, status: "done",        progress: 100, entities: 4, endpoints: 10, deps: ["catalog"] },
     { id: "purchasing", name: "Purchasing", phase: 1, status: "done",        progress: 95,  entities: 2, endpoints: 3,  deps: ["catalog","inventory"] },
     { id: "pos",        name: "POS Sales",  phase: 1, status: "done",        progress: 100, entities: 5, endpoints: 12, deps: ["catalog","inventory","identity"] },
-    { id: "reporting",  name: "Reporting",  phase: 1, status: "done",        progress: 100, entities: 0, endpoints: 6,  deps: ["pos","inventory"] },
+    { id: "reporting",  name: "Reporting",  phase: 1, status: "done",        progress: 100, entities: 0, endpoints: 8,  deps: ["pos","inventory"] },
     { id: "audit",      name: "Audit",      phase: 1, status: "done",        progress: 95,  entities: 1, endpoints: 1,  deps: [] },
     { id: "frontend",   name: "Frontend",   phase: 1, status: "done",        progress: 90,  entities: 0, endpoints: 0,  deps: ["identity","catalog","inventory","pos","reporting"] },
     { id: "infra",      name: "Infra & CI", phase: 1, status: "done",        progress: 95,  entities: 0, endpoints: 0,  deps: [] }
@@ -261,7 +261,9 @@ const DATA = {
     { id: "ADR-008", title: "Rate limiter in-memory (sin Redis)",              date: "2026-04-16", status: "accepted", note: "Single-node en la tienda; 5/min en /auth/login es suficiente. Migrar a Redis sólo si hay multi-instancia." },
     { id: "ADR-009", title: "Code-splitting por ruta + manualChunks",          date: "2026-04-16", status: "accepted", note: "Bundle inicial bajó de 797KB a 305KB gzip. Recharts (414KB) sólo se carga en /admin/reports." },
     { id: "ADR-010", title: "Playwright chromium para E2E",                    date: "2026-04-16", status: "accepted", note: "Smoke tests headless contra vite preview; rutas mockeadas para no acoplar al backend en CI." },
-    { id: "ADR-011", title: "SSH sobre PAT para acceso a GitHub",              date: "2026-04-16", status: "accepted", note: "PAT no tenía scope workflow y bloqueaba commits de .github/. SSH no caduca, no expone tokens en texto plano." }
+    { id: "ADR-011", title: "SSH sobre PAT para acceso a GitHub",              date: "2026-04-16", status: "accepted", note: "PAT no tenía scope workflow y bloqueaba commits de .github/. SSH no caduca, no expone tokens en texto plano." },
+    { id: "ADR-012", title: "Sugerencia de reposición basada en ventas",       date: "2026-04-16", status: "accepted", note: "Algoritmo simple: target = max(min_stock*2, avg_daily*target_days). Prioridades critical/low/replenish. Cobertura en días como señal secundaria." },
+    { id: "ADR-013", title: "Devoluciones vía cancel_sale",                    date: "2026-04-16", status: "accepted", note: "Sin nuevo modelo: cancelar una venta confirmada ya reinyecta stock. El reporte lee Sales con status=cancelled + cancelled_at. Para refunds parciales se evaluará en Fase 2." }
   ],
   domains: {
     "Identity & Audit":   [ {t: "users", vol: "~5 filas"}, {t: "audit_logs", vol: "~15k/año"} ],
@@ -269,7 +271,7 @@ const DATA = {
     "Inventario":         [ {t: "stock_balances", vol: "~2.500"}, {t: "inventory_movements", vol: "~600k/año"}, {t: "stock_counts", vol: "~12"}, {t: "stock_count_items", vol: "~30k"} ],
     "Compras":            [ {t: "purchases", vol: "~400/año"}, {t: "purchase_items", vol: "~20k/año"} ],
     "POS":                [ {t: "cash_sessions", vol: "~400/año"}, {t: "sales", vol: "~120k/año"}, {t: "sale_items", vol: "~500k/año"}, {t: "payments", vol: "~130k/año"}, {t: "cash_movements", vol: "~2k/año"} ],
-    "Infra":              [ {t: "docker-compose.yml", vol: "backend + nginx + volumen"}, {t: ".github/workflows/ci.yml", vol: "4 jobs"}, {t: "openapi.json", vol: "52 endpoints"} ]
+    "Infra":              [ {t: "docker-compose.yml", vol: "backend + nginx + volumen"}, {t: ".github/workflows/ci.yml", vol: "4 jobs"}, {t: "openapi.json", vol: "54 endpoints"} ]
   },
   volumes: [
     { label: "audit_logs",          qty: 15000 },
@@ -286,9 +288,11 @@ const DATA = {
     { text: "Módulo purchasing con WMA (weighted moving average)",                     done: true },
     { text: "Transacción atómica SaleService.confirm + descuento de stock",            done: true },
     { text: "6 reportes (ventas diarias, métodos, top productos, stock, low-stock, cajas)", done: true },
+    { text: "Reporte de sugerencia de reposición (venta/día → qué comprar)",           done: true },
+    { text: "Reporte de devoluciones (ventas canceladas con stock reinyectado)",       done: true },
     { text: "Seed demo idempotente: 150 productos, 2 usuarios, categorías y stock",    done: true },
     { text: "Middleware de observabilidad (request_id + user_id + duración)",          done: true },
-    { text: "Suite backend: 166 tests verdes (87% cobertura)",                         done: true },
+    { text: "Suite backend: 177 tests verdes (reporting + refunds + reposición)",      done: true },
     { text: "Suite frontend: 11 vitest (format + store) + 4 Playwright e2e",           done: true },
     { text: "Scripts operativos: backup, restore, health_check, export_sales, export_count", done: true },
     { text: "Scaffolding frontend Vite + React + TS + 27 pantallas POS/admin",         done: true },
@@ -296,7 +300,7 @@ const DATA = {
     { text: "Code-splitting: bundle inicial 797KB → 305KB gzip (-56%)",                done: true },
     { text: "Docker compose: backend + frontend (nginx) + volumen persistente",        done: true },
     { text: "GitHub Actions CI: backend + frontend + e2e + openapi drift check",       done: true },
-    { text: "OpenAPI 3.1 spec exportado a docs/openapi.json (52 endpoints)",           done: true },
+    { text: "OpenAPI 3.1 spec exportado a docs/openapi.json (54 endpoints)",           done: true },
     { text: "README completo con despliegue local (launchd/systemd/NSSM) y Docker",    done: true },
     { text: "— Fase 2 —",                                                              done: false },
     { text: "Devoluciones / refunds con movimiento inverso de inventario",             done: false },
