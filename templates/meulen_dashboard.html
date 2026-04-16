@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dashboard Planificación — Supermercado Meulen</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  body { font-family: 'Inter', system-ui, sans-serif; background: #f7f8fa; }
+  .tab-btn.active { background: white; color: #0f172a; border-color: #e2e8f0; }
+  .gantt-row { display: grid; grid-template-columns: 160px 1fr; gap: 12px; align-items: center; }
+  .gantt-bar { height: 22px; border-radius: 6px; position: relative; }
+  .kpi-card { transition: transform .15s ease, box-shadow .15s ease; }
+  .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(15,23,42,.08); }
+  .tone-slate   { background: #f1f5f9; color: #0f172a; border: 1px solid #e2e8f0; }
+  .tone-white   { background: #ffffff; color: #0f172a; border: 1px solid #e2e8f0; }
+  .tone-blue    { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+  .tone-emerald { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+  .tone-amber   { background: #fffbeb; color: #92400e; border: 1px solid #fcd34d; }
+  .tone-rose    { background: #fff1f2; color: #9f1239; border: 1px solid #fecaca; }
+  .status-design     { background: #e0e7ff; color: #3730a3; }
+  .status-in_progress{ background: #fef3c7; color: #92400e; }
+  .status-done       { background: #dcfce7; color: #166534; }
+  .status-planned    { background: #f1f5f9; color: #475569; }
+  .priority-critical { background: #fee2e2; color: #991b1b; }
+  .priority-high     { background: #fed7aa; color: #9a3412; }
+  .priority-medium   { background: #fef3c7; color: #92400e; }
+  .priority-low      { background: #e0e7ff; color: #3730a3; }
+</style>
+</head>
+<body class="text-slate-800">
+
+<!-- Header -->
+<header class="bg-white border-b border-slate-200">
+  <div class="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="text-3xl">🛒</div>
+      <div>
+        <h1 class="text-xl font-semibold">Dashboard Planificación — Meulen</h1>
+        <div class="text-sm text-slate-500">Supermercado Meulen · Puerto Montt · MVP Fase 1</div>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="text-xs text-slate-400">Actualizado: <span id="updated-date">2026-04-16</span></div>
+      <a href="../ecosistema/index.html" class="px-3 py-1.5 text-xs font-medium bg-slate-900 text-white rounded-md hover:bg-slate-800">Ver Ecosistema →</a>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="max-w-7xl mx-auto px-6">
+    <nav class="flex gap-1 -mb-px" id="tabs">
+      <button class="tab-btn active px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="overview">📊 Overview</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="modules">🧩 Módulos</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="roadmap">🗓 Roadmap</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="data">🧱 Modelo datos</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="rules">⚙️ Reglas</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="risks">🚨 Riesgos</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="adrs">🕒 ADRs</button>
+    </nav>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-6 py-8">
+
+  <!-- Tab: Overview -->
+  <section id="tab-overview" class="tab-content">
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+      <div class="kpi-card tone-white p-5 rounded-xl">
+        <div class="text-xs uppercase tracking-wide text-slate-500 font-semibold">% Completo</div>
+        <div class="text-3xl font-bold mt-2" id="kpi-complete">—</div>
+        <div class="text-xs text-slate-500 mt-1">MVP Fase 1</div>
+      </div>
+      <div class="kpi-card tone-blue p-5 rounded-xl">
+        <div class="text-xs uppercase tracking-wide font-semibold opacity-80">Fase actual</div>
+        <div class="text-2xl font-bold mt-2">Fase 1</div>
+        <div class="text-xs opacity-75 mt-1">MVP Núcleo</div>
+      </div>
+      <div class="kpi-card tone-slate p-5 rounded-xl">
+        <div class="text-xs uppercase tracking-wide font-semibold opacity-80">Endpoints</div>
+        <div class="text-3xl font-bold mt-2">0 <span class="text-lg text-slate-400">/ 30</span></div>
+        <div class="text-xs opacity-75 mt-1">API MVP</div>
+      </div>
+      <div class="kpi-card tone-emerald p-5 rounded-xl">
+        <div class="text-xs uppercase tracking-wide font-semibold opacity-80">Tests passing</div>
+        <div class="text-3xl font-bold mt-2">0 <span class="text-lg opacity-60">/ —</span></div>
+        <div class="text-xs opacity-75 mt-1">pytest + vitest</div>
+      </div>
+      <div class="kpi-card tone-amber p-5 rounded-xl">
+        <div class="text-xs uppercase tracking-wide font-semibold opacity-80">Reglas</div>
+        <div class="text-3xl font-bold mt-2">0 <span class="text-lg opacity-60">/ 10</span></div>
+        <div class="text-xs opacity-75 mt-1">cubiertas con test</div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <div class="bg-white rounded-xl border border-slate-200 p-6">
+        <h3 class="font-semibold mb-4">Estado de módulos</h3>
+        <canvas id="chart-modules-status" height="220"></canvas>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-200 p-6">
+        <h3 class="font-semibold mb-4">Completitud por fase</h3>
+        <canvas id="chart-phases" height="220"></canvas>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl border border-slate-200 p-6">
+      <h3 class="font-semibold mb-4">Próximos hitos</h3>
+      <ul class="space-y-3" id="checklist"></ul>
+    </div>
+  </section>
+
+  <!-- Tab: Módulos -->
+  <section id="tab-modules" class="tab-content hidden">
+    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+          <tr>
+            <th class="text-left px-5 py-3">Módulo</th>
+            <th class="text-left px-5 py-3">Fase</th>
+            <th class="text-left px-5 py-3">Estado</th>
+            <th class="text-left px-5 py-3">Progreso</th>
+            <th class="text-left px-5 py-3">Entidades</th>
+            <th class="text-left px-5 py-3">Endpoints</th>
+            <th class="text-left px-5 py-3">Dependencias</th>
+          </tr>
+        </thead>
+        <tbody id="modules-tbody" class="divide-y divide-slate-100"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Tab: Roadmap -->
+  <section id="tab-roadmap" class="tab-content hidden">
+    <div class="bg-white rounded-xl border border-slate-200 p-6">
+      <h3 class="font-semibold mb-6">Roadmap por fases</h3>
+      <div class="space-y-4" id="gantt"></div>
+      <div class="mt-6 pt-6 border-t border-slate-100 text-sm text-slate-500">
+        <strong class="text-slate-700">Nota:</strong> las barras son tamaños relativos de esfuerzo, no fechas. El MVP se entrega cuando el flujo crítico (venta con pistoleo + descuento de stock + cierre de caja) funciona end-to-end.
+      </div>
+    </div>
+  </section>
+
+  <!-- Tab: Modelo de datos -->
+  <section id="tab-data" class="tab-content hidden">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="bg-white rounded-xl border border-slate-200 p-6">
+        <h3 class="font-semibold mb-4">Tablas por dominio</h3>
+        <div id="data-domains" class="space-y-5 text-sm"></div>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-200 p-6">
+        <h3 class="font-semibold mb-4">Volumen estimado (1 año)</h3>
+        <canvas id="chart-volumes" height="260"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tab: Reglas -->
+  <section id="tab-rules" class="tab-content hidden">
+    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+          <tr>
+            <th class="text-left px-5 py-3">ID</th>
+            <th class="text-left px-5 py-3">Regla</th>
+            <th class="text-left px-5 py-3">Prioridad</th>
+            <th class="text-left px-5 py-3">Dónde se aplica</th>
+            <th class="text-left px-5 py-3">Test</th>
+          </tr>
+        </thead>
+        <tbody id="rules-tbody" class="divide-y divide-slate-100"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Tab: Riesgos -->
+  <section id="tab-risks" class="tab-content hidden">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="bg-white rounded-xl border border-slate-200 p-6">
+        <h3 class="font-semibold mb-4">Riesgos identificados</h3>
+        <div id="risks-list" class="space-y-3"></div>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-200 p-6">
+        <h3 class="font-semibold mb-4">Matriz Probabilidad × Impacto</h3>
+        <canvas id="chart-risks" height="300"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tab: ADRs -->
+  <section id="tab-adrs" class="tab-content hidden">
+    <div class="bg-white rounded-xl border border-slate-200 p-6">
+      <h3 class="font-semibold mb-6">Decisiones de arquitectura</h3>
+      <ol class="relative border-l-2 border-slate-200 space-y-6 ml-3" id="adrs-list"></ol>
+    </div>
+  </section>
+
+</main>
+
+<script>
+/* ======================================================================
+   Data embebida
+====================================================================== */
+const DATA = {
+  version: "0.1",
+  updated_at: "2026-04-16",
+  phases: [
+    { id: 1, name: "MVP Núcleo",                  status: "in_progress", progress: 8,  weight: 10 },
+    { id: 2, name: "Control robusto",             status: "planned",     progress: 0,  weight: 5  },
+    { id: 3, name: "Integración fiscal/bancaria", status: "planned",     progress: 0,  weight: 7  },
+    { id: 4, name: "Optimización",                status: "planned",     progress: 0,  weight: 4  }
+  ],
+  modules: [
+    { id: "identity",   name: "Identity",   phase: 1, status: "design", progress: 30, entities: 2, endpoints: 4,  deps: [] },
+    { id: "catalog",    name: "Catalog",    phase: 1, status: "design", progress: 25, entities: 4, endpoints: 9,  deps: ["identity"] },
+    { id: "inventory",  name: "Inventory",  phase: 1, status: "design", progress: 20, entities: 4, endpoints: 7,  deps: ["catalog"] },
+    { id: "purchasing", name: "Purchasing", phase: 1, status: "design", progress: 15, entities: 2, endpoints: 3,  deps: ["catalog","inventory"] },
+    { id: "pos",        name: "POS Sales",  phase: 1, status: "design", progress: 15, entities: 5, endpoints: 11, deps: ["catalog","inventory","identity"] },
+    { id: "reporting",  name: "Reporting",  phase: 1, status: "design", progress: 10, entities: 0, endpoints: 6,  deps: ["pos","inventory"] },
+    { id: "audit",      name: "Audit",      phase: 1, status: "design", progress: 20, entities: 1, endpoints: 1,  deps: [] }
+  ],
+  rules: [
+    { id: "R01", name: "Barcode único global",                           priority: "critical", place: "DB constraint + POST /products/barcodes" },
+    { id: "R02", name: "Stock no negativo salvo allow_negative_stock",   priority: "critical", place: "InventoryService._apply_movement" },
+    { id: "R03", name: "Venta requiere caja abierta",                    priority: "critical", place: "SaleService.create_sale" },
+    { id: "R04", name: "Cierre de caja requiere arqueo",                 priority: "critical", place: "CashService.close_session" },
+    { id: "R05", name: "Ajuste de stock requiere motivo",                priority: "high",     place: "InventoryService.adjust" },
+    { id: "R06", name: "Venta confirmada descuenta stock atómicamente",  priority: "critical", place: "SaleService.confirm (transacción)" },
+    { id: "R07", name: "Snapshot de precio/costo en sale_items",         priority: "high",     place: "SaleService.add_item" },
+    { id: "R08", name: "Venta confirmada requiere ≥1 pago",              priority: "critical", place: "SaleService.confirm" },
+    { id: "R09", name: "Suma de pagos ≥ total venta",                    priority: "critical", place: "SaleService.confirm" },
+    { id: "R10", name: "Auditoría automática en acciones críticas",      priority: "medium",   place: "decorador @audit" }
+  ],
+  risks: [
+    { id: "RSK01", name: "Proveedor DTE pendiente",        probability: 3, impact: 2, phase: 3, note: "Evaluar LibreDTE (open-source) vs Haulmer (paga por boleta)." },
+    { id: "RSK02", name: "Impresora térmica a elegir",     probability: 2, impact: 2, phase: 1, note: "Definir modelo (58mm o 80mm) y conectividad USB/red." },
+    { id: "RSK03", name: "Despliegue local vs VPS",        probability: 2, impact: 3, phase: 1, note: "MVP en PC tienda con backup; VPS cuando Fase 3." },
+    { id: "RSK04", name: "UPS / corte eléctrico",          probability: 3, impact: 3, phase: 1, note: "SQLite WAL puede corromperse en corte abrupto — UPS básico recomendado." },
+    { id: "RSK05", name: "UX con operadores no técnicos",  probability: 2, impact: 4, phase: 1, note: "Ensayos reales con los padres antes del go-live." },
+    { id: "RSK06", name: "Concurrencia 2 cajas en SQLite", probability: 1, impact: 3, phase: 1, note: "WAL + busy_timeout 5000 cubre este volumen; si crece → PostgreSQL." }
+  ],
+  adrs: [
+    { id: "ADR-001", title: "FastAPI sobre NestJS",                            date: "2026-04-15", status: "accepted", note: "Ecosistema del usuario está en Python; reusa patrones chatbot-cmc y ges-clinical-app." },
+    { id: "ADR-002", title: "SQLite sobre PostgreSQL en MVP",                  date: "2026-04-15", status: "accepted", note: "Volumen de 1 sucursal con 2 cajas cabe en WAL mode; migración trivial cuando escale." },
+    { id: "ADR-003", title: "React + Vite + TS sobre Next.js",                 date: "2026-04-15", status: "accepted", note: "SPA simple, sin SSR/SEO, despliegue local; Next.js sería overkill." },
+    { id: "ADR-004", title: "MVP sin boleta electrónica (Bsale en paralelo)",  date: "2026-04-15", status: "accepted", note: "Evita bloqueo por proveedor DTE; emisión tributaria en Bsale durante transición." },
+    { id: "ADR-005", title: "Transbank manual en MVP (sin SDK)",               date: "2026-04-15", status: "accepted", note: "Cajero cobra en máquina aparte y registra método. Integración real en Fase 3." },
+    { id: "ADR-006", title: "Despliegue local en PC de la tienda",             date: "2026-04-15", status: "accepted", note: "Funciona offline; internet inestable no bloquea; backup diario a Drive." }
+  ],
+  domains: {
+    "Identity & Audit":   [ {t: "users", vol: "~5 filas"}, {t: "audit_logs", vol: "~15k/año"} ],
+    "Catálogo":           [ {t: "categories", vol: "~30"}, {t: "products", vol: "~2.500"}, {t: "product_barcodes", vol: "~3.500"}, {t: "product_price_history", vol: "~10k"}, {t: "suppliers", vol: "~40"} ],
+    "Inventario":         [ {t: "stock_balances", vol: "~2.500"}, {t: "inventory_movements", vol: "~600k/año"}, {t: "stock_counts", vol: "~12"}, {t: "stock_count_items", vol: "~30k"} ],
+    "Compras":            [ {t: "purchases", vol: "~400/año"}, {t: "purchase_items", vol: "~20k/año"} ],
+    "POS":                [ {t: "cash_sessions", vol: "~400/año"}, {t: "sales", vol: "~120k/año"}, {t: "sale_items", vol: "~500k/año"}, {t: "payments", vol: "~130k/año"}, {t: "cash_movements", vol: "~2k/año"} ]
+  },
+  volumes: [
+    { label: "audit_logs",          qty: 15000 },
+    { label: "inventory_movements", qty: 600000 },
+    { label: "sales",               qty: 120000 },
+    { label: "sale_items",          qty: 500000 },
+    { label: "payments",            qty: 130000 }
+  ],
+  checklist: [
+    { text: "Scaffolding backend + primera migración Alembic", done: true },
+    { text: "Módulo identity con JWT + argon2",                 done: false },
+    { text: "Módulo catalog con import CSV + búsqueda barcode", done: false },
+    { text: "Módulo inventory con kardex y ajustes",            done: false },
+    { text: "Transacción atómica SaleService.confirm",          done: false },
+    { text: "Scaffolding frontend Vite + React + TS",           done: false },
+    { text: "Pantalla POS /pos/sale con pistoleo",              done: false },
+    { text: "Test integración end-to-end flujo venta",          done: false },
+    { text: "Script backup diario",                             done: false }
+  ]
+};
+
+/* ======================================================================
+   Render utilities
+====================================================================== */
+document.getElementById('updated-date').textContent = DATA.updated_at;
+
+// Tabs
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden');
+  });
+});
+
+// Overview KPIs
+const avgProgress = Math.round(DATA.modules.reduce((a, m) => a + m.progress, 0) / DATA.modules.length);
+document.getElementById('kpi-complete').textContent = avgProgress + '%';
+
+// Charts
+const statusCounts = DATA.modules.reduce((acc, m) => { acc[m.status] = (acc[m.status]||0) + 1; return acc; }, {});
+new Chart(document.getElementById('chart-modules-status'), {
+  type: 'doughnut',
+  data: {
+    labels: Object.keys(statusCounts).map(s => ({design:'Diseño',in_progress:'En curso',done:'Listo',planned:'Planificado'})[s] || s),
+    datasets: [{ data: Object.values(statusCounts), backgroundColor: ['#6366f1','#f59e0b','#10b981','#94a3b8'] }]
+  },
+  options: { plugins: { legend: { position: 'bottom' } } }
+});
+
+new Chart(document.getElementById('chart-phases'), {
+  type: 'bar',
+  data: {
+    labels: DATA.phases.map(p => 'Fase ' + p.id + ' — ' + p.name),
+    datasets: [{ label: '% completitud', data: DATA.phases.map(p => p.progress), backgroundColor: '#3b82f6', borderRadius: 6 }]
+  },
+  options: { indexAxis: 'y', scales: { x: { max: 100 } }, plugins: { legend: { display: false } } }
+});
+
+// Checklist
+const checklistEl = document.getElementById('checklist');
+DATA.checklist.forEach(item => {
+  const li = document.createElement('li');
+  li.className = 'flex items-start gap-3 text-sm';
+  li.innerHTML = `
+    <span class="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded ${item.done?'bg-emerald-500 text-white':'border border-slate-300 text-slate-400'}">${item.done?'✓':''}</span>
+    <span class="${item.done?'line-through text-slate-400':'text-slate-700'}">${item.text}</span>
+  `;
+  checklistEl.appendChild(li);
+});
+
+// Módulos tabla
+const modulesTbody = document.getElementById('modules-tbody');
+DATA.modules.forEach(m => {
+  const tr = document.createElement('tr');
+  tr.className = 'hover:bg-slate-50';
+  tr.innerHTML = `
+    <td class="px-5 py-3 font-medium">${m.name}</td>
+    <td class="px-5 py-3 text-slate-500">Fase ${m.phase}</td>
+    <td class="px-5 py-3"><span class="status-${m.status} px-2 py-1 rounded text-xs font-medium">${m.status}</span></td>
+    <td class="px-5 py-3">
+      <div class="flex items-center gap-2">
+        <div class="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+          <div class="h-full bg-blue-500" style="width:${m.progress}%"></div>
+        </div>
+        <span class="text-xs text-slate-500">${m.progress}%</span>
+      </div>
+    </td>
+    <td class="px-5 py-3 text-slate-500">${m.entities}</td>
+    <td class="px-5 py-3 text-slate-500">${m.endpoints}</td>
+    <td class="px-5 py-3 text-xs text-slate-500">${m.deps.length ? m.deps.join(', ') : '—'}</td>
+  `;
+  modulesTbody.appendChild(tr);
+});
+
+// Roadmap Gantt
+const gantt = document.getElementById('gantt');
+const phaseColors = ['#10b981','#f59e0b','#ef4444','#3b82f6'];
+const maxWeight = Math.max(...DATA.phases.map(p => p.weight));
+DATA.phases.forEach((p, i) => {
+  const offset = DATA.phases.slice(0, i).reduce((a,x) => a + x.weight, 0);
+  const totalW = DATA.phases.reduce((a,x) => a + x.weight, 0);
+  const row = document.createElement('div');
+  row.className = 'gantt-row';
+  row.innerHTML = `
+    <div class="text-sm font-medium">Fase ${p.id}: ${p.name}</div>
+    <div class="relative h-6 bg-slate-100 rounded">
+      <div class="gantt-bar absolute top-0"
+           style="left:${(offset/totalW)*100}%;width:${(p.weight/totalW)*100}%;background:${phaseColors[i]};">
+        <div class="text-xs text-white px-2 py-0.5">${p.progress}%</div>
+      </div>
+    </div>
+  `;
+  gantt.appendChild(row);
+});
+
+// Modelo de datos
+const domainsEl = document.getElementById('data-domains');
+Object.entries(DATA.domains).forEach(([domain, tables]) => {
+  const block = document.createElement('div');
+  block.innerHTML = `
+    <h4 class="text-xs uppercase tracking-wide font-semibold text-slate-400 mb-2">${domain}</h4>
+    <ul class="space-y-1">
+      ${tables.map(t => `<li class="flex items-center justify-between py-1 px-2 rounded hover:bg-slate-50">
+        <code class="text-xs text-slate-700">${t.t}</code>
+        <span class="text-xs text-slate-400">${t.vol}</span>
+      </li>`).join('')}
+    </ul>
+  `;
+  domainsEl.appendChild(block);
+});
+
+new Chart(document.getElementById('chart-volumes'), {
+  type: 'bar',
+  data: {
+    labels: DATA.volumes.map(v => v.label),
+    datasets: [{ label: 'filas/año', data: DATA.volumes.map(v => v.qty), backgroundColor: '#fb923c', borderRadius: 6 }]
+  },
+  options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { type: 'logarithmic' } } }
+});
+
+// Reglas
+const rulesTbody = document.getElementById('rules-tbody');
+DATA.rules.forEach(r => {
+  const tr = document.createElement('tr');
+  tr.className = 'hover:bg-slate-50';
+  tr.innerHTML = `
+    <td class="px-5 py-3 font-mono text-xs">${r.id}</td>
+    <td class="px-5 py-3 font-medium">${r.name}</td>
+    <td class="px-5 py-3"><span class="priority-${r.priority} px-2 py-1 rounded text-xs font-medium">${r.priority}</span></td>
+    <td class="px-5 py-3 text-xs text-slate-500 font-mono">${r.place}</td>
+    <td class="px-5 py-3 text-slate-400 text-xs">pendiente</td>
+  `;
+  rulesTbody.appendChild(tr);
+});
+
+// Riesgos
+const risksList = document.getElementById('risks-list');
+DATA.risks.forEach(r => {
+  const div = document.createElement('div');
+  div.className = 'border border-slate-200 rounded-lg p-4';
+  const level = r.probability * r.impact;
+  const badge = level >= 9 ? 'bg-red-100 text-red-700' : level >= 6 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600';
+  div.innerHTML = `
+    <div class="flex items-start justify-between mb-2">
+      <div class="font-medium">${r.name}</div>
+      <span class="${badge} px-2 py-0.5 rounded text-xs font-semibold">P${r.probability}·I${r.impact}</span>
+    </div>
+    <div class="text-xs text-slate-500 mb-2">Fase ${r.phase}</div>
+    <div class="text-sm text-slate-600">${r.note}</div>
+  `;
+  risksList.appendChild(div);
+});
+
+new Chart(document.getElementById('chart-risks'), {
+  type: 'scatter',
+  data: {
+    datasets: [{
+      label: 'Riesgos',
+      data: DATA.risks.map(r => ({ x: r.probability, y: r.impact, label: r.id })),
+      backgroundColor: DATA.risks.map(r => r.probability*r.impact >= 9 ? '#ef4444' : r.probability*r.impact >= 6 ? '#f59e0b' : '#94a3b8'),
+      pointRadius: 10, pointHoverRadius: 12
+    }]
+  },
+  options: {
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: (ctx) => ctx.raw.label + ' · P' + ctx.raw.x + '·I' + ctx.raw.y } }
+    },
+    scales: {
+      x: { min: 0, max: 5, title: { display: true, text: 'Probabilidad →' }, ticks: { stepSize: 1 } },
+      y: { min: 0, max: 5, title: { display: true, text: 'Impacto →' }, ticks: { stepSize: 1 } }
+    }
+  }
+});
+
+// ADRs timeline
+const adrsList = document.getElementById('adrs-list');
+DATA.adrs.forEach(a => {
+  const li = document.createElement('li');
+  li.className = 'ml-6';
+  li.innerHTML = `
+    <span class="absolute -left-[7px] mt-1.5 h-3 w-3 rounded-full bg-blue-500 border-2 border-white"></span>
+    <div class="flex items-baseline gap-2">
+      <span class="font-mono text-xs text-slate-400">${a.id}</span>
+      <span class="text-xs text-slate-400">· ${a.date}</span>
+      <span class="ml-auto text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">${a.status}</span>
+    </div>
+    <h4 class="font-semibold mt-1">${a.title}</h4>
+    <p class="text-sm text-slate-600 mt-1">${a.note}</p>
+  `;
+  adrsList.appendChild(li);
+});
+</script>
+</body>
+</html>

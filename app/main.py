@@ -263,6 +263,8 @@ _ADMIN_HTML = (_TEMPLATE_DIR / "admin.html").read_text(encoding="utf-8")
 _PORTAL_HTML = (_TEMPLATE_DIR / "portal.html").read_text(encoding="utf-8")
 _ECOSISTEMA_HTML = (_TEMPLATE_DIR / "ecosistema.html").read_text(encoding="utf-8")
 _DASHBOARD_HTML = (_TEMPLATE_DIR / "dashboard.html").read_text(encoding="utf-8")
+_MEULEN_ECOSISTEMA_HTML = (_TEMPLATE_DIR / "meulen_ecosistema.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "meulen_ecosistema.html").exists() else ""
+_MEULEN_DASHBOARD_HTML = (_TEMPLATE_DIR / "meulen_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "meulen_dashboard.html").exists() else ""
 _LANDING_HTML = (_TEMPLATE_DIR / "landing.html").read_text(encoding="utf-8")
 _SITIO_V3_HTML = (_TEMPLATE_DIR / "sitio-v3.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio-v3.html").exists() else ""
 _HEATMAP_COMUNAS_HTML = (_TEMPLATE_DIR / "heatmap_comunas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "heatmap_comunas.html").exists() else ""
@@ -427,6 +429,18 @@ def portal_page():
 def ecosistema_page():
     """Dashboard visual del ecosistema digital CMC."""
     return _ECOSISTEMA_HTML
+
+
+@app.get("/meulen/ecosistemameulen", response_class=HTMLResponse)
+def meulen_ecosistema_page():
+    """Visualización del ecosistema digital de Supermercado Meulen."""
+    return _MEULEN_ECOSISTEMA_HTML
+
+
+@app.get("/meulen/dashboardplanificacion", response_class=HTMLResponse)
+def meulen_dashboard_page():
+    """Dashboard de planificación del MVP Meulen."""
+    return _MEULEN_DASHBOARD_HTML
 
 
 # ── Webhooks ─────────────────────────────────────────────────────────────────

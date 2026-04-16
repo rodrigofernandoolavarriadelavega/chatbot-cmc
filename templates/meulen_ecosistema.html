@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>Ecosistema Supermercado Meulen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #191919;
+    --bg-2: #111;
+    --panel: rgba(26, 26, 30, 0.9);
+    --panel-solid: #1b1b1f;
+    --text: #f5f5f5;
+    --text-dim: #a0a0a8;
+    --border: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.18);
+    --accent: #a882ff;
+    --accent-2: #38bdf8;
+    --accent-3: #fb923c;
+    --accent-4: #f87171;
+    --accent-5: #4ade80;
+    --glow: 0 0 24px rgba(168, 130, 255, 0.35);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    overflow: hidden;
+    width: 100vw; height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  canvas { display: block; cursor: grab; }
+  canvas:active { cursor: grabbing; }
+
+  /* Header */
+  .overlay-header {
+    position: fixed; top: 0; left: 0; right: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px;
+    background: linear-gradient(to bottom, rgba(25,25,25,0.95), rgba(25,25,25,0));
+    z-index: 10; pointer-events: none;
+  }
+  .overlay-header > * { pointer-events: auto; }
+  .brand {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .brand-logo {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #a882ff 0%, #38bdf8 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    box-shadow: 0 4px 16px rgba(168, 130, 255, 0.35);
+  }
+  .brand-text { display: flex; flex-direction: column; }
+  .brand-title { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+  .brand-subtitle { font-size: 11px; color: var(--text-dim); font-weight: 500; }
+  .live-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px;
+    background: rgba(251, 146, 60, 0.12);
+    border: 1px solid rgba(251, 146, 60, 0.3);
+    border-radius: 999px;
+    font-size: 11px; font-weight: 600;
+    color: #fdba74;
+  }
+  .live-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #fb923c;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.3); }
+  }
+
+  /* Filters */
+  .filters {
+    display: flex; gap: 8px;
+    flex-wrap: wrap;
+    max-width: 60%;
+  }
+  .filter-pill {
+    padding: 6px 14px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 12px; font-weight: 500;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+  }
+  .filter-pill:hover {
+    background: rgba(255,255,255,0.08);
+    color: var(--text);
+    border-color: var(--border-strong);
+  }
+  .filter-pill.active {
+    background: rgba(168, 130, 255, 0.15);
+    border-color: rgba(168, 130, 255, 0.4);
+    color: #c4b2ff;
+  }
+  .filter-pill .dot {
+    display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+    margin-right: 6px; vertical-align: middle;
+  }
+
+  /* Controls */
+  .controls {
+    position: fixed; bottom: 24px; right: 24px;
+    display: flex; flex-direction: column; gap: 6px;
+    z-index: 10;
+  }
+  .control-btn {
+    width: 36px; height: 36px;
+    background: var(--panel);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 18px; font-weight: 500;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s ease;
+  }
+  .control-btn:hover {
+    background: rgba(255,255,255,0.08);
+    border-color: var(--border-strong);
+  }
+  .zoom-label {
+    font-size: 10px; color: var(--text-dim);
+    text-align: center;
+    padding: 4px 0;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Stats overlay */
+  .stats-overlay {
+    position: fixed; bottom: 24px; left: 24px;
+    display: flex; gap: 20px;
+    padding: 12px 18px;
+    background: var(--panel);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    z-index: 10;
+    font-size: 11px;
+  }
+  .stat-item { display: flex; flex-direction: column; gap: 2px; }
+  .stat-value { font-size: 15px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+  .stat-label { color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; font-size: 9px; font-weight: 600; }
+
+  /* Detail panel */
+  .detail-panel {
+    position: fixed; top: 0; right: 0; bottom: 0;
+    width: 380px;
+    background: var(--panel-solid);
+    border-left: 1px solid var(--border);
+    transform: translateX(100%);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 20;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .detail-panel.open { transform: translateX(0); }
+  .detail-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: flex-start; gap: 14px;
+  }
+  .detail-icon {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px;
+    flex-shrink: 0;
+  }
+  .detail-title-block { flex: 1; min-width: 0; }
+  .detail-title {
+    font-size: 18px; font-weight: 700;
+    margin: 0 0 4px; letter-spacing: -0.01em;
+    white-space: pre-line;
+  }
+  .detail-subtitle {
+    font-size: 12px; color: var(--text-dim);
+    display: flex; align-items: center; gap: 8px;
+    flex-wrap: wrap;
+  }
+  .detail-badge {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .detail-close {
+    background: transparent; border: none; color: var(--text-dim);
+    font-size: 20px; cursor: pointer; padding: 4px;
+    transition: color 0.15s ease;
+  }
+  .detail-close:hover { color: var(--text); }
+
+  .detail-body {
+    padding: 20px 24px;
+    overflow-y: auto;
+    flex: 1;
+  }
+  .detail-section { margin-bottom: 22px; }
+  .detail-section:last-child { margin-bottom: 0; }
+  .detail-section-title {
+    font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--text-dim);
+    margin: 0 0 10px;
+  }
+  .detail-desc { font-size: 13px; line-height: 1.6; color: var(--text); margin: 0; }
+  .detail-list {
+    list-style: none; padding: 0; margin: 0;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .detail-list li {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 12px;
+  }
+  .detail-list li .item-icon { font-size: 14px; }
+  .detail-connections { display: flex; flex-direction: column; gap: 6px; }
+  .connection {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .connection:hover {
+    background: rgba(255,255,255,0.06);
+    border-color: var(--border-strong);
+  }
+  .connection-arrow {
+    color: var(--text-dim); font-family: monospace;
+  }
+  .connection-label {
+    font-size: 11px; color: var(--text-dim);
+    margin-left: auto;
+  }
+
+  .detail-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px;
+    background: rgba(168, 130, 255, 0.15);
+    border: 1px solid rgba(168, 130, 255, 0.3);
+    border-radius: 8px;
+    color: #c4b2ff;
+    text-decoration: none;
+    font-size: 12px; font-weight: 600;
+    transition: all 0.15s ease;
+  }
+  .detail-link:hover {
+    background: rgba(168, 130, 255, 0.25);
+    border-color: rgba(168, 130, 255, 0.5);
+  }
+
+  /* Help overlay */
+  .help-overlay {
+    position: fixed; top: 80px; right: 24px;
+    padding: 14px 18px;
+    background: var(--panel);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-size: 11px;
+    color: var(--text-dim);
+    z-index: 5;
+    opacity: 0.9;
+    transition: opacity 0.3s ease;
+    max-width: 240px;
+  }
+  .help-overlay.hidden { opacity: 0; pointer-events: none; }
+  .help-overlay h4 {
+    font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--text); margin: 0 0 8px;
+  }
+  .help-overlay kbd {
+    display: inline-block;
+    padding: 1px 6px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: 'Inter', monospace;
+    font-size: 10px;
+    color: var(--text);
+    margin: 0 2px;
+  }
+
+  @media (max-width: 720px) {
+    .overlay-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .filters { max-width: 100%; }
+    .detail-panel { width: 100%; }
+    .help-overlay { display: none; }
+    .stats-overlay { font-size: 10px; gap: 12px; padding: 8px 12px; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<!-- HEADER -->
+<header class="overlay-header">
+  <div class="brand">
+    <div class="brand-logo">🛒</div>
+    <div class="brand-text">
+      <div class="brand-title">Ecosistema Meulen</div>
+      <div class="brand-subtitle">Puerto Montt · Chile</div>
+    </div>
+    <span class="live-badge"><span class="live-dot"></span>MVP Fase 1</span>
+  </div>
+  <div class="filters" id="filters"></div>
+</header>
+
+<!-- HELP -->
+<div class="help-overlay" id="help-overlay">
+  <h4>Controles</h4>
+  <div>Click → detalle del nodo</div>
+  <div>Drag nodo → mover</div>
+  <div>Drag vacío → pan</div>
+  <div>Scroll → zoom</div>
+  <div><kbd>+</kbd> <kbd>-</kbd> <kbd>0</kbd> zoom</div>
+  <div><kbd>Esc</kbd> cerrar panel</div>
+</div>
+
+<!-- CONTROLS -->
+<div class="controls">
+  <button class="control-btn" id="zoom-in" title="Acercar">+</button>
+  <div class="zoom-label" id="zoom-label">100%</div>
+  <button class="control-btn" id="zoom-out" title="Alejar">−</button>
+  <button class="control-btn" id="zoom-reset" title="Reset">↺</button>
+</div>
+
+<!-- STATS -->
+<div class="stats-overlay">
+  <div class="stat-item"><span class="stat-value" id="stat-nodes">0</span><span class="stat-label">Nodos</span></div>
+  <div class="stat-item"><span class="stat-value" id="stat-edges">0</span><span class="stat-label">Conexiones</span></div>
+  <div class="stat-item"><span class="stat-value">7</span><span class="stat-label">Módulos</span></div>
+  <div class="stat-item"><span class="stat-value">18</span><span class="stat-label">Tablas</span></div>
+  <div class="stat-item"><span class="stat-value">~30</span><span class="stat-label">Endpoints</span></div>
+  <div class="stat-item"><span class="stat-value">10</span><span class="stat-label">Reglas</span></div>
+</div>
+
+<!-- DETAIL PANEL -->
+<aside class="detail-panel" id="detail-panel">
+  <div class="detail-header">
+    <div class="detail-icon" id="detail-icon"></div>
+    <div class="detail-title-block">
+      <h2 class="detail-title" id="detail-title"></h2>
+      <div class="detail-subtitle" id="detail-subtitle"></div>
+    </div>
+    <button class="detail-close" id="detail-close">✕</button>
+  </div>
+  <div class="detail-body" id="detail-body"></div>
+</aside>
+
+<script>
+/* =========================================================
+   Ecosistema Supermercado Meulen — Canvas 2D force-directed
+   Replica el estilo del ecosistema CMC.
+   ========================================================= */
+
+const CATEGORIES = {
+  producto: { label: 'Productos', color: '#a882ff' },
+  modulo:   { label: 'Módulos backend', color: '#38bdf8' },
+  api:      { label: 'Integraciones', color: '#fb923c' },
+  infra:    { label: 'Infraestructura', color: '#f87171' },
+  datos:    { label: 'Datos', color: '#4ade80' },
+};
+
+const NODES = [
+  // --------- PRODUCTOS (UI / hardware visible al usuario) ---------
+  { id: 'pos-ui', label: 'Caja POS\n(React)', icon: '🛒', cat: 'producto', badge: 'MVP', badgeColor: '#a882ff',
+    size: 36,
+    desc: 'Pantalla de venta con pistoleo. Capture HID invisible, carrito grande, atajos F2/F3/F4/F9/Esc. Diseñada para operadores no técnicos.',
+    items: [
+      { icon: '⚡', text: 'Búsqueda barcode <50ms' },
+      { icon: '⌨️', text: 'Atajos de teclado completos' },
+      { icon: '🔊', text: 'Feedback sonoro OK/error' },
+      { icon: '💳', text: 'Modal de cobro con vuelto' },
+    ],
+    urlLabel: '/pos/sale',
+  },
+  { id: 'admin-ui', label: 'Backoffice\n(Admin)', icon: '🖥️', cat: 'producto', badge: 'MVP', badgeColor: '#a882ff',
+    size: 32,
+    desc: 'Panel de administración: productos, inventario, compras, reportes, usuarios, auditoría. React + Vite + TypeScript + Tailwind.',
+    items: [
+      { icon: '📦', text: 'CRUD productos + CSV' },
+      { icon: '📋', text: 'Kardex y conteos físicos' },
+      { icon: '📊', text: 'Reportes ventas / stock / caja' },
+      { icon: '👥', text: 'Gestión usuarios y auditoría' },
+    ],
+    urlLabel: '/admin',
+  },
+  { id: 'scanner', label: 'Lector\nbarras', icon: '📱', cat: 'producto', badge: 'HW', badgeColor: '#a882ff',
+    size: 24,
+    desc: 'Pistola USB en modo HID (keyboard wedge). Emite el EAN + Enter. El POS lo captura en un input invisible enfocado.',
+    items: [
+      { icon: '🔌', text: 'USB-HID, plug-and-play' },
+      { icon: '⚡', text: 'Latencia imperceptible' },
+      { icon: '📦', text: 'EAN-13 / EAN-8 / Code128' },
+    ],
+  },
+  { id: 'printer', label: 'Impresora\ntérmica', icon: '🖨️', cat: 'producto', badge: 'HW', badgeColor: '#a882ff',
+    size: 22,
+    desc: 'Impresora térmica 58mm/80mm para imprimir resumen de venta (no es boleta tributaria en MVP). Bsale o sistema externo emite la boleta real.',
+    items: [
+      { icon: '📄', text: 'Resumen de venta 80mm' },
+      { icon: '🚫', text: 'NO emite DTE en MVP' },
+    ],
+  },
+  { id: 'tbk', label: 'Máquina\nTransbank', icon: '💳', cat: 'producto', badge: 'EXT', badgeColor: '#fb923c',
+    size: 22,
+    desc: 'Terminal POS de Transbank separado. El cajero cobra en la máquina y registra el método + voucher en el sistema manualmente.',
+    items: [
+      { icon: '💳', text: 'Débito / crédito' },
+      { icon: '✍️', text: 'Voucher registrado a mano' },
+      { icon: '🔜', text: 'Integración SDK en Fase 3' },
+    ],
+  },
+
+  // --------- MÓDULOS BACKEND (FastAPI) ---------
+  { id: 'identity', label: 'Identity', icon: '🔐', cat: 'modulo', badge: 'MVP', badgeColor: '#38bdf8',
+    size: 24,
+    desc: 'Autenticación JWT + refresh tokens, argon2 para passwords, roles admin/cajero. JWT incluye role + email en claims; refresh rota ambos tokens.',
+    items: [
+      { icon: '🔑', text: 'POST /auth/login' },
+      { icon: '🔄', text: 'POST /auth/refresh' },
+      { icon: '👤', text: 'GET /auth/me' },
+      { icon: '🛡️', text: 'Dependency require_role()' },
+    ],
+  },
+  { id: 'catalog', label: 'Catalog', icon: '📦', cat: 'modulo', badge: 'MVP', badgeColor: '#38bdf8',
+    size: 28,
+    desc: 'Productos, códigos de barra (primario + alternativos), categorías, historial de precios. Búsqueda rápida por barcode para POS.',
+    items: [
+      { icon: '🏷️', text: 'products + product_barcodes' },
+      { icon: '📜', text: 'product_price_history' },
+      { icon: '⚡', text: 'GET /products/find?barcode' },
+      { icon: '📥', text: 'POST /products/import (CSV)' },
+    ],
+  },
+  { id: 'inventory', label: 'Inventory', icon: '🏷️', cat: 'modulo', badge: 'MVP', badgeColor: '#38bdf8',
+    size: 30,
+    desc: 'Corazón del sistema: stock_balances + inventory_movements (kardex), ajustes, mermas, conteos físicos. apply_movement() es atómico y valida stock no negativo.',
+    items: [
+      { icon: '📊', text: 'stock_balances + avg_cost' },
+      { icon: '📋', text: 'inventory_movements (kardex)' },
+      { icon: '⚖️', text: 'stock_counts + items' },
+      { icon: '🛡️', text: 'R02: stock no negativo' },
+    ],
+  },
+  { id: 'purchasing', label: 'Purchasing', icon: '🚚', cat: 'modulo', badge: 'MVP', badgeColor: '#38bdf8',
+    size: 22,
+    desc: 'Recepción simple de mercadería: proveedor + fecha + items. Cada item genera un movement purchase que suma stock y recalcula avg_cost.',
+    items: [
+      { icon: '📝', text: 'POST /purchases' },
+      { icon: '🔁', text: 'Delega en inventory.apply_movement' },
+      { icon: '💰', text: 'Actualiza avg_cost automáticamente' },
+    ],
+  },
+  { id: 'pos', label: 'POS Sales', icon: '🧾', cat: 'modulo', badge: 'MVP', badgeColor: '#38bdf8',
+    size: 32,
+    desc: 'Módulo más crítico: cash_sessions, sales, sale_items, payments, cash_movements. confirm() es la transacción atómica que valida R08/R09 y descuenta stock.',
+    items: [
+      { icon: '💼', text: 'CashService + SaleService' },
+      { icon: '⚛️', text: 'confirm() atómico' },
+      { icon: '🔒', text: 'R03 caja abierta requerida' },
+      { icon: '💵', text: 'R09 pagos cubren total' },
+    ],
+  },
+  { id: 'reporting', label: 'Reporting', icon: '📊', cat: 'modulo', badge: 'MVP', badgeColor: '#38bdf8',
+    size: 22,
+    desc: 'Queries agregadas read-only sobre SQLite: ventas diarias, por método, top productos, stock bajo mínimo, cierres de caja.',
+    items: [
+      { icon: '📈', text: 'Ventas del día / hora / cajero' },
+      { icon: '📉', text: 'Stock bajo mínimo' },
+      { icon: '🏆', text: 'Top productos' },
+      { icon: '💰', text: 'Historial cierres caja' },
+    ],
+  },
+  { id: 'audit', label: 'Audit', icon: '📋', cat: 'modulo', badge: 'MVP', badgeColor: '#38bdf8',
+    size: 20,
+    desc: 'audit_logs con before/after JSON de acciones críticas (ventas, ajustes, cierres, logins). Escrito desde routers vía write_audit().',
+    items: [
+      { icon: '📝', text: 'before_json / after_json' },
+      { icon: '🌐', text: 'IP del cliente' },
+      { icon: '🔎', text: 'GET /audit/logs' },
+    ],
+  },
+
+  // --------- DATOS ---------
+  { id: 'sqlite', label: 'SQLite\nmeulen.db', icon: '🗄️', cat: 'datos', badge: 'PROD', badgeColor: '#4ade80',
+    size: 30,
+    desc: 'Un archivo. WAL mode + busy_timeout=5000. 18 tablas, ~260-500 ventas/día, indexados los paths calientes (barcode, movements por producto+fecha).',
+    items: [
+      { icon: '🗃️', text: '18 tablas SQLAlchemy 2.0' },
+      { icon: '⚡', text: 'WAL + busy_timeout 5s' },
+      { icon: '🔧', text: 'Migraciones Alembic' },
+      { icon: '💾', text: 'Archivo único: data/meulen.db' },
+    ],
+  },
+  { id: 'backup', label: 'Backup\nDrive', icon: '☁️', cat: 'datos', badge: 'PROD', badgeColor: '#4ade80',
+    size: 22,
+    desc: 'Script nocturno (backup.sh) con sqlite3 .backup o fallback cp -n. Sube a Google Drive via rclone. Retención 30 días.',
+    items: [
+      { icon: '🕐', text: 'Cron diario 03:00' },
+      { icon: '☁️', text: 'rclone → Google Drive' },
+      { icon: '🛡️', text: 'Fallback cp -n si falla sqlite3' },
+      { icon: '📆', text: 'Retención 30 días' },
+    ],
+  },
+
+  // --------- INTEGRACIONES EXTERNAS ---------
+  { id: 'bsale', label: 'Bsale\n(paralelo)', icon: '🧾', cat: 'api', badge: 'MVP', badgeColor: '#fb923c',
+    size: 22,
+    desc: 'Sistema externo usado en paralelo durante transición, solo para emisión tributaria (boleta electrónica). El MVP NO reemplaza Bsale en Fase 1.',
+    items: [
+      { icon: '🧾', text: 'Boleta electrónica SII' },
+      { icon: '🔀', text: 'Operación en paralelo 2-4 sem.' },
+      { icon: '🔜', text: 'Reemplazo en Fase 3' },
+    ],
+  },
+  { id: 'dte', label: 'DTE\nProvider', icon: '📑', cat: 'api', badge: 'FASE 3', badgeColor: '#f87171',
+    size: 20,
+    desc: 'Proveedor DTE por evaluar: LibreDTE (open source, más control) vs Haulmer (más fácil, paga por boleta). Definirá el flujo fiscal en Fase 3.',
+    items: [
+      { icon: '🧾', text: 'LibreDTE (open source)' },
+      { icon: '🏢', text: 'Haulmer (SaaS)' },
+      { icon: '⚖️', text: 'Decisión pendiente' },
+    ],
+  },
+  { id: 'tbk-api', label: 'Transbank\nSDK', icon: '💳', cat: 'api', badge: 'FASE 3', badgeColor: '#f87171',
+    size: 20,
+    desc: 'Integración Webpay POS vía SDK oficial Transbank. En MVP la máquina opera separada y el voucher se registra a mano.',
+    items: [
+      { icon: '💳', text: 'Webpay POS integrado' },
+      { icon: '🔗', text: 'Conciliación automática' },
+      { icon: '⏳', text: 'MVP: registro manual' },
+    ],
+  },
+  { id: 'metabase', label: 'Metabase\nBI', icon: '📈', cat: 'api', badge: 'FASE 4', badgeColor: '#f87171',
+    size: 18,
+    desc: 'Dashboard ejecutivo en Fase 4. Se conecta a PostgreSQL (tras migración) y expone métricas operacionales y de margen.',
+    items: [
+      { icon: '📊', text: 'Dashboards ejecutivos' },
+      { icon: '🔀', text: 'Conecta a PostgreSQL' },
+      { icon: '📈', text: 'Margen + rotación + Pareto' },
+    ],
+  },
+
+  // --------- INFRAESTRUCTURA ---------
+  { id: 'fastapi', label: 'FastAPI\nPython 3.11', icon: '⚡', cat: 'infra', badge: 'PROD', badgeColor: '#f87171',
+    size: 24,
+    desc: 'Proceso uvicorn en puerto 8000. App factory con lifespan, routers modulares, dependencias centrales (get_db, get_current_user, require_role).',
+    items: [
+      { icon: '🚀', text: 'uvicorn async workers' },
+      { icon: '🧩', text: '7 routers modulares' },
+      { icon: '🔐', text: 'JWT + argon2' },
+      { icon: '⚙️', text: 'Pydantic Settings + dotenv' },
+    ],
+  },
+  { id: 'react', label: 'React 18\n+ Vite', icon: '⚛️', cat: 'infra', badge: 'PROD', badgeColor: '#f87171',
+    size: 22,
+    desc: 'SPA servida por Vite en dev y build estático en prod. React Router, TanStack Query, TypeScript estricto, Tailwind.',
+    items: [
+      { icon: '⚡', text: 'Vite + HMR en dev' },
+      { icon: '🎨', text: 'Tailwind sin config compleja' },
+      { icon: '🔄', text: 'TanStack Query' },
+      { icon: '🧭', text: 'React Router v6' },
+    ],
+  },
+  { id: 'pc', label: 'PC de la\ntienda', icon: '💻', cat: 'infra', badge: 'PROD', badgeColor: '#f87171',
+    size: 24,
+    desc: 'Mini-PC o laptop vieja ejecutando backend + frontend + SQLite localmente. Funciona sin internet. Costo <20k CLP/mes objetivo.',
+    items: [
+      { icon: '💻', text: 'Windows / Linux' },
+      { icon: '🔌', text: 'UPS recomendado' },
+      { icon: '📴', text: 'Opera sin internet' },
+    ],
+  },
+  { id: 'lan', label: 'Red local\nWi-Fi', icon: '🌐', cat: 'infra', badge: 'PROD', badgeColor: '#f87171',
+    size: 18,
+    desc: 'Router Wi-Fi local. Las cajas y el backoffice se conectan al PC servidor vía HTTP en LAN. No requiere salida a internet para operar.',
+    items: [
+      { icon: '📶', text: 'LAN-only para operar' },
+      { icon: '🔀', text: 'HTTP sin TLS en LAN' },
+      { icon: '☁️', text: 'Internet solo para backup' },
+    ],
+  },
+];
+
+const EDGES = [
+  // POS UI
+  { from: 'pos-ui', to: 'pos', label: 'confirma venta' },
+  { from: 'pos-ui', to: 'catalog', label: 'busca barcode' },
+  { from: 'scanner', to: 'pos-ui', label: 'HID input' },
+  { from: 'printer', to: 'pos-ui', label: 'resumen impreso' },
+  { from: 'tbk', to: 'pos-ui', label: 'voucher manual' },
+
+  // Admin UI
+  { from: 'admin-ui', to: 'catalog', label: 'CRUD productos' },
+  { from: 'admin-ui', to: 'inventory', label: 'ajustes + conteos' },
+  { from: 'admin-ui', to: 'purchasing', label: 'recepciones' },
+  { from: 'admin-ui', to: 'reporting', label: 'reportes' },
+  { from: 'admin-ui', to: 'audit', label: 'bitácora' },
+  { from: 'admin-ui', to: 'identity', label: 'usuarios' },
+
+  // Módulos ↔ datos
+  { from: 'identity', to: 'sqlite' },
+  { from: 'catalog', to: 'sqlite' },
+  { from: 'inventory', to: 'sqlite' },
+  { from: 'purchasing', to: 'sqlite' },
+  { from: 'pos', to: 'sqlite' },
+  { from: 'reporting', to: 'sqlite', label: 'read-only' },
+  { from: 'audit', to: 'sqlite' },
+
+  // Flujo POS interno
+  { from: 'pos', to: 'inventory', label: 'descuenta stock (R06)' },
+  { from: 'pos', to: 'catalog', label: 'snapshot precio (R07)' },
+  { from: 'pos', to: 'audit', label: 'log confirm' },
+
+  // Purchasing → inventory
+  { from: 'purchasing', to: 'inventory', label: 'apply_movement' },
+
+  // Backup
+  { from: 'sqlite', to: 'backup', label: 'cron diario' },
+
+  // Infraestructura
+  { from: 'fastapi', to: 'identity' },
+  { from: 'fastapi', to: 'catalog' },
+  { from: 'fastapi', to: 'inventory' },
+  { from: 'fastapi', to: 'purchasing' },
+  { from: 'fastapi', to: 'pos' },
+  { from: 'fastapi', to: 'reporting' },
+  { from: 'fastapi', to: 'audit' },
+  { from: 'react', to: 'pos-ui' },
+  { from: 'react', to: 'admin-ui' },
+  { from: 'pc', to: 'fastapi', label: 'hostea' },
+  { from: 'pc', to: 'react', label: 'hostea' },
+  { from: 'lan', to: 'pc' },
+
+  // Integraciones externas
+  { from: 'pos', to: 'bsale', label: 'boleta paralela' },
+  { from: 'pos', to: 'dte', label: 'Fase 3' },
+  { from: 'pos', to: 'tbk-api', label: 'Fase 3' },
+  { from: 'reporting', to: 'metabase', label: 'Fase 4' },
+];
+
+/* ====================== CANVAS & SIM ====================== */
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+let camera = { x: 0, y: 0, zoom: 1 };
+let dpr = Math.max(1, window.devicePixelRatio || 1);
+
+function resize() {
+  dpr = Math.max(1, window.devicePixelRatio || 1);
+  canvas.width = window.innerWidth * dpr;
+  canvas.height = window.innerHeight * dpr;
+  canvas.style.width = window.innerWidth + 'px';
+  canvas.style.height = window.innerHeight + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// Initialize nodes with random positions
+const nodeMap = new Map();
+NODES.forEach((n, i) => {
+  const angle = (i / NODES.length) * Math.PI * 2;
+  const radius = 320 + Math.random() * 160;
+  n.x = Math.cos(angle) * radius;
+  n.y = Math.sin(angle) * radius;
+  n.vx = 0;
+  n.vy = 0;
+  n.hidden = false;
+  nodeMap.set(n.id, n);
+});
+
+const SIM = {
+  repulsion: 8000,
+  attraction: 0.008,
+  centerForce: 0.002,
+  damping: 0.85,
+  minDist: 80,
+};
+
+let focusedNodeId = null;
+let hoveredNodeId = null;
+let draggingNodeId = null;
+let panning = false;
+let lastPointer = { x: 0, y: 0 };
+let activeFilters = new Set(Object.keys(CATEGORIES));
+
+function simulate() {
+  // Repulsion
+  for (let i = 0; i < NODES.length; i++) {
+    const a = NODES[i];
+    if (a.hidden || a.id === draggingNodeId) continue;
+    for (let j = i + 1; j < NODES.length; j++) {
+      const b = NODES[j];
+      if (b.hidden) continue;
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      let d2 = dx*dx + dy*dy;
+      if (d2 < SIM.minDist * SIM.minDist) d2 = SIM.minDist * SIM.minDist;
+      const d = Math.sqrt(d2);
+      const f = SIM.repulsion / d2;
+      const fx = (dx / d) * f;
+      const fy = (dy / d) * f;
+      a.vx -= fx; a.vy -= fy;
+      if (b.id !== draggingNodeId) { b.vx += fx; b.vy += fy; }
+    }
+  }
+  // Attraction (edges)
+  for (const e of EDGES) {
+    const a = nodeMap.get(e.from);
+    const b = nodeMap.get(e.to);
+    if (!a || !b || a.hidden || b.hidden) continue;
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const f = SIM.attraction;
+    const fx = dx * f;
+    const fy = dy * f;
+    if (a.id !== draggingNodeId) { a.vx += fx; a.vy += fy; }
+    if (b.id !== draggingNodeId) { b.vx -= fx; b.vy -= fy; }
+  }
+  // Center + damping
+  for (const n of NODES) {
+    if (n.hidden) continue;
+    if (n.id !== draggingNodeId) {
+      n.vx -= n.x * SIM.centerForce;
+      n.vy -= n.y * SIM.centerForce;
+      n.vx *= SIM.damping;
+      n.vy *= SIM.damping;
+      n.x += n.vx;
+      n.y += n.vy;
+    }
+  }
+}
+
+function worldToScreen(x, y) {
+  return {
+    x: (x - camera.x) * camera.zoom + window.innerWidth / 2,
+    y: (y - camera.y) * camera.zoom + window.innerHeight / 2,
+  };
+}
+function screenToWorld(x, y) {
+  return {
+    x: (x - window.innerWidth / 2) / camera.zoom + camera.x,
+    y: (y - window.innerHeight / 2) / camera.zoom + camera.y,
+  };
+}
+
+function getNodeAt(sx, sy) {
+  for (let i = NODES.length - 1; i >= 0; i--) {
+    const n = NODES[i];
+    if (n.hidden) continue;
+    const s = worldToScreen(n.x, n.y);
+    const r = n.size * camera.zoom;
+    const dx = sx - s.x;
+    const dy = sy - s.y;
+    if (dx*dx + dy*dy <= r * r) return n;
+  }
+  return null;
+}
+
+/* ====================== DRAW ====================== */
+let frame = 0;
+function draw() {
+  frame++;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Grid
+  const gridSize = 40 * camera.zoom;
+  if (gridSize > 8) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.025)';
+    ctx.lineWidth = 1;
+    const ox = (window.innerWidth / 2 - camera.x * camera.zoom) % gridSize;
+    const oy = (window.innerHeight / 2 - camera.y * camera.zoom) % gridSize;
+    ctx.beginPath();
+    for (let x = ox; x < window.innerWidth; x += gridSize) { ctx.moveTo(x, 0); ctx.lineTo(x, window.innerHeight); }
+    for (let y = oy; y < window.innerHeight; y += gridSize) { ctx.moveTo(0, y); ctx.lineTo(window.innerWidth, y); }
+    ctx.stroke();
+  }
+
+  // Edges
+  const focused = focusedNodeId ? nodeMap.get(focusedNodeId) : null;
+  for (const e of EDGES) {
+    const a = nodeMap.get(e.from);
+    const b = nodeMap.get(e.to);
+    if (!a || !b || a.hidden || b.hidden) continue;
+    const sa = worldToScreen(a.x, a.y);
+    const sb = worldToScreen(b.x, b.y);
+    const isFocused = focused && (e.from === focusedNodeId || e.to === focusedNodeId);
+    const isHover = hoveredNodeId && (e.from === hoveredNodeId || e.to === hoveredNodeId);
+
+    ctx.lineWidth = isFocused ? 2 : (isHover ? 1.5 : 1);
+    ctx.strokeStyle = isFocused
+      ? 'rgba(168, 130, 255, 0.7)'
+      : (isHover ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.08)');
+    ctx.beginPath();
+    ctx.moveTo(sa.x, sa.y);
+    ctx.lineTo(sb.x, sb.y);
+    ctx.stroke();
+
+    // Animated particles on focused edges
+    if (isFocused) {
+      const steps = 3;
+      for (let i = 0; i < steps; i++) {
+        const t = ((frame / 60) + i / steps) % 1;
+        const px = sa.x + (sb.x - sa.x) * t;
+        const py = sa.y + (sb.y - sa.y) * t;
+        ctx.fillStyle = 'rgba(168, 130, 255, 0.9)';
+        ctx.beginPath();
+        ctx.arc(px, py, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // Label
+      if (e.label) {
+        const mx = (sa.x + sb.x) / 2;
+        const my = (sa.y + sb.y) / 2;
+        ctx.font = '10px Inter, sans-serif';
+        const w = ctx.measureText(e.label).width + 12;
+        ctx.fillStyle = 'rgba(26, 26, 30, 0.9)';
+        ctx.strokeStyle = 'rgba(168, 130, 255, 0.3)';
+        ctx.lineWidth = 1;
+        roundRect(ctx, mx - w/2, my - 8, w, 16, 8);
+        ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#c4b2ff';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(e.label, mx, my);
+      }
+    }
+  }
+
+  // Nodes
+  for (const n of NODES) {
+    if (n.hidden) continue;
+    const s = worldToScreen(n.x, n.y);
+    const r = n.size * camera.zoom;
+    const color = CATEGORIES[n.cat].color;
+    const isFocused = n.id === focusedNodeId;
+    const isHover = n.id === hoveredNodeId;
+
+    // Glow
+    if (isFocused || isHover) {
+      const grad = ctx.createRadialGradient(s.x, s.y, r, s.x, s.y, r * 2.2);
+      grad.addColorStop(0, hexToRgba(color, 0.45));
+      grad.addColorStop(1, hexToRgba(color, 0));
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, r * 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Circle background
+    ctx.fillStyle = '#1b1b1f';
+    ctx.strokeStyle = color;
+    ctx.lineWidth = isFocused ? 2.5 : 1.5;
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+
+    // Icon
+    ctx.font = `${r * 0.9}px sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(n.icon, s.x, s.y);
+
+    // Label below
+    ctx.font = '600 11px Inter, sans-serif';
+    ctx.fillStyle = isFocused ? '#fff' : '#e5e5e5';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    const lines = n.label.split('\n');
+    lines.forEach((line, i) => {
+      ctx.fillText(line, s.x, s.y + r + 6 + i * 13);
+    });
+
+    // Badge
+    if (n.badge && r > 14) {
+      const badgeY = s.y - r - 10;
+      ctx.font = '700 9px Inter, sans-serif';
+      const bw = ctx.measureText(n.badge).width + 10;
+      ctx.fillStyle = hexToRgba(n.badgeColor || color, 0.2);
+      ctx.strokeStyle = hexToRgba(n.badgeColor || color, 0.5);
+      ctx.lineWidth = 1;
+      roundRect(ctx, s.x - bw/2, badgeY - 7, bw, 14, 7);
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = n.badgeColor || color;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(n.badge, s.x, badgeY);
+    }
+  }
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y, x + w, y + r, r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h);
+  ctx.arcTo(x, y + h, x, y + h - r, r);
+  ctx.lineTo(x, y + r);
+  ctx.arcTo(x, y, x + r, y, r);
+  ctx.closePath();
+}
+
+function hexToRgba(hex, alpha) {
+  const c = hex.replace('#', '');
+  const r = parseInt(c.substr(0, 2), 16);
+  const g = parseInt(c.substr(2, 2), 16);
+  const b = parseInt(c.substr(4, 2), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+/* ====================== LOOP ====================== */
+function loop() {
+  simulate();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();
+
+/* ====================== INTERACTION ====================== */
+canvas.addEventListener('mousedown', (e) => {
+  const node = getNodeAt(e.clientX, e.clientY);
+  lastPointer = { x: e.clientX, y: e.clientY };
+  if (node) {
+    draggingNodeId = node.id;
+    canvas.style.cursor = 'grabbing';
+  } else {
+    panning = true;
+    canvas.style.cursor = 'grabbing';
+  }
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  if (draggingNodeId) {
+    const n = nodeMap.get(draggingNodeId);
+    const dx = (e.clientX - lastPointer.x) / camera.zoom;
+    const dy = (e.clientY - lastPointer.y) / camera.zoom;
+    n.x += dx; n.y += dy; n.vx = 0; n.vy = 0;
+    lastPointer = { x: e.clientX, y: e.clientY };
+  } else if (panning) {
+    const dx = (e.clientX - lastPointer.x) / camera.zoom;
+    const dy = (e.clientY - lastPointer.y) / camera.zoom;
+    camera.x -= dx; camera.y -= dy;
+    lastPointer = { x: e.clientX, y: e.clientY };
+  } else {
+    const node = getNodeAt(e.clientX, e.clientY);
+    hoveredNodeId = node ? node.id : null;
+    canvas.style.cursor = node ? 'pointer' : 'grab';
+  }
+});
+
+canvas.addEventListener('mouseup', (e) => {
+  const wasDragging = !!draggingNodeId;
+  const moved = Math.abs(e.clientX - lastPointer.x) > 3 || Math.abs(e.clientY - lastPointer.y) > 3;
+  if (wasDragging && !moved) {
+    openDetail(draggingNodeId);
+  } else if (panning && !moved) {
+    const node = getNodeAt(e.clientX, e.clientY);
+    if (node) openDetail(node.id);
+  }
+  draggingNodeId = null;
+  panning = false;
+  canvas.style.cursor = getNodeAt(e.clientX, e.clientY) ? 'pointer' : 'grab';
+});
+
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const zoomDelta = e.deltaY < 0 ? 1.1 : 0.9;
+  const before = screenToWorld(e.clientX, e.clientY);
+  camera.zoom = Math.max(0.25, Math.min(3, camera.zoom * zoomDelta));
+  const after = screenToWorld(e.clientX, e.clientY);
+  camera.x += before.x - after.x;
+  camera.y += before.y - after.y;
+  updateZoomLabel();
+}, { passive: false });
+
+// Touch
+let touchState = null;
+canvas.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 1) {
+    const t = e.touches[0];
+    const node = getNodeAt(t.clientX, t.clientY);
+    lastPointer = { x: t.clientX, y: t.clientY };
+    if (node) draggingNodeId = node.id;
+    else panning = true;
+  } else if (e.touches.length === 2) {
+    const a = e.touches[0], b = e.touches[1];
+    touchState = {
+      dist: Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY),
+      zoom: camera.zoom,
+    };
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  if (e.touches.length === 1 && !touchState) {
+    const t = e.touches[0];
+    if (draggingNodeId) {
+      const n = nodeMap.get(draggingNodeId);
+      const dx = (t.clientX - lastPointer.x) / camera.zoom;
+      const dy = (t.clientY - lastPointer.y) / camera.zoom;
+      n.x += dx; n.y += dy;
+      lastPointer = { x: t.clientX, y: t.clientY };
+    } else if (panning) {
+      const dx = (t.clientX - lastPointer.x) / camera.zoom;
+      const dy = (t.clientY - lastPointer.y) / camera.zoom;
+      camera.x -= dx; camera.y -= dy;
+      lastPointer = { x: t.clientX, y: t.clientY };
+    }
+  } else if (e.touches.length === 2 && touchState) {
+    const a = e.touches[0], b = e.touches[1];
+    const d = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+    camera.zoom = Math.max(0.25, Math.min(3, touchState.zoom * (d / touchState.dist)));
+    updateZoomLabel();
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchend', (e) => {
+  if (e.touches.length === 0) {
+    draggingNodeId = null;
+    panning = false;
+    touchState = null;
+  }
+});
+
+// Keyboard
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeDetail();
+  else if (e.key === '+' || e.key === '=') { camera.zoom = Math.min(3, camera.zoom * 1.15); updateZoomLabel(); }
+  else if (e.key === '-' || e.key === '_') { camera.zoom = Math.max(0.25, camera.zoom * 0.85); updateZoomLabel(); }
+  else if (e.key === '0') { camera = { x: 0, y: 0, zoom: 1 }; updateZoomLabel(); }
+});
+
+/* ====================== DETAIL PANEL ====================== */
+const panel = document.getElementById('detail-panel');
+const detailIcon = document.getElementById('detail-icon');
+const detailTitle = document.getElementById('detail-title');
+const detailSubtitle = document.getElementById('detail-subtitle');
+const detailBody = document.getElementById('detail-body');
+document.getElementById('detail-close').addEventListener('click', closeDetail);
+
+function openDetail(nodeId) {
+  const n = nodeMap.get(nodeId);
+  if (!n) return;
+  focusedNodeId = nodeId;
+  const color = CATEGORIES[n.cat].color;
+
+  detailIcon.textContent = n.icon;
+  detailIcon.style.background = hexToRgba(color, 0.15);
+  detailIcon.style.border = `1px solid ${hexToRgba(color, 0.4)}`;
+
+  detailTitle.textContent = n.label.replace('\n', ' ');
+  detailSubtitle.innerHTML = `
+    <span class="detail-badge" style="background: ${hexToRgba(n.badgeColor || color, 0.15)}; color: ${n.badgeColor || color}; border: 1px solid ${hexToRgba(n.badgeColor || color, 0.4)};">${n.badge || ''}</span>
+    <span>${CATEGORIES[n.cat].label}</span>
+  `;
+
+  let html = '';
+  html += `<div class="detail-section"><h3 class="detail-section-title">Descripción</h3><p class="detail-desc">${n.desc}</p></div>`;
+
+  if (n.items && n.items.length) {
+    html += `<div class="detail-section"><h3 class="detail-section-title">Detalles</h3><ul class="detail-list">`;
+    for (const it of n.items) {
+      html += `<li><span class="item-icon">${it.icon}</span><span>${it.text}</span></li>`;
+    }
+    html += `</ul></div>`;
+  }
+
+  // Connections
+  const incoming = EDGES.filter(e => e.to === nodeId).map(e => ({ id: e.from, label: e.label, direction: 'in' }));
+  const outgoing = EDGES.filter(e => e.from === nodeId).map(e => ({ id: e.to, label: e.label, direction: 'out' }));
+  if (incoming.length || outgoing.length) {
+    html += `<div class="detail-section"><h3 class="detail-section-title">Conexiones</h3><div class="detail-connections">`;
+    for (const c of incoming) {
+      const other = nodeMap.get(c.id);
+      if (!other) continue;
+      html += `<div class="connection" data-node="${c.id}"><span>${other.icon}</span><span>${other.label.replace('\n', ' ')}</span><span class="connection-arrow">←</span>${c.label ? `<span class="connection-label">${c.label}</span>` : ''}</div>`;
+    }
+    for (const c of outgoing) {
+      const other = nodeMap.get(c.id);
+      if (!other) continue;
+      html += `<div class="connection" data-node="${c.id}"><span>${other.icon}</span><span>${other.label.replace('\n', ' ')}</span><span class="connection-arrow">→</span>${c.label ? `<span class="connection-label">${c.label}</span>` : ''}</div>`;
+    }
+    html += `</div></div>`;
+  }
+
+  if (n.urlLabel) {
+    html += `<div class="detail-section"><a class="detail-link" href="#">${n.urlLabel} →</a></div>`;
+  }
+
+  detailBody.innerHTML = html;
+  panel.classList.add('open');
+
+  // Wire connection clicks
+  detailBody.querySelectorAll('.connection').forEach(el => {
+    el.addEventListener('click', () => openDetail(el.dataset.node));
+  });
+
+  // Hide help
+  document.getElementById('help-overlay').classList.add('hidden');
+}
+
+function closeDetail() {
+  panel.classList.remove('open');
+  focusedNodeId = null;
+}
+
+/* ====================== CONTROLS ====================== */
+function updateZoomLabel() {
+  document.getElementById('zoom-label').textContent = Math.round(camera.zoom * 100) + '%';
+}
+document.getElementById('zoom-in').onclick = () => { camera.zoom = Math.min(3, camera.zoom * 1.2); updateZoomLabel(); };
+document.getElementById('zoom-out').onclick = () => { camera.zoom = Math.max(0.25, camera.zoom * 0.8); updateZoomLabel(); };
+document.getElementById('zoom-reset').onclick = () => { camera = { x: 0, y: 0, zoom: 1 }; updateZoomLabel(); };
+
+/* ====================== FILTERS ====================== */
+const filtersEl = document.getElementById('filters');
+for (const [key, cat] of Object.entries(CATEGORIES)) {
+  const pill = document.createElement('div');
+  pill.className = 'filter-pill active';
+  pill.dataset.cat = key;
+  pill.innerHTML = `<span class="dot" style="background:${cat.color}"></span>${cat.label}`;
+  pill.addEventListener('click', () => {
+    if (activeFilters.has(key)) {
+      activeFilters.delete(key);
+      pill.classList.remove('active');
+    } else {
+      activeFilters.add(key);
+      pill.classList.add('active');
+    }
+    NODES.forEach(n => n.hidden = !activeFilters.has(n.cat));
+    updateStats();
+  });
+  filtersEl.appendChild(pill);
+}
+
+/* ====================== STATS ====================== */
+function updateStats() {
+  const visibleNodes = NODES.filter(n => !n.hidden).length;
+  const visibleIds = new Set(NODES.filter(n => !n.hidden).map(n => n.id));
+  const visibleEdges = EDGES.filter(e => visibleIds.has(e.from) && visibleIds.has(e.to)).length;
+  document.getElementById('stat-nodes').textContent = visibleNodes;
+  document.getElementById('stat-edges').textContent = visibleEdges;
+}
+updateStats();
+
+// Auto-hide help after 8 seconds
+setTimeout(() => document.getElementById('help-overlay').classList.add('hidden'), 8000);
+</script>
+</body>
+</html>
