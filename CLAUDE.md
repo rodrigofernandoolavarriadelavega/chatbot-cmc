@@ -288,6 +288,7 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - [x] Agendamiento para terceros: WAIT_BOOKING_FOR + WAIT_PHONE_OWNER_NAME, recordatorios personalizados dueño/paciente
 - [x] Pill imágenes (📷) + modal media stats (historial completo)
 - [x] Pill demanda (🔎) + tracking especialidades/exámenes no disponibles
+- [x] Ley 19.628 compliance: opt-in explícito (`privacy_consents`), derecho al olvido (`DELETE /admin/api/patient`, cascade 18 tablas + audit `gdpr_deletions`), política formal `/privacidad`, playbook SQLCipher/LUKS
 
 ## Dashboard admin
 - Ruta: `http://157.245.13.107:8001/admin?token=cmc_admin_2026`
@@ -296,6 +297,21 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 
 ## Sesión en curso
 **Fecha**: 2026-04-16
+
+**Hecho (sesión 2026-04-16 — Ley 19.628 compliance: opt-in + derecho al olvido + retención)**:
+- **Opt-in explícito al primer mensaje**: tabla `privacy_consents` + FSM gate en `flows.py::handle_message` que pide consent ANTES de cualquier otro flujo (excepto emergencias, que pasan por art. 21 interés vital). Mensaje interactivo con botones "✅ Acepto" / "❌ No acepto" + matching de texto libre (acepto/rechazo/stop/etc). Revocación con "STOP" agrega tag `marketing_opt_out`. "borrar mis datos" dispara alerta a `ADMIN_ALERT_PHONE`.
+- **Derecho al olvido (`DELETE /admin/api/patient`)**: cascade en 18 tablas PII (`_PII_TABLES_BY_PHONE`) más `citas_cache`/`ortodoncia_cache`/`kine_tracking` si hay `id_paciente_medilink`, dentro de `BEGIN IMMEDIATE` transaccional con rollback. Borra `data/uploads/{phone}/` via `shutil.rmtree`. Audit log inmutable en `gdpr_deletions` (JSON summary). Endpoint expone `GET /admin/api/privacy/deletions` para prueba legal.
+- **Endpoints admin privacy**: `GET/POST /admin/api/privacy/consent/{phone}` (ver/setear manual) + `GET /admin/api/privacy/deletions?limit=100` (historial).
+- **`docs/privacy_policy.md` v1.0**: 12 secciones (responsable, datos, finalidad, base legal art.12, retención por categoría con plazos, transferencias a 8 terceros, ARCOP con 4 canales, seguridad, menores, cambios, reclamos, DPO).
+- **`docs/encryption_at_rest.md`**: playbook de cifrado en reposo — Opción A (SQLCipher + `pysqlcipher3`, pasos bash + cambios en `_conn()` + update a `backup-ges-db.sh`) / Opción B (LUKS en Block Storage DO). Recomendación: A primero.
+- **Migración legacy**: `scripts/migrate_legacy_consent.py` marca pacientes preexistentes como `accepted`/`method=legacy_migration` (base legal: relación contractual preexistente). Idempotente. En prod: **16 phones migrados** sin fricción.
+- **Página pública `/privacidad`**: reemplazado HTML inline placeholder por `templates/privacidad.html` con las 12 secciones completas, tablas, callouts, ARCOP. Link referenciado desde el prompt de consent.
+- **Tests**: 6 CONSENT nuevos (prompt, accept, decline, emergency bypass, STOP, "borrar mis datos") + flag `auto_consent=True` en harness para no romper los 92 existentes. **98/98 passed**.
+- **Deploy**: commits `7fa088e` (compliance core) y `aa7721e` (página HTML). Migración ejecutada en el VPS. `/health` → 200, `/privacidad` → 200.
+
+**Pendiente de la sesión**:
+- SQLCipher en el VPS (playbook listo, no ejecutado — requiere stop del service y `PRAGMA rekey`).
+- Buzón `privacidad@centromedicocarampangue.cl` (infra — activar en mailserver).
 
 **Hecho (sesión 2026-04-16 — Plan SEO centromedicocarampangue.cl + dashboard progreso)**:
 - **Auditoría WordPress completa** de centromedicocarampangue.cl (4 fetches del sitio en vivo): 10 problemas identificados, 4 críticos (WhatsApp incorrecto +56966610737 en lugar del chatbot +56945886628, placeholder +5691234567 en blog, links n9.cl, 0 meta descriptions).
