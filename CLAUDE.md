@@ -105,10 +105,14 @@ Ambos servicios corren como **systemd** con auto-restart:
 ## Flujo de la conversación (máquina de estados en flows.py)
 ```
 IDLE → detect_intent (Claude Haiku)
-  → agendar       → WAIT_ESPECIALIDAD → WAIT_SLOT → WAIT_RUT_AGENDAR
-                                                   → WAIT_NOMBRE_NUEVO (paciente nuevo)
-                                                   → WAIT_FECHA_NAC → WAIT_SEXO → WAIT_COMUNA → WAIT_EMAIL
-                                                   → CONFIRMING_CITA → reserva creada
+  → agendar       → WAIT_ESPECIALIDAD → WAIT_SLOT → WAIT_MODALIDAD
+                 → WAIT_BOOKING_FOR (¿para ti o para otra persona?)
+                   → "Para mí" → WAIT_RUT_AGENDAR (usa perfil si existe)
+                   → "Para otra persona" → WAIT_PHONE_OWNER_NAME (si no conocemos al dueño del cel)
+                                         → WAIT_RUT_AGENDAR (RUT del paciente real)
+                 → WAIT_NOMBRE_NUEVO (paciente nuevo en Medilink)
+                 → WAIT_FECHA_NAC → WAIT_SEXO → WAIT_COMUNA → WAIT_EMAIL → WAIT_REFERRAL
+                 → CONFIRMING_CITA → reserva creada
   → cancelar      → WAIT_RUT_CANCELAR → WAIT_CITA_CANCELAR → CONFIRMING_CANCEL
   → ver_reservas  → WAIT_RUT_VER
   → disponibilidad → responde con próxima fecha disponible
@@ -197,7 +201,11 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - [x] Clasificación de respuesta libre al seguimiento (texto libre → mejor/igual/peor via Claude)
 - [x] Panel admin: etiquetas de especialidad legibles, tiempo de espera en formato humano
 - [x] Panel "Pacientes en Control": seguimiento de sesiones recurrentes (kine, ortodoncia, psicología, nutrición)
-- [x] Instagram y Facebook Messenger: webhook unificado, respuesta desde panel admin
+- [x] Instagram chatbot completo: auto-reply + flujo handle_message en texto plano
+- [x] Facebook Messenger chatbot completo: misma lógica que IG
+- [x] Almacenamiento de archivos de pacientes (fotos, PDFs, docs → `data/uploads/{phone}/`)
+- [x] Nombres editables para contactos IG/FB en panel admin (click para editar)
+- [x] Extracción de texto PDF/DOCX (PyMuPDF + python-docx)
 - [x] Normalización de teléfono (sin prefijo `+`) para evitar sesiones duplicadas
 - [x] Detección pasiva de Arauco: si paciente menciona "arauco", guarda tag automáticamente
 - [x] Masoterapia con duración variable (20 o 40 min) antes de buscar slots
@@ -277,6 +285,9 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - [x] Panel admin responsive completo: 6 breakpoints (desktop/tablet/mobile/small phone/landscape/notch)
 - [x] Modals fullscreen en mobile, swipe gestures, safe-area padding, touch targets 44px
 - [x] Doctor mode persistente con tags (sobrevive resets/timeouts), comando "cambiar modo"
+- [x] Agendamiento para terceros: WAIT_BOOKING_FOR + WAIT_PHONE_OWNER_NAME, recordatorios personalizados dueño/paciente
+- [x] Pill imágenes (📷) + modal media stats (historial completo)
+- [x] Pill demanda (🔎) + tracking especialidades/exámenes no disponibles
 
 ## Dashboard admin
 - Ruta: `http://157.245.13.107:8001/admin?token=cmc_admin_2026`
@@ -284,15 +295,58 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - Muestra métricas, conversaciones activas y estado del sistema
 
 ## Sesión en curso
-**Fecha**: 2026-04-15
+**Fecha**: 2026-04-16
 
-**Hecho (sesión 2026-04-15 — mapas dinámicos con filtros + datos marzo)**:
-- **Endpoint API `/admin/api/map-data`**: consulta `heatmap_cache.db` en tiempo real con parámetros `desde` y `hasta`. Retorna comunas, localidades y direcciones geocodificadas con detalle de pacientes (nombre, profesional, fecha). Incluye normalización de comunas, detección de localidades dentro de Arauco, y cruce con `geocode_cache`.
-- **Filtros de fecha en dashboard**: barra de filtros con botones Hoy/Semana/Mes/Año/Todo + selector de mes. Los mapas, tablas y KPIs se recargan dinámicamente al cambiar filtro. Reemplaza datos hardcodeados por fetch al API.
-- **Datos marzo 2026 descargados**: `heatmap_comunas.py download 2026 3` → 1,158 citas, 786 pacientes. DB ahora tiene 1,605 citas totales (marzo+abril), 1,025 pacientes únicos.
-- **Script acepta año/mes**: `heatmap_comunas.py download YYYY M` para descargar cualquier mes.
-- **`geocode_direcciones.py` actualiza dashboard**: función `update_dashboard_pts()` inyecta datos enriquecidos (nombre+doctor+fecha) en `templates/dashboard.html` automáticamente.
-- **Guía paso a paso en Notion**: página "Guía: Pipeline de Mapas Geográficos" con comandos exactos, arquitectura, y flujo completo para agregar meses nuevos.
+**Hecho (sesión 2026-04-16 — Plan SEO centromedicocarampangue.cl + dashboard progreso)**:
+- **Auditoría WordPress completa** de centromedicocarampangue.cl (4 fetches del sitio en vivo): 10 problemas identificados, 4 críticos (WhatsApp incorrecto +56966610737 en lugar del chatbot +56945886628, placeholder +5691234567 en blog, links n9.cl, 0 meta descriptions).
+- **Plan SEO 12 semanas**: `docs/seo_plan_centromedicocarampangue.md` con 4 fases (Fixes críticos → Contenido → Técnica → Presencia local), 19 tareas priorizadas, 12 blog posts con palabras clave específicas, 9 KPIs medibles (162 → 500 users/mes objetivo).
+- **Dashboard SEO visual**: `templates/seo_dashboard.html` servido en `/seo/dashboard`, replica patrón Meulen (Tailwind + Chart.js). 7 tabs: Overview, Tareas, Blog posts, Roadmap, KPIs, Problemas, Wins. Editable modificando objeto `DATA` en el `<script>`.
+- **Ruta registrada** en `main.py`: `GET /seo/dashboard` (pública, sin auth por ahora).
+- **Credenciales WP guardadas** en memoria `wordpress_centromedicocarampangue.md` (admin / c$slLWBi9!ftIh&HFJn9t6Jg). Plan económico: no renovar hosting $70k/año cuando venza (~2027-04), migrar al VPS ($10k/año solo dominio en NIC.cl, ahorro $60k/año).
+- **Notion**: página "11. Plan SEO centromedicocarampangue.cl — 12 semanas" bajo "Documentación Técnica — Chatbot WhatsApp CMC" (https://www.notion.so/3447c7a7b8a48104b961c3976bc45f33).
+
+**Hecho (sesión 2026-04-15 — Instagram/Messenger chatbot completo + editable names)**:
+- **Instagram chatbot completo**: webhook IG ahora procesa mensajes con el mismo `handle_message()` de WhatsApp en vez de derivar a HUMAN_TAKEOVER. `_process_social()` helper unifica lógica IG/FB. `_interactive_to_text()` convierte listas/botones interactivos a texto plano.
+- **Facebook Messenger chatbot completo**: misma lógica que IG via `_process_social()`. Fix token: `send_messenger()` usa `META_ACCESS_TOKEN` (system user) en vez de `META_PAGE_ACCESS_TOKEN` (que ahora es token IG).
+- **Fix Instagram Send API**: endpoint correcto `graph.instagram.com` (no `graph.facebook.com`), auth por query param `?access_token=` (no Bearer header), `INSTAGRAM_USER_ID=17841428972140588` (IGBA ID, no Page ID).
+- **Token Instagram**: generado desde Meta Developers → Casos de uso → Instagram → "Generar token" (paso 2). Token IGAA... en `META_PAGE_ACCESS_TOKEN` del VPS.
+- **Promo en menú IG/FB**: `_SOCIAL_PROMO` agrega ortodoncia ($120k) y nutrición (Fonasa $4.680) al menú de bienvenida en IG/FB.
+- **Nombres editables IG/FB**: endpoint `PUT /admin/api/profile/{phone}/name` + click-to-edit en panel admin con `editarNombreContacto()`. `_fetch_social_name()` intenta resolver username automáticamente, fallback a edición manual.
+- **Almacenamiento archivos pacientes**: tabla `patient_files`, `save_patient_file()`/`get_patient_files()` en session.py. Fotos, PDFs, docs guardados en `data/uploads/{phone}/`.
+- **Extracción texto PDF/DOCX**: `extract_text_from_pdf()` (PyMuPDF) y `extract_text_from_docx()` (python-docx) en messaging.py.
+- **Google Analytics panel**: endpoint `/admin/api/analytics`, pill 📊 en topbar admin, modal con Chart.js.
+- **Badges canal**: WA/IG/FB como badges coloreados en lista de conversaciones. `friendlyPhone()` helper en admin.html.
+- **Tests**: 92/92 harness. Funcional en producción (Instagram confirmado por usuario).
+
+**Hecho (sesión 2026-04-15 — Google Analytics + análisis web profundo)**:
+- **Google Analytics GA4 integrado**: tracking code (G-TBQJN4MYVZ) en `templates/landing.html`. GA4 Data API endpoint `GET /admin/api/analytics?dias=30` en panel admin. Pill "📊 web" en topbar → modal con KPIs, gráfico tendencia Chart.js, páginas top, fuentes, dispositivos. Selector 7/30/90 días.
+- **Cuenta de servicio GA4**: `dashboard-cmc@dashboard-cmc-491001.iam.gserviceaccount.com` con rol Lector. Key en VPS `/opt/chatbot-cmc/ga4-key.json` (permisos 600). Env var `GA4_CREDENTIALS_PATH`. Dependencia `google-analytics-data==0.18.15`.
+- **Search Console vinculado a GA4**: 197 clics, 11 páginas indexadas.
+- **Fix dominio landing.html**: reemplazadas 4 referencias de `agentecmc.cl` → `centromedicocarampangue.cl` (canonical, og:url, og:image, JSON-LD).
+- **Análisis profundo web**: 162 usuarios/mes, 51.8% rebote, 80% tráfico muere en home, 75% depende de Google, RRSS aportan 5%, 65% tráfico móvil. 0 meta descriptions en todo el sitio. 19 de 20 blogs sin publicar. 3 números WA distintos, ninguno es el chatbot. Auditoría completa de 8 páginas WP + 20 blogs HTML.
+- **Notion**: nueva página "10. Análisis Web y Google Analytics" con toda la auditoría (https://www.notion.so/3437c7a7b8a481a3aac0e4c007aba163).
+
+**Hecho (sesión 2026-04-15 — agendamiento para terceros + demanda + media stats)**:
+- **Agendamiento para terceros (WAIT_BOOKING_FOR)**: después de Fonasa/Particular, el bot pregunta "¿Para ti o para otra persona?". Si es para otro y no conocemos al dueño del celular, nuevo estado `WAIT_PHONE_OWNER_NAME` captura su nombre → `contact_profiles` (sin RUT). Recordatorios personalizados: "Hola Ana 👋 Recuerda que Daniel tiene cita...". Columnas `paciente_nombre` y `es_tercero` en `citas_bot`. COALESCE en queries de recordatorios.
+- **Pill imágenes (📷)**: conteo de archivos media recibidos (todo el historial). Modal con tabla por paciente. Endpoint `GET /admin/api/media-stats`.
+- **Pill demanda (🔎)**: tracking de especialidades/exámenes solicitados que el CMC no tiene. Tabla `demanda_no_disponible`. Detección en `_iniciar_agendar()` y FAQ. Endpoint `GET /admin/api/demanda-no-disponible`.
+- **Endpoint PUT `/admin/api/profile/{phone}/name`**: permite setear display name desde el panel admin.
+- **Tests**: 92/92 harness (2 tests TERC nuevos). Todos los flujos existentes intactos.
+
+**Hecho (sesión 2026-04-15 — datos completos Ene-Abr 2026 + geocoding masivo)**:
+- **Descarga completa Ene-Abr 2026**: 3,359 citas (Ene 881 + Feb 873 + Mar 1,158 + Abr 447) + 2,086 pacientes con datos completos (dirección, comuna, ciudad). Backoff automático para rate limits 429 de Medilink.
+- **Geocoding masivo**: 1,147/1,219 direcciones geocodificadas (94%). Nominatim (196) + fallback sector conocido (~75 localidades hardcodeadas) + fallback localidad.
+- **Diccionario fallback expandido** en `geocode_direcciones.py`: ~75 localidades de Carampangue, Laraquete, Ramadillas, Arauco urbano, Tubul, Curanilahue, Lota, Coronel.
+- **`heatmap_cache.db` completo**: WAL checkpoint + scp a producción.
+- **Verificado en producción**: `/admin/api/map-data` → 3,359 citas, 1,853 pacientes, 1,115 direcciones, 9 comunas.
+- **Guía Notion actualizada**: números finales con febrero completo y geocoding 94%.
+
+**Hecho (sesión 2026-04-15 — mapas dinámicos con filtros)**:
+- **Endpoint API `/admin/api/map-data`**: consulta `heatmap_cache.db` con parámetros `desde`/`hasta`. Retorna comunas, localidades y direcciones con detalle (nombre, profesional, fecha).
+- **Filtros en dashboard**: botones Hoy/Semana/Mes/Año/Todo + selector de mes. Mapas, tablas y KPIs dinámicos.
+- **Script acepta año/mes**: `heatmap_comunas.py download YYYY M`.
+- **`geocode_direcciones.py`**: función `update_dashboard_pts()` inyecta datos enriquecidos en dashboard.
+- **Guía Notion**: "Pipeline de Mapas Geográficos" (https://www.notion.so/3437c7a7b8a481889a2ad054ecec771a).
 - DB copiada a producción vía `scp` (con WAL checkpoint previo).
 
 **Hecho (sesión 2026-04-15 — dashboard mapas + sitio web + mobile fix)**:

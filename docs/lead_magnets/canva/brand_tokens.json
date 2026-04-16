@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json.schemastore.org/figma-tokens",
+  "brand": {
+    "name": "Centro Médico Carampangue",
+    "url": "agentecmc.cl",
+    "contact": {
+      "phone": "(41) 296 5226",
+      "whatsapp": "+56 9 4588 6628",
+      "emergency": "SAMU 131"
+    }
+  },
+  "color": {
+    "green":       { "value": "#2e7d57", "description": "Verde salud · acento principal" },
+    "green-dk":    { "value": "#1f5a3d", "description": "Verde oscuro · títulos y portada" },
+    "green-lt":    { "value": "#e8f3ee", "description": "Fondo callout éxito/info" },
+    "blue":        { "value": "#2b6b8a", "description": "Azul confianza · H3" },
+    "blue-lt":     { "value": "#eaf1f6", "description": "Fondo callout info" },
+    "gold":        { "value": "#c89a3a", "description": "Oro cálido · advertencia" },
+    "gold-lt":     { "value": "#fff8e1", "description": "Fondo callout warn" },
+    "red":         { "value": "#b3332b", "description": "Rojo urgencias · SAMU" },
+    "red-lt":      { "value": "#fbe9e7", "description": "Fondo callout danger" },
+    "ink":         { "value": "#1c2a26", "description": "Tinta · cuerpo texto" },
+    "ink-soft":    { "value": "#4a5854", "description": "Tinta suave · labels" },
+    "line":        { "value": "#d9e1de", "description": "Bordes y divisores" },
+    "paper":       { "value": "#fafaf7", "description": "Fondo página" },
+    "paper-alt":   { "value": "#f2f1ea", "description": "Fondo disclaimer" }
+  },
+  "gradient": {
+    "cover-green": { "value": "linear-gradient(160deg, #2e7d57 0%, #1f5a3d 100%)" },
+    "cover-red":   { "value": "linear-gradient(160deg, #b3332b 0%, #7a1f18 100%)" },
+    "cover-blue":  { "value": "linear-gradient(160deg, #2b6b8a 0%, #14445b 100%)" },
+    "cover-gold":  { "value": "linear-gradient(160deg, #c89a3a 0%, #8a6818 100%)" },
+    "cover-ink":   { "value": "linear-gradient(160deg, #2c3e37 0%, #0f1a16 100%)" }
+  },
+  "typography": {
+    "font-serif":  { "value": "Georgia, 'Times New Roman', serif" },
+    "font-sans":   { "value": "Inter, 'Helvetica Neue', Arial, sans-serif" },
+    "h1":          { "value": { "font": "serif", "size": "34pt", "weight": 400, "line-height": 1.1 } },
+    "h2":          { "value": { "font": "serif", "size": "17pt", "weight": 600, "border-bottom": "2px green" } },
+    "h3":          { "value": { "font": "serif", "size": "13pt", "weight": 600, "color": "blue" } },
+    "h4":          { "value": { "font": "sans",  "size": "11pt", "weight": 600, "uppercase": true, "letter-spacing": "0.1em", "color": "ink-soft" } },
+    "body":        { "value": { "font": "sans",  "size": "11pt", "line-height": 1.55, "color": "ink" } },
+    "kicker":      { "value": { "font": "sans",  "size": "9pt",  "uppercase": true, "letter-spacing": "0.2em", "color": "blue", "weight": 700 } },
+    "big-number":  { "value": { "font": "serif", "size": "28pt", "weight": 700, "color": "green" } },
+    "samu-number": { "value": { "font": "serif", "size": "56pt", "weight": 700, "color": "red" } }
+  },
+  "spacing": {
+    "page-padding": { "value": "22mm 18mm 18mm" },
+    "page-size":    { "value": "210mm × 297mm (A4)" }
+  },
+  "component": {
+    "card": {
+      "bg": "#ffffff",
+      "border": "1px solid #d9e1de",
+      "radius": "2mm",
+      "padding": "4mm",
+      "shadow": "0 1px 3px rgba(0,0,0,0.04)"
+    },
+    "callout": {
+      "padding": "4mm 5mm",
+      "border-left": "4px solid {variant-color}",
+      "radius": "0 2mm 2mm 0",
+      "variants": {
+        "info":    { "bg": "blue-lt", "accent": "blue" },
+        "success": { "bg": "green-lt", "accent": "green" },
+        "warn":    { "bg": "gold-lt", "accent": "gold" },
+        "danger":  { "bg": "red-lt", "accent": "red" }
+      }
+    },
+    "phone-box": {
+      "border": "2px solid #b3332b",
+      "padding": "4mm 5mm",
+      "radius": "3mm",
+      "bg": "#ffffff"
+    },
+    "chip": {
+      "padding": "1mm 3mm",
+      "radius": "10mm",
+      "font-size": "9pt",
+      "font-weight": 600
+    }
+  },
+  "documents": {
+    "01_checklist_preconsulta":       { "cover": "cover-green", "icon": "📋", "category": "formulario" },
+    "02_calendario_vacunas_pni":      { "cover": "cover-blue",  "icon": "💉", "category": "informativo" },
+    "03_directorio_emergencias":      { "cover": "cover-red",   "icon": "🚨", "category": "emergencia" },
+    "04_glosario_fonasa_ges":         { "cover": "cover-blue",  "icon": "🏛️", "category": "informativo" },
+    "05_antecedentes_familiares":     { "cover": "cover-gold",  "icon": "🧬", "category": "formulario" },
+    "06_preparacion_examenes":        { "cover": "cover-blue",  "icon": "🔬", "category": "informativo" },
+    "07_guia_prequirurgica":          { "cover": "cover-green", "icon": "🏥", "category": "informativo" },
+    "08_calculadora_imc":             { "cover": "cover-gold",  "icon": "⚖️", "category": "educativo" },
+    "09_diario_postoperatorio":       { "cover": "cover-ink",   "icon": "📆", "category": "formulario" },
+    "10_cuando_llamar_131":           { "cover": "cover-red",   "icon": "🆘", "category": "emergencia" }
+  }
+}

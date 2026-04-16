@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dashboard SEO — centromedicocarampangue.cl</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  body { font-family: 'Inter', system-ui, sans-serif; background: #f7f8fa; }
+  .tab-btn.active { background: white; color: #0f172a; border-color: #e2e8f0; }
+  .gantt-row { display: grid; grid-template-columns: 160px 1fr; gap: 12px; align-items: center; }
+  .gantt-bar { height: 22px; border-radius: 6px; position: relative; }
+  .kpi-card { transition: transform .15s ease, box-shadow .15s ease; }
+  .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(15,23,42,.08); }
+  .tone-slate   { background: #f1f5f9; color: #0f172a; border: 1px solid #e2e8f0; }
+  .tone-white   { background: #ffffff; color: #0f172a; border: 1px solid #e2e8f0; }
+  .tone-blue    { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+  .tone-emerald { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+  .tone-amber   { background: #fffbeb; color: #92400e; border: 1px solid #fcd34d; }
+  .tone-rose    { background: #fff1f2; color: #9f1239; border: 1px solid #fecaca; }
+  .status-done       { background: #dcfce7; color: #166534; }
+  .status-in_progress{ background: #fef3c7; color: #92400e; }
+  .status-planned    { background: #f1f5f9; color: #475569; }
+  .priority-critical { background: #fee2e2; color: #991b1b; }
+  .priority-high     { background: #fed7aa; color: #9a3412; }
+  .priority-medium   { background: #fef3c7; color: #92400e; }
+  .priority-low      { background: #e0e7ff; color: #3730a3; }
+</style>
+</head>
+<body class="text-slate-800">
+
+<!-- Cross-nav -->
+<nav style="position:fixed;top:16px;right:16px;z-index:50;display:flex;gap:8px;font-size:12px;">
+  <a href="/ecosistema" style="padding:8px 14px;background:#1e293b;color:#fff;border-radius:999px;text-decoration:none;font-weight:600;box-shadow:0 4px 14px rgba(15,23,42,0.15);">🌐 Ecosistema</a>
+  <a href="/" style="padding:8px 14px;background:rgba(255,255,255,0.9);color:#334155;border:1px solid #e2e8f0;border-radius:999px;text-decoration:none;font-weight:600;">← agentecmc.cl</a>
+</nav>
+
+<!-- Header -->
+<header class="bg-white border-b border-slate-200">
+  <div class="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="text-3xl">🔎</div>
+      <div>
+        <h1 class="text-xl font-semibold">Dashboard SEO — centromedicocarampangue.cl</h1>
+        <div class="text-sm text-slate-500">Plan 12 semanas · Baseline 2026-04-15 · 162 usuarios/mes</div>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="text-xs text-slate-400">Actualizado: <span id="updated-date">2026-04-16</span></div>
+      <a href="https://centromedicocarampangue.cl" target="_blank" class="px-3 py-1.5 text-xs font-medium bg-slate-900 text-white rounded-md hover:bg-slate-800">Ver sitio →</a>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="max-w-7xl mx-auto px-6">
+    <nav class="flex gap-1 -mb-px flex-wrap" id="tabs">
+      <button class="tab-btn active px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="overview">📊 Overview</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="tasks">✅ Tareas</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="content">✍️ Blog posts</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="roadmap">🗓 Roadmap</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="kpis">📈 KPIs</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="issues">🚨 Problemas</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="wins">🏆 Wins</button>
+    </nav>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-6 py-8">
+
+  <!-- Tab: Overview -->
+  <section id="tab-overview" class="tab-content">
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+      <div class="kpi-card tone-white p-5 rounded-xl">
+        <div class="text-xs uppercase tracking-wide text-slate-500 font-semibold">% Completo</div>
+        <div class="text-3xl font-bold mt-2" id="kpi-complete">—</div>
+        <div class="text-xs text-slate-500 mt-1">Plan 12 sem</div>
+      </div>
+      <div class="kpi-card tone-blue p-5 rounded-xl">
+        <div class="text-xs uppercase tracking-wide font-semibold opacity-80">Fase actual</div>
+        <div class="text-2xl font-bold mt-2" id="kpi-phase">Fase 1</div>
+        <div class="text-xs opacity-75 mt-1" id="kpi-phase-name">Fixes críticos</div>
+      </div>
+      <div class="kpi-card tone-slate p-5 rounded-xl">
+        <div class="text-xs uppercase tracking-wide font-semibold opacity-80">Blog posts</div>
+        <div class="text-3xl font-bold mt-2" id="kpi-blogs">0 <span class="text-lg text-slate-400">/ 12</span></div>
+        <div class="text-xs opacity-75 mt-1">Publicados</div>
+      </div>
+      <div class="kpi-card tone-emerald p-5 rounded-xl">
+        <div class="text-xs uppercase tracking-wide font-semibold opacity-80">Tráfico</div>
+        <div class="text-3xl font-bold mt-2" id="kpi-traffic">162 <span class="text-lg opacity-60">/ 500</span></div>
+        <div class="text-xs opacity-75 mt-1">Users/mes (meta)</div>
+      </div>
+      <div class="kpi-card tone-amber p-5 rounded-xl">
+        <div class="text-xs uppercase tracking-wide font-semibold opacity-80">Rebote</div>
+        <div class="text-3xl font-bold mt-2" id="kpi-bounce">51.8%</div>
+        <div class="text-xs opacity-75 mt-1">Meta: 35%</div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <div class="bg-white rounded-xl border border-slate-200 p-6">
+        <h3 class="font-semibold mb-4">Estado de tareas</h3>
+        <canvas id="chart-tasks-status" height="220"></canvas>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-200 p-6">
+        <h3 class="font-semibold mb-4">Completitud por fase</h3>
+        <canvas id="chart-phases" height="220"></canvas>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl border border-slate-200 p-6 mb-8">
+      <h3 class="font-semibold mb-4">Tendencia de tráfico orgánico</h3>
+      <canvas id="chart-traffic" height="120"></canvas>
+      <p class="text-xs text-slate-500 mt-3">Semanal · Usuarios únicos · Fuente: Google Analytics 4</p>
+    </div>
+
+    <div class="bg-white rounded-xl border border-slate-200 p-6">
+      <h3 class="font-semibold mb-4">Próximas acciones (semana)</h3>
+      <ul class="space-y-3" id="checklist"></ul>
+    </div>
+  </section>
+
+  <!-- Tab: Tareas -->
+  <section id="tab-tasks" class="tab-content hidden">
+    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+          <tr>
+            <th class="text-left px-5 py-3">ID</th>
+            <th class="text-left px-5 py-3">Tarea</th>
+            <th class="text-left px-5 py-3">Fase</th>
+            <th class="text-left px-5 py-3">Prioridad</th>
+            <th class="text-left px-5 py-3">Estado</th>
+            <th class="text-left px-5 py-3">Esfuerzo</th>
+            <th class="text-left px-5 py-3">Impacto SEO</th>
+          </tr>
+        </thead>
+        <tbody id="tasks-tbody" class="divide-y divide-slate-100"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Tab: Blog posts -->
+  <section id="tab-content" class="tab-content hidden">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="posts-grid"></div>
+  </section>
+
+  <!-- Tab: Roadmap -->
+  <section id="tab-roadmap" class="tab-content hidden">
+    <div class="bg-white rounded-xl border border-slate-200 p-6">
+      <h3 class="font-semibold mb-6">Roadmap 12 semanas</h3>
+      <div class="space-y-4" id="gantt"></div>
+      <div class="mt-6 pt-6 border-t border-slate-100 text-sm text-slate-500">
+        <strong class="text-slate-700">Nota:</strong> el esfuerzo se concentra en las primeras 4 semanas (fixes críticos + 12 posts). Después es mantención, linkbuilding y revisión.
+      </div>
+    </div>
+  </section>
+
+  <!-- Tab: KPIs -->
+  <section id="tab-kpis" class="tab-content hidden">
+    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+          <tr>
+            <th class="text-left px-5 py-3">KPI</th>
+            <th class="text-left px-5 py-3">Baseline</th>
+            <th class="text-left px-5 py-3">Actual</th>
+            <th class="text-left px-5 py-3">Meta 4 sem</th>
+            <th class="text-left px-5 py-3">Meta 12 sem</th>
+            <th class="text-left px-5 py-3">Progreso</th>
+          </tr>
+        </thead>
+        <tbody id="kpis-tbody" class="divide-y divide-slate-100"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Tab: Problemas -->
+  <section id="tab-issues" class="tab-content hidden">
+    <div class="space-y-3" id="issues-list"></div>
+  </section>
+
+  <!-- Tab: Wins -->
+  <section id="tab-wins" class="tab-content hidden">
+    <div class="bg-white rounded-xl border border-slate-200 p-6">
+      <h3 class="font-semibold mb-6">Logros (timeline)</h3>
+      <ol class="relative border-l-2 border-slate-200 space-y-6 ml-3" id="wins-list"></ol>
+    </div>
+  </section>
+
+</main>
+
+<script>
+/* ======================================================================
+   Data embebida — editar acá para avanzar el dashboard
+====================================================================== */
+const DATA = {
+  version: "1.0",
+  updated_at: "2026-04-16",
+  baseline: {
+    date: "2026-04-15",
+    traffic_mensual: 162,
+    rebote_pct: 51.8,
+    paginas_sesion: 2.1,
+    paginas_indexadas: 11,
+    posts_publicados: 1,
+    clics_search_console_30d: 197
+  },
+  metas: {
+    traffic_4sem: 250,
+    traffic_12sem: 500,
+    rebote_12sem: 35,
+    paginas_sesion_12sem: 3.2,
+    blog_posts: 12,
+    clics_wa_12sem: 100,
+    backlinks_12sem: 20
+  },
+  phases: [
+    { id: 1, name: "Fixes críticos",        status: "in_progress", progress: 0, weight: 2  },
+    { id: 2, name: "Contenido y blog",      status: "planned",     progress: 0, weight: 6  },
+    { id: 3, name: "Optimización técnica",  status: "planned",     progress: 0, weight: 3  },
+    { id: 4, name: "Presencia local",       status: "planned",     progress: 0, weight: 2  }
+  ],
+  tasks: [
+    // Fase 1 — críticas
+    { id: "T01", name: "Unificar número WA a +56945886628 en todo el sitio", phase: 1, priority: "critical", status: "planned", effort: "30min", impact: 5 },
+    { id: "T02", name: "Quitar placeholder +5691234567 del blog",             phase: 1, priority: "critical", status: "planned", effort: "10min", impact: 3 },
+    { id: "T03", name: "Links 'Agendar' directo a wa.me (sin n9.cl)",         phase: 1, priority: "critical", status: "planned", effort: "15min", impact: 4 },
+    { id: "T04", name: "Meta descriptions en home + 5 páginas principales",   phase: 1, priority: "high",     status: "planned", effort: "30min", impact: 4 },
+    { id: "T05", name: "301 redirects de URLs duplicadas (/home/, Elementor)",phase: 1, priority: "high",     status: "planned", effort: "20min", impact: 3 },
+    { id: "T06", name: "Noindex páginas internas Elementor + robots.txt",     phase: 1, priority: "high",     status: "planned", effort: "10min", impact: 2 },
+    { id: "T07", name: "Sitemap.xml regenerado y resubido a GSC",             phase: 1, priority: "medium",   status: "planned", effort: "10min", impact: 3 },
+    // Fase 2 — contenido
+    { id: "T08", name: "Publicar 12 blog posts SEO",                          phase: 2, priority: "high",     status: "planned", effort: "6h",    impact: 5 },
+    { id: "T09", name: "Revisar y publicar 19 borradores existentes",         phase: 2, priority: "medium",   status: "planned", effort: "3h",    impact: 3 },
+    // Fase 3 — técnica
+    { id: "T10", name: "Schema MedicalClinic + Physician + FAQPage",          phase: 3, priority: "high",     status: "planned", effort: "2h",    impact: 5 },
+    { id: "T11", name: "Convertir imágenes a WebP (plugin Imagify)",          phase: 3, priority: "medium",   status: "planned", effort: "30min", impact: 3 },
+    { id: "T12", name: "Cache + CDN Cloudflare",                              phase: 3, priority: "medium",   status: "planned", effort: "1h",    impact: 4 },
+    { id: "T13", name: "Landings por especialidad (8)",                       phase: 3, priority: "high",     status: "planned", effort: "4h",    impact: 5 },
+    { id: "T14", name: "Auditoría Lighthouse mobile 90+",                     phase: 3, priority: "medium",   status: "planned", effort: "2h",    impact: 4 },
+    // Fase 4 — local
+    { id: "T15", name: "Google Business Profile (crear o reclamar)",          phase: 4, priority: "high",     status: "planned", effort: "1h",    impact: 5 },
+    { id: "T16", name: "30 reseñas GBP con 4.5★",                             phase: 4, priority: "medium",   status: "planned", effort: "ongoing",impact: 5 },
+    { id: "T17", name: "Doctoralia.cl + 5 directorios adicionales",           phase: 4, priority: "medium",   status: "planned", effort: "2h",    impact: 3 },
+    { id: "T18", name: "10 backlinks locales (municipalidad, prensa, etc.)",  phase: 4, priority: "medium",   status: "planned", effort: "ongoing",impact: 4 },
+    { id: "T19", name: "Calendario de contenido RRSS (IG + FB + TikTok)",     phase: 4, priority: "low",      status: "planned", effort: "ongoing",impact: 3 }
+  ],
+  posts: [
+    { n: 1,  titulo: "¿Cuánto cuesta una ortodoncia en Chile? Guía precios 2026",  keyword: "precio ortodoncia chile",      esp: "Odonto",   status: "planned" },
+    { n: 2,  titulo: "Implante dental: qué es, cuánto dura y precios reales",       keyword: "implante dental biobío",       esp: "Odonto",   status: "planned" },
+    { n: 3,  titulo: "Dolor lumbar: cuándo ir al kine y cuándo al traumatólogo",    keyword: "dolor lumbar kinesiología",     esp: "Kine",     status: "planned" },
+    { n: 4,  titulo: "Cefalea tensional vs migraña: diferencias",                   keyword: "cefalea tensional tratamiento", esp: "Med Gen",  status: "planned" },
+    { n: 5,  titulo: "Control del embarazo paso a paso en Chile",                   keyword: "control embarazo fonasa",       esp: "Matrona",  status: "planned" },
+    { n: 6,  titulo: "Otorrino en Carampangue: ¿cuándo consultar?",                 keyword: "otorrino arauco",               esp: "ORL",      status: "planned" },
+    { n: 7,  titulo: "Rinoplastia funcional vs estética",                           keyword: "rinoplastia funcional precio",  esp: "ORL",      status: "planned" },
+    { n: 8,  titulo: "Diabetes tipo 2: primeros pasos tras diagnóstico",            keyword: "diabetes tipo 2 control",       esp: "Med Gen",  status: "planned" },
+    { n: 9,  titulo: "Hipertensión: metas terapéuticas y exámenes",                 keyword: "hipertensión control",          esp: "Cardio",   status: "planned" },
+    { n: 10, titulo: "Psicología infantil: cuándo llevar a tu hijo",                keyword: "psicólogo infantil arauco",     esp: "Psico",    status: "planned" },
+    { n: 11, titulo: "Nutrición Fonasa: cómo agendar tu primera consulta",          keyword: "nutricionista fonasa chile",    esp: "Nutri",    status: "planned" },
+    { n: 12, titulo: "Vacunas PNI 2026: calendario completo por edad",              keyword: "calendario vacunas PNI 2026",   esp: "Pediatría",status: "planned" }
+  ],
+  kpis: [
+    { name: "Usuarios/mes",             base: 162,   actual: 162,   m4: 250,   m12: 500,   unit: "" },
+    { name: "Rebote",                   base: 51.8,  actual: 51.8,  m4: 45,    m12: 35,    unit: "%", invert: true },
+    { name: "Páginas/sesión",           base: 2.1,   actual: 2.1,   m4: 2.5,   m12: 3.2,   unit: "" },
+    { name: "Páginas indexadas",        base: 11,    actual: 11,    m4: 20,    m12: 40,    unit: "" },
+    { name: "Blog posts publicados",    base: 1,     actual: 1,     m4: 6,     m12: 16,    unit: "" },
+    { name: "Clics WA desde sitio",     base: 0,     actual: 0,     m4: 30,    m12: 100,   unit: "" },
+    { name: "Backlinks",                base: 0,     actual: 0,     m4: 5,     m12: 20,    unit: "" },
+    { name: "Reseñas GBP",              base: 0,     actual: 0,     m4: 10,    m12: 30,    unit: "" },
+    { name: "Lighthouse mobile",        base: 60,    actual: 60,    m4: 75,    m12: 90,    unit: "" }
+  ],
+  issues: [
+    { id: "I01", level: "critical", title: "WhatsApp incorrecto en todo el sitio",
+      detail: "El sitio usa +56966610737 (secretarias) en vez de +56945886628 (chatbot). El tráfico web NO llega al bot." },
+    { id: "I02", level: "critical", title: "Placeholder +5691234567 en blog",
+      detail: "Al menos 1 post del blog tiene el número de ejemplo sin reemplazar." },
+    { id: "I03", level: "critical", title: "Links 'Agendar' con acortador n9.cl",
+      detail: "Pasa por un redirect externo que puede caerse; usar wa.me directo." },
+    { id: "I04", level: "high",     title: "0 meta descriptions",
+      detail: "Home y páginas principales sin meta description. Google genera snippet automático (subóptimo)." },
+    { id: "I05", level: "high",     title: "1 solo post publicado",
+      detail: "El único post es 'Hello world' default de WordPress (2020). 19 borradores sin publicar." },
+    { id: "I06", level: "high",     title: "URLs duplicadas indexables",
+      detail: "/home/, /centro-medico-carampangue-{,2,3}/, /elementor-*/ son rutas internas que Google indexa como duplicados." },
+    { id: "I07", level: "high",     title: "Páginas desactualizadas desde 2020",
+      detail: "/profesionales/, /equipo/, /servicios/ no se han tocado en 4 años." },
+    { id: "I08", level: "medium",   title: "Sin schema markup",
+      detail: "Sin MedicalClinic, Physician, FAQPage. Se pierde rich snippets en SERP." },
+    { id: "I09", level: "medium",   title: "Imágenes no optimizadas",
+      detail: "JPGs pesados de 2020, sin WebP, sin lazy loading. Impacta LCP." },
+    { id: "I10", level: "medium",   title: "3 WhatsApp coexisten",
+      detail: "Aparecen 3 números distintos en distintas páginas. Confunde al usuario y diluye tráfico." }
+  ],
+  wins: [
+    { date: "2026-04-15", title: "Auditoría web completa", detail: "Análisis de 8 páginas + 20 blogs. Identificados 10 issues ordenados por prioridad." },
+    { date: "2026-04-16", title: "Plan SEO 12 semanas redactado", detail: "4 fases, 19 tareas, 12 blog posts priorizados, 9 KPIs medibles." },
+    { date: "2026-04-16", title: "Dashboard SEO creado",      detail: "Replica patrón de Meulen; trackea progreso en tiempo real." }
+  ],
+  checklist_week: [
+    { text: "Login WordPress y backup full previo",         done: false },
+    { text: "Reemplazar 3 WhatsApp por +56945886628",       done: false },
+    { text: "Quitar placeholder +5691234567",               done: false },
+    { text: "Meta descriptions en 6 páginas (Yoast)",       done: false },
+    { text: "Instalar plugin Redirection + 301s",           done: false },
+    { text: "Regenerar sitemap y resubir a GSC",            done: false },
+    { text: "Primer blog post publicado (ortodoncia)",      done: false }
+  ],
+  traffic_trend: [
+    // Semanas: baseline + proyección lineal hacia meta (rellenar con datos reales)
+    { label: "S0 (base)", users: 40 },
+    { label: "S1", users: 42 },
+    { label: "S2", users: 48 },
+    { label: "S3", users: 55 },
+    { label: "S4", users: 62 },
+    { label: "S5", users: 70 },
+    { label: "S6", users: 80 },
+    { label: "S7", users: 90 },
+    { label: "S8", users: 100 },
+    { label: "S9", users: 110 },
+    { label: "S10", users: 118 },
+    { label: "S11", users: 122 },
+    { label: "S12 (meta)", users: 125 }
+  ]
+};
+
+/* ======================================================================
+   Render
+====================================================================== */
+document.getElementById('updated-date').textContent = DATA.updated_at;
+
+// Tabs
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden');
+  });
+});
+
+// KPIs overview
+const doneCount = DATA.tasks.filter(t => t.status === 'done').length;
+const totalTasks = DATA.tasks.length;
+const overallPct = Math.round((doneCount / totalTasks) * 100);
+document.getElementById('kpi-complete').textContent = overallPct + '%';
+const postsDone = DATA.posts.filter(p => p.status === 'done').length;
+document.getElementById('kpi-blogs').innerHTML = postsDone + ' <span class="text-lg text-slate-400">/ ' + DATA.posts.length + '</span>';
+const currentPhase = DATA.phases.find(p => p.status === 'in_progress') || DATA.phases[0];
+document.getElementById('kpi-phase').textContent = 'Fase ' + currentPhase.id;
+document.getElementById('kpi-phase-name').textContent = currentPhase.name;
+
+// Charts
+const statusCounts = DATA.tasks.reduce((acc, t) => { acc[t.status] = (acc[t.status]||0) + 1; return acc; }, {});
+new Chart(document.getElementById('chart-tasks-status'), {
+  type: 'doughnut',
+  data: {
+    labels: Object.keys(statusCounts).map(s => ({done:'Hecho',in_progress:'En curso',planned:'Planificado'})[s] || s),
+    datasets: [{ data: Object.values(statusCounts), backgroundColor: ['#10b981','#f59e0b','#94a3b8'] }]
+  },
+  options: { plugins: { legend: { position: 'bottom' } } }
+});
+
+new Chart(document.getElementById('chart-phases'), {
+  type: 'bar',
+  data: {
+    labels: DATA.phases.map(p => 'Fase ' + p.id + ' — ' + p.name),
+    datasets: [{ label: '% completitud', data: DATA.phases.map(p => p.progress), backgroundColor: '#3b82f6', borderRadius: 6 }]
+  },
+  options: { indexAxis: 'y', scales: { x: { max: 100 } }, plugins: { legend: { display: false } } }
+});
+
+new Chart(document.getElementById('chart-traffic'), {
+  type: 'line',
+  data: {
+    labels: DATA.traffic_trend.map(t => t.label),
+    datasets: [{
+      label: 'Usuarios únicos',
+      data: DATA.traffic_trend.map(t => t.users),
+      borderColor: '#10b981',
+      backgroundColor: 'rgba(16,185,129,0.1)',
+      fill: true,
+      tension: 0.3
+    }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true } }
+  }
+});
+
+// Checklist de la semana
+const checklistEl = document.getElementById('checklist');
+DATA.checklist_week.forEach(item => {
+  const li = document.createElement('li');
+  li.className = 'flex items-start gap-3 text-sm';
+  li.innerHTML = `
+    <span class="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded ${item.done?'bg-emerald-500 text-white':'border border-slate-300 text-slate-400'}">${item.done?'✓':''}</span>
+    <span class="${item.done?'line-through text-slate-400':'text-slate-700'}">${item.text}</span>
+  `;
+  checklistEl.appendChild(li);
+});
+
+// Tareas tabla
+const tasksTbody = document.getElementById('tasks-tbody');
+DATA.tasks.forEach(t => {
+  const tr = document.createElement('tr');
+  tr.className = 'hover:bg-slate-50';
+  tr.innerHTML = `
+    <td class="px-5 py-3 font-mono text-xs">${t.id}</td>
+    <td class="px-5 py-3 font-medium">${t.name}</td>
+    <td class="px-5 py-3 text-slate-500">Fase ${t.phase}</td>
+    <td class="px-5 py-3"><span class="priority-${t.priority} px-2 py-1 rounded text-xs font-medium">${t.priority}</span></td>
+    <td class="px-5 py-3"><span class="status-${t.status} px-2 py-1 rounded text-xs font-medium">${t.status}</span></td>
+    <td class="px-5 py-3 text-xs text-slate-500">${t.effort}</td>
+    <td class="px-5 py-3">
+      <div class="flex items-center gap-1">
+        ${'★'.repeat(t.impact)}<span class="text-slate-300">${'★'.repeat(5 - t.impact)}</span>
+      </div>
+    </td>
+  `;
+  tasksTbody.appendChild(tr);
+});
+
+// Blog posts grid
+const postsGrid = document.getElementById('posts-grid');
+DATA.posts.forEach(p => {
+  const card = document.createElement('div');
+  card.className = 'bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md transition';
+  card.innerHTML = `
+    <div class="flex items-start justify-between mb-2">
+      <span class="text-xs font-mono text-slate-400">#${String(p.n).padStart(2,'0')}</span>
+      <span class="status-${p.status} px-2 py-0.5 rounded text-xs font-medium">${p.status}</span>
+    </div>
+    <h4 class="font-semibold text-sm leading-snug mb-2">${p.titulo}</h4>
+    <div class="text-xs text-slate-500 mb-1">🎯 <code class="text-slate-700">${p.keyword}</code></div>
+    <div class="text-xs text-slate-400">${p.esp}</div>
+  `;
+  postsGrid.appendChild(card);
+});
+
+// Roadmap Gantt
+const gantt = document.getElementById('gantt');
+const phaseColors = ['#ef4444','#f59e0b','#3b82f6','#10b981'];
+DATA.phases.forEach((p, i) => {
+  const offset = DATA.phases.slice(0, i).reduce((a,x) => a + x.weight, 0);
+  const totalW = DATA.phases.reduce((a,x) => a + x.weight, 0);
+  const row = document.createElement('div');
+  row.className = 'gantt-row';
+  row.innerHTML = `
+    <div class="text-sm font-medium">Fase ${p.id}: ${p.name}</div>
+    <div class="relative h-6 bg-slate-100 rounded">
+      <div class="gantt-bar absolute top-0"
+           style="left:${(offset/totalW)*100}%;width:${(p.weight/totalW)*100}%;background:${phaseColors[i]};">
+        <div class="text-xs text-white px-2 py-0.5">${p.progress}%</div>
+      </div>
+    </div>
+  `;
+  gantt.appendChild(row);
+});
+
+// KPIs tabla
+const kpisTbody = document.getElementById('kpis-tbody');
+DATA.kpis.forEach(k => {
+  const goal = k.m12;
+  let pct;
+  if (k.invert) {
+    // Para KPIs donde menos es mejor (ej. rebote)
+    pct = Math.max(0, Math.min(100, Math.round(((k.base - k.actual) / (k.base - k.m12)) * 100)));
+  } else {
+    pct = Math.max(0, Math.min(100, Math.round(((k.actual - k.base) / (k.m12 - k.base)) * 100 || 0)));
+  }
+  const tr = document.createElement('tr');
+  tr.className = 'hover:bg-slate-50';
+  tr.innerHTML = `
+    <td class="px-5 py-3 font-medium">${k.name}</td>
+    <td class="px-5 py-3 text-slate-500">${k.base}${k.unit}</td>
+    <td class="px-5 py-3 font-semibold">${k.actual}${k.unit}</td>
+    <td class="px-5 py-3 text-slate-500">${k.m4}${k.unit}</td>
+    <td class="px-5 py-3 text-slate-700 font-medium">${k.m12}${k.unit}</td>
+    <td class="px-5 py-3">
+      <div class="flex items-center gap-2">
+        <div class="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+          <div class="h-full bg-emerald-500" style="width:${pct}%"></div>
+        </div>
+        <span class="text-xs text-slate-500">${pct}%</span>
+      </div>
+    </td>
+  `;
+  kpisTbody.appendChild(tr);
+});
+
+// Issues
+const issuesList = document.getElementById('issues-list');
+const levelColors = {
+  critical: 'border-red-300 bg-red-50',
+  high:     'border-amber-300 bg-amber-50',
+  medium:   'border-blue-200 bg-blue-50',
+  low:      'border-slate-200 bg-slate-50'
+};
+const levelBadge = {
+  critical: 'bg-red-200 text-red-800',
+  high:     'bg-amber-200 text-amber-800',
+  medium:   'bg-blue-200 text-blue-800',
+  low:      'bg-slate-200 text-slate-700'
+};
+const levelEmoji = { critical: '🔴', high: '🟠', medium: '🟡', low: '🟢' };
+DATA.issues.forEach(i => {
+  const div = document.createElement('div');
+  div.className = `border-l-4 ${levelColors[i.level]} rounded-r-lg p-4`;
+  div.innerHTML = `
+    <div class="flex items-start justify-between mb-2">
+      <div class="flex items-center gap-2">
+        <span>${levelEmoji[i.level]}</span>
+        <span class="font-mono text-xs text-slate-500">${i.id}</span>
+        <span class="font-semibold">${i.title}</span>
+      </div>
+      <span class="${levelBadge[i.level]} px-2 py-0.5 rounded text-xs font-semibold uppercase">${i.level}</span>
+    </div>
+    <div class="text-sm text-slate-600 ml-6">${i.detail}</div>
+  `;
+  issuesList.appendChild(div);
+});
+
+// Wins timeline
+const winsList = document.getElementById('wins-list');
+DATA.wins.forEach(w => {
+  const li = document.createElement('li');
+  li.className = 'ml-6';
+  li.innerHTML = `
+    <span class="absolute -left-[7px] mt-1.5 h-3 w-3 rounded-full bg-emerald-500 border-2 border-white"></span>
+    <div class="flex items-baseline gap-2">
+      <span class="font-mono text-xs text-slate-400">${w.date}</span>
+    </div>
+    <h4 class="font-semibold mt-1">${w.title}</h4>
+    <p class="text-sm text-slate-600 mt-1">${w.detail}</p>
+  `;
+  winsList.appendChild(li);
+});
+</script>
+</body>
+</html>

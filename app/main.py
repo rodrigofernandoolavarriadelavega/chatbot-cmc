@@ -271,6 +271,7 @@ _LANDING_HTML = (_TEMPLATE_DIR / "landing.html").read_text(encoding="utf-8")
 _SITIO_V3_HTML = (_TEMPLATE_DIR / "sitio-v3.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio-v3.html").exists() else ""
 _HEATMAP_COMUNAS_HTML = (_TEMPLATE_DIR / "heatmap_comunas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "heatmap_comunas.html").exists() else ""
 _HEATMAP_DIRECCIONES_HTML = (_TEMPLATE_DIR / "heatmap_direcciones.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "heatmap_direcciones.html").exists() else ""
+_SEO_DASHBOARD_HTML = (_TEMPLATE_DIR / "seo_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "seo_dashboard.html").exists() else ""
 
 
 # ── Endpoints ────────────────────────────────────────────────────────────────
@@ -449,6 +450,14 @@ def meulen_dashboard_page():
 def menu_page():
     """Landing esquemático con todas las rutas desplegadas en agentecmc.cl."""
     return _MENU_HTML
+
+
+@app.get("/seo/dashboard", response_class=HTMLResponse)
+def seo_dashboard_page():
+    """Dashboard de progreso del plan SEO para centromedicocarampangue.cl."""
+    if not _SEO_DASHBOARD_HTML:
+        raise HTTPException(404, "Dashboard SEO no disponible")
+    return _SEO_DASHBOARD_HTML
 
 
 @app.get("/proyectos2026", response_class=HTMLResponse)

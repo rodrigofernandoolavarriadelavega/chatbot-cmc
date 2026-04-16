@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Calculadora de IMC · CMC</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<section class="page cover gold">
+  <div>
+    <div class="brand">Centro Médico Carampangue</div>
+    <div class="logo-mark">C</div>
+    <span class="kicker" style="color:rgba(255,255,255,.8); margin-top:10mm; display:block;">Documento 08</span>
+    <h1>Calculadora de IMC</h1>
+    <p class="subtitle">Herramienta educativa. El IMC es una referencia, no un diagnóstico.</p>
+  </div>
+  <div class="footer-cover">
+    <div>Índice de Masa Corporal · OMS</div>
+    <div class="doc-id">CMC · 08</div>
+  </div>
+</section>
+
+<section class="page">
+  <div class="callout warn">
+    <span class="label">Importante</span>
+    El IMC es una referencia general. No diagnostica enfermedades ni refleja la composición corporal (músculo vs grasa). Úselo como <strong>punto de partida</strong>, no como conclusión.
+  </div>
+
+  <h2>Cómo se calcula</h2>
+  <div class="card" style="background:var(--cmc-green-lt); border-color:var(--cmc-green); text-align:center; font-family:var(--serif); font-size:16pt; padding:8mm;">
+    IMC = Peso (kg) ÷ Estatura² (m)
+  </div>
+
+  <h3>Ejemplo</h3>
+  <p>Persona de 70 kg y 1,70 m:</p>
+  <ul>
+    <li>IMC = 70 ÷ (1,70 × 1,70)</li>
+    <li>IMC = 70 ÷ 2,89</li>
+    <li>IMC = <strong>24,2</strong></li>
+  </ul>
+
+  <h2>Tabla de interpretación (OMS — adultos)</h2>
+  <table>
+    <thead><tr><th>IMC</th><th>Categoría</th><th>Qué significa</th></tr></thead>
+    <tbody>
+      <tr><td>&lt; 18,5</td><td>Bajo peso</td><td>Puede haber desnutrición, malabsorción u otras causas.</td></tr>
+      <tr><td>18,5 – 24,9</td><td><strong>Peso normal</strong></td><td>Rango saludable para la mayoría.</td></tr>
+      <tr><td>25,0 – 29,9</td><td>Sobrepeso</td><td>Riesgo aumentado de enfermedades metabólicas.</td></tr>
+      <tr><td>30,0 – 34,9</td><td>Obesidad grado I</td><td>Riesgo importante.</td></tr>
+      <tr><td>35,0 – 39,9</td><td>Obesidad grado II</td><td>Riesgo alto.</td></tr>
+      <tr><td>≥ 40</td><td>Obesidad grado III</td><td>Riesgo muy alto · evaluación médica recomendada.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Calcule el suyo</h2>
+  <div class="grid grid-3">
+    <div class="card center">
+      <span class="kicker">Paso 1</span>
+      <p>Peso actual</p>
+      <p style="font-size:20pt; margin:3mm 0;"><span class="fill sm"></span> kg</p>
+    </div>
+    <div class="card center">
+      <span class="kicker">Paso 2</span>
+      <p>Estatura</p>
+      <p style="font-size:20pt; margin:3mm 0;"><span class="fill sm"></span> cm</p>
+      <p class="small">Divida por 100 → m</p>
+    </div>
+    <div class="card center">
+      <span class="kicker">Paso 3</span>
+      <p>Mi IMC</p>
+      <p style="font-size:20pt; margin:3mm 0; color:var(--cmc-green);"><span class="fill sm"></span></p>
+      <p class="small">Ubíquese en la tabla</p>
+    </div>
+  </div>
+</section>
+
+<section class="page">
+  <h2>Limitaciones del IMC</h2>
+  <p>El IMC <strong>no considera</strong>:</p>
+  <ol>
+    <li><strong>Composición corporal:</strong> masa muscular vs grasa. Un atleta y una persona con sobrepeso pueden tener el mismo IMC.</li>
+    <li><strong>Distribución de grasa:</strong> la grasa abdominal es más peligrosa que la de caderas.</li>
+    <li><strong>Edad:</strong> personas mayores pueden tener IMC "normal" con sarcopenia.</li>
+    <li><strong>Sexo:</strong> mujeres tienden a tener más grasa corporal al mismo IMC.</li>
+    <li><strong>Origen étnico:</strong> algunos grupos tienen riesgo metabólico con IMC menor.</li>
+    <li><strong>Embarazo:</strong> no aplica.</li>
+    <li><strong>Niños y adolescentes:</strong> se usan curvas de crecimiento por edad y sexo.</li>
+  </ol>
+
+  <h2>Circunferencia de cintura — complemento útil</h2>
+  <p>Mida la cintura a la altura del <strong>ombligo</strong>, relajado, al final de una espiración.</p>
+  <table>
+    <thead><tr><th>Sexo</th><th>Riesgo aumentado</th><th>Riesgo alto</th></tr></thead>
+    <tbody>
+      <tr><td>Hombres</td><td>≥ 94 cm</td><td>≥ 102 cm</td></tr>
+      <tr><td>Mujeres</td><td>≥ 80 cm</td><td>≥ 88 cm</td></tr>
+    </tbody>
+  </table>
+  <p class="small">Referencias OMS/IDF</p>
+
+  <h2>Qué hacer según su resultado</h2>
+  <div class="grid grid-2">
+    <div class="card">
+      <span class="chip">Peso normal</span>
+      <p class="small">Mantenga alimentación variada y actividad física regular (150 min/sem de ejercicio moderado). Control médico anual preventivo.</p>
+    </div>
+    <div class="card">
+      <span class="chip gold">Sobrepeso 25–29,9</span>
+      <p class="small">Evalúe cintura + glicemia, perfil lipídico y presión arterial. Consulta con nutricionista (Fonasa MLE). Actividad física gradual.</p>
+    </div>
+    <div class="card">
+      <span class="chip blue">Bajo peso &lt;18,5</span>
+      <p class="small">Consulte a su médico (tiroides, malabsorción, estrés, trastorno alimentario). No inicie dieta hipercalórica sin evaluación.</p>
+    </div>
+    <div class="card">
+      <span class="chip red">Obesidad ≥30</span>
+      <p class="small">Consulte a su médico. Enfermedad crónica que requiere abordaje multidisciplinario (médico, nutricionista, actividad física, salud mental). Evaluar comorbilidades.</p>
+    </div>
+  </div>
+</section>
+
+<section class="page">
+  <h2>Lo que NO haga</h2>
+  <ul class="checklist">
+    <li>No empiece dietas extremas (ayunos prolongados, monodietas) sin supervisión</li>
+    <li>No use "quemadores de grasa" sin evaluación médica</li>
+    <li>No tome medicamentos "para bajar de peso" de venta informal</li>
+    <li>No se compare con otros: cada persona tiene un ritmo y necesidades diferentes</li>
+    <li>No interprete un IMC elevado como "tiene diabetes" — no son lo mismo</li>
+  </ul>
+
+  <h2>Exámenes recomendados como complemento</h2>
+  <p>Si su IMC está sobre 25, converse con su médico sobre pedir:</p>
+  <div class="two-col">
+    <ul class="checklist">
+      <li>Glicemia en ayunas</li>
+      <li>HbA1c</li>
+      <li>Perfil lipídico</li>
+      <li>Presión arterial</li>
+      <li>Pruebas hepáticas (hígado graso)</li>
+      <li>TSH (tiroides)</li>
+      <li>Ácido úrico</li>
+      <li>Ecografía abdominal (en algunos casos)</li>
+    </ul>
+  </div>
+
+  <div class="callout info">
+    <span class="label">En el CMC</span>
+    Nutricionista Gisela Pinto atiende por Fonasa MLE y particular. Agende por WhatsApp <strong>+56 9 4588 6628</strong>.
+  </div>
+
+  <p class="disclaimer">Esta herramienta es solo educativa y no reemplaza evaluación médica ni nutricional. Última revisión: [mes/año].</p>
+</section>
+
+</body>
+</html>

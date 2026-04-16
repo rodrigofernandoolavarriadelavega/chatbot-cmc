@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Material educativo · Centro Médico Carampangue</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  body{ padding: 40px 20px; }
+  .portal{
+    max-width: 900px; margin: 0 auto;
+    background: #fff; border-radius: 6px;
+    padding: 40px 44px;
+    box-shadow: 0 4px 24px rgba(0,0,0,.08);
+  }
+  .portal .intro{ border-bottom: 2px solid var(--cmc-green); padding-bottom: 16px; margin-bottom: 24px; }
+  .doc-list{ display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .doc-list a{
+    display: block; padding: 14px 16px;
+    background: var(--cmc-paper); border: 1px solid var(--cmc-line);
+    border-radius: 6px; color: var(--cmc-ink);
+    border-bottom: 1px solid var(--cmc-line);
+    transition: all .15s;
+  }
+  .doc-list a:hover{ background: var(--cmc-green-lt); border-color: var(--cmc-green); transform: translateY(-1px); }
+  .doc-list .num{ font-family: var(--serif); color: var(--cmc-green); font-size: 22pt; font-weight: 700; display:block; line-height: 1; }
+  .doc-list .t{ font-weight: 600; font-size: 11pt; display: block; margin: 4px 0 2px; }
+  .doc-list .d{ font-size: 9.5pt; color: var(--cmc-ink-soft); }
+  .featured{
+    display:block; padding: 22px 24px; margin-bottom: 22px;
+    background: linear-gradient(160deg, #2c3e37 0%, #0f1a16 100%);
+    color:#fff; border-radius: 6px; text-decoration:none;
+    border:0; transition: transform .15s;
+  }
+  .featured:hover{ transform: translateY(-2px); }
+  .featured .kicker{ color: rgba(255,255,255,.8); font-size:9pt; letter-spacing:.2em; text-transform:uppercase; font-weight:700; }
+  .featured .t{ font-family: var(--serif); font-size: 20pt; font-weight: 400; margin: 4px 0; display:block; }
+  .featured .d{ color: rgba(255,255,255,.85); font-size: 10.5pt; }
+</style>
+</head>
+<body>
+<div class="portal">
+  <div class="intro">
+    <span class="kicker">Material educativo CMC</span>
+    <h1 style="font-family:var(--serif); color:var(--cmc-green-dk); font-size:28pt; font-weight:400;">Centro Médico Carampangue</h1>
+    <p class="small">Todos los documentos son imprimibles en A4. Abra cada uno y use <strong>Ctrl/Cmd + P</strong> para generar PDF o imprimir.</p>
+  </div>
+
+  <a href="00_guia_mitos_realidades_arauco.html" class="featured">
+    <span class="kicker">★ Guía premium · 17 páginas</span>
+    <span class="t">Mitos y Realidades de Salud en Arauco</span>
+    <span class="d">Lo que la ciencia dice sobre 10 creencias populares — araña de rincón, marea roja, empacho, antibióticos, hantavirus, celulosa y más. Con fuentes MINSAL/ISP/Scielo.</span>
+  </a>
+
+  <div class="doc-list">
+    <a href="01_checklist_preconsulta.html"><span class="num">01</span><span class="t">Checklist pre-consulta</span><span class="d">Documentos, medicamentos, preguntas al médico</span></a>
+    <a href="02_calendario_vacunas_pni.html"><span class="num">02</span><span class="t">Calendario de vacunas PNI</span><span class="d">Programa Nacional de Inmunización MINSAL</span></a>
+    <a href="03_directorio_emergencias_arauco.html"><span class="num">03</span><span class="t">Directorio de emergencias</span><span class="d">Teléfonos útiles comuna de Arauco</span></a>
+    <a href="04_glosario_fonasa_ges.html"><span class="num">04</span><span class="t">Guía Fonasa y GES</span><span class="d">Tramos, modalidades, 90 patologías</span></a>
+    <a href="05_antecedentes_familiares.html"><span class="num">05</span><span class="t">Antecedentes familiares</span><span class="d">Árbol médico para su consulta</span></a>
+    <a href="06_preparacion_examenes.html"><span class="num">06</span><span class="t">Preparación de exámenes</span><span class="d">Ayunos, ecografías, PAP, colonoscopía</span></a>
+    <a href="07_guia_prequirurgica.html"><span class="num">07</span><span class="t">Guía prequirúrgica</span><span class="d">Antes, durante y después de la cirugía</span></a>
+    <a href="08_calculadora_imc.html"><span class="num">08</span><span class="t">Calculadora IMC</span><span class="d">Fórmula OMS + circunferencia cintura</span></a>
+    <a href="09_diario_postoperatorio.html"><span class="num">09</span><span class="t">Diario postoperatorio</span><span class="d">Seguimiento diario primeras 4 semanas</span></a>
+    <a href="10_cuando_llamar_131.html"><span class="num">10</span><span class="t">Cuándo llamar al SAMU 131</span><span class="d">F.A.S.T., IAM, pediatría, intoxicaciones</span></a>
+  </div>
+
+  <p class="small" style="margin-top:24px; text-align:center;">
+    📞 (41) 296 5226  ·  💬 WhatsApp +56 9 4588 6628  ·  🌐 agentecmc.cl
+  </p>
+</div>
+</body>
+</html>

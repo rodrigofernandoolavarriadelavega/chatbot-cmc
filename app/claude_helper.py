@@ -366,10 +366,12 @@ PRECIOS (extraídos directamente del sistema):
 MEDICINA GENERAL (Dr. Rodrigo Olavarría, Dr. Andrés Abarca, Dr. Alonso Márquez):
 - Consulta médica particular: $25.000 — atención médica general: diagnóstico, tratamiento, licencias médicas, recetas, derivaciones a especialista.
 - Consulta médica bono Fonasa: $7.880 — misma consulta, copago Fonasa MLE nivel 3.
+- Control o revisión de exámenes: $0 — revisión de resultados de exámenes de laboratorio, imágenes u otros. Sin costo para el paciente.
 
 MEDICINA FAMILIAR (Dr. Alonso Márquez — también atiende con bono de Medicina General):
 - Consulta medicina familiar particular: $30.000 — enfoque integral del paciente y su familia; manejo de enfermedades crónicas, controles preventivos, salud mental leve.
 - Consulta bono Fonasa (bono medicina general): $7.880 — copago Fonasa MLE nivel 3.
+- Control o revisión de exámenes: $0 — revisión de resultados de exámenes de laboratorio, imágenes u otros. Sin costo para el paciente.
 
 KINESIOLOGÍA (Luis Armijo / Leonardo Etcheverry — bono Fonasa MLE nivel 3):
 - Atención kinesiológica bono Fonasa: $7.830 — sesión de rehabilitación física (ejercicios, electroterapia, ultrasonido, etc.) para lesiones, dolor muscular o post-operatorio.

@@ -1,0 +1,371 @@
+/* =====================================================
+   CMC — Centro Médico Carampangue
+   Sistema de diseño para lead magnets imprimibles
+   A4 · Print-optimized · Brand aware
+   ===================================================== */
+
+/* --- Tokens de marca --- */
+:root{
+  --cmc-green:      #2e7d57;   /* verde salud (acento principal) */
+  --cmc-green-dk:   #1f5a3d;
+  --cmc-green-lt:   #e8f3ee;
+  --cmc-blue:       #2b6b8a;   /* azul confianza */
+  --cmc-blue-lt:    #eaf1f6;
+  --cmc-gold:       #c89a3a;   /* acento cálido */
+  --cmc-red:        #b3332b;   /* urgencias */
+  --cmc-red-lt:     #fbe9e7;
+  --cmc-ink:        #1c2a26;   /* cuerpo texto */
+  --cmc-ink-soft:   #4a5854;
+  --cmc-line:       #d9e1de;
+  --cmc-paper:      #fafaf7;
+  --cmc-paper-alt:  #f2f1ea;
+
+  --sans: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --serif:'Georgia', 'Times New Roman', serif;
+}
+
+/* --- Reset minimal --- */
+*{ box-sizing:border-box; margin:0; padding:0; }
+html,body{ background:#e8e8e3; }
+body{
+  font-family: var(--sans);
+  font-size: 11pt;
+  line-height: 1.55;
+  color: var(--cmc-ink);
+  -webkit-font-smoothing:antialiased;
+  padding: 20px 0;
+}
+
+/* --- Hoja A4 --- */
+.page{
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto 20px;
+  background: var(--cmc-paper);
+  box-shadow: 0 4px 24px rgba(0,0,0,.08);
+  padding: 22mm 18mm 18mm;
+  position: relative;
+  page-break-after: always;
+}
+.page:last-of-type{ page-break-after: auto; }
+
+/* --- Header / pie de página --- */
+.page::before{
+  content: "Centro Médico Carampangue  ·  Material educativo";
+  position:absolute;
+  top: 8mm; left: 18mm; right: 18mm;
+  font-size: 8pt;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--cmc-ink-soft);
+  border-bottom: 1px solid var(--cmc-line);
+  padding-bottom: 4mm;
+}
+.page::after{
+  content: "agentecmc.cl  ·  +56 9 4588 6628  ·  (41) 296 5226";
+  position:absolute;
+  bottom: 8mm; left: 18mm; right: 18mm;
+  font-size: 8pt;
+  color: var(--cmc-ink-soft);
+  border-top: 1px solid var(--cmc-line);
+  padding-top: 4mm;
+  text-align: center;
+  letter-spacing: .05em;
+}
+
+/* --- Portada (sin header/footer estándar) --- */
+.cover{
+  background: linear-gradient(160deg, var(--cmc-green) 0%, var(--cmc-green-dk) 100%);
+  color: #fff;
+  padding: 30mm 22mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 297mm;
+}
+.cover::before, .cover::after{ display:none; }
+.cover .brand{
+  font-size: 10pt;
+  letter-spacing: .3em;
+  text-transform: uppercase;
+  opacity:.85;
+  border-bottom: 1px solid rgba(255,255,255,.35);
+  padding-bottom: 10mm;
+}
+.cover .logo-mark{
+  width: 54px; height: 54px;
+  border-radius: 50%;
+  background: #fff;
+  display:flex; align-items:center; justify-content:center;
+  color: var(--cmc-green);
+  font-weight: 800;
+  font-size: 22pt;
+  letter-spacing: -1px;
+  margin-bottom: 8mm;
+}
+.cover h1{
+  font-family: var(--serif);
+  font-size: 34pt;
+  font-weight: 400;
+  line-height: 1.1;
+  margin: 8mm 0 4mm;
+  max-width: 85%;
+}
+.cover .subtitle{
+  font-size: 13pt;
+  opacity: .9;
+  max-width: 70%;
+  font-weight: 300;
+  line-height: 1.4;
+}
+.cover .footer-cover{
+  border-top: 1px solid rgba(255,255,255,.35);
+  padding-top: 10mm;
+  display:flex; justify-content: space-between; align-items:flex-end;
+  font-size: 10pt; opacity:.85;
+}
+.cover .footer-cover .doc-id{
+  font-size: 9pt; letter-spacing:.2em; text-transform:uppercase;
+}
+
+/* Variantes de portada por color */
+.cover.red   { background: linear-gradient(160deg, #b3332b 0%, #7a1f18 100%); }
+.cover.red   .logo-mark{ color:#b3332b; }
+.cover.blue  { background: linear-gradient(160deg, var(--cmc-blue) 0%, #14445b 100%); }
+.cover.blue  .logo-mark{ color: var(--cmc-blue); }
+.cover.gold  { background: linear-gradient(160deg, #c89a3a 0%, #8a6818 100%); }
+.cover.gold  .logo-mark{ color:#8a6818; }
+.cover.ink   { background: linear-gradient(160deg, #2c3e37 0%, #0f1a16 100%); }
+.cover.ink   .logo-mark{ color:#2c3e37; }
+
+/* --- Tipografía --- */
+h1,h2,h3,h4{ font-family: var(--serif); color: var(--cmc-green-dk); font-weight:600; }
+h2{
+  font-size: 17pt;
+  margin: 8mm 0 3mm;
+  padding-bottom: 2mm;
+  border-bottom: 2px solid var(--cmc-green);
+  letter-spacing: -.2px;
+}
+h3{
+  font-size: 13pt;
+  margin: 5mm 0 2mm;
+  color: var(--cmc-blue);
+}
+h4{
+  font-size: 11pt;
+  margin: 4mm 0 2mm;
+  font-family: var(--sans);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--cmc-ink-soft);
+}
+p{ margin: 0 0 3mm; }
+strong{ color: var(--cmc-green-dk); }
+em{ color: var(--cmc-ink-soft); }
+a{ color: var(--cmc-blue); text-decoration: none; border-bottom:1px dotted; }
+
+/* --- Listas --- */
+ul, ol{ margin: 0 0 4mm 6mm; }
+li{ margin-bottom: 1.5mm; }
+ul.checklist{ list-style:none; margin-left:0; }
+ul.checklist li{
+  padding-left: 8mm;
+  position: relative;
+  margin-bottom: 2mm;
+}
+ul.checklist li::before{
+  content:"";
+  position:absolute; left:0; top: 4px;
+  width: 5mm; height:5mm;
+  border: 1.5px solid var(--cmc-green);
+  border-radius: 1mm;
+  background: #fff;
+}
+
+/* --- Callouts --- */
+.callout{
+  background: var(--cmc-green-lt);
+  border-left: 4px solid var(--cmc-green);
+  padding: 4mm 5mm;
+  margin: 4mm 0;
+  border-radius: 0 2mm 2mm 0;
+  font-size: 10.5pt;
+}
+.callout.warn{ background: #fff8e1; border-left-color: var(--cmc-gold); }
+.callout.danger{ background: var(--cmc-red-lt); border-left-color: var(--cmc-red); }
+.callout.info{ background: var(--cmc-blue-lt); border-left-color: var(--cmc-blue); }
+.callout .label{
+  display:inline-block;
+  font-size: 8pt;
+  text-transform: uppercase;
+  letter-spacing: .15em;
+  background: var(--cmc-green); color: #fff;
+  padding: 1mm 2.5mm; border-radius: 1mm;
+  margin-right: 2mm; vertical-align: 1px;
+}
+.callout.warn   .label{ background: var(--cmc-gold); }
+.callout.danger .label{ background: var(--cmc-red); }
+.callout.info   .label{ background: var(--cmc-blue); }
+
+/* --- Tablas --- */
+table{
+  width: 100%;
+  border-collapse: collapse;
+  margin: 3mm 0 5mm;
+  font-size: 10pt;
+}
+thead tr{ background: var(--cmc-green); color: #fff; }
+thead th{
+  padding: 2.5mm 3mm;
+  text-align: left;
+  font-size: 9.5pt;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+tbody td{
+  padding: 2.5mm 3mm;
+  border-bottom: 1px solid var(--cmc-line);
+  vertical-align: top;
+}
+tbody tr:nth-child(even){ background: rgba(46,125,87,.04); }
+
+/* --- Cards / grid --- */
+.grid{ display:grid; gap: 4mm; margin: 3mm 0; }
+.grid-2{ grid-template-columns: 1fr 1fr; }
+.grid-3{ grid-template-columns: repeat(3,1fr); }
+.card{
+  background:#fff;
+  border: 1px solid var(--cmc-line);
+  border-radius: 2mm;
+  padding: 4mm;
+  box-shadow: 0 1px 3px rgba(0,0,0,.04);
+}
+.card h3{ margin-top:0; }
+.card .big-num{
+  font-family: var(--serif);
+  font-size: 28pt;
+  color: var(--cmc-green);
+  font-weight:700;
+  line-height:1;
+  margin-bottom: 2mm;
+}
+
+/* --- Hero/chip/pill --- */
+.chip{
+  display:inline-block;
+  background: var(--cmc-green-lt);
+  color: var(--cmc-green-dk);
+  padding: 1mm 3mm;
+  border-radius: 10mm;
+  font-size: 9pt;
+  font-weight: 600;
+  letter-spacing: .04em;
+}
+.chip.red{ background: var(--cmc-red-lt); color: var(--cmc-red); }
+.chip.gold{ background: #fff8e1; color: #8a6818; }
+.chip.blue{ background: var(--cmc-blue-lt); color: var(--cmc-blue); }
+
+/* --- Kicker --- */
+.kicker{
+  font-size: 9pt;
+  text-transform: uppercase;
+  letter-spacing: .2em;
+  color: var(--cmc-blue);
+  font-weight: 700;
+  margin-bottom: 2mm;
+}
+
+/* --- Línea TOC --- */
+.toc-line{
+  display:flex; justify-content: space-between; align-items:baseline;
+  border-bottom: 1px dotted var(--cmc-line);
+  padding: 2mm 0;
+  font-size: 10.5pt;
+}
+.toc-line .num{ color: var(--cmc-green); font-weight:700; }
+
+/* --- Teléfonos/ emergencias --- */
+.phone-box{
+  display:flex; align-items:center; gap: 4mm;
+  padding: 4mm 5mm;
+  border: 2px solid var(--cmc-red);
+  border-radius: 3mm;
+  background: #fff;
+  margin: 3mm 0;
+}
+.phone-box .num{
+  font-family: var(--serif);
+  font-size: 30pt;
+  color: var(--cmc-red);
+  font-weight: 700;
+  line-height: 1;
+}
+.phone-box .lbl{
+  font-size: 10pt;
+  color: var(--cmc-ink-soft);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+}
+.phone-box .name{
+  font-size: 13pt;
+  font-weight: 700;
+  color: var(--cmc-ink);
+}
+
+/* --- Misc --- */
+hr{ border:0; border-top: 1px solid var(--cmc-line); margin: 5mm 0; }
+.two-col{ column-count: 2; column-gap: 6mm; }
+.center{ text-align:center; }
+.small{ font-size: 9pt; color: var(--cmc-ink-soft); }
+.disclaimer{
+  font-size: 8.5pt;
+  color: var(--cmc-ink-soft);
+  background: var(--cmc-paper-alt);
+  border-radius: 2mm;
+  padding: 3mm 4mm;
+  margin-top: 5mm;
+  font-style: italic;
+}
+
+/* --- Formularios imprimibles --- */
+.fill{
+  display:inline-block;
+  border-bottom: 1px solid var(--cmc-ink-soft);
+  min-width: 40mm;
+  height: 5mm;
+  vertical-align: baseline;
+}
+.fill.sm{ min-width: 20mm; }
+.fill.lg{ min-width: 70mm; }
+.fill.xl{ min-width: 100%; display:block; margin: 1mm 0 3mm; }
+.box{
+  border: 1px solid var(--cmc-ink-soft);
+  width: 4mm; height: 4mm; display:inline-block; margin-right: 1.5mm;
+  vertical-align: -1px;
+}
+
+/* =====================================================
+   IMPRESIÓN — A4 real
+   ===================================================== */
+@page{
+  size: A4;
+  margin: 0;
+}
+@media print{
+  html,body{ background:#fff; padding:0; margin:0; }
+  body{ font-size: 10.5pt; }
+  .page{
+    box-shadow:none;
+    margin:0;
+    padding: 22mm 18mm 18mm;
+    width: 210mm;
+    min-height: 297mm;
+  }
+  .cover{ padding: 30mm 22mm; }
+  .no-print{ display:none !important; }
+  a{ color: inherit; border-bottom:0; }
+  a[href]:after{ content:""; }
+  table, .callout, .card, .phone-box{ page-break-inside: avoid; }
+  h2, h3{ page-break-after: avoid; }
+}

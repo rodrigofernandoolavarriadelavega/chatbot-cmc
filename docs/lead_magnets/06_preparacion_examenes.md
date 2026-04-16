@@ -1,0 +1,216 @@
+# Cómo prepararse para sus exámenes médicos
+
+**Centro Médico Carampangue** — Guía práctica
+
+> Una buena preparación evita que el examen salga mal y tenga que repetirlo. Siga SIEMPRE las indicaciones específicas de su laboratorio o centro médico, ya que pueden variar. Esta guía es un resumen general.
+
+---
+
+## 🩸 Exámenes de sangre
+
+### Perfil bioquímico, glicemia, perfil lipídico
+
+- **Ayuno:** 8 a 12 horas (solo agua).
+- No coma, no tome jugo, leche, café ni té.
+- Sí puede tomar agua.
+- Evite alcohol las 24h previas.
+- Tómelos en la mañana (7:00–10:00 habitualmente).
+- Si toma medicamentos crónicos, consulte a su médico si debe tomarlos o no antes del examen.
+
+### Hemograma, VHS, TSH, hormonas generales
+
+- Ayuno no es obligatorio en la mayoría (confirmar con laboratorio).
+- Evite ejercicio intenso 24h antes (puede alterar CK y otros marcadores).
+
+### Examen de glicemia post-carga (curva de tolerancia a la glucosa)
+
+- Ayuno 8–12h.
+- Lleve alimento para comer **después** del examen (son varias horas).
+- No fume ni haga ejercicio durante el examen.
+- Total del procedimiento: ~2–3 horas.
+
+### Perfil hormonal femenino (FSH, LH, estradiol, progesterona)
+
+- Muchos se piden en **días específicos del ciclo** (día 3 o día 21). Consulte a su médico qué día le corresponde.
+- Anticonceptivos hormonales pueden alterar resultados.
+
+### Tiempo de protrombina (TP/INR) — para pacientes con TACO
+
+- No suspenda el anticoagulante sin indicación médica.
+- Ayuno no es obligatorio.
+
+---
+
+## 💧 Examen de orina
+
+### Orina completa (al azar)
+
+- Preferentemente **primera orina de la mañana** (más concentrada).
+- Lavado genital previo con agua y jabón.
+- Descartar el primer chorro; recolectar el chorro medio en frasco estéril.
+- Llevar al laboratorio **dentro de las 2 horas**.
+
+### Urocultivo
+
+- Mismas indicaciones, pero extremar la higiene.
+- No orinar en el frasco si viene de hacer relaciones sexuales recientes (falsos positivos).
+
+### Orina de 24 horas
+
+- Descartar la primera orina del día 1.
+- Recolectar **toda la orina** de las siguientes 24 horas (incluida la primera del día 2).
+- Mantener el frasco refrigerado.
+- Llevar completo al laboratorio.
+
+---
+
+## 💩 Examen de deposiciones
+
+### Coprocultivo, parasitológico seriado
+
+- Recolectar muestra en frasco que le entrega el laboratorio.
+- No usar laxantes 48h antes.
+- El parasitológico seriado son 3 muestras en días alternos (día 1, 3, 5).
+- Mantener refrigerado entre muestras.
+
+### Test de sangre oculta en deposiciones
+
+- Evitar carnes rojas, hígado, betarraga, rábano y vitamina C por 3 días antes.
+- No tomar aspirina ni antiinflamatorios 7 días antes (consulte a su médico si son crónicos).
+
+---
+
+## 📷 Ecografías
+
+### Ecografía abdominal
+
+- Ayuno 6–8 horas.
+- No fumar ni masticar chicle (produce gas).
+- Si tiene exámenes previos, llévelos.
+
+### Ecografía pélvica transabdominal (vejiga llena)
+
+- **Tomar 1 litro de agua** 1 hora antes.
+- **No orinar** hasta terminar el examen.
+- Esto ayuda a visualizar útero, ovarios o próstata.
+
+### Ecografía pélvica transvaginal
+
+- **Vejiga vacía** (orinar justo antes).
+- No requiere ayuno.
+- Se hace con sonda intravaginal: es normal sentir incomodidad leve.
+
+### Ecografía mamaria
+
+- No requiere preparación especial.
+- No usar desodorante, talco ni cremas en las axilas o pecho.
+- Evitar la semana pre-menstrual (las mamas están más sensibles e hinchadas).
+
+### Ecografía obstétrica (embarazo)
+
+- 1er trimestre: tomar 1 litro de agua 1h antes (vejiga llena).
+- 2do y 3er trimestre: no requiere preparación.
+
+### Ecocardiograma / Ecografía cardíaca
+
+- No requiere ayuno.
+- Llevar exámenes cardíacos previos.
+- Ropa cómoda.
+
+### Ecografía tiroidea o de partes blandas
+
+- No requiere preparación.
+
+---
+
+## 🫀 Electrocardiograma (ECG)
+
+- No requiere ayuno.
+- No usar cremas ni aceites en el pecho.
+- Llevar ropa cómoda que se pueda quitar fácilmente.
+- Duración: 5–10 minutos.
+
+---
+
+## 🩻 Radiografía
+
+### Simple (tórax, extremidades, columna)
+
+- Sin preparación.
+- Retirar objetos metálicos (reloj, cadenas, sostén con aros).
+- Si es mujer en edad fértil: avisar si hay posibilidad de embarazo.
+
+### Radiografía de abdomen simple
+
+- Algunos centros piden ayuno.
+- Preparación intestinal si el médico la solicita.
+
+---
+
+## 🔬 Endoscopía y Colonoscopía
+
+### Endoscopía (EDA)
+
+- Ayuno mínimo 8 horas.
+- Sedación: acudir acompañado, no manejar después.
+- Suspender aspirina/anticoagulantes solo si su médico lo indica.
+
+### Colonoscopía
+
+- Dieta blanda y sin fibra 2 días antes.
+- Preparación intestinal con laxante la noche previa (su médico le dará indicaciones exactas).
+- Ayuno absoluto 8h antes.
+- Sedación: acudir acompañado.
+
+---
+
+## 🧪 Papanicolaou (PAP)
+
+- No tener relaciones sexuales 48h antes.
+- No usar óvulos, duchas vaginales ni tampones 48h antes.
+- No debe estar menstruando (evitar la semana de la regla).
+- Idealmente en la mitad del ciclo.
+
+---
+
+## 🦷 Radiografía dental panorámica
+
+- Sin preparación.
+- Retirar joyas de cuello y cara.
+- Avisar si usa dentadura postiza o retenedor.
+
+---
+
+## 🧬 Test COVID-19 (PCR o antígeno)
+
+- PCR: no comer, beber, lavarse los dientes ni fumar 1 hora antes.
+- Antígeno rápido: sin ayuno, pero no usar enjuague bucal 30 min antes.
+
+---
+
+## Checklist general antes de salir de casa
+
+- [ ] Leí las indicaciones específicas del laboratorio/centro
+- [ ] Cumplo el ayuno indicado (si aplica)
+- [ ] Tengo la **orden médica** original en la mano
+- [ ] Traigo cédula de identidad
+- [ ] Traigo bono Fonasa o credencial Isapre
+- [ ] Traigo exámenes previos relacionados (para comparar)
+- [ ] Confirmé que tengo cita (si el examen la requiere)
+- [ ] Si hay sedación: vengo acompañado y no manejaré
+
+---
+
+## Fuentes
+
+- Protocolos estándar de laboratorios clínicos en Chile.
+- Guías de Sociedad Chilena de Radiología.
+- Sociedad Chilena de Gastroenterología.
+
+---
+
+## Contacto CMC
+
+- 📞 **(41) 296 5226** · 💬 WhatsApp **+56 9 4588 6628**
+
+*Material educativo. Las indicaciones específicas las entrega el laboratorio o centro donde se realizará el examen. Siempre verifique con ellos. Última revisión: [mes/año].*

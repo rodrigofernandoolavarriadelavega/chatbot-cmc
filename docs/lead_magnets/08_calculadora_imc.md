@@ -1,0 +1,138 @@
+# Calculadora de IMC (Índice de Masa Corporal)
+
+**Centro Médico Carampangue** — Herramienta educativa
+
+> **Importante:** el IMC es una **referencia general**. No diagnostica enfermedades ni refleja la composición corporal real (músculo vs grasa). Un deportista con alta masa muscular puede tener IMC alto sin riesgo metabólico. Use esta calculadora como **punto de partida**, no como conclusión. Consulte siempre con un médico o nutricionista para una evaluación completa.
+
+---
+
+## Cómo se calcula
+
+**Fórmula:**
+
+```
+IMC = Peso (kg) ÷ Estatura² (metros)
+```
+
+**Ejemplo:**
+Una persona de 70 kg y 1,70 m:
+- IMC = 70 ÷ (1,70 × 1,70)
+- IMC = 70 ÷ 2,89
+- IMC = **24,2**
+
+---
+
+## Tabla de interpretación (OMS — adultos)
+
+| IMC | Categoría | Qué significa |
+|---|---|---|
+| **Menor a 18,5** | Bajo peso | Puede haber desnutrición, malabsorción u otras causas. |
+| **18,5 a 24,9** | Peso normal | Rango saludable para la mayoría. |
+| **25,0 a 29,9** | Sobrepeso | Riesgo aumentado de enfermedades metabólicas. |
+| **30,0 a 34,9** | Obesidad grado I | Riesgo importante. |
+| **35,0 a 39,9** | Obesidad grado II | Riesgo alto. |
+| **40 o más** | Obesidad grado III / mórbida | Riesgo muy alto; evaluación médica recomendada. |
+
+---
+
+## Calcule el suyo
+
+**Paso 1 — Datos:**
+- Peso actual: ______ kg
+- Estatura: ______ cm → convierta a metros dividiendo por 100 (ej. 170 cm = 1,70 m)
+
+**Paso 2 — Cálculo:**
+- Estatura al cuadrado: ______ × ______ = ______
+- IMC: ______ ÷ ______ = **______**
+
+**Paso 3 — Ubíquese en la tabla de arriba.**
+
+---
+
+## Limitaciones del IMC (importante)
+
+El IMC **no considera**:
+
+1. **Composición corporal:** masa muscular vs grasa. Un atleta y una persona con sobrepeso pueden tener el mismo IMC.
+2. **Distribución de grasa:** la grasa abdominal es más peligrosa que la de caderas. Para medirlo se usa la **circunferencia de cintura**.
+3. **Edad:** las personas mayores pueden tener IMC "normal" pero con sarcopenia (pérdida de músculo).
+4. **Sexo:** las mujeres tienden a tener más grasa corporal que los hombres al mismo IMC.
+5. **Origen étnico:** algunos grupos étnicos tienen riesgo metabólico con IMC menor.
+6. **Embarazo:** no aplica durante el embarazo.
+7. **Niños y adolescentes:** se usan curvas de crecimiento por edad y sexo, no IMC directo.
+
+---
+
+## Circunferencia de cintura — complemento útil
+
+Mida la cintura a la altura del **ombligo**, relajado, al final de una espiración.
+
+| Sexo | Riesgo aumentado | Riesgo alto |
+|---|---|---|
+| **Hombres** | ≥ 94 cm | ≥ 102 cm |
+| **Mujeres** | ≥ 80 cm | ≥ 88 cm |
+
+(Referencias OMS/IDF).
+
+---
+
+## Qué hacer según el resultado
+
+### Si su IMC está en "peso normal"
+- Mantenga una alimentación variada y actividad física regular (150 min/semana de ejercicio moderado).
+- Control médico anual preventivo.
+
+### Si su IMC está en "sobrepeso" (25–29,9)
+- Evalúe circunferencia de cintura + glicemia, perfil lipídico y presión arterial.
+- Considere consulta con **nutricionista** (Fonasa cubre esta prestación con bono MLE).
+- Aumente actividad física gradualmente.
+- Pequeños cambios sostenidos funcionan mejor que dietas extremas.
+
+### Si su IMC está en "bajo peso" (<18,5)
+- Consulte a su médico general. Puede haber causas médicas que evaluar (tiroides, malabsorción, estrés, trastorno alimentario).
+- No comience una dieta hipercalórica sin evaluación.
+
+### Si su IMC está en rango de obesidad (≥30)
+- **Consulte con su médico.** La obesidad es una **enfermedad crónica** que requiere abordaje multidisciplinario (médico + nutricionista + actividad física + a veces salud mental o endocrinología).
+- En Chile hay **cirugía bariátrica GES** bajo ciertos criterios.
+- Evaluar comorbilidades: diabetes, HTA, apnea del sueño, hígado graso.
+
+---
+
+## Lo que NO haga
+
+- ❌ No empiece dietas extremas (ayunos prolongados, monodietas) sin supervisión.
+- ❌ No use suplementos "quemadores de grasa" sin evaluación médica.
+- ❌ No tome medicamentos "para bajar de peso" de venta informal.
+- ❌ No se compare con otros: cada persona tiene un ritmo y necesidades diferentes.
+- ❌ No interprete un IMC elevado como "tiene diabetes" — no son lo mismo.
+
+---
+
+## Exámenes recomendados como complemento
+
+Si su IMC está sobre 25, converse con su médico sobre pedir:
+
+- [ ] Glicemia en ayunas
+- [ ] HbA1c
+- [ ] Perfil lipídico (colesterol total, HDL, LDL, triglicéridos)
+- [ ] Presión arterial
+- [ ] Pruebas hepáticas (por hígado graso)
+- [ ] TSH (hormona tiroidea)
+- [ ] Ácido úrico
+- [ ] En algunos casos: ecografía abdominal
+
+---
+
+## Recursos
+
+- **Nutricionista en el CMC:** Gisela Pinto (Fonasa MLE + particular).
+- **Ministerio de Salud — Elige Vivir Sano:** https://www.minsal.cl
+
+---
+
+## Contacto CMC
+
+- 📞 **(41) 296 5226** · 💬 WhatsApp **+56 9 4588 6628**
+
+*Esta herramienta es solo educativa y no reemplaza evaluación médica ni nutricional. Última revisión: [mes/año].*
