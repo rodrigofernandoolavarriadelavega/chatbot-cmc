@@ -569,53 +569,17 @@ def _btn_msg(body_text: str, buttons: list) -> dict:
 
 # ── Consent Ley 19.628 (reforma 2024) ─────────────────────────────────────────
 
-_PRIVACY_CONSENT_PROMPT = (
-    "👋 *Hola, soy el asistente del Centro Médico Carampangue (CMC)*\n\n"
-    "Antes de empezar necesito tu autorización.\n\n"
-    "Para coordinar tu atención médica guardaré:\n"
-    "• Nuestra conversación en WhatsApp\n"
-    "• Datos que compartas (nombre, RUT, fecha de nacimiento, motivo)\n"
-    "• Archivos que envíes (fotos, audios, PDFs)\n\n"
-    "Tus derechos según *Ley 19.628* (Chile):\n"
-    "✓ Pedir copia de tus datos\n"
-    "✓ Pedir corrección o borrado\n"
-    "✓ Revocar escribiendo *STOP*\n\n"
-    "📄 Política: https://agentecmc.cl/privacidad\n\n"
-    "*¿Aceptas que procesemos tus datos?*"
-)
+# ── Consent inline al pedir datos personales (Ley 19.628) ─────────────────
+# En vez de bloquear al inicio (asusta a los pacientes), incluimos una nota
+# breve cuando pedimos el RUT y registramos consent al recibirlo.
+_PRIVACY_NOTE = "\n\n_Al compartir tus datos aceptas nuestra política de privacidad: agentecmc.cl/privacidad_"
 
 
-def _privacy_consent_msg() -> dict:
-    return _btn_msg(
-        _PRIVACY_CONSENT_PROMPT,
-        [
-            {"id": "privacy:accept",  "title": "✅ Acepto"},
-            {"id": "privacy:decline", "title": "❌ No acepto"},
-        ],
-    )
-
-
-_PRIVACY_ACCEPT_WORDS = {
-    "acepto", "aceptó", "aceptar", "si acepto", "sí acepto", "si, acepto",
-    "sí, acepto", "de acuerdo", "ok", "dale", "confirmo", "autorizo",
-    "autorizar", "si", "sí",
-}
-_PRIVACY_DECLINE_WORDS = {
-    "no acepto", "no aceptó", "rechazo", "rechazar", "no autorizo",
-    "no quiero", "stop", "detener", "baja", "borrar mis datos",
-}
-
-
-def _is_privacy_accept(tl: str, tl_norm: str) -> bool:
-    if tl in _PRIVACY_ACCEPT_WORDS or tl_norm in _PRIVACY_ACCEPT_WORDS:
-        return True
-    return tl == "privacy:accept"
-
-
-def _is_privacy_decline(tl: str, tl_norm: str) -> bool:
-    if tl in _PRIVACY_DECLINE_WORDS or tl_norm in _PRIVACY_DECLINE_WORDS:
-        return True
-    return tl == "privacy:decline"
+def _ensure_consent(phone: str) -> None:
+    """Auto-registra consent cuando el paciente comparte datos personales (RUT)."""
+    if not has_privacy_consent(phone):
+        save_privacy_consent(phone, "accepted", method="rut_provided")
+        log_event(phone, "privacy_consent_accepted", {"method": "rut_provided"})
 
 
 def _menu_msg() -> dict:
@@ -1136,40 +1100,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             "Si necesitas algo más, escribe *menú*."
         )
 
-    # ── Gate de consentimiento Ley 19.628 ─────────────────────────────────────
-    # Pasadas las emergencias y comandos de crisis, si el paciente todavía no
-    # consintió explícitamente no procesamos NI almacenamos ningún otro
-    # mensaje. Este gate solo aplica al número de pacientes (el del doctor
-    # tiene bypass porque ya pasó el handler de `_doctor_phone` arriba).
-    # Si el texto ES la respuesta al opt-in (botón o palabra clave), lo
-    # procesamos acá mismo; cualquier otra cosa devuelve el prompt.
-    if phone != _doctor_phone and not has_privacy_consent(phone):
-        if _is_privacy_accept(tl, tl_norm):
-            save_privacy_consent(phone, "accepted", method="whatsapp")
-            log_event(phone, "privacy_consent_accepted", {"method": "whatsapp"})
-            reset_session(phone)
-            return (
-                "Gracias 🙏 Tu autorización quedó registrada.\n\n"
-                "En cualquier momento puedes:\n"
-                "• Escribir *STOP* para revocar.\n"
-                "• Pedir borrado completo con *borrar mis datos*.\n\n"
-                "Escribe *menú* para empezar 👇"
-            )
-        if _is_privacy_decline(tl, tl_norm):
-            save_privacy_consent(phone, "declined", method="whatsapp")
-            log_event(phone, "privacy_consent_declined", {"method": "whatsapp"})
-            reset_session(phone)
-            return (
-                "Entendido 👍 No almacenaremos tu conversación.\n\n"
-                "Si necesitas atención llama directamente:\n"
-                f"📞 *{CMC_TELEFONO}*\n"
-                f"☎️ *{CMC_TELEFONO_FIJO}*\n\n"
-                "Si cambias de idea, escribe *aceptar* y podremos ayudarte por este medio."
-            )
-        # Primera interacción o usuario declinado previamente → pedir consent.
-        log_event(phone, "privacy_consent_prompt")
-        save_session(phone, "WAIT_PRIVACY_CONSENT", data)
-        return _privacy_consent_msg()
+    # ── Consent inline (Ley 19.628) ──────────────────────────────────────────
+    # El consentimiento se registra cuando el paciente proporciona su RUT
+    # (consentimiento tácito al compartir datos personales). NO bloqueamos al
+    # inicio para evitar asustar a los pacientes (ver feedback de campo).
 
     # ── Revocación post-consent + derecho al olvido ───────────────────────────
     # Paciente ya consintió pero ahora escribe STOP / "borrar mis datos". Son
@@ -2038,6 +1972,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return (
                 "Para confirmar necesito tu RUT:\n"
                 "(ej: *12.345.678-9*)"
+                + _PRIVACY_NOTE
             )
         if tl in _OTHER or tl_norm in _OTHER:
             data["booking_for_other"] = True
@@ -2077,6 +2012,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         return (
             f"Gracias {nombre_corto} 😊 Ahora necesito el RUT de la persona que se va a atender:\n"
             "(ej: *12.345.678-9*)"
+            + _PRIVACY_NOTE
         )
 
     # ── WAIT_RUT_AGENDAR ──────────────────────────────────────────────────────
@@ -2098,6 +2034,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "Escríbelo con dígito verificador, por ejemplo: *12.345.678-9*"
             )
 
+        _ensure_consent(phone)
         paciente = await buscar_paciente(rut)
         if not paciente:
             data["rut"] = rut
@@ -2258,6 +2195,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "Escríbelo así: *12.345.678-9*"
             )
 
+        _ensure_consent(phone)
         paciente = await buscar_paciente(rut)
         if not paciente:
             reset_session(phone)
@@ -2349,6 +2287,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "Escríbelo así: *12.345.678-9*"
             )
 
+        _ensure_consent(phone)
         paciente = await buscar_paciente(rut)
         if not paciente:
             reset_session(phone)
@@ -2423,6 +2362,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return (
                 "Perfecto 👍 Para inscribirte necesito tu RUT:\n"
                 "(ej: *12.345.678-9*)"
+                + _PRIVACY_NOTE
             )
         if tl == "waitlist_no" or tl in NEGACIONES or tl_norm in NEGACIONES:
             reset_session(phone)
@@ -2440,6 +2380,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "Ese RUT no quedó bien 😕\n"
                 "Escríbelo así: *12.345.678-9*"
             )
+        _ensure_consent(phone)
         data["rut"] = rut
         # Buscar paciente en Medilink para traer el nombre
         paciente = await buscar_paciente(rut)
@@ -2473,6 +2414,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "Escríbelo así: *12.345.678-9*"
             )
 
+        _ensure_consent(phone)
         paciente = await buscar_paciente(rut)
         if not paciente:
             reset_session(phone)
@@ -3230,6 +3172,7 @@ async def _iniciar_cancelar(phone: str, data: dict) -> str:
         "Claro, te ayudo a cancelar una hora.\n\n"
         "Necesito tu RUT para buscarte:\n"
         "(ej: *12.345.678-9*)"
+        + _PRIVACY_NOTE
     )
 
 
@@ -3241,6 +3184,7 @@ async def _iniciar_ver(phone: str, data: dict) -> str:
         "Claro, te muestro tus reservas.\n\n"
         "Necesito tu RUT:\n"
         "(ej: *12.345.678-9*)"
+        + _PRIVACY_NOTE
     )
 
 
@@ -3270,6 +3214,7 @@ async def _iniciar_reagendar(phone: str, data: dict) -> str:
         "Claro, te ayudo a reagendar tu hora 🔄\n\n"
         "Necesito tu RUT para buscar tus citas:\n"
         "(ej: *12.345.678-9*)"
+        + _PRIVACY_NOTE
     )
 
 

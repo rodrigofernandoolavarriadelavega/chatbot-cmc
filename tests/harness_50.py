@@ -1069,11 +1069,8 @@ async def main():
         ("saltar", {"any": ["Carlos", "confirm"], **NO_ERROR}),
     ], setup=lambda: save_profile("56900000602", "11111111-1", "María Gómez")),
 
-    # ── Ley 19.628 — consent gate + derecho al olvido ───────────────────────
-    # Estos casos usan auto_consent=False porque testean el gate mismo.
-
-    def mk_noconsent(name, phone, steps, setup=None):
-        results.append((name, phone, steps, setup, False))
+    # ── Ley 19.628 — consent inline + derecho al olvido ─────────────────────
+    # El consent ya NO bloquea al inicio. Se registra inline al dar el RUT.
 
     # Upgrade el resto a la tupla de 5 para uniformidad con auto_consent
     _results_normalized = []
@@ -1084,35 +1081,29 @@ async def main():
             _results_normalized.append(r)
     results[:] = _results_normalized
 
-    mk_noconsent("CONSENT-01 primer mensaje pide consent", "56999000001", [
-        ("hola", {"any": ["autorización", "Ley 19.628", "procesemos tus datos"],
+    results.append(("CONSENT-01 primer msg sin consent gate → menú normal", "56999000001", [
+        ("hola", {"any": ["Carampangue", "agendar", "centro médico", "opciones"],
                   **NO_ERROR}),
-    ])
+    ], None, False))
 
-    mk_noconsent("CONSENT-02 'acepto' guarda consent y saluda", "56999000002", [
-        ("hola", ["Ley 19.628"]),
-        ("acepto", {"any": ["registrada", "menú", "menu"], **NO_ERROR}),
-        ("hola", {"any": ["agendar", "Carampangue", "centro médico"], **NO_ERROR}),
-    ])
+    results.append(("CONSENT-02 nota privacidad al pedir RUT", "56999000002", [
+        ("quiero agendar hora medicina general", {"any": ["horario", "slot", "agenda"],
+                                                   **NO_ERROR}),
+        ("1", {"any": ["Fonasa", "Particular"], **NO_ERROR}),
+        ("fonasa", {"any": ["Para mí", "otra persona"], **NO_ERROR}),
+        ("para mi", {"any": ["RUT", "privacidad"], **NO_ERROR}),
+    ], None, False))
 
-    mk_noconsent("CONSENT-03 'no acepto' rechaza y da farewell", "56999000003", [
-        ("hola", ["Ley 19.628"]),
-        ("no acepto", {"any": ["no almacenaremos", "llama directamente"],
-                       **NO_ERROR}),
-    ])
-
-    mk_noconsent("CONSENT-04 emergencia bypass consent", "56999000004", [
+    results.append(("CONSENT-03 emergencia sin consent OK", "56999000003", [
         ("me duele mucho el pecho", {"any": ["SAMU", "131", "urgencia"],
                                       **NO_ERROR}),
-    ])
+    ], None, False))
 
-    # CONSENT-05 y CONSENT-06 usan auto_consent=True (ya está el consent)
-    # para luego testear STOP / "borrar mis datos" post-consent.
-    results.append(("CONSENT-05 STOP revoca consent", "56999000005", [
+    results.append(("CONSENT-04 STOP revoca consent", "56999000004", [
         ("stop", {"any": ["No recibirás", "marketing", "aceptar"], **NO_ERROR}),
     ], None, True))
 
-    results.append(("CONSENT-06 'borrar mis datos' inicia proceso", "56999000006", [
+    results.append(("CONSENT-05 'borrar mis datos' inicia proceso", "56999000005", [
         ("borrar mis datos", {"any": ["solicitud de borrado", "validar",
                                        "identidad"], **NO_ERROR}),
     ], None, True))
