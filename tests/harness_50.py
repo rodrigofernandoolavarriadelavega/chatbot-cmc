@@ -237,7 +237,7 @@ messaging.send_whatsapp = fake_send_whatsapp
 flows.send_whatsapp = fake_send_whatsapp
 
 # ── Harness ──────────────────────────────────────────────────────────────────
-from session import get_session, reset_session, save_profile, log_event  # noqa: E402
+from session import get_session, reset_session, save_profile, log_event, save_privacy_consent  # noqa: E402
 
 BUGS: list[dict] = []
 WARNINGS: list[dict] = []
@@ -279,7 +279,8 @@ NO_ENTENDI_MARKERS = [
 ]
 
 async def run_convo(name: str, phone: str, steps: list[tuple[str, Any]],
-                    setup: Callable[[], None] | None = None):
+                    setup: Callable[[], None] | None = None,
+                    auto_consent: bool = True):
     """
     steps: list de (input, expectation).
     expectation:
@@ -291,6 +292,16 @@ async def run_convo(name: str, phone: str, steps: list[tuple[str, Any]],
       - dict con varios de los anteriores combinados
     """
     reset_session(phone)
+    # Pre-acepta el consent para que los tests existentes no sean interceptados
+    # por el gate de privacidad (se testea por separado en los casos CONSENT-*).
+    if auto_consent:
+        save_privacy_consent(phone, "accepted", method="test")
+    else:
+        # Limpia cualquier consent previo de este phone para forzar el gate
+        from session import _conn as _session_conn
+        with _session_conn() as _c:
+            _c.execute("DELETE FROM privacy_consents WHERE phone=?", (phone,))
+            _c.commit()
     FAKE_FAIL_CREAR_CITA["value"] = False
     FAKE_FAIL_CANCELAR_CITA["value"] = False
     FAKE_SIN_SLOTS["value"] = False
@@ -1058,11 +1069,64 @@ async def main():
         ("saltar", {"any": ["Carlos", "confirm"], **NO_ERROR}),
     ], setup=lambda: save_profile("56900000602", "11111111-1", "María Gómez")),
 
+    # ── Ley 19.628 — consent gate + derecho al olvido ───────────────────────
+    # Estos casos usan auto_consent=False porque testean el gate mismo.
+
+    def mk_noconsent(name, phone, steps, setup=None):
+        results.append((name, phone, steps, setup, False))
+
+    # Upgrade el resto a la tupla de 5 para uniformidad con auto_consent
+    _results_normalized = []
+    for r in results:
+        if len(r) == 4:
+            _results_normalized.append((*r, True))
+        else:
+            _results_normalized.append(r)
+    results[:] = _results_normalized
+
+    mk_noconsent("CONSENT-01 primer mensaje pide consent", "56999000001", [
+        ("hola", {"any": ["autorización", "Ley 19.628", "procesemos tus datos"],
+                  **NO_ERROR}),
+    ])
+
+    mk_noconsent("CONSENT-02 'acepto' guarda consent y saluda", "56999000002", [
+        ("hola", ["Ley 19.628"]),
+        ("acepto", {"any": ["registrada", "menú", "menu"], **NO_ERROR}),
+        ("hola", {"any": ["agendar", "Carampangue", "centro médico"], **NO_ERROR}),
+    ])
+
+    mk_noconsent("CONSENT-03 'no acepto' rechaza y da farewell", "56999000003", [
+        ("hola", ["Ley 19.628"]),
+        ("no acepto", {"any": ["no almacenaremos", "llama directamente"],
+                       **NO_ERROR}),
+    ])
+
+    mk_noconsent("CONSENT-04 emergencia bypass consent", "56999000004", [
+        ("me duele mucho el pecho", {"any": ["SAMU", "131", "urgencia"],
+                                      **NO_ERROR}),
+    ])
+
+    # CONSENT-05 y CONSENT-06 usan auto_consent=True (ya está el consent)
+    # para luego testear STOP / "borrar mis datos" post-consent.
+    results.append(("CONSENT-05 STOP revoca consent", "56999000005", [
+        ("stop", {"any": ["No recibirás", "marketing", "aceptar"], **NO_ERROR}),
+    ], None, True))
+
+    results.append(("CONSENT-06 'borrar mis datos' inicia proceso", "56999000006", [
+        ("borrar mis datos", {"any": ["solicitud de borrado", "validar",
+                                       "identidad"], **NO_ERROR}),
+    ], None, True))
+
     # ── Run ─────────────────────────────────────────────────────────────────
     passed = 0
     failed = 0
-    for name, phone, steps, setup in results:
-        ok = await run_convo(name, phone, steps, setup)
+    for item in results:
+        if len(item) == 5:
+            name, phone, steps, setup, auto_consent = item
+        else:
+            name, phone, steps, setup = item
+            auto_consent = True
+        ok = await run_convo(name, phone, steps, setup, auto_consent=auto_consent)
         mark = "✅" if ok else "❌"
         print(f"{mark} {name}")
         if ok:

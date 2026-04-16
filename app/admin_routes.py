@@ -23,7 +23,9 @@ from session import (get_session, reset_session, save_session, get_metricas,
                      get_notes, save_notes, get_patient_context, get_registration_stats,
                      get_referral_stats, get_case_study_report,
                      get_patient_files, get_media_stats, get_demanda_no_disponible,
-                     save_profile)
+                     save_profile, get_profile, get_phone_by_rut,
+                     delete_patient_data, get_privacy_consent, save_privacy_consent,
+                     _conn)
 from medilink import (buscar_paciente, crear_paciente, buscar_primer_dia,
                       buscar_slots_dia, crear_cita, listar_citas_paciente,
                       cancelar_cita, get_citas_seguimiento_mes, sync_citas_dia,
@@ -1470,3 +1472,88 @@ def api_demanda_no_disponible(dias: int = Query(90, ge=1, le=365),
                                _=Depends(require_admin)):
     """Lista demanda de especialistas/exámenes que no tenemos."""
     return get_demanda_no_disponible(dias)
+
+
+# ── Ley 19.628: consent + derecho al olvido ──────────────────────────────────
+
+@router.get("/admin/api/privacy/consent/{phone}")
+def api_get_consent(phone: str, _=Depends(require_admin)):
+    """Retorna el registro de consentimiento del paciente (para auditoría)."""
+    phone_clean = phone.lstrip("+").strip()
+    rec = get_privacy_consent(phone_clean)
+    return {"phone": phone_clean, "consent": rec}
+
+
+@router.post("/admin/api/privacy/consent/{phone}")
+def api_set_consent(phone: str, status: str = Query(..., regex="^(accepted|declined|pending)$"),
+                    _=Depends(require_admin)):
+    """Registra manualmente un consent (por ej. recibido por WhatsApp tradicional
+    o por teléfono). `method=admin` queda en el registro."""
+    phone_clean = phone.lstrip("+").strip()
+    save_privacy_consent(phone_clean, status=status, method="admin")
+    log_event(phone_clean, "privacy_consent_admin_set", {"status": status})
+    return {"phone": phone_clean, "status": status}
+
+
+@router.delete("/admin/api/patient")
+async def api_delete_patient(rut: str | None = Query(None),
+                             phone: str | None = Query(None),
+                             id_paciente_medilink: int | None = Query(None),
+                             _=Depends(require_admin)):
+    """Derecho al olvido (Ley 19.628 art. 12). Borra en cascada todos los
+    datos del paciente en nuestras tablas + archivos físicos. Registra el
+    evento en `gdpr_deletions` (inmutable).
+
+    Requiere uno de: `rut`, `phone`. Si provees `id_paciente_medilink`
+    también borra caches de citas/ortodoncia/kine.
+
+    **Atención**: este borrado NO afecta Medilink. Para borrar datos clínicos
+    allí, debes contactar al proveedor (healthatom).
+    """
+    if not rut and not phone:
+        raise HTTPException(400, "Debes proveer rut o phone.")
+    phone_clean = phone.lstrip("+").strip() if phone else None
+    rut_clean = rut.strip().replace(".", "").lower() if rut else None
+
+    # Si solo tenemos rut, intentamos resolver id_paciente en Medilink
+    # (best-effort; no falla si Medilink está caído).
+    if rut_clean and not id_paciente_medilink:
+        try:
+            pac = await buscar_paciente(rut_clean)
+            if pac and pac.get("id"):
+                id_paciente_medilink = int(pac["id"])
+        except Exception as e:
+            log.warning("No pude resolver id_paciente Medilink para rut=%s: %s",
+                        rut_clean, e)
+
+    try:
+        summary = delete_patient_data(
+            phone=phone_clean,
+            rut=rut_clean,
+            id_paciente_medilink=id_paciente_medilink,
+            deleted_by="admin",
+        )
+    except Exception as e:
+        log.exception("Error en delete_patient_data")
+        raise HTTPException(500, f"Error borrando datos: {e}")
+
+    return {
+        "ok": True,
+        "rut": rut_clean,
+        "phone": phone_clean,
+        "id_paciente_medilink": id_paciente_medilink,
+        "summary": summary,
+        "nota": "Datos en Medilink NO fueron borrados. Contacta healthatom por separado.",
+    }
+
+
+@router.get("/admin/api/privacy/deletions")
+def api_list_deletions(limit: int = Query(100, ge=1, le=500),
+                       _=Depends(require_admin)):
+    """Audit log de borrados ejecutados (tabla `gdpr_deletions`, inmutable)."""
+    with _conn() as conn:
+        rows = conn.execute(
+            "SELECT id, rut, phone, deleted_at, deleted_by, summary "
+            "FROM gdpr_deletions ORDER BY deleted_at DESC LIMIT ?", (limit,)
+        ).fetchall()
+        return [dict(r) for r in rows]

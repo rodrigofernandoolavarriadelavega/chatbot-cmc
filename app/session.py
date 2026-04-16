@@ -291,6 +291,35 @@ def _conn():
         conn.execute("ALTER TABLE citas_bot ADD COLUMN es_tercero INTEGER DEFAULT 0")
     except sqlite3.OperationalError:
         pass
+    # ── Compliance Ley 19.628 (Chile, reforma 2024) ───────────────────────────
+    # Registro de consentimiento explícito del paciente para almacenar
+    # conversación + datos. Sin un registro 'accepted' aquí NO se almacena
+    # conversación salvo mensajes de emergencia (art. 21 — base legal: interés
+    # vital del titular).
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS privacy_consents (
+            phone           TEXT PRIMARY KEY,
+            status          TEXT NOT NULL,           -- 'accepted' | 'declined' | 'pending'
+            consent_version TEXT DEFAULT '1.0',
+            method          TEXT DEFAULT 'whatsapp', -- whatsapp | admin | portal
+            consented_at    TEXT DEFAULT (datetime('now')),
+            revoked_at      TEXT
+        )
+    """)
+    # Audit log inmutable de ejecución del derecho al olvido (art. 12 Ley 19.628).
+    # Esta tabla NO se borra nunca — es la prueba legal de cumplimiento.
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS gdpr_deletions (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            rut         TEXT,
+            phone       TEXT,
+            deleted_at  TEXT DEFAULT (datetime('now')),
+            deleted_by  TEXT DEFAULT 'admin',
+            summary     TEXT DEFAULT '{}'
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_gdpr_rut ON gdpr_deletions(rut)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_gdpr_phone ON gdpr_deletions(phone)")
     conn.commit()
     return conn
 
@@ -2142,3 +2171,208 @@ def get_demanda_no_disponible(dias: int = 90) -> list[dict]:
             ORDER BY d.created_at DESC
         """).fetchall()
         return [dict(r) for r in rows]
+
+
+# ── Compliance Ley 19.628 — consentimiento + derecho al olvido ────────────────
+
+# Versión actual de la política de privacidad. Cambiar aquí fuerza re-consent
+# de todos los pacientes (cuando tengamos versionado de política).
+PRIVACY_POLICY_VERSION = "1.0"
+
+
+def has_privacy_consent(phone: str) -> bool:
+    """True si el paciente aceptó explícitamente la política vigente.
+    False si aún no respondió, si rechazó, o si revocó."""
+    if not phone:
+        return False
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT status, consent_version, revoked_at FROM privacy_consents WHERE phone=?",
+            (phone,)
+        ).fetchone()
+        if not row:
+            return False
+        if row["revoked_at"]:
+            return False
+        if row["status"] != "accepted":
+            return False
+        # Si cambió la versión, hay que re-consentir
+        if row["consent_version"] != PRIVACY_POLICY_VERSION:
+            return False
+        return True
+
+
+def get_privacy_consent(phone: str) -> dict | None:
+    """Retorna el registro de consent completo (para auditoría)."""
+    if not phone:
+        return None
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM privacy_consents WHERE phone=?", (phone,)
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def save_privacy_consent(phone: str, status: str, method: str = "whatsapp"):
+    """Registra la respuesta del paciente al opt-in.
+    status ∈ {'accepted', 'declined', 'pending'}
+    method ∈ {'whatsapp', 'admin', 'portal'}
+    """
+    assert status in ("accepted", "declined", "pending"), f"Invalid status: {status}"
+    with _conn() as conn:
+        conn.execute("""
+            INSERT INTO privacy_consents (phone, status, consent_version, method, consented_at)
+            VALUES (?, ?, ?, ?, datetime('now'))
+            ON CONFLICT(phone) DO UPDATE SET
+                status=excluded.status,
+                consent_version=excluded.consent_version,
+                method=excluded.method,
+                consented_at=excluded.consented_at,
+                revoked_at=NULL
+        """, (phone, status, PRIVACY_POLICY_VERSION, method))
+        conn.commit()
+
+
+def revoke_privacy_consent(phone: str):
+    """Revoca el consent (marca revoked_at). Útil si el paciente escribe 'stop'."""
+    with _conn() as conn:
+        conn.execute(
+            "UPDATE privacy_consents SET revoked_at=datetime('now') WHERE phone=?",
+            (phone,)
+        )
+        conn.commit()
+
+
+def log_gdpr_deletion(rut: str | None, phone: str | None, summary: dict,
+                      deleted_by: str = "admin"):
+    """Registra la ejecución de un borrado en cascada (art. 12 Ley 19.628).
+    Esta tabla NO debe borrarse nunca — es la prueba legal de cumplimiento."""
+    import json as _json
+    with _conn() as conn:
+        conn.execute(
+            "INSERT INTO gdpr_deletions (rut, phone, deleted_by, summary) VALUES (?, ?, ?, ?)",
+            (rut, phone, deleted_by, _json.dumps(summary, ensure_ascii=False))
+        )
+        conn.commit()
+
+
+# Tablas con PII keyed por `phone` — usadas en el endpoint de borrado en cascada.
+# Mantener sincronizado cuando se agregue una tabla nueva con phone.
+_PII_TABLES_BY_PHONE = [
+    "sessions",
+    "contact_tags",
+    "citas_bot",
+    "conversation_events",
+    "contact_profiles",
+    "messages",
+    "fidelizacion_msgs",
+    "intent_queue",
+    "waitlist",
+    "message_statuses",
+    "bsuid_map",
+    "contact_notes",
+    "portal_otp",
+    "referral_codes",
+    "campanas_envios",
+    "patient_files",
+    "demanda_no_disponible",
+    "privacy_consents",
+]
+
+
+def delete_patient_data(phone: str | None, rut: str | None,
+                        id_paciente_medilink: int | None = None,
+                        deleted_by: str = "admin") -> dict:
+    """Borra en cascada TODOS los datos del paciente en tablas de nuestro sistema.
+    Transacción atómica. Registra el resumen en gdpr_deletions (inmutable).
+
+    Args:
+        phone: teléfono normalizado (sin '+'); si None se intenta resolver por rut.
+        rut: RUT del paciente (para tablas que lo usan).
+        id_paciente_medilink: id_paciente de Medilink, opcional — si se provee
+                              también borra de citas_cache/ortodoncia_cache/kine_tracking.
+        deleted_by: quién ejecutó el borrado (para audit log).
+
+    Returns:
+        dict {tabla: filas_borradas, ..., 'total': N}
+    """
+    import shutil as _shutil
+    import json as _json
+    from pathlib import Path as _Path
+
+    # Resolución inversa phone ↔ rut
+    resolved_phone = phone
+    resolved_rut = rut
+    if not resolved_phone and rut:
+        resolved_phone = get_phone_by_rut(rut)
+    if not resolved_rut and phone:
+        prof = get_profile(phone)
+        if prof:
+            resolved_rut = prof.get("rut")
+
+    deleted = {}
+    with _conn() as conn:
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            # Borrado por phone
+            if resolved_phone:
+                for table in _PII_TABLES_BY_PHONE:
+                    cur = conn.execute(f"DELETE FROM {table} WHERE phone=?", (resolved_phone,))
+                    if cur.rowcount:
+                        deleted[table] = cur.rowcount
+                # referral_uses tiene 2 columnas de phone
+                cur = conn.execute(
+                    "DELETE FROM referral_uses WHERE referrer_phone=? OR referred_phone=?",
+                    (resolved_phone, resolved_phone)
+                )
+                if cur.rowcount:
+                    deleted["referral_uses"] = cur.rowcount
+            # Borrado adicional por rut (tablas que lo usan además de phone)
+            if resolved_rut:
+                cur = conn.execute("DELETE FROM portal_otp WHERE rut=?", (resolved_rut,))
+                if cur.rowcount:
+                    deleted["portal_otp"] = deleted.get("portal_otp", 0) + cur.rowcount
+                cur = conn.execute("DELETE FROM waitlist WHERE rut=?", (resolved_rut,))
+                if cur.rowcount:
+                    deleted["waitlist"] = deleted.get("waitlist", 0) + cur.rowcount
+            # Borrado por id_paciente Medilink (caches locales)
+            if id_paciente_medilink:
+                for table in ("citas_cache", "ortodoncia_cache", "kine_tracking"):
+                    try:
+                        cur = conn.execute(
+                            f"DELETE FROM {table} WHERE id_paciente=?",
+                            (id_paciente_medilink,)
+                        )
+                        if cur.rowcount:
+                            deleted[table] = cur.rowcount
+                    except sqlite3.OperationalError:
+                        pass
+            conn.execute("COMMIT")
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise
+
+    # Borrar archivos físicos (fuera de la transacción SQL)
+    if resolved_phone:
+        upload_dir = _Path(__file__).parent.parent / "data" / "uploads" / resolved_phone
+        if upload_dir.exists():
+            try:
+                _shutil.rmtree(upload_dir)
+                deleted["uploaded_files_dir"] = str(upload_dir)
+            except OSError as e:
+                log.warning("No pude borrar %s: %s", upload_dir, e)
+
+    deleted["total_rows_deleted"] = sum(
+        v for v in deleted.values() if isinstance(v, int)
+    )
+
+    # Audit log inmutable
+    log_gdpr_deletion(
+        rut=resolved_rut,
+        phone=resolved_phone,
+        summary=deleted,
+        deleted_by=deleted_by,
+    )
+    log.info("GDPR delete executed: phone=%s rut=%s summary=%s",
+             resolved_phone, resolved_rut, deleted)
+    return deleted
