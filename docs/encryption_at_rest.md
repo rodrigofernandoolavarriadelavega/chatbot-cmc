@@ -205,14 +205,37 @@ LUKS queda como opción futura **si se contrata un droplet dedicado o un volumen
 
 ## Checklist de implementación
 
-- [ ] Instalar `sqlcipher` + `pysqlcipher3` en VPS
-- [ ] Generar `SQLCIPHER_KEY` (64 chars hex)
-- [ ] Respaldar `sessions.db` → `sessions_plain.db.bak`
-- [ ] Migrar con `.dump` → sqlcipher
-- [ ] Actualizar `app/session.py::_conn()`
-- [ ] Deploy + smoke test (`/health`, `/admin` con token)
-- [ ] Correr `harness_50.py` contra prod en modo read-only
-- [ ] Actualizar `backup-ges-db.sh`
-- [ ] Borrar `sessions_plain.db.bak` con `shred -u` después de 7 días de estabilidad
-- [ ] Documentar rotación de key en `docs/infra.md`
-- [ ] Actualizar `docs/privacy_policy.md` sección 8 con "✅ SQLCipher activo desde YYYY-MM-DD"
+- [x] Instalar `sqlcipher` + `sqlcipher3-binary` en VPS (2026-04-16)
+- [x] Generar `SQLCIPHER_KEY` (64 chars hex)
+- [x] Respaldar `sessions.db` → `sessions_plain.db.bak`
+- [x] Migrar con `sqlcipher_export()` → DB encriptada (19 sessions, 16 consents, 878 msgs)
+- [x] Actualizar `app/session.py::_conn()` (tupla `_OPERATIONAL_ERRORS` para compat excepciones)
+- [x] Deploy + smoke test (`/health` → 200, `/admin` funcionando)
+- [x] Backup cron semanal encriptado: `scripts/backup-cmc-db.sh` → `/usr/local/bin/backup-cmc-db.sh` + `/etc/cron.d/chatbot-cmc-backup` (domingo 03:30 UTC)
+- [x] Actualizar `docs/privacy_policy.md` sección 8 con "✅ SQLCipher activo desde 2026-04-16"
+- [ ] Borrar `sessions_plain.db.bak` y `sessions_old_plain.db` con `shred -u` después de 7 días de estabilidad (→ 2026-04-23)
+- [ ] Documentar rotación anual de key en `docs/infra.md` (próxima rotación: 2027-04-16)
+
+## Recuperar un backup
+
+```bash
+# Descomprimir
+gunzip -c /opt/backups/chatbot-cmc/sessions_YYYYMMDD_HHMMSS.db.gz > /tmp/restore.db
+
+# Abrir con la key
+KEY=$(grep '^SQLCIPHER_KEY=' /opt/chatbot-cmc/.env | cut -d= -f2)
+sqlcipher /tmp/restore.db "PRAGMA key = \"x'$KEY'\"; SELECT COUNT(*) FROM sessions;"
+```
+
+## Rotación de key (anual)
+
+```bash
+systemctl stop chatbot-cmc
+NEW_KEY=$(openssl rand -hex 32)
+sqlcipher /opt/chatbot-cmc/data/sessions.db <<EOF
+PRAGMA key = "x'$OLD_KEY'";
+PRAGMA rekey = "x'$NEW_KEY'";
+EOF
+sed -i "s|^SQLCIPHER_KEY=.*|SQLCIPHER_KEY=$NEW_KEY|" /opt/chatbot-cmc/.env
+systemctl start chatbot-cmc
+```
