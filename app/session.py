@@ -1,9 +1,15 @@
 """
 Gestión de sesiones por número de WhatsApp usando SQLite.
 Cada sesión guarda: estado actual + datos del flujo en curso.
+
+Encriptación en reposo (Ley 19.628): si `SQLCIPHER_KEY` está definido en el
+entorno y el módulo `sqlcipher3` está instalado, la conexión usa SQLCipher
+(AES-256). Fallback transparente a `sqlite3` para dev local y para DBs
+históricas sin encriptar.
 """
 import json
 import logging
+import os
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -13,11 +19,37 @@ log = logging.getLogger("session")
 DB_PATH = Path(__file__).parent.parent / "data" / "sessions.db"
 SESSION_TIMEOUT_MIN = 30  # minutos sin actividad → volver a IDLE
 
+# ── SQLCipher opcional ───────────────────────────────────────────────────────
+_SQLCIPHER_KEY = (os.getenv("SQLCIPHER_KEY") or "").strip()
+_sqlcipher_mod = None
+if _SQLCIPHER_KEY:
+    try:
+        from sqlcipher3 import dbapi2 as _sqlcipher_mod  # type: ignore
+    except ImportError:
+        try:
+            from pysqlcipher3 import dbapi2 as _sqlcipher_mod  # type: ignore
+        except ImportError:
+            log.warning(
+                "SQLCIPHER_KEY set but no sqlcipher module found; "
+                "continuing with unencrypted sqlite3 (install sqlcipher3-binary)"
+            )
+            _sqlcipher_mod = None
+
+_USE_SQLCIPHER = _sqlcipher_mod is not None and bool(_SQLCIPHER_KEY)
+
 
 def _conn():
     DB_PATH.parent.mkdir(exist_ok=True)
-    conn = sqlite3.connect(DB_PATH, timeout=10)
-    conn.row_factory = sqlite3.Row
+    if _USE_SQLCIPHER:
+        conn = _sqlcipher_mod.connect(str(DB_PATH), timeout=10)
+        # PRAGMA key debe ser lo PRIMERO tras connect. Formato hex x'...'
+        # es más portable que passphrase texto (evita KDF cada PRAGMA).
+        conn.execute(f"PRAGMA key = \"x'{_SQLCIPHER_KEY}'\"")
+        conn.execute("PRAGMA cipher_page_size = 4096")
+        conn.row_factory = _sqlcipher_mod.Row
+    else:
+        conn = sqlite3.connect(DB_PATH, timeout=10)
+        conn.row_factory = sqlite3.Row
     # WAL mode + busy_timeout reducen "database is locked" bajo concurrencia
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA busy_timeout=5000")
