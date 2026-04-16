@@ -1,28 +1,38 @@
-# Mapa de portadas — Canva/Figma
+# Mapa de portadas — Canva (basado en Manual Oficial CMC)
 
-| # | Documento | Color de portada | Gradiente | Ícono | Tono comunicacional |
+Toda la paleta deriva del Manual de Normas Gráficas. Solo turquesa, azul y navy son colores de marca; rojo/verde se reservan para emergencia y GES respectivamente.
+
+| # | Documento | Variante | Gradiente | Ícono | Tono |
 |---|---|---|---|---|---|
-| 01 | Checklist pre-consulta | Verde | `#2e7d57 → #1f5a3d` | 📋 | Amigable, práctico |
-| 02 | Calendario vacunas PNI | Azul | `#2b6b8a → #14445b` | 💉 | Institucional, tranquilizador |
-| 03 | Directorio emergencias | **Rojo** | `#b3332b → #7a1f18` | 🚨 | Urgente, claro |
-| 04 | Guía Fonasa y GES | Azul | `#2b6b8a → #14445b` | 🏛️ | Institucional, formal |
-| 05 | Antecedentes familiares | Oro | `#c89a3a → #8a6818` | 🧬 | Personal, cálido |
-| 06 | Preparación de exámenes | Azul | `#2b6b8a → #14445b` | 🔬 | Clínico, técnico |
-| 07 | Guía prequirúrgica | Verde | `#2e7d57 → #1f5a3d` | 🏥 | Tranquilizador, confiable |
-| 08 | Calculadora IMC | Oro | `#c89a3a → #8a6818` | ⚖️ | Educativo, suave |
-| 09 | Diario postoperatorio | Tinta | `#2c3e37 → #0f1a16` | 📆 | Serio, clínico |
-| 10 | Cuándo llamar al SAMU 131 | **Rojo** | `#b3332b → #7a1f18` | 🆘 | Urgente, directo |
+| 00 | Mitos y Realidades Arauco (premium) | **Navy** | `#1A3F75 → #0f2a52` | 📖 | Serio, autoridad clínica |
+| 01 | Checklist pre-consulta | Azul | `#1172AB → #1A3F75` | 📋 | Institucional, práctico |
+| 02 | Calendario vacunas PNI | Turquesa | `#4FBECE → #1172AB` | 💉 | Educativo, tranquilizador |
+| 03 | Directorio emergencias | **Rojo** | `#c0392b → #7a1f18` | 🚨 | Urgente, claro |
+| 04 | Guía Fonasa y GES | Azul | `#1172AB → #1A3F75` | 🏛️ | Institucional, formal |
+| 05 | Antecedentes familiares | Turquesa | `#4FBECE → #1172AB` | 🧬 | Personal, cálido |
+| 06 | Preparación de exámenes | Azul | `#1172AB → #1A3F75` | 🔬 | Clínico, técnico |
+| 07 | Guía prequirúrgica | Navy | `#1A3F75 → #0f2a52` | 🏥 | Tranquilizador, confiable |
+| 08 | Calculadora IMC | Turquesa | `#4FBECE → #1172AB` | ⚖️ | Educativo, suave |
+| 09 | Diario postoperatorio | Navy | `#1A3F75 → #0f2a52` | 📆 | Serio, clínico |
+| 10 | Cuándo llamar al SAMU 131 | **Rojo** | `#c0392b → #7a1f18` | 🆘 | Urgente, directo |
 
-## Lógica de colores
-- **Rojo** → emergencia / acción inmediata (docs 03 y 10)
-- **Verde** → salud general, bienestar, consulta (docs 01 y 07)
-- **Azul** → información institucional, técnica o procedimental (docs 02, 04, 06)
-- **Oro** → contenido personal, formularios cálidos (docs 05, 08)
-- **Tinta oscura** → clínico serio, seguimiento médico (doc 09)
+## Lógica de uso de cada variante
+- **Azul `#1172AB → #1A3F75`** → portada institucional default; documentos informativos, técnicos y administrativos.
+- **Navy `#1A3F75 → #0f2a52`** → contenido premium, clínico serio o de seguimiento médico.
+- **Turquesa `#4FBECE → #1172AB`** → contenido educativo amable: vacunas, IMC, antecedentes, autocuidado.
+- **Rojo `#c0392b → #7a1f18`** → SOLO emergencia / SAMU. Romper la marca con rojo está justificado por el impacto visual que requiere una urgencia.
+- **Verde `#2e7d57 → #1f5a3d`** → opcional para contenido GES/wellness positivo.
 
-## Reglas
-- Todas las portadas ocupan **página completa sin header/footer**.
-- El título principal usa Georgia regular 34 pt.
-- Debajo del título, un subtítulo de 13 pt con opacity 0.9.
-- En la base: línea divisoria blanca al 35% + "Carampangue · Región del Biobío" + "CMC · ##".
-- El logo mark (círculo blanco con "C") va arriba a la izquierda, antes del título, con separación de 10 mm.
+## Reglas de portada
+- **Sin franjas decorativas** (las franjas turquesa/azul son solo para páginas internas).
+- El gradiente cubre toda la hoja A4, sin márgenes blancos.
+- Logo mark (cuadrado blanco con + azul + C turquesa) arriba a la izquierda, **antes** del título, con separación de 10 mm.
+- Título principal en **Montserrat 32pt 700 UPPERCASE**.
+- Subtítulo en Montserrat 12pt 300 con opacidad 0.92.
+- En la base: línea divisoria blanca al 25% + ubicación + "CMC · ##".
+- Tag superior pequeño "CENTRO MÉDICO CARAMPANGUE" en uppercase tracking ancho.
+
+## Páginas internas (todos los documentos)
+- Franja turquesa+azul de **4 mm** arriba y abajo (10% turquesa / 90% azul corporativo).
+- Header textual sobre la franja superior: "CENTRO MÉDICO CARAMPANGUE · MATERIAL EDUCATIVO" en azul corporativo.
+- Footer textual sobre la franja inferior: "agentecmc.cl · +56 9 4588 6628 · (41) 296 5226".

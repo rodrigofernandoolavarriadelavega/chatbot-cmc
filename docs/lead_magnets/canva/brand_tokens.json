@@ -1,57 +1,92 @@
 {
   "$schema": "https://json.schemastore.org/figma-tokens",
+  "$source": "Manual de Normas Gráficas CMC (oficial)",
   "brand": {
     "name": "Centro Médico Carampangue",
-    "url": "agentecmc.cl",
+    "tagline": "CARAMPANGUE · CENTRO MÉDICO",
+    "url": "centromedicocarampangue.cl",
+    "url_corto": "agentecmc.cl",
     "contact": {
       "phone": "(41) 296 5226",
       "whatsapp": "+56 9 4588 6628",
-      "emergency": "SAMU 131"
+      "emergency": "SAMU 131",
+      "direccion": "Carampangue · Región del Biobío · Chile"
     }
   },
   "color": {
-    "green":       { "value": "#2e7d57", "description": "Verde salud · acento principal" },
-    "green-dk":    { "value": "#1f5a3d", "description": "Verde oscuro · títulos y portada" },
-    "green-lt":    { "value": "#e8f3ee", "description": "Fondo callout éxito/info" },
-    "blue":        { "value": "#2b6b8a", "description": "Azul confianza · H3" },
-    "blue-lt":     { "value": "#eaf1f6", "description": "Fondo callout info" },
-    "gold":        { "value": "#c89a3a", "description": "Oro cálido · advertencia" },
-    "gold-lt":     { "value": "#fff8e1", "description": "Fondo callout warn" },
-    "red":         { "value": "#b3332b", "description": "Rojo urgencias · SAMU" },
-    "red-lt":      { "value": "#fbe9e7", "description": "Fondo callout danger" },
-    "ink":         { "value": "#1c2a26", "description": "Tinta · cuerpo texto" },
-    "ink-soft":    { "value": "#4a5854", "description": "Tinta suave · labels" },
-    "line":        { "value": "#d9e1de", "description": "Bordes y divisores" },
-    "paper":       { "value": "#fafaf7", "description": "Fondo página" },
-    "paper-alt":   { "value": "#f2f1ea", "description": "Fondo disclaimer" }
+    "turquesa":    { "value": "#4FBECE", "rgb": "79, 190, 206", "cmyk": "64, 0, 21, 0", "uso": "Acento principal · franjas decorativas · turquesa del isotipo" },
+    "turquesa-lt": { "value": "#e6f6f9", "uso": "Fondo callouts info suave" },
+    "azul":        { "value": "#1172AB", "rgb": "17, 114, 171", "cmyk": "86, 48, 12, 1", "uso": "Azul corporativo · texto del logotipo · titulares H2" },
+    "azul-lt":     { "value": "#e3eef6", "uso": "Fondo callouts info" },
+    "navy":        { "value": "#1A3F75", "uso": "Azul navy · cruz exterior del isotipo · cuerpo de títulos" },
+    "navy-dk":     { "value": "#0f2a52", "uso": "Navy oscuro · gradientes de portada" },
+    "rojo":        { "value": "#c0392b", "uso": "SAMU · emergencias · ALERTA. Solo donde sea necesario por urgencia visual." },
+    "rojo-lt":     { "value": "#fbe9e7", "uso": "Fondo callout danger" },
+    "amarillo":    { "value": "#d4a017", "uso": "Warn · advertencias menores" },
+    "amarillo-lt": { "value": "#fff8e1", "uso": "Fondo callout warn" },
+    "verde":       { "value": "#2e7d57", "uso": "Success · GES · información positiva" },
+    "verde-lt":    { "value": "#e8f3ee", "uso": "Fondo callout success" },
+    "ink":         { "value": "#1A2A3A", "uso": "Cuerpo de texto" },
+    "ink-soft":    { "value": "#4a5868", "uso": "Texto secundario · subtítulos" },
+    "line":        { "value": "#d9e1ea", "uso": "Bordes y divisores" },
+    "paper":       { "value": "#ffffff", "uso": "Fondo de página estándar" },
+    "paper-alt":   { "value": "#f4f7fa", "uso": "Fondo de disclaimer y bloques secundarios" }
   },
   "gradient": {
-    "cover-green": { "value": "linear-gradient(160deg, #2e7d57 0%, #1f5a3d 100%)" },
-    "cover-red":   { "value": "linear-gradient(160deg, #b3332b 0%, #7a1f18 100%)" },
-    "cover-blue":  { "value": "linear-gradient(160deg, #2b6b8a 0%, #14445b 100%)" },
-    "cover-gold":  { "value": "linear-gradient(160deg, #c89a3a 0%, #8a6818 100%)" },
-    "cover-ink":   { "value": "linear-gradient(160deg, #2c3e37 0%, #0f1a16 100%)" }
+    "cover-azul":     { "value": "linear-gradient(160deg, #1172AB 0%, #1A3F75 100%)", "uso": "Portada principal (default)" },
+    "cover-navy":     { "value": "linear-gradient(160deg, #1A3F75 0%, #0f2a52 100%)", "uso": "Documentos serios / clínicos" },
+    "cover-turquesa": { "value": "linear-gradient(160deg, #4FBECE 0%, #1172AB 100%)", "uso": "Documentos educativos / wellness" },
+    "cover-red":      { "value": "linear-gradient(160deg, #c0392b 0%, #7a1f18 100%)", "uso": "Solo emergencias y SAMU" },
+    "cover-green":    { "value": "linear-gradient(160deg, #2e7d57 0%, #1f5a3d 100%)", "uso": "Documentos asociados a GES y bienestar" }
+  },
+  "decoracion": {
+    "franja-top": {
+      "value": "Barra horizontal 4mm. Izquierda 10% turquesa #4FBECE, resto 90% azul #1172AB.",
+      "ejemplo": "linear-gradient(to right, #4FBECE 0% 10%, #1172AB 10% 100%)",
+      "uso": "Borde superior de TODAS las páginas internas (no la portada)."
+    },
+    "franja-bottom": {
+      "value": "Idéntica a la franja-top pero en el borde inferior.",
+      "uso": "Borde inferior de TODAS las páginas internas."
+    }
   },
   "typography": {
-    "font-serif":  { "value": "Georgia, 'Times New Roman', serif" },
-    "font-sans":   { "value": "Inter, 'Helvetica Neue', Arial, sans-serif" },
-    "h1":          { "value": { "font": "serif", "size": "34pt", "weight": 400, "line-height": 1.1 } },
-    "h2":          { "value": { "font": "serif", "size": "17pt", "weight": 600, "border-bottom": "2px green" } },
-    "h3":          { "value": { "font": "serif", "size": "13pt", "weight": 600, "color": "blue" } },
-    "h4":          { "value": { "font": "sans",  "size": "11pt", "weight": 600, "uppercase": true, "letter-spacing": "0.1em", "color": "ink-soft" } },
-    "body":        { "value": { "font": "sans",  "size": "11pt", "line-height": 1.55, "color": "ink" } },
-    "kicker":      { "value": { "font": "sans",  "size": "9pt",  "uppercase": true, "letter-spacing": "0.2em", "color": "blue", "weight": 700 } },
-    "big-number":  { "value": { "font": "serif", "size": "28pt", "weight": 700, "color": "green" } },
-    "samu-number": { "value": { "font": "serif", "size": "56pt", "weight": 700, "color": "red" } }
+    "$source": "Manual CMC indica Montserrat Bold como tipografía oficial única.",
+    "font-primary":  { "value": "Montserrat", "weights": [300, 400, 500, 600, 700, 800], "fallback": "'Helvetica Neue', Arial, sans-serif" },
+    "h1-cover":      { "value": { "font": "Montserrat", "size": "32pt", "weight": 700, "uppercase": true, "letter-spacing": "-0.5px", "line-height": 1.05 } },
+    "h2":            { "value": { "font": "Montserrat", "size": "16pt", "weight": 700, "color": "azul", "uppercase": true, "border-bottom": "2px solid turquesa" } },
+    "h3":            { "value": { "font": "Montserrat", "size": "12pt", "weight": 600, "color": "navy" } },
+    "h4":            { "value": { "font": "Montserrat", "size": "10pt", "weight": 700, "uppercase": true, "letter-spacing": "0.12em", "color": "azul" } },
+    "body":          { "value": { "font": "Montserrat", "size": "10.5pt", "weight": 400, "line-height": 1.55, "color": "ink" } },
+    "kicker":        { "value": { "font": "Montserrat", "size": "8.5pt", "weight": 700, "uppercase": true, "letter-spacing": "0.22em", "color": "turquesa" } },
+    "big-number":    { "value": { "font": "Montserrat", "size": "26pt", "weight": 800, "color": "azul", "letter-spacing": "-1px" } },
+    "samu-number":   { "value": { "font": "Montserrat", "size": "44-56pt", "weight": 800, "color": "rojo" } }
   },
   "spacing": {
-    "page-padding": { "value": "22mm 18mm 18mm" },
-    "page-size":    { "value": "210mm × 297mm (A4)" }
+    "page-padding":  { "value": "22mm 18mm 18mm" },
+    "page-size":     { "value": "210mm × 297mm (A4)" },
+    "franja-height": { "value": "4mm" }
+  },
+  "logo": {
+    "isotipo": {
+      "descripcion": "Cruz médica conformada por una 'C' turquesa que abraza a una cruz azul corporativa, con sombra navy.",
+      "fondo_recomendado": "Blanco o fondos azul/turquesa con suficiente contraste.",
+      "no_usar_sobre": "Patrones complejos · imágenes con poco contraste · colores que rompan la legibilidad."
+    },
+    "logotipo": {
+      "texto": "CARAMPANGUE",
+      "subtitulo": "CENTRO MÉDICO",
+      "tipografia": "Montserrat",
+      "carampangue": { "weight": 700, "tracking": "0.15em", "color": "azul" },
+      "centro_medico": { "weight": 500, "tracking": "0.35em", "color": "turquesa" }
+    },
+    "variaciones": ["isotipo solo", "vertical", "horizontal", "negativo (sobre fondo oscuro)"]
   },
   "component": {
     "card": {
       "bg": "#ffffff",
-      "border": "1px solid #d9e1de",
+      "border": "1px solid #d9e1ea",
+      "border-top": "3px solid #4FBECE",
       "radius": "2mm",
       "padding": "4mm",
       "shadow": "0 1px 3px rgba(0,0,0,0.04)"
@@ -61,14 +96,15 @@
       "border-left": "4px solid {variant-color}",
       "radius": "0 2mm 2mm 0",
       "variants": {
-        "info":    { "bg": "blue-lt", "accent": "blue" },
-        "success": { "bg": "green-lt", "accent": "green" },
-        "warn":    { "bg": "gold-lt", "accent": "gold" },
-        "danger":  { "bg": "red-lt", "accent": "red" }
+        "info":    { "bg": "azul-lt",     "accent": "azul" },
+        "success": { "bg": "verde-lt",    "accent": "verde" },
+        "warn":    { "bg": "amarillo-lt", "accent": "amarillo" },
+        "danger":  { "bg": "rojo-lt",     "accent": "rojo" },
+        "default": { "bg": "turquesa-lt", "accent": "turquesa" }
       }
     },
     "phone-box": {
-      "border": "2px solid #b3332b",
+      "border": "2px solid #c0392b",
       "padding": "4mm 5mm",
       "radius": "3mm",
       "bg": "#ffffff"
@@ -76,20 +112,22 @@
     "chip": {
       "padding": "1mm 3mm",
       "radius": "10mm",
-      "font-size": "9pt",
-      "font-weight": 600
+      "font-size": "8.5pt",
+      "font-weight": 700,
+      "uppercase": true
     }
   },
   "documents": {
-    "01_checklist_preconsulta":       { "cover": "cover-green", "icon": "📋", "category": "formulario" },
-    "02_calendario_vacunas_pni":      { "cover": "cover-blue",  "icon": "💉", "category": "informativo" },
-    "03_directorio_emergencias":      { "cover": "cover-red",   "icon": "🚨", "category": "emergencia" },
-    "04_glosario_fonasa_ges":         { "cover": "cover-blue",  "icon": "🏛️", "category": "informativo" },
-    "05_antecedentes_familiares":     { "cover": "cover-gold",  "icon": "🧬", "category": "formulario" },
-    "06_preparacion_examenes":        { "cover": "cover-blue",  "icon": "🔬", "category": "informativo" },
-    "07_guia_prequirurgica":          { "cover": "cover-green", "icon": "🏥", "category": "informativo" },
-    "08_calculadora_imc":             { "cover": "cover-gold",  "icon": "⚖️", "category": "educativo" },
-    "09_diario_postoperatorio":       { "cover": "cover-ink",   "icon": "📆", "category": "formulario" },
-    "10_cuando_llamar_131":           { "cover": "cover-red",   "icon": "🆘", "category": "emergencia" }
+    "00_guia_mitos_realidades":       { "cover": "cover-navy",     "icon": "📖", "category": "premium" },
+    "01_checklist_preconsulta":       { "cover": "cover-azul",     "icon": "📋", "category": "formulario" },
+    "02_calendario_vacunas_pni":      { "cover": "cover-turquesa", "icon": "💉", "category": "informativo" },
+    "03_directorio_emergencias":      { "cover": "cover-red",      "icon": "🚨", "category": "emergencia" },
+    "04_glosario_fonasa_ges":         { "cover": "cover-azul",     "icon": "🏛️", "category": "informativo" },
+    "05_antecedentes_familiares":     { "cover": "cover-turquesa", "icon": "🧬", "category": "formulario" },
+    "06_preparacion_examenes":        { "cover": "cover-azul",     "icon": "🔬", "category": "informativo" },
+    "07_guia_prequirurgica":          { "cover": "cover-navy",     "icon": "🏥", "category": "informativo" },
+    "08_calculadora_imc":             { "cover": "cover-turquesa", "icon": "⚖️", "category": "educativo" },
+    "09_diario_postoperatorio":       { "cover": "cover-navy",     "icon": "📆", "category": "formulario" },
+    "10_cuando_llamar_131":           { "cover": "cover-red",      "icon": "🆘", "category": "emergencia" }
   }
 }

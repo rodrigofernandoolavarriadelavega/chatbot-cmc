@@ -1,209 +1,232 @@
-# Design Brief — Lead Magnets CMC
-## Para maquetar en Canva, Figma o entregarse a diseñador
+# Design Brief — Lead Magnets CMC (basado en Manual Oficial)
+## Para maquetar en Canva Pro siguiendo las normas gráficas del CMC
 
-> Este documento reúne la especificación de marca y las instrucciones exactas para reproducir los 10 lead magnets del Centro Médico Carampangue en Canva, Figma o cualquier herramienta de diseño.
+> **Fuente única de verdad:** este documento traduce el `MANUALCMC.pdf` (Manual de Normas Gráficas) a una guía operativa para reproducir los lead magnets en Canva Pro al 100% on-brand.
 
 ---
 
-## 1. Sistema de marca
+## 1. Marca CMC — fundamentos
 
-### Paleta de colores
-| Token | Hex | Uso |
+### Identidad
+- **Nombre:** Centro Médico Carampangue
+- **Lockup:** "CARAMPANGUE" arriba (azul, bold) + "CENTRO MÉDICO" abajo (turquesa, regular, tracking ancho)
+- **Isotipo:** Cruz médica formada por una **C turquesa** que abraza una **cruz azul corporativa**, con sombra azul navy. Inspirado en la C de Carampangue + la cruz médica.
+
+### Paleta oficial (**solo estos colores son la marca**)
+| Color | Hex | RGB | CMYK | Uso |
+|---|---|---|---|---|
+| Turquesa | `#4FBECE` | 79, 190, 206 | 64/0/21/0 | Acento principal, franjas decorativas, "C" del isotipo |
+| Azul corporativo | `#1172AB` | 17, 114, 171 | 86/48/12/1 | Texto del logotipo, titulares H2, links |
+| Azul navy | `#1A3F75` | 26, 63, 117 | — | Cruz exterior del isotipo, cuerpo de títulos |
+
+### Acentos funcionales (NO son parte de la paleta principal — usarlos solo cuando sea estrictamente necesario)
+| Color | Hex | Uso |
 |---|---|---|
-| Verde salud | `#2e7d57` | Acento principal, tablas, cards primarios |
-| Verde oscuro | `#1f5a3d` | Títulos, portada principal |
-| Verde claro | `#e8f3ee` | Fondo de callouts informativos |
-| Azul confianza | `#2b6b8a` | H3, cards secundarios, chips |
-| Azul claro | `#eaf1f6` | Fondo callout info |
-| Oro cálido | `#c89a3a` | Acento warn, portada cálida |
-| Rojo urgencias | `#b3332b` | SAMU, callouts danger, portada emergencias |
-| Rojo claro | `#fbe9e7` | Fondo callout danger |
-| Tinta | `#1c2a26` | Cuerpo de texto |
-| Tinta suave | `#4a5854` | Secundario, subtítulos |
-| Línea | `#d9e1de` | Bordes de tabla, divisores |
-| Papel | `#fafaf7` | Fondo de página |
+| Rojo | `#c0392b` | **Solo emergencias** (SAMU 131, callouts danger) |
+| Amarillo | `#d4a017` | Advertencias (warn) |
+| Verde | `#2e7d57` | Success / información GES positiva |
 
-### Tipografía
-- **Títulos (h1, h2, h3)**: Georgia · serif · 34 / 17 / 13 pt
-- **Cuerpo**: Inter (o Helvetica Neue / Arial) · 11 pt · line-height 1.55
-- **Kicker / labels**: sans-serif · 9 pt · UPPERCASE · letter-spacing 0.15em
-- **Números grandes**: Georgia · 28–56 pt · weight 700
+### Tipografía oficial — Montserrat
+**Una sola tipografía para todo.** El manual indica Montserrat Bold; usamos toda la familia (300/400/500/600/700/800) para jerarquía.
 
-### Tamaño hoja
-- A4 vertical · 210 × 297 mm
-- Márgenes internos: 22 mm top (con header), 18 mm laterales, 18 mm bottom
-- Sangrado de portada: 0 (fondo a borde)
+| Estilo | Tamaño | Peso | Tracking | Uso |
+|---|---|---|---|---|
+| H1 portada | 32pt | 700 | -0.5px | Título principal de portada (UPPERCASE) |
+| H2 sección | 16pt | 700 | -0.2px | Títulos de sección con borde turquesa abajo (UPPERCASE) |
+| H3 subsección | 12pt | 600 | normal | Sub-secciones (color navy) |
+| H4 label | 10pt | 700 | 0.12em | Labels (UPPERCASE) |
+| Body | 10.5pt | 400 | normal | Cuerpo de texto (line-height 1.55) |
+| Kicker | 8.5pt | 700 | 0.22em | Antetítulos (UPPERCASE, color turquesa) |
+| Big number | 26pt | 800 | -1px | KPIs y números destacados |
+| SAMU 131 | 44–56pt | 800 | -1px | Solo en cajas de emergencia (color rojo) |
 
-### Header / footer estándar
-- **Header**: "CENTRO MÉDICO CARAMPANGUE · MATERIAL EDUCATIVO" · 8 pt · uppercase · letter-spacing 0.14em · color tinta suave · borde inferior 1 px
-- **Footer**: "agentecmc.cl · +56 9 4588 6628 · (41) 296 5226" · 8 pt · centrado · borde superior 1 px
+> Montserrat es **gratis en Google Fonts** y viene preinstalado en Canva. No hace falta subirla.
+
+---
+
+## 2. Sistema de página A4
+
+### Dimensiones
+- **Tamaño:** 210 × 297 mm (A4 vertical)
+- **Márgenes internos:** 22 mm top + 18 mm laterales + 18 mm bottom
+
+### Decoración fija (TODAS las páginas internas, no la portada)
+**Franja superior + franja inferior — 4mm de alto cada una:**
+```
+[ TURQUESA #4FBECE 0–10% ][ AZUL CORPORATIVO #1172AB 10–100% ]
+```
+Esta es la firma visual del manual. Cada página interna debe llevar ambas franjas.
+
+### Header / footer textuales (sobre las franjas)
+- **Header:** "CENTRO MÉDICO CARAMPANGUE · MATERIAL EDUCATIVO" · 7.5pt · UPPERCASE · letter-spacing 0.18em · color azul corporativo · weight 600
+- **Footer:** "agentecmc.cl · +56 9 4588 6628 · (41) 296 5226" · 7.5pt · centrado · color tinta suave · weight 500
+
+### Portada (sin franjas decorativas — el gradiente cubre toda la hoja)
+Gradiente diagonal 160° en una de las 5 variantes:
+- **Azul** (default): `#1172AB → #1A3F75` · documentos institucionales
+- **Navy** (premium / serio): `#1A3F75 → #0f2a52` · guía de mitos, postoperatorio
+- **Turquesa** (educativo / wellness): `#4FBECE → #1172AB` · IMC, vacunas, antecedentes
+- **Rojo** (solo emergencias): `#c0392b → #7a1f18` · SAMU, directorio emergencias
+- **Verde** (GES / bienestar): `#2e7d57 → #1f5a3d` · uso opcional para contenido GES positivo
+
+---
+
+## 3. Componentes reutilizables (Brand Kit Canva)
 
 ### Logo mark
-Círculo blanco 54 × 54 px · letra "C" en Georgia 22 pt weight 800 · color verde salud.
-> Si tienes el logo oficial del CMC en SVG/PNG, úsalo en vez del circle-mark.
+1. Si tiene el SVG/PNG oficial del isotipo CMC → úselo siempre.
+2. Si no, en placeholder use: cuadrado blanco 64×64 px, esquinas redondeadas 8px, con un "+" gigante azul (Montserrat 38pt 800) y una "C" turquesa pequeña arriba a la izquierda.
+3. **Espacio de respeto:** mínimo X = altura de la "C" del logotipo a cada lado.
 
-### Portadas (4 variantes)
-Gradiente diagonal 160° de un tono oscuro a uno aún más oscuro del mismo color:
-- **Verde** (default): `#2e7d57 → #1f5a3d`
-- **Roja** (urgencias): `#b3332b → #7a1f18`
-- **Azul** (informativa): `#2b6b8a → #14445b`
-- **Oro** (formularios personales): `#c89a3a → #8a6818`
-- **Tinta** (clínica/seriedad): `#2c3e37 → #0f1a16`
-
-### Componentes reutilizables
-1. **Callout**: recuadro con borde izquierdo 4 px + fondo claro + label-pill arriba a la izquierda. Variantes: info (azul), success (verde), warn (oro), danger (rojo).
-2. **Card**: rectángulo blanco · radius 2 mm · border 1 px línea · padding 4 mm · shadow suave.
-3. **Chip/pill**: cápsula pequeña · padding 1×3 mm · radius 10 mm · fondo color-lt · texto color-dk · 9 pt.
-4. **Phone-box**: caja con borde rojo 2 px · número SAMU grande en Georgia 30 pt rojo · label uppercase arriba.
-5. **TOC-line**: fila con número + título + puntos + página (borde inferior dotted).
-6. **Fill line**: línea gris 1 px para escribir a mano (formularios).
+### Componentes a guardar como "Elementos de Marca" en Canva Pro
+1. **Header decorativo** (rectángulo 210mm × 4mm con gradiente turquesa/azul).
+2. **Footer decorativo** (idem).
+3. **Header textual** ("CENTRO MÉDICO CARAMPANGUE · MATERIAL EDUCATIVO").
+4. **Footer textual** ("agentecmc.cl · +56 9 4588 6628 · (41) 296 5226").
+5. **Logo mark** (en blanco sobre fondo color y en color sobre fondo blanco).
+6. **Callout info** (fondo azul claro, borde izquierdo azul, label "INFO" en pill azul).
+7. **Callout success** (verde claro + verde + label "GES" o "ÉXITO").
+8. **Callout warn** (amarillo claro + amarillo + label "ATENCIÓN").
+9. **Callout danger** (rojo claro + rojo + label "URGENCIA").
+10. **Card** (fondo blanco + borde superior turquesa 3pt + radius 2mm + sombra suave).
+11. **Phone box SAMU** (caja blanca con borde rojo 2pt, número 131 grande rojo).
+12. **Chip / pill** (fondo turquesa claro, texto azul, radius 10mm, padding 1×3mm).
 
 ---
 
-## 2. Estructura estándar de cada documento
+## 4. Estructura estándar de cada documento
 
 ```
-Portada (1 página)
- ├─ Header con nombre CMC pequeño
- ├─ Logo mark
- ├─ Kicker "Documento ##"
- ├─ H1 título grande (Georgia 34 pt)
- ├─ Subtitle
- └─ Footer con ubicación y ID (CMC · ##)
+Página 1 — PORTADA (full-bleed gradient, sin franjas)
+  ├─ Tag "CENTRO MÉDICO CARAMPANGUE" pequeño arriba (uppercase, tracking ancho)
+  ├─ Logo mark (cuadrado blanco con + azul)
+  ├─ Kicker turquesa "Documento ##"
+  ├─ H1 32pt UPPERCASE bold
+  ├─ Subtítulo 12pt regular
+  └─ Footer "Carampangue · Región del Biobío" + "CMC · ##"
 
-Contenido (2–4 páginas)
- ├─ Kicker por sección
- ├─ H2 con línea inferior verde
- ├─ Subsecciones con H3 azul
- ├─ Callouts para advertencias
- ├─ Tablas con header verde
- └─ Cards/grids para contenido modular
+Páginas 2–N — CONTENIDO (con franjas turquesa+azul arriba y abajo)
+  ├─ Header textual minúsculo arriba
+  ├─ Kicker turquesa por sección
+  ├─ H2 con línea inferior turquesa
+  ├─ Subsecciones con H3 navy
+  ├─ Callouts según tipo (info/success/warn/danger)
+  ├─ Tablas con header azul corporativo
+  ├─ Cards con borde superior turquesa
+  └─ Footer textual minúsculo abajo
 
-Cierre
- ├─ Señales de alarma (callout danger)
- ├─ Datos de contacto CMC
- └─ Disclaimer legal en cursiva 8.5 pt
+Página Final — CIERRE
+  ├─ Señales de alarma (callout danger)
+  ├─ 3 canales CMC (WhatsApp / teléfono / web)
+  └─ Disclaimer legal en cursiva 8pt
 ```
 
 ---
 
-## 3. Guía rápida para Canva
+## 5. Paso a paso en Canva Pro
 
-### Paso a paso
-1. Abre Canva → **Crear diseño → Tamaño personalizado → 210 × 297 mm**
-2. Sube los colores de marca a **Marca** (Brand Kit) usando los hex de arriba.
-3. Sube las fuentes: Inter desde Google Fonts, Georgia ya viene incluida.
-4. Crea la **portada** (1 página): rectángulo full-bleed con el gradiente correspondiente al tipo de documento + logo mark + texto.
-5. Duplica la página para **contenido**: añade header y footer como elementos fijos, guárdalos como **elementos de Marca** para reusar.
-6. Para cada documento usa el texto del archivo `textos_canva/XX_*.txt` (copy-paste directo).
-7. Exporta como **PDF Estándar → Descargar con marcas de recorte: NO · Aplanar PDF: sí**.
+### Setup inicial
+1. Canva Pro → **Crear diseño → Tamaño personalizado → 210 × 297 mm**.
+2. Ir a **Marca → Brand Kit** y subir:
+   - Logo CMC (SVG o PNG con fondo transparente)
+   - Colores: pega los hex de la paleta oficial de arriba
+   - Fuentes: Montserrat (ya viene en Canva)
+3. Crear un **template "Página interna CMC"** con las franjas turquesa+azul + header + footer ya posicionados → Marcar como **Plantilla de marca** (icono de chincheta).
+4. Crear un **template "Portada CMC"** con el gradiente full-bleed + logo + estructura de título → Plantilla de marca también.
 
-### Plantillas Canva recomendadas para inspiración
-Busca estos términos en Canva (no son templates exactos, son puntos de partida visuales):
-- "Health brochure A4 printable" — base limpia
-- "Medical patient guide" — estructura clínica
-- "Healthcare infographic pastel" — paleta similar
-- "Emergency contact list printable" — para documento 03
-- "Vaccination schedule Spanish" — para documento 02
+### Para cada documento (1 → 11)
+1. Duplicar la plantilla "Portada CMC" → cambiar gradiente según tipo (ver tabla en `covers.md`).
+2. Pegar el título y subtítulo desde `textos_canva/NN_*.txt`.
+3. Duplicar la plantilla "Página interna CMC" tantas veces como páginas tenga el documento.
+4. Pegar el contenido de `textos_canva/NN_*.txt` respetando la jerarquía:
+   - `▸` → H2
+   - `•` → H3
+   - `☐` → checkbox de checklist
+   - texto plano → body
+5. Aplicar callouts con un click (se llaman desde el panel "Elementos de marca").
+6. Exportar como **PDF Estándar → Aplanar PDF: SÍ**.
 
-### Organización en Canva
-Crea una **carpeta "CMC — Lead Magnets"** con subcarpetas por tipo:
-- `Emergencias` (doc 03, 10)
-- `Informativo` (doc 02, 04, 06, 07)
-- `Formularios` (doc 01, 05, 09)
-- `Educativo` (doc 08)
+### Importar PDFs ya generados a Canva Pro como editables
+1. Canva Pro → **Subir → seleccionar archivo PDF** desde `pdfs/` de este repo.
+2. Canva los importará como diseños editables (cada página queda como una página de Canva).
+3. Reemplazar el placeholder del logo por el SVG real.
+4. Ajustar tipografía si fue importada como otra fuente (forzar a Montserrat).
+5. Re-exportar.
 
----
-
-## 4. Guía rápida para Figma
-
-### Paso a paso
-1. Crea un nuevo archivo **CMC Lead Magnets**.
-2. Crea un frame A4 (210 × 297 mm) llamado **Page Template**.
-3. Define **Styles**:
-   - Text: `Serif/H1`, `Serif/H2`, `Sans/Body`, `Sans/Kicker`
-   - Color: `CMC/Green`, `CMC/Blue`, `CMC/Red`, `CMC/Gold`, etc.
-   - Effects: `Card shadow`, `Cover gradient Green`, etc.
-4. Crea **Components**:
-   - `Cover` (con variants: green, blue, red, gold, ink)
-   - `Header`, `Footer`
-   - `Callout` (variants: info, success, warn, danger)
-   - `Card`, `Phone Box`, `Chip`, `Fill Line`, `Checkbox`
-5. Duplica el page template 1 vez por página de cada documento.
-6. Usa el **plugin "Content Reel"** para auto-rellenar textos largos, o pega directo desde los archivos `textos_canva/*.txt`.
-7. Exporta cada documento como **PDF**: selecciona todos los frames del documento → **Export → PDF**.
-
-### Plugins útiles
-- **Iconify** — iconos de emergencia, médicos
-- **Content Reel** — texto de relleno
-- **To PDF** — exportar múltiples frames a un solo PDF
-- **Unsplash** — fotos de stock (úselas con criterio médico apropiado)
+> **Tip Pro:** los PDFs generados via `bash build_pdfs.sh` ya están on-brand. Subirlos a Canva ahorra el trabajo de maquetar de cero.
 
 ---
 
-## 5. Iconografía sugerida
+## 6. Iconografía sugerida
+
+Buscar en Canva con keyword **"line icon"** o **"outline"** para mantener un look clínico moderno.
 
 | Sección | Icono | Canva keyword |
 |---|---|---|
-| Documentos | 📋 | "clipboard checkmark" |
-| Medicamentos | 💊 | "pill capsule" |
-| Emergencia | 🚨 | "emergency siren" |
-| Infarto | 🫀 | "heart anatomy" |
-| ACV | 🧠 | "brain health" |
-| Respiratorio | 🫁 | "lungs" |
-| Pediatría | 👶 | "baby care" |
-| Embarazo | 🤱 | "pregnancy" |
-| Quemaduras | 🔥 | "fire warning" |
-| Araña | 🕷️ | "spider warning" |
-| Marea roja | 🌊 | "wave red" |
-| Vacunas | 💉 | "syringe vaccine" |
-| Cirugía | 🏥 | "hospital surgery" |
-| IMC | ⚖️ | "scale balance" |
-
-Prefiere iconos **line / outlined** para un look clínico y moderno. Evita iconos "cartoon" salvo en la guía pediátrica.
+| Documentos | 📋 | "clipboard line" |
+| Medicamentos | 💊 | "pill line" |
+| Emergencia | 🚨 | "siren outline" |
+| Infarto | 🫀 | "heart anatomy line" |
+| ACV | 🧠 | "brain outline" |
+| Respiratorio | 🫁 | "lungs line" |
+| Pediatría | 👶 | "baby outline" |
+| Embarazo | 🤱 | "pregnancy line" |
+| Quemaduras | 🔥 | "fire warning outline" |
+| Araña rincón | 🕷️ | "spider outline" |
+| Marea roja | 🌊 | "wave warning" |
+| Vacunas | 💉 | "syringe line" |
+| Cirugía | 🏥 | "hospital cross" |
+| IMC | ⚖️ | "scale balance line" |
+| Hantavirus | 🐭 | "rodent outline" |
+| Celulosa | 🏭 | "industry outline" |
 
 ---
 
-## 6. Checklist de revisión antes de publicar
+## 7. Checklist de revisión antes de publicar
 
-- [ ] Datos de contacto actualizados: **(41) 296 5226** y **+56 9 4588 6628**
-- [ ] Web correcta: `agentecmc.cl`
-- [ ] Disclaimer legal al final de cada documento
+- [ ] Paleta = solo turquesa #4FBECE + azul #1172AB + navy #1A3F75 (acentos rojo/amarillo/verde solo cuando aplique)
+- [ ] Tipografía = Montserrat únicamente
+- [ ] Franjas decorativas turquesa/azul arriba y abajo de cada página interna
+- [ ] Logo presente en portada (con espacio de respeto)
+- [ ] Datos de contacto: **(41) 296 5226** y **+56 9 4588 6628**
+- [ ] Web: `agentecmc.cl` o `centromedicocarampangue.cl`
+- [ ] Disclaimer legal al final
 - [ ] Fecha "Última revisión: [mes/año]" reemplazada por la fecha real
-- [ ] Sin errores ortográficos (úsese el corrector de Canva/Figma)
+- [ ] Sin errores ortográficos
 - [ ] Teléfonos de emergencia verificados (SAMU 131, CITUC 22 635 3800)
-- [ ] PDF bajo 2 MB por archivo para envío por WhatsApp
+- [ ] PDF bajo 2 MB para envío por WhatsApp
 - [ ] Archivo de origen guardado en la carpeta compartida del CMC
 
 ---
 
-## 7. Archivos disponibles en este brief
+## 8. Archivos disponibles en este brief
 
 ```
 canva/
-├── DESIGN_BRIEF.md            ← este archivo
-├── brand_tokens.json          ← tokens exportables (Figma Variables)
-├── textos_canva/
-│   ├── 01_checklist.txt       ← texto plano listo para copiar
-│   ├── 02_vacunas.txt
-│   ├── 03_emergencias.txt
-│   ├── 04_fonasa.txt
-│   ├── 05_familia.txt
-│   ├── 06_examenes.txt
-│   ├── 07_prequirurgica.txt
-│   ├── 08_imc.txt
-│   ├── 09_postoperatorio.txt
-│   └── 10_samu131.txt
-└── covers.md                  ← mapa de qué gradiente usa cada documento
+├── DESIGN_BRIEF.md            ← este archivo (basado en Manual oficial CMC)
+├── brand_tokens.json          ← tokens exportables (Figma Variables / Tokens Studio)
+├── covers.md                  ← mapa de gradiente por documento
+└── textos_canva/
+    ├── 01_checklist.txt       ← texto plano listo para copiar
+    ├── 02_vacunas.txt
+    ├── 03_emergencias.txt
+    ├── 04_fonasa.txt
+    ├── 05_familia.txt
+    ├── 06_examenes.txt
+    ├── 07_prequirurgica.txt
+    ├── 08_imc.txt
+    ├── 09_postoperatorio.txt
+    └── 10_samu131.txt
 ```
 
 ---
 
-## 8. Uso recomendado de los HTML imprimibles
+## 9. Flujo recomendado
 
-Además de Canva/Figma, en la carpeta `html/` hay versiones HTML A4 ya estilizadas que puedes:
-- Abrir en Chrome → **Imprimir → Guardar como PDF** para obtener un PDF profesional en 10 segundos
-- Editar el CSS (`style.css`) si quieres ajustar colores/tipografía antes de exportar
-- Enviar directo por WhatsApp como PDF sin necesidad de Canva
+1. **HTML → PDF** es lo más rápido para v1 (usar `bash build_pdfs.sh`).
+2. **Subir esos PDFs a Canva Pro** y editarlos como diseños → ahorra todo el trabajo de maquetar.
+3. **Reemplazar logo** placeholder por el SVG oficial del CMC.
+4. **Exportar** desde Canva como PDF aplanado.
+5. **Subir al sitio** `centromedicocarampangue.cl` o enviar por WhatsApp.
 
-> **Flujo sugerido**: HTML → PDF es lo más rápido para v1. Usa Canva/Figma cuando quieras diseño ilustrado con fotos, iconos personalizados o versiones para Instagram/RRSS.
+> Si el equipo de CMC tiene un diseñador o agencia, este brief + el `brand_tokens.json` + los HTMLs ya maquetados son suficientes para que reproduzcan todo en Canva o Figma sin preguntas.
