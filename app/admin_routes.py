@@ -1217,8 +1217,22 @@ def admin_map_data(desde: str = Query(None), hasta: str = Query(None),
     if not db_path.exists():
         raise HTTPException(404, "heatmap_cache.db no encontrado. Ejecutar scripts/heatmap_comunas.py download")
 
-    conn = _sqlite3.connect(str(db_path))
-    conn.row_factory = _sqlite3.Row
+    # SQLCipher si la key está definida (misma key que sessions.db)
+    import os as _os
+    _hm_key = (_os.getenv("SQLCIPHER_KEY") or "").strip()
+    if _hm_key:
+        try:
+            from sqlcipher3 import dbapi2 as _sc3
+            conn = _sc3.connect(str(db_path))
+            conn.execute(f"PRAGMA key = \"x'{_hm_key}'\"")
+            conn.execute("PRAGMA cipher_page_size = 4096")
+            conn.row_factory = _sc3.Row
+        except ImportError:
+            conn = _sqlite3.connect(str(db_path))
+            conn.row_factory = _sqlite3.Row
+    else:
+        conn = _sqlite3.connect(str(db_path))
+        conn.row_factory = _sqlite3.Row
 
     # ── Rango de fechas disponible ──
     rango = conn.execute("SELECT MIN(fecha) as mn, MAX(fecha) as mx FROM citas_heatmap").fetchone()
