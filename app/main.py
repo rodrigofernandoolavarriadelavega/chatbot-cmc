@@ -442,8 +442,22 @@ def meulen_ecosistema_page():
 
 @app.get("/meulen/dashboardplanificacion", response_class=HTMLResponse)
 def meulen_dashboard_page():
-    """Dashboard de planificación del MVP Meulen."""
-    return _MEULEN_DASHBOARD_HTML
+    """Dashboard de planificación del MVP Meulen.
+
+    Se re-lee el template desde disco en cada request y se envían headers de
+    no-cache para que los cambios hechos vía `git pull` se reflejen sin
+    requerir restart del servicio.
+    """
+    tpl_path = _TEMPLATE_DIR / "meulen_dashboard.html"
+    html = tpl_path.read_text(encoding="utf-8") if tpl_path.exists() else _MEULEN_DASHBOARD_HTML
+    return HTMLResponse(
+        content=html,
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        },
+    )
 
 
 @app.get("/menu", response_class=HTMLResponse)
