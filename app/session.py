@@ -37,6 +37,14 @@ if _SQLCIPHER_KEY:
 
 _USE_SQLCIPHER = _sqlcipher_mod is not None and bool(_SQLCIPHER_KEY)
 
+# Tupla de excepciones de operación DB. sqlcipher3 define sus propias clases
+# que NO heredan de sqlite3.*, así que cuando SQLCipher está activo hay que
+# capturar ambos tipos (ej. ALTER TABLE duplicado durante migraciones).
+if _sqlcipher_mod is not None:
+    _OPERATIONAL_ERRORS: tuple = (sqlite3.OperationalError, _sqlcipher_mod.OperationalError)
+else:
+    _OPERATIONAL_ERRORS = (sqlite3.OperationalError,)
+
 
 def _conn():
     DB_PATH.parent.mkdir(exist_ok=True)
@@ -292,36 +300,36 @@ def _conn():
     # Migración: agregar fecha_nacimiento a contact_profiles
     try:
         conn.execute("ALTER TABLE contact_profiles ADD COLUMN fecha_nacimiento TEXT")
-    except sqlite3.OperationalError:
+    except _OPERATIONAL_ERRORS:
         pass
     # Migración: agregar canal a messages si no existe
     try:
         conn.execute("ALTER TABLE messages ADD COLUMN canal TEXT DEFAULT 'whatsapp'")
-    except sqlite3.OperationalError:
+    except _OPERATIONAL_ERRORS:
         pass  # columna ya existe, nada que hacer
     # Migración: confirmación de asistencia pre-cita
     # Valores: NULL/pending (sin responder), confirmed, reagendar, cancelar
     try:
         conn.execute("ALTER TABLE citas_bot ADD COLUMN confirmation_status TEXT")
-    except sqlite3.OperationalError:
+    except _OPERATIONAL_ERRORS:
         pass
     try:
         conn.execute("ALTER TABLE citas_bot ADD COLUMN confirmation_at TEXT")
-    except sqlite3.OperationalError:
+    except _OPERATIONAL_ERRORS:
         pass
     # Migración: recordatorio 2 horas antes (separado del recordatorio 24h)
     try:
         conn.execute("ALTER TABLE citas_bot ADD COLUMN reminder_2h_sent INTEGER DEFAULT 0")
-    except sqlite3.OperationalError:
+    except _OPERATIONAL_ERRORS:
         pass
     # Migración: nombre paciente + es_tercero (cita para otra persona)
     try:
         conn.execute("ALTER TABLE citas_bot ADD COLUMN paciente_nombre TEXT DEFAULT ''")
-    except sqlite3.OperationalError:
+    except _OPERATIONAL_ERRORS:
         pass
     try:
         conn.execute("ALTER TABLE citas_bot ADD COLUMN es_tercero INTEGER DEFAULT 0")
-    except sqlite3.OperationalError:
+    except _OPERATIONAL_ERRORS:
         pass
     # ── Compliance Ley 19.628 (Chile, reforma 2024) ───────────────────────────
     # Registro de consentimiento explícito del paciente para almacenar
@@ -2377,7 +2385,7 @@ def delete_patient_data(phone: str | None, rut: str | None,
                         )
                         if cur.rowcount:
                             deleted[table] = cur.rowcount
-                    except sqlite3.OperationalError:
+                    except _OPERATIONAL_ERRORS:
                         pass
             conn.execute("COMMIT")
         except Exception:
