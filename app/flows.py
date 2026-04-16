@@ -19,7 +19,8 @@ from session import (save_session, reset_session, save_tag, delete_tag, get_tags
                      save_profile, get_profile, save_fidelizacion_respuesta, get_ultimo_seguimiento,
                      enqueue_intent, add_to_waitlist, cancel_waitlist,
                      get_cita_bot_by_id_cita, mark_cita_confirmation, get_phone_by_rut,
-                     save_demanda_no_disponible)
+                     save_demanda_no_disponible,
+                     has_privacy_consent, save_privacy_consent, revoke_privacy_consent)
 from resilience import is_medilink_down
 from triage_ges import triage_sintomas, normalizar_texto_paciente
 from pni import get_vaccine_reminder
@@ -566,6 +567,57 @@ def _btn_msg(body_text: str, buttons: list) -> dict:
     }
 
 
+# ── Consent Ley 19.628 (reforma 2024) ─────────────────────────────────────────
+
+_PRIVACY_CONSENT_PROMPT = (
+    "👋 *Hola, soy el asistente del Centro Médico Carampangue (CMC)*\n\n"
+    "Antes de empezar necesito tu autorización.\n\n"
+    "Para coordinar tu atención médica guardaré:\n"
+    "• Nuestra conversación en WhatsApp\n"
+    "• Datos que compartas (nombre, RUT, fecha de nacimiento, motivo)\n"
+    "• Archivos que envíes (fotos, audios, PDFs)\n\n"
+    "Tus derechos según *Ley 19.628* (Chile):\n"
+    "✓ Pedir copia de tus datos\n"
+    "✓ Pedir corrección o borrado\n"
+    "✓ Revocar escribiendo *STOP*\n\n"
+    "📄 Política: https://agentecmc.cl/privacidad\n\n"
+    "*¿Aceptas que procesemos tus datos?*"
+)
+
+
+def _privacy_consent_msg() -> dict:
+    return _btn_msg(
+        _PRIVACY_CONSENT_PROMPT,
+        [
+            {"id": "privacy:accept",  "title": "✅ Acepto"},
+            {"id": "privacy:decline", "title": "❌ No acepto"},
+        ],
+    )
+
+
+_PRIVACY_ACCEPT_WORDS = {
+    "acepto", "aceptó", "aceptar", "si acepto", "sí acepto", "si, acepto",
+    "sí, acepto", "de acuerdo", "ok", "dale", "confirmo", "autorizo",
+    "autorizar", "si", "sí",
+}
+_PRIVACY_DECLINE_WORDS = {
+    "no acepto", "no aceptó", "rechazo", "rechazar", "no autorizo",
+    "no quiero", "stop", "detener", "baja", "borrar mis datos",
+}
+
+
+def _is_privacy_accept(tl: str, tl_norm: str) -> bool:
+    if tl in _PRIVACY_ACCEPT_WORDS or tl_norm in _PRIVACY_ACCEPT_WORDS:
+        return True
+    return tl == "privacy:accept"
+
+
+def _is_privacy_decline(tl: str, tl_norm: str) -> bool:
+    if tl in _PRIVACY_DECLINE_WORDS or tl_norm in _PRIVACY_DECLINE_WORDS:
+        return True
+    return tl == "privacy:decline"
+
+
 def _menu_msg() -> dict:
     return _list_msg(
         body_text=(
@@ -838,7 +890,7 @@ async def _handle_doctor_command(phone: str, txt: str, tl: str, data: dict, stat
     # ── Selección de modo (botones interactivos) ─────────────────────────
     if tl == "doc_modo_agente":
         _set_doctor_mode(phone, "agente")
-        return "🤖 *Modo Agente CMC* activado. Estás en el flujo de pacientes para probar.\nEscribe *cambiar modo* para cambiar."
+        return "🤖 *Modo Agente CMC* activado. Estás en el flujo de pacientes para probar.\nEscribe *modo* para cambiar."
 
     if tl == "doc_modo_asistente":
         _set_doctor_mode(phone, "asistente")
@@ -851,11 +903,11 @@ async def _handle_doctor_command(phone: str, txt: str, tl: str, data: dict, stat
             "🏷️ `dx RUT dm2 hta` — agregar diagnósticos\n"
             "🗑️ `dxborrar RUT dm2` — eliminar diagnóstico\n"
             "💬 Cualquier otra cosa → pregunta clínica IA\n\n"
-            "Escribe *cambiar modo* para cambiar."
+            "Escribe *modo* para cambiar."
         )
 
     # ── Cambiar modo: ÚNICA forma de volver al selector ──────────────────
-    if tl in ("cambiar modo", "cambiar_modo"):
+    if tl in ("modo", "cambiar", "cambiar modo", "cambiar_modo"):
         _clear_doctor_mode(phone)
         reset_session(phone)
         return _doctor_mode_menu()
@@ -1064,13 +1116,18 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # y tl como fallback por si la normalización rompe algún match existente.
     # `EMERGENCIAS_VITAL_PATRONES` tiene lookahead negativo para excluir
     # colloquialismos como "me muero de hambre/risa/sed".
+    # IMPORTANTE: emergencias pasan por encima del opt-in de privacidad
+    # (Ley 19.628 art. 21 — base legal "interés vital del titular").
+    # Solo registramos el evento (no el texto crudo) para minimizar PII.
     if (any(p in tl_norm for p in EMERGENCIAS)
             or any(pat.search(tl_norm) for pat in EMERGENCIAS_PATRONES)
             or any(pat.search(tl_norm) for pat in EMERGENCIAS_VITAL_PATRONES)
             or any(p in tl for p in EMERGENCIAS)
             or any(pat.search(tl) for pat in EMERGENCIAS_PATRONES)
             or any(pat.search(tl) for pat in EMERGENCIAS_VITAL_PATRONES)):
-        log_event(phone, "emergencia_detectada", {"texto": txt[:240]})
+        _consented_now = has_privacy_consent(phone)
+        log_event(phone, "emergencia_detectada",
+                  {"consented": _consented_now, "texto": txt[:240] if _consented_now else "[redacted]"})
         reset_session(phone)
         return (
             "⚠️ Esto suena como una urgencia.\n\n"
@@ -1078,6 +1135,84 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             f"También puedes contactarnos:\n📞 *{CMC_TELEFONO}*\n☎️ *{CMC_TELEFONO_FIJO}*\n\n"
             "Si necesitas algo más, escribe *menú*."
         )
+
+    # ── Gate de consentimiento Ley 19.628 ─────────────────────────────────────
+    # Pasadas las emergencias y comandos de crisis, si el paciente todavía no
+    # consintió explícitamente no procesamos NI almacenamos ningún otro
+    # mensaje. Este gate solo aplica al número de pacientes (el del doctor
+    # tiene bypass porque ya pasó el handler de `_doctor_phone` arriba).
+    # Si el texto ES la respuesta al opt-in (botón o palabra clave), lo
+    # procesamos acá mismo; cualquier otra cosa devuelve el prompt.
+    if phone != _doctor_phone and not has_privacy_consent(phone):
+        if _is_privacy_accept(tl, tl_norm):
+            save_privacy_consent(phone, "accepted", method="whatsapp")
+            log_event(phone, "privacy_consent_accepted", {"method": "whatsapp"})
+            reset_session(phone)
+            return (
+                "Gracias 🙏 Tu autorización quedó registrada.\n\n"
+                "En cualquier momento puedes:\n"
+                "• Escribir *STOP* para revocar.\n"
+                "• Pedir borrado completo con *borrar mis datos*.\n\n"
+                "Escribe *menú* para empezar 👇"
+            )
+        if _is_privacy_decline(tl, tl_norm):
+            save_privacy_consent(phone, "declined", method="whatsapp")
+            log_event(phone, "privacy_consent_declined", {"method": "whatsapp"})
+            reset_session(phone)
+            return (
+                "Entendido 👍 No almacenaremos tu conversación.\n\n"
+                "Si necesitas atención llama directamente:\n"
+                f"📞 *{CMC_TELEFONO}*\n"
+                f"☎️ *{CMC_TELEFONO_FIJO}*\n\n"
+                "Si cambias de idea, escribe *aceptar* y podremos ayudarte por este medio."
+            )
+        # Primera interacción o usuario declinado previamente → pedir consent.
+        log_event(phone, "privacy_consent_prompt")
+        save_session(phone, "WAIT_PRIVACY_CONSENT", data)
+        return _privacy_consent_msg()
+
+    # ── Revocación post-consent + derecho al olvido ───────────────────────────
+    # Paciente ya consintió pero ahora escribe STOP / "borrar mis datos". Son
+    # dos cosas distintas:
+    #   - STOP / revocar      → revoca consent; deja de enviar marketing pero
+    #                           los datos clínicos quedan (pueden ser necesarios).
+    #   - "borrar mis datos"  → derecho al olvido (art. 12). Emite alerta al
+    #                           admin para ejecutar DELETE /admin/api/patient.
+    if phone != _doctor_phone:
+        if tl in ("stop", "detener", "baja") or tl_norm in ("stop", "detener", "baja"):
+            revoke_privacy_consent(phone)
+            save_tag(phone, "marketing_opt_out")
+            log_event(phone, "privacy_consent_revoked")
+            reset_session(phone)
+            return (
+                "Listo 👍 No recibirás más mensajes de seguimiento ni campañas.\n\n"
+                "Si quieres que borremos *todos* tus datos, escribe "
+                "*borrar mis datos*.\n\n"
+                "Para volver a recibir mensajes escribe *aceptar*."
+            )
+        if ("borrar mis datos" in tl_norm or "borrar mis datos" in tl
+                or "derecho al olvido" in tl_norm):
+            log_event(phone, "gdpr_deletion_requested", {"texto": txt[:240]})
+            # Alerta al admin/doctor para ejecución manual (validación identidad)
+            try:
+                import asyncio as _asyncio
+                _asyncio.create_task(send_whatsapp(
+                    ADMIN_ALERT_PHONE,
+                    f"🔐 *Solicitud borrado de datos*\n\n"
+                    f"📱 Paciente: {phone}\n"
+                    f"📝 Texto: {txt[:200]}\n\n"
+                    f"Valida identidad y ejecuta:\n"
+                    f"`DELETE /admin/api/patient/{{rut}}`"
+                ))
+            except Exception as _e:
+                log.warning("No pude notificar borrado al admin: %s", _e)
+            return (
+                "Recibida tu solicitud de borrado 🔐\n\n"
+                "Para proteger tus datos vamos a *validar tu identidad* antes de "
+                "ejecutarla. Un miembro del equipo se contactará contigo dentro "
+                "de las próximas 48 horas (plazo legal: 30 días).\n\n"
+                "Mientras tanto hemos pausado el envío de mensajes."
+            )
 
     # ── Comandos globales ─────────────────────────────────────────────────────
     _COMANDOS_GLOBALES = ("menu", "menú", "inicio", "reiniciar", "volver", "hola")
@@ -1091,7 +1226,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if doc_mode == "asistente":
                 return (
                     "👨‍⚕️ *Asistente Clínico* listo.\n"
-                    "Escribe *cambiar modo* para cambiar."
+                    "Escribe *modo* para cambiar."
                 )
             return _doctor_mode_menu()
         return _menu_msg()
