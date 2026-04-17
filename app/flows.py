@@ -1260,7 +1260,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
     # ── Comandos globales ─────────────────────────────────────────────────────
     _COMANDOS_GLOBALES = ("menu", "menú", "inicio", "reiniciar", "volver", "hola", "menu_volver")
-    if tl in _COMANDOS_GLOBALES or tl_norm in _COMANDOS_GLOBALES or tl in _SALUDOS_SET or tl_norm in _SALUDOS_SET:
+    # Si la recepcionista tomó la conversación, NO resetear por saludos/menu —
+    # dejar que el handler de HUMAN_TAKEOVER registre el mensaje.
+    _es_comando_reset = (tl in _COMANDOS_GLOBALES or tl_norm in _COMANDOS_GLOBALES
+                        or tl in _SALUDOS_SET or tl_norm in _SALUDOS_SET)
+    if _es_comando_reset and state != "HUMAN_TAKEOVER":
         reset_session(phone)
         if phone == _doctor_phone:
             # El modo se lee del tag, no de la sesión — sobrevive el reset

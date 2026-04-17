@@ -297,16 +297,22 @@ body {
 }
 .qr-btn:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
 .chat-messages {
-  flex: 1; overflow-y: auto; padding: 16px;
-  display: flex; flex-direction: column; gap: 6px;
+  flex: 1; overflow-y: auto; padding: 10px 14px;
+  display: flex; flex-direction: column; gap: 4px;
   background: var(--bg);
 }
 .msg-row { display: flex; }
 .msg-row.in { justify-content: flex-start; }
 .msg-row.out { justify-content: flex-end; }
+/* Burbujas más amplias (85%) y texto más denso para aprovechar pantalla Windows/laptop */
 .msg-bubble {
-  max-width: 75%; padding: 9px 13px; border-radius: 12px;
-  font-size: 12px; line-height: 1.5; word-break: break-word;
+  max-width: 85%; padding: 7px 11px; border-radius: 10px;
+  font-size: 12.5px; line-height: 1.4; word-break: break-word;
+}
+/* En pantallas anchas (>1400px), aún más amplio */
+@media (min-width: 1400px) {
+  .msg-bubble { max-width: 78%; font-size: 13px; }
+  .chat-messages { padding: 12px 18px; }
 }
 .msg-row.in .msg-bubble { background: var(--surface); color: var(--text); border-bottom-left-radius: 3px; border: 1px solid var(--border); }
 .msg-row.out .msg-bubble { background: #dcf8c6; color: #1a3a1a; border-bottom-right-radius: 3px; }
