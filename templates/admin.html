@@ -1253,7 +1253,7 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
             <button class="btn btn-outline" id="btn-resume" style="display:none;" onclick="doResume()">🤖 Devolver al bot</button>
             <button class="btn btn-outline" id="btn-notify-informe" style="display:none;font-size:11px;padding:5px 10px;" onclick="notificarInforme()" title="Enviar template informe_listo al paciente">📄 Notificar informe</button>
             <button class="btn btn-outline" id="btn-seguimiento" style="display:none;font-size:11px;padding:5px 10px;" onclick="seguimientoMedico()" title="Enviar seguimiento médico personalizado">🩺 Seguimiento</button>
-            <button class="btn btn-outline" style="font-size:11px;padding:5px 10px;" onclick="abrirMarcarAgendado()" title="Registrar cita agendada manualmente (teléfono/presencial)">✅ Marcar agendado</button>
+            <button class="btn btn-outline" style="font-size:11px;padding:5px 8px;" onclick="abrirMarcarAgendado()" title="Marcar como agendado manual — registrar cita agendada por teléfono o presencial, el bot deja de perseguir al paciente">✅ Agendado</button>
             <button class="mobile-ctx-toggle" onclick="toggleCtxPanel()" title="Info paciente">ℹ️</button>
           </div>
         </div>
@@ -1341,6 +1341,7 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
             <button class="btn btn-primary btn-full" id="ctx-btn-agendar-por" style="display:none;" onclick="abrirAgendarPorElla()">📋 Agendar por el paciente</button>
             <button class="btn btn-danger btn-full" id="ctx-btn-takeover" onclick="doTakeover()">🎯 Tomar control</button>
             <button class="btn btn-outline btn-full" id="ctx-btn-resume" style="display:none;" onclick="doResume()">🤖 Devolver al bot</button>
+            <button class="btn btn-outline btn-full" onclick="abrirMarcarAgendado()" style="margin-top:6px;" title="Paciente ya quedó agendado por teléfono/presencial — el bot dejará de perseguirlo">✅ Marcar como agendado</button>
           </div>
         </div>
         <div class="ctx-sec" id="ctx-slots-section" style="display:none;">
