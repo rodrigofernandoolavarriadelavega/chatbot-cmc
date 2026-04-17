@@ -2044,9 +2044,13 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if len(txt) > 2:
                 result = await detect_intent(txt)
                 intent = result.get("intent", "otro")
-                if intent == "agendar" and result.get("especialidad"):
+                if intent == "agendar" and (result.get("especialidad") or _detectar_apellido_profesional(txt)):
                     from medilink import _ids_para_especialidad
-                    esp_pedida = result.get("especialidad", "")
+                    # Override: si el texto crudo menciona un apellido de profesional,
+                    # priorizar ese match sobre la clasificación genérica de Claude.
+                    # Fix para "Con Olavarria" cuando Claude devuelve "medicina general".
+                    esp_override = _detectar_apellido_profesional(txt)
+                    esp_pedida = esp_override or result.get("especialidad", "")
                     ids_nuevos = set(_ids_para_especialidad(esp_pedida))
                     ids_actuales = {s.get("id_profesional") for s in todos_slots}
                     # Si el paciente pide un doctor/especialidad que ya está en el pool
@@ -3345,6 +3349,51 @@ _MED_GENERAL_IDS = [73, 1, 13]  # Abarca, Olavarría, Márquez
 _MED_AO_IDS      = [73, 1]      # Primarios: Abarca (08-16) + Olavarría (16-21)
 _MED_OVERFLOW_ID = 13            # Márquez: overflow cuando Abarca+Olavarría no tienen cupo
 _ESP_MED_GENERAL = {"medicina general", "medicina familiar"}
+
+# Apellidos de profesionales específicos → key de ESPECIALIDADES_MAP (que resuelve a 1 ID).
+# Usado como override cuando Claude clasifica genéricamente pero el texto crudo
+# menciona a un doctor puntual (ej. "Con Olavarria" → narrow a solo ese).
+_APELLIDOS_PROFESIONAL = [
+    ("olavarr",      "olavarría"),
+    ("abarca",       "abarca"),
+    ("marquez",      "medicina familiar"),
+    ("márquez",      "medicina familiar"),
+    ("borrego",      "otorrinolaringología"),
+    ("millan",       "cardiología"),
+    ("millán",       "cardiología"),
+    ("rejon",        "ginecología"),
+    ("rejón",        "ginecología"),
+    ("quijano",      "gastroenterología"),
+    ("burgos",       "odontología"),
+    ("jimenez",      "odontología"),
+    ("jiménez",      "odontología"),
+    ("castillo",     "ortodoncia"),
+    ("fredes",       "endodoncia"),
+    ("valdes",       "implantología"),
+    ("valdés",       "implantología"),
+    ("fuentealba",   "estética facial"),
+    ("acosta",       "masoterapia"),
+    ("armijo",       "armijo"),
+    ("etcheverry",   "etcheverry"),
+    ("pinto",        "nutrición"),
+    ("montalba",     "psicología"),
+    ("arratia",      "fonoaudiología"),
+    ("guevara",      "podología"),
+    ("pardo",        "ecografía"),
+]
+
+
+def _detectar_apellido_profesional(txt: str) -> str | None:
+    """Si el texto menciona un apellido de profesional, devuelve la key de
+    ESPECIALIDADES_MAP correspondiente. Útil cuando Claude clasifica genérico
+    pero el paciente pidió un doctor específico."""
+    if not txt:
+        return None
+    tl = txt.lower()
+    for apellido, key in _APELLIDOS_PROFESIONAL:
+        if apellido in tl:
+            return key
+    return None
 
 
 _ESPECIALIDADES_TEXTO = (
