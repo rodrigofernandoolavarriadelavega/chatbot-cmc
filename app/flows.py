@@ -582,6 +582,78 @@ def _ensure_consent(phone: str) -> None:
         log_event(phone, "privacy_consent_accepted", {"method": "rut_provided"})
 
 
+async def _slot_confirmed(phone: str, data: dict, slot: dict) -> str | dict:
+    """Llamada cuando el paciente confirma un slot.
+
+    Fast-track para pacientes recurrentes: si ya tenemos su perfil (RUT + nombre),
+    saltamos Fonasa/Particular + Para ti/otra persona + confirmar RUT y vamos
+    directo a CONFIRMING_CITA. Reduce de 6 a 3 pasos para el 90%+ de los casos.
+
+    Si no hay perfil o el paciente está agendando para un tercero, sigue el
+    flujo normal por WAIT_MODALIDAD.
+    """
+    data["slot_elegido"] = slot
+
+    # No fast-track si ya sabemos que es para otra persona
+    if data.get("booking_for_other"):
+        save_session(phone, "WAIT_MODALIDAD", data)
+        return _btn_msg(
+            f"Perfecto 🙌\n\n"
+            f"🏥 *{slot['especialidad']}* — {slot['profesional']}\n"
+            f"📅 *{slot['fecha_display']}*\n"
+            f"🕐 *{slot['hora_inicio'][:5]}*\n\n"
+            "¿Tu atención será Fonasa o Particular?",
+            [{"id": "1", "title": "Fonasa"}, {"id": "2", "title": "Particular"}]
+        )
+
+    # Fast track: paciente recurrente con perfil completo
+    perfil = get_profile(phone)
+    if perfil and perfil.get("rut"):
+        paciente = await buscar_paciente(perfil["rut"])
+        if paciente:
+            _ensure_consent(phone)
+            # Reutilizar última modalidad conocida (tag modalidad-fonasa/particular)
+            tags = get_tags(phone)
+            last_modalidad = "fonasa"  # default chileno
+            for t in tags:
+                if t.startswith("modalidad-"):
+                    last_modalidad = t.replace("modalidad-", "")
+                    break
+            data.update({
+                "paciente": paciente,
+                "rut": perfil["rut"],
+                "modalidad": last_modalidad,
+                "booking_for_other": False,
+            })
+            save_session(phone, "CONFIRMING_CITA", data)
+            nombre_corto = paciente["nombre"].split()[0]
+            modalidad_str = last_modalidad.capitalize()
+            return _btn_msg(
+                f"*{nombre_corto}*, te reservo esta hora 👇\n\n"
+                f"👤 {paciente['nombre']}\n"
+                f"🏥 {slot['especialidad']} — {slot['profesional']}\n"
+                f"📅 {slot['fecha_display']}\n"
+                f"🕐 {slot['hora_inicio'][:5]}\n"
+                f"💳 {modalidad_str}\n\n"
+                "¿La confirmo?",
+                [
+                    {"id": "si", "title": "✅ Sí, reservar"},
+                    {"id": "cambiar_datos", "title": "✏️ Cambiar algo"},
+                ]
+            )
+
+    # Flujo normal: preguntar Fonasa/Particular
+    save_session(phone, "WAIT_MODALIDAD", data)
+    return _btn_msg(
+        f"Perfecto 🙌\n\n"
+        f"🏥 *{slot['especialidad']}* — {slot['profesional']}\n"
+        f"📅 *{slot['fecha_display']}*\n"
+        f"🕐 *{slot['hora_inicio'][:5]}*\n\n"
+        "¿Tu atención será Fonasa o Particular?",
+        [{"id": "1", "title": "Fonasa"}, {"id": "2", "title": "Particular"}]
+    )
+
+
 def _menu_msg() -> dict:
     return _list_msg(
         body_text=(
@@ -1696,12 +1768,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         precio_linea = _precio_line("Masoterapia", mejor)
         precio_bloque = f"{precio_linea}\n" if precio_linea else ""
         return _btn_msg(
-            f"Encontré disponibilidad ✨\n\n"
+            f"Te encontré hora ✨\n\n"
             f"🏥 *Masoterapia* — {mejor['profesional']}\n"
             f"📅 *{mejor['fecha_display']}*\n"
             f"🕐 *{mejor['hora_inicio'][:5]}* ({duracion_maso} min) ⭐\n"
             f"{precio_bloque}\n"
-            "¿La agendo?",
+            "¿Te la reservo?",
             [
                 {"id": "confirmar_sugerido", "title": "✅ Sí, esa hora"},
                 {"id": "ver_otros",          "title": "📋 Otros horarios"},
@@ -1741,16 +1813,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # Respuesta al sugerido proactivo (botón o texto libre "si"/"sí"/"confirmo"/...)
         if (tl == "confirmar_sugerido" or tl in AFIRMACIONES or tl_norm in AFIRMACIONES) and slots_mostrados:
             slot = slots_mostrados[0]
-            data["slot_elegido"] = slot
-            save_session(phone, "WAIT_MODALIDAD", data)
-            return _btn_msg(
-                f"Perfecto 🙌\n\n"
-                f"🏥 *{slot['especialidad']}* — {slot['profesional']}\n"
-                f"📅 *{slot['fecha_display']}*\n"
-                f"🕐 *{slot['hora_inicio'][:5]}*\n\n"
-                "¿Tu atención será Fonasa o Particular?",
-                [{"id": "1", "title": "Fonasa"}, {"id": "2", "title": "Particular"}]
-            )
+            return await _slot_confirmed(phone, data, slot)
         if tl == "ver_otros":
             if especialidad in _ESPECIALIDADES_EXPANSION:
                 return await _handle_expansion(phone, data, slots_mostrados, todos_slots,
@@ -1909,19 +1972,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             )
 
         slot = slots_mostrados[idx]
-        data["slot_elegido"] = slot
-        save_session(phone, "WAIT_MODALIDAD", data)
-        return _btn_msg(
-            f"Perfecto 🙌\n\n"
-            f"🏥 *{slot['especialidad']}* — {slot['profesional']}\n"
-            f"📅 *{slot['fecha_display']}*\n"
-            f"🕐 *{slot['hora_inicio'][:5]}*\n\n"
-            "¿Tu atención será Fonasa o Particular?",
-            [
-                {"id": "1", "title": "Fonasa"},
-                {"id": "2", "title": "Particular"},
-            ]
-        )
+        return await _slot_confirmed(phone, data, slot)
 
     # ── WAIT_MODALIDAD ────────────────────────────────────────────────────────
     if state == "WAIT_MODALIDAD":
@@ -2051,22 +2102,42 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
         slot = data["slot_elegido"]
         modalidad = data.get("modalidad", "particular").capitalize()
+        nombre_corto_conf = paciente['nombre'].split()[0]
         return _btn_msg(
-            f"Estás a un paso de confirmar tu hora 👇\n\n"
+            f"*{nombre_corto_conf}*, te reservo esta hora 👇\n\n"
             f"👤 {paciente['nombre']}\n"
             f"🏥 {slot['especialidad']} — {slot['profesional']}\n"
             f"📅 {slot['fecha_display']}\n"
-            f"🕐 {slot['hora_inicio'][:5]}–{slot['hora_fin'][:5]}\n"
+            f"🕐 {slot['hora_inicio'][:5]}\n"
             f"💳 {modalidad}\n\n"
-            "¿Confirmas tu hora?",
+            "¿La confirmo?",
             [
-                {"id": "si", "title": "✅ Confirmar"},
+                {"id": "si", "title": "✅ Sí, reservar"},
                 {"id": "no", "title": "❌ Cambiar"},
             ]
         )
 
     # ── CONFIRMING_CITA ───────────────────────────────────────────────────────
     if state == "CONFIRMING_CITA":
+        # Paciente fast-track quiere cambiar datos → flujo completo desde WAIT_MODALIDAD
+        if tl == "cambiar_datos":
+            data.pop("paciente", None)
+            data.pop("rut", None)
+            # Preservar rut_conocido del perfil para el atajo en WAIT_RUT_AGENDAR
+            perfil = get_profile(phone)
+            if perfil and perfil.get("rut"):
+                data["rut_conocido"] = perfil["rut"]
+                data["nombre_conocido"] = perfil.get("nombre", "")
+            slot = data.get("slot_elegido", {})
+            save_session(phone, "WAIT_MODALIDAD", data)
+            return _btn_msg(
+                f"Sin problema 😊 Tu hora sigue apartada:\n\n"
+                f"🏥 *{slot.get('especialidad', '')}* — {slot.get('profesional', '')}\n"
+                f"📅 *{slot.get('fecha_display', '')}*\n"
+                f"🕐 *{slot.get('hora_inicio', '')[:5]}*\n\n"
+                "¿Tu atención será Fonasa o Particular?",
+                [{"id": "1", "title": "Fonasa"}, {"id": "2", "title": "Particular"}]
+            )
         if tl in AFIRMACIONES or tl_norm in AFIRMACIONES:
             slot    = data["slot_elegido"]
             paciente = data["paciente"]
@@ -3154,12 +3225,12 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
     precio_linea = _precio_line(mejor.get("especialidad", ""), mejor)
     precio_bloque = f"{precio_linea}\n" if precio_linea else ""
     return _btn_msg(
-        f"{header}Encontré disponibilidad ✨\n\n"
+        f"{header}Te encontré hora ✨\n\n"
         f"🏥 *{mejor['especialidad']}* — {mejor['profesional']}\n"
         f"📅 *{mejor['fecha_display']}*\n"
         f"🕐 *{mejor['hora_inicio'][:5]}* ⭐\n"
         f"{precio_bloque}\n"
-        "¿La agendo?",
+        "¿Te la reservo?",
         botones
     )
 

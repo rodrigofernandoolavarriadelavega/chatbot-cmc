@@ -1055,9 +1055,12 @@ async def main():
         ("saltar", {"any": ["Daniel", "confirm"], **NO_ERROR}),
     ])
 
-    mk("TERC-02 tercero con perfil conocido → salta nombre owner", "56900000602", [
+    mk("TERC-02 tercero con perfil conocido → fast-track + cambiar datos", "56900000602", [
         ("quiero agendar kine", {"any": ["Kine", "09:"], **NO_ERROR}),
-        ("confirmar_sugerido", ["Fonasa"]),
+        # Fast-track: perfil conocido → salta directo a CONFIRMING_CITA
+        ("confirmar_sugerido", {"any": ["reservo", "confirmo", "Juan"], **NO_ERROR}),
+        # Quiere agendar para otra persona → "Cambiar algo" → flujo completo
+        ("cambiar_datos", {"any": ["Fonasa", "Particular"], **NO_ERROR}),
         ("1", ["para ti", "otra persona"]),
         ("booking_other", ["RUT", "atender"]),  # ya tiene perfil → directo a RUT
         ("99999999-9", ["nombre", "encontr", "registrar"]),
@@ -1068,6 +1071,33 @@ async def main():
         ("saltar", {"any": ["conociste", "conocist"], **NO_ERROR}),
         ("saltar", {"any": ["Carlos", "confirm"], **NO_ERROR}),
     ], setup=lambda: save_profile("56900000602", "11111111-1", "María Gómez")),
+
+    # ── Fast-track paciente recurrente (salta Fonasa/RUT) ─────────────────
+    mk("FT-01 fast-track: paciente recurrente salta 3 pasos", "56900000701", [
+        ("quiero agendar medicina general", {"any": ["09:", "encontré"], **NO_ERROR}),
+        # Fast-track: perfil + RUT conocido → salta Fonasa + Para ti + RUT
+        ("confirmar_sugerido", {"any": ["reservo", "confirmo", "Juan"], **NO_ERROR}),
+        # Confirma directo → ¡Listo!
+        ("si", {"any": ["reserv", "✅", "Listo"], **NO_ERROR}),
+    ], setup=lambda: save_profile("56900000701", "11111111-1", "Juan Prueba Test")),
+
+    mk("FT-02 fast-track: 'cambiar algo' → flujo completo", "56900000702", [
+        ("quiero agendar kine", {"any": ["Kine", "09:"], **NO_ERROR}),
+        # Fast-track ofrece confirmar
+        ("confirmar_sugerido", {"any": ["reservo", "confirmo", "Juan"], **NO_ERROR}),
+        # Toca "Cambiar algo" → vuelve a Fonasa/Particular
+        ("cambiar_datos", {"any": ["Fonasa", "Particular"], **NO_ERROR}),
+        ("1", {"any": ["para ti", "otra persona"], **NO_ERROR}),
+        ("booking_self", {"any": ["datos anteriores", "continuar"], **NO_ERROR}),
+        ("si", {"any": ["reservo", "confirmo"], **NO_ERROR}),
+        ("si", {"any": ["reserv", "✅", "Listo"], **NO_ERROR}),
+    ], setup=lambda: save_profile("56900000702", "11111111-1", "Juan Prueba Test")),
+
+    mk("FT-03 sin perfil → flujo normal (no fast-track)", "56900000703", [
+        ("quiero agendar medicina general", {"any": ["09:", "encontré"], **NO_ERROR}),
+        # Sin perfil → va a Fonasa/Particular como antes
+        ("confirmar_sugerido", {"any": ["Fonasa", "Particular"], **NO_ERROR}),
+    ]),
 
     # ── Ley 19.628 — consent inline + derecho al olvido ─────────────────────
     # El consent ya NO bloquea al inicio. Se registra inline al dar el RUT.
