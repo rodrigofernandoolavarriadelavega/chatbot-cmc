@@ -39,6 +39,16 @@ body {
   display: flex; flex-direction: column;
 }
 /* TOPBAR */
+/* Modo focus: chat ocupa toda la pantalla, ocultando topbar, lista y contexto */
+body.chat-focus .topbar,
+body.chat-focus .col-filters,
+body.chat-focus .col-convs,
+body.chat-focus .ctx-panel,
+body.chat-focus .alert-bar { display: none !important; }
+body.chat-focus .app-grid,
+body.chat-focus .layout { grid-template-columns: 1fr !important; }
+body.chat-focus .chat-col { grid-column: 1 / -1 !important; width: 100vw; }
+
 .topbar {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
@@ -1286,6 +1296,7 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
             <button class="btn btn-outline" id="btn-notify-informe" style="display:none;font-size:11px;padding:5px 10px;" onclick="notificarInforme()" title="Enviar template informe_listo al paciente">📄 Notificar informe</button>
             <button class="btn btn-outline" id="btn-seguimiento" style="display:none;font-size:11px;padding:5px 10px;" onclick="seguimientoMedico()" title="Enviar seguimiento médico personalizado">🩺 Seguimiento</button>
             <button class="btn btn-outline" style="font-size:11px;padding:5px 8px;" onclick="abrirMarcarAgendado()" title="Marcar como agendado manual — registrar cita agendada por teléfono o presencial, el bot deja de perseguir al paciente">✅ Agendado</button>
+            <button class="btn btn-outline" style="font-size:14px;padding:5px 8px;" onclick="toggleChatFocus()" title="Modo enfocado (ocultar barra superior, lista y contexto)" id="btn-chat-focus">⛶</button>
             <button class="mobile-ctx-toggle" onclick="toggleCtxPanel()" title="Info paciente">ℹ️</button>
           </div>
         </div>
@@ -3927,6 +3938,22 @@ function toggleCtxPanel() {
   ctx.classList.toggle('open');
   overlay.classList.toggle('open');
 }
+// Modo chat-focus: chat a pantalla completa, oculta topbar, lista, contexto
+function toggleChatFocus(){
+  const on = document.body.classList.toggle('chat-focus');
+  const btn = document.getElementById('btn-chat-focus');
+  if(btn){
+    btn.textContent = on ? '⤢' : '⛶';
+    btn.title = on ? 'Salir del modo enfocado' : 'Modo enfocado (pantalla completa del chat)';
+  }
+  try { localStorage.setItem('chatFocus', on ? '1' : '0'); } catch(e){}
+}
+// Restaurar preferencia al cargar
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    if(localStorage.getItem('chatFocus') === '1') toggleChatFocus();
+  } catch(e){}
+});
 
 function showMobileChat() {
   if (!isMobile()) return;
