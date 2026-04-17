@@ -1253,6 +1253,7 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
             <button class="btn btn-outline" id="btn-resume" style="display:none;" onclick="doResume()">🤖 Devolver al bot</button>
             <button class="btn btn-outline" id="btn-notify-informe" style="display:none;font-size:11px;padding:5px 10px;" onclick="notificarInforme()" title="Enviar template informe_listo al paciente">📄 Notificar informe</button>
             <button class="btn btn-outline" id="btn-seguimiento" style="display:none;font-size:11px;padding:5px 10px;" onclick="seguimientoMedico()" title="Enviar seguimiento médico personalizado">🩺 Seguimiento</button>
+            <button class="btn btn-outline" style="font-size:11px;padding:5px 10px;" onclick="abrirMarcarAgendado()" title="Registrar cita agendada manualmente (teléfono/presencial)">✅ Marcar agendado</button>
             <button class="mobile-ctx-toggle" onclick="toggleCtxPanel()" title="Info paciente">ℹ️</button>
           </div>
         </div>
@@ -2128,6 +2129,27 @@ function clearFileUpload(){
 }
 
 /* ── NOTIFICAR INFORME (template) ── */
+async function abrirMarcarAgendado(){
+  if(!selectedPhone){ alert("Seleccioná una conversación primero"); return; }
+  const esp = prompt("Especialidad (ej: Medicina General):");
+  if(!esp) return;
+  const prof = prompt("Profesional (ej: Dr. Olavarría) — opcional:") || "";
+  const fecha = prompt("Fecha (YYYY-MM-DD, ej: 2026-04-20):");
+  if(!fecha || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)){ alert("Fecha inválida"); return; }
+  const hora = prompt("Hora (HH:MM, ej: 10:00):");
+  if(!hora || !/^\d{2}:\d{2}$/.test(hora)){ alert("Hora inválida"); return; }
+  const mod = prompt("Modalidad (fonasa / particular):", "fonasa") || "fonasa";
+  try{
+    const r = await fetch(apiUrl(`/admin/api/patient/${encodeURIComponent(selectedPhone)}/mark-booked`), {
+      method: "POST", headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ especialidad: esp, profesional: prof, fecha, hora, modalidad: mod }),
+    });
+    if(!r.ok){ const t = await r.text(); alert("Error: " + t.slice(0, 200)); return; }
+    alert("✅ Paciente marcado como agendado manualmente.\nEl bot ya no le hará reenganche.");
+    if(typeof refresh === "function") refresh();
+  }catch(e){ alert("Error: " + e.message); }
+}
+
 async function notificarInforme(){
   if(!selectedPhone) return;
   const tipo=prompt("Tipo de examen/informe (ej: Ecografia, Examen de sangre):");

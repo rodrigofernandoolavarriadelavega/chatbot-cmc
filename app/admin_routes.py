@@ -1491,6 +1491,42 @@ def api_conversion_funnel(dias: int = Query(30, ge=1, le=365),
 
 # ── Reagendar 1-click tras cancelación del doctor ───────────────────────────
 
+# ── Marcar paciente como agendado manualmente ──────────────────────────────
+
+@router.post("/admin/api/patient/{phone}/mark-booked")
+async def api_mark_booked(phone: str, request: Request, _=Depends(require_admin)):
+    """Registra cita agendada manualmente (por teléfono o presencial).
+
+    Body: {"especialidad":..., "profesional":..., "fecha":"YYYY-MM-DD",
+           "hora":"HH:MM", "modalidad":"fonasa|particular"}
+
+    Guarda cita en citas_bot + state=COMPLETED + tag "agendado-manual".
+    El bot deja de perseguir al paciente con reenganche.
+    """
+    body = await request.json()
+    esp = (body.get("especialidad") or "").strip()
+    prof = (body.get("profesional") or "").strip()
+    fecha = (body.get("fecha") or "").strip()
+    hora = (body.get("hora") or "").strip()
+    if not esp or not fecha or not hora:
+        raise HTTPException(status_code=400, detail="especialidad, fecha y hora son obligatorios")
+    from session import save_cita_bot, save_session, save_tag, log_event
+    import time as _time
+    id_cita = body.get("id_cita") or f"manual-{phone}-{int(_time.time())}"
+    save_cita_bot(
+        phone=phone, id_cita=id_cita, especialidad=esp, profesional=prof,
+        fecha=fecha, hora=hora, modalidad=(body.get("modalidad") or "manual"),
+    )
+    save_session(phone, "COMPLETED", {})
+    save_tag(phone, "agendado-manual")
+    log_event(phone, "agendado_manual", {
+        "especialidad": esp, "profesional": prof, "fecha": fecha, "hora": hora,
+        "id_cita": id_cita,
+    })
+    return {"ok": True, "phone": phone, "id_cita": id_cita,
+            "cita": {"especialidad": esp, "profesional": prof, "fecha": fecha, "hora": hora}}
+
+
 @router.post("/admin/api/cita/{id_cita}/cancel-doctor")
 async def api_cancel_by_doctor(id_cita: str, _=Depends(require_admin)):
     """Notifica al paciente que su cita fue cancelada por el profesional y
