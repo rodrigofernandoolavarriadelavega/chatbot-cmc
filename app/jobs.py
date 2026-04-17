@@ -14,7 +14,9 @@ from medilink import (buscar_primer_dia, buscar_paciente, sync_citas_dia,
                       SEGUIMIENTO_ESPECIALIDADES, PROFESIONALES)
 from session import (get_sesiones_abandonadas, save_session, log_event,
                      get_pending_intent_queue, mark_intent_notified, intent_queue_depth,
-                     get_waitlist_pending, mark_waitlist_notified)
+                     get_waitlist_pending, mark_waitlist_notified,
+                     get_cita_bot_by_id_for_rebook, mark_cita_cancel_detected,
+                     get_profile)
 from resilience import (is_medilink_down, mark_medilink_up, medilink_down_since,
                         should_notify_reception, mark_reception_notified)
 from doctor_alerts import (enviar_resumen_precita, enviar_reporte_progreso,
@@ -87,6 +89,79 @@ async def _enviar_reenganche():
         data["reenganche_sent"] = True
         save_session(phone, state, data)
         log.info("Reenganche enviado → %s (estado: %s)", phone, state)
+
+
+async def enviar_reagendar_por_cancelacion(id_cita: str, motivo: str = "doctor_cancel") -> dict:
+    """Envía al paciente 3 slots alternativos tras cancelación del doctor.
+
+    Flujo 1-click: pre-carga los slots en session.data con estado WAIT_SLOT. El
+    paciente responde un número y entra directo al flujo existente de confirmación.
+
+    Retorna: {"ok": bool, "reason": str, "phone": str, "slots_enviados": int}.
+    """
+    cita = get_cita_bot_by_id_for_rebook(id_cita)
+    if not cita:
+        return {"ok": False, "reason": "cita_no_encontrada"}
+    if cita.get("cancel_detected_at"):
+        return {"ok": False, "reason": "ya_notificado"}
+    phone = cita["phone"]
+    esp = (cita.get("especialidad") or "").strip()
+    if not esp:
+        return {"ok": False, "reason": "sin_especialidad"}
+    if is_medilink_down():
+        return {"ok": False, "reason": "medilink_down"}
+
+    try:
+        smart, todos = await buscar_primer_dia(esp)
+    except Exception as e:
+        log.exception("Error buscando slots alternos id_cita=%s: %s", id_cita, e)
+        return {"ok": False, "reason": "error_buscar_slots"}
+    if not todos:
+        send_whatsapp(
+            phone,
+            f"⚠️ Tu hora del {cita.get('fecha','')} {cita.get('hora','')} con "
+            f"{cita.get('profesional','')} fue cancelada por el profesional.\n\n"
+            f"Por ahora no tenemos horas disponibles en *{esp}*. "
+            f"Llámanos para coordinar: 📞 *{CMC_TELEFONO}*"
+        )
+        mark_cita_cancel_detected(id_cita)
+        log_event(phone, "cancel_doctor_notified", {"id_cita": id_cita, "slots": 0})
+        return {"ok": True, "reason": "sin_disponibilidad", "phone": phone, "slots_enviados": 0}
+
+    alt_slots = smart[:3] if smart else todos[:3]
+    perfil = get_profile(phone) or {}
+    data = {
+        "especialidad": esp,
+        "slots": alt_slots,
+        "todos_slots": todos,
+        "fechas_vistas": list({s.get("fecha") for s in alt_slots if s.get("fecha")}),
+        "rut_conocido": perfil.get("rut"),
+        "nombre_conocido": perfil.get("nombre"),
+        "expansion_stage": 0,
+        "prof_sugerido_id": alt_slots[0].get("id_profesional") if alt_slots else None,
+        "from_cancel": True,
+    }
+    save_session(phone, "WAIT_SLOT", data)
+
+    send_whatsapp(
+        phone,
+        f"⚠️ *Aviso importante*\n\nTu hora del *{cita.get('fecha','')}* a las "
+        f"*{cita.get('hora','')}* con *{cita.get('profesional','')}* fue cancelada "
+        f"por el profesional 😔\n\nTe dejo 3 alternativas para reagendar en 1 toque:"
+    )
+    from flows import _format_slots
+    body = _format_slots(alt_slots)
+    if isinstance(body, dict):
+        send_whatsapp_interactive(phone, body)
+    else:
+        send_whatsapp(phone, body)
+
+    mark_cita_cancel_detected(id_cita)
+    log_event(phone, "cancel_doctor_notified", {
+        "id_cita": id_cita, "slots": len(alt_slots), "motivo": motivo
+    })
+    return {"ok": True, "reason": "notificado", "phone": phone,
+            "slots_enviados": len(alt_slots)}
 
 
 async def _sync_citas_hoy():

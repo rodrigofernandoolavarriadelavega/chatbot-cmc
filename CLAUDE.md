@@ -296,12 +296,24 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - Muestra métricas, conversaciones activas y estado del sistema
 
 ## Sesión en curso
-**Fecha**: 2026-04-16
-**Historial completo**: ver claude-mem timeline (50+ observaciones) o git log
+**Fecha**: 2026-04-17
+**Historial completo**: ver claude-mem timeline o git log
 
-**Último deploy**: commit `388dad1` — producción healthy (`/health` → 200)
+**Resumen (2026-04-17)** — Friction Killer + seguridad:
+- Fixes técnicos: `is_duplicate` atómico (INSERT OR IGNORE), índices `citas_bot(esp/phone)` + `demanda(phone)` + `events(event, ts)`, rate limit multi-clave (phone + `rut:{rut}`)
+- Quick-book (`WAIT_QUICK_BOOK`): paciente conocido agenda como la última vez en 1 toque — reduce 4-6 pasos a 2
+- Botón primer slot ahora "⚡ — Primero disp." (antes "⭐ recomendado")
+- Reagendar 1-click tras cancelación doctor: endpoint `POST /admin/api/cita/{id}/cancel-doctor` pre-carga 3 alternativas en sesión paciente → WAIT_SLOT
+- IG/FB celular opcional en registro (prompt suavizado)
+- Conversion funnel por especialidad: pill 📊 conv + modal en topbar admin, endpoint `GET /admin/api/conversion-funnel`
+- Fix bug preexistente: `_iniciar_ver_reservas` → `_iniciar_ver` (2 referencias)
+- Tests: 100/100 harness + 200/200 stress + 52/52 normalizer
 
-**Resumen reciente (2026-04-16)**:
+**TODOs documentados**:
+- Detección automática de cancelaciones en Medilink (polling `GET /citas/{id}` + cron 30min) — agente dejó plan
+- Botón "🔄 Reagendar cancelado-doctor" en tabla citas del panel admin HTML (endpoint ya existe)
+
+**Resumen (2026-04-16)**:
 - Ley 19.628 compliance: opt-in explícito, derecho al olvido (cascade 18 tablas), política `/privacidad`
 - Registro paciente nuevo en 1 mensaje (WAIT_DATOS_NUEVO): nombre+sexo+fecha, IG/FB pide celular
 - Reenganche agresivo con slot real + urgencia + botones interactivos

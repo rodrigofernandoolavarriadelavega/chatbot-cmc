@@ -297,6 +297,15 @@ def _conn():
         )
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_dnd_ts ON demanda_no_disponible(created_at)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_dnd_phone ON demanda_no_disponible(phone)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_citas_bot_esp ON citas_bot(especialidad)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_citas_bot_phone ON citas_bot(phone)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_events_event_ts ON conversation_events(event, ts)")
+    # Migración: columna para trackear cancelaciones notificadas (reagendar 1-click)
+    try:
+        conn.execute("ALTER TABLE citas_bot ADD COLUMN cancel_detected_at TEXT")
+    except Exception:
+        pass  # columna ya existe
     # Migración: agregar fecha_nacimiento a contact_profiles
     try:
         conn.execute("ALTER TABLE contact_profiles ADD COLUMN fecha_nacimiento TEXT")
@@ -365,18 +374,19 @@ def _conn():
 
 
 def is_duplicate(msg_id: str) -> bool:
-    """Retorna True si el msg_id ya fue procesado (idempotencia ante reenvíos de Meta)."""
+    """Retorna True si el msg_id ya fue procesado (idempotencia ante reenvíos de Meta).
+
+    Usa INSERT OR IGNORE atómico: si la fila ya existía, rowcount==0 → duplicado.
+    Evita race condition cuando Meta reenvía el mismo msg_id en paralelo.
+    """
     with _conn() as conn:
-        exists = conn.execute(
-            "SELECT 1 FROM processed_msgs WHERE msg_id=?", (msg_id,)
-        ).fetchone()
-        if exists:
-            return True
-        conn.execute("INSERT INTO processed_msgs (msg_id) VALUES (?)", (msg_id,))
+        cur = conn.execute(
+            "INSERT OR IGNORE INTO processed_msgs (msg_id) VALUES (?)", (msg_id,)
+        )
         # Limpiar entradas de más de 1 hora para no crecer indefinidamente
         conn.execute("DELETE FROM processed_msgs WHERE created_at < datetime('now', '-1 hour')")
         conn.commit()
-        return False
+        return cur.rowcount == 0
 
 
 _REGISTRO_STATES = {"WAIT_DATOS_NUEVO", "WAIT_NOMBRE_NUEVO", "WAIT_FECHA_NAC", "WAIT_SEXO", "WAIT_COMUNA", "WAIT_EMAIL"}
@@ -815,6 +825,86 @@ def get_registration_stats(dias: int = 30) -> dict:
         tasa = round(completados / total * 100, 1) if total else 0
         return {"completados": completados, "abandonados": abandonados,
                 "total": total, "tasa_completado": tasa}
+
+
+def get_cita_bot_by_id_for_rebook(id_cita: str) -> dict | None:
+    """Retorna una cita agendada vía bot por id_cita, si aún no se notificó cancelación."""
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT phone, id_cita, especialidad, profesional, fecha, hora, modalidad, "
+            "cancel_detected_at FROM citas_bot WHERE id_cita=? LIMIT 1",
+            (id_cita,)
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def mark_cita_cancel_detected(id_cita: str):
+    """Marca una cita como 'cancelación detectada y notificada' para evitar duplicados."""
+    with _conn() as conn:
+        conn.execute(
+            "UPDATE citas_bot SET cancel_detected_at = datetime('now') WHERE id_cita=?",
+            (id_cita,)
+        )
+        conn.commit()
+
+
+def get_ultima_cita_paciente(phone: str) -> dict | None:
+    """Retorna la última cita agendada por el paciente (por fecha más reciente).
+
+    Usada para ofrecer Quick-book: "¿agendo otra hora con {profesional} de {especialidad}?"
+    Retorna None si el paciente nunca agendó vía bot.
+    """
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT especialidad, profesional, fecha, hora, modalidad "
+            "FROM citas_bot "
+            "WHERE phone=? AND especialidad IS NOT NULL AND especialidad != '' "
+            "ORDER BY datetime(fecha || ' ' || COALESCE(hora, '00:00')) DESC, id DESC "
+            "LIMIT 1",
+            (phone,)
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def get_conversion_funnel_by_especialidad(dias: int = 30) -> list[dict]:
+    """Funnel de conversión por especialidad usando conversation_events.
+
+    Etapas:
+      - intents: pacientes que iniciaron agendamiento (intent_agendar)
+      - confirmados: pacientes que confirmaron cita (cita_confirmada)
+
+    Para cada especialidad retorna: intents, confirmados, tasa (%).
+    Dato clave para decidir dónde invertir marketing y optimizar flujo.
+    """
+    with _conn() as conn:
+        rows = conn.execute("""
+            SELECT
+                COALESCE(json_extract(meta, '$.especialidad'), '(sin especialidad)') AS esp,
+                event,
+                COUNT(DISTINCT phone) AS pacientes
+            FROM conversation_events
+            WHERE event IN ('intent_agendar', 'cita_confirmada')
+              AND ts >= datetime('now', ?)
+            GROUP BY esp, event
+        """, (f"-{dias} days",)).fetchall()
+        # Pivotar event → columnas
+        por_esp: dict[str, dict] = {}
+        for r in rows:
+            esp = r["esp"] or "(sin especialidad)"
+            por_esp.setdefault(esp, {"especialidad": esp, "intents": 0, "confirmados": 0})
+            por_esp[esp][
+                "intents" if r["event"] == "intent_agendar" else "confirmados"
+            ] = r["pacientes"]
+        # Calcular tasa y ordenar
+        out = []
+        for d in por_esp.values():
+            intents = d["intents"]
+            conf = d["confirmados"]
+            d["tasa_conversion"] = round(conf / intents * 100, 1) if intents else 0.0
+            d["drop_off"] = max(0, intents - conf)
+            out.append(d)
+        out.sort(key=lambda x: x["intents"], reverse=True)
+        return out
 
 
 def get_referral_stats(dias: int = 30) -> dict:

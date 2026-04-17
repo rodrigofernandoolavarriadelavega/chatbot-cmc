@@ -842,6 +842,7 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
     <div class="pill" id="pill-trabados" style="display:none;cursor:pointer;" onclick="setFilter('trabados',document.getElementById('pill-trabados'))" title="Pacientes >5 min sin avanzar en un flujo activo">🚧&nbsp;<strong id="s-trabados">0</strong>&nbsp;trabados</div>
     <div class="pill" id="pill-imagenes" onclick="abrirModalImagenes()" style="cursor:pointer;" title="Imágenes recibidas de pacientes (30 días)">📷&nbsp;<strong id="s-imagenes">—</strong>&nbsp;imgs</div>
     <div class="pill" id="pill-demanda" onclick="abrirModalDemanda()" style="cursor:pointer;display:none;" title="Especialidades/exámenes solicitados que no tenemos">🔎&nbsp;<strong id="s-demanda">0</strong>&nbsp;demanda</div>
+    <div class="pill" id="pill-funnel" onclick="abrirModalFunnel()" style="cursor:pointer;" title="Conversión agendar→confirmar por especialidad (30 días)">📊&nbsp;<strong id="s-funnel">—</strong>%&nbsp;conv</div>
     <div class="pill"><div class="live-dot"></div>&nbsp;<span id="last-refresh">—</span></div>
   </div>
   <div class="topbar-spacer" style="margin-left:auto;"></div>
@@ -1141,6 +1142,21 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
     </div>
     <div id="imagenes-resumen" style="padding:12px 22px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:#475569;"></div>
     <div id="imagenes-lista" style="padding:14px 22px 22px;max-height:60vh;overflow-y:auto;"></div>
+  </div>
+</div>
+
+<!-- MODAL CONVERSION FUNNEL -->
+<div id="modal-funnel" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:flex-start;justify-content:center;padding-top:40px;padding-bottom:40px;overflow-y:auto;">
+  <div style="background:#fff;border-radius:14px;width:820px;max-width:96vw;box-shadow:0 20px 60px rgba(0,0,0,.2);position:relative;margin:auto;">
+    <div style="padding:16px 22px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:18px;">📊</span>
+      <span style="font-size:15px;font-weight:700;color:#1e293b;">Conversión por especialidad (30 días)</span>
+      <button onclick="document.getElementById('modal-funnel').style.display='none'" style="margin-left:auto;background:none;border:none;font-size:20px;cursor:pointer;color:#94a3b8;">✕</button>
+    </div>
+    <div style="padding:10px 22px;background:#f8fafc;border-bottom:1px solid #e2e8f0;font-size:12px;color:#64748b;">
+      Intents = iniciaron agendamiento. Confirmados = completaron reserva. Tasa &lt; 40% con &gt; 10 intents = oportunidad de UX o disponibilidad.
+    </div>
+    <div id="funnel-lista" style="padding:14px 22px 22px;max-height:60vh;overflow-y:auto;"></div>
   </div>
 </div>
 
@@ -4106,6 +4122,56 @@ function renderImagenes(){
 }
 loadMediaStats();
 setInterval(loadMediaStats,60000);
+
+// ── CONVERSION FUNNEL MODAL ─────────────────────────────────────────────────
+let funnelCache = null;
+async function loadFunnel(){
+  try{
+    const r=await fetch(apiUrl("/admin/api/conversion-funnel?dias=30"));
+    if(!r.ok) return;
+    funnelCache=await r.json();
+    let totalIntents=0, totalConf=0;
+    (funnelCache||[]).forEach(x=>{ totalIntents+=x.intents||0; totalConf+=x.confirmados||0; });
+    const tasa = totalIntents? Math.round(totalConf/totalIntents*100) : 0;
+    document.getElementById("s-funnel").textContent = tasa;
+    const pill=document.getElementById("pill-funnel");
+    pill.className = "pill" + (tasa<40 && totalIntents>10 ? " amber" : "");
+  }catch(e){console.error("loadFunnel",e);}
+}
+function abrirModalFunnel(){
+  document.getElementById("modal-funnel").style.display="flex";
+  renderFunnel();
+  loadFunnel().then(renderFunnel);
+}
+function renderFunnel(){
+  const items=funnelCache||[];
+  const lista=document.getElementById("funnel-lista");
+  if(!funnelCache){lista.innerHTML='<div style="padding:18px;color:#94a3b8;text-align:center;">Cargando…</div>';return;}
+  if(!items.length){lista.innerHTML='<div style="padding:18px;color:#94a3b8;text-align:center;">Sin datos en los últimos 30 días.</div>';return;}
+  let html='<table style="width:100%;border-collapse:collapse;font-size:13px;">';
+  html+='<thead><tr style="background:#f1f5f9;text-align:left;">';
+  html+='<th style="padding:8px 10px;">Especialidad</th>';
+  html+='<th style="padding:8px 10px;text-align:right;">Intents</th>';
+  html+='<th style="padding:8px 10px;text-align:right;">Confirmados</th>';
+  html+='<th style="padding:8px 10px;text-align:right;">Drop-off</th>';
+  html+='<th style="padding:8px 10px;text-align:right;">Tasa</th>';
+  html+='</tr></thead><tbody>';
+  items.forEach(x=>{
+    const tasa=x.tasa_conversion||0;
+    const color = tasa>=60?"#059669" : tasa>=40?"#d97706" : "#dc2626";
+    html+='<tr style="border-bottom:1px solid #e2e8f0;">';
+    html+='<td style="padding:8px 10px;">'+escapeHtml(x.especialidad||'-')+'</td>';
+    html+='<td style="padding:8px 10px;text-align:right;">'+(x.intents||0)+'</td>';
+    html+='<td style="padding:8px 10px;text-align:right;">'+(x.confirmados||0)+'</td>';
+    html+='<td style="padding:8px 10px;text-align:right;color:#dc2626;">'+(x.drop_off||0)+'</td>';
+    html+='<td style="padding:8px 10px;text-align:right;font-weight:700;color:'+color+';">'+tasa+'%</td>';
+    html+='</tr>';
+  });
+  html+='</tbody></table>';
+  lista.innerHTML=html;
+}
+loadFunnel();
+setInterval(loadFunnel,300000);
 
 // ── DEMANDA NO DISPONIBLE MODAL ─────────────────────────────────────────────
 let demandaCache = null;

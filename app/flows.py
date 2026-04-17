@@ -20,7 +20,7 @@ from session import (save_session, reset_session, save_tag, delete_tag, get_tags
                      enqueue_intent, add_to_waitlist, cancel_waitlist,
                      get_cita_bot_by_id_cita, mark_cita_confirmation, get_phone_by_rut,
                      save_demanda_no_disponible, get_waitlist_by_especialidad,
-                     mark_waitlist_notified,
+                     mark_waitlist_notified, get_ultima_cita_paciente,
                      has_privacy_consent, save_privacy_consent, revoke_privacy_consent)
 from resilience import is_medilink_down
 from triage_ges import triage_sintomas, normalizar_texto_paciente
@@ -1647,6 +1647,30 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if perfil:
                 data["rut_conocido"] = perfil["rut"]
                 data["nombre_conocido"] = perfil["nombre"]
+            # Quick-book: paciente conocido sin especialidad explícita → ofrecer
+            # "¿agendo otra hora como la última vez?" antes del flujo estándar.
+            # Reduce 4-6 pasos a 2 para el recurrente — principal lever de conversión.
+            if perfil and not especialidad:
+                ultima = get_ultima_cita_paciente(phone)
+                esp_ultima = (ultima or {}).get("especialidad", "")
+                if esp_ultima:
+                    prof_ultima = (ultima or {}).get("profesional", "") or ""
+                    data["quick_esp"] = esp_ultima
+                    data["quick_prof"] = prof_ultima
+                    save_session(phone, "WAIT_QUICK_BOOK", data)
+                    log_event(phone, "quick_book_offered", {"especialidad": esp_ultima})
+                    nombre_corto = perfil.get("nombre", "").split()[0] if perfil.get("nombre") else ""
+                    saludo = f"¡Hola de nuevo, *{nombre_corto}*! ⚡\n\n" if nombre_corto else "⚡ "
+                    con_prof = f" con *{prof_ultima}*" if prof_ultima else ""
+                    return _btn_msg(
+                        f"{saludo}Vi que tu última visita fue de *{esp_ultima}*{con_prof}.\n\n"
+                        f"¿Te agendo otra hora de lo mismo?",
+                        [
+                            {"id": "quick_yes", "title": "⚡ Sí, agendar"},
+                            {"id": "quick_other", "title": "🔄 Otra especialidad"},
+                            {"id": "quick_cancel", "title": "Ahora no"},
+                        ]
+                    )
             return await _iniciar_agendar(phone, data, especialidad)
 
         if intent == "reagendar":
@@ -1829,6 +1853,53 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 {"id": "confirmar_sugerido", "title": "✅ Sí, esa hora"},
                 {"id": "ver_otros",          "title": "📋 Otros horarios"},
                 {"id": "otro_dia",           "title": "📅 Otro día"},
+            ]
+        )
+
+    # ── WAIT_QUICK_BOOK ───────────────────────────────────────────────────────
+    # Oferta "agendar otra hora como la última vez" para pacientes conocidos.
+    # 3 botones: sí / otra especialidad / ahora no. Cualquier otro texto cae al
+    # detector de intent general (permite "cancelar", "ver reservas", etc.).
+    if state == "WAIT_QUICK_BOOK":
+        tl = txt.strip().lower()
+        if tl in ("quick_yes", "si", "sí", "1", "agendar", "ok", "dale"):
+            esp = data.get("quick_esp", "")
+            log_event(phone, "quick_book_accepted", {"especialidad": esp})
+            # Limpiar flags del quick-book antes de pasar al flujo estándar
+            data.pop("quick_esp", None)
+            data.pop("quick_prof", None)
+            return await _iniciar_agendar(phone, data, esp or None)
+        if tl in ("quick_other", "otra", "otra especialidad", "2", "cambiar"):
+            log_event(phone, "quick_book_other")
+            data.pop("quick_esp", None)
+            data.pop("quick_prof", None)
+            return await _iniciar_agendar(phone, data, None)
+        if tl in ("quick_cancel", "ahora no", "no", "3", "cancelar", "menu"):
+            log_event(phone, "quick_book_declined")
+            reset_session(phone)
+            return "Sin problema 😊 Escribe *menu* cuando quieras retomar."
+        # Texto libre → re-detectar intent (permite decir "quiero ver mis reservas")
+        result = await detect_intent(txt)
+        intent = result.get("intent", "otro")
+        if intent == "agendar":
+            esp_nuevo = result.get("especialidad") or data.get("quick_esp")
+            data.pop("quick_esp", None)
+            data.pop("quick_prof", None)
+            return await _iniciar_agendar(phone, data, esp_nuevo)
+        if intent == "cancelar":
+            reset_session(phone)
+            return await _iniciar_cancelar(phone, {})
+        if intent == "ver_reservas":
+            reset_session(phone)
+            return await _iniciar_ver(phone, {})
+        # Si no entendimos, reiterar las opciones
+        save_session(phone, "WAIT_QUICK_BOOK", data)
+        return _btn_msg(
+            "Elige una opción 👇",
+            [
+                {"id": "quick_yes", "title": "⚡ Sí, agendar"},
+                {"id": "quick_other", "title": "🔄 Otra especialidad"},
+                {"id": "quick_cancel", "title": "Ahora no"},
             ]
         )
 
@@ -2182,8 +2253,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "👤 Nombre completo\n"
                     "⚤ Sexo (M o F)\n"
                     "📅 Fecha de nacimiento\n"
-                    "📱 Número de celular\n\n"
-                    "_Ejemplo: María González López, F, 15/03/1990, 912345678_"
+                    "📱 Celular _(opcional, para recordarte la cita)_\n\n"
+                    "_Ejemplo: María González López, F, 15/03/1990_\n"
+                    "_Si quieres agregar celular al final: …, 912345678_"
                 )
             return (
                 "¡Bienvenido/a! Es tu primera vez con nosotros 🙌\n\n"
@@ -2728,13 +2800,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # Limpiar nombre
         nombre_raw = re.sub(r'\s+', ' ', nombre_raw or '').strip()
         is_social = phone.startswith("ig_") or phone.startswith("fb_")
-        _ej = "María González López, F, 15/03/1990, 912345678" if is_social else "María González López, F, 15/03/1990"
+        _ej = "María González López, F, 15/03/1990"
+        _tip = "\n(Si quieres, agrega tu celular al final: _…, 912345678_)" if is_social else ""
         if not nombre_raw or not re.match(r"^[a-záéíóúñüA-ZÁÉÍÓÚÑÜ\s\-']{3,60}$", nombre_raw):
             return (
                 "No reconocí el nombre 😕\n\n"
                 "Escríbelo separado por comas:\n"
-                f"*Nombre Apellido, M o F, DD/MM/AAAA{', Celular' if is_social else ''}*\n\n"
-                f"_Ejemplo: {_ej}_"
+                "*Nombre Apellido, M o F, DD/MM/AAAA*\n\n"
+                f"_Ejemplo: {_ej}_{_tip}"
             )
         partes_nombre = nombre_raw.split()
         if len(partes_nombre) < 2:
@@ -3705,7 +3778,7 @@ def _format_slots(slots: list, mostrar_todos: bool = False):
         slot_rows = []
         for i, s in enumerate(slots, 1):
             hora = s["hora_inicio"][:5]
-            title = f"⭐ {hora} (recomendado)" if i == 1 and not mostrar_todos else hora
+            title = f"⚡ {hora} — Primero disp." if i == 1 and not mostrar_todos else hora
             slot_rows.append({"id": str(i), "title": title[:24]})
         sections = [{"title": fecha[:24], "rows": slot_rows}]
         if nav_rows:
@@ -3726,7 +3799,7 @@ def _format_slots(slots: list, mostrar_todos: bool = False):
     lineas.append("")  # línea en blanco antes de los slots
     for i, s in enumerate(slots, 1):
         hora = s['hora_inicio'][:5]
-        prefix = f"*{i}.* ⭐ {hora} (recomendado)" if i == 1 and not mostrar_todos else f"*{i}.* {hora}"
+        prefix = f"*{i}.* ⚡ {hora} — Primero disponible" if i == 1 and not mostrar_todos else f"*{i}.* {hora}"
         lineas.append(prefix)
     if mostrar_todos:
         lineas.append("\nElige un número o escribe *otro día* si no te acomoda.")

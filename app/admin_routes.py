@@ -23,6 +23,7 @@ from session import (get_session, reset_session, save_session, get_metricas,
                      get_notes, save_notes, get_patient_context, get_registration_stats,
                      get_referral_stats, get_case_study_report,
                      get_patient_files, get_media_stats, get_demanda_no_disponible,
+                     get_conversion_funnel_by_especialidad,
                      save_profile, get_profile, get_phone_by_rut,
                      delete_patient_data, get_privacy_consent, save_privacy_consent,
                      _conn)
@@ -1473,6 +1474,41 @@ def api_demanda_no_disponible(dias: int = Query(90, ge=1, le=365),
                                _=Depends(require_admin)):
     """Lista demanda de especialistas/exámenes que no tenemos."""
     return get_demanda_no_disponible(dias)
+
+
+# ── Conversion funnel por especialidad ──────────────────────────────────────
+
+@router.get("/admin/api/conversion-funnel")
+def api_conversion_funnel(dias: int = Query(30, ge=1, le=365),
+                          _=Depends(require_admin)):
+    """Tasa de conversión agendar→confirmar por especialidad.
+
+    Úsalo para decidir dónde invertir marketing (alta demanda + baja conversión
+    = problema de UX o disponibilidad) y detectar especialidades que sangran.
+    """
+    return get_conversion_funnel_by_especialidad(dias)
+
+
+# ── Reagendar 1-click tras cancelación del doctor ───────────────────────────
+
+@router.post("/admin/api/cita/{id_cita}/cancel-doctor")
+async def api_cancel_by_doctor(id_cita: str, _=Depends(require_admin)):
+    """Notifica al paciente que su cita fue cancelada por el profesional y
+    le envía 3 slots alternativos pre-cargados en WhatsApp (1-click reagendar).
+
+    Uso: recepción llama este endpoint tras cancelar la cita en Medilink
+    (cuando la causa es el profesional, no el paciente).
+    """
+    from jobs import enviar_reagendar_por_cancelacion
+    result = await enviar_reagendar_por_cancelacion(id_cita, motivo="doctor_cancel")
+    if not result.get("ok"):
+        reason = result.get("reason", "error")
+        if reason == "cita_no_encontrada":
+            raise HTTPException(status_code=404, detail="Cita no encontrada en citas_bot")
+        if reason == "ya_notificado":
+            raise HTTPException(status_code=409, detail="Paciente ya fue notificado")
+        raise HTTPException(status_code=400, detail=reason)
+    return result
 
 
 # ── Ley 19.628: consent + derecho al olvido ──────────────────────────────────

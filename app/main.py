@@ -76,19 +76,31 @@ _RATE_MAX_MSGS   = 30  # mensajes por minuto por número
 _rate_buckets: dict[str, deque] = {}
 
 
-def _rate_limited(phone: str) -> bool:
-    """True si el número superó _RATE_MAX_MSGS mensajes en la última ventana."""
+def _rate_limited(*keys: str) -> bool:
+    """True si CUALQUIER clave superó _RATE_MAX_MSGS mensajes en la última ventana.
+
+    Acepta múltiples claves (e.g. phone y rut:XXXXX) para evitar que un atacante
+    bypassee el límite rotando números con un mismo RUT. Solo se incrementan los
+    buckets si ninguno excedió, para no "castigar" claves secundarias cuando otra
+    ya bloqueó.
+    """
     now = monotonic()
-    bucket = _rate_buckets.get(phone)
-    if bucket is None:
-        bucket = deque()
-        _rate_buckets[phone] = bucket
-    # Descartar entradas fuera de la ventana
-    while bucket and now - bucket[0] > _RATE_WINDOW_SEC:
-        bucket.popleft()
-    if len(bucket) >= _RATE_MAX_MSGS:
-        return True
-    bucket.append(now)
+    keys = tuple(k for k in keys if k)
+    if not keys:
+        return False
+    # Primera pasada: comprobar si alguna clave excede
+    for key in keys:
+        bucket = _rate_buckets.get(key)
+        if bucket is None:
+            bucket = deque()
+            _rate_buckets[key] = bucket
+        while bucket and now - bucket[0] > _RATE_WINDOW_SEC:
+            bucket.popleft()
+        if len(bucket) >= _RATE_MAX_MSGS:
+            return True
+    # Ninguna excedió: registrar timestamp en todas
+    for key in keys:
+        _rate_buckets[key].append(now)
     # Limpieza oportunista: si el dict crece demasiado, purgar buckets vacíos
     if len(_rate_buckets) > 5000:
         for k in list(_rate_buckets.keys()):
@@ -685,8 +697,12 @@ async def webhook(request: Request):
             log.info("MSG duplicado ignorado id=%s from=%s", msg_id, phone)
             return Response(status_code=200)
 
-        if _rate_limited(phone):
-            log.warning("Rate limit excedido WA phone=%s type=%s", phone, msg_type)
+        # Rate limit por phone Y por RUT (si lo conocemos): evita bypass rotando números
+        _profile = get_profile(phone) or {}
+        _rut = (_profile.get("rut") or "").strip()
+        _rate_keys = (phone, f"rut:{_rut}" if _rut else "")
+        if _rate_limited(*_rate_keys):
+            log.warning("Rate limit excedido WA phone=%s rut=%s type=%s", phone, _rut or "-", msg_type)
             return Response(status_code=200)
 
         # Extraer texto de mensajes de texto, respuestas interactivas o audio
