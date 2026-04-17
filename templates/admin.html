@@ -47,8 +47,11 @@ body {
   flex-wrap: wrap; min-height: 42px;
 }
 .topbar-pills {
-  display: contents;
+  display: none; order: 20; width: 100%;
+  gap: 6px; flex-wrap: wrap;
+  padding: 6px 12px; border-top: 1px solid var(--border);
 }
+.topbar-pills.show { display: flex !important; }
 .topbar-actions {
   display: contents;
 }
@@ -458,16 +461,15 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
   }
   .brand-text p { display: none; }
 
-  /* Row 1: hamburger (left) + info toggle (right) */
+  /* Row 1: hamburger (left) + KPI bar (center) + stats toggle (right) */
   .mobile-hamburger { display: block; order: 1; padding: 10px 12px; }
   .mobile-ctx-toggle { display: block; }
-  .mobile-pills-toggle {
-    display: inline-flex; order: 2;
-    margin-left: auto; margin-right: 10px; margin-top: 8px; margin-bottom: 8px;
-    background: none; border: 1px solid var(--border);
-    border-radius: 6px; font-size: 11px; padding: 4px 10px; cursor: pointer;
-    color: var(--text-2);
-  }
+  .kpi-bar { order: 2; flex: 1; gap: 4px; overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 4px 2px; }
+  .kpi-card { padding: 4px 8px; min-width: 0; }
+  .kpi-card .kpi-value { font-size: 14px; }
+  .kpi-card .kpi-label { font-size: 8px; }
+  .kpi-card .kpi-icon { font-size: 13px; }
+  .stats-toggle-btn { order: 3; font-size: 10px; padding: 4px 8px; margin-right: 4px; }
 
   /* Row 2: Action buttons — icon-only toolbar */
   .topbar-actions {
@@ -487,7 +489,7 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
   .topbar-actions .dropdown { flex: 0 0 auto; }
   .topbar-spacer { display: none; }
 
-  /* Row 3: Pills (hidden by default, toggled) */
+  /* Row 3: Secondary pills (hidden by default, toggled by stats-toggle) */
   .topbar-pills {
     display: none !important; order: 20; width: 100%;
     gap: 5px; flex-wrap: wrap;
@@ -728,6 +730,64 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
   }
 }
 
+/* ── COMMERCIAL KPI BAR ── */
+.kpi-bar {
+  display: flex; align-items: center; gap: 8px; padding: 0 4px;
+}
+.kpi-card {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 14px; border-radius: 10px;
+  background: var(--surface); border: 1.5px solid var(--border);
+  cursor: default; transition: all .15s; flex-shrink: 0;
+}
+.kpi-card:hover { box-shadow: var(--shadow); }
+.kpi-card .kpi-value { font-size: 18px; font-weight: 800; line-height: 1.1; color: var(--text); }
+.kpi-card .kpi-label { font-size: 9px; color: var(--text-3); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+.kpi-card .kpi-icon { font-size: 16px; flex-shrink: 0; }
+.kpi-card.hot { background: #fef2f2; border-color: #fca5a5; }
+.kpi-card.hot .kpi-value { color: #dc2626; }
+.kpi-card.warm { background: #fffbeb; border-color: #fcd34d; }
+.kpi-card.warm .kpi-value { color: #92400e; }
+.kpi-card.good { background: #f0fdf4; border-color: #86efac; }
+.kpi-card.good .kpi-value { color: #15803d; }
+.kpi-card.info { background: #eff6ff; border-color: #bfdbfe; }
+.kpi-card.info .kpi-value { color: #1d4ed8; }
+.kpi-card.clickable { cursor: pointer; }
+.kpi-card.clickable:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+/* Secondary stats toggle (desktop: always show as pill) */
+.stats-toggle-btn {
+  display: flex; align-items: center; gap: 4px;
+  padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border);
+  background: var(--bg); color: var(--text-2); font-size: 12px; font-weight: 500;
+  cursor: pointer; font-family: inherit; transition: all .15s; flex-shrink: 0;
+}
+.stats-toggle-btn:hover { background: var(--surface); }
+/* Suggestion block in context panel */
+.ctx-suggestion {
+  background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+  border: 1.5px solid #93c5fd; border-radius: 10px;
+  padding: 12px 14px;
+}
+.ctx-suggestion-title {
+  font-size: 10px; font-weight: 700; letter-spacing: .5px;
+  text-transform: uppercase; color: #1d4ed8; margin-bottom: 6px;
+  display: flex; align-items: center; gap: 5px;
+}
+.ctx-suggestion-text {
+  font-size: 12px; color: #334155; font-weight: 500; line-height: 1.5;
+  margin-bottom: 10px;
+}
+.ctx-suggestion-msg {
+  background: #fff; border: 1.5px solid #e2e8f0; border-radius: 8px;
+  padding: 8px 11px; font-size: 12px; color: #334155;
+  cursor: pointer; transition: all .15s; line-height: 1.4;
+}
+.ctx-suggestion-msg:hover { border-color: var(--primary); background: #f8fafc; box-shadow: 0 2px 4px rgba(0,0,0,.06); }
+/* Intent badges on conversation cards */
+.badge-hot { background: #fef2f2; color: #dc2626; border-color: #fca5a5; font-weight: 700; }
+.badge-value { background: #f0fdf4; color: #15803d; border-color: #86efac; font-family: ui-monospace, monospace; font-size: 10px; }
+.badge-intent { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+
 /* ── PRINT ── */
 @media print {
   .topbar, .col-filters, .ctx-panel, .reply-bar,
@@ -746,8 +806,30 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
 <!-- TOPBAR -->
 <div class="topbar">
   <button class="mobile-hamburger" onclick="toggleFilters()" title="Filtros">☰</button>
-  <button class="mobile-pills-toggle" onclick="this.nextElementSibling.classList.toggle('show')">▼ Info</button>
-  <div class="topbar-pills">
+
+  <!-- ── KPI BAR (always visible, even mobile) ── -->
+  <div class="kpi-bar">
+    <div class="kpi-card hot clickable" onclick="setFilter('oportunidades')" title="Pacientes listos para cerrar cita AHORA">
+      <span class="kpi-icon">🔥</span>
+      <div><div class="kpi-value" id="kpi-oportunidades">0</div><div class="kpi-label">Oportunidades</div></div>
+    </div>
+    <div class="kpi-card warm clickable" onclick="setFilter('all')" title="Tasa de conversión últimos 30 días">
+      <span class="kpi-icon">📈</span>
+      <div><div class="kpi-value" id="kpi-conversion">—</div><div class="kpi-label">Conversión</div></div>
+    </div>
+    <div class="kpi-card good clickable" onclick="abrirModalConfirmaciones()" title="Citas agendadas para mañana">
+      <span class="kpi-icon">📅</span>
+      <div><div class="kpi-value" id="kpi-citas-manana">—</div><div class="kpi-label">Citas mañana</div></div>
+    </div>
+    <div class="kpi-card info clickable" onclick="setFilter('esperando')" title="Pacientes esperando respuesta humana">
+      <span class="kpi-icon">⏳</span>
+      <div><div class="kpi-value" id="kpi-esperando">0</div><div class="kpi-label">Esperando</div></div>
+    </div>
+  </div>
+
+  <!-- ── SECONDARY STATS (collapsible) ── -->
+  <button class="stats-toggle-btn" id="stats-toggle" onclick="document.getElementById('stats-pills').classList.toggle('show');this.querySelector('.stats-arrow').textContent=document.getElementById('stats-pills').classList.contains('show')?'▴':'▾'">📊 Más <span class="stats-arrow">▾</span></button>
+  <div class="topbar-pills" id="stats-pills">
     <div class="pill"><strong id="s-total">—</strong>&nbsp;conv.</div>
     <div class="pill amber"><strong id="s-flujo">—</strong>&nbsp;en flujo</div>
     <div class="pill" id="pill-esperando"><strong id="s-takeover">—</strong>&nbsp;esperando</div>
@@ -1199,6 +1281,12 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
           <div class="ctx-sub" id="ctx-sub-info">—</div>
           <div class="ctx-state-wrap"><span class="state-tag tag-slate" id="ctx-state-badge">—</span></div>
         </div>
+        <!-- AI Suggestion block -->
+        <div class="ctx-sec ctx-suggestion" id="ctx-suggestion" style="display:none;">
+          <div class="ctx-suggestion-title">💡 Sugerencia</div>
+          <div class="ctx-suggestion-text" id="ctx-suggestion-text"></div>
+          <div class="ctx-suggestion-msg" id="ctx-suggestion-msg" onclick="useSuggestion()" title="Click para copiar al chat"></div>
+        </div>
         <div class="ctx-sec" id="ctx-flow-section" style="display:none;">
           <div class="ctx-sec-title">Flujo actual</div>
           <div id="ctx-esp-wrap" class="flow-row" style="display:none;">
@@ -1306,6 +1394,79 @@ const ESP_DISPLAY = {
 function espLabel(key) {
   if (!key) return '';
   return ESP_DISPLAY[key.toLowerCase()] || (key.charAt(0).toUpperCase() + key.slice(1));
+}
+
+/* ── COMMERCIAL INTELLIGENCE ── */
+const VALOR_ESPECIALIDAD = {
+  "medicina_general":25000,"otorrino":25000,"cardiologia":25000,"traumatologia":25000,
+  "ginecologia":25000,"gastroenterologia":25000,"odontologia":25000,"ortodoncia":120000,
+  "endodoncia":60000,"implantologia":300000,"estetica_facial":130000,"masoterapia":15000,
+  "kinesiologia":15000,"nutricion":15000,"psicologia_adulto":35000,"psicologia_infantil":35000,
+  "fonoaudiologia":25000,"matrona":15000,"podologia":20000,"ecografia":15000
+};
+const HOT_STATES = ["CONFIRMING_CITA","WAIT_SLOT","WAIT_MODALIDAD","WAIT_BOOKING_FOR","WAIT_RUT_AGENDAR"];
+const WARM_STATES = ["WAIT_ESPECIALIDAD","WAIT_NOMBRE_NUEVO","WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL","WAIT_REFERRAL","WAIT_REFERRAL_CODE","WAIT_DURACION_MASOTERAPIA"];
+
+function computeSuggestion(conv) {
+  const st = conv.state || "IDLE";
+  const fd = conv.flow_data || {};
+  const mins = waitMinutes(conv.last_ts || conv.updated_at);
+  const esp = fd.especialidad ? espLabel(fd.especialidad) : "";
+  const nombre = conv.nombre || "el paciente";
+
+  if (st === "CONFIRMING_CITA" && fd.fecha_display && fd.hora_inicio)
+    return { text: `${nombre} está a punto de confirmar su cita. Si no responde, envíale un empujón.`,
+             msg: `Hola ${nombre} 👋 ¿Confirmamos tu hora de ${esp} el ${fd.fecha_display} a las ${fd.hora_inicio.substring(0,5)}? Solo dime "Sí" 😊` };
+
+  if (st === "WAIT_SLOT" && fd.especialidad)
+    return { text: `Está eligiendo horario de ${esp}. Si lleva más de 2 min, ofrécele el mejor slot directamente.`,
+             msg: `Te recomiendo esta hora para ${esp}: es la más cercana disponible. ¿Te parece bien? 📅` };
+
+  if (st === "WAIT_MODALIDAD")
+    return { text: "Está eligiendo Fonasa o Particular. No suele requerir intervención.",
+             msg: null };
+
+  if (st === "WAIT_RUT_AGENDAR")
+    return { text: `Necesita ingresar su RUT para continuar. Si es paciente conocido, puedes buscarlo.`,
+             msg: `¿Me indicas tu RUT para buscarte en el sistema? Formato: 12345678-9 😊` };
+
+  if (st === "HUMAN_TAKEOVER") {
+    if (fd.especialidad && fd.fecha_display && fd.hora_inicio)
+      return { text: `PRIORIDAD: ${nombre} ya eligió hora de ${esp}. Solo falta confirmar.`,
+               msg: `Hola ${nombre} 👋 Veo que elegiste hora de ${esp} el ${fd.fecha_display} a las ${fd.hora_inicio.substring(0,5)}. ¡Te la confirmo! ✅` };
+    if (fd.especialidad)
+      return { text: `Quiere ${esp}. Ayúdale a elegir horario.`,
+               msg: `Hola ${nombre} 👋 Te busco disponibilidad para ${esp}, dame un momento 😊` };
+    if (fd.handoff_reason?.startsWith("media:"))
+      return { text: "Envió un archivo. Revísalo y responde.",
+               msg: `Recibí tu archivo, ${nombre}. Lo estoy revisando 👍` };
+    return { text: "Pidió hablar con recepción. Responde rápido para no perderlo.",
+             msg: `Hola ${nombre} 👋 En qué te puedo ayudar?` };
+  }
+
+  if (st === "WAIT_ESPECIALIDAD")
+    return { text: "Está eligiendo especialidad. Normalmente el bot se encarga solo.",
+             msg: null };
+
+  if (mins >= 10 && ACTIVE_STATES.includes(st))
+    return { text: `⚠️ Lleva ${mins} min sin avanzar en ${stateLabel(st)}. Puede estar abandonando.`,
+             msg: `Hola ${nombre} 👋 ¿Necesitas ayuda para continuar con tu cita? Estoy aquí para ayudarte 😊` };
+
+  return null;
+}
+
+function getConvValue(conv) {
+  const fd = conv.flow_data || {};
+  if (!fd.especialidad) return 0;
+  return VALOR_ESPECIALIDAD[fd.especialidad.toLowerCase()] || 25000;
+}
+
+function useSuggestion() {
+  const msgEl = document.getElementById("ctx-suggestion-msg");
+  const text = msgEl?.textContent;
+  if (!text) return;
+  const input = document.getElementById("reply-input");
+  if (input) { input.value = text; input.focus(); }
 }
 
 const ACTIVE_STATES = ["WAIT_ESPECIALIDAD","WAIT_SLOT","WAIT_MODALIDAD","WAIT_BOOKING_FOR","WAIT_PHONE_OWNER_NAME","WAIT_RUT_AGENDAR",
@@ -1503,12 +1664,26 @@ function toggleStaffList() {
 }
 
 /* ── LISTA ── */
+function convPriority(c) {
+  // Commercial priority: ready-to-close first, then hot, then warm, then rest
+  const fd = c.flow_data || {};
+  if (fd.fecha_display && fd.hora_inicio) return 0; // ready to close
+  if (c.state === "CONFIRMING_CITA") return 0;
+  if (c.state === "HUMAN_TAKEOVER") return 1; // needs human NOW
+  if (HOT_STATES.includes(c.state)) return 2;
+  if (WARM_STATES.includes(c.state)) return 3;
+  return 4;
+}
 function sortedConvs(list) {
   return list.slice().sort((a,b) => {
+    // Primary: commercial priority (hot first)
+    const pA = convPriority(a), pB = convPriority(b);
+    if (pA !== pB) return pA - pB;
+    // Secondary: state group
     const gA = STATE_GROUPS.findIndex(g=>g.states.includes(a.state));
     const gB = STATE_GROUPS.findIndex(g=>g.states.includes(b.state));
     if (gA!==gB) return gA-gB;
-    // Dentro del mismo grupo: más reciente primero
+    // Tertiary: most recent first
     return waitMinutes(a.last_ts||a.updated_at) - waitMinutes(b.last_ts||b.updated_at);
   });
 }
@@ -1521,6 +1696,10 @@ function filtered() {
       if (!ACTIVE_STATES.includes(c.state) || waitMinutes(c.last_ts||c.updated_at)<5) return false;
     } else if (currentFilter==="pendientes") {
       if (c.last_dir!=="in" || c.state==="IDLE") return false;
+    } else if (currentFilter==="oportunidades") {
+      if (!((c.flow_data?.fecha_display && c.flow_data?.hora_inicio) || HOT_STATES.includes(c.state))) return false;
+    } else if (currentFilter==="esperando") {
+      if (c.state!=="HUMAN_TAKEOVER" && !(ACTIVE_STATES.includes(c.state) && waitMinutes(c.last_ts||c.updated_at)>=5)) return false;
     } else if (group && !group.states.includes(c.state)) return false;
     if (currentEsp!=="all" && (c.flow_data?.especialidad||"")!==currentEsp) return false;
     return true;
@@ -1571,7 +1750,10 @@ function convCard(c,g) {
   if (mins>=15) badges+=`<span class="badge badge-urgent">⏰ ${waitLabel(mins)} sin respuesta</span>`;
   else if (mins>=5) badges+=`<span class="badge badge-warn">⏱ ${waitLabel(mins)} esperando</span>`;
   else if (mins>=1&&c.state!=="IDLE") badges+=`<span class="badge" style="background:#f8fafc;color:#94a3b8;border-color:#e2e8f0;">⏱ ${waitLabel(mins)}</span>`;
-  if (fd.fecha_display&&fd.hora_inicio) badges+=`<span class="badge badge-prob">✅ Lista para agendar</span>`;
+  if (fd.fecha_display&&fd.hora_inicio) badges+=`<span class="badge badge-hot">🔥 Lista para cerrar</span>`;
+  else if (HOT_STATES.includes(c.state)) badges+=`<span class="badge badge-hot">🔥 Caliente</span>`;
+  else if (WARM_STATES.includes(c.state)) badges+=`<span class="badge badge-intent">🟡 En flujo</span>`;
+  if (fd.especialidad) { const v=getConvValue(c); if(v>0) badges+=`<span class="badge badge-value">$${(v/1000).toFixed(0)}k</span>`; }
   if (fd.handoff_reason&&fd.handoff_reason.startsWith("media:")) badges+=`<span class="badge badge-urgent">📎 Archivo pendiente</span>`;
   return `<div class="conv-card${selectedPhone===c.phone?" selected":""}${isStaff?" staff-card":""}" style="border-left-color:${isStaff?"var(--purple)":g.dot};" onclick="selectConv('${c.phone}')">
     <div class="card-top">
@@ -1709,6 +1891,22 @@ function updateContextPanel(conv) {
         <span>${s.label}</span>
       </div>`).join("");
   } else { progSec.style.display="none"; }
+  // Render AI suggestion
+  const suggBlock = document.getElementById("ctx-suggestion");
+  const suggestion = computeSuggestion(conv);
+  if (suggestion) {
+    suggBlock.style.display = "block";
+    document.getElementById("ctx-suggestion-text").textContent = suggestion.text;
+    const msgEl = document.getElementById("ctx-suggestion-msg");
+    if (suggestion.msg) {
+      msgEl.style.display = "block";
+      msgEl.textContent = suggestion.msg;
+    } else {
+      msgEl.style.display = "none";
+    }
+  } else {
+    suggBlock.style.display = "none";
+  }
   renderQuickReplies(conv);
 }
 function renderQuickReplies(conv) {
@@ -2041,6 +2239,33 @@ function renderConfirmaciones(){
   html+='</tbody></table>';
   lista.innerHTML=html;
 }
+function updateCommercialKPIs() {
+  // Oportunidades = conversations ready to close (have slot selected or in CONFIRMING)
+  const oportunidades = convs.filter(c =>
+    (c.flow_data?.fecha_display && c.flow_data?.hora_inicio) ||
+    c.state === "CONFIRMING_CITA"
+  ).length;
+  document.getElementById("kpi-oportunidades").textContent = oportunidades;
+
+  // Esperando = HUMAN_TAKEOVER + stuck >5min in active flow
+  const tk = convs.filter(c => c.state === "HUMAN_TAKEOVER").length;
+  const stuck = convs.filter(c => ACTIVE_STATES.includes(c.state) && waitMinutes(c.last_ts||c.updated_at) >= 5).length;
+  document.getElementById("kpi-esperando").textContent = tk + stuck;
+
+  // Citas mañana — already loaded by loadConfirmaciones into s-confirm
+  const citasManana = document.getElementById("s-confirm")?.textContent || "—";
+  document.getElementById("kpi-citas-manana").textContent = citasManana;
+
+  // Conversión — already loaded by loadMetrics into s-conversion
+  const conv = document.getElementById("s-conversion")?.textContent || "—";
+  document.getElementById("kpi-conversion").textContent = conv;
+
+  // Pulse effect on oportunidades if > 0
+  const kpiOp = document.getElementById("kpi-oportunidades").closest(".kpi-card");
+  if (oportunidades > 0) kpiOp.style.animation = "pulse-glow 2s infinite";
+  else kpiOp.style.animation = "none";
+}
+
 function updateStats(){
   document.getElementById("s-total").textContent=convs.length;
   document.getElementById("s-flujo").textContent=convs.filter(c=>ACTIVE_STATES.includes(c.state)).length;
@@ -2062,23 +2287,28 @@ function updateStats(){
   document.getElementById("s-media").textContent=mediaPend;
   pillMedia.style.display=mediaPend>0?"":"none";
   pillMedia.className="pill"+(mediaPend>0?" red":"");
-  // Banner de alertas
+  // Banner de alertas — commercial language
   const alertBar=document.getElementById("alert-bar");
-  const esperando5=convs.filter(c=>c.state!=="IDLE"&&waitMinutes(c.last_ts||c.updated_at)>=5).length;
   const listos=convs.filter(c=>(c.flow_data?.fecha_display)&&(c.flow_data?.hora_inicio)).length;
+  const hotTk=convs.filter(c=>c.state==="HUMAN_TAKEOVER"&&(c.flow_data?.especialidad)).length;
+  const coldTk=tk-hotTk;
+  const abandonando=convs.filter(c=>ACTIVE_STATES.includes(c.state)&&waitMinutes(c.last_ts||c.updated_at)>=5).length;
   const partes=[];
-  if(mediaPend>0) partes.push(`📎 ${mediaPend} archivo${mediaPend>1?"s":""} pendiente${mediaPend>1?"s":""} de revisión`);
-  if(tk>0) partes.push(`${tk} paciente${tk>1?"s":""} esperando atención humana`);
-  if(esperando5>0) partes.push(`${esperando5} sin respuesta hace más de 5 min`);
-  if(listos>0) partes.push(`${listos} listo${listos>1?"s":""} para confirmar hora`);
+  if(listos>0) partes.push(`🔥 ${listos} paciente${listos>1?"s":""} listo${listos>1?"s":""} para CERRAR cita — ¡actúa ya!`);
+  if(hotTk>0) partes.push(`⚡ ${hotTk} quieren agendar y esperan TU respuesta`);
+  if(coldTk>0) partes.push(`💬 ${coldTk} esperando atención`);
+  if(abandonando>0) partes.push(`⏰ ${abandonando} se están yendo — rescátalos`);
+  if(mediaPend>0) partes.push(`📎 ${mediaPend} archivo${mediaPend>1?"s":""} por revisar`);
   if(partes.length){
     alertBar.style.display="flex";
-    document.getElementById("alert-text").textContent=partes.join("  ·  ");
+    document.getElementById("alert-text").innerHTML=partes.join("&nbsp;&nbsp;·&nbsp;&nbsp;");
     document.documentElement.style.setProperty("--alert-h","37px");
   } else {
     alertBar.style.display="none";
     document.documentElement.style.setProperty("--alert-h","0px");
   }
+  // Update commercial KPIs
+  updateCommercialKPIs();
 }
 
 // Seed incoming timestamps to prevent false notification on first load
