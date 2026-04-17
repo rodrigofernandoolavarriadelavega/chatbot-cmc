@@ -67,6 +67,100 @@ _INTENT_CACHE: dict[str, dict] = {
     "recepcion":      {"intent": "humano", "especialidad": None},
     "hablar con alguien": {"intent": "humano", "especialidad": None},
     "hablar con recepción": {"intent": "humano", "especialidad": None},
+    "secretaria":     {"intent": "humano", "especialidad": None},
+    "operador":       {"intent": "humano", "especialidad": None},
+    "persona":        {"intent": "humano", "especialidad": None},
+    # Saludos / menú → ahorra ~30% de calls a Claude
+    "hola":           {"intent": "menu", "especialidad": None},
+    "holi":           {"intent": "menu", "especialidad": None},
+    "hola!":          {"intent": "menu", "especialidad": None},
+    "hola buen día":  {"intent": "menu", "especialidad": None},
+    "hola buen dia":  {"intent": "menu", "especialidad": None},
+    "hola buenos días": {"intent": "menu", "especialidad": None},
+    "hola buenos dias": {"intent": "menu", "especialidad": None},
+    "hola buenas tardes": {"intent": "menu", "especialidad": None},
+    "hola buenas noches": {"intent": "menu", "especialidad": None},
+    "hola buenas":    {"intent": "menu", "especialidad": None},
+    "buen día":       {"intent": "menu", "especialidad": None},
+    "buen dia":       {"intent": "menu", "especialidad": None},
+    "buenos días":    {"intent": "menu", "especialidad": None},
+    "buenos dias":    {"intent": "menu", "especialidad": None},
+    "buenas":         {"intent": "menu", "especialidad": None},
+    "buenas tardes":  {"intent": "menu", "especialidad": None},
+    "buenas noches":  {"intent": "menu", "especialidad": None},
+    "buenas tarde":   {"intent": "menu", "especialidad": None},
+    "menu":           {"intent": "menu", "especialidad": None},
+    "menú":           {"intent": "menu", "especialidad": None},
+    "inicio":         {"intent": "menu", "especialidad": None},
+    "empezar":        {"intent": "menu", "especialidad": None},
+    "volver":         {"intent": "menu", "especialidad": None},
+    "reiniciar":      {"intent": "menu", "especialidad": None},
+    "hi":             {"intent": "menu", "especialidad": None},
+    "hey":            {"intent": "menu", "especialidad": None},
+    # Confirmaciones y negaciones sueltas → quedan en menú, el flujo las filtra antes
+    "si":             {"intent": "menu", "especialidad": None},
+    "sí":             {"intent": "menu", "especialidad": None},
+    "sii":            {"intent": "menu", "especialidad": None},
+    "siii":           {"intent": "menu", "especialidad": None},
+    "sip":            {"intent": "menu", "especialidad": None},
+    "claro":          {"intent": "menu", "especialidad": None},
+    "dale":           {"intent": "menu", "especialidad": None},
+    "ya":             {"intent": "menu", "especialidad": None},
+    "ok":             {"intent": "menu", "especialidad": None},
+    "okay":           {"intent": "menu", "especialidad": None},
+    "okey":           {"intent": "menu", "especialidad": None},
+    "vale":           {"intent": "menu", "especialidad": None},
+    "bueno":          {"intent": "menu", "especialidad": None},
+    "no":             {"intent": "menu", "especialidad": None},
+    "nop":            {"intent": "menu", "especialidad": None},
+    "nel":            {"intent": "menu", "especialidad": None},
+    # Gracias / despedidas
+    "gracias":        {"intent": "menu", "especialidad": None},
+    "gracias!":       {"intent": "menu", "especialidad": None},
+    "muchas gracias": {"intent": "menu", "especialidad": None},
+    "muchas gracia":  {"intent": "menu", "especialidad": None},
+    "mil gracias":    {"intent": "menu", "especialidad": None},
+    "grax":           {"intent": "menu", "especialidad": None},
+    "gracia":         {"intent": "menu", "especialidad": None},
+    "chao":           {"intent": "menu", "especialidad": None},
+    "chau":           {"intent": "menu", "especialidad": None},
+    "adios":          {"intent": "menu", "especialidad": None},
+    "adiós":          {"intent": "menu", "especialidad": None},
+    "bye":            {"intent": "menu", "especialidad": None},
+    # Reacciones / emojis
+    "👍":             {"intent": "menu", "especialidad": None},
+    "👌":             {"intent": "menu", "especialidad": None},
+    "🙏":             {"intent": "menu", "especialidad": None},
+    "❤":              {"intent": "menu", "especialidad": None},
+    "❤️":             {"intent": "menu", "especialidad": None},
+    # Atajos numéricos del menú principal
+    "1":              {"intent": "agendar", "especialidad": None},
+    "2":              {"intent": "cancelar", "especialidad": None},
+    "3":              {"intent": "ver_reservas", "especialidad": None},
+    "4":              {"intent": "humano", "especialidad": None},
+    # Agendar coloquial
+    "quiero hora":    {"intent": "agendar", "especialidad": None},
+    "necesito hora":  {"intent": "agendar", "especialidad": None},
+    "agendar":        {"intent": "agendar", "especialidad": None},
+    "agendar hora":   {"intent": "agendar", "especialidad": None},
+    "quiero agendar": {"intent": "agendar", "especialidad": None},
+    "pedir hora":     {"intent": "agendar", "especialidad": None},
+    "reservar hora":  {"intent": "agendar", "especialidad": None},
+    "reservar":       {"intent": "agendar", "especialidad": None},
+    "tomar hora":     {"intent": "agendar", "especialidad": None},
+    "sacar hora":     {"intent": "agendar", "especialidad": None},
+    # Cancelar coloquial
+    "cancelar mi hora": {"intent": "cancelar", "especialidad": None},
+    "anular":         {"intent": "cancelar", "especialidad": None},
+    "quiero cancelar": {"intent": "cancelar", "especialidad": None},
+    # Ver reservas coloquial
+    "mis reservas":   {"intent": "ver_reservas", "especialidad": None},
+    "ver hora":       {"intent": "ver_reservas", "especialidad": None},
+    "mi hora":        {"intent": "ver_reservas", "especialidad": None},
+    "tengo hora":     {"intent": "ver_reservas", "especialidad": None},
+    "tienes hora":    {"intent": "ver_reservas", "especialidad": None},
+    "cuándo es mi hora": {"intent": "ver_reservas", "especialidad": None},
+    "cuando es mi hora": {"intent": "ver_reservas", "especialidad": None},
 }
 
 SYSTEM_PROMPT = f"""Eres el asistente de recepción del Centro Médico Carampangue (CMC), ubicado en Carampangue, Chile.
@@ -620,12 +714,25 @@ async def detect_intent(mensaje: str) -> dict:
         resp = await client.messages.create(
             model="claude-haiku-4-5-20251001",
             max_tokens=1024,
-            system=SYSTEM_PROMPT,
+            system=[{
+                "type": "text",
+                "text": SYSTEM_PROMPT,
+                "cache_control": {"type": "ephemeral"},
+            }],
             messages=[{"role": "user", "content": mensaje}],
         )
         text = _strip_markdown_json(resp.content[0].text)
         if resp.stop_reason == "max_tokens":
             log.warning("detect_intent truncado por max_tokens: %r", mensaje[:80])
+        usage = getattr(resp, "usage", None)
+        if usage is not None:
+            log.info(
+                "detect_intent usage: in=%s cache_read=%s cache_write=%s out=%s",
+                getattr(usage, "input_tokens", "?"),
+                getattr(usage, "cache_read_input_tokens", 0),
+                getattr(usage, "cache_creation_input_tokens", 0),
+                getattr(usage, "output_tokens", "?"),
+            )
         return json.loads(text)
     except json.JSONDecodeError as e:
         log.error("detect_intent JSON inválido para '%s': %s | respuesta: %r",
@@ -666,7 +773,11 @@ async def respuesta_faq(mensaje: str) -> str:
         resp = await client.messages.create(
             model="claude-haiku-4-5-20251001",
             max_tokens=1024,
-            system=SYSTEM_PROMPT,
+            system=[{
+                "type": "text",
+                "text": SYSTEM_PROMPT,
+                "cache_control": {"type": "ephemeral"},
+            }],
             messages=[{"role": "user", "content": mensaje}],
         )
         text = _strip_markdown_json(resp.content[0].text)

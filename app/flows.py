@@ -1986,6 +1986,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if (tl == "confirmar_sugerido" or tl in AFIRMACIONES or tl_norm in AFIRMACIONES) and slots_mostrados:
             slot = slots_mostrados[0]
             return await _slot_confirmed(phone, data, slot)
+        # Payload del botón "Sí, esa hora" llegó pero se perdieron los slots de sesión
+        # (sesión expiró, mensaje demorado, etc.) → re-buscar en vez de ignorar.
+        if tl == "confirmar_sugerido" and not slots_mostrados:
+            reset_session(phone)
+            return await _iniciar_agendar(phone, {}, especialidad or None)
         if tl == "ver_otros":
             if especialidad in _ESPECIALIDADES_EXPANSION:
                 return await _handle_expansion(phone, data, slots_mostrados, todos_slots,
@@ -2099,10 +2104,29 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return _format_slots(smart_nuevo)
 
         # ── Motivos del menú que cayeron en WAIT_SLOT (usuario volvió a menú) ──
-        # Los IDs motivo_* solo se manejan en IDLE. Si llegan acá, resetear.
-        if txt.startswith("motivo_") or txt in (
+        # Manejo directo — evita redispatch que puede fallar por preambles (crisis,
+        # emergencias, consent, doctor_mode). Cada motivo_* dispara _iniciar_agendar
+        # con la especialidad correspondiente.
+        _MOTIVOS_ESP = {
+            "motivo_resfrio":  ("medicina general", "🤒", "Medicina General"),
+            "motivo_kine":     ("kinesiología",     "🦴", "Kinesiología"),
+            "motivo_hta":      ("medicina general", "🫀", "Medicina General"),
+            "motivo_dental":   ("odontología",      "🦷", "Odontología"),
+            "motivo_mg_otra":  ("medicina general", "🩺", "Medicina General"),
+        }
+        if tl in _MOTIVOS_ESP:
+            esp, emoji, label = _MOTIVOS_ESP[tl]
+            prefix = f"{emoji} *Perfecto, te agendo con {label}*\n\n"
+            log_event(phone, "motivo_seleccionado", {"motivo": tl, "especialidad": esp})
+            reset_session(phone)
+            return await _iniciar_agendar(phone, {}, esp, saludo_prefix=prefix)
+        if tl == "motivo_otra_esp":
+            log_event(phone, "motivo_seleccionado", {"motivo": "otra_esp"})
+            reset_session(phone)
+            return await _iniciar_agendar(phone, {}, None)
+        if txt in (
             "accion_cambiar", "accion_mis_citas", "accion_otro",
-            "menu_volver", "ver_otros", "cambiar_datos"
+            "menu_volver", "cambiar_datos"
         ):
             reset_session(phone)
             return await handle_message(phone, txt, get_session(phone))
@@ -2202,7 +2226,81 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 f"\n\nElige uno, escribe *otro día* o *otro profesional*."
             )
 
+        # ── Ventana horaria "desde las N" / "después de las N" / "antes de las N" ──
+        # Usuario escribe "desde las 15", "después de las 5", "antes de las 12"
+        import re as _re_vh
+        _m_desde = _re_vh.search(
+            r'(?:desde|despues de|después de|a partir de|despues d las|después d las)\s+(?:las\s+)?(\d{1,2})',
+            tl_norm_slot,
+        )
+        _m_antes = _re_vh.search(
+            r'(?:antes de|hasta|máximo|maximo)\s+(?:las\s+)?(\d{1,2})',
+            tl_norm_slot,
+        )
+        if (_m_desde or _m_antes) and todos_slots:
+            def _h_int(s):
+                try:
+                    return int(s.get("hora_inicio", "00:00")[:2])
+                except Exception:
+                    return 0
+            if _m_desde:
+                h_min = int(_m_desde.group(1))
+                # Asumir PM si <8 (pedir "después de las 5" = 17:00)
+                if h_min < 8:
+                    h_min += 12
+                slots_vh = [s for s in todos_slots if _h_int(s) >= h_min]
+                etiqueta = f"desde las {h_min:02d}:00"
+            else:
+                h_max = int(_m_antes.group(1))
+                if h_max < 8:
+                    h_max += 12
+                slots_vh = [s for s in todos_slots if _h_int(s) < h_max]
+                etiqueta = f"antes de las {h_max:02d}:00"
+            if slots_vh:
+                data["slots"] = slots_vh[:10]
+                save_session(phone, "WAIT_SLOT", data)
+                return _format_slots(slots_vh[:10], mostrar_todos=True)
+            horas_disp_vh = sorted({s.get("hora_inicio", "")[:5] for s in todos_slots if s.get("hora_inicio")})
+            return (
+                f"No tengo horas {etiqueta} para este profesional 😕\n\n"
+                f"Horarios disponibles:\n{', '.join(horas_disp_vh[:12])}"
+                f"\n\nElige uno, escribe *otro día* o *otro profesional*."
+            )
+
         idx = _parse_slot_selection(txt, slots_mostrados)
+
+        # ── Fallback 1: HH:MM contra TODOS los slots del día, no solo los 5 mostrados ──
+        # Usuario escribe "10:00", "las 16:45", "1030" y ese horario está en todos_slots
+        # aunque no esté entre los 5 sugeridos → promocionar al primer puesto y re-mostrar.
+        if idx is None and todos_slots and len(todos_slots) > len(slots_mostrados):
+            idx_all = _parse_slot_selection(txt, todos_slots)
+            if idx_all is not None:
+                slot_elegido = todos_slots[idx_all]
+                hora_eleg = slot_elegido.get("hora_inicio", "")[:5]
+                # Poner el slot elegido primero, llenar resto con los ya mostrados
+                otros = [s for s in slots_mostrados if s.get("hora_inicio", "")[:5] != hora_eleg]
+                data["slots"] = [slot_elegido] + otros[:4]
+                save_session(phone, "WAIT_SLOT", data)
+                return _format_slots(data["slots"])
+
+        # ── Fallback 2: apellido de profesional en texto libre (sin llamar a Claude) ──
+        # Usuario escribe "Con Olavarria", "el dr marquez", "necesito con Abarca".
+        # Shortcut sin Claude para ahorrar tokens y latencia.
+        if idx is None:
+            apellido_key = _detectar_apellido_profesional(txt)
+            if apellido_key:
+                from medilink import _ids_para_especialidad
+                ids_nuevos = set(_ids_para_especialidad(apellido_key))
+                slots_prof = [s for s in todos_slots if s.get("id_profesional") in ids_nuevos]
+                if slots_prof:
+                    data["slots"] = slots_prof[:5]
+                    data["prof_sugerido_id"] = slots_prof[0].get("id_profesional")
+                    save_session(phone, "WAIT_SLOT", data)
+                    return _format_slots(slots_prof[:5], mostrar_todos=True)
+                # No hay slots de ese profesional en el pool actual — re-buscar fresh
+                reset_session(phone)
+                return await _iniciar_agendar(phone, {}, apellido_key)
+
         if idx is None:
             # Si el texto parece una hora pero no coincide con slots, mostrar opciones
             import re as _re
@@ -2485,6 +2583,25 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         else:
             rut = clean_rut(txt)
         if not valid_rut(rut):
+            # Escape: el usuario pide cambiar de profesional ("me equivoqué necesito con abarca")
+            apellido_esc = _detectar_apellido_profesional(txt)
+            if apellido_esc and any(
+                k in tl for k in ("necesito", "quiero", "equivoque", "equivoqué",
+                                  "con el", "con la", "mejor con")
+            ):
+                reset_session(phone)
+                return await _iniciar_agendar(phone, {}, apellido_esc)
+            # Escape: pregunta de precio/info en medio del flujo — responder sin romper
+            if any(k in tl for k in ("cuanto", "cuánto", "precio", "valor", "vale", "sale", "bono")):
+                try:
+                    resp_faq = await respuesta_faq(txt)
+                except Exception:
+                    resp_faq = "Para más información, comunícate con recepción 😊"
+                save_session(phone, "WAIT_RUT_AGENDAR", data)
+                return (
+                    f"{resp_faq}\n\n"
+                    "_Cuando quieras continuar con tu reserva, envíame tu RUT 😊_"
+                )
             data["intentos_fallidos"] = data.get("intentos_fallidos", 0) + 1
             if data["intentos_fallidos"] >= 3:
                 return _derivar_humano(phone=phone, contexto="frustración WAIT_RUT_AGENDAR")
@@ -2713,6 +2830,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
     # ── WAIT_RUT_CANCELAR ─────────────────────────────────────────────────────
     if state == "WAIT_RUT_CANCELAR":
+        # Escape: usuario menciona un profesional → se equivocó y quiere agendar
+        apellido_esc = _detectar_apellido_profesional(txt)
+        if apellido_esc and any(
+            k in tl for k in ("necesito", "quiero", "equivoque", "equivoqué",
+                              "con el", "con la", "dr ", "dra ", "doctor ", "doctora ")
+        ):
+            reset_session(phone)
+            return await _iniciar_agendar(phone, {}, apellido_esc)
         rut = clean_rut(txt)
         if not valid_rut(rut):
             return (
@@ -2831,6 +2956,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
     # ── WAIT_RUT_REAGENDAR ────────────────────────────────────────────────────
     if state == "WAIT_RUT_REAGENDAR":
+        apellido_esc = _detectar_apellido_profesional(txt)
+        if apellido_esc:
+            reset_session(phone)
+            return await _iniciar_agendar(phone, {}, apellido_esc)
         rut = clean_rut(txt)
         if not valid_rut(rut):
             return (
@@ -2958,6 +3087,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
     # ── WAIT_RUT_VER ──────────────────────────────────────────────────────────
     if state == "WAIT_RUT_VER":
+        # Escape: el usuario menciona un profesional — realmente quería agendar
+        apellido_esc = _detectar_apellido_profesional(txt)
+        if apellido_esc:
+            reset_session(phone)
+            return await _iniciar_agendar(phone, {}, apellido_esc)
         rut = clean_rut(txt)
         if not valid_rut(rut):
             return (
