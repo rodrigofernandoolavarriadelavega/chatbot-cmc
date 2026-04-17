@@ -1686,6 +1686,39 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if intent == "ver_reservas":
             return await _iniciar_ver(phone, data)
 
+        # Atajo conversacional: paciente pregunta si su cita de HOY sigue en pie
+        _tl_confirm = txt.lower()
+        _CONFIRM_HOY = ("se confirma", "sigue en pie", "confirman", "confirma hoy",
+                        "mi hora para hoy", "mi hora de hoy", "mi cita de hoy",
+                        "mi hora sigue", "mi cita sigue")
+        if any(p in _tl_confirm for p in _CONFIRM_HOY):
+            perfil_c = get_profile(phone)
+            if perfil_c and perfil_c.get("rut") and not is_medilink_down():
+                try:
+                    pac_c = await buscar_paciente(perfil_c["rut"])
+                except Exception:
+                    pac_c = None
+                if pac_c:
+                    try:
+                        citas_c = await listar_citas_paciente(pac_c["id"]) or []
+                    except Exception:
+                        citas_c = []
+                    hoy_str = datetime.now(_CHILE_TZ).date().strftime("%Y-%m-%d") if "_CHILE_TZ" in globals() else datetime.now().date().strftime("%Y-%m-%d")
+                    citas_hoy = [c for c in citas_c if c.get("fecha") == hoy_str]
+                    if citas_hoy:
+                        c0 = citas_hoy[0]
+                        return (
+                            f"Sí, tu hora de hoy está confirmada ✅\n\n"
+                            f"🏥 *{c0.get('especialidad','')}* — {c0.get('profesional','')}\n"
+                            f"🕐 *{c0.get('hora_inicio','')[:5]}*\n\n"
+                            f"📍 Monsalve 102, Carampangue.\n"
+                            f"_Llega 15 min antes con tu cédula._"
+                        )
+                    return (
+                        "No veo una cita tuya para hoy 🤔\n\n"
+                        "¿Quieres que te muestre tus próximas citas? Escribe *ver mis citas*."
+                    )
+
         if intent == "waitlist":
             especialidad = result.get("especialidad")
             return await _iniciar_waitlist(phone, data, especialidad)
