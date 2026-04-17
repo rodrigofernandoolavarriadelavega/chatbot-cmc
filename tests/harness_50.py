@@ -413,8 +413,7 @@ async def main():
         ("hola", ["Agendar", "opciones"]),
         ("quiero agendar medicina general", {"any": ["Medicina", "09:"], **NO_ERROR}),
         ("confirmar_sugerido", ["Fonasa", "Particular"]),
-        ("1", ["para ti", "otra persona"]),
-        ("booking_self", ["rut", "RUT"]),
+        ("1", ["RUT"]),
         ("11111111-1", ["Juan", "confirm"]),
         ("confirmar", ["reserv", "confirm", "✅", "cita"]),
     ])
@@ -432,8 +431,7 @@ async def main():
     mk("03 agendar paciente nuevo registro", "56900000003", [
         ("quiero agendar kine", {"any": ["Kine", "09:"], **NO_ERROR}),
         ("confirmar_sugerido", ["Fonasa"]),
-        ("1", ["para ti", "otra persona"]),
-        ("booking_self", ["rut"]),
+        ("1", ["RUT"]),
         ("99999999-9", ["nombre", "encontr", "registrar"]),
         ("Pedro Pérez González", ["fecha de nacimiento"]),
         ("15/03/1990", ["sexo"]),
@@ -481,8 +479,7 @@ async def main():
     mk("11 agendar RUT inválido", "56900000011", [
         ("quiero agendar medicina general", ["09:"]),
         ("confirmar_sugerido", None),
-        ("1", ["para ti", "otra persona"]),
-        ("booking_self", ["rut"]),
+        ("1", ["RUT"]),
         ("asdfasdf", {"any": ["rut", "válido", "inválido", "formato"]}),
     ])
 
@@ -586,8 +583,8 @@ async def main():
         ("11111111-1", {"any": ["Abarca"], **NO_ERROR}),
         ("1", {"any": ["09:"], **NO_ERROR}),
         ("confirmar_sugerido", None),
-        ("1", None),  # Fonasa → booking_for
-        ("booking_self", None),  # para mí → reuse perfil
+        # WAIT_MODALIDAD con rut_conocido → "¿Agendo con tus datos?"
+        ("1", None),
         ("si", None),  # confirmar datos
         ("si", {"any": ["ya fue tomada", "encontré otra", "reservo"]}),
     ], setup=lambda: (setup_una_cita(), FAKE_FAIL_CREAR_CITA.update(value=True)))
@@ -826,15 +823,13 @@ async def main():
     mk("NORM-05 FONASA/PARTICULAR acepta 'fonaza' sin tilde", "56900000305", [
         ("quiero agendar medicina general", ["09:"]),
         ("si", {"any": ["Fonasa", "Particular"], **NO_ERROR}),
-        ("fonasa", ["para ti", "otra persona"]),
-        ("booking_self", ["rut"]),
+        ("fonasa", ["RUT"]),
     ])
 
     mk("NORM-06 negación 'nop' en CONFIRMING_CITA", "56900000306", [
         ("quiero agendar medicina general", ["09:"]),
         ("si", {"any": ["Fonasa", "Particular"]}),
-        ("1", ["para ti", "otra persona"]),
-        ("booking_self", ["rut"]),
+        ("1", ["RUT"]),
         ("11111111-1", ["confirm"]),
         ("nop", {"any": ["otro día", "menu", "problema"], **NO_ERROR}),
     ])
@@ -921,8 +916,7 @@ async def main():
     mk("REG-01 fecha dd/mm/yyyy", "56900000501", [
         ("quiero agendar kine", {"any": ["Kine", "09:"], **NO_ERROR}),
         ("confirmar_sugerido", ["Fonasa"]),
-        ("1", ["para ti", "otra persona"]),
-        ("booking_self", ["rut"]),
+        ("1", ["RUT"]),
         ("99999999-9", ["nombre", "encontr", "registrar"]),
         ("Ana López", ["fecha de nacimiento"]),
         ("15/03/1990", ["sexo"]),
@@ -935,8 +929,7 @@ async def main():
     mk("REG-02 fecha texto '15 de marzo de 1990'", "56900000502", [
         ("quiero agendar kine", {"any": ["Kine", "09:"], **NO_ERROR}),
         ("confirmar_sugerido", ["Fonasa"]),
-        ("1", ["para ti", "otra persona"]),
-        ("booking_self", ["rut"]),
+        ("1", ["RUT"]),
         ("99999999-9", ["nombre", "encontr", "registrar"]),
         ("Luis Pérez", ["fecha de nacimiento"]),
         ("15 de marzo de 1990", ["sexo"]),
@@ -949,8 +942,7 @@ async def main():
     mk("REG-03 fecha con guión dd-mm-yyyy", "56900000503", [
         ("quiero agendar kine", {"any": ["Kine", "09:"], **NO_ERROR}),
         ("confirmar_sugerido", ["Fonasa"]),
-        ("1", ["para ti", "otra persona"]),
-        ("booking_self", ["rut"]),
+        ("1", ["RUT"]),
         ("99999999-9", ["nombre", "encontr", "registrar"]),
         ("María Soto", ["fecha de nacimiento"]),
         ("15-03-1990", ["sexo"]),
@@ -963,8 +955,7 @@ async def main():
     mk("REG-04 fecha corta dd/mm/yy", "56900000504", [
         ("quiero agendar kine", {"any": ["Kine", "09:"], **NO_ERROR}),
         ("confirmar_sugerido", ["Fonasa"]),
-        ("1", ["para ti", "otra persona"]),
-        ("booking_self", ["rut"]),
+        ("1", ["RUT"]),
         ("99999999-9", ["nombre", "encontr", "registrar"]),
         ("Juan Muñoz", ["fecha de nacimiento"]),
         ("15/03/90", ["sexo"]),
@@ -977,8 +968,7 @@ async def main():
     mk("REG-05 fecha 8 digitos pegados", "56900000505", [
         ("quiero agendar kine", {"any": ["Kine", "09:"], **NO_ERROR}),
         ("confirmar_sugerido", ["Fonasa"]),
-        ("1", ["para ti", "otra persona"]),
-        ("booking_self", ["rut"]),
+        ("1", ["RUT"]),
         ("99999999-9", ["nombre", "encontr", "registrar"]),
         ("Rosa Díaz", ["fecha de nacimiento"]),
         ("15031990", ["sexo"]),
@@ -991,8 +981,7 @@ async def main():
     mk("REG-06 fecha inválida → pide de nuevo", "56900000506", [
         ("quiero agendar kine", {"any": ["Kine", "09:"], **NO_ERROR}),
         ("confirmar_sugerido", ["Fonasa"]),
-        ("1", ["para ti", "otra persona"]),
-        ("booking_self", ["rut"]),
+        ("1", ["RUT"]),
         ("99999999-9", ["nombre", "encontr", "registrar"]),
         ("Carlos Vega", ["fecha de nacimiento"]),
         ("mañana", ["No entendí"]),
@@ -1006,8 +995,7 @@ async def main():
     mk("REG-07 email inválido → sigue igual", "56900000507", [
         ("quiero agendar kine", {"any": ["Kine", "09:"], **NO_ERROR}),
         ("confirmar_sugerido", ["Fonasa"]),
-        ("1", ["para ti", "otra persona"]),
-        ("booking_self", ["rut"]),
+        ("1", ["RUT"]),
         ("99999999-9", ["nombre", "encontr", "registrar"]),
         ("Sofía Paredes", ["fecha de nacimiento"]),
         ("saltar", ["sexo"]),
@@ -1020,8 +1008,7 @@ async def main():
     mk("REG-08 todo saltado → registra igual", "56900000508", [
         ("quiero agendar kine", {"any": ["Kine", "09:"], **NO_ERROR}),
         ("confirmar_sugerido", ["Fonasa"]),
-        ("1", ["para ti", "otra persona"]),
-        ("booking_self", ["rut"]),
+        ("1", ["RUT"]),
         ("99999999-9", ["nombre", "encontr", "registrar"]),
         ("Pedro Nada", ["fecha de nacimiento"]),
         ("saltar", ["sexo"]),
@@ -1034,8 +1021,7 @@ async def main():
     mk("REG-09 fecha con mes abreviado '15 mar 1990'", "56900000509", [
         ("quiero agendar kine", {"any": ["Kine", "09:"], **NO_ERROR}),
         ("confirmar_sugerido", ["Fonasa"]),
-        ("1", ["para ti", "otra persona"]),
-        ("booking_self", ["rut"]),
+        ("1", ["RUT"]),
         ("99999999-9", ["nombre", "encontr", "registrar"]),
         ("Tomás Rojas", ["fecha de nacimiento"]),
         ("15 mar 1990", ["sexo"]),
@@ -1049,8 +1035,9 @@ async def main():
     mk("TERC-01 tercero sin perfil → pide nombre owner", "56900000601", [
         ("quiero agendar kine", {"any": ["Kine", "09:"], **NO_ERROR}),
         ("confirmar_sugerido", ["Fonasa"]),
-        ("1", ["para ti", "otra persona"]),
-        ("booking_other", ["nombre", "celular"]),  # no tiene perfil → pregunta nombre del dueño
+        ("1", ["RUT"]),
+        # En WAIT_RUT_AGENDAR escribe "otra persona" → sin perfil → pide nombre
+        ("otra persona", ["nombre"]),
         ("Ana López", ["RUT", "atender"]),  # guarda nombre, pide RUT del paciente
         ("99999999-9", ["nombre", "encontr", "registrar"]),
         ("Daniel López", ["fecha de nacimiento"]),

@@ -1270,7 +1270,7 @@ async def main():
         ("confirmar_sugerido", None),
         ("1", None),
         ("si", None),
-        ("si", {"any": ["error", "no se pudo", "intenta", "recepción", "problema"]}),
+        ("si", {"any": ["ya fue tomada", "encontré otra", "reservo"]}),
     ], setup=lambda: (setup_una_cita(), FAKE_FAIL_CREAR_CITA.update(value=True)))
 
     mk("139 reagendar desde sub-menú", "56910000139", [
