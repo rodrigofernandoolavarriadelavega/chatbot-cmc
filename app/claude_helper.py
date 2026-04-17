@@ -147,6 +147,7 @@ Si mencionan un profesional por nombre, mapea al nombre de la especialidad:
 - Ecografía ginecológica / transvaginal / vaginal → "ginecología" (Dr. Tirso Rejón, NO David Pardo)
 - Ecografía obstétrica / embarazo / ver al bebé → "ginecología" (Dr. Tirso Rejón, NO David Pardo)
 Si preguntan por un precio que no está en la lista, responde que pueden consultar en recepción.
+IMPORTANTE PRECIOS: Cuando menciones el precio de una consulta, SIEMPRE indica ambos valores: Fonasa y particular. La mayoría de los pacientes del CMC son Fonasa. Ejemplo: "consulta $7.880 (Fonasa) / $25.000 (particular)". NUNCA pongas solo el precio particular sin mencionar Fonasa.
 
 GLOSARIO DE TÉRMINOS CLÍNICOS COLOQUIALES (chileno)
 Si el mensaje del paciente contiene un término del glosario de abajo, el intent es SIEMPRE "info" (NUNCA "agendar"), incluso si dice "quiero X", "necesito X", "me gustaría una X", "hazme una X", "quiero hacerme X". El motivo: el paciente puede no saber en qué consiste el tratamiento, y un buen recepcionista explica antes de agendar. El sistema ofrecerá automáticamente el botón de agendar después de la explicación.
@@ -469,17 +470,19 @@ ODONTOLOGÍA GENERAL (Dra. Javiera Burgos, Dr. Carlos Jiménez — solo particul
 - Destartraje + profilaxis: $30.000 — limpieza dental profesional: retiro de sarro y placa bacteriana con ultrasonido + pulido. Se recomienda cada 6 meses.
 
 ORTODONCIA (Dra. Daniela Castillo — solo particular):
-- Instalación brackets boca completa: $120.000 — colocación de brackets metálicos arriba y abajo para corregir posición dental. Incluye arco inicial.
+⚠️ IMPORTANTE: NO se agenda directamente con ortodoncia. El paciente SIEMPRE debe primero agendar una evaluación con ODONTOLOGÍA GENERAL (Dra. Javiera Burgos o Dr. Carlos Jiménez). La dentista evalúa el caso, solicita radiografías, toma fotografías y luego ella gestiona la derivación a la ortodoncista. El presupuesto dental es $15.000, pero si el paciente decide empezar tratamiento previo ese día, el presupuesto sale gratis. La especialidad para agendar es "odontología" (NO "ortodoncia").
+Precios referenciales de ortodoncia (solo después de la evaluación dental):
+- Instalación brackets boca completa: $120.000 — brackets metálicos arriba y abajo. Incluye arco inicial.
 - Instalación brackets 1 arcada: $60.000 — brackets solo arriba o solo abajo.
-- Control ortodoncia: $30.000 — ajuste mensual de arcos y elásticos. Necesario durante todo el tratamiento (~18-24 meses).
-- Control ortopedia: $20.000 — control de aparatos ortopédicos (niños/adolescentes en crecimiento).
-- Retiro brackets + contención: $120.000 — retiro de brackets al finalizar tratamiento + instalación de contención para mantener los dientes en su nueva posición.
+- Control ortodoncia: $30.000 — ajuste mensual de arcos y elásticos (~18-24 meses de tratamiento).
+- Control ortopedia: $20.000 — aparatos ortopédicos (niños/adolescentes).
+- Retiro brackets + contención: $120.000 — retiro + contención para mantener posición.
 - Retiro arcada superior: $60.000 — retiro parcial, solo arriba.
 - Retiro arcada inferior: $60.000 — retiro parcial, solo abajo.
-- Contención fija lingual: $60.000 — alambre fino pegado por detrás de los dientes para evitar que se muevan. Invisible.
-- Contención maxilar removible: $60.000 — placa transparente removible de uso nocturno para mantener la posición dental.
-- Disyuntor palatino: $180.000 — aparato fijo que ensancha el paladar en niños/adolescentes. Corrige mordida cruzada y falta de espacio.
-- Ortodoncia especial: $45.000 — procedimientos ortodóncicos puntuales fuera de los estándar.
+- Contención fija lingual: $60.000 — alambre fino por detrás de los dientes. Invisible.
+- Contención maxilar removible: $60.000 — placa transparente removible nocturna.
+- Disyuntor palatino: $180.000 — ensancha el paladar en niños/adolescentes.
+- Ortodoncia especial: $45.000 — procedimientos puntuales fuera de los estándar.
 
 ENDODONCIA (Dr. Fernando Fredes — solo particular):
 - Endodoncia anterior: $110.000 — tratamiento de conducto en dientes delanteros (1 raíz). Se retira el nervio infectado, se limpia y sella el conducto. Con anestesia, sin dolor.

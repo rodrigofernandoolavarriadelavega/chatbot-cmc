@@ -3208,6 +3208,25 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
             f"o llamar a recepción:\n📞 *{CMC_TELEFONO}*\n\n"
             "_Escribe *menu* para ver las opciones._"
         )
+    # Ortodoncia requiere evaluación previa con odontología general.
+    # La dentista evalúa, pide radiografías y gestiona la derivación.
+    if especialidad_lower in ("ortodoncia", "ortodoncista", "brackets", "frenillos"):
+        log_event(phone, "ortodoncia_redirigida_odonto", {"especialidad_original": especialidad})
+        # Redirigir a odontología general con el mensaje del flujo real
+        data["ortodoncia_redirigida"] = True
+        return await _iniciar_agendar(
+            phone, data, "odontología",
+            saludo_prefix=(
+                "🦷 *¡Buena decisión!*\n\n"
+                "Para ortodoncia, el primer paso es una evaluación con nuestra "
+                "*dentista general*.\n"
+                "Ella evalúa tu caso, solicita radiografías, toma fotografías "
+                "y gestiona la derivación con la ortodoncista.\n\n"
+                "💰 Presupuesto dental: *$15.000* (gratis si decides empezar "
+                "tratamiento previo ese día).\n\n"
+            ),
+        )
+
     # Masoterapia tiene duración variable — preguntar antes de buscar slots
     if especialidad_lower in ("masoterapia", "masaje", "masajes"):
         data["especialidad"] = "masoterapia"
