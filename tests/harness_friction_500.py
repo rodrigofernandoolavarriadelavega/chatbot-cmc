@@ -423,6 +423,68 @@ def build_tests():
         n += 1
         add(f"edge-{edge_inputs.index((inp, exp)):02d}", [(inp, exp)])
 
+    # ── BLOQUE G: regresiones reales de producción (bugs 2026-04-17) ────────
+    # Narrow-down de profesional mientras está en WAIT_SLOT con otro doctor
+    # pre-sugerido. Claude puede devolver "medicina general" genérico pero el
+    # paciente nombró a un doctor específico — debe ganar el apellido.
+
+    def setup_wait_slot_mg_abarca():
+        """Simula paciente en WAIT_SLOT viendo slots de Abarca (MG)."""
+        # No se puede simular state WAIT_SLOT desde el harness sin modificar
+        # session directamente. Estas pruebas entran por IDLE y agendar, que
+        # ejercita el flujo completo — en WAIT_SLOT el override se valida con
+        # otro test pero el flujo end-to-end al menos valida que no crashee.
+        pass
+
+    regresion_cases = [
+        # (name, steps) — cada step es (input, expected/None)
+        ("con-olavarria-no-crash", [
+            ("agendar medicina general", None),
+            ("Con Olavarria", None),  # debe responder sin error técnico
+        ]),
+        ("olavarria-solo", [
+            ("Olavarria", None),  # debe detectar y ofrecer agendar
+        ]),
+        ("dra-castillo-ortodoncia", [
+            ("Dra Castillo", _any_match(["dental", "odontolog", "ortodoncia", "evaluación"])),
+        ]),
+        ("abarca-directo", [
+            ("Abarca", _any_match(["Abarca", "Medicina", "horarios", "agendar"])),
+        ]),
+        ("dr-millan-cardio", [
+            ("con el doctor millan", _any_match(["Millán", "Cardio", "horarios"])),
+        ]),
+        # Info/FAQ fuera de contexto — no debe heredar especialidad del WAIT_SLOT
+        ("info-estetica-tras-mg", [
+            ("agendar medicina general", None),
+            # Mock puede clasificar como agendar (esp="estética facial") o info.
+            # Importante: la respuesta NO debe ser solo sobre Medicina General.
+            ("cuales son los procedimientos esteticos", {"none": ["Medicina General"] + NO_ENTENDI_MARKERS}),
+        ]),
+        ("info-dental-tras-mg", [
+            ("agendar medicina general", None),
+            ("cuanto cuesta una endodoncia", _any_match(["endodoncia", "conducto", "180", "250", "$"])),
+        ]),
+        ("info-botox-tras-kine", [
+            ("agendar kinesiologia", None),
+            ("tienen botox", _any_match(["Botox", "botox", "toxina", "Estética", "159"])),
+        ]),
+        # Misspelled specialty within WAIT_SLOT
+        ("mal-escrito-kine-tras-mg", [
+            ("agendar medicina general", None),
+            ("kine", _any_match(["Kine", "kinesio", "horarios", "elige", "elegir", "número"])),
+        ]),
+        # Pregunta ambigua de precio - DEBE heredar contexto (comportamiento correcto)
+        ("precio-ambiguo-hereda-contexto", [
+            ("agendar medicina general", None),
+            ("cuanto cuesta", _any_match(["Medicina", "Fonasa", "Particular", "$", "consulta", "7.880"])),
+        ]),
+    ]
+    for name_r, steps_r in regresion_cases:
+        n += 1
+        ph = f"t500_reg_{n:03d}"
+        tests.append((f"{n:03d}-reg-{name_r}", ph, steps_r, None))
+
     # Pequeño padding para asegurar llegar a 500
     while n < 500:
         n += 1

@@ -2077,17 +2077,34 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     return await _iniciar_ver(phone, {})
                 if intent in ("precio", "info"):
                     esp_display = todos_slots[0]["especialidad"] if todos_slots else especialidad
-                    # Sólo reescribir como pregunta de precio si el paciente hizo una
-                    # pregunta AMBIGUA ("cuánto cuesta", "precio", etc). Si la pregunta
-                    # es más específica (ej. "cuáles son los procedimientos estéticos"),
-                    # respetar el texto original para que Claude responda de la especialidad
-                    # correcta, no del contexto actual del WAIT_SLOT.
+                    # Heredar contexto SOLO si la pregunta es corta y no menciona otra
+                    # especialidad. Si el texto menciona una especialidad/tratamiento
+                    # distinto ("procedimientos estéticos", "endodoncia", "botox"),
+                    # respetar el texto original y no contaminar con la especialidad
+                    # del WAIT_SLOT actual.
                     tl = txt.lower().strip()
-                    ambiguas = {"precio", "precios", "cuanto", "cuánto", "cuanto cuesta",
-                                "cuánto cuesta", "cuanto sale", "cuánto sale", "cuanto vale",
-                                "cuánto vale", "valor", "cuesta", "vale"}
-                    es_ambigua = len(tl) <= 25 and any(p in tl for p in ambiguas)
-                    if es_ambigua and esp_display:
+                    OTRAS_ESPS_KW = (
+                        "odontolog", "dental", "diente", "muela", "tapadura",
+                        "endodoncia", "conducto", "ortodoncia", "brackets",
+                        "implante", "implantolog", "estét", "estetica",
+                        "botox", "peeling", "hilos", "bioestim", "lipopapada",
+                        "kinesio", "kine", "lumbago", "espalda",
+                        "cardio", "corazon", "corazón", "gastro",
+                        "gine", "matrona", "embarazo", "otorrino", "garganta", "oido", "oído",
+                        "fono", "psico", "ansiedad", "nutri", "dieta",
+                        "podo", "uña", "ecograf", "maso", "masaje",
+                    )
+                    menciona_otra = any(k in tl for k in OTRAS_ESPS_KW)
+                    ambiguas = {"precio", "precios", "cuanto", "cuánto",
+                                "cuanto cuesta", "cuánto cuesta", "cuanto sale",
+                                "cuánto sale", "cuanto vale", "cuánto vale",
+                                "valor", "vale"}
+                    es_ambigua_corta = (
+                        not menciona_otra
+                        and len(tl) <= 20
+                        and any(p in tl for p in ambiguas)
+                    )
+                    if es_ambigua_corta and esp_display:
                         consulta = f"¿Cuánto cuesta una consulta de {esp_display}?"
                     else:
                         consulta = txt
