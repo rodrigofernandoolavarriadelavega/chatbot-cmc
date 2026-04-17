@@ -2050,6 +2050,26 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             save_session(phone, "WAIT_SLOT", data)
             return _format_slots(smart_nuevo)
 
+        # ── Motivos del menú que cayeron en WAIT_SLOT (usuario volvió a menú) ──
+        # Los IDs motivo_* solo se manejan en IDLE. Si llegan acá, resetear.
+        if txt.startswith("motivo_") or txt in (
+            "accion_cambiar", "accion_mis_citas", "accion_otro",
+            "menu_volver", "ver_otros", "cambiar_datos"
+        ):
+            reset_session(phone)
+            return await handle_message(phone, txt, get_session(phone))
+
+        # ── "No" suelto en WAIT_SLOT → ofrecer alternativas (no confundir con negación real) ──
+        _tl_slot = txt.strip().lower()
+        if _tl_slot in ("no", "no gracias", "nel", "nop", "negativo"):
+            return (
+                "Sin problema 😊 Puedo mostrarte:\n\n"
+                "• *Otros horarios* del mismo día\n"
+                "• *Otro día* para cambiar de fecha\n"
+                "• *Otro profesional* (si hay disponible)\n\n"
+                "¿Qué preferís?"
+            )
+
         # ── Intento de cambio de profesional por lenguaje natural ──
         # "no quiero ese profesional", "con otro doctor", "no me gusta", etc.
         _OTRO_PROF_PHRASES = (
@@ -3591,13 +3611,37 @@ _FRASES_ESPECIALIDAD = [
 
 def _detectar_especialidad_en_texto(txt: str) -> str | None:
     """Detecta una especialidad mencionada en el texto crudo. Usado como
-    fallback cuando Claude no extrae especialidad correctamente."""
+    fallback cuando Claude no extrae especialidad correctamente.
+
+    Primero intenta match exacto. Si falla, normaliza typos fonéticos comunes
+    (j→g, y→ll, sh→ch, sin tildes) y reintenta."""
     if not txt:
         return None
     tl = txt.lower()
     for frase, key in _FRASES_ESPECIALIDAD:
         if frase in tl:
             return key
+    # Fuzzy pass: normalizar typos fonéticos y ortográficos comunes en chile rural
+    tl_fuzzy = tl
+    _FIXES = [
+        ("jeneral", "general"), ("jeberal", "general"), ("geberal", "general"),
+        ("jinecologia", "ginecologia"), ("jenital", "genital"),
+        ("endodonsia", "endodoncia"), ("ortodonsia", "ortodoncia"),
+        ("dentizta", "dentista"), ("odontoloja", "odontologia"),
+        ("kinesiologo", "kinesiologia"), ("kinesiolog", "kinesiologia"),
+        ("cirujano dentista", "dentista"),
+        ("psicologa", "psicologia"), ("psicologo", "psicologia"),
+        ("nutricionista", "nutricion"),
+        ("matron ", "matrona "), ("matron?", "matrona"),
+        ("cardiologo", "cardiologia"),
+    ]
+    for wrong, right in _FIXES:
+        if wrong in tl_fuzzy:
+            tl_fuzzy = tl_fuzzy.replace(wrong, right)
+    if tl_fuzzy != tl:
+        for frase, key in _FRASES_ESPECIALIDAD:
+            if frase in tl_fuzzy:
+                return key
     return None
 
 
