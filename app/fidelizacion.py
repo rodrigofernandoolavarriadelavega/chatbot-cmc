@@ -76,7 +76,7 @@ def _msg_postconsulta(cita: dict) -> dict:
 
 
 def _msg_reactivacion(paciente: dict) -> dict:
-    """Mensaje interactivo para reactivar un paciente inactivo."""
+    """Mensaje interactivo para reactivar un paciente inactivo — tono prescriptivo."""
     nombre = _nombre_corto(paciente.get("nombre"))
     saludo = f"Hola *{nombre}* 👋 " if nombre else "Hola 👋 "
     esp = paciente.get("especialidad", "")
@@ -88,13 +88,15 @@ def _msg_reactivacion(paciente: dict) -> dict:
             "type": "button",
             "body": {
                 "text": (
-                    f"{saludo}Hace un tiempo no te vemos en el *Centro Médico Carampangue* 🏥\n\n"
-                    f"¿Quieres retomar tu atención{esp_txt}? Puedo ayudarte a agendar ahora mismo."
+                    f"{saludo}Del *Centro Médico Carampangue*.\n\n"
+                    f"Para mantener tu tratamiento{esp_txt} al día, es importante "
+                    "no dejar pasar mucho tiempo entre controles.\n\n"
+                    "Tenemos horas disponibles esta semana. ¿Te reservo una?"
                 )
             },
             "action": {
                 "buttons": [
-                    {"type": "reply", "reply": {"id": "reac_si",    "title": "Sí, agendar"}},
+                    {"type": "reply", "reply": {"id": "reac_si",    "title": "📅 Sí, reservar"}},
                     {"type": "reply", "reply": {"id": "reac_luego", "title": "Más adelante"}},
                 ]
             }
@@ -219,14 +221,15 @@ def _msg_adherencia_kine(paciente: dict) -> dict:
             "type": "button",
             "body": {
                 "text": (
-                    f"{saludo}Para que tu tratamiento de kinesiología funcione bien, "
-                    "es importante mantener continuidad en las sesiones.\n\n"
-                    "¿Quieres que te ayude a agendar la próxima?"
+                    f"{saludo}Tu kinesiólogo necesita verte esta semana para "
+                    "que el tratamiento avance bien.\n\n"
+                    "Si dejas pasar más días, se pierde el progreso de las sesiones anteriores.\n\n"
+                    "¿Agendamos tu próxima sesión?"
                 )
             },
             "action": {
                 "buttons": [
-                    {"type": "reply", "reply": {"id": "kine_adh_si",  "title": "Sí, agendar"}},
+                    {"type": "reply", "reply": {"id": "kine_adh_si",  "title": "📅 Agendar ahora"}},
                     {"type": "reply", "reply": {"id": "kine_adh_no",  "title": "Más adelante"}},
                 ]
             }
@@ -293,14 +296,14 @@ def _msg_control(paciente: dict, especialidad: str) -> dict:
             "type": "button",
             "body": {
                 "text": (
-                    f"{saludo}Ya va correspondiendo tu control de *{especialidad}* 📅\n\n"
-                    "Hacer el seguimiento a tiempo hace la diferencia. "
-                    "¿Quieres ver horarios disponibles?"
+                    f"{saludo}Tu control de *{especialidad}* ya corresponde hacerlo.\n\n"
+                    "Detectar cambios a tiempo puede evitar complicaciones.\n\n"
+                    "Tenemos horas disponibles. ¿Te reservo una?"
                 )
             },
             "action": {
                 "buttons": [
-                    {"type": "reply", "reply": {"id": "ctrl_si", "title": "Sí, ver horarios"}},
+                    {"type": "reply", "reply": {"id": "ctrl_si", "title": "📅 Reservar"}},
                     {"type": "reply", "reply": {"id": "ctrl_no", "title": "No por ahora"}},
                 ]
             }
@@ -356,14 +359,15 @@ def _msg_crosssell_kine(paciente: dict) -> dict:
             "type": "button",
             "body": {
                 "text": (
-                    f"{saludo}Muchas veces, tras una consulta médica "
-                    "se recomienda continuar con kinesiología para avanzar mejor.\n\n"
-                    "¿Te gustaría agendar con nuestros kinesiólogos?"
+                    f"{saludo}Para que tu tratamiento funcione, "
+                    "necesitas complementar con *kinesiología*.\n\n"
+                    "Es lo que más ayuda a la recuperación. "
+                    "Tenemos horas esta semana. ¿Te reservo?"
                 )
             },
             "action": {
                 "buttons": [
-                    {"type": "reply", "reply": {"id": "xkine_si", "title": "Sí, me interesa"}},
+                    {"type": "reply", "reply": {"id": "xkine_si", "title": "📅 Reservar kine"}},
                     {"type": "reply", "reply": {"id": "xkine_no", "title": "No por ahora"}},
                 ]
             }
@@ -453,10 +457,18 @@ async def enviar_cumpleanos(send_fn):
             msg = (
                 f"¡Feliz cumpleaños, {saludo}! 🎂🎉{edad_txt}\n\n"
                 "Todo el equipo del *Centro Médico Carampangue* te desea un excelente día.\n\n"
-                f"Tu salud es lo más importante. ¿Te gustaría agendar un chequeo?{tip}\n\n"
-                "_Escribe *menu* cuando quieras agendar._"
+                f"Tu salud es lo más importante.{tip}\n\n"
+                "¿Aprovechas de agendar tu chequeo preventivo?"
             )
-            await send_fn(p["phone"], msg)
+            try:
+                from messaging import send_whatsapp_interactive
+                await send_whatsapp_interactive(
+                    p["phone"], msg,
+                    [{"id": "reac_si", "title": "📅 Sí, agendar"},
+                     {"id": "reac_luego", "title": "Más adelante"}],
+                )
+            except Exception:
+                await send_fn(p["phone"], msg + "\n\n_Escribe *menu* para agendar._")
             log_message(p["phone"], "out", msg, "IDLE")
             save_fidelizacion_msg(p["phone"], "cumpleanos")
             log.info("Cumpleaños enviado → %s (%s)%s", p["phone"], nombre, edad_txt)
@@ -469,7 +481,7 @@ async def enviar_cumpleanos(send_fn):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _msg_winback(paciente: dict) -> dict:
-    """Mensaje interactivo para recuperar pacientes inactivos >90 días."""
+    """Mensaje interactivo para recuperar pacientes inactivos >90 días — tono directo."""
     nombre = _nombre_corto(paciente.get("nombre"))
     saludo = f"Hola *{nombre}* 👋 " if nombre else "Hola 👋 "
 
@@ -478,25 +490,21 @@ def _msg_winback(paciente: dict) -> dict:
     dx_tags = [t.replace("dx:", "") for t in tags if t.startswith("dx:")]
 
     if dx_tags:
-        # Mensaje personalizado para crónicos
         patologia = dx_tags[0].upper()
         body = (
             f"{saludo}Del *Centro Médico Carampangue*.\n\n"
-            f"Como paciente con *{patologia}*, recuerda que es importante "
-            "mantener tus controles al día, hidratarte bien, cuidar tu "
-            "alimentación y realizar actividad física con regularidad 💪\n\n"
-            "También se recomienda una *limpieza dental* cada 6 meses "
-            "para prevenir caries y problemas de encías 🦷\n\n"
-            "¿Quieres agendar una hora con odontólogo o con otro profesional del centro?"
+            f"Con *{patologia}*, dejar pasar más de 3 meses sin control "
+            "aumenta el riesgo de complicaciones.\n\n"
+            "Te recomendamos agendar tu chequeo esta semana. "
+            "Tenemos horas disponibles."
         )
     else:
         body = (
             f"{saludo}Del *Centro Médico Carampangue*.\n\n"
-            "Recuerda hidratarte bien, cuidar tu alimentación "
-            "y realizar actividad física con regularidad 💪\n\n"
-            "También se recomienda una *limpieza dental* cada 6 meses "
-            "para prevenir caries y problemas de encías 🦷\n\n"
-            "¿Quieres que te agende una hora con el odontólogo?"
+            "Tu última visita fue hace más de 3 meses. "
+            "Un chequeo preventivo puede detectar problemas a tiempo.\n\n"
+            "También se recomienda *limpieza dental* cada 6 meses 🦷\n\n"
+            "Tenemos horas disponibles esta semana."
         )
 
     return {

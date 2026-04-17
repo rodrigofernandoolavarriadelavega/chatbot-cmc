@@ -1403,7 +1403,7 @@ function espLabel(key) {
 
 /* ── COMMERCIAL INTELLIGENCE ── */
 const HOT_STATES = ["CONFIRMING_CITA","WAIT_SLOT","WAIT_MODALIDAD","WAIT_BOOKING_FOR","WAIT_RUT_AGENDAR"];
-const WARM_STATES = ["WAIT_ESPECIALIDAD","WAIT_NOMBRE_NUEVO","WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL","WAIT_REFERRAL","WAIT_REFERRAL_CODE","WAIT_DURACION_MASOTERAPIA"];
+const WARM_STATES = ["WAIT_ESPECIALIDAD","WAIT_DATOS_NUEVO","WAIT_NOMBRE_NUEVO","WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL","WAIT_REFERRAL","WAIT_REFERRAL_CODE","WAIT_DURACION_MASOTERAPIA"];
 
 function computeSuggestion(conv) {
   const st = conv.state || "IDLE";
@@ -1462,7 +1462,7 @@ function useSuggestion() {
 }
 
 const ACTIVE_STATES = ["WAIT_ESPECIALIDAD","WAIT_SLOT","WAIT_MODALIDAD","WAIT_BOOKING_FOR","WAIT_PHONE_OWNER_NAME","WAIT_RUT_AGENDAR",
-  "WAIT_NOMBRE_NUEVO","WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL","WAIT_REFERRAL","WAIT_REFERRAL_CODE",
+  "WAIT_DATOS_NUEVO","WAIT_NOMBRE_NUEVO","WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL","WAIT_REFERRAL","WAIT_REFERRAL_CODE",
   "CONFIRMING_CITA","WAIT_RUT_CANCELAR","WAIT_CITA_CANCELAR",
   "CONFIRMING_CANCEL","WAIT_RUT_VER","WAIT_RUT_REAGENDAR","WAIT_CITA_REAGENDAR",
   "WAIT_DURACION_MASOTERAPIA"];
@@ -1472,7 +1472,7 @@ const STATE_GROUPS = [
     states:["HUMAN_TAKEOVER"] },
   { id:"agendando", label:"Agendando",              dot:"#f59e0b", tag:"tag-amber",
     states:["WAIT_ESPECIALIDAD","WAIT_SLOT","WAIT_MODALIDAD","WAIT_BOOKING_FOR","WAIT_PHONE_OWNER_NAME","WAIT_RUT_AGENDAR",
-            "WAIT_NOMBRE_NUEVO","WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL","WAIT_REFERRAL","WAIT_REFERRAL_CODE",
+            "WAIT_DATOS_NUEVO","WAIT_NOMBRE_NUEVO","WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL","WAIT_REFERRAL","WAIT_REFERRAL_CODE",
             "CONFIRMING_CITA","WAIT_DURACION_MASOTERAPIA"] },
   { id:"reagendando",label:"Reagendando",           dot:"#06b6d4", tag:"tag-cyan",
     states:["WAIT_RUT_REAGENDAR","WAIT_CITA_REAGENDAR"] },
@@ -1488,7 +1488,7 @@ const STATE_LABELS = {
   IDLE:"Sin actividad", WAIT_ESPECIALIDAD:"Eligiendo especialidad",
   WAIT_SLOT:"Eligiendo horario", WAIT_MODALIDAD:"Fonasa / Particular", WAIT_BOOKING_FOR:"¿Para ti o para otro?", WAIT_PHONE_OWNER_NAME:"Nombre dueño celular",
   WAIT_DURACION_MASOTERAPIA:"Eligiendo duración masoterapia",
-  WAIT_RUT_AGENDAR:"Ingresando RUT", WAIT_NOMBRE_NUEVO:"Registro paciente nuevo",
+  WAIT_RUT_AGENDAR:"Ingresando RUT", WAIT_DATOS_NUEVO:"Registro rápido", WAIT_NOMBRE_NUEVO:"Registro paciente nuevo",
   WAIT_FECHA_NAC:"Registro — fecha nacimiento", WAIT_SEXO:"Registro — sexo",
   WAIT_COMUNA:"Registro — comuna", WAIT_EMAIL:"Registro — email", WAIT_REFERRAL:"Registro — ¿cómo nos conociste?", WAIT_REFERRAL_CODE:"Registro — código referido",
   CONFIRMING_CITA:"Confirmando cita", WAIT_RUT_CANCELAR:"Cancelando — ingresa RUT",
@@ -1887,10 +1887,10 @@ function updateContextPanel(conv) {
   document.getElementById("ctx-slots-section").style.display="none"; // reset on conv switch
   // Checklist de progreso
   const agendarStates = ["WAIT_ESPECIALIDAD","WAIT_SLOT","WAIT_MODALIDAD","WAIT_BOOKING_FOR","WAIT_PHONE_OWNER_NAME","WAIT_RUT_AGENDAR",
-    "WAIT_NOMBRE_NUEVO","WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL","WAIT_REFERRAL",
+    "WAIT_DATOS_NUEVO","WAIT_NOMBRE_NUEVO","WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL","WAIT_REFERRAL",
     "CONFIRMING_CITA","WAIT_DURACION_MASOTERAPIA"];
   const isAgendar = agendarStates.includes(conv.state);
-  const isRegistro = ["WAIT_NOMBRE_NUEVO","WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL","WAIT_REFERRAL"].includes(conv.state);
+  const isRegistro = ["WAIT_DATOS_NUEVO","WAIT_NOMBRE_NUEVO","WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL","WAIT_REFERRAL"].includes(conv.state);
   const progSec = document.getElementById("ctx-progress-section");
   if(isAgendar){
     progSec.style.display="block";
@@ -1899,7 +1899,10 @@ function updateContextPanel(conv) {
       {label:"Horario seleccionado", done:!!(fd.fecha_display&&fd.hora_inicio)},
       {label:"Previsión / RUT", done:!!conv.rut},
     ];
-    if(isRegistro) steps.push(
+    if(conv.state==="WAIT_DATOS_NUEVO") steps.push(
+      {label:"Registro rápido (nombre, sexo, fecha nac.)", done:false},
+    );
+    if(["WAIT_NOMBRE_NUEVO","WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL","WAIT_REFERRAL"].includes(conv.state)) steps.push(
       {label:"Registro: nombre", done:["WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL","WAIT_REFERRAL"].includes(conv.state)},
       {label:"Registro: fecha nac.", done:["WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL","WAIT_REFERRAL"].includes(conv.state)},
       {label:"Registro: sexo", done:["WAIT_COMUNA","WAIT_EMAIL","WAIT_REFERRAL"].includes(conv.state)},
@@ -1953,6 +1956,9 @@ function renderQuickReplies(conv) {
   } else if(["WAIT_RUT_AGENDAR","WAIT_RUT_CANCELAR","WAIT_RUT_VER","WAIT_RUT_REAGENDAR"].includes(st)) {
     replies.push("¿Me indicas tu RUT para buscarte en el sistema?");
     replies.push("Necesito tu RUT con guión (ej: 12345678-9)");
+  } else if(st==="WAIT_DATOS_NUEVO") {
+    replies.push("Escríbeme: Nombre, Sexo (M/F), Fecha nacimiento");
+    replies.push("Ejemplo: María González, F, 15/03/1990");
   } else if(["WAIT_NOMBRE_NUEVO","WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL","WAIT_REFERRAL"].includes(st)) {
     replies.push("Para registrarte necesito unos datos 📋");
     replies.push("Si prefieres, puedes saltarte este paso escribiendo 'saltar'");

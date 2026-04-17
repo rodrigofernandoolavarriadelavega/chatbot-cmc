@@ -1024,17 +1024,12 @@ async def main():
         ("confirmar", ["reserv", "✅", "cita"]),
     ])
 
-    mk("103 full flow kine: agendar→slot→nuevo paciente", "56910000103", [
+    mk("103 full flow kine: agendar→slot→nuevo paciente (1 msg)", "56910000103", [
         ("quiero agendar kinesiología", {"any": ["Kine", "09:"], **NO_ERROR}),
         ("confirmar_sugerido", ["Fonasa"]),
         ("1", ["rut"]),
-        ("99999999-9", ["nombre", "encontr", "registrar"]),
-        ("Pedro Pérez González", ["fecha de nacimiento"]),
-        ("saltar", ["sexo"]),
-        ("sexo_f", ["comuna"]),
-        ("saltar", ["correo"]),
-        ("saltar", {"any": ["conociste", "conocist"], **NO_ERROR}),
-        ("ref_rrss", {"any": ["confirm", "cita", "reserv"], **NO_ERROR}),
+        ("99999999-9", ["Nombre", "Sexo", "nacimiento"]),
+        ("Pedro Pérez González, F, 15/03/1990", {"any": ["confirm", "cita", "reserv", "Registrad"], **NO_ERROR}),
         ("confirmar", ["reserv", "✅", "cita"]),
     ])
 

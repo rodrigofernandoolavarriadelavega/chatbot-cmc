@@ -19,7 +19,8 @@ from session import (save_session, reset_session, save_tag, delete_tag, get_tags
                      save_profile, get_profile, save_fidelizacion_respuesta, get_ultimo_seguimiento,
                      enqueue_intent, add_to_waitlist, cancel_waitlist,
                      get_cita_bot_by_id_cita, mark_cita_confirmation, get_phone_by_rut,
-                     save_demanda_no_disponible,
+                     save_demanda_no_disponible, get_waitlist_by_especialidad,
+                     mark_waitlist_notified,
                      has_privacy_consent, save_privacy_consent, revoke_privacy_consent)
 from resilience import is_medilink_down
 from triage_ges import triage_sintomas, normalizar_texto_paciente
@@ -1607,7 +1608,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         f"Si necesitas orientación, llama a recepción:\n📞 *{CMC_TELEFONO}*\n\n"
                         + DISCLAIMER
                     )
-                # Especialidad agendable → iniciar flujo de agendar directo.
+                # Especialidad agendable → iniciar flujo de agendar con urgencia empática.
                 especialidad_triage = triage.get("especialidad")
                 if especialidad_triage:
                     perfil = get_profile(phone)
@@ -1615,6 +1616,13 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         data["rut_conocido"] = perfil["rut"]
                         data["nombre_conocido"] = perfil["nombre"]
                     data["triage_motivo"] = triage.get("top_pathology")
+                    # Mensaje de urgencia empática ANTES de iniciar agendamiento
+                    await send_whatsapp(
+                        phone,
+                        f"Por lo que me cuentas, es importante que te evalúe "
+                        f"un especialista en *{especialidad_triage}* pronto.\n\n"
+                        "Te busco la hora más cercana disponible ahora mismo."
+                    )
                     return await _iniciar_agendar(phone, data, especialidad_triage)
             else:
                 # Log de gaps de recall — sólo si el texto parece clínico. Así
@@ -2165,11 +2173,25 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         paciente = await buscar_paciente(rut)
         if not paciente:
             data["rut"] = rut
-            save_session(phone, "WAIT_NOMBRE_NUEVO", data)
+            is_social = phone.startswith("ig_") or phone.startswith("fb_")
+            save_session(phone, "WAIT_DATOS_NUEVO", data)
+            if is_social:
+                return (
+                    "¡Bienvenido/a! Es tu primera vez con nosotros 🙌\n\n"
+                    "Escríbeme en *un solo mensaje*:\n\n"
+                    "👤 Nombre completo\n"
+                    "⚤ Sexo (M o F)\n"
+                    "📅 Fecha de nacimiento\n"
+                    "📱 Número de celular\n\n"
+                    "_Ejemplo: María González López, F, 15/03/1990, 912345678_"
+                )
             return (
-                "Es tu primera vez con nosotros 🙌\n\n"
-                "Te registro en un minuto. ¿Cuál es tu nombre completo?\n"
-                "(ej: *María González López*)"
+                "¡Bienvenido/a! Es tu primera vez con nosotros 🙌\n\n"
+                "Escríbeme en *un solo mensaje*:\n\n"
+                "👤 Nombre completo\n"
+                "⚤ Sexo (M o F)\n"
+                "📅 Fecha de nacimiento\n\n"
+                "_Ejemplo: *María González López, F, 15/03/1990*_"
             )
 
         data.update({"paciente": paciente, "rut": rut})
@@ -2442,6 +2464,28 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if ok:
                 log_event(phone, "cita_cancelada", {"id_cita": cita["id"], "profesional": cita.get("profesional")})
                 save_tag(phone, "canceló")
+                # ── Event-driven: notificar waitlist al instante ──
+                esp_cancelada = cita.get("especialidad", "")
+                if esp_cancelada:
+                    try:
+                        waiters = get_waitlist_by_especialidad(esp_cancelada)
+                        for w in waiters[:3]:  # notificar hasta 3 personas
+                            w_phone = w["phone"]
+                            w_nombre = (w.get("nombre") or "").split()
+                            w_saludo = f"*{w_nombre[0]}*" if w_nombre else ""
+                            await send_whatsapp(
+                                w_phone,
+                                f"Hola {w_saludo} 👋 ¡Se acaba de liberar una hora de "
+                                f"*{esp_cancelada}* con *{cita.get('profesional', '')}*!\n\n"
+                                f"📅 *{cita.get('fecha_display', '')}* a las *{cita.get('hora_inicio', '')}*\n\n"
+                                "Escribe *menu* ahora para reservarla antes de que se llene."
+                            )
+                            mark_waitlist_notified(w["id"])
+                            log_event(w_phone, "waitlist_notificado_cancelacion", {
+                                "especialidad": esp_cancelada, "cita_cancelada": cita["id"],
+                            })
+                    except Exception as e:
+                        log.warning("Error notificando waitlist post-cancel: %s", e)
                 return _btn_msg(
                     f"✅ Cita cancelada.\n\n"
                     f"_{cita['profesional']} · {cita['fecha_display']} · {cita['hora_inicio']}_\n\n"
@@ -2625,7 +2669,138 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             ]
         )
 
-    # ── WAIT_NOMBRE_NUEVO ─────────────────────────────────────────────────────
+    # ── WAIT_DATOS_NUEVO (registro en un solo mensaje) ────────────────────────
+    if state == "WAIT_DATOS_NUEVO":
+        raw = txt.strip()
+
+        # ── Separar por comas/punto y coma ──
+        parts = [p.strip() for p in re.split(r'[,;]+', raw) if p.strip()]
+
+        nombre_raw = None
+        sexo = None
+        fecha_nac = None
+        celular_raw = None
+        _SEX_M = re.compile(r'^(m|masculino|hombre|masc)$', re.I)
+        _SEX_F = re.compile(r'^(f|femenino|mujer|fem)$', re.I)
+        _PHONE_RE = re.compile(r'^(\+?56)?[0-9\s\-]{8,12}$')
+
+        for part in parts:
+            p = part.strip()
+            # ¿Es sexo?
+            if not sexo and _SEX_M.match(p):
+                sexo = "M"; continue
+            if not sexo and _SEX_F.match(p):
+                sexo = "F"; continue
+            # ¿Es número de celular? (9 dígitos chilenos, opcionalmente +56)
+            if not celular_raw and _PHONE_RE.match(p):
+                digits = re.sub(r'[^\d]', '', p)
+                if digits.startswith("56") and len(digits) >= 10:
+                    celular_raw = digits[2:]  # sin código país
+                    continue
+                elif len(digits) >= 8 and len(digits) <= 9:
+                    celular_raw = digits
+                    continue
+            # ¿Es fecha?
+            if not fecha_nac:
+                f = _parsear_fecha_nacimiento(p)
+                if f:
+                    fecha_nac = f; continue
+            # Lo demás es nombre (primera parte no-matcheada)
+            if not nombre_raw:
+                nombre_raw = p
+
+        # Si no hubo comas, intentar extraer de tokens sueltos
+        if not sexo and nombre_raw:
+            tokens = nombre_raw.split()
+            for i, t in enumerate(tokens):
+                if _SEX_M.match(t):
+                    sexo = "M"; tokens.pop(i); nombre_raw = " ".join(tokens); break
+                if _SEX_F.match(t):
+                    sexo = "F"; tokens.pop(i); nombre_raw = " ".join(tokens); break
+        if not fecha_nac and nombre_raw:
+            fecha_nac = _parsear_fecha_nacimiento(nombre_raw)
+            if fecha_nac:
+                nombre_raw = re.sub(r'\d{1,2}[/-]\d{1,2}[/-]\d{2,4}', '', nombre_raw)
+                nombre_raw = re.sub(r'\b\d{8}\b', '', nombre_raw)
+                nombre_raw = re.sub(r'\d{1,2}\s+de\s+\w+\s+(de\s+)?\d{4}', '', nombre_raw, flags=re.I)
+                nombre_raw = nombre_raw.strip()
+
+        # Limpiar nombre
+        nombre_raw = re.sub(r'\s+', ' ', nombre_raw or '').strip()
+        is_social = phone.startswith("ig_") or phone.startswith("fb_")
+        _ej = "María González López, F, 15/03/1990, 912345678" if is_social else "María González López, F, 15/03/1990"
+        if not nombre_raw or not re.match(r"^[a-záéíóúñüA-ZÁÉÍÓÚÑÜ\s\-']{3,60}$", nombre_raw):
+            return (
+                "No reconocí el nombre 😕\n\n"
+                "Escríbelo separado por comas:\n"
+                f"*Nombre Apellido, M o F, DD/MM/AAAA{', Celular' if is_social else ''}*\n\n"
+                f"_Ejemplo: {_ej}_"
+            )
+        partes_nombre = nombre_raw.split()
+        if len(partes_nombre) < 2:
+            return f"Necesito nombre y apellido, por ejemplo:\n*{_ej}*"
+
+        nombre   = partes_nombre[0].capitalize()
+        apellidos = " ".join(p.capitalize() for p in partes_nombre[1:])
+
+        # ── Crear paciente con los datos básicos ──
+        rut = data.get("rut", "")
+        extra: dict = {}
+        if fecha_nac:
+            from datetime import date as _date_check
+            if fecha_nac.year >= 1920 and fecha_nac <= datetime.now().date():
+                extra["fecha_nacimiento"] = fecha_nac.strftime("%Y-%m-%d")
+                data["reg_fecha_nacimiento"] = extra["fecha_nacimiento"]
+        if sexo:
+            extra["sexo"] = sexo
+        # Celular: en IG/FB usar el que escribió, en WA auto-rellenar del número
+        is_social = phone.startswith("ig_") or phone.startswith("fb_")
+        if celular_raw:
+            extra["celular"] = celular_raw
+            extra["telefono"] = celular_raw
+        elif not is_social:
+            cel = phone.lstrip("+")
+            if cel.startswith("56") and len(cel) >= 10:
+                extra["celular"] = cel[2:]
+                extra["telefono"] = cel[2:]
+
+        log_event(phone, "registro_completo", {
+            "rut": rut, "campos_extra": list(extra.keys()),
+            "total_campos": len(extra),
+        })
+        paciente = await crear_paciente(rut, nombre, apellidos, **extra)
+        if not paciente:
+            reset_session(phone)
+            return f"Hubo un problema al registrarte 😕\nLlama a recepción: 📞 *{CMC_TELEFONO}*"
+
+        save_profile(phone, rut, paciente["nombre"],
+                     fecha_nacimiento=data.get("reg_fecha_nacimiento"))
+        # Código de referido (silencioso)
+        try:
+            from session import generate_referral_code
+            generate_referral_code(phone)
+        except Exception:
+            pass
+
+        data.update({"paciente": paciente, "rut": rut})
+        save_session(phone, "CONFIRMING_CITA", data)
+        slot = data["slot_elegido"]
+        modalidad = data.get("modalidad", "particular").capitalize()
+        return _btn_msg(
+            f"¡Registrado/a, *{nombre}*! 🙌\n\n"
+            f"¿Confirmas esta hora?\n\n"
+            f"👤 *{paciente['nombre']}*\n"
+            f"🏥 *{slot['especialidad']}* — {slot['profesional']}\n"
+            f"📅 *{slot['fecha_display']}*\n"
+            f"🕐 *{slot['hora_inicio'][:5]}*\n"
+            f"💳 *{modalidad}*",
+            [
+                {"id": "si", "title": "✅ Confirmar"},
+                {"id": "no", "title": "❌ Cambiar"},
+            ]
+        )
+
+    # ── WAIT_NOMBRE_NUEVO (legacy — para sesiones activas pre-update) ─────────
     if state == "WAIT_NOMBRE_NUEVO":
         nombre_raw = txt.strip()
         # Validar que solo tenga letras, espacios, guiones y apóstrofes

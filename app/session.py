@@ -379,7 +379,7 @@ def is_duplicate(msg_id: str) -> bool:
         return False
 
 
-_REGISTRO_STATES = {"WAIT_NOMBRE_NUEVO", "WAIT_FECHA_NAC", "WAIT_SEXO", "WAIT_COMUNA", "WAIT_EMAIL"}
+_REGISTRO_STATES = {"WAIT_DATOS_NUEVO", "WAIT_NOMBRE_NUEVO", "WAIT_FECHA_NAC", "WAIT_SEXO", "WAIT_COMUNA", "WAIT_EMAIL"}
 
 
 def get_session(phone: str) -> dict:
@@ -895,7 +895,7 @@ def get_conversations(limit: int = 200) -> list[dict]:
 
 def get_sesiones_abandonadas() -> list[dict]:
     """Retorna sesiones activas sin actividad entre 10 y 60 minutos (candidatas a reenganche)."""
-    estados = ("WAIT_SLOT", "WAIT_MODALIDAD", "WAIT_RUT_AGENDAR", "WAIT_NOMBRE_NUEVO")
+    estados = ("WAIT_SLOT", "WAIT_MODALIDAD", "WAIT_RUT_AGENDAR", "WAIT_DATOS_NUEVO", "WAIT_NOMBRE_NUEVO")
     placeholders = ",".join("?" * len(estados))
     with _conn() as conn:
         rows = conn.execute(f"""
@@ -1834,6 +1834,18 @@ def waitlist_depth() -> int:
             "WHERE notified_at IS NULL AND canceled_at IS NULL"
         ).fetchone()
         return int(row[0]) if row else 0
+
+
+def get_waitlist_by_especialidad(especialidad: str) -> list[dict]:
+    """Retorna inscripciones activas para una especialidad (FIFO)."""
+    with _conn() as conn:
+        rows = conn.execute(
+            "SELECT * FROM waitlist "
+            "WHERE especialidad = ? AND notified_at IS NULL AND canceled_at IS NULL "
+            "ORDER BY created_at ASC",
+            (especialidad.lower(),)
+        ).fetchall()
+        return [dict(r) for r in rows]
 
 
 # ── BSUID mapping ─────────────────────────────────────────────────────────

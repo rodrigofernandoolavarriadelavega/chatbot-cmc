@@ -27,24 +27,63 @@ HEADERS_MEDILINK = {"Authorization": f"Token {MEDILINK_TOKEN}"}
 
 
 async def _enviar_reenganche():
-    """Reenganche a pacientes que abandonaron un flujo activo hace 10-60 minutos."""
+    """Reenganche agresivo: slot real + urgencia + botón directo."""
     sesiones = get_sesiones_abandonadas()
     for s in sesiones:
         phone = s["phone"]
         state = s["state"]
         data  = s["data"]
         especialidad = data.get("especialidad", "")
+        nombre = (data.get("nombre_conocido") or data.get("reg_nombre") or "").split()
+        saludo = f"*{nombre[0]}*" if nombre else ""
+
+        # Intentar obtener próximo slot real para la especialidad
+        slot_txt = ""
+        if especialidad and not is_medilink_down():
+            try:
+                _, todos = await buscar_primer_dia(especialidad, dias_adelante=7)
+                if todos:
+                    s0 = todos[0]
+                    n_slots = len(todos)
+                    escasez = "⚡ _Última hora disponible_ " if n_slots <= 2 else (
+                        f"⚡ _Quedan solo {n_slots} horas_ " if n_slots <= 4 else "")
+                    slot_txt = (
+                        f"\n\n{escasez}📅 *{s0.get('fecha_display', '')}* a las *{s0.get('hora_inicio', '')[:5]}*"
+                        f" con *{s0.get('profesional', '')}*"
+                    )
+            except Exception:
+                pass
+
         if state == "WAIT_SLOT":
             msg = (
-                f"Hola 😊 ¿Seguimos con tu hora{' de *' + especialidad + '*' if especialidad else ''}?\n\n"
-                "Escribe *menu* para retomar desde el inicio."
+                f"Hola {saludo} 👋 Te quedaste a punto de elegir tu hora"
+                f"{' de *' + especialidad + '*' if especialidad else ''}."
+                f"{slot_txt}\n\n"
+                "Las horas se van llenando rápido, ¿la reservo?"
+            )
+        elif state in ("CONFIRMING_CITA", "WAIT_RUT_AGENDAR", "WAIT_DATOS_NUEVO", "WAIT_NOMBRE_NUEVO"):
+            msg = (
+                f"Hola {saludo} 👋 Quedaste a un paso de confirmar tu hora"
+                f"{' de *' + especialidad + '*' if especialidad else ''}."
+                f"{slot_txt}\n\n"
+                "Solo falta un dato para reservarla. ¿Seguimos?"
             )
         else:
             msg = (
-                "Hola 😊 Quedaste a punto de confirmar tu hora.\n\n"
-                "Escribe *menu* para retomar cuando quieras."
+                f"Hola {saludo} 👋 Tienes una reserva pendiente"
+                f"{' de *' + especialidad + '*' if especialidad else ''}."
+                f"{slot_txt}\n\n"
+                "¿Te la reservo antes de que se llene?"
             )
-        await send_whatsapp(phone, msg)
+
+        try:
+            await send_whatsapp_interactive(
+                phone, msg,
+                [{"id": "menu", "title": "✅ Sí, continuar"},
+                 {"id": "no_gracias_reeng", "title": "No por ahora"}],
+            )
+        except Exception:
+            await send_whatsapp(phone, msg + "\n\nEscribe *menu* para continuar.")
         data["reenganche_sent"] = True
         save_session(phone, state, data)
         log.info("Reenganche enviado → %s (estado: %s)", phone, state)
