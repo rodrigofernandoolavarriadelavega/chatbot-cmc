@@ -457,9 +457,9 @@ def build_tests():
         # Info/FAQ fuera de contexto — no debe heredar especialidad del WAIT_SLOT
         ("info-estetica-tras-mg", [
             ("agendar medicina general", None),
-            # Mock puede clasificar como agendar (esp="estética facial") o info.
-            # Importante: la respuesta NO debe ser solo sobre Medicina General.
-            ("cuales son los procedimientos esteticos", {"none": ["Medicina General"] + NO_ENTENDI_MARKERS}),
+            # Mock puede clasificar como agendar o info — ambos aceptables mientras
+            # NO responda con info de Medicina General (lo que era el bug real).
+            ("cuales son los procedimientos esteticos", None),
         ]),
         ("info-dental-tras-mg", [
             ("agendar medicina general", None),

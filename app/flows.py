@@ -1948,18 +1948,26 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             prof_sugerido_id = data.get("prof_sugerido_id")
             ids_esp = _ids_para_especialidad(especialidad)
             if especialidad in _ESP_MED_GENERAL:
-                ids_esp = list(_MED_GENERAL_IDS)
-            otros_ids = [i for i in ids_esp if i != prof_sugerido_id]
+                ids_esp = list(_MED_GENERAL_IDS)  # [73, 1, 13] = Abarca, Olavarría, Márquez
+            # Tracking de profesionales vistos — evita loops entre los mismos 2
+            profs_vistos = set(data.get("profs_vistos", []))
+            if prof_sugerido_id:
+                profs_vistos.add(prof_sugerido_id)
+            otros_ids = [i for i in ids_esp if i not in profs_vistos]
+            # Si ya vio a todos los "primarios" pero aún hay profesionales adicionales
+            # no cargados (caso MG: Márquez como overflow), incluirlos explícitamente.
+            if not otros_ids and especialidad in _ESP_MED_GENERAL:
+                otros_ids = [_MED_OVERFLOW_ID] if _MED_OVERFLOW_ID not in profs_vistos else []
             if not otros_ids:
-                return "Solo hay un profesional disponible para esta especialidad 😊"
+                return "Ya viste a todos los profesionales disponibles para esta especialidad 😊\n\nEscribe *otro día* para cambiar de día o elige un número del listado."
 
             # 1) Intentar con los slots que ya tenemos del mismo día (todos_slots)
             slots_otros_mismo_dia = [s for s in todos_slots if s.get("id_profesional") in otros_ids]
             if slots_otros_mismo_dia:
                 data["slots"] = slots_otros_mismo_dia
-                # Marcar al primer "otro" como el nuevo sugerido para seguir navegando
                 nuevo_sugerido_id = slots_otros_mismo_dia[0].get("id_profesional")
                 data["prof_sugerido_id"] = nuevo_sugerido_id
+                data["profs_vistos"] = list(profs_vistos)
                 save_session(phone, "WAIT_SLOT", data)
                 return _format_slots(slots_otros_mismo_dia, mostrar_todos=True)
 
@@ -1981,7 +1989,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             smart_nuevo_filtrado = [s for s in smart_nuevo if s.get("id_profesional") == nuevo_sugerido_id] or smart_nuevo
             data.update({"slots": smart_nuevo_filtrado, "todos_slots": todos_nuevo,
                          "fechas_vistas": fechas_vistas, "expansion_stage": 0,
-                         "prof_sugerido_id": nuevo_sugerido_id})
+                         "prof_sugerido_id": nuevo_sugerido_id,
+                         "profs_vistos": list(profs_vistos)})
             save_session(phone, "WAIT_SLOT", data)
             return _format_slots(smart_nuevo_filtrado)
 
@@ -2045,8 +2054,6 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 result = await detect_intent(txt)
                 intent = result.get("intent", "otro")
                 esp_override = _detectar_apellido_profesional(txt)
-                log.info("[WAIT_SLOT] txt=%r intent=%r esp_claude=%r esp_override=%r",
-                         txt[:60], intent, result.get("especialidad"), esp_override)
                 if intent == "agendar" and (result.get("especialidad") or esp_override):
                     from medilink import _ids_para_especialidad
                     # Override: si el texto crudo menciona un apellido de profesional,
