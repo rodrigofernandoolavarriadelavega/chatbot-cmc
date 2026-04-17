@@ -2046,22 +2046,24 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 intent = result.get("intent", "otro")
                 if intent == "agendar" and result.get("especialidad"):
                     from medilink import _ids_para_especialidad
-                    ids_nuevos = set(_ids_para_especialidad(result.get("especialidad", "")))
+                    esp_pedida = result.get("especialidad", "")
+                    ids_nuevos = set(_ids_para_especialidad(esp_pedida))
                     ids_actuales = {s.get("id_profesional") for s in todos_slots}
-                    # Si el paciente pide un doctor/especialidad que ya está en el pool,
-                    # filtrar a ese profesional en vez de resetear
+                    # Si el paciente pide un doctor/especialidad que ya está en el pool
+                    # actual, filtrar a ese profesional. Si no hay en pool o filtro
+                    # sale vacío, resetear y buscar fresh — el paciente nombró a un
+                    # profesional específico y merece ver SUS horarios, no un menú genérico.
                     if ids_nuevos and ids_nuevos & ids_actuales:
-                        # Filtrar todos_slots a los IDs pedidos
                         slots_filtrados = [s for s in todos_slots if s.get("id_profesional") in ids_nuevos]
                         if slots_filtrados:
                             data["slots"] = slots_filtrados
                             data["prof_sugerido_id"] = slots_filtrados[0].get("id_profesional")
                             save_session(phone, "WAIT_SLOT", data)
                             return _format_slots(slots_filtrados, mostrar_todos=True)
-                        save_session(phone, "WAIT_SLOT", data)
-                        return "Elige un número del listado, escribe *ver todos* para más horarios, u *otro día* si no te acomoda."
+                    # Fallback robusto: cualquier mención de profesional específico →
+                    # buscar slots frescos de ese profesional (incluye caso sin pool match).
                     reset_session(phone)
-                    return await _iniciar_agendar(phone, {}, result.get("especialidad"))
+                    return await _iniciar_agendar(phone, {}, esp_pedida)
                 if intent == "cancelar":
                     reset_session(phone)
                     return await _iniciar_cancelar(phone, {})
