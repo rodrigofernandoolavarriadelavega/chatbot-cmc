@@ -2050,8 +2050,66 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             save_session(phone, "WAIT_SLOT", data)
             return _format_slots(smart_nuevo)
 
+        # ── Intento de cambio de profesional por lenguaje natural ──
+        # "no quiero ese profesional", "con otro doctor", "no me gusta", etc.
+        _OTRO_PROF_PHRASES = (
+            "no quiero ese", "no me gusta", "otro doctor", "otro profesional",
+            "otra doctora", "otro médico", "otro medico", "con otro",
+            "con otra", "cambiar doctor", "cambiar profesional",
+            "no ese", "no ese doctor", "prefiero otro",
+        )
+        tl_norm_slot = txt.lower().strip()
+        if any(p in tl_norm_slot for p in _OTRO_PROF_PHRASES):
+            tl = "otro_prof"  # re-dispatch al handler ya existente
+
+        # ── Filtro por período (mañana/tarde/noche) ──
+        _PERIODOS = {
+            "mañana":  (0, 12),  "manana":  (0, 12),
+            "en la mañana": (0, 12), "en la manana": (0, 12),
+            "temprano": (0, 12),
+            "mediodía": (12, 14), "mediodia": (12, 14), "al mediodia": (12, 14),
+            "tarde":   (14, 19), "en la tarde": (14, 19),
+            "noche":   (19, 24), "en la noche": (19, 24),
+        }
+        periodo = None
+        for kw, rango in _PERIODOS.items():
+            if kw in tl_norm_slot and tl != "otro_prof":
+                periodo = (kw, rango)
+                break
+        if periodo:
+            kw, (h_min, h_max) = periodo
+            slots_filtrados = [
+                s for s in todos_slots
+                if h_min <= int(s.get("hora_inicio", "99:00")[:2]) < h_max
+            ]
+            if slots_filtrados:
+                data["slots"] = slots_filtrados[:10]
+                save_session(phone, "WAIT_SLOT", data)
+                return _format_slots(slots_filtrados[:10], mostrar_todos=True)
+            # No hay slots en ese período → responder con los disponibles
+            horas_disp = sorted({s.get("hora_inicio", "")[:5] for s in todos_slots if s.get("hora_inicio")})
+            return (
+                f"No tengo horas en la {kw} para este profesional 😕\n\n"
+                f"Horarios disponibles:\n{', '.join(horas_disp[:12])}"
+                f"\n\nElige uno, escribe *otro día* o *otro profesional*."
+            )
+
         idx = _parse_slot_selection(txt, slots_mostrados)
         if idx is None:
+            # Si el texto parece una hora pero no coincide con slots, mostrar opciones
+            import re as _re
+            _hora_match = _re.search(r"\b(\d{1,2})[:.]?(\d{2})?\b", tl_norm_slot)
+            if _hora_match and len(tl_norm_slot) <= 10:
+                h_pedida = _hora_match.group(1).zfill(2)
+                m_pedida = _hora_match.group(2) or ""
+                hora_str = f"{h_pedida}:{m_pedida}" if m_pedida else f"{h_pedida}:00"
+                horas_disp = sorted({s.get("hora_inicio", "")[:5] for s in todos_slots if s.get("hora_inicio")})
+                if horas_disp and hora_str not in horas_disp:
+                    return (
+                        f"La hora *{hora_str}* no está disponible para este profesional 😕\n\n"
+                        f"Horarios disponibles:\n{', '.join(horas_disp[:12])}"
+                        f"\n\nElige una o escribe *otro día*."
+                    )
             if len(txt) > 2:
                 result = await detect_intent(txt)
                 intent = result.get("intent", "otro")
@@ -2254,6 +2312,22 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         )
 
     # ── WAIT_RUT_AGENDAR ──────────────────────────────────────────────────────
+    # Helper: detectar intent humano/escape antes de validar RUT. Si el paciente
+    # pide hablar con alguien, no le insistamos con "RUT inválido".
+    _HUMAN_PHRASES_RUT = (
+        "hablar con", "hablar persona", "hablar secretaria",
+        "con la secretaria", "con una persona", "con alguien",
+        "recepcionista", "recepción", "recepcion",
+        "no puedo ahora", "no tengo mi rut", "no recuerdo mi rut",
+        "luego vuelvo", "llámame", "llamame", "llamen",
+        "directo", "necesito ayuda", "ayudame", "ayúdame",
+        "humano", "persona real",
+    )
+    if state in ("WAIT_RUT_AGENDAR", "WAIT_RUT_CANCELAR", "WAIT_RUT_REAGENDAR", "WAIT_RUT_VER"):
+        _tl_rut = txt.lower().strip()
+        if any(p in _tl_rut for p in _HUMAN_PHRASES_RUT) and len(_tl_rut) > 5:
+            return _derivar_humano(phone=phone, contexto=f"paciente pidió humano en {state}")
+
     if state == "WAIT_RUT_AGENDAR":
         # Escape: "otra persona" → flujo de terceros
         _OTHER_PHRASES = {"otra persona", "otro", "otra", "para otra persona",
