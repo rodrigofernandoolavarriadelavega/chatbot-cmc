@@ -1795,12 +1795,18 @@ function convCard(c,g) {
   else if (HOT_STATES.includes(c.state)) badges+=`<span class="badge badge-hot">🔥 Por agendar</span>`;
   else if (WARM_STATES.includes(c.state)) badges+=`<span class="badge badge-intent">🟡 En flujo</span>`;
   if (fd.handoff_reason&&fd.handoff_reason.startsWith("media:")) badges+=`<span class="badge badge-urgent">📎 Archivo pendiente</span>`;
-  return `<div class="conv-card${selectedPhone===c.phone?" selected":""}${isStaff?" staff-card":""}" style="border-left-color:${isStaff?"var(--purple)":g.dot};" onclick="selectConv('${c.phone}')">
+  // Badge de mensajes no leídos (mensajes inbound después del último mark-seen)
+  const unreadCount = (window.unreadCounts && window.unreadCounts[c.phone]) || 0;
+  const unreadBadge = unreadCount > 0 ? `<span style="background:#dc2626;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:4px;">${unreadCount > 99 ? '99+' : unreadCount}</span>` : "";
+  const seenBtn = unreadCount > 0 ? `<span onclick="markSeenDirect(event, '${c.phone}')" title="Marcar visto sin abrir" style="cursor:pointer;color:#94a3b8;font-size:14px;margin-left:4px;padding:0 3px;">✓</span>` : "";
+  return `<div class="conv-card${selectedPhone===c.phone?" selected":""}${isStaff?" staff-card":""}${unreadCount > 0 ? " has-unread" : ""}" style="border-left-color:${isStaff?"var(--purple)":g.dot};" onclick="selectConv('${c.phone}')">
     <div class="card-top">
       <span class="cdot" style="background:${dotColor(c.state)};"></span>
       <span class="cname">${name.replace(/</g,"&lt;")}</span>
       <span style="margin-left:4px;">${canalIcon(canal)}</span>
+      ${unreadBadge}
       <span class="ctime">${relTime(c.last_ts||c.updated_at)}</span>
+      ${seenBtn}
     </div>
     <div class="cstate" style="color:${g.dot};">${stateLabel(c.state)}</div>
     ${fd.especialidad?`<div class="cesp">🩺 ${espLabel(fd.especialidad)}</div>`:""}
@@ -1811,7 +1817,13 @@ function convCard(c,g) {
 
 /* ── SELECCIÓN ── */
 async function selectConv(phone) {
-  selectedPhone=phone; renderList();
+  selectedPhone=phone;
+  // Auto-marcar como visto al abrir la conversación
+  try{
+    fetch(apiUrl(`/admin/api/conversation/${encodeURIComponent(phone)}/mark-seen`), { method: "POST" });
+    if(window.unreadCounts) delete window.unreadCounts[phone];
+  }catch(e){}
+  renderList();
   const conv=convs.find(c=>c.phone===phone);
   document.getElementById("chat-empty").style.display="none";
   document.getElementById("chat-active").style.display="flex";
@@ -2190,8 +2202,25 @@ async function seguimientoMedico(){
 }
 
 /* ── DATOS ── */
+async function markSeenDirect(ev, phone){
+  ev.stopPropagation();
+  try{
+    await fetch(apiUrl(`/admin/api/conversation/${encodeURIComponent(phone)}/mark-seen`), { method: "POST" });
+    if(window.unreadCounts) delete window.unreadCounts[phone];
+    renderList();
+  }catch(e){}
+}
+
+async function loadUnreadCounts(){
+  try{
+    const r = await fetch(apiUrl(`/admin/api/unread-counts`));
+    if(r.ok) window.unreadCounts = await r.json();
+  }catch(e){}
+}
+
 async function loadConversations(){
   try{
+    await loadUnreadCounts();
     const r=await fetch(apiUrl(`/admin/api/conversations`));
     const newConvs=await r.json();
     // Detect new incoming messages for notification

@@ -301,6 +301,15 @@ def _conn():
     conn.execute("CREATE INDEX IF NOT EXISTS idx_citas_bot_esp ON citas_bot(especialidad)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_citas_bot_phone ON citas_bot(phone)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_events_event_ts ON conversation_events(event, ts)")
+    # Marca "visto por admin" — permite al panel limpiar conversaciones sin
+    # cambiar el state del flujo conversacional.
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS admin_seen (
+            phone       TEXT PRIMARY KEY,
+            seen_at     TEXT DEFAULT (datetime('now')),
+            seen_by     TEXT DEFAULT 'admin'
+        )
+    """)
     # Migración: columna para trackear cancelaciones notificadas (reagendar 1-click)
     try:
         conn.execute("ALTER TABLE citas_bot ADD COLUMN cancel_detected_at TEXT")
@@ -631,6 +640,33 @@ def get_confirmaciones_dia(fecha: str) -> list[dict]:
 
 
 # ── Métricas de conversación ──────────────────────────────────────────────────
+
+def mark_admin_seen(phone: str, seen_by: str = "admin"):
+    """Registra que la admin vio la conversación ahora. Persistente."""
+    with _conn() as conn:
+        conn.execute("""
+            INSERT INTO admin_seen (phone, seen_at, seen_by)
+            VALUES (?, datetime('now'), ?)
+            ON CONFLICT(phone) DO UPDATE SET
+                seen_at=datetime('now'), seen_by=excluded.seen_by
+        """, (phone, seen_by))
+        conn.commit()
+
+
+def get_unread_counts() -> dict:
+    """Retorna {phone: cantidad_mensajes_no_leidos} solo para inbound posteriores
+    a admin_seen.seen_at (o todos los inbound si nunca se marcó)."""
+    with _conn() as conn:
+        rows = conn.execute("""
+            SELECT m.phone, COUNT(*) as cnt
+            FROM messages m
+            LEFT JOIN admin_seen a ON a.phone = m.phone
+            WHERE m.direction = 'in'
+              AND (a.seen_at IS NULL OR m.ts > a.seen_at)
+            GROUP BY m.phone
+        """).fetchall()
+        return {r["phone"]: r["cnt"] for r in rows}
+
 
 def log_event(phone: str, event: str, meta: dict = None):
     """

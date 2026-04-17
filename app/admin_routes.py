@@ -24,6 +24,7 @@ from session import (get_session, reset_session, save_session, get_metricas,
                      get_referral_stats, get_case_study_report,
                      get_patient_files, get_media_stats, get_demanda_no_disponible,
                      get_conversion_funnel_by_especialidad,
+                     mark_admin_seen, get_unread_counts,
                      save_profile, get_profile, get_phone_by_rut,
                      delete_patient_data, get_privacy_consent, save_privacy_consent,
                      _conn)
@@ -1490,6 +1491,21 @@ def api_conversion_funnel(dias: int = Query(30, ge=1, le=365),
 
 
 # ── Reagendar 1-click tras cancelación del doctor ───────────────────────────
+
+# ── Marcar conversación como vista por el admin ────────────────────────────
+
+@router.post("/admin/api/conversation/{phone}/mark-seen")
+async def api_mark_seen(phone: str, _=Depends(require_admin)):
+    """Marca la conversación como vista ahora. Limpia badges de no leídos."""
+    mark_admin_seen(phone, seen_by="admin")
+    return {"ok": True, "phone": phone}
+
+
+@router.get("/admin/api/unread-counts")
+def api_unread_counts(_=Depends(require_admin)):
+    """Retorna mapa {phone: cantidad} de mensajes inbound no leídos por phone."""
+    return get_unread_counts()
+
 
 # ── Marcar paciente como agendado manualmente ──────────────────────────────
 
