@@ -1258,7 +1258,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             )
 
     # ── Comandos globales ─────────────────────────────────────────────────────
-    _COMANDOS_GLOBALES = ("menu", "menú", "inicio", "reiniciar", "volver", "hola")
+    _COMANDOS_GLOBALES = ("menu", "menú", "inicio", "reiniciar", "volver", "hola", "menu_volver")
     if tl in _COMANDOS_GLOBALES or tl_norm in _COMANDOS_GLOBALES or tl in _SALUDOS_SET or tl_norm in _SALUDOS_SET:
         reset_session(phone)
         if phone == _doctor_phone:
@@ -1749,9 +1749,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                             {"id": "no_agendar",      "title": "No por ahora"},
                         ]
                     )
-            return (
-                f"{resp}\n\n{DISCLAIMER}\n\n"
-                "¿Te ayudo a agendar? Escribe *1* o *menu* para volver."
+            return _btn_msg(
+                f"{resp}\n\n{DISCLAIMER}",
+                [
+                    {"id": "1", "title": "📅 Agendar hora"},
+                    {"id": "menu_volver", "title": "Ver menú"},
+                ]
             )
 
         # intent "otro" — si Claude produjo una respuesta útil (p.ej. una
@@ -3341,12 +3344,20 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
 
     precio_linea = _precio_line(mejor.get("especialidad", ""), mejor)
     precio_bloque = f"{precio_linea}\n" if precio_linea else ""
+    # Señal de escasez cuando quedan pocas horas
+    n_slots = len(todos)
+    escasez = ""
+    if n_slots <= 2:
+        escasez = "⚡ _Última hora disponible_ · "
+    elif n_slots <= 4:
+        escasez = f"⚡ _Quedan solo {n_slots} horas_ · "
     return _btn_msg(
         f"{header}Te encontré hora ✨\n\n"
         f"🏥 *{mejor['especialidad']}* — {mejor['profesional']}\n"
         f"📅 *{mejor['fecha_display']}*\n"
         f"🕐 *{mejor['hora_inicio'][:5]}* ⭐\n"
-        f"{precio_bloque}\n"
+        f"{precio_bloque}"
+        f"{escasez}\n"
         "¿Te la reservo?",
         botones
     )
