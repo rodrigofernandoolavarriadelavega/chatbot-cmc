@@ -287,8 +287,19 @@ body {
   display: flex; align-items: center; gap: 8px; color: #664d03; flex-shrink: 0;
 }
 .takeover-banner.hidden { display: none; }
-.quick-replies { display: flex; flex-wrap: wrap; gap: 5px; padding: 8px 14px 0; flex-shrink: 0; }
+/* Quick replies: colapsable por default para que el chat tenga más espacio vertical.
+   Se muestra con botón 💬 en el reply-bar. En takeover sigue oculto hasta que el
+   usuario decida abrirlo. */
+.quick-replies {
+  display: flex; flex-wrap: wrap; gap: 5px; padding: 0 14px;
+  flex-shrink: 0; max-height: 0; overflow: hidden;
+  transition: max-height .2s ease, padding .2s ease;
+}
 .quick-replies.hidden { display: none; }
+.quick-replies.expanded {
+  max-height: 140px; padding: 8px 14px; overflow-y: auto;
+  border-bottom: 1px solid var(--border);
+}
 .qr-btn {
   font-size: 11px; padding: 4px 10px; border-radius: 6px;
   border: 1px solid var(--border); background: var(--bg);
@@ -1300,6 +1311,7 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
             onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendReply();}"></textarea>
           <div class="reply-actions">
             <button class="btn btn-outline" onclick="document.getElementById('file-upload-input').click()" title="Adjuntar archivo" style="font-size:15px;padding:5px 10px;">📎</button>
+            <button class="btn btn-outline" onclick="document.getElementById('quick-replies').classList.toggle('expanded')" title="Mostrar/ocultar plantillas" style="font-size:15px;padding:5px 10px;">💬</button>
             <button class="btn btn-outline" onclick="document.getElementById('reply-input').value='';clearFileUpload();">Limpiar</button>
             <button class="btn btn-primary btn-send" onclick="sendReply()">Enviar →</button>
           </div>
