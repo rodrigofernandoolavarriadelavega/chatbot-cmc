@@ -2077,8 +2077,20 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     return await _iniciar_ver(phone, {})
                 if intent in ("precio", "info"):
                     esp_display = todos_slots[0]["especialidad"] if todos_slots else especialidad
-                    # Siempre usar respuesta_faq con contexto de especialidad (ignorar respuesta_directa genérica)
-                    consulta = f"¿Cuánto cuesta una consulta de {esp_display}?" if esp_display else txt
+                    # Sólo reescribir como pregunta de precio si el paciente hizo una
+                    # pregunta AMBIGUA ("cuánto cuesta", "precio", etc). Si la pregunta
+                    # es más específica (ej. "cuáles son los procedimientos estéticos"),
+                    # respetar el texto original para que Claude responda de la especialidad
+                    # correcta, no del contexto actual del WAIT_SLOT.
+                    tl = txt.lower().strip()
+                    ambiguas = {"precio", "precios", "cuanto", "cuánto", "cuanto cuesta",
+                                "cuánto cuesta", "cuanto sale", "cuánto sale", "cuanto vale",
+                                "cuánto vale", "valor", "cuesta", "vale"}
+                    es_ambigua = len(tl) <= 25 and any(p in tl for p in ambiguas)
+                    if es_ambigua and esp_display:
+                        consulta = f"¿Cuánto cuesta una consulta de {esp_display}?"
+                    else:
+                        consulta = txt
                     resp = await respuesta_faq(consulta)
                     # Refrescar sesión para mantener el flujo vivo y que el panel
                     # muestre esta conversación como "activa"
