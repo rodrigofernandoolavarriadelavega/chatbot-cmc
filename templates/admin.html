@@ -216,6 +216,18 @@ body {
 .badge-prob { background: var(--green-soft); color: #15803d; border-color: #86efac; }
 .badge-staff { background: var(--purple-soft); color: var(--purple); border-color: #c4b5fd; font-weight: 800; }
 .conv-card.staff-card { border-left-color: var(--purple) !important; background: #faf8ff; }
+/* Conversaciones con mensajes no leídos: borde izquierdo rojo + fondo suave + pulso */
+.conv-card.has-unread {
+  border-left-color: #dc2626 !important;
+  border-left-width: 4px !important;
+  background: #fef2f2;
+  animation: unread-pulse 2.2s ease-in-out infinite;
+}
+.conv-card.has-unread .cname { font-weight: 700; color: #991b1b; }
+@keyframes unread-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+  50%      { box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.18); }
+}
 .no-results { text-align: center; color: var(--text-3); font-size: 12px; padding: 30px 0; }
 /* COL 3: CHAT + CONTEXTO */
 .col-main { flex: 1; display: flex; overflow: hidden; }
@@ -1818,6 +1830,12 @@ function convCard(c,g) {
 /* ── SELECCIÓN ── */
 async function selectConv(phone) {
   selectedPhone=phone;
+  // Obtener last_seen_at ANTES de marcar (para renderizar separador de "mensajes nuevos")
+  window._lastSeenBeforeOpen = null;
+  try{
+    const rls = await fetch(apiUrl(`/admin/api/conversation/${encodeURIComponent(phone)}/last-seen`));
+    if(rls.ok){ const d = await rls.json(); window._lastSeenBeforeOpen = d.last_seen_at; }
+  }catch(e){}
   // Auto-marcar como visto al abrir la conversación
   try{
     fetch(apiUrl(`/admin/api/conversation/${encodeURIComponent(phone)}/mark-seen`), { method: "POST" });
@@ -2022,10 +2040,14 @@ function renderMessages(msgs, preserveScroll=false) {
   const prevScroll = el.scrollTop;
   if (msgs.length) allMsgsCache = msgs;
   if(!msgs.length){el.innerHTML=`<div style="text-align:center;color:var(--text-3);font-size:12px;padding:20px;">Sin mensajes registrados aún</div>`;return;}
-  let html=""; let lastState=null;
+  let html=""; let lastState=null; let newMsgSepInserted=false; const lastSeen=window._lastSeenBeforeOpen;
   // Orden cronológico (antiguo → nuevo), estilo WhatsApp: scroll hacia abajo
   // para ver los mensajes más recientes.
   msgs.forEach(m=>{
+    if (!newMsgSepInserted && lastSeen && m.direction === "in" && m.ts && m.ts > lastSeen) {
+      html += `<div id="new-msg-separator" style="text-align:center;margin:14px 0 10px;position:relative;"><div style="height:1px;background:#dc2626;opacity:.5;"></div><span style="background:#dc2626;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:10px;position:absolute;top:-9px;left:50%;transform:translateX(-50%);white-space:nowrap;">↓ Mensajes nuevos ↓</span></div>`;
+      newMsgSepInserted = true;
+    }
     if(m.state&&m.state!==lastState){html+=`<div class="state-sep"><span class="state-pill">${stateLabel(m.state)}</span></div>`;lastState=m.state;}
     const isRecep=m.direction==="out"&&(m.text||"").startsWith("[Recepcionista]");
     let rawText=(m.text||"").replace(/^\[Recepcionista\] /,"").replace(/^\[.*?\] /,"");
@@ -2052,7 +2074,15 @@ function renderMessages(msgs, preserveScroll=false) {
     html+=`<div class="msg-row ${m.direction}${isRecep?" recep":""}"><div><div class="msg-bubble">${mediaHtml}${text}</div><div class="msg-meta">${who} · ${ts}</div></div></div>`;
   });
   el.innerHTML=html;
-  el.scrollTop = stickyBottom ? el.scrollHeight : prevScroll;
+  // Auto-scroll: si hay separador de mensajes nuevos, ir ahí; si no, al final
+  const sep = document.getElementById("new-msg-separator");
+  if (sep && !preserveScroll) {
+    sep.scrollIntoView({ block: "start", behavior: "auto" });
+    // bump un poco arriba para que el separador quede visible en pantalla
+    el.scrollTop = Math.max(0, el.scrollTop - 40);
+  } else {
+    el.scrollTop = stickyBottom ? el.scrollHeight : prevScroll;
+  }
   // Resolver URLs de media inline
   _resolveMediaUrls();
 }

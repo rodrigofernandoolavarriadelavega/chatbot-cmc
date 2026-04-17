@@ -1501,6 +1501,17 @@ async def api_mark_seen(phone: str, _=Depends(require_admin)):
     return {"ok": True, "phone": phone}
 
 
+@router.get("/admin/api/conversation/{phone}/last-seen")
+def api_last_seen(phone: str, _=Depends(require_admin)):
+    """Retorna el timestamp en que se marcó por última vez como visto.
+    Si nunca se marcó, retorna None. Útil para renderizar separador
+    '↓ Mensajes nuevos ↓' justo antes del primer msg posterior."""
+    from session import _conn
+    with _conn() as c:
+        row = c.execute("SELECT seen_at FROM admin_seen WHERE phone=?", (phone,)).fetchone()
+        return {"phone": phone, "last_seen_at": row["seen_at"] if row else None}
+
+
 @router.get("/admin/api/unread-counts")
 def api_unread_counts(_=Depends(require_admin)):
     """Retorna mapa {phone: cantidad} de mensajes inbound no leídos por phone."""
