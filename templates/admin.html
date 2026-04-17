@@ -1385,8 +1385,6 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
           <div class="ctx-actions">
             <button class="btn btn-primary btn-full" id="ctx-btn-agendar-por" style="display:none;" onclick="abrirAgendarPorElla()">📋 Agendar por el paciente</button>
             <button class="btn btn-danger btn-full" id="ctx-btn-takeover" onclick="doTakeover()">🎯 Tomar control</button>
-            <button class="btn btn-outline btn-full" onclick="abrirMarcarAgendado()" style="margin-top:6px;">✅ Marcar agendado manual</button>
-            <button class="btn btn-outline btn-full" onclick="cambiarEstadoManual()" style="margin-top:6px;">⚙️ Cambiar estado del flujo</button>
             <button class="btn btn-outline btn-full" id="ctx-btn-resume" style="display:none;" onclick="doResume()">🤖 Devolver al bot</button>
           </div>
         </div>
@@ -2317,58 +2315,6 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   renderFreqEmojis();
 });
-
-// ── CONTROL MANUAL DE ESTADO DEL PACIENTE ──────────────────────────────────
-async function abrirMarcarAgendado(){
-  if(!selectedPhone){ alert("Seleccioná una conversación primero"); return; }
-  const esp = prompt("Especialidad (ej: Medicina General):");
-  if(!esp) return;
-  const prof = prompt("Profesional (ej: Dr. Olavarría) — opcional:") || "";
-  const fecha = prompt("Fecha (YYYY-MM-DD, ej: 2026-04-20):");
-  if(!fecha || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)){ alert("Fecha inválida"); return; }
-  const hora = prompt("Hora (HH:MM, ej: 10:00):");
-  if(!hora || !/^\d{2}:\d{2}$/.test(hora)){ alert("Hora inválida"); return; }
-  const mod = prompt("Modalidad (fonasa / particular) — opcional:", "fonasa") || "fonasa";
-  try{
-    const r = await fetch(apiUrl(`/admin/api/patient/${encodeURIComponent(selectedPhone)}/mark-booked`), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ especialidad: esp, profesional: prof, fecha, hora, modalidad: mod }),
-    });
-    if(!r.ok){ const t = await r.text(); alert("Error: " + t); return; }
-    alert("✅ Paciente marcado como agendado manualmente.\n\nEl bot ya no le hará reenganche.");
-    if(typeof refresh === "function") refresh();
-    else location.reload();
-  }catch(e){ alert("Error: " + e.message); }
-}
-
-async function cambiarEstadoManual(){
-  if(!selectedPhone){ alert("Seleccioná una conversación primero"); return; }
-  const choice = prompt(
-    "Estado manual del paciente:\n\n" +
-    "1 = IDLE (libre, bot responde normal)\n" +
-    "2 = HUMAN_TAKEOVER (bot pausa, solo humano responde)\n" +
-    "3 = COMPLETED (flujo terminado, bot no persigue)\n\n" +
-    "Escribe el número o el estado:", "1"
-  );
-  if(!choice) return;
-  const map = { "1": "IDLE", "2": "HUMAN_TAKEOVER", "3": "COMPLETED",
-                "idle": "IDLE", "human_takeover": "HUMAN_TAKEOVER",
-                "humano": "HUMAN_TAKEOVER", "completed": "COMPLETED",
-                "completado": "COMPLETED" };
-  const state = map[choice.toLowerCase()] || choice.toUpperCase();
-  try{
-    const r = await fetch(apiUrl(`/admin/api/patient/${encodeURIComponent(selectedPhone)}/set-state`), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ state }),
-    });
-    if(!r.ok){ const t = await r.text(); alert("Error: " + t); return; }
-    alert(`✅ Estado cambiado a ${state}`);
-    if(typeof refresh === "function") refresh();
-    else location.reload();
-  }catch(e){ alert("Error: " + e.message); }
-}
 
 async function sendReply(){
   if(!selectedPhone) return;
