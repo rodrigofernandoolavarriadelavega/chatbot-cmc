@@ -3685,6 +3685,11 @@ def _detectar_especialidad_en_texto(txt: str) -> str | None:
     # Fuzzy pass: normalizar typos fonéticos y ortográficos comunes en chile rural
     tl_fuzzy = tl
     _FIXES = [
+        # Typos verbales comunes
+        ("biene", "viene"), ("bienen", "vienen"), ("bamos", "vamos"),
+        ("horits", "horas"), ("orita", "hora"), ("oritas", "horas"),
+        ("pars", "para"), ("hpra", "hora"), ("hoy dia", "hoy"),
+        # Typos fonéticos
         ("jeneral", "general"), ("jeberal", "general"), ("geberal", "general"),
         ("jinecologia", "ginecologia"), ("jenital", "genital"),
         ("endodonsia", "endodoncia"), ("ortodonsia", "ortodoncia"),
