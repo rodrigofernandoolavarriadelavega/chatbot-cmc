@@ -3430,11 +3430,40 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "agendar", "reagendar", "cancelar", "ver_reservas",
                 "waitlist", "disponibilidad", "precio", "info",
             }
+            # Auto-escape conservador: solo sacar del takeover si:
+            # 1) El paciente tiene claro intent accionable
+            # 2) Y la recepcionista NO ha respondido en los últimos 10 min
+            #    (si recepcionista está activa, el paciente está conversando con ella
+            #     — no hay que romper el flujo humano)
             if _intent in _ACCIONABLES:
-                log_event(phone, "human_takeover_exit", {"intent": _intent, "texto": txt[:120]})
-                reset_session(phone)
-                fresh_session = {"state": "IDLE", "data": {}}
-                return await handle_message(phone, texto, fresh_session)
+                from session import _conn as _c
+                try:
+                    with _c() as _conn_r:
+                        _last_recep = _conn_r.execute(
+                            "SELECT ts FROM messages WHERE phone=? AND direction='out' "
+                            "AND text LIKE '[Recepcionista]%' "
+                            "ORDER BY id DESC LIMIT 1", (phone,)
+                        ).fetchone()
+                except Exception:
+                    _last_recep = None
+                _recep_activa = False
+                if _last_recep:
+                    from datetime import datetime as _dtz
+                    try:
+                        _ts = _dtz.strptime(_last_recep["ts"], "%Y-%m-%d %H:%M:%S")
+                        _recep_activa = (_dtz.utcnow() - _ts).total_seconds() < 600  # 10 min
+                    except Exception:
+                        pass
+                if not _recep_activa:
+                    log_event(phone, "human_takeover_exit", {"intent": _intent, "texto": txt[:120]})
+                    reset_session(phone)
+                    fresh_session = {"state": "IDLE", "data": {}}
+                    return await handle_message(phone, texto, fresh_session)
+                # Recepcionista activa → respetar takeover, guardar msg silenciosamente
+                log_event(phone, "human_takeover_preserved", {
+                    "intent": _intent, "texto": txt[:120],
+                    "razon": "recepcionista activa <10min"
+                })
 
         # Mensaje quedó guardado en el historial — recepcionista responde desde el panel
         # Solo respondemos si el paciente sigue enviando mensajes para que no sienta silencio
