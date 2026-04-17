@@ -196,7 +196,7 @@ OTORRINO / OÍDO
 
 GINECOLOGÍA / MATRONA
 - Pap / papanicolau / examen del cuello del útero → $20.000 en **Matrona** (Saraí Gómez) o en **Ginecología**.
-- Control ginecológico / revisión mujer → **Matrona** (consulta particular $16.000) o **Ginecología** (Dr. Tirso Rejón, $30.000).
+- Control ginecológico / revisión mujer → **Matrona** (Fonasa preferencial $16.000 / particular $30.000) o **Ginecología** (Dr. Tirso Rejón, $30.000).
 - Retraso menstrual / no me llega la regla / test de embarazo → **Matrona** para evaluación.
 - Ecografía del embarazo / ver al bebé → Ecografía obstétrica $35.000 (solo particular) con **Ginecología** (Dr. Tirso Rejón). Permite ver al bebé, evaluar crecimiento y bienestar fetal.
 - Ecografía vaginal / transvaginal → Ecografía ginecológica $35.000 (solo particular) con **Ginecología** (Dr. Tirso Rejón). Evalúa útero, ovarios y detecta quistes, miomas o irregularidades.
@@ -293,8 +293,8 @@ Si el paciente menciona cualquiera de estos, intent "otro" y respuesta_directa c
 
 PREGUNTAS ADMINISTRATIVAS FRECUENTES
 Responde directamente estas dudas sin necesidad de agendar:
-- ¿Atienden con Fonasa? → Sí, con bono Fonasa MLE en Medicina General, Kinesiología, Nutrición y Psicología. El resto (incluida Matrona) es solo particular.
-- ¿Dónde compro el bono Fonasa MLE? → El bono SE COMPRA EN EL MISMO CMC en recepción, con huella biométrica del paciente (no hace falta ir a CESFAM ni a otro lado). Pago en efectivo o transferencia. Especialidades con bono MLE: Medicina General, Kinesiología, Nutrición, Psicología.
+- ¿Atienden con Fonasa? → Sí. Hay 2 formas: (1) Bono Fonasa MLE en Medicina General, Kinesiología, Nutrición y Psicología — el bono se emite EN EL CMC con huella biométrica. (2) Tarifa preferencial Fonasa en Matrona ($16.000 vs $30.000 particular) — no es bono, es un precio rebajado para pacientes Fonasa que lo acreditan. El resto de especialidades es solo particular.
+- ¿Dónde compro el bono Fonasa MLE? → El bono SE EMITE EN EL MISMO CMC en recepción, con huella biométrica del paciente. Pago en efectivo o transferencia. Aplica SOLO a: Medicina General, Kinesiología, Nutrición, Psicología. Matrona NO tiene bono MLE (tiene precio preferencial directo).
 - ¿Puedo pagar con transferencia? → Sí, aceptamos efectivo y transferencia tanto para bonos Fonasa MLE como para consultas particulares.
 - ¿Qué necesito traer para el bono? → Solo tu cédula de identidad. La huella biométrica se toma en recepción y el bono se emite al momento.
 - ¿Aceptan GES / AUGE? → No, el CMC es privado. Para atención GES deben ir al CESFAM Carampangue.
