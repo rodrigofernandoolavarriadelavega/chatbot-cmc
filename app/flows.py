@@ -1684,10 +1684,15 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if especialidad:
                 fecha = await consultar_proxima_fecha(especialidad)
                 if fecha:
-                    return (
+                    data["especialidad_sugerida"] = especialidad.lower()
+                    save_session(phone, "IDLE", data)
+                    return _btn_msg(
                         f"Sí, para *{especialidad}* hay hora disponible el *{fecha}* 📅\n\n"
-                        "¿La agendamos ahora?\n"
-                        "Escribe *1* para continuar o *menu* si necesitas algo más."
+                        "¿Te la reservo?",
+                        [
+                            {"id": "agendar_sugerido", "title": "✅ Sí, agendar"},
+                            {"id": "no_agendar",      "title": "No por ahora"},
+                        ]
                     )
             return (
                 "Para consultar disponibilidad, dime qué especialidad necesitas 😊\n\n"
@@ -2381,8 +2386,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if not citas:
             reset_session(phone)
             return (
-                f"No encontré citas futuras para *{paciente['nombre'].split()[0]}* 📋\n\n"
-                "¿Quieres agendar una nueva hora? Escribe *1* o *menu*."
+                f"No tienes citas futuras agendadas, *{paciente['nombre'].split()[0]}* 📋\n\n"
+                "¿Quieres agendar una hora?"
             )
 
         data.update({"paciente": paciente, "citas": citas})
@@ -2437,10 +2442,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if ok:
                 log_event(phone, "cita_cancelada", {"id_cita": cita["id"], "profesional": cita.get("profesional")})
                 save_tag(phone, "canceló")
-                return (
-                    f"✅ Cita cancelada correctamente.\n\n"
+                return _btn_msg(
+                    f"✅ Cita cancelada.\n\n"
                     f"_{cita['profesional']} · {cita['fecha_display']} · {cita['hora_inicio']}_\n\n"
-                    "¿Quieres agendar otra hora? Escribe *1* o *menu* para volver."
+                    "¿Quieres agendar otra hora?",
+                    [
+                        {"id": "1", "title": "📅 Sí, agendar"},
+                        {"id": "menu_volver", "title": "No, gracias"},
+                    ]
                 )
             return f"Hubo un problema al cancelar 😕\nLlama a recepción: 📞 *{CMC_TELEFONO}*"
 
@@ -2473,8 +2482,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if not citas:
             reset_session(phone)
             return (
-                f"No encontré citas futuras para *{paciente['nombre'].split()[0]}* 📋\n\n"
-                "¿Quieres agendar una nueva hora? Escribe *1* o *menu*."
+                f"No tienes citas futuras agendadas, *{paciente['nombre'].split()[0]}* 📋\n\n"
+                "¿Quieres agendar una hora?"
             )
 
         data.update({"paciente": paciente, "citas": citas, "rut": rut})
@@ -2596,16 +2605,25 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         reset_session(phone)
         nombre_corto = paciente['nombre'].split()[0]
         if not citas:
-            return (
-                f"No tienes citas futuras agendadas, *{nombre_corto}* 📋\n\n"
-                "¿Quieres agendar una ahora? Escribe *1* o *menu*."
+            return _btn_msg(
+                f"No tienes citas futuras agendadas, *{nombre_corto}* 📋",
+                [
+                    {"id": "1", "title": "📅 Agendar hora"},
+                    {"id": "menu_volver", "title": "Ver menú"},
+                ]
             )
 
         lineas = [f"📋 *Tus próximas citas, {nombre_corto}:*\n"]
         for c in citas:
             lineas.append(f"• {c['fecha_display']} {c['hora_inicio']} — {c['profesional']}")
-        lineas.append("\n_Escribe *menu* si necesitas algo más._")
-        return "\n".join(lineas)
+        body = "\n".join(lineas)
+        return _btn_msg(
+            body,
+            [
+                {"id": "1", "title": "📅 Agendar otra"},
+                {"id": "menu_volver", "title": "Listo"},
+            ]
+        )
 
     # ── WAIT_NOMBRE_NUEVO ─────────────────────────────────────────────────────
     if state == "WAIT_NOMBRE_NUEVO":
