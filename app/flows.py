@@ -2409,6 +2409,15 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         _tl_rut = txt.lower().strip()
         if any(p in _tl_rut for p in _HUMAN_PHRASES_RUT) and len(_tl_rut) > 5:
             return _derivar_humano(phone=phone, contexto=f"paciente pidió humano en {state}")
+        # Audios largos en WAIT_RUT_* = paciente está contando historia compleja,
+        # no dándonos RUT. Derivar a humano con el texto transcrito como contexto.
+        # Mismo para mensajes de texto MUY largos (>80 chars) sin formato de RUT.
+        if (txt.startswith("🎤") and len(txt) > 30) or \
+           (len(txt) > 80 and not any(ch.isdigit() for ch in txt[:15])):
+            return _derivar_humano(
+                phone=phone,
+                contexto=f"audio/texto largo en {state}: {txt[:240]}",
+            )
 
     if state == "WAIT_RUT_AGENDAR":
         # Escape: "otra persona" → flujo de terceros
