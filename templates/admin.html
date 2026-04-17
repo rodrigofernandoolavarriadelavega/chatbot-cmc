@@ -1191,6 +1191,10 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
       <div id="esp-buttons"></div>
       <div id="esp-empty" style="font-size:11px;color:var(--text-3);display:none;">Sin especialidad registrada</div>
     </div>
+    <div class="filter-section">
+      <div class="filter-label">Canal</div>
+      <div id="canal-buttons" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+    </div>
     <div class="filter-section" id="staff-section" style="display:none;">
       <button class="staff-toggle" onclick="toggleStaffList()">
         <span class="arrow">▶</span> Profesionales CMC
@@ -1373,6 +1377,7 @@ let convs = [];
 let selectedPhone = null;
 let currentFilter = "all";
 let currentEsp = "all";
+let currentCanal = "all";
 let _notesSaveTimer = null;
 let _prevIncomingTs = {};  // phone -> last_ts for new-message detection
 let _notifMuted = localStorage.getItem("cmc_notif_muted") === "1";
@@ -1629,6 +1634,36 @@ function renderEspButtons() {
     </button>`
   ).join("");
 }
+function setCanalFilter(canal) {
+  currentCanal = (currentCanal === canal) ? "all" : canal;
+  renderCanalButtons();
+  renderList();
+}
+function renderCanalButtons() {
+  const el = document.getElementById("canal-buttons");
+  const counts = { whatsapp: 0, instagram: 0, messenger: 0 };
+  convs.forEach(c => {
+    const ch = c.canal || "whatsapp";
+    if (counts[ch] !== undefined) counts[ch]++;
+  });
+  const btns = [
+    { id: "whatsapp", icon: "💬", label: "WA", color: "#25d366" },
+    { id: "instagram", icon: "📸", label: "IG", color: "#e1306c" },
+    { id: "messenger", icon: "💙", label: "FB", color: "#0084ff" },
+  ];
+  el.innerHTML = btns.map(b => {
+    const active = currentCanal === b.id;
+    const cnt = counts[b.id];
+    return `<button onclick="setCanalFilter('${b.id}')" style="
+      display:flex;align-items:center;gap:4px;padding:5px 10px;border-radius:8px;
+      border:1.5px solid ${active ? b.color : 'var(--border)'};
+      background:${active ? b.color + '18' : 'var(--bg)'};
+      color:${active ? b.color : 'var(--text-2)'};
+      font-size:11px;font-weight:${active?700:500};cursor:pointer;font-family:inherit;
+      transition:all .15s;flex:1;justify-content:center;
+    ">${b.icon} ${b.label} <span style="font-weight:700;font-size:10px;">${cnt}</span></button>`;
+  }).join("");
+}
 function renderStaffList() {
   const staffConvs = convs.filter(c => c.is_staff);
   const section = document.getElementById("staff-section");
@@ -1702,6 +1737,7 @@ function filtered() {
       if (c.state!=="HUMAN_TAKEOVER" && !(ACTIVE_STATES.includes(c.state) && waitMinutes(c.last_ts||c.updated_at)>=5)) return false;
     } else if (group && !group.states.includes(c.state)) return false;
     if (currentEsp!=="all" && (c.flow_data?.especialidad||"")!==currentEsp) return false;
+    if (currentCanal!=="all" && (c.canal||"whatsapp")!==currentCanal) return false;
     return true;
   });
 }
@@ -2147,7 +2183,7 @@ async function loadConversations(){
         new Notification(title,{body:newName,icon:"/static/logo.png",tag:"cmc-new-msg"});
       }
     }
-    renderStateButtons(); renderEspButtons(); renderStaffList(); renderList(); updateStats();
+    renderStateButtons(); renderEspButtons(); renderCanalButtons(); renderStaffList(); renderList(); updateStats();
     if(selectedPhone){
       const still=convs.find(c=>c.phone===selectedPhone);
       if(still){updateChatControls(still.state);updateContextPanel(still);await loadMessages(selectedPhone,true);}
@@ -2318,7 +2354,7 @@ function updateStats(){
     const data=await r.json();
     data.forEach(c=>{if(c.last_dir==="in"&&c.last_ts)_prevIncomingTs[c.phone]=c.last_ts;});
     convs=data;
-    renderStateButtons(); renderEspButtons(); renderStaffList(); renderList(); updateStats();
+    renderStateButtons(); renderEspButtons(); renderCanalButtons(); renderStaffList(); renderList(); updateStats();
   }catch(e){console.error(e);}
   document.getElementById("last-refresh").textContent=
     new Date().toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
