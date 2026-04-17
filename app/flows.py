@@ -1712,7 +1712,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if intent == "disponibilidad":
             if is_medilink_down():
                 return _modo_degradado(phone, "disponibilidad", result.get("especialidad") or "")
-            especialidad = result.get("especialidad")
+            # Override: si Claude no detectó especialidad, buscarla en el texto crudo
+            # (detecta apellidos de profesionales y términos como "médico familiar")
+            especialidad = result.get("especialidad") or _detectar_apellido_profesional(txt) or _detectar_especialidad_en_texto(txt)
             if especialidad:
                 fecha = await consultar_proxima_fecha(especialidad)
                 if fecha:
@@ -3429,6 +3431,62 @@ def _detectar_apellido_profesional(txt: str) -> str | None:
     tl = txt.lower()
     for apellido, key in _APELLIDOS_PROFESIONAL:
         if apellido in tl:
+            return key
+    return None
+
+
+# Frases comunes → key de ESPECIALIDADES_MAP. Cuando Claude no detecta la
+# especialidad pero el texto claramente la menciona (ej. "médico familiar"
+# en intent disponibilidad), este detector sirve de fallback.
+_FRASES_ESPECIALIDAD = [
+    ("médico familiar",       "medicina familiar"),
+    ("medico familiar",       "medicina familiar"),
+    ("medicina familiar",     "medicina familiar"),
+    ("medicina general",      "medicina general"),
+    ("médico general",        "medicina general"),
+    ("medico general",        "medicina general"),
+    ("kinesiolog",            "kinesiología"),
+    ("kine",                  "kinesiología"),
+    ("dentista",              "odontología"),
+    ("odontolog",             "odontología"),
+    ("odontoloj",             "odontología"),
+    ("endodoncia",            "endodoncia"),
+    ("endodoncis",            "endodoncia"),
+    ("conducto",              "endodoncia"),
+    ("ortodoncia",            "ortodoncia"),
+    ("brackets",              "ortodoncia"),
+    ("frenillos",             "ortodoncia"),
+    ("implant",               "implantología"),
+    ("masoterapia",           "masoterapia"),
+    ("masaje",                "masoterapia"),
+    ("otorrino",              "otorrinolaringología"),
+    ("orl",                   "otorrinolaringología"),
+    ("cardiolog",             "cardiología"),
+    ("gastro",                "gastroenterología"),
+    ("ginecolog",             "ginecología"),
+    ("matrona",               "matrona"),
+    ("fonoaudiolog",          "fonoaudiología"),
+    ("fono",                  "fonoaudiología"),
+    ("psicolog",              "psicología"),
+    ("nutricion",             "nutrición"),
+    ("nutrición",             "nutrición"),
+    ("podolog",               "podología"),
+    ("ecograf",               "ecografía"),
+    ("estetica",              "estética facial"),
+    ("estética",              "estética facial"),
+    ("botox",                 "estética facial"),
+    ("traumato",              "traumatología"),
+]
+
+
+def _detectar_especialidad_en_texto(txt: str) -> str | None:
+    """Detecta una especialidad mencionada en el texto crudo. Usado como
+    fallback cuando Claude no extrae especialidad correctamente."""
+    if not txt:
+        return None
+    tl = txt.lower()
+    for frase, key in _FRASES_ESPECIALIDAD:
+        if frase in tl:
             return key
     return None
 
