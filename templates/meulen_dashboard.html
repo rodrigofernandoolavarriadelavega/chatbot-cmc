@@ -45,7 +45,7 @@
       <div class="text-3xl">🛒</div>
       <div>
         <h1 class="text-xl font-semibold">Dashboard Planificación — Meulen</h1>
-        <div class="text-sm text-slate-500">Supermercado Meulen · Puerto Montt · MVP Fase 1</div>
+        <div class="text-sm text-slate-500">Supermercado Meulen · Puerto Montt · Fase 2 (AP) + Fase 3 (Chatbot)</div>
       </div>
     </div>
     <div class="flex items-center gap-3">
@@ -76,22 +76,22 @@
       <div class="kpi-card tone-white p-5 rounded-xl">
         <div class="text-xs uppercase tracking-wide text-slate-500 font-semibold">% Completo</div>
         <div class="text-3xl font-bold mt-2" id="kpi-complete">—</div>
-        <div class="text-xs text-slate-500 mt-1">MVP Fase 1</div>
+        <div class="text-xs text-slate-500 mt-1">Fase 2 + Fase 3 scaffolding</div>
       </div>
       <div class="kpi-card tone-blue p-5 rounded-xl">
         <div class="text-xs uppercase tracking-wide font-semibold opacity-80">Fase actual</div>
-        <div class="text-2xl font-bold mt-2">Fase 1</div>
+        <div class="text-2xl font-bold mt-2">Fase 3</div>
         <div class="text-xs opacity-75 mt-1">MVP Núcleo</div>
       </div>
       <div class="kpi-card tone-slate p-5 rounded-xl">
         <div class="text-xs uppercase tracking-wide font-semibold opacity-80">Endpoints</div>
-        <div class="text-3xl font-bold mt-2">54 <span class="text-lg text-slate-400">/ 54</span></div>
-        <div class="text-xs opacity-75 mt-1">API MVP implementada</div>
+        <div class="text-3xl font-bold mt-2">88 <span class="text-lg text-slate-400">/ 88</span></div>
+        <div class="text-xs opacity-75 mt-1">MVP + post-cierre + AP Fase 2</div>
       </div>
       <div class="kpi-card tone-emerald p-5 rounded-xl">
         <div class="text-xs uppercase tracking-wide font-semibold opacity-80">Tests passing</div>
-        <div class="text-3xl font-bold mt-2">192 <span class="text-lg opacity-60">/ 192</span></div>
-        <div class="text-xs opacity-75 mt-1">166 backend · 11 vitest · 4 e2e</div>
+        <div class="text-3xl font-bold mt-2">310 <span class="text-lg opacity-60">/ 310</span></div>
+        <div class="text-xs opacity-75 mt-1">304 backend + 6 chatbot · cobertura ≥83%</div>
       </div>
       <div class="kpi-card tone-amber p-5 rounded-xl">
         <div class="text-xs uppercase tracking-wide font-semibold opacity-80">Reglas</div>
@@ -209,13 +209,14 @@
    Data embebida
 ====================================================================== */
 const DATA = {
-  version: "0.1",
-  updated_at: "2026-04-16",
+  version: "0.3",
+  updated_at: "2026-04-17",
   phases: [
     { id: 1, name: "MVP Núcleo",                  status: "done",        progress: 95, weight: 10 },
-    { id: 2, name: "Control robusto",             status: "planned",     progress: 0,  weight: 5  },
-    { id: 3, name: "Integración fiscal/bancaria", status: "planned",     progress: 0,  weight: 7  },
-    { id: 4, name: "Optimización",                status: "planned",     progress: 0,  weight: 4  }
+    { id: 2, name: "Cuentas por Pagar",           status: "done",        progress: 95, weight: 8  },
+    { id: 3, name: "Chatbot WhatsApp",            status: "in_progress", progress: 40, weight: 6  },
+    { id: 4, name: "Integración fiscal (DTE/TBK)",status: "planned",     progress: 0,  weight: 7  },
+    { id: 5, name: "Optimización",                status: "planned",     progress: 0,  weight: 4  }
   ],
   modules: [
     { id: "identity",   name: "Identity",   phase: 1, status: "done",        progress: 100, entities: 2, endpoints: 7,  deps: [] },
@@ -226,7 +227,9 @@ const DATA = {
     { id: "reporting",  name: "Reporting",  phase: 1, status: "done",        progress: 100, entities: 0, endpoints: 8,  deps: ["pos","inventory"] },
     { id: "audit",      name: "Audit",      phase: 1, status: "done",        progress: 95,  entities: 1, endpoints: 1,  deps: [] },
     { id: "frontend",   name: "Frontend",   phase: 1, status: "done",        progress: 90,  entities: 0, endpoints: 0,  deps: ["identity","catalog","inventory","pos","reporting"] },
-    { id: "infra",      name: "Infra & CI", phase: 1, status: "done",        progress: 95,  entities: 0, endpoints: 0,  deps: [] }
+    { id: "infra",      name: "Infra & CI", phase: 1, status: "done",        progress: 95,  entities: 0, endpoints: 0,  deps: [] },
+    { id: "accounts_payable", name: "Cuentas por Pagar", phase: 2, status: "done",        progress: 95, entities: 5, endpoints: 19, deps: ["catalog","purchasing","identity"] },
+    { id: "chatbot",          name: "Chatbot WhatsApp",  phase: 3, status: "in-progress", progress: 40, entities: 2, endpoints: 2,  deps: ["catalog","pos","accounts_payable"] }
   ],
   rules: [
     { id: "R01", name: "Barcode único global",                           priority: "critical", place: "DB constraint + POST /products/barcodes",  tested: true  },
@@ -302,10 +305,18 @@ const DATA = {
     { text: "GitHub Actions CI: backend + frontend + e2e + openapi drift check",       done: true },
     { text: "OpenAPI 3.1 spec exportado a docs/openapi.json (54 endpoints)",           done: true },
     { text: "README completo con despliegue local (launchd/systemd/NSSM) y Docker",    done: true },
-    { text: "— Fase 2 —",                                                              done: false },
-    { text: "Devoluciones / refunds con movimiento inverso de inventario",             done: false },
-    { text: "Alertas de stock bajo (email o archivo diario)",                          done: false },
-    { text: "Reportes de margen y matriz BCG",                                         done: false },
+    { text: "— Fase 2 (AP) —",                                                         done: false },
+    { text: "Devoluciones / refunds con movimiento inverso de inventario",             done: true },
+    { text: "Alertas de stock bajo (snapshot diario JSON/CSV)",                        done: true },
+    { text: "Reportes de margen y matriz BCG",                                         done: true },
+    { text: "Módulo Cuentas por Pagar: facturas, pagos, cheques, simulador",           done: true },
+    { text: "Backup automático nightly vía APScheduler",                               done: true },
+    { text: "— Fase 3 (chatbot) —",                                                    done: false },
+    { text: "Chatbot WhatsApp Meulen (clonado del CMC, 12 intents, Whisper)",          done: true },
+    { text: "Webhook live https://agentecmc.cl/meulen-bot/webhook",                    done: true },
+    { text: "Configurar Meta Cloud API + tokens de producción",                        done: false },
+    { text: "OCR foto de factura con Claude Vision → draft AP",                        done: false },
+    { text: "— Fase 4 (integración fiscal) —",                                         done: false },
     { text: "Boleta electrónica (LibreDTE o Haulmer)",                                 done: false },
     { text: "Integración Transbank SDK",                                               done: false },
     { text: "Migración a PostgreSQL cuando aparezca 2a caja",                          done: false }
@@ -389,7 +400,7 @@ DATA.modules.forEach(m => {
 
 // Roadmap Gantt
 const gantt = document.getElementById('gantt');
-const phaseColors = ['#10b981','#f59e0b','#ef4444','#3b82f6'];
+const phaseColors = ['#10b981','#f59e0b','#8b5cf6','#ef4444','#3b82f6'];
 const maxWeight = Math.max(...DATA.phases.map(p => p.weight));
 DATA.phases.forEach((p, i) => {
   const offset = DATA.phases.slice(0, i).reduce((a,x) => a + x.weight, 0);

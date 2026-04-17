@@ -326,7 +326,7 @@
       <div class="brand-title">Ecosistema Meulen</div>
       <div class="brand-subtitle">Puerto Montt · Chile</div>
     </div>
-    <span class="live-badge"><span class="live-dot"></span>MVP Fase 1</span>
+    <span class="live-badge"><span class="live-dot"></span>Fase 2 (AP) + Fase 3 (Bot)</span>
   </div>
   <div class="filters" id="filters"></div>
   <nav style="display:flex;gap:8px;font-size:11px;">
@@ -572,6 +572,43 @@ const NODES = [
     ],
   },
 
+  // --------- FASE 2: CUENTAS POR PAGAR ---------
+  { id: 'accounts_payable', label: 'Cuentas\npor Pagar', icon: '🧾', cat: 'modulo', badge: 'FASE 2', badgeColor: '#38bdf8',
+    size: 28,
+    desc: 'Gestión financiera con proveedores: facturas, pagos, cheques (con clear/bounce), calendario de vencimientos, coverage ganancia vs deuda, simulador de ofertas con recomendación por rotación histórica.',
+    items: [
+      { icon: '📄', text: '5 tablas ap_* + extensiones a suppliers' },
+      { icon: '💳', text: 'Cheques: clear propaga · bounce revierte' },
+      { icon: '📅', text: 'Calendario agregado + cupo de crédito' },
+      { icon: '🧮', text: 'Simulador con recomendación de cantidad' },
+      { icon: '🔀', text: '19 endpoints /api/v1/ap/*' },
+    ],
+    urlLabel: '/admin/ap/calendar',
+  },
+
+  // --------- FASE 3: CHATBOT WHATSAPP ---------
+  { id: 'chatbot-wa', label: 'Chatbot\nWhatsApp', icon: '💬', cat: 'producto', badge: 'FASE 3', badgeColor: '#a882ff',
+    size: 30,
+    desc: 'Bot conversacional clonado del ecosistema CMC. Los padres pueden consultar stock, ventas, deuda y ajustar precios/stock por mensaje de texto o nota de voz. Castellano chileno informal, confirmación sí/no para acciones destructivas.',
+    items: [
+      { icon: '🎙️', text: 'Whisper para notas de voz' },
+      { icon: '🧠', text: 'Claude Haiku detect_intent' },
+      { icon: '📋', text: '12 intents (stock/ventas/deuda/acciones)' },
+      { icon: '✅', text: 'Whitelist ALLOWED_PHONES' },
+      { icon: '🔄', text: 'Cliente HTTP de /api/v1' },
+    ],
+    urlLabel: 'agentecmc.cl/meulen-bot',
+  },
+  { id: 'meta-wa', label: 'Meta Cloud\nAPI WA', icon: '📱', cat: 'api', badge: 'FASE 3', badgeColor: '#fb923c',
+    size: 22,
+    desc: 'WhatsApp Business API oficial. Webhook verificado en agentecmc.cl/meulen-bot/webhook. Mensajes de pasan por rate limiter + whitelist + idempotencia por msg_id.',
+    items: [
+      { icon: '🌐', text: 'Webhook HTTPS con verify token' },
+      { icon: '📨', text: 'send_whatsapp + interactivos' },
+      { icon: '🎤', text: 'Audio → bytes → Whisper' },
+    ],
+  },
+
   // --------- INFRAESTRUCTURA ---------
   { id: 'fastapi', label: 'FastAPI\nPython 3.11', icon: '⚡', cat: 'infra', badge: 'PROD', badgeColor: '#f87171',
     size: 24,
@@ -665,9 +702,24 @@ const EDGES = [
 
   // Integraciones externas
   { from: 'pos', to: 'bsale', label: 'boleta paralela' },
-  { from: 'pos', to: 'dte', label: 'Fase 3' },
-  { from: 'pos', to: 'tbk-api', label: 'Fase 3' },
+  { from: 'pos', to: 'dte', label: 'Fase 4' },
+  { from: 'pos', to: 'tbk-api', label: 'Fase 4' },
   { from: 'reporting', to: 'metabase', label: 'Fase 4' },
+
+  // Fase 2: Cuentas por Pagar
+  { from: 'admin-ui', to: 'accounts_payable', label: 'calendario + pagos' },
+  { from: 'accounts_payable', to: 'sqlite' },
+  { from: 'accounts_payable', to: 'purchasing', label: 'link N:M a compras' },
+  { from: 'accounts_payable', to: 'audit', label: 'log acciones' },
+  { from: 'fastapi', to: 'accounts_payable' },
+
+  // Fase 3: Chatbot WhatsApp
+  { from: 'meta-wa', to: 'chatbot-wa', label: 'webhook POST' },
+  { from: 'chatbot-wa', to: 'identity', label: 'Bearer JWT admin' },
+  { from: 'chatbot-wa', to: 'catalog', label: 'stock + precios' },
+  { from: 'chatbot-wa', to: 'reporting', label: 'ventas del día' },
+  { from: 'chatbot-wa', to: 'accounts_payable', label: 'deuda + cheques' },
+  { from: 'chatbot-wa', to: 'inventory', label: 'ajustes stock' },
 ];
 
 /* ====================== CANVAS & SIM ====================== */
