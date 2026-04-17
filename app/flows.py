@@ -2135,14 +2135,29 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             _maso_override = {59: data["maso_duracion"]} if especialidad == "masoterapia" and data.get("maso_duracion") else None
             smart_dia, todos_dia = await buscar_slots_dia(
                 especialidad, _DIA_RELATIVO, intervalo_override=_maso_override)
+            # Filtro estricto: Medilink a veces devuelve slots del día siguiente
+            # cuando no hay disponibilidad en el día pedido. Aseguramos que solo
+            # mostramos slots con fecha == _DIA_RELATIVO.
+            todos_dia = [s for s in (todos_dia or []) if s.get("fecha") == _DIA_RELATIVO]
+            smart_dia = [s for s in (smart_dia or []) if s.get("fecha") == _DIA_RELATIVO]
             if todos_dia:
                 if _DIA_RELATIVO not in fechas_vistas:
                     fechas_vistas = fechas_vistas + [_DIA_RELATIVO]
-                data.update({"slots": smart_dia, "todos_slots": todos_dia,
+                data.update({"slots": smart_dia or todos_dia[:5],
+                             "todos_slots": todos_dia,
                              "fechas_vistas": fechas_vistas, "expansion_stage": 1})
                 save_session(phone, "WAIT_SLOT", data)
-                return _format_slots(smart_dia)
-            return f"No tengo horarios disponibles para ese día 😕\n\nEscribe *otro día* para buscar el siguiente."
+                return _format_slots(smart_dia or todos_dia[:5])
+            # Convertir fecha a label legible para el mensaje
+            from datetime import datetime as _dtx
+            try:
+                _lbl = _dtx.strptime(_DIA_RELATIVO, "%Y-%m-%d").strftime("%A %d de %B").lower()
+            except Exception:
+                _lbl = _DIA_RELATIVO
+            return (
+                f"No tengo horarios disponibles para *{_lbl}* 😕\n\n"
+                f"Escribe *otro día* para buscar el siguiente disponible, o llama a recepción."
+            )
 
         # ── Filtro por período horario (mañana/tarde/noche) ──
         # NOTA: "mañana" suelto ya se manejó arriba como día relativo.
