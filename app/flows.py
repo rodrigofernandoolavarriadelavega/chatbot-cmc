@@ -2380,9 +2380,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "Sin problema 😊 Necesito el RUT de la persona que se va a atender:\n"
                     "(ej: *12.345.678-9*)"
                 )
-            # No conocemos al dueño del celular → preguntar su nombre
-            save_session(phone, "WAIT_PHONE_OWNER_NAME", data)
-            return "Sin problema 😊 ¿Cuál es tu nombre? (el de quien nos escribe, para enviarte los recordatorios)"
+            # No conocemos al dueño del celular — pero no preguntemos su nombre
+            # ahora (genera fricción). Saltamos directo al RUT del paciente a
+            # atender. Al final preguntamos si el RUT es suyo o es para tercero.
+            save_session(phone, "WAIT_RUT_AGENDAR", data)
+            return (
+                "Sin problema 😊 Necesito el *RUT* de la persona que se va a atender:\n"
+                "(ej: *12.345.678-9*)"
+            )
         save_session(phone, "WAIT_BOOKING_FOR", data)
         return _btn_msg(
             "Responde *Para mí* o *Para otra persona* 😊",
@@ -2452,8 +2457,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "(ej: *12.345.678-9*)"
                     + _PRIVACY_NOTE
                 )
-            save_session(phone, "WAIT_PHONE_OWNER_NAME", data)
-            return "Sin problema 😊 Primero, ¿cuál es tu nombre?\n(ej: *Ana Muñoz*)"
+            # Ir directo al RUT del paciente. El nombre del dueño del cel lo
+            # preguntamos al final (si la cita es para tercero).
+            save_session(phone, "WAIT_RUT_AGENDAR", data)
+            return (
+                "Sin problema 😊 Necesito el *RUT* de la persona que se va a atender:\n"
+                "(ej: *12.345.678-9*)"
+                + _PRIVACY_NOTE
+            )
 
         # Si el paciente ya agendó antes y confirma con sí/ok, usar su RUT guardado
         rut_conocido = data.get("rut_conocido")

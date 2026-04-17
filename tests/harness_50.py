@@ -982,13 +982,12 @@ async def main():
     ])
 
     # ── Tercero (booking for another person) ────────────────────────────────
-    mk("TERC-01 tercero sin perfil → pide nombre owner", "56900000601", [
+    mk("TERC-01 tercero sin perfil → pide RUT directo (sin fricción)", "56900000601", [
         ("quiero agendar kine", {"any": ["Kine", "09:"], **NO_ERROR}),
         ("confirmar_sugerido", ["Fonasa"]),
         ("1", ["RUT"]),
-        # En WAIT_RUT_AGENDAR escribe "otra persona" → sin perfil → pide nombre
-        ("otra persona", ["nombre"]),
-        ("Ana López", ["RUT", "atender"]),  # guarda nombre, pide RUT del paciente
+        # Nuevo flujo: "otra persona" → va directo a pedir RUT del paciente a atender
+        ("otra persona", {"any": ["RUT", "atender"], **NO_ERROR}),
         ("99999999-9", ["Nombre", "Sexo", "nacimiento"]),
         ("Daniel López, M, 01/01/2000", {"any": ["Daniel", "confirm", "Registrad"], **NO_ERROR}),
     ])
