@@ -533,6 +533,14 @@ def _precio_line(especialidad: str, slot: dict | None = None) -> str:
     return f"💰 Consulta: {precio_str}"
 
 
+# Especialidades con opción Fonasa — las demás son solo particular y se salta
+# la pregunta Fonasa/Particular para reducir un paso en el flujo.
+_FONASA_SPECIALTIES = frozenset({
+    "Medicina General", "Kinesiología", "Psicología Adulto",
+    "Psicología Infantil", "Nutrición", "Matrona",
+})
+
+
 # ── Helpers de mensajes interactivos ──────────────────────────────────────────
 
 def _list_msg(body_text: str, button_label: str, sections: list) -> dict:
@@ -572,7 +580,7 @@ def _btn_msg(body_text: str, buttons: list) -> dict:
 # ── Consent inline al pedir datos personales (Ley 19.628) ─────────────────
 # En vez de bloquear al inicio (asusta a los pacientes), incluimos una nota
 # breve cuando pedimos el RUT y registramos consent al recibirlo.
-_PRIVACY_NOTE = "\n\n_Al compartir tus datos aceptas nuestra política de privacidad: agentecmc.cl/privacidad_"
+_PRIVACY_NOTE = "\n\n_Tus datos se usan solo para tu atención médica · agentecmc.cl/privacidad_"
 
 
 def _ensure_consent(phone: str) -> None:
@@ -642,13 +650,42 @@ async def _slot_confirmed(phone: str, data: dict, slot: dict) -> str | dict:
                 ]
             )
 
-    # Flujo normal: preguntar Fonasa/Particular
+    # Flujo para pacientes nuevos (sin perfil aún)
+    esp = slot.get("especialidad", "")
+    slot_resumen = (
+        f"🏥 *{esp}* — {slot['profesional']}\n"
+        f"📅 *{slot['fecha_display']}*\n"
+        f"🕐 *{slot['hora_inicio'][:5]}*"
+    )
+    if esp not in _FONASA_SPECIALTIES:
+        # Solo particular → saltar pregunta modalidad, ir directo al RUT
+        data["modalidad"] = "particular"
+        data["booking_for_other"] = False
+        # Si ya conocemos al paciente (ej. reagendar), ofrecer atajo
+        rut_c = data.get("rut_conocido")
+        nombre_c = data.get("nombre_conocido")
+        if rut_c and nombre_c:
+            save_session(phone, "WAIT_RUT_AGENDAR", data)
+            return _btn_msg(
+                f"Perfecto 🙌\n\n{slot_resumen}\n\n"
+                f"¿Agendo con tus datos, *{nombre_c.split()[0]}*?",
+                [
+                    {"id": "si", "title": "✅ Sí, continuar"},
+                    {"id": "rut_nuevo", "title": "Ingresar otro RUT"},
+                ]
+            )
+        save_session(phone, "WAIT_RUT_AGENDAR", data)
+        return (
+            f"Perfecto 🙌\n\n{slot_resumen}\n\n"
+            "Para reservar necesito tu *RUT* 😊\n"
+            "(ej: *12.345.678-9*)\n\n"
+            "_Si es para otra persona, escribe *otra persona*._"
+            + _PRIVACY_NOTE
+        )
+    # Fonasa disponible → preguntar modalidad
     save_session(phone, "WAIT_MODALIDAD", data)
     return _btn_msg(
-        f"Perfecto 🙌\n\n"
-        f"🏥 *{slot['especialidad']}* — {slot['profesional']}\n"
-        f"📅 *{slot['fecha_display']}*\n"
-        f"🕐 *{slot['hora_inicio'][:5]}*\n\n"
+        f"Perfecto 🙌\n\n{slot_resumen}\n\n"
         "¿Tu atención será Fonasa o Particular?",
         [{"id": "1", "title": "Fonasa"}, {"id": "2", "title": "Particular"}]
     )
@@ -1695,10 +1732,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     return _btn_msg(
                         f"{resp}\n\n"
                         f"Próxima hora disponible en *{esp_sug}*:\n{preview}\n\n"
-                        f"{DISCLAIMER}\n\n"
-                        "¿Quieres agendar?",
+                        "¿Te la reservo?",
                         [
-                            {"id": "agendar_sugerido", "title": "✅ Agendar ahora"},
+                            {"id": "agendar_sugerido", "title": "✅ Sí, agendar"},
                             {"id": "no_agendar",      "title": "No por ahora"},
                         ]
                     )
@@ -1707,16 +1743,15 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     data["especialidad_sugerida"] = esp_lower
                     save_session(phone, "IDLE", data)
                     return _btn_msg(
-                        f"{resp}\n\n{DISCLAIMER}\n\n¿Quieres agendar en *{esp_sug}*?",
+                        f"{resp}\n\n¿Te agendo en *{esp_sug}*?",
                         [
                             {"id": "agendar_sugerido", "title": "✅ Sí, agendar"},
                             {"id": "no_agendar",      "title": "No por ahora"},
                         ]
                     )
             return (
-                f"{resp}\n\n"
-                f"{DISCLAIMER}\n\n"
-                "¿Quieres agendar una hora? Escribe *1* o *menu* para volver."
+                f"{resp}\n\n{DISCLAIMER}\n\n"
+                "¿Te ayudo a agendar? Escribe *1* o *menu* para volver."
             )
 
         # intent "otro" — si Claude produjo una respuesta útil (p.ej. una
@@ -1949,7 +1984,6 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     save_session(phone, "WAIT_SLOT", data)
                     return (
                         f"{resp}\n\n"
-                        f"{DISCLAIMER}\n\n"
                         "_Elige un número para continuar con tu reserva o escribe *menu* para volver._"
                     )
             # Frustration detector — escalada en 3 niveles
@@ -1990,14 +2024,28 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return "Responde *Fonasa* o *Particular* 😊"
 
         modalidad_str = data["modalidad"].capitalize()
-        save_session(phone, "WAIT_BOOKING_FOR", data)
-        return _btn_msg(
+        # Saltar WAIT_BOOKING_FOR → ir directo al RUT (si quiere para otro, escribe "otra persona")
+        data["booking_for_other"] = False
+
+        # Atajo para pacientes conocidos
+        rut_c = data.get("rut_conocido")
+        nombre_c = data.get("nombre_conocido")
+        if rut_c and nombre_c:
+            save_session(phone, "WAIT_RUT_AGENDAR", data)
+            return _btn_msg(
+                f"Perfecto, atención *{modalidad_str}* 😊\n\n"
+                f"¿Agendo con tus datos, *{nombre_c.split()[0]}*?",
+                [{"id": "si", "title": "✅ Sí, continuar"},
+                 {"id": "rut_nuevo", "title": "Ingresar otro RUT"}]
+            )
+
+        save_session(phone, "WAIT_RUT_AGENDAR", data)
+        return (
             f"Perfecto, atención *{modalidad_str}* 😊\n\n"
-            "¿La hora es para ti o para otra persona?",
-            [
-                {"id": "booking_self", "title": "Para mí"},
-                {"id": "booking_other", "title": "Para otra persona"},
-            ]
+            "Para reservar necesito tu *RUT*:\n"
+            "(ej: *12.345.678-9*)\n\n"
+            "_Si es para otra persona, escribe *otra persona*._"
+            + _PRIVACY_NOTE
         )
 
     # ── WAIT_BOOKING_FOR ───────────────────────────────────────────────────────
@@ -2068,6 +2116,26 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
     # ── WAIT_RUT_AGENDAR ──────────────────────────────────────────────────────
     if state == "WAIT_RUT_AGENDAR":
+        # Escape: "otra persona" → flujo de terceros
+        _OTHER_PHRASES = {"otra persona", "otro", "otra", "para otra persona",
+                          "para otro", "booking_other", "familiar", "hijo", "hija",
+                          "papa", "papá", "mama", "mamá", "esposo", "esposa",
+                          "hermano", "hermana", "abuelo", "abuela"}
+        if tl in _OTHER_PHRASES or tl_norm in _OTHER_PHRASES:
+            data["booking_for_other"] = True
+            data.pop("rut_conocido", None)
+            data.pop("nombre_conocido", None)
+            perfil_owner = get_profile(phone)
+            if perfil_owner and perfil_owner.get("nombre"):
+                save_session(phone, "WAIT_RUT_AGENDAR", data)
+                return (
+                    "Sin problema 😊 Necesito el RUT de la persona que se va a atender:\n"
+                    "(ej: *12.345.678-9*)"
+                    + _PRIVACY_NOTE
+                )
+            save_session(phone, "WAIT_PHONE_OWNER_NAME", data)
+            return "Sin problema 😊 Primero, ¿cuál es tu nombre?\n(ej: *Ana Muñoz*)"
+
         # Si el paciente ya agendó antes y confirma con sí/ok, usar su RUT guardado
         rut_conocido = data.get("rut_conocido")
         _SET_CONTINUAR = AFIRMACIONES | {"si", "sí", "ok", "mismo", "el mismo"}
@@ -2091,9 +2159,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             data["rut"] = rut
             save_session(phone, "WAIT_NOMBRE_NUEVO", data)
             return (
-                "No encontré ese RUT en el sistema 🔎\n\n"
-                "No te preocupes, te registro ahora mismo.\n"
-                "¿Cuál es tu nombre completo?\n"
+                "Es tu primera vez con nosotros 🙌\n\n"
+                "Te registro en un minuto. ¿Cuál es tu nombre completo?\n"
                 "(ej: *María González López*)"
             )
 
@@ -2526,9 +2593,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         log_event(phone, "registro_inicio", {"rut": data.get("rut", ""), "step": "nombre"})
         save_session(phone, "WAIT_FECHA_NAC", data)
         return (
-            f"Gracias, *{nombre}* 😊\n\n"
-            "Para completar tu ficha, necesito algunos datos más.\n"
-            "Si no quieres responder alguno, escribe *saltar*.\n\n"
+            f"Gracias, *{nombre}* 😊 Solo faltan unos datos rápidos "
+            "(puedes escribir *saltar* en cualquiera).\n\n"
             "📅 *¿Cuál es tu fecha de nacimiento?*\n"
             "(ej: *15/03/1990* o *15-03-1990*)"
         )
@@ -2729,15 +2795,16 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         slot = data["slot_elegido"]
         modalidad = data.get("modalidad", "particular").capitalize()
         return _btn_msg(
-            f"¡Listo, *{nombre}*! Ya quedaste registrado/a 🙌\n\n"
-            f"¿Confirmas esta hora?\n\n"
-            f"👤 *{paciente['nombre']}*\n"
-            f"🏥 *{slot['especialidad']}* — {slot['profesional']}\n"
-            f"📅 *{slot['fecha_display']}*\n"
-            f"🕐 *{slot['hora_inicio'][:5]}*\n"
-            f"💳 *{modalidad}*",
+            f"¡Listo, *{nombre}*! Ya estás registrado/a 🙌\n\n"
+            f"Te reservo esta hora:\n\n"
+            f"👤 {paciente['nombre']}\n"
+            f"🏥 {slot['especialidad']} — {slot['profesional']}\n"
+            f"📅 {slot['fecha_display']}\n"
+            f"🕐 {slot['hora_inicio'][:5]}\n"
+            f"💳 {modalidad}\n\n"
+            "¿La confirmo?",
             [
-                {"id": "si", "title": "✅ Confirmar"},
+                {"id": "si", "title": "✅ Sí, reservar"},
                 {"id": "no", "title": "❌ Cambiar"},
             ]
         )

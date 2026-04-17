@@ -417,9 +417,8 @@ async def main():
         ("menu", ["Motivos"]),
         ("1", ["especialidad", "categoría", "categoria"]),
         ("odontología", {"any": ["Odonto", "09:"], **NO_ERROR}),
-        ("confirmar_sugerido", ["Fonasa", "Particular"]),
-        ("1", ["para ti", "otra persona"]),
-        ("booking_self", ["rut"]),
+        # Odonto es particular-only → salta modalidad, va directo a RUT
+        ("confirmar_sugerido", ["RUT"]),
         ("11111111-1", ["confirm"]),
         ("confirmar", ["reserv", "✅", "confirm"]),
     ])
@@ -561,8 +560,8 @@ async def main():
         ("11111111-1", {"any": ["Abarca", "cita", "reagend"], **NO_ERROR}),
         ("1", {"any": ["09:", "reagend"], **NO_ERROR}),
         ("confirmar_sugerido", {"any": ["Fonasa"], **NO_ERROR}),
-        ("1", {"any": ["para ti", "otra persona"], **NO_ERROR}),
-        ("booking_self", {"any": ["datos anteriores", "continuar", "confirm"], **NO_ERROR}),
+        # WAIT_MODALIDAD detecta rut_conocido → atajo "¿Agendo con tus datos?"
+        ("1", {"any": ["Agendo con tus datos", "continuar"], **NO_ERROR}),
         ("si", {"any": ["confirm", "Estás a un paso"], **NO_ERROR}),
         ("si", {"any": ["reagend", "✅", "reserv"], **NO_ERROR}),
     ], setup=setup_una_cita)
@@ -705,7 +704,8 @@ async def main():
 
     mk("BUG-03 'confirmo' en WAIT_SLOT", "56900000103", [
         ("quiero agendar odontología", ["09:"]),
-        ("confirmo", {"any": ["Fonasa", "Particular"], **NO_ERROR}),
+        # Odontología es solo particular → salta directo al RUT
+        ("confirmo", {"any": ["RUT", "rut"], **NO_ERROR}),
     ])
 
     mk("BUG-04 'no' en WAIT_CITA_CANCELAR aborta", "56900000104", [
@@ -1061,8 +1061,10 @@ async def main():
         ("confirmar_sugerido", {"any": ["reservo", "confirmo", "Juan"], **NO_ERROR}),
         # Quiere agendar para otra persona → "Cambiar algo" → flujo completo
         ("cambiar_datos", {"any": ["Fonasa", "Particular"], **NO_ERROR}),
-        ("1", ["para ti", "otra persona"]),
-        ("booking_other", ["RUT", "atender"]),  # ya tiene perfil → directo a RUT
+        # WAIT_MODALIDAD detecta rut_conocido → atajo, pero quiere para otra persona
+        ("1", {"any": ["Agendo con tus datos", "continuar"], **NO_ERROR}),
+        # En WAIT_RUT_AGENDAR escribe "otra persona"
+        ("otra persona", ["RUT", "atender"]),
         ("99999999-9", ["nombre", "encontr", "registrar"]),
         ("Carlos Pérez", ["fecha de nacimiento"]),
         ("saltar", ["sexo"]),
@@ -1087,8 +1089,8 @@ async def main():
         ("confirmar_sugerido", {"any": ["reservo", "confirmo", "Juan"], **NO_ERROR}),
         # Toca "Cambiar algo" → vuelve a Fonasa/Particular
         ("cambiar_datos", {"any": ["Fonasa", "Particular"], **NO_ERROR}),
-        ("1", {"any": ["para ti", "otra persona"], **NO_ERROR}),
-        ("booking_self", {"any": ["datos anteriores", "continuar"], **NO_ERROR}),
+        # WAIT_MODALIDAD detecta rut_conocido → atajo "¿Agendo con tus datos?"
+        ("1", {"any": ["Agendo con tus datos", "continuar"], **NO_ERROR}),
         ("si", {"any": ["reservo", "confirmo"], **NO_ERROR}),
         ("si", {"any": ["reserv", "✅", "Listo"], **NO_ERROR}),
     ], setup=lambda: save_profile("56900000702", "11111111-1", "Juan Prueba Test")),

@@ -1018,8 +1018,8 @@ async def main():
 
     mk("102 full flow odonto: agendar→slot→rut→confirm", "56910000102", [
         ("quiero agendar odontología", {"any": ["Odonto", "09:"], **NO_ERROR}),
-        ("confirmar_sugerido", ["Fonasa", "Particular"]),
-        ("1", ["rut"]),
+        # Particular-only → salta Fonasa/Particular, va directo a RUT
+        ("confirmar_sugerido", ["RUT"]),
         ("11111111-1", ["confirm"]),
         ("confirmar", ["reserv", "✅", "cita"]),
     ])
@@ -1040,16 +1040,14 @@ async def main():
 
     mk("104 full flow traumato", "56910000104", [
         ("quiero agendar traumatología", {"any": ["Traumatolog", "09:"], **NO_ERROR}),
-        ("confirmar_sugerido", ["Fonasa", "Particular"]),
-        ("1", ["rut"]),
+        ("confirmar_sugerido", ["RUT"]),
         ("11111111-1", ["confirm"]),
         ("confirmar", ["reserv", "✅"]),
     ])
 
     mk("105 full flow cardio", "56910000105", [
         ("quiero agendar cardiología", {"any": ["Cardiolog", "09:"], **NO_ERROR}),
-        ("confirmar_sugerido", ["Fonasa", "Particular"]),
-        ("1", ["rut"]),
+        ("confirmar_sugerido", ["RUT"]),
         ("11111111-1", ["confirm"]),
         ("confirmar", ["reserv", "✅"]),
     ])
@@ -1072,32 +1070,28 @@ async def main():
 
     mk("108 full flow fono", "56910000108", [
         ("quiero agendar fonoaudiología", {"any": ["Fono", "09:"], **NO_ERROR}),
-        ("confirmar_sugerido", ["Fonasa", "Particular"]),
-        ("1", ["rut"]),
+        ("confirmar_sugerido", ["RUT"]),
         ("11111111-1", ["confirm"]),
         ("confirmar", ["reserv", "✅"]),
     ])
 
     mk("109 full flow gastro", "56910000109", [
         ("quiero agendar gastroenterología", {"any": ["Gastro", "09:"], **NO_ERROR}),
-        ("confirmar_sugerido", ["Fonasa", "Particular"]),
-        ("1", ["rut"]),
+        ("confirmar_sugerido", ["RUT"]),
         ("11111111-1", ["confirm"]),
         ("confirmar", ["reserv", "✅"]),
     ])
 
     mk("110 full flow ORL", "56910000110", [
         ("quiero agendar otorrino", {"any": ["Otorrino", "09:"], **NO_ERROR}),
-        ("confirmar_sugerido", ["Fonasa", "Particular"]),
-        ("1", ["rut"]),
+        ("confirmar_sugerido", ["RUT"]),
         ("11111111-1", ["confirm"]),
         ("confirmar", ["reserv", "✅"]),
     ])
 
     mk("111 full flow gineco", "56910000111", [
         ("quiero agendar ginecología", {"any": ["Ginecolog", "09:"], **NO_ERROR}),
-        ("confirmar_sugerido", ["Fonasa", "Particular"]),
-        ("1", ["rut"]),
+        ("confirmar_sugerido", ["RUT"]),
         ("11111111-1", ["confirm"]),
         ("confirmar", ["reserv", "✅"]),
     ])
@@ -1112,40 +1106,35 @@ async def main():
 
     mk("113 full flow endodoncia", "56910000113", [
         ("quiero agendar endodoncia", {"any": ["Endodoncia", "09:"], **NO_ERROR}),
-        ("confirmar_sugerido", ["Fonasa", "Particular"]),
-        ("1", ["rut"]),
+        ("confirmar_sugerido", ["RUT"]),
         ("11111111-1", ["confirm"]),
         ("confirmar", ["reserv", "✅"]),
     ])
 
     mk("114 full flow implantología", "56910000114", [
         ("quiero agendar implantología", {"any": ["Implantolog", "09:"], **NO_ERROR}),
-        ("confirmar_sugerido", ["Fonasa", "Particular"]),
-        ("1", ["rut"]),
+        ("confirmar_sugerido", ["RUT"]),
         ("11111111-1", ["confirm"]),
         ("confirmar", ["reserv", "✅"]),
     ])
 
     mk("115 full flow estética facial", "56910000115", [
         ("quiero agendar estética facial", {"any": ["Estética", "09:"], **NO_ERROR}),
-        ("confirmar_sugerido", ["Fonasa", "Particular"]),
-        ("1", ["rut"]),
+        ("confirmar_sugerido", ["RUT"]),
         ("11111111-1", ["confirm"]),
         ("confirmar", ["reserv", "✅"]),
     ])
 
     mk("116 full flow ecografía", "56910000116", [
         ("quiero agendar ecografía", {"any": ["Ecograf", "09:"], **NO_ERROR}),
-        ("confirmar_sugerido", ["Fonasa", "Particular"]),
-        ("1", ["rut"]),
+        ("confirmar_sugerido", ["RUT"]),
         ("11111111-1", ["confirm"]),
         ("confirmar", ["reserv", "✅"]),
     ])
 
     mk("117 full flow podología", "56910000117", [
         ("quiero agendar podología", {"any": ["Podolog", "09:"], **NO_ERROR}),
-        ("confirmar_sugerido", ["Fonasa", "Particular"]),
-        ("1", ["rut"]),
+        ("confirmar_sugerido", ["RUT"]),
         ("11111111-1", ["confirm"]),
         ("confirmar", ["reserv", "✅"]),
     ])
@@ -1153,8 +1142,8 @@ async def main():
     mk("118 full flow masoterapia 40 min", "56910000118", [
         ("quiero agendar masoterapia", ["minutos", "20", "40"]),
         ("40 minutos", {"any": ["09:"], **NO_ERROR}),
-        ("confirmar_sugerido", ["Fonasa", "Particular"]),
-        ("1", ["rut"]),
+        # Masoterapia es particular-only → salta Fonasa/Particular
+        ("confirmar_sugerido", ["RUT"]),
         ("11111111-1", ["confirm"]),
         ("confirmar", ["reserv", "✅"]),
     ])
