@@ -1491,6 +1491,87 @@ def api_conversion_funnel(dias: int = Query(30, ge=1, le=365),
 
 # ── Reagendar 1-click tras cancelación del doctor ───────────────────────────
 
+# ── Control manual de estado del paciente en el flujo ──────────────────────
+
+@router.post("/admin/api/patient/{phone}/set-state")
+async def api_set_patient_state(phone: str, request: Request, _=Depends(require_admin)):
+    """Cambia manualmente el estado de la sesión del paciente.
+
+    Body: {"state": "IDLE" | "HUMAN_TAKEOVER" | "COMPLETED" | ...}
+    Uso típico: recepcionista agendó manualmente y quiere que el bot deje de
+    perseguir al paciente con reenganche.
+    """
+    body = await request.json()
+    new_state = (body.get("state") or "").strip().upper()
+    if not new_state:
+        raise HTTPException(status_code=400, detail="state es requerido")
+    # Estados válidos que la recepción puede setear manualmente
+    VALID_MANUAL_STATES = {
+        "IDLE",            # Paciente libre, bot responde normal
+        "HUMAN_TAKEOVER",  # Bot pausa, solo humano responde
+        "COMPLETED",       # Cita completada manualmente
+    }
+    if new_state not in VALID_MANUAL_STATES:
+        raise HTTPException(status_code=400, detail=f"Estado no permitido. Válidos: {sorted(VALID_MANUAL_STATES)}")
+    from session import save_session, get_session, log_event
+    sess = get_session(phone)
+    data = sess.get("data") or {}
+    if isinstance(data, str):
+        import json as _json
+        try:
+            data = _json.loads(data)
+        except Exception:
+            data = {}
+    save_session(phone, new_state, data)
+    log_event(phone, "admin_state_change", {"new_state": new_state, "previous": sess.get("state")})
+    return {"ok": True, "phone": phone, "state": new_state}
+
+
+@router.post("/admin/api/patient/{phone}/mark-booked")
+async def api_mark_booked(phone: str, request: Request, _=Depends(require_admin)):
+    """Marca al paciente como agendado manualmente (fuera del bot).
+
+    Body: {
+      "especialidad": "Medicina General",
+      "profesional": "Dr. Olavarría",
+      "fecha": "2026-04-20",
+      "hora": "10:00",
+      "modalidad": "fonasa",   # opcional
+      "id_cita": "manual-...", # opcional, default auto
+    }
+
+    Crea registro en citas_bot + setea state=COMPLETED + tag "agendado-manual".
+    El bot no hará reenganche ni recordatorios cron sobre esta conversación.
+    """
+    body = await request.json()
+    esp = (body.get("especialidad") or "").strip()
+    prof = (body.get("profesional") or "").strip()
+    fecha = (body.get("fecha") or "").strip()
+    hora = (body.get("hora") or "").strip()
+    if not esp or not fecha or not hora:
+        raise HTTPException(status_code=400, detail="especialidad, fecha y hora son obligatorios")
+    from session import save_cita_bot, save_session, save_tag, log_event
+    import time as _time
+    id_cita = body.get("id_cita") or f"manual-{phone}-{int(_time.time())}"
+    save_cita_bot(
+        phone=phone,
+        id_cita=id_cita,
+        especialidad=esp,
+        profesional=prof,
+        fecha=fecha,
+        hora=hora,
+        modalidad=(body.get("modalidad") or "manual"),
+    )
+    save_session(phone, "COMPLETED", {})
+    save_tag(phone, "agendado-manual")
+    log_event(phone, "agendado_manual", {
+        "especialidad": esp, "profesional": prof, "fecha": fecha, "hora": hora,
+        "id_cita": id_cita,
+    })
+    return {"ok": True, "phone": phone, "id_cita": id_cita,
+            "cita": {"especialidad": esp, "profesional": prof, "fecha": fecha, "hora": hora}}
+
+
 @router.post("/admin/api/cita/{id_cita}/cancel-doctor")
 async def api_cancel_by_doctor(id_cita: str, _=Depends(require_admin)):
     """Notifica al paciente que su cita fue cancelada por el profesional y
