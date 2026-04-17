@@ -109,7 +109,9 @@ ESPECIALIDADES_ID = {
 
 
 def _q(params: dict) -> str:
-    return urllib.parse.quote(json.dumps(params))
+    # Medilink rechaza JSON con espacios — separadores compactos.
+    # NO URL-encodear acá: httpx lo hace vía params={}. Doble encoding rompe la query.
+    return json.dumps(params, separators=(",", ":"))
 
 
 # ── Reporte de estado a resilience.py ────────────────────────────────────────
@@ -230,7 +232,6 @@ async def _get_bloqueos(client: httpx.AsyncClient, id_prof: int, fecha: str) -> 
     """Retorna lista de rangos bloqueados (hora_inicio, hora_fin) para ese profesional y fecha.
     La API solo filtra por id_sucursal y fecha — filtramos id_profesional en código.
     Incluye bloqueos sin id_profesional (aplican a toda la sucursal).
-    Usa per_page=100 para evitar paginación.
     """
     params = {
         "id_sucursal": {"eq": MEDILINK_SUCURSAL},
@@ -238,7 +239,7 @@ async def _get_bloqueos(client: httpx.AsyncClient, id_prof: int, fecha: str) -> 
     }
     try:
         r = await _get(client, f"{MEDILINK_BASE_URL}/horariosbloqueados",
-                       params={"q": _q(params), "per_page": 100}, headers=HEADERS)
+                       params={"q": _q(params)}, headers=HEADERS)
     except httpx.RequestError as e:
         log.error("No se pudo obtener bloqueos para prof %d fecha %s: %s", id_prof, fecha, e)
         return []
@@ -305,7 +306,6 @@ def _ids_para_especialidad(especialidad: str) -> list:
 async def _get_horas_ocupadas(client: httpx.AsyncClient, id_prof: int, fecha: str) -> set:
     """Retorna set de hora_inicio ocupadas según /citas (fuente de verdad real).
     Expande citas largas: una cita 11:00-12:00 bloquea 11:00, 11:15, 11:30, 11:45.
-    Usa per_page=100 para evitar que la paginación oculte citas.
     """
     params = {
         "id_sucursal":      {"eq": MEDILINK_SUCURSAL},
@@ -315,7 +315,7 @@ async def _get_horas_ocupadas(client: httpx.AsyncClient, id_prof: int, fecha: st
     }
     try:
         r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
-                       params={"q": _q(params), "per_page": 100}, headers=HEADERS)
+                       params={"q": _q(params)}, headers=HEADERS)
     except httpx.RequestError as e:
         log.error("No se pudo obtener horas ocupadas prof %d fecha %s: %s", id_prof, fecha, e)
         raise  # Propagar error — no asumir que todo está libre
