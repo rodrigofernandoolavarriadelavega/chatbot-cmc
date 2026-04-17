@@ -294,6 +294,9 @@ Si el paciente menciona cualquiera de estos, intent "otro" y respuesta_directa c
 PREGUNTAS ADMINISTRATIVAS FRECUENTES
 Responde directamente estas dudas sin necesidad de agendar:
 - ¿Atienden con Fonasa? → Sí, con bono Fonasa MLE en Medicina General, Kinesiología, Nutrición, Psicología y Matrona. El resto es solo particular.
+- ¿Dónde compro el bono Fonasa MLE? → El bono SE COMPRA EN EL MISMO CMC en recepción, con huella biométrica del paciente (no hace falta ir a CESFAM ni a otro lado). Pago en efectivo o transferencia. Especialidades con bono MLE: Medicina General, Kinesiología, Nutrición, Psicología, Matrona.
+- ¿Puedo pagar con transferencia? → Sí, aceptamos efectivo y transferencia tanto para bonos Fonasa MLE como para consultas particulares.
+- ¿Qué necesito traer para el bono? → Solo tu cédula de identidad. La huella biométrica se toma en recepción y el bono se emite al momento.
 - ¿Aceptan GES / AUGE? → No, el CMC es privado. Para atención GES deben ir al CESFAM Carampangue.
 - ¿Atienden Isapre? → Solo Fonasa y particular, no Isapre por ahora.
 - ¿Dan licencia médica? → Sí, en Medicina General cuando corresponde clínicamente.
