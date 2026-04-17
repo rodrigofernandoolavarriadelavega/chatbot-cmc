@@ -1291,19 +1291,8 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
           <div class="reply-actions" style="position:relative;">
             <button class="btn btn-outline" onclick="document.getElementById('file-upload-input').click()" title="Adjuntar archivo" style="font-size:15px;padding:5px 10px;">📎</button>
             <button class="btn btn-outline" onclick="toggleEmojiPicker(event)" title="Insertar emoji" style="font-size:15px;padding:5px 10px;">😀</button>
-            <button class="btn btn-outline" onclick="toggleQuickReplies(event)" title="Respuestas rápidas" style="font-size:15px;padding:5px 10px;">💬</button>
             <button class="btn btn-outline" onclick="document.getElementById('reply-input').value='';clearFileUpload();">Limpiar</button>
             <button class="btn btn-primary btn-send" onclick="sendReply()">Enviar →</button>
-            <!-- QUICK REPLIES — plantillas editables -->
-            <div id="quick-replies-panel" style="display:none;position:absolute;bottom:100%;right:0;margin-bottom:6px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:10px;width:380px;max-width:92vw;z-index:100;max-height:420px;overflow-y:auto;">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-                <div style="font-size:11px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Respuestas rápidas</div>
-                <button onclick="addQuickReply()" style="background:none;border:1px solid #e2e8f0;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;color:#475569;">➕ Nueva</button>
-              </div>
-              <div style="font-size:11px;color:#94a3b8;margin-bottom:8px;">Click para insertar. Tip: también podés escribir el atajo <code style="background:#f1f5f9;padding:1px 4px;border-radius:3px;">/hola</code> y presionar Tab o Espacio.</div>
-              <div id="quick-replies-list" style="display:flex;flex-direction:column;gap:4px;"></div>
-            </div>
-
             <!-- EMOJI PICKER — aparece sobre los botones -->
             <div id="emoji-picker" style="display:none;position:absolute;bottom:100%;right:0;margin-bottom:6px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:10px;width:320px;max-width:90vw;z-index:100;">
               <div style="font-size:11px;color:#64748b;font-weight:600;margin:0 0 4px;text-transform:uppercase;letter-spacing:.5px;">Frecuentes</div>
@@ -2126,136 +2115,6 @@ async function doResume(){
   if(r.ok){updateChatControls("IDLE");await loadConversations();await loadMessages(selectedPhone);}
   else alert("Error al reanudar el bot");
 }
-// ── QUICK REPLIES (plantillas editables) ───────────────────────────────────
-const QUICK_REPLIES_DEFAULT = [
-  { shortcut: "/hola",       title: "Saludo",                text: "¡Hola! 👋 Te habla recepción del Centro Médico Carampangue. ¿En qué te podemos ayudar?" },
-  { shortcut: "/confirmar",  title: "Confirmar cita",        text: "Perfecto, te confirmo tu hora 🙌 Te esperamos puntual. Si necesitás cambiarla escribinos con tiempo." },
-  { shortcut: "/reagendar",  title: "Reagendar",             text: "Claro, ¿para qué día te gustaría cambiar la hora? 📅" },
-  { shortcut: "/ubicacion",  title: "Ubicación",             text: "📍 Estamos en Monsalve 102, frente a la antigua estación de trenes, Carampangue." },
-  { shortcut: "/horarios",   title: "Horarios",              text: "Nuestro horario es:\n🗓️ Lunes a viernes 08:00 – 20:00\n🗓️ Sábados 09:00 – 13:00" },
-  { shortcut: "/emergencia", title: "Emergencia",            text: "⚠️ Si es una emergencia llama al *SAMU 131* o al *(41) 296 5226*. También podés acudir directamente al servicio de urgencias más cercano." },
-  { shortcut: "/espera",     title: "Un momento",            text: "Dame un segundo por favor 👀 enseguida te reviso." },
-  { shortcut: "/gracias",    title: "Despedida",             text: "¡Gracias por contactarnos! 🙌 Que tengas un buen día." },
-  { shortcut: "/fonasa",     title: "Aclaración Fonasa",     text: "Sí, atendemos Fonasa en Medicina General, Kinesiología, Nutrición, Psicología, Matrona y Podología. El resto de especialidades son particular." },
-  { shortcut: "/llegar",     title: "Cómo llegar",           text: "Nos encontrás en *Monsalve 102*, Carampangue, frente a la antigua estación de trenes.\n📞 (41) 296 5226" },
-];
-function getQuickReplies(){
-  try{
-    const raw = localStorage.getItem("quick_replies");
-    if(raw) return JSON.parse(raw);
-  }catch(e){}
-  return QUICK_REPLIES_DEFAULT.slice();
-}
-function saveQuickReplies(list){
-  localStorage.setItem("quick_replies", JSON.stringify(list));
-}
-function renderQuickReplies(){
-  const c = document.getElementById("quick-replies-list");
-  if(!c) return;
-  const list = getQuickReplies();
-  if(!list.length){
-    c.innerHTML = '<div style="padding:14px;color:#94a3b8;text-align:center;font-size:12px;">Sin plantillas. Click en "➕ Nueva" para crear.</div>';
-    return;
-  }
-  c.innerHTML = list.map((qr, i) => `
-    <div class="qr-item" style="display:flex;align-items:flex-start;gap:8px;padding:8px;border-radius:6px;cursor:pointer;border:1px solid transparent;transition:background .1s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
-      <div style="flex:1;min-width:0;" onclick="insertQuickReply(${i})">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
-          <code style="background:#f1f5f9;padding:1px 5px;border-radius:3px;font-size:11px;color:#475569;">${escapeHtml(qr.shortcut || '')}</code>
-          <span style="font-size:12px;font-weight:600;color:#1e293b;">${escapeHtml(qr.title || '')}</span>
-        </div>
-        <div style="font-size:12px;color:#475569;white-space:pre-wrap;line-height:1.35;">${escapeHtml(qr.text || '').slice(0, 120)}${(qr.text || '').length > 120 ? '…' : ''}</div>
-      </div>
-      <button onclick="editQuickReply(${i});event.stopPropagation();" style="background:none;border:none;cursor:pointer;color:#94a3b8;padding:2px 4px;" title="Editar">✏️</button>
-      <button onclick="deleteQuickReply(${i});event.stopPropagation();" style="background:none;border:none;cursor:pointer;color:#94a3b8;padding:2px 4px;" title="Eliminar">🗑️</button>
-    </div>
-  `).join("");
-}
-function insertQuickReply(idx){
-  const qr = getQuickReplies()[idx];
-  if(!qr) return;
-  const ta = document.getElementById("reply-input");
-  if(!ta) return;
-  ta.value = ta.value ? (ta.value + "\n" + qr.text) : qr.text;
-  ta.focus();
-  ta.setSelectionRange(ta.value.length, ta.value.length);
-  document.getElementById("quick-replies-panel").style.display = "none";
-}
-function addQuickReply(){
-  const title = prompt("Título de la plantilla (ej: Confirmación):");
-  if(!title) return;
-  const shortcut = prompt("Atajo (ej: /confirmar) — opcional:") || "";
-  const text = prompt("Texto del mensaje:");
-  if(!text) return;
-  const list = getQuickReplies();
-  list.push({ shortcut, title, text });
-  saveQuickReplies(list);
-  renderQuickReplies();
-}
-function editQuickReply(idx){
-  const list = getQuickReplies();
-  const qr = list[idx];
-  if(!qr) return;
-  const title = prompt("Título:", qr.title);
-  if(title === null) return;
-  const shortcut = prompt("Atajo:", qr.shortcut || "");
-  if(shortcut === null) return;
-  const text = prompt("Texto:", qr.text);
-  if(text === null) return;
-  list[idx] = { shortcut, title, text };
-  saveQuickReplies(list);
-  renderQuickReplies();
-}
-function deleteQuickReply(idx){
-  if(!confirm("¿Eliminar esta plantilla?")) return;
-  const list = getQuickReplies();
-  list.splice(idx, 1);
-  saveQuickReplies(list);
-  renderQuickReplies();
-}
-function toggleQuickReplies(ev){
-  if(ev) ev.stopPropagation();
-  const p = document.getElementById("quick-replies-panel");
-  if(!p) return;
-  const willShow = p.style.display === "none" || !p.style.display;
-  // Cerrar emoji picker si está abierto
-  const ep = document.getElementById("emoji-picker");
-  if(ep) ep.style.display = "none";
-  p.style.display = willShow ? "block" : "none";
-  if(willShow){
-    renderQuickReplies();
-    setTimeout(() => {
-      document.addEventListener("click", _closeQuickReplies, { once: true });
-    }, 10);
-  }
-}
-function _closeQuickReplies(ev){
-  const p = document.getElementById("quick-replies-panel");
-  if(p && !p.contains(ev.target)) p.style.display = "none";
-}
-// Detectar atajos /xxx mientras escribe — al presionar Tab o Espacio tras un atajo, expandir
-(function(){
-  document.addEventListener("DOMContentLoaded", () => {
-    const ta = document.getElementById("reply-input");
-    if(!ta) return;
-    ta.addEventListener("keydown", (e) => {
-      if(e.key !== "Tab" && e.key !== " ") return;
-      const pos = ta.selectionStart;
-      const before = ta.value.slice(0, pos);
-      const m = before.match(/(\/[a-z]+)$/i);
-      if(!m) return;
-      const shortcut = m[1].toLowerCase();
-      const qr = getQuickReplies().find(q => (q.shortcut || "").toLowerCase() === shortcut);
-      if(!qr) return;
-      e.preventDefault();
-      const after = ta.value.slice(pos);
-      ta.value = before.slice(0, -shortcut.length) + qr.text + after;
-      const newPos = before.length - shortcut.length + qr.text.length;
-      ta.setSelectionRange(newPos, newPos);
-    });
-  });
-})();
-
 // ── EMOJI PICKER ────────────────────────────────────────────────────────────
 // Frecuentes se actualizan con los últimos 8 usados (localStorage persiste).
 const EMOJI_DEFAULT_FREQ = ["👋","😊","✅","🏥","📅","⏰","🙌","📞"];
