@@ -2044,12 +2044,13 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if len(txt) > 2:
                 result = await detect_intent(txt)
                 intent = result.get("intent", "otro")
-                if intent == "agendar" and (result.get("especialidad") or _detectar_apellido_profesional(txt)):
+                esp_override = _detectar_apellido_profesional(txt)
+                log.info("[WAIT_SLOT] txt=%r intent=%r esp_claude=%r esp_override=%r",
+                         txt[:60], intent, result.get("especialidad"), esp_override)
+                if intent == "agendar" and (result.get("especialidad") or esp_override):
                     from medilink import _ids_para_especialidad
                     # Override: si el texto crudo menciona un apellido de profesional,
                     # priorizar ese match sobre la clasificación genérica de Claude.
-                    # Fix para "Con Olavarria" cuando Claude devuelve "medicina general".
-                    esp_override = _detectar_apellido_profesional(txt)
                     esp_pedida = esp_override or result.get("especialidad", "")
                     ids_nuevos = set(_ids_para_especialidad(esp_pedida))
                     ids_actuales = {s.get("id_profesional") for s in todos_slots}
