@@ -845,13 +845,43 @@ async def webhook(request: Request):
             })
             log_event(phone, "media_recibido", {"tipo": msg_type, "caption": caption[:200],
                                                  "filename": saved_filename})
-            reply = (
-                f"Recibí tu {label}, gracias.\n\n"
-                "Lo guardé en tu ficha y una recepcionista lo va a revisar 🙏\n"
-                "Si es urgente, puedes llamar al 📞 (41) 296 5226"
-            )
-            await send_whatsapp(phone, reply)
-            log_message(phone, "out", reply, "HUMAN_TAKEOVER", canal="whatsapp")
+            # Dedupe: si el paciente manda varias imágenes/PDFs en ráfaga (ej. 3 fotos
+            # seguidas), solo responder al PRIMERO dentro de una ventana de 60s.
+            # Evita el spam "Recibí tu imagen × 3".
+            import time as _time
+            _now = _time.time()
+            _last_ack_ts = (get_session(phone).get("data") or {}).get("_last_media_ack_ts", 0)
+            try:
+                _last_ack_ts = float(_last_ack_ts or 0)
+            except Exception:
+                _last_ack_ts = 0
+            if _now - _last_ack_ts < 60:
+                # Ya mandamos ack reciente — actualizar timestamp y no responder de nuevo
+                _sess_curr = get_session(phone)
+                _data_curr = _sess_curr.get("data") or {}
+                if isinstance(_data_curr, str):
+                    import json as _json
+                    try: _data_curr = _json.loads(_data_curr)
+                    except Exception: _data_curr = {}
+                _data_curr["_last_media_ack_ts"] = _now
+                save_session(phone, _sess_curr.get("state") or "HUMAN_TAKEOVER", _data_curr)
+            else:
+                reply = (
+                    f"Recibí tu {label}, gracias.\n\n"
+                    "Lo guardé en tu ficha y una recepcionista lo va a revisar 🙏\n"
+                    "Si es urgente, puedes llamar al 📞 (41) 296 5226"
+                )
+                await send_whatsapp(phone, reply)
+                log_message(phone, "out", reply, "HUMAN_TAKEOVER", canal="whatsapp")
+                # Guardar timestamp del ack en session data
+                _sess_curr = get_session(phone)
+                _data_curr = _sess_curr.get("data") or {}
+                if isinstance(_data_curr, str):
+                    import json as _json
+                    try: _data_curr = _json.loads(_data_curr)
+                    except Exception: _data_curr = {}
+                _data_curr["_last_media_ack_ts"] = _now
+                save_session(phone, "HUMAN_TAKEOVER", _data_curr)
             return Response(status_code=200)
         elif msg_type in ("sticker", "location", "contacts"):
             # Tipos livianos: responder amable sin derivar a recepción
