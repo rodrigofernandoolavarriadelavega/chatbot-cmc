@@ -131,7 +131,7 @@ SALUD_MENTAL_PATRONES = [
     re.compile(r"\bquiero\s+acabar\s+con\s+(todo|mi\s+vida)"),
 ]
 
-DISCLAIMER = "_Recuerda que soy un asistente virtual, no un médico. Para consultas clínicas, habla siempre con un profesional de salud._"
+DISCLAIMER = "_Soy tu asistente del CMC, no reemplazo la evaluación médica presencial._"
 
 # 200+ variaciones de saludo (chileno, coloquial, typos, WhatsApp).
 # Cualquiera de estos → resetea sesión y muestra menú principal.
@@ -2149,7 +2149,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 return _derivar_humano(phone=phone, contexto="frustración WAIT_RUT_AGENDAR")
             save_session(phone, "WAIT_RUT_AGENDAR", data)
             return (
-                "Ese RUT no quedó bien 😕\n"
+                "Hmm, no reconozco ese RUT 🤔\n"
                 "Escríbelo con dígito verificador, por ejemplo: *12.345.678-9*"
             )
 
@@ -2360,7 +2360,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         rut = clean_rut(txt)
         if not valid_rut(rut):
             return (
-                "Ese RUT no quedó bien 😕\n"
+                "Hmm, no reconozco ese RUT 🤔\n"
                 "Escríbelo así: *12.345.678-9*"
             )
 
@@ -2369,8 +2369,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if not paciente:
             reset_session(phone)
             return (
-                "No encontré ese RUT en el sistema 🔎\n\n"
-                f"Llama a recepción si necesitas ayuda:\n📞 *{CMC_TELEFONO}*\n\n"
+                "No tenemos ese RUT registrado 😊\n\n"
+                f"¿Necesitas ayuda? Llama a recepción:\n📞 *{CMC_TELEFONO}*\n\n"
                 "_Escribe *menu* para volver._"
             )
 
@@ -2452,7 +2452,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         rut = clean_rut(txt)
         if not valid_rut(rut):
             return (
-                "Ese RUT no quedó bien 😕\n"
+                "Hmm, no reconozco ese RUT 🤔\n"
                 "Escríbelo así: *12.345.678-9*"
             )
 
@@ -2461,8 +2461,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if not paciente:
             reset_session(phone)
             return (
-                "No encontré ese RUT en el sistema 🔎\n\n"
-                f"Llama a recepción si necesitas ayuda:\n📞 *{CMC_TELEFONO}*\n\n"
+                "No tenemos ese RUT registrado 😊\n\n"
+                f"¿Necesitas ayuda? Llama a recepción:\n📞 *{CMC_TELEFONO}*\n\n"
                 "_Escribe *menu* para volver._"
             )
 
@@ -2546,7 +2546,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         rut = clean_rut(txt)
         if not valid_rut(rut):
             return (
-                "Ese RUT no quedó bien 😕\n"
+                "Hmm, no reconozco ese RUT 🤔\n"
                 "Escríbelo así: *12.345.678-9*"
             )
         _ensure_consent(phone)
@@ -2579,7 +2579,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         rut = clean_rut(txt)
         if not valid_rut(rut):
             return (
-                "Ese RUT no quedó bien 😕\n"
+                "Hmm, no reconozco ese RUT 🤔\n"
                 "Escríbelo así: *12.345.678-9*"
             )
 
