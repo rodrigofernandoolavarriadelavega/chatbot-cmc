@@ -1752,6 +1752,17 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             # Override: si Claude no detectó especialidad, buscarla en el texto crudo
             # (detecta apellidos de profesionales y términos como "médico familiar")
             especialidad = result.get("especialidad") or _detectar_apellido_profesional(txt) or _detectar_especialidad_en_texto(txt)
+            # Si tenemos especialidad pero consultar_proxima_fecha falla, redirigir
+            # al flujo completo de agendar (que busca día por día) en vez de caer
+            # al fallback feo 'dime qué especialidad'.
+            if especialidad:
+                try:
+                    _fecha_prox = await consultar_proxima_fecha(especialidad)
+                except Exception:
+                    _fecha_prox = None
+                if not _fecha_prox:
+                    # Sin fecha inmediata → lanzar flujo completo de agendar
+                    return await _iniciar_agendar(phone, data, especialidad)
             if especialidad:
                 fecha = await consultar_proxima_fecha(especialidad)
                 if fecha:
