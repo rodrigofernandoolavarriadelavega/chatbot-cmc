@@ -45,6 +45,18 @@ body.chat-focus .col-filters,
 body.chat-focus .col-convs,
 body.chat-focus .ctx-panel,
 body.chat-focus .alert-bar { display: none !important; }
+
+/* Botón flotante de fullscreen — siempre visible arriba a la derecha */
+#float-fullscreen {
+  position: fixed; top: 8px; right: 12px; z-index: 999;
+  background: #2563eb; color: #fff; border: none;
+  padding: 6px 12px; border-radius: 8px; font-size: 13px;
+  font-weight: 600; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,.15);
+  transition: background .15s;
+}
+#float-fullscreen:hover { background: #1d4ed8; }
+body.chat-focus #float-fullscreen { background: #dc2626; }
+body.chat-focus #float-fullscreen:hover { background: #b91c1c; }
 body.chat-focus .app-grid,
 body.chat-focus .layout { grid-template-columns: 1fr !important; }
 body.chat-focus .chat-col { grid-column: 1 / -1 !important; width: 100vw; }
@@ -845,6 +857,9 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
 </head>
 <body>
 
+<!-- Botón flotante: fullscreen / salir de fullscreen — siempre visible -->
+<button id="float-fullscreen" onclick="toggleChatFocus()" title="Alternar modo pantalla completa del chat">⛶ Fullscreen</button>
+
 <!-- TOPBAR -->
 <div class="topbar">
   <button class="mobile-hamburger" onclick="toggleFilters()" title="Filtros">☰</button>
@@ -1296,7 +1311,6 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
             <button class="btn btn-outline" id="btn-notify-informe" style="display:none;font-size:11px;padding:5px 10px;" onclick="notificarInforme()" title="Enviar template informe_listo al paciente">📄 Notificar informe</button>
             <button class="btn btn-outline" id="btn-seguimiento" style="display:none;font-size:11px;padding:5px 10px;" onclick="seguimientoMedico()" title="Enviar seguimiento médico personalizado">🩺 Seguimiento</button>
             <button class="btn btn-outline" style="font-size:11px;padding:5px 8px;" onclick="abrirMarcarAgendado()" title="Marcar como agendado manual — registrar cita agendada por teléfono o presencial, el bot deja de perseguir al paciente">✅ Agendado</button>
-            <button class="btn btn-outline" style="font-size:14px;padding:4px 10px;background:#eff6ff;border-color:#93c5fd;color:#1e40af;font-weight:700;" onclick="toggleChatFocus()" title="Pantalla completa — solo el chat, sin barras" id="btn-chat-focus">⛶ Fullscreen</button>
             <button class="mobile-ctx-toggle" onclick="toggleCtxPanel()" title="Info paciente">ℹ️</button>
           </div>
         </div>
@@ -3941,10 +3955,10 @@ function toggleCtxPanel() {
 // Modo chat-focus: chat a pantalla completa, oculta topbar, lista, contexto
 function toggleChatFocus(){
   const on = document.body.classList.toggle('chat-focus');
-  const btn = document.getElementById('btn-chat-focus');
-  if(btn){
-    btn.textContent = on ? '⤢' : '⛶';
-    btn.title = on ? 'Salir del modo enfocado' : 'Modo enfocado (pantalla completa del chat)';
+  const floatBtn = document.getElementById('float-fullscreen');
+  if(floatBtn){
+    floatBtn.textContent = on ? '✕ Salir' : '⛶ Fullscreen';
+    floatBtn.title = on ? 'Salir del modo pantalla completa' : 'Chat pantalla completa';
   }
   try { localStorage.setItem('chatFocus', on ? '1' : '0'); } catch(e){}
 }
