@@ -2062,9 +2062,34 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if any(p in tl_norm_slot for p in _OTRO_PROF_PHRASES):
             tl = "otro_prof"  # re-dispatch al handler ya existente
 
-        # ── Filtro por período (mañana/tarde/noche) ──
+        # ── Día relativo ("mañana", "pasado mañana", "hoy") — PRIORITARIO ──
+        # Va antes del filtro por período para que "Para mañana" = día siguiente,
+        # no "en la mañana" (período horario).
+        _DIA_RELATIVO = None
+        _hoy = datetime.now().date()
+        if "pasado mañana" in tl_norm_slot or "pasado manana" in tl_norm_slot:
+            _DIA_RELATIVO = (_hoy + timedelta(days=2)).strftime("%Y-%m-%d")
+        elif "para mañana" in tl_norm_slot or "para manana" in tl_norm_slot \
+             or tl_norm_slot in ("mañana", "manana"):
+            _DIA_RELATIVO = (_hoy + timedelta(days=1)).strftime("%Y-%m-%d")
+        elif tl_norm_slot in ("hoy", "hoy mismo", "hoy dia", "hoy día"):
+            _DIA_RELATIVO = _hoy.strftime("%Y-%m-%d")
+        if _DIA_RELATIVO:
+            _maso_override = {59: data["maso_duracion"]} if especialidad == "masoterapia" and data.get("maso_duracion") else None
+            smart_dia, todos_dia = await buscar_slots_dia(
+                especialidad, _DIA_RELATIVO, intervalo_override=_maso_override)
+            if todos_dia:
+                if _DIA_RELATIVO not in fechas_vistas:
+                    fechas_vistas = fechas_vistas + [_DIA_RELATIVO]
+                data.update({"slots": smart_dia, "todos_slots": todos_dia,
+                             "fechas_vistas": fechas_vistas, "expansion_stage": 1})
+                save_session(phone, "WAIT_SLOT", data)
+                return _format_slots(smart_dia)
+            return f"No tengo horarios disponibles para ese día 😕\n\nEscribe *otro día* para buscar el siguiente."
+
+        # ── Filtro por período horario (mañana/tarde/noche) ──
+        # NOTA: "mañana" suelto ya se manejó arriba como día relativo.
         _PERIODOS = {
-            "mañana":  (0, 12),  "manana":  (0, 12),
             "en la mañana": (0, 12), "en la manana": (0, 12),
             "temprano": (0, 12),
             "mediodía": (12, 14), "mediodia": (12, 14), "al mediodia": (12, 14),
