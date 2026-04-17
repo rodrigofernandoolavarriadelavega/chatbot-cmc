@@ -201,7 +201,7 @@ def _intent_from_text(m: str) -> dict:
         esp = "fonoaudiología"
     elif any(w in t for w in ["podolog", "podóloga", "podólogo"]):
         esp = "podología"
-    elif any(w in t for w in ["traumatolog", "traumatologo", "traumatólogo"]):
+    elif any(w in t for w in ["traumato", "traumatolog", "traumatologo", "traumatólogo"]):
         esp = "traumatología"
     elif any(w in t for w in ["cardiolog", "cardiologo", "cardiólogo", "cardio", "corazon", "corazón"]):
         esp = "cardiología"
