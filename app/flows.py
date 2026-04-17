@@ -13,7 +13,7 @@ from medilink import (buscar_primer_dia, buscar_slots_dia, buscar_slots_dia_por_
                       buscar_paciente, buscar_paciente_por_nombre, crear_paciente, crear_cita,
                       listar_citas_paciente, cancelar_cita, obtener_agenda_dia,
                       valid_rut, clean_rut, especialidades_disponibles,
-                      consultar_proxima_fecha)
+                      consultar_proxima_fecha, verificar_slot_disponible)
 from session import (save_session, reset_session, save_tag, delete_tag, get_tags,
                      save_cita_bot, log_event,
                      save_profile, get_profile, save_fidelizacion_respuesta, get_ultimo_seguimiento,
@@ -2210,6 +2210,37 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             paciente = data["paciente"]
             reagendar = bool(data.get("reagendar_mode"))
             cita_old = data.get("cita_old") or {}
+            # ── Doble-check: verificar que el slot sigue libre ──
+            slot_libre = await verificar_slot_disponible(
+                slot["id_profesional"], slot["fecha"],
+                slot["hora_inicio"], slot["hora_fin"],
+            )
+            if not slot_libre:
+                log.warning("Slot %s %s ya no está disponible para prof %s",
+                            slot["fecha"], slot["hora_inicio"], slot["id_profesional"])
+                log_event(phone, "slot_ya_ocupado", {
+                    "fecha": slot["fecha"], "hora": slot["hora_inicio"],
+                    "profesional": slot.get("profesional", ""),
+                })
+                # Re-buscar y ofrecer nueva hora
+                esp = data.get("especialidad", slot.get("especialidad", ""))
+                smart, todos = await buscar_primer_dia(esp)
+                if smart:
+                    new_slot = smart[0]
+                    data["slot_elegido"] = new_slot
+                    save_session(phone, "CONFIRMING_CITA", data)
+                    return _btn_msg(
+                        f"⚠️ Esa hora ya fue tomada. Te encontré otra:\n\n"
+                        f"🏥 *{new_slot['especialidad']}* — {new_slot['profesional']}\n"
+                        f"📅 *{new_slot['fecha_display']}*\n"
+                        f"🕐 *{new_slot['hora_inicio'][:5]}*\n\n"
+                        "¿Te la reservo?",
+                        [{"id": "si", "title": "✅ Sí, reservar"},
+                         {"id": "no", "title": "❌ No"}]
+                    )
+                else:
+                    reset_session(phone)
+                    return "😔 Lo siento, esa hora fue tomada y no encontré otra disponible. Escribe *hola* para intentar de nuevo."
             resultado = await crear_cita(
                 id_paciente=paciente["id"],
                 id_profesional=slot["id_profesional"],

@@ -55,6 +55,11 @@ async def fake_crear_cita(id_paciente, id_profesional, fecha, hora_inicio, hora_
         return None
     return {"id": 5555}
 
+async def fake_verificar_slot_disponible(id_profesional, fecha, hora_inicio, hora_fin):
+    if FAKE_FAIL_CREAR_CITA["value"]:
+        return False  # slot no disponible cuando simula fallo
+    return True
+
 async def fake_cancelar_cita(id_cita):
     if FAKE_FAIL_CANCELAR_CITA["value"]:
         return False
@@ -216,6 +221,7 @@ for mod in (medilink, flows):
     mod.buscar_slots_dia = fake_buscar_slots_dia
     mod.buscar_slots_dia_por_ids = fake_buscar_slots_dia_por_ids
     mod.consultar_proxima_fecha = fake_consultar_proxima_fecha
+    mod.verificar_slot_disponible = fake_verificar_slot_disponible
 
 claude_helper.detect_intent = fake_detect_intent
 claude_helper.respuesta_faq = fake_respuesta_faq
@@ -583,7 +589,7 @@ async def main():
         ("1", None),  # Fonasa → booking_for
         ("booking_self", None),  # para mí → reuse perfil
         ("si", None),  # confirmar datos
-        ("si", {"any": ["error", "no se pudo", "intenta", "recepción", "problema"]}),
+        ("si", {"any": ["ya fue tomada", "encontré otra", "reservo"]}),
     ], setup=lambda: (setup_una_cita(), FAKE_FAIL_CREAR_CITA.update(value=True)))
 
     # ── WAITLIST (5) ────────────────────────────────────────────────────────

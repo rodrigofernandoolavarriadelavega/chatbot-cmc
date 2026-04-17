@@ -5,6 +5,7 @@ Base URL: https://api.medilink2.healthatom.com/api/v5
 import asyncio
 import json
 import logging
+import time
 import urllib.parse
 from datetime import datetime, timedelta
 from typing import Optional
@@ -20,8 +21,9 @@ log = logging.getLogger("medilink")
 
 HEADERS = {"Authorization": f"Token {MEDILINK_TOKEN}"}
 
-# Caché de horarios por profesional: id_prof → {intervalo, dias (set de weekdays Python)}
+# Caché de horarios por profesional: id_prof → {intervalo, dias (set de weekdays Python), _ts}
 _horarios_cache: dict = {}
+_HORARIO_CACHE_TTL = 3600  # 1 hora — si cambian horarios en Medilink, se refrescan automáticamente
 
 # Medilink usa dia 1=Lun..6=Sáb, 7=Dom → Python weekday 0=Lun..5=Sáb, 6=Dom
 _MEDILINK_DIA_TO_WEEKDAY = {1:0, 2:1, 3:2, 4:3, 5:4, 6:5, 7:6}
@@ -186,11 +188,12 @@ async def _post(client: httpx.AsyncClient, url: str, **kwargs) -> httpx.Response
 
 
 async def _get_horario(client: httpx.AsyncClient, id_prof: int) -> dict:
-    """Obtiene intervalo, días de trabajo y horarios por día desde la API (con caché).
+    """Obtiene intervalo, días de trabajo y horarios por día desde la API (con caché 1h).
     Retorna: {intervalo, dias: set(weekdays), horario_dia: {weekday: (hi, hf)}}
     """
-    if id_prof in _horarios_cache:
-        return _horarios_cache[id_prof]
+    cached = _horarios_cache.get(id_prof)
+    if cached and (time.monotonic() - cached.get("_ts", 0)) < _HORARIO_CACHE_TTL:
+        return cached
 
     try:
         r = await _get(client, f"{MEDILINK_BASE_URL}/profesionales/{id_prof}/horarios", headers=HEADERS)
@@ -218,6 +221,7 @@ async def _get_horario(client: httpx.AsyncClient, id_prof: int) -> dict:
                 "horario_dia": horario_dia,
             }
 
+    horario["_ts"] = time.monotonic()
     _horarios_cache[id_prof] = horario
     return horario
 
@@ -225,6 +229,8 @@ async def _get_horario(client: httpx.AsyncClient, id_prof: int) -> dict:
 async def _get_bloqueos(client: httpx.AsyncClient, id_prof: int, fecha: str) -> list:
     """Retorna lista de rangos bloqueados (hora_inicio, hora_fin) para ese profesional y fecha.
     La API solo filtra por id_sucursal y fecha — filtramos id_profesional en código.
+    Incluye bloqueos sin id_profesional (aplican a toda la sucursal).
+    Usa per_page=100 para evitar paginación.
     """
     params = {
         "id_sucursal": {"eq": MEDILINK_SUCURSAL},
@@ -232,17 +238,21 @@ async def _get_bloqueos(client: httpx.AsyncClient, id_prof: int, fecha: str) -> 
     }
     try:
         r = await _get(client, f"{MEDILINK_BASE_URL}/horariosbloqueados",
-                       params={"q": _q(params)}, headers=HEADERS)
+                       params={"q": _q(params), "per_page": 100}, headers=HEADERS)
     except httpx.RequestError as e:
         log.error("No se pudo obtener bloqueos para prof %d fecha %s: %s", id_prof, fecha, e)
         return []
     if r.status_code != 200:
         return []
-    return [
-        (b["hora_inicio"][:5], b["hora_fin"][:5])
-        for b in r.json().get("data", [])
-        if b.get("id_profesional") == id_prof
-    ]
+    bloqueos = []
+    for b in r.json().get("data", []):
+        b_prof = b.get("id_profesional")
+        # Incluir bloqueos del profesional O sin profesional (bloqueo de sucursal)
+        if b_prof == id_prof or b_prof is None or b_prof == 0:
+            bloqueos.append((b["hora_inicio"][:5], b["hora_fin"][:5]))
+    if bloqueos:
+        log.debug("Bloqueos prof %d fecha %s: %s", id_prof, fecha, bloqueos)
+    return bloqueos
 
 
 def _slot_bloqueado(hora_inicio: str, hora_fin: str, bloqueos: list) -> bool:
@@ -293,7 +303,10 @@ def _ids_para_especialidad(especialidad: str) -> list:
 
 
 async def _get_horas_ocupadas(client: httpx.AsyncClient, id_prof: int, fecha: str) -> set:
-    """Retorna set de hora_inicio ocupadas según /citas (fuente de verdad real)."""
+    """Retorna set de hora_inicio ocupadas según /citas (fuente de verdad real).
+    Expande citas largas: una cita 11:00-12:00 bloquea 11:00, 11:15, 11:30, 11:45.
+    Usa per_page=100 para evitar que la paginación oculte citas.
+    """
     params = {
         "id_sucursal":      {"eq": MEDILINK_SUCURSAL},
         "id_profesional":   {"eq": id_prof},
@@ -302,13 +315,28 @@ async def _get_horas_ocupadas(client: httpx.AsyncClient, id_prof: int, fecha: st
     }
     try:
         r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
-                       params={"q": _q(params)}, headers=HEADERS)
+                       params={"q": _q(params), "per_page": 100}, headers=HEADERS)
     except httpx.RequestError as e:
         log.error("No se pudo obtener horas ocupadas prof %d fecha %s: %s", id_prof, fecha, e)
         raise  # Propagar error — no asumir que todo está libre
     if r.status_code != 200:
         raise httpx.RequestError(f"GET horas_ocupadas prof={id_prof} fecha={fecha} → {r.status_code}")
-    return {c["hora_inicio"][:5] for c in r.json().get("data", [])}
+    ocupadas = set()
+    for c in r.json().get("data", []):
+        hi = c.get("hora_inicio", "")[:5]
+        hf = c.get("hora_fin", "")[:5]
+        if not hi:
+            continue
+        ocupadas.add(hi)
+        # Expandir: una cita larga bloquea todos los bloques de 5 min internos
+        if hf and hf > hi:
+            cur = _h_to_min(hi) + 5
+            fin = _h_to_min(hf)
+            while cur < fin:
+                ocupadas.add(f"{cur // 60:02d}:{cur % 60:02d}")
+                cur += 5
+    log.debug("Horas ocupadas prof %d fecha %s: %s", id_prof, fecha, sorted(ocupadas))
+    return ocupadas
 
 
 def _generar_slots_horario(hora_inicio: str, hora_fin: str, intervalo: int) -> list:
@@ -363,8 +391,14 @@ async def _slots_para_fecha(client: httpx.AsyncClient, ids: list, horarios: dict
         horas_ocupadas |= ocupadas_citas
         horas_vistas    = {s["hora_inicio"] for s in todos_libres}
 
+        log.info("Slots prof %d (%s) fecha %s: horario %s-%s, intervalo %d min, "
+                 "ocupadas %d, bloqueos %d",
+                 id_prof, PROFESIONALES[id_prof]["nombre"], fecha,
+                 hi_dia, hf_dia, intervalo, len(ocupadas_citas), len(bloqueos))
+
         _ahora_cl = datetime.now(_CHILE_TZ)
         ahora_min = _h_to_min(_ahora_cl.strftime("%H:%M")) if fecha == _ahora_cl.date().strftime("%Y-%m-%d") else None
+        libres_prof = 0
         for hi, hf in _generar_slots_horario(hi_dia, hf_dia, intervalo):
             if ahora_min is not None and _h_to_min(hi) <= ahora_min:
                 continue  # slot ya pasó hoy
@@ -372,6 +406,7 @@ async def _slots_para_fecha(client: httpx.AsyncClient, ids: list, horarios: dict
                 horas_ocupadas.add(hi)
             elif not _slot_bloqueado(hi, hf, bloqueos) and hi not in horas_vistas:
                 horas_vistas.add(hi)
+                libres_prof += 1
                 todos_libres.append({
                     "profesional":    PROFESIONALES[id_prof]["nombre"],
                     "especialidad":   PROFESIONALES[id_prof]["especialidad"],
@@ -382,6 +417,7 @@ async def _slots_para_fecha(client: httpx.AsyncClient, ids: list, horarios: dict
                     "id_profesional": id_prof,
                     "id_recurso":     1,
                 })
+        log.info("Slots libres prof %d fecha %s: %d", id_prof, fecha, libres_prof)
 
     smart_5 = sorted(smart_select(todos_libres, horas_ocupadas, intervalo),
                      key=lambda x: x["hora_inicio"])
@@ -642,6 +678,35 @@ async def buscar_paciente_por_nombre(nombre: str) -> list[dict]:
                 "rut": p.get("rut", ""),
             })
         return results
+
+
+async def verificar_slot_disponible(id_profesional: int, fecha: str,
+                                    hora_inicio: str, hora_fin: str) -> bool:
+    """Verifica en tiempo real que el slot sigue libre antes de crear la cita.
+    Consulta /citas y /horariosbloqueados frescos.
+    """
+    async with httpx.AsyncClient(timeout=10) as client:
+        try:
+            ocupadas = await _get_horas_ocupadas(client, id_profesional, fecha)
+            bloqueos = await _get_bloqueos(client, id_profesional, fecha)
+        except (httpx.RequestError, Exception) as e:
+            log.warning("verificar_slot: error consultando prof %d fecha %s: %s",
+                        id_profesional, fecha, e)
+            return False  # ante duda, decir que no está disponible
+
+        # Verificar que hora_inicio no esté en el set expandido de horas ocupadas
+        if hora_inicio[:5] in ocupadas:
+            log.warning("verificar_slot: %s ya ocupado para prof %d fecha %s (ocupadas: %s)",
+                        hora_inicio, id_profesional, fecha, sorted(ocupadas))
+            return False
+
+        # Verificar que no esté bloqueado
+        if _slot_bloqueado(hora_inicio, hora_fin, bloqueos):
+            log.warning("verificar_slot: %s bloqueado para prof %d fecha %s",
+                        hora_inicio, id_profesional, fecha)
+            return False
+
+    return True
 
 
 async def crear_cita(id_paciente: int, id_profesional: int, fecha: str,
