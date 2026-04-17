@@ -47,10 +47,11 @@ body {
   flex-wrap: wrap; min-height: 42px;
 }
 .topbar-pills {
-  display: none; order: 20; width: 100%;
+  display: flex; order: 20; width: 100%;
   gap: 6px; flex-wrap: wrap;
   padding: 6px 12px; border-top: 1px solid var(--border);
 }
+.topbar-pills.hide { display: none !important; }
 .topbar-pills.show { display: flex !important; }
 .topbar-actions {
   display: contents;
@@ -489,13 +490,13 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
   .topbar-actions .dropdown { flex: 0 0 auto; }
   .topbar-spacer { display: none; }
 
-  /* Row 3: Secondary pills (hidden by default, toggled by stats-toggle) */
+  /* Row 3: Secondary pills (collapsed on mobile, toggle to show) */
   .topbar-pills {
     display: none !important; order: 20; width: 100%;
     gap: 5px; flex-wrap: wrap;
     padding: 8px 10px; border-top: 1px solid var(--border); margin: 0;
   }
-  .topbar-pills.show { display: flex !important; }
+  .topbar-pills.mobile-show { display: flex !important; }
   .pill { font-size: 10px; padding: 3px 7px; }
 
   /* Topbar sticky so content scrolls below it */
@@ -785,7 +786,6 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
 .ctx-suggestion-msg:hover { border-color: var(--primary); background: #f8fafc; box-shadow: 0 2px 4px rgba(0,0,0,.06); }
 /* Intent badges on conversation cards */
 .badge-hot { background: #fef2f2; color: #dc2626; border-color: #fca5a5; font-weight: 700; }
-.badge-value { background: #f0fdf4; color: #15803d; border-color: #86efac; font-family: ui-monospace, monospace; font-size: 10px; }
 .badge-intent { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
 
 /* ── PRINT ── */
@@ -828,7 +828,7 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
   </div>
 
   <!-- ── SECONDARY STATS (collapsible) ── -->
-  <button class="stats-toggle-btn" id="stats-toggle" onclick="document.getElementById('stats-pills').classList.toggle('show');this.querySelector('.stats-arrow').textContent=document.getElementById('stats-pills').classList.contains('show')?'▴':'▾'">📊 Más <span class="stats-arrow">▾</span></button>
+  <button class="stats-toggle-btn" id="stats-toggle" onclick="toggleStatsPills()">📊 Más <span class="stats-arrow" id="stats-arrow">▴</span></button>
   <div class="topbar-pills" id="stats-pills">
     <div class="pill"><strong id="s-total">—</strong>&nbsp;conv.</div>
     <div class="pill amber"><strong id="s-flujo">—</strong>&nbsp;en flujo</div>
@@ -1402,13 +1402,6 @@ function espLabel(key) {
 }
 
 /* ── COMMERCIAL INTELLIGENCE ── */
-const VALOR_ESPECIALIDAD = {
-  "medicina_general":25000,"otorrino":25000,"cardiologia":25000,"traumatologia":25000,
-  "ginecologia":25000,"gastroenterologia":25000,"odontologia":25000,"ortodoncia":120000,
-  "endodoncia":60000,"implantologia":300000,"estetica_facial":130000,"masoterapia":15000,
-  "kinesiologia":15000,"nutricion":15000,"psicologia_adulto":35000,"psicologia_infantil":35000,
-  "fonoaudiologia":25000,"matrona":15000,"podologia":20000,"ecografia":15000
-};
 const HOT_STATES = ["CONFIRMING_CITA","WAIT_SLOT","WAIT_MODALIDAD","WAIT_BOOKING_FOR","WAIT_RUT_AGENDAR"];
 const WARM_STATES = ["WAIT_ESPECIALIDAD","WAIT_NOMBRE_NUEVO","WAIT_FECHA_NAC","WAIT_SEXO","WAIT_COMUNA","WAIT_EMAIL","WAIT_REFERRAL","WAIT_REFERRAL_CODE","WAIT_DURACION_MASOTERAPIA"];
 
@@ -1458,12 +1451,6 @@ function computeSuggestion(conv) {
              msg: `Hola ${nombre} 👋 ¿Necesitas ayuda para continuar con tu cita? Estoy aquí para ayudarte 😊` };
 
   return null;
-}
-
-function getConvValue(conv) {
-  const fd = conv.flow_data || {};
-  if (!fd.especialidad) return 0;
-  return VALOR_ESPECIALIDAD[fd.especialidad.toLowerCase()] || 25000;
 }
 
 function useSuggestion() {
@@ -1786,10 +1773,9 @@ function convCard(c,g) {
   if (mins>=15) badges+=`<span class="badge badge-urgent">⏰ ${waitLabel(mins)} sin respuesta</span>`;
   else if (mins>=5) badges+=`<span class="badge badge-warn">⏱ ${waitLabel(mins)} esperando</span>`;
   else if (mins>=1&&c.state!=="IDLE") badges+=`<span class="badge" style="background:#f8fafc;color:#94a3b8;border-color:#e2e8f0;">⏱ ${waitLabel(mins)}</span>`;
-  if (fd.fecha_display&&fd.hora_inicio) badges+=`<span class="badge badge-hot">🔥 Lista para cerrar</span>`;
-  else if (HOT_STATES.includes(c.state)) badges+=`<span class="badge badge-hot">🔥 Caliente</span>`;
+  if (fd.fecha_display&&fd.hora_inicio) badges+=`<span class="badge badge-hot">✅ Hora lista, confírmale</span>`;
+  else if (HOT_STATES.includes(c.state)) badges+=`<span class="badge badge-hot">🔥 Por agendar</span>`;
   else if (WARM_STATES.includes(c.state)) badges+=`<span class="badge badge-intent">🟡 En flujo</span>`;
-  if (fd.especialidad) { const v=getConvValue(c); if(v>0) badges+=`<span class="badge badge-value">$${(v/1000).toFixed(0)}k</span>`; }
   if (fd.handoff_reason&&fd.handoff_reason.startsWith("media:")) badges+=`<span class="badge badge-urgent">📎 Archivo pendiente</span>`;
   return `<div class="conv-card${selectedPhone===c.phone?" selected":""}${isStaff?" staff-card":""}" style="border-left-color:${isStaff?"var(--purple)":g.dot};" onclick="selectConv('${c.phone}')">
     <div class="card-top">
@@ -2330,10 +2316,10 @@ function updateStats(){
   const coldTk=tk-hotTk;
   const abandonando=convs.filter(c=>ACTIVE_STATES.includes(c.state)&&waitMinutes(c.last_ts||c.updated_at)>=5).length;
   const partes=[];
-  if(listos>0) partes.push(`🔥 ${listos} paciente${listos>1?"s":""} listo${listos>1?"s":""} para CERRAR cita — ¡actúa ya!`);
-  if(hotTk>0) partes.push(`⚡ ${hotTk} quieren agendar y esperan TU respuesta`);
+  if(listos>0) partes.push(`✅ ${listos} paciente${listos>1?"s":""} con hora lista — confírmale${listos>1?"s":""}`);
+  if(hotTk>0) partes.push(`📋 ${hotTk} quiere${hotTk>1?"n":""} agendar y espera${hotTk>1?"n":""} respuesta`);
   if(coldTk>0) partes.push(`💬 ${coldTk} esperando atención`);
-  if(abandonando>0) partes.push(`⏰ ${abandonando} se están yendo — rescátalos`);
+  if(abandonando>0) partes.push(`⏰ ${abandonando} lleva${abandonando>1?"n":""} rato sin avanzar — dale${abandonando>1?"s":""} una mano`);
   if(mediaPend>0) partes.push(`📎 ${mediaPend} archivo${mediaPend>1?"s":""} por revisar`);
   if(partes.length){
     alertBar.style.display="flex";
@@ -3791,6 +3777,18 @@ document.addEventListener("click",function(e){
 // ── RESPONSIVE / MOBILE NAV ─────────────────────────────────────────────────
 function isMobile() { return window.innerWidth < 768; }
 
+function toggleStatsPills() {
+  const pills = document.getElementById('stats-pills');
+  const arrow = document.getElementById('stats-arrow');
+  const isMobile = window.innerWidth <= 767;
+  if (isMobile) {
+    pills.classList.toggle('mobile-show');
+    arrow.textContent = pills.classList.contains('mobile-show') ? '▴' : '▾';
+  } else {
+    pills.classList.toggle('hide');
+    arrow.textContent = pills.classList.contains('hide') ? '▾' : '▴';
+  }
+}
 function toggleFilters() {
   const col = document.getElementById('col-filters');
   const overlay = document.getElementById('filters-overlay');
