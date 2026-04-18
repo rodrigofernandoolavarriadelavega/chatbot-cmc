@@ -154,10 +154,10 @@ async def lifespan(app: FastAPI):
         id="reactivacion_pacientes",
         replace_existing=True,
     )
-    # Adherencia kine: diario a las 11:00 AM CLT
+    # Adherencia kine: L/M/V a las 11:00 AM CLT (antes diario — bajamos 7→3/sem para reducir costo templates)
     scheduler.add_job(
         _job_adherencia_kine,
-        CronTrigger(hour=11, minute=0, timezone=_CLT),
+        CronTrigger(day_of_week="mon,wed,fri", hour=11, minute=0, timezone=_CLT),
         id="adherencia_kine",
         replace_existing=True,
     )
@@ -753,6 +753,16 @@ async def webhook(request: Request):
                 )
                 return Response(status_code=200)
             audio_bytes, mime = media
+            # Skip audios muy cortos (<~2s en opus ~20 kbps) — ruido, "hmm", respiraciones.
+            # Evita pagar Whisper por audios sin contenido util.
+            if len(audio_bytes) < 5000:
+                log.info("AUDIO omitido (demasiado corto, %d bytes) from=%s", len(audio_bytes), phone)
+                await send_whatsapp(
+                    phone,
+                    "Tu audio es muy cortito y no se entiende bien 😅\n"
+                    "¿Puedes escribirlo o grabar uno un poco más largo?"
+                )
+                return Response(status_code=200)
             transcripcion = await transcribe_audio(audio_bytes, mime)
             if not transcripcion:
                 await send_whatsapp(

@@ -177,12 +177,14 @@ async def enviar_seguimiento_postconsulta(send_fn, send_template_fn=None,
 async def enviar_reactivacion_pacientes(send_fn, send_template_fn=None):
     """
     Ejecutar semanalmente (lunes 10:30 AM).
-    Envía mensaje de reactivación a pacientes inactivos 30–90 días.
+    Envía mensaje de reactivación a pacientes inactivos 60–120 días.
+    Umbral subido 30→60 días para evitar "mosca en la sopa" con pacientes recientes
+    y reducir volumen de templates ~40%.
     """
-    pacientes = get_pacientes_inactivos(dias_min=30, dias_max=90)
+    pacientes = get_pacientes_inactivos(dias_min=60, dias_max=120)
 
     if not pacientes:
-        log.info("Reactivación: sin pacientes inactivos en rango 30–90 días")
+        log.info("Reactivación: sin pacientes inactivos en rango 60–120 días")
         return
 
     log.info("Reactivación: enviando %d mensaje(s)", len(pacientes))
