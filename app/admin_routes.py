@@ -933,13 +933,24 @@ _AGENDA_DIA_TTL = 60  # 60s — balance entre frescura y carga Medilink
 
 @router.get("/admin/api/agenda-dia")
 async def admin_agenda_dia(fecha: str = None, nocache: int = 0, _: str = Depends(require_admin)):
-    """Agenda del día enriquecida con estado normalizado, wa_status, service window, etc.
+    """DESACTIVADO: retorna lista vacía sin consultar Medilink.
 
-    Cacheada 60s: el panel admin polea cada pocos segundos y 20 llamadas a
-    Medilink (una por profesional) saturaban el rate limit. Con caché,
-    múltiples recargas usan la misma respuesta durante la ventana TTL.
-    Pasar `?nocache=1` fuerza refresh (botón "Actualizar" del panel).
-    """
+    Este endpoint hacía fan-out de ~20 requests paralelos a Medilink (una
+    por profesional) y saturaba el rate limit (429). La recepción ya tiene
+    la agenda del día directamente en Medilink — replicarla en el panel
+    del bot era redundante. Ver commit 938b47e que desactivó la sección
+    'Agenda de hoy'. Aquí cortamos el endpoint mismo para que modales o
+    polls que aún lo llamen no causen 429.
+
+    Para reactivar: quitar este return y restaurar el cuerpo original
+    desde git (commit previo a este fix)."""
+    return {"fecha": fecha, "profesionales": [], "disabled": True,
+            "reason": "Consultar la agenda directamente en Medilink."}
+
+
+async def _admin_agenda_dia_DISABLED(fecha: str = None, nocache: int = 0):
+    """Implementación original — DESACTIVADA.
+    Se preserva por si hay que reactivar; pegaba 20 requests a Medilink."""
     import time as _time
     from medilink import obtener_agenda_dia
     from session import get_phone_by_rut, get_last_inbound_ts
