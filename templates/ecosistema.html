@@ -365,6 +365,17 @@ const NODES = [
       { dot: '#f472b6', text: 'Landing /landing con JSON-LD SEO' },
     ],
     size: 20 },
+  { id: 'compliance', label: 'Compliance\nLey 19.628', icon: '\u{1F512}', cat: 'modulo', badge: 'PROD', badgeColor: '#4ade80',
+    desc: 'Cumplimiento Ley 19.628 chilena de proteccion de datos. Opt-in, derecho al olvido, retencion, encriptacion SQLCipher.',
+    items: [
+      { dot: '#4ade80', text: 'Politica privacidad v1.0 en /privacidad' },
+      { dot: '#38bdf8', text: 'Opt-in inline al pedir RUT (no gate)' },
+      { dot: '#fbbf24', text: 'Derecho al olvido implementado' },
+      { dot: '#22d3ee', text: 'SQLCipher en heatmap_cache.db' },
+      { dot: '#a78bfa', text: 'Backup semanal sessions.db encriptado' },
+    ],
+    url: 'https://agentecmc.cl/privacidad', urlLabel: 'agentecmc.cl/privacidad',
+    size: 18 },
   { id: 'cron', label: '15 Cron\nJobs', icon: '\u{23F0}', cat: 'modulo', badge: 'PROD', badgeColor: '#4ade80',
     desc: 'Recordatorios, reenganche, watchdog Medilink, waitlist check, sync citas, fidelizacion, backup.',
     items: [
@@ -464,6 +475,9 @@ const EDGES = [
   { from: 'chatbot', to: 'referral', label: 'Tags referido' },
   { from: 'chatbot', to: 'demanda', label: 'Log esp. no disponible' },
   { from: 'demanda', to: 'sqlite', label: 'demanda_no_disponible' },
+  // compliance
+  { from: 'chatbot', to: 'compliance', label: 'Opt-in, derecho al olvido' },
+  { from: 'compliance', to: 'sqlite', label: 'SQLCipher encryption' },
   // admin
   { from: 'admin', to: 'sqlite',   label: 'Metricas, notas' },
   { from: 'admin', to: 'medilink', label: 'Sync citas' },
