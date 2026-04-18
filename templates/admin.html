@@ -972,8 +972,10 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
   .ah-btn-collapse { order: 6; width: 32px; height: 32px; }
   .ah-nav-day button { width: 32px; height: 32px; font-size: 13px; }
   .ah-nav-day .ah-btn-hoy { width: auto; padding: 0 12px; }
-  #agenda-home-grid { grid-template-columns: 1fr; gap: 10px; }
-  .ah-col { max-height: 50vh; padding: 8px 10px; }
+  #agenda-home-grid { grid-template-columns: 1fr; gap: 8px; }
+  .ah-col { max-height: 34vh; padding: 8px 10px; }
+  #agenda-home { max-height: calc(78vh - env(safe-area-inset-bottom, 0px)); overflow-y: auto; }
+  #agenda-home.collapsed { max-height: none; overflow: visible; }
   .ah-col h3 { font-size: 11px; }
   .cita-card { grid-template-columns: 46px 1fr; grid-template-rows: auto auto; padding: 8px; gap: 8px; }
   .cita-card .cita-right { grid-column: 1 / -1; flex-direction: row; justify-content: space-between; align-items: center; }
@@ -4718,6 +4720,13 @@ function setupAgendaHomeListeners(){
 }
 function iniciarAgendaHome(){
   setupAgendaHomeListeners();
+  // En móvil colapsamos por defecto para que el chat quede visible.
+  try {
+    if (window.innerWidth <= 768) {
+      const s = document.getElementById('agenda-home');
+      if (s && !s.classList.contains('collapsed')) s.classList.add('collapsed');
+    }
+  } catch(e) {}
   cargarAgendaHome(ah_hoyISO());
   cargarWaitingRoom();
   if(AH_STATE.refreshAgenda) clearInterval(AH_STATE.refreshAgenda);
