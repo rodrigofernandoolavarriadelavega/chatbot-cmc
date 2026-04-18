@@ -1958,6 +1958,29 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if esp_hint:
                 log_event(phone, "fallback_esp_detectada", {"esp": esp_hint, "txt": txt[:120]})
                 return await _iniciar_agendar(phone, data, esp_hint)
+            # 1b) Intención clara de agendar sin especialidad → iniciar flujo
+            # agendar que pregunta especialidad. Ej: "Necesito una hora para
+            # mi hijo", "quiero agendar hora", "quiero pedir hora"
+            _tl_book = txt.lower()
+            _VERBO_AGENDAR = (
+                "agendar", "reservar", "tomar hora", "pedir hora",
+            )
+            _HORA_NOUN_BOOK = any(k in _tl_book for k in (
+                "hora medica", "hora médica", "hora para",
+                "una hora", "reservar una", "agendar una",
+                "agendar hora", "pedir una hora",
+            ))
+            if any(v in _tl_book for v in _VERBO_AGENDAR) or _HORA_NOUN_BOOK:
+                log_event(phone, "fallback_agendar_sin_esp", {"txt": txt[:120]})
+                return await _iniciar_agendar(phone, data, None)
+            # 1c) Intención explícita de hablar con recepción → derivar humano
+            if any(k in _tl_book for k in (
+                "hablar con recepcion", "hablar con recepción",
+                "hablar con alguien", "hablar con humano",
+                "hablar con persona", "atencion humana", "atención humana",
+            )):
+                log_event(phone, "fallback_humano", {"txt": txt[:120]})
+                return _derivar_humano(phone=phone, contexto=txt)
             # 2) Si NO hay palabra de acción CLARA de reserva, probar FAQ.
             #    "consulta" es ambiguo (noun/verb) — no bloquea FAQ.
             #    Si hay acción clara, el paciente ya está en flujo conocido →
