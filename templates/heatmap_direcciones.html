@@ -42,6 +42,19 @@
   .atencion { color: #555; font-size: 11px; padding-left: 10px; }
   .atencion .fecha { color: #2563eb; font-weight: 500; }
   .atencion .prof { color: #7c3aed; }
+  .filter-bar { display: flex; gap: 10px; justify-content: center; margin: 8px 16px 0; flex-wrap: wrap; align-items: center; }
+  .filter-bar .filter-toggle.has-filters { background: #2563eb; border-color: #3b82f6; }
+  .filter-panel { max-width: 720px; margin: 8px auto; padding: 12px; background: #1e293b; border: 1px solid #334155; border-radius: 10px; }
+  .filter-panel input[type=text] { width: 100%; padding: 8px 12px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #e2e8f0; font-size: 0.85rem; margin-bottom: 8px; }
+  .filter-panel input[type=text]::placeholder { color: #64748b; }
+  .filter-panel .panel-tools { display: flex; gap: 8px; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 0.75rem; color: #94a3b8; }
+  .filter-panel .panel-tools a { color: #38bdf8; text-decoration: none; cursor: pointer; }
+  .filter-panel .panel-tools a:hover { text-decoration: underline; }
+  #prof-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 2px; max-height: 260px; overflow-y: auto; padding-right: 4px; }
+  .prof-row { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 4px; font-size: 0.85rem; cursor: pointer; user-select: none; }
+  .prof-row:hover { background: #334155; }
+  .prof-row input { accent-color: #2563eb; cursor: pointer; }
+  .prof-row .prof-n { color: #64748b; font-size: 0.72rem; margin-left: auto; }
 </style>
 </head>
 <body>
@@ -57,15 +70,29 @@
 </div>
 
 <div class="stats">
-  <div class="stat-card"><div class="num">1721</div><div class="label">Direcciones</div></div>
-  <div class="stat-card"><div class="num">2378</div><div class="label">Pacientes</div></div>
-  <div class="stat-card"><div class="num">4806</div><div class="label">Citas</div></div>
+  <div class="stat-card"><div class="num" id="stat-direcciones">1721</div><div class="label">Direcciones</div></div>
+  <div class="stat-card"><div class="num" id="stat-pacientes">2378</div><div class="label">Pacientes</div></div>
+  <div class="stat-card"><div class="num" id="stat-citas">4806</div><div class="label">Citas</div></div>
 </div>
 
 <div class="controls">
   <button class="btn active" onclick="toggleLayer('clusters')">Clusters</button>
   <button class="btn" onclick="toggleLayer('heat')">Calor</button>
   <button class="btn" onclick="toggleLayer('points')">Puntos</button>
+</div>
+
+<div class="filter-bar">
+  <button class="btn filter-toggle" id="filter-toggle" onclick="toggleFilterPanel()">Profesional: <span id="filter-count">Todos</span> ▾</button>
+  <button class="btn" id="filter-clear" onclick="clearProfFilter()" style="display:none">Limpiar</button>
+</div>
+
+<div id="filter-panel" class="filter-panel" style="display:none">
+  <div class="panel-tools">
+    <span id="filter-summary">0 seleccionados</span>
+    <span><a onclick="selectAllVisibleProfs()">Marcar visibles</a> · <a onclick="clearProfFilter()">Limpiar todo</a></span>
+  </div>
+  <input type="text" id="prof-search" placeholder="Buscar profesional..." oninput="renderProfList()">
+  <div id="prof-list"></div>
 </div>
 
 <div id="map"></div>
@@ -138,41 +165,148 @@ const clusters = L.markerClusterGroup({
   showCoverageOnHover: false,
 });
 
-pts.forEach(function(p) {
-  const marker = L.circleMarker([p.lat, p.lng], {
-    radius: Math.max(5, Math.min(12, p.pacientes * 4)),
-    fillColor: p.pacientes > 2 ? '#ef4444' : p.pacientes > 1 ? '#fbbf24' : '#38bdf8',
-    color: '#1e293b',
-    weight: 1.5,
-    fillOpacity: 0.8,
-  });
-
-  marker.bindTooltip(buildTooltip(p), { sticky: true, direction: 'top', offset: [0, -10] });
-  marker.bindPopup(buildPopup(p), { maxWidth: 360, maxHeight: 400 });
-  clusters.addLayer(marker);
-});
-
-clusters.addTo(map);
-
 // Heat layer (oculto por defecto)
-const heatData = pts.map(function(p) { return [p.lat, p.lng, p.pacientes]; });
-const heatLayer = L.heatLayer(heatData, {
+const heatLayer = L.heatLayer([], {
   radius: 25, blur: 20, maxZoom: 16, max: 5,
   gradient: {0.2:'#2563eb', 0.4:'#38bdf8', 0.6:'#fbbf24', 0.8:'#f97316', 1:'#ef4444'},
 });
 
 // Points layer (oculto por defecto)
 const pointsLayer = L.layerGroup();
+
+clusters.addTo(map);
+
+// ── Filtro por profesional ──
+const profCounts = {};
 pts.forEach(function(p) {
-  const dot = L.circleMarker([p.lat, p.lng], {
-    radius: Math.max(4, Math.min(10, p.pacientes * 3)),
-    fillColor: p.pacientes > 2 ? '#ef4444' : p.pacientes > 1 ? '#fbbf24' : '#38bdf8',
-    color: '#fff', weight: 1, fillOpacity: 0.85,
+  (p.detalle || []).forEach(function(d) {
+    (d.a || []).forEach(function(at) {
+      const parts = at.split(' — ');
+      if (parts[1]) {
+        const name = parts[1].trim();
+        if (name) profCounts[name] = (profCounts[name] || 0) + 1;
+      }
+    });
   });
-  dot.bindTooltip(buildTooltip(p), { sticky: true, direction: 'top', offset: [0, -10] });
-  dot.bindPopup(buildPopup(p), { maxWidth: 360, maxHeight: 400 });
-  pointsLayer.addLayer(dot);
 });
+const profNames = Object.keys(profCounts).sort(function(a, b) {
+  return profCounts[b] - profCounts[a] || a.localeCompare(b);
+});
+const selectedProfs = new Set();
+
+function renderProfList() {
+  const q = (document.getElementById('prof-search').value || '').toLowerCase().trim();
+  const list = document.getElementById('prof-list');
+  list.innerHTML = '';
+  const visible = profNames.filter(function(n) { return !q || n.toLowerCase().includes(q); });
+  visible.forEach(function(name) {
+    const row = document.createElement('label');
+    row.className = 'prof-row';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = selectedProfs.has(name);
+    cb.addEventListener('change', function() {
+      if (cb.checked) selectedProfs.add(name); else selectedProfs.delete(name);
+      applyFilter();
+    });
+    const label = document.createElement('span');
+    label.textContent = name;
+    const n = document.createElement('span');
+    n.className = 'prof-n';
+    n.textContent = profCounts[name];
+    row.appendChild(cb);
+    row.appendChild(label);
+    row.appendChild(n);
+    list.appendChild(row);
+  });
+  document.getElementById('filter-summary').textContent = selectedProfs.size + ' seleccionados · ' + visible.length + ' visibles';
+}
+
+function toggleFilterPanel() {
+  const el = document.getElementById('filter-panel');
+  const open = el.style.display === 'none' || !el.style.display;
+  el.style.display = open ? 'block' : 'none';
+  if (open) renderProfList();
+}
+
+function clearProfFilter() {
+  selectedProfs.clear();
+  renderProfList();
+  applyFilter();
+}
+
+function selectAllVisibleProfs() {
+  const q = (document.getElementById('prof-search').value || '').toLowerCase().trim();
+  profNames.filter(function(n) { return !q || n.toLowerCase().includes(q); })
+    .forEach(function(n) { selectedProfs.add(n); });
+  renderProfList();
+  applyFilter();
+}
+
+function filterPts() {
+  if (selectedProfs.size === 0) return pts;
+  const result = [];
+  pts.forEach(function(p) {
+    const newDetalle = [];
+    let citas = 0;
+    (p.detalle || []).forEach(function(d) {
+      const newA = (d.a || []).filter(function(at) {
+        const parts = at.split(' — ');
+        return parts[1] && selectedProfs.has(parts[1].trim());
+      });
+      if (newA.length > 0) {
+        newDetalle.push({n: d.n, c: newA.length, a: newA});
+        citas += newA.length;
+      }
+    });
+    if (newDetalle.length > 0) {
+      result.push({
+        lat: p.lat, lng: p.lng, direccion: p.direccion, comuna: p.comuna,
+        pacientes: newDetalle.length, citas: citas, detalle: newDetalle
+      });
+    }
+  });
+  return result;
+}
+
+function applyFilter() {
+  const filtered = filterPts();
+
+  clusters.clearLayers();
+  pointsLayer.clearLayers();
+
+  filtered.forEach(function(p) {
+    const marker = L.circleMarker([p.lat, p.lng], {
+      radius: Math.max(5, Math.min(12, p.pacientes * 4)),
+      fillColor: p.pacientes > 2 ? '#ef4444' : p.pacientes > 1 ? '#fbbf24' : '#38bdf8',
+      color: '#1e293b', weight: 1.5, fillOpacity: 0.8,
+    });
+    marker.bindTooltip(buildTooltip(p), { sticky: true, direction: 'top', offset: [0, -10] });
+    marker.bindPopup(buildPopup(p), { maxWidth: 360, maxHeight: 400 });
+    clusters.addLayer(marker);
+
+    const dot = L.circleMarker([p.lat, p.lng], {
+      radius: Math.max(4, Math.min(10, p.pacientes * 3)),
+      fillColor: p.pacientes > 2 ? '#ef4444' : p.pacientes > 1 ? '#fbbf24' : '#38bdf8',
+      color: '#fff', weight: 1, fillOpacity: 0.85,
+    });
+    dot.bindTooltip(buildTooltip(p), { sticky: true, direction: 'top', offset: [0, -10] });
+    dot.bindPopup(buildPopup(p), { maxWidth: 360, maxHeight: 400 });
+    pointsLayer.addLayer(dot);
+  });
+
+  const heatData = filtered.map(function(p) { return [p.lat, p.lng, p.pacientes]; });
+  heatLayer.setLatLngs(heatData);
+
+  document.getElementById('stat-direcciones').textContent = filtered.length;
+  document.getElementById('stat-pacientes').textContent = filtered.reduce(function(s, p) { return s + p.pacientes; }, 0);
+  document.getElementById('stat-citas').textContent = filtered.reduce(function(s, p) { return s + p.citas; }, 0);
+
+  const fc = document.getElementById('filter-count');
+  fc.textContent = selectedProfs.size === 0 ? 'Todos' : selectedProfs.size + ' selec.';
+  document.getElementById('filter-clear').style.display = selectedProfs.size === 0 ? 'none' : 'inline-block';
+  document.getElementById('filter-toggle').classList.toggle('has-filters', selectedProfs.size > 0);
+}
 
 let activeLayer = 'clusters';
 function toggleLayer(name) {
@@ -183,9 +317,11 @@ function toggleLayer(name) {
   else if (name === 'heat') heatLayer.addTo(map);
   else if (name === 'points') pointsLayer.addTo(map);
   activeLayer = name;
-  document.querySelectorAll('.btn').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelectorAll('.controls .btn').forEach(function(b) { b.classList.remove('active'); });
   event.target.classList.add('active');
 }
+
+applyFilter();
 
 // Fit bounds
 if (pts.length > 0) {
