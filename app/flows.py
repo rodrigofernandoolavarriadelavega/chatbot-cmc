@@ -3241,11 +3241,29 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
     # ── WAIT_RUT_VER ──────────────────────────────────────────────────────────
     if state == "WAIT_RUT_VER":
-        # Escape: el usuario menciona un profesional — realmente quería agendar
+        # Escape: el usuario menciona un profesional — aclarar que primero
+        # necesitamos su RUT para ver sus citas, sin abandonar el flujo.
         apellido_esc = _detectar_apellido_profesional(txt)
         if apellido_esc:
-            reset_session(phone)
-            return await _iniciar_agendar(phone, {}, apellido_esc)
+            save_session(phone, "WAIT_RUT_VER", data)
+            return (
+                f"Para ver tu cita con *{apellido_esc.title()}* necesito tu *RUT* primero 😊\n"
+                f"(ej: *12.345.678-9*)\n\n"
+                f"_Si querías agendar con otro doctor, escribe *menu*._"
+            )
+        # Tiempo/día en vez de RUT → clarificar
+        import re as _re_time
+        _parece_rut_ver = bool(_re_time.search(r'\d[-][0-9kK]\b', txt))
+        if not _parece_rut_ver and any(
+            k in tl for k in ("a las ", "hoy", "mañana", "manana", "lunes",
+                               "martes", "miercoles", "miércoles", "jueves",
+                               "viernes", "sabado", "sábado")
+        ):
+            save_session(phone, "WAIT_RUT_VER", data)
+            return (
+                "Primero necesito tu *RUT* para buscar tu cita 😊\n"
+                "(ej: *12.345.678-9*)"
+            )
         rut = clean_rut(txt)
         if not valid_rut(rut):
             return (
