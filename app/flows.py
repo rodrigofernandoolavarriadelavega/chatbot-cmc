@@ -4640,22 +4640,6 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
         save_session(phone, "WAIT_ESPECIALIDAD", data)
         return f"Claro, te ayudo a agendar 😊\n\n¿Qué especialidad necesitas?\n\n{_ESPECIALIDADES_TEXTO}"
     especialidad_lower = especialidad.lower()
-
-    # Excepción: ecografías son servicio de imagenología, no tienen horarios
-    # reservables en Medilink. Derivamos directo a recepción en vez de decir
-    # "no hay horas" (engañoso) o lista de espera (nunca se libera un cupo
-    # que no existe en el sistema). Ecografías ginecológicas/obstétricas ya
-    # son ruteadas a Ginecología (Dr. Tirso Rejón) antes de llegar acá.
-    if "ecograf" in especialidad_lower:
-        log_event(phone, "derivar_ecografia_recepcion", {"solicitud": especialidad})
-        reset_session(phone)
-        return (
-            "Las *ecografías* (imagenología) no aparecen en nuestra agenda en línea 😊\n\n"
-            "Para agendarte, contáctanos directamente:\n"
-            f"📞 *{CMC_TELEFONO}*  o  ☎️ *(41) 296 5226*\n"
-            "📍 Monsalve 102, Carampangue\n\n"
-            "_Si quieres agendar otra cosa, escribe *menu*._"
-        )
     # Detectar si la especialidad no existe en nuestro catálogo
     from medilink import _ids_para_especialidad as _ids_esp_check
     if not _ids_esp_check(especialidad_lower):
