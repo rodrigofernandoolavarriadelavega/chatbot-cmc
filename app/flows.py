@@ -1639,6 +1639,35 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         "elapsed_ms": _elapsed_ms,
                     })
 
+        # ── Shortcut local: apellido + verbo de acción → agendar sin Claude ──
+        # "Necesito hora con el doctor Olavarría", "Tendrá hora con Abarca",
+        # "me equivoqué quiero con el dr Márquez"
+        _apellido_idle = _detectar_apellido_profesional(txt)
+        if _apellido_idle and any(
+            k in tl for k in (
+                "necesito", "quiero", "hora", "agendar", "me equivoque",
+                "me equivoqué", "reservar", "con el", "con la", "mejor con",
+                "tendra", "tendrá", "tiene", "disponible", "disponibilidad",
+                "atencion", "atención",
+            )
+        ):
+            log_event(phone, "intent_detectado_local", {"apellido": _apellido_idle})
+            return await _iniciar_agendar(phone, data, _apellido_idle)
+
+        # ── Shortcut: frase de especialidad ("hora medico general") + intent
+        # implícito → agendar sin Claude cuando la frase es inequívoca. ──
+        _esp_idle = _detectar_especialidad_en_texto(txt)
+        if _esp_idle and any(
+            k in tl for k in (
+                "hora", "agendar", "reservar", "necesito", "quiero",
+                "tiene alguna", "tendra", "tendrá", "tendrán",
+            )
+        ) and not any(
+            k in tl for k in ("cuanto", "cuánto", "precio", "valor", "vale", "bono")
+        ):
+            log_event(phone, "intent_detectado_local", {"esp": _esp_idle})
+            return await _iniciar_agendar(phone, data, _esp_idle)
+
         result = await detect_intent(txt)
         intent = result.get("intent", "otro")
         log_event(phone, "intent_detectado", {"intent": intent, "esp": result.get("especialidad")})
@@ -1967,8 +1996,18 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # Traducir ID de lista interactiva al nombre real de especialidad
         especialidad_candidata = _ESP_ID_MAP.get(tl, tl)
         if not _ids_para_especialidad(especialidad_candidata):
-            result = await detect_intent(txt)
-            especialidad_candidata = result.get("especialidad") or especialidad_candidata
+            # 1) fallback local por apellido o frase conocida (ahorra Claude call)
+            apellido_loc = _detectar_apellido_profesional(txt)
+            if apellido_loc:
+                especialidad_candidata = apellido_loc
+            else:
+                esp_frase = _detectar_especialidad_en_texto(txt)
+                if esp_frase:
+                    especialidad_candidata = esp_frase
+                else:
+                    # 2) último recurso: Claude
+                    result = await detect_intent(txt)
+                    especialidad_candidata = result.get("especialidad") or especialidad_candidata
         # Si venimos del flujo de lista de espera, redirigir al confirming
         if data.pop("from_waitlist", False):
             return await _iniciar_waitlist(phone, data, especialidad_candidata)
@@ -2140,6 +2179,22 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "• *Otro día* para cambiar de fecha\n"
                 "• *Otro profesional* (si hay disponible)\n\n"
                 "¿Qué preferís?"
+            )
+
+        # ── Pregunta por contacto / teléfono / dirección / ubicación ──
+        if any(k in _tl_slot for k in (
+            "contacto telef", "contacto telefonico", "contacto telefónico",
+            "numero de contacto", "número de contacto",
+            "telefono de contacto", "teléfono de contacto",
+            "numero para llamar", "número para llamar",
+            "llamar por telefono", "llamar por teléfono",
+            "telefono del centro", "teléfono del centro",
+        )):
+            save_session(phone, "WAIT_SLOT", data)
+            return (
+                f"📞 *{CMC_TELEFONO}* · ☎️ *{CMC_TELEFONO_FIJO}*\n"
+                f"📍 Monsalve 102, Carampangue\n\n"
+                "_Seguimos con tu reserva: elige un número del listado o escribe *otro día*._"
             )
 
         # ── Intento de cambio de profesional por lenguaje natural ──
@@ -2413,18 +2468,50 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
     # ── WAIT_MODALIDAD ────────────────────────────────────────────────────────
     if state == "WAIT_MODALIDAD":
-        FONASA     = {"1", "fonasa", "fona"}
-        PARTICULAR = {"2", "particular", "privado", "privada"}
+        FONASA     = {"1", "fonasa", "fona", "con fonasa", "por fonasa"}
+        PARTICULAR = {"2", "particular", "privado", "privada", "particulares", "con particular"}
+        ISAPRE     = {"isapre", "consalud", "colmena", "banmedica", "cruz blanca", "vida tres"}
         if tl in FONASA or tl_norm in FONASA:
             data["modalidad"] = "fonasa"
         elif tl in PARTICULAR or tl_norm in PARTICULAR:
             data["modalidad"] = "particular"
+        elif tl in ISAPRE or any(k in tl for k in ISAPRE):
+            # Isapre no está integrado → atender como particular con nota
+            data["modalidad"] = "particular"
         else:
+            # Escape: usuario se equivocó / quiere reiniciar
+            if txt.startswith("motivo_") or tl in ("menu", "menú", "inicio", "hola", "volver"):
+                reset_session(phone)
+                return await handle_message(phone, txt, get_session(phone))
+            # Escape: menciona "otra persona" → saltar a flujo de terceros
+            if any(k in tl for k in ("otra persona", "para otro", "para otra", "familiar",
+                                      "para mi hijo", "para mi hija", "para mi mama",
+                                      "para mi mamá", "para mi papa", "para mi papá")):
+                data["booking_for_other"] = True
+                save_session(phone, "WAIT_MODALIDAD", data)
+                return _btn_msg(
+                    "Entendido, es para otra persona 😊\n\n¿Atención *Fonasa* o *Particular*?",
+                    [{"id": "1", "title": "Fonasa"},
+                     {"id": "2", "title": "Particular"}]
+                )
+            # Escape: apellido profesional → reiniciar agendar con ese doctor
+            apellido_esc = _detectar_apellido_profesional(txt)
+            if apellido_esc:
+                reset_session(phone)
+                return await _iniciar_agendar(phone, {}, apellido_esc)
+            # Escape: payload de otro día / ver otros (quedaron en buffer)
+            if tl in ("otro_dia", "otro_día", "ver_otros", "ver_todos"):
+                save_session(phone, "WAIT_MODALIDAD", data)
+                return "Primero dime si la atención es *Fonasa* o *Particular* 😊\n\nDespués elegimos otro horario."
             data["intentos_fallidos"] = data.get("intentos_fallidos", 0) + 1
             if data["intentos_fallidos"] >= 3:
                 return _derivar_humano(phone=phone, contexto="frustración WAIT_MODALIDAD")
             save_session(phone, "WAIT_MODALIDAD", data)
-            return "Responde *Fonasa* o *Particular* 😊"
+            return _btn_msg(
+                "¿La atención será *Fonasa* o *Particular*?",
+                [{"id": "1", "title": "Fonasa"},
+                 {"id": "2", "title": "Particular"}]
+            )
 
         modalidad_str = data["modalidad"].capitalize()
         # Saltar WAIT_BOOKING_FOR → ir directo al RUT (si quiere para otro, escribe "otra persona")
@@ -3133,8 +3220,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     if state == "WAIT_DATOS_NUEVO":
         raw = txt.strip()
 
-        # ── Separar por comas/punto y coma ──
-        parts = [p.strip() for p in re.split(r'[,;]+', raw) if p.strip()]
+        # ── Separar por comas, punto y coma, pipe, barras, saltos de línea
+        # y guiones/raya larga con espacios ("Ruth - Femenino - 28/05/1939"). ──
+        parts = [p.strip() for p in re.split(r'[,;|/\n]+|\s+[-–—]+\s+', raw) if p.strip()]
 
         nombre_raw = None
         sexo = None
