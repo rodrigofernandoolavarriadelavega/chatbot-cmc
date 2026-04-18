@@ -302,6 +302,28 @@ input, textarea, select{font-family:inherit; color:inherit}
 }
 .cita-item .when{color:var(--green); font-weight:500}
 
+/* Files section */
+.ctx-files{display:grid; grid-template-columns:1fr 1fr; gap:6px}
+.ctx-files .file-img{
+  display:block; position:relative; border-radius:6px; overflow:hidden;
+  border:1px solid var(--border); background:var(--panel-2); aspect-ratio:1;
+}
+.ctx-files .file-img img{width:100%; height:100%; object-fit:cover; display:block}
+.ctx-files .file-img:hover{border-color:var(--green-dark)}
+.ctx-files .file-img .meta{
+  position:absolute; bottom:0; left:0; right:0; padding:3px 6px; font-size:9px;
+  color:#fff; background:linear-gradient(transparent, rgba(0,0,0,.7));
+}
+.ctx-files .file-doc{
+  grid-column:1/-1; display:flex; align-items:center; gap:8px; padding:7px 9px;
+  background:var(--panel-2); border:1px solid var(--border); border-radius:6px;
+  text-decoration:none; color:var(--text); font-size:12px;
+}
+.ctx-files .file-doc:hover{background:var(--panel-3); border-color:var(--green-dark)}
+.ctx-files .file-doc .ico{font-size:20px}
+.ctx-files .file-doc .name{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:500}
+.ctx-files .file-doc .sub{font-size:10px; color:var(--text-mute); margin-top:1px}
+
 /* ===== TOAST ============================================================== */
 #toast{
   position:fixed; bottom:20px; left:50%; transform:translateX(-50%) translateY(60px);
@@ -452,6 +474,10 @@ input, textarea, select{font-family:inherit; color:inherit}
     <div class="ctx-section">
       <h3>Próximas citas</h3>
       <div id="cxCitas"><div style="color:var(--text-dim); font-size:12px">Sin citas próximas</div></div>
+    </div>
+    <div class="ctx-section" id="cxFilesSection" style="display:none">
+      <h3>📎 Archivos del paciente <span id="cxFilesCount" style="color:var(--text-dim); font-weight:400; font-size:10px"></span></h3>
+      <div id="cxFiles" class="ctx-files"></div>
     </div>
   </aside>
 
@@ -882,7 +908,38 @@ async function loadContext(){
     $("#cxFlowSlot").textContent = (flow.fecha_display || "") + (flow.hora_inicio ? " " + flow.hora_inicio : "") || "—";
     $("#cxFlowMod").textContent = flow.modalidad || "—";
   }
-  loadTags(); loadNotes(); loadCitas();
+  loadTags(); loadNotes(); loadCitas(); loadFiles();
+}
+
+async function loadFiles(){
+  const sec = $("#cxFilesSection");
+  const wrap = $("#cxFiles");
+  try {
+    const files = await api(`/admin/api/patient-files/${encodeURIComponent(activePhone)}`).catch(()=>[]);
+    if (!files || !files.length){ sec.style.display = "none"; return; }
+    $("#cxFilesCount").textContent = `(${files.length})`;
+    const tokenQs = TOKEN ? `?token=${encodeURIComponent(TOKEN)}` : "";
+    wrap.innerHTML = files.slice(0, 30).map(f => {
+      const url = `/admin/api/file/${f.id}${tokenQs}`;
+      const date = (f.created_at || "").substring(0,16).replace("T", " ");
+      const sizeKB = f.file_size ? Math.round(f.file_size/1024) + "KB" : "";
+      if (f.media_type === "image"){
+        return `<a class="file-img" href="${url}" target="_blank" title="${esc(date)}">
+          <img src="${url}" loading="lazy" alt="">
+          <div class="meta">${esc(date.slice(5))}</div>
+        </a>`;
+      }
+      const ico = f.media_type === "video" ? "🎥" : f.media_type === "audio" ? "🎵" : "📄";
+      return `<a class="file-doc" href="${url}" target="_blank">
+        <span class="ico">${ico}</span>
+        <div style="flex:1; min-width:0">
+          <div class="name">${esc(f.filename || "archivo")}</div>
+          <div class="sub">${esc(date)} · ${sizeKB}</div>
+        </div>
+      </a>`;
+    }).join("");
+    sec.style.display = "block";
+  } catch(e){ sec.style.display = "none"; }
 }
 
 async function loadTags(){
