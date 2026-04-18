@@ -1657,3 +1657,65 @@ def api_list_deletions(limit: int = Query(100, ge=1, le=500),
             "FROM gdpr_deletions ORDER BY deleted_at DESC LIMIT ?", (limit,)
         ).fetchall()
         return [dict(r) for r in rows]
+
+
+# ── Dashboard de ahorros (savings tracker) ──────────────────────────────────
+
+_PRICE_CLAUDE_INTENT_USD     = 0.0011
+_PRICE_TEMPLATE_UTILITY_USD  = 0.0075
+_PRICE_WHISPER_SHORT_USD     = 0.0003
+_USD_TO_CLP = 950
+
+_SAVINGS_EVENTS = {
+    "savings:intent_cache_hit":                    _PRICE_CLAUDE_INTENT_USD,
+    "savings:skip_reminder_2h_service_window":     _PRICE_TEMPLATE_UTILITY_USD,
+    "savings:skip_reminder_2h_medilink_confirmed": _PRICE_TEMPLATE_UTILITY_USD,
+    "savings:skip_whisper_short_audio":            _PRICE_WHISPER_SHORT_USD,
+}
+
+
+@router.get("/admin/api/savings")
+def api_savings(period: str = Query("today", pattern="^(today|7d|30d)$"),
+                _=Depends(require_admin)):
+    """Agrega eventos 'savings:*' en conversation_events y calcula ahorro estimado.
+    Period: today | 7d | 30d."""
+    where_ts = {
+        "today": "ts >= datetime('now', 'start of day')",
+        "7d":    "ts >= datetime('now', '-7 days')",
+        "30d":   "ts >= datetime('now', '-30 days')",
+    }[period]
+
+    counts = {e.split(":")[1]: 0 for e in _SAVINGS_EVENTS}
+    usd_by_category = {k: 0.0 for k in counts}
+
+    with _conn() as conn:
+        qmarks = ",".join("?" for _ in _SAVINGS_EVENTS)
+        rows = conn.execute(
+            f"SELECT event, COUNT(*) AS n FROM conversation_events "
+            f"WHERE {where_ts} AND event IN ({qmarks}) "
+            f"GROUP BY event",
+            list(_SAVINGS_EVENTS.keys())
+        ).fetchall()
+
+    total_usd = 0.0
+    for r in rows:
+        ev = r["event"]
+        n = int(r["n"] or 0)
+        key = ev.split(":")[1]
+        counts[key] = n
+        subtotal = n * _SAVINGS_EVENTS.get(ev, 0.0)
+        usd_by_category[key] = round(subtotal, 4)
+        total_usd += subtotal
+
+    return {
+        "period":          period,
+        "counts":          counts,
+        "usd_by_category": usd_by_category,
+        "total_usd":       round(total_usd, 3),
+        "total_clp":       int(round(total_usd * _USD_TO_CLP)),
+        "prices_usd": {
+            "claude_intent":    _PRICE_CLAUDE_INTENT_USD,
+            "template_utility": _PRICE_TEMPLATE_UTILITY_USD,
+            "whisper_short":    _PRICE_WHISPER_SHORT_USD,
+        },
+    }

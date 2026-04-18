@@ -895,9 +895,19 @@ async def detect_intent(mensaje: str) -> dict:
     clave_sin_punto = clave.rstrip('.?!¿¡,;:')
     if clave in _INTENT_CACHE:
         log.info("cache hit: %r → %s", clave, _INTENT_CACHE[clave]["intent"])
+        try:
+            from session import log_event as _log_event
+            _log_event("", "savings:intent_cache_hit", {"clave": clave[:60]})
+        except Exception:
+            pass
         return {**_INTENT_CACHE[clave], "respuesta_directa": None}
     if clave_sin_punto in _INTENT_CACHE:
         log.info("cache hit (sin punto): %r → %s", clave_sin_punto, _INTENT_CACHE[clave_sin_punto]["intent"])
+        try:
+            from session import log_event as _log_event
+            _log_event("", "savings:intent_cache_hit", {"clave": clave_sin_punto[:60]})
+        except Exception:
+            pass
         return {**_INTENT_CACHE[clave_sin_punto], "respuesta_directa": None}
 
     try:

@@ -757,6 +757,10 @@ async def webhook(request: Request):
             # Evita pagar Whisper por audios sin contenido util.
             if len(audio_bytes) < 5000:
                 log.info("AUDIO omitido (demasiado corto, %d bytes) from=%s", len(audio_bytes), phone)
+                try:
+                    log_event(phone, "savings:skip_whisper_short_audio", {"bytes": len(audio_bytes)})
+                except Exception:
+                    pass
                 await send_whatsapp(
                     phone,
                     "Tu audio es muy cortito y no se entiende bien 😅\n"

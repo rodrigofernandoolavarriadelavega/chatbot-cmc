@@ -900,6 +900,7 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
     <div class="pill" id="pill-imagenes" onclick="abrirModalImagenes()" style="cursor:pointer;" title="Imágenes recibidas de pacientes (30 días)">📷&nbsp;<strong id="s-imagenes">—</strong>&nbsp;imgs</div>
     <div class="pill" id="pill-demanda" onclick="abrirModalDemanda()" style="cursor:pointer;display:none;" title="Especialidades/exámenes solicitados que no tenemos">🔎&nbsp;<strong id="s-demanda">0</strong>&nbsp;demanda</div>
     <div class="pill" id="pill-funnel" onclick="abrirModalFunnel()" style="cursor:pointer;" title="Conversión agendar→confirmar por especialidad (30 días)">📊&nbsp;<strong id="s-funnel">—</strong>%&nbsp;conv</div>
+    <div class="pill" id="pill-savings" onclick="abrirModalSavings()" style="cursor:pointer;background:#f0fdf4;color:#15803d;border-color:#bbf7d0;" title="Ahorro estimado por optimizaciones (cache Claude + service window + audios cortos + skip confirmadas)">💰&nbsp;<strong id="s-savings">—</strong></div>
     <div class="pill"><div class="live-dot"></div>&nbsp;<span id="last-refresh">—</span></div>
   </div>
   <div class="topbar-spacer" style="margin-left:auto;"></div>
@@ -1229,6 +1230,30 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
     <div id="demanda-lista" style="padding:14px 22px 22px;max-height:60vh;overflow-y:auto;"></div>
   </div>
 </div>
+
+<!-- MODAL AHORROS -->
+<div id="modal-savings" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:flex-start;justify-content:center;padding-top:40px;padding-bottom:40px;overflow-y:auto;">
+  <div style="background:#fff;border-radius:14px;width:720px;max-width:96vw;box-shadow:0 20px 60px rgba(0,0,0,.2);position:relative;margin:auto;">
+    <div style="padding:18px 22px 14px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:20px;">💰</span>
+      <span style="font-size:15px;font-weight:700;color:#15803d;">Ahorros por optimizaciones</span>
+      <button onclick="document.getElementById('modal-savings').style.display='none'" style="margin-left:auto;background:none;border:none;font-size:20px;cursor:pointer;color:#94a3b8;">✕</button>
+    </div>
+    <div style="padding:14px 22px;background:#f0fdf4;border-bottom:1px solid #bbf7d0;font-size:12px;color:#166534;">
+      Cuenta cada vez que el sistema <strong>evitó</strong> un costo: cache intent (Claude), service window (Meta), cita ya confirmada en Medilink, audio <code>&lt;2s</code> (Whisper).
+    </div>
+    <div style="padding:10px 22px;border-bottom:1px solid #e2e8f0;display:flex;gap:8px;">
+      <button class="btn-period active" data-period="today" onclick="setSavingsPeriod('today')">Hoy</button>
+      <button class="btn-period" data-period="7d" onclick="setSavingsPeriod('7d')">7 días</button>
+      <button class="btn-period" data-period="30d" onclick="setSavingsPeriod('30d')">30 días</button>
+    </div>
+    <div id="savings-contenido" style="padding:18px 22px 22px;"></div>
+  </div>
+</div>
+<style>
+.btn-period{padding:6px 14px;border:1px solid #e2e8f0;background:#fff;border-radius:8px;cursor:pointer;font-size:13px;color:#475569;font-weight:600;}
+.btn-period.active{background:#15803d;color:#fff;border-color:#15803d;}
+</style>
 
 <!-- OVERLAYS MOBILE -->
 <div class="filters-overlay" id="filters-overlay" onclick="toggleFilters()"></div>
@@ -4417,6 +4442,93 @@ function renderDemanda(){
 }
 loadDemanda();
 setInterval(loadDemanda,120000);
+
+// ── AHORROS (savings tracker) ───────────────────────────────────────────────
+let savingsPeriod = "today";
+let savingsCache = null;
+
+async function loadSavings(period){
+  period = period || savingsPeriod || "today";
+  try{
+    const r = await fetch(apiUrl("/admin/api/savings?period=" + period));
+    if(!r.ok) return;
+    savingsCache = await r.json();
+    if(period === "today"){
+      const clp = savingsCache.total_clp || 0;
+      const el = document.getElementById("s-savings");
+      if(el) el.textContent = "$" + clp.toLocaleString("es-CL");
+    }
+    if(document.getElementById("modal-savings").style.display === "flex"){
+      renderSavings();
+    }
+  }catch(e){ console.error("loadSavings", e); }
+}
+
+function setSavingsPeriod(p){
+  savingsPeriod = p;
+  document.querySelectorAll(".btn-period").forEach(b => {
+    b.classList.toggle("active", b.dataset.period === p);
+  });
+  document.getElementById("savings-contenido").innerHTML =
+    '<div style="padding:20px;color:#94a3b8;text-align:center;">Cargando…</div>';
+  loadSavings(p);
+}
+
+function abrirModalSavings(){
+  document.getElementById("modal-savings").style.display = "flex";
+  loadSavings(savingsPeriod).then(renderSavings);
+}
+
+function renderSavings(){
+  const s = savingsCache;
+  const box = document.getElementById("savings-contenido");
+  if(!s){
+    box.innerHTML = '<div style="padding:20px;color:#94a3b8;text-align:center;">Cargando…</div>';
+    return;
+  }
+  const c = s.counts || {};
+  const u = s.usd_by_category || {};
+  const rows = [
+    {key:"intent_cache_hit",                    label:"Cache Claude (intent)",                emoji:"🧠", hint:"Mensajes resueltos sin llamar a Haiku",                     color:"#2563eb"},
+    {key:"skip_reminder_2h_service_window",     label:"Service window (recordatorio 2h gratis)", emoji:"🪟", hint:"Paciente escribió hace <24h → texto plano sin template", color:"#059669"},
+    {key:"skip_reminder_2h_medilink_confirmed", label:"Medilink ya confirmada (skip 2h)",     emoji:"✅", hint:"Recepción ya marcó confirmada desde Medilink",            color:"#0d9488"},
+    {key:"skip_whisper_short_audio",            label:"Audios cortos omitidos (Whisper)",     emoji:"🎤", hint:"Audios <2s = ruido, no se transcriben",                   color:"#7c3aed"},
+  ];
+  let html = '';
+  html += '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;">';
+  html += '<div style="font-size:13px;color:#64748b;">Período: <strong>' + s.period + '</strong></div>';
+  html += '<div style="font-size:26px;font-weight:800;color:#15803d;">$' + (s.total_clp||0).toLocaleString("es-CL") + ' CLP</div>';
+  html += '</div>';
+  html += '<div style="font-size:12px;color:#94a3b8;text-align:right;margin-bottom:14px;">≈ US$ ' + (s.total_usd||0).toFixed(3) + '</div>';
+  html += '<table style="width:100%;border-collapse:collapse;font-size:13px;">';
+  html += '<thead><tr style="background:#f8fafc;text-align:left;">';
+  html += '<th style="padding:8px 10px;">Optimización</th>';
+  html += '<th style="padding:8px 10px;text-align:right;">Veces</th>';
+  html += '<th style="padding:8px 10px;text-align:right;">Ahorro CLP</th>';
+  html += '</tr></thead><tbody>';
+  rows.forEach(r => {
+    const n = c[r.key] || 0;
+    const usd = u[r.key] || 0;
+    const clp = Math.round(usd * 950);
+    html += '<tr style="border-bottom:1px solid #e2e8f0;">';
+    html += '<td style="padding:10px;"><span style="font-size:16px;margin-right:6px;">'+r.emoji+'</span><strong style="color:'+r.color+';">'+r.label+'</strong><div style="font-size:11px;color:#94a3b8;margin-top:2px;">'+r.hint+'</div></td>';
+    html += '<td style="padding:10px;text-align:right;font-weight:700;font-size:15px;">'+n.toLocaleString("es-CL")+'</td>';
+    html += '<td style="padding:10px;text-align:right;font-weight:700;color:#15803d;">$'+clp.toLocaleString("es-CL")+'</td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  if(s.period !== "today"){
+    const days = s.period === "7d" ? 7 : 30;
+    const proy = Math.round(((s.total_clp||0) / days) * 365);
+    html += '<div style="margin-top:18px;padding:12px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;font-size:13px;color:#166534;">';
+    html += 'Proyección anualizada: <strong>$' + proy.toLocaleString("es-CL") + ' CLP/año</strong> (~US$ ' + (proy/950).toFixed(0) + '/año)';
+    html += '</div>';
+  }
+  box.innerHTML = html;
+}
+
+loadSavings("today");
+setInterval(() => loadSavings("today"), 300000);
 </script>
 </body>
 </html>

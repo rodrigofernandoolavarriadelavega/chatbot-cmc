@@ -15,6 +15,7 @@ from session import (
     mark_reminder_sent,
     mark_reminder_2h_sent,
     log_message,
+    log_event,
 )
 from medilink import get_cita, cita_esta_confirmada
 
@@ -215,6 +216,11 @@ async def enviar_recordatorios_2h(send_text_fn, send_template_fn=None):
                     mark_reminder_2h_sent(cita["id"])
                     log.info("Recordatorio 2h omitido (ya confirmada en Medilink) → %s cita_id=%s",
                              cita["phone"], id_cita_medilink)
+                    try:
+                        log_event(cita["phone"], "savings:skip_reminder_2h_medilink_confirmed",
+                                  {"id_cita": id_cita_medilink})
+                    except Exception:
+                        pass
                     continue
 
             # Decide si usar template (pagado) o texto plano (gratis si hay service window)
@@ -243,6 +249,11 @@ async def enviar_recordatorios_2h(send_text_fn, send_template_fn=None):
                 )
                 log.info("Recordatorio 2h (service window, free) → %s cita_id=%s",
                          cita["phone"], id_cita_medilink)
+                try:
+                    log_event(cita["phone"], "savings:skip_reminder_2h_service_window",
+                              {"id_cita": id_cita_medilink})
+                except Exception:
+                    pass
             elif USE_TEMPLATES and send_template_fn:
                 await send_template_fn(
                     cita["phone"],
