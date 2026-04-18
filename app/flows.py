@@ -1664,16 +1664,42 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # ── Shortcut: frase de especialidad ("hora medico general") + intent
         # implícito → agendar sin Claude cuando la frase es inequívoca. ──
         _esp_idle = _detectar_especialidad_en_texto(txt)
+        _ES_PREGUNTA_INFO = any(k in tl for k in (
+            "realizan", "realiza", "hacen", "hace ",
+            "tienen", "tiene ", "ofrecen", "ofrece",
+            "cuanto", "cuánto", "precio", "valor", "vale", "bono",
+            "cuesta", "costo",
+        ))
         if _esp_idle and any(
             k in tl for k in (
                 "hora", "agendar", "reservar", "necesito", "quiero",
                 "tiene alguna", "tendra", "tendrá", "tendrán",
             )
-        ) and not any(
-            k in tl for k in ("cuanto", "cuánto", "precio", "valor", "vale", "bono")
-        ):
+        ) and not _ES_PREGUNTA_INFO:
             log_event(phone, "intent_detectado_local", {"esp": _esp_idle})
             return await _iniciar_agendar(phone, data, _esp_idle)
+        # Pregunta "¿realizan X?" (existencia del servicio) con especialidad →
+        # FAQ local antes de Claude. Robusto ante outages.
+        # NO interceptar preguntas de precio — dejamos que Claude responda con
+        # el arancel específico y Fonasa/particular.
+        _PREGUNTA_EXISTENCIA = any(k in tl for k in (
+            "realizan", "realiza", "hacen", "hace ",
+            "tienen", "tiene ", "ofrecen", "ofrece",
+        ))
+        if _esp_idle and _PREGUNTA_EXISTENCIA:
+            from claude_helper import _local_faq_fallback
+            _faq_fb = _local_faq_fallback(txt)
+            if _faq_fb:
+                log_event(phone, "faq_local_hit", {"esp": _esp_idle})
+                data["especialidad_sugerida"] = _esp_idle
+                save_session(phone, "IDLE", data)
+                return _btn_msg(
+                    f"{_faq_fb}\n\n¿Te agendo en *{_esp_idle}*?",
+                    [
+                        {"id": "agendar_sugerido", "title": "✅ Sí, agendar"},
+                        {"id": "no_agendar",      "title": "No por ahora"},
+                    ]
+                )
 
         # ── RUT suelto en IDLE (sin flujo activo): el paciente responde con
         # sólo su RUT esperando continuar. Ofrecerle las 3 opciones principales. ──
@@ -1932,14 +1958,26 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if esp_hint:
                 log_event(phone, "fallback_esp_detectada", {"esp": esp_hint, "txt": txt[:120]})
                 return await _iniciar_agendar(phone, data, esp_hint)
-            # 2) Si NO hay palabra de acción (agendar/hora/cita), probar FAQ.
-            #    Con acción, el paciente ya está en flujo conocido → dejar que
-            #    caiga al menú (muestra las especialidades).
+            # 2) Si NO hay palabra de acción CLARA de reserva, probar FAQ.
+            #    "consulta" es ambiguo (noun/verb) — no bloquea FAQ.
+            #    Si hay acción clara, el paciente ya está en flujo conocido →
+            #    dejar que caiga al menú (muestra las especialidades).
             _tl_fb = txt.lower()
             _ACCION_KW = ("agendar", "reservar", "reagendar", "cancelar", "mover",
-                          "cambiar", "hora", "cita", "consulta")
+                          "cambiar", "quiero hora", "quiero cita",
+                          "pedir hora", "tomar hora")
             _es_accion = any(k in _tl_fb for k in _ACCION_KW)
             if not _es_accion:
+                # Primero intentar FAQ local (sin red) → robusto ante outages
+                try:
+                    from claude_helper import _local_faq_fallback
+                    _local_fb = _local_faq_fallback(txt)
+                    if _local_fb:
+                        log_event(phone, "fallback_faq_local", {"txt": txt[:120]})
+                        return f"{_local_fb}\n\n_Escribe *menu* si prefieres ver las opciones._"
+                except Exception:
+                    pass
+                # Si no matchea local, llamar Claude FAQ
                 try:
                     faq_resp = await respuesta_faq(txt)
                     if faq_resp and len(faq_resp) > 20:
@@ -4082,6 +4120,16 @@ _FRASES_ESPECIALIDAD = [
     ("nutrición",             "nutrición"),
     ("podolog",               "podología"),
     ("ecograf",               "ecografía"),
+    ("ecotomograf",           "ecografía"),
+    ("ecotomo",               "ecografía"),
+    ("eco abdom",             "ecografía"),
+    ("eco tiroid",            "ecografía"),
+    ("eco mama",              "ecografía"),
+    ("eco testi",             "ecografía"),
+    ("testicul",              "ecografía"),
+    ("texticul",              "ecografía"),
+    ("inguino escrotal",      "ecografía"),
+    ("inguinal escrotal",     "ecografía"),
     ("estetica",              "estética facial"),
     ("estética",              "estética facial"),
     ("botox",                 "estética facial"),
