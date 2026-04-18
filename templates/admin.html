@@ -1096,7 +1096,7 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
 </div>
 
 <!-- AGENDA HOME -->
-<section id="agenda-home" class="collapsed">
+<section id="agenda-home" class="collapsed" hidden>
   <div class="ah-header">
     <h2>📅 Agenda de hoy</h2>
     <span class="ah-date" id="ah-fecha-label">—</span>
@@ -4743,14 +4743,18 @@ function iniciarAgendaHome(){
       if (s && !s.classList.contains('collapsed')) s.classList.add('collapsed');
     }
   } catch(e) {}
-  cargarAgendaHome(ah_hoyISO());
-  cargarWaitingRoom();
-  if(AH_STATE.refreshAgenda) clearInterval(AH_STATE.refreshAgenda);
-  if(AH_STATE.refreshWaiting) clearInterval(AH_STATE.refreshWaiting);
-  if(AH_STATE.refreshClock) clearInterval(AH_STATE.refreshClock);
-  AH_STATE.refreshAgenda=setInterval(()=>cargarAgendaHome(AH_STATE.fecha),30000);
-  AH_STATE.refreshWaiting=setInterval(cargarWaitingRoom,10000);
-  AH_STATE.refreshClock=setInterval(tickRefrescarTiempos,30000);
+  // Agenda-home desactivada — la agenda del día se ve directo en Medilink,
+  // evitando fan-out de requests (20 por carga) que saturaba el rate limit.
+  // Para reactivar: quitar 'hidden' del <section id="agenda-home"> y
+  // descomentar las llamadas de abajo.
+  // cargarAgendaHome(ah_hoyISO());
+  // cargarWaitingRoom();
+  // if(AH_STATE.refreshAgenda) clearInterval(AH_STATE.refreshAgenda);
+  // if(AH_STATE.refreshWaiting) clearInterval(AH_STATE.refreshWaiting);
+  // if(AH_STATE.refreshClock) clearInterval(AH_STATE.refreshClock);
+  // AH_STATE.refreshAgenda=setInterval(()=>cargarAgendaHome(AH_STATE.fecha),30000);
+  // AH_STATE.refreshWaiting=setInterval(cargarWaitingRoom,10000);
+  // AH_STATE.refreshClock=setInterval(tickRefrescarTiempos,30000);
 }
 
 // ============ COMMAND PALETTE ============
