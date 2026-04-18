@@ -1668,6 +1668,29 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             log_event(phone, "intent_detectado_local", {"esp": _esp_idle})
             return await _iniciar_agendar(phone, data, _esp_idle)
 
+        # ── Datos de paciente no solicitados: RUT + nombre o fecha en el mismo
+        # mensaje → el paciente está enviando todo de una. Asumimos que quiere
+        # agendar y arrancamos el flujo. Se basa en patrón de RUT chileno. ──
+        _txt_multiline = "\n" in txt or ";" in txt or txt.count(",") >= 2
+        if _txt_multiline and len(txt) > 30:
+            import re as _re_rut
+            _m_rut = _re_rut.search(r"\b(\d{1,2}[.]?\d{3}[.]?\d{3}[-]?[0-9kK])\b", txt)
+            _tiene_nombre = bool(_re_rut.search(r"\b[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+", txt))
+            _tiene_fecha = bool(_re_rut.search(r"\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b|\bde \d{4}\b|\bde enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre\b", txt, _re_rut.IGNORECASE))
+            if _m_rut and (_tiene_nombre or _tiene_fecha):
+                log_event(phone, "datos_paciente_no_solicitados", {"len": len(txt)})
+                rut_hallado = clean_rut(_m_rut.group(1))
+                if valid_rut(rut_hallado):
+                    data["rut_sugerido"] = rut_hallado
+                return (
+                    "¡Gracias por enviarme tus datos! 🙌\n\n"
+                    "Para agendar necesito saber *qué especialidad* quieres. "
+                    "Elige una opción:\n\n"
+                    "• Escribe *1* para agendar\n"
+                    "• Escribe *menu* para ver todas las opciones\n\n"
+                    "_Te derivaré con la recepcionista si prefieres registro manual._"
+                )
+
         result = await detect_intent(txt)
         intent = result.get("intent", "otro")
         log_event(phone, "intent_detectado", {"intent": intent, "esp": result.get("especialidad")})
