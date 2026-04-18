@@ -295,6 +295,7 @@ app.include_router(portal_routes.router)
 # Cargar HTML del panel admin y portal paciente
 _TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
 _ADMIN_HTML = (_TEMPLATE_DIR / "admin.html").read_text(encoding="utf-8")
+_ADMIN_V2_HTML = (_TEMPLATE_DIR / "admin_v2.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "admin_v2.html").exists() else ""
 _PORTAL_HTML = (_TEMPLATE_DIR / "portal.html").read_text(encoding="utf-8")
 _ECOSISTEMA_HTML = (_TEMPLATE_DIR / "ecosistema.html").read_text(encoding="utf-8")
 _DASHBOARD_HTML = (_TEMPLATE_DIR / "dashboard.html").read_text(encoding="utf-8")
@@ -380,6 +381,20 @@ def admin_panel(token: str | None = Query(None),
             # Authed via cookie — inject empty TOKEN so JS uses cookie-only path
             return _ADMIN_HTML.replace("__TOKEN__", "")
     # 3. No auth → redirect to login
+    return RedirectResponse(url="/admin/login", status_code=302)
+
+
+@app.get("/admin/v2", response_class=HTMLResponse)
+def admin_panel_v2(token: str | None = Query(None),
+                   cmc_session: str | None = Cookie(None)):
+    """Panel de recepción v2 (chat-first). Misma auth que /admin."""
+    from admin_routes import _verify_cookie
+    if token and token == ADMIN_TOKEN:
+        return _ADMIN_V2_HTML.replace("__TOKEN__", token)
+    if cmc_session:
+        role = _verify_cookie(cmc_session)
+        if role in ("admin", "ortodoncia"):
+            return _ADMIN_V2_HTML.replace("__TOKEN__", "")
     return RedirectResponse(url="/admin/login", status_code=302)
 
 
