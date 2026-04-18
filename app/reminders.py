@@ -20,6 +20,19 @@ log = logging.getLogger("bot.reminders")
 _TZ_CL = ZoneInfo("America/Santiago")
 
 
+def _dedup_citas(citas: list[dict]) -> list[dict]:
+    """Deduplica citas por (phone, fecha, hora) para evitar enviar el mismo
+    recordatorio dos veces cuando citas_bot tiene duplicados (ej. cita manual
+    + cita sincronizada de Medilink para la misma hora). Prefiere la de menor
+    id (normalmente la primera creada)."""
+    seen: dict[tuple, dict] = {}
+    for c in citas:
+        key = (c.get("phone"), c.get("fecha"), (c.get("hora") or "")[:5])
+        if key not in seen or (c.get("id") or 0) < (seen[key].get("id") or 0):
+            seen[key] = c
+    return list(seen.values())
+
+
 def _fmt_hora(hora: str) -> str:
     """'10:30:00' → '10:30'"""
     return hora[:5]
@@ -98,7 +111,7 @@ async def enviar_recordatorios(send_text_fn, send_interactive_fn=None,
     - send_template_fn: send_whatsapp_template — usado cuando USE_TEMPLATES=True.
     """
     manana = (datetime.now(ZoneInfo("America/Santiago")).date() + timedelta(days=1)).isoformat()
-    citas = get_citas_bot_pendientes(manana)
+    citas = _dedup_citas(get_citas_bot_pendientes(manana))
 
     if not citas:
         log.info("Recordatorios: sin citas para %s", manana)
@@ -178,7 +191,7 @@ async def enviar_recordatorios_2h(send_text_fn, send_template_fn=None):
     hora_min = hora_min_dt.strftime("%H:%M:%S")
     hora_max = hora_max_dt.strftime("%H:%M:%S")
 
-    citas = get_citas_bot_para_2h_reminder(fecha_hoy, hora_min, hora_max)
+    citas = _dedup_citas(get_citas_bot_para_2h_reminder(fecha_hoy, hora_min, hora_max))
     if not citas:
         return
 
