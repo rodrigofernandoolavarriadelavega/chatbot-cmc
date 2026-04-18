@@ -296,8 +296,33 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - Muestra métricas, conversaciones activas y estado del sistema
 
 ## Sesión en curso
-**Fecha**: 2026-04-17
+**Fecha**: 2026-04-18
 **Historial completo**: ver claude-mem timeline o git log
+
+**Estado Meta/WhatsApp**:
+- Bot en `+56 9 6661 0737` — status `CONNECTED` · quality `GREEN`
+- Display Name "Centro Médico Carampangue" en `PENDING_REVIEW`
+- **Payment method activo** (USD 20 cargados 2026-04-18) — desbloquea templates MARKETING sin restricción del free tier
+- 14 templates APPROVED (9 UTILITY + 5 MARKETING): recordatorio_cita, recordatorio_cita_2h, postconsulta_seguimiento, lista_espera_cupo, informe_listo, seguimiento_medico, reactivacion_paciente, crosssell_kine, control_especialidad, adherencia_kine, sistema_recuperado, más administrativos
+
+**Resumen (2026-04-18)** — UX + fixes basados en conversaciones reales:
+- Modo chat-focus pantalla completa (botón flotante ⛶)
+- Quick replies colapsables (+60px chat), chat-header compacto, takeover-banner fino
+- Marcado visto (badges rojos + separador "↓ Mensajes nuevos ↓")
+- Terceros sin fricción: RUT directo, no pide nombre del dueño del celular
+- Fuzzy typos rurales (biene/horits/pars/medico geberal → correct)
+- "Para mañana" = día siguiente + filtro estricto por fecha
+- "médico familiar", "médico" aislado, "médico para hoy" → detectados
+- Bono Fonasa MLE SE VENDE en el CMC (con huella), Matrona es preferencial (no MLE)
+- HUMAN_TAKEOVER preservado con saludos y cuando recepcionista activa <10min
+- Dedupe "Recibí tu imagen" en ráfagas <60s
+- Audios largos en WAIT_RUT_* → humano automático con contexto
+- Atajo "¿Se confirma mi hora para hoy?" → consulta Medilink directo
+- "Marcar agendado manual" en panel (cita por teléfono/presencial)
+- Fix crítico: `datetime` faltante hacía que imágenes se perdieran silenciosamente
+- Staff Javiera Burgos agregada como profesional
+
+**Resumen (2026-04-17)** — Friction Killer + seguridad:
 
 **Resumen (2026-04-17)** — Friction Killer + seguridad:
 - Fixes técnicos: `is_duplicate` atómico (INSERT OR IGNORE), índices `citas_bot(esp/phone)` + `demanda(phone)` + `events(event, ts)`, rate limit multi-clave (phone + `rut:{rut}`)
