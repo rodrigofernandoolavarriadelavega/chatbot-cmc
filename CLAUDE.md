@@ -151,7 +151,7 @@ El campo `intervalo` es la duración de cita por WhatsApp (en minutos). El bot *
 | 64 | Dr. Claudio Barraza | Traumatología | 15 |
 | 61 | Dr. Tirso Rejón | Ginecología | 20 |
 | 65 | Dr. Nicolás Quijano | Gastroenterología | 20 |
-| 55 | Dra. Javiera Burgos | Odontología General | 30 |
+| 55 | Dra. Javiera Burgos | Odontología General | 60 |
 | 72 | Dr. Carlos Jiménez | Odontología General | 30 |
 | 66 | Dra. Daniela Castillo | Ortodoncia | 30 |
 | 75 | Dr. Fernando Fredes | Endodoncia | 30 |
