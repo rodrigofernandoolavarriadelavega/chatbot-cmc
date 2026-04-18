@@ -305,6 +305,31 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - **Payment method activo** (USD 20 cargados 2026-04-18) — desbloquea templates MARKETING sin restricción del free tier
 - 14 templates APPROVED (9 UTILITY + 5 MARKETING): recordatorio_cita, recordatorio_cita_2h, postconsulta_seguimiento, lista_espera_cupo, informe_listo, seguimiento_medico, reactivacion_paciente, crosssell_kine, control_especialidad, adherencia_kine, sistema_recuperado, más administrativos
 
+**Resumen (2026-04-18 PM)** — Panel Recepción v2 + anti-spam 429 Medilink:
+
+*Panel v2 (`/admin/v2`, no reemplaza v1)*:
+- Rediseño chat-first en `templates/admin_v2.html` (~1200 líneas). Layout 3 cols: bandeja / chat / contexto. Reutiliza endpoints v1 (conversations, takeover, reply, resume, unread-counts, mark-seen, notes, tags, profile, patient-context, patient-files, file, send-document). No agrega endpoints backend
+- Paleta institucional CMC (Manual de Marca): aqua `#4FBECE`, azul `#1172AB`, navy `#0F3F68`. Tipografía Montserrat. Logo = isotipo recortado del PNG (`/static/isotipo.png`, 150×150, bbox auto-detectado con Pillow)
+- Estética pro: sistema de sombras con tinte navy (xs/sm/md/lg), iconos SVG lucide-style, burbujas con tail en primer msg de cada grupo, empty state institucional con isotipo + kbd de shortcuts, scrollbars on-hover
+- Timezone correcto: `parseServerTs()` trata timestamps server como UTC y renderiza en `America/Santiago` (helpers `fmtTime`/`fmtDay`/`fmtClock`). Antes hardcodeaba `-04:00` y rompía con DST
+- Responsive mobile completo: <760px pasa a `display:flex column` (salir del grid evita columnas implícitas de `grid-template-areas`), safe-area inset para iOS, KPIs ocultos, btn-actions con icon-only, contexto overlay 100vw
+- Auth: misma que `/admin` (token query o cookie HMAC)
+
+*Anti-spam 429 Medilink*:
+- Síntoma: mensaje "✅ Medilink recuperado" al admin cada minuto cuando la API oscilaba (429 intermitente)
+- `resilience.should_notify_recovery()`: throttle 30 min + flap protection (ignora caídas <3 min)
+- `resilience.mark_medilink_down()` ahora idempotente (no resetea `_KEY_MEDILINK_DOWN_AT` si ya estaba down) para medir duración real
+- `jobs._job_medilink_watchdog` envuelve notifs (pacientes + admin) con el guard; `mark_medilink_up()` sigue ejecutando siempre para `/health`
+- **Root cause matado**: `/admin/api/agenda-dia` desactivado — retorna `{profesionales: [], disabled: true}` sin consultar Medilink. Ese endpoint hacía fan-out de ~20 requests paralelos (uno por profesional) que saturaban rate limit. La recepción ya ve la agenda directamente en Medilink — era redundante. Implementación original preservada como `_admin_agenda_dia_DISABLED`
+
+*Otros fixes*:
+- `Dra. Javiera Burgos` intervalo 30→60 min en `PROFESIONALES`
+- Isotipo recortado con script Pillow inline (bbox automático del logo horizontal 655×171 → cuadrado 150×150)
+
+Commits: `2b45259` (v2 inicial), `2916c31` (fix filtro No leídas), `46b1bdf` (sección archivos), `fb9d9f1` (logo topbar), `a90379c` (logo cruz SVG), `b1933c9` (paleta CMC + tz + Javiera 60min), `487a281` (logo via CSS), `42b9b0d` (isotipo.png), `23ed4f4` (pulido estético), `029b6dd`+`e1c3a04` (responsive mobile), `19e3f3f` (anti-spam), `cfe53c6` (desactivar agenda-dia)
+
+---
+
 **Resumen (2026-04-18)** — UX + fixes basados en conversaciones reales:
 - Modo chat-focus pantalla completa (botón flotante ⛶)
 - Quick replies colapsables (+60px chat), chat-header compacto, takeover-banner fino
