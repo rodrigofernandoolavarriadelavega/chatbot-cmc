@@ -57,7 +57,7 @@ PROFESIONALES = {
     # 64: Dr. Claudio Barraza — Traumatología — temporalmente deshabilitado
     61: {"nombre": "Dr. Tirso Rejón",          "especialidad": "Ginecología",           "intervalo": 20},
     65: {"nombre": "Dr. Nicolás Quijano",      "especialidad": "Gastroenterología",     "intervalo": 20},
-    55: {"nombre": "Dra. Javiera Burgos",      "especialidad": "Odontología General",   "intervalo": 30},
+    55: {"nombre": "Dra. Javiera Burgos",      "especialidad": "Odontología General",   "intervalo": 60},
     72: {"nombre": "Dr. Carlos Jiménez",       "especialidad": "Odontología General",   "intervalo": 30},
     66: {"nombre": "Dra. Daniela Castillo",    "especialidad": "Ortodoncia",            "intervalo": 30},
     75: {"nombre": "Dr. Fernando Fredes",      "especialidad": "Endodoncia",            "intervalo": 30},
