@@ -127,7 +127,7 @@ def _report_up() -> None:
     if _last_reported_status == "up":
         return
     try:
-        from app.resilience import mark_medilink_up
+        from resilience import mark_medilink_up
         mark_medilink_up()
     except Exception as e:  # pragma: no cover — nunca debe romper un call
         log.error("resilience.mark_medilink_up falló: %s", e)
@@ -139,7 +139,7 @@ def _report_down(reason: str) -> None:
     if _last_reported_status == "down":
         return
     try:
-        from app.resilience import mark_medilink_down
+        from resilience import mark_medilink_down
         mark_medilink_down(reason)
     except Exception as e:  # pragma: no cover
         log.error("resilience.mark_medilink_down falló: %s", e)
