@@ -571,7 +571,19 @@ async function loadInbox(){
 }
 
 function filteredConvs(){
-  let list = conversations;
+  let list = conversations.slice();
+  // Si hay phones con unread que no están en conversations, los agrego como "fantasma"
+  // para que el filtro 'unread' siempre coincida con el badge.
+  const inList = new Set(list.map(c => c.phone));
+  Object.keys(unreadMap).forEach(p => {
+    if ((unreadMap[p]||0) > 0 && !inList.has(p)){
+      list.push({
+        phone: p, state: "", nombre: "", flow_data: {},
+        last_text: "(mensaje sin sesión activa)", last_dir: "in",
+        last_ts: "", canal: p.startsWith("ig_") ? "instagram" : p.startsWith("fb_") ? "messenger" : "whatsapp",
+      });
+    }
+  });
   if (searchTerm){
     const q = searchTerm.toLowerCase();
     list = list.filter(c =>
@@ -630,19 +642,18 @@ function renderInbox(){
 }
 
 function updateKpis(){
-  const totalUnread = Object.values(unreadMap).reduce((a,b) => a + (b||0), 0);
+  const unreadConvs = Object.keys(unreadMap).filter(p => (unreadMap[p]||0) > 0).length;
+  const totalUnreadMsgs = Object.values(unreadMap).reduce((a,b) => a + (b||0), 0);
   const takeoverN = conversations.filter(c => c.state === "HUMAN_TAKEOVER").length;
   const waitingN = conversations.filter(c => (c.msgs_sin_respuesta||0) > 0 || c.last_dir === "in").length;
-  const today = new Date().toDateString();
-  const todayN = conversations.filter(c => c.last_ts && new Date(c.last_ts.replace(" ","T")).toDateString() === today).length;
-  $("#kpiUnread").querySelector("b").textContent = totalUnread;
+  $("#kpiUnread").querySelector("b").textContent = totalUnreadMsgs;
   $("#kpiTakeover").querySelector("b").textContent = takeoverN;
   $("#kpiPending").querySelector("b").textContent = waitingN;
-  $("#kpiUnread").className = "kpi" + (totalUnread > 0 ? " alert" : "");
+  $("#kpiUnread").className = "kpi" + (totalUnreadMsgs > 0 ? " alert" : "");
   $("#kpiTakeover").className = "kpi" + (takeoverN > 0 ? " warn" : "");
   $("#kpiPending").className = "kpi" + (waitingN > 0 ? " warn" : "");
   $("#tabAllN").textContent = conversations.length;
-  $("#tabUnreadN").textContent = totalUnread;
+  $("#tabUnreadN").textContent = unreadConvs;
   $("#tabTakeoverN").textContent = takeoverN;
   $("#tabWaitingN").textContent = waitingN;
 }
