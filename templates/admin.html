@@ -844,6 +844,116 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
 
 /* ── PRINT ── */
 @media print {
+/* AGENDA-HOME / PALETTE / TOASTS / SHORTCUTS */
+:root { --estado-pendiente-border:#f59e0b;--estado-pendiente-bg:#fef3c7;--estado-pendiente-fg:#92400e;--estado-confirmada-border:#10b981;--estado-confirmada-bg:#d1fae5;--estado-confirmada-fg:#065f46;--estado-en_consulta-border:#3b82f6;--estado-en_consulta-bg:#dbeafe;--estado-en_consulta-fg:#1e40af;--estado-atendida-border:#94a3b8;--estado-atendida-bg:#f1f5f9;--estado-atendida-fg:#475569;--estado-no_asistio-border:#ef4444;--estado-no_asistio-bg:#fee2e2;--estado-no_asistio-fg:#991b1b;--estado-cancelada-border:#cbd5e1;--estado-cancelada-bg:#f8fafc;--estado-cancelada-fg:#64748b; }
+#agenda-home { padding:14px 18px; background:#f8fafc; border-bottom:1px solid #e2e8f0; }
+#agenda-home.collapsed .ah-body { display:none; }
+.ah-header { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px; }
+.ah-header h2 { font-size:16px; font-weight:700; margin:0; color:#0f172a; }
+.ah-date { font-size:12px; color:#64748b; font-weight:500; text-transform:capitalize; }
+.ah-nav-day button { background:#fff; border:1px solid #e2e8f0; border-radius:6px; width:26px; height:26px; cursor:pointer; font-size:12px; color:#475569; }
+.ah-nav-day .ah-btn-hoy { width:auto; padding:0 9px; font-weight:600; font-size:11px; }
+.ah-prof-select { border:1px solid #e2e8f0; border-radius:6px; padding:3px 7px; font-size:12px; background:#fff; color:#334155; }
+.ah-pill-row { display:inline-flex; gap:5px; flex-wrap:wrap; }
+.ah-pill { display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:600; background:#fff; border:1px solid #e2e8f0; color:#475569; }
+.ah-pill.p-pendiente { background:var(--estado-pendiente-bg); color:var(--estado-pendiente-fg); border-color:transparent; }
+.ah-pill.p-confirmada { background:var(--estado-confirmada-bg); color:var(--estado-confirmada-fg); border-color:transparent; }
+.ah-pill.p-en_consulta { background:var(--estado-en_consulta-bg); color:var(--estado-en_consulta-fg); border-color:transparent; }
+.ah-pill.p-atendida { background:var(--estado-atendida-bg); color:var(--estado-atendida-fg); border-color:transparent; }
+.ah-pill.p-no_asistio { background:var(--estado-no_asistio-bg); color:var(--estado-no_asistio-fg); border-color:transparent; }
+.ah-btn-waiting { margin-left:auto; background:#0ea5e9; color:#fff; border:none; border-radius:8px; padding:5px 10px; font-size:12px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
+.ah-btn-waiting .badge-count { background:#fff; color:#0284c7; border-radius:999px; padding:0 6px; font-size:10px; font-weight:700; min-width:16px; text-align:center; }
+.ah-btn-collapse { background:transparent; border:1px solid #e2e8f0; border-radius:6px; width:26px; height:26px; cursor:pointer; color:#64748b; font-size:15px; }
+#agenda-home-grid { display:grid; grid-template-columns:2fr 1fr; gap:14px; }
+@media (max-width:900px) { #agenda-home-grid { grid-template-columns:1fr; } }
+.ah-col { background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px; min-height:180px; max-height:560px; overflow-y:auto; }
+.ah-col h3 { font-size:12px; font-weight:700; color:#334155; text-transform:uppercase; letter-spacing:0.5px; margin:0 0 8px; padding-bottom:6px; border-bottom:1px solid #f1f5f9; position:sticky; top:0; background:#fff; z-index:1; }
+.ah-hora-group { margin-bottom:10px; }
+.ah-hora-label { font-size:11px; font-weight:700; color:#64748b; margin-bottom:5px; padding-left:3px; }
+.cita-card { background:#fff; border-left:4px solid #cbd5e1; border-top:1px solid #f1f5f9; border-right:1px solid #f1f5f9; border-bottom:1px solid #f1f5f9; border-radius:8px; padding:8px 10px; margin-bottom:6px; display:grid; grid-template-columns:52px 1fr auto; gap:9px; align-items:center; cursor:pointer; outline:2px solid transparent; outline-offset:-2px; transition:outline .15s,box-shadow .15s; }
+.cita-card:hover { box-shadow:0 2px 8px rgba(15,23,42,.08); }
+.cita-card.cita-focused { outline-color:#3b82f6; }
+.cita-card.estado-pendiente { border-left-color:var(--estado-pendiente-border); }
+.cita-card.estado-confirmada { border-left-color:var(--estado-confirmada-border); }
+.cita-card.estado-en_consulta { border-left-color:var(--estado-en_consulta-border); background:#f0f7ff; }
+.cita-card.estado-atendida { border-left-color:var(--estado-atendida-border); opacity:.7; }
+.cita-card.estado-atendida .cita-paciente,.cita-card.estado-atendida .cita-meta { text-decoration:line-through; color:#94a3b8; }
+.cita-card.estado-no_asistio { border-left-color:var(--estado-no_asistio-border); background:#fff5f5; }
+.cita-card.estado-cancelada { border-left-color:var(--estado-cancelada-border); opacity:.55; }
+.cita-card.estado-cancelada .cita-paciente,.cita-card.estado-cancelada .cita-meta { text-decoration:line-through; color:#94a3b8; }
+.cita-hora { font-size:13px; font-weight:700; color:#0f172a; text-align:center; line-height:1.2; }
+.cita-hora .cita-hora-fin { display:block; font-size:10px; font-weight:500; color:#94a3b8; margin-top:2px; }
+.cita-info { min-width:0; }
+.cita-paciente { font-size:13px; font-weight:600; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cita-rut { font-size:11px; color:#94a3b8; font-weight:500; margin-left:4px; }
+.cita-meta { font-size:11.5px; color:#64748b; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cita-meta .sep { margin:0 4px; color:#cbd5e1; }
+.cita-right { display:flex; flex-direction:column; gap:5px; align-items:flex-end; }
+.cita-badge-row { display:inline-flex; gap:4px; align-items:center; }
+.estado-badge { display:inline-block; padding:2px 7px; border-radius:999px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.3px; }
+.estado-badge.estado-pendiente { background:var(--estado-pendiente-bg); color:var(--estado-pendiente-fg); }
+.estado-badge.estado-confirmada { background:var(--estado-confirmada-bg); color:var(--estado-confirmada-fg); }
+.estado-badge.estado-en_consulta { background:var(--estado-en_consulta-bg); color:var(--estado-en_consulta-fg); }
+.estado-badge.estado-atendida { background:var(--estado-atendida-bg); color:var(--estado-atendida-fg); }
+.estado-badge.estado-no_asistio { background:var(--estado-no_asistio-bg); color:var(--estado-no_asistio-fg); }
+.estado-badge.estado-cancelada { background:var(--estado-cancelada-bg); color:var(--estado-cancelada-fg); }
+.wa-chip { display:inline-flex; align-items:center; gap:3px; padding:2px 6px; border-radius:999px; font-size:10.5px; font-weight:600; cursor:help; border:1px solid transparent; }
+.wa-chip.wa-no_enviado { background:#f1f5f9; color:#94a3b8; border-color:#e2e8f0; }
+.wa-chip.wa-enviado { background:#f1f5f9; color:#475569; }
+.wa-chip.wa-entregado { background:#e2e8f0; color:#334155; }
+.wa-chip.wa-leido { background:#dbeafe; color:#1e40af; }
+.wa-chip.wa-respondido { background:#d1fae5; color:#065f46; }
+.quick-actions { display:inline-flex; gap:3px; }
+.qa-btn { height:26px; min-width:26px; padding:0 7px; border-radius:6px; border:1px solid #e2e8f0; background:#fff; color:#475569; font-size:12px; font-weight:600; cursor:pointer; }
+.qa-btn[disabled] { opacity:.4; cursor:not-allowed; }
+#ah-waiting-list { display:flex; flex-direction:column; gap:5px; }
+.waiting-card { background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:7px 9px; display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center; }
+.waiting-card.priority-alta { border-left:3px solid #ef4444; }
+.waiting-card.priority-normal { border-left:3px solid #94a3b8; }
+.waiting-card .wc-nombre { font-size:12.5px; font-weight:600; color:#0f172a; }
+.waiting-card .wc-meta { font-size:10.5px; color:#64748b; margin-top:1px; }
+.waiting-card .wc-tiempo { font-size:11.5px; font-weight:700; color:#475569; }
+.waiting-card .wc-tiempo.tiempo-alerta { color:#ef4444; }
+.waiting-card .wc-btn-quitar { background:transparent; border:1px solid #e2e8f0; border-radius:6px; width:22px; height:22px; cursor:pointer; color:#94a3b8; font-size:11px; margin-top:4px; }
+.ah-empty { text-align:center; padding:22px 10px; color:#94a3b8; font-size:12px; font-style:italic; }
+.cp-overlay { position:fixed; inset:0; background:rgba(15,23,42,.55); backdrop-filter:blur(4px); z-index:9999; display:flex; align-items:flex-start; justify-content:center; padding-top:12vh; }
+.cp-modal { width:92%; max-width:640px; background:#fff; border-radius:12px; box-shadow:0 20px 50px -10px rgba(0,0,0,.35); overflow:hidden; }
+.cp-input-wrap { display:flex; align-items:center; gap:12px; padding:14px 18px; border-bottom:1px solid #f1f5f9; }
+.cp-input { flex:1; border:none; outline:none; font-size:16px; background:transparent; color:#0f172a; }
+.cp-results { max-height:52vh; overflow-y:auto; padding:6px 0; }
+.cp-section-header { font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:#94a3b8; padding:10px 18px 4px; }
+.cp-item { display:flex; align-items:center; gap:12px; padding:9px 18px; cursor:pointer; border-left:3px solid transparent; }
+.cp-item:hover { background:#f8fafc; }
+.cp-item.cp-active { background:#eff6ff; border-left-color:#3b82f6; }
+.cp-item-icon { width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:6px; background:#f1f5f9; font-size:14px; }
+.cp-item-body { flex:1; min-width:0; }
+.cp-item-title { font-size:13.5px; font-weight:500; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cp-item-hint { font-size:11.5px; color:#64748b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cp-empty { padding:28px 18px; text-align:center; color:#94a3b8; font-size:12.5px; }
+.cp-footer { display:flex; align-items:center; gap:14px; padding:9px 18px; border-top:1px solid #f1f5f9; background:#f8fafc; font-size:10.5px; color:#64748b; }
+.cp-footer kbd { display:inline-block; padding:1px 6px; margin-right:4px; background:#fff; border:1px solid #cbd5e1; border-radius:4px; font-family:ui-monospace,monospace; font-size:10px; color:#334155; }
+.cp-footer-spacer { flex:1; }
+.sh-overlay { position:fixed; inset:0; background:rgba(15,23,42,.55); z-index:9998; display:flex; align-items:center; justify-content:center; }
+.sh-card { width:92%; max-width:560px; background:#fff; border-radius:12px; overflow:hidden; }
+.sh-header { display:flex; align-items:center; justify-content:space-between; padding:14px 20px; border-bottom:1px solid #f1f5f9; }
+.sh-header h3 { margin:0; font-size:15px; color:#0f172a; }
+.sh-close { border:none; background:transparent; cursor:pointer; font-size:22px; color:#64748b; }
+.sh-body { padding:14px 20px; display:grid; grid-template-columns:1fr 1fr; gap:22px; }
+.sh-group-title { font-size:10.5px; font-weight:600; text-transform:uppercase; color:#94a3b8; margin-bottom:7px; }
+.sh-row { display:flex; justify-content:space-between; align-items:center; padding:5px 0; font-size:12.5px; color:#334155; gap:10px; }
+.sh-footer { padding:9px 20px; background:#f8fafc; border-top:1px solid #f1f5f9; font-size:10.5px; color:#64748b; text-align:right; }
+.sh-card kbd, .sh-footer kbd { display:inline-block; padding:2px 6px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:4px; font-family:ui-monospace,monospace; font-size:10.5px; color:#1e293b; margin:0 1px; }
+.toast-stack { position:fixed; bottom:22px; left:50%; transform:translateX(-50%); display:flex; flex-direction:column-reverse; gap:9px; z-index:10000; pointer-events:none; }
+.toast { pointer-events:auto; min-width:280px; max-width:380px; background:#111827; color:#fff; border-radius:10px; box-shadow:0 10px 30px -8px rgba(0,0,0,.4); overflow:hidden; position:relative; }
+.toast-body { display:flex; align-items:center; gap:11px; padding:11px 15px; }
+.toast-msg { flex:1; font-size:12.5px; line-height:1.35; }
+.toast-action { background:transparent; border:none; color:#fff; cursor:pointer; font-size:12.5px; font-weight:600; text-decoration:underline; padding:3px 5px; }
+.toast-progress { position:absolute; left:0; bottom:0; height:2px; background:rgba(255,255,255,.55); width:100%; transform-origin:left center; }
+.toast-success { background:#065f46; }
+.toast-error { background:#991b1b; }
+.toast-undo { background:#1e293b; }
+.toast-info { background:#111827; }
+
   .topbar, .col-filters, .ctx-panel, .reply-bar,
   .mobile-hamburger, .mobile-back, .mobile-ctx-toggle,
   .filters-overlay, .ctx-overlay { display: none !important; }
@@ -925,6 +1035,45 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
   </div>
 </div>
 
+<!-- AGENDA HOME -->
+<section id="agenda-home">
+  <div class="ah-header">
+    <h2>📅 Agenda de hoy</h2>
+    <span class="ah-date" id="ah-fecha-label">—</span>
+    <div class="ah-nav-day">
+      <button type="button" id="ah-btn-prev" title="Día anterior">◀</button>
+      <button type="button" class="ah-btn-hoy" id="ah-btn-hoy" title="Volver a hoy">Hoy</button>
+      <button type="button" id="ah-btn-next" title="Día siguiente">▶</button>
+    </div>
+    <select id="ah-prof-select" class="ah-prof-select" title="Filtrar por profesional">
+      <option value="">Todos los profesionales</option>
+    </select>
+    <div class="ah-pill-row" id="ah-pill-row">
+      <span class="ah-pill p-pendiente">Pendientes <span class="num" id="ah-count-pendiente">0</span></span>
+      <span class="ah-pill p-confirmada">Confirmadas <span class="num" id="ah-count-confirmada">0</span></span>
+      <span class="ah-pill p-en_consulta">En consulta <span class="num" id="ah-count-en_consulta">0</span></span>
+      <span class="ah-pill p-atendida">Atendidas <span class="num" id="ah-count-atendida">0</span></span>
+      <span class="ah-pill p-no_asistio">No asistió <span class="num" id="ah-count-no_asistio">0</span></span>
+    </div>
+    <button type="button" class="ah-btn-waiting" id="ah-btn-waiting-toggle" title="Ir a sala de espera">
+      🏥 Sala de espera <span class="badge-count" id="ah-waiting-count">0</span>
+    </button>
+    <button type="button" class="ah-btn-collapse" id="ah-btn-collapse" title="Mostrar/ocultar agenda">×</button>
+  </div>
+  <div class="ah-body">
+    <div id="agenda-home-grid">
+      <div class="ah-col" id="ah-col-citas">
+        <h3>Citas del día</h3>
+        <div id="ah-grid-citas"><div class="ah-empty">Cargando agenda…</div></div>
+      </div>
+      <div class="ah-col" id="ah-col-waiting">
+        <h3>Sala de espera</h3>
+        <div id="ah-waiting-list"><div class="ah-empty">Sin pacientes esperando.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- MODAL KINESIOLOGÍA -->
 <div id="modal-kine" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:flex-start;justify-content:center;padding-top:30px;padding-bottom:30px;overflow-y:auto;">
   <div id="modal-kine-inner" style="background:#fff;border-radius:14px;width:900px;max-width:98vw;box-shadow:0 20px 60px rgba(0,0,0,.2);position:relative;margin:auto;">
@@ -994,22 +1143,24 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
   </div>
 </div>
 
-<!-- MODAL BÚSQUEDA GLOBAL -->
-<div id="modal-busqueda" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:flex-start;justify-content:center;padding-top:80px;">
-  <div style="background:#fff;border-radius:14px;width:560px;max-width:95vw;max-height:70vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.2);position:relative;">
-    <div style="padding:20px 20px 12px;border-bottom:1px solid var(--border);">
-      <div style="display:flex;gap:8px;align-items:center;">
-        <span style="font-size:18px;">🔍</span>
-        <input id="global-search-input" type="text" placeholder="Buscar en todas las conversaciones..."
-          style="flex:1;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;"
-          oninput="buscarGlobal()" onkeydown="if(event.key==='Escape') cerrarBusquedaGlobal()">
-        <button onclick="cerrarBusquedaGlobal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#94a3b8;">×</button>
-      </div>
-      <div id="global-search-meta" style="font-size:11px;color:#94a3b8;margin-top:8px;min-height:14px;"></div>
+<!-- COMMAND PALETTE -->
+<div id="command-palette" class="cp-overlay" style="display:none;" role="dialog" aria-modal="true">
+  <div class="cp-modal">
+    <div class="cp-input-wrap">
+      <span style="font-size:18px;opacity:.6;">🔍</span>
+      <input type="text" id="cp-input" class="cp-input" placeholder="Buscar acción, paciente, RUT, teléfono o conversación..." autocomplete="off" spellcheck="false">
     </div>
-    <div id="global-search-results" style="overflow-y:auto;padding:8px 0;flex:1;"></div>
+    <div class="cp-results" id="cp-results" role="listbox"></div>
+    <div class="cp-footer">
+      <span><kbd>↑</kbd><kbd>↓</kbd> navegar</span>
+      <span><kbd>↵</kbd> ejecutar</span>
+      <span><kbd>esc</kbd> cerrar</span>
+      <span class="cp-footer-spacer"></span>
+      <span><kbd>?</kbd> atajos</span>
+    </div>
   </div>
 </div>
+<div id="modal-busqueda" style="display:none;"></div>
 
 <!-- MODAL ANULAR HORA -->
 <div id="modal-anular" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center;">
@@ -3172,16 +3323,8 @@ function filtrarMensajesChat() {
 // ── BÚSQUEDA GLOBAL ───────────────────────────────────────────────────────────
 let globalSearchTimer = null;
 
-function abrirBusquedaGlobal() {
-  document.getElementById('modal-busqueda').style.display='flex';
-  setTimeout(()=>document.getElementById('global-search-input').focus(), 50);
-}
-function cerrarBusquedaGlobal() {
-  document.getElementById('modal-busqueda').style.display='none';
-  document.getElementById('global-search-input').value='';
-  document.getElementById('global-search-results').innerHTML='';
-  document.getElementById('global-search-meta').textContent='';
-}
+function abrirBusquedaGlobal(){ if(typeof openPalette==='function') openPalette(); }
+function cerrarBusquedaGlobal(){ if(typeof closePalette==='function') closePalette(); }
 function buscarGlobal() {
   clearTimeout(globalSearchTimer);
   const q = document.getElementById('global-search-input').value.trim();
@@ -3962,29 +4105,20 @@ if("Notification" in window && Notification.permission==="default"){
   },{once:true});
 }
 
-// ── KEYBOARD SHORTCUTS ──────────────────────────────────────────────────────
+// KEYBOARD legacy: solo ESC para modales — Ctrl+K y letras en bloque AGENDA-HOME al final.
 document.addEventListener("keydown",function(e){
-  // Skip if user is typing in an input/textarea
+  if(e.key!=="Escape") return;
   const tag=document.activeElement?.tagName;
-  if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT"){
-    if(e.key==="Escape"){document.activeElement.blur();return;}
-    if(!((e.ctrlKey||e.metaKey)&&e.key==="k")) return;
-  }
-  // Ctrl+K / Cmd+K → search
-  if((e.ctrlKey||e.metaKey)&&e.key==="k"){e.preventDefault();abrirBusquedaGlobal();return;}
-  // Escape → close modals
-  if(e.key==="Escape"){
-    if(document.getElementById("modal-busqueda").style.display==="flex"){cerrarBusquedaGlobal();return;}
-    if(document.getElementById("modal-confirm").style.display==="flex"){cerrarModalConfirmaciones();return;}
-    if(document.getElementById("modal-fidel").style.display==="flex"){cerrarModalFidelizacion();return;}
-    if(document.getElementById("modal-nps").style.display==="flex"){cerrarModalNPS();return;}
-    if(document.getElementById("modal-analytics").style.display==="flex"){cerrarModalAnalytics();return;}
-    if(document.getElementById("modal-kine").style.display==="flex"){cerrarModalKine();return;}
-    if(document.getElementById("modal-agendar").style.display==="flex"){cerrarModalAgendar();return;}
-    if(document.getElementById("modal-anular").style.display==="flex"){cerrarModalAnular();return;}
-    if(document.querySelector(".ctx-panel.open")){toggleCtxPanel();return;}
-    if(document.querySelector(".col-filters.open")){toggleFilters();return;}
-  }
+  if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT"){document.activeElement.blur();return;}
+  if(document.getElementById("modal-confirm")?.style.display==="flex"){cerrarModalConfirmaciones();return;}
+  if(document.getElementById("modal-fidel")?.style.display==="flex"){cerrarModalFidelizacion();return;}
+  if(document.getElementById("modal-nps")?.style.display==="flex"){cerrarModalNPS();return;}
+  if(document.getElementById("modal-analytics")?.style.display==="flex"){cerrarModalAnalytics();return;}
+  if(document.getElementById("modal-kine")?.style.display==="flex"){cerrarModalKine();return;}
+  if(document.getElementById("modal-agendar")?.style.display==="flex"){cerrarModalAgendar();return;}
+  if(document.getElementById("modal-anular")?.style.display==="flex"){cerrarModalAnular();return;}
+  if(document.querySelector(".ctx-panel.open")){toggleCtxPanel();return;}
+  if(document.querySelector(".col-filters.open")){toggleFilters();return;}
 });
 
 // Close dropdown on outside click
@@ -4529,6 +4663,252 @@ function renderSavings(){
 
 loadSavings("today");
 setInterval(() => loadSavings("today"), 300000);
+
+// ============ AGENDA HOME ============
+const AH_STATE = { fecha:null, citas:[], waiting:[], focusedCitaId:null, refreshAgenda:null, refreshWaiting:null, refreshClock:null };
+function ah_hoyISO(){ const d=new Date(); const off=d.getTimezoneOffset(); const local=new Date(d.getTime()-off*60000); return local.toISOString().slice(0,10); }
+function ah_formatHora(h){ if(!h) return '--:--'; const m=String(h).match(/(\d{1,2}):(\d{2})/); return m?`${m[1].padStart(2,'0')}:${m[2]}`:String(h).slice(0,5); }
+function ah_esc(s){ if(s===null||s===undefined) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function ah_shiftDate(iso,days){ const [y,m,d]=iso.split('-').map(Number); const dt=new Date(y,m-1,d); dt.setDate(dt.getDate()+days); const yy=dt.getFullYear(); const mm=String(dt.getMonth()+1).padStart(2,'0'); const dd=String(dt.getDate()).padStart(2,'0'); return `${yy}-${mm}-${dd}`; }
+function ah_fechaHumana(iso){ if(!iso) return ''; const [y,m,d]=iso.split('-').map(Number); const dt=new Date(y,m-1,d); return dt.toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long'}); }
+
+const WA_STATUS_META = { no_enviado:{icon:'\u26AA',label:'No enviado'}, enviado:{icon:'\u2713',label:'Enviado'}, entregado:{icon:'\u2713\u2713',label:'Entregado'}, leido:{icon:'\u2713\u2713',label:'Leido'}, respondido:{icon:'\uD83D\uDCAC',label:'Respondido'} };
+function renderWaChip(s,tsw){ const k=s||'no_enviado'; const m=WA_STATUS_META[k]||WA_STATUS_META.no_enviado; return `<span class="wa-chip wa-${k}${tsw?' service-window':''}" title="WhatsApp: ${m.label}${tsw?' - Ventana abierta':''}">${m.icon}</span>`; }
+const ESTADO_LABEL = { pendiente:'Pendiente', confirmada:'Confirmada', en_consulta:'En consulta', atendida:'Atendida', no_asistio:'No asistio', cancelada:'Cancelada' };
+
+function renderCitaCard(c){
+  const e=c.estado||'pendiente'; const lbl=ESTADO_LABEL[e]||e;
+  const hi=ah_formatHora(c.hora_inicio); const hf=c.hora_fin?ah_formatHora(c.hora_fin):'';
+  const ph=ah_esc(c.paciente_phone||c.phone||''); const id=ah_esc(c.id_cita);
+  const pc=e==='pendiente'; const pa=['pendiente','confirmada'].includes(e); const pn=['pendiente','confirmada'].includes(e);
+  const cj=ah_esc(JSON.stringify(c));
+  const fo=AH_STATE.focusedCitaId==String(c.id_cita)?' cita-focused':'';
+  return `<div class="cita-card estado-${e}${fo}" data-id-cita="${id}" data-telefono="${ph}" data-nombre="${ah_esc(c.paciente_nombre||'')}" onclick="focusCita('${id}')">
+    <div class="cita-hora">${hi}${hf?`<span class="cita-hora-fin">${hf}</span>`:''}</div>
+    <div class="cita-info">
+      <div class="cita-paciente" onclick="event.stopPropagation();abrirChatDesdeAgenda('${ph}')">${ah_esc(c.paciente_nombre||'Sin nombre')}${c.paciente_rut?`<span class="cita-rut">${ah_esc(c.paciente_rut)}</span>`:''}</div>
+      <div class="cita-meta">${ah_esc(c.especialidad||'')}${c.profesional_nombre?`<span class="sep">·</span>${ah_esc(c.profesional_nombre)}`:''}</div>
+    </div>
+    <div class="cita-right">
+      <div class="cita-badge-row">${renderWaChip(c.wa_status,c.tiene_service_window)}<span class="estado-badge estado-${e}">${ah_esc(lbl)}</span></div>
+      <div class="quick-actions">
+        <button class="qa-btn qa-confirmar" title="Confirmar (C)" ${pc?'':'disabled'} onclick="event.stopPropagation();cambiarEstadoCita('${id}','confirmada')">\u2713</button>
+        <button class="qa-btn qa-wa" title="WhatsApp (W)" onclick='event.stopPropagation();quickEnviarWA(${cj.replace(/"/g,"&quot;")})'>\uD83D\uDCAC</button>
+        <button class="qa-btn qa-asistio" title="Llegada (A)" ${pa?'':'disabled'} onclick='event.stopPropagation();marcarLlegadaPaciente(${cj.replace(/"/g,"&quot;")})'>\uD83C\uDFE5</button>
+        <button class="qa-btn qa-noasistio" title="No asistio (F)" ${pn?'':'disabled'} onclick="event.stopPropagation();cambiarEstadoCita('${id}','no_asistio')">\u2717</button>
+      </div>
+    </div>
+  </div>`;
+}
+function focusCita(id){ AH_STATE.focusedCitaId=String(id); document.querySelectorAll('.cita-card').forEach(el=>el.classList.toggle('cita-focused',el.dataset.idCita===String(id))); }
+
+function renderAgendaCitas(citas){
+  const c=document.getElementById('ah-grid-citas'); if(!c) return;
+  if(!citas||!citas.length){ c.innerHTML='<div class="ah-empty">No hay citas para hoy.</div>'; return; }
+  const sel=document.getElementById('ah-prof-select'); const f=sel?sel.value:'';
+  const l=f?citas.filter(x=>(x.profesional_nombre||'')===f):citas;
+  if(!l.length){ c.innerHTML='<div class="ah-empty">Sin citas para ese profesional.</div>'; return; }
+  const ord=[...l].sort((a,b)=>String(a.hora_inicio||'').localeCompare(String(b.hora_inicio||'')));
+  const gr={}; ord.forEach(x=>{ const hh=ah_formatHora(x.hora_inicio).slice(0,2)+':00'; (gr[hh]=gr[hh]||[]).push(x); });
+  let h=''; Object.keys(gr).sort().forEach(hh=>{ h+=`<div class="ah-hora-group"><div class="ah-hora-label">${hh}</div>${gr[hh].map(renderCitaCard).join('')}</div>`; });
+  c.innerHTML=h;
+}
+function actualizarContadoresAgenda(citas){ const k={pendiente:0,confirmada:0,en_consulta:0,atendida:0,no_asistio:0}; (citas||[]).forEach(c=>{ const e=c.estado||'pendiente'; if(k[e]!==undefined) k[e]++; }); Object.keys(k).forEach(x=>{ const el=document.getElementById('ah-count-'+x); if(el) el.textContent=k[x]; }); }
+function actualizarSelectProfesionales(citas){ const s=document.getElementById('ah-prof-select'); if(!s) return; const a=s.value; const p=Array.from(new Set((citas||[]).map(c=>c.profesional_nombre).filter(Boolean))).sort(); s.innerHTML='<option value="">Todos los profesionales</option>'+p.map(x=>`<option value="${ah_esc(x)}"${x===a?' selected':''}>${ah_esc(x)}</option>`).join(''); }
+
+async function cargarAgendaHome(fecha){
+  AH_STATE.fecha=fecha||ah_hoyISO();
+  const lbl=document.getElementById('ah-fecha-label'); if(lbl) lbl.textContent=ah_fechaHumana(AH_STATE.fecha);
+  try{
+    const r=await fetch(apiUrl(`/admin/api/agenda-dia?fecha=${encodeURIComponent(AH_STATE.fecha)}`));
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const data=await r.json();
+    let citas=[];
+    if(Array.isArray(data.citas)) citas=data.citas;
+    else if(Array.isArray(data.profesionales)){ data.profesionales.forEach(p=>(p.citas||[]).forEach(c=>{ c.profesional_nombre=c.profesional_nombre||p.nombre||''; citas.push(c); })); }
+    AH_STATE.citas=citas;
+    actualizarSelectProfesionales(citas);
+    renderAgendaCitas(citas);
+    actualizarContadoresAgenda(citas);
+  }catch(e){ console.error('cargarAgendaHome',e); const c=document.getElementById('ah-grid-citas'); if(c) c.innerHTML='<div class="ah-empty">Error al cargar la agenda.</div>'; }
+}
+function refrescarAgenda(){ cargarAgendaHome(AH_STATE.fecha); }
+
+async function cambiarEstadoCita(id,nuevo){
+  try{
+    const r=await fetch(apiUrl(`/admin/api/cita/${encodeURIComponent(id)}/estado`),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({estado:nuevo})});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    if(typeof showToast==='function') showToast(`Cita: ${ESTADO_LABEL[nuevo]||nuevo}`,{type:'success',ttl:3500});
+    await cargarAgendaHome(AH_STATE.fecha);
+  }catch(e){ console.error(e); if(typeof showToast==='function') showToast('No se pudo cambiar estado',{type:'error'}); }
+}
+async function marcarLlegadaPaciente(c){
+  try{
+    const b={id_cita:c.id_cita, phone:c.paciente_phone||c.phone||'', nombre:c.paciente_nombre||'', especialidad:c.especialidad||'', profesional:c.profesional_nombre||'', prioridad:0};
+    const r=await fetch(apiUrl('/admin/api/waiting-room/arrive'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    await cambiarEstadoCita(c.id_cita,'en_consulta');
+    await cargarWaitingRoom();
+  }catch(e){ console.error(e); if(typeof showToast==='function') showToast('No se pudo marcar llegada',{type:'error'}); }
+}
+function tiempoEsperaTexto(ts){ if(!ts) return {texto:'-',alerta:false}; const min=Math.max(0,Math.floor((Date.now()-ts*1000)/60000)); const a=min>15; if(min<60) return {texto:`${min} min`,alerta:a}; return {texto:`${Math.floor(min/60)}h ${min%60}m`,alerta:a}; }
+function renderWaitingCard(it){ const t=tiempoEsperaTexto(it.llegada_ts); const p=it.prioridad===1||it.prioridad==='alta'?'alta':'normal'; const id=ah_esc(it.id_cita);
+  return `<div class="waiting-card priority-${p}" data-id-cita="${id}"><div><div class="wc-nombre">${ah_esc(it.nombre||'Paciente')}</div><div class="wc-meta">${ah_esc(it.especialidad||'')}${it.profesional?' · '+ah_esc(it.profesional):''}</div></div><div style="text-align:right;"><div class="wc-tiempo ${t.alerta?'tiempo-alerta':''}">\u23F1 ${t.texto}</div><button class="wc-btn-quitar" title="Quitar" onclick="sacarDeWaiting('${id}')">\u00D7</button></div></div>`; }
+function renderWaitingList(items){ const c=document.getElementById('ah-waiting-list'); if(!c) return; const cnt=document.getElementById('ah-waiting-count'); if(cnt) cnt.textContent=items?items.length:0; if(!items||!items.length){ c.innerHTML='<div class="ah-empty">Sin pacientes esperando.</div>'; return; } const ord=[...items].sort((a,b)=>(b.prioridad||0)-(a.prioridad||0)||(a.llegada_ts||0)-(b.llegada_ts||0)); c.innerHTML=ord.map(renderWaitingCard).join(''); }
+async function cargarWaitingRoom(){ try{ const r=await fetch(apiUrl('/admin/api/waiting-room')); if(!r.ok) throw new Error('HTTP'); const d=await r.json(); AH_STATE.waiting=d.items||[]; renderWaitingList(AH_STATE.waiting); }catch(e){ console.error(e); } }
+async function sacarDeWaiting(id){ try{ const r=await fetch(apiUrl(`/admin/api/waiting-room/${encodeURIComponent(id)}`),{method:'DELETE'}); if(!r.ok) throw new Error('HTTP'); const d=await r.json().catch(()=>({})); await cargarWaitingRoom(); const s=d.snapshot_id||null; if(typeof showToast==='function') showToast('Retirado de sala',{type:'undo',ttl:10000,undo:s?()=>undoFromSnapshot(s):null}); }catch(e){ console.error(e); } }
+function abrirChatDesdeAgenda(ph){ if(!ph) return; if(typeof selectConv==='function'){ try{ selectConv(ph); return; }catch(e){} } }
+function quickEnviarWA(c){ abrirChatDesdeAgenda(c.paciente_phone||c.phone||''); const r=document.getElementById('reply-input'); if(!r) return; const n=(c.paciente_nombre||'').split(' ')[0]||'Hola'; const h=ah_formatHora(c.hora_inicio); let t; switch(c.estado){ case 'pendiente': t=`Hola ${n}, le confirmamos su hora a las ${h} con ${c.profesional_nombre||''}. ¿Podrá asistir?`; break; case 'confirmada': t=`Hola ${n}, le recordamos su hora hoy a las ${h} con ${c.profesional_nombre||''}. Le esperamos.`; break; case 'no_asistio': t=`Hola ${n}, no le vimos hoy. ¿Desea reagendar?`; break; default: t=`Hola ${n}, `; } r.value=t; r.focus(); }
+function tickRefrescarTiempos(){ if(AH_STATE.waiting&&AH_STATE.waiting.length) renderWaitingList(AH_STATE.waiting); }
+
+function setupAgendaHomeListeners(){
+  const $=id=>document.getElementById(id);
+  if($('ah-btn-prev')) $('ah-btn-prev').onclick=()=>cargarAgendaHome(ah_shiftDate(AH_STATE.fecha,-1));
+  if($('ah-btn-next')) $('ah-btn-next').onclick=()=>cargarAgendaHome(ah_shiftDate(AH_STATE.fecha,1));
+  if($('ah-btn-hoy')) $('ah-btn-hoy').onclick=()=>cargarAgendaHome(ah_hoyISO());
+  if($('ah-btn-collapse')) $('ah-btn-collapse').onclick=()=>{ const s=$('agenda-home'); if(s) s.classList.toggle('collapsed'); };
+  if($('ah-btn-waiting-toggle')) $('ah-btn-waiting-toggle').onclick=()=>{ const c=$('ah-col-waiting'); if(c) c.scrollIntoView({behavior:'smooth',block:'nearest'}); cargarWaitingRoom(); };
+  if($('ah-prof-select')) $('ah-prof-select').onchange=()=>renderAgendaCitas(AH_STATE.citas);
+}
+function iniciarAgendaHome(){
+  setupAgendaHomeListeners();
+  cargarAgendaHome(ah_hoyISO());
+  cargarWaitingRoom();
+  if(AH_STATE.refreshAgenda) clearInterval(AH_STATE.refreshAgenda);
+  if(AH_STATE.refreshWaiting) clearInterval(AH_STATE.refreshWaiting);
+  if(AH_STATE.refreshClock) clearInterval(AH_STATE.refreshClock);
+  AH_STATE.refreshAgenda=setInterval(()=>cargarAgendaHome(AH_STATE.fecha),30000);
+  AH_STATE.refreshWaiting=setInterval(cargarWaitingRoom,10000);
+  AH_STATE.refreshClock=setInterval(tickRefrescarTiempos,30000);
+}
+
+// ============ COMMAND PALETTE ============
+const COMMAND_PALETTE_ACTIONS = [
+  { title:'Nueva cita', hint:'Agendar paciente', icon:'\u2795', fn:()=>safeCall('abrirModalAgendar'), keywords:'agendar turno hora nuevo' },
+  { title:'Anular cita', hint:'Cancelar cita', icon:'\u274C', fn:()=>safeCall('abrirModalAnular'), keywords:'cancelar borrar anular' },
+  { title:'Ir a agenda de hoy', hint:'Focus en la agenda', icon:'\uD83D\uDCC5', fn:()=>{ const s=document.getElementById('agenda-home'); if(s){ s.classList.remove('collapsed'); s.scrollIntoView({behavior:'smooth'}); } }, keywords:'hoy horario timeline agenda' },
+  { title:'Timeline agenda (modal)', hint:'Vista ampliada', icon:'\uD83D\uDDD3', fn:()=>safeCall('abrirTimeline'), keywords:'timeline modal' },
+  { title:'Confirmaciones de mañana', hint:'Pacientes mañana', icon:'\u2705', fn:()=>safeCall('abrirModalConfirmaciones'), keywords:'confirmar manana' },
+  { title:'Pacientes en control', hint:'Kine / ortodoncia / psico', icon:'\uD83D\uDCCB', fn:()=>safeCall('abrirModalKine'), keywords:'kine kinesiologia ortodoncia seguimiento' },
+  { title:'Fidelización', hint:'Campañas y métricas', icon:'\uD83D\uDCCA', fn:()=>safeCall('abrirModalFidelizacion'), keywords:'campanas referidos retencion' },
+  { title:'NPS por profesional', hint:'Satisfacción', icon:'\uD83D\uDE0A', fn:()=>safeCall('abrirModalNPS'), keywords:'nps satisfaccion' },
+  { title:'Analytics', hint:'Métricas generales', icon:'\uD83D\uDCC8', fn:()=>safeCall('abrirModalAnalytics'), keywords:'analytics metricas reportes' },
+  { title:'Silenciar / activar notificaciones', hint:'Toggle sonidos', icon:'\uD83D\uDD15', fn:()=>safeCall('toggleNotifMute'), keywords:'mute notificaciones sonido' },
+  { title:'Ver atajos de teclado', hint:'Help', icon:'\u2328', fn:()=>showShortcutsHelp(), keywords:'teclado shortcuts atajos ayuda' },
+  { title:'Ir a sala de espera', hint:'Columna espera', icon:'\uD83C\uDFE5', fn:()=>{ const c=document.getElementById('ah-col-waiting'); if(c) c.scrollIntoView({behavior:'smooth'}); cargarWaitingRoom(); }, keywords:'sala espera' },
+  { title:'Recargar panel', hint:'Refresh', icon:'\uD83D\uDD04', fn:()=>location.reload(), keywords:'recargar refresh' },
+  { title:'Cerrar sesión', hint:'Salir', icon:'\uD83D\uDEAA', fn:()=>safeCall('doLogout'), keywords:'logout salir' },
+];
+let _cpState = { open:false, items:[], activeIndex:0, lastFetchToken:0, debounceTimer:null };
+function safeCall(fn){ const args=Array.prototype.slice.call(arguments,1); if(typeof window[fn]==='function'){ try{ window[fn].apply(null,args); }catch(e){ console.error(fn,e); } } else console.warn('safeCall miss:'+fn); }
+function openPalette(){ const o=document.getElementById('command-palette'); if(!o) return; _cpState.open=true; o.style.display='flex'; const i=document.getElementById('cp-input'); if(i){ i.value=''; setTimeout(()=>i.focus(),30); } renderPaletteResults(''); }
+function closePalette(){ const o=document.getElementById('command-palette'); if(!o) return; _cpState.open=false; o.style.display='none'; }
+function _cpScore(a,tokens){ const h=(a.title+' '+(a.hint||'')+' '+(a.keywords||'')).toLowerCase(); const tl=a.title.toLowerCase(); let s=0; for(const tk of tokens){ if(!h.includes(tk)) return -1; if(tl.startsWith(tk)) s+=100; else if(tl.includes(' '+tk)) s+=60; else if(tl.includes(tk)) s+=30; else s+=10; } return s; }
+async function _cpRemote(q,tk){ try{ const r=await fetch(apiUrl(`/admin/api/search?q=${encodeURIComponent(q)}`)); if(!r.ok) return null; const d=await r.json(); if(tk!==_cpState.lastFetchToken) return null; return d; }catch(e){ return null; } }
+function renderPaletteResults(query){
+  const cont=document.getElementById('cp-results'); if(!cont) return;
+  const q=(query||'').trim().toLowerCase(); const sections=[];
+  let actions; if(!q) actions=COMMAND_PALETTE_ACTIONS.slice(0,8);
+  else { const tokens=q.split(/\s+/).filter(Boolean); actions=COMMAND_PALETTE_ACTIONS.map(a=>({a,s:_cpScore(a,tokens)})).filter(x=>x.s>=0).sort((x,y)=>y.s-x.s).map(x=>x.a); }
+  if(actions.length) sections.push({ name:'Acciones', items:actions.map(a=>({icon:a.icon,title:a.title,hint:a.hint,fn:a.fn})) });
+  _cpState.items=sections.flatMap(s=>s.items); _cpState.activeIndex=0;
+  _cpRender(cont,sections);
+  if(q.length>=2){ const tk=++_cpState.lastFetchToken; clearTimeout(_cpState.debounceTimer); _cpState.debounceTimer=setTimeout(async()=>{
+    const data=await _cpRemote(query,tk); if(!data||tk!==_cpState.lastFetchToken) return;
+    const results=Array.isArray(data.results)?data.results:(data.pacientes||[]).concat(data.conversaciones||[]);
+    const pac=[],conv=[];
+    results.forEach(it=>{ const ph=it.telefono||it.phone; if(it.tipo==='paciente'||it.rut) pac.push({icon:'\uD83D\uDC64',title:it.nombre||it.rut||'Paciente',hint:[it.rut,ph].filter(Boolean).join(' · '),fn:()=>{ closePalette(); if(ph&&typeof selectConv==='function') selectConv(ph); }}); else conv.push({icon:'\uD83D\uDCAC',title:it.nombre||ph||'Conv',hint:it.ultimo_mensaje||ph||'',fn:()=>{ closePalette(); if(ph&&typeof selectConv==='function') selectConv(ph); }}); });
+    const ns=[...sections]; if(pac.length) ns.push({name:'Pacientes',items:pac.slice(0,6)}); if(conv.length) ns.push({name:'Conversaciones',items:conv.slice(0,6)});
+    _cpState.items=ns.flatMap(s=>s.items); _cpState.activeIndex=Math.min(_cpState.activeIndex,_cpState.items.length-1); _cpRender(cont,ns);
+  },200); }
+}
+function _cpRender(c,s){ if(!s.length||!_cpState.items.length){ c.innerHTML='<div class="cp-empty">Sin resultados</div>'; return; } let h='',i=0; for(const sec of s){ h+=`<div class="cp-section-header">${ah_esc(sec.name)}</div>`; for(const it of sec.items){ const a=i===_cpState.activeIndex?' cp-active':''; h+=`<div class="cp-item${a}" data-idx="${i}"><div class="cp-item-icon">${it.icon||'\u2022'}</div><div class="cp-item-body"><div class="cp-item-title">${ah_esc(it.title)}</div>${it.hint?`<div class="cp-item-hint">${ah_esc(it.hint)}</div>`:''}</div></div>`; i++; } } c.innerHTML=h; c.querySelectorAll('.cp-item').forEach(el=>{ el.onmouseenter=()=>{ _cpState.activeIndex=parseInt(el.dataset.idx,10); _cpRefresh(); }; el.onclick=()=>_cpExec(); }); }
+function _cpRefresh(){ const its=document.querySelectorAll('#cp-results .cp-item'); its.forEach((e,i)=>e.classList.toggle('cp-active',i===_cpState.activeIndex)); const a=its[_cpState.activeIndex]; if(a) a.scrollIntoView({block:'nearest'}); }
+function _cpExec(){ const it=_cpState.items[_cpState.activeIndex]; if(!it) return; closePalette(); setTimeout(()=>{ try{ it.fn(); }catch(e){ console.error(e); } },50); }
+
+// ============ SHORTCUTS GLOBALES ============
+function _isTyping(el){ if(!el) return false; const t=(el.tagName||'').toLowerCase(); if(t==='input'||t==='textarea'||t==='select') return true; return !!el.isContentEditable; }
+function getFocusedCita(){ if(!AH_STATE.focusedCitaId) return null; const c=(AH_STATE.citas||[]).find(x=>String(x.id_cita)===String(AH_STATE.focusedCitaId)); if(!c) return null; return { id:c.id_cita, telefono:c.paciente_phone||c.phone||null, nombre:c.paciente_nombre||null, data:c }; }
+function showShortcutsHelp(){ const el=document.getElementById('shortcuts-help'); if(el) el.style.display='flex'; }
+function hideShortcutsHelp(){ const el=document.getElementById('shortcuts-help'); if(el) el.style.display='none'; }
+function _reqCita(a){ const c=getFocusedCita(); if(!c){ if(typeof showToast==='function') showToast('Selecciona una cita primero ('+a+')',{type:'info',ttl:3000}); return null; } return c; }
+
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'){
+    if(_cpState&&_cpState.open){ closePalette(); return; }
+    const sh=document.getElementById('shortcuts-help'); if(sh&&sh.style.display==='flex'){ hideShortcutsHelp(); return; }
+  }
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){ e.preventDefault(); openPalette(); return; }
+  if(_isTyping(document.activeElement)) return;
+  if(e.altKey||e.ctrlKey||e.metaKey) return;
+  const k=e.key;
+  if(k==='?'||(e.shiftKey&&k==='/')){ e.preventDefault(); showShortcutsHelp(); return; }
+  if(k==='/'){ e.preventDefault(); openPalette(); return; }
+  switch(k.toLowerCase()){
+    case 'n': e.preventDefault(); safeCall('abrirModalAgendar'); break;
+    case 'g': e.preventDefault(); { const s=document.getElementById('agenda-home'); if(s){ s.classList.remove('collapsed'); s.scrollIntoView({behavior:'smooth'}); } } break;
+    case 'c': { const c=_reqCita('confirmar'); if(c){ e.preventDefault(); cambiarEstadoCita(c.id,'confirmada'); } break; }
+    case 'a': { const c=_reqCita('atendida'); if(c){ e.preventDefault(); cambiarEstadoCita(c.id,'atendida'); } break; }
+    case 'f': { const c=_reqCita('no asistio'); if(c){ e.preventDefault(); cambiarEstadoCita(c.id,'no_asistio'); } break; }
+    case 'w': { const c=getFocusedCita(); if(c){ e.preventDefault(); quickEnviarWA(c.data); } break; }
+  }
+},false);
+
+// ============ TOAST + UNDO ============
+let _toastSeq=0;
+function showToast(msg,opts){
+  opts=opts||{}; const undo=opts.undo||null, ttl=opts.ttl||10000, type=opts.type||'info';
+  const stack=document.getElementById('toast-stack'); if(!stack){ console.log('toast:',msg); return null; }
+  const icons={info:'\u2139',success:'\u2705',error:'\u26A0',undo:'\u21A9'}; const icon=icons[type]||'\u2022';
+  const el=document.createElement('div'); el.className='toast toast-'+type; el.id='toast-'+(++_toastSeq);
+  el.innerHTML='<div class="toast-body"><span class="toast-icon">'+icon+'</span><span class="toast-msg"></span>'+(undo?'<button class="toast-action" type="button">Deshacer</button>':'')+'</div><div class="toast-progress"></div>';
+  el.querySelector('.toast-msg').textContent=msg; stack.appendChild(el);
+  const pr=el.querySelector('.toast-progress'); let start=performance.now(), elapsedBefore=0, paused=false, raf;
+  function tick(n){ if(paused) return; const e=elapsedBefore+(n-start); const p=Math.max(0,1-e/ttl); pr.style.transform='scaleX('+p+')'; if(e>=ttl){ dismiss(); return; } raf=requestAnimationFrame(tick); }
+  raf=requestAnimationFrame(tick);
+  el.addEventListener('mouseenter',()=>{ if(paused) return; paused=true; elapsedBefore+=performance.now()-start; cancelAnimationFrame(raf); });
+  el.addEventListener('mouseleave',()=>{ if(!paused) return; paused=false; start=performance.now(); raf=requestAnimationFrame(tick); });
+  function dismiss(){ cancelAnimationFrame(raf); if(!el.parentNode) return; el.remove(); }
+  if(undo) el.querySelector('.toast-action').addEventListener('click',async()=>{ try{ await undo(); }catch(e){ console.error(e); } dismiss(); });
+  return { id:el.id, dismiss };
+}
+async function undoFromSnapshot(id){ if(!id){ showToast('Snapshot invalido',{type:'error'}); return; } try{ const r=await fetch(apiUrl(`/admin/api/undo/${id}`),{method:'POST'}); if(!r.ok){ showToast('No se pudo deshacer',{type:'error',ttl:6000}); return; } showToast('Accion restaurada',{type:'success',ttl:4000}); if(typeof refrescarAgenda==='function') refrescarAgenda(); if(typeof cargarWaitingRoom==='function') cargarWaitingRoom(); }catch(e){ showToast('Error de red',{type:'error'}); } }
+async function cancelarCitaConUndo(id,motivo){ if(!id) return; motivo=motivo||'Cancelada desde panel'; try{ const r=await fetch(apiUrl('/admin/api/anular'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id_cita:id,motivo})}); if(!r.ok){ showToast('Error al anular',{type:'error',ttl:6000}); return; } const d=await r.json().catch(()=>({})); const s=d.snapshot_id||null; showToast('Cita anulada',{type:'undo',ttl:10000,undo:s?()=>undoFromSnapshot(s):null}); if(typeof refrescarAgenda==='function') refrescarAgenda(); }catch(e){ showToast('Error de red',{type:'error'}); } }
+
+document.addEventListener('DOMContentLoaded',()=>{
+  const inp=document.getElementById('cp-input');
+  if(inp){ inp.addEventListener('input',e=>renderPaletteResults(e.target.value)); inp.addEventListener('keydown',e=>{ if(e.key==='ArrowDown'){ e.preventDefault(); if(_cpState.activeIndex<_cpState.items.length-1){ _cpState.activeIndex++; _cpRefresh(); } } else if(e.key==='ArrowUp'){ e.preventDefault(); if(_cpState.activeIndex>0){ _cpState.activeIndex--; _cpRefresh(); } } else if(e.key==='Enter'){ e.preventDefault(); _cpExec(); } else if(e.key==='Escape'){ e.preventDefault(); closePalette(); } }); }
+  const ov=document.getElementById('command-palette'); if(ov) ov.addEventListener('click',e=>{ if(e.target===ov) closePalette(); });
+  const sh=document.getElementById('shortcuts-help'); if(sh) sh.addEventListener('click',e=>{ if(e.target===sh) hideShortcutsHelp(); });
+});
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',iniciarAgendaHome); else iniciarAgendaHome();
 </script>
+
+<!-- SHORTCUTS HELP -->
+<div id="shortcuts-help" class="sh-overlay" style="display:none;">
+  <div class="sh-card">
+    <div class="sh-header"><h3>⌨️ Atajos de teclado</h3><button class="sh-close" onclick="hideShortcutsHelp()">×</button></div>
+    <div class="sh-body">
+      <div>
+        <div class="sh-group-title">Globales</div>
+        <div class="sh-row"><span>Paleta de comandos</span><span><kbd>Ctrl</kbd>+<kbd>K</kbd> · <kbd>/</kbd></span></div>
+        <div class="sh-row"><span>Nueva cita</span><kbd>N</kbd></div>
+        <div class="sh-row"><span>Ir a agenda</span><kbd>G</kbd></div>
+        <div class="sh-row"><span>Mostrar esta ayuda</span><kbd>?</kbd></div>
+        <div class="sh-row"><span>Cerrar overlay</span><kbd>Esc</kbd></div>
+      </div>
+      <div>
+        <div class="sh-group-title">Sobre cita seleccionada</div>
+        <div class="sh-row"><span>Confirmar</span><kbd>C</kbd></div>
+        <div class="sh-row"><span>Atendida</span><kbd>A</kbd></div>
+        <div class="sh-row"><span>No asistió</span><kbd>F</kbd></div>
+        <div class="sh-row"><span>WhatsApp</span><kbd>W</kbd></div>
+      </div>
+    </div>
+    <div class="sh-footer">Clic en una cita para seleccionarla antes de usar C/A/F/W · <kbd>Esc</kbd> cerrar</div>
+  </div>
+</div>
+<div id="toast-stack" class="toast-stack" aria-live="polite"></div>
+
 </body>
 </html>
