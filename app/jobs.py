@@ -20,7 +20,8 @@ from session import (get_sesiones_abandonadas, save_session, log_event,
                      get_cita_bot_by_id_for_rebook, mark_cita_cancel_detected,
                      get_profile)
 from resilience import (is_medilink_down, mark_medilink_up, medilink_down_since,
-                        should_notify_reception, mark_reception_notified)
+                        should_notify_reception, mark_reception_notified,
+                        should_notify_recovery, mark_recovery_notified)
 from doctor_alerts import (enviar_resumen_precita, enviar_reporte_progreso,
                            reset_resumenes_diarios)
 from config import CMC_TELEFONO
@@ -277,8 +278,16 @@ async def _job_medilink_watchdog():
                 log.error("watchdog: no se pudo notificar a recepción: %s", e)
         return
 
-    # Medilink respondió OK → recuperación
+    # Medilink respondió OK → recuperación.
+    # Siempre marcamos como up (estado del sistema), pero las NOTIFICACIONES
+    # están gateadas por should_notify_recovery() para evitar spam cuando
+    # Medilink oscila (ej. 429 intermitente cada pocos minutos).
     mark_medilink_up()
+    if not should_notify_recovery():
+        log.info("watchdog: Medilink recuperado pero notif throttled "
+                 "(oscilación reciente o notif ya enviada en los últimos 30 min)")
+        return
+    mark_recovery_notified()
     pendientes = get_pending_intent_queue()
     log.info("watchdog: Medilink OPERATIVO de nuevo — notificando %d pacientes en cola", len(pendientes))
     for row in pendientes:

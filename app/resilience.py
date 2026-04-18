@@ -33,7 +33,11 @@ class MedilinkDown(Exception):
 
 _KEY_MEDILINK = "medilink_status"          # "up" | "down"
 _KEY_MEDILINK_REASON = "medilink_reason"
-_KEY_RECEPTION_NOTIFIED = "reception_notified_at"  # timestamp ISO de última notif
+_KEY_RECEPTION_NOTIFIED = "reception_notified_at"  # timestamp ISO de última notif de "sigue caído"
+_KEY_RECOVERY_NOTIFIED = "recovery_notified_at"    # timestamp ISO de última notif de "recuperado"
+_KEY_MEDILINK_DOWN_AT = "medilink_down_since_at"   # timestamp ISO de la última caída confirmada
+RECOVERY_THROTTLE_MIN = 30          # no notificar recuperación más de 1 vez cada 30 min
+MIN_OUTAGE_MIN_FOR_NOTIF = 3        # no notificar recuperación si la caída duró <3 min (oscilación)
 
 RECEPTION_THROTTLE_MIN = 30
 
@@ -41,8 +45,14 @@ RECEPTION_THROTTLE_MIN = 30
 # ── Estado Medilink ───────────────────────────────────────────────────────────
 
 def mark_medilink_down(reason: str = ""):
-    """Marca Medilink como caído. Idempotente."""
+    """Marca Medilink como caído. Idempotente.
+    Solo actualiza el timestamp de caída la *primera* vez (para flap protection):
+    si ya estaba down, no resetea down_at — así should_notify_recovery() puede
+    distinguir entre una caída larga real y una oscilación corta."""
+    already_down = system_state_get(_KEY_MEDILINK) == "down"
     system_state_set(_KEY_MEDILINK, "down")
+    if not already_down:
+        system_state_set(_KEY_MEDILINK_DOWN_AT, datetime.now(timezone.utc).isoformat())
     if reason:
         system_state_set(_KEY_MEDILINK_REASON, reason[:500])
 
@@ -89,3 +99,39 @@ def should_notify_reception() -> bool:
 def mark_reception_notified():
     """Registra que recepción fue notificada (resetea el throttle)."""
     system_state_set(_KEY_RECEPTION_NOTIFIED, datetime.now(timezone.utc).isoformat())
+
+
+def should_notify_recovery() -> bool:
+    """True si podemos enviar la notificación de 'Medilink recuperado'.
+    Evita spam cuando Medilink oscila (429 intermitente):
+      - No más de 1 notificación cada RECOVERY_THROTTLE_MIN minutos.
+      - No notificar si la caída confirmada duró menos de MIN_OUTAGE_MIN_FOR_NOTIF.
+    """
+    # Throttle: ya notificamos recientemente
+    last_notif = system_state_updated_at(_KEY_RECOVERY_NOTIFIED)
+    if last_notif:
+        try:
+            ts = datetime.fromisoformat(last_notif)
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=timezone.utc)
+            if (datetime.now(timezone.utc) - ts) < timedelta(minutes=RECOVERY_THROTTLE_MIN):
+                return False
+        except (ValueError, TypeError):
+            pass
+    # Flap protection: la caída actual fue muy breve → oscilación, no notificar
+    down_at = system_state_get(_KEY_MEDILINK_DOWN_AT)
+    if down_at:
+        try:
+            ts = datetime.fromisoformat(down_at)
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=timezone.utc)
+            if (datetime.now(timezone.utc) - ts) < timedelta(minutes=MIN_OUTAGE_MIN_FOR_NOTIF):
+                return False
+        except (ValueError, TypeError):
+            pass
+    return True
+
+
+def mark_recovery_notified():
+    """Registra que se envió la notificación de recuperación."""
+    system_state_set(_KEY_RECOVERY_NOTIFIED, datetime.now(timezone.utc).isoformat())
