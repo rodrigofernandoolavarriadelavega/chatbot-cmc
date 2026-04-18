@@ -63,10 +63,11 @@ input, textarea, select{font-family:inherit; color:inherit}
 .brand-logo{
   width:30px; height:30px; border-radius:50%; flex:0 0 30px;
   background:linear-gradient(135deg, #1ec45a, #0d8a4d);
-  padding:2px; box-shadow:0 2px 6px rgba(18,140,126,.25);
+  box-shadow:0 2px 6px rgba(18,140,126,.25);
   display:flex; align-items:center; justify-content:center;
+  color:#fff;
 }
-.brand-logo img{width:100%; height:100%; border-radius:50%; background:#fff; object-fit:cover}
+.brand-logo svg{width:18px; height:18px}
 .brand-text{display:flex; flex-direction:column; line-height:1.15}
 .brand-text .top{font-size:10px; color:var(--text-mute); letter-spacing:.3px; text-transform:uppercase; font-weight:500}
 .brand-text .bot{font-size:13.5px; font-weight:700; color:var(--text); letter-spacing:-.2px; display:flex; align-items:center; gap:6px}
@@ -387,7 +388,11 @@ input, textarea, select{font-family:inherit; color:inherit}
   <!-- ===== TOPBAR ========================================================= -->
   <header class="topbar">
     <a class="brand" href="#" title="Centro Médico Carampangue">
-      <span class="brand-logo"><img src="/static/logo.png" alt="CMC"></span>
+      <span class="brand-logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <path d="M14 3h-4a1 1 0 0 0-1 1v5H4a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h5v5a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-5h5a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1h-5V4a1 1 0 0 0-1-1Z"/>
+        </svg>
+      </span>
       <span class="brand-text">
         <span class="top">Centro Médico</span>
         <span class="bot">Carampangue <span class="v2">v2</span></span>
