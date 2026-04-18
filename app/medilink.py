@@ -219,6 +219,10 @@ async def _post(client: httpx.AsyncClient, url: str, **kwargs) -> httpx.Response
 async def _get_horario(client: httpx.AsyncClient, id_prof: int) -> dict:
     """Obtiene intervalo, días de trabajo y horarios por día desde la API (con caché 1h).
     Retorna: {intervalo, dias: set(weekdays), horario_dia: {weekday: (hi, hf)}}
+
+    Solo cachea resultados con datos válidos. Si Medilink falla (429/5xx/red),
+    retorna el dict stale del caché si existe, o un fallback SIN cachearlo —
+    así el próximo call reintenta en vez de servir vacío por 1 hora.
     """
     cached = _horarios_cache.get(id_prof)
     if cached and (time.monotonic() - cached.get("_ts", 0)) < _HORARIO_CACHE_TTL:
@@ -228,7 +232,12 @@ async def _get_horario(client: httpx.AsyncClient, id_prof: int) -> dict:
         r = await _get(client, f"{MEDILINK_BASE_URL}/profesionales/{id_prof}/horarios", headers=HEADERS)
     except httpx.RequestError as e:
         log.error("No se pudo obtener horario del profesional %d: %s", id_prof, e)
+        # Devolver stale si existe (aunque haya expirado) en vez de vacío
+        if cached and cached.get("horario_dia"):
+            log.warning("Usando horario stale para prof %d (fetch falló)", id_prof)
+            return cached
         return {"intervalo": PROFESIONALES[id_prof]["intervalo"], "dias": set(range(5)), "horario_dia": {}}
+
     horario = {"intervalo": PROFESIONALES[id_prof]["intervalo"], "dias": set(range(6)), "horario_dia": {}}
     if r.status_code == 200:
         data = r.json().get("data", [])
@@ -250,8 +259,15 @@ async def _get_horario(client: httpx.AsyncClient, id_prof: int) -> dict:
                 "horario_dia": horario_dia,
             }
 
-    horario["_ts"] = time.monotonic()
-    _horarios_cache[id_prof] = horario
+    # Solo cachear si obtuvimos horario_dia real. Sin esto, un 429 que deja
+    # horario_dia={} se cacheaba 1h y tumbaba a ese profesional para todos.
+    if horario.get("horario_dia"):
+        horario["_ts"] = time.monotonic()
+        _horarios_cache[id_prof] = horario
+    else:
+        log.warning("Horario vacío para prof %d (status %s) — no se cachea", id_prof, r.status_code)
+        if cached and cached.get("horario_dia"):
+            return cached  # fallback a stale si existe
     return horario
 
 
