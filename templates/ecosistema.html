@@ -8,28 +8,79 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #191919; --bg-lighter: #1e1e1e; --bg-panel: #252525;
-  --border: #333; --border-light: #444;
-  --text: #dcddde; --text-dim: #999; --text-muted: #666;
-  --accent: #a882ff; --accent-dim: rgba(168,130,255,.15);
+  --bg: #08161F;
+  --bg-lighter: #0E1F2B;
+  --bg-panel: rgba(16, 35, 48, 0.9);
+  --border: rgba(82, 176, 188, 0.18);
+  --border-light: rgba(82, 176, 188, 0.32);
+  --text: #E6F2F5;
+  --text-dim: #9BB8C2;
+  --text-muted: #5E7D89;
+  --cmc-navy: #1C3D66;
+  --cmc-blue: #2563A3;
+  --cmc-teal: #52B0BC;
+  --cmc-aqua: #8AD6DE;
+  --accent: #52B0BC;
+  --accent-dim: rgba(82, 176, 188, .14);
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-  background: var(--bg); color: var(--text);
+  background:
+    radial-gradient(ellipse at 20% 10%, rgba(37, 99, 163, 0.22), transparent 55%),
+    radial-gradient(ellipse at 85% 90%, rgba(82, 176, 188, 0.18), transparent 55%),
+    radial-gradient(circle at 50% 50%, #0E1F2B 0%, #08161F 70%);
+  color: var(--text);
   font-family: "Inter", -apple-system, system-ui, sans-serif;
   overflow: hidden; height: 100vh; width: 100vw;
   -webkit-font-smoothing: antialiased;
   cursor: grab;
+  position: relative;
+}
+/* Watermark logo CMC — elegante y tecnológico */
+body::before {
+  content: "";
+  position: fixed;
+  top: 50%; left: 50%;
+  width: min(62vmin, 700px);
+  height: min(62vmin, 700px);
+  transform: translate(-50%, -50%);
+  background: url('/static/logo.png') center/contain no-repeat;
+  opacity: 0.045;
+  filter: brightness(1.4) drop-shadow(0 0 40px rgba(82, 176, 188, 0.35));
+  pointer-events: none;
+  z-index: 0;
+  animation: cmc-breath 9s ease-in-out infinite;
+}
+/* Grid técnico sutil + viñeta */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(82, 176, 188, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(82, 176, 188, 0.045) 1px, transparent 1px),
+    radial-gradient(ellipse at center, transparent 35%, rgba(8, 22, 31, 0.65) 100%);
+  background-size: 48px 48px, 48px 48px, 100% 100%;
+  pointer-events: none;
+  z-index: 0;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 85%);
+  -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 85%);
+}
+@keyframes cmc-breath {
+  0%, 100% { opacity: 0.045; filter: brightness(1.4) drop-shadow(0 0 40px rgba(82, 176, 188, 0.35)); }
+  50%      { opacity: 0.075; filter: brightness(1.55) drop-shadow(0 0 60px rgba(138, 214, 222, 0.55)); }
 }
 body.dragging { cursor: grabbing; }
 
-canvas { display: block; position: absolute; top: 0; left: 0; }
+canvas { display: block; position: absolute; top: 0; left: 0; z-index: 2; }
 
 /* ── Overlay header ──────────────────────── */
 .overlay-header {
   position: fixed; top: 0; left: 0; right: 0; z-index: 10;
   padding: 16px 24px; display: flex; align-items: center; gap: 12px;
-  background: linear-gradient(180deg, rgba(25,25,25,.95) 0%, rgba(25,25,25,.7) 70%, transparent 100%);
+  background: linear-gradient(180deg, rgba(8, 22, 31, 0.96) 0%, rgba(8, 22, 31, 0.7) 70%, transparent 100%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   pointer-events: none;
 }
 .overlay-header > * { pointer-events: auto; }
