@@ -952,6 +952,66 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
 .toast-undo { background:#1e293b; }
 .toast-info { background:#111827; }
 
+/* RESPONSIVE agenda-home / palette / shortcuts / toasts */
+@media (max-width: 1024px) {
+  #agenda-home { padding: 10px 12px; }
+  .ah-header { gap: 6px; margin-bottom: 10px; }
+  .ah-header h2 { font-size: 15px; }
+  .ah-col { max-height: 420px; }
+}
+@media (max-width: 768px) {
+  #agenda-home { padding: 8px 10px; }
+  .ah-header { gap: 6px; row-gap: 6px; }
+  .ah-header h2 { font-size: 14px; }
+  .ah-date { font-size: 11px; flex-basis: 100%; order: 2; }
+  .ah-nav-day { order: 3; }
+  .ah-prof-select { order: 4; flex: 1; min-width: 140px; }
+  .ah-pill-row { order: 10; width: 100%; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+  .ah-pill { white-space: nowrap; flex: 0 0 auto; font-size: 10.5px; }
+  .ah-btn-waiting { order: 5; margin-left: 0; padding: 6px 10px; font-size: 12px; }
+  .ah-btn-collapse { order: 6; width: 32px; height: 32px; }
+  .ah-nav-day button { width: 32px; height: 32px; font-size: 13px; }
+  .ah-nav-day .ah-btn-hoy { width: auto; padding: 0 12px; }
+  #agenda-home-grid { grid-template-columns: 1fr; gap: 10px; }
+  .ah-col { max-height: 50vh; padding: 8px 10px; }
+  .ah-col h3 { font-size: 11px; }
+  .cita-card { grid-template-columns: 46px 1fr; grid-template-rows: auto auto; padding: 8px; gap: 8px; }
+  .cita-card .cita-right { grid-column: 1 / -1; flex-direction: row; justify-content: space-between; align-items: center; }
+  .cita-card .cita-badge-row { flex-wrap: wrap; }
+  .quick-actions { gap: 4px; }
+  .qa-btn { height: 32px; min-width: 32px; padding: 0 9px; font-size: 13px; }
+  .waiting-card { padding: 8px 10px; }
+  .waiting-card .wc-btn-quitar { width: 28px; height: 28px; font-size: 13px; }
+  .cp-modal { max-width: 100%; border-radius: 10px 10px 0 0; }
+  .cp-overlay { padding-top: 8vh; align-items: flex-start; }
+  .cp-input { font-size: 15px; }
+  .cp-footer { flex-wrap: wrap; gap: 6px; font-size: 10px; }
+  .cp-footer-spacer { display: none; }
+  .toast-stack { left: 10px; right: 10px; transform: none; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+  .toast { min-width: 0; max-width: 100%; width: 100%; }
+  .sh-body { grid-template-columns: 1fr; gap: 14px; padding: 12px 16px; }
+  .sh-card { max-width: 100%; border-radius: 10px; }
+}
+@media (max-width: 480px) {
+  #agenda-home { padding: 6px 8px; }
+  .ah-header h2 { font-size: 13px; }
+  .ah-btn-waiting .badge-count { font-size: 9.5px; }
+  .ah-pill { font-size: 10px; padding: 2px 7px; }
+  .cita-card { padding: 7px 8px; }
+  .cita-paciente { font-size: 12.5px; }
+  .cita-meta { font-size: 11px; }
+  .estado-badge { font-size: 9.5px; padding: 1px 6px; }
+  .qa-btn { min-width: 34px; height: 34px; }
+  .cp-overlay { padding-top: 0; }
+  .cp-modal { height: 100dvh; max-height: 100dvh; border-radius: 0; display: flex; flex-direction: column; }
+  .cp-results { flex: 1; max-height: none; }
+}
+@media (hover: none) and (pointer: coarse) {
+  .qa-btn { min-height: 36px; min-width: 36px; }
+  .cp-item { padding: 11px 18px; }
+  .waiting-card .wc-btn-quitar { min-height: 32px; min-width: 32px; }
+}
+
 @media print {
   .topbar, .col-filters, .ctx-panel, .reply-bar,
   .mobile-hamburger, .mobile-back, .mobile-ctx-toggle,
