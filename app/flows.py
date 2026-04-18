@@ -1924,7 +1924,23 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         resp_otro = (result.get("respuesta_directa") or "").strip()
         if resp_otro:
             return f"{resp_otro}\n\n{DISCLAIMER}"
-        # Fallback final (saludo o input incomprensible) → mostrar menú
+        # Override: si el paciente hizo pregunta substantiva (>10 chars) que
+        # Claude no clasificó bien, intentar detectar apellido/especialidad
+        # o llamar a respuesta_faq antes de caer al menú genérico.
+        if len(txt) >= 10:
+            esp_hint = _detectar_apellido_profesional(txt) or _detectar_especialidad_en_texto(txt)
+            if esp_hint:
+                log_event(phone, "fallback_esp_detectada", {"esp": esp_hint, "txt": txt[:120]})
+                return await _iniciar_agendar(phone, data, esp_hint)
+            # Consulta libre — usar respuesta_faq (Claude maneja FAQ extensamente)
+            try:
+                faq_resp = await respuesta_faq(txt)
+                if faq_resp and len(faq_resp) > 20:
+                    log_event(phone, "fallback_faq", {"txt": txt[:120]})
+                    return f"{faq_resp}\n\n_Escribe *menu* si prefieres ver las opciones._"
+            except Exception:
+                pass
+        # Fallback final (saludo o input muy corto) → mostrar menú
         return _menu_msg()
 
     # ── WAIT_DURACION_MASOTERAPIA ──────────────────────────────────────────────
