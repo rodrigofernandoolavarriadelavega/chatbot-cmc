@@ -206,6 +206,8 @@ body {
   gap: 20px; margin-bottom: 24px;
 }
 .map-section .chart-card { min-height: 420px; }
+.sv-btn { padding:5px 12px; border:1px solid #e2e8f0; background:#fff; border-radius:8px; cursor:pointer; font-size:12px; color:#475569; font-weight:600; }
+.sv-btn.active { background:#15803d; color:#fff; border-color:#15803d; }
 .map-wrap {
   width: 100%; height: 380px; border-radius: 8px;
   border: 1px solid var(--border); overflow: hidden;
@@ -545,6 +547,48 @@ function render(d) {
           <thead><tr><th>Dirección</th><th>Pac.</th><th>Citas</th></tr></thead>
           <tbody id="tabla-direcciones-dash"></tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- AHORROS POR OPTIMIZACIÓN ─────────────────────────────────────────── -->
+    <div class="chart-card" style="margin-top:16px;background:linear-gradient(180deg,#f0fdf4 0%,#fff 100%);border:1px solid #bbf7d0;">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+        <h3 style="color:#15803d;margin:0;">💰 Ahorros por optimización</h3>
+        <div style="display:flex;gap:6px;">
+          <button class="sv-btn active" data-period="today" onclick="setSavingsDashPeriod('today')">Hoy</button>
+          <button class="sv-btn" data-period="7d" onclick="setSavingsDashPeriod('7d')">7 días</button>
+          <button class="sv-btn" data-period="30d" onclick="setSavingsDashPeriod('30d')">30 días</button>
+        </div>
+      </div>
+      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+        <div style="font-size:34px;font-weight:800;color:#15803d;" id="sv-total-clp">$—</div>
+        <div style="font-size:12px;color:#64748b;" id="sv-total-usd">≈ US$ —</div>
+        <div style="font-size:12px;color:#94a3b8;margin-left:auto;" id="sv-proy"></div>
+      </div>
+      <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-bottom:0;">
+        <div class="kpi-card blue" style="padding:14px;">
+          <div class="kpi-label" style="font-size:10px;">🧠 Cache Claude</div>
+          <div class="kpi-value" style="font-size:22px;" id="sv-n-intent">—</div>
+          <div class="kpi-sub" id="sv-clp-intent">$—</div>
+        </div>
+        <div class="kpi-card green" style="padding:14px;">
+          <div class="kpi-label" style="font-size:10px;">🪟 Service window</div>
+          <div class="kpi-value" style="font-size:22px;" id="sv-n-sw">—</div>
+          <div class="kpi-sub" id="sv-clp-sw">$—</div>
+        </div>
+        <div class="kpi-card cyan" style="padding:14px;">
+          <div class="kpi-label" style="font-size:10px;">✅ Ya confirmada</div>
+          <div class="kpi-value" style="font-size:22px;" id="sv-n-md">—</div>
+          <div class="kpi-sub" id="sv-clp-md">$—</div>
+        </div>
+        <div class="kpi-card purple" style="padding:14px;">
+          <div class="kpi-label" style="font-size:10px;">🎤 Audios cortos</div>
+          <div class="kpi-value" style="font-size:22px;" id="sv-n-wh">—</div>
+          <div class="kpi-sub" id="sv-clp-wh">$—</div>
+        </div>
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:#64748b;">
+        Costos evitados: cada optimización cuenta cuando el sistema <strong>no pagó</strong> por Claude, WhatsApp template o Whisper.
       </div>
     </div>
   `;
@@ -1028,6 +1072,53 @@ async function loadMapData() {
 // Init
 initMapFilters();
 loadData();
+
+// ── AHORROS POR OPTIMIZACIÓN ─────────────────────────────────────────────
+let svPeriod = "today";
+async function loadSavingsDash() {
+  try {
+    const r = await fetch(`/admin/api/savings?period=${svPeriod}&token=${encodeURIComponent(TOKEN)}`);
+    if (!r.ok) return;
+    const s = await r.json();
+    const c = s.counts || {};
+    const u = s.usd_by_category || {};
+    const fmt = n => "$" + (n||0).toLocaleString("es-CL");
+    const clpFrom = k => Math.round((u[k]||0) * 950);
+    const setIf = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    setIf("sv-total-clp", fmt(s.total_clp));
+    setIf("sv-total-usd", "≈ US$ " + (s.total_usd||0).toFixed(3));
+    setIf("sv-n-intent",   (c.intent_cache_hit||0).toLocaleString("es-CL"));
+    setIf("sv-clp-intent", fmt(clpFrom("intent_cache_hit")));
+    setIf("sv-n-sw",       (c.skip_reminder_2h_service_window||0).toLocaleString("es-CL"));
+    setIf("sv-clp-sw",     fmt(clpFrom("skip_reminder_2h_service_window")));
+    setIf("sv-n-md",       (c.skip_reminder_2h_medilink_confirmed||0).toLocaleString("es-CL"));
+    setIf("sv-clp-md",     fmt(clpFrom("skip_reminder_2h_medilink_confirmed")));
+    setIf("sv-n-wh",       (c.skip_whisper_short_audio||0).toLocaleString("es-CL"));
+    setIf("sv-clp-wh",     fmt(clpFrom("skip_whisper_short_audio")));
+    if (svPeriod !== "today") {
+      const days = svPeriod === "7d" ? 7 : 30;
+      const proy = Math.round(((s.total_clp||0) / days) * 365);
+      setIf("sv-proy", "Proyección anual: $" + proy.toLocaleString("es-CL") + " CLP");
+    } else {
+      setIf("sv-proy", "");
+    }
+  } catch (e) { console.error("loadSavingsDash", e); }
+}
+function setSavingsDashPeriod(p) {
+  svPeriod = p;
+  document.querySelectorAll(".sv-btn").forEach(b => {
+    b.classList.toggle("active", b.dataset.period === p);
+  });
+  loadSavingsDash();
+}
+const _svWaitInterval = setInterval(() => {
+  if (document.getElementById("sv-total-clp")) {
+    clearInterval(_svWaitInterval);
+    loadSavingsDash();
+    setInterval(loadSavingsDash, 300000);
+  }
+}, 500);
+
 loadMapData();
 </script>
 </body>
