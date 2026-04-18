@@ -13,7 +13,7 @@ la caída. El paciente decide si quiere retomar.
 """
 from datetime import datetime, timedelta, timezone
 
-from app.session import (
+from session import (
     system_state_get,
     system_state_set,
     system_state_updated_at,
