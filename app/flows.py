@@ -1675,6 +1675,21 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             log_event(phone, "intent_detectado_local", {"esp": _esp_idle})
             return await _iniciar_agendar(phone, data, _esp_idle)
 
+        # ── RUT suelto en IDLE (sin flujo activo): el paciente responde con
+        # sólo su RUT esperando continuar. Ofrecerle las 3 opciones principales. ──
+        _txt_stripped = txt.strip()
+        if len(_txt_stripped) <= 15 and valid_rut(clean_rut(_txt_stripped)):
+            data["rut_conocido"] = clean_rut(_txt_stripped)
+            save_session(phone, "IDLE", data)
+            return _btn_msg(
+                "Recibí tu *RUT* 👌 ¿Qué necesitas hacer?",
+                [
+                    {"id": "1", "title": "Agendar hora"},
+                    {"id": "3", "title": "Ver mis citas"},
+                    {"id": "2", "title": "Cancelar cita"},
+                ]
+            )
+
         # ── Datos de paciente no solicitados: RUT + nombre o fecha en el mismo
         # mensaje → el paciente está enviando todo de una. Asumimos que quiere
         # agendar y arrancamos el flujo. Se basa en patrón de RUT chileno. ──

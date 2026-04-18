@@ -879,6 +879,51 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
      "*Traumatología:* atendemos lesiones musculoesqueléticas con nuestros médicos "
      "generales. Si requieres especialista traumatólogo directo, te derivan desde el CMC 🦴\n\n"
      "Escribe *1* o *agendar* para reservar hora."),
+    (("servicios", "ofrec"),
+     "🏥 *Centro Médico Carampangue*\n\n"
+     "🩺 *Medicina:* general, familiar, cardiología, gastroenterología, ginecología, otorrino\n"
+     "🦷 *Dental:* odontología, ortodoncia, endodoncia, implantología\n"
+     "✨ *Estética:* estética facial, toxina, hilos, bioestimuladores\n"
+     "🏃 *Kinesiología · Masoterapia · Nutrición · Psicología · Fonoaudiología · Podología · Matrona · Ecografía*\n\n"
+     "Escribe *1* o *agendar* para reservar hora 📅"),
+    (("que servicios",),
+     "🏥 Atendemos: Medicina General, Odontología, Cardiología, Ginecología, "
+     "Gastroenterología, Otorrino, Kinesiología, Nutrición, Psicología, Fonoaudiología, "
+     "Podología, Matrona, Ecografía, Estética Facial, Ortodoncia, Endodoncia, Implantología.\n\n"
+     "Escribe *agendar* o *1* para reservar hora 📅"),
+    (("donde", "ubica"),
+     "📍 *Centro Médico Carampangue* — Monsalve 102, esquina con República, Carampangue.\n"
+     "Frente a la antigua estación de trenes.\n"
+     "📞 *+56966610737* · ☎️ *(41) 296 5226*"),
+    (("donde estan",),
+     "📍 *Monsalve 102*, Carampangue (Región del Biobío). Frente a la antigua estación de trenes.\n"
+     "📞 *+56966610737* · ☎️ *(41) 296 5226*"),
+    (("de donde son",),
+     "📍 Somos el *Centro Médico Carampangue* — Monsalve 102, Carampangue (Región del Biobío). "
+     "Frente a la antigua estación de trenes.\n"
+     "📞 *+56966610737* · ☎️ *(41) 296 5226*"),
+    (("de donde",),
+     "📍 Somos de *Carampangue, Región del Biobío*. Dirección: Monsalve 102, frente a la antigua estación de trenes.\n"
+     "📞 *+56966610737*"),
+    (("direccion",),
+     "📍 *Monsalve 102*, esquina con República, Carampangue. Frente a la antigua estación de trenes.\n"
+     "📞 *+56966610737*"),
+    (("como llego",),
+     "📍 *Monsalve 102*, Carampangue — frente a la antigua estación de trenes.\n"
+     "Desde Curanilahue o Arauco, la Ruta 160 te deja a pasos del centro.\n"
+     "📞 *+56966610737*"),
+    (("horario", "atenc"),
+     "⏰ *Horarios:*\n"
+     "Lunes a viernes: 08:00 a 21:00\n"
+     "Sábado: 08:00 a 15:00\n"
+     "Domingo: cerrado\n\n"
+     "_Cada profesional tiene su propio horario — escribe *agendar* para ver disponibilidad._"),
+    (("horarios",),
+     "⏰ Atendemos de *lunes a viernes 08:00–21:00* y *sábados 08:00–15:00*. "
+     "Escribe *agendar* y te muestro horarios disponibles de cada profesional 📅"),
+    (("estacionamient",),
+     "🚗 Sí, contamos con estacionamiento en el mismo centro, en Monsalve 102. "
+     "Es gratuito para pacientes del CMC."),
 ]
 
 
