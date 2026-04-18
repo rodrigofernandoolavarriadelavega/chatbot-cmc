@@ -477,6 +477,7 @@ async def admin_slots(especialidad: str, _: str = Depends(require_admin)):
 @router.post("/admin/api/agendar")
 async def admin_agendar(request: Request, _: str = Depends(require_admin)):
     """Crea una cita desde el panel de recepción."""
+    _AGENDA_DIA_CACHE.clear()  # invalidar caché: la nueva cita debe aparecer al próximo GET
     body = await request.json()
     rut        = body.get("rut", "").strip()
     nombre     = body.get("nombre", "").strip()
@@ -566,6 +567,7 @@ async def admin_citas_paciente(rut: str, _: str = Depends(require_admin)):
 @router.post("/admin/api/anular")
 async def admin_anular_cita(request: Request, _: str = Depends(require_admin)):
     """Anula una cita por su ID de Medilink."""
+    _AGENDA_DIA_CACHE.clear()  # invalidar caché tras anulación
     body = await request.json()
     id_cita = int(body.get("id_cita"))
     ok = await cancelar_cita(id_cita)
@@ -925,15 +927,30 @@ async def admin_select_slot(phone: str, request: Request, _: str = Depends(requi
 
 # ── Timeline / Agenda del día ──────────────────────────────────────────────
 
+_AGENDA_DIA_CACHE: dict = {}
+_AGENDA_DIA_TTL = 60  # 60s — balance entre frescura y carga Medilink
+
+
 @router.get("/admin/api/agenda-dia")
-async def admin_agenda_dia(fecha: str = None, _: str = Depends(require_admin)):
-    """Agenda del día enriquecida con estado normalizado, wa_status, service window, etc."""
+async def admin_agenda_dia(fecha: str = None, nocache: int = 0, _: str = Depends(require_admin)):
+    """Agenda del día enriquecida con estado normalizado, wa_status, service window, etc.
+
+    Cacheada 60s: el panel admin polea cada pocos segundos y 20 llamadas a
+    Medilink (una por profesional) saturaban el rate limit. Con caché,
+    múltiples recargas usan la misma respuesta durante la ventana TTL.
+    Pasar `?nocache=1` fuerza refresh (botón "Actualizar" del panel).
+    """
+    import time as _time
     from medilink import obtener_agenda_dia
     from session import get_phone_by_rut, get_last_inbound_ts
     if not fecha:
         from zoneinfo import ZoneInfo
         from datetime import datetime as _dt
         fecha = _dt.now(ZoneInfo("America/Santiago")).strftime("%Y-%m-%d")
+
+    _cached = _AGENDA_DIA_CACHE.get(fecha)
+    if _cached and not nocache and (_time.monotonic() - _cached["_ts"]) < _AGENDA_DIA_TTL:
+        return _cached["data"]
 
     _ensure_agenda_tables()
 
@@ -1009,7 +1026,9 @@ async def admin_agenda_dia(fecha: str = None, _: str = Depends(require_admin)):
 
     agenda = [a for a in agenda if a["citas"]]
     agenda.sort(key=lambda a: a["nombre"])
-    return {"fecha": fecha, "profesionales": agenda, "citas": flat_citas}
+    _result = {"fecha": fecha, "profesionales": agenda, "citas": flat_citas}
+    _AGENDA_DIA_CACHE[fecha] = {"data": _result, "_ts": __import__("time").monotonic()}
+    return _result
 
 
 # ── Campañas estacionales ────────────────────────────────────────────────────

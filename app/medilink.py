@@ -32,6 +32,18 @@ _HORARIO_CACHE_TTL = 3600  # 1 hora — si cambian horarios en Medilink, se refr
 # no oscila. Si se necesita más throughput, subir con cuidado probando rate limit real.
 _MEDILINK_SEM = asyncio.Semaphore(4)
 
+# Caché de pacientes por RUT — ~200 pacientes activos, datos casi inmutables.
+# Paciente se re-consulta 2-5 veces por flujo de agendar/cancelar/reagendar.
+_paciente_cache: dict = {}
+_PACIENTE_CACHE_TTL = 600  # 10 min
+
+# Caché de primera fecha disponible por especialidad.
+# `/especialidades/{id}/proxima` se consulta en cada intento de agendar; los
+# slots reales cambian cada pocos minutos pero el "próximo día disponible"
+# cambia con menos frecuencia. TTL corto evita info stale.
+_proxima_cache: dict = {}
+_PROXIMA_CACHE_TTL = 180  # 3 min
+
 # Medilink usa dia 1=Lun..6=Sáb, 7=Dom → Python weekday 0=Lun..5=Sáb, 6=Dom
 _MEDILINK_DIA_TO_WEEKDAY = {1:0, 2:1, 3:2, 4:3, 5:4, 6:5, 7:6}
 
@@ -482,17 +494,24 @@ async def buscar_primer_dia(especialidad: str, dias_adelante: int = 60,
                     horarios[id_prof] = {**horarios[id_prof], "intervalo": mins}
 
         # Intentar con /proxima para descubrir la fecha rápidamente
+        # Cacheado 3 min: reduce llamadas repetidas cuando varios pacientes
+        # piden la misma especialidad en rápida sucesión.
         primera_fecha = None
         if id_esp:
-            try:
-                r = await _get(
-                    client, f"{MEDILINK_BASE_URL}/especialidades/{id_esp}/proxima",
-                    params={"q": _q({"id_sucursal": {"eq": int(MEDILINK_SUCURSAL)}})},
-                    headers=HEADERS,
-                )
-            except httpx.RequestError as e:
-                log.warning("No se pudo consultar proxima fecha especialidad %d: %s", id_esp, e)
+            _px_cached = _proxima_cache.get(id_esp)
+            if _px_cached and (time.monotonic() - _px_cached["_ts"]) < _PROXIMA_CACHE_TTL:
+                primera_fecha = _px_cached.get("fecha")
                 r = None
+            else:
+                try:
+                    r = await _get(
+                        client, f"{MEDILINK_BASE_URL}/especialidades/{id_esp}/proxima",
+                        params={"q": _q({"id_sucursal": {"eq": int(MEDILINK_SUCURSAL)}})},
+                        headers=HEADERS,
+                    )
+                except httpx.RequestError as e:
+                    log.warning("No se pudo consultar proxima fecha especialidad %d: %s", id_esp, e)
+                    r = None
             if r and r.status_code == 200:
                 for slot in r.json().get("data", []):
                     # fecha viene en formato DD/MM/YYYY
@@ -504,6 +523,8 @@ async def buscar_primer_dia(especialidad: str, dias_adelante: int = 60,
                     if fecha_dt not in excluir_set:
                         primera_fecha = fecha_dt
                         break
+                if primera_fecha:
+                    _proxima_cache[id_esp] = {"fecha": primera_fecha, "_ts": time.monotonic()}
 
         # Siempre escanear desde hoy, usando primera_fecha como límite superior o fallback
         hoy = datetime.now(_CHILE_TZ).date()
@@ -634,7 +655,12 @@ async def crear_paciente(rut: str, nombre: str, apellidos: str, **kwargs) -> Opt
 
 
 async def buscar_paciente(rut: str) -> Optional[dict]:
-    """Busca paciente por RUT. Devuelve dict con id, nombre, rut o None."""
+    """Busca paciente por RUT. Devuelve dict con id, nombre, rut o None.
+
+    Cacheado por 10 min: el mismo RUT se consulta 2-5 veces en un flujo
+    (WAIT_RUT_AGENDAR → confirmaciones → CONFIRMING_CITA). Reduce carga
+    Medilink y latencia de la conversación.
+    """
     rut_clean = rut.replace(".", "").replace("-", "").strip().upper()
     # El dígito verificador va después del guión
     if len(rut_clean) > 1:
@@ -642,7 +668,13 @@ async def buscar_paciente(rut: str) -> Optional[dict]:
     else:
         return None
 
-    async with httpx.AsyncClient(timeout=10) as client:
+    _cached = _paciente_cache.get(rut_clean)
+    if _cached and (time.monotonic() - _cached["_ts"]) < _PACIENTE_CACHE_TTL:
+        return _cached["data"]
+
+    # Timeout reducido a 5s: si Medilink tarda más, caemos a fallback antes
+    # de que Meta retire el webhook (límite 20s).
+    async with httpx.AsyncClient(timeout=5) as client:
         params = {"rut": {"lk": rut_clean[:-1]}}
         try:
             r = await _get(client, f"{MEDILINK_BASE_URL}/pacientes",
@@ -668,6 +700,7 @@ async def buscar_paciente(rut: str) -> Optional[dict]:
             result["fecha_nacimiento"] = p["fecha_nacimiento"]
         if p.get("sexo"):
             result["sexo"] = p["sexo"]
+        _paciente_cache[rut_clean] = {"data": result, "_ts": time.monotonic()}
         return result
 
 

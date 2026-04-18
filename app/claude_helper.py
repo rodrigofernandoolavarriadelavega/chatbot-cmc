@@ -893,6 +893,14 @@ async def detect_intent(mensaje: str) -> dict:
     clave = _re_w.sub(r'\s+', ' ', mensaje.strip().lower())
     # También probamos la versión sin puntuación final ('hola!', 'hola.', 'hola?')
     clave_sin_punto = clave.rstrip('.?!¿¡,;:')
+    # Variante normalizada léxicamente: expande abreviaciones ("xq"→"porque",
+    # "kbza"→"cabeza"), corrige typos rurales ("feber"→"fiebre") y quita tildes.
+    # Captura el long tail de hits de cache que hoy pasan directo a Claude.
+    try:
+        from triage_ges import normalizar_texto_paciente as _norm_tx
+        clave_norm = _norm_tx(clave).rstrip('.?!¿¡,;:')
+    except Exception:
+        clave_norm = clave_sin_punto
     if clave in _INTENT_CACHE:
         log.info("cache hit: %r → %s", clave, _INTENT_CACHE[clave]["intent"])
         try:
@@ -901,6 +909,14 @@ async def detect_intent(mensaje: str) -> dict:
         except Exception:
             pass
         return {**_INTENT_CACHE[clave], "respuesta_directa": None}
+    if clave_norm != clave and clave_norm in _INTENT_CACHE:
+        log.info("cache hit (norm): %r → %r → %s", clave, clave_norm, _INTENT_CACHE[clave_norm]["intent"])
+        try:
+            from session import log_event as _log_event
+            _log_event("", "savings:intent_cache_hit_norm", {"clave": clave[:60], "norm": clave_norm[:60]})
+        except Exception:
+            pass
+        return {**_INTENT_CACHE[clave_norm], "respuesta_directa": None}
     if clave_sin_punto in _INTENT_CACHE:
         log.info("cache hit (sin punto): %r → %s", clave_sin_punto, _INTENT_CACHE[clave_sin_punto]["intent"])
         try:
@@ -1093,7 +1109,19 @@ def _local_faq_fallback(mensaje: str) -> str | None:
 
 
 async def respuesta_faq(mensaje: str) -> str:
-    """Responde preguntas frecuentes directamente con Claude."""
+    """Responde preguntas frecuentes. Primero intenta con el FAQ local
+    (keywords inequívocas — sin llamada a Claude); si no hay match, usa Claude."""
+    # Fast-path: FAQ local cubre preguntas simples de precio/Fonasa/horarios.
+    # Ahorra llamada a Claude (latencia 200-400ms + tokens).
+    _fb_fast = _local_faq_fallback(mensaje)
+    if _fb_fast:
+        try:
+            from session import log_event as _log_event
+            _log_event("", "savings:faq_local_hit", {"mensaje": mensaje[:80]})
+        except Exception:
+            pass
+        return _fb_fast
+
     text = ""
     try:
         resp = await client.messages.create(
