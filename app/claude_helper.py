@@ -737,9 +737,17 @@ async def detect_intent(mensaje: str) -> dict:
     except json.JSONDecodeError as e:
         log.error("detect_intent JSON inválido para '%s': %s | respuesta: %r",
                   mensaje[:80], e, text[:300] if 'text' in dir() else "")
+        # Fallback local: si el mensaje contiene keywords de exámenes/especialidades
+        # conocidas, devolver intent='info' con respuesta directa.
+        _fb = _local_faq_fallback(mensaje)
+        if _fb:
+            return {"intent": "info", "especialidad": None, "respuesta_directa": _fb}
         return {"intent": "menu", "especialidad": None, "respuesta_directa": None}
     except Exception as e:
         log.error("detect_intent falló para '%s': %s", mensaje[:80], e)
+        _fb = _local_faq_fallback(mensaje)
+        if _fb:
+            return {"intent": "info", "especialidad": None, "respuesta_directa": _fb}
         return {"intent": "menu", "especialidad": None, "respuesta_directa": None}
 
 
@@ -766,6 +774,79 @@ async def consulta_clinica_doctor(pregunta: str) -> str:
         return "⚠️ Error al procesar tu consulta. Intenta de nuevo."
 
 
+_FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
+    # (keywords que deben aparecer, respuesta). Solo keywords muy específicas
+    # para evitar falsos positivos. Se usa como fallback cuando Claude falla.
+    (("ecograf", "mamari"),
+     "Sí, realizamos *ecografía mamaria* con el Dr. David Pardo 🩺\n\n"
+     "💰 Particular: desde $40.000\n\n"
+     "Escribe *1* o *agendar* para reservar hora."),
+    (("ecotomograf", "mamari"),
+     "Sí, realizamos *ecotomografía mamaria* con el Dr. David Pardo 🩺\n\n"
+     "💰 Particular: desde $40.000\n\n"
+     "Escribe *1* o *agendar* para reservar hora."),
+    (("ecograf", "testicul"),
+     "Sí, realizamos *ecografía testicular / inguino-escrotal* con el Dr. David Pardo 🩺\n\n"
+     "💰 Particular: desde $40.000\n\n"
+     "Escribe *1* o *agendar* para reservar hora."),
+    (("ecotomograf", "texticul"),
+     "Sí, realizamos *ecografía testicular* con el Dr. David Pardo 🩺\n\n"
+     "💰 Particular: desde $40.000\n\n"
+     "Escribe *1* o *agendar* para reservar hora."),
+    (("ecograf", "doppler"),
+     "Sí, realizamos *ecografía Doppler* (miembros inferiores, carótidas, etc.) "
+     "con el Dr. David Pardo 🩺\n\n"
+     "💰 Particular: desde $40.000\n\n"
+     "Escribe *1* o *agendar* para reservar hora."),
+    (("ecograf", "abdomin"),
+     "Sí, realizamos *ecografía abdominal* con el Dr. David Pardo 🩺\n\n"
+     "💰 Particular: desde $40.000\n\n"
+     "Escribe *1* o *agendar* para reservar hora."),
+    (("ecograf", "ginecolog"),
+     "Sí, realizamos *ecografía ginecológica* con el Dr. Tirso Rejón (ginecólogo) 👩‍⚕️\n\n"
+     "💰 Particular: desde $50.000\n\n"
+     "Escribe *1* o *agendar ginecología* para reservar hora."),
+    (("ecograf", "obstetric"),
+     "Sí, realizamos *ecografía obstétrica* con el Dr. Tirso Rejón (ginecólogo) 👩‍⚕️\n\n"
+     "💰 Particular: desde $50.000\n\n"
+     "Escribe *1* o *agendar ginecología* para reservar hora."),
+    (("gastroenterolog",),
+     "Sí, tenemos *gastroenterólogo*: Dr. Nicolás Quijano 🩺\n\n"
+     "💰 Consulta particular: $40.000\n\n"
+     "Escribe *1* o *agendar gastroenterología* para reservar hora."),
+    (("cardiolog",),
+     "Sí, tenemos *cardiólogo*: Dr. Miguel Millán 🫀\n\n"
+     "💰 Consulta particular: $40.000\n\n"
+     "Escribe *1* o *agendar cardiología* para reservar hora."),
+    (("otorrino",),
+     "Sí, tenemos *otorrinolaringólogo*: Dr. Manuel Borrego 👂\n\n"
+     "💰 Consulta particular: $40.000\n\n"
+     "Escribe *1* o *agendar otorrinolaringología* para reservar hora."),
+    (("ginecolog",),
+     "Sí, tenemos *ginecólogo*: Dr. Tirso Rejón 👩‍⚕️\n\n"
+     "💰 Consulta particular: $40.000\n\n"
+     "Escribe *1* o *agendar ginecología* para reservar hora."),
+    (("traumatolog",),
+     "*Traumatología:* atendemos lesiones musculoesqueléticas con nuestros médicos "
+     "generales. Si requieres especialista traumatólogo directo, te derivan desde el CMC 🦴\n\n"
+     "Escribe *1* o *agendar* para reservar hora."),
+]
+
+
+def _local_faq_fallback(mensaje: str) -> str | None:
+    """Responde sin Claude cuando el mensaje contiene keywords inequívocas.
+    Evita colapsar cuando la API está caída y cubre las FAQ más repetidas.
+    Normaliza tildes para capturar variantes ('cardiólogo' vs 'cardiologo')."""
+    import unicodedata
+    tl = mensaje.lower()
+    tl_na = ''.join(c for c in unicodedata.normalize('NFD', tl)
+                    if unicodedata.category(c) != 'Mn')
+    for keywords, respuesta in _FAQ_LOCAL_FALLBACKS:
+        if all(k in tl_na for k in keywords):
+            return respuesta
+    return None
+
+
 async def respuesta_faq(mensaje: str) -> str:
     """Responde preguntas frecuentes directamente con Claude."""
     text = ""
@@ -784,11 +865,15 @@ async def respuesta_faq(mensaje: str) -> str:
         if resp.stop_reason == "max_tokens":
             log.warning("respuesta_faq truncado por max_tokens: %r", mensaje[:80])
         data = json.loads(text)
-        return data.get("respuesta_directa") or "Para más información, comunícate con recepción 😊"
+        respuesta_claude = data.get("respuesta_directa")
+        if respuesta_claude:
+            return respuesta_claude
+        # Sin respuesta de Claude → intentar fallback local antes de rendirse
+        return _local_faq_fallback(mensaje) or "Para más información, comunícate con recepción 😊"
     except json.JSONDecodeError as e:
         log.error("respuesta_faq JSON inválido para '%s': %s | respuesta: %r",
                   mensaje[:80], e, text[:300])
-        return "Para más información, comunícate con recepción 😊"
+        return _local_faq_fallback(mensaje) or "Para más información, comunícate con recepción 😊"
     except Exception as e:
         log.error("respuesta_faq falló para '%s': %s", mensaje[:80], e)
-        return "Para más información, comunícate con recepción 😊"
+        return _local_faq_fallback(mensaje) or "Para más información, comunícate con recepción 😊"
