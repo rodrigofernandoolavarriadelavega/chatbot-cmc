@@ -1775,18 +1775,12 @@ def api_savings(period: str = Query("today", pattern="^(today|7d|30d)$"),
 
 # ── AGENDA HOME: waiting room + estado local + undo ──────────────────────────
 import json as _json
-import sqlite3 as _sqlite
-from pathlib import Path as _Path
-
-_AGENDA_DB = _Path(__file__).parent.parent / "data" / "sessions.db"
 
 
 def _agenda_conn():
-    conn = _sqlite.connect(str(_AGENDA_DB), timeout=10)
-    conn.row_factory = _sqlite.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA busy_timeout=5000")
-    return conn
+    """Usa el mismo helper que session.py para compatibilidad con SQLCipher."""
+    from session import _conn as _session_conn  # type: ignore
+    return _session_conn()
 
 
 _AGENDA_TABLES_READY = False
