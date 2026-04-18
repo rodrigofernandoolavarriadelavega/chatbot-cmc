@@ -927,37 +927,89 @@ async def admin_select_slot(phone: str, request: Request, _: str = Depends(requi
 
 @router.get("/admin/api/agenda-dia")
 async def admin_agenda_dia(fecha: str = None, _: str = Depends(require_admin)):
-    """Retorna la agenda de todos los profesionales para una fecha.
-    Resultado: [{id, nombre, especialidad, citas: [{hora, hora_fin, paciente, rut, estado}]}]
-    """
+    """Agenda del día enriquecida con estado normalizado, wa_status, service window, etc."""
     from medilink import obtener_agenda_dia
+    from session import get_phone_by_rut, get_last_inbound_ts
     if not fecha:
         from zoneinfo import ZoneInfo
         from datetime import datetime as _dt
         fecha = _dt.now(ZoneInfo("America/Santiago")).strftime("%Y-%m-%d")
 
-    # Solo consultar profesionales que atienden ese día de la semana
-    agenda = []
+    _ensure_agenda_tables()
+
     tasks = []
     for pid, pinfo in PROFESIONALES.items():
         tasks.append((pid, pinfo, obtener_agenda_dia(pid, fecha)))
-
     results = await asyncio.gather(*[t[2] for t in tasks], return_exceptions=True)
 
-    for (pid, pinfo, _), result in zip(tasks, results):
+    all_ids = []
+    for r in results:
+        if isinstance(r, list):
+            for c in r:
+                if c.get("id_cita"):
+                    try:
+                        all_ids.append(int(c["id_cita"]))
+                    except (TypeError, ValueError):
+                        pass
+    estados_locales = _bulk_estados_locales(all_ids) if all_ids else {}
+
+    from datetime import datetime as _dt2
+    from zoneinfo import ZoneInfo as _ZI
+    now_utc = _dt2.now(_ZI("UTC"))
+
+    agenda = []
+    flat_citas = []
+    for (pid, pinfo, _ign), result in zip(tasks, results):
         if isinstance(result, Exception):
             result = []
+        citas_enriched = []
+        for c in result:
+            rut = c.get("rut", "") or ""
+            phone = ""
+            if rut:
+                try:
+                    phone = get_phone_by_rut(rut) or ""
+                except Exception:
+                    phone = ""
+            wa_status = _get_wa_status(phone) if phone else "no_enviado"
+            tsw = False
+            if phone:
+                try:
+                    last_in = get_last_inbound_ts(phone)
+                    if last_in and (now_utc - last_in).total_seconds() < 24 * 3600:
+                        tsw = True
+                except Exception:
+                    pass
+            estado_raw = c.get("estado", "") or ""
+            try:
+                local_ov = estados_locales.get(int(c.get("id_cita") or 0))
+            except (TypeError, ValueError):
+                local_ov = None
+            estado_norm = local_ov or _normalize_estado(estado_raw)
+            c_new = dict(c)
+            c_new.update({
+                "paciente_nombre": c.get("paciente", "") or "",
+                "paciente_rut": rut,
+                "paciente_phone": phone,
+                "profesional_nombre": pinfo.get("nombre", f"Prof. {pid}"),
+                "especialidad": pinfo.get("especialidad", ""),
+                "estado_raw": estado_raw,
+                "estado": estado_norm,
+                "wa_status": wa_status,
+                "tiene_service_window": tsw,
+            })
+            citas_enriched.append(c_new)
+            flat_citas.append(c_new)
         agenda.append({
             "id": pid,
             "nombre": pinfo.get("nombre", f"Prof. {pid}"),
             "especialidad": pinfo.get("especialidad", ""),
-            "citas": result,
+            "citas": citas_enriched,
         })
 
-    # Filtrar profesionales sin citas para no saturar
     agenda = [a for a in agenda if a["citas"]]
     agenda.sort(key=lambda a: a["nombre"])
-    return {"fecha": fecha, "profesionales": agenda}
+    return {"fecha": fecha, "profesionales": agenda, "citas": flat_citas}
 
 
 # ── Campañas estacionales ────────────────────────────────────────────────────
@@ -1719,3 +1771,326 @@ def api_savings(period: str = Query("today", pattern="^(today|7d|30d)$"),
             "whisper_short":    _PRICE_WHISPER_SHORT_USD,
         },
     }
+
+
+# ── AGENDA HOME: waiting room + estado local + undo ──────────────────────────
+import json as _json
+import sqlite3 as _sqlite
+from pathlib import Path as _Path
+
+_AGENDA_DB = _Path(__file__).parent.parent / "data" / "sessions.db"
+
+
+def _agenda_conn():
+    conn = _sqlite.connect(str(_AGENDA_DB), timeout=10)
+    conn.row_factory = _sqlite.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=5000")
+    return conn
+
+
+_AGENDA_TABLES_READY = False
+
+
+def _ensure_agenda_tables():
+    global _AGENDA_TABLES_READY
+    if _AGENDA_TABLES_READY:
+        return
+    conn = _agenda_conn()
+    try:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS cita_estados_local (
+                id_cita INTEGER PRIMARY KEY,
+                estado TEXT,
+                ts INTEGER,
+                operador TEXT
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS waiting_room (
+                id_cita INTEGER PRIMARY KEY,
+                phone TEXT,
+                nombre TEXT,
+                especialidad TEXT,
+                profesional TEXT,
+                llegada_ts INTEGER,
+                prioridad INTEGER DEFAULT 0
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS undo_snapshots (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                op TEXT,
+                payload TEXT,
+                ts INTEGER,
+                expires_ts INTEGER,
+                applied INTEGER DEFAULT 0
+            )
+        """)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_undo_expires ON undo_snapshots(expires_ts)")
+        conn.commit()
+        _AGENDA_TABLES_READY = True
+    finally:
+        conn.close()
+
+
+_ESTADO_MAP = {
+    "": "pendiente",
+    "pendiente": "pendiente",
+    "solicitada": "pendiente",
+    "confirmada": "confirmada",
+    "confirmado": "confirmada",
+    "asistira": "confirmada",
+    "asistirá": "confirmada",
+    "asiste": "en_consulta",
+    "en consulta": "en_consulta",
+    "en_consulta": "en_consulta",
+    "en sala": "en_consulta",
+    "atendida": "atendida",
+    "atendido": "atendida",
+    "asistio": "atendida",
+    "asistió": "atendida",
+    "no asistio": "no_asistio",
+    "no asistió": "no_asistio",
+    "no_asistio": "no_asistio",
+    "ausente": "no_asistio",
+    "anulada": "cancelada",
+    "anulado": "cancelada",
+    "cancelada": "cancelada",
+    "cancelado": "cancelada",
+}
+
+
+def _normalize_estado(raw: str) -> str:
+    if not raw:
+        return "pendiente"
+    k = str(raw).strip().lower()
+    return _ESTADO_MAP.get(k, "pendiente")
+
+
+def _bulk_estados_locales(ids):
+    if not ids:
+        return {}
+    _ensure_agenda_tables()
+    conn = _agenda_conn()
+    try:
+        placeholders = ",".join(["?"] * len(ids))
+        rows = conn.execute(
+            f"SELECT id_cita, estado FROM cita_estados_local WHERE id_cita IN ({placeholders})",
+            ids
+        ).fetchall()
+        return {int(r["id_cita"]): r["estado"] for r in rows}
+    finally:
+        conn.close()
+
+
+def _get_wa_status(phone: str) -> str:
+    if not phone:
+        return "no_enviado"
+    try:
+        conn = _agenda_conn()
+        try:
+            cutoff = int(time.time()) - 48 * 3600
+            r = conn.execute(
+                "SELECT status, ts FROM message_statuses WHERE phone=? AND ts>=? ORDER BY ts DESC LIMIT 1",
+                (phone, cutoff)
+            ).fetchone()
+            if not r:
+                return "no_enviado"
+            status = (r["status"] or "").lower()
+            last_status_ts = int(r["ts"] or 0)
+            try:
+                ri = conn.execute(
+                    "SELECT ts FROM messages WHERE phone=? AND direction='in' ORDER BY ts DESC LIMIT 1",
+                    (phone,)
+                ).fetchone()
+                if ri and int(ri["ts"] or 0) > last_status_ts:
+                    return "respondido"
+            except Exception:
+                pass
+            if status == "read":
+                return "leido"
+            if status == "delivered":
+                return "entregado"
+            if status == "sent":
+                return "enviado"
+            if status == "failed":
+                return "no_enviado"
+            return "enviado"
+        finally:
+            conn.close()
+    except Exception as e:
+        log.debug("_get_wa_status err: %s", e)
+        return "no_enviado"
+
+
+def _create_undo_snapshot(op: str, payload: dict, ttl_s: int = 15) -> int:
+    _ensure_agenda_tables()
+    conn = _agenda_conn()
+    try:
+        now = int(time.time())
+        cur = conn.execute(
+            "INSERT INTO undo_snapshots (op, payload, ts, expires_ts) VALUES (?, ?, ?, ?)",
+            (op, _json.dumps(payload, default=str), now, now + int(ttl_s))
+        )
+        conn.commit()
+        return int(cur.lastrowid)
+    finally:
+        conn.close()
+
+
+@router.post("/admin/api/cita/{id_cita}/estado")
+async def admin_cita_set_estado(id_cita: int, request: Request, _: str = Depends(require_admin)):
+    """Guarda un override local del estado de la cita (no se propaga a Medilink)."""
+    body = await request.json()
+    nuevo = (body.get("estado") or "").strip().lower()
+    if nuevo not in ("pendiente", "confirmada", "en_consulta", "atendida", "no_asistio", "cancelada"):
+        raise HTTPException(status_code=400, detail="estado inválido")
+    operador = body.get("operador", "admin")
+    _ensure_agenda_tables()
+    conn = _agenda_conn()
+    try:
+        conn.execute(
+            "INSERT INTO cita_estados_local (id_cita, estado, ts, operador) VALUES (?, ?, ?, ?) "
+            "ON CONFLICT(id_cita) DO UPDATE SET estado=excluded.estado, ts=excluded.ts, operador=excluded.operador",
+            (int(id_cita), nuevo, int(time.time()), operador)
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    log_event("admin", "cita_estado_local", {"id_cita": id_cita, "estado": nuevo})
+    return {"ok": True, "id_cita": id_cita, "estado": nuevo}
+
+
+@router.get("/admin/api/waiting-room")
+def admin_waiting_room(_: str = Depends(require_admin)):
+    """Lista pacientes en sala de espera."""
+    _ensure_agenda_tables()
+    conn = _agenda_conn()
+    try:
+        rows = conn.execute(
+            "SELECT id_cita, phone, nombre, especialidad, profesional, llegada_ts, prioridad "
+            "FROM waiting_room ORDER BY prioridad DESC, llegada_ts ASC"
+        ).fetchall()
+        now = int(time.time())
+        items = []
+        for r in rows:
+            llegada = int(r["llegada_ts"] or 0)
+            espera_min = max(0, (now - llegada) // 60) if llegada else 0
+            items.append({
+                "id_cita": r["id_cita"],
+                "phone": r["phone"] or "",
+                "nombre": r["nombre"] or "",
+                "especialidad": r["especialidad"] or "",
+                "profesional": r["profesional"] or "",
+                "llegada_ts": llegada,
+                "prioridad": int(r["prioridad"] or 0),
+                "espera_min": int(espera_min),
+            })
+        return {"items": items}
+    finally:
+        conn.close()
+
+
+@router.post("/admin/api/waiting-room/arrive")
+async def admin_waiting_room_arrive(request: Request, _: str = Depends(require_admin)):
+    """Agrega o actualiza un paciente en la sala de espera."""
+    body = await request.json()
+    id_cita = int(body.get("id_cita") or 0)
+    if not id_cita:
+        raise HTTPException(status_code=400, detail="id_cita requerido")
+    _ensure_agenda_tables()
+    conn = _agenda_conn()
+    try:
+        conn.execute(
+            "INSERT INTO waiting_room (id_cita, phone, nombre, especialidad, profesional, llegada_ts, prioridad) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT(id_cita) DO UPDATE SET phone=excluded.phone, nombre=excluded.nombre, "
+            "especialidad=excluded.especialidad, profesional=excluded.profesional, "
+            "prioridad=excluded.prioridad",
+            (
+                id_cita,
+                body.get("phone", "") or "",
+                body.get("nombre", "") or "",
+                body.get("especialidad", "") or "",
+                body.get("profesional", "") or "",
+                int(time.time()),
+                int(body.get("prioridad") or 0),
+            )
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    log_event("admin", "waiting_room_arrive", {"id_cita": id_cita})
+    return {"ok": True, "id_cita": id_cita}
+
+
+@router.delete("/admin/api/waiting-room/{id_cita}")
+def admin_waiting_room_remove(id_cita: int, _: str = Depends(require_admin)):
+    """Retira un paciente de la sala de espera con snapshot undo."""
+    _ensure_agenda_tables()
+    conn = _agenda_conn()
+    try:
+        row = conn.execute(
+            "SELECT id_cita, phone, nombre, especialidad, profesional, llegada_ts, prioridad "
+            "FROM waiting_room WHERE id_cita=?",
+            (int(id_cita),)
+        ).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="No está en sala")
+        snapshot_id = _create_undo_snapshot("waiting_remove", dict(row), ttl_s=30)
+        conn.execute("DELETE FROM waiting_room WHERE id_cita=?", (int(id_cita),))
+        conn.commit()
+    finally:
+        conn.close()
+    log_event("admin", "waiting_room_remove", {"id_cita": id_cita, "snapshot": snapshot_id})
+    return {"ok": True, "snapshot_id": snapshot_id}
+
+
+@router.post("/admin/api/undo/{snapshot_id}")
+def admin_undo(snapshot_id: int, _: str = Depends(require_admin)):
+    """Restaura una acción desde snapshot (soporta waiting_remove)."""
+    _ensure_agenda_tables()
+    conn = _agenda_conn()
+    try:
+        row = conn.execute(
+            "SELECT id, op, payload, expires_ts, applied FROM undo_snapshots WHERE id=?",
+            (int(snapshot_id),)
+        ).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="snapshot no encontrado")
+        if int(row["applied"] or 0) == 1:
+            raise HTTPException(status_code=410, detail="snapshot ya aplicado")
+        if int(row["expires_ts"] or 0) < int(time.time()):
+            raise HTTPException(status_code=410, detail="snapshot expirado")
+        payload = _json.loads(row["payload"] or "{}")
+        op = row["op"]
+        if op == "waiting_remove":
+            conn.execute(
+                "INSERT INTO waiting_room (id_cita, phone, nombre, especialidad, profesional, llegada_ts, prioridad) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?) "
+                "ON CONFLICT(id_cita) DO UPDATE SET phone=excluded.phone, nombre=excluded.nombre",
+                (
+                    int(payload.get("id_cita") or 0),
+                    payload.get("phone", "") or "",
+                    payload.get("nombre", "") or "",
+                    payload.get("especialidad", "") or "",
+                    payload.get("profesional", "") or "",
+                    int(payload.get("llegada_ts") or time.time()),
+                    int(payload.get("prioridad") or 0),
+                )
+            )
+        else:
+            raise HTTPException(status_code=400, detail=f"op {op} no soportada")
+        conn.execute("UPDATE undo_snapshots SET applied=1 WHERE id=?", (int(snapshot_id),))
+        conn.commit()
+    finally:
+        conn.close()
+    log_event("admin", "undo_applied", {"snapshot_id": snapshot_id, "op": op})
+    return {"ok": True, "snapshot_id": snapshot_id, "op": op}
+
+
+try:
+    _ensure_agenda_tables()
+except Exception as _e:
+    log.warning("No se pudieron inicializar tablas admin: %s", _e)
