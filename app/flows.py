@@ -1981,6 +1981,21 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             )):
                 log_event(phone, "fallback_humano", {"txt": txt[:120]})
                 return _derivar_humano(phone=phone, contexto=txt)
+            # 1d) Reagendar / cancelar por texto libre
+            if any(k in _tl_book for k in (
+                "cambiar hora", "cambiar cita", "cambiar mi hora",
+                "mover hora", "mover cita", "reagendar",
+                "modificar hora", "modificar cita", "modificar la hora",
+                "cambiar de hora", "cambiar horario",
+            )):
+                log_event(phone, "fallback_reagendar", {"txt": txt[:120]})
+                return await _iniciar_reagendar(phone, data)
+            if any(k in _tl_book for k in (
+                "cancelar mi hora", "cancelar hora", "cancelar cita",
+                "anular hora", "anular cita",
+            )):
+                log_event(phone, "fallback_cancelar", {"txt": txt[:120]})
+                return await _iniciar_cancelar(phone, data)
             # 2) Si NO hay palabra de acción CLARA de reserva, probar FAQ.
             #    "consulta" es ambiguo (noun/verb) — no bloquea FAQ.
             #    Si hay acción clara, el paciente ya está en flujo conocido →
@@ -2144,6 +2159,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
     # ── WAIT_SLOT ─────────────────────────────────────────────────────────────
     if state == "WAIT_SLOT":
+        # Escape universal: botón motivo_* del menú inicial llega aquí
+        # (paciente se devolvió al menú y tocó un botón). Reset + re-dispatch.
+        if txt.startswith("motivo_"):
+            reset_session(phone)
+            return await handle_message(phone, txt, get_session(phone))
         slots_mostrados = data.get("slots", [])          # los que ve el paciente ahora
         todos_slots     = data.get("todos_slots", slots_mostrados)  # todos del día
         fechas_vistas   = data.get("fechas_vistas", [])
