@@ -76,13 +76,11 @@ input, textarea, select{font-family:inherit; color:inherit}
 .brand:hover{background:var(--panel-2)}
 .brand-logo{
   width:38px; height:38px; border-radius:10px; flex:0 0 38px;
-  background:#fff url(/static/logo.png) no-repeat;
-  background-size:auto 82%;
-  background-position:5px center;
-  border:1.5px solid var(--cmc-aqua-soft);
+  background:#fff; border:1.5px solid var(--cmc-aqua-soft);
   box-shadow:0 2px 6px rgba(15,63,104,.12);
+  display:flex; align-items:center; justify-content:center; padding:3px;
 }
-.brand-logo img{display:none}
+.brand-logo img{width:100%; height:100%; object-fit:contain; display:block}
 .brand-text{display:flex; flex-direction:column; line-height:1.15}
 .brand-text .top{
   font-size:10px; color:var(--cmc-aqua); letter-spacing:2px;
@@ -417,7 +415,7 @@ input, textarea, select{font-family:inherit; color:inherit}
   <!-- ===== TOPBAR ========================================================= -->
   <header class="topbar">
     <a class="brand" href="#" title="Centro Médico Carampangue">
-      <span class="brand-logo"><img src="/static/logo.png" alt="CMC"></span>
+      <span class="brand-logo"><img src="/static/isotipo.png" alt="CMC"></span>
       <span class="brand-text">
         <span class="top">Centro Médico</span>
         <span class="bot">Carampangue <span class="v2">v2</span></span>
