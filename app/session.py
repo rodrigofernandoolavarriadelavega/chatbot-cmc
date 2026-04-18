@@ -597,21 +597,40 @@ def mark_reminder_sent(cita_id: int):
 def get_citas_bot_para_2h_reminder(fecha: str, hora_min: str, hora_max: str) -> list[dict]:
     """Devuelve citas del día `fecha` cuyo horario cae en [hora_min, hora_max]
     y donde aún no se envió el recordatorio de 2 horas antes.
-    Incluye paciente_nombre y phone_owner para terceros."""
+
+    Atómico: marca las citas como enviadas dentro de la misma transacción
+    (BEGIN IMMEDIATE) para evitar duplicados cuando dos iteraciones del cron
+    corren casi simultáneamente. Si el envío posterior falla, la cita queda
+    marcada como enviada — preferimos no recordar que molestar con duplicados.
+    """
     with _conn() as conn:
-        rows = conn.execute(
-            """SELECT c.*,
-                      CASE WHEN c.paciente_nombre != '' THEN c.paciente_nombre
-                           ELSE cp.nombre END AS paciente_nombre,
-                      cp.nombre AS phone_owner
-               FROM citas_bot c
-               LEFT JOIN contact_profiles cp ON c.phone = cp.phone
-               WHERE c.fecha=? AND c.hora>=? AND c.hora<=?
-                 AND (c.reminder_2h_sent IS NULL OR c.reminder_2h_sent=0)
-                 AND (c.confirmation_status IS NULL OR c.confirmation_status != 'cancelar')""",
-            (fecha, hora_min, hora_max),
-        ).fetchall()
-        return [dict(r) for r in rows]
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            rows = conn.execute(
+                """SELECT c.*,
+                          CASE WHEN c.paciente_nombre != '' THEN c.paciente_nombre
+                               ELSE cp.nombre END AS paciente_nombre,
+                          cp.nombre AS phone_owner
+                   FROM citas_bot c
+                   LEFT JOIN contact_profiles cp ON c.phone = cp.phone
+                   WHERE c.fecha=? AND c.hora>=? AND c.hora<=?
+                     AND (c.reminder_2h_sent IS NULL OR c.reminder_2h_sent=0)
+                     AND (c.confirmation_status IS NULL OR c.confirmation_status != 'cancelar')""",
+                (fecha, hora_min, hora_max),
+            ).fetchall()
+            citas = [dict(r) for r in rows]
+            if citas:
+                ids = [r["id"] for r in citas]
+                placeholders = ",".join("?" for _ in ids)
+                conn.execute(
+                    f"UPDATE citas_bot SET reminder_2h_sent=1 WHERE id IN ({placeholders})",
+                    ids,
+                )
+            conn.commit()
+            return citas
+        except Exception:
+            conn.rollback()
+            raise
 
 
 def mark_reminder_2h_sent(cita_id: int):

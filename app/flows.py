@@ -1149,6 +1149,39 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # nombre) y para pasarle a `detect_intent` el texto original.
     tl_norm = normalizar_texto_paciente(txt)
 
+    # ── Mapeo de títulos de botón/lista → IDs (crítico para IG/FB) ─────────────
+    # En WhatsApp los clicks de botones llegan con `id`; en Instagram/Messenger
+    # el click manda el texto literal del título. Normalizamos aquí antes de
+    # que el dispatcher falle al no matchear el id esperado.
+    _TITLE_TO_ID = {
+        "hablar con recepcion": "accion_recepcion",
+        "hablar con recepción": "accion_recepcion",
+        "cambiar/cancelar hora": "accion_cambiar",
+        "cambiar cancelar hora": "accion_cambiar",
+        "cambiar hora": "accion_cambiar",
+        "cancelar hora": "accion_cambiar",
+        "cancelar mi hora": "accion_cambiar",
+        "agendar hora": "accion_agendar",
+        "agendar una hora": "accion_agendar",
+        "pedir hora": "accion_agendar",
+        "ver mis citas": "accion_mis_citas",
+        "mis citas": "accion_mis_citas",
+        "ver mis reservas": "accion_mis_citas",
+        "lista de espera": "accion_waitlist",
+        "otro profesional": "otro_prof",
+        "👤 otro profesional": "otro_prof",
+        "otro dia": "otro_dia",
+        "otro día": "otro_dia",
+        "ver todos": "ver_todos",
+        "ver más": "ver_otros",
+        "ver mas": "ver_otros",
+    }
+    _tl_map_key = tl_norm.lstrip("🔄💬📅📋👤⚡🏥❌✅🔎📊📷 ").strip()
+    if _tl_map_key in _TITLE_TO_ID:
+        tl = _TITLE_TO_ID[_tl_map_key]
+    elif tl_norm in _TITLE_TO_ID:
+        tl = _TITLE_TO_ID[tl_norm]
+
     # ── Confirmación pre-cita (respuesta al recordatorio de 09:00) ────────────
     # Los botones del recordatorio llegan con ID "cita_confirm:<id>", etc.
     # Debe ir ANTES de emergencias y comandos globales para que siempre se procese.
@@ -1353,6 +1386,27 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if tl in ("ver_otros", "ver_todos", "otro_dia", "otro_día",
                   "otro_prof", "confirmar_sugerido"):
             return await _iniciar_agendar(phone, data, None)
+
+        # ── Closings conversacionales (no re-mostrar menú) ────────────────────
+        # "gracias", "ok", "dale", "chao" tras un flujo completado — el paciente
+        # está cerrando la conversación, no iniciando otra. Evita saludarlo de
+        # cero con el menú cuando solo dice "ok".
+        _CLOSINGS = {
+            "gracias", "muchas gracias", "muchas grasias", "grasias",
+            "gracia", "graciass", "graciasss", "thanks", "thx",
+            "ok", "okey", "okay", "okey gracias", "ok gracias",
+            "vale", "dale", "bueno", "perfecto", "listo", "listop",
+            "super", "súper", "bacan", "bakan", "bacán", "genial",
+            "ya", "ya ok", "ya gracias", "ya po", "ya listo",
+            "chao", "chaito", "chau", "adios", "adiós", "bye",
+            "hasta luego", "hasta pronto", "nos vemos",
+            "no gracias", "no grasias", "pero no gracias",
+            "muy amable", "muy amables", "excelente", "ta bien",
+            "tá bien", "ta bueno", "tá bueno", "gracias igual",
+        }
+        if tl_norm in _CLOSINGS or tl in _CLOSINGS:
+            log_event(phone, "idle_closing", {"txt": txt[:80]})
+            return "¡Que estés muy bien! 👋"
 
         # ── Seguimiento de FAQ con sugerencia de agendar ──────────────────────
         # Debe ir ANTES de los atajos numéricos (1..4) porque aquí interpretamos
@@ -2472,6 +2526,28 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "_Elige un número del listado, *ver todos* para más horarios, u *otro día*._"
             )
 
+        # ── Apellido específico mencionado ("con el dr marquez", "quiero con abarca") ──
+        # PRIORIDAD MÁXIMA: si el paciente pide un doctor por nombre, filtramos
+        # slots actuales a ese profesional o lanzamos búsqueda fresca con él.
+        # Evita loop donde el paciente pedía Márquez y el bot ofrecía Olavarría.
+        _apellido_slot = _detectar_apellido_profesional(txt) if tl != "otro_prof" else None
+        if _apellido_slot:
+            from medilink import _ids_para_especialidad
+            ids_apellido = set(_ids_para_especialidad(_apellido_slot))
+            if ids_apellido:
+                slots_de_ese = [s for s in todos_slots if s.get("id_profesional") in ids_apellido]
+                if slots_de_ese:
+                    data["slots"] = slots_de_ese[:10]
+                    data["prof_sugerido_id"] = slots_de_ese[0].get("id_profesional")
+                    _pv = set(data.get("profs_vistos", []))
+                    _pv.update(ids_apellido)
+                    data["profs_vistos"] = list(_pv)
+                    save_session(phone, "WAIT_SLOT", data)
+                    return _format_slots(slots_de_ese[:10], mostrar_todos=True)
+                # Sin slots de ese profesional en el día actual → búsqueda fresca
+                reset_session(phone)
+                return await _iniciar_agendar(phone, {}, _apellido_slot)
+
         # ── Intento de cambio de profesional por lenguaje natural ──
         # "no quiero ese profesional", "con otro doctor", "no me gusta", etc.
         _OTRO_PROF_PHRASES = (
@@ -2554,6 +2630,79 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 f"Horarios disponibles:\n{', '.join(horas_disp[:12])}"
                 f"\n\nElige uno, escribe *otro día* o *otro profesional*."
             )
+
+        # ── Hora exacta mencionada ("10:00", "1030", "a las 5", "tipo 17hrs") ──
+        # Si el paciente escribe una hora específica, buscar el slot más cercano
+        # dentro de ±30 min. Cubre mucho texto libre que antes caía en el fallback.
+        import re as _re_hh
+        _m_hora = _re_hh.search(
+            r'(?:a\s+las|como\s+a\s+las|tipo|sobre\s+las|cerca\s+de\s+las)?\s*'
+            r'\b(\d{1,2})(?:[:.h](\d{2})|(\d{2}))?\s*(am|pm|hrs?|horas?|h)?\b',
+            tl_norm_slot,
+        )
+        def _slot_hora_close(slots, h_target, m_target):
+            def _mins(hm):
+                try:
+                    hh, mm = hm.split(":")
+                    return int(hh) * 60 + int(mm)
+                except Exception:
+                    return 9999
+            target = h_target * 60 + m_target
+            best = None
+            best_d = 999
+            for s in slots:
+                hi = s.get("hora_inicio", "")[:5]
+                if not hi:
+                    continue
+                d = abs(_mins(hi) - target)
+                if d < best_d:
+                    best_d = d
+                    best = s
+            return best, best_d
+        _hora_match_valida = False
+        _h_pedida = _m_pedida = 0
+        if _m_hora:
+            _h_pedida = int(_m_hora.group(1))
+            _mm = _m_hora.group(2) or _m_hora.group(3) or "0"
+            _m_pedida = int(_mm) if _mm else 0
+            _ampm = (_m_hora.group(4) or "").lower()
+            if _ampm == "pm" and _h_pedida < 12:
+                _h_pedida += 12
+            if _ampm == "am" and _h_pedida == 12:
+                _h_pedida = 0
+            if not _ampm and 1 <= _h_pedida <= 7:
+                _h_pedida += 12
+            _es_numero_puro = tl_norm_slot.strip().isdigit() and len(tl_norm_slot.strip()) <= 2
+            _hora_match_valida = (
+                0 <= _h_pedida <= 23
+                and 0 <= _m_pedida <= 59
+                and not _es_numero_puro
+                and bool(todos_slots)
+                and tl != "otro_prof"
+            )
+        if _hora_match_valida:
+            best_slot, delta = _slot_hora_close(todos_slots, _h_pedida, _m_pedida)
+            if best_slot and delta <= 30:
+                data["slots"] = [best_slot]
+                save_session(phone, "WAIT_SLOT", data)
+                return _format_slots([best_slot])
+            cercanos = []
+            for s in todos_slots:
+                hi = s.get("hora_inicio", "")[:5]
+                try:
+                    hh = int(hi.split(":")[0])
+                    if abs(hh - _h_pedida) <= 2:
+                        cercanos.append(s)
+                except Exception:
+                    pass
+            if cercanos:
+                data["slots"] = cercanos[:10]
+                save_session(phone, "WAIT_SLOT", data)
+                return (
+                    f"No tengo exactamente a las {_h_pedida:02d}:{_m_pedida:02d} 😕\n"
+                    f"Te muestro los más cercanos:\n\n"
+                    + _format_slots(cercanos[:10], mostrar_todos=True)
+                )
 
         # ── Ventana horaria "desde las N" / "después de las N" / "antes de las N" ──
         # Usuario escribe "desde las 15", "después de las 5", "antes de las 12"
