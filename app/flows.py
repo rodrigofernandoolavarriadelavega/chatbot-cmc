@@ -2242,6 +2242,19 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "_Seguimos con tu reserva: elige un número del listado o escribe *otro día*._"
             )
 
+        # ── Pregunta por teléfono/dirección en WAIT_SLOT ──
+        tl_norm_slot = txt.lower().strip()
+        _INFO_CONTACTO = ("numero de contacto", "número de contacto", "telefono de contacto",
+                          "teléfono de contacto", "a que numero", "a qué número",
+                          "direccion del centro", "dirección del centro",
+                          "donde queda", "dónde queda", "como llego", "cómo llego")
+        if any(p in tl_norm_slot for p in _INFO_CONTACTO):
+            return (
+                f"📞 *{CMC_TELEFONO}* o ☎️ *(41) 296 5226*\n"
+                f"📍 Monsalve 102, Carampangue (frente a la antigua estación de trenes).\n\n"
+                "_Elige un número del listado, *ver todos* para más horarios, u *otro día*._"
+            )
+
         # ── Intento de cambio de profesional por lenguaje natural ──
         # "no quiero ese profesional", "con otro doctor", "no me gusta", etc.
         _OTRO_PROF_PHRASES = (
@@ -2250,7 +2263,6 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             "con otra", "cambiar doctor", "cambiar profesional",
             "no ese", "no ese doctor", "prefiero otro",
         )
-        tl_norm_slot = txt.lower().strip()
         if any(p in tl_norm_slot for p in _OTRO_PROF_PHRASES):
             tl = "otro_prof"  # re-dispatch al handler ya existente
 
@@ -2420,6 +2432,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 result = await detect_intent(txt)
                 intent = result.get("intent", "otro")
                 esp_override = _detectar_apellido_profesional(txt)
+                # Si detectamos apellido de profesional, tratarlo como intent agendar
+                # aunque Claude haya devuelto otro (info/precio/otro). El paciente
+                # claramente está pidiendo al doctor por nombre.
+                if esp_override and intent not in ("cancelar", "reagendar", "ver_reservas"):
+                    intent = "agendar"
                 if intent == "agendar" and (result.get("especialidad") or esp_override):
                     from medilink import _ids_para_especialidad
                     # Override: si el texto crudo menciona un apellido de profesional,
@@ -2681,6 +2698,27 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             )
 
     if state == "WAIT_RUT_AGENDAR":
+        # Botón "Ingresar otro RUT" (rut_nuevo) — paciente rechazó el RUT conocido
+        if tl == "rut_nuevo":
+            data.pop("rut_conocido", None)
+            data.pop("nombre_conocido", None)
+            save_session(phone, "WAIT_RUT_AGENDAR", data)
+            return (
+                "Perfecto 😊 Ingresa el *RUT* con el que se va a atender:\n"
+                "(ej: *12.345.678-9*)"
+            )
+        # Si menciona otro profesional/especialidad (paciente se arrepintió del slot)
+        # → reset + reiniciar agendar con esa especialidad
+        _esp_override_rut = _detectar_apellido_profesional(txt) or _detectar_especialidad_en_texto(txt)
+        _tl_rut_check = txt.lower().strip()
+        _frases_cambio = ("me equivoque", "me equivoqué", "mejor con", "mejor el",
+                          "cambiar a", "en realidad", "quise decir", "no quiero este")
+        if _esp_override_rut and (any(p in _tl_rut_check for p in _frases_cambio) or len(txt) > 25):
+            log_event(phone, "rut_to_agendar_redirect", {
+                "texto": txt[:120], "esp": _esp_override_rut
+            })
+            reset_session(phone)
+            return await _iniciar_agendar(phone, {}, _esp_override_rut)
         # Escape: "otra persona" → flujo de terceros
         _OTHER_PHRASES = {"otra persona", "otro", "otra", "para otra persona",
                           "para otro", "booking_other", "familiar", "hijo", "hija",
