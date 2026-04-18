@@ -1264,6 +1264,51 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # dejar que el handler de HUMAN_TAKEOVER registre el mensaje.
     _es_comando_reset = (tl in _COMANDOS_GLOBALES or tl_norm in _COMANDOS_GLOBALES
                         or tl in _SALUDOS_SET or tl_norm in _SALUDOS_SET)
+    # Si el paciente está en flujo activo y escribe un saludo (no un comando
+    # explícito como 'menu'/'reiniciar'), ofrecer retomar antes de resetear.
+    _es_saludo_puro = (tl in _SALUDOS_SET or tl_norm in _SALUDOS_SET) and tl not in (
+        "menu", "menú", "inicio", "reiniciar", "volver", "menu_volver"
+    )
+    _FLUJO_RETOMABLE = {
+        "WAIT_SLOT", "WAIT_MODALIDAD", "WAIT_BOOKING_FOR",
+        "WAIT_RUT_AGENDAR", "CONFIRMING_CITA",
+        "WAIT_RUT_CANCELAR", "WAIT_CITA_CANCELAR", "CONFIRMING_CANCEL",
+        "WAIT_RUT_REAGENDAR", "WAIT_CITA_REAGENDAR",
+    }
+    if _es_saludo_puro and state in _FLUJO_RETOMABLE and not data.get("_retomar_ofrecido"):
+        data["_retomar_ofrecido"] = True
+        save_session(phone, state, data)
+        esp_retomar = data.get("especialidad") or data.get("quick_esp") or "tu cita"
+        log_event(phone, "retomar_ofrecido", {"state": state, "esp": esp_retomar})
+        return _btn_msg(
+            f"¡Hola de nuevo! 👋\n\nTenías un trámite pendiente de *{esp_retomar}*. "
+            "¿Retomamos donde quedaste o prefieres empezar de cero?",
+            [
+                {"id": "retomar_si", "title": "✅ Retomar"},
+                {"id": "retomar_no", "title": "🔄 Empezar de cero"},
+                {"id": "retomar_menu", "title": "📋 Ver menú"},
+            ]
+        )
+    # Handler de los botones de retomar (llega antes del reset_session general)
+    if tl in ("retomar_si",):
+        data.pop("_retomar_ofrecido", None)
+        save_session(phone, state, data)
+        log_event(phone, "retomado", {"state": state})
+        # Según el estado, reemitir el prompt específico
+        if state in ("WAIT_SLOT", "WAIT_MODALIDAD"):
+            esp_r = data.get("especialidad") or ""
+            return f"Perfecto, seguimos agendando *{esp_r}*. Escribe el *número* del horario o *otro día* para cambiar de día."
+        if state == "CONFIRMING_CITA":
+            return "Retomamos tu confirmación. Escribe *sí* para confirmar la hora, o *no* para buscar otra."
+        if state in ("WAIT_RUT_AGENDAR", "WAIT_RUT_CANCELAR", "WAIT_RUT_REAGENDAR"):
+            return "Necesito tu *RUT* para continuar (ej: *12.345.678-9*)"
+        if state in ("WAIT_CITA_CANCELAR", "WAIT_CITA_REAGENDAR"):
+            return "Escribe el *número* de la cita que quieres cambiar/cancelar."
+        return "Sigamos donde quedamos 👌 Escribe lo que necesitas."
+    if tl in ("retomar_no", "retomar_menu"):
+        log_event(phone, "retomar_rechazado", {"state": state})
+        reset_session(phone)
+        return _menu_msg()
     if _es_comando_reset and state != "HUMAN_TAKEOVER":
         reset_session(phone)
         if phone == _doctor_phone:
@@ -1497,6 +1542,59 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "Sin problema 😊 Cuando lo necesites, estamos acá.\n"
                 "_Escribe *menu* para ver todas las opciones._"
             )
+
+        # ── Cross-sell ORL ↔ Fonoaudiología ────────────────────────────────
+        if tl in ("xorlfono_si",):
+            perfil = get_profile(phone)
+            if perfil:
+                data["rut_conocido"] = perfil["rut"]
+                data["nombre_conocido"] = perfil["nombre"]
+            # Determinar destino: si última cita es ORL → fono, si es fono → ORL
+            ultima = get_ultima_cita_paciente(phone)
+            esp_prev = (ultima or {}).get("especialidad", "").lower()
+            destino = "fonoaudiología" if "otorrin" in esp_prev else "otorrinolaringología"
+            log_event(phone, "crosssell_orl_fono_acepto", {"destino": destino})
+            return await _iniciar_agendar(phone, data, destino)
+        if tl == "xorlfono_no":
+            log_event(phone, "crosssell_orl_fono_rechazo", {})
+            return "Sin problema 😊 Cuando quieras, avísame.\n_Escribe *menu* para ver opciones._"
+
+        # ── Cross-sell Odontología → Estética Facial ──────────────────────
+        if tl == "xestetica_si":
+            log_event(phone, "crosssell_odonto_estetica_acepto", {})
+            perfil = get_profile(phone)
+            if perfil:
+                data["rut_conocido"] = perfil["rut"]
+                data["nombre_conocido"] = perfil["nombre"]
+            return await _iniciar_agendar(phone, data, "estética facial")
+        if tl == "xestetica_info":
+            log_event(phone, "crosssell_odonto_estetica_info", {})
+            try:
+                info = await respuesta_faq("¿qué procedimientos de estética facial hacen?")
+            except Exception:
+                info = None
+            return (
+                (info or
+                 "En *estética facial* con la Dra. Valentina Fuentealba ofrecemos: "
+                 "toxina botulínica, bioestimuladores, hilos tensores, "
+                 "armonización facial y limpiezas profundas.")
+                + "\n\n_Escribe *agendar estética* si quieres reservar hora._"
+            )
+        if tl == "xestetica_no":
+            log_event(phone, "crosssell_odonto_estetica_rechazo", {})
+            return "Entendido 😊 _Escribe *menu* cuando quieras volver._"
+
+        # ── Cross-sell Medicina General → Chequeo preventivo ──────────────
+        if tl == "xchequeo_si":
+            log_event(phone, "crosssell_mg_chequeo_acepto", {})
+            perfil = get_profile(phone)
+            if perfil:
+                data["rut_conocido"] = perfil["rut"]
+                data["nombre_conocido"] = perfil["nombre"]
+            return await _iniciar_agendar(phone, data, "medicina general")
+        if tl == "xchequeo_no":
+            log_event(phone, "crosssell_mg_chequeo_rechazo", {})
+            return "Sin problema 😊 Cuando te haga sentido, avísame.\n_Escribe *menu* para ver opciones._"
 
         # ── Recordatorio de control ───────────────────────────────────────────
         if tl == "ctrl_si":
@@ -1751,18 +1849,33 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if perfil:
                 data["rut_conocido"] = perfil["rut"]
                 data["nombre_conocido"] = perfil["nombre"]
-            # Quick-book: paciente conocido sin especialidad explícita → ofrecer
-            # "¿agendo otra hora como la última vez?" antes del flujo estándar.
-            # Reduce 4-6 pasos a 2 para el recurrente — principal lever de conversión.
-            if perfil and not especialidad:
+            # Quick-book: paciente conocido → ofrecer "¿agendo otra hora como
+            # la última vez?" antes del flujo estándar. Dispara en 2 casos:
+            #   a) No hay especialidad explícita (Claude no la extrajo)
+            #   b) Especialidad coincide con la última cita → proponemos slot
+            #      inmediato (mismo doctor) para reducir 4-6 pasos a 2.
+            # Antes el bug: solo (a), pero Claude casi siempre infiere esp →
+            # el quick-book nunca disparaba (0 ofertas en 14 días).
+            if perfil:
                 ultima = get_ultima_cita_paciente(phone)
                 esp_ultima = (ultima or {}).get("especialidad", "")
-                if esp_ultima:
+                esp_norm = (especialidad or "").lower().strip()
+                esp_ultima_norm = esp_ultima.lower().strip()
+                _esp_match = (
+                    not especialidad
+                    or esp_norm == esp_ultima_norm
+                    or (esp_norm and esp_ultima_norm and
+                        (esp_norm in esp_ultima_norm or esp_ultima_norm in esp_norm))
+                )
+                if esp_ultima and _esp_match:
                     prof_ultima = (ultima or {}).get("profesional", "") or ""
                     data["quick_esp"] = esp_ultima
                     data["quick_prof"] = prof_ultima
                     save_session(phone, "WAIT_QUICK_BOOK", data)
-                    log_event(phone, "quick_book_offered", {"especialidad": esp_ultima})
+                    log_event(phone, "quick_book_offered", {
+                        "especialidad": esp_ultima,
+                        "esp_claude": especialidad or None,
+                    })
                     nombre_corto = perfil.get("nombre", "").split()[0] if perfil.get("nombre") else ""
                     saludo = f"¡Hola de nuevo, *{nombre_corto}*! ⚡\n\n" if nombre_corto else "⚡ "
                     con_prof = f" con *{prof_ultima}*" if prof_ultima else ""

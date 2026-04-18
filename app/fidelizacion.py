@@ -17,7 +17,10 @@ from session import (get_citas_para_seguimiento, get_pacientes_inactivos,
                      get_kine_candidatos_adherencia, get_control_candidatos,
                      get_crosssell_kine_candidatos, get_profile, log_message,
                      get_cumpleanos_hoy, get_pacientes_winback, get_tags,
-                     save_campana_envio, puede_enviar_campana_estacional)
+                     save_campana_envio, puede_enviar_campana_estacional,
+                     get_crosssell_orl_fono_candidatos,
+                     get_crosssell_odonto_estetica_candidatos,
+                     get_crosssell_mg_chequeo_candidatos)
 from autocuidado import get_tips_autocuidado
 
 log = logging.getLogger("bot.fidelizacion")
@@ -409,6 +412,171 @@ async def enviar_crosssell_kine(send_fn, send_template_fn=None):
             log.info("Cross-sell kine enviado → %s (%s)", p["phone"], p.get("especialidad"))
         except Exception as e:
             log.error("Error cross-sell kine phone=%s: %s", p.get("phone"), e)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 5b. Cross-sell ORL ↔ Fonoaudiología
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _msg_crosssell_orl_fono(p: dict) -> dict:
+    nombre = _nombre_corto(p.get("nombre"))
+    saludo = f"Hola *{nombre}* 😊 " if nombre else "Hola 😊 "
+    destino = p.get("destino", "Fonoaudiología")
+    if destino == "Fonoaudiología":
+        cuerpo = (
+            f"{saludo}Después de tu consulta con el otorrino, una evaluación de "
+            f"*fonoaudiología* suele complementar el tratamiento — especialmente "
+            f"para audición, lenguaje o problemas de voz.\n\n"
+            f"¿Te agendo una hora?"
+        )
+    else:
+        cuerpo = (
+            f"{saludo}Además de la fonoaudiología, muchos pacientes se benefician "
+            f"de una evaluación con *otorrino* (oído, nariz, garganta) para un "
+            f"diagnóstico más completo.\n\n¿Te interesa agendar?"
+        )
+    return {
+        "type": "interactive",
+        "interactive": {
+            "type": "button",
+            "body": {"text": cuerpo},
+            "action": {
+                "buttons": [
+                    {"type": "reply", "reply": {"id": "xorlfono_si", "title": "📅 Sí, agendar"}},
+                    {"type": "reply", "reply": {"id": "xorlfono_no", "title": "No por ahora"}},
+                ]
+            }
+        }
+    }
+
+
+async def enviar_crosssell_orl_fono(send_fn, send_template_fn=None):
+    """Cross-sell bidireccional ORL ↔ Fono. Cron semanal (jueves 11:00)."""
+    candidatos = get_crosssell_orl_fono_candidatos()
+    if not candidatos:
+        log.info("Cross-sell ORL↔Fono: sin candidatos")
+        return
+    log.info("Cross-sell ORL↔Fono: enviando %d mensaje(s)", len(candidatos))
+    for p in candidatos:
+        try:
+            msg = _msg_crosssell_orl_fono(p)
+            await send_fn(p["phone"], msg)
+            body = msg.get("interactive", {}).get("body", {}).get("text", "[Cross-sell ORL↔Fono]")
+            log_message(p["phone"], "out", body, "IDLE")
+            origen = (p.get("origen") or "").lower()
+            tipo = "crosssell_orl_fono" if "otorrin" in origen else "crosssell_fono_orl"
+            save_fidelizacion_msg(p["phone"], tipo)
+        except Exception as e:
+            log.error("Error cross-sell ORL↔Fono phone=%s: %s", p.get("phone"), e)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 5c. Cross-sell Odontología → Estética Facial
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _msg_crosssell_odonto_estetica(p: dict) -> dict:
+    nombre = _nombre_corto(p.get("nombre"))
+    saludo = f"Hola *{nombre}* 😊 " if nombre else "Hola 😊 "
+    return {
+        "type": "interactive",
+        "interactive": {
+            "type": "button",
+            "body": {
+                "text": (
+                    f"{saludo}Vimos que has venido a tus controles dentales. "
+                    f"En el CMC también hacemos *estética facial* con la Dra. "
+                    f"Valentina Fuentealba: toxina botulínica, bioestimuladores, "
+                    f"hilos y limpiezas faciales.\n\n¿Te interesa evaluar?"
+                )
+            },
+            "action": {
+                "buttons": [
+                    {"type": "reply", "reply": {"id": "xestetica_si", "title": "📅 Ver horas"}},
+                    {"type": "reply", "reply": {"id": "xestetica_info", "title": "💬 Más info"}},
+                    {"type": "reply", "reply": {"id": "xestetica_no", "title": "No por ahora"}},
+                ]
+            }
+        }
+    }
+
+
+async def enviar_crosssell_odonto_estetica(send_fn, send_template_fn=None):
+    """Cross-sell odontología frecuente → estética facial. Cron bi-semanal."""
+    candidatos = get_crosssell_odonto_estetica_candidatos()
+    if not candidatos:
+        log.info("Cross-sell Odonto→Estética: sin candidatos")
+        return
+    log.info("Cross-sell Odonto→Estética: enviando %d mensaje(s)", len(candidatos))
+    for p in candidatos:
+        try:
+            msg = _msg_crosssell_odonto_estetica(p)
+            await send_fn(p["phone"], msg)
+            body = msg.get("interactive", {}).get("body", {}).get("text", "[Cross-sell Odonto→Estética]")
+            log_message(p["phone"], "out", body, "IDLE")
+            save_fidelizacion_msg(p["phone"], "crosssell_odonto_estetica")
+        except Exception as e:
+            log.error("Error cross-sell odonto-estetica phone=%s: %s", p.get("phone"), e)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 5d. Cross-sell Medicina General → Chequeo preventivo
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _msg_crosssell_mg_chequeo(p: dict) -> dict:
+    nombre = _nombre_corto(p.get("nombre"))
+    saludo = f"Hola *{nombre}* 😊 " if nombre else "Hola 😊 "
+    # Si es >=40 ajustamos el mensaje a chequeo preventivo con EMPAM
+    edad = None
+    try:
+        fn = p.get("fecha_nacimiento")
+        if fn:
+            edad = _calcular_edad(fn)
+    except Exception:
+        pass
+    if edad and edad >= 40:
+        texto = (
+            f"{saludo}Pasaron unos meses desde tu consulta. "
+            f"A partir de los 40, se recomienda un *chequeo preventivo anual*: "
+            f"presión, glicemia, colesterol y EMPAM (Fonasa).\n\n"
+            f"¿Te agendo una hora de control?"
+        )
+    else:
+        texto = (
+            f"{saludo}Pasaron unos meses desde tu última consulta. "
+            f"Si quieres, puedes agendar un *control médico general* para "
+            f"revisar cómo estás.\n\n¿Te reservo hora?"
+        )
+    return {
+        "type": "interactive",
+        "interactive": {
+            "type": "button",
+            "body": {"text": texto},
+            "action": {
+                "buttons": [
+                    {"type": "reply", "reply": {"id": "xchequeo_si", "title": "📅 Agendar control"}},
+                    {"type": "reply", "reply": {"id": "xchequeo_no", "title": "No por ahora"}},
+                ]
+            }
+        }
+    }
+
+
+async def enviar_crosssell_mg_chequeo(send_fn, send_template_fn=None):
+    """Cross-sell paciente MG inactivo 30-180d → chequeo preventivo. Cron mensual."""
+    candidatos = get_crosssell_mg_chequeo_candidatos()
+    if not candidatos:
+        log.info("Cross-sell MG→Chequeo: sin candidatos")
+        return
+    log.info("Cross-sell MG→Chequeo: enviando %d mensaje(s)", len(candidatos))
+    for p in candidatos:
+        try:
+            msg = _msg_crosssell_mg_chequeo(p)
+            await send_fn(p["phone"], msg)
+            body = msg.get("interactive", {}).get("body", {}).get("text", "[Cross-sell MG→Chequeo]")
+            log_message(p["phone"], "out", body, "IDLE")
+            save_fidelizacion_msg(p["phone"], "crosssell_mg_chequeo")
+        except Exception as e:
+            log.error("Error cross-sell mg-chequeo phone=%s: %s", p.get("phone"), e)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

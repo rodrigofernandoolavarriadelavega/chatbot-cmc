@@ -4,6 +4,7 @@ Base URL: https://api.medilink2.healthatom.com/api/v5
 """
 import asyncio
 import json
+import re
 import logging
 import time
 import urllib.parse
@@ -1164,11 +1165,53 @@ def valid_rut(rut: str) -> bool:
         return False
 
 
+def _calcular_dv_rut(cuerpo: str) -> str:
+    """Calcula el dígito verificador de un RUT chileno con módulo 11."""
+    if not cuerpo.isdigit():
+        return ""
+    suma, multiplo = 0, 2
+    for c in reversed(cuerpo):
+        suma += int(c) * multiplo
+        multiplo = multiplo + 1 if multiplo < 7 else 2
+    resto = 11 - (suma % 11)
+    return "0" if resto == 11 else ("K" if resto == 10 else str(resto))
+
+
 def clean_rut(rut: str) -> str:
-    """Normaliza RUT: '12.345.678-9' → '12345678-9'"""
-    rut = rut.replace(".", "").replace(" ", "").strip().upper()
-    if "-" not in rut and len(rut) > 1:
-        rut = rut[:-1] + "-" + rut[-1]
+    """Normaliza RUT con múltiples formatos aceptados:
+    - '12.345.678-9' / '12345678-9'      → '12345678-9' (ya válido)
+    - '123456789'                         → '12345678-9' (último char es DV)
+    - '12 345 678 9' / '12.345.678 9'     → '12345678-9' (espacios/puntos)
+    - '12345678' (8 dígitos sin DV)       → '12345678-K' (calcula DV)
+    - '1234567' (7 dígitos sin DV)        → '1234567-K' (calcula DV)
+    - 'rut 12.345.678-9' / '12345678 /9'  → '12345678-9'
+
+    Reduce fricción en WAIT_RUT_* donde pacientes rurales escriben sin guión
+    ni puntos ('209972077') o sólo el cuerpo ('20997207').
+    """
+    if not rut:
+        return ""
+    # Sacar palabras/contexto ('rut:', 'mi rut es')
+    rut = re.sub(r"(?i)(mi\s+rut\s+es|rut[:\s]|r\s*u\s*t)", "", rut)
+    # Normalizar separadores extraños a guión
+    rut = re.sub(r"[/|·•]", "-", rut)
+    # Quitar puntos, espacios, paréntesis, comas
+    rut = re.sub(r"[.\s()\,]", "", rut).strip().upper()
+    rut = rut.replace("--", "-")
+    if not rut:
+        return ""
+    # Ya tiene guión
+    if "-" in rut:
+        cuerpo, dv = rut.rsplit("-", 1)
+        return f"{cuerpo}-{dv}" if cuerpo and dv else rut
+    # Sin guión, 7-8 dígitos puros → calcular DV
+    if rut.isdigit() and 7 <= len(rut) <= 8:
+        dv = _calcular_dv_rut(rut)
+        if dv:
+            return f"{rut}-{dv}"
+    # Sin guión, >=2 chars → último char = DV
+    if len(rut) >= 2:
+        return rut[:-1] + "-" + rut[-1]
     return rut
 
 

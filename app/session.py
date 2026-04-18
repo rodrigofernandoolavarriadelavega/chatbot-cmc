@@ -17,7 +17,21 @@ from pathlib import Path
 log = logging.getLogger("session")
 
 DB_PATH = Path(__file__).parent.parent / "data" / "sessions.db"
-SESSION_TIMEOUT_MIN = 30  # minutos sin actividad → volver a IDLE
+SESSION_TIMEOUT_MIN = 30  # minutos sin actividad → volver a IDLE (por defecto)
+# Flujos activos (paciente está agendando/cancelando/registrando) tienen
+# timeout extendido: 240 min (4 h). Mediana tiempo saludo→confirmación es
+# 197 min → la sesión expiraba y forzaba empezar de cero. Con 4h, el
+# paciente puede volver y retomar.
+SESSION_TIMEOUT_FLUJO_MIN = 240
+_FLUJO_ACTIVO_STATES = {
+    "WAIT_ESPECIALIDAD", "WAIT_SLOT", "WAIT_MODALIDAD", "WAIT_BOOKING_FOR",
+    "WAIT_PHONE_OWNER_NAME", "WAIT_RUT_AGENDAR", "WAIT_NOMBRE_NUEVO",
+    "WAIT_FECHA_NAC", "WAIT_SEXO", "WAIT_COMUNA", "WAIT_EMAIL",
+    "WAIT_REFERRAL", "WAIT_REFERRAL_CODE", "WAIT_DATOS_NUEVO",
+    "CONFIRMING_CITA", "WAIT_DURACION_MASOTERAPIA",
+    "WAIT_RUT_CANCELAR", "WAIT_CITA_CANCELAR", "CONFIRMING_CANCEL",
+    "WAIT_RUT_REAGENDAR", "WAIT_CITA_REAGENDAR", "WAIT_QUICK_BOOK",
+}
 
 # ── SQLCipher opcional ───────────────────────────────────────────────────────
 _SQLCIPHER_KEY = (os.getenv("SQLCIPHER_KEY") or "").strip()
@@ -402,24 +416,37 @@ _REGISTRO_STATES = {"WAIT_DATOS_NUEVO", "WAIT_NOMBRE_NUEVO", "WAIT_FECHA_NAC", "
 
 
 def get_session(phone: str) -> dict:
-    """Devuelve la sesión actual del número. Si expiró o no existe, retorna sesión limpia."""
+    """Devuelve la sesión actual del número. Si expiró o no existe, retorna sesión limpia.
+
+    Timeout diferenciado:
+    - Flujos activos (WAIT_*, CONFIRMING_*): 4h (paciente volviendo retoma)
+    - IDLE / HUMAN_TAKEOVER / otros: 30 min
+    """
     with _conn() as conn:
         row = conn.execute("SELECT * FROM sessions WHERE phone=?", (phone,)).fetchone()
         if not row:
             return {"state": "IDLE", "data": {}}
-        # Verificar timeout
         updated = datetime.fromisoformat(row["updated_at"])
-        if datetime.now(timezone.utc) - updated.replace(tzinfo=timezone.utc) > timedelta(minutes=SESSION_TIMEOUT_MIN):
-            old_state = row["state"]
+        elapsed = datetime.now(timezone.utc) - updated.replace(tzinfo=timezone.utc)
+        state = row["state"]
+        # Timeout según tipo de estado
+        limit_min = SESSION_TIMEOUT_FLUJO_MIN if state in _FLUJO_ACTIVO_STATES else SESSION_TIMEOUT_MIN
+        if elapsed > timedelta(minutes=limit_min):
             # Trackear abandono en flujo de registro de paciente nuevo
-            if old_state in _REGISTRO_STATES:
+            if state in _REGISTRO_STATES:
                 try:
-                    log_event(phone, "registro_abandono", {"step": old_state})
+                    log_event(phone, "registro_abandono", {"step": state})
+                except Exception:
+                    pass
+            # Trackear abandono en flujo largo (para métricas)
+            elif state in _FLUJO_ACTIVO_STATES:
+                try:
+                    log_event(phone, "flujo_abandono", {"state": state, "minutos": int(elapsed.total_seconds()/60)})
                 except Exception:
                     pass
             _reset(conn, phone)
             return {"state": "IDLE", "data": {}}
-        return {"state": row["state"], "data": json.loads(row["data"])}
+        return {"state": state, "data": json.loads(row["data"])}
 
 
 def save_session(phone: str, state: str, data: dict):
@@ -1320,8 +1347,9 @@ def get_control_candidatos(especialidad: str, dias_control: int) -> list[dict]:
 
 def get_crosssell_kine_candidatos() -> list[dict]:
     """
-    Pacientes con cita de medicina/traumatología hace 1-5 días,
-    sin cita de kinesiología reciente, sin cross-sell enviado en 14 días.
+    Pacientes con cita de medicina/traumatología hace 1-14 días,
+    sin cita de kinesiología reciente, sin cross-sell enviado en 21 días.
+    Ventana ampliada (1-14d) tras detectar 0 candidatos con 1-5d.
     """
     with _conn() as conn:
         rows = conn.execute("""
@@ -1329,18 +1357,130 @@ def get_crosssell_kine_candidatos() -> list[dict]:
             FROM citas_bot cb
             LEFT JOIN contact_profiles p ON p.phone = cb.phone
             WHERE cb.especialidad IN ('Medicina General', 'Medicina Familiar', 'Traumatología')
-              AND cb.fecha >= date('now', '-5 days')
+              AND cb.fecha >= date('now', '-14 days')
               AND cb.fecha <= date('now', '-1 days')
               AND NOT EXISTS (
                   SELECT 1 FROM citas_bot cb2
                   WHERE cb2.phone = cb.phone
                     AND cb2.especialidad LIKE 'Kinesiolog%'
-                    AND cb2.fecha >= date('now', '-30 days')
+                    AND cb2.fecha >= date('now', '-60 days')
               )
               AND NOT EXISTS (
                   SELECT 1 FROM fidelizacion_msgs f
                   WHERE f.phone = cb.phone AND f.tipo = 'crosssell_kine'
-                    AND f.enviado_en >= datetime('now', '-14 days')
+                    AND f.enviado_en >= datetime('now', '-21 days')
+              )
+            GROUP BY cb.phone
+        """).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_crosssell_orl_fono_candidatos() -> list[dict]:
+    """Cross-sell bidireccional ORL ↔ Fonoaudiología:
+    - Paciente con cita de ORL en últimos 14d sin fono reciente → ofrecer fono
+    - Paciente con cita de Fono en últimos 14d sin ORL reciente → ofrecer ORL
+    Retorna lista con {phone, nombre, especialidad_origen, especialidad_destino}.
+    """
+    with _conn() as conn:
+        rows = conn.execute("""
+            SELECT cb.phone, cb.especialidad AS origen, MAX(cb.fecha) AS ultima_fecha, p.nombre
+            FROM citas_bot cb
+            LEFT JOIN contact_profiles p ON p.phone = cb.phone
+            WHERE cb.especialidad LIKE 'Otorrinolaring%'
+              AND cb.fecha >= date('now', '-14 days')
+              AND cb.fecha <= date('now', '-1 days')
+              AND NOT EXISTS (
+                  SELECT 1 FROM citas_bot cb2
+                  WHERE cb2.phone = cb.phone
+                    AND cb2.especialidad LIKE 'Fonoaudiolog%'
+                    AND cb2.fecha >= date('now', '-60 days')
+              )
+              AND NOT EXISTS (
+                  SELECT 1 FROM fidelizacion_msgs f
+                  WHERE f.phone = cb.phone AND f.tipo IN ('crosssell_orl_fono','crosssell_fono_orl')
+                    AND f.enviado_en >= datetime('now', '-21 days')
+              )
+            GROUP BY cb.phone
+            UNION ALL
+            SELECT cb.phone, cb.especialidad AS origen, MAX(cb.fecha) AS ultima_fecha, p.nombre
+            FROM citas_bot cb
+            LEFT JOIN contact_profiles p ON p.phone = cb.phone
+            WHERE cb.especialidad LIKE 'Fonoaudiolog%'
+              AND cb.fecha >= date('now', '-14 days')
+              AND cb.fecha <= date('now', '-1 days')
+              AND NOT EXISTS (
+                  SELECT 1 FROM citas_bot cb2
+                  WHERE cb2.phone = cb.phone
+                    AND cb2.especialidad LIKE 'Otorrinolaring%'
+                    AND cb2.fecha >= date('now', '-60 days')
+              )
+              AND NOT EXISTS (
+                  SELECT 1 FROM fidelizacion_msgs f
+                  WHERE f.phone = cb.phone AND f.tipo IN ('crosssell_orl_fono','crosssell_fono_orl')
+                    AND f.enviado_en >= datetime('now', '-21 days')
+              )
+            GROUP BY cb.phone
+        """).fetchall()
+        out = []
+        for r in rows:
+            d = dict(r)
+            origen = d.get("origen", "").lower()
+            d["destino"] = "Fonoaudiología" if "otorrin" in origen else "Otorrinolaringología"
+            out.append(d)
+        return out
+
+
+def get_crosssell_odonto_estetica_candidatos() -> list[dict]:
+    """Pacientes con 2+ citas de odontología general en últimos 90d
+    (higienista/limpieza frecuente) → candidatos a estética facial.
+    Criterio: ya confían en el equipo dental, pueden probar estética."""
+    with _conn() as conn:
+        rows = conn.execute("""
+            SELECT cb.phone, COUNT(*) AS n_citas, p.nombre, MAX(cb.fecha) AS ultima_fecha
+            FROM citas_bot cb
+            LEFT JOIN contact_profiles p ON p.phone = cb.phone
+            WHERE cb.especialidad = 'Odontología General'
+              AND cb.fecha >= date('now', '-90 days')
+              AND cb.fecha <= date('now', '-2 days')
+              AND NOT EXISTS (
+                  SELECT 1 FROM citas_bot cb2
+                  WHERE cb2.phone = cb.phone
+                    AND cb2.especialidad = 'Estética Facial'
+                    AND cb2.fecha >= date('now', '-180 days')
+              )
+              AND NOT EXISTS (
+                  SELECT 1 FROM fidelizacion_msgs f
+                  WHERE f.phone = cb.phone AND f.tipo = 'crosssell_odonto_estetica'
+                    AND f.enviado_en >= datetime('now', '-60 days')
+              )
+            GROUP BY cb.phone
+            HAVING n_citas >= 2
+        """).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_crosssell_mg_chequeo_candidatos() -> list[dict]:
+    """Pacientes con cita de MG hace 30-180d sin control/chequeo reciente
+    → ofrecer chequeo preventivo (EMPAM, exámenes generales).
+    Edad >=40 prioridad (alta prevalencia HTA/DM2/dislipidemia)."""
+    with _conn() as conn:
+        rows = conn.execute("""
+            SELECT cb.phone, p.nombre, p.fecha_nacimiento, MAX(cb.fecha) AS ultima_fecha
+            FROM citas_bot cb
+            LEFT JOIN contact_profiles p ON p.phone = cb.phone
+            WHERE cb.especialidad IN ('Medicina General','Medicina Familiar')
+              AND cb.fecha >= date('now', '-180 days')
+              AND cb.fecha <= date('now', '-30 days')
+              AND NOT EXISTS (
+                  SELECT 1 FROM citas_bot cb2
+                  WHERE cb2.phone = cb.phone
+                    AND cb2.especialidad IN ('Medicina General','Medicina Familiar')
+                    AND cb2.fecha >= date('now', '-29 days')
+              )
+              AND NOT EXISTS (
+                  SELECT 1 FROM fidelizacion_msgs f
+                  WHERE f.phone = cb.phone AND f.tipo = 'crosssell_mg_chequeo'
+                    AND f.enviado_en >= datetime('now', '-90 days')
               )
             GROUP BY cb.phone
         """).fetchall()

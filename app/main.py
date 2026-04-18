@@ -38,7 +38,9 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_recordatorios, _job_recordatorios_2h,
                   _job_postconsulta, _job_reactivacion,
                   _job_adherencia_kine, _job_control_especialidad,
-                  _job_crosssell_kine, _job_medilink_watchdog,
+                  _job_crosssell_kine, _job_crosssell_orl_fono,
+                  _job_crosssell_odonto_estetica, _job_crosssell_mg_chequeo,
+                  _job_medilink_watchdog,
                   _job_waitlist_check,
                   _job_doctor_resumen_precita, _job_doctor_reporte_progreso,
                   _job_doctor_reset_diario,
@@ -171,6 +173,27 @@ async def lifespan(app: FastAPI):
         _job_crosssell_kine,
         CronTrigger(day_of_week="wed", hour=10, minute=30, timezone=_CLT),
         id="crosssell_kine",
+        replace_existing=True,
+    )
+    # Cross-sell ORL↔Fono: jueves 11:00 CLT
+    scheduler.add_job(
+        _job_crosssell_orl_fono,
+        CronTrigger(day_of_week="thu", hour=11, minute=0, timezone=_CLT),
+        id="crosssell_orl_fono",
+        replace_existing=True,
+    )
+    # Cross-sell odontología → estética: 1º y 15 del mes 10:30 CLT
+    scheduler.add_job(
+        _job_crosssell_odonto_estetica,
+        CronTrigger(day="1,15", hour=10, minute=30, timezone=_CLT),
+        id="crosssell_odonto_estetica",
+        replace_existing=True,
+    )
+    # Cross-sell MG→chequeo preventivo: primer martes del mes 09:30 CLT
+    scheduler.add_job(
+        _job_crosssell_mg_chequeo,
+        CronTrigger(day_of_week="tue", day="1-7", hour=9, minute=30, timezone=_CLT),
+        id="crosssell_mg_chequeo",
         replace_existing=True,
     )
     # Cumpleaños: diario a las 10:00 CLT
