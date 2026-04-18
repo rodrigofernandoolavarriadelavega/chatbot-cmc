@@ -4,17 +4,19 @@ Recordatorios automáticos:
 - 2h antes (mensaje texto corto, fresh-in-mind): cron interval 15 min
 """
 import logging
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from config import USE_TEMPLATES
 from session import (
     get_citas_bot_pendientes,
     get_citas_bot_para_2h_reminder,
+    get_last_inbound_ts,
     mark_reminder_sent,
     mark_reminder_2h_sent,
     log_message,
 )
+from medilink import get_cita, cita_esta_confirmada
 
 log = logging.getLogger("bot.reminders")
 _TZ_CL = ZoneInfo("America/Santiago")
@@ -204,14 +206,27 @@ async def enviar_recordatorios_2h(send_text_fn, send_template_fn=None):
             nombre_own = _nombre_corto(cita.get("phone_owner"))
             es_terc = cita.get("es_tercero", 0)
 
-            if USE_TEMPLATES and send_template_fn:
-                await send_template_fn(
-                    cita["phone"],
-                    "recordatorio_cita_2h",
-                    body_params=[nombre_pac, cita["especialidad"],
-                                 cita["profesional"], hora],
-                )
-            else:
+            # Skip si la cita ya fue confirmada manualmente en Medilink
+            # (recepcion envio confirmacion por el WA Business prepago y marco estado)
+            id_cita_medilink = cita.get("id_cita")
+            if id_cita_medilink:
+                cita_md = await get_cita(int(id_cita_medilink))
+                if cita_esta_confirmada(cita_md):
+                    mark_reminder_2h_sent(cita["id"])
+                    log.info("Recordatorio 2h omitido (ya confirmada en Medilink) → %s cita_id=%s",
+                             cita["phone"], id_cita_medilink)
+                    continue
+
+            # Decide si usar template (pagado) o texto plano (gratis si hay service window)
+            # Meta abre service window de 24h cuando el paciente envia un mensaje.
+            # Dentro de esa ventana, texto plano va sin costo (no se usa template).
+            last_in = get_last_inbound_ts(cita["phone"])
+            en_service_window = False
+            if last_in is not None:
+                ahora_utc = datetime.now(timezone.utc)
+                en_service_window = (ahora_utc - last_in) < timedelta(hours=24)
+
+            if en_service_window:
                 if es_terc and nombre_own and nombre_pac:
                     saludo = f"Hola {nombre_own}"
                     intro = f"⏰ *En 2 horas* *{nombre_pac}* tiene cita"
@@ -226,6 +241,35 @@ async def enviar_recordatorios_2h(send_text_fn, send_template_fn=None):
                     f"📍 Monsalve esquina República, Carampangue\n\n"
                     "Recuerda llegar *15 minutos antes* con tu cédula de identidad."
                 )
+                log.info("Recordatorio 2h (service window, free) → %s cita_id=%s",
+                         cita["phone"], id_cita_medilink)
+            elif USE_TEMPLATES and send_template_fn:
+                await send_template_fn(
+                    cita["phone"],
+                    "recordatorio_cita_2h",
+                    body_params=[nombre_pac, cita["especialidad"],
+                                 cita["profesional"], hora],
+                )
+                log.info("Recordatorio 2h (template, paid) → %s cita_id=%s",
+                         cita["phone"], id_cita_medilink)
+            else:
+                # Fallback: sin templates y sin service window → intenta texto plano igual
+                # (WhatsApp rechazara si no hay ventana; fallo se loguea)
+                if es_terc and nombre_own and nombre_pac:
+                    saludo = f"Hola {nombre_own}"
+                    intro = f"⏰ *En 2 horas* *{nombre_pac}* tiene cita"
+                else:
+                    saludo = f"Hola {nombre_pac}" if nombre_pac != "paciente" else "Hola"
+                    intro = "⏰ *En 2 horas* tienes tu cita"
+                await send_text_fn(
+                    cita["phone"],
+                    f"{saludo} {intro} en el *Centro Médico Carampangue*:\n\n"
+                    f"🏥 *{cita['especialidad']}* — {cita['profesional']}\n"
+                    f"🕐 Hoy a las *{hora}*\n"
+                    f"📍 Monsalve esquina República, Carampangue\n\n"
+                    "Recuerda llegar *15 minutos antes* con tu cédula de identidad."
+                )
+
             log_message(cita["phone"], "out",
                         f"[Recordatorio 2h] {cita['especialidad']} con {cita['profesional']} — hoy a las {hora}",
                         "IDLE")

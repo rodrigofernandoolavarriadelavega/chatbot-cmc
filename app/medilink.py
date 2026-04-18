@@ -896,6 +896,40 @@ async def obtener_agenda_dia(id_prof: int, fecha: str | None = None) -> list[dic
         return agenda
 
 
+async def get_cita(id_cita: int) -> dict | None:
+    """Obtiene una cita por ID desde Medilink.
+    Devuelve el dict crudo de Medilink (con estado_cita, id_estado, estado_anulacion, etc)
+    o None si la cita no existe o la llamada fallo."""
+    url = f"{MEDILINK_BASE_URL}/citas/{id_cita}"
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get(url, headers=HEADERS)
+            if r.status_code != 200:
+                return None
+            data = r.json()
+            if isinstance(data, dict) and "data" in data:
+                payload = data["data"]
+                if isinstance(payload, list):
+                    return payload[0] if payload else None
+                return payload if isinstance(payload, dict) else None
+            return data if isinstance(data, dict) else None
+    except Exception as e:
+        log.warning("get_cita %d fallo: %s", id_cita, e)
+        return None
+
+
+def cita_esta_confirmada(cita: dict | None) -> bool:
+    """True si la cita ya fue marcada como confirmada por la recepcion en Medilink.
+    Detecta los valores tipicos en `estado_cita` (case-insensitive) porque Medilink
+    no documenta los id_estado numericos y pueden variar por cuenta."""
+    if not cita:
+        return False
+    estado = (cita.get("estado_cita") or "").strip().lower()
+    if estado in ("confirmada", "confirmado", "asistira", "asiste"):
+        return True
+    return False
+
+
 async def cancelar_cita(id_cita: int) -> bool:
     """Cancela una cita por su ID, con reintentos ante errores transitorios."""
     url = f"{MEDILINK_BASE_URL}/citas/{id_cita}"

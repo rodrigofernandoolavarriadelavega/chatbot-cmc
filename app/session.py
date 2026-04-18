@@ -790,6 +790,24 @@ def get_last_message_status(phone: str) -> str | None:
         return row["status"] if row else None
 
 
+def get_last_inbound_ts(phone: str) -> datetime | None:
+    """Timestamp UTC del ultimo mensaje entrante del paciente. None si nunca escribio.
+    Usado para detectar service window de 24h de Meta (donde se pueden enviar
+    mensajes libres sin cobrar template)."""
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT ts FROM messages WHERE phone=? AND direction='in' "
+            "ORDER BY ts DESC LIMIT 1",
+            (phone,)
+        ).fetchone()
+    if not row or not row["ts"]:
+        return None
+    try:
+        return datetime.fromisoformat(row["ts"]).replace(tzinfo=timezone.utc)
+    except Exception:
+        return None
+
+
 def get_messages(phone: str, limit: int = 300) -> list[dict]:
     """Retorna los últimos `limit` mensajes de un número, ordenados cronológicamente
     (más antiguo primero, más reciente al final — lo que espera el panel para mostrar

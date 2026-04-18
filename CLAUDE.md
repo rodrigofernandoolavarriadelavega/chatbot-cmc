@@ -179,8 +179,8 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - App ID: 804421499380432
 - System User: Chatbotcmc-systemuser (ID: 61576699507415) — token permanente
 - Números de prueba: +1 555 641 7609 (Meta test number, sin aprobación requerida)
-- Número prepago CMC: +56945886628 (Display Name APROBADO ✅)
-- **NO conectar** al +56966610737 (WhatsApp activo de secretarias del CMC)
+- **Bot activo en: +56966610737** (antiguo WhatsApp de secretarias, migrado a Cloud API)
+- +56945886628 (prepago): quedó fuera de uso tras la migración
 
 ## Estado actual del proyecto
 - [x] Webhook Meta Cloud API funcional
@@ -196,7 +196,7 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - [x] Panel admin web (`/admin`) con métricas y conversaciones
 - [x] Recordatorios automáticos de citas (09:00 CLT)
 - [x] Deploy en VPS DigitalOcean (`157.245.13.107`) corriendo con uvicorn
-- [x] Aprobación Display Name número prepago (+56945886628) ✅
+- [x] Migración del número: +56945886628 (prepago inicial) → +56966610737 (número histórico CMC, ahora bot en Cloud API)
 - [x] Fidelización completa: post-consulta · reactivación · adherencia kine · control por especialidad · cross-sell kine
 - [x] Clasificación de respuesta libre al seguimiento (texto libre → mejor/igual/peor via Claude)
 - [x] Panel admin: etiquetas de especialidad legibles, tiempo de espera en formato humano
@@ -355,7 +355,7 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 
 **Pendiente corto plazo**:
 - SQLCipher sessions.db en VPS (playbook listo)
-- Migración número WhatsApp (+56945886628 → Cloud API)
+- ~~Migración número WhatsApp~~ ✅ bot ya corre en +56966610737 (Cloud API)
 - Rotación PAT → SSH keys
 - Recolección diferida de datos (comuna/email 2h antes de cita) — diseñado, no implementado
 
