@@ -85,13 +85,13 @@
       </div>
       <div class="kpi-card tone-slate p-5 rounded-xl">
         <div class="text-xs uppercase tracking-wide font-semibold opacity-80">Endpoints</div>
-        <div class="text-3xl font-bold mt-2">88 <span class="text-lg text-slate-400">/ 88</span></div>
-        <div class="text-xs opacity-75 mt-1">MVP + post-cierre + AP Fase 2</div>
+        <div class="text-3xl font-bold mt-2">~100 <span class="text-lg text-slate-400">/ 100</span></div>
+        <div class="text-xs opacity-75 mt-1">MVP + AP + Warehouse + Procurement</div>
       </div>
       <div class="kpi-card tone-emerald p-5 rounded-xl">
         <div class="text-xs uppercase tracking-wide font-semibold opacity-80">Tests passing</div>
-        <div class="text-3xl font-bold mt-2">310 <span class="text-lg opacity-60">/ 310</span></div>
-        <div class="text-xs opacity-75 mt-1">304 backend + 6 chatbot · cobertura ≥83%</div>
+        <div class="text-3xl font-bold mt-2">319 <span class="text-lg opacity-60">/ 319</span></div>
+        <div class="text-xs opacity-75 mt-1">313 backend + 6 chatbot · cobertura ≥83%</div>
       </div>
       <div class="kpi-card tone-amber p-5 rounded-xl">
         <div class="text-xs uppercase tracking-wide font-semibold opacity-80">Reglas</div>
@@ -209,14 +209,15 @@
    Data embebida
 ====================================================================== */
 const DATA = {
-  version: "0.3",
-  updated_at: "2026-04-17",
+  version: "0.4",
+  updated_at: "2026-04-18",
   phases: [
     { id: 1, name: "MVP Núcleo",                  status: "done",        progress: 95, weight: 10 },
     { id: 2, name: "Cuentas por Pagar",           status: "done",        progress: 95, weight: 8  },
-    { id: 3, name: "Chatbot WhatsApp",            status: "in_progress", progress: 40, weight: 6  },
-    { id: 4, name: "Integración fiscal (DTE/TBK)",status: "planned",     progress: 0,  weight: 7  },
-    { id: 5, name: "Optimización",                status: "planned",     progress: 0,  weight: 4  }
+    { id: 3, name: "Chatbot WhatsApp (bot + vision)", status: "done",    progress: 70, weight: 6  },
+    { id: 4, name: "Bodega + Viajes",             status: "done",        progress: 90, weight: 6  },
+    { id: 5, name: "Integración fiscal (DTE/TBK)",status: "planned",     progress: 0,  weight: 7  },
+    { id: 6, name: "Optimización",                status: "planned",     progress: 0,  weight: 4  }
   ],
   modules: [
     { id: "identity",   name: "Identity",   phase: 1, status: "done",        progress: 100, entities: 2, endpoints: 7,  deps: [] },
@@ -228,8 +229,10 @@ const DATA = {
     { id: "audit",      name: "Audit",      phase: 1, status: "done",        progress: 95,  entities: 1, endpoints: 1,  deps: [] },
     { id: "frontend",   name: "Frontend",   phase: 1, status: "done",        progress: 90,  entities: 0, endpoints: 0,  deps: ["identity","catalog","inventory","pos","reporting"] },
     { id: "infra",      name: "Infra & CI", phase: 1, status: "done",        progress: 95,  entities: 0, endpoints: 0,  deps: [] },
-    { id: "accounts_payable", name: "Cuentas por Pagar", phase: 2, status: "done",        progress: 95, entities: 5, endpoints: 19, deps: ["catalog","purchasing","identity"] },
-    { id: "chatbot",          name: "Chatbot WhatsApp",  phase: 3, status: "in-progress", progress: 40, entities: 2, endpoints: 2,  deps: ["catalog","pos","accounts_payable"] }
+    { id: "accounts_payable", name: "Cuentas por Pagar", phase: 2, status: "done", progress: 95, entities: 5, endpoints: 19, deps: ["catalog","purchasing","identity"] },
+    { id: "chatbot",          name: "Chatbot WhatsApp",  phase: 3, status: "done", progress: 70, entities: 2, endpoints: 2,  deps: ["catalog","pos","accounts_payable","warehouse","procurement"] },
+    { id: "warehouse",        name: "Bodega (transformaciones)", phase: 4, status: "done", progress: 90, entities: 1, endpoints: 4, deps: ["catalog","inventory"] },
+    { id: "procurement",      name: "Viajes de compra",  phase: 4, status: "done", progress: 85, entities: 2, endpoints: 5, deps: ["catalog"] }
   ],
   rules: [
     { id: "R01", name: "Barcode único global",                           priority: "critical", place: "DB constraint + POST /products/barcodes",  tested: true  },
@@ -311,12 +314,18 @@ const DATA = {
     { text: "Reportes de margen y matriz BCG",                                         done: true },
     { text: "Módulo Cuentas por Pagar: facturas, pagos, cheques, simulador",           done: true },
     { text: "Backup automático nightly vía APScheduler",                               done: true },
-    { text: "— Fase 3 (chatbot) —",                                                    done: false },
-    { text: "Chatbot WhatsApp Meulen (clonado del CMC, 12 intents, Whisper)",          done: true },
+    { text: "— Fase 3 (chatbot + IA) —",                                               done: false },
+    { text: "Chatbot WhatsApp clonado del CMC — 17 intents + Whisper",                 done: true },
+    { text: "Soporte imagen: foto factura → Claude Vision → resumen estructurado",     done: true },
+    { text: "Intents para bodega, viajes, transformaciones",                           done: true },
     { text: "Webhook live https://agentecmc.cl/meulen-bot/webhook",                    done: true },
     { text: "Configurar Meta Cloud API + tokens de producción",                        done: false },
-    { text: "OCR foto de factura con Claude Vision → draft AP",                        done: false },
-    { text: "— Fase 4 (integración fiscal) —",                                         done: false },
+    { text: "— Fase 4 (bodega + viajes) —",                                            done: false },
+    { text: "Módulo warehouse: transformaciones bulk→bolsas con avg_cost automático",  done: true },
+    { text: "Bodega dashboard con potencial combinado bulk+retail",                    done: true },
+    { text: "Simulador de margen pre-transformación (cálculo en vivo)",                done: true },
+    { text: "Módulo procurement: planes de viaje a Temuco con plan vs real",           done: true },
+    { text: "— Fase 5 (integración fiscal) —",                                         done: false },
     { text: "Boleta electrónica (LibreDTE o Haulmer)",                                 done: false },
     { text: "Integración Transbank SDK",                                               done: false },
     { text: "Migración a PostgreSQL cuando aparezca 2a caja",                          done: false }

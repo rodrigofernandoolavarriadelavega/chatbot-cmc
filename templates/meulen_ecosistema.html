@@ -326,7 +326,7 @@
       <div class="brand-title">Ecosistema Meulen</div>
       <div class="brand-subtitle">Puerto Montt · Chile</div>
     </div>
-    <span class="live-badge"><span class="live-dot"></span>Fase 2 (AP) + Fase 3 (Bot)</span>
+    <span class="live-badge"><span class="live-dot"></span>Fases 2+3+4 live</span>
   </div>
   <div class="filters" id="filters"></div>
   <nav style="display:flex;gap:8px;font-size:11px;">
@@ -601,12 +601,38 @@ const NODES = [
   },
   { id: 'meta-wa', label: 'Meta Cloud\nAPI WA', icon: '📱', cat: 'api', badge: 'FASE 3', badgeColor: '#fb923c',
     size: 22,
-    desc: 'WhatsApp Business API oficial. Webhook verificado en agentecmc.cl/meulen-bot/webhook. Mensajes de pasan por rate limiter + whitelist + idempotencia por msg_id.',
+    desc: 'WhatsApp Business API oficial. Webhook verificado en agentecmc.cl/meulen-bot/webhook. Mensajes pasan por rate limiter + whitelist + idempotencia por msg_id.',
     items: [
       { icon: '🌐', text: 'Webhook HTTPS con verify token' },
       { icon: '📨', text: 'send_whatsapp + interactivos' },
       { icon: '🎤', text: 'Audio → bytes → Whisper' },
+      { icon: '📸', text: 'Imagen → Claude Vision (OCR factura)' },
     ],
+  },
+
+  // --------- FASE 4: BODEGA ---------
+  { id: 'warehouse', label: 'Bodega\n(transformaciones)', icon: '🏭', cat: 'modulo', badge: 'FASE 4', badgeColor: '#4ade80',
+    size: 26,
+    desc: 'Gestión de productos a granel (leña, carbón) que se transforman en bolsas vendibles. Cada transformación decrementa el stock del input bulk e incrementa el output retail con el avg_cost calculado automáticamente. Incluye simulador de margen pre-transformación.',
+    items: [
+      { icon: '📦', text: 'TransformationRun: input bulk → output retail' },
+      { icon: '💰', text: 'avg_cost output auto: (input×qty + labor) / output_qty' },
+      { icon: '📊', text: 'Potencial combinado bodega + tienda' },
+      { icon: '🧮', text: 'Simulador de margen en vivo' },
+    ],
+    urlLabel: '/admin/bodega',
+  },
+
+  // --------- FASE 4: VIAJES DE COMPRA ---------
+  { id: 'procurement', label: 'Viajes\nde compra', icon: '🚚', cat: 'modulo', badge: 'FASE 4', badgeColor: '#4ade80',
+    size: 22,
+    desc: 'Planificación de viajes a Temuco (u otros) para comprar fruta. Lista de productos con cantidad y precio estimado vs real, presupuesto vs gasto real, variance por item.',
+    items: [
+      { icon: '📅', text: 'Status: planned → in_progress → completed' },
+      { icon: '📋', text: 'Items con plan + actual + variance' },
+      { icon: '💵', text: 'Alerta si plan excede presupuesto' },
+    ],
+    urlLabel: '/admin/viajes',
   },
 
   // --------- INFRAESTRUCTURA ---------
@@ -720,6 +746,17 @@ const EDGES = [
   { from: 'chatbot-wa', to: 'reporting', label: 'ventas del día' },
   { from: 'chatbot-wa', to: 'accounts_payable', label: 'deuda + cheques' },
   { from: 'chatbot-wa', to: 'inventory', label: 'ajustes stock' },
+  { from: 'chatbot-wa', to: 'warehouse', label: 'potencial bodega' },
+  { from: 'chatbot-wa', to: 'procurement', label: 'viajes' },
+
+  // Fase 4: Bodega + Viajes
+  { from: 'admin-ui', to: 'warehouse', label: 'transformaciones' },
+  { from: 'admin-ui', to: 'procurement', label: 'plan de viaje' },
+  { from: 'warehouse', to: 'catalog', label: 'productos bulk/retail' },
+  { from: 'warehouse', to: 'inventory', label: 'movimientos auto' },
+  { from: 'procurement', to: 'catalog', label: 'match producto' },
+  { from: 'fastapi', to: 'warehouse' },
+  { from: 'fastapi', to: 'procurement' },
 ];
 
 /* ====================== CANVAS & SIM ====================== */
