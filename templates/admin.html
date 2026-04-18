@@ -1307,7 +1307,7 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
             <button onclick="toggleBusquedaChat()" title="Buscar en conversación" style="background:none;border:none;cursor:pointer;font-size:16px;padding:4px 6px;color:#64748b;border-radius:6px;" id="btn-chat-search">🔍</button>
             <span class="state-tag tag-slate" id="chat-state-tag">—</span>
             <button class="btn btn-danger" id="btn-takeover" onclick="doTakeover()">🎯 Tomar control</button>
-            <button class="btn btn-outline" id="btn-resume" style="display:none;" onclick="doResume()">🤖 Devolver al bot</button>
+            <button class="btn btn-outline" id="btn-resume" style="display:none;" onclick="doResume()">🤖 Dejar al bot</button>
             <button class="btn btn-outline" id="btn-notify-informe" style="display:none;font-size:11px;padding:5px 10px;" onclick="notificarInforme()" title="Enviar template informe_listo al paciente">📄 Notificar informe</button>
             <button class="btn btn-outline" id="btn-seguimiento" style="display:none;font-size:11px;padding:5px 10px;" onclick="seguimientoMedico()" title="Enviar seguimiento médico personalizado">🩺 Seguimiento</button>
             <button class="btn btn-outline" style="font-size:11px;padding:5px 8px;" onclick="abrirMarcarAgendado()" title="Marcar como agendado manual — registrar cita agendada por teléfono o presencial, el bot deja de perseguir al paciente">✅ Agendado</button>
@@ -1398,7 +1398,7 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
           <div class="ctx-actions">
             <button class="btn btn-primary btn-full" id="ctx-btn-agendar-por" style="display:none;" onclick="abrirAgendarPorElla()">📋 Agendar por el paciente</button>
             <button class="btn btn-danger btn-full" id="ctx-btn-takeover" onclick="doTakeover()">🎯 Tomar control</button>
-            <button class="btn btn-outline btn-full" id="ctx-btn-resume" style="display:none;" onclick="doResume()">🤖 Devolver al bot</button>
+            <button class="btn btn-outline btn-full" id="ctx-btn-resume" style="display:none;" onclick="doResume()">🤖 Dejar al bot</button>
             <button class="btn btn-outline btn-full" onclick="abrirMarcarAgendado()" style="margin-top:6px;" title="Paciente ya quedó agendado por teléfono/presencial — el bot dejará de perseguirlo">✅ Marcar como agendado</button>
           </div>
         </div>
@@ -1906,10 +1906,40 @@ function updateChatControls(state) {
   const isTakeover=state==="HUMAN_TAKEOVER";
   const tag=document.getElementById("chat-state-tag");
   tag.textContent=stateLabel(state); tag.className="state-tag "+stateTagClass(state);
-  document.getElementById("btn-takeover").style.display=isTakeover?"none":"inline-flex";
+  // Si el paciente envió el último mensaje hace <3s → el bot está procesando.
+  // Bloqueamos el takeover preventivo (causa #1 de baja conversión bot-only).
+  // Cuando venza el 3s (polling), se re-evalúa y aparece el botón.
+  const conv0 = convs.find(c=>c.phone===selectedPhone);
+  let botProcesando=false;
+  try {
+    if (!isTakeover && conv0 && conv0.last_dir==="in" && conv0.last_ts) {
+      const lastMs = new Date(conv0.last_ts.replace(" ","T")+"Z").getTime();
+      botProcesando = (Date.now() - lastMs) < 3500;
+    }
+  } catch(e) {}
+  const showTakeover = !isTakeover && !botProcesando;
+  document.getElementById("btn-takeover").style.display=showTakeover?"inline-flex":"none";
   document.getElementById("btn-resume").style.display=isTakeover?"inline-flex":"none";
-  document.getElementById("ctx-btn-takeover").style.display=isTakeover?"none":"block";
+  document.getElementById("ctx-btn-takeover").style.display=showTakeover?"block":"none";
   document.getElementById("ctx-btn-resume").style.display=isTakeover?"block":"none";
+  // Indicador visual de "bot respondiendo"
+  let botInd = document.getElementById("bot-respondiendo-ind");
+  if (botProcesando) {
+    if (!botInd) {
+      botInd = document.createElement("div");
+      botInd.id = "bot-respondiendo-ind";
+      botInd.className = "badge";
+      botInd.style.cssText = "background:#fef3c7;color:#92400e;padding:6px 10px;border-radius:6px;font-size:12px;margin-right:6px;";
+      botInd.innerHTML = "⏳ Bot respondiendo...";
+      const btnTO = document.getElementById("btn-takeover");
+      if (btnTO && btnTO.parentNode) btnTO.parentNode.insertBefore(botInd, btnTO);
+    }
+    botInd.style.display = "inline-flex";
+    // Re-evaluar en 1s para destapar el botón cuando pasen los 3.5s
+    setTimeout(()=>updateChatControls(state), 1100);
+  } else if (botInd) {
+    botInd.style.display = "none";
+  }
   document.getElementById("takeover-banner").classList.toggle("hidden",!isTakeover);
   document.getElementById("reply-bar").classList.toggle("hidden",!isTakeover);
   document.getElementById("quick-replies").classList.toggle("hidden",!isTakeover);
@@ -2158,7 +2188,22 @@ function insertQR(text){document.getElementById("reply-input").value=text;docume
 async function doTakeover(){
   if(!selectedPhone) return;
   const convName=(convs.find(c=>c.phone===selectedPhone)||{}).nombre||selectedPhone;
-  if(!confirm(`¿Tomar control de ${convName}? El bot se pausará para este paciente.`)) return;
+  const conv = convs.find(c=>c.phone===selectedPhone);
+  let warning = `¿Tomar control de ${convName}?\n\nEl bot se pausará para este paciente.`;
+  // Si el bot respondió hace poco (<10s) o el paciente está mid-flujo, advertir
+  if (conv && conv.last_ts) {
+    try {
+      const lastMs = new Date(conv.last_ts.replace(" ","T")+"Z").getTime();
+      const segs = Math.round((Date.now() - lastMs)/1000);
+      if (segs < 10 && conv.last_dir === "out") {
+        warning += `\n\n⚠️ El bot acaba de responder (hace ${segs}s). Quizás el paciente todavía no vuelve a escribir.`;
+      }
+    } catch(e){}
+    if (conv.state && conv.state.startsWith("WAIT_")) {
+      warning += `\n\n💡 Estado: ${conv.state}. El bot puede terminar este flujo solo.`;
+    }
+  }
+  if(!confirm(warning)) return;
   const r=await fetch(apiUrl(`/admin/api/takeover/${encodeURIComponent(selectedPhone)}`),{method:"POST"});
   if(r.ok){updateChatControls("HUMAN_TAKEOVER");await loadConversations();}
   else alert("No se pudo tomar el control. Intenta de nuevo.");
