@@ -1302,6 +1302,13 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
     # ── IDLE: detectar intención ──────────────────────────────────────────────
     if state == "IDLE":
+        # ── Botones residuales de WAIT_SLOT que llegaron tarde (sesión expiró,
+        # usuario volvió al menú pero el mensaje tardó en llegar). En vez de
+        # devolver el menú genérico, relanzar el flujo de agendar. ──
+        if tl in ("ver_otros", "ver_todos", "otro_dia", "otro_día",
+                  "otro_prof", "confirmar_sugerido"):
+            return await _iniciar_agendar(phone, data, None)
+
         # ── Seguimiento de FAQ con sugerencia de agendar ──────────────────────
         # Debe ir ANTES de los atajos numéricos (1..4) porque aquí interpretamos
         # "1"/"sí"/botón como "agendar la especialidad ya sugerida en el FAQ".
@@ -3070,11 +3077,33 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if apellido_esc:
             reset_session(phone)
             return await _iniciar_agendar(phone, {}, apellido_esc)
+        # Usuario respondió con hora/día en vez de RUT ("a las 15:00", "lunes")
+        # Excluye RUTs ("12345678-9") y strings-de-digitos-sueltos.
+        import re as _re_time
+        _parece_rut = bool(_re_time.search(r'\d[-][0-9kK]\b', txt))
+        _tiene_hora_explicita = bool(_re_time.search(r'\b\d{1,2}[:.]\d{2}\b', txt))
+        _tiene_hora_texto = any(
+            k in tl for k in ("a las ", "hrs", "hs", "horas", "puede ser",
+                               "lunes", "martes", "miercoles", "miércoles",
+                               "jueves", "viernes", "sabado", "sábado",
+                               "mañana", "manana", "hoy", "tarde")
+        )
+        if not _parece_rut and (_tiene_hora_explicita or _tiene_hora_texto):
+            # Guardar la preferencia si la extraemos — la usamos cuando tengamos el RUT
+            data["reagendar_preferencia"] = txt[:120]
+            save_session(phone, "WAIT_RUT_REAGENDAR", data)
+            return (
+                "¡Perfecto, anoté tu preferencia! 🗓️\n\n"
+                "Primero necesito tu *RUT* para buscar tu cita actual:\n"
+                "(ej: *12.345.678-9*)\n\n"
+                "Cuando me lo des, te ofrezco nuevos horarios."
+            )
         rut = clean_rut(txt)
         if not valid_rut(rut):
             return (
                 "Hmm, no reconozco ese RUT 🤔\n"
-                "Escríbelo así: *12.345.678-9*"
+                "Escríbelo así: *12.345.678-9*\n\n"
+                "_Si quieres cancelar, escribe *menu*._"
             )
 
         _ensure_consent(phone)

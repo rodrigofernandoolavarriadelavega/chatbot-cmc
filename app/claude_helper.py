@@ -91,12 +91,20 @@ _INTENT_CACHE: dict[str, dict] = {
     "buenas tarde":   {"intent": "menu", "especialidad": None},
     "menu":           {"intent": "menu", "especialidad": None},
     "menú":           {"intent": "menu", "especialidad": None},
+    "memu":           {"intent": "menu", "especialidad": None},  # typo común
+    "meny":           {"intent": "menu", "especialidad": None},
+    "menus":          {"intent": "menu", "especialidad": None},
+    "meni":           {"intent": "menu", "especialidad": None},
+    "mneu":           {"intent": "menu", "especialidad": None},
     "inicio":         {"intent": "menu", "especialidad": None},
     "empezar":        {"intent": "menu", "especialidad": None},
     "volver":         {"intent": "menu", "especialidad": None},
     "reiniciar":      {"intent": "menu", "especialidad": None},
     "hi":             {"intent": "menu", "especialidad": None},
     "hey":            {"intent": "menu", "especialidad": None},
+    "holaaa":         {"intent": "menu", "especialidad": None},
+    "holaaaa":        {"intent": "menu", "especialidad": None},
+    "holis":          {"intent": "menu", "especialidad": None},
     # Confirmaciones y negaciones sueltas → quedan en menú, el flujo las filtra antes
     "si":             {"intent": "menu", "especialidad": None},
     "sí":             {"intent": "menu", "especialidad": None},
@@ -739,10 +747,17 @@ def _strip_markdown_json(text: str) -> str:
 
 async def detect_intent(mensaje: str) -> dict:
     """Detecta intención del mensaje. Devuelve dict con intent, especialidad, respuesta_directa."""
-    clave = mensaje.strip().lower()
+    import re as _re_w
+    # Normaliza: minúsculas, strip, colapsa espacios internos, quita signos dobles
+    clave = _re_w.sub(r'\s+', ' ', mensaje.strip().lower())
+    # También probamos la versión sin puntuación final ('hola!', 'hola.', 'hola?')
+    clave_sin_punto = clave.rstrip('.?!¿¡,;:')
     if clave in _INTENT_CACHE:
         log.info("cache hit: %r → %s", clave, _INTENT_CACHE[clave]["intent"])
         return {**_INTENT_CACHE[clave], "respuesta_directa": None}
+    if clave_sin_punto in _INTENT_CACHE:
+        log.info("cache hit (sin punto): %r → %s", clave_sin_punto, _INTENT_CACHE[clave_sin_punto]["intent"])
+        return {**_INTENT_CACHE[clave_sin_punto], "respuesta_directa": None}
 
     try:
         resp = await client.messages.create(
