@@ -75,12 +75,14 @@ input, textarea, select{font-family:inherit; color:inherit}
 }
 .brand:hover{background:var(--panel-2)}
 .brand-logo{
-  width:36px; height:36px; border-radius:8px; flex:0 0 36px;
-  background:#fff; border:1.5px solid var(--cmc-aqua-soft);
+  width:38px; height:38px; border-radius:10px; flex:0 0 38px;
+  background:#fff url(/static/logo.png) no-repeat;
+  background-size:auto 82%;
+  background-position:5px center;
+  border:1.5px solid var(--cmc-aqua-soft);
   box-shadow:0 2px 6px rgba(15,63,104,.12);
-  display:flex; align-items:center; justify-content:center; padding:3px;
 }
-.brand-logo img{width:100%; height:100%; object-fit:contain}
+.brand-logo img{display:none}
 .brand-text{display:flex; flex-direction:column; line-height:1.15}
 .brand-text .top{
   font-size:10px; color:var(--cmc-aqua); letter-spacing:2px;
