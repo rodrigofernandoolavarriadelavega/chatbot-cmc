@@ -1927,12 +1927,17 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # Override: si el paciente hizo pregunta substantiva (>10 chars) que
         # Claude no clasificó bien, intentar detectar apellido/especialidad
         # o llamar a respuesta_faq antes de caer al menú genérico.
-        if len(txt) >= 10:
+        _tl_fb = txt.lower()
+        _ACCION_KW = ("agendar", "reservar", "reagendar", "cancelar", "mover",
+                      "cambiar", "hora", "cita", "consulta")
+        _es_accion = any(k in _tl_fb for k in _ACCION_KW)
+        if len(txt) >= 10 and not _es_accion:
+            # Solo fallback FAQ si NO es claramente pedido de acción
             esp_hint = _detectar_apellido_profesional(txt) or _detectar_especialidad_en_texto(txt)
             if esp_hint:
                 log_event(phone, "fallback_esp_detectada", {"esp": esp_hint, "txt": txt[:120]})
                 return await _iniciar_agendar(phone, data, esp_hint)
-            # Consulta libre — usar respuesta_faq (Claude maneja FAQ extensamente)
+            # Consulta libre (no acción) — usar respuesta_faq
             try:
                 faq_resp = await respuesta_faq(txt)
                 if faq_resp and len(faq_resp) > 20:
