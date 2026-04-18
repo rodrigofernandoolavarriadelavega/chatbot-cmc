@@ -1924,27 +1924,29 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         resp_otro = (result.get("respuesta_directa") or "").strip()
         if resp_otro:
             return f"{resp_otro}\n\n{DISCLAIMER}"
-        # Override: si el paciente hizo pregunta substantiva (>10 chars) que
-        # Claude no clasificó bien, intentar detectar apellido/especialidad
-        # o llamar a respuesta_faq antes de caer al menú genérico.
-        _tl_fb = txt.lower()
-        _ACCION_KW = ("agendar", "reservar", "reagendar", "cancelar", "mover",
-                      "cambiar", "hora", "cita", "consulta")
-        _es_accion = any(k in _tl_fb for k in _ACCION_KW)
-        if len(txt) >= 10 and not _es_accion:
-            # Solo fallback FAQ si NO es claramente pedido de acción
+        # Override fallback: antes de caer al menú, intentar rescatar la
+        # intención del paciente.
+        if len(txt) >= 10:
+            # 1) ¿Menciona apellido/especialidad específica? → flujo agendar
             esp_hint = _detectar_apellido_profesional(txt) or _detectar_especialidad_en_texto(txt)
             if esp_hint:
                 log_event(phone, "fallback_esp_detectada", {"esp": esp_hint, "txt": txt[:120]})
                 return await _iniciar_agendar(phone, data, esp_hint)
-            # Consulta libre (no acción) — usar respuesta_faq
-            try:
-                faq_resp = await respuesta_faq(txt)
-                if faq_resp and len(faq_resp) > 20:
-                    log_event(phone, "fallback_faq", {"txt": txt[:120]})
-                    return f"{faq_resp}\n\n_Escribe *menu* si prefieres ver las opciones._"
-            except Exception:
-                pass
+            # 2) Si NO hay palabra de acción (agendar/hora/cita), probar FAQ.
+            #    Con acción, el paciente ya está en flujo conocido → dejar que
+            #    caiga al menú (muestra las especialidades).
+            _tl_fb = txt.lower()
+            _ACCION_KW = ("agendar", "reservar", "reagendar", "cancelar", "mover",
+                          "cambiar", "hora", "cita", "consulta")
+            _es_accion = any(k in _tl_fb for k in _ACCION_KW)
+            if not _es_accion:
+                try:
+                    faq_resp = await respuesta_faq(txt)
+                    if faq_resp and len(faq_resp) > 20:
+                        log_event(phone, "fallback_faq", {"txt": txt[:120]})
+                        return f"{faq_resp}\n\n_Escribe *menu* si prefieres ver las opciones._"
+                except Exception:
+                    pass
         # Fallback final (saludo o input muy corto) → mostrar menú
         return _menu_msg()
 
