@@ -1096,7 +1096,7 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
 </div>
 
 <!-- AGENDA HOME -->
-<section id="agenda-home">
+<section id="agenda-home" class="collapsed">
   <div class="ah-header">
     <h2>📅 Agenda de hoy</h2>
     <span class="ah-date" id="ah-fecha-label">—</span>
@@ -1118,7 +1118,7 @@ kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: inh
     <button type="button" class="ah-btn-waiting" id="ah-btn-waiting-toggle" title="Ir a sala de espera">
       🏥 Sala de espera <span class="badge-count" id="ah-waiting-count">0</span>
     </button>
-    <button type="button" class="ah-btn-collapse" id="ah-btn-collapse" title="Mostrar/ocultar agenda">×</button>
+    <button type="button" class="ah-btn-collapse" id="ah-btn-collapse" title="Mostrar/ocultar agenda">▾</button>
   </div>
   <div class="ah-body">
     <div id="agenda-home-grid">
@@ -4714,7 +4714,23 @@ function setupAgendaHomeListeners(){
   if($('ah-btn-prev')) $('ah-btn-prev').onclick=()=>cargarAgendaHome(ah_shiftDate(AH_STATE.fecha,-1));
   if($('ah-btn-next')) $('ah-btn-next').onclick=()=>cargarAgendaHome(ah_shiftDate(AH_STATE.fecha,1));
   if($('ah-btn-hoy')) $('ah-btn-hoy').onclick=()=>cargarAgendaHome(ah_hoyISO());
-  if($('ah-btn-collapse')) $('ah-btn-collapse').onclick=()=>{ const s=$('agenda-home'); if(s) s.classList.toggle('collapsed'); };
+  if($('ah-btn-collapse')){
+    const btn=$('ah-btn-collapse');
+    const sec=$('agenda-home');
+    const saved=localStorage.getItem('ah-collapsed');
+    if(sec){
+      if(saved==='0') sec.classList.remove('collapsed');
+      else sec.classList.add('collapsed');
+      btn.textContent = sec.classList.contains('collapsed') ? '▸' : '▾';
+    }
+    btn.onclick=()=>{
+      if(!sec) return;
+      sec.classList.toggle('collapsed');
+      const c=sec.classList.contains('collapsed');
+      btn.textContent = c ? '▸' : '▾';
+      localStorage.setItem('ah-collapsed', c ? '1' : '0');
+    };
+  }
   if($('ah-btn-waiting-toggle')) $('ah-btn-waiting-toggle').onclick=()=>{ const c=$('ah-col-waiting'); if(c) c.scrollIntoView({behavior:'smooth',block:'nearest'}); cargarWaitingRoom(); };
   if($('ah-prof-select')) $('ah-prof-select').onchange=()=>renderAgendaCitas(AH_STATE.citas);
 }
