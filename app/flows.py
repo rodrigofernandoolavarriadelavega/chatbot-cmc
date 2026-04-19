@@ -4335,44 +4335,167 @@ _ESP_MED_GENERAL = {"medicina general", "medicina familiar"}
 # Usado como override cuando Claude clasifica genéricamente pero el texto crudo
 # menciona a un doctor puntual (ej. "Con Olavarria" → narrow a solo ese).
 _APELLIDOS_PROFESIONAL = [
-    ("olavarr",      "olavarría"),
+    # Variaciones por profesional. Incluye: sin tilde, confusión b↔v,
+    # j↔g↔x↔h, ll↔y, s↔z al final, errores de escritura rural.
+    # `in` es substring — orden no importa demasiado salvo colisiones.
+    # Mapean a keys que deben EXISTIR en ESPECIALIDADES_MAP de medilink.py.
+
+    # ── Medicina General: 3 colegas (Olavarría 1, Abarca 73, Márquez 13) ──
+    ("olavarr",      "olavarría"),     # olavarría, olavarria, olavarr
+    ("olavari",      "olavarría"),     # olavarí
     ("abarca",       "abarca"),
-    ("marquez",      "medicina familiar"),
-    ("márquez",      "medicina familiar"),
+    ("avarca",       "abarca"),        # b↔v
+    ("abaca",        "abarca"),        # error común
+    ("marquez",      "marquez"),       # antes "medicina familiar" — caía en _ESP_MED_GENERAL
+    ("márquez",      "marquez"),
+    ("marques",      "marquez"),       # s↔z
+    ("márques",      "marquez"),
+
+    # ── Odontología: 2 colegas (Burgos 55, Jiménez 72) ──
+    ("burgos",       "burgos"),        # antes "odontología" — mezclaba con Jiménez
+    ("vurgos",       "burgos"),        # b↔v
+    ("burgo",        "burgos"),        # sin s
+    ("jimenez",      "jimenez"),       # antes "odontología" — mezclaba con Burgos
+    ("jiménez",      "jimenez"),
+    ("ximenez",      "jimenez"),       # j↔x
+    ("ximénez",      "jimenez"),
+    ("gimenez",      "jimenez"),       # j↔g
+    ("giménez",      "jimenez"),
+    ("himenez",      "jimenez"),       # j↔h
+    ("jimene",       "jimenez"),       # sin z
+
+    # ── Psicología Adulto: 2 colegas (Montalba 74, Rodríguez 49) ──
+    ("montalba",     "montalba"),      # antes "psicología" — mezclaba con Rodríguez
+    ("montalva",     "montalba"),      # b↔v
+    ("montalbo",     "montalba"),      # error terminación
+    ("rodriguez",    "rodriguez"),     # NUEVO — no estaba listado
+    ("rodríguez",    "rodriguez"),
+    ("rodrigez",     "rodriguez"),     # sin ui
+    ("rodrigues",    "rodriguez"),     # s↔z
+    ("rodrígez",     "rodriguez"),
+    ("juan pablo",   "rodriguez"),
+
+    # ── Kinesiología: 2 colegas (Armijo 77, Etcheverry 21) ──
+    ("armijo",       "armijo"),
+    ("armiho",       "armijo"),        # j↔h
+    ("armigo",       "armijo"),        # j↔g
+    ("etcheverry",   "etcheverry"),
+    ("echeverry",    "etcheverry"),    # sin t
+    ("echeverri",    "etcheverry"),    # sin y final
+    ("etcheveri",    "etcheverry"),
+    ("echaverri",    "etcheverry"),    # e↔a
+
+    # ── Profesionales únicos en su especialidad ──
     ("borrego",      "otorrinolaringología"),
+    ("vorrego",      "otorrinolaringología"),  # b↔v
+    ("borego",       "otorrinolaringología"),  # sin doble r
+
     ("millan",       "cardiología"),
     ("millán",       "cardiología"),
+    ("milan",        "cardiología"),   # ll↔l
+    ("milán",        "cardiología"),
+    ("miyan",        "cardiología"),   # ll↔y
+
     ("rejon",        "ginecología"),
     ("rejón",        "ginecología"),
+    ("rehon",        "ginecología"),   # j↔h
+    ("regon",        "ginecología"),   # j↔g
+
     ("quijano",      "gastroenterología"),
-    ("burgos",       "odontología"),
-    ("jimenez",      "odontología"),
-    ("jiménez",      "odontología"),
+    ("kijano",       "gastroenterología"),  # qu↔k
+    ("quihano",      "gastroenterología"),  # j↔h
+
     ("castillo",     "ortodoncia"),
+    ("castiyo",      "ortodoncia"),    # ll↔y
+    ("castilo",      "ortodoncia"),    # sin doble l
+    ("casiyo",       "ortodoncia"),
+
     ("fredes",       "endodoncia"),
+    ("fredez",       "endodoncia"),    # s↔z
+    ("frede",        "endodoncia"),    # sin s
+
     ("valdes",       "implantología"),
     ("valdés",       "implantología"),
+    ("valdez",       "implantología"),
+    ("baldes",       "implantología"), # b↔v
+    ("baldés",       "implantología"),
+
     ("fuentealba",   "estética facial"),
+    ("fuentealva",   "estética facial"),  # b↔v
+    ("fuentesalba",  "estética facial"),  # error común
+    ("valentina",    "estética facial"),
+
     ("acosta",       "masoterapia"),
-    ("armijo",       "armijo"),
-    ("etcheverry",   "etcheverry"),
+    ("acostas",      "masoterapia"),   # s extra
+
     ("pinto",        "nutrición"),
-    ("montalba",     "psicología"),
+    ("pintos",       "nutrición"),
+    ("gisela",       "nutrición"),
+    ("gise",         "nutrición"),
+
     ("arratia",      "fonoaudiología"),
+    ("aratia",       "fonoaudiología"),  # sin doble r
+    ("juana",        "fonoaudiología"),
+
     ("guevara",      "podología"),
+    ("gevara",       "podología"),     # sin u
+    ("guebara",      "podología"),     # b↔v
+    ("andrea guevara", "podología"),
+
     ("pardo",        "ecografía"),
+    ("pardos",       "ecografía"),
+    ("david pardo",  "ecografía"),
+
+    # Matrona (no estaba) — Sarai Gómez (67). "gómez" y "sarai" son únicos en el centro.
+    ("sarai",        "matrona"),
+    ("saraí",        "matrona"),
+    ("sara gomez",   "matrona"),
+    ("sarai gomez",  "matrona"),
+    ("saraí gómez",  "matrona"),
 ]
+
+
+def _normalizar_para_apellido(txt: str) -> str:
+    """Normaliza texto libre para detección robusta de apellidos.
+    Objetivo: que "M4rquez", "márq_uez", "Márquez 😊", "el dr. M A R Q U E Z"
+    todos colapsen al mismo string base donde buscar 'marquez' como substring.
+
+    Pasos:
+    1. Unicode NFKC (fullwidth → ASCII).
+    2. Quita chars invisibles (ZWSP, ZWJ, BOM).
+    3. Lowercase.
+    4. Quita tildes (NFD + drop combining).
+    5. Elimina TODO lo que no sea letra a-z/ñ — espacios, dígitos, emojis,
+       underscores, puntuación, símbolos. Queda una sola tira de letras.
+    """
+    if not txt:
+        return ""
+    import unicodedata
+    t = unicodedata.normalize("NFKC", txt)
+    t = re.sub(r"[\u200b-\u200f\u2060\ufeff]", "", t)
+    t = t.lower()
+    t = unicodedata.normalize("NFD", t)
+    t = "".join(c for c in t if not unicodedata.combining(c))
+    t = re.sub(r"[^a-zñ]+", "", t)
+    return t
+
+
+# Precomputar apellidos normalizados una sola vez (optimización)
+_APELLIDOS_NORM = [(re.sub(r"[^a-zñ]+", "", a.lower()), key) for a, key in _APELLIDOS_PROFESIONAL]
 
 
 def _detectar_apellido_profesional(txt: str) -> str | None:
     """Si el texto menciona un apellido de profesional, devuelve la key de
-    ESPECIALIDADES_MAP correspondiente. Útil cuando Claude clasifica genérico
-    pero el paciente pidió un doctor específico."""
+    ESPECIALIDADES_MAP correspondiente. Normaliza el input para tolerar
+    underscores, emojis, dígitos insertados, tildes, fullwidth, etc.
+    """
     if not txt:
         return None
-    tl = txt.lower()
-    for apellido, key in _APELLIDOS_PROFESIONAL:
-        if apellido in tl:
+    norm = _normalizar_para_apellido(txt)
+    if not norm:
+        return None
+    for apellido_norm, key in _APELLIDOS_NORM:
+        if apellido_norm and apellido_norm in norm:
             return key
     return None
 
@@ -4560,12 +4683,12 @@ def _format_slots_expansion(groups: list, show_ver_mas: bool = False) -> str | d
 
 async def _handle_expansion(phone: str, data: dict, slots_mostrados: list,
                              todos_slots: list, stage: int, fecha: str | None) -> str | dict:
-    """Expande progresivamente los horarios de Medicina General.
+    """Expande horarios de Medicina General.
     Stage 0→1: muestra slots del doctor sugerido (ya cargados).
-    Stage 1→2: busca el OTRO doctor primario (Abarca↔Olavarría) y muestra ambos.
-    Stage 2→3: muestra los 3 (Abarca + Olavarría + Márquez) con todos los horarios."""
+    Stage 1→2: muestra los 3 (Abarca + Olavarría + Márquez) con todos los
+               horarios del día. Antes requería 2 pasos (Abarca+Olavarría,
+               después +Márquez); colapsado para reducir fricción."""
     next_stage = stage + 1
-    prof_sugerido_id = data.get("prof_sugerido_id")
 
     if next_stage == 1:
         # Mostrar los slots del doctor sugerido (ya guardados en data["slots"])
@@ -4573,47 +4696,23 @@ async def _handle_expansion(phone: str, data: dict, slots_mostrados: list,
         save_session(phone, "WAIT_SLOT", data)
         return _format_slots(data["slots"])
 
-    elif next_stage == 2:
-        # Buscar el OTRO doctor primario (el que NO fue sugerido)
-        slots_sugerido = data.get("slots", [])
-        otros_primarios = [i for i in _MED_AO_IDS if i != prof_sugerido_id]
-        smart_otro, todos_otro = (await buscar_slots_dia_por_ids(otros_primarios, fecha)) if (fecha and otros_primarios) else ([], [])
+    # next_stage >= 2: mostrar los 3 profesionales de MG agrupados.
+    # NO hacer fallback a buscar_primer_dia para profs sin horario ese día —
+    # evita mostrar slots de otro día bajo el header de fecha actual.
+    all_groups = []
+    todos_all = []
+    for pid in _MED_GENERAL_IDS:
+        _, slots_pid = (await buscar_slots_dia_por_ids([pid], fecha)) if fecha else ([], [])
+        if slots_pid:
+            all_groups.append({"slots": slots_pid})
+            todos_all.extend(slots_pid)
 
-        show_sug = slots_sugerido[:4]
-        show_otro = smart_otro[:4]
-        combined = show_sug + show_otro
+    data["expansion_stage"] = 2
+    data["slots"] = todos_all
+    data["todos_slots"] = todos_all
+    save_session(phone, "WAIT_SLOT", data)
 
-        data["expansion_stage"] = 2
-        data["slots"] = combined
-        data["todos_slots"] = todos_slots + todos_otro
-        save_session(phone, "WAIT_SLOT", data)
-
-        groups = []
-        if show_sug:
-            groups.append({"slots": show_sug})
-        if show_otro:
-            groups.append({"slots": show_otro})
-        return _format_slots_expansion(groups, show_ver_mas=True) if groups else _format_slots(todos_slots, mostrar_todos=True)
-
-    else:
-        # Todos los horarios de los 3 profesionales QUE ATIENDEN ESE DÍA.
-        # NO hacer fallback a buscar_primer_dia para el overflow — si Márquez
-        # no atiende ese día, no se muestra (evita mostrar slots de otro día
-        # bajo el header de fecha equivocado).
-        all_groups = []
-        todos_all = []
-        for pid in _MED_GENERAL_IDS:
-            _, slots_pid = (await buscar_slots_dia_por_ids([pid], fecha)) if fecha else ([], [])
-            if slots_pid:
-                all_groups.append({"slots": slots_pid})
-                todos_all.extend(slots_pid)
-
-        data["expansion_stage"] = 3
-        data["slots"] = todos_all
-        data["todos_slots"] = todos_all
-        save_session(phone, "WAIT_SLOT", data)
-
-        return _format_slots_expansion(all_groups) if all_groups else "No hay más horarios disponibles."
+    return _format_slots_expansion(all_groups) if all_groups else "No hay más horarios disponibles."
 
 
 def _modo_degradado(phone: str, intent: str, state_snap: str = "") -> str:

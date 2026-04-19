@@ -36,6 +36,9 @@ jobs:
       - name: Run horarios con break
         run: PYTHONPATH=app:. python tests/test_horarios_break.py
 
+      - name: Run apellidos profesional (3000 variantes)
+        run: PYTHONPATH=app:. python tests/test_apellidos_profesional.py
+
       - name: Run offline flow harness
         working-directory: tests
         env:

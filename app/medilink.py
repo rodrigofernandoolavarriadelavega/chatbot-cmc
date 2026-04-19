@@ -82,11 +82,20 @@ ESPECIALIDADES_MAP = {
     "medicina general": [73, 1, 13], "médico": [73, 1, 13], "medico general": [73, 1, 13], "doctor": [73, 1, 13],
     "medicina familiar": [13], "médico familiar": [13],
     "otorrinolaringología": [23], "otorrino": [23], "orl": [23],
+    # ── Keys únicas por profesional (usadas cuando el paciente pide a uno específico) ──
+    # Bypass de _ESP_MED_GENERAL: "marquez" NO resuelve a "medicina familiar"
+    # para que _iniciar_agendar NO active la lógica stage Abarca/Olavarría.
     "olavarría": [1], "olavarria": [1],
     "abarca": [73],
+    "marquez": [13], "márquez": [13], "alonso márquez": [13], "dr marquez": [13], "dr márquez": [13],
     "etcheverry": [21], "leo": [21], "leonardo": [21],
     "armijo": [77], "luis armijo": [77],
     "paola acosta": [59], "paola": [59],
+    "burgos": [55], "javiera burgos": [55], "dra burgos": [55],
+    "jimenez": [72], "jiménez": [72], "carlos jimenez": [72], "dr jimenez": [72],
+    "montalba": [74], "jorge montalba": [74],
+    "rodriguez": [49], "rodríguez": [49], "juan pablo": [49], "juan pablo rodriguez": [49],
+    # ── Especialidades genéricas (cuando el paciente no nombra a nadie) ──
     "odontología": [72, 55], "dentista": [72, 55], "odontólogo": [72, 55],
     "endodoncia": [75], "endodoncista": [75],
     "estética facial": [76], "estetica facial": [76], "estética": [76],
@@ -110,6 +119,7 @@ ESPECIALIDADES_MAP = {
 ESPECIALIDADES_ID = {
     "kinesiología": 3, "kinesiólogo": 3, "kinesiologa": 3, "kine": 3,
     "medicina general": 10, "médico": 10, "medico general": 10, "doctor": 10,
+    "medicina familiar": 10, "médico familiar": 10,
     "odontología": 9, "dentista": 9, "odontólogo": 9,
     "fonoaudiología": 8, "fonoaudiólogo": 8, "fonoaudiologa": 8,
     "implantología": 20, "implantes": 20,
@@ -119,11 +129,22 @@ ESPECIALIDADES_ID = {
     "cardiología": 16, "cardiólogo": 16,
     "gastroenterología": 18, "gastroenterólogo": 18,
     "psicología": 5, "psicólogo": 5, "psicóloga": 5,
+    "psicología adulto": 5, "psicología infantil": 5,
     "nutrición": 4, "nutricionista": 4,
     "podología": 12, "podólogo": 12,
     "ortodoncia": 19, "ortodoncista": 19,
     "ecografía": 13, "ecografista": 13, "tecnólogo": 13,
     "otorrinolaringología": 6, "otorrino": 6,
+    # ── Keys únicas por profesional (mismo id de especialidad base en Medilink) ──
+    "olavarría": 10, "olavarria": 10, "abarca": 10,
+    "marquez": 10, "márquez": 10, "alonso márquez": 10, "dr marquez": 10, "dr márquez": 10,
+    "etcheverry": 3, "leo": 3, "leonardo": 3,
+    "armijo": 3, "luis armijo": 3,
+    "paola acosta": 3, "paola": 3,
+    "burgos": 9, "javiera burgos": 9, "dra burgos": 9,
+    "jimenez": 9, "jiménez": 9, "carlos jimenez": 9, "dr jimenez": 9,
+    "montalba": 5, "jorge montalba": 5,
+    "rodriguez": 5, "rodríguez": 5, "juan pablo": 5, "juan pablo rodriguez": 5,
 }
 
 
