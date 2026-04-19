@@ -37,7 +37,7 @@ while len(BASES) < 10:
     if dv:
         BASES.append((cuerpo, dv))
 
-# ── 21 separadores ──
+# ── Separadores (25) ──
 SEPARADORES = [
     "-", "_", "/", "|", ":", "*", "·", "•",
     "\u2010",  # hyphen
@@ -47,15 +47,20 @@ SEPARADORES = [
     "\u2014",  # em dash
     "\u2015",  # horizontal bar
     "\u2212",  # minus sign
+    "\u2E3A",  # two-em dash
+    "\u2043",  # hyphen bullet
+    "\uFF0D",  # fullwidth hyphen-minus
     " ",       # espacio simple
     "  ",      # doble espacio
     " - ",     # guion con espacios
     "- ",
     " -",
     "--",      # doble guion
+    "\t",      # tab (Excel copy-paste)
+    "\u00a0",  # nbsp
 ]
 
-# ── 9 prefijos ──
+# ── Prefijos (14) ──
 PREFIJOS = [
     "",
     "rut: ",
@@ -66,6 +71,37 @@ PREFIJOS = [
     "ci: ",
     "cédula: ",
     "cedula ",
+    "n° ",
+    "nro: ",
+    "#",
+    "hola mi rut es ",
+    "te paso el rut: ",
+]
+
+# ── Envolturas (inicio, fin) — 10 combos incluyendo "sin envoltura" ──
+ENVOLTURAS = [
+    ("", ""),
+    ('"', '"'),
+    ("'", "'"),
+    ("«", "»"),
+    ("\u201c", "\u201d"),  # smart double
+    ("\u2018", "\u2019"),  # smart single
+    ("[", "]"),
+    ("{", "}"),
+    ("<", ">"),
+    ("(", ")"),
+]
+
+# ── Sufijos (emoji, puntuación, texto) — 8 ──
+SUFIJOS = [
+    "",
+    " 😊",
+    "👍",
+    ".",
+    "!!",
+    " gracias",
+    " ok",
+    " :)",
 ]
 
 
@@ -77,15 +113,19 @@ def _con_puntos(cuerpo: str) -> str:
 
 
 def _generar_casos(n: int = 1000) -> list[tuple[str, str]]:
-    """[(input, expected_canonical), ...]"""
+    """[(input, expected_canonical), ...]
+    Espacio combinatorio: 10 bases × 25 separadores × 14 prefijos × 10 envolturas
+    × 8 sufijos × 2 puntos × 2 casing = 1.120.000 combinaciones.
+    Muestreamos n con semilla fija para reproducibilidad."""
     todos: list[tuple[str, str]] = []
     combos = itertools.product(
-        BASES, SEPARADORES, PREFIJOS, [True, False], [True, False]
+        BASES, SEPARADORES, PREFIJOS, ENVOLTURAS, SUFIJOS,
+        [True, False], [True, False],
     )
-    for (cuerpo, dv), sep, pre, con_puntos, dv_upper in combos:
+    for (cuerpo, dv), sep, pre, (env_a, env_z), suf, con_puntos, dv_upper in combos:
         cuerpo_str = _con_puntos(cuerpo) if con_puntos else cuerpo
         dv_str = dv.upper() if dv_upper else dv.lower()
-        inp = f"{pre}{cuerpo_str}{sep}{dv_str}"
+        inp = f"{env_a}{pre}{cuerpo_str}{sep}{dv_str}{env_z}{suf}"
         expected = f"{cuerpo}-{dv.upper()}"
         todos.append((inp, expected))
     _rng2 = random.Random(42)

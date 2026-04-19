@@ -65,6 +65,54 @@ CASES: list[tuple] = [
     # ── Demasiado corto/largo ──
     ("LEN-01", "1234-5",             None,         False),
     ("LEN-02", "123456789012-3",     None,         False),
+
+    # ── Whitespace invisible ──
+    ("WS-01", "12345678\t5",         "12345678-5", True),   # tab
+    ("WS-02", "12345678\n5",         "12345678-5", True),   # newline
+    ("WS-03", "12345678\r5",         "12345678-5", True),   # CR
+    ("WS-04", "12345678\u00a05",     "12345678-5", True),   # nbsp
+    ("WS-05", "12345678\u200b-5",    "12345678-5", True),   # zero-width space
+    ("WS-06", "\ufeff12345678-5",    "12345678-5", True),   # BOM al inicio
+    ("WS-07", "12\u200b345678-5",    "12345678-5", True),   # ZWSP en medio
+
+    # ── Fullwidth (CJK / copy-paste) ──
+    ("FW-01", "１２３４５６７８－５",   "12345678-5", True),  # todo fullwidth
+    ("FW-02", "12345678－5",          "12345678-5", True),  # solo hyphen fullwidth
+
+    # ── Dashes raros ──
+    ("UNI-06", "12345678⸺5",         "12345678-5", True),   # two-em dash U+2E3A
+    ("UNI-07", "12345678⁃5",         "12345678-5", True),   # hyphen bullet U+2043
+
+    # ── Envolturas (quotes, brackets) ──
+    ("ENV-01", '"12345678-5"',       "12345678-5", True),   # ASCII double quotes
+    ("ENV-02", "'12345678-5'",       "12345678-5", True),   # ASCII single
+    ("ENV-03", "«12345678-5»",       "12345678-5", True),   # angle
+    ("ENV-04", "\u201c12345678-5\u201d", "12345678-5", True),   # smart double
+    ("ENV-05", "\u201812345678-5\u2019", "12345678-5", True),   # smart single
+    ("ENV-06", "[12345678-5]",       "12345678-5", True),
+    ("ENV-07", "{12345678-5}",       "12345678-5", True),
+    ("ENV-08", "<12345678-5>",       "12345678-5", True),
+
+    # ── Emoji / texto circundante ──
+    ("EMO-01", "12345678-5😊",       "12345678-5", True),
+    ("EMO-02", "12345678-5 👍",      "12345678-5", True),
+    ("EMO-03", "hola mi rut es 12345678-5 gracias", "12345678-5", True),
+    ("EMO-04", "12345678-5!!",       "12345678-5", True),
+
+    # ── Prefijos adicionales ──
+    ("PREF-06", "n° 12345678-5",     "12345678-5", True),
+    ("PREF-07", "N°: 12345678-5",    "12345678-5", True),
+    ("PREF-08", "nro: 12345678-5",   "12345678-5", True),
+    ("PREF-09", "#12345678-5",       "12345678-5", True),
+
+    # ── Mayúsculas/minúsculas K ──
+    ("K-01", "10000013-k",            "10000013-K", True),
+    ("K-02", "10.000.013-k",          "10000013-K", True),
+
+    # ── Espacios múltiples ──
+    ("SP-01", "12345678   -   5",    "12345678-5", True),
+    ("SP-02", "  12345678-5  ",      "12345678-5", True),
+    ("SP-03", "1 2 3 4 5 6 7 8-5",   "12345678-5", True),
 ]
 
 

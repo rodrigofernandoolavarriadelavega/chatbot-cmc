@@ -1285,32 +1285,71 @@ def clean_rut(rut: str) -> str:
 
     Reduce fricción en WAIT_RUT_* donde pacientes rurales escriben sin guión
     ni puntos ('209972077') o sólo el cuerpo ('20997207').
+
+    Casos cubiertos para robustez máxima:
+    - Unicode NFKC: fullwidth '１２３４５６７８－９' → '12345678-9'
+    - Chars invisibles: ZWSP, ZWJ, ZWNJ, BOM, nbsp.
+    - Envolturas: "...", '...', «...», [...], {...}, <...>.
+    - Emojis o texto alrededor (filtro final por clase [^0-9\-K]).
+    - Prefijos: rut:, mi rut es, ci:, cédula:, n°, nro:, #.
+    - Separadores: - _ / | : * · • y dashes Unicode (‐‑‒–—―−⸺⁃).
     """
     if not rut:
         return ""
-    # Sacar palabras/contexto ('rut:', 'mi rut es', 'ci:', 'cédula:')
-    rut = re.sub(r"(?i)(mi\s+(rut|c[eé]dula)\s+es|rut[:\s]|c[eé]dula[:\s]|ci[:\s]|r\s*u\s*t)", "", rut)
-    # Normalizar separadores extraños a guión:
-    # - _ / | · • (teclados raros, markdown, falta de guión en móvil)
-    # - Unicode dashes: ‐ (U+2010), ‑ (U+2011), ‒ (U+2012), – (U+2013),
-    #   — (U+2014), ― (U+2015), − (U+2212). iOS autocorrect pone —.
-    # - : y * aparecen a veces como separador casero
-    rut = re.sub(r"[/|·•_:\*\u2010\u2011\u2012\u2013\u2014\u2015\u2212]", "-", rut)
-    # Quitar puntos, espacios, paréntesis, comas
-    rut = re.sub(r"[.\s()\,]", "", rut).strip().upper()
+    # 1. Unicode NFKC (fullwidth → ASCII, compatibility decomposition)
+    try:
+        import unicodedata as _ud
+        rut = _ud.normalize("NFKC", rut)
+    except Exception:
+        pass
+    # 2. Quitar chars invisibles (ZWSP, ZWNJ, ZWJ, LRM, RLM, BOM, word joiner)
+    rut = re.sub(r"[\u200b-\u200f\u2060\ufeff]", "", rut)
+    # 3. Prefijos contextuales ('rut:', 'mi rut es', 'ci:', 'cédula:', 'n°', 'nro:', '#')
+    rut = re.sub(
+        r"(?i)(mi\s+(rut|c[eé]dula)\s+es|rut[:\s]|c[eé]dula[:\s]|ci[:\s]"
+        r"|n(ro|[°ºo])[:\s]+|#)",
+        " ",
+        rut,
+    )
+    # 4. Normalizar separadores extraños a guión: _ / | · • : * + dashes Unicode
+    rut = re.sub(r"[/|·•_:\*\u2010\u2011\u2012\u2013\u2014\u2015\u2212\u2E3A\u2043]", "-", rut)
+    rut = rut.upper()
+    # 5. EXTRACCIÓN por regex: buscar secuencia tipo RUT dentro del texto.
+    # Permite puntos/espacios/nbsp internos en el cuerpo y guión(es) antes del DV.
+    # Así toleramos texto circundante, envolturas ("", [], {}, «»), emojis, etc.
+    m = re.search(
+        r"(\d[\d.\s\u00a0]{5,}\d)(?:\s*-+\s*([0-9K]))?(?![0-9K])",
+        rut,
+    )
+    if m:
+        cuerpo_digitos = re.sub(r"\D", "", m.group(1))
+        dv = m.group(2)
+        if dv:
+            if 7 <= len(cuerpo_digitos) <= 8:
+                return f"{cuerpo_digitos}-{dv}"
+            if len(cuerpo_digitos) == 9 and cuerpo_digitos[-1] == dv:
+                return f"{cuerpo_digitos[:8]}-{dv}"
+        else:
+            if len(cuerpo_digitos) == 9:
+                return f"{cuerpo_digitos[:8]}-{cuerpo_digitos[8]}"
+            if 7 <= len(cuerpo_digitos) <= 8:
+                dv_calc = _calcular_dv_rut(cuerpo_digitos)
+                if dv_calc:
+                    return f"{cuerpo_digitos}-{dv_calc}"
+    # 6. Fallback para strings sin estructura clara: quitar puntuación/envolturas
+    # y aplicar lógica simple (para que LEN-01/LEN-02 sigan retornando algo).
+    rut = re.sub(r"[.\s()\[\]{}<>\,'\"«»‹›\u2018\u2019\u201c\u201d]", "", rut).strip()
+    rut = re.sub(r"[^0-9\-K]", "", rut)
     rut = rut.replace("--", "-")
     if not rut:
         return ""
-    # Ya tiene guión
     if "-" in rut:
         cuerpo, dv = rut.rsplit("-", 1)
         return f"{cuerpo}-{dv}" if cuerpo and dv else rut
-    # Sin guión, 7-8 dígitos puros → calcular DV
     if rut.isdigit() and 7 <= len(rut) <= 8:
         dv = _calcular_dv_rut(rut)
         if dv:
             return f"{rut}-{dv}"
-    # Sin guión, >=2 chars → último char = DV
     if len(rut) >= 2:
         return rut[:-1] + "-" + rut[-1]
     return rut
