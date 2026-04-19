@@ -493,6 +493,21 @@ input, textarea, select{font-family:inherit; color:inherit}
 #toast.error{background:var(--red); color:#fff}
 #toast.success{background:#1a8e4a; color:#fff}
 
+.chat-header .ctx-toggle, .chat-header .back{display:none}
+.chat-header .ctx-toggle{
+  width:34px; height:34px; border-radius:8px; align-items:center; justify-content:center;
+  background:var(--panel-2); color:var(--cmc-navy); border:none; cursor:pointer;
+  font-size:16px;
+}
+.chat-header .ctx-toggle:hover{background:var(--cmc-aqua-soft)}
+.chat-header .back{
+  width:36px; height:36px; border-radius:8px; align-items:center; justify-content:center;
+  color:var(--cmc-navy); background:transparent; border:none; cursor:pointer;
+  font-size:22px; line-height:1; font-weight:600; flex:0 0 auto;
+}
+.chat-header .back:hover{background:var(--panel-2)}
+.chat-header .back:active{background:var(--cmc-aqua-soft)}
+
 /* ===== RESPONSIVE ========================================================= */
 @media (max-width:1180px){
   .app{grid-template-columns: 300px 1fr 0}
@@ -579,17 +594,6 @@ html, body{width:100%; max-width:100%; overflow-x:hidden}
   .chat-header{padding:8px 8px; gap:6px}
   .chat-header .avatar{width:36px; height:36px; flex:0 0 36px}
 }
-.chat-header .ctx-toggle, .chat-header .back{display:none}
-.chat-header .ctx-toggle{
-  width:34px; height:34px; border-radius:8px; align-items:center; justify-content:center;
-  background:var(--panel-2); color:var(--cmc-navy);
-}
-.chat-header .ctx-toggle:hover{background:var(--cmc-aqua-soft)}
-.chat-header .back{
-  width:34px; height:34px; border-radius:8px; align-items:center; justify-content:center;
-  color:var(--cmc-navy); background:transparent;
-}
-.chat-header .back:hover{background:var(--panel-2)}
 </style>
 </head>
 <body>
@@ -632,7 +636,35 @@ html, body{width:100%; max-width:100%; overflow-x:hidden}
       <button class="inbox-tab" data-filter="unread">No leídas <span class="badge" id="tabUnreadN">0</span></button>
       <button class="inbox-tab" data-filter="takeover">Humano <span class="badge" id="tabTakeoverN">0</span></button>
       <button class="inbox-tab" data-filter="waiting">Esperando <span class="badge" id="tabWaitingN">0</span></button>
+      <button class="inbox-tab" data-filter="waitlist">Lista de espera <span class="badge" id="tabWaitlistN">0</span></button>
+      <button class="inbox-tab" data-filter="ecografias">Ecografías <span class="badge" id="tabEcografiasN">0</span></button>
       <button class="inbox-tab" data-filter="today">Hoy</button>
+      <select class="inbox-tab inbox-tab-select" id="profSelect" aria-label="Filtrar por profesional CMC">
+        <option value="">Profesionales CMC ▾</option>
+        <option value="Dr. Rodrigo Olavarría">Dr. Rodrigo Olavarría — Medicina General</option>
+        <option value="Dr. Andrés Abarca">Dr. Andrés Abarca — Medicina General</option>
+        <option value="Dr. Alonso Márquez">Dr. Alonso Márquez — Medicina General / Familiar</option>
+        <option value="Dr. Manuel Borrego">Dr. Manuel Borrego — Otorrinolaringología</option>
+        <option value="Dr. Miguel Millán">Dr. Miguel Millán — Cardiología</option>
+        <option value="Dr. Tirso Rejón">Dr. Tirso Rejón — Ginecología</option>
+        <option value="Dr. Nicolás Quijano">Dr. Nicolás Quijano — Gastroenterología</option>
+        <option value="Dra. Javiera Burgos">Dra. Javiera Burgos — Odontología General</option>
+        <option value="Dr. Carlos Jiménez">Dr. Carlos Jiménez — Odontología General</option>
+        <option value="Dra. Daniela Castillo">Dra. Daniela Castillo — Ortodoncia</option>
+        <option value="Dr. Fernando Fredes">Dr. Fernando Fredes — Endodoncia</option>
+        <option value="Dra. Aurora Valdés">Dra. Aurora Valdés — Implantología</option>
+        <option value="Dra. Valentina Fuentealba">Dra. Valentina Fuentealba — Estética Facial</option>
+        <option value="Paola Acosta">Paola Acosta — Masoterapia</option>
+        <option value="Luis Armijo">Luis Armijo — Kinesiología</option>
+        <option value="Leonardo Etcheverry">Leonardo Etcheverry — Kinesiología</option>
+        <option value="Gisela Pinto">Gisela Pinto — Nutrición</option>
+        <option value="Jorge Montalba">Jorge Montalba — Psicología Adulto</option>
+        <option value="Juan Pablo Rodríguez">Juan Pablo Rodríguez — Psicología Adulto</option>
+        <option value="Juana Arratia">Juana Arratia — Fonoaudiología</option>
+        <option value="Sarai Gómez">Sarai Gómez — Matrona</option>
+        <option value="Andrea Guevara">Andrea Guevara — Podología</option>
+        <option value="David Pardo">David Pardo — Ecografía</option>
+      </select>
     </div>
     <div class="inbox-list" id="inboxList">
       <div class="empty">Cargando conversaciones…</div>
@@ -655,7 +687,7 @@ html, body{width:100%; max-width:100%; overflow-x:hidden}
     </div>
     <div id="chatActive" style="display:none; flex:1; flex-direction:column; min-height:0">
       <div class="chat-header">
-        <button class="back" onclick="closeChat()">←</button>
+        <button class="back" onclick="closeChat()" title="Volver a conversaciones" aria-label="Volver a conversaciones">←</button>
         <div class="avatar" id="chAvatar">?</div>
         <div class="info">
           <div class="name" id="chName" onclick="editName()">— <span class="edit">✏ editar</span></div>
@@ -750,12 +782,15 @@ const POLL_MSGS_MS  = 3000;
 
 let conversations = [];
 let unreadMap     = {};
+let ecografiasPhones = new Set();
+let waitlistPhones = new Set();
 let activePhone   = null;
 let activeConv    = null;
 let messages      = [];
 let lastSeenTs    = {};   // phone → ts of last message we showed
 let pendingFile   = null;
 let inboxFilter   = "all";
+let profFilter    = "";
 let searchTerm    = "";
 let soundOn       = localStorage.getItem("v2_sound") !== "off";
 let notifOn       = localStorage.getItem("v2_notif") === "on";
@@ -881,6 +916,12 @@ function filteredConvs(){
   if (inboxFilter === "unread")   list = list.filter(c => (unreadMap[c.phone]||0) > 0);
   if (inboxFilter === "takeover") list = list.filter(c => c.state === "HUMAN_TAKEOVER");
   if (inboxFilter === "waiting")  list = list.filter(c => (c.msgs_sin_respuesta||0) > 0 || c.last_dir === "in");
+  if (inboxFilter === "ecografias") list = list.filter(c => ecografiasPhones.has(c.phone));
+  if (inboxFilter === "waitlist")  list = list.filter(c => waitlistPhones.has(c.phone));
+  if (profFilter) {
+    const p = profFilter.toLowerCase();
+    list = list.filter(c => ((c.profesional||"") + " " + ((c.flow_data||{}).profesional||"")).toLowerCase().includes(p));
+  }
   if (inboxFilter === "today"){
     const todayKey = new Date().toLocaleDateString("es-CL", {timeZone:TZ});
     list = list.filter(c => {
@@ -946,6 +987,32 @@ function updateKpis(){
   $("#tabUnreadN").textContent = unreadConvs;
   $("#tabTakeoverN").textContent = takeoverN;
   $("#tabWaitingN").textContent = waitingN;
+  $("#tabEcografiasN").textContent = ecografiasPhones.size;
+  $("#tabWaitlistN").textContent = waitlistPhones.size;
+}
+
+async function loadWaitlistPhones(){
+  try {
+    const data = await api("/admin/api/waitlist");
+    const set = new Set();
+    (data || []).forEach(w => {
+      if (w.phone && !w.canceled_at && !w.notified_at) set.add(w.phone);
+    });
+    waitlistPhones = set;
+    $("#tabWaitlistN").textContent = waitlistPhones.size;
+    if (inboxFilter === "waitlist") renderInbox();
+  } catch(e){ console.warn("waitlist load failed", e); }
+}
+
+async function loadEcografiasPhones(){
+  try {
+    const data = await api("/admin/api/search?q=ecograf");
+    const set = new Set();
+    (data.results || []).forEach(r => { if (r.phone) set.add(r.phone); });
+    ecografiasPhones = set;
+    $("#tabEcografiasN").textContent = ecografiasPhones.size;
+    if (inboxFilter === "ecografias") renderInbox();
+  } catch(e){}
 }
 
 /* =========================================================================
@@ -1381,12 +1448,21 @@ document.addEventListener("keydown", e => {
  * ========================================================================= */
 function setup(){
   // Tabs
-  $$(".inbox-tab").forEach(t => t.onclick = () => {
-    $$(".inbox-tab").forEach(x => x.classList.remove("active"));
-    t.classList.add("active");
-    inboxFilter = t.dataset.filter;
-    renderInbox();
+  $$(".inbox-tab").forEach(t => {
+    if (t.tagName === "SELECT") return;
+    t.onclick = () => {
+      $$(".inbox-tab").forEach(x => x.classList.remove("active"));
+      t.classList.add("active");
+      inboxFilter = t.dataset.filter;
+      renderInbox();
+    };
   });
+  const profSel = $("#profSelect");
+  if (profSel) profSel.onchange = e => {
+    profFilter = e.target.value;
+    profSel.classList.toggle("active", !!profFilter);
+    renderInbox();
+  };
   // Search
   $("#searchBox").oninput = e => { searchTerm = e.target.value; renderInbox(); };
   // Reply input
@@ -1421,7 +1497,11 @@ function setup(){
 
   setupAttach();
   loadInbox();
+  loadEcografiasPhones();
+  loadWaitlistPhones();
   inboxTimer = setInterval(loadInbox, POLL_INBOX_MS);
+  setInterval(loadEcografiasPhones, 60000);
+  setInterval(loadWaitlistPhones, 60000);
 }
 
 document.addEventListener("DOMContentLoaded", setup);
