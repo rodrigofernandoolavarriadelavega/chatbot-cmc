@@ -82,7 +82,8 @@ input, textarea, select{font-family:inherit; color:inherit}
 ::-webkit-scrollbar-thumb{background:transparent; border-radius:10px; border:3px solid transparent; background-clip:padding-box}
 *:hover::-webkit-scrollbar-thumb{background:rgba(15,63,104,.15); background-clip:padding-box; border:3px solid transparent}
 *:hover::-webkit-scrollbar-thumb:hover{background:rgba(15,63,104,.3); background-clip:padding-box}
-::selection{background:var(--cmc-aqua-soft); color:var(--cmc-navy)}
+::selection{background:rgba(17,114,171,.32); color:var(--cmc-navy); text-shadow:none}
+.msg ::selection{background:rgba(15,63,104,.32); color:var(--cmc-navy); text-shadow:none}
 
 /* ===== LAYOUT ============================================================= */
 .app{
@@ -966,6 +967,16 @@ let inboxTimer, msgsTimer, notesDebounce;
 const $  = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
 const esc = (s="") => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+// Markdown WhatsApp: *bold* _italic_ ~strike~ ```code```. Escapa HTML primero.
+const formatWa = (s="") => {
+  let t = esc(s);
+  t = t.replace(/```([\s\S]+?)```/g, '<code>$1</code>');
+  t = t.replace(/\*([^\s*][^*\n]*?[^\s*]|[^\s*])\*/g, '<b>$1</b>');
+  t = t.replace(/(^|[\s(])_([^\s_][^_\n]*?[^\s_]|[^\s_])_(?=[\s.,!?)]|$)/g, '$1<i>$2</i>');
+  t = t.replace(/~([^\s~][^~\n]*?[^\s~]|[^\s~])~/g, '<s>$1</s>');
+  return t;
+};
+const stripWa = (s="") => String(s).replace(/[*_~`]/g, "");
 
 function api(path, opts={}){
   const url = path.startsWith("http") ? path : path + (path.includes("?") ? "&" : QS ? "?" : "") + (TOKEN && !path.includes("token=") ? "token=" + encodeURIComponent(TOKEN) : "");
@@ -1117,7 +1128,7 @@ function renderInbox(){
     if (flow.especialidad) tags.push(`<span class="tag-pill flow">${esc(flow.especialidad)}</span>`);
 
     const lastDir = c.last_dir === "out" ? "out" : "";
-    const preview = (c.last_text || "").replace(/\n/g," ").slice(0,80) || "—";
+    const preview = stripWa((c.last_text || "").replace(/\n/g," ")).slice(0,80) || "—";
 
     return `
       <div class="conv-item ${unread?'unread':''} ${isTake?'takeover':''} ${isActive?'active':''}"
@@ -1301,7 +1312,7 @@ function renderMessages(){
     const time = fmtClock(m.ts);
     html += `<div class="msg ${cls}${firstCls}">
       ${isRecep && firstCls ? '<span class="prefix">Recepcionista</span>' : ''}
-      <span class="text">${esc(cleanText)}</span>
+      <span class="text">${formatWa(cleanText)}</span>
       <span class="time">${time}</span>
     </div>`;
     lastKind = kind;
