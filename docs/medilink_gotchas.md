@@ -10,6 +10,22 @@ Medilink devuelve slots de 5–10 min (bloques flexibles para recepcionistas). E
 - Odontología Javiera (prof 55): Medilink intervalo=60, bot también 60.
 - Siempre que consultes `/especialidades/{id}/proxima` para notificar/ofrecer, pasa por agrupación.
 
+## 1b. El JSON de `/horarios` incluye `hora_inicio_break` y `hora_fin_break`
+
+Cada día de trabajo viene como:
+```json
+{"dia":1,"nombre_dia":"Lunes","hora_inicio":"09:40:00","hora_fin":"18:00:00",
+ "hora_inicio_break":"13:00:00","hora_fin_break":"14:00:00"}
+```
+
+Si `hora_inicio_break != hora_fin_break`, el profesional tiene **pausa/almuerzo**. Cualquier slot que se solape con esa ventana (total o parcial) es rechazado por Medilink al crear la cita con:
+
+> `"Profesional no tiene horario para la fecha y duración de cita solicitadas"`
+
+Caso real (2026-04-19): Leonardo Etcheverry lun 09:40-18:00 con break 13:00-14:00. El bot ofrecía 13:40 porque ignoraba el break. Paciente confirmaba → `crear_cita` fallaba 400 → bot mandaba "llama a recepción".
+
+Fix ya aplicado en `_get_horario` y `_generar_slots_horario`: se respeta el break. **Si escribes scripts one-shot (waitlist, notificación manual)**: también agrupa ventanas excluyendo el break del profesional — consultar `/profesionales/{id}/horarios` y leer `hora_inicio_break`/`hora_fin_break`.
+
 ## 2. `/profesionales/{id}/horarios` puede estar vacío y NO significa "no trabaja"
 
 El campo `hora_inicio == hora_fin` (p.ej. 08:00-08:00) en todos los `dias` = ventana cero. Esto no significa que el profesional no atienda — significa que la recepción no publicó horario base y crea citas "a mano". En ese caso:

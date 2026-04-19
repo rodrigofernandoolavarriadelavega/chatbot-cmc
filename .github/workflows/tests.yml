@@ -33,6 +33,9 @@ jobs:
       - name: Run RUT variantes (1000 casos generados)
         run: PYTHONPATH=app:. python tests/test_rut_variantes.py
 
+      - name: Run horarios con break
+        run: PYTHONPATH=app:. python tests/test_horarios_break.py
+
       - name: Run offline flow harness
         working-directory: tests
         env:

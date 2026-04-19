@@ -218,7 +218,8 @@ async def _post(client: httpx.AsyncClient, url: str, **kwargs) -> httpx.Response
 
 async def _get_horario(client: httpx.AsyncClient, id_prof: int) -> dict:
     """Obtiene intervalo, días de trabajo y horarios por día desde la API (con caché 1h).
-    Retorna: {intervalo, dias: set(weekdays), horario_dia: {weekday: (hi, hf)}}
+    Retorna: {intervalo, dias: set(weekdays), horario_dia: {weekday: (hi, hf, break_t)}}
+    break_t es None o (break_hi, break_hf) para excluir slots de pausa/almuerzo.
 
     Solo cachea resultados con datos válidos. Si Medilink falla (429/5xx/red),
     retorna el dict stale del caché si existe, o un fallback SIN cachearlo —
@@ -248,11 +249,20 @@ async def _get_horario(client: httpx.AsyncClient, id_prof: int) -> dict:
             for d in sucursal_data.get("dias", []):
                 hi = d.get("hora_inicio", "")
                 hf = d.get("hora_fin", "")
+                # Break/almuerzo: si hora_inicio_break != hora_fin_break, se debe excluir.
+                # Muchos profesionales tienen break 13:00-14:00. Ignorarlo causaba que
+                # el bot ofreciera slots dentro del break y Medilink rechazara el crear_cita
+                # con "Profesional no tiene horario para la fecha y duración solicitadas".
+                bhi = d.get("hora_inicio_break", "") or ""
+                bhf = d.get("hora_fin_break", "") or ""
                 if hi and hf and hi != hf:
                     wd = _MEDILINK_DIA_TO_WEEKDAY.get(d["dia"])
                     if wd is not None:
                         dias_activos.add(wd)
-                        horario_dia[wd] = (hi[:5], hf[:5])
+                        break_t = None
+                        if bhi and bhf and bhi != bhf:
+                            break_t = (bhi[:5], bhf[:5])
+                        horario_dia[wd] = (hi[:5], hf[:5], break_t)
             horario = {
                 "intervalo":   PROFESIONALES[id_prof]["intervalo"],
                 "dias":        dias_activos if dias_activos else set(range(5)),
@@ -382,14 +392,26 @@ async def _get_horas_ocupadas(client: httpx.AsyncClient, id_prof: int, fecha: st
     return ocupadas
 
 
-def _generar_slots_horario(hora_inicio: str, hora_fin: str, intervalo: int) -> list:
-    """Genera lista de (hi, hf) en strings 'HH:MM' desde hora_inicio hasta hora_fin."""
+def _generar_slots_horario(hora_inicio: str, hora_fin: str, intervalo: int,
+                           break_t: tuple[str, str] | None = None) -> list:
+    """Genera lista de (hi, hf) en 'HH:MM' desde hora_inicio hasta hora_fin,
+    excluyendo los slots que se solapen total o parcialmente con el break."""
     slots = []
     cur = _h_to_min(hora_inicio)
     fin = _h_to_min(hora_fin)
+    bi = bf = None
+    if break_t:
+        bi = _h_to_min(break_t[0])
+        bf = _h_to_min(break_t[1])
     while cur + intervalo <= fin:
-        hi = f"{cur // 60:02d}:{cur % 60:02d}"
         hf_min = cur + intervalo
+        # Solapamiento con break: el slot [cur, hf_min] choca si
+        # cur < bf AND hf_min > bi (intersección no vacía).
+        if bi is not None and cur < bf and hf_min > bi:
+            # Saltar al final del break (alineado al siguiente múltiplo del intervalo)
+            cur = bf
+            continue
+        hi = f"{cur // 60:02d}:{cur % 60:02d}"
         hf = f"{hf_min // 60:02d}:{hf_min % 60:02d}"
         slots.append((hi, hf))
         cur += intervalo
@@ -422,7 +444,10 @@ async def _slots_para_fecha(client: httpx.AsyncClient, ids: list, horarios: dict
         # Obtener hora inicio/fin para este día específico
         horario_dia = h.get("horario_dia", {})
         if weekday in horario_dia:
-            hi_dia, hf_dia = horario_dia[weekday]
+            _tup = horario_dia[weekday]
+            # Compat: entradas antiguas (hi, hf) o nuevas (hi, hf, break_t)
+            hi_dia, hf_dia = _tup[0], _tup[1]
+            break_t = _tup[2] if len(_tup) >= 3 else None
         else:
             # Sin info de horas específicas para este día, saltamos
             log.warning("Sin horario_dia para prof %d weekday %d", id_prof, weekday)
@@ -442,7 +467,7 @@ async def _slots_para_fecha(client: httpx.AsyncClient, ids: list, horarios: dict
         _ahora_cl = datetime.now(_CHILE_TZ)
         ahora_min = _h_to_min(_ahora_cl.strftime("%H:%M")) if fecha == _ahora_cl.date().strftime("%Y-%m-%d") else None
         libres_prof = 0
-        for hi, hf in _generar_slots_horario(hi_dia, hf_dia, intervalo):
+        for hi, hf in _generar_slots_horario(hi_dia, hf_dia, intervalo, break_t):
             if ahora_min is not None and _h_to_min(hi) <= ahora_min:
                 continue  # slot ya pasó hoy
             if hi in ocupadas_citas:
