@@ -218,6 +218,9 @@ input, textarea, select{font-family:inherit; color:inherit}
   font-feature-settings:"tnum";
 }
 .inbox-tab.active .badge{background:rgba(255,255,255,.26); color:#fff; text-shadow:0 1px 1px rgba(0,0,0,.1)}
+.inbox-tabs button.inbox-tab{cursor:grab; user-select:none; touch-action:none}
+.inbox-tabs button.inbox-tab:active{cursor:grabbing}
+.inbox-tab.dragging{opacity:.5; transform:scale(.95); box-shadow:var(--shadow-lg)}
 
 .inbox-list{flex:1; overflow-y:auto}
 .conv-item{
@@ -1610,6 +1613,76 @@ document.addEventListener("keydown", e => {
 /* =========================================================================
  *  WIRE UP
  * ========================================================================= */
+function setupTabDragDrop(){
+  const tabsEl = $("#tabs");
+  if (!tabsEl) return;
+  const KEY = "v2_tab_order";
+  const idOf = t => t.dataset.filter || (t.id === "profSelect" ? "__prof" : "");
+  // Restaurar orden guardado
+  const saved = JSON.parse(localStorage.getItem(KEY) || "null");
+  if (Array.isArray(saved)){
+    const byId = {};
+    Array.from(tabsEl.children).forEach(c => { const k = idOf(c); if (k) byId[k] = c; });
+    saved.forEach(k => { if (byId[k]) tabsEl.appendChild(byId[k]); });
+    Array.from(tabsEl.children).forEach(c => { if (!saved.includes(idOf(c))) tabsEl.appendChild(c); });
+  }
+
+  let dragEl = null, isDragging = false, startX = 0, startY = 0, suppressClick = false;
+  const THRESHOLD = 6;
+
+  const onDown = (e) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    dragEl = e.currentTarget;
+    startX = e.clientX; startY = e.clientY;
+    isDragging = false;
+    try { dragEl.setPointerCapture(e.pointerId); } catch(_){}
+  };
+
+  const onMove = (e) => {
+    if (!dragEl) return;
+    if (!isDragging){
+      const dx = Math.abs(e.clientX - startX), dy = Math.abs(e.clientY - startY);
+      if (dx < THRESHOLD && dy < THRESHOLD) return;
+      isDragging = true;
+      dragEl.classList.add("dragging");
+      document.body.style.cursor = "grabbing";
+    }
+    e.preventDefault();
+    for (const s of Array.from(tabsEl.children)){
+      if (s === dragEl) continue;
+      const r = s.getBoundingClientRect();
+      if (e.clientX >= r.left && e.clientX <= r.right){
+        const before = (e.clientX - r.left) < r.width / 2;
+        tabsEl.insertBefore(dragEl, before ? s : s.nextSibling);
+        break;
+      }
+    }
+  };
+
+  const onUp = (e) => {
+    if (!dragEl) return;
+    try { dragEl.releasePointerCapture(e.pointerId); } catch(_){}
+    if (isDragging){
+      dragEl.classList.remove("dragging");
+      document.body.style.cursor = "";
+      const order = Array.from(tabsEl.children).map(idOf).filter(Boolean);
+      localStorage.setItem(KEY, JSON.stringify(order));
+      suppressClick = true;
+      setTimeout(() => { suppressClick = false; }, 50);
+    }
+    dragEl = null; isDragging = false;
+  };
+
+  Array.from(tabsEl.children).forEach(t => {
+    if (t.tagName === "SELECT") return; // el dropdown no se arrastra para no romper su click
+    t.addEventListener("pointerdown", onDown);
+    t.addEventListener("pointermove", onMove);
+    t.addEventListener("pointerup", onUp);
+    t.addEventListener("pointercancel", onUp);
+    t.addEventListener("click", (ev) => { if (suppressClick) { ev.stopImmediatePropagation(); ev.preventDefault(); } }, true);
+  });
+}
+
 function setup(){
   // Tabs
   $$(".inbox-tab").forEach(t => {
@@ -1627,6 +1700,7 @@ function setup(){
     profSel.classList.toggle("active", !!profFilter);
     renderInbox();
   };
+  setupTabDragDrop();
   // Search
   $("#searchBox").oninput = e => { searchTerm = e.target.value; renderInbox(); };
   // Reply input
