@@ -1,5 +1,7 @@
 # CLAUDE.md — Chatbot WhatsApp Centro Médico Carampangue (CMC)
 
+> **Antes de tocar slots, horarios, cupos o citas de Medilink: lee `docs/medilink_gotchas.md`.** Contiene las reglas contraintuitivas (intervalo bot ≠ Medilink, horario base vacío, cancelación con id_estado=1, etc.) que si no recuerdas te hacen re-descubrir bugs ya resueltos.
+
 ## Instrucciones para Claude Code
 - **Actualiza `## Sesión en curso`** cada vez que completes algo relevante (deploy, fix, feature, decisión importante). Hazlo antes de que el contexto se llene.
 - **Al iniciar una sesión nueva**, lee esta sección primero para retomar desde donde quedaste.
@@ -294,6 +296,16 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - Ruta: `http://157.245.13.107:8001/admin?token=cmc_admin_2026`
 - Incluido en el mismo proceso del bot (no es proyecto separado)
 - Muestra métricas, conversaciones activas y estado del sistema
+
+## Auditor financiero (`auditor.py`)
+Script standalone de conciliación de pagos del CMC. Cruza CSVs de las 6 fuentes de cobro y genera informe de diferencias.
+
+- Lee de los directorios raíz: `RECEPCION/`, `MEDILINK/`, `TRANSFERENCIA/`, `EFECTIVO/`, `TRANSBANK_DEBITO/`, `TRANSBANK_CREDITO/` (cada uno con los CSVs exportados de su fuente).
+- Uso:
+  - `python auditor.py` — audita todo lo disponible
+  - `python auditor.py --desde 2026-03-01 --hasta 2026-03-31` — rango
+  - `python auditor.py --output informe.html` — exporta HTML
+- No toca el bot en ejecución; es una herramienta offline para el cierre mensual.
 
 ## Sesión en curso
 **Fecha**: 2026-04-18

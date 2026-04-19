@@ -1,0 +1,62 @@
+# Medilink — reglas contraintuitivas (LEER antes de tocar slots/horarios/citas)
+
+Este archivo recopila las trampas no obvias de la API Medilink 2. Si razonas sobre slots, horarios, cupos o citas sin pasar por aquí, vas a re-descubrirlas a mano — ya nos pasó.
+
+## 1. Intervalo: el bot IGNORA el intervalo de Medilink
+
+Medilink devuelve slots de 5–10 min (bloques flexibles para recepcionistas). El bot debe agrupar esos slots en ventanas del intervalo definido en el dict `PROFESIONALES` de `app/medilink.py`.
+
+- Ecografía (prof 68): Medilink intervalo=5 min, bot intervalo=15 min → agrupa 3 slots contiguos.
+- Odontología Javiera (prof 55): Medilink intervalo=60, bot también 60.
+- Siempre que consultes `/especialidades/{id}/proxima` para notificar/ofrecer, pasa por agrupación.
+
+## 2. `/profesionales/{id}/horarios` puede estar vacío y NO significa "no trabaja"
+
+El campo `hora_inicio == hora_fin` (p.ej. 08:00-08:00) en todos los `dias` = ventana cero. Esto no significa que el profesional no atienda — significa que la recepción no publicó horario base y crea citas "a mano". En ese caso:
+
+- `buscar_slots_dia` devolverá vacío (depende del horario base).
+- **Fallback**: `/especialidades/{id}/proxima` sí devuelve cupos reales, independiente del horario base. Úsalo para waitlist y disponibilidad.
+- David Pardo (ecografía, prof 68) es el caso típico.
+
+## 3. Cancelación de citas
+
+`PUT /citas/{id}` con body **`{"id_estado": 1}`**.
+
+NO uses `{"estado_anulacion": 1}` solo — retorna `Undefined index`.
+
+## 4. Creación de citas requiere `duracion`
+
+`POST /citas` necesita campo `duracion` (minutos) = `hora_fin - hora_inicio` en minutos. Sin ese campo, la creación falla silenciosa o devuelve error poco claro.
+
+## 5. Formatos de fecha
+
+- **Respuesta de Medilink**: `DD/MM/YYYY`.
+- **Entrada del bot internamente / SQLite**: `YYYY-MM-DD`.
+- No confundir ni asumir equivalencia — convertir explícitamente al cruzar la frontera.
+- La fecha en la respuesta viene del API, no asumas que coincide con la fecha de consulta (edge cases de TZ).
+
+## 6. Rate limit 429
+
+- ~20 req/min duro. El bot tiene semáforo de 4 concurrentes + resilience.py (circuit breaker + cola).
+- **No cachees "horario vacío" de un 429** — `medilink.py` hace esto bien hoy; cuidar en refactors.
+- El fan-out en `/admin/api/agenda-dia` fue el que tiró el rate limit el 18-abr-2026 (20 profs × 1 req). Está desactivado en `admin_routes.py`.
+
+## 7. Autenticación
+
+Header `Authorization: Token <valor>` — **NO** `Bearer`. Error silencioso si te equivocas.
+
+## 8. 404 en `/profesionales/{id}/horarios`
+
+Algunos IDs válidos devuelven 404 ahí. No asumas "no existe". Para saber si un profesional tiene agenda, consulta `/agendas` o `/citas` con su ID.
+
+## 9. Zona horaria
+
+Servidor corre en UTC pero Chile es America/Santiago. `medilink.py` usa `ZoneInfo("America/Santiago")` para calcular "hoy". Si sumas TZ tú mismo, verifica DST (sept y abril).
+
+## 10. Mapa `ESPECIALIDADES_ID` en `medilink.py`
+
+Diccionario keyword → id_esp Medilink. Cuando sumes una especialidad nueva, actualízalo acá. Ecografía = 13, medicina general = 10, etc.
+
+---
+
+**Si tocas este archivo, actualiza también** `CLAUDE.md` si cambia la cita o referencia.

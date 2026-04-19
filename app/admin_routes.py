@@ -927,119 +927,13 @@ async def admin_select_slot(phone: str, request: Request, _: str = Depends(requi
 
 # ── Timeline / Agenda del día ──────────────────────────────────────────────
 
-_AGENDA_DIA_CACHE: dict = {}
-_AGENDA_DIA_TTL = 60  # 60s — balance entre frescura y carga Medilink
-
-
 @router.get("/admin/api/agenda-dia")
 async def admin_agenda_dia(fecha: str = None, nocache: int = 0, _: str = Depends(require_admin)):
-    """DESACTIVADO: retorna lista vacía sin consultar Medilink.
-
-    Este endpoint hacía fan-out de ~20 requests paralelos a Medilink (una
-    por profesional) y saturaba el rate limit (429). La recepción ya tiene
-    la agenda del día directamente en Medilink — replicarla en el panel
-    del bot era redundante. Ver commit 938b47e que desactivó la sección
-    'Agenda de hoy'. Aquí cortamos el endpoint mismo para que modales o
-    polls que aún lo llamen no causen 429.
-
-    Para reactivar: quitar este return y restaurar el cuerpo original
-    desde git (commit previo a este fix)."""
+    # Desactivado: hacía fan-out de ~20 requests a Medilink y saturaba el
+    # rate limit. Recepción ya ve la agenda directa en Medilink. Para
+    # reactivar, restaurar desde git el cuerpo previo a commit cfe53c6.
     return {"fecha": fecha, "profesionales": [], "disabled": True,
             "reason": "Consultar la agenda directamente en Medilink."}
-
-
-async def _admin_agenda_dia_DISABLED(fecha: str = None, nocache: int = 0):
-    """Implementación original — DESACTIVADA.
-    Se preserva por si hay que reactivar; pegaba 20 requests a Medilink."""
-    import time as _time
-    from medilink import obtener_agenda_dia
-    from session import get_phone_by_rut, get_last_inbound_ts
-    if not fecha:
-        from zoneinfo import ZoneInfo
-        from datetime import datetime as _dt
-        fecha = _dt.now(ZoneInfo("America/Santiago")).strftime("%Y-%m-%d")
-
-    _cached = _AGENDA_DIA_CACHE.get(fecha)
-    if _cached and not nocache and (_time.monotonic() - _cached["_ts"]) < _AGENDA_DIA_TTL:
-        return _cached["data"]
-
-    _ensure_agenda_tables()
-
-    tasks = []
-    for pid, pinfo in PROFESIONALES.items():
-        tasks.append((pid, pinfo, obtener_agenda_dia(pid, fecha)))
-    results = await asyncio.gather(*[t[2] for t in tasks], return_exceptions=True)
-
-    all_ids = []
-    for r in results:
-        if isinstance(r, list):
-            for c in r:
-                if c.get("id_cita"):
-                    try:
-                        all_ids.append(int(c["id_cita"]))
-                    except (TypeError, ValueError):
-                        pass
-    estados_locales = _bulk_estados_locales(all_ids) if all_ids else {}
-
-    from datetime import datetime as _dt2
-    from zoneinfo import ZoneInfo as _ZI
-    now_utc = _dt2.now(_ZI("UTC"))
-
-    agenda = []
-    flat_citas = []
-    for (pid, pinfo, _ign), result in zip(tasks, results):
-        if isinstance(result, Exception):
-            result = []
-        citas_enriched = []
-        for c in result:
-            rut = c.get("rut", "") or ""
-            phone = ""
-            if rut:
-                try:
-                    phone = get_phone_by_rut(rut) or ""
-                except Exception:
-                    phone = ""
-            wa_status = _get_wa_status(phone) if phone else "no_enviado"
-            tsw = False
-            if phone:
-                try:
-                    last_in = get_last_inbound_ts(phone)
-                    if last_in and (now_utc - last_in).total_seconds() < 24 * 3600:
-                        tsw = True
-                except Exception:
-                    pass
-            estado_raw = c.get("estado", "") or ""
-            try:
-                local_ov = estados_locales.get(int(c.get("id_cita") or 0))
-            except (TypeError, ValueError):
-                local_ov = None
-            estado_norm = local_ov or _normalize_estado(estado_raw)
-            c_new = dict(c)
-            c_new.update({
-                "paciente_nombre": c.get("paciente", "") or "",
-                "paciente_rut": rut,
-                "paciente_phone": phone,
-                "profesional_nombre": pinfo.get("nombre", f"Prof. {pid}"),
-                "especialidad": pinfo.get("especialidad", ""),
-                "estado_raw": estado_raw,
-                "estado": estado_norm,
-                "wa_status": wa_status,
-                "tiene_service_window": tsw,
-            })
-            citas_enriched.append(c_new)
-            flat_citas.append(c_new)
-        agenda.append({
-            "id": pid,
-            "nombre": pinfo.get("nombre", f"Prof. {pid}"),
-            "especialidad": pinfo.get("especialidad", ""),
-            "citas": citas_enriched,
-        })
-
-    agenda = [a for a in agenda if a["citas"]]
-    agenda.sort(key=lambda a: a["nombre"])
-    _result = {"fecha": fecha, "profesionales": agenda, "citas": flat_citas}
-    _AGENDA_DIA_CACHE[fecha] = {"data": _result, "_ts": __import__("time").monotonic()}
-    return _result
 
 
 # ── Campañas estacionales ────────────────────────────────────────────────────

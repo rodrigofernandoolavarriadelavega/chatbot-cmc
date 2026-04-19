@@ -1288,10 +1288,14 @@ def clean_rut(rut: str) -> str:
     """
     if not rut:
         return ""
-    # Sacar palabras/contexto ('rut:', 'mi rut es')
-    rut = re.sub(r"(?i)(mi\s+rut\s+es|rut[:\s]|r\s*u\s*t)", "", rut)
-    # Normalizar separadores extraños a guión (_ común en móviles donde falta el guión)
-    rut = re.sub(r"[/|·•_]", "-", rut)
+    # Sacar palabras/contexto ('rut:', 'mi rut es', 'ci:', 'cédula:')
+    rut = re.sub(r"(?i)(mi\s+(rut|c[eé]dula)\s+es|rut[:\s]|c[eé]dula[:\s]|ci[:\s]|r\s*u\s*t)", "", rut)
+    # Normalizar separadores extraños a guión:
+    # - _ / | · • (teclados raros, markdown, falta de guión en móvil)
+    # - Unicode dashes: ‐ (U+2010), ‑ (U+2011), ‒ (U+2012), – (U+2013),
+    #   — (U+2014), ― (U+2015), − (U+2212). iOS autocorrect pone —.
+    # - : y * aparecen a veces como separador casero
+    rut = re.sub(r"[/|·•_:\*\u2010\u2011\u2012\u2013\u2014\u2015\u2212]", "-", rut)
     # Quitar puntos, espacios, paréntesis, comas
     rut = re.sub(r"[.\s()\,]", "", rut).strip().upper()
     rut = rut.replace("--", "-")
