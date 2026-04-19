@@ -183,52 +183,74 @@ input, textarea, select{font-family:inherit; color:inherit}
 /* ===== INBOX ============================================================== */
 .inbox-search{padding:14px 14px 10px}
 .inbox-search input{
-  width:100%; padding:9px 10px 9px 32px; background:var(--panel-2); border:1px solid var(--border);
-  border-radius:20px; color:var(--text); font-size:13px; outline:none; font-family:var(--font);
+  width:100%; padding:10px 12px 10px 34px; background:var(--panel-2); border:1px solid var(--border);
+  border-radius:22px; color:var(--text); font-size:13px; outline:none; font-family:var(--font);
+  transition: background-color var(--dur) var(--ease), border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%231172AB' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='7'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>");
-  background-repeat:no-repeat; background-position:11px center;
+  background-repeat:no-repeat; background-position:12px center;
 }
-.inbox-search input:focus{border-color:var(--cmc-aqua); background-color:#fff; box-shadow:0 0 0 3px rgba(79,190,206,.15)}
+.inbox-search input::placeholder{color:var(--text-dim)}
+.inbox-search input:hover{border-color:var(--cmc-aqua-dark); background-color:#fff}
+.inbox-search input:focus{border-color:var(--cmc-aqua); background-color:#fff; box-shadow:var(--ring)}
 
 .inbox-tabs{
-  display:flex; padding:4px 10px; gap:3px; border-bottom:1px solid var(--border-soft);
+  display:flex; padding:6px 10px; gap:4px; border-bottom:1px solid var(--border-soft);
   overflow-x:auto; background:var(--panel);
+  scrollbar-width:thin;
 }
 .inbox-tab{
-  padding:7px 10px; font-size:11.5px; color:var(--text-mute); border-radius:8px;
+  padding:7px 11px; font-size:11.5px; color:var(--text-mute); border-radius:999px;
   white-space:nowrap; display:flex; align-items:center; gap:7px; font-weight:600;
-  letter-spacing:.1px;
+  letter-spacing:.15px;
+  border:1px solid transparent;
 }
-.inbox-tab:hover{color:var(--cmc-navy); background:var(--panel-2)}
-.inbox-tab.active{color:#fff; background:var(--cmc-blue); box-shadow:var(--shadow-sm)}
-.inbox-tab.active:hover{background:var(--cmc-blue); color:#fff}
+.inbox-tab:hover{color:var(--cmc-navy); background:var(--panel-2); border-color:var(--border-soft)}
+.inbox-tab:focus-visible{outline:none; box-shadow:var(--ring)}
+.inbox-tab.active{
+  color:#fff;
+  background:linear-gradient(135deg, var(--cmc-aqua) 0%, var(--cmc-blue) 100%);
+  box-shadow:0 2px 6px rgba(17,114,171,.22), inset 0 1px 0 rgba(255,255,255,.2);
+  border-color:transparent;
+}
+.inbox-tab.active:hover{color:#fff; transform:translateY(-0.5px)}
 .inbox-tab .badge{
-  background:var(--panel-3); color:var(--text-mute); font-size:10px; font-weight:700; padding:1px 6px;
-  border-radius:10px; min-width:18px; text-align:center; line-height:1.4;
+  background:var(--panel-3); color:var(--text-mute); font-size:10px; font-weight:700; padding:1px 7px;
+  border-radius:10px; min-width:18px; text-align:center; line-height:1.5;
   font-feature-settings:"tnum";
 }
-.inbox-tab.active .badge{background:rgba(255,255,255,.22); color:#fff}
+.inbox-tab.active .badge{background:rgba(255,255,255,.26); color:#fff; text-shadow:0 1px 1px rgba(0,0,0,.1)}
 
 .inbox-list{flex:1; overflow-y:auto}
 .conv-item{
-  display:flex; gap:12px; padding:12px 14px; cursor:pointer; position:relative;
+  display:flex; gap:12px; padding:13px 14px; cursor:pointer; position:relative;
   border-left:3px solid transparent; border-bottom:1px solid var(--border-soft);
-  transition: background-color var(--dur) var(--ease);
+  transition: background-color var(--dur) var(--ease), border-left-color var(--dur) var(--ease);
+}
+.conv-item::before{
+  content:""; position:absolute; left:0; top:0; bottom:0; width:3px;
+  background:linear-gradient(180deg, var(--cmc-aqua), var(--cmc-blue));
+  opacity:0; transition:opacity var(--dur) var(--ease);
 }
 .conv-item:hover{background:var(--panel-2)}
-.conv-item.active{background:var(--cmc-aqua-soft); border-left-color:var(--cmc-aqua)}
+.conv-item:hover .avatar{box-shadow:inset 0 0 0 2px rgba(255,255,255,.2), 0 0 0 3px rgba(79,190,206,.15)}
+.conv-item.active{background:var(--cmc-aqua-soft); border-left-color:transparent}
+.conv-item.active::before{opacity:1}
 .conv-item.active .conv-name{color:var(--cmc-navy)}
 .conv-item.unread{background:rgba(79,190,206,.06)}
 .conv-item.takeover{border-left-color:var(--amber)}
 .conv-item.takeover.active{border-left-color:var(--amber); background:var(--amber-soft)}
+.conv-item.takeover.active::before{display:none}
 
 .avatar{
   width:42px; height:42px; flex:0 0 42px; border-radius:50%;
   background:linear-gradient(135deg, var(--cmc-aqua), var(--cmc-blue));
   display:flex; align-items:center; justify-content:center;
   font-weight:700; font-size:13.5px; color:#fff; position:relative;
-  letter-spacing:.3px; box-shadow:inset 0 0 0 2px rgba(255,255,255,.15);
+  letter-spacing:.3px;
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.18), inset 0 -2px 4px rgba(15,63,104,.08);
   text-transform:uppercase;
+  text-shadow:0 1px 1px rgba(0,0,0,.1);
+  transition: box-shadow var(--dur) var(--ease), transform var(--dur) var(--ease);
 }
 .avatar .channel{
   position:absolute; bottom:-2px; right:-2px; width:16px; height:16px; border-radius:50%;
@@ -241,28 +263,31 @@ input, textarea, select{font-family:inherit; color:inherit}
 
 .conv-body{flex:1; min-width:0}
 .conv-row{display:flex; justify-content:space-between; align-items:baseline; gap:8px}
-.conv-name{font-weight:700; font-size:13.5px; color:var(--cmc-navy); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; letter-spacing:-.1px}
+.conv-name{font-weight:700; font-size:13.5px; color:var(--cmc-navy); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; letter-spacing:-.2px}
 .conv-time{font-size:11px; color:var(--text-dim); flex:0 0 auto; font-weight:500}
 .conv-item.unread .conv-time{color:var(--cmc-blue); font-weight:700}
 .conv-preview{
-  font-size:12.5px; color:var(--text-mute); margin-top:2px;
+  font-size:12.5px; color:var(--text-mute); margin-top:3px;
   display:flex; align-items:center; gap:6px;
 }
 .conv-preview .text{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-.conv-item.unread .conv-preview .text{color:var(--text)}
+.conv-item.unread .conv-preview .text{color:var(--text); font-weight:500}
 .conv-preview .out{color:var(--text-dim)}
 .conv-preview .out::before{content:"↗ "; color:var(--text-dim)}
-.conv-meta{display:flex; gap:4px; margin-top:4px; flex-wrap:wrap}
+.conv-meta{display:flex; gap:4px; margin-top:5px; flex-wrap:wrap}
 .tag-pill{
-  font-size:10px; padding:1px 6px; border-radius:4px; background:var(--panel-3); color:var(--text-mute);
-  white-space:nowrap;
+  font-size:10px; padding:2px 7px; border-radius:999px; background:var(--panel-3); color:var(--text-mute);
+  white-space:nowrap; font-weight:600; letter-spacing:.2px;
 }
 .tag-pill.state{background:var(--amber-soft); color:var(--amber)}
 .tag-pill.takeover{background:var(--cmc-navy-soft); color:var(--cmc-navy)}
 .tag-pill.flow{background:var(--cmc-aqua-soft); color:var(--cmc-blue)}
 .unread-dot{
-  background:var(--cmc-aqua); color:#fff; font-size:10px; font-weight:700;
-  padding:1px 6px; border-radius:10px; min-width:18px; text-align:center; line-height:1.2;
+  background:linear-gradient(135deg, var(--cmc-aqua), var(--cmc-blue));
+  color:#fff; font-size:10px; font-weight:700;
+  padding:2px 7px; border-radius:10px; min-width:18px; text-align:center; line-height:1.2;
+  box-shadow:0 1px 3px rgba(17,114,171,.3), 0 0 0 2px rgba(79,190,206,.15);
+  text-shadow:0 1px 1px rgba(0,0,0,.1);
 }
 
 .empty{padding:30px 20px; text-align:center; color:var(--text-dim); font-size:13px}
@@ -270,31 +295,39 @@ input, textarea, select{font-family:inherit; color:inherit}
 /* ===== CHAT =============================================================== */
 .chat-empty{
   flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
-  color:var(--text-mute); padding:40px; text-align:center; gap:20px;
+  color:var(--text-mute); padding:40px; text-align:center; gap:22px;
   background:
-    radial-gradient(circle at 30% 20%, rgba(79,190,206,.05), transparent 50%),
-    radial-gradient(circle at 70% 80%, rgba(17,114,171,.04), transparent 50%);
+    radial-gradient(circle at 30% 20%, rgba(79,190,206,.06), transparent 55%),
+    radial-gradient(circle at 70% 80%, rgba(17,114,171,.05), transparent 55%);
 }
 .chat-empty .iso{
-  width:96px; height:96px; padding:16px; background:#fff; border-radius:24px;
-  border:1px solid var(--border); box-shadow:var(--shadow-md);
+  width:100px; height:100px; padding:18px;
+  background:linear-gradient(180deg, #fff, #f7fbfd);
+  border-radius:28px;
+  border:1px solid var(--border); box-shadow:var(--shadow-md), inset 0 1px 0 rgba(255,255,255,.8);
   display:flex; align-items:center; justify-content:center;
+  animation: breathe 5s ease-in-out infinite;
 }
 .chat-empty .iso img{width:100%; height:100%; object-fit:contain}
 .chat-empty h2{
-  font-size:17px; font-weight:700; color:var(--cmc-navy); letter-spacing:-.3px;
+  font-size:18px; font-weight:800; color:var(--cmc-navy); letter-spacing:-.4px;
   margin-top:4px;
 }
-.chat-empty p{font-size:13px; color:var(--text-mute); max-width:340px; line-height:1.55}
+.chat-empty p{font-size:13px; color:var(--text-mute); max-width:360px; line-height:1.6}
 .chat-empty .shortcuts{
-  display:flex; gap:18px; margin-top:12px; padding:10px 18px; background:#fff;
-  border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow-xs);
+  display:flex; gap:18px; margin-top:14px; padding:12px 20px;
+  background:var(--surface-elevated);
+  border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-sm);
   font-size:11.5px; color:var(--text-mute);
+  flex-wrap:wrap; justify-content:center;
 }
 .chat-empty kbd{
-  display:inline-block; padding:1px 6px; background:var(--panel-3); border:1px solid var(--border);
-  border-radius:4px; font-family:inherit; font-size:10.5px; font-weight:700; color:var(--cmc-navy);
-  margin-right:4px; box-shadow:inset 0 -1px 0 var(--border);
+  display:inline-block; padding:2px 7px;
+  background:linear-gradient(180deg, #fff, var(--panel-3));
+  border:1px solid var(--border);
+  border-radius:5px; font-family:inherit; font-size:10.5px; font-weight:700; color:var(--cmc-navy);
+  margin-right:4px;
+  box-shadow:0 1px 0 var(--border), inset 0 1px 0 rgba(255,255,255,.6);
 }
 
 .chat-header{
