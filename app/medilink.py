@@ -392,6 +392,22 @@ async def _get_horas_ocupadas(client: httpx.AsyncClient, id_prof: int, fecha: st
     return ocupadas
 
 
+def _slot_libre_vs_ocupadas(hi: str, hf: str, ocupadas: set) -> bool:
+    """True si el rango [hi, hf) no se solapa con ninguna hora en ocupadas.
+    `ocupadas` es un set de strings 'HH:MM' en bloques de 5 min (ya expandido
+    por _get_horas_ocupadas). Un slot de 40 min como 18:40-19:20 debe chequear
+    18:40, 18:45, ..., 19:15 contra ocupadas. Si alguna está, choca.
+    Fix del bug 2026-04-19: antes solo se chequeaba hi ∈ ocupadas, y el slot
+    18:40-19:20 pasaba como libre aunque 19:10-19:50 ya estuviera agendado."""
+    cur = _h_to_min(hi)
+    fin = _h_to_min(hf)
+    while cur < fin:
+        if f"{cur // 60:02d}:{cur % 60:02d}" in ocupadas:
+            return False
+        cur += 5
+    return True
+
+
 def _generar_slots_horario(hora_inicio: str, hora_fin: str, intervalo: int,
                            break_t: tuple[str, str] | None = None) -> list:
     """Genera lista de (hi, hf) en 'HH:MM' desde hora_inicio hasta hora_fin,
@@ -470,7 +486,8 @@ async def _slots_para_fecha(client: httpx.AsyncClient, ids: list, horarios: dict
         for hi, hf in _generar_slots_horario(hi_dia, hf_dia, intervalo, break_t):
             if ahora_min is not None and _h_to_min(hi) <= ahora_min:
                 continue  # slot ya pasó hoy
-            if hi in ocupadas_citas:
+            # Chequear solape con TODO el rango del slot, no solo hora_inicio
+            if not _slot_libre_vs_ocupadas(hi, hf, ocupadas_citas):
                 horas_ocupadas.add(hi)
             elif not _slot_bloqueado(hi, hf, bloqueos) and hi not in horas_vistas:
                 horas_vistas.add(hi)

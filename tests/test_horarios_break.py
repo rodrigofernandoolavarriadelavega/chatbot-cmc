@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "app"))
 sys.path.insert(0, str(ROOT))
 
-from medilink import _generar_slots_horario
+from medilink import _generar_slots_horario, _slot_libre_vs_ocupadas
 
 
 def _assert(cond: bool, msg: str):
@@ -74,7 +74,27 @@ def run() -> int:
     fails += _assert("13:00" not in horas, "60min: 13:00 excluido")
     fails += _assert("14:00" in horas,     "60min: 14:00 post-break OK")
 
-    total = 21
+    # ── Solape con citas ya ocupadas (bug 2026-04-19 Teofilo) ──
+    # Luis Armijo 20-abr: citas 18:00-18:40 y 19:10-19:50. El bot ofrecía
+    # 18:40-19:20 como "libre" porque solo miraba hora_inicio.
+    # Simular ocupadas expandidas a 5 min.
+    ocupadas_luis = set()
+    for hi_oc, hf_oc in [("18:00", "18:40"), ("19:10", "19:50")]:
+        cur = int(hi_oc[:2]) * 60 + int(hi_oc[3:])
+        fin = int(hf_oc[:2]) * 60 + int(hf_oc[3:])
+        while cur < fin:
+            ocupadas_luis.add(f"{cur // 60:02d}:{cur % 60:02d}")
+            cur += 5
+    fails += _assert(not _slot_libre_vs_ocupadas("18:40", "19:20", ocupadas_luis),
+                     "Luis 18:40-19:20 CHOCA con Steeve 19:10-19:50")
+    fails += _assert(_slot_libre_vs_ocupadas("18:00", "18:40", ocupadas_luis) is False,
+                     "Luis 18:00-18:40 es la cita ocupada misma")
+    fails += _assert(_slot_libre_vs_ocupadas("19:50", "20:30", ocupadas_luis),
+                     "Luis 19:50-20:30 OK (justo después de Steeve)")
+    fails += _assert(not _slot_libre_vs_ocupadas("19:00", "19:40", ocupadas_luis),
+                     "Luis 19:00-19:40 choca (19:10 cae adentro)")
+
+    total = 25
     passed = total - fails
     print(f"\n── Total: {passed}/{total} passed, {fails} failed ──")
     return 1 if fails else 0

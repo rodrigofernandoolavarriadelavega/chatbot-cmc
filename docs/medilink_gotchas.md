@@ -26,6 +26,14 @@ Caso real (2026-04-19): Leonardo Etcheverry lun 09:40-18:00 con break 13:00-14:0
 
 Fix ya aplicado en `_get_horario` y `_generar_slots_horario`: se respeta el break. **Si escribes scripts one-shot (waitlist, notificación manual)**: también agrupa ventanas excluyendo el break del profesional — consultar `/profesionales/{id}/horarios` y leer `hora_inicio_break`/`hora_fin_break`.
 
+## 1c. Slot ofrecido debe NO solaparse con ninguna cita existente, no solo compartir hora_inicio
+
+`_get_horas_ocupadas` expande cada cita en bloques de 5 min (una cita 19:10-19:50 añade 19:10, 19:15, ..., 19:45 al set). Al validar un slot, no alcanza con `hora_inicio ∈ ocupadas` — hay que chequear **todo el rango** del slot.
+
+Caso real (2026-04-19): Luis Armijo tenía 18:00-18:40 (Deyanira) y 19:10-19:50 (Steeve). El bot ofreció 18:40-19:20 como libre (hora_inicio 18:40 no estaba ocupada), pero el slot se solapa con Steeve → Medilink 400 `"Profesional tiene tope con otra cita"`.
+
+Fix aplicado: `_slot_libre_vs_ocupadas(hi, hf, ocupadas)` recorre cada bloque de 5 min entre hi y hf. Se usa en `_slots_para_fecha` antes de marcar slot como libre.
+
 ## 2. `/profesionales/{id}/horarios` puede estar vacío y NO significa "no trabaja"
 
 El campo `hora_inicio == hora_fin` (p.ej. 08:00-08:00) en todos los `dias` = ventana cero. Esto no significa que el profesional no atienda — significa que la recepción no publicó horario base y crea citas "a mano". En ese caso:
