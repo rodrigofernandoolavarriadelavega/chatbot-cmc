@@ -219,7 +219,7 @@ input, textarea, select{font-family:inherit; color:inherit}
   font-feature-settings:"tnum";
 }
 .inbox-tab.active .badge{background:rgba(255,255,255,.26); color:#fff; text-shadow:0 1px 1px rgba(0,0,0,.1)}
-.inbox-tabs button.inbox-tab{cursor:grab; user-select:none; touch-action:none}
+.inbox-tabs button.inbox-tab{cursor:grab; user-select:none; touch-action:pan-x}
 .inbox-tabs button.inbox-tab:active{cursor:grabbing}
 .inbox-tab.dragging{opacity:.5; transform:scale(.95); box-shadow:var(--shadow-lg)}
 
@@ -1639,18 +1639,46 @@ function setupTabDragDrop(){
   }
 
   let dragEl = null, isDragging = false, startX = 0, startY = 0, suppressClick = false;
+  let armed = false, holdTimer = null, heldPointerId = null;
   const THRESHOLD = 6;
+  const HOLD_MS = 350;
+  const cancelHold = () => { if (holdTimer){ clearTimeout(holdTimer); holdTimer = null; } };
 
   const onDown = (e) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
     dragEl = e.currentTarget;
     startX = e.clientX; startY = e.clientY;
     isDragging = false;
-    try { dragEl.setPointerCapture(e.pointerId); } catch(_){}
+    heldPointerId = e.pointerId;
+    const isTouch = (e.pointerType === "touch" || e.pointerType === "pen");
+    armed = !isTouch;
+    if (isTouch){
+      cancelHold();
+      holdTimer = setTimeout(() => {
+        holdTimer = null;
+        if (!dragEl) return;
+        armed = true;
+        try { dragEl.setPointerCapture(heldPointerId); } catch(_){}
+        dragEl.classList.add("dragging");
+        document.body.style.cursor = "grabbing";
+        isDragging = true;
+        if ("vibrate" in navigator) { try { navigator.vibrate(18); } catch(_){} }
+      }, HOLD_MS);
+    } else {
+      try { dragEl.setPointerCapture(e.pointerId); } catch(_){}
+    }
   };
 
   const onMove = (e) => {
     if (!dragEl) return;
+    if (!armed){
+      const dx = Math.abs(e.clientX - startX), dy = Math.abs(e.clientY - startY);
+      if (dx > THRESHOLD || dy > THRESHOLD){
+        cancelHold();
+        dragEl = null;
+      }
+      return;
+    }
     if (!isDragging){
       const dx = Math.abs(e.clientX - startX), dy = Math.abs(e.clientY - startY);
       if (dx < THRESHOLD && dy < THRESHOLD) return;
@@ -1671,6 +1699,7 @@ function setupTabDragDrop(){
   };
 
   const onUp = (e) => {
+    cancelHold();
     if (!dragEl) return;
     try { dragEl.releasePointerCapture(e.pointerId); } catch(_){}
     if (isDragging){
@@ -1681,7 +1710,7 @@ function setupTabDragDrop(){
       suppressClick = true;
       setTimeout(() => { suppressClick = false; }, 50);
     }
-    dragEl = null; isDragging = false;
+    dragEl = null; isDragging = false; armed = false; heldPointerId = null;
   };
 
   Array.from(tabsEl.children).forEach(t => {
