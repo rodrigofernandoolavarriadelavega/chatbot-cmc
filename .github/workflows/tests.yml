@@ -27,6 +27,12 @@ jobs:
         working-directory: tests
         run: python test_normalizer.py
 
+      - name: Run RUT tests (28 casos curados)
+        run: PYTHONPATH=app:. python tests/test_rut.py
+
+      - name: Run RUT variantes (1000 casos generados)
+        run: PYTHONPATH=app:. python tests/test_rut_variantes.py
+
       - name: Run offline flow harness
         working-directory: tests
         env:
