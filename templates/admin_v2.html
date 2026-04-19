@@ -54,8 +54,7 @@ body{
   font-size:14px; line-height:1.45; -webkit-font-smoothing:antialiased;
   -moz-osx-font-smoothing:grayscale;
   text-rendering:optimizeLegibility;
-  font-feature-settings:"cv11","ss01","tnum","kern";
-  font-variant-numeric: tabular-nums;
+  font-feature-settings:"cv11","ss01";
 }
 button{
   font-family:inherit; cursor:pointer; border:none; background:none; color:inherit;
@@ -1223,10 +1222,10 @@ function renderHeader(){
   $("#chName").innerHTML = esc(c.nombre || c.phone) + ' <span class="edit">✏</span>';
   const sub = [];
   sub.push(`<span>${esc(c.phone.replace(/^(ig|fb)_/,''))}</span>`);
-  if (c.rut) sub.push(`<span>RUT <b>${esc(c.rut)}</b></span>`);
+  if (c.rut) sub.push(`<span>RUT: <b>${esc(c.rut)}</b></span>`);
   sub.push(`<span>${esc(c.state || "IDLE")}</span>`);
   if ((c.msgs_sin_respuesta||0) > 0) sub.push(`<span style="color:var(--amber)">${c.msgs_sin_respuesta} esperando</span>`);
-  $("#chSub").innerHTML = sub.join(" · ");
+  $("#chSub").innerHTML = sub.join(" — ");
 
   const isTake = c.state === "HUMAN_TAKEOVER";
   const acts = [];
@@ -1440,7 +1439,7 @@ async function loadFiles(){
         <span class="ico">${ico}</span>
         <div style="flex:1; min-width:0">
           <div class="name">${esc(f.filename || "archivo")}</div>
-          <div class="sub">${esc(date)} · ${sizeKB}</div>
+          <div class="sub">${esc(date)} — ${sizeKB}</div>
         </div>
       </a>`;
     }).join("");
@@ -1509,7 +1508,7 @@ async function loadCitas(){
     el.innerHTML = citas.map(c => `
       <div class="cita-item">
         <div class="when">${esc(c.fecha || "")} ${esc(c.hora_inicio || "")}</div>
-        <div style="color:var(--text-mute)">${esc(c.especialidad || "")} · ${esc(c.profesional || "")}</div>
+        <div style="color:var(--text-mute)">${esc(c.especialidad || "")} — ${esc(c.profesional || "")}</div>
       </div>`).join("");
   } catch(e){}
 }
