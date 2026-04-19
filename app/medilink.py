@@ -1290,8 +1290,8 @@ def clean_rut(rut: str) -> str:
         return ""
     # Sacar palabras/contexto ('rut:', 'mi rut es')
     rut = re.sub(r"(?i)(mi\s+rut\s+es|rut[:\s]|r\s*u\s*t)", "", rut)
-    # Normalizar separadores extraños a guión
-    rut = re.sub(r"[/|·•]", "-", rut)
+    # Normalizar separadores extraños a guión (_ común en móviles donde falta el guión)
+    rut = re.sub(r"[/|·•_]", "-", rut)
     # Quitar puntos, espacios, paréntesis, comas
     rut = re.sub(r"[.\s()\,]", "", rut).strip().upper()
     rut = rut.replace("--", "-")
