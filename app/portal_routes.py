@@ -199,7 +199,7 @@ async def portal_datos(portal_session: str | None = Cookie(None)):
         "citas_futuras": citas_futuras,
         "historial": historial,
         "diagnosticos": diagnosticos,
-        "whatsapp_url": "https://wa.me/56945886628?text=Hola%2C%20quiero%20agendar%20una%20cita",
+        "whatsapp_url": "https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20una%20cita",
     }
 
 
