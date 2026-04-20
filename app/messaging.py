@@ -394,42 +394,70 @@ async def get_whatsapp_quality_rating() -> dict | None:
         return None
 
 
+def _split_long_msg(body: str, limit: int = 900) -> list[str]:
+    """Divide un mensaje largo en chunks <= limit chars respetando líneas.
+    IG y Messenger rechazan > 1000 chars; WA acepta 4096 pero conviene
+    dividir para legibilidad. Intenta cortar en saltos de línea primero,
+    luego en espacios, como fallback en el char exacto."""
+    if not body or len(body) <= limit:
+        return [body] if body else []
+    chunks: list[str] = []
+    resto = body
+    while len(resto) > limit:
+        corte = resto.rfind("\n\n", 0, limit)
+        if corte < limit * 0.5:
+            corte = resto.rfind("\n", 0, limit)
+        if corte < limit * 0.5:
+            corte = resto.rfind(" ", 0, limit)
+        if corte < limit * 0.5:
+            corte = limit  # cortar en el char exacto como fallback
+        chunks.append(resto[:corte].rstrip())
+        resto = resto[corte:].lstrip()
+    if resto:
+        chunks.append(resto)
+    return chunks
+
+
 async def send_instagram(igsid: str, body: str):
-    """Envía mensaje de texto a un usuario de Instagram vía Graph API."""
+    """Envía mensaje de texto a un usuario de Instagram vía Graph API.
+    IG rechaza mensajes > 1000 chars: divide en chunks automáticamente."""
     if not INSTAGRAM_USER_ID:
         log.error("INSTAGRAM_USER_ID no configurado en .env")
         return
     url = f"https://graph.instagram.com/v22.0/{INSTAGRAM_USER_ID}/messages"
-    for attempt in range(2):
-        try:
-            async with httpx.AsyncClient(timeout=10) as client:
-                r = await client.post(
-                    url,
-                    params={"access_token": META_PAGE_ACCESS_TOKEN},
-                    json={"recipient": {"id": igsid}, "message": {"text": body}},
-                )
-            if r.status_code == 200:
-                return
-            log.error("Instagram API intento %d → %s: %s", attempt + 1, r.status_code, r.text[:200])
-        except (httpx.TimeoutException, httpx.NetworkError) as e:
-            log.error("Instagram API intento %d error: %s", attempt + 1, e)
+    for chunk in _split_long_msg(body, limit=900):
+        for attempt in range(2):
+            try:
+                async with httpx.AsyncClient(timeout=10) as client:
+                    r = await client.post(
+                        url,
+                        params={"access_token": META_PAGE_ACCESS_TOKEN},
+                        json={"recipient": {"id": igsid}, "message": {"text": chunk}},
+                    )
+                if r.status_code == 200:
+                    break
+                log.error("Instagram API intento %d → %s: %s", attempt + 1, r.status_code, r.text[:200])
+            except (httpx.TimeoutException, httpx.NetworkError) as e:
+                log.error("Instagram API intento %d error: %s", attempt + 1, e)
 
 
 async def send_messenger(psid: str, body: str):
-    """Envía mensaje de texto a un usuario de Facebook Messenger vía Graph API."""
+    """Envía mensaje de texto a un usuario de Facebook Messenger vía Graph API.
+    Messenger rechaza mensajes > 1000 chars: divide en chunks automáticamente."""
     page_id = META_PAGE_ID or "me"
     url = f"https://graph.facebook.com/v22.0/{page_id}/messages"
     token = META_MESSENGER_TOKEN or META_ACCESS_TOKEN or META_PAGE_ACCESS_TOKEN
-    for attempt in range(2):
-        try:
-            async with httpx.AsyncClient(timeout=10) as client:
-                r = await client.post(
-                    url,
-                    headers={"Authorization": f"Bearer {token}"},
-                    json={"recipient": {"id": psid}, "message": {"text": body}},
-                )
-            if r.status_code == 200:
-                return
-            log.error("Messenger API intento %d → %s: %s", attempt + 1, r.status_code, r.text[:200])
-        except (httpx.TimeoutException, httpx.NetworkError) as e:
-            log.error("Messenger API intento %d error: %s", attempt + 1, e)
+    for chunk in _split_long_msg(body, limit=900):
+        for attempt in range(2):
+            try:
+                async with httpx.AsyncClient(timeout=10) as client:
+                    r = await client.post(
+                        url,
+                        headers={"Authorization": f"Bearer {token}"},
+                        json={"recipient": {"id": psid}, "message": {"text": chunk}},
+                    )
+                if r.status_code == 200:
+                    break
+                log.error("Messenger API intento %d → %s: %s", attempt + 1, r.status_code, r.text[:200])
+            except (httpx.TimeoutException, httpx.NetworkError) as e:
+                log.error("Messenger API intento %d error: %s", attempt + 1, e)
