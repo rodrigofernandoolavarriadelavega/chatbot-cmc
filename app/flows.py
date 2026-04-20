@@ -1429,6 +1429,29 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     data["rut_conocido"] = perfil["rut"]
                     data["nombre_conocido"] = perfil["nombre"]
                 return await _iniciar_agendar(phone, data, esp_sug_prev)
+            # Si pregunta por más opciones/temprano/otra hora, iniciar flujo completo
+            # de agendar (WAIT_SLOT) para que vea múltiples horarios y pueda filtrar
+            # por período ("temprano", "tarde", etc.). Antes caía al fallback genérico.
+            _MAS_OPCIONES_KWS = (
+                "mas temprano", "más temprano", "mas tarde", "más tarde",
+                "mas tempranito", "más tempranito",
+                "otra hora", "otras horas", "otro horario", "otros horarios",
+                "mas opciones", "más opciones", "mas horas", "más horas",
+                "mas horarios", "más horarios", "hay otra", "hay otro",
+                "no habra hora", "no habrá hora", "no habran", "no habrán",
+                "en la mañana", "en la manana", "por la mañana", "por la manana",
+                "en la tarde", "por la tarde", "en la noche", "por la noche",
+                "tendrá otra", "tendra otra", "tendrás otra", "tendras otra",
+                "ver mas", "ver más", "ver todas", "ver todos",
+            )
+            if any(kw in tl_norm for kw in _MAS_OPCIONES_KWS):
+                log_event(phone, "faq_agendar_mas_opciones", {"esp": esp_sug_prev, "txt": txt[:100]})
+                data.pop("especialidad_sugerida", None)
+                perfil = get_profile(phone)
+                if perfil:
+                    data["rut_conocido"] = perfil["rut"]
+                    data["nombre_conocido"] = perfil["nombre"]
+                return await _iniciar_agendar(phone, data, esp_sug_prev)
             # Cualquier otro mensaje: limpiamos la sugerencia y seguimos el flujo
             # normal para no atrapar al paciente.
             data.pop("especialidad_sugerida", None)
