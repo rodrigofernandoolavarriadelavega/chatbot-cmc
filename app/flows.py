@@ -1825,20 +1825,58 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         "elapsed_ms": _elapsed_ms,
                     })
 
-        # ── Shortcut local: apellido + verbo de acción → agendar sin Claude ──
-        # "Necesito hora con el doctor Olavarría", "Tendrá hora con Abarca",
-        # "me equivoqué quiero con el dr Márquez"
+        # ── Shortcut local: mención a un profesional → agendar sin Claude ──
+        # Cubre tres formas:
+        #   A) Texto corto que es PRINCIPALMENTE el apellido del prof
+        #      "Dr Márquez", "Dra Javiera", "con Olavarría", "la doctora Burgos"
+        #   B) Apellido + verbo de acción explícito
+        #      "Necesito hora con el doctor Olavarría", "agendar con Abarca"
+        #   C) Apellido implicando "quiero con X"
+        #      "me equivoqué quiero con el dr Márquez"
+        # No dispara si el mensaje parece una pregunta sobre el profesional
+        # ("quién es", "dónde atiende", "es bueno", etc.).
         _apellido_idle = _detectar_apellido_profesional(txt)
-        if _apellido_idle and any(
-            k in tl for k in (
-                "necesito", "quiero", "hora", "agendar", "me equivoque",
-                "me equivoqué", "reservar", "con el", "con la", "mejor con",
-                "tendra", "tendrá", "tiene", "disponible", "disponibilidad",
-                "atencion", "atención",
+        if _apellido_idle:
+            _PREGUNTAS_INFO_PROF = (
+                "quien es", "quién es", "quien atiende", "quién atiende",
+                "a que hora atiende", "a qué hora atiende",
+                "donde atiende", "dónde atiende",
+                "que dias atiende", "qué días atiende",
+                "que dia atiende", "qué día atiende",
+                "es buen", "es bueno", "es buena",
+                "sabe de", "especialidad de", "que especialidad",
+                "qué especialidad",
             )
-        ):
-            log_event(phone, "intent_detectado_local", {"apellido": _apellido_idle})
-            return await _iniciar_agendar(phone, data, _apellido_idle)
+            # Contra-señal: el paciente se presenta con su propio nombre.
+            # Ej: "Soy Luis", "me llamo Daniela", "mi nombre es Rodrigo"
+            # (coincide con nombres de pila de profesionales).
+            _SELF_INTRO = (
+                "soy ", "me llamo", "mi nombre es", "yo soy", "yo me llamo",
+                "habla ", "le habla",
+            )
+            _es_pregunta_info = any(kw in tl for kw in _PREGUNTAS_INFO_PROF)
+            _es_self_intro = any(kw in tl for kw in _SELF_INTRO)
+            _tiene_verbo_accion = any(
+                k in tl for k in (
+                    "necesito", "quiero", "hora", "agendar", "me equivoque",
+                    "me equivoqué", "reservar", "con el", "con la", "mejor con",
+                    "tendra", "tendrá", "tiene", "disponible", "disponibilidad",
+                    "atencion", "atención", "atiende",
+                )
+            )
+            # Texto corto: pocas palabras significativas (típicamente
+            # "dr marquez", "la javiera", "con olavarría", "doctor abarca")
+            _palabras_utiles = [w for w in tl.split()
+                                if len(w) >= 2 and w not in {"dr", "dra", "doctor",
+                                                             "doctora", "con", "el",
+                                                             "la", "los", "las", "y"}]
+            _es_texto_corto = len(_palabras_utiles) <= 3
+            if not _es_pregunta_info and not _es_self_intro and (_tiene_verbo_accion or _es_texto_corto):
+                log_event(phone, "intent_detectado_apellido", {
+                    "apellido": _apellido_idle,
+                    "modo": "verbo" if _tiene_verbo_accion else "texto_corto",
+                })
+                return await _iniciar_agendar(phone, data, _apellido_idle)
 
         # ── Shortcut: frase de especialidad ("hora medico general") + intent
         # implícito → agendar sin Claude cuando la frase es inequívoca. ──
@@ -4479,6 +4517,278 @@ _APELLIDOS_PROFESIONAL = [
     ("sara gomez",   "matrona"),
     ("sarai gomez",  "matrona"),
     ("saraí gómez",  "matrona"),
+
+    # ── COBERTURA EXHAUSTIVA: nombres, apellidos, nombre+apellido, apodos,
+    # typos frecuentes (b/v, j/g/h/x, ll/y, z/s, letras omitidas o dobles).
+    # El shortcut IDLE filtra "soy X / me llamo X" para evitar falsos positivos.
+
+    # === Dr. Rodrigo Olavarría (1) — Medicina General ===
+    ("rodrigo",      "olavarría"),
+    ("rodri",        "olavarría"),
+    ("rodriguito",   "olavarría"),
+    ("drigo",        "olavarría"),
+    ("olabarria",    "olavarría"),
+    ("olabarría",    "olavarría"),
+    ("olaverria",    "olavarría"),
+    ("holavarria",   "olavarría"),
+    ("rodrigo olavarria",   "olavarría"),
+    ("rodrigo olavarría",   "olavarría"),
+    ("rodri olavarria",     "olavarría"),
+    ("dr olavarria",        "olavarría"),
+    ("dr rodrigo",          "olavarría"),
+
+    # === Dr. Andrés Abarca (73) — Medicina General ===
+    ("andres",       "abarca"),
+    ("andrés",       "abarca"),
+    ("andy",         "abarca"),
+    ("andre",        "abarca"),
+    ("andresito",    "abarca"),
+    ("abarka",       "abarca"),
+    ("abalca",       "abarca"),
+    ("abarcas",      "abarca"),
+    ("andres abarca",    "abarca"),
+    ("andrés abarca",    "abarca"),
+    ("dr abarca",        "abarca"),
+    ("dr andres",        "abarca"),
+
+    # === Dr. Alonso Márquez (13) — Medicina General ===
+    ("alonso",       "marquez"),
+    ("alonzo",       "marquez"),
+    ("markez",       "marquez"),
+    ("markes",       "marquez"),
+    ("marke",        "marquez"),
+    ("alonso marquez",   "marquez"),
+    ("alonso márquez",   "marquez"),
+    ("dr marquez",       "marquez"),
+    ("dr alonso",        "marquez"),
+
+    # === Dr. Manuel Borrego (23) — Otorrinolaringología ===
+    ("manuel",       "otorrinolaringología"),
+    ("manu",         "otorrinolaringología"),
+    ("manolo",       "otorrinolaringología"),
+    ("manuelito",    "otorrinolaringología"),
+    ("boregos",      "otorrinolaringología"),
+    ("borregos",     "otorrinolaringología"),
+    ("manuel borrego",   "otorrinolaringología"),
+    ("dr borrego",       "otorrinolaringología"),
+    ("dr manuel",        "otorrinolaringología"),
+
+    # === Dr. Miguel Millán (60) — Cardiología ===
+    ("miguel",       "cardiología"),
+    ("migue",        "cardiología"),
+    ("mike",         "cardiología"),
+    ("miki",         "cardiología"),
+    ("miguelito",    "cardiología"),
+    ("milian",       "cardiología"),
+    ("millian",      "cardiología"),
+    ("miguel millan",    "cardiología"),
+    ("miguel millán",    "cardiología"),
+    ("dr millan",        "cardiología"),
+    ("dr miguel",        "cardiología"),
+
+    # === Dr. Claudio Barraza (64) — Traumatología ===
+    ("claudio",      "traumatología"),
+    ("clau",         "traumatología"),
+    ("claudi",       "traumatología"),
+    ("claudito",     "traumatología"),
+    ("barraza",      "traumatología"),
+    ("baraza",       "traumatología"),
+    ("varraza",      "traumatología"),
+    ("barras",       "traumatología"),
+    ("barraz",       "traumatología"),
+    ("claudio barraza",  "traumatología"),
+    ("dr barraza",       "traumatología"),
+    ("dr claudio",       "traumatología"),
+
+    # === Dr. Tirso Rejón (61) — Ginecología ===
+    ("tirso",        "ginecología"),
+    ("tirzo",        "ginecología"),
+    ("rexon",        "ginecología"),
+    ("reyón",        "ginecología"),
+    ("rejones",      "ginecología"),
+    ("tirso rejon",      "ginecología"),
+    ("tirso rejón",      "ginecología"),
+    ("dr rejon",         "ginecología"),
+    ("dr tirso",         "ginecología"),
+
+    # === Dr. Nicolás Quijano (65) — Gastroenterología ===
+    ("nicolas",      "gastroenterología"),
+    ("nicolás",      "gastroenterología"),
+    ("nico",         "gastroenterología"),
+    ("nicolasito",   "gastroenterología"),
+    ("quijan",       "gastroenterología"),
+    ("quixano",      "gastroenterología"),
+    ("qijano",       "gastroenterología"),
+    ("kijanu",       "gastroenterología"),
+    ("nicolas quijano",  "gastroenterología"),
+    ("nicolás quijano",  "gastroenterología"),
+    ("dr quijano",       "gastroenterología"),
+    ("dr nicolas",       "gastroenterología"),
+
+    # === Dra. Javiera Burgos (55) — Odontología General ===
+    ("javiera",      "burgos"),
+    ("xaviera",      "burgos"),
+    ("haviera",      "burgos"),
+    ("yaviera",      "burgos"),
+    ("javi",         "burgos"),
+    ("javy",         "burgos"),
+    ("xavi",         "burgos"),
+    ("jabiera",      "burgos"),
+    ("javierita",    "burgos"),
+    ("vurgo",        "burgos"),
+    ("burgoss",      "burgos"),
+    ("javiera burgos",   "burgos"),
+    ("javi burgos",      "burgos"),
+    ("dra burgos",       "burgos"),
+    ("dra javiera",      "burgos"),
+    ("doctora javiera",  "burgos"),
+
+    # === Dr. Carlos Jiménez (72) — Odontología General ===
+    ("carlos",       "jimenez"),
+    ("carlitos",     "jimenez"),
+    ("carli",        "jimenez"),
+    ("carl",         "jimenez"),
+    ("carlos jimenez",   "jimenez"),
+    ("carlos jiménez",   "jimenez"),
+    ("carlos ximenez",   "jimenez"),
+    ("dr jimenez",       "jimenez"),
+    ("dr carlos",        "jimenez"),
+
+    # === Dra. Daniela Castillo (66) — Ortodoncia ===
+    ("daniela",      "ortodoncia"),
+    ("dani",         "ortodoncia"),
+    ("danny",        "ortodoncia"),
+    ("danielita",    "ortodoncia"),
+    ("castilllo",    "ortodoncia"),
+    ("catillo",      "ortodoncia"),
+    ("daniela castillo", "ortodoncia"),
+    ("dra castillo",     "ortodoncia"),
+    ("dra daniela",      "ortodoncia"),
+    ("doctora daniela",  "ortodoncia"),
+
+    # === Dr. Fernando Fredes (75) — Endodoncia ===
+    ("fernando",     "endodoncia"),
+    ("fer",          "endodoncia"),
+    ("nando",        "endodoncia"),
+    ("fefe",         "endodoncia"),
+    ("fercho",       "endodoncia"),
+    ("fredes",       "endodoncia"),
+    ("fredesh",      "endodoncia"),
+    ("fernando fredes",  "endodoncia"),
+    ("dr fredes",        "endodoncia"),
+    ("dr fernando",      "endodoncia"),
+
+    # === Dra. Aurora Valdés (69) — Implantología ===
+    ("aurora",       "implantología"),
+    ("au",           "implantología"),
+    ("aurorita",     "implantología"),
+    ("valdeth",      "implantología"),
+    ("baldesh",      "implantología"),
+    ("aurora valdes",    "implantología"),
+    ("aurora valdés",    "implantología"),
+    ("dra valdes",       "implantología"),
+    ("dra aurora",       "implantología"),
+
+    # === Dra. Valentina Fuentealba (76) — Estética Facial ===
+    ("valentina",    "estética facial"),
+    ("vale",         "estética facial"),
+    ("valen",        "estética facial"),
+    ("valenti",      "estética facial"),
+    ("balentina",    "estética facial"),
+    ("valen fuentealba", "estética facial"),
+    ("valentina fuentealba", "estética facial"),
+    ("dra fuentealba",   "estética facial"),
+    ("dra valentina",    "estética facial"),
+
+    # === Paola Acosta (59) — Masoterapia ===
+    ("paola",        "masoterapia"),
+    ("pao",          "masoterapia"),
+    ("pauli",        "masoterapia"),
+    ("paolita",      "masoterapia"),
+    ("agosta",       "masoterapia"),
+    ("acustai",      "masoterapia"),
+    ("paola acosta",     "masoterapia"),
+
+    # === Luis Armijo (77) — Kinesiología ===
+    ("luis",         "armijo"),
+    ("lucho",        "armijo"),
+    ("luisito",      "armijo"),
+    ("luigi",        "armijo"),
+    ("armijos",      "armijo"),
+    ("luis armijo",      "armijo"),
+    ("kine luis",        "armijo"),
+    ("don luis",         "armijo"),
+
+    # === Leonardo Etcheverry (21) — Kinesiología ===
+    ("leonardo",     "etcheverry"),
+    ("leo",          "etcheverry"),
+    ("leonel",       "etcheverry"),
+    ("leito",        "etcheverry"),
+    ("etcheberry",   "etcheverry"),
+    ("echeberry",    "etcheverry"),
+    ("etchevery",    "etcheverry"),
+    ("leonardo etcheverry", "etcheverry"),
+    ("kine leonardo",    "etcheverry"),
+
+    # === Gisela Pinto (52) — Nutrición ===
+    ("gisel",        "nutrición"),
+    ("gisela pinto",     "nutrición"),
+    ("pintos",           "nutrición"),
+    ("jisela",           "nutrición"),
+    ("hisela",           "nutrición"),
+    ("nutricionista",    "nutrición"),
+
+    # === Jorge Montalba (74) — Psicología ===
+    ("jorge",        "montalba"),
+    ("jorgito",      "montalba"),
+    ("coque",        "montalba"),
+    ("horge",        "montalba"),
+    ("gorge",        "montalba"),
+    ("montalva",     "montalba"),
+    ("jorge montalba",   "montalba"),
+    ("jorge montalva",   "montalba"),
+    ("dr montalba",      "montalba"),
+    ("dr jorge",         "montalba"),
+
+    # === Dr. Juan Pablo Rodríguez (49) — Psicología ===
+    ("juan pablo rodriguez", "rodriguez"),
+    ("juanpa",       "rodriguez"),
+    ("juampa",       "rodriguez"),
+    ("jp rodriguez", "rodriguez"),
+    ("dr rodriguez",     "rodriguez"),
+    ("dr juan pablo",    "rodriguez"),
+
+    # === Juana Arratia (70) — Fonoaudiología ===
+    ("juani",        "fonoaudiología"),
+    ("juanita",      "fonoaudiología"),
+    ("juanis",       "fonoaudiología"),
+    ("xuana",        "fonoaudiología"),
+    ("huana",        "fonoaudiología"),
+    ("juana arratia",    "fonoaudiología"),
+    ("fono juana",       "fonoaudiología"),
+
+    # === Sarai Gómez (67) — Matrona ===
+    ("gomez",        "matrona"),
+    ("gómez",        "matrona"),
+    ("gomes",        "matrona"),
+    ("sarah",        "matrona"),
+    ("matrona sarai",    "matrona"),
+
+    # === Andrea Guevara (56) — Podología ===
+    ("andrea",       "podología"),
+    ("andi",         "podología"),
+    ("andre guevara",    "podología"),
+    ("andreita",     "podología"),
+    ("gebaras",      "podología"),
+    ("guevara andrea",   "podología"),
+
+    # === Dr. David Pardo (68) — Ecografía ===
+    ("david",        "ecografía"),
+    ("dave",         "ecografía"),
+    ("pardos",       "ecografía"),
+    ("pardu",        "ecografía"),
+    ("dr pardo",         "ecografía"),
+    ("dr david",         "ecografía"),
 ]
 
 
