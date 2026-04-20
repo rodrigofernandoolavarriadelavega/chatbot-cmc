@@ -1148,47 +1148,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     if phone == ADMIN_ALERT_PHONE and tl in ("/status", "status", "ping",
                                              "reporte", "/reporte", "health",
                                              "/health", "estado", "/estado"):
-        try:
-            from datetime import datetime
-            from zoneinfo import ZoneInfo
-            from medilink import get_stats_429, _proxima_cache
-            from resilience import is_medilink_down
-            from session import _conn
-            import sys as _sys
-            ahora = datetime.now(ZoneInfo("America/Santiago")).strftime("%H:%M")
-            stats = get_stats_429()
-            total_429 = stats.get("total", 0)
-            cache_n = len(_proxima_cache)
-            _mod = _sys.modules.get("app.main") or _sys.modules.get("main")
-            scheduler = getattr(_mod, "scheduler", None) if _mod else None
-            sched_running = bool(scheduler and scheduler.running)
-            sched_jobs = len(scheduler.get_jobs()) if scheduler else 0
-            try:
-                with _conn() as c:
-                    r = c.execute("""
-                        SELECT
-                          SUM(CASE WHEN direction='in' THEN 1 ELSE 0 END) AS ins,
-                          SUM(CASE WHEN direction='out' THEN 1 ELSE 0 END) AS outs
-                        FROM messages WHERE ts >= datetime('now','-30 minutes')
-                    """).fetchone()
-                    msgs_in = r["ins"] or 0
-                    msgs_out = r["outs"] or 0
-            except Exception:
-                msgs_in = msgs_out = "?"
-            medilink_down = is_medilink_down()
-            icono = "🟢" if (not medilink_down and sched_running and sched_jobs > 0) else "🔴"
-            return (
-                f"{icono} *CMC bot · {ahora}*\n\n"
-                f"Medilink: {'DOWN' if medilink_down else 'ok'}\n"
-                f"429 totales: {total_429}\n"
-                f"Cache próxima: {cache_n} entradas\n"
-                f"Scheduler: {sched_jobs} jobs · running={sched_running}\n"
-                f"Mensajes 30min: in={msgs_in} · out={msgs_out}\n\n"
-                f"_Ventana 24h abierta ✅ · los reportes periódicos llegarán_"
-            )
-        except Exception as _e:
-            log.error("Error en comando /status admin: %s", _e)
-            return "⚠️ Error generando reporte. Revisa logs."
+        return await _admin_status_report_live()
     # tl_norm = texto del paciente normalizado léxicamente (sin tildes,
     # abreviaciones WhatsApp expandidas, typos frecuentes corregidos,
     # participios rurales arreglados). Lo usamos en los matches hard-coded
@@ -5602,3 +5562,50 @@ def _format_citas_cancelar(citas: list, nombre_paciente: str):
         lineas.append(f"*{i}.* {c['fecha_display']} · {c['hora_inicio']} · {c['profesional']}")
     lineas.append("\n¿Cuál quieres cancelar? Responde con el número.")
     return "\n".join(lineas)
+
+
+async def _admin_status_report_live() -> str:
+    """Genera el reporte de salud en vivo para el admin (comando /status).
+    Separado de handle_message para aislar los imports locales y evitar
+    que sombreen variables globales (UnboundLocalError)."""
+    try:
+        from datetime import datetime as _dt_now
+        from zoneinfo import ZoneInfo as _ZI
+        from medilink import get_stats_429, _proxima_cache
+        from resilience import is_medilink_down as _is_down
+        from session import _conn as _conn_fn
+        import sys as _sys
+        ahora = _dt_now.now(_ZI("America/Santiago")).strftime("%H:%M")
+        stats = get_stats_429()
+        total_429 = stats.get("total", 0)
+        cache_n = len(_proxima_cache)
+        _mod = _sys.modules.get("app.main") or _sys.modules.get("main")
+        scheduler = getattr(_mod, "scheduler", None) if _mod else None
+        sched_running = bool(scheduler and scheduler.running)
+        sched_jobs = len(scheduler.get_jobs()) if scheduler else 0
+        try:
+            with _conn_fn() as c:
+                r = c.execute("""
+                    SELECT
+                      SUM(CASE WHEN direction='in' THEN 1 ELSE 0 END) AS ins,
+                      SUM(CASE WHEN direction='out' THEN 1 ELSE 0 END) AS outs
+                    FROM messages WHERE ts >= datetime('now','-30 minutes')
+                """).fetchone()
+                msgs_in = r["ins"] or 0
+                msgs_out = r["outs"] or 0
+        except Exception:
+            msgs_in = msgs_out = "?"
+        medilink_down = _is_down()
+        icono = "🟢" if (not medilink_down and sched_running and sched_jobs > 0) else "🔴"
+        return (
+            f"{icono} *CMC bot · {ahora}*\n\n"
+            f"Medilink: {'DOWN' if medilink_down else 'ok'}\n"
+            f"429 totales: {total_429}\n"
+            f"Cache próxima: {cache_n} entradas\n"
+            f"Scheduler: {sched_jobs} jobs · running={sched_running}\n"
+            f"Mensajes 30min: in={msgs_in} · out={msgs_out}\n\n"
+            f"_Ventana 24h abierta ✅ · los reportes periódicos llegarán_"
+        )
+    except Exception as _e:
+        log.error("Error en _admin_status_report_live: %s", _e)
+        return "⚠️ Error generando reporte. Revisa logs."
