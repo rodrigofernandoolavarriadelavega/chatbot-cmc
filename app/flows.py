@@ -1272,8 +1272,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             log_event(phone, "gdpr_deletion_requested", {"texto": txt[:240]})
             # Alerta al admin/doctor para ejecución manual (validación identidad)
             try:
-                import asyncio as _asyncio
-                _asyncio.create_task(send_whatsapp(
+                from resilience import spawn_task
+                spawn_task(send_whatsapp(
                     ADMIN_ALERT_PHONE,
                     f"🔐 *Solicitud borrado de datos*\n\n"
                     f"📱 Paciente: {phone}\n"
@@ -1557,7 +1557,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 log_event(phone, "seguimiento_alerta_peor",
                           {"especialidad": esp, "profesional": prof})
                 try:
-                    asyncio.create_task(send_whatsapp(ADMIN_ALERT_PHONE, alerta))
+                    from resilience import spawn_task
+                    spawn_task(send_whatsapp(ADMIN_ALERT_PHONE, alerta))
                 except Exception:
                     log.warning("No se pudo enviar alerta peor a %s", ADMIN_ALERT_PHONE)
             return _btn_msg(
@@ -1732,7 +1733,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         log_event(phone, "seguimiento_alerta_peor",
                                   {"especialidad": esp, "profesional": prof, "fuente": "texto_libre"})
                         try:
-                            asyncio.create_task(send_whatsapp(ADMIN_ALERT_PHONE, alerta))
+                            from resilience import spawn_task
+                            spawn_task(send_whatsapp(ADMIN_ALERT_PHONE, alerta))
                         except Exception:
                             log.warning("No se pudo enviar alerta peor a %s", ADMIN_ALERT_PHONE)
                     return _btn_msg(

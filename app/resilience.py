@@ -135,3 +135,21 @@ def should_notify_recovery() -> bool:
 def mark_recovery_notified():
     """Registra que se envió la notificación de recuperación."""
     system_state_set(_KEY_RECOVERY_NOTIFIED, datetime.now(timezone.utc).isoformat())
+
+
+# ── Tasks en background con tracking (evita GC de fire-and-forget) ──────────
+import asyncio as _asyncio_bg
+_background_tasks: set = set()
+
+
+def spawn_task(coro):
+    """Crea una asyncio.Task y guarda la referencia hasta que termina.
+
+    Python puede garbage-collectar una Task si no hay referencia viva, cancelando
+    la coroutine silenciosamente. Este helper resuelve ese problema.
+    Uso: spawn_task(send_whatsapp(...)) en lugar de asyncio.create_task(...).
+    """
+    task = _asyncio_bg.create_task(coro)
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
+    return task

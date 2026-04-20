@@ -926,7 +926,8 @@ def admin_case_study(dias: int = 30, _: str = Depends(require_admin)):
 async def admin_ortodoncia_sync(desde: str = "2025-01-01", hasta: str = None,
                                 _: str = Depends(require_ortodoncia)):
     fin = hasta or date.today().isoformat()
-    asyncio.create_task(sync_ortodoncia_rango(desde, fin))
+    from resilience import spawn_task
+    spawn_task(sync_ortodoncia_rango(desde, fin))
     return {"ok": True, "desde": desde, "hasta": fin}
 
 
@@ -1650,7 +1651,7 @@ def api_get_consent(phone: str, _=Depends(require_admin)):
 
 
 @router.post("/admin/api/privacy/consent/{phone}")
-def api_set_consent(phone: str, status: str = Query(..., regex="^(accepted|declined|pending)$"),
+def api_set_consent(phone: str, status: str = Query(..., pattern="^(accepted|declined|pending)$"),
                     _=Depends(require_admin)):
     """Registra manualmente un consent (por ej. recibido por WhatsApp tradicional
     o por teléfono). `method=admin` queda en el registro."""
