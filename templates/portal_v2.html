@@ -297,15 +297,17 @@ a{color:inherit; text-decoration:none}
 .hero-card .tag{font-size:9.5px; font-weight:800; letter-spacing:2px; text-transform:uppercase; opacity:.78; margin-bottom:4px}
 .hero-card .greeting{font-size:24px; font-weight:800; letter-spacing:-.4px; line-height:1.15}
 .hero-card .next-appt{
-  margin-top:14px; padding:14px; border-radius:14px;
+  margin-top:14px; padding:14px 16px; border-radius:14px;
   background:rgba(255,255,255,.12); backdrop-filter:blur(6px);
   border:1px solid rgba(255,255,255,.18);
-  display:grid; grid-template-columns:72px 1fr auto; gap:14px; align-items:center;
+  display:grid; grid-template-columns:82px 1fr auto; gap:20px; align-items:center;
 }
 .hero-card .next-appt.empty{grid-template-columns:1fr; text-align:center; padding:24px 14px}
 .hero-card .appt-date{
   background:rgba(255,255,255,.14); border-radius:12px;
-  padding:8px 4px; text-align:center; font-feature-settings:"tnum";
+  padding:10px 8px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
+  font-feature-settings:"tnum";
 }
 .hero-card .appt-date .dow{font-size:9px; font-weight:800; letter-spacing:1.2px; opacity:.85; text-transform:uppercase}
 .hero-card .appt-date .d{font-size:26px; font-weight:800; line-height:1; margin:2px 0}
@@ -320,8 +322,9 @@ a{color:inherit; text-decoration:none}
   background:#fff; color:var(--cmc-navy);
 }
 @media (max-width:520px){
-  .hero-card .next-appt{grid-template-columns:58px 1fr; gap:12px}
+  .hero-card .next-appt{grid-template-columns:64px 1fr; gap:14px; padding:12px 14px}
   .hero-card .next-appt .appt-cta{display:none}
+  .hero-card .appt-date{padding:8px 6px}
 }
 
 .quick-actions{
