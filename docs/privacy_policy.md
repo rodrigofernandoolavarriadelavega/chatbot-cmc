@@ -13,7 +13,7 @@ Esta política cumple con la **Ley 19.628 sobre Protección de la Vida Privada**
 - RUT: [RUT DE LA SOCIEDAD — completar]
 - Representante legal: Dr. Rodrigo Olavarría de la Vega
 - Email DPO: privacidad@centromedicocarampangue.cl *(pendiente activar buzón)*
-- Teléfono: +56987834148
+- Teléfono: +56966610737
 
 El CMC actúa como **responsable** del tratamiento de los datos personales que se recolectan a través de:
 - Chatbot WhatsApp (+56945886628 — en migración a +56966610737)
@@ -121,7 +121,7 @@ Conforme al art. 12 de la Ley 19.628 (reformada 2024), tienes los siguientes der
 |---|---|
 | WhatsApp | Escribe *"borrar mis datos"* o *"quiero mi información"* al bot |
 | Email | privacidad@centromedicocarampangue.cl |
-| Teléfono | +56987834148 |
+| Teléfono | +56966610737 |
 | Presencial | En recepción del CMC con tu cédula de identidad |
 
 **Plazo de respuesta**: 10 días hábiles (prorrogables por 10 días más, notificando la prórroga).
@@ -180,7 +180,7 @@ Si consideras que tus derechos han sido vulnerados, puedes:
 
 **Dr. Rodrigo Olavarría de la Vega** (responsable interino hasta designación formal)
 - Email: privacidad@centromedicocarampangue.cl
-- Teléfono: +56987834148
+- Teléfono: +56966610737
 
 ---
 

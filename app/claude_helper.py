@@ -393,7 +393,7 @@ Input: "Quiero cambiar mi hora del viernes al lunes"
 Output: {{"intent": "reagendar", "especialidad": null, "respuesta_directa": null}}
 
 Input: "me muero"
-Output: {{"intent": "otro", "especialidad": null, "respuesta_directa": "⚠️ Si es una emergencia, llama al *SAMU 131* ahora mismo o acude al servicio de urgencias más cercano. También puedes llamar al CMC al +56987834148."}}
+Output: {{"intent": "otro", "especialidad": null, "respuesta_directa": "⚠️ Si es una emergencia, llama al *SAMU 131* ahora mismo o acude al servicio de urgencias más cercano. También puedes llamar al CMC al +56966610737."}}
 
 Input: "me siento super mal"
 Output: {{"intent": "otro", "especialidad": null, "respuesta_directa": "Lamento escuchar eso. Si es grave, llama al *SAMU 131*. Si no es urgente, ¿te ayudo a agendar una consulta de Medicina General?"}}
@@ -648,7 +648,7 @@ INFO DEL CMC:
   · Lota: ~45 min
   · Coronel: ~1 hora
 - Teléfono fijo: (41) 296 5226
-- WhatsApp: +56987834148
+- WhatsApp: +56966610737
 - Horario: lunes a viernes 08:00–21:00, sábado 09:00–14:00 (horario continuo, sin pausa al mediodía)
 - Fonasa: atención como libre elección disponible en varias especialidades
 - Solo tienen Fonasa (MLE): Medicina General, Kinesiología, Nutrición y Psicología. Todo lo demás es SOLO PARTICULAR.
