@@ -403,3 +403,78 @@ async def _job_waitlist_check():
             log.error("waitlist_check: fallo notificando %s: %s", phone_p, e)
 
     log.info("waitlist_check: notificados %d/%d pacientes", notificados, len(pendientes))
+
+
+# ── Reporte periódico al admin por WhatsApp ──────────────────────────────────
+
+# Contador previo de 429s para calcular delta entre ejecuciones
+_admin_report_state = {"last_429_total": 0}
+
+
+async def _job_admin_status_report():
+    """Cada 30 min envía un resumen de salud al ADMIN_ALERT_PHONE por WhatsApp.
+    No consume calls extra a Medilink (solo lee contadores en memoria y DB local).
+    """
+    if not ADMIN_ALERT_PHONE:
+        return
+    try:
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+        from medilink import get_stats_429, _proxima_cache
+        from resilience import is_medilink_down
+        from session import _conn
+
+        ahora = datetime.now(ZoneInfo("America/Santiago")).strftime("%H:%M")
+        stats = get_stats_429()
+        total_429 = stats.get("total", 0)
+        delta_429 = total_429 - _admin_report_state["last_429_total"]
+        _admin_report_state["last_429_total"] = total_429
+
+        medilink_down = is_medilink_down()
+        cache_n = len(_proxima_cache)
+
+        # Jobs del scheduler
+        import sys
+        _mod = sys.modules.get("app.main") or sys.modules.get("main")
+        scheduler = getattr(_mod, "scheduler", None) if _mod else None
+        sched_running = bool(scheduler and scheduler.running)
+        sched_jobs = len(scheduler.get_jobs()) if scheduler else 0
+
+        # Mensajes últimos 30 min
+        try:
+            with _conn() as c:
+                r = c.execute("""
+                    SELECT
+                      SUM(CASE WHEN direction='in' THEN 1 ELSE 0 END) AS ins,
+                      SUM(CASE WHEN direction='out' THEN 1 ELSE 0 END) AS outs
+                    FROM messages
+                    WHERE ts >= datetime('now','-30 minutes')
+                """).fetchone()
+                msgs_in = r["ins"] or 0
+                msgs_out = r["outs"] or 0
+        except Exception:
+            msgs_in = msgs_out = "?"
+
+        # Semáforo
+        ok = not medilink_down and sched_running and sched_jobs > 0 and delta_429 < 5
+        icono = "🟢" if ok else ("🟡" if not medilink_down else "🔴")
+        med_line = "DOWN" if medilink_down else "ok"
+        alert = "" if ok else "\n⚠️ *Revisar*"
+
+        body = (
+            f"{icono} *CMC bot · {ahora}*\n\n"
+            f"Medilink: {med_line}\n"
+            f"429 totales: {total_429} (últ 30min: {delta_429})\n"
+            f"Cache próxima: {cache_n} entradas\n"
+            f"Scheduler: {sched_jobs} jobs · running={sched_running}\n"
+            f"Mensajes 30min: in={msgs_in} · out={msgs_out}"
+            f"{alert}"
+        )
+
+        try:
+            from messaging import send_whatsapp
+            await send_whatsapp(ADMIN_ALERT_PHONE, body)
+        except Exception as e:
+            log.error("admin_status_report: fallo enviando a admin: %s", e)
+    except Exception as e:
+        log.error("admin_status_report: %s", e)

@@ -40,7 +40,7 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_adherencia_kine, _job_control_especialidad,
                   _job_crosssell_kine, _job_crosssell_orl_fono,
                   _job_crosssell_odonto_estetica, _job_crosssell_mg_chequeo,
-                  _job_medilink_watchdog,
+                  _job_medilink_watchdog, _job_admin_status_report,
                   _job_waitlist_check,
                   _job_doctor_resumen_precita, _job_doctor_reporte_progreso,
                   _job_doctor_reset_diario,
@@ -254,6 +254,13 @@ async def lifespan(app: FastAPI):
         _job_doctor_reset_diario,
         CronTrigger(hour=0, minute=0, timezone=_CLT),
         id="doctor_reset_diario",
+        replace_existing=True,
+    )
+    # Reporte periódico de estado al admin cada 30 min
+    scheduler.add_job(
+        _job_admin_status_report,
+        CronTrigger(minute="0,30", timezone=_CLT),
+        id="admin_status_report",
         replace_existing=True,
     )
     scheduler.start()
