@@ -913,8 +913,13 @@ async def crear_cita(id_paciente: int, id_profesional: int, fecha: str,
         return None
 
 
-async def listar_citas_paciente(id_paciente: int) -> list:
-    """Lista citas futuras de un paciente."""
+async def listar_citas_paciente(id_paciente: int, rut: str | None = None) -> list:
+    """Lista citas futuras de un paciente.
+
+    Si el filtro por id_paciente devuelve 0 resultados y se provee `rut`,
+    reintenta con filtro por RUT. Algunos registros antiguos en Medilink
+    no indexan bien `id_paciente` aunque sí esté seteado en las citas.
+    """
     hoy = datetime.now(_CHILE_TZ).date().strftime("%Y-%m-%d")
     params = {
         "id_paciente": {"eq": id_paciente},
@@ -931,6 +936,20 @@ async def listar_citas_paciente(id_paciente: int) -> list:
         if r.status_code != 200:
             return []
         data = _safe_json(r).get("data", [])
+        if not data and rut:
+            fallback = {
+                "rut": {"eq": rut},
+                "fecha": {"gte": hoy},
+                "estado_anulacion": {"eq": 0},
+            }
+            try:
+                r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
+                               params={"q": _q(fallback)}, headers=HEADERS)
+                if r.status_code == 200:
+                    data = _safe_json(r).get("data", [])
+                    log.info("listar_citas_paciente: fallback por RUT %s → %d citas", rut, len(data))
+            except httpx.RequestError as e:
+                log.warning("fallback rut citas: %s", e)
         citas = []
         for c in data:
             id_prof = c.get("id_profesional")
@@ -948,8 +967,8 @@ async def listar_citas_paciente(id_paciente: int) -> list:
         return citas[:5]
 
 
-async def listar_historial_paciente(id_paciente: int, meses: int = 6) -> list:
-    """Lista citas pasadas de un paciente (últimos N meses)."""
+async def listar_historial_paciente(id_paciente: int, meses: int = 6, rut: str | None = None) -> list:
+    """Lista citas pasadas de un paciente (últimos N meses). Fallback por RUT si id_paciente no devuelve resultados."""
     hoy = datetime.now(_CHILE_TZ).date()
     desde = (hoy - timedelta(days=meses * 30)).strftime("%Y-%m-%d")
     hasta = hoy.strftime("%Y-%m-%d")
@@ -968,6 +987,20 @@ async def listar_historial_paciente(id_paciente: int, meses: int = 6) -> list:
         if r.status_code != 200:
             return []
         data = _safe_json(r).get("data", [])
+        if not data and rut:
+            fallback = {
+                "rut": {"eq": rut},
+                "fecha": {"gte": desde, "lte": hasta},
+                "estado_anulacion": {"eq": 0},
+            }
+            try:
+                r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
+                               params={"q": _q(fallback)}, headers=HEADERS)
+                if r.status_code == 200:
+                    data = _safe_json(r).get("data", [])
+                    log.info("listar_historial_paciente: fallback por RUT %s → %d citas", rut, len(data))
+            except httpx.RequestError as e:
+                log.warning("fallback rut historial: %s", e)
         citas = []
         for c in data:
             id_prof = c.get("id_profesional")

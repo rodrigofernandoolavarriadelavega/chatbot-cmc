@@ -236,8 +236,23 @@ input{font-family:inherit;color:inherit}
 }
 
 /* Aside: promos / cross-selling */
-.aside{display:flex; flex-direction:column; gap:14px; position:sticky; top:72px}
-@media (max-width:960px){ .aside{position:static} }
+.aside{
+  display:flex; flex-direction:column; gap:12px;
+  position:sticky; top:72px; max-height:calc(100vh - 88px);
+  overflow-y:auto; padding-right:4px; padding-bottom:4px;
+}
+.aside::-webkit-scrollbar{width:6px}
+.aside::-webkit-scrollbar-thumb{background:rgba(15,63,104,.15); border-radius:10px}
+.aside:hover::-webkit-scrollbar-thumb{background:rgba(15,63,104,.25)}
+.aside-fade{
+  position:sticky; bottom:0; height:32px; margin-top:-32px;
+  background:linear-gradient(to top, var(--bg), transparent);
+  pointer-events:none; flex-shrink:0;
+}
+@media (max-width:960px){
+  .aside{position:static; max-height:none; overflow:visible; padding-right:0}
+  .aside-fade{display:none}
+}
 .aside-title{
   font-size:12px; font-weight:800; color:var(--cmc-navy);
   letter-spacing:.6px; text-transform:uppercase; padding:0 4px 2px;
@@ -756,52 +771,109 @@ function fmtHistoryDate(fechaStr) {
 
 // ══ Promo catalog ══
 const PROMO_CATALOG = {
+  chequeo: {
+    label:"Chequeo preventivo",
+    iconSvg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v3"/><path d="M16 2v3"/><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>`,
+    title:"Chequeo médico general",
+    desc:"Agenda con Dr. Abarca u Olavarría. Presión, exámenes básicos y plan de salud personalizado.",
+    price:"Fonasa $7.880"
+  },
   kine: {
-    label:"Kinesiología", icon:"💪", iconSvg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5h11"/><path d="M6.5 17.5h11"/><path d="M8 3v18"/><path d="M16 3v18"/><path d="M3 8h2"/><path d="M3 16h2"/><path d="M19 8h2"/><path d="M19 16h2"/></svg>`,
+    label:"Kinesiología",
+    iconSvg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5h11"/><path d="M6.5 17.5h11"/><path d="M8 3v18"/><path d="M16 3v18"/><path d="M3 8h2"/><path d="M3 16h2"/><path d="M19 8h2"/><path d="M19 16h2"/></svg>`,
     title:"Completa tu plan de kinesiología",
-    desc:"Luis y Leo atienden por Fonasa MLE. 10 sesiones con bono: $83.360.",
+    desc:"Luis y Leo atienden por Fonasa MLE. Paquete 10 sesiones con bono: $83.360.",
     price:"Fonasa $7.830"
   },
   cardio: {
-    label:"Cardiología", icon:"❤️", iconSvg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>`,
+    label:"Cardiología",
+    iconSvg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>`,
     title:"Control cardiovascular",
     desc:"Dr. Millán evalúa presión, ECG y ecocardiograma. Ideal si tienes HTA o DM2.",
     price:"Consulta $40.000"
   },
   nutri: {
-    label:"Nutrición", icon:"🥗", iconSvg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 014 13H2a10 10 0 0018.92 4.23"/><path d="M13 4a7 7 0 017 7h2a10 10 0 00-18.92-4.23"/><circle cx="12" cy="12" r="3"/></svg>`,
+    label:"Nutrición",
+    iconSvg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 014 13H2a10 10 0 0018.92 4.23"/><path d="M13 4a7 7 0 017 7h2a10 10 0 00-18.92-4.23"/><circle cx="12" cy="12" r="3"/></svg>`,
     title:"Plan nutricional personalizado",
-    desc:"Gisela Pinto atiende con Fonasa. Diabetes, HTA, baja de peso.",
+    desc:"Gisela Pinto atiende con Fonasa. Diabetes, HTA o baja de peso con seguimiento mensual.",
     price:"Fonasa $4.770"
   },
+  psico: {
+    label:"Psicología",
+    iconSvg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a5 5 0 00-5 5c0 2 1 4 3 5v2a2 2 0 002 2h0a2 2 0 002-2v-2c2-1 3-3 3-5a5 5 0 00-5-5z"/><path d="M8 21h8"/><path d="M10 17v4"/><path d="M14 17v4"/></svg>`,
+    title:"Atención psicológica",
+    desc:"Jorge y Juan Pablo atienden adultos e infantojuvenil. Bono Fonasa sesión 45 min.",
+    price:"Fonasa $14.420"
+  },
   odonto: {
-    label:"Odontología estética", icon:"🦷", iconSvg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.5c-2-2-5-2-6.5-.5s-1 4.5 0 6.5 1.5 6 2.5 9 2 3 2.5 0 2-5 2-5 1.5 2 2 5 1.5 3 2.5 0 1.5-7 2.5-9 1.5-5 0-6.5-4.5-2-6.5-.5z"/></svg>`,
+    label:"Odontología estética",
+    iconSvg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.5c-2-2-5-2-6.5-.5s-1 4.5 0 6.5 1.5 6 2.5 9 2 3 2.5 0 2-5 2-5 1.5 2 2 5 1.5 3 2.5 0 1.5-7 2.5-9 1.5-5 0-6.5-4.5-2-6.5-.5z"/></svg>`,
     title:"Blanqueamiento y estética",
-    desc:"Sonrisa nueva con nuestras dentistas. Evaluación gratuita incluye revisión general.",
+    desc:"Dra. Javiera y Dr. Jiménez. Evaluación incluye revisión general y plan de tratamiento.",
     price:"Evaluación $15.000"
   },
-  matrona: {
-    label:"Matrona", icon:"👶", iconSvg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9c2.39 0 4.56.93 6.18 2.44"/></svg>`,
-    title:"Control ginecológico + PAP",
-    desc:"Sarai atiende con bono preferencial. Incluye consulta y PAP.",
-    price:"Bono $25.000"
-  },
-  chequeo: {
-    label:"Chequeo preventivo", icon:"🩺", iconSvg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v3"/><path d="M16 2v3"/><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>`,
-    title:"Chequeo médico general",
-    desc:"Agenda con Dr. Abarca u Olavarría. Presión, exámenes básicos y plan.",
-    price:"Fonasa $7.880"
-  },
   ortodoncia: {
-    label:"Ortodoncia", icon:"😁", iconSvg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2h8"/><path d="M9 2v6"/><path d="M15 2v6"/><circle cx="12" cy="15" r="6"/></svg>`,
+    label:"Ortodoncia",
+    iconSvg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2h8"/><path d="M9 2v6"/><path d="M15 2v6"/><circle cx="12" cy="15" r="6"/></svg>`,
     title:"Alinea tu sonrisa",
     desc:"Dra. Castillo instala brackets con control mensual. Consulta evalúa tu caso.",
     price:"Instalación $120.000"
   },
+  endo: {
+    label:"Endodoncia",
+    iconSvg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l4 4-4 4-4-4z"/><path d="M12 10v12"/><path d="M9 22h6"/></svg>`,
+    title:"Tratamiento de conducto",
+    desc:"Dr. Fredes resuelve caries profundas y dolor intenso. Mantén tu diente natural.",
+    price:"Desde $110.000"
+  },
+  matrona: {
+    label:"Matrona",
+    iconSvg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9c2.39 0 4.56.93 6.18 2.44"/></svg>`,
+    title:"Control ginecológico + PAP",
+    desc:"Sarai atiende con bono preferencial. Consulta + PAP en la misma visita.",
+    price:"Bono $25.000"
+  },
   orl_fono: {
-    label:"ORL + Fonoaudiología", icon:"👂", iconSvg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8.5a6.5 6.5 0 1113 0c0 6-6 6-6 10a3.5 3.5 0 11-7 0"/><path d="M15 8.5a2.5 2.5 0 00-5 0v1a2 2 0 01-2 2"/></svg>`,
+    label:"ORL + Fonoaudiología",
+    iconSvg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8.5a6.5 6.5 0 1113 0c0 6-6 6-6 10a3.5 3.5 0 11-7 0"/><path d="M15 8.5a2.5 2.5 0 00-5 0v1a2 2 0 01-2 2"/></svg>`,
     title:"Evaluación auditiva y del habla",
-    desc:"Dr. Borrego (ORL) + Juana (fono) trabajan juntos. Ideal niños con retraso del lenguaje.",
+    desc:"Dr. Borrego (ORL) + Juana (fono) en dupla. Ideal niños con retraso del lenguaje.",
+    price:"Consulta $35.000"
+  },
+  eco: {
+    label:"Ecografía",
+    iconSvg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3"/><path d="M12 19v3"/><path d="M2 12h3"/><path d="M19 12h3"/><path d="M5 5l2 2"/><path d="M17 17l2 2"/><path d="M5 19l2-2"/><path d="M17 7l2-2"/></svg>`,
+    title:"Ecografía y doppler",
+    desc:"David Pardo realiza abdominal, renal, tiroides, doppler venoso. Informe al momento.",
+    price:"Desde $40.000"
+  },
+  estetica: {
+    label:"Estética facial",
+    iconSvg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 00-7 7c0 3.5 2 5.5 3 7s1 3 4 3 3-1.5 4-3 3-3.5 3-7a7 7 0 00-7-7z"/><path d="M9 9h.01"/><path d="M15 9h.01"/></svg>`,
+    title:"Armonización y estética facial",
+    desc:"Dra. Fuentealba: hilos, bioestimuladores, lipopapada, exosomas, peeling.",
+    price:"Consulta evaluativa"
+  },
+  podologia: {
+    label:"Podología",
+    iconSvg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20c4-3 6-7 6-11a6 6 0 00-12 0c0 4 2 8 6 11z"/><circle cx="9" cy="8" r="1"/><circle cx="12" cy="6" r="1"/><circle cx="15" cy="8" r="1"/></svg>`,
+    title:"Atención podológica",
+    desc:"Andrea trata uñas encarnadas, callosidades, pie diabético. Importante si tienes DM2.",
+    price:"Consulta $25.000"
+  },
+  masoterapia: {
+    label:"Masoterapia",
+    iconSvg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16"/><path d="M6 8h12"/><path d="M8 16h8"/><path d="M12 4v16"/></svg>`,
+    title:"Masajes terapéuticos",
+    desc:"Paola Acosta: sesiones de 20 o 40 min. Alivio de contracturas y estrés.",
+    price:"Desde $17.990"
+  },
+  gastro: {
+    label:"Gastroenterología",
+    iconSvg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h8a2 2 0 012 2v14a2 2 0 01-2 2H8a2 2 0 01-2-2V5a2 2 0 012-2z"/><path d="M12 7v10"/><path d="M9 10h6"/><path d="M9 14h6"/></svg>`,
+    title:"Evaluación gastroenterológica",
+    desc:"Dr. Quijano trata reflujo, gastritis, colon irritable. Deriva a endoscopía si se requiere.",
     price:"Consulta $35.000"
   },
 };
@@ -811,36 +883,33 @@ function pickPromos(d){
   const specs = new Set((d.historial || []).map(c => (c.especialidad || '').toLowerCase()));
   const prox = new Set((d.citas_futuras || []).map(c => (c.especialidad || '').toLowerCase()));
   const has = (set, kw) => [...set].some(s => s.includes(kw));
-  const picks = [];
+  const priority = [];
 
-  // HTA o DM2 → cardio/nutri
-  if ([...dxSet].some(dx => dx.includes('hta') || dx.includes('hiperten') || dx.includes('presi'))) picks.push('cardio');
-  if ([...dxSet].some(dx => dx.includes('dm2') || dx.includes('diab'))) picks.push('nutri');
-  // Traumatología → kine
-  if (has(specs, 'traumat') && !has(prox, 'kinesio')) picks.push('kine');
-  // MG pero sin kine y sin dx cardio → chequeo/nutri
-  if (has(specs, 'medicina general') && !has(specs, 'nutric')) picks.push('nutri');
-  // Odontología sin ortodoncia reciente → estética
-  if (has(specs, 'odontolog') && !has(specs, 'ortodon')) picks.push('odonto');
-  // ORL → fono (y viceversa)
-  if (has(specs, 'otorri') && !has(specs, 'fonoaud')) picks.push('orl_fono');
-  if (has(specs, 'fonoaud') && !has(specs, 'otorri')) picks.push('orl_fono');
-  // Ortodoncia en curso
-  if (has(specs, 'ortodon')) picks.push('ortodoncia');
-  // Ginecología / matrona sugerido para mujeres con historial gine
-  if (has(specs, 'ginecol') && !has(specs, 'matrona')) picks.push('matrona');
-  // Sin próximas citas y sin historial reciente → chequeo
-  if ((d.citas_futuras || []).length === 0) picks.push('chequeo');
+  // Prioridad 1: dx crónicos → cardio, nutri
+  if ([...dxSet].some(dx => dx.includes('hta') || dx.includes('hiperten') || dx.includes('presi'))) priority.push('cardio');
+  if ([...dxSet].some(dx => dx.includes('dm2') || dx.includes('diab'))) { priority.push('nutri'); priority.push('podologia'); }
+  // Prioridad 2: historial específico
+  if (has(specs, 'traumat') && !has(prox, 'kinesio')) priority.push('kine');
+  if (has(specs, 'ortodon')) priority.push('ortodoncia');
+  if (has(specs, 'odontolog') && !has(specs, 'ortodon')) priority.push('odonto');
+  if (has(specs, 'otorri') && !has(specs, 'fonoaud')) priority.push('orl_fono');
+  if (has(specs, 'fonoaud') && !has(specs, 'otorri')) priority.push('orl_fono');
+  if (has(specs, 'ginecol') && !has(specs, 'matrona')) priority.push('matrona');
+  if (has(specs, 'kinesio')) priority.push('masoterapia');
+  if (has(specs, 'odontolog')) priority.push('endo');
+  // Prioridad 3: sin próximas → chequeo preventivo
+  if ((d.citas_futuras || []).length === 0) priority.push('chequeo');
 
-  // Dedupe + fallback
-  const unique = [...new Set(picks)];
-  if (unique.length < 2) {
-    for (const fb of ['chequeo','nutri','odonto']) {
-      if (!unique.includes(fb)) unique.push(fb);
-      if (unique.length >= 3) break;
-    }
+  // Completar con fallbacks genéricos hasta 10
+  const fallback = ['chequeo','nutri','odonto','kine','psico','estetica','eco','gastro','matrona','ortodoncia','cardio','podologia','masoterapia','orl_fono','endo'];
+  const combined = [...priority, ...fallback];
+  const seen = new Set();
+  const result = [];
+  for (const k of combined) {
+    if (!seen.has(k) && PROMO_CATALOG[k]) { seen.add(k); result.push(k); }
+    if (result.length >= 10) break;
   }
-  return unique.slice(0, 3);
+  return result;
 }
 
 // ══ Render dashboard ══
@@ -967,7 +1036,7 @@ function renderDashboard() {
       </div>
     </div>`;
   });
-  aside += `</aside>`;
+  aside += `<div class="aside-fade"></div></aside>`;
 
   c.innerHTML = main + aside;
 }

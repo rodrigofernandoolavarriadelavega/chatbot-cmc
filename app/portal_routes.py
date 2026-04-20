@@ -180,9 +180,10 @@ async def portal_datos(portal_session: str | None = Cookie(None)):
 
     # Fetch paralelo: citas futuras + historial
     import asyncio
+    rut_medilink = paciente.get("rut") or ""
     citas_futuras, historial = await asyncio.gather(
-        listar_citas_paciente(id_pac),
-        listar_historial_paciente(id_pac, meses=12),
+        listar_citas_paciente(id_pac, rut=rut_medilink),
+        listar_historial_paciente(id_pac, meses=12, rut=rut_medilink),
     )
 
     # Tags de diagnóstico
