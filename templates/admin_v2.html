@@ -1259,6 +1259,11 @@ function filteredConvs(){
       return d && d.toLocaleDateString("es-CL", {timeZone:TZ}) === todayKey;
     });
   }
+  list.sort((a, b) => {
+    const da = parseServerTs(a.last_ts || a.updated_at);
+    const db = parseServerTs(b.last_ts || b.updated_at);
+    return (db ? db.getTime() : 0) - (da ? da.getTime() : 0);
+  });
   return list;
 }
 
