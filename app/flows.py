@@ -4789,6 +4789,111 @@ _APELLIDOS_PROFESIONAL = [
     ("pardu",        "ecografía"),
     ("dr pardo",         "ecografía"),
     ("dr david",         "ecografía"),
+
+    # ── Apellidos/nombres INCOMPLETOS (cuando el paciente no está seguro
+    # de la ortografía y escribe solo el prefijo). Longitud mínima 4-5 letras
+    # para evitar falsos positivos. Prefijos 3 letras serían muy ambiguos.
+    # Evitados: rodr/pard/gom/vald (demasiado cortos o ambiguos).
+
+    # Medicina General
+    ("olava",        "olavarría"),   # "dr olava", "olava" → ya casi completo
+    ("olavar",       "olavarría"),
+    ("olabar",       "olavarría"),
+    ("olaber",       "olavarría"),
+    ("abarc",        "abarca"),      # "abarc" sin a final
+    ("avarc",        "abarca"),
+    ("abar",         "abarca"),      # suficientemente único
+    ("marq",         "marquez"),     # "marq", "márq"
+    ("márq",         "marquez"),
+
+    # ORL
+    ("borre",        "otorrinolaringología"),
+    ("borr",         "otorrinolaringología"),   # cuidado con "borrico" pero raro
+    ("vorre",        "otorrinolaringología"),
+
+    # Cardiología
+    ("milla",        "cardiología"),
+    ("milán",        "cardiología"),  # ya está variantes, refuerzo
+    ("mille",        "cardiología"),
+
+    # Traumatología
+    ("barra",        "traumatología"),
+    ("baras",        "traumatología"),
+    ("barrasa",      "traumatología"),
+
+    # Ginecología
+    ("rejo",         "ginecología"),  # "rejo" únicamente, "rejon" ya está
+    ("reho",         "ginecología"),
+    ("rego",         "ginecología"),
+
+    # Gastroenterología
+    ("quija",        "gastroenterología"),
+    ("kija",         "gastroenterología"),
+    ("quihan",       "gastroenterología"),
+
+    # Odontología Burgos
+    ("burgo",        "burgos"),      # ya estaba pero refuerzo
+    ("vurgo",        "burgos"),
+
+    # Odontología Jiménez
+    ("jime",         "jimenez"),
+    ("jimen",        "jimenez"),
+    ("xime",         "jimenez"),
+    ("gime",         "jimenez"),
+
+    # Ortodoncia Castillo
+    ("castil",       "ortodoncia"),
+    ("casti",        "ortodoncia"),
+    ("castiy",       "ortodoncia"),
+
+    # Endodoncia Fredes
+    ("frede",        "endodoncia"),
+    ("fredec",       "endodoncia"),
+
+    # Implantología Valdés
+    ("valde",        "implantología"),
+    ("balde",        "implantología"),
+
+    # Estética Fuentealba
+    ("fuente",       "estética facial"),
+    ("fuentea",      "estética facial"),
+    ("fuentes",      "estética facial"),
+
+    # Masoterapia Acosta
+    ("acost",        "masoterapia"),
+    ("agost",        "masoterapia"),
+
+    # Kinesiología Armijo
+    ("armi",         "armijo"),
+    ("armih",        "armijo"),
+
+    # Kinesiología Etcheverry
+    ("etche",        "etcheverry"),
+    ("eche",         "etcheverry"),
+    ("echeb",        "etcheverry"),
+    ("etcheb",       "etcheverry"),
+
+    # Psicología Montalba
+    ("montal",       "montalba"),
+    ("montalv",      "montalba"),
+
+    # Psicología Rodríguez (solo con apellido completo — "rodri" ambiguo)
+    ("rodriguezz",   "rodriguez"),
+
+    # Fonoaudiología Arratia
+    ("arrat",        "fonoaudiología"),
+    ("arati",        "fonoaudiología"),
+
+    # Podología Guevara
+    ("gueva",        "podología"),
+    ("gueb",         "podología"),
+    ("geva",         "podología"),
+
+    # Matrona Sarai Gómez (gomez ya está como "gomez")
+    ("sarahi",       "matrona"),
+
+    # Nutrición Pinto (cuidado: "pinto" es verbo. Lo dejo con pinto entero.)
+    # "pint" sería demasiado riesgoso (matchea "pinto", "pinta", "pintar")
 ]
 
 
