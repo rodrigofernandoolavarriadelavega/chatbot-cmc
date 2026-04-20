@@ -447,7 +447,13 @@ async def admin_reply(request: Request, _: str = Depends(require_admin)):
 @router.get("/admin/api/scheduler-info")
 async def admin_scheduler_info(_: str = Depends(require_admin)):
     """Lista jobs del APScheduler con próximo run. Útil para diagnóstico."""
-    from main import scheduler
+    import sys
+    # uvicorn puede registrar el módulo como "app.main" o "main" según cómo se
+    # arrancó. Buscamos en ambos para no crear un scheduler nuevo por import.
+    mod = sys.modules.get("app.main") or sys.modules.get("main")
+    if mod is None or not hasattr(mod, "scheduler"):
+        return {"error": "scheduler_module_not_found", "running": False, "jobs": []}
+    scheduler = mod.scheduler
     jobs = []
     for j in scheduler.get_jobs():
         jobs.append({
