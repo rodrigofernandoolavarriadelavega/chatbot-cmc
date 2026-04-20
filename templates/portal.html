@@ -219,8 +219,8 @@ input{font-family:inherit;color:inherit}
 .content{
   flex:1; width:100%;
   padding:8px 20px calc(96px + env(safe-area-inset-bottom));
-  display:grid; grid-template-columns: minmax(0, 1fr) 320px; gap:18px;
-  align-items:start;
+  display:grid; grid-template-columns: minmax(0, 580px) minmax(360px, 1fr);
+  gap:22px; align-items:start;
 }
 @media (max-width:960px){
   .content{grid-template-columns: minmax(0, 1fr); gap:14px}
