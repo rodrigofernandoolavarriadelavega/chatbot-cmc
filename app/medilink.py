@@ -916,40 +916,51 @@ async def crear_cita(id_paciente: int, id_profesional: int, fecha: str,
 async def listar_citas_paciente(id_paciente: int, rut: str | None = None) -> list:
     """Lista citas futuras de un paciente.
 
-    Si el filtro por id_paciente devuelve 0 resultados y se provee `rut`,
-    reintenta con filtro por RUT. Algunos registros antiguos en Medilink
-    no indexan bien `id_paciente` aunque sí esté seteado en las citas.
+    Medilink devuelve HTTP 400 ('No puede buscar por id_paciente') al filtrar
+    /citas por id_paciente. Si se provee `rut`, consultamos directamente por
+    RUT. Dejamos `id_paciente` como intento inicial por compatibilidad, pero
+    el camino real es por RUT.
     """
     hoy = datetime.now(_CHILE_TZ).date().strftime("%Y-%m-%d")
-    params = {
-        "id_paciente": {"eq": id_paciente},
-        "fecha":       {"gte": hoy},
-        "estado_anulacion": {"eq": 0},
-    }
     async with httpx.AsyncClient(timeout=10) as client:
-        try:
-            r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
-                           params={"q": _q(params)}, headers=HEADERS)
-        except httpx.RequestError as e:
-            log.error("No se pudo listar citas paciente=%d: %s", id_paciente, e)
-            return []
-        if r.status_code != 200:
-            return []
-        data = _safe_json(r).get("data", [])
-        if not data and rut:
-            fallback = {
+        data = []
+        # Intento por rut (Medilink no soporta id_paciente en /citas)
+        if rut:
+            params = {
                 "rut": {"eq": rut},
                 "fecha": {"gte": hoy},
                 "estado_anulacion": {"eq": 0},
             }
             try:
                 r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
-                               params={"q": _q(fallback)}, headers=HEADERS)
+                               params={"q": _q(params)}, headers=HEADERS)
                 if r.status_code == 200:
                     data = _safe_json(r).get("data", [])
-                    log.info("listar_citas_paciente: fallback por RUT %s → %d citas", rut, len(data))
             except httpx.RequestError as e:
-                log.warning("fallback rut citas: %s", e)
+                log.error("listar_citas_paciente rut=%s: %s", rut, e)
+                return []
+        else:
+            # Fallback: sin rut. Intenta id_paciente (fallará 400 hoy, pero
+            # mantenemos por si la API se arregla).
+            params = {
+                "id_paciente": {"eq": id_paciente},
+                "fecha":       {"gte": hoy},
+                "estado_anulacion": {"eq": 0},
+            }
+            try:
+                r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
+                               params={"q": _q(params)}, headers=HEADERS)
+                if r.status_code == 200:
+                    data = _safe_json(r).get("data", [])
+                else:
+                    log.warning("listar_citas_paciente id=%d → HTTP %d (necesita rut)",
+                                id_paciente, r.status_code)
+            except httpx.RequestError as e:
+                log.error("listar_citas_paciente id=%d: %s", id_paciente, e)
+                return []
+        # Filtrar por id_paciente en cliente por si el RUT tiene más de un registro
+        if rut:
+            data = [c for c in data if not c.get("id_paciente") or c.get("id_paciente") == id_paciente]
         citas = []
         for c in data:
             id_prof = c.get("id_profesional")
@@ -968,39 +979,34 @@ async def listar_citas_paciente(id_paciente: int, rut: str | None = None) -> lis
 
 
 async def listar_historial_paciente(id_paciente: int, meses: int = 6, rut: str | None = None) -> list:
-    """Lista citas pasadas de un paciente (últimos N meses). Fallback por RUT si id_paciente no devuelve resultados."""
+    """Lista citas pasadas de un paciente (últimos N meses).
+
+    Usa filtro por RUT (Medilink no soporta id_paciente en /citas).
+    """
     hoy = datetime.now(_CHILE_TZ).date()
     desde = (hoy - timedelta(days=meses * 30)).strftime("%Y-%m-%d")
     hasta = hoy.strftime("%Y-%m-%d")
-    params = {
-        "id_paciente": {"eq": id_paciente},
-        "fecha":       {"gte": desde, "lte": hasta},
-        "estado_anulacion": {"eq": 0},
-    }
     async with httpx.AsyncClient(timeout=10) as client:
-        try:
-            r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
-                           params={"q": _q(params)}, headers=HEADERS)
-        except httpx.RequestError as e:
-            log.error("listar_historial paciente=%d: %s", id_paciente, e)
-            return []
-        if r.status_code != 200:
-            return []
-        data = _safe_json(r).get("data", [])
-        if not data and rut:
-            fallback = {
+        data = []
+        if rut:
+            params = {
                 "rut": {"eq": rut},
                 "fecha": {"gte": desde, "lte": hasta},
                 "estado_anulacion": {"eq": 0},
             }
             try:
                 r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
-                               params={"q": _q(fallback)}, headers=HEADERS)
+                               params={"q": _q(params)}, headers=HEADERS)
                 if r.status_code == 200:
                     data = _safe_json(r).get("data", [])
-                    log.info("listar_historial_paciente: fallback por RUT %s → %d citas", rut, len(data))
             except httpx.RequestError as e:
-                log.warning("fallback rut historial: %s", e)
+                log.error("listar_historial_paciente rut=%s: %s", rut, e)
+                return []
+            # Filtrar por id_paciente por si hay otros registros con el mismo RUT
+            data = [c for c in data if not c.get("id_paciente") or c.get("id_paciente") == id_paciente]
+        else:
+            log.warning("listar_historial_paciente id=%d sin rut — Medilink no soporta id_paciente filter", id_paciente)
+            return []
         citas = []
         for c in data:
             id_prof = c.get("id_profesional")
