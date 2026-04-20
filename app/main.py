@@ -312,6 +312,8 @@ _TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
 _ADMIN_HTML = (_TEMPLATE_DIR / "admin.html").read_text(encoding="utf-8")
 _ADMIN_V2_HTML = (_TEMPLATE_DIR / "admin_v2.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "admin_v2.html").exists() else ""
 _PORTAL_HTML = (_TEMPLATE_DIR / "portal.html").read_text(encoding="utf-8")
+_PORTAL_V2_HTML = (_TEMPLATE_DIR / "portal_v2.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "portal_v2.html").exists() else ""
+_PORTAL_INFORME_HTML = (_TEMPLATE_DIR / "portal_informe.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "portal_informe.html").exists() else ""
 _ECOSISTEMA_HTML = (_TEMPLATE_DIR / "ecosistema.html").read_text(encoding="utf-8")
 _DASHBOARD_HTML = (_TEMPLATE_DIR / "dashboard.html").read_text(encoding="utf-8")
 _MEULEN_ECOSISTEMA_HTML = (_TEMPLATE_DIR / "meulen_ecosistema.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "meulen_ecosistema.html").exists() else ""
@@ -463,6 +465,18 @@ def admin_mapa_direcciones(token: str | None = Query(None),
 def portal_page():
     """Portal del paciente — webapp pública (auth se maneja client-side con OTP)."""
     return _PORTAL_HTML
+
+
+@app.get("/portal/v2", response_class=HTMLResponse)
+def portal_page_v2():
+    """Portal del paciente v2 — IA modernizada (tabs, sidebar, best practices MyChart/MiSalud)."""
+    return _PORTAL_V2_HTML or _PORTAL_HTML
+
+
+@app.get("/portal/informe", response_class=HTMLResponse)
+def portal_informe():
+    """Informe imprimible de registros del paciente (HTML print-friendly)."""
+    return _PORTAL_INFORME_HTML
 
 
 @app.get("/ecosistema", response_class=HTMLResponse)

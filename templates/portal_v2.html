@@ -1,0 +1,1557 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="light only">
+<meta name="theme-color" content="#0F3F68">
+<title>Mi Salud · Centro Médico Carampangue</title>
+<link rel="icon" type="image/png" href="https://centromedicocarampangue.cl/wp-content/uploads/2025/08/cropped-logo-carampangue.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+html{color-scheme:light only}
+:root{
+  --cmc-aqua:#4FBECE; --cmc-aqua-soft:#e5f5f8; --cmc-aqua-dark:#3ba9ba;
+  --cmc-blue:#1172AB; --cmc-blue-soft:#e3eff7;
+  --cmc-navy:#0F3F68; --cmc-navy-soft:#d7e0ea;
+  --bg:#f3f6f9; --panel:#ffffff; --panel-2:#f7fafc;
+  --border:#e3ebf1; --border-soft:#eef3f7;
+  --text:#0F3F68; --text-mute:#546776; --text-dim:#8696a0;
+  --green:#25d366; --green-dark:#128c7e; --green-soft:#dcf8c6;
+  --red:#e53935; --red-soft:#ffebee; --amber:#b58105; --amber-soft:#fff4d6;
+  --shadow-xs:0 1px 2px rgba(15,63,104,.04);
+  --shadow-sm:0 1px 2px rgba(15,63,104,.05), 0 1px 3px rgba(15,63,104,.04);
+  --shadow-md:0 2px 6px rgba(15,63,104,.05), 0 6px 18px rgba(15,63,104,.06);
+  --shadow-lg:0 4px 12px rgba(15,63,104,.06), 0 16px 36px rgba(15,63,104,.10);
+  --ring:0 0 0 3px rgba(79,190,206,.22);
+  --radius:14px; --radius-sm:10px; --radius-lg:18px;
+  --ease:cubic-bezier(.4,0,.2,1);
+  --ease-spring:cubic-bezier(.34,1.36,.64,1);
+  --font:"Montserrat",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --sidebar-w:224px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--text); font-family:var(--font);
+  font-size:14px; line-height:1.45; -webkit-font-smoothing:antialiased;
+  min-height:100vh; min-height:100dvh;
+}
+button{font-family:inherit; cursor:pointer; border:none; background:none; color:inherit; transition:all .18s var(--ease)}
+button:active{transform:scale(.98)}
+input, select, textarea{font-family:inherit; color:inherit}
+a{color:inherit; text-decoration:none}
+::selection{background:rgba(79,190,206,.32); color:var(--cmc-navy)}
+
+.screen{display:none}
+.screen.active{display:flex}
+
+/* ═══ Loading ═══ */
+.loading-screen{
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  min-height:100vh; gap:14px;
+}
+.spinner{
+  width:34px; height:34px; border:3px solid var(--border);
+  border-top-color:var(--cmc-blue); border-radius:50%;
+  animation:spin .7s linear infinite;
+}
+.spinner.sm{width:18px;height:18px;border-width:2.5px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ═══ LOGIN (igual que v1) ═══ */
+#login-screen{
+  flex-direction:column; align-items:center; justify-content:center;
+  min-height:100vh; padding:24px 20px;
+  background:
+    radial-gradient(1200px 600px at 50% -100px, rgba(79,190,206,.18), transparent 60%),
+    radial-gradient(900px 500px at 50% 110%, rgba(17,114,171,.10), transparent 60%),
+    var(--bg);
+}
+.login-card{
+  background:var(--panel); border-radius:20px; box-shadow:var(--shadow-lg);
+  padding:36px 28px 28px; width:100%; max-width:400px;
+  border:1px solid var(--border-soft);
+}
+.login-brand{display:flex; flex-direction:column; align-items:center; margin-bottom:26px}
+.login-brand .logo{
+  width:64px; height:64px; border-radius:16px; padding:6px;
+  background:linear-gradient(180deg,#fff,#f7fbfd);
+  border:1px solid var(--border); box-shadow:var(--shadow-sm);
+  display:flex; align-items:center; justify-content:center;
+}
+.login-brand .logo img{width:100%;height:100%;object-fit:contain}
+.login-brand h1{font-size:18px; font-weight:800; color:var(--cmc-navy); margin-top:14px; letter-spacing:-.2px}
+.login-brand .tag{font-size:10px; color:var(--cmc-aqua); font-weight:700; letter-spacing:2px; text-transform:uppercase; margin-top:4px}
+.login-brand .v2badge{
+  display:inline-block; margin-top:8px; font-size:9px; padding:2px 8px;
+  background:linear-gradient(135deg, var(--cmc-aqua), var(--cmc-blue));
+  color:#fff; border-radius:4px; font-weight:800; letter-spacing:1.2px;
+}
+
+.form-group{margin-bottom:14px}
+.form-group label{display:block; font-size:11px; font-weight:700; letter-spacing:.8px; color:var(--text-mute); margin-bottom:7px; text-transform:uppercase}
+.form-group input{
+  width:100%; padding:13px 15px; border:1.5px solid var(--border);
+  border-radius:12px; font-size:16px; color:var(--text); background:var(--panel-2);
+  transition:border-color .18s, box-shadow .18s, background-color .18s;
+  font-weight:500; letter-spacing:.3px;
+}
+.form-group input::placeholder{color:var(--text-dim); font-weight:400}
+.form-group input:hover{border-color:var(--cmc-aqua-dark); background:#fff}
+.form-group input:focus{outline:none; border-color:var(--cmc-aqua); background:#fff; box-shadow:var(--ring)}
+
+.btn{
+  width:100%; padding:14px; border-radius:12px;
+  font-size:14px; font-weight:700; letter-spacing:.4px;
+  display:flex; align-items:center; justify-content:center; gap:10px;
+  transition:background-color .18s, box-shadow .18s, transform .12s;
+}
+.btn-primary{background:linear-gradient(135deg, var(--cmc-blue), var(--cmc-navy)); color:#fff; box-shadow:0 4px 12px rgba(17,114,171,.28)}
+.btn-primary:hover{box-shadow:0 6px 18px rgba(17,114,171,.36)}
+.btn-primary:disabled{opacity:.55; cursor:not-allowed; box-shadow:none}
+.btn-ghost{background:var(--panel-2); color:var(--text-mute); border:1px solid var(--border)}
+.btn-ghost:hover{background:#fff; color:var(--cmc-navy); border-color:var(--cmc-aqua-dark)}
+
+.message{margin-top:12px; padding:11px 14px; border-radius:10px; font-size:12.5px; font-weight:600; text-align:center; display:none}
+.message.error{background:var(--red-soft); color:var(--red)}
+.message.info{background:var(--cmc-aqua-soft); color:var(--cmc-blue)}
+.message.show{display:block}
+
+.otp-section{display:none}
+.otp-section.show{display:block}
+.otp-header{font-size:12.5px; color:var(--text-mute); text-align:center; margin:6px 0 16px; line-height:1.5}
+.otp-header strong{color:var(--cmc-navy); font-weight:700}
+.otp-boxes{display:flex; gap:8px; justify-content:center; margin-bottom:18px}
+.otp-boxes input{
+  width:46px; height:54px; text-align:center;
+  font-size:22px; font-weight:700; color:var(--cmc-navy);
+  border:1.5px solid var(--border); border-radius:12px;
+  background:var(--panel-2); transition:all .18s var(--ease);
+}
+.otp-boxes input:focus{outline:none; border-color:var(--cmc-aqua); background:#fff; box-shadow:var(--ring); transform:translateY(-1px)}
+.resend-link{display:block; text-align:center; margin-top:14px; padding:8px; font-size:12px; color:var(--cmc-blue); font-weight:600; cursor:pointer; border-radius:8px}
+.resend-link:hover{background:var(--cmc-aqua-soft)}
+
+/* ═══════════════════════════════════════════════════════════════
+   DASHBOARD v2 — Layout con sidebar (desktop) + bottom nav (mobile)
+   ═══════════════════════════════════════════════════════════════ */
+#dashboard-screen{flex-direction:column; min-height:100vh}
+
+.topbar{
+  height:56px; padding:0 18px 0 18px;
+  padding-top:env(safe-area-inset-top);
+  background:rgba(255,255,255,.92); backdrop-filter:saturate(160%) blur(10px);
+  -webkit-backdrop-filter:saturate(160%) blur(10px);
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:10px;
+  position:sticky; top:0; z-index:20;
+  box-shadow:var(--shadow-xs);
+}
+.topbar::after{
+  content:""; position:absolute; left:0; right:0; bottom:-1px; height:1px;
+  background:linear-gradient(90deg, transparent, rgba(79,190,206,.35), rgba(17,114,171,.25), transparent);
+}
+.tb-brand{display:flex; align-items:center; gap:11px; position:relative; padding-right:14px; height:100%}
+.tb-brand::after{content:""; position:absolute; right:0; top:50%; transform:translateY(-50%); width:1px; height:28px; background:var(--border)}
+.tb-logo{
+  width:38px; height:38px; border-radius:12px; padding:3px;
+  background:linear-gradient(180deg,#fff,#f7fbfd); border:1px solid var(--border);
+  box-shadow:var(--shadow-xs); display:flex; align-items:center; justify-content:center; flex:0 0 38px;
+}
+.tb-logo img{width:100%;height:100%;object-fit:contain}
+.tb-text{display:flex; flex-direction:column; line-height:1.1; gap:2px}
+.tb-text .top{font-size:8.5px; color:var(--cmc-aqua); letter-spacing:2.2px; text-transform:uppercase; font-weight:800}
+.tb-text .bot{font-size:14px; font-weight:800; color:var(--cmc-navy); letter-spacing:.9px; text-transform:uppercase; display:flex; align-items:center; gap:6px}
+.tb-text .v2{
+  font-size:9px; padding:1px 6px; border-radius:4px;
+  background:linear-gradient(135deg, var(--cmc-aqua), var(--cmc-blue));
+  color:#fff; font-weight:800; letter-spacing:1px;
+}
+.tb-spacer{flex:1}
+.tb-patient{
+  display:flex; align-items:center; gap:10px; padding:5px 10px; border-radius:22px;
+  background:var(--panel-2); border:1px solid var(--border-soft);
+}
+.tb-patient .avatar{
+  width:28px; height:28px; border-radius:50%; flex:0 0 28px;
+  background:linear-gradient(135deg, var(--cmc-aqua), var(--cmc-blue));
+  color:#fff; font-size:11px; font-weight:800;
+  display:flex; align-items:center; justify-content:center;
+}
+.tb-patient .who{display:flex; flex-direction:column; line-height:1.1; gap:2px}
+.tb-patient .who .name{font-size:11.5px; font-weight:700; color:var(--cmc-navy)}
+.tb-patient .who .rut{font-size:9.5px; color:var(--text-dim); letter-spacing:.3px}
+.tb-logout{
+  padding:7px 12px; background:transparent; border:1px solid transparent;
+  border-radius:8px; font-size:12px; color:var(--text-mute); display:inline-flex;
+  align-items:center; gap:6px; font-weight:600; line-height:1;
+}
+.tb-logout:hover{background:var(--panel-2); color:var(--cmc-navy); border-color:var(--border-soft)}
+.tb-logout svg{width:13px;height:13px}
+@media (max-width:720px){
+  .tb-patient .who{display:none}
+  .tb-patient{padding:5px}
+  .tb-logout span{display:none}
+  .tb-text .top{display:none}
+}
+
+/* Shell */
+.shell{display:grid; grid-template-columns: var(--sidebar-w) 1fr; min-height:calc(100vh - 56px)}
+@media (max-width:860px){ .shell{grid-template-columns:1fr; padding-bottom:72px} }
+
+.sidebar{
+  background:var(--panel); border-right:1px solid var(--border);
+  padding:18px 14px; display:flex; flex-direction:column; gap:4px;
+  position:sticky; top:56px; align-self:start;
+  max-height:calc(100vh - 56px); overflow-y:auto;
+}
+@media (max-width:860px){
+  .sidebar{
+    position:fixed; bottom:0; left:0; right:0; top:auto;
+    flex-direction:row; border-right:none; border-top:1px solid var(--border);
+    padding:6px env(safe-area-inset-right) calc(6px + env(safe-area-inset-bottom)) env(safe-area-inset-left);
+    background:rgba(255,255,255,.96); backdrop-filter:blur(10px); gap:0;
+    z-index:20; justify-content:space-around; box-shadow:0 -4px 14px rgba(15,63,104,.06);
+    max-height:none; overflow:visible;
+  }
+}
+.nav-group{margin-bottom:18px}
+.nav-group .label{
+  font-size:9.5px; font-weight:800; letter-spacing:1.5px;
+  color:var(--text-dim); text-transform:uppercase; padding:0 12px 8px;
+}
+@media (max-width:860px){ .nav-group{margin-bottom:0} .nav-group .label{display:none} }
+
+.navbtn{
+  display:flex; align-items:center; gap:11px;
+  padding:10px 12px; border-radius:10px;
+  font-size:13px; font-weight:600; color:var(--text-mute);
+  width:100%; text-align:left;
+}
+.navbtn svg{width:18px; height:18px; flex:0 0 18px}
+.navbtn:hover{background:var(--panel-2); color:var(--cmc-navy)}
+.navbtn.active{
+  background:linear-gradient(90deg, var(--cmc-aqua-soft), transparent);
+  color:var(--cmc-navy); font-weight:700;
+  position:relative;
+}
+.navbtn.active::before{
+  content:""; position:absolute; left:-14px; top:8px; bottom:8px; width:3px;
+  background:linear-gradient(180deg, var(--cmc-aqua), var(--cmc-blue)); border-radius:0 3px 3px 0;
+}
+@media (max-width:860px){
+  .navbtn{flex-direction:column; gap:2px; padding:8px 6px; font-size:10px; border-radius:8px}
+  .navbtn svg{width:20px;height:20px}
+  .navbtn.active{background:var(--cmc-aqua-soft)}
+  .navbtn.active::before{display:none}
+}
+
+.main{padding:22px 26px 36px; min-width:0}
+@media (max-width:860px){ .main{padding:16px 14px 30px} }
+
+.view{display:none; animation:fadeInUp .3s var(--ease) both}
+.view.active{display:block}
+@keyframes fadeInUp{from{opacity:0; transform:translateY(4px)}to{opacity:1; transform:none}}
+
+/* Page head */
+.page-head-v2{
+  display:flex; align-items:flex-end; justify-content:space-between; gap:16px;
+  margin-bottom:20px; flex-wrap:wrap;
+}
+.page-head-v2 .title{font-size:22px; font-weight:800; color:var(--cmc-navy); letter-spacing:-.4px; line-height:1.15}
+.page-head-v2 .subtitle{font-size:12.5px; color:var(--text-mute); margin-top:4px; font-weight:500}
+.page-actions{display:flex; gap:8px; flex-wrap:wrap}
+
+.btn-sm{
+  padding:9px 14px; border-radius:10px; font-size:12px; font-weight:700;
+  display:inline-flex; align-items:center; gap:6px; line-height:1;
+  letter-spacing:.2px; transition:all .18s var(--ease);
+}
+.btn-sm svg{width:13px;height:13px}
+.btn-sm.primary{background:linear-gradient(135deg, var(--cmc-aqua), var(--cmc-blue)); color:#fff; box-shadow:0 2px 6px rgba(17,114,171,.25)}
+.btn-sm.primary:hover{box-shadow:0 4px 12px rgba(17,114,171,.35)}
+.btn-sm.ghost{background:var(--panel-2); color:var(--cmc-blue); border:1px solid var(--border)}
+.btn-sm.ghost:hover{background:#fff; border-color:var(--cmc-aqua)}
+.btn-sm.wa{background:linear-gradient(135deg, #25d366, #128c7e); color:#fff; box-shadow:0 2px 8px rgba(18,140,126,.3)}
+
+/* ═══ Inicio (hero + quick) ═══ */
+.hero-card{
+  background:
+    radial-gradient(600px 300px at 100% -30%, rgba(79,190,206,.28), transparent 60%),
+    linear-gradient(135deg, var(--cmc-navy), var(--cmc-blue));
+  color:#fff; border-radius:var(--radius-lg); padding:20px 22px;
+  margin-bottom:18px; position:relative; overflow:hidden;
+  box-shadow:var(--shadow-md);
+}
+.hero-card .tag{font-size:9.5px; font-weight:800; letter-spacing:2px; text-transform:uppercase; opacity:.78; margin-bottom:4px}
+.hero-card .greeting{font-size:24px; font-weight:800; letter-spacing:-.4px; line-height:1.15}
+.hero-card .next-appt{
+  margin-top:14px; padding:14px; border-radius:14px;
+  background:rgba(255,255,255,.12); backdrop-filter:blur(6px);
+  border:1px solid rgba(255,255,255,.18);
+  display:grid; grid-template-columns:72px 1fr auto; gap:14px; align-items:center;
+}
+.hero-card .next-appt.empty{grid-template-columns:1fr; text-align:center; padding:24px 14px}
+.hero-card .appt-date{
+  background:rgba(255,255,255,.14); border-radius:12px;
+  padding:8px 4px; text-align:center; font-feature-settings:"tnum";
+}
+.hero-card .appt-date .dow{font-size:9px; font-weight:800; letter-spacing:1.2px; opacity:.85; text-transform:uppercase}
+.hero-card .appt-date .d{font-size:26px; font-weight:800; line-height:1; margin:2px 0}
+.hero-card .appt-date .m{font-size:9px; font-weight:700; letter-spacing:1.3px; opacity:.85; text-transform:uppercase}
+.hero-card .appt-info{display:flex; flex-direction:column; gap:2px; min-width:0}
+.hero-card .appt-info .esp{font-size:10px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; opacity:.85}
+.hero-card .appt-info .time{font-size:18px; font-weight:800; line-height:1.1}
+.hero-card .appt-info .prof{font-size:12px; opacity:.88; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.hero-card .appt-info .when{font-size:10px; font-weight:700; opacity:.9; margin-top:2px}
+.hero-card .appt-cta{
+  padding:8px 14px; border-radius:22px; font-size:11px; font-weight:700; letter-spacing:.3px;
+  background:#fff; color:var(--cmc-navy);
+}
+@media (max-width:520px){
+  .hero-card .next-appt{grid-template-columns:58px 1fr; gap:12px}
+  .hero-card .next-appt .appt-cta{display:none}
+}
+
+.quick-actions{
+  display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-bottom:22px;
+}
+@media (max-width:640px){ .quick-actions{grid-template-columns:repeat(2, 1fr)} }
+.qa{
+  background:var(--panel); border:1px solid var(--border-soft); border-radius:var(--radius);
+  padding:14px 12px; text-align:left; display:flex; flex-direction:column; gap:6px;
+  transition:transform .2s var(--ease), box-shadow .2s var(--ease), border-color .18s;
+}
+.qa:hover{transform:translateY(-2px); box-shadow:var(--shadow-md); border-color:var(--cmc-aqua)}
+.qa .ic{
+  width:36px; height:36px; border-radius:10px;
+  background:var(--cmc-aqua-soft); color:var(--cmc-blue);
+  display:flex; align-items:center; justify-content:center;
+}
+.qa .ic svg{width:18px;height:18px}
+.qa .t{font-size:13px; font-weight:800; color:var(--cmc-navy); letter-spacing:-.1px; line-height:1.2}
+.qa .s{font-size:11px; color:var(--text-mute); font-weight:500; line-height:1.35}
+
+/* Stats glance */
+.stats-row{display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-bottom:22px}
+@media (max-width:520px){ .stats-row{grid-template-columns:1fr 1fr} }
+.stat-card{
+  background:var(--panel); border:1px solid var(--border-soft); border-radius:var(--radius);
+  padding:12px 14px;
+}
+.stat-card .k{font-size:9.5px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-dim); margin-bottom:3px}
+.stat-card .v{font-size:20px; font-weight:800; color:var(--cmc-navy); font-feature-settings:"tnum"}
+.stat-card .v .u{font-size:10px; font-weight:600; color:var(--text-dim); margin-left:3px}
+.stat-card .s{font-size:11px; color:var(--text-mute); font-weight:500}
+
+.panel{
+  background:var(--panel); border:1px solid var(--border-soft); border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-sm); padding:18px 20px; margin-bottom:18px;
+}
+.panel-head{
+  display:flex; align-items:center; gap:10px; margin-bottom:14px;
+}
+.panel-head .dot{width:8px; height:8px; border-radius:50%; background:var(--cmc-aqua); box-shadow:0 0 0 4px rgba(79,190,206,.2)}
+.panel-head h2{font-size:13px; font-weight:800; color:var(--cmc-navy); letter-spacing:.5px; text-transform:uppercase; flex:1}
+.panel-head .count{font-size:11px; font-weight:700; color:var(--cmc-blue); background:var(--cmc-aqua-soft); padding:3px 10px; border-radius:20px}
+
+/* ═══ Citas cards ═══ */
+.appt-card{
+  background:var(--panel-2); border:1px solid var(--border-soft); border-radius:var(--radius);
+  padding:14px 16px; margin-bottom:10px;
+  display:grid; grid-template-columns:74px 1fr auto; gap:14px; align-items:center;
+  transition:transform .18s var(--ease), box-shadow .18s var(--ease);
+}
+.appt-card:hover{transform:translateY(-1px); box-shadow:var(--shadow-sm)}
+.appt-card .date-chip{
+  background:linear-gradient(160deg, var(--cmc-aqua-soft), var(--cmc-blue-soft));
+  border-radius:12px; padding:9px 6px; text-align:center;
+  display:flex; flex-direction:column; gap:1px;
+  border:1px solid rgba(79,190,206,.25); position:relative; overflow:hidden;
+}
+.appt-card .date-chip::before{content:""; position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg, var(--cmc-aqua), var(--cmc-blue))}
+.appt-card .dow{font-size:9.5px; font-weight:800; letter-spacing:1.2px; color:var(--cmc-blue); text-transform:uppercase}
+.appt-card .day{font-size:24px; font-weight:800; color:var(--cmc-navy); line-height:1; letter-spacing:-1px; font-feature-settings:"tnum"}
+.appt-card .month{font-size:9px; font-weight:700; color:var(--text-mute); letter-spacing:1.3px; text-transform:uppercase}
+.appt-card .info{display:flex; flex-direction:column; gap:3px; min-width:0}
+.appt-card .esp{font-size:10.5px; font-weight:800; color:var(--cmc-blue); letter-spacing:.4px; text-transform:uppercase}
+.appt-card .time{font-size:17px; font-weight:800; color:var(--cmc-navy); font-feature-settings:"tnum"}
+.appt-card .time .u{font-size:10px; font-weight:600; color:var(--text-dim); margin-left:4px}
+.appt-card .prof{font-size:12.5px; color:var(--text-mute); font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.appt-card .when{
+  display:inline-flex; align-items:center; padding:3px 9px; border-radius:22px;
+  font-size:10px; font-weight:800; letter-spacing:.4px; text-transform:uppercase;
+  width:fit-content; margin-top:1px;
+}
+.appt-card .when.today{background:var(--green); color:#fff}
+.appt-card .when.tomorrow{background:#fff3cd; color:#8b6508}
+.appt-card .when.soon{background:var(--cmc-aqua-soft); color:var(--cmc-blue)}
+.appt-card .when.later{background:var(--panel); color:var(--text-mute)}
+
+/* Historial compacto */
+.hist-card{
+  padding:10px 14px; border-radius:10px;
+  background:var(--panel-2); border:1px solid var(--border-soft);
+  margin-bottom:6px;
+  display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center;
+}
+.hist-card .d{font-size:12px; font-weight:700; color:var(--cmc-navy)}
+.hist-card .p{font-size:11.5px; color:var(--text-mute); font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.hist-card .r{display:flex; flex-direction:column; align-items:flex-end; gap:2px}
+.hist-card .t{font-size:12.5px; font-weight:700; color:var(--cmc-blue); font-feature-settings:"tnum"}
+.hist-card .e{font-size:9px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--text-dim); padding:2px 7px; border-radius:10px; background:var(--panel)}
+
+/* Dx chips */
+.dx-chips{display:flex; flex-wrap:wrap; gap:7px}
+.dx-chip{
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:11.5px; font-weight:700; letter-spacing:.3px;
+  padding:7px 13px; border-radius:22px;
+  background:var(--amber-soft); color:#8b6508; border:1px solid #f0e1b4;
+}
+.dx-chip::before{content:""; width:6px; height:6px; border-radius:50%; background:var(--amber)}
+
+/* Empty state */
+.empty-state{
+  text-align:center; padding:28px 18px;
+  border:1px dashed var(--border); border-radius:var(--radius);
+}
+.empty-state .ic{
+  width:48px; height:48px; margin:0 auto 10px;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--cmc-aqua-soft); border-radius:50%; color:var(--cmc-blue);
+}
+.empty-state .ic svg{width:24px; height:24px}
+.empty-state p{font-size:13px; color:var(--text-mute); font-weight:600}
+.empty-state .sub{font-size:11.5px; color:var(--text-dim); margin-top:4px; font-weight:400}
+
+/* ═══ Vitals ═══ */
+.vitals-toolbar{display:flex; align-items:center; gap:8px; margin-bottom:14px; flex-wrap:wrap}
+.vital-tabs{display:flex; gap:5px; flex-wrap:wrap; flex:1}
+.vital-tab{
+  padding:7px 13px; border-radius:22px; font-size:11.5px; font-weight:700;
+  color:var(--text-mute); background:var(--panel-2); border:1px solid var(--border);
+  display:inline-flex; align-items:center; gap:6px;
+}
+.vital-tab svg{width:13px;height:13px}
+.vital-tab:hover{border-color:var(--cmc-aqua-dark); color:var(--cmc-blue)}
+.vital-tab.active{
+  background:linear-gradient(135deg, var(--cmc-blue), var(--cmc-navy));
+  color:#fff; border-color:transparent;
+  box-shadow:0 2px 6px rgba(17,114,171,.28);
+}
+
+.vital-summary{display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-bottom:14px}
+@media (max-width:520px){ .vital-summary{grid-template-columns:repeat(3, 1fr)} }
+.vital-stat{
+  background:var(--panel-2); border:1px solid var(--border-soft); border-radius:var(--radius-sm);
+  padding:10px 12px;
+}
+.vital-stat .k{font-size:9px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-dim); margin-bottom:3px}
+.vital-stat .v{font-size:17px; font-weight:800; color:var(--cmc-navy); font-feature-settings:"tnum"}
+.vital-stat .v .u{font-size:10px; font-weight:600; color:var(--text-dim); margin-left:3px}
+.vital-stat.alert{background:var(--red-soft); border-color:#fcd6d4}
+.vital-stat.alert .v{color:var(--red)}
+.vital-stat.warn{background:var(--amber-soft); border-color:#f0e1b4}
+.vital-stat.warn .v{color:#8b6508}
+.vital-stat.ok{background:#e6f7ef; border-color:#bfe8d3}
+.vital-stat.ok .v{color:var(--green-dark)}
+
+.vital-chart{
+  background:linear-gradient(180deg, var(--panel-2), #fff);
+  border:1px solid var(--border-soft); border-radius:var(--radius);
+  padding:12px; margin-bottom:14px; position:relative;
+}
+.vital-chart svg{width:100%; height:140px; display:block}
+.vital-chart .legend{position:absolute; top:10px; right:12px; font-size:9px; font-weight:700; color:var(--text-dim); letter-spacing:.4px; text-transform:uppercase}
+
+.vital-list{display:flex; flex-direction:column; gap:6px}
+.vrow{
+  display:grid; grid-template-columns:88px 1fr auto auto; gap:12px; align-items:center;
+  padding:10px 12px; border-radius:10px;
+  background:var(--panel-2); border:1px solid var(--border-soft);
+}
+.vrow:hover{background:#fff}
+.vrow .vd{font-size:11px; color:var(--text-mute); font-weight:600; font-feature-settings:"tnum"}
+.vrow .vv{font-size:14px; font-weight:800; color:var(--cmc-navy); font-feature-settings:"tnum"}
+.vrow .vv .ctx{font-size:9.5px; color:var(--text-dim); font-weight:700; margin-left:6px; letter-spacing:.3px; text-transform:uppercase}
+.vrow .vb{font-size:9px; font-weight:800; padding:3px 9px; border-radius:12px; letter-spacing:.5px; text-transform:uppercase}
+.vb.ok{background:#dcf8c6; color:var(--green-dark)}
+.vb.warn{background:var(--amber-soft); color:#8b6508}
+.vb.alert{background:var(--red-soft); color:var(--red)}
+.vrow .vx{color:var(--text-dim); padding:4px 6px; font-size:15px; line-height:1}
+.vrow .vx:hover{color:var(--red)}
+
+/* ═══ Tips + Guías + Promos (Recursos) ═══ */
+.grid-2{display:grid; grid-template-columns:repeat(2, 1fr); gap:10px}
+@media (max-width:560px){ .grid-2{grid-template-columns:1fr} }
+
+.tip{
+  background:linear-gradient(180deg, #fff, var(--panel-2));
+  border:1px solid var(--border-soft); border-radius:var(--radius);
+  padding:12px 14px;
+}
+.tip .h{display:flex; align-items:center; gap:10px; margin-bottom:4px}
+.tip .ic{width:30px; height:30px; border-radius:9px; display:flex; align-items:center; justify-content:center; background:var(--cmc-aqua-soft); color:var(--cmc-blue); flex:0 0 30px}
+.tip .ic svg{width:16px;height:16px}
+.tip.green .ic{background:#dcf8c6; color:var(--green-dark)}
+.tip.amber .ic{background:var(--amber-soft); color:#8b6508}
+.tip.navy .ic{background:var(--cmc-navy-soft); color:var(--cmc-navy)}
+.tip .cat{font-size:9px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:var(--cmc-aqua-dark)}
+.tip .t{font-size:12.5px; font-weight:700; color:var(--cmc-navy); line-height:1.2; letter-spacing:-.1px}
+.tip .d{font-size:11.5px; color:var(--text-mute); line-height:1.45; margin-top:4px}
+
+.guide{
+  background:var(--panel); border:1px solid var(--border-soft); border-radius:var(--radius);
+  padding:14px 16px; cursor:pointer;
+  transition:transform .18s var(--ease), box-shadow .18s var(--ease), border-color .18s;
+}
+.guide:hover{transform:translateY(-1px); box-shadow:var(--shadow-sm); border-color:var(--cmc-aqua)}
+.guide .h{display:flex; align-items:center; gap:10px; margin-bottom:6px}
+.guide .ic{width:34px; height:34px; border-radius:10px; background:var(--cmc-blue-soft); color:var(--cmc-blue); display:flex; align-items:center; justify-content:center; flex:0 0 34px}
+.guide .ic svg{width:16px;height:16px}
+.guide .t{font-size:13px; font-weight:700; color:var(--cmc-navy); letter-spacing:-.1px}
+.guide .sub{font-size:11px; color:var(--text-dim); font-weight:600; letter-spacing:.3px; text-transform:uppercase}
+.guide .d{font-size:12px; color:var(--text-mute); line-height:1.45}
+.guide-detail{
+  display:none; margin-top:10px; padding-top:12px; border-top:1px dashed var(--border);
+  font-size:12.5px; color:var(--text-mute); line-height:1.55;
+}
+.guide-detail ol{padding-left:20px; display:flex; flex-direction:column; gap:6px}
+.guide-detail strong{color:var(--cmc-navy)}
+.guide.open .guide-detail{display:block; animation:fadeInUp .25s var(--ease)}
+
+.promo{
+  background:var(--panel); border:1px solid var(--border-soft); border-radius:var(--radius);
+  padding:14px 15px; position:relative; overflow:hidden; cursor:pointer;
+  transition:transform .18s var(--ease), box-shadow .18s var(--ease);
+}
+.promo:hover{transform:translateY(-1px); box-shadow:var(--shadow-sm)}
+.promo::before{content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background:linear-gradient(180deg, var(--cmc-aqua), var(--cmc-blue))}
+.promo .h{display:flex; align-items:center; gap:10px; margin-bottom:6px}
+.promo .ic{width:34px; height:34px; border-radius:10px; background:var(--cmc-aqua-soft); color:var(--cmc-blue); display:flex; align-items:center; justify-content:center; flex:0 0 34px}
+.promo .ic svg{width:17px;height:17px}
+.promo .cat{font-size:9px; font-weight:800; letter-spacing:1.3px; text-transform:uppercase; color:var(--cmc-aqua-dark)}
+.promo .t{font-size:13px; font-weight:700; color:var(--cmc-navy); line-height:1.2; letter-spacing:-.1px}
+.promo .d{font-size:12px; color:var(--text-mute); line-height:1.45; margin-top:4px}
+.promo .price{display:inline-block; margin-top:8px; font-size:11px; font-weight:800; color:var(--cmc-blue); background:var(--cmc-aqua-soft); padding:3px 9px; border-radius:12px}
+.promo .cta{margin-top:8px; font-size:11.5px; font-weight:700; color:var(--cmc-blue); display:inline-flex; align-items:center; gap:5px}
+.promo .cta svg{width:12px;height:12px; transition:transform .2s}
+.promo:hover .cta svg{transform:translateX(3px)}
+
+/* Modal */
+.modal-backdrop{position:fixed; inset:0; background:rgba(15,63,104,.5); backdrop-filter:blur(3px); display:none; align-items:center; justify-content:center; padding:16px; z-index:100}
+.modal-backdrop.show{display:flex; animation:fadeInBg .2s var(--ease)}
+@keyframes fadeInBg{from{opacity:0}to{opacity:1}}
+.modal{background:var(--panel); border-radius:18px; box-shadow:var(--shadow-lg); padding:22px; width:100%; max-width:440px; animation:modalSlide .3s var(--ease-spring)}
+@keyframes modalSlide{from{opacity:0; transform:translateY(16px) scale(.96)}to{opacity:1; transform:none}}
+.modal-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:16px}
+.modal-head h3{font-size:16px; font-weight:800; color:var(--cmc-navy); letter-spacing:-.2px}
+.modal-close{color:var(--text-dim); font-size:24px; line-height:1; padding:4px 8px}
+.modal-close:hover{color:var(--cmc-navy)}
+.tipo-grid{display:grid; grid-template-columns:repeat(2, 1fr); gap:8px; margin-bottom:14px}
+.tipo-btn{
+  padding:10px; border:1.5px solid var(--border); border-radius:12px;
+  background:var(--panel-2); display:flex; align-items:center; gap:8px;
+  font-size:12.5px; font-weight:700; color:var(--text-mute);
+}
+.tipo-btn svg{width:16px;height:16px}
+.tipo-btn:hover{border-color:var(--cmc-aqua-dark); color:var(--cmc-blue)}
+.tipo-btn.active{background:linear-gradient(135deg, var(--cmc-aqua-soft), #fff); border-color:var(--cmc-aqua); color:var(--cmc-navy)}
+.field{display:flex; flex-direction:column; gap:5px; margin-bottom:10px}
+.field label{font-size:10.5px; font-weight:800; letter-spacing:.6px; color:var(--text-mute); text-transform:uppercase}
+.field input, .field select, .field textarea{
+  padding:11px 13px; border:1.5px solid var(--border); border-radius:10px;
+  background:var(--panel-2); font-size:14px; font-weight:600; color:var(--text);
+}
+.field input:focus, .field select:focus, .field textarea:focus{outline:none; border-color:var(--cmc-aqua); background:#fff; box-shadow:var(--ring)}
+.field-row{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.modal-actions{display:flex; gap:8px; margin-top:16px}
+.modal-actions .btn{flex:1; padding:12px}
+
+/* CTA flotante WA */
+.cta-float{
+  position:fixed; left:0; right:0; bottom:0;
+  padding:14px 16px calc(14px + env(safe-area-inset-bottom));
+  pointer-events:none; z-index:15;
+  background:linear-gradient(to top, var(--bg) 60%, rgba(243,246,249,0));
+}
+@media (max-width:860px){ .cta-float{bottom:60px; padding-bottom:10px} }
+.cta-float > *{pointer-events:auto}
+.btn-wa-float{
+  max-width:560px; margin:0 auto; width:100%; padding:14px 20px;
+  background:linear-gradient(135deg, #25d366, #128c7e); color:#fff;
+  border-radius:16px; font-size:14px; font-weight:800; letter-spacing:.3px;
+  display:flex; align-items:center; justify-content:center; gap:10px;
+  box-shadow:0 6px 20px rgba(18,140,126,.35);
+}
+.btn-wa-float:hover{box-shadow:0 8px 28px rgba(18,140,126,.45)}
+.btn-wa-float svg{width:18px;height:18px;fill:#fff}
+
+/* Toast */
+.toast{
+  position:fixed; bottom:80px; left:50%; transform:translateX(-50%);
+  background:var(--cmc-navy); color:#fff;
+  padding:10px 18px; border-radius:22px; font-size:12.5px; font-weight:700;
+  box-shadow:var(--shadow-lg); z-index:200; opacity:0; transition:opacity .2s;
+  pointer-events:none;
+}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loading-screen" class="loading-screen"><div class="spinner"></div><p>Cargando…</p></div>
+
+<!-- Login -->
+<div id="login-screen" class="screen">
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="logo"><img src="/static/isotipo.png" alt="CMC" onerror="this.src='/static/logo.png'"></div>
+      <h1>Mi Salud</h1>
+      <span class="tag">Centro Médico Carampangue</span>
+      <span class="v2badge">V2</span>
+    </div>
+    <div id="step-rut">
+      <div class="form-group">
+        <label for="rut-input">Tu RUT</label>
+        <input type="text" id="rut-input" placeholder="12.345.678-9" inputmode="text" autocomplete="off" maxlength="12">
+      </div>
+      <button class="btn btn-primary" id="btn-send-code" onclick="requestCode()">
+        Enviar código por WhatsApp
+      </button>
+    </div>
+    <div class="otp-section" id="otp-section">
+      <div class="otp-header">Código de 6 dígitos enviado<br>a <strong id="otp-target">tu WhatsApp</strong></div>
+      <div class="otp-boxes" id="otp-boxes">
+        <input type="text" inputmode="numeric" maxlength="1" placeholder="•">
+        <input type="text" inputmode="numeric" maxlength="1" placeholder="•">
+        <input type="text" inputmode="numeric" maxlength="1" placeholder="•">
+        <input type="text" inputmode="numeric" maxlength="1" placeholder="•">
+        <input type="text" inputmode="numeric" maxlength="1" placeholder="•">
+        <input type="text" inputmode="numeric" maxlength="1" placeholder="•">
+      </div>
+      <button class="btn btn-primary" id="btn-verify" onclick="verifyCode()">Verificar</button>
+      <span class="resend-link" onclick="requestCode()">Reenviar código</span>
+    </div>
+    <div class="message error" id="error-msg"></div>
+    <div class="message info" id="info-msg"></div>
+  </div>
+</div>
+
+<!-- Dashboard -->
+<div id="dashboard-screen" class="screen">
+  <div class="topbar">
+    <div class="tb-brand">
+      <div class="tb-logo"><img src="/static/isotipo.png" alt="CMC" onerror="this.src='/static/logo.png'"></div>
+      <div class="tb-text">
+        <span class="top">Centro Médico</span>
+        <span class="bot">Carampangue <span class="v2">V2</span></span>
+      </div>
+    </div>
+    <div class="tb-spacer"></div>
+    <div class="tb-patient">
+      <div class="avatar" id="tb-avatar">—</div>
+      <div class="who">
+        <span class="name" id="tb-name">—</span>
+        <span class="rut" id="tb-rut">—</span>
+      </div>
+    </div>
+    <button class="tb-logout" onclick="doLogout()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      <span>Salir</span>
+    </button>
+  </div>
+
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="nav-group">
+        <div class="label">Menú</div>
+        <button class="navbtn active" data-view="inicio" onclick="switchView('inicio')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2h-4a2 2 0 01-2-2v-5h-2v5a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+          Inicio
+        </button>
+        <button class="navbtn" data-view="agenda" onclick="switchView('agenda')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Agenda
+        </button>
+        <button class="navbtn" data-view="salud" onclick="switchView('salud')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+          Mi salud
+        </button>
+        <button class="navbtn" data-view="recursos" onclick="switchView('recursos')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+          Recursos
+        </button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <!-- View: Inicio -->
+      <section class="view active" id="view-inicio">
+        <div class="page-head-v2">
+          <div>
+            <div class="title" id="greet-title">Hola</div>
+            <div class="subtitle" id="greet-subtitle">Bienvenido a tu portal</div>
+          </div>
+        </div>
+        <div id="inicio-content"></div>
+      </section>
+
+      <!-- View: Agenda -->
+      <section class="view" id="view-agenda">
+        <div class="page-head-v2">
+          <div>
+            <div class="title">Mi agenda</div>
+            <div class="subtitle">Próximas citas y atenciones anteriores</div>
+          </div>
+          <div class="page-actions">
+            <button class="btn-sm wa" onclick="agendar()">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              Agendar
+            </button>
+          </div>
+        </div>
+        <div id="agenda-content"></div>
+      </section>
+
+      <!-- View: Mi salud -->
+      <section class="view" id="view-salud">
+        <div class="page-head-v2">
+          <div>
+            <div class="title">Mi salud</div>
+            <div class="subtitle">Diagnósticos y auto-monitoreo</div>
+          </div>
+          <div class="page-actions">
+            <button class="btn-sm primary" onclick="openVitalModal()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Registrar
+            </button>
+            <button class="btn-sm ghost" onclick="exportInforme()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+              Informe
+            </button>
+          </div>
+        </div>
+        <div id="salud-content"></div>
+      </section>
+
+      <!-- View: Recursos -->
+      <section class="view" id="view-recursos">
+        <div class="page-head-v2">
+          <div>
+            <div class="title">Recursos</div>
+            <div class="subtitle">Guías, consejos y servicios recomendados</div>
+          </div>
+        </div>
+        <div id="recursos-content"></div>
+      </section>
+    </main>
+  </div>
+
+  <div class="cta-float">
+    <button class="btn-wa-float" onclick="agendar()">
+      <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      Agendar nueva cita
+    </button>
+  </div>
+
+  <!-- Modal vital -->
+  <div class="modal-backdrop" id="vital-modal" onclick="if(event.target===this)closeVitalModal()">
+    <div class="modal">
+      <div class="modal-head">
+        <h3>Nuevo registro</h3>
+        <button class="modal-close" onclick="closeVitalModal()">×</button>
+      </div>
+      <div class="tipo-grid" id="vital-tipo-sel">
+        <button class="tipo-btn" data-tipo="presion" onclick="selectTipo('presion')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 6v6l4 2"/></svg>
+          Presión
+        </button>
+        <button class="tipo-btn" data-tipo="glicemia" onclick="selectTipo('glicemia')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 14l4-10 4 10"/><path d="M12 14v8"/></svg>
+          Glicemia
+        </button>
+        <button class="tipo-btn" data-tipo="peso" onclick="selectTipo('peso')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 12h6"/><path d="M12 9l-3 3 3 3"/></svg>
+          Peso
+        </button>
+        <button class="tipo-btn" data-tipo="temperatura" onclick="selectTipo('temperatura')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76V3.5a2.5 2.5 0 00-5 0v11.26a4 4 0 105 0z"/></svg>
+          Temperatura
+        </button>
+      </div>
+      <div id="vital-fields"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeVitalModal()">Cancelar</button>
+        <button class="btn btn-primary" id="vital-save-btn" onclick="saveVital()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* ═══ State ═══ */
+let currentRut = '';
+let patientData = null;
+let currentView = 'inicio';
+let currentVitalTipo = 'presion';
+let allVitals = { presion:[], glicemia:[], peso:[], temperatura:[] };
+
+const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const DIAS = ['dom','lun','mar','mié','jue','vie','sáb'];
+
+/* ═══ Init + auth ═══ */
+(async function init() {
+  try {
+    const r = await fetch('/portal/api/datos', { credentials: 'same-origin' });
+    if (r.ok) { patientData = await r.json(); await loadAllVitals(); showDashboard(); }
+    else showLogin();
+  } catch { showLogin(); }
+})();
+
+function showLogin() {
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('login-screen').classList.add('active');
+  document.getElementById('dashboard-screen').classList.remove('active');
+  document.getElementById('rut-input').focus();
+}
+function showDashboard() {
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('login-screen').classList.remove('active');
+  document.getElementById('dashboard-screen').classList.add('active');
+  renderAll();
+}
+
+/* ═══ RUT formatter ═══ */
+document.getElementById('rut-input').addEventListener('input', function(e) {
+  let v = e.target.value.replace(/[^0-9kK]/g, '').toUpperCase();
+  if (v.length > 9) v = v.slice(0, 9);
+  if (v.length > 1) {
+    const dv = v.slice(-1); const body = v.slice(0, -1);
+    let formatted = ''; const reversed = body.split('').reverse();
+    for (let i = 0; i < reversed.length; i++) { if (i > 0 && i % 3 === 0) formatted = '.' + formatted; formatted = reversed[i] + formatted; }
+    e.target.value = formatted + '-' + dv;
+  }
+});
+document.getElementById('rut-input').addEventListener('keydown', e => { if (e.key === 'Enter') requestCode(); });
+
+/* ═══ OTP ═══ */
+const otpInputs = document.querySelectorAll('#otp-boxes input');
+otpInputs.forEach((inp, i) => {
+  inp.addEventListener('input', function() {
+    this.value = this.value.replace(/[^0-9]/g, '');
+    if (this.value && i < 5) otpInputs[i + 1].focus();
+    if (i === 5 && this.value) { const code = [...otpInputs].map(x => x.value).join(''); if (code.length === 6) verifyCode(); }
+  });
+  inp.addEventListener('keydown', function(e) { if (e.key === 'Backspace' && !this.value && i > 0) otpInputs[i - 1].focus(); });
+  inp.addEventListener('paste', function(e) {
+    e.preventDefault();
+    const paste = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+    for (let j = 0; j < 6 && j < paste.length; j++) otpInputs[j].value = paste[j];
+    if (paste.length >= 6) verifyCode(); else if (paste.length > 0) otpInputs[Math.min(paste.length, 5)].focus();
+  });
+});
+
+async function requestCode() {
+  const rut = document.getElementById('rut-input').value.trim();
+  if (!rut || rut.length < 9) { showError('Ingresa un RUT válido'); return; }
+  currentRut = rut;
+  const btn = document.getElementById('btn-send-code');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner sm" style="border-color:rgba(255,255,255,.35);border-top-color:#fff"></span>';
+  hideMessages();
+  try {
+    const r = await fetch('/portal/api/request-code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rut }) });
+    const data = await r.json();
+    if (!r.ok) { showError(data.detail || 'Error enviando código'); btn.disabled = false; btn.textContent = 'Enviar código por WhatsApp'; return; }
+    document.getElementById('step-rut').style.display = 'none';
+    document.getElementById('otp-section').classList.add('show');
+    if (data.rut_masked) document.getElementById('otp-target').textContent = 'tu WhatsApp (' + data.rut_masked + ')';
+    showInfo('Código enviado'); otpInputs.forEach(x => x.value = ''); otpInputs[0].focus();
+  } catch { showError('Error de conexión'); }
+  btn.disabled = false;
+}
+
+async function verifyCode() {
+  const code = [...otpInputs].map(x => x.value).join('');
+  if (code.length !== 6) { showError('Ingresa los 6 dígitos'); return; }
+  const btn = document.getElementById('btn-verify');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner sm" style="border-color:rgba(255,255,255,.35);border-top-color:#fff"></span>';
+  hideMessages();
+  try {
+    const r = await fetch('/portal/api/verify-code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rut: currentRut, code }), credentials: 'same-origin' });
+    const data = await r.json();
+    if (!r.ok) { showError(data.detail || 'Código incorrecto'); btn.disabled = false; btn.textContent = 'Verificar'; otpInputs.forEach(x => x.value = ''); otpInputs[0].focus(); return; }
+    const r2 = await fetch('/portal/api/datos', { credentials: 'same-origin' });
+    if (r2.ok) { patientData = await r2.json(); await loadAllVitals(); showDashboard(); }
+    else showError('Error cargando datos');
+  } catch { showError('Error de conexión'); }
+  btn.disabled = false; btn.textContent = 'Verificar';
+}
+
+async function doLogout() {
+  await fetch('/portal/api/logout', { method: 'POST', credentials: 'same-origin' });
+  patientData = null; allVitals = { presion:[], glicemia:[], peso:[], temperatura:[] };
+  document.getElementById('step-rut').style.display = 'block';
+  document.getElementById('otp-section').classList.remove('show');
+  document.getElementById('rut-input').value = ''; hideMessages(); showLogin();
+}
+
+function agendar() { if (patientData && patientData.whatsapp_url) window.open(patientData.whatsapp_url, '_blank'); }
+
+/* ═══ Vitals API ═══ */
+async function loadAllVitals() {
+  try {
+    const tipos = ['presion','glicemia','peso','temperatura'];
+    const rs = await Promise.all(tipos.map(t => fetch(`/portal/api/vitals?tipo=${t}&limit=200`, { credentials:'same-origin' })));
+    const data = await Promise.all(rs.map(r => r.ok ? r.json() : { vitals:[] }));
+    tipos.forEach((t, i) => { allVitals[t] = data[i].vitals || []; });
+  } catch { /* silent */ }
+}
+
+async function addVital(payload) {
+  const r = await fetch('/portal/api/vitals', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload), credentials:'same-origin' });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.detail || 'Error al guardar');
+  return data;
+}
+
+async function deleteVital(tipo, id) {
+  if (!confirm('¿Eliminar este registro?')) return;
+  const r = await fetch(`/portal/api/vitals/${id}`, { method:'DELETE', credentials:'same-origin' });
+  if (r.ok) { allVitals[tipo] = allVitals[tipo].filter(v => v.id !== id); renderSalud(); toast('Registro eliminado'); }
+}
+
+/* ═══ Helpers fechas ═══ */
+function parseFecha(f) { if (!f) return null; const [y,m,d] = f.split('-').map(n=>parseInt(n,10)); return new Date(y, m-1, d); }
+function daysUntil(f) { const t = parseFecha(f); if (!t) return null; const h = new Date(); h.setHours(0,0,0,0); t.setHours(0,0,0,0); return Math.round((t-h)/86400000); }
+function whenBadge(f) { const d = daysUntil(f); if (d===null) return null; if (d===0) return {cls:'today', lbl:'Hoy'}; if (d===1) return {cls:'tomorrow', lbl:'Mañana'}; if (d<=7) return {cls:'soon', lbl:`En ${d} días`}; return {cls:'later', lbl:`En ${d} días`}; }
+function dateChip(f) { const d = parseFecha(f); if (!d) return {dow:'—',day:'—',month:'—'}; return {dow:DIAS[d.getDay()], day:d.getDate(), month:MESES[d.getMonth()]}; }
+function fmtHistDate(f) { const d = parseFecha(f); if (!d) return f; return `${DIAS[d.getDay()]} ${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()}`; }
+function fmtVitalDate(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return iso;
+  const day = d.getDate(); const mon = MESES[d.getMonth()]; const h = String(d.getHours()).padStart(2,'0'); const mi = String(d.getMinutes()).padStart(2,'0');
+  return `${day} ${mon} ${h}:${mi}`;
+}
+
+/* ═══ Rangos clínicos ═══ */
+function classifyPresion(sys, dia) {
+  if (sys >= 180 || dia >= 120) return { cls:'alert', lbl:'Crisis' };
+  if (sys >= 140 || dia >= 90) return { cls:'alert', lbl:'HTA 2' };
+  if (sys >= 130 || dia >= 80) return { cls:'warn', lbl:'HTA 1' };
+  if (sys >= 120) return { cls:'warn', lbl:'Elevada' };
+  return { cls:'ok', lbl:'Normal' };
+}
+function classifyGlicemia(g, ctx) {
+  const ayunas = (ctx||'').toLowerCase().includes('ayunas');
+  if (ayunas) {
+    if (g < 70) return { cls:'alert', lbl:'Baja' };
+    if (g >= 126) return { cls:'alert', lbl:'Diabetes' };
+    if (g >= 100) return { cls:'warn', lbl:'Prediab' };
+    return { cls:'ok', lbl:'Normal' };
+  }
+  if (g < 70) return { cls:'alert', lbl:'Baja' };
+  if (g >= 200) return { cls:'alert', lbl:'Alta' };
+  if (g >= 140) return { cls:'warn', lbl:'Elevada' };
+  return { cls:'ok', lbl:'Normal' };
+}
+function classifyTemp(t) {
+  if (t < 35) return { cls:'alert', lbl:'Hipotermia' };
+  if (t >= 38) return { cls:'alert', lbl:'Fiebre' };
+  if (t >= 37.5) return { cls:'warn', lbl:'Febrícula' };
+  return { cls:'ok', lbl:'Normal' };
+}
+
+/* ═══ View switch ═══ */
+function switchView(v) {
+  currentView = v;
+  document.querySelectorAll('.navbtn').forEach(b => b.classList.toggle('active', b.dataset.view === v));
+  document.querySelectorAll('.view').forEach(s => s.classList.toggle('active', s.id === 'view-'+v));
+  if (v === 'inicio') renderInicio();
+  if (v === 'agenda') renderAgenda();
+  if (v === 'salud') renderSalud();
+  if (v === 'recursos') renderRecursos();
+}
+
+/* ═══ Render root ═══ */
+function renderAll() {
+  const d = patientData;
+  const firstName = (d.nombre || '').split(' ')[0];
+  document.getElementById('greet-title').textContent = firstName ? `Hola, ${firstName}` : 'Hola';
+  const meta = [];
+  if (d.rut) meta.push(`RUT ${d.rut}`);
+  if ((d.citas_futuras||[]).length > 0) meta.push(`${d.citas_futuras.length} ${d.citas_futuras.length===1?'próxima cita':'próximas citas'}`);
+  document.getElementById('greet-subtitle').textContent = meta.join(' · ') || 'Bienvenido a tu portal';
+  // Topbar patient
+  document.getElementById('tb-avatar').textContent = firstName ? firstName[0].toUpperCase() : '—';
+  document.getElementById('tb-name').textContent = d.nombre || '—';
+  document.getElementById('tb-rut').textContent = d.rut ? `RUT ${d.rut}` : '—';
+  renderInicio(); renderAgenda(); renderSalud(); renderRecursos();
+}
+
+/* ═══ Inicio ═══ */
+function renderInicio() {
+  const d = patientData; const el = document.getElementById('inicio-content');
+  const firstName = (d.nombre || '').split(' ')[0];
+  const next = (d.citas_futuras || [])[0];
+  let html = `<div class="hero-card">
+    <div class="tag">Tu salud al día</div>
+    <div class="greeting">${firstName ? 'Hola, ' + firstName : 'Hola'}</div>`;
+  if (next) {
+    const chip = dateChip(next.fecha); const when = whenBadge(next.fecha);
+    html += `<div class="next-appt">
+      <div class="appt-date"><span class="dow">${chip.dow}</span><span class="d">${chip.day}</span><span class="m">${chip.month}</span></div>
+      <div class="appt-info">
+        <span class="esp">${next.especialidad || 'Próxima cita'}</span>
+        <span class="time">${next.hora_inicio} hrs</span>
+        <span class="prof">${next.profesional || ''}</span>
+        ${when ? `<span class="when">${when.lbl}</span>` : ''}
+      </div>
+      <button class="appt-cta" onclick="switchView('agenda')">Ver agenda</button>
+    </div>`;
+  } else {
+    html += `<div class="next-appt empty">
+      <span style="opacity:.85; font-size:12.5px; font-weight:600">No tienes próximas citas</span>
+      <div style="margin-top:10px"><button class="appt-cta" onclick="agendar()">Agendar por WhatsApp</button></div>
+    </div>`;
+  }
+  html += `</div>`;
+
+  // Quick actions
+  html += `<div class="quick-actions">
+    <button class="qa" onclick="switchView('agenda')">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+      <span class="t">Mi agenda</span>
+      <span class="s">${(d.citas_futuras||[]).length} próximas · ${(d.historial||[]).length} atenciones</span>
+    </button>
+    <button class="qa" onclick="switchView('salud'); openVitalModal()">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+      <span class="t">Registrar medición</span>
+      <span class="s">Presión, glicemia, peso, temperatura</span>
+    </button>
+    <button class="qa" onclick="switchView('salud')">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><polyline points="19 9 13 15 9 11 3 17"/></svg></div>
+      <span class="t">Mi salud</span>
+      <span class="s">${vitalCount()} mediciones totales</span>
+    </button>
+    <button class="qa" onclick="switchView('recursos')">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg></div>
+      <span class="t">Recursos</span>
+      <span class="s">Guías de autocuidado y consejos</span>
+    </button>
+  </div>`;
+
+  // Resumen rápido: dx + última medición
+  if ((d.diagnosticos || []).length > 0) {
+    html += `<div class="panel">
+      <div class="panel-head">
+        <span class="dot" style="background:var(--amber); box-shadow:0 0 0 4px rgba(181,129,5,.2)"></span>
+        <h2>Mis diagnósticos</h2>
+      </div>
+      <div class="dx-chips">${d.diagnosticos.map(dx => `<span class="dx-chip">${dx}</span>`).join('')}</div>
+    </div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+function vitalCount() { return Object.values(allVitals).reduce((s,a)=>s+a.length, 0); }
+
+/* ═══ Agenda ═══ */
+function renderAgenda() {
+  const d = patientData; const el = document.getElementById('agenda-content');
+  let html = `<div class="panel">
+    <div class="panel-head">
+      <span class="dot"></span>
+      <h2>Próximas citas</h2>
+      <span class="count">${d.citas_futuras.length}</span>
+    </div>`;
+  if (d.citas_futuras.length === 0) {
+    html += `<div class="empty-state"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><p>No tienes citas agendadas</p><div class="sub">Agenda desde WhatsApp con el botón de abajo</div></div>`;
+  } else {
+    for (const c of d.citas_futuras) {
+      const chip = dateChip(c.fecha); const when = whenBadge(c.fecha);
+      html += `<div class="appt-card">
+        <div class="date-chip"><span class="dow">${chip.dow}</span><span class="day">${chip.day}</span><span class="month">${chip.month}</span></div>
+        <div class="info">
+          <span class="esp">${c.especialidad || ''}</span>
+          <span class="time">${c.hora_inicio}<span class="u">HRS</span></span>
+          <span class="prof">${c.profesional || ''}</span>
+          ${when ? `<span class="when ${when.cls}">${when.lbl}</span>` : ''}
+        </div>
+      </div>`;
+    }
+  }
+  html += `</div>`;
+
+  html += `<div class="panel">
+    <div class="panel-head">
+      <span class="dot" style="background:var(--cmc-navy); box-shadow:0 0 0 4px rgba(15,63,104,.2)"></span>
+      <h2>Historial de atenciones</h2>
+      <span class="count">${d.historial.length}</span>
+    </div>`;
+  if (d.historial.length === 0) {
+    html += `<div class="empty-state"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div><p>Sin atenciones recientes</p></div>`;
+  } else {
+    for (const c of d.historial) {
+      html += `<div class="hist-card">
+        <div><div class="d">${fmtHistDate(c.fecha)}</div><div class="p">${c.profesional || 'Profesional'}</div></div>
+        <div class="r"><span class="t">${c.hora_inicio}</span>${c.especialidad ? `<span class="e">${c.especialidad}</span>` : ''}</div>
+      </div>`;
+    }
+  }
+  html += `</div>`;
+  el.innerHTML = html;
+}
+
+/* ═══ Mi salud ═══ */
+function renderSalud() {
+  const d = patientData; const el = document.getElementById('salud-content');
+  let html = '';
+
+  // Dx
+  if ((d.diagnosticos||[]).length > 0) {
+    html += `<div class="panel">
+      <div class="panel-head"><span class="dot" style="background:var(--amber); box-shadow:0 0 0 4px rgba(181,129,5,.2)"></span><h2>Diagnósticos registrados</h2></div>
+      <div class="dx-chips">${d.diagnosticos.map(dx => `<span class="dx-chip">${dx}</span>`).join('')}</div>
+    </div>`;
+  }
+
+  // Vitals panel
+  html += `<div class="panel">
+    <div class="panel-head"><span class="dot"></span><h2>Mis mediciones</h2><span class="count">${vitalCount()}</span></div>
+    <div class="vitals-toolbar">
+      <div class="vital-tabs">
+        ${['presion','glicemia','peso','temperatura'].map(t => `<button class="vital-tab ${t===currentVitalTipo?'active':''}" onclick="setVitalTipo('${t}')">${vitalTabLabel(t)}</button>`).join('')}
+      </div>
+    </div>
+    <div id="vital-view"></div>
+  </div>`;
+  el.innerHTML = html;
+  renderVitalView();
+}
+
+function vitalTabLabel(t) {
+  const icons = {
+    presion: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 6v6l4 2"/></svg> Presión`,
+    glicemia: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 14l4-10 4 10"/><path d="M12 14v8"/></svg> Glicemia`,
+    peso: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 12h6"/></svg> Peso`,
+    temperatura: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76V3.5a2.5 2.5 0 00-5 0v11.26a4 4 0 105 0z"/></svg> Temp.`,
+  };
+  return icons[t];
+}
+
+function setVitalTipo(t) { currentVitalTipo = t; renderSalud(); }
+
+function renderVitalView() {
+  const el = document.getElementById('vital-view'); if (!el) return;
+  const tipo = currentVitalTipo;
+  const list = (allVitals[tipo] || []).slice();
+  if (list.length === 0) {
+    el.innerHTML = `<div class="empty-state">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+      <p>Sin registros de ${tipoNombre(tipo)}</p>
+      <div class="sub">Toca "Registrar" para anotar tu primera medición</div>
+    </div>`;
+    return;
+  }
+  let html = '';
+  // Summary stats (último + promedio 30d + total)
+  const last = list[0];
+  const last30 = list.filter(v => (Date.now() - new Date(v.ts).getTime()) < 30*86400000);
+  html += `<div class="vital-summary">${summaryBlocks(tipo, last, last30, list.length)}</div>`;
+  // Chart
+  html += `<div class="vital-chart"><span class="legend">Últimos 30</span>${renderChart(tipo, last30.slice().reverse())}</div>`;
+  // List
+  html += `<div class="vital-list">`;
+  for (const v of list.slice(0, 15)) {
+    html += renderVitalRow(tipo, v);
+  }
+  html += `</div>`;
+  el.innerHTML = html;
+}
+
+function tipoNombre(t) { return {presion:'presión', glicemia:'glicemia', peso:'peso', temperatura:'temperatura'}[t] || t; }
+function tipoUnidad(t) { return {presion:'mmHg', glicemia:'mg/dL', peso:'kg', temperatura:'°C'}[t] || ''; }
+
+function summaryBlocks(tipo, last, last30, total) {
+  const unit = tipoUnidad(tipo);
+  if (tipo === 'presion') {
+    const c = classifyPresion(last.valor, last.valor2 || 0);
+    const avgSys = last30.length ? Math.round(last30.reduce((s,v)=>s+v.valor,0)/last30.length) : '—';
+    const avgDia = last30.length ? Math.round(last30.reduce((s,v)=>s+(v.valor2||0),0)/last30.length) : '—';
+    return `
+      <div class="vital-stat ${c.cls}"><div class="k">Último · ${c.lbl}</div><div class="v">${last.valor}/${last.valor2||'-'} <span class="u">${unit}</span></div></div>
+      <div class="vital-stat"><div class="k">Promedio 30d</div><div class="v">${avgSys}/${avgDia} <span class="u">${unit}</span></div></div>
+      <div class="vital-stat"><div class="k">Total</div><div class="v">${total}</div></div>`;
+  }
+  if (tipo === 'glicemia') {
+    const c = classifyGlicemia(last.valor, last.contexto);
+    const avg = last30.length ? Math.round(last30.reduce((s,v)=>s+v.valor,0)/last30.length) : '—';
+    return `
+      <div class="vital-stat ${c.cls}"><div class="k">Último · ${c.lbl}</div><div class="v">${last.valor} <span class="u">${unit}</span></div></div>
+      <div class="vital-stat"><div class="k">Promedio 30d</div><div class="v">${avg} <span class="u">${unit}</span></div></div>
+      <div class="vital-stat"><div class="k">Total</div><div class="v">${total}</div></div>`;
+  }
+  if (tipo === 'peso') {
+    const deltaStr = last30.length > 1 ? (last.valor - last30[last30.length-1].valor).toFixed(1) : '—';
+    return `
+      <div class="vital-stat"><div class="k">Último</div><div class="v">${last.valor.toFixed(1)} <span class="u">${unit}</span></div></div>
+      <div class="vital-stat"><div class="k">Δ 30 días</div><div class="v">${deltaStr}${deltaStr!=='—'?` <span class="u">${unit}</span>`:''}</div></div>
+      <div class="vital-stat"><div class="k">Total</div><div class="v">${total}</div></div>`;
+  }
+  if (tipo === 'temperatura') {
+    const c = classifyTemp(last.valor);
+    return `
+      <div class="vital-stat ${c.cls}"><div class="k">Última · ${c.lbl}</div><div class="v">${last.valor.toFixed(1)} <span class="u">${unit}</span></div></div>
+      <div class="vital-stat"><div class="k">Registros 7d</div><div class="v">${list30Count(last30, 7)}</div></div>
+      <div class="vital-stat"><div class="k">Total</div><div class="v">${total}</div></div>`;
+  }
+  return '';
+}
+function list30Count(arr, d) { const cutoff = Date.now() - d*86400000; return arr.filter(v => new Date(v.ts).getTime() >= cutoff).length; }
+
+function renderVitalRow(tipo, v) {
+  let valStr = '', ctxStr = '', badge = null;
+  if (tipo === 'presion') { valStr = `${v.valor}/${v.valor2||'-'}`; ctxStr = v.contexto || ''; badge = classifyPresion(v.valor, v.valor2||0); }
+  else if (tipo === 'glicemia') { valStr = `${v.valor} mg/dL`; ctxStr = v.contexto || ''; badge = classifyGlicemia(v.valor, v.contexto); }
+  else if (tipo === 'peso') { valStr = `${v.valor.toFixed(1)} kg`; ctxStr = v.contexto || ''; }
+  else if (tipo === 'temperatura') { valStr = `${v.valor.toFixed(1)}°C`; ctxStr = v.contexto || ''; badge = classifyTemp(v.valor); }
+  return `<div class="vrow">
+    <span class="vd">${fmtVitalDate(v.ts)}</span>
+    <span class="vv">${valStr}${ctxStr?`<span class="ctx">${ctxStr}</span>`:''}</span>
+    ${badge ? `<span class="vb ${badge.cls}">${badge.lbl}</span>` : '<span></span>'}
+    <button class="vx" onclick="deleteVital('${tipo}', ${v.id})" title="Eliminar">×</button>
+  </div>`;
+}
+
+/* ═══ Chart SVG ═══ */
+function renderChart(tipo, rows) {
+  if (rows.length < 1) return '<svg></svg>';
+  const W = 640, H = 120, pad = { t:10, b:22, l:32, r:10 };
+  const vals = rows.map(r => r.valor);
+  const vals2 = (tipo === 'presion') ? rows.map(r => r.valor2 || 0) : [];
+  let min = Math.min(...vals, ...(vals2.length?vals2:[Infinity]));
+  let max = Math.max(...vals, ...(vals2.length?vals2:[-Infinity]));
+  if (tipo === 'presion') { min = Math.min(min, 60); max = Math.max(max, 160); }
+  if (tipo === 'glicemia') { min = Math.min(min, 60); max = Math.max(max, 200); }
+  if (tipo === 'temperatura') { min = Math.min(min, 35.5); max = Math.max(max, 38.5); }
+  const span = Math.max(1, max - min);
+  const x = i => pad.l + (rows.length === 1 ? (W - pad.l - pad.r) / 2 : (W - pad.l - pad.r) * i / (rows.length - 1));
+  const y = v => pad.t + (H - pad.t - pad.b) * (1 - (v - min) / span);
+
+  const linePath = (series, stroke) => {
+    const pts = series.map((v, i) => `${i===0?'M':'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+    return `<path d="${pts}" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
+  };
+  const dots = (series, fill) => series.map((v, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="3" fill="${fill}"/>`).join('');
+  const areaPath = (series, fill) => {
+    if (series.length < 2) return '';
+    const top = series.map((v,i) => `${i===0?'M':'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+    const closed = `${top} L${x(series.length-1).toFixed(1)},${H-pad.b} L${x(0).toFixed(1)},${H-pad.b} Z`;
+    return `<path d="${closed}" fill="${fill}" opacity="0.12"/>`;
+  };
+
+  // Grid + axis labels
+  let grid = '';
+  for (let i = 0; i <= 3; i++) {
+    const v = min + span * i / 3;
+    const yy = y(v);
+    grid += `<line x1="${pad.l}" y1="${yy.toFixed(1)}" x2="${W-pad.r}" y2="${yy.toFixed(1)}" stroke="#e3ebf1" stroke-width="1"/>`;
+    grid += `<text x="${pad.l-6}" y="${yy+3}" text-anchor="end" font-size="9" fill="#8696a0" font-family="Montserrat" font-weight="600">${Math.round(v)}</text>`;
+  }
+
+  let content = areaPath(vals, '#1172AB') + linePath(vals, '#1172AB') + dots(vals, '#1172AB');
+  if (tipo === 'presion' && vals2.length) {
+    content += areaPath(vals2, '#4FBECE') + linePath(vals2, '#4FBECE') + dots(vals2, '#4FBECE');
+  }
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${grid}${content}</svg>`;
+}
+
+/* ═══ Modal vital ═══ */
+function openVitalModal() { document.getElementById('vital-modal').classList.add('show'); selectTipo(currentVitalTipo); }
+function closeVitalModal() { document.getElementById('vital-modal').classList.remove('show'); }
+
+function selectTipo(t) {
+  currentVitalTipo = t;
+  document.querySelectorAll('#vital-tipo-sel .tipo-btn').forEach(b => b.classList.toggle('active', b.dataset.tipo === t));
+  const el = document.getElementById('vital-fields');
+  const nowLocal = new Date(); nowLocal.setMinutes(nowLocal.getMinutes() - nowLocal.getTimezoneOffset());
+  const defaultDt = nowLocal.toISOString().slice(0,16);
+  let html = '';
+  if (t === 'presion') {
+    html = `<div class="field-row">
+      <div class="field"><label>Sistólica</label><input type="number" id="f-valor" placeholder="120" min="50" max="260"></div>
+      <div class="field"><label>Diastólica</label><input type="number" id="f-valor2" placeholder="80" min="30" max="180"></div>
+    </div>
+    <div class="field"><label>Contexto</label><select id="f-ctx">
+      <option value="">—</option><option>Reposo</option><option>Mañana</option><option>Tarde</option><option>Noche</option><option>Después ejercicio</option>
+    </select></div>`;
+  } else if (t === 'glicemia') {
+    html = `<div class="field"><label>mg/dL</label><input type="number" id="f-valor" placeholder="100" min="20" max="600" step="1"></div>
+    <div class="field"><label>Contexto</label><select id="f-ctx">
+      <option value="">—</option><option>Ayunas</option><option>Antes comida</option><option>2h post-comida</option><option>Antes dormir</option><option>Síntomas</option>
+    </select></div>`;
+  } else if (t === 'peso') {
+    html = `<div class="field"><label>Peso (kg)</label><input type="number" id="f-valor" placeholder="70.5" min="20" max="300" step="0.1"></div>`;
+  } else if (t === 'temperatura') {
+    html = `<div class="field"><label>°C</label><input type="number" id="f-valor" placeholder="36.5" min="30" max="43" step="0.1"></div>
+    <div class="field"><label>Sitio</label><select id="f-ctx"><option value="">—</option><option>Axilar</option><option>Oral</option><option>Timpánico</option><option>Frente</option></select></div>`;
+  }
+  html += `<div class="field"><label>Fecha y hora</label><input type="datetime-local" id="f-ts" value="${defaultDt}"></div>
+  <div class="field"><label>Nota (opcional)</label><input type="text" id="f-nota" placeholder="Ej. en ayunas, dolor de cabeza..."></div>`;
+  el.innerHTML = html;
+}
+
+async function saveVital() {
+  const btn = document.getElementById('vital-save-btn');
+  const payload = { tipo: currentVitalTipo };
+  const valor = parseFloat(document.getElementById('f-valor').value);
+  if (isNaN(valor)) { toast('Ingresa un valor válido'); return; }
+  payload.valor = valor;
+  const v2el = document.getElementById('f-valor2');
+  if (v2el) { const v2 = parseFloat(v2el.value); if (isNaN(v2)) { toast('Ingresa ambos valores'); return; } payload.valor2 = v2; }
+  const ctxEl = document.getElementById('f-ctx'); if (ctxEl && ctxEl.value) payload.contexto = ctxEl.value;
+  const tsEl = document.getElementById('f-ts');
+  if (tsEl && tsEl.value) {
+    const dt = new Date(tsEl.value);
+    payload.ts = dt.toISOString().slice(0,19) + 'Z';
+  }
+  const nota = document.getElementById('f-nota').value.trim(); if (nota) payload.nota = nota;
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  try {
+    await addVital(payload);
+    await loadAllVitals();
+    closeVitalModal();
+    toast('Registro guardado');
+    if (currentView === 'salud') renderSalud();
+    if (currentView === 'inicio') renderInicio();
+  } catch (e) { toast(e.message || 'Error al guardar'); }
+  btn.disabled = false; btn.textContent = 'Guardar';
+}
+
+/* ═══ Export informe ═══ */
+function exportInforme() {
+  window.open('/portal/informe', '_blank');
+}
+
+/* ═══ Recursos (guías + tips + promos) ═══ */
+const GUIDES = [
+  { id:'presion', cat:'Técnica', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 6v6l4 2"/></svg>`,
+    title:'Cómo tomar tu presión en casa',
+    sub:'5 minutos', cond:['hta','hiperten','presi'],
+    steps:['<strong>Reposa 5 min</strong> sentado, espalda apoyada, pies en el suelo.',
+           'Brazo a la altura del corazón, apoyado en mesa. <strong>Manguito sobre piel desnuda</strong>, 2 dedos por arriba del pliegue del codo.',
+           'No hables ni cruces piernas durante la medición.',
+           'Toma 2 mediciones separadas por 1 min. Si tu tensiómetro tiene modo "promedio", úsalo.',
+           'Anota el <strong>promedio</strong> en tu portal. Ideal: mañana en ayunas y noche antes de dormir.',
+           'Reporta al médico si sistólica ≥180 o diastólica ≥120 (crisis).'] },
+  { id:'glicemia', cat:'Técnica', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 14l4-10 4 10"/><path d="M12 14v8"/></svg>`,
+    title:'Cómo medir tu glicemia',
+    sub:'3 minutos', cond:['dm2','diab'],
+    steps:['Lava tus manos con agua tibia y jabón. Seca bien.',
+           'Inserta la tira en el glucómetro; enciende si es necesario.',
+           'Usa la <strong>lateral del dedo</strong> (no la yema), alternando dedos para no lastimarlos.',
+           'Presiona con la lanceta. Aplica la gota sobre la tira (no la "unta").',
+           'Anota el valor con el contexto: <strong>ayunas</strong> (8+ horas sin comer) o <strong>2h post-comida</strong>.',
+           'Objetivo típico DM2: ayunas 70–130, post-comida &lt;180. Tu médico puede ajustarlo.'] },
+  { id:'temp', cat:'Técnica', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76V3.5a2.5 2.5 0 00-5 0v11.26a4 4 0 105 0z"/></svg>`,
+    title:'Cómo tomar la temperatura',
+    sub:'2 minutos', cond:[],
+    steps:['Seca bien la axila antes de medir si usas termómetro axilar.',
+           'Coloca el sensor en el centro de la axila, con el brazo pegado al cuerpo 3–5 min (digital) o hasta que suene.',
+           'Normal: 36–37,4 °C axilar. Oral suma 0,3–0,5; rectal suma 0,5–1.',
+           '<strong>Fiebre</strong>: ≥38 °C axilar o equivalente. Febrícula: 37,5–37,9.',
+           'Mide antes de tomar antipiréticos (paracetamol/ibuprofeno). Registra la hora.'] },
+  { id:'inhalador', cat:'Fármacos', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="10" height="10" rx="2"/><path d="M9 10V6h6v4"/><path d="M19 8l-3 3"/></svg>`,
+    title:'Cómo usar tu inhalador (salbutamol)',
+    sub:'1 minuto', cond:['asma','epoc'],
+    steps:['Agita bien el inhalador antes de usarlo.',
+           'Usa siempre <strong>aerocámara</strong> si tienes (especialmente niños y adultos mayores). Mejora la llegada a los pulmones.',
+           'Exhala despacio antes de inhalar.',
+           'Presiona el inhalador y a la vez <strong>inhala profundo y lento</strong>. Retén el aire 10 segundos.',
+           'Espera 30 segundos entre puff y puff.',
+           'Enjuaga la boca si usas corticoides inhalados (budesonida, fluticasona).'] },
+  { id:'insulina', cat:'Fármacos', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2l4 4-8 8H2v-4z"/><path d="M14 6l4 4-4 4-4-4z"/><path d="M18 10l4 4v4h-4l-4-4z"/></svg>`,
+    title:'Cómo administrar insulina',
+    sub:'3 minutos', cond:['dm2','insulin'],
+    steps:['Guarda la insulina en refrigerador (2–8 °C). El lápiz en uso puede estar a temperatura ambiente ≤30 días.',
+           'Lava tus manos. Verifica que la insulina se vea transparente (rápida) o bien mezclada (NPH).',
+           'Coloca aguja nueva. Purga 2 unidades al aire para eliminar burbujas.',
+           'Inyecta en tejido subcutáneo: <strong>abdomen</strong> (más rápido), muslo o brazo.',
+           'Rota el sitio cada día: 2 cm de separación para evitar lipodistrofia.',
+           'Mantén la aguja 10 segundos bajo la piel antes de retirar.'] },
+  { id:'heridas', cat:'Cuidado', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 20l-4-4 14-14 4 4z"/><path d="M16 4l4 4"/><path d="M13 7l4 4"/></svg>`,
+    title:'Lavado básico de heridas',
+    sub:'5 minutos', cond:[],
+    steps:['Lava tus manos antes. Usa guantes si tienes.',
+           'Lava la herida con <strong>suero fisiológico</strong> o agua potable a chorro suave.',
+           'Seca con gasa limpia tocando (no arrastrando).',
+           'Aplica povidona o clorhexidina si hay riesgo de infección.',
+           'Cubre con gasa + vendaje. Cambia al menos 1 vez/día o si se moja.',
+           'Consulta si hay: pus, fiebre, enrojecimiento creciente, o herida que no cierra en 7 días.'] },
+];
+
+const TIPS_CATALOG = {
+  sal: { cat:'Alimentación', color:'amber', title:'Reduce la sal', desc:'Menos de 5 g/día. Evita embutidos, sopas en sobre, snacks.',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 3h12l-1 5H7z"/><path d="M8 8v12a1 1 0 001 1h6a1 1 0 001-1V8"/></svg>` },
+  azucar: { cat:'Alimentación', color:'amber', title:'Controla el azúcar', desc:'Limita bebidas azucaradas y postres. Prefiere fruta entera.',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="16" height="12" rx="1"/><path d="M4 10h16"/><path d="M10 6v12"/></svg>` },
+  frutas: { cat:'Alimentación', color:'green', title:'5 porciones al día', desc:'Frutas y verduras en cada comida. Colores distintos.',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 014 4v1"/><ellipse cx="12" cy="14" rx="7" ry="8"/></svg>` },
+  agua: { cat:'Hidratación', color:'', title:'8 vasos de agua', desc:'Hidrátate. Más si hace calor, haces ejercicio o tomas diuréticos.',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l6 10a6 6 0 11-12 0z"/></svg>` },
+  caminar: { cat:'Actividad física', color:'green', title:'Camina 30 min/día', desc:'5 días a la semana. Baja presión y glicemia.',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13" cy="4" r="2"/><path d="M10 8l3-2 3 3-2 3 2 4"/><path d="M8 21l3-6 3 3"/></svg>` },
+  fuerza: { cat:'Actividad física', color:'green', title:'Fuerza 2×/semana', desc:'Mancuernas, bandas o peso corporal. Protege huesos y músculos.',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="8" width="6" height="8" rx="1"/><rect x="16" y="8" width="6" height="8" rx="1"/><path d="M8 12h8"/></svg>` },
+  sueno: { cat:'Sueño', color:'navy', title:'7–8 horas de sueño', desc:'Horarios regulares. Pantalla off 30 min antes.',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>` },
+  tabaco: { cat:'Salud general', color:'amber', title:'Si fumas, déjalo', desc:'En 12 meses tu riesgo cardiovascular baja a la mitad.',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18h15"/><path d="M3 18v3h15v-3"/></svg>` },
+  alcohol: { cat:'Salud general', color:'amber', title:'Alcohol con moderación', desc:'Máx 1 trago/día mujeres, 2 hombres. Días sin alcohol.',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2h8l-1 8a3 3 0 01-6 0z"/><path d="M12 10v10"/><path d="M8 22h8"/></svg>` },
+  mental: { cat:'Salud mental', color:'navy', title:'Cuida tu salud mental', desc:'Pausas, red social, hobbies. >2 semanas tristes: consulta.',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a5 5 0 00-5 5c0 2 1 4 3 5v2a2 2 0 002 2h0a2 2 0 002-2v-2c2-1 3-3 3-5a5 5 0 00-5-5z"/></svg>` },
+  presion_medir: { cat:'HTA', color:'amber', title:'Mide tu presión', desc:'1–2 veces por semana en casa, sentado y relajado.',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 6v6l4 2"/></svg>` },
+  glicemia_tip: { cat:'DM2', color:'amber', title:'Mide tu glicemia', desc:'Ayunas y 2h post-comida. &lt;180 post es buen objetivo.',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 14l4-10 4 10"/><path d="M12 14v8"/></svg>` },
+  pies: { cat:'DM2', color:'amber', title:'Revisa tus pies', desc:'Inspecciona diariamente. Heridas o callos → podología.',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20c4-3 6-7 6-11a6 6 0 00-12 0c0 4 2 8 6 11z"/></svg>` },
+};
+
+const PROMO_CATALOG = {
+  chequeo: { label:'Chequeo preventivo', title:'Chequeo médico general', desc:'Dr. Abarca u Olavarría: presión, exámenes básicos y plan.', price:'Fonasa $7.880',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18"/></svg>` },
+  kine: { label:'Kinesiología', title:'Plan de kinesiología', desc:'Luis y Leo atienden por Fonasa MLE. 10 sesiones $83.360.', price:'Fonasa $7.830',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="8" width="6" height="8" rx="1"/><rect x="16" y="8" width="6" height="8" rx="1"/><path d="M8 12h8"/></svg>` },
+  cardio: { label:'Cardiología', title:'Control cardiovascular', desc:'Dr. Millán: ECG, ecocardiograma. Ideal HTA o DM2.', price:'$40.000',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>` },
+  nutri: { label:'Nutrición', title:'Plan nutricional personalizado', desc:'Gisela Pinto con Fonasa. DM2, HTA, baja de peso.', price:'Fonasa $4.770',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="8" cy="10" rx="3" ry="5" transform="rotate(-20 8 10)"/><ellipse cx="16" cy="14" rx="3" ry="5" transform="rotate(20 16 14)"/></svg>` },
+  psico: { label:'Psicología', title:'Atención psicológica', desc:'Jorge y Juan Pablo. Bono Fonasa sesión 45 min.', price:'Fonasa $14.420',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a5 5 0 00-5 5c0 2 1 4 3 5v2a2 2 0 002 2h0a2 2 0 002-2v-2c2-1 3-3 3-5a5 5 0 00-5-5z"/></svg>` },
+  odonto: { label:'Odontología estética', title:'Blanqueamiento y estética', desc:'Evaluación incluye revisión general y plan.', price:'Evaluación $15.000',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.5c-2-2-5-2-6.5-.5s-1 4.5 0 6.5 1.5 6 2.5 9 2 3 2.5 0 2-5 2-5 1.5 2 2 5 1.5 3 2.5 0 1.5-7 2.5-9 1.5-5 0-6.5-4.5-2-6.5-.5z"/></svg>` },
+  eco: { label:'Ecografía', title:'Ecografía y doppler', desc:'David Pardo: abdominal, renal, tiroides, doppler venoso.', price:'Desde $40.000',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M5 5l2 2"/><path d="M17 17l2 2"/></svg>` },
+  podologia: { label:'Podología', title:'Atención podológica', desc:'Andrea: uñas encarnadas, callos, pie diabético.', price:'Consulta $25.000',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20c4-3 6-7 6-11a6 6 0 00-12 0c0 4 2 8 6 11z"/></svg>` },
+  matrona: { label:'Matrona', title:'Control ginecológico + PAP', desc:'Sarai atiende con bono preferencial.', price:'Bono $25.000',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>` },
+  estetica: { label:'Estética facial', title:'Armonización facial', desc:'Dra. Fuentealba: hilos, bioestimuladores, exosomas.', price:'Consulta',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 00-7 7c0 3.5 2 5.5 3 7s1 3 4 3 3-1.5 4-3 3-3.5 3-7a7 7 0 00-7-7z"/></svg>` },
+};
+
+function pickTips(d) {
+  const dx = (d.diagnosticos || []).join(' | ').toLowerCase();
+  const hasDx = kw => dx.includes(kw);
+  const picks = [];
+  if (hasDx('hta')||hasDx('hiperten')||hasDx('presi')) picks.push('sal','presion_medir','caminar');
+  if (hasDx('dm2')||hasDx('diab')) picks.push('azucar','glicemia_tip','pies','caminar');
+  if (hasDx('asma')||hasDx('epoc')) picks.push('tabaco');
+  if (hasDx('ansie')||hasDx('depre')) picks.push('mental','sueno');
+  const baseline = ['caminar','frutas','agua','sueno','fuerza','mental','tabaco','alcohol'];
+  const seen = new Set(); const out = [];
+  for (const k of [...picks, ...baseline]) { if (TIPS_CATALOG[k] && !seen.has(k)) { seen.add(k); out.push(k); } if (out.length >= 8) break; }
+  return out;
+}
+
+function pickPromos(d) {
+  const dx = (d.diagnosticos || []).join(' | ').toLowerCase();
+  const specs = new Set((d.historial || []).map(c => (c.especialidad || '').toLowerCase()));
+  const prox = new Set((d.citas_futuras || []).map(c => (c.especialidad || '').toLowerCase()));
+  const covered = new Set([...specs, ...prox]);
+  const isCovered = kw => [...covered].some(s => s.includes(kw));
+  const picks = [];
+  if (dx.includes('hta')||dx.includes('hiperten')) { picks.push('cardio','nutri'); }
+  if (dx.includes('dm2')||dx.includes('diab')) { picks.push('nutri','podologia','cardio','eco'); }
+  if ([...specs].some(s=>s.includes('traumat'))) picks.push('kine');
+  if ([...specs].some(s=>s.includes('odontolog'))) picks.push('odonto');
+  if ([...specs].some(s=>s.includes('medicina general'))) picks.push('nutri','psico','eco');
+  if ((d.citas_futuras||[]).length === 0) picks.push('chequeo');
+  const fallback = ['chequeo','nutri','psico','kine','odonto','eco','matrona','estetica','cardio','podologia'];
+  const seen = new Set(); const out = [];
+  for (const k of [...picks, ...fallback]) {
+    if (!PROMO_CATALOG[k] || seen.has(k)) continue;
+    if (isCovered(k) && k !== 'chequeo') continue;
+    seen.add(k); out.push(k);
+    if (out.length >= 8) break;
+  }
+  return out;
+}
+
+function renderRecursos() {
+  const d = patientData; const el = document.getElementById('recursos-content');
+  let html = '';
+
+  // Guías relevantes según dx
+  const dxStr = (d.diagnosticos || []).join(' | ').toLowerCase();
+  const relevantes = GUIDES.filter(g => g.cond.length === 0 || g.cond.some(k => dxStr.includes(k)));
+  const generales = GUIDES.filter(g => !relevantes.includes(g));
+  const ordered = [...relevantes, ...generales];
+
+  html += `<div class="panel">
+    <div class="panel-head"><span class="dot"></span><h2>Guías rápidas de autocuidado</h2><span class="count">${ordered.length}</span></div>
+    <div class="grid-2">`;
+  for (const g of ordered) {
+    html += `<div class="guide" onclick="this.classList.toggle('open')">
+      <div class="h"><span class="ic">${g.icon}</span>
+        <div style="flex:1;min-width:0"><div class="sub">${g.cat} · ${g.sub}</div><div class="t">${g.title}</div></div>
+      </div>
+      <div class="guide-detail"><ol>${g.steps.map(s => `<li>${s}</li>`).join('')}</ol></div>
+    </div>`;
+  }
+  html += `</div></div>`;
+
+  // Tips
+  const tips = pickTips(d);
+  html += `<div class="panel">
+    <div class="panel-head"><span class="dot" style="background:var(--green-dark); box-shadow:0 0 0 4px rgba(18,140,126,.2)"></span><h2>Consejos para ti</h2><span class="count">${tips.length}</span></div>
+    <div class="grid-2">`;
+  for (const k of tips) {
+    const t = TIPS_CATALOG[k]; if (!t) continue;
+    html += `<div class="tip ${t.color||''}">
+      <div class="h"><span class="ic">${t.svg}</span><div style="flex:1;min-width:0"><div class="cat">${t.cat}</div><div class="t">${t.title}</div></div></div>
+      <div class="d">${t.desc}</div>
+    </div>`;
+  }
+  html += `</div></div>`;
+
+  // Promos
+  const promos = pickPromos(d);
+  html += `<div class="panel">
+    <div class="panel-head"><span class="dot" style="background:var(--cmc-blue); box-shadow:0 0 0 4px rgba(17,114,171,.2)"></span><h2>Servicios recomendados</h2></div>
+    <div class="grid-2">`;
+  for (const k of promos) {
+    const p = PROMO_CATALOG[k]; if (!p) continue;
+    html += `<div class="promo" onclick="agendar()">
+      <div class="h"><span class="ic">${p.svg}</span><div style="flex:1;min-width:0"><div class="cat">${p.label}</div><div class="t">${p.title}</div></div></div>
+      <div class="d">${p.desc}</div>
+      ${p.price ? `<span class="price">${p.price}</span>` : ''}
+      <div class="cta">Agendar por WhatsApp <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></div>
+    </div>`;
+  }
+  html += `</div></div>`;
+
+  el.innerHTML = html;
+}
+
+/* ═══ Helpers ═══ */
+function toast(msg) {
+  const el = document.getElementById('toast'); el.textContent = msg; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2200);
+}
+function showError(m) { const e = document.getElementById('error-msg'); e.textContent = m; e.classList.add('show'); document.getElementById('info-msg').classList.remove('show'); }
+function showInfo(m) { const e = document.getElementById('info-msg'); e.textContent = m; e.classList.add('show'); document.getElementById('error-msg').classList.remove('show'); }
+function hideMessages() { document.getElementById('error-msg').classList.remove('show'); document.getElementById('info-msg').classList.remove('show'); }
+</script>
+</body>
+</html>

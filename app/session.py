@@ -257,6 +257,22 @@ def _conn():
         )
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_portal_otp_rut ON portal_otp(rut, created_at)")
+    # Registros personales del paciente (presión, glicemia, peso, temperatura)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS patient_vitals (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            rut        TEXT NOT NULL,
+            tipo       TEXT NOT NULL,
+            valor      REAL NOT NULL,
+            valor2     REAL,
+            contexto   TEXT,
+            nota       TEXT,
+            ts         TEXT NOT NULL,
+            created_at TEXT DEFAULT (datetime('now'))
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_vitals_rut_ts ON patient_vitals(rut, ts DESC)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_vitals_rut_tipo ON patient_vitals(rut, tipo, ts DESC)")
     # Códigos de referido (programa de referidos)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS referral_codes (
@@ -2368,6 +2384,62 @@ def count_portal_otps(rut: str, minutes: int = 60) -> int:
             (rut, f"-{minutes} minutes")
         ).fetchone()
         return row["c"]
+
+
+# ═══ Patient vitals (auto-monitoreo) ═══════════════════════════════════
+_VITAL_TIPOS = {"presion", "glicemia", "peso", "temperatura"}
+
+
+def add_vital(rut: str, tipo: str, valor: float, valor2: float | None = None,
+              contexto: str | None = None, nota: str | None = None,
+              ts: str | None = None) -> int:
+    """Añade un registro de vital. Retorna el id."""
+    if tipo not in _VITAL_TIPOS:
+        raise ValueError(f"tipo inválido: {tipo}")
+    ts = ts or __import__("datetime").datetime.utcnow().isoformat(timespec="seconds") + "Z"
+    with _conn() as conn:
+        cur = conn.execute(
+            """INSERT INTO patient_vitals (rut, tipo, valor, valor2, contexto, nota, ts)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (rut, tipo, valor, valor2, contexto, nota, ts)
+        )
+        conn.commit()
+        return cur.lastrowid
+
+
+def list_vitals(rut: str, tipo: str | None = None, dias: int | None = None,
+                limit: int = 200) -> list[dict]:
+    """Lista vitals de un paciente, más recientes primero."""
+    where = ["rut = ?"]
+    params: list = [rut]
+    if tipo:
+        where.append("tipo = ?")
+        params.append(tipo)
+    if dias:
+        where.append("ts >= datetime('now', ?)")
+        params.append(f"-{int(dias)} days")
+    where_sql = " AND ".join(where)
+    params.append(limit)
+    with _conn() as conn:
+        rows = conn.execute(
+            f"""SELECT id, rut, tipo, valor, valor2, contexto, nota, ts, created_at
+                FROM patient_vitals
+                WHERE {where_sql}
+                ORDER BY ts DESC LIMIT ?""",
+            tuple(params)
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def delete_vital(rut: str, vital_id: int) -> bool:
+    """Borra un registro de vital (solo si pertenece al RUT)."""
+    with _conn() as conn:
+        cur = conn.execute(
+            "DELETE FROM patient_vitals WHERE id=? AND rut=?",
+            (vital_id, rut)
+        )
+        conn.commit()
+        return cur.rowcount > 0
 
 
 def get_dx_tags(phone: str) -> list[str]:

@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Informe de mediciones · CMC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cmc-aqua:#4FBECE; --cmc-blue:#1172AB; --cmc-navy:#0F3F68;
+  --border:#e3ebf1; --text:#0F3F68; --mute:#546776; --dim:#8696a0;
+}
+*{box-sizing:border-box; margin:0; padding:0}
+body{
+  font-family:"Montserrat",-apple-system,system-ui,sans-serif;
+  color:var(--text); background:#f7fafc; font-size:13px; line-height:1.5;
+  padding:20px;
+}
+.page{max-width:820px; margin:0 auto; background:#fff; padding:40px 44px; border-radius:8px; box-shadow:0 2px 10px rgba(15,63,104,.06)}
+
+.header{display:flex; align-items:flex-start; justify-content:space-between; gap:20px; padding-bottom:18px; border-bottom:2px solid var(--cmc-aqua); margin-bottom:24px}
+.brand{display:flex; align-items:center; gap:12px}
+.brand-logo{width:48px; height:48px; border-radius:10px; background:linear-gradient(135deg, var(--cmc-aqua), var(--cmc-blue)); display:flex; align-items:center; justify-content:center; padding:4px}
+.brand-logo img{width:100%;height:100%;object-fit:contain; filter:brightness(0) invert(1)}
+.brand .top{font-size:9.5px; font-weight:800; letter-spacing:2px; color:var(--cmc-aqua); text-transform:uppercase}
+.brand .bot{font-size:17px; font-weight:800; color:var(--cmc-navy); letter-spacing:.5px; text-transform:uppercase; line-height:1.1}
+.brand .sub{font-size:10.5px; color:var(--mute); margin-top:2px}
+.info{text-align:right; font-size:11px; color:var(--mute)}
+.info strong{color:var(--cmc-navy); display:block; font-size:13px}
+.info .date{font-size:10px; color:var(--dim); margin-top:4px}
+
+h1{font-size:22px; font-weight:800; color:var(--cmc-navy); margin-bottom:4px; letter-spacing:-.3px}
+.subtitle{font-size:12px; color:var(--mute); margin-bottom:22px; font-weight:500}
+
+.actions{
+  display:flex; gap:8px; margin-bottom:20px;
+}
+.btn{padding:10px 16px; border-radius:10px; font-family:inherit; font-size:12px; font-weight:700; cursor:pointer; border:none; letter-spacing:.2px; display:inline-flex; align-items:center; gap:6px}
+.btn-primary{background:linear-gradient(135deg, var(--cmc-blue), var(--cmc-navy)); color:#fff}
+.btn-ghost{background:#f7fafc; color:var(--cmc-blue); border:1px solid var(--border)}
+
+.section{margin-bottom:28px; page-break-inside:avoid}
+.section h2{font-size:13px; font-weight:800; color:var(--cmc-navy); letter-spacing:1px; text-transform:uppercase; padding:10px 12px; background:linear-gradient(90deg, #e5f5f8, transparent); border-left:4px solid var(--cmc-aqua); margin-bottom:12px}
+.section .sub{font-size:11px; color:var(--mute); margin-bottom:12px; padding:0 12px}
+
+table{width:100%; border-collapse:collapse; font-size:12px}
+thead th{text-align:left; font-size:10px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; color:var(--mute); padding:8px 10px; border-bottom:1.5px solid var(--border)}
+tbody td{padding:9px 10px; border-bottom:1px solid #eef3f7}
+tbody tr:last-child td{border-bottom:none}
+tbody td.val{font-weight:700; color:var(--cmc-navy); font-feature-settings:"tnum"}
+.badge{display:inline-block; font-size:9px; font-weight:800; padding:2px 7px; border-radius:12px; letter-spacing:.4px; text-transform:uppercase}
+.badge.ok{background:#dcf8c6; color:#128c7e}
+.badge.warn{background:#fff4d6; color:#8b6508}
+.badge.alert{background:#ffebee; color:#e53935}
+
+.summary{display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-bottom:14px}
+.sum-stat{background:#f7fafc; padding:10px 12px; border-radius:8px; border:1px solid var(--border)}
+.sum-stat .k{font-size:9px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:var(--dim); margin-bottom:3px}
+.sum-stat .v{font-size:16px; font-weight:800; color:var(--cmc-navy); font-feature-settings:"tnum"}
+.sum-stat .v .u{font-size:10px; color:var(--dim); font-weight:600; margin-left:3px}
+
+.empty{padding:20px; text-align:center; color:var(--dim); font-size:12px; border:1px dashed var(--border); border-radius:8px}
+
+.footer{margin-top:32px; padding-top:16px; border-top:1px solid var(--border); font-size:10px; color:var(--dim); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px}
+.footer .disclaimer{font-size:9.5px; max-width:420px; line-height:1.5}
+
+@media print {
+  body{background:#fff; padding:0}
+  .page{box-shadow:none; max-width:100%; padding:0 16mm}
+  .actions{display:none}
+  .section{page-break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div class="brand">
+      <div class="brand-logo"><img src="/static/isotipo.png" alt="CMC" onerror="this.src='/static/logo.png'"></div>
+      <div>
+        <div class="top">Centro Médico</div>
+        <div class="bot">Carampangue</div>
+        <div class="sub">Portal del paciente</div>
+      </div>
+    </div>
+    <div class="info">
+      <strong id="p-name">—</strong>
+      <span id="p-rut">—</span>
+      <div class="date" id="p-date">—</div>
+    </div>
+  </div>
+
+  <h1>Informe de mediciones</h1>
+  <p class="subtitle">Últimos 90 días · Auto-monitoreo del paciente</p>
+
+  <div class="actions">
+    <button class="btn btn-primary" onclick="window.print()">🖨 Imprimir / Guardar PDF</button>
+    <button class="btn btn-ghost" onclick="window.close()">Cerrar</button>
+  </div>
+
+  <div id="content">
+    <div class="empty">Cargando datos…</div>
+  </div>
+
+  <div class="footer">
+    <div class="disclaimer">
+      <strong>Aviso:</strong> estos registros fueron ingresados por el paciente y no reemplazan una evaluación médica. Preséntalos a tu médico tratante.
+    </div>
+    <div>Generado por agentecmc.cl</div>
+  </div>
+</div>
+
+<script>
+const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function fmtDate(iso) {
+  const d = new Date(iso); if (isNaN(d)) return iso;
+  return `${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()} · ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+function classifyPresion(s, d) {
+  if (s >= 180 || d >= 120) return {cls:'alert', lbl:'Crisis'};
+  if (s >= 140 || d >= 90) return {cls:'alert', lbl:'HTA 2'};
+  if (s >= 130 || d >= 80) return {cls:'warn', lbl:'HTA 1'};
+  if (s >= 120) return {cls:'warn', lbl:'Elevada'};
+  return {cls:'ok', lbl:'Normal'};
+}
+function classifyGlicemia(g, ctx) {
+  const ayunas = (ctx||'').toLowerCase().includes('ayunas');
+  if (ayunas) { if (g < 70) return {cls:'alert', lbl:'Baja'}; if (g >= 126) return {cls:'alert', lbl:'Diabetes'}; if (g >= 100) return {cls:'warn', lbl:'Prediab'}; return {cls:'ok', lbl:'Normal'}; }
+  if (g < 70) return {cls:'alert', lbl:'Baja'}; if (g >= 200) return {cls:'alert', lbl:'Alta'}; if (g >= 140) return {cls:'warn', lbl:'Elevada'}; return {cls:'ok', lbl:'Normal'};
+}
+function classifyTemp(t) { if (t < 35) return {cls:'alert', lbl:'Hipotermia'}; if (t >= 38) return {cls:'alert', lbl:'Fiebre'}; if (t >= 37.5) return {cls:'warn', lbl:'Febrícula'}; return {cls:'ok', lbl:'Normal'}; }
+
+(async function() {
+  const dEl = document.getElementById('content');
+  const [ri, rp, rg, rw, rt] = await Promise.all([
+    fetch('/portal/api/datos', { credentials:'same-origin' }),
+    fetch('/portal/api/vitals?tipo=presion&dias=90', { credentials:'same-origin' }),
+    fetch('/portal/api/vitals?tipo=glicemia&dias=90', { credentials:'same-origin' }),
+    fetch('/portal/api/vitals?tipo=peso&dias=90', { credentials:'same-origin' }),
+    fetch('/portal/api/vitals?tipo=temperatura&dias=90', { credentials:'same-origin' }),
+  ]);
+  if (!ri.ok) { dEl.innerHTML = '<div class="empty">Sesión expirada. Vuelve al portal.</div>'; return; }
+  const info = await ri.json();
+  const presion = (await rp.json()).vitals || [];
+  const glicemia = (await rg.json()).vitals || [];
+  const peso = (await rw.json()).vitals || [];
+  const temp = (await rt.json()).vitals || [];
+
+  document.getElementById('p-name').textContent = info.nombre || '—';
+  document.getElementById('p-rut').textContent = info.rut ? 'RUT ' + info.rut : '';
+  document.getElementById('p-date').textContent = 'Generado: ' + fmtDate(new Date().toISOString());
+
+  let html = '';
+
+  // Diagnósticos
+  if ((info.diagnosticos||[]).length > 0) {
+    html += `<div class="section"><h2>Diagnósticos</h2><p class="sub">Tal como figuran en el registro del paciente</p><div style="padding:0 12px">${info.diagnosticos.map(dx => `<span class="badge warn" style="margin-right:6px; font-size:11px; padding:4px 10px">${dx}</span>`).join('')}</div></div>`;
+  }
+
+  // Presión
+  if (presion.length > 0) {
+    const avgS = Math.round(presion.reduce((a,v)=>a+v.valor,0)/presion.length);
+    const avgD = Math.round(presion.reduce((a,v)=>a+(v.valor2||0),0)/presion.length);
+    html += `<div class="section"><h2>Presión arterial</h2>
+      <p class="sub">${presion.length} registros en los últimos 90 días · promedio <strong>${avgS}/${avgD} mmHg</strong></p>
+      <table><thead><tr><th>Fecha</th><th>Sistólica</th><th>Diastólica</th><th>Contexto</th><th>Clasificación</th></tr></thead><tbody>`;
+    for (const v of presion) {
+      const c = classifyPresion(v.valor, v.valor2||0);
+      html += `<tr><td>${fmtDate(v.ts)}</td><td class="val">${v.valor}</td><td class="val">${v.valor2||'—'}</td><td>${v.contexto||'—'}</td><td><span class="badge ${c.cls}">${c.lbl}</span></td></tr>`;
+    }
+    html += `</tbody></table></div>`;
+  }
+
+  // Glicemia
+  if (glicemia.length > 0) {
+    const avg = Math.round(glicemia.reduce((a,v)=>a+v.valor,0)/glicemia.length);
+    html += `<div class="section"><h2>Glicemia capilar</h2>
+      <p class="sub">${glicemia.length} registros · promedio <strong>${avg} mg/dL</strong></p>
+      <table><thead><tr><th>Fecha</th><th>mg/dL</th><th>Contexto</th><th>Clasificación</th><th>Nota</th></tr></thead><tbody>`;
+    for (const v of glicemia) {
+      const c = classifyGlicemia(v.valor, v.contexto);
+      html += `<tr><td>${fmtDate(v.ts)}</td><td class="val">${v.valor}</td><td>${v.contexto||'—'}</td><td><span class="badge ${c.cls}">${c.lbl}</span></td><td>${v.nota||''}</td></tr>`;
+    }
+    html += `</tbody></table></div>`;
+  }
+
+  // Peso
+  if (peso.length > 0) {
+    const delta = peso.length > 1 ? (peso[0].valor - peso[peso.length-1].valor).toFixed(1) : null;
+    html += `<div class="section"><h2>Peso</h2>
+      <p class="sub">${peso.length} registros${delta ? ` · Δ ${delta > 0 ? '+' : ''}${delta} kg en el período` : ''}</p>
+      <table><thead><tr><th>Fecha</th><th>Peso (kg)</th><th>Nota</th></tr></thead><tbody>`;
+    for (const v of peso) html += `<tr><td>${fmtDate(v.ts)}</td><td class="val">${v.valor.toFixed(1)}</td><td>${v.nota||''}</td></tr>`;
+    html += `</tbody></table></div>`;
+  }
+
+  // Temperatura
+  if (temp.length > 0) {
+    html += `<div class="section"><h2>Temperatura</h2>
+      <p class="sub">${temp.length} registros</p>
+      <table><thead><tr><th>Fecha</th><th>°C</th><th>Sitio</th><th>Clasificación</th><th>Nota</th></tr></thead><tbody>`;
+    for (const v of temp) {
+      const c = classifyTemp(v.valor);
+      html += `<tr><td>${fmtDate(v.ts)}</td><td class="val">${v.valor.toFixed(1)}</td><td>${v.contexto||'—'}</td><td><span class="badge ${c.cls}">${c.lbl}</span></td><td>${v.nota||''}</td></tr>`;
+    }
+    html += `</tbody></table></div>`;
+  }
+
+  if (presion.length + glicemia.length + peso.length + temp.length === 0) {
+    html += `<div class="empty">No hay mediciones registradas en los últimos 90 días.<br>Regresa al portal y registra mediciones desde "Mi salud".</div>`;
+  }
+
+  dEl.innerHTML = html;
+})();
+</script>
+</body>
+</html>

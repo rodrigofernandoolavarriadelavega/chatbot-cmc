@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from config import PORTAL_SESSION_SECRET, ADMIN_TOKEN
 from messaging import send_whatsapp
 from session import (get_phone_by_rut, save_portal_otp, verify_portal_otp,
+                     add_vital, list_vitals, delete_vital,
                      count_portal_otps, get_dx_tags, get_profile)
 from medilink import buscar_paciente, listar_citas_paciente, listar_historial_paciente, valid_rut
 
@@ -210,3 +211,80 @@ async def portal_logout():
     response = JSONResponse({"ok": True})
     response.delete_cookie(key=_COOKIE_NAME, path="/")
     return response
+
+
+# ══ Registros personales del paciente (auto-monitoreo) ═══════════════════
+_VITAL_TIPOS_OK = {"presion", "glicemia", "peso", "temperatura"}
+
+
+@router.post("/portal/api/vitals")
+async def portal_add_vital(request: Request,
+                           portal_session: str | None = Cookie(None)):
+    """Añade un registro (presión, glicemia, peso, temperatura)."""
+    result = _verify_portal_cookie(portal_session)
+    if not result:
+        raise HTTPException(status_code=401, detail="Sesión expirada")
+    rut, _ = result
+    body = await request.json()
+    tipo = (body.get("tipo") or "").strip().lower()
+    if tipo not in _VITAL_TIPOS_OK:
+        raise HTTPException(status_code=400, detail="Tipo inválido")
+    try:
+        valor = float(body.get("valor"))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="Valor inválido")
+    valor2 = body.get("valor2")
+    if valor2 is not None and valor2 != "":
+        try:
+            valor2 = float(valor2)
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail="Valor2 inválido")
+    else:
+        valor2 = None
+    contexto = (body.get("contexto") or "").strip() or None
+    nota = (body.get("nota") or "").strip() or None
+    ts = (body.get("ts") or "").strip() or None
+    # Validaciones por tipo
+    if tipo == "presion":
+        if not (50 <= valor <= 260) or valor2 is None or not (30 <= valor2 <= 180):
+            raise HTTPException(status_code=400, detail="Presión fuera de rango")
+    elif tipo == "glicemia":
+        if not (20 <= valor <= 600):
+            raise HTTPException(status_code=400, detail="Glicemia fuera de rango")
+    elif tipo == "peso":
+        if not (20 <= valor <= 300):
+            raise HTTPException(status_code=400, detail="Peso fuera de rango")
+    elif tipo == "temperatura":
+        if not (30 <= valor <= 43):
+            raise HTTPException(status_code=400, detail="Temperatura fuera de rango")
+    vid = add_vital(rut, tipo, valor, valor2, contexto, nota, ts)
+    return {"ok": True, "id": vid}
+
+
+@router.get("/portal/api/vitals")
+async def portal_list_vitals(tipo: str | None = None, dias: int | None = None,
+                             limit: int = 200,
+                             portal_session: str | None = Cookie(None)):
+    """Lista registros del paciente."""
+    result = _verify_portal_cookie(portal_session)
+    if not result:
+        raise HTTPException(status_code=401, detail="Sesión expirada")
+    rut, _ = result
+    if tipo and tipo not in _VITAL_TIPOS_OK:
+        raise HTTPException(status_code=400, detail="Tipo inválido")
+    vitals = list_vitals(rut, tipo=tipo, dias=dias, limit=max(1, min(500, limit)))
+    return {"ok": True, "vitals": vitals}
+
+
+@router.delete("/portal/api/vitals/{vital_id}")
+async def portal_delete_vital(vital_id: int,
+                              portal_session: str | None = Cookie(None)):
+    """Elimina un registro del paciente."""
+    result = _verify_portal_cookie(portal_session)
+    if not result:
+        raise HTTPException(status_code=401, detail="Sesión expirada")
+    rut, _ = result
+    ok = delete_vital(rut, vital_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Registro no encontrado")
+    return {"ok": True}
