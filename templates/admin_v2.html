@@ -581,6 +581,7 @@ input, textarea, select{font-family:inherit; color:inherit}
   display:grid; grid-template-columns:repeat(10, 1fr); gap:2px;
   animation:emojiIn 140ms var(--ease);
 }
+.emoji-picker[hidden]{display:none !important}
 @keyframes emojiIn{from{opacity:0; transform:translateY(4px)} to{opacity:1; transform:none}}
 .emoji-picker .emoji-cat{
   grid-column:1 / -1; font-size:10.5px; font-weight:700; color:var(--text-mute);
