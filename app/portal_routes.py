@@ -12,7 +12,8 @@ from config import PORTAL_SESSION_SECRET, ADMIN_TOKEN
 from messaging import send_whatsapp
 from session import (get_phone_by_rut, save_portal_otp, verify_portal_otp,
                      add_vital, list_vitals, delete_vital,
-                     count_portal_otps, get_dx_tags, get_profile)
+                     count_portal_otps, get_dx_tags, get_profile,
+                     get_profile_full, update_profile_fields)
 from medilink import buscar_paciente, listar_citas_paciente, listar_historial_paciente, valid_rut
 
 log = logging.getLogger("bot.portal")
@@ -357,6 +358,58 @@ async def portal_list_vitals(tipo: str | None = None, dias: int | None = None,
         raise HTTPException(status_code=400, detail="Tipo inválido")
     vitals = list_vitals(rut, tipo=tipo, dias=dias, limit=max(1, min(500, limit)))
     return {"ok": True, "vitals": vitals}
+
+
+@router.get("/portal/api/perfil")
+async def portal_get_perfil(portal_session: str | None = Cookie(None)):
+    """Devuelve los campos editables del perfil del paciente."""
+    result = _verify_portal_cookie(portal_session)
+    if not result:
+        raise HTTPException(status_code=401, detail="Sesión expirada")
+    rut, phone = result
+    if rut == DEMO_RUT:
+        return {
+            "ok": True, "demo": True,
+            "profile": {
+                "nombre": "María Ejemplo Demo",
+                "fecha_nacimiento": "1975-06-15",
+                "sexo": "F",
+                "email": "demo@cmc.cl",
+                "comuna": "Arauco",
+                "direccion": "Calle Ficticia 123",
+                "prevision": "Fonasa C",
+                "contacto_emerg_nombre": "Juan Ejemplo",
+                "contacto_emerg_telefono": "+56 9 8765 4321",
+            },
+        }
+    prof = get_profile_full(phone)
+    return {"ok": True, "profile": prof}
+
+
+@router.post("/portal/api/perfil")
+async def portal_update_perfil(request: Request,
+                                portal_session: str | None = Cookie(None)):
+    """Actualiza campos editables del perfil."""
+    result = _verify_portal_cookie(portal_session)
+    if not result:
+        raise HTTPException(status_code=401, detail="Sesión expirada")
+    rut, phone = result
+    body = await request.json()
+    # Validaciones ligeras
+    campos = ("nombre", "fecha_nacimiento", "sexo", "email", "comuna",
+              "direccion", "prevision", "contacto_emerg_nombre",
+              "contacto_emerg_telefono")
+    data = {k: (body.get(k) or "").strip() or None for k in campos if k in body}
+    # Email básico
+    if data.get("email") and "@" not in data["email"]:
+        raise HTTPException(status_code=400, detail="Email inválido")
+    # Sexo
+    if data.get("sexo") and data["sexo"] not in ("M", "F", "O"):
+        raise HTTPException(status_code=400, detail="Sexo inválido")
+    if rut == DEMO_RUT:
+        return {"ok": True, "demo": True}  # no persistir demo
+    update_profile_fields(phone, rut, data)
+    return {"ok": True}
 
 
 @router.delete("/portal/api/vitals/{vital_id}")

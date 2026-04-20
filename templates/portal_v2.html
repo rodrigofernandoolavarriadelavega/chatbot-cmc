@@ -239,7 +239,18 @@ a{color:inherit; text-decoration:none}
   font-size:13px; font-weight:600; color:var(--text-mute);
   width:100%; text-align:left;
 }
-.navbtn svg{width:18px; height:18px; flex:0 0 18px}
+.navbtn svg{width:20px; height:20px; flex:0 0 20px; display:block}
+.navbtn .navicon{
+  width:34px; height:34px; border-radius:10px; flex:0 0 34px;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--cmc-aqua-soft); color:var(--cmc-blue);
+  transition: background-color var(--dur,.18s) var(--ease), color var(--dur,.18s) var(--ease);
+}
+.navbtn:hover .navicon{background:var(--cmc-blue-soft)}
+.navbtn.active .navicon{
+  background:linear-gradient(135deg, var(--cmc-aqua), var(--cmc-blue));
+  color:#fff;
+}
 .navbtn:hover{background:var(--panel-2); color:var(--cmc-navy)}
 .navbtn.active{
   background:linear-gradient(90deg, var(--cmc-aqua-soft), transparent);
@@ -251,8 +262,10 @@ a{color:inherit; text-decoration:none}
   background:linear-gradient(180deg, var(--cmc-aqua), var(--cmc-blue)); border-radius:0 3px 3px 0;
 }
 @media (max-width:860px){
-  .navbtn{flex-direction:column; gap:2px; padding:8px 6px; font-size:10px; border-radius:8px}
+  .navbtn{flex-direction:column; gap:2px; padding:6px 4px; font-size:10px; border-radius:8px}
   .navbtn svg{width:20px;height:20px}
+  .navbtn .navicon{width:auto; height:auto; background:transparent; flex:none; border-radius:0}
+  .navbtn:hover .navicon, .navbtn.active .navicon{background:transparent; color:inherit}
   .navbtn.active{background:var(--cmc-aqua-soft)}
   .navbtn.active::before{display:none}
 }
@@ -552,6 +565,36 @@ a{color:inherit; text-decoration:none}
 .promo .cta{margin-top:8px; font-size:11.5px; font-weight:700; color:var(--cmc-blue); display:inline-flex; align-items:center; gap:5px}
 .promo .cta svg{width:12px;height:12px; transition:transform .2s}
 .promo:hover .cta svg{transform:translateX(3px)}
+
+/* ═══ Perfil (Mis datos) ═══ */
+.perfil-panel{
+  background:var(--panel); border:1px solid var(--border-soft); border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-sm); padding:20px 22px; margin-bottom:16px;
+}
+.perfil-panel .group-title{
+  font-size:11px; font-weight:800; color:var(--cmc-navy);
+  letter-spacing:.8px; text-transform:uppercase;
+  padding-bottom:10px; border-bottom:1px dashed var(--border); margin-bottom:16px;
+  display:flex; align-items:center; gap:8px;
+}
+.perfil-panel .group-title::before{content:""; width:6px; height:6px; border-radius:50%; background:var(--cmc-aqua)}
+.perfil-grid{display:grid; grid-template-columns:repeat(2, 1fr); gap:14px 16px}
+.perfil-grid .wide{grid-column:1 / -1}
+@media (max-width:720px){ .perfil-grid{grid-template-columns:1fr; gap:12px} }
+.perfil-field{display:flex; flex-direction:column; gap:6px}
+.perfil-field label{font-size:10.5px; font-weight:800; letter-spacing:.6px; color:var(--text-mute); text-transform:uppercase}
+.perfil-field input, .perfil-field select{
+  padding:11px 13px; border:1.5px solid var(--border); border-radius:10px;
+  background:var(--panel-2); font-size:14px; font-weight:600; color:var(--text);
+  transition:border-color .15s, box-shadow .15s, background-color .15s;
+}
+.perfil-field input:focus, .perfil-field select:focus{
+  outline:none; border-color:var(--cmc-aqua); background:#fff; box-shadow:var(--ring);
+}
+.perfil-field input[readonly]{background:var(--panel-3, #edf3f7); color:var(--text-mute); cursor:not-allowed}
+.perfil-field .hint{font-size:10.5px; color:var(--text-dim); font-weight:500; margin-top:1px}
+.perfil-actions{display:flex; gap:10px; margin-top:18px; padding-top:16px; border-top:1px solid var(--border-soft)}
+.perfil-actions .btn{flex:1; max-width:220px; padding:12px 16px; font-size:13px; border-radius:11px}
 
 /* Modal */
 .modal-backdrop{position:fixed; inset:0; background:rgba(15,63,104,.5); backdrop-filter:blur(3px); display:none; align-items:center; justify-content:center; padding:16px; z-index:100}
@@ -908,19 +951,23 @@ a{color:inherit; text-decoration:none}
       <div class="nav-group">
         <div class="label">Menú</div>
         <button class="navbtn active" data-view="inicio" onclick="switchView('inicio')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2h-4a2 2 0 01-2-2v-5h-2v5a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+          <span class="navicon"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11.5L12 4l9 7.5V20a2 2 0 01-2 2h-3a1 1 0 01-1-1v-5a2 2 0 00-4 0v5a1 1 0 01-1 1H5a2 2 0 01-2-2z" fill="currentColor" opacity=".18"/><path d="M3 11.5L12 4l9 7.5V20a2 2 0 01-2 2h-3a1 1 0 01-1-1v-5a2 2 0 00-4 0v5a1 1 0 01-1 1H5a2 2 0 01-2-2z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
           Inicio
         </button>
         <button class="navbtn" data-view="agenda" onclick="switchView('agenda')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span class="navicon"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="15" rx="3" fill="currentColor" opacity=".18"/><rect x="3" y="6" width="18" height="15" rx="3" stroke="currentColor" stroke-width="1.8"/><path d="M3 11h18" stroke="currentColor" stroke-width="1.8"/><path d="M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="8.5" cy="15.5" r="1.3" fill="currentColor"/></svg></span>
           Agenda
         </button>
         <button class="navbtn" data-view="salud" onclick="switchView('salud')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+          <span class="navicon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 21s-8-5-8-11a5 5 0 019-3 5 5 0 019 3c0 6-8 11-8 11-.4.2-.6.2-1 0z" fill="currentColor" opacity=".18"/><path d="M12 21s-8-5-8-11a5 5 0 019-3 5 5 0 019 3c0 6-8 11-8 11-.4.2-.6.2-1 0z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 11h2l1-2 2 4 1-2h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></span>
           Mi salud
         </button>
+        <button class="navbtn" data-view="perfil" onclick="switchView('perfil')">
+          <span class="navicon"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="currentColor" opacity=".18"/><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="10" r="3.2" stroke="currentColor" stroke-width="1.8" fill="none"/><path d="M6 19.5a6.5 6.5 0 0112 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg></span>
+          Mis datos
+        </button>
         <button class="navbtn" data-view="recursos" onclick="switchView('recursos')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+          <span class="navicon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 5a2 2 0 012-2h13v17H6a2 2 0 01-2-2z" fill="currentColor" opacity=".18"/><path d="M4 5a2 2 0 012-2h13v17H6a2 2 0 01-2-2zM4 18a2 2 0 012-2h13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M8 8h7M8 11h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
           Recursos
         </button>
       </div>
@@ -968,6 +1015,17 @@ a{color:inherit; text-decoration:none}
           </div>
         </div>
         <div id="salud-content"></div>
+      </section>
+
+      <!-- View: Mis datos -->
+      <section class="view" id="view-perfil">
+        <div class="page-head-v2">
+          <div>
+            <div class="title">Mis datos</div>
+            <div class="subtitle">Actualiza tu información de contacto y emergencia</div>
+          </div>
+        </div>
+        <div id="perfil-content"></div>
       </section>
 
       <!-- View: Recursos -->
@@ -1208,6 +1266,7 @@ function switchView(v) {
   if (v === 'agenda') renderAgenda();
   if (v === 'salud') renderSalud();
   if (v === 'recursos') renderRecursos();
+  if (v === 'perfil') renderPerfil();
 }
 
 /* ═══ Render root ═══ */
@@ -1219,7 +1278,7 @@ function renderAll() {
   document.getElementById('tb-avatar').textContent = firstName ? firstName[0].toUpperCase() : '—';
   document.getElementById('tb-name').textContent = d.nombre || '—';
   document.getElementById('tb-rut').textContent = d.rut ? `RUT ${d.rut}` : '—';
-  renderInicio(); renderAgenda(); renderSalud(); renderRecursos();
+  renderInicio(); renderAgenda(); renderSalud(); renderRecursos(); renderPerfil();
 }
 
 /* ═══ Inicio ═══ */
@@ -1769,6 +1828,141 @@ function renderRecursos() {
   html += `</div></div>`;
 
   el.innerHTML = html;
+}
+
+/* ═══ Perfil (Mis datos) ═══ */
+let perfilCache = null;
+
+async function renderPerfil() {
+  const el = document.getElementById('perfil-content'); if (!el) return;
+  if (!perfilCache) {
+    try {
+      const r = await fetch('/portal/api/perfil', { credentials:'same-origin' });
+      const data = await r.json();
+      perfilCache = data.profile || {};
+    } catch { perfilCache = {}; }
+  }
+  const d = patientData; const p = perfilCache;
+  const val = k => (p[k] != null ? String(p[k]).replace(/"/g, '&quot;') : '');
+  el.innerHTML = `
+    <div class="perfil-panel">
+      <div class="group-title">Datos básicos</div>
+      <div class="perfil-grid">
+        <div class="perfil-field">
+          <label>Nombre completo</label>
+          <input type="text" id="pf-nombre" value="${(d.nombre||'').replace(/"/g,'&quot;')}" readonly>
+          <span class="hint">Editable solo en recepción del CMC</span>
+        </div>
+        <div class="perfil-field">
+          <label>RUT</label>
+          <input type="text" value="${d.rut||''}" readonly>
+        </div>
+        <div class="perfil-field">
+          <label>Fecha de nacimiento</label>
+          <input type="date" id="pf-fecha" value="${val('fecha_nacimiento') || (d.fecha_nacimiento||'')}">
+        </div>
+        <div class="perfil-field">
+          <label>Sexo</label>
+          <select id="pf-sexo">
+            <option value="">—</option>
+            <option value="F" ${(p.sexo||d.sexo)==='F'?'selected':''}>Femenino</option>
+            <option value="M" ${(p.sexo||d.sexo)==='M'?'selected':''}>Masculino</option>
+            <option value="O" ${(p.sexo||d.sexo)==='O'?'selected':''}>Otro / prefiero no decir</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="perfil-panel">
+      <div class="group-title">Contacto</div>
+      <div class="perfil-grid">
+        <div class="perfil-field">
+          <label>Teléfono / WhatsApp</label>
+          <input type="text" value="+${(d.rut && d.rut==='50.000.000-7') ? '56 9 0000 0000' : ''}" readonly>
+          <span class="hint">Es el número con el que inicias sesión</span>
+        </div>
+        <div class="perfil-field">
+          <label>Email</label>
+          <input type="email" id="pf-email" value="${val('email')}" placeholder="tu@correo.cl">
+        </div>
+        <div class="perfil-field">
+          <label>Comuna</label>
+          <input type="text" id="pf-comuna" value="${val('comuna')}" placeholder="Ej. Arauco">
+        </div>
+        <div class="perfil-field wide">
+          <label>Dirección</label>
+          <input type="text" id="pf-direccion" value="${val('direccion')}" placeholder="Calle, número, sector">
+        </div>
+      </div>
+    </div>
+
+    <div class="perfil-panel">
+      <div class="group-title">Previsión de salud</div>
+      <div class="perfil-grid">
+        <div class="perfil-field wide">
+          <label>Previsión</label>
+          <select id="pf-prevision">
+            <option value="">—</option>
+            <option ${p.prevision==='Fonasa A'?'selected':''}>Fonasa A</option>
+            <option ${p.prevision==='Fonasa B'?'selected':''}>Fonasa B</option>
+            <option ${p.prevision==='Fonasa C'?'selected':''}>Fonasa C</option>
+            <option ${p.prevision==='Fonasa D'?'selected':''}>Fonasa D</option>
+            <option ${p.prevision==='Isapre Banmédica'?'selected':''}>Isapre Banmédica</option>
+            <option ${p.prevision==='Isapre Colmena'?'selected':''}>Isapre Colmena</option>
+            <option ${p.prevision==='Isapre Consalud'?'selected':''}>Isapre Consalud</option>
+            <option ${p.prevision==='Isapre Cruz Blanca'?'selected':''}>Isapre Cruz Blanca</option>
+            <option ${p.prevision==='Isapre Esencial'?'selected':''}>Isapre Esencial</option>
+            <option ${p.prevision==='Isapre Nueva Masvida'?'selected':''}>Isapre Nueva Masvida</option>
+            <option ${p.prevision==='Isapre Vida Tres'?'selected':''}>Isapre Vida Tres</option>
+            <option ${p.prevision==='Capredena'?'selected':''}>Capredena</option>
+            <option ${p.prevision==='Dipreca'?'selected':''}>Dipreca</option>
+            <option ${p.prevision==='Particular / Sin previsión'?'selected':''}>Particular / Sin previsión</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="perfil-panel">
+      <div class="group-title">Contacto de emergencia</div>
+      <div class="perfil-grid">
+        <div class="perfil-field">
+          <label>Nombre</label>
+          <input type="text" id="pf-emerg-nombre" value="${val('contacto_emerg_nombre')}" placeholder="Familiar, pareja, etc.">
+        </div>
+        <div class="perfil-field">
+          <label>Teléfono</label>
+          <input type="text" id="pf-emerg-tel" value="${val('contacto_emerg_telefono')}" placeholder="+56 9 ...">
+        </div>
+      </div>
+      <div class="perfil-actions">
+        <button class="btn btn-primary" onclick="savePerfil()">Guardar cambios</button>
+        <button class="btn btn-ghost" onclick="perfilCache=null; renderPerfil()">Deshacer</button>
+      </div>
+    </div>
+  `;
+}
+
+async function savePerfil() {
+  const payload = {
+    fecha_nacimiento: document.getElementById('pf-fecha').value,
+    sexo: document.getElementById('pf-sexo').value,
+    email: document.getElementById('pf-email').value.trim(),
+    comuna: document.getElementById('pf-comuna').value.trim(),
+    direccion: document.getElementById('pf-direccion').value.trim(),
+    prevision: document.getElementById('pf-prevision').value,
+    contacto_emerg_nombre: document.getElementById('pf-emerg-nombre').value.trim(),
+    contacto_emerg_telefono: document.getElementById('pf-emerg-tel').value.trim(),
+  };
+  try {
+    const r = await fetch('/portal/api/perfil', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload), credentials:'same-origin',
+    });
+    const data = await r.json();
+    if (!r.ok) { toast(data.detail || 'Error al guardar'); return; }
+    perfilCache = { ...(perfilCache||{}), ...payload };
+    toast(data.demo ? 'Guardado (demo, no persiste)' : 'Datos actualizados');
+  } catch { toast('Error de conexión'); }
 }
 
 /* ═══ Helpers ═══ */

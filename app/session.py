@@ -350,6 +350,16 @@ def _conn():
         conn.execute("ALTER TABLE contact_profiles ADD COLUMN fecha_nacimiento TEXT")
     except _OPERATIONAL_ERRORS:
         pass
+    # Migración: campos del perfil editable (actualizar datos desde portal)
+    for col, typ in [
+        ("email", "TEXT"), ("comuna", "TEXT"), ("direccion", "TEXT"),
+        ("sexo", "TEXT"), ("prevision", "TEXT"),
+        ("contacto_emerg_nombre", "TEXT"), ("contacto_emerg_telefono", "TEXT"),
+    ]:
+        try:
+            conn.execute(f"ALTER TABLE contact_profiles ADD COLUMN {col} {typ}")
+        except _OPERATIONAL_ERRORS:
+            pass
     # Migración: agregar canal a messages si no existe
     try:
         conn.execute("ALTER TABLE messages ADD COLUMN canal TEXT DEFAULT 'whatsapp'")
@@ -620,6 +630,43 @@ def get_profile(phone: str) -> dict | None:
             "SELECT rut, nombre FROM contact_profiles WHERE phone=?", (phone,)
         ).fetchone()
         return dict(row) if row else None
+
+
+_PERFIL_CAMPOS = (
+    "nombre", "fecha_nacimiento", "sexo", "email", "comuna", "direccion",
+    "prevision", "contacto_emerg_nombre", "contacto_emerg_telefono",
+)
+
+
+def get_profile_full(phone: str) -> dict:
+    """Retorna el perfil completo (todos los campos editables + phone + rut)."""
+    cols = ["phone", "rut", *_PERFIL_CAMPOS, "updated_at"]
+    with _conn() as conn:
+        row = conn.execute(
+            f"SELECT {', '.join(cols)} FROM contact_profiles WHERE phone=?",
+            (phone,),
+        ).fetchone()
+        return dict(row) if row else {}
+
+
+def update_profile_fields(phone: str, rut: str, data: dict) -> None:
+    """Actualiza campos editables del perfil. Inserta si no existe."""
+    campos = {k: data.get(k) for k in _PERFIL_CAMPOS if k in data}
+    if not campos:
+        return
+    with _conn() as conn:
+        # Asegurar que el registro exista
+        conn.execute(
+            "INSERT OR IGNORE INTO contact_profiles (phone, rut, updated_at) VALUES (?, ?, datetime('now'))",
+            (phone, rut),
+        )
+        sets = ", ".join(f"{k}=?" for k in campos.keys())
+        params = list(campos.values()) + [phone]
+        conn.execute(
+            f"UPDATE contact_profiles SET {sets}, updated_at=datetime('now') WHERE phone=?",
+            params,
+        )
+        conn.commit()
 
 
 _RUT_RE = __import__("re").compile(r'\b(\d{1,2}\.?\d{3}\.?\d{3}[-.\s]?[\dkK])\b')
