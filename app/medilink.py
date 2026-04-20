@@ -875,7 +875,12 @@ async def crear_cita(id_paciente: int, id_profesional: int, fecha: str,
                       id_paciente, id_profesional, fecha, e)
             return None
         if r.status_code in (200, 201):
-            data = r.json()
+            try:
+                data = r.json()
+            except Exception as e:
+                log.error("crear_cita: respuesta no-JSON de Medilink (%s): %s",
+                          e, r.text[:300])
+                return None
             cita = data.get("data", data)
             if isinstance(cita, list) and cita:
                 cita = cita[0]
@@ -1092,6 +1097,9 @@ async def cancelar_cita(id_cita: int) -> bool:
                     continue
                 if r.status_code in (200, 201):
                     _report_up()
+                    # Slot liberado: invalidar cache de próxima fecha para que
+                    # el próximo paciente vea el slot recién disponible.
+                    _proxima_cache.clear()
                     return True
                 if r.status_code >= 500:
                     log.warning("Medilink PUT %s → %s (intento %d/3)", url, r.status_code, attempt + 1)
@@ -1375,7 +1383,7 @@ def clean_rut(rut: str) -> str:
     - Unicode NFKC: fullwidth '１２３４５６７８－９' → '12345678-9'
     - Chars invisibles: ZWSP, ZWJ, ZWNJ, BOM, nbsp.
     - Envolturas: "...", '...', «...», [...], {...}, <...>.
-    - Emojis o texto alrededor (filtro final por clase [^0-9\-K]).
+    - Emojis o texto alrededor (filtro final por clase [^0-9-K]).
     - Prefijos: rut:, mi rut es, ci:, cédula:, n°, nro:, #.
     - Separadores: - _ / | : * · • y dashes Unicode (‐‑‒–—―−⸺⁃).
     """
