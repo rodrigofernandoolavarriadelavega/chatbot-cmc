@@ -20,6 +20,74 @@ log = logging.getLogger("bot.portal")
 router = APIRouter(tags=["portal"])
 
 _COOKIE_NAME = "portal_session"
+
+# ═══ Modo demo ═══════════════════════════════════════════════════════════
+# RUT ficticio (50.000.000-X) para compartir la demo con socios sin exponer
+# datos reales. Código fijo, OTP skipped.
+DEMO_RUT = "50000000-7"
+DEMO_CODE = "123456"
+DEMO_PHONE = "56900000000"
+
+
+def is_demo_rut(rut_raw: str) -> bool:
+    clean = (rut_raw or "").replace(".", "").replace("-", "").upper().strip()
+    return clean.startswith("50000000")
+
+
+def _demo_data() -> dict:
+    """Data ficticia para modo demo. Fechas relativas al día actual."""
+    from datetime import datetime, timedelta
+    from zoneinfo import ZoneInfo
+    hoy = datetime.now(ZoneInfo("America/Santiago")).date()
+
+    def ymd(d):
+        return d.strftime("%Y-%m-%d")
+
+    def fmt_es(d):
+        dias = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
+        meses = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"]
+        return f"{dias[d.weekday()]} {d.day} de {meses[d.month-1]}"
+
+    citas_futuras = [
+        {"id": 901, "id_profesional": 60, "profesional": "Dr. Miguel Millán",
+         "especialidad": "Cardiología",
+         "fecha": ymd(hoy + timedelta(days=3)),
+         "fecha_display": fmt_es(hoy + timedelta(days=3)),
+         "hora_inicio": "11:00", "estado": "Confirmada"},
+        {"id": 902, "id_profesional": 52, "profesional": "Gisela Pinto",
+         "especialidad": "Nutrición",
+         "fecha": ymd(hoy + timedelta(days=10)),
+         "fecha_display": fmt_es(hoy + timedelta(days=10)),
+         "hora_inicio": "15:30", "estado": "Confirmada"},
+    ]
+    historial = [
+        {"id": 801, "profesional": "Dr. Rodrigo Olavarría", "especialidad": "Medicina General",
+         "fecha": ymd(hoy - timedelta(days=14)), "fecha_display": fmt_es(hoy - timedelta(days=14)),
+         "hora_inicio": "10:00"},
+        {"id": 802, "profesional": "Dr. Andrés Abarca", "especialidad": "Medicina General",
+         "fecha": ymd(hoy - timedelta(days=45)), "fecha_display": fmt_es(hoy - timedelta(days=45)),
+         "hora_inicio": "09:30"},
+        {"id": 803, "profesional": "Luis Armijo", "especialidad": "Kinesiología",
+         "fecha": ymd(hoy - timedelta(days=60)), "fecha_display": fmt_es(hoy - timedelta(days=60)),
+         "hora_inicio": "16:00"},
+        {"id": 804, "profesional": "Dr. Claudio Barraza", "especialidad": "Traumatología",
+         "fecha": ymd(hoy - timedelta(days=90)), "fecha_display": fmt_es(hoy - timedelta(days=90)),
+         "hora_inicio": "12:00"},
+        {"id": 805, "profesional": "Dra. Javiera Burgos", "especialidad": "Odontología General",
+         "fecha": ymd(hoy - timedelta(days=150)), "fecha_display": fmt_es(hoy - timedelta(days=150)),
+         "hora_inicio": "17:00"},
+    ]
+    return {
+        "nombre": "María Ejemplo Demo",
+        "rut": "50.000.000-7",
+        "fecha_nacimiento": "1975-06-15",
+        "sexo": "F",
+        "citas_futuras": citas_futuras,
+        "historial": historial,
+        "diagnosticos": ["HTA", "DM2"],
+        "whatsapp_url": "https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20una%20cita",
+        "demo": True,
+    }
 _COOKIE_MAX_AGE = 24 * 3600  # 24 hours
 
 
@@ -75,6 +143,10 @@ async def portal_request_code(request: Request):
     """Envía código OTP al WhatsApp del paciente."""
     body = await request.json()
     rut = body.get("rut", "").strip()
+
+    # Modo demo: RUT 50.000.000-X → salta OTP por WhatsApp
+    if is_demo_rut(rut):
+        return {"ok": True, "rut_masked": "50.***.0-0", "demo": True, "hint": f"Código demo: {DEMO_CODE}"}
 
     if not rut or not valid_rut(rut):
         raise HTTPException(status_code=400, detail="RUT inválido")
@@ -135,15 +207,22 @@ async def portal_verify_code(request: Request):
     if not rut or not code:
         raise HTTPException(status_code=400, detail="RUT y código requeridos")
 
-    rut_clean = rut.replace(".", "").replace("-", "").strip().upper()
-    if len(rut_clean) > 1:
-        rut_norm = rut_clean[:-1] + "-" + rut_clean[-1]
+    # Modo demo
+    if is_demo_rut(rut):
+        if code != DEMO_CODE:
+            raise HTTPException(status_code=401, detail=f"Código demo: {DEMO_CODE}")
+        rut_norm = DEMO_RUT
+        phone = DEMO_PHONE
     else:
-        raise HTTPException(status_code=400, detail="RUT inválido")
+        rut_clean = rut.replace(".", "").replace("-", "").strip().upper()
+        if len(rut_clean) > 1:
+            rut_norm = rut_clean[:-1] + "-" + rut_clean[-1]
+        else:
+            raise HTTPException(status_code=400, detail="RUT inválido")
 
-    phone = verify_portal_otp(rut_norm, code)
-    if not phone:
-        raise HTTPException(status_code=401, detail="Código incorrecto o expirado")
+        phone = verify_portal_otp(rut_norm, code)
+        if not phone:
+            raise HTTPException(status_code=401, detail="Código incorrecto o expirado")
 
     # Crear cookie de sesión
     is_https = (request.url.scheme == "https"
@@ -170,6 +249,10 @@ async def portal_datos(portal_session: str | None = Cookie(None)):
     if not result:
         raise HTTPException(status_code=401, detail="Sesión expirada")
     rut, phone = result
+
+    # Modo demo: devolver datos ficticios
+    if rut == DEMO_RUT:
+        return _demo_data()
 
     # Buscar paciente en Medilink
     paciente = await buscar_paciente(rut)
