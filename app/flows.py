@@ -42,6 +42,12 @@ _DIAS_SEMANA = {
 }
 
 
+def _first_name(nombre) -> str:
+    """Primer token de un nombre, seguro ante None/vacío/solo-espacios."""
+    parts = (nombre or "").split()
+    return parts[0] if parts else ""
+
+
 def _proxima_fecha_dia(weekday: int) -> str:
     """Retorna la fecha (YYYY-MM-DD) del próximo día de la semana dado (hoy + 1 en adelante)."""
     hoy = datetime.now(_CHILE_TZ).date()
@@ -637,7 +643,7 @@ async def _slot_confirmed(phone: str, data: dict, slot: dict) -> str | dict:
                 "booking_for_other": False,
             })
             save_session(phone, "CONFIRMING_CITA", data)
-            nombre_corto = paciente["nombre"].split()[0]
+            nombre_corto = _first_name(paciente.get("nombre"))
             modalidad_str = last_modalidad.capitalize()
             return _btn_msg(
                 f"*{nombre_corto}*, te reservo esta hora 👇\n\n"
@@ -671,7 +677,7 @@ async def _slot_confirmed(phone: str, data: dict, slot: dict) -> str | dict:
             save_session(phone, "WAIT_RUT_AGENDAR", data)
             return _btn_msg(
                 f"Perfecto 🙌\n\n{slot_resumen}\n\n"
-                f"¿Agendo con tus datos, *{nombre_c.split()[0]}*?",
+                f"¿Agendo con tus datos, *{_first_name(nombre_c)}*?",
                 [
                     {"id": "si", "title": "✅ Sí, continuar"},
                     {"id": "rut_nuevo", "title": "Ingresar otro RUT"},
@@ -2003,7 +2009,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         "especialidad": esp_ultima,
                         "esp_claude": especialidad or None,
                     })
-                    nombre_corto = perfil.get("nombre", "").split()[0] if perfil.get("nombre") else ""
+                    nombre_corto = _first_name(perfil.get("nombre"))
                     saludo = f"¡Hola de nuevo, *{nombre_corto}*! ⚡\n\n" if nombre_corto else "⚡ "
                     con_prof = f" con *{prof_ultima}*" if prof_ultima else ""
                     return _btn_msg(
@@ -3025,7 +3031,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             save_session(phone, "WAIT_RUT_AGENDAR", data)
             return _btn_msg(
                 f"Perfecto, atención *{modalidad_str}* 😊\n\n"
-                f"¿Agendo con tus datos, *{nombre_c.split()[0]}*?",
+                f"¿Agendo con tus datos, *{_first_name(nombre_c)}*?",
                 [{"id": "si", "title": "✅ Sí, continuar"},
                  {"id": "rut_nuevo", "title": "Ingresar otro RUT"}]
             )
@@ -3051,7 +3057,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             rut_conocido = data.get("rut_conocido")
             nombre_conocido = data.get("nombre_conocido")
             if rut_conocido and nombre_conocido:
-                nombre_corto = nombre_conocido.split()[0]
+                nombre_corto = _first_name(nombre_conocido)
                 return _btn_msg(
                     f"¿Agendo con tus datos anteriores, *{nombre_corto}*?",
                     [
@@ -3103,7 +3109,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # Guardar el nombre del dueño del celular (sin RUT, no es el paciente)
         save_profile(phone, "", nombre_owner)
         save_session(phone, "WAIT_RUT_AGENDAR", data)
-        nombre_corto = nombre_owner.split()[0].capitalize()
+        nombre_corto = _first_name(nombre_owner).capitalize()
         return (
             f"Gracias {nombre_corto} 😊 Ahora necesito el RUT de la persona que se va a atender:\n"
             "(ej: *12.345.678-9*)"
@@ -3251,7 +3257,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
         slot = data["slot_elegido"]
         modalidad = data.get("modalidad", "particular").capitalize()
-        nombre_corto_conf = paciente['nombre'].split()[0]
+        nombre_corto_conf = _first_name(paciente.get('nombre'))
         return _btn_msg(
             f"*{nombre_corto_conf}*, te reservo esta hora 👇\n\n"
             f"👤 {paciente['nombre']}\n"
@@ -3341,7 +3347,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                               {"id_cita_old": cita_old.get("id"),
                                "id_cita_new": resultado.get("id")})
             reset_session(phone)
-            nombre_corto = paciente['nombre'].split()[0]
+            nombre_corto = _first_name(paciente.get('nombre'))
             modalidad = data.get("modalidad", "particular").capitalize()
             es_tercero = bool(data.get("booking_for_other"))
             if resultado:
@@ -3468,7 +3474,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if not citas:
             reset_session(phone)
             return (
-                f"No tienes citas futuras agendadas, *{paciente['nombre'].split()[0]}* 📋\n\n"
+                f"No tienes citas futuras agendadas, *{_first_name(paciente.get('nombre'))}* 📋\n\n"
                 "¿Quieres agendar una hora?"
             )
 
@@ -3612,7 +3618,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if not citas:
             reset_session(phone)
             return (
-                f"No tienes citas futuras agendadas, *{paciente['nombre'].split()[0]}* 📋\n\n"
+                f"No tienes citas futuras agendadas, *{_first_name(paciente.get('nombre'))}* 📋\n\n"
                 "¿Quieres agendar una hora?"
             )
 
@@ -3756,7 +3762,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
         citas = await listar_citas_paciente(paciente["id"])
         reset_session(phone)
-        nombre_corto = paciente['nombre'].split()[0]
+        nombre_corto = _first_name(paciente.get('nombre'))
         if not citas:
             return _btn_msg(
                 f"No tienes citas futuras agendadas, *{nombre_corto}* 📋",
@@ -5279,7 +5285,7 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
                  "expansion_stage": 0, "prof_sugerido_id": prof_sugerido_id})
     save_session(phone, "WAIT_SLOT", data)
     nombre_conocido = data.get("nombre_conocido", "")
-    nombre_corto = nombre_conocido.split()[0] if nombre_conocido else ""
+    nombre_corto = _first_name(nombre_conocido) if nombre_conocido else ""
     # Si viene con saludo_prefix (ej. desde un motivo del menú), el prefix
     # actúa como header y se omite el "¡Hola de nuevo!" para no duplicar saludos.
     if saludo_prefix:
@@ -5362,7 +5368,7 @@ async def _iniciar_reagendar(phone: str, data: dict) -> str:
             if not citas:
                 reset_session(phone)
                 return (
-                    f"No encontré citas futuras para *{paciente['nombre'].split()[0]}* 📋\n\n"
+                    f"No encontré citas futuras para *{_first_name(paciente.get('nombre'))}* 📋\n\n"
                     "¿Quieres agendar una nueva hora? Escribe *1* o *menu*."
                 )
             data.update({"paciente": paciente, "citas": citas, "rut": perfil["rut"]})
@@ -5415,7 +5421,7 @@ def _inscribir_waitlist_y_responder(phone: str, data: dict) -> str:
     log_event(phone, "waitlist_inscrito",
               {"id": wid, "especialidad": esp, "id_prof_pref": id_prof_pref})
     reset_session(phone)
-    nombre_corto = nombre.split()[0] if nombre else ""
+    nombre_corto = _first_name(nombre)
     saludo = f"*{nombre_corto}*, " if nombre_corto else ""
     return (
         f"✅ Listo {saludo}quedaste inscrito/a en la lista de espera de *{esp}*.\n\n"
@@ -5426,7 +5432,7 @@ def _inscribir_waitlist_y_responder(phone: str, data: dict) -> str:
 
 def _format_citas_reagendar(citas: list, nombre_paciente: str) -> dict:
     """Muestra las citas del paciente para que elija cuál reagendar."""
-    nombre = nombre_paciente.split()[0]
+    nombre = _first_name(nombre_paciente)
     rows = []
     for i, c in enumerate(citas, 1):
         fecha_short = c.get("fecha_display", "")[:10]
@@ -5541,7 +5547,7 @@ def _parse_slot_selection(txt: str, slots: list) -> int | None:
 
 
 def _format_citas_cancelar(citas: list, nombre_paciente: str):
-    nombre = nombre_paciente.split()[0]
+    nombre = _first_name(nombre_paciente)
     rows = []
     for i, c in enumerate(citas, 1):
         fecha_short = f"{c['fecha'][8:10]}/{c['fecha'][5:7]}" if c.get("fecha") else c.get("fecha_display", "")[:5]

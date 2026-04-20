@@ -20,6 +20,22 @@ from config import MEDILINK_BASE_URL, MEDILINK_TOKEN, MEDILINK_SUCURSAL
 
 log = logging.getLogger("medilink")
 
+
+def _safe_json(r, default=None):
+    """Parse response JSON tolerando no-JSON (HTML de error, body vacío).
+    Retorna default o {} si falla, loggeando status y snippet del body."""
+    try:
+        return _safe_json(r)
+    except (ValueError, json.JSONDecodeError):
+        body = ""
+        try:
+            body = r.text[:200]
+        except Exception:
+            pass
+        log.warning(f"medilink non-JSON response status={r.status_code} body={body!r}")
+        return default if default is not None else {}
+
+
 HEADERS = {"Authorization": f"Token {MEDILINK_TOKEN}"}
 
 # Caché de horarios por profesional: id_prof → {intervalo, dias (set de weekdays Python), _ts}
@@ -279,7 +295,7 @@ async def _get_horario(client: httpx.AsyncClient, id_prof: int) -> dict:
 
     horario = {"intervalo": PROFESIONALES[id_prof]["intervalo"], "dias": set(range(6)), "horario_dia": {}}
     if r.status_code == 200:
-        data = r.json().get("data", [])
+        data = _safe_json(r).get("data", [])
         sucursal_data = next((x for x in data if x.get("id_sucursal") == int(MEDILINK_SUCURSAL)), None)
         if sucursal_data:
             dias_activos = set()
@@ -337,7 +353,7 @@ async def _get_bloqueos(client: httpx.AsyncClient, id_prof: int, fecha: str) -> 
     if r.status_code != 200:
         return []
     bloqueos = []
-    for b in r.json().get("data", []):
+    for b in _safe_json(r).get("data", []):
         b_prof = b.get("id_profesional")
         # Incluir bloqueos del profesional O sin profesional (bloqueo de sucursal)
         if b_prof == id_prof or b_prof is None or b_prof == 0:
@@ -413,7 +429,7 @@ async def _get_horas_ocupadas(client: httpx.AsyncClient, id_prof: int, fecha: st
     if r.status_code != 200:
         raise httpx.RequestError(f"GET horas_ocupadas prof={id_prof} fecha={fecha} → {r.status_code}")
     ocupadas = set()
-    for c in r.json().get("data", []):
+    for c in _safe_json(r).get("data", []):
         hi = c.get("hora_inicio", "")[:5]
         hf = c.get("hora_fin", "")[:5]
         if not hi:
@@ -609,7 +625,7 @@ async def buscar_primer_dia(especialidad: str, dias_adelante: int = 60,
                     log.warning("No se pudo consultar proxima fecha especialidad %d: %s", id_esp, e)
                     r = None
             if r and r.status_code == 200:
-                for slot in r.json().get("data", []):
+                for slot in _safe_json(r).get("data", []):
                     # fecha viene en formato DD/MM/YYYY
                     raw = slot.get("fecha", "")
                     try:
@@ -665,7 +681,7 @@ async def consultar_proxima_fecha(especialidad: str) -> str | None:
             headers=HEADERS,
         )
         if r.status_code == 200:
-            for slot in r.json().get("data", []):
+            for slot in _safe_json(r).get("data", []):
                 raw = slot.get("fecha", "")
                 try:
                     fecha_fmt = datetime.strptime(raw, "%d/%m/%Y").strftime("%Y-%m-%d")
@@ -728,7 +744,7 @@ async def crear_paciente(rut: str, nombre: str, apellidos: str, **kwargs) -> Opt
         if r.status_code not in (200, 201):
             log.error("Error crear paciente rut=%s: %s %s", rut, r.status_code, r.text[:200])
             return None
-        p = r.json().get("data", {})
+        p = _safe_json(r).get("data", {})
         pac_id = p["id"]
         result = {
             "id":     pac_id,
@@ -780,7 +796,7 @@ async def buscar_paciente(rut: str) -> Optional[dict]:
             return None
         if r.status_code != 200:
             return None
-        data = r.json().get("data", [])
+        data = _safe_json(r).get("data", [])
         if not data:
             return None
         p = data[0]
@@ -812,7 +828,7 @@ async def buscar_paciente_por_nombre(nombre: str) -> list[dict]:
             return []
         if r.status_code != 200:
             return []
-        data = r.json().get("data", [])
+        data = _safe_json(r).get("data", [])
         results = []
         for p in data[:10]:
             nombre_full = f"{p.get('nombre', '')} {p.get('apellidos', '')}".strip()
@@ -876,7 +892,7 @@ async def crear_cita(id_paciente: int, id_profesional: int, fecha: str,
             return None
         if r.status_code in (200, 201):
             try:
-                data = r.json()
+                data = _safe_json(r)
             except Exception as e:
                 log.error("crear_cita: respuesta no-JSON de Medilink (%s): %s",
                           e, r.text[:300])
@@ -914,7 +930,7 @@ async def listar_citas_paciente(id_paciente: int) -> list:
             return []
         if r.status_code != 200:
             return []
-        data = r.json().get("data", [])
+        data = _safe_json(r).get("data", [])
         citas = []
         for c in data:
             id_prof = c.get("id_profesional")
@@ -951,7 +967,7 @@ async def listar_historial_paciente(id_paciente: int, meses: int = 6) -> list:
             return []
         if r.status_code != 200:
             return []
-        data = r.json().get("data", [])
+        data = _safe_json(r).get("data", [])
         citas = []
         for c in data:
             id_prof = c.get("id_profesional")
@@ -989,7 +1005,7 @@ async def obtener_agenda_dia(id_prof: int, fecha: str | None = None) -> list[dic
             return []
         if r.status_code != 200:
             return []
-        citas_raw = r.json().get("data", [])
+        citas_raw = _safe_json(r).get("data", [])
 
         # Obtener datos de pacientes en paralelo (máx 5 concurrentes)
         import asyncio as _aio
@@ -1003,7 +1019,7 @@ async def obtener_agenda_dia(id_prof: int, fecha: str | None = None) -> list[dic
                     rp = await _get(client, f"{MEDILINK_BASE_URL}/pacientes/{pac_id}",
                                     headers=HEADERS)
                     if rp.status_code == 200:
-                        p = rp.json().get("data", {})
+                        p = _safe_json(rp).get("data", {})
                         if isinstance(p, list) and p:
                             p = p[0]
                         return p
@@ -1058,7 +1074,7 @@ async def get_cita(id_cita: int) -> dict | None:
             r = await client.get(url, headers=HEADERS)
             if r.status_code != 200:
                 return None
-            data = r.json()
+            data = _safe_json(r)
             if isinstance(data, dict) and "data" in data:
                 payload = data["data"]
                 if isinstance(payload, list):
@@ -1147,7 +1163,7 @@ async def sync_ortodoncia_rango(fecha_ini: str, fecha_fin: str, delay: float = 2
                 r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
                                params={"q": _q(params)}, headers=HEADERS)
                 if r.status_code == 200:
-                    citas = [c for c in r.json().get("data", []) if c.get("id_paciente")]
+                    citas = [c for c in _safe_json(r).get("data", []) if c.get("id_paciente")]
                     visitas = []
                     for c in citas:
                         id_aten = c.get("id_atencion")
@@ -1157,7 +1173,7 @@ async def sync_ortodoncia_rango(fecha_ini: str, fecha_fin: str, delay: float = 2
                             ra = await _get(client, f"{MEDILINK_BASE_URL}/atenciones/{id_aten}",
                                             headers=HEADERS)
                             if ra.status_code == 200:
-                                total = ra.json().get("data", {}).get("total", 0)
+                                total = _safe_json(ra).get("data", {}).get("total", 0)
                         tipo = "instalacion" if total == 120000 else ("control" if total == 30000 else "pendiente")
                         visitas.append({
                             "id_atencion":     id_aten or 0,
@@ -1203,7 +1219,7 @@ async def sync_citas_dia(fecha: str, ids_prof: list[int]):
                         "fecha":           fecha,
                         "hora_inicio":     (c.get("hora_inicio") or "")[:5],
                     }
-                    for c in r.json().get("data", [])
+                    for c in _safe_json(r).get("data", [])
                     if c.get("id_paciente")
                 ]
                 upsert_citas_cache(citas)
@@ -1263,7 +1279,7 @@ async def get_citas_seguimiento_mes(year: int, month: int, especialidad: str = "
                             "fecha":           fecha,
                             "hora_inicio":     (c.get("hora_inicio") or "")[:5],
                         }
-                        for c in r.json().get("data", [])
+                        for c in _safe_json(r).get("data", [])
                         if c.get("id_paciente")
                     ]
                     # Guardar aunque esté vacío (marca el día como sincronizado)
