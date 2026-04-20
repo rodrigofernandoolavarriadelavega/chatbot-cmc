@@ -226,6 +226,33 @@ input{font-family:inherit;color:inherit}
   .content{grid-template-columns: minmax(0, 1fr); gap:14px}
 }
 
+/* Consejos de vida sana */
+.tips-grid{display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px}
+@media (max-width:520px){ .tips-grid{grid-template-columns:1fr} }
+.tip{
+  background:linear-gradient(180deg, #fff, var(--panel-2));
+  border:1px solid var(--border-soft); border-radius:var(--radius);
+  padding:12px 14px; position:relative; overflow:hidden;
+  transition:transform .18s var(--ease), box-shadow .18s var(--ease);
+}
+.tip:hover{transform:translateY(-1px); box-shadow:var(--shadow-sm)}
+.tip .tip-head{display:flex; align-items:center; gap:9px; margin-bottom:5px}
+.tip .tip-icon{
+  width:30px; height:30px; border-radius:9px; flex:0 0 30px;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--cmc-aqua-soft); color:var(--cmc-blue);
+}
+.tip .tip-icon svg{width:16px; height:16px}
+.tip.green .tip-icon{background:#dcf8c6; color:var(--green-dark)}
+.tip.amber .tip-icon{background:var(--amber-soft); color:#8b6508}
+.tip.navy .tip-icon{background:var(--cmc-navy-soft); color:var(--cmc-navy)}
+.tip .tip-title{font-size:12.5px; font-weight:700; color:var(--cmc-navy); letter-spacing:-.1px; line-height:1.2}
+.tip .tip-desc{font-size:11.5px; color:var(--text-mute); line-height:1.45; margin-top:4px}
+.tip .tip-tag{
+  display:inline-block; font-size:9px; font-weight:800; letter-spacing:1.2px;
+  text-transform:uppercase; color:var(--cmc-aqua-dark); margin-bottom:2px;
+}
+
 /* Contenedor principal que agrupa secciones en un surface horizontal */
 .surface{
   background:var(--panel); border:1px solid var(--border-soft);
@@ -879,6 +906,100 @@ const PROMO_CATALOG = {
   },
 };
 
+// ══ Consejos de vida sana ══
+const TIPS_CATALOG = {
+  // === Alimentación ===
+  sal: { cat:'Alimentación', color:'amber', title:'Reduce la sal',
+    desc:'Menos de 5 g por día. Evita embutidos, sopas en sobre y snacks. Baja tu presión naturalmente.',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 3h12l-1 5H7z"/><path d="M8 8v12a1 1 0 001 1h6a1 1 0 001-1V8"/></svg>` },
+  azucar: { cat:'Alimentación', color:'amber', title:'Controla el azúcar',
+    desc:'Limita bebidas azucaradas y postres. Prefiere fruta entera antes que jugos.',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="16" height="12" rx="1"/><path d="M4 10h16"/><path d="M10 6v12"/></svg>` },
+  frutas: { cat:'Alimentación', color:'green', title:'5 porciones al día',
+    desc:'Frutas y verduras en cada comida. Colores distintos = nutrientes distintos.',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 014 4v1"/><ellipse cx="12" cy="14" rx="7" ry="8"/><path d="M12 14c-1-3-3-4-5-4"/></svg>` },
+  agua: { cat:'Hidratación', color:'', title:'8 vasos de agua',
+    desc:'Hidrátate durante el día. Más si hace calor, haces ejercicio o tomas diuréticos.',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l6 10a6 6 0 11-12 0z"/></svg>` },
+  legumbres: { cat:'Alimentación', color:'green', title:'Legumbres 2 veces/semana',
+    desc:'Porotos, lentejas, garbanzos. Proteína vegetal + fibra que controla glicemia.',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><ellipse cx="8" cy="10" rx="3" ry="5" transform="rotate(-20 8 10)"/><ellipse cx="16" cy="14" rx="3" ry="5" transform="rotate(20 16 14)"/></svg>` },
+  hidratos: { cat:'DM2', color:'amber', title:'Mide los hidratos',
+    desc:'Controla porciones de pan, arroz, papa. Prefiere integrales.',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="12" rx="8" ry="6"/><path d="M6 12c2 1 4 1 6 0s4-1 6 0"/></svg>` },
+
+  // === Actividad física ===
+  caminar: { cat:'Actividad física', color:'green', title:'Camina 30 min/día',
+    desc:'5 días a la semana. Baja presión, mejora glicemia y ánimo. Después de comer es ideal.',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13" cy="4" r="2"/><path d="M10 8l3-2 3 3-2 3 2 4"/><path d="M8 21l3-6 3 3"/></svg>` },
+  fuerza: { cat:'Actividad física', color:'green', title:'Fuerza 2×/semana',
+    desc:'Mancuernas, bandas o peso corporal. Protege masa muscular, huesos y articulaciones.',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l3 3"/><path d="M15 15l3 3"/><rect x="2" y="8" width="6" height="8" rx="1"/><rect x="16" y="8" width="6" height="8" rx="1"/><path d="M8 12h8"/></svg>` },
+  elongar: { cat:'Actividad física', color:'green', title:'Elonga y muévete',
+    desc:'Si trabajas sentado, levántate cada hora. Estira cuello, espalda y piernas.',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"/><path d="M12 7v6"/><path d="M8 10l4 3 4-3"/><path d="M9 21l3-8 3 8"/></svg>` },
+  respiracion: { cat:'Actividad física', color:'', title:'Ejercicio respiratorio',
+    desc:'Si tienes asma o EPOC, ejercicio aeróbico moderado fortalece tu función pulmonar.',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5c0 4 2 7 5.5 7s5.5-3 5.5-7"/><path d="M12 13v8"/><path d="M8 21h8"/></svg>` },
+
+  // === Bienestar / salud general ===
+  sueno: { cat:'Sueño', color:'navy', title:'7–8 horas de sueño',
+    desc:'Horarios regulares. Pantalla off 30 min antes. Mejora memoria, defensas y ánimo.',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>` },
+  tabaco: { cat:'Salud general', color:'amber', title:'Si fumas, déjalo',
+    desc:'Pregunta por el programa de cesación. A los 12 meses tu riesgo cardiovascular baja a la mitad.',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18h15"/><path d="M3 18v3h15v-3"/><path d="M18 18l3-3"/><path d="M18 6c2 0 3-1 3-3"/><path d="M18 12c2 0 3-1 3-3"/></svg>` },
+  alcohol: { cat:'Salud general', color:'amber', title:'Alcohol con moderación',
+    desc:'Máximo 1 trago/día mujeres, 2 hombres. Mejor si tienes días sin alcohol.',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2h8l-1 8a3 3 0 01-6 0z"/><path d="M12 10v10"/><path d="M8 22h8"/></svg>` },
+  mental: { cat:'Salud mental', color:'navy', title:'Cuida tu salud mental',
+    desc:'Pausas, red social, hobbies. Si llevas >2 semanas triste o ansioso, consulta.',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a5 5 0 00-5 5c0 2 1 4 3 5v2a2 2 0 002 2h0a2 2 0 002-2v-2c2-1 3-3 3-5a5 5 0 00-5-5z"/><path d="M10 21h4"/></svg>` },
+  sol: { cat:'Salud general', color:'amber', title:'Protege tu piel',
+    desc:'Bloqueador FPS 30+ diario. Evita sol directo 11–16h. Revisa lunares anualmente.',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="M4.93 4.93l1.41 1.41"/><path d="M17.66 17.66l1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="M4.93 19.07l1.41-1.41"/><path d="M17.66 6.34l1.41-1.41"/></svg>` },
+
+  // === Condicionales (dx específicos) ===
+  presion_medir: { cat:'HTA', color:'amber', title:'Mide tu presión',
+    desc:'1–2 veces por semana en casa, sentado y relajado. Anota y comparte con tu médico.',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 6v6l4 2"/></svg>` },
+  glicemia: { cat:'DM2', color:'amber', title:'Mide tu glicemia',
+    desc:'En ayunas y 2h post-comida. Menor a 180 después de comer es un buen objetivo.',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 14l4-10 4 10"/><path d="M12 14v8"/><path d="M8 22h8"/></svg>` },
+  pies: { cat:'DM2', color:'amber', title:'Revisa tus pies',
+    desc:'Inspecciona diariamente. Uñas encarnadas, heridas o callos → consulta podología.',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20c4-3 6-7 6-11a6 6 0 00-12 0c0 4 2 8 6 11z"/></svg>` },
+  inhalador: { cat:'Asma', color:'', title:'Usa tu inhalador bien',
+    desc:'Aerocámara siempre. Coordina puff con inspiración. Si olvidas dosis, pregunta al médico.',
+    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="10" height="10" rx="2"/><path d="M9 10V6h6v4"/><path d="M19 8l-3 3"/></svg>` },
+};
+
+function pickTips(d){
+  const dx = [...(d.diagnosticos || [])].map(x => x.toLowerCase()).join(' | ');
+  const historyEsp = (d.historial || []).map(c => (c.especialidad || '').toLowerCase()).join(' | ');
+  const hasDx = kw => dx.includes(kw);
+  const priority = [];
+  // Condicionales por dx
+  if (hasDx('hta') || hasDx('hiperten') || hasDx('presi')) { priority.push('sal','presion_medir','caminar'); }
+  if (hasDx('dm2') || hasDx('diab')) { priority.push('azucar','glicemia','hidratos','pies','caminar'); }
+  if (hasDx('asma') || hasDx('epoc')) { priority.push('inhalador','respiracion','tabaco'); }
+  if (hasDx('obes') || hasDx('sobrep')) { priority.push('azucar','caminar','frutas'); }
+  if (hasDx('colest') || hasDx('dislip')) { priority.push('legumbres','caminar','sal'); }
+  if (hasDx('ansie') || hasDx('depre')) { priority.push('mental','sueno','caminar'); }
+  // Complementos generales por historial
+  if (historyEsp.includes('traumat') || historyEsp.includes('kinesio')) priority.push('elongar','fuerza');
+  if (historyEsp.includes('psico')) priority.push('mental','sueno');
+  // Base: sano general
+  const baseline = ['caminar','frutas','agua','sueno','fuerza','mental','sol','alcohol','tabaco','legumbres','elongar','respiracion'];
+  const seen = new Set();
+  const result = [];
+  for (const k of [...priority, ...baseline]) {
+    if (TIPS_CATALOG[k] && !seen.has(k)) { seen.add(k); result.push(k); }
+    if (result.length >= 6) break;
+  }
+  return result;
+}
+
 // Qué promos sobran cuando el paciente ya tiene esa especialidad agendada o la tuvo recientemente
 const PROMO_SPECIALTY_MAP = {
   chequeo: ['medicina general','medicina familiar'],
@@ -1074,7 +1195,35 @@ function renderDashboard() {
       </div>`;
     }
   }
-  main += `</div></main>`;
+  main += `</div>`;
+
+  // Consejos de vida sana
+  const tips = pickTips(d);
+  if (tips.length > 0) {
+    main += `<div class="section">
+      <div class="section-head">
+        <span class="dot" style="background:var(--green-dark); box-shadow:0 0 0 4px rgba(18,140,126,.18)"></span>
+        <h2>Consejos para ti</h2>
+        <span class="count">${tips.length}</span>
+      </div>
+      <div class="tips-grid">`;
+    for (const key of tips) {
+      const t = TIPS_CATALOG[key]; if (!t) continue;
+      main += `<div class="tip ${t.color || ''}">
+        <div class="tip-head">
+          <span class="tip-icon">${t.svg}</span>
+          <div style="flex:1; min-width:0">
+            <div class="tip-tag">${t.cat}</div>
+            <div class="tip-title">${t.title}</div>
+          </div>
+        </div>
+        <div class="tip-desc">${t.desc}</div>
+      </div>`;
+    }
+    main += `</div></div>`;
+  }
+
+  main += `</main>`;
 
   // ══ ASIDE (promos) ══
   const picks = pickPromos(d);
