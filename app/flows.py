@@ -5204,7 +5204,20 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
     # Detectar si la especialidad no existe en nuestro catálogo
     from medilink import _ids_para_especialidad as _ids_esp_check
     if not _ids_esp_check(especialidad_lower):
-        # Especialidad que no tenemos → registrar demanda
+        # Sanity check: si la "especialidad" no parece serlo (solo signos, saludos,
+        # agradecimientos, muy corta) NO decir "no contamos con *X*" — mostrar el
+        # menú. Esto evita responses absurdas como "no contamos con *?*" o
+        # "no contamos con *muchas gracias*".
+        _esp_clean = re.sub(r"[^a-záéíóúñü ]", "", especialidad_lower).strip()
+        _SALUDOS_GRACIAS = {
+            "hola", "hi", "buenos dias", "buenas tardes", "buenas noches",
+            "gracias", "muchas gracias", "graxias", "grcias", "ok", "oki", "vale",
+            "perfecto", "perfect", "listo", "dale", "si", "no",
+        }
+        if (len(_esp_clean) < 4 or _esp_clean in _SALUDOS_GRACIAS or not _esp_clean):
+            save_session(phone, "WAIT_ESPECIALIDAD", data)
+            return f"Claro, te ayudo a agendar 😊\n\n¿Qué especialidad necesitas?\n\n{_ESPECIALIDADES_TEXTO}"
+        # Especialidad plausible pero que no tenemos → registrar demanda
         save_demanda_no_disponible(phone, especialidad, "especialidad")
         log_event(phone, "demanda_no_disponible", {"solicitud": especialidad, "tipo": "especialidad"})
         reset_session(phone)

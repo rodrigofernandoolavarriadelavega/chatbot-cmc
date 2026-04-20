@@ -61,8 +61,39 @@ async def unreact_whatsapp(to: str, message_id: str):
     })
 
 
+# Dedupe: evita enviar el mismo mensaje idéntico al mismo teléfono en una
+# ventana corta. Causa común: el paciente escribe "Hola" dos veces y el bot
+# manda el mismo saludo largo dos veces; o errores que generan el mismo
+# "Tuve un problema técnico" repetido. Guardamos hash(body) por phone con TTL.
+import time as _t
+_DEDUPE_WINDOW_S = 120  # 2 min
+_DEDUPE_CACHE: dict[str, tuple[int, float]] = {}  # phone → (hash, ts)
+
+
+def _is_dupe_outbound(to: str, body: str) -> bool:
+    """True si estamos a punto de enviar el mismo body a `to` dentro de la ventana."""
+    if not body or not to:
+        return False
+    now = _t.time()
+    h = hash(body)
+    prev = _DEDUPE_CACHE.get(to)
+    if prev and prev[0] == h and (now - prev[1]) < _DEDUPE_WINDOW_S:
+        return True
+    _DEDUPE_CACHE[to] = (h, now)
+    # GC barato cuando el cache crece
+    if len(_DEDUPE_CACHE) > 500:
+        for k in list(_DEDUPE_CACHE.keys()):
+            if now - _DEDUPE_CACHE[k][1] > _DEDUPE_WINDOW_S * 4:
+                _DEDUPE_CACHE.pop(k, None)
+    return False
+
+
 async def send_whatsapp(to: str, body: str) -> str | None:
-    """Envía mensaje de texto vía Meta Cloud API. Retorna wamid o None si falla."""
+    """Envía mensaje de texto vía Meta Cloud API. Retorna wamid o None si falla.
+    Si el mismo body fue enviado a `to` en los últimos 2 min, skip (dedupe)."""
+    if _is_dupe_outbound(to, body):
+        log.info("dedupe outbound skipped to=%s len=%d", to, len(body))
+        return None
     return await _post_meta({
         "messaging_product": "whatsapp",
         "to": to,
@@ -420,7 +451,11 @@ def _split_long_msg(body: str, limit: int = 900) -> list[str]:
 
 async def send_instagram(igsid: str, body: str):
     """Envía mensaje de texto a un usuario de Instagram vía Graph API.
-    IG rechaza mensajes > 1000 chars: divide en chunks automáticamente."""
+    IG rechaza mensajes > 1000 chars: divide en chunks automáticamente.
+    Dedupe: skip si el mismo body se envió a este igsid en los últimos 2 min."""
+    if _is_dupe_outbound(f"ig_{igsid}", body):
+        log.info("dedupe outbound skipped ig=%s len=%d", igsid, len(body))
+        return
     if not INSTAGRAM_USER_ID:
         log.error("INSTAGRAM_USER_ID no configurado en .env")
         return
@@ -443,7 +478,11 @@ async def send_instagram(igsid: str, body: str):
 
 async def send_messenger(psid: str, body: str):
     """Envía mensaje de texto a un usuario de Facebook Messenger vía Graph API.
-    Messenger rechaza mensajes > 1000 chars: divide en chunks automáticamente."""
+    Messenger rechaza mensajes > 1000 chars: divide en chunks automáticamente.
+    Dedupe: skip si el mismo body se envió a este psid en los últimos 2 min."""
+    if _is_dupe_outbound(f"fb_{psid}", body):
+        log.info("dedupe outbound skipped fb=%s len=%d", psid, len(body))
+        return
     page_id = META_PAGE_ID or "me"
     url = f"https://graph.facebook.com/v22.0/{page_id}/messages"
     token = META_MESSENGER_TOKEN or META_ACCESS_TOKEN or META_PAGE_ACCESS_TOKEN

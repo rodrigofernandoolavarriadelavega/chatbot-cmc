@@ -784,6 +784,13 @@ async def webhook(request: Request):
             texto = msg["text"]["body"].strip()
             if not texto:
                 return Response(status_code=200)
+            # Mensajes-ruido: solo signos de puntuación ("?", "??", "...", "!") o
+            # emojis sueltos. No deben activar detect_intent ni generar un saludo
+            # largo. Ignoramos silenciosamente.
+            import re as _re_noise
+            if _re_noise.fullmatch(r"[^\w\s]{1,3}", texto):
+                log.info("noise msg ignored from=%s txt=%r", phone, texto)
+                return Response(status_code=200)
         elif msg_type == "interactive":
             interactive = msg.get("interactive", {})
             itype = interactive.get("type", "")
