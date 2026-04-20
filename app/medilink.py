@@ -25,7 +25,7 @@ def _safe_json(r, default=None):
     """Parse response JSON tolerando no-JSON (HTML de error, body vacío).
     Retorna default o {} si falla, loggeando status y snippet del body."""
     try:
-        return _safe_json(r)
+        return r.json()
     except (ValueError, json.JSONDecodeError):
         body = ""
         try:
