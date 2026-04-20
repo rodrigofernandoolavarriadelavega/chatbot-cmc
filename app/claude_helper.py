@@ -422,7 +422,7 @@ Si mencionan un profesional por nombre, mapea al nombre de la especialidad:
 - Psicólogo Jorge / Jorge Montalba / Montalba → "psicología"
 - David Pardo → "ecografía" (ecografías generales: abdominal, tiroidea, renal, mamaria, partes blandas, doppler, etc.)
 - Ecografía ginecológica / transvaginal / vaginal → "ginecología" (Dr. Tirso Rejón, NO David Pardo)
-- Ecografía obstétrica / embarazo / ver al bebé → "ginecología" (Dr. Tirso Rejón, NO David Pardo)
+- Ecografía obstétrica / embarazo / ver al bebé → NO DISPONIBLE en el CMC. Responder que no contamos con esa prestación y sugerir acudir a un centro de imagenología especializado.
 Si preguntan por un precio que no está en la lista, responde que pueden consultar en recepción.
 IMPORTANTE PRECIOS: Cuando menciones el precio de una consulta, SIEMPRE indica ambos valores: Fonasa y particular. La mayoría de los pacientes del CMC son Fonasa. Ejemplo: "consulta $7.880 (Fonasa) / $25.000 (particular)". NUNCA pongas solo el precio particular sin mencionar Fonasa.
 
@@ -475,7 +475,7 @@ GINECOLOGÍA / MATRONA
 - Pap / papanicolau / examen del cuello del útero → $20.000 en **Matrona** (Saraí Gómez) o en **Ginecología**.
 - Control ginecológico / revisión mujer → **Matrona** (Fonasa preferencial $16.000 / particular $30.000) o **Ginecología** (Dr. Tirso Rejón, $30.000).
 - Retraso menstrual / no me llega la regla / test de embarazo → **Matrona** para evaluación.
-- Ecografía del embarazo / ver al bebé → Ecografía obstétrica $35.000 (solo particular) con **Ginecología** (Dr. Tirso Rejón). Permite ver al bebé, evaluar crecimiento y bienestar fetal.
+- Ecografía del embarazo / ver al bebé → **NO disponible en el CMC**. Responder que no contamos con ecografía obstétrica y sugerir un centro de imagenología especializado.
 - Ecografía vaginal / transvaginal → Ecografía ginecológica $35.000 (solo particular) con **Ginecología** (Dr. Tirso Rejón). Evalúa útero, ovarios y detecta quistes, miomas o irregularidades.
 
 KINE / TRAUMA / DOLOR
@@ -638,7 +638,7 @@ INFO DEL CMC:
 - Solo tienen Fonasa (MLE): Medicina General, Kinesiología, Nutrición y Psicología. Todo lo demás es SOLO PARTICULAR.
 - Los copagos Fonasa indicados son lo que paga el paciente (beneficiario nivel 3 MLE 2026)
 - Ecografía vaginal = Ecografía ginecológica ($35.000, solo particular) con Dr. Tirso Rejón (Ginecología). Evalúa útero y ovarios.
-- Ecografía obstétrica ($35.000, solo particular) con Dr. Tirso Rejón (Ginecología). Control prenatal, ver al bebé.
+- Ecografía obstétrica: **NO disponible** en el CMC. Si el paciente la pide, indicar que no contamos con esa prestación.
 - Las ecografías generales (abdominal, tiroidea, renal, etc.) las realiza David Pardo.
 - Audiometría: disponible en Fonoaudiología y Otorrinolaringología
 
@@ -721,11 +721,11 @@ ECOGRAFÍA — David Pardo (solo particular, ecografías generales):
 - Ecotomografía tiroidea: $40.000 — evalúa tamaño y nódulos de la tiroides. Indicada si hay alteraciones hormonales o nódulo palpable.
 - Ecotomografía renal bilateral: $40.000 — evalúa ambos riñones y vías urinarias. Detecta cálculos, quistes o dilatación.
 - Ecotomografía doppler: $90.000 — evalúa el flujo sanguíneo en arterias y venas. Se usa para várices, trombosis o insuficiencia venosa.
-NOTA: David Pardo NO realiza ecografías ginecológicas ni obstétricas; esas las hace el Dr. Tirso Rejón (Ginecología).
+NOTA: David Pardo NO realiza ecografías ginecológicas; esas las hace el Dr. Tirso Rejón (Ginecología). La ecografía obstétrica NO se realiza en el CMC.
 
-ECOGRAFÍA GINECOLÓGICA Y OBSTÉTRICA — Dr. Tirso Rejón (Ginecología, solo particular):
+ECOGRAFÍA GINECOLÓGICA — Dr. Tirso Rejón (Ginecología, solo particular):
 - Ecografía ginecológica (transvaginal): $35.000 — evalúa útero y ovarios. Detecta quistes, miomas, endometriosis o irregularidades menstruales.
-- Ecografía obstétrica: $35.000 — control prenatal, permite ver al bebé, evaluar crecimiento, latidos y bienestar fetal.
+- Ecografía obstétrica: NO disponible en el CMC. Derivar a centro de imagenología.
 
 CARDIOLOGÍA (Dr. Miguel Millán — solo particular):
 - Consulta cardiología: $40.000 — evaluación cardiovascular: hipertensión, arritmias, soplos, dolor de pecho, control de factores de riesgo cardíaco.
@@ -1023,9 +1023,9 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
      "💰 Particular: desde $50.000\n\n"
      "Escribe *1* o *agendar ginecología* para reservar hora."),
     (("ecograf", "obstetric"),
-     "Sí, realizamos *ecografía obstétrica* con el Dr. Tirso Rejón (ginecólogo) 👩‍⚕️\n\n"
-     "💰 Particular: desde $50.000\n\n"
-     "Escribe *1* o *agendar ginecología* para reservar hora."),
+     "Lo sentimos, por ahora *no contamos con ecografía obstétrica* 🙏\n\n"
+     "Te recomendamos acudir a un centro de imagenología especializado.\n\n"
+     "Si necesitas control ginecológico o del embarazo, puedes agendar con el Dr. Tirso Rejón (Ginecología) escribiendo *menu*."),
     (("gastroenterolog",),
      "Sí, tenemos *gastroenterólogo*: Dr. Nicolás Quijano 🩺\n\n"
      "💰 Consulta particular: $40.000\n\n"

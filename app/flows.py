@@ -336,7 +336,7 @@ CROSS_REFERENCE: dict[str, str] = {
         "\n\n💡 *¿Sabías que tenemos Ginecólogo?*\n"
         "Dr. Tirso Rejón atiende en el CMC y puede ayudarte con:\n"
         "• Evaluación ginecológica especializada\n"
-        "• Ecografía obstétrica y ginecológica\n"
+        "• Ecografía ginecológica\n"
         "• Patología cervical\n"
         "• Control de embarazo de alto riesgo\n\n"
         "Si necesitas atención más especializada, "
