@@ -339,6 +339,19 @@ def _conn():
         conn.execute("ALTER TABLE messages ADD COLUMN canal TEXT DEFAULT 'whatsapp'")
     except _OPERATIONAL_ERRORS:
         pass  # columna ya existe, nada que hacer
+    # Migración: wamid y edited_at para edición de mensajes enviados
+    try:
+        conn.execute("ALTER TABLE messages ADD COLUMN wamid TEXT")
+    except _OPERATIONAL_ERRORS:
+        pass
+    try:
+        conn.execute("ALTER TABLE messages ADD COLUMN edited_at TEXT")
+    except _OPERATIONAL_ERRORS:
+        pass
+    try:
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_msg_wamid ON messages(wamid)")
+    except _OPERATIONAL_ERRORS:
+        pass
     # Migración: confirmación de asistencia pre-cita
     # Valores: NULL/pending (sin responder), confirmed, reagendar, cancelar
     try:
@@ -751,14 +764,38 @@ def purge_old_data(msgs_days: int = 90, events_days: int = 180) -> dict:
     return {"messages_deleted": msgs_del, "events_deleted": events_del}
 
 
-def log_message(phone: str, direction: str, text: str, state: str = "IDLE", canal: str = "whatsapp"):
+def log_message(phone: str, direction: str, text: str, state: str = "IDLE",
+                canal: str = "whatsapp", wamid: str | None = None):
     """Registra un mensaje entrante ('in') o saliente ('out') en el historial."""
     with _conn() as conn:
         conn.execute(
-            "INSERT INTO messages (phone, direction, text, state, canal) VALUES (?, ?, ?, ?, ?)",
-            (phone, direction, str(text)[:2000], state, canal)
+            "INSERT INTO messages (phone, direction, text, state, canal, wamid) VALUES (?, ?, ?, ?, ?, ?)",
+            (phone, direction, str(text)[:2000], state, canal, wamid)
         )
         conn.commit()
+
+
+def update_message_text_by_wamid(wamid: str, new_text: str) -> bool:
+    """Actualiza el texto de un mensaje ya registrado y marca edited_at.
+    Retorna True si se actualizó al menos una fila."""
+    with _conn() as conn:
+        cur = conn.execute(
+            "UPDATE messages SET text=?, edited_at=datetime('now') WHERE wamid=?",
+            (str(new_text)[:2000], wamid)
+        )
+        conn.commit()
+        return cur.rowcount > 0
+
+
+def get_message_by_wamid(wamid: str) -> dict | None:
+    """Retorna el mensaje con ese wamid, o None si no existe."""
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT id, phone, direction, text, state, ts, COALESCE(canal,'whatsapp') AS canal, wamid, edited_at "
+            "FROM messages WHERE wamid=? LIMIT 1",
+            (wamid,)
+        ).fetchone()
+        return dict(row) if row else None
 
 
 def upsert_message_status(wamid: str, phone: str, status: str,
@@ -834,7 +871,8 @@ def get_messages(phone: str, limit: int = 300) -> list[dict]:
     ANTIGUOS y cortaba los mensajes nuevos en conversaciones largas."""
     with _conn() as conn:
         rows = conn.execute(
-            "SELECT id, phone, direction, text, state, ts, COALESCE(canal,'whatsapp') AS canal FROM messages "
+            "SELECT id, phone, direction, text, state, ts, COALESCE(canal,'whatsapp') AS canal, "
+            "wamid, edited_at FROM messages "
             "WHERE phone=? ORDER BY id DESC LIMIT ?",
             (phone, limit)
         ).fetchall()

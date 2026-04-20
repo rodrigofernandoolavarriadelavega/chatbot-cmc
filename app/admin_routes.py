@@ -11,9 +11,10 @@ from fastapi import APIRouter, Request, Query, HTTPException, Header, Depends, C
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from config import ADMIN_TOKEN, ORTODONCIA_TOKEN, COOKIE_SECRET, STAFF_PHONES
-from messaging import send_whatsapp, send_instagram, send_messenger
+from messaging import send_whatsapp, send_instagram, send_messenger, edit_whatsapp_message
 from session import (get_session, reset_session, save_session, get_metricas,
                      log_message, get_messages, get_conversations, log_event,
+                     update_message_text_by_wamid, get_message_by_wamid,
                      get_tags, save_tag, delete_tag, search_messages,
                      get_kine_tracking_all, save_kine_tracking,
                      get_ortodoncia_pacientes, set_ortodoncia_tipo, get_ortodoncia_sync_max_fecha,
@@ -419,6 +420,7 @@ async def admin_reply(request: Request, _: str = Depends(require_admin)):
     if not phone or not message:
         raise HTTPException(status_code=400, detail="phone y message son requeridos")
 
+    wamid = None
     if phone.startswith("ig_"):
         igsid = phone[3:]
         await send_instagram(igsid, message)
@@ -428,12 +430,54 @@ async def admin_reply(request: Request, _: str = Depends(require_admin)):
         await send_messenger(psid, message)
         canal = "messenger"
     else:
-        await send_whatsapp(phone, message)
+        wamid = await send_whatsapp(phone, message)
         canal = "whatsapp"
 
     state = get_session(phone).get("state", "HUMAN_TAKEOVER")
-    log_message(phone, "out", f"[Recepcionista] {message}", state, canal=canal)
+    log_message(phone, "out", f"[Recepcionista] {message}", state, canal=canal, wamid=wamid)
     log_event(phone, "recepcionista_respondio", {"mensaje": message[:200]})
+    return {"ok": True, "wamid": wamid}
+
+
+@router.post("/admin/api/edit-message")
+async def admin_edit_message(request: Request, _: str = Depends(require_admin)):
+    """Edita un mensaje WhatsApp ya enviado. Meta impone ventana de 15 min y sólo texto."""
+    from datetime import datetime, timezone
+    body = await request.json()
+    phone = (body.get("phone") or "").strip()
+    wamid = (body.get("wamid") or "").strip()
+    new_text = (body.get("text") or "").strip()
+    if not phone or not wamid or not new_text:
+        raise HTTPException(status_code=400, detail="phone, wamid y text son requeridos")
+
+    msg = get_message_by_wamid(wamid)
+    if not msg:
+        raise HTTPException(status_code=404, detail="Mensaje no encontrado")
+    if msg.get("phone") != phone or msg.get("direction") != "out":
+        raise HTTPException(status_code=400, detail="Mensaje no pertenece a esta conversación")
+    if msg.get("canal") not in (None, "whatsapp"):
+        raise HTTPException(status_code=400, detail="Sólo se pueden editar mensajes de WhatsApp")
+
+    # Ventana 15 min
+    try:
+        ts = datetime.fromisoformat(msg["ts"].replace("Z", "+00:00"))
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        age = (datetime.now(timezone.utc) - ts).total_seconds()
+    except Exception:
+        age = 0
+    if age > 900:
+        raise HTTPException(status_code=400, detail="Ventana de 15 min expiró")
+
+    ok, err = await edit_whatsapp_message(phone, wamid, new_text)
+    if not ok:
+        raise HTTPException(status_code=502, detail=f"Meta rechazó la edición: {err}")
+
+    # Actualizar DB conservando prefijo [Recepcionista] si existía
+    orig = msg.get("text") or ""
+    prefix = "[Recepcionista] " if orig.startswith("[Recepcionista]") else ""
+    update_message_text_by_wamid(wamid, f"{prefix}{new_text}")
+    log_event(phone, "mensaje_editado", {"wamid": wamid, "nuevo": new_text[:200]})
     return {"ok": True}
 
 

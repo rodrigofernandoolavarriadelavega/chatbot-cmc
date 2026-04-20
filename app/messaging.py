@@ -71,6 +71,41 @@ async def send_whatsapp(to: str, body: str) -> str | None:
     })
 
 
+async def edit_whatsapp_message(to: str, wamid: str, new_body: str) -> tuple[bool, str | None]:
+    """Edita un mensaje de texto ya enviado vía Meta Cloud API.
+
+    Limitaciones de Meta: sólo texto, ventana de 15 min desde envío original.
+    Retorna (ok, error_message). Si ok=True, error_message es None.
+    """
+    payload = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": to,
+        "type": "text",
+        "text": {"body": new_body},
+        "message_id": wamid,
+    }
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.post(
+                META_API_URL,
+                headers={"Authorization": f"Bearer {META_ACCESS_TOKEN}"},
+                json=payload,
+            )
+        if r.status_code == 200:
+            return True, None
+        try:
+            err = r.json().get("error", {})
+            msg = err.get("message") or err.get("error_user_msg") or r.text[:300]
+        except Exception:
+            msg = r.text[:300]
+        log.error("edit_whatsapp_message falló %s: %s", r.status_code, msg)
+        return False, msg
+    except (httpx.TimeoutException, httpx.NetworkError) as e:
+        log.error("edit_whatsapp_message error de red: %s", e)
+        return False, f"Error de red: {e}"
+
+
 async def send_whatsapp_location(to: str, latitude: float, longitude: float,
                                   name: str = "", address: str = ""):
     """Envía mensaje de ubicación nativo vía Meta Cloud API."""

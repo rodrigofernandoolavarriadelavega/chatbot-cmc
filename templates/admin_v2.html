@@ -471,6 +471,44 @@ input, textarea, select{font-family:inherit; color:inherit}
 }
 .msg.out.recep .prefix{color:#0b5fa8}
 
+.msg{position:relative}
+.msg-edit-btn{
+  position:absolute; top:4px; right:-30px; width:24px; height:24px;
+  border-radius:50%; background:var(--panel); border:1px solid var(--border);
+  color:var(--text-mute); display:none; align-items:center; justify-content:center;
+  cursor:pointer; box-shadow:var(--shadow-sm);
+  transition: color 120ms var(--ease), background-color 120ms var(--ease);
+}
+.msg.out:hover > .msg-edit-btn{display:flex}
+.msg-edit-btn:hover{color:var(--cmc-blue); background:var(--cmc-aqua-soft)}
+.msg-edit-btn:focus-visible{outline:none; box-shadow:var(--ring)}
+.edited-tag{
+  font-size:9px; color:var(--text-dim); font-style:italic; margin-left:5px;
+  font-weight:500; letter-spacing:.2px;
+}
+.msg-editing{
+  display:flex; flex-direction:column; gap:6px; width:100%;
+}
+.msg-editing textarea{
+  width:100%; min-width:220px; background:rgba(255,255,255,.7); color:var(--text);
+  border:1px solid var(--cmc-aqua); border-radius:10px; padding:6px 10px;
+  font-family:var(--font); font-size:13.5px; resize:none; outline:none;
+}
+.msg-editing textarea:focus{box-shadow:var(--ring)}
+.msg-editing .row{display:flex; gap:6px; justify-content:flex-end}
+.msg-editing button{
+  padding:4px 10px; font-size:11.5px; font-weight:600; border-radius:7px; cursor:pointer;
+  border:1px solid var(--border);
+}
+.msg-editing .save-btn{background:var(--cmc-blue); color:#fff; border-color:var(--cmc-blue)}
+.msg-editing .save-btn:hover{background:var(--cmc-navy)}
+.msg-editing .cancel-btn{background:var(--panel-2); color:var(--text-mute)}
+.msg-editing .cancel-btn:hover{color:var(--text)}
+@media (max-width:760px){
+  .msg-edit-btn{right:2px; top:2px; display:flex; opacity:.6; background:rgba(255,255,255,.85)}
+  .msg-edit-btn:hover{opacity:1}
+}
+
 .new-divider{
   align-self:stretch; display:flex; align-items:center; gap:12px; margin:14px 0 10px;
   color:var(--green-dark); font-size:10.5px; font-weight:700;
@@ -1336,14 +1374,83 @@ function renderMessages(){
     const cls = isOut ? (isRecep ? "out recep" : "out") : "in";
     const cleanText = isRecep ? text.replace(/^\[Recepcionista\]\s*/, "") : text;
     const time = fmtClock(m.ts);
-    html += `<div class="msg ${cls}${firstCls}">
+    const canal = m.canal || "whatsapp";
+    const ageMs = Date.now() - (parseServerTs(m.ts)?.getTime() || 0);
+    const canEdit = isOut && m.wamid && canal === "whatsapp" && ageMs < 15*60*1000;
+    const editedBadge = m.edited_at ? ' <span class="edited-tag">editado</span>' : '';
+    const editBtn = canEdit
+      ? `<button class="msg-edit-btn" data-wamid="${esc(m.wamid)}" title="Editar mensaje" aria-label="Editar"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`
+      : '';
+    html += `<div class="msg ${cls}${firstCls}"${m.wamid ? ` data-wamid="${esc(m.wamid)}"` : ''}>
       ${isRecep && firstCls ? '<span class="prefix">Recepcionista</span>' : ''}
       <span class="text">${formatWa(cleanText)}</span>
-      <span class="time">${time}</span>
+      <span class="time">${time}${editedBadge}</span>
+      ${editBtn}
     </div>`;
     lastKind = kind;
   });
   el.innerHTML = html;
+}
+
+function startEditMessage(bubble, wamid){
+  if (!bubble || bubble.querySelector(".msg-editing")) return;
+  const textEl = bubble.querySelector(".text");
+  const timeEl = bubble.querySelector(".time");
+  const editBtn = bubble.querySelector(".msg-edit-btn");
+  const prefix = bubble.querySelector(".prefix");
+  // Extraer texto original limpio (quitando prefix "[Recepcionista]" si aplica)
+  const msg = messages.find(m => m.wamid === wamid);
+  if (!msg) return;
+  let original = msg.text || "";
+  if (original.startsWith("[Recepcionista]")) original = original.replace(/^\[Recepcionista\]\s*/, "");
+
+  const editor = document.createElement("div");
+  editor.className = "msg-editing";
+  editor.innerHTML = `
+    <textarea rows="2"></textarea>
+    <div class="row">
+      <button class="cancel-btn" type="button">Cancelar</button>
+      <button class="save-btn" type="button">Guardar</button>
+    </div>`;
+  const ta = editor.querySelector("textarea");
+  ta.value = original;
+
+  if (textEl) textEl.style.display = "none";
+  if (timeEl) timeEl.style.display = "none";
+  if (editBtn) editBtn.style.display = "none";
+  bubble.appendChild(editor);
+  ta.focus();
+  ta.setSelectionRange(ta.value.length, ta.value.length);
+
+  const restore = () => {
+    editor.remove();
+    if (textEl) textEl.style.display = "";
+    if (timeEl) timeEl.style.display = "";
+    if (editBtn) editBtn.style.display = "";
+  };
+  editor.querySelector(".cancel-btn").onclick = restore;
+  editor.querySelector(".save-btn").onclick = async () => {
+    const newText = ta.value.trim();
+    if (!newText) return toast("Texto vacío", "error");
+    if (newText === original){ restore(); return; }
+    editor.querySelector(".save-btn").disabled = true;
+    try {
+      await api("/admin/api/edit-message", {
+        method:"POST",
+        body: JSON.stringify({ phone: activePhone, wamid, text: newText })
+      });
+      toast("Mensaje editado");
+      loadMessages(false);
+    } catch(e){
+      console.error(e);
+      toast(e.message || "No se pudo editar", "error");
+      editor.querySelector(".save-btn").disabled = false;
+    }
+  };
+  ta.addEventListener("keydown", (e) => {
+    if (e.key === "Escape"){ restore(); }
+    if (e.key === "Enter" && !e.shiftKey){ e.preventDefault(); editor.querySelector(".save-btn").click(); }
+  });
 }
 
 function scrollToBottom(force){
@@ -1833,6 +1940,15 @@ function setup(){
   });
   // Emoji picker
   setupEmojiPicker(ri);
+  // Delegación: click en botón editar mensaje
+  $("#messages").addEventListener("click", (e) => {
+    const btn = e.target.closest(".msg-edit-btn");
+    if (!btn) return;
+    e.stopPropagation();
+    const bubble = btn.closest(".msg");
+    const wamid = btn.dataset.wamid;
+    if (bubble && wamid) startEditMessage(bubble, wamid);
+  });
   // Sound / notif
   const updateBtns = () => {
     $("#btnSound").classList.toggle("active", soundOn);
