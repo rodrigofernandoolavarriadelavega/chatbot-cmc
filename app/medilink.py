@@ -883,6 +883,10 @@ async def crear_cita(id_paciente: int, id_profesional: int, fecha: str,
             if not cita_id:
                 log.error("crear_cita: respuesta sin id — %s", data)
                 return None
+            # Invalidar cache de próxima fecha tras booking: el slot ya no está
+            # disponible. Sin esto, con TTL 15 min el bot puede ofrecer el mismo
+            # slot a otros pacientes y provocar doble-booking.
+            _proxima_cache.clear()
             return {"id": cita_id, "confirmado": True}
         log.error("crear_cita falló: %s %s", r.status_code, r.text[:500])
         return None
