@@ -374,7 +374,23 @@ Si el mensaje contiene CUALQUIER señal de:
   que debería atrapar esto antes, pero si algo se filtra hasta acá es tu responsabilidad
   no mandarlo a recepción como si fuera un trámite.
 
+🎯 ORDEN DE PRIORIDAD PARA CLASIFICAR (lee de arriba a abajo, la primera regla que aplique gana):
+1. Verbos de CANCELACIÓN/ANULACIÓN conjugados en cualquier tiempo o persona ("cancelo/cancelaré/cancelé/anulo/anulé/anularé/voy a cancelar/quiero cancelar/no puedo ir/no voy a poder asistir/doy de baja mi hora") → SIEMPRE intent "cancelar", AUNQUE el mensaje contenga "hora", "hoy", una especialidad, una fecha, o un nombre de profesional.
+2. Verbos de REAGENDAR ("mover/cambiar/reprogramar/correr la hora/cambiar de día") → SIEMPRE intent "reagendar", aunque después mencione una nueva especialidad o fecha.
+3. Verbos de AGENDAR ("agendar/pedir/reservar/tomar/sacar una hora/necesito consulta"). Solo aplica si no hubo verbo de cancelación/reagendar antes.
+4. Solo nombre o abreviación de especialidad sin verbo ("kine", "gine", "cardio") → intent "agendar".
+5. Consultas de INFO o PRECIO (no piden acción) → intent "info" o "precio".
+
 EJEMPLOS (sigue este formato exacto):
+
+Input: "Buenos días, comentarle que cancelaré la hora de hoy con la matrona, mil disculpas"
+Output: {{"intent": "cancelar", "especialidad": null, "respuesta_directa": null}}
+
+Input: "Tengo hora con Dr Abarca pero me surgió un imprevisto, no voy a poder ir"
+Output: {{"intent": "cancelar", "especialidad": null, "respuesta_directa": null}}
+
+Input: "Quiero cambiar mi hora del viernes al lunes"
+Output: {{"intent": "reagendar", "especialidad": null, "respuesta_directa": null}}
 
 Input: "me muero"
 Output: {{"intent": "otro", "especialidad": null, "respuesta_directa": "⚠️ Si es una emergencia, llama al *SAMU 131* ahora mismo o acude al servicio de urgencias más cercano. También puedes llamar al CMC al +56987834148."}}

@@ -1259,23 +1259,34 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             "Si necesitas algo más, escribe *menú*."
         )
 
-    # ── Urgencia de ortodoncia (alambre suelto, herida, bráckets desprendidos) ──
-    # La dentista general no puede resolver esto rápido; mejor derivar directo a
-    # recepción para que coordine con la ortodoncista (Dra. Castillo).
-    _ORTO_URG_KWS = ("alambre", "bracket se me", "brackets se me", "bracket suelto",
-                     "bráckets sueltos", "brackets sueltos", "se me pinchó",
-                     "se me pincho", "se me clavó", "se me clavo", "me saca sangre",
-                     "me esta sangrando", "me está sangrando")
-    _ORTO_CONTEXTO = ("bracket", "brácket", "brackets", "bráckets", "ortodoncia",
-                      "frenillos", "aparato dental", "aparato de los dientes")
-    if (state != "HUMAN_TAKEOVER"
-            and any(k in tl for k in _ORTO_URG_KWS)
-            and any(c in tl for c in _ORTO_CONTEXTO)):
-        log_event(phone, "ortodoncia_urgencia", {"texto": txt[:200]})
-        return _derivar_humano(
-            phone=phone,
-            contexto=f"ortodoncia urgente: {txt[:160]}"
-        )
+    # ── Urgencias soft (no-SAMU) por especialidad ─────────────────────────────
+    # Situaciones clínicas no vitales pero que requieren atención rápida: la
+    # dentista general / el flujo normal de agendamiento no resuelve a tiempo.
+    # Derivamos directo a recepción con contexto para que coordine.
+    # Formato: (señal, contexto). El match requiere QUE AMBOS aparezcan en tl.
+    _URGENCIAS_SOFT = (
+        # Ortodoncia
+        (("alambre", "me pinchó", "me pincho", "me clavó", "me clavo",
+          "me saca sangre", "me sangra", "suelto", "sueltos", "se safó", "se zafo"),
+         ("bracket", "brácket", "brackets", "bráckets", "ortodoncia",
+          "frenillos", "aparato dental", "aparato de los dientes"),
+         "ortodoncia"),
+        # Dental — diente/muela fracturado, prótesis rota, absceso
+        (("se me partió", "se me partio", "se rompió", "se rompio", "fractur",
+          "se me cayó un trozo", "se me salió", "se me salio", "no puedo comer",
+          "absceso", "infla", "me revento"),
+         ("muela", "diente", "dientes", "colmillo", "incisivo", "molar",
+          "prótesis", "protesis", "placa dental", "corona"),
+         "dental"),
+    )
+    if state != "HUMAN_TAKEOVER":
+        for kws_sig, kws_ctx, etiqueta in _URGENCIAS_SOFT:
+            if any(k in tl for k in kws_sig) and any(c in tl for c in kws_ctx):
+                log_event(phone, "urgencia_soft", {"tipo": etiqueta, "texto": txt[:200]})
+                return _derivar_humano(
+                    phone=phone,
+                    contexto=f"urgencia {etiqueta}: {txt[:160]}"
+                )
 
     # ── Consent inline (Ley 19.628) ──────────────────────────────────────────
     # El consentimiento se registra cuando el paciente proporciona su RUT
@@ -2969,6 +2980,27 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         f"{resp}\n\n"
                         "_Elige un número para continuar con tu reserva o escribe *menu* para volver._"
                     )
+            # Fallback sistémico: antes de dar el mensaje genérico, re-correr
+            # detect_intent. Si el paciente pivotó a otra acción clara (cancelar,
+            # reagendar, cambiar de especialidad, ver reservas), procesamos ese
+            # intent nuevo en vez de insistir con el "no te entendí".
+            if len(txt) >= 3 and not txt.isdigit():
+                try:
+                    _pivot = await detect_intent(txt)
+                    _pintent = _pivot.get("intent", "otro")
+                except Exception:
+                    _pintent = "otro"
+                if _pintent in ("cancelar", "reagendar", "ver_reservas"):
+                    log_event(phone, "wait_slot_pivot", {"intent": _pintent, "texto": txt[:120]})
+                    reset_session(phone)
+                    return await handle_message(phone, texto, {"state": "IDLE", "data": {}})
+                if _pintent == "agendar" and _pivot.get("especialidad"):
+                    nueva_esp = (_pivot.get("especialidad") or "").lower()
+                    if nueva_esp and nueva_esp != (data.get("especialidad") or "").lower():
+                        log_event(phone, "wait_slot_cambio_esp",
+                                  {"de": data.get("especialidad"), "a": nueva_esp})
+                        reset_session(phone)
+                        return await _iniciar_agendar(phone, {}, nueva_esp)
             # Frustration detector — escalada en 3 niveles
             data["intentos_fallidos"] = data.get("intentos_fallidos", 0) + 1
             intentos = data["intentos_fallidos"]
@@ -4241,62 +4273,16 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         )
 
     # ── HUMAN_TAKEOVER ────────────────────────────────────────────────────────
+    # Principio: HUMAN_TAKEOVER es inviolable. Solo la recepcionista sale del
+    # estado (botón "devolver al bot") o el paciente con un reset explícito
+    # ("menu"/"hola"/"inicio" — ya manejado arriba como _es_comando_reset).
+    #
+    # Por qué: el auto-escape basado en intent detection contradecía a la
+    # recepcionista y desinformaba al paciente (ej: bot respondía que el bono
+    # Fonasa se compraba en CESFAM cuando la recepcionista estaba diciendo
+    # lo contrario). Los supuestos "rescates automáticos" tenían más falsos
+    # positivos que beneficios. Ahora el comportamiento es determinístico.
     if state == "HUMAN_TAKEOVER":
-        # Auto-escape: si el paciente cambió de tema y su mensaje tiene una
-        # intención accionable (agendar, cancelar, precio, info, etc.), NO lo
-        # dejamos atrapado esperando a la recepcionista — reseteamos la sesión
-        # y re-procesamos el mismo texto desde IDLE. Así el bot "entiende solo"
-        # cuando el paciente retoma el flujo, sin obligarlo a escribir "hola".
-        # Los botones de confirmación pre-cita ya se manejan arriba, por eso
-        # acá solo consultamos Claude si es texto libre de cierta longitud.
-        _es_boton_precita = tl.startswith(("cita_confirm:", "cita_reagendar:", "cita_cancelar:"))
-        if not _es_boton_precita and len(txt) >= 3:
-            try:
-                _result = await detect_intent(txt)
-                _intent = _result.get("intent", "otro")
-            except Exception:
-                _intent = "otro"
-            # Solo intents de ACCIÓN explícita rompen el takeover. Preguntas
-            # tipo "info"/"precio"/"disponibilidad" las puede responder la
-            # recepcionista — si el bot escapa, contradice y desinforma.
-            _ACCIONABLES = {
-                "agendar", "reagendar", "cancelar", "ver_reservas",
-            }
-            # Auto-escape conservador: solo sacar del takeover si:
-            # 1) El paciente tiene claro intent accionable
-            # 2) Y la recepcionista NO ha respondido en los últimos 10 min
-            #    (si recepcionista está activa, el paciente está conversando con ella
-            #     — no hay que romper el flujo humano)
-            if _intent in _ACCIONABLES:
-                from session import _conn as _c
-                try:
-                    with _c() as _conn_r:
-                        _last_recep = _conn_r.execute(
-                            "SELECT ts FROM messages WHERE phone=? AND direction='out' "
-                            "AND text LIKE '[Recepcionista]%' "
-                            "ORDER BY id DESC LIMIT 1", (phone,)
-                        ).fetchone()
-                except Exception:
-                    _last_recep = None
-                _recep_activa = False
-                if _last_recep:
-                    from datetime import datetime as _dtz
-                    try:
-                        _ts = _dtz.strptime(_last_recep["ts"], "%Y-%m-%d %H:%M:%S")
-                        _recep_activa = (_dtz.utcnow() - _ts).total_seconds() < 600  # 10 min
-                    except Exception:
-                        pass
-                if not _recep_activa:
-                    log_event(phone, "human_takeover_exit", {"intent": _intent, "texto": txt[:120]})
-                    reset_session(phone)
-                    fresh_session = {"state": "IDLE", "data": {}}
-                    return await handle_message(phone, texto, fresh_session)
-                # Recepcionista activa → respetar takeover, guardar msg silenciosamente
-                log_event(phone, "human_takeover_preserved", {
-                    "intent": _intent, "texto": txt[:120],
-                    "razon": "recepcionista activa <10min"
-                })
-
         # Mensaje quedó guardado en el historial — recepcionista responde desde el panel
         # Solo respondemos si el paciente sigue enviando mensajes para que no sienta silencio
         msgs_sin_respuesta = data.get("msgs_sin_respuesta", 0) + 1
