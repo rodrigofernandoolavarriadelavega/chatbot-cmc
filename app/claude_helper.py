@@ -901,6 +901,25 @@ async def detect_intent(mensaje: str) -> dict:
         clave_norm = _norm_tx(clave).rstrip('.?!¿¡,;:')
     except Exception:
         clave_norm = clave_sin_punto
+    # Prefilter: verbos de cancelación explícitos. Claude a veces confunde frases como
+    # "cancelaré la hora de hoy con la matrona" con intent=agendar por la presencia de
+    # "hora/matrona/hoy". El verbo de cancelación siempre gana.
+    _CANCEL_VERB_RE = _re_w.compile(
+        r"(\bcancel(?:o|a|ar|aré|are|ará|ara|aría|aria|arla|arlo|arel|emos|ado|ada|"
+        r"acion|ación|aciones|aciones|o la|ar la|aré la|are la|ará la|ara la)\b"
+        r"|\banul(?:o|a|ar|aré|are|ará|ara|aría|aria|arla|arlo|emos|ado|ada|"
+        r"o la|ar la|aré la|are la|ará la|ara la)\b"
+        r"|\bno (?:puedo|podré|podre|voy a poder|podría|podria) (?:ir|asistir|llegar|venir|atender[mt]e)"
+        r"|\bdar de baja\b|\bquitar (?:la|mi) hora\b|\beliminar (?:la|mi) hora\b)"
+    )
+    if _CANCEL_VERB_RE.search(clave_norm) or _CANCEL_VERB_RE.search(clave):
+        log.info("cancel-verb prefilter: %r", clave[:80])
+        try:
+            from session import log_event as _log_event
+            _log_event("", "intent_cancel_prefilter", {"texto": clave[:120]})
+        except Exception:
+            pass
+        return {"intent": "cancelar", "especialidad": None, "respuesta_directa": None}
     if clave in _INTENT_CACHE:
         log.info("cache hit: %r → %s", clave, _INTENT_CACHE[clave]["intent"])
         try:

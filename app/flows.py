@@ -1259,6 +1259,24 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             "Si necesitas algo más, escribe *menú*."
         )
 
+    # ── Urgencia de ortodoncia (alambre suelto, herida, bráckets desprendidos) ──
+    # La dentista general no puede resolver esto rápido; mejor derivar directo a
+    # recepción para que coordine con la ortodoncista (Dra. Castillo).
+    _ORTO_URG_KWS = ("alambre", "bracket se me", "brackets se me", "bracket suelto",
+                     "bráckets sueltos", "brackets sueltos", "se me pinchó",
+                     "se me pincho", "se me clavó", "se me clavo", "me saca sangre",
+                     "me esta sangrando", "me está sangrando")
+    _ORTO_CONTEXTO = ("bracket", "brácket", "brackets", "bráckets", "ortodoncia",
+                      "frenillos", "aparato dental", "aparato de los dientes")
+    if (state != "HUMAN_TAKEOVER"
+            and any(k in tl for k in _ORTO_URG_KWS)
+            and any(c in tl for c in _ORTO_CONTEXTO)):
+        log_event(phone, "ortodoncia_urgencia", {"texto": txt[:200]})
+        return _derivar_humano(
+            phone=phone,
+            contexto=f"ortodoncia urgente: {txt[:160]}"
+        )
+
     # ── Consent inline (Ley 19.628) ──────────────────────────────────────────
     # El consentimiento se registra cuando el paciente proporciona su RUT
     # (consentimiento tácito al compartir datos personales). NO bloqueamos al
@@ -2567,13 +2585,13 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
         # ── "No" suelto en WAIT_SLOT → ofrecer alternativas (no confundir con negación real) ──
         _tl_slot = txt.strip().lower()
-        if _tl_slot in ("no", "no gracias", "nel", "nop", "negativo"):
+        if _tl_slot in ("no", "no gracias", "nel", "nop", "negativo", "no me sirve", "ninguna"):
             return (
                 "Sin problema 😊 Puedo mostrarte:\n\n"
-                "• *Otros horarios* del mismo día\n"
+                "• *Otros horarios* del mismo día (escribe *ver todos*)\n"
                 "• *Otro día* para cambiar de fecha\n"
                 "• *Otro profesional* (si hay disponible)\n\n"
-                "¿Qué preferís?"
+                "¿Qué prefieres?"
             )
 
         # ── Pregunta por contacto / teléfono / dirección / ubicación ──
@@ -4238,9 +4256,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 _intent = _result.get("intent", "otro")
             except Exception:
                 _intent = "otro"
+            # Solo intents de ACCIÓN explícita rompen el takeover. Preguntas
+            # tipo "info"/"precio"/"disponibilidad" las puede responder la
+            # recepcionista — si el bot escapa, contradice y desinforma.
             _ACCIONABLES = {
                 "agendar", "reagendar", "cancelar", "ver_reservas",
-                "waitlist", "disponibilidad", "precio", "info",
             }
             # Auto-escape conservador: solo sacar del takeover si:
             # 1) El paciente tiene claro intent accionable
