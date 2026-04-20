@@ -1004,6 +1004,10 @@ async def listar_historial_paciente(id_paciente: int, meses: int = 6, rut: str |
                 return []
             # Filtrar por id_paciente por si hay otros registros con el mismo RUT
             data = [c for c in data if not c.get("id_paciente") or c.get("id_paciente") == id_paciente]
+            # Defensa: Medilink a veces ignora `lte` y devuelve citas futuras.
+            # Historial no debe incluir fechas >= hoy.
+            hoy_str = hoy.strftime("%Y-%m-%d")
+            data = [c for c in data if c.get("fecha", "") < hoy_str]
         else:
             log.warning("listar_historial_paciente id=%d sin rut — Medilink no soporta id_paciente filter", id_paciente)
             return []

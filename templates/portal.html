@@ -879,38 +879,99 @@ const PROMO_CATALOG = {
   },
 };
 
+// Qué promos sobran cuando el paciente ya tiene esa especialidad agendada o la tuvo recientemente
+const PROMO_SPECIALTY_MAP = {
+  chequeo: ['medicina general','medicina familiar'],
+  kine:    ['kinesiología','kinesiologia'],
+  cardio:  ['cardiología','cardiologia'],
+  nutri:   ['nutrición','nutricion'],
+  psico:   ['psicología','psicologia','psicología adulto','psicología infantil'],
+  odonto:  ['odontología general','odontologia'],
+  ortodoncia: ['ortodoncia'],
+  endo:    ['endodoncia'],
+  matrona: ['matrona','ginecología','ginecologia'],
+  orl_fono:['otorrinolaringología','otorrinolaringologia','fonoaudiología','fonoaudiologia'],
+  eco:     ['ecografía','ecografia'],
+  estetica:['estética facial','estetica facial'],
+  podologia:['podología','podologia'],
+  masoterapia:['masoterapia'],
+  gastro:  ['gastroenterología','gastroenterologia'],
+};
+
 function pickPromos(d){
-  const dxSet = new Set((d.diagnosticos || []).map(x => x.toLowerCase()));
-  const specs = new Set((d.historial || []).map(c => (c.especialidad || '').toLowerCase()));
-  const prox = new Set((d.citas_futuras || []).map(c => (c.especialidad || '').toLowerCase()));
-  const has = (set, kw) => [...set].some(s => s.includes(kw));
-  const priority = [];
+  const dx = [...(d.diagnosticos || [])].map(x => x.toLowerCase()).join(' | ');
+  const historyEsp = (d.historial || []).map(c => (c.especialidad || '').toLowerCase());
+  const futureEsp  = (d.citas_futuras || []).map(c => (c.especialidad || '').toLowerCase());
+  const covered = new Set([...historyEsp, ...futureEsp]);
+  const hasDx = kw => dx.includes(kw);
+  const hasSpec = kw => [...covered].some(s => s.includes(kw));
+  const coveredByPromo = key => {
+    const specs = PROMO_SPECIALTY_MAP[key] || [];
+    return specs.some(s => [...covered].some(c => c.includes(s)));
+  };
 
-  // Prioridad 1: dx crónicos → cardio, nutri
-  if ([...dxSet].some(dx => dx.includes('hta') || dx.includes('hiperten') || dx.includes('presi'))) priority.push('cardio');
-  if ([...dxSet].some(dx => dx.includes('dm2') || dx.includes('diab'))) { priority.push('nutri'); priority.push('podologia'); }
-  // Prioridad 2: historial específico
-  if (has(specs, 'traumat') && !has(prox, 'kinesio')) priority.push('kine');
-  if (has(specs, 'ortodon')) priority.push('ortodoncia');
-  if (has(specs, 'odontolog') && !has(specs, 'ortodon')) priority.push('odonto');
-  if (has(specs, 'otorri') && !has(specs, 'fonoaud')) priority.push('orl_fono');
-  if (has(specs, 'fonoaud') && !has(specs, 'otorri')) priority.push('orl_fono');
-  if (has(specs, 'ginecol') && !has(specs, 'matrona')) priority.push('matrona');
-  if (has(specs, 'kinesio')) priority.push('masoterapia');
-  if (has(specs, 'odontolog')) priority.push('endo');
-  // Prioridad 3: sin próximas → chequeo preventivo
-  if ((d.citas_futuras || []).length === 0) priority.push('chequeo');
+  const scored = [];
+  const push = (key, score) => scored.push({ key, score });
 
-  // Completar con fallbacks genéricos hasta 10
-  const fallback = ['chequeo','nutri','odonto','kine','psico','estetica','eco','gastro','matrona','ortodoncia','cardio','podologia','masoterapia','orl_fono','endo'];
-  const combined = [...priority, ...fallback];
-  const seen = new Set();
-  const result = [];
-  for (const k of combined) {
-    if (!seen.has(k) && PROMO_CATALOG[k]) { seen.add(k); result.push(k); }
-    if (result.length >= 10) break;
+  // === Contexto demográfico ===
+  const hasProx = futureEsp.length > 0;
+
+  // === Recomendaciones clínicas ===
+  // HTA: cardio + nutri + podología (si además DM2)
+  if (hasDx('hta') || hasDx('hiperten') || hasDx('presi')) {
+    push('cardio', 100); push('nutri', 90);
   }
-  return result;
+  // DM2: nutri + podología + cardio + ecografía (control renal/hepático)
+  if (hasDx('dm2') || hasDx('diab')) {
+    push('nutri', 100); push('podologia', 95); push('cardio', 85); push('eco', 70);
+  }
+  // Asma/EPOC: kine respiratoria (la marcamos como kine genérica)
+  if (hasDx('asma') || hasDx('epoc')) { push('kine', 80); }
+  // Traumatología histórica → kine + masoterapia
+  if (hasSpec('traumat') && !coveredByPromo('kine')) { push('kine', 90); push('masoterapia', 60); }
+  // Ortodoncia en curso → control y estética dental
+  if (hasSpec('ortodon')) { push('ortodoncia', 70); push('odonto', 55); }
+  // Odontología histórica → endo + estética dental
+  if (hasSpec('odontolog') && !hasSpec('ortodon')) { push('endo', 55); push('odonto', 50); }
+  // ORL ↔ Fono cross-sell
+  if (hasSpec('otorri') || hasSpec('fonoaud')) { push('orl_fono', 70); }
+  // Ginecología sin matrona → matrona
+  if (hasSpec('ginecol') && !coveredByPromo('matrona')) push('matrona', 65);
+  // Kine en curso → masoterapia complementaria
+  if (hasSpec('kinesio')) push('masoterapia', 55);
+
+  // === Complementos inteligentes a la cita próxima ===
+  // Si tiene consulta MG próxima, no redundar: sugerir nutri/psico/eco que suelen salir derivadas
+  if (hasSpec('medicina general') || hasSpec('medicina familiar')) {
+    push('nutri', 60); push('psico', 55); push('eco', 50); push('cardio', 45);
+  }
+  // Si tiene gine → matrona/eco; si tiene matrona → gine
+  if (hasSpec('ginecol')) push('eco', 50);
+
+  // === Si paciente sin próxima y sin historial relevante → chequeo preventivo ===
+  if (!hasProx && historyEsp.length === 0) push('chequeo', 75);
+
+  // === Fallback genérico (baja prioridad) ===
+  const fallback = ['psico','nutri','odonto','kine','estetica','eco','matrona','gastro','podologia','masoterapia','orl_fono','cardio','ortodoncia','endo','chequeo'];
+  fallback.forEach((k, i) => push(k, 10 - i * 0.1));
+
+  // Deduplicar, descartar los ya cubiertos por agenda/historial, y ordenar por score
+  const best = new Map();
+  for (const { key, score } of scored) {
+    if (!PROMO_CATALOG[key]) continue;
+    if (coveredByPromo(key)) continue;
+    if (!best.has(key) || best.get(key) < score) best.set(key, score);
+  }
+  const sorted = [...best.entries()].sort((a, b) => b[1] - a[1]).map(([k]) => k);
+
+  // Garantizar 10 items — si filtramos demasiado, rellenar ignorando "covered"
+  if (sorted.length < 10) {
+    for (const k of fallback) {
+      if (!sorted.includes(k)) sorted.push(k);
+      if (sorted.length >= 10) break;
+    }
+  }
+  return sorted.slice(0, 10);
 }
 
 // ══ Render dashboard ══
