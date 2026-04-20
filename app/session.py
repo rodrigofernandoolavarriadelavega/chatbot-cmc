@@ -589,6 +589,86 @@ def get_profile(phone: str) -> dict | None:
         return dict(row) if row else None
 
 
+_RUT_RE = __import__("re").compile(r'\b(\d{1,2}\.?\d{3}\.?\d{3}[-.\s]?[\dkK])\b')
+_PALABRAS_BASURA = {
+    "rut", "mi", "el", "la", "es", "soy", "para", "con", "de", "del", "al",
+    "hola", "buenas", "tardes", "dias", "noches", "gracias", "favor",
+    "nombre", "paciente", "atiende", "atender", "acompaname", "ayuda",
+    "atencion", "porfavor", "por", "cel", "celular", "whatsapp", "numero",
+    "telefono", "fono", "correo", "email", "hora", "cita", "reservar",
+    "agendar", "cancelar", "quiero", "necesito", "puedo", "puede", "si", "no",
+    "ok", "bueno", "dale", "claro",
+}
+
+
+def try_autocapture_rut_name(phone: str, text: str) -> dict | None:
+    """Extrae RUT chileno + nombre aproximado de un mensaje libre y los asocia
+    al teléfono si no tiene perfil completo. Pasivo y silencioso: nunca rompe
+    el flujo. Retorna el perfil guardado (o None si no capturó nada).
+
+    Casos típicos cubiertos:
+      - "9.443.926-4 maría Parra pedrero"
+      - "mi rut es 12345678-9 Juan Pérez"
+      - "RUT: 12.345.678-9"
+    """
+    if not phone or not text:
+        return None
+    existing = get_profile(phone) or {}
+    has_rut = bool((existing.get("rut") or "").strip())
+    has_nombre = bool((existing.get("nombre") or "").strip())
+    if has_rut and has_nombre:
+        return None
+
+    m = _RUT_RE.search(text)
+    rut_fmt = None
+    if m:
+        raw = m.group(1)
+        import re as _re
+        digits = _re.sub(r'[^\dkK]', '', raw).upper()
+        if 8 <= len(digits) <= 9:
+            cuerpo, dv = digits[:-1], digits[-1]
+            try:
+                cuerpo_fmt = f"{int(cuerpo):,}".replace(",", ".")
+                rut_fmt = f"{cuerpo_fmt}-{dv}"
+                # Validar con valid_rut si está disponible
+                try:
+                    from medilink import valid_rut  # type: ignore
+                    if not valid_rut(rut_fmt):
+                        rut_fmt = None
+                except Exception:
+                    pass
+            except Exception:
+                rut_fmt = None
+    if not rut_fmt:
+        return None  # sin RUT válido no guardamos nada para no meter nombres sueltos
+
+    # Extraer palabras candidato a nombre alrededor del RUT
+    import re as _re
+    around = (text[:m.start()] + " " + text[m.end():])
+    tokens = _re.findall(r"[A-Za-zÁÉÍÓÚÑáéíóúñ]{2,}", around)
+    filtrados = [t for t in tokens if t.lower() not in _PALABRAS_BASURA]
+    # Tomar hasta 4 palabras consecutivas tras el primer match, con cap sensato
+    if filtrados:
+        nombre_candidato = " ".join(w.capitalize() for w in filtrados[:4])
+    else:
+        nombre_candidato = ""
+
+    nombre_final = (existing.get("nombre") or "").strip() or nombre_candidato
+    rut_final = rut_fmt
+    if not nombre_final:
+        # RUT sin nombre: guardar igual el RUT para poder cruzarlo en Medilink
+        nombre_final = ""
+    save_profile(phone, rut_final, nombre_final)
+    try:
+        log_event(phone, "autocapture_profile", {
+            "rut": rut_final, "nombre": nombre_final[:60],
+            "fuente": text[:120],
+        })
+    except Exception:
+        pass
+    return {"rut": rut_final, "nombre": nombre_final}
+
+
 def get_phone_by_rut(rut: str) -> str | None:
     """Busca el teléfono asociado a un RUT en contact_profiles."""
     if not rut:

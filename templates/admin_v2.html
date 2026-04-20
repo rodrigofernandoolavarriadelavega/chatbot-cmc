@@ -582,6 +582,52 @@ input, textarea, select{font-family:inherit; color:inherit}
   animation:emojiIn 140ms var(--ease);
 }
 .emoji-picker[hidden]{display:none !important}
+
+.mb-modal{
+  position:fixed; inset:0; z-index:200;
+  background:rgba(15,63,104,.35); backdrop-filter:blur(4px);
+  display:flex; align-items:center; justify-content:center; padding:20px;
+}
+.mb-modal[hidden]{display:none !important}
+.mb-dialog{
+  background:var(--panel); border-radius:14px; width:100%; max-width:440px;
+  box-shadow:var(--shadow-lg); border:1px solid var(--border);
+  animation:mbIn 140ms var(--ease);
+}
+@keyframes mbIn{from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:none}}
+.mb-header{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:14px 18px; border-bottom:1px solid var(--border-soft);
+}
+.mb-header h3{margin:0; font-size:14.5px; color:var(--cmc-navy); font-weight:700}
+.mb-close{
+  width:28px; height:28px; border-radius:50%; border:0; background:transparent;
+  color:var(--text-mute); cursor:pointer; font-size:20px; line-height:1;
+}
+.mb-close:hover{background:var(--panel-2); color:var(--text)}
+.mb-body{padding:14px 18px; display:flex; flex-direction:column; gap:10px}
+.mb-row{display:flex; flex-direction:column; gap:4px}
+.mb-row label{font-size:11px; color:var(--text-mute); font-weight:600; text-transform:uppercase; letter-spacing:.3px}
+.mb-row input, .mb-row select{
+  padding:8px 10px; border:1px solid var(--border); border-radius:8px;
+  font-size:13px; background:var(--panel); color:var(--text);
+  font-family:var(--font); outline:none;
+}
+.mb-row input:focus, .mb-row select:focus{border-color:var(--cmc-aqua); box-shadow:var(--ring)}
+.mb-grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.mb-footer{
+  display:flex; gap:8px; justify-content:flex-end; padding:12px 18px 16px;
+  border-top:1px solid var(--border-soft);
+}
+.mb-btn{
+  padding:8px 14px; font-size:12.5px; font-weight:600; border-radius:8px;
+  cursor:pointer; border:1px solid var(--border);
+}
+.mb-btn.cancel{background:var(--panel-2); color:var(--text-mute)}
+.mb-btn.cancel:hover{color:var(--text)}
+.mb-btn.save{background:var(--cmc-blue); color:#fff; border-color:var(--cmc-blue)}
+.mb-btn.save:hover{background:var(--cmc-navy)}
+.mb-btn:disabled{opacity:.6; cursor:not-allowed}
 @keyframes emojiIn{from{opacity:0; transform:translateY(4px)} to{opacity:1; transform:none}}
 .emoji-picker .emoji-cat{
   grid-column:1 / -1; font-size:10.5px; font-weight:700; color:var(--text-mute);
@@ -997,6 +1043,49 @@ html, body{width:100%; max-width:100%; overflow-x:hidden}
 
 <div id="toast"></div>
 
+<div id="mbModal" class="mb-modal" hidden>
+  <div class="mb-dialog">
+    <div class="mb-header">
+      <h3>Marcar cita agendada manualmente</h3>
+      <button class="mb-close" type="button" aria-label="Cerrar">×</button>
+    </div>
+    <div class="mb-body">
+      <div class="mb-row">
+        <label>RUT del paciente</label>
+        <input type="text" id="mbRut" placeholder="12.345.678-9">
+      </div>
+      <div class="mb-row">
+        <label>Nombre completo</label>
+        <input type="text" id="mbNombre" placeholder="Nombre Apellido">
+      </div>
+      <div class="mb-row">
+        <label>Especialidad *</label>
+        <input type="text" id="mbEsp" placeholder="Ej. medicina general, kinesiología">
+      </div>
+      <div class="mb-row">
+        <label>Profesional</label>
+        <input type="text" id="mbProf" placeholder="Opcional">
+      </div>
+      <div class="mb-row mb-grid2">
+        <div><label>Fecha *</label><input type="date" id="mbFecha"></div>
+        <div><label>Hora *</label><input type="time" id="mbHora"></div>
+      </div>
+      <div class="mb-row">
+        <label>Modalidad</label>
+        <select id="mbMod">
+          <option value="particular">Particular</option>
+          <option value="fonasa">Fonasa</option>
+          <option value="manual">Otro</option>
+        </select>
+      </div>
+    </div>
+    <div class="mb-footer">
+      <button class="mb-btn cancel" type="button">Cancelar</button>
+      <button class="mb-btn save" type="button">Guardar cita</button>
+    </div>
+  </div>
+</div>
+
 <script>
 "use strict";
 
@@ -1316,6 +1405,8 @@ function renderHeader(){
   } else {
     acts.push(`<button class="chat-btn warn pulse" onclick="takeover()">${iconHand}Tomar control</button>`);
   }
+  const iconBook = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="10" y1="16" x2="14" y2="16"/></svg>`;
+  acts.push(`<button class="chat-btn" onclick="openMarkBookedModal()" title="Marcar cita agendada manualmente">${iconBook}Agendar manual</button>`);
   acts.push(`<button class="chat-btn icon-only" onclick="copyPhone()" title="Copiar teléfono">${iconCopy}</button>`);
   $("#chActions").innerHTML = acts.join("");
   $("#takeoverBanner").style.display = isTake ? "flex" : "none";
@@ -1391,6 +1482,68 @@ function renderMessages(){
     lastKind = kind;
   });
   el.innerHTML = html;
+}
+
+function openMarkBookedModal(){
+  if (!activePhone){ toast("Selecciona un chat primero", "error"); return; }
+  const modal = $("#mbModal");
+  const c = conversations.find(c => c.phone === activePhone) || {};
+  $("#mbRut").value = c.rut || "";
+  $("#mbNombre").value = c.nombre || "";
+  $("#mbEsp").value = "";
+  $("#mbProf").value = "";
+  const hoy = new Date();
+  $("#mbFecha").value = hoy.toISOString().slice(0,10);
+  $("#mbHora").value = "";
+  $("#mbMod").value = "particular";
+  modal.hidden = false;
+  setTimeout(() => $("#mbEsp").focus(), 40);
+}
+
+function closeMarkBookedModal(){ $("#mbModal").hidden = true; }
+
+async function submitMarkBooked(){
+  const phone = activePhone;
+  if (!phone) return;
+  const payload = {
+    rut:    $("#mbRut").value.trim(),
+    nombre: $("#mbNombre").value.trim(),
+    especialidad: $("#mbEsp").value.trim(),
+    profesional:  $("#mbProf").value.trim(),
+    fecha:        $("#mbFecha").value.trim(),
+    hora:         $("#mbHora").value.trim(),
+    modalidad:    $("#mbMod").value,
+  };
+  if (!payload.especialidad || !payload.fecha || !payload.hora){
+    toast("Especialidad, fecha y hora son obligatorias", "error"); return;
+  }
+  const btn = $("#mbModal .mb-btn.save");
+  btn.disabled = true;
+  try {
+    await api(`/admin/api/patient/${encodeURIComponent(phone)}/mark-booked`, {
+      method:"POST", body: JSON.stringify(payload)
+    });
+    toast("Cita registrada ✅");
+    closeMarkBookedModal();
+    loadInbox();
+  } catch(e){
+    console.error(e);
+    toast(e.message || "No se pudo guardar", "error");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function setupMarkBookedModal(){
+  const modal = $("#mbModal");
+  if (!modal) return;
+  modal.querySelector(".mb-close").onclick = closeMarkBookedModal;
+  modal.querySelector(".mb-btn.cancel").onclick = closeMarkBookedModal;
+  modal.querySelector(".mb-btn.save").onclick = submitMarkBooked;
+  modal.addEventListener("click", (e) => { if (e.target === modal) closeMarkBookedModal(); });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !modal.hidden) closeMarkBookedModal();
+  });
 }
 
 function startEditMessage(bubble, wamid){
@@ -1941,6 +2094,8 @@ function setup(){
   });
   // Emoji picker
   setupEmojiPicker(ri);
+  // Modal agendar manual
+  setupMarkBookedModal();
   // Delegación: click en botón editar mensaje
   $("#messages").addEventListener("click", (e) => {
     const btn = e.target.closest(".msg-edit-btn");

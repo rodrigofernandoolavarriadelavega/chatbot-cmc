@@ -559,6 +559,11 @@ async def webhook(request: Request):
         state_before = session.get("state", "IDLE")
         log_message(phone, "in", texto, state_before, canal=canal)
         try:
+            from session import try_autocapture_rut_name
+            try_autocapture_rut_name(phone, texto)
+        except Exception:
+            pass
+        try:
             respuesta = await handle_message(phone, texto, session)
         except Exception as e:
             log.error("Error procesando %s msg from=%s: %s", canal, phone, e, exc_info=True)

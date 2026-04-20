@@ -436,6 +436,11 @@ async def admin_reply(request: Request, _: str = Depends(require_admin)):
     state = get_session(phone).get("state", "HUMAN_TAKEOVER")
     log_message(phone, "out", f"[Recepcionista] {message}", state, canal=canal, wamid=wamid)
     log_event(phone, "recepcionista_respondio", {"mensaje": message[:200]})
+    try:
+        from session import try_autocapture_rut_name
+        try_autocapture_rut_name(phone, message)
+    except Exception:
+        pass
     return {"ok": True, "wamid": wamid}
 
 
@@ -1555,20 +1560,28 @@ async def api_mark_booked(phone: str, request: Request, _=Depends(require_admin)
     prof = (body.get("profesional") or "").strip()
     fecha = (body.get("fecha") or "").strip()
     hora = (body.get("hora") or "").strip()
+    rut = (body.get("rut") or "").strip()
+    nombre = (body.get("nombre") or "").strip()
     if not esp or not fecha or not hora:
         raise HTTPException(status_code=400, detail="especialidad, fecha y hora son obligatorios")
-    from session import save_cita_bot, save_session, save_tag, log_event
+    from session import save_cita_bot, save_session, save_tag, log_event, save_profile, get_profile
     import time as _time
     id_cita = body.get("id_cita") or f"manual-{phone}-{int(_time.time())}"
     save_cita_bot(
         phone=phone, id_cita=id_cita, especialidad=esp, profesional=prof,
         fecha=fecha, hora=hora, modalidad=(body.get("modalidad") or "manual"),
     )
+    # Asociar RUT + nombre al teléfono si vinieron en el body
+    if rut or nombre:
+        existing = get_profile(phone) or {}
+        rut_final = rut or (existing.get("rut") or "")
+        nombre_final = nombre or (existing.get("nombre") or "")
+        save_profile(phone, rut_final, nombre_final)
     save_session(phone, "COMPLETED", {})
     save_tag(phone, "agendado-manual")
     log_event(phone, "agendado_manual", {
         "especialidad": esp, "profesional": prof, "fecha": fecha, "hora": hora,
-        "id_cita": id_cita,
+        "id_cita": id_cita, "rut": rut, "nombre": nombre,
     })
     return {"ok": True, "phone": phone, "id_cita": id_cita,
             "cita": {"especialidad": esp, "profesional": prof, "fecha": fecha, "hora": hora}}
