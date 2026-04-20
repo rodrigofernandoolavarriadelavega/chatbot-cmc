@@ -478,3 +478,14 @@ async def _job_admin_status_report():
             log.error("admin_status_report: fallo enviando a admin: %s", e)
     except Exception as e:
         log.error("admin_status_report: %s", e)
+
+
+async def _job_cleanup_stuck_sessions():
+    """Cada hora: resetea sesiones stuck en WAIT_*/CONFIRMING_* > 4h."""
+    try:
+        from session import cleanup_stuck_sessions
+        n = cleanup_stuck_sessions(hours=4)
+        if n:
+            log.info("cleanup_stuck_sessions: %d sesiones reseteadas", n)
+    except Exception as e:
+        log.error("cleanup_stuck_sessions fallo: %s", e)

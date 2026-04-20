@@ -482,6 +482,23 @@ def reset_session(phone: str):
         _reset(conn, phone)
 
 
+def cleanup_stuck_sessions(hours: int = 4) -> int:
+    """Resetea sesiones que quedaron atascadas en estados WAIT_*/CONFIRMING_*
+    por más de `hours` horas. Esos flujos tienen timeout funcional en
+    get_session() pero el reset solo se aplica cuando el paciente vuelve
+    a escribir; si el paciente nunca vuelve, la sesión queda atascada
+    en DB indefinidamente. Retorna el número de sesiones limpiadas."""
+    with _conn() as conn:
+        cur = conn.execute(
+            f"""UPDATE sessions
+                SET state='IDLE', data='{{}}', updated_at=datetime('now')
+                WHERE (state LIKE 'WAIT_%' OR state LIKE 'CONFIRMING_%')
+                AND updated_at < datetime('now', '-{int(hours)} hours')"""
+        )
+        conn.commit()
+        return cur.rowcount
+
+
 def _reset(conn, phone: str):
     conn.execute("""
         INSERT INTO sessions (phone, state, data, updated_at)

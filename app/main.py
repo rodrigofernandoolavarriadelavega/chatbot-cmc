@@ -41,6 +41,7 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_crosssell_kine, _job_crosssell_orl_fono,
                   _job_crosssell_odonto_estetica, _job_crosssell_mg_chequeo,
                   _job_medilink_watchdog, _job_admin_status_report,
+                  _job_cleanup_stuck_sessions,
                   _job_waitlist_check,
                   _job_doctor_resumen_precita, _job_doctor_reporte_progreso,
                   _job_doctor_reset_diario,
@@ -261,6 +262,13 @@ async def lifespan(app: FastAPI):
         _job_admin_status_report,
         CronTrigger(minute="0,30", timezone=_CLT),
         id="admin_status_report",
+        replace_existing=True,
+    )
+    # Limpieza de sesiones stuck en WAIT_* cada hora
+    scheduler.add_job(
+        _job_cleanup_stuck_sessions,
+        CronTrigger(minute="15", timezone=_CLT),
+        id="cleanup_stuck_sessions",
         replace_existing=True,
     )
     scheduler.start()
