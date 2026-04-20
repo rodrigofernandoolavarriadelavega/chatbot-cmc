@@ -74,7 +74,7 @@ def _conn():
         conn.row_factory = sqlite3.Row
     # WAL mode + busy_timeout reducen "database is locked" bajo concurrencia
     conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA busy_timeout=5000")
+    conn.execute("PRAGMA busy_timeout=10000")
     conn.execute("PRAGMA synchronous=NORMAL")
     conn.execute("""
         CREATE TABLE IF NOT EXISTS sessions (

@@ -42,7 +42,22 @@ _PACIENTE_CACHE_TTL = 600  # 10 min
 # slots reales cambian cada pocos minutos pero el "próximo día disponible"
 # cambia con menos frecuencia. TTL corto evita info stale.
 _proxima_cache: dict = {}
-_PROXIMA_CACHE_TTL = 180  # 3 min
+_PROXIMA_CACHE_TTL = 900  # 15 min — aguanta picos de carga sin saturar Medilink
+
+# Contador simple de 429s (para diagnóstico rápido)
+_STATS_429 = {"total": 0, "last_ts": 0.0, "last_url": ""}
+
+
+def record_429(url: str) -> None:
+    import time as _t
+    _STATS_429["total"] += 1
+    _STATS_429["last_ts"] = _t.time()
+    _STATS_429["last_url"] = url[:200]
+    log.error("MEDILINK_429 %s total=%d", url, _STATS_429["total"])
+
+
+def get_stats_429() -> dict:
+    return dict(_STATS_429)
 
 # Medilink usa dia 1=Lun..6=Sáb, 7=Dom → Python weekday 0=Lun..5=Sáb, 6=Dom
 _MEDILINK_DIA_TO_WEEKDAY = {1:0, 2:1, 3:2, 4:3, 5:4, 6:5, 7:6}
@@ -197,6 +212,7 @@ async def _get(client: httpx.AsyncClient, url: str, **kwargs) -> httpx.Response:
             try:
                 r = await client.get(url, **kwargs)
                 if r.status_code == 429:
+                    record_429(url)
                     wait = 3.0 * (2 ** attempt)  # 3s, 6s, 12s
                     log.warning("Medilink GET %s → 429 rate limit, esperando %.0fs (intento %d/3)", url, wait, attempt + 1)
                     await asyncio.sleep(wait)
@@ -221,6 +237,7 @@ async def _post(client: httpx.AsyncClient, url: str, **kwargs) -> httpx.Response
             try:
                 r = await client.post(url, **kwargs)
                 if r.status_code == 429:
+                    record_429(url)
                     wait = 3.0 * (2 ** attempt)  # 3s, 6s
                     log.warning("Medilink POST %s → 429 rate limit, esperando %.0fs (intento %d/2)", url, wait, attempt + 1)
                     await asyncio.sleep(wait)
@@ -1064,6 +1081,7 @@ async def cancelar_cita(id_cita: int) -> bool:
             try:
                 r = await client.put(url, json={"id_estado": 1}, headers=HEADERS)
                 if r.status_code == 429:
+                    record_429(url)
                     wait = 3.0 * (2 ** attempt)
                     log.warning("Medilink PUT %s → 429 rate limit, esperando %.0fs (intento %d/3)", url, wait, attempt + 1)
                     await asyncio.sleep(wait)

@@ -444,6 +444,32 @@ async def admin_reply(request: Request, _: str = Depends(require_admin)):
     return {"ok": True, "wamid": wamid}
 
 
+@router.get("/admin/api/scheduler-info")
+async def admin_scheduler_info(_: str = Depends(require_admin)):
+    """Lista jobs del APScheduler con próximo run. Útil para diagnóstico."""
+    from main import scheduler
+    jobs = []
+    for j in scheduler.get_jobs():
+        jobs.append({
+            "id": j.id,
+            "name": j.name,
+            "trigger": str(j.trigger),
+            "next_run": str(j.next_run_time) if j.next_run_time else None,
+        })
+    return {"count": len(jobs), "jobs": jobs, "running": scheduler.running}
+
+
+@router.get("/admin/api/medilink-stats")
+async def admin_medilink_stats(_: str = Depends(require_admin)):
+    """Stats rápidas de Medilink: contador 429, tamaño cache proxima."""
+    from medilink import get_stats_429, _proxima_cache, _PROXIMA_CACHE_TTL
+    return {
+        "stats_429": get_stats_429(),
+        "proxima_cache_entries": len(_proxima_cache),
+        "proxima_cache_ttl_seconds": _PROXIMA_CACHE_TTL,
+    }
+
+
 @router.post("/admin/api/edit-message")
 async def admin_edit_message(request: Request, _: str = Depends(require_admin)):
     """Edita un mensaje WhatsApp ya enviado. Meta impone ventana de 15 min y sólo texto."""
