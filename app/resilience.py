@@ -153,3 +153,19 @@ def spawn_task(coro):
     _background_tasks.add(task)
     task.add_done_callback(_background_tasks.discard)
     return task
+
+
+# ── Lock por phone (serializa procesamiento de mensajes del mismo paciente) ─
+_phone_locks: dict = {}
+
+
+def get_phone_lock(phone: str) -> "_asyncio_bg.Lock":
+    """Retorna (o crea) un asyncio.Lock asociado al teléfono. Garantiza que
+    dos mensajes simultáneos del mismo paciente se procesen en serie, evitando
+    race conditions en session/state (ej. 2 webhooks del mismo phone que leen
+    y escriben la misma sesión al mismo tiempo)."""
+    lock = _phone_locks.get(phone)
+    if lock is None:
+        lock = _asyncio_bg.Lock()
+        _phone_locks[phone] = lock
+    return lock

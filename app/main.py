@@ -562,33 +562,35 @@ async def webhook(request: Request):
     async def _process_social(phone: str, sender_id: str, texto: str,
                               canal: str, send_fn):
         """Procesa un mensaje de IG/FB usando handle_message y responde."""
-        session = get_session(phone)
-        state_before = session.get("state", "IDLE")
-        log_message(phone, "in", texto, state_before, canal=canal)
-        try:
-            from session import try_autocapture_rut_name
-            try_autocapture_rut_name(phone, texto)
-        except Exception:
-            pass
-        try:
-            respuesta = await handle_message(phone, texto, session)
-        except Exception as e:
-            log.error("Error procesando %s msg from=%s: %s", canal, phone, e, exc_info=True)
-            reset_session(phone)
-            respuesta = (
-                "Tuve un problema técnico 😕\n\n"
-                "Por favor intenta de nuevo o llama a recepción:\n"
-                f"📞 {CMC_TELEFONO}"
-            )
-        state_after = get_session(phone).get("state", "IDLE")
-        if isinstance(respuesta, dict) and respuesta.get("type") == "interactive":
-            resp_text = _interactive_to_text(respuesta)
-        else:
-            resp_text = str(respuesta) if respuesta else ""
-        if resp_text:
-            await send_fn(sender_id, resp_text)
-            log_message(phone, "out", resp_text, state_after, canal=canal)
-            log.info("BOT %s to=%s state=%s reply=%r", canal.upper(), phone, state_after, resp_text[:80])
+        from resilience import get_phone_lock
+        async with get_phone_lock(phone):
+            session = get_session(phone)
+            state_before = session.get("state", "IDLE")
+            log_message(phone, "in", texto, state_before, canal=canal)
+            try:
+                from session import try_autocapture_rut_name
+                try_autocapture_rut_name(phone, texto)
+            except Exception:
+                pass
+            try:
+                respuesta = await handle_message(phone, texto, session)
+            except Exception as e:
+                log.error("Error procesando %s msg from=%s: %s", canal, phone, e, exc_info=True)
+                reset_session(phone)
+                respuesta = (
+                    "Tuve un problema técnico 😕\n\n"
+                    "Por favor intenta de nuevo o llama a recepción:\n"
+                    f"📞 {CMC_TELEFONO}"
+                )
+            state_after = get_session(phone).get("state", "IDLE")
+            if isinstance(respuesta, dict) and respuesta.get("type") == "interactive":
+                resp_text = _interactive_to_text(respuesta)
+            else:
+                resp_text = str(respuesta) if respuesta else ""
+            if resp_text:
+                await send_fn(sender_id, resp_text)
+                log_message(phone, "out", resp_text, state_after, canal=canal)
+                log.info("BOT %s to=%s state=%s reply=%r", canal.upper(), phone, state_after, resp_text[:80])
 
     # ── Helper: obtener nombre de usuario IG/FB ─────────────────────────────
     async def _fetch_social_name(sender_id: str, phone: str, platform: str):
@@ -1001,63 +1003,70 @@ async def webhook(request: Request):
 
         log.info("MSG from=%s id=%s type=%s text=%r", phone, msg_id, msg_type, texto[:100])
 
-        session = get_session(phone)
-        state_before = session.get("state", "IDLE")
-        log_text = f"🎤 {texto}" if is_audio else texto
-        log_message(phone, "in", log_text, state_before, canal="whatsapp")
+        from resilience import get_phone_lock
+        async with get_phone_lock(phone):
+            session = get_session(phone)
+            state_before = session.get("state", "IDLE")
+            log_text = f"🎤 {texto}" if is_audio else texto
+            log_message(phone, "in", log_text, state_before, canal="whatsapp")
+            try:
+                from session import try_autocapture_rut_name
+                try_autocapture_rut_name(phone, log_text)
+            except Exception:
+                pass
 
-        # Indicador de "pensando" — reacción ⏳ al mensaje del paciente
-        await react_whatsapp(phone, msg_id)
+            # Indicador de "pensando" — reacción ⏳ al mensaje del paciente
+            await react_whatsapp(phone, msg_id)
 
-        # Confirmar al paciente lo que se entendió del audio
-        if is_audio:
-            await send_whatsapp(phone, f"🎤 Entendí: _{texto}_")
+            # Confirmar al paciente lo que se entendió del audio
+            if is_audio:
+                await send_whatsapp(phone, f"🎤 Entendí: _{texto}_")
 
-        try:
-            respuesta = await handle_message(phone, texto, session)
-        except Exception as e:
-            log.error("Error inesperado procesando msg from=%s: %s", phone, e, exc_info=True)
-            reset_session(phone)
-            respuesta = (
-                "Tuve un problema técnico 😕\n\n"
-                "Por favor intenta de nuevo o llama a recepción:\n"
-                f"📞 {CMC_TELEFONO}"
+            try:
+                respuesta = await handle_message(phone, texto, session)
+            except Exception as e:
+                log.error("Error inesperado procesando msg from=%s: %s", phone, e, exc_info=True)
+                reset_session(phone)
+                respuesta = (
+                    "Tuve un problema técnico 😕\n\n"
+                    "Por favor intenta de nuevo o llama a recepción:\n"
+                    f"📞 {CMC_TELEFONO}"
+                )
+
+            # Quitar indicador de "pensando"
+            await unreact_whatsapp(phone, msg_id)
+
+            state_after = get_session(phone).get("state", "IDLE")
+
+            if isinstance(respuesta, dict) and respuesta.get("type") == "interactive":
+                resp_text = respuesta["interactive"].get("body", {}).get("text", "[mensaje interactivo]")
+            else:
+                resp_text = str(respuesta) if respuesta else ""
+
+            if resp_text:
+                log_message(phone, "out", resp_text, state_after, canal="whatsapp")
+            log.info("BOT to=%s state=%s reply=%r", phone, state_after, resp_text[:80])
+
+            if not respuesta:
+                pass  # silencio intencional (HUMAN_TAKEOVER)
+            elif isinstance(respuesta, dict) and respuesta.get("type") == "interactive":
+                await send_whatsapp_interactive(phone, respuesta["interactive"])
+            else:
+                await send_whatsapp(phone, respuesta)
+
+            # Enviar pin del mapa solo en respuestas de ubicación o confirmación de cita
+            # (NO en el saludo que también menciona la dirección)
+            _location_ctx = resp_text and "Monsalve 102" in resp_text and (
+                "ubicado" in resp_text.lower()
+                or "recuerda llegar" in resp_text.lower()
+                or "tiempos de llegada" in resp_text.lower()
             )
-
-        # Quitar indicador de "pensando"
-        await unreact_whatsapp(phone, msg_id)
-
-        state_after = get_session(phone).get("state", "IDLE")
-
-        if isinstance(respuesta, dict) and respuesta.get("type") == "interactive":
-            resp_text = respuesta["interactive"].get("body", {}).get("text", "[mensaje interactivo]")
-        else:
-            resp_text = str(respuesta) if respuesta else ""
-
-        if resp_text:
-            log_message(phone, "out", resp_text, state_after, canal="whatsapp")
-        log.info("BOT to=%s state=%s reply=%r", phone, state_after, resp_text[:80])
-
-        if not respuesta:
-            pass  # silencio intencional (HUMAN_TAKEOVER)
-        elif isinstance(respuesta, dict) and respuesta.get("type") == "interactive":
-            await send_whatsapp_interactive(phone, respuesta["interactive"])
-        else:
-            await send_whatsapp(phone, respuesta)
-
-        # Enviar pin del mapa solo en respuestas de ubicación o confirmación de cita
-        # (NO en el saludo que también menciona la dirección)
-        _location_ctx = resp_text and "Monsalve 102" in resp_text and (
-            "ubicado" in resp_text.lower()
-            or "recuerda llegar" in resp_text.lower()
-            or "tiempos de llegada" in resp_text.lower()
-        )
-        if _location_ctx:
-            await send_whatsapp_location(
-                phone, -37.2548769, -73.2355041,
-                name="Centro Médico Carampangue",
-                address="Monsalve 102 esq. República, Carampangue",
-            )
+            if _location_ctx:
+                await send_whatsapp_location(
+                    phone, -37.2548769, -73.2355041,
+                    name="Centro Médico Carampangue",
+                    address="Monsalve 102 esq. República, Carampangue",
+                )
 
         # C4 fix: process remaining messages in batch (Meta can send 2+ per payload)
         for _xm in change["messages"][1:]:

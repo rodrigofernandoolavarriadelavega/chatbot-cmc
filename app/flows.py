@@ -7,6 +7,8 @@ import logging
 import re
 import time
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+_CHILE_TZ = ZoneInfo("America/Santiago")
 
 from claude_helper import detect_intent, respuesta_faq, clasificar_respuesta_seguimiento, consulta_clinica_doctor
 from medilink import (buscar_primer_dia, buscar_slots_dia, buscar_slots_dia_por_ids,
@@ -42,7 +44,7 @@ _DIAS_SEMANA = {
 
 def _proxima_fecha_dia(weekday: int) -> str:
     """Retorna la fecha (YYYY-MM-DD) del próximo día de la semana dado (hoy + 1 en adelante)."""
-    hoy = datetime.now().date()
+    hoy = datetime.now(_CHILE_TZ).date()
     for delta in range(1, 8):
         candidato = hoy + timedelta(days=delta)
         if candidato.weekday() == weekday:
@@ -2588,7 +2590,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # Va antes del filtro por período para que "Para mañana" = día siguiente,
         # no "en la mañana" (período horario).
         _DIA_RELATIVO = None
-        _hoy = datetime.now().date()
+        _hoy = datetime.now(_CHILE_TZ).date()
         if "pasado mañana" in tl_norm_slot or "pasado manana" in tl_norm_slot:
             _DIA_RELATIVO = (_hoy + timedelta(days=2)).strftime("%Y-%m-%d")
         elif "para mañana" in tl_norm_slot or "para manana" in tl_norm_slot \
@@ -3811,7 +3813,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         extra: dict = {}
         if fecha_nac:
             from datetime import date as _date_check
-            if fecha_nac.year >= 1920 and fecha_nac <= datetime.now().date():
+            if fecha_nac.year >= 1920 and fecha_nac <= datetime.now(_CHILE_TZ).date():
                 extra["fecha_nacimiento"] = fecha_nac.strftime("%Y-%m-%d")
                 data["reg_fecha_nacimiento"] = extra["fecha_nacimiento"]
         if sexo:
@@ -3902,7 +3904,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "(o escribe *saltar*)"
                 )
             from datetime import date as _date
-            if fecha_nac.year < 1920 or fecha_nac > datetime.now().date():
+            if fecha_nac.year < 1920 or fecha_nac > datetime.now(_CHILE_TZ).date():
                 return "Esa fecha no parece correcta 🤔 Intenta de nuevo (ej: *15/03/1990*)"
             data["reg_fecha_nacimiento"] = fecha_nac.strftime("%Y-%m-%d")
         save_session(phone, "WAIT_SEXO", data)
