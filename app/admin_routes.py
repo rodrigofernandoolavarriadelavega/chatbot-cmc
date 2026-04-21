@@ -433,7 +433,19 @@ async def admin_reply(request: Request, _: str = Depends(require_admin)):
         wamid = await send_whatsapp(phone, message)
         canal = "whatsapp"
 
-    state = get_session(phone).get("state", "HUMAN_TAKEOVER")
+    # Auto-takeover: cuando la recepcionista escribe, el paciente está
+    # conversando con ella — el bot NO debe seguir procesando intents de
+    # los mensajes del paciente en paralelo. Forzamos HUMAN_TAKEOVER si
+    # no estaba ya. Salir requiere explícitamente "devolver al bot".
+    _sess = get_session(phone)
+    state = _sess.get("state", "HUMAN_TAKEOVER")
+    if state != "HUMAN_TAKEOVER":
+        from session import save_session
+        _data = _sess.get("data", {}) or {}
+        _data["handoff_reason"] = "recepcionista_respondio"
+        save_session(phone, "HUMAN_TAKEOVER", _data)
+        log_event(phone, "auto_takeover_recep_reply", {"from_state": state})
+        state = "HUMAN_TAKEOVER"
     log_message(phone, "out", f"[Recepcionista] {message}", state, canal=canal, wamid=wamid)
     log_event(phone, "recepcionista_respondio", {"mensaje": message[:200]})
     try:
