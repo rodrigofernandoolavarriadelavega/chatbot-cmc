@@ -1304,6 +1304,14 @@ async def _pre_router_wait(phone: str, txt: str, tl: str, state: str, data: dict
 
     # ── Escape: cambio de tema ──
     if action == "escape":
+        if tag == "confirmar_slot":
+            # Paciente acepta el horario mostrado con lenguaje natural
+            # ("perfecto tomo la hora", "sí me sirve", "esa está bien").
+            slots_mostrados = data.get("slots", [])
+            if state == "WAIT_SLOT" and slots_mostrados:
+                return await _slot_confirmed(phone, data, slots_mostrados[0])
+            return None
+
         if tag == "cancelar_cita_real":
             reset_session(phone)
             return await handle_message(phone, "accion_cambiar", {"state": "IDLE", "data": {}})

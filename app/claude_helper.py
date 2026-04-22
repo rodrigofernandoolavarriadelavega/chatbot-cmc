@@ -1295,6 +1295,10 @@ async def classify_with_context(mensaje: str, state: str, session_data: dict) ->
         "   'dar de baja', 'eliminar mi hora'). NO confundir con 'cancelar=pagar'.\n"
         "10. llamar_recepcion — prefiere llamar por teléfono (ej: 'llamar', 'prefiero llamar').\n"
         "11. fuera_de_alcance — queja, reclamo, tema no relacionado, o nada de lo anterior.\n"
+        "12. confirmar_slot — paciente ACEPTA el horario mostrado actualmente\n"
+        "    (ej: 'perfecto tomo la hora', 'sí me sirve', 'esa está bien',\n"
+        "    'me acomoda', 'quedemos con esa', 'déjala ahí', 'confirmo').\n"
+        "    Solo aplica si estado=WAIT_SLOT o CONFIRMING_CITA.\n"
         "\n"
         "REGLAS:\n"
         "- Si el mensaje es una respuesta plausible al prompt (SI/NO/hora/RUT/día), responder_prompt.\n"
@@ -1325,6 +1329,8 @@ async def classify_with_context(mensaje: str, state: str, session_data: dict) ->
         action = "continue"
     elif intent in ("preguntar_horario", "preguntar_pago", "preguntar_info"):
         action = "answer_and_continue"
+    elif intent == "confirmar_slot":
+        action = "escape"  # handler especial en pre_router_wait
     else:
         action = "escape"
 
