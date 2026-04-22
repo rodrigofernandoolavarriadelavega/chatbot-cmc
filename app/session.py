@@ -526,11 +526,33 @@ def cleanup_stuck_sessions(hours: int = 4) -> int:
 
 
 def _reset(conn, phone: str):
+    # Preservar snapshot de última búsqueda de slots para que el paciente pueda
+    # retomar con "10:30" aunque la sesión haya caducado o sido reseteada.
+    preserved = {}
+    row = conn.execute("SELECT data FROM sessions WHERE phone=?", (phone,)).fetchone()
+    if row:
+        try:
+            old = json.loads(row["data"] or "{}")
+            if old.get("todos_slots"):
+                preserved = {
+                    "last_slots": old.get("todos_slots"),
+                    "last_especialidad": old.get("especialidad"),
+                    "last_slots_ts": datetime.now(timezone.utc).isoformat(),
+                }
+            elif old.get("last_slots"):  # ya hay snapshot, mantenerlo
+                preserved = {
+                    "last_slots": old["last_slots"],
+                    "last_especialidad": old.get("last_especialidad"),
+                    "last_slots_ts": old.get("last_slots_ts"),
+                }
+        except Exception:
+            pass
     conn.execute("""
         INSERT INTO sessions (phone, state, data, updated_at)
-        VALUES (?, 'IDLE', '{}', datetime('now'))
-        ON CONFLICT(phone) DO UPDATE SET state='IDLE', data='{}', updated_at=datetime('now')
-    """, (phone,))
+        VALUES (?, 'IDLE', ?, datetime('now'))
+        ON CONFLICT(phone) DO UPDATE SET
+            state='IDLE', data=excluded.data, updated_at=datetime('now')
+    """, (phone, json.dumps(preserved, ensure_ascii=False)))
     conn.commit()
 
 
@@ -1223,7 +1245,7 @@ def get_referral_stats(dias: int = 30) -> dict:
         return {"by_source": by_source, "total": total, "dias": dias}
 
 
-def get_conversations(limit: int = 200) -> list[dict]:
+def get_conversations(limit: int = 1000) -> list[dict]:
     """Lista todas las conversaciones con último mensaje y estado actual.
 
     Ordena por la última actividad real (mayor entre session.updated_at

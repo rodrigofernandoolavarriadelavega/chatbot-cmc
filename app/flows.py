@@ -6,7 +6,7 @@ import asyncio
 import logging
 import re
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 _CHILE_TZ = ZoneInfo("America/Santiago")
 
@@ -1423,6 +1423,28 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if any(kw in tl_norm for kw in keywords):
             save_tag(phone, f"dx:{tag}")
 
+    # ── IDLE + hora suelta + snapshot reciente → reabrir WAIT_SLOT ──
+    # Si el paciente vio una lista de horarios hace <60 min y ahora escribe
+    # "10:30" (o cualquier variante), restauramos WAIT_SLOT con esos slots
+    # para que el bloque de WAIT_SLOT encuentre la hora exacta.
+    if state == "IDLE" and data.get("last_slots") and data.get("last_slots_ts"):
+        try:
+            from time_parser import parse_hora as _parse_hora_idle
+            if _parse_hora_idle(txt):
+                _ts_snap = datetime.fromisoformat(data["last_slots_ts"])
+                _edad = datetime.now(timezone.utc) - _ts_snap
+                if _edad < timedelta(minutes=60):
+                    data["todos_slots"] = data["last_slots"]
+                    data["slots"] = data["last_slots"][:5]
+                    if data.get("last_especialidad"):
+                        data["especialidad"] = data["last_especialidad"]
+                    data.setdefault("fechas_vistas", [])
+                    state = "WAIT_SLOT"
+                    save_session(phone, "WAIT_SLOT", data)
+                    log_event(phone, "hora_idle_recuperada", {"edad_min": int(_edad.total_seconds() / 60)})
+        except Exception:
+            pass
+
     # ── IDLE: detectar intención ──────────────────────────────────────────────
     if state == "IDLE":
         # ── Botones residuales de WAIT_SLOT que llegaron tarde (sesión expiró,
@@ -2739,15 +2761,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 f"\n\nElige uno, escribe *otro día* o *otro profesional*."
             )
 
-        # ── Hora exacta mencionada ("10:00", "1030", "a las 5", "tipo 17hrs") ──
-        # Si el paciente escribe una hora específica, buscar el slot más cercano
-        # dentro de ±30 min. Cubre mucho texto libre que antes caía en el fallback.
-        import re as _re_hh
-        _m_hora = _re_hh.search(
-            r'(?:a\s+las|como\s+a\s+las|tipo|sobre\s+las|cerca\s+de\s+las)?\s*'
-            r'\b(\d{1,2})(?:[:.h](\d{2})|(\d{2}))?\s*(am|pm|hrs?|horas?|h)?\b',
-            tl_norm_slot,
-        )
+        # ── Hora exacta mencionada ("10:00", "diez y media", "a las 5") ──
+        # Delegamos el parseo a time_parser.parse_hora (cubre ~100 formatos:
+        # numérico, AM/PM, palabras, prefijos, sufijos, expresiones de resta).
+        from time_parser import parse_hora as _parse_hora
+        _hora_tuple = _parse_hora(tl_norm_slot)
         def _slot_hora_close(slots, h_target, m_target):
             def _mins(hm):
                 try:
@@ -2769,22 +2787,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return best, best_d
         _hora_match_valida = False
         _h_pedida = _m_pedida = 0
-        if _m_hora:
-            _h_pedida = int(_m_hora.group(1))
-            _mm = _m_hora.group(2) or _m_hora.group(3) or "0"
-            _m_pedida = int(_mm) if _mm else 0
-            _ampm = (_m_hora.group(4) or "").lower()
-            if _ampm == "pm" and _h_pedida < 12:
-                _h_pedida += 12
-            if _ampm == "am" and _h_pedida == 12:
-                _h_pedida = 0
-            if not _ampm and 1 <= _h_pedida <= 7:
-                _h_pedida += 12
+        if _hora_tuple is not None:
+            _h_pedida, _m_pedida = _hora_tuple
+            # "10" solo → selección por número, no hora (lo maneja _parse_slot_selection)
             _es_numero_puro = tl_norm_slot.strip().isdigit() and len(tl_norm_slot.strip()) <= 2
             _hora_match_valida = (
-                0 <= _h_pedida <= 23
-                and 0 <= _m_pedida <= 59
-                and not _es_numero_puro
+                not _es_numero_puro
                 and bool(todos_slots)
                 and tl != "otro_prof"
             )
