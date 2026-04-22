@@ -1,0 +1,1612 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Viajes Anguie | Vuelos curados para ti</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #FDF8F3;
+    --blush: #F5D5D0;
+    --blush-soft: #FAE8E4;
+    --rose: #C97B7B;
+    --rose-dark: #A65A5A;
+    --taupe: #3D2C2C;
+    --body: #6B5555;
+    --gold: #C9A878;
+    --white: #FFFFFF;
+    --shadow-soft: 0 8px 32px rgba(61,44,44,.08);
+    --shadow-hover: 0 12px 40px rgba(61,44,44,.14);
+    --radius-sm: 12px;
+    --radius: 16px;
+    --radius-lg: 24px;
+    --transition: 0.35s cubic-bezier(.2,.8,.2,1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--cream);
+    color: var(--body);
+    line-height: 1.6;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Playfair Display', Georgia, serif;
+    color: var(--taupe);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  a { color: var(--rose); text-decoration: none; }
+  a:hover { color: var(--rose-dark); }
+
+  *:focus-visible {
+    outline: 2px solid var(--rose);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  /* ---------- NAV ---------- */
+  .nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: 20px 48px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: var(--transition);
+    background: transparent;
+  }
+  .nav.scrolled {
+    background: rgba(253, 248, 243, 0.82);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(201, 168, 120, 0.18);
+    padding: 14px 48px;
+  }
+  .logotype {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 28px;
+    color: var(--taupe);
+    letter-spacing: -0.01em;
+  }
+  .nav-tagline {
+    font-size: 13px;
+    color: var(--body);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  /* ---------- HERO ---------- */
+  .hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 120px 24px 180px;
+    overflow: hidden;
+  }
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    background-image: url('https://images.unsplash.com/photo-1488085061387-422e29b40080?w=1800');
+    background-size: cover;
+    background-position: center;
+    filter: blur(2px) brightness(1.05);
+    transform: scale(1.04);
+    z-index: 0;
+  }
+  .hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(253,248,243,0.35) 0%, rgba(253,248,243,0.75) 60%, var(--cream) 100%);
+    z-index: 1;
+  }
+  .hero-content {
+    position: relative;
+    z-index: 2;
+    max-width: 900px;
+  }
+  .hero h1 {
+    font-size: clamp(48px, 10vw, 96px);
+    font-style: italic;
+    font-weight: 600;
+    line-height: 1.02;
+    color: var(--taupe);
+    margin-bottom: 20px;
+  }
+  .hero-hairline {
+    display: inline-block;
+    width: 60px;
+    height: 1px;
+    background: var(--gold);
+    margin: 12px 0 24px;
+  }
+  .hero-subtitle {
+    font-size: clamp(16px, 2vw, 20px);
+    color: var(--body);
+    font-weight: 400;
+    letter-spacing: 0.02em;
+  }
+
+  /* ---------- SEARCH CARD ---------- */
+  .search-wrap {
+    position: relative;
+    z-index: 10;
+    max-width: 1100px;
+    margin: -120px auto 80px;
+    padding: 0 24px;
+  }
+  .search-card {
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-soft);
+    padding: 36px 40px;
+    border: 1px solid rgba(201, 168, 120, 0.14);
+  }
+  .search-title {
+    font-size: 22px;
+    margin-bottom: 4px;
+  }
+  .search-subtitle {
+    font-size: 14px;
+    color: var(--body);
+    margin-bottom: 28px;
+  }
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 18px;
+  }
+  .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    position: relative;
+  }
+  .form-field label {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--taupe);
+  }
+  .form-field input[type="text"],
+  .form-field input[type="date"],
+  .form-field input[type="number"] {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid rgba(61, 44, 44, 0.12);
+    border-radius: var(--radius-sm);
+    background: var(--cream);
+    font-family: inherit;
+    font-size: 15px;
+    color: var(--taupe);
+    transition: var(--transition);
+  }
+  .form-field input:focus {
+    border-color: var(--rose);
+    background: var(--white);
+    box-shadow: 0 0 0 4px rgba(201, 123, 123, 0.12);
+    outline: none;
+  }
+  .form-field input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .autocomplete-list {
+    position: absolute;
+    top: 100%;
+    left: 0; right: 0;
+    background: var(--white);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-soft);
+    border: 1px solid rgba(201, 168, 120, 0.2);
+    margin-top: 4px;
+    max-height: 220px;
+    overflow-y: auto;
+    z-index: 20;
+    display: none;
+  }
+  .autocomplete-list.open { display: block; }
+  .autocomplete-item {
+    padding: 10px 14px;
+    font-size: 14px;
+    color: var(--taupe);
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .autocomplete-item:hover,
+  .autocomplete-item.active {
+    background: var(--blush-soft);
+  }
+
+  /* Toggle switch */
+  .toggle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+  }
+  .toggle-switch {
+    position: relative;
+    width: 42px;
+    height: 24px;
+    background: rgba(61, 44, 44, 0.15);
+    border-radius: 12px;
+    transition: var(--transition);
+    flex-shrink: 0;
+  }
+  .toggle-switch::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    background: var(--white);
+    border-radius: 50%;
+    transition: var(--transition);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+  }
+  .toggle input { display: none; }
+  .toggle input:checked + .toggle-switch {
+    background: var(--rose);
+  }
+  .toggle input:checked + .toggle-switch::after {
+    left: 21px;
+  }
+  .toggle-label {
+    font-size: 13px;
+    color: var(--taupe);
+    font-weight: 500;
+  }
+
+  /* Slider */
+  .slider-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .slider-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    color: var(--body);
+  }
+  .slider-value {
+    color: var(--rose);
+    font-weight: 600;
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+  }
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    background: var(--blush);
+    border-radius: 2px;
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    background: var(--rose);
+    border-radius: 50%;
+    cursor: pointer;
+    border: 3px solid var(--white);
+    box-shadow: 0 2px 6px rgba(201, 123, 123, 0.4);
+    transition: transform 0.2s;
+  }
+  input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+  input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    background: var(--rose);
+    border-radius: 50%;
+    cursor: pointer;
+    border: 3px solid var(--white);
+    box-shadow: 0 2px 6px rgba(201, 123, 123, 0.4);
+  }
+
+  /* Stepper */
+  .stepper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid rgba(61, 44, 44, 0.12);
+    border-radius: var(--radius-sm);
+    padding: 4px;
+    background: var(--cream);
+  }
+  .stepper button {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--taupe);
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .stepper button:hover {
+    background: var(--blush-soft);
+    color: var(--rose);
+  }
+  .stepper button:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+  .stepper-value {
+    flex: 1;
+    text-align: center;
+    font-weight: 600;
+    color: var(--taupe);
+    font-size: 16px;
+  }
+
+  /* Toggle row with helper */
+  .toggle-row {
+    grid-column: span 2;
+    padding: 14px 16px;
+    background: var(--blush-soft);
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(245, 213, 208, 0.6);
+  }
+  .toggle-helper {
+    font-size: 12px;
+    color: var(--body);
+    margin-top: 6px;
+    line-height: 1.5;
+    padding-left: 54px;
+  }
+
+  .form-actions {
+    margin-top: 28px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px 48px;
+    background: var(--rose);
+    color: var(--white);
+    border: none;
+    border-radius: 999px;
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: var(--transition);
+    box-shadow: 0 6px 20px rgba(201, 123, 123, 0.28);
+  }
+  .btn:hover {
+    background: var(--rose-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 10px 28px rgba(166, 90, 90, 0.35);
+  }
+  .btn:active { transform: translateY(0); }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--rose);
+    border: 1px solid var(--rose);
+    box-shadow: none;
+    padding: 10px 20px;
+    font-size: 13px;
+  }
+  .btn-secondary:hover {
+    background: var(--blush-soft);
+    color: var(--rose-dark);
+    border-color: var(--rose-dark);
+    box-shadow: none;
+  }
+
+  /* ---------- RESULTS ---------- */
+  .results-section {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+    display: none;
+  }
+  .results-section.visible { display: block; }
+
+  .results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .results-title {
+    font-size: 32px;
+  }
+  .results-title em {
+    color: var(--rose);
+    font-style: italic;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--white);
+    padding: 6px;
+    border-radius: 999px;
+    box-shadow: var(--shadow-soft);
+    border: 1px solid rgba(201, 168, 120, 0.14);
+    margin-bottom: 28px;
+  }
+  .tab {
+    flex: 1;
+    padding: 12px 20px;
+    border: none;
+    background: transparent;
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--body);
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .tab.active {
+    background: var(--rose);
+    color: var(--white);
+    box-shadow: 0 4px 12px rgba(201, 123, 123, 0.25);
+  }
+  .tab-badge {
+    background: rgba(255,255,255,0.25);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .tab:not(.active) .tab-badge {
+    background: var(--blush-soft);
+    color: var(--rose);
+  }
+
+  .toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .filter-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border: 1px solid rgba(61, 44, 44, 0.15);
+    border-radius: 999px;
+    background: var(--white);
+    font-size: 13px;
+    color: var(--taupe);
+    cursor: pointer;
+    transition: var(--transition);
+    user-select: none;
+  }
+  .chip input { display: none; }
+  .chip:hover { border-color: var(--rose); }
+  .chip.checked {
+    background: var(--blush-soft);
+    border-color: var(--rose);
+    color: var(--rose-dark);
+    font-weight: 500;
+  }
+
+  select.sort {
+    padding: 10px 36px 10px 16px;
+    border: 1px solid rgba(61, 44, 44, 0.15);
+    border-radius: var(--radius-sm);
+    background: var(--white);
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--taupe);
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B5555' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+  }
+
+  /* Result card */
+  .result-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-soft);
+    border: 1px solid rgba(201, 168, 120, 0.12);
+    padding: 24px 28px;
+    margin-bottom: 16px;
+    transition: var(--transition);
+  }
+  .result-card:hover {
+    box-shadow: var(--shadow-hover);
+    transform: translateY(-2px);
+  }
+  .result-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+    gap: 16px;
+  }
+  .result-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .result-airlines {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .airline-logo {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--cream);
+    border: 1px solid rgba(61, 44, 44, 0.08);
+    padding: 3px;
+    object-fit: contain;
+  }
+  .airline-name {
+    font-size: 13px;
+    color: var(--body);
+    font-weight: 500;
+  }
+  .result-duration {
+    font-size: 13px;
+    color: var(--body);
+    letter-spacing: 0.03em;
+  }
+  .result-price {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--taupe);
+    white-space: nowrap;
+    text-align: right;
+  }
+  .result-price small {
+    display: block;
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    color: var(--body);
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .timeline {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 0;
+    border-top: 1px dashed rgba(201, 168, 120, 0.3);
+  }
+  .timeline-point {
+    text-align: center;
+    min-width: 70px;
+  }
+  .timeline-time {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--taupe);
+  }
+  .timeline-code {
+    font-size: 12px;
+    color: var(--body);
+    letter-spacing: 0.1em;
+    margin-top: 2px;
+  }
+  .timeline-line {
+    flex: 1;
+    position: relative;
+    height: 1px;
+    background: var(--gold);
+  }
+  .timeline-line::before,
+  .timeline-line::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 6px;
+    height: 6px;
+    background: var(--gold);
+    border-radius: 50%;
+    transform: translateY(-50%);
+  }
+  .timeline-line::before { left: 0; }
+  .timeline-line::after { right: 0; }
+  .timeline-duration {
+    position: absolute;
+    top: -24px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    color: var(--body);
+    background: var(--cream);
+    padding: 2px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+    letter-spacing: 0.05em;
+  }
+
+  .layovers {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+  .layover-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--blush);
+    border-radius: 999px;
+    font-size: 12px;
+    color: var(--rose-dark);
+    font-weight: 500;
+  }
+
+  .accordion-toggle {
+    margin-top: 14px;
+    background: transparent;
+    border: none;
+    color: var(--rose);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 6px 0;
+    letter-spacing: 0.02em;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .accordion-toggle:hover { color: var(--rose-dark); }
+  .accordion-toggle .arrow { transition: transform 0.3s; }
+  .accordion-toggle.open .arrow { transform: rotate(180deg); }
+
+  .accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease;
+  }
+  .accordion-content.open { max-height: 1200px; }
+
+  .segment {
+    display: flex;
+    gap: 16px;
+    padding: 14px 0;
+    border-top: 1px solid rgba(201, 168, 120, 0.15);
+    align-items: center;
+  }
+  .segment-info {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr;
+    gap: 12px;
+    align-items: center;
+    font-size: 13px;
+    color: var(--body);
+  }
+  .segment-info strong { color: var(--taupe); font-weight: 600; }
+
+  /* Skeletons */
+  .skeleton-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 24px 28px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(201, 168, 120, 0.12);
+  }
+  .skeleton-line {
+    height: 14px;
+    background: linear-gradient(90deg, var(--blush-soft) 0%, var(--cream) 50%, var(--blush-soft) 100%);
+    background-size: 200% 100%;
+    border-radius: 4px;
+    animation: shimmer 1.6s ease-in-out infinite;
+    margin: 8px 0;
+  }
+  .skeleton-line.lg { height: 22px; width: 40%; }
+  .skeleton-line.md { width: 60%; }
+  .skeleton-line.sm { width: 30%; }
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  .empty-state, .error-state {
+    text-align: center;
+    padding: 60px 24px;
+    color: var(--body);
+  }
+  .empty-state h3, .error-state h3 {
+    font-size: 24px;
+    margin-bottom: 10px;
+  }
+  .error-state {
+    background: var(--blush-soft);
+    border-radius: var(--radius);
+    border: 1px solid var(--blush);
+    color: var(--rose-dark);
+  }
+
+  /* ---------- GALLERY ---------- */
+  .gallery-section {
+    max-width: 1300px;
+    margin: 0 auto;
+    padding: 100px 24px;
+  }
+  .gallery-header {
+    text-align: center;
+    margin-bottom: 60px;
+  }
+  .gallery-header h2 {
+    font-size: clamp(32px, 5vw, 48px);
+    font-style: italic;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .gallery-header .hairline {
+    display: inline-block;
+    width: 50px;
+    height: 1px;
+    background: var(--gold);
+    margin: 14px 0;
+  }
+  .gallery-header p {
+    color: var(--body);
+    font-size: 15px;
+    letter-spacing: 0.02em;
+  }
+
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 16px;
+  }
+  .gallery-card {
+    position: relative;
+    aspect-ratio: 3/4.2;
+    border-radius: var(--radius);
+    overflow: hidden;
+    cursor: pointer;
+    box-shadow: var(--shadow-soft);
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.8s ease, transform 0.8s ease, box-shadow 0.35s ease;
+  }
+  .gallery-card.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .gallery-card:hover {
+    box-shadow: var(--shadow-hover);
+  }
+  .gallery-card:hover .gallery-img {
+    transform: scale(1.06);
+  }
+  .gallery-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.8s ease;
+    display: block;
+  }
+  .gallery-fallback {
+    position: absolute;
+    inset: 0;
+    background: var(--blush);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px;
+  }
+  .gallery-fallback span {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 24px;
+    color: var(--taupe);
+  }
+  .gallery-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(61,44,44,0) 40%, rgba(61,44,44,0.65) 100%);
+    display: flex;
+    align-items: flex-end;
+    padding: 20px;
+  }
+  .gallery-city {
+    color: var(--white);
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  /* ---------- FOOTER ---------- */
+  .footer {
+    border-top: 1px solid rgba(201, 168, 120, 0.2);
+    padding: 32px 24px;
+    text-align: center;
+    background: var(--cream);
+  }
+  .footer p {
+    font-size: 13px;
+    color: var(--body);
+    letter-spacing: 0.04em;
+  }
+  .footer .dot {
+    color: var(--gold);
+    margin: 0 10px;
+  }
+  .footer-logo {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    color: var(--taupe);
+    font-weight: 600;
+  }
+
+  /* aria-live */
+  .sr-live {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0);
+    white-space: nowrap; border: 0;
+  }
+
+  /* ---------- MOBILE ---------- */
+  @media (max-width: 768px) {
+    .nav { padding: 14px 20px; }
+    .nav.scrolled { padding: 10px 20px; }
+    .nav-tagline { display: none; }
+    .logotype { font-size: 22px; }
+
+    .hero { padding: 100px 20px 160px; min-height: 90vh; }
+    .hero h1 { font-size: 48px; }
+
+    .search-wrap { margin: -110px auto 60px; padding: 0 16px; }
+    .search-card { padding: 24px 20px; }
+    .form-grid {
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+    .toggle-row { grid-column: span 1; }
+    .toggle-helper { padding-left: 0; margin-top: 10px; }
+
+    .results-section { padding: 24px 16px 60px; }
+    .result-top { flex-direction: column; }
+    .result-price { text-align: left; font-size: 24px; }
+    .timeline { gap: 8px; }
+    .timeline-point { min-width: 56px; }
+    .timeline-time { font-size: 18px; }
+
+    .gallery-section { padding: 70px 0 70px; }
+    .gallery-header { padding: 0 20px; }
+    .gallery-grid {
+      display: flex;
+      overflow-x: auto;
+      gap: 12px;
+      padding: 0 20px 10px;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+    }
+    .gallery-grid::-webkit-scrollbar { display: none; }
+    .gallery-card {
+      flex: 0 0 70%;
+      scroll-snap-align: start;
+      aspect-ratio: 3/4.2;
+    }
+
+    .segment-info { grid-template-columns: 1fr; text-align: left; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav" id="nav" aria-label="Navegación principal">
+  <div class="logotype">Viajes Anguie</div>
+  <div class="nav-tagline">Vuelos curados para ti</div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" aria-labelledby="hero-title">
+  <div class="hero-bg" aria-hidden="true"></div>
+  <div class="hero-overlay" aria-hidden="true"></div>
+  <div class="hero-content">
+    <h1 id="hero-title">Viajes Anguie</h1>
+    <span class="hero-hairline" aria-hidden="true"></span>
+    <p class="hero-subtitle">Encuentra tu próximo viaje</p>
+  </div>
+</section>
+
+<!-- SEARCH -->
+<div class="search-wrap">
+  <div class="search-card">
+    <h2 class="search-title">Busca tu vuelo</h2>
+    <p class="search-subtitle">Curamos combinaciones para que vueles más lejos, por menos.</p>
+
+    <form id="search-form" autocomplete="off" novalidate>
+      <div class="form-grid">
+
+        <div class="form-field">
+          <label for="origen">Origen</label>
+          <input type="text" id="origen" name="origen" placeholder="CCP" maxlength="3" required aria-autocomplete="list" aria-controls="origen-list" />
+          <div class="autocomplete-list" id="origen-list" role="listbox"></div>
+        </div>
+
+        <div class="form-field">
+          <label for="destino">Destino</label>
+          <input type="text" id="destino" name="destino" placeholder="SCL" maxlength="3" required aria-autocomplete="list" aria-controls="destino-list" />
+          <div class="autocomplete-list" id="destino-list" role="listbox"></div>
+        </div>
+
+        <div class="form-field">
+          <label for="fecha-ida">Fecha ida</label>
+          <input type="date" id="fecha-ida" name="fecha_ida" required />
+        </div>
+
+        <div class="form-field">
+          <label for="fecha-vuelta">Fecha vuelta</label>
+          <input type="date" id="fecha-vuelta" name="fecha_vuelta" />
+        </div>
+
+        <div class="form-field">
+          <label>Solo ida</label>
+          <label class="toggle" for="solo-ida">
+            <input type="checkbox" id="solo-ida" />
+            <span class="toggle-switch" aria-hidden="true"></span>
+            <span class="toggle-label">Viaje solo ida</span>
+          </label>
+        </div>
+
+        <div class="form-field slider-wrap">
+          <label for="escala-max">Escala máxima</label>
+          <div class="slider-row">
+            <span>Duración en aeropuerto</span>
+            <span class="slider-value" id="escala-value">5h 00m</span>
+          </div>
+          <input type="range" id="escala-max" name="escala_max" min="0" max="600" step="15" value="300" />
+        </div>
+
+        <div class="form-field">
+          <label for="adultos">Adultos</label>
+          <div class="stepper" role="group" aria-label="Cantidad de adultos">
+            <button type="button" id="adultos-minus" aria-label="Quitar adulto">−</button>
+            <div class="stepper-value" id="adultos-value" aria-live="polite">1</div>
+            <button type="button" id="adultos-plus" aria-label="Agregar adulto">+</button>
+            <input type="hidden" id="adultos" name="adultos" value="1" />
+          </div>
+        </div>
+
+        <div class="form-field">
+          <!-- spacer for grid alignment -->
+        </div>
+
+        <div class="toggle-row">
+          <label class="toggle" for="combinar">
+            <input type="checkbox" id="combinar" checked />
+            <span class="toggle-switch" aria-hidden="true"></span>
+            <span class="toggle-label">Buscar combinaciones de aerolíneas</span>
+          </label>
+          <p class="toggle-helper">Mezclamos vuelos de LATAM, Sky y JetSMART para encontrar opciones más baratas. Puede que el equipaje se retire y facture de nuevo en la escala.</p>
+        </div>
+
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn" id="submit-btn">Buscar vuelos</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<section class="results-section" id="results-section" aria-labelledby="results-title">
+  <div class="results-header">
+    <h2 class="results-title" id="results-title">Vuelos <em>encontrados</em></h2>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button type="button" class="tab active" data-tab="direct" role="tab" aria-selected="true">
+      Vuelo único <span class="tab-badge" id="count-direct">0</span>
+    </button>
+    <button type="button" class="tab" data-tab="self_transfer" role="tab" aria-selected="false">
+      Combinando aerolíneas <span class="tab-badge" id="count-self">0</span>
+    </button>
+  </div>
+
+  <div class="toolbar">
+    <div class="filter-chips" id="filter-chips" role="group" aria-label="Filtrar por aerolínea"></div>
+    <select class="sort" id="sort-select" aria-label="Ordenar resultados">
+      <option value="price">Ordenar: Precio</option>
+      <option value="duration">Ordenar: Duración</option>
+      <option value="layover">Ordenar: Escala más corta</option>
+    </select>
+  </div>
+
+  <div id="results-list" aria-live="polite"></div>
+  <div class="sr-live" id="sr-status" aria-live="polite" aria-atomic="true"></div>
+</section>
+
+<!-- GALLERY -->
+<section class="gallery-section" aria-labelledby="gallery-title">
+  <div class="gallery-header">
+    <h2 id="gallery-title">Destinos favoritos</h2>
+    <span class="hairline" aria-hidden="true"></span>
+    <p>Siete ciudades que amamos, siete excusas para hacer las maletas.</p>
+  </div>
+  <div class="gallery-grid" id="gallery-grid"></div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <p>
+    <span class="footer-logo">Viajes Anguie</span>
+    <span class="dot">·</span>
+    2026
+    <span class="dot">·</span>
+    Powered by Google Flights
+  </p>
+</footer>
+
+<script>
+(function() {
+  'use strict';
+
+  // ============ DATA ============
+  const IATA_CODES = ['CCP','SCL','LIM','LSC','PMC','ARI','IPC','PUQ','ANF','IQQ','ZCO','CJC'];
+  const IATA_NAMES = {
+    CCP: 'Concepción', SCL: 'Santiago', LIM: 'Lima',
+    LSC: 'La Serena', PMC: 'Puerto Montt', ARI: 'Arica',
+    IPC: 'Rapa Nui', PUQ: 'Punta Arenas', ANF: 'Antofagasta',
+    IQQ: 'Iquique', ZCO: 'Temuco', CJC: 'Calama'
+  };
+  const AIRLINE_NAMES = { LA: 'LATAM', H2: 'Sky', JA: 'JetSMART' };
+  const DESTINOS = [
+    { city: 'Lima',         img: 'https://images.unsplash.com/photo-1531968455001-5c5272a41129?w=800' },
+    { city: 'Piura',        img: 'https://source.unsplash.com/800x1000/?piura,peru' },
+    { city: 'Talara',       img: 'https://source.unsplash.com/800x1000/?talara,peru,beach' },
+    { city: 'Concepción',   img: 'https://source.unsplash.com/800x1000/?concepcion,chile' },
+    { city: 'Arauco',       img: 'https://source.unsplash.com/800x1000/?arauco,chile,coast' },
+    { city: 'Carampangue',  img: 'https://source.unsplash.com/800x1000/?carampangue,biobio,chile' },
+    { city: 'Santiago',     img: 'https://images.unsplash.com/photo-1489493512598-d08130f49bea?w=800' }
+  ];
+
+  // ============ UTILS ============
+  function formatPrice(n) {
+    if (n == null || isNaN(n)) return '—';
+    const rounded = Math.round(n);
+    return '$' + rounded.toLocaleString('es-CL').replace(/,/g, '.') + ' CLP';
+  }
+  function formatDuration(min) {
+    if (min == null || isNaN(min)) return '—';
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    return h + 'h ' + String(m).padStart(2, '0') + 'm';
+  }
+  function formatTime(raw) {
+    if (!raw) return '—';
+    // API may return "2026-05-01 14:35" or "14:35"
+    const m = String(raw).match(/(\d{2}):(\d{2})/);
+    return m ? (m[1] + ':' + m[2]) : raw;
+  }
+  function airlineLogo(seg) {
+    if (seg && seg.airline_logo) return seg.airline_logo;
+    const code = seg && seg.airline_code ? seg.airline_code :
+                 (seg && seg.flight_number ? String(seg.flight_number).match(/^[A-Z0-9]{1,3}/) : null);
+    const codeStr = Array.isArray(code) ? code[0] : (code || 'LA');
+    return 'https://www.gstatic.com/flights/airline_logos/70px/' + codeStr + '.png';
+  }
+  function airlineNameOf(seg) {
+    if (!seg) return '';
+    if (seg.airline) return seg.airline;
+    if (seg.airline_code && AIRLINE_NAMES[seg.airline_code]) return AIRLINE_NAMES[seg.airline_code];
+    return '';
+  }
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => (
+      { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]
+    ));
+  }
+
+  // ============ NAV SCROLL ============
+  const nav = document.getElementById('nav');
+  window.addEventListener('scroll', () => {
+    if (window.scrollY > 20) nav.classList.add('scrolled');
+    else nav.classList.remove('scrolled');
+  }, { passive: true });
+
+  // ============ AUTOCOMPLETE ============
+  function setupAutocomplete(inputId, listId) {
+    const input = document.getElementById(inputId);
+    const list = document.getElementById(listId);
+    let activeIdx = -1;
+
+    function render(q) {
+      const query = (q || '').toUpperCase();
+      const matches = IATA_CODES.filter(code =>
+        code.includes(query) || IATA_NAMES[code].toUpperCase().includes(query)
+      );
+      list.innerHTML = matches.map((code, i) => (
+        '<div class="autocomplete-item" role="option" data-code="' + code + '" data-idx="' + i + '">' +
+        '<strong>' + code + '</strong> — ' + escapeHtml(IATA_NAMES[code]) +
+        '</div>'
+      )).join('');
+      list.classList.toggle('open', matches.length > 0);
+      activeIdx = -1;
+    }
+
+    input.addEventListener('focus', () => render(input.value));
+    input.addEventListener('input', (e) => {
+      input.value = input.value.toUpperCase().replace(/[^A-Z]/g, '');
+      render(input.value);
+    });
+    input.addEventListener('blur', () => {
+      setTimeout(() => list.classList.remove('open'), 150);
+    });
+    input.addEventListener('keydown', (e) => {
+      const items = list.querySelectorAll('.autocomplete-item');
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        activeIdx = Math.min(activeIdx + 1, items.length - 1);
+        items.forEach((it, i) => it.classList.toggle('active', i === activeIdx));
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        activeIdx = Math.max(activeIdx - 1, 0);
+        items.forEach((it, i) => it.classList.toggle('active', i === activeIdx));
+      } else if (e.key === 'Enter' && activeIdx >= 0 && items[activeIdx]) {
+        e.preventDefault();
+        input.value = items[activeIdx].getAttribute('data-code');
+        list.classList.remove('open');
+      } else if (e.key === 'Escape') {
+        list.classList.remove('open');
+      }
+    });
+
+    list.addEventListener('mousedown', (e) => {
+      const item = e.target.closest('.autocomplete-item');
+      if (!item) return;
+      e.preventDefault();
+      input.value = item.getAttribute('data-code');
+      list.classList.remove('open');
+    });
+  }
+  setupAutocomplete('origen', 'origen-list');
+  setupAutocomplete('destino', 'destino-list');
+
+  // ============ SOLO IDA TOGGLE ============
+  const soloIda = document.getElementById('solo-ida');
+  const fechaVuelta = document.getElementById('fecha-vuelta');
+  soloIda.addEventListener('change', () => {
+    fechaVuelta.disabled = soloIda.checked;
+    if (soloIda.checked) fechaVuelta.value = '';
+  });
+
+  // ============ SLIDER ============
+  const slider = document.getElementById('escala-max');
+  const sliderVal = document.getElementById('escala-value');
+  function updateSlider() { sliderVal.textContent = formatDuration(parseInt(slider.value, 10)); }
+  slider.addEventListener('input', updateSlider);
+  updateSlider();
+
+  // ============ STEPPER ============
+  const adultosMinus = document.getElementById('adultos-minus');
+  const adultosPlus = document.getElementById('adultos-plus');
+  const adultosVal = document.getElementById('adultos-value');
+  const adultosHidden = document.getElementById('adultos');
+  function setAdultos(n) {
+    n = Math.max(1, Math.min(9, n));
+    adultosVal.textContent = n;
+    adultosHidden.value = n;
+    adultosMinus.disabled = n <= 1;
+    adultosPlus.disabled = n >= 9;
+  }
+  adultosMinus.addEventListener('click', () => setAdultos(parseInt(adultosHidden.value, 10) - 1));
+  adultosPlus.addEventListener('click', () => setAdultos(parseInt(adultosHidden.value, 10) + 1));
+  setAdultos(1);
+
+  // ============ GALLERY ============
+  (function renderGallery() {
+    const grid = document.getElementById('gallery-grid');
+    grid.innerHTML = DESTINOS.map(d => (
+      '<div class="gallery-card">' +
+        '<div class="gallery-fallback"><span>' + escapeHtml(d.city) + '</span></div>' +
+        '<img class="gallery-img" src="' + d.img + '" alt="' + escapeHtml(d.city) + '" loading="lazy" ' +
+          'onerror="this.style.display=\'none\'" />' +
+        '<div class="gallery-overlay"><span class="gallery-city">' + escapeHtml(d.city) + '</span></div>' +
+      '</div>'
+    )).join('');
+    // reveal on scroll
+    const cards = grid.querySelectorAll('.gallery-card');
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach((ent, i) => {
+          if (ent.isIntersecting) {
+            setTimeout(() => ent.target.classList.add('visible'), i * 80);
+            io.unobserve(ent.target);
+          }
+        });
+      }, { threshold: 0.15 });
+      cards.forEach(c => io.observe(c));
+    } else {
+      cards.forEach(c => c.classList.add('visible'));
+    }
+  })();
+
+  // ============ RESULTS STATE ============
+  let state = {
+    direct: [],
+    self_transfer: [],
+    currency: 'CLP',
+    tab: 'direct',
+    sort: 'price',
+    airlineFilter: new Set()
+  };
+
+  const resultsSection = document.getElementById('results-section');
+  const resultsList = document.getElementById('results-list');
+  const srStatus = document.getElementById('sr-status');
+  const countDirect = document.getElementById('count-direct');
+  const countSelf = document.getElementById('count-self');
+  const filterChips = document.getElementById('filter-chips');
+  const sortSelect = document.getElementById('sort-select');
+
+  document.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(x => {
+        x.classList.remove('active');
+        x.setAttribute('aria-selected', 'false');
+      });
+      t.classList.add('active');
+      t.setAttribute('aria-selected', 'true');
+      state.tab = t.getAttribute('data-tab');
+      renderResults();
+    });
+  });
+
+  sortSelect.addEventListener('change', () => {
+    state.sort = sortSelect.value;
+    renderResults();
+  });
+
+  function skeleton() {
+    let out = '';
+    for (let i = 0; i < 3; i++) {
+      out += '<div class="skeleton-card">' +
+        '<div class="skeleton-line lg"></div>' +
+        '<div class="skeleton-line md"></div>' +
+        '<div class="skeleton-line"></div>' +
+        '<div class="skeleton-line sm"></div>' +
+      '</div>';
+    }
+    return out;
+  }
+
+  function collectAirlines() {
+    const set = new Set();
+    function scan(items) {
+      items.forEach(r => {
+        const segs = r.flights || [];
+        segs.forEach(s => { if (s.airline) set.add(s.airline); });
+        (r.legs || []).concat(r.return_legs || []).forEach(leg => {
+          (leg.flights || []).forEach(s => { if (s.airline) set.add(s.airline); });
+        });
+      });
+    }
+    scan(state.direct);
+    scan(state.self_transfer);
+    return Array.from(set).sort();
+  }
+
+  function renderFilterChips() {
+    const airlines = collectAirlines();
+    if (airlines.length === 0) { filterChips.innerHTML = ''; return; }
+    filterChips.innerHTML = airlines.map(a => {
+      const checked = state.airlineFilter.has(a);
+      return '<label class="chip ' + (checked ? 'checked' : '') + '">' +
+        '<input type="checkbox" data-airline="' + escapeHtml(a) + '" ' + (checked ? 'checked' : '') + ' />' +
+        escapeHtml(a) +
+        '</label>';
+    }).join('');
+    filterChips.querySelectorAll('input').forEach(inp => {
+      inp.addEventListener('change', () => {
+        const a = inp.getAttribute('data-airline');
+        if (inp.checked) state.airlineFilter.add(a);
+        else state.airlineFilter.delete(a);
+        inp.closest('.chip').classList.toggle('checked', inp.checked);
+        renderResults();
+      });
+    });
+  }
+
+  function segmentTimeline(flights) {
+    if (!flights || flights.length === 0) return '';
+    const first = flights[0];
+    const last = flights[flights.length - 1];
+    const totalMin = flights.reduce((s, f) => s + (f.duration || 0), 0);
+    return '<div class="timeline">' +
+      '<div class="timeline-point">' +
+        '<div class="timeline-time">' + formatTime(first.departure_airport && first.departure_airport.time) + '</div>' +
+        '<div class="timeline-code">' + escapeHtml((first.departure_airport && first.departure_airport.id) || '') + '</div>' +
+      '</div>' +
+      '<div class="timeline-line"><span class="timeline-duration">' + formatDuration(totalMin) + '</span></div>' +
+      '<div class="timeline-point">' +
+        '<div class="timeline-time">' + formatTime(last.arrival_airport && last.arrival_airport.time) + '</div>' +
+        '<div class="timeline-code">' + escapeHtml((last.arrival_airport && last.arrival_airport.id) || '') + '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderLayovers(layovers) {
+    if (!layovers || layovers.length === 0) return '';
+    return '<div class="layovers">' + layovers.map(l =>
+      '<span class="layover-chip">Escala ' + escapeHtml(l.id || '') + ' · ' + formatDuration(l.duration || 0) + '</span>'
+    ).join('') + '</div>';
+  }
+
+  function segmentDetail(f) {
+    const al = airlineNameOf(f);
+    const fn = f.flight_number ? ' ' + escapeHtml(f.flight_number) : '';
+    return '<div class="segment">' +
+      '<img class="airline-logo" src="' + airlineLogo(f) + '" alt="" onerror="this.style.display=\'none\'" />' +
+      '<div class="segment-info">' +
+        '<div><strong>' + formatTime(f.departure_airport && f.departure_airport.time) + '</strong><br/>' +
+          escapeHtml((f.departure_airport && f.departure_airport.id) || '') + '</div>' +
+        '<div>' + escapeHtml(al) + fn + ' · ' + formatDuration(f.duration || 0) + '</div>' +
+        '<div><strong>' + formatTime(f.arrival_airport && f.arrival_airport.time) + '</strong><br/>' +
+          escapeHtml((f.arrival_airport && f.arrival_airport.id) || '') + '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function directCard(r, idx) {
+    const flights = r.flights || [];
+    const logos = flights.slice(0, 3).map(f =>
+      '<img class="airline-logo" src="' + airlineLogo(f) + '" alt="' + escapeHtml(airlineNameOf(f)) + '" onerror="this.style.display=\'none\'" />'
+    ).join('');
+    const airlineLabels = Array.from(new Set(flights.map(f => airlineNameOf(f)).filter(Boolean))).join(' · ');
+    return '<article class="result-card" data-idx="' + idx + '">' +
+      '<div class="result-top">' +
+        '<div class="result-meta">' +
+          '<div class="result-airlines">' + logos + '<span class="airline-name">' + escapeHtml(airlineLabels) + '</span></div>' +
+          '<div class="result-duration">' + formatDuration(r.total_duration || 0) + ' · ' + flights.length + ' tramo' + (flights.length !== 1 ? 's' : '') + '</div>' +
+        '</div>' +
+        '<div class="result-price">' + formatPrice(r.price) + '<small>por persona</small></div>' +
+      '</div>' +
+      segmentTimeline(flights) +
+      renderLayovers(r.layovers) +
+      '<button type="button" class="accordion-toggle" aria-expanded="false">Ver detalle <span class="arrow">v</span></button>' +
+      '<div class="accordion-content">' + flights.map(segmentDetail).join('') + '</div>' +
+    '</article>';
+  }
+
+  function selfTransferCard(r, idx) {
+    const legs = (r.legs || []).concat(r.return_legs || []);
+    const allFlights = legs.reduce((a, l) => a.concat(l.flights || []), []);
+    const logos = allFlights.slice(0, 3).map(f =>
+      '<img class="airline-logo" src="' + airlineLogo(f) + '" alt="' + escapeHtml(airlineNameOf(f)) + '" onerror="this.style.display=\'none\'" />'
+    ).join('');
+    const airlineLabels = Array.from(new Set(allFlights.map(f => airlineNameOf(f)).filter(Boolean))).join(' + ');
+    const layoverChip = r.layover_min ? '<span class="layover-chip">Conexión · ' + formatDuration(r.layover_min) + '</span>' : '';
+    return '<article class="result-card" data-idx="' + idx + '">' +
+      '<div class="result-top">' +
+        '<div class="result-meta">' +
+          '<div class="result-airlines">' + logos + '<span class="airline-name">' + escapeHtml(airlineLabels) + '</span></div>' +
+          '<div class="result-duration">' + formatDuration(r.total_duration || 0) + ' · Combinación multi-aerolínea</div>' +
+        '</div>' +
+        '<div class="result-price">' + formatPrice(r.total_price) + '<small>total</small></div>' +
+      '</div>' +
+      segmentTimeline(allFlights) +
+      (layoverChip ? '<div class="layovers">' + layoverChip + '</div>' : '') +
+      '<button type="button" class="accordion-toggle" aria-expanded="false">Ver detalle <span class="arrow">v</span></button>' +
+      '<div class="accordion-content">' + allFlights.map(segmentDetail).join('') + '</div>' +
+    '</article>';
+  }
+
+  function itemAirlines(r) {
+    const flights = (r.flights || []).concat(
+      (r.legs || []).concat(r.return_legs || []).reduce((a, l) => a.concat(l.flights || []), [])
+    );
+    return new Set(flights.map(f => airlineNameOf(f)).filter(Boolean));
+  }
+
+  function sortItems(items) {
+    const copy = items.slice();
+    if (state.sort === 'price') {
+      copy.sort((a, b) => (a.price || a.total_price || 0) - (b.price || b.total_price || 0));
+    } else if (state.sort === 'duration') {
+      copy.sort((a, b) => (a.total_duration || 0) - (b.total_duration || 0));
+    } else if (state.sort === 'layover') {
+      const lay = r => {
+        if (r.layover_min != null) return r.layover_min;
+        if (r.layovers && r.layovers.length) return r.layovers.reduce((s, l) => s + (l.duration || 0), 0);
+        return 0;
+      };
+      copy.sort((a, b) => lay(a) - lay(b));
+    }
+    return copy;
+  }
+
+  function filterItems(items) {
+    if (state.airlineFilter.size === 0) return items;
+    return items.filter(r => {
+      const a = itemAirlines(r);
+      for (const wanted of state.airlineFilter) {
+        if (a.has(wanted)) return true;
+      }
+      return false;
+    });
+  }
+
+  function renderResults() {
+    countDirect.textContent = state.direct.length;
+    countSelf.textContent = state.self_transfer.length;
+
+    const raw = state.tab === 'direct' ? state.direct : state.self_transfer;
+    const items = sortItems(filterItems(raw));
+
+    if (items.length === 0) {
+      resultsList.innerHTML = '<div class="empty-state"><h3>Sin resultados</h3><p>Prueba cambiando fechas, ampliando la escala máxima, o activando la combinación de aerolíneas.</p></div>';
+      return;
+    }
+    const renderFn = state.tab === 'direct' ? directCard : selfTransferCard;
+    resultsList.innerHTML = items.map((r, i) => renderFn(r, i)).join('');
+
+    resultsList.querySelectorAll('.accordion-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const content = btn.nextElementSibling;
+        const open = content.classList.toggle('open');
+        btn.classList.toggle('open', open);
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+    });
+  }
+
+  // ============ FORM SUBMIT ============
+  const form = document.getElementById('search-form');
+  const submitBtn = document.getElementById('submit-btn');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const origen = document.getElementById('origen').value.trim().toUpperCase();
+    const destino = document.getElementById('destino').value.trim().toUpperCase();
+    const fechaIda = document.getElementById('fecha-ida').value;
+    const fechaVueltaVal = soloIda.checked ? '' : fechaVuelta.value;
+    const escalaMax = slider.value;
+    const combinar = document.getElementById('combinar').checked ? '1' : '0';
+    const adultos = adultosHidden.value;
+
+    if (!origen || !IATA_CODES.includes(origen)) {
+      alert('Selecciona un origen válido.'); return;
+    }
+    if (!destino || !IATA_CODES.includes(destino)) {
+      alert('Selecciona un destino válido.'); return;
+    }
+    if (origen === destino) {
+      alert('Origen y destino deben ser distintos.'); return;
+    }
+    if (!fechaIda) {
+      alert('Ingresa una fecha de ida.'); return;
+    }
+
+    const params = new URLSearchParams({
+      origen: origen,
+      destino: destino,
+      fecha_ida: fechaIda,
+      escala_max: escalaMax,
+      combinar: combinar,
+      adultos: adultos
+    });
+    if (fechaVueltaVal) params.append('fecha_vuelta', fechaVueltaVal);
+
+    // show loading
+    resultsSection.classList.add('visible');
+    resultsList.innerHTML = skeleton();
+    srStatus.textContent = 'Buscando vuelos…';
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Buscando…';
+    resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    try {
+      const res = await fetch('/vuelos/api/search?' + params.toString(), {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+
+      state.direct = Array.isArray(data.direct) ? data.direct : [];
+      state.self_transfer = Array.isArray(data.self_transfer) ? data.self_transfer : [];
+      state.currency = data.currency || 'CLP';
+      state.airlineFilter = new Set();
+
+      // pick default tab intelligently
+      if (state.direct.length === 0 && state.self_transfer.length > 0) {
+        state.tab = 'self_transfer';
+        document.querySelectorAll('.tab').forEach(t => {
+          const on = t.getAttribute('data-tab') === 'self_transfer';
+          t.classList.toggle('active', on);
+          t.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+      }
+
+      renderFilterChips();
+      renderResults();
+      srStatus.textContent = 'Se encontraron ' + (state.direct.length + state.self_transfer.length) + ' vuelos.';
+    } catch (err) {
+      resultsList.innerHTML = '<div class="error-state"><h3>No pudimos buscar</h3><p>' + escapeHtml(err.message) + '. Intenta de nuevo en unos segundos.</p></div>';
+      srStatus.textContent = 'Error al buscar vuelos.';
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Buscar vuelos';
+    }
+  });
+
+  // default date = today + 30
+  (function setDefaultDate() {
+    const d = new Date();
+    d.setDate(d.getDate() + 30);
+    const iso = d.toISOString().slice(0, 10);
+    const ida = document.getElementById('fecha-ida');
+    if (!ida.value) ida.value = iso;
+    const today = new Date().toISOString().slice(0, 10);
+    ida.min = today;
+    fechaVuelta.min = today;
+  })();
+
+})();
+</script>
+</body>
+</html>

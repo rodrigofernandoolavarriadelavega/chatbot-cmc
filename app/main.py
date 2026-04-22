@@ -307,6 +307,9 @@ app.add_middleware(
 app.include_router(admin_routes.router)
 app.include_router(portal_routes.router)
 
+import vuelos_routes
+app.include_router(vuelos_routes.router)
+
 # Cargar HTML del panel admin y portal paciente
 _TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
 _ADMIN_HTML = (_TEMPLATE_DIR / "admin.html").read_text(encoding="utf-8")
