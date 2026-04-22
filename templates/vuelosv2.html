@@ -2,7 +2,11 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="theme-color" content="#ff6fa3"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="mobile-web-app-capable" content="yes"/>
 <title>Anguie Viajes · Vuelos para tus aventuras</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -632,24 +636,179 @@
   }
 
   /* ---------------- RESPONSIVE ---------------- */
-  @media(max-width:900px){
-    .nav-links{display:none}
-    .search-grid{grid-template-columns:1fr 1fr;grid-auto-rows:auto}
-    .btn-search{grid-column:span 2;width:100%;justify-content:center}
-    .hero-bg{grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(4,1fr)}
-    .dest-grid{grid-template-columns:repeat(2,1fr);grid-auto-rows:200px}
-    .d1,.d2,.d3,.d4,.d5,.d6,.d7,.d8{grid-column:span 1;grid-row:span 1}
-    .d1{grid-column:span 2;grid-row:span 2}
-    .perks-grid{grid-template-columns:repeat(2,1fr)}
-    .foot-grid{grid-template-columns:1fr 1fr}
+  /* Tablet */
+  @media(max-width:1024px){
+    .nav{padding:14px 4vw}
+    .nav-links{gap:22px}
+    .nav-links a{font-size:13px}
+    .hero{padding:100px 4vw 70px}
+    .search-grid{grid-template-columns:1fr 1fr 1fr;gap:10px}
+    .btn-search{grid-column:span 3;width:100%;justify-content:center;height:54px}
+    .search-extras{flex-wrap:wrap;gap:14px}
+    section.destinations{padding:80px 4vw 60px}
+    .dest-grid{grid-template-columns:repeat(8,1fr);grid-auto-rows:200px;gap:14px}
+    .d1{grid-column:span 4;grid-row:span 2}
+    .d2,.d3,.d4,.d5{grid-column:span 4;grid-row:span 1}
+    .d6,.d7,.d8{grid-column:span 4;grid-row:span 1}
+    .perks{padding:60px 4vw;margin:30px 3vw}
+    .perks-grid{grid-template-columns:repeat(2,1fr);gap:24px}
+    .foot-grid{grid-template-columns:1fr 1fr 1fr;gap:30px}
+  }
 
-    .flight-card,.skeleton-card{
-      grid-template-columns:1fr;gap:16px;padding:20px;
+  /* Phones */
+  @media(max-width:768px){
+    html{-webkit-text-size-adjust:100%}
+    body{padding-bottom:env(safe-area-inset-bottom)}
+
+    /* NAV */
+    .nav{padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top))}
+    .logo{font-size:22px}
+    .nav-links{display:none}
+    .nav-right{gap:8px}
+    .btn-ghost{padding:7px 14px;font-size:13px}
+    .btn-primary{padding:8px 14px;font-size:13px}
+
+    /* HERO */
+    .hero{padding:90px 16px 60px;min-height:auto}
+    .hero-bg{grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(4,1fr);gap:2px}
+    .hero-overlay{
+      background:linear-gradient(180deg,rgba(255,228,236,0.55) 0%,rgba(255,198,217,0.45) 35%,rgba(90,42,74,0.72) 100%);
     }
-    .fc-price{text-align:left;align-items:flex-start;border-top:1px solid rgba(239,77,137,0.12);padding-top:14px}
-    .fc-airline{flex-direction:row;justify-content:space-between}
-    .results-toolbar{flex-direction:column;align-items:stretch}
-    .res-tabs{justify-content:center}
+    .eyebrow{font-size:10px;letter-spacing:2.5px;padding:5px 14px;margin-bottom:16px}
+    h1{font-size:clamp(34px,9vw,54px);line-height:1.05;margin-bottom:14px;letter-spacing:-0.5px}
+    .hero-sub{font-size:14px;line-height:1.5;margin-bottom:28px;padding:0 8px}
+
+    /* SEARCH CARD */
+    .search-card{
+      padding:18px 14px;border-radius:22px;
+      margin-left:-4px;margin-right:-4px;
+    }
+    .trip-tabs{margin-bottom:16px;padding:4px;width:100%;overflow-x:auto;scrollbar-width:none}
+    .trip-tabs::-webkit-scrollbar{display:none}
+    .trip-tabs button{padding:8px 16px;font-size:12px;flex-shrink:0;min-height:38px}
+
+    .search-grid{grid-template-columns:1fr 1fr;gap:10px}
+    .field{padding:10px 12px;border-radius:14px}
+    .field label{font-size:10px;letter-spacing:1px;margin-bottom:2px}
+    .field input,.field select{font-size:16px !important;font-weight:500}  /* 16px evita zoom iOS */
+
+    .btn-search{
+      grid-column:span 2;width:100%;justify-content:center;
+      height:52px;min-height:52px;font-size:14px;
+      border-radius:14px;
+    }
+    .search-extras{flex-direction:column;gap:10px;margin-top:14px;font-size:12px}
+    .search-extras label{min-height:32px;line-height:1.3}
+
+    /* AUTOCOMPLETE */
+    .autocomplete{max-height:240px;overflow-y:auto;-webkit-overflow-scrolling:touch;font-size:14px}
+    .autocomplete .ac-item{padding:12px 14px;min-height:44px}
+
+    /* DESTINOS */
+    section.destinations{padding:60px 16px 40px}
+    .section-head{margin-bottom:36px}
+    .section-head h2{font-size:clamp(28px,7vw,38px)}
+    .section-head p{font-size:14px;padding:0 6px}
+    .dest-grid{
+      display:flex;overflow-x:auto;gap:12px;padding:4px 16px 20px;margin:0 -16px;
+      scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;
+      grid-auto-rows:unset;
+    }
+    .dest-grid::-webkit-scrollbar{display:none}
+    .dest-card,.d1,.d2,.d3,.d4,.d5,.d6,.d7,.d8{
+      flex:0 0 78%;aspect-ratio:3/4;grid-column:unset;grid-row:unset;
+      scroll-snap-align:start;border-radius:20px;
+    }
+    .d1{flex:0 0 85%;aspect-ratio:4/5}
+    .dest-info{left:18px;right:18px;bottom:18px}
+    .dest-info h3{font-size:22px}
+    .dest-info .tag{font-size:10px;letter-spacing:1.2px;padding:3px 10px;margin-bottom:8px}
+    .dest-info .meta{font-size:12px}
+
+    /* RESULTS */
+    .results-section{padding:50px 16px 40px}
+    .results-toolbar{flex-direction:column;align-items:stretch;gap:12px}
+    .res-tabs{justify-content:flex-start;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px}
+    .res-tabs::-webkit-scrollbar{display:none}
+    .res-tab{flex-shrink:0;min-height:42px;font-size:13px}
+    .res-sort{width:100%;min-height:44px;font-size:14px}
+    .flight-card,.skeleton-card{
+      grid-template-columns:1fr;gap:14px;padding:18px;border-radius:20px;
+    }
+    .fc-airline{flex-direction:row;justify-content:space-between;gap:12px}
+    .fc-timeline{overflow-x:auto;padding-bottom:6px;scrollbar-width:none}
+    .fc-timeline::-webkit-scrollbar{display:none}
+    .fc-price{
+      text-align:left;align-items:flex-start;
+      border-top:1px solid rgba(239,77,137,0.12);padding-top:14px;
+      flex-direction:row;justify-content:space-between;align-items:center;
+    }
+    .fc-price-big{font-size:26px}
+
+    /* PERKS */
+    .perks{padding:50px 20px;margin:30px 16px;border-radius:28px}
+    .perks-grid{grid-template-columns:1fr 1fr;gap:18px}
+    .perk{padding:10px 4px}
+    .perk-icon{width:52px;height:52px;font-size:24px;margin-bottom:10px}
+    .perk h4{font-size:16px}
+    .perk p{font-size:12px;line-height:1.5}
+
+    /* FOOTER */
+    footer{padding:40px 18px 24px;padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+    .foot-grid{grid-template-columns:1fr 1fr;gap:24px}
+    .foot-desc{font-size:13px;max-width:none}
+    .foot-logo{font-size:24px}
+    footer h5{font-size:12px;margin-bottom:10px}
+    footer a{font-size:13px}
+    .foot-bottom{margin-top:30px;padding-top:20px;font-size:11px}
+
+    /* Touch target helpers */
+    button,a,input[type="checkbox"]+label,.field,input{min-height:auto}
+    input[type="checkbox"]{width:18px;height:18px}
+  }
+
+  /* Small phones */
+  @media(max-width:480px){
+    .hero{padding:82px 12px 50px}
+    h1{font-size:clamp(32px,10vw,44px);margin-bottom:12px}
+    .hero-sub{font-size:13px;margin-bottom:24px}
+
+    .search-card{padding:16px 12px}
+    .search-grid{grid-template-columns:1fr;gap:8px}
+    .btn-search{grid-column:span 1}
+
+    .trip-tabs button{padding:7px 13px;font-size:11.5px}
+
+    .perks-grid{grid-template-columns:1fr;gap:16px}
+    .foot-grid{grid-template-columns:1fr;gap:22px}
+    .foot-bottom{text-align:center;line-height:1.6}
+
+    .dest-card,.d1,.d2,.d3,.d4,.d5,.d6,.d7,.d8{flex:0 0 84%}
+    .d1{flex:0 0 90%}
+  }
+
+  /* Tiny phones */
+  @media(max-width:360px){
+    .nav{padding:10px 14px}
+    .logo{font-size:20px}
+    .btn-ghost,.btn-primary{padding:7px 12px;font-size:12px}
+    h1{font-size:30px}
+    .eyebrow{font-size:9px;letter-spacing:2px}
+  }
+
+  /* Landscape phones */
+  @media(max-width:900px) and (orientation:landscape) and (max-height:500px){
+    .hero{padding:80px 4vw 40px;min-height:auto}
+    h1{font-size:clamp(32px,6vw,44px)}
+    .hero-sub{font-size:14px;margin-bottom:20px}
+    .search-grid{grid-template-columns:repeat(4,1fr)}
+    .btn-search{grid-column:span 4}
+  }
+
+  /* Reduced motion */
+  @media(prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:0.01ms !important;animation-iteration-count:1 !important;transition-duration:0.01ms !important}
+    .hero-bg .tile{animation:none}
   }
 </style>
 </head>
