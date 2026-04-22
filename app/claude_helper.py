@@ -1043,7 +1043,37 @@ async def detect_intent(mensaje: str) -> dict:
                 getattr(usage, "cache_creation_input_tokens", 0),
                 getattr(usage, "output_tokens", "?"),
             )
-        return json.loads(text)
+        _result = json.loads(text)
+        # ── POST-PROCESO: sanity check contra alucinaciones comunes ──
+        # Claude a veces devuelve especialidad=implantología o estética_facial
+        # cuando el texto del paciente no las menciona para nada (ej: "otorrino",
+        # "médico general", "traumatólogo", "confirmar mi hora"). Filtramos.
+        try:
+            _esp_raw = (_result.get("especialidad") or "").lower().strip()
+            _txt_low = (mensaje or "").lower()
+            _ALUC_PROBLEMATICAS = {
+                "implantología": ("implant", "valdes", "valdez", "aurora"),
+                "implantologia": ("implant", "valdes", "valdez", "aurora"),
+                "estética facial": ("estet", "estét", "fuenteal", "valenti", "botox",
+                                     "hilos tensores", "bioestim", "peeling", "rellen"),
+                "estetica facial": ("estet", "estét", "fuenteal", "valenti", "botox",
+                                     "hilos tensores", "bioestim", "peeling", "rellen"),
+            }
+            if _esp_raw in _ALUC_PROBLEMATICAS:
+                _triggers = _ALUC_PROBLEMATICAS[_esp_raw]
+                if not any(t in _txt_low for t in _triggers):
+                    log.warning("detect_intent: descartando especialidad alucinada %r para texto %r",
+                                _esp_raw, mensaje[:80])
+                    try:
+                        from session import log_event as _le
+                        _le("", "intent_esp_aluc_descartada",
+                            {"claude_esp": _esp_raw, "texto": mensaje[:120]})
+                    except Exception:
+                        pass
+                    _result["especialidad"] = None
+        except Exception as _e_pp:
+            log.warning("post-proceso detect_intent falló: %s", _e_pp)
+        return _result
     except json.JSONDecodeError as e:
         log.error("detect_intent JSON inválido para '%s': %s | respuesta: %r",
                   mensaje[:80], e, text[:300] if 'text' in dir() else "")
