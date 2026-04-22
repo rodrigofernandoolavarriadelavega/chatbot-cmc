@@ -1453,7 +1453,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         return await _handle_confirmacion_precita(phone, tl, data)
 
     # ── Comandos del doctor (solo desde su número) ──────────────────────────
-    _doctor_phone = CMC_TELEFONO.replace("+", "").replace(" ", "")
+    _doctor_phone = ADMIN_ALERT_PHONE
     if phone == _doctor_phone:
         resp = await _handle_doctor_command(phone, txt, tl, data, state)
         if resp is not None:
