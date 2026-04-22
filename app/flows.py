@@ -1717,12 +1717,18 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     if state == "IDLE" and data.get("last_slots") and data.get("last_slots_ts"):
         try:
             from time_parser import parse_hora as _parse_hora_idle
-            if _parse_hora_idle(txt):
+            _ls = data["last_slots"]
+            _ls_valido = (
+                isinstance(_ls, list)
+                and _ls
+                and all(isinstance(s, dict) and s.get("hora_inicio") for s in _ls)
+            )
+            if _ls_valido and _parse_hora_idle(txt):
                 _ts_snap = datetime.fromisoformat(data["last_slots_ts"])
                 _edad = datetime.now(timezone.utc) - _ts_snap
                 if _edad < timedelta(minutes=60):
-                    data["todos_slots"] = data["last_slots"]
-                    data["slots"] = data["last_slots"][:5]
+                    data["todos_slots"] = _ls
+                    data["slots"] = _ls[:5]
                     if data.get("last_especialidad"):
                         data["especialidad"] = data["last_especialidad"]
                     data.setdefault("fechas_vistas", [])
