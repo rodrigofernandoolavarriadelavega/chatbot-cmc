@@ -59,7 +59,7 @@ Esta es la firma visual del manual. Cada página interna debe llevar ambas franj
 
 ### Header / footer textuales (sobre las franjas)
 - **Header:** "CENTRO MÉDICO CARAMPANGUE · MATERIAL EDUCATIVO" · 7.5pt · UPPERCASE · letter-spacing 0.18em · color azul corporativo · weight 600
-- **Footer:** "agentecmc.cl · +56 9 4588 6628 · (41) 296 5226" · 7.5pt · centrado · color tinta suave · weight 500
+- **Footer:** "agentecmc.cl · +56 9 4588 6628 · (44) 296 5226" · 7.5pt · centrado · color tinta suave · weight 500
 
 ### Portada (sin franjas decorativas — el gradiente cubre toda la hoja)
 Gradiente diagonal 160° en una de las 5 variantes:
@@ -82,7 +82,7 @@ Gradiente diagonal 160° en una de las 5 variantes:
 1. **Header decorativo** (rectángulo 210mm × 4mm con gradiente turquesa/azul).
 2. **Footer decorativo** (idem).
 3. **Header textual** ("CENTRO MÉDICO CARAMPANGUE · MATERIAL EDUCATIVO").
-4. **Footer textual** ("agentecmc.cl · +56 9 4588 6628 · (41) 296 5226").
+4. **Footer textual** ("agentecmc.cl · +56 9 4588 6628 · (44) 296 5226").
 5. **Logo mark** (en blanco sobre fondo color y en color sobre fondo blanco).
 6. **Callout info** (fondo azul claro, borde izquierdo azul, label "INFO" en pill azul).
 7. **Callout success** (verde claro + verde + label "GES" o "ÉXITO").
@@ -188,7 +188,7 @@ Buscar en Canva con keyword **"line icon"** o **"outline"** para mantener un loo
 - [ ] Tipografía = Montserrat únicamente
 - [ ] Franjas decorativas turquesa/azul arriba y abajo de cada página interna
 - [ ] Logo presente en portada (con espacio de respeto)
-- [ ] Datos de contacto: **(41) 296 5226** y **+56 9 4588 6628**
+- [ ] Datos de contacto: **(44) 296 5226** y **+56 9 4588 6628**
 - [ ] Web: `agentecmc.cl` o `centromedicocarampangue.cl`
 - [ ] Disclaimer legal al final
 - [ ] Fecha "Última revisión: [mes/año]" reemplazada por la fecha real

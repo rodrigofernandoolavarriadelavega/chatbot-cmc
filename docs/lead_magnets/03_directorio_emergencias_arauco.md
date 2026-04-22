@@ -50,7 +50,7 @@
 ### Centro Médico Carampangue (privado)
 - **Dirección:** [Dirección oficial CMC]
 - **Horario:** [Horarios CMC]
-- **Teléfono:** (41) 296 5226
+- **Teléfono:** (44) 296 5226
 - **WhatsApp:** +56 9 4588 6628
 - **Web:** agentecmc.cl
 

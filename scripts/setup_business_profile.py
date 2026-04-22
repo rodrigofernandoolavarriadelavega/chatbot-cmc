@@ -35,7 +35,7 @@ PROFILE = {
         "Especialidades: Medicina General, Traumatología, Odontología, Kinesiología, "
         "Ginecología, Cardiología, Gastroenterología, ORL, Nutrición, Psicología, "
         "Fonoaudiología, Matrona, Podología, Ecografía, Masoterapia, Estética Facial.\n\n"
-        "📞 (41) 296 5226\n"
+        "📞 (44) 296 5226\n"
         "📍 Monsalve esq. República, Carampangue"
     ),
     "email": "",

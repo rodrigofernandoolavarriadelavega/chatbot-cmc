@@ -253,6 +253,6 @@ El SAMU envía una ambulancia con personal de salud si la situación lo requiere
 
 ## Contacto CMC
 
-- 📞 **(41) 296 5226** · 💬 WhatsApp **+56 9 4588 6628**
+- 📞 **(44) 296 5226** · 💬 WhatsApp **+56 9 4588 6628**
 
 *Material educativo basado en criterios oficiales del MINSAL y sociedades médicas. Ante cualquier duda, siempre es mejor llamar al 131 y preguntar. El operador le orientará. Última revisión: [mes/año].*

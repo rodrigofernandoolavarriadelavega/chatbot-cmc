@@ -964,7 +964,7 @@ async def webhook(request: Request):
                 reply = (
                     f"Recibí tu {label}, gracias.\n\n"
                     "Lo guardé en tu ficha y una recepcionista lo va a revisar 🙏\n"
-                    "Si es urgente, puedes llamar al 📞 (41) 296 5226"
+                    "Si es urgente, puedes llamar al 📞 (44) 296 5226"
                 )
                 await send_whatsapp(phone, reply)
                 log_message(phone, "out", reply, "HUMAN_TAKEOVER", canal="whatsapp")

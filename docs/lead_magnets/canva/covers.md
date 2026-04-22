@@ -35,4 +35,4 @@ Toda la paleta deriva del Manual de Normas Gráficas. Solo turquesa, azul y navy
 ## Páginas internas (todos los documentos)
 - Franja turquesa+azul de **4 mm** arriba y abajo (10% turquesa / 90% azul corporativo).
 - Header textual sobre la franja superior: "CENTRO MÉDICO CARAMPANGUE · MATERIAL EDUCATIVO" en azul corporativo.
-- Footer textual sobre la franja inferior: "agentecmc.cl · +56 9 4588 6628 · (41) 296 5226".
+- Footer textual sobre la franja inferior: "agentecmc.cl · +56 9 4588 6628 · (44) 296 5226".

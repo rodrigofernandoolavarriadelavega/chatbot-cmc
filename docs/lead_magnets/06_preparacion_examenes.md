@@ -106,11 +106,6 @@
 - No usar desodorante, talco ni cremas en las axilas o pecho.
 - Evitar la semana pre-menstrual (las mamas están más sensibles e hinchadas).
 
-### Ecografía obstétrica (embarazo)
-
-- 1er trimestre: tomar 1 litro de agua 1h antes (vejiga llena).
-- 2do y 3er trimestre: no requiere preparación.
-
 ### Ecocardiograma / Ecografía cardíaca
 
 - No requiere ayuno.
@@ -211,6 +206,6 @@
 
 ## Contacto CMC
 
-- 📞 **(41) 296 5226** · 💬 WhatsApp **+56 9 4588 6628**
+- 📞 **(44) 296 5226** · 💬 WhatsApp **+56 9 4588 6628**
 
 *Material educativo. Las indicaciones específicas las entrega el laboratorio o centro donde se realizará el examen. Siempre verifique con ellos. Última revisión: [mes/año].*

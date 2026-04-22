@@ -291,7 +291,7 @@ Chile garantiza **90 problemas de salud por ley** (Decreto GES 2025-2028). Algun
 | Carabineros | **133** |
 | Salud Responde MINSAL | **600 360 7777** |
 | Hospital de Arauco | Av. Villagrán 620, Arauco |
-| Centro Médico Carampangue | (41) 296 5226 · WhatsApp +56 9 4588 6628 |
+| Centro Médico Carampangue | (44) 296 5226 · WhatsApp +56 9 4588 6628 |
 
 ---
 

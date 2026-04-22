@@ -2629,7 +2629,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                           "donde queda", "dónde queda", "como llego", "cómo llego")
         if any(p in tl_norm_slot for p in _INFO_CONTACTO):
             return (
-                f"📞 *{CMC_TELEFONO}* o ☎️ *(41) 296 5226*\n"
+                f"📞 *{CMC_TELEFONO}* o ☎️ *(44) 296 5226*\n"
                 f"📍 Monsalve 102, Carampangue (frente a la antigua estación de trenes).\n\n"
                 "_Elige un número del listado, *ver todos* para más horarios, u *otro día*._"
             )
