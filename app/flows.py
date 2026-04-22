@@ -1460,9 +1460,18 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     if tl.startswith(("cita_confirm:", "cita_reagendar:", "cita_cancelar:")):
         return await _handle_confirmacion_precita(phone, tl, data)
 
-    # ── Comandos del doctor (solo desde su número) ──────────────────────────
-    _doctor_phone = ADMIN_ALERT_PHONE
-    if phone == _doctor_phone:
+    # ── Comandos del profesional (doctor_mode) ──────────────────────────
+    # Gate via dashboard /profesionalescmc → permiso "wa_access".
+    # Fallback legacy: ADMIN_ALERT_PHONE siempre tiene acceso (primer arranque
+    # del dashboard sin data aún).
+    _doctor_phone = ADMIN_ALERT_PHONE  # bypass STOP legacy (ver linea 1551)
+    _tiene_wa_prof = False
+    try:
+        from admin_routes import get_permiso as _get_permiso_wa
+        _tiene_wa_prof = _get_permiso_wa(phone, "wa_access", default=False)
+    except Exception:
+        pass
+    if phone == ADMIN_ALERT_PHONE or _tiene_wa_prof:
         resp = await _handle_doctor_command(phone, txt, tl, data, state)
         if resp is not None:
             return resp
