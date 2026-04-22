@@ -2098,6 +2098,7 @@ function renderDynamicTagTabs(){
   const counts = tagsSummary.counts || {};
   const tags = Object.keys(counts).sort((a,b) => a.localeCompare(b, "es"));
 
+  // Si el filtro activo apuntaba a un tag que ya no existe, vuelve a "all"
   if (inboxFilter.startsWith("tag:")){
     const active = inboxFilter.slice(4);
     if (!(active in counts)){
@@ -2116,6 +2117,7 @@ function renderDynamicTagTabs(){
   }).join("");
   Array.from(host.children).forEach(bindTabClick);
 
+  // Datalist para autocomplete en el input de etiquetas del panel de contexto
   const dl = $("#tagSuggestions");
   if (dl){
     const union = Array.from(new Set([...PRESET_TAGS, ...tags]))
