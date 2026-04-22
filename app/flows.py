@@ -3274,8 +3274,27 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 return _format_slots(slots_filtrados[:10], mostrar_todos=True)
             # No hay slots en ese período → responder con los disponibles
             horas_disp = sorted({s.get("hora_inicio", "")[:5] for s in todos_slots if s.get("hora_inicio")})
+            # Mapa kw → label gramaticalmente correcto (evita "en la en la mañana",
+            # "en la mediodía", "en la mas tarde", etc.)
+            _PERIODO_LABEL = {
+                "tarde noche": "la tarde-noche", "tarde-noche": "la tarde-noche",
+                "tardecita": "la tardecita",
+                "mas tarde": "el horario más tarde", "más tarde": "el horario más tarde",
+                "mas tardecito": "el horario más tardecito", "más tardecito": "el horario más tardecito",
+                "mas temprano": "la mañana temprano", "más temprano": "la mañana temprano",
+                "mas tempranito": "la mañana tempranito", "más tempranito": "la mañana tempranito",
+                "en la mañana": "la mañana", "en la manana": "la mañana",
+                "por la mañana": "la mañana", "por la manana": "la mañana",
+                "temprano": "la mañana temprano",
+                "mediodía": "el mediodía", "mediodia": "el mediodía", "al mediodia": "el mediodía",
+                "en la tarde": "la tarde", "por la tarde": "la tarde",
+                "tarde": "la tarde",
+                "en la noche": "la noche", "por la noche": "la noche",
+                "noche": "la noche",
+            }
+            _label = _PERIODO_LABEL.get(kw, kw)
             return (
-                f"No tengo horas en la {kw} para este profesional 😕\n\n"
+                f"No tengo horas en {_label} para este profesional 😕\n\n"
                 f"Horarios disponibles:\n{', '.join(horas_disp[:12])}"
                 f"\n\nElige uno, escribe *otro día* o *otro profesional*."
             )
@@ -3568,9 +3587,18 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 reset_session(phone)
                 return await handle_message(phone, txt, get_session(phone))
             # Escape: menciona "otra persona" → saltar a flujo de terceros
-            if any(k in tl for k in ("otra persona", "para otro", "para otra", "familiar",
-                                      "para mi hijo", "para mi hija", "para mi mama",
-                                      "para mi mamá", "para mi papa", "para mi papá")):
+            # Regex con word-boundary evita matchear "para otro DÍA" o
+            # "para otra CITA". Caso real 2026-04-21 (56982709417): "necesito
+            # una hora para otro día" → bot decía "Entendido, es para otra persona".
+            _OTRA_PERSONA_RE = re.compile(
+                r"\b(otra persona|otr[oa] familiar|mi esposo|mi esposa|"
+                r"mi hijo|mi hija|mi mam[aá]|mi pap[aá]|mi hermano|mi hermana|"
+                r"mi abuelo|mi abuela|mi pololo|mi polola|mi pareja|mi nieto|"
+                r"mi nieta|un familiar|para un amigo|para una amiga|"
+                r"para mi (?:hijo|hija|mam[aá]|pap[aá]|hermano|hermana|"
+                r"abuelo|abuela|esposo|esposa|pareja|nieto|nieta))\b"
+            )
+            if _OTRA_PERSONA_RE.search(tl):
                 data["booking_for_other"] = True
                 save_session(phone, "WAIT_MODALIDAD", data)
                 return _btn_msg(
@@ -5101,7 +5129,7 @@ _APELLIDOS_PROFESIONAL = [
     ("fuentealba",   "estética facial"),
     ("fuentealva",   "estética facial"),  # b↔v
     ("fuentesalba",  "estética facial"),  # error común
-    ("valentina",    "estética facial"),
+    # "valentina" removido — nombre común de pacientes genera falsos positivos
 
     ("acosta",       "masoterapia"),
     ("acostas",      "masoterapia"),   # s extra
@@ -5303,15 +5331,14 @@ _APELLIDOS_PROFESIONAL = [
     ("dra aurora",       "implantología"),
 
     # === Dra. Valentina Fuentealba (76) — Estética Facial ===
-    ("valentina",    "estética facial"),
-    ("vale",         "estética facial"),
-    ("valen",        "estética facial"),
-    ("valenti",      "estética facial"),
-    ("balentina",    "estética facial"),
-    ("valen fuentealba", "estética facial"),
+    # NOTA: "valentina"/"vale"/"valen"/"valenti" removidos — nombres comunes
+    # de pacientes generaban FP ("para Valentina Medina", "vale bono").
+    # Requieren contexto: "dra" o apellido "fuentealba".
+    ("fuentealba",           "estética facial"),
     ("valentina fuentealba", "estética facial"),
-    ("dra fuentealba",   "estética facial"),
-    ("dra valentina",    "estética facial"),
+    ("valen fuentealba",     "estética facial"),
+    ("dra fuentealba",       "estética facial"),
+    ("dra valentina",        "estética facial"),
 
     # === Paola Acosta (59) — Masoterapia ===
     ("paola",        "masoterapia"),
