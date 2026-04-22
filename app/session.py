@@ -584,6 +584,27 @@ def delete_tag(phone: str, tag: str):
         conn.commit()
 
 
+def get_tags_summary() -> dict:
+    """Devuelve {counts, by_phone} para filtros dinámicos del panel admin.
+
+    Excluye tags auto-generados (referido:*, dx:*) para que solo aparezcan
+    como filtros las etiquetas manuales y las de interés operativo.
+    """
+    with _conn() as conn:
+        rows = conn.execute(
+            "SELECT phone, tag FROM contact_tags "
+            "WHERE tag NOT LIKE 'referido:%' AND tag NOT LIKE 'dx:%'"
+        ).fetchall()
+    counts: dict = {}
+    by_phone: dict = {}
+    for r in rows:
+        tag = r["tag"]
+        phone = r["phone"]
+        counts[tag] = counts.get(tag, 0) + 1
+        by_phone.setdefault(phone, []).append(tag)
+    return {"counts": counts, "by_phone": by_phone}
+
+
 # ── Citas creadas por el bot ──────────────────────────────────────────────────
 
 def save_cita_bot(phone: str, id_cita: str, especialidad: str,
@@ -1256,11 +1277,11 @@ def get_conversations(limit: int = 1000) -> list[dict]:
     with _conn() as conn:
         rows = conn.execute("""
             SELECT
-                s.phone,
-                s.state,
-                s.data,
+                ph.phone,
+                COALESCE(s.state, 'IDLE') AS state,
+                COALESCE(s.data, '{}')    AS data,
                 CASE
-                    WHEN m.ts IS NOT NULL AND m.ts > s.updated_at THEN m.ts
+                    WHEN m.ts IS NOT NULL AND (s.updated_at IS NULL OR m.ts > s.updated_at) THEN m.ts
                     ELSE s.updated_at
                 END           AS updated_at,
                 m.text        AS last_text,
@@ -1269,12 +1290,17 @@ def get_conversations(limit: int = 1000) -> list[dict]:
                 COALESCE(m.canal, 'whatsapp') AS canal,
                 p.nombre,
                 p.rut,
-                (SELECT COUNT(*) FROM messages WHERE phone = s.phone) AS msg_count
-            FROM sessions s
+                (SELECT COUNT(*) FROM messages WHERE phone = ph.phone) AS msg_count
+            FROM (
+                SELECT phone FROM sessions
+                UNION
+                SELECT DISTINCT phone FROM messages
+            ) ph
+            LEFT JOIN sessions s ON s.phone = ph.phone
             LEFT JOIN messages m ON m.id = (
-                SELECT id FROM messages WHERE phone = s.phone ORDER BY id DESC LIMIT 1
+                SELECT id FROM messages WHERE phone = ph.phone ORDER BY id DESC LIMIT 1
             )
-            LEFT JOIN contact_profiles p ON p.phone = s.phone
+            LEFT JOIN contact_profiles p ON p.phone = ph.phone
             ORDER BY updated_at DESC
             LIMIT ?
         """, (limit,)).fetchall()
