@@ -930,17 +930,21 @@ async def webhook(request: Request):
                     confirm_msg = f"📄 *Tu documento dice:*\n_{preview}_"
                     await send_whatsapp(phone, confirm_msg)
                     log_message(phone, "out", confirm_msg, state_before, canal="whatsapp")
-                    # Procesar el texto extraído por el pipeline normal
-                    session = get_session(phone)
-                    respuesta = await handle_message(phone, texto, session)
-                    if respuesta:
-                        if isinstance(respuesta, dict):
-                            await send_whatsapp_interactive(phone, respuesta)
-                            body = respuesta.get("interactive", {}).get("body", {}).get("text", "")
-                            log_message(phone, "out", body, get_session(phone).get("state", "IDLE"), canal="whatsapp")
-                        else:
-                            await send_whatsapp(phone, respuesta)
-                            log_message(phone, "out", respuesta, get_session(phone).get("state", "IDLE"), canal="whatsapp")
+                    # Procesar el texto extraído por el pipeline normal.
+                    # Lock por phone: serializa procesamiento si llegan mensajes
+                    # simultáneos del mismo paciente (evita doble respuesta en WAIT_SLOT).
+                    from resilience import get_phone_lock
+                    async with get_phone_lock(phone):
+                        session = get_session(phone)
+                        respuesta = await handle_message(phone, texto, session)
+                        if respuesta:
+                            if isinstance(respuesta, dict):
+                                await send_whatsapp_interactive(phone, respuesta)
+                                body = respuesta.get("interactive", {}).get("body", {}).get("text", "")
+                                log_message(phone, "out", body, get_session(phone).get("state", "IDLE"), canal="whatsapp")
+                            else:
+                                await send_whatsapp(phone, respuesta)
+                                log_message(phone, "out", respuesta, get_session(phone).get("state", "IDLE"), canal="whatsapp")
                     return Response(status_code=200)
 
             # Imágenes y otros → guardar + derivar a recepción (sin extracción)
@@ -1137,19 +1141,23 @@ async def webhook(request: Request):
                     log.info("MSG extra en batch ignorado from=%s type=%s", _xphone, _xtype)
                     continue
                 log.info("MSG extra en batch from=%s type=%s text=%r", _xphone, _xtype, _xtxt[:80])
-                _xs = get_session(_xphone)
-                _xstate = _xs.get("state", "IDLE")
-                log_message(_xphone, "in", _xtxt, _xstate, canal="whatsapp")
-                _xresp = await handle_message(_xphone, _xtxt, _xs)
-                _xstate_after = get_session(_xphone).get("state", "IDLE")
-                if _xresp:
-                    if isinstance(_xresp, dict) and _xresp.get("type") == "interactive":
-                        await send_whatsapp_interactive(_xphone, _xresp["interactive"])
-                        _xrt = _xresp["interactive"].get("body", {}).get("text", "")
-                    else:
-                        await send_whatsapp(_xphone, str(_xresp))
-                        _xrt = str(_xresp)
-                    log_message(_xphone, "out", _xrt, _xstate_after, canal="whatsapp")
+                # Lock por phone: el mensaje principal ya liberó su lock al retornar,
+                # pero si hay otro handler en vuelo del mismo paciente queremos serializar.
+                from resilience import get_phone_lock
+                async with get_phone_lock(_xphone):
+                    _xs = get_session(_xphone)
+                    _xstate = _xs.get("state", "IDLE")
+                    log_message(_xphone, "in", _xtxt, _xstate, canal="whatsapp")
+                    _xresp = await handle_message(_xphone, _xtxt, _xs)
+                    _xstate_after = get_session(_xphone).get("state", "IDLE")
+                    if _xresp:
+                        if isinstance(_xresp, dict) and _xresp.get("type") == "interactive":
+                            await send_whatsapp_interactive(_xphone, _xresp["interactive"])
+                            _xrt = _xresp["interactive"].get("body", {}).get("text", "")
+                        else:
+                            await send_whatsapp(_xphone, str(_xresp))
+                            _xrt = str(_xresp)
+                        log_message(_xphone, "out", _xrt, _xstate_after, canal="whatsapp")
             except Exception as _xe:
                 log.warning("Error procesando msg extra en batch WA: %s", _xe)
 
