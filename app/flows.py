@@ -603,6 +603,33 @@ def _ensure_consent(phone: str) -> None:
         log_event(phone, "privacy_consent_accepted", {"method": "rut_provided"})
 
 
+async def _buscar_paciente_safe(rut: str) -> tuple[dict | None, bool]:
+    """Wrapper de buscar_paciente que distingue 'RUT no existe' de 'error transitorio'.
+
+    Devuelve (paciente, transient_error). Si transient_error es True, el caller
+    NO debe asumir que el RUT no existe — Medilink falló (429/timeout/red) y se
+    debe derivar a humano para evitar registrar como paciente nuevo a alguien
+    que ya está en sistema. Causa raíz del bug donde RUT 16649550-4 (existente)
+    se reportó como no encontrado por 429 silenciado.
+    """
+    paciente = await buscar_paciente(rut)
+    if paciente is None and is_medilink_down():
+        return None, True
+    return paciente, False
+
+
+def _msg_medilink_transient(extra: str = "") -> str:
+    """Mensaje estándar cuando Medilink tira 429/timeout durante búsqueda de RUT."""
+    base = (
+        "🤔 No pude verificar tu RUT en este momento porque el sistema está lento.\n\n"
+        "Una recepcionista te ayudará en breve."
+    )
+    if extra:
+        base += "\n\n" + extra
+    base += f"\n\nMientras esperas también puedes llamar:\n📞 *{CMC_TELEFONO}*"
+    return base
+
+
 async def _slot_confirmed(phone: str, data: dict, slot: dict) -> str | dict:
     """Llamada cuando el paciente confirma un slot.
 
@@ -3601,7 +3628,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             )
 
         _ensure_consent(phone)
-        paciente = await buscar_paciente(rut)
+        paciente, transient = await _buscar_paciente_safe(rut)
+        if transient:
+            data["rut"] = rut
+            save_session(phone, "HUMAN_TAKEOVER", data)
+            return _msg_medilink_transient()
         if not paciente:
             data["rut"] = rut
             is_social = phone.startswith("ig_") or phone.startswith("fb_")
@@ -3835,7 +3866,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             )
 
         _ensure_consent(phone)
-        paciente = await buscar_paciente(rut)
+        paciente, transient = await _buscar_paciente_safe(rut)
+        if transient:
+            save_session(phone, "HUMAN_TAKEOVER", data)
+            return _msg_medilink_transient()
         if not paciente:
             reset_session(phone)
             return (
@@ -3983,7 +4017,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             )
 
         _ensure_consent(phone)
-        paciente = await buscar_paciente(rut)
+        paciente, transient = await _buscar_paciente_safe(rut)
+        if transient:
+            save_session(phone, "HUMAN_TAKEOVER", data)
+            return _msg_medilink_transient()
         if not paciente:
             reset_session(phone)
             return (
@@ -4133,7 +4170,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             )
 
         _ensure_consent(phone)
-        paciente = await buscar_paciente(rut)
+        paciente, transient = await _buscar_paciente_safe(rut)
+        if transient:
+            save_session(phone, "HUMAN_TAKEOVER", data)
+            return _msg_medilink_transient()
         if not paciente:
             reset_session(phone)
             return "No encontré ese RUT 🔎\nEscribe *menu* para volver o intenta de nuevo."
