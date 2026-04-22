@@ -15,15 +15,17 @@ META_API_URL = f"https://graph.facebook.com/v22.0/{META_PHONE_NUMBER_ID}/message
 
 
 async def _post_meta(payload: dict) -> str | None:
-    """POST a Meta Cloud API con 1 reintento. Returns wamid if available.
+    """POST a Meta Cloud API con retry selectivo.
 
-    Errores 4xx (cliente) no se reintentan — reintentar no cambia el resultado.
-    Errores de "ventana 24h cerrada" (code 131047, 131052, "re-engagement") se
-    loguean como INFO: es comportamiento esperado cuando el destinatario no ha
-    escrito al bot recientemente; no es un fallo que el operador deba revisar.
+    - Ventana 24h cerrada (codes 131047/131052/131051/131045/131042/131030 o
+      mensaje con "re-engagement" / "24 hour") → INFO, no es fallo operacional.
+    - 4xx (excepto 429): payload irreversible → no reintenta.
+    - 5xx / 429 / timeout / NetworkError: transitorio → backoff exponencial
+      (2s, 4s), 3 intentos totales.
     """
     WINDOW_CLOSED_CODES = {131047, 131052, 131051, 131045, 131042, 131030}
-    for attempt in range(2):
+    backoffs = [2, 4]
+    for attempt in range(3):
         try:
             async with httpx.AsyncClient(timeout=10) as client:
                 r = await client.post(
@@ -40,7 +42,6 @@ async def _post_meta(payload: dict) -> str | None:
                 except Exception:
                     pass
                 return None
-            # Parse error code/message
             err_code = None
             err_msg = ""
             try:
@@ -49,26 +50,28 @@ async def _post_meta(payload: dict) -> str | None:
                 err_msg = (err.get("message") or err.get("error_user_msg") or "")[:200]
             except Exception:
                 err_msg = r.text[:200]
+            msg_lower = err_msg.lower()
             is_window_closed = (
                 err_code in WINDOW_CLOSED_CODES
-                or "re-engagement" in err_msg.lower()
-                or "outside the allowed window" in err_msg.lower()
-                or "24 hour" in err_msg.lower()
-                or "24-hour" in err_msg.lower()
+                or "re-engagement" in msg_lower
+                or "outside the allowed window" in msg_lower
+                or "24 hour" in msg_lower
+                or "24-hour" in msg_lower
             )
             if is_window_closed:
                 log.info("Meta API: ventana 24h cerrada para %s (code=%s) — mensaje omitido",
                          payload.get("to", "?"), err_code)
                 return None
-            # 4xx no se reintentan; 5xx sí
-            if 400 <= r.status_code < 500:
-                log.error("Meta API → %s (no-retry): %s", r.status_code, err_msg)
+            if 400 <= r.status_code < 500 and r.status_code != 429:
+                log.error("Meta API %s (no-retry): %s", r.status_code, err_msg)
                 return None
-            log.error("Meta API intento %d → %s: %s", attempt + 1, r.status_code, err_msg)
+            log.warning("Meta API intento %d → %s (transitorio): %s",
+                        attempt + 1, r.status_code, err_msg)
         except (httpx.TimeoutException, httpx.NetworkError) as e:
-            log.error("Meta API intento %d error red: %s", attempt + 1, e)
-        if attempt == 0:
-            await asyncio.sleep(2)
+            log.warning("Meta API intento %d error red: %s", attempt + 1, e)
+        if attempt < len(backoffs):
+            await asyncio.sleep(backoffs[attempt])
+    log.error("Meta API: 3 intentos fallidos, abandono (to=%s)", payload.get("to"))
     return None
 
 

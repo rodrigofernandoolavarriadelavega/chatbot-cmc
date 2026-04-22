@@ -773,7 +773,10 @@ async def buscar_paciente(rut: str) -> Optional[dict]:
     (WAIT_RUT_AGENDAR → confirmaciones → CONFIRMING_CITA). Reduce carga
     Medilink y latencia de la conversación.
     """
-    rut_clean = rut.replace(".", "").replace("-", "").strip().upper()
+    # Normalización robusta: remover puntos, guiones, underscores, espacios,
+    # tabs y cualquier separador raro que pacientes rurales usan (p. ej.
+    # "20_997_207_7", "20 997 207 7", "20.997.207 7"). Solo dejar alfanumérico.
+    rut_clean = "".join(c for c in (rut or "").upper() if c.isalnum())
     # El dígito verificador va después del guión
     if len(rut_clean) > 1:
         rut_fmt = rut_clean[:-1] + "-" + rut_clean[-1]

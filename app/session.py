@@ -10,6 +10,7 @@ históricas sin encriptar.
 import json
 import logging
 import os
+import re
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -64,9 +65,10 @@ else:
 def _conn():
     DB_PATH.parent.mkdir(exist_ok=True)
     if _USE_SQLCIPHER:
+        # Validar hex antes de interpolar en PRAGMA (no acepta bindings).
+        if not re.fullmatch(r"[0-9a-fA-F]+", _SQLCIPHER_KEY):
+            raise ValueError("SQLCIPHER_KEY debe ser hex (0-9, a-f).")
         conn = _sqlcipher_mod.connect(str(DB_PATH), timeout=10)
-        # PRAGMA key debe ser lo PRIMERO tras connect. Formato hex x'...'
-        # es más portable que passphrase texto (evita KDF cada PRAGMA).
         conn.execute(f"PRAGMA key = \"x'{_SQLCIPHER_KEY}'\"")
         conn.execute("PRAGMA cipher_page_size = 4096")
         conn.row_factory = _sqlcipher_mod.Row
