@@ -928,6 +928,33 @@ async def detect_intent(mensaje: str) -> dict:
         r"|\bno (?:puedo|podré|podre|voy a poder|podría|podria) (?:ir|asistir|llegar|venir|atender[mt]e)"
         r"|\bdar de baja\b|\bquitar (?:la|mi) hora\b|\beliminar (?:la|mi) hora\b)"
     )
+    # PRE-PREFILTER — chilenismo "cancelar" = PAGAR.
+    # "¿hay que cancelar al tiro?", "cuánto hay que cancelar?", "se cancela con
+    # tarjeta?" son preguntas sobre PAGO, no intención de anular cita. Debe ir
+    # ANTES de _CANCEL_VERB_RE para no caer en flujo de anulación por error.
+    _CANCEL_AS_PAY_RE = _re_w.compile(
+        r"(hay que cancelar|se cancela (?:al tiro|altiro|ahora|adelantado|por adelantado|en |con )|"
+        r"cuando (?:se )?cancela|cuanto (?:hay que )?cancel|"
+        r"cancelar (?:al tiro|altiro|por adelantado|adelantado|en efectivo|"
+        r"con (?:efectivo|debito|débito|credito|crédito|transferencia|tarjeta))|"
+        r"\bse paga\b|\bhay que pagar\b|\bcomo (?:se )?paga\b|\bcuando (?:se )?paga\b)"
+    )
+    if _CANCEL_AS_PAY_RE.search(clave_norm) or _CANCEL_AS_PAY_RE.search(clave):
+        log.info("cancel-as-pay prefilter: %r", clave[:80])
+        try:
+            from session import log_event as _log_event
+            _log_event("", "intent_pay_prefilter", {"texto": clave[:120]})
+        except Exception:
+            pass
+        return {
+            "intent": "faq",
+            "especialidad": None,
+            "respuesta_directa": (
+                "💳 *Pago:* se cancela al momento de la atención.\n"
+                "Aceptamos efectivo, débito, crédito y transferencia.\n"
+                "No se cobra al agendar la hora."
+            ),
+        }
     if _CANCEL_VERB_RE.search(clave_norm) or _CANCEL_VERB_RE.search(clave):
         log.info("cancel-verb prefilter: %r", clave[:80])
         try:
@@ -1185,3 +1212,128 @@ async def respuesta_faq(mensaje: str) -> str:
     except Exception as e:
         log.error("respuesta_faq falló para '%s': %s", mensaje[:80], e)
         return _local_faq_fallback(mensaje) or "Para más información, comunícate con recepción 😊"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Pre-router universal: clasifica intención en contexto de estado WAIT_*
+# ─────────────────────────────────────────────────────────────────────────────
+async def classify_with_context(mensaje: str, state: str, session_data: dict) -> dict:
+    """
+    Clasifica el mensaje del paciente en el contexto de su estado actual.
+    Usado como pre-router para detectar cambios de tema, preguntas paralelas
+    o escapes del flujo actual en estados WAIT_*.
+
+    Retorna:
+      {
+        "action": "continue" | "answer_and_continue" | "escape",
+        "intent": str,
+        "args":   dict,
+      }
+
+    action=continue        → paciente responde al prompt; seguir handler normal
+    action=answer_and_continue → pregunta paralela; responder sin cambiar estado
+    action=escape          → cambio de tema/intención; resetear y re-dispatch
+    """
+    # Contexto enriquecido para el prompt
+    especialidad = session_data.get("especialidad", "")
+    prof_id      = session_data.get("prof_sugerido_id")
+    prof_nombre  = ""
+    if prof_id:
+        try:
+            from medilink import PROFESIONALES
+            prof_nombre = PROFESIONALES.get(prof_id, {}).get("nombre", "")
+        except Exception:
+            pass
+
+    ctx_flujo = ""
+    if prof_nombre:
+        ctx_flujo = f"Agendando {especialidad} con {prof_nombre}."
+    elif especialidad:
+        ctx_flujo = f"Agendando {especialidad}."
+
+    # Fecha actual en zona Chile — crítico para interpretar "próxima semana",
+    # "el viernes", "para mayo" con el año correcto.
+    from datetime import datetime as _dt
+    from zoneinfo import ZoneInfo as _Z
+    _hoy_cl = _dt.now(_Z("America/Santiago"))
+    ctx_fecha = f"Hoy es {_hoy_cl.strftime('%A %d de %B de %Y')} (zona Chile). Al resolver fechas relativas usa ESTE año ({_hoy_cl.year}) salvo que el paciente mencione otro año explícitamente."
+
+    sys_prompt = (
+        "Eres clasificador de intención de pacientes en un centro médico chileno.\n"
+        + ctx_fecha + "\n"
+        "Estado del flujo actual: " + state + "\n"
+        + (ctx_flujo + "\n" if ctx_flujo else "") +
+        "\n"
+        "CRÍTICO — CHILENISMOS (español de Chile):\n"
+        "- 'cancelar' en contexto de servicios = PAGAR. SOLO es anular cita si dice explícitamente\n"
+        "  'anular', 'quiero cancelar mi hora/cita', 'no puedo asistir', 'no voy a poder ir'.\n"
+        "- 'altiro' / 'al tiro' = ahora, de inmediato.\n"
+        "- 'horita' = una cita (diminutivo de hora). NO es 'pequeña hora de reloj'.\n"
+        "- 'luca' = mil pesos (ej: '15 lucas' = $15.000).\n"
+        "- 'cachái' = ¿entiendes? (no es pregunta real).\n"
+        "- 'bacán' / 'filete' = afirmación.\n"
+        "\n"
+        "INTENCIONES (elige UNA):\n"
+        "1. responder_prompt — el paciente responde al prompt del estado actual\n"
+        "   (SI/NO esperado, hora, RUT, día, número de opción, nombre).\n"
+        "2. preguntar_horario — pregunta qué días/horas atiende el profesional del flujo\n"
+        "   (ej: 'solo los miércoles?', 'qué días atiende?', 'atiende otros días?').\n"
+        "3. preguntar_pago — pregunta sobre forma/momento/monto de pago\n"
+        "   (ej: 'hay que cancelar al tiro?', 'cuánto sale?', 'aceptan isapre?').\n"
+        "4. preguntar_info — pregunta dirección, teléfono, FONASA, convenios, horarios del centro.\n"
+        "5. buscar_fecha — pide otra fecha o rango\n"
+        "   (ej: 'para mayo', 'la primera semana de junio', 'lo más tarde posible',\n"
+        "    'en la mañana', 'cualquier día de la próxima semana').\n"
+        "   En args: {fecha_desde?, fecha_hasta?, preferencia_horaria?: 'mañana'|'tarde'|'noche'}.\n"
+        "6. cambiar_especialidad — quiere OTRA especialidad/tipo de atención\n"
+        "   (ej: 'mejor kine', 'necesito otorrino', 'no, odontología').\n"
+        "   En args: {especialidad}.\n"
+        "7. cambiar_profesional — quiere otro doctor para la misma especialidad\n"
+        "   (ej: 'otro doctor', 'no me gusta ese', 'con otro').\n"
+        "8. pedir_hora_nuevo — quiere agendar desde cero (ej: 'pedir hora', 'quiero agendar').\n"
+        "9. cancelar_cita_real — ANULA cita existente (verbo 'anular', 'no puedo asistir',\n"
+        "   'dar de baja', 'eliminar mi hora'). NO confundir con 'cancelar=pagar'.\n"
+        "10. llamar_recepcion — prefiere llamar por teléfono (ej: 'llamar', 'prefiero llamar').\n"
+        "11. fuera_de_alcance — queja, reclamo, tema no relacionado, o nada de lo anterior.\n"
+        "\n"
+        "REGLAS:\n"
+        "- Si el mensaje es una respuesta plausible al prompt (SI/NO/hora/RUT/día), responder_prompt.\n"
+        "- Si duda entre responder_prompt y algo más, preferir responder_prompt.\n"
+        "- 'cancelar' sin contexto explícito de anular = preguntar_pago, NUNCA cancelar_cita_real.\n"
+        "\n"
+        'Responde SOLO JSON válido sin markdown: {"intent":"<etiqueta>","args":{...}}.'
+    )
+
+    try:
+        resp = await client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=120,
+            system=sys_prompt,
+            messages=[{"role": "user", "content": mensaje[:500]}]
+        )
+        raw = resp.content[0].text.strip()
+        raw = _strip_markdown_json(raw)
+        parsed = json.loads(raw)
+        intent = parsed.get("intent", "responder_prompt")
+        args   = parsed.get("args") or {}
+    except Exception as e:
+        log.warning("classify_with_context falló: %s — defaulting a responder_prompt", e)
+        return {"action": "continue", "intent": "responder_prompt", "args": {}}
+
+    # Map intent → action
+    if intent == "responder_prompt":
+        action = "continue"
+    elif intent in ("preguntar_horario", "preguntar_pago", "preguntar_info"):
+        action = "answer_and_continue"
+    else:
+        action = "escape"
+
+    log.info("classify_with_context: state=%s txt=%r → intent=%s action=%s",
+             state, mensaje[:60], intent, action)
+    try:
+        from session import log_event
+        log_event("", "intent_context", {"state": state, "intent": intent, "action": action})
+    except Exception:
+        pass
+
+    return {"action": action, "intent": intent, "args": args}

@@ -10,7 +10,8 @@ from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 _CHILE_TZ = ZoneInfo("America/Santiago")
 
-from claude_helper import detect_intent, respuesta_faq, clasificar_respuesta_seguimiento, consulta_clinica_doctor
+from claude_helper import (detect_intent, respuesta_faq, clasificar_respuesta_seguimiento,
+                           consulta_clinica_doctor, classify_with_context)
 from medilink import (buscar_primer_dia, buscar_slots_dia, buscar_slots_dia_por_ids,
                       buscar_paciente, buscar_paciente_por_nombre, crear_paciente, crear_cita,
                       listar_citas_paciente, cancelar_cita, obtener_agenda_dia,
@@ -1142,6 +1143,253 @@ async def _handle_confirmacion_precita(phone: str, tl: str, data: dict) -> str:
     return "No pude procesar tu respuesta 😕 Escribe *menu* para volver al inicio."
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Pre-router universal para estados WAIT_*
+# Detecta cambios de tema, preguntas paralelas y escape intents usando Claude.
+# ─────────────────────────────────────────────────────────────────────────────
+import re as _re_pre
+
+_FAST_PATH_BUTTONS = {
+    # botones universales
+    "si", "sí", "no", "confirmar", "cancelar", "rechazar",
+    "confirmar_sugerido", "ver_otros", "ver_todos", "otro_dia", "otro_día",
+    "otro_prof", "otro_profesional", "menu", "menu_volver", "cambiar_datos",
+    "accion_recepcion", "accion_cambiar", "accion_agendar",
+    "accion_mis_citas", "accion_otro", "accion_waitlist",
+    # afirmaciones frecuentes
+    "ok", "dale", "listo", "vale", "perfecto", "bueno",
+}
+
+_FAST_PATH_PREFIXES = (
+    "cita_confirm:", "cita_cancelar:", "cita_reagendar:",
+    "motivo_", "cat_", "menu_", "accion_", "slot_", "cita_",
+)
+
+def _es_respuesta_obvia_al_prompt(txt: str, tl: str, state: str, data: dict) -> bool:
+    """
+    Determina si el texto es una respuesta OBVIA al prompt del estado actual.
+    Si devuelve True, el pre-router se salta y el handler continúa normal
+    (evita costo/latencia de Claude).
+    """
+    if not txt:
+        return True
+    if tl in _FAST_PATH_BUTTONS:
+        return True
+    if any(tl.startswith(p) for p in _FAST_PATH_PREFIXES):
+        return True
+    # Números cortos (selección de lista 1-20)
+    if _re_pre.fullmatch(r"\d{1,2}", tl):
+        return True
+    # RUT-like
+    stripped = tl.replace(".", "").replace(" ", "").replace("-", "")
+    if _re_pre.fullmatch(r"\d{7,9}[\dkK]", stripped):
+        return True
+    # Hora suelta
+    if _re_pre.fullmatch(r"\d{1,2}:?\d{0,2}", tl):
+        return True
+    if _re_pre.fullmatch(r"\d{1,2}\s?(am|pm|hrs?)", tl):
+        return True
+    # WAIT_SLOT: frases muy cortas de navegación
+    if state == "WAIT_SLOT":
+        if tl in ("otro dia", "otro día", "ver todos", "todos", "ver mas",
+                  "ver más", "mañana", "manana", "hoy", "pasado mañana",
+                  "pasado manana"):
+            return True
+    # Estados con RUT: cualquier cosa con formato numérico larga ya la filtramos arriba
+    return False
+
+
+async def _responder_pregunta_horario(phone: str, state: str, data: dict) -> str:
+    """Responde orgánicamente los días de atención del profesional del flujo."""
+    prof_id = data.get("prof_sugerido_id")
+    if not prof_id:
+        # Sin profesional específico — responder genérico
+        return (
+            "Los días de atención varían según el profesional. "
+            "Si quieres te muestro horarios disponibles por día — "
+            "escribe el día que prefieres (ej: *lunes*, *mañana*, *próximo martes*)."
+        )
+    try:
+        import httpx as _httpx
+        from medilink import _get_horario, PROFESIONALES
+        async with _httpx.AsyncClient() as _c:
+            horario = await _get_horario(_c, int(prof_id))
+        dias = sorted(horario.get("dias", []))
+        DIAS = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+        nombres = [DIAS[d] for d in dias if 0 <= d < 7]
+        if not nombres:
+            nombres = ["según agenda"]
+        if len(nombres) == 1:
+            dias_str = nombres[0]
+        elif len(nombres) == 2:
+            dias_str = " y ".join(nombres)
+        else:
+            dias_str = ", ".join(nombres[:-1]) + " y " + nombres[-1]
+        prof_nombre = PROFESIONALES.get(int(prof_id), {}).get("nombre", "El profesional")
+        return f"{prof_nombre} atiende los *{dias_str}* 📅"
+    except Exception as e:
+        log.warning("pregunta_horario falló: %s", e)
+        return "Los días de atención dependen del profesional. Te puedo mostrar horarios disponibles."
+
+
+def _preguntar_pago_respuesta() -> str:
+    return (
+        "💳 *Pago:* se cancela al momento de la atención.\n"
+        "Aceptamos efectivo, débito, crédito y transferencia.\n"
+        "No se cobra al agendar la hora."
+    )
+
+
+def _preguntar_info_respuesta() -> str:
+    return (
+        f"📍 Monsalve 102, Carampangue\n"
+        f"📞 *{CMC_TELEFONO}* · ☎️ *{CMC_TELEFONO_FIJO}*\n"
+        f"🕐 Lun-Vie 9-19h · Sáb 9-13h"
+    )
+
+
+def _recordatorio_prompt(state: str, data: dict) -> str:
+    """Texto que recuerda al paciente qué estaba pidiendo el bot."""
+    if state == "WAIT_SLOT":
+        return "_¿Te sirve alguno de los horarios que te mostré, o prefieres otro día?_"
+    if state == "WAIT_WAITLIST_CONFIRM":
+        return "_Responde *SI* para inscribirte en lista de espera o *NO* si prefieres llamar._"
+    if state in ("WAIT_RUT_AGENDAR", "WAIT_RUT_CANCELAR", "WAIT_RUT_REAGENDAR", "WAIT_RUT_VER",
+                 "WAIT_WAITLIST_RUT"):
+        return "_Necesito tu RUT para continuar (ej: 12.345.678-9)._"
+    if state == "WAIT_MODALIDAD":
+        return "_Indica si prefieres atención *presencial* o *domicilio*._"
+    if state == "WAIT_BOOKING_FOR":
+        return "_La hora es para *ti* o para *otra persona*?_"
+    if state == "CONFIRMING_CITA":
+        return "_¿Confirmo la reserva? Responde *SI* o *NO*._"
+    return ""
+
+
+async def _pre_router_wait(phone: str, txt: str, tl: str, state: str, data: dict):
+    """
+    Pre-router universal para estados WAIT_*.
+    Retorna str (respuesta final) si tomó control; None si el handler normal debe continuar.
+    """
+    # Fast path — evita Claude cuando la respuesta es obvia
+    if _es_respuesta_obvia_al_prompt(txt, tl, state, data):
+        return None
+
+    try:
+        intent = await classify_with_context(txt, state, data)
+    except Exception as e:
+        log.warning("pre-router classify falló: %s — fallback a handler normal", e)
+        return None
+
+    action = intent.get("action")
+    tag    = intent.get("intent")
+    args   = intent.get("args", {}) or {}
+
+    if action == "continue":
+        return None
+
+    # ── Preguntas paralelas: responder y recordar prompt ──
+    if action == "answer_and_continue":
+        if tag == "preguntar_horario":
+            resp = await _responder_pregunta_horario(phone, state, data)
+        elif tag == "preguntar_pago":
+            resp = _preguntar_pago_respuesta()
+        elif tag == "preguntar_info":
+            resp = _preguntar_info_respuesta()
+        else:
+            return None
+        recordatorio = _recordatorio_prompt(state, data)
+        save_session(phone, state, data)
+        return f"{resp}\n\n{recordatorio}" if recordatorio else resp
+
+    # ── Escape: cambio de tema ──
+    if action == "escape":
+        if tag == "cancelar_cita_real":
+            reset_session(phone)
+            return await handle_message(phone, "accion_cambiar", {"state": "IDLE", "data": {}})
+
+        if tag == "cambiar_especialidad":
+            nueva_esp = (args.get("especialidad") or "").strip().lower()
+            reset_session(phone)
+            return await _iniciar_agendar(phone, {}, nueva_esp or None)
+
+        if tag == "pedir_hora_nuevo":
+            nueva_esp = (args.get("especialidad") or "").strip().lower()
+            reset_session(phone)
+            return await _iniciar_agendar(phone, {}, nueva_esp or None)
+
+        if tag == "cambiar_profesional":
+            if state == "WAIT_SLOT":
+                # Re-dispatch al handler "otro_prof" del WAIT_SLOT
+                return None  # Dejar que el handler con tl="otro_prof" no aplica aquí
+                             # (simplemente devolvemos None y el siguiente mensaje podrá escoger)
+            # Si está en otro estado, reset y mostrar opciones
+            reset_session(phone)
+            return await _iniciar_agendar(phone, {}, data.get("especialidad") or None)
+
+        if tag == "llamar_recepcion":
+            save_session(phone, state, data)
+            return (
+                f"Claro, te dejo el contacto:\n\n"
+                f"📞 *{CMC_TELEFONO}*\n"
+                f"☎️ *{CMC_TELEFONO_FIJO}*\n"
+                f"🕐 Lun-Vie 9-19h · Sáb 9-13h\n\n"
+                "_Si prefieres, sigo ayudándote por acá 😊_"
+            )
+
+        if tag == "buscar_fecha":
+            # Delegar a WAIT_SLOT si corresponde; si no, re-abrir flujo
+            preferencia = args.get("preferencia_horaria")
+            fecha_desde = args.get("fecha_desde")
+            if state != "WAIT_SLOT":
+                return None
+            # En WAIT_SLOT: si hay fecha_desde, buscar ese día; si hay preferencia,
+            # filtrar slots por periodo horario.
+            esp = data.get("especialidad") or ""
+            if fecha_desde:
+                try:
+                    smart_dia, todos_dia = await buscar_slots_dia(esp, fecha_desde)
+                    if todos_dia:
+                        fv = data.get("fechas_vistas", [])
+                        if fecha_desde not in fv:
+                            fv = fv + [fecha_desde]
+                        data.update({"slots": (smart_dia or todos_dia)[:5],
+                                     "todos_slots": todos_dia,
+                                     "fechas_vistas": fv, "expansion_stage": 1})
+                        save_session(phone, "WAIT_SLOT", data)
+                        return _format_slots((smart_dia or todos_dia)[:5])
+                except Exception as e:
+                    log.warning("buscar_fecha falló: %s", e)
+            if preferencia:
+                todos_slots = data.get("todos_slots", [])
+                def _hora_in(sl, franja):
+                    h = int((sl.get("hora") or "00:00").split(":")[0])
+                    if franja == "mañana":
+                        return 7 <= h < 13
+                    if franja == "tarde":
+                        return 13 <= h < 19
+                    if franja == "noche":
+                        return h >= 19
+                    return True
+                filtrados = [s for s in todos_slots if _hora_in(s, preferencia)]
+                if filtrados:
+                    data["slots"] = filtrados[:5]
+                    save_session(phone, "WAIT_SLOT", data)
+                    return _format_slots(filtrados[:5])
+            return None
+
+        if tag == "fuera_de_alcance":
+            # Entregar contacto + dejar el flujo abierto
+            save_session(phone, state, data)
+            return (
+                f"Para ese tema prefiero que hables directamente con recepción:\n\n"
+                f"📞 *{CMC_TELEFONO}*\n"
+                f"☎️ *{CMC_TELEFONO_FIJO}*"
+            )
+
+    return None
+
+
 async def handle_message(phone: str, texto: str, session: dict) -> str:
     state = session["state"]
     data  = session["data"]
@@ -1444,6 +1692,18 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     log_event(phone, "hora_idle_recuperada", {"edad_min": int(_edad.total_seconds() / 60)})
         except Exception:
             pass
+
+    # ── PRE-ROUTER UNIVERSAL para estados WAIT_* / CONFIRMING_* ──
+    # Detecta cambios de tema y preguntas paralelas antes de que el handler
+    # rígido del estado falle por no matchear patterns. Solo corre si el texto
+    # no es una respuesta "obvia" al prompt actual (evita latencia y costo).
+    if state.startswith("WAIT_") or state.startswith("CONFIRMING_"):
+        try:
+            _pre_resp = await _pre_router_wait(phone, txt, tl, state, data)
+            if _pre_resp is not None:
+                return _pre_resp
+        except Exception as _e_pre:
+            log.warning("pre-router excepción en state=%s: %s — fallback", state, _e_pre)
 
     # ── IDLE: detectar intención ──────────────────────────────────────────────
     if state == "IDLE":
