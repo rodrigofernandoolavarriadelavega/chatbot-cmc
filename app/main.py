@@ -551,7 +551,12 @@ def verify_webhook(
 @app.post("/webhook")
 async def webhook(request: Request):
     """Recibe mensajes de Meta Cloud API (WhatsApp, Instagram, Messenger)."""
-    data = await request.json()
+    try:
+        data = await request.json()
+    except Exception:
+        return Response(status_code=200)
+    if not isinstance(data, dict):
+        return Response(status_code=200)
     obj = data.get("object", "")
 
     # ── Helper: convertir mensaje interactivo WA a texto plano ──────────────
