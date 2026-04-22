@@ -155,9 +155,18 @@
     position: absolute;
     inset: 0;
     background:
-      radial-gradient(ellipse at 50% 35%, rgba(252,243,240,0.05) 0%, rgba(252,243,240,0.35) 35%, rgba(253,248,243,0.72) 70%, var(--cream) 100%),
-      linear-gradient(180deg, rgba(232,180,168,0.08) 0%, rgba(232,180,168,0) 50%);
+      radial-gradient(ellipse 60% 45% at 50% 40%, rgba(61,44,44,0.38) 0%, rgba(61,44,44,0.18) 45%, rgba(253,248,243,0) 75%),
+      radial-gradient(ellipse at 50% 35%, rgba(252,243,240,0) 0%, rgba(252,243,240,0.25) 50%, rgba(253,248,243,0.78) 82%, var(--cream) 100%);
     z-index: 1;
+  }
+  .hero-vignette {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: radial-gradient(ellipse 45% 35% at 50% 38%, rgba(61,44,44,0.22) 0%, rgba(61,44,44,0) 70%);
+    pointer-events: none;
+    backdrop-filter: blur(0.5px);
+    -webkit-backdrop-filter: blur(0.5px);
   }
   .hero-blob {
     position: absolute;
@@ -180,7 +189,6 @@
     font-size: clamp(48px, 9vw, 96px);
     font-weight: 600;
     line-height: 1.02;
-    color: var(--taupe);
     margin-bottom: 8px;
     letter-spacing: -0.01em;
   }
@@ -189,23 +197,26 @@
     font-style: italic;
     font-weight: 500;
     font-size: 0.62em;
-    color: var(--body);
-    letter-spacing: 0.18em;
+    color: #FFFFFF;
+    letter-spacing: 0.22em;
     text-transform: lowercase;
-    margin-bottom: -0.15em;
+    margin-bottom: -0.08em;
+    text-shadow:
+      0 2px 20px rgba(61,44,44,0.55),
+      0 1px 3px rgba(61,44,44,0.5);
   }
   .hero h1 .anguie {
     display: block;
     font-family: 'Parisienne', 'Dancing Script', cursive;
-    font-size: 1.15em;
-    color: var(--rose);
+    font-size: 1.25em;
+    color: #FFFFFF;
     font-weight: 400;
     line-height: 0.95;
     padding: 0.05em 0 0.1em;
-    background: linear-gradient(135deg, var(--rose) 0%, var(--mauve) 45%, var(--rose-gold) 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
+    text-shadow:
+      0 4px 30px rgba(61,44,44,0.65),
+      0 2px 8px rgba(61,44,44,0.55),
+      0 0 40px rgba(232,180,168,0.4);
   }
   .hero-divider {
     display: flex;
@@ -232,11 +243,15 @@
   .hero-subtitle {
     font-family: 'Cormorant Garamond', 'Playfair Display', serif;
     font-size: clamp(18px, 2.2vw, 24px);
-    color: var(--body);
+    color: #FFFFFF;
     font-weight: 400;
     font-style: italic;
     letter-spacing: 0.04em;
+    text-shadow: 0 2px 14px rgba(61,44,44,0.55), 0 1px 3px rgba(61,44,44,0.5);
   }
+  .hero-divider svg { stroke: #FFFFFF; filter: drop-shadow(0 2px 6px rgba(61,44,44,0.4)); }
+  .hero-divider::before,
+  .hero-divider::after { background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8) 50%, transparent); }
 
   /* ---------- SEARCH CARD ---------- */
   .search-wrap {
