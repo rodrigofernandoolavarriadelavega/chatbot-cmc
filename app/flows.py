@@ -5547,11 +5547,35 @@ async def _handle_expansion(phone: str, data: dict, slots_mostrados: list,
     return _format_slots_expansion(all_groups) if all_groups else "No hay más horarios disponibles."
 
 
+# Tracking en memoria de cuándo se le mostró "modo_degradado" a cada phone
+# para no repetir el mensaje una y otra vez durante una caída larga.
+_MODO_DEGRADADO_AVISADO: dict[str, float] = {}
+_MODO_DEGRADADO_TTL_SEG = 15 * 60  # 15 min
+
+
 def _modo_degradado(phone: str, intent: str, state_snap: str = "") -> str:
     """Respuesta cuando Medilink está caído. Encola la intención y avisa al paciente.
-    Devuelve un mensaje graceful que el bot enviará por WhatsApp."""
+    Devuelve un mensaje graceful que el bot enviará por WhatsApp.
+
+    Si ya se avisó en los últimos 15 min, pasa a HUMAN_TAKEOVER en vez de
+    repetir el mismo mensaje (el paciente ya sabe que hay problema técnico).
+    """
+    import time as _time_deg
     enqueue_intent(phone, intent, state_snap)
     log_event(phone, "modo_degradado", {"intent": intent})
+
+    ahora = _time_deg.time()
+    last_aviso = _MODO_DEGRADADO_AVISADO.get(phone, 0.0)
+    if ahora - last_aviso < _MODO_DEGRADADO_TTL_SEG:
+        # Ya le avisamos recientemente — pasar a humano directo
+        save_session(phone, "HUMAN_TAKEOVER", {})
+        log_event(phone, "modo_degradado_takeover", {"intent": intent})
+        return (
+            "Una recepcionista va a ayudarte directamente por acá 🙏\n\n"
+            "_El sistema automático sigue en pausa, pero ya lo están revisando._"
+        )
+
+    _MODO_DEGRADADO_AVISADO[phone] = ahora
     reset_session(phone)
     return (
         "Nuestro sistema de citas está con un problema técnico en este momento 😕\n\n"
