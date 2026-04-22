@@ -52,7 +52,7 @@ def _parse_num(raw: str) -> Optional[int]:
 def _resolver_ampm(h: int, ampm: str, ctx: str) -> int:
     """Aplica AM/PM explícito, marcadores de período, y heurística clínica."""
     ampm = ampm.replace(".", "").replace(" ", "")
-    if ampm in ("pm", "pm") and h < 12:
+    if ampm == "pm" and h < 12:
         return h + 12
     if ampm == "am" and h == 12:
         return 0

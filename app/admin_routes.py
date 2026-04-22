@@ -499,8 +499,8 @@ async def admin_reply(request: Request, _: str = Depends(require_admin)):
     try:
         from session import try_autocapture_rut_name
         try_autocapture_rut_name(phone, message)
-    except Exception:
-        pass
+    except Exception as e:
+        log.warning("try_autocapture_rut_name falló phone=%s: %s", phone, e)
     return {"ok": True, "wamid": wamid}
 
 

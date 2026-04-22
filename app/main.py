@@ -893,7 +893,8 @@ async def webhook(request: Request):
                         }
                         ext = _MIME_EXT.get(mime, ".bin")
                         from datetime import datetime as _dt
-                        ts = _dt.now().strftime("%Y%m%d_%H%M%S")
+                        from zoneinfo import ZoneInfo as _ZI
+                        ts = _dt.now(_ZI("America/Santiago")).strftime("%Y%m%d_%H%M%S")
                         saved_filename = orig_filename or f"{msg_type}_{ts}{ext}"
                         file_path = _UPLOAD_DIR / saved_filename
                         if file_path.exists():

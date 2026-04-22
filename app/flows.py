@@ -28,13 +28,10 @@ from session import (save_session, reset_session, save_tag, delete_tag, get_tags
 from resilience import is_medilink_down
 from triage_ges import triage_sintomas, normalizar_texto_paciente
 from pni import get_vaccine_reminder
-from config import CMC_TELEFONO, CMC_TELEFONO_FIJO
+from config import CMC_TELEFONO, CMC_TELEFONO_FIJO, ADMIN_ALERT_PHONE
 from messaging import send_whatsapp
 
 log = logging.getLogger("bot.flows")
-
-# Teléfono del médico director para alertas clínicas (Dr. Olavarría)
-ADMIN_ALERT_PHONE = "56987834148"
 
 # Mapa de nombres de día en español → Python weekday (0=Lun..6=Dom)
 _DIAS_SEMANA = {
@@ -46,7 +43,7 @@ _DIAS_SEMANA = {
 def _first_name(nombre) -> str:
     """Primer token de un nombre, seguro ante None/vacío/solo-espacios."""
     parts = (nombre or "").split()
-    return parts[0] if parts else ""
+    return parts[0] if parts else "paciente"
 
 
 def _proxima_fecha_dia(weekday: int) -> str:
@@ -58,7 +55,13 @@ def _proxima_fecha_dia(weekday: int) -> str:
             return candidato.strftime("%Y-%m-%d")
     return None
 
-AFIRMACIONES = {"si", "sí", "yes", "ok", "confirmo", "confirmar", "dale", "ya", "claro", "bueno"}
+AFIRMACIONES = {
+    "si", "sí", "yes", "ok", "confirmo", "confirmar", "dale", "ya", "claro", "bueno",
+    "perfecto", "listo", "tomo", "tomar", "esa", "ese", "esa hora", "ese horario",
+    "me sirve", "sirve", "genial", "buenisimo", "buenísimo", "vale", "acepto", "acepta",
+    "reservar", "reservalo", "resérvalo", "reservala", "resérvala", "agenda", "agendala",
+    "agéndala", "agendar", "confirma", "confírmalo", "confirmalo", "de acuerdo",
+}
 NEGACIONES   = {"no", "nop", "nope", "cancelar", "cancel", "no gracias"}
 
 EMERGENCIAS  = {
@@ -2400,7 +2403,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         citas_c = await listar_citas_paciente(pac_c["id"]) or []
                     except Exception:
                         citas_c = []
-                    hoy_str = datetime.now(_CHILE_TZ).date().strftime("%Y-%m-%d") if "_CHILE_TZ" in globals() else datetime.now().date().strftime("%Y-%m-%d")
+                    hoy_str = datetime.now(_CHILE_TZ).date().strftime("%Y-%m-%d")
                     citas_hoy = [c for c in citas_c if c.get("fecha") == hoy_str]
                     if citas_hoy:
                         c0 = citas_hoy[0]
@@ -3882,7 +3885,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # ── CONFIRMING_CANCEL ─────────────────────────────────────────────────────
     if state == "CONFIRMING_CANCEL":
         if tl in AFIRMACIONES or tl_norm in AFIRMACIONES:
-            cita = data["cita_cancelar"]
+            cita = data.get("cita_cancelar")
+            if not cita or not cita.get("id"):
+                log.warning("CONFIRMING_CANCEL sin cita_cancelar en sesión phone=%s", phone)
+                reset_session(phone)
+                return "No pude recuperar la cita a cancelar. ¿Me das tu RUT para revisar tus reservas?"
             ok = await cancelar_cita(cita["id"])
             reset_session(phone)
             if ok:
