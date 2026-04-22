@@ -2285,6 +2285,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         intent = result.get("intent", "otro")
         log_event(phone, "intent_detectado", {"intent": intent, "esp": result.get("especialidad")})
 
+        # ── Saludo / menu → devolver menú corto con botones (sin preguntas largas) ──
+        if intent == "menu":
+            return _menu_msg()
+
         if intent == "agendar":
             especialidad = result.get("especialidad")
             log_event(phone, "intent_agendar", {"especialidad": especialidad})
