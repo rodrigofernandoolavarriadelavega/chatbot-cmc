@@ -487,13 +487,18 @@ async def admin_reply(request: Request, _: str = Depends(require_admin)):
     # no estaba ya. Salir requiere explícitamente "devolver al bot".
     _sess = get_session(phone)
     state = _sess.get("state", "HUMAN_TAKEOVER")
+    from session import save_session as _save_sess_for_takeover
+    _data = _sess.get("data", {}) or {}
     if state != "HUMAN_TAKEOVER":
-        from session import save_session
-        _data = _sess.get("data", {}) or {}
         _data["handoff_reason"] = "recepcionista_respondio"
-        save_session(phone, "HUMAN_TAKEOVER", _data)
         log_event(phone, "auto_takeover_recep_reply", {"from_state": state})
         state = "HUMAN_TAKEOVER"
+    # Reset contador msgs_sin_respuesta: la recepcionista YA respondió, así que
+    # los próximos mensajes del paciente no deben gatillar "Recibido 🙏" /
+    # "Seguimos atentos" automáticos. Sin esto el bot mandaba auto-replies
+    # mientras la recepcionista ya estaba en la conversación.
+    _data["msgs_sin_respuesta"] = 0
+    _save_sess_for_takeover(phone, "HUMAN_TAKEOVER", _data)
     log_message(phone, "out", f"[Recepcionista] {message}", state, canal=canal, wamid=wamid)
     log_event(phone, "recepcionista_respondio", {"mensaje": message[:200]})
     try:
