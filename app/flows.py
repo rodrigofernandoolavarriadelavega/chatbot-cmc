@@ -1297,21 +1297,8 @@ async def _responder_pregunta_horario(phone: str, state: str, data: dict, txt: s
         return "Los días de atención dependen del profesional. Te puedo mostrar horarios disponibles."
 
 
-def _preguntar_pago_respuesta(data: dict | None = None) -> str:
-    """Responde sobre pago. Si hay especialidad activa en data, incluye el precio
-    primero — un paciente que pregunta 'cuánto sale' quiere el monto, no el
-    método de pago. Sin contexto, cae al texto genérico de formas de pago.
-    """
-    precio_block = ""
-    if data:
-        slot = data.get("slot_elegido") or {}
-        esp = (slot.get("especialidad") or data.get("especialidad") or "").strip()
-        if esp:
-            linea = _precio_line(esp, slot if slot else None)
-            if linea:
-                precio_block = f"{linea}\n\n"
+def _preguntar_pago_respuesta() -> str:
     return (
-        f"{precio_block}"
         "💳 *Pago:* se cancela al momento de la atención.\n"
         "Aceptamos efectivo, débito, crédito y transferencia.\n"
         "No se cobra al agendar la hora."
@@ -1371,7 +1358,7 @@ async def _pre_router_wait(phone: str, txt: str, tl: str, state: str, data: dict
         if tag == "preguntar_horario":
             resp = await _responder_pregunta_horario(phone, state, data, txt=txt)
         elif tag == "preguntar_pago":
-            resp = _preguntar_pago_respuesta(data)
+            resp = _preguntar_pago_respuesta()
         elif tag == "preguntar_info":
             resp = _preguntar_info_respuesta()
         else:
@@ -1429,15 +1416,6 @@ async def _pre_router_wait(phone: str, txt: str, tl: str, state: str, data: dict
             fecha_desde = args.get("fecha_desde")
             if state != "WAIT_SLOT":
                 return None
-            # Si el texto incluye hora explícita ("a las 20", "20 horas",
-            # "20:00", "8 pm") cedemos al handler de WAIT_SLOT que tiene
-            # parser de hora exacta — devolver None acá hace fall-through.
-            try:
-                from time_parser import parse_hora as _ph
-                if _ph(txt) is not None:
-                    return None
-            except Exception:
-                pass
             # En WAIT_SLOT: si hay fecha_desde, buscar ese día; si hay preferencia,
             # filtrar slots por periodo horario.
             esp = data.get("especialidad") or ""
@@ -1458,37 +1436,19 @@ async def _pre_router_wait(phone: str, txt: str, tl: str, state: str, data: dict
             if preferencia:
                 todos_slots = data.get("todos_slots", [])
                 def _hora_in(sl, franja):
-                    # Slots usan "hora_inicio" — el código original leía "hora"
-                    # (siempre None) → todos los slots quedaban filtrados out
-                    # y el filtro nunca aplicaba.
-                    raw = sl.get("hora_inicio") or sl.get("hora") or "00:00"
-                    try:
-                        h = int(raw.split(":")[0])
-                    except (ValueError, AttributeError):
-                        return False
+                    h = int((sl.get("hora") or "00:00").split(":")[0])
                     if franja == "mañana":
                         return 7 <= h < 13
                     if franja == "tarde":
                         return 13 <= h < 19
                     if franja == "noche":
                         return h >= 19
-                    if franja == "tarde-noche":
-                        return h >= 13
                     return True
                 filtrados = [s for s in todos_slots if _hora_in(s, preferencia)]
                 if filtrados:
                     data["slots"] = filtrados[:5]
                     save_session(phone, "WAIT_SLOT", data)
                     return _format_slots(filtrados[:5])
-                # Sin slots en la franja pedida → mensaje específico, no caer al menú
-                save_session(phone, "WAIT_SLOT", data)
-                franja_label = {"mañana": "la mañana", "tarde": "la tarde",
-                                "noche": "la noche", "tarde-noche": "la tarde-noche"}.get(preferencia, preferencia)
-                return (
-                    f"No tengo horas en *{franja_label}* este día 😕\n\n"
-                    "Escribe *otro día* para cambiar de fecha, *ver todos* "
-                    "para ver los horarios disponibles, o el *número* del horario que prefieras."
-                )
             return None
 
         if tag == "fuera_de_alcance":
@@ -1859,13 +1819,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             "muy amable", "muy amables", "excelente", "ta bien",
             "tá bien", "ta bueno", "tá bueno", "gracias igual",
         }
-        # Strip de puntuación al final ("gracias!!", "ok.", "dale!") para que
-        # match aún cuando el paciente cierra con énfasis. Sin esto, el bot
-        # respondía con menú completo a "Gracias!!" después de takeover.
-        _tl_clean = tl.rstrip("!.?,;:🙏✨💙🙌👋😊")
-        _tl_norm_clean = tl_norm.rstrip("!.?,;:🙏✨💙🙌👋😊")
-        if (tl_norm in _CLOSINGS or tl in _CLOSINGS
-                or _tl_clean in _CLOSINGS or _tl_norm_clean in _CLOSINGS):
+        if tl_norm in _CLOSINGS or tl in _CLOSINGS:
             log_event(phone, "idle_closing", {"txt": txt[:80]})
             return "¡Que estés muy bien! 👋"
 
@@ -2878,11 +2832,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if especialidad in _ESPECIALIDADES_EXPANSION:
                 return await _handle_expansion(phone, data, slots_mostrados, todos_slots,
                                                data.get("expansion_stage", 0), fecha_actual)
-            # Para especialidades sin expansion-stages: mostrar TODOS los slots del día
-            # (no los mismos 5 ya vistos — eso era el bug que dejaba el botón inútil).
-            data["slots"] = todos_slots
-            save_session(phone, "WAIT_SLOT", data)
-            return _format_slots(todos_slots, mostrar_todos=True)
+            return _format_slots(slots_mostrados)
 
         # "Otro profesional" → muestra slots del/los otro(s) doctor(es) de la especialidad
         if tl == "otro_prof":
@@ -2965,90 +2915,6 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return "Sin horarios disponibles para ese día.\n\nEscribe *otro día* para buscar el siguiente 😊"
 
         # "otro día" → primeras 5 del siguiente día disponible
-        # ── Salto directo a fecha específica ("para mayo", "el 15/05", "próxima semana") ──
-        # Antes el paciente debía spamear "otro día" 6+ veces para llegar a mayo.
-        _fecha_objetivo: str | None = None
-        # 1) Mes mencionado: "para mayo", "en mayo", "mayo", "para junio"
-        for _mes_nombre, _mes_num in _MESES_ES.items():
-            if len(_mes_nombre) < 3:
-                continue
-            if (f" {_mes_nombre}" in f" {tl_norm_slot}"
-                    or tl_norm_slot.startswith(_mes_nombre)
-                    or tl_norm_slot.endswith(_mes_nombre)):
-                _hoy_dt = datetime.now(_CHILE_TZ).date()
-                _anio = _hoy_dt.year
-                if _mes_num < _hoy_dt.month or (_mes_num == _hoy_dt.month and _hoy_dt.day > 25):
-                    _anio += 1
-                _fecha_objetivo = f"{_anio:04d}-{_mes_num:02d}-01"
-                break
-        # 2) Fecha DD/MM o DD-MM
-        if not _fecha_objetivo:
-            _m = re.search(r"\b(\d{1,2})[/\-\.](\d{1,2})(?:[/\-\.](\d{2,4}))?\b", tl_norm_slot)
-            if _m:
-                try:
-                    _d, _mm = int(_m.group(1)), int(_m.group(2))
-                    _yy = _m.group(3)
-                    _hoy_dt = datetime.now(_CHILE_TZ).date()
-                    if _yy:
-                        _yy_int = int(_yy)
-                        if _yy_int < 100:
-                            _yy_int += 2000
-                        _anio = _yy_int
-                    else:
-                        _anio = _hoy_dt.year
-                        if (_mm, _d) < (_hoy_dt.month, _hoy_dt.day):
-                            _anio += 1
-                    if 1 <= _d <= 31 and 1 <= _mm <= 12:
-                        _fecha_objetivo = f"{_anio:04d}-{_mm:02d}-{_d:02d}"
-                except (ValueError, IndexError):
-                    pass
-        # 3) "próxima semana" / "la otra semana" / "en X semanas"
-        if not _fecha_objetivo:
-            if any(k in tl_norm_slot for k in ("proxima semana", "próxima semana",
-                                               "la otra semana", "otra semana",
-                                               "semana que viene", "semana entrante")):
-                _hoy_dt = datetime.now(_CHILE_TZ).date()
-                _dias_lunes = (7 - _hoy_dt.weekday()) % 7 or 7
-                _fecha_objetivo = (_hoy_dt + timedelta(days=_dias_lunes)).strftime("%Y-%m-%d")
-            else:
-                _m_sem = re.search(r"\ben\s+(\d{1,2})\s+semanas?\b", tl_norm_slot)
-                if _m_sem:
-                    _hoy_dt = datetime.now(_CHILE_TZ).date()
-                    _fecha_objetivo = (_hoy_dt + timedelta(days=int(_m_sem.group(1))*7)).strftime("%Y-%m-%d")
-        if _fecha_objetivo:
-            _maso_override = {59: data["maso_duracion"]} if especialidad == "masoterapia" and data.get("maso_duracion") else None
-            try:
-                smart_dia, todos_dia = await buscar_slots_dia(
-                    especialidad, _fecha_objetivo, intervalo_override=_maso_override)
-            except Exception as e:
-                log.warning("buscar_slots_dia salto fecha falló: %s", e)
-                smart_dia, todos_dia = [], []
-            if todos_dia:
-                fechas_vistas_nuevas = (data.get("fechas_vistas") or []) + [_fecha_objetivo]
-                data.update({"slots": (smart_dia or todos_dia)[:5],
-                             "todos_slots": todos_dia,
-                             "fechas_vistas": fechas_vistas_nuevas,
-                             "expansion_stage": 0})
-                save_session(phone, "WAIT_SLOT", data)
-                log_event(phone, "salto_fecha_directo", {"fecha": _fecha_objetivo})
-                return _format_slots((smart_dia or todos_dia)[:5])
-            # No hay slots ese día — buscar próximos 14 días desde la fecha pedida
-            try:
-                _start_dt = datetime.strptime(_fecha_objetivo, "%Y-%m-%d").date()
-                for _delta in range(1, 15):
-                    _fecha_try = (_start_dt + timedelta(days=_delta)).strftime("%Y-%m-%d")
-                    smart_post, todos_post = await buscar_slots_dia(
-                        especialidad, _fecha_try, intervalo_override=_maso_override)
-                    if todos_post:
-                        fechas_vistas_nuevas = (data.get("fechas_vistas") or []) + [_fecha_try]
-                        data.update({"slots": (smart_post or todos_post)[:5],
-                                     "todos_slots": todos_post,
-                                     "fechas_vistas": fechas_vistas_nuevas,
-                                     "expansion_stage": 0})
-                        save_session(phone, "WAIT_SLOT", data)
-                        return _format_slots((smart_post or todos_post)[:5])
-            except (ValueError, Exception) as e:
-                log.warning("salto fecha follow-up falló: %s", e)
         OTRO_DIA = {"otro dia", "otro día", "otro", "no puedo", "no me sirve",
                     "no me acomoda", "cambiar dia", "cambiar día", "siguiente", "otro_dia"}
         if tl in OTRO_DIA or any(p in tl for p in ["otro dia", "otro día", "no puedo"]):
@@ -3187,25 +3053,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # no "en la mañana" (período horario).
         _DIA_RELATIVO = None
         _hoy = datetime.now(_CHILE_TZ).date()
-        # Strip puntuación final del paciente ("O mañana ??", "mañana?", "hoy.")
-        _tns_clean = tl_norm_slot.rstrip("!?.,;:¿¡ ").strip()
-        # Eliminar prefijos triviales que rompían el match exacto:
-        # "o mañana" → "mañana"; "y mañana" → "mañana"; "para hoy" → "hoy"
-        _tns_short = _tns_clean
-        for _pref in ("o ", "y ", "para ", "el "):
-            if _tns_short.startswith(_pref):
-                _tns_short = _tns_short[len(_pref):]
-                break
         if "pasado mañana" in tl_norm_slot or "pasado manana" in tl_norm_slot:
             _DIA_RELATIVO = (_hoy + timedelta(days=2)).strftime("%Y-%m-%d")
-        elif ("para mañana" in tl_norm_slot or "para manana" in tl_norm_slot
-              or _tns_clean in ("mañana", "manana", "o mañana", "o manana", "y mañana", "y manana")
-              or _tns_short in ("mañana", "manana")):
-            # Confirmar que NO es "en la mañana" / "por la mañana" (ahí es franja horaria)
-            if not any(p in tl_norm_slot for p in ("en la mañana", "en la manana",
-                                                    "por la mañana", "por la manana")):
-                _DIA_RELATIVO = (_hoy + timedelta(days=1)).strftime("%Y-%m-%d")
-        elif _tns_clean in ("hoy", "hoy mismo", "hoy dia", "hoy día") or _tns_short == "hoy":
+        elif "para mañana" in tl_norm_slot or "para manana" in tl_norm_slot \
+             or tl_norm_slot in ("mañana", "manana"):
+            _DIA_RELATIVO = (_hoy + timedelta(days=1)).strftime("%Y-%m-%d")
+        elif tl_norm_slot in ("hoy", "hoy mismo", "hoy dia", "hoy día"):
             _DIA_RELATIVO = _hoy.strftime("%Y-%m-%d")
         if _DIA_RELATIVO:
             _maso_override = {59: data["maso_duracion"]} if especialidad == "masoterapia" and data.get("maso_duracion") else None
@@ -3237,33 +3090,22 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
         # ── Filtro por período horario (mañana/tarde/noche) ──
         # NOTA: "mañana" suelto ya se manejó arriba como día relativo.
+        # Value = (rango_horas, label_para_mensaje).
         _PERIODOS = {
-            # Más específico primero (orden importa para el primer match)
-            "tarde noche":    (17, 24), "tarde-noche": (17, 24),
-            "tardecita":      (17, 22),
-            "mas tarde":      (17, 24), "más tarde": (17, 24),
-            "mas tardecito":  (17, 22), "más tardecito": (17, 22),
-            "mas temprano":   (0, 11),  "más temprano": (0, 11),
-            "mas tempranito": (0, 10),  "más tempranito": (0, 10),
-            "en la mañana":   (0, 12),  "en la manana": (0, 12),
-            "por la mañana":  (0, 12),  "por la manana": (0, 12),
-            "temprano":       (0, 12),
-            "mediodía":       (12, 14), "mediodia": (12, 14), "al mediodia": (12, 14),
-            "en la tarde":    (14, 19), "por la tarde": (14, 19),
-            "tarde":          (14, 19),
-            "en la noche":    (19, 24), "por la noche": (19, 24),
-            "noche":          (19, 24),
-            # 'mañana' solo NO se incluye aquí — el día relativo (línea 3079+)
-            # ya lo interpreta como "tomorrow". Solo "en la mañana" / "por la
-            # mañana" caen como franja horaria.
+            "en la mañana": ((0, 12), "la mañana"), "en la manana": ((0, 12), "la mañana"),
+            "temprano":     ((0, 12), "la mañana temprano"),
+            "mediodía":     ((12, 14), "el mediodía"), "mediodia": ((12, 14), "el mediodía"),
+            "al mediodia":  ((12, 14), "el mediodía"),
+            "tarde":        ((14, 19), "la tarde"),    "en la tarde": ((14, 19), "la tarde"),
+            "noche":        ((19, 24), "la noche"),    "en la noche": ((19, 24), "la noche"),
         }
         periodo = None
-        for kw, rango in _PERIODOS.items():
+        for kw, v in _PERIODOS.items():
             if kw in tl_norm_slot and tl != "otro_prof":
-                periodo = (kw, rango)
+                periodo = (kw, v[0], v[1])
                 break
         if periodo:
-            kw, (h_min, h_max) = periodo
+            kw, (h_min, h_max), label = periodo
             slots_filtrados = [
                 s for s in todos_slots
                 if h_min <= int(s.get("hora_inicio", "99:00")[:2]) < h_max
@@ -3275,7 +3117,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             # No hay slots en ese período → responder con los disponibles
             horas_disp = sorted({s.get("hora_inicio", "")[:5] for s in todos_slots if s.get("hora_inicio")})
             return (
-                f"No tengo horas en la {kw} para este profesional 😕\n\n"
+                f"No tengo horas en {label} para este profesional 😕\n\n"
                 f"Horarios disponibles:\n{', '.join(horas_disp[:12])}"
                 f"\n\nElige uno, escribe *otro día* o *otro profesional*."
             )
@@ -3567,10 +3409,19 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if txt.startswith("motivo_") or tl in ("menu", "menú", "inicio", "hola", "volver"):
                 reset_session(phone)
                 return await handle_message(phone, txt, get_session(phone))
-            # Escape: menciona "otra persona" → saltar a flujo de terceros
-            if any(k in tl for k in ("otra persona", "para otro", "para otra", "familiar",
-                                      "para mi hijo", "para mi hija", "para mi mama",
-                                      "para mi mamá", "para mi papa", "para mi papá")):
+            # Escape: menciona "otra persona" → saltar a flujo de terceros.
+            # Usamos regex con word-boundary para no matchear "para otro *día*"
+            # o "para otra *cita*". Caso real 2026-04-21: "necesito una hora
+            # para otro día" → bot decía "Entendido, es para otra persona".
+            _OTRA_PERSONA_RE = re.compile(
+                r"\b(otra persona|otr[oa] familiar|mi esposo|mi esposa|"
+                r"mi hijo|mi hija|mi mam[aá]|mi pap[aá]|mi hermano|mi hermana|"
+                r"mi abuelo|mi abuela|mi pololo|mi polola|mi pareja|mi nieto|"
+                r"mi nieta|un familiar|para un amigo|para una amiga|"
+                r"para mi (?:hijo|hija|mam[aá]|pap[aá]|hermano|hermana|"
+                r"abuelo|abuela|esposo|esposa|pareja|nieto|nieta))\b"
+            )
+            if _OTRA_PERSONA_RE.search(tl):
                 data["booking_for_other"] = True
                 save_session(phone, "WAIT_MODALIDAD", data)
                 return _btn_msg(
@@ -3874,60 +3725,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "¿Tu atención será Fonasa o Particular?",
                 [{"id": "1", "title": "Fonasa"}, {"id": "2", "title": "Particular"}]
             )
-        # ── Paciente declinó la confirmación de cita duplicada ──
-        if data.get("dup_pending") and (tl in NEGACIONES or tl_norm in NEGACIONES):
-            data.pop("dup_pending", None)
-            reset_session(phone)
-            log_event(phone, "cita_duplicada_rechazada", {})
-            return (
-                "Sin problema 😊 Mantienes solo la hora original.\n\n"
-                "_Escribe *menu* si necesitas algo más._"
-            )
         if tl in AFIRMACIONES or tl_norm in AFIRMACIONES:
             slot    = data["slot_elegido"]
             paciente = data["paciente"]
             reagendar = bool(data.get("reagendar_mode"))
             cita_old = data.get("cita_old") or {}
-            # ── Cita duplicada: paciente ya tiene cita misma fecha + especialidad ──
-            # En reagendar la antigua se cancela igual; ahí saltamos el check.
-            if not reagendar and not data.get("dup_ok"):
-                if data.get("dup_pending"):
-                    data["dup_ok"] = True
-                    data.pop("dup_pending", None)
-                else:
-                    try:
-                        existing_citas = await listar_citas_paciente(
-                            paciente["id"], rut=paciente.get("rut")
-                        )
-                    except Exception as e:
-                        log.warning("dup-check listar_citas falló: %s", e)
-                        existing_citas = []
-                    _slot_esp = (slot.get("especialidad") or "").strip().lower()
-                    dup = next(
-                        (c for c in (existing_citas or [])
-                         if c.get("fecha") == slot.get("fecha")
-                         and (c.get("especialidad") or "").strip().lower() == _slot_esp),
-                        None,
-                    )
-                    if dup:
-                        data["dup_pending"] = True
-                        save_session(phone, "CONFIRMING_CITA", data)
-                        log_event(phone, "cita_duplicada_detectada", {
-                            "fecha": slot.get("fecha"),
-                            "especialidad": slot.get("especialidad"),
-                            "existing_hora": dup.get("hora_inicio", ""),
-                        })
-                        return _btn_msg(
-                            f"⚠️ *Ya tienes una hora ese día*\n\n"
-                            f"📋 Tienes *{dup.get('especialidad','')}* el "
-                            f"{slot.get('fecha_display','')} a las "
-                            f"*{dup.get('hora_inicio','')}* con "
-                            f"{dup.get('profesional','')}.\n\n"
-                            f"¿Igual quieres agendar esta segunda hora a las "
-                            f"*{slot['hora_inicio'][:5]}*?",
-                            [{"id": "si", "title": "✅ Sí, agendar igual"},
-                             {"id": "no", "title": "❌ Cancelar"}]
-                        )
             # ── Doble-check: verificar que el slot sigue libre ──
             slot_libre = await verificar_slot_disponible(
                 slot["id_profesional"], slot["fecha"],
@@ -5101,7 +4903,7 @@ _APELLIDOS_PROFESIONAL = [
     ("fuentealba",   "estética facial"),
     ("fuentealva",   "estética facial"),  # b↔v
     ("fuentesalba",  "estética facial"),  # error común
-    ("valentina",    "estética facial"),
+    # "valentina" removido — nombre común, causa FP con pacientes llamadas Valentina
 
     ("acosta",       "masoterapia"),
     ("acostas",      "masoterapia"),   # s extra
@@ -5303,15 +5105,14 @@ _APELLIDOS_PROFESIONAL = [
     ("dra aurora",       "implantología"),
 
     # === Dra. Valentina Fuentealba (76) — Estética Facial ===
-    ("valentina",    "estética facial"),
-    ("vale",         "estética facial"),
-    ("valen",        "estética facial"),
-    ("valenti",      "estética facial"),
-    ("balentina",    "estética facial"),
-    ("valen fuentealba", "estética facial"),
+    # NOTA: "valentina", "vale", "valen", "valenti" removidos — nombres comunes
+    # de pacientes generaban falsos positivos ("para Valentina Medina",
+    # "vale bono"). Requiere contexto con "dra" o apellido "fuentealba".
+    ("fuentealba",           "estética facial"),
     ("valentina fuentealba", "estética facial"),
-    ("dra fuentealba",   "estética facial"),
-    ("dra valentina",    "estética facial"),
+    ("valen fuentealba",     "estética facial"),
+    ("dra fuentealba",       "estética facial"),
+    ("dra valentina",        "estética facial"),
 
     # === Paola Acosta (59) — Masoterapia ===
     ("paola",        "masoterapia"),
@@ -5614,30 +5415,6 @@ def _detectar_apellido_profesional(txt: str) -> str | None:
             # Alias corto — exigir word-boundary
             if re.search(r"\b" + re.escape(apellido_norm) + r"\b", norm_ws):
                 return key
-    # ── Fuzzy fallback (typos no en diccionario): "cabalga" → "carballo",
-    # "olavaria" → "olavarria", "abracas" → "abarca", etc. Solo aplica cuando
-    # el paciente menciona explícitamente "doctor"/"dra"/"dr." para evitar
-    # que palabras al azar matcheen apellidos similares por casualidad.
-    _MENCIONA_PROF = any(p in norm_ws for p in (
-        "doctor", "doctora", "dr ", "dra ", "medico", "medica",
-        "kinesiologo", "kinesiologa", "kinesiolog",
-        "psicologo", "psicologa", "psicolog",
-        "dentista", "odontologo", "odontologa",
-    ))
-    if _MENCIONA_PROF:
-        from difflib import SequenceMatcher
-        # Tomar tokens del input >=4 chars y comparar contra apellidos >=5
-        _tokens = [t for t in norm_ws.split() if len(t) >= 4]
-        _best: tuple[float, str | None] = (0.0, None)
-        for tok in _tokens:
-            for apellido_norm, key in _APELLIDOS_NORM:
-                if len(apellido_norm) < 5:
-                    continue
-                ratio = SequenceMatcher(None, tok, apellido_norm).ratio()
-                if ratio > _best[0]:
-                    _best = (ratio, key)
-        if _best[0] >= 0.72:  # 72% similarity = ~1-2 typos en palabra de 7-8 chars
-            return _best[1]
     return None
 
 
