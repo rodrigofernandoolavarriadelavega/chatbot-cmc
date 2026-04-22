@@ -241,6 +241,12 @@ async def vuelos_page(request: Request):
     return _templates.TemplateResponse("vuelos.html", {"request": request})
 
 
+@router.get("/vuelosv2")
+async def vuelos_page_v2(request: Request):
+    """Alternate v2 design for the flight-search landing."""
+    return _templates.TemplateResponse("vuelosv2.html", {"request": request})
+
+
 # ── Public: search API ──────────────────────────────────────────────────────
 
 @router.get("/vuelos/api/search")
