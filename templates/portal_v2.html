@@ -192,6 +192,113 @@ a{color:inherit; text-decoration:none}
 .tb-patient .who{display:flex; flex-direction:column; line-height:1.1; gap:2px}
 .tb-patient .who .name{font-size:11.5px; font-weight:700; color:var(--cmc-navy)}
 .tb-patient .who .rut{font-size:9.5px; color:var(--text-dim); letter-spacing:.3px}
+.tb-patient{cursor:pointer; transition:background .15s var(--ease)}
+.tb-patient:hover{background:var(--cmc-aqua-soft); border-color:var(--cmc-aqua)}
+.tb-patient .caret{width:12px; height:12px; color:var(--text-mute); flex-shrink:0}
+.tb-patient.dependent{background:var(--cmc-aqua-soft); border-color:var(--cmc-aqua)}
+.tb-patient.dependent .avatar{background:linear-gradient(135deg, var(--cmc-blue), var(--cmc-navy))}
+.patient-menu{
+  position:absolute; top:54px; right:140px; z-index:200;
+  background:#fff; border:1px solid var(--border); border-radius:14px;
+  box-shadow:var(--shadow-lg); min-width:280px; padding:6px;
+  display:none; flex-direction:column; gap:2px;
+}
+.patient-menu.open{display:flex}
+.patient-menu .pm-item{
+  display:flex; align-items:center; gap:10px; padding:10px 12px;
+  border-radius:10px; cursor:pointer; text-align:left; border:none; background:none;
+  transition:background .12s;
+}
+.patient-menu .pm-item:hover{background:var(--panel-2)}
+.patient-menu .pm-item.active{background:var(--cmc-aqua-soft); color:var(--cmc-navy)}
+.patient-menu .pm-avatar{
+  width:32px; height:32px; border-radius:50%; flex:0 0 32px;
+  background:linear-gradient(135deg, var(--cmc-aqua), var(--cmc-blue));
+  color:#fff; font-size:12px; font-weight:800;
+  display:flex; align-items:center; justify-content:center;
+}
+.patient-menu .pm-info{flex:1; min-width:0}
+.patient-menu .pm-name{font-size:13px; font-weight:700; color:var(--cmc-navy); line-height:1.2}
+.patient-menu .pm-meta{font-size:10.5px; color:var(--text-mute); margin-top:2px}
+.patient-menu .pm-divider{height:1px; background:var(--border-soft); margin:4px 0}
+.patient-menu .pm-add{
+  color:var(--cmc-blue); font-weight:700; font-size:13px;
+  display:flex; align-items:center; gap:10px; padding:10px 12px;
+  border-radius:10px; cursor:pointer; border:none; background:none;
+}
+.patient-menu .pm-add:hover{background:var(--cmc-blue-soft)}
+.patient-menu .pm-add .plus{
+  width:32px; height:32px; border-radius:50%; background:var(--cmc-blue-soft);
+  color:var(--cmc-blue); display:flex; align-items:center; justify-content:center;
+  font-size:18px; font-weight:800; flex:0 0 32px;
+}
+@media (max-width:720px){
+  .patient-menu{right:10px; left:10px; min-width:unset}
+}
+
+/* ═══ Modal Agregar familiar ═══ */
+.af-backdrop{
+  position:fixed; inset:0; background:rgba(15,63,104,.35); z-index:300;
+  display:none; align-items:center; justify-content:center; padding:20px;
+  backdrop-filter:blur(2px);
+}
+.af-backdrop.open{display:flex}
+.af-modal{
+  background:#fff; border-radius:18px; box-shadow:var(--shadow-lg);
+  width:100%; max-width:480px; max-height:92vh; overflow:auto;
+  padding:22px;
+}
+.af-modal h3{font-size:17px; color:var(--cmc-navy); margin-bottom:4px}
+.af-modal .af-sub{font-size:12.5px; color:var(--text-mute); margin-bottom:16px}
+.af-tabs{display:flex; gap:6px; margin-bottom:16px; border-bottom:1px solid var(--border-soft); padding-bottom:0}
+.af-tab{
+  flex:1; padding:10px 12px; border:none; background:none;
+  font-size:13px; font-weight:700; color:var(--text-mute); cursor:pointer;
+  border-bottom:2px solid transparent; margin-bottom:-1px;
+}
+.af-tab.active{color:var(--cmc-blue); border-bottom-color:var(--cmc-blue)}
+.af-field{display:flex; flex-direction:column; gap:6px; margin-bottom:12px}
+.af-field label{font-size:10.5px; font-weight:800; letter-spacing:.6px; color:var(--text-mute); text-transform:uppercase}
+.af-field input, .af-field select{
+  padding:11px 13px; border:1px solid var(--border); border-radius:10px;
+  font-size:14px; background:#fff;
+}
+.af-field input:focus, .af-field select:focus{outline:none; border-color:var(--cmc-aqua); box-shadow:var(--ring)}
+.af-check{display:flex; gap:10px; padding:10px 12px; background:var(--panel-2); border-radius:10px; font-size:12px; color:var(--text-mute); margin-bottom:12px; align-items:flex-start}
+.af-check input{margin-top:2px; flex-shrink:0}
+.af-actions{display:flex; gap:8px; margin-top:14px}
+.af-btn{
+  flex:1; padding:11px 14px; border-radius:11px; font-size:13px; font-weight:700;
+  border:1px solid var(--border); background:#fff; color:var(--text); cursor:pointer;
+}
+.af-btn.primary{background:var(--cmc-blue); color:#fff; border-color:var(--cmc-blue)}
+.af-btn.primary:hover{background:var(--cmc-navy)}
+.af-btn:disabled{opacity:.5; cursor:not-allowed}
+.af-msg{padding:10px 12px; border-radius:10px; font-size:12.5px; margin-bottom:10px}
+.af-msg.error{background:var(--red-soft); color:var(--red)}
+.af-msg.ok{background:var(--green-soft); color:var(--green-dark)}
+.af-msg.info{background:var(--cmc-aqua-soft); color:var(--cmc-navy)}
+
+/* Lista de familiares en perfil */
+.family-list{display:flex; flex-direction:column; gap:8px; margin-top:10px}
+.family-row{
+  display:flex; align-items:center; gap:12px; padding:10px 12px;
+  background:var(--panel-2); border:1px solid var(--border-soft); border-radius:12px;
+}
+.family-row .fr-avatar{
+  width:34px; height:34px; border-radius:50%; flex:0 0 34px;
+  background:linear-gradient(135deg, var(--cmc-aqua), var(--cmc-blue));
+  color:#fff; font-size:12px; font-weight:800;
+  display:flex; align-items:center; justify-content:center;
+}
+.family-row .fr-info{flex:1; min-width:0}
+.family-row .fr-name{font-size:13.5px; font-weight:700; color:var(--cmc-navy)}
+.family-row .fr-meta{font-size:11px; color:var(--text-mute); margin-top:2px}
+.family-row .fr-remove{
+  padding:6px 10px; font-size:11px; font-weight:700; border-radius:8px;
+  background:var(--red-soft); color:var(--red); border:none; cursor:pointer;
+}
+.family-empty{padding:14px; background:var(--panel-2); border-radius:10px; font-size:12.5px; color:var(--text-mute); text-align:center}
 .tb-logout{
   padding:7px 12px; background:transparent; border:1px solid transparent;
   border-radius:8px; font-size:12px; color:var(--text-mute); display:inline-flex;
@@ -933,13 +1040,15 @@ a{color:inherit; text-decoration:none}
       </div>
     </div>
     <div class="tb-spacer"></div>
-    <div class="tb-patient">
+    <div class="tb-patient" id="tb-patient" onclick="togglePatientMenu()" title="Cambiar paciente o agregar familiar">
       <div class="avatar" id="tb-avatar">—</div>
       <div class="who">
         <span class="name" id="tb-name">—</span>
         <span class="rut" id="tb-rut">—</span>
       </div>
+      <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
+    <div class="patient-menu" id="patient-menu"></div>
     <button class="tb-logout" onclick="doLogout()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
       <span>Salir</span>
@@ -1278,6 +1387,9 @@ function renderAll() {
   document.getElementById('tb-avatar').textContent = firstName ? firstName[0].toUpperCase() : '—';
   document.getElementById('tb-name').textContent = d.nombre || '—';
   document.getElementById('tb-rut').textContent = d.rut ? `RUT ${d.rut}` : '—';
+  const tb = document.getElementById('tb-patient');
+  if (tb) tb.classList.toggle('dependent', !!d.is_dependent);
+  if (!d.is_dependent) ownerPatient = d;
   renderInicio(); renderAgenda(); renderSalud(); renderRecursos(); renderPerfil();
 }
 
@@ -1939,7 +2051,40 @@ async function renderPerfil() {
         <button class="btn btn-ghost" onclick="perfilCache=null; renderPerfil()">Deshacer</button>
       </div>
     </div>
+    ${d.is_dependent ? '' : `
+    <div class="perfil-panel" style="margin-top:14px">
+      <div class="group-title">Familiares vinculados</div>
+      <div style="font-size:12.5px; color:var(--text-mute); margin-bottom:4px">
+        Personas cuyas citas puedes gestionar desde tu portal.
+      </div>
+      <div id="family-list-container"></div>
+      <div class="perfil-actions">
+        <button class="btn btn-primary" onclick="openAddFamilyModal()">+ Agregar familiar</button>
+      </div>
+    </div>`}
   `;
+  if (!d.is_dependent) renderFamilyList();
+}
+
+async function renderFamilyList() {
+  const container = document.getElementById('family-list-container');
+  if (!container) return;
+  const fam = await loadFamily(true);
+  const links = fam.links || [];
+  if (!links.length) {
+    container.innerHTML = '<div class="family-empty">Aún no has vinculado a nadie. Presiona "Agregar familiar" para empezar.</div>';
+    return;
+  }
+  container.innerHTML = '<div class="family-list">' + links.map(lk => `
+    <div class="family-row">
+      <div class="fr-avatar">${rutInitial(lk.dependent_nombre)}</div>
+      <div class="fr-info">
+        <div class="fr-name">${escapeHTML(lk.dependent_nombre || 'Familiar')}</div>
+        <div class="fr-meta">${escapeHTML(capitalize(lk.relation || 'familiar'))} · RUT ${lk.dependent_rut} · ${lk.verification_method === 'otp' ? 'Verificado por código' : 'Declaración tutor'}</div>
+      </div>
+      <button class="fr-remove" onclick="removeFamilyLink('${lk.dependent_rut}', '${escapeHTML(lk.dependent_nombre||'').replace(/'/g,'&#39;')}')">Quitar</button>
+    </div>
+  `).join('') + '</div>';
 }
 
 async function savePerfil() {
@@ -1973,6 +2118,318 @@ function toast(msg) {
 function showError(m) { const e = document.getElementById('error-msg'); e.textContent = m; e.classList.add('show'); document.getElementById('info-msg').classList.remove('show'); }
 function showInfo(m) { const e = document.getElementById('info-msg'); e.textContent = m; e.classList.add('show'); document.getElementById('error-msg').classList.remove('show'); }
 function hideMessages() { document.getElementById('error-msg').classList.remove('show'); document.getElementById('info-msg').classList.remove('show'); }
+
+/* ═══ Familiares vinculados ═══ */
+let familyCache = null;
+let ownerPatient = null;
+
+async function loadFamily(force) {
+  if (!force && familyCache) return familyCache;
+  try {
+    const r = await fetch('/portal/api/family', { credentials:'same-origin' });
+    if (!r.ok) { familyCache = { links: [] }; return familyCache; }
+    familyCache = await r.json();
+  } catch { familyCache = { links: [] }; }
+  return familyCache;
+}
+
+function rutInitial(name) { return (name || '—').trim().charAt(0).toUpperCase() || '—'; }
+
+async function renderPatientMenu() {
+  const menu = document.getElementById('patient-menu');
+  const fam = await loadFamily(true);
+  const d = patientData;
+  const activeRut = d && d.rut ? d.rut : '';
+  const ownerRut = fam.owner_rut || (d && d.rut);
+  const isDep = d && d.is_dependent;
+  const ownerName = isDep ? (ownerPatient && ownerPatient.nombre) || 'Titular' : (d && d.nombre) || '—';
+  const items = [];
+  items.push(`
+    <button class="pm-item ${!isDep ? 'active' : ''}" onclick="switchPatient('${ownerRut}')">
+      <div class="pm-avatar">${rutInitial(ownerName)}</div>
+      <div class="pm-info">
+        <div class="pm-name">${escapeHTML(ownerName)}</div>
+        <div class="pm-meta">Titular · ${ownerRut}</div>
+      </div>
+    </button>
+  `);
+  (fam.links || []).forEach(lk => {
+    const isActive = lk.dependent_rut === activeRut;
+    items.push(`
+      <button class="pm-item ${isActive ? 'active' : ''}" onclick="switchPatient('${lk.dependent_rut}')">
+        <div class="pm-avatar">${rutInitial(lk.dependent_nombre)}</div>
+        <div class="pm-info">
+          <div class="pm-name">${escapeHTML(lk.dependent_nombre || 'Familiar')}</div>
+          <div class="pm-meta">${escapeHTML(capitalize(lk.relation || 'familiar'))} · ${lk.dependent_rut}</div>
+        </div>
+      </button>
+    `);
+  });
+  items.push('<div class="pm-divider"></div>');
+  items.push(`
+    <button class="pm-add" onclick="openAddFamilyModal()">
+      <div class="plus">+</div>
+      <span>Agregar familiar</span>
+    </button>
+  `);
+  menu.innerHTML = items.join('');
+}
+
+async function togglePatientMenu() {
+  const menu = document.getElementById('patient-menu');
+  if (menu.classList.contains('open')) { menu.classList.remove('open'); return; }
+  await renderPatientMenu();
+  menu.classList.add('open');
+}
+
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('patient-menu');
+  const tb = document.getElementById('tb-patient');
+  if (!menu || !tb) return;
+  if (menu.classList.contains('open') && !menu.contains(e.target) && !tb.contains(e.target)) {
+    menu.classList.remove('open');
+  }
+});
+
+async function switchPatient(targetRut) {
+  document.getElementById('patient-menu').classList.remove('open');
+  if (patientData && patientData.rut === targetRut) return;
+  try {
+    const r = await fetch('/portal/api/family/switch', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      credentials:'same-origin', body: JSON.stringify({ rut: targetRut })
+    });
+    if (!r.ok) { const err = await r.json().catch(()=>({})); alert(err.detail || 'No se pudo cambiar de paciente'); return; }
+    // Recargar datos del paciente activo
+    perfilCache = null;
+    const d = await fetch('/portal/api/datos', { credentials:'same-origin' });
+    if (!d.ok) { alert('No se pudo cargar el paciente'); return; }
+    patientData = await d.json();
+    if (!patientData.is_dependent) ownerPatient = patientData;
+    await loadAllVitals();
+    showDashboard();
+  } catch (e) { alert('Error de conexión'); }
+}
+
+function openAddFamilyModal() {
+  document.getElementById('patient-menu').classList.remove('open');
+  document.getElementById('af-backdrop').classList.add('open');
+  setAfTab('minor');
+  afResetMinor();
+  afResetAdult();
+}
+
+function closeAddFamilyModal() {
+  document.getElementById('af-backdrop').classList.remove('open');
+}
+
+function setAfTab(which) {
+  document.querySelectorAll('.af-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === which));
+  document.getElementById('af-pane-minor').style.display = which === 'minor' ? 'block' : 'none';
+  document.getElementById('af-pane-adult').style.display = which === 'adult' ? 'block' : 'none';
+  afClearMsg();
+}
+
+function afClearMsg() {
+  const m = document.getElementById('af-msg'); m.textContent=''; m.className='af-msg'; m.style.display='none';
+}
+function afShowMsg(kind, text) {
+  const m = document.getElementById('af-msg'); m.textContent=text; m.className='af-msg '+kind; m.style.display='block';
+}
+
+function afResetMinor() {
+  document.getElementById('af-minor-rut').value='';
+  document.getElementById('af-minor-relation').value='hijo';
+  document.getElementById('af-minor-check').checked=false;
+}
+function afResetAdult() {
+  document.getElementById('af-adult-rut').value='';
+  document.getElementById('af-adult-code').value='';
+  document.getElementById('af-adult-relation').value='padre';
+  document.getElementById('af-adult-step1').style.display='block';
+  document.getElementById('af-adult-step2').style.display='none';
+}
+
+function formatRutInput(el) {
+  let v = el.value.replace(/[^0-9kK]/g, '').toUpperCase();
+  if (v.length > 1) v = v.slice(0, -1) + '-' + v.slice(-1);
+  if (v.length > 5) {
+    const dv = v.slice(-2);
+    const body = v.slice(0, -2).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    v = body + dv;
+  }
+  el.value = v;
+}
+
+async function submitAddMinor() {
+  afClearMsg();
+  const rut = document.getElementById('af-minor-rut').value.trim();
+  const relation = document.getElementById('af-minor-relation').value;
+  const tutorOk = document.getElementById('af-minor-check').checked;
+  if (!rut) { afShowMsg('error','Ingresa el RUT del menor'); return; }
+  if (!tutorOk) { afShowMsg('error','Debes aceptar la declaración de tutor'); return; }
+  const btn = document.getElementById('af-minor-btn'); btn.disabled=true; btn.textContent='Verificando…';
+  try {
+    const r = await fetch('/portal/api/family/add-minor', {
+      method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin',
+      body: JSON.stringify({ rut, relation, tutor_declaration: true })
+    });
+    const data = await r.json().catch(()=>({}));
+    if (!r.ok) { afShowMsg('error', data.detail || 'No se pudo vincular'); return; }
+    afShowMsg('ok', `Vinculado: ${data.nombre || 'familiar'} (${data.edad} años)`);
+    familyCache = null;
+    setTimeout(() => { closeAddFamilyModal(); renderPerfil(); }, 900);
+  } catch (e) { afShowMsg('error','Error de conexión'); }
+  finally { btn.disabled=false; btn.textContent='Vincular menor'; }
+}
+
+async function requestAdultOTP() {
+  afClearMsg();
+  const rut = document.getElementById('af-adult-rut').value.trim();
+  if (!rut) { afShowMsg('error','Ingresa el RUT del familiar'); return; }
+  const btn = document.getElementById('af-adult-btn1'); btn.disabled=true; btn.textContent='Enviando…';
+  try {
+    const r = await fetch('/portal/api/family/request-otp', {
+      method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin',
+      body: JSON.stringify({ rut })
+    });
+    const data = await r.json().catch(()=>({}));
+    if (!r.ok) { afShowMsg('error', data.detail || 'No se pudo enviar el código'); return; }
+    afShowMsg('info', `Se envió un código al WhatsApp ${data.phone_masked}. Pídeselo al familiar y escríbelo aquí.`);
+    document.getElementById('af-adult-step1').style.display='none';
+    document.getElementById('af-adult-step2').style.display='block';
+    setTimeout(() => document.getElementById('af-adult-code').focus(), 100);
+  } catch (e) { afShowMsg('error','Error de conexión'); }
+  finally { btn.disabled=false; btn.textContent='Enviar código'; }
+}
+
+async function verifyAdultOTP() {
+  afClearMsg();
+  const rut = document.getElementById('af-adult-rut').value.trim();
+  const code = document.getElementById('af-adult-code').value.trim();
+  const relation = document.getElementById('af-adult-relation').value;
+  if (!code) { afShowMsg('error','Ingresa el código de 6 dígitos'); return; }
+  const btn = document.getElementById('af-adult-btn2'); btn.disabled=true; btn.textContent='Verificando…';
+  try {
+    const r = await fetch('/portal/api/family/verify-otp', {
+      method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin',
+      body: JSON.stringify({ rut, code, relation })
+    });
+    const data = await r.json().catch(()=>({}));
+    if (!r.ok) { afShowMsg('error', data.detail || 'Código incorrecto o expirado'); return; }
+    afShowMsg('ok', `Vinculado: ${data.nombre || 'familiar'}`);
+    familyCache = null;
+    setTimeout(() => { closeAddFamilyModal(); renderPerfil(); }, 900);
+  } catch (e) { afShowMsg('error','Error de conexión'); }
+  finally { btn.disabled=false; btn.textContent='Vincular'; }
+}
+
+async function removeFamilyLink(dependentRut, nombre) {
+  if (!confirm(`¿Quitar vinculación con ${nombre || dependentRut}? No perderás datos; solo dejarás de gestionar sus citas.`)) return;
+  try {
+    const r = await fetch('/portal/api/family/' + encodeURIComponent(dependentRut), {
+      method:'DELETE', credentials:'same-origin'
+    });
+    if (!r.ok) { alert('No se pudo quitar el vínculo'); return; }
+    familyCache = null;
+    // Si el paciente activo era el que se quitó, volver al titular
+    if (patientData && patientData.rut === dependentRut && ownerPatient) {
+      await switchPatient(ownerPatient.rut);
+    } else {
+      renderPerfil();
+    }
+  } catch (e) { alert('Error de conexión'); }
+}
+
+function escapeHTML(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function capitalize(s) { s = String(s||''); return s ? s[0].toUpperCase() + s.slice(1) : ''; }
 </script>
+
+<!-- Modal: Agregar familiar -->
+<div class="af-backdrop" id="af-backdrop" onclick="if(event.target===this)closeAddFamilyModal()">
+  <div class="af-modal" role="dialog" aria-labelledby="af-title">
+    <h3 id="af-title">Agregar familiar</h3>
+    <div class="af-sub">Gestiona las citas de tus hijos o padres desde el portal.</div>
+
+    <div class="af-tabs">
+      <button class="af-tab active" data-tab="minor" onclick="setAfTab('minor')">Menor de edad</button>
+      <button class="af-tab" data-tab="adult" onclick="setAfTab('adult')">Adulto</button>
+    </div>
+
+    <div class="af-msg" id="af-msg" style="display:none"></div>
+
+    <!-- Menor -->
+    <div id="af-pane-minor">
+      <div class="af-field">
+        <label>RUT del menor</label>
+        <input type="text" id="af-minor-rut" placeholder="12.345.678-9" inputmode="text" maxlength="12" oninput="formatRutInput(this)">
+      </div>
+      <div class="af-field">
+        <label>Relación</label>
+        <select id="af-minor-relation">
+          <option value="hijo">Hijo</option>
+          <option value="hija">Hija</option>
+          <option value="nieto">Nieto</option>
+          <option value="nieta">Nieta</option>
+          <option value="tutelado">Tutelado legal</option>
+        </select>
+      </div>
+      <label class="af-check">
+        <input type="checkbox" id="af-minor-check">
+        <span>Declaro bajo mi responsabilidad que soy <strong>padre, madre o tutor legal</strong> del menor y que estoy autorizado(a) para gestionar su atención médica en el CMC.</span>
+      </label>
+      <div class="af-actions">
+        <button class="af-btn" onclick="closeAddFamilyModal()">Cancelar</button>
+        <button class="af-btn primary" id="af-minor-btn" onclick="submitAddMinor()">Vincular menor</button>
+      </div>
+    </div>
+
+    <!-- Adulto -->
+    <div id="af-pane-adult" style="display:none">
+      <div id="af-adult-step1">
+        <div class="af-field">
+          <label>RUT del familiar adulto</label>
+          <input type="text" id="af-adult-rut" placeholder="12.345.678-9" inputmode="text" maxlength="12" oninput="formatRutInput(this)">
+        </div>
+        <div class="af-check" style="background:var(--cmc-aqua-soft); color:var(--cmc-navy)">
+          <span>Enviaremos un código de autorización al WhatsApp registrado del familiar. Pídeselo y escríbelo en el siguiente paso.</span>
+        </div>
+        <div class="af-actions">
+          <button class="af-btn" onclick="closeAddFamilyModal()">Cancelar</button>
+          <button class="af-btn primary" id="af-adult-btn1" onclick="requestAdultOTP()">Enviar código</button>
+        </div>
+      </div>
+      <div id="af-adult-step2" style="display:none">
+        <div class="af-field">
+          <label>Código recibido por el familiar (6 dígitos)</label>
+          <input type="text" id="af-adult-code" placeholder="123456" inputmode="numeric" maxlength="6">
+        </div>
+        <div class="af-field">
+          <label>Relación</label>
+          <select id="af-adult-relation">
+            <option value="padre">Padre</option>
+            <option value="madre">Madre</option>
+            <option value="conyuge">Cónyuge</option>
+            <option value="pareja">Pareja</option>
+            <option value="hermano">Hermano</option>
+            <option value="hermana">Hermana</option>
+            <option value="abuelo">Abuelo</option>
+            <option value="abuela">Abuela</option>
+            <option value="hijo">Hijo (adulto)</option>
+            <option value="hija">Hija (adulta)</option>
+            <option value="otro">Otro</option>
+          </select>
+        </div>
+        <div class="af-actions">
+          <button class="af-btn" onclick="afResetAdult()">Volver</button>
+          <button class="af-btn primary" id="af-adult-btn2" onclick="verifyAdultOTP()">Vincular</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

@@ -260,6 +260,22 @@ def _conn():
         )
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_portal_otp_rut ON portal_otp(rut, created_at)")
+    # Vinculaciones familiares del portal (madre/padre gestiona citas de hijos o mayores)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS family_links (
+            id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_rut            TEXT NOT NULL,
+            dependent_rut        TEXT NOT NULL,
+            dependent_nombre     TEXT,
+            relation             TEXT,
+            verification_method  TEXT NOT NULL,
+            verified_at          TEXT DEFAULT (datetime('now')),
+            created_at           TEXT DEFAULT (datetime('now')),
+            revoked_at           TEXT,
+            UNIQUE(owner_rut, dependent_rut)
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_family_owner ON family_links(owner_rut, revoked_at)")
     # Registros personales del paciente (presión, glicemia, peso, temperatura)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS patient_vitals (
@@ -2501,6 +2517,72 @@ def count_portal_otps(rut: str, minutes: int = 60) -> int:
             (rut, f"-{minutes} minutes")
         ).fetchone()
         return row["c"]
+
+
+# ── Portal del paciente — vinculaciones familiares ───────────────────────────
+
+def add_family_link(owner_rut: str, dependent_rut: str, dependent_nombre: str,
+                    relation: str, verification_method: str) -> int:
+    """Crea una vinculación familiar. Si ya existe (revocada), la reactiva.
+    verification_method: 'tutor_declaration' (menor) | 'otp' (adulto)."""
+    with _conn() as conn:
+        conn.execute(
+            """INSERT INTO family_links
+               (owner_rut, dependent_rut, dependent_nombre, relation, verification_method)
+               VALUES (?, ?, ?, ?, ?)
+               ON CONFLICT(owner_rut, dependent_rut) DO UPDATE SET
+                   dependent_nombre=excluded.dependent_nombre,
+                   relation=excluded.relation,
+                   verification_method=excluded.verification_method,
+                   verified_at=datetime('now'),
+                   revoked_at=NULL""",
+            (owner_rut, dependent_rut, dependent_nombre, relation, verification_method)
+        )
+        row = conn.execute(
+            "SELECT id FROM family_links WHERE owner_rut=? AND dependent_rut=?",
+            (owner_rut, dependent_rut)
+        ).fetchone()
+        conn.commit()
+        return row["id"] if row else 0
+
+
+def list_family_links(owner_rut: str) -> list[dict]:
+    """Lista familiares activos (no revocados) de un titular."""
+    with _conn() as conn:
+        rows = conn.execute(
+            """SELECT dependent_rut, dependent_nombre, relation, verification_method,
+                      verified_at, created_at
+               FROM family_links
+               WHERE owner_rut=? AND revoked_at IS NULL
+               ORDER BY created_at DESC""",
+            (owner_rut,)
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def revoke_family_link(owner_rut: str, dependent_rut: str) -> bool:
+    """Marca como revocada una vinculación familiar. Retorna True si hubo cambio."""
+    with _conn() as conn:
+        cur = conn.execute(
+            """UPDATE family_links SET revoked_at=datetime('now')
+               WHERE owner_rut=? AND dependent_rut=? AND revoked_at IS NULL""",
+            (owner_rut, dependent_rut)
+        )
+        conn.commit()
+        return cur.rowcount > 0
+
+
+def is_family_link(owner_rut: str, dependent_rut: str) -> bool:
+    """True si existe una vinculación activa entre owner y dependent."""
+    if owner_rut == dependent_rut:
+        return True
+    with _conn() as conn:
+        row = conn.execute(
+            """SELECT 1 FROM family_links
+               WHERE owner_rut=? AND dependent_rut=? AND revoked_at IS NULL LIMIT 1""",
+            (owner_rut, dependent_rut)
+        ).fetchone()
+        return row is not None
 
 
 # ═══ Patient vitals (auto-monitoreo) ═══════════════════════════════════

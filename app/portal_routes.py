@@ -13,7 +13,9 @@ from messaging import send_whatsapp
 from session import (get_phone_by_rut, save_portal_otp, verify_portal_otp,
                      add_vital, list_vitals, delete_vital,
                      count_portal_otps, get_dx_tags, get_profile,
-                     get_profile_full, update_profile_fields)
+                     get_profile_full, update_profile_fields,
+                     add_family_link, list_family_links, revoke_family_link,
+                     is_family_link, log_event)
 from medilink import buscar_paciente, listar_citas_paciente, listar_historial_paciente, valid_rut
 
 log = logging.getLogger("bot.portal")
@@ -21,6 +23,7 @@ log = logging.getLogger("bot.portal")
 router = APIRouter(tags=["portal"])
 
 _COOKIE_NAME = "portal_session"
+_ACTIVE_COOKIE_NAME = "portal_active"
 
 # ═══ Modo demo ═══════════════════════════════════════════════════════════
 # RUT ficticio (50.000.000-X) para compartir la demo con socios sin exponer
@@ -137,6 +140,63 @@ def _require_portal(portal_session: str | None = Cookie(None)) -> tuple[str, str
     return result
 
 
+# ── Paciente activo (owner + dependientes familiares) ────────────────────────
+
+def _sign_active_cookie(owner_rut: str, active_rut: str) -> str:
+    expires = int(time.time()) + _COOKIE_MAX_AGE
+    payload = f"{owner_rut}:{active_rut}:{expires}"
+    sig = hmac.new(_portal_key(), payload.encode(), hashlib.sha256).hexdigest()
+    return f"{payload}:{sig}"
+
+
+def _verify_active_cookie(value: str, owner_rut: str) -> str | None:
+    """Verifica la cookie de paciente activo. Retorna active_rut válido si
+    coincide con el owner_rut de la sesión actual."""
+    if not value:
+        return None
+    parts = value.rsplit(":", 1)
+    if len(parts) != 2:
+        return None
+    payload, sig = parts
+    expected = hmac.new(_portal_key(), payload.encode(), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(sig, expected):
+        return None
+    segments = payload.split(":")
+    if len(segments) != 3:
+        return None
+    cookie_owner, active_rut, expires_str = segments
+    if cookie_owner != owner_rut:
+        return None
+    try:
+        if time.time() > int(expires_str):
+            return None
+    except ValueError:
+        return None
+    return active_rut
+
+
+def _resolve_context(portal_session: str | None,
+                     portal_active: str | None) -> tuple[str, str, str, str]:
+    """Dependency interna: retorna (owner_rut, owner_phone, active_rut, active_phone).
+    Si no hay cookie activa o es inválida, active = owner.
+    Si active != owner, valida que sea un familiar vinculado."""
+    result = _verify_portal_cookie(portal_session)
+    if not result:
+        raise HTTPException(status_code=401, detail="Sesión expirada")
+    owner_rut, owner_phone = result
+    active_rut = owner_rut
+    if portal_active:
+        candidate = _verify_active_cookie(portal_active, owner_rut)
+        if candidate and candidate != owner_rut:
+            if candidate == DEMO_RUT or is_family_link(owner_rut, candidate):
+                active_rut = candidate
+    if active_rut == owner_rut:
+        active_phone = owner_phone
+    else:
+        active_phone = get_phone_by_rut(active_rut) or owner_phone
+    return owner_rut, owner_phone, active_rut, active_phone
+
+
 # ── Endpoints ────────────────────────────────────────────────────────────────
 
 @router.post("/portal/api/request-code")
@@ -239,31 +299,32 @@ async def portal_verify_code(request: Request):
         secure=is_https,
         path="/",
     )
+    # Limpiar cookie de paciente activo de sesiones previas
+    response.delete_cookie(key=_ACTIVE_COOKIE_NAME, path="/")
     log.info("Portal login OK rut=%s", rut_norm)
     return response
 
 
 @router.get("/portal/api/datos")
-async def portal_datos(portal_session: str | None = Cookie(None)):
-    """Retorna los datos del paciente autenticado."""
-    result = _verify_portal_cookie(portal_session)
-    if not result:
-        raise HTTPException(status_code=401, detail="Sesión expirada")
-    rut, phone = result
+async def portal_datos(portal_session: str | None = Cookie(None),
+                       portal_active: str | None = Cookie(None)):
+    """Retorna los datos del paciente activo (owner o familiar vinculado)."""
+    owner_rut, owner_phone, active_rut, active_phone = _resolve_context(portal_session, portal_active)
 
-    # Modo demo: devolver datos ficticios
-    if rut == DEMO_RUT:
-        return _demo_data()
+    # Modo demo: datos ficticios cuando el activo es el RUT demo
+    if active_rut == DEMO_RUT:
+        data = _demo_data()
+        data["owner_rut"] = owner_rut
+        data["is_dependent"] = (active_rut != owner_rut)
+        return data
 
-    # Buscar paciente en Medilink
-    paciente = await buscar_paciente(rut)
+    paciente = await buscar_paciente(active_rut)
     if not paciente:
         raise HTTPException(status_code=404, detail="Paciente no encontrado en el sistema")
 
     id_pac = paciente["id"]
     nombre = paciente["nombre"]
 
-    # Fetch paralelo: citas futuras + historial
     import asyncio
     rut_medilink = paciente.get("rut") or ""
     citas_futuras, historial = await asyncio.gather(
@@ -271,21 +332,20 @@ async def portal_datos(portal_session: str | None = Cookie(None)):
         listar_historial_paciente(id_pac, meses=12, rut=rut_medilink),
     )
 
-    # Tags de diagnóstico
-    diagnosticos = get_dx_tags(phone)
-
-    # Datos del perfil local
-    perfil = get_profile(phone)
+    # Los tags de dx están ligados al teléfono; para dependientes usamos el del dependiente si lo hay
+    diagnosticos = get_dx_tags(active_phone) if active_phone else []
 
     return {
         "nombre": nombre,
-        "rut": rut,
+        "rut": active_rut,
         "fecha_nacimiento": paciente.get("fecha_nacimiento", ""),
         "sexo": paciente.get("sexo", ""),
         "citas_futuras": citas_futuras,
         "historial": historial,
         "diagnosticos": diagnosticos,
         "whatsapp_url": "https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20una%20cita",
+        "owner_rut": owner_rut,
+        "is_dependent": (active_rut != owner_rut),
     }
 
 
@@ -294,6 +354,7 @@ async def portal_logout():
     """Cierra la sesión del portal."""
     response = JSONResponse({"ok": True})
     response.delete_cookie(key=_COOKIE_NAME, path="/")
+    response.delete_cookie(key=_ACTIVE_COOKIE_NAME, path="/")
     return response
 
 
@@ -303,12 +364,10 @@ _VITAL_TIPOS_OK = {"presion", "glicemia", "peso", "temperatura"}
 
 @router.post("/portal/api/vitals")
 async def portal_add_vital(request: Request,
-                           portal_session: str | None = Cookie(None)):
-    """Añade un registro (presión, glicemia, peso, temperatura)."""
-    result = _verify_portal_cookie(portal_session)
-    if not result:
-        raise HTTPException(status_code=401, detail="Sesión expirada")
-    rut, _ = result
+                           portal_session: str | None = Cookie(None),
+                           portal_active: str | None = Cookie(None)):
+    """Añade un registro (presión, glicemia, peso, temperatura) al paciente activo."""
+    _owner_rut, _owner_phone, rut, _active_phone = _resolve_context(portal_session, portal_active)
     body = await request.json()
     tipo = (body.get("tipo") or "").strip().lower()
     if tipo not in _VITAL_TIPOS_OK:
@@ -348,12 +407,10 @@ async def portal_add_vital(request: Request,
 @router.get("/portal/api/vitals")
 async def portal_list_vitals(tipo: str | None = None, dias: int | None = None,
                              limit: int = 200,
-                             portal_session: str | None = Cookie(None)):
-    """Lista registros del paciente."""
-    result = _verify_portal_cookie(portal_session)
-    if not result:
-        raise HTTPException(status_code=401, detail="Sesión expirada")
-    rut, _ = result
+                             portal_session: str | None = Cookie(None),
+                             portal_active: str | None = Cookie(None)):
+    """Lista registros del paciente activo."""
+    _owner_rut, _owner_phone, rut, _active_phone = _resolve_context(portal_session, portal_active)
     if tipo and tipo not in _VITAL_TIPOS_OK:
         raise HTTPException(status_code=400, detail="Tipo inválido")
     vitals = list_vitals(rut, tipo=tipo, dias=dias, limit=max(1, min(500, limit)))
@@ -361,12 +418,10 @@ async def portal_list_vitals(tipo: str | None = None, dias: int | None = None,
 
 
 @router.get("/portal/api/perfil")
-async def portal_get_perfil(portal_session: str | None = Cookie(None)):
-    """Devuelve los campos editables del perfil del paciente."""
-    result = _verify_portal_cookie(portal_session)
-    if not result:
-        raise HTTPException(status_code=401, detail="Sesión expirada")
-    rut, phone = result
+async def portal_get_perfil(portal_session: str | None = Cookie(None),
+                            portal_active: str | None = Cookie(None)):
+    """Devuelve los campos editables del perfil del paciente activo."""
+    _owner_rut, _owner_phone, rut, phone = _resolve_context(portal_session, portal_active)
     if rut == DEMO_RUT:
         return {
             "ok": True, "demo": True,
@@ -388,12 +443,10 @@ async def portal_get_perfil(portal_session: str | None = Cookie(None)):
 
 @router.post("/portal/api/perfil")
 async def portal_update_perfil(request: Request,
-                                portal_session: str | None = Cookie(None)):
-    """Actualiza campos editables del perfil."""
-    result = _verify_portal_cookie(portal_session)
-    if not result:
-        raise HTTPException(status_code=401, detail="Sesión expirada")
-    rut, phone = result
+                                portal_session: str | None = Cookie(None),
+                                portal_active: str | None = Cookie(None)):
+    """Actualiza campos editables del perfil del paciente activo."""
+    _owner_rut, _owner_phone, rut, phone = _resolve_context(portal_session, portal_active)
     body = await request.json()
     # Validaciones ligeras
     campos = ("nombre", "fecha_nacimiento", "sexo", "email", "comuna",
@@ -414,13 +467,223 @@ async def portal_update_perfil(request: Request,
 
 @router.delete("/portal/api/vitals/{vital_id}")
 async def portal_delete_vital(vital_id: int,
-                              portal_session: str | None = Cookie(None)):
-    """Elimina un registro del paciente."""
-    result = _verify_portal_cookie(portal_session)
-    if not result:
-        raise HTTPException(status_code=401, detail="Sesión expirada")
-    rut, _ = result
+                              portal_session: str | None = Cookie(None),
+                              portal_active: str | None = Cookie(None)):
+    """Elimina un registro del paciente activo."""
+    _owner_rut, _owner_phone, rut, _active_phone = _resolve_context(portal_session, portal_active)
     ok = delete_vital(rut, vital_id)
     if not ok:
         raise HTTPException(status_code=404, detail="Registro no encontrado")
+    return {"ok": True}
+
+
+# ═══ Familiares vinculados ═══════════════════════════════════════════════
+
+def _normalize_rut(rut_raw: str) -> str:
+    """Normaliza RUT a formato 'NNNNNNNN-K' (sin puntos, con guión)."""
+    clean = (rut_raw or "").replace(".", "").replace("-", "").strip().upper()
+    if len(clean) < 2:
+        return ""
+    return clean[:-1] + "-" + clean[-1]
+
+
+def _age_years(fecha_nac: str) -> int | None:
+    """Edad en años a partir de YYYY-MM-DD o DD/MM/YYYY. None si no parsea."""
+    if not fecha_nac:
+        return None
+    from datetime import date
+    s = fecha_nac.strip()
+    parsed = None
+    for sep, fmt in (("-", "%Y-%m-%d"), ("/", "%d/%m/%Y")):
+        if sep in s:
+            try:
+                from datetime import datetime as _dt
+                parsed = _dt.strptime(s[:10], fmt).date()
+                break
+            except ValueError:
+                continue
+    if not parsed:
+        return None
+    today = date.today()
+    years = today.year - parsed.year - ((today.month, today.day) < (parsed.month, parsed.day))
+    return years
+
+
+@router.get("/portal/api/family")
+async def portal_family_list(portal_session: str | None = Cookie(None)):
+    """Lista los familiares vinculados al titular."""
+    owner_rut, _owner_phone = _require_portal(portal_session)
+    links = list_family_links(owner_rut)
+    return {"ok": True, "owner_rut": owner_rut, "links": links}
+
+
+@router.post("/portal/api/family/switch")
+async def portal_family_switch(request: Request,
+                               portal_session: str | None = Cookie(None)):
+    """Cambia el paciente activo. Body: {rut}. Setea cookie portal_active."""
+    owner_rut, _owner_phone = _require_portal(portal_session)
+    body = await request.json()
+    target_raw = (body.get("rut") or "").strip()
+    target = _normalize_rut(target_raw) if target_raw else owner_rut
+
+    if target != owner_rut and target != DEMO_RUT:
+        if not is_family_link(owner_rut, target):
+            raise HTTPException(status_code=403, detail="Familiar no vinculado")
+
+    is_https = (request.url.scheme == "https"
+                or request.headers.get("x-forwarded-proto") == "https")
+    response = JSONResponse({"ok": True, "active_rut": target})
+    if target == owner_rut:
+        response.delete_cookie(key=_ACTIVE_COOKIE_NAME, path="/")
+    else:
+        response.set_cookie(
+            key=_ACTIVE_COOKIE_NAME,
+            value=_sign_active_cookie(owner_rut, target),
+            max_age=_COOKIE_MAX_AGE,
+            httponly=True,
+            samesite="lax",
+            secure=is_https,
+            path="/",
+        )
+    log_event(_owner_phone, "portal_family_switch", {"from": owner_rut, "to": target})
+    return response
+
+
+@router.post("/portal/api/family/add-minor")
+async def portal_family_add_minor(request: Request,
+                                  portal_session: str | None = Cookie(None)):
+    """Vincula un familiar menor de edad mediante declaración de tutor.
+    Body: {rut, relation, tutor_declaration: true}."""
+    owner_rut, owner_phone = _require_portal(portal_session)
+    body = await request.json()
+    dep_raw = (body.get("rut") or "").strip()
+    relation = (body.get("relation") or "").strip().lower() or "hijo"
+    tutor_ok = bool(body.get("tutor_declaration"))
+
+    if not tutor_ok:
+        raise HTTPException(status_code=400, detail="Debes aceptar la declaración de tutor")
+    if not dep_raw or not valid_rut(dep_raw):
+        raise HTTPException(status_code=400, detail="RUT inválido")
+
+    dep_rut = _normalize_rut(dep_raw)
+    if dep_rut == owner_rut:
+        raise HTTPException(status_code=400, detail="No puedes vincularte a ti mismo")
+    if relation not in {"hijo", "hija", "tutelado", "tutelada", "nieto", "nieta"}:
+        raise HTTPException(status_code=400, detail="Relación inválida para menor")
+
+    paciente = await buscar_paciente(dep_raw)
+    if not paciente:
+        raise HTTPException(status_code=404, detail="Paciente no encontrado en Medilink")
+
+    edad = _age_years(paciente.get("fecha_nacimiento", ""))
+    if edad is None:
+        raise HTTPException(status_code=400,
+                            detail="El paciente no tiene fecha de nacimiento registrada. "
+                                   "Para mayores usa la vinculación con código de verificación.")
+    if edad >= 18:
+        raise HTTPException(status_code=400,
+                            detail=f"El paciente tiene {edad} años. "
+                                   "Los mayores requieren verificación con código al WhatsApp del titular.")
+
+    add_family_link(owner_rut, dep_rut, paciente.get("nombre", ""),
+                    relation, "tutor_declaration")
+    log_event(owner_phone, "portal_family_add_minor",
+              {"owner": owner_rut, "dependent": dep_rut, "edad": edad})
+    return {"ok": True, "dependent_rut": dep_rut, "nombre": paciente.get("nombre", ""), "edad": edad}
+
+
+@router.post("/portal/api/family/request-otp")
+async def portal_family_request_otp(request: Request,
+                                    portal_session: str | None = Cookie(None)):
+    """Envía OTP al WhatsApp del familiar adulto para autorizar la vinculación.
+    Body: {rut}."""
+    owner_rut, owner_phone = _require_portal(portal_session)
+    body = await request.json()
+    dep_raw = (body.get("rut") or "").strip()
+    if not dep_raw or not valid_rut(dep_raw):
+        raise HTTPException(status_code=400, detail="RUT inválido")
+
+    dep_rut = _normalize_rut(dep_raw)
+    if dep_rut == owner_rut:
+        raise HTTPException(status_code=400, detail="No puedes vincularte a ti mismo")
+
+    # Rate limit por RUT familiar
+    if count_portal_otps(dep_rut) >= 3:
+        raise HTTPException(status_code=429, detail="Demasiados intentos. Espera unos minutos.")
+
+    paciente = await buscar_paciente(dep_raw)
+    if not paciente:
+        raise HTTPException(status_code=404, detail="Paciente no encontrado en Medilink")
+
+    edad = _age_years(paciente.get("fecha_nacimiento", ""))
+    if edad is not None and edad < 18:
+        raise HTTPException(status_code=400,
+                            detail="El paciente es menor de edad. Usa la opción 'Agregar menor'.")
+
+    dep_phone = get_phone_by_rut(dep_rut)
+    if not dep_phone:
+        raise HTTPException(status_code=404,
+                            detail="Este familiar no tiene WhatsApp registrado en el CMC. "
+                                   "Pídele que escriba primero al +56 9 6661 0737.")
+
+    code = f"{secrets.randbelow(1000000):06d}"
+    save_portal_otp(dep_rut, dep_phone, code)
+
+    await send_whatsapp(
+        dep_phone,
+        f"🔐 *Vinculación familiar — Portal del Paciente CMC*\n\n"
+        f"Alguien está solicitando gestionar tus citas en el portal.\n\n"
+        f"Código de autorización: *{code}*\n\n"
+        f"Compártelo solo con quien confíes. Expira en 5 minutos.\n"
+        f"Si no reconoces esta solicitud, ignora este mensaje."
+    )
+    log_event(owner_phone, "portal_family_request_otp",
+              {"owner": owner_rut, "dependent": dep_rut})
+
+    masked = dep_phone[:6] + "***" + dep_phone[-2:]
+    return {"ok": True, "phone_masked": masked}
+
+
+@router.post("/portal/api/family/verify-otp")
+async def portal_family_verify_otp(request: Request,
+                                   portal_session: str | None = Cookie(None)):
+    """Verifica el OTP del familiar adulto y crea la vinculación.
+    Body: {rut, code, relation}."""
+    owner_rut, owner_phone = _require_portal(portal_session)
+    body = await request.json()
+    dep_raw = (body.get("rut") or "").strip()
+    code = (body.get("code") or "").strip()
+    relation = (body.get("relation") or "").strip().lower() or "familiar"
+
+    if not dep_raw or not code:
+        raise HTTPException(status_code=400, detail="RUT y código requeridos")
+    if relation not in {"padre", "madre", "conyuge", "pareja", "hermano", "hermana",
+                        "hijo", "hija", "abuelo", "abuela", "otro", "familiar"}:
+        relation = "familiar"
+
+    dep_rut = _normalize_rut(dep_raw)
+    phone = verify_portal_otp(dep_rut, code)
+    if not phone:
+        raise HTTPException(status_code=401, detail="Código incorrecto o expirado")
+
+    paciente = await buscar_paciente(dep_raw)
+    nombre = paciente.get("nombre", "") if paciente else ""
+
+    add_family_link(owner_rut, dep_rut, nombre, relation, "otp")
+    log_event(owner_phone, "portal_family_add_adult",
+              {"owner": owner_rut, "dependent": dep_rut, "relation": relation})
+    return {"ok": True, "dependent_rut": dep_rut, "nombre": nombre}
+
+
+@router.delete("/portal/api/family/{dependent_rut}")
+async def portal_family_remove(dependent_rut: str,
+                               portal_session: str | None = Cookie(None)):
+    """Revoca una vinculación familiar."""
+    owner_rut, owner_phone = _require_portal(portal_session)
+    dep_rut = _normalize_rut(dependent_rut)
+    ok = revoke_family_link(owner_rut, dep_rut)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Vínculo no encontrado")
+    log_event(owner_phone, "portal_family_revoke",
+              {"owner": owner_rut, "dependent": dep_rut})
     return {"ok": True}
