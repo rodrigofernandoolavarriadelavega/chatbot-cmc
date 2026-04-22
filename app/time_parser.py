@@ -76,11 +76,28 @@ def _resolver_ampm(h: int, ampm: str, ctx: str) -> int:
     return h
 
 
+_DESCALIFICADORES = (
+    "anos", "ano", "meses", "mes", "semana", "semanas",
+    "hijos", "hijas", "hijo", "hija", "nietos", "nieto",
+    "kilos", "kilo", "kg", "gramos", "libras",
+    "metros", "metro", "km", "centimetros", "cm",
+    "veces", "numero", "rut", "codigo", "whatsapp",
+    "grados", "fiebre", "temperatura",
+)
+
+
 def parse_hora(texto: str) -> Optional[Tuple[int, int]]:
-    """Extrae (hora, minuto) de texto libre en español. None si no aplica."""
+    """Extrae (hora, minuto) de texto libre en español. None si no aplica.
+
+    Rechaza si el texto contiene palabras claramente no-horarias ("años",
+    "hijos", "kilos", etc.) para evitar que "mi hijo tiene 10 años" se
+    interprete como las 10:00.
+    """
     if not texto:
         return None
     t = _normalizar(texto)
+    if any(re.search(rf"\b{w}\b", t) for w in _DESCALIFICADORES):
+        return None
 
     # Mediodía / medianoche
     if re.search(r"\b(al\s+)?mediod[ií]?a\b|\bmedio\s?dia\b", t):
