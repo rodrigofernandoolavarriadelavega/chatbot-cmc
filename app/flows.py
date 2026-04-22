@@ -1020,7 +1020,14 @@ async def _handle_doctor_command(phone: str, txt: str, tl: str, data: dict, stat
         )
 
     # ── Cambiar modo: ÚNICA forma de volver al selector ──────────────────
-    if tl in ("modo", "cambiar", "cambiar modo", "cambiar_modo"):
+    # Matchea variantes naturales porque el doctor no se acuerda del comando exacto.
+    _MODO_RESET_FRASES = (
+        "modo", "cambiar", "cambiar modo", "cambiar_modo",
+        "cambio de modo", "cambiar de modo", "cambiar mode",
+        "otro modo", "volver al menu", "volver menu", "menu doctor",
+        "menu dr", "menú dr", "salir modo", "salir del modo",
+    )
+    if tl in _MODO_RESET_FRASES or "cambio de modo" in tl or "cambiar de modo" in tl:
         _clear_doctor_mode(phone)
         reset_session(phone)
         return _doctor_mode_menu()
@@ -1031,7 +1038,16 @@ async def _handle_doctor_command(phone: str, txt: str, tl: str, data: dict, stat
         return _doctor_mode_menu()
 
     # ── Modo Agente CMC → pasar al flujo normal de pacientes ──────────────
+    # Si viene un saludo simple ("hola", "buenos días") en IDLE, asumir que
+    # el doctor olvidó que estaba en modo agente y volver al menú doctor.
     if doctor_mode == "agente":
+        _saludos_naturales = {"hola", "hi", "buenos dias", "buenos días",
+                              "buenas tardes", "buenas noches", "buen dia",
+                              "buen día", "ola", "hey"}
+        if tl in _saludos_naturales and state == "IDLE":
+            _clear_doctor_mode(phone)
+            reset_session(phone)
+            return _doctor_mode_menu()
         return None  # None = seguir con el flujo normal de handle_message
 
     # ── Modo Asistente Clínico ────────────────────────────────────────────
