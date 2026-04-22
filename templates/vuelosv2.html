@@ -173,6 +173,7 @@
     background:var(--rose-50);
     padding:5px;border-radius:999px;
     width:fit-content;margin:0 auto 24px;
+    position:relative;
   }
   .trip-tabs button{
     border:none;background:transparent;
@@ -180,11 +181,25 @@
     font-family:inherit;font-size:13px;font-weight:500;
     color:var(--plum-700);cursor:pointer;
     transition:all .2s;
+    position:relative;
   }
   .trip-tabs button.active{
     background:linear-gradient(135deg,var(--rose-400),var(--rose-600));
     color:#fff;box-shadow:0 4px 12px rgba(239,77,137,0.3);
   }
+  .trip-tabs button:focus-visible{
+    outline:2px solid var(--rose-500);outline-offset:2px;
+  }
+  .trip-tabs .tooltip{
+    position:absolute;top:calc(100% + 8px);left:50%;
+    transform:translateX(-50%) translateY(-4px);
+    background:var(--plum-900);color:#fff;
+    padding:6px 12px;border-radius:10px;font-size:11px;font-weight:500;
+    white-space:nowrap;opacity:0;pointer-events:none;
+    transition:all .25s;letter-spacing:0.3px;
+    box-shadow:0 6px 18px rgba(43,19,38,0.25);
+  }
+  .trip-tabs .tooltip.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
   .search-grid{
     display:grid;
@@ -197,8 +212,11 @@
     padding:12px 16px;
     border:1px solid rgba(239,77,137,0.12);
     transition:all .25s;
+    position:relative;
   }
   .field:hover{border-color:var(--rose-300);box-shadow:0 4px 14px rgba(239,77,137,0.08)}
+  .field:focus-within{border-color:var(--rose-400);box-shadow:0 4px 16px rgba(239,77,137,0.15)}
+  .field.disabled{opacity:0.5;pointer-events:none}
   .field label{
     display:block;font-size:11px;font-weight:500;
     color:var(--rose-600);text-transform:uppercase;letter-spacing:1.2px;
@@ -209,7 +227,38 @@
     font-family:inherit;font-size:15px;font-weight:500;
     color:var(--plum-900);background:transparent;
   }
+  .field input[type="date"]{
+    font-family:inherit;color:var(--plum-900);
+    cursor:pointer;
+  }
+  .field input[type="date"]::-webkit-calendar-picker-indicator{
+    filter:invert(41%) sepia(78%) saturate(850%) hue-rotate(308deg) brightness(95%) contrast(90%);
+    cursor:pointer;opacity:0.7;
+  }
   .field input::placeholder{color:#b89aab}
+
+  .autocomplete{
+    position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:30;
+    background:#fff;border-radius:14px;
+    box-shadow:0 12px 32px rgba(90,42,74,0.18);
+    border:1px solid rgba(239,77,137,0.12);
+    max-height:260px;overflow-y:auto;
+    display:none;
+  }
+  .autocomplete.show{display:block}
+  .autocomplete .ac-item{
+    padding:10px 16px;cursor:pointer;
+    font-size:14px;color:var(--plum-900);
+    display:flex;justify-content:space-between;align-items:center;
+    transition:background .15s;
+  }
+  .autocomplete .ac-item:hover,
+  .autocomplete .ac-item.highlighted{background:var(--rose-50)}
+  .autocomplete .ac-iata{
+    font-size:11px;color:var(--rose-600);font-weight:600;
+    letter-spacing:1px;background:var(--rose-100);
+    padding:3px 8px;border-radius:6px;
+  }
 
   .btn-search{
     padding:0 28px;height:62px;
@@ -221,10 +270,13 @@
     transition:transform .25s,box-shadow .25s;
   }
   .btn-search:hover{transform:translateY(-2px);box-shadow:0 14px 30px rgba(239,77,137,0.5)}
+  .btn-search:focus-visible{outline:2px solid #fff;outline-offset:3px}
+  .btn-search:disabled{opacity:0.7;cursor:wait;transform:none}
 
   .search-extras{
     display:flex;gap:20px;margin-top:18px;
     font-size:13px;color:var(--plum-700);
+    flex-wrap:wrap;
   }
   .search-extras label{display:flex;gap:6px;align-items:center;cursor:pointer}
   .search-extras input{accent-color:var(--rose-500)}
@@ -312,6 +364,210 @@
   .d7{grid-column:span 4;grid-row:span 1;background-image:url('https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Inarbolece_en_r%C3%ADo_Carampangue.jpg/1280px-Inarbolece_en_r%C3%ADo_Carampangue.jpg')}
   .d8{grid-column:span 4;grid-row:span 1;background:linear-gradient(135deg, var(--rose-300), var(--rose-500))}
 
+  /* ---------------- RESULTS ---------------- */
+  section.results{
+    padding:60px 6vw 80px;
+    max-width:1300px;margin:0 auto;
+  }
+  .results-toolbar{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:18px;flex-wrap:wrap;margin-bottom:28px;
+  }
+  .res-tabs{
+    display:flex;gap:6px;
+    background:var(--rose-50);
+    padding:5px;border-radius:999px;
+  }
+  .res-tabs button{
+    border:none;background:transparent;
+    padding:9px 20px;border-radius:999px;
+    font-family:inherit;font-size:13px;font-weight:500;
+    color:var(--plum-700);cursor:pointer;
+    display:flex;align-items:center;gap:8px;
+    transition:all .2s;
+  }
+  .res-tabs button.active{
+    background:linear-gradient(135deg,var(--rose-400),var(--rose-600));
+    color:#fff;box-shadow:0 4px 12px rgba(239,77,137,0.3);
+  }
+  .res-tabs button:focus-visible{outline:2px solid var(--rose-500);outline-offset:2px}
+  .res-tabs .badge{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-width:22px;height:22px;padding:0 7px;border-radius:999px;
+    background:rgba(255,255,255,0.4);color:inherit;
+    font-size:11px;font-weight:600;
+  }
+  .res-tabs button:not(.active) .badge{background:var(--rose-100);color:var(--rose-600)}
+
+  .res-sort{
+    display:flex;align-items:center;gap:10px;
+  }
+  .res-sort label{
+    font-size:12px;color:var(--plum-700);
+    text-transform:uppercase;letter-spacing:1.2px;font-weight:500;
+  }
+  .res-sort select{
+    border:1px solid rgba(239,77,137,0.2);
+    background:#fff;border-radius:12px;
+    padding:8px 14px;font-family:inherit;font-size:13px;
+    color:var(--plum-900);font-weight:500;cursor:pointer;
+    outline:none;transition:border-color .2s;
+  }
+  .res-sort select:hover{border-color:var(--rose-300)}
+  .res-sort select:focus-visible{border-color:var(--rose-500);box-shadow:0 0 0 3px rgba(239,77,137,0.15)}
+
+  .results-grid{
+    display:grid;grid-template-columns:1fr;gap:18px;
+  }
+  .flight-card{
+    background:#fff;border-radius:22px;
+    padding:22px 26px;
+    box-shadow:0 10px 30px rgba(90,42,74,0.08);
+    border:1px solid rgba(239,77,137,0.08);
+    display:grid;
+    grid-template-columns:180px 1fr 180px;
+    gap:24px;align-items:center;
+    transition:transform .25s,box-shadow .25s;
+  }
+  .flight-card:hover{
+    transform:translateY(-3px);
+    box-shadow:0 18px 40px rgba(90,42,74,0.14);
+    border-color:rgba(239,77,137,0.18);
+  }
+  .fc-airline{
+    display:flex;flex-direction:column;gap:10px;
+  }
+  .fc-logos{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .fc-logos img{
+    width:36px;height:36px;border-radius:10px;
+    background:var(--rose-50);padding:4px;object-fit:contain;
+    border:1px solid rgba(239,77,137,0.1);
+  }
+  .fc-airline-names{
+    font-size:13px;font-weight:500;color:var(--plum-700);
+    line-height:1.3;
+  }
+  .fc-airline-sub{font-size:11px;color:var(--rose-600);margin-top:2px;font-weight:500;text-transform:uppercase;letter-spacing:1px}
+
+  .fc-timeline{
+    display:flex;flex-direction:column;gap:10px;
+  }
+  .fc-leg{
+    display:flex;align-items:center;gap:12px;
+    font-size:14px;color:var(--plum-900);
+  }
+  .fc-time{
+    font-family:'Playfair Display',serif;
+    font-size:20px;font-weight:700;color:var(--plum-900);
+    min-width:58px;
+  }
+  .fc-iata{
+    font-size:12px;color:var(--rose-600);font-weight:600;
+    letter-spacing:1.2px;
+  }
+  .fc-line{
+    flex:1;height:2px;position:relative;
+    background:linear-gradient(90deg,var(--rose-200),var(--rose-400),var(--rose-200));
+    min-width:40px;
+  }
+  .fc-line::before,.fc-line::after{
+    content:'';position:absolute;top:50%;width:8px;height:8px;
+    border-radius:50%;background:var(--rose-500);
+    transform:translateY(-50%);
+  }
+  .fc-line::before{left:-4px}
+  .fc-line::after{right:-4px}
+  .fc-dur{
+    position:absolute;top:-20px;left:50%;transform:translateX(-50%);
+    font-size:11px;color:var(--plum-700);font-weight:500;
+    background:#fff;padding:0 8px;white-space:nowrap;
+  }
+  .fc-layover{
+    font-size:11px;color:var(--rose-600);
+    background:var(--rose-50);padding:4px 12px;
+    border-radius:999px;font-weight:500;
+    text-transform:uppercase;letter-spacing:0.8px;
+    align-self:center;
+  }
+
+  .fc-price{
+    text-align:right;display:flex;flex-direction:column;gap:6px;align-items:flex-end;
+  }
+  .fc-price-val{
+    font-family:'Playfair Display',serif;
+    font-size:28px;font-weight:700;color:var(--rose-500);
+    line-height:1;
+  }
+  .fc-price-cur{font-size:12px;color:var(--plum-700);font-weight:500;letter-spacing:1px}
+  .fc-total-dur{font-size:12px;color:var(--plum-700);font-weight:500}
+  .fc-co2{font-size:11px;color:var(--gold);font-weight:500}
+  .fc-cta{
+    margin-top:8px;padding:8px 18px;border-radius:999px;border:none;
+    background:linear-gradient(135deg,var(--rose-400),var(--rose-600));
+    color:#fff;font-family:inherit;font-size:12px;font-weight:600;
+    cursor:pointer;box-shadow:0 6px 16px rgba(239,77,137,0.3);
+    transition:transform .2s;letter-spacing:0.5px;
+  }
+  .fc-cta:hover{transform:translateY(-2px)}
+
+  /* Skeleton */
+  .skeleton-card{
+    background:#fff;border-radius:22px;
+    padding:22px 26px;
+    display:grid;
+    grid-template-columns:180px 1fr 180px;
+    gap:24px;align-items:center;
+    box-shadow:0 10px 30px rgba(90,42,74,0.06);
+  }
+  .sk{
+    background:linear-gradient(90deg,var(--rose-50) 0%,var(--rose-100) 50%,var(--rose-50) 100%);
+    background-size:200% 100%;
+    border-radius:10px;
+    animation:shimmer 1.4s ease-in-out infinite;
+  }
+  @keyframes shimmer{
+    0%{background-position:200% 0}
+    100%{background-position:-200% 0}
+  }
+  .sk-logo{width:40px;height:40px;border-radius:12px}
+  .sk-line{height:12px;width:100%}
+  .sk-line.short{width:60%}
+  .sk-line.mid{width:80%}
+  .sk-row{display:flex;gap:12px;align-items:center;margin-bottom:10px}
+
+  /* State cards */
+  .state-card{
+    background:#fff;border-radius:22px;
+    padding:40px 32px;text-align:center;
+    box-shadow:0 10px 30px rgba(90,42,74,0.08);
+    border:1px solid rgba(239,77,137,0.08);
+  }
+  .state-card h3{
+    font-family:'Playfair Display',serif;
+    font-size:22px;font-weight:700;color:var(--plum-900);
+    margin-bottom:10px;
+  }
+  .state-card h3 em{
+    font-style:italic;
+    background:linear-gradient(135deg,var(--rose-500),var(--gold));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .state-card p{color:var(--plum-700);font-weight:300;margin-bottom:20px}
+  .state-card button{
+    padding:10px 24px;border-radius:999px;border:none;
+    background:linear-gradient(135deg,var(--rose-400),var(--rose-600));
+    color:#fff;font-family:inherit;font-weight:600;cursor:pointer;
+    box-shadow:0 8px 20px rgba(239,77,137,0.3);
+    transition:transform .2s;
+  }
+  .state-card button:hover{transform:translateY(-2px)}
+
+  .summary{
+    font-size:15px;color:var(--plum-700);font-weight:300;
+    margin-top:8px;
+  }
+  .summary strong{color:var(--rose-500);font-weight:600}
+
   /* ---------------- PERKS ---------------- */
   .perks{
     padding:80px 6vw;
@@ -383,6 +639,14 @@
     .d1{grid-column:span 2;grid-row:span 2}
     .perks-grid{grid-template-columns:repeat(2,1fr)}
     .foot-grid{grid-template-columns:1fr 1fr}
+
+    .flight-card,.skeleton-card{
+      grid-template-columns:1fr;gap:16px;padding:20px;
+    }
+    .fc-price{text-align:left;align-items:flex-start;border-top:1px solid rgba(239,77,137,0.12);padding-top:14px}
+    .fc-airline{flex-direction:row;justify-content:space-between}
+    .results-toolbar{flex-direction:column;align-items:stretch}
+    .res-tabs{justify-content:center}
   }
 </style>
 </head>
@@ -418,50 +682,53 @@
     <p class="hero-sub">Encuentra vuelos al mejor precio a las ciudades que soñaste recorrer. De Lima a Santiago, de Piura a Concepción · Anguie Viajes es tu mejor compañera de viaje.</p>
 
     <!-- SEARCH CARD -->
-    <div class="search-card">
-      <div class="trip-tabs">
-        <button class="active">Ida y vuelta</button>
-        <button>Solo ida</button>
-        <button>Multidestino</button>
+    <form class="search-card" id="flight-form" novalidate>
+      <div class="trip-tabs" role="tablist" aria-label="Tipo de viaje">
+        <button type="button" class="active" data-trip="roundtrip" role="tab" aria-selected="true">Ida y vuelta</button>
+        <button type="button" data-trip="oneway" role="tab" aria-selected="false">Solo ida</button>
+        <button type="button" data-trip="multi" role="tab" aria-selected="false">Multidestino</button>
+        <span class="tooltip" id="multi-tooltip">Próximamente</span>
       </div>
 
       <div class="search-grid">
-        <div class="field">
-          <label>Desde</label>
-          <input type="text" value="Lima (LIM)" />
+        <div class="field" data-ac-field="origin">
+          <label for="f-origin">Desde</label>
+          <input type="text" id="f-origin" name="origin" value="Concepción (CCP)" autocomplete="off" aria-autocomplete="list" aria-controls="ac-origin" />
+          <div class="autocomplete" id="ac-origin" role="listbox"></div>
+        </div>
+        <div class="field" data-ac-field="destination">
+          <label for="f-destination">Hacia</label>
+          <input type="text" id="f-destination" name="destination" value="Lima (LIM)" autocomplete="off" aria-autocomplete="list" aria-controls="ac-destination" />
+          <div class="autocomplete" id="ac-destination" role="listbox"></div>
         </div>
         <div class="field">
-          <label>Hacia</label>
-          <input type="text" value="Santiago (SCL)" />
+          <label for="f-outbound">Salida</label>
+          <input type="date" id="f-outbound" name="outbound_date" />
+        </div>
+        <div class="field" id="return-field">
+          <label for="f-return">Regreso</label>
+          <input type="date" id="f-return" name="return_date" />
         </div>
         <div class="field">
-          <label>Salida</label>
-          <input type="text" value="12 May 2026" />
-        </div>
-        <div class="field">
-          <label>Regreso</label>
-          <input type="text" value="22 May 2026" />
-        </div>
-        <div class="field">
-          <label>Viajeras</label>
-          <select>
-            <option>1 adulto</option>
-            <option>2 adultos</option>
-            <option>Familia</option>
+          <label for="f-adults">Viajeras</label>
+          <select id="f-adults" name="adults">
+            <option value="1">1 adulto</option>
+            <option value="2">2 adultos</option>
+            <option value="4">Familia</option>
           </select>
         </div>
-        <button class="btn-search">
+        <button type="submit" class="btn-search" id="btn-search">
           <span>Buscar vuelos</span>
-          <span>→</span>
+          <span aria-hidden="true">→</span>
         </button>
       </div>
 
       <div class="search-extras">
-        <label><input type="checkbox" /> Solo vuelos directos</label>
-        <label><input type="checkbox" checked /> Mejor precio flexible ±3 días</label>
+        <label><input type="checkbox" id="f-direct" /> Solo vuelos directos</label>
+        <label><input type="checkbox" id="f-combine" checked /> Combinar aerolíneas (LATAM + Sky + JetSMART)</label>
         <label><input type="checkbox" /> Viajo con mascota</label>
       </div>
-    </div>
+    </form>
   </div>
 </section>
 
@@ -543,6 +810,38 @@
   </div>
 </section>
 
+<!-- RESULTS -->
+<section class="results" id="results" hidden aria-live="polite">
+  <div class="section-head" style="margin-bottom:36px">
+    <span class="eyebrow-dark">Resultados</span>
+    <h2>Tu próximo <em>vuelo</em></h2>
+    <p class="summary" id="results-summary">Buscando opciones…</p>
+  </div>
+
+  <div class="results-toolbar" id="results-toolbar" hidden>
+    <div class="res-tabs" role="tablist" aria-label="Tipo de resultado">
+      <button type="button" class="active" data-restab="direct" role="tab" aria-selected="true">
+        <span>Vuelo único</span>
+        <span class="badge" id="badge-direct">0</span>
+      </button>
+      <button type="button" data-restab="self_transfer" role="tab" aria-selected="false">
+        <span>Combinando aerolíneas</span>
+        <span class="badge" id="badge-self">0</span>
+      </button>
+    </div>
+    <div class="res-sort">
+      <label for="f-sort">Ordenar</label>
+      <select id="f-sort">
+        <option value="price">Precio</option>
+        <option value="duration">Duración</option>
+        <option value="layover">Escala más corta</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="results-grid" id="results-grid"></div>
+</section>
+
 <!-- PERKS -->
 <section class="perks">
   <div class="section-head" style="margin-bottom:40px">
@@ -603,13 +902,470 @@
 </footer>
 
 <script>
-  // Toggle de pestañas de viaje
-  document.querySelectorAll('.trip-tabs button').forEach(btn=>{
+(function(){
+  // ---- Airport dictionary ----
+  const AIRPORTS = [
+    { iata:'CCP', city:'Concepción' },
+    { iata:'SCL', city:'Santiago' },
+    { iata:'LIM', city:'Lima' },
+    { iata:'PIU', city:'Piura' },
+    { iata:'TYL', city:'Talara' },
+    { iata:'AQP', city:'Arequipa' },
+    { iata:'CUZ', city:'Cuzco' },
+    { iata:'ANF', city:'Antofagasta' },
+    { iata:'IQQ', city:'Iquique' },
+    { iata:'ARI', city:'Arica' },
+    { iata:'PMC', city:'Puerto Montt' },
+    { iata:'PUQ', city:'Punta Arenas' },
+    { iata:'ZCO', city:'Temuco' },
+    { iata:'LSC', city:'La Serena' },
+    { iata:'CJC', city:'Calama' },
+  ];
+  const AIRPORT_BY_IATA = Object.fromEntries(AIRPORTS.map(a=>[a.iata,a]));
+  const AIRLINE_FALLBACK = {
+    'LATAM':'LA','Sky':'H2','Sky Airline':'H2','JetSMART':'JA','JetSmart':'JA'
+  };
+
+  // ---- Helpers ----
+  const fmtCLP = v => new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(Math.round(v));
+  const fmtPrice = (v,cur) => {
+    const c = (cur||'CLP').toUpperCase();
+    if(c==='CLP'){
+      return fmtCLP(v);
+    }
+    try{
+      return new Intl.NumberFormat('es-CL',{style:'currency',currency:c,maximumFractionDigits:0}).format(Math.round(v));
+    }catch(e){ return `${Math.round(v)} ${c}`; }
+  };
+  const fmtDur = m => {
+    m = Math.max(0, Math.round(m||0));
+    const h = Math.floor(m/60), mm = m % 60;
+    if(h===0) return `${mm}m`;
+    return `${h}h ${String(mm).padStart(2,'0')}m`;
+  };
+  const fmtTime = s => {
+    if(!s) return '—';
+    // API returns "YYYY-MM-DD HH:MM" or ISO
+    const m = String(s).match(/(\d{2}:\d{2})/);
+    if(m) return m[1];
+    try{
+      const d = new Date(s);
+      return d.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit',hour12:false});
+    }catch(e){ return '—'; }
+  };
+  const fmtDayShort = s => {
+    if(!s) return '';
+    try{
+      const d = new Date(s+'T00:00:00');
+      return d.toLocaleDateString('es-CL',{day:'numeric',month:'short'}).replace('.','');
+    }catch(e){ return s; }
+  };
+  const parseIATA = v => {
+    if(!v) return '';
+    const m = String(v).match(/\b([A-Z]{3})\b/);
+    if(m) return m[1];
+    const up = String(v).trim().toUpperCase();
+    if(/^[A-Z]{3}$/.test(up)) return up;
+    // try city name match
+    const hit = AIRPORTS.find(a => a.city.toLowerCase() === String(v).trim().toLowerCase());
+    return hit ? hit.iata : '';
+  };
+  const airlineLogo = (seg) => {
+    if(seg && seg.airline_logo) return seg.airline_logo;
+    const code = (seg && seg.flight_number) ? String(seg.flight_number).match(/^([A-Z0-9]{2})/)?.[1]
+                 : AIRLINE_FALLBACK[seg && seg.airline] || '';
+    if(code) return `https://www.gstatic.com/flights/airline_logos/70px/${code}.png`;
+    return '';
+  };
+
+  // ---- Trip tabs ----
+  const tripTabs = document.querySelectorAll('.trip-tabs button');
+  const returnField = document.getElementById('return-field');
+  const returnInput = document.getElementById('f-return');
+  const multiTooltip = document.getElementById('multi-tooltip');
+  let tripMode = 'roundtrip';
+
+  tripTabs.forEach(btn=>{
     btn.addEventListener('click',()=>{
-      document.querySelectorAll('.trip-tabs button').forEach(b=>b.classList.remove('active'));
+      const mode = btn.dataset.trip;
+      if(mode === 'multi'){
+        multiTooltip.classList.add('show');
+        setTimeout(()=>multiTooltip.classList.remove('show'), 2200);
+        return; // don't switch
+      }
+      tripTabs.forEach(b=>{b.classList.remove('active');b.setAttribute('aria-selected','false')});
       btn.classList.add('active');
+      btn.setAttribute('aria-selected','true');
+      tripMode = mode;
+      if(mode === 'oneway'){
+        returnField.classList.add('disabled');
+        returnInput.disabled = true;
+        returnInput.value = '';
+      }else{
+        returnField.classList.remove('disabled');
+        returnInput.disabled = false;
+      }
     });
   });
+
+  // ---- Date defaults ----
+  function toISO(d){
+    return d.toISOString().slice(0,10);
+  }
+  const today = new Date();
+  const out = new Date(today); out.setDate(out.getDate()+30);
+  document.getElementById('f-outbound').value = toISO(out);
+  document.getElementById('f-outbound').min = toISO(today);
+  // return left empty per brief
+
+  // ---- Autocomplete ----
+  function setupAutocomplete(fieldSel){
+    const field = document.querySelector(`[data-ac-field="${fieldSel}"]`);
+    const input = field.querySelector('input');
+    const list = field.querySelector('.autocomplete');
+    let highlighted = -1;
+
+    function render(q){
+      const qn = (q||'').trim().toLowerCase();
+      const items = AIRPORTS.filter(a=>{
+        if(!qn) return true;
+        return a.city.toLowerCase().includes(qn) || a.iata.toLowerCase().includes(qn);
+      }).slice(0, 10);
+      list.innerHTML = items.map((a,i)=>(
+        `<div class="ac-item" role="option" data-iata="${a.iata}" data-city="${a.city}">`+
+        `<span>${a.city}</span><span class="ac-iata">${a.iata}</span></div>`
+      )).join('');
+      highlighted = -1;
+      list.classList.toggle('show', items.length>0);
+    }
+    function pick(el){
+      if(!el) return;
+      const city = el.dataset.city, iata = el.dataset.iata;
+      input.value = `${city} (${iata})`;
+      list.classList.remove('show');
+    }
+    input.addEventListener('focus', ()=>render(input.value));
+    input.addEventListener('input', ()=>render(input.value));
+    input.addEventListener('keydown', (e)=>{
+      const items = [...list.querySelectorAll('.ac-item')];
+      if(e.key==='ArrowDown'){e.preventDefault();highlighted=Math.min(highlighted+1,items.length-1);}
+      else if(e.key==='ArrowUp'){e.preventDefault();highlighted=Math.max(highlighted-1,0);}
+      else if(e.key==='Enter' && highlighted>=0){e.preventDefault();pick(items[highlighted]);return;}
+      else if(e.key==='Escape'){list.classList.remove('show');return;}
+      items.forEach((it,i)=>it.classList.toggle('highlighted', i===highlighted));
+    });
+    list.addEventListener('mousedown', (e)=>{
+      const it = e.target.closest('.ac-item');
+      if(it){ e.preventDefault(); pick(it); }
+    });
+    document.addEventListener('click', (e)=>{
+      if(!field.contains(e.target)) list.classList.remove('show');
+    });
+  }
+  setupAutocomplete('origin');
+  setupAutocomplete('destination');
+
+  // ---- Results rendering ----
+  const resultsSection = document.getElementById('results');
+  const resultsGrid = document.getElementById('results-grid');
+  const resultsToolbar = document.getElementById('results-toolbar');
+  const summaryEl = document.getElementById('results-summary');
+  const badgeDirect = document.getElementById('badge-direct');
+  const badgeSelf = document.getElementById('badge-self');
+  const sortSel = document.getElementById('f-sort');
+  const resTabs = document.querySelectorAll('.res-tabs button');
+
+  let currentData = { direct:[], self_transfer:[], currency:'CLP' };
+  let currentTab = 'direct';
+  let onlyDirect = false;
+
+  function skeletonHTML(){
+    return `
+      ${[0,1,2].map(()=>`
+        <div class="skeleton-card">
+          <div>
+            <div class="sk-row"><div class="sk sk-logo"></div><div class="sk sk-line short"></div></div>
+            <div class="sk sk-line mid"></div>
+          </div>
+          <div>
+            <div class="sk sk-line" style="margin-bottom:8px"></div>
+            <div class="sk sk-line short"></div>
+          </div>
+          <div>
+            <div class="sk sk-line short" style="margin-bottom:8px;height:22px"></div>
+            <div class="sk sk-line short"></div>
+          </div>
+        </div>`).join('')}`;
+  }
+
+  function showLoading(){
+    resultsGrid.innerHTML = skeletonHTML();
+    resultsToolbar.hidden = true;
+  }
+
+  function showError(retryFn){
+    resultsGrid.innerHTML = `
+      <div class="state-card">
+        <h3>Ups, algo <em>no salió bien</em></h3>
+        <p>No pudimos buscar vuelos. Intenta otra vez.</p>
+        <button type="button" id="retry-btn">Reintentar</button>
+      </div>`;
+    resultsToolbar.hidden = true;
+    document.getElementById('retry-btn').addEventListener('click', retryFn);
+  }
+
+  function showEmpty(){
+    resultsGrid.innerHTML = `
+      <div class="state-card">
+        <h3>Sin <em>resultados</em></h3>
+        <p>No encontramos vuelos con estos filtros. Prueba ampliando la escala máxima.</p>
+      </div>`;
+  }
+
+  function legsFromDirect(item){
+    // direct item has `flights` (array of segments) and `layovers`
+    return (item.flights || []).map(s => ({
+      dep_time: s.departure_airport?.time,
+      dep_iata: s.departure_airport?.id,
+      arr_time: s.arrival_airport?.time,
+      arr_iata: s.arrival_airport?.id,
+      duration: s.duration,
+      airline: s.airline,
+      airline_logo: airlineLogo(s),
+      flight_number: s.flight_number
+    }));
+  }
+
+  function legsFromSelf(item){
+    // self_transfer: legs: [seg...] then possibly more
+    const segs = [];
+    (item.legs || []).forEach(l => {
+      if(l.flights){
+        l.flights.forEach(s=>segs.push(s));
+      }else if(l.departure_airport){
+        segs.push(l);
+      }
+    });
+    return segs.map(s => ({
+      dep_time: s.departure_airport?.time,
+      dep_iata: s.departure_airport?.id,
+      arr_time: s.arrival_airport?.time,
+      arr_iata: s.arrival_airport?.id,
+      duration: s.duration,
+      airline: s.airline,
+      airline_logo: airlineLogo(s),
+      flight_number: s.flight_number
+    }));
+  }
+
+  function renderTimeline(legs, layovers){
+    // layovers may be array of {id, duration} interleaved between legs
+    let html = '';
+    legs.forEach((l, i)=>{
+      html += `<div class="fc-leg">
+        <span class="fc-time">${fmtTime(l.dep_time)}</span>
+        <span class="fc-iata">${l.dep_iata||''}</span>
+        <span class="fc-line"><span class="fc-dur">${fmtDur(l.duration)}</span></span>
+        <span class="fc-time">${fmtTime(l.arr_time)}</span>
+        <span class="fc-iata">${l.arr_iata||''}</span>
+      </div>`;
+      if(i < legs.length-1){
+        const lay = layovers && layovers[i];
+        const dur = lay?.duration;
+        const id = lay?.id || l.arr_iata;
+        html += `<div class="fc-leg"><span class="fc-layover">Escala en ${id} · ${fmtDur(dur)}</span></div>`;
+      }
+    });
+    return html;
+  }
+
+  function renderCard(item, kind){
+    const legs = kind==='direct' ? legsFromDirect(item) : legsFromSelf(item);
+    if(!legs.length) return '';
+    const layovers = kind==='direct' ? (item.layovers||[]) : (item.layovers||[]);
+    const airlines = [...new Set(legs.map(l=>l.airline).filter(Boolean))];
+    const logos = [...new Set(legs.map(l=>l.airline_logo).filter(Boolean))].slice(0,3);
+    const price = kind==='direct' ? item.price : item.total_price;
+    const totalDur = kind==='direct' ? item.total_duration : item.total_duration;
+    const co2 = item.carbon_emissions?.this_flight;
+    const co2Kg = co2 ? Math.round(co2/1000) : null;
+
+    return `
+      <article class="flight-card">
+        <div class="fc-airline">
+          <div class="fc-logos">
+            ${logos.map(u=>`<img src="${u}" alt="" loading="lazy" onerror="this.style.display='none'"/>`).join('')}
+          </div>
+          <div>
+            <div class="fc-airline-names">${airlines.join(' + ') || 'Aerolínea'}</div>
+            ${kind==='self_transfer' ? `<div class="fc-airline-sub">Combinada</div>` : ''}
+          </div>
+        </div>
+        <div class="fc-timeline">${renderTimeline(legs, layovers)}</div>
+        <div class="fc-price">
+          <div>
+            <div class="fc-price-val">${fmtPrice(price, currentData.currency)}</div>
+            <div class="fc-price-cur">${(currentData.currency||'CLP')} · total</div>
+          </div>
+          <div class="fc-total-dur">${fmtDur(totalDur)} en total</div>
+          ${co2Kg ? `<div class="fc-co2">${co2Kg} kg CO₂</div>` : ''}
+          <button type="button" class="fc-cta">Reservar</button>
+        </div>
+      </article>`;
+  }
+
+  function sortItems(arr, kind){
+    const mode = sortSel.value;
+    const copy = [...arr];
+    copy.sort((a,b)=>{
+      if(mode==='price'){
+        return (kind==='direct'?a.price:a.total_price) - (kind==='direct'?b.price:b.total_price);
+      }
+      if(mode==='duration'){
+        return (a.total_duration||0) - (b.total_duration||0);
+      }
+      if(mode==='layover'){
+        if(kind==='direct'){
+          const la = (a.layovers||[]).reduce((s,l)=>s+(l.duration||0),0);
+          const lb = (b.layovers||[]).reduce((s,l)=>s+(l.duration||0),0);
+          return la - lb;
+        }else{
+          return (a.layover_min||0) - (b.layover_min||0);
+        }
+      }
+      return 0;
+    });
+    return copy;
+  }
+
+  function filterItems(arr, kind){
+    if(onlyDirect && kind==='direct'){
+      return arr.filter(x => !x.layovers || x.layovers.length===0);
+    }
+    return arr;
+  }
+
+  function renderResults(){
+    let arr = currentTab==='direct' ? currentData.direct : currentData.self_transfer;
+    arr = filterItems(arr, currentTab);
+    arr = sortItems(arr, currentTab);
+    if(!arr.length){ showEmpty(); return; }
+    resultsGrid.innerHTML = arr.map(it => renderCard(it, currentTab)).join('');
+  }
+
+  resTabs.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      resTabs.forEach(b=>{b.classList.remove('active');b.setAttribute('aria-selected','false')});
+      btn.classList.add('active');
+      btn.setAttribute('aria-selected','true');
+      currentTab = btn.dataset.restab;
+      renderResults();
+    });
+  });
+  sortSel.addEventListener('change', renderResults);
+
+  // ---- Submission ----
+  const form = document.getElementById('flight-form');
+  const btnSearch = document.getElementById('btn-search');
+
+  async function doSearch(){
+    const originRaw = document.getElementById('f-origin').value;
+    const destRaw = document.getElementById('f-destination').value;
+    const origin = parseIATA(originRaw);
+    const destination = parseIATA(destRaw);
+    const outbound = document.getElementById('f-outbound').value;
+    const returnDate = (tripMode==='roundtrip') ? document.getElementById('f-return').value : '';
+    const adults = document.getElementById('f-adults').value || '1';
+    const combine = document.getElementById('f-combine').checked;
+    onlyDirect = document.getElementById('f-direct').checked;
+
+    // Validation
+    const problems = [];
+    if(!origin || origin.length!==3) problems.push('origen');
+    if(!destination || destination.length!==3) problems.push('destino');
+    if(origin && origin === destination) problems.push('origen y destino iguales');
+    if(!outbound) problems.push('fecha de salida');
+    if(problems.length){
+      resultsSection.hidden = false;
+      resultsGrid.innerHTML = `<div class="state-card"><h3>Completa la <em>búsqueda</em></h3><p>Revisa: ${problems.join(', ')}.</p></div>`;
+      resultsToolbar.hidden = true;
+      resultsSection.scrollIntoView({behavior:'smooth',block:'start'});
+      return;
+    }
+
+    // Summary text
+    const oCity = AIRPORT_BY_IATA[origin]?.city || origin;
+    const dCity = AIRPORT_BY_IATA[destination]?.city || destination;
+    const adultsLabel = adults==='1' ? '1 viajera' : (adults==='4' ? 'familia (4)' : `${adults} viajeras`);
+    const dateLabel = returnDate
+      ? `${fmtDayShort(outbound)} – ${fmtDayShort(returnDate)}`
+      : `${fmtDayShort(outbound)} · solo ida`;
+    summaryEl.innerHTML = `<strong>${origin} → ${destination}</strong> · ${dateLabel} · ${adultsLabel}`;
+
+    // Show section + skeletons
+    resultsSection.hidden = false;
+    showLoading();
+    resultsSection.scrollIntoView({behavior:'smooth',block:'start'});
+    btnSearch.disabled = true;
+
+    // Build params
+    const params = new URLSearchParams({
+      origin,
+      destination,
+      outbound_date: outbound,
+      adults: adults,
+      allow_self_transfer: String(combine),
+      max_layover_min: String(onlyDirect ? 0 : 300),
+    });
+    if(returnDate) params.set('return_date', returnDate);
+
+    try{
+      const resp = await fetch(`/vuelos/api/search?${params.toString()}`, {
+        headers: { 'Accept':'application/json' }
+      });
+      if(!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+      currentData = {
+        direct: Array.isArray(data.direct) ? data.direct : [],
+        self_transfer: Array.isArray(data.self_transfer) ? data.self_transfer : [],
+        currency: data.currency || 'CLP',
+      };
+
+      badgeDirect.textContent = currentData.direct.length;
+      badgeSelf.textContent = currentData.self_transfer.length;
+
+      // Auto-select tab with more results
+      const directCount = filterItems(currentData.direct,'direct').length;
+      const selfCount = currentData.self_transfer.length;
+      currentTab = (directCount >= selfCount) ? 'direct' : 'self_transfer';
+      if(directCount === 0 && selfCount > 0) currentTab = 'self_transfer';
+
+      resTabs.forEach(b=>{
+        const is = b.dataset.restab === currentTab;
+        b.classList.toggle('active', is);
+        b.setAttribute('aria-selected', is ? 'true':'false');
+      });
+
+      resultsToolbar.hidden = false;
+
+      if(currentData.direct.length === 0 && currentData.self_transfer.length === 0){
+        showEmpty();
+      }else{
+        renderResults();
+      }
+    }catch(err){
+      console.error('search error', err);
+      showError(doSearch);
+    }finally{
+      btnSearch.disabled = false;
+    }
+  }
+
+  form.addEventListener('submit', (e)=>{
+    e.preventDefault();
+    doSearch();
+  });
+})();
 </script>
 </body>
 </html>
