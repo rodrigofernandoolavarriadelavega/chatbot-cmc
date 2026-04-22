@@ -28,6 +28,7 @@ from session import (get_session, reset_session, save_session, get_metricas,
                      mark_admin_seen, get_unread_counts,
                      save_profile, get_profile, get_phone_by_rut,
                      delete_patient_data, get_privacy_consent, save_privacy_consent,
+                     get_next_cita_bot_by_phone, mark_reminder_sent,
                      _conn)
 from medilink import (buscar_paciente, crear_paciente, buscar_primer_dia,
                       buscar_slots_dia, crear_cita, listar_citas_paciente,
@@ -891,6 +892,43 @@ async def api_send_template(
     await send_whatsapp_template(phone, template_name, body_params=body_params)
     log_message(phone, "out", f"[template: {template_name}] {', '.join(body_params)}", "HUMAN_TAKEOVER", canal="whatsapp")
     return {"ok": True}
+
+
+@router.post("/admin/api/send-confirmation/{phone}")
+async def api_send_confirmation(phone: str, _=Depends(require_admin)):
+    """Dispara manualmente la plantilla `recordatorio_cita` para la próxima cita
+    agendada por el bot. Marca reminder_sent=1 para evitar duplicado del cron 24h."""
+    from messaging import send_whatsapp_template
+    from reminders import _fmt_fecha_display, _fmt_hora, _nombre_corto
+
+    cita = get_next_cita_bot_by_phone(phone)
+    if not cita:
+        raise HTTPException(404, "No hay cita futura agendada por el bot para este número")
+
+    nombre = _nombre_corto(cita.get("paciente_nombre")) or "paciente"
+    fecha_display = _fmt_fecha_display(cita["fecha"])
+    hora = _fmt_hora(cita["hora"])
+    modalidad = (cita.get("modalidad") or "particular").capitalize()
+    id_cita = cita["id_cita"]
+
+    await send_whatsapp_template(
+        phone,
+        "recordatorio_cita",
+        body_params=[nombre, cita["especialidad"], cita["profesional"],
+                     fecha_display, hora, modalidad],
+        button_payloads=[f"cita_confirm:{id_cita}",
+                         f"cita_reagendar:{id_cita}",
+                         f"cita_cancelar:{id_cita}"],
+    )
+    log_message(phone, "out",
+                f"[Recordatorio manual] {cita['especialidad']} con {cita['profesional']} — {fecha_display} a las {hora}",
+                "HUMAN_TAKEOVER", canal="whatsapp")
+    mark_reminder_sent(cita["id"])
+    log_event(phone, "recordatorio_manual", {"id_cita": id_cita})
+    return {"ok": True, "cita": {
+        "especialidad": cita["especialidad"], "profesional": cita["profesional"],
+        "fecha": fecha_display, "hora": hora, "nombre": nombre,
+    }}
 
 
 # ── Notas internas ───────────────────────────────────────────────────────────

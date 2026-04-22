@@ -12,6 +12,7 @@ import logging
 import os
 import sqlite3
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from pathlib import Path
 
 log = logging.getLogger("session")
@@ -854,6 +855,25 @@ def mark_reminder_2h_sent(cita_id: int):
     with _conn() as conn:
         conn.execute("UPDATE citas_bot SET reminder_2h_sent=1 WHERE id=?", (cita_id,))
         conn.commit()
+
+
+def get_next_cita_bot_by_phone(phone: str) -> dict | None:
+    """Próxima cita futura (fecha >= hoy CLT) agendada por el bot para un teléfono.
+    Incluye paciente_nombre resolviendo por fallback a contact_profiles."""
+    hoy = datetime.now(ZoneInfo("America/Santiago")).date().isoformat()
+    with _conn() as conn:
+        row = conn.execute(
+            """SELECT c.*,
+                      CASE WHEN c.paciente_nombre != '' THEN c.paciente_nombre
+                           ELSE cp.nombre END AS paciente_nombre,
+                      cp.nombre AS phone_owner
+               FROM citas_bot c
+               LEFT JOIN contact_profiles cp ON c.phone = cp.phone
+               WHERE c.phone=? AND c.fecha >= ?
+               ORDER BY c.fecha ASC, c.hora ASC LIMIT 1""",
+            (phone, hoy),
+        ).fetchone()
+        return dict(row) if row else None
 
 
 def get_cita_bot_by_id_cita(id_cita: str, phone: str = None) -> dict | None:
