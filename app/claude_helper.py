@@ -1098,7 +1098,7 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
      "Escribe *1* o *agendar cardiología* para reservar hora."),
     (("otorrino",),
      "Sí, tenemos *otorrinolaringólogo*: Dr. Manuel Borrego 👂\n\n"
-     "💰 Consulta particular: $40.000\n\n"
+     "💰 Consulta particular: $35.000\n\n"
      "Escribe *1* o *agendar otorrinolaringología* para reservar hora."),
     (("ginecolog",),
      "Sí, tenemos *ginecólogo*: Dr. Tirso Rejón 👩‍⚕️\n\n"
