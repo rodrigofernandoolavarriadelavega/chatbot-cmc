@@ -15,7 +15,14 @@ META_API_URL = f"https://graph.facebook.com/v22.0/{META_PHONE_NUMBER_ID}/message
 
 
 async def _post_meta(payload: dict) -> str | None:
-    """POST a Meta Cloud API con 1 reintento. Returns wamid if available."""
+    """POST a Meta Cloud API con 1 reintento. Returns wamid if available.
+
+    Errores 4xx (cliente) no se reintentan — reintentar no cambia el resultado.
+    Errores de "ventana 24h cerrada" (code 131047, 131052, "re-engagement") se
+    loguean como INFO: es comportamiento esperado cuando el destinatario no ha
+    escrito al bot recientemente; no es un fallo que el operador deba revisar.
+    """
+    WINDOW_CLOSED_CODES = {131047, 131052, 131051, 131045, 131042, 131030}
     for attempt in range(2):
         try:
             async with httpx.AsyncClient(timeout=10) as client:
@@ -33,7 +40,31 @@ async def _post_meta(payload: dict) -> str | None:
                 except Exception:
                     pass
                 return None
-            log.error("Meta API intento %d → %s: %s", attempt + 1, r.status_code, r.text[:200])
+            # Parse error code/message
+            err_code = None
+            err_msg = ""
+            try:
+                err = r.json().get("error", {}) or {}
+                err_code = err.get("code")
+                err_msg = (err.get("message") or err.get("error_user_msg") or "")[:200]
+            except Exception:
+                err_msg = r.text[:200]
+            is_window_closed = (
+                err_code in WINDOW_CLOSED_CODES
+                or "re-engagement" in err_msg.lower()
+                or "outside the allowed window" in err_msg.lower()
+                or "24 hour" in err_msg.lower()
+                or "24-hour" in err_msg.lower()
+            )
+            if is_window_closed:
+                log.info("Meta API: ventana 24h cerrada para %s (code=%s) — mensaje omitido",
+                         payload.get("to", "?"), err_code)
+                return None
+            # 4xx no se reintentan; 5xx sí
+            if 400 <= r.status_code < 500:
+                log.error("Meta API → %s (no-retry): %s", r.status_code, err_msg)
+                return None
+            log.error("Meta API intento %d → %s: %s", attempt + 1, r.status_code, err_msg)
         except (httpx.TimeoutException, httpx.NetworkError) as e:
             log.error("Meta API intento %d error red: %s", attempt + 1, e)
         if attempt == 0:
