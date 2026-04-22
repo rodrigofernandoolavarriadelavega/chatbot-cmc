@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profesionales CMC — Permisos Bot</title>
+  <style>
+    :root {
+      --azul: #0f4c81;
+      --azul-suave: #eaf3fb;
+      --verde: #1b9e4b;
+      --rojo: #c62828;
+      --gris: #e5e8ed;
+      --fondo: #f6f8fb;
+      --texto: #1d2330;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
+    body { background: var(--fondo); color: var(--texto); padding: 24px; }
+    header { max-width: 1400px; margin: 0 auto 24px; display: flex; justify-content: space-between; align-items: center; }
+    header h1 { color: var(--azul); font-size: 22px; font-weight: 600; }
+    header .subtitle { color: #647084; font-size: 13px; margin-top: 4px; }
+    .status-bar { display: flex; gap: 12px; align-items: center; font-size: 14px; }
+    .status-bar .saved { color: var(--verde); font-weight: 500; }
+    .status-bar .dirty { color: var(--rojo); font-weight: 500; }
+    button.primary {
+      background: var(--azul); color: white; border: none; padding: 10px 18px;
+      border-radius: 6px; font-weight: 500; cursor: pointer; font-size: 14px;
+    }
+    button.primary:hover { background: #0c3d68; }
+    button.primary:disabled { background: #a0b3c4; cursor: not-allowed; }
+    .container { max-width: 1400px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); overflow: hidden; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      background: var(--azul-suave); color: var(--azul); font-weight: 600;
+      padding: 14px 12px; text-align: center; font-size: 13px;
+      border-bottom: 2px solid var(--azul); position: sticky; top: 0; z-index: 2;
+    }
+    thead th:first-child { text-align: left; min-width: 280px; }
+    thead th .especialidad { display: block; font-size: 11px; font-weight: 400; color: #5a6e85; margin-top: 2px; }
+    thead th .phone { display: block; font-size: 10px; font-weight: 400; color: #8292a8; font-family: monospace; margin-top: 2px; }
+    tbody td { padding: 10px 12px; border-bottom: 1px solid var(--gris); text-align: center; }
+    tbody td.feature {
+      text-align: left; font-size: 13px; font-weight: 500;
+      background: #fafbfd; color: var(--texto);
+    }
+    tbody td.feature .desc { display: block; font-weight: 400; font-size: 11px; color: #7a8a9e; margin-top: 2px; }
+    tbody tr:hover { background: #f3f6fa; }
+    tbody tr.category-header td {
+      background: #e9eef5; font-weight: 600; color: var(--azul);
+      font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;
+      padding: 8px 12px;
+    }
+    input[type="checkbox"] {
+      width: 22px; height: 22px; cursor: pointer; accent-color: var(--azul);
+    }
+    .legend {
+      max-width: 1400px; margin: 16px auto 0; font-size: 12px; color: #647084;
+      padding: 12px 16px; background: var(--azul-suave); border-radius: 6px;
+    }
+    .legend strong { color: var(--azul); }
+    @media (max-width: 720px) {
+      thead th:first-child { min-width: 200px; }
+      tbody td.feature { font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Profesionales CMC — Permisos Bot</h1>
+    <div class="subtitle">Qué puede hacer el bot por cada profesional · activar/desactivar toggles y guardar.</div>
+  </div>
+  <div class="status-bar">
+    <span id="status" class="saved">Cargando…</span>
+    <button id="save-btn" class="primary" disabled>Guardar cambios</button>
+  </div>
+</header>
+
+<div class="container">
+  <div class="table-wrap">
+    <table id="grid">
+      <thead>
+        <tr id="head-row"><th>Capacidad</th></tr>
+      </thead>
+      <tbody id="body"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="legend">
+  <strong>Cómo funciona:</strong> cada columna es un profesional, cada fila una capacidad del bot profesional CMC.
+  Activa el checkbox para habilitarla. Los cambios se guardan en el servidor al hacer clic en "Guardar cambios"
+  y se aplican al siguiente mensaje que el profesional envíe al bot (+56966610737).
+</div>
+
+<script>
+const TOKEN = new URLSearchParams(location.search).get("token") || "cmc_admin_2026";
+
+// ── Catálogo de capacidades del bot profesional ─────────────────────────────
+const FEATURES = [
+  { cat: "Acceso general" },
+  { id: "wa_access",          label: "Acceso WhatsApp profesional",          desc: "Puede escribirle al bot +56966610737 y recibir menú de doctor_mode." },
+  { id: "admin_commands",     label: "Comandos admin (/status, /reporte)",  desc: "Acceso a comandos /status, /reporte, /health, /estado desde WhatsApp." },
+  { id: "bypass_stop",        label: "Bypass STOP/optout",                   desc: "No le aplican reglas de STOP, detener, baja (es staff)." },
+
+  { cat: "Recordatorios de sus citas" },
+  { id: "resumen_precita",    label: "Resumen pre-cita (10 min antes)",      desc: "Le llega un resumen del paciente justo antes de atenderlo." },
+  { id: "reporte_08",         label: "Reporte progreso 08:00",               desc: "Resumen del día al inicio de la mañana." },
+  { id: "reporte_12",         label: "Reporte progreso 12:00",               desc: "Resumen al mediodía." },
+  { id: "reporte_16",         label: "Reporte progreso 16:00",               desc: "Resumen a media tarde." },
+  { id: "reporte_20",         label: "Reporte progreso 20:00",               desc: "Resumen al cierre del día." },
+
+  { cat: "Inteligencia clínica" },
+  { id: "asistente_clinico",  label: "Modo asistente clínico",               desc: "Preventivos por edad/sexo, guías GES por patología (DM2, HTA, asma, EPOC…)." },
+  { id: "modo_agente",        label: "Modo agente (bot agenda por el doctor)", desc: "El doctor puede pedir agenda por WhatsApp y el bot gestiona." },
+  { id: "consultas_claude",   label: "Consultas clínicas Claude",            desc: "Preguntas libres tipo 'dosis de metformina en ERC' responde Claude médico." },
+
+  { cat: "Alertas y métricas" },
+  { id: "alertas_tecnicas",   label: "Alertas técnicas (Medilink, bot)",     desc: "Notificaciones cuando Medilink se cae, pacientes esperando, etc." },
+  { id: "nps_detalle",        label: "NPS/Fidelización detallada",           desc: "Acceso a métricas de satisfacción por profesional y por paciente." },
+  { id: "dashboard_admin",    label: "Dashboard admin completo",              desc: "Acceso al panel v2 con todas las conversaciones y controles." },
+];
+
+// ── Staff (orden — Dr. Olavarría primero) ───────────────────────────────────
+const STAFF = [
+  { phone: "56987834148", nombre: "Dr. Olavarría",            especialidad: "Medicina General · Director" },
+  { phone: "56974559977", nombre: "Dr. Andrés Abarca",        especialidad: "Medicina General" },
+  { phone: "56938738734", nombre: "Dra. Javiera Burgos",      especialidad: "Odontología General" },
+  { phone: "56941529674", nombre: "Ps. Juan Pablo Rodríguez", especialidad: "Psicología Adulto" },
+  { phone: "56992201931", nombre: "T.M. David Pardo",         especialidad: "Ecografía" },
+];
+
+// ── Permisos por defecto ────────────────────────────────────────────────────
+const DEFAULT_PERMS = {
+  // Dr. Olavarría (director) — todo
+  "56987834148": Object.fromEntries(FEATURES.filter(f => f.id).map(f => [f.id, true])),
+  // Abarca (MG) — acceso, pre-cita, clínico, agente, Claude, alertas
+  "56974559977": {
+    wa_access: true, admin_commands: false, bypass_stop: true,
+    resumen_precita: true, reporte_08: true, reporte_12: false, reporte_16: true, reporte_20: false,
+    asistente_clinico: true, modo_agente: false, consultas_claude: true,
+    alertas_tecnicas: false, nps_detalle: false, dashboard_admin: false,
+  },
+  // Burgos — solo lo básico
+  "56938738734": {
+    wa_access: true, admin_commands: false, bypass_stop: true,
+    resumen_precita: true, reporte_08: true, reporte_12: false, reporte_16: true, reporte_20: false,
+    asistente_clinico: false, modo_agente: false, consultas_claude: false,
+    alertas_tecnicas: false, nps_detalle: false, dashboard_admin: false,
+  },
+  // Juan Pablo
+  "56941529674": {
+    wa_access: true, admin_commands: false, bypass_stop: true,
+    resumen_precita: true, reporte_08: true, reporte_12: false, reporte_16: true, reporte_20: false,
+    asistente_clinico: false, modo_agente: false, consultas_claude: false,
+    alertas_tecnicas: false, nps_detalle: false, dashboard_admin: false,
+  },
+  // David Pardo
+  "56992201931": {
+    wa_access: true, admin_commands: false, bypass_stop: true,
+    resumen_precita: true, reporte_08: false, reporte_12: false, reporte_16: false, reporte_20: false,
+    asistente_clinico: false, modo_agente: false, consultas_claude: false,
+    alertas_tecnicas: false, nps_detalle: false, dashboard_admin: false,
+  },
+};
+
+let permsCurrent = {};
+let dirty = false;
+
+function setStatus(text, klass) {
+  const el = document.getElementById("status");
+  el.textContent = text;
+  el.className = klass || "saved";
+}
+function markDirty() {
+  dirty = true;
+  setStatus("Cambios sin guardar", "dirty");
+  document.getElementById("save-btn").disabled = false;
+}
+
+async function loadPermisos() {
+  try {
+    const r = await fetch(`/admin/api/profesionales-permisos?token=${encodeURIComponent(TOKEN)}`);
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const data = await r.json();
+    permsCurrent = data || {};
+  } catch (e) {
+    console.warn("No se pudo cargar permisos, usando defaults:", e);
+    permsCurrent = JSON.parse(JSON.stringify(DEFAULT_PERMS));
+  }
+  // Completar phones que falten con defaults
+  for (const s of STAFF) {
+    if (!permsCurrent[s.phone]) {
+      permsCurrent[s.phone] = DEFAULT_PERMS[s.phone] || {};
+    }
+  }
+  render();
+  setStatus("✔ Cargado", "saved");
+}
+
+function render() {
+  // Header
+  const head = document.getElementById("head-row");
+  head.innerHTML = '<th>Capacidad</th>';
+  for (const s of STAFF) {
+    const th = document.createElement("th");
+    th.innerHTML = `${s.nombre}<span class="especialidad">${s.especialidad}</span><span class="phone">+${s.phone}</span>`;
+    head.appendChild(th);
+  }
+  // Body
+  const body = document.getElementById("body");
+  body.innerHTML = "";
+  for (const f of FEATURES) {
+    const tr = document.createElement("tr");
+    if (f.cat) {
+      tr.className = "category-header";
+      const td = document.createElement("td");
+      td.colSpan = 1 + STAFF.length;
+      td.textContent = f.cat;
+      tr.appendChild(td);
+      body.appendChild(tr);
+      continue;
+    }
+    const tdLabel = document.createElement("td");
+    tdLabel.className = "feature";
+    tdLabel.innerHTML = `${f.label}<span class="desc">${f.desc}</span>`;
+    tr.appendChild(tdLabel);
+    for (const s of STAFF) {
+      const td = document.createElement("td");
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = !!(permsCurrent[s.phone] && permsCurrent[s.phone][f.id]);
+      cb.dataset.phone = s.phone;
+      cb.dataset.feature = f.id;
+      cb.addEventListener("change", (ev) => {
+        const p = ev.target.dataset.phone;
+        const ft = ev.target.dataset.feature;
+        permsCurrent[p] = permsCurrent[p] || {};
+        permsCurrent[p][ft] = ev.target.checked;
+        markDirty();
+      });
+      td.appendChild(cb);
+      tr.appendChild(td);
+    }
+    body.appendChild(tr);
+  }
+}
+
+async function save() {
+  const btn = document.getElementById("save-btn");
+  btn.disabled = true;
+  setStatus("Guardando…", "saved");
+  try {
+    const r = await fetch(`/admin/api/profesionales-permisos?token=${encodeURIComponent(TOKEN)}`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(permsCurrent),
+    });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    dirty = false;
+    setStatus("✔ Guardado", "saved");
+  } catch (e) {
+    setStatus("✖ Error: " + e.message, "dirty");
+    btn.disabled = false;
+  }
+}
+
+document.getElementById("save-btn").addEventListener("click", save);
+window.addEventListener("beforeunload", (e) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+
+loadPermisos();
+</script>
+</body>
+</html>

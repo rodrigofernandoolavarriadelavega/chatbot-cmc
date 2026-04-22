@@ -340,6 +340,53 @@ def admin_staff_phones(_: str = Depends(require_admin)):
     return STAFF_PHONES
 
 
+# ── Permisos del bot profesional por profesional ────────────────────────────
+# Persistencia en JSON plano (solo lo edita el director del CMC desde el
+# dashboard /profesionalescmc; no requiere DB).
+import json as _json_perm
+from pathlib import Path as _Path_perm
+_PERMS_FILE = _Path_perm(__file__).parent.parent / "data" / "profesionales_permisos.json"
+
+
+def _load_perms() -> dict:
+    try:
+        if _PERMS_FILE.exists():
+            return _json_perm.loads(_PERMS_FILE.read_text(encoding="utf-8"))
+    except Exception as _e_load:
+        log.warning("profesionales_permisos: falla al leer %s: %s", _PERMS_FILE, _e_load)
+    return {}
+
+
+def _save_perms(data: dict) -> None:
+    _PERMS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    _PERMS_FILE.write_text(_json_perm.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+@router.get("/admin/api/profesionales-permisos")
+def admin_profesionales_permisos(_: str = Depends(require_admin)):
+    """Retorna dict {phone: {feature_id: bool}} con permisos actuales."""
+    return _load_perms()
+
+
+@router.post("/admin/api/profesionales-permisos")
+async def admin_profesionales_permisos_set(request: Request, _: str = Depends(require_admin)):
+    """Guarda el dict completo de permisos. Body: {phone: {feature: bool}}."""
+    body = await request.json()
+    if not isinstance(body, dict):
+        return {"ok": False, "error": "body debe ser dict"}
+    _save_perms(body)
+    log.info("profesionales_permisos actualizado: %d profesionales", len(body))
+    return {"ok": True, "profesionales": len(body)}
+
+
+def get_permiso(phone: str, feature: str, default: bool = False) -> bool:
+    """Helper para que otros módulos (flows, doctor_alerts) consulten permisos.
+    Uso: `if get_permiso("56987834148", "asistente_clinico"): ...`
+    """
+    perms = _load_perms()
+    return bool(perms.get(phone, {}).get(feature, default))
+
+
 @router.get("/admin/api/metrics")
 def admin_metrics(_: str = Depends(require_admin)):
     return get_metricas(dias=30)

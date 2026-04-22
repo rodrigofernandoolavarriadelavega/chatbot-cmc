@@ -329,6 +329,7 @@ _HEATMAP_COMUNAS_HTML = (_TEMPLATE_DIR / "heatmap_comunas.html").read_text(encod
 _HEATMAP_DIRECCIONES_HTML = (_TEMPLATE_DIR / "heatmap_direcciones.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "heatmap_direcciones.html").exists() else ""
 _SEO_DASHBOARD_HTML = (_TEMPLATE_DIR / "seo_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "seo_dashboard.html").exists() else ""
 _PRIVACIDAD_HTML = (_TEMPLATE_DIR / "privacidad.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "privacidad.html").exists() else ""
+_PROFESIONALES_CMC_HTML = (_TEMPLATE_DIR / "profesionales_cmc.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "profesionales_cmc.html").exists() else ""
 
 
 # ── Endpoints ────────────────────────────────────────────────────────────────
@@ -532,6 +533,12 @@ def seo_dashboard_page():
 def proyectos2026_page():
     """Visualización Canvas 2D de CMC y Meulen como proyectos hermanos."""
     return _PROYECTOS2026_HTML
+
+
+@app.get("/profesionalescmc", response_class=HTMLResponse)
+def profesionales_cmc_page():
+    """Dashboard de permisos del bot profesional CMC por profesional."""
+    return _PROFESIONALES_CMC_HTML
 
 
 # ── Webhooks ─────────────────────────────────────────────────────────────────
