@@ -1164,6 +1164,24 @@ def _local_faq_fallback(mensaje: str) -> str | None:
     tl = mensaje.lower()
     tl_na = ''.join(c for c in unicodedata.normalize('NFD', tl)
                     if unicodedata.category(c) != 'Mn')
+    # ── Desambiguación "electro" (ECG vs electroterapia) ──
+    # Caso real 2026-04-22 (56984166850): "Hacen electro?" → bot respondió
+    # electroterapia kine, paciente queria ECG cardiología. Si el mensaje
+    # menciona "electro" pero NO da contexto claro (cardiograma/terapia/etc),
+    # pedir aclaración en vez de adivinar.
+    if "electro" in tl_na and not any(x in tl_na for x in (
+        "cardiograma", "cardiogram", "terapia", "tratamiento",
+        "kinesio", "kine", "ecg", "ekg", "corazon", "cardio",
+        "rehab", "muscul", "lesion",
+    )):
+        return (
+            "¿A qué *electro* te refieres? 🤔\n\n"
+            "1️⃣ *Electrocardiograma (ECG)* — registro eléctrico del corazón "
+            "(con cardiólogo). $20.000\n"
+            "2️⃣ *Electroterapia* — parte del tratamiento de kinesiología "
+            "(dolor muscular, rehabilitación). $7.830 bono Fonasa · $15.000 particular\n\n"
+            "Responde *1* o *2* para que te ayude a agendar."
+        )
     for keywords, respuesta in _FAQ_LOCAL_FALLBACKS:
         if all(k in tl_na for k in keywords):
             return respuesta
@@ -1276,8 +1294,11 @@ async def classify_with_context(mensaje: str, state: str, session_data: dict) ->
         "INTENCIONES (elige UNA):\n"
         "1. responder_prompt — el paciente responde al prompt del estado actual\n"
         "   (SI/NO esperado, hora, RUT, día, número de opción, nombre).\n"
-        "2. preguntar_horario — pregunta qué días/horas atiende el profesional del flujo\n"
-        "   (ej: 'solo los miércoles?', 'qué días atiende?', 'atiende otros días?').\n"
+        "2. preguntar_horario — pregunta qué días/horas atiende un profesional\n"
+        "   (del flujo O de OTRO que el paciente mencione).\n"
+        "   Ejemplos: 'solo los miércoles?', 'qué días atiende?', 'atiende otros días?',\n"
+        "   'el Dr. Márquez aún trabaja ahí?', '¿sigue atendiendo la Dra. X?',\n"
+        "   'todavía trabaja el Dr. Y?'.\n"
         "3. preguntar_pago — pregunta sobre forma/momento/monto de pago\n"
         "   (ej: 'hay que cancelar al tiro?', 'cuánto sale?', 'aceptan isapre?').\n"
         "4. preguntar_info — pregunta dirección, teléfono, FONASA, convenios, horarios del centro.\n"

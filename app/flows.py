@@ -1199,11 +1199,28 @@ def _es_respuesta_obvia_al_prompt(txt: str, tl: str, state: str, data: dict) -> 
     return False
 
 
-async def _responder_pregunta_horario(phone: str, state: str, data: dict) -> str:
-    """Responde orgánicamente los días de atención del profesional del flujo."""
+async def _responder_pregunta_horario(phone: str, state: str, data: dict, txt: str = "") -> str:
+    """Responde orgánicamente los días de atención del profesional del flujo,
+    O del profesional que el paciente mencione en el mensaje (si distinto).
+
+    Caso real 2026-04-22 (56932644508): en WAIT_SLOT con Abarca, paciente pregunta
+    "¿el dr Márquez aún trabaja ahí?" — debe responder con días de Márquez,
+    no de Abarca.
+    """
     prof_id = data.get("prof_sugerido_id")
+
+    # Override: si el texto menciona a otro profesional, usar ese
+    if txt:
+        key_mencionado = _detectar_apellido_profesional(txt)
+        if key_mencionado:
+            from medilink import _ids_para_especialidad as _ids_chk
+            ids_mencionados = _ids_chk(key_mencionado)
+            if ids_mencionados:
+                # Si es key específica de profesional (única ID), usar esa
+                if len(ids_mencionados) == 1:
+                    prof_id = ids_mencionados[0]
+
     if not prof_id:
-        # Sin profesional específico — responder genérico
         return (
             "Los días de atención varían según el profesional. "
             "Si quieres te muestro horarios disponibles por día — "
@@ -1226,7 +1243,9 @@ async def _responder_pregunta_horario(phone: str, state: str, data: dict) -> str
         else:
             dias_str = ", ".join(nombres[:-1]) + " y " + nombres[-1]
         prof_nombre = PROFESIONALES.get(int(prof_id), {}).get("nombre", "El profesional")
-        return f"{prof_nombre} atiende los *{dias_str}* 📅"
+        especialidad = PROFESIONALES.get(int(prof_id), {}).get("especialidad", "")
+        esp_sufijo = f" de *{especialidad}*" if especialidad else ""
+        return f"Sí, {prof_nombre}{esp_sufijo} atiende los *{dias_str}* 📅"
     except Exception as e:
         log.warning("pregunta_horario falló: %s", e)
         return "Los días de atención dependen del profesional. Te puedo mostrar horarios disponibles."
@@ -1291,7 +1310,7 @@ async def _pre_router_wait(phone: str, txt: str, tl: str, state: str, data: dict
     # ── Preguntas paralelas: responder y recordar prompt ──
     if action == "answer_and_continue":
         if tag == "preguntar_horario":
-            resp = await _responder_pregunta_horario(phone, state, data)
+            resp = await _responder_pregunta_horario(phone, state, data, txt=txt)
         elif tag == "preguntar_pago":
             resp = _preguntar_pago_respuesta()
         elif tag == "preguntar_info":
