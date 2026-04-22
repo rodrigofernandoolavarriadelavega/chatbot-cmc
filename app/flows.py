@@ -2912,9 +2912,16 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             log_event(phone, "motivo_seleccionado", {"motivo": "otra_esp"})
             reset_session(phone)
             return await _iniciar_agendar(phone, {}, None)
+        if txt == "cambiar_datos":
+            # Botón "✏️ Cambiar algo" viene con sesión stale en WAIT_SLOT.
+            # Reprocesar `cambiar_datos` como texto en IDLE no matchea nada
+            # y cae en intent detection (resultados erráticos: FAQ, estética).
+            # Fix: arrancar flujo de agendar desde cero.
+            reset_session(phone)
+            return await _iniciar_agendar(phone, {}, None)
         if txt in (
             "accion_cambiar", "accion_mis_citas", "accion_otro",
-            "menu_volver", "cambiar_datos"
+            "menu_volver"
         ):
             reset_session(phone)
             return await handle_message(phone, txt, get_session(phone))
