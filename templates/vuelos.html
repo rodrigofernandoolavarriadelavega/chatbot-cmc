@@ -973,16 +973,21 @@
     transform: scale(1.06);
   }
   .gallery-img {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.8s ease;
+    transition: transform 0.9s cubic-bezier(0.2, 0.9, 0.3, 1), filter 0.5s ease;
     display: block;
+    z-index: 2;
+    filter: saturate(0.95);
   }
   .gallery-fallback {
     position: absolute;
     inset: 0;
-    background: var(--blush);
+    z-index: 1;
+    background: linear-gradient(135deg, var(--blush) 0%, var(--peach) 100%);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -990,25 +995,37 @@
     padding: 20px;
   }
   .gallery-fallback span {
-    font-family: 'Playfair Display', serif;
-    font-style: italic;
-    font-size: 24px;
-    color: var(--taupe);
+    font-family: 'Parisienne', 'Playfair Display', cursive;
+    font-size: 32px;
+    color: var(--rose-dark);
   }
   .gallery-overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, rgba(61,44,44,0) 40%, rgba(61,44,44,0.65) 100%);
+    z-index: 3;
+    background: linear-gradient(180deg, rgba(61,44,44,0) 35%, rgba(61,44,44,0.75) 100%);
     display: flex;
-    align-items: flex-end;
-    padding: 20px;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding: 22px 20px 24px;
+  }
+  .gallery-country {
+    color: rgba(255,255,255,0.85);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
   }
   .gallery-city {
     color: var(--white);
     font-family: 'Playfair Display', serif;
-    font-size: 22px;
+    font-style: italic;
+    font-size: 26px;
     font-weight: 600;
     letter-spacing: 0.01em;
+    line-height: 1;
   }
 
   /* ---------- FOOTER ---------- */
@@ -1486,7 +1503,10 @@
         '<div class="gallery-fallback"><span>' + escapeHtml(d.city) + '</span></div>' +
         '<img class="gallery-img" src="' + d.img + '" alt="' + escapeHtml(d.city) + '" loading="lazy" ' +
           'onerror="this.style.display=\'none\'" />' +
-        '<div class="gallery-overlay"><span class="gallery-city">' + escapeHtml(d.city) + '</span></div>' +
+        '<div class="gallery-overlay">' +
+          (d.country ? '<span class="gallery-country">' + escapeHtml(d.country) + '</span>' : '') +
+          '<span class="gallery-city">' + escapeHtml(d.city) + '</span>' +
+        '</div>' +
       '</div>'
     )).join('');
     // reveal on scroll
