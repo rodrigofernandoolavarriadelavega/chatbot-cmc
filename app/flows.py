@@ -5224,21 +5224,83 @@ def _normalizar_para_apellido(txt: str) -> str:
 
 # Precomputar apellidos normalizados una sola vez (optimización)
 _APELLIDOS_NORM = [(re.sub(r"[^a-zñ]+", "", a.lower()), key) for a, key in _APELLIDOS_PROFESIONAL]
+# Filtra aliases < 2 chars o conocidos como problemáticos (matchean dentro de
+# palabras comunes sin aportar valor porque hay variantes largas).
+# Casos reales observados en producción 2026-04-21/22:
+#   "au"   → traumatólogo, paula, autos → falso positivo implantología
+#   "vale" → "vale el bono", "vale la pena" → falso positivo estética facial
+#   "pao"  → "por", "pao-r", "sapao" → falso positivo masoterapia
+#   "fer"  → "conferencia", "preferir", "feria", "oferta" → FP endodoncia
+#   "armi" → "ecotomografia mamaria" tiene "mamari" pero no es el caso;
+#            revisar si existe, quitarlo si sí
+_APELLIDOS_BLACKLIST = {"au", "vale", "pao", "fer", "armi"}
+_APELLIDOS_NORM = [(a, k) for (a, k) in _APELLIDOS_NORM if a not in _APELLIDOS_BLACKLIST]
+
+
+def _normalizar_para_apellido_ws(txt: str) -> str:
+    """Como _normalizar_para_apellido pero PRESERVA espacios para permitir
+    matching con word boundary en aliases cortos."""
+    if not txt:
+        return ""
+    import unicodedata
+    t = unicodedata.normalize("NFKC", txt)
+    t = re.sub(r"[\u200b-\u200f\u2060\ufeff]", "", t)
+    t = t.lower()
+    t = unicodedata.normalize("NFD", t)
+    t = "".join(c for c in t if not unicodedata.combining(c))
+    t = re.sub(r"[^a-zñ0-9\s]+", " ", t)
+    t = re.sub(r"\s+", " ", t).strip()
+    return t
+
+
+# Especialidades que el CMC NO atiende — si el texto las menciona, NO matchear
+# apellidos (evita que aliases cortos tipo "au" de implantología colisionen
+# dentro de palabras como "traumatólogo").
+_ESPECIALIDADES_NO_DISPONIBLES_NORM = {
+    "traumatolog", "traumatologo", "traumatologa", "traumatologia",
+    "pediatra", "pediatria",
+    "dermatolog", "dermatologo", "dermatologa", "dermatologia",
+    "urologo", "urologa", "urologia",
+    "oftalmolog", "oftalmologo", "oftalmologa", "oftalmologia",
+    "neurolog", "neurologo", "neurologa", "neurologia",
+    "psiquiatra",
+    "reumatolog", "reumatologo", "reumatologa", "reumatologia",
+}
 
 
 def _detectar_apellido_profesional(txt: str) -> str | None:
     """Si el texto menciona un apellido de profesional, devuelve la key de
     ESPECIALIDADES_MAP correspondiente. Normaliza el input para tolerar
     underscores, emojis, dígitos insertados, tildes, fullwidth, etc.
+
+    Reglas de matching:
+    - Hard-block: si el texto menciona especialidad NO disponible (traumatólogo,
+      pediatra, etc.), no matchear apellidos.
+    - Aliases >=5 chars: substring match en versión colapsada (tolera "M4rquez",
+      "márq_uez", etc.).
+    - Aliases <5 chars: word-boundary regex en versión con espacios (evita
+      "vale" matchando en "vale el bono", "pao" en "por", etc.).
     """
     if not txt:
         return None
-    norm = _normalizar_para_apellido(txt)
-    if not norm:
+    norm_collapsed = _normalizar_para_apellido(txt)
+    norm_ws = _normalizar_para_apellido_ws(txt)
+    if not norm_collapsed:
         return None
+    # Hard-block de especialidades no disponibles
+    for esp_no in _ESPECIALIDADES_NO_DISPONIBLES_NORM:
+        if esp_no in norm_collapsed:
+            return None
     for apellido_norm, key in _APELLIDOS_NORM:
-        if apellido_norm and apellido_norm in norm:
-            return key
+        if not apellido_norm:
+            continue
+        if len(apellido_norm) >= 5:
+            if apellido_norm in norm_collapsed:
+                return key
+        else:
+            # Alias corto — exigir word-boundary
+            if re.search(r"\b" + re.escape(apellido_norm) + r"\b", norm_ws):
+                return key
     return None
 
 
