@@ -15,7 +15,7 @@ from messaging import send_whatsapp, send_instagram, send_messenger, edit_whatsa
 from session import (get_session, reset_session, save_session, get_metricas,
                      log_message, get_messages, get_conversations, log_event,
                      update_message_text_by_wamid, get_message_by_wamid,
-                     get_tags, save_tag, delete_tag, search_messages,
+                     get_tags, save_tag, delete_tag, get_tags_summary, search_messages,
                      get_kine_tracking_all, save_kine_tracking,
                      get_ortodoncia_pacientes, set_ortodoncia_tipo, get_ortodoncia_sync_max_fecha,
                      get_waitlist_all, cancel_waitlist,
@@ -612,6 +612,16 @@ def admin_especialidades(_: str = Depends(require_admin)):
 
 
 # ── Tags ─────────────────────────────────────────────────────────────────────
+
+@router.get("/admin/api/tags/summary")
+def admin_tags_summary(_: str = Depends(require_admin)):
+    """Agregado de tags en uso: counts por tag + mapa phone→tags.
+
+    Alimenta los pills dinámicos de filtro en la bandeja admin_v2.
+    Debe ir antes de /tags/{phone} para que FastAPI no capture 'summary' como phone.
+    """
+    return get_tags_summary()
+
 
 @router.get("/admin/api/tags/{phone}")
 def admin_get_tags(phone: str, _: str = Depends(require_admin)):

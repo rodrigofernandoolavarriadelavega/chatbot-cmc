@@ -913,6 +913,8 @@ html, body{width:100%; max-width:100%; overflow-x:hidden}
       <button class="inbox-tab" data-filter="waitlist">Lista de espera <span class="badge" id="tabWaitlistN">0</span></button>
       <button class="inbox-tab" data-filter="ecografias">Ecografías <span class="badge" id="tabEcografiasN">0</span></button>
       <button class="inbox-tab" data-filter="today">Hoy</button>
+      <span id="dynTagTabs" style="display:contents"></span>
+      <datalist id="tagSuggestions"></datalist>
       <select class="inbox-tab inbox-tab-select" id="profSelect" aria-label="Filtrar por profesional CMC">
         <option value="">Profesionales CMC ▾</option>
         <option value="Dr. Rodrigo Olavarría">Dr. Rodrigo Olavarría — Medicina General</option>
@@ -1113,6 +1115,8 @@ let pendingFile   = null;
 let inboxFilter   = "all";
 let profFilter    = "";
 let searchTerm    = "";
+let tagsSummary   = {counts:{}, by_phone:{}};
+const PRESET_TAGS = ["pendiente agendar","pendiente confirmar","moroso","VIP","seguimiento","control mensual"];
 let soundOn       = localStorage.getItem("v2_sound") !== "off";
 let notifOn       = localStorage.getItem("v2_notif") === "on";
 let inboxTimer, msgsTimer, notesDebounce;
@@ -1210,12 +1214,15 @@ function channelOf(phone){
  * ========================================================================= */
 async function loadInbox(){
   try {
-    const [convs, unread] = await Promise.all([
+    const [convs, unread, tagSum] = await Promise.all([
       api("/admin/api/conversations"),
       api("/admin/api/unread-counts").catch(() => ({})),
+      api("/admin/api/tags/summary").catch(() => ({counts:{}, by_phone:{}})),
     ]);
     conversations = convs || [];
     unreadMap = unread || {};
+    tagsSummary = tagSum || {counts:{}, by_phone:{}};
+    renderDynamicTagTabs();
     renderInbox();
     updateKpis();
   } catch (e) {
@@ -1250,6 +1257,10 @@ function filteredConvs(){
   if (inboxFilter === "waiting")  list = list.filter(c => (c.msgs_sin_respuesta||0) > 0 || c.last_dir === "in");
   if (inboxFilter === "ecografias") list = list.filter(c => ecografiasPhones.has(c.phone));
   if (inboxFilter === "waitlist")  list = list.filter(c => waitlistPhones.has(c.phone));
+  if (inboxFilter.startsWith("tag:")){
+    const tag = inboxFilter.slice(4);
+    list = list.filter(c => (tagsSummary.by_phone[c.phone]||[]).includes(tag));
+  }
   if (profFilter) {
     const p = profFilter.toLowerCase();
     list = list.filter(c => ((c.profesional||"") + " " + ((c.flow_data||{}).profesional||"")).toLowerCase().includes(p));
@@ -1757,11 +1768,12 @@ async function loadFiles(){
 
 async function loadTags(){
   try {
-    const tags = await api(`/admin/api/tags/${encodeURIComponent(activePhone)}`).catch(()=>[]);
+    const resp = await api(`/admin/api/tags/${encodeURIComponent(activePhone)}`).catch(()=>({tags:[]}));
+    const tags = Array.isArray(resp) ? resp : (resp.tags || []);
     const el = $("#cxTags");
-    el.innerHTML = (tags||[]).map(t =>
+    el.innerHTML = tags.map(t =>
       `<span class="tag">${esc(t)} <span class="x" onclick="delTag('${esc(t)}')">×</span></span>`).join("") +
-      '<input type="text" id="cxTagInput" placeholder="+ tag (Enter)">';
+      '<input type="text" id="cxTagInput" list="tagSuggestions" placeholder="+ etiqueta (Enter)" autocomplete="off">';
     $("#cxTagInput").onkeydown = e => {
       if (e.key === "Enter" && e.target.value.trim()){
         e.preventDefault(); addTag(e.target.value.trim()); e.target.value = "";
@@ -1774,12 +1786,14 @@ async function addTag(t){
     await api(`/admin/api/tags/${encodeURIComponent(activePhone)}`,
       {method:"POST", body: JSON.stringify({tag: t})});
     loadTags();
-  } catch(e){ toast("Error al añadir tag", "error"); }
+    loadInbox();
+  } catch(e){ toast("Error al añadir etiqueta", "error"); }
 }
 async function delTag(t){
   try {
     await api(`/admin/api/tags/${encodeURIComponent(activePhone)}/${encodeURIComponent(t)}`, {method:"DELETE"});
     loadTags();
+    loadInbox();
   } catch(e){}
 }
 
@@ -2068,17 +2082,51 @@ function setupTabDragDrop(){
   });
 }
 
+function bindTabClick(t){
+  if (!t || t.tagName === "SELECT") return;
+  t.onclick = () => {
+    $$(".inbox-tab").forEach(x => x.classList.remove("active"));
+    t.classList.add("active");
+    inboxFilter = t.dataset.filter;
+    renderInbox();
+  };
+}
+
+function renderDynamicTagTabs(){
+  const host = $("#dynTagTabs");
+  if (!host) return;
+  const counts = tagsSummary.counts || {};
+  const tags = Object.keys(counts).sort((a,b) => a.localeCompare(b, "es"));
+
+  if (inboxFilter.startsWith("tag:")){
+    const active = inboxFilter.slice(4);
+    if (!(active in counts)){
+      inboxFilter = "all";
+      $$(".inbox-tab").forEach(x => x.classList.remove("active"));
+      const allTab = $('.inbox-tab[data-filter="all"]');
+      if (allTab) allTab.classList.add("active");
+    }
+  }
+
+  host.innerHTML = tags.map(tag => {
+    const filter = "tag:" + tag;
+    const isActive = inboxFilter === filter;
+    return `<button class="inbox-tab${isActive?' active':''}" data-filter="${esc(filter)}">`
+         + `${esc(tag)} <span class="badge">${counts[tag]}</span></button>`;
+  }).join("");
+  Array.from(host.children).forEach(bindTabClick);
+
+  const dl = $("#tagSuggestions");
+  if (dl){
+    const union = Array.from(new Set([...PRESET_TAGS, ...tags]))
+      .sort((a,b) => a.localeCompare(b, "es"));
+    dl.innerHTML = union.map(t => `<option value="${esc(t)}">`).join("");
+  }
+}
+
 function setup(){
   // Tabs
-  $$(".inbox-tab").forEach(t => {
-    if (t.tagName === "SELECT") return;
-    t.onclick = () => {
-      $$(".inbox-tab").forEach(x => x.classList.remove("active"));
-      t.classList.add("active");
-      inboxFilter = t.dataset.filter;
-      renderInbox();
-    };
-  });
+  $$(".inbox-tab").forEach(bindTabClick);
   const profSel = $("#profSelect");
   if (profSel) profSel.onchange = e => {
     profFilter = e.target.value;
