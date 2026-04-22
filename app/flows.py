@@ -28,10 +28,13 @@ from session import (save_session, reset_session, save_tag, delete_tag, get_tags
 from resilience import is_medilink_down
 from triage_ges import triage_sintomas, normalizar_texto_paciente
 from pni import get_vaccine_reminder
-from config import CMC_TELEFONO, CMC_TELEFONO_FIJO, ADMIN_ALERT_PHONE
+from config import CMC_TELEFONO, CMC_TELEFONO_FIJO
 from messaging import send_whatsapp
 
 log = logging.getLogger("bot.flows")
+
+# Teléfono del médico director para alertas clínicas (Dr. Olavarría)
+ADMIN_ALERT_PHONE = "56987834148"
 
 # Mapa de nombres de día en español → Python weekday (0=Lun..6=Dom)
 _DIAS_SEMANA = {
@@ -43,7 +46,7 @@ _DIAS_SEMANA = {
 def _first_name(nombre) -> str:
     """Primer token de un nombre, seguro ante None/vacío/solo-espacios."""
     parts = (nombre or "").split()
-    return parts[0] if parts else "paciente"
+    return parts[0] if parts else ""
 
 
 def _proxima_fecha_dia(weekday: int) -> str:
@@ -55,13 +58,7 @@ def _proxima_fecha_dia(weekday: int) -> str:
             return candidato.strftime("%Y-%m-%d")
     return None
 
-AFIRMACIONES = {
-    "si", "sí", "yes", "ok", "confirmo", "confirmar", "dale", "ya", "claro", "bueno",
-    "perfecto", "listo", "tomo", "tomar", "esa", "ese", "esa hora", "ese horario",
-    "me sirve", "sirve", "genial", "buenisimo", "buenísimo", "vale", "acepto", "acepta",
-    "reservar", "reservalo", "resérvalo", "reservala", "resérvala", "agenda", "agendala",
-    "agéndala", "agendar", "confirma", "confírmalo", "confirmalo", "de acuerdo",
-}
+AFIRMACIONES = {"si", "sí", "yes", "ok", "confirmo", "confirmar", "dale", "ya", "claro", "bueno"}
 NEGACIONES   = {"no", "nop", "nope", "cancelar", "cancel", "no gracias"}
 
 EMERGENCIAS  = {
@@ -603,33 +600,6 @@ def _ensure_consent(phone: str) -> None:
         log_event(phone, "privacy_consent_accepted", {"method": "rut_provided"})
 
 
-async def _buscar_paciente_safe(rut: str) -> tuple[dict | None, bool]:
-    """Wrapper de buscar_paciente que distingue 'RUT no existe' de 'error transitorio'.
-
-    Devuelve (paciente, transient_error). Si transient_error es True, el caller
-    NO debe asumir que el RUT no existe — Medilink falló (429/timeout/red) y se
-    debe derivar a humano para evitar registrar como paciente nuevo a alguien
-    que ya está en sistema. Causa raíz del bug donde RUT 16649550-4 (existente)
-    se reportó como no encontrado por 429 silenciado.
-    """
-    paciente = await buscar_paciente(rut)
-    if paciente is None and is_medilink_down():
-        return None, True
-    return paciente, False
-
-
-def _msg_medilink_transient(extra: str = "") -> str:
-    """Mensaje estándar cuando Medilink tira 429/timeout durante búsqueda de RUT."""
-    base = (
-        "🤔 No pude verificar tu RUT en este momento porque el sistema está lento.\n\n"
-        "Una recepcionista te ayudará en breve."
-    )
-    if extra:
-        base += "\n\n" + extra
-    base += f"\n\nMientras esperas también puedes llamar:\n📞 *{CMC_TELEFONO}*"
-    return base
-
-
 async def _slot_confirmed(phone: str, data: dict, slot: dict) -> str | dict:
     """Llamada cuando el paciente confirma un slot.
 
@@ -1020,7 +990,14 @@ async def _handle_doctor_command(phone: str, txt: str, tl: str, data: dict, stat
         )
 
     # ── Cambiar modo: ÚNICA forma de volver al selector ──────────────────
-    if tl in ("modo", "cambiar", "cambiar modo", "cambiar_modo"):
+    # Matchea más variantes naturales porque el doctor no se acuerda del comando exacto.
+    _MODO_RESET_FRASES = (
+        "modo", "cambiar", "cambiar modo", "cambiar_modo",
+        "cambio de modo", "cambiar de modo", "cambiar mode",
+        "otro modo", "volver al menu", "volver menu", "menu doctor",
+        "menu dr", "menú dr", "salir modo", "salir del modo",
+    )
+    if tl in _MODO_RESET_FRASES or any(f in tl for f in ("cambio de modo", "cambiar de modo")):
         _clear_doctor_mode(phone)
         reset_session(phone)
         return _doctor_mode_menu()
@@ -1031,7 +1008,16 @@ async def _handle_doctor_command(phone: str, txt: str, tl: str, data: dict, stat
         return _doctor_mode_menu()
 
     # ── Modo Agente CMC → pasar al flujo normal de pacientes ──────────────
+    # Si viene un saludo simple ("hola", "buenos días") después de >4h sin
+    # actividad, asumir que olvidó que estaba en modo agente y volver al menú.
     if doctor_mode == "agente":
+        _saludos_naturales = {"hola", "hi", "buenos dias", "buenos días",
+                              "buenas tardes", "buenas noches", "buen dia",
+                              "buen día", "ola", "hey"}
+        if tl in _saludos_naturales and state == "IDLE":
+            _clear_doctor_mode(phone)
+            reset_session(phone)
+            return _doctor_mode_menu()
         return None  # None = seguir con el flujo normal de handle_message
 
     # ── Modo Asistente Clínico ────────────────────────────────────────────
@@ -1744,18 +1730,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     if state == "IDLE" and data.get("last_slots") and data.get("last_slots_ts"):
         try:
             from time_parser import parse_hora as _parse_hora_idle
-            _ls = data["last_slots"]
-            _ls_valido = (
-                isinstance(_ls, list)
-                and _ls
-                and all(isinstance(s, dict) and s.get("hora_inicio") for s in _ls)
-            )
-            if _ls_valido and _parse_hora_idle(txt):
+            if _parse_hora_idle(txt):
                 _ts_snap = datetime.fromisoformat(data["last_slots_ts"])
                 _edad = datetime.now(timezone.utc) - _ts_snap
                 if _edad < timedelta(minutes=60):
-                    data["todos_slots"] = _ls
-                    data["slots"] = _ls[:5]
+                    data["todos_slots"] = data["last_slots"]
+                    data["slots"] = data["last_slots"][:5]
                     if data.get("last_especialidad"):
                         data["especialidad"] = data["last_especialidad"]
                     data.setdefault("fechas_vistas", [])
@@ -2436,7 +2416,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         citas_c = await listar_citas_paciente(pac_c["id"]) or []
                     except Exception:
                         citas_c = []
-                    hoy_str = datetime.now(_CHILE_TZ).date().strftime("%Y-%m-%d")
+                    hoy_str = datetime.now(_CHILE_TZ).date().strftime("%Y-%m-%d") if "_CHILE_TZ" in globals() else datetime.now().date().strftime("%Y-%m-%d")
                     citas_hoy = [c for c in citas_c if c.get("fecha") == hoy_str]
                     if citas_hoy:
                         c0 = citas_hoy[0]
@@ -2945,16 +2925,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             log_event(phone, "motivo_seleccionado", {"motivo": "otra_esp"})
             reset_session(phone)
             return await _iniciar_agendar(phone, {}, None)
-        if txt == "cambiar_datos":
-            # Botón "✏️ Cambiar algo" viene con sesión stale en WAIT_SLOT.
-            # Reprocesar `cambiar_datos` como texto en IDLE no matchea nada
-            # y cae en intent detection (resultados erráticos: FAQ, estética).
-            # Fix: arrancar flujo de agendar desde cero.
-            reset_session(phone)
-            return await _iniciar_agendar(phone, {}, None)
         if txt in (
             "accion_cambiar", "accion_mis_citas", "accion_otro",
-            "menu_volver"
+            "menu_volver", "cambiar_datos"
         ):
             reset_session(phone)
             return await handle_message(phone, txt, get_session(phone))
@@ -3628,11 +3601,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             )
 
         _ensure_consent(phone)
-        paciente, transient = await _buscar_paciente_safe(rut)
-        if transient:
-            data["rut"] = rut
-            save_session(phone, "HUMAN_TAKEOVER", data)
-            return _msg_medilink_transient()
+        paciente = await buscar_paciente(rut)
         if not paciente:
             data["rut"] = rut
             is_social = phone.startswith("ig_") or phone.startswith("fb_")
@@ -3866,10 +3835,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             )
 
         _ensure_consent(phone)
-        paciente, transient = await _buscar_paciente_safe(rut)
-        if transient:
-            save_session(phone, "HUMAN_TAKEOVER", data)
-            return _msg_medilink_transient()
+        paciente = await buscar_paciente(rut)
         if not paciente:
             reset_session(phone)
             return (
@@ -3932,11 +3898,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # ── CONFIRMING_CANCEL ─────────────────────────────────────────────────────
     if state == "CONFIRMING_CANCEL":
         if tl in AFIRMACIONES or tl_norm in AFIRMACIONES:
-            cita = data.get("cita_cancelar")
-            if not cita or not cita.get("id"):
-                log.warning("CONFIRMING_CANCEL sin cita_cancelar en sesión phone=%s", phone)
-                reset_session(phone)
-                return "No pude recuperar la cita a cancelar. ¿Me das tu RUT para revisar tus reservas?"
+            cita = data["cita_cancelar"]
             ok = await cancelar_cita(cita["id"])
             reset_session(phone)
             if ok:
@@ -4017,10 +3979,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             )
 
         _ensure_consent(phone)
-        paciente, transient = await _buscar_paciente_safe(rut)
-        if transient:
-            save_session(phone, "HUMAN_TAKEOVER", data)
-            return _msg_medilink_transient()
+        paciente = await buscar_paciente(rut)
         if not paciente:
             reset_session(phone)
             return (
@@ -4170,10 +4129,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             )
 
         _ensure_consent(phone)
-        paciente, transient = await _buscar_paciente_safe(rut)
-        if transient:
-            save_session(phone, "HUMAN_TAKEOVER", data)
-            return _msg_medilink_transient()
+        paciente = await buscar_paciente(rut)
         if not paciente:
             reset_session(phone)
             return "No encontré ese RUT 🔎\nEscribe *menu* para volver o intenta de nuevo."
