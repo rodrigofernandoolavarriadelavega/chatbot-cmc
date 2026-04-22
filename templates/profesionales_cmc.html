@@ -168,6 +168,8 @@ const DEFAULT_PERMS = {
 
 let permsCurrent = {};
 let dirty = false;
+let _saveTimer = null;
+const AUTO_SAVE_DELAY_MS = 600;  // debounce — evita saves por cada click
 
 function setStatus(text, klass) {
   const el = document.getElementById("status");
@@ -176,8 +178,12 @@ function setStatus(text, klass) {
 }
 function markDirty() {
   dirty = true;
-  setStatus("Cambios sin guardar", "dirty");
-  document.getElementById("save-btn").disabled = false;
+  setStatus("Guardando…", "saved");
+  document.getElementById("save-btn").disabled = true;
+  // Auto-save con debounce: si el usuario sigue cambiando checkboxes,
+  // reseteamos el timer hasta que deje de hacer clicks.
+  if (_saveTimer) clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(() => { save(); }, AUTO_SAVE_DELAY_MS);
 }
 
 async function loadPermisos() {
@@ -260,7 +266,8 @@ async function save() {
     });
     if (!r.ok) throw new Error("HTTP " + r.status);
     dirty = false;
-    setStatus("✔ Guardado", "saved");
+    const t = new Date().toLocaleTimeString("es-CL", {hour: "2-digit", minute: "2-digit", second: "2-digit"});
+    setStatus(`✔ Guardado automáticamente · ${t}`, "saved");
   } catch (e) {
     setStatus("✖ Error: " + e.message, "dirty");
     btn.disabled = false;
@@ -268,7 +275,8 @@ async function save() {
 }
 
 document.getElementById("save-btn").addEventListener("click", save);
-window.addEventListener("beforeunload", (e) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+// Auto-save ya incluye debounce — el botón queda como fallback manual.
+// No advertir al salir: todos los cambios se guardan solos al instante.
 
 loadPermisos();
 </script>
