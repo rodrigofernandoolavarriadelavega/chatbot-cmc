@@ -288,6 +288,50 @@
   .search-extras label{display:flex;gap:6px;align-items:center;cursor:pointer}
   .search-extras input{accent-color:var(--rose-500)}
 
+  /* --- Max layover slider --- */
+  .layover-row{
+    margin-top:18px;padding-top:16px;
+    border-top:1px solid rgba(239,77,137,0.12);
+    transition:opacity .2s;
+  }
+  .layover-row.is-disabled{opacity:0.45;pointer-events:none}
+  .layover-label-wrap{
+    display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;gap:12px;
+  }
+  .layover-label{
+    font-size:11px;font-weight:500;
+    color:var(--rose-600);text-transform:uppercase;letter-spacing:1.2px;
+  }
+  .layover-value{
+    font-family:'Playfair Display',serif;font-style:italic;
+    font-size:18px;font-weight:600;
+    color:var(--plum-900);
+  }
+  .layover-row input[type="range"]{
+    -webkit-appearance:none;appearance:none;
+    width:100%;height:6px;border-radius:999px;
+    background:linear-gradient(90deg,var(--rose-300) 0%, var(--rose-300) var(--rngfill,50%), var(--rose-50) var(--rngfill,50%), var(--rose-50) 100%);
+    outline:none;cursor:pointer;
+  }
+  .layover-row input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;
+    width:22px;height:22px;border-radius:50%;
+    background:linear-gradient(135deg,var(--rose-400),var(--rose-600));
+    box-shadow:0 4px 12px rgba(239,77,137,0.35),0 0 0 3px #fff;
+    cursor:pointer;border:none;
+  }
+  .layover-row input[type="range"]::-moz-range-thumb{
+    width:22px;height:22px;border-radius:50%;
+    background:linear-gradient(135deg,var(--rose-400),var(--rose-600));
+    box-shadow:0 4px 12px rgba(239,77,137,0.35);
+    cursor:pointer;border:none;
+  }
+  .layover-ticks{
+    display:flex;justify-content:space-between;margin-top:8px;
+    font-size:10px;color:var(--plum-700);opacity:0.55;
+    letter-spacing:1px;
+  }
+
   /* ---------------- DESTINATIONS ---------------- */
   section.destinations{
     padding:100px 6vw 80px;
@@ -422,6 +466,21 @@
   }
   .res-sort select:hover{border-color:var(--rose-300)}
   .res-sort select:focus-visible{border-color:var(--rose-500);box-shadow:0 0 0 3px rgba(239,77,137,0.15)}
+  .btn-download{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:10px 18px;border-radius:999px;
+    background:#fff;border:1px solid var(--rose-200);
+    color:var(--rose-600);font-family:inherit;font-size:13px;font-weight:500;
+    cursor:pointer;transition:all .2s;
+    box-shadow:0 2px 8px rgba(239,77,137,0.08);
+  }
+  .btn-download:hover{
+    background:linear-gradient(135deg,var(--rose-400),var(--rose-600));
+    color:#fff;border-color:transparent;
+    box-shadow:0 6px 16px rgba(239,77,137,0.3);
+    transform:translateY(-1px);
+  }
+  .btn-download svg{flex-shrink:0}
 
   .results-grid{
     display:grid;grid-template-columns:1fr;gap:18px;
@@ -688,9 +747,13 @@
     .trip-tabs button{padding:8px 16px;font-size:12px;flex-shrink:0;min-height:38px}
 
     .search-grid{grid-template-columns:1fr 1fr;gap:10px}
-    .field{padding:10px 12px;border-radius:14px}
-    .field label{font-size:10px;letter-spacing:1px;margin-bottom:2px}
-    .field input,.field select{font-size:16px !important;font-weight:500}  /* 16px evita zoom iOS */
+    .field{padding:10px 12px;border-radius:14px;text-align:center}
+    .field label{font-size:10px;letter-spacing:1px;margin-bottom:2px;display:block;text-align:center}
+    .field input,.field select{font-size:16px !important;font-weight:500;text-align:center}  /* 16px evita zoom iOS */
+    .search-extras label{justify-content:center;text-align:center}
+    .search-extras{text-align:center}
+    .layover-label-wrap{justify-content:center;flex-direction:column;align-items:center;gap:4px;text-align:center}
+    .layover-ticks{justify-content:space-around}
 
     .btn-search{
       grid-column:span 2;width:100%;justify-content:center;
@@ -890,6 +953,15 @@
         <label><input type="checkbox" id="f-combine" checked /> Combinar aerolíneas (LATAM + Sky + JetSMART)</label>
         <label><input type="checkbox" /> Viajo con mascota</label>
       </div>
+
+      <div class="layover-row" id="layover-row">
+        <div class="layover-label-wrap">
+          <label for="f-layover" class="layover-label">Escala máxima en aeropuerto</label>
+          <span class="layover-value" id="f-layover-out">5h 00m</span>
+        </div>
+        <input type="range" id="f-layover" min="60" max="600" step="15" value="300" aria-label="Escala máxima en minutos" />
+        <div class="layover-ticks"><span>1h</span><span>3h</span><span>5h</span><span>10h</span></div>
+      </div>
     </form>
   </div>
 </section>
@@ -999,6 +1071,10 @@
         <option value="layover">Escala más corta</option>
       </select>
     </div>
+    <button type="button" class="btn-download" id="btn-download" aria-label="Descargar sugerencias">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <span>Descargar</span>
+    </button>
   </div>
 
   <div class="results-grid" id="results-grid"></div>
@@ -1299,23 +1375,21 @@
   }
 
   function legsFromSelf(item){
-    // self_transfer: legs: [seg...] then possibly more
-    const segs = [];
-    (item.legs || []).forEach(l => {
-      if(l.flights){
-        l.flights.forEach(s=>segs.push(s));
-      }else if(l.departure_airport){
-        segs.push(l);
-      }
-    });
-    return segs.map(s => ({
-      dep_time: s.departure_airport?.time,
-      dep_iata: s.departure_airport?.id,
-      arr_time: s.arrival_airport?.time,
-      arr_iata: s.arrival_airport?.id,
-      duration: s.duration,
+    // self_transfer from backend has shape:
+    //   { outbound: { legs: [{from,to,departure,arrival,airline,duration_min,...}, ...], hub, layover_min, ... },
+    //     return:   same or null,
+    //     total_price, total_duration_min }
+    const out = item.outbound?.legs || [];
+    const ret = item.return?.legs || [];
+    const all = [...out, ...ret];
+    return all.map(s => ({
+      dep_time: s.departure || s.departure_airport?.time,
+      dep_iata: s.from || s.departure_airport?.id,
+      arr_time: s.arrival || s.arrival_airport?.time,
+      arr_iata: s.to || s.arrival_airport?.id,
+      duration: s.duration_min || s.duration,
       airline: s.airline,
-      airline_logo: airlineLogo(s),
+      airline_logo: s.airline_logo || airlineLogo(s),
       flight_number: s.flight_number
     }));
   }
@@ -1344,11 +1418,16 @@
   function renderCard(item, kind){
     const legs = kind==='direct' ? legsFromDirect(item) : legsFromSelf(item);
     if(!legs.length) return '';
-    const layovers = kind==='direct' ? (item.layovers||[]) : (item.layovers||[]);
+    const layovers = kind==='direct'
+      ? (item.layovers||[])
+      : [item.outbound, item.return]
+          .filter(Boolean)
+          .filter(x => x.layover_min)
+          .map(x => ({ id: x.hub || 'SCL', duration: x.layover_min }));
     const airlines = [...new Set(legs.map(l=>l.airline).filter(Boolean))];
     const logos = [...new Set(legs.map(l=>l.airline_logo).filter(Boolean))].slice(0,3);
     const price = kind==='direct' ? item.price : item.total_price;
-    const totalDur = kind==='direct' ? item.total_duration : item.total_duration;
+    const totalDur = kind==='direct' ? item.total_duration : item.total_duration_min;
     const co2 = item.carbon_emissions?.this_flight;
     const co2Kg = co2 ? Math.round(co2/1000) : null;
 
@@ -1426,6 +1505,87 @@
   });
   sortSel.addEventListener('change', renderResults);
 
+  // ---- Layover slider (live display + disable when "solo directos") ----
+  const layoverInput = document.getElementById('f-layover');
+  const layoverOut = document.getElementById('f-layover-out');
+  const layoverRow = document.getElementById('layover-row');
+  const onlyDirectInput = document.getElementById('f-direct');
+  function fmtLayoverDisplay(min){
+    const h = Math.floor(min/60), m = min%60;
+    return `${h}h ${String(m).padStart(2,'0')}m`;
+  }
+  function syncLayoverUI(){
+    const val = parseInt(layoverInput.value,10);
+    const pct = ((val - parseInt(layoverInput.min,10)) / (parseInt(layoverInput.max,10) - parseInt(layoverInput.min,10))) * 100;
+    layoverInput.style.setProperty('--rngfill', pct + '%');
+    layoverOut.textContent = fmtLayoverDisplay(val);
+  }
+  layoverInput.addEventListener('input', syncLayoverUI);
+  onlyDirectInput.addEventListener('change', ()=>{
+    layoverRow.classList.toggle('is-disabled', onlyDirectInput.checked);
+  });
+  syncLayoverUI();
+
+  // ---- Download button ----
+  const btnDownload = document.getElementById('btn-download');
+  function fmtPriceForDownload(n, currency){
+    if(n==null) return 'N/A';
+    if(currency === 'CLP' || !currency || currency==='PEN') {
+      return `$${Number(n).toLocaleString('es-CL')} ${currency||'CLP'}`;
+    }
+    return `${currency} ${n}`;
+  }
+  function buildDownloadText(){
+    const arr = currentTab==='direct' ? currentData.direct : currentData.self_transfer;
+    const filtered = sortItems(filterItems(arr, currentTab), currentTab);
+    const title = currentTab==='direct' ? 'VUELO ÚNICO' : 'COMBINANDO AEROLÍNEAS';
+    const header = summaryEl.textContent.replace(/\s+/g,' ').trim();
+    const lines = [];
+    lines.push('╔════════════════════════════════════════════════════════════╗');
+    lines.push('║              VIAJES ANGUIE · Propuestas de vuelo            ║');
+    lines.push('╚════════════════════════════════════════════════════════════╝');
+    lines.push('');
+    lines.push(header);
+    lines.push(`Tipo: ${title}   ·   Resultados: ${filtered.length}`);
+    lines.push(`Generado: ${new Date().toLocaleString('es-CL')}`);
+    lines.push('─'.repeat(62));
+    lines.push('');
+    filtered.forEach((it, idx)=>{
+      const legs = currentTab==='direct' ? legsFromDirect(it) : legsFromSelf(it);
+      const price = currentTab==='direct' ? it.price : it.total_price;
+      const totalDur = currentTab==='direct' ? it.total_duration : it.total_duration_min;
+      const airlines = [...new Set(legs.map(l=>l.airline).filter(Boolean))].join(' + ');
+      lines.push(`${idx+1}. ${airlines || 'Aerolínea'}`);
+      lines.push(`   Precio: ${fmtPriceForDownload(price, currentData.currency)}`);
+      lines.push(`   Duración total: ${fmtDur(totalDur)}`);
+      legs.forEach((l, j)=>{
+        lines.push(`   Tramo ${j+1}: ${l.airline||'-'} ${l.flight_number||''}  ${l.dep_iata} ${fmtTime(l.dep_time)} → ${l.arr_iata} ${fmtTime(l.arr_time)}  (${fmtDur(l.duration)})`);
+      });
+      if(currentTab==='self_transfer'){
+        if(it.outbound?.layover_min) lines.push(`   Escala ida: ${fmtDur(it.outbound.layover_min)} en ${it.outbound.hub||'SCL'}`);
+        if(it.return?.layover_min)   lines.push(`   Escala vuelta: ${fmtDur(it.return.layover_min)} en ${it.return.hub||'SCL'}`);
+      }
+      lines.push('');
+    });
+    lines.push('─'.repeat(62));
+    lines.push('Viajes Anguie · agentecmc.cl/vuelosv2');
+    return lines.join('\n');
+  }
+  btnDownload.addEventListener('click', ()=>{
+    const arr = currentTab==='direct' ? currentData.direct : currentData.self_transfer;
+    if(!arr || !arr.length) return;
+    const text = buildDownloadText();
+    const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const d = new Date().toISOString().slice(0,10);
+    a.download = `vuelos-anguie-${d}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 100);
+  });
+
   // ---- Submission ----
   const form = document.getElementById('flight-form');
   const btnSearch = document.getElementById('btn-search');
@@ -1477,7 +1637,7 @@
       outbound_date: outbound,
       adults: adults,
       allow_self_transfer: String(combine),
-      max_layover_min: String(onlyDirect ? 0 : 300),
+      max_layover_min: String(onlyDirect ? 0 : (parseInt(document.getElementById('f-layover').value,10) || 300)),
     });
     if(returnDate) params.set('return_date', returnDate);
 
