@@ -2864,6 +2864,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         fechas_vistas   = data.get("fechas_vistas", [])
         especialidad    = data.get("especialidad", "")
         fecha_actual    = todos_slots[0]["fecha"] if todos_slots else None
+        # tl_norm_slot: normalizado usado por todo el handler. Definido al inicio
+        # porque bloques tempranos (mes/fecha/semana) lo referencian antes del
+        # punto donde históricamente se asignaba (~línea 3140). Causaba NameError
+        # crashes. Caso real 2026-04-23: 15 crashes en pacientes que escribieron
+        # "20hrs", botón "otro_dia", "6", frases con mes antes de llegar a 3140.
+        tl_norm_slot = txt.lower().strip()
 
         # Respuesta al sugerido proactivo (botón o texto libre "si"/"sí"/"confirmo"/...)
         if (tl == "confirmar_sugerido" or tl in AFIRMACIONES or tl_norm in AFIRMACIONES) and slots_mostrados:
@@ -3137,7 +3143,6 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             )
 
         # ── Pregunta por teléfono/dirección en WAIT_SLOT ──
-        tl_norm_slot = txt.lower().strip()
         _INFO_CONTACTO = ("numero de contacto", "número de contacto", "telefono de contacto",
                           "teléfono de contacto", "a que numero", "a qué número",
                           "direccion del centro", "dirección del centro",
