@@ -5934,6 +5934,38 @@ def _modo_degradado(phone: str, intent: str, state_snap: str = "") -> str:
     )
 
 
+def _normalizar_slot_especialidad(slots: list, esp_solicitada: str) -> None:
+    """Override in-place del campo slot[\"especialidad\"] para que refleje
+    la especialidad SOLICITADA por el paciente cuando difiera de la registrada
+    en PROFESIONALES.
+
+    Caso real 2026-04-23: Jorge Montalba (74) esta registrado como
+    \"Psicologia Adulto\". Un paciente pide \"psicologia infantil\" y el slot
+    card mostraba \"Psicologia Adulto\". Confuso.
+
+    Reglas actuales:
+    - \"psicologia infantil\" (o \"psicologo infantil\") -> override a
+      \"Psicologia Infantil\".
+    Agregar nuevos casos aqui si aparecen.
+    """
+    if not slots or not esp_solicitada:
+        return
+    esp_low = esp_solicitada.lower().strip()
+    # Mapear esp_low -> label de display
+    overrides = {
+        "psicologia infantil": "Psicologia Infantil",
+        "psicología infantil": "Psicología Infantil",
+        "psicologo infantil": "Psicología Infantil",
+        "psicólogo infantil": "Psicología Infantil",
+    }
+    label = overrides.get(esp_low)
+    if not label:
+        return
+    for s in slots:
+        if isinstance(s, dict) and s.get("especialidad", "").lower().startswith("psicolog"):
+            s["especialidad"] = label
+
+
 async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
                             saludo_prefix: str | None = None) -> str:
     if is_medilink_down():
@@ -5942,6 +5974,20 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
         save_session(phone, "WAIT_ESPECIALIDAD", data)
         return f"Claro, te ayudo a agendar 😊\n\n¿Qué especialidad necesitas?\n\n{_ESPECIALIDADES_TEXTO}"
     especialidad_lower = especialidad.lower()
+    # ── Traumatología: derivada a medicina general (Barraza temporalmente no
+    # disponible). Avisar al paciente antes de mostrar slots para que no se
+    # confunda viendo Dr. Abarca cuando pidió traumatólogo.
+    # Caso real 2026-04-23: 56954490708, 56951933878, 56941520432 — pacientes
+    # preguntaban por traumatólogo y el bot ofrecía MG sin explicar el cambio.
+    if especialidad_lower in ("traumatología", "traumatologia", "traumatólogo", "traumatologo"):
+        if not saludo_prefix:
+            saludo_prefix = (
+                "Actualmente nuestro *traumatólogo* no está disponible 😔\n"
+                "Te ofrezco *Medicina General* — puede evaluar tu caso y "
+                "derivar a kinesiología o solicitar imágenes si corresponde.\n\n"
+            )
+        especialidad = "medicina general"
+        especialidad_lower = "medicina general"
     # Detectar si la especialidad no existe en nuestro catálogo
     from medilink import _ids_para_especialidad as _ids_esp_check
     if not _ids_esp_check(especialidad_lower):
@@ -6011,6 +6057,12 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
     else:
         smart, todos = await buscar_primer_dia(especialidad_lower)
         mejor = smart[0] if smart else (todos[0] if todos else None)
+
+    # Normaliza display de especialidad (ej: Psicologia Infantil vs Adulto)
+    _normalizar_slot_especialidad(smart, especialidad_lower)
+    _normalizar_slot_especialidad(todos, especialidad_lower)
+    if mejor:
+        _normalizar_slot_especialidad([mejor], especialidad_lower)
 
     if not todos or not mejor:
         log_event(phone, "sin_disponibilidad", {"especialidad": especialidad})

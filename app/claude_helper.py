@@ -1194,6 +1194,12 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
      "*Traumatología:* atendemos lesiones musculoesqueléticas con nuestros médicos "
      "generales. Si requieres especialista traumatólogo directo, te derivan desde el CMC 🦴\n\n"
      "Escribe *1* o *agendar* para reservar hora."),
+    (("telemedicin",),
+     "No ofrecemos *telemedicina* por el momento 😔 Todas las consultas son "
+     "presenciales en nuestro centro:\n\n"
+     "📍 Monsalve 102, Carampangue\n"
+     "🕐 Lun-Vie 8-21h · Sáb 9-13h\n\n"
+     "_Escribe *agendar* si quieres reservar una hora presencial._"),
     (("servicios", "ofrec"),
      "🏥 *Centro Médico Carampangue*\n\n"
      "🩺 *Medicina:* general, familiar, cardiología, gastroenterología, ginecología, otorrino\n"
