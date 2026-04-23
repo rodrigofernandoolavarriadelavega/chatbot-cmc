@@ -14,6 +14,21 @@ client = anthropic.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
 
 # Cache de intents determinísticos — evita llamar a Claude para casos obvios.
 # Clave: texto normalizado (lower + strip). Valor: dict con intent y especialidad.
+# Saludos automáticos de Meta (Click-to-WhatsApp ads, quick replies, etc.).
+# Meta inyecta estos textos cuando el usuario toca un CTA; NO son intención
+# real de conversación con humano. Deben caer en menu para mostrar opciones.
+_META_AUTO_GREETINGS = frozenset({
+    "quiero chatear con alguien", "chatear con alguien",
+    "quiero saber mas informacion", "quiero saber mas información",
+    "quiero saber más información", "quiero saber más informacion",
+    "quiero más información", "quiero mas informacion",
+    "necesito mas informacion", "necesito más información",
+    "hola, me interesa", "hola me interesa",
+    "quiero mas detalles", "quiero más detalles",
+    "quiero agendar una hora",  # ad CTA → flujo de agendar
+    "me gustaria saber mas", "me gustaría saber más",
+})
+
 _INTENT_CACHE: dict[str, dict] = {
     # Especialidades directas
     "kine":           {"intent": "agendar", "especialidad": "kinesiología"},
@@ -492,7 +507,7 @@ PODOLOGÍA
 - Verruga en la planta del pie → Verruga plantar, $10.000 por tratamiento en **Podología**.
 
 OTORRINO / OÍDO
-- Tapón de cera / no escucho / oído tapado → Lavado de oídos ($25.000) con **Otorrinolaringología** (Dr. Manuel Borrego).
+- Tapón de cera / no escucho / oído tapado → Lavado de oídos ($10.000, aparte de la consulta) con **Otorrinolaringología** (Dr. Manuel Borrego, consulta $35.000).
 - Pito en el oído / zumbido / tinnitus → Terapia Tinnitus en **Fonoaudiología**, $25.000.
 - Mareos al girar la cabeza / vértigo / se mueve todo → Vértigo posicional (VPPB). Trata: **Fonoaudiología** (evaluación + maniobra $50.000) u **Otorrinolaringología**.
 - Examen de audición / sordera → Audiometría ($25.000) en **Fonoaudiología** u **ORL**.
@@ -716,7 +731,7 @@ FONOAUDIOLOGÍA (Juana Arratia):
 - Evaluación infantil/adulto: $30.000 — evaluación completa de lenguaje, habla, voz o deglución. Determina si necesitas terapia y de qué tipo.
 - Sesión de terapia infantil/adulto: $25.000 — sesión de rehabilitación de lenguaje, habla, voz o deglución según el plan de tratamiento.
 - Terapia Tinnitus: $25.000 — tratamiento para el zumbido en los oídos (tinnitus/acúfenos). Incluye técnicas de habituación y manejo.
-- Lavado de oídos: $25.000 — extracción de cerumen (cera) acumulado mediante irrigación. Mejora la audición cuando hay tapón de cerumen.
+- Lavado de oídos: $10.000 — extracción de cerumen (cera) acumulado mediante irrigación. Mejora la audición cuando hay tapón de cerumen. Este valor es ADEMÁS de la consulta ($35.000), no en lugar de ella.
 - Audiometría: $25.000 — examen auditivo que mide cuánto escuchas en cada oído. Se hace en cabina silente con audífonos; dura ~20 min, no duele.
 - Audiometría + impedanciometría: $45.000 — audiometría combinada con impedanciometría. Evaluación auditiva completa.
 - Impedanciometría: $20.000 — mide la movilidad del tímpano y la función del oído medio. Detecta otitis serosa, disfunción tubárica o perforación. Rápido e indoloro.
@@ -995,6 +1010,15 @@ async def detect_intent(mensaje: str) -> dict:
         except Exception:
             pass
         return {"intent": "cancelar", "especialidad": None, "respuesta_directa": None}
+    # Meta auto-greetings: vienen de ads/CTAs. Tratar como menu, no como humano.
+    if clave in _META_AUTO_GREETINGS or clave_sin_punto in _META_AUTO_GREETINGS:
+        log.info("meta-ad auto-greeting: %r → menu", clave)
+        try:
+            from session import log_event as _le
+            _le("", "meta_ad_greeting_redirigido", {"texto": clave[:80]})
+        except Exception:
+            pass
+        return {"intent": "menu", "especialidad": None, "respuesta_directa": None}
     if clave in _INTENT_CACHE:
         log.info("cache hit: %r → %s", clave, _INTENT_CACHE[clave]["intent"])
         try:

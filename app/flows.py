@@ -4937,12 +4937,18 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             )
 
         if msgs_sin_respuesta == 1:
-            return "Recibido 🙏 Una recepcionista te responderá en este chat en breve."
-        if msgs_sin_respuesta == 2:
-            return f"Seguimos atentos 😊 Mientras esperas también puedes llamar: 📞 *{CMC_TELEFONO}*"
-        if msgs_sin_respuesta % 5 == 0:
+            # Primer ack — el paciente sabe que una recepcionista vendra.
+            return (
+                "Recibido 🙏 Una recepcionista te responderá en este chat en breve.\n\n"
+                f"_Si es urgente puedes llamar: 📞 *{CMC_TELEFONO}*_"
+            )
+        # Desde msg 2+ el bot queda SILENCIOSO. No spamear al paciente con
+        # Seguimos atentos ni Recibido 🙏 repetidos — la recepcionista ya
+        # esta respondiendo desde el panel y el ruido confunde. Cada 15
+        # mensajes sin respuesta humana mandamos un recordatorio suave.
+        if msgs_sin_respuesta > 0 and msgs_sin_respuesta % 15 == 0:
             return f"Seguimos aquí 🙌 Si es urgente, llama al 📞 *{CMC_TELEFONO}*"
-        return ""  # silencio desde msg 3+ — no spamear
+        return ""
 
     # Fallback
     reset_session(phone)
