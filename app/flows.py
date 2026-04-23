@@ -1526,6 +1526,23 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # nombre) y para pasarle a `detect_intent` el texto original.
     tl_norm = normalizar_texto_paciente(txt)
 
+    # ── Paciente envía solo una URL: no lo procesemos con Claude ──
+    # Caso real 2026-04-23 (56931400124): paciente mandó link a boleta;
+    # Claude respondió "el CMC no es una imprenta" (alucinación).
+    # URL sola → escalar a recepcionista directamente.
+    import re as _re_url
+    _URL_SOLA_RE = _re_url.compile(
+        r"^(https?://\S+|www\.\S+)$", _re_url.IGNORECASE
+    )
+    if _URL_SOLA_RE.match(txt.strip()) and state != "HUMAN_TAKEOVER":
+        save_session(phone, "HUMAN_TAKEOVER", data)
+        log_event(phone, "url_sola_a_humano", {"url": txt.strip()[:200]})
+        return (
+            "Recibí tu link 🔗 Una recepcionista lo revisará y te responderá"
+            " en breve por acá.\n\n"
+            f"_Si es urgente: 📞 *{CMC_TELEFONO}*_"
+        )
+
     # ── Mapeo de títulos de botón/lista → IDs (crítico para IG/FB) ─────────────
     # En WhatsApp los clicks de botones llegan con `id`; en Instagram/Messenger
     # el click manda el texto literal del título. Normalizamos aquí antes de
