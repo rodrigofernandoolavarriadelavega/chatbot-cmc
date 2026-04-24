@@ -11,6 +11,13 @@ from config import (META_ACCESS_TOKEN, META_PHONE_NUMBER_ID,
 
 log = logging.getLogger("bot")
 
+def _normalize_markdown_for_chat(body: str) -> str:
+    """Convierte **bold** → *bold* para WhatsApp/IG/FB (Meta renderer)."""
+    import re as _re_nm
+    return _re_nm.sub(r"\*\*([^*]+)\*\*", r"*\1*", body or "")
+
+
+
 META_API_URL = f"https://graph.facebook.com/v22.0/{META_PHONE_NUMBER_ID}/messages"
 
 
@@ -135,9 +142,7 @@ async def send_whatsapp(to: str, body: str) -> str | None:
     Si el mismo body fue enviado a `to` en los últimos 2 min, skip (dedupe)."""
     if not body or not body.strip():
         return None
-    # Normalizar **bold** → *bold* para WhatsApp (Claude a veces devuelve **)
-    import re as _re_md
-    body = _re_md.sub(r"\*\*([^*]+)\*\*", r"*\1*", body)
+    body = _normalize_markdown_for_chat(body)
     if _is_dupe_outbound(to, body):
         log.info("dedupe outbound skipped to=%s len=%d", to, len(body))
         return None
@@ -513,7 +518,7 @@ async def send_instagram(igsid: str, body: str):
                 async with httpx.AsyncClient(timeout=10) as client:
                     r = await client.post(
                         url,
-                        params={"access_token": META_PAGE_ACCESS_TOKEN},
+                        headers={"Authorization": f"Bearer {META_PAGE_ACCESS_TOKEN}"},
                         json={"recipient": {"id": igsid}, "message": {"text": chunk}},
                     )
                 if r.status_code == 200:

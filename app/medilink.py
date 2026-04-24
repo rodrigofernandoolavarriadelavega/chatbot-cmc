@@ -751,7 +751,7 @@ async def crear_paciente(rut: str, nombre: str, apellidos: str, **kwargs) -> Opt
         pac_id = p["id"]
         result = {
             "id":     pac_id,
-            "nombre": f"{p.get('nombre','')} {p.get('apellidos','')}".strip(),
+            "nombre": _fmt_nombre_apellidos(p.get('nombre'), p.get('apellidos')),
             "rut":    p.get("rut", ""),
         }
         # PUT para guardar campos opcionales (Medilink POST los ignora)
@@ -811,7 +811,7 @@ async def buscar_paciente(rut: str) -> Optional[dict]:
             return None
         result = {
             "id":     p["id"],
-            "nombre": f"{p.get('nombre','')} {p.get('apellidos','')}".strip(),
+            "nombre": _fmt_nombre_apellidos(p.get('nombre'), p.get('apellidos')),
             "rut":    p.get("rut", ""),
         }
         if p.get("fecha_nacimiento"):
@@ -837,7 +837,7 @@ async def buscar_paciente_por_nombre(nombre: str) -> list[dict]:
         data = _safe_json(r).get("data", [])
         results = []
         for p in data[:10]:
-            nombre_full = f"{p.get('nombre', '')} {p.get('apellidos', '')}".strip()
+            nombre_full = _fmt_nombre_apellidos(p.get('nombre'), p.get('apellidos'))
             results.append({
                 "id": p["id"],
                 "nombre": nombre_full,
@@ -1086,7 +1086,7 @@ async def obtener_agenda_dia(id_prof: int, fecha: str | None = None) -> list[dic
             pac_edad = ""
             pac_sexo = ""
             if p:
-                pac_nombre = f"{p.get('nombre','')} {p.get('apellidos','')}".strip() or pac_nombre
+                pac_nombre = _fmt_nombre_apellidos(p.get('nombre'), p.get('apellidos')) or pac_nombre
                 pac_rut = p.get("rut", "")
                 pac_sexo = p.get("sexo", "")
                 pac_fecha_nac = p.get("fecha_nacimiento", "")
@@ -1394,6 +1394,12 @@ def _fmt_fecha(fecha: str) -> str:
         return f"{dias[d.weekday()]} {d.day} de {meses[d.month-1]}"
     except (ValueError, TypeError):
         return fecha
+
+
+
+def _fmt_nombre_apellidos(nombre: str, apellidos: str) -> str:
+    """Une nombre + apellidos colapsando espacios extra (Medilink manda valores con trailing whitespace)."""
+    return " ".join((str(nombre or "") + " " + str(apellidos or "")).split())
 
 
 def valid_rut(rut: str) -> bool:
