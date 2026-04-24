@@ -594,11 +594,12 @@ def seo_geo_api():
             # Sumar si ya existe (caso edge: dos buckets que mapean al mismo display)
             if display in grouped:
                 grouped[display]["pacientes"] += loc["pacientes"]
+                grouped[display]["citas"] += loc.get("citas", 0)
             else:
                 grouped[display] = {
                     "comuna": display,
                     "pacientes": loc["pacientes"],
-                    "citas": loc.get("pacientes", 0),
+                    "citas": loc.get("citas", 0),
                     "es_localidad_arauco": True,
                 }
 

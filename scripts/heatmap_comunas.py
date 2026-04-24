@@ -377,13 +377,19 @@ def fase_mapa():
 
     # Contar por comuna
     rows = conn.execute("""
-        SELECT p.comuna, p.ciudad, p.direccion, p.nombre || ' ' || p.apellidos AS nombre_completo
+        SELECT p.id, p.comuna, p.ciudad, p.direccion, p.nombre || ' ' || p.apellidos AS nombre_completo
         FROM pacientes_heatmap p
         INNER JOIN (SELECT DISTINCT id_paciente FROM citas_heatmap) c ON c.id_paciente = p.id
     """).fetchall()
 
+    # Citas por paciente (para repartir atenciones por comuna y localidad)
+    citas_por_paciente: dict[int, int] = dict(conn.execute(
+        "SELECT id_paciente, COUNT(*) FROM citas_heatmap WHERE id_paciente IS NOT NULL GROUP BY id_paciente"
+    ).fetchall())
+
     comuna_counter = Counter()
     localidad_counter = Counter()
+    localidad_citas = Counter()
     direccion_samples = {}
     localidad_direcciones = {}  # localidad → [direcciones de ejemplo]
     sin_comuna = 0
@@ -409,6 +415,7 @@ def fase_mapa():
     for row in rows:
         comuna = (row["comuna"] or "").strip()
         direccion = (row["direccion"] or "").strip()
+        n_citas_pac = citas_por_paciente.get(row["id"], 0)
 
         cu = normalizar_comuna(comuna)
         # Si no hay comuna, intentar inferir desde la dirección
@@ -421,6 +428,7 @@ def fase_mapa():
             loc = detectar_localidad(direccion, cu)
             if loc:
                 localidad_counter[loc] += 1
+                localidad_citas[loc] += n_citas_pac
                 if loc not in localidad_direcciones:
                     localidad_direcciones[loc] = []
                 if len(localidad_direcciones[loc]) < 3:
@@ -500,6 +508,7 @@ def fase_mapa():
             {
                 "localidad": loc,
                 "pacientes": count,
+                "citas": localidad_citas.get(loc, 0),
                 "porcentaje": round(count / total_arauco * 100, 1) if total_arauco else 0,
                 "direcciones_ejemplo": localidad_direcciones.get(loc, []),
             }
