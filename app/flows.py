@@ -2535,6 +2535,22 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             except Exception:
                 pass
 
+        # Detección previa: frases sobre cita EXISTENTE deben ir a
+        # reagendar/cancelar, no a agendar nueva. Claude a veces clasifica
+        # tenia una hora con la dentista el sabado como intent=agendar.
+        # Caso 56975811662 2026-04-23 22:18.
+        _CITA_EXISTENTE_RE = re.compile(
+            r"\b(tenia|tenía) (una )?hora\b|"
+            r"\bmi hora (de|del|para)\b|"
+            r"\bmi cita (de|del|para)\b|"
+            r"\btengo (una )?hora (el|para el)\b|"
+            r"\bagend[eé] (una )?hora\b",
+            re.IGNORECASE,
+        )
+        if _CITA_EXISTENTE_RE.search(txt) and not any(p in tl for p in ("agendar", "quiero agendar", "quiero una hora nueva")):
+            log_event(phone, "intent_cita_existente_detectado", {"texto": txt[:120]})
+            return await _iniciar_reagendar(phone, data)
+
         result = await detect_intent(txt)
         intent = result.get("intent", "otro")
         log_event(phone, "intent_detectado", {"intent": intent, "esp": result.get("especialidad")})
