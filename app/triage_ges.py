@@ -340,7 +340,7 @@ _SPECIALTY_MAP: dict[str, str] = {
 
 # Score mínimo para considerar que el triage tiene una hipótesis real.
 # Valores típicos: matches decentes ≥2.0, sólidos ≥2.5.
-_MIN_SCORE = 2.0
+_MIN_SCORE = 2.5  # subido de 2.0 a 2.5 (2026-04-24) — reduce falsos positivos en textos cortos ambiguos
 
 
 async def triage_sintomas(texto: str) -> dict | None:

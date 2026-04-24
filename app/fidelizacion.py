@@ -165,8 +165,18 @@ async def enviar_seguimiento_postconsulta(send_fn, send_template_fn=None,
                     especialidad=cita.get("especialidad"),
                     nombre=cita.get("nombre"),
                 )
-                await send_text_fn(cita["phone"], tips)
-                log_message(cita["phone"], "out", tips, "IDLE")
+                # Guardar tips en session para enviar cuando paciente
+                # responda algun boton (seg_mejor/igual/peor) — ahi la
+                # ventana 24h esta abierta. Antes se enviaba inmediato
+                # tras el template y fallaba con 131047 (ventana cerrada).
+                try:
+                    from session import get_session, save_session
+                    _sess = get_session(cita["phone"])
+                    _data = _sess.get("data", {})
+                    _data["pending_tips"] = tips
+                    save_session(cita["phone"], _sess.get("state", "IDLE"), _data)
+                except Exception as _e_tips:
+                    log.warning("No se pudo guardar pending_tips: %s", _e_tips)
 
             save_fidelizacion_msg(cita["phone"], "postconsulta", str(cita.get("id_cita", "")))
             log.info("Seguimiento enviado → %s (%s)", cita["phone"], cita.get("especialidad"))

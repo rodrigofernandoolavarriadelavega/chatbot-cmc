@@ -1566,6 +1566,19 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # nombre) y para pasarle a `detect_intent` el texto original.
     tl_norm = normalizar_texto_paciente(txt)
 
+    # Flush pending_tips: si hay tips guardados del ultimo post-consulta
+    # (bug #5 fidelizacion), enviarlos ahora que el paciente escribio y
+    # la ventana 24h esta abierta.
+    _pending_tips = data.get("pending_tips") if isinstance(data, dict) else None
+    if _pending_tips:
+        try:
+            await send_whatsapp(phone, _pending_tips)
+            data.pop("pending_tips", None)
+            save_session(phone, state, data)
+            log_event(phone, "pending_tips_enviados", {"len": len(_pending_tips)})
+        except Exception as _e_pt:
+            log.warning("Error enviando pending_tips: %s", _e_pt)
+
     # ── Paciente envía solo una URL: no lo procesemos con Claude ──
     # Caso real 2026-04-23 (56931400124): paciente mandó link a boleta;
     # Claude respondió "el CMC no es una imprenta" (alucinación).
@@ -3297,7 +3310,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                           "donde queda", "dónde queda", "como llego", "cómo llego")
         if any(p in tl_norm_slot for p in _INFO_CONTACTO):
             return (
-                f"📞 *{CMC_TELEFONO}* o ☎️ *(44) 296 5226*\n"
+                f"📞 *{CMC_TELEFONO}* o ☎️ *(41) 296 5226*\n"
                 f"📍 Monsalve 102, Carampangue (frente a la antigua estación de trenes).\n\n"
                 "_Elige un número del listado, *ver todos* para más horarios, u *otro día*._"
             )

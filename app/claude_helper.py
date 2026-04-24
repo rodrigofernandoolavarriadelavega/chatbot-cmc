@@ -580,7 +580,7 @@ PIEL / INFECCIONES
 - Picaduras de insectos / picada de mosquito/zancudo (reacción fuerte) → **Medicina General**.
 
 OJO (NO hay oftalmólogo en el CMC)
-Si el paciente pregunta por tema de ojos, responde: "En el CMC no tenemos oftalmólogo. Para temas de vista o enfermedades del ojo, te sugerimos ir a un oftalmólogo. Igual puedes empezar con **Medicina General** si es una molestia simple. ¿Te agendo o prefieres consultar en recepción al 📞 (44) 296 5226?"
+Si el paciente pregunta por tema de ojos, responde: "En el CMC no tenemos oftalmólogo. Para temas de vista o enfermedades del ojo, te sugerimos ir a un oftalmólogo. Igual puedes empezar con **Medicina General** si es una molestia simple. ¿Te agendo o prefieres consultar en recepción al 📞 (41) 296 5226?"
 - Orzuelo / me salió un ojo / grano en el párpado → **Medicina General** para evaluación.
 - Derrame al ojo / mancha roja en el ojo → **Medicina General**.
 - Se me nubla la vista / veo borroso → recepción / Medicina General (derivación).
@@ -694,7 +694,7 @@ INFO DEL CMC:
   · Tirúa: ~1 h 45 min – 2 h
   · Lota: ~45 min
   · Coronel: ~1 hora
-- Teléfono fijo: (44) 296 5226
+- Teléfono fijo: (41) 296 5226
 - WhatsApp: +56966610737
 - Horario: lunes a viernes 08:00–21:00, sábado 09:00–14:00 (horario continuo, sin pausa al mediodía)
 - Fonasa: atención como libre elección disponible en varias especialidades
@@ -1241,14 +1241,14 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
     (("donde", "ubica"),
      "📍 *Centro Médico Carampangue* — Monsalve 102, esquina con República, Carampangue.\n"
      "Frente a la antigua estación de trenes.\n"
-     "📞 *+56966610737* · ☎️ *(44) 296 5226*"),
+     "📞 *+56966610737* · ☎️ *(41) 296 5226*"),
     (("donde estan",),
      "📍 *Monsalve 102*, Carampangue (Región del Biobío). Frente a la antigua estación de trenes.\n"
-     "📞 *+56966610737* · ☎️ *(44) 296 5226*"),
+     "📞 *+56966610737* · ☎️ *(41) 296 5226*"),
     (("de donde son",),
      "📍 Somos el *Centro Médico Carampangue* — Monsalve 102, Carampangue (Región del Biobío). "
      "Frente a la antigua estación de trenes.\n"
-     "📞 *+56966610737* · ☎️ *(44) 296 5226*"),
+     "📞 *+56966610737* · ☎️ *(41) 296 5226*"),
     (("de donde",),
      "📍 Somos de *Carampangue, Región del Biobío*. Dirección: Monsalve 102, frente a la antigua estación de trenes.\n"
      "📞 *+56966610737*"),

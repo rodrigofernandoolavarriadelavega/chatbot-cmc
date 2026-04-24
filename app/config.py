@@ -19,7 +19,7 @@ INSTAGRAM_USER_ID    = os.getenv("INSTAGRAM_USER_ID", "")   # ID del usuario de 
 META_PAGE_ID         = os.getenv("META_PAGE_ID", "")        # ID de la Página de Facebook
 
 CMC_TELEFONO       = os.getenv("CMC_TELEFONO", "+56 XX XXX XXXX")
-CMC_TELEFONO_FIJO  = os.getenv("CMC_TELEFONO_FIJO", "(44) 296 5226")
+CMC_TELEFONO_FIJO  = os.getenv("CMC_TELEFONO_FIJO", "(41) 296 5226")
 
 ADMIN_TOKEN        = os.getenv("ADMIN_TOKEN", "cmc_admin_2026")
 ORTODONCIA_TOKEN   = os.getenv("ORTODONCIA_TOKEN", "cmc_ortodoncia_2026")
