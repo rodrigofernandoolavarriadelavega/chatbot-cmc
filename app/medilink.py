@@ -599,7 +599,10 @@ async def buscar_primer_dia(especialidad: str, dias_adelante: int = 60,
     id_esp = _id_especialidad(especialidad)
 
     async with httpx.AsyncClient(timeout=15) as client:
-        horarios = {i: await _get_horario(client, i) for i in ids}
+        # N+1 → paralelizado con asyncio.gather para reducir latencia
+        import asyncio as _asyncio_horarios
+        _horarios_list = await _asyncio_horarios.gather(*(_get_horario(client, i) for i in ids))
+        horarios = dict(zip(ids, _horarios_list))
         if intervalo_override:
             for id_prof, mins in intervalo_override.items():
                 if id_prof in horarios:

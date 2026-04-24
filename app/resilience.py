@@ -171,12 +171,11 @@ def get_phone_lock(phone: str) -> "_asyncio_bg.Lock":
         for p, val in list(_phone_locks.items()):
             if isinstance(val, tuple) and (now - val[1]) > _LOCK_TTL_SEC:
                 _phone_locks.pop(p, None)
-    entry = _phone_locks.get(phone)
-    if entry is not None:
-        if isinstance(entry, tuple):
-            _phone_locks[phone] = (entry[0], now)
-            return entry[0]
-        return entry  # backwards compat si algún código guardó Lock sin tuple
-    lock = _asyncio_bg.Lock()
-    _phone_locks[phone] = (lock, now)
-    return lock
+    # setdefault es atómico en dict — evita race donde 2 corrutinas crean 2 Locks.
+    new_lock = _asyncio_bg.Lock()
+    entry = _phone_locks.setdefault(phone, (new_lock, now))
+    if isinstance(entry, tuple):
+        lock, _ = entry
+        _phone_locks[phone] = (lock, now)  # refresh ts
+        return lock
+    return entry  # backwards compat

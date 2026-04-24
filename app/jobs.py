@@ -123,7 +123,7 @@ async def enviar_reagendar_por_cancelacion(id_cita: str, motivo: str = "doctor_c
         log.exception("Error buscando slots alternos id_cita=%s: %s", id_cita, e)
         return {"ok": False, "reason": "error_buscar_slots"}
     if not todos:
-        send_whatsapp(
+        await send_whatsapp(
             phone,
             f"⚠️ Tu hora del {cita.get('fecha','')} {cita.get('hora','')} con "
             f"{cita.get('profesional','')} fue cancelada por el profesional.\n\n"
@@ -149,7 +149,7 @@ async def enviar_reagendar_por_cancelacion(id_cita: str, motivo: str = "doctor_c
     }
     save_session(phone, "WAIT_SLOT", data)
 
-    send_whatsapp(
+    await send_whatsapp(
         phone,
         f"⚠️ *Aviso importante*\n\nTu hora del *{cita.get('fecha','')}* a las "
         f"*{cita.get('hora','')}* con *{cita.get('profesional','')}* fue cancelada "
@@ -158,9 +158,9 @@ async def enviar_reagendar_por_cancelacion(id_cita: str, motivo: str = "doctor_c
     from flows import _format_slots
     body = _format_slots(alt_slots)
     if isinstance(body, dict):
-        send_whatsapp_interactive(phone, body)
+        await send_whatsapp_interactive(phone, body)
     else:
-        send_whatsapp(phone, body)
+        await send_whatsapp(phone, body)
 
     mark_cita_cancel_detected(id_cita)
     log_event(phone, "cancel_doctor_notified", {

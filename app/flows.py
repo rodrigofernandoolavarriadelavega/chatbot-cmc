@@ -89,7 +89,7 @@ EMERGENCIAS  = {
     # neurológico grave
     "no despierta", "no reacciona", "perdida de conciencia",
     # ocular urgente
-    "no veo", "perdí la vista", "perdi la vista", "ceguera súbita",
+    "perdí la vista", "perdi la vista", "ceguera súbita",
 }
 
 # Patrones regex para emergencias con redacción flexible
