@@ -37,17 +37,17 @@
   .hover\:bg-slate-50:hover { background: rgba(232, 224, 208, 0.35) !important; }
   .bg-slate-50 { background: rgba(232, 224, 208, 0.3) !important; color: var(--olacore-fiordo); }
   /* Meridiano: línea vertical cobre con 2 bolitas — firma del sistema OLACORE */
-  .meridian { width: 1px; height: 56px; background: var(--olacore-cobre); position: relative; opacity: 0.7; flex-shrink: 0; }
+  .meridian { width: 1px; height: 56px; background: var(--olacore-cobre); position: relative; opacity: 0.7; flex-shrink: 0; margin-left: 24px; margin-right: 8px; }
   .meridian::before, .meridian::after { content: ""; position: absolute; left: -4px; width: 9px; height: 9px; background: var(--olacore-cobre); border-radius: 50%; }
   .meridian::before { top: 22%; }
   .meridian::after  { bottom: 22%; }
 
   /* Marca OLACORE en header — usa sello simple + wordmark transparentes oficiales */
   .by-olacore { display: flex; align-items: center; gap: 12px; padding-left: 16px; margin-left: 4px; text-decoration: none; }
-  .by-olacore-text-block { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
-  .by-olacore-by { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--olacore-cobre); opacity: 0.85; line-height: 1; }
-  .by-olacore-wordmark { height: 22px; display: block; margin: 1px 0; }
-  .by-olacore-tag { font-family: 'Fraunces', serif; font-style: italic; font-weight: 300; font-size: 10px; color: var(--olacore-cobre); opacity: 0.8; line-height: 1; letter-spacing: 0.04em; }
+  .by-olacore-text-block { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+  .by-olacore-by { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--olacore-cobre); opacity: 0.85; line-height: 1; align-self: flex-start; }
+  .by-olacore-wordmark { height: 22px; display: block; margin: 1px 0; object-fit: contain; object-position: left center; align-self: flex-start; }
+  .by-olacore-tag { font-family: 'Fraunces', serif; font-style: italic; font-weight: 300; font-size: 10px; color: var(--olacore-cobre); opacity: 0.8; line-height: 1; letter-spacing: 0.04em; align-self: flex-start; }
   .by-olacore-sello { width: 38px; height: 38px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
   .by-olacore-sello img { width: 100%; height: 100%; display: block; animation: sello-spin 60s linear infinite; transform-origin: center; }
   .tab-btn.active { background: white; color: #0f172a; border-color: #e2e8f0; }
