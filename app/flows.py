@@ -1313,6 +1313,12 @@ async def _responder_pregunta_horario(phone: str, state: str, data: dict, txt: s
         prof_nombre = PROFESIONALES.get(int(prof_id), {}).get("nombre", "El profesional")
         especialidad = PROFESIONALES.get(int(prof_id), {}).get("especialidad", "")
         esp_sufijo = f" de *{especialidad}*" if especialidad else ""
+        # Marcar prof pedido explícitamente para que confirmar_sugerido no
+        # reserve con otro. Caso 56988694763: pidió Márquez, bot mostró días
+        # de atención pero no slots; al confirmar reservó con Olavarría.
+        if prof_mencionado_id:
+            data["prof_pedido_explicito"] = int(prof_mencionado_id)
+            save_session(phone, state, data)
         return f"Sí, {prof_nombre}{esp_sufijo} atiende los *{dias_str}* 📅"
     except Exception as e:
         log.warning("pregunta_horario falló: %s", e)
@@ -1395,7 +1401,9 @@ async def _pre_router_wait(phone: str, txt: str, tl: str, state: str, data: dict
         elif tag == "preguntar_pago":
             resp = _preguntar_pago_respuesta(data)
         elif tag == "preguntar_info":
-            resp = _preguntar_info_respuesta()
+            # Intentar FAQ específico primero (telemedicina, radiografía, etc).
+            from claude_helper import _local_faq_fallback as _faq_fb
+            resp = _faq_fb(txt) or _preguntar_info_respuesta()
         else:
             return None
         recordatorio = _recordatorio_prompt(state, data)
@@ -1413,6 +1421,16 @@ async def _pre_router_wait(phone: str, txt: str, tl: str, state: str, data: dict
             return None
 
         if tag == "cancelar_cita_real":
+            # Si el paciente está en flujo de AGENDAR, no cancelar cita existente.
+            # Caso 56988694763 22:17: No alcanzo q llegar en CONFIRMING_CITA →
+            # significaba rechazar el slot, no anular cita previa.
+            if state in ("WAIT_SLOT", "CONFIRMING_CITA", "WAIT_MODALIDAD",
+                         "WAIT_RUT_AGENDAR", "WAIT_BOOKING_FOR"):
+                save_session(phone, "WAIT_SLOT", data)
+                return (
+                    "Sin problema 😊 Escribe *otro día* para ver más opciones, "
+                    "un número del listado o *menu* para volver al inicio."
+                )
             reset_session(phone)
             return await handle_message(phone, "accion_cambiar", {"state": "IDLE", "data": {}})
 
@@ -2258,7 +2276,18 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # patología sospechada (ej. "posible IAM") — eso es territorio médico
         # y puede alarmar sin información diagnóstica real. La patología se
         # registra en log_event para auditoría interna y revisión posterior.
-        if len(txt) >= 10 and not txt.isdigit():
+        # Skip triage si el texto menciona gestión de cita existente o
+        # especialidad específica — esas intenciones deben ir a Claude.
+        _TRIAGE_SKIP_KWS = (
+            "dentista", "odontol", "ortodonci", "endodonc", "implante",
+            "cancel", "anular", "reagend", "cambiar hora", "cambiar mi hora",
+            "no puedo ir", "no puedo asistir", "no alcanzo", "cambio de hora",
+            "otorrino", "kinesio", "kine", "psicolog", "nutricion",
+            "matrona", "ecograf", "ginecolog", "cardiolog", "podolog",
+            "fonoaud", "gastro",
+        )
+        _skip_triage = any(k in tl for k in _TRIAGE_SKIP_KWS)
+        if len(txt) >= 10 and not txt.isdigit() and not _skip_triage:
             _t0 = time.monotonic()
             triage = await triage_sintomas(txt)
             _elapsed_ms = int((time.monotonic() - _t0) * 1000)
@@ -2961,6 +2990,24 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
         # Respuesta al sugerido proactivo (botón o texto libre "si"/"sí"/"confirmo"/...)
         if (tl == "confirmar_sugerido" or tl in AFIRMACIONES or tl_norm in AFIRMACIONES) and slots_mostrados:
+            # Si el paciente pidió explicitamente otro profesional antes y los
+            # slots mostrados NO son de él, preferir uno que sí lo sea.
+            _pedido = data.get("prof_pedido_explicito")
+            if _pedido:
+                _slot_pedido = next((s for s in slots_mostrados if s.get("id_profesional") == _pedido), None)
+                if _slot_pedido:
+                    data.pop("prof_pedido_explicito", None)
+                    return await _slot_confirmed(phone, data, _slot_pedido)
+                # No hay slot del doctor pedido → avisar antes de confirmar
+                from medilink import PROFESIONALES as _PROFS_EX
+                nombre_p = _PROFS_EX.get(int(_pedido), {}).get("nombre", "ese doctor")
+                nombre_s = slots_mostrados[0].get("profesional", "otro doctor")
+                data.pop("prof_pedido_explicito", None)
+                save_session(phone, "WAIT_SLOT", data)
+                return (
+                    f"No encontré cupo con *{nombre_p}* en los próximos días 😕{chr(92)}n{chr(92)}n"
+                    f"¿Te sirve con *{nombre_s}* (mismo día y hora)? Responde *sí* o escribe *otro día*."
+                )
             slot = slots_mostrados[0]
             return await _slot_confirmed(phone, data, slot)
 
@@ -5491,7 +5538,7 @@ _APELLIDOS_PROFESIONAL = [
     ("nutricionista",    "nutrición"),
 
     # === Jorge Montalba (74) — Psicología ===
-    ("jorge",        "montalba"),
+    # "jorge" solo removido — nombre común de paciente (caso 56994855278: Jorge Pezo)
     ("jorgito",      "montalba"),
     ("coque",        "montalba"),
     ("horge",        "montalba"),
