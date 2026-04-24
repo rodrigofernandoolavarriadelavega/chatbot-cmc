@@ -536,6 +536,65 @@ def seo_dashboard_page():
     return _SEO_DASHBOARD_HTML
 
 
+@app.get("/api/seo/geo")
+def seo_geo_api():
+    """Sirve el cruce comunas/atenciones para el dashboard SEO.
+
+    Lee data/heatmap_*.json (generado por el chatbot), normaliza variantes con typos
+    (CURNILAGUE → CURANILAHUE, etc.) y devuelve top 10 comunas reales.
+
+    El dashboard hace fetch a este endpoint para mostrar datos siempre actualizados.
+    """
+    import json, re, glob, os
+    from pathlib import Path
+
+    # Tomar el heatmap más reciente
+    files = sorted(glob.glob(str(Path(__file__).parent.parent / "data" / "heatmap_*.json")),
+                   key=os.path.getmtime, reverse=True)
+    if not files:
+        return {"error": "no heatmap data"}
+    raw = json.loads(Path(files[0]).read_text(encoding="utf-8"))
+
+    # Normalizar variantes con typos: agrupar por palabra base
+    NORMALIZE = {
+        r"^CURAN[IM]?L?A?H?U?E?\.?$": "CURANILAHUE",
+        r"^LO[SA]?\s*A?L?[AÁ]?M?O?S?\.?$": "LOS ÁLAMOS",
+        r"^ARAU[CU]+O?\s*-?$": "ARAUCO",
+        r"^CONCEPCI[OÓ]N$": "CONCEPCIÓN",
+        r"^SAN\s+JOS[EÉ]\s+(DE\s+)?C[OÓ]LICO$": "SAN JOSÉ DE CÓLICO",
+    }
+    grouped = {}
+    for c in raw.get("comunas", []):
+        nombre = c["comuna"].strip().upper()
+        canonical = nombre
+        for pattern, target in NORMALIZE.items():
+            if re.match(pattern, nombre):
+                canonical = target
+                break
+        if canonical in grouped:
+            grouped[canonical]["pacientes"] += c["pacientes"]
+            grouped[canonical]["citas"] += c["citas"]
+        else:
+            grouped[canonical] = {"comuna": canonical, "pacientes": c["pacientes"], "citas": c["citas"]}
+
+    total_pac = sum(g["pacientes"] for g in grouped.values())
+    comunas = sorted(grouped.values(), key=lambda x: x["pacientes"], reverse=True)
+    for c in comunas:
+        c["pct"] = round(c["pacientes"] / total_pac * 100, 1) if total_pac else 0
+
+    return {
+        "fuente": "heatmap_chatbot",
+        "actualizado": Path(files[0]).stat().st_mtime,
+        "archivo": Path(files[0]).name,
+        "periodo": raw.get("periodo"),
+        "total_citas": raw.get("total_citas"),
+        "pacientes_unicos": raw.get("pacientes_unicos"),
+        "con_comuna": raw.get("con_comuna"),
+        "sin_comuna": raw.get("sin_comuna"),
+        "comunas": comunas[:10],  # top 10
+    }
+
+
 @app.get("/proyectos2026", response_class=HTMLResponse)
 def proyectos2026_page():
     """Visualización Canvas 2D de CMC y Meulen como proyectos hermanos."""

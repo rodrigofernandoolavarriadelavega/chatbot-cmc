@@ -600,29 +600,67 @@ DATA.kpis.forEach(k => {
   kpisTbody.appendChild(tr);
 });
 
-// Geo (cruce comunas vs SEO)
-if (DATA.geo) {
-  document.getElementById('geo-periodo').textContent = DATA.geo.periodo;
-  document.getElementById('geo-citas').textContent = DATA.geo.total_citas;
-  document.getElementById('geo-pacientes').textContent = DATA.geo.pacientes_unicos;
-  document.getElementById('geo-concomuna').textContent = DATA.geo.con_comuna + ' (' + Math.round((DATA.geo.con_comuna/DATA.geo.pacientes_unicos)*100) + '%)';
-  const geoTbody = document.getElementById('geo-tbody');
+// Geo (cruce comunas vs SEO) — fetch dinámico desde /api/seo/geo
+function renderGeo(geoData, sourceLabel) {
+  const periodoEl = document.getElementById('geo-periodo');
+  if (sourceLabel) periodoEl.textContent = `${geoData.periodo || ''} · ${sourceLabel}`;
+  else periodoEl.textContent = geoData.periodo || '';
+  document.getElementById('geo-citas').textContent = (geoData.total_citas || 0).toLocaleString('es-CL');
+  document.getElementById('geo-pacientes').textContent = (geoData.pacientes_unicos || 0).toLocaleString('es-CL');
+  const con = geoData.con_comuna || 0, uniq = geoData.pacientes_unicos || 1;
+  document.getElementById('geo-concomuna').textContent = con + ' (' + Math.round(con/uniq*100) + '%)';
+  // Cruce con clics SEO conocidos (de DATA.seo_geo_clicks o defaults)
+  const SEO_CLICKS = { 'ARAUCO': 150, 'CARAMPANGUE': 150, 'CURANILAHUE': 0, 'LOS ÁLAMOS': 0, 'CAÑETE': 0, 'LEBU': 0, 'LOTA': 0, 'CORONEL': 0 };
+  const NOTAS = {
+    'ARAUCO': 'Mercado capturado, optimizar long-tail',
+    'CURANILAHUE': 'Mercado #2 — landing /centro-medico-curanilahue/ creada',
+    'LOS ÁLAMOS': '3er mercado — incluir en landings geo',
+    'LEBU': 'Crecimiento reciente — evaluar landing dedicada',
+    'CAÑETE': 'Doctoralia domina SERP — listarse en lugar de pelear',
+    'LOTA': 'Marginal pero presente',
+    'CORONEL': 'Marginal pero presente',
+  };
+  const brechaFor = (comuna, pct) => {
+    const c = SEO_CLICKS[comuna];
+    if (c === undefined) return 'low';
+    if (c > 100) return 'ok';
+    if (pct > 5) return 'critical';
+    if (pct > 1) return 'high';
+    return 'medium';
+  };
   const brechaColors = { critical: 'priority-critical', high: 'priority-high', medium: 'priority-medium', low: 'priority-low', ok: 'status-done' };
   const brechaLabel = { critical: '🔴 crítica', high: '🟠 alta', medium: '🟡 media', low: '⚪ baja', ok: '✅ ok' };
-  DATA.geo.comunas.forEach(c => {
+  const tbody = document.getElementById('geo-tbody');
+  tbody.innerHTML = '';
+  geoData.comunas.forEach(c => {
+    const seoClicks = SEO_CLICKS[c.comuna] !== undefined ? SEO_CLICKS[c.comuna] : 0;
+    const brecha = brechaFor(c.comuna, c.pct);
+    const nota = NOTAS[c.comuna] || '—';
     const tr = document.createElement('tr');
     tr.className = 'hover:bg-slate-50';
     tr.innerHTML = `
       <td class="px-4 py-3 font-medium">${c.comuna}</td>
-      <td class="px-4 py-3 text-right">${c.pacientes}</td>
+      <td class="px-4 py-3 text-right">${c.pacientes.toLocaleString('es-CL')}</td>
       <td class="px-4 py-3 text-right text-slate-500">${c.pct}%</td>
-      <td class="px-4 py-3 text-right ${c.seo_clics === 0 ? 'text-red-600 font-semibold' : ''}">${c.seo_clics}</td>
-      <td class="px-4 py-3 text-center"><span class="${brechaColors[c.brecha]||''} px-2 py-1 rounded text-xs font-medium">${brechaLabel[c.brecha]||c.brecha}</span></td>
-      <td class="px-4 py-3 text-xs text-slate-600">${c.nota}</td>
+      <td class="px-4 py-3 text-right ${seoClicks === 0 ? 'text-red-600 font-semibold' : ''}">${seoClicks}</td>
+      <td class="px-4 py-3 text-center"><span class="${brechaColors[brecha]||''} px-2 py-1 rounded text-xs font-medium">${brechaLabel[brecha]||brecha}</span></td>
+      <td class="px-4 py-3 text-xs text-slate-600">${nota}</td>
     `;
-    geoTbody.appendChild(tr);
+    tbody.appendChild(tr);
   });
 }
+
+// Render inicial con DATA estática (fallback) e inmediatamente fetch live data
+if (DATA.geo) renderGeo(DATA.geo, 'snapshot estático');
+fetch('/api/seo/geo')
+  .then(r => r.ok ? r.json() : Promise.reject(r.status))
+  .then(live => {
+    if (live && live.comunas) {
+      const ts = new Date(live.actualizado * 1000).toLocaleString('es-CL', {dateStyle:'short', timeStyle:'short'});
+      renderGeo(live, '🟢 live · ' + ts);
+    }
+  })
+  .catch(err => console.warn('Geo live fetch failed:', err));
 
 // Top queries GSC
 if (DATA.top_queries) {
