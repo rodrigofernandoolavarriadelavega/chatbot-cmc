@@ -2963,6 +2963,19 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if (tl == "confirmar_sugerido" or tl in AFIRMACIONES or tl_norm in AFIRMACIONES) and slots_mostrados:
             slot = slots_mostrados[0]
             return await _slot_confirmed(phone, data, slot)
+
+        # Pregunta-afirmación implícita cuando hay 1 solo slot mostrado:
+        # Tendra hora disponible? / hay cupos? / tiene hora? → paciente está
+        # confirmando implícitamente el slot único ofrecido. Caso 56966283335.
+        if len(slots_mostrados) == 1:
+            _CONFIRM_IMPLICITO = (
+                "tendra", "tendrá", "tiene hora", "hay cupo", "hay cupos",
+                "esta disponible", "está disponible", "hay disponible",
+                "alguna horita disponible", "tendra alguna", "tendrá alguna",
+                "hay hora",
+            )
+            if any(k in tl for k in _CONFIRM_IMPLICITO):
+                return await _slot_confirmed(phone, data, slots_mostrados[0])
         # Payload del botón "Sí, esa hora" llegó pero se perdieron los slots de sesión
         # (sesión expiró, mensaje demorado, etc.) → re-buscar en vez de ignorar.
         if tl == "confirmar_sugerido" and not slots_mostrados:
