@@ -63,7 +63,15 @@ async def _post_meta(payload: dict) -> str | None:
                          payload.get("to", "?"), err_code)
                 return None
             if 400 <= r.status_code < 500 and r.status_code != 429:
-                log.error("Meta API %s (no-retry) to=%s: %s", r.status_code, payload.get("to", "?"), err_msg)
+                _to_val = payload.get("to", "?")
+                try:
+                    from config import ADMIN_ALERT_PHONE as _AAP
+                except Exception:
+                    _AAP = ""
+                if _to_val == _AAP:
+                    log.info("Meta API %s to=%s (admin, sin WA): %s", r.status_code, _to_val, err_msg)
+                else:
+                    log.error("Meta API %s (no-retry) to=%s: %s", r.status_code, _to_val, err_msg)
                 return None
             log.warning("Meta API intento %d → %s (transitorio): %s",
                         attempt + 1, r.status_code, err_msg)
@@ -125,6 +133,8 @@ def _is_dupe_outbound(to: str, body: str) -> bool:
 async def send_whatsapp(to: str, body: str) -> str | None:
     """Envía mensaje de texto vía Meta Cloud API. Retorna wamid o None si falla.
     Si el mismo body fue enviado a `to` en los últimos 2 min, skip (dedupe)."""
+    if not body or not body.strip():
+        return None
     if _is_dupe_outbound(to, body):
         log.info("dedupe outbound skipped to=%s len=%d", to, len(body))
         return None
