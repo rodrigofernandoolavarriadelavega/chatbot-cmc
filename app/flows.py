@@ -2432,6 +2432,27 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "_Te derivaré con la recepcionista si prefieres registro manual._"
                 )
 
+        # ── Context pivot: si preguntó por info de una esp hace <5min y ahora
+        # pregunta por disponibilidad/cupos/hora, re-enrutar a agendar. ──
+        _ctx_esp = data.get("last_esp_context")
+        _ctx_ts = data.get("last_esp_context_ts")
+        if _ctx_esp and _ctx_ts:
+            try:
+                from datetime import datetime as _dt_ctx2
+                _edad = _dt_ctx2.now(timezone.utc) - _dt_ctx2.fromisoformat(_ctx_ts)
+                if _edad < timedelta(minutes=5):
+                    _pivot_kw = ("cupo", "cupos", "disponib", "hora dispon",
+                                 "horario", "cuando hay", "cuándo hay",
+                                 "hay hora", "para cuando", "para cuándo",
+                                 "en que horario", "en qué horario")
+                    if any(k in tl for k in _pivot_kw):
+                        data.pop("last_esp_context", None)
+                        data.pop("last_esp_context_ts", None)
+                        log_event(phone, "ctx_pivot_agendar", {"esp": _ctx_esp})
+                        return await _iniciar_agendar(phone, data, _ctx_esp)
+            except Exception:
+                pass
+
         result = await detect_intent(txt)
         intent = result.get("intent", "otro")
         log_event(phone, "intent_detectado", {"intent": intent, "esp": result.get("especialidad")})
@@ -2609,6 +2630,15 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             )
 
         if intent in ("precio", "info"):
+            # Guardar especialidad mencionada en contexto con TTL 5min.
+            # Permite que "¿Y cuando hay cupos?" en el siguiente turno sepa
+            # que hablamos de eso. Caso 56937785271 2026-04-23 18:52.
+            _esp_ctx = result.get("especialidad")
+            if _esp_ctx:
+                from datetime import datetime as _dt_ctx
+                data["last_esp_context"] = _esp_ctx
+                data["last_esp_context_ts"] = _dt_ctx.now(timezone.utc).isoformat()
+                save_session(phone, "IDLE", data)
             resp = result.get("respuesta_directa") or await respuesta_faq(txt)
             esp_sug = (result.get("especialidad") or "").strip()
             # Si Claude infirió una especialidad, intentamos mostrar el próximo slot

@@ -220,7 +220,11 @@ async def _job_winback():
     await enviar_winback(send_whatsapp)
 
 # ── Doctor alerts ────────────────────────────────────────────────────────────
-_doctor_phone = CMC_TELEFONO.replace("+", "").replace(" ", "")
+# Usar ADMIN_ALERT_PHONE (celular del Dr. Olavarria), no CMC_TELEFONO (bot).
+# Caso real 2026-04-23: el job enviaba mensajes al numero del bot → Meta API
+# 400 Invalid parameter 6x al dia. Bug heredado del _doctor_phone de flows.py
+# (ya arreglado en commit a2b19f4).
+_doctor_phone = ADMIN_ALERT_PHONE
 
 async def _job_doctor_resumen_precita():
     await enviar_resumen_precita(send_whatsapp, _doctor_phone)
