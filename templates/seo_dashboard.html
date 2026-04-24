@@ -20,35 +20,62 @@
     --olacore-lenga: #7C4A2A;
     --olacore-lacre: #9A3E2F;
   }
-  body { font-family: 'Inter', system-ui, sans-serif; background: #f7f8fa; }
+  body { font-family: 'Inter', system-ui, sans-serif; background: #faf6ee; color: var(--olacore-fiordo); }
   /* Animación del sello pequeño en el header (al lado de "by OLACORE") */
   @keyframes sello-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-  /* Marca OLACORE en header — alineado a Brand Board v6 (Meridiano Sur) */
-  .by-olacore { display: flex; align-items: center; gap: 10px; padding-left: 14px; margin-left: 14px; border-left: 1px solid #e2e8f0; text-decoration: none; }
-  .by-olacore-text-wrap { display: flex; flex-direction: column; line-height: 1; }
-  .by-olacore-by { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--olacore-cobre); opacity: 0.85; }
-  .by-olacore-name { font-family: 'Fraunces', serif; font-weight: 600; font-size: 15px; letter-spacing: 0.06em; color: var(--olacore-fiordo); margin-top: 2px; }
-  .by-olacore-tag { font-family: 'Fraunces', serif; font-style: italic; font-weight: 300; font-size: 10px; color: var(--olacore-cobre); margin-top: 2px; opacity: 0.75; }
-  .by-olacore-logo { width: 36px; height: 36px; border-radius: 10px; background: var(--olacore-fiordo); border: 1px solid rgba(185, 129, 73, 0.4); display: flex; align-items: center; justify-content: center; padding: 4px; box-shadow: 0 2px 10px rgba(14, 37, 48, 0.18), inset 0 0 8px rgba(185, 129, 73, 0.1); flex-shrink: 0; }
-  .by-olacore-logo img { width: 100%; height: 100%; display: block; animation: sello-spin 60s linear infinite; transform-origin: center; }
+  /* Tipografía: títulos en serif Fraunces, mono para microdatos */
+  h1, h2, h3, h4 { font-family: 'Fraunces', serif; font-weight: 600; color: var(--olacore-fiordo); }
+  .micro, .uppercase { font-family: 'IBM Plex Mono', monospace; letter-spacing: 0.18em; }
+  .text-slate-800, .text-slate-700, .text-slate-600, .text-slate-500 { color: var(--olacore-fiordo) !important; opacity: 0.85; }
+  .text-slate-500 { opacity: 0.65; }
+  .text-slate-400 { opacity: 0.5; }
+  .text-slate-300 { opacity: 0.3; }
+  /* Cards y bordes con tono neblina */
+  .bg-white { background: #fffcf5 !important; }
+  .border-slate-200, .border-slate-100, .divide-slate-100 > * + * { border-color: rgba(14, 37, 48, 0.12) !important; }
+  .border-slate-100 { border-color: rgba(14, 37, 48, 0.08) !important; }
+  .hover\:bg-slate-50:hover { background: rgba(232, 224, 208, 0.35) !important; }
+  .bg-slate-50 { background: rgba(232, 224, 208, 0.3) !important; color: var(--olacore-fiordo); }
+  /* Marca OLACORE en header — usa sello simple + wordmark transparentes oficiales */
+  .by-olacore { display: flex; align-items: center; gap: 12px; padding-left: 16px; margin-left: 14px; border-left: 1px solid #e2e8f0; text-decoration: none; }
+  .by-olacore-by { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--olacore-cobre); opacity: 0.85; align-self: center; }
+  .by-olacore-sello { width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .by-olacore-sello img { width: 100%; height: 100%; display: block; animation: sello-spin 60s linear infinite; transform-origin: center; }
+  .by-olacore-wordmark { height: 24px; display: block; }
   .tab-btn.active { background: white; color: #0f172a; border-color: #e2e8f0; }
   .gantt-row { display: grid; grid-template-columns: 160px 1fr; gap: 12px; align-items: center; }
   .gantt-bar { height: 22px; border-radius: 6px; position: relative; }
   .kpi-card { transition: transform .15s ease, box-shadow .15s ease; }
   .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(15,23,42,.08); }
-  .tone-slate   { background: #f1f5f9; color: #0f172a; border: 1px solid #e2e8f0; }
-  .tone-white   { background: #ffffff; color: #0f172a; border: 1px solid #e2e8f0; }
-  .tone-blue    { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
-  .tone-emerald { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
-  .tone-amber   { background: #fffbeb; color: #92400e; border: 1px solid #fcd34d; }
-  .tone-rose    { background: #fff1f2; color: #9f1239; border: 1px solid #fecaca; }
-  .status-done       { background: #dcfce7; color: #166534; }
-  .status-in_progress{ background: #fef3c7; color: #92400e; }
-  .status-planned    { background: #f1f5f9; color: #475569; }
-  .priority-critical { background: #fee2e2; color: #991b1b; }
-  .priority-high     { background: #fed7aa; color: #9a3412; }
-  .priority-medium   { background: #fef3c7; color: #92400e; }
-  .priority-low      { background: #e0e7ff; color: #3730a3; }
+  /* Tones — paleta OLACORE (fiordo · neblina · cobre · verde-musgo · lacre) */
+  .tone-slate   { background: rgba(232, 224, 208, 0.45); color: var(--olacore-fiordo); border: 1px solid rgba(14,37,48,0.12); }
+  .tone-white   { background: #fffcf5; color: var(--olacore-fiordo); border: 1px solid rgba(14,37,48,0.12); }
+  .tone-blue    { background: rgba(23, 50, 63, 0.08); color: var(--olacore-fiordo); border: 1px solid rgba(23, 50, 63, 0.2); }
+  .tone-emerald { background: rgba(74, 93, 68, 0.1); color: #2f3d2c; border: 1px solid rgba(74, 93, 68, 0.3); }
+  .tone-amber   { background: rgba(185, 129, 73, 0.12); color: var(--olacore-lenga); border: 1px solid rgba(185, 129, 73, 0.35); }
+  .tone-rose    { background: rgba(154, 62, 47, 0.1); color: var(--olacore-lacre); border: 1px solid rgba(154, 62, 47, 0.3); }
+  /* Status badges */
+  .status-done       { background: rgba(74, 93, 68, 0.18); color: #2f3d2c; }
+  .status-in_progress{ background: rgba(185, 129, 73, 0.2); color: var(--olacore-lenga); }
+  .status-planned    { background: rgba(232, 224, 208, 0.7); color: var(--olacore-fiordo); }
+  /* Priority badges */
+  .priority-critical { background: rgba(154, 62, 47, 0.15); color: var(--olacore-lacre); }
+  .priority-high     { background: rgba(185, 129, 73, 0.2);  color: var(--olacore-lenga); }
+  .priority-medium   { background: rgba(232, 224, 208, 0.6); color: var(--olacore-lenga); }
+  .priority-low      { background: rgba(23, 50, 63, 0.08);   color: var(--olacore-fiordo-2); }
+  /* Botones primarios fiordo */
+  .bg-slate-900 { background: var(--olacore-fiordo) !important; }
+  .hover\:bg-slate-800:hover { background: var(--olacore-fiordo-2) !important; }
+  /* Tab activa: fondo neblina + acento cobre */
+  .tab-btn.active { color: var(--olacore-fiordo) !important; border-bottom-color: var(--olacore-cobre) !important; border-bottom-width: 2px !important; }
+  /* Cards hover refinado */
+  .kpi-card { transition: transform .15s ease, box-shadow .15s ease; }
+  .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(14, 37, 48, .12); }
+  /* Texto rojo (KPI bajo) → lacre */
+  .text-red-600 { color: var(--olacore-lacre) !important; }
+  .text-emerald-600 { color: #4a5d44 !important; }
+  /* Header bottom border cobre sutil */
+  header { border-bottom: 1px solid rgba(185, 129, 73, 0.2) !important; }
 </style>
 </head>
 <body class="text-slate-800">
@@ -69,14 +96,11 @@
         <div class="text-sm text-slate-500">Plan 12 semanas · Baseline 2026-04-15 · 162 usuarios/mes</div>
       </div>
       <a href="/proyectos2026" class="by-olacore" title="OLACORE — Meridiano Sur">
-        <div class="by-olacore-logo">
-          <img src="/static/olacore_sello.svg" alt="OLACORE" />
+        <span class="by-olacore-by">by</span>
+        <div class="by-olacore-sello">
+          <img src="/static/olacore_sello_simple.png" alt="" />
         </div>
-        <div class="by-olacore-text-wrap">
-          <span class="by-olacore-by">by</span>
-          <span class="by-olacore-name">OLACORE</span>
-          <span class="by-olacore-tag">Meridiano Sur</span>
-        </div>
+        <img src="/static/olacore_wordmark.png" alt="OLACORE" class="by-olacore-wordmark" />
       </a>
     </div>
     <div class="flex items-center gap-3">
@@ -518,7 +542,7 @@ new Chart(document.getElementById('chart-tasks-status'), {
   type: 'doughnut',
   data: {
     labels: Object.keys(statusCounts).map(s => ({done:'Hecho',in_progress:'En curso',planned:'Planificado'})[s] || s),
-    datasets: [{ data: Object.values(statusCounts), backgroundColor: ['#10b981','#f59e0b','#94a3b8'] }]
+    datasets: [{ data: Object.values(statusCounts), backgroundColor: ['#4A5D44','#B98149','#0E2530'], borderColor: '#fffcf5', borderWidth: 2 }]
   },
   options: { plugins: { legend: { position: 'bottom' } } }
 });
@@ -527,7 +551,7 @@ new Chart(document.getElementById('chart-phases'), {
   type: 'bar',
   data: {
     labels: DATA.phases.map(p => 'Fase ' + p.id + ' — ' + p.name),
-    datasets: [{ label: '% completitud', data: DATA.phases.map(p => p.progress), backgroundColor: '#3b82f6', borderRadius: 6 }]
+    datasets: [{ label: '% completitud', data: DATA.phases.map(p => p.progress), backgroundColor: '#0E2530', borderRadius: 6 }]
   },
   options: { indexAxis: 'y', scales: { x: { max: 100 } }, plugins: { legend: { display: false } } }
 });
@@ -539,8 +563,8 @@ new Chart(document.getElementById('chart-traffic'), {
     datasets: [{
       label: 'Usuarios únicos',
       data: DATA.traffic_trend.map(t => t.users),
-      borderColor: '#10b981',
-      backgroundColor: 'rgba(16,185,129,0.1)',
+      borderColor: '#B98149',
+      backgroundColor: 'rgba(185, 129, 73, 0.12)',
       fill: true,
       tension: 0.3
     }]
@@ -603,7 +627,7 @@ DATA.posts.forEach(p => {
 
 // Roadmap Gantt
 const gantt = document.getElementById('gantt');
-const phaseColors = ['#ef4444','#f59e0b','#3b82f6','#10b981'];
+const phaseColors = ['#9A3E2F','#B98149','#0E2530','#4A5D44'];
 DATA.phases.forEach((p, i) => {
   const offset = DATA.phases.slice(0, i).reduce((a,x) => a + x.weight, 0);
   const totalW = DATA.phases.reduce((a,x) => a + x.weight, 0);
@@ -691,8 +715,8 @@ function renderGeo(geoData, sourceLabel) {
       data: {
         labels: s.map(x => fmtMes(x.mes)),
         datasets: [
-          { label: 'Citas', data: s.map(x => x.citas), backgroundColor: '#3b82f6', borderRadius: 4 },
-          { label: 'Pacientes únicos', data: s.map(x => x.pacientes_unicos), backgroundColor: '#10b981', borderRadius: 4 }
+          { label: 'Citas', data: s.map(x => x.citas), backgroundColor: '#0E2530', borderRadius: 4 },
+          { label: 'Pacientes únicos', data: s.map(x => x.pacientes_unicos), backgroundColor: '#B98149', borderRadius: 4 }
         ]
       },
       options: {
