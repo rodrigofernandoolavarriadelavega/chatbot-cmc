@@ -84,6 +84,82 @@
   .text-emerald-600 { color: #4a5d44 !important; }
   /* Header bottom border cobre sutil */
   header { border-bottom: 1px solid rgba(185, 129, 73, 0.2) !important; }
+
+  /* ========================================================================
+     RESPONSIVE: tablet (≤1024px) y mobile (≤640px)
+     ======================================================================== */
+
+  /* Tabs siempre con scroll horizontal en pantallas chicas */
+  #tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-wrap: nowrap !important; }
+  #tabs::-webkit-scrollbar { display: none; }
+  #tabs .tab-btn { flex-shrink: 0; white-space: nowrap; }
+
+  /* Cross-nav (Ecosistema · agentecmc.cl) flotante: en mobile va abajo del header */
+  @media (max-width: 768px) {
+    nav[style*="position:fixed"] { top: auto !important; bottom: 12px !important; right: 12px !important; left: 12px !important; justify-content: center; }
+    nav[style*="position:fixed"] a { padding: 6px 10px !important; font-size: 11px !important; }
+  }
+
+  /* Header — stack vertical y badge OLACORE compacto */
+  @media (max-width: 768px) {
+    header > div:first-child {
+      flex-direction: column;
+      align-items: flex-start !important;
+      gap: 12px !important;
+      padding: 14px 16px !important;
+    }
+    header > div:first-child > div:first-child {
+      width: 100%;
+      flex-wrap: wrap;
+      gap: 10px !important;
+    }
+    header h1 { font-size: 16px !important; }
+    header .text-sm { font-size: 11px !important; }
+    .meridian { display: none; }
+    .by-olacore { padding-left: 0; margin-left: 0; gap: 8px; }
+    .by-olacore-wordmark { height: 14px; }
+    .by-olacore-sello { width: 30px; height: 30px; }
+    /* "Actualizado" + botón "Ver sitio" */
+    header > div:first-child > div:last-child { width: 100%; justify-content: space-between; padding: 0 16px 12px; }
+    /* Tabs row toma todo el ancho */
+    header > div:nth-child(2) { padding: 0 8px !important; }
+  }
+
+  /* Main padding reducido en mobile */
+  @media (max-width: 768px) {
+    main { padding: 16px 12px !important; }
+    .grid { gap: 12px !important; }
+    .p-6 { padding: 16px !important; }
+    .p-5 { padding: 14px !important; }
+    .p-4 { padding: 12px !important; }
+    .mb-8 { margin-bottom: 20px !important; }
+    .mb-6 { margin-bottom: 16px !important; }
+    /* KPI cards compactas */
+    .kpi-card .text-3xl { font-size: 22px !important; }
+    .kpi-card .text-2xl { font-size: 18px !important; }
+    .kpi-card .text-xs { font-size: 10px !important; }
+    /* Charts más bajos */
+    canvas { max-height: 240px !important; }
+  }
+
+  /* Mobile chico (≤480px): KPIs 1 columna */
+  @media (max-width: 480px) {
+    .grid.grid-cols-2 { grid-template-columns: 1fr !important; }
+    .grid.grid-cols-3 { grid-template-columns: repeat(2, 1fr) !important; }
+    header h1 { font-size: 15px !important; }
+    canvas { max-height: 200px !important; }
+  }
+
+  /* Tablas con scroll horizontal en cualquier pantalla pequeña */
+  @media (max-width: 768px) {
+    table { font-size: 12px !important; }
+    th, td { padding: 8px 10px !important; }
+  }
+
+  /* Tablet (641-1024px): KPIs 3 columnas en lugar de 5 */
+  @media (min-width: 641px) and (max-width: 1024px) {
+    .md\:grid-cols-5 { grid-template-columns: repeat(3, 1fr) !important; }
+  }
 </style>
 </head>
 <body class="text-slate-800">
