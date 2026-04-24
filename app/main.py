@@ -580,18 +580,27 @@ def seo_geo_api():
     # Expandir ARAUCO en sus localidades reales (si el JSON las trae)
     if "ARAUCO" in grouped and raw.get("localidades_arauco"):
         del grouped["ARAUCO"]
+        # Mapeo de nombres internos → nombres reconocibles para el público
+        DISPLAY_NAME = {
+            "ARAUCO URBANO": "Arauco",  # la gente busca "arauco", no "arauco urbano"
+            "ARAUCO (OTRO)": None,       # descartar agregados sin detalle
+            "ARAUCO (SIN DETALLE)": None,
+        }
         for loc in raw["localidades_arauco"]:
-            nombre = loc["localidad"].strip()
-            if nombre in ("ARAUCO (OTRO)", "ARAUCO (SIN DETALLE)"):
-                continue  # los descartamos, no son localidad real
-            # Capitalizar bonito: "ARAUCO URBANO" → "Arauco urbano"
-            display = nombre.title()
-            grouped[display] = {
-                "comuna": display,
-                "pacientes": loc["pacientes"],
-                "citas": loc.get("pacientes", 0),  # localidades_arauco no trae "citas"
-                "es_localidad_arauco": True,
-            }
+            nombre = loc["localidad"].strip().upper()
+            display = DISPLAY_NAME.get(nombre, loc["localidad"].strip().title())
+            if display is None:
+                continue
+            # Sumar si ya existe (caso edge: dos buckets que mapean al mismo display)
+            if display in grouped:
+                grouped[display]["pacientes"] += loc["pacientes"]
+            else:
+                grouped[display] = {
+                    "comuna": display,
+                    "pacientes": loc["pacientes"],
+                    "citas": loc.get("pacientes", 0),
+                    "es_localidad_arauco": True,
+                }
 
     total_pac = sum(g["pacientes"] for g in grouped.values())
     comunas = sorted(grouped.values(), key=lambda x: x["pacientes"], reverse=True)
