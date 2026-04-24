@@ -505,6 +505,7 @@ async def send_instagram(igsid: str, body: str):
     """Envía mensaje de texto a un usuario de Instagram vía Graph API.
     IG rechaza mensajes > 1000 chars: divide en chunks automáticamente.
     Dedupe: skip si el mismo body se envió a este igsid en los últimos 2 min."""
+    body = _normalize_markdown_for_chat(body)
     if _is_dupe_outbound(f"ig_{igsid}", body):
         log.info("dedupe outbound skipped ig=%s len=%d", igsid, len(body))
         return
@@ -532,6 +533,7 @@ async def send_messenger(psid: str, body: str):
     """Envía mensaje de texto a un usuario de Facebook Messenger vía Graph API.
     Messenger rechaza mensajes > 1000 chars: divide en chunks automáticamente.
     Dedupe: skip si el mismo body se envió a este psid en los últimos 2 min."""
+    body = _normalize_markdown_for_chat(body)
     if _is_dupe_outbound(f"fb_{psid}", body):
         log.info("dedupe outbound skipped fb=%s len=%d", psid, len(body))
         return

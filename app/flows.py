@@ -6204,6 +6204,17 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
         if (len(_esp_clean) < 4 or _esp_clean in _SALUDOS_GRACIAS or not _esp_clean):
             save_session(phone, "WAIT_ESPECIALIDAD", data)
             return f"Claro, te ayudo a agendar 😊\n\n¿Qué especialidad necesitas?\n\n{_ESPECIALIDADES_TEXTO}"
+        # Antes de decir no contamos con, probar FAQ local (radiografia/telemed/etc)
+        try:
+            from claude_helper import _local_faq_fallback as _faq_fb_esp
+            _faq_resp = _faq_fb_esp(especialidad)
+            if _faq_resp:
+                save_demanda_no_disponible(phone, especialidad, "especialidad")
+                log_event(phone, "demanda_no_disponible_faq", {"solicitud": especialidad})
+                reset_session(phone)
+                return _faq_resp
+        except Exception:
+            pass
         # Especialidad plausible pero que no tenemos → registrar demanda
         save_demanda_no_disponible(phone, especialidad, "especialidad")
         log_event(phone, "demanda_no_disponible", {"solicitud": especialidad, "tipo": "especialidad"})
