@@ -2443,6 +2443,21 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if intent == "agendar":
             especialidad = result.get("especialidad")
             log_event(phone, "intent_agendar", {"especialidad": especialidad})
+            # Detectar preferencia de fecha en el mensaje ("mañana", "pasado mañana",
+            # "viernes", etc.) y guardar en data para que _iniciar_agendar la use.
+            # Caso real 2026-04-23: Una horita para mañana con el Dr. Olavarria →
+            # bot ignoraba "mañana" y daba slot de HOY.
+            from datetime import datetime as _dt_fp, timedelta as _td_fp
+            _hoy_cl = _dt_fp.now(_CHILE_TZ).date()
+            _fp_tl = txt.lower()
+            if "pasado mañana" in _fp_tl or "pasado manana" in _fp_tl:
+                data["fecha_preferida"] = (_hoy_cl + _td_fp(days=2)).strftime("%Y-%m-%d")
+            elif ("para mañana" in _fp_tl or "para manana" in _fp_tl
+                  or " mañana" in _fp_tl or " manana" in _fp_tl):
+                # "en la mañana" / "por la mañana" son franja, no fecha
+                if not any(fr in _fp_tl for fr in ("en la mañana", "en la manana",
+                                                    "por la mañana", "por la manana")):
+                    data["fecha_preferida"] = (_hoy_cl + _td_fp(days=1)).strftime("%Y-%m-%d")
             # Pre-fill RUT si el paciente ya agendó antes
             perfil = get_profile(phone)
             if perfil:
@@ -5990,7 +6005,15 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
     if not especialidad:
         save_session(phone, "WAIT_ESPECIALIDAD", data)
         return f"Claro, te ayudo a agendar 😊\n\n¿Qué especialidad necesitas?\n\n{_ESPECIALIDADES_TEXTO}"
-    especialidad_lower = especialidad.lower()
+    especialidad_lower = especialidad.lower().strip()
+    # ── "general" / "generica" solas → medicina general ──
+    # Caso 2026-04-23 (56968396554): paciente en WAIT_ESPECIALIDAD respondió
+    # "General" (nombre de la especialidad); sin alias, Claude la mandaba
+    # a off-topic. Normalizamos.
+    if especialidad_lower in ("general", "generica", "genérica", "general medica",
+                              "mg", "m.g.", "m.g", "medico", "médico"):
+        especialidad = "medicina general"
+        especialidad_lower = "medicina general"
     # ── Traumatología: derivada a medicina general (Barraza temporalmente no
     # disponible). Avisar al paciente antes de mostrar slots para que no se
     # confunda viendo Dr. Abarca cuando pidió traumatólogo.
@@ -6072,7 +6095,17 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
             smart, todos = await buscar_primer_dia(especialidad_lower, solo_ids=[_MED_OVERFLOW_ID])
             mejor = todos[0] if todos else None
     else:
-        smart, todos = await buscar_primer_dia(especialidad_lower)
+        # Si el paciente indicó una fecha preferida ("mañana", "viernes", etc.),
+        # buscarla directamente en vez de usar primer_dia.
+        _fecha_pref = data.get("fecha_preferida")
+        if _fecha_pref:
+            smart, todos = await buscar_slots_dia(especialidad_lower, _fecha_pref)
+            if not todos:
+                # Sin cupo ese día específico → fallback al siguiente disponible
+                smart, todos = await buscar_primer_dia(especialidad_lower)
+            data.pop("fecha_preferida", None)
+        else:
+            smart, todos = await buscar_primer_dia(especialidad_lower)
         mejor = smart[0] if smart else (todos[0] if todos else None)
 
     # Normaliza display de especialidad (ej: Psicologia Infantil vs Adulto)

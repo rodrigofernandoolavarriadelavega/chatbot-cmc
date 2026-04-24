@@ -1058,6 +1058,10 @@ async def detect_intent(mensaje: str) -> dict:
         text = _strip_markdown_json(resp.content[0].text)
         if resp.stop_reason == "max_tokens":
             log.warning("detect_intent truncado por max_tokens: %r", mensaje[:80])
+        # raw_decode tolerante: Claude a veces agrega texto/markdown después
+        # del JSON. json.loads fallaría; raw_decode toma el primer objeto y
+        # descarta el resto. Caso real 2026-04-23: Infantil devolvió
+        # {...}\n```\n**Nota:**... y detect_intent crasheaba.
         usage = getattr(resp, "usage", None)
         if usage is not None:
             log.info(
@@ -1067,7 +1071,11 @@ async def detect_intent(mensaje: str) -> dict:
                 getattr(usage, "cache_creation_input_tokens", 0),
                 getattr(usage, "output_tokens", "?"),
             )
-        _result = json.loads(text)
+        try:
+            _result, _ = json.JSONDecoder().raw_decode(text.lstrip())
+        except (json.JSONDecodeError, ValueError):
+            # Fallback al parser estricto para obtener el error específico
+            _result = json.loads(text)
         # ── POST-PROCESO: sanity check contra alucinaciones comunes ──
         # Claude a veces devuelve especialidad=implantología o estética_facial
         # cuando el texto del paciente no las menciona para nada (ej: "otorrino",
@@ -1194,6 +1202,11 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
      "*Traumatología:* atendemos lesiones musculoesqueléticas con nuestros médicos "
      "generales. Si requieres especialista traumatólogo directo, te derivan desde el CMC 🦴\n\n"
      "Escribe *1* o *agendar* para reservar hora."),
+    (("radiograf",),
+     "No realizamos *radiografías* en el CMC 🙏\n\n"
+     "Contamos con *ecografía* (Dr. David Pardo). Para radiografías te "
+     "sugerimos hospital o centro de imágenes cercano.\n\n"
+     "_Si quieres agendar una *ecografía* o consulta médica, escribe *agendar*._"),
     (("telemedicin",),
      "No ofrecemos *telemedicina* por el momento 😔 Todas las consultas son "
      "presenciales en nuestro centro:\n\n"
