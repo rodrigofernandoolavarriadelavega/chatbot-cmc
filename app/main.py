@@ -603,9 +603,11 @@ def seo_geo_api():
                 }
 
     total_pac = sum(g["pacientes"] for g in grouped.values())
+    total_cit = sum(g["citas"] for g in grouped.values())
     comunas = sorted(grouped.values(), key=lambda x: x["pacientes"], reverse=True)
     for c in comunas:
         c["pct"] = round(c["pacientes"] / total_pac * 100, 1) if total_pac else 0
+        c["pct_citas"] = round(c["citas"] / total_cit * 100, 1) if total_cit else 0
 
     # Leer rango real + serie mensual del SQLite cache (fuente única de verdad)
     import sqlite3

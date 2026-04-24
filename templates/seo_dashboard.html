@@ -360,8 +360,10 @@
           <thead class="bg-slate-50 text-slate-600 uppercase text-xs">
             <tr>
               <th class="px-4 py-3 text-left">Comuna / Localidad</th>
-              <th class="px-4 py-3 text-right">Pacientes</th>
+              <th class="px-4 py-3 text-right">Atenciones</th>
               <th class="px-4 py-3 text-right">% atenciones</th>
+              <th class="px-4 py-3 text-right">Pacientes</th>
+              <th class="px-4 py-3 text-right">% pacientes</th>
               <th class="px-4 py-3 text-right">Clics SEO</th>
               <th class="px-4 py-3 text-center">Brecha</th>
               <th class="px-4 py-3 text-left">Acción</th>
@@ -855,8 +857,12 @@ function renderGeo(geoData, sourceLabel) {
     const prefix = c.es_localidad_arauco ? '<span class="text-xs text-slate-400 mr-1">📍</span>' : '';
     const tr = document.createElement('tr');
     tr.className = 'hover:bg-slate-50';
+    const citas = c.citas != null ? c.citas : c.pacientes;
+    const pctCitas = c.pct_citas != null ? c.pct_citas : c.pct;
     tr.innerHTML = `
       <td class="px-4 py-3 font-medium">${prefix}${c.comuna}</td>
+      <td class="px-4 py-3 text-right">${citas.toLocaleString('es-CL')}</td>
+      <td class="px-4 py-3 text-right text-slate-500">${pctCitas}%</td>
       <td class="px-4 py-3 text-right">${c.pacientes.toLocaleString('es-CL')}</td>
       <td class="px-4 py-3 text-right text-slate-500">${c.pct}%</td>
       <td class="px-4 py-3 text-right ${seoClicks === 0 ? 'text-red-600 font-semibold' : ''}">${seoClicks}</td>
