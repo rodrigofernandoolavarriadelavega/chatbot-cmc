@@ -37,11 +37,13 @@
   .hover\:bg-slate-50:hover { background: rgba(232, 224, 208, 0.35) !important; }
   .bg-slate-50 { background: rgba(232, 224, 208, 0.3) !important; color: var(--olacore-fiordo); }
   /* Marca OLACORE en header — usa sello simple + wordmark transparentes oficiales */
-  .by-olacore { display: flex; align-items: center; gap: 12px; padding-left: 16px; margin-left: 14px; border-left: 1px solid #e2e8f0; text-decoration: none; }
-  .by-olacore-by { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--olacore-cobre); opacity: 0.85; align-self: center; }
-  .by-olacore-sello { width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .by-olacore { display: flex; align-items: center; gap: 12px; padding-left: 16px; margin-left: 14px; border-left: 1px solid rgba(185, 129, 73, 0.3); text-decoration: none; }
+  .by-olacore-text-block { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
+  .by-olacore-by { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--olacore-cobre); opacity: 0.85; line-height: 1; }
+  .by-olacore-wordmark { height: 22px; display: block; margin: 1px 0; }
+  .by-olacore-tag { font-family: 'Fraunces', serif; font-style: italic; font-weight: 300; font-size: 10px; color: var(--olacore-cobre); opacity: 0.8; line-height: 1; letter-spacing: 0.04em; }
+  .by-olacore-sello { width: 38px; height: 38px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
   .by-olacore-sello img { width: 100%; height: 100%; display: block; animation: sello-spin 60s linear infinite; transform-origin: center; }
-  .by-olacore-wordmark { height: 24px; display: block; }
   .tab-btn.active { background: white; color: #0f172a; border-color: #e2e8f0; }
   .gantt-row { display: grid; grid-template-columns: 160px 1fr; gap: 12px; align-items: center; }
   .gantt-bar { height: 22px; border-radius: 6px; position: relative; }
@@ -96,8 +98,11 @@
         <div class="text-sm text-slate-500">Plan 12 semanas · Baseline 2026-04-15 · 162 usuarios/mes</div>
       </div>
       <a href="/proyectos2026" class="by-olacore" title="OLACORE — Meridiano Sur">
-        <span class="by-olacore-by">by</span>
-        <img src="/static/olacore_wordmark.png" alt="OLACORE" class="by-olacore-wordmark" />
+        <div class="by-olacore-text-block">
+          <span class="by-olacore-by">by</span>
+          <img src="/static/olacore_wordmark.png" alt="OLACORE" class="by-olacore-wordmark" />
+          <span class="by-olacore-tag">Meridiano Sur</span>
+        </div>
         <div class="by-olacore-sello">
           <img src="/static/olacore_sello_simple.png" alt="" />
         </div>
