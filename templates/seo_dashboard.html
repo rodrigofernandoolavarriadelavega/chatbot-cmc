@@ -200,56 +200,67 @@
    Data embebida — editar acá para avanzar el dashboard
 ====================================================================== */
 const DATA = {
-  version: "1.0",
-  updated_at: "2026-04-16",
+  version: "2.1",
+  updated_at: "2026-04-24",
   baseline: {
-    date: "2026-04-15",
+    date: "2026-04-23",
     traffic_mensual: 162,
     rebote_pct: 51.8,
     paginas_sesion: 2.1,
-    paginas_indexadas: 11,
-    posts_publicados: 1,
-    clics_search_console_30d: 197
+    paginas_indexadas: 4,
+    posts_publicados: 21,
+    clics_search_console_90d: 289,
+    impresiones_90d: 3800,
+    ctr_pct: 7.6,
+    posicion_media: 7.3,
+    pct_trafico_marca: 51,
+    citas_abril_2026: 447,
+    pacientes_unicos_abril: 342
   },
   metas: {
     traffic_4sem: 250,
     traffic_12sem: 500,
     rebote_12sem: 35,
     paginas_sesion_12sem: 3.2,
-    blog_posts: 12,
+    blog_posts: 32,
     clics_wa_12sem: 100,
-    backlinks_12sem: 20
+    backlinks_12sem: 20,
+    pct_trafico_no_marca: 65,
+    comunas_con_clics: 4
   },
   phases: [
-    { id: 1, name: "Fixes críticos",        status: "in_progress", progress: 0, weight: 2  },
-    { id: 2, name: "Contenido y blog",      status: "planned",     progress: 0, weight: 6  },
-    { id: 3, name: "Optimización técnica",  status: "planned",     progress: 0, weight: 3  },
-    { id: 4, name: "Presencia local",       status: "planned",     progress: 0, weight: 2  }
+    { id: 1, name: "Quick wins",            status: "done",        progress: 80, weight: 1 },
+    { id: 2, name: "Geo expansion + GBP",   status: "in_progress", progress: 60, weight: 3 },
+    { id: 3, name: "Contenido y blog",      status: "in_progress", progress: 70, weight: 6 },
+    { id: 4, name: "Optimización técnica",  status: "planned",     progress: 0,  weight: 3 }
   ],
   tasks: [
-    // Fase 1 — críticas
-    { id: "T01", name: "Unificar número WA a +56945886628 en todo el sitio", phase: 1, priority: "critical", status: "planned", effort: "30min", impact: 5 },
-    { id: "T02", name: "Quitar placeholder +5691234567 del blog",             phase: 1, priority: "critical", status: "planned", effort: "10min", impact: 3 },
-    { id: "T03", name: "Links 'Agendar' directo a wa.me (sin n9.cl)",         phase: 1, priority: "critical", status: "planned", effort: "15min", impact: 4 },
-    { id: "T04", name: "Meta descriptions en home + 5 páginas principales",   phase: 1, priority: "high",     status: "planned", effort: "30min", impact: 4 },
-    { id: "T05", name: "301 redirects de URLs duplicadas (/home/, Elementor)",phase: 1, priority: "high",     status: "planned", effort: "20min", impact: 3 },
-    { id: "T06", name: "Noindex páginas internas Elementor + robots.txt",     phase: 1, priority: "high",     status: "planned", effort: "10min", impact: 2 },
-    { id: "T07", name: "Sitemap.xml regenerado y resubido a GSC",             phase: 1, priority: "medium",   status: "planned", effort: "10min", impact: 3 },
-    // Fase 2 — contenido
-    { id: "T08", name: "Publicar 12 blog posts SEO",                          phase: 2, priority: "high",     status: "planned", effort: "6h",    impact: 5 },
-    { id: "T09", name: "Revisar y publicar 19 borradores existentes",         phase: 2, priority: "medium",   status: "planned", effort: "3h",    impact: 3 },
-    // Fase 3 — técnica
-    { id: "T10", name: "Schema MedicalClinic + Physician + FAQPage",          phase: 3, priority: "high",     status: "planned", effort: "2h",    impact: 5 },
-    { id: "T11", name: "Convertir imágenes a WebP (plugin Imagify)",          phase: 3, priority: "medium",   status: "planned", effort: "30min", impact: 3 },
-    { id: "T12", name: "Cache + CDN Cloudflare",                              phase: 3, priority: "medium",   status: "planned", effort: "1h",    impact: 4 },
-    { id: "T13", name: "Landings por especialidad (8)",                       phase: 3, priority: "high",     status: "planned", effort: "4h",    impact: 5 },
-    { id: "T14", name: "Auditoría Lighthouse mobile 90+",                     phase: 3, priority: "medium",   status: "planned", effort: "2h",    impact: 4 },
-    // Fase 4 — local
-    { id: "T15", name: "Google Business Profile (crear o reclamar)",          phase: 4, priority: "high",     status: "planned", effort: "1h",    impact: 5 },
-    { id: "T16", name: "30 reseñas GBP con 4.5★",                             phase: 4, priority: "medium",   status: "planned", effort: "ongoing",impact: 5 },
-    { id: "T17", name: "Doctoralia.cl + 5 directorios adicionales",           phase: 4, priority: "medium",   status: "planned", effort: "2h",    impact: 3 },
-    { id: "T18", name: "10 backlinks locales (municipalidad, prensa, etc.)",  phase: 4, priority: "medium",   status: "planned", effort: "ongoing",impact: 4 },
-    { id: "T19", name: "Calendario de contenido RRSS (IG + FB + TikTok)",     phase: 4, priority: "low",      status: "planned", effort: "ongoing",impact: 3 }
+    // Fase 1 — quick wins (mostly DONE)
+    { id: "T01", name: "Reescribir <title> home (eliminar duplicación)", phase: 1, priority: "critical", status: "done",     effort: "15min", impact: 5 },
+    { id: "T02", name: "Borrar 7 duplicados (home /, elementor, hello-world) → papelera", phase: 1, priority: "critical", status: "done", effort: "30min", impact: 5 },
+    { id: "T03", name: "Renombrar /equipo/→/instalaciones/ y -2→-arauco (3)", phase: 1, priority: "high", status: "done",  effort: "30min", impact: 4 },
+    { id: "T04", name: "Plugin Redirection instalado + 11 redirects 301",   phase: 1, priority: "high",     status: "done",     effort: "20min", impact: 4 },
+    { id: "T05", name: "Meta descriptions home + 5 páginas (Yoast inline — manual)", phase: 1, priority: "high", status: "planned", effort: "30min", impact: 4 },
+    { id: "T06", name: "Schema JSON-LD MedicalClinic + areaServed (Yoast inline o plugin)", phase: 1, priority: "critical", status: "planned", effort: "1h", impact: 5 },
+    // Fase 2 — Geo expansion
+    { id: "T07", name: "Landing /centro-medico-curanilahue/ creada y publicada", phase: 2, priority: "critical", status: "done", effort: "4h", impact: 5 },
+    { id: "T08", name: "4 landings esp+Arauco (traumato, otorrino, gineco, dentista) creadas", phase: 2, priority: "high", status: "done", effort: "8h", impact: 5 },
+    { id: "T09", name: "3 landings reescritas (kine, nutri, medgen) con copy real",        phase: 2, priority: "high", status: "done", effort: "3h", impact: 5 },
+    { id: "T10", name: "4 landings esp+Curanilahue (mismas 4 especialidades)",  phase: 2, priority: "high",     status: "planned",  effort: "6h",   impact: 4 },
+    { id: "T11", name: "Crear perfil Doctoralia centro médico (gratis)",        phase: 2, priority: "high",     status: "planned",  effort: "1h",   impact: 4 },
+    { id: "T12", name: "Google Business Profile crear/reclamar + zonas servicio", phase: 2, priority: "critical", status: "planned", effort: "2h",  impact: 5 },
+    { id: "T13", name: "Pedir 30 reseñas GBP (vía chatbot post-consulta)",      phase: 2, priority: "high",     status: "planned",  effort: "ongoing", impact: 5 },
+    // Fase 3 — Contenido
+    { id: "T14", name: "20 blog HTML locales publicados como posts WP",          phase: 3, priority: "high",   status: "done",     effort: "4h",   impact: 5 },
+    { id: "T15", name: "Blog 'Médico para niños en Arauco' (capta query pediatra)", phase: 3, priority: "high", status: "done",  effort: "30min", impact: 4 },
+    { id: "T16", name: "11 posts SEO long-tail adicionales (precio orto, dolor lumbar, etc.)", phase: 3, priority: "medium", status: "planned", effort: "20h", impact: 5 },
+    { id: "T17", name: "Tracking referral_source en chatbot (medir ROI por geo)", phase: 3, priority: "medium", status: "planned", effort: "2h",  impact: 4 },
+    // Fase 4 — Técnica
+    { id: "T18", name: "Schema Physician para 24 profesionales",                 phase: 4, priority: "medium", status: "planned",  effort: "4h",   impact: 4 },
+    { id: "T19", name: "Schema FAQPage en páginas de servicios",                 phase: 4, priority: "medium", status: "planned",  effort: "2h",   impact: 3 },
+    { id: "T20", name: "WebP (Imagify/ShortPixel) + Cloudflare CDN",             phase: 4, priority: "medium", status: "planned",  effort: "2h",   impact: 4 },
+    { id: "T21", name: "Lighthouse mobile 90+ (perf, a11y, SEO)",                phase: 4, priority: "medium", status: "planned",  effort: "2h",   impact: 4 },
+    { id: "T22", name: "10 backlinks locales (Doctoralia, Municipalidad, prensa)", phase: 4, priority: "low", status: "planned",   effort: "ongoing", impact: 4 }
   ],
   posts: [
     { n: 1,  titulo: "¿Cuánto cuesta una ortodoncia en Chile? Guía precios 2026",  keyword: "precio ortodoncia chile",      esp: "Odonto",   status: "planned" },
