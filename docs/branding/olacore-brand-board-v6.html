@@ -1,0 +1,883 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>OLACORE — Meridiano Sur</title>
+<meta name="viewport" content="width=1440" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,700;0,9..144,900;1,9..144,300;1,9..144,400&family=Inter:wght@300;400;500;600&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --fiordo:#0E2530;       /* azul noche fiordo */
+    --fiordo-2:#17323F;
+    --neblina:#E8E0D0;       /* papel cartográfico */
+    --neblina-2:#D9D0BD;
+    --lenga:#7C4A2A;         /* madera de lenga sur */
+    --lacre:#9A3E2F;         /* lacre de cartógrafo */
+    --cobre:#B98149;
+    --verde-musgo:#4A5D44;
+    --hair:rgba(14,37,48,0.15);
+    --hair-l:rgba(232,224,208,0.2);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#081820;color:var(--fiordo);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased}
+  body{min-width:1440px}
+  .sheet{width:1440px;margin:0 auto;background:var(--neblina)}
+
+  .serif{font-family:'Fraunces',serif}
+  .mono{font-family:'IBM Plex Mono',monospace}
+  .micro{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.28em;text-transform:uppercase}
+
+  /* ═════════ COVER · CARTA SUR ═════════ */
+  .cover{
+    background:var(--fiordo);color:var(--neblina);
+    min-height:1040px;padding:40px 72px 56px;position:relative;overflow:hidden;
+    display:grid;grid-template-rows:auto 1fr auto;gap:40px;
+  }
+
+  /* contour map bg — southern chile fjords hinted */
+  .contour{position:absolute;inset:0;pointer-events:none;opacity:0.22;z-index:0}
+
+  /* meridian line through the whole cover */
+  .meridian{
+    position:absolute;top:0;bottom:0;left:50%;width:1px;background:var(--cobre);opacity:0.55;z-index:1;
+  }
+  .meridian::before,.meridian::after{
+    content:"";position:absolute;left:-4px;width:9px;height:9px;background:var(--cobre);border-radius:50%;
+  }
+  .meridian::before{top:36%}
+  .meridian::after{top:64%}
+  .meridian-labels{
+    position:absolute;left:50%;transform:translateX(18px);z-index:3;
+    font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:var(--neblina);
+  }
+  .meridian-labels .top{position:absolute;top:36%;transform:translateY(-50%);white-space:nowrap}
+  .meridian-labels .bot{position:absolute;top:64%;transform:translateY(-50%);white-space:nowrap}
+  .meridian-labels small{display:block;color:var(--cobre);opacity:0.85;margin-top:3px;font-size:9px;letter-spacing:0.32em}
+
+  /* top bar */
+  .cover-top{
+    position:relative;z-index:2;display:grid;grid-template-columns:1fr auto 1fr;
+    padding-bottom:22px;border-bottom:1px solid var(--hair-l);align-items:center;
+  }
+  .cover-top .l,.cover-top .r{display:flex;gap:28px;align-items:center}
+  .cover-top .r{justify-content:flex-end}
+  .cover-top .c{font-family:'Fraunces',serif;font-style:italic;font-weight:300;font-size:20px;letter-spacing:0.08em;color:var(--neblina)}
+  .vrule{width:1px;height:14px;background:var(--hair-l)}
+
+  /* main comp */
+  .cover-main{
+    position:relative;z-index:2;display:grid;grid-template-columns:1fr auto 1fr;
+    align-items:center;gap:48px;padding:40px 0;
+  }
+  .cover-side{display:flex;flex-direction:column;gap:24px}
+  .cover-side.r{text-align:right;align-items:flex-end}
+  .coord-card{
+    display:inline-flex;flex-direction:column;gap:6px;padding:22px 28px;
+    border:1px solid var(--hair-l);background:rgba(14,37,48,0.35);backdrop-filter:blur(2px);
+  }
+  .coord-card .kicker{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.28em;text-transform:uppercase;color:var(--cobre)}
+  .coord-card .place{font-family:'Fraunces',serif;font-weight:400;font-size:26px;letter-spacing:0.02em;color:var(--neblina);line-height:1.1}
+  .coord-card .coord{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.16em;color:var(--neblina);opacity:0.85}
+  .coord-card .bloodline{font-family:'Fraunces',serif;font-style:italic;font-weight:300;font-size:15px;color:var(--cobre);margin-top:8px}
+
+  /* central wordmark stack */
+  .wordmark-stack{display:flex;flex-direction:column;align-items:center;gap:14px;min-width:560px}
+  .wordmark-stack .line-top{width:140px;height:1px;background:var(--cobre)}
+  .wordmark-stack .word{
+    font-family:'Fraunces',serif;font-weight:900;font-size:148px;line-height:0.95;letter-spacing:0.02em;color:var(--neblina);
+    text-align:center;
+  }
+  .wordmark-stack .word .ital{font-family:'Fraunces',serif;font-style:italic;font-weight:400;color:var(--cobre)}
+  .wordmark-stack .tag{font-family:'Fraunces',serif;font-style:italic;font-weight:300;font-size:19px;color:var(--neblina);letter-spacing:0.06em;margin-top:6px;opacity:0.85}
+  .wordmark-stack .translate{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.32em;text-transform:uppercase;color:var(--cobre);margin-top:12px}
+
+  /* footer */
+  .cover-foot{
+    position:relative;z-index:2;display:grid;grid-template-columns:repeat(4,1fr);gap:32px;
+    border-top:1px solid var(--hair-l);padding-top:24px;
+  }
+  .cover-foot .k{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.32em;text-transform:uppercase;color:rgba(232,224,208,0.55);margin-bottom:8px}
+  .cover-foot .v{font-family:'Fraunces',serif;font-weight:400;font-size:17px;letter-spacing:0.02em;color:var(--neblina);line-height:1.3}
+  .cover-foot .v small{display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.18em;color:rgba(232,224,208,0.6);margin-top:4px;text-transform:uppercase}
+
+  /* ═════════ PLATE BASE ═════════ */
+  .plate{background:var(--neblina);color:var(--fiordo);position:relative;border-top:6px solid var(--fiordo)}
+  .plate-head{
+    display:grid;grid-template-columns:120px 1fr 1fr 200px;border-bottom:1px solid var(--fiordo);
+  }
+  .plate-head > div{padding:22px 28px;border-right:1px solid var(--fiordo);font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.28em;text-transform:uppercase;color:var(--fiordo)}
+  .plate-head > div:last-child{border-right:none;text-align:right}
+  .plate-head .num{font-family:'Fraunces',serif;font-weight:900;font-size:56px;line-height:0.85;letter-spacing:-0.02em;padding:16px 28px;text-transform:none}
+  .plate-head .ttl{font-family:'Fraunces',serif;font-weight:700;font-size:20px;letter-spacing:0.02em;text-transform:none;margin-top:6px}
+  .plate-head .ttl .ital{font-family:'Fraunces',serif;font-style:italic;font-weight:300;color:var(--lacre)}
+
+  /* ═════════ 02 · ORIGIN STORY / NAME ═════════ */
+  .origin{
+    padding:96px 72px;display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;
+    border-bottom:6px solid var(--fiordo);background:var(--neblina-2);position:relative;
+  }
+  .origin-text h2{
+    font-family:'Fraunces',serif;font-weight:400;font-size:58px;line-height:1.05;letter-spacing:0.01em;color:var(--fiordo);margin-bottom:28px;
+  }
+  .origin-text h2 em{font-style:italic;font-weight:300;color:var(--lacre)}
+  .origin-text p{font-family:'Fraunces',serif;font-weight:300;font-size:20px;line-height:1.6;color:var(--fiordo);max-width:46ch;margin-bottom:18px}
+  .origin-text p strong{font-weight:500;color:var(--lacre)}
+
+  .origin-diagram{
+    position:relative;background:var(--neblina);border:1px solid var(--fiordo);padding:56px 40px;
+  }
+  .origin-diagram .title{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.32em;text-transform:uppercase;color:var(--lacre);text-align:center;margin-bottom:32px}
+
+  .lineage{display:grid;grid-template-columns:1fr 60px 1fr;gap:0;align-items:start}
+  .lineage .branch{display:flex;flex-direction:column;gap:8px;padding:20px}
+  .lineage .branch.l{border-right:1px dashed var(--fiordo);text-align:right}
+  .lineage .branch .place{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.28em;text-transform:uppercase;color:var(--lacre)}
+  .lineage .branch .surname{font-family:'Fraunces',serif;font-weight:700;font-size:32px;letter-spacing:0.01em;color:var(--fiordo);line-height:1}
+  .lineage .branch .descr{font-family:'Fraunces',serif;font-style:italic;font-weight:300;font-size:15px;color:var(--fiordo);opacity:0.75}
+  .lineage .join{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:28px;gap:8px}
+  .lineage .join .dot{width:10px;height:10px;background:var(--lacre);border-radius:50%}
+  .lineage .join .bar{width:1px;height:56px;background:var(--lacre)}
+  .lineage .join .amp{font-family:'Fraunces',serif;font-style:italic;font-size:28px;color:var(--lacre);font-weight:300}
+
+  .lineage-out{
+    margin-top:32px;padding:22px;border:1px solid var(--fiordo);background:var(--neblina-2);
+    display:flex;align-items:baseline;justify-content:center;gap:14px;
+  }
+  .lineage-out .mark{font-family:'Fraunces',serif;font-weight:900;font-size:36px;letter-spacing:0.02em;color:var(--fiordo)}
+  .lineage-out .mark .ital{font-style:italic;font-weight:300;color:var(--lacre)}
+  .lineage-out .desc{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.32em;text-transform:uppercase;color:var(--fiordo);opacity:0.7}
+
+  /* ═════════ 03 · WORDMARK STUDY ═════════ */
+  .word-section{border-bottom:6px solid var(--fiordo)}
+  .word-stage{padding:120px 72px 96px;display:flex;flex-direction:column;align-items:center;gap:48px;background:var(--neblina)}
+  .word-display{font-family:'Fraunces',serif;font-weight:900;font-size:176px;line-height:1;letter-spacing:0.02em;color:var(--fiordo)}
+  .word-display .ital{font-family:'Fraunces',serif;font-style:italic;font-weight:300;color:var(--lacre)}
+  .word-tag{font-family:'Fraunces',serif;font-style:italic;font-weight:300;font-size:22px;color:var(--fiordo);letter-spacing:0.04em;padding-top:32px;border-top:1px solid var(--fiordo);width:520px;text-align:center}
+
+  .word-specs{
+    border-top:1px solid var(--fiordo);background:var(--neblina-2);
+    display:grid;grid-template-columns:repeat(4,1fr);
+  }
+  .word-specs > div{padding:32px;border-right:1px solid var(--fiordo)}
+  .word-specs > div:last-child{border-right:none}
+  .word-specs .k{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.32em;text-transform:uppercase;color:var(--lacre);margin-bottom:10px}
+  .word-specs .v{font-family:'Fraunces',serif;font-weight:500;font-size:20px;letter-spacing:0.01em;color:var(--fiordo);line-height:1.2}
+  .word-specs .v small{display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.22em;color:var(--fiordo);opacity:0.7;margin-top:6px;text-transform:uppercase}
+
+  /* ═════════ 04 · SEAL · COMPASS ═════════ */
+  .seal-section{background:var(--fiordo);color:var(--neblina);border-bottom:6px solid var(--fiordo)}
+  .seal-section .plate-head{border-bottom-color:var(--hair-l)}
+  .seal-section .plate-head > div{border-right-color:var(--hair-l);color:var(--neblina)}
+  .seal-section .plate-head .num{color:var(--neblina)}
+
+  .seal-grid{display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px solid var(--hair-l)}
+  .seal-cell{
+    min-height:600px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:56px;position:relative;border-right:1px solid var(--hair-l);gap:28px;
+  }
+  .seal-cell:last-child{border-right:none}
+  .seal-cell.light{background:var(--neblina);color:var(--fiordo)}
+  .seal-cell.lacre{background:var(--lacre);color:var(--neblina)}
+  .seal-cell .corner{position:absolute;top:20px;left:20px;right:20px;display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.28em;text-transform:uppercase;opacity:0.75}
+  .seal-cell .foot{position:absolute;bottom:20px;left:20px;right:20px;display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.28em;text-transform:uppercase;opacity:0.75}
+
+  /* construction row */
+  .seal-construction{
+    background:var(--neblina);color:var(--fiordo);
+    display:grid;grid-template-columns:1fr 1fr;
+  }
+  .seal-construction > div{padding:64px 72px}
+  .seal-construction .right{border-left:1px solid var(--fiordo);background:var(--neblina-2)}
+  .construction-kicker{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.32em;text-transform:uppercase;color:var(--lacre);margin-bottom:16px}
+  .construction-title{font-family:'Fraunces',serif;font-weight:500;font-size:34px;letter-spacing:0.01em;line-height:1.05;margin-bottom:24px}
+  .construction-title em{font-style:italic;font-weight:300;color:var(--lacre)}
+  .construction-body{font-family:'Fraunces',serif;font-weight:300;font-size:18px;line-height:1.6;color:var(--fiordo);max-width:44ch}
+  .construction-body strong{color:var(--lacre);font-weight:500}
+  .spec-table{margin-top:28px;width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:11px}
+  .spec-table td{padding:10px 0;border-bottom:1px solid var(--fiordo)}
+  .spec-table td.k{font-size:9px;letter-spacing:0.28em;text-transform:uppercase;color:var(--lacre);width:46%}
+
+  /* ═════════ 05 · SUBSIDIARIES ═════════ */
+  .sub-section{background:var(--neblina);border-bottom:6px solid var(--fiordo)}
+  .sub-stage{padding:80px 72px;display:flex;flex-direction:column;gap:56px}
+
+  .sub-feature{
+    background:var(--fiordo);color:var(--neblina);
+    padding:72px 80px;display:grid;grid-template-columns:auto auto auto 1fr auto;gap:48px;align-items:center;position:relative;
+  }
+  .sub-feature .compass{flex-shrink:0}
+  .sub-feature .div{width:1px;height:88px;background:var(--hair-l)}
+  .sub-feature .text .n{font-family:'Fraunces',serif;font-weight:500;font-size:36px;letter-spacing:0.01em;line-height:1.05;color:var(--neblina)}
+  .sub-feature .text .n em{font-style:italic;font-weight:300;color:var(--cobre)}
+  .sub-feature .text .endorse{margin-top:12px;display:flex;align-items:center;gap:14px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.32em;text-transform:uppercase;color:var(--cobre)}
+  .sub-feature .text .endorse::before{content:"";width:32px;height:1px;background:var(--cobre)}
+  .sub-feature .coord-block{text-align:right;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:rgba(232,224,208,0.65);line-height:1.8}
+  .sub-feature .coord-block .big{font-family:'Fraunces',serif;font-style:italic;font-weight:300;font-size:22px;color:var(--cobre);letter-spacing:0.02em;text-transform:none}
+
+  .sub-grid{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--fiordo)}
+  .sub-card{padding:40px 36px;border-right:1px solid var(--fiordo);display:flex;flex-direction:column;gap:28px;min-height:320px;justify-content:space-between}
+  .sub-card:last-child{border-right:none}
+  .sub-card .head{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.28em;text-transform:uppercase;color:var(--lacre)}
+  .sub-card .mid{display:flex;align-items:center;gap:18px}
+  .sub-card .nm{font-family:'Fraunces',serif;font-weight:500;font-size:22px;letter-spacing:0.01em;color:var(--fiordo);line-height:1.15}
+  .sub-card .nm em{font-style:italic;font-weight:300;color:var(--lacre)}
+  .sub-card .where{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.22em;text-transform:uppercase;color:var(--fiordo);opacity:0.65;margin-top:4px}
+  .sub-card .foot{display:flex;align-items:center;gap:12px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.28em;text-transform:uppercase;color:var(--fiordo);opacity:0.7;padding-top:16px;border-top:1px solid rgba(14,37,48,0.2)}
+
+  /* ═════════ 06 · COLORS ═════════ */
+  .color-section{background:var(--neblina)}
+  .color-grid{display:grid;grid-template-columns:repeat(4,1fr)}
+  .swatch{min-height:600px;padding:40px;display:flex;flex-direction:column;justify-content:space-between;border-right:1px solid var(--fiordo);position:relative}
+  .swatch:last-child{border-right:none}
+  .swatch .top{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.22em;text-transform:uppercase}
+  .swatch .nm{font-family:'Fraunces',serif;font-weight:500;font-size:28px;letter-spacing:0.01em;line-height:1.05}
+  .swatch .nm em{font-style:italic;font-weight:300}
+  .swatch .role{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.28em;text-transform:uppercase;margin-top:8px;opacity:0.7}
+  .swatch .specs{display:grid;grid-template-columns:auto 1fr;gap:6px 24px;font-family:'IBM Plex Mono',monospace;font-size:11px;border-top:1px solid currentColor;padding-top:18px}
+  .swatch .specs .k{font-size:9px;letter-spacing:0.28em;text-transform:uppercase;opacity:0.6}
+
+  .ratio{display:grid;grid-template-columns:45% 25% 18% 8% 4%;height:32px;border-top:1px solid var(--fiordo);border-bottom:1px solid var(--fiordo)}
+  .ratio-labels{display:grid;grid-template-columns:45% 25% 18% 8% 4%;padding:14px 0 28px;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:var(--fiordo)}
+  .ratio-labels > div{padding-left:14px}
+
+  /* colophon */
+  .colophon{
+    background:var(--fiordo);color:var(--neblina);
+    display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:28px 72px;gap:32px;
+  }
+  .colophon .l,.colophon .r{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.28em;text-transform:uppercase;opacity:0.7}
+  .colophon .c{font-family:'Fraunces',serif;font-style:italic;font-weight:300;font-size:18px;color:var(--neblina);letter-spacing:0.02em;text-align:center}
+  .colophon .r{text-align:right}
+</style>
+</head>
+<body>
+
+<div class="sheet">
+
+  <!-- ═════════════ COVER ═════════════ -->
+  <section class="cover">
+
+    <svg class="contour" viewBox="0 0 1296 960" preserveAspectRatio="xMidYMid slice">
+      <!-- stylized fjord/coast contour lines, not literal chile -->
+      <g fill="none" stroke="#E8E0D0" stroke-width="0.5">
+        <path d="M 0 180 C 200 220, 320 140, 520 200 S 820 260, 1000 180 S 1200 220, 1296 200"/>
+        <path d="M 0 260 C 200 300, 320 220, 520 280 S 820 340, 1000 260 S 1200 300, 1296 280"/>
+        <path d="M 0 340 C 200 380, 320 300, 520 360 S 820 420, 1000 340 S 1200 380, 1296 360"/>
+        <path d="M 0 420 C 200 460, 320 380, 520 440 S 820 500, 1000 420 S 1200 460, 1296 440"/>
+        <path d="M 0 500 C 200 540, 320 460, 520 520 S 820 580, 1000 500 S 1200 540, 1296 520"/>
+        <path d="M 0 580 C 200 620, 320 540, 520 600 S 820 660, 1000 580 S 1200 620, 1296 600"/>
+        <path d="M 0 660 C 200 700, 320 620, 520 680 S 820 740, 1000 660 S 1200 700, 1296 680"/>
+        <path d="M 0 740 C 200 780, 320 700, 520 760 S 820 820, 1000 740 S 1200 780, 1296 760"/>
+        <path d="M 0 820 C 200 860, 320 780, 520 840 S 820 900, 1000 820 S 1200 860, 1296 840"/>
+      </g>
+      <!-- faint latitude ticks -->
+      <g stroke="#B98149" stroke-width="0.4" opacity="0.5">
+        <line x1="0" y1="346" x2="1296" y2="346" stroke-dasharray="2,6"/>
+        <line x1="0" y1="614" x2="1296" y2="614" stroke-dasharray="2,6"/>
+      </g>
+    </svg>
+
+    <!-- meridian vertical line -->
+    <div class="meridian"></div>
+    <div class="meridian-labels">
+      <div class="top"><span>— CARAMPANGUE · RAÍZ MATERNA</span><small>37° 37′ S  ·  de la Vega</small></div>
+      <div class="bot"><span>— PUERTO MONTT · RAÍZ PATERNA</span><small>41° 28′ S  ·  Olavarría</small></div>
+    </div>
+
+    <header class="cover-top">
+      <div class="l">
+        <span class="micro" style="color:var(--cobre)">OLACORE · Vol. I</span>
+        <span class="vrule"></span>
+        <span class="micro" style="color:rgba(232,224,208,0.7)">Brand Standards · MMXXVI</span>
+      </div>
+      <div class="c">— Meridiano Sur —</div>
+      <div class="r">
+        <span class="micro" style="color:rgba(232,224,208,0.7)">Doc OLA / VI</span>
+        <span class="vrule"></span>
+        <span class="micro" style="color:rgba(232,224,208,0.7)">Edición de autor</span>
+      </div>
+    </header>
+
+    <div class="cover-main">
+      <!-- LEFT: Olavarría -->
+      <div class="cover-side">
+        <div class="coord-card">
+          <div class="kicker">Raíz I · Linaje paterno</div>
+          <div class="place">Olavarría</div>
+          <div class="coord">País Vasco → Sur de Chile</div>
+          <div class="bloodline">— la fragua, el hierro, el cimiento —</div>
+        </div>
+        <div class="coord-card">
+          <div class="kicker">Latitud 41° 28′ S</div>
+          <div class="place">Puerto Montt</div>
+          <div class="coord">Lugar de fondeo · agua salada</div>
+          <div class="bloodline">— el fiordo que no se explica —</div>
+        </div>
+      </div>
+
+      <!-- CENTER: wordmark -->
+      <div class="wordmark-stack">
+        <span class="line-top"></span>
+        <div class="word">OLA<span class="ital">core</span></div>
+        <div class="tag">— Dos linajes. Un meridiano. —</div>
+        <div class="translate">▴ Fuerza vasca  ·  Territorio cántabro ▾</div>
+      </div>
+
+      <!-- RIGHT: de la Vega -->
+      <div class="cover-side r">
+        <div class="coord-card" style="text-align:left">
+          <div class="kicker">Raíz II · Linaje materno</div>
+          <div class="place">de la Vega</div>
+          <div class="coord">Cantabria → Sur de Chile</div>
+          <div class="bloodline">— la llanura, el mar, el patrimonio —</div>
+        </div>
+        <div class="coord-card" style="text-align:left">
+          <div class="kicker">Latitud 37° 37′ S</div>
+          <div class="place">Carampangue</div>
+          <div class="coord">Región del Biobío · tierra firme</div>
+          <div class="bloodline">— la vega que alimenta —</div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="cover-foot">
+      <div>
+        <div class="k">Matriz</div>
+        <div class="v">Olacore Holding<small>Compañía de capital institucional</small></div>
+      </div>
+      <div>
+        <div class="k">Sectores</div>
+        <div class="v">Salud · Software · Retail<small>Cuatro divisiones operativas</small></div>
+      </div>
+      <div>
+        <div class="k">Eje geográfico</div>
+        <div class="v">Concepción — Puerto Montt<small>Sur institucional de Chile</small></div>
+      </div>
+      <div>
+        <div class="k">Principio</div>
+        <div class="v">Patrimonio por generaciones<small>Control · estructura · horizonte largo</small></div>
+      </div>
+    </footer>
+  </section>
+
+  <!-- ═════════════ 02 · ORIGIN ═════════════ -->
+  <section class="plate">
+    <div class="plate-head">
+      <div class="num">i.</div>
+      <div>
+        <div>Sección 01</div>
+        <div class="ttl">Origen <span class="ital">del nombre</span></div>
+      </div>
+      <div>
+        <div>Método</div>
+        <div class="ttl">Dos apellidos, una palabra</div>
+      </div>
+      <div>OLA · NAME · 01</div>
+    </div>
+
+    <div class="origin">
+      <div class="origin-text">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.32em;text-transform:uppercase;color:var(--lacre);margin-bottom:20px">— Bitácora del nombre —</div>
+        <h2>Un nombre <em>no se inventa</em> — se hereda.</h2>
+        <p><strong>OLA</strong> viene de <strong>Olavarría</strong>, el apellido vasco que cruzó el Atlántico y bajó hasta el sur, hasta el agua quieta de Puerto Montt. Trae consigo la fragua, el hierro que se dobla bajo peso, la ética de construir con lo que no se rompe.</p>
+        <p><strong>CORE</strong> es núcleo, pero también es <strong>de la Vega</strong> — la raíz cántabra que se asentó en Carampangue, en la tierra ancha del Biobío. Es lo que permanece en el centro cuando todo lo demás se mueve.</p>
+        <p>Juntos no son una fusión decorativa: son dos pesos que se sostienen. Por eso la marca escribe <em>OLA</em> en romana plena y <em>core</em> en cursiva — no por capricho tipográfico, sino porque una raíz empuja y la otra contiene.</p>
+      </div>
+
+      <div class="origin-diagram">
+        <div class="title">— Diagrama de Filiación —</div>
+
+        <div class="lineage">
+          <div class="branch l">
+            <div class="place">Raíz I · País Vasco</div>
+            <div class="surname">Olavarría</div>
+            <div class="descr">— la fragua, el hierro, el cimiento —</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.22em;color:var(--fiordo);opacity:0.7;text-transform:uppercase;margin-top:8px">Puerto Montt · 41° 28′ S</div>
+          </div>
+
+          <div class="join">
+            <span class="dot"></span>
+            <span class="bar"></span>
+            <span class="amp">et</span>
+            <span class="bar"></span>
+            <span class="dot"></span>
+          </div>
+
+          <div class="branch">
+            <div class="place">Raíz II · Cantabria</div>
+            <div class="surname">de la Vega</div>
+            <div class="descr">— la llanura, el mar, el patrimonio —</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.22em;color:var(--fiordo);opacity:0.7;text-transform:uppercase;margin-top:8px">Carampangue · 37° 37′ S</div>
+          </div>
+        </div>
+
+        <div class="lineage-out">
+          <span class="mark">OLA<span class="ital">core</span></span>
+          <span class="desc">— síntesis —</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════════ 03 · WORDMARK ═════════════ -->
+  <section class="plate word-section">
+    <div class="plate-head">
+      <div class="num">ii.</div>
+      <div>
+        <div>Sección 02</div>
+        <div class="ttl">Logotipo <span class="ital">Primario</span></div>
+      </div>
+      <div>
+        <div>Composición</div>
+        <div class="ttl">Fraunces · Roman + Italic</div>
+      </div>
+      <div>OLA · WM · 01</div>
+    </div>
+
+    <div class="word-stage">
+      <div class="word-display">OLA<span class="ital">core</span></div>
+      <div class="word-tag">— Patrimonio institucional del sur de Chile —</div>
+    </div>
+
+    <div class="word-specs">
+      <div>
+        <div class="k">Familia</div>
+        <div class="v">Fraunces<small>Opsz 144 · w900 + w300 italic</small></div>
+      </div>
+      <div>
+        <div class="k">Tracking</div>
+        <div class="v">+0.02 em<small>Constante en todos los tamaños</small></div>
+      </div>
+      <div>
+        <div class="k">Proporción</div>
+        <div class="v">OLA · 60% <span style="color:var(--lacre)">core</span> · 40%<small>No se alteran las masas</small></div>
+      </div>
+      <div>
+        <div class="k">Aplicación mínima</div>
+        <div class="v">32 mm · 128 px<small>Debajo · solo sello</small></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════════ 04 · SEAL ═════════════ -->
+  <section class="plate seal-section">
+    <div class="plate-head">
+      <div class="num">iii.</div>
+      <div>
+        <div>Sección 03</div>
+        <div class="ttl" style="color:var(--neblina)">Sello <span class="ital" style="color:var(--cobre)">Austral</span></div>
+      </div>
+      <div>
+        <div>Nombre</div>
+        <div class="ttl" style="color:var(--neblina)">"La Brújula de Dos Raíces"</div>
+      </div>
+      <div>OLA · S · 01</div>
+    </div>
+
+    <div class="seal-grid">
+      <!-- A · dark -->
+      <div class="seal-cell">
+        <div class="corner"><span style="color:rgba(232,224,208,0.6)">A · Primario</span><span style="color:rgba(232,224,208,0.6)">Sobre Fiordo</span></div>
+
+        <svg viewBox="0 0 280 280" width="240" height="240" aria-label="Seal primario">
+          <!-- outer ring -->
+          <circle cx="140" cy="140" r="128" fill="none" stroke="#E8E0D0" stroke-width="1.5"/>
+          <circle cx="140" cy="140" r="120" fill="none" stroke="#E8E0D0" stroke-width="0.4" opacity="0.5"/>
+          <!-- cardinal ticks -->
+          <g stroke="#E8E0D0" stroke-width="0.8">
+            <line x1="140" y1="12" x2="140" y2="28"/>
+            <line x1="140" y1="252" x2="140" y2="268"/>
+            <line x1="12" y1="140" x2="28" y2="140"/>
+            <line x1="252" y1="140" x2="268" y2="140"/>
+          </g>
+          <!-- tiny tick marks around ring -->
+          <g stroke="#E8E0D0" stroke-width="0.4" opacity="0.6">
+            <line x1="140" y1="14" x2="140" y2="22" transform="rotate(30 140 140)"/>
+            <line x1="140" y1="14" x2="140" y2="22" transform="rotate(60 140 140)"/>
+            <line x1="140" y1="14" x2="140" y2="22" transform="rotate(120 140 140)"/>
+            <line x1="140" y1="14" x2="140" y2="22" transform="rotate(150 140 140)"/>
+            <line x1="140" y1="14" x2="140" y2="22" transform="rotate(210 140 140)"/>
+            <line x1="140" y1="14" x2="140" y2="22" transform="rotate(240 140 140)"/>
+            <line x1="140" y1="14" x2="140" y2="22" transform="rotate(300 140 140)"/>
+            <line x1="140" y1="14" x2="140" y2="22" transform="rotate(330 140 140)"/>
+          </g>
+          <!-- vertical meridian line (south-north axis) -->
+          <line x1="140" y1="36" x2="140" y2="244" stroke="#B98149" stroke-width="1.2"/>
+          <!-- two latitude points: Carampangue (37°) and Puerto Montt (41°) -->
+          <circle cx="140" cy="92" r="6" fill="#B98149"/>
+          <circle cx="140" cy="188" r="6" fill="#B98149"/>
+          <!-- inner horizontal equator line -->
+          <line x1="44" y1="140" x2="236" y2="140" stroke="#E8E0D0" stroke-width="0.4" opacity="0.5"/>
+          <!-- tiny dot at center -->
+          <circle cx="140" cy="140" r="2" fill="#E8E0D0"/>
+          <!-- arrow north pointing up (small triangle at top) -->
+          <polygon points="140,28 134,40 146,40" fill="#B98149"/>
+          <!-- inscriptions on arcs -->
+          <defs>
+            <path id="topArcA" d="M 20 140 A 120 120 0 0 1 260 140"/>
+            <path id="botArcA" d="M 260 140 A 120 120 0 0 1 20 140"/>
+          </defs>
+          <text font-family="IBM Plex Mono" font-size="9" fill="#E8E0D0" letter-spacing="0.32em">
+            <textPath href="#topArcA" startOffset="50%" text-anchor="middle">— OLACORE · MERIDIANO SUR —</textPath>
+          </text>
+          <text font-family="IBM Plex Mono" font-size="8" fill="#B98149" letter-spacing="0.36em">
+            <textPath href="#botArcA" startOffset="50%" text-anchor="middle">CARAMPANGUE · PUERTO MONTT</textPath>
+          </text>
+        </svg>
+        <div class="foot"><span style="color:rgba(232,224,208,0.6)">OLA · S · 01 · A</span><span style="color:rgba(232,224,208,0.6)">Aplicación principal</span></div>
+      </div>
+
+      <!-- B · light -->
+      <div class="seal-cell light">
+        <div class="corner" style="color:var(--fiordo)"><span>B · Inverso</span><span>Sobre Neblina</span></div>
+
+        <svg viewBox="0 0 280 280" width="240" height="240" aria-label="Seal inverso">
+          <circle cx="140" cy="140" r="128" fill="none" stroke="#0E2530" stroke-width="1.5"/>
+          <circle cx="140" cy="140" r="120" fill="none" stroke="#0E2530" stroke-width="0.4" opacity="0.4"/>
+          <g stroke="#0E2530" stroke-width="0.8">
+            <line x1="140" y1="12" x2="140" y2="28"/>
+            <line x1="140" y1="252" x2="140" y2="268"/>
+            <line x1="12" y1="140" x2="28" y2="140"/>
+            <line x1="252" y1="140" x2="268" y2="140"/>
+          </g>
+          <g stroke="#0E2530" stroke-width="0.4" opacity="0.5">
+            <line x1="140" y1="14" x2="140" y2="22" transform="rotate(30 140 140)"/>
+            <line x1="140" y1="14" x2="140" y2="22" transform="rotate(60 140 140)"/>
+            <line x1="140" y1="14" x2="140" y2="22" transform="rotate(120 140 140)"/>
+            <line x1="140" y1="14" x2="140" y2="22" transform="rotate(150 140 140)"/>
+            <line x1="140" y1="14" x2="140" y2="22" transform="rotate(210 140 140)"/>
+            <line x1="140" y1="14" x2="140" y2="22" transform="rotate(240 140 140)"/>
+            <line x1="140" y1="14" x2="140" y2="22" transform="rotate(300 140 140)"/>
+            <line x1="140" y1="14" x2="140" y2="22" transform="rotate(330 140 140)"/>
+          </g>
+          <line x1="140" y1="36" x2="140" y2="244" stroke="#9A3E2F" stroke-width="1.2"/>
+          <circle cx="140" cy="92" r="6" fill="#9A3E2F"/>
+          <circle cx="140" cy="188" r="6" fill="#9A3E2F"/>
+          <line x1="44" y1="140" x2="236" y2="140" stroke="#0E2530" stroke-width="0.4" opacity="0.45"/>
+          <circle cx="140" cy="140" r="2" fill="#0E2530"/>
+          <polygon points="140,28 134,40 146,40" fill="#9A3E2F"/>
+          <defs>
+            <path id="topArcB" d="M 20 140 A 120 120 0 0 1 260 140"/>
+            <path id="botArcB" d="M 260 140 A 120 120 0 0 1 20 140"/>
+          </defs>
+          <text font-family="IBM Plex Mono" font-size="9" fill="#0E2530" letter-spacing="0.32em">
+            <textPath href="#topArcB" startOffset="50%" text-anchor="middle">— OLACORE · MERIDIANO SUR —</textPath>
+          </text>
+          <text font-family="IBM Plex Mono" font-size="8" fill="#9A3E2F" letter-spacing="0.36em">
+            <textPath href="#botArcB" startOffset="50%" text-anchor="middle">CARAMPANGUE · PUERTO MONTT</textPath>
+          </text>
+        </svg>
+        <div class="foot" style="color:var(--fiordo)"><span>OLA · S · 01 · B</span><span>Aplicación clara</span></div>
+      </div>
+
+      <!-- C · lacre -->
+      <div class="seal-cell lacre">
+        <div class="corner"><span style="color:rgba(232,224,208,0.75)">C · Lacre</span><span style="color:rgba(232,224,208,0.75)">Documento sellado</span></div>
+
+        <svg viewBox="0 0 280 280" width="240" height="240" aria-label="Seal lacre">
+          <circle cx="140" cy="140" r="128" fill="none" stroke="#E8E0D0" stroke-width="1.5"/>
+          <circle cx="140" cy="140" r="120" fill="none" stroke="#E8E0D0" stroke-width="0.4" opacity="0.55"/>
+          <g stroke="#E8E0D0" stroke-width="0.8">
+            <line x1="140" y1="12" x2="140" y2="28"/>
+            <line x1="140" y1="252" x2="140" y2="268"/>
+            <line x1="12" y1="140" x2="28" y2="140"/>
+            <line x1="252" y1="140" x2="268" y2="140"/>
+          </g>
+          <line x1="140" y1="36" x2="140" y2="244" stroke="#E8E0D0" stroke-width="1.2"/>
+          <circle cx="140" cy="92" r="6" fill="#E8E0D0"/>
+          <circle cx="140" cy="188" r="6" fill="#E8E0D0"/>
+          <line x1="44" y1="140" x2="236" y2="140" stroke="#E8E0D0" stroke-width="0.4" opacity="0.55"/>
+          <circle cx="140" cy="140" r="2" fill="#E8E0D0"/>
+          <polygon points="140,28 134,40 146,40" fill="#E8E0D0"/>
+          <defs>
+            <path id="topArcC" d="M 20 140 A 120 120 0 0 1 260 140"/>
+            <path id="botArcC" d="M 260 140 A 120 120 0 0 1 20 140"/>
+          </defs>
+          <text font-family="IBM Plex Mono" font-size="9" fill="#E8E0D0" letter-spacing="0.32em">
+            <textPath href="#topArcC" startOffset="50%" text-anchor="middle">— OLACORE · MERIDIANO SUR —</textPath>
+          </text>
+          <text font-family="IBM Plex Mono" font-size="8" fill="#E8E0D0" letter-spacing="0.36em" opacity="0.75">
+            <textPath href="#botArcC" startOffset="50%" text-anchor="middle">CARAMPANGUE · PUERTO MONTT</textPath>
+          </text>
+        </svg>
+        <div class="foot"><span style="color:rgba(232,224,208,0.75)">OLA · S · 01 · C</span><span style="color:rgba(232,224,208,0.75)">Aplicación de lacre</span></div>
+      </div>
+    </div>
+
+    <!-- construction -->
+    <div class="seal-construction">
+      <div>
+        <div class="construction-kicker">— Lectura del sello —</div>
+        <div class="construction-title">Una <em>brújula</em> que mira hacia dentro.</div>
+        <div class="construction-body">
+          El sello no indica rumbo hacia afuera: traza el eje <strong>interno</strong> de la compañía. La línea vertical es el meridiano que une las dos raíces familiares. Los dos puntos de cobre son <strong>Carampangue</strong> (37° 37′ S) arriba y <strong>Puerto Montt</strong> (41° 28′ S) abajo — no latitudes casuales, sino las dos tierras de origen. La aguja apunta al norte geográfico porque el capital mira al horizonte largo; los dos puntos anclan el sur porque el origen no se negocia.
+        </div>
+        <table class="spec-table">
+          <tr><td class="k">Anillo exterior</td><td>128 u · stroke 1.5</td></tr>
+          <tr><td class="k">Anillo interior</td><td>120 u · stroke 0.4 · opacidad 50%</td></tr>
+          <tr><td class="k">Meridiano</td><td>Vertical · 208 u · stroke 1.2</td></tr>
+          <tr><td class="k">Nodos geográficos</td><td>2 · Ø 12 u · cobre</td></tr>
+          <tr><td class="k">Aguja norte</td><td>Triángulo · 12 × 12 u</td></tr>
+          <tr><td class="k">Inscripción superior</td><td>IBM Plex Mono · 9 pt · tracking 0.32</td></tr>
+        </table>
+      </div>
+      <div class="right">
+        <div class="construction-kicker">— Diagrama técnico —</div>
+        <div class="construction-title">Plano del <em>instrumento</em>.</div>
+
+        <svg viewBox="0 0 480 480" width="100%" style="max-width:480px;display:block;margin-top:12px">
+          <g stroke="#0E2530" stroke-width="0.4" opacity="0.25">
+            <line x1="40" y1="40" x2="440" y2="40"/>
+            <line x1="40" y1="240" x2="440" y2="240"/>
+            <line x1="40" y1="440" x2="440" y2="440"/>
+            <line x1="40" y1="40" x2="40" y2="440"/>
+            <line x1="240" y1="40" x2="240" y2="440"/>
+            <line x1="440" y1="40" x2="440" y2="440"/>
+          </g>
+          <g fill="none" stroke="#0E2530" stroke-width="0.8">
+            <circle cx="240" cy="240" r="200"/>
+            <circle cx="240" cy="240" r="184"/>
+          </g>
+          <line x1="240" y1="60" x2="240" y2="420" stroke="#9A3E2F" stroke-width="1.4"/>
+          <line x1="68" y1="240" x2="412" y2="240" stroke="#0E2530" stroke-width="0.4" opacity="0.45"/>
+          <circle cx="240" cy="156" r="8" fill="#9A3E2F"/>
+          <circle cx="240" cy="324" r="8" fill="#9A3E2F"/>
+          <circle cx="240" cy="240" r="3" fill="#0E2530"/>
+          <polygon points="240,44 232,64 248,64" fill="#9A3E2F"/>
+
+          <g stroke="#4A5D44" stroke-width="0.5" fill="#4A5D44" font-family="IBM Plex Mono" font-size="9" letter-spacing="0.14em">
+            <line x1="255" y1="156" x2="310" y2="156"/>
+            <text x="316" y="159">CARAMPANGUE · 37° 37′ S</text>
+
+            <line x1="255" y1="324" x2="310" y2="324"/>
+            <text x="316" y="327">PUERTO MONTT · 41° 28′ S</text>
+
+            <line x1="225" y1="240" x2="170" y2="240"/>
+            <text x="164" y="243" text-anchor="end" fill="#9A3E2F">CENTRO · OLACORE</text>
+          </g>
+          <g font-family="IBM Plex Mono" font-size="9" fill="#0E2530" letter-spacing="0.18em">
+            <text x="240" y="36" text-anchor="middle">N · HORIZONTE LARGO</text>
+            <text x="240" y="460" text-anchor="middle">S · ORIGEN</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════════ 05 · SUBSIDIARIES ═════════════ -->
+  <section class="plate sub-section">
+    <div class="plate-head">
+      <div class="num">iv.</div>
+      <div>
+        <div>Sección 04</div>
+        <div class="ttl">Endoso de <span class="ital">Subsidiarias</span></div>
+      </div>
+      <div>
+        <div>Sistema</div>
+        <div class="ttl">Una casa de Olacore</div>
+      </div>
+      <div>OLA · SUB · 01</div>
+    </div>
+
+    <div class="sub-stage">
+
+      <div class="sub-feature">
+        <svg class="compass" viewBox="0 0 280 280" width="108" height="108" aria-hidden="true">
+          <circle cx="140" cy="140" r="128" fill="none" stroke="#E8E0D0" stroke-width="1.5"/>
+          <g stroke="#E8E0D0" stroke-width="0.8">
+            <line x1="140" y1="12" x2="140" y2="28"/>
+            <line x1="140" y1="252" x2="140" y2="268"/>
+            <line x1="12" y1="140" x2="28" y2="140"/>
+            <line x1="252" y1="140" x2="268" y2="140"/>
+          </g>
+          <line x1="140" y1="36" x2="140" y2="244" stroke="#B98149" stroke-width="1.6"/>
+          <circle cx="140" cy="92" r="8" fill="#B98149"/>
+          <circle cx="140" cy="188" r="8" fill="#B98149"/>
+          <polygon points="140,28 132,42 148,42" fill="#B98149"/>
+        </svg>
+
+        <span class="div"></span>
+
+        <div class="text">
+          <div class="n">Centro Médico <em>Carampangue</em></div>
+          <div class="endorse">Una casa de Olacore</div>
+        </div>
+
+        <div style="width:1px"></div>
+
+        <div class="coord-block">
+          <div>37° 37′ S  ·  73° 16′ W</div>
+          <div>Región del Biobío</div>
+          <div class="big">— tierra materna —</div>
+        </div>
+      </div>
+
+      <div class="sub-grid">
+        <div class="sub-card">
+          <div class="head"><span>Salud</span><span>01</span></div>
+          <div class="mid">
+            <svg viewBox="0 0 280 280" width="52" height="52" aria-hidden="true">
+              <circle cx="140" cy="140" r="128" fill="none" stroke="#0E2530" stroke-width="3"/>
+              <line x1="140" y1="40" x2="140" y2="240" stroke="#9A3E2F" stroke-width="4"/>
+              <circle cx="140" cy="96" r="14" fill="#9A3E2F"/>
+              <circle cx="140" cy="184" r="14" fill="#9A3E2F"/>
+            </svg>
+            <div>
+              <div class="nm">Centro Médico <em>Carampangue</em></div>
+              <div class="where">Carampangue · 37° 37′ S · Biobío</div>
+            </div>
+          </div>
+          <div class="foot"><span style="width:18px;height:1px;background:currentColor"></span><span>Una casa de Olacore</span></div>
+        </div>
+        <div class="sub-card">
+          <div class="head"><span>Software corporativo</span><span>02</span></div>
+          <div class="mid">
+            <svg viewBox="0 0 280 280" width="52" height="52" aria-hidden="true">
+              <circle cx="140" cy="140" r="128" fill="none" stroke="#0E2530" stroke-width="3"/>
+              <line x1="140" y1="40" x2="140" y2="240" stroke="#9A3E2F" stroke-width="4"/>
+              <circle cx="140" cy="96" r="14" fill="#9A3E2F"/>
+              <circle cx="140" cy="184" r="14" fill="#9A3E2F"/>
+            </svg>
+            <div>
+              <div class="nm">Olacore <em>Systems</em></div>
+              <div class="where">Puerto Montt · 41° 28′ S · Los Lagos</div>
+            </div>
+          </div>
+          <div class="foot"><span style="width:18px;height:1px;background:currentColor"></span><span>Una casa de Olacore</span></div>
+        </div>
+        <div class="sub-card">
+          <div class="head"><span>Comercio · Retail</span><span>03</span></div>
+          <div class="mid">
+            <svg viewBox="0 0 280 280" width="52" height="52" aria-hidden="true">
+              <circle cx="140" cy="140" r="128" fill="none" stroke="#0E2530" stroke-width="3"/>
+              <line x1="140" y1="40" x2="140" y2="240" stroke="#9A3E2F" stroke-width="4"/>
+              <circle cx="140" cy="96" r="14" fill="#9A3E2F"/>
+              <circle cx="140" cy="184" r="14" fill="#9A3E2F"/>
+            </svg>
+            <div>
+              <div class="nm">Olavega <em>Comercial</em></div>
+              <div class="where">Eje Concepción · Puerto Montt</div>
+            </div>
+          </div>
+          <div class="foot"><span style="width:18px;height:1px;background:currentColor"></span><span>Una casa de Olacore</span></div>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.28em;text-transform:uppercase;color:var(--fiordo);opacity:0.75;padding-top:18px;border-top:1px solid rgba(14,37,48,0.2)">
+        <span>Regla · el sello nunca se inclina</span>
+        <span>El meridiano siempre vertical</span>
+        <span>El endoso siempre en cobre o lacre</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════════ 06 · COLORS ═════════════ -->
+  <section class="plate color-section">
+    <div class="plate-head">
+      <div class="num">v.</div>
+      <div>
+        <div>Sección 05</div>
+        <div class="ttl">Sistema <span class="ital">Cromático</span></div>
+      </div>
+      <div>
+        <div>Paleta</div>
+        <div class="ttl">Cinco tonos · sur de Chile</div>
+      </div>
+      <div>OLA · C · 01</div>
+    </div>
+
+    <div class="color-grid">
+      <div class="swatch" style="background:#0E2530;color:#E8E0D0">
+        <div class="top"><span style="opacity:0.65">N° 01 / 05</span><span style="opacity:0.65">45%</span></div>
+        <div>
+          <div class="nm">Azul <em>Fiordo</em></div>
+          <div class="role">Primario · agua profunda</div>
+        </div>
+        <div class="specs">
+          <span class="k">Hex</span><span>#0E2530</span>
+          <span class="k">RGB</span><span>14 · 37 · 48</span>
+          <span class="k">Pantone</span><span>5395 C</span>
+          <span class="k">Origen</span><span>Seno de Reloncaví</span>
+        </div>
+      </div>
+      <div class="swatch" style="background:#E8E0D0;color:#0E2530">
+        <div class="top"><span style="opacity:0.65">N° 02 / 05</span><span style="opacity:0.65">25%</span></div>
+        <div>
+          <div class="nm">Neblina <em>Austral</em></div>
+          <div class="role">Sustrato · nunca #FFF</div>
+        </div>
+        <div class="specs">
+          <span class="k">Hex</span><span>#E8E0D0</span>
+          <span class="k">RGB</span><span>232 · 224 · 208</span>
+          <span class="k">Pantone</span><span>9184 C</span>
+          <span class="k">Origen</span><span>Nubes bajas del sur</span>
+        </div>
+      </div>
+      <div class="swatch" style="background:#7C4A2A;color:#E8E0D0">
+        <div class="top"><span style="opacity:0.65">N° 03 / 05</span><span style="opacity:0.65">16%</span></div>
+        <div>
+          <div class="nm">Madera de <em>Lenga</em></div>
+          <div class="role">Secundario · patrimonio</div>
+        </div>
+        <div class="specs">
+          <span class="k">Hex</span><span>#7C4A2A</span>
+          <span class="k">RGB</span><span>124 · 74 · 42</span>
+          <span class="k">Pantone</span><span>4625 C</span>
+          <span class="k">Origen</span><span>Nothofagus pumilio</span>
+        </div>
+      </div>
+      <div class="swatch" style="background:#9A3E2F;color:#E8E0D0">
+        <div class="top"><span style="opacity:0.7">N° 04 / 05</span><span style="opacity:0.7">10%</span></div>
+        <div>
+          <div class="nm">Lacre de <em>Cartógrafo</em></div>
+          <div class="role">Acento · sello</div>
+        </div>
+        <div class="specs">
+          <span class="k">Hex</span><span>#9A3E2F</span>
+          <span class="k">RGB</span><span>154 · 62 · 47</span>
+          <span class="k">Pantone</span><span>1805 C</span>
+          <span class="k">Origen</span><span>Cera de bitácora</span>
+        </div>
+      </div>
+      <div class="swatch" style="background:#B98149;color:#0E2530">
+        <div class="top"><span style="opacity:0.7">N° 05 / 05</span><span style="opacity:0.7">4%</span></div>
+        <div>
+          <div class="nm">Cobre <em>Patagón</em></div>
+          <div class="role">Filete · instrumento</div>
+        </div>
+        <div class="specs">
+          <span class="k">Hex</span><span>#B98149</span>
+          <span class="k">RGB</span><span>185 · 129 · 73</span>
+          <span class="k">Pantone</span><span>1545 C</span>
+          <span class="k">Origen</span><span>Sextante antiguo</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="ratio">
+      <div style="background:#0E2530"></div>
+      <div style="background:#E8E0D0"></div>
+      <div style="background:#7C4A2A"></div>
+      <div style="background:#9A3E2F"></div>
+      <div style="background:#B98149"></div>
+    </div>
+    <div class="ratio-labels">
+      <div>Fiordo · 45</div>
+      <div>Neblina · 25</div>
+      <div>Lenga · 16</div>
+      <div>Lacre · 10</div>
+      <div style="padding-left:6px">4</div>
+    </div>
+  </section>
+
+  <footer class="colophon">
+    <div class="l">Olacore · Meridiano Sur · Vol. I</div>
+    <div class="c">— Dos raíces. Un meridiano. El sur que permanece. —</div>
+    <div class="r">Doc OLA · VI · MMXXVI</div>
+  </footer>
+
+</div>
+</body>
+</html>

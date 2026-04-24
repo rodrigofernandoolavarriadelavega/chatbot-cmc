@@ -36,8 +36,14 @@
   .border-slate-100 { border-color: rgba(14, 37, 48, 0.08) !important; }
   .hover\:bg-slate-50:hover { background: rgba(232, 224, 208, 0.35) !important; }
   .bg-slate-50 { background: rgba(232, 224, 208, 0.3) !important; color: var(--olacore-fiordo); }
+  /* Meridiano: línea vertical cobre con 2 bolitas — firma del sistema OLACORE */
+  .meridian { width: 1px; height: 56px; background: var(--olacore-cobre); position: relative; opacity: 0.7; flex-shrink: 0; }
+  .meridian::before, .meridian::after { content: ""; position: absolute; left: -4px; width: 9px; height: 9px; background: var(--olacore-cobre); border-radius: 50%; }
+  .meridian::before { top: 22%; }
+  .meridian::after  { bottom: 22%; }
+
   /* Marca OLACORE en header — usa sello simple + wordmark transparentes oficiales */
-  .by-olacore { display: flex; align-items: center; gap: 12px; padding-left: 16px; margin-left: 14px; border-left: 1px solid rgba(185, 129, 73, 0.3); text-decoration: none; }
+  .by-olacore { display: flex; align-items: center; gap: 12px; padding-left: 16px; margin-left: 4px; text-decoration: none; }
   .by-olacore-text-block { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
   .by-olacore-by { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--olacore-cobre); opacity: 0.85; line-height: 1; }
   .by-olacore-wordmark { height: 22px; display: block; margin: 1px 0; }
@@ -97,6 +103,7 @@
         <h1 class="text-xl font-semibold">Dashboard SEO — centromedicocarampangue.cl</h1>
         <div class="text-sm text-slate-500">Plan 12 semanas · Baseline 2026-04-15 · 162 usuarios/mes</div>
       </div>
+      <div class="meridian" aria-hidden="true"></div>
       <a href="/proyectos2026" class="by-olacore" title="OLACORE — Meridiano Sur">
         <div class="by-olacore-text-block">
           <span class="by-olacore-by">by</span>

@@ -1,0 +1,1190 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>OLACORE — Manual de Marca · Meridiano Sur</title>
+<meta name="viewport" content="width=1200" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,700;0,9..144,900;1,9..144,300;1,9..144,400&family=Inter:wght@300;400;500;600&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --fiordo:#0E2530;
+    --fiordo-2:#17323F;
+    --neblina:#E8E0D0;
+    --neblina-2:#D9D0BD;
+    --neblina-3:#C4B9A0;
+    --lenga:#7C4A2A;
+    --lacre:#9A3E2F;
+    --cobre:#B98149;
+    --verde-musgo:#4A5D44;
+    --ok:#3A6B4A;
+    --mal:#8B2E24;
+    --hair:rgba(14,37,48,0.18);
+    --hair-d:rgba(14,37,48,0.42);
+    --hair-l:rgba(232,224,208,0.22);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#060f14;color:var(--fiordo);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased}
+  body{min-width:1200px;padding:48px 0}
+
+  .serif{font-family:'Fraunces',serif}
+  .mono{font-family:'IBM Plex Mono',monospace}
+  .micro{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.3em;text-transform:uppercase}
+
+  /* ═════ PAGE SHELL — each page is A4-ish proportion ═════ */
+  .page{
+    width:1200px;margin:0 auto 48px;background:var(--neblina);color:var(--fiordo);
+    min-height:1600px;position:relative;overflow:hidden;
+    box-shadow:0 24px 60px rgba(0,0,0,0.5), 0 4px 8px rgba(0,0,0,0.3);
+  }
+  .page.dark{background:var(--fiordo);color:var(--neblina)}
+
+  /* running header */
+  .r-head{
+    display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+    padding:28px 64px 18px;border-bottom:1px solid var(--hair);
+  }
+  .dark .r-head{border-bottom-color:var(--hair-l)}
+  .r-head .l,.r-head .r{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.3em;text-transform:uppercase;opacity:0.75}
+  .r-head .r{text-align:right}
+  .r-head .c{font-family:'Fraunces',serif;font-style:italic;font-weight:300;font-size:16px;letter-spacing:0.08em}
+  .dark .r-head .c{color:var(--cobre)}
+
+  /* running footer */
+  .r-foot{
+    position:absolute;left:64px;right:64px;bottom:36px;
+    display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+    padding-top:14px;border-top:1px solid var(--hair);
+    font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.28em;text-transform:uppercase;opacity:0.7;
+  }
+  .dark .r-foot{border-top-color:var(--hair-l)}
+  .r-foot .r{text-align:right}
+  .r-foot .page-n{font-family:'Fraunces',serif;font-weight:500;font-size:14px;letter-spacing:0.04em;opacity:1;text-transform:none}
+  .r-foot .page-n em{font-style:italic;font-weight:300;color:var(--lacre)}
+  .dark .r-foot .page-n em{color:var(--cobre)}
+
+  .inner{padding:48px 64px 120px;position:relative}
+
+  /* section chapter head */
+  .chapter{
+    display:grid;grid-template-columns:auto 1fr auto;gap:40px;align-items:end;
+    padding-bottom:18px;border-bottom:2px solid currentColor;margin-bottom:48px;
+  }
+  .chapter .n{font-family:'Fraunces',serif;font-weight:900;font-size:96px;line-height:0.85;letter-spacing:-0.02em}
+  .chapter .t{font-family:'Fraunces',serif;font-weight:400;font-size:42px;line-height:1;letter-spacing:0.01em}
+  .chapter .t em{font-style:italic;font-weight:300;color:var(--lacre)}
+  .dark .chapter .t em{color:var(--cobre)}
+  .chapter .t small{display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.3em;text-transform:uppercase;margin-top:10px;opacity:0.7;font-weight:400}
+  .chapter .code{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.3em;text-transform:uppercase;opacity:0.8;line-height:1.8;text-align:right}
+
+  /* ═════ COVER (page 1) ═════ */
+  .cover{
+    min-height:1600px;background:var(--fiordo);color:var(--neblina);
+    padding:64px 64px 56px;display:grid;grid-template-rows:auto 1fr auto;position:relative;overflow:hidden;
+  }
+  .cover::before{
+    content:"";position:absolute;inset:0;opacity:0.2;pointer-events:none;
+    background:
+      radial-gradient(ellipse at 50% 20%, rgba(185,129,73,0.15), transparent 50%),
+      radial-gradient(ellipse at 20% 85%, rgba(154,62,47,0.18), transparent 45%);
+  }
+  .cover .contour{position:absolute;inset:0;opacity:0.12;z-index:1}
+  .cover > *{position:relative;z-index:2}
+
+  .cover-strip{
+    display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+    padding-bottom:20px;border-bottom:1px solid var(--hair-l);
+  }
+  .cover-strip .l,.cover-strip .r{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.32em;text-transform:uppercase;color:var(--cobre)}
+  .cover-strip .r{text-align:right;color:rgba(232,224,208,0.7)}
+  .cover-strip .c{font-family:'Fraunces',serif;font-style:italic;font-weight:300;font-size:20px;color:var(--neblina);letter-spacing:0.08em}
+
+  .cover-center{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:36px;padding:80px 0}
+  .cover-eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.48em;text-transform:uppercase;color:var(--cobre)}
+  .cover-eyebrow::before,.cover-eyebrow::after{content:" — "}
+  .cover-meridian{width:1px;height:80px;background:var(--cobre);position:relative}
+  .cover-meridian::before,.cover-meridian::after{content:"";position:absolute;left:-4px;width:9px;height:9px;background:var(--cobre);border-radius:50%}
+  .cover-meridian::before{top:0}
+  .cover-meridian::after{bottom:0}
+
+  .cover-wm{
+    font-family:'Fraunces',serif;font-weight:900;font-size:180px;line-height:0.92;letter-spacing:0.01em;color:var(--neblina);text-align:center;
+  }
+  .cover-wm .ital{font-style:italic;font-weight:300;color:var(--cobre)}
+
+  .cover-title{
+    font-family:'Fraunces',serif;font-weight:400;font-size:44px;line-height:1.1;letter-spacing:0.01em;color:var(--neblina);text-align:center;
+    padding-top:30px;border-top:1px solid var(--cobre);width:640px;
+  }
+  .cover-title em{font-style:italic;font-weight:300;color:var(--cobre)}
+  .cover-sub{font-family:'Fraunces',serif;font-style:italic;font-weight:300;font-size:22px;color:rgba(232,224,208,0.85);letter-spacing:0.03em}
+
+  .cover-foot-grid{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:24px;
+    padding-top:22px;border-top:1px solid var(--hair-l);
+  }
+  .cover-foot-grid .k{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.32em;text-transform:uppercase;color:rgba(232,224,208,0.55);margin-bottom:6px}
+  .cover-foot-grid .v{font-family:'Fraunces',serif;font-weight:400;font-size:16px;letter-spacing:0.02em;color:var(--neblina)}
+  .cover-foot-grid .v em{font-style:italic;font-weight:300;color:var(--cobre);display:block;font-size:13px;margin-top:4px}
+
+  /* ═════ TOC ═════ */
+  .toc-intro{
+    font-family:'Fraunces',serif;font-weight:300;font-size:22px;line-height:1.55;color:var(--fiordo);max-width:68ch;margin-bottom:48px;
+  }
+  .toc-intro em{font-style:italic;color:var(--lacre);font-weight:400}
+
+  .toc{display:grid;grid-template-columns:1fr 1fr;gap:56px 80px;margin-top:24px}
+  .toc .entry{
+    display:grid;grid-template-columns:60px 1fr auto;gap:18px;align-items:baseline;
+    padding:14px 0;border-bottom:1px solid var(--hair);
+  }
+  .toc .entry .n{font-family:'Fraunces',serif;font-weight:400;font-size:22px;letter-spacing:0.02em;color:var(--lacre)}
+  .toc .entry .n em{font-style:italic;font-weight:300}
+  .toc .entry .t{font-family:'Fraunces',serif;font-weight:500;font-size:20px;letter-spacing:0.01em;color:var(--fiordo);line-height:1.2}
+  .toc .entry .t small{display:block;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.28em;text-transform:uppercase;margin-top:4px;color:var(--fiordo);opacity:0.65;font-weight:400}
+  .toc .entry .p{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.18em;color:var(--fiordo);opacity:0.7}
+
+  /* ═════ FOUNDATION (manifesto) ═════ */
+  .manifest{
+    display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:start;
+  }
+  .manifest .lead{
+    font-family:'Fraunces',serif;font-weight:400;font-size:36px;line-height:1.15;letter-spacing:0.01em;color:var(--fiordo);
+  }
+  .manifest .lead em{font-style:italic;font-weight:300;color:var(--lacre)}
+  .manifest .lead::first-letter{font-family:'Fraunces',serif;font-weight:900;font-size:88px;float:left;line-height:0.85;margin:8px 14px 0 0;color:var(--lacre)}
+
+  .manifest .body p{font-family:'Fraunces',serif;font-weight:300;font-size:17px;line-height:1.7;color:var(--fiordo);margin-bottom:16px}
+  .manifest .body p strong{font-weight:500;color:var(--lacre)}
+
+  .pillars{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:64px;border:1px solid var(--fiordo);
+  }
+  .pillar{padding:32px;border-right:1px solid var(--fiordo)}
+  .pillar:last-child{border-right:none}
+  .pillar .n{font-family:'Fraunces',serif;font-weight:900;font-size:56px;line-height:0.85;letter-spacing:-0.02em;color:var(--lacre);margin-bottom:14px}
+  .pillar .n em{font-style:italic;font-weight:300}
+  .pillar .t{font-family:'Fraunces',serif;font-weight:500;font-size:22px;letter-spacing:0.01em;color:var(--fiordo);margin-bottom:10px;line-height:1.15}
+  .pillar .t em{font-style:italic;font-weight:300;color:var(--lacre)}
+  .pillar .d{font-family:'Fraunces',serif;font-weight:300;font-size:15px;line-height:1.55;color:var(--fiordo)}
+
+  /* ═════ WORDMARK anatomy ═════ */
+  .anatomy-stage{
+    padding:72px 32px;background:var(--neblina-2);border:1px solid var(--fiordo);
+    position:relative;display:flex;justify-content:center;margin-bottom:48px;
+  }
+  .anatomy-wm{
+    font-family:'Fraunces',serif;font-weight:900;font-size:200px;line-height:1;letter-spacing:0.02em;color:var(--fiordo);position:relative;
+  }
+  .anatomy-wm .ital{font-style:italic;font-weight:300;color:var(--lacre)}
+
+  /* measurement overlays */
+  .anno-line{position:absolute;background:var(--lacre)}
+  .anno-txt{
+    position:absolute;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:var(--lacre);
+  }
+
+  .anatomy-specs{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--fiordo);background:var(--neblina)}
+  .anatomy-specs > div{padding:22px 24px;border-right:1px solid var(--fiordo)}
+  .anatomy-specs > div:last-child{border-right:none}
+  .anatomy-specs .k{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.3em;text-transform:uppercase;color:var(--lacre);margin-bottom:8px}
+  .anatomy-specs .v{font-family:'Fraunces',serif;font-weight:500;font-size:18px;letter-spacing:0.01em;color:var(--fiordo);line-height:1.2}
+  .anatomy-specs .v small{display:block;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.22em;color:var(--fiordo);opacity:0.65;margin-top:4px;text-transform:uppercase;font-weight:400}
+
+  /* ═════ CLEAR SPACE & SIZES ═════ */
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:48px}
+  .card{border:1px solid var(--fiordo);background:var(--neblina);padding:36px}
+  .card.dark-c{background:var(--neblina-2)}
+  .card .kicker{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.32em;text-transform:uppercase;color:var(--lacre);margin-bottom:14px}
+  .card .h{font-family:'Fraunces',serif;font-weight:500;font-size:26px;letter-spacing:0.01em;margin-bottom:12px;line-height:1.15}
+  .card .h em{font-style:italic;font-weight:300;color:var(--lacre)}
+  .card p{font-family:'Fraunces',serif;font-weight:300;font-size:15px;line-height:1.6;color:var(--fiordo);max-width:52ch}
+
+  .clear-space-diagram{
+    display:flex;justify-content:center;align-items:center;padding:48px 0;margin:24px 0;
+    background:var(--neblina);border:1px solid var(--fiordo);
+  }
+
+  .size-row{
+    display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border:1px solid var(--fiordo);margin-top:32px;
+    background:var(--neblina);
+  }
+  .size-cell{padding:36px 32px;border-right:1px solid var(--fiordo);display:flex;flex-direction:column;gap:18px;min-height:260px;justify-content:space-between}
+  .size-cell:last-child{border-right:none}
+  .size-cell .k{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.3em;text-transform:uppercase;color:var(--lacre)}
+  .size-cell .v{font-family:'Fraunces',serif;font-weight:900;letter-spacing:0.02em;color:var(--fiordo);line-height:0.95}
+  .size-cell .v .ital{font-style:italic;font-weight:300;color:var(--lacre)}
+  .size-cell .n{font-family:'Fraunces',serif;font-weight:500;font-size:17px;color:var(--fiordo);line-height:1.3}
+  .size-cell .n em{font-style:italic;font-weight:300;color:var(--lacre)}
+  .size-cell .d{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.22em;color:var(--fiordo);opacity:0.75;text-transform:uppercase}
+
+  /* ═════ MISUSE ═════ */
+  .misuse{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:16px;
+  }
+  .mis{
+    border:1px solid var(--fiordo);background:var(--neblina);padding:32px;display:flex;flex-direction:column;gap:20px;min-height:320px;
+  }
+  .mis .corner{display:flex;justify-content:space-between;align-items:center}
+  .mis .corner .tag{
+    font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.3em;text-transform:uppercase;
+    padding:4px 10px;border:1px solid var(--mal);color:var(--mal);
+  }
+  .mis.ok .corner .tag{border-color:var(--ok);color:var(--ok)}
+  .mis .corner .n{font-family:'Fraunces',serif;font-weight:500;font-size:18px;color:var(--fiordo)}
+  .mis .stage{flex:1;display:flex;align-items:center;justify-content:center;background:var(--neblina-2);padding:24px;position:relative;overflow:hidden;border:1px solid var(--hair)}
+  .mis .stage .wm{font-family:'Fraunces',serif;font-weight:900;font-size:44px;letter-spacing:0.02em;color:var(--fiordo)}
+  .mis .stage .wm .ital{font-style:italic;font-weight:300;color:var(--lacre)}
+  .mis .exp{font-family:'Fraunces',serif;font-weight:300;font-size:14px;line-height:1.55;color:var(--fiordo)}
+  .mis .exp strong{color:var(--mal);font-weight:500}
+  .mis.ok .exp strong{color:var(--ok)}
+
+  /* ═════ COLOR SYSTEM ═════ */
+  .color-grid{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--fiordo)}
+  .swatch{min-height:400px;padding:28px;display:flex;flex-direction:column;justify-content:space-between;border-right:1px solid var(--fiordo);position:relative}
+  .swatch:last-child{border-right:none}
+  .swatch .top{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.24em;text-transform:uppercase}
+  .swatch .nm{font-family:'Fraunces',serif;font-weight:500;font-size:26px;letter-spacing:0.01em;line-height:1.05}
+  .swatch .nm em{font-style:italic;font-weight:300}
+  .swatch .role{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.3em;text-transform:uppercase;margin-top:6px;opacity:0.7}
+  .swatch .specs{display:grid;grid-template-columns:auto 1fr;gap:4px 20px;font-family:'IBM Plex Mono',monospace;font-size:10px;padding-top:14px;border-top:1px solid currentColor}
+  .swatch .specs .k{font-size:8px;letter-spacing:0.28em;text-transform:uppercase;opacity:0.6}
+
+  .ratio{display:grid;grid-template-columns:48% 22% 14% 8% 5% 3%;height:32px;border:1px solid var(--fiordo);margin-top:24px}
+  .ratio-lbl{display:grid;grid-template-columns:48% 22% 14% 8% 5% 3%;padding:12px 0 8px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.24em;text-transform:uppercase;color:var(--fiordo)}
+  .ratio-lbl > div{padding-left:12px}
+
+  .color-pairs{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:40px}
+  .pair{
+    border:1px solid var(--fiordo);padding:16px;display:flex;align-items:center;gap:14px;min-height:96px;
+    font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--fiordo);
+  }
+  .pair.ok{border-color:var(--ok)}
+  .pair.bad{border-color:var(--mal)}
+  .pair .chip{width:48px;height:48px;border:1px solid var(--fiordo);flex-shrink:0}
+  .pair .lbl strong{display:block;font-family:'Fraunces',serif;font-weight:500;font-size:13px;letter-spacing:0;color:var(--fiordo);text-transform:none;margin-bottom:4px}
+  .pair .lbl small{display:block;font-size:9px;opacity:0.75}
+
+  /* ═════ TYPOGRAPHY ═════ */
+  .type-spec{padding:36px;border:1px solid var(--fiordo);background:var(--neblina);margin-bottom:24px}
+  .type-spec .head{display:grid;grid-template-columns:1fr auto;align-items:baseline;padding-bottom:16px;border-bottom:1px solid var(--hair);margin-bottom:24px}
+  .type-spec .head .name{font-family:'Fraunces',serif;font-weight:500;font-size:28px;letter-spacing:0.01em;color:var(--fiordo)}
+  .type-spec .head .name em{font-style:italic;font-weight:300;color:var(--lacre)}
+  .type-spec .head .role{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:var(--lacre)}
+  .type-spec .body{display:grid;grid-template-columns:1fr 240px;gap:36px;align-items:start}
+  .type-spec .display{font-family:'Fraunces',serif}
+  .type-spec .display .l1{font-size:72px;font-weight:900;line-height:0.95;letter-spacing:0;margin-bottom:8px;color:var(--fiordo)}
+  .type-spec .display .l2{font-size:32px;font-weight:400;font-style:italic;line-height:1.15;color:var(--lacre);margin-bottom:12px}
+  .type-spec .display .l3{font-size:16px;font-weight:300;line-height:1.55;color:var(--fiordo);max-width:52ch}
+  .type-spec .sidebar{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.2em;color:var(--fiordo);line-height:1.8}
+  .type-spec .sidebar .row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--hair)}
+  .type-spec .sidebar .k{opacity:0.6;letter-spacing:0.28em;text-transform:uppercase;font-size:9px}
+
+  .type-spec.mono-spec .display .l1{font-family:'IBM Plex Mono',monospace;font-size:36px;font-weight:400;letter-spacing:0.02em}
+  .type-spec.mono-spec .display .l2{font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:300;letter-spacing:0.2em;text-transform:uppercase;color:var(--lacre);font-style:normal}
+  .type-spec.mono-spec .display .l3{font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:0.05em;line-height:1.7}
+
+  .type-scale{margin-top:24px;border:1px solid var(--fiordo);background:var(--neblina)}
+  .type-scale .row{display:grid;grid-template-columns:80px 1fr 120px 140px;padding:14px 24px;border-bottom:1px dashed var(--hair);align-items:baseline;gap:16px}
+  .type-scale .row:last-child{border-bottom:none}
+  .type-scale .row .k{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.28em;text-transform:uppercase;color:var(--lacre)}
+  .type-scale .row .sample{font-family:'Fraunces',serif;color:var(--fiordo);letter-spacing:0.01em;font-weight:500}
+  .type-scale .row .size{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.22em;color:var(--fiordo);opacity:0.7;text-transform:uppercase;text-align:right}
+  .type-scale .row .use{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.22em;color:var(--fiordo);opacity:0.7;text-transform:uppercase;text-align:right}
+
+  /* ═════ SEAL PAGE (uses v6 compass) ═════ */
+  .seal-showcase{
+    display:grid;grid-template-columns:1.1fr 1fr;gap:40px;margin-bottom:40px;
+  }
+  .seal-primary{
+    background:var(--fiordo);border:1px solid var(--fiordo);padding:64px;
+    display:flex;align-items:center;justify-content:center;min-height:540px;position:relative;
+  }
+  .seal-primary .corner{position:absolute;top:20px;left:20px;right:20px;display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:rgba(232,224,208,0.65)}
+  .seal-primary .foot{position:absolute;bottom:20px;left:20px;right:20px;display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:var(--cobre)}
+
+  .seal-construction{border:1px solid var(--fiordo);background:var(--neblina-2);padding:40px}
+  .seal-construction .k{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.32em;text-transform:uppercase;color:var(--lacre);margin-bottom:12px}
+  .seal-construction h3{font-family:'Fraunces',serif;font-weight:500;font-size:28px;line-height:1.1;letter-spacing:0.01em;color:var(--fiordo);margin-bottom:16px}
+  .seal-construction h3 em{font-style:italic;font-weight:300;color:var(--lacre)}
+  .seal-construction p{font-family:'Fraunces',serif;font-weight:300;font-size:15px;line-height:1.6;color:var(--fiordo);margin-bottom:12px}
+  .seal-construction p strong{color:var(--lacre);font-weight:500}
+
+  .seal-states{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--fiordo);margin-top:24px}
+  .seal-state{padding:28px;display:flex;flex-direction:column;align-items:center;gap:12px;border-right:1px solid var(--fiordo);min-height:260px;justify-content:space-between}
+  .seal-state:last-child{border-right:none}
+  .seal-state .label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.3em;text-transform:uppercase;color:var(--lacre);text-align:center}
+  .seal-state.dark{background:var(--fiordo)}
+  .seal-state.dark .label{color:var(--cobre)}
+  .seal-state.lacre-bg{background:var(--lacre)}
+  .seal-state.lacre-bg .label{color:var(--neblina)}
+  .seal-state .usage{font-family:'Fraunces',serif;font-style:italic;font-weight:300;font-size:13px;color:var(--fiordo);text-align:center}
+  .seal-state.dark .usage,.seal-state.lacre-bg .usage{color:var(--neblina)}
+
+  /* ═════ SUBSIDIARIES ═════ */
+  .sub-manifest{
+    border:1px solid var(--fiordo);background:var(--neblina);
+  }
+  .sub-manifest .head{
+    display:grid;grid-template-columns:60px 2.2fr 1.3fr 1.3fr 1fr;gap:16px;padding:18px 28px;
+    background:var(--fiordo);color:var(--neblina);
+    font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.3em;text-transform:uppercase;
+  }
+  .sub-manifest .row{
+    display:grid;grid-template-columns:60px 2.2fr 1.3fr 1.3fr 1fr;gap:16px;padding:24px 28px;
+    align-items:center;border-bottom:1px solid var(--hair);
+  }
+  .sub-manifest .row:last-child{border-bottom:none}
+  .sub-manifest .row .n{font-family:'Fraunces',serif;font-weight:900;font-size:32px;line-height:0.85;color:var(--lacre)}
+  .sub-manifest .row .nm{font-family:'Fraunces',serif;font-weight:500;font-size:22px;letter-spacing:0.01em;color:var(--fiordo);line-height:1.1}
+  .sub-manifest .row .nm em{font-style:italic;font-weight:300;color:var(--lacre)}
+  .sub-manifest .row .nm small{display:block;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.22em;color:var(--fiordo);opacity:0.65;margin-top:4px;font-weight:400;text-transform:uppercase}
+  .sub-manifest .row .sector{font-family:'Fraunces',serif;font-style:italic;font-weight:300;font-size:15px;color:var(--fiordo)}
+  .sub-manifest .row .where{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--fiordo);opacity:0.75;line-height:1.5}
+  .sub-manifest .row .endorse{
+    font-family:'Fraunces',serif;font-style:italic;font-weight:300;font-size:13px;letter-spacing:0.03em;color:var(--lacre);
+    padding:8px 12px;border:1px solid var(--lacre);text-align:center;line-height:1.2;
+  }
+
+  .lockup-demo{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:32px;
+  }
+  .lockup{
+    border:1px solid var(--fiordo);padding:36px 28px;min-height:200px;
+    display:flex;flex-direction:column;justify-content:space-between;gap:20px;background:var(--neblina);
+  }
+  .lockup .nm{font-family:'Fraunces',serif;font-weight:500;font-size:28px;letter-spacing:0.01em;color:var(--fiordo);line-height:1.05}
+  .lockup .nm em{font-style:italic;font-weight:300;color:var(--lacre)}
+  .lockup .endorse{
+    font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:var(--lacre);
+    padding-top:14px;border-top:1px solid var(--lacre);display:flex;justify-content:space-between;align-items:center;
+  }
+  .lockup .endorse .star::before{content:"✦";font-size:11px;letter-spacing:0}
+
+  /* ═════ VOICE ═════ */
+  .voice-grid{display:grid;grid-template-columns:1fr 1fr;gap:32px}
+  .voice-card{border:1px solid var(--fiordo);background:var(--neblina);padding:36px;min-height:280px;display:flex;flex-direction:column;gap:18px}
+  .voice-card.ok{border-color:var(--ok)}
+  .voice-card.bad{border-color:var(--mal);background:var(--neblina-2)}
+  .voice-card .tag{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.32em;text-transform:uppercase;color:var(--ok)}
+  .voice-card.bad .tag{color:var(--mal)}
+  .voice-card .q{font-family:'Fraunces',serif;font-weight:400;font-size:22px;line-height:1.35;color:var(--fiordo);font-style:italic}
+  .voice-card .q::before{content:"« ";color:var(--lacre)}
+  .voice-card .q::after{content:" »";color:var(--lacre)}
+  .voice-card.bad .q::before,.voice-card.bad .q::after{color:var(--mal)}
+  .voice-card .note{font-family:'Fraunces',serif;font-weight:300;font-size:14px;line-height:1.55;color:var(--fiordo);padding-top:16px;border-top:1px dashed var(--hair)}
+
+  .voice-lexicon{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:48px}
+  .lex{border:1px solid var(--fiordo);background:var(--neblina);padding:32px}
+  .lex h4{font-family:'Fraunces',serif;font-weight:500;font-size:22px;letter-spacing:0.01em;color:var(--fiordo);margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--hair)}
+  .lex h4 em{font-style:italic;font-weight:300;color:var(--lacre)}
+  .lex ul{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:10px 20px}
+  .lex li{font-family:'Fraunces',serif;font-weight:400;font-size:15px;color:var(--fiordo);padding:6px 0;border-bottom:1px dashed var(--hair)}
+  .lex li em{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:var(--lacre);font-style:normal;display:block;margin-top:2px}
+
+  /* ═════ STATIONERY ═════ */
+  .stationery{display:grid;grid-template-columns:1fr 1fr;gap:36px;margin-bottom:40px}
+  .stat-card{
+    border:1px solid var(--fiordo);background:var(--neblina);padding:32px;min-height:460px;
+    display:flex;flex-direction:column;gap:20px;
+  }
+  .stat-card .lbl{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:var(--lacre)}
+  .stat-mockup{flex:1;background:var(--neblina-2);border:1px solid var(--hair-d);padding:28px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden}
+
+  .stat-mockup.card-mockup{min-height:220px}
+  .stat-mockup.letterhead{min-height:320px}
+
+  /* ═════ FINAL SIGN-OFF ═════ */
+  .signoff{text-align:center;padding:96px 80px}
+  .signoff .mark{font-family:'Fraunces',serif;font-weight:900;font-size:144px;line-height:1;letter-spacing:0.02em;color:var(--neblina);margin-bottom:32px}
+  .signoff .mark .ital{font-style:italic;font-weight:300;color:var(--cobre)}
+  .signoff .divisa{font-family:'Fraunces',serif;font-style:italic;font-weight:300;font-size:30px;color:var(--cobre);letter-spacing:0.02em;padding:24px 0;border-top:1px solid var(--cobre);border-bottom:1px solid var(--cobre);width:600px;margin:0 auto 32px}
+  .signoff .meta{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.3em;text-transform:uppercase;color:rgba(232,224,208,0.75);line-height:2}
+
+  /* utility */
+  .rule-h{height:1px;background:var(--fiordo);border:none;margin:32px 0}
+
+</style>
+</head>
+<body>
+
+<!-- ════════════════ PAGE 01 · COVER ════════════════ -->
+<section class="page">
+  <div class="cover">
+    <svg class="contour" viewBox="0 0 1072 1400" preserveAspectRatio="xMidYMid slice">
+      <g fill="none" stroke="#E8E0D0" stroke-width="0.5">
+        <path d="M 0 220 C 160 260, 280 180, 480 240 S 780 300, 960 220 S 1072 260, 1072 240"/>
+        <path d="M 0 340 C 160 380, 280 300, 480 360 S 780 420, 960 340 S 1072 380, 1072 360"/>
+        <path d="M 0 460 C 160 500, 280 420, 480 480 S 780 540, 960 460 S 1072 500, 1072 480"/>
+        <path d="M 0 580 C 160 620, 280 540, 480 600 S 780 660, 960 580 S 1072 620, 1072 600"/>
+        <path d="M 0 700 C 160 740, 280 660, 480 720 S 780 780, 960 700 S 1072 740, 1072 720"/>
+        <path d="M 0 820 C 160 860, 280 780, 480 840 S 780 900, 960 820 S 1072 860, 1072 840"/>
+        <path d="M 0 940 C 160 980, 280 900, 480 960 S 780 1020, 960 940 S 1072 980, 1072 960"/>
+        <path d="M 0 1060 C 160 1100, 280 1020, 480 1080 S 780 1140, 960 1060 S 1072 1100, 1072 1080"/>
+        <path d="M 0 1180 C 160 1220, 280 1140, 480 1200 S 780 1260, 960 1180 S 1072 1220, 1072 1200"/>
+      </g>
+    </svg>
+
+    <div class="cover-strip">
+      <div class="l">OLACORE HOLDING · VOL. I</div>
+      <div class="c">— Manual de Marca —</div>
+      <div class="r">MMXXVI · Edición de autor</div>
+    </div>
+
+    <div class="cover-center">
+      <div class="cover-eyebrow">Brand Standards · Meridiano Sur</div>
+      <div class="cover-meridian"></div>
+      <div class="cover-wm">OLA<span class="ital">core</span></div>
+      <div class="cover-title">Sistema <em>de identidad visual</em><br/>y reglas de uso institucional</div>
+      <div class="cover-sub">— Del fiordo a la vega, en una sola marca —</div>
+    </div>
+
+    <div class="cover-foot-grid">
+      <div>
+        <div class="k">Documento</div>
+        <div class="v">OLA / BM / 01<em>Brand Manual · Vol. I</em></div>
+      </div>
+      <div>
+        <div class="k">Custodio</div>
+        <div class="v">Dirección de Marca<em>Olacore Holding</em></div>
+      </div>
+      <div>
+        <div class="k">Vigencia</div>
+        <div class="v">MMXXVI — MMXXXI<em>Revisión quinquenal</em></div>
+      </div>
+      <div>
+        <div class="k">Control</div>
+        <div class="v">Edición 001 · Matriz<em>Sin copia · uso interno</em></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ PAGE 02 · TOC ════════════════ -->
+<section class="page">
+  <div class="r-head"><div class="l">OLACORE · Brand Manual · Vol. I</div><div class="c">— Meridiano Sur —</div><div class="r">OLA / BM / 01</div></div>
+  <div class="inner">
+
+    <div class="chapter">
+      <div class="n">00</div>
+      <div class="t">Índice <em>del volumen</em><small>— Ocho secciones · Brand Standards MMXXVI —</small></div>
+      <div class="code">CONT · 00<br/>Fol. 02</div>
+    </div>
+
+    <p class="toc-intro">
+      Este volumen contiene las reglas que rigen la marca <em>OLACORE</em> — su nombre, su sello, sus colores, su voz y su aplicación. Está escrito para quien custodia la marca en el tiempo: el equipo interno, las agencias externas, los proveedores y las generaciones futuras. <em>No es un documento de estilo; es un instrumento de gobierno.</em>
+    </p>
+
+    <div class="toc">
+      <div class="entry"><span class="n">i.</span><span class="t">Fundamento y manifiesto<small>— Qué es la marca, de dónde viene, qué defiende —</small></span><span class="p">p. 04</span></div>
+      <div class="entry"><span class="n">ii.</span><span class="t">Logotipo primario<small>— Anatomía, construcción, tracking, masas —</small></span><span class="p">p. 06</span></div>
+      <div class="entry"><span class="n">iii.</span><span class="t">Zona de protección <em>&amp;</em> escalas<small>— Clear space, tamaños mínimos, pruebas —</small></span><span class="p">p. 08</span></div>
+      <div class="entry"><span class="n">iv.</span><span class="t">Malos usos <em>prohibidos</em><small>— Seis maneras de romper la marca —</small></span><span class="p">p. 10</span></div>
+      <div class="entry"><span class="n">v.</span><span class="t">Sistema de color<small>— Paleta oficial, proporciones, pares —</small></span><span class="p">p. 12</span></div>
+      <div class="entry"><span class="n">vi.</span><span class="t">Sistema tipográfico<small>— Fraunces + IBM Plex Mono, jerarquía, escala —</small></span><span class="p">p. 14</span></div>
+      <div class="entry"><span class="n">vii.</span><span class="t">Sello austral <em>&amp;</em> estados<small>— La Brújula de Dos Raíces, tres estados —</small></span><span class="p">p. 16</span></div>
+      <div class="entry"><span class="n">viii.</span><span class="t">Sub-marcas, voz <em>&amp;</em> papelería<small>— Endoso, lockups, tono, aplicaciones —</small></span><span class="p">p. 18</span></div>
+    </div>
+
+  </div>
+  <div class="r-foot"><div class="l">OLA / BM / 01</div><div class="page-n">Fol. <em>02</em></div><div class="r">Índice · 00</div></div>
+</section>
+
+<!-- ════════════════ PAGE 03 · FOUNDATION ════════════════ -->
+<section class="page">
+  <div class="r-head"><div class="l">OLACORE · Brand Manual · Vol. I</div><div class="c">— i · Fundamento —</div><div class="r">OLA / BM / 01</div></div>
+  <div class="inner">
+
+    <div class="chapter">
+      <div class="n">i.</div>
+      <div class="t">Fundamento <em>y manifiesto</em><small>— Qué es la marca, de dónde viene, qué defiende —</small></div>
+      <div class="code">FOUND · 01<br/>Fol. 04</div>
+    </div>
+
+    <div class="manifest">
+      <div class="lead">
+        <em>Olacore</em> es el nombre de una casa que mira al sur de Chile como se mira un mapa: con la certeza de que el territorio viene antes que la empresa.
+      </div>
+
+      <div class="body">
+        <p>El nombre <strong>OLA</strong> viene del apellido paterno <em>Olavarría</em> — linaje vasco que cruzó el Atlántico y encontró su fondeo en Puerto Montt. Trae consigo la fragua, el hierro y la ética de construir con lo que no se rompe.</p>
+        <p>El nombre <strong>CORE</strong> es el núcleo en inglés, pero también es <em>de la Vega</em> — raíz cántabra asentada en Carampangue, al sur del Biobío. Es lo que permanece en el centro cuando todo lo demás se mueve.</p>
+        <p>Olacore no es una fusión decorativa entre dos palabras. Es una <strong>casa tenedora</strong> que administra patrimonio institucional por generaciones, con domicilio en el sur de Chile y con vocación de permanencia por sobre ganancia inmediata.</p>
+        <p>Este manual existe porque <strong>las marcas patrimoniales se protegen con reglas</strong>, no con entusiasmo. Lo que viene a continuación es ese instrumento.</p>
+      </div>
+    </div>
+
+    <div class="pillars">
+      <div class="pillar">
+        <div class="n">i<em>.</em></div>
+        <div class="t">Patrimonio <em>por generaciones</em></div>
+        <div class="d">No operamos ciclos trimestrales; operamos décadas. La unidad de medida es la generación, no el ejercicio fiscal.</div>
+      </div>
+      <div class="pillar">
+        <div class="n">ii<em>.</em></div>
+        <div class="t">Control <em>y estructura</em></div>
+        <div class="d">Tenencia paciente, gobierno discreto. Las compañías subsidiarias conservan su nombre; Olacore es el respaldo, no el protagonista.</div>
+      </div>
+      <div class="pillar">
+        <div class="n">iii<em>.</em></div>
+        <div class="t">Horizonte <em>largo</em></div>
+        <div class="d">Cada decisión se evalúa contra la misma pregunta: <em>¿sobrevive esto dos generaciones más?</em> Si no, no se hace.</div>
+      </div>
+    </div>
+
+  </div>
+  <div class="r-foot"><div class="l">OLA / BM / 01</div><div class="page-n">Fol. <em>04</em></div><div class="r">Sección i</div></div>
+</section>
+
+<!-- ════════════════ PAGE 04 · WORDMARK ANATOMY ════════════════ -->
+<section class="page">
+  <div class="r-head"><div class="l">OLACORE · Brand Manual · Vol. I</div><div class="c">— ii · Logotipo —</div><div class="r">OLA / BM / 01</div></div>
+  <div class="inner">
+
+    <div class="chapter">
+      <div class="n">ii.</div>
+      <div class="t">Logotipo <em>primario</em><small>— Anatomía, construcción, tracking, masas —</small></div>
+      <div class="code">WM · 02<br/>Fol. 06</div>
+    </div>
+
+    <div class="anatomy-stage">
+      <div class="anatomy-wm">OLA<span class="ital">core</span>
+        <!-- overlays -->
+        <span class="anno-line" style="left:0;right:0;top:-18px;height:1px"></span>
+        <span class="anno-line" style="left:0;right:0;bottom:-18px;height:1px"></span>
+        <span class="anno-line" style="left:-14px;top:-18px;bottom:-18px;width:1px"></span>
+        <span class="anno-line" style="right:-14px;top:-18px;bottom:-18px;width:1px"></span>
+        <span class="anno-txt" style="top:-34px;left:50%;transform:translateX(-50%)">Caja tipográfica · 1x alto</span>
+        <span class="anno-txt" style="bottom:-34px;left:0">OLA — romana</span>
+        <span class="anno-txt" style="bottom:-34px;right:0">core — cursiva</span>
+      </div>
+    </div>
+
+    <div class="anatomy-specs">
+      <div>
+        <div class="k">Familia</div>
+        <div class="v">Fraunces<small>Opsz 144 · Display</small></div>
+      </div>
+      <div>
+        <div class="k">Pesos</div>
+        <div class="v">w900 + w300 ital.<small>Romana plena + itálica fina</small></div>
+      </div>
+      <div>
+        <div class="k">Tracking</div>
+        <div class="v">+0.02 em<small>Constante · todas las escalas</small></div>
+      </div>
+      <div>
+        <div class="k">Color</div>
+        <div class="v">Fiordo + Lacre<small>Nunca se mezclan dentro de la letra</small></div>
+      </div>
+    </div>
+
+    <div class="two-col" style="margin-top:48px">
+      <div class="card">
+        <div class="kicker">— Regla de masas —</div>
+        <div class="h">Ola <em>empuja</em>, core <em>sostiene</em>.</div>
+        <p>Las tres letras romanas de <strong>OLA</strong> ocupan el 60% del wordmark; las cuatro letras cursivas de <strong>core</strong> ocupan el 40%. Esta proporción no se altera nunca, ni siquiera en composiciones muy apretadas. Si no cabe en la proporción, no cabe la marca.</p>
+      </div>
+      <div class="card">
+        <div class="kicker">— Regla del color —</div>
+        <div class="h">Dos tintas, <em>jamás tres</em>.</div>
+        <p>El wordmark se compone siempre en dos tintas: una para <strong>OLA</strong> (Fiordo o Neblina, según fondo) y otra para <strong>core</strong> (Lacre o Cobre, según fondo). Nunca aparece en una tinta única plana, ni con degradados, ni con una tercera tinta.</p>
+      </div>
+    </div>
+
+  </div>
+  <div class="r-foot"><div class="l">OLA / BM / 01</div><div class="page-n">Fol. <em>06</em></div><div class="r">Sección ii</div></div>
+</section>
+
+<!-- ════════════════ PAGE 05 · CLEAR SPACE + SIZES ════════════════ -->
+<section class="page">
+  <div class="r-head"><div class="l">OLACORE · Brand Manual · Vol. I</div><div class="c">— iii · Protección —</div><div class="r">OLA / BM / 01</div></div>
+  <div class="inner">
+
+    <div class="chapter">
+      <div class="n">iii.</div>
+      <div class="t">Zona de protección <em>y escalas</em><small>— Clear space, tamaños mínimos, pruebas de lectura —</small></div>
+      <div class="code">CLR · 03<br/>Fol. 08</div>
+    </div>
+
+    <div class="card dark-c" style="margin-bottom:40px">
+      <div class="kicker">— Clear space · diagrama —</div>
+      <div class="h">La <em>"O"</em> como unidad de respiro.</div>
+      <p>El espacio libre mínimo alrededor del logotipo equivale al ancho del círculo exterior de la letra <strong>O</strong>, medido desde su ancho mayor. Este espacio no contiene texto, iconografía, imagen, borde ni ningún otro elemento gráfico. La excepción únicamente es el sello, cuando aparece acompañando al wordmark en composición vertical.</p>
+    </div>
+
+    <div class="clear-space-diagram">
+      <svg viewBox="0 0 960 340" width="920" height="340" aria-label="Clear space">
+        <!-- clear space dashed box -->
+        <rect x="80" y="60" width="800" height="220" fill="none" stroke="#9A3E2F" stroke-width="1" stroke-dasharray="4 4"/>
+        <!-- the "O" measurement unit (red circle) — shown smaller at corners -->
+        <g stroke="#9A3E2F" stroke-width="0.8" fill="none">
+          <circle cx="80" cy="60" r="22"/>
+          <circle cx="880" cy="60" r="22"/>
+          <circle cx="80" cy="280" r="22"/>
+          <circle cx="880" cy="280" r="22"/>
+          <text x="50" y="44" font-family="IBM Plex Mono" font-size="9" letter-spacing="0.22em" fill="#9A3E2F">= X</text>
+        </g>
+        <!-- logo inner bounding -->
+        <rect x="130" y="110" width="700" height="120" fill="none" stroke="#0E2530" stroke-width="0.5" stroke-dasharray="2 3" opacity="0.5"/>
+        <!-- logo text -->
+        <text x="480" y="200" text-anchor="middle" font-family="Fraunces" font-weight="900" font-size="100" letter-spacing="2" fill="#0E2530">OLA<tspan font-weight="300" font-style="italic" fill="#9A3E2F">core</tspan></text>
+        <!-- dim arrows -->
+        <g stroke="#9A3E2F" stroke-width="0.6" fill="none">
+          <line x1="100" y1="90" x2="130" y2="110"/>
+          <line x1="860" y1="90" x2="830" y2="110"/>
+          <line x1="100" y1="250" x2="130" y2="230"/>
+          <line x1="860" y1="250" x2="830" y2="230"/>
+        </g>
+        <!-- caption -->
+        <text x="480" y="320" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" letter-spacing="0.32em" fill="#9A3E2F">— ZONA DE PROTECCIÓN MÍNIMA · X = ANCHO DE "O" —</text>
+      </svg>
+    </div>
+
+    <div class="size-row">
+      <div class="size-cell">
+        <div>
+          <div class="k">Mínimo digital</div>
+          <div class="v" style="font-size:48px">OLA<span class="ital">core</span></div>
+        </div>
+        <div class="n">128 <em>px</em> de ancho</div>
+        <div class="d">— pantalla · web · app —</div>
+      </div>
+      <div class="size-cell">
+        <div>
+          <div class="k">Mínimo impreso</div>
+          <div class="v" style="font-size:36px">OLA<span class="ital">core</span></div>
+        </div>
+        <div class="n">32 <em>mm</em> de ancho</div>
+        <div class="d">— papelería · folletos · libros —</div>
+      </div>
+      <div class="size-cell">
+        <div>
+          <div class="k">Bajo el mínimo</div>
+          <div class="v" style="font-size:24px;opacity:0.35">OLA<span class="ital">core</span></div>
+        </div>
+        <div class="n">Solo <em>sello</em>, nunca wordmark</div>
+        <div class="d">— favicon · stamp · solapa —</div>
+      </div>
+    </div>
+
+  </div>
+  <div class="r-foot"><div class="l">OLA / BM / 01</div><div class="page-n">Fol. <em>08</em></div><div class="r">Sección iii</div></div>
+</section>
+
+<!-- ════════════════ PAGE 06 · MISUSE ════════════════ -->
+<section class="page">
+  <div class="r-head"><div class="l">OLACORE · Brand Manual · Vol. I</div><div class="c">— iv · Malos usos —</div><div class="r">OLA / BM / 01</div></div>
+  <div class="inner">
+
+    <div class="chapter">
+      <div class="n">iv.</div>
+      <div class="t">Malos usos <em>prohibidos</em><small>— Seis maneras de romper la marca —</small></div>
+      <div class="code">NO · 04<br/>Fol. 10</div>
+    </div>
+
+    <p class="toc-intro" style="margin-bottom:32px">
+      Las siguientes aplicaciones están <em>explícitamente prohibidas</em>. No son cuestión de gusto: son infracciones al gobierno de marca. Cualquier pieza que contenga una de estas seis faltas debe retirarse de circulación antes de su distribución.
+    </p>
+
+    <div class="misuse">
+      <div class="mis">
+        <div class="corner"><span class="n">01</span><span class="tag">No</span></div>
+        <div class="stage"><span class="wm" style="background:linear-gradient(90deg,#9A3E2F,#B98149);-webkit-background-clip:text;color:transparent">OLA<span class="ital">core</span></span></div>
+        <div class="exp"><strong>No aplicar degradados.</strong> El wordmark usa siempre dos tintas planas. Un degradado traiciona la austeridad institucional.</div>
+      </div>
+
+      <div class="mis">
+        <div class="corner"><span class="n">02</span><span class="tag">No</span></div>
+        <div class="stage"><span class="wm" style="transform:rotate(-12deg)">OLA<span class="ital">core</span></span></div>
+        <div class="exp"><strong>No rotar el logotipo.</strong> Siempre sobre una horizontal limpia. La marca no se inclina, no se curva, no sigue rutas tipográficas.</div>
+      </div>
+
+      <div class="mis">
+        <div class="corner"><span class="n">03</span><span class="tag">No</span></div>
+        <div class="stage"><span class="wm" style="transform:scaleX(1.6);transform-origin:center">OLA<span class="ital">core</span></span></div>
+        <div class="exp"><strong>No deformar proporciones.</strong> Ni estirar, ni condensar, ni aplicar <em>skew</em>. Las masas Ola–core son inviolables.</div>
+      </div>
+
+      <div class="mis">
+        <div class="corner"><span class="n">04</span><span class="tag">No</span></div>
+        <div class="stage" style="background:#B98149"><span class="wm" style="color:#0E2530"><span style="color:#0E2530">OLA</span><span style="color:#0E2530;font-style:italic;font-weight:300">core</span></span></div>
+        <div class="exp"><strong>No componer en una sola tinta sobre fondo cálido.</strong> La distinción entre <em>OLA</em> y <em>core</em> siempre debe ser cromática.</div>
+      </div>
+
+      <div class="mis">
+        <div class="corner"><span class="n">05</span><span class="tag">No</span></div>
+        <div class="stage" style="background:#E8E0D0"><span class="wm" style="color:#0E2530">OLA<span class="ital" style="color:#0E2530;font-weight:900;font-style:normal">CORE</span></span></div>
+        <div class="exp"><strong>No componer "CORE" en mayúsculas romanas.</strong> La segunda mitad es siempre cursiva minúscula. Si es mayúscula, es otra marca.</div>
+      </div>
+
+      <div class="mis">
+        <div class="corner"><span class="n">06</span><span class="tag">No</span></div>
+        <div class="stage" style="background:#E8E0D0"><span class="wm" style="font-family:'Inter',sans-serif;font-weight:700;color:#0E2530">OLA<span style="font-weight:300;font-style:italic;color:#9A3E2F">core</span></span></div>
+        <div class="exp"><strong>No sustituir la familia tipográfica.</strong> Fraunces es el logotipo. Ni Inter, ni Georgia, ni ningún sustituto reemplaza la construcción original.</div>
+      </div>
+    </div>
+
+  </div>
+  <div class="r-foot"><div class="l">OLA / BM / 01</div><div class="page-n">Fol. <em>10</em></div><div class="r">Sección iv</div></div>
+</section>
+
+<!-- ════════════════ PAGE 07 · COLORS ════════════════ -->
+<section class="page">
+  <div class="r-head"><div class="l">OLACORE · Brand Manual · Vol. I</div><div class="c">— v · Color —</div><div class="r">OLA / BM / 01</div></div>
+  <div class="inner">
+
+    <div class="chapter">
+      <div class="n">v.</div>
+      <div class="t">Sistema <em>de color</em><small>— Paleta oficial, proporciones, pares autorizados —</small></div>
+      <div class="code">CLR · 05<br/>Fol. 12</div>
+    </div>
+
+    <div class="color-grid">
+      <div class="swatch" style="background:#0E2530;color:#E8E0D0">
+        <div class="top"><span>N° 01 · Primario</span><span>48%</span></div>
+        <div>
+          <div class="nm">Fiordo <em>Austral</em></div>
+          <div class="role">— el fondo, la noche —</div>
+        </div>
+        <div class="specs">
+          <span class="k">Hex</span><span>#0E2530</span>
+          <span class="k">RGB</span><span>14 · 37 · 48</span>
+          <span class="k">CMYK</span><span>90 · 70 · 55 · 65</span>
+          <span class="k">PMS</span><span>5395 C</span>
+        </div>
+      </div>
+      <div class="swatch" style="background:#E8E0D0;color:#0E2530">
+        <div class="top"><span>N° 02 · Primario</span><span>22%</span></div>
+        <div>
+          <div class="nm">Neblina <em>Cartográfica</em></div>
+          <div class="role">— el papel, la luz —</div>
+        </div>
+        <div class="specs">
+          <span class="k">Hex</span><span>#E8E0D0</span>
+          <span class="k">RGB</span><span>232 · 224 · 208</span>
+          <span class="k">CMYK</span><span>8 · 10 · 20 · 2</span>
+          <span class="k">PMS</span><span>9183 C</span>
+        </div>
+      </div>
+      <div class="swatch" style="background:#9A3E2F;color:#E8E0D0">
+        <div class="top"><span>N° 03 · Acento</span><span>14%</span></div>
+        <div>
+          <div class="nm">Lacre <em>de Cartógrafo</em></div>
+          <div class="role">— la firma, el sello —</div>
+        </div>
+        <div class="specs">
+          <span class="k">Hex</span><span>#9A3E2F</span>
+          <span class="k">RGB</span><span>154 · 62 · 47</span>
+          <span class="k">CMYK</span><span>28 · 82 · 80 · 25</span>
+          <span class="k">PMS</span><span>1805 C</span>
+        </div>
+      </div>
+      <div class="swatch" style="background:#B98149;color:#0E2530">
+        <div class="top"><span>N° 04 · Acento</span><span>8%</span></div>
+        <div>
+          <div class="nm">Cobre <em>de Bitácora</em></div>
+          <div class="role">— el detalle, la línea —</div>
+        </div>
+        <div class="specs">
+          <span class="k">Hex</span><span>#B98149</span>
+          <span class="k">RGB</span><span>185 · 129 · 73</span>
+          <span class="k">CMYK</span><span>28 · 56 · 78 · 10</span>
+          <span class="k">PMS</span><span>7573 C</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="ratio">
+      <div style="background:#0E2530"></div>
+      <div style="background:#E8E0D0"></div>
+      <div style="background:#9A3E2F"></div>
+      <div style="background:#B98149"></div>
+      <div style="background:#4A5D44"></div>
+      <div style="background:#7C4A2A"></div>
+    </div>
+    <div class="ratio-lbl">
+      <div>Fiordo · 48</div>
+      <div>Neblina · 22</div>
+      <div>Lacre · 14</div>
+      <div>Cobre · 8</div>
+      <div>Musgo · 5</div>
+      <div>Lenga · 3</div>
+    </div>
+
+    <div class="color-pairs">
+      <div class="pair ok">
+        <span class="chip" style="background:#0E2530"></span>
+        <span class="chip" style="background:#E8E0D0"></span>
+        <span class="lbl"><strong>Fiordo + Neblina</strong><small>Par principal · contraste máximo</small></span>
+      </div>
+      <div class="pair ok">
+        <span class="chip" style="background:#E8E0D0"></span>
+        <span class="chip" style="background:#9A3E2F"></span>
+        <span class="lbl"><strong>Neblina + Lacre</strong><small>Sobre papel · sellos oficiales</small></span>
+      </div>
+      <div class="pair bad">
+        <span class="chip" style="background:#9A3E2F"></span>
+        <span class="chip" style="background:#B98149"></span>
+        <span class="lbl"><strong>Lacre + Cobre</strong><small>Prohibido · bajo contraste</small></span>
+      </div>
+      <div class="pair bad">
+        <span class="chip" style="background:#B98149"></span>
+        <span class="chip" style="background:#4A5D44"></span>
+        <span class="lbl"><strong>Cobre + Musgo</strong><small>Prohibido · acentos juntos</small></span>
+      </div>
+    </div>
+
+  </div>
+  <div class="r-foot"><div class="l">OLA / BM / 01</div><div class="page-n">Fol. <em>12</em></div><div class="r">Sección v</div></div>
+</section>
+
+<!-- ════════════════ PAGE 08 · TYPOGRAPHY ════════════════ -->
+<section class="page">
+  <div class="r-head"><div class="l">OLACORE · Brand Manual · Vol. I</div><div class="c">— vi · Tipografía —</div><div class="r">OLA / BM / 01</div></div>
+  <div class="inner">
+
+    <div class="chapter">
+      <div class="n">vi.</div>
+      <div class="t">Sistema <em>tipográfico</em><small>— Fraunces + IBM Plex Mono, jerarquía, escala —</small></div>
+      <div class="code">TYPE · 06<br/>Fol. 14</div>
+    </div>
+
+    <div class="type-spec">
+      <div class="head">
+        <div class="name">Fraunces <em>— Display &amp; Texto —</em></div>
+        <div class="role">Principal · editorial</div>
+      </div>
+      <div class="body">
+        <div class="display">
+          <div class="l1">Meridiano <em style="font-weight:300;font-style:italic">Sur</em></div>
+          <div class="l2">— Dos linajes. Un meridiano. Una casa. —</div>
+          <div class="l3">Fraunces es una tipografía de contraste alto que cambia de personalidad según su tamaño: elegante en display, sobria en texto. Se usa en <em>todos</em> los titulares, subtítulos y cuerpos editoriales de Olacore. Nunca debe mezclarse con una segunda serif; su propia gama de pesos y ópticas cubre todo el sistema.</div>
+        </div>
+        <div class="sidebar">
+          <div class="row"><span class="k">Opsz</span><span>9–144</span></div>
+          <div class="row"><span class="k">Pesos</span><span>300 / 400 / 500 / 700 / 900</span></div>
+          <div class="row"><span class="k">Estilos</span><span>Roman + Italic</span></div>
+          <div class="row"><span class="k">Features</span><span>ss01 ss02 soft</span></div>
+          <div class="row"><span class="k">Licencia</span><span>Open-source · SIL OFL</span></div>
+          <div class="row"><span class="k">Fallback</span><span>Georgia, "Times New Roman"</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="type-spec mono-spec">
+      <div class="head">
+        <div class="name">IBM Plex Mono <em>— Labels &amp; Datos —</em></div>
+        <div class="role">Secundaria · técnica</div>
+      </div>
+      <div class="body">
+        <div class="display">
+          <div class="l1">DOC · OLA / BM / 01 · MMXXVI</div>
+          <div class="l2">— COORDENADAS · METADATOS · CÓDIGOS —</div>
+          <div class="l3">IBM Plex Mono se usa exclusivamente para <em>micro-copy técnico</em>: códigos de documento, coordenadas, kickers, etiquetas de espec y numeración de folio. Nunca se usa para cuerpo de texto ni titulares. Su función es estructural, no expresiva.</div>
+        </div>
+        <div class="sidebar">
+          <div class="row"><span class="k">Pesos</span><span>300 / 400 / 500</span></div>
+          <div class="row"><span class="k">Estilos</span><span>Roman only</span></div>
+          <div class="row"><span class="k">Tracking</span><span>+0.28 a +0.32 em</span></div>
+          <div class="row"><span class="k">Case</span><span>UPPERCASE solo</span></div>
+          <div class="row"><span class="k">Tamaño</span><span>9 – 12 px</span></div>
+          <div class="row"><span class="k">Licencia</span><span>Open-source · SIL OFL</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="type-scale">
+      <div class="row"><span class="k">Display · D1</span><span class="sample" style="font-size:72px;font-weight:900;line-height:0.9">Meridiano</span><span class="size">72 / 66</span><span class="use">Titulares portada</span></div>
+      <div class="row"><span class="k">Display · D2</span><span class="sample" style="font-size:48px;font-weight:500">De dos raíces</span><span class="size">48 / 52</span><span class="use">Aperturas de sección</span></div>
+      <div class="row"><span class="k">Head · H1</span><span class="sample" style="font-size:32px;font-weight:500">Zona de protección</span><span class="size">32 / 38</span><span class="use">Títulos interiores</span></div>
+      <div class="row"><span class="k">Head · H2</span><span class="sample" style="font-size:22px;font-weight:500;font-style:italic">Clear space mínimo</span><span class="size">22 / 28</span><span class="use">Subtítulos</span></div>
+      <div class="row"><span class="k">Body · B1</span><span class="sample" style="font-size:16px;font-weight:300">Texto corrido de cuerpo editorial extendido.</span><span class="size">16 / 26</span><span class="use">Prosa, manifiesto</span></div>
+      <div class="row"><span class="k">Caption · C1</span><span class="sample" style="font-size:12px;font-weight:400;font-style:italic">— notas al pie, epígrafes, citas —</span><span class="size">12 / 18</span><span class="use">Pies, epígrafes</span></div>
+      <div class="row"><span class="k">Micro · M1</span><span class="sample mono" style="font-size:10px;font-family:'IBM Plex Mono';letter-spacing:0.3em;text-transform:uppercase">— DOC · OLA / BM / 01 —</span><span class="size">10 / 18</span><span class="use">Metadatos</span></div>
+    </div>
+
+  </div>
+  <div class="r-foot"><div class="l">OLA / BM / 01</div><div class="page-n">Fol. <em>14</em></div><div class="r">Sección vi</div></div>
+</section>
+
+<!-- ════════════════ PAGE 09 · SEAL ════════════════ -->
+<section class="page dark">
+  <div class="r-head"><div class="l" style="color:var(--cobre)">OLACORE · Brand Manual · Vol. I</div><div class="c">— vii · Sello austral —</div><div class="r" style="color:rgba(232,224,208,0.7)">OLA / BM / 01</div></div>
+  <div class="inner">
+
+    <div class="chapter" style="border-bottom-color:var(--cobre)">
+      <div class="n" style="color:var(--neblina)">vii.</div>
+      <div class="t" style="color:var(--neblina)">Sello <em>austral</em><small style="color:rgba(232,224,208,0.7)">— La Brújula de Dos Raíces · tres estados oficiales —</small></div>
+      <div class="code" style="color:var(--cobre)">SEAL · 07<br/>Fol. 16</div>
+    </div>
+
+    <div class="seal-showcase">
+      <div class="seal-primary">
+        <div class="corner"><span>A · Primario</span><span>Sobre Fiordo</span></div>
+
+        <svg viewBox="0 0 280 280" width="300" height="300" aria-label="Seal primario">
+          <circle cx="140" cy="140" r="128" fill="none" stroke="#E8E0D0" stroke-width="1.5"/>
+          <circle cx="140" cy="140" r="120" fill="none" stroke="#E8E0D0" stroke-width="0.4" opacity="0.5"/>
+          <g stroke="#E8E0D0" stroke-width="0.8">
+            <line x1="140" y1="12" x2="140" y2="28"/>
+            <line x1="140" y1="252" x2="140" y2="268"/>
+            <line x1="12" y1="140" x2="28" y2="140"/>
+            <line x1="252" y1="140" x2="268" y2="140"/>
+          </g>
+          <g stroke="#E8E0D0" stroke-width="0.4" opacity="0.6">
+            <line x1="140" y1="14" x2="140" y2="22" transform="rotate(30 140 140)"/>
+            <line x1="140" y1="14" x2="140" y2="22" transform="rotate(60 140 140)"/>
+            <line x1="140" y1="14" x2="140" y2="22" transform="rotate(120 140 140)"/>
+            <line x1="140" y1="14" x2="140" y2="22" transform="rotate(150 140 140)"/>
+            <line x1="140" y1="14" x2="140" y2="22" transform="rotate(210 140 140)"/>
+            <line x1="140" y1="14" x2="140" y2="22" transform="rotate(240 140 140)"/>
+            <line x1="140" y1="14" x2="140" y2="22" transform="rotate(300 140 140)"/>
+            <line x1="140" y1="14" x2="140" y2="22" transform="rotate(330 140 140)"/>
+          </g>
+          <line x1="140" y1="36" x2="140" y2="244" stroke="#B98149" stroke-width="1.2"/>
+          <circle cx="140" cy="92" r="6" fill="#B98149"/>
+          <circle cx="140" cy="188" r="6" fill="#B98149"/>
+          <line x1="44" y1="140" x2="236" y2="140" stroke="#E8E0D0" stroke-width="0.4" opacity="0.5"/>
+          <circle cx="140" cy="140" r="2" fill="#E8E0D0"/>
+          <polygon points="140,28 134,40 146,40" fill="#B98149"/>
+          <defs>
+            <path id="topArcPM" d="M 20 140 A 120 120 0 0 1 260 140"/>
+            <path id="botArcPM" d="M 260 140 A 120 120 0 0 1 20 140"/>
+          </defs>
+          <text font-family="IBM Plex Mono" font-size="9" fill="#E8E0D0" letter-spacing="0.28em"><textPath href="#topArcPM" startOffset="50%" text-anchor="middle">— OLACORE · MERIDIANO SUR · MMXXVI —</textPath></text>
+          <text font-family="IBM Plex Mono" font-size="8" fill="#B98149" letter-spacing="0.3em"><textPath href="#botArcPM" startOffset="50%" text-anchor="middle">CARAMPANGUE · 37°S  ·  41°S · PUERTO MONTT</textPath></text>
+        </svg>
+
+        <div class="foot"><span>Sello oficial</span><span>Diámetro 280 u</span></div>
+      </div>
+
+      <div class="seal-construction">
+        <div class="k">— Construcción —</div>
+        <h3>La <em>Brújula</em> de Dos Raíces.</h3>
+        <p>El sello cartográfico representa el eje <strong>norte-sur</strong> de la casa como un meridiano cartográfico. Los dos puntos sobre la línea vertical son las latitudes fundacionales: <strong>37° 37′ S</strong> (Carampangue · raíz materna) arriba y <strong>41° 28′ S</strong> (Puerto Montt · raíz paterna) abajo.</p>
+        <p>La flecha cardinal al norte se dibuja siempre en Cobre. El sello <strong>no se rota, no se espejea, no se deforma.</strong> Los textos de la circunferencia se mantienen legibles en cualquier estado.</p>
+        <p style="padding-top:12px;border-top:1px solid var(--hair);margin-top:20px;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.24em;text-transform:uppercase;color:var(--lacre)">Diámetro mínimo: 24 mm impreso · 96 px digital</p>
+      </div>
+    </div>
+
+    <div class="seal-states">
+      <div class="seal-state dark">
+        <div class="label">A · Primario</div>
+        <svg viewBox="0 0 160 160" width="140" height="140">
+          <circle cx="80" cy="80" r="70" fill="none" stroke="#E8E0D0" stroke-width="1"/>
+          <line x1="80" y1="20" x2="80" y2="140" stroke="#B98149" stroke-width="1"/>
+          <circle cx="80" cy="50" r="3.5" fill="#B98149"/>
+          <circle cx="80" cy="110" r="3.5" fill="#B98149"/>
+          <circle cx="80" cy="80" r="1.5" fill="#E8E0D0"/>
+          <polygon points="80,16 76,26 84,26" fill="#B98149"/>
+        </svg>
+        <div class="usage">Sobre Fiordo · principal</div>
+      </div>
+      <div class="seal-state">
+        <div class="label" style="color:var(--lacre)">B · Negativo</div>
+        <svg viewBox="0 0 160 160" width="140" height="140">
+          <circle cx="80" cy="80" r="70" fill="none" stroke="#0E2530" stroke-width="1"/>
+          <line x1="80" y1="20" x2="80" y2="140" stroke="#9A3E2F" stroke-width="1"/>
+          <circle cx="80" cy="50" r="3.5" fill="#9A3E2F"/>
+          <circle cx="80" cy="110" r="3.5" fill="#9A3E2F"/>
+          <circle cx="80" cy="80" r="1.5" fill="#0E2530"/>
+          <polygon points="80,16 76,26 84,26" fill="#9A3E2F"/>
+        </svg>
+        <div class="usage">Sobre Neblina · impreso</div>
+      </div>
+      <div class="seal-state lacre-bg">
+        <div class="label">C · Lacre</div>
+        <svg viewBox="0 0 160 160" width="140" height="140">
+          <circle cx="80" cy="80" r="70" fill="none" stroke="#E8E0D0" stroke-width="1"/>
+          <line x1="80" y1="20" x2="80" y2="140" stroke="#E8E0D0" stroke-width="1"/>
+          <circle cx="80" cy="50" r="3.5" fill="#E8E0D0"/>
+          <circle cx="80" cy="110" r="3.5" fill="#E8E0D0"/>
+          <circle cx="80" cy="80" r="1.5" fill="#E8E0D0"/>
+          <polygon points="80,16 76,26 84,26" fill="#E8E0D0"/>
+        </svg>
+        <div class="usage">Documentos · firma oficial</div>
+      </div>
+    </div>
+
+  </div>
+  <div class="r-foot"><div class="l" style="color:rgba(232,224,208,0.7)">OLA / BM / 01</div><div class="page-n" style="color:var(--neblina)">Fol. <em>16</em></div><div class="r" style="color:rgba(232,224,208,0.7)">Sección vii</div></div>
+</section>
+
+<!-- ════════════════ PAGE 10 · SUBSIDIARIES + VOICE + STATIONERY ════════════════ -->
+<section class="page">
+  <div class="r-head"><div class="l">OLACORE · Brand Manual · Vol. I</div><div class="c">— viii · Arquitectura &amp; voz —</div><div class="r">OLA / BM / 01</div></div>
+  <div class="inner">
+
+    <div class="chapter">
+      <div class="n">viii.</div>
+      <div class="t">Sub-marcas, <em>voz &amp; papelería</em><small>— Endoso, lockups autorizados, tono, aplicaciones —</small></div>
+      <div class="code">ARCH · 08<br/>Fol. 18</div>
+    </div>
+
+    <div class="sub-manifest" style="margin-bottom:48px">
+      <div class="head">
+        <span>N°</span><span>Razón social</span><span>Sector</span><span>Sede</span><span>Endoso</span>
+      </div>
+      <div class="row">
+        <div class="n">01</div>
+        <div class="nm">Centro Médico <em>Carampangue</em><small>Heredera de la raíz materna</small></div>
+        <div class="sector">Salud ambulatoria</div>
+        <div class="where">Carampangue<br/>Biobío · CL</div>
+        <div class="endorse">An Olacore<br/>Company</div>
+      </div>
+      <div class="row">
+        <div class="n">02</div>
+        <div class="nm">Olacore <em>Systems</em><small>Plataforma de software corporativo</small></div>
+        <div class="sector">Software B2B</div>
+        <div class="where">Puerto Montt<br/>Los Lagos · CL</div>
+        <div class="endorse">An Olacore<br/>Company</div>
+      </div>
+      <div class="row">
+        <div class="n">03</div>
+        <div class="nm">Olavega <em>Comercial</em><small>Brazo de distribución y retail</small></div>
+        <div class="sector">Retail · comercio</div>
+        <div class="where">Concepción<br/>Biobío · CL</div>
+        <div class="endorse">An Olacore<br/>Company</div>
+      </div>
+    </div>
+
+    <div class="lockup-demo">
+      <div class="lockup">
+        <div class="nm">Centro Médico<br/><em>Carampangue</em></div>
+        <div class="endorse"><span class="star">An Olacore Company</span><span>01</span></div>
+      </div>
+      <div class="lockup">
+        <div class="nm">Olacore <em>Systems</em></div>
+        <div class="endorse"><span class="star">An Olacore Company</span><span>02</span></div>
+      </div>
+      <div class="lockup">
+        <div class="nm">Olavega <em>Comercial</em></div>
+        <div class="endorse"><span class="star">An Olacore Company</span><span>03</span></div>
+      </div>
+    </div>
+
+    <hr class="rule-h"/>
+
+    <div style="font-family:'Fraunces',serif;font-weight:500;font-size:22px;color:var(--fiordo);margin:40px 0 20px">Voz — <em style="color:var(--lacre);font-weight:300;font-style:italic">cómo hablamos</em></div>
+
+    <div class="voice-grid">
+      <div class="voice-card ok">
+        <div class="tag">✓ Tono Olacore</div>
+        <div class="q">Administramos patrimonio institucional por generaciones en el sur de Chile.</div>
+        <div class="note">Frase declarativa, sin adjetivos. Dice <em>qué hacemos</em> y <em>dónde</em>. No vende; informa.</div>
+      </div>
+      <div class="voice-card bad">
+        <div class="tag">✗ Tono prohibido</div>
+        <div class="q">Somos el holding líder e innovador que está revolucionando el ecosistema patrimonial.</div>
+        <div class="note">Adjetivos promocionales (<em>líder · innovador · revolucionando · ecosistema</em>) rompen la austeridad institucional. Esto no es Olacore.</div>
+      </div>
+    </div>
+
+    <div class="voice-lexicon">
+      <div class="lex">
+        <h4>Usamos <em>— léxico propio —</em></h4>
+        <ul>
+          <li>Casa<em>la compañía, el grupo</em></li>
+          <li>Patrimonio<em>lo que se administra</em></li>
+          <li>Linaje / raíz<em>origen familiar</em></li>
+          <li>Meridiano<em>eje, horizonte</em></li>
+          <li>Tenencia<em>forma de gobierno</em></li>
+          <li>Sur<em>territorio, identidad</em></li>
+        </ul>
+      </div>
+      <div class="lex">
+        <h4>Evitamos <em>— léxico prohibido —</em></h4>
+        <ul>
+          <li style="color:var(--mal)">Ecosistema<em>— vago, promocional —</em></li>
+          <li style="color:var(--mal)">Innovador<em>— vacío, redundante —</em></li>
+          <li style="color:var(--mal)">Líder<em>— no nos comparamos —</em></li>
+          <li style="color:var(--mal)">Revolucionar<em>— incompatible con horizonte largo —</em></li>
+          <li style="color:var(--mal)">Disruptivo<em>— moda, se agota —</em></li>
+          <li style="color:var(--mal)">Sinergia<em>— jerga vacía —</em></li>
+        </ul>
+      </div>
+    </div>
+
+    <hr class="rule-h"/>
+
+    <div style="font-family:'Fraunces',serif;font-weight:500;font-size:22px;color:var(--fiordo);margin:40px 0 20px">Papelería — <em style="color:var(--lacre);font-weight:300;font-style:italic">aplicaciones de sistema</em></div>
+
+    <div class="stationery">
+      <!-- Business card -->
+      <div class="stat-card">
+        <div class="lbl">— 01 · Tarjeta personal —</div>
+        <div class="stat-mockup card-mockup">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div>
+              <div style="font-family:'Fraunces',serif;font-weight:900;font-size:26px;color:var(--fiordo);line-height:1">OLA<span style="font-weight:300;font-style:italic;color:var(--lacre)">core</span></div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:7px;letter-spacing:0.3em;color:var(--lacre);margin-top:4px;text-transform:uppercase">Meridiano Sur</div>
+            </div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:7px;letter-spacing:0.22em;color:var(--fiordo);opacity:0.7;text-align:right;text-transform:uppercase;line-height:1.8">
+              41° 28′ S<br/>Puerto Montt
+            </div>
+          </div>
+          <div>
+            <div style="font-family:'Fraunces',serif;font-weight:500;font-size:14px;color:var(--fiordo);line-height:1.1">Carolina Olavarría de la Vega</div>
+            <div style="font-family:'Fraunces',serif;font-style:italic;font-weight:300;font-size:11px;color:var(--lacre);margin-top:2px">Dirección de Marca · Olacore Holding</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.2em;color:var(--fiordo);opacity:0.7;margin-top:10px;line-height:1.8;text-transform:uppercase">
+              <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="80e3aeefece1f6e5e7e1c0efece1e3eff2e5aee3ec">[email&#160;protected]</a> · +56 9 5555 5555
+            </div>
+          </div>
+        </div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.28em;color:var(--fiordo);opacity:0.75;text-transform:uppercase">85 × 55 mm · papel algodón 300g · tinta plana</div>
+      </div>
+
+      <!-- Letterhead -->
+      <div class="stat-card">
+        <div class="lbl">— 02 · Papel carta institucional —</div>
+        <div class="stat-mockup letterhead">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:16px;border-bottom:1px solid var(--fiordo)">
+            <div style="font-family:'Fraunces',serif;font-weight:900;font-size:22px;color:var(--fiordo);line-height:1">OLA<span style="font-weight:300;font-style:italic;color:var(--lacre)">core</span></div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:7px;letter-spacing:0.28em;color:var(--fiordo);opacity:0.75;text-align:right;text-transform:uppercase;line-height:1.9">
+              Olacore Holding · Puerto Montt<br/>Ref · OLA / 2026 / 0048
+            </div>
+          </div>
+          <div style="padding-top:20px;font-family:'Fraunces',serif;font-weight:300;font-size:12px;color:var(--fiordo);line-height:1.6">
+            <span style="font-style:italic;color:var(--lacre)">— Apreciada señora Directora, —</span><br/><br/>
+            Por el presente instrumento, la Dirección de Marca de Olacore Holding confirma la recepción de su comunicación…
+          </div>
+          <div style="padding-top:14px;border-top:1px dashed var(--hair);display:flex;justify-content:space-between;align-items:center">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:7px;letter-spacing:0.26em;color:var(--fiordo);opacity:0.7;text-transform:uppercase">olacore.cl · Puerto Montt · 41° 28′ S</div>
+            <svg viewBox="0 0 40 40" width="28" height="28">
+              <circle cx="20" cy="20" r="17" fill="none" stroke="#9A3E2F" stroke-width="0.6"/>
+              <line x1="20" y1="6" x2="20" y2="34" stroke="#9A3E2F" stroke-width="0.6"/>
+              <circle cx="20" cy="13" r="1.3" fill="#9A3E2F"/>
+              <circle cx="20" cy="27" r="1.3" fill="#9A3E2F"/>
+            </svg>
+          </div>
+        </div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.28em;color:var(--fiordo);opacity:0.75;text-transform:uppercase">A4 · papel crema 120g · impresión offset</div>
+      </div>
+    </div>
+
+  </div>
+  <div class="r-foot"><div class="l">OLA / BM / 01</div><div class="page-n">Fol. <em>18</em></div><div class="r">Sección viii</div></div>
+</section>
+
+<!-- ════════════════ PAGE 11 · SIGN-OFF ════════════════ -->
+<section class="page dark">
+  <div class="r-head"><div class="l" style="color:var(--cobre)">OLACORE · Brand Manual · Vol. I</div><div class="c">— Colofón —</div><div class="r" style="color:rgba(232,224,208,0.7)">OLA / BM / 01</div></div>
+
+  <div class="signoff">
+    <div class="mark">OLA<span class="ital">core</span></div>
+    <div class="divisa">— Dos linajes. Un meridiano. Una casa. —</div>
+    <div class="meta">
+      Manual de Marca · Vol. I<br/>
+      Olacore Holding · MMXXVI<br/>
+      Puerto Montt · 41° 28′ S<br/>
+      Doc OLA / BM / 01 · Edición 001 · Matriz
+    </div>
+  </div>
+
+  <div class="r-foot" style="border-top-color:var(--hair-l)"><div class="l" style="color:rgba(232,224,208,0.7)">OLA / BM / 01</div><div class="page-n" style="color:var(--neblina)">Fol. <em>20</em></div><div class="r" style="color:rgba(232,224,208,0.7)">— Fin —</div></div>
+</section>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script></body>
+</html>
