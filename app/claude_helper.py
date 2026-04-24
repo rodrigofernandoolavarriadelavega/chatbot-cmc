@@ -205,8 +205,6 @@ _INTENT_CACHE: dict[str, dict] = {
     "quiero una cita": {"intent": "agendar", "especialidad": None},
     "necesito cita":  {"intent": "agendar", "especialidad": None},
     "necesito una cita": {"intent": "agendar", "especialidad": None},
-    "necesito hora":  {"intent": "agendar", "especialidad": None},
-    "necesito una hora": {"intent": "agendar", "especialidad": None},
     "solicitar hora": {"intent": "agendar", "especialidad": None},
     "solicitar cita": {"intent": "agendar", "especialidad": None},
     "pedir una hora": {"intent": "agendar", "especialidad": None},
@@ -1438,6 +1436,9 @@ async def classify_with_context(mensaje: str, state: str, session_data: dict) ->
         "    (ej: 'perfecto tomo la hora', 'sí me sirve', 'esa está bien',\n"
         "    'me acomoda', 'quedemos con esa', 'déjala ahí', 'confirmo').\n"
         "    Solo aplica si estado=WAIT_SLOT o CONFIRMING_CITA.\n"
+        "    NO aplica a despedidas/cierres ('ya muchas gracias', 'gracias',\n"
+        "    'chao', 'bendiciones', 'perfecto gracias') — esos son\n"
+        "    fuera_de_alcance o responder_prompt.\n"
         "\n"
         "REGLAS:\n"
         "- Si el mensaje es una respuesta plausible al prompt (SI/NO/hora/RUT/día), responder_prompt.\n"

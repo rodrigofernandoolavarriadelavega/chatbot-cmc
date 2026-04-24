@@ -656,9 +656,12 @@ async def webhook(request: Request):
                 for token in tokens:
                     if not token:
                         continue
+                    # Pasar token por Authorization header evita que httpx lo logee
+                    # en la URL (seguridad: antes se filtraba en /var/log/cmc-bot.log)
                     r = await client.get(
                         f"https://graph.facebook.com/v22.0/{sender_id}",
-                        params={"fields": fields, "access_token": token},
+                        params={"fields": fields},
+                        headers={"Authorization": f"Bearer {token}"},
                     )
                     if r.status_code == 200:
                         info = r.json()
@@ -765,8 +768,19 @@ async def webhook(request: Request):
                         error_title=err.get("title", "") if err else None,
                     )
                     if status == "failed":
-                        log.warning("MSG FAILED wamid=%s to=%s code=%s: %s",
-                                    wamid, recipient, err.get("code"), err.get("title"))
+                        # 131047/51/52 = ventana 24h cerrada (esperado, no error).
+                        # Admin personal tampoco es customer-facing issue.
+                        _err_code = err.get("code") if err else None
+                        try:
+                            from config import ADMIN_ALERT_PHONE as _ADM
+                        except Exception:
+                            _ADM = ""
+                        if _err_code in (131047, 131051, 131052) or recipient == _ADM:
+                            log.info("MSG undelivered wamid=%s to=%s code=%s: %s",
+                                     wamid, recipient, _err_code, err.get("title") if err else "")
+                        else:
+                            log.warning("MSG FAILED wamid=%s to=%s code=%s: %s",
+                                        wamid, recipient, _err_code, err.get("title") if err else "")
 
         if "messages" not in change:
             return Response(status_code=200)
@@ -946,7 +960,7 @@ async def webhook(request: Request):
                         respuesta = await handle_message(phone, texto, session)
                         if respuesta:
                             if isinstance(respuesta, dict):
-                                await send_whatsapp_interactive(phone, respuesta)
+                                await send_whatsapp_interactive(phone, respuesta["interactive"])
                                 body = respuesta.get("interactive", {}).get("body", {}).get("text", "")
                                 log_message(phone, "out", body, get_session(phone).get("state", "IDLE"), canal="whatsapp")
                             else:

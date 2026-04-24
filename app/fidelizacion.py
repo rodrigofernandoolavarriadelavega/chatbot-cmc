@@ -642,11 +642,12 @@ async def enviar_cumpleanos(send_fn):
             )
             try:
                 from messaging import send_whatsapp_interactive
-                await send_whatsapp_interactive(
-                    p["phone"], msg,
-                    [{"id": "reac_si", "title": "📅 Sí, agendar"},
-                     {"id": "reac_luego", "title": "Más adelante"}],
-                )
+                from flows import _btn_msg as _btn_msg_f
+                _bmf = _btn_msg_f(msg, [
+                    {"id": "reac_si", "title": "📅 Sí, agendar"},
+                    {"id": "reac_luego", "title": "Más adelante"},
+                ])
+                await send_whatsapp_interactive(p["phone"], _bmf["interactive"])
             except Exception:
                 await send_fn(p["phone"], msg + "\n\n_Escribe *menu* para agendar._")
             log_message(p["phone"], "out", msg, "IDLE")

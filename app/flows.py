@@ -5519,7 +5519,6 @@ _APELLIDOS_PROFESIONAL = [
     ("nando",        "endodoncia"),
     ("fefe",         "endodoncia"),
     ("fercho",       "endodoncia"),
-    ("fredes",       "endodoncia"),
     ("fredesh",      "endodoncia"),
     ("fernando fredes",  "endodoncia"),
     ("dr fredes",        "endodoncia"),
@@ -5631,7 +5630,6 @@ _APELLIDOS_PROFESIONAL = [
     # === Dr. David Pardo (68) — Ecografía ===
     ("david",        "ecografía"),
     ("dave",         "ecografía"),
-    ("pardos",       "ecografía"),
     ("pardu",        "ecografía"),
     ("dr pardo",         "ecografía"),
     ("dr david",         "ecografía"),
@@ -5679,7 +5677,6 @@ _APELLIDOS_PROFESIONAL = [
 
     # Odontología Burgos
     ("burgo",        "burgos"),      # ya estaba pero refuerzo
-    ("vurgo",        "burgos"),
 
     # Odontología Jiménez
     ("jime",         "jimenez"),

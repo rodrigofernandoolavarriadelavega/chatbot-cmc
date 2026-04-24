@@ -84,11 +84,12 @@ async def _enviar_reenganche():
             )
 
         try:
-            await send_whatsapp_interactive(
-                phone, msg,
-                [{"id": "menu", "title": "✅ Sí, continuar"},
-                 {"id": "no_gracias_reeng", "title": "No por ahora"}],
-            )
+            from flows import _btn_msg as _btn_msg_j
+            _bt_msg = _btn_msg_j(msg, [
+                {"id": "menu", "title": "✅ Sí, continuar"},
+                {"id": "no_gracias_reeng", "title": "No por ahora"},
+            ])
+            await send_whatsapp_interactive(phone, _bt_msg["interactive"])
         except Exception:
             await send_whatsapp(phone, msg + "\n\nEscribe *menu* para continuar.")
         data["reenganche_sent"] = True

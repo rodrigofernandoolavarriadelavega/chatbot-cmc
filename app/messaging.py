@@ -135,6 +135,9 @@ async def send_whatsapp(to: str, body: str) -> str | None:
     Si el mismo body fue enviado a `to` en los últimos 2 min, skip (dedupe)."""
     if not body or not body.strip():
         return None
+    # Normalizar **bold** → *bold* para WhatsApp (Claude a veces devuelve **)
+    import re as _re_md
+    body = _re_md.sub(r"\*\*([^*]+)\*\*", r"*\1*", body)
     if _is_dupe_outbound(to, body):
         log.info("dedupe outbound skipped to=%s len=%d", to, len(body))
         return None
