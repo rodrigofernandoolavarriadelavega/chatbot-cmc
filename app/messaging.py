@@ -63,7 +63,7 @@ async def _post_meta(payload: dict) -> str | None:
                          payload.get("to", "?"), err_code)
                 return None
             if 400 <= r.status_code < 500 and r.status_code != 429:
-                log.error("Meta API %s (no-retry): %s", r.status_code, err_msg)
+                log.error("Meta API %s (no-retry) to=%s: %s", r.status_code, payload.get("to", "?"), err_msg)
                 return None
             log.warning("Meta API intento %d → %s (transitorio): %s",
                         attempt + 1, r.status_code, err_msg)

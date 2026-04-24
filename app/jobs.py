@@ -34,6 +34,8 @@ HEADERS_MEDILINK = {"Authorization": f"Token {MEDILINK_TOKEN}"}
 async def _enviar_reenganche():
     """Reenganche agresivo: slot real + urgencia + botón directo."""
     sesiones = get_sesiones_abandonadas()
+    # Filtrar phones no-WhatsApp (fb_*, ig_*, TEST_*, IDs numericos raros)
+    sesiones = [s for s in sesiones if str(s.get("phone", "")).isdigit() and len(str(s["phone"])) >= 10]
     for s in sesiones:
         phone = s["phone"]
         state = s["state"]

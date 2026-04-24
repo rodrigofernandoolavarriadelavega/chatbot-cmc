@@ -110,7 +110,7 @@ PROFESIONALES = {
 ESPECIALIDADES_MAP = {
     "kinesiología": [77, 21], "kinesiólogo": [77, 21], "kinesiologa": [77, 21], "kine": [77, 21],
     "masoterapia": [59], "masaje": [59], "masajes": [59], "masoterapeuta": [59],
-    "medicina general": [73, 1, 13], "médico": [73, 1, 13], "medico general": [73, 1, 13], "doctor": [73, 1, 13],
+    "medicina general": [73, 1, 13], "medico general": [73, 1, 13],
     "medicina familiar": [13], "médico familiar": [13],
     "otorrinolaringología": [23], "otorrino": [23], "orl": [23],
     # ── Keys únicas por profesional (usadas cuando el paciente pide a uno específico) ──
@@ -149,7 +149,7 @@ ESPECIALIDADES_MAP = {
 # Mapa de palabras clave → ID de especialidad Medilink (para /especialidades/{id}/proxima)
 ESPECIALIDADES_ID = {
     "kinesiología": 3, "kinesiólogo": 3, "kinesiologa": 3, "kine": 3,
-    "medicina general": 10, "médico": 10, "medico general": 10, "doctor": 10,
+    "medicina general": 10, "medico general": 10,
     "medicina familiar": 10, "médico familiar": 10,
     "odontología": 9, "dentista": 9, "odontólogo": 9,
     "fonoaudiología": 8, "fonoaudiólogo": 8, "fonoaudiologa": 8,

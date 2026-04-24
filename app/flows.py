@@ -2624,6 +2624,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                             {"id": "no_agendar",      "title": "No por ahora"},
                         ]
                     )
+            # Fallback: apellido fuzzy (caso 56964044338: labarria pñ -> olavarria)
+            _ap_fb = _detectar_apellido_profesional(txt)
+            if _ap_fb:
+                return await _iniciar_agendar(phone, data, _ap_fb)
             return (
                 "Para consultar disponibilidad, dime qué especialidad necesitas 😊\n\n"
                 f"O llama a recepción: 📞 *{CMC_TELEFONO}*"
