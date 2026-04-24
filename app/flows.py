@@ -1255,16 +1255,38 @@ async def _responder_pregunta_horario(phone: str, state: str, data: dict, txt: s
     """
     prof_id = data.get("prof_sugerido_id")
 
-    # Override: si el texto menciona a otro profesional, usar ese
+    # Override: si el texto menciona a otro profesional distinto al sugerido,
+    # cambiar a mostrar slots de ESE profesional en lugar de solo días.
+    prof_mencionado_id = None
     if txt:
         key_mencionado = _detectar_apellido_profesional(txt)
         if key_mencionado:
             from medilink import _ids_para_especialidad as _ids_chk
             ids_mencionados = _ids_chk(key_mencionado)
-            if ids_mencionados:
-                # Si es key específica de profesional (única ID), usar esa
-                if len(ids_mencionados) == 1:
-                    prof_id = ids_mencionados[0]
+            if ids_mencionados and len(ids_mencionados) == 1:
+                prof_mencionado_id = ids_mencionados[0]
+                if prof_id != prof_mencionado_id:
+                    # Paciente pide otro doctor → switch al que pide
+                    prof_id = prof_mencionado_id
+                    # Intentar cargar slots del nuevo doctor para ofrecerlos
+                    try:
+                        from medilink import PROFESIONALES, buscar_primer_dia
+                        esp_prof = PROFESIONALES.get(int(prof_id), {}).get("especialidad", "").lower()
+                        if esp_prof:
+                            smart, todos = await buscar_primer_dia(esp_prof, solo_ids=[int(prof_id)])
+                            if todos:
+                                data["slots"] = (smart or todos)[:5]
+                                data["todos_slots"] = todos
+                                data["prof_sugerido_id"] = int(prof_id)
+                                data["especialidad"] = esp_prof
+                                save_session(phone, "WAIT_SLOT", data)
+                                prof_nombre_sw = PROFESIONALES.get(int(prof_id), {}).get("nombre", "")
+                                return (
+                                    f"Cambié a *{prof_nombre_sw}* 👨‍⚕️{chr(10)}{chr(10)}" +
+                                    _format_slots((smart or todos)[:5])
+                                )
+                    except Exception as _e_sw:
+                        log.warning("switch prof en preguntar_horario falló: %s", _e_sw)
 
     if not prof_id:
         return (

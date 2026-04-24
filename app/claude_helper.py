@@ -1207,6 +1207,19 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
      "Contamos con *ecografía* (Dr. David Pardo). Para radiografías te "
      "sugerimos hospital o centro de imágenes cercano.\n\n"
      "_Si quieres agendar una *ecografía* o consulta médica, escribe *agendar*._"),
+    (("cuanto", "listo"),
+     "⏱ *Tiempo de entrega de exámenes:*\n"
+     "• Ecografía: el mismo día (informe al momento)\n"
+     "• Resultados derivados a laboratorio externo: 2-3 días hábiles\n\n"
+     "Si pasaron más de 3 días, envíame tu RUT y una recepcionista te revisa el estado."),
+    (("cuanto", "tarda"),
+     "⏱ *Tiempo de entrega de exámenes:*\n"
+     "• Ecografía: el mismo día (informe al momento)\n"
+     "• Resultados derivados a laboratorio externo: 2-3 días hábiles\n\n"
+     "Si pasaron más de 3 días, envíame tu RUT y una recepcionista te revisa el estado."),
+    (("cuando", "resultado"),
+     "⏱ Los resultados de ecografía son el *mismo día*. Para exámenes externos: 2-3 días hábiles.\n\n"
+     "Envíame tu RUT si quieres que revise el estado de tu examen."),
     (("telemedicin",),
      "No ofrecemos *telemedicina* por el momento 😔 Todas las consultas son "
      "presenciales en nuestro centro:\n\n"
