@@ -1297,7 +1297,7 @@ async def _responder_pregunta_horario(phone: str, state: str, data: dict, txt: s
     try:
         import httpx as _httpx
         from medilink import _get_horario, PROFESIONALES
-        async with _httpx.AsyncClient() as _c:
+        async with _httpx.AsyncClient(timeout=10) as _c:
             horario = await _get_horario(_c, int(prof_id))
         dias = sorted(horario.get("dias", []))
         DIAS = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
@@ -1532,6 +1532,24 @@ async def _pre_router_wait(phone: str, txt: str, tl: str, state: str, data: dict
             return None
 
         if tag == "fuera_de_alcance":
+            # Guard-rail: si el texto ES una respuesta válida para el estado
+            # actual, dejar pasar al handler para que procese su propia lógica.
+            _tl_fda = txt.lower().strip()
+            _PALABRAS_VALIDAS_ESP = {"general", "mg", "médico", "medico",
+                                      "generica", "genérica"}
+            _CIERRES_CORDIALES = {"gracias", "muchas gracias", "bendiciones",
+                                    "saludos", "que tenga buen dia",
+                                    "que tengan buen dia", "perfecto"}
+            _OTRA_PERSONA_KW = {"otra persona", "otro", "otra", "familiar"}
+            if state == "WAIT_ESPECIALIDAD" and _tl_fda in _PALABRAS_VALIDAS_ESP:
+                return None
+            if state in ("WAIT_RUT_AGENDAR", "WAIT_RUT_CANCELAR",
+                         "WAIT_RUT_REAGENDAR", "WAIT_RUT_VER"):
+                if _tl_fda in _OTRA_PERSONA_KW:
+                    return None
+                if _tl_fda in _CIERRES_CORDIALES:
+                    save_session(phone, state, data)
+                    return "🙏 Cuando tengas el RUT me lo envías para continuar."
             # Entregar contacto + dejar el flujo abierto
             save_session(phone, state, data)
             return (

@@ -156,16 +156,27 @@ def spawn_task(coro):
 
 
 # ── Lock por phone (serializa procesamiento de mensajes del mismo paciente) ─
+# Valor: (Lock, timestamp_ultima_uso). TTL 7 días para evitar memory leak.
 _phone_locks: dict = {}
+_LOCK_TTL_SEC = 86400 * 7
 
 
 def get_phone_lock(phone: str) -> "_asyncio_bg.Lock":
     """Retorna (o crea) un asyncio.Lock asociado al teléfono. Garantiza que
     dos mensajes simultáneos del mismo paciente se procesen en serie, evitando
-    race conditions en session/state (ej. 2 webhooks del mismo phone que leen
-    y escriben la misma sesión al mismo tiempo)."""
-    lock = _phone_locks.get(phone)
-    if lock is None:
-        lock = _asyncio_bg.Lock()
-        _phone_locks[phone] = lock
+    race conditions en session/state. Lazy GC cuando el dict supera 500 entries."""
+    import time as _t_pl
+    now = _t_pl.monotonic()
+    if len(_phone_locks) > 500:
+        for p, val in list(_phone_locks.items()):
+            if isinstance(val, tuple) and (now - val[1]) > _LOCK_TTL_SEC:
+                _phone_locks.pop(p, None)
+    entry = _phone_locks.get(phone)
+    if entry is not None:
+        if isinstance(entry, tuple):
+            _phone_locks[phone] = (entry[0], now)
+            return entry[0]
+        return entry  # backwards compat si algún código guardó Lock sin tuple
+    lock = _asyncio_bg.Lock()
+    _phone_locks[phone] = (lock, now)
     return lock

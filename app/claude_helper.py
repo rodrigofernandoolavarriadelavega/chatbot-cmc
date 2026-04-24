@@ -1456,7 +1456,12 @@ async def classify_with_context(mensaje: str, state: str, session_data: dict) ->
         )
         raw = resp.content[0].text.strip()
         raw = _strip_markdown_json(raw)
-        parsed = json.loads(raw)
+        # raw_decode tolera texto extra despues del JSON (Claude a veces
+        # agrega markdown/nota). Fallback a loads estricto como ultimo recurso.
+        try:
+            parsed, _ = json.JSONDecoder().raw_decode(raw.lstrip())
+        except (json.JSONDecodeError, ValueError):
+            parsed = json.loads(raw)
         intent = parsed.get("intent", "responder_prompt")
         args   = parsed.get("args") or {}
     except Exception as e:
