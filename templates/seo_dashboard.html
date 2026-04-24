@@ -64,6 +64,8 @@
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="content">✍️ Blog posts</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="roadmap">🗓 Roadmap</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="kpis">📈 KPIs</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="geo">🗺 Geo</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="queries">🔍 Queries GSC</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="issues">🚨 Problemas</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="wins">🏆 Wins</button>
     </nav>
@@ -180,6 +182,69 @@
     </div>
   </section>
 
+  <!-- Tab: Geo (cruce comunas vs SEO) -->
+  <section id="tab-geo" class="tab-content hidden">
+    <div class="bg-white rounded-xl border border-slate-200 p-6 mb-6">
+      <div class="flex items-baseline justify-between mb-4">
+        <h3 class="font-semibold">Comunas atendidas vs presencia SEO</h3>
+        <span class="text-xs text-slate-500" id="geo-periodo">—</span>
+      </div>
+      <p class="text-sm text-slate-500 mb-5">Cruza datos del chatbot (atenciones reales) con Google Search Console (clics orgánicos). Detecta brechas: comunas que ya consultan al CMC pero donde el sitio no se posiciona.</p>
+      <div class="grid grid-cols-3 gap-3 mb-6">
+        <div class="tone-blue p-4 rounded-lg">
+          <div class="text-xs uppercase font-semibold opacity-75">Citas mes</div>
+          <div class="text-2xl font-bold mt-1" id="geo-citas">—</div>
+        </div>
+        <div class="tone-emerald p-4 rounded-lg">
+          <div class="text-xs uppercase font-semibold opacity-75">Pacientes únicos</div>
+          <div class="text-2xl font-bold mt-1" id="geo-pacientes">—</div>
+        </div>
+        <div class="tone-slate p-4 rounded-lg">
+          <div class="text-xs uppercase font-semibold opacity-75">Con comuna registrada</div>
+          <div class="text-2xl font-bold mt-1" id="geo-concomuna">—</div>
+        </div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 text-slate-600 uppercase text-xs">
+            <tr>
+              <th class="px-4 py-3 text-left">Comuna</th>
+              <th class="px-4 py-3 text-right">Pacientes</th>
+              <th class="px-4 py-3 text-right">% atenciones</th>
+              <th class="px-4 py-3 text-right">Clics SEO</th>
+              <th class="px-4 py-3 text-center">Brecha</th>
+              <th class="px-4 py-3 text-left">Acción</th>
+            </tr>
+          </thead>
+          <tbody id="geo-tbody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tab: Queries GSC -->
+  <section id="tab-queries" class="tab-content hidden">
+    <div class="bg-white rounded-xl border border-slate-200 p-6">
+      <h3 class="font-semibold mb-2">Top queries reales (Google Search Console, 90 días)</h3>
+      <p class="text-sm text-slate-500 mb-5">Lo que la gente realmente busca y cómo nos encuentra. Las queries con CTR bajo y muchas impresiones son la mayor oportunidad de optimización.</p>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 text-slate-600 uppercase text-xs">
+            <tr>
+              <th class="px-4 py-3 text-left">Query</th>
+              <th class="px-4 py-3 text-right">Clics</th>
+              <th class="px-4 py-3 text-right">Impresiones</th>
+              <th class="px-4 py-3 text-right">CTR</th>
+              <th class="px-4 py-3 text-left">Tipo</th>
+              <th class="px-4 py-3 text-left">Acción recomendada</th>
+            </tr>
+          </thead>
+          <tbody id="queries-tbody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
   <!-- Tab: Problemas -->
   <section id="tab-issues" class="tab-content hidden">
     <div class="space-y-3" id="issues-list"></div>
@@ -277,15 +342,43 @@ const DATA = {
     { n: 12, titulo: "Vacunas PNI 2026: calendario completo por edad",              keyword: "calendario vacunas PNI 2026",   esp: "Pediatría",status: "planned" }
   ],
   kpis: [
-    { name: "Usuarios/mes",             base: 162,   actual: 162,   m4: 250,   m12: 500,   unit: "" },
-    { name: "Rebote",                   base: 51.8,  actual: 51.8,  m4: 45,    m12: 35,    unit: "%", invert: true },
-    { name: "Páginas/sesión",           base: 2.1,   actual: 2.1,   m4: 2.5,   m12: 3.2,   unit: "" },
-    { name: "Páginas indexadas",        base: 11,    actual: 11,    m4: 20,    m12: 40,    unit: "" },
-    { name: "Blog posts publicados",    base: 1,     actual: 1,     m4: 6,     m12: 16,    unit: "" },
-    { name: "Clics WA desde sitio",     base: 0,     actual: 0,     m4: 30,    m12: 100,   unit: "" },
-    { name: "Backlinks",                base: 0,     actual: 0,     m4: 5,     m12: 20,    unit: "" },
-    { name: "Reseñas GBP",              base: 0,     actual: 0,     m4: 10,    m12: 30,    unit: "" },
-    { name: "Lighthouse mobile",        base: 60,    actual: 60,    m4: 75,    m12: 90,    unit: "" }
+    { name: "Clics GSC (90d)",            base: 197,   actual: 289,   m4: 380,   m12: 600,   unit: "" },
+    { name: "Impresiones GSC (90d)",      base: 2400,  actual: 3800,  m4: 5500,  m12: 12000, unit: "" },
+    { name: "CTR medio",                  base: 7.6,   actual: 7.6,   m4: 8.5,   m12: 10,    unit: "%" },
+    { name: "Posición media",             base: 7.3,   actual: 7.3,   m4: 5.5,   m12: 4.0,   unit: "", invert: true },
+    { name: "% tráfico no-marca",         base: 49,    actual: 49,    m4: 55,    m12: 65,    unit: "%" },
+    { name: "Clics query 'carampangue'",  base: 6,     actual: 6,     m4: 25,    m12: 50,    unit: "" },
+    { name: "Comunas con clics GSC",      base: 1,     actual: 1,     m4: 2,     m12: 4,     unit: "" },
+    { name: "Posts publicados",           base: 1,     actual: 21,    m4: 25,    m12: 35,    unit: "" },
+    { name: "Reseñas GBP",                base: 0,     actual: 0,     m4: 10,    m12: 30,    unit: "" },
+    { name: "Pacientes Curanilahue/mes",  base: 20,    actual: 20,    m4: 25,    m12: 35,    unit: "" }
+  ],
+  geo: {
+    periodo: "Abril 2026",
+    total_citas: 447,
+    pacientes_unicos: 342,
+    con_comuna: 299,
+    comunas: [
+      { comuna: "Arauco (Carampangue/Laraquete)", pacientes: 271, pct: 90.6, seo_clics: 150, brecha: "ok",       nota: "Mercado capturado, optimizar long-tail" },
+      { comuna: "Curanilahue",                     pacientes: 20,  pct: 6.7,  seo_clics: 0,   brecha: "critical", nota: "Mercado #2 invisible en Google — landing creada" },
+      { comuna: "Los Álamos",                      pacientes: 3,   pct: 1.0,  seo_clics: 0,   brecha: "high",     nota: "Casos esporádicos, incluir en landing geo" },
+      { comuna: "Cañete",                          pacientes: 2,   pct: 0.7,  seo_clics: 0,   brecha: "medium",   nota: "Doctoralia domina SERP — mejor listarse que pelear" },
+      { comuna: "Lota",                            pacientes: 1,   pct: 0.3,  seo_clics: 0,   brecha: "low",      nota: "Marginal" },
+      { comuna: "Coronel",                         pacientes: 1,   pct: 0.3,  seo_clics: 0,   brecha: "low",      nota: "Marginal" },
+      { comuna: "Lebu",                            pacientes: 1,   pct: 0.3,  seo_clics: 0,   brecha: "low",      nota: "Marginal" }
+    ]
+  },
+  top_queries: [
+    { query: "centro medico carampangue",   clics: 115, impresiones: 271,   ctr: 42.4, tipo: "marca",     accion: "ya capturado" },
+    { query: "centro médico carampangue",   clics: 32,  impresiones: 110,   ctr: 29.0, tipo: "marca",     accion: "ya capturado" },
+    { query: "carampangue",                 clics: 6,   impresiones: 1195,  ctr: 0.5,  tipo: "geo",       accion: "🔥 reescribir snippet — mayor oportunidad" },
+    { query: "traumatologo arauco",         clics: 4,   impresiones: 54,    ctr: 7.4,  tipo: "esp+geo",   accion: "✓ landing /traumatologo-arauco/ creada" },
+    { query: "centro medico arauco",        clics: 3,   impresiones: 85,    ctr: 3.5,  tipo: "geo",       accion: "title home actualizado con Arauco" },
+    { query: "otorrinolaringologo arauco",  clics: 3,   impresiones: 20,    ctr: 15.0, tipo: "esp+geo",   accion: "✓ landing /otorrino-arauco/ creada" },
+    { query: "otorrino arauco",             clics: 2,   impresiones: 22,    ctr: 9.1,  tipo: "esp+geo",   accion: "✓ misma landing capta variante" },
+    { query: "centro medico en arauco",     clics: 2,   impresiones: 19,    ctr: 10.5, tipo: "geo",       accion: "ya capturable con title actualizado" },
+    { query: "pediatra en arauco",          clics: 2,   impresiones: 16,    ctr: 12.5, tipo: "esp+geo",   accion: "✓ blog 'médico para niños' captura honestamente" },
+    { query: "pediatra arauco",             clics: 2,   impresiones: 13,    ctr: 15.4, tipo: "esp+geo",   accion: "✓ ídem anterior — Medicina Familiar" }
   ],
   issues: [
     { id: "I01", level: "critical", title: "WhatsApp incorrecto en todo el sitio",
@@ -506,6 +599,50 @@ DATA.kpis.forEach(k => {
   `;
   kpisTbody.appendChild(tr);
 });
+
+// Geo (cruce comunas vs SEO)
+if (DATA.geo) {
+  document.getElementById('geo-periodo').textContent = DATA.geo.periodo;
+  document.getElementById('geo-citas').textContent = DATA.geo.total_citas;
+  document.getElementById('geo-pacientes').textContent = DATA.geo.pacientes_unicos;
+  document.getElementById('geo-concomuna').textContent = DATA.geo.con_comuna + ' (' + Math.round((DATA.geo.con_comuna/DATA.geo.pacientes_unicos)*100) + '%)';
+  const geoTbody = document.getElementById('geo-tbody');
+  const brechaColors = { critical: 'priority-critical', high: 'priority-high', medium: 'priority-medium', low: 'priority-low', ok: 'status-done' };
+  const brechaLabel = { critical: '🔴 crítica', high: '🟠 alta', medium: '🟡 media', low: '⚪ baja', ok: '✅ ok' };
+  DATA.geo.comunas.forEach(c => {
+    const tr = document.createElement('tr');
+    tr.className = 'hover:bg-slate-50';
+    tr.innerHTML = `
+      <td class="px-4 py-3 font-medium">${c.comuna}</td>
+      <td class="px-4 py-3 text-right">${c.pacientes}</td>
+      <td class="px-4 py-3 text-right text-slate-500">${c.pct}%</td>
+      <td class="px-4 py-3 text-right ${c.seo_clics === 0 ? 'text-red-600 font-semibold' : ''}">${c.seo_clics}</td>
+      <td class="px-4 py-3 text-center"><span class="${brechaColors[c.brecha]||''} px-2 py-1 rounded text-xs font-medium">${brechaLabel[c.brecha]||c.brecha}</span></td>
+      <td class="px-4 py-3 text-xs text-slate-600">${c.nota}</td>
+    `;
+    geoTbody.appendChild(tr);
+  });
+}
+
+// Top queries GSC
+if (DATA.top_queries) {
+  const queriesTbody = document.getElementById('queries-tbody');
+  const tipoColors = { 'marca': 'tone-emerald', 'geo': 'tone-blue', 'esp+geo': 'tone-amber' };
+  DATA.top_queries.forEach(q => {
+    const ctrClass = q.ctr < 2 ? 'text-red-600 font-semibold' : (q.ctr > 10 ? 'text-emerald-600 font-medium' : 'text-slate-700');
+    const tr = document.createElement('tr');
+    tr.className = 'hover:bg-slate-50';
+    tr.innerHTML = `
+      <td class="px-4 py-3 font-mono text-xs">${q.query}</td>
+      <td class="px-4 py-3 text-right font-medium">${q.clics}</td>
+      <td class="px-4 py-3 text-right text-slate-500">${q.impresiones.toLocaleString('es-CL')}</td>
+      <td class="px-4 py-3 text-right ${ctrClass}">${q.ctr}%</td>
+      <td class="px-4 py-3"><span class="${tipoColors[q.tipo]||'tone-slate'} px-2 py-0.5 rounded text-xs font-medium">${q.tipo}</span></td>
+      <td class="px-4 py-3 text-xs text-slate-600">${q.accion}</td>
+    `;
+    queriesTbody.appendChild(tr);
+  });
+}
 
 // Issues
 const issuesList = document.getElementById('issues-list');
