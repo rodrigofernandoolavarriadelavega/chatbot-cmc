@@ -577,21 +577,64 @@ def seo_geo_api():
         else:
             grouped[canonical] = {"comuna": canonical, "pacientes": c["pacientes"], "citas": c["citas"]}
 
+    # Expandir ARAUCO en sus localidades reales (si el JSON las trae)
+    if "ARAUCO" in grouped and raw.get("localidades_arauco"):
+        del grouped["ARAUCO"]
+        for loc in raw["localidades_arauco"]:
+            nombre = loc["localidad"].strip()
+            if nombre in ("ARAUCO (OTRO)", "ARAUCO (SIN DETALLE)"):
+                continue  # los descartamos, no son localidad real
+            # Capitalizar bonito: "ARAUCO URBANO" → "Arauco urbano"
+            display = nombre.title()
+            grouped[display] = {
+                "comuna": display,
+                "pacientes": loc["pacientes"],
+                "citas": loc.get("pacientes", 0),  # localidades_arauco no trae "citas"
+                "es_localidad_arauco": True,
+            }
+
     total_pac = sum(g["pacientes"] for g in grouped.values())
     comunas = sorted(grouped.values(), key=lambda x: x["pacientes"], reverse=True)
     for c in comunas:
         c["pct"] = round(c["pacientes"] / total_pac * 100, 1) if total_pac else 0
 
+    # Leer rango real + serie mensual del SQLite cache (fuente única de verdad)
+    import sqlite3
+    db_path = Path(__file__).parent.parent / "data" / "heatmap_cache.db"
+    rango = None
+    serie_mensual = []
+    if db_path.exists():
+        conn = sqlite3.connect(str(db_path))
+        try:
+            row = conn.execute(
+                "SELECT MIN(fecha), MAX(fecha) FROM citas_heatmap"
+            ).fetchone()
+            if row and row[0]:
+                rango = {"desde": row[0], "hasta": row[1]}
+            for mes, citas, unicos in conn.execute("""
+                SELECT substr(fecha,1,7) AS mes,
+                       COUNT(*) AS citas,
+                       COUNT(DISTINCT id_paciente) AS pacientes_unicos
+                FROM citas_heatmap
+                GROUP BY mes
+                ORDER BY mes
+            """).fetchall():
+                serie_mensual.append({"mes": mes, "citas": citas, "pacientes_unicos": unicos})
+        finally:
+            conn.close()
+
     return {
         "fuente": "heatmap_chatbot",
         "actualizado": Path(files[0]).stat().st_mtime,
         "archivo": Path(files[0]).name,
-        "periodo": raw.get("periodo"),
+        "periodo_label": raw.get("periodo"),
+        "rango": rango,
+        "serie_mensual": serie_mensual,
         "total_citas": raw.get("total_citas"),
         "pacientes_unicos": raw.get("pacientes_unicos"),
         "con_comuna": raw.get("con_comuna"),
         "sin_comuna": raw.get("sin_comuna"),
-        "comunas": comunas[:10],  # top 10
+        "comunas": comunas[:12],  # top 12 (con Arauco expandido)
     }
 
 

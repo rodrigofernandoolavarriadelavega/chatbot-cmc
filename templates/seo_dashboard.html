@@ -192,7 +192,7 @@
       <p class="text-sm text-slate-500 mb-5">Cruza datos del chatbot (atenciones reales) con Google Search Console (clics orgánicos). Detecta brechas: comunas que ya consultan al CMC pero donde el sitio no se posiciona.</p>
       <div class="grid grid-cols-3 gap-3 mb-6">
         <div class="tone-blue p-4 rounded-lg">
-          <div class="text-xs uppercase font-semibold opacity-75">Citas mes</div>
+          <div class="text-xs uppercase font-semibold opacity-75">Citas en el periodo</div>
           <div class="text-2xl font-bold mt-1" id="geo-citas">—</div>
         </div>
         <div class="tone-emerald p-4 rounded-lg">
@@ -204,11 +204,21 @@
           <div class="text-2xl font-bold mt-1" id="geo-concomuna">—</div>
         </div>
       </div>
+
+      <!-- Crecimiento mensual -->
+      <div class="bg-slate-50 rounded-lg p-5 mb-6">
+        <div class="flex items-baseline justify-between mb-3">
+          <h4 class="font-semibold text-sm">Crecimiento mensual</h4>
+          <span class="text-xs text-slate-500" id="geo-rango">—</span>
+        </div>
+        <canvas id="chart-geo-mensual" height="80"></canvas>
+      </div>
+
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead class="bg-slate-50 text-slate-600 uppercase text-xs">
             <tr>
-              <th class="px-4 py-3 text-left">Comuna</th>
+              <th class="px-4 py-3 text-left">Comuna / Localidad</th>
               <th class="px-4 py-3 text-right">Pacientes</th>
               <th class="px-4 py-3 text-right">% atenciones</th>
               <th class="px-4 py-3 text-right">Clics SEO</th>
@@ -614,19 +624,71 @@ DATA.kpis.forEach(k => {
 });
 
 // Geo (cruce comunas vs SEO) — fetch dinámico desde /api/seo/geo
+let _geoChart = null;
+const MES_NOMBRES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+function fmtMes(m) {
+  // m = "2026-04" → "Abr 2026"
+  const [y, n] = m.split('-');
+  return `${MES_NOMBRES[parseInt(n,10)-1]} ${y}`;
+}
+function fmtFecha(s) {
+  // s = "2026-04-24" → "24 abr"
+  const [y, m, d] = s.split('-');
+  return `${parseInt(d,10)} ${MES_NOMBRES[parseInt(m,10)-1].toLowerCase()} ${y}`;
+}
 function renderGeo(geoData, sourceLabel) {
   const periodoEl = document.getElementById('geo-periodo');
-  if (sourceLabel) periodoEl.textContent = `${geoData.periodo || ''} · ${sourceLabel}`;
-  else periodoEl.textContent = geoData.periodo || '';
+  let periodoTxt = '';
+  if (geoData.rango) {
+    periodoTxt = `${fmtFecha(geoData.rango.desde)} → ${fmtFecha(geoData.rango.hasta)}`;
+  } else if (geoData.periodo_label || geoData.periodo) {
+    periodoTxt = geoData.periodo_label || geoData.periodo;
+  }
+  periodoEl.textContent = sourceLabel ? `${periodoTxt} · ${sourceLabel}` : periodoTxt;
   document.getElementById('geo-citas').textContent = (geoData.total_citas || 0).toLocaleString('es-CL');
   document.getElementById('geo-pacientes').textContent = (geoData.pacientes_unicos || 0).toLocaleString('es-CL');
   const con = geoData.con_comuna || 0, uniq = geoData.pacientes_unicos || 1;
-  document.getElementById('geo-concomuna').textContent = con + ' (' + Math.round(con/uniq*100) + '%)';
-  // Cruce con clics SEO conocidos (de DATA.seo_geo_clicks o defaults)
-  const SEO_CLICKS = { 'ARAUCO': 150, 'CARAMPANGUE': 150, 'CURANILAHUE': 0, 'LOS ÁLAMOS': 0, 'CAÑETE': 0, 'LEBU': 0, 'LOTA': 0, 'CORONEL': 0 };
+  document.getElementById('geo-concomuna').textContent = con.toLocaleString('es-CL') + ' (' + Math.round(con/uniq*100) + '%)';
+
+  // Crecimiento mensual
+  const rangoEl = document.getElementById('geo-rango');
+  if (geoData.serie_mensual && geoData.serie_mensual.length) {
+    const s = geoData.serie_mensual;
+    const total_m = s.length;
+    rangoEl.textContent = `${total_m} meses · ${s[0].mes} → ${s[total_m-1].mes}`;
+    if (_geoChart) _geoChart.destroy();
+    _geoChart = new Chart(document.getElementById('chart-geo-mensual'), {
+      type: 'bar',
+      data: {
+        labels: s.map(x => fmtMes(x.mes)),
+        datasets: [
+          { label: 'Citas', data: s.map(x => x.citas), backgroundColor: '#3b82f6', borderRadius: 4 },
+          { label: 'Pacientes únicos', data: s.map(x => x.pacientes_unicos), backgroundColor: '#10b981', borderRadius: 4 }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom' } },
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+  }
+
+  // Cruce con clics SEO + notas (incluye localidades de Arauco)
+  const SEO_CLICKS = {
+    'Carampangue': 150, 'Arauco Urbano': 0, 'Laraquete': 0, 'Ramadillas': 0,
+    'Tubul': 0, 'Llico': 0, 'Colico': 0,
+    'CURANILAHUE': 0, 'LOS ÁLAMOS': 0, 'CAÑETE': 0, 'LEBU': 0, 'LOTA': 0, 'CORONEL': 0,
+  };
   const NOTAS = {
-    'ARAUCO': 'Mercado capturado, optimizar long-tail',
-    'CURANILAHUE': 'Mercado #2 — landing /centro-medico-curanilahue/ creada',
+    'Carampangue': '✅ Localidad propia, mercado capturado',
+    'Arauco Urbano': 'Capital comunal — sin landing dedicada',
+    'Laraquete': 'Sub-localidad importante — incluir en landing geo',
+    'Ramadillas': 'Sub-localidad — incluir en landing geo',
+    'Tubul': 'Marginal',
+    'Llico': 'Marginal',
+    'Colico': 'Marginal',
+    'CURANILAHUE': '🔥 Mercado #2 — landing /centro-medico-curanilahue/ creada',
     'LOS ÁLAMOS': '3er mercado — incluir en landings geo',
     'LEBU': 'Crecimiento reciente — evaluar landing dedicada',
     'CAÑETE': 'Doctoralia domina SERP — listarse en lugar de pelear',
@@ -649,10 +711,11 @@ function renderGeo(geoData, sourceLabel) {
     const seoClicks = SEO_CLICKS[c.comuna] !== undefined ? SEO_CLICKS[c.comuna] : 0;
     const brecha = brechaFor(c.comuna, c.pct);
     const nota = NOTAS[c.comuna] || '—';
+    const prefix = c.es_localidad_arauco ? '<span class="text-xs text-slate-400 mr-1">📍</span>' : '';
     const tr = document.createElement('tr');
     tr.className = 'hover:bg-slate-50';
     tr.innerHTML = `
-      <td class="px-4 py-3 font-medium">${c.comuna}</td>
+      <td class="px-4 py-3 font-medium">${prefix}${c.comuna}</td>
       <td class="px-4 py-3 text-right">${c.pacientes.toLocaleString('es-CL')}</td>
       <td class="px-4 py-3 text-right text-slate-500">${c.pct}%</td>
       <td class="px-4 py-3 text-right ${seoClicks === 0 ? 'text-red-600 font-semibold' : ''}">${seoClicks}</td>
