@@ -210,7 +210,12 @@ async def enviar_recordatorios_2h(send_text_fn, send_template_fn=None):
             # Skip si la cita ya fue confirmada manualmente en Medilink
             # (recepcion envio confirmacion por el WA Business prepago y marco estado)
             id_cita_medilink = cita.get("id_cita")
-            if id_cita_medilink:
+            # Citas manuales (admin_routes) usan id tipo "manual-PHONE-TS", no int.
+            _id_es_num = (
+                isinstance(id_cita_medilink, int)
+                or (isinstance(id_cita_medilink, str) and id_cita_medilink.isdigit())
+            )
+            if id_cita_medilink and _id_es_num:
                 cita_md = await get_cita(int(id_cita_medilink))
                 if cita_esta_confirmada(cita_md):
                     mark_reminder_2h_sent(cita["id"])

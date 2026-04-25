@@ -4,6 +4,7 @@ Alertas personales para el Dr. Olavarría:
   2. Reporte de progreso a las 08:00, 12:00, 16:00 y 20:00
 """
 import logging
+from resilience import is_medilink_down
 from datetime import datetime, date
 from zoneinfo import ZoneInfo
 
@@ -249,6 +250,9 @@ async def enviar_reporte_progreso(send_fn, doctor_phone: str):
     Llamar a las 08:00, 12:00, 16:00 y 20:00.
     Envía cuántos pacientes tiene agendados, cuántos ya pasaron, cuántos faltan.
     """
+    if is_medilink_down():
+        log.info("doctor_alerts.enviar_reporte_progreso: skip — Medilink down")
+        return
     ahora = _ahora_cl()
     fecha_hoy = ahora.strftime("%Y-%m-%d")
     hora_actual = ahora.hour * 60 + ahora.minute

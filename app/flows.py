@@ -4151,7 +4151,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         log_event(phone, "cita_duplicada_detectada", {
                             "fecha": slot.get("fecha"),
                             "especialidad": slot.get("especialidad"),
-                            "existing_hora": dup.get("hora_inicio", ""),
+                            "existing_hora": dup.get("hora_inicio", "")[:5],
                         })
                         return _btn_msg(
                             f"⚠️ *Ya tienes una hora ese día*\n\n"
@@ -6609,7 +6609,7 @@ def _format_citas_cancelar(citas: list, nombre_paciente: str):
         fecha_short = f"{c['fecha'][8:10]}/{c['fecha'][5:7]}" if c.get("fecha") else c.get("fecha_display", "")[:5]
         rows.append({
             "id": str(i),
-            "title": f"{fecha_short} {c['hora_inicio']}"[:24],
+            "title": f"{fecha_short} {c['hora_inicio'][:5]}"[:24],
             "description": c["profesional"][:72],
         })
     if len(rows) <= 10:
