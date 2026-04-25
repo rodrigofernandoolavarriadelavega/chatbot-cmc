@@ -788,6 +788,17 @@ def seo_cruces_api(periodo: str = "todos"):
     finally:
         conn.close()
 
+    # Índices paciente↔profesional usados por todos los KPIs siguientes
+    pac_profs_set: dict[int, set] = {}
+    pac_prof_citas: dict[tuple, int] = {}
+    prof_to_pacs: dict[int, set] = {}
+    for pid, prof in prof_especs_rows:
+        if prof not in PROFESIONALES:
+            continue
+        pac_profs_set.setdefault(pid, set()).add(prof)
+        pac_prof_citas[(pid, prof)] = pac_prof_citas.get((pid, prof), 0) + 1
+        prof_to_pacs.setdefault(prof, set()).add(pid)
+
     # Profesionales activos (con al menos 1 paciente en el periodo)
     profesionales = []
     for pid, info in PROFESIONALES.items():
@@ -879,16 +890,6 @@ def seo_cruces_api(periodo: str = "todos"):
 
     # Cross-sell INTRA-especialidad: paciente con ≥2 profesionales de la misma esp
     # (ej. paciente que ve a Olavarría Y a Márquez — ambos Medicina General)
-    # También aprovechamos para construir índices de citas paciente-profesional.
-    pac_profs_set: dict[int, set] = {}
-    pac_prof_citas: dict[tuple, int] = {}
-    prof_to_pacs: dict[int, set] = {}
-    for pid, prof in prof_especs_rows:
-        if prof not in PROFESIONALES:
-            continue
-        pac_profs_set.setdefault(pid, set()).add(prof)
-        pac_prof_citas[(pid, prof)] = pac_prof_citas.get((pid, prof), 0) + 1
-        prof_to_pacs.setdefault(prof, set()).add(pid)
     pac_intra = 0
     for pid, profs in pac_profs_set.items():
         esps_counts: dict[str, int] = {}
