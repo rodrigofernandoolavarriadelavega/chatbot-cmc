@@ -769,20 +769,25 @@ def seo_geo_api(periodo: str = "todos", desde: str | None = None,
         # Aplicar la misma normalización de typos que en el branch sin filtro
         grouped_f: dict[str, dict] = {}
         sin_com = 0
+        ARAUCO_PATTERN = r"^ARAU[CU]+O?\s*-?$"
+        # Detectar pacientes ARAUCO para expandir por localidad luego
+        arauco_buckets: list[tuple[str, int, int]] = []  # (raw_name, pac, cit)
         for nombre_raw, pac, cit in rows:
-            # Uppercase en Python (SQLite no maneja ñ correctamente),
-            # filtra valores espurios (vacío, numérico, muy corto, fragmentos
-            # de dirección como "Calle X" o "#234").
             nombre = (nombre_raw or "").strip().upper()
             if (not nombre or nombre.isdigit() or len(nombre) < 3
                     or any(x in nombre for x in ("VOLCAN", "CALLE", "PASAJE", "#"))):
                 sin_com += pac
                 continue
-            # Localidades de la comuna de Arauco que aparecen en el campo
-            # `comuna` por error de digitación o convención local.
-            if nombre in ("LARAQUETE", "RAMADILLAS", "CARAMPANGUE",
-                          "PUNTA LAVAPIE", "PUNTA LAVAPIÉ"):
-                nombre = "ARAUCO"
+            # Localidades dentro de la comuna de Arauco que se digitan en el campo
+            # `comuna` por convención local — marcarlas para expansión posterior.
+            if nombre in ("ARAUCO", "LARAQUETE", "RAMADILLAS", "CARAMPANGUE",
+                          "TUBUL", "LLICO", "COLICO", "CÓLICO",
+                          "PUNTA LAVAPIE", "PUNTA LAVAPIÉ", "ARAUUCO", "ARA"):
+                arauco_buckets.append((nombre, pac, cit))
+                continue
+            if re.match(ARAUCO_PATTERN, nombre):
+                arauco_buckets.append((nombre, pac, cit))
+                continue
             canonical = nombre
             for pattern, target in NORMALIZE.items():
                 if re.match(pattern, nombre):
@@ -795,6 +800,69 @@ def seo_geo_api(periodo: str = "todos", desde: str | None = None,
                 grouped_f[canonical] = {
                     "comuna": canonical, "pacientes": pac, "citas": cit,
                 }
+
+        # Expandir ARAUCO en localidades reales mirando p.direccion
+        if arauco_buckets:
+            conn_a = sqlite3.connect(str(db_path))
+            try:
+                # Si el campo comuna ya dice "CARAMPANGUE" / "LARAQUETE" / etc.,
+                # respetarlo; si dice "ARAUCO" o variante, mirar p.direccion.
+                where_arauco = (
+                    "(UPPER(TRIM(p.comuna)) IN ('ARAUCO','ARAUUCO','ARA') "
+                    "OR UPPER(TRIM(p.comuna)) LIKE 'ARAUCO%')"
+                )
+                arauco_rows = conn_a.execute(
+                    f"""SELECT c.id_paciente AS pid,
+                              UPPER(TRIM(p.comuna)) AS com,
+                              LOWER(COALESCE(p.direccion,'')) AS dir,
+                              COUNT(*) AS citas
+                       FROM citas_heatmap c
+                       INNER JOIN pacientes_heatmap p ON p.id = c.id_paciente
+                       WHERE c.id_paciente IS NOT NULL{clause}
+                         AND {where_arauco}
+                       GROUP BY c.id_paciente
+                    """,
+                    params,
+                ).fetchall()
+            finally:
+                conn_a.close()
+            local_pac: dict[str, set] = {}
+            local_cit: dict[str, int] = {}
+            for pid, com, direccion, citas in arauco_rows:
+                # Si el campo comuna ya es una localidad, usarla directo
+                if com in ("CARAMPANGUE",): loc = "Carampangue"
+                elif com in ("LARAQUETE",): loc = "Laraquete"
+                elif com in ("RAMADILLAS",): loc = "Ramadillas"
+                elif com in ("TUBUL",): loc = "Tubul"
+                elif com in ("LLICO",): loc = "Llico"
+                elif com in ("COLICO", "CÓLICO"): loc = "Colico"
+                else:
+                    # Comuna = ARAUCO: deducir por dirección
+                    d = direccion or ""
+                    if "carampangue" in d or "conumo" in d or "horcones" in d or "pichilo" in d:
+                        loc = "Carampangue"
+                    elif "laraquete" in d or "el bosque" in d:
+                        loc = "Laraquete"
+                    elif "ramadillas" in d or "ramadilla" in d:
+                        loc = "Ramadillas"
+                    elif "tubul" in d:
+                        loc = "Tubul"
+                    elif "llico" in d:
+                        loc = "Llico"
+                    elif "colico" in d or "cólico" in d:
+                        loc = "Colico"
+                    else:
+                        loc = "Arauco"  # urbano por defecto
+                local_pac.setdefault(loc, set()).add(pid)
+                local_cit[loc] = local_cit.get(loc, 0) + citas
+            for loc, pids in local_pac.items():
+                grouped_f[loc] = {
+                    "comuna": loc,
+                    "pacientes": len(pids),
+                    "citas": local_cit.get(loc, 0),
+                    "es_localidad_arauco": True,
+                }
+
         total_pac_g = sum(g["pacientes"] for g in grouped_f.values()) or 1
         total_cit_g = sum(g["citas"] for g in grouped_f.values()) or 1
         comunas_f = sorted(grouped_f.values(), key=lambda x: x["pacientes"], reverse=True)
