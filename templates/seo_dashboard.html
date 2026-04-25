@@ -328,11 +328,26 @@
   <!-- Tab: Geo (cruce comunas vs SEO) -->
   <section id="tab-geo" class="tab-content hidden">
     <div class="bg-white rounded-xl border border-slate-200 p-6 mb-6">
-      <div class="flex items-baseline justify-between mb-4">
+      <div class="flex items-baseline justify-between mb-2">
         <h3 class="font-semibold">Comunas atendidas vs presencia SEO</h3>
         <span class="text-xs text-slate-500" id="geo-periodo">—</span>
       </div>
-      <p class="text-sm text-slate-500 mb-5">Cruza datos del chatbot (atenciones reales) con Google Search Console (clics orgánicos). Detecta brechas: comunas que ya consultan al CMC pero donde el sitio no se posiciona.</p>
+      <div class="flex flex-wrap items-center gap-2 mb-4 pb-4 border-b border-slate-100">
+        <span class="text-xs uppercase font-semibold text-slate-500 mr-2">Periodo:</span>
+        <button class="geo-periodo px-3 py-1.5 text-xs rounded-full border border-slate-300 hover:bg-slate-100" data-periodo="hoy">Hoy</button>
+        <button class="geo-periodo px-3 py-1.5 text-xs rounded-full border border-slate-300 hover:bg-slate-100" data-periodo="semana">Semana</button>
+        <button class="geo-periodo px-3 py-1.5 text-xs rounded-full border border-slate-300 hover:bg-slate-100" data-periodo="mes">Mes</button>
+        <button class="geo-periodo px-3 py-1.5 text-xs rounded-full border border-slate-300 hover:bg-slate-100" data-periodo="año">Año</button>
+        <button class="geo-periodo px-3 py-1.5 text-xs rounded-full border border-slate-300 bg-slate-800 text-white" data-periodo="todos">Todos</button>
+        <span class="text-slate-300 mx-2">|</span>
+        <span class="text-xs uppercase font-semibold text-slate-500">Rango:</span>
+        <input type="date" id="geo-desde" class="border border-slate-300 rounded px-2 py-1 text-xs">
+        <span class="text-xs text-slate-400">a</span>
+        <input type="date" id="geo-hasta" class="border border-slate-300 rounded px-2 py-1 text-xs">
+        <button id="geo-aplicar" class="px-3 py-1.5 text-xs rounded-full bg-emerald-600 text-white hover:bg-emerald-700">Aplicar</button>
+        <button id="geo-limpiar" class="px-2 py-1.5 text-xs text-slate-500 hover:text-slate-700">Limpiar</button>
+      </div>
+      <p class="text-sm text-slate-500 mb-5">Cruza datos del chatbot (atenciones reales) con Google Search Console (clics orgánicos). Detecta brechas: comunas que ya consultan al CMC pero donde el sitio no se posiciona. <span class="text-amber-600" id="geo-filtrado-nota" style="display:none">Con filtro de fechas se muestran solo comunas (sin localidades de Arauco).</span></p>
       <div class="grid grid-cols-3 gap-3 mb-6">
         <div class="tone-blue p-4 rounded-lg">
           <div class="text-xs uppercase font-semibold opacity-75">Citas en el periodo</div>
@@ -794,6 +809,12 @@
 </main>
 
 <script>
+// Token inyectado server-side por /seo/dashboard?token=... — todos los
+// fetch a /api/seo/* lo concatenan. Si quedó como placeholder, el dashboard
+// fue cargado sin auth y los endpoints van a responder 401.
+const ADMIN_TOKEN = "__ADMIN_TOKEN_PLACEHOLDER__";
+const _withTok = qs => (qs ? qs + '&' : '') + 'token=' + encodeURIComponent(ADMIN_TOKEN);
+
 /* ======================================================================
    Data embebida — editar acá para avanzar el dashboard
 ====================================================================== */
@@ -1255,15 +1276,72 @@ function renderGeo(geoData, sourceLabel) {
 
 // Render inicial con DATA estática (fallback) e inmediatamente fetch live data
 if (DATA.geo) renderGeo(DATA.geo, 'snapshot estático');
-fetch('/api/seo/geo')
+
+// Estado del filtro Geo
+let _geoPeriodo = 'todos';
+let _geoDesde = '';
+let _geoHasta = '';
+function _geoQS() {
+  const p = new URLSearchParams();
+  if (_geoDesde || _geoHasta) {
+    if (_geoDesde) p.set('desde', _geoDesde);
+    if (_geoHasta) p.set('hasta', _geoHasta);
+  } else {
+    p.set('periodo', _geoPeriodo);
+  }
+  return p.toString();
+}
+function loadGeo() {
+  const filtrado = !!(_geoDesde || _geoHasta || (_geoPeriodo && _geoPeriodo !== 'todos'));
+  const nota = document.getElementById('geo-filtrado-nota');
+  if (nota) nota.style.display = filtrado ? '' : 'none';
+  fetch('/api/seo/geo?' + _withTok(_geoQS()))
   .then(r => r.ok ? r.json() : Promise.reject(r.status))
   .then(live => {
     if (live && live.comunas) {
       const ts = new Date(live.actualizado * 1000).toLocaleString('es-CL', {dateStyle:'short', timeStyle:'short'});
-      renderGeo(live, '🟢 live · ' + ts);
+      const tag = live.filtrado
+        ? '🟢 filtrado · ' + (live.fecha_desde || '—') + ' a ' + (live.fecha_hasta || 'hoy')
+        : '🟢 live · ' + ts;
+      renderGeo(live, tag);
     }
   })
   .catch(err => console.warn('Geo live fetch failed:', err));
+}
+
+function _resetGeoBtns(activo) {
+  document.querySelectorAll('.geo-periodo').forEach(b => {
+    b.classList.remove('bg-slate-800', 'text-white');
+    if (b.dataset.periodo === activo) b.classList.add('bg-slate-800', 'text-white');
+  });
+}
+document.querySelectorAll('.geo-periodo').forEach(btn => {
+  btn.addEventListener('click', () => {
+    _geoPeriodo = btn.dataset.periodo;
+    _geoDesde = ''; _geoHasta = '';
+    document.getElementById('geo-desde').value = '';
+    document.getElementById('geo-hasta').value = '';
+    _resetGeoBtns(_geoPeriodo);
+    loadGeo();
+  });
+});
+document.getElementById('geo-aplicar').addEventListener('click', () => {
+  const d = document.getElementById('geo-desde').value;
+  const h = document.getElementById('geo-hasta').value;
+  if (!d && !h) return;
+  if (d && h && d > h) { alert('Fecha "Desde" no puede ser posterior a "Hasta"'); return; }
+  _geoDesde = d; _geoHasta = h;
+  _resetGeoBtns(null);
+  loadGeo();
+});
+document.getElementById('geo-limpiar').addEventListener('click', () => {
+  _geoDesde = ''; _geoHasta = ''; _geoPeriodo = 'todos';
+  document.getElementById('geo-desde').value = '';
+  document.getElementById('geo-hasta').value = '';
+  _resetGeoBtns('todos');
+  loadGeo();
+});
+loadGeo();
 
 // Top queries GSC
 if (DATA.top_queries) {
@@ -1396,7 +1474,7 @@ function abrirModalCruce(profA, profB) {
   const tbody = document.getElementById('cruce-modal-tbody');
   tbody.innerHTML = '<tr><td colspan="9" class="px-3 py-6 text-center text-slate-400">Cargando…</td></tr>';
   modal.classList.remove('hidden');
-  fetch(`/api/seo/cruce-pacientes?prof_a=${profA}&prof_b=${profB}&${_crucesQS()}`)
+  fetch(`/api/seo/cruce-pacientes?prof_a=${profA}&prof_b=${profB}&${_withTok(_crucesQS())}`)
     .then(r => r.ok ? r.json() : Promise.reject(r.status))
     .then(d => {
       if (!d || d.error) { tbody.innerHTML = '<tr><td colspan="9" class="px-3 py-6 text-center text-rose-500">Error</td></tr>'; return; }
@@ -1479,7 +1557,7 @@ function renderTopPares() {
 let _metaChart = null;
 function loadMeta() {
   const dias = document.getElementById('meta-dias').value;
-  fetch('/api/seo/meta?dias=' + dias)
+  fetch('/api/seo/meta?dias=' + dias + '&token=' + encodeURIComponent(ADMIN_TOKEN))
     .then(r => r.ok ? r.json() : Promise.reject(r.status))
     .then(d => renderMeta(d))
     .catch(err => console.warn('Meta fetch failed:', err));
@@ -1603,7 +1681,7 @@ document.getElementById('meta-dias').addEventListener('change', loadMeta);
 loadMeta();
 
 function loadCruces() {
-  fetch('/api/seo/cruces?' + _crucesQS())
+  fetch('/api/seo/cruces?' + _withTok(_crucesQS()))
   .then(r => r.ok ? r.json() : Promise.reject(r.status))
   .then(data => {
     if (!data || data.error) return;

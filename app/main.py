@@ -529,24 +529,29 @@ def menu_page():
 
 
 @app.get("/seo/dashboard", response_class=HTMLResponse)
-def seo_dashboard_page():
+def seo_dashboard_page(token: str = ""):
     """Dashboard de progreso del plan SEO para centromedicocarampangue.cl."""
     if not _SEO_DASHBOARD_HTML:
         raise HTTPException(404, "Dashboard SEO no disponible")
-    return _SEO_DASHBOARD_HTML
+    if token != ADMIN_TOKEN:
+        raise HTTPException(401, "unauthorized")
+    # Inyectar el token al HTML para que los fetch() del cliente lo
+    # incluyan en las llamadas a /api/seo/*. Single source of truth.
+    return _SEO_DASHBOARD_HTML.replace("__ADMIN_TOKEN_PLACEHOLDER__", token)
 
 
 @app.get("/api/seo/geo")
-def seo_geo_api(token: str = ""):
+def seo_geo_api(periodo: str = "todos", desde: str | None = None,
+                hasta: str | None = None, token: str = ""):
     if token != ADMIN_TOKEN:
         from fastapi import HTTPException
         raise HTTPException(401, "unauthorized")
     """Sirve el cruce comunas/atenciones para el dashboard SEO.
 
-    Lee data/heatmap_*.json (generado por el chatbot), normaliza variantes con typos
-    (CURNILAGUE → CURANILAHUE, etc.) y devuelve top 10 comunas reales.
-
-    El dashboard hace fetch a este endpoint para mostrar datos siempre actualizados.
+    Lee data/heatmap_*.json (snapshot del periodo completo) cuando no hay
+    filtro de fechas. Si se pasa `periodo`/`desde`/`hasta`, recalcula los
+    conteos contra el SQLite (`data/heatmap_cache.db`) restringido al
+    rango pedido — fuente de verdad temporal.
     """
     import json, re, glob, os
     from pathlib import Path
@@ -637,6 +642,103 @@ def seo_geo_api(token: str = ""):
                 serie_mensual.append({"mes": mes, "citas": citas, "pacientes_unicos": unicos})
         finally:
             conn.close()
+
+    # Si hay filtro de fechas, recalcular las comunas contra el SQLite
+    # restringido al rango. Pierde el detalle de localidades dentro de Arauco
+    # (eso lo provee el script que escribe el JSON snapshot), pero responde
+    # con conteos exactos por comuna en el periodo solicitado.
+    fecha_desde, fecha_hasta = _resolver_rango(periodo, desde, hasta)
+    if fecha_desde or fecha_hasta:
+        if not db_path.exists():
+            return {"error": "no cache for date range"}
+        clause, params = "", ()
+        if fecha_desde and fecha_hasta:
+            clause = " AND c.fecha BETWEEN ? AND ?"
+            params = (fecha_desde, fecha_hasta)
+        elif fecha_desde:
+            clause = " AND c.fecha >= ?"
+            params = (fecha_desde,)
+        elif fecha_hasta:
+            clause = " AND c.fecha <= ?"
+            params = (fecha_hasta,)
+
+        conn = sqlite3.connect(str(db_path))
+        try:
+            tot_cit = conn.execute(
+                f"SELECT COUNT(*) FROM citas_heatmap c WHERE 1=1{clause}",
+                params,
+            ).fetchone()[0]
+            tot_pac = conn.execute(
+                f"SELECT COUNT(DISTINCT c.id_paciente) FROM citas_heatmap c "
+                f"WHERE c.id_paciente IS NOT NULL{clause}",
+                params,
+            ).fetchone()[0]
+            rows = conn.execute(
+                f"""
+                SELECT TRIM(COALESCE(p.comuna, '')) AS comuna,
+                       COUNT(DISTINCT c.id_paciente) AS pacientes,
+                       COUNT(*) AS citas
+                FROM citas_heatmap c
+                INNER JOIN pacientes_heatmap p ON p.id = c.id_paciente
+                WHERE c.id_paciente IS NOT NULL{clause}
+                GROUP BY comuna
+                """,
+                params,
+            ).fetchall()
+        finally:
+            conn.close()
+
+        # Aplicar la misma normalización de typos que en el branch sin filtro
+        grouped_f: dict[str, dict] = {}
+        sin_com = 0
+        for nombre_raw, pac, cit in rows:
+            # Uppercase en Python (SQLite no maneja ñ correctamente),
+            # filtra valores espurios (vacío, numérico, muy corto, fragmentos
+            # de dirección como "Calle X" o "#234").
+            nombre = (nombre_raw or "").strip().upper()
+            if (not nombre or nombre.isdigit() or len(nombre) < 3
+                    or any(x in nombre for x in ("VOLCAN", "CALLE", "PASAJE", "#"))):
+                sin_com += pac
+                continue
+            # Localidades de la comuna de Arauco que aparecen en el campo
+            # `comuna` por error de digitación o convención local.
+            if nombre in ("LARAQUETE", "RAMADILLAS", "CARAMPANGUE",
+                          "PUNTA LAVAPIE", "PUNTA LAVAPIÉ"):
+                nombre = "ARAUCO"
+            canonical = nombre
+            for pattern, target in NORMALIZE.items():
+                if re.match(pattern, nombre):
+                    canonical = target
+                    break
+            if canonical in grouped_f:
+                grouped_f[canonical]["pacientes"] += pac
+                grouped_f[canonical]["citas"] += cit
+            else:
+                grouped_f[canonical] = {
+                    "comuna": canonical, "pacientes": pac, "citas": cit,
+                }
+        total_pac_g = sum(g["pacientes"] for g in grouped_f.values()) or 1
+        total_cit_g = sum(g["citas"] for g in grouped_f.values()) or 1
+        comunas_f = sorted(grouped_f.values(), key=lambda x: x["pacientes"], reverse=True)
+        for c in comunas_f:
+            c["pct"] = round(c["pacientes"] / total_pac_g * 100, 1)
+            c["pct_citas"] = round(c["citas"] / total_cit_g * 100, 1)
+
+        return {
+            "fuente": "heatmap_sqlite_filtrado",
+            "actualizado": Path(files[0]).stat().st_mtime if files else 0,
+            "rango": {"desde": fecha_desde, "hasta": fecha_hasta} if (fecha_desde or fecha_hasta) else None,
+            "fecha_desde": fecha_desde,
+            "fecha_hasta": fecha_hasta,
+            "periodo": periodo if not (desde or hasta) else None,
+            "serie_mensual": serie_mensual,
+            "total_citas": tot_cit,
+            "pacientes_unicos": tot_pac,
+            "con_comuna": tot_pac - sin_com,
+            "sin_comuna": sin_com,
+            "comunas": comunas_f[:12],
+            "filtrado": True,
+        }
 
     return {
         "fuente": "heatmap_chatbot",
