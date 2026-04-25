@@ -1217,14 +1217,20 @@ function renderGeo(geoData, sourceLabel) {
       data: {
         labels: s.map(x => fmtMes(x.mes)),
         datasets: [
-          { label: 'Citas', data: s.map(x => x.citas), backgroundColor: '#0E2530', borderRadius: 4 },
-          { label: 'Pacientes únicos', data: s.map(x => x.pacientes_unicos), backgroundColor: '#B98149', borderRadius: 4 }
+          { type: 'bar',  label: 'Citas',                data: s.map(x => x.citas),               backgroundColor: '#0E2530', borderRadius: 4, yAxisID: 'y' },
+          { type: 'bar',  label: 'Pacientes únicos',     data: s.map(x => x.pacientes_unicos),    backgroundColor: '#B98149', borderRadius: 4, yAxisID: 'y' },
+          { type: 'bar',  label: 'Pacientes nuevos',     data: s.map(x => x.pacientes_nuevos || 0), backgroundColor: '#9A3E2F', borderRadius: 4, yAxisID: 'y' },
+          { type: 'line', label: 'Acumulado pacientes',  data: s.map(x => x.pacientes_acumulado || 0), borderColor: '#4A5D44', backgroundColor: 'rgba(74,93,68,0.12)', borderWidth: 2, tension: 0.3, pointRadius: 3, fill: true, yAxisID: 'y1' }
         ]
       },
       options: {
         responsive: true,
+        interaction: { mode: 'index', intersect: false },
         plugins: { legend: { position: 'bottom' } },
-        scales: { y: { beginAtZero: true } }
+        scales: {
+          y:  { beginAtZero: true, position: 'left',  title: { display: true, text: 'Mensual', font: { size: 10 } } },
+          y1: { beginAtZero: true, position: 'right', title: { display: true, text: 'Acumulado', font: { size: 10 } }, grid: { drawOnChartArea: false } }
+        }
       }
     });
   }

@@ -706,15 +706,40 @@ def seo_geo_api(periodo: str = "todos", desde: str | None = None,
             ).fetchone()
             if row and row[0]:
                 rango = {"desde": row[0], "hasta": row[1]}
-            for mes, citas, unicos in conn.execute("""
-                SELECT substr(fecha,1,7) AS mes,
-                       COUNT(*) AS citas,
-                       COUNT(DISTINCT id_paciente) AS pacientes_unicos
-                FROM citas_heatmap
-                GROUP BY mes
-                ORDER BY mes
-            """).fetchall():
-                serie_mensual.append({"mes": mes, "citas": citas, "pacientes_unicos": unicos})
+            # CTE: para cada paciente, mes de su PRIMERA cita (= mes en que es "nuevo")
+            serie_rows = conn.execute("""
+                WITH primera AS (
+                    SELECT id_paciente, MIN(fecha) AS f_primera
+                    FROM citas_heatmap
+                    WHERE id_paciente IS NOT NULL
+                    GROUP BY id_paciente
+                ),
+                mensual AS (
+                    SELECT substr(fecha,1,7) AS mes,
+                           COUNT(*) AS citas,
+                           COUNT(DISTINCT id_paciente) AS pac_unicos
+                    FROM citas_heatmap
+                    GROUP BY mes
+                ),
+                nuevos AS (
+                    SELECT substr(f_primera,1,7) AS mes, COUNT(*) AS pac_nuevos
+                    FROM primera GROUP BY mes
+                )
+                SELECT m.mes, m.citas, m.pac_unicos, COALESCE(n.pac_nuevos, 0) AS pac_nuevos
+                FROM mensual m
+                LEFT JOIN nuevos n ON n.mes = m.mes
+                ORDER BY m.mes
+            """).fetchall()
+            acumulado = 0
+            for mes, citas, unicos, nuevos in serie_rows:
+                acumulado += nuevos
+                serie_mensual.append({
+                    "mes": mes,
+                    "citas": citas,
+                    "pacientes_unicos": unicos,
+                    "pacientes_nuevos": nuevos,
+                    "pacientes_acumulado": acumulado,
+                })
         finally:
             conn.close()
 
