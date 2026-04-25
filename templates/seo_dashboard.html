@@ -555,18 +555,25 @@
           <h3 class="font-semibold text-lg" id="cruce-modal-title">—</h3>
           <button id="cruce-modal-close" class="text-slate-400 hover:text-slate-700 text-2xl leading-none">&times;</button>
         </div>
-        <div class="grid grid-cols-3 gap-3 mb-4">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
           <div class="bg-slate-50 p-3 rounded">
-            <div class="text-xs uppercase text-slate-500">Pacientes</div>
+            <div class="text-xs uppercase text-slate-500">Pacientes en común</div>
             <div class="text-xl font-bold" id="cruce-modal-pacs">—</div>
           </div>
-          <div class="bg-slate-50 p-3 rounded">
-            <div class="text-xs uppercase text-slate-500">Atenciones totales</div>
-            <div class="text-xl font-bold" id="cruce-modal-atens">—</div>
+          <div class="bg-blue-50 p-3 rounded">
+            <div class="text-xs uppercase text-blue-700" id="cruce-modal-lbl-a">Derivador</div>
+            <div class="text-base font-bold" id="cruce-modal-aten-a">—</div>
+            <div class="text-sm font-semibold text-blue-800" id="cruce-modal-monto-a">—</div>
+          </div>
+          <div class="bg-amber-50 p-3 rounded">
+            <div class="text-xs uppercase text-amber-700" id="cruce-modal-lbl-b">Cruzado</div>
+            <div class="text-base font-bold" id="cruce-modal-aten-b">—</div>
+            <div class="text-sm font-semibold text-amber-800" id="cruce-modal-monto-b">—</div>
           </div>
           <div class="bg-emerald-50 p-3 rounded">
-            <div class="text-xs uppercase text-emerald-700">$ estimado total</div>
+            <div class="text-xs uppercase text-emerald-700">$ total combinado</div>
             <div class="text-xl font-bold text-emerald-800" id="cruce-modal-monto">—</div>
+            <div class="text-xs text-emerald-700" id="cruce-modal-atens">—</div>
           </div>
         </div>
         <div class="overflow-x-auto max-h-[60vh]">
@@ -1395,11 +1402,23 @@ function abrirModalCruce(profA, profB) {
       if (!d || d.error) { tbody.innerHTML = '<tr><td colspan="9" class="px-3 py-6 text-center text-rose-500">Error</td></tr>'; return; }
       document.getElementById('cruce-modal-title').innerHTML =
         `${d.prof_a.nombre} <span class="text-slate-400">×</span> ${d.prof_b.nombre} <span class="text-xs text-slate-500 font-normal">· periodo: ${d.periodo}</span>`;
+      const sumCitasA = d.pacientes.reduce((s,p) => s + p.citas_a, 0);
+      const sumCitasB = d.pacientes.reduce((s,p) => s + p.citas_b, 0);
+      const sumMontoA = d.pacientes.reduce((s,p) => s + p.monto_a, 0);
+      const sumMontoB = d.pacientes.reduce((s,p) => s + p.monto_b, 0);
+      const apellidoA = d.prof_a.nombre.split(' ').slice(-1)[0];
+      const apellidoB = d.prof_b.nombre.split(' ').slice(-1)[0];
       document.getElementById('cruce-modal-pacs').textContent  = d.total_pacientes.toLocaleString('es-CL');
-      document.getElementById('cruce-modal-atens').textContent = d.total_atenciones.toLocaleString('es-CL');
+      document.getElementById('cruce-modal-lbl-a').textContent  = `Derivador · ${apellidoA}`;
+      document.getElementById('cruce-modal-aten-a').textContent = sumCitasA.toLocaleString('es-CL') + ' atenciones';
+      document.getElementById('cruce-modal-monto-a').textContent = _fmtCLP(sumMontoA);
+      document.getElementById('cruce-modal-lbl-b').textContent  = `Cruzado · ${apellidoB}`;
+      document.getElementById('cruce-modal-aten-b').textContent = sumCitasB.toLocaleString('es-CL') + ' atenciones';
+      document.getElementById('cruce-modal-monto-b').textContent = _fmtCLP(sumMontoB);
       document.getElementById('cruce-modal-monto').textContent = _fmtCLP(d.monto_total_estimado);
-      document.getElementById('cruce-modal-th-a').textContent = `Citas ${d.prof_a.nombre.split(' ').slice(-1)[0]}`;
-      document.getElementById('cruce-modal-th-b').textContent = `Citas ${d.prof_b.nombre.split(' ').slice(-1)[0]}`;
+      document.getElementById('cruce-modal-atens').textContent = d.total_atenciones.toLocaleString('es-CL') + ' atenciones (A+B)';
+      document.getElementById('cruce-modal-th-a').textContent = `Citas ${apellidoA}`;
+      document.getElementById('cruce-modal-th-b').textContent = `Citas ${apellidoB}`;
       tbody.innerHTML = '';
       if (!d.pacientes.length) {
         tbody.innerHTML = '<tr><td colspan="9" class="px-3 py-6 text-center text-slate-400">Sin pacientes en este periodo.</td></tr>';
