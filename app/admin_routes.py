@@ -651,7 +651,7 @@ async def admin_agendar(request: Request, _: str = Depends(require_admin)):
         if not paciente:
             raise HTTPException(status_code=400, detail="No se pudo crear el paciente")
 
-    cita = await crear_cita(paciente["id"], id_prof, fecha, hora_ini, hora_fin, duracion)
+    cita = await crear_cita(paciente["id"], id_prof, fecha, hora_ini, hora_fin)
     if not cita:
         raise HTTPException(status_code=400, detail="No se pudo crear la cita en Medilink")
 

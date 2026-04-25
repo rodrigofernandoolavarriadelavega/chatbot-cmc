@@ -1600,8 +1600,27 @@ def save_kine_tracking(id_paciente: int, id_prof: int, total_sesiones: int,
 
 
 def puede_enviar_campana(phone: str, tipo: str, dias_cooldown: int = 7) -> bool:
-    """True si no se envió este tipo de campaña en los últimos dias_cooldown días."""
+    """True si no se envió este tipo de campaña en los últimos dias_cooldown días
+    Y el paciente NO hizo opt-out ni revocó privacidad
+    (compliance Ley 21.719 + WhatsApp Business Policy marketing)."""
     with _conn() as conn:
+        # Hard-block: opt-out marketing
+        opt_out = conn.execute(
+            "SELECT 1 FROM contact_tags WHERE phone=? AND tag='marketing_opt_out'",
+            (phone,)
+        ).fetchone()
+        if opt_out:
+            return False
+        # Hard-block: consentimiento revocado
+        try:
+            revoked = conn.execute(
+                "SELECT 1 FROM privacy_consents WHERE phone=? AND revoked_at IS NOT NULL",
+                (phone,)
+            ).fetchone()
+            if revoked:
+                return False
+        except Exception:
+            pass  # tabla puede no existir en deploys antiguos
         row = conn.execute(
             "SELECT 1 FROM fidelizacion_msgs WHERE phone=? AND tipo=? "
             "AND enviado_en >= datetime('now', ?)",

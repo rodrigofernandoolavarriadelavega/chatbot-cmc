@@ -4113,8 +4113,15 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "_Escribe *menu* si necesitas algo más._"
             )
         if tl in AFIRMACIONES or tl_norm in AFIRMACIONES:
-            slot    = data["slot_elegido"]
-            paciente = data["paciente"]
+            slot    = data.get("slot_elegido")
+            paciente = data.get("paciente")
+            if not slot or not paciente:
+                # Sesión sin datos clave (limpieza parcial, race, admin_resume manual).
+                reset_session(phone)
+                return (
+                    "Perdimos el hilo de tu reserva 😅 "
+                    "Escribe *menu* para empezar de nuevo o *agendar* directamente."
+                )
             reagendar = bool(data.get("reagendar_mode"))
             cita_old = data.get("cita_old") or {}
             # ── Cita duplicada: paciente ya tiene cita misma fecha + especialidad ──
