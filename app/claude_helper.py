@@ -4,6 +4,7 @@ Solo se usa para texto libre — los flujos controlados no consumen tokens.
 """
 import json
 import logging
+import re
 import anthropic
 from config import ANTHROPIC_API_KEY
 from medilink import especialidades_disponibles
@@ -360,6 +361,13 @@ _INTENT_CACHE: dict[str, dict] = {
 }
 
 SYSTEM_PROMPT = f"""Eres el asistente de recepción del Centro Médico Carampangue (CMC), ubicado en Carampangue, Chile.
+
+🚨 NÚMEROS DE CONTACTO PERMITIDOS — NO INVENTES OTROS:
+Los ÚNICOS teléfonos del CMC que puedes mencionar en cualquier respuesta son:
+  • WhatsApp / móvil: +56966610737
+  • Fijo: (41) 296 5226
+  • Emergencias: SAMU 131
+PROHIBIDO ABSOLUTAMENTE escribir cualquier otro número telefónico chileno (+56 9 XXXX XXXX o (4X) XXX XXXX) aunque parezca plausible. Si no recuerdas el número, escribe literalmente "el WhatsApp del CMC" o "recepción" sin dígitos. Inventar un número equivale a desviar pacientes a un tercero — es un error grave.
 
 ESPECIALIDADES DISPONIBLES:
 {especialidades_disponibles()}
@@ -934,6 +942,35 @@ async def clasificar_respuesta_seguimiento(mensaje: str) -> str | None:
         return None
 
 
+_TEL_CMC_WA = "+56966610737"
+_TEL_CMC_FIJO = "(41) 296 5226"
+
+# Números canónicos del CMC. Cualquier otro teléfono chileno generado por el
+# LLM se reemplaza por estos para evitar leaks (ej: hallucination del celular
+# personal del Dr. Olavarría +56987834148, o del código de área (44) en lugar
+# de (41)). Ver conversaciones reales con leaks en sessions.db hasta abr 2026.
+_RX_TEL_CHILE_MOVIL = re.compile(r"\+?\s*56[\s\-]*9[\s\-]*\d{4}[\s\-]*\d{4}")
+_RX_TEL_CHILE_FIJO = re.compile(r"\(\s*4\d\s*\)\s*\d{3}[\s\-]*\d{4}")
+
+
+def _scrub_telefonos(text: str) -> str:
+    """Reemplaza cualquier teléfono chileno NO canónico por el número oficial.
+    Defensa final contra hallucinations del LLM."""
+    if not text:
+        return text
+
+    def _movil(m: re.Match) -> str:
+        digits = re.sub(r"\D", "", m.group(0))
+        return m.group(0) if digits.endswith("66610737") else _TEL_CMC_WA
+
+    def _fijo(m: re.Match) -> str:
+        return m.group(0) if "(41)" in m.group(0).replace(" ", "") or m.group(0).startswith("(41") else _TEL_CMC_FIJO
+
+    text = _RX_TEL_CHILE_MOVIL.sub(_movil, text)
+    text = _RX_TEL_CHILE_FIJO.sub(_fijo, text)
+    return text
+
+
 def _strip_markdown_json(text: str) -> str:
     """Quita envoltorios ```json ... ``` si Claude los agrega."""
     text = text.strip()
@@ -1103,6 +1140,9 @@ async def detect_intent(mensaje: str) -> dict:
                     _result["especialidad"] = None
         except Exception as _e_pp:
             log.warning("post-proceso detect_intent falló: %s", _e_pp)
+        rd = _result.get("respuesta_directa")
+        if isinstance(rd, str) and rd:
+            _result["respuesta_directa"] = _scrub_telefonos(rd)
         return _result
     except json.JSONDecodeError as e:
         log.error("detect_intent JSON inválido para '%s': %s | respuesta: %r",
@@ -1138,7 +1178,7 @@ async def consulta_clinica_doctor(pregunta: str) -> str:
             system=system,
             messages=[{"role": "user", "content": pregunta}],
         )
-        return resp.content[0].text
+        return _scrub_telefonos(resp.content[0].text)
     except Exception as e:
         log.error("consulta_clinica_doctor falló: %s", e)
         return "⚠️ Error al procesar tu consulta. Intenta de nuevo."
@@ -1336,7 +1376,7 @@ async def respuesta_faq(mensaje: str) -> str:
         data = json.loads(text)
         respuesta_claude = data.get("respuesta_directa")
         if respuesta_claude:
-            return respuesta_claude
+            return _scrub_telefonos(respuesta_claude)
         # Sin respuesta de Claude → intentar fallback local antes de rendirse
         return _local_faq_fallback(mensaje) or "Para más información, comunícate con recepción 😊"
     except json.JSONDecodeError as e:

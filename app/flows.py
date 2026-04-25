@@ -5136,7 +5136,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "🚑 *SAMU*: 131"
             )
 
-        if msgs_sin_respuesta == 1:
+        # Si la recepcionista ya respondió alguna vez, NO repetir el ack —
+        # el paciente sabe que está hablando con una persona. Repetir el
+        # "Recibido 🙏" cada mensaje confunde y se mezcla con las respuestas
+        # reales de la recepcionista (caso real 56975932459, 2026-04-23: 10
+        # acks repetidos en una conversación activa).
+        if msgs_sin_respuesta == 1 and not data.get("human_replied"):
             # Primer ack — el paciente sabe que una recepcionista vendra.
             return (
                 "Recibido 🙏 Una recepcionista te responderá en este chat en breve.\n\n"

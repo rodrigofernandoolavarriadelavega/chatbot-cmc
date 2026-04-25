@@ -498,6 +498,11 @@ async def admin_reply(request: Request, _: str = Depends(require_admin)):
     # "Seguimos atentos" automáticos. Sin esto el bot mandaba auto-replies
     # mientras la recepcionista ya estaba en la conversación.
     _data["msgs_sin_respuesta"] = 0
+    # Marca que la recepcionista YA habló al menos una vez en esta sesión.
+    # Sin esto el contador se reseteaba a 0 y el siguiente msg del paciente
+    # volvía a disparar "Recibido 🙏" después de cada respuesta humana.
+    # Ver caso real 56975932459 (2026-04-23): 10 acks repetidos.
+    _data["human_replied"] = True
     _save_sess_for_takeover(phone, "HUMAN_TAKEOVER", _data)
     log_message(phone, "out", f"[Recepcionista] {message}", state, canal=canal, wamid=wamid)
     log_event(phone, "recepcionista_respondio", {"mensaje": message[:200]})
