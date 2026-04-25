@@ -635,7 +635,7 @@ async def enviar_cumpleanos(send_fn):
                 tip = "\n\nEs un buen momento para agendar tu chequeo preventivo anual."
 
             msg = (
-                f"¡Feliz cumpleaños, {saludo}! 🎂🎉{edad_txt}\n\n"
+                f"¡Feliz cumpleaños{(", " + saludo) if saludo else ""}! 🎂🎉{edad_txt}\n\n"
                 "Todo el equipo del *Centro Médico Carampangue* te desea un excelente día.\n\n"
                 f"Tu salud es lo más importante.{tip}\n\n"
                 "¿Aprovechas de agendar tu chequeo preventivo?"
