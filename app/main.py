@@ -697,22 +697,34 @@ def _periodo_to_fecha_desde(periodo: str) -> str | None:
     return None  # todos
 
 
+def _resolver_rango(periodo: str | None, desde: str | None, hasta: str | None) -> tuple[str | None, str | None]:
+    """Devuelve (fecha_desde, fecha_hasta). Rango explícito gana sobre preset."""
+    import re
+    valido = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+    d = desde if desde and valido.match(desde) else None
+    h = hasta if hasta and valido.match(hasta) else None
+    if d or h:
+        return d, h
+    return _periodo_to_fecha_desde(periodo or "todos"), None
+
+
 @app.get("/api/seo/cruces")
-def seo_cruces_api(periodo: str = "todos"):
+def seo_cruces_api(periodo: str = "todos", desde: str | None = None, hasta: str | None = None):
     """Cruce de pacientes entre profesionales.
 
     Para cada profesional A, lista los profesionales B con los que comparte
     pacientes, ordenado por # pacientes en común. Sirve al tab "Cruces" del
     dashboard SEO para detectar oportunidades de cross-sell.
 
-    `periodo` ∈ {hoy, semana, mes, año, todos}.
+    `periodo` ∈ {hoy, semana, mes, año, todos}. Si se pasan `desde`/`hasta`
+    en YYYY-MM-DD, anulan el preset.
     """
     import sqlite3
     from medilink import PROFESIONALES as _PROFS_BOOKING
     from pathlib import Path
 
     PROFESIONALES = {**HIST_PROFESIONALES, **_PROFS_BOOKING}
-    fecha_desde = _periodo_to_fecha_desde(periodo)
+    fecha_desde, fecha_hasta = _resolver_rango(periodo, desde, hasta)
 
     db_path = Path(__file__).parent.parent / "data" / "heatmap_cache.db"
     if not db_path.exists():
@@ -721,9 +733,15 @@ def seo_cruces_api(periodo: str = "todos"):
     # Construye filtro de fecha y parámetros como strings/binds
     fecha_clause = ""
     params: tuple = ()
-    if fecha_desde:
+    if fecha_desde and fecha_hasta:
+        fecha_clause = " AND fecha BETWEEN ? AND ?"
+        params = (fecha_desde, fecha_hasta)
+    elif fecha_desde:
         fecha_clause = " AND fecha >= ?"
         params = (fecha_desde,)
+    elif fecha_hasta:
+        fecha_clause = " AND fecha <= ?"
+        params = (fecha_hasta,)
 
     conn = sqlite3.connect(str(db_path))
     try:
@@ -752,7 +770,7 @@ def seo_cruces_api(periodo: str = "todos"):
               {fecha_clause.replace('fecha', 'a.fecha')}
               {fecha_clause.replace('fecha', 'b.fecha')}
             GROUP BY a.id_profesional, b.id_profesional
-        """, params + params if fecha_desde else ()).fetchall()
+        """, params + params).fetchall()
 
         # Pacientes con >1 profesional distinto + atenciones de esos pacientes
         row = conn.execute(f"""
@@ -956,6 +974,7 @@ def seo_cruces_api(periodo: str = "todos"):
     return {
         "periodo": periodo,
         "fecha_desde": fecha_desde,
+        "fecha_hasta": fecha_hasta,
         "total_pacientes": total_pac,
         "total_atenciones": total_citas,
         "pacientes_multi_profesional": pac_multi,
@@ -1145,7 +1164,8 @@ def seo_meta_api(dias: int = 30):
 
 
 @app.get("/api/seo/cruce-pacientes")
-def seo_cruce_pacientes_api(prof_a: int, prof_b: int, periodo: str = "todos"):
+def seo_cruce_pacientes_api(prof_a: int, prof_b: int, periodo: str = "todos",
+                             desde: str | None = None, hasta: str | None = None):
     """Lista de pacientes que se atienden con prof_a Y prof_b en el periodo.
 
     Devuelve nombre, RUT, # citas con cada profesional, $ estimado por
@@ -1156,7 +1176,7 @@ def seo_cruce_pacientes_api(prof_a: int, prof_b: int, periodo: str = "todos"):
     from pathlib import Path
 
     PROFESIONALES = {**HIST_PROFESIONALES, **_PROFS_BOOKING}
-    fecha_desde = _periodo_to_fecha_desde(periodo)
+    fecha_desde, fecha_hasta = _resolver_rango(periodo, desde, hasta)
     if prof_a not in PROFESIONALES or prof_b not in PROFESIONALES:
         return {"error": "profesional no reconocido"}
 
@@ -1169,8 +1189,18 @@ def seo_cruce_pacientes_api(prof_a: int, prof_b: int, periodo: str = "todos"):
     if not db_path.exists():
         return {"error": "no cache"}
 
-    fecha_clause = " AND fecha >= ?" if fecha_desde else ""
-    base_params: list = [fecha_desde] if fecha_desde else []
+    if fecha_desde and fecha_hasta:
+        fecha_clause = " AND fecha BETWEEN ? AND ?"
+        base_params: list = [fecha_desde, fecha_hasta]
+    elif fecha_desde:
+        fecha_clause = " AND fecha >= ?"
+        base_params = [fecha_desde]
+    elif fecha_hasta:
+        fecha_clause = " AND fecha <= ?"
+        base_params = [fecha_hasta]
+    else:
+        fecha_clause = ""
+        base_params = []
 
     conn = sqlite3.connect(str(db_path))
     try:
@@ -1229,6 +1259,7 @@ def seo_cruce_pacientes_api(prof_a: int, prof_b: int, periodo: str = "todos"):
     return {
         "periodo": periodo,
         "fecha_desde": fecha_desde,
+        "fecha_hasta": fecha_hasta,
         "prof_a": {"id": prof_a, "nombre": info_a["nombre"], "especialidad": info_a["especialidad"], "precio": precio_a},
         "prof_b": {"id": prof_b, "nombre": info_b["nombre"], "especialidad": info_b["especialidad"], "precio": precio_b},
         "pacientes": pacientes,

@@ -391,6 +391,13 @@
         <button class="cruces-periodo px-3 py-1.5 text-xs rounded-full border border-slate-300 hover:bg-slate-100" data-periodo="mes">Mes</button>
         <button class="cruces-periodo px-3 py-1.5 text-xs rounded-full border border-slate-300 hover:bg-slate-100" data-periodo="año">Año</button>
         <button class="cruces-periodo px-3 py-1.5 text-xs rounded-full border border-slate-300 bg-slate-800 text-white" data-periodo="todos">Todos</button>
+        <span class="text-slate-300 mx-2">|</span>
+        <span class="text-xs uppercase font-semibold text-slate-500">Rango:</span>
+        <input type="date" id="cruces-desde" class="border border-slate-300 rounded px-2 py-1 text-xs">
+        <span class="text-xs text-slate-400">a</span>
+        <input type="date" id="cruces-hasta" class="border border-slate-300 rounded px-2 py-1 text-xs">
+        <button id="cruces-aplicar" class="px-3 py-1.5 text-xs rounded-full bg-emerald-600 text-white hover:bg-emerald-700">Aplicar</button>
+        <button id="cruces-limpiar" class="px-2 py-1.5 text-xs text-slate-500 hover:text-slate-700">Limpiar</button>
       </div>
       <p class="text-sm text-slate-500 mb-5">Para cada profesional, qué otros profesionales atienden a sus mismos pacientes. Detecta oportunidades reales de cross-sell (ej. pacientes de Olavarría que también van a kine o nutrición).</p>
 
@@ -1322,7 +1329,19 @@ DATA.wins.forEach(w => {
 // Cruces de pacientes entre profesionales — fetch dinámico desde /api/seo/cruces
 let _crucesData = null;
 let _crucesPeriodo = 'todos';
+let _crucesDesde = '';
+let _crucesHasta = '';
 const _fmtCLP = n => '$' + (n || 0).toLocaleString('es-CL');
+function _crucesQS() {
+  const p = new URLSearchParams();
+  if (_crucesDesde || _crucesHasta) {
+    if (_crucesDesde) p.set('desde', _crucesDesde);
+    if (_crucesHasta) p.set('hasta', _crucesHasta);
+  } else {
+    p.set('periodo', _crucesPeriodo);
+  }
+  return p.toString();
+}
 function renderCrucesProfesional() {
   if (!_crucesData) return;
   const sel = document.getElementById('cruces-select');
@@ -1370,7 +1389,7 @@ function abrirModalCruce(profA, profB) {
   const tbody = document.getElementById('cruce-modal-tbody');
   tbody.innerHTML = '<tr><td colspan="9" class="px-3 py-6 text-center text-slate-400">Cargando…</td></tr>';
   modal.classList.remove('hidden');
-  fetch(`/api/seo/cruce-pacientes?prof_a=${profA}&prof_b=${profB}&periodo=${_crucesPeriodo}`)
+  fetch(`/api/seo/cruce-pacientes?prof_a=${profA}&prof_b=${profB}&${_crucesQS()}`)
     .then(r => r.ok ? r.json() : Promise.reject(r.status))
     .then(d => {
       if (!d || d.error) { tbody.innerHTML = '<tr><td colspan="9" class="px-3 py-6 text-center text-rose-500">Error</td></tr>'; return; }
@@ -1565,12 +1584,15 @@ document.getElementById('meta-dias').addEventListener('change', loadMeta);
 loadMeta();
 
 function loadCruces() {
-  fetch('/api/seo/cruces?periodo=' + _crucesPeriodo)
+  fetch('/api/seo/cruces?' + _crucesQS())
   .then(r => r.ok ? r.json() : Promise.reject(r.status))
   .then(data => {
     if (!data || data.error) return;
     _crucesData = data;
-    document.getElementById('cruces-fuente').textContent = '🟢 periodo: ' + data.periodo + (data.fecha_desde ? ' · desde ' + data.fecha_desde : '');
+    const tagPeriodo = (data.fecha_desde || data.fecha_hasta)
+      ? 'rango: ' + (data.fecha_desde || '—') + ' a ' + (data.fecha_hasta || 'hoy')
+      : 'periodo: ' + data.periodo;
+    document.getElementById('cruces-fuente').textContent = '🟢 ' + tagPeriodo;
     document.getElementById('cruces-multi').textContent = data.pacientes_multi_profesional.toLocaleString('es-CL');
     document.getElementById('cruces-pct').textContent = data.pct_multi + '% del total · ' + data.atenciones_multi_profesional.toLocaleString('es-CL') + ' atenciones';
     document.getElementById('cruces-multi-esp').textContent = data.pacientes_multi_especialidad.toLocaleString('es-CL');
@@ -1677,16 +1699,41 @@ function loadCruces() {
 }
 
 // Periodo buttons
+function _resetPeriodoBtns(activo) {
+  document.querySelectorAll('.cruces-periodo').forEach(b => {
+    b.classList.remove('bg-slate-800', 'text-white');
+    if (b.dataset.periodo === activo) b.classList.add('bg-slate-800', 'text-white');
+  });
+}
 document.querySelectorAll('.cruces-periodo').forEach(btn => {
   btn.addEventListener('click', () => {
     _crucesPeriodo = btn.dataset.periodo;
-    document.querySelectorAll('.cruces-periodo').forEach(b => {
-      b.classList.remove('bg-slate-800', 'text-white');
-      b.classList.add('border-slate-300');
-    });
-    btn.classList.add('bg-slate-800', 'text-white');
+    _crucesDesde = '';
+    _crucesHasta = '';
+    document.getElementById('cruces-desde').value = '';
+    document.getElementById('cruces-hasta').value = '';
+    _resetPeriodoBtns(_crucesPeriodo);
     loadCruces();
   });
+});
+document.getElementById('cruces-aplicar').addEventListener('click', () => {
+  const d = document.getElementById('cruces-desde').value;
+  const h = document.getElementById('cruces-hasta').value;
+  if (!d && !h) return;
+  if (d && h && d > h) { alert('Fecha "Desde" no puede ser posterior a "Hasta"'); return; }
+  _crucesDesde = d;
+  _crucesHasta = h;
+  _resetPeriodoBtns(null);
+  loadCruces();
+});
+document.getElementById('cruces-limpiar').addEventListener('click', () => {
+  _crucesDesde = '';
+  _crucesHasta = '';
+  _crucesPeriodo = 'todos';
+  document.getElementById('cruces-desde').value = '';
+  document.getElementById('cruces-hasta').value = '';
+  _resetPeriodoBtns('todos');
+  loadCruces();
 });
 loadCruces();
 </script>
