@@ -384,6 +384,14 @@
         <h3 class="font-semibold">Cruces de pacientes entre profesionales</h3>
         <span class="text-xs text-slate-500" id="cruces-fuente">—</span>
       </div>
+      <div class="flex flex-wrap items-center gap-2 mb-4 pb-4 border-b border-slate-100">
+        <span class="text-xs uppercase font-semibold text-slate-500 mr-2">Periodo:</span>
+        <button class="cruces-periodo px-3 py-1.5 text-xs rounded-full border border-slate-300 hover:bg-slate-100" data-periodo="hoy">Hoy</button>
+        <button class="cruces-periodo px-3 py-1.5 text-xs rounded-full border border-slate-300 hover:bg-slate-100" data-periodo="semana">Semana</button>
+        <button class="cruces-periodo px-3 py-1.5 text-xs rounded-full border border-slate-300 hover:bg-slate-100" data-periodo="mes">Mes</button>
+        <button class="cruces-periodo px-3 py-1.5 text-xs rounded-full border border-slate-300 hover:bg-slate-100" data-periodo="año">Año</button>
+        <button class="cruces-periodo px-3 py-1.5 text-xs rounded-full border border-slate-300 bg-slate-800 text-white" data-periodo="todos">Todos</button>
+      </div>
       <p class="text-sm text-slate-500 mb-5">Para cada profesional, qué otros profesionales atienden a sus mismos pacientes. Detecta oportunidades reales de cross-sell (ej. pacientes de Olavarría que también van a kine o nutrición).</p>
 
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
@@ -419,6 +427,26 @@
             <div class="text-2xl font-bold text-amber-900" id="cruces-intra">—</div>
             <div class="text-xs text-amber-700" id="cruces-intra-pct">—</div>
           </div>
+        </div>
+      </div>
+
+      <div class="mb-6">
+        <h4 class="font-semibold text-sm mb-3">Profesionales: pacientes, atenciones e ingresos estimados</h4>
+        <p class="text-xs text-slate-500 mb-2">Monto estimado = atenciones × precio particular promedio de la especialidad. Asume sesiones completadas y pago particular.</p>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 text-slate-600 uppercase text-xs">
+              <tr>
+                <th class="px-3 py-2 text-left">Profesional</th>
+                <th class="px-3 py-2 text-left">Especialidad</th>
+                <th class="px-3 py-2 text-right">Pacientes</th>
+                <th class="px-3 py-2 text-right">Atenciones</th>
+                <th class="px-3 py-2 text-right">$ estimado</th>
+                <th class="px-3 py-2 text-left">Distribución</th>
+              </tr>
+            </thead>
+            <tbody id="cruces-profs-tbody" class="divide-y divide-slate-100"></tbody>
+          </table>
         </div>
       </div>
 
@@ -501,10 +529,53 @@
               <th class="px-4 py-3 text-right">Pacientes en común</th>
               <th class="px-4 py-3 text-right">% sobre total</th>
               <th class="px-4 py-3 text-left">Distribución</th>
+              <th class="px-4 py-3 text-center">Detalle</th>
             </tr>
           </thead>
           <tbody id="cruces-tbody" class="divide-y divide-slate-100"></tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Modal drill-down: pacientes de un cruce -->
+    <div id="cruce-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-start justify-center p-6 overflow-y-auto">
+      <div class="bg-white rounded-xl max-w-5xl w-full p-6 my-6">
+        <div class="flex items-baseline justify-between mb-3">
+          <h3 class="font-semibold text-lg" id="cruce-modal-title">—</h3>
+          <button id="cruce-modal-close" class="text-slate-400 hover:text-slate-700 text-2xl leading-none">&times;</button>
+        </div>
+        <div class="grid grid-cols-3 gap-3 mb-4">
+          <div class="bg-slate-50 p-3 rounded">
+            <div class="text-xs uppercase text-slate-500">Pacientes</div>
+            <div class="text-xl font-bold" id="cruce-modal-pacs">—</div>
+          </div>
+          <div class="bg-slate-50 p-3 rounded">
+            <div class="text-xs uppercase text-slate-500">Atenciones totales</div>
+            <div class="text-xl font-bold" id="cruce-modal-atens">—</div>
+          </div>
+          <div class="bg-emerald-50 p-3 rounded">
+            <div class="text-xs uppercase text-emerald-700">$ estimado total</div>
+            <div class="text-xl font-bold text-emerald-800" id="cruce-modal-monto">—</div>
+          </div>
+        </div>
+        <div class="overflow-x-auto max-h-[60vh]">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 text-slate-600 uppercase text-xs sticky top-0">
+              <tr>
+                <th class="px-3 py-2 text-left">Paciente</th>
+                <th class="px-3 py-2 text-left">RUT</th>
+                <th class="px-3 py-2 text-left">Comuna</th>
+                <th class="px-3 py-2 text-right" id="cruce-modal-th-a">Citas A</th>
+                <th class="px-3 py-2 text-right" id="cruce-modal-th-b">Citas B</th>
+                <th class="px-3 py-2 text-right">$ A</th>
+                <th class="px-3 py-2 text-right">$ B</th>
+                <th class="px-3 py-2 text-right">$ total</th>
+                <th class="px-3 py-2 text-left">Última cita</th>
+              </tr>
+            </thead>
+            <tbody id="cruce-modal-tbody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -1246,6 +1317,8 @@ DATA.wins.forEach(w => {
 
 // Cruces de pacientes entre profesionales — fetch dinámico desde /api/seo/cruces
 let _crucesData = null;
+let _crucesPeriodo = 'todos';
+const _fmtCLP = n => '$' + (n || 0).toLocaleString('es-CL');
 function renderCrucesProfesional() {
   if (!_crucesData) return;
   const sel = document.getElementById('cruces-select');
@@ -1276,10 +1349,67 @@ function renderCrucesProfesional() {
       <td class="px-4 py-3 text-right font-semibold">${c.comunes.toLocaleString('es-CL')}</td>
       <td class="px-4 py-3 text-right text-slate-500">${c.pct}%</td>
       <td class="px-4 py-3"><div class="bg-blue-100 rounded h-2" style="width:${w}%"></div></td>
+      <td class="px-4 py-3 text-center">
+        <button class="cruce-detalle-btn text-blue-600 hover:underline text-xs"
+                data-prof-a="${profId}" data-prof-b="${c.id}">Ver pacientes</button>
+      </td>
     `;
     tbody.appendChild(tr);
   });
+  document.querySelectorAll('.cruce-detalle-btn').forEach(btn => {
+    btn.addEventListener('click', () => abrirModalCruce(btn.dataset.profA, btn.dataset.profB));
+  });
 }
+
+function abrirModalCruce(profA, profB) {
+  const modal = document.getElementById('cruce-modal');
+  const tbody = document.getElementById('cruce-modal-tbody');
+  tbody.innerHTML = '<tr><td colspan="9" class="px-3 py-6 text-center text-slate-400">Cargando…</td></tr>';
+  modal.classList.remove('hidden');
+  fetch(`/api/seo/cruce-pacientes?prof_a=${profA}&prof_b=${profB}&periodo=${_crucesPeriodo}`)
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(d => {
+      if (!d || d.error) { tbody.innerHTML = '<tr><td colspan="9" class="px-3 py-6 text-center text-rose-500">Error</td></tr>'; return; }
+      document.getElementById('cruce-modal-title').innerHTML =
+        `${d.prof_a.nombre} <span class="text-slate-400">×</span> ${d.prof_b.nombre} <span class="text-xs text-slate-500 font-normal">· periodo: ${d.periodo}</span>`;
+      document.getElementById('cruce-modal-pacs').textContent  = d.total_pacientes.toLocaleString('es-CL');
+      document.getElementById('cruce-modal-atens').textContent = d.total_atenciones.toLocaleString('es-CL');
+      document.getElementById('cruce-modal-monto').textContent = _fmtCLP(d.monto_total_estimado);
+      document.getElementById('cruce-modal-th-a').textContent = `Citas ${d.prof_a.nombre.split(' ').slice(-1)[0]}`;
+      document.getElementById('cruce-modal-th-b').textContent = `Citas ${d.prof_b.nombre.split(' ').slice(-1)[0]}`;
+      tbody.innerHTML = '';
+      if (!d.pacientes.length) {
+        tbody.innerHTML = '<tr><td colspan="9" class="px-3 py-6 text-center text-slate-400">Sin pacientes en este periodo.</td></tr>';
+        return;
+      }
+      d.pacientes.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50';
+        tr.innerHTML = `
+          <td class="px-3 py-2 font-medium">${p.nombre}</td>
+          <td class="px-3 py-2 text-slate-600 text-xs">${p.rut}</td>
+          <td class="px-3 py-2 text-slate-600 text-xs">${p.comuna}</td>
+          <td class="px-3 py-2 text-right">${p.citas_a}</td>
+          <td class="px-3 py-2 text-right">${p.citas_b}</td>
+          <td class="px-3 py-2 text-right text-slate-500">${_fmtCLP(p.monto_a)}</td>
+          <td class="px-3 py-2 text-right text-slate-500">${_fmtCLP(p.monto_b)}</td>
+          <td class="px-3 py-2 text-right font-semibold text-emerald-700">${_fmtCLP(p.monto_total)}</td>
+          <td class="px-3 py-2 text-xs text-slate-500">${p.ultima_cita}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    })
+    .catch(err => {
+      console.warn('cruce-pacientes failed:', err);
+      tbody.innerHTML = '<tr><td colspan="9" class="px-3 py-6 text-center text-rose-500">Error al cargar.</td></tr>';
+    });
+}
+document.getElementById('cruce-modal-close').addEventListener('click', () => {
+  document.getElementById('cruce-modal').classList.add('hidden');
+});
+document.getElementById('cruce-modal').addEventListener('click', (e) => {
+  if (e.target.id === 'cruce-modal') e.target.classList.add('hidden');
+});
 function renderTopPares() {
   if (!_crucesData) return;
   const otraEsp = document.getElementById('pares-otra-esp').checked;
@@ -1430,11 +1560,13 @@ function renderMeta(d) {
 document.getElementById('meta-dias').addEventListener('change', loadMeta);
 loadMeta();
 
-fetch('/api/seo/cruces')
+function loadCruces() {
+  fetch('/api/seo/cruces?periodo=' + _crucesPeriodo)
   .then(r => r.ok ? r.json() : Promise.reject(r.status))
   .then(data => {
     if (!data || data.error) return;
     _crucesData = data;
+    document.getElementById('cruces-fuente').textContent = '🟢 periodo: ' + data.periodo + (data.fecha_desde ? ' · desde ' + data.fecha_desde : '');
     document.getElementById('cruces-multi').textContent = data.pacientes_multi_profesional.toLocaleString('es-CL');
     document.getElementById('cruces-pct').textContent = data.pct_multi + '% del total · ' + data.atenciones_multi_profesional.toLocaleString('es-CL') + ' atenciones';
     document.getElementById('cruces-multi-esp').textContent = data.pacientes_multi_especialidad.toLocaleString('es-CL');
@@ -1498,6 +1630,7 @@ fetch('/api/seo/cruces')
     });
     document.getElementById('cruces-fuente').textContent = '🟢 live · cache local';
     const sel = document.getElementById('cruces-select');
+    const prevSel = sel.value;
     sel.innerHTML = '';
     data.profesionales.forEach(p => {
       const opt = document.createElement('option');
@@ -1505,14 +1638,53 @@ fetch('/api/seo/cruces')
       opt.textContent = `${p.nombre} — ${p.especialidad} (${p.pacientes})`;
       sel.appendChild(opt);
     });
-    sel.addEventListener('change', renderCrucesProfesional);
-    document.getElementById('cruces-otra-esp').addEventListener('change', renderCrucesProfesional);
-    document.getElementById('cruces-topn').addEventListener('change', renderCrucesProfesional);
-    document.getElementById('pares-otra-esp').addEventListener('change', renderTopPares);
+    if (prevSel) sel.value = prevSel;
+
+    // Tabla profesionales con $ estimado
+    const profsTb = document.getElementById('cruces-profs-tbody');
+    profsTb.innerHTML = '';
+    const maxAten = data.profesionales.length ? Math.max(...data.profesionales.map(p => p.atenciones)) : 1;
+    data.profesionales.forEach(p => {
+      const w = Math.max(2, Math.round(p.atenciones / maxAten * 100));
+      const tr = document.createElement('tr');
+      tr.className = 'hover:bg-slate-50';
+      tr.innerHTML = `
+        <td class="px-3 py-2 font-medium">${p.nombre}</td>
+        <td class="px-3 py-2 text-slate-600">${p.especialidad}</td>
+        <td class="px-3 py-2 text-right">${p.pacientes.toLocaleString('es-CL')}</td>
+        <td class="px-3 py-2 text-right">${p.atenciones.toLocaleString('es-CL')}</td>
+        <td class="px-3 py-2 text-right font-semibold text-emerald-700">${_fmtCLP(p.monto_estimado)}</td>
+        <td class="px-3 py-2"><div class="bg-emerald-100 rounded h-2" style="width:${w}%"></div></td>
+      `;
+      profsTb.appendChild(tr);
+    });
+
+    if (!sel.dataset.bound) {
+      sel.addEventListener('change', renderCrucesProfesional);
+      document.getElementById('cruces-otra-esp').addEventListener('change', renderCrucesProfesional);
+      document.getElementById('cruces-topn').addEventListener('change', renderCrucesProfesional);
+      document.getElementById('pares-otra-esp').addEventListener('change', renderTopPares);
+      sel.dataset.bound = '1';
+    }
     renderCrucesProfesional();
     renderTopPares();
   })
   .catch(err => console.warn('Cruces fetch failed:', err));
+}
+
+// Periodo buttons
+document.querySelectorAll('.cruces-periodo').forEach(btn => {
+  btn.addEventListener('click', () => {
+    _crucesPeriodo = btn.dataset.periodo;
+    document.querySelectorAll('.cruces-periodo').forEach(b => {
+      b.classList.remove('bg-slate-800', 'text-white');
+      b.classList.add('border-slate-300');
+    });
+    btn.classList.add('bg-slate-800', 'text-white');
+    loadCruces();
+  });
+});
+loadCruces();
 </script>
 </body>
 </html>

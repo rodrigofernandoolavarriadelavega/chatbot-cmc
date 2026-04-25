@@ -650,41 +650,97 @@ def seo_geo_api():
     }
 
 
+# ── Cross-sell helpers ───────────────────────────────────────────────────
+HIST_PROFESIONALES = {
+    64: {"nombre": "Dr. Claudio Barraza", "especialidad": "Traumatología"},
+}
+
+# Precio promedio particular por especialidad (CLP). Se usa para estimar
+# el ingreso generado por un paciente. Fuente: SYSTEM_PROMPT del chatbot.
+PRECIOS_ESPECIALIDAD = {
+    "Medicina General":          25000,
+    "Medicina Familiar":         25000,
+    "Otorrinolaringología":      35000,
+    "Cardiología":               40000,
+    "Ginecología":               30000,
+    "Gastroenterología":         40000,
+    "Odontología General":       35000,
+    "Ortodoncia":                30000,
+    "Endodoncia":               150000,
+    "Implantología":            650000,
+    "Estética Facial":           80000,
+    "Masoterapia":               20000,
+    "Kinesiología":              20000,
+    "Nutrición":                 20000,
+    "Psicología Adulto":         20000,
+    "Psicología Infantil":       20000,
+    "Fonoaudiología":            35000,
+    "Matrona":                   30000,
+    "Podología":                 25000,
+    "Ecografía":                 40000,
+    "Traumatología":             35000,
+}
+
+
+def _periodo_to_fecha_desde(periodo: str) -> str | None:
+    """Convierte un periodo label en una fecha mínima YYYY-MM-DD (None = todos)."""
+    from datetime import datetime, timedelta
+    hoy = datetime.now().date()
+    if periodo == "hoy":
+        return hoy.isoformat()
+    if periodo == "semana":
+        return (hoy - timedelta(days=7)).isoformat()
+    if periodo == "mes":
+        return (hoy - timedelta(days=30)).isoformat()
+    if periodo == "año" or periodo == "anio" or periodo == "year":
+        return (hoy - timedelta(days=365)).isoformat()
+    return None  # todos
+
+
 @app.get("/api/seo/cruces")
-def seo_cruces_api():
+def seo_cruces_api(periodo: str = "todos"):
     """Cruce de pacientes entre profesionales.
 
     Para cada profesional A, lista los profesionales B con los que comparte
     pacientes, ordenado por # pacientes en común. Sirve al tab "Cruces" del
     dashboard SEO para detectar oportunidades de cross-sell.
+
+    `periodo` ∈ {hoy, semana, mes, año, todos}.
     """
     import sqlite3
     from medilink import PROFESIONALES as _PROFS_BOOKING
     from pathlib import Path
 
-    # Profesionales históricos no expuestos al chatbot pero presentes en el
-    # caché de citas (deshabilitados temporalmente, retirados, etc.).
-    # Se usan solo para análisis — no afectan agendamiento.
-    HIST_PROFESIONALES = {
-        64: {"nombre": "Dr. Claudio Barraza", "especialidad": "Traumatología"},
-    }
     PROFESIONALES = {**HIST_PROFESIONALES, **_PROFS_BOOKING}
+    fecha_desde = _periodo_to_fecha_desde(periodo)
 
     db_path = Path(__file__).parent.parent / "data" / "heatmap_cache.db"
     if not db_path.exists():
         return {"error": "no cache"}
 
+    # Construye filtro de fecha y parámetros como strings/binds
+    fecha_clause = ""
+    params: tuple = ()
+    if fecha_desde:
+        fecha_clause = " AND fecha >= ?"
+        params = (fecha_desde,)
+
     conn = sqlite3.connect(str(db_path))
     try:
-        # Pacientes únicos por profesional
-        pac_por_prof: dict[int, int] = dict(conn.execute(
-            "SELECT id_profesional, COUNT(DISTINCT id_paciente) "
-            "FROM citas_heatmap WHERE id_profesional IS NOT NULL "
-            "AND id_paciente IS NOT NULL GROUP BY id_profesional"
-        ).fetchall())
+        # Pacientes y atenciones por profesional (en el periodo)
+        pac_por_prof: dict[int, int] = {}
+        cit_por_prof: dict[int, int] = {}
+        for pid, pac, cit in conn.execute(
+            f"SELECT id_profesional, COUNT(DISTINCT id_paciente), COUNT(*) "
+            f"FROM citas_heatmap WHERE id_profesional IS NOT NULL "
+            f"AND id_paciente IS NOT NULL{fecha_clause} GROUP BY id_profesional",
+            params,
+        ).fetchall():
+            pac_por_prof[pid] = pac
+            cit_por_prof[pid] = cit
 
         # Cruces direccionales: (A, B, # pacientes que se atienden con ambos)
-        cruces_raw = conn.execute("""
+        cruces_raw = conn.execute(f"""
             SELECT a.id_profesional, b.id_profesional, COUNT(DISTINCT a.id_paciente)
             FROM citas_heatmap a
             JOIN citas_heatmap b
@@ -693,53 +749,62 @@ def seo_cruces_api():
             WHERE a.id_profesional IS NOT NULL
               AND b.id_profesional IS NOT NULL
               AND a.id_paciente IS NOT NULL
+              {fecha_clause.replace('fecha', 'a.fecha')}
+              {fecha_clause.replace('fecha', 'b.fecha')}
             GROUP BY a.id_profesional, b.id_profesional
-        """).fetchall()
+        """, params + params if fecha_desde else ()).fetchall()
 
         # Pacientes con >1 profesional distinto + atenciones de esos pacientes
-        row = conn.execute("""
+        row = conn.execute(f"""
             SELECT COUNT(*), COALESCE(SUM(citas), 0)
             FROM (
                 SELECT id_paciente, COUNT(*) AS citas
                 FROM citas_heatmap
-                WHERE id_paciente IS NOT NULL AND id_profesional IS NOT NULL
+                WHERE id_paciente IS NOT NULL AND id_profesional IS NOT NULL{fecha_clause}
                 GROUP BY id_paciente
                 HAVING COUNT(DISTINCT id_profesional) > 1
             )
-        """).fetchone()
+        """, params).fetchone()
         pac_multi = row[0] if row else 0
         atenciones_multi = row[1] if row else 0
 
         # Pacientes con >1 ESPECIALIDAD distinta (cross-sell verdadero)
-        # Necesita el mapeo id_profesional → especialidad. Lo hacemos en Python.
         prof_especs_rows = conn.execute(
-            "SELECT id_paciente, id_profesional FROM citas_heatmap "
-            "WHERE id_paciente IS NOT NULL AND id_profesional IS NOT NULL"
+            f"SELECT id_paciente, id_profesional FROM citas_heatmap "
+            f"WHERE id_paciente IS NOT NULL AND id_profesional IS NOT NULL{fecha_clause}",
+            params,
         ).fetchall()
 
         total_pac = conn.execute(
-            "SELECT COUNT(DISTINCT id_paciente) FROM citas_heatmap WHERE id_paciente IS NOT NULL"
+            f"SELECT COUNT(DISTINCT id_paciente) FROM citas_heatmap "
+            f"WHERE id_paciente IS NOT NULL{fecha_clause}",
+            params,
         ).fetchone()[0]
         total_citas = conn.execute(
-            "SELECT COUNT(*) FROM citas_heatmap "
-            "WHERE id_paciente IS NOT NULL AND id_profesional IS NOT NULL"
+            f"SELECT COUNT(*) FROM citas_heatmap "
+            f"WHERE id_paciente IS NOT NULL AND id_profesional IS NOT NULL{fecha_clause}",
+            params,
         ).fetchone()[0]
     finally:
         conn.close()
 
-    # Profesionales activos (con al menos 1 paciente)
+    # Profesionales activos (con al menos 1 paciente en el periodo)
     profesionales = []
     for pid, info in PROFESIONALES.items():
         n = pac_por_prof.get(pid, 0)
         if n == 0:
             continue
+        cit = cit_por_prof.get(pid, 0)
+        precio = PRECIOS_ESPECIALIDAD.get(info["especialidad"], 25000)
         profesionales.append({
             "id": pid,
             "nombre": info["nombre"],
             "especialidad": info["especialidad"],
             "pacientes": n,
+            "atenciones": cit,
+            "monto_estimado": cit * precio,
         })
-    profesionales.sort(key=lambda x: x["pacientes"], reverse=True)
+    profesionales.sort(key=lambda x: x["atenciones"], reverse=True)
 
     # Cruces agrupados por profesional A
     cruces: dict[str, list] = {}
@@ -872,6 +937,8 @@ def seo_cruces_api():
     ) if pac_esps else 0
 
     return {
+        "periodo": periodo,
+        "fecha_desde": fecha_desde,
         "total_pacientes": total_pac,
         "total_atenciones": total_citas,
         "pacientes_multi_profesional": pac_multi,
@@ -1057,6 +1124,100 @@ def seo_meta_api(dias: int = 30):
         "delivery": delivery,
         "templates": templates,
         "serie": serie,
+    }
+
+
+@app.get("/api/seo/cruce-pacientes")
+def seo_cruce_pacientes_api(prof_a: int, prof_b: int, periodo: str = "todos"):
+    """Lista de pacientes que se atienden con prof_a Y prof_b en el periodo.
+
+    Devuelve nombre, RUT, # citas con cada profesional, $ estimado por
+    cada uno y total. Usado para drill-down del tab Cruces.
+    """
+    import sqlite3
+    from medilink import PROFESIONALES as _PROFS_BOOKING
+    from pathlib import Path
+
+    PROFESIONALES = {**HIST_PROFESIONALES, **_PROFS_BOOKING}
+    fecha_desde = _periodo_to_fecha_desde(periodo)
+    if prof_a not in PROFESIONALES or prof_b not in PROFESIONALES:
+        return {"error": "profesional no reconocido"}
+
+    info_a = PROFESIONALES[prof_a]
+    info_b = PROFESIONALES[prof_b]
+    precio_a = PRECIOS_ESPECIALIDAD.get(info_a["especialidad"], 25000)
+    precio_b = PRECIOS_ESPECIALIDAD.get(info_b["especialidad"], 25000)
+
+    db_path = Path(__file__).parent.parent / "data" / "heatmap_cache.db"
+    if not db_path.exists():
+        return {"error": "no cache"}
+
+    fecha_clause = " AND fecha >= ?" if fecha_desde else ""
+    base_params: list = [fecha_desde] if fecha_desde else []
+
+    conn = sqlite3.connect(str(db_path))
+    try:
+        # Pacientes que tienen ≥1 cita con A Y ≥1 cita con B
+        rows = conn.execute(
+            f"""
+            SELECT p.id, COALESCE(p.nombre,'') || ' ' || COALESCE(p.apellidos,'') AS nombre,
+                   p.rut, p.comuna, p.celular,
+                   (SELECT COUNT(*) FROM citas_heatmap c
+                    WHERE c.id_paciente = p.id AND c.id_profesional = ?{fecha_clause}) AS cit_a,
+                   (SELECT COUNT(*) FROM citas_heatmap c
+                    WHERE c.id_paciente = p.id AND c.id_profesional = ?{fecha_clause}) AS cit_b,
+                   (SELECT MAX(fecha) FROM citas_heatmap c
+                    WHERE c.id_paciente = p.id AND c.id_profesional IN (?, ?){fecha_clause}) AS ultima
+            FROM pacientes_heatmap p
+            WHERE p.id IN (
+                SELECT id_paciente FROM citas_heatmap
+                WHERE id_profesional = ?{fecha_clause}
+            )
+            AND p.id IN (
+                SELECT id_paciente FROM citas_heatmap
+                WHERE id_profesional = ?{fecha_clause}
+            )
+            ORDER BY (cit_a + cit_b) DESC
+            """,
+            [prof_a] + base_params  # cit_a subquery
+            + [prof_b] + base_params  # cit_b subquery
+            + [prof_a, prof_b] + base_params  # ultima subquery
+            + [prof_a] + base_params  # outer A
+            + [prof_b] + base_params,  # outer B
+        ).fetchall()
+
+        pacientes = []
+        for pid, nombre, rut, comuna, celular, cit_a, cit_b, ultima in rows:
+            monto_a = cit_a * precio_a
+            monto_b = cit_b * precio_b
+            pacientes.append({
+                "id": pid,
+                "nombre": nombre.strip() or "(sin nombre)",
+                "rut": rut or "—",
+                "comuna": comuna or "—",
+                "celular": celular or "—",
+                "citas_a": cit_a,
+                "citas_b": cit_b,
+                "monto_a": monto_a,
+                "monto_b": monto_b,
+                "monto_total": monto_a + monto_b,
+                "ultima_cita": ultima or "—",
+            })
+    finally:
+        conn.close()
+
+    total_monto = sum(p["monto_total"] for p in pacientes)
+    total_citas = sum(p["citas_a"] + p["citas_b"] for p in pacientes)
+
+    return {
+        "periodo": periodo,
+        "fecha_desde": fecha_desde,
+        "prof_a": {"id": prof_a, "nombre": info_a["nombre"], "especialidad": info_a["especialidad"], "precio": precio_a},
+        "prof_b": {"id": prof_b, "nombre": info_b["nombre"], "especialidad": info_b["especialidad"], "precio": precio_b},
+        "pacientes": pacientes,
+        "total_pacientes": len(pacientes),
+        "total_atenciones": total_citas,
+        "monto_total_estimado": total_monto,
     }
 
 
