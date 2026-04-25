@@ -659,8 +659,16 @@ def seo_cruces_api():
     dashboard SEO para detectar oportunidades de cross-sell.
     """
     import sqlite3
-    from medilink import PROFESIONALES
+    from medilink import PROFESIONALES as _PROFS_BOOKING
     from pathlib import Path
+
+    # Profesionales históricos no expuestos al chatbot pero presentes en el
+    # caché de citas (deshabilitados temporalmente, retirados, etc.).
+    # Se usan solo para análisis — no afectan agendamiento.
+    HIST_PROFESIONALES = {
+        64: {"nombre": "Dr. Claudio Barraza", "especialidad": "Traumatología"},
+    }
+    PROFESIONALES = {**HIST_PROFESIONALES, **_PROFS_BOOKING}
 
     db_path = Path(__file__).parent.parent / "data" / "heatmap_cache.db"
     if not db_path.exists():
