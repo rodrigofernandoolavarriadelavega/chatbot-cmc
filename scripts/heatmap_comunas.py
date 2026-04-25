@@ -16,6 +16,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import sqlite3
 import sys
 import urllib.parse
@@ -351,7 +352,7 @@ def fase_mapa():
                         "ARTURO PEREZ", "ARTURO PÉREZ", "COSTADO RUTA 160"]),
         ("ARAUCO URBANO", ["ARAUCO", "VILLA PEHUEN", "VILLA DON CARLOS", "PORTAL DEL VALLE",
                            "VILLA LOS TRONCOS", "VILLA RADIATA", "LAS ARAUCARIAS",
-                           "VILLA LA PAZ", "VILLA EL MIRADOR", "LAS PEÑAS", "FRESIA",
+                           "VILLA EL MIRADOR", "LAS PEÑAS", "FRESIA",
                            "CAUPOLICAN", "SERRANO", "BLANCO ", "SAN MARTIN",
                            "TUCAPEL", "CALIFORNIA", "COVADONGA", "BOSQUES DE MONTEMAR",
                            "RENE SCHNIER", "ALTO LOS PADRES", "LAS AMAPOLAS",
@@ -362,6 +363,19 @@ def fase_mapa():
         ("COLICO", ["COLICO"]),
     ]
 
+    # Guard: si la dirección menciona explícitamente otra comuna AL FINAL
+    # (típicamente tras coma), no es Arauco. Solo aplicamos a nombres poco
+    # ambiguos (Concepción, Talcahuano, Lota, etc.) y exigimos que aparezcan
+    # como último componente para evitar que "Volcán Osorno" o "Pasaje San
+    # Carlos" disparen falsos positivos.
+    OTRA_COMUNA_FINAL = re.compile(
+        r',\s*(concepci[óo]n|talcahuano|hualp[ée]n|chiguayante|penco|tom[ée]|'
+        r'san pedro de la paz|los [áa]ngeles|chill[áa]n|temuco|valdivia|santiago|'
+        r'vi[ñn]a del mar|valpara[íi]so|rancagua|talca|linares|puerto montt|'
+        r'angol|mulch[ée]n|nacimiento|cabrero|yumbel)\s*\.?\s*$',
+        re.IGNORECASE,
+    )
+
     def detectar_localidad(direccion: str, comuna_norm: str) -> str:
         """Detecta la localidad dentro de Arauco a partir de la dirección."""
         if comuna_norm != "ARAUCO":
@@ -369,10 +383,20 @@ def fase_mapa():
         dir_upper = (direccion or "").upper()
         if not dir_upper or dir_upper == "ARAUCO":
             return "ARAUCO (SIN DETALLE)"
+        # Si la dirección termina con otra comuna explícita, no es de Arauco
+        if OTRA_COMUNA_FINAL.search(direccion or ""):
+            return "FUERA_ARAUCO"
         for localidad, keywords in LOCALIDAD_KEYWORDS:
             for kw in keywords:
-                if kw in dir_upper:
-                    return localidad
+                # Word-boundary match (evita que "PRAT" matchee "PRATAS"),
+                # excepto para keywords que terminan en espacio (que ya fuerzan
+                # límite implícito, ej: "PRAT ", "PATRIA ")
+                if kw.endswith(" "):
+                    if kw in dir_upper:
+                        return localidad
+                else:
+                    if re.search(r'\b' + re.escape(kw) + r'\b', dir_upper):
+                        return localidad
         return "ARAUCO (OTRO)"
 
     # Contar por comuna
@@ -423,9 +447,22 @@ def fase_mapa():
             cu = inferir_comuna_desde_direccion(direccion)
 
         if cu:
-            comuna_counter[cu] += 1
             # Detectar localidad dentro de Arauco
             loc = detectar_localidad(direccion, cu)
+            # Si la dirección menciona explícitamente otra comuna al final,
+            # respetamos eso: re-asignamos el conteo a la otra comuna.
+            if loc == "FUERA_ARAUCO":
+                m = OTRA_COMUNA_FINAL.search(direccion or "")
+                if m:
+                    cu = m.group(1).upper().replace("Á", "A").replace("É", "E").replace("Í", "I").replace("Ó", "O").replace("Ú", "U")
+                    cu = cu.replace("Ñ", "N")
+                comuna_counter[cu] += 1
+                if direccion:
+                    direccion_samples.setdefault(cu, [])
+                    if len(direccion_samples[cu]) < 5:
+                        direccion_samples[cu].append(direccion)
+                continue
+            comuna_counter[cu] += 1
             if loc:
                 localidad_counter[loc] += 1
                 localidad_citas[loc] += n_citas_pac
@@ -469,25 +506,39 @@ def fase_mapa():
     print(f"Con comuna registrada:    {total_con_comuna}")
     print(f"Sin comuna:               {sin_comuna}")
 
-    print(f"\n{'COMUNA':<30} {'PAC.':>6} {'%':>7} {'CITAS':>7}")
-    print("-" * 55)
+    print(f"\n{'COMUNA':<30} {'PAC.':>6} {'%':>7} {'CITAS':>7} {'POBL':>9} {'CAPT.':>8}")
+    print("-" * 75)
     for comuna, count in comuna_counter.most_common():
         pct = count / total_con_comuna * 100 if total_con_comuna else 0
         nc = citas_por_comuna.get(comuna, 0)
+        pob = POBLACION_COMUNA.get(comuna, 0)
+        cap = (count / pob * 100) if pob else None
+        cap_txt = f"{cap:>7.2f}%" if cap is not None else "      —"
+        pob_txt = f"{pob:>9,}" if pob else "        —"
         bar = "█" * max(1, int(pct / 2))
-        print(f"{comuna:<30} {count:>6} {pct:>6.1f}% {nc:>7}  {bar}")
+        print(f"{comuna:<30} {count:>6} {pct:>6.1f}% {nc:>7} {pob_txt} {cap_txt}  {bar}")
 
     if localidad_counter:
         total_arauco = comuna_counter.get("ARAUCO", 0)
-        print(f"\n{'LOCALIDAD (ARAUCO)':<30} {'PAC.':>6} {'% ARAUCO':>9}")
-        print("-" * 50)
+        print(f"\n{'LOCALIDAD (ARAUCO)':<30} {'PAC.':>6} {'% ARAUCO':>9} {'POBL':>7} {'CAPT.':>8}")
+        print("-" * 70)
         for loc, count in localidad_counter.most_common():
             pct = count / total_arauco * 100 if total_arauco else 0
+            pob = POBLACION_LOCALIDAD.get(loc, 0)
+            cap = (count / pob * 100) if pob else None
+            cap_txt = f"{cap:>7.2f}%" if cap is not None else "      —"
+            pob_txt = f"{pob:>7,}" if pob else "      —"
             bar = "█" * max(1, int(pct / 2))
-            print(f"{loc:<30} {count:>6} {pct:>8.1f}%  {bar}")
+            print(f"{loc:<30} {count:>6} {pct:>8.1f}% {pob_txt} {cap_txt}  {bar}")
 
     # Datos para el HTML
     total_arauco = comuna_counter.get("ARAUCO", 0)
+
+    def _pct_captura(pacientes: int, poblacion: int) -> float | None:
+        if not poblacion:
+            return None
+        return round(pacientes / poblacion * 100, 2)
+
     data = {
         "periodo": "Abril 2026",
         "total_citas": total_citas,
@@ -500,6 +551,8 @@ def fase_mapa():
                 "pacientes": count,
                 "porcentaje": round(count / total_con_comuna * 100, 1) if total_con_comuna else 0,
                 "citas": citas_por_comuna.get(comuna, 0),
+                "poblacion": POBLACION_COMUNA.get(comuna, 0),
+                "pct_captura": _pct_captura(count, POBLACION_COMUNA.get(comuna, 0)),
                 "direcciones_ejemplo": direccion_samples.get(comuna, []),
             }
             for comuna, count in comuna_counter.most_common()
@@ -510,6 +563,8 @@ def fase_mapa():
                 "pacientes": count,
                 "citas": localidad_citas.get(loc, 0),
                 "porcentaje": round(count / total_arauco * 100, 1) if total_arauco else 0,
+                "poblacion": POBLACION_LOCALIDAD.get(loc, 0),
+                "pct_captura": _pct_captura(count, POBLACION_LOCALIDAD.get(loc, 0)),
                 "direcciones_ejemplo": localidad_direcciones.get(loc, []),
             }
             for loc, count in localidad_counter.most_common()
@@ -538,6 +593,49 @@ LOCALIDAD_COORDS = {
 }
 
 
+# Población oficial — Censo INE 2017. Comunas (totales) y localidades urbanas
+# dentro de la comuna de Arauco. Útil para calcular % captura del CMC.
+POBLACION_COMUNA = {
+    "ARAUCO": 35841, "CAÑETE": 32394, "CONTULMO": 5652, "CURANILAHUE": 32288,
+    "LEBU": 25522, "LOS ALAMOS": 19805, "TIRUA": 9664,
+    "CONCEPCIÓN": 223574, "CONCEPCION": 223574, "TALCAHUANO": 151749,
+    "HUALPÉN": 86722, "HUALPEN": 86722, "CHIGUAYANTE": 87378,
+    "SAN PEDRO DE LA PAZ": 134773, "CORONEL": 116262, "LOTA": 43535,
+    "PENCO": 50353, "TOMÉ": 56232, "TOME": 56232, "FLORIDA": 12201,
+    "HUALQUI": 23073, "SANTA JUANA": 13989,
+    "LOS ÁNGELES": 202331, "LOS ANGELES": 202331, "NACIMIENTO": 27160,
+    "MULCHÉN": 31094, "MULCHEN": 31094, "ANGOL": 56135, "COLLIPULLI": 23491,
+    "CHILLÁN": 184739, "CHILLAN": 184739, "YUMBEL": 22013, "CABRERO": 30164,
+    "LAJA": 22414, "SAN ROSENDO": 3550, "TUCAPEL": 14148, "ANTUCO": 4083,
+    "QUILLECO": 9658, "SANTA BÁRBARA": 14121, "SANTA BARBARA": 14121,
+    "ALTO BIOBÍO": 5923, "ALTO BIOBIO": 5923, "NEGRETE": 9251,
+    "SANTIAGO": 404495, "TEMUCO": 282415, "VALDIVIA": 166080,
+    "VIÑA DEL MAR": 334248, "VALPARAÍSO": 296655, "VALPARAISO": 296655,
+    "LA SERENA": 221054, "RANCAGUA": 241774, "TALCA": 220357,
+    "LINARES": 93830, "OSORNO": 161460, "PUERTO MONTT": 245902,
+    "SAN CARLOS": 53024, "COELEMU": 16151, "BULNES": 23489,
+    "QUILLÓN": 18120, "QUILLON": 18120, "CHILLÁN VIEJO": 30907,
+    "CHILLAN VIEJO": 30907, "COLICO": 1000,
+    "HUECHURABA": 98671, "PUENTE ALTO": 568106, "MAIPÚ": 521627, "MAIPU": 521627,
+    "LA FLORIDA": 366916, "ÑUÑOA": 208237, "NUNOA": 208237,
+    "PROVIDENCIA": 142079, "LAS CONDES": 294838,
+}
+
+# Población aproximada por localidad urbana dentro de la comuna de Arauco
+# (Censo 2017 a nivel de localidad urbana, redondeado).
+POBLACION_LOCALIDAD = {
+    "ARAUCO URBANO": 26000,
+    "CARAMPANGUE": 4000,
+    "LARAQUETE": 2900,
+    "TUBUL": 1500,
+    "RAMADILLAS": 600,
+    "LLICO": 400,
+    "COLICO": 700,
+    "ARAUCO (SIN DETALLE)": 0,  # no asignada
+    "ARAUCO (OTRO)": 0,         # no asignada
+}
+
+
 def generate_html(data: dict):
     """Genera un HTML interactivo con mapa de calor usando Leaflet."""
     comunas_js = []
@@ -553,6 +651,8 @@ def generate_html(data: dict):
                 "pacientes": item["pacientes"],
                 "citas": item.get("citas", 0),
                 "porcentaje": item["porcentaje"],
+                "poblacion": item.get("poblacion", 0),
+                "pct_captura": item.get("pct_captura"),
                 "direcciones": item.get("direcciones_ejemplo", []),
             })
         else:
@@ -573,6 +673,8 @@ def generate_html(data: dict):
                 "lng": coords[1],
                 "pacientes": item["pacientes"],
                 "porcentaje": item["porcentaje"],
+                "poblacion": item.get("poblacion", 0),
+                "pct_captura": item.get("pct_captura"),
                 "direcciones": item.get("direcciones_ejemplo", []),
             })
 
@@ -632,7 +734,7 @@ def generate_html(data: dict):
 <div class="table-container">
 <table>
   <thead>
-    <tr><th>#</th><th>Comuna</th><th>Pacientes</th><th>Citas</th><th>%</th><th>Distribucion</th></tr>
+    <tr><th>#</th><th>Comuna</th><th>Pacientes</th><th>Citas</th><th>%</th><th>Poblacion</th><th>% Captura</th><th>Distribucion</th></tr>
   </thead>
   <tbody id="tabla-comunas"></tbody>
 </table>
@@ -646,7 +748,7 @@ def generate_html(data: dict):
 <div class="table-container">
 <table>
   <thead>
-    <tr><th>#</th><th>Localidad</th><th>Pacientes</th><th>% de Arauco</th><th>Distribucion</th></tr>
+    <tr><th>#</th><th>Localidad</th><th>Pacientes</th><th>% Arauco</th><th>Poblacion</th><th>% Captura</th><th>Distribucion</th></tr>
   </thead>
   <tbody id="tabla-localidades"></tbody>
 </table>
@@ -713,8 +815,15 @@ const totalPac = allComunas.reduce((s, c) => s + c.pacientes, 0);
 allComunas.forEach((c, i) => {{
   const pct = totalPac ? (c.pacientes / totalPac * 100).toFixed(1) : 0;
   const barW = totalPac ? Math.max(2, c.pacientes / allComunas[0].pacientes * 120) : 0;
+  const pob = c.poblacion || 0;
+  const pobTxt = pob ? pob.toLocaleString('es-CL') : '<span style="color:#64748b">—</span>';
+  const cap = c.pct_captura;
+  const capTxt = (cap !== null && cap !== undefined)
+    ? `<span style="color:${{cap >= 1 ? '#fbbf24' : '#64748b'}}">${{cap.toFixed(2)}}%</span>`
+    : '<span style="color:#64748b">—</span>';
   const row = document.createElement('tr');
   row.innerHTML = `<td>${{i+1}}</td><td>${{c.comuna}}</td><td>${{c.pacientes}}</td><td>${{c.citas || '-'}}</td><td>${{pct}}%</td>
+    <td>${{pobTxt}}</td><td>${{capTxt}}</td>
     <td><div class="bar-bg"><div class="bar" style="width:${{barW}}px"></div></div></td>`;
   tbody.appendChild(row);
 }});
@@ -791,8 +900,15 @@ localidades.sort((a, b) => b.pacientes - a.pacientes);
 const totalLocPac = localidades.reduce((s, l) => s + l.pacientes, 0);
 localidades.forEach((l, i) => {{
   const barW = totalLocPac ? Math.max(2, l.pacientes / localidades[0].pacientes * 120) : 0;
+  const pob = l.poblacion || 0;
+  const pobTxt = pob ? pob.toLocaleString('es-CL') : '<span style="color:#64748b">—</span>';
+  const cap = l.pct_captura;
+  const capTxt = (cap !== null && cap !== undefined)
+    ? `<span style="color:${{cap >= 5 ? '#fbbf24' : (cap >= 1 ? '#38bdf8' : '#64748b')}}">${{cap.toFixed(2)}}%</span>`
+    : '<span style="color:#64748b">—</span>';
   const row = document.createElement('tr');
   row.innerHTML = `<td>${{i+1}}</td><td>${{l.localidad}}</td><td>${{l.pacientes}}</td><td>${{l.porcentaje}}%</td>
+    <td>${{pobTxt}}</td><td>${{capTxt}}</td>
     <td><div class="bar-bg"><div class="bar" style="width:${{barW}}px;background:${{colorsLoc[i % colorsLoc.length]}}"></div></div></td>`;
   tbodyLoc.appendChild(row);
 }});

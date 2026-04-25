@@ -4,9 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mapa de Calor — Pacientes CMC — Abril 2026</title>
-<link rel="icon" type="image/png" href="https://centromedicocarampangue.cl/wp-content/uploads/2025/08/cropped-logo-carampangue.png">
-<link rel="shortcut icon" type="image/png" href="https://centromedicocarampangue.cl/wp-content/uploads/2025/08/cropped-logo-carampangue.png">
-<link rel="apple-touch-icon" href="https://centromedicocarampangue.cl/wp-content/uploads/2025/08/cropped-logo-carampangue.png">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
@@ -20,9 +17,6 @@
   .header { text-align: center; padding: 20px 16px 0; }
   .header h1 { font-size: 1.6rem; color: #38bdf8; }
   .header p { color: #94a3b8; margin-top: 4px; }
-  .nav-links { display: flex; gap: 12px; justify-content: center; margin-top: 10px; }
-  .nav-links a { color: #38bdf8; text-decoration: none; font-size: 0.85rem; padding: 5px 14px; border: 1px solid #334155; border-radius: 6px; transition: all 0.2s; }
-  .nav-links a:hover { background: #334155; }
   .stats { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin: 16px; }
   .stat-card { background: #1e293b; border-radius: 10px; padding: 14px 24px; text-align: center; min-width: 130px; }
   .stat-card .num { font-size: 1.8rem; font-weight: 700; color: #38bdf8; }
@@ -45,18 +39,13 @@
 <div class="header">
   <h1>Mapa de Calor — Pacientes CMC</h1>
   <p>Abril 2026 · Centro Medico Carampangue</p>
-  <div class="nav-links">
-    <a href="/admin/mapa-direcciones">📍 Mapa direcciones</a>
-    <a href="/admin/dashboard">📊 Dashboard KPIs</a>
-    <a href="/admin">← Panel admin</a>
-  </div>
 </div>
 
 <div class="stats">
-  <div class="stat-card"><div class="num">447</div><div class="label">Citas totales</div></div>
-  <div class="stat-card"><div class="num">342</div><div class="label">Pacientes unicos</div></div>
-  <div class="stat-card"><div class="num">299</div><div class="label">Con comuna</div></div>
-  <div class="stat-card"><div class="num">43</div><div class="label">Sin comuna</div></div>
+  <div class="stat-card"><div class="num">6319</div><div class="label">Citas totales</div></div>
+  <div class="stat-card"><div class="num">3280</div><div class="label">Pacientes unicos</div></div>
+  <div class="stat-card"><div class="num">2773</div><div class="label">Con comuna</div></div>
+  <div class="stat-card"><div class="num">507</div><div class="label">Sin comuna</div></div>
 </div>
 
 <div class="section-title">Mapa por Comunas</div>
@@ -65,13 +54,13 @@
 <div class="table-container">
 <table>
   <thead>
-    <tr><th>#</th><th>Comuna</th><th>Pacientes</th><th>Citas</th><th>%</th><th>Distribucion</th></tr>
+    <tr><th>#</th><th>Comuna</th><th>Pacientes</th><th>Citas</th><th>%</th><th>Poblacion</th><th>% Captura</th><th>Distribucion</th></tr>
   </thead>
   <tbody id="tabla-comunas"></tbody>
 </table>
 </div>
 
-
+<div class='sin-coords'><h3>Comunas sin coordenadas (no aparecen en mapa)</h3><p>CERRO ALTO, ARAUCO  -, LOS ALMOS, CONUMO ALTO, NIGUEN, CURANILAHUE., CURANIHUE, LOA ALAMOS, ALAMOS, SAN JOSE COLICO, SAN JOSÉ DE COLICO, CURAMNILAHUE, POBLACIÓN RAMÓN RABAL PSJ ARAUCARIA 050 A, COLCURA, LOS ACACIOS PONIENTE 750 ARAUCO, CURNILAGUE, SANTA FILOMENA S/N, ARA, CURANILHUE, ARAUUCO, LOMA LARGA, PUNTA ARENAS, CALAMA, CRUCE NORTE, LOS ALAMOS.</p></div>
 
 <div class="section-title">Localidades dentro de Arauco</div>
 <div class="map-container"><div id="map2"></div></div>
@@ -79,7 +68,7 @@
 <div class="table-container">
 <table>
   <thead>
-    <tr><th>#</th><th>Localidad</th><th>Pacientes</th><th>% de Arauco</th><th>Distribucion</th></tr>
+    <tr><th>#</th><th>Localidad</th><th>Pacientes</th><th>% Arauco</th><th>Poblacion</th><th>% Captura</th><th>Distribucion</th></tr>
   </thead>
   <tbody id="tabla-localidades"></tbody>
 </table>
@@ -91,8 +80,8 @@
 </div>
 
 <script>
-const comunas = [{"comuna": "ARAUCO", "lat": -37.2467, "lng": -73.3178, "pacientes": 271, "citas": 309, "porcentaje": 90.6, "direcciones": ["Calle conumo", "Conumo Alto S/N, Carampangue", "Cerro colorado s/n", "El Arrayán 188 Villa Bosques de Montemar", "Conumo Alto S/N, Carampangue"]}, {"comuna": "CURANILAHUE", "lat": -37.4744, "lng": -73.3481, "pacientes": 20, "citas": 27, "porcentaje": 6.7, "direcciones": ["san José de cólico", "Av.las estrella s/n San José de colico", "Ortalisa", "Sargento Aldea 1250B, Curanilahue", "San José de colico"]}, {"comuna": "LOS ALAMOS", "lat": -37.62, "lng": -73.47, "pacientes": 3, "citas": 4, "porcentaje": 1.0, "direcciones": ["los alamos", "Fundo cheñeco s/n, San José de colico.", "Los álamos, población Caupolicán los tulipanes 94"]}, {"comuna": "CAÑETE", "lat": -37.8009, "lng": -73.3967, "pacientes": 2, "citas": 2, "porcentaje": 0.7, "direcciones": ["Bella Hortencia 075", "Lautaro"]}, {"comuna": "LOTA", "lat": -37.0833, "lng": -73.15, "pacientes": 1, "citas": 1, "porcentaje": 0.3, "direcciones": ["Población frecia calle villa las estrellas"]}, {"comuna": "CORONEL", "lat": -37.0167, "lng": -73.15, "pacientes": 1, "citas": 1, "porcentaje": 0.3, "direcciones": ["los radales 340"]}, {"comuna": "LEBU", "lat": -37.6083, "lng": -73.65, "pacientes": 1, "citas": 1, "porcentaje": 0.3, "direcciones": ["Yani"]}];
-const sinCoords = [];
+const comunas = [{"comuna": "ARAUCO", "lat": -37.2467, "lng": -73.3178, "pacientes": 2291, "citas": 4107, "porcentaje": 82.6, "poblacion": 35841, "pct_captura": 6.39, "direcciones": ["carlos pratt 291 villa portal del valle", "Pedro prado 5 laraquete", "Ignacio Serrano Casa 27 tubul", "la meseta 264", "Los Robles 297, villa el bosque, Laraquete"]}, {"comuna": "CURANILAHUE", "lat": -37.4744, "lng": -73.3481, "pacientes": 319, "citas": 512, "porcentaje": 11.5, "poblacion": 32288, "pct_captura": 0.99, "direcciones": ["población bernardo ohiggins pasaja a casa392", "Estación Ferrocarril casa 7 Colico Norte", "los castaños 270", "san José de cólico", "población eleuterio ramirez"]}, {"comuna": "LOS ALAMOS", "lat": -37.62, "lng": -73.47, "pacientes": 57, "citas": 107, "porcentaje": 2.1, "poblacion": 19805, "pct_captura": 0.29, "direcciones": ["villa los rios 758", "Avda Caupolicán 24 los Alamos", "Pasaje ita pino 05, población Silvia Chacon", "Los avellanos 145 La Araucana", "Los alerces 76, cerro alto"]}, {"comuna": "LEBU", "lat": -37.6083, "lng": -73.65, "pacientes": 19, "citas": 32, "porcentaje": 0.7, "poblacion": 25522, "pct_captura": 0.07, "direcciones": ["los linges 409", "trancal alto", "Bonilla 01", "lebu", "Junquillo alto 277"]}, {"comuna": "CAÑETE", "lat": -37.8009, "lng": -73.3967, "pacientes": 19, "citas": 38, "porcentaje": 0.7, "poblacion": 32394, "pct_captura": 0.06, "direcciones": ["pasaje los avellanos 012", "Camino Millanao Parcela 2 Los Batros Cañete", "lote 3 parcela 17 peleco lasquila", "Cardenal Raul Silva Enriquez", "Población gajardo sur, calle baldomero lillo 007"]}, {"comuna": "LOTA", "lat": -37.0833, "lng": -73.15, "pacientes": 11, "citas": 23, "porcentaje": 0.4, "poblacion": 43535, "pct_captura": 0.03, "direcciones": ["Brasilia 228 valle colcula", "Villa Camilo Escalona", "Población san martin calle 3 764", "Juan Manuel del Valle N520", "Pasaje san martin 23 lota"]}, {"comuna": "CORONEL", "lat": -37.0167, "lng": -73.15, "pacientes": 11, "citas": 16, "porcentaje": 0.4, "poblacion": 116262, "pct_captura": 0.01, "direcciones": ["Los Cerezo 3405 Laguinillas 3", "Rosa basoalto 291 los jardines de coronel", "Rosa basoalto 291 los jardines de coronel", "Calle wenmapu 5565 villa la posada Coronel", "Villa esperanza 520 salvador allende coronel"]}, {"comuna": "SAN PEDRO DE LA PAZ", "lat": -36.85, "lng": -73.1167, "pacientes": 3, "citas": 5, "porcentaje": 0.1, "poblacion": 134773, "pct_captura": 0.0, "direcciones": ["Pasaje Diego Dublé Urrutia 404", "Volcán Antuco 494 Valle las rosas", "psje 3 casa 3510 villa victoria"]}, {"comuna": "TIRUA", "lat": -38.3333, "lng": -73.5, "pacientes": 2, "citas": 3, "porcentaje": 0.1, "poblacion": 9664, "pct_captura": 0.02, "direcciones": ["sector san Ramón", "sector quirico"]}, {"comuna": "CONCEPCION", "lat": -36.8201, "lng": -73.0444, "pacientes": 2, "citas": 3, "porcentaje": 0.1, "poblacion": 223574, "pct_captura": 0.0, "direcciones": ["angol 47 1207 Concepción", "Los quillayes 67 cosmito"]}, {"comuna": "CONCEPCIÓN", "lat": -36.8201, "lng": -73.0444, "pacientes": 2, "citas": 4, "porcentaje": 0.1, "poblacion": 223574, "pct_captura": 0.0, "direcciones": ["San pedro de la paz", "ANTONIO VARAS 491 DPTO303"]}, {"comuna": "TALCAHUANO", "lat": -36.7167, "lng": -73.1167, "pacientes": 2, "citas": 2, "porcentaje": 0.1, "poblacion": 151749, "pct_captura": 0.0, "direcciones": ["maryland 24caleta tumbes", "psje 9 casa 825"]}, {"comuna": "CONTULMO", "lat": -38.0131, "lng": -73.2292, "pacientes": 2, "citas": 2, "porcentaje": 0.1, "poblacion": 5652, "pct_captura": 0.04, "direcciones": ["Las Araucarias 1598 Contulmo", "esmeralda 548"]}, {"comuna": "VIÑA DEL MAR", "lat": -33.0153, "lng": -71.55, "pacientes": 1, "citas": 1, "porcentaje": 0.0, "poblacion": 334248, "pct_captura": 0.0, "direcciones": ["santa ines 23 norte 1890"]}, {"comuna": "TEMUCO", "lat": -38.7359, "lng": -72.5904, "pacientes": 1, "citas": 1, "porcentaje": 0.0, "poblacion": 282415, "pct_captura": 0.0, "direcciones": ["Temuco chico Pedro de Valdivia"]}];
+const sinCoords = [{"comuna": "CERRO ALTO", "pacientes": 5, "porcentaje": 0.2, "citas": 12}, {"comuna": "ARAUCO  -", "pacientes": 2, "porcentaje": 0.1, "citas": 4}, {"comuna": "LOS ALMOS", "pacientes": 2, "porcentaje": 0.1, "citas": 2}, {"comuna": "CONUMO ALTO", "pacientes": 1, "porcentaje": 0.0, "citas": 2}, {"comuna": "NIGUEN", "pacientes": 1, "porcentaje": 0.0, "citas": 3}, {"comuna": "CURANILAHUE.", "pacientes": 1, "porcentaje": 0.0, "citas": 2}, {"comuna": "CURANIHUE", "pacientes": 1, "porcentaje": 0.0, "citas": 2}, {"comuna": "LOA ALAMOS", "pacientes": 1, "porcentaje": 0.0, "citas": 1}, {"comuna": "ALAMOS", "pacientes": 1, "porcentaje": 0.0, "citas": 7}, {"comuna": "SAN JOSE COLICO", "pacientes": 1, "porcentaje": 0.0, "citas": 2}, {"comuna": "SAN JOSÉ DE COLICO", "pacientes": 1, "porcentaje": 0.0, "citas": 1}, {"comuna": "CURAMNILAHUE", "pacientes": 1, "porcentaje": 0.0, "citas": 1}, {"comuna": "POBLACIÓN RAMÓN RABAL PSJ ARAUCARIA 050 A", "pacientes": 1, "porcentaje": 0.0, "citas": 1}, {"comuna": "COLCURA", "pacientes": 1, "porcentaje": 0.0, "citas": 2}, {"comuna": "LOS ACACIOS PONIENTE 750 ARAUCO", "pacientes": 1, "porcentaje": 0.0, "citas": 5}, {"comuna": "CURNILAGUE", "pacientes": 1, "porcentaje": 0.0, "citas": 2}, {"comuna": "SANTA FILOMENA S/N", "pacientes": 1, "porcentaje": 0.0, "citas": 1}, {"comuna": "ARA", "pacientes": 1, "porcentaje": 0.0, "citas": 1}, {"comuna": "CURANILHUE", "pacientes": 1, "porcentaje": 0.0, "citas": 2}, {"comuna": "ARAUUCO", "pacientes": 1, "porcentaje": 0.0, "citas": 12}, {"comuna": "LOMA LARGA", "pacientes": 1, "porcentaje": 0.0, "citas": 1}, {"comuna": "PUNTA ARENAS", "pacientes": 1, "porcentaje": 0.0, "citas": 1}, {"comuna": "CALAMA", "pacientes": 1, "porcentaje": 0.0, "citas": 1}, {"comuna": "CRUCE NORTE", "pacientes": 1, "porcentaje": 0.0, "citas": 1}, {"comuna": "LOS ALAMOS.", "pacientes": 1, "porcentaje": 0.0, "citas": 2}];
 
 // Mapa centrado en Carampangue
 const map = L.map('map').setView([-37.27, -73.28], 10);
@@ -146,8 +135,15 @@ const totalPac = allComunas.reduce((s, c) => s + c.pacientes, 0);
 allComunas.forEach((c, i) => {
   const pct = totalPac ? (c.pacientes / totalPac * 100).toFixed(1) : 0;
   const barW = totalPac ? Math.max(2, c.pacientes / allComunas[0].pacientes * 120) : 0;
+  const pob = c.poblacion || 0;
+  const pobTxt = pob ? pob.toLocaleString('es-CL') : '<span style="color:#64748b">—</span>';
+  const cap = c.pct_captura;
+  const capTxt = (cap !== null && cap !== undefined)
+    ? `<span style="color:${cap >= 1 ? '#fbbf24' : '#64748b'}">${cap.toFixed(2)}%</span>`
+    : '<span style="color:#64748b">—</span>';
   const row = document.createElement('tr');
   row.innerHTML = `<td>${i+1}</td><td>${c.comuna}</td><td>${c.pacientes}</td><td>${c.citas || '-'}</td><td>${pct}%</td>
+    <td>${pobTxt}</td><td>${capTxt}</td>
     <td><div class="bar-bg"><div class="bar" style="width:${barW}px"></div></div></td>`;
   tbody.appendChild(row);
 });
@@ -159,7 +155,7 @@ if (comunas.length > 0) {
 }
 
 // ── Mapa 2: Localidades de Arauco ──
-const localidades = [{"localidad": "CARAMPANGUE", "lat": -37.265, "lng": -73.28, "pacientes": 129, "porcentaje": 47.6, "direcciones": ["Calle conumo", "Conumo Alto S/N, Carampangue", "Conumo Alto S/N, Carampangue"]}, {"localidad": "ARAUCO URBANO", "lat": -37.2467, "lng": -73.3178, "pacientes": 51, "porcentaje": 18.8, "direcciones": ["Calle fresia 59", "Las Peñas", "Covadonga 83 la quinta"]}, {"localidad": "LARAQUETE", "lat": -37.17, "lng": -73.1833, "pacientes": 36, "porcentaje": 13.3, "direcciones": ["El Arrayán 188 Villa Bosques de Montemar", "Los mañios 561 Villa el Bosque Laraquete", "Fundó el boldo s/n"]}, {"localidad": "ARAUCO (OTRO)", "lat": -37.2467, "lng": -73.3178, "pacientes": 18, "porcentaje": 6.6, "direcciones": ["Cerro colorado s/n", "Población unión Carampanguina calle 27 de octubre", "Horconoes"]}, {"localidad": "ARAUCO (SIN DETALLE)", "lat": -37.2467, "lng": -73.3178, "pacientes": 18, "porcentaje": 6.6, "direcciones": ["Arauco", "Arauco", "ARAUCO"]}, {"localidad": "RAMADILLAS", "lat": -37.22, "lng": -73.21, "pacientes": 16, "porcentaje": 5.9, "direcciones": ["Villa molino del Sol 79 Ramadillas", "Los pintores 111 ramadillas", "los artesanos 158 ramadillas"]}, {"localidad": "TUBUL", "lat": -37.23, "lng": -73.44, "pacientes": 1, "porcentaje": 0.4, "direcciones": ["Tubul calle los sauces casa 165 población san jose"]}, {"localidad": "COLICO", "lat": -37.3833, "lng": -73.25, "pacientes": 1, "porcentaje": 0.4, "direcciones": ["El amanecer 22 san jose colico"]}, {"localidad": "LLICO", "lat": -37.195, "lng": -73.565, "pacientes": 1, "porcentaje": 0.4, "direcciones": ["Llico sector los martinez s/n"]}];
+const localidades = [{"localidad": "CARAMPANGUE", "lat": -37.265, "lng": -73.28, "pacientes": 903, "porcentaje": 39.4, "poblacion": 4000, "pct_captura": 22.57, "direcciones": ["la meseta 264", "Pichilo S/N, Carampangue", "Los horcones s/n Carampangue"]}, {"localidad": "ARAUCO (OTRO)", "lat": -37.2467, "lng": -73.3178, "pacientes": 409, "porcentaje": 17.9, "poblacion": 0, "pct_captura": null, "direcciones": ["las puentes", "CHACABUCO 256", "raqui alto"]}, {"localidad": "ARAUCO URBANO", "lat": -37.2467, "lng": -73.3178, "pacientes": 347, "porcentaje": 15.1, "poblacion": 26000, "pct_captura": 1.33, "direcciones": ["carlos pratt 291 villa portal del valle", "Ignacio Serrano Casa 27 tubul", "Llico s/n arauco"]}, {"localidad": "LARAQUETE", "lat": -37.17, "lng": -73.1833, "pacientes": 322, "porcentaje": 14.1, "poblacion": 2900, "pct_captura": 11.1, "direcciones": ["Pedro prado 5 laraquete", "Los Robles 297, villa el bosque, Laraquete", "Fundó el boldo s/n"]}, {"localidad": "ARAUCO (SIN DETALLE)", "lat": -37.2467, "lng": -73.3178, "pacientes": 159, "porcentaje": 6.9, "poblacion": 0, "pct_captura": null, "direcciones": ["Arauco", "arauco", "Arauco"]}, {"localidad": "RAMADILLAS", "lat": -37.22, "lng": -73.21, "pacientes": 122, "porcentaje": 5.3, "poblacion": 600, "pct_captura": 20.33, "direcciones": ["Arturo perez canto s/n Ramadillas", "Ignacio Carrera  Pinto Ramadillas", "ignacio carrera pinto numero 30 ramadillas"]}, {"localidad": "TUBUL", "lat": -37.23, "lng": -73.44, "pacientes": 22, "porcentaje": 1.0, "poblacion": 1500, "pct_captura": 1.47, "direcciones": ["los robles 15 tubul", "Esmeralda 27 Tubul", "Avenida del mar 247 caleta  tubul"]}, {"localidad": "LLICO", "lat": -37.195, "lng": -73.565, "pacientes": 5, "porcentaje": 0.2, "poblacion": 400, "pct_captura": 1.25, "direcciones": ["Llico sin número camino al piure", "llico", "Población San Sebastián 22 pasaje 2 Llico"]}, {"localidad": "COLICO", "lat": -37.3833, "lng": -73.25, "pacientes": 2, "porcentaje": 0.1, "poblacion": 700, "pct_captura": 0.29, "direcciones": ["El amanecer 22 san jose colico", "Pasaje arcoiris 46 san jose colico"]}];
 
 const map2 = L.map('map2').setView([-37.24, -73.30], 12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -224,8 +220,15 @@ localidades.sort((a, b) => b.pacientes - a.pacientes);
 const totalLocPac = localidades.reduce((s, l) => s + l.pacientes, 0);
 localidades.forEach((l, i) => {
   const barW = totalLocPac ? Math.max(2, l.pacientes / localidades[0].pacientes * 120) : 0;
+  const pob = l.poblacion || 0;
+  const pobTxt = pob ? pob.toLocaleString('es-CL') : '<span style="color:#64748b">—</span>';
+  const cap = l.pct_captura;
+  const capTxt = (cap !== null && cap !== undefined)
+    ? `<span style="color:${cap >= 5 ? '#fbbf24' : (cap >= 1 ? '#38bdf8' : '#64748b')}">${cap.toFixed(2)}%</span>`
+    : '<span style="color:#64748b">—</span>';
   const row = document.createElement('tr');
   row.innerHTML = `<td>${i+1}</td><td>${l.localidad}</td><td>${l.pacientes}</td><td>${l.porcentaje}%</td>
+    <td>${pobTxt}</td><td>${capTxt}</td>
     <td><div class="bar-bg"><div class="bar" style="width:${barW}px;background:${colorsLoc[i % colorsLoc.length]}"></div></div></td>`;
   tbodyLoc.appendChild(row);
 });
