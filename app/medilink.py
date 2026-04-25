@@ -329,7 +329,7 @@ async def _get_horario(client: httpx.AsyncClient, id_prof: int) -> dict:
         horario["_ts"] = time.monotonic()
         _horarios_cache[id_prof] = horario
     else:
-        log.warning("Horario vacío para prof %d (status %s) — no se cachea", id_prof, r.status_code)
+        log.debug("Horario vacío para prof %d (status %s) — no se cachea", id_prof, r.status_code)
         if cached and cached.get("horario_dia"):
             return cached  # fallback a stale si existe
     return horario
@@ -520,7 +520,7 @@ async def _slots_para_fecha(client: httpx.AsyncClient, ids: list, horarios: dict
             break_t = _tup[2] if len(_tup) >= 3 else None
         else:
             # Sin info de horas específicas para este día, saltamos
-            log.warning("Sin horario_dia para prof %d weekday %d", id_prof, weekday)
+            log.debug("Sin horario_dia para prof %d weekday %d", id_prof, weekday)
             continue
 
         intervalo       = h["intervalo"]

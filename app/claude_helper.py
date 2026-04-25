@@ -1373,7 +1373,10 @@ async def respuesta_faq(mensaje: str) -> str:
         text = _strip_markdown_json(resp.content[0].text)
         if resp.stop_reason == "max_tokens":
             log.warning("respuesta_faq truncado por max_tokens: %r", mensaje[:80])
-        data = json.loads(text)
+        try:
+            data, _ = json.JSONDecoder().raw_decode(text.lstrip())
+        except (json.JSONDecodeError, ValueError):
+            data = json.loads(text)
         respuesta_claude = data.get("respuesta_directa")
         if respuesta_claude:
             return _scrub_telefonos(respuesta_claude)

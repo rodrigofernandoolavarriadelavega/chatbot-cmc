@@ -6210,7 +6210,14 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
             "gracias", "muchas gracias", "graxias", "grcias", "ok", "oki", "vale",
             "perfecto", "perfect", "listo", "dale", "si", "no",
         }
-        if (len(_esp_clean) < 4 or _esp_clean in _SALUDOS_GRACIAS or not _esp_clean):
+        # Tokens que indican saludo o intención de pedir hora (no son especialidad)
+        _SALUDOS_TOKENS = {"hola", "buenos", "buenas", "saludos", "hi", "hey", "ola"}
+        _AGEND_TOKENS = {"pedir", "agendar", "reservar", "quiero", "necesito"}
+        _palabras = set(_esp_clean.split())
+        _es_saludo_compuesto = bool(_palabras & _SALUDOS_TOKENS)
+        _es_intencion_agendar = bool(_palabras & _AGEND_TOKENS) and "hora" in _palabras
+        if (len(_esp_clean) < 4 or _esp_clean in _SALUDOS_GRACIAS or not _esp_clean
+                or _es_saludo_compuesto or _es_intencion_agendar):
             save_session(phone, "WAIT_ESPECIALIDAD", data)
             return f"Claro, te ayudo a agendar 😊\n\n¿Qué especialidad necesitas?\n\n{_ESPECIALIDADES_TEXTO}"
         # Antes de decir no contamos con, probar FAQ local (radiografia/telemed/etc)
