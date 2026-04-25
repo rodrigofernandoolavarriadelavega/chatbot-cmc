@@ -206,6 +206,7 @@
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="roadmap">🗓 Roadmap</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="kpis">📈 KPIs</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="geo">🗺 Geo</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="cruces">🔗 Cruces</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="queries">🔍 Queries GSC</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="issues">🚨 Problemas</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="wins">🏆 Wins</button>
@@ -370,6 +371,93 @@
             </tr>
           </thead>
           <tbody id="geo-tbody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tab: Cruces (pacientes compartidos entre profesionales) -->
+  <section id="tab-cruces" class="tab-content hidden">
+    <div class="bg-white rounded-xl border border-slate-200 p-6 mb-6">
+      <div class="flex items-baseline justify-between mb-2">
+        <h3 class="font-semibold">Cruces de pacientes entre profesionales</h3>
+        <span class="text-xs text-slate-500" id="cruces-fuente">—</span>
+      </div>
+      <p class="text-sm text-slate-500 mb-5">Para cada profesional, qué otros profesionales atienden a sus mismos pacientes. Detecta oportunidades reales de cross-sell (ej. pacientes de Olavarría que también van a kine o nutrición).</p>
+
+      <div class="grid grid-cols-3 gap-3 mb-6">
+        <div class="tone-blue p-4 rounded-lg">
+          <div class="text-xs uppercase font-semibold opacity-75">Pacientes con ≥2 profesionales</div>
+          <div class="text-2xl font-bold mt-1" id="cruces-multi">—</div>
+        </div>
+        <div class="tone-green p-4 rounded-lg">
+          <div class="text-xs uppercase font-semibold opacity-75">% del total que cruza</div>
+          <div class="text-2xl font-bold mt-1" id="cruces-pct">—</div>
+        </div>
+        <div class="tone-slate p-4 rounded-lg">
+          <div class="text-xs uppercase font-semibold opacity-75">Profesionales activos</div>
+          <div class="text-2xl font-bold mt-1" id="cruces-profs">—</div>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-end gap-3 mb-4">
+        <div>
+          <label class="block text-xs uppercase font-semibold text-slate-500 mb-1">Profesional</label>
+          <select id="cruces-select" class="border border-slate-300 rounded-lg px-3 py-2 text-sm min-w-[280px]"></select>
+        </div>
+        <label class="flex items-center gap-2 text-sm text-slate-700 mb-2">
+          <input type="checkbox" id="cruces-otra-esp" checked class="rounded">
+          Solo cruces de otra especialidad
+        </label>
+        <div>
+          <label class="block text-xs uppercase font-semibold text-slate-500 mb-1">Top N</label>
+          <select id="cruces-topn" class="border border-slate-300 rounded-lg px-3 py-2 text-sm">
+            <option value="10">10</option>
+            <option value="20" selected>20</option>
+            <option value="50">50</option>
+            <option value="999">Todos</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="cruces-prof-info" class="text-sm text-slate-600 mb-3"></div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 text-slate-600 uppercase text-xs">
+            <tr>
+              <th class="px-4 py-3 text-left">Profesional cruzado</th>
+              <th class="px-4 py-3 text-left">Especialidad</th>
+              <th class="px-4 py-3 text-right">Pacientes en común</th>
+              <th class="px-4 py-3 text-right">% sobre total</th>
+              <th class="px-4 py-3 text-left">Distribución</th>
+            </tr>
+          </thead>
+          <tbody id="cruces-tbody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl border border-slate-200 p-6">
+      <div class="flex items-baseline justify-between mb-2">
+        <h3 class="font-semibold">Top 30 pares más fuertes (vista global)</h3>
+        <label class="flex items-center gap-2 text-sm text-slate-700">
+          <input type="checkbox" id="pares-otra-esp" class="rounded">
+          Solo pares de distinta especialidad
+        </label>
+      </div>
+      <p class="text-sm text-slate-500 mb-4">Pares de profesionales con más pacientes compartidos. Sin importar dirección.</p>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 text-slate-600 uppercase text-xs">
+            <tr>
+              <th class="px-4 py-3 text-left">Profesional A</th>
+              <th class="px-4 py-3 text-left">Profesional B</th>
+              <th class="px-4 py-3 text-right">Pacientes en común</th>
+              <th class="px-4 py-3 text-center">¿Misma especialidad?</th>
+            </tr>
+          </thead>
+          <tbody id="pares-tbody" class="divide-y divide-slate-100"></tbody>
         </table>
       </div>
     </div>
@@ -952,6 +1040,91 @@ DATA.wins.forEach(w => {
   `;
   winsList.appendChild(li);
 });
+
+// Cruces de pacientes entre profesionales — fetch dinámico desde /api/seo/cruces
+let _crucesData = null;
+function renderCrucesProfesional() {
+  if (!_crucesData) return;
+  const sel = document.getElementById('cruces-select');
+  const profId = sel.value;
+  const otraEsp = document.getElementById('cruces-otra-esp').checked;
+  const topN = parseInt(document.getElementById('cruces-topn').value, 10);
+  const prof = _crucesData.profesionales.find(p => String(p.id) === String(profId));
+  if (!prof) return;
+  document.getElementById('cruces-prof-info').innerHTML =
+    `<strong>${prof.nombre}</strong> (${prof.especialidad}) · ${prof.pacientes.toLocaleString('es-CL')} pacientes únicos`;
+  let lista = (_crucesData.cruces[String(profId)] || []).slice();
+  if (otraEsp) lista = lista.filter(c => c.especialidad !== prof.especialidad);
+  lista = lista.slice(0, topN);
+  const max = lista.length ? lista[0].comunes : 1;
+  const tbody = document.getElementById('cruces-tbody');
+  tbody.innerHTML = '';
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-6 text-center text-slate-400">Sin cruces para este filtro.</td></tr>';
+    return;
+  }
+  lista.forEach(c => {
+    const w = Math.max(2, Math.round(c.comunes / max * 100));
+    const tr = document.createElement('tr');
+    tr.className = 'hover:bg-slate-50';
+    tr.innerHTML = `
+      <td class="px-4 py-3 font-medium">${c.nombre}</td>
+      <td class="px-4 py-3 text-slate-600">${c.especialidad}</td>
+      <td class="px-4 py-3 text-right font-semibold">${c.comunes.toLocaleString('es-CL')}</td>
+      <td class="px-4 py-3 text-right text-slate-500">${c.pct}%</td>
+      <td class="px-4 py-3"><div class="bg-blue-100 rounded h-2" style="width:${w}%"></div></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+function renderTopPares() {
+  if (!_crucesData) return;
+  const otraEsp = document.getElementById('pares-otra-esp').checked;
+  let lista = _crucesData.top_pares.slice();
+  if (otraEsp) lista = lista.filter(p => !p.misma_esp);
+  const tbody = document.getElementById('pares-tbody');
+  tbody.innerHTML = '';
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-6 text-center text-slate-400">Sin pares para este filtro.</td></tr>';
+    return;
+  }
+  lista.forEach(p => {
+    const tr = document.createElement('tr');
+    tr.className = 'hover:bg-slate-50';
+    tr.innerHTML = `
+      <td class="px-4 py-3"><span class="font-medium">${p.a}</span><div class="text-xs text-slate-500">${p.esp_a}</div></td>
+      <td class="px-4 py-3"><span class="font-medium">${p.b}</span><div class="text-xs text-slate-500">${p.esp_b}</div></td>
+      <td class="px-4 py-3 text-right font-semibold">${p.comunes.toLocaleString('es-CL')}</td>
+      <td class="px-4 py-3 text-center">${p.misma_esp ? '<span class="text-amber-600">sí</span>' : '<span class="text-emerald-600">no</span>'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+fetch('/api/seo/cruces')
+  .then(r => r.ok ? r.json() : Promise.reject(r.status))
+  .then(data => {
+    if (!data || data.error) return;
+    _crucesData = data;
+    document.getElementById('cruces-multi').textContent = data.pacientes_multi_profesional.toLocaleString('es-CL');
+    document.getElementById('cruces-pct').textContent = data.pct_multi + '%';
+    document.getElementById('cruces-profs').textContent = data.profesionales.length;
+    document.getElementById('cruces-fuente').textContent = '🟢 live · cache local';
+    const sel = document.getElementById('cruces-select');
+    sel.innerHTML = '';
+    data.profesionales.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = `${p.nombre} — ${p.especialidad} (${p.pacientes})`;
+      sel.appendChild(opt);
+    });
+    sel.addEventListener('change', renderCrucesProfesional);
+    document.getElementById('cruces-otra-esp').addEventListener('change', renderCrucesProfesional);
+    document.getElementById('cruces-topn').addEventListener('change', renderCrucesProfesional);
+    document.getElementById('pares-otra-esp').addEventListener('change', renderTopPares);
+    renderCrucesProfesional();
+    renderTopPares();
+  })
+  .catch(err => console.warn('Cruces fetch failed:', err));
 </script>
 </body>
 </html>

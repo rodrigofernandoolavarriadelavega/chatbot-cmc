@@ -650,6 +650,125 @@ def seo_geo_api():
     }
 
 
+@app.get("/api/seo/cruces")
+def seo_cruces_api():
+    """Cruce de pacientes entre profesionales.
+
+    Para cada profesional A, lista los profesionales B con los que comparte
+    pacientes, ordenado por # pacientes en común. Sirve al tab "Cruces" del
+    dashboard SEO para detectar oportunidades de cross-sell.
+    """
+    import sqlite3
+    from medilink import PROFESIONALES
+    from pathlib import Path
+
+    db_path = Path(__file__).parent.parent / "data" / "heatmap_cache.db"
+    if not db_path.exists():
+        return {"error": "no cache"}
+
+    conn = sqlite3.connect(str(db_path))
+    try:
+        # Pacientes únicos por profesional
+        pac_por_prof: dict[int, int] = dict(conn.execute(
+            "SELECT id_profesional, COUNT(DISTINCT id_paciente) "
+            "FROM citas_heatmap WHERE id_profesional IS NOT NULL "
+            "AND id_paciente IS NOT NULL GROUP BY id_profesional"
+        ).fetchall())
+
+        # Cruces direccionales: (A, B, # pacientes que se atienden con ambos)
+        cruces_raw = conn.execute("""
+            SELECT a.id_profesional, b.id_profesional, COUNT(DISTINCT a.id_paciente)
+            FROM citas_heatmap a
+            JOIN citas_heatmap b
+              ON a.id_paciente = b.id_paciente
+             AND a.id_profesional != b.id_profesional
+            WHERE a.id_profesional IS NOT NULL
+              AND b.id_profesional IS NOT NULL
+              AND a.id_paciente IS NOT NULL
+            GROUP BY a.id_profesional, b.id_profesional
+        """).fetchall()
+
+        # Pacientes con >1 profesional distinto
+        row = conn.execute("""
+            SELECT COUNT(*) FROM (
+                SELECT id_paciente FROM citas_heatmap
+                WHERE id_paciente IS NOT NULL AND id_profesional IS NOT NULL
+                GROUP BY id_paciente HAVING COUNT(DISTINCT id_profesional) > 1
+            )
+        """).fetchone()
+        pac_multi = row[0] if row else 0
+
+        total_pac = conn.execute(
+            "SELECT COUNT(DISTINCT id_paciente) FROM citas_heatmap WHERE id_paciente IS NOT NULL"
+        ).fetchone()[0]
+    finally:
+        conn.close()
+
+    # Profesionales activos (con al menos 1 paciente)
+    profesionales = []
+    for pid, info in PROFESIONALES.items():
+        n = pac_por_prof.get(pid, 0)
+        if n == 0:
+            continue
+        profesionales.append({
+            "id": pid,
+            "nombre": info["nombre"],
+            "especialidad": info["especialidad"],
+            "pacientes": n,
+        })
+    profesionales.sort(key=lambda x: x["pacientes"], reverse=True)
+
+    # Cruces agrupados por profesional A
+    cruces: dict[str, list] = {}
+    for prof_a, prof_b, comunes in cruces_raw:
+        if prof_a not in PROFESIONALES or prof_b not in PROFESIONALES:
+            continue
+        n_a = pac_por_prof.get(prof_a, 0)
+        if n_a == 0:
+            continue
+        cruces.setdefault(str(prof_a), []).append({
+            "id": prof_b,
+            "nombre": PROFESIONALES[prof_b]["nombre"],
+            "especialidad": PROFESIONALES[prof_b]["especialidad"],
+            "comunes": comunes,
+            "pct": round(comunes / n_a * 100, 1),
+        })
+    for lista in cruces.values():
+        lista.sort(key=lambda x: x["comunes"], reverse=True)
+
+    # Top pares globales (sin duplicar A↔B)
+    seen = set()
+    top_pares = []
+    for prof_a, prof_b, comunes in sorted(cruces_raw, key=lambda x: x[2], reverse=True):
+        if prof_a not in PROFESIONALES or prof_b not in PROFESIONALES:
+            continue
+        key = tuple(sorted([prof_a, prof_b]))
+        if key in seen:
+            continue
+        seen.add(key)
+        top_pares.append({
+            "a_id": key[0],
+            "a": PROFESIONALES[key[0]]["nombre"],
+            "esp_a": PROFESIONALES[key[0]]["especialidad"],
+            "b_id": key[1],
+            "b": PROFESIONALES[key[1]]["nombre"],
+            "esp_b": PROFESIONALES[key[1]]["especialidad"],
+            "comunes": comunes,
+            "misma_esp": PROFESIONALES[key[0]]["especialidad"] == PROFESIONALES[key[1]]["especialidad"],
+        })
+        if len(top_pares) >= 30:
+            break
+
+    return {
+        "total_pacientes": total_pac,
+        "pacientes_multi_profesional": pac_multi,
+        "pct_multi": round(pac_multi / total_pac * 100, 1) if total_pac else 0,
+        "profesionales": profesionales,
+        "cruces": cruces,
+        "top_pares": top_pares,
+    }
+
+
 @app.get("/proyectos2026", response_class=HTMLResponse)
 def proyectos2026_page():
     """Visualización Canvas 2D de CMC y Meulen como proyectos hermanos."""
