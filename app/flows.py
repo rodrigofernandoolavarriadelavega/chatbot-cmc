@@ -28,6 +28,7 @@ from session import (save_session, reset_session, save_tag, delete_tag, get_tags
 from resilience import is_medilink_down
 from triage_ges import triage_sintomas, normalizar_texto_paciente
 from pni import get_vaccine_reminder
+from hitos_desarrollo import get_milestones_reminder
 from config import CMC_TELEFONO, CMC_TELEFONO_FIJO, ADMIN_ALERT_PHONE
 from messaging import send_whatsapp
 
@@ -4244,6 +4245,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     _pni = get_vaccine_reminder(fecha_nac, paciente["nombre"])
                     if _pni:
                         pni_msg = f"\n\n{_pni}"
+                    _hitos = get_milestones_reminder(fecha_nac, paciente["nombre"])
+                    if _hitos:
+                        pni_msg += f"\n\n{_hitos}"
                 if reagendar:
                     extra = ""
                     if not cancel_ok:
