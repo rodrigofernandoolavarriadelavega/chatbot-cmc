@@ -528,12 +528,16 @@
               <th class="px-4 py-3 text-left">Especialidad</th>
               <th class="px-4 py-3 text-right">Pacientes en común</th>
               <th class="px-4 py-3 text-right">% sobre total</th>
-              <th class="px-4 py-3 text-left">Distribución</th>
+              <th class="px-4 py-3 text-right">Atenciones cruzado</th>
+              <th class="px-4 py-3 text-right">$ generado por cruzado</th>
               <th class="px-4 py-3 text-center">Detalle</th>
             </tr>
           </thead>
           <tbody id="cruces-tbody" class="divide-y divide-slate-100"></tbody>
         </table>
+        <div class="text-xs text-slate-500 mt-2 px-2">
+          Lectura: el profesional seleccionado actúa como <strong>derivador</strong>. La columna "$ generado por cruzado" estima el ingreso que generó el segundo profesional desde los pacientes compartidos (atenciones del cruzado × precio promedio de su especialidad).
+        </div>
       </div>
     </div>
 
@@ -1340,7 +1344,6 @@ function renderCrucesProfesional() {
     return;
   }
   lista.forEach(c => {
-    const w = Math.max(2, Math.round(c.comunes / max * 100));
     const tr = document.createElement('tr');
     tr.className = 'hover:bg-slate-50';
     tr.innerHTML = `
@@ -1348,7 +1351,8 @@ function renderCrucesProfesional() {
       <td class="px-4 py-3 text-slate-600">${c.especialidad}</td>
       <td class="px-4 py-3 text-right font-semibold">${c.comunes.toLocaleString('es-CL')}</td>
       <td class="px-4 py-3 text-right text-slate-500">${c.pct}%</td>
-      <td class="px-4 py-3"><div class="bg-blue-100 rounded h-2" style="width:${w}%"></div></td>
+      <td class="px-4 py-3 text-right">${(c.atenciones_cruzado||0).toLocaleString('es-CL')}</td>
+      <td class="px-4 py-3 text-right font-semibold text-emerald-700">${_fmtCLP(c.monto_cruzado)}</td>
       <td class="px-4 py-3 text-center">
         <button class="cruce-detalle-btn text-blue-600 hover:underline text-xs"
                 data-prof-a="${profId}" data-prof-b="${c.id}">Ver pacientes</button>

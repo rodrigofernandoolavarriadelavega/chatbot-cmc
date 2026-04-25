@@ -814,15 +814,26 @@ def seo_cruces_api(periodo: str = "todos"):
         n_a = pac_por_prof.get(prof_a, 0)
         if n_a == 0:
             continue
+        # Pacientes que comparten A y B
+        comunes_pids = prof_to_pacs.get(prof_a, set()) & prof_to_pacs.get(prof_b, set())
+        # Atenciones que el cruzado (B) generó con esos pacientes
+        atenciones_b_cross = sum(pac_prof_citas.get((pid, prof_b), 0) for pid in comunes_pids)
+        atenciones_a_cross = sum(pac_prof_citas.get((pid, prof_a), 0) for pid in comunes_pids)
+        precio_b = PRECIOS_ESPECIALIDAD.get(PROFESIONALES[prof_b]["especialidad"], 25000)
+        precio_a = PRECIOS_ESPECIALIDAD.get(PROFESIONALES[prof_a]["especialidad"], 25000)
         cruces.setdefault(str(prof_a), []).append({
             "id": prof_b,
             "nombre": PROFESIONALES[prof_b]["nombre"],
             "especialidad": PROFESIONALES[prof_b]["especialidad"],
             "comunes": comunes,
             "pct": round(comunes / n_a * 100, 1),
+            "atenciones_cruzado": atenciones_b_cross,
+            "monto_cruzado": atenciones_b_cross * precio_b,
+            "atenciones_derivador": atenciones_a_cross,
+            "monto_derivador": atenciones_a_cross * precio_a,
         })
     for lista in cruces.values():
-        lista.sort(key=lambda x: x["comunes"], reverse=True)
+        lista.sort(key=lambda x: x["monto_cruzado"], reverse=True)
 
     # Top pares globales (sin duplicar A↔B)
     seen = set()
@@ -868,11 +879,16 @@ def seo_cruces_api(periodo: str = "todos"):
 
     # Cross-sell INTRA-especialidad: paciente con ≥2 profesionales de la misma esp
     # (ej. paciente que ve a Olavarría Y a Márquez — ambos Medicina General)
+    # También aprovechamos para construir índices de citas paciente-profesional.
     pac_profs_set: dict[int, set] = {}
+    pac_prof_citas: dict[tuple, int] = {}
+    prof_to_pacs: dict[int, set] = {}
     for pid, prof in prof_especs_rows:
         if prof not in PROFESIONALES:
             continue
         pac_profs_set.setdefault(pid, set()).add(prof)
+        pac_prof_citas[(pid, prof)] = pac_prof_citas.get((pid, prof), 0) + 1
+        prof_to_pacs.setdefault(prof, set()).add(pid)
     pac_intra = 0
     for pid, profs in pac_profs_set.items():
         esps_counts: dict[str, int] = {}
