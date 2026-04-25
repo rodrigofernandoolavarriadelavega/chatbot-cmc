@@ -267,7 +267,7 @@ async def lifespan(app: FastAPI):
     # Limpieza de sesiones stuck en WAIT_* cada hora
     scheduler.add_job(
         _job_cleanup_stuck_sessions,
-        CronTrigger(minute="15", timezone=_CLT),
+        CronTrigger(hour="7-22", minute="15", timezone=_CLT),
         id="cleanup_stuck_sessions",
         replace_existing=True,
     )

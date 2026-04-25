@@ -51,6 +51,8 @@ _MEDILINK_SEM = asyncio.Semaphore(4)
 # Caché de pacientes por RUT — ~200 pacientes activos, datos casi inmutables.
 # Paciente se re-consulta 2-5 veces por flujo de agendar/cancelar/reagendar.
 _paciente_cache: dict = {}
+_paciente_id_cache: dict = {}
+_PAC_ID_TTL = 600  # 10 min
 _PACIENTE_CACHE_TTL = 600  # 10 min
 
 # Caché de primera fecha disponible por especialidad.
@@ -1069,6 +1071,10 @@ async def obtener_agenda_dia(id_prof: int, fecha: str | None = None) -> list[dic
         async def _fetch_pac(pac_id):
             if not pac_id:
                 return {}
+            # Cache por ID (10 min) reduce traffic Medilink en jobs repetitivos
+            _cached = _paciente_id_cache.get(pac_id)
+            if _cached and (time.monotonic() - _cached["_ts"]) < _PAC_ID_TTL:
+                return _cached["data"]
             async with _sem:
                 try:
                     rp = await _get(client, f"{MEDILINK_BASE_URL}/pacientes/{pac_id}",
@@ -1077,6 +1083,8 @@ async def obtener_agenda_dia(id_prof: int, fecha: str | None = None) -> list[dic
                         p = _safe_json(rp).get("data", {})
                         if isinstance(p, list) and p:
                             p = p[0]
+                        if p:
+                            _paciente_id_cache[pac_id] = {"data": p, "_ts": time.monotonic()}
                         return p
                 except httpx.RequestError:
                     pass
