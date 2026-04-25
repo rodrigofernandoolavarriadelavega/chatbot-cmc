@@ -1236,6 +1236,10 @@ def _es_respuesta_obvia_al_prompt(txt: str, tl: str, state: str, data: dict) -> 
         return True
     if _re_pre.fullmatch(r"\d{1,2}\s?(am|pm|hrs?)", tl):
         return True
+    # WAIT_MODALIDAD: respuestas obvias
+    if state == "WAIT_MODALIDAD":
+        if tl in {"fonasa", "fona", "f", "particular", "privado", "privada", "p", "1", "2", "isapre"}:
+            return True
     # WAIT_SLOT: frases muy cortas de navegación
     if state == "WAIT_SLOT":
         if tl in ("otro dia", "otro día", "ver todos", "todos", "ver mas",
@@ -2698,7 +2702,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 return _modo_degradado(phone, "disponibilidad", result.get("especialidad") or "")
             # Override: si Claude no detectó especialidad, buscarla en el texto crudo
             # (detecta apellidos de profesionales y términos como "médico familiar")
-            especialidad = result.get("especialidad") or _detectar_apellido_profesional(txt) or _detectar_especialidad_en_texto(txt)
+            # Apellido explícito tiene prioridad sobre especialidad genérica de Claude
+            _ap_explicito_disp = _detectar_apellido_profesional(txt)
+            especialidad = _ap_explicito_disp or result.get("especialidad") or _detectar_especialidad_en_texto(txt)
             # Si tenemos especialidad pero consultar_proxima_fecha falla, redirigir
             # al flujo completo de agendar (que busca día por día) en vez de caer
             # al fallback feo 'dime qué especialidad'.
@@ -3023,7 +3029,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # (paciente se devolvió al menú y tocó un botón). Reset + re-dispatch.
         if txt.startswith("motivo_"):
             reset_session(phone)
-            return await handle_message(phone, txt, get_session(phone))
+            return await handle_message(phone, txt, {"state": "IDLE", "data": {}})
         slots_mostrados = data.get("slots", [])          # los que ve el paciente ahora
         todos_slots     = data.get("todos_slots", slots_mostrados)  # todos del día
         fechas_vistas   = data.get("fechas_vistas", [])
@@ -3309,7 +3315,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             "menu_volver"
         ):
             reset_session(phone)
-            return await handle_message(phone, txt, get_session(phone))
+            return await handle_message(phone, txt, {"state": "IDLE", "data": {}})
 
         # ── "No" suelto en WAIT_SLOT → ofrecer alternativas (no confundir con negación real) ──
         _tl_slot = txt.strip().lower()
@@ -3786,7 +3792,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             # Escape: usuario se equivocó / quiere reiniciar
             if txt.startswith("motivo_") or tl in ("menu", "menú", "inicio", "hola", "volver"):
                 reset_session(phone)
-                return await handle_message(phone, txt, get_session(phone))
+                return await handle_message(phone, txt, {"state": "IDLE", "data": {}})
             # Escape: menciona "otra persona" → saltar a flujo de terceros
             # Regex con word-boundary evita matchear "para otro DÍA" o
             # "para otra CITA". Caso real 2026-04-21 (56982709417): "necesito
@@ -6370,9 +6376,9 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
     n_slots = len(todos)
     escasez = ""
     if n_slots <= 2:
-        escasez = "⚡ _Última hora disponible_ · "
+        escasez = "⚡ _Última hora disponible_\n"
     elif n_slots <= 4:
-        escasez = f"⚡ _Quedan solo {n_slots} horas_ · "
+        escasez = f"⚡ _Quedan solo {n_slots} horas_\n"
     return _btn_msg(
         f"{header}Te encontré hora ✨\n\n"
         f"🏥 *{mejor['especialidad']}* — {mejor['profesional']}\n"

@@ -1222,7 +1222,7 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
      "Si necesitas control ginecológico o del embarazo, puedes agendar con el Dr. Tirso Rejón (Ginecología) escribiendo *menu*."),
     (("gastroenterolog",),
      "Sí, tenemos *gastroenterólogo*: Dr. Nicolás Quijano 🩺\n\n"
-     "💰 Consulta particular: $40.000\n\n"
+     "💰 Consulta particular: $35.000\n\n"
      "Escribe *1* o *agendar gastroenterología* para reservar hora."),
     (("cardiolog",),
      "Sí, tenemos *cardiólogo*: Dr. Miguel Millán 🫀\n\n"
@@ -1234,7 +1234,7 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
      "Escribe *1* o *agendar otorrinolaringología* para reservar hora."),
     (("ginecolog",),
      "Sí, tenemos *ginecólogo*: Dr. Tirso Rejón 👩‍⚕️\n\n"
-     "💰 Consulta particular: $40.000\n\n"
+     "💰 Consulta particular: $30.000\n\n"
      "Escribe *1* o *agendar ginecología* para reservar hora."),
     (("traumatolog",),
      "*Traumatología:* atendemos lesiones musculoesqueléticas con nuestros médicos "

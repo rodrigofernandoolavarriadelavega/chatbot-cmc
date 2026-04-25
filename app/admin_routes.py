@@ -123,7 +123,7 @@ def require_admin(request: Request,
     # 1. Bearer header
     if authorization and authorization.lower().startswith("bearer "):
         tk = authorization.split(None, 1)[1].strip()
-        if tk == ADMIN_TOKEN:
+        if _hmac_admin.compare_digest(tk or '', ADMIN_TOKEN):
             return tk
     # 2. Cookie
     if cmc_session:
@@ -131,7 +131,7 @@ def require_admin(request: Request,
         if role == "admin":
             return ADMIN_TOKEN
     # 3. Query param (backwards compat)
-    if token and token == ADMIN_TOKEN:
+    if token and _hmac_admin.compare_digest(token or '', ADMIN_TOKEN):
         return token
     raise HTTPException(status_code=401, detail="Token inválido")
 
@@ -292,7 +292,7 @@ def admin_login(request: Request, password: str = Form(...)):
     is_https = (request.url.scheme == "https"
                 or request.headers.get("x-forwarded-proto") == "https")
 
-    if password == ADMIN_TOKEN:
+    if _hmac_admin.compare_digest(password, ADMIN_TOKEN):
         response = RedirectResponse(url="/admin", status_code=302)
         _set_session_cookie(response, "admin", is_https)
         log.info("Admin login OK (cookie set) ip=%s",
