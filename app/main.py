@@ -801,6 +801,44 @@ def seo_cruces_api():
     pac_multi_esp = sum(1 for s in pac_esps.values() if len(s) > 1)
     atenciones_multi_esp = sum(c for pid, c in pac_citas.items() if len(pac_esps.get(pid, set())) > 1)
 
+    # Cross-sell INTRA-especialidad: paciente con ≥2 profesionales de la misma esp
+    # (ej. paciente que ve a Olavarría Y a Márquez — ambos Medicina General)
+    pac_profs_set: dict[int, set] = {}
+    for pid, prof in prof_especs_rows:
+        if prof not in PROFESIONALES:
+            continue
+        pac_profs_set.setdefault(pid, set()).add(prof)
+    pac_intra = 0
+    for pid, profs in pac_profs_set.items():
+        esps_counts: dict[str, int] = {}
+        for prof in profs:
+            esp = PROFESIONALES[prof]["especialidad"]
+            esps_counts[esp] = esps_counts.get(esp, 0) + 1
+        if any(n > 1 for n in esps_counts.values()):
+            pac_intra += 1
+    pct_intra = round(pac_intra / total_pac * 100, 1) if total_pac else 0
+
+    # Top pares intra-especialidad — recorre cruces_raw completo (no solo top 30)
+    seen_intra = set()
+    pares_intra = []
+    for prof_a, prof_b, comunes in sorted(cruces_raw, key=lambda x: x[2], reverse=True):
+        if prof_a not in PROFESIONALES or prof_b not in PROFESIONALES:
+            continue
+        if PROFESIONALES[prof_a]["especialidad"] != PROFESIONALES[prof_b]["especialidad"]:
+            continue
+        key = tuple(sorted([prof_a, prof_b]))
+        if key in seen_intra:
+            continue
+        seen_intra.add(key)
+        pares_intra.append({
+            "a": PROFESIONALES[key[0]]["nombre"],
+            "b": PROFESIONALES[key[1]]["nombre"],
+            "especialidad": PROFESIONALES[key[0]]["especialidad"],
+            "comunes": comunes,
+        })
+        if len(pares_intra) >= 15:
+            break
+
     # Pares de especialidades (no profesionales) — cross-sell real
     for pid, esps in pac_esps.items():
         if len(esps) < 2:
@@ -844,9 +882,12 @@ def seo_cruces_api():
         "pct_multi_esp": round(pac_multi_esp / total_pac * 100, 1) if total_pac else 0,
         "atenciones_multi_especialidad": atenciones_multi_esp,
         "pct_atenciones_cross_esp": round(atenciones_multi_esp / total_citas * 100, 1) if total_citas else 0,
+        "pacientes_intra_especialidad": pac_intra,
+        "pct_intra_esp": pct_intra,
         "promedio_especialidades_por_paciente": promedio_profs,
         "cross_sell_por_especialidad": cross_sell_esp,
         "top_pares_especialidad": top_pares_esp,
+        "top_pares_intra_especialidad": pares_intra,
         "profesionales": profesionales,
         "cruces": cruces,
         "top_pares": top_pares,
