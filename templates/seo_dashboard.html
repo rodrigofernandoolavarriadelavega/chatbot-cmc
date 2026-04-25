@@ -207,6 +207,7 @@
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="kpis">📈 KPIs</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="geo">🗺 Geo</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="cruces">🔗 Cruces</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="meta">💬 Meta Suite</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="queries">🔍 Queries GSC</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="issues">🚨 Problemas</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="wins">🏆 Wins</button>
@@ -385,18 +386,58 @@
       </div>
       <p class="text-sm text-slate-500 mb-5">Para cada profesional, qué otros profesionales atienden a sus mismos pacientes. Detecta oportunidades reales de cross-sell (ej. pacientes de Olavarría que también van a kine o nutrición).</p>
 
-      <div class="grid grid-cols-3 gap-3 mb-6">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         <div class="tone-blue p-4 rounded-lg">
           <div class="text-xs uppercase font-semibold opacity-75">Pacientes con ≥2 profesionales</div>
           <div class="text-2xl font-bold mt-1" id="cruces-multi">—</div>
+          <div class="text-xs mt-1 opacity-75" id="cruces-pct">—</div>
         </div>
         <div class="tone-green p-4 rounded-lg">
-          <div class="text-xs uppercase font-semibold opacity-75">% del total que cruza</div>
-          <div class="text-2xl font-bold mt-1" id="cruces-pct">—</div>
+          <div class="text-xs uppercase font-semibold opacity-75">Pacientes con ≥2 especialidades</div>
+          <div class="text-2xl font-bold mt-1" id="cruces-multi-esp">—</div>
+          <div class="text-xs mt-1 opacity-75" id="cruces-pct-esp">—</div>
+        </div>
+        <div class="tone-amber p-4 rounded-lg">
+          <div class="text-xs uppercase font-semibold opacity-75">% atenciones con cross-sell</div>
+          <div class="text-2xl font-bold mt-1" id="cruces-pct-aten">—</div>
+          <div class="text-xs mt-1 opacity-75" id="cruces-aten-detail">—</div>
         </div>
         <div class="tone-slate p-4 rounded-lg">
-          <div class="text-xs uppercase font-semibold opacity-75">Profesionales activos</div>
-          <div class="text-2xl font-bold mt-1" id="cruces-profs">—</div>
+          <div class="text-xs uppercase font-semibold opacity-75">Especialidades / paciente</div>
+          <div class="text-2xl font-bold mt-1" id="cruces-prom">—</div>
+          <div class="text-xs mt-1 opacity-75" id="cruces-profs-info">—</div>
+        </div>
+      </div>
+
+      <div class="grid lg:grid-cols-2 gap-6 mb-6">
+        <div>
+          <h4 class="font-semibold text-sm mb-3">Cross-sell por especialidad</h4>
+          <p class="text-xs text-slate-500 mb-2">% de pacientes de cada especialidad que también consume otra especialidad.</p>
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 text-slate-600 uppercase text-xs">
+              <tr>
+                <th class="px-3 py-2 text-left">Especialidad</th>
+                <th class="px-3 py-2 text-right">Pacientes</th>
+                <th class="px-3 py-2 text-right">Cruzaron</th>
+                <th class="px-3 py-2 text-right">% cross</th>
+              </tr>
+            </thead>
+            <tbody id="cross-esp-tbody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+        <div>
+          <h4 class="font-semibold text-sm mb-3">Top pares de especialidades</h4>
+          <p class="text-xs text-slate-500 mb-2">Combinaciones de especialidades con más pacientes en común.</p>
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 text-slate-600 uppercase text-xs">
+              <tr>
+                <th class="px-3 py-2 text-left">Especialidad A</th>
+                <th class="px-3 py-2 text-left">Especialidad B</th>
+                <th class="px-3 py-2 text-right">Pacientes</th>
+              </tr>
+            </thead>
+            <tbody id="cross-pares-esp-tbody" class="divide-y divide-slate-100"></tbody>
+          </table>
         </div>
       </div>
 
@@ -458,6 +499,139 @@
             </tr>
           </thead>
           <tbody id="pares-tbody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tab: Meta Suite (KPIs estilo Meta Business Suite, calculados sobre datos del bot) -->
+  <section id="tab-meta" class="tab-content hidden">
+    <div class="bg-white rounded-xl border border-slate-200 p-6 mb-6">
+      <div class="flex items-baseline justify-between mb-2">
+        <h3 class="font-semibold">Mensajería WhatsApp · Instagram · Messenger</h3>
+        <div class="flex items-center gap-3">
+          <label class="text-xs uppercase font-semibold text-slate-500">Ventana</label>
+          <select id="meta-dias" class="border border-slate-300 rounded-lg px-2 py-1 text-sm">
+            <option value="7">7 días</option>
+            <option value="30" selected>30 días</option>
+            <option value="90">90 días</option>
+            <option value="180">180 días</option>
+          </select>
+          <span class="text-xs text-slate-500" id="meta-fuente">—</span>
+        </div>
+      </div>
+      <p class="text-sm text-slate-500 mb-5">KPIs equivalentes a Meta Business Suite, calculados sobre los datos reales del chatbot (sessions.db). No depende de la API de Meta.</p>
+
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        <div class="tone-blue p-4 rounded-lg">
+          <div class="text-xs uppercase font-semibold opacity-75">Conversaciones únicas</div>
+          <div class="text-2xl font-bold mt-1" id="meta-convs">—</div>
+        </div>
+        <div class="tone-green p-4 rounded-lg">
+          <div class="text-xs uppercase font-semibold opacity-75">Pacientes nuevos</div>
+          <div class="text-2xl font-bold mt-1" id="meta-nuevos">—</div>
+        </div>
+        <div class="tone-amber p-4 rounded-lg">
+          <div class="text-xs uppercase font-semibold opacity-75">Citas vía bot</div>
+          <div class="text-2xl font-bold mt-1" id="meta-citas">—</div>
+        </div>
+        <div class="tone-slate p-4 rounded-lg">
+          <div class="text-xs uppercase font-semibold opacity-75">Tasa conversión</div>
+          <div class="text-2xl font-bold mt-1" id="meta-conv">—</div>
+        </div>
+        <div class="tone-slate p-4 rounded-lg">
+          <div class="text-xs uppercase font-semibold opacity-75">Mensajes recibidos</div>
+          <div class="text-2xl font-bold mt-1" id="meta-in">—</div>
+        </div>
+        <div class="tone-slate p-4 rounded-lg">
+          <div class="text-xs uppercase font-semibold opacity-75">Mensajes enviados</div>
+          <div class="text-2xl font-bold mt-1" id="meta-out">—</div>
+        </div>
+        <div class="tone-slate p-4 rounded-lg">
+          <div class="text-xs uppercase font-semibold opacity-75">Mensajes / conversación</div>
+          <div class="text-2xl font-bold mt-1" id="meta-mpc">—</div>
+        </div>
+        <div class="tone-slate p-4 rounded-lg">
+          <div class="text-xs uppercase font-semibold opacity-75">Escaladas a humano</div>
+          <div class="text-2xl font-bold mt-1" id="meta-humano">—</div>
+        </div>
+      </div>
+
+      <div class="bg-slate-50 rounded-lg p-5 mb-6">
+        <h4 class="font-semibold text-sm mb-3">Tendencia diaria</h4>
+        <canvas id="chart-meta-serie" height="80"></canvas>
+      </div>
+
+      <div class="grid lg:grid-cols-2 gap-6 mb-6">
+        <div>
+          <h4 class="font-semibold text-sm mb-3">Distribución por canal</h4>
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 text-slate-600 uppercase text-xs">
+              <tr>
+                <th class="px-3 py-2 text-left">Canal</th>
+                <th class="px-3 py-2 text-right">Pacientes</th>
+                <th class="px-3 py-2 text-right">Msg in</th>
+                <th class="px-3 py-2 text-right">Msg out</th>
+                <th class="px-3 py-2 text-right">Citas</th>
+                <th class="px-3 py-2 text-right">% conv.</th>
+              </tr>
+            </thead>
+            <tbody id="meta-canal-tbody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+        <div>
+          <h4 class="font-semibold text-sm mb-3">Top especialidades agendadas</h4>
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 text-slate-600 uppercase text-xs">
+              <tr>
+                <th class="px-3 py-2 text-left">Especialidad</th>
+                <th class="px-3 py-2 text-right">Citas</th>
+                <th class="px-3 py-2 text-left">Distribución</th>
+              </tr>
+            </thead>
+            <tbody id="meta-esp-tbody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="grid lg:grid-cols-2 gap-6 mb-6">
+        <div>
+          <h4 class="font-semibold text-sm mb-3">Funnel de agendamiento</h4>
+          <div id="meta-funnel" class="space-y-1"></div>
+        </div>
+        <div>
+          <h4 class="font-semibold text-sm mb-3">Calidad de entrega (WA Cloud API)</h4>
+          <div class="grid grid-cols-3 gap-2 mb-3">
+            <div class="bg-emerald-50 p-3 rounded text-center">
+              <div class="text-xs uppercase text-slate-500">Entregados</div>
+              <div class="text-lg font-bold" id="meta-deliv">—</div>
+            </div>
+            <div class="bg-blue-50 p-3 rounded text-center">
+              <div class="text-xs uppercase text-slate-500">Leídos</div>
+              <div class="text-lg font-bold" id="meta-read">—</div>
+            </div>
+            <div class="bg-rose-50 p-3 rounded text-center">
+              <div class="text-xs uppercase text-slate-500">Fallos</div>
+              <div class="text-lg font-bold" id="meta-fail">—</div>
+            </div>
+          </div>
+          <p class="text-xs text-slate-500" id="meta-deliv-detail">—</p>
+        </div>
+      </div>
+
+      <div>
+        <h4 class="font-semibold text-sm mb-3">Engagement de templates de fidelización</h4>
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 text-slate-600 uppercase text-xs">
+            <tr>
+              <th class="px-3 py-2 text-left">Template / campaña</th>
+              <th class="px-3 py-2 text-right">Enviados</th>
+              <th class="px-3 py-2 text-right">Respondidos</th>
+              <th class="px-3 py-2 text-right">% respuesta</th>
+              <th class="px-3 py-2 text-left">Distribución</th>
+            </tr>
+          </thead>
+          <tbody id="meta-tpl-tbody" class="divide-y divide-slate-100"></tbody>
         </table>
       </div>
     </div>
@@ -1100,14 +1274,178 @@ function renderTopPares() {
     tbody.appendChild(tr);
   });
 }
+// Meta Suite KPIs (calculados sobre datos del bot)
+let _metaChart = null;
+function loadMeta() {
+  const dias = document.getElementById('meta-dias').value;
+  fetch('/api/seo/meta?dias=' + dias)
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(d => renderMeta(d))
+    .catch(err => console.warn('Meta fetch failed:', err));
+}
+function renderMeta(d) {
+  if (!d) return;
+  document.getElementById('meta-fuente').textContent = '🟢 ventana ' + d.ventana_dias + 'd · desde ' + (d.desde||'').slice(0,10);
+  document.getElementById('meta-convs').textContent  = d.conversaciones_unicas.toLocaleString('es-CL');
+  document.getElementById('meta-nuevos').textContent = d.pacientes_nuevos.toLocaleString('es-CL');
+  document.getElementById('meta-citas').textContent  = d.citas_agendadas.toLocaleString('es-CL');
+  document.getElementById('meta-conv').textContent   = d.pct_conversion + '%';
+  document.getElementById('meta-in').textContent     = d.msg_in.toLocaleString('es-CL');
+  document.getElementById('meta-out').textContent    = d.msg_out.toLocaleString('es-CL');
+  const mpc = d.conversaciones_unicas ? ((d.msg_in + d.msg_out) / d.conversaciones_unicas).toFixed(1) : 0;
+  document.getElementById('meta-mpc').textContent    = mpc;
+  document.getElementById('meta-humano').textContent = d.tomas_humano + ' (' + d.pct_humano + '%)';
+
+  // Tabla canal
+  const tbCanal = document.getElementById('meta-canal-tbody');
+  tbCanal.innerHTML = '';
+  const canalIcon = { whatsapp: '🟢 WhatsApp', instagram: '📷 Instagram', messenger: '💬 Messenger', facebook: '💬 Messenger' };
+  d.por_canal.forEach(c => {
+    const tr = document.createElement('tr');
+    tr.className = 'hover:bg-slate-50';
+    tr.innerHTML = `
+      <td class="px-3 py-2 font-medium">${canalIcon[c.canal] || c.canal}</td>
+      <td class="px-3 py-2 text-right">${c.phones.toLocaleString('es-CL')}</td>
+      <td class="px-3 py-2 text-right">${c.msg_in.toLocaleString('es-CL')}</td>
+      <td class="px-3 py-2 text-right">${c.msg_out.toLocaleString('es-CL')}</td>
+      <td class="px-3 py-2 text-right">${c.citas.toLocaleString('es-CL')}</td>
+      <td class="px-3 py-2 text-right text-slate-500">${c.pct_conv}%</td>
+    `;
+    tbCanal.appendChild(tr);
+  });
+
+  // Top especialidades
+  const tbEsp = document.getElementById('meta-esp-tbody');
+  tbEsp.innerHTML = '';
+  const maxEsp = d.top_especialidades.length ? d.top_especialidades[0].n : 1;
+  d.top_especialidades.forEach(e => {
+    const w = Math.max(2, Math.round(e.n / maxEsp * 100));
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="px-3 py-2">${e.especialidad}</td>
+      <td class="px-3 py-2 text-right font-semibold">${e.n}</td>
+      <td class="px-3 py-2"><div class="bg-emerald-100 rounded h-2" style="width:${w}%"></div></td>
+    `;
+    tbEsp.appendChild(tr);
+  });
+
+  // Funnel
+  const fdiv = document.getElementById('meta-funnel');
+  fdiv.innerHTML = '';
+  const maxF = d.funnel.length ? d.funnel[0].phones : 1;
+  d.funnel.forEach((f, i) => {
+    const w = Math.max(2, Math.round(f.phones / maxF * 100));
+    const dropPct = i > 0 && d.funnel[i-1].phones
+      ? Math.round((1 - f.phones / d.funnel[i-1].phones) * 100)
+      : 0;
+    const drop = i > 0 ? `<span class="text-xs text-rose-500 ml-2">−${dropPct}%</span>` : '';
+    const div = document.createElement('div');
+    div.innerHTML = `
+      <div class="flex items-baseline justify-between text-xs text-slate-600 mb-1">
+        <span>${f.etapa} ${drop}</span>
+        <span class="font-semibold text-slate-700">${f.phones.toLocaleString('es-CL')}</span>
+      </div>
+      <div class="bg-blue-100 rounded h-3" style="width:${w}%"></div>
+    `;
+    fdiv.appendChild(div);
+  });
+
+  // Delivery
+  const dl = d.delivery;
+  document.getElementById('meta-deliv').textContent = dl.pct_delivered + '%';
+  document.getElementById('meta-read').textContent  = dl.pct_read + '%';
+  document.getElementById('meta-fail').textContent  = dl.pct_failed + '%';
+  document.getElementById('meta-deliv-detail').textContent =
+    `Total status events: ${dl.total.toLocaleString('es-CL')} (sent ${dl.sent} · delivered ${dl.delivered} · read ${dl.read} · failed ${dl.failed})`;
+
+  // Templates
+  const tbTpl = document.getElementById('meta-tpl-tbody');
+  tbTpl.innerHTML = '';
+  if (!d.templates.length) {
+    tbTpl.innerHTML = '<tr><td colspan="5" class="px-3 py-4 text-center text-slate-400">Sin envíos en el período.</td></tr>';
+  } else {
+    const maxT = d.templates[0].enviados;
+    d.templates.forEach(t => {
+      const w = Math.max(2, Math.round(t.enviados / maxT * 100));
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="px-3 py-2">${t.tipo}</td>
+        <td class="px-3 py-2 text-right">${t.enviados.toLocaleString('es-CL')}</td>
+        <td class="px-3 py-2 text-right">${t.respondidos.toLocaleString('es-CL')}</td>
+        <td class="px-3 py-2 text-right ${t.pct_respuesta >= 30 ? 'text-emerald-700 font-semibold' : 'text-slate-600'}">${t.pct_respuesta}%</td>
+        <td class="px-3 py-2"><div class="bg-amber-100 rounded h-2" style="width:${w}%"></div></td>
+      `;
+      tbTpl.appendChild(tr);
+    });
+  }
+
+  // Serie temporal
+  const ctx = document.getElementById('chart-meta-serie').getContext('2d');
+  if (_metaChart) _metaChart.destroy();
+  _metaChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: d.serie.map(s => s.dia.slice(5)),
+      datasets: [
+        { label: 'Conversaciones únicas/día', data: d.serie.map(s => s.phones), borderColor: '#1172AB', backgroundColor: 'rgba(17,114,171,0.1)', tension: 0.3, fill: true },
+        { label: 'Mensajes recibidos',         data: d.serie.map(s => s.msg_in), borderColor: '#10b981', tension: 0.3, fill: false },
+        { label: 'Mensajes enviados',          data: d.serie.map(s => s.msg_out), borderColor: '#f59e0b', tension: 0.3, fill: false }
+      ]
+    },
+    options: {
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+}
+document.getElementById('meta-dias').addEventListener('change', loadMeta);
+loadMeta();
+
 fetch('/api/seo/cruces')
   .then(r => r.ok ? r.json() : Promise.reject(r.status))
   .then(data => {
     if (!data || data.error) return;
     _crucesData = data;
     document.getElementById('cruces-multi').textContent = data.pacientes_multi_profesional.toLocaleString('es-CL');
-    document.getElementById('cruces-pct').textContent = data.pct_multi + '%';
-    document.getElementById('cruces-profs').textContent = data.profesionales.length;
+    document.getElementById('cruces-pct').textContent = data.pct_multi + '% del total · ' + data.atenciones_multi_profesional.toLocaleString('es-CL') + ' atenciones';
+    document.getElementById('cruces-multi-esp').textContent = data.pacientes_multi_especialidad.toLocaleString('es-CL');
+    document.getElementById('cruces-pct-esp').textContent = data.pct_multi_esp + '% del total';
+    document.getElementById('cruces-pct-aten').textContent = data.pct_atenciones_cross_esp + '%';
+    document.getElementById('cruces-aten-detail').textContent = data.atenciones_multi_especialidad.toLocaleString('es-CL') + ' / ' + data.total_atenciones.toLocaleString('es-CL') + ' atenciones';
+    document.getElementById('cruces-prom').textContent = data.promedio_especialidades_por_paciente;
+    document.getElementById('cruces-profs-info').textContent = data.profesionales.length + ' profesionales activos';
+
+    // Cross-sell por especialidad
+    const cstb = document.getElementById('cross-esp-tbody');
+    cstb.innerHTML = '';
+    data.cross_sell_por_especialidad.forEach(e => {
+      const color = e.pct_cross >= 50 ? 'text-emerald-700 font-semibold'
+                  : e.pct_cross >= 25 ? 'text-blue-600'
+                  : e.pct_cross >= 10 ? 'text-slate-600' : 'text-slate-400';
+      const tr = document.createElement('tr');
+      tr.className = 'hover:bg-slate-50';
+      tr.innerHTML = `
+        <td class="px-3 py-2">${e.especialidad}</td>
+        <td class="px-3 py-2 text-right">${e.pacientes.toLocaleString('es-CL')}</td>
+        <td class="px-3 py-2 text-right">${e.cruzaron.toLocaleString('es-CL')}</td>
+        <td class="px-3 py-2 text-right ${color}">${e.pct_cross}%</td>
+      `;
+      cstb.appendChild(tr);
+    });
+
+    // Top pares de especialidades
+    const cetb = document.getElementById('cross-pares-esp-tbody');
+    cetb.innerHTML = '';
+    data.top_pares_especialidad.forEach(p => {
+      const tr = document.createElement('tr');
+      tr.className = 'hover:bg-slate-50';
+      tr.innerHTML = `
+        <td class="px-3 py-2">${p.esp_a}</td>
+        <td class="px-3 py-2">${p.esp_b}</td>
+        <td class="px-3 py-2 text-right font-semibold">${p.pacientes.toLocaleString('es-CL')}</td>
+      `;
+      cetb.appendChild(tr);
+    });
     document.getElementById('cruces-fuente').textContent = '🟢 live · cache local';
     const sel = document.getElementById('cruces-select');
     sel.innerHTML = '';

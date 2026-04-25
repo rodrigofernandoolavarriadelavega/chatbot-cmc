@@ -688,18 +688,33 @@ def seo_cruces_api():
             GROUP BY a.id_profesional, b.id_profesional
         """).fetchall()
 
-        # Pacientes con >1 profesional distinto
+        # Pacientes con >1 profesional distinto + atenciones de esos pacientes
         row = conn.execute("""
-            SELECT COUNT(*) FROM (
-                SELECT id_paciente FROM citas_heatmap
+            SELECT COUNT(*), COALESCE(SUM(citas), 0)
+            FROM (
+                SELECT id_paciente, COUNT(*) AS citas
+                FROM citas_heatmap
                 WHERE id_paciente IS NOT NULL AND id_profesional IS NOT NULL
-                GROUP BY id_paciente HAVING COUNT(DISTINCT id_profesional) > 1
+                GROUP BY id_paciente
+                HAVING COUNT(DISTINCT id_profesional) > 1
             )
         """).fetchone()
         pac_multi = row[0] if row else 0
+        atenciones_multi = row[1] if row else 0
+
+        # Pacientes con >1 ESPECIALIDAD distinta (cross-sell verdadero)
+        # Necesita el mapeo id_profesional → especialidad. Lo hacemos en Python.
+        prof_especs_rows = conn.execute(
+            "SELECT id_paciente, id_profesional FROM citas_heatmap "
+            "WHERE id_paciente IS NOT NULL AND id_profesional IS NOT NULL"
+        ).fetchall()
 
         total_pac = conn.execute(
             "SELECT COUNT(DISTINCT id_paciente) FROM citas_heatmap WHERE id_paciente IS NOT NULL"
+        ).fetchone()[0]
+        total_citas = conn.execute(
+            "SELECT COUNT(*) FROM citas_heatmap "
+            "WHERE id_paciente IS NOT NULL AND id_profesional IS NOT NULL"
         ).fetchone()[0]
     finally:
         conn.close()
@@ -759,13 +774,240 @@ def seo_cruces_api():
         if len(top_pares) >= 30:
             break
 
+    # ── KPIs cross-sell por especialidad ─────────────────────────────────
+    # Mapeo paciente → set(especialidades) y citas por (paciente, especialidad)
+    pac_esps: dict[int, set] = {}
+    pac_citas: dict[int, int] = {}
+    pares_esp_count: dict[tuple, int] = {}
+    citas_por_esp: dict[str, int] = {}
+    pac_por_esp: dict[str, set] = {}
+    for pid, prof in prof_especs_rows:
+        if prof not in PROFESIONALES:
+            continue
+        esp = PROFESIONALES[prof]["especialidad"]
+        pac_esps.setdefault(pid, set()).add(esp)
+        pac_citas[pid] = pac_citas.get(pid, 0) + 1
+        citas_por_esp[esp] = citas_por_esp.get(esp, 0) + 1
+        pac_por_esp.setdefault(esp, set()).add(pid)
+
+    pac_multi_esp = sum(1 for s in pac_esps.values() if len(s) > 1)
+    atenciones_multi_esp = sum(c for pid, c in pac_citas.items() if len(pac_esps.get(pid, set())) > 1)
+
+    # Pares de especialidades (no profesionales) — cross-sell real
+    for pid, esps in pac_esps.items():
+        if len(esps) < 2:
+            continue
+        esp_list = sorted(esps)
+        for i in range(len(esp_list)):
+            for j in range(i + 1, len(esp_list)):
+                key = (esp_list[i], esp_list[j])
+                pares_esp_count[key] = pares_esp_count.get(key, 0) + 1
+
+    top_pares_esp = sorted(
+        [{"esp_a": k[0], "esp_b": k[1], "pacientes": v} for k, v in pares_esp_count.items()],
+        key=lambda x: x["pacientes"], reverse=True
+    )[:15]
+
+    # Cross-sell ratio por especialidad: % de pacientes de esp X que también consumen otra especialidad
+    cross_sell_esp = []
+    for esp, pacs in pac_por_esp.items():
+        n = len(pacs)
+        cruzaron = sum(1 for pid in pacs if len(pac_esps.get(pid, set())) > 1)
+        cross_sell_esp.append({
+            "especialidad": esp,
+            "pacientes": n,
+            "cruzaron": cruzaron,
+            "pct_cross": round(cruzaron / n * 100, 1) if n else 0,
+        })
+    cross_sell_esp.sort(key=lambda x: x["pacientes"], reverse=True)
+
+    promedio_profs = round(
+        sum(len(pac_esps.get(pid, set())) for pid in pac_esps) / len(pac_esps), 2
+    ) if pac_esps else 0
+
     return {
         "total_pacientes": total_pac,
+        "total_atenciones": total_citas,
         "pacientes_multi_profesional": pac_multi,
         "pct_multi": round(pac_multi / total_pac * 100, 1) if total_pac else 0,
+        "atenciones_multi_profesional": atenciones_multi,
+        "pct_atenciones_cross": round(atenciones_multi / total_citas * 100, 1) if total_citas else 0,
+        "pacientes_multi_especialidad": pac_multi_esp,
+        "pct_multi_esp": round(pac_multi_esp / total_pac * 100, 1) if total_pac else 0,
+        "atenciones_multi_especialidad": atenciones_multi_esp,
+        "pct_atenciones_cross_esp": round(atenciones_multi_esp / total_citas * 100, 1) if total_citas else 0,
+        "promedio_especialidades_por_paciente": promedio_profs,
+        "cross_sell_por_especialidad": cross_sell_esp,
+        "top_pares_especialidad": top_pares_esp,
         "profesionales": profesionales,
         "cruces": cruces,
         "top_pares": top_pares,
+    }
+
+
+@app.get("/api/seo/meta")
+def seo_meta_api(dias: int = 30):
+    """KPIs estilo Meta Business Suite calculados sobre los datos locales del bot.
+
+    Incluye volumen de conversaciones, captación de pacientes, conversión a citas,
+    distribución por canal (WA/IG/FB), calidad de entrega y engagement de
+    templates de fidelización. Ventana configurable por query param `dias`.
+    """
+    from session import _conn
+    from datetime import datetime, timedelta
+
+    dias = max(1, min(int(dias), 365))
+    desde_dt = datetime.now() - timedelta(days=dias)
+    desde = desde_dt.strftime("%Y-%m-%d %H:%M:%S")
+
+    conn = _conn()
+    try:
+        # ── Volumen + captación ──────────────────────────────────────────
+        msg_in = conn.execute(
+            "SELECT COUNT(*) FROM messages WHERE direction='in' AND ts >= ?", (desde,)
+        ).fetchone()[0]
+        msg_out = conn.execute(
+            "SELECT COUNT(*) FROM messages WHERE direction='out' AND ts >= ?", (desde,)
+        ).fetchone()[0]
+        convers_unicas = conn.execute(
+            "SELECT COUNT(DISTINCT phone) FROM messages WHERE direction='in' AND ts >= ?", (desde,)
+        ).fetchone()[0]
+        # Pacientes nuevos: primer mensaje 'in' cae dentro del período
+        pacientes_nuevos = conn.execute(
+            "SELECT COUNT(*) FROM (SELECT phone, MIN(ts) AS first FROM messages "
+            "WHERE direction='in' GROUP BY phone HAVING first >= ?)", (desde,)
+        ).fetchone()[0]
+
+        # ── Por canal ────────────────────────────────────────────────────
+        canal_rows = conn.execute("""
+            SELECT COALESCE(canal,'whatsapp') AS canal,
+                   COUNT(*) FILTER (WHERE direction='in')  AS msg_in,
+                   COUNT(*) FILTER (WHERE direction='out') AS msg_out,
+                   COUNT(DISTINCT phone) AS phones
+            FROM messages WHERE ts >= ?
+            GROUP BY COALESCE(canal,'whatsapp')
+        """, (desde,)).fetchall()
+        por_canal = [
+            {"canal": r["canal"], "msg_in": r["msg_in"], "msg_out": r["msg_out"], "phones": r["phones"]}
+            for r in canal_rows
+        ]
+
+        # ── Conversión: citas agendadas por el bot en el período ─────────
+        citas_agend = conn.execute(
+            "SELECT COUNT(*) FROM citas_bot WHERE created_at >= ?", (desde,)
+        ).fetchone()[0]
+        citas_por_canal = conn.execute("""
+            SELECT COALESCE(m.canal,'whatsapp') AS canal, COUNT(DISTINCT cb.id) AS citas
+            FROM citas_bot cb
+            LEFT JOIN messages m ON m.phone = cb.phone
+            WHERE cb.created_at >= ?
+            GROUP BY COALESCE(m.canal,'whatsapp')
+        """, (desde,)).fetchall()
+        citas_canal_map = {r["canal"]: r["citas"] for r in citas_por_canal}
+        for c in por_canal:
+            c["citas"] = citas_canal_map.get(c["canal"], 0)
+            c["pct_conv"] = round(c["citas"] / c["phones"] * 100, 1) if c["phones"] else 0
+
+        citas_top_esp = conn.execute("""
+            SELECT especialidad, COUNT(*) AS n FROM citas_bot
+            WHERE created_at >= ? AND especialidad IS NOT NULL AND especialidad != ''
+            GROUP BY especialidad ORDER BY n DESC LIMIT 8
+        """, (desde,)).fetchall()
+        top_especialidades = [{"especialidad": r["especialidad"], "n": r["n"]} for r in citas_top_esp]
+
+        # ── Funnel de agendamiento ───────────────────────────────────────
+        # Estado al final de cada conversación es difícil; aproximamos contando
+        # estados visitados al menos una vez en messages (cada msg trae state)
+        funnel_rows = conn.execute("""
+            SELECT state, COUNT(DISTINCT phone) AS phones
+            FROM messages WHERE ts >= ? AND state IS NOT NULL
+            GROUP BY state
+        """, (desde,)).fetchall()
+        funnel_map = {r["state"]: r["phones"] for r in funnel_rows}
+        funnel = [
+            {"etapa": "Conversación iniciada", "phones": convers_unicas},
+            {"etapa": "Eligió especialidad",   "phones": funnel_map.get("WAIT_SLOT", 0) + funnel_map.get("WAIT_MODALIDAD", 0)},
+            {"etapa": "Eligió slot",           "phones": funnel_map.get("WAIT_MODALIDAD", 0) + funnel_map.get("CONFIRMING_CITA", 0)},
+            {"etapa": "Confirmando cita",      "phones": funnel_map.get("CONFIRMING_CITA", 0)},
+            {"etapa": "Cita reservada",        "phones": citas_agend},
+        ]
+
+        # ── Calidad de entrega (message_statuses) ────────────────────────
+        ms_rows = conn.execute("""
+            SELECT status, COUNT(*) AS n FROM message_statuses
+            WHERE ts >= ? GROUP BY status
+        """, (desde,)).fetchall()
+        statuses = {r["status"]: r["n"] for r in ms_rows}
+        total_status = sum(statuses.values()) or 1
+        delivery = {
+            "sent":      statuses.get("sent", 0),
+            "delivered": statuses.get("delivered", 0),
+            "read":      statuses.get("read", 0),
+            "failed":    statuses.get("failed", 0),
+            "total":     sum(statuses.values()),
+            "pct_delivered": round(statuses.get("delivered", 0) / total_status * 100, 1),
+            "pct_read":      round(statuses.get("read", 0)      / total_status * 100, 1),
+            "pct_failed":    round(statuses.get("failed", 0)    / total_status * 100, 1),
+        }
+
+        # ── Engagement de templates de fidelización ──────────────────────
+        tpl_rows = conn.execute("""
+            SELECT tipo, COUNT(*) AS enviados,
+                   SUM(CASE WHEN respuesta IS NOT NULL AND respuesta != '' THEN 1 ELSE 0 END) AS respondidos
+            FROM fidelizacion_msgs
+            WHERE enviado_en >= ?
+            GROUP BY tipo ORDER BY enviados DESC
+        """, (desde,)).fetchall()
+        templates = []
+        for r in tpl_rows:
+            tasa = round(r["respondidos"] / r["enviados"] * 100, 1) if r["enviados"] else 0
+            templates.append({"tipo": r["tipo"], "enviados": r["enviados"],
+                              "respondidos": r["respondidos"], "pct_respuesta": tasa})
+
+        # ── Serie temporal diaria ────────────────────────────────────────
+        serie_rows = conn.execute("""
+            SELECT substr(ts, 1, 10) AS dia,
+                   COUNT(*) FILTER (WHERE direction='in')  AS msg_in,
+                   COUNT(*) FILTER (WHERE direction='out') AS msg_out,
+                   COUNT(DISTINCT phone) AS phones
+            FROM messages WHERE ts >= ?
+            GROUP BY dia ORDER BY dia
+        """, (desde,)).fetchall()
+        serie = [{"dia": r["dia"], "msg_in": r["msg_in"], "msg_out": r["msg_out"], "phones": r["phones"]}
+                 for r in serie_rows]
+
+        # Tasa de toma de control humana (HUMAN_TAKEOVER en eventos)
+        try:
+            human = conn.execute(
+                "SELECT COUNT(DISTINCT phone) FROM conversation_events "
+                "WHERE event LIKE '%takeover%' AND ts >= ?", (desde,)
+            ).fetchone()[0]
+        except Exception:
+            human = 0
+
+    finally:
+        conn.close()
+
+    pct_conv = round(citas_agend / convers_unicas * 100, 1) if convers_unicas else 0
+    pct_humano = round(human / convers_unicas * 100, 1) if convers_unicas else 0
+
+    return {
+        "ventana_dias": dias,
+        "desde": desde_dt.isoformat(),
+        "msg_in": msg_in,
+        "msg_out": msg_out,
+        "conversaciones_unicas": convers_unicas,
+        "pacientes_nuevos": pacientes_nuevos,
+        "citas_agendadas": citas_agend,
+        "pct_conversion": pct_conv,
+        "tomas_humano": human,
+        "pct_humano": pct_humano,
+        "por_canal": sorted(por_canal, key=lambda x: x["phones"], reverse=True),
+        "top_especialidades": top_especialidades,
+        "funnel": funnel,
+        "delivery": delivery,
+        "templates": templates,
+        "serie": serie,
     }
 
 
