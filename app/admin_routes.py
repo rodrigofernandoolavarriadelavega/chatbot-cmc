@@ -2219,3 +2219,50 @@ try:
     _ensure_agenda_tables()
 except Exception as _e:
     log.warning("No se pudieron inicializar tablas admin: %s", _e)
+
+
+# ---------------------------------------------------------------------------
+# Pediátrico: PNI + hitos del desarrollo (consumido desde GES)
+# ---------------------------------------------------------------------------
+from pni import get_vaccine_reminder
+from hitos_desarrollo import get_milestones_reminder
+
+
+@router.post("/api/send-pediatric-info")
+async def admin_send_pediatric_info(request: Request, _: str = Depends(require_admin)):
+    """Envía recordatorio PNI y/o hitos del desarrollo a un teléfono.
+    Body: {phone, birthdate, name?, include: 'pni'|'milestones'|'both'}.
+    Llamado desde la app GES."""
+    payload = await request.json()
+    phone = (payload.get("phone") or "").strip()
+    birthdate = (payload.get("birthdate") or "").strip()
+    name = (payload.get("name") or "").strip()
+    include = (payload.get("include") or "both").lower()
+
+    if not phone or not birthdate:
+        raise HTTPException(400, "phone y birthdate son requeridos")
+    if include not in ("pni", "milestones", "both"):
+        raise HTTPException(400, "include debe ser 'pni', 'milestones' o 'both'")
+
+    partes = []
+    if include in ("pni", "both"):
+        msg = get_vaccine_reminder(birthdate, name)
+        if msg:
+            partes.append(msg)
+    if include in ("milestones", "both"):
+        msg = get_milestones_reminder(birthdate, name)
+        if msg:
+            partes.append(msg)
+
+    if not partes:
+        return {"sent": False, "reason": "Paciente fuera del rango pediátrico o sin contenido aplicable"}
+
+    texto = "\n\n".join(partes)
+    try:
+        wamid = await send_whatsapp(phone, texto)
+    except Exception as e:
+        log.error("send-pediatric-info falló para %s: %s", phone, e)
+        raise HTTPException(502, f"No se pudo enviar WhatsApp: {e}")
+
+    log_event(phone, "pediatric_info_sent", {"include": include, "source": "ges"})
+    return {"sent": True, "wamid": wamid, "include": include, "chars": len(texto)}
