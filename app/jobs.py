@@ -227,12 +227,36 @@ async def _job_winback():
 # Caso real 2026-04-23: el job enviaba mensajes al numero del bot → Meta API
 # 400 Invalid parameter 6x al dia. Bug heredado del _doctor_phone de flows.py
 # (ya arreglado en commit a2b19f4).
+
+def _admin_window_open(threshold_hours: int = 23) -> bool:
+    """True si ADMIN_ALERT_PHONE escribió al bot en las últimas N horas.
+    Evita enviar texto libre cuando la ventana 24h de Meta está cerrada
+    (que devuelve 131047 o 400 #100)."""
+    if not ADMIN_ALERT_PHONE:
+        return False
+    try:
+        from session import get_last_inbound_ts
+        from datetime import datetime, timedelta, timezone
+        ts = get_last_inbound_ts(ADMIN_ALERT_PHONE)
+        if not ts:
+            return False
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        return (datetime.now(timezone.utc) - ts) < timedelta(hours=threshold_hours)
+    except Exception:
+        return False
+
+
 _doctor_phone = ADMIN_ALERT_PHONE
 
 async def _job_doctor_resumen_precita():
+    if not _admin_window_open():
+        return  # ventana 24h cerrada; evita Meta 400 (#100) Invalid parameter
     await enviar_resumen_precita(send_whatsapp, _doctor_phone)
 
 async def _job_doctor_reporte_progreso():
+    if not _admin_window_open():
+        return
     await enviar_reporte_progreso(send_whatsapp, _doctor_phone)
 
 async def _job_doctor_reset_diario():
@@ -421,8 +445,9 @@ _admin_report_state = {"last_429_total": 0}
 async def _job_admin_status_report():
     """Cada 30 min envía un resumen de salud al ADMIN_ALERT_PHONE por WhatsApp.
     No consume calls extra a Medilink (solo lee contadores en memoria y DB local).
+    Skip si la ventana 24h del admin esta cerrada (evita Meta 131047 spam).
     """
-    if not ADMIN_ALERT_PHONE:
+    if not ADMIN_ALERT_PHONE or not _admin_window_open():
         return
     try:
         from datetime import datetime

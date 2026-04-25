@@ -537,7 +537,10 @@ def seo_dashboard_page():
 
 
 @app.get("/api/seo/geo")
-def seo_geo_api():
+def seo_geo_api(token: str = ""):
+    if token != ADMIN_TOKEN:
+        from fastapi import HTTPException
+        raise HTTPException(401, "unauthorized")
     """Sirve el cruce comunas/atenciones para el dashboard SEO.
 
     Lee data/heatmap_*.json (generado por el chatbot), normaliza variantes con typos
@@ -709,7 +712,10 @@ def _resolver_rango(periodo: str | None, desde: str | None, hasta: str | None) -
 
 
 @app.get("/api/seo/cruces")
-def seo_cruces_api(periodo: str = "todos", desde: str | None = None, hasta: str | None = None):
+def seo_cruces_api(periodo: str = "todos", desde: str | None = None, hasta: str | None = None, token: str = ""):
+    if token != ADMIN_TOKEN:
+        from fastapi import HTTPException
+        raise HTTPException(401, "unauthorized")
     """Cruce de pacientes entre profesionales.
 
     Para cada profesional A, lista los profesionales B con los que comparte
@@ -998,7 +1004,10 @@ def seo_cruces_api(periodo: str = "todos", desde: str | None = None, hasta: str 
 
 
 @app.get("/api/seo/meta")
-def seo_meta_api(dias: int = 30):
+def seo_meta_api(dias: int = 30, token: str = ""):
+    if token != ADMIN_TOKEN:
+        from fastapi import HTTPException
+        raise HTTPException(401, "unauthorized")
     """KPIs estilo Meta Business Suite calculados sobre los datos locales del bot.
 
     Incluye volumen de conversaciones, captación de pacientes, conversión a citas,
@@ -1165,7 +1174,10 @@ def seo_meta_api(dias: int = 30):
 
 @app.get("/api/seo/cruce-pacientes")
 def seo_cruce_pacientes_api(prof_a: int, prof_b: int, periodo: str = "todos",
-                             desde: str | None = None, hasta: str | None = None):
+                             desde: str | None = None, hasta: str | None = None, token: str = ""):
+    if token != ADMIN_TOKEN:
+        from fastapi import HTTPException
+        raise HTTPException(401, "unauthorized")
     """Lista de pacientes que se atienden con prof_a Y prof_b en el periodo.
 
     Devuelve nombre, RUT, # citas con cada profesional, $ estimado por
