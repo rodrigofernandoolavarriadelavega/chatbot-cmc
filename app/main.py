@@ -740,6 +740,19 @@ def seo_geo_api(periodo: str = "todos", desde: str | None = None,
                     "pacientes_nuevos": nuevos,
                     "pacientes_acumulado": acumulado,
                 })
+            # Totales recalculados del SQLite (fuente live, no del JSON snapshot)
+            tot_row = conn.execute("""
+                SELECT COUNT(*) AS citas, COUNT(DISTINCT id_paciente) AS unicos
+                FROM citas_heatmap
+            """).fetchone()
+            sqlite_total_citas, sqlite_total_pac = (tot_row[0], tot_row[1]) if tot_row else (0, 0)
+            con_com_row = conn.execute("""
+                SELECT COUNT(DISTINCT c.id_paciente)
+                FROM citas_heatmap c
+                INNER JOIN pacientes_heatmap p ON p.id = c.id_paciente
+                WHERE TRIM(COALESCE(p.comuna,'')) != ''
+            """).fetchone()
+            sqlite_con_comuna = con_com_row[0] if con_com_row else 0
         finally:
             conn.close()
 
@@ -946,7 +959,7 @@ def seo_geo_api(periodo: str = "todos", desde: str | None = None,
             conn3.close()
 
     return {
-        "fuente": "heatmap_chatbot",
+        "fuente": "heatmap_sqlite_live",
         "actualizado": Path(files[0]).stat().st_mtime,
         "archivo": Path(files[0]).name,
         "periodo_label": raw.get("periodo"),
@@ -954,10 +967,11 @@ def seo_geo_api(periodo: str = "todos", desde: str | None = None,
         "filtro_profesional": None,
         "profesionales": prof_list,
         "serie_mensual": serie_mensual,
-        "total_citas": raw.get("total_citas"),
-        "pacientes_unicos": raw.get("pacientes_unicos"),
-        "con_comuna": raw.get("con_comuna"),
-        "sin_comuna": raw.get("sin_comuna"),
+        # Totales LIVE del SQLite (no del JSON snapshot que se queda viejo)
+        "total_citas": sqlite_total_citas if 'sqlite_total_citas' in dir() else raw.get("total_citas"),
+        "pacientes_unicos": sqlite_total_pac if 'sqlite_total_pac' in dir() else raw.get("pacientes_unicos"),
+        "con_comuna": sqlite_con_comuna if 'sqlite_con_comuna' in dir() else raw.get("con_comuna"),
+        "sin_comuna": (sqlite_total_pac - sqlite_con_comuna) if 'sqlite_total_pac' in dir() else raw.get("sin_comuna"),
         "comunas": _enriquecer_comunas(comunas[:12]),  # top 12 con población + % captado
     }
 
