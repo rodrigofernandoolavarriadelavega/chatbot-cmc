@@ -372,15 +372,26 @@
         <canvas id="chart-geo-mensual" height="80"></canvas>
       </div>
 
+      <!-- Filtro por profesional -->
+      <div class="rounded-lg p-4 mb-4 flex items-center gap-3 flex-wrap" style="background: rgba(232, 224, 208, 0.35);">
+        <label style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:var(--olacore-cobre);">Profesional:</label>
+        <select id="geo-profesional-filter" class="text-sm px-3 py-1.5 rounded border" style="background:#fffcf5;border-color:rgba(14,37,48,0.18);color:var(--olacore-fiordo);min-width:240px;">
+          <option value="">Todos</option>
+        </select>
+        <button id="geo-profesional-clear" class="text-xs px-2 py-1 rounded" style="background:rgba(154,62,47,0.1);color:var(--olacore-lacre);display:none;">✕ Limpiar</button>
+        <span id="geo-profesional-info" class="text-xs ml-auto" style="color:var(--olacore-fiordo);opacity:0.7;"></span>
+      </div>
+
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead class="bg-slate-50 text-slate-600 uppercase text-xs">
             <tr>
               <th class="px-4 py-3 text-left">Comuna / Localidad</th>
               <th class="px-4 py-3 text-right">Atenciones</th>
-              <th class="px-4 py-3 text-right">% atenciones</th>
+              <th class="px-4 py-3 text-right">% atenc.</th>
               <th class="px-4 py-3 text-right">Pacientes</th>
-              <th class="px-4 py-3 text-right">% pacientes</th>
+              <th class="px-4 py-3 text-right">Población</th>
+              <th class="px-4 py-3 text-right">% captado</th>
               <th class="px-4 py-3 text-right">Clics SEO</th>
               <th class="px-4 py-3 text-center">Brecha</th>
               <th class="px-4 py-3 text-left">Acción</th>
@@ -1260,12 +1271,16 @@ function renderGeo(geoData, sourceLabel) {
     tr.className = 'hover:bg-slate-50';
     const citas = c.citas != null ? c.citas : c.pacientes;
     const pctCitas = c.pct_citas != null ? c.pct_citas : c.pct;
+    const pob = c.poblacion_total != null ? c.poblacion_total.toLocaleString('es-CL') : '<span class="text-slate-400">—</span>';
+    const cap = c.pct_captado != null ? c.pct_captado.toFixed(2) + '%' : '<span class="text-slate-400">—</span>';
+    const capClass = c.pct_captado != null && c.pct_captado >= 5 ? 'text-emerald-600 font-semibold' : (c.pct_captado != null && c.pct_captado >= 1 ? 'font-medium' : 'text-slate-500');
     tr.innerHTML = `
       <td class="px-4 py-3 font-medium">${prefix}${c.comuna}</td>
       <td class="px-4 py-3 text-right">${citas.toLocaleString('es-CL')}</td>
       <td class="px-4 py-3 text-right text-slate-500">${pctCitas}%</td>
       <td class="px-4 py-3 text-right">${c.pacientes.toLocaleString('es-CL')}</td>
-      <td class="px-4 py-3 text-right text-slate-500">${c.pct}%</td>
+      <td class="px-4 py-3 text-right text-slate-500">${pob}</td>
+      <td class="px-4 py-3 text-right ${capClass}">${cap}</td>
       <td class="px-4 py-3 text-right ${seoClicks === 0 ? 'text-red-600 font-semibold' : ''}">${seoClicks}</td>
       <td class="px-4 py-3 text-center"><span class="${brechaColors[brecha]||''} px-2 py-1 rounded text-xs font-medium">${brechaLabel[brecha]||brecha}</span></td>
       <td class="px-4 py-3 text-xs text-slate-600">${nota}</td>
@@ -1281,6 +1296,8 @@ if (DATA.geo) renderGeo(DATA.geo, 'snapshot estático');
 let _geoPeriodo = 'todos';
 let _geoDesde = '';
 let _geoHasta = '';
+let _geoProfesional = '';
+let _geoProfesionalesCargados = false;
 function _geoQS() {
   const p = new URLSearchParams();
   if (_geoDesde || _geoHasta) {
@@ -1289,7 +1306,38 @@ function _geoQS() {
   } else {
     p.set('periodo', _geoPeriodo);
   }
+  if (_geoProfesional) p.set('profesional', _geoProfesional);
   return p.toString();
+}
+
+// Poblar dropdown de profesionales y wirear listeners (1 sola vez)
+function _setupGeoProfesional(profesionales) {
+  if (_geoProfesionalesCargados || !profesionales || !profesionales.length) return;
+  _geoProfesionalesCargados = true;
+  const sel = document.getElementById('geo-profesional-filter');
+  const clear = document.getElementById('geo-profesional-clear');
+  const info = document.getElementById('geo-profesional-info');
+  profesionales.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.nombre;
+    opt.textContent = `${p.nombre} (${p.citas.toLocaleString('es-CL')} citas)`;
+    sel.appendChild(opt);
+  });
+  sel.addEventListener('change', () => {
+    _geoProfesional = sel.value;
+    clear.style.display = _geoProfesional ? '' : 'none';
+    if (_geoProfesional) {
+      const p = profesionales.find(x => x.nombre === _geoProfesional);
+      info.textContent = p ? `${p.citas.toLocaleString('es-CL')} citas totales` : '';
+    } else {
+      info.textContent = '';
+    }
+    loadGeo();
+  });
+  clear.addEventListener('click', () => {
+    sel.value = '';
+    sel.dispatchEvent(new Event('change'));
+  });
 }
 function loadGeo() {
   const filtrado = !!(_geoDesde || _geoHasta || (_geoPeriodo && _geoPeriodo !== 'todos'));
@@ -1299,10 +1347,12 @@ function loadGeo() {
   .then(r => r.ok ? r.json() : Promise.reject(r.status))
   .then(live => {
     if (live && live.comunas) {
+      _setupGeoProfesional(live.profesionales || []);
       const ts = new Date(live.actualizado * 1000).toLocaleString('es-CL', {dateStyle:'short', timeStyle:'short'});
-      const tag = live.filtrado
-        ? '🟢 filtrado · ' + (live.fecha_desde || '—') + ' a ' + (live.fecha_hasta || 'hoy')
-        : '🟢 live · ' + ts;
+      let tag;
+      if (live.filtro_profesional) tag = '🟢 ' + live.filtro_profesional + ' · ' + ts;
+      else if (live.filtrado) tag = '🟢 filtrado · ' + (live.fecha_desde || '—') + ' a ' + (live.fecha_hasta || 'hoy');
+      else tag = '🟢 live · ' + ts;
       renderGeo(live, tag);
     }
   })

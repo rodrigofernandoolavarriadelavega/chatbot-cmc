@@ -580,9 +580,45 @@ def seo_dashboard_page(request: Request, token: str = "",
     return response
 
 
+# Población oficial INE (Censo 2017 / proyección 2024). Provincia de Arauco
+# y vecinas del Gran Concepción. Sirve para calcular % de población captada.
+POBLACION_COMUNA = {
+    "ARAUCO":              37000,   # comuna completa
+    "Arauco":              16000,   # solo zona urbana
+    "Carampangue":          5000,
+    "Laraquete":            4000,
+    "Ramadillas":           1500,
+    "Tubul":                1500,
+    "Llico":                 800,
+    "Colico":                500,
+    "CURANILAHUE":         32000,
+    "LOS ÁLAMOS":          21000,
+    "CAÑETE":              32000,
+    "LEBU":                26000,
+    "TIRÚA":               11000,
+    "CONTULMO":             6000,
+    "LOTA":                43000,
+    "CORONEL":            116000,
+    "CONCEPCIÓN":         230000,
+    "SAN PEDRO DE LA PAZ":142000,
+    "TALCAHUANO":         154000,
+}
+
+
+def _enriquecer_comunas(comunas: list[dict]) -> list[dict]:
+    """Agrega poblacion_total y pct_captado (penetración) a cada fila."""
+    for c in comunas:
+        pob = POBLACION_COMUNA.get(c["comuna"])
+        if pob:
+            c["poblacion_total"] = pob
+            c["pct_captado"] = round(c["pacientes"] / pob * 100, 2)
+    return comunas
+
+
 @app.get("/api/seo/geo")
 def seo_geo_api(periodo: str = "todos", desde: str | None = None,
-                hasta: str | None = None, token: str = "",
+                hasta: str | None = None, profesional: str = "",
+                token: str = "",
                 cmc_session: str | None = Cookie(None)):
     _seo_api_auth(token, cmc_session)
     """Sirve el cruce comunas/atenciones para el dashboard SEO.
@@ -687,7 +723,7 @@ def seo_geo_api(periodo: str = "todos", desde: str | None = None,
     # (eso lo provee el script que escribe el JSON snapshot), pero responde
     # con conteos exactos por comuna en el periodo solicitado.
     fecha_desde, fecha_hasta = _resolver_rango(periodo, desde, hasta)
-    if fecha_desde or fecha_hasta:
+    if fecha_desde or fecha_hasta or profesional:
         if not db_path.exists():
             return {"error": "no cache for date range"}
         clause, params = "", ()
@@ -700,6 +736,9 @@ def seo_geo_api(periodo: str = "todos", desde: str | None = None,
         elif fecha_hasta:
             clause = " AND c.fecha <= ?"
             params = (fecha_hasta,)
+        if profesional:
+            clause += " AND c.nombre_profesional = ?"
+            params = params + (profesional,)
 
         conn = sqlite3.connect(str(db_path))
         try:
@@ -763,6 +802,21 @@ def seo_geo_api(periodo: str = "todos", desde: str | None = None,
             c["pct"] = round(c["pacientes"] / total_pac_g * 100, 1)
             c["pct_citas"] = round(c["citas"] / total_cit_g * 100, 1)
 
+        # Lista de profesionales (independiente del filtro, para popular el select)
+        conn2 = sqlite3.connect(str(db_path))
+        try:
+            prof_list = [
+                {"nombre": r[0].strip(), "citas": r[1]}
+                for r in conn2.execute("""
+                    SELECT nombre_profesional, COUNT(*) AS n
+                    FROM citas_heatmap
+                    WHERE nombre_profesional IS NOT NULL AND nombre_profesional != ''
+                    GROUP BY nombre_profesional ORDER BY n DESC
+                """).fetchall() if r[0]
+            ]
+        finally:
+            conn2.close()
+
         return {
             "fuente": "heatmap_sqlite_filtrado",
             "actualizado": Path(files[0]).stat().st_mtime if files else 0,
@@ -770,14 +824,33 @@ def seo_geo_api(periodo: str = "todos", desde: str | None = None,
             "fecha_desde": fecha_desde,
             "fecha_hasta": fecha_hasta,
             "periodo": periodo if not (desde or hasta) else None,
+            "filtro_profesional": profesional or None,
+            "profesionales": prof_list,
             "serie_mensual": serie_mensual,
             "total_citas": tot_cit,
             "pacientes_unicos": tot_pac,
             "con_comuna": tot_pac - sin_com,
             "sin_comuna": sin_com,
-            "comunas": comunas_f[:12],
+            "comunas": _enriquecer_comunas(comunas_f[:12]),
             "filtrado": True,
         }
+
+    # Lista de profesionales (para popular dropdown)
+    prof_list = []
+    if db_path.exists():
+        conn3 = sqlite3.connect(str(db_path))
+        try:
+            prof_list = [
+                {"nombre": r[0].strip(), "citas": r[1]}
+                for r in conn3.execute("""
+                    SELECT nombre_profesional, COUNT(*) AS n
+                    FROM citas_heatmap
+                    WHERE nombre_profesional IS NOT NULL AND nombre_profesional != ''
+                    GROUP BY nombre_profesional ORDER BY n DESC
+                """).fetchall() if r[0]
+            ]
+        finally:
+            conn3.close()
 
     return {
         "fuente": "heatmap_chatbot",
@@ -785,12 +858,14 @@ def seo_geo_api(periodo: str = "todos", desde: str | None = None,
         "archivo": Path(files[0]).name,
         "periodo_label": raw.get("periodo"),
         "rango": rango,
+        "filtro_profesional": None,
+        "profesionales": prof_list,
         "serie_mensual": serie_mensual,
         "total_citas": raw.get("total_citas"),
         "pacientes_unicos": raw.get("pacientes_unicos"),
         "con_comuna": raw.get("con_comuna"),
         "sin_comuna": raw.get("sin_comuna"),
-        "comunas": comunas[:12],  # top 12 (con Arauco expandido)
+        "comunas": _enriquecer_comunas(comunas[:12]),  # top 12 con población + % captado
     }
 
 
