@@ -721,7 +721,7 @@ async def admin_citas_paciente(rut: str, _: str = Depends(require_admin)):
     paciente = await buscar_paciente(rut)
     if not paciente:
         raise HTTPException(status_code=404, detail="Paciente no encontrado")
-    citas = await listar_citas_paciente(paciente["id"])
+    citas = await listar_citas_paciente(paciente["id"], rut=paciente.get("rut"))
     return {"paciente": paciente, "citas": citas}
 
 

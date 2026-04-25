@@ -899,7 +899,7 @@ async def _handle_doctor_paciente(rut_raw: str) -> str:
                 msg += f"  • {t.replace('dx:', '').upper()}\n"
 
     # Citas futuras
-    citas = await listar_citas_paciente(pac["id"])
+    citas = await listar_citas_paciente(pac["id"], rut=pac.get("rut"))
     if citas:
         msg += f"\n📅 *Próximas citas ({len(citas)}):*\n"
         for c in citas[:3]:
@@ -1365,7 +1365,7 @@ def _recordatorio_prompt(state: str, data: dict) -> str:
                  "WAIT_WAITLIST_RUT"):
         return "_Necesito tu RUT para continuar (ej: 12.345.678-9)._"
     if state == "WAIT_MODALIDAD":
-        return "_Indica si prefieres atención *presencial* o *domicilio*._"
+        return "_Indica si tu atención es *Fonasa* o *Particular*._"
     if state == "WAIT_BOOKING_FOR":
         return "_La hora es para *ti* o para *otra persona*?_"
     if state == "CONFIRMING_CITA":
@@ -2647,7 +2647,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     pac_c = None
                 if pac_c:
                     try:
-                        citas_c = await listar_citas_paciente(pac_c["id"]) or []
+                        citas_c = await listar_citas_paciente(pac_c["id"], rut=pac_c.get("rut")) or []
                     except Exception:
                         citas_c = []
                     hoy_str = datetime.now(_CHILE_TZ).date().strftime("%Y-%m-%d")
@@ -4335,7 +4335,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "_Escribe *menu* para volver._"
             )
 
-        citas = await listar_citas_paciente(paciente["id"])
+        citas = await listar_citas_paciente(paciente["id"], rut=paciente.get("rut"))
         if not citas:
             reset_session(phone)
             return (
@@ -4486,7 +4486,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "_Escribe *menu* para volver._"
             )
 
-        citas = await listar_citas_paciente(paciente["id"])
+        citas = await listar_citas_paciente(paciente["id"], rut=paciente.get("rut"))
         if not citas:
             reset_session(phone)
             return (
@@ -4635,7 +4635,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             reset_session(phone)
             return "No encontré ese RUT 🔎\nEscribe *menu* para volver o intenta de nuevo."
 
-        citas = await listar_citas_paciente(paciente["id"])
+        citas = await listar_citas_paciente(paciente["id"], rut=paciente.get("rut"))
         reset_session(phone)
         nombre_corto = _first_name(paciente.get('nombre'))
         if not citas:
@@ -6413,7 +6413,7 @@ async def _iniciar_reagendar(phone: str, data: dict) -> str:
     if perfil and perfil.get("rut"):
         paciente = await buscar_paciente(perfil["rut"])
         if paciente:
-            citas = await listar_citas_paciente(paciente["id"])
+            citas = await listar_citas_paciente(paciente["id"], rut=paciente.get("rut"))
             if not citas:
                 reset_session(phone)
                 return (

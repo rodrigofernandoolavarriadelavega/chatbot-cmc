@@ -916,6 +916,12 @@ async def crear_cita(id_paciente: int, id_profesional: int, fecha: str,
             _proxima_cache.clear()
             return {"id": cita_id, "confirmado": True}
         log.error("crear_cita falló: %s %s", r.status_code, r.text[:500])
+        # Invalidar caché de horario si Medilink se queja de horario/duración:
+        # asegura que el siguiente buscar_primer_dia consulte fresco.
+        if r.status_code == 400 and ("horario" in r.text.lower() or "duraci" in r.text.lower()):
+            _horarios_cache.pop(id_profesional, None)
+            _proxima_cache.clear()
+            log.info("crear_cita 400 horario → caché invalidada para prof %s", id_profesional)
         return None
 
 
