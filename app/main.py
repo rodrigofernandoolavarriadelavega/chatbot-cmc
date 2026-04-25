@@ -528,24 +528,63 @@ def menu_page():
     return _MENU_HTML
 
 
+def _seo_api_auth(token: str, cmc_session: str | None) -> None:
+    """Acepta auth via ?token=... o cookie cmc_session admin. 401 si no."""
+    if token == ADMIN_TOKEN:
+        return
+    from admin_routes import _verify_cookie
+    if _verify_cookie(cmc_session or "") == "admin":
+        return
+    raise HTTPException(401, "unauthorized")
+
+
 @app.get("/seo/dashboard", response_class=HTMLResponse)
-def seo_dashboard_page(token: str = ""):
-    """Dashboard de progreso del plan SEO para centromedicocarampangue.cl."""
+def seo_dashboard_page(request: Request, token: str = "",
+                       cmc_session: str | None = Cookie(None)):
+    """Dashboard SEO. Acepta auth via ?token=... o cookie cmc_session
+    (la misma del panel /admin). Si entrás con token query, se setea la
+    cookie para que las próximas visitas funcionen sin token en URL."""
+    from admin_routes import _verify_cookie, _set_session_cookie
     if not _SEO_DASHBOARD_HTML:
         raise HTTPException(404, "Dashboard SEO no disponible")
-    if token != ADMIN_TOKEN:
-        raise HTTPException(401, "unauthorized")
-    # Inyectar el token al HTML para que los fetch() del cliente lo
-    # incluyan en las llamadas a /api/seo/*. Single source of truth.
-    return _SEO_DASHBOARD_HTML.replace("__ADMIN_TOKEN_PLACEHOLDER__", token)
+
+    has_query_token = token == ADMIN_TOKEN
+    has_cookie = _verify_cookie(cmc_session or "") == "admin"
+
+    if not (has_query_token or has_cookie):
+        msg = (
+            '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
+            '<title>Acceso requerido</title>'
+            '<style>body{font-family:system-ui;background:#0f172a;color:#e2e8f0;'
+            'display:flex;min-height:100vh;align-items:center;justify-content:center;'
+            'margin:0;padding:20px}div{max-width:520px;text-align:center;'
+            'background:#1e293b;padding:32px;border-radius:12px}h1{color:#38bdf8;'
+            'margin:0 0 12px;font-size:1.4rem}p{color:#cbd5e1;line-height:1.5}'
+            'code{background:#334155;padding:2px 8px;border-radius:4px;'
+            'font-size:0.85em;color:#fbbf24}a{color:#38bdf8}</style></head><body>'
+            '<div><h1>🔒 Dashboard SEO — acceso restringido</h1>'
+            '<p>Este dashboard requiere autenticación. Andá primero a '
+            '<a href="/admin?token=…">/admin?token=…</a> para iniciar sesión, '
+            'o accedé directo con <code>?token=…</code> en la URL.</p></div>'
+            '</body></html>'
+        )
+        return HTMLResponse(msg, status_code=401)
+
+    response = HTMLResponse(
+        _SEO_DASHBOARD_HTML.replace("__ADMIN_TOKEN_PLACEHOLDER__", ADMIN_TOKEN)
+    )
+    # Si autenticó con ?token=..., refrescamos la cookie para futuras visitas
+    if has_query_token and not has_cookie:
+        is_https = request.url.scheme == "https"
+        _set_session_cookie(response, "admin", is_https)
+    return response
 
 
 @app.get("/api/seo/geo")
 def seo_geo_api(periodo: str = "todos", desde: str | None = None,
-                hasta: str | None = None, token: str = ""):
-    if token != ADMIN_TOKEN:
-        from fastapi import HTTPException
-        raise HTTPException(401, "unauthorized")
+                hasta: str | None = None, token: str = "",
+                cmc_session: str | None = Cookie(None)):
+    _seo_api_auth(token, cmc_session)
     """Sirve el cruce comunas/atenciones para el dashboard SEO.
 
     Lee data/heatmap_*.json (snapshot del periodo completo) cuando no hay
@@ -814,10 +853,10 @@ def _resolver_rango(periodo: str | None, desde: str | None, hasta: str | None) -
 
 
 @app.get("/api/seo/cruces")
-def seo_cruces_api(periodo: str = "todos", desde: str | None = None, hasta: str | None = None, token: str = ""):
-    if token != ADMIN_TOKEN:
-        from fastapi import HTTPException
-        raise HTTPException(401, "unauthorized")
+def seo_cruces_api(periodo: str = "todos", desde: str | None = None,
+                   hasta: str | None = None, token: str = "",
+                   cmc_session: str | None = Cookie(None)):
+    _seo_api_auth(token, cmc_session)
     """Cruce de pacientes entre profesionales.
 
     Para cada profesional A, lista los profesionales B con los que comparte
@@ -1106,10 +1145,9 @@ def seo_cruces_api(periodo: str = "todos", desde: str | None = None, hasta: str 
 
 
 @app.get("/api/seo/meta")
-def seo_meta_api(dias: int = 30, token: str = ""):
-    if token != ADMIN_TOKEN:
-        from fastapi import HTTPException
-        raise HTTPException(401, "unauthorized")
+def seo_meta_api(dias: int = 30, token: str = "",
+                 cmc_session: str | None = Cookie(None)):
+    _seo_api_auth(token, cmc_session)
     """KPIs estilo Meta Business Suite calculados sobre los datos locales del bot.
 
     Incluye volumen de conversaciones, captación de pacientes, conversión a citas,
@@ -1276,10 +1314,10 @@ def seo_meta_api(dias: int = 30, token: str = ""):
 
 @app.get("/api/seo/cruce-pacientes")
 def seo_cruce_pacientes_api(prof_a: int, prof_b: int, periodo: str = "todos",
-                             desde: str | None = None, hasta: str | None = None, token: str = ""):
-    if token != ADMIN_TOKEN:
-        from fastapi import HTTPException
-        raise HTTPException(401, "unauthorized")
+                             desde: str | None = None, hasta: str | None = None,
+                             token: str = "",
+                             cmc_session: str | None = Cookie(None)):
+    _seo_api_auth(token, cmc_session)
     """Lista de pacientes que se atienden con prof_a Y prof_b en el periodo.
 
     Devuelve nombre, RUT, # citas con cada profesional, $ estimado por
