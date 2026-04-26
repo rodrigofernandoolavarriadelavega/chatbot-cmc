@@ -179,18 +179,29 @@ KNOWN_LOCATIONS = {
     "LAGUNILLAS": (-37.0400, -73.1450),
 }
 
-import random
+import hashlib
+
+_JITTER_DEG = 0.003  # ~330m por eje — dispersa el cluster artificial al zoom out
+
+
+def _deterministic_jitter(key: str) -> tuple[float, float]:
+    """Offset reproducible basado en hash de la dirección.
+    Direcciones distintas siempre caen en posiciones distintas; misma dirección
+    siempre cae en la misma posición. Sin esto, los matches de KNOWN_LOCATIONS
+    se apilan visualmente y crean clusters falsos."""
+    h = hashlib.sha1(key.encode("utf-8")).digest()
+    a = int.from_bytes(h[0:4], "big") / 0xFFFFFFFF
+    b = int.from_bytes(h[4:8], "big") / 0xFFFFFFFF
+    return ((a * 2 - 1) * _JITTER_DEG, (b * 2 - 1) * _JITTER_DEG)
+
 
 def fallback_coords(direccion: str, localidad: str) -> tuple[float, float] | None:
     """Intenta obtener coordenadas desde el diccionario de ubicaciones conocidas."""
     dir_upper = direccion.upper()
-    # Buscar match en known locations
     for name, coords in KNOWN_LOCATIONS.items():
         if name in dir_upper:
-            # Agregar jitter pequeño para que no se apilen
-            jitter_lat = random.uniform(-0.001, 0.001)
-            jitter_lng = random.uniform(-0.001, 0.001)
-            return (coords[0] + jitter_lat, coords[1] + jitter_lng)
+            d_lat, d_lng = _deterministic_jitter(direccion)
+            return (coords[0] + d_lat, coords[1] + d_lng)
     return None
 
 
