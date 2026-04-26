@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Crecimiento Personal — Dr. Rodrigo Olavarría · OLACORE</title>
+<link rel="icon" type="image/png" href="/static/olacore_sello_simple.png">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fraunces:ital,wght@0,400;0,600;1,300;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --olacore-fiordo: #0E2530;
+    --olacore-fiordo-2: #17323F;
+    --olacore-neblina: #E8E0D0;
+    --olacore-cobre: #B98149;
+    --olacore-lenga: #7C4A2A;
+    --olacore-lacre: #9A3E2F;
+    --olacore-verde-musgo: #4A5D44;
+  }
+  body { font-family: 'Inter', system-ui, sans-serif; background: #faf6ee; color: var(--olacore-fiordo); }
+  @keyframes sello-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  h1, h2, h3, h4 { font-family: 'Fraunces', serif; font-weight: 600; color: var(--olacore-fiordo); }
+  .text-slate-800, .text-slate-700, .text-slate-600, .text-slate-500 { color: var(--olacore-fiordo) !important; opacity: 0.85; }
+  .text-slate-500 { opacity: 0.65; }
+  .text-slate-400 { opacity: 0.5; }
+  .text-slate-300 { opacity: 0.3; }
+  .bg-white { background: #fffcf5 !important; }
+  .border-slate-200, .divide-slate-100 > * + * { border-color: rgba(14, 37, 48, 0.12) !important; }
+  .bg-slate-50 { background: rgba(232, 224, 208, 0.3) !important; color: var(--olacore-fiordo); }
+  .hover\:bg-slate-50:hover { background: rgba(232, 224, 208, 0.35) !important; }
+  .tab-btn.active { background: white; color: #0f172a; border-color: #e2e8f0; }
+  .tab-btn.active { color: var(--olacore-fiordo) !important; border-bottom-color: var(--olacore-cobre) !important; border-bottom-width: 2px !important; }
+  .by-olacore { display: flex; align-items: center; gap: 12px; padding-left: 16px; margin-left: 4px; text-decoration: none; }
+  .by-olacore-text-block { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+  .by-olacore-by { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--olacore-cobre); opacity: 0.85; line-height: 1; align-self: flex-start; }
+  .by-olacore-wordmark { height: 16px; display: block; margin: 2px 0; object-fit: contain; object-position: left center; align-self: flex-start; }
+  .by-olacore-tag { font-family: 'Fraunces', serif; font-style: italic; font-weight: 300; font-size: 10px; color: var(--olacore-cobre); opacity: 0.8; line-height: 1; letter-spacing: 0.04em; align-self: flex-start; }
+  .by-olacore-sello { width: 38px; height: 38px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .by-olacore-sello img { width: 100%; height: 100%; display: block; animation: sello-spin 60s linear infinite; transform-origin: center; }
+  .meridian { width: 1px; height: 56px; background: var(--olacore-cobre); position: relative; opacity: 0.7; flex-shrink: 0; margin-left: 24px; margin-right: 8px; }
+  .meridian::before, .meridian::after { content: ""; position: absolute; left: -4px; width: 9px; height: 9px; background: var(--olacore-cobre); border-radius: 50%; }
+  .meridian::before { top: 22%; }
+  .meridian::after  { bottom: 22%; }
+  .tone-fiordo  { background: rgba(14, 37, 48, 0.08); color: var(--olacore-fiordo); border: 1px solid rgba(14, 37, 48, 0.18); }
+  .tone-cobre   { background: rgba(185, 129, 73, 0.12); color: var(--olacore-lenga); border: 1px solid rgba(185, 129, 73, 0.35); }
+  .tone-musgo   { background: rgba(74, 93, 68, 0.1); color: #2f3d2c; border: 1px solid rgba(74, 93, 68, 0.3); }
+  .tone-lacre   { background: rgba(154, 62, 47, 0.1); color: var(--olacore-lacre); border: 1px solid rgba(154, 62, 47, 0.3); }
+  .tone-neblina { background: rgba(232, 224, 208, 0.45); color: var(--olacore-fiordo); border: 1px solid rgba(14,37,48,0.12); }
+  .status-done       { background: rgba(74, 93, 68, 0.18); color: #2f3d2c; }
+  .status-in_progress{ background: rgba(185, 129, 73, 0.2); color: var(--olacore-lenga); }
+  .status-planned    { background: rgba(232, 224, 208, 0.7); color: var(--olacore-fiordo); }
+  .priority-critical { background: rgba(154, 62, 47, 0.15); color: var(--olacore-lacre); }
+  .priority-alta     { background: rgba(185, 129, 73, 0.2); color: var(--olacore-lenga); }
+  .priority-media    { background: rgba(232, 224, 208, 0.6); color: var(--olacore-lenga); }
+  .priority-baja     { background: rgba(23, 50, 63, 0.08); color: var(--olacore-fiordo-2); }
+  .kpi-card { transition: transform .15s ease, box-shadow .15s ease; }
+  .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(14, 37, 48, .12); }
+  header { border-bottom: 1px solid rgba(185, 129, 73, 0.2) !important; }
+  /* Cross-nav */
+  .cross-nav { position: fixed; top: 16px; right: 16px; z-index: 50; display: flex; gap: 8px; font-size: 12px; }
+  .cross-nav a { padding: 6px 12px; border-radius: 999px; text-decoration: none; font-weight: 600; }
+  .cross-nav .seo { background: var(--olacore-fiordo); color: var(--olacore-neblina); }
+  .cross-nav .home { background: rgba(255,255,255,0.9); color: var(--olacore-fiordo); border: 1px solid rgba(14,37,48,0.18); }
+  /* Responsive */
+  #tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-wrap: nowrap !important; }
+  #tabs::-webkit-scrollbar { display: none; }
+  #tabs .tab-btn { flex-shrink: 0; white-space: nowrap; }
+  @media (max-width: 768px) {
+    header > div:first-child { flex-direction: column; align-items: flex-start !important; gap: 12px !important; padding: 14px 16px !important; }
+    .meridian { display: none; }
+    .by-olacore { padding-left: 0; margin-left: 0; gap: 8px; }
+    main { padding: 16px 12px !important; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="cross-nav">
+  <a href="/seo/dashboard" class="home">🔎 SEO</a>
+  <a href="/proyectos2026" class="home">🌐 Proyectos</a>
+  <a href="/" class="home">← agentecmc.cl</a>
+</nav>
+
+<header class="bg-white">
+  <div class="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="text-3xl">🎓</div>
+      <div>
+        <h1 class="text-xl font-semibold">Crecimiento Personal — Dr. Rodrigo Olavarría</h1>
+        <div class="text-sm text-slate-500" id="header-sub">Roadmap estratégico de aprendizaje · Plan 12 meses</div>
+      </div>
+      <div class="meridian" aria-hidden="true"></div>
+      <a href="/proyectos2026" class="by-olacore" title="OLACORE — Meridiano Sur">
+        <div class="by-olacore-text-block">
+          <span class="by-olacore-by">by</span>
+          <img src="/static/olacore_wordmark.png?v=2" alt="OLACORE" class="by-olacore-wordmark" />
+          <span class="by-olacore-tag">Meridiano Sur</span>
+        </div>
+        <div class="by-olacore-sello"><img src="/static/olacore_sello_simple.png" alt="" /></div>
+      </a>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="text-xs text-slate-400">Actualizado: <span id="updated-date">—</span></div>
+    </div>
+  </div>
+  <div class="max-w-7xl mx-auto px-6">
+    <nav class="flex gap-1 -mb-px flex-wrap" id="tabs">
+      <button class="tab-btn active px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="overview">📊 Overview</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="perfil">👤 Perfil</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="cursos">🎓 Cursos</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="libros">📚 Libros</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="certs">🏆 Certificaciones</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="areas">🌟 Áreas estratégicas</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="roadmap">🗓 Roadmap 12 meses</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="redes">🌐 Networking</button>
+    </nav>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-6 py-8">
+
+  <!-- Tab: Overview -->
+  <section id="tab-overview" class="tab-content">
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+      <div class="kpi-card tone-neblina p-5 rounded-xl">
+        <div class="text-xs uppercase tracking-wide font-semibold opacity-75">Horas estudio meta/mes</div>
+        <div class="text-3xl font-bold mt-2" id="kpi-horas">10</div>
+        <div class="text-xs opacity-75 mt-1">~30 min/día</div>
+      </div>
+      <div class="kpi-card tone-fiordo p-5 rounded-xl">
+        <div class="text-xs uppercase tracking-wide font-semibold opacity-80">Cursos planeados</div>
+        <div class="text-3xl font-bold mt-2" id="kpi-cursos">—</div>
+        <div class="text-xs opacity-75 mt-1">Curados estratégicamente</div>
+      </div>
+      <div class="kpi-card tone-cobre p-5 rounded-xl">
+        <div class="text-xs uppercase tracking-wide font-semibold opacity-80">Libros año meta</div>
+        <div class="text-3xl font-bold mt-2" id="kpi-libros">—</div>
+        <div class="text-xs opacity-75 mt-1">~1/mes</div>
+      </div>
+      <div class="kpi-card tone-musgo p-5 rounded-xl">
+        <div class="text-xs uppercase tracking-wide font-semibold opacity-80">Certificaciones</div>
+        <div class="text-3xl font-bold mt-2" id="kpi-certs">—</div>
+        <div class="text-xs opacity-75 mt-1">Validables</div>
+      </div>
+      <div class="kpi-card tone-lacre p-5 rounded-xl">
+        <div class="text-xs uppercase tracking-wide font-semibold opacity-80">% Plan completo</div>
+        <div class="text-3xl font-bold mt-2" id="kpi-completo">0%</div>
+        <div class="text-xs opacity-75 mt-1">Plan 12 meses</div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div class="bg-white rounded-xl border border-slate-200 p-6">
+        <h3 class="font-semibold mb-4">Estado de cursos</h3>
+        <canvas id="chart-cursos" height="220"></canvas>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-200 p-6">
+        <h3 class="font-semibold mb-4">Distribución por área</h3>
+        <canvas id="chart-areas" height="220"></canvas>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl border border-slate-200 p-6 mb-6">
+      <h3 class="font-semibold mb-2">Filosofía del plan</h3>
+      <p class="text-sm leading-relaxed">Eres médico con doble formación clínica y de gestión, ahora liderando un holding del sur de Chile. Tu palanca de crecimiento ya no es solo más medicina — es <strong>la intersección entre clínica, tecnología, marketing y liderazgo</strong>. Este plan está diseñado para que <strong>no dependas de agencias ni consultoras</strong>: que sepas pedir, evaluar y construir lo que necesitas.</p>
+      <p class="text-sm leading-relaxed mt-3">Tres principios:</p>
+      <ul class="text-sm leading-relaxed list-disc ml-5 mt-2">
+        <li><strong>Profundidad sobre amplitud</strong>: pocos temas, muy bien aprendidos. No te conviertas en "experto en todo".</li>
+        <li><strong>Aplicación inmediata</strong>: cada curso debe tener output ejecutable en CMC u OLACORE en menos de 30 días.</li>
+        <li><strong>Compounding</strong>: prefiere temas que se refuercen entre sí (SEO + analytics + marketing > SEO + diseño industrial + biología molecular).</li>
+      </ul>
+    </div>
+
+    <div class="bg-white rounded-xl border border-slate-200 p-6">
+      <h3 class="font-semibold mb-4">Próximas acciones (mes en curso)</h3>
+      <ul class="space-y-3" id="checklist"></ul>
+    </div>
+  </section>
+
+  <!-- Tab: Perfil -->
+  <section id="tab-perfil" class="tab-content hidden">
+    <div class="bg-white rounded-xl border border-slate-200 p-6 mb-6">
+      <h3 class="font-semibold mb-4">Background</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <div class="text-xs uppercase font-semibold tracking-wide opacity-60">Formación clínica</div>
+          <div class="font-medium mt-1">Medicina General</div>
+          <div class="text-sm opacity-75">Universidad de Concepción</div>
+        </div>
+        <div>
+          <div class="text-xs uppercase font-semibold tracking-wide opacity-60">Diplomados</div>
+          <div class="font-medium mt-1">Gestión de Centros Privados</div>
+          <div class="text-sm opacity-75">Universidad Católica de Chile</div>
+          <div class="font-medium mt-3">Atención Primaria de Salud (APS)</div>
+          <div class="text-sm opacity-75">Universidad de los Andes Chile</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl border border-slate-200 p-6 mb-6">
+      <h3 class="font-semibold mb-4">Roles actuales</h3>
+      <ul class="space-y-2 text-sm">
+        <li>🏥 <strong>Director / Médico General</strong> — Centro Médico Carampangue (CMC)</li>
+        <li>🏛 <strong>Gerente General</strong> — OLACORE Holding (Meridiano Sur)</li>
+        <li>📍 Sub-marcas del ecosistema: Meulen (supermercado), proyectos en evaluación</li>
+        <li>📍 Carampangue, Provincia de Arauco · Puerto Montt</li>
+      </ul>
+    </div>
+
+    <div class="bg-white rounded-xl border border-slate-200 p-6 mb-6">
+      <h3 class="font-semibold mb-4">Análisis de fortalezas y gaps</h3>
+      <div class="grid md:grid-cols-2 gap-6">
+        <div>
+          <div class="text-xs uppercase font-semibold tracking-wide opacity-60 mb-2">✅ Fortalezas establecidas</div>
+          <ul class="text-sm space-y-1.5 list-disc ml-5">
+            <li>Conocimiento clínico sólido (medicina general)</li>
+            <li>Comprensión del sistema de salud chileno (Fonasa, Isapres, MLE)</li>
+            <li>Experiencia operativa de centro médico privado real</li>
+            <li>Capacidad de visión sistémica (holding multimarca)</li>
+            <li>Identidad de marca construida con criterio (OLACORE)</li>
+            <li>Mentalidad de constructor — implementa, no solo planifica</li>
+          </ul>
+        </div>
+        <div>
+          <div class="text-xs uppercase font-semibold tracking-wide opacity-60 mb-2">🟠 Gaps a cerrar (priorizados)</div>
+          <ul class="text-sm space-y-1.5 list-disc ml-5">
+            <li>Marketing digital (SEO, analítica, conversión)</li>
+            <li>Tecnología aplicada (Python, IA, automatización)</li>
+            <li>Análisis de datos / BI (más allá de Excel)</li>
+            <li>Inglés ejecutivo (acceso a literatura y networking global)</li>
+            <li>Negociación con proveedores y partners institucionales</li>
+            <li>Gestión de talento (atraer y retener equipos clínicos)</li>
+            <li>Salud financiera personal (separar holding de patrimonio)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl border border-slate-200 p-6">
+      <h3 class="font-semibold mb-4">Identidad profesional emergente</h3>
+      <p class="text-sm leading-relaxed">Estás en una transición típica del médico-emprendedor: <strong>de proveedor de servicio a operador de sistema</strong>. La medicina seguirá siendo tu ancla de credibilidad, pero tu valor económico futuro estará en tu capacidad de <strong>diseñar y escalar</strong> sistemas de salud.</p>
+      <p class="text-sm leading-relaxed mt-3">Pocos médicos chilenos hacen esta transición bien — la mayoría se atrincheran en la consulta o se contratan en una corporación. Tu ventaja: ya tomaste el camino del operador. Este plan acelera tu tránsito hacia <em>healthcare entrepreneur</em>.</p>
+    </div>
+  </section>
+
+  <!-- Tab: Cursos -->
+  <section id="tab-cursos" class="tab-content hidden">
+    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
+        <h3 class="font-semibold">Cursos curados (gratis y pagos)</h3>
+        <div class="flex gap-2 flex-wrap">
+          <select id="filter-area" class="text-xs px-3 py-1.5 rounded border" style="background:#fffcf5;border-color:rgba(14,37,48,0.18);">
+            <option value="">Todas las áreas</option>
+          </select>
+          <select id="filter-status" class="text-xs px-3 py-1.5 rounded border" style="background:#fffcf5;border-color:rgba(14,37,48,0.18);">
+            <option value="">Todos los estados</option>
+            <option value="planned">Planeados</option>
+            <option value="in_progress">En curso</option>
+            <option value="done">Completados</option>
+          </select>
+        </div>
+      </div>
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-slate-600 uppercase text-xs">
+          <tr>
+            <th class="px-4 py-3 text-left">Curso</th>
+            <th class="px-4 py-3 text-left">Fuente</th>
+            <th class="px-4 py-3 text-left">Área</th>
+            <th class="px-4 py-3 text-right">Horas</th>
+            <th class="px-4 py-3 text-right">Costo</th>
+            <th class="px-4 py-3 text-center">Prioridad</th>
+            <th class="px-4 py-3 text-center">Estado</th>
+            <th class="px-4 py-3 text-center">Fase</th>
+          </tr>
+        </thead>
+        <tbody id="cursos-tbody" class="divide-y divide-slate-100"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Tab: Libros -->
+  <section id="tab-libros" class="tab-content hidden">
+    <div class="bg-white rounded-xl border border-slate-200 p-6">
+      <h3 class="font-semibold mb-4">Lectura priorizada</h3>
+      <p class="text-sm text-slate-500 mb-4">Libros que comprimen años de experiencia en horas. Ordenados por aplicabilidad inmediata a tu rol.</p>
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4" id="libros-grid"></div>
+    </div>
+  </section>
+
+  <!-- Tab: Certificaciones -->
+  <section id="tab-certs" class="tab-content hidden">
+    <div class="bg-white rounded-xl border border-slate-200 p-6">
+      <h3 class="font-semibold mb-4">Certificaciones validables</h3>
+      <p class="text-sm text-slate-500 mb-4">Acreditan capacidad técnica ante terceros (proveedores, partners, inversionistas).</p>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 text-slate-600 uppercase text-xs">
+            <tr>
+              <th class="px-4 py-3 text-left">Certificación</th>
+              <th class="px-4 py-3 text-left">Proveedor</th>
+              <th class="px-4 py-3 text-left">Área</th>
+              <th class="px-4 py-3 text-right">Costo</th>
+              <th class="px-4 py-3 text-center">Estado</th>
+              <th class="px-4 py-3 text-left">Por qué importa</th>
+            </tr>
+          </thead>
+          <tbody id="certs-tbody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tab: Áreas -->
+  <section id="tab-areas" class="tab-content hidden">
+    <div class="bg-white rounded-xl border border-slate-200 p-6 mb-6">
+      <h3 class="font-semibold mb-4">Áreas estratégicas (impacto vs dominio actual)</h3>
+      <p class="text-sm text-slate-500 mb-5">Mapa de hacia dónde invertir tu tiempo de aprendizaje. Las que tienen alto impacto y bajo dominio son tu prioridad real.</p>
+      <canvas id="chart-areas-radar" height="320"></canvas>
+    </div>
+    <div id="areas-cards" class="grid md:grid-cols-2 gap-4"></div>
+  </section>
+
+  <!-- Tab: Roadmap -->
+  <section id="tab-roadmap" class="tab-content hidden">
+    <div class="bg-white rounded-xl border border-slate-200 p-6">
+      <h3 class="font-semibold mb-2">Roadmap 12 meses</h3>
+      <p class="text-sm text-slate-500 mb-6">Plan estructurado en 5 trimestres-fase + ejes paralelos continuos.</p>
+      <div id="roadmap-fases" class="space-y-6"></div>
+    </div>
+  </section>
+
+  <!-- Tab: Networking -->
+  <section id="tab-redes" class="tab-content hidden">
+    <div class="bg-white rounded-xl border border-slate-200 p-6">
+      <h3 class="font-semibold mb-4">Networking estratégico para healthcare entrepreneur en Chile</h3>
+      <p class="text-sm text-slate-500 mb-5">Las relaciones correctas aceleran más que cualquier curso. Comunidades específicas para tu transición.</p>
+      <div id="redes-grid" class="grid md:grid-cols-2 gap-4"></div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+const DATA = {
+  version: "1.0",
+  updated_at: "2026-04-26",
+
+  metas: { horas_mes: 10, libros_anio: 12, certs_anio: 4 },
+
+  fases: [
+    { id: 1, name: "Fundamentos digitales",          meses: "Mes 1-3",   color: "#9A3E2F", desc: "Marketing digital + analítica básica. Para que evalúes proveedores y no dependas de mí o de una agencia." },
+    { id: 2, name: "Datos + medición operativa",     meses: "Mes 4-5",   color: "#B98149", desc: "BI, SQL, métricas de negocio. Tomar decisiones con datos, no con intuición." },
+    { id: 3, name: "Tecnología + IA aplicada",        meses: "Mes 6-7",   color: "#0E2530", desc: "Python básico, prompting, automatización. Construir o evaluar lo que se automatiza." },
+    { id: 4, name: "Gestión de holding",              meses: "Mes 8-9",   color: "#4A5D44", desc: "Finanzas, OKRs, liderazgo de equipos. Operar como CEO no como médico-administrador." },
+    { id: 5, name: "Healthtech + escalamiento",       meses: "Mes 10-12", color: "#17323F", desc: "Estrategia, networking, capital. Pasar de operador a constructor de sistema." }
+  ],
+
+  ejes_paralelos: [
+    "🏃 Salud personal y manejo del burnout (continuo)",
+    "🌐 Inglés ejecutivo y médico (15 min/día)",
+    "📚 1 libro por mes (alternando técnico y mindset)",
+    "🤝 1 reunión de networking estratégica por mes"
+  ],
+
+  areas: [
+    { area: "Marketing digital aplicado a salud",     impacto: 5, dominio: 2, color: "#9A3E2F", nota: "Tu palanca #1 de crecimiento de pacientes nuevos. SEO local + Ads salud + content = adquisición a costo bajo." },
+    { area: "Analítica y métricas de negocio",         impacto: 5, dominio: 2, color: "#B98149", nota: "Sin esto, tomas decisiones a ciegas. GA4 + GSC + tu propio BI te ahorra meses de iteración." },
+    { area: "Tecnología / IA aplicada",                impacto: 5, dominio: 3, color: "#0E2530", nota: "Ya construiste un chatbot. Si entiendes lo que pasa adentro, puedes dirigir mejor a tu equipo o a Claude." },
+    { area: "Gestión financiera de holding",           impacto: 5, dominio: 2, color: "#4A5D44", nota: "Diferencia entre médico que cobra honorarios y CEO que entiende cap table, EBITDA, valuación." },
+    { area: "Liderazgo y gestión de talento clínico",  impacto: 5, dominio: 3, color: "#7C4A2A", nota: "El cuello de botella del CMC ya no son pacientes — son profesionales. Atraer, retener, desarrollar." },
+    { area: "Negociación (proveedores, isapres, M&A)", impacto: 4, dominio: 2, color: "#17323F", nota: "Cada año negocias contratos. Una habilidad asimétrica: 1% mejor negociador = millones a 10 años." },
+    { area: "Salud poblacional / value-based care",     impacto: 4, dominio: 3, color: "#9A3E2F", nota: "Hacia donde va el sistema chileno. Si entiendes esto antes que tus competidores, posicionas." },
+    { area: "Comunicación ejecutiva / public speaking", impacto: 4, dominio: 2, color: "#B98149", nota: "Vender el holding a inversionistas, partners, prensa. Habilidad multiplicadora." },
+    { area: "Inglés ejecutivo y médico",                impacto: 4, dominio: 3, color: "#0E2530", nota: "Acceso a literatura, conferencias, partners internacionales. Compounding lifetime." },
+    { area: "Productividad personal y deep work",       impacto: 4, dominio: 3, color: "#4A5D44", nota: "Tu input más limitado es tu tiempo y atención. Sistemas para protegerlo." }
+  ],
+
+  cursos: [
+    // ── FASE 1: Fundamentos digitales ──
+    { nombre: "Ahrefs Academy SEO Course",                  fuente: "Ahrefs",            url: "https://ahrefs.com/academy",                              area: "Marketing Digital", horas: 10, costo: "Gratis",       prioridad: "critical", status: "planned", fase: 1 },
+    { nombre: "Google Search Central — Documentation",      fuente: "Google",            url: "https://developers.google.com/search/docs",              area: "Marketing Digital", horas: 8,  costo: "Gratis",       prioridad: "critical", status: "planned", fase: 1 },
+    { nombre: "Yoast SEO Academy — Plugin Training",        fuente: "Yoast",             url: "https://academy.yoast.com",                              area: "Marketing Digital", horas: 4,  costo: "Gratis básico", prioridad: "alta", status: "planned", fase: 1 },
+    { nombre: "Google Analytics Academy (GA4)",              fuente: "Google Skillshop",  url: "https://skillshop.exceedlms.com",                        area: "Analytica",         horas: 8,  costo: "Gratis",       prioridad: "critical", status: "planned", fase: 1 },
+    { nombre: "Whitespark Local SEO Course",                 fuente: "Whitespark",        url: "https://learn.whitespark.ca",                            area: "Marketing Digital", horas: 6,  costo: "Algunos free", prioridad: "alta",     status: "planned", fase: 1 },
+    { nombre: "HubSpot — Inbound Marketing Certification",   fuente: "HubSpot Academy",   url: "https://academy.hubspot.com",                            area: "Marketing Digital", horas: 6,  costo: "Gratis + cert", prioridad: "alta", status: "planned", fase: 1 },
+
+    // ── FASE 2: Datos + medición ──
+    { nombre: "Mode SQL Tutorial",                           fuente: "Mode Analytics",    url: "https://mode.com/sql-tutorial",                          area: "Datos / BI",        horas: 12, costo: "Gratis",       prioridad: "critical", status: "planned", fase: 2 },
+    { nombre: "Google Data Analytics Professional Certificate", fuente: "Coursera",      url: "https://www.coursera.org/google-certificates/data-analytics-professional-certificate", area: "Datos / BI", horas: 80, costo: "USD 49/mes", prioridad: "alta",  status: "planned", fase: 2 },
+    { nombre: "Metabase Learn",                              fuente: "Metabase",          url: "https://metabase.com/learn",                             area: "Datos / BI",        horas: 6,  costo: "Gratis",       prioridad: "alta",     status: "planned", fase: 2 },
+    { nombre: "Lean Analytics — Curso/Libro aplicado",        fuente: "O'Reilly + libro",  url: "",                                                       area: "Métricas",          horas: 15, costo: "Libro $20",    prioridad: "alta",     status: "planned", fase: 2 },
+    { nombre: "Excel para análisis financiero (Wall Street Prep)", fuente: "WSP",        url: "https://www.wallstreetprep.com",                         area: "Finanzas",          horas: 10, costo: "USD 39",       prioridad: "media",    status: "planned", fase: 2 },
+
+    // ── FASE 3: Tecnología + IA ──
+    { nombre: "Python para No-Programadores (Automate the Boring Stuff)", fuente: "Al Sweigart", url: "https://automatetheboringstuff.com",            area: "Tech / IA",         horas: 30, costo: "Gratis online", prioridad: "alta",    status: "planned", fase: 3 },
+    { nombre: "Anthropic — Prompt Engineering",              fuente: "Anthropic",         url: "https://docs.anthropic.com",                             area: "Tech / IA",         horas: 6,  costo: "Gratis",       prioridad: "critical", status: "planned", fase: 3 },
+    { nombre: "DeepLearning.AI — ChatGPT Prompt Engineering for Devs", fuente: "DeepLearning.AI", url: "https://www.deeplearning.ai/short-courses",   area: "Tech / IA",         horas: 4,  costo: "Gratis",       prioridad: "alta",     status: "planned", fase: 3 },
+    { nombre: "FastAPI Tutorial Oficial",                     fuente: "FastAPI Docs",      url: "https://fastapi.tiangolo.com",                           area: "Tech / IA",         horas: 8,  costo: "Gratis",       prioridad: "media",    status: "planned", fase: 3 },
+    { nombre: "Andrew Huberman — AI for Health (entrevistas)", fuente: "Huberman Lab",     url: "https://www.hubermanlab.com",                            area: "Tech / IA",         horas: 10, costo: "Gratis",       prioridad: "baja",     status: "planned", fase: 3 },
+    { nombre: "No-code automation: Make + Zapier essentials", fuente: "Make Academy",     url: "https://www.make.com/en/academy",                        area: "Tech / IA",         horas: 6,  costo: "Gratis",       prioridad: "media",    status: "planned", fase: 3 },
+
+    // ── FASE 4: Gestión de holding ──
+    { nombre: "Finance for Non-Financial Managers",          fuente: "Coursera (UC Irvine)", url: "https://www.coursera.org",                            area: "Finanzas",          horas: 20, costo: "Auditar gratis", prioridad: "critical", status: "planned", fase: 4 },
+    { nombre: "Measure What Matters — OKRs implementación",   fuente: "John Doerr book + WhatMatters.com", url: "https://www.whatmatters.com",            area: "Liderazgo",         horas: 8,  costo: "Libro $20",    prioridad: "alta",     status: "planned", fase: 4 },
+    { nombre: "Negociación — Harvard Program on Negotiation", fuente: "PON Online",       url: "https://www.pon.harvard.edu",                            area: "Negociación",       horas: 15, costo: "USD 100-300",  prioridad: "alta",     status: "planned", fase: 4 },
+    { nombre: "Liderazgo clínico (Healthcare Leadership Coursera)", fuente: "Coursera",   url: "https://www.coursera.org/specializations/healthcare-leadership", area: "Liderazgo",     horas: 25, costo: "Auditar gratis", prioridad: "alta",   status: "planned", fase: 4 },
+    { nombre: "Tributación de empresas en Chile (Diplomado)", fuente: "U. de Chile / SII Capacita", url: "https://www.sii.cl",                            area: "Finanzas",          horas: 20, costo: "Gratis SII",   prioridad: "media",    status: "planned", fase: 4 },
+    { nombre: "Atraer y retener talento clínico (HBR articles)", fuente: "Harvard Business Review", url: "https://hbr.org/topic/talent-management",     area: "Liderazgo",         horas: 6,  costo: "USD 10/mes",   prioridad: "alta",     status: "planned", fase: 4 },
+
+    // ── FASE 5: Healthtech + escalamiento ──
+    { nombre: "Stanford Medicine X — Healthcare Innovation (videos)", fuente: "Stanford", url: "https://medicinex.stanford.edu",                         area: "Healthtech",        horas: 15, costo: "Gratis",       prioridad: "alta",     status: "planned", fase: 5 },
+    { nombre: "a16z Bio + Health podcast",                    fuente: "Andreessen Horowitz", url: "https://a16z.com/news-content",                        area: "Healthtech",        horas: 20, costo: "Gratis",       prioridad: "media",    status: "planned", fase: 5 },
+    { nombre: "Value-Based Care fundamentals",                fuente: "Coursera (U. Pennsylvania)", url: "https://www.coursera.org",                       area: "Salud poblacional", horas: 18, costo: "Auditar gratis", prioridad: "alta",   status: "planned", fase: 5 },
+    { nombre: "Pitch deck para healthtech (YC Startup School)", fuente: "Y Combinator",   url: "https://www.startupschool.org",                          area: "Healthtech",        horas: 10, costo: "Gratis",       prioridad: "media",    status: "planned", fase: 5 },
+    { nombre: "Comunicación ejecutiva — Coursera (RUSSIA WSL)", fuente: "Coursera/Wharton", url: "https://www.coursera.org/learn/wharton-communication-skills", area: "Comunicación",   horas: 12, costo: "Auditar gratis", prioridad: "alta",   status: "planned", fase: 5 },
+    { nombre: "M&A para PYMEs en Chile (CCS / SOFOFA)",       fuente: "CCS / SOFOFA",     url: "https://www.ccs.cl",                                     area: "Finanzas",          horas: 15, costo: "Variable",     prioridad: "media",    status: "planned", fase: 5 },
+
+    // ── EJES PARALELOS continuos ──
+    { nombre: "Inglés médico y ejecutivo (Cambly o italki)",  fuente: "Cambly / italki",  url: "https://www.cambly.com",                                 area: "Inglés",            horas: 60, costo: "USD 100/mes",  prioridad: "alta",     status: "planned", fase: 0 },
+    { nombre: "Mindfulness y burnout (Headspace / Calm)",      fuente: "Headspace",        url: "https://www.headspace.com",                              area: "Bienestar",         horas: 15, costo: "USD 70/año",   prioridad: "alta",     status: "planned", fase: 0 },
+    { nombre: "Productividad y deep work (Cal Newport materials)", fuente: "calnewport.com", url: "https://calnewport.com",                              area: "Productividad",     horas: 8,  costo: "Gratis blog",  prioridad: "media",    status: "planned", fase: 0 }
+  ],
+
+  libros: [
+    { titulo: "They Ask, You Answer",           autor: "Marcus Sheridan",       area: "Marketing Digital", por_que: "El método de inbound marketing más útil para negocios locales que viven de confianza. Aplicable directo al CMC.", status: "planned" },
+    { titulo: "Lean Analytics",                 autor: "Croll & Yoskovitz",     area: "Métricas",          por_que: "Te enseña qué medir según la etapa del negocio. Evita la trampa de las vanity metrics.", status: "planned" },
+    { titulo: "Don't Make Me Think",            autor: "Steve Krug",            area: "UX",                por_que: "Lectura de 4 horas que cambia cómo pensás landing pages, formularios, chatbot. Útil para evaluar diseño.", status: "planned" },
+    { titulo: "Measure What Matters",           autor: "John Doerr",            area: "Liderazgo",         por_que: "OKRs explicados con casos reales (Google, Bono). Sirve para alinear holding multi-empresa.", status: "planned" },
+    { titulo: "Build",                          autor: "Tony Fadell",           area: "Liderazgo",         por_que: "Memorias del creador del iPod/Nest. La mejor guía honesta de cómo se construye y se lidera producto.", status: "planned" },
+    { titulo: "Crossing the Chasm",             autor: "Geoffrey Moore",        area: "Estrategia",        por_que: "Cómo escalar un servicio de early adopters al mainstream. Aplicable a mover CMC de Carampangue a más comunas.", status: "planned" },
+    { titulo: "The Lean Startup",               autor: "Eric Ries",             area: "Estrategia",        por_que: "Validación con experimentos pequeños. Útil para probar nuevas líneas dentro del holding.", status: "planned" },
+    { titulo: "Deep Work",                      autor: "Cal Newport",           area: "Productividad",     por_que: "Tu input más limitado es atención profunda. Sistema para protegerla con responsabilidades múltiples.", status: "planned" },
+    { titulo: "The Healthcare Quality Book",    autor: "Ransom et al",          area: "Salud poblacional", por_que: "Marco de calidad asistencial práctico. Diferencia entre clínica que crece y clínica que sobresale.", status: "planned" },
+    { titulo: "The Brand Gap",                  autor: "Marty Neumeier",        area: "Branding",          por_que: "Lo que ya intuís con OLACORE, formalizado. Lectura de 1 hora con compounding gigante.", status: "planned" },
+    { titulo: "Never Split the Difference",     autor: "Chris Voss",            area: "Negociación",       por_que: "Ex negociador FBI. Técnicas aplicables a contratos con isapres, médicos, proveedores.", status: "planned" },
+    { titulo: "When Breath Becomes Air",        autor: "Paul Kalanithi",        area: "Bienestar",         por_que: "Médico-escritor. Recordatorio de por qué hacés esto cuando el holding te abruma. Lectura de domingo.", status: "planned" },
+    { titulo: "Atomic Habits",                  autor: "James Clear",           area: "Productividad",     por_que: "Sistema de hábitos para integrar todo este aprendizaje en rutina sin colapsar.", status: "planned" },
+    { titulo: "The Innovator's Prescription",   autor: "Clayton Christensen",   area: "Healthtech",        por_que: "Cómo se disrumpe la salud. Marco para anticipar movimientos del sistema chileno (Fonasa-VBC).", status: "planned" }
+  ],
+
+  certificaciones: [
+    { nombre: "Google Analytics 4 (Skillshop)",        proveedor: "Google",           area: "Analítica",          costo: "Gratis",         por_que: "Cred standard para hablar con cualquier agencia digital sin que te vendan humo.", status: "planned" },
+    { nombre: "HubSpot Inbound Marketing",             proveedor: "HubSpot Academy",  area: "Marketing",          costo: "Gratis",         por_que: "Reconocida globalmente. Aplicable a contenido del CMC.", status: "planned" },
+    { nombre: "Google Ads Search Certification",       proveedor: "Google Skillshop", area: "Marketing",          costo: "Gratis",         por_que: "Para evaluar campañas pagadas (cuando llegue el momento) sin depender 100% de agencia.", status: "planned" },
+    { nombre: "Anthropic — Claude Skill Builder",      proveedor: "Anthropic",        area: "Tech / IA",          costo: "Gratis",         por_que: "Oficial. Te legitima como early adopter de IA en salud, útil para PR y partnerships.", status: "planned" },
+    { nombre: "PMP — Project Management Professional",  proveedor: "PMI",              area: "Gestión",            costo: "USD 555 + curso", por_que: "Para gestionar lanzamientos del holding (nuevo servicio, nueva sucursal). Reconocida internacional.", status: "planned" },
+    { nombre: "Meta Blueprint — Healthcare Marketing",  proveedor: "Meta",             area: "Marketing",          costo: "Gratis",         por_que: "Específica de regulación publicidad salud en plataformas Meta (FB/IG/WhatsApp).", status: "planned" }
+  ],
+
+  redes: [
+    { nombre: "Endeavor Chile",                    url: "https://endeavor.cl",                       descripcion: "Red de emprendedores high-impact. Aplicar cuando facturación holding > USD 1M/año. Acceso a mentores top y capital." },
+    { nombre: "ASECH (Asociación de Emprendedores Chile)", url: "https://asech.cl",                  descripcion: "Comunidad amplia de emprendedores chilenos. Eventos mensuales, lobby regulatorio, networking sector." },
+    { nombre: "Salud Digital Chile",                url: "https://saluddigital.cl",                  descripcion: "Comunidad emergente healthtech CL. Conoce a tus pares en telemedicina, IA salud, etc." },
+    { nombre: "ACHS (Asociación Chilena de Salud)", url: "https://www.achs.cl",                      descripcion: "Más establishment, pero útil para entender la conversación de salud privada y oportunidades de partnership." },
+    { nombre: "UDD Ventures / Ucampus",              url: "https://udd.cl",                            descripcion: "Si te interesa rodearte de fundadores tech. Pitch days, demo days, mentorías." },
+    { nombre: "Healthtech Builders LATAM (Whatsapp/Slack)", url: "",                                  descripcion: "Buscar comunidades en Slack/WA específicas de healthtech LATAM. Pequeñas pero alto signal." },
+    { nombre: "Linkedin: seguir +20 healthtech CEOs LATAM", url: "https://linkedin.com",              descripcion: "Curar feed estratégicamente. Sigue founders de Examedi, Lemu, Cero, Heru, etc. Aprenden público qué construir." },
+    { nombre: "MEDS (Medicina + Estrategia)",        url: "",                                          descripcion: "Mastermind cerrados de médicos-emprendedores chilenos. Buscar en Linkedin o pedir intro." },
+    { nombre: "Ronda 100 (CCS)",                     url: "https://www.ccs.cl",                        descripcion: "Red empresarial Cámara Comercio Santiago. Si llegas a expandir el holding, indispensable." },
+    { nombre: "Health 2.0 / HIMSS Latin America",    url: "https://www.himss.org",                    descripcion: "Conferencias de salud digital. Una al año. Compounding de aprendizaje + contactos internacionales." }
+  ],
+
+  checklist_mes: [
+    { text: "Inscribirse a Ahrefs Academy y completar módulo 1 (2h)",           done: false },
+    { text: "Crear cuenta en Google Skillshop y empezar GA4 Cert",              done: false },
+    { text: "Comprar 'They Ask, You Answer' (Kindle o físico)",                  done: false },
+    { text: "Bloquear 30 min en calendario, lunes a viernes 7:00 AM, para estudio", done: false },
+    { text: "Definir métrica única para evaluar progreso este mes",              done: false },
+    { text: "Programar 1 reunión de networking este mes (Salud Digital Chile)",  done: false }
+  ]
+};
+
+document.getElementById('updated-date').textContent = DATA.updated_at;
+document.getElementById('kpi-cursos').textContent = DATA.cursos.length;
+document.getElementById('kpi-libros').textContent = DATA.libros.length;
+document.getElementById('kpi-certs').textContent = DATA.certificaciones.length;
+
+// Tabs
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden');
+  });
+});
+
+// Charts overview
+const statusCounts = DATA.cursos.reduce((a, c) => { a[c.status] = (a[c.status]||0)+1; return a; }, {});
+new Chart(document.getElementById('chart-cursos'), {
+  type: 'doughnut',
+  data: {
+    labels: Object.keys(statusCounts).map(s => ({done:'Completados',in_progress:'En curso',planned:'Planeados'})[s] || s),
+    datasets: [{ data: Object.values(statusCounts), backgroundColor: ['#4A5D44','#B98149','#0E2530'], borderColor: '#fffcf5', borderWidth: 2 }]
+  },
+  options: { plugins: { legend: { position: 'bottom' } } }
+});
+const areaCounts = DATA.cursos.reduce((a, c) => { a[c.area] = (a[c.area]||0)+1; return a; }, {});
+new Chart(document.getElementById('chart-areas'), {
+  type: 'bar',
+  data: {
+    labels: Object.keys(areaCounts),
+    datasets: [{ label: '# cursos', data: Object.values(areaCounts), backgroundColor: '#B98149', borderRadius: 4 }]
+  },
+  options: { indexAxis: 'y', plugins: { legend: { display: false } } }
+});
+
+const completos = DATA.cursos.filter(c => c.status === 'done').length;
+document.getElementById('kpi-completo').textContent = Math.round(completos / DATA.cursos.length * 100) + '%';
+
+// Checklist
+const checkEl = document.getElementById('checklist');
+DATA.checklist_mes.forEach(item => {
+  const li = document.createElement('li');
+  li.className = 'flex items-start gap-3 text-sm';
+  li.innerHTML = `<span class="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded ${item.done?'bg-emerald-500 text-white':'border border-slate-300 text-slate-400'}">${item.done?'✓':''}</span><span class="${item.done?'line-through text-slate-400':'text-slate-700'}">${item.text}</span>`;
+  checkEl.appendChild(li);
+});
+
+// Cursos table + filters
+const cursosTbody = document.getElementById('cursos-tbody');
+const filterArea = document.getElementById('filter-area');
+const filterStatus = document.getElementById('filter-status');
+[...new Set(DATA.cursos.map(c => c.area))].sort().forEach(a => {
+  const opt = document.createElement('option'); opt.value = a; opt.textContent = a; filterArea.appendChild(opt);
+});
+function renderCursos() {
+  const fa = filterArea.value, fs = filterStatus.value;
+  cursosTbody.innerHTML = '';
+  DATA.cursos.filter(c => (!fa || c.area === fa) && (!fs || c.status === fs)).forEach(c => {
+    const tr = document.createElement('tr');
+    tr.className = 'hover:bg-slate-50';
+    const linkEl = c.url ? `<a href="${c.url}" target="_blank" class="font-medium hover:underline" style="color:var(--olacore-fiordo)">${c.nombre} ↗</a>` : `<span class="font-medium">${c.nombre}</span>`;
+    tr.innerHTML = `
+      <td class="px-4 py-3">${linkEl}</td>
+      <td class="px-4 py-3 text-slate-500">${c.fuente}</td>
+      <td class="px-4 py-3"><span class="text-xs px-2 py-0.5 rounded tone-neblina">${c.area}</span></td>
+      <td class="px-4 py-3 text-right">${c.horas}h</td>
+      <td class="px-4 py-3 text-right text-slate-500">${c.costo}</td>
+      <td class="px-4 py-3 text-center"><span class="priority-${c.prioridad} px-2 py-1 rounded text-xs font-medium">${c.prioridad}</span></td>
+      <td class="px-4 py-3 text-center"><span class="status-${c.status} px-2 py-1 rounded text-xs font-medium">${c.status}</span></td>
+      <td class="px-4 py-3 text-center text-slate-500">${c.fase ? 'F'+c.fase : '∞'}</td>`;
+    cursosTbody.appendChild(tr);
+  });
+}
+filterArea.addEventListener('change', renderCursos);
+filterStatus.addEventListener('change', renderCursos);
+renderCursos();
+
+// Libros grid
+const librosGrid = document.getElementById('libros-grid');
+DATA.libros.forEach(l => {
+  const card = document.createElement('div');
+  card.className = 'tone-neblina p-4 rounded-lg';
+  card.innerHTML = `
+    <div class="flex items-baseline justify-between mb-1">
+      <h4 class="font-semibold text-sm">${l.titulo}</h4>
+      <span class="status-${l.status} px-2 py-0.5 rounded text-xs">${l.status}</span>
+    </div>
+    <div class="text-xs italic opacity-75 mb-2">${l.autor}</div>
+    <div class="text-xs uppercase font-semibold opacity-60 mb-1">${l.area}</div>
+    <p class="text-xs leading-relaxed">${l.por_que}</p>`;
+  librosGrid.appendChild(card);
+});
+
+// Certificaciones
+const certsTbody = document.getElementById('certs-tbody');
+DATA.certificaciones.forEach(c => {
+  const tr = document.createElement('tr');
+  tr.className = 'hover:bg-slate-50';
+  tr.innerHTML = `
+    <td class="px-4 py-3 font-medium">${c.nombre}</td>
+    <td class="px-4 py-3 text-slate-500">${c.proveedor}</td>
+    <td class="px-4 py-3"><span class="text-xs px-2 py-0.5 rounded tone-neblina">${c.area}</span></td>
+    <td class="px-4 py-3 text-right text-slate-500">${c.costo}</td>
+    <td class="px-4 py-3 text-center"><span class="status-${c.status} px-2 py-1 rounded text-xs">${c.status}</span></td>
+    <td class="px-4 py-3 text-xs text-slate-600">${c.por_que}</td>`;
+  certsTbody.appendChild(tr);
+});
+
+// Áreas radar + cards
+new Chart(document.getElementById('chart-areas-radar'), {
+  type: 'radar',
+  data: {
+    labels: DATA.areas.map(a => a.area),
+    datasets: [
+      { label: 'Dominio actual', data: DATA.areas.map(a => a.dominio), borderColor: '#9A3E2F', backgroundColor: 'rgba(154,62,47,0.15)', borderWidth: 2 },
+      { label: 'Impacto estratégico', data: DATA.areas.map(a => a.impacto), borderColor: '#4A5D44', backgroundColor: 'rgba(74,93,68,0.12)', borderWidth: 2 }
+    ]
+  },
+  options: { scales: { r: { min: 0, max: 5, ticks: { stepSize: 1 } } }, plugins: { legend: { position: 'bottom' } } }
+});
+const areasCards = document.getElementById('areas-cards');
+DATA.areas.sort((a,b) => (b.impacto - b.dominio) - (a.impacto - a.dominio)).forEach(a => {
+  const gap = a.impacto - a.dominio;
+  const card = document.createElement('div');
+  card.className = 'bg-white rounded-xl border border-slate-200 p-4';
+  card.innerHTML = `
+    <div class="flex items-baseline justify-between mb-2">
+      <h4 class="font-semibold text-sm">${a.area}</h4>
+      <span class="text-xs font-mono opacity-60">gap: ${gap}</span>
+    </div>
+    <div class="flex gap-1 mb-2">
+      <div class="text-xs">Impacto: ${'★'.repeat(a.impacto)}<span class="text-slate-300">${'★'.repeat(5-a.impacto)}</span></div>
+      <span class="text-slate-300">·</span>
+      <div class="text-xs">Dominio: ${'●'.repeat(a.dominio)}<span class="text-slate-300">${'○'.repeat(5-a.dominio)}</span></div>
+    </div>
+    <p class="text-xs opacity-80 leading-relaxed">${a.nota}</p>`;
+  areasCards.appendChild(card);
+});
+
+// Roadmap
+const roadEl = document.getElementById('roadmap-fases');
+DATA.fases.forEach(f => {
+  const cursosFase = DATA.cursos.filter(c => c.fase === f.id);
+  const horas = cursosFase.reduce((s,c) => s + (c.horas||0), 0);
+  const card = document.createElement('div');
+  card.className = 'border border-slate-200 rounded-xl overflow-hidden';
+  card.innerHTML = `
+    <div class="px-5 py-3 flex items-center justify-between" style="background:${f.color}15;border-bottom:1px solid rgba(14,37,48,0.1)">
+      <div class="flex items-center gap-3">
+        <span class="font-mono text-xs uppercase font-semibold" style="color:${f.color}">Fase ${f.id} · ${f.meses}</span>
+        <h4 class="font-semibold">${f.name}</h4>
+      </div>
+      <span class="text-xs opacity-75">${cursosFase.length} cursos · ${horas}h</span>
+    </div>
+    <div class="p-5">
+      <p class="text-sm opacity-80 mb-3">${f.desc}</p>
+      <ul class="space-y-1.5 text-sm">
+        ${cursosFase.map(c => `<li class="flex justify-between"><span>· ${c.nombre}</span><span class="text-xs opacity-60">${c.horas}h · ${c.costo}</span></li>`).join('')}
+      </ul>
+    </div>`;
+  roadEl.appendChild(card);
+});
+// Ejes paralelos al final del roadmap
+const ejes = document.createElement('div');
+ejes.className = 'border border-slate-200 rounded-xl overflow-hidden';
+ejes.innerHTML = `
+  <div class="px-5 py-3" style="background:rgba(185,129,73,0.1);border-bottom:1px solid rgba(14,37,48,0.1)">
+    <span class="font-mono text-xs uppercase font-semibold" style="color:var(--olacore-cobre)">Ejes paralelos · Continuo (12 meses)</span>
+    <h4 class="font-semibold mt-1">Hábitos compounding</h4>
+  </div>
+  <div class="p-5">
+    <ul class="space-y-1.5 text-sm">
+      ${DATA.ejes_paralelos.map(e => `<li>${e}</li>`).join('')}
+    </ul>
+  </div>`;
+roadEl.appendChild(ejes);
+
+// Networking
+const redesEl = document.getElementById('redes-grid');
+DATA.redes.forEach(r => {
+  const card = document.createElement('div');
+  card.className = 'tone-neblina p-4 rounded-lg';
+  const link = r.url ? `<a href="${r.url}" target="_blank" class="font-semibold text-sm hover:underline">${r.nombre} ↗</a>` : `<span class="font-semibold text-sm">${r.nombre}</span>`;
+  card.innerHTML = `<div class="mb-2">${link}</div><p class="text-xs opacity-80 leading-relaxed">${r.descripcion}</p>`;
+  redesEl.appendChild(card);
+});
+</script>
+</body>
+</html>
