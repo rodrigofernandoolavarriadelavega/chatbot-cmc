@@ -330,6 +330,7 @@ _HEATMAP_COMUNAS_HTML = (_TEMPLATE_DIR / "heatmap_comunas.html").read_text(encod
 _HEATMAP_DIRECCIONES_HTML = (_TEMPLATE_DIR / "heatmap_direcciones.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "heatmap_direcciones.html").exists() else ""
 _SEO_DASHBOARD_HTML = (_TEMPLATE_DIR / "seo_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "seo_dashboard.html").exists() else ""
 _CRECIMIENTO_PERSONAL_HTML = (_TEMPLATE_DIR / "crecimiento_personal.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "crecimiento_personal.html").exists() else ""
+_META_DASHBOARD_HTML = (_TEMPLATE_DIR / "meta_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "meta_dashboard.html").exists() else ""
 _PRIVACIDAD_HTML = (_TEMPLATE_DIR / "privacidad.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "privacidad.html").exists() else ""
 _PROFESIONALES_CMC_HTML = (_TEMPLATE_DIR / "profesionales_cmc.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "profesionales_cmc.html").exists() else ""
 
@@ -589,6 +590,16 @@ def crecimiento_personal_page():
     if not _CRECIMIENTO_PERSONAL_HTML:
         raise HTTPException(404, "Dashboard Crecimiento Personal no disponible")
     return _CRECIMIENTO_PERSONAL_HTML
+
+
+@app.get("/meta/dashboard", response_class=HTMLResponse)
+@app.get("/meta-dashboard", response_class=HTMLResponse)
+def meta_dashboard_page():
+    """Dashboard dedicado de Meta Ads — el mayor canal de inversión y captación.
+    Sin auth de cookie: usa el token del .env via /api/seo/meta-ads."""
+    if not _META_DASHBOARD_HTML:
+        raise HTTPException(404, "Dashboard Meta no disponible")
+    return _META_DASHBOARD_HTML
 
 
 # ─────────────────────────────────────────────────────────────────────────

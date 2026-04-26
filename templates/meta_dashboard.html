@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Meta Ads Dashboard — CMC · OLACORE</title>
+<link rel="icon" type="image/png" href="/static/olacore_sello_simple.png">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fraunces:ital,wght@0,400;0,600;1,300;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --olacore-fiordo: #0E2530;
+    --olacore-fiordo-2: #17323F;
+    --olacore-neblina: #E8E0D0;
+    --olacore-cobre: #B98149;
+    --olacore-lenga: #7C4A2A;
+    --olacore-lacre: #9A3E2F;
+    --olacore-verde-musgo: #4A5D44;
+  }
+  body { font-family: 'Inter', system-ui, sans-serif; background: #faf6ee; color: var(--olacore-fiordo); }
+  @keyframes sello-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  h1, h2, h3, h4 { font-family: 'Fraunces', serif; font-weight: 600; color: var(--olacore-fiordo); }
+  .text-slate-800, .text-slate-700, .text-slate-600, .text-slate-500 { color: var(--olacore-fiordo) !important; opacity: 0.85; }
+  .text-slate-500 { opacity: 0.65; }
+  .text-slate-400 { opacity: 0.5; }
+  .bg-white { background: #fffcf5 !important; }
+  .border-slate-200, .divide-slate-100 > * + * { border-color: rgba(14, 37, 48, 0.12) !important; }
+  .bg-slate-50 { background: rgba(232, 224, 208, 0.3) !important; color: var(--olacore-fiordo); }
+  .hover\:bg-slate-50:hover { background: rgba(232, 224, 208, 0.35) !important; }
+  .tab-btn.active { color: var(--olacore-fiordo) !important; border-bottom-color: var(--olacore-cobre) !important; border-bottom-width: 2px !important; }
+  .by-olacore { display: flex; align-items: center; gap: 12px; padding-left: 16px; margin-left: 4px; text-decoration: none; }
+  .by-olacore-text-block { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+  .by-olacore-by { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--olacore-cobre); opacity: 0.85; line-height: 1; }
+  .by-olacore-wordmark { height: 16px; display: block; margin: 2px 0; object-fit: contain; object-position: left center; }
+  .by-olacore-tag { font-family: 'Fraunces', serif; font-style: italic; font-weight: 300; font-size: 10px; color: var(--olacore-cobre); opacity: 0.8; line-height: 1; letter-spacing: 0.04em; }
+  .by-olacore-sello { width: 38px; height: 38px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .by-olacore-sello img { width: 100%; height: 100%; display: block; animation: sello-spin 60s linear infinite; }
+  .meridian { width: 1px; height: 56px; background: var(--olacore-cobre); position: relative; opacity: 0.7; flex-shrink: 0; margin-left: 24px; margin-right: 8px; }
+  .meridian::before, .meridian::after { content: ""; position: absolute; left: -4px; width: 9px; height: 9px; background: var(--olacore-cobre); border-radius: 50%; }
+  .meridian::before { top: 22%; }
+  .meridian::after  { bottom: 22%; }
+  .tone-fiordo  { background: rgba(14, 37, 48, 0.08); color: var(--olacore-fiordo); border: 1px solid rgba(14, 37, 48, 0.18); }
+  .tone-cobre   { background: rgba(185, 129, 73, 0.12); color: var(--olacore-lenga); border: 1px solid rgba(185, 129, 73, 0.35); }
+  .tone-musgo   { background: rgba(74, 93, 68, 0.1); color: #2f3d2c; border: 1px solid rgba(74, 93, 68, 0.3); }
+  .tone-lacre   { background: rgba(154, 62, 47, 0.1); color: var(--olacore-lacre); border: 1px solid rgba(154, 62, 47, 0.3); }
+  .tone-neblina { background: rgba(232, 224, 208, 0.45); color: var(--olacore-fiordo); border: 1px solid rgba(14,37,48,0.12); }
+  .status-done       { background: rgba(74, 93, 68, 0.18); color: #2f3d2c; }
+  .status-in_progress{ background: rgba(185, 129, 73, 0.2); color: var(--olacore-lenga); }
+  .status-planned    { background: rgba(232, 224, 208, 0.7); color: var(--olacore-fiordo); }
+  .status-bloqueado  { background: rgba(154, 62, 47, 0.15); color: var(--olacore-lacre); }
+  .priority-critical { background: rgba(154, 62, 47, 0.15); color: var(--olacore-lacre); }
+  .priority-alta     { background: rgba(185, 129, 73, 0.2); color: var(--olacore-lenga); }
+  .priority-media    { background: rgba(232, 224, 208, 0.6); color: var(--olacore-lenga); }
+  .priority-baja     { background: rgba(23, 50, 63, 0.08); color: var(--olacore-fiordo-2); }
+  .kpi-card { transition: transform .15s ease, box-shadow .15s ease; }
+  .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(14, 37, 48, .12); }
+  header { border-bottom: 1px solid rgba(185, 129, 73, 0.2) !important; }
+  .cross-nav { position: fixed; top: 16px; right: 16px; z-index: 50; display: flex; gap: 8px; font-size: 12px; }
+  .cross-nav a { padding: 6px 12px; border-radius: 999px; text-decoration: none; font-weight: 600; background: rgba(255,255,255,0.9); color: var(--olacore-fiordo); border: 1px solid rgba(14,37,48,0.18); }
+  #tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-wrap: nowrap !important; }
+  #tabs::-webkit-scrollbar { display: none; }
+  #tabs .tab-btn { flex-shrink: 0; white-space: nowrap; }
+  @media (max-width: 768px) {
+    header > div:first-child { flex-direction: column; align-items: flex-start !important; gap: 12px !important; padding: 14px 16px !important; }
+    .meridian { display: none; }
+    .by-olacore { padding-left: 0; margin-left: 0; gap: 8px; }
+    main { padding: 16px 12px !important; }
+  }
+  .meta-section { background: #fffcf5; border: 1px solid rgba(14,37,48,0.12); border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+  .meta-section h3 { font-size: 1rem; margin-bottom: 12px; }
+  .meta-section h4 { font-size: 0.9rem; margin-bottom: 10px; margin-top: 18px; }
+  code.inline { background: rgba(232,224,208,0.5); padding: 1px 6px; border-radius: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
+</style>
+</head>
+<body>
+
+<nav class="cross-nav">
+  <a href="/seo/dashboard">🔎 SEO</a>
+  <a href="/crecimientopersonal">🎓 Crecimiento</a>
+  <a href="/proyectos2026">🌐 Proyectos</a>
+  <a href="/">← agentecmc.cl</a>
+</nav>
+
+<header class="bg-white">
+  <div class="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="text-3xl">📱</div>
+      <div>
+        <h1 class="text-xl font-semibold">Meta Ads Dashboard — CMC</h1>
+        <div class="text-sm text-slate-500">Tu mayor canal de inversión y captación · <code class="inline">act_220608142267129</code></div>
+      </div>
+      <div class="meridian" aria-hidden="true"></div>
+      <a href="/proyectos2026" class="by-olacore" title="OLACORE — Meridiano Sur">
+        <div class="by-olacore-text-block">
+          <span class="by-olacore-by">by</span>
+          <img src="/static/olacore_wordmark.png?v=2" alt="OLACORE" class="by-olacore-wordmark" />
+          <span class="by-olacore-tag">Meridiano Sur</span>
+        </div>
+        <div class="by-olacore-sello"><img src="/static/olacore_sello_simple.png" alt="" /></div>
+      </a>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="text-xs text-slate-400">Live: <span id="updated-date">cargando...</span></div>
+    </div>
+  </div>
+  <div class="max-w-7xl mx-auto px-6">
+    <nav class="flex gap-1 -mb-px flex-wrap" id="tabs">
+      <button class="tab-btn active px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="overview">📊 Overview</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="performance">📈 Performance</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="campaigns">🎯 Campañas</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="audiencias">👥 Audiencias</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="creative">🎨 Creative</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="capi">⚡ CAPI</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="roadmap">🗺 Roadmap</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="metas">🎯 Metas / OKRs</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="reporte">📋 Reporte estratégico</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="glosario">📚 Glosario</button>
+    </nav>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-6 py-8">
+
+  <!-- ──────────────────────── OVERVIEW ──────────────────────── -->
+  <section id="tab-overview" class="tab-content">
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+      <div class="kpi-card tone-fiordo p-4 rounded-lg">
+        <div class="text-xs uppercase font-semibold opacity-80">Spend lifetime</div>
+        <div class="text-2xl font-bold mt-1" id="kpi-spend">—</div>
+        <div class="text-xs opacity-75 mt-1" id="kpi-spend-mes">—</div>
+      </div>
+      <div class="kpi-card tone-cobre p-4 rounded-lg">
+        <div class="text-xs uppercase font-semibold opacity-80">Conversaciones</div>
+        <div class="text-2xl font-bold mt-1" id="kpi-conv">—</div>
+        <div class="text-xs opacity-75 mt-1">WhatsApp iniciadas</div>
+      </div>
+      <div class="kpi-card tone-musgo p-4 rounded-lg">
+        <div class="text-xs uppercase font-semibold opacity-80">CAC actual</div>
+        <div class="text-2xl font-bold mt-1" id="kpi-cac">—</div>
+        <div class="text-xs opacity-75 mt-1">Por conversación</div>
+      </div>
+      <div class="kpi-card tone-neblina p-4 rounded-lg">
+        <div class="text-xs uppercase font-semibold opacity-80">Reach único</div>
+        <div class="text-2xl font-bold mt-1" id="kpi-reach">—</div>
+        <div class="text-xs opacity-75 mt-1" id="kpi-reach-pct">— de Arauco</div>
+      </div>
+      <div class="kpi-card tone-lacre p-4 rounded-lg">
+        <div class="text-xs uppercase font-semibold opacity-80">LTV / CAC</div>
+        <div class="text-2xl font-bold mt-1" id="kpi-ltv">~103×</div>
+        <div class="text-xs opacity-75 mt-1">Asumiendo 60% atribución Meta</div>
+      </div>
+    </div>
+
+    <!-- Alertas de salud -->
+    <div class="meta-section">
+      <h3>🚨 Alertas y semáforo de salud</h3>
+      <div class="grid md:grid-cols-3 gap-3 text-sm">
+        <div class="tone-lacre p-4 rounded">
+          <div class="text-xs uppercase font-semibold mb-1">🔴 Saturación crítica</div>
+          <p>3+ campañas con frecuencia &gt;10. Audiencia ya vio el mismo ad &gt;10 veces. <strong>Acción: rotar creative o ampliar audiencia esta semana.</strong></p>
+        </div>
+        <div class="tone-cobre p-4 rounded">
+          <div class="text-xs uppercase font-semibold mb-1">🟠 Concentración placement</div>
+          <p>68% del spend en Facebook Feed. Si Meta cambia algoritmo, te impacta directo. <strong>Diversificar a IG y Reels.</strong></p>
+        </div>
+        <div class="tone-cobre p-4 rounded">
+          <div class="text-xs uppercase font-semibold mb-1">🟠 Sin atribución end-to-end</div>
+          <p>Optimizás conversaciones, no citas. <strong>Implementar CAPI urgente — reduce CAC 30-50%.</strong></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filosofía -->
+    <div class="meta-section">
+      <h3>Filosofía del canal</h3>
+      <p class="text-sm leading-relaxed mb-3">Meta Ads es <strong>el sistema nervioso de tu adquisición de pacientes</strong>. CLP 14M en 25 meses con LTV/CAC ~103× lo confirma. No es "publicidad", es infraestructura de captación.</p>
+      <p class="text-sm leading-relaxed">Tres principios que rigen este dashboard:</p>
+      <ul class="text-sm leading-relaxed list-disc ml-5 mt-2 space-y-1">
+        <li><strong>Atribución end-to-end</strong>: la métrica que importa es "paciente atendido", no "click" ni "conversación". CAPI cierra ese loop.</li>
+        <li><strong>Diversificar para sobrevivir</strong>: 1 placement, 1 audiencia, 1 creative = 3 puntos de falla. Sistema robusto = redundancia.</li>
+        <li><strong>El algoritmo es tu compañero, no tu jefe</strong>: hay que alimentarlo bien (señales correctas, audiencias frescas) para que trabaje a tu favor.</li>
+      </ul>
+    </div>
+
+    <!-- Charts principales -->
+    <div class="grid lg:grid-cols-2 gap-6 mb-6">
+      <div class="meta-section" style="margin-bottom:0">
+        <h3>Spend por mes (lifetime)</h3>
+        <canvas id="chart-monthly-spend" height="200"></canvas>
+      </div>
+      <div class="meta-section" style="margin-bottom:0">
+        <h3>Conversaciones vs pacientes nuevos</h3>
+        <canvas id="chart-conv-vs-pac" height="200"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- ──────────────────────── PERFORMANCE ──────────────────────── -->
+  <section id="tab-performance" class="tab-content hidden">
+    <div class="meta-section">
+      <h3>Hora del día (últimos 90 días)</h3>
+      <p class="text-sm opacity-75 mb-3">Identifica ventanas de máxima eficiencia. Donde el spend es alto pero conversaciones bajas (CPA alto), conviene reducir presupuesto vía dayparting.</p>
+      <canvas id="chart-hourly" height="80"></canvas>
+    </div>
+    <div class="grid lg:grid-cols-2 gap-6">
+      <div class="meta-section" style="margin-bottom:0">
+        <h3>Demografía (% spend)</h3>
+        <canvas id="chart-demo" height="280"></canvas>
+        <p class="text-xs opacity-75 mt-3">76% del gasto va a mujeres. Tu paciente core es mujer 25-54 (la "compradora médica" de la familia).</p>
+      </div>
+      <div class="meta-section" style="margin-bottom:0">
+        <h3>Placement (donde se gasta)</h3>
+        <canvas id="chart-placement" height="280"></canvas>
+        <p class="text-xs opacity-75 mt-3">68% del spend va a Facebook Feed. Instagram (audiencia natural de mujeres 25-44) está sub-utilizado con solo 6%.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ──────────────────────── CAMPAÑAS ──────────────────────── -->
+  <section id="tab-campaigns" class="tab-content hidden">
+    <div class="meta-section">
+      <h3>Top 20 campañas (por spend)</h3>
+      <p class="text-sm opacity-75 mb-3">Semáforo de saturación: 🔴 frec &gt;8 (rotar urgente), 🟠 4-8 (advertencia), 🟢 &lt;4 (sano).</p>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 text-slate-600 uppercase text-xs">
+            <tr>
+              <th class="px-3 py-2 text-left">Campaña</th>
+              <th class="px-3 py-2 text-right">Spend</th>
+              <th class="px-3 py-2 text-right">Imp</th>
+              <th class="px-3 py-2 text-right">Clicks</th>
+              <th class="px-3 py-2 text-right">Conv</th>
+              <th class="px-3 py-2 text-right">CPA</th>
+              <th class="px-3 py-2 text-right">Frec</th>
+              <th class="px-3 py-2 text-center">Sat.</th>
+            </tr>
+          </thead>
+          <tbody id="meta-campaigns-tbody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ──────────────────────── AUDIENCIAS ──────────────────────── -->
+  <section id="tab-audiencias" class="tab-content hidden">
+    <div class="meta-section">
+      <h3>Estrategia de audiencias</h3>
+      <p class="text-sm leading-relaxed mb-4">Tu mayor activo no es una audiencia genérica — es <strong>tu base real de 12.592 pacientes en SQLite</strong>. Eso entrena lookalikes superiores a cualquier targeting de interés.</p>
+
+      <h4>Audiencias recomendadas a crear</h4>
+      <table class="w-full text-sm">
+        <thead><tr class="border-b border-slate-200"><th class="text-left py-2">Audiencia</th><th class="text-left py-2">Tamaño</th><th class="text-left py-2">Uso</th><th class="text-center py-2">Estado</th></tr></thead>
+        <tbody class="divide-y divide-slate-100" id="audiencias-tbody"></tbody>
+      </table>
+
+      <h4>Custom audiences a EXCLUIR</h4>
+      <p class="text-sm opacity-75 mb-3">Para reducir saturación y CPM, excluir gente que ya está en tu funnel.</p>
+      <ul class="text-sm space-y-2 list-disc ml-5">
+        <li><strong>Conversaciones WhatsApp últimos 30 días</strong>: ya están hablando, no necesitan ver el ad otra vez</li>
+        <li><strong>Pacientes activos del CMC</strong> (de tu base): ya son clientes, no son lead nuevo</li>
+        <li><strong>Engagement &gt;3 con tus posts últimos 90d</strong>: ya están "warm", mejor mostrarles ad de remarketing distinto</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ──────────────────────── CREATIVE ──────────────────────── -->
+  <section id="tab-creative" class="tab-content hidden">
+    <div class="meta-section">
+      <h3>Estrategia de creative</h3>
+      <p class="text-sm leading-relaxed mb-4">El creative es el 70% del éxito de un ad en 2026 (lo que va al algoritmo es secundario). Tu problema actual: <strong>1 sola pieza concentra 45% del spend</strong> y ya tiene fatiga.</p>
+
+      <h4>Reglas para creative que funciona en healthcare local</h4>
+      <ul class="text-sm space-y-2 list-disc ml-5 mb-5">
+        <li><strong>Foto real del equipo</strong> &gt; stock photo (3× CTR)</li>
+        <li><strong>Especialista mirando a cámara</strong> (no posando) &gt; foto de ambiente</li>
+        <li><strong>Texto sobre imagen máximo 20%</strong> (Meta penaliza más texto)</li>
+        <li><strong>Copy con dolor primero, solución después</strong>: "¿Dolor lumbar hace meses? Especialistas en kine en Carampangue"</li>
+        <li><strong>CTA con verbo + horario</strong>: "Agenda hoy por WhatsApp"</li>
+        <li><strong>Video 9:16 vertical</strong> para Reels y Stories (no recortar de Feed)</li>
+        <li><strong>Variantes en serie</strong>: 5 variantes de la misma idea, no 5 ideas distintas (test es sobre el detalle no el concepto)</li>
+      </ul>
+
+      <h4>Calendario de refresh sugerido</h4>
+      <div class="font-mono text-xs whitespace-pre" style="background:rgba(232,224,208,0.4);padding:14px;border-radius:6px;line-height:1.7">Ad alcanza frecuencia 4    →  alerta amarilla, planear refresh
+Ad alcanza frecuencia 6    →  pausar y reemplazar
+Cada 30 días                →  inyectar 1 nuevo creative al mix
+Cada 90 días                →  rotación completa de la cartera</div>
+
+      <h4 class="mt-5">Formats prioritarios para tu audiencia (mujeres 25-54)</h4>
+      <ol class="text-sm space-y-1 list-decimal ml-5">
+        <li><strong>Carrusel testimonio</strong> (3-5 fotos pacientes reales con copy corto) — 2× engagement</li>
+        <li><strong>Video 30s "día en el CMC"</strong> — humaniza la marca</li>
+        <li><strong>Reel vertical 15s</strong> con doctor explicando 1 problema clínico común</li>
+        <li><strong>Story con sticker WhatsApp</strong> + countdown (urgencia)</li>
+        <li><strong>Carousel "antes/después"</strong> en odontología y estética facial</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ──────────────────────── CAPI ──────────────────────── -->
+  <section id="tab-capi" class="tab-content hidden">
+    <div class="meta-section">
+      <h3>⚡ Conversion API (CAPI) — el upgrade #1</h3>
+      <p class="text-sm opacity-75 mb-4">El cambio técnico de mayor impacto este año en tu canal. Reduce CAC 30-50% sin gastar un peso más.</p>
+
+      <h4>¿Qué es?</h4>
+      <p class="text-sm leading-relaxed mb-3">CAPI es un canal <strong>servidor-a-servidor</strong> entre el chatbot y Meta. Le mandás eventos de conversión que pasan <strong>fuera del navegador</strong>: cita confirmada, pago, paciente que volvió.</p>
+
+      <div class="grid md:grid-cols-2 gap-4 mb-5">
+        <div class="tone-lacre p-4 rounded">
+          <div class="text-xs uppercase font-semibold mb-2">❌ Sin CAPI (hoy)</div>
+          <div class="font-mono text-xs leading-relaxed mb-2" style="background:rgba(154,62,47,0.05);padding:8px;border-radius:4px">Meta ve: ad → click → conversación
+NO ve: cita → asistió → pagó</div>
+          <p class="text-sm">El algoritmo busca <strong>"gente que conversa"</strong>. Atrae curiosos.</p>
+        </div>
+        <div class="tone-musgo p-4 rounded">
+          <div class="text-xs uppercase font-semibold mb-2">✅ Con CAPI</div>
+          <div class="font-mono text-xs leading-relaxed mb-2" style="background:rgba(74,93,68,0.05);padding:8px;border-radius:4px">Meta ve: ad → click → conv → CITA → atendió</div>
+          <p class="text-sm">El algoritmo busca <strong>"pacientes reales"</strong>. CAC -30 a -50%.</p>
+        </div>
+      </div>
+
+      <h4>Plan de implementación (~6-8h totales)</h4>
+      <div class="space-y-3" id="capi-pasos"></div>
+
+      <h4 class="mt-6">Eventos que vamos a mandar</h4>
+      <table class="w-full text-sm">
+        <thead><tr class="border-b border-slate-200"><th class="text-left py-2">Evento Meta</th><th class="text-left py-2">Cuándo se dispara</th><th class="text-left py-2">Valor (CLP)</th></tr></thead>
+        <tbody class="divide-y divide-slate-100">
+          <tr><td class="py-2"><code class="inline">Lead</code></td><td>Confirmación cita 24h antes (alta intención)</td><td>—</td></tr>
+          <tr><td class="py-2"><code class="inline">CompleteRegistration</code></td><td>Paciente nuevo registrado (RUT + datos)</td><td>—</td></tr>
+          <tr><td class="py-2"><code class="inline">Schedule</code></td><td>Cita reservada en Medilink</td><td>Precio según especialidad</td></tr>
+          <tr><td class="py-2"><code class="inline">Purchase</code></td><td>Pago confirmado (futuro, requiere Transbank API)</td><td>Monto real</td></tr>
+        </tbody>
+      </table>
+
+      <h4 class="mt-6">⚖️ Compliance Ley 19.628</h4>
+      <div class="tone-cobre p-4 rounded">
+        <p class="text-sm leading-relaxed mb-2">CAPI requiere mandar PII (email, teléfono) a Meta. Ley chilena exige consentimiento.</p>
+        <ul class="text-sm space-y-1 list-disc ml-5">
+          <li>Toda PII se hashea SHA-256 antes de enviar (irreversible)</li>
+          <li>Agregar al opt-in del chatbot: "Acepto compartir datos anónimos con Meta"</li>
+          <li>Endpoint <code class="inline">/admin/api/patient/forget</code> ya existe — agregar también notificar a Meta para borrar</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ──────────────────────── ROADMAP ──────────────────────── -->
+  <section id="tab-roadmap" class="tab-content hidden">
+    <div class="meta-section">
+      <h3>Roadmap 90 días — Meta Ads</h3>
+      <p class="text-sm opacity-75 mb-5">Plan estructurado por fases con dependencias y deadlines. Marca tareas completadas al ejecutarlas para tracking de progreso.</p>
+      <div id="roadmap-fases" class="space-y-6"></div>
+    </div>
+  </section>
+
+  <!-- ──────────────────────── METAS ──────────────────────── -->
+  <section id="tab-metas" class="tab-content hidden">
+    <div class="meta-section">
+      <h3>OKRs — Q2 2026 (abr-jun)</h3>
+      <p class="text-sm opacity-75 mb-5">Objetivos medibles a 90 días. Si los métricos suben, el sistema funciona. Si no, hay que iterar.</p>
+      <div class="space-y-4" id="okrs-list"></div>
+    </div>
+
+    <div class="meta-section">
+      <h3>Visión 12 meses</h3>
+      <table class="w-full text-sm">
+        <thead><tr class="border-b border-slate-200"><th class="text-left py-2">Métrica</th><th class="text-right py-2">Hoy</th><th class="text-right py-2">Q4 2026</th><th class="text-right py-2">Δ esperado</th></tr></thead>
+        <tbody class="divide-y divide-slate-100" id="vision-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ──────────────────────── REPORTE ──────────────────────── -->
+  <section id="tab-reporte" class="tab-content hidden">
+
+    <!-- 1. Escala -->
+    <div class="meta-section">
+      <h3>1. La escala real de tu inversión Meta</h3>
+      <p class="text-sm leading-relaxed mb-4">Has alcanzado <strong>404.550 personas únicas</strong> con tus ads en 25 meses. Arauco completo tiene <strong>37.000 habitantes</strong>. Has impactado el equivalente a <strong>11× tu mercado natural</strong> — toda la VIII Región te conoce, o tu audiencia ya está saturada por overlap (te ven varias veces como personas distintas).</p>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+        <div class="tone-fiordo p-3 rounded"><div class="opacity-75 uppercase">Spend total</div><div class="text-lg font-bold mt-1">CLP 14.294.633</div></div>
+        <div class="tone-cobre p-3 rounded"><div class="opacity-75 uppercase">Período</div><div class="text-lg font-bold mt-1">25 meses</div></div>
+        <div class="tone-musgo p-3 rounded"><div class="opacity-75 uppercase">Promedio</div><div class="text-lg font-bold mt-1">CLP 572K/mes</div></div>
+        <div class="tone-lacre p-3 rounded"><div class="opacity-75 uppercase">Reach / población</div><div class="text-lg font-bold mt-1">11× Arauco</div></div>
+      </div>
+    </div>
+
+    <!-- 2. Evolución -->
+    <div class="meta-section">
+      <h3>2. Evolución del spend — cómo escalaste</h3>
+      <table class="w-full text-sm">
+        <thead><tr class="border-b border-slate-200"><th class="text-left py-2">Período</th><th class="text-right py-2">CLP/mes</th><th class="text-right py-2">Δ vs anterior</th><th class="text-left py-2 pl-4">Lectura</th></tr></thead>
+        <tbody class="divide-y divide-slate-100">
+          <tr><td class="py-2">2023 testing (abr-dic)</td><td class="text-right">~140K</td><td class="text-right opacity-60">baseline</td><td class="pl-4 opacity-75">Aprendizaje del algoritmo</td></tr>
+          <tr><td class="py-2">2024 H1 (ene-jun)</td><td class="text-right">~140K</td><td class="text-right opacity-60">estable</td><td class="pl-4 opacity-75">Validación silenciosa</td></tr>
+          <tr style="background:rgba(74,93,68,0.08)"><td class="py-2 font-semibold">2024 H2 (jul-dic)</td><td class="text-right font-semibold">~350K</td><td class="text-right" style="color:var(--olacore-verde-musgo)">+150%</td><td class="pl-4 font-medium">🚀 Escalada — confianza en el funnel</td></tr>
+          <tr><td class="py-2">2025</td><td class="text-right">~700K</td><td class="text-right" style="color:var(--olacore-verde-musgo)">+100%</td><td class="pl-4 opacity-75">Año de consolidación</td></tr>
+          <tr style="background:rgba(185,129,73,0.08)"><td class="py-2 font-semibold">2026 Q1</td><td class="text-right font-semibold">~1M</td><td class="text-right" style="color:var(--olacore-verde-musgo)">+43%</td><td class="pl-4 font-medium">Tope actual</td></tr>
+        </tbody>
+      </table>
+      <p class="text-xs opacity-75 mt-3"><strong>Punto de inflexión:</strong> noviembre 2024 con peak histórico CLP 791K/mes — desde entonces nunca volviste atrás. Tu negocio está en modo de adquisición agresiva sostenida desde hace 18 meses.</p>
+    </div>
+
+    <!-- 3. Demografía -->
+    <div class="meta-section">
+      <h3>3. Demografía — quién es tu paciente Meta</h3>
+      <div class="grid md:grid-cols-2 gap-5">
+        <div>
+          <table class="w-full text-sm">
+            <thead><tr class="border-b border-slate-200"><th class="text-left py-2">Segmento</th><th class="text-right py-2">% spend</th></tr></thead>
+            <tbody class="divide-y divide-slate-100">
+              <tr><td class="py-1.5">🎯 <strong>Mujeres 35-44</strong></td><td class="text-right font-semibold">25.9%</td></tr>
+              <tr><td class="py-1.5">Mujeres 25-34</td><td class="text-right">20.4%</td></tr>
+              <tr><td class="py-1.5">Mujeres 45-54</td><td class="text-right">16.4%</td></tr>
+              <tr><td class="py-1.5">Mujeres 55-64</td><td class="text-right">7.4%</td></tr>
+              <tr style="background:rgba(185,129,73,0.1)"><td class="py-1.5 font-semibold">Total mujeres</td><td class="text-right font-semibold">76%</td></tr>
+              <tr><td class="py-1.5">Hombres 35-44</td><td class="text-right">7.8%</td></tr>
+              <tr><td class="py-1.5">Hombres 25-54 total</td><td class="text-right">~13%</td></tr>
+              <tr style="background:rgba(154,62,47,0.08)"><td class="py-1.5 font-semibold">Total hombres</td><td class="text-right font-semibold">24%</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="space-y-3">
+          <div class="tone-musgo p-4 rounded">
+            <div class="text-xs uppercase font-semibold opacity-75 mb-1">Insight #1</div>
+            <p class="text-sm">Tu audiencia es <strong>76% femenina</strong>. La mujer es la <strong>"compradora médica"</strong> de la familia (decide controles, ortodoncia hijos, salud mental, etc.). El algoritmo aprendió correctamente.</p>
+          </div>
+          <div class="tone-cobre p-4 rounded">
+            <div class="text-xs uppercase font-semibold opacity-75 mb-1">Insight #2</div>
+            <p class="text-sm"><strong>Los hombres están sub-atendidos</strong>. Solo 24% del spend, pero generan demanda real para traumatología, urología, cardiología. Oportunidad de campañas separadas con creative masculino.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Hora del día -->
+    <div class="meta-section">
+      <h3>4. Eficiencia por hora del día</h3>
+      <div class="font-mono text-xs whitespace-pre" style="background:rgba(232,224,208,0.4);padding:14px;border-radius:6px;line-height:1.7;overflow-x:auto">Mejor ventana:  09:00 - 15:00  ✅  CPA bajo, conversión alta
+Pico absoluto:  13:00          🎯  97 conversaciones / 90d
+Aceptable:      15:00 - 21:00  🟡
+Marginal:       21:00 - 23:00  🟠  CPA sube
+🔴 Desperdicio: 00:00 - 06:00  ❌  Spend real con casi 0 conversiones</div>
+      <div class="tone-cobre p-4 rounded mt-3">
+        <div class="text-xs uppercase font-semibold opacity-75 mb-1">Acción inmediata</div>
+        <p class="text-sm"><strong>Dayparting</strong>: bajar puja 50% entre 22h-7h. Ahorras ~10% del spend mensual sin perder conversiones. Configuración en Ads Manager → Ad Set → Budget &amp; Schedule → "Run ads on a schedule".</p>
+      </div>
+    </div>
+
+    <!-- 5. Placement -->
+    <div class="meta-section">
+      <h3>5. Placement — concentración de riesgo</h3>
+      <table class="w-full text-sm">
+        <thead><tr class="border-b border-slate-200"><th class="text-left py-2">Placement</th><th class="text-right py-2">Spend lifetime</th><th class="text-right py-2">% total</th><th class="text-left pl-4 py-2">Lectura</th></tr></thead>
+        <tbody class="divide-y divide-slate-100">
+          <tr style="background:rgba(154,62,47,0.05)"><td class="py-2 font-semibold">Facebook Feed</td><td class="text-right font-semibold">CLP 9,69M</td><td class="text-right font-semibold">68%</td><td class="pl-4">🔴 Dependencia total — punto único de falla</td></tr>
+          <tr><td class="py-2">Facebook Stories</td><td class="text-right">CLP 1,26M</td><td class="text-right">9%</td><td class="pl-4 opacity-75">OK</td></tr>
+          <tr style="background:rgba(185,129,73,0.05)"><td class="py-2">Instagram Feed</td><td class="text-right">CLP 849K</td><td class="text-right">6%</td><td class="pl-4 font-medium">🟠 Sub-utilizado para tu audiencia femenina</td></tr>
+          <tr><td class="py-2">Facebook Reels</td><td class="text-right">CLP 743K</td><td class="text-right">5%</td><td class="pl-4 opacity-75">OK</td></tr>
+          <tr><td class="py-2 opacity-75">Otros (FB Search, IG Explore, etc.)</td><td class="text-right opacity-75">~CLP 700K</td><td class="text-right opacity-75">5%</td><td class="pl-4 opacity-75">Long tail</td></tr>
+        </tbody>
+      </table>
+      <div class="tone-lacre p-4 rounded mt-3">
+        <div class="text-xs uppercase font-semibold opacity-75 mb-1">Insight #3</div>
+        <p class="text-sm"><strong>68% en Facebook Feed</strong>. Si Meta cambia su algoritmo o el feed pierde alcance orgánico (como ya pasó 2018-2020), te impacta directo. <strong>Instagram con 6% es absurdamente bajo</strong> para una audiencia que es 76% mujeres 25-54 — ahí IG dominaba la atención. Diversificar urgente.</p>
+      </div>
+    </div>
+
+    <!-- 6. Cruce con base -->
+    <div class="meta-section">
+      <h3>6. Cruce con base real del chatbot — el número que importa</h3>
+      <div class="font-mono text-xs whitespace-pre" style="background:rgba(232,224,208,0.4);padding:14px;border-radius:6px;line-height:1.7;overflow-x:auto">6 años de CMC en SQLite:
+  Pacientes únicos chatbot:     12.592
+  Spend Meta lifetime:          CLP 14,3M (en 25 meses)
+
+Estimación CAC (asumiendo Meta atribuye 50-60% de pacientes nuevos):
+  Pacientes Meta últimos 25m:   ~3.500
+  CAC real por paciente nuevo:  CLP 4.085
+  LTV paciente (4 visitas/año × 3 años × $35K): CLP 420.000
+
+  📈 LTV / CAC = ~103×</div>
+      <div class="tone-musgo p-4 rounded mt-3">
+        <div class="text-xs uppercase font-semibold opacity-75 mb-1">Insight #4 — el más importante</div>
+        <p class="text-sm">Tu LTV/CAC es <strong>espectacular</strong> (saludable es 3×). Estás en territorio "deberías invertir AÚN MÁS" — no menos. Si tu margen operativo y capacidad de atención lo aguantan, el siguiente CLP de Meta tiene retorno mejor que casi cualquier otra inversión.</p>
+      </div>
+    </div>
+
+    <!-- 7. Lo bien vs lo mal -->
+    <div class="grid md:grid-cols-2 gap-4 mb-6">
+      <div class="tone-musgo p-5 rounded-lg">
+        <h3 style="color:#2f3d2c">✅ Lo que estás haciendo bien</h3>
+        <ul class="text-sm space-y-2 list-disc ml-5">
+          <li><strong>Escala</strong>: invertir 1M/mes en Meta para un centro médico de Carampangue es agresivo y correcto. La mayoría de centros gastan 100-300K</li>
+          <li><strong>Foco en mujeres</strong>: el algoritmo aprendió bien</li>
+          <li><strong>WhatsApp como CTA</strong>: la mejor decisión de funnel posible para healthcare local</li>
+          <li><strong>Sostenida</strong>: 25 meses sin interrumpir = aprendizaje del algoritmo bestial</li>
+        </ul>
+      </div>
+      <div class="tone-lacre p-5 rounded-lg">
+        <h3 style="color:var(--olacore-lacre)">🔴 Lo que estás haciendo mal</h3>
+        <ul class="text-sm space-y-2 list-disc ml-5">
+          <li><strong>Saturación de audiencias</strong>: 11× población impactada con frecuencias 5-15. Ya sos "ruido visual"</li>
+          <li><strong>Concentración FB Feed (68%)</strong>: 1 placement = 1 punto de falla</li>
+          <li><strong>Sin atribución end-to-end</strong>: optimizás conversaciones, no citas pagadas</li>
+          <li><strong>IG abandonado</strong> (6%): tu audiencia vive ahí</li>
+          <li><strong>1 sola "audiencia"</strong>: tirás todo a interés general en Arauco, no a intent específico (otorrino, ortodoncia, etc.)</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 8. Oportunidades -->
+    <div class="meta-section">
+      <h3>8. Oportunidades NO explotadas (priorizadas por ROI)</h3>
+      <table class="w-full text-sm">
+        <thead><tr class="border-b border-slate-200"><th class="text-left py-2">Oportunidad</th><th class="text-center py-2">Impacto</th><th class="text-center py-2">Esfuerzo</th><th class="text-left pl-4 py-2">Por qué importa</th></tr></thead>
+        <tbody class="divide-y divide-slate-100">
+          <tr style="background:rgba(154,62,47,0.05)"><td class="py-2 font-semibold">Conversion API (CAPI)</td><td class="text-center">🔥🔥🔥</td><td class="text-center">8h setup</td><td class="pl-4">-30% CAC. Mandar evento "cita confirmada" del chatbot → Meta optimiza por agendadores reales no conversadores</td></tr>
+          <tr style="background:rgba(154,62,47,0.05)"><td class="py-2 font-semibold">Lookalike audiences</td><td class="text-center">🔥🔥🔥</td><td class="text-center">1h</td><td class="pl-4">-40% CAC. Entrenar con tu base real de 12.500 pacientes — Meta busca "gente parecida a tus mejores pacientes"</td></tr>
+          <tr><td class="py-2">Campañas por especialidad</td><td class="text-center">🔥🔥</td><td class="text-center">4h c/u</td><td class="pl-4">+20% conversión. Otorrino, kine, dental, etc. — cada uno con creative específico</td></tr>
+          <tr><td class="py-2">Retargeting interactores</td><td class="text-center">🔥🔥</td><td class="text-center">2h</td><td class="pl-4">+10-15% extra. Quien interactuó pero no escribió</td></tr>
+          <tr><td class="py-2">Geo separation Curanilahue / Cañete / Lebu</td><td class="text-center">🔥🔥</td><td class="text-center">3h</td><td class="pl-4">Abre mercado nuevo. Hoy todos comparten el mismo creative</td></tr>
+          <tr><td class="py-2">Reels nativos verticales</td><td class="text-center">🔥</td><td class="text-center">medio</td><td class="pl-4">-50% CPM en Reels. No reciclar creative de Feed</td></tr>
+          <tr><td class="py-2">IG Stories Ads + WhatsApp sticker</td><td class="text-center">🔥</td><td class="text-center">bajo</td><td class="pl-4">Captura demografía joven en su entorno natural</td></tr>
+          <tr><td class="py-2">Programa referidos vía Meta</td><td class="text-center">🔥</td><td class="text-center">alto</td><td class="pl-4">Viralidad orgánica. Incentivo a compartir</td></tr>
+          <tr><td class="py-2">Dayparting (puja 22h-7h)</td><td class="text-center">🔥</td><td class="text-center">30 min</td><td class="pl-4">-10% spend sin perder conversiones</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 9. Roadmap (referencia rápida — el detalle vive en pestaña Roadmap) -->
+    <div class="meta-section">
+      <h3>9. Roadmap priorizado (próximos 60 días)</h3>
+      <p class="text-sm opacity-75 mb-3">Resumen ejecutivo. El detalle táctico vive en la pestaña <strong>🗺 Roadmap</strong> con las 6 fases completas.</p>
+      <div class="space-y-3">
+        <div class="border-l-4 pl-4 py-2" style="border-color:var(--olacore-verde-musgo)">
+          <div class="font-semibold text-sm">📅 Semana 1 — Quick wins (sin gasto extra)</div>
+          <ul class="text-sm mt-2 space-y-1 list-disc ml-5 opacity-90">
+            <li>Dayparting 22h-7h → ahorra 10% spend</li>
+            <li>Crear custom audience "Inició conversación últimos 30d" → excluir</li>
+            <li>Pausar las 3 campañas con frecuencia &gt;10</li>
+          </ul>
+        </div>
+        <div class="border-l-4 pl-4 py-2" style="border-color:var(--olacore-cobre)">
+          <div class="font-semibold text-sm">📅 Semana 2-4 — Setup técnico</div>
+          <ul class="text-sm mt-2 space-y-1 list-disc ml-5 opacity-90">
+            <li><strong>Conversion API</strong>: el chatbot ya sabe quién agendó. Mandar "lead confirmed" a Meta → algoritmo aprende a buscar agendadores no conversacionalistas. <strong>Reduce CAC 30-50%</strong></li>
+            <li><strong>Lookalike audiences</strong> de tu base de 12.500: generar 3 audiencias (1%, 2%, 5%)</li>
+          </ul>
+        </div>
+        <div class="border-l-4 pl-4 py-2" style="border-color:var(--olacore-fiordo)">
+          <div class="font-semibold text-sm">📅 Mes 2 — Escalamiento inteligente</div>
+          <ul class="text-sm mt-2 space-y-1 list-disc ml-5 opacity-90">
+            <li>4-6 campañas separadas: medicina general, otorrino, ortopedia/kine, ginecología, odontología, "médico para niños"</li>
+            <li>Cada una con creative específico + lookalike específico</li>
+            <li>Geo split: Carampangue/Arauco vs Curanilahue vs Cañete (presupuesto y copy distintos)</li>
+          </ul>
+        </div>
+        <div class="border-l-4 pl-4 py-2" style="border-color:var(--olacore-lacre)">
+          <div class="font-semibold text-sm">📅 Mes 3 — Creative refresh</div>
+          <ul class="text-sm mt-2 space-y-1 list-disc ml-5 opacity-90">
+            <li>5-8 nuevos formatos: Reels verticales, carrousel testimonios, video con doctor hablando</li>
+            <li>Test de copys: dolor vs aspiracional vs precio</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 10. Reflexión final -->
+    <div class="meta-section">
+      <h3>10. Reflexión estratégica final</h3>
+      <div class="tone-fiordo p-5 rounded-lg">
+        <p class="text-sm leading-relaxed mb-3">Tu ROI real (LTV/CAC ~100×) significa que <strong>deberías estar gastando 3-5× más</strong> (CLP 3-5M/mes) si:</p>
+        <ul class="text-sm space-y-1 list-disc ml-5 opacity-90 mb-3">
+          <li>Tu margen operativo aguanta</li>
+          <li>Tu capacidad de atención no se satura</li>
+          <li>Tienes profesionales para absorber los nuevos pacientes</li>
+        </ul>
+        <p class="text-sm leading-relaxed">Si tu cuello de botella ya no es "captar pacientes" sino "atender más profesionales/horas", entonces el siguiente CLP de marketing tiene <strong>menos retorno que contratar al traumatólogo #2 o al 2do dentista</strong>. Pensar marketing y operación como un sistema, no como silos aislados.</p>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ──────────────────────── GLOSARIO ──────────────────────── -->
+  <section id="tab-glosario" class="tab-content hidden">
+    <div class="meta-section">
+      <h3>Glosario — vocabulario Meta Ads</h3>
+      <p class="text-sm opacity-75 mb-5">Términos que aparecen en este dashboard y en Ads Manager. Para no depender de traductor cuando hablas con agencia o consultor.</p>
+      <div class="space-y-3" id="glosario-list"></div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+const STATIC = {
+  audiencias: [
+    { nombre: "Pacientes CMC (custom audience desde base)", tamaño: "12.592 personas", uso: "Excluir de campañas de adquisición / usar como semilla lookalike", estado: "planeada" },
+    { nombre: "Lookalike 1% Chile (de pacientes CMC)", tamaño: "~150.000", uso: "Audiencia core nueva — alta similitud", estado: "planeada" },
+    { nombre: "Lookalike 2% Chile (de pacientes CMC)", tamaño: "~300.000", uso: "Escalamiento moderado", estado: "planeada" },
+    { nombre: "Lookalike 5% Chile (de pacientes CMC)", tamaño: "~750.000", uso: "Escalamiento agresivo", estado: "planeada" },
+    { nombre: "Engaged FB/IG últimos 90d", tamaño: "auto", uso: "Retargeting + lookalike de engagers", estado: "planeada" },
+    { nombre: "Conversaciones WhatsApp 30d", tamaño: "auto", uso: "Excluir (ya en funnel) o retarget con oferta distinta", estado: "planeada" },
+    { nombre: "Visitantes web últimos 180d", tamaño: "depende GA4", uso: "Retargeting de quien visitó pero no escribió", estado: "bloqueada (requiere pixel web)" }
+  ],
+  capi_pasos: [
+    { paso: "1. Configurar Pixel + Dataset en Meta Events Manager", tiempo: "30 min", estado: "planeado", detalle: "Crear nuevo Dataset asociado a la app Chatbot CMC. Definir 4 eventos custom: Lead, Schedule, Purchase, CompleteRegistration. Configurar Pixel ID en .env del bot." },
+    { paso: "2. Implementar envío de eventos en el chatbot", tiempo: "3h", estado: "planeado", detalle: "Nuevo módulo app/meta_capi.py con función send_event(event_name, user_data, custom_data). Hash SHA-256 de email/phone/RUT. Triggers en flows.py: cita reservada → Schedule, paciente nuevo → CompleteRegistration, confirmación 24h → Lead, pago → Purchase." },
+    { paso: "3. Click ID tracking (fbclid → Meta)", tiempo: "2h", estado: "planeado", detalle: "Cuando Meta envía a WhatsApp, agregar fbclid al mensaje pre-cargado. Chatbot extrae el fbclid del primer mensaje y lo guarda en sesión. Lo manda con cada evento CAPI → cierra el loop de atribución." },
+    { paso: "4. Verificación + Test Events", tiempo: "1h", estado: "planeado", detalle: "Events Manager → Test Events: ver eventos llegando en tiempo real. Verificar matching score (ideal >7/10). Validar deduplicación entre Pixel y CAPI." },
+    { paso: "5. Optimizar campañas a evento custom", tiempo: "1h + 14d aprendizaje", estado: "planeado", detalle: "En Ads Manager: cambiar objetivo de 'Conversaciones' a 'Conversiones' → Schedule. Meta entra en learning phase 7-14 días. Después: CAC esperado baja 30-50%." }
+  ],
+  fases_roadmap: [
+    {
+      id: 1, nombre: "Quick Wins", semanas: "Sem 1", color: "#4A5D44",
+      desc: "Acciones inmediatas, sin gasto extra, alto impacto en eficiencia",
+      tareas: [
+        { t: "Configurar dayparting: bajar puja 50% entre 22h-7h", impact: "-10% spend", estado: "planeado" },
+        { t: "Crear custom audience 'Conversaciones WA últimos 30d' y excluirla", impact: "Reduce frecuencia 30%", estado: "planeado" },
+        { t: "Pausar las 3 campañas con frecuencia >10 (saturadas)", impact: "Libera ~CLP 200K/mes mal gastado", estado: "planeado" },
+        { t: "Documentar audiencias actuales activas", impact: "Baseline para auditoría", estado: "planeado" }
+      ]
+    },
+    {
+      id: 2, nombre: "Setup técnico CAPI", semanas: "Sem 2-4", color: "#B98149",
+      desc: "Implementar Conversion API — el upgrade más rentable disponible",
+      tareas: [
+        { t: "Configurar Pixel + Dataset en Meta Events Manager", impact: "Base para todo lo siguiente", estado: "planeado" },
+        { t: "Módulo app/meta_capi.py con eventos hash SHA-256", impact: "Backend listo", estado: "planeado" },
+        { t: "Triggers en flows.py: Lead, Schedule, CompleteRegistration", impact: "Eventos vivos", estado: "planeado" },
+        { t: "fbclid tracking desde primer mensaje WhatsApp", impact: "Atribución end-to-end", estado: "planeado" },
+        { t: "Test Events + matching score >7", impact: "Validación pre-prod", estado: "planeado" },
+        { t: "Cambiar campañas a optimizar por Schedule", impact: "-30 a -50% CAC", estado: "planeado" }
+      ]
+    },
+    {
+      id: 3, nombre: "Audiencias avanzadas", semanas: "Sem 3-5", color: "#0E2530",
+      desc: "Aprovechar tu base real de 12.592 pacientes para lookalikes precisos",
+      tareas: [
+        { t: "Exportar base CMC (hashed) → Custom Audience en Meta", impact: "Activo de marketing reutilizable", estado: "planeado" },
+        { t: "Generar Lookalike 1%, 2%, 5% Chile", impact: "3 audiencias nuevas para test", estado: "planeado" },
+        { t: "A/B test: Lookalike 1% vs interés actual", impact: "Validar mejor performer", estado: "planeado" },
+        { t: "Custom audience 'engaged FB/IG 90d' → retargeting", impact: "+10-15% conversiones extra", estado: "planeado" }
+      ]
+    },
+    {
+      id: 4, nombre: "Diversificación de canales", semanas: "Sem 5-7", color: "#7C4A2A",
+      desc: "Salir de la dependencia FB Feed (68%) → mix saludable IG + Reels + Stories",
+      tareas: [
+        { t: "Crear 5 ad sets nuevos solo para Instagram Feed", impact: "Subir IG de 6% → 20% del mix", estado: "planeado" },
+        { t: "Producir 3 Reels verticales 15s (no recortar de Feed)", impact: "-50% CPM en Reels", estado: "planeado" },
+        { t: "Stories ads con sticker WhatsApp + countdown urgencia", impact: "Captura mujeres jóvenes", estado: "planeado" },
+        { t: "Campaign Budget Optimization (CBO) entre placements", impact: "Meta reasigna automático", estado: "planeado" }
+      ]
+    },
+    {
+      id: 5, nombre: "Segmentación por especialidad", semanas: "Sem 6-9", color: "#9A3E2F",
+      desc: "Del 1 mensaje genérico a campañas específicas por servicio",
+      tareas: [
+        { t: "Campaña dedicada Otorrinolaringología (Dr. Borrego)", impact: "Captura intent específico", estado: "planeado" },
+        { t: "Campaña dedicada Kinesiología (Armijo + Etcheverry)", impact: "Mercado de dolor lumbar/post-trauma", estado: "planeado" },
+        { t: "Campaña dedicada Odontología/Ortodoncia", impact: "Ticket alto, alta intención", estado: "planeado" },
+        { t: "Campaña dedicada Ginecología (Dr. Rejón)", impact: "Mujeres 25-44 = audiencia core", estado: "planeado" },
+        { t: "Campaña dedicada 'Médico para niños' (medicina familiar)", impact: "Capta pediatra arauco honestamente", estado: "planeado" },
+        { t: "Geo splits: Curanilahue, Cañete, Lebu separadas", impact: "Abre mercados sub-atendidos", estado: "planeado" }
+      ]
+    },
+    {
+      id: 6, nombre: "Creative refresh continuo", semanas: "Sem 8-12", color: "#17323F",
+      desc: "Sistema de producción de creative para mantener freshness",
+      tareas: [
+        { t: "Sesión foto profesional con equipo médico (mensual)", impact: "Stock fresco de creative", estado: "planeado" },
+        { t: "Calendario de rotación: cambiar creative cada 30d en activos", impact: "Frecuencia <4", estado: "planeado" },
+        { t: "Producir 1 video testimonial paciente real al mes", impact: "Social proof real", estado: "planeado" },
+        { t: "A/B test mensual: copy dolor vs aspiracional vs precio", impact: "Aprendizaje continuo", estado: "planeado" }
+      ]
+    }
+  ],
+  okrs: [
+    {
+      objetivo: "🎯 Reducir CAC por paciente atendido en 40%",
+      kr: [
+        { kr: "CAPI implementado y optimizando por evento Schedule", baseline: "0%", meta: "100%", actual: "0%" },
+        { kr: "CAC actual en CLP por paciente atendido", baseline: "~CLP 4.085", meta: "CLP 2.500", actual: "—" },
+        { kr: "Matching score CAPI", baseline: "—", meta: ">7/10", actual: "—" }
+      ]
+    },
+    {
+      objetivo: "🎯 Diversificar mix de placements (reducir riesgo)",
+      kr: [
+        { kr: "% spend en Facebook Feed", baseline: "68%", meta: "<45%", actual: "—" },
+        { kr: "% spend en Instagram (Feed + Stories + Reels)", baseline: "12%", meta: ">30%", actual: "—" },
+        { kr: "Placements activos generando >5% del spend", baseline: "3", meta: "≥5", actual: "—" }
+      ]
+    },
+    {
+      objetivo: "🎯 Bajar saturación (frecuencia promedio)",
+      kr: [
+        { kr: "Frecuencia promedio top 10 campañas", baseline: "~7.5", meta: "<4", actual: "—" },
+        { kr: "Campañas con frecuencia >8 simultáneas", baseline: "3+", meta: "0", actual: "—" },
+        { kr: "Creative pieces nuevos producidos por mes", baseline: "~2", meta: "≥6", actual: "—" }
+      ]
+    },
+    {
+      objetivo: "🎯 Escalar conversaciones / pacientes nuevos atribuibles",
+      kr: [
+        { kr: "Conversaciones WA / mes desde Meta", baseline: "~440", meta: "700", actual: "—" },
+        { kr: "Pacientes nuevos / mes (cualquier canal)", baseline: "~89", meta: "120", actual: "—" },
+        { kr: "% pacientes nuevos atribuidos a Meta (vía CAPI)", baseline: "estimado 60%", meta: "medido >65%", actual: "—" }
+      ]
+    },
+    {
+      objetivo: "🎯 Expansión geográfica controlada",
+      kr: [
+        { kr: "Pacientes nuevos Curanilahue/mes (de Meta)", baseline: "~30", meta: "70", actual: "—" },
+        { kr: "Comunas con campaña dedicada", baseline: "0", meta: "3 (Curanilahue, Cañete, Lebu)", actual: "—" },
+        { kr: "CAC por comuna (visible en dashboard)", baseline: "no medido", meta: "medido", actual: "—" }
+      ]
+    }
+  ],
+  vision: [
+    { metrica: "Spend mensual", hoy: "~CLP 1M", q4: "CLP 2-3M (si LTV/CAC se mantiene)", delta: "+200%" },
+    { metrica: "CAC por paciente atendido", hoy: "~CLP 4.085", q4: "CLP 2.500", delta: "-40%" },
+    { metrica: "Conversaciones WA / mes", hoy: "~440", q4: "1.200+", delta: "+170%" },
+    { metrica: "Pacientes nuevos / mes (atribuibles)", hoy: "~50-60", q4: "150+", delta: "+150%" },
+    { metrica: "% mix Facebook Feed", hoy: "68%", q4: "<45%", delta: "diversificado" },
+    { metrica: "% mix Instagram", hoy: "12%", q4: ">30%", delta: "+150%" },
+    { metrica: "Campañas activas por especialidad", hoy: "1 (genérica)", q4: "6-8 (segmentadas)", delta: "+700%" },
+    { metrica: "Frecuencia promedio top campañas", hoy: "7.5", q4: "<4", delta: "saludable" }
+  ],
+  glosario: [
+    { termino: "CAC (Customer Acquisition Cost)", def: "Costo de adquirir 1 cliente nuevo. Fórmula: spend total / clientes nuevos. En tu caso ~CLP 4.085 por paciente atribuible." },
+    { termino: "CAPI (Conversion API)", def: "Canal servidor-a-servidor de Meta para mandar eventos de conversión que ocurren fuera del navegador (ej. cita confirmada en WhatsApp)." },
+    { termino: "CPA (Cost Per Action)", def: "Costo por acción definida (en tu caso, conversación WA iniciada). CPA actual ~CLP 2.222 por conversación." },
+    { termino: "CPC (Cost Per Click)", def: "Costo por clic en el ad. Tu CPC promedio: CLP 144." },
+    { termino: "CPM (Cost Per Mille)", def: "Costo por 1.000 impresiones. Tu CPM promedio: CLP 904. Sube cuando saturás audiencia." },
+    { termino: "CTR (Click Through Rate)", def: "% de impresiones que generan clic. Tu CTR: 0.61% (benchmark salud LATAM: 1-2%)." },
+    { termino: "Frecuencia", def: "Cuántas veces (en promedio) cada persona vio el mismo ad. Sano: <3. Saturado: >5. Crítico: >10." },
+    { termino: "Reach (Alcance)", def: "Personas únicas que vieron tu ad. Tu lifetime: 404.550 personas (11× la población de Arauco)." },
+    { termino: "Impresiones", def: "Total de veces que se mostró el ad (incluye repeticiones). Reach × Frecuencia = Impresiones." },
+    { termino: "Custom Audience", def: "Lista de personas que ya conoces (emails, teléfonos, visitantes web). Las subes a Meta para segmentar o excluir." },
+    { termino: "Lookalike Audience", def: "Audiencia que Meta genera 'parecida a' tu Custom Audience. Es la mejor herramienta de targeting que existe." },
+    { termino: "Pixel", def: "Snippet JS que se instala en tu web. Trackea visitas y eventos para Meta. Tu sitio actualmente no lo tiene activo (depende del web)." },
+    { termino: "fbclid", def: "Parámetro que Meta agrega a links de ads. Sirve para atribuir conversiones que pasan después del click (vía CAPI)." },
+    { termino: "Dayparting", def: "Mostrar/no mostrar ads según hora del día. Útil para concentrar gasto en horas de alta conversión." },
+    { termino: "ROAS (Return On Ad Spend)", def: "Ingresos generados por cada peso invertido en ads. ROAS 4x = $4 ingreso por $1 gastado. Tu LTV/CAC ~103x." },
+    { termino: "LTV (Lifetime Value)", def: "Ingreso total que un cliente genera durante su relación contigo. Estimado paciente CMC: ~CLP 420K (4 visitas/año × 3 años × $35K)." },
+    { termino: "Conversion Window", def: "Período en que Meta atribuye una conversión a un click (default 7 días). Útil para análisis post-campaña." },
+    { termino: "Learning Phase", def: "Período inicial (7-14 días, ~50 conversiones) donde Meta optimiza una nueva campaña. Durante esta fase NO modificar." },
+    { termino: "CBO (Campaign Budget Optimization)", def: "Meta reasigna automáticamente budget entre ad sets de una campaña. Funciona bien con CAPI bien implementado." }
+  ]
+};
+
+let _charts = {};
+const fmtCLP = n => 'CLP ' + Math.round(n).toLocaleString('es-CL');
+const fmtNum = n => Math.round(n).toLocaleString('es-CL');
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden');
+  });
+});
+
+// Render estáticos
+const audTb = document.getElementById('audiencias-tbody');
+STATIC.audiencias.forEach(a => {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td class="py-2 font-medium">${a.nombre}</td><td class="py-2 opacity-75">${a.tamaño}</td><td class="py-2 text-xs">${a.uso}</td><td class="py-2 text-center"><span class="status-${a.estado.replace(' ','_')} px-2 py-0.5 rounded text-xs">${a.estado}</span></td>`;
+  audTb.appendChild(tr);
+});
+
+const capiPasos = document.getElementById('capi-pasos');
+STATIC.capi_pasos.forEach(p => {
+  const div = document.createElement('div');
+  div.className = 'border border-slate-200 rounded-lg p-4';
+  div.innerHTML = `<div class="flex items-baseline justify-between mb-1"><strong class="text-sm">${p.paso}</strong><span class="text-xs opacity-60">${p.tiempo}</span></div><p class="text-xs opacity-85 mt-1">${p.detalle}</p>`;
+  capiPasos.appendChild(div);
+});
+
+const roadEl = document.getElementById('roadmap-fases');
+STATIC.fases_roadmap.forEach(f => {
+  const card = document.createElement('div');
+  card.className = 'border border-slate-200 rounded-xl overflow-hidden';
+  card.innerHTML = `
+    <div class="px-5 py-3 flex items-center justify-between" style="background:${f.color}15;border-bottom:1px solid rgba(14,37,48,0.1)">
+      <div class="flex items-center gap-3">
+        <span class="font-mono text-xs uppercase font-semibold" style="color:${f.color}">Fase ${f.id} · ${f.semanas}</span>
+        <h4 class="font-semibold">${f.nombre}</h4>
+      </div>
+      <span class="text-xs opacity-75">${f.tareas.length} tareas</span>
+    </div>
+    <div class="p-5">
+      <p class="text-sm opacity-80 mb-3">${f.desc}</p>
+      <ul class="space-y-2 text-sm">
+        ${f.tareas.map(t => `<li class="flex justify-between gap-3"><span class="flex-1">· ${t.t}</span><span class="text-xs opacity-60 whitespace-nowrap">${t.impact}</span><span class="status-${t.estado} px-2 py-0.5 rounded text-xs whitespace-nowrap">${t.estado}</span></li>`).join('')}
+      </ul>
+    </div>`;
+  roadEl.appendChild(card);
+});
+
+const okrsEl = document.getElementById('okrs-list');
+STATIC.okrs.forEach(o => {
+  const card = document.createElement('div');
+  card.className = 'border border-slate-200 rounded-lg p-4';
+  card.innerHTML = `
+    <h4 class="font-semibold text-sm mb-3" style="font-family:'Fraunces',serif">${o.objetivo}</h4>
+    <table class="w-full text-sm">
+      <thead><tr class="border-b border-slate-100"><th class="text-left py-1 opacity-60 font-normal text-xs uppercase tracking-wide">Key Result</th><th class="text-right py-1 opacity-60 font-normal text-xs uppercase tracking-wide">Baseline</th><th class="text-right py-1 opacity-60 font-normal text-xs uppercase tracking-wide">Meta Q2</th><th class="text-right py-1 opacity-60 font-normal text-xs uppercase tracking-wide">Actual</th></tr></thead>
+      <tbody class="divide-y divide-slate-100">
+        ${o.kr.map(k => `<tr><td class="py-1.5">${k.kr}</td><td class="py-1.5 text-right opacity-75">${k.baseline}</td><td class="py-1.5 text-right font-medium" style="color:var(--olacore-cobre)">${k.meta}</td><td class="py-1.5 text-right">${k.actual}</td></tr>`).join('')}
+      </tbody>
+    </table>`;
+  okrsEl.appendChild(card);
+});
+
+const visionTb = document.getElementById('vision-tbody');
+STATIC.vision.forEach(v => {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td class="py-2 font-medium">${v.metrica}</td><td class="py-2 text-right opacity-75">${v.hoy}</td><td class="py-2 text-right font-medium" style="color:var(--olacore-cobre)">${v.q4}</td><td class="py-2 text-right text-xs opacity-75">${v.delta}</td>`;
+  visionTb.appendChild(tr);
+});
+
+const glosTb = document.getElementById('glosario-list');
+STATIC.glosario.forEach(g => {
+  const div = document.createElement('div');
+  div.className = 'border-l-4 pl-4 py-1';
+  div.style.borderColor = 'var(--olacore-cobre)';
+  div.innerHTML = `<div class="font-semibold text-sm">${g.termino}</div><p class="text-sm opacity-80 mt-1">${g.def}</p>`;
+  glosTb.appendChild(div);
+});
+
+// Cargar datos live de Meta
+function loadMeta() {
+  fetch('/api/seo/meta-ads?token=cmc_admin_2026')
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('updated-date').textContent = new Date().toLocaleString('es-CL', {dateStyle:'short', timeStyle:'short'});
+      const lt = d.lifetime || {};
+      document.getElementById('kpi-spend').textContent = fmtCLP(lt.spend || 0);
+      const mes_avg = (d.monthly && d.monthly.length) ? lt.spend / d.monthly.length : 0;
+      document.getElementById('kpi-spend-mes').textContent = '~' + fmtCLP(mes_avg) + '/mes (' + (d.monthly?.length||0) + ' meses)';
+      document.getElementById('kpi-conv').textContent = fmtNum(lt.conversaciones || 0);
+      document.getElementById('kpi-cac').textContent = lt.conversaciones ? fmtCLP(lt.spend / lt.conversaciones) : '—';
+      document.getElementById('kpi-reach').textContent = fmtNum(lt.reach || 0);
+      document.getElementById('kpi-reach-pct').textContent = ((lt.reach || 0) / 37000).toFixed(1) + '× población Arauco';
+
+      // Charts
+      const months = d.monthly || [];
+      const nuevos = (d.pacientes_nuevos_chatbot || []).reduce((m,x) => { m[x.mes]=x.pacientes_nuevos; return m; }, {});
+      _charts.spend = new Chart(document.getElementById('chart-monthly-spend'), {
+        type: 'bar', data: { labels: months.map(m=>m.mes), datasets: [{ label:'Spend', data: months.map(m=>m.spend), backgroundColor:'#0E2530', borderRadius:3 }] },
+        options: { plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
+      });
+      _charts.cvp = new Chart(document.getElementById('chart-conv-vs-pac'), {
+        type:'line', data: {
+          labels: months.map(m=>m.mes),
+          datasets: [
+            { label:'Conversaciones Meta', data: months.map(m=>m.conversaciones), borderColor:'#B98149', backgroundColor:'rgba(185,129,73,0.1)', borderWidth:2, tension:0.3, fill:false },
+            { label:'Pacientes nuevos chatbot', data: months.map(m=>nuevos[m.mes]||0), borderColor:'#4A5D44', borderWidth:2, tension:0.3, fill:false, borderDash:[4,4] }
+          ]
+        },
+        options: { plugins:{legend:{position:'bottom'}}, scales:{y:{beginAtZero:true}} }
+      });
+      _charts.hourly = new Chart(document.getElementById('chart-hourly'), {
+        type: 'bar', data: {
+          labels: (d.hourly||[]).map(h => String(h.hora).padStart(2,'0') + 'h'),
+          datasets: [
+            { type:'bar',  label:'Spend', data:(d.hourly||[]).map(h=>h.spend), backgroundColor:'#0E2530', borderRadius:3, yAxisID:'y' },
+            { type:'line', label:'Conversaciones', data:(d.hourly||[]).map(h=>h.conversaciones), borderColor:'#B98149', borderWidth:2, tension:0.3, fill:false, yAxisID:'y1' }
+          ]
+        },
+        options: { interaction:{mode:'index',intersect:false}, plugins:{legend:{position:'bottom'}}, scales:{ y:{beginAtZero:true,position:'left'}, y1:{beginAtZero:true,position:'right',grid:{drawOnChartArea:false}} } }
+      });
+      const demoTop = (d.demografia || []).slice(0, 8);
+      _charts.demo = new Chart(document.getElementById('chart-demo'), {
+        type:'doughnut', data: {
+          labels: demoTop.map(x => x.edad + ' ' + (x.genero==='female'?'♀':x.genero==='male'?'♂':'?')),
+          datasets: [{ data: demoTop.map(x=>x.spend), backgroundColor:['#9A3E2F','#B98149','#0E2530','#4A5D44','#7C4A2A','#17323F','#D9D0BD','#E8E0D0'], borderColor:'#fffcf5', borderWidth:2 }]
+        },
+        options: { plugins:{legend:{position:'right',labels:{font:{size:11}}}} }
+      });
+      const placeTop = (d.placement || []).slice(0, 8);
+      _charts.place = new Chart(document.getElementById('chart-placement'), {
+        type:'bar', data:{ labels: placeTop.map(p=>p.plataforma + ' · ' + p.posicion), datasets:[{label:'Spend', data: placeTop.map(p=>p.spend), backgroundColor:'#B98149', borderRadius:4}] },
+        options:{ indexAxis:'y', plugins:{legend:{display:false}} }
+      });
+
+      // Tabla campañas
+      const tb = document.getElementById('meta-campaigns-tbody');
+      tb.innerHTML = '';
+      (d.top_campaigns||[]).forEach(c => {
+        const tr = document.createElement('tr');
+        tr.className='hover:bg-slate-50';
+        tr.innerHTML = `<td class="px-3 py-2">${c.nombre}</td><td class="px-3 py-2 text-right">${fmtCLP(c.spend)}</td><td class="px-3 py-2 text-right opacity-75">${fmtNum(c.impresiones)}</td><td class="px-3 py-2 text-right opacity-75">${fmtNum(c.clicks)}</td><td class="px-3 py-2 text-right font-semibold">${c.conversaciones}</td><td class="px-3 py-2 text-right ${c.cpa&&c.cpa>5000?'text-red-600 font-semibold':c.cpa&&c.cpa<2000?'text-emerald-600 font-medium':''}">${c.cpa?fmtCLP(c.cpa):'—'}</td><td class="px-3 py-2 text-right">${c.frecuencia.toFixed(1)}</td><td class="px-3 py-2 text-center">${c.saturacion}</td>`;
+        tb.appendChild(tr);
+      });
+    })
+    .catch(e => { document.getElementById('updated-date').textContent = '❌ ' + e; });
+}
+loadMeta();
+</script>
+</body>
+</html>
