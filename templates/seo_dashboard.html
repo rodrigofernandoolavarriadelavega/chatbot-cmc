@@ -390,6 +390,7 @@
               <th class="px-4 py-3 text-right">Atenciones</th>
               <th class="px-4 py-3 text-right">% atenc.</th>
               <th class="px-4 py-3 text-right">Pacientes</th>
+              <th class="px-4 py-3 text-right">% pac.</th>
               <th class="px-4 py-3 text-right">Población</th>
               <th class="px-4 py-3 text-right">% captado</th>
               <th class="px-4 py-3 text-right">Clics SEO</th>
@@ -1285,6 +1286,7 @@ function renderGeo(geoData, sourceLabel) {
       <td class="px-4 py-3 text-right">${citas.toLocaleString('es-CL')}</td>
       <td class="px-4 py-3 text-right text-slate-500">${pctCitas}%</td>
       <td class="px-4 py-3 text-right">${c.pacientes.toLocaleString('es-CL')}</td>
+      <td class="px-4 py-3 text-right text-slate-500">${c.pct}%</td>
       <td class="px-4 py-3 text-right text-slate-500">${pob}</td>
       <td class="px-4 py-3 text-right ${capClass}">${cap}</td>
       <td class="px-4 py-3 text-right ${seoClicks === 0 ? 'text-red-600 font-semibold' : ''}">${seoClicks}</td>
