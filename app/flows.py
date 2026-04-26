@@ -535,6 +535,21 @@ def _precio_line(especialidad: str, slot: dict | None = None, modalidad_override
     precio = entry[1]
     sufijo = entry[2] if len(entry) > 2 else None
     precio_str = f"${precio:,}".replace(",", ".")
+    # Si el paciente preguntó por una modalidad distinta a la default, ser
+    # explícito: para MG/Kine/Psico/etc el único precio es Fonasa.
+    # Bug real 2026-04-25 (56942757630, 17:55): pidió "particular" en MG y
+    # bot respondió "Fonasa $7.880" sin advertir que no hay particular.
+    if modalidad_override and modalidad_override != modalidad:
+        if modalidad == "fonasa":
+            return (
+                f"💰 Fonasa: {precio_str}\n"
+                f"_{esp} se atiende solo con valor Fonasa en el CMC._"
+            )
+        # default es particular y piden fonasa
+        return (
+            f"💰 Particular: {precio_str}\n"
+            f"_{esp} no tiene convenio Fonasa en el CMC._"
+        )
     if modalidad == "fonasa":
         return f"💰 Fonasa: {precio_str}"
     # modalidad == particular
@@ -1205,6 +1220,11 @@ _FAST_PATH_BUTTONS = {
     "accion_mis_citas", "accion_otro", "accion_waitlist",
     # afirmaciones frecuentes
     "ok", "dale", "listo", "vale", "perfecto", "bueno",
+    # respuestas modalidad — bug 2026-04-25 (56942757630): el classifier
+    # interpretaba "Fonasa" como preguntar_info y devolvía la dirección,
+    # ignorando 5 mensajes consecutivos. Fast-path corta el classifier.
+    "fonasa", "fona", "particular", "privado", "privada",
+    "no_gracias_reeng",
 }
 
 _FAST_PATH_PREFIXES = (
@@ -1665,6 +1685,22 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     if tl.startswith(("cita_confirm:", "cita_reagendar:", "cita_cancelar:")):
         return await _handle_confirmacion_precita(phone, tl, data)
 
+    # ── Respuesta al reenganche "No por ahora" ────────────────────────────────
+    # Bug 2026-04-25 (56933748605, 15:32): el botón de jobs.py mandaba
+    # "no_gracias_reeng" pero no había handler → caía en HUMAN_TAKEOVER y el
+    # bot decía "Una recepcionista te responderá", asustando al paciente que
+    # solo dijo "no por ahora". Cerramos amable sin escalar.
+    if tl == "no_gracias_reeng":
+        log_event(phone, "reenganche_rechazado", {"state": state})
+        # Limpiar flag para permitir reenganche futuro y conservar la sesión
+        # para que retome cuando quiera (no resetear estado completo).
+        data.pop("reenganche_sent", None)
+        save_session(phone, state, data)
+        return (
+            "Sin problema 😊 Cuando quieras retomar, escribe *menu* y te ayudo.\n\n"
+            f"_📞 *{CMC_TELEFONO}* si lo prefieres por teléfono._"
+        )
+
     # ── Comandos del profesional (doctor_mode) ──────────────────────────
     # Gate via dashboard /profesionalescmc → permiso "wa_access".
     # Fallback legacy: ADMIN_ALERT_PHONE siempre tiene acceso (primer arranque
@@ -1968,6 +2004,41 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 or _tl_clean in _CLOSINGS or _tl_norm_clean in _CLOSINGS):
             log_event(phone, "idle_closing", {"txt": txt[:80]})
             return "¡Que estés muy bien! 👋"
+
+        # ── Corrección de titular tras cita recién confirmada ─────────────────
+        # Bug 2026-04-25 (56981328760, 13:29): la paciente confirmó hora
+        # con su RUT y luego dijo "Per la hora es para mi hija". El bot la
+        # llevó a quick_book (oferta nueva agenda) en vez de detectar que
+        # quería corregir el TITULAR de la cita recién creada → terminó con
+        # doble reserva. Detectar el patrón y derivar a humano.
+        try:
+            from datetime import datetime as _dt_titular, timezone as _tz_titular
+            _last_book_ts = data.get("last_booking_ts")
+            _es_post_confirm = False
+            if _last_book_ts:
+                try:
+                    _delta = (_dt_titular.now(_tz_titular.utc)
+                              - _dt_titular.fromisoformat(_last_book_ts))
+                    _es_post_confirm = _delta.total_seconds() < 1800  # 30 min
+                except Exception:
+                    pass
+            _CORRECCION_TITULAR_RE = re.compile(
+                r"\b(la hora|esa hora|esta hora|la cita) (es )?para "
+                r"(mi |un |una )?(hij[oa]|esposo|esposa|mam[aá]|pap[aá]|"
+                r"hermano|hermana|nieto|nieta|pareja|pololo|polola|"
+                r"abuelo|abuela|familiar|amig[oa])\b",
+                re.IGNORECASE,
+            )
+            if _es_post_confirm and _CORRECCION_TITULAR_RE.search(txt):
+                log_event(phone, "correccion_titular_post_confirm", {"txt": txt[:160]})
+                save_session(phone, "HUMAN_TAKEOVER", data)
+                return (
+                    "Entendido 🙏 Una recepcionista corregirá los datos de "
+                    "la hora que recién agendaste y te confirmará por acá.\n\n"
+                    f"_Si es urgente: 📞 *{CMC_TELEFONO}*_"
+                )
+        except Exception:
+            pass
 
         # ── Seguimiento de FAQ con sugerencia de agendar ──────────────────────
         # Debe ir ANTES de los atajos numéricos (1..4) porque aquí interpretamos
@@ -3761,6 +3832,22 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                                   {"de": data.get("especialidad"), "a": nueva_esp})
                         reset_session(phone)
                         return await _iniciar_agendar(phone, {}, nueva_esp)
+            # Mensajes con clara intención de hablar con el doctor o dejar
+            # consulta libre → escalar directo (no insistir con número).
+            # Bug 2026-04-25 (56923649471, 14:05): "Fui en la semana y necesito
+            # hacerle una consulta" cayó en "No te entendí bien" tres veces.
+            _DERIVAR_FRASES = (
+                "necesito hacerle", "necesito hablar",
+                "necesito consultar", "necesito preguntar",
+                "hacerle una consulta", "consultarle",
+                "dejarle un mensaje", "decirle al doctor",
+                "decirle al dr", "decirle a la dra",
+                "le pregunto al doctor", "modificar la receta",
+                "modificarla", "me dio una receta",
+            )
+            if any(f in tl for f in _DERIVAR_FRASES):
+                log_event(phone, "wait_slot_consulta_libre", {"texto": txt[:120]})
+                return _derivar_humano(phone=phone, contexto="consulta libre WAIT_SLOT")
             # Frustration detector — escalada en 3 niveles
             data["intentos_fallidos"] = data.get("intentos_fallidos", 0) + 1
             intentos = data["intentos_fallidos"]
@@ -4226,6 +4313,17 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                               {"id_cita_old": cita_old.get("id"),
                                "id_cita_new": resultado.get("id")})
             reset_session(phone)
+            # Guardar marca de booking reciente para detectar correcciones
+            # de titular post-confirmación (bug 56981328760 2026-04-25 13:29).
+            try:
+                from datetime import datetime as _dt_lb, timezone as _tz_lb
+                from session import save_session as _save_lb, get_session as _get_lb
+                _sess_lb = _get_lb(phone) or {"state": "IDLE", "data": {}}
+                _data_lb = _sess_lb.get("data", {}) or {}
+                _data_lb["last_booking_ts"] = _dt_lb.now(_tz_lb.utc).isoformat()
+                _save_lb(phone, "IDLE", _data_lb)
+            except Exception:
+                pass
             nombre_corto = _first_name(paciente.get('nombre'))
             modalidad = data.get("modalidad", "particular").capitalize()
             es_tercero = bool(data.get("booking_for_other"))
