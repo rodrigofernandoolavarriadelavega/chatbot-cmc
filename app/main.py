@@ -943,6 +943,8 @@ def seo_geo_api(periodo: str = "todos", desde: str | None = None,
 
     # Lista de profesionales (para popular dropdown)
     prof_list = []
+    # Comunas calculadas del SQLite histórico (no del JSON snapshot del último mes)
+    sqlite_comunas: list[dict] = []
     if db_path.exists():
         conn3 = sqlite3.connect(str(db_path))
         try:
@@ -955,6 +957,94 @@ def seo_geo_api(periodo: str = "todos", desde: str | None = None,
                     GROUP BY nombre_profesional ORDER BY n DESC
                 """).fetchall() if r[0]
             ]
+            # Comunas (sin filtro) desde SQLite + expansión Arauco por dirección
+            comunas_rows = conn3.execute("""
+                SELECT TRIM(COALESCE(p.comuna, '')) AS comuna,
+                       COUNT(DISTINCT c.id_paciente) AS pacientes,
+                       COUNT(*) AS citas
+                FROM citas_heatmap c
+                INNER JOIN pacientes_heatmap p ON p.id = c.id_paciente
+                WHERE c.id_paciente IS NOT NULL
+                GROUP BY comuna
+            """).fetchall()
+            grouped_full: dict[str, dict] = {}
+            sin_com_full = 0
+            arauco_buckets = []
+            for nombre_raw, pac, cit in comunas_rows:
+                nombre = (nombre_raw or "").strip().upper()
+                if (not nombre or nombre.isdigit() or len(nombre) < 3
+                        or any(x in nombre for x in ("VOLCAN", "CALLE", "PASAJE", "#"))):
+                    sin_com_full += pac
+                    continue
+                if nombre in ("ARAUCO", "LARAQUETE", "RAMADILLAS", "CARAMPANGUE",
+                              "TUBUL", "LLICO", "COLICO", "CÓLICO",
+                              "PUNTA LAVAPIE", "PUNTA LAVAPIÉ", "ARAUUCO", "ARA"):
+                    arauco_buckets.append((nombre, pac, cit))
+                    continue
+                if re.match(r"^ARAU[CU]+O?\s*-?$", nombre):
+                    arauco_buckets.append((nombre, pac, cit))
+                    continue
+                canonical = nombre
+                for pat, target in NORMALIZE.items():
+                    if re.match(pat, nombre):
+                        canonical = target
+                        break
+                if canonical in grouped_full:
+                    grouped_full[canonical]["pacientes"] += pac
+                    grouped_full[canonical]["citas"] += cit
+                else:
+                    grouped_full[canonical] = {"comuna": canonical, "pacientes": pac, "citas": cit}
+            # Expandir Arauco en localidades por dirección
+            if arauco_buckets:
+                arauco_rows = conn3.execute("""
+                    SELECT c.id_paciente AS pid,
+                           UPPER(TRIM(p.comuna)) AS com,
+                           LOWER(COALESCE(p.direccion,'')) AS dir,
+                           COUNT(*) AS citas
+                    FROM citas_heatmap c
+                    INNER JOIN pacientes_heatmap p ON p.id = c.id_paciente
+                    WHERE c.id_paciente IS NOT NULL
+                      AND (UPPER(TRIM(p.comuna)) IN ('ARAUCO','ARAUUCO','ARA','LARAQUETE','RAMADILLAS','CARAMPANGUE','TUBUL','LLICO','COLICO','CÓLICO')
+                           OR UPPER(TRIM(p.comuna)) LIKE 'ARAUCO%')
+                    GROUP BY c.id_paciente
+                """).fetchall()
+                local_pac: dict[str, set] = {}
+                local_cit: dict[str, int] = {}
+                for pid, com, direccion, citas in arauco_rows:
+                    if com == "CARAMPANGUE": loc = "Carampangue"
+                    elif com == "LARAQUETE": loc = "Laraquete"
+                    elif com == "RAMADILLAS": loc = "Ramadillas"
+                    elif com == "TUBUL": loc = "Tubul"
+                    elif com == "LLICO": loc = "Llico"
+                    elif com in ("COLICO", "CÓLICO"): loc = "Colico"
+                    else:
+                        d = direccion or ""
+                        if "carampangue" in d or "conumo" in d or "horcones" in d or "pichilo" in d:
+                            loc = "Carampangue"
+                        elif "laraquete" in d or "el bosque" in d:
+                            loc = "Laraquete"
+                        elif "ramadillas" in d or "ramadilla" in d:
+                            loc = "Ramadillas"
+                        elif "tubul" in d:
+                            loc = "Tubul"
+                        elif "llico" in d:
+                            loc = "Llico"
+                        elif "colico" in d or "cólico" in d:
+                            loc = "Colico"
+                        else:
+                            loc = "Arauco"
+                    local_pac.setdefault(loc, set()).add(pid)
+                    local_cit[loc] = local_cit.get(loc, 0) + citas
+                for loc, pids in local_pac.items():
+                    grouped_full[loc] = {"comuna": loc, "pacientes": len(pids),
+                                         "citas": local_cit.get(loc, 0),
+                                         "es_localidad_arauco": True}
+            tot_pac_full = sum(g["pacientes"] for g in grouped_full.values()) or 1
+            tot_cit_full = sum(g["citas"] for g in grouped_full.values()) or 1
+            sqlite_comunas = sorted(grouped_full.values(), key=lambda x: x["pacientes"], reverse=True)
+            for c in sqlite_comunas:
+                c["pct"] = round(c["pacientes"] / tot_pac_full * 100, 1)
+                c["pct_citas"] = round(c["citas"] / tot_cit_full * 100, 1)
         finally:
             conn3.close()
 
@@ -972,7 +1062,7 @@ def seo_geo_api(periodo: str = "todos", desde: str | None = None,
         "pacientes_unicos": sqlite_total_pac if 'sqlite_total_pac' in dir() else raw.get("pacientes_unicos"),
         "con_comuna": sqlite_con_comuna if 'sqlite_con_comuna' in dir() else raw.get("con_comuna"),
         "sin_comuna": (sqlite_total_pac - sqlite_con_comuna) if 'sqlite_total_pac' in dir() else raw.get("sin_comuna"),
-        "comunas": _enriquecer_comunas(comunas[:12]),  # top 12 con población + % captado
+        "comunas": _enriquecer_comunas(sqlite_comunas[:12] if sqlite_comunas else comunas[:12]),
     }
 
 
