@@ -509,7 +509,7 @@ def _cross_reference_msg(especialidad: str) -> str:
     return CROSS_REFERENCE.get(especialidad.strip(), "")
 
 
-def _precio_line(especialidad: str, slot: dict | None = None) -> str:
+def _precio_line(especialidad: str, slot: dict | None = None, modalidad_override: str | None = None) -> str:
     """Línea de precio para insertar en la oferta de slot.
     Retorna string vacío si la especialidad no tiene precio registrado."""
     if not especialidad:
@@ -1330,7 +1330,7 @@ async def _responder_pregunta_horario(phone: str, state: str, data: dict, txt: s
         return "Los días de atención dependen del profesional. Te puedo mostrar horarios disponibles."
 
 
-def _preguntar_pago_respuesta(data: dict | None = None) -> str:
+def _preguntar_pago_respuesta(data: dict | None = None, txt: str = "") -> str:
     """Responde sobre pago. Si hay especialidad activa en data, incluye el precio
     primero — un paciente que pregunta 'cuánto sale' quiere el monto, no el
     método de pago. Sin contexto, cae al texto genérico de formas de pago.
@@ -1340,7 +1340,14 @@ def _preguntar_pago_respuesta(data: dict | None = None) -> str:
         slot = data.get("slot_elegido") or {}
         esp = (slot.get("especialidad") or data.get("especialidad") or "").strip()
         if esp:
-            linea = _precio_line(esp, slot if slot else None)
+            # Si el paciente menciona "particular" o "fonasa" en el texto, forzar esa columna
+            _modalidad_pedida = None
+            _txt_low = (txt or "").lower()
+            if "particular" in _txt_low or "privado" in _txt_low:
+                _modalidad_pedida = "particular"
+            elif "fonasa" in _txt_low:
+                _modalidad_pedida = "fonasa"
+            linea = _precio_line(esp, slot if slot else None, modalidad_override=_modalidad_pedida)
             if linea:
                 precio_block = f"{linea}\n\n"
     return (
@@ -1404,7 +1411,7 @@ async def _pre_router_wait(phone: str, txt: str, tl: str, state: str, data: dict
         if tag == "preguntar_horario":
             resp = await _responder_pregunta_horario(phone, state, data, txt=txt)
         elif tag == "preguntar_pago":
-            resp = _preguntar_pago_respuesta(data)
+            resp = _preguntar_pago_respuesta(data, txt=txt)
         elif tag == "preguntar_info":
             # Intentar FAQ específico primero (telemedicina, radiografía, etc).
             from claude_helper import _local_faq_fallback as _faq_fb

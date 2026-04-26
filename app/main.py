@@ -1629,6 +1629,15 @@ def verify_webhook(
     return Response(status_code=403)
 
 
+
+
+def _sanitize_upload_filename(orig: str, fallback: str = "file") -> str:
+    """Path traversal guard: solo basename, alfanumeric/dot/dash, max 120 chars."""
+    import os, re
+    base = os.path.basename(orig or "")
+    safe = re.sub(r"[^\w.\-]", "_", base)[:120]
+    return safe or fallback
+
 @app.post("/webhook")
 async def webhook(request: Request):
     """Recibe mensajes de Meta Cloud API (WhatsApp, Instagram, Messenger)."""

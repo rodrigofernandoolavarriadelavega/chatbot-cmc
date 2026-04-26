@@ -552,7 +552,7 @@ SALUD DIGESTIVA (muy común en zona rural de Arauco)
 
 CARDIOVASCULAR
 - Soplo al corazón / me dijeron que tengo soplo → **Cardiología** (Dr. Millán, $40.000).
-- Puntadas en el pecho / pinchazos al pecho → **Medicina General**; si es intenso o con ahogo → URGENCIA 131.
+- Puntadas/pinchazos en el pecho — **bandera roja**: si dura >5 min, irradia a brazo/mandíbula, con sudoración, náuseas o ahogo → **URGENCIA 131 inmediatamente** (posible IAM). Solo puntada breve y aislada en paciente joven sin factores de riesgo → **Medicina General**.
 - Presión baja / se me bajó la presión / hipotensión → **Medicina General**.
 - Presión alta / hipertensión / la presión sube → **Medicina General**; control con **Cardiología** si es necesario.
 - Palpitaciones / el corazón se me acelera / arritmia → **Cardiología**.
@@ -563,7 +563,7 @@ CARDIOVASCULAR
 RESPIRATORIO (común en zona con humo de chimenea y leña)
 - Gripazo / resfrío fuerte / me agarró un resfrío → **Medicina General**.
 - Tos con flema / tos con gallos → **Medicina General**.
-- Ahogos / me falta el aire / disnea → **Medicina General**; si es agudo → URGENCIA.
+- Ahogos / me falta el aire / disnea — **bandera roja**: si es de inicio súbito, en reposo, o con dolor de pecho → **URGENCIA 131 inmediatamente** (posible TEP/edema/IAM). Solo si es progresivo en días en paciente con asma/gripe conocida → **Medicina General**.
 - Bronquitis / me dieron bronquitis → **Medicina General**.
 - Asma / pecho apretado / silbido al respirar → **Medicina General**.
 - Dolor de garganta / amigdalitis / anginas → **Medicina General** u **Otorrinolaringología**.
@@ -1214,7 +1214,7 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
      "Escribe *1* o *agendar* para reservar hora."),
     (("ecograf", "ginecolog"),
      "Sí, realizamos *ecografía ginecológica* con el Dr. Tirso Rejón (ginecólogo) 👩‍⚕️\n\n"
-     "💰 Particular: desde $50.000\n\n"
+     "💰 Particular: desde $35.000\n\n"
      "Escribe *1* o *agendar ginecología* para reservar hora."),
     (("ecograf", "obstetric"),
      "Lo sentimos, por ahora *no contamos con ecografía obstétrica* 🙏\n\n"
@@ -1300,11 +1300,11 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
     (("horario", "atenc"),
      "⏰ *Horarios:*\n"
      "Lunes a viernes: 08:00 a 21:00\n"
-     "Sábado: 08:00 a 15:00\n"
+     "Sábado: 09:00 a 14:00\n"
      "Domingo: cerrado\n\n"
      "_Cada profesional tiene su propio horario — escribe *agendar* para ver disponibilidad._"),
     (("horarios",),
-     "⏰ Atendemos de *lunes a viernes 08:00–21:00* y *sábados 08:00–15:00*. "
+     "⏰ Atendemos de *lunes a viernes 08:00–21:00* y *sábados 09:00–14:00*. "
      "Escribe *agendar* y te muestro horarios disponibles de cada profesional 📅"),
     (("estacionamient",),
      "🚗 Sí, contamos con estacionamiento en el mismo centro, en Monsalve 102. "
