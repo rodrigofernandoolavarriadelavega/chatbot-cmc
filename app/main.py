@@ -920,6 +920,40 @@ def seo_geo_api(periodo: str = "todos", desde: str | None = None,
                     GROUP BY nombre_profesional ORDER BY n DESC
                 """).fetchall() if r[0]
             ]
+            # Serie mensual FILTRADA (con cláusula de fechas + profesional)
+            serie_mensual_f = []
+            serie_q = f"""
+                WITH primera AS (
+                    SELECT id_paciente, MIN(fecha) AS f_primera
+                    FROM citas_heatmap c
+                    WHERE id_paciente IS NOT NULL{clause}
+                    GROUP BY id_paciente
+                ),
+                mensual AS (
+                    SELECT substr(c.fecha,1,7) AS mes,
+                           COUNT(*) AS citas,
+                           COUNT(DISTINCT c.id_paciente) AS pac_unicos
+                    FROM citas_heatmap c
+                    WHERE 1=1{clause}
+                    GROUP BY mes
+                ),
+                nuevos AS (
+                    SELECT substr(f_primera,1,7) AS mes, COUNT(*) AS pac_nuevos
+                    FROM primera GROUP BY mes
+                )
+                SELECT m.mes, m.citas, m.pac_unicos, COALESCE(n.pac_nuevos, 0)
+                FROM mensual m LEFT JOIN nuevos n ON n.mes = m.mes
+                ORDER BY m.mes
+            """
+            # clause aparece 2 veces en serie_q → params duplicados
+            serie_params = params + params
+            acum = 0
+            for mes, cit, uni, nuv in conn2.execute(serie_q, serie_params).fetchall():
+                acum += nuv
+                serie_mensual_f.append({
+                    "mes": mes, "citas": cit, "pacientes_unicos": uni,
+                    "pacientes_nuevos": nuv, "pacientes_acumulado": acum,
+                })
         finally:
             conn2.close()
 
@@ -932,7 +966,7 @@ def seo_geo_api(periodo: str = "todos", desde: str | None = None,
             "periodo": periodo if not (desde or hasta) else None,
             "filtro_profesional": profesional or None,
             "profesionales": prof_list,
-            "serie_mensual": serie_mensual,
+            "serie_mensual": serie_mensual_f if serie_mensual_f else serie_mensual,
             "total_citas": tot_cit,
             "pacientes_unicos": tot_pac,
             "con_comuna": tot_pac - sin_com,
