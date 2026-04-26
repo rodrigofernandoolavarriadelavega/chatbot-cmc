@@ -591,6 +591,204 @@ def crecimiento_personal_page():
     return _CRECIMIENTO_PERSONAL_HTML
 
 
+# ─────────────────────────────────────────────────────────────────────────
+# Meta Ads (Marketing API) — análisis y cruce con citas del chatbot
+# ─────────────────────────────────────────────────────────────────────────
+
+META_AD_ACCOUNT_ID = "act_220608142267129"
+
+
+def _meta_get(path: str, params: dict | None = None) -> dict:
+    """Helper para llamar Marketing API con el token del .env."""
+    import os, json, urllib.request, urllib.parse
+    token = os.getenv("META_ACCESS_TOKEN", "")
+    if not token:
+        return {"error": "no META_ACCESS_TOKEN"}
+    base = "https://graph.facebook.com/v19.0"
+    p = dict(params or {})
+    p["access_token"] = token
+    url = f"{base}/{path}?" + urllib.parse.urlencode(p)
+    try:
+        req = urllib.request.Request(url, headers={"Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return json.loads(r.read())
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def _sum_conv(actions: list) -> int:
+    """Suma conversaciones iniciadas (los 2 action types relevantes)."""
+    if not actions:
+        return 0
+    types = ("onsite_conversion.messaging_conversation_started_7d",
+             "onsite_conversion.messaging_first_reply")
+    return sum(int(a.get("value", 0)) for a in actions if a.get("action_type") in types)
+
+
+@app.get("/api/seo/meta-ads")
+def seo_meta_ads_api(periodo: str = "last_90d", token: str = "",
+                    cmc_session: str | None = Cookie(None)):
+    """Análisis de Meta Ads (FB+IG → WhatsApp) cruzado con citas del chatbot."""
+    _seo_api_auth(token, cmc_session)
+
+    # 1. Lifetime totales
+    lifetime = _meta_get(f"{META_AD_ACCOUNT_ID}/insights",
+                         {"fields": "spend,impressions,reach,clicks,actions",
+                          "date_preset": "maximum"})
+
+    # 2. Serie mensual (todos los meses)
+    monthly = _meta_get(f"{META_AD_ACCOUNT_ID}/insights",
+                        {"fields": "spend,impressions,reach,clicks,frequency,actions",
+                         "time_increment": "monthly", "date_preset": "maximum"})
+
+    # 3. Top campañas (lifetime)
+    campaigns = _meta_get(f"{META_AD_ACCOUNT_ID}/insights",
+                          {"fields": "campaign_name,spend,impressions,clicks,frequency,actions",
+                           "level": "campaign", "date_preset": "maximum", "limit": 50})
+
+    # 4. Por placement
+    placement = _meta_get(f"{META_AD_ACCOUNT_ID}/insights",
+                          {"fields": "spend,impressions,clicks,actions",
+                           "breakdowns": "publisher_platform,platform_position",
+                           "date_preset": "maximum"})
+
+    # 5. Demografía
+    demo = _meta_get(f"{META_AD_ACCOUNT_ID}/insights",
+                     {"fields": "spend,impressions,clicks,actions",
+                      "breakdowns": "age,gender", "date_preset": "maximum"})
+
+    # 6. Por hora (últimos 90d para no sobrepasar)
+    hourly = _meta_get(f"{META_AD_ACCOUNT_ID}/insights",
+                       {"fields": "spend,clicks,actions",
+                        "breakdowns": "hourly_stats_aggregated_by_advertiser_time_zone",
+                        "date_preset": "last_90d"})
+
+    # 7. Cruce con chatbot: pacientes nuevos por mes (correlación)
+    import sqlite3
+    from pathlib import Path as _Path
+    db_path = _Path(__file__).parent.parent / "data" / "heatmap_cache.db"
+    nuevos_mes = []
+    if db_path.exists():
+        conn = sqlite3.connect(str(db_path))
+        try:
+            for mes, n in conn.execute("""
+                WITH primera AS (
+                    SELECT id_paciente, MIN(fecha) AS f
+                    FROM citas_heatmap WHERE id_paciente IS NOT NULL
+                    GROUP BY id_paciente)
+                SELECT substr(f,1,7) AS mes, COUNT(*) FROM primera
+                GROUP BY mes ORDER BY mes
+            """).fetchall():
+                nuevos_mes.append({"mes": mes, "pacientes_nuevos": n})
+        finally:
+            conn.close()
+
+    # Procesar respuestas
+    def proc_lifetime(resp):
+        if not resp.get("data"): return {}
+        r = resp["data"][0]
+        return {
+            "spend": float(r.get("spend", 0)),
+            "impresiones": int(r.get("impressions", 0)),
+            "reach": int(r.get("reach", 0)),
+            "clicks": int(r.get("clicks", 0)),
+            "conversaciones": _sum_conv(r.get("actions", [])),
+            "link_clicks": next((int(a["value"]) for a in r.get("actions", []) if a["action_type"] == "link_click"), 0),
+        }
+
+    def proc_monthly(resp):
+        out = []
+        for r in resp.get("data", []):
+            spend = float(r.get("spend", 0))
+            convs = _sum_conv(r.get("actions", []))
+            out.append({
+                "mes": r.get("date_start", "")[:7],
+                "spend": spend,
+                "impresiones": int(r.get("impressions", 0)),
+                "clicks": int(r.get("clicks", 0)),
+                "frecuencia": float(r.get("frequency", 0)),
+                "conversaciones": convs,
+                "cpa": round(spend / convs, 0) if convs else None,
+            })
+        return out
+
+    def proc_campaigns(resp):
+        out = []
+        for r in resp.get("data", []):
+            spend = float(r.get("spend", 0))
+            convs = _sum_conv(r.get("actions", []))
+            out.append({
+                "nombre": r.get("campaign_name", "")[:80],
+                "spend": spend,
+                "impresiones": int(r.get("impressions", 0)),
+                "clicks": int(r.get("clicks", 0)),
+                "frecuencia": float(r.get("frequency", 0)),
+                "conversaciones": convs,
+                "cpa": round(spend / convs, 0) if convs else None,
+                "saturacion": "🔴" if r.get("frequency", 0) and float(r["frequency"]) > 8 else
+                              "🟠" if r.get("frequency", 0) and float(r["frequency"]) > 4 else "🟢",
+            })
+        return sorted(out, key=lambda x: -x["spend"])
+
+    def proc_placement(resp):
+        out = []
+        for r in resp.get("data", []):
+            spend = float(r.get("spend", 0))
+            if spend < 100: continue  # filtrar ruido
+            out.append({
+                "plataforma": r.get("publisher_platform", ""),
+                "posicion": r.get("platform_position", ""),
+                "spend": spend,
+                "impresiones": int(r.get("impressions", 0)),
+                "clicks": int(r.get("clicks", 0)),
+            })
+        return sorted(out, key=lambda x: -x["spend"])
+
+    def proc_demo(resp):
+        out = []
+        total = sum(float(r.get("spend", 0)) for r in resp.get("data", []))
+        for r in resp.get("data", []):
+            spend = float(r.get("spend", 0))
+            if spend < 100: continue
+            out.append({
+                "edad": r.get("age", ""),
+                "genero": r.get("gender", ""),
+                "spend": spend,
+                "pct": round(spend / total * 100, 1) if total else 0,
+                "impresiones": int(r.get("impressions", 0)),
+                "clicks": int(r.get("clicks", 0)),
+            })
+        return sorted(out, key=lambda x: -x["spend"])
+
+    def proc_hourly(resp):
+        out = []
+        for r in resp.get("data", []):
+            h = r.get("hourly_stats_aggregated_by_advertiser_time_zone", "")
+            hora = int(h.split(":")[0]) if h else 0
+            spend = float(r.get("spend", 0))
+            convs = _sum_conv(r.get("actions", []))
+            out.append({
+                "hora": hora,
+                "spend": spend,
+                "clicks": int(r.get("clicks", 0)),
+                "conversaciones": convs,
+                "cpa": round(spend / convs, 0) if convs else None,
+            })
+        return sorted(out, key=lambda x: x["hora"])
+
+    return {
+        "fuente": "meta_marketing_api",
+        "ad_account_id": META_AD_ACCOUNT_ID,
+        "lifetime": proc_lifetime(lifetime),
+        "monthly": proc_monthly(monthly),
+        "top_campaigns": proc_campaigns(campaigns)[:20],
+        "placement": proc_placement(placement),
+        "demografia": proc_demo(demo),
+        "hourly": proc_hourly(hourly),
+        "pacientes_nuevos_chatbot": nuevos_mes,
+    }
+
+
 # Población oficial INE (Censo 2017 / proyección 2024). Provincia de Arauco
 # y vecinas del Gran Concepción. Sirve para calcular % de población captada.
 POBLACION_COMUNA = {

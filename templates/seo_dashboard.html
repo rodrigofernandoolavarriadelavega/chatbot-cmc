@@ -207,6 +207,7 @@
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="kpis">📈 KPIs</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="geo">🗺 Geo</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="cruces">🔗 Cruces</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="meta">📱 Meta Ads</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="meta">💬 Meta Suite</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="queries">🔍 Queries GSC</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="issues">🚨 Problemas</button>
@@ -806,6 +807,91 @@
   </section>
 
   <!-- Tab: Problemas -->
+  <!-- Tab: Meta Ads -->
+  <section id="tab-meta" class="tab-content hidden">
+    <div class="bg-white rounded-xl border border-slate-200 p-6 mb-6">
+      <div class="flex items-baseline justify-between mb-4">
+        <h3 class="font-semibold">Meta Ads (Facebook + Instagram → WhatsApp)</h3>
+        <span class="text-xs text-slate-500" id="meta-fuente">cargando...</span>
+      </div>
+      <p class="text-sm text-slate-500 mb-5">Datos en vivo desde Marketing API. Cuenta <code id="meta-acct" style="background:rgba(232,224,208,0.5);padding:1px 6px;border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:11px;">act_220608142267129</code></p>
+
+      <!-- KPIs lifetime -->
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+        <div class="tone-fiordo p-4 rounded-lg">
+          <div class="text-xs uppercase font-semibold opacity-80">Spend lifetime</div>
+          <div class="text-2xl font-bold mt-1" id="meta-spend">—</div>
+          <div class="text-xs opacity-75 mt-1" id="meta-spend-mes">—</div>
+        </div>
+        <div class="tone-cobre p-4 rounded-lg">
+          <div class="text-xs uppercase font-semibold opacity-80">Conversaciones</div>
+          <div class="text-2xl font-bold mt-1" id="meta-conv">—</div>
+          <div class="text-xs opacity-75 mt-1">WhatsApp iniciadas</div>
+        </div>
+        <div class="tone-musgo p-4 rounded-lg">
+          <div class="text-xs uppercase font-semibold opacity-80">CAC promedio</div>
+          <div class="text-2xl font-bold mt-1" id="meta-cac">—</div>
+          <div class="text-xs opacity-75 mt-1">Por conversación</div>
+        </div>
+        <div class="tone-neblina p-4 rounded-lg">
+          <div class="text-xs uppercase font-semibold opacity-80">Reach único</div>
+          <div class="text-2xl font-bold mt-1" id="meta-reach">—</div>
+          <div class="text-xs opacity-75 mt-1">Personas alcanzadas</div>
+        </div>
+        <div class="tone-lacre p-4 rounded-lg">
+          <div class="text-xs uppercase font-semibold opacity-80">Link clicks</div>
+          <div class="text-2xl font-bold mt-1" id="meta-clicks">—</div>
+          <div class="text-xs opacity-75 mt-1">CTR <span id="meta-ctr">—</span></div>
+        </div>
+      </div>
+
+      <!-- Spend mensual + correlación con pacientes nuevos -->
+      <div class="bg-slate-50 rounded-lg p-5 mb-6">
+        <h4 class="font-semibold text-sm mb-3">Spend mensual y conversaciones (vs pacientes nuevos del chatbot)</h4>
+        <canvas id="chart-meta-monthly" height="100"></canvas>
+      </div>
+
+      <!-- Por hora del día -->
+      <div class="bg-slate-50 rounded-lg p-5 mb-6">
+        <h4 class="font-semibold text-sm mb-3">Eficiencia por hora del día (últimos 90 días)</h4>
+        <canvas id="chart-meta-hourly" height="80"></canvas>
+        <p class="text-xs text-slate-500 mt-2">Donde el spend es alto pero las conversaciones bajas (CPA alto), conviene reducir presupuesto.</p>
+      </div>
+
+      <!-- Demografía + Placement side by side -->
+      <div class="grid lg:grid-cols-2 gap-6 mb-6">
+        <div class="bg-slate-50 rounded-lg p-5">
+          <h4 class="font-semibold text-sm mb-3">Demografía (% spend)</h4>
+          <canvas id="chart-meta-demo" height="220"></canvas>
+        </div>
+        <div class="bg-slate-50 rounded-lg p-5">
+          <h4 class="font-semibold text-sm mb-3">Placement (donde se gasta)</h4>
+          <canvas id="chart-meta-placement" height="220"></canvas>
+        </div>
+      </div>
+
+      <!-- Top campañas -->
+      <div class="overflow-x-auto">
+        <h4 class="font-semibold text-sm mb-3">Top campañas (por spend)</h4>
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 text-slate-600 uppercase text-xs">
+            <tr>
+              <th class="px-3 py-2 text-left">Campaña</th>
+              <th class="px-3 py-2 text-right">Spend</th>
+              <th class="px-3 py-2 text-right">Imp</th>
+              <th class="px-3 py-2 text-right">Clicks</th>
+              <th class="px-3 py-2 text-right">Conv</th>
+              <th class="px-3 py-2 text-right">CPA</th>
+              <th class="px-3 py-2 text-right">Frec</th>
+              <th class="px-3 py-2 text-center">Sat.</th>
+            </tr>
+          </thead>
+          <tbody id="meta-campaigns-tbody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
   <section id="tab-issues" class="tab-content hidden">
     <div class="space-y-3" id="issues-list"></div>
   </section>
@@ -1423,6 +1509,123 @@ if (DATA.top_queries) {
     queriesTbody.appendChild(tr);
   });
 }
+
+// ─── Meta Ads ───
+let _metaCharts = {};
+function fmtCLP(n) { return 'CLP ' + Math.round(n).toLocaleString('es-CL'); }
+function fmtNum(n) { return Math.round(n).toLocaleString('es-CL'); }
+function loadMeta() {
+  const fuente = document.getElementById('meta-fuente');
+  fuente.textContent = '⏳ Cargando...';
+  fetch('/api/seo/meta-ads?' + _withTok(''))
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(d => renderMeta(d))
+    .catch(e => { fuente.textContent = '❌ Error: ' + e; });
+}
+function renderMeta(d) {
+  document.getElementById('meta-fuente').textContent = '🟢 live · ' + new Date().toLocaleString('es-CL');
+  const lt = d.lifetime || {};
+  document.getElementById('meta-spend').textContent = fmtCLP(lt.spend || 0);
+  // Spend mensual promedio
+  const mes_avg = (d.monthly && d.monthly.length) ? lt.spend / d.monthly.length : 0;
+  document.getElementById('meta-spend-mes').textContent = '~' + fmtCLP(mes_avg) + '/mes (' + (d.monthly?.length || 0) + ' meses)';
+  document.getElementById('meta-conv').textContent = fmtNum(lt.conversaciones || 0);
+  document.getElementById('meta-cac').textContent = lt.conversaciones ? fmtCLP(lt.spend / lt.conversaciones) : '—';
+  document.getElementById('meta-reach').textContent = fmtNum(lt.reach || 0);
+  document.getElementById('meta-clicks').textContent = fmtNum(lt.link_clicks || 0);
+  const ctr = lt.impresiones ? (lt.clicks / lt.impresiones * 100).toFixed(2) : 0;
+  document.getElementById('meta-ctr').textContent = ctr + '%';
+
+  // Chart mensual: spend (bar) + conversaciones (line) + pacientes nuevos (line)
+  const monthly = d.monthly || [];
+  const nuevos = (d.pacientes_nuevos_chatbot || []).reduce((m, x) => { m[x.mes] = x.pacientes_nuevos; return m; }, {});
+  if (_metaCharts.monthly) _metaCharts.monthly.destroy();
+  _metaCharts.monthly = new Chart(document.getElementById('chart-meta-monthly'), {
+    type: 'bar', data: {
+      labels: monthly.map(m => m.mes),
+      datasets: [
+        { type: 'bar',  label: 'Spend (CLP)',         data: monthly.map(m => m.spend),         backgroundColor: '#0E2530', borderRadius: 3, yAxisID: 'y' },
+        { type: 'line', label: 'Conversaciones WA',    data: monthly.map(m => m.conversaciones), borderColor: '#B98149',     backgroundColor: 'rgba(185,129,73,0.1)', borderWidth: 2, tension: 0.3, pointRadius: 3, fill: false, yAxisID: 'y1' },
+        { type: 'line', label: 'Pacientes nuevos chatbot', data: monthly.map(m => nuevos[m.mes] || 0), borderColor: '#4A5D44', borderWidth: 2, tension: 0.3, pointRadius: 3, fill: false, yAxisID: 'y1', borderDash: [4,4] }
+      ]
+    },
+    options: {
+      responsive: true, interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { position: 'bottom' } },
+      scales: {
+        y:  { beginAtZero: true, position: 'left', title: { display: true, text: 'Spend CLP', font: { size: 10 } } },
+        y1: { beginAtZero: true, position: 'right', title: { display: true, text: 'Personas', font: { size: 10 } }, grid: { drawOnChartArea: false } }
+      }
+    }
+  });
+
+  // Hourly
+  if (_metaCharts.hourly) _metaCharts.hourly.destroy();
+  _metaCharts.hourly = new Chart(document.getElementById('chart-meta-hourly'), {
+    type: 'bar', data: {
+      labels: (d.hourly || []).map(h => String(h.hora).padStart(2,'0') + 'h'),
+      datasets: [
+        { type: 'bar',  label: 'Spend',          data: (d.hourly||[]).map(h => h.spend),         backgroundColor: '#0E2530', borderRadius: 3, yAxisID: 'y' },
+        { type: 'line', label: 'Conversaciones', data: (d.hourly||[]).map(h => h.conversaciones), borderColor: '#B98149', borderWidth: 2, tension: 0.3, pointRadius: 2, fill: false, yAxisID: 'y1' }
+      ]
+    },
+    options: {
+      responsive: true, interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { position: 'bottom' } },
+      scales: {
+        y:  { beginAtZero: true, position: 'left' },
+        y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false } }
+      }
+    }
+  });
+
+  // Demografía (doughnut)
+  if (_metaCharts.demo) _metaCharts.demo.destroy();
+  const demoTop = (d.demografia || []).slice(0, 8);
+  const demoColors = ['#9A3E2F','#B98149','#0E2530','#4A5D44','#7C4A2A','#17323F','#D9D0BD','#E8E0D0'];
+  _metaCharts.demo = new Chart(document.getElementById('chart-meta-demo'), {
+    type: 'doughnut', data: {
+      labels: demoTop.map(x => x.edad + ' ' + (x.genero === 'female' ? '♀' : x.genero === 'male' ? '♂' : '?')),
+      datasets: [{ data: demoTop.map(x => x.spend), backgroundColor: demoColors.slice(0, demoTop.length), borderColor: '#fffcf5', borderWidth: 2 }]
+    },
+    options: { plugins: { legend: { position: 'right', labels: { font: { size: 11 } } } } }
+  });
+
+  // Placement (bar horizontal)
+  if (_metaCharts.placement) _metaCharts.placement.destroy();
+  const placeTop = (d.placement || []).slice(0, 8);
+  _metaCharts.placement = new Chart(document.getElementById('chart-meta-placement'), {
+    type: 'bar', data: {
+      labels: placeTop.map(p => p.plataforma + ' · ' + p.posicion),
+      datasets: [{ label: 'Spend', data: placeTop.map(p => p.spend), backgroundColor: '#B98149', borderRadius: 4 }]
+    },
+    options: { indexAxis: 'y', plugins: { legend: { display: false } } }
+  });
+
+  // Tabla campañas
+  const tb = document.getElementById('meta-campaigns-tbody');
+  tb.innerHTML = '';
+  (d.top_campaigns || []).forEach(c => {
+    const tr = document.createElement('tr');
+    tr.className = 'hover:bg-slate-50';
+    tr.innerHTML = `
+      <td class="px-3 py-2">${c.nombre}</td>
+      <td class="px-3 py-2 text-right">${fmtCLP(c.spend)}</td>
+      <td class="px-3 py-2 text-right text-slate-500">${fmtNum(c.impresiones)}</td>
+      <td class="px-3 py-2 text-right text-slate-500">${fmtNum(c.clicks)}</td>
+      <td class="px-3 py-2 text-right font-semibold">${c.conversaciones}</td>
+      <td class="px-3 py-2 text-right ${c.cpa && c.cpa > 5000 ? 'text-red-600 font-semibold' : c.cpa && c.cpa < 2000 ? 'text-emerald-600 font-medium' : ''}">${c.cpa ? fmtCLP(c.cpa) : '—'}</td>
+      <td class="px-3 py-2 text-right">${c.frecuencia.toFixed(1)}</td>
+      <td class="px-3 py-2 text-center">${c.saturacion}</td>
+    `;
+    tb.appendChild(tr);
+  });
+}
+
+// Disparar carga cuando se hace click en el tab Meta
+document.querySelectorAll('.tab-btn[data-tab="meta"]').forEach(btn => {
+  btn.addEventListener('click', () => { if (!_metaCharts.monthly) loadMeta(); }, { once: false });
+});
 
 // Issues
 const issuesList = document.getElementById('issues-list');
