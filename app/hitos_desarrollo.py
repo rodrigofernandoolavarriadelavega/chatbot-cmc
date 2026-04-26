@@ -200,7 +200,7 @@ def get_milestones_reminder(fecha_nacimiento: str, nombre: str = "") -> Optional
         return None
 
     _, _, etiqueta, hitos, alertas = bucket
-    nombre_corto = nombre.split()[0] if nombre else "tu hijo/a"
+    nombre_corto = ((nombre or "").split() or [""])[0] if nombre else "tu hijo/a"
 
     lineas = [f"🧒 *Hitos del desarrollo — {nombre_corto} ({etiqueta})*\n"]
     lineas.append("Según la guía MINSAL (Chile Crece Contigo), a esta edad se espera:\n")

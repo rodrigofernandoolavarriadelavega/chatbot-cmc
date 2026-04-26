@@ -400,7 +400,7 @@ async def _job_waitlist_check():
             PROFESIONALES.get(int(id_prof_pref), {}).get("nombre", "") if id_prof_pref else ""
         )
 
-        nombre_corto = nombre.split()[0] if nombre else ""
+        nombre_corto = ((nombre or "").split() or [""])[0] if nombre else ""
         try:
             if USE_TEMPLATES:
                 # Template: lista_espera_cupo

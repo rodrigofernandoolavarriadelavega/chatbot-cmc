@@ -403,6 +403,8 @@ async def enviar_crosssell_kine(send_fn, send_template_fn=None):
 
     log.info("Cross-sell kine: enviando %d mensaje(s)", len(candidatos))
     for p in candidatos:
+        if not puede_enviar_campana(p.get("phone",""), "crosssell_kine", dias_cooldown=90):
+            continue
         try:
             if USE_TEMPLATES and send_template_fn:
                 nombre = _nombre_corto(p.get("nombre")) or "paciente"
@@ -470,6 +472,8 @@ async def enviar_crosssell_orl_fono(send_fn, send_template_fn=None):
         return
     log.info("Cross-sell ORL↔Fono: enviando %d mensaje(s)", len(candidatos))
     for p in candidatos:
+        if not puede_enviar_campana(p.get("phone",""), "crosssell_orl_fono", dias_cooldown=90):
+            continue
         try:
             msg = _msg_crosssell_orl_fono(p)
             await send_fn(p["phone"], msg)
@@ -520,6 +524,8 @@ async def enviar_crosssell_odonto_estetica(send_fn, send_template_fn=None):
         return
     log.info("Cross-sell Odonto→Estética: enviando %d mensaje(s)", len(candidatos))
     for p in candidatos:
+        if not puede_enviar_campana(p.get("phone",""), "crosssell_odonto_estetica", dias_cooldown=90):
+            continue
         try:
             msg = _msg_crosssell_odonto_estetica(p)
             await send_fn(p["phone"], msg)
@@ -581,6 +587,8 @@ async def enviar_crosssell_mg_chequeo(send_fn, send_template_fn=None):
         return
     log.info("Cross-sell MG→Chequeo: enviando %d mensaje(s)", len(candidatos))
     for p in candidatos:
+        if not puede_enviar_campana(p.get("phone",""), "crosssell_mg_chequeo", dias_cooldown=180):
+            continue
         try:
             msg = _msg_crosssell_mg_chequeo(p)
             await send_fn(p["phone"], msg)
@@ -619,6 +627,8 @@ async def enviar_cumpleanos(send_fn):
 
     log.info("Cumpleaños: enviando %d saludo(s)", len(cumpleaneros))
     for p in cumpleaneros:
+        if not puede_enviar_campana(p.get("phone",""), "cumpleanos", dias_cooldown=330):
+            continue
         try:
             nombre = _nombre_corto(p.get("nombre"))
             saludo = f"*{nombre}*" if nombre else ""

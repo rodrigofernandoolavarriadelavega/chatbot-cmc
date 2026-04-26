@@ -704,7 +704,10 @@ async def buscar_slots_dia(especialidad: str, fecha: str,
         return [], []
     usar_prioridad = especialidad.lower() in _ESPECIALIDADES_PRIORIDAD
     async with httpx.AsyncClient(timeout=15) as client:
-        horarios = {i: await _get_horario(client, i) for i in ids}
+        # Paralelizar _get_horario (era N+1 secuencial)
+        import asyncio as _aio_h
+        _hl = await _aio_h.gather(*(_get_horario(client, i) for i in ids))
+        horarios = dict(zip(ids, _hl))
         if intervalo_override:
             for id_prof, mins in intervalo_override.items():
                 if id_prof in horarios:
@@ -718,7 +721,10 @@ async def buscar_slots_dia_por_ids(ids: list, fecha: str,
     if not ids:
         return [], []
     async with httpx.AsyncClient(timeout=15) as client:
-        horarios = {i: await _get_horario(client, i) for i in ids}
+        # Paralelizar _get_horario (era N+1 secuencial)
+        import asyncio as _aio_h
+        _hl = await _aio_h.gather(*(_get_horario(client, i) for i in ids))
+        horarios = dict(zip(ids, _hl))
         if intervalo_override:
             for id_prof, mins in intervalo_override.items():
                 if id_prof in horarios:
@@ -750,7 +756,10 @@ async def crear_paciente(rut: str, nombre: str, apellidos: str, **kwargs) -> Opt
             log.error("Error crear paciente rut=%s: %s %s", rut, r.status_code, r.text[:200])
             return None
         p = _safe_json(r).get("data", {})
-        pac_id = p["id"]
+        pac_id = p.get("id")
+        if not pac_id:
+            log.error("crear_paciente: Medilink response sin id: %s", str(p)[:200])
+            return None
         result = {
             "id":     pac_id,
             "nombre": _fmt_nombre_apellidos(p.get('nombre'), p.get('apellidos')),

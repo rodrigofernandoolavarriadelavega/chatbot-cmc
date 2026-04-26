@@ -1135,7 +1135,7 @@ PRECIOS_ESPECIALIDAD = {
 def _periodo_to_fecha_desde(periodo: str) -> str | None:
     """Convierte un periodo label en una fecha mínima YYYY-MM-DD (None = todos)."""
     from datetime import datetime, timedelta
-    hoy = datetime.now().date()
+    hoy = datetime.now(ZoneInfo("America/Santiago")).date()
     if periodo == "hoy":
         return hoy.isoformat()
     if periodo == "semana":
@@ -2116,7 +2116,8 @@ async def webhook(request: Request):
                         from datetime import datetime as _dt
                         from zoneinfo import ZoneInfo as _ZI
                         ts = _dt.now(_ZI("America/Santiago")).strftime("%Y%m%d_%H%M%S")
-                        saved_filename = orig_filename or f"{msg_type}_{ts}{ext}"
+                        _fallback_name = f"{msg_type}_{ts}{ext}"
+                        saved_filename = _sanitize_upload_filename(orig_filename, fallback=_fallback_name)
                         file_path = _UPLOAD_DIR / saved_filename
                         if file_path.exists():
                             saved_filename = f"{ts}_{saved_filename}"

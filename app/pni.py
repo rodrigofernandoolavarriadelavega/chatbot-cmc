@@ -110,7 +110,7 @@ def get_vaccine_reminder(fecha_nacimiento: str, nombre: str = "") -> Optional[st
         anios = edad_m // 12
         edad_txt = f"{anios} año{'s' if anios > 1 else ''}"
 
-    nombre_corto = nombre.split()[0] if nombre else "tu hijo/a"
+    nombre_corto = ((nombre or "").split() or [""])[0] if nombre else "tu hijo/a"
 
     lineas = [f"💉 *Recordatorio de vacunas — {nombre_corto} ({edad_txt})*\n"]
 
