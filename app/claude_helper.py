@@ -631,7 +631,7 @@ Responde directamente estas dudas sin necesidad de agendar:
 | Ginecología | ❌ Solo particular | $30.000 | NO acepta Fonasa |
 | Cardiología | ❌ Solo particular | $40.000 | NO acepta Fonasa |
 | Otorrinolaringología | ❌ Solo particular | $35.000 | NO acepta Fonasa |
-| Gastroenterología | ❌ Solo particular | $40.000 | NO acepta Fonasa |
+| Gastroenterología | ❌ Solo particular | $35.000 | NO acepta Fonasa |
 | Odontología (todas) | ❌ Solo particular | varía | NO acepta Fonasa |
 | Estética Facial | ❌ Solo particular | varía | NO acepta Fonasa |
 | Fonoaudiología | ❌ Solo particular | $25.000–$50.000 | NO acepta Fonasa |
@@ -663,7 +663,7 @@ MEDICINA GENERAL / SÍNTOMAS
 
 SALUD MENTAL
 - Ansiedad / estrés / ataques de pánico → **Psicología Adulto** (Jorge Montalba o Juan Pablo Rodríguez), $14.420 Fonasa / $20.000 particular.
-- Depresión / tristeza / desánimo → **Psicología Adulto**; si es urgente mencionar Salud Responde *4141.
+- Depresión / tristeza / desánimo → **Psicología Adulto**; si es urgente mencionar Salud Responde 600 360 7777.
 - Problemas de aprendizaje en niño / conducta → **Psicología Infantil** (Jorge Montalba).
 - Problemas de lenguaje en niño → **Fonoaudiología** (Juana Arratia).
 
@@ -1262,7 +1262,7 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
      "No ofrecemos *telemedicina* por el momento 😔 Todas las consultas son "
      "presenciales en nuestro centro:\n\n"
      "📍 Monsalve 102, Carampangue\n"
-     "🕐 Lun-Vie 8-21h · Sáb 9-13h\n\n"
+     "🕐 Lun-Vie 8-21h · Sáb 9-14h\n\n"
      "_Escribe *agendar* si quieres reservar una hora presencial._"),
     (("servicios", "ofrec"),
      "🏥 *Centro Médico Carampangue*\n\n"

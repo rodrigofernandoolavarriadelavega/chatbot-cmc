@@ -30,7 +30,6 @@ _PNI_CALENDARIO = [
     (18, 24, "Hexavalente (refuerzo)", "refuerzo de hexavalente", False),
     (18, 24, "Hepatitis A (2ª dosis)", "segunda dosis contra hepatitis A", False),
     (18, 24, "Varicela (1ª dosis)", "protege contra varicela", False),
-    (18, 24, "Fiebre Amarilla", "solo si viaja a zona endémica", False),
     # 36 meses (3 años)
     (36, 48, "Varicela (2ª dosis)", "segunda dosis contra varicela", False),
     # 4 años (48 meses)

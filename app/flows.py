@@ -1306,10 +1306,13 @@ async def _responder_pregunta_horario(phone: str, state: str, data: dict, txt: s
                                 data["especialidad"] = esp_prof
                                 save_session(phone, "WAIT_SLOT", data)
                                 prof_nombre_sw = PROFESIONALES.get(int(prof_id), {}).get("nombre", "")
-                                return (
-                                    f"Cambié a *{prof_nombre_sw}* 👨‍⚕️{chr(10)}{chr(10)}" +
-                                    _format_slots((smart or todos)[:5])
-                                )
+                                # _format_slots puede devolver dict (interactive list)
+                                # con <=8 slots → no concatenar, mandar header como msg separado.
+                                _slot_resp = _format_slots((smart or todos)[:5])
+                                if isinstance(_slot_resp, dict):
+                                    await send_whatsapp(phone, f"Cambié a *{prof_nombre_sw}* 👨‍⚕️")
+                                    return _slot_resp
+                                return f"Cambié a *{prof_nombre_sw}* 👨‍⚕️{chr(10)}{chr(10)}" + _slot_resp
                     except Exception as _e_sw:
                         log.warning("switch prof en preguntar_horario falló: %s", _e_sw)
 
@@ -3637,11 +3640,13 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if cercanos:
                 data["slots"] = cercanos[:10]
                 save_session(phone, "WAIT_SLOT", data)
-                return (
-                    f"No tengo exactamente a las {_h_pedida:02d}:{_m_pedida:02d} 😕\n"
-                    f"Te muestro los más cercanos:\n\n"
-                    + _format_slots(cercanos[:10], mostrar_todos=True)
-                )
+                _slot_resp_c = _format_slots(cercanos[:10], mostrar_todos=True)
+            _hdr = f"No tengo exactamente a las {_h_pedida:02d}:{_m_pedida:02d} 😕\n"
+            _hdr += "Te muestro los más cercanos:"
+            if isinstance(_slot_resp_c, dict):
+                await send_whatsapp(phone, _hdr)
+                return _slot_resp_c
+            return _hdr + "\n\n" + _slot_resp_c
 
         # ── Ventana horaria "desde las N" / "después de las N" / "antes de las N" ──
         # Usuario escribe "desde las 15", "después de las 5", "antes de las 12"
