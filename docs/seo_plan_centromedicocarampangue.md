@@ -278,3 +278,63 @@ El dashboard se actualiza editando el objeto `DATA` en el `<script>` al final de
 - Ecosistema digital: https://agentecmc.cl/ecosistema
 - Plan de crecimiento general: memoria `growth_plan.md` (Notion #9)
 - Landing actual del chatbot: https://agentecmc.cl/landing
+
+---
+
+# ADENDA 2026-04-26 — Cross-sell Med General → Especialistas (Arauco urbano)
+
+## Contexto (datos reales de heatmap_cache.db)
+- 6 años de histórico cargado (2020-2026)
+- Arauco urbano: 3.364 pacientes únicos
+- **Solo ~10-12% de pacientes de MG usaron alguna otra especialidad** (vs 37.9% global)
+- Los pares más cruzados (excluyendo rotación intra-MG):
+  - MG → Otorrino (Borrego): 116 pacientes (3.4%)
+  - MG → Ginecología (Rejón): 116 (3.4%)
+  - MG → Kinesiología (Etcheverry): 108 (3.2%)
+  - MG → Odontología (Burgos): 62 (1.8%)
+
+## Acciones para reforzar flujos MG → Especialistas en las landings
+
+### En `/medicina-general-arauco/`
+Agregar sección "**Si necesitas especialista**":
+- "El equipo de medicina general deriva habitualmente a:"
+- Cards con link a las 4 landings esp+arauco creadas:
+  - 🦴 Traumatólogo (lesiones, dolor)
+  - 👂 Otorrino (oídos, garganta, sinusitis)
+  - 👶 Ginecóloga (control PAP, embarazo)
+  - 🦷 Dentista (limpieza, ortodoncia)
+- Mensaje: "Atención integral en un solo lugar — sin viajar a Concepción"
+
+### En `/traumatologo-arauco/`, `/otorrino-arauco/`, `/ginecologo-arauco/`, `/dentista-arauco/`
+Agregar sección "**Antes de tu cita con el especialista**":
+- "Si no sabes con qué especialista consultar, agenda primero con Medicina General. El equipo te orienta."
+- Link a `/medicina-general-arauco/`
+- Botón "Consulta primero con MG" además del botón principal "Agendar [especialista]"
+
+### En `/centro-medico-curanilahue/`
+- Mismo concepto: "Atendemos contigo desde Medicina General hasta especialista, todo en una visita"
+- Replicar para reducir fricción de viaje desde Curanilahue
+
+## Programa "Chequeo + 1" (operacional, no SEO)
+Cuando un paciente de Arauco urbano consulta con MG, ofrecer en la misma jornada un servicio adicional:
+- Ecografía (TM David Pardo)
+- Limpieza dental (Javiera Burgos)
+- Sesión kine de evaluación
+- Consulta con matrona
+
+Esto requiere:
+1. Que recepción tenga visibilidad de slots disponibles del día
+2. Que el chatbot sugiera "+1" al confirmar la cita de MG
+3. Pricing especial paquete (ej. $35.000 MG + $15.000 ecografía vs $40.000 sueltos)
+
+## KPI a trackear (dashboard SEO)
+Agregar a la pestaña Cruces del dashboard:
+- **% cross-sell inter-especialidad por comuna** — distinguir de rotación intra-MG
+- **Meta**: subir Arauco urbano de 10-12% → 25% en 12 meses
+
+## Profesionales antiguos (excluir del análisis cross)
+- Dr. Tomás Araneda Muñoz — MG (no atiende)
+- Dr. Gabriel Díaz — MG (no atiende)
+- Dra. Natalia Torres Concha — MG (no atiende)
+
+Sus 570+ "cruces" en la data eran rotación intra-MG, no revenue cross-sell.
