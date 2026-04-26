@@ -580,6 +580,16 @@ def seo_dashboard_page(request: Request, token: str = "",
     return response
 
 
+@app.get("/crecimientopersonal", response_class=HTMLResponse)
+@app.get("/crecimiento-personal", response_class=HTMLResponse)
+def crecimiento_personal_page():
+    """Roadmap personal de aprendizaje del Dr. Olavarría.
+    Sin auth: es plan personal, no contiene datos sensibles del CMC."""
+    if not _CRECIMIENTO_PERSONAL_HTML:
+        raise HTTPException(404, "Dashboard Crecimiento Personal no disponible")
+    return _CRECIMIENTO_PERSONAL_HTML
+
+
 # Población oficial INE (Censo 2017 / proyección 2024). Provincia de Arauco
 # y vecinas del Gran Concepción. Sirve para calcular % de población captada.
 POBLACION_COMUNA = {
