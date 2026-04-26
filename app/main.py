@@ -331,6 +331,7 @@ _HEATMAP_DIRECCIONES_HTML = (_TEMPLATE_DIR / "heatmap_direcciones.html").read_te
 _SEO_DASHBOARD_HTML = (_TEMPLATE_DIR / "seo_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "seo_dashboard.html").exists() else ""
 _CRECIMIENTO_PERSONAL_HTML = (_TEMPLATE_DIR / "crecimiento_personal.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "crecimiento_personal.html").exists() else ""
 _META_DASHBOARD_HTML = (_TEMPLATE_DIR / "meta_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "meta_dashboard.html").exists() else ""
+_HORIZONTE_DASHBOARD_HTML = (_TEMPLATE_DIR / "horizonte_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "horizonte_dashboard.html").exists() else ""
 _PRIVACIDAD_HTML = (_TEMPLATE_DIR / "privacidad.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "privacidad.html").exists() else ""
 _PROFESIONALES_CMC_HTML = (_TEMPLATE_DIR / "profesionales_cmc.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "profesionales_cmc.html").exists() else ""
 
@@ -600,6 +601,15 @@ def meta_dashboard_page():
     if not _META_DASHBOARD_HTML:
         raise HTTPException(404, "Dashboard Meta no disponible")
     return _META_DASHBOARD_HTML
+
+
+@app.get("/horizonte", response_class=HTMLResponse)
+@app.get("/horizonte/dashboard", response_class=HTMLResponse)
+def horizonte_dashboard_page():
+    """Roadmap estratégico de largo plazo del CMC — escenarios A/B/C, pipeline contratación, KPIs."""
+    if not _HORIZONTE_DASHBOARD_HTML:
+        raise HTTPException(404, "Dashboard Horizonte no disponible")
+    return _HORIZONTE_DASHBOARD_HTML
 
 
 # ─────────────────────────────────────────────────────────────────────────

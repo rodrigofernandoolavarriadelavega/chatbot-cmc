@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Horizonte Estratégico — CMC · OLACORE</title>
+<link rel="icon" type="image/png" href="/static/olacore_sello_simple.png">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fraunces:ital,wght@0,400;0,600;1,300;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --olacore-fiordo: #0E2530;
+    --olacore-fiordo-2: #17323F;
+    --olacore-neblina: #E8E0D0;
+    --olacore-cobre: #B98149;
+    --olacore-lenga: #7C4A2A;
+    --olacore-lacre: #9A3E2F;
+    --olacore-verde-musgo: #4A5D44;
+  }
+  body { font-family: 'Inter', system-ui, sans-serif; background: #faf6ee; color: var(--olacore-fiordo); }
+  @keyframes sello-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  h1, h2, h3, h4 { font-family: 'Fraunces', serif; font-weight: 600; color: var(--olacore-fiordo); }
+  .text-slate-800, .text-slate-700, .text-slate-600, .text-slate-500 { color: var(--olacore-fiordo) !important; opacity: 0.85; }
+  .text-slate-500 { opacity: 0.65; }
+  .text-slate-400 { opacity: 0.5; }
+  .bg-white { background: #fffcf5 !important; }
+  .border-slate-200, .divide-slate-100 > * + * { border-color: rgba(14, 37, 48, 0.12) !important; }
+  .bg-slate-50 { background: rgba(232, 224, 208, 0.3) !important; color: var(--olacore-fiordo); }
+  .hover\:bg-slate-50:hover { background: rgba(232, 224, 208, 0.35) !important; }
+  .tab-btn.active { color: var(--olacore-fiordo) !important; border-bottom-color: var(--olacore-cobre) !important; border-bottom-width: 2px !important; }
+  .by-olacore { display: flex; align-items: center; gap: 12px; padding-left: 16px; margin-left: 4px; text-decoration: none; }
+  .by-olacore-text-block { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+  .by-olacore-by { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--olacore-cobre); opacity: 0.85; line-height: 1; }
+  .by-olacore-wordmark { height: 16px; display: block; margin: 2px 0; object-fit: contain; object-position: left center; }
+  .by-olacore-tag { font-family: 'Fraunces', serif; font-style: italic; font-weight: 300; font-size: 10px; color: var(--olacore-cobre); opacity: 0.8; line-height: 1; letter-spacing: 0.04em; }
+  .by-olacore-sello { width: 38px; height: 38px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .by-olacore-sello img { width: 100%; height: 100%; display: block; animation: sello-spin 60s linear infinite; }
+  .meridian { width: 1px; height: 56px; background: var(--olacore-cobre); position: relative; opacity: 0.7; flex-shrink: 0; margin-left: 24px; margin-right: 8px; }
+  .meridian::before, .meridian::after { content: ""; position: absolute; left: -4px; width: 9px; height: 9px; background: var(--olacore-cobre); border-radius: 50%; }
+  .meridian::before { top: 22%; }
+  .meridian::after  { bottom: 22%; }
+  .tone-fiordo  { background: rgba(14, 37, 48, 0.08); color: var(--olacore-fiordo); border: 1px solid rgba(14, 37, 48, 0.18); }
+  .tone-cobre   { background: rgba(185, 129, 73, 0.12); color: var(--olacore-lenga); border: 1px solid rgba(185, 129, 73, 0.35); }
+  .tone-musgo   { background: rgba(74, 93, 68, 0.1); color: #2f3d2c; border: 1px solid rgba(74, 93, 68, 0.3); }
+  .tone-lacre   { background: rgba(154, 62, 47, 0.1); color: var(--olacore-lacre); border: 1px solid rgba(154, 62, 47, 0.3); }
+  .tone-neblina { background: rgba(232, 224, 208, 0.45); color: var(--olacore-fiordo); border: 1px solid rgba(14,37,48,0.12); }
+  .status-done       { background: rgba(74, 93, 68, 0.18); color: #2f3d2c; }
+  .status-in_progress{ background: rgba(185, 129, 73, 0.2); color: var(--olacore-lenga); }
+  .status-planned    { background: rgba(232, 224, 208, 0.7); color: var(--olacore-fiordo); }
+  .status-bloqueado  { background: rgba(154, 62, 47, 0.15); color: var(--olacore-lacre); }
+  .kpi-card { transition: transform .15s ease, box-shadow .15s ease; }
+  .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(14, 37, 48, .12); }
+  header { border-bottom: 1px solid rgba(185, 129, 73, 0.2) !important; }
+  .cross-nav { position: fixed; top: 16px; right: 16px; z-index: 50; display: flex; gap: 8px; font-size: 12px; }
+  .cross-nav a { padding: 6px 12px; border-radius: 999px; text-decoration: none; font-weight: 600; background: rgba(255,255,255,0.9); color: var(--olacore-fiordo); border: 1px solid rgba(14,37,48,0.18); }
+  #tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-wrap: nowrap !important; }
+  #tabs::-webkit-scrollbar { display: none; }
+  #tabs .tab-btn { flex-shrink: 0; white-space: nowrap; }
+  @media (max-width: 768px) {
+    header > div:first-child { flex-direction: column; align-items: flex-start !important; gap: 12px !important; padding: 14px 16px !important; }
+    .meridian { display: none; }
+    .by-olacore { padding-left: 0; margin-left: 0; gap: 8px; }
+    main { padding: 16px 12px !important; }
+  }
+  .meta-section { background: #fffcf5; border: 1px solid rgba(14,37,48,0.12); border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+  .meta-section h3 { font-size: 1rem; margin-bottom: 12px; }
+  .meta-section h4 { font-size: 0.9rem; margin-bottom: 10px; margin-top: 18px; }
+  code.inline { background: rgba(232,224,208,0.5); padding: 1px 6px; border-radius: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
+  .scenario-card { border: 2px solid; border-radius: 16px; padding: 24px; transition: transform .2s ease, box-shadow .2s ease; }
+  .scenario-card:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(14,37,48,0.12); }
+  .scenario-a { border-color: var(--olacore-verde-musgo); background: rgba(74,93,68,0.04); }
+  .scenario-b { border-color: var(--olacore-cobre); background: rgba(185,129,73,0.04); }
+  .scenario-c { border-color: var(--olacore-lacre); background: rgba(154,62,47,0.04); }
+  .timeline-line { position: relative; padding-left: 24px; }
+  .timeline-line::before { content: ""; position: absolute; left: 6px; top: 0; bottom: 0; width: 2px; background: var(--olacore-cobre); opacity: 0.3; }
+  .timeline-dot { position: absolute; left: 0; top: 6px; width: 14px; height: 14px; border-radius: 50%; border: 2px solid; background: #fffcf5; }
+</style>
+</head>
+<body>
+
+<nav class="cross-nav">
+  <a href="/seo/dashboard">🔎 SEO</a>
+  <a href="/meta/dashboard">📱 Meta</a>
+  <a href="/crecimientopersonal">🎓 Crecimiento</a>
+  <a href="/proyectos2026">🌐 Proyectos</a>
+  <a href="/">← agentecmc.cl</a>
+</nav>
+
+<header class="bg-white">
+  <div class="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="text-3xl">🧭</div>
+      <div>
+        <h1 class="text-xl font-semibold">Horizonte Estratégico — CMC</h1>
+        <div class="text-sm text-slate-500">Roadmap a 12 meses · 36 meses · 7 años · pipeline de capacidad operativa</div>
+      </div>
+      <div class="meridian" aria-hidden="true"></div>
+      <a href="/proyectos2026" class="by-olacore" title="OLACORE — Meridiano Sur">
+        <div class="by-olacore-text-block">
+          <span class="by-olacore-by">by</span>
+          <img src="/static/olacore_wordmark.png?v=2" alt="OLACORE" class="by-olacore-wordmark" />
+          <span class="by-olacore-tag">Meridiano Sur</span>
+        </div>
+        <div class="by-olacore-sello"><img src="/static/olacore_sello_simple.png" alt="" /></div>
+      </a>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="text-xs text-slate-400">Versión 1.0 · 26 abr 2026</div>
+    </div>
+  </div>
+  <div class="max-w-7xl mx-auto px-6">
+    <nav class="flex gap-1 -mb-px flex-wrap" id="tabs">
+      <button class="tab-btn active px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="overview">📊 Overview</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="esca">🅰 Escenario A · Conservador</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="escb">🅱 Escenario B · Ambicioso</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="escc">🅲 Escenario C · Tope teórico</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="pipeline">👥 Pipeline contratación</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="infra">🏗 Infraestructura</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="capex">💰 Capital y financiamiento</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="kpis">📈 KPIs de tracking</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="decision">🎯 Decisión recomendada</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="reflexion">📋 Reflexión estratégica</button>
+    </nav>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-6 py-8">
+
+  <!-- ─────────────── OVERVIEW ─────────────── -->
+  <section id="tab-overview" class="tab-content">
+    <div class="meta-section">
+      <h3>Punto de partida — dónde estás hoy</h3>
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+        <div class="tone-fiordo p-3 rounded"><div class="text-xs uppercase opacity-75">Profesionales</div><div class="text-2xl font-bold mt-1">27</div></div>
+        <div class="tone-cobre p-3 rounded"><div class="text-xs uppercase opacity-75">Atenciones/mes</div><div class="text-2xl font-bold mt-1">~1.000</div></div>
+        <div class="tone-musgo p-3 rounded"><div class="text-xs uppercase opacity-75">Facturación bruta</div><div class="text-2xl font-bold mt-1">~$30M</div></div>
+        <div class="tone-lacre p-3 rounded"><div class="text-xs uppercase opacity-75">CMC retiene</div><div class="text-2xl font-bold mt-1">~$5.6M</div></div>
+        <div class="tone-neblina p-3 rounded"><div class="text-xs uppercase opacity-75">Pacientes únicos 6 años</div><div class="text-2xl font-bold mt-1">12.592</div></div>
+      </div>
+      <p class="text-sm leading-relaxed">Estás en una <strong>etapa madura de captación</strong> con LTV/CAC ~103×. Tu cuello de botella ya no es marketing — es <strong>capacidad operativa y reclutamiento</strong>. Este dashboard mapea 3 escenarios honestos para los próximos 7 años.</p>
+    </div>
+
+    <!-- 3 escenarios comparados -->
+    <div class="grid md:grid-cols-3 gap-5 mb-6">
+      <div class="scenario-card scenario-a">
+        <div class="text-xs uppercase font-mono mb-1" style="letter-spacing:0.18em;color:var(--olacore-verde-musgo)">Escenario A · 12 meses</div>
+        <h3 style="font-size:1.4rem;margin-bottom:8px">🅰 Conservador</h3>
+        <p class="text-sm opacity-80 mb-4">Sin tocar infraestructura. Solo ejecutar lo planeado: SEO + CAPI + Lookalikes + Doctoralia + GBP.</p>
+        <table class="w-full text-sm mb-4">
+          <tr><td class="py-1 opacity-75">Profesionales</td><td class="text-right font-medium">32-35</td></tr>
+          <tr><td class="py-1 opacity-75">Atenciones/mes</td><td class="text-right font-medium">1.300</td></tr>
+          <tr><td class="py-1 opacity-75">Facturación bruta</td><td class="text-right font-medium">$39M</td></tr>
+          <tr style="background:rgba(74,93,68,0.1)"><td class="py-1.5 font-semibold">CMC retiene</td><td class="text-right font-bold">$7-9M</td></tr>
+          <tr><td class="py-1 opacity-75">Crecimiento vs hoy</td><td class="text-right" style="color:var(--olacore-verde-musgo)">+30-50%</td></tr>
+          <tr><td class="py-1 opacity-75">CapEx</td><td class="text-right">$11-17M</td></tr>
+        </table>
+        <div class="text-xs opacity-75">Sin riesgo financiero. Sin cambio de estructura. Capturás el upside de lo ya invertido.</div>
+      </div>
+
+      <div class="scenario-card scenario-b">
+        <div class="text-xs uppercase font-mono mb-1" style="letter-spacing:0.18em;color:var(--olacore-cobre)">Escenario B · 24-36 meses</div>
+        <h3 style="font-size:1.4rem;margin-bottom:8px">🅱 Ambicioso</h3>
+        <p class="text-sm opacity-80 mb-4">Sub-sede Curanilahue + telemedicina activa + 2× Meta spend + estructura organizacional formal.</p>
+        <table class="w-full text-sm mb-4">
+          <tr><td class="py-1 opacity-75">Profesionales</td><td class="text-right font-medium">53</td></tr>
+          <tr><td class="py-1 opacity-75">Atenciones/mes</td><td class="text-right font-medium">2.000-2.500</td></tr>
+          <tr><td class="py-1 opacity-75">Facturación bruta</td><td class="text-right font-medium">$60-75M</td></tr>
+          <tr style="background:rgba(185,129,73,0.1)"><td class="py-1.5 font-semibold">CMC retiene</td><td class="text-right font-bold">$15-20M</td></tr>
+          <tr><td class="py-1 opacity-75">Crecimiento vs hoy</td><td class="text-right" style="color:var(--olacore-verde-musgo)">+150-250%</td></tr>
+          <tr><td class="py-1 opacity-75">CapEx</td><td class="text-right">$40-70M</td></tr>
+        </table>
+        <div class="text-xs opacity-75">Pasás de operador a CEO. Requiere jefe de operaciones y coordinador médico.</div>
+      </div>
+
+      <div class="scenario-card scenario-c">
+        <div class="text-xs uppercase font-mono mb-1" style="letter-spacing:0.18em;color:var(--olacore-lacre)">Escenario C · 5-7 años</div>
+        <h3 style="font-size:1.4rem;margin-bottom:8px">🅲 Tope teórico</h3>
+        <p class="text-sm opacity-80 mb-4">Empresa de salud regional. 3 sucursales, 100+ profesionales, posible imagenología/laboratorio propios.</p>
+        <table class="w-full text-sm mb-4">
+          <tr><td class="py-1 opacity-75">Profesionales</td><td class="text-right font-medium">100+</td></tr>
+          <tr><td class="py-1 opacity-75">Atenciones/mes</td><td class="text-right font-medium">3.500-4.000</td></tr>
+          <tr><td class="py-1 opacity-75">Facturación bruta</td><td class="text-right font-medium">$100-120M</td></tr>
+          <tr style="background:rgba(154,62,47,0.1)"><td class="py-1.5 font-semibold">CMC retiene</td><td class="text-right font-bold">$28-33M</td></tr>
+          <tr><td class="py-1 opacity-75">Crecimiento vs hoy</td><td class="text-right" style="color:var(--olacore-verde-musgo)">+400-500%</td></tr>
+          <tr><td class="py-1 opacity-75">CapEx acumulado</td><td class="text-right">$300-500M</td></tr>
+        </table>
+        <div class="text-xs opacity-75">Decisión de vida — requiere capital externo o reinversión brutal. Cambio de identidad profesional.</div>
+      </div>
+    </div>
+
+    <div class="meta-section">
+      <h3>El factor real que define el resultado</h3>
+      <p class="text-sm leading-relaxed mb-3">Lo que define en cuál escenario terminás <strong>NO es Meta Ads, NO es SEO, NO es Curanilahue</strong>. Es:</p>
+      <div class="tone-cobre p-5 rounded-lg">
+        <p class="text-base font-semibold mb-2" style="font-family:'Fraunces',serif">¿Cuántos profesionales clínicos puedes contratar y retener cada año?</p>
+        <ul class="text-sm space-y-1 list-disc ml-5">
+          <li><strong>+5/año sostenido</strong> → llegás a Escenario B en 5 años</li>
+          <li><strong>+1-2/año</strong> (más realista en provincia) → te toma 10-15 años llegar al mismo punto</li>
+          <li><strong>+10/año</strong> (con headhunter dedicado o expansión a Concepción) → Escenario C en 7 años</li>
+        </ul>
+      </div>
+      <p class="text-sm leading-relaxed mt-4">Reclutamiento de profesionales clínicos en provincia <strong>= tu cuello de botella estratégico real</strong>. Marketing y operaciones son corolarios de eso.</p>
+    </div>
+  </section>
+
+  <!-- ─────────────── ESCENARIO A ─────────────── -->
+  <section id="tab-esca" class="tab-content hidden">
+    <div class="meta-section" style="border-color:var(--olacore-verde-musgo)">
+      <h3 style="color:var(--olacore-verde-musgo)">🅰 Escenario A — Conservador (12 meses)</h3>
+      <p class="text-sm opacity-75 mb-4">Hipótesis: solo ejecutar lo ya planeado (SEO, CAPI, Lookalikes, Doctoralia, GBP, landings nuevas) sin expansión física ni cambio organizacional grande.</p>
+
+      <h4>Resultado proyectado</h4>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        <div class="tone-musgo p-3 rounded"><div class="text-xs uppercase opacity-75">Atenciones/mes</div><div class="text-xl font-bold mt-1">1.300</div><div class="text-xs opacity-60">+30% hoy</div></div>
+        <div class="tone-musgo p-3 rounded"><div class="text-xs uppercase opacity-75">Facturación bruta</div><div class="text-xl font-bold mt-1">$39M</div><div class="text-xs opacity-60">+30%</div></div>
+        <div class="tone-musgo p-3 rounded"><div class="text-xs uppercase opacity-75">CMC retiene</div><div class="text-xl font-bold mt-1">$7-9M</div><div class="text-xs opacity-60">+25-60%</div></div>
+        <div class="tone-musgo p-3 rounded"><div class="text-xs uppercase opacity-75">Profesionales</div><div class="text-xl font-bold mt-1">32-35</div><div class="text-xs opacity-60">+5-8 vs 27</div></div>
+      </div>
+
+      <h4>Profesionales adicionales (por especialidad)</h4>
+      <table class="w-full text-sm mb-4">
+        <thead><tr class="border-b border-slate-200"><th class="text-left py-2">Especialidad</th><th class="text-right py-2">Hoy</th><th class="text-right py-2">Suma</th><th class="text-right py-2">Total</th><th class="text-left pl-4 py-2">Por qué</th></tr></thead>
+        <tbody class="divide-y divide-slate-100">
+          <tr><td class="py-2 font-medium">Medicina General/Familiar</td><td class="text-right">3</td><td class="text-right" style="color:var(--olacore-verde-musgo)">+1</td><td class="text-right font-semibold">4</td><td class="pl-4 text-xs opacity-75">Hub del cross-sell, cuello de botella mayor</td></tr>
+          <tr><td class="py-2 font-medium">Kinesiología</td><td class="text-right">2</td><td class="text-right" style="color:var(--olacore-verde-musgo)">+1</td><td class="text-right font-semibold">3</td><td class="pl-4 text-xs opacity-75">Lista de espera evidente</td></tr>
+          <tr><td class="py-2 font-medium">Odontología General</td><td class="text-right">2</td><td class="text-right" style="color:var(--olacore-verde-musgo)">+1</td><td class="text-right font-semibold">3</td><td class="pl-4 text-xs opacity-75">Demanda no satisfecha en cargos diarios</td></tr>
+          <tr style="background:rgba(154,62,47,0.05)"><td class="py-2 font-medium">Pediatra</td><td class="text-right">0</td><td class="text-right" style="color:var(--olacore-lacre);font-weight:600">+1</td><td class="text-right font-semibold">1</td><td class="pl-4 text-xs">🔥 Demanda confirmada en GSC ("pediatra arauco")</td></tr>
+          <tr><td class="py-2 opacity-75">Otros (refuerzo selectivo)</td><td class="text-right opacity-75">20</td><td class="text-right opacity-75">+2</td><td class="text-right opacity-75">22</td><td class="pl-4 text-xs opacity-60">Según oportunidad y candidato</td></tr>
+          <tr style="border-top:2px solid var(--olacore-fiordo)"><td class="py-2 font-bold">TOTAL</td><td class="text-right font-bold">27</td><td class="text-right font-bold" style="color:var(--olacore-verde-musgo)">+5-8</td><td class="text-right font-bold">32-35</td><td></td></tr>
+        </tbody>
+      </table>
+
+      <h4>Infraestructura</h4>
+      <ul class="text-sm space-y-1 list-disc ml-5 mb-4">
+        <li>Boxes: <strong>+1-2</strong> (de 6-8 a 8-10)</li>
+        <li>Recepción: <strong>+1</strong> turno tarde-noche</li>
+        <li>Software/CRM: ya tienes (Medilink + chatbot OK)</li>
+        <li>Contador externo: sigue OK</li>
+      </ul>
+
+      <h4>CapEx one-time</h4>
+      <ul class="text-sm space-y-1 list-disc ml-5 mb-4">
+        <li>Acondicionamiento 2 boxes nuevos: <strong>CLP 8-12M</strong></li>
+        <li>Equipamiento médico básico (camilla, escritorio, instrumental): <strong>CLP 3-5M</strong></li>
+        <li><strong>TOTAL: CLP 11-17M</strong></li>
+      </ul>
+
+      <h4>OpEx mensual extra</h4>
+      <ul class="text-sm space-y-1 list-disc ml-5 mb-4">
+        <li>Sueldo recepcionista nueva: ~CLP 700K</li>
+        <li>Honorarios profesionales nuevos (5-8): variable según modalidad (independiente/honorarios)</li>
+        <li><strong>TOTAL fijo extra: CLP 700K-1.5M/mes</strong> (no incluye honorarios variables)</li>
+      </ul>
+
+      <h4>Tiempo de implementación</h4>
+      <p class="text-sm">3-6 meses. Lo más lento: <strong>conseguir profesionales</strong> (especialmente pediatra en provincia).</p>
+
+      <div class="tone-musgo p-4 rounded mt-4">
+        <strong>Ventaja del escenario A:</strong> sin riesgo financiero, sin cambio de estructura, capturás el upside de lo ya invertido. Si llegás aquí en 12 meses, tenés cash flow para decidir si ir por B.
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────── ESCENARIO B ─────────────── -->
+  <section id="tab-escb" class="tab-content hidden">
+    <div class="meta-section" style="border-color:var(--olacore-cobre)">
+      <h3 style="color:var(--olacore-cobre)">🅱 Escenario B — Ambicioso (24-36 meses)</h3>
+      <p class="text-sm opacity-75 mb-4">Hipótesis: A + sub-sede Curanilahue + telemedicina + 2× Meta spend + estructura organizacional formal. <strong>Pasás de operador a CEO real.</strong></p>
+
+      <h4>Resultado proyectado</h4>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        <div class="tone-cobre p-3 rounded"><div class="text-xs uppercase opacity-75">Atenciones/mes</div><div class="text-xl font-bold mt-1">2.000-2.500</div><div class="text-xs opacity-60">2-2.5× hoy</div></div>
+        <div class="tone-cobre p-3 rounded"><div class="text-xs uppercase opacity-75">Facturación bruta</div><div class="text-xl font-bold mt-1">$60-75M</div><div class="text-xs opacity-60">+150%</div></div>
+        <div class="tone-cobre p-3 rounded"><div class="text-xs uppercase opacity-75">CMC retiene</div><div class="text-xl font-bold mt-1">$15-20M</div><div class="text-xs opacity-60">+170-260%</div></div>
+        <div class="tone-cobre p-3 rounded"><div class="text-xs uppercase opacity-75">Profesionales</div><div class="text-xl font-bold mt-1">53</div><div class="text-xs opacity-60">+26 vs 27</div></div>
+      </div>
+
+      <h4>Profesionales adicionales</h4>
+      <table class="w-full text-sm mb-4">
+        <thead><tr class="border-b border-slate-200"><th class="text-left py-2">Categoría</th><th class="text-right py-2">Hoy</th><th class="text-right py-2">Suma</th><th class="text-right py-2">Total</th></tr></thead>
+        <tbody class="divide-y divide-slate-100">
+          <tr><td class="py-2">Medicina General/Familiar</td><td class="text-right">3</td><td class="text-right" style="color:var(--olacore-cobre)">+4</td><td class="text-right font-semibold">7</td></tr>
+          <tr><td class="py-2">Kinesiología</td><td class="text-right">2</td><td class="text-right" style="color:var(--olacore-cobre)">+3</td><td class="text-right font-semibold">5</td></tr>
+          <tr><td class="py-2">Odontología (general+especialidades)</td><td class="text-right">6</td><td class="text-right" style="color:var(--olacore-cobre)">+5</td><td class="text-right font-semibold">11</td></tr>
+          <tr><td class="py-2">Ginecología/Matrona</td><td class="text-right">2</td><td class="text-right" style="color:var(--olacore-cobre)">+1</td><td class="text-right font-semibold">3</td></tr>
+          <tr><td class="py-2">Otorrino</td><td class="text-right">1</td><td class="text-right" style="color:var(--olacore-cobre)">+1</td><td class="text-right font-semibold">2</td></tr>
+          <tr style="background:rgba(154,62,47,0.05)"><td class="py-2 font-medium">Pediatra (nuevo!)</td><td class="text-right">0</td><td class="text-right" style="color:var(--olacore-lacre);font-weight:600">+2</td><td class="text-right font-semibold">2</td></tr>
+          <tr><td class="py-2">Cardiología</td><td class="text-right">1</td><td class="text-right" style="color:var(--olacore-cobre)">+1</td><td class="text-right font-semibold">2</td></tr>
+          <tr><td class="py-2">Traumatología</td><td class="text-right">1</td><td class="text-right" style="color:var(--olacore-cobre)">+1</td><td class="text-right font-semibold">2</td></tr>
+          <tr><td class="py-2">Psicología</td><td class="text-right">2</td><td class="text-right" style="color:var(--olacore-cobre)">+2</td><td class="text-right font-semibold">4</td></tr>
+          <tr><td class="py-2">Nutrición</td><td class="text-right">1</td><td class="text-right" style="color:var(--olacore-cobre)">+1</td><td class="text-right font-semibold">2</td></tr>
+          <tr><td class="py-2 opacity-75">Otros (TM, fono, podología, etc.)</td><td class="text-right opacity-75">8</td><td class="text-right opacity-75">+5</td><td class="text-right opacity-75">13</td></tr>
+          <tr style="border-top:2px solid var(--olacore-fiordo)"><td class="py-2 font-bold">TOTAL</td><td class="text-right font-bold">27</td><td class="text-right font-bold" style="color:var(--olacore-cobre)">+26</td><td class="text-right font-bold">53</td></tr>
+        </tbody>
+      </table>
+
+      <h4>Infraestructura — 3 caminos posibles</h4>
+      <div class="space-y-3 mb-4">
+        <div class="border border-slate-200 rounded-lg p-4">
+          <div class="font-semibold text-sm mb-2">B1: Expandir Carampangue actual</div>
+          <ul class="text-xs space-y-1 list-disc ml-5">
+            <li>Boxes: 6-8 → <strong>14-16</strong></li>
+            <li>Recepción: 2 → 4-5</li>
+            <li>Sala espera ampliada</li>
+            <li>CapEx: <strong>CLP 60-100M</strong></li>
+          </ul>
+        </div>
+        <div class="border border-slate-200 rounded-lg p-4" style="background:rgba(74,93,68,0.04)">
+          <div class="font-semibold text-sm mb-2">B2: Sub-sede en Curanilahue ⭐ más estratégico</div>
+          <ul class="text-xs space-y-1 list-disc ml-5">
+            <li>Sub-sede 6-8 boxes</li>
+            <li>2 recepcionistas dedicadas</li>
+            <li>4-6 profesionales rotativos (3 días/semana cada uno)</li>
+            <li>Telemedicina para complementar</li>
+            <li>CapEx (arriendo + acondicionamiento): <strong>CLP 40-70M</strong></li>
+            <li>OpEx mensual: arriendo ~CLP 1.5M + sueldos ~CLP 2M = <strong>CLP 3.5M/mes extra</strong></li>
+          </ul>
+        </div>
+        <div class="border border-slate-200 rounded-lg p-4" style="background:rgba(185,129,73,0.04)">
+          <div class="font-semibold text-sm mb-2">B3: Híbrido (recomendado)</div>
+          <ul class="text-xs space-y-1 list-disc ml-5">
+            <li>Carampangue ampliado modesto (10 boxes)</li>
+            <li>Día semanal de especialistas en Curanilahue (consultorio compartido alquilado)</li>
+            <li>Telemedicina activa</li>
+            <li>CapEx: <strong>CLP 40-60M</strong></li>
+            <li>OpEx: <strong>CLP 2-3M/mes extra</strong></li>
+          </ul>
+        </div>
+      </div>
+
+      <h4>Estructura organizacional (NUEVO)</h4>
+      <ul class="text-sm space-y-1 list-disc ml-5 mb-4">
+        <li><strong>Jefe de Operaciones</strong>: 1 (ya no podés operar tú solo)</li>
+        <li><strong>Coordinador médico</strong>: 1 (orquesta agendas, cross-sell, calidad)</li>
+        <li><strong>Recepción</strong>: 4-5</li>
+        <li><strong>Contador interno</strong> (part-time o externo full)</li>
+        <li>Tu rol pasa de "operador" a <strong>CEO real</strong></li>
+      </ul>
+
+      <div class="tone-cobre p-4 rounded mt-4">
+        <strong>Ventaja del escenario B:</strong> es el sweet spot riesgo/retorno. Triplicás la rentabilidad sin necesitar capital externo, manteniendo control clínico. <strong>Es lo que recomiendo perseguir.</strong>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────── ESCENARIO C ─────────────── -->
+  <section id="tab-escc" class="tab-content hidden">
+    <div class="meta-section" style="border-color:var(--olacore-lacre)">
+      <h3 style="color:var(--olacore-lacre)">🅲 Escenario C — Tope teórico (5-7 años)</h3>
+      <p class="text-sm opacity-75 mb-4">Hipótesis: empresa de salud regional. Múltiples sucursales, equipos por área, posiblemente imagenología y laboratorio propios. <strong>Decisión de vida.</strong></p>
+
+      <h4>Resultado proyectado</h4>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        <div class="tone-lacre p-3 rounded"><div class="text-xs uppercase opacity-75">Atenciones/mes</div><div class="text-xl font-bold mt-1">3.500-4.000</div><div class="text-xs opacity-60">3.5-4× hoy</div></div>
+        <div class="tone-lacre p-3 rounded"><div class="text-xs uppercase opacity-75">Facturación bruta</div><div class="text-xl font-bold mt-1">$100-120M</div><div class="text-xs opacity-60">+330-400%</div></div>
+        <div class="tone-lacre p-3 rounded"><div class="text-xs uppercase opacity-75">CMC retiene</div><div class="text-xl font-bold mt-1">$28-33M</div><div class="text-xs opacity-60">+400-500%</div></div>
+        <div class="tone-lacre p-3 rounded"><div class="text-xs uppercase opacity-75">Profesionales</div><div class="text-xl font-bold mt-1">100+</div><div class="text-xs opacity-60">+73 vs 27</div></div>
+      </div>
+
+      <h4>Infraestructura</h4>
+      <ul class="text-sm space-y-1 list-disc ml-5 mb-4">
+        <li><strong>3 sucursales</strong>: Carampangue (matriz, 20 boxes), Curanilahue (10 boxes), Los Álamos o Cañete (8 boxes)</li>
+        <li>Telemedicina full operación</li>
+        <li>Imagenología propia (no solo tercerizada)</li>
+        <li>Posible laboratorio propio</li>
+        <li>CapEx total acumulado: <strong>CLP 300-500M</strong></li>
+      </ul>
+
+      <h4>Estructura organizacional (empresa formal)</h4>
+      <ul class="text-sm space-y-1 list-disc ml-5 mb-4">
+        <li>CEO (vos)</li>
+        <li>Director médico</li>
+        <li>Gerente operaciones</li>
+        <li>Gerente comercial / marketing</li>
+        <li>Gerente administración/finanzas</li>
+        <li>Jefe RRHH (clínico es complicado)</li>
+        <li>4 jefes de sucursal</li>
+        <li>15-20 administrativos</li>
+        <li>100+ profesionales clínicos</li>
+      </ul>
+
+      <h4>Inversión y financiamiento</h4>
+      <ul class="text-sm space-y-1 list-disc ml-5 mb-4">
+        <li>CapEx: $300-500M acumulados (sucursales, equipamiento, imagenología/lab)</li>
+        <li>Capital de trabajo adicional: $50-100M</li>
+        <li>Fuentes posibles: reinversión orgánica (lento), banco (préstamo PYME), inversionista privado, fondo healthtech regional</li>
+        <li>Tiempo: <strong>5-7 años</strong></li>
+      </ul>
+
+      <div class="tone-lacre p-4 rounded mt-4">
+        <strong>Realidad del escenario C:</strong> es romántico pero requiere cambio de identidad — pasar de médico-emprendedor a CEO de empresa regional. No es decisión de marketing, es decisión de vida. <strong>No te enamores prematuramente.</strong>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────── PIPELINE CONTRATACIÓN ─────────────── -->
+  <section id="tab-pipeline" class="tab-content hidden">
+    <div class="meta-section">
+      <h3>👥 Pipeline de contratación clínica — la métrica que vale más que cualquier KPI marketing</h3>
+      <p class="text-sm leading-relaxed mb-4"><strong>Reclutamiento clínico en provincia es tu cuello de botella estratégico real.</strong> Más importante que cualquier campaña Meta, más importante que cualquier landing SEO. Si conseguís 5 profesionales/año, llegás a B en 5 años. Si conseguís 1-2, te toma 15.</p>
+
+      <h4>Pipeline actual (dummy — debería actualizarse cuando hay movimiento real)</h4>
+      <table class="w-full text-sm mb-4">
+        <thead><tr class="border-b border-slate-200"><th class="text-left py-2">Especialidad</th><th class="text-left py-2">Prioridad</th><th class="text-left py-2">Estado</th><th class="text-left py-2">Fuente / red</th><th class="text-left py-2">Notas</th></tr></thead>
+        <tbody class="divide-y divide-slate-100">
+          <tr><td class="py-2 font-medium">Pediatra</td><td><span class="status-bloqueado px-2 py-0.5 rounded text-xs">crítica</span></td><td><span class="status-planned px-2 py-0.5 rounded text-xs">búsqueda no iniciada</span></td><td class="text-xs opacity-75">UdeC, Hospital Cañete, Concepción</td><td class="text-xs opacity-75">Demanda confirmada en GSC y chatbot</td></tr>
+          <tr><td class="py-2 font-medium">Medicina General</td><td><span class="status-in_progress px-2 py-0.5 rounded text-xs">alta</span></td><td><span class="status-planned px-2 py-0.5 rounded text-xs">planeada</span></td><td class="text-xs opacity-75">UdeC nuevos egresados</td><td class="text-xs opacity-75">+1 para descomprimir Olavarría/Márquez/Abarca</td></tr>
+          <tr><td class="py-2 font-medium">Kinesiólogo (3°)</td><td><span class="status-in_progress px-2 py-0.5 rounded text-xs">alta</span></td><td><span class="status-planned px-2 py-0.5 rounded text-xs">planeada</span></td><td class="text-xs opacity-75">UCSC, Universidad de Concepción</td><td class="text-xs opacity-75">Lista de espera en kine confirmada</td></tr>
+          <tr><td class="py-2 font-medium">Dentista (3°)</td><td><span class="status-in_progress px-2 py-0.5 rounded text-xs">alta</span></td><td><span class="status-planned px-2 py-0.5 rounded text-xs">planeada</span></td><td class="text-xs opacity-75">U. Andrés Bello, U. del Desarrollo</td><td class="text-xs opacity-75">Demanda diaria no satisfecha</td></tr>
+          <tr><td class="py-2 opacity-75">Recepcionista turno tarde</td><td><span class="status-in_progress px-2 py-0.5 rounded text-xs">media</span></td><td><span class="status-planned px-2 py-0.5 rounded text-xs">planeada</span></td><td class="text-xs opacity-75">Bolsa empleo regional</td><td class="text-xs opacity-75">Si subimos a 35 profesionales</td></tr>
+        </tbody>
+      </table>
+
+      <h4>Estrategias de reclutamiento</h4>
+      <div class="space-y-3 mb-4">
+        <div class="border-l-4 pl-4 py-2" style="border-color:var(--olacore-verde-musgo)">
+          <strong class="text-sm">1. Convenios con Universidades</strong>
+          <p class="text-xs opacity-80 mt-1">UdeC, UCSC, U. Andrés Bello — recibir internos/becados/recién egresados con tutoría. Algunos se quedan.</p>
+        </div>
+        <div class="border-l-4 pl-4 py-2" style="border-color:var(--olacore-cobre)">
+          <strong class="text-sm">2. Programa "Día por mes" para especialistas de Concepción</strong>
+          <p class="text-xs opacity-80 mt-1">Especialistas que viven en Concepción atienden 1-2 días/mes en Carampangue. Más fácil convencer que mudarse. Bueno para crecer cobertura.</p>
+        </div>
+        <div class="border-l-4 pl-4 py-2" style="border-color:var(--olacore-lenga)">
+          <strong class="text-sm">3. Referidos de profesionales actuales</strong>
+          <p class="text-xs opacity-80 mt-1">Bono por referir profesional que se queda 6+ meses. CLP 200-500K. Tus 27 actuales son tu mejor red.</p>
+        </div>
+        <div class="border-l-4 pl-4 py-2" style="border-color:var(--olacore-lacre)">
+          <strong class="text-sm">4. LinkedIn outreach activo</strong>
+          <p class="text-xs opacity-80 mt-1">Buscar profesionales que viven en provincia (Arauco, Cañete, Curanilahue) que estén en grandes clínicas — ofrecer alternativa cerca de casa.</p>
+        </div>
+        <div class="border-l-4 pl-4 py-2" style="border-color:var(--olacore-fiordo)">
+          <strong class="text-sm">5. Atractivo del paquete (no solo sueldo)</strong>
+          <p class="text-xs opacity-80 mt-1">Modalidad flexible (no full-time obligatorio), pacientes ya derivados (vos los traés con marketing), ambiente moderno (chatbot, dashboard, profesional), participación en utilidades.</p>
+        </div>
+      </div>
+
+      <h4>Métricas a trackear (mensual)</h4>
+      <table class="w-full text-sm">
+        <thead><tr class="border-b border-slate-200"><th class="text-left py-2">Métrica</th><th class="text-right py-2">Meta año 1</th><th class="text-right py-2">Meta año 3</th><th class="text-right py-2">Meta año 7</th></tr></thead>
+        <tbody class="divide-y divide-slate-100">
+          <tr><td class="py-1.5">Profesionales activos</td><td class="text-right font-medium">35</td><td class="text-right font-medium">53</td><td class="text-right font-medium">100+</td></tr>
+          <tr><td class="py-1.5">Contrataciones netas/año</td><td class="text-right">+5-8</td><td class="text-right">+8-10</td><td class="text-right">+10-15</td></tr>
+          <tr><td class="py-1.5">Tasa retención (12m)</td><td class="text-right">>85%</td><td class="text-right">>85%</td><td class="text-right">>85%</td></tr>
+          <tr><td class="py-1.5">Pipeline candidatos activos</td><td class="text-right">3-5</td><td class="text-right">5-8</td><td class="text-right">10-15</td></tr>
+          <tr><td class="py-1.5">Tiempo promedio de búsqueda (días)</td><td class="text-right">90</td><td class="text-right">60</td><td class="text-right">45</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ─────────────── INFRAESTRUCTURA ─────────────── -->
+  <section id="tab-infra" class="tab-content hidden">
+    <div class="meta-section">
+      <h3>🏗 Infraestructura por escenario</h3>
+
+      <table class="w-full text-sm mb-6">
+        <thead><tr class="border-b border-slate-200"><th class="text-left py-2">Recurso</th><th class="text-right py-2">Hoy</th><th class="text-right py-2">Esc. A</th><th class="text-right py-2">Esc. B</th><th class="text-right py-2">Esc. C</th></tr></thead>
+        <tbody class="divide-y divide-slate-100">
+          <tr><td class="py-2 font-medium">Sucursales</td><td class="text-right">1</td><td class="text-right">1</td><td class="text-right">1-2</td><td class="text-right">3</td></tr>
+          <tr><td class="py-2 font-medium">Boxes totales</td><td class="text-right">6-8</td><td class="text-right">8-10</td><td class="text-right">14-20</td><td class="text-right">38-45</td></tr>
+          <tr><td class="py-2 font-medium">Recepción</td><td class="text-right">2</td><td class="text-right">3</td><td class="text-right">4-5</td><td class="text-right">8-10</td></tr>
+          <tr><td class="py-2 font-medium">Profesionales clínicos</td><td class="text-right">27</td><td class="text-right">32-35</td><td class="text-right">53</td><td class="text-right">100+</td></tr>
+          <tr><td class="py-2 font-medium">Personal admin/operativo</td><td class="text-right">~5</td><td class="text-right">~6</td><td class="text-right">10-12</td><td class="text-right">25-30</td></tr>
+          <tr><td class="py-2 font-medium">Telemedicina activa</td><td class="text-right">No</td><td class="text-right">Piloto</td><td class="text-right">Sí</td><td class="text-right">Full</td></tr>
+          <tr><td class="py-2 font-medium">Imagenología propia</td><td class="text-right">No (1 TM)</td><td class="text-right">No</td><td class="text-right">Parcial</td><td class="text-right">Sí</td></tr>
+          <tr><td class="py-2 font-medium">Laboratorio propio</td><td class="text-right">No</td><td class="text-right">No</td><td class="text-right">No</td><td class="text-right">Posible</td></tr>
+        </tbody>
+      </table>
+
+      <h4>Decisiones inmobiliarias clave</h4>
+      <div class="space-y-3">
+        <div class="tone-musgo p-4 rounded">
+          <strong class="text-sm">¿Comprar o arrendar la sub-sede de Curanilahue?</strong>
+          <p class="text-xs mt-1 opacity-85">Para escenario B híbrido, arrendar es mejor (test de mercado sin compromiso). Para escenario C, comprar tiene sentido a 5+ años.</p>
+        </div>
+        <div class="tone-cobre p-4 rounded">
+          <strong class="text-sm">¿Ampliar Carampangue actual o construir nueva?</strong>
+          <p class="text-xs mt-1 opacity-85">Si el terreno actual permite ampliación vertical/lateral, es 30% más barato que construir nuevo. Verificar zonificación municipal.</p>
+        </div>
+        <div class="tone-fiordo p-4 rounded">
+          <strong class="text-sm">Telemedicina: ¿plataforma propia o terceros?</strong>
+          <p class="text-xs mt-1 opacity-85">Para B: usar plataforma terciaria (Doxy.me, Whereby, o el módulo de Medilink si lo tiene). Para C: vale la pena white-label o desarrollo propio.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────── CAPITAL ─────────────── -->
+  <section id="tab-capex" class="tab-content hidden">
+    <div class="meta-section">
+      <h3>💰 Capital y financiamiento</h3>
+
+      <h4>CapEx requerido por escenario</h4>
+      <table class="w-full text-sm mb-6">
+        <thead><tr class="border-b border-slate-200"><th class="text-left py-2">Concepto</th><th class="text-right py-2">Esc. A</th><th class="text-right py-2">Esc. B</th><th class="text-right py-2">Esc. C</th></tr></thead>
+        <tbody class="divide-y divide-slate-100">
+          <tr><td class="py-2">Acondicionamiento boxes nuevos</td><td class="text-right">$8-12M</td><td class="text-right">$30-50M</td><td class="text-right">$120-180M</td></tr>
+          <tr><td class="py-2">Equipamiento médico</td><td class="text-right">$3-5M</td><td class="text-right">$15-25M</td><td class="text-right">$60-100M</td></tr>
+          <tr><td class="py-2">Imagenología propia</td><td class="text-right">—</td><td class="text-right">—</td><td class="text-right">$80-120M</td></tr>
+          <tr><td class="py-2">Sub-sede Curanilahue (arriendo+acond)</td><td class="text-right">—</td><td class="text-right">$40-70M</td><td class="text-right">incluido</td></tr>
+          <tr><td class="py-2">3a sucursal (Los Álamos / Cañete)</td><td class="text-right">—</td><td class="text-right">—</td><td class="text-right">$60-100M</td></tr>
+          <tr><td class="py-2">Software / sistemas / digital</td><td class="text-right">—</td><td class="text-right">$3-5M</td><td class="text-right">$10-15M</td></tr>
+          <tr style="border-top:2px solid var(--olacore-fiordo)"><td class="py-2 font-bold">TOTAL CapEx</td><td class="text-right font-bold">$11-17M</td><td class="text-right font-bold">$88-150M</td><td class="text-right font-bold">$330-515M</td></tr>
+        </tbody>
+      </table>
+
+      <h4>Fuentes de financiamiento</h4>
+      <table class="w-full text-sm mb-6">
+        <thead><tr class="border-b border-slate-200"><th class="text-left py-2">Fuente</th><th class="text-left py-2">Aplica a</th><th class="text-left py-2">Pros</th><th class="text-left py-2">Contras</th></tr></thead>
+        <tbody class="divide-y divide-slate-100">
+          <tr><td class="py-2 font-medium">Reinversión orgánica</td><td>A, parte de B</td><td class="text-xs opacity-80">Sin deuda, control total</td><td class="text-xs opacity-80">Lento. Necesitás 12-18m de cash flow para B completo</td></tr>
+          <tr><td class="py-2 font-medium">Banco (CORFO PYME, BancoEstado)</td><td>B, parte de C</td><td class="text-xs opacity-80">Bajo costo, formal</td><td class="text-xs opacity-80">Garantías, tiempo trámite, documentación</td></tr>
+          <tr><td class="py-2 font-medium">Inversionista privado / FFF</td><td>B, C</td><td class="text-xs opacity-80">Capital + red de contactos</td><td class="text-xs opacity-80">Cesión de equity, expectativas</td></tr>
+          <tr><td class="py-2 font-medium">Fondo healthtech regional</td><td>C</td><td class="text-xs opacity-80">Sofisticado, escala</td><td class="text-xs opacity-80">Chile aún incipiente, perdés autonomía</td></tr>
+          <tr><td class="py-2 font-medium">CORFO Subsidios</td><td>A, B (parcial)</td><td class="text-xs opacity-80">Gratis (fondo perdido)</td><td class="text-xs opacity-80">Concursos competitivos, postular bien</td></tr>
+        </tbody>
+      </table>
+
+      <h4>Análisis de retorno por escenario</h4>
+      <table class="w-full text-sm">
+        <thead><tr class="border-b border-slate-200"><th class="text-left py-2">Métrica</th><th class="text-right py-2">A</th><th class="text-right py-2">B</th><th class="text-right py-2">C</th></tr></thead>
+        <tbody class="divide-y divide-slate-100">
+          <tr><td class="py-1.5">CapEx total</td><td class="text-right">$11-17M</td><td class="text-right">$88-150M</td><td class="text-right">$330-515M</td></tr>
+          <tr><td class="py-1.5">CMC retiene/mes (estabilizado)</td><td class="text-right">$8M</td><td class="text-right">$17M</td><td class="text-right">$30M</td></tr>
+          <tr><td class="py-1.5">Aumento neto/mes vs hoy</td><td class="text-right">+$2.4M</td><td class="text-right">+$11.4M</td><td class="text-right">+$24.4M</td></tr>
+          <tr><td class="py-1.5 font-semibold">Payback CapEx</td><td class="text-right font-semibold">5-7 meses</td><td class="text-right font-semibold">8-13 meses</td><td class="text-right font-semibold">14-22 meses</td></tr>
+        </tbody>
+      </table>
+      <p class="text-xs opacity-75 mt-3">Todos los escenarios tienen payback &lt;2 años — son inversiones racionales económicamente. La pregunta no es ROI, es <strong>capacidad de ejecución</strong>.</p>
+    </div>
+  </section>
+
+  <!-- ─────────────── KPIs ─────────────── -->
+  <section id="tab-kpis" class="tab-content hidden">
+    <div class="meta-section">
+      <h3>📈 KPIs de tracking — el sistema nervioso del horizonte</h3>
+      <p class="text-sm opacity-75 mb-4">Estos son los números a revisar mensualmente en un comité de gestión. Si suben, el plan funciona. Si no, hay que iterar.</p>
+
+      <h4>KPIs operativos</h4>
+      <table class="w-full text-sm mb-6">
+        <thead><tr class="border-b border-slate-200"><th class="text-left py-2">KPI</th><th class="text-right py-2">Hoy</th><th class="text-right py-2">12m (A)</th><th class="text-right py-2">36m (B)</th><th class="text-right py-2">7y (C)</th></tr></thead>
+        <tbody class="divide-y divide-slate-100">
+          <tr><td class="py-1.5">Atenciones/mes</td><td class="text-right">1.000</td><td class="text-right">1.300</td><td class="text-right">2.000-2.500</td><td class="text-right">3.500-4.000</td></tr>
+          <tr><td class="py-1.5">Pacientes únicos activos</td><td class="text-right">~750</td><td class="text-right">~1.000</td><td class="text-right">~1.700</td><td class="text-right">~3.000</td></tr>
+          <tr><td class="py-1.5">Pacientes nuevos/mes</td><td class="text-right">~89</td><td class="text-right">~120</td><td class="text-right">~200</td><td class="text-right">~350</td></tr>
+          <tr><td class="py-1.5">Profesionales activos</td><td class="text-right">27</td><td class="text-right">32-35</td><td class="text-right">53</td><td class="text-right">100+</td></tr>
+          <tr><td class="py-1.5">Atenciones/profesional/mes</td><td class="text-right">~37</td><td class="text-right">~38</td><td class="text-right">~42</td><td class="text-right">~38</td></tr>
+          <tr><td class="py-1.5">Capacidad utilizada (%)</td><td class="text-right">~65%</td><td class="text-right">~70%</td><td class="text-right">~75%</td><td class="text-right">~70%</td></tr>
+          <tr><td class="py-1.5">Inasistencias %</td><td class="text-right">?</td><td class="text-right">&lt;15%</td><td class="text-right">&lt;12%</td><td class="text-right">&lt;10%</td></tr>
+        </tbody>
+      </table>
+
+      <h4>KPIs financieros</h4>
+      <table class="w-full text-sm mb-6">
+        <thead><tr class="border-b border-slate-200"><th class="text-left py-2">KPI</th><th class="text-right py-2">Hoy</th><th class="text-right py-2">12m</th><th class="text-right py-2">36m</th><th class="text-right py-2">7y</th></tr></thead>
+        <tbody class="divide-y divide-slate-100">
+          <tr><td class="py-1.5">Facturación bruta/mes</td><td class="text-right">$30M</td><td class="text-right">$39M</td><td class="text-right">$60-75M</td><td class="text-right">$100-120M</td></tr>
+          <tr><td class="py-1.5">CMC retiene/mes</td><td class="text-right">$5.6M</td><td class="text-right">$7-9M</td><td class="text-right">$15-20M</td><td class="text-right">$28-33M</td></tr>
+          <tr><td class="py-1.5">% retención CMC</td><td class="text-right">~28%</td><td class="text-right">~28%</td><td class="text-right">~28%</td><td class="text-right">~28%</td></tr>
+          <tr><td class="py-1.5">Margen operativo</td><td class="text-right">?</td><td class="text-right">≥40%</td><td class="text-right">≥45%</td><td class="text-right">≥50%</td></tr>
+          <tr><td class="py-1.5">CAC por paciente nuevo</td><td class="text-right">$4.085</td><td class="text-right">$2.500 (con CAPI)</td><td class="text-right">$2.000</td><td class="text-right">$1.800</td></tr>
+          <tr><td class="py-1.5">LTV/CAC</td><td class="text-right">~103×</td><td class="text-right">~150×</td><td class="text-right">~200×</td><td class="text-right">~230×</td></tr>
+        </tbody>
+      </table>
+
+      <h4>KPIs estratégicos (los que más importan)</h4>
+      <table class="w-full text-sm">
+        <thead><tr class="border-b border-slate-200"><th class="text-left py-2">KPI</th><th class="text-right py-2">Meta</th><th class="text-left pl-4 py-2">Por qué importa</th></tr></thead>
+        <tbody class="divide-y divide-slate-100">
+          <tr style="background:rgba(154,62,47,0.05)"><td class="py-2 font-semibold">Profesionales contratados/año</td><td class="text-right font-semibold">+5-10</td><td class="pl-4 text-xs">El cuello de botella real</td></tr>
+          <tr style="background:rgba(154,62,47,0.05)"><td class="py-2 font-semibold">Tasa retención profesional 12m</td><td class="text-right font-semibold">&gt;85%</td><td class="pl-4 text-xs">Reclutar es caro, perderlos peor</td></tr>
+          <tr><td class="py-2">% pacientes Curanilahue/total</td><td class="text-right">3% → 10% en 36m</td><td class="pl-4 text-xs">Diversificación geográfica</td></tr>
+          <tr><td class="py-2">Cross-sell intra-mes (% pacientes 2+ prof)</td><td class="text-right">10% → 20%</td><td class="pl-4 text-xs">Maximiza LTV de la base existente</td></tr>
+          <tr><td class="py-2">NPS pacientes</td><td class="text-right">&gt;70</td><td class="pl-4 text-xs">Predictor de retención y boca a boca</td></tr>
+          <tr><td class="py-2">Reseñas Google ★</td><td class="text-right">≥4.5 con 200+ reviews</td><td class="pl-4 text-xs">Captura orgánica</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ─────────────── DECISIÓN ─────────────── -->
+  <section id="tab-decision" class="tab-content hidden">
+    <div class="meta-section">
+      <h3>🎯 Decisión recomendada — qué hacer ahora</h3>
+
+      <div class="tone-cobre p-5 rounded-lg mb-5">
+        <h4 style="color:var(--olacore-cobre);margin-top:0">Camino sugerido: A → B híbrido en 36 meses</h4>
+        <p class="text-sm leading-relaxed mb-3">No te enamores del Escenario C inmediatamente. Es romántico pero requiere cambio de identidad: pasar de médico-emprendedor a CEO de empresa de salud regional. Eso es decisión de vida.</p>
+        <p class="text-sm leading-relaxed">Recomendación: ejecutar A en los próximos 12 meses, evaluar resultados, transicionar a B híbrido en mes 12-36. Esto te lleva a:</p>
+        <ul class="text-sm space-y-1 list-disc ml-5 mt-2">
+          <li><strong>$15-20M/mes para el CMC</strong> (3-4× hoy)</li>
+          <li>Sin quemarte, sin perder calidad, sin necesitar capital externo</li>
+          <li>Manteniendo control operativo y clínico</li>
+        </ul>
+        <p class="text-sm leading-relaxed mt-3">Si después de 36 meses te das cuenta de que querés ir por C, ya tendrás cash flow para financiarlo + estructura mínima viable + marca consolidada en VIII Región.</p>
+      </div>
+
+      <h4>Próximos 90 días — acciones concretas</h4>
+      <div class="space-y-3 timeline-line">
+        <div style="position:relative">
+          <div class="timeline-dot" style="border-color:var(--olacore-verde-musgo)"></div>
+          <div class="font-semibold text-sm">Mes 1: Foco operativo, no más marketing</div>
+          <ul class="text-xs mt-2 space-y-1 list-disc ml-5 opacity-90">
+            <li>Auditoría capacidad real: cuántas atenciones puede hacer cada profesional vs cuántas hace</li>
+            <li>Identificar 2-3 cuellos específicos (qué especialidad, qué box, qué horario)</li>
+            <li>Iniciar proceso pediatra (LinkedIn + universidades)</li>
+          </ul>
+        </div>
+        <div style="position:relative">
+          <div class="timeline-dot" style="border-color:var(--olacore-cobre)"></div>
+          <div class="font-semibold text-sm">Mes 2: Ejecutar planeado de marketing</div>
+          <ul class="text-xs mt-2 space-y-1 list-disc ml-5 opacity-90">
+            <li>CAPI implementado (ver dashboard Meta)</li>
+            <li>Lookalikes de base CMC creadas</li>
+            <li>Landings nuevas indexadas en Google</li>
+            <li>GBP + Doctoralia activos</li>
+          </ul>
+        </div>
+        <div style="position:relative">
+          <div class="timeline-dot" style="border-color:var(--olacore-fiordo)"></div>
+          <div class="font-semibold text-sm">Mes 3: Decidir Curanilahue piloto</div>
+          <ul class="text-xs mt-2 space-y-1 list-disc ml-5 opacity-90">
+            <li>Visitar Curanilahue, identificar consultorio compartido para arrendar 1 día/sem</li>
+            <li>Identificar 2 profesionales que viajen 1 día/mes</li>
+            <li>Producir comunicación específica para mercado Curanilahue</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────── REFLEXIÓN ─────────────── -->
+  <section id="tab-reflexion" class="tab-content hidden">
+    <div class="meta-section">
+      <h3>📋 Reflexión estratégica final</h3>
+
+      <h4>Lo que la data confirma</h4>
+      <ul class="text-sm space-y-2 list-disc ml-5 mb-5">
+        <li><strong>Tienes un negocio sano y escalable</strong>. LTV/CAC ~103× pone al CMC en el top 5% de cualquier industria. La economía unitaria es brutal.</li>
+        <li><strong>Tu marketing está sobre-eficiente</strong>. Podrías triplicar Meta y seguiría siendo rentable. El "problema" es de lujo: tener más demanda que capacidad.</li>
+        <li><strong>El upside está en geografía</strong>. Carampangue saturándose (45%), Arauco urbano madurando (21%), Curanilahue es el océano azul (1%).</li>
+      </ul>
+
+      <h4>Lo que la data NO te dice (pero debes saber)</h4>
+      <ul class="text-sm space-y-2 list-disc ml-5 mb-5">
+        <li><strong>Las decisiones de los próximos 36 meses son las que determinan si el CMC es un negocio bonito de provincia o una empresa regional</strong>. No hay vuelta atrás fácil de cualquiera de los dos caminos.</li>
+        <li><strong>Tu salud personal y la de tu familia es un input crítico</strong>. CEO quemado = empresa quemada. Cuidate, delegá temprano.</li>
+        <li><strong>El día que contratés un Jefe de Operaciones, tu rol cambia para siempre</strong>. Ya no atendés la operación día a día. Algunos disfrutan ese cambio, otros lo odian. Reflexioná antes.</li>
+        <li><strong>El sector salud chileno está en transición</strong> (Fonasa hacia value-based care, isapres en crisis). Quien construya capacidad regional con eficiencia hoy, captura la nueva ola.</li>
+      </ul>
+
+      <h4>Las preguntas que vale la pena hacerte</h4>
+      <div class="space-y-3 mb-5">
+        <div class="border-l-4 pl-4 py-2" style="border-color:var(--olacore-cobre)">
+          <p class="text-sm">¿Querés ser <strong>el médico-dueño de un buen centro de provincia</strong> ($7-15M/mes, 30-50 profesionales, vida controlable, control clínico personal) — o <strong>el CEO de una empresa de salud regional</strong> ($25-35M/mes, 100+ profesionales, equipo gerencial, identidad de operador)?</p>
+        </div>
+        <div class="border-l-4 pl-4 py-2" style="border-color:var(--olacore-lenga)">
+          <p class="text-sm">¿Cuánto querés <strong>seguir siendo médico clínico</strong>? Si la respuesta es "siempre", el camino es A→B. Si es "puedo dejar la clínica gradualmente", se abre C.</p>
+        </div>
+        <div class="border-l-4 pl-4 py-2" style="border-color:var(--olacore-lacre)">
+          <p class="text-sm">¿Tu familia/pareja apoya un proyecto que requiere 5-7 años de foco intenso (Esc. C)?</p>
+        </div>
+        <div class="border-l-4 pl-4 py-2" style="border-color:var(--olacore-fiordo)">
+          <p class="text-sm">¿Hay un <strong>"co-fundador o socio"</strong> que pueda tomar el lado operativo mientras vos te enfocás en clínica + visión? (Esc. B necesita esto, Esc. C es imposible sin esto)</p>
+        </div>
+      </div>
+
+      <h4>El número filosófico</h4>
+      <div class="tone-fiordo p-5 rounded-lg">
+        <p class="text-sm leading-relaxed mb-3">Si tu LTV/CAC se mantiene en 100×, <strong>cada CLP que NO inviertes en marketing es CLP 100 dejados en la mesa a 5 años</strong>. Pero si tu capacidad operativa se queda en 1.000 atenciones/mes, ese marketing extra no se convierte en dinero — solo en frustración (gente queriendo agendar y no encontrando hora).</p>
+        <p class="text-sm leading-relaxed">El CMC ya validó que <strong>existe demanda</strong>. La siguiente etapa es validar que <strong>existe capacidad</strong>. Y eso se construye con personas, no con campañas.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden');
+  });
+});
+</script>
+</body>
+</html>
