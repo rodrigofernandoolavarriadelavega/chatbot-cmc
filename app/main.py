@@ -613,6 +613,123 @@ def horizonte_dashboard_page():
 
 
 # ─────────────────────────────────────────────────────────────────────────
+# Pipeline de Contratación — tracking de búsquedas activas y candidatos
+# ─────────────────────────────────────────────────────────────────────────
+import sqlite3 as _sqlite3_hiring
+from datetime import datetime as _dt_hiring
+
+def _hiring_db():
+    db_path = Path(__file__).parent.parent / "data" / "heatmap_cache.db"
+    conn = _sqlite3_hiring.connect(str(db_path))
+    conn.row_factory = _sqlite3_hiring.Row
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS hiring_pipeline (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            especialidad TEXT NOT NULL,
+            prioridad TEXT NOT NULL DEFAULT 'media',
+            estado TEXT NOT NULL DEFAULT 'busqueda',
+            candidato_nombre TEXT,
+            candidato_contacto TEXT,
+            fuente TEXT,
+            fecha_inicio TEXT,
+            fecha_proxima_accion TEXT,
+            notas TEXT,
+            escenario TEXT,
+            jornada TEXT,
+            sueldo_estimado INTEGER,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    conn.commit()
+    return conn
+
+
+@app.get("/api/hiring/pipeline")
+def hiring_pipeline_list():
+    """Lista todas las búsquedas activas del pipeline de contratación."""
+    conn = _hiring_db()
+    rows = conn.execute(
+        "SELECT * FROM hiring_pipeline ORDER BY "
+        "CASE prioridad WHEN 'critica' THEN 0 WHEN 'alta' THEN 1 WHEN 'media' THEN 2 ELSE 3 END, "
+        "CASE estado WHEN 'contratado' THEN 9 WHEN 'descartado' THEN 8 ELSE 0 END, "
+        "id DESC"
+    ).fetchall()
+    conn.close()
+    items = [dict(r) for r in rows]
+    by_estado = {}
+    for it in items:
+        by_estado[it["estado"]] = by_estado.get(it["estado"], 0) + 1
+    return {
+        "items": items,
+        "total": len(items),
+        "by_estado": by_estado,
+        "activos": sum(1 for it in items if it["estado"] not in ("contratado", "descartado")),
+    }
+
+
+@app.post("/api/hiring/pipeline")
+async def hiring_pipeline_create(request: Request):
+    body = await request.json()
+    if not body.get("especialidad"):
+        raise HTTPException(400, "especialidad requerida")
+    conn = _hiring_db()
+    cur = conn.execute(
+        """INSERT INTO hiring_pipeline
+        (especialidad, prioridad, estado, candidato_nombre, candidato_contacto,
+         fuente, fecha_inicio, fecha_proxima_accion, notas, escenario, jornada, sueldo_estimado)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+        (
+            body.get("especialidad"),
+            body.get("prioridad", "media"),
+            body.get("estado", "busqueda"),
+            body.get("candidato_nombre"),
+            body.get("candidato_contacto"),
+            body.get("fuente"),
+            body.get("fecha_inicio") or _dt_hiring.now().strftime("%Y-%m-%d"),
+            body.get("fecha_proxima_accion"),
+            body.get("notas"),
+            body.get("escenario"),
+            body.get("jornada"),
+            body.get("sueldo_estimado"),
+        ),
+    )
+    conn.commit()
+    new_id = cur.lastrowid
+    conn.close()
+    return {"id": new_id, "ok": True}
+
+
+@app.put("/api/hiring/pipeline/{item_id}")
+async def hiring_pipeline_update(item_id: int, request: Request):
+    body = await request.json()
+    allowed = {"especialidad", "prioridad", "estado", "candidato_nombre", "candidato_contacto",
+               "fuente", "fecha_inicio", "fecha_proxima_accion", "notas", "escenario",
+               "jornada", "sueldo_estimado"}
+    fields = {k: v for k, v in body.items() if k in allowed}
+    if not fields:
+        raise HTTPException(400, "Sin campos a actualizar")
+    set_clause = ", ".join([f"{k}=?" for k in fields.keys()]) + ", updated_at=CURRENT_TIMESTAMP"
+    conn = _hiring_db()
+    conn.execute(
+        f"UPDATE hiring_pipeline SET {set_clause} WHERE id=?",
+        (*fields.values(), item_id),
+    )
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+
+@app.delete("/api/hiring/pipeline/{item_id}")
+def hiring_pipeline_delete(item_id: int):
+    conn = _hiring_db()
+    conn.execute("DELETE FROM hiring_pipeline WHERE id=?", (item_id,))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+
+# ─────────────────────────────────────────────────────────────────────────
 # Meta Ads (Marketing API) — análisis y cruce con citas del chatbot
 # ─────────────────────────────────────────────────────────────────────────
 

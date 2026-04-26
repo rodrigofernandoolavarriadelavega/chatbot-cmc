@@ -223,7 +223,7 @@
         <thead><tr class="border-b border-slate-200"><th class="text-left py-2">Especialidad</th><th class="text-right py-2">Hoy</th><th class="text-right py-2">Suma</th><th class="text-right py-2">Total</th><th class="text-left pl-4 py-2">Por qué</th></tr></thead>
         <tbody class="divide-y divide-slate-100">
           <tr><td class="py-2 font-medium">Medicina General/Familiar</td><td class="text-right">3</td><td class="text-right" style="color:var(--olacore-verde-musgo)">+1</td><td class="text-right font-semibold">4</td><td class="pl-4 text-xs opacity-75">Hub del cross-sell, cuello de botella mayor</td></tr>
-          <tr><td class="py-2 font-medium">Kinesiología</td><td class="text-right">2</td><td class="text-right" style="color:var(--olacore-verde-musgo)">+1</td><td class="text-right font-semibold">3</td><td class="pl-4 text-xs opacity-75">Lista de espera evidente</td></tr>
+          <tr><td class="py-2 font-medium">Kinesiología</td><td class="text-right">2</td><td class="text-right" style="color:var(--olacore-verde-musgo)">+1</td><td class="text-right font-semibold">3</td><td class="pl-4 text-xs opacity-75">Cobertura para crecer demanda</td></tr>
           <tr><td class="py-2 font-medium">Odontología General</td><td class="text-right">2</td><td class="text-right" style="color:var(--olacore-verde-musgo)">+1</td><td class="text-right font-semibold">3</td><td class="pl-4 text-xs opacity-75">Demanda no satisfecha en cargos diarios</td></tr>
           <tr style="background:rgba(154,62,47,0.05)"><td class="py-2 font-medium">Pediatra</td><td class="text-right">0</td><td class="text-right" style="color:var(--olacore-lacre);font-weight:600">+1</td><td class="text-right font-semibold">1</td><td class="pl-4 text-xs">🔥 Demanda confirmada en GSC ("pediatra arauco")</td></tr>
           <tr><td class="py-2 opacity-75">Otros (refuerzo selectivo)</td><td class="text-right opacity-75">20</td><td class="text-right opacity-75">+2</td><td class="text-right opacity-75">22</td><td class="pl-4 text-xs opacity-60">Según oportunidad y candidato</td></tr>
@@ -400,17 +400,110 @@
       <h3>👥 Pipeline de contratación clínica — la métrica que vale más que cualquier KPI marketing</h3>
       <p class="text-sm leading-relaxed mb-4"><strong>Reclutamiento clínico en provincia es tu cuello de botella estratégico real.</strong> Más importante que cualquier campaña Meta, más importante que cualquier landing SEO. Si conseguís 5 profesionales/año, llegás a B en 5 años. Si conseguís 1-2, te toma 15.</p>
 
-      <h4>Pipeline actual (dummy — debería actualizarse cuando hay movimiento real)</h4>
-      <table class="w-full text-sm mb-4">
-        <thead><tr class="border-b border-slate-200"><th class="text-left py-2">Especialidad</th><th class="text-left py-2">Prioridad</th><th class="text-left py-2">Estado</th><th class="text-left py-2">Fuente / red</th><th class="text-left py-2">Notas</th></tr></thead>
-        <tbody class="divide-y divide-slate-100">
-          <tr><td class="py-2 font-medium">Pediatra</td><td><span class="status-bloqueado px-2 py-0.5 rounded text-xs">crítica</span></td><td><span class="status-planned px-2 py-0.5 rounded text-xs">búsqueda no iniciada</span></td><td class="text-xs opacity-75">UdeC, Hospital Cañete, Concepción</td><td class="text-xs opacity-75">Demanda confirmada en GSC y chatbot</td></tr>
-          <tr><td class="py-2 font-medium">Medicina General</td><td><span class="status-in_progress px-2 py-0.5 rounded text-xs">alta</span></td><td><span class="status-planned px-2 py-0.5 rounded text-xs">planeada</span></td><td class="text-xs opacity-75">UdeC nuevos egresados</td><td class="text-xs opacity-75">+1 para descomprimir Olavarría/Márquez/Abarca</td></tr>
-          <tr><td class="py-2 font-medium">Kinesiólogo (3°)</td><td><span class="status-in_progress px-2 py-0.5 rounded text-xs">alta</span></td><td><span class="status-planned px-2 py-0.5 rounded text-xs">planeada</span></td><td class="text-xs opacity-75">UCSC, Universidad de Concepción</td><td class="text-xs opacity-75">Lista de espera en kine confirmada</td></tr>
-          <tr><td class="py-2 font-medium">Dentista (3°)</td><td><span class="status-in_progress px-2 py-0.5 rounded text-xs">alta</span></td><td><span class="status-planned px-2 py-0.5 rounded text-xs">planeada</span></td><td class="text-xs opacity-75">U. Andrés Bello, U. del Desarrollo</td><td class="text-xs opacity-75">Demanda diaria no satisfecha</td></tr>
-          <tr><td class="py-2 opacity-75">Recepcionista turno tarde</td><td><span class="status-in_progress px-2 py-0.5 rounded text-xs">media</span></td><td><span class="status-planned px-2 py-0.5 rounded text-xs">planeada</span></td><td class="text-xs opacity-75">Bolsa empleo regional</td><td class="text-xs opacity-75">Si subimos a 35 profesionales</td></tr>
-        </tbody>
-      </table>
+      <h4>Pipeline activo · Tracker en vivo</h4>
+      <div class="flex flex-wrap gap-3 mb-3 text-sm">
+        <div class="px-3 py-1.5 rounded bg-slate-50 border border-slate-200">Activos: <strong id="hp-stat-activos">…</strong></div>
+        <div class="px-3 py-1.5 rounded bg-slate-50 border border-slate-200">Búsqueda: <strong id="hp-stat-busqueda">…</strong></div>
+        <div class="px-3 py-1.5 rounded bg-slate-50 border border-slate-200">Entrevista: <strong id="hp-stat-entrevista">…</strong></div>
+        <div class="px-3 py-1.5 rounded bg-slate-50 border border-slate-200">Negociando: <strong id="hp-stat-negociando">…</strong></div>
+        <div class="px-3 py-1.5 rounded bg-slate-50 border border-slate-200">Contratados: <strong id="hp-stat-contratado">…</strong></div>
+        <button id="hp-btn-add" class="ml-auto px-3 py-1.5 rounded bg-slate-900 text-white text-sm hover:bg-slate-700">+ Nueva búsqueda</button>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm mb-4" id="hp-table">
+          <thead><tr class="border-b border-slate-200">
+            <th class="text-left py-2 px-2">Especialidad</th>
+            <th class="text-left py-2 px-2">Prioridad</th>
+            <th class="text-left py-2 px-2">Estado</th>
+            <th class="text-left py-2 px-2">Candidato</th>
+            <th class="text-left py-2 px-2">Contacto</th>
+            <th class="text-left py-2 px-2">Fuente</th>
+            <th class="text-left py-2 px-2">Próx. acción</th>
+            <th class="text-left py-2 px-2">Notas</th>
+            <th class="text-left py-2 px-2"></th>
+          </tr></thead>
+          <tbody id="hp-tbody" class="divide-y divide-slate-100">
+            <tr><td colspan="9" class="py-4 text-center opacity-60">Cargando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Modal nuevo / editar -->
+      <div id="hp-modal" class="hidden fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg max-w-2xl w-full p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold" id="hp-modal-title">Nueva búsqueda</h3>
+            <button id="hp-modal-close" class="text-slate-400 hover:text-slate-700">✕</button>
+          </div>
+          <form id="hp-form" class="grid grid-cols-2 gap-3 text-sm">
+            <input type="hidden" id="hp-id">
+            <label class="col-span-2">Especialidad / cargo *
+              <input id="hp-especialidad" required class="w-full px-2 py-1.5 border rounded mt-1" placeholder="Pediatra, Kinesiólogo, Recepcionista…">
+            </label>
+            <label>Prioridad
+              <select id="hp-prioridad" class="w-full px-2 py-1.5 border rounded mt-1">
+                <option value="critica">Crítica</option>
+                <option value="alta">Alta</option>
+                <option value="media" selected>Media</option>
+                <option value="baja">Baja</option>
+              </select>
+            </label>
+            <label>Estado
+              <select id="hp-estado" class="w-full px-2 py-1.5 border rounded mt-1">
+                <option value="busqueda">Búsqueda activa</option>
+                <option value="contactado">Contactado</option>
+                <option value="entrevista">Entrevista</option>
+                <option value="negociando">Negociando</option>
+                <option value="contratado">Contratado</option>
+                <option value="descartado">Descartado</option>
+              </select>
+            </label>
+            <label>Candidato (nombre)
+              <input id="hp-candidato_nombre" class="w-full px-2 py-1.5 border rounded mt-1">
+            </label>
+            <label>Contacto (tel/email)
+              <input id="hp-candidato_contacto" class="w-full px-2 py-1.5 border rounded mt-1">
+            </label>
+            <label>Fuente
+              <input id="hp-fuente" class="w-full px-2 py-1.5 border rounded mt-1" placeholder="UdeC, LinkedIn, referido…">
+            </label>
+            <label>Escenario
+              <select id="hp-escenario" class="w-full px-2 py-1.5 border rounded mt-1">
+                <option value="">—</option>
+                <option value="A">A · Conservador</option>
+                <option value="B">B · Ambicioso</option>
+                <option value="C">C · Tope teórico</option>
+              </select>
+            </label>
+            <label>Jornada
+              <select id="hp-jornada" class="w-full px-2 py-1.5 border rounded mt-1">
+                <option value="">—</option>
+                <option value="full">Full-time</option>
+                <option value="part">Part-time</option>
+                <option value="dia_mes">Día por mes</option>
+                <option value="freelance">Freelance / honorarios</option>
+              </select>
+            </label>
+            <label>Sueldo estimado (CLP)
+              <input id="hp-sueldo_estimado" type="number" class="w-full px-2 py-1.5 border rounded mt-1">
+            </label>
+            <label>Fecha inicio búsqueda
+              <input id="hp-fecha_inicio" type="date" class="w-full px-2 py-1.5 border rounded mt-1">
+            </label>
+            <label>Próxima acción (fecha)
+              <input id="hp-fecha_proxima_accion" type="date" class="w-full px-2 py-1.5 border rounded mt-1">
+            </label>
+            <label class="col-span-2">Notas
+              <textarea id="hp-notas" rows="3" class="w-full px-2 py-1.5 border rounded mt-1"></textarea>
+            </label>
+            <div class="col-span-2 flex justify-end gap-2 mt-2">
+              <button type="button" id="hp-modal-cancel" class="px-4 py-2 text-sm border rounded hover:bg-slate-50">Cancelar</button>
+              <button type="submit" class="px-4 py-2 text-sm bg-slate-900 text-white rounded hover:bg-slate-700">Guardar</button>
+            </div>
+          </form>
+        </div>
+      </div>
 
       <h4>Estrategias de reclutamiento</h4>
       <div class="space-y-3 mb-4">
@@ -684,8 +777,105 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
     btn.classList.add('active');
     document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden');
+    if (btn.dataset.tab === 'pipeline') hpLoad();
   });
 });
+
+// ───────── Hiring Pipeline ─────────
+const HP_PRIO_LABEL = {critica:'crítica', alta:'alta', media:'media', baja:'baja'};
+const HP_PRIO_CLASS = {critica:'status-bloqueado', alta:'status-in_progress', media:'status-planned', baja:'status-planned'};
+const HP_ESTADO_LABEL = {busqueda:'búsqueda', contactado:'contactado', entrevista:'entrevista', negociando:'negociando', contratado:'contratado', descartado:'descartado'};
+const HP_ESTADO_CLASS = {busqueda:'status-planned', contactado:'status-in_progress', entrevista:'status-in_progress', negociando:'status-in_progress', contratado:'status-done', descartado:'status-bloqueado'};
+
+async function hpLoad() {
+  try {
+    const r = await fetch('/api/hiring/pipeline');
+    const data = await r.json();
+    hpRender(data);
+  } catch (e) {
+    document.getElementById('hp-tbody').innerHTML = '<tr><td colspan="9" class="py-4 text-center text-red-600">Error: '+e.message+'</td></tr>';
+  }
+}
+
+function hpEsc(s){return (s==null?'':String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);}
+
+function hpRender(data) {
+  const tb = document.getElementById('hp-tbody');
+  document.getElementById('hp-stat-activos').textContent = data.activos || 0;
+  const e = data.by_estado || {};
+  document.getElementById('hp-stat-busqueda').textContent = (e.busqueda||0) + (e.contactado||0);
+  document.getElementById('hp-stat-entrevista').textContent = e.entrevista || 0;
+  document.getElementById('hp-stat-negociando').textContent = e.negociando || 0;
+  document.getElementById('hp-stat-contratado').textContent = e.contratado || 0;
+
+  if (!data.items || !data.items.length) {
+    tb.innerHTML = '<tr><td colspan="9" class="py-6 text-center opacity-60">Sin búsquedas registradas. Usá "+ Nueva búsqueda" para empezar.</td></tr>';
+    return;
+  }
+  tb.innerHTML = data.items.map(it => {
+    const dim = (it.estado === 'contratado' || it.estado === 'descartado') ? 'opacity-60' : '';
+    return `<tr class="${dim}">
+      <td class="py-2 px-2 font-medium">${hpEsc(it.especialidad)}</td>
+      <td class="py-2 px-2"><span class="${HP_PRIO_CLASS[it.prioridad]||'status-planned'} px-2 py-0.5 rounded text-xs">${HP_PRIO_LABEL[it.prioridad]||it.prioridad}</span></td>
+      <td class="py-2 px-2"><span class="${HP_ESTADO_CLASS[it.estado]||'status-planned'} px-2 py-0.5 rounded text-xs">${HP_ESTADO_LABEL[it.estado]||it.estado}</span></td>
+      <td class="py-2 px-2 text-xs">${hpEsc(it.candidato_nombre||'—')}</td>
+      <td class="py-2 px-2 text-xs opacity-75">${hpEsc(it.candidato_contacto||'')}</td>
+      <td class="py-2 px-2 text-xs opacity-75">${hpEsc(it.fuente||'')}</td>
+      <td class="py-2 px-2 text-xs opacity-75">${hpEsc(it.fecha_proxima_accion||'')}</td>
+      <td class="py-2 px-2 text-xs opacity-75 max-w-xs truncate" title="${hpEsc(it.notas||'')}">${hpEsc(it.notas||'')}</td>
+      <td class="py-2 px-2 text-right whitespace-nowrap">
+        <button class="text-xs underline mr-2" onclick="hpEdit(${it.id})">editar</button>
+        <button class="text-xs text-red-600" onclick="hpDelete(${it.id})">×</button>
+      </td>
+    </tr>`;
+  }).join('');
+  window._hpItems = data.items;
+}
+
+function hpOpenModal(item) {
+  document.getElementById('hp-modal-title').textContent = item ? 'Editar búsqueda' : 'Nueva búsqueda';
+  ['id','especialidad','prioridad','estado','candidato_nombre','candidato_contacto','fuente','escenario','jornada','sueldo_estimado','fecha_inicio','fecha_proxima_accion','notas'].forEach(k => {
+    const el = document.getElementById('hp-'+k);
+    if (el) el.value = item ? (item[k] || '') : (k === 'prioridad' ? 'media' : (k === 'estado' ? 'busqueda' : ''));
+  });
+  document.getElementById('hp-modal').classList.remove('hidden');
+}
+
+function hpEdit(id) {
+  const item = (window._hpItems || []).find(x => x.id === id);
+  if (item) hpOpenModal(item);
+}
+
+async function hpDelete(id) {
+  if (!confirm('¿Eliminar esta búsqueda del pipeline?')) return;
+  await fetch('/api/hiring/pipeline/' + id, {method:'DELETE'});
+  hpLoad();
+}
+
+document.getElementById('hp-btn-add').addEventListener('click', () => hpOpenModal(null));
+document.getElementById('hp-modal-close').addEventListener('click', () => document.getElementById('hp-modal').classList.add('hidden'));
+document.getElementById('hp-modal-cancel').addEventListener('click', () => document.getElementById('hp-modal').classList.add('hidden'));
+document.getElementById('hp-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const id = document.getElementById('hp-id').value;
+  const body = {};
+  ['especialidad','prioridad','estado','candidato_nombre','candidato_contacto','fuente','escenario','jornada','fecha_inicio','fecha_proxima_accion','notas'].forEach(k => {
+    body[k] = document.getElementById('hp-'+k).value || null;
+  });
+  const sueldo = document.getElementById('hp-sueldo_estimado').value;
+  body.sueldo_estimado = sueldo ? parseInt(sueldo, 10) : null;
+  const url = id ? '/api/hiring/pipeline/' + id : '/api/hiring/pipeline';
+  const method = id ? 'PUT' : 'POST';
+  const r = await fetch(url, {method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+  if (!r.ok) { alert('Error guardando: ' + r.status); return; }
+  document.getElementById('hp-modal').classList.add('hidden');
+  hpLoad();
+});
+
+// Carga inicial si la pestaña pipeline ya está visible
+if (location.hash === '#pipeline') {
+  document.querySelector('[data-tab="pipeline"]').click();
+}
 </script>
 </body>
 </html>
