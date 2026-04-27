@@ -854,9 +854,21 @@ html, body{width:100%; max-width:100%; overflow-x:hidden}
   .inbox-tab .badge{font-size:9.5px; padding:1px 5px}
   .conv-item{padding:11px 12px; gap:10px; max-width:100vw}
   .avatar{width:40px; height:40px; flex:0 0 40px; font-size:13px}
+  /* Contexto oculto por defecto en mobile — solo se muestra como overlay cuando tiene .open */
+  .context{display:none}
   .context.open{
-    width:100vw; max-width:100vw; top:54px; left:0; right:0; border-left:none;
+    display:flex; position:fixed; z-index:60;
+    width:100vw; max-width:100vw; top:54px; left:0; right:0; bottom:0;
+    height:calc(100dvh - 54px); border-left:none;
+    box-shadow:-8px 0 24px rgba(15,63,104,.18);
+    overflow-y:auto; -webkit-overflow-scrolling:touch;
   }
+  /* Backdrop para cerrar el contexto tocando fuera */
+  .ctx-backdrop{
+    display:none; position:fixed; z-index:55; inset:54px 0 0 0;
+    background:rgba(15,63,104,.35); backdrop-filter:blur(2px);
+  }
+  .ctx-backdrop.open{display:block}
   .inbox-list{-webkit-overflow-scrolling:touch}
 }
 @media (max-width:380px){
@@ -970,7 +982,7 @@ html, body{width:100%; max-width:100%; overflow-x:hidden}
           <div class="sub" id="chSub"></div>
         </div>
         <div class="chat-actions" id="chActions"></div>
-        <button class="ctx-toggle" onclick="document.querySelector('.context').classList.toggle('open')">ⓘ</button>
+        <button class="ctx-toggle" onclick="toggleContext()" aria-label="Ver datos del paciente">ⓘ</button>
       </div>
       <div class="takeover-banner" id="takeoverBanner" style="display:none">
         🙋 Estás respondiendo como recepcionista — el bot no contestará hasta que devuelvas el control.
@@ -1009,6 +1021,7 @@ html, body{width:100%; max-width:100%; overflow-x:hidden}
   </main>
 
   <!-- ===== CONTEXT ======================================================== -->
+  <div class="ctx-backdrop" id="ctxBackdrop" onclick="toggleContext()"></div>
   <aside class="context" id="contextPane">
     <div class="ctx-section">
       <h3>Paciente</h3>
@@ -1093,6 +1106,15 @@ html, body{width:100%; max-width:100%; overflow-x:hidden}
 
 <script>
 "use strict";
+
+/* Toggle del panel de contexto en mobile (overlay con backdrop) */
+function toggleContext(){
+  const ctx = document.getElementById('contextPane');
+  const bd  = document.getElementById('ctxBackdrop');
+  if (!ctx) return;
+  const open = ctx.classList.toggle('open');
+  if (bd) bd.classList.toggle('open', open);
+}
 
 /* =========================================================================
  *  CONFIG & STATE
