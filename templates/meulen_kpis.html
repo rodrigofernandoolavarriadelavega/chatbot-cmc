@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meulen — KPIs MVP</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><g stroke='%232F3E34' stroke-width='3' stroke-linecap='round' stroke-linejoin='round' fill='%232F3E34'><path d='M24 54 L26 28 L38 28 L40 54 Z' fill-opacity='0.18'/><path d='M25 28 L32 20 L39 28 Z' fill-opacity='0.28'/><path d='M32 23 L48 9 M32 23 L48 37 M32 23 L16 37 M32 23 L16 9' fill='none' stroke-width='4'/><circle cx='32' cy='23' r='2.8'/></g></svg>">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --meulen-verde: #2F3E34;
+    --meulen-cobre: #8B6B4E;
+    --meulen-arena: #D9C7A1;
+    --meulen-crema: #F2EFE6;
+    --meulen-noche: #1A1A1A;
+    --olacore-fiordo: #1F3340;
+    --olacore-cobre: #B86D3F;
+  }
+  body { font-family: 'Inter', sans-serif; background: var(--meulen-crema); color: var(--meulen-noche); }
+  h1, h2, h3, .serif { font-family: 'Fraunces', serif; }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  .tab-btn.active { color: var(--meulen-verde) !important; border-bottom-color: var(--meulen-cobre) !important; border-bottom-width: 2px !important; }
+  .badge-done { background: #d4e9d8; color: #2F3E34; }
+  .badge-progress { background: #fef3e0; color: #8B6B4E; }
+  .badge-planned { background: #e5e1d4; color: #4a4030; }
+  .badge-blocked { background: #fee; color: #8C2A2A; }
+  .progress-bar { background: linear-gradient(90deg, var(--meulen-verde) 0%, var(--meulen-cobre) 100%); }
+</style>
+</head>
+<body>
+
+<nav class="border-b border-stone-300 sticky top-0 bg-white/90 backdrop-blur z-50">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4 text-sm">
+    <span class="serif text-lg font-medium" style="color:var(--meulen-verde)">Meulen</span>
+    <span class="mono text-xs opacity-50">KPIs MVP</span>
+    <a href="/meulen/dashboardplanificacion" class="ml-auto opacity-70 hover:opacity-100">Planificación</a>
+    <a href="/meulen/ecosistemameulen" class="opacity-70 hover:opacity-100">Ecosistema</a>
+    <a href="/supermercadomeulen/menu" class="opacity-70 hover:opacity-100">App</a>
+    <a href="/menu" class="opacity-50 hover:opacity-100">← Menú</a>
+  </div>
+</nav>
+
+<main class="max-w-7xl mx-auto px-4 py-8">
+
+  <header class="mb-10">
+    <p class="mono text-xs uppercase tracking-widest opacity-60 mb-2" style="color:var(--meulen-cobre)">OLACORE · Vertical retail · Puerto Montt</p>
+    <h1 class="text-5xl md:text-6xl font-medium leading-none mb-4" style="color:var(--meulen-verde)">KPIs MVP<em class="italic" style="color:var(--meulen-cobre)">.</em></h1>
+    <p class="serif italic text-xl opacity-75 max-w-2xl">Estado del proyecto Supermercado Meulen — POS + inventario para un minimarket familiar que hasta 2025 operaba todo a mano.</p>
+  </header>
+
+  <div id="tabs" class="border-b border-stone-300 mb-8 flex flex-wrap gap-1 overflow-x-auto">
+    <button class="tab-btn active px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-stone-500" data-tab="overview">Overview</button>
+    <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-stone-500" data-tab="modulos">Módulos</button>
+    <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-stone-500" data-tab="tests">Tests · Cobertura</button>
+    <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-stone-500" data-tab="fases">Roadmap fases</button>
+    <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-stone-500" data-tab="riesgos">Riesgos</button>
+    <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-stone-500" data-tab="stack">Stack</button>
+  </div>
+
+  <!-- ───── Overview ───── -->
+  <section id="tab-overview" class="tab-content">
+    <div class="grid md:grid-cols-4 gap-4 mb-8">
+      <div class="bg-white rounded p-5 border border-stone-200">
+        <p class="mono text-[10px] uppercase tracking-wider opacity-60 mb-2">Avance global Fase 1</p>
+        <p class="text-4xl font-medium serif" style="color:var(--meulen-verde)">100%</p>
+        <p class="text-xs opacity-70 mt-1">Cierre Fase 1 documentado</p>
+      </div>
+      <div class="bg-white rounded p-5 border border-stone-200">
+        <p class="mono text-[10px] uppercase tracking-wider opacity-60 mb-2">Tests pasando</p>
+        <p class="text-4xl font-medium serif" style="color:var(--meulen-verde)">122</p>
+        <p class="text-xs opacity-70 mt-1">51 unit + 71 integración</p>
+      </div>
+      <div class="bg-white rounded p-5 border border-stone-200">
+        <p class="mono text-[10px] uppercase tracking-wider opacity-60 mb-2">Cobertura</p>
+        <p class="text-4xl font-medium serif" style="color:var(--meulen-verde)">83%</p>
+        <p class="text-xs opacity-70 mt-1">pytest --cov</p>
+      </div>
+      <div class="bg-white rounded p-5 border border-stone-200">
+        <p class="mono text-[10px] uppercase tracking-wider opacity-60 mb-2">Módulos backend</p>
+        <p class="text-4xl font-medium serif" style="color:var(--meulen-verde)">7</p>
+        <p class="text-xs opacity-70 mt-1">identity, catalog, inventory, purchasing, pos, reporting, audit</p>
+      </div>
+    </div>
+
+    <div class="bg-white rounded p-6 border border-stone-200 mb-6">
+      <h3 class="serif text-2xl mb-3" style="color:var(--meulen-verde)">Estado del proyecto · una mirada honesta</h3>
+      <div class="space-y-3 text-sm leading-relaxed">
+        <p>Meulen es un minimarket familiar en Puerto Montt operado por los padres del desarrollador. Hasta 2025 todo era manual: ventas, inventario, caja, sin sistema. El proyecto entrega un POS táctil + control de inventario + caja diaria, con boleta electrónica diferida a Fase 2.</p>
+        <p><strong>Fase 1 cerrada</strong> (cierre documentado en <span class="mono text-xs">docs/notion/10-fase1-cierre.md</span>). Backend modular con 7 módulos, frontend React + Vite con POS táctil + admin, JWT con argon2, 122 tests al 83% cobertura, despliegue funcionando en <span class="mono text-xs">/supermercadomeulen/menu</span>.</p>
+        <p><strong>Fase 2 en planificación:</strong> cuentas por pagar, boleta electrónica SII (LibreDTE vs Haulmer), métricas operativas reales de ventas/margen.</p>
+        <p class="opacity-75 italic">Riesgo principal: que la usabilidad real con los operadores (padres, sin experiencia técnica) no esté validada con suficientes horas de uso productivo. Tests en código no equivalen a tests en operación.</p>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="bg-white rounded p-6 border border-stone-200">
+        <h4 class="mono text-[10px] uppercase tracking-wider opacity-60 mb-3">Hitos cumplidos</h4>
+        <ul class="space-y-2 text-sm">
+          <li class="flex items-start gap-2"><span class="text-green-700 font-bold">✓</span> 7 módulos backend con FastAPI + SQLAlchemy 2.0</li>
+          <li class="flex items-start gap-2"><span class="text-green-700 font-bold">✓</span> Frontend React 18 + Vite + TypeScript + Tailwind</li>
+          <li class="flex items-start gap-2"><span class="text-green-700 font-bold">✓</span> POS táctil (UX para cajero familiar sin experiencia técnica)</li>
+          <li class="flex items-start gap-2"><span class="text-green-700 font-bold">✓</span> Panel admin con productos, categorías, proveedores, stock</li>
+          <li class="flex items-start gap-2"><span class="text-green-700 font-bold">✓</span> JWT auth con argon2 (access + refresh)</li>
+          <li class="flex items-start gap-2"><span class="text-green-700 font-bold">✓</span> Migraciones Alembic versionadas</li>
+          <li class="flex items-start gap-2"><span class="text-green-700 font-bold">✓</span> Audit log de operaciones críticas</li>
+          <li class="flex items-start gap-2"><span class="text-green-700 font-bold">✓</span> 122 tests · 83% cobertura</li>
+          <li class="flex items-start gap-2"><span class="text-green-700 font-bold">✓</span> Compras con WMA (precio promedio ponderado)</li>
+          <li class="flex items-start gap-2"><span class="text-green-700 font-bold">✓</span> Despliegue producción en <span class="mono text-xs">/supermercadomeulen</span></li>
+          <li class="flex items-start gap-2"><span class="text-green-700 font-bold">✓</span> Seed demo (~150 productos)</li>
+          <li class="flex items-start gap-2"><span class="text-green-700 font-bold">✓</span> 12 documentos Notion de arquitectura, flujos y ADRs</li>
+        </ul>
+      </div>
+      <div class="bg-white rounded p-6 border border-stone-200">
+        <h4 class="mono text-[10px] uppercase tracking-wider opacity-60 mb-3">Pendiente Fase 2 y posteriores</h4>
+        <ul class="space-y-2 text-sm">
+          <li class="flex items-start gap-2"><span class="text-stone-500 font-bold">○</span> Boleta electrónica SII Chile (LibreDTE vs Haulmer)</li>
+          <li class="flex items-start gap-2"><span class="text-stone-500 font-bold">○</span> Cuentas por pagar / proveedores con vencimientos</li>
+          <li class="flex items-start gap-2"><span class="text-stone-500 font-bold">○</span> Reportes operativos: ventas por período, margen, top productos, mermas</li>
+          <li class="flex items-start gap-2"><span class="text-stone-500 font-bold">○</span> Dashboard de gestión (no solo MVP — reportes que la familia use semanalmente)</li>
+          <li class="flex items-start gap-2"><span class="text-stone-500 font-bold">○</span> Validación operativa real (50+ horas de uso productivo en caja)</li>
+          <li class="flex items-start gap-2"><span class="text-stone-500 font-bold">○</span> Backups automatizados + restore probado</li>
+          <li class="flex items-start gap-2"><span class="text-stone-500 font-bold">○</span> Capacitación documentada para operadores (padres)</li>
+          <li class="flex items-start gap-2"><span class="text-stone-500 font-bold">○</span> Integración con balanzas / lectores de código de barras</li>
+          <li class="flex items-start gap-2"><span class="text-stone-500 font-bold">○</span> PWA offline-first (caja sin internet por minutos)</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───── Módulos ───── -->
+  <section id="tab-modulos" class="tab-content hidden">
+    <div class="grid md:grid-cols-2 gap-4 mb-6">
+      <div class="bg-white rounded p-6 border border-stone-200">
+        <h3 class="serif text-xl mb-1">Backend · 7 módulos</h3>
+        <p class="text-xs opacity-60 mb-4">FastAPI + SQLAlchemy 2.0 + SQLite + Alembic</p>
+        <table class="w-full text-sm">
+          <tbody class="divide-y divide-stone-100">
+            <tr><td class="py-2 font-medium">identity</td><td class="text-xs opacity-75">Users · auth · roles · JWT</td><td class="text-right"><span class="badge-done px-2 py-0.5 rounded text-xs">done</span></td></tr>
+            <tr><td class="py-2 font-medium">catalog</td><td class="text-xs opacity-75">Productos · categorías · proveedores</td><td class="text-right"><span class="badge-done px-2 py-0.5 rounded text-xs">done</span></td></tr>
+            <tr><td class="py-2 font-medium">inventory</td><td class="text-xs opacity-75">Stock · movimientos · conteos</td><td class="text-right"><span class="badge-done px-2 py-0.5 rounded text-xs">done</span></td></tr>
+            <tr><td class="py-2 font-medium">purchasing</td><td class="text-xs opacity-75">Compras con WMA</td><td class="text-right"><span class="badge-done px-2 py-0.5 rounded text-xs">done</span></td></tr>
+            <tr><td class="py-2 font-medium">pos</td><td class="text-xs opacity-75">Ventas · pagos · caja diaria</td><td class="text-right"><span class="badge-done px-2 py-0.5 rounded text-xs">done</span></td></tr>
+            <tr><td class="py-2 font-medium">reporting</td><td class="text-xs opacity-75">Reportes agregados</td><td class="text-right"><span class="badge-progress px-2 py-0.5 rounded text-xs">parcial</span></td></tr>
+            <tr><td class="py-2 font-medium">audit</td><td class="text-xs opacity-75">Audit log operaciones críticas</td><td class="text-right"><span class="badge-done px-2 py-0.5 rounded text-xs">done</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="bg-white rounded p-6 border border-stone-200">
+        <h3 class="serif text-xl mb-1">Frontend · módulos</h3>
+        <p class="text-xs opacity-60 mb-4">React 18 + Vite + TypeScript + Tailwind + PWA</p>
+        <table class="w-full text-sm">
+          <tbody class="divide-y divide-stone-100">
+            <tr><td class="py-2 font-medium">pos</td><td class="text-xs opacity-75">POS táctil cajero</td><td class="text-right"><span class="badge-done px-2 py-0.5 rounded text-xs">done</span></td></tr>
+            <tr><td class="py-2 font-medium">admin</td><td class="text-xs opacity-75">Panel admin productos/stock</td><td class="text-right"><span class="badge-done px-2 py-0.5 rounded text-xs">done</span></td></tr>
+            <tr><td class="py-2 font-medium">ingresos</td><td class="text-xs opacity-75">Registro de ingresos / compras</td><td class="text-right"><span class="badge-done px-2 py-0.5 rounded text-xs">done</span></td></tr>
+            <tr><td class="py-2 font-medium">pagos</td><td class="text-xs opacity-75">Pagos a proveedores</td><td class="text-right"><span class="badge-progress px-2 py-0.5 rounded text-xs">parcial</span></td></tr>
+            <tr><td class="py-2 font-medium">menu</td><td class="text-xs opacity-75">Menú principal app</td><td class="text-right"><span class="badge-done px-2 py-0.5 rounded text-xs">done</span></td></tr>
+            <tr><td class="py-2 font-medium">kutral</td><td class="text-xs opacity-75">Módulo extra (planeación)</td><td class="text-right"><span class="badge-planned px-2 py-0.5 rounded text-xs">planned</span></td></tr>
+            <tr><td class="py-2 font-medium">viaje</td><td class="text-xs opacity-75">Compras viaje a Puerto Montt</td><td class="text-right"><span class="badge-progress px-2 py-0.5 rounded text-xs">parcial</span></td></tr>
+            <tr><td class="py-2 font-medium">components</td><td class="text-xs opacity-75">Button, Input, Modal, DataTable…</td><td class="text-right"><span class="badge-done px-2 py-0.5 rounded text-xs">done</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="bg-white rounded p-6 border border-stone-200">
+      <h3 class="serif text-xl mb-3">Cobertura visual por área</h3>
+      <div class="space-y-3">
+        <div><div class="flex justify-between text-xs mb-1"><span class="font-medium">Backend modules</span><span class="opacity-60">95%</span></div><div class="h-2 bg-stone-200 rounded"><div class="h-2 progress-bar rounded" style="width:95%"></div></div></div>
+        <div><div class="flex justify-between text-xs mb-1"><span class="font-medium">Frontend POS + admin</span><span class="opacity-60">90%</span></div><div class="h-2 bg-stone-200 rounded"><div class="h-2 progress-bar rounded" style="width:90%"></div></div></div>
+        <div><div class="flex justify-between text-xs mb-1"><span class="font-medium">Tests + coverage</span><span class="opacity-60">83%</span></div><div class="h-2 bg-stone-200 rounded"><div class="h-2 progress-bar rounded" style="width:83%"></div></div></div>
+        <div><div class="flex justify-between text-xs mb-1"><span class="font-medium">Reportes operativos</span><span class="opacity-60">40%</span></div><div class="h-2 bg-stone-200 rounded"><div class="h-2 progress-bar rounded" style="width:40%"></div></div></div>
+        <div><div class="flex justify-between text-xs mb-1"><span class="font-medium">Boleta electrónica SII</span><span class="opacity-60">0%</span></div><div class="h-2 bg-stone-200 rounded"><div class="h-2 progress-bar rounded" style="width:0%"></div></div></div>
+        <div><div class="flex justify-between text-xs mb-1"><span class="font-medium">Validación operativa real</span><span class="opacity-60">15%</span></div><div class="h-2 bg-stone-200 rounded"><div class="h-2 progress-bar rounded" style="width:15%"></div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───── Tests ───── -->
+  <section id="tab-tests" class="tab-content hidden">
+    <div class="grid md:grid-cols-3 gap-4 mb-6">
+      <div class="bg-white rounded p-5 border border-stone-200 text-center">
+        <p class="mono text-[10px] uppercase tracking-wider opacity-60 mb-2">Total tests</p>
+        <p class="text-5xl font-medium serif" style="color:var(--meulen-verde)">122</p>
+      </div>
+      <div class="bg-white rounded p-5 border border-stone-200 text-center">
+        <p class="mono text-[10px] uppercase tracking-wider opacity-60 mb-2">Cobertura</p>
+        <p class="text-5xl font-medium serif" style="color:var(--meulen-verde)">83%</p>
+      </div>
+      <div class="bg-white rounded p-5 border border-stone-200 text-center">
+        <p class="mono text-[10px] uppercase tracking-wider opacity-60 mb-2">Test framework</p>
+        <p class="text-2xl font-medium serif mt-2" style="color:var(--meulen-verde)">pytest</p>
+      </div>
+    </div>
+
+    <div class="bg-white rounded p-6 border border-stone-200">
+      <h3 class="serif text-xl mb-4">Distribución de tests</h3>
+      <canvas id="testsChart" height="80"></canvas>
+    </div>
+
+    <div class="bg-white rounded p-6 border border-stone-200 mt-4">
+      <h3 class="serif text-xl mb-3">Brechas de testing reconocidas</h3>
+      <ul class="space-y-2 text-sm">
+        <li>17% del código no está cubierto — concentrado en handlers de error y paths edge poco frecuentes.</li>
+        <li>No hay tests E2E en frontend (solo unit + integración backend).</li>
+        <li>No hay tests de carga/stress (volumen es bajo, no es prioridad).</li>
+        <li><strong>El mayor gap no es código — es operación.</strong> 122 tests en CI no equivalen a 50 horas de uso real con los operadores reales (los padres) en condiciones de caja.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ───── Roadmap fases ───── -->
+  <section id="tab-fases" class="tab-content hidden">
+    <div class="space-y-4">
+      <div class="bg-white rounded p-6 border-l-4" style="border-color:var(--meulen-verde)">
+        <div class="flex items-baseline justify-between mb-2">
+          <h3 class="serif text-xl" style="color:var(--meulen-verde)">Fase 1 — POS + Inventario base</h3>
+          <span class="badge-done px-2 py-0.5 rounded text-xs">cerrada</span>
+        </div>
+        <p class="text-sm opacity-80 mb-3">Sistema operable mínimo viable: registro de ventas, control de stock, caja diaria, panel admin, autenticación, audit log.</p>
+        <ul class="text-xs space-y-1 opacity-70">
+          <li>· 7 módulos backend completados</li>
+          <li>· Frontend React desplegado en producción</li>
+          <li>· 122 tests · 83% cobertura</li>
+          <li>· Documentación Notion completa (12 docs)</li>
+        </ul>
+      </div>
+
+      <div class="bg-white rounded p-6 border-l-4" style="border-color:var(--meulen-cobre)">
+        <div class="flex items-baseline justify-between mb-2">
+          <h3 class="serif text-xl" style="color:var(--meulen-cobre)">Fase 2 — Boleta electrónica + cuentas por pagar</h3>
+          <span class="badge-progress px-2 py-0.5 rounded text-xs">en planificación</span>
+        </div>
+        <p class="text-sm opacity-80 mb-3">Cumplir requisito SII (boleta electrónica obligatoria), control de pagos a proveedores con vencimientos.</p>
+        <ul class="text-xs space-y-1 opacity-70">
+          <li>· Evaluación LibreDTE vs Haulmer (decisión pendiente)</li>
+          <li>· Módulo cuentas por pagar (<span class="mono">docs/notion/11-fase2-cuentas-por-pagar.md</span>)</li>
+          <li>· Migración alembic + seed proveedores</li>
+        </ul>
+      </div>
+
+      <div class="bg-white rounded p-6 border-l-4 opacity-75" style="border-color:var(--meulen-arena)">
+        <div class="flex items-baseline justify-between mb-2">
+          <h3 class="serif text-xl">Fase 3 — Reportes operativos + capacitación</h3>
+          <span class="badge-planned px-2 py-0.5 rounded text-xs">planeada</span>
+        </div>
+        <p class="text-sm opacity-80 mb-3">Reportes que la familia use semanalmente: ventas por período, top productos, margen real, mermas, productos por vencer.</p>
+      </div>
+
+      <div class="bg-white rounded p-6 border-l-4 opacity-75" style="border-color:var(--meulen-arena)">
+        <div class="flex items-baseline justify-between mb-2">
+          <h3 class="serif text-xl">Fase 4 — Hardware integrado</h3>
+          <span class="badge-planned px-2 py-0.5 rounded text-xs">backlog</span>
+        </div>
+        <p class="text-sm opacity-80 mb-3">Lectores de código de barras, balanzas, impresora de boletas física, cajón monedero.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───── Riesgos ───── -->
+  <section id="tab-riesgos" class="tab-content hidden">
+    <div class="space-y-3">
+      <div class="bg-white rounded p-5 border-l-4 border-red-700">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h4 class="serif text-lg font-medium">Operadores no han usado el sistema en producción real</h4>
+            <p class="text-sm opacity-75 mt-1">Los padres (operadores) son los usuarios finales — sin experiencia técnica previa. La calidad del código no garantiza usabilidad real. Hasta que no haya 50+ horas de uso productivo con tickets reales, el riesgo de fricción operativa es alto.</p>
+          </div>
+          <span class="badge-blocked px-2 py-0.5 rounded text-xs whitespace-nowrap">crítico</span>
+        </div>
+      </div>
+
+      <div class="bg-white rounded p-5 border-l-4 border-orange-600">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h4 class="serif text-lg font-medium">Boleta electrónica SII obligatoria</h4>
+            <p class="text-sm opacity-75 mt-1">Chile exige boleta electrónica para todos los contribuyentes. Sin esto el sistema no puede usarse legalmente como POS oficial. Diferido a Fase 2, decisión LibreDTE vs Haulmer pendiente.</p>
+          </div>
+          <span class="badge-progress px-2 py-0.5 rounded text-xs whitespace-nowrap">alto</span>
+        </div>
+      </div>
+
+      <div class="bg-white rounded p-5 border-l-4 border-orange-600">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h4 class="serif text-lg font-medium">Negocio Meulen sigue siendo subsidiado</h4>
+            <p class="text-sm opacity-75 mt-1">Si la rentabilidad operativa de Meulen no mejora con el sistema, la inversión en el MVP termina siendo subsidio familiar, no inversión productiva. Implica conversación con familia sobre viabilidad real del negocio independiente del sistema.</p>
+          </div>
+          <span class="badge-progress px-2 py-0.5 rounded text-xs whitespace-nowrap">alto</span>
+        </div>
+      </div>
+
+      <div class="bg-white rounded p-5 border-l-4 border-yellow-600">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h4 class="serif text-lg font-medium">Sin backup automatizado en producción</h4>
+            <p class="text-sm opacity-75 mt-1">SQLite con WAL es robusta para volumen bajo, pero sin estrategia de backup probada un disco muerto pierde datos. Hay scripts en <span class="mono text-xs">scripts/</span> pero el cron de backup automatizado en VPS no está configurado.</p>
+          </div>
+          <span class="badge-progress px-2 py-0.5 rounded text-xs whitespace-nowrap">medio</span>
+        </div>
+      </div>
+
+      <div class="bg-white rounded p-5 border-l-4 border-yellow-600">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h4 class="serif text-lg font-medium">Sin offline-first</h4>
+            <p class="text-sm opacity-75 mt-1">Si se cae internet en Puerto Montt, la caja deja de funcionar. PWA está habilitado a nivel manifest pero la lógica offline-first no está implementada.</p>
+          </div>
+          <span class="badge-progress px-2 py-0.5 rounded text-xs whitespace-nowrap">medio</span>
+        </div>
+      </div>
+
+      <div class="bg-white rounded p-5 border-l-4 border-stone-400">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h4 class="serif text-lg font-medium">Dependencia de un solo dev</h4>
+            <p class="text-sm opacity-75 mt-1">El proyecto depende de una sola persona para mantenimiento y evolución. Buena documentación (12 docs Notion) mitiga, pero no elimina, este riesgo.</p>
+          </div>
+          <span class="badge-planned px-2 py-0.5 rounded text-xs whitespace-nowrap">bajo</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───── Stack ───── -->
+  <section id="tab-stack" class="tab-content hidden">
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="bg-white rounded p-6 border border-stone-200">
+        <h4 class="mono text-[10px] uppercase tracking-wider opacity-60 mb-3">Backend</h4>
+        <ul class="space-y-1.5 text-sm">
+          <li><strong>Python 3.11+</strong></li>
+          <li>FastAPI</li>
+          <li>SQLAlchemy 2.0</li>
+          <li>SQLite con WAL</li>
+          <li>Alembic (migraciones)</li>
+          <li>JWT auth (access + refresh)</li>
+          <li>argon2 para password hashing</li>
+          <li>pytest (122 tests)</li>
+        </ul>
+      </div>
+
+      <div class="bg-white rounded p-6 border border-stone-200">
+        <h4 class="mono text-[10px] uppercase tracking-wider opacity-60 mb-3">Frontend</h4>
+        <ul class="space-y-1.5 text-sm">
+          <li><strong>React 18</strong></li>
+          <li>Vite (build + dev server)</li>
+          <li>TypeScript</li>
+          <li>Tailwind CSS (UI)</li>
+          <li>PWA manifest + service worker</li>
+          <li>Playfair Display + Inter (typography)</li>
+          <li>POS optimizado para uso táctil</li>
+        </ul>
+      </div>
+
+      <div class="bg-white rounded p-6 border border-stone-200">
+        <h4 class="mono text-[10px] uppercase tracking-wider opacity-60 mb-3">Infraestructura</h4>
+        <ul class="space-y-1.5 text-sm">
+          <li>Docker + docker-compose</li>
+          <li>SQLite volume persistente</li>
+          <li>Despliegue en agentecmc.cl bajo subpath <span class="mono text-xs">/supermercadomeulen</span></li>
+          <li>Nginx + uvicorn</li>
+          <li>DigitalOcean VPS compartido con CMC</li>
+        </ul>
+      </div>
+
+      <div class="bg-white rounded p-6 border border-stone-200">
+        <h4 class="mono text-[10px] uppercase tracking-wider opacity-60 mb-3">Próximas tecnologías (Fase 2+)</h4>
+        <ul class="space-y-1.5 text-sm opacity-75">
+          <li>LibreDTE o Haulmer (boleta SII)</li>
+          <li>Service worker offline-first</li>
+          <li>Lectores código de barras (USB HID)</li>
+          <li>Balanzas integradas</li>
+          <li>Backup automatizado (rclone → S3 o similar)</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="border-t border-stone-300 mt-16 py-8">
+  <div class="max-w-7xl mx-auto px-4 flex justify-between items-center text-xs opacity-60">
+    <span class="serif">Meulen · Hacemos posible lo imposible</span>
+    <span class="mono">KPIs · v1.0 · 2026-04-27</span>
+  </div>
+</footer>
+
+<script>
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden');
+  });
+});
+
+// Tests chart
+const ctx = document.getElementById('testsChart');
+if (ctx) {
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Unit tests', 'Integración', 'E2E frontend', 'Carga/stress'],
+      datasets: [{
+        label: 'Tests',
+        data: [51, 71, 0, 0],
+        backgroundColor: ['#2F3E34', '#8B6B4E', '#D9C7A1', '#D9C7A1']
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+}
+</script>
+
+</body>
+</html>

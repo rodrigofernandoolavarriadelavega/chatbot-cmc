@@ -321,6 +321,7 @@ _ECOSISTEMA_HTML = (_TEMPLATE_DIR / "ecosistema.html").read_text(encoding="utf-8
 _DASHBOARD_HTML = (_TEMPLATE_DIR / "dashboard.html").read_text(encoding="utf-8")
 _MEULEN_ECOSISTEMA_HTML = (_TEMPLATE_DIR / "meulen_ecosistema.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "meulen_ecosistema.html").exists() else ""
 _MEULEN_DASHBOARD_HTML = (_TEMPLATE_DIR / "meulen_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "meulen_dashboard.html").exists() else ""
+_MEULEN_KPIS_HTML = (_TEMPLATE_DIR / "meulen_kpis.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "meulen_kpis.html").exists() else ""
 _MENU_HTML = (_TEMPLATE_DIR / "menu.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "menu.html").exists() else ""
 _PROYECTOS2026_HTML = (_TEMPLATE_DIR / "proyectos2026.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "proyectos2026.html").exists() else ""
 _LANDING_HTML = (_TEMPLATE_DIR / "landing.html").read_text(encoding="utf-8")
@@ -523,6 +524,14 @@ def meulen_dashboard_page():
             "Expires": "0",
         },
     )
+
+
+@app.get("/meulen/kpis", response_class=HTMLResponse)
+def meulen_kpis_page():
+    """Dashboard de KPIs del MVP Meulen — avance fases, módulos, tests, riesgos."""
+    if not _MEULEN_KPIS_HTML:
+        raise HTTPException(404, "Dashboard KPIs Meulen no disponible")
+    return _MEULEN_KPIS_HTML
 
 
 @app.get("/menu", response_class=HTMLResponse)
