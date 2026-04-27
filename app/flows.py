@@ -4229,46 +4229,75 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 )
             reagendar = bool(data.get("reagendar_mode"))
             cita_old = data.get("cita_old") or {}
-            # ── Cita duplicada: paciente ya tiene cita misma fecha + especialidad ──
+            # ── Validación: paciente ya tiene cita activa con el MISMO profesional ──
+            # Bloqueo duro — no permitimos múltiples horas activas con el mismo
+            # profesional para evitar auto-agendamientos en cascada (caso real:
+            # paciente reservaba 19:20, 19:40 y 20:00 con el mismo doctor).
             # En reagendar la antigua se cancela igual; ahí saltamos el check.
-            if not reagendar and not data.get("dup_ok"):
-                if data.get("dup_pending"):
-                    data["dup_ok"] = True
-                    data.pop("dup_pending", None)
-                else:
-                    try:
-                        existing_citas = await listar_citas_paciente(
-                            paciente["id"], rut=paciente.get("rut")
-                        )
-                    except Exception as e:
-                        log.warning("dup-check listar_citas falló: %s", e)
-                        existing_citas = []
-                    _slot_esp = (slot.get("especialidad") or "").strip().lower()
-                    dup = next(
-                        (c for c in (existing_citas or [])
-                         if c.get("fecha") == slot.get("fecha")
-                         and (c.get("especialidad") or "").strip().lower() == _slot_esp),
-                        None,
+            if not reagendar:
+                try:
+                    existing_citas = await listar_citas_paciente(
+                        paciente["id"], rut=paciente.get("rut")
                     )
-                    if dup:
-                        data["dup_pending"] = True
-                        save_session(phone, "CONFIRMING_CITA", data)
-                        log_event(phone, "cita_duplicada_detectada", {
-                            "fecha": slot.get("fecha"),
-                            "especialidad": slot.get("especialidad"),
-                            "existing_hora": dup.get("hora_inicio", "")[:5],
-                        })
-                        return _btn_msg(
-                            f"⚠️ *Ya tienes una hora ese día*\n\n"
-                            f"📋 Tienes *{dup.get('especialidad','')}* el "
-                            f"{slot.get('fecha_display','')} a las "
-                            f"*{dup.get('hora_inicio','')}* con "
-                            f"{dup.get('profesional','')}.\n\n"
-                            f"¿Igual quieres agendar esta segunda hora a las "
-                            f"*{slot['hora_inicio'][:5]}*?",
-                            [{"id": "si", "title": "✅ Sí, agendar igual"},
-                             {"id": "no", "title": "❌ Cancelar"}]
+                except Exception as e:
+                    log.warning("dup-check listar_citas falló: %s", e)
+                    existing_citas = []
+
+                # 1) Bloqueo duro: misma profesional ya reservada
+                same_prof = next(
+                    (c for c in (existing_citas or [])
+                     if str(c.get("id_profesional", "")) == str(slot.get("id_profesional", ""))),
+                    None,
+                )
+                if same_prof:
+                    log_event(phone, "cita_bloqueada_mismo_profesional", {
+                        "id_profesional": slot.get("id_profesional"),
+                        "fecha_existente": same_prof.get("fecha"),
+                        "hora_existente": same_prof.get("hora_inicio", "")[:5],
+                    })
+                    reset_session(phone)
+                    return (
+                        f"📋 *Ya tienes una hora reservada con {same_prof.get('profesional','este profesional')}.*\n\n"
+                        f"📅 {same_prof.get('fecha','')} a las "
+                        f"*{(same_prof.get('hora_inicio','') or '')[:5]}*\n\n"
+                        f"Solo permitimos *una hora activa por profesional*. "
+                        f"Si quieres cambiar el horario, escribe *reagendar*. "
+                        f"Si necesitas una segunda atención, escribe *recepción* "
+                        f"para hablar con una secretaria."
+                    )
+
+                # 2) Soft-warn: misma fecha + especialidad (puede ser válido en algunos casos)
+                if not data.get("dup_ok"):
+                    if data.get("dup_pending"):
+                        data["dup_ok"] = True
+                        data.pop("dup_pending", None)
+                    else:
+                        _slot_esp = (slot.get("especialidad") or "").strip().lower()
+                        dup = next(
+                            (c for c in (existing_citas or [])
+                             if c.get("fecha") == slot.get("fecha")
+                             and (c.get("especialidad") or "").strip().lower() == _slot_esp),
+                            None,
                         )
+                        if dup:
+                            data["dup_pending"] = True
+                            save_session(phone, "CONFIRMING_CITA", data)
+                            log_event(phone, "cita_duplicada_detectada", {
+                                "fecha": slot.get("fecha"),
+                                "especialidad": slot.get("especialidad"),
+                                "existing_hora": dup.get("hora_inicio", "")[:5],
+                            })
+                            return _btn_msg(
+                                f"⚠️ *Ya tienes una hora ese día*\n\n"
+                                f"📋 Tienes *{dup.get('especialidad','')}* el "
+                                f"{slot.get('fecha_display','')} a las "
+                                f"*{dup.get('hora_inicio','')}* con "
+                                f"{dup.get('profesional','')}.\n\n"
+                                f"¿Igual quieres agendar esta segunda hora a las "
+                                f"*{slot['hora_inicio'][:5]}*?",
+                                [{"id": "si", "title": "✅ Sí, agendar igual"},
+                                 {"id": "no", "title": "❌ Cancelar"}]
+                            )
             # ── Doble-check: verificar que el slot sigue libre ──
             slot_libre = await verificar_slot_disponible(
                 slot["id_profesional"], slot["fecha"],
