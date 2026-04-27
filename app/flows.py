@@ -4428,7 +4428,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     titulo = f"✅ *¡Listo! La hora de {nombre_corto} quedó reservada.*"
                 else:
                     titulo = f"✅ *¡Listo, {nombre_corto}! Tu hora quedó reservada.*"
-                return (
+                confirmacion_msg = (
                     f"{titulo}\n\n"
                     f"👤 {paciente['nombre']}\n"
                     f"🏥 {slot['especialidad']} — {slot['profesional']}\n"
@@ -4438,9 +4438,21 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "Recuerda llegar *15 minutos antes* con cédula de identidad.\n\n"
                     "📍 *Monsalve 102 esq. República, Carampangue*\n\n"
                     f"¡Te esperamos! 😊{cross_ref}"
-                    f"{pni_msg}\n\n"
-                    "_Escribe *menu* si necesitas algo más._"
+                    f"{pni_msg}"
                 )
+                # Si es paciente nuevo registrado en este flujo, pedir referido
+                # como segundo mensaje con botones (post-confirmación, baja fricción).
+                if data.get("is_paciente_nuevo_post_referral"):
+                    save_session(phone, "WAIT_REFERRAL_POST", {})
+                    from messaging import send_whatsapp
+                    await send_whatsapp(phone, confirmacion_msg)
+                    return _btn_msg(
+                        "Una última cosa rápida 🙏\n\n*¿Cómo nos conociste?*",
+                        [{"id": "ref_amigo", "title": "👥 Amigo / familiar"},
+                         {"id": "ref_rrss", "title": "📱 Redes / Google"},
+                         {"id": "ref_recurrente", "title": "🔄 Ya venía antes"}]
+                    )
+                return confirmacion_msg + "\n\n_Escribe *menu* si necesitas algo más._"
             else:
                 return (
                     "Hubo un problema al reservar la hora 😕\n"
@@ -4912,6 +4924,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             "rut": rut, "campos_extra": list(extra.keys()),
             "total_campos": len(extra),
         })
+        data["is_paciente_nuevo_post_referral"] = True  # pedir referido tras confirmar
         paciente = await crear_paciente(rut, nombre, apellidos, **extra)
         if not paciente:
             reset_session(phone)
@@ -5049,6 +5062,36 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 {"id": "ref_saltar",     "title": "Prefiero no decir"},
             ]}]
         )
+
+    # ── WAIT_REFERRAL_POST (1 mensaje post-confirmación, baja fricción) ──
+    if state == "WAIT_REFERRAL_POST":
+        _POST_MAP = {
+            "ref_amigo": "amigo",
+            "ref_rrss": "rrss",
+            "ref_recurrente": "recurrente",
+            "ref_google": "google",
+        }
+        # Mapeo por button id o por texto libre
+        ref_source = _POST_MAP.get(tl)
+        if not ref_source:
+            tl_low = tl.lower()
+            if any(w in tl_low for w in ("amig", "famili", "conoci", "vecin", "recomen")):
+                ref_source = "amigo"
+            elif any(w in tl_low for w in ("instagram", "facebook", "tiktok", "red social", "rrss", "google", "internet", "busq")):
+                ref_source = "rrss" if "google" not in tl_low else "google"
+            elif any(w in tl_low for w in ("antes", "siempre", "años", "venia", "venía", "recurr")):
+                ref_source = "recurrente"
+            elif any(w in tl_low for w in ("volante", "calle", "letrero", "fachada", "pasaba")):
+                ref_source = "calle"
+        if ref_source:
+            save_tag(phone, f"referido:{ref_source}")
+            log_event(phone, "registro_referral_post", {"source": ref_source, "raw": txt[:60]})
+            reset_session(phone)
+            return "¡Gracias! 🙏 Eso nos ayuda a mejorar.\n\n_Escribe *menu* si necesitas algo más._"
+        # Si no se mapeó, agradecer y soltar igual
+        log_event(phone, "registro_skip", {"step": "referral_post", "raw": txt[:60]})
+        reset_session(phone)
+        return "Perfecto, gracias 🙏\n\n_Escribe *menu* si necesitas algo más._"
 
     # ── WAIT_REFERRAL ─────────────────────────────────────────────────────
     if state == "WAIT_REFERRAL":

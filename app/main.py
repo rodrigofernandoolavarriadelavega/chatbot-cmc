@@ -621,6 +621,126 @@ def horizonte_dashboard_page():
     return _HORIZONTE_DASHBOARD_HTML
 
 
+_ATRIBUCION_DASHBOARD_HTML = (_TEMPLATE_DIR / "atribucion_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "atribucion_dashboard.html").exists() else ""
+
+@app.get("/atribucion", response_class=HTMLResponse)
+@app.get("/atribucion/dashboard", response_class=HTMLResponse)
+def atribucion_dashboard_page():
+    """Cruce diario Meta Ads × Bot × Pacientes nuevos × Referidos."""
+    if not _ATRIBUCION_DASHBOARD_HTML:
+        raise HTTPException(404, "Dashboard Atribución no disponible")
+    return _ATRIBUCION_DASHBOARD_HTML
+
+
+@app.get("/api/atribucion/today")
+async def api_atribucion_today():
+    """Cruce de datos para el dashboard /atribucion. Devuelve día actual.
+
+    Combina:
+    - Meta Ads (Marketing API): spend, impresiones, clicks, conversaciones
+    - Bot: mensajes, phones nuevos, citas creadas, registros completos
+    - Tags de referido: distribución por canal (amigo/rrss/google/recurrente)
+    """
+    import json as _json_atr
+    from datetime import datetime as _dt_atr
+    from pathlib import Path as _P_atr
+    import sys as _sys_atr
+    _sys_atr.path.insert(0, str(_P_atr(__file__).parent))
+    from session import _conn as _conn_atr
+
+    today = _dt_atr.now().strftime("%Y-%m-%d")
+    out: dict = {"fecha": today, "meta": {}, "bot": {}, "atribucion": {}, "funnel": {}}
+
+    conn = _conn_atr()
+    c = conn.cursor()
+
+    # Bot: actividad del día
+    c.execute("SELECT COUNT(*) FROM messages WHERE date(ts)=date('now')")
+    out["bot"]["mensajes_total"] = c.fetchone()[0]
+
+    c.execute("""SELECT COUNT(DISTINCT phone) FROM messages WHERE date(ts)=date('now')
+                 AND phone NOT IN (SELECT DISTINCT phone FROM messages WHERE date(ts) < date('now'))""")
+    out["bot"]["phones_nuevos"] = c.fetchone()[0]
+
+    c.execute("""SELECT COUNT(*) FROM conversation_events
+                 WHERE event='cita_creada' AND date(ts)=date('now')""")
+    out["bot"]["citas_creadas"] = c.fetchone()[0]
+
+    c.execute("""SELECT COUNT(*) FROM conversation_events
+                 WHERE event='registro_completo' AND date(ts)=date('now')""")
+    out["bot"]["registros_completos"] = c.fetchone()[0]
+
+    c.execute("""SELECT COUNT(*) FROM conversation_events
+                 WHERE event='cita_bloqueada_mismo_profesional' AND date(ts)=date('now')""")
+    out["bot"]["bloqueos_mismo_prof"] = c.fetchone()[0]
+
+    c.execute("""SELECT COUNT(*) FROM conversation_events
+                 WHERE event='derivado_humano' AND date(ts)=date('now')""")
+    out["bot"]["derivados_humano"] = c.fetchone()[0]
+
+    # Atribución por tags de referido
+    c.execute("""SELECT tag, COUNT(*) FROM contact_tags
+                 WHERE tag LIKE 'referido:%' AND date(ts)=date('now')
+                 GROUP BY tag ORDER BY 2 DESC""")
+    refs = {r[0].split(":", 1)[1]: r[1] for r in c.fetchall()}
+    out["atribucion"]["por_canal_hoy"] = refs
+    out["atribucion"]["respondieron_post"] = sum(refs.values())
+
+    c.execute("""SELECT tag, COUNT(*) FROM contact_tags
+                 WHERE tag LIKE 'referido:%' AND ts > datetime('now','-30 days')
+                 GROUP BY tag ORDER BY 2 DESC""")
+    out["atribucion"]["por_canal_30d"] = {r[0].split(":", 1)[1]: r[1] for r in c.fetchall()}
+
+    # Funnel del día: phones nuevos → cita
+    c.execute("""SELECT COUNT(DISTINCT ce.phone) FROM conversation_events ce
+                 WHERE ce.event='cita_creada' AND date(ce.ts)=date('now')
+                   AND ce.phone IN (
+                     SELECT phone FROM messages WHERE date(ts)=date('now')
+                       AND phone NOT IN (SELECT DISTINCT phone FROM messages WHERE date(ts) < date('now'))
+                   )""")
+    nuevos_con_cita = c.fetchone()[0]
+    out["funnel"]["phones_nuevos_con_cita"] = nuevos_con_cita
+    if out["bot"]["phones_nuevos"]:
+        out["funnel"]["conversion_pct"] = round(100.0 * nuevos_con_cita / out["bot"]["phones_nuevos"], 1)
+    else:
+        out["funnel"]["conversion_pct"] = 0
+
+    # Meta Ads del día
+    import os as _os_atr, urllib.request as _ur_atr, urllib.parse as _up_atr
+    token = (_os_atr.getenv("META_ACCESS_TOKEN") or "").strip()
+    acct = "act_220608142267129"
+    if token:
+        try:
+            params = {
+                "fields": "spend,impressions,reach,clicks,actions",
+                "time_range": _json_atr.dumps({"since": today, "until": today}),
+                "access_token": token,
+            }
+            url = f"https://graph.facebook.com/v19.0/{acct}/insights?" + _up_atr.urlencode(params)
+            with _ur_atr.urlopen(url, timeout=10) as resp:
+                d = _json_atr.loads(resp.read())
+                rows = d.get("data", [])
+                if rows:
+                    r = rows[0]
+                    out["meta"] = {
+                        "spend_clp": float(r.get("spend", 0)),
+                        "impresiones": int(r.get("impressions", 0)),
+                        "reach": int(r.get("reach", 0)),
+                        "clicks": int(r.get("clicks", 0)),
+                    }
+                    for a in (r.get("actions") or []):
+                        if a.get("action_type") == "link_click":
+                            out["meta"]["link_clicks"] = int(float(a.get("value", 0)))
+                        elif a.get("action_type") == "onsite_conversion.messaging_conversation_started_7d":
+                            out["meta"]["conversaciones_iniciadas"] = int(float(a.get("value", 0)))
+                else:
+                    out["meta"] = {"spend_clp": 0, "impresiones": 0, "reach": 0, "clicks": 0}
+        except Exception as e:
+            out["meta"] = {"error": str(e)[:120]}
+
+    return out
+
+
 # ─────────────────────────────────────────────────────────────────────────
 # Pipeline de Contratación — tracking de búsquedas activas y candidatos
 # ─────────────────────────────────────────────────────────────────────────

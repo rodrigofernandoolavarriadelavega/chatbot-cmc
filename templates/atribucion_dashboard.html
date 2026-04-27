@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CMC — Atribución diaria · Meta × Bot × Pacientes</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{ --fiordo:#1F3340; --cobre:#B86D3F; --neblina:#EFE9DD; --musgo:#4A5F3A; --lacre:#8C2A2A; --agua:#5B8B96; --noche:#122028; }
+  body{ font-family:'Inter',sans-serif; background:var(--neblina); color:var(--fiordo); }
+  h1,h2,h3,.serif{ font-family:'Fraunces',serif; }
+  .mono{ font-family:'IBM Plex Mono',monospace; }
+  .kpi-card{ background:white; border:1px solid rgba(31,51,64,.1); border-radius:6px; padding:18px 22px; }
+  .kpi-num{ font-family:'Fraunces',serif; font-size:34px; font-weight:500; line-height:1; color:var(--fiordo); }
+  .kpi-label{ font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--cobre); margin-bottom:8px; }
+  .kpi-sub{ font-size:11px; color:rgba(31,51,64,.6); margin-top:4px; }
+  .section-head{ font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:3px; text-transform:uppercase; color:var(--cobre); margin-bottom:8px; }
+  .section-title{ font-family:'Fraunces',serif; font-size:32px; font-weight:500; line-height:1.05; margin-bottom:24px; }
+  .funnel-step{ background:white; padding:14px 18px; border-radius:6px; border:1px solid rgba(31,51,64,.1); display:flex; justify-content:space-between; align-items:center; }
+</style>
+</head>
+<body>
+
+<nav class="border-b border-stone-300 sticky top-0 bg-white/90 backdrop-blur z-50">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4 text-sm">
+    <span class="serif text-lg font-medium" style="color:var(--fiordo)">CMC</span>
+    <span class="mono text-xs opacity-50">Atribución</span>
+    <a href="/seo/dashboard" class="ml-auto opacity-70 hover:opacity-100">SEO</a>
+    <a href="/meta/dashboard" class="opacity-70 hover:opacity-100">Meta</a>
+    <a href="/horizonte" class="opacity-70 hover:opacity-100">Horizonte</a>
+    <a href="/menu" class="opacity-50 hover:opacity-100">← Menú</a>
+  </div>
+</nav>
+
+<main class="max-w-7xl mx-auto px-4 py-8">
+  <header class="mb-8">
+    <p class="section-head" style="color:var(--cobre)">OLACORE · CMC · Atribución diaria</p>
+    <h1 class="text-5xl md:text-6xl font-medium leading-none mb-2" style="color:var(--fiordo)">Atribución<em class="italic" style="color:var(--cobre)">.</em></h1>
+    <p class="serif italic text-xl opacity-75">De dónde llegan los pacientes nuevos hoy.</p>
+    <p class="mono text-xs opacity-60 mt-3" id="fechaHeader">cargando…</p>
+  </header>
+
+  <section class="mb-10">
+    <div class="grid md:grid-cols-4 gap-3">
+      <div class="kpi-card">
+        <div class="kpi-label">Spend Meta hoy</div>
+        <div class="kpi-num" id="kpiSpend">—</div>
+        <div class="kpi-sub" id="kpiSpendSub">CLP</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Phones nuevos hoy</div>
+        <div class="kpi-num" id="kpiNuevos">—</div>
+        <div class="kpi-sub">primera conversación</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Citas creadas hoy</div>
+        <div class="kpi-num" id="kpiCitas">—</div>
+        <div class="kpi-sub">via chatbot</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Conversión nuevos→cita</div>
+        <div class="kpi-num" id="kpiConv">—</div>
+        <div class="kpi-sub" id="kpiConvSub">—</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="mb-10 grid md:grid-cols-2 gap-6">
+    <div>
+      <p class="section-head">01 — Meta Ads</p>
+      <h2 class="section-title">Métricas del día.</h2>
+      <div class="space-y-2">
+        <div class="funnel-step"><span class="mono text-xs uppercase opacity-60">Spend</span><span class="font-medium" id="metaSpend">—</span></div>
+        <div class="funnel-step"><span class="mono text-xs uppercase opacity-60">Impresiones</span><span class="font-medium" id="metaImpr">—</span></div>
+        <div class="funnel-step"><span class="mono text-xs uppercase opacity-60">Reach</span><span class="font-medium" id="metaReach">—</span></div>
+        <div class="funnel-step"><span class="mono text-xs uppercase opacity-60">Clicks</span><span class="font-medium" id="metaClicks">—</span></div>
+        <div class="funnel-step"><span class="mono text-xs uppercase opacity-60">Link clicks</span><span class="font-medium" id="metaLinkClicks">—</span></div>
+        <div class="funnel-step"><span class="mono text-xs uppercase opacity-60">Conversaciones iniciadas</span><span class="font-medium" id="metaConv">—</span></div>
+      </div>
+    </div>
+
+    <div>
+      <p class="section-head">02 — Bot</p>
+      <h2 class="section-title">Actividad del día.</h2>
+      <div class="space-y-2">
+        <div class="funnel-step"><span class="mono text-xs uppercase opacity-60">Mensajes totales</span><span class="font-medium" id="botMsgs">—</span></div>
+        <div class="funnel-step"><span class="mono text-xs uppercase opacity-60">Phones nuevos</span><span class="font-medium" id="botNuevos">—</span></div>
+        <div class="funnel-step"><span class="mono text-xs uppercase opacity-60">Registros completos (paciente nuevo)</span><span class="font-medium" id="botReg">—</span></div>
+        <div class="funnel-step"><span class="mono text-xs uppercase opacity-60">Citas creadas</span><span class="font-medium" id="botCitas">—</span></div>
+        <div class="funnel-step"><span class="mono text-xs uppercase opacity-60">Bloqueos mismo profesional</span><span class="font-medium" id="botBloqueos">—</span></div>
+        <div class="funnel-step"><span class="mono text-xs uppercase opacity-60">Derivados a humano</span><span class="font-medium" id="botHumano">—</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="mb-10">
+    <p class="section-head">03 — Atribución por canal (tags de referido)</p>
+    <h2 class="section-title">¿De dónde nos conocieron?</h2>
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="bg-white border border-stone-300 rounded p-6">
+        <h3 class="serif text-lg mb-3">Hoy</h3>
+        <p class="text-xs opacity-60 mb-3" id="atribHoyTotal">—</p>
+        <div id="atribHoy" class="space-y-2"></div>
+      </div>
+      <div class="bg-white border border-stone-300 rounded p-6">
+        <h3 class="serif text-lg mb-3">Últimos 30 días</h3>
+        <canvas id="atrib30Chart" height="180"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <section class="mb-10">
+    <p class="section-head">04 — Funnel del día</p>
+    <h2 class="section-title">Conversación → cita.</h2>
+    <div class="bg-white border border-stone-300 rounded p-6">
+      <canvas id="funnelChart" height="80"></canvas>
+    </div>
+    <p class="text-xs opacity-60 mt-3 italic">El funnel se basa en phones que escribieron por primera vez hoy y agendaron al menos una cita el mismo día.</p>
+  </section>
+
+  <section class="mb-10">
+    <p class="section-head">05 — Estado del tracking</p>
+    <h2 class="section-title">Calidad del dato.</h2>
+    <div id="trackingHealth" class="bg-white border border-stone-300 rounded p-6 text-sm leading-relaxed"></div>
+  </section>
+
+</main>
+
+<footer class="border-t border-stone-300 mt-12 py-6">
+  <div class="max-w-7xl mx-auto px-4 flex justify-between items-center text-xs opacity-60">
+    <span class="serif">CMC · Atribución diaria</span>
+    <span class="mono">Auto-refresh cada 5 min</span>
+  </div>
+</footer>
+
+<script>
+const fmt = n => (n||0).toLocaleString('es-CL');
+const fmtClp = n => 'CLP $' + (n||0).toLocaleString('es-CL', {maximumFractionDigits:0});
+
+async function load() {
+  try {
+    const r = await fetch('/api/atribucion/today');
+    const d = await r.json();
+    document.getElementById('fechaHeader').textContent = `Fecha: ${d.fecha}`;
+
+    // KPIs
+    document.getElementById('kpiSpend').textContent = fmtClp(d.meta?.spend_clp || 0);
+    document.getElementById('kpiSpendSub').textContent = `${fmt(d.meta?.impresiones || 0)} impresiones · ${fmt(d.meta?.reach || 0)} reach`;
+    document.getElementById('kpiNuevos').textContent = fmt(d.bot?.phones_nuevos || 0);
+    document.getElementById('kpiCitas').textContent = fmt(d.bot?.citas_creadas || 0);
+    document.getElementById('kpiConv').textContent = (d.funnel?.conversion_pct ?? 0) + '%';
+    document.getElementById('kpiConvSub').textContent = `${d.funnel?.phones_nuevos_con_cita || 0} de ${d.bot?.phones_nuevos || 0}`;
+
+    // Meta detalle
+    document.getElementById('metaSpend').textContent = fmtClp(d.meta?.spend_clp || 0);
+    document.getElementById('metaImpr').textContent = fmt(d.meta?.impresiones || 0);
+    document.getElementById('metaReach').textContent = fmt(d.meta?.reach || 0);
+    document.getElementById('metaClicks').textContent = fmt(d.meta?.clicks || 0);
+    document.getElementById('metaLinkClicks').textContent = fmt(d.meta?.link_clicks || 0);
+    document.getElementById('metaConv').textContent = fmt(d.meta?.conversaciones_iniciadas || 0);
+
+    // Bot detalle
+    document.getElementById('botMsgs').textContent = fmt(d.bot?.mensajes_total || 0);
+    document.getElementById('botNuevos').textContent = fmt(d.bot?.phones_nuevos || 0);
+    document.getElementById('botReg').textContent = fmt(d.bot?.registros_completos || 0);
+    document.getElementById('botCitas').textContent = fmt(d.bot?.citas_creadas || 0);
+    document.getElementById('botBloqueos').textContent = fmt(d.bot?.bloqueos_mismo_prof || 0);
+    document.getElementById('botHumano').textContent = fmt(d.bot?.derivados_humano || 0);
+
+    // Atribución hoy
+    const hoy = d.atribucion?.por_canal_hoy || {};
+    const totalHoy = d.atribucion?.respondieron_post || 0;
+    document.getElementById('atribHoyTotal').textContent = `${totalHoy} pacientes respondieron la pregunta hoy`;
+    const hoyCont = document.getElementById('atribHoy');
+    if (totalHoy === 0) {
+      hoyCont.innerHTML = `<div class="text-stone-500 italic text-sm">Aún no hay respuestas de "¿cómo nos conociste?" hoy. La pregunta se hace tras agendar la primera cita.</div>`;
+    } else {
+      hoyCont.innerHTML = Object.entries(hoy).sort((a,b)=>b[1]-a[1]).map(([k,v]) => {
+        const pct = ((v/totalHoy)*100).toFixed(0);
+        return `<div class="flex items-center gap-3 text-sm">
+          <span class="w-24 mono uppercase text-xs opacity-70">${k}</span>
+          <div class="flex-1 bg-stone-200 rounded h-3 relative">
+            <div class="absolute left-0 top-0 h-3 rounded" style="width:${pct}%;background:var(--cobre)"></div>
+          </div>
+          <span class="w-12 text-right font-medium">${v}</span>
+          <span class="w-12 text-right text-xs opacity-60">${pct}%</span>
+        </div>`;
+      }).join('');
+    }
+
+    // Atribución 30d chart
+    const por30 = d.atribucion?.por_canal_30d || {};
+    if (Object.keys(por30).length) {
+      new Chart(document.getElementById('atrib30Chart'), {
+        type:'doughnut',
+        data:{
+          labels: Object.keys(por30),
+          datasets:[{
+            data: Object.values(por30),
+            backgroundColor:['#1F3340','#B86D3F','#5B8B96','#4A5F3A','#D4A87A','#8C2A2A']
+          }]
+        },
+        options:{ plugins:{ legend:{ position:'bottom', labels:{ font:{family:'Inter'}, boxWidth:12 } } } }
+      });
+    } else {
+      document.getElementById('atrib30Chart').replaceWith(Object.assign(document.createElement('div'),{
+        className:'text-stone-500 italic text-sm py-8 text-center',
+        textContent:'Sin tags de referido en los últimos 30 días — el tracking se acaba de habilitar (post-fix WAIT_REFERRAL_POST).'
+      }));
+    }
+
+    // Funnel
+    new Chart(document.getElementById('funnelChart'), {
+      type:'bar',
+      data:{
+        labels:['Impresiones Meta','Reach','Clicks','Link clicks','Conv. Meta','Phones nuevos','Cita creada (nuevos)'],
+        datasets:[{
+          label:'Hoy',
+          data:[
+            d.meta?.impresiones || 0,
+            d.meta?.reach || 0,
+            d.meta?.clicks || 0,
+            d.meta?.link_clicks || 0,
+            d.meta?.conversaciones_iniciadas || 0,
+            d.bot?.phones_nuevos || 0,
+            d.funnel?.phones_nuevos_con_cita || 0,
+          ],
+          backgroundColor:['#1F3340','#3D4F5C','#5B8B96','#B86D3F','#D4A87A','#4A5F3A','#8C2A2A']
+        }]
+      },
+      options:{ indexAxis:'y', plugins:{ legend:{display:false} }, scales:{ x:{ type:'logarithmic' } } }
+    });
+
+    // Tracking health
+    const health = document.getElementById('trackingHealth');
+    const items = [];
+    if ((d.meta?.spend_clp || 0) === 0) {
+      items.push(`<li><strong style="color:var(--lacre)">Meta sin actividad hoy</strong> — spend = $0. Si esto no es intencional, revisar Ads Manager (campañas pausadas, presupuesto agotado, error API).</li>`);
+    } else if ((d.meta?.spend_clp || 0) < 10000) {
+      items.push(`<li><strong style="color:var(--cobre)">Meta spend muy bajo</strong> — CLP ${fmt(d.meta.spend_clp)} hoy. Promedio histórico ~CLP $200K/día. Verificar.</li>`);
+    } else {
+      items.push(`<li><strong style="color:var(--musgo)">Meta activo</strong> — spend del día dentro de rango razonable.</li>`);
+    }
+    if ((d.atribucion?.respondieron_post || 0) === 0) {
+      items.push(`<li><strong style="color:var(--cobre)">Tracking de referidos</strong> — la pregunta post-confirmación se acaba de habilitar (WAIT_REFERRAL_POST). En las próximas horas comenzarán a aparecer respuestas.</li>`);
+    } else {
+      items.push(`<li><strong style="color:var(--musgo)">Tracking activo</strong> — ${d.atribucion.respondieron_post} respuestas hoy.</li>`);
+    }
+    if ((d.bot?.bloqueos_mismo_prof || 0) > 0) {
+      items.push(`<li><strong style="color:var(--musgo)">Bloqueo "1 cita por profesional"</strong> — disparó ${d.bot.bloqueos_mismo_prof} veces hoy. Funcionando.</li>`);
+    }
+    health.innerHTML = '<ul class="list-disc pl-5 space-y-2">' + items.join('') + '</ul>';
+
+  } catch(e) {
+    console.error(e);
+    document.body.insertAdjacentHTML('afterbegin', `<div class="bg-red-100 text-red-900 p-4 mono text-sm">Error: ${e.message}</div>`);
+  }
+}
+
+load();
+setInterval(load, 5*60*1000);
+</script>
+
+</body>
+</html>
