@@ -1376,7 +1376,8 @@ def _preguntar_pago_respuesta(data: dict | None = None, txt: str = "") -> str:
     return (
         f"{precio_block}"
         "💳 *Pago:* se cancela al momento de la atención.\n"
-        "Aceptamos efectivo, débito, crédito y transferencia.\n"
+        "• *Atenciones médicas:* efectivo o transferencia\n"
+        "• *Atenciones dentales:* efectivo, transferencia, débito o crédito\n"
         "No se cobra al agendar la hora."
     )
 
@@ -3515,7 +3516,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             # Convertir fecha a label legible para el mensaje
             from datetime import datetime as _dtx
             try:
-                _lbl = _dtx.strptime(_DIA_RELATIVO, "%Y-%m-%d").strftime("%A %d de %B").lower()
+                _d = _dtx.strptime(_DIA_RELATIVO, "%Y-%m-%d")
+                _DIAS_ES = ["lunes","martes","miércoles","jueves","viernes","sábado","domingo"]
+                _MESES_ES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"]
+                _lbl = f"{_DIAS_ES[_d.weekday()]} {_d.day} de {_MESES_ES[_d.month - 1]}"
             except Exception:
                 _lbl = _DIA_RELATIVO
             return (

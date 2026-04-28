@@ -651,7 +651,7 @@ Responde directamente estas dudas sin necesidad de agendar:
 
 REGLA ESTRICTA: Si te preguntan "¿el ginecólogo atiende por Fonasa?" o "¿hay Fonasa para [X especialidad]?", RESPONDE EXPLÍCITAMENTE SÍ/NO según la tabla. NO contestes con "tenemos Fonasa MLE en otras especialidades" sin antes responder lo que preguntan.
 - ¿Dónde compro el bono Fonasa MLE? → El bono SE EMITE EN EL MISMO CMC en recepción, con huella biométrica del paciente. Pago en efectivo o transferencia. Aplica SOLO a: Medicina General, Kinesiología, Nutrición, Psicología. Matrona NO tiene bono MLE (tiene precio preferencial directo).
-- ¿Puedo pagar con transferencia? → Sí, aceptamos efectivo y transferencia tanto para bonos Fonasa MLE como para consultas particulares.
+- ¿Puedo pagar con transferencia / tarjeta? → MÉDICAS (medicina general, especialidades, kine, nutrición, psicología, matrona, etc.): SOLO efectivo o transferencia (también para bono Fonasa MLE). DENTALES (odontología, ortodoncia, endodoncia, implantología, estética dental): efectivo, transferencia, débito o crédito. Tarjetas SOLO en atenciones dentales.
 - ¿Qué necesito traer para el bono? → Solo tu cédula de identidad. La huella biométrica se toma en recepción y el bono se emite al momento.
 - ¿Aceptan GES / AUGE? → No, el CMC es privado. Para atención GES deben ir al CESFAM Carampangue.
 - ¿Atienden Isapre? → Solo Fonasa y particular, no Isapre por ahora.
@@ -1043,7 +1043,8 @@ async def detect_intent(mensaje: str) -> dict:
             "especialidad": None,
             "respuesta_directa": (
                 "💳 *Pago:* se cancela al momento de la atención.\n"
-                "Aceptamos efectivo, débito, crédito y transferencia.\n"
+                "• *Atenciones médicas:* efectivo o transferencia\n"
+                "• *Atenciones dentales:* efectivo, transferencia, débito o crédito\n"
                 "No se cobra al agendar la hora."
             ),
         }
@@ -1443,7 +1444,10 @@ async def classify_with_context(mensaje: str, state: str, session_data: dict) ->
     from datetime import datetime as _dt
     from zoneinfo import ZoneInfo as _Z
     _hoy_cl = _dt.now(_Z("America/Santiago"))
-    ctx_fecha = f"Hoy es {_hoy_cl.strftime('%A %d de %B de %Y')} (zona Chile). Al resolver fechas relativas usa ESTE año ({_hoy_cl.year}) salvo que el paciente mencione otro año explícitamente."
+    _DIAS_ES = ["lunes","martes","miércoles","jueves","viernes","sábado","domingo"]
+    _MESES_ES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"]
+    _fecha_es = f"{_DIAS_ES[_hoy_cl.weekday()]} {_hoy_cl.day} de {_MESES_ES[_hoy_cl.month - 1]} de {_hoy_cl.year}"
+    ctx_fecha = f"Hoy es {_fecha_es} (zona Chile). Al resolver fechas relativas usa ESTE año ({_hoy_cl.year}) salvo que el paciente mencione otro año explícitamente."
 
     sys_prompt = (
         "Eres clasificador de intención de pacientes en un centro médico chileno.\n"
