@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CMC — Análisis Dr. Abarca · Carga vs sueldo</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{ --fiordo:#1F3340; --cobre:#B86D3F; --neblina:#EFE9DD; --musgo:#4A5F3A; --lacre:#8C2A2A; --agua:#5B8B96; --noche:#122028; }
+  body{ font-family:'Inter',sans-serif; background:var(--neblina); color:var(--fiordo); }
+  h1,h2,h3,.serif{ font-family:'Fraunces',serif; }
+  .mono{ font-family:'IBM Plex Mono',monospace; }
+  .kpi-card{ background:white; border:1px solid rgba(31,51,64,.1); border-radius:6px; padding:18px 22px; }
+  .kpi-num{ font-family:'Fraunces',serif; font-size:30px; font-weight:500; line-height:1; color:var(--fiordo); }
+  .kpi-label{ font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--cobre); margin-bottom:8px; }
+  .kpi-sub{ font-size:11px; color:rgba(31,51,64,.6); margin-top:4px; }
+  .section-head{ font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:3px; text-transform:uppercase; color:var(--cobre); margin-bottom:8px; }
+  .section-title{ font-family:'Fraunces',serif; font-size:30px; font-weight:500; line-height:1.05; margin-bottom:18px; }
+  .panel{ background:white; border:1px solid rgba(31,51,64,.1); border-radius:6px; padding:22px; }
+  .calday{ width:34px; height:34px; border-radius:4px; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:9px; line-height:1.05; color:var(--fiordo); position:relative; }
+  .calday .n{ font-size:11px; font-weight:600; }
+  .calday .delta{ font-size:8.5px; opacity:.85; margin-top:1px; }
+  .calday .delta.pos{ color:#3a6b2a; font-weight:600; }
+  .calday .delta.neg{ color:#7a1f1f; font-weight:600; }
+  .calday-empty{ background:#EFE9DD; border:1px dashed #d4cdb8; }
+  .pos{ color:var(--musgo); }
+  .neg{ color:var(--lacre); }
+  table.tidy{ width:100%; border-collapse:collapse; font-size:13px; }
+  table.tidy th{ text-align:left; font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--cobre); border-bottom:1px solid rgba(31,51,64,.15); padding:8px 6px; }
+  table.tidy td{ padding:8px 6px; border-bottom:1px solid rgba(31,51,64,.05); }
+  table.tidy tr:hover td{ background:rgba(184,109,63,.05); }
+  input[type=range]{ -webkit-appearance:none; appearance:none; height:4px; background:rgba(31,51,64,.15); border-radius:2px; outline:none; }
+  input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; appearance:none; width:18px; height:18px; border-radius:50%; background:var(--cobre); cursor:pointer; border:2px solid white; box-shadow:0 1px 3px rgba(0,0,0,.2); }
+  input[type=range]::-moz-range-thumb{ width:18px; height:18px; border-radius:50%; background:var(--cobre); cursor:pointer; border:2px solid white; }
+  .slider-label{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
+  .scenario-btn{ font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:1px; text-transform:uppercase; padding:8px 14px; border:1px solid rgba(31,51,64,.2); border-radius:4px; background:white; cursor:pointer; transition:all .15s; }
+  .scenario-btn:hover{ background:var(--cobre); color:white; border-color:var(--cobre); }
+</style>
+</head>
+<body>
+
+<nav class="border-b border-stone-300 sticky top-0 bg-white/90 backdrop-blur z-50">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4 text-sm">
+    <span class="serif text-lg font-medium" style="color:var(--fiordo)">CMC</span>
+    <span class="mono text-xs opacity-50">Dr. Abarca · análisis de carga</span>
+    <button id="btnRefresh" class="ml-auto mono text-xs opacity-70 hover:opacity-100" title="Forzar recarga desde Medilink">⟳ Refrescar</button>
+    <a href="/horizonte" class="opacity-70 hover:opacity-100">Horizonte</a>
+    <a href="/atribucion" class="opacity-70 hover:opacity-100">Atribución</a>
+    <a href="/menu" class="opacity-50 hover:opacity-100">← Menú</a>
+  </div>
+</nav>
+
+<main class="max-w-7xl mx-auto px-4 py-8">
+  <header class="mb-8">
+    <p class="section-head" id="ctxLabel">CMC · Recurso humano · Análisis económico</p>
+    <div class="flex items-end gap-4 flex-wrap">
+      <h1 class="text-5xl md:text-6xl font-medium leading-none mb-2" style="color:var(--fiordo)">Dr. Abarca<em class="italic" style="color:var(--cobre)">.</em></h1>
+      <div class="ml-auto flex gap-2 mb-2">
+        <a href="/abarca" id="tabTotal" class="scenario-btn">Histórico total</a>
+        <a href="/abarca/2026" id="tab2026" class="scenario-btn">Solo 2026 (Abarca)</a>
+      </div>
+    </div>
+    <p class="serif italic text-xl opacity-75" id="ctxSubtitle">¿Cuántas horas justifica la demanda real?</p>
+    <p class="mono text-xs opacity-60 mt-3" id="metaSubtitle">cargando datos Medilink…</p>
+  </header>
+
+  <!-- KPIs reales -->
+  <section class="mb-10">
+    <p class="section-head">Estado actual · contrato 40 hs/semana · sueldo $3.414.000/mes · tarifa $15.100/atención</p>
+    <div class="grid md:grid-cols-5 gap-3">
+      <div class="kpi-card">
+        <div class="kpi-label">Atendidos ene–hoy</div>
+        <div class="kpi-num" id="kpiAtend">—</div>
+        <div class="kpi-sub" id="kpiAtendSub">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Promedio mensual</div>
+        <div class="kpi-num" id="kpiAvgMes">—</div>
+        <div class="kpi-sub">vs equilibrio 226</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Ingreso promedio/mes</div>
+        <div class="kpi-num" id="kpiIngMes">—</div>
+        <div class="kpi-sub">CLP</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Pérdida promedio/mes</div>
+        <div class="kpi-num neg" id="kpiDelta">—</div>
+        <div class="kpi-sub">contrato actual</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">% de equilibrio</div>
+        <div class="kpi-num" id="kpiEquil">—</div>
+        <div class="kpi-sub" id="kpiEquilSub">—</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Por mes -->
+  <section class="mb-10 grid md:grid-cols-2 gap-6">
+    <div class="panel">
+      <p class="section-head">01 — Resultado mensual</p>
+      <h2 class="section-title">Por mes.</h2>
+      <table class="tidy" id="tablaMes"><thead><tr><th>Mes</th><th>Atend.</th><th>No asiste</th><th>Anul.</th><th>Ingreso</th><th>Delta</th></tr></thead><tbody></tbody></table>
+    </div>
+    <div class="panel">
+      <p class="section-head">02 — Demanda por día de semana</p>
+      <h2 class="section-title">Atenciones promedio.</h2>
+      <canvas id="chartDow" height="200"></canvas>
+      <p class="text-xs opacity-60 mt-3">Promedio cuando trabaja (excluye días libres). Banda roja = mediana, gris = mín–máx.</p>
+    </div>
+  </section>
+
+  <!-- Heatmap calendario -->
+  <section class="mb-10 panel">
+    <p class="section-head">03 — Carga diaria</p>
+    <h2 class="section-title">Calendario ene–hoy.</h2>
+    <div id="heatmap" class="font-mono text-xs"></div>
+    <p class="text-xs opacity-70 mt-4">Cada celda muestra <strong>nº atendidos</strong> arriba y <strong>delta vs cap del simulador</strong> abajo. Mové los sliders del simulador (más abajo) y el calendario se recalcula en vivo.</p>
+    <div class="flex flex-wrap items-center gap-3 mt-3 text-xs">
+      <span class="opacity-60 mr-2">Faltaron (capacidad ociosa):</span>
+      <span class="calday" style="background:#F0CFCB;"></span><span class="opacity-70">1–2</span>
+      <span class="calday" style="background:#DC8E86;"></span><span class="opacity-70">3–5</span>
+      <span class="calday" style="background:#B85040;color:white;"></span><span class="opacity-70">6–9</span>
+      <span class="calday" style="background:#8A2418;color:white;"></span><span class="opacity-70">10+</span>
+      <span class="opacity-60 mx-2">·</span>
+      <span class="calday" style="background:#D9D4C5;"></span><span class="opacity-70">justo (=)</span>
+      <span class="opacity-60 mx-2">·</span>
+      <span class="opacity-60 mr-2">Sobraron (demanda fuerte):</span>
+      <span class="calday" style="background:#CFE3C5;"></span><span class="opacity-70">1–2</span>
+      <span class="calday" style="background:#9FCB8E;"></span><span class="opacity-70">3–5</span>
+      <span class="calday" style="background:#5FA858;color:white;"></span><span class="opacity-70">6–9</span>
+      <span class="calday" style="background:#2D7A30;color:white;"></span><span class="opacity-70">10+</span>
+    </div>
+  </section>
+
+  <!-- Distribución por hora -->
+  <section class="mb-10 panel">
+    <p class="section-head">04 — Distribución horaria</p>
+    <h2 class="section-title">¿En qué horas concentra atenciones?</h2>
+    <canvas id="chartHora" height="100"></canvas>
+    <p class="text-xs opacity-60 mt-3">Atenciones totales por hora del día (suma ene–hoy). Útil para decidir qué franja horaria mantener.</p>
+  </section>
+
+  <!-- SIMULADOR -->
+  <section class="mb-10">
+    <p class="section-head">05 — Simulador de jornada</p>
+    <h2 class="section-title">¿Qué jornada tiene sentido?</h2>
+
+    <div class="grid md:grid-cols-3 gap-6">
+      <!-- Sliders -->
+      <div class="panel md:col-span-1">
+        <p class="mono text-xs opacity-60 mb-4">Horas por día (4 pacientes/hora)</p>
+        <div id="sliders" class="space-y-4"></div>
+        <div class="border-t mt-5 pt-4 space-y-2">
+          <p class="mono text-xs opacity-60 uppercase tracking-wider">Escenarios rápidos</p>
+          <div class="flex flex-wrap gap-2">
+            <button class="scenario-btn" data-scenario="actual">Actual (40hs)</button>
+            <button class="scenario-btn" data-scenario="planA">Plan A (2-2-2-2-2)</button>
+            <button class="scenario-btn" data-scenario="planB">Plan B (3-2-2-2-1)</button>
+            <button class="scenario-btn" data-scenario="planC">Plan C (3-2-2-1-1)</button>
+            <button class="scenario-btn" data-scenario="optimo">Sobre demanda real</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Resultados -->
+      <div class="panel md:col-span-2">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          <div>
+            <p class="kpi-label">Horas/sem</p>
+            <p class="kpi-num" id="simHoras">—</p>
+            <p class="kpi-sub">cap = horas × 4</p>
+          </div>
+          <div>
+            <p class="kpi-label">Sueldo proporc.</p>
+            <p class="kpi-num" id="simSueldo">—</p>
+            <p class="kpi-sub">CLP/mes</p>
+          </div>
+          <div>
+            <p class="kpi-label">Cobertura demanda</p>
+            <p class="kpi-num" id="simCob">—</p>
+            <p class="kpi-sub" id="simCobSub">—</p>
+          </div>
+          <div>
+            <p class="kpi-label">Delta proyectado</p>
+            <p class="kpi-num" id="simDelta">—</p>
+            <p class="kpi-sub" id="simDeltaSub">—</p>
+          </div>
+        </div>
+
+        <table class="tidy">
+          <thead><tr><th>Día</th><th>Cap (pac)</th><th>Demanda real (avg)</th><th>p90 demanda</th><th>Días sobreflujo</th><th>Pacientes perdidos/sem</th></tr></thead>
+          <tbody id="tablaSim"></tbody>
+        </table>
+        <p class="text-xs opacity-60 mt-3">"Sobreflujo" = días donde la demanda real superó tu capacidad. "Pacientes perdidos" = pacientes que no podrías haber atendido con esta jornada (basado en el histórico real ene–hoy).</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPARADOR DE MODELOS DE PAGO -->
+  <section class="mb-10">
+    <p class="section-head">06 — Modelo de pago: fijo vs porcentaje</p>
+    <h2 class="section-title">Sueldo proporcional vs % por atención.</h2>
+
+    <div class="grid md:grid-cols-3 gap-6 mb-6">
+      <div class="panel md:col-span-1">
+        <p class="mono text-xs opacity-60 mb-4">Parámetros del modelo variable</p>
+        <div class="space-y-4">
+          <div>
+            <div class="slider-label">
+              <span class="font-medium">% que cobra el médico</span>
+              <span class="mono text-sm" id="lblPct">70%</span>
+            </div>
+            <input type="range" min="40" max="90" step="5" value="70" id="pagoPct" class="w-full">
+            <p class="text-xs opacity-60 mt-1">Habitual MG: 60-70% de la consulta.</p>
+          </div>
+          <div>
+            <div class="slider-label">
+              <span class="font-medium">Tarifa promedio por atención</span>
+              <span class="mono text-sm" id="lblTarifa">$15.100</span>
+            </div>
+            <input type="range" min="10000" max="30000" step="500" value="15100" id="tarifaProm" class="w-full">
+            <p class="text-xs opacity-60 mt-1">Mix Fonasa ($15.100) + Particular ($25.000) según realidad del CMC.</p>
+          </div>
+        </div>
+        <div class="border-t mt-5 pt-4">
+          <p class="kpi-label mb-1">Pago al médico por atención</p>
+          <p class="kpi-num" id="pagoPorAtencion">—</p>
+          <p class="kpi-sub" id="pagoPorHora">—</p>
+        </div>
+      </div>
+
+      <div class="panel md:col-span-2">
+        <table class="tidy">
+          <thead><tr>
+            <th>Escenario</th>
+            <th>Horas/sem</th>
+            <th>Atend/mes</th>
+            <th>Sueldo fijo</th>
+            <th>Pago variable (%)</th>
+            <th>Diferencia</th>
+            <th>Conviene</th>
+          </tr></thead>
+          <tbody id="tablaPago"></tbody>
+        </table>
+        <p class="text-xs opacity-60 mt-3" id="pagoLectura">—</p>
+        <p class="text-xs opacity-60 mt-2"><strong>Diferencia</strong> = lo que pagás de más con el modelo fijo vs el variable. Positivo (verde) = el variable te conviene a vos. Negativo (rojo) = el fijo es más barato.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Recomendación -->
+  <section class="mb-10 panel" style="background:linear-gradient(180deg,#1F3340 0%,#122028 100%);color:#EFE9DD;">
+    <p class="section-head" style="color:#B86D3F">07 — Recomendación</p>
+    <h2 class="section-title text-white">Lectura del análisis.</h2>
+    <p id="recomendacion" class="text-base leading-relaxed opacity-90"></p>
+  </section>
+
+</main>
+
+<script>
+const SUELDO_FULL = 3414000;
+const HORAS_FULL = 40;
+const TARIFA = 15100;
+const PAC_POR_HORA = 4;
+const DIAS = ['Lun','Mar','Mié','Jue','Vie','Sáb'];
+const MESES = {'01':'Enero','02':'Febrero','03':'Marzo','04':'Abril','05':'Mayo','06':'Junio','07':'Julio','08':'Agosto','09':'Septiembre','10':'Octubre','11':'Noviembre','12':'Diciembre'};
+
+let DATA = null;
+let chartDow = null, chartHora = null;
+
+const fmt = n => new Intl.NumberFormat('es-CL').format(Math.round(n));
+const clp = n => '$' + fmt(n);
+
+// Detecta período según URL: /abarca/2026 → solo 2026, resto → histórico total
+const IS_2026 = window.location.pathname.includes('/2026');
+const DESDE = IS_2026 ? '2026-01-01' : '2025-05-01';
+
+function setActiveTab() {
+  const t = document.getElementById('tabTotal');
+  const t2 = document.getElementById('tab2026');
+  if (!t || !t2) return;
+  const active = 'background:var(--cobre);color:white;border-color:var(--cobre);';
+  t.setAttribute('style', IS_2026 ? '' : active);
+  t2.setAttribute('style', IS_2026 ? active : '');
+  // Subtítulo
+  if (IS_2026) {
+    document.getElementById('ctxLabel').textContent = 'CMC · Período enero 2026 → hoy · Para conversación con Abarca';
+    document.getElementById('ctxSubtitle').textContent = 'El período en pérdida estructural — la base de la propuesta.';
+  }
+}
+
+async function load(refresh=false) {
+  document.getElementById('metaSubtitle').textContent = refresh ? 'consultando Medilink…' : 'cargando…';
+  const params = new URLSearchParams({ desde: DESDE });
+  if (refresh) params.set('refresh', '1');
+  const r = await fetch('/api/abarca/data?' + params.toString());
+  if (!r.ok) { document.getElementById('metaSubtitle').textContent = 'error: ' + r.status; return; }
+  DATA = await r.json();
+  render();
+}
+
+function colorByDelta(n, cap) {
+  // n = atendidos del día, cap = capacidad seteada en simulador
+  if (n === 0 && cap === 0) return '#EFE9DD';      // sin actividad
+  if (n === 0) return '#F5F1E8';                    // día sin atender (cap pero no trabajó)
+  const delta = n - cap;
+  if (delta === 0) return '#D9D4C5';                // justo (gris)
+  if (delta > 0) {
+    // sobraron pacientes → verde (mientras más, más oscuro)
+    if (delta <= 2) return '#CFE3C5';
+    if (delta <= 5) return '#9FCB8E';
+    if (delta <= 9) return '#5FA858';
+    return '#2D7A30';
+  } else {
+    // faltaron pacientes → rojo (mientras más, más oscuro)
+    const a = -delta;
+    if (a <= 2) return '#F0CFCB';
+    if (a <= 5) return '#DC8E86';
+    if (a <= 9) return '#B85040';
+    return '#8A2418';
+  }
+}
+function isDarkBg(n, cap) {
+  if (n === 0) return false;
+  const delta = n - cap;
+  return delta >= 6 || delta <= -6;
+}
+
+function render() {
+  const { por_dia, por_mes, por_dow, por_hora, kpis, fecha_actualizacion } = DATA;
+  document.getElementById('metaSubtitle').textContent =
+    `Actualizado: ${fecha_actualizacion} · ${kpis.dias_con_atencion} días trabajados · ${kpis.total_atend} atenciones`;
+
+  // KPIs
+  document.getElementById('kpiAtend').textContent = fmt(kpis.total_atend);
+  document.getElementById('kpiAtendSub').textContent = `${kpis.dias_con_atencion} días trabajados`;
+  document.getElementById('kpiAvgMes').textContent = fmt(kpis.atend_avg_mes);
+  document.getElementById('kpiIngMes').textContent = clp(kpis.ing_avg_mes);
+  document.getElementById('kpiDelta').textContent = clp(kpis.delta_avg_mes);
+  document.getElementById('kpiDelta').className = 'kpi-num ' + (kpis.delta_avg_mes >= 0 ? 'pos' : 'neg');
+  document.getElementById('kpiEquil').textContent = (kpis.atend_avg_mes / 226 * 100).toFixed(0) + '%';
+  document.getElementById('kpiEquilSub').textContent = `faltan ${Math.max(0, 226 - kpis.atend_avg_mes).toFixed(0)} atenc/mes`;
+
+  // Tabla por mes
+  const tb = document.querySelector('#tablaMes tbody');
+  tb.innerHTML = '';
+  Object.keys(por_mes).sort().forEach(m => {
+    const r = por_mes[m];
+    const ing = r.atend * TARIFA;
+    const delta = ing - SUELDO_FULL;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="font-medium">${MESES[m.slice(5)]}</td>
+                    <td>${r.atend}</td>
+                    <td class="opacity-60">${r.no_asiste || 0}</td>
+                    <td class="opacity-60">${r.anul || 0}</td>
+                    <td>${clp(ing)}</td>
+                    <td class="${delta >= 0 ? 'pos' : 'neg'} font-medium">${clp(delta)}</td>`;
+    tb.appendChild(tr);
+  });
+
+  // Chart DOW
+  const dowLabels = DIAS;
+  const dowAvg = DIAS.map((_,i) => por_dow[i]?.avg || 0);
+  const dowMin = DIAS.map((_,i) => por_dow[i]?.min || 0);
+  const dowMax = DIAS.map((_,i) => por_dow[i]?.max || 0);
+  if (chartDow) chartDow.destroy();
+  chartDow = new Chart(document.getElementById('chartDow'), {
+    type: 'bar',
+    data: {
+      labels: dowLabels,
+      datasets: [
+        { label: 'Promedio', data: dowAvg, backgroundColor: '#B86D3F', borderRadius: 4 },
+        { label: 'Máx', data: dowMax, type: 'line', borderColor: 'rgba(31,51,64,.4)', backgroundColor: 'transparent', borderDash: [3,3], pointRadius: 3 },
+        { label: 'Mín', data: dowMin, type: 'line', borderColor: 'rgba(31,51,64,.2)', backgroundColor: 'transparent', borderDash: [3,3], pointRadius: 3 }
+      ]
+    },
+    options: { responsive: true, plugins: { legend: { labels: { font: { size: 11 } } } }, scales: { y: { beginAtZero: true } } }
+  });
+
+  // Heatmap calendario (initial render con caps default - será re-renderizado por recalcSim)
+  renderHeatmap(por_dia, [8,8,8,8,8,0]);
+
+  // Chart hora
+  const horaLabels = Object.keys(por_hora).sort((a,b) => +a - +b);
+  const horaData = horaLabels.map(h => por_hora[h]);
+  if (chartHora) chartHora.destroy();
+  chartHora = new Chart(document.getElementById('chartHora'), {
+    type: 'bar',
+    data: { labels: horaLabels.map(h => h+':00'), datasets: [{ label: 'Atenciones', data: horaData, backgroundColor: '#5B8B96', borderRadius: 3 }] },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+  });
+
+  // Sliders
+  buildSliders();
+  recalcSim();
+}
+
+function renderHeatmap(por_dia, caps) {
+  // caps = [Lun, Mar, Mié, Jue, Vie, Sáb] capacidades en pacientes
+  const fechas = Object.keys(por_dia).sort();
+  const por_mes_grid = {};
+  fechas.forEach(f => {
+    const m = f.slice(0,7);
+    if (!por_mes_grid[m]) por_mes_grid[m] = [];
+    por_mes_grid[m].push(f);
+  });
+  let html = '<div class="grid md:grid-cols-3 lg:grid-cols-4 gap-6">';
+  Object.keys(por_mes_grid).sort().forEach(m => {
+    html += `<div><div class="mono text-xs uppercase opacity-60 mb-2">${MESES[m.slice(5)]} ${m.slice(0,4)}</div>`;
+    html += '<div class="grid grid-cols-7 gap-1">';
+    // Padding inicial según día de semana del 1ro
+    const first = new Date(por_mes_grid[m][0] + 'T12:00');
+    const startDow = (first.getDay() + 6) % 7; // L=0..D=6
+    for (let i = 0; i < startDow; i++) html += '<div></div>';
+    por_mes_grid[m].forEach(f => {
+      const dt = new Date(f + 'T12:00');
+      const dow = (dt.getDay() + 6) % 7; // L=0..D=6
+      const n = por_dia[f] || 0;
+      // Domingo: solo placeholder, sin texto
+      if (dow === 6) {
+        html += `<div class="calday calday-empty" title="${f}: domingo"></div>`;
+        return;
+      }
+      const cap = caps[dow] || 0;
+      // Color según delta vs cap del simulador
+      const bg = colorByDelta(n, cap);
+      const dark = isDarkBg(n, cap);
+      // Delta: positivo = sobraron pacientes (jornada aprovechada) · negativo = faltaron (subutilización)
+      let deltaHtml = '';
+      if (n > 0 || cap > 0) {
+        const delta = n - cap;
+        if (delta > 0) deltaHtml = `<div class="delta pos">+${delta}</div>`;        // sobraron → bueno
+        else if (delta < 0) deltaHtml = `<div class="delta neg">${delta}</div>`;     // faltaron → malo
+        else deltaHtml = `<div class="delta" style="opacity:.5">=</div>`;
+      }
+      const txtColor = dark ? 'color:white;' : '';
+      const title = `${f}: ${n} atend · cap ${cap} · delta ${n - cap}`;
+      html += `<div class="calday" style="background:${bg};${txtColor}" title="${title}"><div class="n">${n||'·'}</div>${deltaHtml}</div>`;
+    });
+    html += '</div></div>';
+  });
+  html += '</div>';
+  document.getElementById('heatmap').innerHTML = html;
+}
+
+// ── SIMULADOR ──
+const SCENARIOS = {
+  actual: [8,8,8,8,8,0],
+  planA:  [2,2,2,2,2,0],
+  planB:  [3,2,2,2,1,0],
+  planC:  [3,2,2,1,1,0],
+};
+
+function buildSliders() {
+  const cont = document.getElementById('sliders');
+  cont.innerHTML = '';
+  DIAS.forEach((d,i) => {
+    const wrap = document.createElement('div');
+    wrap.innerHTML = `
+      <div class="slider-label">
+        <span class="font-medium">${d}</span>
+        <span class="mono text-sm" id="lblHs_${i}">2.0 hs</span>
+      </div>
+      <input type="range" min="0" max="8" step="0.5" value="2" id="sld_${i}" class="w-full">
+    `;
+    cont.appendChild(wrap);
+    document.getElementById('sld_' + i).addEventListener('input', recalcSim);
+  });
+}
+
+function setScenario(name) {
+  const cfg = SCENARIOS[name];
+  if (!cfg) {
+    if (name === 'optimo') {
+      // Setear por DOW al p90 / 4 pac/hora redondeado a 0.5
+      DIAS.forEach((_,i) => {
+        const p = (DATA.por_dow[i]?.p90 || 0);
+        const hs = Math.ceil(p / PAC_POR_HORA * 2) / 2;
+        document.getElementById('sld_' + i).value = Math.min(8, hs);
+      });
+      recalcSim();
+      return;
+    }
+    return;
+  }
+  cfg.forEach((v,i) => document.getElementById('sld_' + i).value = v);
+  recalcSim();
+}
+
+function recalcSim() {
+  const horas = DIAS.map((_,i) => parseFloat(document.getElementById('sld_' + i).value));
+  horas.forEach((h,i) => document.getElementById('lblHs_' + i).textContent = h.toFixed(1) + ' hs');
+  const totalHs = horas.reduce((a,b) => a+b, 0);
+  const cap = horas.map(h => h * PAC_POR_HORA);
+
+  // Sueldo proporcional
+  const sueldo = (totalHs / HORAS_FULL) * SUELDO_FULL;
+
+  // Cobertura: para cada día histórico, atendibles = min(real, cap[dow])
+  const por_dia = DATA.por_dia;
+  let totalReal = 0, totalCubierto = 0;
+  let perdidosPorDow = [0,0,0,0,0,0];
+  let diasOverflowDow = [0,0,0,0,0,0];
+  let diasContadosDow = [0,0,0,0,0,0];
+  Object.entries(por_dia).forEach(([f, n]) => {
+    const dow = (new Date(f + 'T12:00').getDay() + 6) % 7;
+    if (dow >= 6) return; // Domingo
+    diasContadosDow[dow]++;
+    totalReal += n;
+    const c = cap[dow];
+    const cubierto = Math.min(n, c);
+    totalCubierto += cubierto;
+    if (n > c) {
+      diasOverflowDow[dow]++;
+      perdidosPorDow[dow] += (n - c);
+    }
+  });
+  const cobertura = totalReal > 0 ? (totalCubierto / totalReal * 100) : 0;
+
+  // Ingreso mensual proyectado: cubierto / nro de meses
+  const numMeses = Object.keys(DATA.por_mes).length;
+  const ingMes = (totalCubierto / numMeses) * TARIFA;
+  const delta = ingMes - sueldo;
+
+  // Re-render heatmap con caps actuales
+  renderHeatmap(DATA.por_dia, cap);
+
+  document.getElementById('simHoras').textContent = totalHs.toFixed(1);
+  document.getElementById('simSueldo').textContent = clp(sueldo);
+  document.getElementById('simCob').textContent = cobertura.toFixed(0) + '%';
+  document.getElementById('simCobSub').textContent = `${fmt(totalCubierto)} de ${fmt(totalReal)} atend.`;
+  document.getElementById('simDelta').textContent = clp(delta);
+  document.getElementById('simDelta').className = 'kpi-num ' + (delta >= 0 ? 'pos' : 'neg');
+  document.getElementById('simDeltaSub').textContent = delta >= 0 ? 'rentable' : 'aún pierde';
+
+  // Tabla por DOW
+  const tb = document.getElementById('tablaSim');
+  tb.innerHTML = '';
+  DIAS.forEach((d,i) => {
+    const dow = DATA.por_dow[i] || {};
+    const tr = document.createElement('tr');
+    const perdSem = diasContadosDow[i] > 0 ? (perdidosPorDow[i] / diasContadosDow[i]) : 0;
+    tr.innerHTML = `<td class="font-medium">${d}</td>
+                    <td>${cap[i]}</td>
+                    <td>${(dow.avg || 0).toFixed(1)}</td>
+                    <td>${(dow.p90 || 0)}</td>
+                    <td>${diasOverflowDow[i]} / ${diasContadosDow[i]}</td>
+                    <td class="${perdSem > 0 ? 'neg' : 'pos'}">${perdSem.toFixed(1)}</td>`;
+    tb.appendChild(tr);
+  });
+
+  // Recomendación
+  let reco = '';
+  if (cobertura >= 95 && delta > 0) {
+    reco = `Esta jornada cubre ${cobertura.toFixed(0)}% de la demanda histórica con ${clp(delta)} de margen mensual proyectado. Buena combinación: pierde poca demanda y deja de generar pérdidas.`;
+  } else if (cobertura >= 85 && delta > 0) {
+    reco = `Cubre ${cobertura.toFixed(0)}% de la demanda y deja ${clp(delta)} mensuales positivos. Pierde algunos pacientes en las puntas (probablemente lunes), pero pasa de pérdida estructural a rentable.`;
+  } else if (delta > 0) {
+    reco = `Genera ${clp(delta)} mensuales pero solo cubre ${cobertura.toFixed(0)}% de la demanda. Estás dejando ${fmt(totalReal - totalCubierto)} pacientes sin atender en el histórico — evaluar si esos pacientes se irían a otro médico CMC o a la competencia.`;
+  } else {
+    reco = `Sigue generando pérdida (${clp(delta)}/mes) aunque cubra ${cobertura.toFixed(0)}% de la demanda. Reducir más horas o renegociar tarifa.`;
+  }
+  document.getElementById('recomendacion').textContent = reco;
+
+  // ── Recalcular comparador de modelos de pago (depende de cap actual) ──
+  recalcModelosPago(totalHs, totalCubierto, numMeses);
+}
+
+function recalcModelosPago(simHoras, simAtendCubiertos, numMeses) {
+  const pct = parseInt(document.getElementById('pagoPct').value, 10);
+  const tarifa = parseInt(document.getElementById('tarifaProm').value, 10);
+  document.getElementById('lblPct').textContent = pct + '%';
+  document.getElementById('lblTarifa').textContent = clp(tarifa);
+
+  // Pago al médico por unidad
+  const pagoXAtenc = tarifa * pct / 100;
+  const pagoXHora = pagoXAtenc * PAC_POR_HORA;
+  document.getElementById('pagoPorAtencion').textContent = clp(pagoXAtenc);
+  document.getElementById('pagoPorHora').textContent = `≈ ${clp(pagoXHora)}/hora trabajada (${PAC_POR_HORA} pac/h)`;
+
+  // Atend mensual histórico real (todas las atenciones del periodo)
+  const atendMesActual = DATA.kpis.atend_avg_mes;
+
+  // ESCENARIO 1: Hoy (40 hs fijo, atiende todo lo que hay = histórico)
+  const f_hoy = SUELDO_FULL;
+  const v_hoy = atendMesActual * pagoXAtenc;
+  // Para tu jornada simulada, atend = simAtendCubiertos / numMeses
+  const atendSimMes = simAtendCubiertos / numMeses;
+  const f_sim = (simHoras / HORAS_FULL) * SUELDO_FULL;
+  const v_sim = atendSimMes * pagoXAtenc;
+
+  const filas = [
+    { label: 'Hoy (40 hs · contrato actual)', hs: 40, atend: atendMesActual,
+      fijo: f_hoy, var_: v_hoy },
+    { label: `Tu jornada simulada (${simHoras.toFixed(1)} hs)`, hs: simHoras, atend: atendSimMes,
+      fijo: f_sim, var_: v_sim },
+  ];
+  // Plan B preset (10 hs · 3-2-2-2-1) y Plan A (10 hs · 2 cada día) — fijos para comparar
+  [['Plan B (10 hs)', 10], ['Plan A (10 hs)', 10]].forEach(([nm, hs]) => {
+    // Atend cubierto con cap=hs/5*4 (aprox uniforme)
+    // Mejor: usar cobertura proporcional simple cap=ATM × min(1, hs*4*22/atendMesActual)
+    const capMes = hs * PAC_POR_HORA * 4.33; // semanas/mes
+    const atendCubierto = Math.min(atendMesActual, capMes);
+    filas.push({
+      label: nm, hs, atend: atendCubierto,
+      fijo: (hs / HORAS_FULL) * SUELDO_FULL,
+      var_: atendCubierto * pagoXAtenc,
+    });
+  });
+
+  const tb = document.getElementById('tablaPago');
+  tb.innerHTML = '';
+  filas.forEach(r => {
+    const dif = r.fijo - r.var_;
+    const tr = document.createElement('tr');
+    const conv = dif > 0 ? `<span class="pos">Variable</span>` :
+                 dif < 0 ? `<span class="neg">Fijo</span>` : '<span>=</span>';
+    tr.innerHTML = `<td class="font-medium">${r.label}</td>
+                    <td>${r.hs.toFixed(1)}</td>
+                    <td>${fmt(r.atend)}</td>
+                    <td>${clp(r.fijo)}</td>
+                    <td>${clp(r.var_)}</td>
+                    <td class="${dif >= 0 ? 'pos' : 'neg'} font-medium">${clp(dif)}</td>
+                    <td>${conv}</td>`;
+    tb.appendChild(tr);
+  });
+
+  // Lectura concreta para tu jornada actual
+  const dif_sim = f_sim - v_sim;
+  let lectura = '';
+  if (dif_sim > 0) {
+    lectura = `Con tu jornada actual (${simHoras.toFixed(1)} hs) y ${pct}% por consulta, le pagarías al médico ${clp(v_sim)} (variable) vs ${clp(f_sim)} fijo. **El modelo variable te ahorra ${clp(dif_sim)}/mes** (${clp(dif_sim*12)} al año). Pero el médico se expone más a estacionalidad — feb/mar gana mucho menos que oct/nov.`;
+  } else if (dif_sim < 0) {
+    lectura = `Con tu jornada actual y ${pct}% por consulta, le pagarías ${clp(v_sim)} (variable) vs ${clp(f_sim)} fijo. **El modelo fijo te ahorra ${clp(-dif_sim)}/mes**. El variable lo pone a Abarca en mejor posición pero te cuesta más a vos.`;
+  } else {
+    lectura = `Empate: el variable y el fijo te cuestan lo mismo con tu jornada actual.`;
+  }
+  document.getElementById('pagoLectura').innerHTML = lectura.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+}
+
+// Hook recalculo al mover los nuevos sliders
+document.getElementById('pagoPct').addEventListener('input', () => recalcSim());
+document.getElementById('tarifaProm').addEventListener('input', () => recalcSim());
+
+document.querySelectorAll('.scenario-btn[data-scenario]').forEach(b => b.addEventListener('click', () => setScenario(b.dataset.scenario)));
+document.getElementById('btnRefresh').addEventListener('click', () => load(true));
+
+setActiveTab();
+load();
+</script>
+</body>
+</html>
