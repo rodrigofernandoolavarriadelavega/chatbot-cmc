@@ -11,16 +11,20 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fraunces:ital,wght@0,400;0,600;1,300;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <style>
-  /* OLACORE brand tokens (oficial — Brand Board v6) */
+  /* CMC brand tokens (Manual de Marca CMC) — mapeados sobre los nombres OLACORE para mantener compatibilidad */
   :root {
-    --olacore-fiordo: #0E2530;
-    --olacore-fiordo-2: #17323F;
-    --olacore-neblina: #E8E0D0;
-    --olacore-cobre: #B98149;
-    --olacore-lenga: #7C4A2A;
-    --olacore-lacre: #9A3E2F;
+    --cmc-navy: #0F3F68;
+    --cmc-azul: #1172AB;
+    --cmc-aqua: #4FBECE;
+    --cmc-aqua-soft: #DCEEF2;
+    --olacore-fiordo: #0F3F68;       /* navy CMC */
+    --olacore-fiordo-2: #1172AB;     /* azul CMC */
+    --olacore-neblina: #DCEEF2;      /* aqua suave */
+    --olacore-cobre: #4FBECE;        /* aqua acento */
+    --olacore-lenga: #1172AB;        /* azul (antes warm) */
+    --olacore-lacre: #C0392B;        /* alerta */
   }
-  body { font-family: 'Inter', system-ui, sans-serif; background: #faf6ee; color: var(--olacore-fiordo); }
+  body { font-family: 'Inter', system-ui, sans-serif; background: #F2F8FA; color: var(--olacore-fiordo); }
   /* Animación del sello pequeño en el header (al lado de "by OLACORE") */
   @keyframes sello-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   /* Tipografía: títulos en serif Fraunces, mono para microdatos */
@@ -31,7 +35,9 @@
   .text-slate-400 { opacity: 0.5; }
   .text-slate-300 { opacity: 0.3; }
   /* Cards y bordes con tono neblina */
-  .bg-white { background: #fffcf5 !important; }
+  .bg-white { background: #ffffff !important; }
+  .bg-emerald-600 { background: var(--cmc-aqua) !important; color: #ffffff !important; }
+  .hover\:bg-emerald-700:hover { background: var(--cmc-azul) !important; }
   .border-slate-200, .border-slate-100, .divide-slate-100 > * + * { border-color: rgba(14, 37, 48, 0.12) !important; }
   .border-slate-100 { border-color: rgba(14, 37, 48, 0.08) !important; }
   .hover\:bg-slate-50:hover { background: rgba(232, 224, 208, 0.35) !important; }
@@ -57,9 +63,9 @@
   .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(15,23,42,.08); }
   /* Tones — paleta OLACORE (fiordo · neblina · cobre · verde-musgo · lacre) */
   .tone-slate   { background: rgba(232, 224, 208, 0.45); color: var(--olacore-fiordo); border: 1px solid rgba(14,37,48,0.12); }
-  .tone-white   { background: #fffcf5; color: var(--olacore-fiordo); border: 1px solid rgba(14,37,48,0.12); }
-  .tone-blue    { background: rgba(23, 50, 63, 0.08); color: var(--olacore-fiordo); border: 1px solid rgba(23, 50, 63, 0.2); }
-  .tone-emerald { background: rgba(74, 93, 68, 0.1); color: #2f3d2c; border: 1px solid rgba(74, 93, 68, 0.3); }
+  .tone-white   { background: #ffffff; color: var(--olacore-fiordo); border: 1px solid rgba(15,63,104,0.15); }
+  .tone-blue    { background: rgba(17, 114, 171, 0.08); color: var(--cmc-navy); border: 1px solid rgba(17, 114, 171, 0.25); }
+  .tone-emerald { background: rgba(79, 190, 206, 0.14); color: var(--cmc-navy); border: 1px solid rgba(79, 190, 206, 0.4); }
   .tone-amber   { background: rgba(185, 129, 73, 0.12); color: var(--olacore-lenga); border: 1px solid rgba(185, 129, 73, 0.35); }
   .tone-rose    { background: rgba(154, 62, 47, 0.1); color: var(--olacore-lacre); border: 1px solid rgba(154, 62, 47, 0.3); }
   /* Status badges */
@@ -376,7 +382,7 @@
       <!-- Filtro por profesional -->
       <div class="rounded-lg p-4 mb-4 flex items-center gap-3 flex-wrap" style="background: rgba(232, 224, 208, 0.35);">
         <label style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:var(--olacore-cobre);">Profesional:</label>
-        <select id="geo-profesional-filter" class="text-sm px-3 py-1.5 rounded border" style="background:#fffcf5;border-color:rgba(14,37,48,0.18);color:var(--olacore-fiordo);min-width:240px;">
+        <select id="geo-profesional-filter" class="text-sm px-3 py-1.5 rounded border" style="background:#ffffff;border-color:rgba(14,37,48,0.18);color:var(--olacore-fiordo);min-width:240px;">
           <option value="">Todos</option>
         </select>
         <button id="geo-profesional-clear" class="text-xs px-2 py-1 rounded" style="background:rgba(154,62,47,0.1);color:var(--olacore-lacre);display:none;">✕ Limpiar</button>
