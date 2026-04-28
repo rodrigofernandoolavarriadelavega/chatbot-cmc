@@ -3803,9 +3803,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             from datetime import datetime as _dtx
             try:
                 _d = _dtx.strptime(_DIA_RELATIVO, "%Y-%m-%d")
-                _DIAS_ES = ["lunes","martes","miércoles","jueves","viernes","sábado","domingo"]
-                _MESES_ES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"]
-                _lbl = f"{_DIAS_ES[_d.weekday()]} {_d.day} de {_MESES_ES[_d.month - 1]}"
+                _DIAS_LBL = ["lunes","martes","miércoles","jueves","viernes","sábado","domingo"]
+                _MESES_LBL = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"]
+                _lbl = f"{_DIAS_LBL[_d.weekday()]} {_d.day} de {_MESES_LBL[_d.month - 1]}"
             except Exception:
                 _lbl = _DIA_RELATIVO
             return (
@@ -3927,12 +3927,15 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         cercanos.append(s)
                 except Exception:
                     pass
+            _slot_resp_c = None
             if cercanos:
                 data["slots"] = cercanos[:10]
                 save_session(phone, "WAIT_SLOT", data)
                 _slot_resp_c = _format_slots(cercanos[:10], mostrar_todos=True)
             _hdr = f"No tengo exactamente a las {_h_pedida:02d}:{_m_pedida:02d} 😕\n"
             _hdr += "Te muestro los más cercanos:"
+            if _slot_resp_c is None:
+                return _hdr + "\n\n_No hay otros horarios disponibles ese día._"
             if isinstance(_slot_resp_c, dict):
                 await send_whatsapp(phone, _hdr)
                 return _slot_resp_c

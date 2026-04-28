@@ -74,8 +74,60 @@ Cada fix con commit individual + predeploy_check + deploy. Si predeploy falla, N
   - Defensa: `reagendar = bool(reagendar_mode) or bool(cita_old.get("id"))`.
     Si hay cita_old con id en data, tratar como reagendar.
 
-## Pendientes de la noche
+## Simulador implementado
 
-- [ ] Implementar simulador (props + replay)
-- [ ] Iterar con simulador, encontrar bugs nuevos, arreglar
+### `scripts/audit_properties.py`
+Audita propiedades estáticas sobre el HISTORIAL de mensajes salientes en
+`sessions.db` de producción (vía sqlcipher3). Detecta:
+- Locale inglés (monday/april)
+- Leak de número personal +56987834148
+- Slots ofrecidos en el pasado (regex sobre "Te encontré hora ✨")
+- Horario genérico aplicado a profesional específico
+- Pago tarjeta para atención médica (no dental)
+
+Resultado primer run (7d): 0 violaciones POST-fix · solo histórico pre-fix.
+
+### `scripts/adversarial_chat.py`
+21 conversaciones adversariales contra `handle_message()` con Medilink y Claude
+mockeados de forma determinista. **Encontró 2 bugs nuevos en producción**:
+
+- [x] **Bug K — UnboundLocalError `_MESES_ES`** (commit pendiente)
+  - Variable global `_MESES_ES` (dict) shadowed por asignación local (lista)
+    dentro de `handle_message`. Python trataba TODA la función como si
+    `_MESES_ES` fuera local, fallaba en línea 3548 antes de definirse en 3807.
+  - Fix: renombrar locales a `_DIAS_LBL` / `_MESES_LBL`.
+
+- [x] **Bug L — UnboundLocalError `_slot_resp_c`** (commit pendiente)
+  - Variable inicializada solo dentro de `if cercanos:`. Si `cercanos` vacío,
+    fallaba al usarla más abajo.
+  - Fix: inicializar a `None` antes del if + manejar caso None.
+
+Casos cubiertos por el harness:
+- locale_es_no_ingles
+- no_personal_phone_leak
+- horario_otorrino_real_no_inventado
+- metodo_pago_separa_medico_dental
+- control_mg_gratis_2_semanas
+- para_hoy_avisa_si_no_hay_slot
+- payload_huerfano_no_da_saludo_generico
+- cierre_corto_no_repite_menu
+- ecografia_abdominal_no_cae_en_fallback
+- apellido_no_contamina_especialidad
+- no_unbound_local_para_hoy
+- rut_invalido_no_crashea
+- saludo_solo_no_repite_menu_si_takeover
+- cancel_sin_rut_no_crashea
+- mensaje_vacio_no_crashea
+- emergencia_deriva_samu
+- boletas_no_crashea
+- pregunta_horario_kine
+- ortografia_rural
+- respuesta_solo_numero
+- agendar_para_otro
+
+## Próximos pasos en la noche
+
+- [ ] Agregar más casos al adversarial (replay de conversaciones reales)
+- [ ] Iterar: encontrar más bugs, arreglar
+- [ ] Sumar predeploy_check.sh con adversarial_chat.py
 
