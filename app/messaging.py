@@ -143,16 +143,26 @@ _RX_PERSONAL_LEAK = re.compile(r"\+?\s*56[\s\-]*9[\s\-]*8783[\s\-]*4148")
 _TEL_CMC_WA_GUARD = "+56966610737"
 
 
+_RX_FIJO_44 = re.compile(r"\(\s*44\s*\)\s*\d{3}[\s\-]*\d{4}")
+_FIJO_CMC_CANONICO = "(41) 296 5226"
+
+
 def _final_phone_guard(text: str) -> str:
     """Última defensa antes de enviar al canal. Si por algún path el número
-    personal se filtró sin pasar por _scrub_telefonos, lo capturamos acá y
-    loggeamos warning para detectar regresiones."""
+    personal o el código de área incorrecto se filtraron sin pasar por
+    _scrub_telefonos, los capturamos acá y loggeamos warning para detectar
+    regresiones. Auditoría 2026-04-28: 74 casos en 7d con código (44) en
+    respuestas — Claude Haiku alucinaba o el sitio web v3 (que tiene "(44)"
+    hardcoded) lo metía en contexto."""
     if not text:
         return text
     if _RX_PERSONAL_LEAK.search(text):
         log.warning("PHONE_LEAK_GUARD personal_number_caught snippet=%r",
                     text[:160])
         text = _RX_PERSONAL_LEAK.sub(_TEL_CMC_WA_GUARD, text)
+    if _RX_FIJO_44.search(text):
+        log.warning("PHONE_LEAK_GUARD codigo_area_44 snippet=%r", text[:160])
+        text = _RX_FIJO_44.sub(_FIJO_CMC_CANONICO, text)
     return text
 
 

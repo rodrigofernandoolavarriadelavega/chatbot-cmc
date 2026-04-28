@@ -148,12 +148,86 @@ def _check_pago_tarjeta_medico(content: str) -> str | None:
     return None
 
 
+# Patrones más estrictos: el bot dijo el código de área incorrecto del fijo.
+FIJO_CODIGO_INCORRECTO = re.compile(r"\(44\)\s*296")
+
+
+def _check_codigo_area_fijo(content: str) -> str | None:
+    if FIJO_CODIGO_INCORRECTO.search(content):
+        return "codigo_area_fijo_44_en_vez_de_41"
+    return None
+
+
+# Bot dijo "monday/tuesday" aunque locale ya está en español. Combina con
+# el mes en español para reducir falsos positivos.
+LOCALE_MIXTO = re.compile(
+    r"\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b.{0,30}\bde\s+"
+    r"(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\b",
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def _check_locale_mixto(content: str) -> str | None:
+    if LOCALE_MIXTO.search(content):
+        return "locale_mixto_ingles_espanol"
+    return None
+
+
+# Slot ofrecido con apellido como especialidad ("No encontré horas para *jimenez*").
+ESP_APELLIDO_BUG = re.compile(
+    r"horas?\s+disponibles?\s+para\s+\*?(jimenez|jiménez|abarca|olavarria|olavarría|"
+    r"marquez|márquez|burgos|montalba|rodriguez|rodríguez|armijo|etcheverry)\*?",
+    re.IGNORECASE,
+)
+
+
+def _check_esp_apellido(content: str) -> str | None:
+    m = ESP_APELLIDO_BUG.search(content)
+    if m:
+        return f"esp_apellido_bug: {m.group(0)}"
+    return None
+
+
+# Dos saludos consecutivos en un mismo mensaje (bug de doble greeting).
+DOBLE_SALUDO = re.compile(
+    r"(buenos d[ií]as|buenas tardes|hola)[^.!?\n]{0,80}.{0,200}"
+    r"(hola.{0,40}bienvenido|buenos d[ií]as|buenas tardes)",
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def _check_doble_saludo(content: str) -> str | None:
+    if DOBLE_SALUDO.search(content):
+        return "doble_saludo_en_un_mensaje"
+    return None
+
+
+# Bot ofreció lavado de oídos $10.000 (precio correcto) → check de precios
+# históricos canónicos. Si en una respuesta aparece un precio CONOCIDO con
+# valor INCORRECTO, flagear.
+PRECIOS_CANONICOS = {
+    # Detectar variantes incorrectas de la primera consulta MG Fonasa
+    r"medicina general[^$]{0,40}\$\s*[789](\.\d{3})?\s*\(?fonasa": 7880,
+}
+
+# Detectar mensajes que terminan en "..." o sin signo de pregunta cuando el
+# bot está pidiendo respuesta (UX: pregunta sin signo final)
+PREGUNTA_SIN_SIGNO = re.compile(
+    r"(¿|preguntar|cuéntame|dime|escribe el).+\b(que|quien|donde|cuando|como)\b[^?\n]*$",
+    re.IGNORECASE | re.MULTILINE,
+)
+
+
 PROPIEDADES = [
-    ("locale_ingles", _check_english_locale, lambda c, ts: _check_english_locale(c)),
-    ("personal_phone", _check_personal_phone, lambda c, ts: _check_personal_phone(c)),
+    ("locale_ingles", None, lambda c, ts: _check_english_locale(c)),
+    ("locale_mixto", None, lambda c, ts: _check_locale_mixto(c)),
+    ("personal_phone", None, lambda c, ts: _check_personal_phone(c)),
+    ("codigo_area_fijo", None, lambda c, ts: _check_codigo_area_fijo(c)),
     ("slot_pasado", None, _check_slot_pasado),
-    ("horario_generico_por_prof", _check_horario_generico_por_prof, lambda c, ts: _check_horario_generico_por_prof(c)),
-    ("pago_tarjeta_medico", _check_pago_tarjeta_medico, lambda c, ts: _check_pago_tarjeta_medico(c)),
+    ("horario_generico_por_prof", None, lambda c, ts: _check_horario_generico_por_prof(c)),
+    ("pago_tarjeta_medico", None, lambda c, ts: _check_pago_tarjeta_medico(c)),
+    ("esp_apellido_bug", None, lambda c, ts: _check_esp_apellido(c)),
+    ("doble_saludo", None, lambda c, ts: _check_doble_saludo(c)),
 ]
 
 

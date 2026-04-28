@@ -125,9 +125,33 @@ Casos cubiertos por el harness:
 - respuesta_solo_numero
 - agendar_para_otro
 
+## Bugs adicionales detectados por iteración con simulador
+
+- [x] **Bug M — Fuzzy false positive "tiene" → "jimenez"** (commit `96b63d0`)
+  - Token "tiene" comparado con alias corto "jimene" daba ratio 0.727 (umbral
+    0.72) → bot ofrecía Odontología Dr. Jiménez al paciente que decía "Tiene
+    hora para médico mañana?".
+  - Fix: tokens ≥5, aliases ≥7, umbral 0.85, exclude `_PALABRAS_COMUNES`.
+
+- [x] **Bug N — `.env` local con CMC_TELEFONO=+56987834148 personal**
+  - Detectado por adversarial_chat.py global asserts.
+  - En PROD `.env` está bien (+56966610737). El local del Mac estaba mal.
+  - Fix: `config.py` ahora valida y forza default si detecta personal.
+
+- [x] **Bug O — 74 casos en 7d con código (44) en respuestas del bot**
+  - Detectado por audit_properties.py.
+  - Causa raíz: sitio-web/v3.html, v2.html, privacidad.html, templates/sitio-v3.html
+    tenían "(44) 296 5226" hardcoded como número fijo (incorrecto — Carampangue
+    es código (41)). Claude Haiku posiblemente leía esos como contexto y los
+    repetía. Plus alucinación.
+  - Fix:
+    1. Mass-replace en archivos web → 0 ocurrencias residuales.
+    2. `messaging._final_phone_guard` ahora también captura `(44)` y lo
+       reemplaza por `(41) 296 5226` antes de enviar (defense-in-depth).
+    3. `config.py` valida CMC_TELEFONO_FIJO en startup.
+
 ## Próximos pasos en la noche
 
-- [ ] Agregar más casos al adversarial (replay de conversaciones reales)
-- [ ] Iterar: encontrar más bugs, arreglar
-- [ ] Sumar predeploy_check.sh con adversarial_chat.py
+- [ ] Iterar más con simulador
+- [ ] Sumar `adversarial_chat.py` al `predeploy_check.sh`
 
