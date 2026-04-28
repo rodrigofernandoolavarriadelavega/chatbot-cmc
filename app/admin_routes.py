@@ -5,7 +5,7 @@ import hmac
 import logging
 import time
 from datetime import date, timedelta
-from collections import defaultdict
+from collections import defaultdict, deque
 
 from fastapi import APIRouter, Request, Query, HTTPException, Header, Depends, Cookie, Form, File, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -145,7 +145,7 @@ def require_ortodoncia(request: Request,
     # 1. Bearer header
     if authorization and authorization.lower().startswith("bearer "):
         tk = authorization.split(None, 1)[1].strip()
-        if tk in (ORTODONCIA_TOKEN, ADMIN_TOKEN):
+        if hmac.compare_digest(tk, ADMIN_TOKEN) or hmac.compare_digest(tk, ORTODONCIA_TOKEN):
             return tk
     # 2. Cookie
     if cmc_session:
@@ -153,7 +153,7 @@ def require_ortodoncia(request: Request,
         if role in ("admin", "ortodoncia"):
             return ORTODONCIA_TOKEN if role == "ortodoncia" else ADMIN_TOKEN
     # 3. Query param (backwards compat)
-    if token and token in (ORTODONCIA_TOKEN, ADMIN_TOKEN):
+    if token and (hmac.compare_digest(token, ADMIN_TOKEN) or hmac.compare_digest(token, ORTODONCIA_TOKEN)):
         return token
     raise HTTPException(status_code=403, detail="Acceso denegado")
 
@@ -286,26 +286,48 @@ def admin_login_page(cmc_session: str | None = Cookie(None)):
     return HTMLResponse(content=_LOGIN_HTML)
 
 
+_LOGIN_ATTEMPTS: dict[str, deque] = {}
+_LOGIN_RATE_WINDOW = 60   # segundos
+_LOGIN_RATE_MAX = 5       # intentos
+
+
+def _login_rate_limited(ip: str) -> bool:
+    """True si la IP excedió el límite de intentos en la ventana actual."""
+    import time as _t_lr
+    now = _t_lr.time()
+    bucket = _LOGIN_ATTEMPTS.setdefault(ip, deque())
+    # Drop old entries
+    while bucket and (now - bucket[0]) > _LOGIN_RATE_WINDOW:
+        bucket.popleft()
+    if len(bucket) >= _LOGIN_RATE_MAX:
+        return True
+    bucket.append(now)
+    return False
+
+
 @router.post("/admin/login")
 def admin_login(request: Request, password: str = Form(...)):
     """Valida la contrasena y setea la cookie de sesion."""
+    ip = request.client.host if request.client else "?"
+    if _login_rate_limited(ip):
+        log.warning("Admin login rate-limited ip=%s", ip)
+        raise HTTPException(status_code=429, detail="Demasiados intentos. Intenta en 1 minuto.")
     is_https = (request.url.scheme == "https"
                 or request.headers.get("x-forwarded-proto") == "https")
 
     if hmac.compare_digest(password, ADMIN_TOKEN):
         response = RedirectResponse(url="/admin", status_code=302)
         _set_session_cookie(response, "admin", is_https)
-        log.info("Admin login OK (cookie set) ip=%s",
-                 request.client.host if request.client else "?")
+        log.info("Admin login OK (cookie set) ip=%s", ip)
         return response
 
-    if password == ORTODONCIA_TOKEN:
+    if hmac.compare_digest(password, ORTODONCIA_TOKEN):
         response = RedirectResponse(url="/admin", status_code=302)
         _set_session_cookie(response, "ortodoncia", is_https)
-        log.info("Ortodoncia login OK (cookie set) ip=%s",
-                 request.client.host if request.client else "?")
+        log.info("Ortodoncia login OK (cookie set) ip=%s", ip)
         return response
 
+    log.warning("Admin login FAIL ip=%s", ip)
     raise HTTPException(status_code=401, detail="Contrasena incorrecta")
 
 

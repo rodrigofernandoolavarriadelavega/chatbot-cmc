@@ -16,9 +16,11 @@ _PNI_CALENDARIO = [
     # 2 meses
     (2, 4, "Hexavalente (1ª dosis)", "protege contra difteria, tétanos, tos convulsiva, polio, Hib y hepatitis B", False),
     (2, 4, "Neumocócica conjugada (1ª dosis)", "protege contra neumonía y meningitis neumocócica", False),
+    (2, 4, "Rotavirus (1ª dosis)", "protege contra gastroenteritis grave por rotavirus (PNI Chile desde 2022)", False),
     # 4 meses
     (4, 6, "Hexavalente (2ª dosis)", "segunda dosis de hexavalente", False),
     (4, 6, "Neumocócica conjugada (2ª dosis)", "segunda dosis contra neumonía", False),
+    (4, 6, "Rotavirus (2ª dosis)", "segunda dosis contra rotavirus", False),
     # 6 meses
     (6, 12, "Hexavalente (3ª dosis)", "tercera dosis de hexavalente", False),
     # 12 meses

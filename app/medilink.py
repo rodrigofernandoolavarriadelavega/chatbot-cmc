@@ -38,6 +38,19 @@ def _safe_json(r, default=None):
 
 HEADERS = {"Authorization": f"Token {MEDILINK_TOKEN}"}
 
+
+def _rut_safe(rut: str | None) -> str:
+    """Hash truncado de RUT para logging — Ley 21.719: no escribir RUT en
+    /var/log en claro. Se preservan los últimos 4 dígitos para diagnóstico."""
+    if not rut:
+        return "-"
+    import hashlib as _hl
+    cleaned = "".join(c for c in str(rut) if c.isalnum())
+    h = _hl.sha256(cleaned.encode()).hexdigest()[:6]
+    tail = cleaned[-3:] if len(cleaned) >= 3 else cleaned
+    return f"h{h}…{tail}"
+
+
 # Caché de horarios por profesional: id_prof → {intervalo, dias (set de weekdays Python), _ts}
 _horarios_cache: dict = {}
 _HORARIO_CACHE_TTL = 3600  # 1 hora — si cambian horarios en Medilink, se refrescan automáticamente
@@ -848,10 +861,10 @@ async def crear_paciente(rut: str, nombre: str, apellidos: str, **kwargs) -> Opt
             r = await _post(client, f"{MEDILINK_BASE_URL}/pacientes",
                             json=body, headers=HEADERS)
         except httpx.RequestError as e:
-            log.error("No se pudo crear paciente rut=%s: %s", rut, e)
+            log.error("No se pudo crear paciente rut=%s: %s", _rut_safe(rut), e)
             return None
         if r.status_code not in (200, 201):
-            log.error("Error crear paciente rut=%s: %s %s", rut, r.status_code, r.text[:200])
+            log.error("Error crear paciente rut=%s: %s %s", _rut_safe(rut), r.status_code, r.text[:200])
             return None
         p = _safe_json(r).get("data", {})
         pac_id = p.get("id")
@@ -907,7 +920,7 @@ async def buscar_paciente(rut: str) -> Optional[dict]:
             r = await _get(client, f"{MEDILINK_BASE_URL}/pacientes",
                            params={"q": _q(params)}, headers=HEADERS)
         except httpx.RequestError as e:
-            log.error("No se pudo buscar paciente rut=%s: %s", rut_clean, e)
+            log.error("No se pudo buscar paciente rut=%s: %s", _rut_safe(rut_clean), e)
             return None
         if r.status_code != 200:
             return None
@@ -916,7 +929,7 @@ async def buscar_paciente(rut: str) -> Optional[dict]:
             return None
         p = data[0]
         if not p.get("id"):
-            log.error("buscar_paciente: registro sin id para rut=%s: %s", rut_clean, p)
+            log.error("buscar_paciente: registro sin id para rut=%s: %s", _rut_safe(rut_clean), p)
             return None
         result = {
             "id":     p["id"],
@@ -1084,7 +1097,7 @@ async def listar_citas_paciente(id_paciente: int, rut: str | None = None) -> lis
                 if r.status_code == 200:
                     data = _safe_json(r).get("data", [])
             except httpx.RequestError as e:
-                log.error("listar_citas_paciente rut=%s: %s", rut, e)
+                log.error("listar_citas_paciente rut=%s: %s", _rut_safe(rut), e)
                 return []
         else:
             # Fallback: sin rut. Intenta id_paciente (fallará 400 hoy, pero
@@ -1147,7 +1160,7 @@ async def listar_historial_paciente(id_paciente: int, meses: int = 6, rut: str |
                 if r.status_code == 200:
                     data = _safe_json(r).get("data", [])
             except httpx.RequestError as e:
-                log.error("listar_historial_paciente rut=%s: %s", rut, e)
+                log.error("listar_historial_paciente rut=%s: %s", _rut_safe(rut), e)
                 return []
             # Filtrar por id_paciente por si hay otros registros con el mismo RUT
             data = [c for c in data if not c.get("id_paciente") or c.get("id_paciente") == id_paciente]

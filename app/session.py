@@ -3177,6 +3177,18 @@ def delete_patient_data(phone: str | None, rut: str | None,
                 cur = conn.execute("DELETE FROM waitlist WHERE rut=?", (resolved_rut,))
                 if cur.rowcount:
                     deleted["waitlist"] = deleted.get("waitlist", 0) + cur.rowcount
+                # Ley 21.719 art. 2: family_links contiene RUT vinculados (dependientes)
+                # y patient_vitals contiene datos de salud sensibles (presión, glicemia, etc.)
+                # — ambas deben incluirse en el cascade de derecho al olvido.
+                cur = conn.execute(
+                    "DELETE FROM family_links WHERE owner_rut=? OR dependent_rut=?",
+                    (resolved_rut, resolved_rut)
+                )
+                if cur.rowcount:
+                    deleted["family_links"] = cur.rowcount
+                cur = conn.execute("DELETE FROM patient_vitals WHERE rut=?", (resolved_rut,))
+                if cur.rowcount:
+                    deleted["patient_vitals"] = cur.rowcount
             # Borrado por id_paciente Medilink (caches locales)
             if id_paciente_medilink:
                 for table in ("citas_cache", "ortodoncia_cache", "kine_tracking"):

@@ -2444,9 +2444,28 @@ def _sanitize_upload_filename(orig: str, fallback: str = "file") -> str:
 
 @app.post("/webhook")
 async def webhook(request: Request):
-    """Recibe mensajes de Meta Cloud API (WhatsApp, Instagram, Messenger)."""
+    """Recibe mensajes de Meta Cloud API (WhatsApp, Instagram, Messenger).
+
+    Si META_APP_SECRET está configurado, valida la firma X-Hub-Signature-256
+    para evitar que un atacante envíe payloads falsos al endpoint público.
+    Sin APP_SECRET, modo legacy (acepta todo) — recomendado configurarlo.
+    """
+    # Leer body raw primero para poder validar firma (json.loads consume el stream)
+    body_bytes = await request.body()
+    from config import META_APP_SECRET as _MAS
+    if _MAS:
+        sig_header = request.headers.get("x-hub-signature-256", "")
+        if not sig_header.startswith("sha256="):
+            log.warning("webhook firma faltante o malformada")
+            return Response(status_code=403)
+        import hmac as _hmac_w, hashlib as _hl_w
+        expected = "sha256=" + _hmac_w.new(_MAS.encode(), body_bytes, _hl_w.sha256).hexdigest()
+        if not _hmac_w.compare_digest(sig_header, expected):
+            log.warning("webhook firma inválida")
+            return Response(status_code=403)
     try:
-        data = await request.json()
+        import json as _json_w
+        data = _json_w.loads(body_bytes.decode() or "{}")
     except Exception:
         return Response(status_code=200)
     if not isinstance(data, dict):
@@ -2696,7 +2715,10 @@ async def webhook(request: Request):
         _rut = (_profile.get("rut") or "").strip()
         _rate_keys = (phone, f"rut:{_rut}" if _rut else "")
         if _rate_limited(*_rate_keys):
-            log.warning("Rate limit excedido WA phone=%s rut=%s type=%s", phone, _rut or "-", msg_type)
+            # Ley 21.719: NO loguear RUT en claro en /var/log. Hash truncado para diagnóstico.
+            import hashlib as _hl_rut
+            _rut_log = _hl_rut.sha256(_rut.encode()).hexdigest()[:8] if _rut else "-"
+            log.warning("Rate limit excedido WA phone=%s rut_hash=%s type=%s", phone, _rut_log, msg_type)
             return Response(status_code=200)
 
         # Extraer texto de mensajes de texto, respuestas interactivas o audio

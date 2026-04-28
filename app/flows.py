@@ -359,7 +359,6 @@ CROSS_REFERENCE: dict[str, str] = {
         "Sarai Gómez atiende en el CMC y realiza:\n"
         "• Control ginecológico\n"
         "• PAP\n"
-        "• Ecografía ginecológica\n"
         "• Control prenatal\n"
         "• Planificación familiar\n\n"
         "Complementa tu atención ginecológica. "
@@ -1546,16 +1545,16 @@ def _recordatorio_prompt(state: str, data: dict) -> str:
     if state == "WAIT_SLOT":
         return "_¿Te sirve alguno de los horarios que te mostré, o prefieres otro día?_"
     if state == "WAIT_WAITLIST_CONFIRM":
-        return "_Responde *SI* para inscribirte en lista de espera o *NO* si prefieres llamar._"
+        return "_Responde *Sí* para inscribirte en lista de espera o *No* si prefieres llamar._"
     if state in ("WAIT_RUT_AGENDAR", "WAIT_RUT_CANCELAR", "WAIT_RUT_REAGENDAR", "WAIT_RUT_VER",
                  "WAIT_WAITLIST_RUT"):
         return "_Necesito tu RUT para continuar (ej: 12.345.678-9)._"
     if state == "WAIT_MODALIDAD":
         return "_Indica si tu atención es *Fonasa* o *Particular*._"
     if state == "WAIT_BOOKING_FOR":
-        return "_La hora es para *ti* o para *otra persona*?_"
+        return "_¿La hora es para *ti* o para *otra persona*?_"
     if state == "CONFIRMING_CITA":
-        return "_¿Confirmo la reserva? Responde *SI* o *NO*._"
+        return "_¿Confirmo la reserva? Responde *Sí* o *No*._"
     return ""
 
 
@@ -3001,7 +3000,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         [
                             {"id": "quick_yes", "title": "⚡ Sí, agendar"},
                             {"id": "quick_other", "title": "🔄 Otra especialidad"},
-                            {"id": "quick_cancel", "title": "Ahora no"},
+                            {"id": "quick_cancel", "title": "✋ Ahora no"},
                         ]
                     )
             # Detectar "para hoy/mañana" en el mensaje y propagar al agendar.
@@ -3374,7 +3373,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             [
                 {"id": "quick_yes", "title": "⚡ Sí, agendar"},
                 {"id": "quick_other", "title": "🔄 Otra especialidad"},
-                {"id": "quick_cancel", "title": "Ahora no"},
+                {"id": "quick_cancel", "title": "✋ Ahora no"},
             ]
         )
 
@@ -4858,7 +4857,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "• Escribe *menu* para volver al inicio"
             )
 
-        return "Responde *SÍ* para confirmar o *NO* para cambiar."
+        return _btn_msg(
+            "Responde *Sí* para confirmar o *No* para cambiar.",
+            [{"id": "si", "title": "✅ Sí, reservar"},
+             {"id": "no", "title": "❌ Cambiar"}]
+        )
 
     # ── WAIT_RUT_CANCELAR ─────────────────────────────────────────────────────
     if state == "WAIT_RUT_CANCELAR":
@@ -4991,7 +4994,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             reset_session(phone)
             return "Perfecto, tu cita se mantiene 😊\n_Escribe *menu* si necesitas algo más._"
 
-        return "Responde *SÍ* para cancelar o *NO* para mantener la cita."
+        return _btn_msg(
+            "Responde *Sí* para cancelar o *No* para mantener la cita.",
+            [{"id": "si", "title": "✅ Sí, cancelar"},
+             {"id": "no", "title": "❌ Mantener cita"}]
+        )
 
     # ── WAIT_RUT_REAGENDAR ────────────────────────────────────────────────────
     if state == "WAIT_RUT_REAGENDAR":
@@ -5621,8 +5628,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         save_session(phone, "CONFIRMING_CITA", data)
         slot = data["slot_elegido"]
         modalidad = data.get("modalidad", "particular").capitalize()
+        _sx = (paciente.get("sexo") or data.get("sexo") or "").upper()
+        _flex_reg = "registrada" if _sx == "F" else "registrado"
         return _btn_msg(
-            f"¡Listo, *{nombre}*! Ya estás registrado/a 🙌\n\n"
+            f"¡Listo, *{nombre}*! Ya estás {_flex_reg} 🙌\n\n"
             f"Te reservo esta hora:\n\n"
             f"👤 {paciente['nombre']}\n"
             f"🏥 {slot['especialidad']} — {slot['profesional']}\n"
@@ -5691,8 +5700,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         save_session(phone, "CONFIRMING_CITA", data)
         slot = data["slot_elegido"]
         modalidad = data.get("modalidad", "particular").capitalize()
+        _sx2 = (paciente.get("sexo") or data.get("sexo") or "").upper()
+        _flex_reg2 = "registrada" if _sx2 == "F" else "registrado"
         return _btn_msg(
-            f"\u00a1Listo, *{nombre}*! Ya quedaste registrado/a \U0001f64c\n\n"
+            f"\u00a1Listo, *{nombre}*! Ya quedaste {_flex_reg2} \U0001f64c\n\n"
             f"\u00bfConfirmas esta hora?\n\n"
             f"\U0001f464 *{paciente['nombre']}*\n"
             f"\U0001f3e5 *{slot['especialidad']}* \u2014 {slot['profesional']}\n"
@@ -7172,8 +7183,10 @@ def _inscribir_waitlist_y_responder(phone: str, data: dict) -> str:
     reset_session(phone)
     nombre_corto = _first_name(nombre)
     saludo = f"*{nombre_corto}*, " if nombre_corto else ""
+    _sx_w = (data.get("sexo") or (data.get("paciente") or {}).get("sexo") or "").upper()
+    _flex_ins = "inscrita" if _sx_w == "F" else "inscrito"
     return (
-        f"✅ Listo {saludo}quedaste inscrito/a en la lista de espera de *{esp}*.\n\n"
+        f"✅ Listo {saludo}quedaste {_flex_ins} en la lista de espera de *{esp}*.\n\n"
         "Apenas se libere un cupo te aviso por este mismo chat 📱\n\n"
         "_Escribe *menu* si necesitas algo más._"
     )
