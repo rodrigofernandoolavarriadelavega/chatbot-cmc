@@ -672,7 +672,7 @@ def abarca_dashboard_page():
 
 
 _ABARCA_CACHE_PATH = Path(__file__).parent.parent / "data" / "abarca_cache.json"
-_ABARCA_CACHE_TTL_SEC = 3600  # 1h
+_ABARCA_CACHE_TTL_SEC = 86400  # 24h (refresh manual con ?refresh=1)
 
 
 @app.get("/api/abarca/data")
@@ -811,7 +811,7 @@ async def api_abarca_data(refresh: int = 0, desde: str = "2025-05-01"):
 
     return {
         "fecha_actualizacion": _dt_ab.now().strftime("%Y-%m-%d %H:%M"),
-        "fuente_cache": "json local (TTL 1h)" if cache_age and cache_age < _ABARCA_CACHE_TTL_SEC else "Medilink fresh",
+        "fuente_cache": "json local (TTL 24h)" if cache_age and cache_age < _ABARCA_CACHE_TTL_SEC else "Medilink fresh",
         "por_dia": por_dia,
         "por_mes": dict(por_mes),
         "por_dow": dow_stats,

@@ -295,13 +295,14 @@ async def _get_horario(client: httpx.AsyncClient, id_prof: int) -> dict:
             return cached
         return {"intervalo": PROFESIONALES[id_prof]["intervalo"], "dias": set(range(5)), "horario_dia": {}}
 
-    horario = {"intervalo": PROFESIONALES[id_prof]["intervalo"], "dias": set(range(6)), "horario_dia": {}}
+    horario = {"intervalo": PROFESIONALES[id_prof]["intervalo"], "dias": set(range(6)), "horario_dia": {}, "usa_agendas": False}
     if r.status_code == 200:
         data = _safe_json(r).get("data", [])
         sucursal_data = next((x for x in data if x.get("id_sucursal") == int(MEDILINK_SUCURSAL)), None)
         if sucursal_data:
             dias_activos = set()
             horario_dia = {}
+            tiene_dias_fantasma = False
             for d in sucursal_data.get("dias", []):
                 hi = d.get("hora_inicio", "")
                 hf = d.get("hora_fin", "")
@@ -319,15 +320,24 @@ async def _get_horario(client: httpx.AsyncClient, id_prof: int) -> dict:
                         if bhi and bhf and bhi != bhf:
                             break_t = (bhi[:5], bhf[:5])
                         horario_dia[wd] = (hi[:5], hf[:5], break_t)
+                elif hi and hi == hf:
+                    tiene_dias_fantasma = True
+            # Profesional con horarios fantasma (todos hi==hf) = "horas especiales".
+            # No tiene jornada base recurrente — la recepción agenda cupos puntuales
+            # via /agendas. El bot debe usar /agendas en vez de generar slots desde
+            # el horario base (que está vacío). 14 de 23 profs del CMC funcionan así.
+            usa_agendas = tiene_dias_fantasma and not horario_dia
             horario = {
                 "intervalo":   PROFESIONALES[id_prof]["intervalo"],
-                "dias":        dias_activos if dias_activos else set(range(5)),
+                "dias":        dias_activos if dias_activos else set(range(6)),
                 "horario_dia": horario_dia,
+                "usa_agendas": usa_agendas,
             }
 
-    # Solo cachear si obtuvimos horario_dia real. Sin esto, un 429 que deja
-    # horario_dia={} se cacheaba 1h y tumbaba a ese profesional para todos.
-    if horario.get("horario_dia"):
+    # Cachear si tenemos horario_dia real O si está marcado como usa_agendas.
+    # Antes solo cacheaba si horario_dia tenía datos, lo que dejaba a los profs
+    # de "horas especiales" siempre re-fetcheando.
+    if horario.get("horario_dia") or horario.get("usa_agendas"):
         horario["_ts"] = time.monotonic()
         _horarios_cache[id_prof] = horario
     else:
@@ -335,6 +345,58 @@ async def _get_horario(client: httpx.AsyncClient, id_prof: int) -> dict:
         if cached and cached.get("horario_dia"):
             return cached  # fallback a stale si existe
     return horario
+
+
+async def _slots_desde_agendas(client: httpx.AsyncClient, id_prof: int, fecha: str) -> list:
+    """Para profesionales con `usa_agendas=True` (sin horario base recurrente),
+    consulta /agendas y devuelve los slots libres (id_paciente=0) de la fecha
+    pedida. /agendas devuelve cupos creados manualmente por la recepción.
+
+    Nota: Medilink ignora el filtro `fecha eq` en /agendas y siempre devuelve
+    todos los cupos próximos. Filtramos en código por la fecha exacta.
+    """
+    fecha_dt = datetime.strptime(fecha, "%Y-%m-%d").date()
+    fecha_dmy = fecha_dt.strftime("%d/%m/%Y")
+    params = {
+        "id_sucursal":      {"eq": int(MEDILINK_SUCURSAL)},
+        "id_profesional":   {"eq": id_prof},
+        "fecha":            {"eq": fecha},
+    }
+    try:
+        r = await _get(client, f"{MEDILINK_BASE_URL}/agendas",
+                       params={"q": _q(params)}, headers=HEADERS)
+    except httpx.RequestError as e:
+        log.error("No se pudo obtener /agendas prof=%d fecha=%s: %s", id_prof, fecha, e)
+        return []
+    if r.status_code != 200:
+        return []
+    data = _safe_json(r).get("data", [])
+    libres = []
+    for slot in data:
+        # Filtrar por fecha exacta (Medilink devuelve dd/mm/yyyy)
+        if slot.get("fecha") != fecha_dmy:
+            continue
+        # id_paciente=0 = libre. Otros valores = ya reservado.
+        if slot.get("id_paciente") not in (0, None):
+            continue
+        hi = (slot.get("hora_inicio") or "")[:5]
+        hf = (slot.get("hora_fin") or "")[:5]
+        if not hi or not hf:
+            continue
+        libres.append({
+            "profesional":    PROFESIONALES[id_prof]["nombre"],
+            "especialidad":   PROFESIONALES[id_prof]["especialidad"],
+            "fecha":          fecha,
+            "fecha_display":  _fmt_fecha(fecha),
+            "hora_inicio":    hi,
+            "hora_fin":       hf,
+            "id_profesional": id_prof,
+            "id_recurso":     slot.get("id_recurso", 1),
+        })
+    libres.sort(key=lambda x: x["hora_inicio"])
+    log.info("Slots /agendas prof %d fecha %s: %d libres",
+             id_prof, fecha, len(libres))
+    return libres
 
 
 async def _get_bloqueos(client: httpx.AsyncClient, id_prof: int, fecha: str) -> list:
@@ -511,6 +573,24 @@ async def _slots_para_fecha(client: httpx.AsyncClient, ids: list, horarios: dict
 
     for id_prof in ids:
         h = horarios[id_prof]
+        # Profesionales de "horas especiales" (Pardo, Quijano, Millán, etc.):
+        # no tienen horario base recurrente — leen slots desde /agendas.
+        if h.get("usa_agendas"):
+            slots_ag = await _slots_desde_agendas(client, id_prof, fecha)
+            if slots_ag:
+                _ahora_cl_a = datetime.now(_CHILE_TZ)
+                ahora_min_a = _h_to_min(_ahora_cl_a.strftime("%H:%M")) if fecha == _ahora_cl_a.date().strftime("%Y-%m-%d") else None
+                BUFFER_A = 60
+                horas_vistas_a = {s["hora_inicio"] for s in todos_libres}
+                for s in slots_ag:
+                    if ahora_min_a is not None and _h_to_min(s["hora_inicio"]) <= (ahora_min_a + BUFFER_A):
+                        continue
+                    if s["hora_inicio"] in horas_vistas_a:
+                        continue
+                    horas_vistas_a.add(s["hora_inicio"])
+                    todos_libres.append(s)
+                intervalo = h.get("intervalo", intervalo)
+            continue
         if weekday not in h["dias"]:
             continue
         # Obtener hora inicio/fin para este día específico

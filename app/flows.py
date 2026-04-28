@@ -1487,15 +1487,23 @@ async def _responder_pregunta_horario(phone: str, state: str, data: dict, txt: s
         return "Los días de atención dependen del profesional. Te puedo mostrar horarios disponibles."
 
 
+_ESP_DENTALES = {
+    "odontología", "odontologia", "ortodoncia", "endodoncia",
+    "implantología", "implantologia", "estética facial", "estetica facial",
+    "estética dental", "estetica dental",
+}
+
 def _preguntar_pago_respuesta(data: dict | None = None, txt: str = "") -> str:
-    """Responde sobre pago. Si hay especialidad activa en data, incluye el precio
-    primero — un paciente que pregunta 'cuánto sale' quiere el monto, no el
-    método de pago. Sin contexto, cae al texto genérico de formas de pago.
+    """Responde sobre pago. Si hay especialidad activa, muestra SOLO los métodos
+    aplicables (médica vs dental) para no confundir al paciente. Sin contexto,
+    muestra ambos.
     """
     precio_block = ""
+    esp_low = ""
     if data:
         slot = data.get("slot_elegido") or {}
         esp = (slot.get("especialidad") or data.get("especialidad") or "").strip()
+        esp_low = esp.lower()
         if esp:
             # Si el paciente menciona "particular" o "fonasa" en el texto, forzar esa columna
             _modalidad_pedida = None
@@ -1507,11 +1515,20 @@ def _preguntar_pago_respuesta(data: dict | None = None, txt: str = "") -> str:
             linea = _precio_line(esp, slot if slot else None, modalidad_override=_modalidad_pedida)
             if linea:
                 precio_block = f"{linea}\n\n"
+    # Filtrar la línea de pago según el tipo de especialidad
+    if esp_low and any(d in esp_low for d in _ESP_DENTALES):
+        metodos = "• Efectivo, transferencia, débito o crédito\n"
+    elif esp_low:
+        metodos = "• Efectivo o transferencia\n"
+    else:
+        metodos = (
+            "• *Atenciones médicas:* efectivo o transferencia\n"
+            "• *Atenciones dentales:* efectivo, transferencia, débito o crédito\n"
+        )
     return (
         f"{precio_block}"
         "💳 *Pago:* se cancela al momento de la atención.\n"
-        "• *Atenciones médicas:* efectivo o transferencia\n"
-        "• *Atenciones dentales:* efectivo, transferencia, débito o crédito\n"
+        f"{metodos}"
         "No se cobra al agendar la hora."
     )
 
@@ -1611,8 +1628,25 @@ async def _pre_router_wait(phone: str, txt: str, tl: str, state: str, data: dict
 
         if tag == "pedir_hora_nuevo":
             nueva_esp = (args.get("especialidad") or "").strip().lower()
+            # Si el paciente NO especificó una especialidad nueva pero antes
+            # vio una sugerencia (ej: "¿Te agendo en ecografía?") y ahora
+            # dice "quisiera agendar porfavor" → respetar esa sugerencia
+            # en vez de resetear y volver a preguntar especialidad de cero.
+            esp_sug = data.get("especialidad_sugerida")
+            esp_final = nueva_esp or esp_sug or None
+            data_carry = {}
+            if esp_final:
+                # Pasamos perfil conocido si está, así no re-pregunta RUT
+                perfil = get_profile(phone)
+                if perfil:
+                    data_carry["rut_conocido"] = perfil["rut"]
+                    data_carry["nombre_conocido"] = perfil["nombre"]
+                log_event(phone, "pedir_hora_carry_sugerencia", {
+                    "esp_final": esp_final, "tenia_sugerencia": bool(esp_sug),
+                    "explicita": bool(nueva_esp),
+                })
             reset_session(phone)
-            return await _iniciar_agendar(phone, {}, nueva_esp or None)
+            return await _iniciar_agendar(phone, data_carry, esp_final)
 
         if tag == "cambiar_profesional":
             if state == "WAIT_SLOT":
@@ -1702,25 +1736,25 @@ async def _pre_router_wait(phone: str, txt: str, tl: str, state: str, data: dict
             return None
 
         if tag == "fuera_de_alcance":
-            # Guard-rail: si el texto ES una respuesta válida para el estado
-            # actual, dejar pasar al handler para que procese su propia lógica.
-            _tl_fda = txt.lower().strip()
-            _PALABRAS_VALIDAS_ESP = {"general", "mg", "médico", "medico",
-                                      "generica", "genérica"}
-            _CIERRES_CORDIALES = {"gracias", "muchas gracias", "bendiciones",
-                                    "saludos", "que tenga buen dia",
-                                    "que tengan buen dia", "perfecto"}
-            _OTRA_PERSONA_KW = {"otra persona", "otro", "otra", "familiar"}
-            if state == "WAIT_ESPECIALIDAD" and _tl_fda in _PALABRAS_VALIDAS_ESP:
-                return None
-            if state in ("WAIT_RUT_AGENDAR", "WAIT_RUT_CANCELAR",
-                         "WAIT_RUT_REAGENDAR", "WAIT_RUT_VER"):
-                if _tl_fda in _OTRA_PERSONA_KW:
-                    return None
-                if _tl_fda in _CIERRES_CORDIALES:
+            # REGLA SISTÉMICA: el clasificador de intent NUNCA sobreescribe
+            # un handler de estado activo. Si el paciente está en CUALQUIER
+            # WAIT_*, el handler del estado tiene el contexto correcto para
+            # decidir si el mensaje es válido en ese paso. Solo cuando estamos
+            # en IDLE (sin flujo activo) tiene sentido derivar a recepción.
+            #
+            # Excepción operativa: en WAIT_RUT_* permitimos que cierres
+            # cordiales ("gracias", "saludos") respondan amablemente sin
+            # cerrar el flujo (el paciente está pensando, no abandonó).
+            if state.startswith("WAIT_") or state == "CONFIRMING_CITA" or state == "CONFIRMING_CANCEL":
+                _tl_fda = txt.lower().strip()
+                _CIERRES_CORDIALES = {"gracias", "muchas gracias", "bendiciones",
+                                       "saludos", "que tenga buen dia",
+                                       "que tengan buen dia", "perfecto"}
+                if state.startswith("WAIT_RUT_") and _tl_fda in _CIERRES_CORDIALES:
                     save_session(phone, state, data)
                     return "🙏 Cuando tengas el RUT me lo envías para continuar."
-            # Entregar contacto + dejar el flujo abierto
+                return None  # ← handler del estado decide
+            # IDLE / HUMAN_TAKEOVER → derivar a recepción
             save_session(phone, state, data)
             return (
                 f"Para ese tema prefiero que hables directamente con recepción:\n\n"
@@ -2216,9 +2250,24 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "Sin problema 😊 Cuando lo necesites, estamos acá.\n"
                     "_Escribe *menu* para ver todas las opciones._"
                 )
-            if tl == "agendar_sugerido" or txt == "1" or tl in AFIRMACIONES or tl_norm in AFIRMACIONES:
+            # Aceptación implícita: paciente expresa intent de agendar (texto libre)
+            # cuando hay especialidad sugerida → procesar como sí.
+            # Cubre casos como "quisiera agendar porfavor", "agendame", "reservar hora",
+            # "quiero la hora", etc. — frecuente cuando el paciente vuelve después de
+            # ver la sugerencia y no responde con "sí" puro.
+            _AGENDAR_KWS = (
+                "agendar", "agenda", "agéndame", "agendame", "agendarme",
+                "reserva", "reservar", "reservame", "resérvame",
+                "quiero hora", "quiero la hora", "quiero una hora",
+                "tomar hora", "tomar la hora", "darme hora",
+            )
+            _es_intent_agendar = any(kw in tl_norm for kw in _AGENDAR_KWS)
+            if (tl == "agendar_sugerido" or txt == "1"
+                or tl in AFIRMACIONES or tl_norm in AFIRMACIONES
+                or _es_intent_agendar):
                 data.pop("especialidad_sugerida", None)
-                log_event(phone, "faq_agendar_acepto", {"esp": esp_sug_prev})
+                log_event(phone, "faq_agendar_acepto", {"esp": esp_sug_prev,
+                                                          "via": "implicit" if _es_intent_agendar else "explicit"})
                 perfil = get_profile(phone)
                 if perfil:
                     data["rut_conocido"] = perfil["rut"]
