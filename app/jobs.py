@@ -280,6 +280,22 @@ async def _job_takeover_ttl():
         log.exception("takeover_ttl falló: %s", e)
 
 
+async def _job_takeover_media_ttl():
+    """TTL más agresivo (6h) para HUMAN_TAKEOVER iniciados por imagen/PDF/doc.
+    Esos handoffs solo requieren ack/archivo de la recepción, no conversación —
+    no tiene sentido bloquear al paciente 24h. Auditoría 28-abr-2026: 9 sesiones
+    varadas con +8h por media sin acción de recepción.
+    """
+    try:
+        from session import reanudar_takeovers_expirados
+        phones = reanudar_takeovers_expirados(horas_max=6, solo_media=True)
+        if phones:
+            log.info("takeover_media_ttl: reanudados %d phones por media (primeros 10): %s",
+                     len(phones), phones[:10])
+    except Exception as e:
+        log.exception("takeover_media_ttl falló: %s", e)
+
+
 async def _job_medilink_watchdog():
     """Cada minuto: si Medilink está marcado como caído, prueba un ping.
     - Si se recuperó: marca up, notifica a los pacientes encolados y avisa a recepción.

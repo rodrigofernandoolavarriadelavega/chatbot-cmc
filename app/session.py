@@ -527,34 +527,59 @@ def reset_session(phone: str):
         _reset(conn, phone)
 
 
-def reanudar_takeovers_expirados(horas_max: int = 24) -> list[str]:
+def reanudar_takeovers_expirados(horas_max: int = 24,
+                                  solo_media: bool = False) -> list[str]:
     """Reanuda automáticamente sesiones HUMAN_TAKEOVER que llevan más de
     `horas_max` horas sin actividad. Retorna la lista de phones reanudados.
 
     Causa raíz que resuelve: si recepción cierra el chat sin clickear
     "Devolver al bot", la sesión queda bloqueada indefinidamente y cualquier
-    mensaje del paciente queda silenciado. Auditoría 2026-04-28: 107 sesiones
-    HUMAN_TAKEOVER con +48h sin reanude, 29 con +7 días.
+    mensaje del paciente queda silenciado.
+
+    `solo_media=True` filtra solo handoffs por imagen/PDF (handoff_reason
+    LIKE 'media:%'). Estos típicamente solo requieren ack y archivado, no
+    respuesta de la recepción → TTL más corto. Auditoría 28-abr-2026:
+    9 sesiones varadas con +8h por imagen sin acción.
     """
     phones_reanudados: list[str] = []
     with _conn() as conn:
-        rows = conn.execute(
-            """
-            SELECT phone FROM sessions
-             WHERE state = 'HUMAN_TAKEOVER'
-               AND datetime(updated_at) < datetime('now', ?)
-            """,
-            (f'-{int(horas_max)} hours',),
-        ).fetchall()
+        if solo_media:
+            rows_raw = conn.execute(
+                """
+                SELECT phone, data FROM sessions
+                 WHERE state = 'HUMAN_TAKEOVER'
+                   AND datetime(updated_at) < datetime('now', ?)
+                """,
+                (f'-{int(horas_max)} hours',),
+            ).fetchall()
+            import json as _json_r
+            rows = []
+            for r in rows_raw:
+                try:
+                    d = _json_r.loads(r[1] or "{}")
+                    if str(d.get("handoff_reason", "")).startswith("media:"):
+                        rows.append((r[0],))
+                except Exception:
+                    pass
+        else:
+            rows = conn.execute(
+                """
+                SELECT phone FROM sessions
+                 WHERE state = 'HUMAN_TAKEOVER'
+                   AND datetime(updated_at) < datetime('now', ?)
+                """,
+                (f'-{int(horas_max)} hours',),
+            ).fetchall()
         for row in rows:
             phone = row[0]
             phones_reanudados.append(phone)
             _reset(conn, phone)
             try:
+                payload = '{"horas_max": %d, "solo_media": %s}' % (horas_max, "true" if solo_media else "false")
                 conn.execute(
                     "INSERT INTO conversation_events (phone, event, payload, ts) "
                     "VALUES (?, 'takeover_ttl_reanudado', ?, datetime('now'))",
-                    (phone, f'{{"horas_max": {horas_max}}}'),
+                    (phone, payload),
                 )
             except Exception:
                 pass

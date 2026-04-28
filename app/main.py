@@ -46,7 +46,7 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_doctor_resumen_precita, _job_doctor_reporte_progreso,
                   _job_doctor_reset_diario,
                   _job_cumpleanos, _job_winback,
-                  _job_takeover_ttl)
+                  _job_takeover_ttl, _job_takeover_media_ttl)
 import admin_routes
 import portal_routes
 
@@ -264,6 +264,14 @@ async def lifespan(app: FastAPI):
         _job_takeover_ttl,
         CronTrigger(minute=15, timezone=_CLT),
         id="takeover_ttl",
+        replace_existing=True,
+    )
+    # TTL más corto (6h) para HUMAN_TAKEOVER iniciados por imagen/PDF: solo
+    # requieren ack/archivado. Cron cada hora a los :45.
+    scheduler.add_job(
+        _job_takeover_media_ttl,
+        CronTrigger(minute=45, timezone=_CLT),
+        id="takeover_media_ttl",
         replace_existing=True,
     )
     # Reporte periódico de estado al admin cada 30 min
@@ -2451,8 +2459,13 @@ async def webhook(request: Request):
         "😁 *Ortodoncia:* completa $120.000 / controles $30.000"
     )
 
-    def _interactive_to_text(resp: dict) -> str:
-        """Convierte un mensaje interactivo de WhatsApp a texto plano para IG/FB."""
+    def _interactive_to_text(resp: dict, include_promo: bool = False) -> str:
+        """Convierte un mensaje interactivo a texto plano.
+        Se usa para:
+         - IG/FB outbound (WhatsApp interactive no aplica) → include_promo=True
+         - Logging de mensajes WA en messages.text → include_promo=False (la
+           recepcionista necesita ver header + opciones tal como las ve el paciente)
+        """
         inter = resp.get("interactive", {})
         itype = inter.get("type", "")
         body = inter.get("body", {}).get("text", "")
@@ -2468,9 +2481,8 @@ async def webhook(request: Request):
                     desc = f" — {row['description']}" if row.get("description") else ""
                     opts.append(f"  • {row['title']}{desc}")
             items = "\n".join(opts)
-            # Agregar promo al menú principal
             is_menu = "¿Qué necesitas hoy?" in body
-            promo = _SOCIAL_PROMO if is_menu else ""
+            promo = _SOCIAL_PROMO if (is_menu and include_promo) else ""
             return f"{body}{promo}\n\n{items}" if items else body + promo
         return body
 
@@ -2500,7 +2512,7 @@ async def webhook(request: Request):
                 )
             state_after = get_session(phone).get("state", "IDLE")
             if isinstance(respuesta, dict) and respuesta.get("type") == "interactive":
-                resp_text = _interactive_to_text(respuesta)
+                resp_text = _interactive_to_text(respuesta, include_promo=True)
             else:
                 resp_text = str(respuesta) if respuesta else ""
             if resp_text:
@@ -2834,8 +2846,10 @@ async def webhook(request: Request):
                         if respuesta:
                             if isinstance(respuesta, dict):
                                 await send_whatsapp_interactive(phone, respuesta["interactive"])
-                                body = respuesta.get("interactive", {}).get("body", {}).get("text", "")
-                                log_message(phone, "out", body, get_session(phone).get("state", "IDLE"), canal="whatsapp")
+                                # Log con texto completo (body + opciones) para que la
+                                # recepcionista en /admin vea las mismas opciones que el paciente.
+                                log_text = _interactive_to_text(respuesta, include_promo=False)
+                                log_message(phone, "out", log_text, get_session(phone).get("state", "IDLE"), canal="whatsapp")
                             else:
                                 await send_whatsapp(phone, respuesta)
                                 log_message(phone, "out", respuesta, get_session(phone).get("state", "IDLE"), canal="whatsapp")
@@ -2982,7 +2996,8 @@ async def webhook(request: Request):
             state_after = get_session(phone).get("state", "IDLE")
 
             if isinstance(respuesta, dict) and respuesta.get("type") == "interactive":
-                resp_text = respuesta["interactive"].get("body", {}).get("text", "[mensaje interactivo]")
+                # Log con texto completo (body + opciones) → la recepción ve lo mismo que el paciente.
+                resp_text = _interactive_to_text(respuesta, include_promo=False)
             else:
                 resp_text = str(respuesta) if respuesta else ""
 

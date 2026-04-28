@@ -4544,6 +4544,35 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
     # ── CONFIRMING_CITA ───────────────────────────────────────────────────────
     if state == "CONFIRMING_CITA":
+        # Detección sistémica de re-envío de datos del paciente.
+        # Caso real (Paula Alejandra, 28-abr): el paciente reenvió "Nombre, F, fecha"
+        # 3 veces para corregir el año, pero el bot insistía en pedir SÍ/NO.
+        # Si detectamos el patrón "Nombre, M/F, DD/MM/YYYY", redirigimos a
+        # WAIT_MODALIDAD igual que si hubiera presionado "cambiar_datos".
+        import re as _re_corr
+        _RE_DATOS_RECITADOS = _re_corr.compile(
+            r"^[A-Za-zÁÉÍÓÚáéíóúñÑ ]{3,},\s*[MFmf]\s*,\s*\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4}\s*$"
+        )
+        if _RE_DATOS_RECITADOS.match(txt.strip()):
+            log_event(phone, "confirming_recibe_datos_correccion", {"raw": txt[:80]})
+            data.pop("paciente", None)
+            data.pop("rut", None)
+            data["datos_corregidos_pending"] = txt.strip()  # para WAIT_DATOS_NUEVO
+            perfil = get_profile(phone)
+            if perfil and perfil.get("rut"):
+                data["rut_conocido"] = perfil["rut"]
+                data["nombre_conocido"] = perfil.get("nombre", "")
+            slot = data.get("slot_elegido", {})
+            save_session(phone, "WAIT_MODALIDAD", data)
+            return _btn_msg(
+                f"Veo que querías corregir tus datos 😊\n\n"
+                f"Tu hora sigue apartada:\n"
+                f"🏥 *{slot.get('especialidad', '')}* — {slot.get('profesional', '')}\n"
+                f"📅 *{slot.get('fecha_display', '')}*\n"
+                f"🕐 *{slot.get('hora_inicio', '')[:5]}*\n\n"
+                "¿Tu atención será Fonasa o Particular?",
+                [{"id": "1", "title": "Fonasa"}, {"id": "2", "title": "Particular"}]
+            )
         # Paciente fast-track quiere cambiar datos → flujo completo desde WAIT_MODALIDAD
         if tl == "cambiar_datos":
             data.pop("paciente", None)

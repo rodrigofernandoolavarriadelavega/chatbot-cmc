@@ -347,36 +347,51 @@ async def _get_horario(client: httpx.AsyncClient, id_prof: int) -> dict:
     return horario
 
 
-async def _slots_desde_agendas(client: httpx.AsyncClient, id_prof: int, fecha: str) -> list:
-    """Para profesionales con `usa_agendas=True` (sin horario base recurrente),
-    consulta /agendas y devuelve los slots libres (id_paciente=0) de la fecha
-    pedida. /agendas devuelve cupos creados manualmente por la recepción.
+# Cache de respuestas crudas de /agendas (60s TTL) para evitar el burst de
+# requests en buscar_primer_dia: itera 60 días pero /agendas devuelve siempre
+# la misma respuesta (Medilink ignora el filtro fecha eq). Una sola llamada
+# alcanza para 60 verificaciones.
+_agendas_raw_cache: dict = {}
+_AGENDAS_RAW_TTL = 60  # segundos
 
-    Nota: Medilink ignora el filtro `fecha eq` en /agendas y siempre devuelve
-    todos los cupos próximos. Filtramos en código por la fecha exacta.
+
+async def _fetch_agendas_raw(client: httpx.AsyncClient, id_prof: int) -> list:
+    """Devuelve TODOS los cupos crudos de /agendas para un prof (cacheado 60s).
+    Medilink ignora el filtro de fecha y devuelve siempre el listado próximo
+    completo, así que llamarlo 1× por flujo es suficiente.
     """
-    fecha_dt = datetime.strptime(fecha, "%Y-%m-%d").date()
-    fecha_dmy = fecha_dt.strftime("%d/%m/%Y")
+    cached = _agendas_raw_cache.get(id_prof)
+    if cached and (time.monotonic() - cached["_ts"]) < _AGENDAS_RAW_TTL:
+        return cached["data"]
     params = {
         "id_sucursal":      {"eq": int(MEDILINK_SUCURSAL)},
         "id_profesional":   {"eq": id_prof},
-        "fecha":            {"eq": fecha},
     }
     try:
         r = await _get(client, f"{MEDILINK_BASE_URL}/agendas",
                        params={"q": _q(params)}, headers=HEADERS)
     except httpx.RequestError as e:
-        log.error("No se pudo obtener /agendas prof=%d fecha=%s: %s", id_prof, fecha, e)
-        return []
+        log.error("No se pudo obtener /agendas prof=%d: %s", id_prof, e)
+        return cached["data"] if cached else []
     if r.status_code != 200:
-        return []
+        return cached["data"] if cached else []
     data = _safe_json(r).get("data", [])
+    _agendas_raw_cache[id_prof] = {"data": data, "_ts": time.monotonic()}
+    return data
+
+
+async def _slots_desde_agendas(client: httpx.AsyncClient, id_prof: int, fecha: str) -> list:
+    """Para profesionales con `usa_agendas=True` (sin horario base recurrente),
+    devuelve slots libres (id_paciente=0) de la fecha pedida. Usa
+    `_fetch_agendas_raw` para no spamear Medilink en buscar_primer_dia.
+    """
+    fecha_dt = datetime.strptime(fecha, "%Y-%m-%d").date()
+    fecha_dmy = fecha_dt.strftime("%d/%m/%Y")
+    data = await _fetch_agendas_raw(client, id_prof)
     libres = []
     for slot in data:
-        # Filtrar por fecha exacta (Medilink devuelve dd/mm/yyyy)
         if slot.get("fecha") != fecha_dmy:
             continue
-        # id_paciente=0 = libre. Otros valores = ya reservado.
         if slot.get("id_paciente") not in (0, None):
             continue
         hi = (slot.get("hora_inicio") or "")[:5]
@@ -394,8 +409,7 @@ async def _slots_desde_agendas(client: httpx.AsyncClient, id_prof: int, fecha: s
             "id_recurso":     slot.get("id_recurso", 1),
         })
     libres.sort(key=lambda x: x["hora_inicio"])
-    log.info("Slots /agendas prof %d fecha %s: %d libres",
-             id_prof, fecha, len(libres))
+    log.info("Slots /agendas prof %d fecha %s: %d libres", id_prof, fecha, len(libres))
     return libres
 
 
@@ -944,9 +958,35 @@ async def buscar_paciente_por_nombre(nombre: str) -> list[dict]:
 async def verificar_slot_disponible(id_profesional: int, fecha: str,
                                     hora_inicio: str, hora_fin: str) -> bool:
     """Verifica en tiempo real que el slot sigue libre antes de crear la cita.
-    Consulta /citas y /horariosbloqueados frescos.
+
+    Para profesionales con `usa_agendas=True` (Pardo, Quijano, Millán, etc.):
+    consulta /agendas para confirmar que el slot sigue como id_paciente=0.
+    Si la recepción asignó manualmente el cupo en Medilink (sin crear cita
+    formal), el bot lo detecta y evita el doble booking.
+
+    Para el resto: cruza /citas + /horariosbloqueados como antes.
     """
     async with httpx.AsyncClient(timeout=10) as client:
+        # Path para profs de "horas especiales": consultar /agendas directo.
+        try:
+            h = await _get_horario(client, id_profesional)
+        except Exception:
+            h = {}
+        if h.get("usa_agendas"):
+            try:
+                libres = await _slots_desde_agendas(client, id_profesional, fecha)
+            except Exception as e:
+                log.warning("verificar_slot agendas: error prof %d fecha %s: %s",
+                            id_profesional, fecha, e)
+                return False
+            ok = any(s["hora_inicio"] == hora_inicio[:5] for s in libres)
+            if not ok:
+                log.warning("verificar_slot agendas: %s NO disponible prof %d fecha %s "
+                            "(libres: %s)",
+                            hora_inicio, id_profesional, fecha,
+                            [s["hora_inicio"] for s in libres])
+            return ok
+
         try:
             ocupadas = await _get_horas_ocupadas(client, id_profesional, fecha)
             bloqueos = await _get_bloqueos(client, id_profesional, fecha)
