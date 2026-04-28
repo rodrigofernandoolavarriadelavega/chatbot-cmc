@@ -27,4 +27,12 @@ for m in ['messaging','flows','claude_helper','medilink','jobs','session',
     print(f'  ok {m}')
 "
 
+echo "==> Adversarial chat tests (53 conversaciones, 100% pass requerido)"
+python3 scripts/adversarial_chat.py 2>&1 | tail -3 | head -2
+if ! python3 scripts/adversarial_chat.py >/dev/null 2>&1; then
+    echo "  ✗ Adversarial tests fallaron — abortando deploy"
+    exit 1
+fi
+echo "  ok adversarial: 100%"
+
 echo "==> Pre-deploy OK"

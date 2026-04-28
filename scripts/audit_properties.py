@@ -197,6 +197,9 @@ DOBLE_SALUDO = re.compile(
 
 
 def _check_doble_saludo(content: str) -> str | None:
+    # Excluir mensajes de recepcionista (escritos desde el panel admin)
+    if content.strip().startswith("[Recepcionista]"):
+        return None
     if DOBLE_SALUDO.search(content):
         return "doble_saludo_en_un_mensaje"
     return None

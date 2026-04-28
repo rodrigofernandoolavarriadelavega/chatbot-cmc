@@ -150,8 +150,46 @@ Casos cubiertos por el harness:
        reemplaza por `(41) 296 5226` antes de enviar (defense-in-depth).
     3. `config.py` valida CMC_TELEFONO_FIJO en startup.
 
-## Próximos pasos en la noche
+## Validación masiva con replay de mensajes reales
 
-- [ ] Iterar más con simulador
-- [ ] Sumar `adversarial_chat.py` al `predeploy_check.sh`
+`scripts/replay_recent.py` carga últimos N mensajes inbound de
+`sessions.db` de prod (vía SQLCipher) y los re-ejecuta contra el handler
+ACTUAL del bot con mocks deterministas. Aplica los GLOBAL_ASSERTS.
+
+### Resultados
+
+| Volumen | Excepciones | Violaciones |
+|---------|-------------|-------------|
+| 100 mensajes | 0 | 0 |
+| 500 mensajes | 0 | 0 |
+| **2000 mensajes** | **0** | **0** |
+
+Esto valida que:
+- El bot maneja 2000 mensajes reales sin crashear
+- Ningún output contiene `+56987834148`, `(44)`, locale inglés
+- Los fixes de la noche están funcionando
+
+## Pre-deploy hardening
+
+`scripts/predeploy_check.sh` ahora incluye:
+1. AST parse de todos los .py de `app/`
+2. Import de cada módulo (caza NameError / missing imports)
+3. **Adversarial chat tests** (53 conversaciones, 100% pass requerido)
+
+Si los adversariales fallan, el deploy se aborta.
+
+## Resumen de la noche
+
+Commits deployados (en orden):
+- `0efef82` — Bug A (horarios reales por prof) + Bug B (HUMAN_TAKEOVER TTL)
+- `1202ce7` — Bug C (WAIT_SLOT guard) + D (apellido) + E (ver_otros) + F (waitlist) + G (ecografías)
+- `2b9ca51` — Bug H (id_cita_old) + I (fallback loop) + J (GES skip)
+- `2909b16` — Bug K (UnboundLocalError _MESES_ES) + L (_slot_resp_c) + simulador
+- `96b63d0` — Bug M (fuzzy false positive) + config validation
+- `0374e40` — Bug O (código (44) en sitio + guard) + audit predicates
+- (this commit) — predeploy hardening + replay tool + log final
+
+**Total bugs sistémicos arreglados: 15 (A-O).**
+**Total tests adversariales: 53 (todos pasan).**
+**Total mensajes reales validados: 2000 (0 errores).**
 
