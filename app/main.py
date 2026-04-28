@@ -822,6 +822,31 @@ async def api_abarca_data(refresh: int = 0, desde: str = "2025-05-01"):
         except Exception:
             pass
 
+    # ── Delta refresh: siempre traer las atenciones de HOY ────────────────────
+    # El cache vive 24h, pero el día actual cambia constantemente. Una llamada
+    # extra a Medilink mantiene la métrica de hoy fresca sin esperar refresh
+    # completo de 7 min.
+    from datetime import date as _date_dr
+    from config import MEDILINK_BASE_URL as _MB_dr
+    hoy_iso = _date_dr.today().isoformat()
+    try:
+        params_hoy = {"id_sucursal": {"eq": 1}, "id_profesional": {"eq": 73},
+                      "fecha": {"eq": hoy_iso}}
+        async with httpx.AsyncClient(timeout=10) as cli_dr:
+            resp_dr = await cli_dr.get(
+                f"{_MB_dr}/citas",
+                params={"q": _json_ab.dumps(params_hoy, separators=(",", ":"))},
+                headers=HEADERS_MEDILINK,
+            )
+        if resp_dr.status_code == 200:
+            citas_hoy = resp_dr.json().get("data", [])
+            raw = [c for c in raw if (c.get("fecha") or "")[:10] != hoy_iso] + citas_hoy
+            log.info("abarca delta refresh hoy=%s: %d citas", hoy_iso, len(citas_hoy))
+        else:
+            log.warning("abarca delta refresh hoy=%s HTTP %s", hoy_iso, resp_dr.status_code)
+    except Exception as _e_dr:
+        log.warning("abarca delta refresh hoy falló: %s", _e_dr)
+
     # ── Agregaciones ──
     por_dia: dict = {}
     por_mes: dict = _dd_ab(lambda: {"atend": 0, "anul": 0, "no_asiste": 0, "otros": 0, "total": 0})

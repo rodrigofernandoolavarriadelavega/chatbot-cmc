@@ -601,8 +601,11 @@ function recalcModelosPago(simHoras, simAtendCubiertos, numMeses) {
     { label: `Tu jornada simulada (${simHoras.toFixed(1)} hs)`, hs: simHoras, atend: atendSimMes,
       fijo: f_sim, var_: v_sim },
   ];
-  // Plan B preset (10 hs · 3-2-2-2-1) y Plan A (10 hs · 2 cada día) — fijos para comparar
-  [['Plan B (10 hs)', 10], ['Plan A (10 hs)', 10]].forEach(([nm, hs]) => {
+  // Presets fijos para comparación rápida sin tocar sliders
+  [['Plan B (10 hs · 3-2-2-2-1)', 10],
+   ['Plan A (10 hs · 2 cada día)', 10],
+   ['Plan 15 hs (3 hs/día)', 15],
+   ['Plan 20 hs (4 hs/día)', 20]].forEach(([nm, hs]) => {
     // Atend cubierto con cap=hs/5*4 (aprox uniforme)
     // Mejor: usar cobertura proporcional simple cap=ATM × min(1, hs*4*22/atendMesActual)
     const capMes = hs * PAC_POR_HORA * 4.33; // semanas/mes
