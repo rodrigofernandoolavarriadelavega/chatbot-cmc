@@ -137,11 +137,30 @@ def _is_dupe_outbound(to: str, body: str) -> bool:
     return False
 
 
+_PERSONAL_PHONE_DR = "56987834148"  # número personal Dr. Olavarría — NUNCA customer-facing
+_RX_PERSONAL_LEAK = re.compile(r"\+?\s*56[\s\-]*9[\s\-]*8783[\s\-]*4148")
+_TEL_CMC_WA_GUARD = "+56966610737"
+
+
+def _final_phone_guard(text: str) -> str:
+    """Última defensa antes de enviar al canal. Si por algún path el número
+    personal se filtró sin pasar por _scrub_telefonos, lo capturamos acá y
+    loggeamos warning para detectar regresiones."""
+    if not text:
+        return text
+    if _RX_PERSONAL_LEAK.search(text):
+        log.warning("PHONE_LEAK_GUARD personal_number_caught snippet=%r",
+                    text[:160])
+        text = _RX_PERSONAL_LEAK.sub(_TEL_CMC_WA_GUARD, text)
+    return text
+
+
 async def send_whatsapp(to: str, body: str) -> str | None:
     """Envía mensaje de texto vía Meta Cloud API. Retorna wamid o None si falla.
     Si el mismo body fue enviado a `to` en los últimos 2 min, skip (dedupe)."""
     if not body or not body.strip():
         return None
+    body = _final_phone_guard(body)
     body = _normalize_markdown_for_chat(body)
     if _is_dupe_outbound(to, body):
         log.info("dedupe outbound skipped to=%s len=%d", to, len(body))
@@ -505,6 +524,7 @@ async def send_instagram(igsid: str, body: str):
     """Envía mensaje de texto a un usuario de Instagram vía Graph API.
     IG rechaza mensajes > 1000 chars: divide en chunks automáticamente.
     Dedupe: skip si el mismo body se envió a este igsid en los últimos 2 min."""
+    body = _final_phone_guard(body)
     body = _normalize_markdown_for_chat(body)
     if _is_dupe_outbound(f"ig_{igsid}", body):
         log.info("dedupe outbound skipped ig=%s len=%d", igsid, len(body))
@@ -533,6 +553,7 @@ async def send_messenger(psid: str, body: str):
     """Envía mensaje de texto a un usuario de Facebook Messenger vía Graph API.
     Messenger rechaza mensajes > 1000 chars: divide en chunks automáticamente.
     Dedupe: skip si el mismo body se envió a este psid en los últimos 2 min."""
+    body = _final_phone_guard(body)
     body = _normalize_markdown_for_chat(body)
     if _is_dupe_outbound(f"fb_{psid}", body):
         log.info("dedupe outbound skipped fb=%s len=%d", psid, len(body))
