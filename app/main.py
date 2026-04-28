@@ -336,6 +336,8 @@ _PROYECTOS2026_HTML = (_TEMPLATE_DIR / "proyectos2026.html").read_text(encoding=
 _LANDING_HTML = (_TEMPLATE_DIR / "landing.html").read_text(encoding="utf-8")
 _SITIO_V3_HTML = (_TEMPLATE_DIR / "sitio-v3.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio-v3.html").exists() else ""
 _SITIO_V2_HTML = (_TEMPLATE_DIR / "sitio-v2.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio-v2.html").exists() else ""
+_SITIO_FLAGSHIP_HTML = (_TEMPLATE_DIR / "sitio-flagship.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio-flagship.html").exists() else ""
+_SITIO_V4_HTML = (_TEMPLATE_DIR / "sitio-v4.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio-v4.html").exists() else ""
 _HEATMAP_COMUNAS_HTML = (_TEMPLATE_DIR / "heatmap_comunas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "heatmap_comunas.html").exists() else ""
 _HEATMAP_DIRECCIONES_HTML = (_TEMPLATE_DIR / "heatmap_direcciones.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "heatmap_direcciones.html").exists() else ""
 _SEO_DASHBOARD_HTML = (_TEMPLATE_DIR / "seo_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "seo_dashboard.html").exists() else ""
@@ -391,6 +393,23 @@ def sitio_v3():
 def sitio_v2():
     """Sitio web v2 — diseño handoff Claude Design (azul deep + turquesa)."""
     return _SITIO_V2_HTML
+
+
+@app.get("/sitio/v3", response_class=HTMLResponse)
+def sitio_v3_flagship():
+    """Sitio web v3 — flagship: HTML estático server-rendered, schema enriquecido,
+    booking widget integrado, equipo con SVG ilustrado, FAQ ampliada, lead magnet."""
+    return _SITIO_FLAGSHIP_HTML
+
+
+@app.get("/sitio/v4", response_class=HTMLResponse)
+def sitio_v4():
+    """Sitio web v4 — híbrido OLACORE-aligned: HTML estático server-rendered, tipografía
+    Fraunces + Inter (sub-marca OLACORE), QuickBookWidget vanilla JS con WhatsApp pre-rellenado,
+    Schema.org canónico (medicalSpecialty + Physician), tabla de horarios por especialidad,
+    tabs médicas/dentales con precios visibles, blog cards, payments correctos por tipo de
+    atención (tarjetas solo en dental), endorsement OLACORE en footer."""
+    return _SITIO_V4_HTML
 
 
 @app.get("/privacidad", response_class=HTMLResponse)
