@@ -308,10 +308,121 @@ Script standalone de conciliación de pagos del CMC. Cruza CSVs de las 6 fuentes
 - No toca el bot en ejecución; es una herramienta offline para el cierre mensual.
 
 ## Sesión en curso
-**Fecha**: 2026-04-18
+**Fecha**: 2026-04-27 / 2026-04-28 (sesión maratónica que cubrió varios frentes)
 **Historial completo**: ver claude-mem timeline o git log
 
-**Estado Meta/WhatsApp**:
+---
+
+### Resumen sesión 2026-04-27 / 2026-04-28
+
+#### Deploys del día (en orden cronológico, todos en producción)
+1. `7fc3af1` — feat(menu): grupo "Estratégicos · OLACORE" con SEO + Meta + Crecimiento + Horizonte
+2. `884f251` — fix(geocoder): jitter determinístico en fallback dispersa clusters falsos (script `redistribute_fallback_jitter.py` ya ejecutado en server, 2741 entries re-distribuidas)
+3. `dc72651` — feat(menu+meulen): card "App Meulen (POS+Admin)" + dashboard `/meulen/kpis` con 6 tabs
+4. `1621c1a` — fix(admin/v2): contexto en mobile como overlay con backdrop (panel admin v2 era inservible en mobile)
+5. `8cefcf7` — fix(admin): **NameError _hmac_admin → hmac** (Recepción tenía panel CAÍDO, HTTP 500 en `/admin/api/conversations` con token query)
+6. `379a170` — feat(flows): **bloqueo duro de 1 cita activa por paciente y profesional** (caso Yesenia Reyes: agendó 3 horas con Dr. Márquez el mismo día). Estado: bloqueo retorna mensaje y resetea sesión, log_event `cita_bloqueada_mismo_profesional`
+7. `637aa59` — feat(atribucion): tracking de referidos post-cita + dashboard `/atribucion` + endpoint `GET /api/atribucion/today` + agente `cmc-attribution-reporter`
+8. `45907e4` — feat(flows): mensaje de derivación cuando especialidad no está en CMC (incluye CESFAM red SSC + clínicas privadas Concepción) + cache de typos kinesiología (kinesiologo, quinesiologo, quiniciologo, etc.). **Sin Doctoralia/Reservo por decisión del usuario**
+9. `b7e2165` + `a1f121a` — fix(messaging): defense-in-depth `_final_phone_guard` + import `re` faltante. **Bot crashed 3 minutos** entre 02:29-02:32 UTC por NameError, hotfix recuperó.
+
+#### Cambios en código clave (saber dónde están)
+- `app/flows.py` línea ~4232 — bloqueo "1 cita por profesional" en `CONFIRMING_CITA`. Listar citas paciente, si hay misma `id_profesional` futura → reset_session + mensaje de bloqueo
+- `app/flows.py` línea ~4915 — `data["is_paciente_nuevo_post_referral"] = True` flag
+- `app/flows.py` línea ~4444 — post-confirmación, si flag activo, manda 2 mensajes: confirmación + pregunta referido (botones "Amigo / Redes-Google / Recurrente"), set state `WAIT_REFERRAL_POST`
+- `app/flows.py` línea ~5054 — handler `WAIT_REFERRAL_POST` (mapea botón a tag, save_tag, log_event `registro_referral_post`)
+- `app/flows.py` línea ~6433 — mensaje de derivación (CESFAM + 4 clínicas privadas Concepción)
+- `app/messaging.py` líneas 140-160 — `_final_phone_guard` aplicado a `send_whatsapp`, `send_instagram`, `send_messenger`
+- `app/admin_routes.py` líneas 126/134/295 — `_hmac_admin` → `hmac` (3 ocurrencias)
+- `app/main.py` línea ~534 — endpoint `/api/atribucion/today` (Marketing API + sessions.db cruce)
+- `templates/atribucion_dashboard.html` — dashboard auto-refresh 5min
+- `scripts/redistribute_fallback_jitter.py` — re-jitter SHA-1 ±0.003° para entries fallback existentes
+- `scripts/geocode_direcciones.py` — jitter ahora determinístico desde el inicio
+
+#### Agentes Claude Code (en `~/.claude/agents/`)
+**11 agentes totales** = 5 auditores read-only (cmc-bugs, cmc-medical, cmc-performance, cmc-security, cmc-ux) + 6 constructores nuevos:
+- `cmc-bot-engineer` — implementa fixes/features en flows/medilink/jobs
+- `cmc-data-analyst` — queries SQL sessions.db + heatmap_cache.db (sabe que sessions.db es SQLCipher, env var `SQLCIPHER_KEY`)
+- `cmc-dashboard-builder` — patrón FastAPI+Tailwind+Chart.js+OLACORE
+- `olacore-brand-designer` — brand boards estilo OLACORE/Olamar/Oris/Austra
+- `clinic-strategist` — decisiones estratégicas (modelo opus)
+- `cmc-conversation-auditor` — bugs de producción cruzando data real
+- `cmc-attribution-reporter` — reportes diarios Meta×Bot×Pacientes (creado hoy)
+
+**IMPORTANTE**: en sesión actual NO se pueden invocar (solo se cargan al iniciar Claude Code). En próxima sesión disponibles automáticamente.
+
+#### Bug del leak histórico del número personal Dr.
+- Auditoría completa: **60 mensajes outbound entre 2026-03-30 y 2026-04-20** leakearon `+56987834148` a 60 phones distintos
+- Causa: Claude Haiku hallucinaba que ese era el WhatsApp del CMC
+- Fix `_scrub_telefonos` en `claude_helper.py` se implementó el 20-21 abr (3 puntos: línea 1155, 1191, 1392)
+- **Cero leaks en últimos 7 días** (verificado vía SQL)
+- Defense-in-depth añadida hoy en `messaging.py` (`_final_phone_guard`) — última puerta antes de canal, loggea `WARNING PHONE_LEAK_GUARD personal_number_caught` si detecta regresión
+- Riesgo residual: esos 60 phones pueden tener guardado el número personal del Dr.
+
+#### Atribución diaria (datos reales del 27-abr)
+- Meta spend: **CLP $4.930** (anómalamente bajo vs baseline ~CLP $200K/día) — **revisar Ads Manager**
+- Phones nuevos: 65 · Citas creadas: 30 · **Conversión 32.3%**
+- 0 tags de referido pre-fix (el flujo `WAIT_DATOS_NUEVO` saltaba `WAIT_REFERRAL`). Ahora con `WAIT_REFERRAL_POST` empezarán a llegar.
+- Endpoint live: `https://agentecmc.cl/api/atribucion/today`
+- Dashboard: `https://agentecmc.cl/atribucion`
+
+#### Hallazgos de auditoría conversaciones 7d (no todos arreglados)
+- 8 pacientes con múltiples reservas mismo profesional (caso Yesenia y otros 7) → **arreglado** con feature
+- 7 casos "slot ya ocupado al confirmar" — race condition concentrada en Dr. Márquez/Olavarría → **NO arreglado** (idea: reserva tentativa 30s)
+- Demanda no satisfecha 30d: ecografía 19, gastroenterología 14, implantología 10, cardiología 7 → typo capitalización en `sin_disponibilidad` event (NO arreglado)
+- 94 intents "otro" en 7d (mal clasificados) — sample muestra 3 buckets: agradecimientos/cierre, status updates a recepción, saludos → no normalizado al cache aún
+- **Bug crítico NO arreglado**: María 56968621918 pidió hora "para hoy", el bot le mostró slots de mañana sin avisar → revisar `WAIT_SLOT` cuando paciente especifica fecha y no hay slots ese día
+- Otras 5 conversaciones llegaron a WAIT_SLOT y se cayeron sin convertir
+
+#### Brand boards dental Concepción (en `~/Downloads/`)
+3 brand boards completos creados (HTML+SVG+CSS+mockups) bajo paraguas OLACORE:
+- `OLAMAR_brand/` — ola+mar, costa Concepción, agua marina #5B8B96
+- `ORIS_brand/` — boca en latín, oficio dental clínico, esmeralda #2D5F4E (riesgo: marca relojera Oris)
+- `AUSTRA_brand/` — sur en latín, escalable a red dental sur de Chile, pizarra #3D4F5C (riesgo: confusión "Austria")
+
+**Decisión pendiente del Dr.**: cuál marca usar. Mi recomendación: Austra si hay ambición de expandir al sur (Talcahuano/Los Ángeles/Temuco), Oris si solo Concepción premium dental. Olamar perdió frente a esos dos.
+
+**Contexto crítico de la decisión**: la ortodoncista Dra. Daniela Castillo (ID Medilink 66) vive en Concepción. Si se va full a la sub-marca dental, **CMC pierde ~10 pacientes recurrentes de Curanilahue** que iban a controles ortodónticos (5.1 sesiones/paciente promedio). Decidir si la dejás 1 día/semana en CMC o se va completa.
+
+#### Otros dashboards/herramientas creadas
+- `/horizonte` — roadmap estratégico CMC con escenarios A/B/C + pipeline contratación interactivo (CRUD endpoints `/api/hiring/pipeline`, tabla `hiring_pipeline` en heatmap_cache.db)
+- `/meulen/kpis` — dashboard MVP Meulen (Fase 1 cerrada, 7 módulos backend, 122 tests 83% cobertura, riesgos)
+- `/atribucion` — Meta×Bot×Pacientes diario
+- App Meulen ya estaba desplegada en `/supermercadomeulen/menu` pero no enlazada — agregada al menú principal
+
+#### Conversación importante con el Dr. (no técnica pero clave)
+- Dr. estudió 1 año de Ing Civil UC (plan común, intención Mecatrónica/Industrial) en 2025
+- Lo dejó porque prestó plata a sus padres (Meulen entró en crisis) y no podía sostener Stgo
+- Reflexión brutal pero respetuosa: 60 mensajes históricos donde el bot dejó leakear su personal a pacientes — eso aplica el mismo patrón "subsidio familiar/personal sin límites" que con Meulen. Saber decir "sí ayudo, pero con reglas claras" aplica tanto a familia como a privacidad técnica.
+- **NO retomar este tema sin que él lo abra**.
+
+#### Bug del banco Itaú (no técnico del CMC pero relevante)
+- Dr. tuvo problema accediendo a banco.itau.cl
+- Memoria sugería Imperva bloqueando ISP Pacífico Cable, pero estaba en datos móviles → no era ISP
+- Llamó al banco, era error del banco
+- **Mi diagnóstico estaba errado**, lo reconocí explícitamente
+
+---
+
+### Pendientes técnicos priorizados (próxima sesión)
+
+1. **Bug WAIT_SLOT "para hoy" sin avisar** — caso María. Cuando paciente pide hora hoy y no hay slots, debe decir "no hay slots para hoy, te muestro mañana" en vez de mostrar mañana en silencio. Es un fix en `_iniciar_agendar` o donde se llama `buscar_primer_dia` con preferencia de fecha.
+2. **Normalizar capitalización en evento `sin_disponibilidad`** — typo "Cardiología" vs "cardiología" duplicaba conteos. `flows.py` líneas 2999 y 6457: `"especialidad": especialidad.lower()`.
+3. **Auditar bucket "intent: otro"** (94/7d) y agregar al cache de `claude_helper.py` los patterns recurrentes (saludos, agradecimientos cortos).
+4. **Reserva tentativa de slot por 30s** — para reducir race condition Dr. Márquez/Olavarría (5 casos de "slot ya ocupado" últimos 7d).
+5. **Flujo de reimpresión de boletas** — caso real detectado, ortodoncia, requiere endpoint Medilink. Backlog.
+6. **Test mock `fake_listar_citas_paciente` desactualizado** — no acepta kwarg `rut`. `tests/harness_50.py` falla en línea 4641 (no afecta producción).
+7. **Validación pre-deploy más estricta** — el `python3 ast.parse()` no detectó `NameError: name 're'`. Mejor: `python3 -c "import sys; sys.path.insert(0,'app'); import messaging; import flows; import claude_helper"`.
+
+### Pendientes no técnicos
+- Decisión de marca dental (Olamar / Oris / Austra) → Dr. decide
+- Validar disponibilidad dominios + INAPI antes de cualquier inversión en marca dental
+- Revisar Meta Ads Manager: por qué spend del 27-abr fue solo $4.930 (vs ~$200K baseline)
+- Conversación honesta sobre Meulen (¿es viable independiente del subsidio del CMC?)
+
+---
+
+
 - Bot en `+56 9 6661 0737` — status `CONNECTED` · quality `GREEN`
 - Display Name "Centro Médico Carampangue" en `PENDING_REVIEW`
 - **Payment method activo** (USD 20 cargados 2026-04-18) — desbloquea templates MARKETING sin restricción del free tier
