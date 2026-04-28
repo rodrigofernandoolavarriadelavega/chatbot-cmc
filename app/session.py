@@ -1341,7 +1341,7 @@ def get_referral_stats(dias: int = 30) -> dict:
         return {"by_source": by_source, "total": total, "dias": dias}
 
 
-def get_conversations(limit: int = 1000) -> list[dict]:
+def get_conversations(limit: int = 2000) -> list[dict]:
     """Lista todas las conversaciones con último mensaje y estado actual.
 
     Ordena por la última actividad real (mayor entre session.updated_at
