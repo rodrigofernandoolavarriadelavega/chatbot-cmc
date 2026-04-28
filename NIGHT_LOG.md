@@ -190,6 +190,49 @@ Commits deployados (en orden):
 - (this commit) — predeploy hardening + replay tool + log final
 
 **Total bugs sistémicos arreglados: 15 (A-O).**
-**Total tests adversariales: 53 (todos pasan).**
+**Total tests adversariales: 66 (todos pasan).**
 **Total mensajes reales validados: 2000 (0 errores).**
+
+## Fuzz testing
+
+`scripts/fuzz_handler.py` genera N mensajes random con patrones adversariales
+(unicode, emojis, signos puros, control chars, zalgo, RUTs random, URLs, etc.)
+y los pasa por `handle_message()`.
+
+Resultados:
+- 200 mensajes seed=42: 0 excepciones · 0 violaciones
+- 500 mensajes seed=1: 0 excepciones · 0 violaciones
+- 500 mensajes seed=99: 0 excepciones · 0 violaciones
+
+**Total: 3200 mensajes reales + random validados sin errores.**
+
+## Tareas no técnicas dejadas para Rodrigo
+
+- `.env` local del Mac fue corregido automáticamente (CMC_TELEFONO y FIJO).
+- Si en algún server futuro se setea mal alguna de esas variables, el bot
+  loggea CONFIG_ERROR al startup pero igual usa default seguro.
+
+## Cómo usar las herramientas creadas
+
+```bash
+# Pre-deploy (corre antes de cada git push si querés)
+./scripts/predeploy_check.sh
+
+# Tests adversariales offline (en local, con mocks)
+python3 scripts/adversarial_chat.py
+python3 scripts/adversarial_chat.py --verbose
+
+# Fuzz testing
+python3 scripts/fuzz_handler.py --n 500
+
+# Replay de mensajes reales (en SERVER, con SQLCipher key cargado)
+ssh root@157.245.13.107 'cd /opt/chatbot-cmc && \
+  set -a && source .env && set +a && \
+  venv/bin/python3 scripts/replay_recent.py --limit 500'
+
+# Auditoría de propiedades sobre historial 7d (en SERVER)
+ssh root@157.245.13.107 'cd /opt/chatbot-cmc && \
+  set -a && source .env && set +a && \
+  venv/bin/python3 scripts/audit_properties.py --days 7'
+```
 
