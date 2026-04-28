@@ -18,7 +18,7 @@ from medilink import (buscar_primer_dia, buscar_slots_dia, buscar_slots_dia_por_
                       valid_rut, clean_rut, especialidades_disponibles,
                       consultar_proxima_fecha, verificar_slot_disponible)
 from session import (save_session, reset_session, save_tag, delete_tag, get_tags,
-                     save_cita_bot, log_event,
+                     save_cita_bot, log_event, has_recent_event,
                      save_profile, get_profile, save_fidelizacion_respuesta, get_ultimo_seguimiento,
                      enqueue_intent, add_to_waitlist, cancel_waitlist,
                      get_cita_bot_by_id_cita, mark_cita_confirmation, get_phone_by_rut,
@@ -1372,6 +1372,34 @@ def _format_horario_prof(horario: dict) -> str:
     return ", ".join(partes)
 
 
+async def _send_review_request_if_due(phone: str, especialidad: str = "") -> None:
+    """Pide al paciente que dejó 'mejor' que califique en Google.
+    Anti-spam: máx 1 vez cada 90 días por teléfono.
+    Se dispara con spawn_task tras la respuesta de upsell/control para no
+    competir con el cross-sell ni bloquear la conversación."""
+    import asyncio
+    if has_recent_event(phone, "review_request_sent", days=90):
+        return
+    await asyncio.sleep(4)  # respiro tras el msg de upsell/control
+    try:
+        from google_rating import get_review_link
+        link = get_review_link()
+    except Exception:
+        link = "https://search.google.com/local/writereview?placeid=ChIJfwqzraTvaZYRBlt0l4W85JE"
+    msg = (
+        "Una última cosa 🌟\n\n"
+        "Si te tomas 30 segundos, ¿podrías dejarnos una reseña en Google? "
+        "Tu opinión ayuda a otras familias de Arauco a encontrarnos.\n\n"
+        f"👉 {link}\n\n"
+        "_Solo te pedimos esto una vez al año. ¡Gracias!_"
+    )
+    try:
+        await send_whatsapp(phone, msg)
+        log_event(phone, "review_request_sent", {"especialidad": especialidad})
+    except Exception as e:
+        log.warning("review_request fallo phone=%s: %s", phone, e)
+
+
 async def _responder_horario_por_especialidad(especialidad: str) -> str | None:
     """Responde días+horarios reales (de Medilink) de los profesionales de una
     especialidad. Devuelve None si no hay match. Esto corta el path donde
@@ -2362,6 +2390,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             save_fidelizacion_respuesta(phone, "postconsulta", "mejor")
             esp = seg.get("especialidad", "") if seg else ""
             log_event(phone, "seguimiento_mejor", {"especialidad": esp})
+            # Pide reseña Google (anti-spam: máx 1/90d)
+            try:
+                from resilience import spawn_task
+                spawn_task(_send_review_request_if_due(phone, esp))
+            except Exception:
+                pass
             # Cross-sell inteligente según especialidad
             upsell = UPSELL_POSTCONSULTA.get(esp.lower()) if esp else None
             if upsell:
@@ -2542,6 +2576,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 save_fidelizacion_respuesta(phone, "postconsulta", clasificacion)
                 if clasificacion == "mejor":
                     log_event(phone, "seguimiento_mejor", {"especialidad": esp, "fuente": "texto_libre"})
+                    try:
+                        from resilience import spawn_task
+                        spawn_task(_send_review_request_if_due(phone, esp))
+                    except Exception:
+                        pass
                     upsell = UPSELL_POSTCONSULTA.get(esp.lower()) if esp else None
                     if upsell:
                         upsell_msg, upsell_esp = upsell

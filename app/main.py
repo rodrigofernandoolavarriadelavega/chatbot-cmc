@@ -411,13 +411,90 @@ def sitio_v3_flagship():
 
 
 @app.get("/sitio/v4", response_class=HTMLResponse)
-def sitio_v4():
-    """Sitio web v4 — híbrido OLACORE-aligned: HTML estático server-rendered, tipografía
-    Fraunces + Inter (sub-marca OLACORE), QuickBookWidget vanilla JS con WhatsApp pre-rellenado,
-    Schema.org canónico (medicalSpecialty + Physician), tabla de horarios por especialidad,
-    tabs médicas/dentales con precios visibles, blog cards, payments correctos por tipo de
-    atención (tarjetas solo en dental), endorsement OLACORE en footer."""
-    return _SITIO_V4_HTML
+async def sitio_v4():
+    """Sitio web v4 — híbrido OLACORE-aligned con rating real de Google Places.
+    El HTML base usa placeholders <!--CMC_*--> que se reemplazan en cada request
+    con los datos del caché de google_rating (TTL 6h, ~4 calls/día)."""
+    from google_rating import fetch_rating
+    rating_data = await fetch_rating()
+    return _render_sitio_v4(rating_data)
+
+
+@app.get("/api/google-rating")
+async def api_google_rating():
+    """Rating + reseñas de Google Places para el CMC (cache 6h)."""
+    from google_rating import fetch_rating
+    return await fetch_rating()
+
+
+def _render_sitio_v4(rating_data: dict) -> str:
+    """Reemplaza placeholders del template con rating real de Google.
+    Si no hay API key o falla, deja la pill genérica y omite aggregateRating
+    (cumple Google guidelines: no fabricar reviews)."""
+    import html as _html
+    html = _SITIO_V4_HTML
+    rating  = rating_data.get("rating")
+    count   = rating_data.get("review_count")
+    reviews = rating_data.get("reviews") or []
+
+    if rating and count:
+        rt = f"{rating:.1f}".replace(".", ",")
+        pill = (
+            '<span class="stars" style="color:var(--c-warm);font-size:.82rem;letter-spacing:1px">★★★★★</span>'
+            f'<span class="rn">{rt}</span>'
+            f'<span class="rt">· {count} reseñas en Google</span>'
+        )
+    else:
+        pill = (
+            '<i class="fas fa-shield-halved" style="color:var(--c-blue)"></i>'
+            '<span class="rn">Acreditados</span>'
+            '<span class="rt">· Superintendencia de Salud</span>'
+        )
+    html = html.replace("<!--CMC_RATING_PILL-->", pill)
+
+    if rating and count:
+        agg = (
+            ',\n        "aggregateRating": {\n'
+            '          "@type": "AggregateRating",\n'
+            f'          "ratingValue": "{rating:.1f}",\n'
+            f'          "reviewCount": "{count}",\n'
+            '          "bestRating": "5",\n'
+            '          "worstRating": "1"\n'
+            '        }'
+        )
+    else:
+        agg = ""
+    html = html.replace("<!--CMC_AGGREGATE_RATING-->", agg)
+
+    if reviews:
+        from google_rating import initials
+        cards = []
+        for rv in reviews[:3]:
+            txt = (rv.get("text") or "").strip()
+            if len(txt) < 25:
+                continue
+            txt_short = txt[:240] + ("…" if len(txt) > 240 else "")
+            author = rv.get("author") or "Anónimo"
+            stars  = "★" * int(rv.get("rating") or 5)
+            when   = rv.get("relative_time") or ""
+            cards.append(
+                '<article class="testi reveal">\n'
+                f'  <div class="testi-stars">{stars}</div>\n'
+                f'  <p class="testi-text">"{_html.escape(txt_short)}"</p>\n'
+                '  <div class="testi-author">\n'
+                f'    <div class="testi-avatar">{_html.escape(initials(author))}</div>\n'
+                '    <div>\n'
+                f'      <div class="testi-name">{_html.escape(author)}</div>\n'
+                f'      <div class="testi-role">Reseña Google · {_html.escape(when)}</div>\n'
+                '    </div>\n'
+                '    <div class="testi-verified"><i class="fab fa-google"></i> Verificado</div>\n'
+                '  </div>\n'
+                '</article>'
+            )
+        if cards:
+            html = html.replace("<!--CMC_TESTIMONIOS_REALES-->", "\n".join(cards))
+
+    return html
 
 
 @app.get("/privacidad", response_class=HTMLResponse)

@@ -1045,6 +1045,18 @@ def log_event(phone: str, event: str, meta: dict = None):
         conn.commit()
 
 
+def has_recent_event(phone: str, event: str, days: int = 90) -> bool:
+    """¿Tiene este phone un `event` registrado en los últimos `days`?
+    Usado por anti-spam (review_request_sent, etc.)."""
+    with _conn() as conn:
+        cur = conn.execute(
+            "SELECT 1 FROM conversation_events "
+            "WHERE phone = ? AND event = ? AND ts > datetime('now', ?) LIMIT 1",
+            (phone, event, f"-{int(days)} days"),
+        )
+        return cur.fetchone() is not None
+
+
 def purge_old_data(msgs_days: int = 90, events_days: int = 180) -> dict:
     """Borra mensajes y eventos antiguos para evitar crecimiento ilimitado del SQLite.
     Retorna conteos de filas eliminadas."""
