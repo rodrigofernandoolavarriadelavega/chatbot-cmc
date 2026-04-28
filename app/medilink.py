@@ -538,10 +538,14 @@ async def _slots_para_fecha(client: httpx.AsyncClient, ids: list, horarios: dict
 
         _ahora_cl = datetime.now(_CHILE_TZ)
         ahora_min = _h_to_min(_ahora_cl.strftime("%H:%M")) if fecha == _ahora_cl.date().strftime("%Y-%m-%d") else None
+        # Buffer 60 min: el paciente no alcanza a llegar a un slot que empiece
+        # en menos de 1h. También cubre conversaciones que quedan abiertas y
+        # los slots se obsoletan antes de confirmar.
+        BUFFER_MIN = 60
         libres_prof = 0
         for hi, hf in _generar_slots_horario(hi_dia, hf_dia, intervalo, break_t):
-            if ahora_min is not None and _h_to_min(hi) <= ahora_min:
-                continue  # slot ya pasó hoy
+            if ahora_min is not None and _h_to_min(hi) <= (ahora_min + BUFFER_MIN):
+                continue  # slot ya pasó o muy cerca de ahora
             # Chequear solape con TODO el rango del slot, no solo hora_inicio
             if not _slot_libre_vs_ocupadas(hi, hf, ocupadas_citas):
                 horas_ocupadas.add(hi)

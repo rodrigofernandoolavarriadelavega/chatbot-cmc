@@ -6504,7 +6504,7 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
         _normalizar_slot_especialidad([mejor], especialidad_lower)
 
     if not todos or not mejor:
-        log_event(phone, "sin_disponibilidad", {"especialidad": especialidad})
+        log_event(phone, "sin_disponibilidad", {"especialidad": (especialidad or "").strip().lower()})
         save_tag(phone, "sin-disponibilidad")
         # Ofrecer lista de espera en lugar de terminar la conversación
         # Si la especialidad resuelve a un único profesional (ej. "olavarria",

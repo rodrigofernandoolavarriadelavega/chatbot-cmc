@@ -18,6 +18,24 @@ client = anthropic.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
 # Saludos automáticos de Meta (Click-to-WhatsApp ads, quick replies, etc.).
 # Meta inyecta estos textos cuando el usuario toca un CTA; NO son intención
 # real de conversación con humano. Deben caer en menu para mostrar opciones.
+_CIERRES_CORTOS = frozenset({
+    # Agradecimientos
+    "gracias", "muchas gracias", "muchísimas gracias", "muchisimas gracias",
+    "mil gracias", "te lo agradezco", "se agradece", "graxias", "grax",
+    # Confirmaciones de cierre
+    "ok", "okey", "okay", "okas", "vale", "ya", "ya esta", "ya está",
+    "listo", "perfecto", "bueno", "bacán", "bacan", "buenísimo", "buenisimo",
+    "dale", "genial", "estupendo", "excelente",
+    # Combinados frecuentes
+    "ok gracias", "ok muchas gracias", "gracias ok", "perfecto gracias",
+    "listo gracias", "ya gracias", "vale gracias",
+    # Despedidas
+    "chao", "chau", "adios", "adiós", "hasta luego", "nos vemos",
+    "que tenga buen dia", "que tenga buen día", "buen dia", "buen día",
+    # Emoji-only
+    "🙏", "👍", "❤️", "🙌",
+})
+
 _META_AUTO_GREETINGS = frozenset({
     "quiero chatear con alguien", "chatear con alguien",
     "quiero saber mas informacion", "quiero saber mas información",
@@ -483,6 +501,12 @@ Si mencionan un profesional por nombre, mapea al nombre de la especialidad:
 - Ecografía obstétrica / embarazo / ver al bebé → NO DISPONIBLE en el CMC. Responder que no contamos con esa prestación y sugerir acudir a un centro de imagenología especializado.
 Si preguntan por un precio que no está en la lista, responde que pueden consultar en recepción.
 IMPORTANTE PRECIOS: Cuando menciones el precio de una consulta, SIEMPRE indica ambos valores: Fonasa y particular. La mayoría de los pacientes del CMC son Fonasa. Ejemplo: "consulta $7.880 (Fonasa) / $25.000 (particular)". NUNCA pongas solo el precio particular sin mencionar Fonasa.
+
+PRECIOS DE CONTROL (seguimiento al mismo profesional dentro de 1-4 semanas): el control NO cuesta lo mismo que la primera consulta — generalmente es menor o gratis. Si te preguntan "¿cuánto cuesta el control?", "¿el control se paga?", "¿pago de nuevo si voy a control?":
+- *Medicina General* y *Medicina Familiar*: el control es GRATIS dentro de las primeras 2 semanas (sin costo). Después de 2 semanas se cobra como consulta normal.
+- *Otorrinolaringología* (Dr. Borrego): control $8.000.
+- Resto de especialidades: responde que el control tiene precio reducido respecto a la primera consulta y que el monto exacto se confirma con la recepcionista al agendar o el día de la atención. NO inventes precios.
+- Si el paciente pregunta por control y NO mencionó la especialidad, pídele que te diga qué especialidad antes de responder.
 
 GLOSARIO DE TÉRMINOS CLÍNICOS COLOQUIALES (chileno)
 Si el mensaje del paciente contiene un término del glosario de abajo, el intent es SIEMPRE "info" (NUNCA "agendar"), incluso si dice "quiero X", "necesito X", "me gustaría una X", "hazme una X", "quiero hacerme X". El motivo: el paciente puede no saber en qué consiste el tratamiento, y un buen recepcionista explica antes de agendar. El sistema ofrecerá automáticamente el botón de agendar después de la explicación.
@@ -1065,6 +1089,18 @@ async def detect_intent(mensaje: str) -> dict:
         except Exception:
             pass
         return {"intent": "menu", "especialidad": None, "respuesta_directa": None}
+    if clave in _CIERRES_CORTOS or clave_sin_punto in _CIERRES_CORTOS:
+        log.info("cierre corto: %r → respuesta_directa", clave)
+        try:
+            from session import log_event as _le
+            _le("", "savings:cierre_corto", {"texto": clave[:80]})
+        except Exception:
+            pass
+        return {
+            "intent": "info",
+            "especialidad": None,
+            "respuesta_directa": "¡De nada! 😊 Si necesitas algo más, escribe *menú*.",
+        }
     if clave in _INTENT_CACHE:
         log.info("cache hit: %r → %s", clave, _INTENT_CACHE[clave]["intent"])
         try:

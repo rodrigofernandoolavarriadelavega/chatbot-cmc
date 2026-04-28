@@ -61,7 +61,7 @@ async def fake_cancelar_cita(id_cita):
         return False
     return True
 
-async def fake_listar_citas_paciente(id_paciente: int):
+async def fake_listar_citas_paciente(id_paciente: int = 0, **kwargs):
     return list(FAKE_CITAS_PACIENTE)
 
 def _fake_slots(esp_display: str, id_prof: int, prof_nombre: str):
