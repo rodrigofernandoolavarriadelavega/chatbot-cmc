@@ -189,9 +189,19 @@ Commits deployados (en orden):
 - `0374e40` — Bug O (código (44) en sitio + guard) + audit predicates
 - (this commit) — predeploy hardening + replay tool + log final
 
-**Total bugs sistémicos arreglados: 15 (A-O).**
+**Total bugs sistémicos arreglados: 16 (A-P).**
 **Total tests adversariales: 66 (todos pasan).**
-**Total mensajes reales validados: 2000 (0 errores).**
+**Total mensajes reales validados: 4263 (0 errores).**
+
+- [x] **Bug P — UnboundLocalError `send_whatsapp` por re-import local**
+  - Cazado por replay 1000 mensajes reales en una segunda iteración.
+  - Caso real 2026-04-24 (56999988115) "una ecografía abdominal y paredes
+    abdominal" — el flujo entraba al post-confirmación con flag
+    `is_paciente_nuevo_post_referral`.
+  - Causa raíz: línea 4744 `from messaging import send_whatsapp` dentro de
+    handle_message → Python trataba la variable como local en TODA la
+    función, fallando en otros paths que usaban send_whatsapp antes.
+  - Fix: eliminar el re-import redundante (ya está en línea 33 global).
 
 ## Fuzz testing
 
