@@ -41,6 +41,34 @@ _DIAS_SEMANA = {
 }
 
 
+def _detectar_fecha_pedida_idle(txt: str) -> str | None:
+    """Detecta fecha relativa pedida en un mensaje libre (IDLE → agendar).
+    Retorna YYYY-MM-DD o None. Solo se usa para PROPAGAR la preferencia al
+    flujo de agendar, no como filtro estricto. Si el paciente menciona
+    "en la mañana" / "por la mañana" sin "para mañana", no es día — es franja.
+    """
+    if not txt:
+        return None
+    t = txt.lower()
+    franjas = ("en la mañana", "en la manana", "por la mañana", "por la manana")
+    es_franja = any(p in t for p in franjas)
+    hoy = datetime.now(_CHILE_TZ).date()
+    if t.strip() in ("hoy", "hoy mismo", "hoy dia", "hoy día"):
+        return hoy.strftime("%Y-%m-%d")
+    if any(p in t for p in (" para hoy", "para hoy", "hoy mismo", "hoy dia", "hoy día")):
+        return hoy.strftime("%Y-%m-%d")
+    if " hoy " in f" {t} " and "manana" not in t and "mañana" not in t:
+        return hoy.strftime("%Y-%m-%d")
+    if "pasado mañana" in t or "pasado manana" in t:
+        return (hoy + timedelta(days=2)).strftime("%Y-%m-%d")
+    if ("para mañana" in t or "para manana" in t
+        or t.strip() in ("mañana", "manana")):
+        return (hoy + timedelta(days=1)).strftime("%Y-%m-%d")
+    if (("mañana" in t or "manana" in t) and not es_franja):
+        return (hoy + timedelta(days=1)).strftime("%Y-%m-%d")
+    return None
+
+
 def _first_name(nombre) -> str:
     """Primer token de un nombre, seguro ante None/vacío/solo-espacios."""
     parts = (nombre or "").split()
@@ -656,6 +684,39 @@ async def _slot_confirmed(phone: str, data: dict, slot: dict) -> str | dict:
     Si no hay perfil o el paciente está agendando para un tercero, sigue el
     flujo normal por WAIT_MODALIDAD.
     """
+    # Defensa sistémica: revalidar que el slot no esté en el pasado al momento
+    # de confirmar. Cubre el caso donde la conversación quedó abierta horas
+    # (sesión vigente) y el paciente confirma una hora que ya pasó. Sin este
+    # check, Medilink crearía la cita "para el pasado" o fallaría con error
+    # confuso. Detectado 2026-04-28: bot ofreció martes 28 11:40 a paciente que
+    # confirmó después de las 19:00 del mismo día.
+    try:
+        from datetime import datetime as _dtv
+        from zoneinfo import ZoneInfo as _Zv
+        _hora_str = (slot.get("hora_inicio") or "")[:5]  # "HH:MM"
+        _fecha_str = slot.get("fecha") or ""
+        if _fecha_str and _hora_str:
+            _slot_dt = _dtv.strptime(f"{_fecha_str} {_hora_str}", "%Y-%m-%d %H:%M")
+            _slot_dt = _slot_dt.replace(tzinfo=_Zv("America/Santiago"))
+            _ahora = _dtv.now(_Zv("America/Santiago"))
+            if _slot_dt < _ahora:
+                log_event(phone, "slot_expirado_al_confirmar", {
+                    "slot": f"{_fecha_str} {_hora_str}",
+                    "esp": slot.get("especialidad"),
+                    "phone": phone,
+                })
+                esp_obs = slot.get("especialidad", "") or data.get("especialidad", "")
+                reset_session(phone)
+                return await _iniciar_agendar(
+                    phone, {}, esp_obs or None,
+                    saludo_prefix=(
+                        f"⚠️ Esa hora (*{_hora_str}* del *{slot.get('fecha_display','')}*) "
+                        f"ya pasó.\n\nTe busco la siguiente disponible:\n\n"
+                    ),
+                )
+    except Exception as _e_slot_val:
+        log.warning("slot revalidation failed: %s", _e_slot_val)
+
     data["slot_elegido"] = slot
 
     # No fast-track si ya sabemos que es para otra persona
@@ -2048,6 +2109,31 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # Debe ir ANTES de los atajos numéricos (1..4) porque aquí interpretamos
         # "1"/"sí"/botón como "agendar la especialidad ya sugerida en el FAQ".
         esp_sug_prev = data.get("especialidad_sugerida")
+        # ── Defensa sistémica: payload de botón viejo sin contexto ────────────
+        # El paciente clickeó un botón "Sí, agendar" / "Otros horarios" / etc.
+        # pero la sesión expiró (timeout 30 min) o nunca se guardó el contexto.
+        # Sin este handler caía al menú genérico y mostraba un saludo de
+        # bienvenida confuso. Caso real 2026-04-28 (56931330787): paciente
+        # clickeó "agendar_sugerido" tras un mensaje del bot y recibió 2 saludos
+        # genéricos en lugar de retomar el agendamiento.
+        if not esp_sug_prev and not data.get("slots"):
+            _BOT_PAYLOADS_HUERFANOS = {
+                "agendar_sugerido": "Esa opción de agendar ya no está activa 😔\n\n¿Qué *especialidad* necesitas? O escribe *menu* para ver las opciones.",
+                "confirmar_sugerido": "La hora que te ofrecí ya no está disponible 😔\n\nEscribe la *especialidad* que necesitas y te busco hora nueva.",
+                "ver_otros": "Las opciones que mostré ya no están activas. Escribe la *especialidad* que necesitas para empezar de nuevo 😊",
+                "ver_todos": "Las opciones que mostré ya no están activas. Escribe la *especialidad* que necesitas para empezar de nuevo 😊",
+                "otro_dia": "Tu búsqueda anterior expiró. Dime qué *especialidad* necesitas y te busco horas 😊",
+                "otro_día": "Tu búsqueda anterior expiró. Dime qué *especialidad* necesitas y te busco horas 😊",
+                "otro_prof": "Tu búsqueda anterior expiró. Dime qué *especialidad* necesitas y te busco horas 😊",
+            }
+            if tl in _BOT_PAYLOADS_HUERFANOS:
+                log_event(phone, "payload_huerfano", {"payload": tl})
+                save_session(phone, "IDLE", data)
+                return _BOT_PAYLOADS_HUERFANOS[tl]
+            # "no_agendar" sin contexto: silencio no, mejor cerrar amable
+            if tl == "no_agendar":
+                save_session(phone, "IDLE", data)
+                return "Sin problema 😊 Si necesitas algo, escribe *menu*."
         if esp_sug_prev:
             if tl == "no_agendar" or tl in NEGACIONES or tl_norm in NEGACIONES:
                 data.pop("especialidad_sugerida", None)
@@ -2708,6 +2794,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                             {"id": "quick_cancel", "title": "Ahora no"},
                         ]
                     )
+            # Detectar "para hoy/mañana" en el mensaje y propagar al agendar.
+            # Si paciente dice "una hora con kine para hoy" y no hay slots hoy,
+            # _iniciar_agendar debe avisarle explícitamente en vez de mostrar
+            # mañana sin contexto. Caso real 2026-04-28 (Norma Muñoz) +
+            # CLAUDE.md pendiente #1 (caso María 56968621918).
+            _fp = _detectar_fecha_pedida_idle(txt)
+            if _fp:
+                data["fecha_pedida_idle"] = _fp
             return await _iniciar_agendar(phone, data, especialidad)
 
         if intent == "reagendar":
@@ -6473,24 +6567,54 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
                 {"id": "maso_40", "title": "40 minutos"},
             ]
         )
+    # Si paciente dijo "para hoy"/"para mañana" en IDLE, propagar a fecha_preferida
+    # para que el branch correspondiente respete la fecha pedida.
+    if data.get("fecha_pedida_idle") and not data.get("fecha_preferida"):
+        data["fecha_preferida"] = data.pop("fecha_pedida_idle")
+
     # Medicina general: stage 0 = slot más próximo entre Abarca (08-16) y Olavarría (16-21).
     # Márquez (15-20) solo aparece como overflow si Abarca+Olavarría no tienen cupo.
     if especialidad_lower in _ESP_MED_GENERAL:
-        smart, todos = await buscar_primer_dia(especialidad_lower, solo_ids=_MED_AO_IDS)
-        if todos:
-            mejor = todos[0]  # más próximo entre ambos doctores
+        _fp_mg = data.get("fecha_preferida")
+        if _fp_mg:
+            # Paciente pidió fecha específica — buscar solo ese día primero
+            smart, todos = await buscar_slots_dia(especialidad_lower, _fp_mg)
+            todos = [s for s in (todos or []) if s.get("fecha") == _fp_mg and s.get("id_profesional") in _MED_AO_IDS]
+            smart = [s for s in (smart or []) if s.get("fecha") == _fp_mg and s.get("id_profesional") in _MED_AO_IDS]
+            if todos:
+                mejor = todos[0]
+            else:
+                # Sin disponibilidad ese día — marcar para disclaimer y caer al siguiente
+                data["_aviso_sin_fecha_pedida"] = _fp_mg
+                data.pop("fecha_preferida", None)
+                smart, todos = await buscar_primer_dia(especialidad_lower, solo_ids=_MED_AO_IDS)
+                if todos:
+                    mejor = todos[0]
+                else:
+                    smart, todos = await buscar_primer_dia(especialidad_lower, solo_ids=[_MED_OVERFLOW_ID])
+                    mejor = todos[0] if todos else None
         else:
-            # Abarca + Olavarría sin disponibilidad → Márquez como overflow
-            smart, todos = await buscar_primer_dia(especialidad_lower, solo_ids=[_MED_OVERFLOW_ID])
-            mejor = todos[0] if todos else None
+            smart, todos = await buscar_primer_dia(especialidad_lower, solo_ids=_MED_AO_IDS)
+            if todos:
+                mejor = todos[0]  # más próximo entre ambos doctores
+            else:
+                # Abarca + Olavarría sin disponibilidad → Márquez como overflow
+                smart, todos = await buscar_primer_dia(especialidad_lower, solo_ids=[_MED_OVERFLOW_ID])
+                mejor = todos[0] if todos else None
     else:
         # Si el paciente indicó una fecha preferida ("mañana", "viernes", etc.),
         # buscarla directamente en vez de usar primer_dia.
         _fecha_pref = data.get("fecha_preferida")
         if _fecha_pref:
             smart, todos = await buscar_slots_dia(especialidad_lower, _fecha_pref)
-            if not todos:
-                # Sin cupo ese día específico → fallback al siguiente disponible
+            # Filtrar estrictamente a la fecha pedida (Medilink puede devolver vecinas)
+            todos_dia_pref = [s for s in (todos or []) if s.get("fecha") == _fecha_pref]
+            if todos_dia_pref:
+                smart = [s for s in (smart or []) if s.get("fecha") == _fecha_pref] or todos_dia_pref[:5]
+                todos = todos_dia_pref
+            else:
+                # Sin cupo ese día específico — marcar para disclaimer y caer al siguiente
+                data["_aviso_sin_fecha_pedida"] = _fecha_pref
                 smart, todos = await buscar_primer_dia(especialidad_lower)
             data.pop("fecha_preferida", None)
         else:
@@ -6543,6 +6667,18 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
         header = saludo_prefix
     else:
         header = f"¡Hola de nuevo, *{nombre_corto}*! " if nombre_corto else ""
+    # Disclaimer cuando el paciente pidió fecha específica y no había slots ese
+    # día — antes el bot mostraba el siguiente disponible sin avisar.
+    _fecha_avisar = data.pop("_aviso_sin_fecha_pedida", None)
+    if _fecha_avisar:
+        try:
+            _d_av = datetime.strptime(_fecha_avisar, "%Y-%m-%d")
+            _DIAS_AV = ["lunes","martes","miércoles","jueves","viernes","sábado","domingo"]
+            _MESES_AV = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"]
+            _lbl_av = f"{_DIAS_AV[_d_av.weekday()]} {_d_av.day} de {_MESES_AV[_d_av.month - 1]}"
+        except Exception:
+            _lbl_av = _fecha_avisar
+        header = f"⚠️ No tengo horarios para *{_lbl_av}* 😕\nTe muestro la *próxima disponible*:\n\n" + header
     # Tercer botón: "Otro profesional" si hay >1 doctor; si no, "Otro día"
     from medilink import _ids_para_especialidad
     ids_esp = _ids_para_especialidad(especialidad_lower)
