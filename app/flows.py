@@ -1520,7 +1520,7 @@ def _preguntar_info_respuesta() -> str:
     return (
         f"📍 Monsalve 102, Carampangue\n"
         f"📞 *{CMC_TELEFONO}* · ☎️ *{CMC_TELEFONO_FIJO}*\n"
-        f"🕐 Lun-Vie 9-19h · Sáb 9-13h"
+        f"🕐 Lun-Vie 8-21h · Sáb 9-14h"
     )
 
 
@@ -1629,7 +1629,7 @@ async def _pre_router_wait(phone: str, txt: str, tl: str, state: str, data: dict
                 f"Claro, te dejo el contacto:\n\n"
                 f"📞 *{CMC_TELEFONO}*\n"
                 f"☎️ *{CMC_TELEFONO_FIJO}*\n"
-                f"🕐 Lun-Vie 9-19h · Sáb 9-13h\n\n"
+                f"🕐 Lun-Vie 8-21h · Sáb 9-14h\n\n"
                 "_Si prefieres, sigo ayudándote por acá 😊_"
             )
 
@@ -3380,7 +3380,20 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         tl_norm_slot = txt.lower().strip()
 
         # Respuesta al sugerido proactivo (botón o texto libre "si"/"sí"/"confirmo"/...)
-        if (tl == "confirmar_sugerido" or tl in AFIRMACIONES or tl_norm in AFIRMACIONES) and slots_mostrados:
+        # Afirmación libre: "puedo reservar?", "sí reservalo", "reserva esa hora",
+        # "agenda esa", "tomo esa hora", etc. Caso real 2026-04-28
+        # (fb_27066996906237198): bot ofreció Podología 14:00, paciente preguntó
+        # "¿Puedo reservar una cita?" como confirmación implícita y el bot
+        # reseteó el flow con "Claro, te ayudo a agendar 😊".
+        _afirm_libre = (
+            ("reserv" in tl or "agenda" in tl or "tomo" in tl or "tomar" in tl
+             or "confirm" in tl or "esa hora" in tl or "esa hora me sirve" in tl)
+            and not any(neg in tl for neg in (
+                "no reserv", "no quiero reserv", "no agenda",
+                "no la reserv", "no me sirve", "no gracias",
+            ))
+        )
+        if (tl == "confirmar_sugerido" or tl in AFIRMACIONES or tl_norm in AFIRMACIONES or _afirm_libre) and slots_mostrados:
             # Si el paciente pidió explicitamente otro profesional antes y los
             # slots mostrados NO son de él, preferir uno que sí lo sea.
             _pedido = data.get("prof_pedido_explicito")
