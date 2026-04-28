@@ -4741,7 +4741,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 # como segundo mensaje con botones (post-confirmación, baja fricción).
                 if data.get("is_paciente_nuevo_post_referral"):
                     save_session(phone, "WAIT_REFERRAL_POST", {})
-                    from messaging import send_whatsapp
+                    # send_whatsapp ya está importado globalmente (línea 33).
+                    # El re-import local previo causaba UnboundLocalError porque
+                    # Python trataba send_whatsapp como local en TODA la función.
+                    # Caso real 2026-04-24 (56999988115).
                     await send_whatsapp(phone, confirmacion_msg)
                     return _btn_msg(
                         "Una última cosa rápida 🙏\n\n*¿Cómo nos conociste?*",
