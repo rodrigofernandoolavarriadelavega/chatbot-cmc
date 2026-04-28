@@ -531,6 +531,103 @@ CONVERSACIONES = [
             ("aaa", []),  # 4 mensajes consecutivos sin sentido
         ],
     ),
+    # ── Full flows de agendamiento end-to-end ─────────────────────────────────
+    (
+        "full_flow_kine_paciente_nuevo",
+        [
+            ("hola", []),
+            ("una hora con kine", []),
+            ("1", []),  # selecciona primer slot
+            # Espera RUT
+            ("12345678-9", []),  # paciente nuevo (mock buscar_paciente devolverá nuevo)
+        ],
+    ),
+    (
+        "full_flow_medico_recurrente",
+        [
+            ("hola", []),
+            ("hora con medico", []),
+            ("si", []),  # confirma slot
+        ],
+    ),
+    (
+        "full_flow_cancelar",
+        [
+            ("hola", []),
+            ("cancelar mi hora", []),
+        ],
+    ),
+    (
+        "full_flow_ver_reservas",
+        [
+            ("hola", []),
+            ("ver mis citas", []),
+        ],
+    ),
+    (
+        "no_crash_random_strings",
+        [
+            ("Lorem ipsum dolor sit amet", []),
+            ("a" * 500, []),  # mensaje muy largo
+            ("🌟🎉🔥💯", []),  # solo emojis
+            ("¿¡!!??", []),  # solo signos
+            ("--------", []),
+        ],
+    ),
+    (
+        "no_crash_inyeccion_sql",
+        [
+            ("'; DROP TABLE messages; --", []),
+            ("../../etc/passwd", []),
+            ("<script>alert('xss')</script>", []),
+        ],
+    ),
+    (
+        "no_crash_unicode_extremo",
+        [
+            ("Z̴̢̡͙̮̜̘̙̜̅͒͐͛̕̕͜A̷̢̛̟̟̘̩̲͍̥͌͆̾͗̕͝", []),  # zalgo text
+            ("\u202e\u202d", []),  # Unicode bidi override
+            ("ﾊﾞﾝｸ", []),  # halfwidth katakana
+        ],
+    ),
+    (
+        "boletas_solicitud_explicita",
+        [
+            ("necesito que me reimpriman la boleta de mi última cita", []),
+        ],
+    ),
+    (
+        "respuesta_a_recordatorio_2h",
+        [
+            ("ok ya voy en camino", []),
+            ("ya estoy llegando", []),
+        ],
+    ),
+    (
+        "info_ubicacion",
+        [
+            ("donde queda el centro?", []),
+            ("dirección por favor", []),
+        ],
+    ),
+    (
+        "agendar_via_motivo",
+        [
+            ("tengo dolor de muela", []),
+        ],
+    ),
+    (
+        "agendar_dental_estetica",
+        [
+            ("quiero hacerme botox", []),
+        ],
+    ),
+    (
+        "ortodoncia_control_no_inicial",
+        [
+            ("hora para control de ortodoncia", []),
+        ],
+    ),
 ]
 
 
