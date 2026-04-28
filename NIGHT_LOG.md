@@ -48,10 +48,34 @@ Cada fix con commit individual + predeploy_check + deploy. Si predeploy falla, N
   - Si paciente envía nuevo intent (palabras de agendar/cancelar/etc),
     `reset_session` y reentra `handle_message` con sesión limpia.
 
-- [x] **Bug G — Ecografías por tipo no detectadas** (pending)
+- [x] **Bug G — Ecografías por tipo no detectadas** (commit `1202ce7`)
   - Auditoría: 12 sin_disponibilidad/7d en ecografía porque solo "transvaginal"
     se ruteaba a Ginecología; abdominal/renal/tiroidea/etc. caían a fallback.
   - `_INTENT_CACHE`: agregadas 18 variantes de ecografía con intent="agendar"
     + esp correcta (ginecología para transvaginal/pélvica, ecografía para
     el resto = David Pardo).
+
+- [x] **Bug I — Fallback loop counter** (pending)
+  - Caso real 56971038302: bot mandó 4 menús en 26s sin entender al paciente.
+  - Contador `data["fallback_otro_count"]` aumenta con cada intent="otro" o
+    "menu". Al llegar a 3 → escala a HUMAN_TAKEOVER con mensaje claro.
+  - Si paciente avanza, el contador se resetea.
+
+- [x] **Bug J — GES triage pre-filtro mejorado** (pending)
+  - 7 nomatch/7d con intención clara: "tengo hora hoy con Dr X", "no podré
+    asistir", etc. → caían al triage GES en vez de cancelar/reagendar.
+  - `_TRIAGE_SKIP_KWS` extendido con: frases de gestión de cita ("tengo hora",
+    "no podre", "mi cita", "horita", etc.) + apellidos de TODOS los
+    profesionales del CMC. Si menciona apellido, NO es síntoma — es gestión.
+
+- [x] **Bug H — Reagendar id_cita_old null** (pending)
+  - Auditoría: 2 casos con cita_creada que tiene id_cita_old=null y SIN
+    cita_cancelada — flag `reagendar_mode` se perdía en save_session intermedio.
+  - Defensa: `reagendar = bool(reagendar_mode) or bool(cita_old.get("id"))`.
+    Si hay cita_old con id en data, tratar como reagendar.
+
+## Pendientes de la noche
+
+- [ ] Implementar simulador (props + replay)
+- [ ] Iterar con simulador, encontrar bugs nuevos, arreglar
 

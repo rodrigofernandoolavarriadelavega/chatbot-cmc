@@ -2562,6 +2562,26 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             "otorrino", "kinesio", "kine", "psicolog", "nutricion",
             "matrona", "ecograf", "ginecolog", "cardiolog", "podolog",
             "fonoaud", "gastro",
+            # Frases de gestión de cita — agregadas 2026-04-28 tras auditoría
+            # (7 nomatch/7d con intención clara: "tengo hora hoy", "no podré
+            # asistir", "horita hoy con el dr X", etc.).
+            "tengo hora", "tengo una hora", "tengo cita", "tengo una cita",
+            "una horita", "una hora", "mi hora", "mi cita",
+            "no podre", "no podré", "no creo que", "no asistir", "no asistire",
+            "no asistiré", "no llegaré", "no llegare", "no voy a poder",
+            "no podre asistir", "no podré asistir",
+            "esa hora", "esa cita", "agendado", "agendada",
+            "voy a llegar tarde", "atrasado", "atrasada",
+            "verificar mi hora", "confirmar mi", "confirmar hora",
+            # Apellidos de profesionales (mención = gestión de cita, no síntoma)
+            "abarca", "olavarria", "olavarría", "marquez", "márquez",
+            "borrego", "millan", "millán", "barraza", "rejon", "rejón",
+            "quijano", "burgos", "jimenez", "jiménez", "castillo",
+            "fredes", "valdes", "valdés", "fuentealba", "armijo",
+            "etcheverry", "pinto", "montalba", "rodriguez", "rodríguez",
+            "arratia", "saraí", "sarai", "guevara", "pardo",
+            # "horita" usado como diminutivo de "hora" (cita), muy común en CMC
+            "horita",
         )
         _skip_triage = any(k in tl for k in _TRIAGE_SKIP_KWS)
         if len(txt) >= 10 and not txt.isdigit() and not _skip_triage:
@@ -2826,6 +2846,30 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         result = await detect_intent(txt)
         intent = result.get("intent", "otro")
         log_event(phone, "intent_detectado", {"intent": intent, "esp": result.get("especialidad")})
+
+        # ── Defensa sistémica: fallback loop counter ─────────────────────────
+        # Si el bot devuelve N veces seguidas intent="otro" / "menu" sin avanzar
+        # el flow, escalar a HUMAN_TAKEOVER. Caso real 2026-04-28 (56971038302):
+        # bot mandó 4 menús distintos en 26 segundos sin entender al paciente.
+        if intent in ("otro", "menu"):
+            cnt_otro = int(data.get("fallback_otro_count", 0)) + 1
+            data["fallback_otro_count"] = cnt_otro
+            if cnt_otro >= 3:
+                log_event(phone, "fallback_loop_escalado", {"count": cnt_otro})
+                data["handoff_reason"] = "fallback_loop"
+                data["fallback_otro_count"] = 0
+                save_session(phone, "HUMAN_TAKEOVER", data)
+                return (
+                    "Disculpa, no estoy entendiendo bien tu consulta 😔\n\n"
+                    "Te conecto con una recepcionista para que te ayude personalmente.\n"
+                    f"📞 *{CMC_TELEFONO}* · ☎️ *{CMC_TELEFONO_FIJO}*"
+                )
+            save_session(phone, state, data)
+        else:
+            # Avanzó del fallback — limpiar contador
+            if data.get("fallback_otro_count"):
+                data["fallback_otro_count"] = 0
+                save_session(phone, state, data)
 
         # ── Saludo / menu → devolver menú corto con botones (sin preguntas largas) ──
         if intent == "menu":
@@ -4473,8 +4517,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "Perdimos el hilo de tu reserva 😅 "
                     "Escribe *menu* para empezar de nuevo o *agendar* directamente."
                 )
-            reagendar = bool(data.get("reagendar_mode"))
             cita_old = data.get("cita_old") or {}
+            # Defensa sistémica: si hay cita_old con id, tratar como reagendar
+            # incluso si el flag se perdió. Auditoría 2026-04-28: 2 casos con
+            # id_cita_old=null en cita_creada y sin cita_cancelada — el flag
+            # reagendar_mode se perdía en algún save_session intermedio.
+            reagendar = bool(data.get("reagendar_mode")) or bool(cita_old.get("id"))
             # ── Validación: paciente ya tiene cita activa con el MISMO profesional ──
             # Bloqueo duro — no permitimos múltiples horas activas con el mismo
             # profesional para evitar auto-agendamientos en cascada (caso real:
