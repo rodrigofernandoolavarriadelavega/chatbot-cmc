@@ -18,8 +18,30 @@ META_MESSENGER_TOKEN = os.getenv("META_MESSENGER_TOKEN", "")  # Page token para 
 INSTAGRAM_USER_ID    = os.getenv("INSTAGRAM_USER_ID", "")   # ID del usuario de Instagram Business
 META_PAGE_ID         = os.getenv("META_PAGE_ID", "")        # ID de la Página de Facebook
 
-CMC_TELEFONO       = os.getenv("CMC_TELEFONO", "+56 XX XXX XXXX")
+CMC_TELEFONO       = os.getenv("CMC_TELEFONO", "+56966610737")
 CMC_TELEFONO_FIJO  = os.getenv("CMC_TELEFONO_FIJO", "(41) 296 5226")
+
+# Validación crítica: el número personal del Dr. nunca debe ser CMC_TELEFONO.
+# Bug detectado 2026-04-28 vía simulador adversarial: .env local tenía
+# CMC_TELEFONO=+56987834148 → todas las respuestas con CMC_TELEFONO leakeaban
+# el personal. En prod estaba bien, pero la falta de validación es riesgo.
+if "987834148" in CMC_TELEFONO.replace(" ", ""):
+    import logging as _log_cfg
+    _log_cfg.getLogger(__name__).error(
+        "CONFIG_ERROR: CMC_TELEFONO=%s es el número PERSONAL del Dr. Olavarría — "
+        "NUNCA customer-facing. Forzando default +56966610737 (bot WA Cloud API).",
+        CMC_TELEFONO,
+    )
+    CMC_TELEFONO = "+56966610737"
+# Validación menor: código de área del fijo. Carampangue es VIII región → (41).
+if "(44)" in CMC_TELEFONO_FIJO:
+    import logging as _log_cfg2
+    _log_cfg2.getLogger(__name__).error(
+        "CONFIG_ERROR: CMC_TELEFONO_FIJO=%s tiene código (44) — Carampangue "
+        "es código (41). Forzando default.",
+        CMC_TELEFONO_FIJO,
+    )
+    CMC_TELEFONO_FIJO = "(41) 296 5226"
 
 ADMIN_TOKEN        = os.getenv("ADMIN_TOKEN", "cmc_admin_2026")
 ORTODONCIA_TOKEN   = os.getenv("ORTODONCIA_TOKEN", "cmc_ortodoncia_2026")

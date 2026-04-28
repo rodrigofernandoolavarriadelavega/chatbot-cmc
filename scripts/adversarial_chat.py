@@ -312,8 +312,11 @@ CONVERSACIONES = [
         "apellido_no_contamina_especialidad",
         [
             ("Tiene hora para médico mañana?", [
-                # No debe ofrecer Odontología Dr. Carlos Jiménez
-                must_not_contain("Carlos Jiménez", "Odontología General — Dr."),
+                # No debe matchear "jimenez" como especialidad NI ofrecer
+                # Odontología Dr. Carlos Jiménez. El detector fuzzy daba
+                # falso positivo "tiene" vs "jimene".
+                must_not_contain("jimenez", "jiménez", "Carlos Jiménez",
+                                 "Odontología General — Dr.", "*jimenez*"),
             ]),
         ],
     ),
@@ -397,6 +400,148 @@ CONVERSACIONES = [
             ("agendar medico para mi mama", []),
         ],
     ),
+    # ── Edge cases reales detectados por auditor / screenshots ────────────────
+    (
+        "frases_largas_con_signos",
+        [
+            ("Hola buenos días!! Necesito una hora para el doctor Abarca para mañana en la mañana plzz", []),
+        ],
+    ),
+    (
+        "modismos_chilenos",
+        [
+            ("oye cabro, tendrai una horita pal' médico ahora?", []),
+            ("po sabí si hay disponible?", []),
+        ],
+    ),
+    (
+        "gritos_caps_lock",
+        [
+            ("HOLA NECESITO HORA URGENTE", []),
+        ],
+    ),
+    (
+        "doble_mensaje_consecutivo",
+        [
+            ("hola", []),
+            ("hola", []),  # mismo saludo dos veces
+        ],
+    ),
+    (
+        "cambio_intent_a_mitad_flujo",
+        [
+            ("agendar kine", []),
+            ("mejor cancelar mi hora anterior", []),  # cambia intent
+        ],
+    ),
+    (
+        "input_no_relacionado",
+        [
+            ("a cómo está el dólar hoy?", []),  # off-topic
+        ],
+    ),
+    (
+        "audio_simulado",
+        [
+            ("audio: hola, una hora con kinesiologa", []),  # no es audio real, pero similar texto
+        ],
+    ),
+    (
+        "rut_con_puntos",
+        [
+            ("agendar medico", []),
+            ("12.345.678-9", []),
+        ],
+    ),
+    (
+        "pregunta_existencia_no_realizada",
+        [
+            ("hacen ecografía obstétrica?", []),  # NO la hacen
+        ],
+    ),
+    (
+        "fecha_relativa_compleja",
+        [
+            ("medico para la próxima semana", []),
+        ],
+    ),
+    (
+        "menu_repetido_no_loop_infinito",
+        [
+            ("menu", []),
+            ("menu", []),
+            ("menu", []),
+        ],
+    ),
+    (
+        "numero_solo_sin_contexto",
+        [
+            ("1", []),  # número solo en IDLE, sin sesión
+        ],
+    ),
+    (
+        "stop_words_solo",
+        [
+            ("ah", []),
+            ("eh", []),
+            ("...", []),
+        ],
+    ),
+    (
+        "agendar_con_emoji_solo",
+        [
+            ("👍", []),
+            ("🙏", []),
+        ],
+    ),
+    (
+        "url_o_link_pegado",
+        [
+            ("https://centromedicocarampangue.cl/contacto", []),
+        ],
+    ),
+    (
+        "emergencia_disfrazada",
+        [
+            ("doctor estoy sangrando mucho", [
+                must_contain("SAMU", "131"),
+            ]),
+        ],
+    ),
+    (
+        "ginecologa_no_mismo_que_matrona",
+        [
+            ("hora con la matrona", []),
+            ("hora con ginecóloga", []),
+        ],
+    ),
+    (
+        "respuesta_si_no_sin_contexto",
+        [
+            ("si", []),
+            ("no", []),
+        ],
+    ),
+    (
+        "conversation_loop_detection",
+        [
+            ("xxx", []),
+            ("yyy", []),
+            ("zzz", []),
+            ("aaa", []),  # 4 mensajes consecutivos sin sentido
+        ],
+    ),
+]
+
+
+# Asserts GLOBALES que se aplican a TODAS las respuestas. Si alguna falla,
+# es un bug crítico independiente del test específico.
+GLOBAL_ASSERTS = [
+    must_not_contain("+56987834148", "987834148"),  # Número personal del Dr.
+    must_not_contain("(44) 296"),                    # Fijo CMC mal código (es 41)
+    must_not_contain("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"),  # locale
+    must_not_contain("january", "february", "march", "april", "may ", "june",
+                     "july", "august", "september", "october", "november", "december"),
 ]
 
 
@@ -414,18 +559,54 @@ async def run_conversacion(nombre: str, pasos: list, verbose: bool):
         except Exception as e:
             fails.append(f"step {i+1} '{msg}' → exception: {e}")
             break
-        if isinstance(resp, dict):
-            resp_text = resp.get("body", "") or resp.get("text", "") or str(resp)
-        else:
-            resp_text = str(resp or "")
+        # Para mensajes interactive, extraer body + buttons + sections
+        resp_text = _extract_text(resp)
         if verbose:
             print(f"  {DIM}[{i+1}] paciente:{RESET} {msg}")
-            print(f"  {DIM}    bot:{RESET} {resp_text[:240]}")
+            print(f"  {DIM}    bot:{RESET} {resp_text[:300]}")
+        # Asserts específicos del test
         for a in asserts:
             err = a(resp_text)
             if err:
                 fails.append(f"step {i+1} '{msg}' → {err}\n     resp: {resp_text[:180]}")
+        # Asserts globales (siempre)
+        for ga in GLOBAL_ASSERTS:
+            err = ga(resp_text)
+            if err:
+                fails.append(f"GLOBAL step {i+1} '{msg}' → {err}\n     resp: {resp_text[:280]}")
     return fails
+
+
+def _extract_text(resp) -> str:
+    """Extrae todo el texto de una respuesta del bot, ya sea string, dict
+    interactive con body+buttons+sections, o tuple."""
+    if resp is None:
+        return ""
+    if isinstance(resp, str):
+        return resp
+    if isinstance(resp, dict):
+        parts = []
+        body = resp.get("body") or resp.get("text") or ""
+        if isinstance(body, dict):
+            body = body.get("text", "")
+        parts.append(str(body))
+        # Interactive
+        inter = resp.get("interactive") or {}
+        if isinstance(inter, dict):
+            inter_body = inter.get("body", {})
+            if isinstance(inter_body, dict):
+                parts.append(str(inter_body.get("text", "")))
+            action = inter.get("action", {})
+            for btn in action.get("buttons", []):
+                rep = btn.get("reply", {})
+                parts.append(str(rep.get("title", "")))
+            for sec in action.get("sections", []):
+                parts.append(str(sec.get("title", "")))
+                for row in sec.get("rows", []):
+                    parts.append(str(row.get("title", "")))
+                    parts.append(str(row.get("description", "")))
+        return "\n".join(p for p in parts if p)
+    return str(resp)
 
 
 async def main():

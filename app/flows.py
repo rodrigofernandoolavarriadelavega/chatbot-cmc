@@ -6389,17 +6389,37 @@ def _detectar_apellido_profesional(txt: str) -> str | None:
     ))
     if _MENCIONA_PROF:
         from difflib import SequenceMatcher
-        # Tomar tokens del input >=4 chars y comparar contra apellidos >=5
-        _tokens = [t for t in norm_ws.split() if len(t) >= 4]
+        # Tomar tokens del input >=5 chars (eviar matches espurios con "tiene",
+        # "para", "como", etc.) y comparar contra apellidos >=7 chars (los
+        # aliases cortos como "jimene" generaban falsos positivos: "tiene" vs
+        # "jimene" daba 0.727. Caso real 2026-04-28 56993584481).
+        _PALABRAS_COMUNES = frozenset({
+            "tiene", "tienes", "tengo", "tengas", "tener",
+            "hora", "horas", "horita", "horario",
+            "para", "como", "donde", "cuando", "cuanto",
+            "sera", "será", "serán", "seran",
+            "necesito", "quisiera", "quiero", "deseo",
+            "puedo", "puede", "puedes",
+            "manana", "mañana", "tarde", "noche",
+            "hoy", "ayer",
+            "medico", "medica", "doctor", "doctora",
+            "dental", "dentista", "kine",
+            "con", "del", "esa", "ese", "esto", "esta",
+            "entonces", "tambien",
+        })
+        _tokens = [
+            t for t in norm_ws.split()
+            if len(t) >= 5 and t not in _PALABRAS_COMUNES
+        ]
         _best: tuple[float, str | None] = (0.0, None)
         for tok in _tokens:
             for apellido_norm, key in _APELLIDOS_NORM:
-                if len(apellido_norm) < 5:
+                if len(apellido_norm) < 7:
                     continue
                 ratio = SequenceMatcher(None, tok, apellido_norm).ratio()
                 if ratio > _best[0]:
                     _best = (ratio, key)
-        if _best[0] >= 0.72:  # 72% similarity = ~1-2 typos en palabra de 7-8 chars
+        if _best[0] >= 0.85:  # 85% — muy estricto, evita falsos positivos
             return _best[1]
     return None
 
