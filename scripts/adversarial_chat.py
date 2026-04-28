@@ -628,6 +628,112 @@ CONVERSACIONES = [
             ("hora para control de ortodoncia", []),
         ],
     ),
+    # ── Validación de outputs específicos (no solo "no crashea") ──────────────
+    (
+        "horario_real_otorrino_dice_lunes_a_miercoles",
+        [
+            ("a que dia atiende el otorrino", [
+                must_contain("Borrego"),
+                # debe mencionar 16 (hora real) o "según agenda" o "lunes"
+                must_match(r"(16:00|según agenda|lun)"),
+            ]),
+        ],
+    ),
+    (
+        "metodo_pago_dice_efectivo_o_transferencia_para_medico",
+        [
+            ("agendar medico", []),
+            ("como puedo pagar", [
+                # Debe mencionar efectivo y transferencia para médica
+                must_contain("efectivo"),
+            ]),
+        ],
+    ),
+    (
+        "dolor_muela_va_a_odonto",
+        [
+            ("tengo dolor de muela", [
+                # Debe sugerir odontología o dental
+                must_match(r"(Odontolog|dental|tapadura|caries|muela)"),
+            ]),
+        ],
+    ),
+    (
+        "audio_largo_no_responde_solo_recibido",
+        [
+            ("este es un mensaje de audio muy largo donde el paciente cuenta " +
+             ("síntomas " * 30), []),
+        ],
+    ),
+    (
+        "fechas_pasadas_explicitas_se_rechazan",
+        [
+            ("hora para el 1 de enero del 2020", []),
+        ],
+    ),
+    (
+        "respuesta_dr_olavarria_no_da_personal",
+        [
+            ("hora con olavarria", [
+                must_not_contain("987834148"),
+                # Debe dar el bot WA del CMC, no el personal
+            ]),
+        ],
+    ),
+    (
+        "boleta_solicitud_repetida_no_loop",
+        [
+            ("necesito una boleta", []),
+            ("boleta", []),
+            ("la boleta de mi última cita", []),
+        ],
+    ),
+    (
+        "mensaje_solo_signos_no_crash",
+        [
+            ("?", []),
+            ("!", []),
+            (".", []),
+            (",", []),
+            ("¿?", []),
+        ],
+    ),
+    (
+        "consulta_general_simple",
+        [
+            ("buenos días, me podría ayudar?", []),
+        ],
+    ),
+    (
+        "reagendar_proactivo",
+        [
+            ("hola", []),
+            ("necesito cambiar mi hora del miércoles", []),
+        ],
+    ),
+    (
+        "tipo_atencion_directo",
+        [
+            ("agendar particular kine", []),
+            ("agendar fonasa medico", []),
+        ],
+    ),
+    (
+        "telefono_personal_no_aparece_en_pregunta_contacto",
+        [
+            ("cual es el numero del centro?", [
+                must_not_contain("987834148", "+56987834148"),
+            ]),
+        ],
+    ),
+    (
+        "horario_general_cmc_con_codigo_correcto",
+        [
+            ("a que hora atienden ustedes?", [
+                must_not_contain("(44)"),
+            ]),
+        ],
+    ),
 ]
 
 
