@@ -6432,9 +6432,12 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
         reset_session(phone)
         return (
             f"En el CMC no contamos con *{especialidad}* por el momento 😔\n\n"
-            f"Te sugerimos consultar con *Medicina General* para orientarte, "
-            f"o llamar a recepción:\n📞 *{CMC_TELEFONO}*\n\n"
-            "_Escribe *menu* para ver las opciones._"
+            f"🩺 Si quieres orientación, puedes agendar con nuestra *Medicina General* — el médico te evalúa y deriva si corresponde.\n\n"
+            f"🏥 *Otras opciones:*\n\n"
+            f"*Atención pública:* tu CESFAM te puede derivar al especialista en la red SSC (Hospital de Curanilahue, Cañete, Las Higueras o Regional de Concepción).\n\n"
+            f"*Atención privada en Concepción:* las clínicas con mayor cobertura son Clínica Universitaria, Sanatorio Alemán, Andes Salud y RedSalud Mayor.\n\n"
+            f"📞 Recepción: *{CMC_TELEFONO}*\n\n"
+            "_Escribe *menu* para ver opciones._"
         )
     # Ortodoncia requiere evaluación previa con odontología general.
     # La dentista evalúa, pide radiografías y gestiona la derivación.
