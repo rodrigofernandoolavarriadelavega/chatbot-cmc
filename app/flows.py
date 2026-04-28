@@ -2969,7 +2969,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return await _iniciar_reagendar(phone, data)
 
         if intent == "cancelar":
-            return await _iniciar_cancelar(phone, data)
+            return await _iniciar_cancelar(phone, data, txt=txt)
 
         if intent == "ver_reservas":
             return await _iniciar_ver(phone, data)
@@ -3198,7 +3198,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "anular hora", "anular cita",
             )):
                 log_event(phone, "fallback_cancelar", {"txt": txt[:120]})
-                return await _iniciar_cancelar(phone, data)
+                return await _iniciar_cancelar(phone, data, txt=txt)
             # 2) Si NO hay palabra de acción CLARA de reserva, probar FAQ.
             #    "consulta" es ambiguo (noun/verb) — no bloquea FAQ.
             #    Si hay acción clara, el paciente ya está en flujo conocido →
@@ -6970,10 +6970,20 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
     )
 
 
-async def _iniciar_cancelar(phone: str, data: dict) -> str:
+async def _iniciar_cancelar(phone: str, data: dict, txt: str = "") -> str:
     if is_medilink_down():
         return _modo_degradado(phone, "cancelar")
     save_session(phone, "WAIT_RUT_CANCELAR", data)
+    # Defensa sistémica: si el mensaje original ya contiene un RUT válido,
+    # procesarlo directo sin pedirlo otra vez. Caso real 2026-04-28 (Camila
+    # Salas, 56967753900): paciente escribió "Para que me la anulen porfa
+    # 21.234.722-1" y el bot le pidió el RUT 2 veces más.
+    if txt:
+        from medilink import clean_rut as _cr, valid_rut as _vr
+        _rut_emb = _cr(txt)
+        if _vr(_rut_emb):
+            log_event(phone, "rut_extraido_de_frase", {"flow": "cancelar"})
+            return await handle_message(phone, _rut_emb, get_session(phone))
     return (
         "Claro, te ayudo a cancelar una hora.\n\n"
         "Necesito tu RUT para buscarte:\n"
@@ -6982,10 +6992,17 @@ async def _iniciar_cancelar(phone: str, data: dict) -> str:
     )
 
 
-async def _iniciar_ver(phone: str, data: dict) -> str:
+async def _iniciar_ver(phone: str, data: dict, txt: str = "") -> str:
     if is_medilink_down():
         return _modo_degradado(phone, "ver_reservas")
     save_session(phone, "WAIT_RUT_VER", data)
+    # Mismo defensivo: extraer RUT del mensaje si está embebido.
+    if txt:
+        from medilink import clean_rut as _cr, valid_rut as _vr
+        _rut_emb = _cr(txt)
+        if _vr(_rut_emb):
+            log_event(phone, "rut_extraido_de_frase", {"flow": "ver"})
+            return await handle_message(phone, _rut_emb, get_session(phone))
     return (
         "Claro, te muestro tus reservas.\n\n"
         "Necesito tu RUT:\n"
