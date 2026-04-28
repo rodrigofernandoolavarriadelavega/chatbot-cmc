@@ -45,7 +45,8 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_waitlist_check,
                   _job_doctor_resumen_precita, _job_doctor_reporte_progreso,
                   _job_doctor_reset_diario,
-                  _job_cumpleanos, _job_winback)
+                  _job_cumpleanos, _job_winback,
+                  _job_takeover_ttl)
 import admin_routes
 import portal_routes
 
@@ -255,6 +256,14 @@ async def lifespan(app: FastAPI):
         _job_doctor_reset_diario,
         CronTrigger(hour=0, minute=0, timezone=_CLT),
         id="doctor_reset_diario",
+        replace_existing=True,
+    )
+    # TTL HUMAN_TAKEOVER: reanudar bot si recepción no devolvió el control en 24h.
+    # Cron cada hora a los :15. Evita 107+ sesiones bloqueadas (auditoría 2026-04-28).
+    scheduler.add_job(
+        _job_takeover_ttl,
+        CronTrigger(minute=15, timezone=_CLT),
+        id="takeover_ttl",
         replace_existing=True,
     )
     # Reporte periódico de estado al admin cada 30 min
@@ -622,6 +631,7 @@ def horizonte_dashboard_page():
 
 
 _ATRIBUCION_DASHBOARD_HTML = (_TEMPLATE_DIR / "atribucion_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "atribucion_dashboard.html").exists() else ""
+_ABARCA_DASHBOARD_HTML = (_TEMPLATE_DIR / "abarca_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "abarca_dashboard.html").exists() else ""
 
 @app.get("/atribucion", response_class=HTMLResponse)
 @app.get("/atribucion/dashboard", response_class=HTMLResponse)
@@ -630,6 +640,173 @@ def atribucion_dashboard_page():
     if not _ATRIBUCION_DASHBOARD_HTML:
         raise HTTPException(404, "Dashboard Atribución no disponible")
     return _ATRIBUCION_DASHBOARD_HTML
+
+
+@app.get("/abarca", response_class=HTMLResponse)
+@app.get("/abarca/dashboard", response_class=HTMLResponse)
+@app.get("/abarca/2026", response_class=HTMLResponse)
+def abarca_dashboard_page():
+    """Análisis de carga del Dr. Abarca. /abarca = histórico total · /abarca/2026 = solo 2026."""
+    if not _ABARCA_DASHBOARD_HTML:
+        raise HTTPException(404, "Dashboard Abarca no disponible")
+    return _ABARCA_DASHBOARD_HTML
+
+
+_ABARCA_CACHE_PATH = Path(__file__).parent.parent / "data" / "abarca_cache.json"
+_ABARCA_CACHE_TTL_SEC = 3600  # 1h
+
+
+@app.get("/api/abarca/data")
+async def api_abarca_data(refresh: int = 0, desde: str = "2025-05-01"):
+    """Atenciones del Dr. Abarca (id=73). El cache crudo va desde 2025-05-01.
+
+    `?desde=YYYY-MM-DD` filtra agregaciones desde esa fecha (default 2025-05-01).
+    `?refresh=1` fuerza recarga desde Medilink.
+    """
+    import json as _json_ab
+    import time as _time_ab
+    from datetime import datetime as _dt_ab, date as _date_ab
+    from collections import defaultdict as _dd_ab, Counter as _ct_ab
+    from config import MEDILINK_BASE_URL as _MB
+
+    raw = None
+    cache_age = None
+    if not refresh and _ABARCA_CACHE_PATH.exists():
+        cache_age = _time_ab.time() - _ABARCA_CACHE_PATH.stat().st_mtime
+        if cache_age < _ABARCA_CACHE_TTL_SEC:
+            try:
+                raw = _json_ab.loads(_ABARCA_CACHE_PATH.read_text(encoding="utf-8"))
+            except Exception:
+                raw = None
+
+    if raw is None:
+        # Fetch día a día (eq por fecha = sin problema de paginación, secuencial = sin 429)
+        from datetime import date as _date_ab2, timedelta as _td_ab2
+        import asyncio as _aio_ab
+        raw = []
+        seen_ids = set()
+        d = _date_ab2(2025, 5, 1)
+        hoy = _date_ab2.today()
+        async with httpx.AsyncClient(timeout=30) as cli:
+            while d <= hoy:
+                if d.weekday() == 6:  # domingo, sin atenciones
+                    d += _td_ab2(days=1); continue
+                params = {"id_sucursal": {"eq": 1}, "id_profesional": {"eq": 73},
+                          "fecha": {"eq": d.isoformat()}}
+                pq = {"q": _json_ab.dumps(params, separators=(",", ":"))}
+                resp = None
+                for attempt in range(6):
+                    resp = await cli.get(f"{_MB}/citas", params=pq, headers=HEADERS_MEDILINK)
+                    if resp.status_code == 200:
+                        break
+                    if resp.status_code == 429:
+                        await _aio_ab.sleep(1.5 + attempt * 1.5)
+                        continue
+                    break
+                if resp is not None and resp.status_code == 200:
+                    for c in resp.json().get("data", []):
+                        cid = c.get("id")
+                        if cid in seen_ids:
+                            continue
+                        seen_ids.add(cid)
+                        raw.append(c)
+                d += _td_ab2(days=1)
+                await _aio_ab.sleep(0.15)
+        try:
+            _ABARCA_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
+            _ABARCA_CACHE_PATH.write_text(_json_ab.dumps(raw, ensure_ascii=False, default=str), encoding="utf-8")
+        except Exception:
+            pass
+
+    # ── Agregaciones ──
+    por_dia: dict = {}
+    por_mes: dict = _dd_ab(lambda: {"atend": 0, "anul": 0, "no_asiste": 0, "otros": 0, "total": 0})
+    por_dow: dict = _dd_ab(list)   # weekday → [atendidos por día trabajado]
+    por_hora: dict = _dd_ab(int)    # hora → atenciones
+    estados: dict = _ct_ab()
+
+    for c in raw:
+        f = (c.get("fecha") or "")[:10]
+        if not f or f < desde:
+            continue
+        st = (c.get("estado_cita") or "").lower()
+        estados[c.get("estado_cita") or "?"] += 1
+        m = f[:7]
+        por_mes[m]["total"] += 1
+        if st == "atendido":
+            por_mes[m]["atend"] += 1
+            por_dia[f] = por_dia.get(f, 0) + 1
+            h = (c.get("hora_inicio") or "")[:2]
+            if h.isdigit():
+                por_hora[int(h)] += 1
+        elif st == "anulado" or "anulad" in st:
+            por_mes[m]["anul"] += 1
+        elif "asiste" in st:
+            por_mes[m]["no_asiste"] += 1
+        else:
+            por_mes[m]["otros"] += 1
+
+    # Asegurar todos los días del rango aparezcan (con 0)
+    from datetime import timedelta as _td_ab
+    try:
+        start = _date_ab.fromisoformat(desde)
+    except ValueError:
+        start = _date_ab(2025, 5, 1)
+    end = _date_ab.today()
+    d = start
+    while d <= end:
+        f = d.isoformat()
+        por_dia.setdefault(f, 0)
+        d += _td_ab(days=1)
+
+    # por_dow stats
+    for f, n in por_dia.items():
+        if n > 0:
+            dt = _date_ab.fromisoformat(f)
+            por_dow[dt.weekday()].append(n)
+
+    dow_stats = {}
+    for w in range(7):
+        vals = sorted(por_dow.get(w, []))
+        if not vals:
+            dow_stats[w] = {"avg": 0, "median": 0, "min": 0, "max": 0, "p90": 0, "n": 0}
+        else:
+            n_v = len(vals)
+            p90_idx = max(0, int(n_v * 0.9) - 1) if n_v >= 10 else n_v - 1
+            dow_stats[w] = {
+                "avg": round(sum(vals) / n_v, 2),
+                "median": vals[n_v // 2],
+                "min": vals[0],
+                "max": vals[-1],
+                "p90": vals[p90_idx],
+                "n": n_v,
+            }
+
+    # KPIs
+    total_atend = sum(v for v in por_dia.values())
+    dias_trab = sum(1 for v in por_dia.values() if v > 0)
+    n_meses = max(1, len(por_mes))
+    atend_avg_mes = total_atend / n_meses
+    ing_avg_mes = atend_avg_mes * 15100
+    delta_avg_mes = ing_avg_mes - 3414000
+
+    return {
+        "fecha_actualizacion": _dt_ab.now().strftime("%Y-%m-%d %H:%M"),
+        "fuente_cache": "json local (TTL 1h)" if cache_age and cache_age < _ABARCA_CACHE_TTL_SEC else "Medilink fresh",
+        "por_dia": por_dia,
+        "por_mes": dict(por_mes),
+        "por_dow": dow_stats,
+        "por_hora": dict(por_hora),
+        "estados": dict(estados),
+        "kpis": {
+            "total_atend": total_atend,
+            "dias_con_atencion": dias_trab,
+            "atend_avg_mes": round(atend_avg_mes, 1),
+            "ing_avg_mes": round(ing_avg_mes),
+            "delta_avg_mes": round(delta_avg_mes),
+            "n_meses": n_meses,
+        },
+    }
 
 
 @app.get("/api/atribucion/today")

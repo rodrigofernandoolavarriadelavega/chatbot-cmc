@@ -736,7 +736,8 @@ INFO DEL CMC:
   · Coronel: ~1 hora
 - Teléfono fijo: (41) 296 5226
 - WhatsApp: +56966610737
-- Horario: lunes a viernes 08:00–21:00, sábado 09:00–14:00 (horario continuo, sin pausa al mediodía)
+- Horario GENERAL del CMC (recepción): lunes a viernes 08:00–21:00, sábado 09:00–14:00 (horario continuo, sin pausa al mediodía)
+- IMPORTANTE: cada PROFESIONAL tiene su propio horario que NO coincide con el horario general del CMC. Ej: el Dr. Borrego (otorrino) atiende lunes a miércoles 16:00–20:00, NO de lunes a viernes. NUNCA inventes el horario de un profesional específico — si te preguntan "qué día atiende el otorrino / kine / ginecólogo / Dr. X", responde EXACTAMENTE: "Te confirmo los días y horarios exactos del [profesional/especialidad] desde el sistema. ¿Te muestro horarios disponibles?". El bot tiene un handler que consulta Medilink directo; NO improvises.
 - Fonasa: atención como libre elección disponible en varias especialidades
 - Solo tienen Fonasa (MLE): Medicina General, Kinesiología, Nutrición y Psicología. Todo lo demás es SOLO PARTICULAR.
 - Los copagos Fonasa indicados son lo que paga el paciente (beneficiario nivel 3 MLE 2026)

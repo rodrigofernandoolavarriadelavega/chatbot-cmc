@@ -527,6 +527,40 @@ def reset_session(phone: str):
         _reset(conn, phone)
 
 
+def reanudar_takeovers_expirados(horas_max: int = 24) -> list[str]:
+    """Reanuda automáticamente sesiones HUMAN_TAKEOVER que llevan más de
+    `horas_max` horas sin actividad. Retorna la lista de phones reanudados.
+
+    Causa raíz que resuelve: si recepción cierra el chat sin clickear
+    "Devolver al bot", la sesión queda bloqueada indefinidamente y cualquier
+    mensaje del paciente queda silenciado. Auditoría 2026-04-28: 107 sesiones
+    HUMAN_TAKEOVER con +48h sin reanude, 29 con +7 días.
+    """
+    phones_reanudados: list[str] = []
+    with _conn() as conn:
+        rows = conn.execute(
+            """
+            SELECT phone FROM sessions
+             WHERE state = 'HUMAN_TAKEOVER'
+               AND datetime(updated_at) < datetime('now', ?)
+            """,
+            (f'-{int(horas_max)} hours',),
+        ).fetchall()
+        for row in rows:
+            phone = row[0]
+            phones_reanudados.append(phone)
+            _reset(conn, phone)
+            try:
+                conn.execute(
+                    "INSERT INTO conversation_events (phone, event, payload, ts) "
+                    "VALUES (?, 'takeover_ttl_reanudado', ?, datetime('now'))",
+                    (phone, f'{{"horas_max": {horas_max}}}'),
+                )
+            except Exception:
+                pass
+    return phones_reanudados
+
+
 def cleanup_stuck_sessions(hours: int = 4) -> int:
     """Resetea sesiones atascadas en WAIT_*/CONFIRMING_* > hours horas
     PRESERVANDO el snapshot last_slots/last_especialidad (igual que _reset).

@@ -263,6 +263,23 @@ async def _job_doctor_reset_diario():
     reset_resumenes_diarios()
 
 
+async def _job_takeover_ttl():
+    """TTL automático para HUMAN_TAKEOVER: reanuda al bot si recepción no
+    devolvió el control en 24h. Evita que mensajes del paciente queden
+    silenciados indefinidamente cuando recepcionista cierra el chat sin
+    clickear "Devolver al bot". Auditoría 2026-04-28: 107 sesiones HUMAN_TAKEOVER
+    con +48h sin reanude, 29 con +7 días.
+    """
+    try:
+        from session import reanudar_takeovers_expirados
+        phones = reanudar_takeovers_expirados(horas_max=24)
+        if phones:
+            log.info("takeover_ttl: reanudados %d phones (mostrando primeros 10): %s",
+                     len(phones), phones[:10])
+    except Exception as e:
+        log.exception("takeover_ttl falló: %s", e)
+
+
 async def _job_medilink_watchdog():
     """Cada minuto: si Medilink está marcado como caído, prueba un ping.
     - Si se recuperó: marca up, notifica a los pacientes encolados y avisa a recepción.

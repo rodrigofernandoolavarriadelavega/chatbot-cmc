@@ -1331,6 +1331,89 @@ def _es_respuesta_obvia_al_prompt(txt: str, tl: str, state: str, data: dict) -> 
     return False
 
 
+def _format_horario_prof(horario: dict) -> str:
+    """Formatea un horario Medilink (con dias + horario_dia por weekday) en
+    texto legible: "lunes 16:00-20:00, martes 16:00-20:00, miércoles ...".
+    Agrupa días con mismo rango.
+    """
+    DIAS = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+    dias = sorted(horario.get("dias", []))
+    horario_dia = horario.get("horario_dia", {}) or {}
+    if not dias:
+        return "según agenda"
+    bloques = []
+    for d in dias:
+        if d not in range(7):
+            continue
+        rango = horario_dia.get(d)
+        if rango and len(rango) >= 2:
+            hi, hf = rango[0][:5], rango[1][:5]
+            bloques.append((DIAS[d], f"{hi}-{hf}"))
+        else:
+            bloques.append((DIAS[d], None))
+    # Agrupar consecutivos con mismo horario
+    grupos: list[tuple[list[str], str | None]] = []
+    for nombre, rango in bloques:
+        if grupos and grupos[-1][1] == rango:
+            grupos[-1][0].append(nombre)
+        else:
+            grupos.append(([nombre], rango))
+    partes = []
+    for nombres, rango in grupos:
+        if len(nombres) == 1:
+            d_str = nombres[0]
+        elif len(nombres) == 2:
+            d_str = f"{nombres[0]} y {nombres[1]}"
+        else:
+            d_str = f"{nombres[0]} a {nombres[-1]}"
+        if rango:
+            partes.append(f"{d_str} {rango}")
+        else:
+            partes.append(d_str)
+    return ", ".join(partes)
+
+
+async def _responder_horario_por_especialidad(especialidad: str) -> str | None:
+    """Responde días+horarios reales (de Medilink) de los profesionales de una
+    especialidad. Devuelve None si no hay match. Esto corta el path donde
+    Claude Haiku improvisaba horarios genéricos del CMC para profesionales
+    específicos. Caso real 2026-04-28 (56958462692): paciente preguntó días
+    del otorrino y bot respondió "lunes a viernes 08:00–21:00 + sábado
+    09:00–14:00" cuando el Dr. Borrego atiende lunes a miércoles 16:00–20:00.
+    """
+    if not especialidad:
+        return None
+    try:
+        import httpx as _httpx
+        from medilink import _ids_para_especialidad, _get_horario, PROFESIONALES
+        ids = _ids_para_especialidad(especialidad.lower())
+        if not ids:
+            return None
+        async with _httpx.AsyncClient(timeout=10) as _c:
+            horarios = []
+            for pid in ids:
+                try:
+                    h = await _get_horario(_c, int(pid))
+                    horarios.append((pid, h))
+                except Exception:
+                    continue
+        if not horarios:
+            return None
+        partes = []
+        for pid, h in horarios:
+            nombre = PROFESIONALES.get(int(pid), {}).get("nombre", "")
+            partes.append(f"👨‍⚕️ *{nombre}*: {_format_horario_prof(h)}")
+        esp_display = especialidad.lower()
+        return (
+            f"Horarios de atención de *{esp_display}* en el CMC:\n\n"
+            + "\n".join(partes)
+            + "\n\n¿Te agendo una hora? Responde *sí* o escribe el día que prefieres."
+        )
+    except Exception as e:
+        log.warning("_responder_horario_por_especialidad falló: %s", e)
+        return None
+
+
 async def _responder_pregunta_horario(phone: str, state: str, data: dict, txt: str = "") -> str:
     """Responde orgánicamente los días de atención del profesional del flujo,
     O del profesional que el paciente mencione en el mensaje (si distinto).
@@ -1388,27 +1471,17 @@ async def _responder_pregunta_horario(phone: str, state: str, data: dict, txt: s
         from medilink import _get_horario, PROFESIONALES
         async with _httpx.AsyncClient(timeout=10) as _c:
             horario = await _get_horario(_c, int(prof_id))
-        dias = sorted(horario.get("dias", []))
-        DIAS = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
-        nombres = [DIAS[d] for d in dias if 0 <= d < 7]
-        if not nombres:
-            nombres = ["según agenda"]
-        if len(nombres) == 1:
-            dias_str = nombres[0]
-        elif len(nombres) == 2:
-            dias_str = " y ".join(nombres)
-        else:
-            dias_str = ", ".join(nombres[:-1]) + " y " + nombres[-1]
         prof_nombre = PROFESIONALES.get(int(prof_id), {}).get("nombre", "El profesional")
         especialidad = PROFESIONALES.get(int(prof_id), {}).get("especialidad", "")
         esp_sufijo = f" de *{especialidad}*" if especialidad else ""
+        horario_str = _format_horario_prof(horario)
         # Marcar prof pedido explícitamente para que confirmar_sugerido no
         # reserve con otro. Caso 56988694763: pidió Márquez, bot mostró días
         # de atención pero no slots; al confirmar reservó con Olavarría.
         if prof_mencionado_id:
             data["prof_pedido_explicito"] = int(prof_mencionado_id)
             save_session(phone, state, data)
-        return f"Sí, {prof_nombre}{esp_sufijo} atiende los *{dias_str}* 📅"
+        return f"📅 *{prof_nombre}*{esp_sufijo} atiende: {horario_str}"
     except Exception as e:
         log.warning("pregunta_horario falló: %s", e)
         return "Los días de atención dependen del profesional. Te puedo mostrar horarios disponibles."
@@ -2723,6 +2796,32 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if _CITA_EXISTENTE_RE.search(txt) and not any(p in tl for p in ("agendar", "quiero agendar", "quiero una hora nueva")):
             log_event(phone, "intent_cita_existente_detectado", {"texto": txt[:120]})
             return await _iniciar_reagendar(phone, data)
+
+        # ── Pregunta de días/horarios de atención por especialidad ──────────
+        # Caso real 2026-04-28 (56958462692): paciente preguntó "Que día
+        # atiende el otorrino?" y bot respondió con horario genérico del CMC
+        # (lunes-viernes 08-21) inventado por Claude Haiku, en lugar del
+        # horario REAL del Dr. Borrego (lun-mié 16-20). Fix sistémico: cortar
+        # ANTES de Claude, consultar Medilink directo.
+        _PREGUNTA_HORARIO_RE = (
+            "que dia atiende", "qué día atiende", "que dias atiende", "qué días atiende",
+            "cuando atiende", "cuándo atiende",
+            "que dia trabaja", "qué día trabaja", "que dias trabaja", "qué días trabaja",
+            "cuando viene", "cuándo viene",
+            "que dia viene", "qué día viene", "que dias viene", "qué días viene",
+            "horario del", "horario de la", "horario de los",
+            "que horario tiene", "qué horario tiene",
+            "a que hora atiende", "a qué hora atiende",
+            "atiende los", "atiende el día", "atiende el dia",
+        )
+        if any(p in tl for p in _PREGUNTA_HORARIO_RE):
+            # Detectar especialidad o apellido del profesional
+            _esp_h = _detectar_especialidad_en_texto(txt) or _detectar_apellido_profesional(txt)
+            if _esp_h:
+                _resp_h = await _responder_horario_por_especialidad(_esp_h)
+                if _resp_h:
+                    log_event(phone, "horario_consultado", {"esp": _esp_h, "fuente": "medilink"})
+                    return _resp_h
 
         result = await detect_intent(txt)
         intent = result.get("intent", "otro")
