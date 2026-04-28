@@ -2833,6 +2833,24 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
         if intent == "agendar":
             especialidad = result.get("especialidad")
+            # Validar que la "especialidad" no sea un APELLIDO de profesional
+            # alucinado por Claude. Si Claude retornó "jimenez"/"abarca"/etc.
+            # pero el texto NO menciona el apellido, descartar y usar
+            # detector local. Caso real 2026-04-28 (56993584481): paciente
+            # dijo "Tiene hora para médico mañana?", Claude retornó "jimenez"
+            # → bot ofreció odontología en vez de medicina general.
+            if especialidad:
+                esp_norm = especialidad.lower().strip()
+                if esp_norm in _APELLIDOS_INDIVIDUALES_KEYS:
+                    txt_norm_apellido = _normalizar_para_apellido(txt) or ""
+                    if esp_norm not in txt_norm_apellido:
+                        # Apellido no está en el texto — Claude alucinó. Fallback.
+                        log_event(phone, "esp_apellido_alucinada", {"esp_claude": esp_norm, "txt": txt[:120]})
+                        especialidad_fb = _detectar_especialidad_en_texto(txt)
+                        if especialidad_fb and especialidad_fb.lower() not in _APELLIDOS_INDIVIDUALES_KEYS:
+                            especialidad = especialidad_fb
+                        else:
+                            especialidad = None
             log_event(phone, "intent_agendar", {"especialidad": especialidad})
             # Detectar preferencia de fecha en el mensaje ("mañana", "pasado mañana",
             # "viernes", etc.) y guardar en data para que _iniciar_agendar la use.
@@ -3361,6 +3379,37 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if especialidad in _ESPECIALIDADES_EXPANSION:
                 return await _handle_expansion(phone, data, slots_mostrados, todos_slots,
                                                data.get("expansion_stage", 0), fecha_actual)
+            # Defensa sistémica: si solo hay 1 slot total (ya mostrado), no
+            # tiene sentido "ver_otros" del mismo día — debemos expandir a otro
+            # día o profesional. Caso real 2026-04-28 (56934363158): bot ofreció
+            # Dr. Abarca 08:00, paciente clickeó "ver_otros", bot mostró el
+            # mismo slot duplicado.
+            if len(todos_slots or []) <= 1:
+                # Buscar slots de OTROS días para esta especialidad
+                from medilink import buscar_primer_dia
+                fechas_vistas = data.get("fechas_vistas") or []
+                if not isinstance(fechas_vistas, list):
+                    fechas_vistas = list(fechas_vistas)
+                try:
+                    smart_x, todos_x = await buscar_primer_dia(
+                        especialidad,
+                        excluir=fechas_vistas,
+                    )
+                except Exception:
+                    smart_x, todos_x = [], []
+                if todos_x:
+                    nueva_fecha = todos_x[0].get("fecha")
+                    if nueva_fecha and nueva_fecha not in fechas_vistas:
+                        fechas_vistas.append(nueva_fecha)
+                    data["slots"] = (smart_x or todos_x)[:5]
+                    data["todos_slots"] = todos_x
+                    data["fechas_vistas"] = fechas_vistas
+                    save_session(phone, "WAIT_SLOT", data)
+                    return _format_slots((smart_x or todos_x)[:5], mostrar_todos=False)
+                return (
+                    "Esta era la única hora que tenía disponible para esta especialidad 😕\n\n"
+                    "Escribe *otro día* o *llamar recepción* para más opciones."
+                )
             # Para especialidades sin expansion-stages: mostrar TODOS los slots del día
             # (no los mismos 5 ya vistos — eso era el bug que dejaba el botón inútil).
             data["slots"] = todos_slots
@@ -4920,6 +4969,28 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "Sin problema 😊 Cuando lo necesites, escríbenos.\n"
                 f"_Llama a recepción: 📞 *{CMC_TELEFONO}* · ☎️ *{CMC_TELEFONO_FIJO}*_"
             )
+        # Defensa sistémica: si paciente envía intent claro distinto a SI/NO,
+        # liberar el estado y procesar como IDLE. Antes el bot quedaba bloqueado
+        # ofreciendo waitlist de una especialidad que el paciente ya no quería.
+        # Auditoría 2026-04-28: 12 takeovers desde WAIT_WAITLIST_CONFIRM por
+        # contaminación de estado (caso 56989488187: bot pedía waitlist de
+        # implantología cuando paciente había pedido medicina general).
+        _NUEVO_INTENT_KW = (
+            "agendar", "hora", "consulta", "cita", "reservar",
+            "kine", "kinesiolog", "medico", "médico", "doctor",
+            "dental", "odontolog", "psicolog", "ginecolog",
+            "ortodonc", "endodonc", "implantolog", "ecograf",
+            "nutricion", "matrona", "podologo", "fonoaudiolog",
+            "cancelar", "anular", "cambiar", "ver mis", "mis citas",
+            "menu", "menú",
+        )
+        if any(kw in tl for kw in _NUEVO_INTENT_KW):
+            log_event(phone, "waitlist_confirm_break", {"txt": txt[:120]})
+            reset_session(phone)
+            # Reentrar handle_message con la sesión limpia para procesar el
+            # nuevo intent. Es recursión controlada (1 nivel máximo: IDLE no
+            # vuelve a WAIT_WAITLIST_CONFIRM dentro del mismo turn).
+            return await handle_message(phone, txt, get_session(phone))
         return "Responde *SÍ* para inscribirte o *NO* si prefieres llamar a recepción."
 
     # ── WAIT_WAITLIST_RUT ─────────────────────────────────────────────────────
@@ -6210,6 +6281,16 @@ _ESPECIALIDADES_NO_DISPONIBLES_NORM = {
     "psiquiatra",
     "reumatolog", "reumatologo", "reumatologa", "reumatologia",
 }
+
+
+# Keys de _APELLIDOS_NORM que son APELLIDOS INDIVIDUALES (no especialidades).
+# Cuando Claude Haiku retorna una de estas como "especialidad" pero el texto
+# del paciente NO menciona el apellido, es alucinación → descartar y caer al
+# detector local de especialidad. Caso real 2026-04-28 (56993584481).
+_APELLIDOS_INDIVIDUALES_KEYS = frozenset({
+    "abarca", "armijo", "burgos", "etcheverry", "jimenez", "marquez",
+    "montalba", "olavarría", "olavarria", "rodriguez",
+})
 
 
 def _detectar_apellido_profesional(txt: str) -> str | None:

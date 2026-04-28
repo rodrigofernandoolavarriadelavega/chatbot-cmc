@@ -489,7 +489,25 @@ async def admin_reply(request: Request, _: str = Depends(require_admin)):
     state = _sess.get("state", "HUMAN_TAKEOVER")
     from session import save_session as _save_sess_for_takeover
     _data = _sess.get("data", {}) or {}
-    if state != "HUMAN_TAKEOVER":
+    # Excepción sistémica: si el paciente está en un estado TRANSACCIONAL
+    # (agendando, completando registro, confirmando cita), un mensaje de la
+    # recepcionista en paralelo NO debe interrumpir el flow. Auditoría
+    # 2026-04-28: 55 takeovers desde WAIT_SLOT/7d, solo 1 terminó en cita.
+    _ESTADOS_TRANSACCIONALES = {
+        "WAIT_SLOT", "CONFIRMING_CITA", "WAIT_QUICK_BOOK",
+        "WAIT_RUT_AGENDAR", "WAIT_RUT_CANCELAR", "WAIT_RUT_REAGENDAR", "WAIT_RUT_VER",
+        "WAIT_DATOS_NUEVO", "WAIT_NOMBRE_NUEVO", "WAIT_FECHA_NAC", "WAIT_SEXO",
+        "WAIT_COMUNA", "WAIT_EMAIL", "WAIT_REFERRAL", "WAIT_REFERRAL_POST",
+        "WAIT_REFERRAL_CODE",
+        "WAIT_BOOKING_FOR", "WAIT_PHONE_OWNER_NAME",
+        "WAIT_MODALIDAD", "WAIT_CITA_CANCELAR", "WAIT_CITA_REAGENDAR",
+        "CONFIRMING_CANCEL", "CONFIRMING_REAGENDAR",
+    }
+    if state in _ESTADOS_TRANSACCIONALES:
+        log_event(phone, "recep_msg_durante_flow", {"state": state})
+        # NO cambiamos el estado — el paciente sigue en el flow transaccional.
+        # La recepcionista puede contestarle algo en paralelo sin interrumpir.
+    elif state != "HUMAN_TAKEOVER":
         _data["handoff_reason"] = "recepcionista_respondio"
         log_event(phone, "auto_takeover_recep_reply", {"from_state": state})
         state = "HUMAN_TAKEOVER"
