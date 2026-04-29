@@ -7,6 +7,12 @@
 <meta name="theme-color" content="#0F3F68">
 <title>Mi Salud · Centro Médico Carampangue</title>
 <link rel="icon" type="image/png" href="https://centromedicocarampangue.cl/wp-content/uploads/2025/08/cropped-logo-carampangue.png">
+<link rel="apple-touch-icon" href="/static/pwa/icon-192.png">
+<link rel="manifest" href="/static/pwa/portal-manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Portal CMC">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -2431,5 +2437,14 @@ function capitalize(s) { s = String(s||''); return s ? s[0].toUpperCase() + s.sl
   </div>
 </div>
 
+<script>
+// PWA: registrar service worker (scope /portal/)
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/portal/sw.js", { scope: "/portal/" })
+      .catch(err => console.warn("[PWA] SW register failed:", err));
+  });
+}
+</script>
 </body>
 </html>

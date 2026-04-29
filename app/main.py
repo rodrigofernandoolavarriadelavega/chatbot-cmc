@@ -17,7 +17,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from fastapi import FastAPI, Request, Response, Query, HTTPException, Cookie
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from config import (META_VERIFY_TOKEN, CMC_TELEFONO, ADMIN_TOKEN,
@@ -541,6 +541,24 @@ def admin_panel_v2(token: str | None = Query(None),
         if role in ("admin", "ortodoncia"):
             return _ADMIN_V2_HTML.replace("__TOKEN__", "")
     return RedirectResponse(url="/admin/login", status_code=302)
+
+
+@app.get("/admin/sw.js", include_in_schema=False)
+def admin_service_worker():
+    return FileResponse(
+        str(Path(__file__).parent.parent / "static" / "pwa" / "admin-sw.js"),
+        media_type="application/javascript",
+        headers={"Cache-Control": "no-cache", "Service-Worker-Allowed": "/admin/"},
+    )
+
+
+@app.get("/portal/sw.js", include_in_schema=False)
+def portal_service_worker():
+    return FileResponse(
+        str(Path(__file__).parent.parent / "static" / "pwa" / "portal-sw.js"),
+        media_type="application/javascript",
+        headers={"Cache-Control": "no-cache", "Service-Worker-Allowed": "/portal/"},
+    )
 
 
 @app.get("/admin/dashboard", response_class=HTMLResponse)
