@@ -6,7 +6,7 @@
   "scope": "/admin/",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#0F3F68",
+  "background_color": "#FFFFFF",
   "theme_color": "#1172AB",
   "lang": "es-CL",
   "dir": "ltr",

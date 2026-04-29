@@ -2,7 +2,7 @@
 // Estrategia: network-first para HTML/API, cache-first para assets estáticos.
 // Permite la app instalable y un fallback offline básico.
 
-const CACHE_VERSION = 'cmc-admin-v1';
+const CACHE_VERSION = 'cmc-admin-v2';
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const ASSETS_CACHE = `${CACHE_VERSION}-assets`;
 

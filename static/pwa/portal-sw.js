@@ -1,6 +1,6 @@
 // CMC Portal Paciente v2 — Service Worker
 
-const CACHE_VERSION = 'cmc-portal-v1';
+const CACHE_VERSION = 'cmc-portal-v2';
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const ASSETS_CACHE = `${CACHE_VERSION}-assets`;
 
