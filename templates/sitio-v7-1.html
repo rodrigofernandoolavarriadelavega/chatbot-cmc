@@ -243,8 +243,8 @@ html, body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  overflow-x: hidden;
-  max-width: 100vw;
+  /* No usar overflow-x: hidden en body — rompe position: sticky del navbar.
+     Para evitar scroll horizontal en mobile usamos overflow: clip a nivel de section problemáticas. */
 }
 
 img, svg, iframe { display: block; max-width: 100%; height: auto; }
