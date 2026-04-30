@@ -925,7 +925,7 @@ html, body{width:100%; max-width:100%; overflow-x:hidden}
   <!-- ===== INBOX ========================================================== -->
   <aside class="inbox">
     <div class="inbox-search">
-      <input type="text" id="searchBox" placeholder="Buscar por nombre o teléfono…" autocomplete="off">
+      <input type="text" id="searchBox" placeholder="Buscar por nombre, teléfono, RUT o texto del chat…" autocomplete="off">
     </div>
     <div class="inbox-tabs" id="tabs">
       <button class="inbox-tab active" data-filter="all">Todas <span class="badge" id="tabAllN">0</span></button>
@@ -1149,6 +1149,9 @@ let pendingFile   = null;
 let inboxFilter   = "all";
 let profFilter    = "";
 let searchTerm    = "";
+let searchHits    = new Set();   // phones que aparecen en búsqueda full-text del servidor
+let searchHitsQ   = "";          // término que generó searchHits (para invalidar)
+let searchTimer   = null;
 let tagsSummary   = {counts:{}, by_phone:{}};
 const PRESET_TAGS = ["pendiente agendar","pendiente confirmar","moroso","VIP","seguimiento","control mensual"];
 let soundOn       = localStorage.getItem("v2_sound") !== "off";
@@ -1280,10 +1283,26 @@ function filteredConvs(){
   });
   if (searchTerm){
     const q = searchTerm.toLowerCase();
+    // Asegurar que phones encontrados por full-text estén en la lista aunque no
+    // tengan sesión activa (mismo patrón que unread fallback de arriba).
+    if (searchHitsQ === q){
+      searchHits.forEach(p => {
+        if (!inList.has(p)){
+          list.push({
+            phone: p, state: "", nombre: "", flow_data: {},
+            last_text: "(coincidencia en historial)", last_dir: "in",
+            last_ts: "",
+            canal: p.startsWith("ig_") ? "instagram" : p.startsWith("fb_") ? "messenger" : "whatsapp",
+          });
+          inList.add(p);
+        }
+      });
+    }
     list = list.filter(c =>
       (c.nombre||"").toLowerCase().includes(q) ||
       (c.phone||"").toLowerCase().includes(q) ||
-      (c.rut||"").toLowerCase().includes(q));
+      (c.rut||"").toLowerCase().includes(q) ||
+      (searchHitsQ === q && searchHits.has(c.phone)));
   }
   if (inboxFilter === "unread")   list = list.filter(c => (unreadMap[c.phone]||0) > 0);
   if (inboxFilter === "takeover") list = list.filter(c => c.state === "HUMAN_TAKEOVER");
@@ -2172,8 +2191,23 @@ function setup(){
     renderInbox();
   };
   setupTabDragDrop();
-  // Search
-  $("#searchBox").oninput = e => { searchTerm = e.target.value; renderInbox(); };
+  // Search (local + server-side full-text en mensajes)
+  $("#searchBox").oninput = e => {
+    searchTerm = e.target.value;
+    renderInbox();
+    if (searchTimer) clearTimeout(searchTimer);
+    const q = searchTerm.trim().toLowerCase();
+    if (q.length < 2){ searchHits = new Set(); searchHitsQ = ""; return; }
+    searchTimer = setTimeout(async () => {
+      try {
+        const data = await api(`/admin/api/search?q=${encodeURIComponent(q)}`);
+        const hits = new Set();
+        (data.results || []).forEach(r => { if (r.phone) hits.add(r.phone); });
+        searchHits = hits; searchHitsQ = q;
+        if (searchTerm.trim().toLowerCase() === q) renderInbox();
+      } catch (err) { /* silencio: deja filtro local funcionando */ }
+    }, 280);
+  };
   // Reply input
   const ri = $("#replyInput");
   ri.addEventListener("input", autosize);
