@@ -118,40 +118,27 @@ def _msg_reactivacion(paciente: dict) -> dict:
 async def enviar_seguimiento_postconsulta(send_fn, send_template_fn=None,
                                           send_text_fn=None, buscar_paciente_fn=None):
     """
-    Ejecutar diariamente a las 10:00 AM.
-    Busca citas de ayer y envía seguimiento post-consulta + tips de autocuidado.
+    Ejecutar diariamente a las 22:00 CLT — mismo día de la consulta, dentro de la
+    ventana 24h de WhatsApp, lo que permite mandar lista interactiva 1-5 estrellas
+    sin depender de un template Meta (que solo soporta 3 botones).
     send_fn: envía mensaje interactivo (dict con botones)
     send_text_fn: envía mensaje de texto plano (para tips)
     buscar_paciente_fn: async fn(rut) → dict con fecha_nacimiento, sexo, etc.
     """
-    ayer = (date.today() - timedelta(days=1)).isoformat()
-    citas = get_citas_para_seguimiento(ayer)
+    hoy = date.today().isoformat()
+    citas = get_citas_para_seguimiento(hoy)
 
     if not citas:
-        log.info("Post-consulta: sin citas de %s para hacer seguimiento", ayer)
+        log.info("Post-consulta: sin citas de %s para hacer seguimiento", hoy)
         return
 
-    log.info("Post-consulta: enviando %d seguimiento(s) de %s", len(citas), ayer)
+    log.info("Post-consulta: enviando %d seguimiento(s) de %s", len(citas), hoy)
     for cita in citas:
         try:
-            if USE_TEMPLATES and send_template_fn:
-                nombre = _nombre_corto(cita.get("nombre")) or "paciente"
-                esp = cita.get("especialidad", "tu consulta")
-                prof = cita.get("profesional", "el profesional")
-                await send_template_fn(
-                    cita["phone"],
-                    "postconsulta_seguimiento",
-                    body_params=[nombre, esp, prof],
-                    button_payloads=["seg_mejor", "seg_igual", "seg_peor"],
-                )
-                log_message(cita["phone"], "out",
-                            f"[Post-consulta] ¿Cómo te sientes después de tu consulta de {esp} con {prof}?",
-                            "IDLE")
-            else:
-                msg = _msg_postconsulta(cita)
-                await send_fn(cita["phone"], msg)
-                body = msg.get("interactive", {}).get("body", {}).get("text", "[Post-consulta]")
-                log_message(cita["phone"], "out", body, "IDLE")
+            msg = _msg_postconsulta(cita)
+            await send_fn(cita["phone"], msg)
+            body = msg.get("interactive", {}).get("body", {}).get("text", "[Post-consulta]")
+            log_message(cita["phone"], "out", body, "IDLE")
 
             # Tips de autocuidado personalizados (segundo mensaje)
             if send_text_fn:

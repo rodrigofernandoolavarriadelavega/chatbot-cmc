@@ -145,7 +145,7 @@ async def lifespan(app: FastAPI):
     # Post-consulta: todos los días a las 10:00 AM CLT
     scheduler.add_job(
         _job_postconsulta,
-        CronTrigger(hour=10, minute=0, timezone=_CLT),
+        CronTrigger(hour=22, minute=0, timezone=_CLT),
         id="seguimiento_postconsulta",
         replace_existing=True,
     )
