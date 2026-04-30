@@ -51,30 +51,38 @@ def _nombre_corto(nombre: str | None) -> str:
 
 
 def _msg_postconsulta(cita: dict) -> dict:
-    """Mensaje interactivo con 3 botones: Mejor / Igual / Peor."""
+    """Mensaje interactivo con escala 1-5 — pide valoración de la experiencia
+    siendo atendido en CMC (más amplio que solo 'cómo te sientes').
+    Ofrece NPS-style scoring: detractores (1-2), neutros (3), promotores (4-5).
+    """
     nombre = _nombre_corto(cita.get("nombre"))
     saludo = f"Hola *{nombre}* 😊 " if nombre else "Hola 😊 "
     prof = cita.get("profesional", "el profesional")
     esp = cita.get("especialidad", "tu consulta")
-
+    body = (
+        f"{saludo}*¿Cómo te sentiste siendo atendido/a en el Centro Médico Carampangue?*\n\n"
+        f"Hoy fuiste por *{esp}* con *{prof}*. Tu opinión es muy importante para mejorar 🙏\n\n"
+        "_Califica de 1 a 5._"
+    )
     return {
         "type": "interactive",
         "interactive": {
-            "type": "button",
-            "body": {
-                "text": (
-                    f"{saludo}¿Cómo te sientes después de tu consulta de *{esp}* con *{prof}*?\n\n"
-                    "Tu opinión nos ayuda a mejorar 🙏"
-                )
-            },
+            "type": "list",
+            "body": {"text": body},
             "action": {
-                "buttons": [
-                    {"type": "reply", "reply": {"id": "seg_mejor", "title": "Mejor 😊"}},
-                    {"type": "reply", "reply": {"id": "seg_igual", "title": "Igual 😐"}},
-                    {"type": "reply", "reply": {"id": "seg_peor",  "title": "Peor 😟"}},
-                ]
-            }
-        }
+                "button": "Calificar",
+                "sections": [{
+                    "title": "Tu calificación",
+                    "rows": [
+                        {"id": "seg_5", "title": "5 ⭐⭐⭐⭐⭐", "description": "Excelente"},
+                        {"id": "seg_4", "title": "4 ⭐⭐⭐⭐",   "description": "Muy buena"},
+                        {"id": "seg_3", "title": "3 ⭐⭐⭐",     "description": "Regular"},
+                        {"id": "seg_2", "title": "2 ⭐⭐",       "description": "Mala"},
+                        {"id": "seg_1", "title": "1 ⭐",         "description": "Muy mala"},
+                    ],
+                }],
+            },
+        },
     }
 
 

@@ -449,6 +449,22 @@ UPSELL_POSTCONSULTA: dict[str, tuple[str, str]] = {
 }
 
 
+# Mapping de IDs de la lista NPS de post-consulta (1-5 estrellas) a las 3
+# categorías legacy ("mejor"/"igual"/"peor") + el rating numérico para NPS.
+# Incluye también los IDs antiguos (seg_mejor/seg_igual/seg_peor) para no
+# romper mensajes ya enviados antes del cambio a escala 1-5.
+_SEG_ID_MAP: dict[str, tuple[str, int]] = {
+    "seg_5":     ("mejor", 5),
+    "seg_4":     ("mejor", 4),
+    "seg_3":     ("igual", 3),
+    "seg_2":     ("peor",  2),
+    "seg_1":     ("peor",  1),
+    "seg_mejor": ("mejor", 5),
+    "seg_igual": ("igual", 3),
+    "seg_peor":  ("peor",  1),
+}
+
+
 _MESES_ES = {
     "enero": 1, "febrero": 2, "marzo": 3, "abril": 4, "mayo": 5, "junio": 6,
     "julio": 7, "agosto": 8, "septiembre": 9, "octubre": 10, "noviembre": 11, "diciembre": 12,
@@ -2382,57 +2398,60 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if tl == "accion_recepcion":
             return _derivar_humano(phone=phone, contexto="menú recepción")
 
-        # ── Respuestas de fidelización ────────────────────────────────────────
-        if tl == "seg_mejor":
+        # ── Respuestas de fidelización (escala NPS 1-5 + legacy 3-puntos) ─────
+        if tl in _SEG_ID_MAP:
+            categoria, rating = _SEG_ID_MAP[tl]
             # IMPORTANTE: obtener seguimiento ANTES de guardar respuesta
             # (get_ultimo_seguimiento busca respuesta IS NULL)
             seg = get_ultimo_seguimiento(phone)
-            save_fidelizacion_respuesta(phone, "postconsulta", "mejor")
-            esp = seg.get("especialidad", "") if seg else ""
-            log_event(phone, "seguimiento_mejor", {"especialidad": esp})
-            # Pide reseña Google (anti-spam: máx 1/90d)
-            try:
-                from resilience import spawn_task
-                spawn_task(_send_review_request_if_due(phone, esp))
-            except Exception:
-                pass
-            # Cross-sell inteligente según especialidad
-            upsell = UPSELL_POSTCONSULTA.get(esp.lower()) if esp else None
-            if upsell:
-                upsell_msg, upsell_esp = upsell
-                data["upsell_especialidad"] = upsell_esp
-                save_session(phone, "IDLE", data)
-                log_event(phone, "upsell_postconsulta_ofrecido",
-                          {"especialidad_origen": esp, "especialidad_destino": upsell_esp})
-                return _btn_msg(
-                    f"Qué bueno saberlo 😊 Nos alegra que te sientas mejor.\n\n{upsell_msg}",
-                    [{"id": "upsell_si", "title": "Sí, me interesa"},
-                     {"id": "no_control", "title": "No por ahora"}]
-                )
-            return _btn_msg(
-                "Qué bueno saberlo 😊 Nos alegra que te sientas mejor.\n\n"
-                "¿Quieres agendar tu control de seguimiento?",
-                [{"id": "1", "title": "Sí, agendar control"},
-                 {"id": "no_control", "title": "Por ahora no"}]
-            )
-        if tl in ("seg_igual", "seg_peor"):
-            seg = get_ultimo_seguimiento(phone)
-            save_fidelizacion_respuesta(phone, "postconsulta", tl.replace("seg_", ""))
+            save_fidelizacion_respuesta(phone, "postconsulta", categoria)
             esp = seg.get("especialidad", "") if seg else ""
             prof = seg.get("profesional", "") if seg else ""
-            log_event(phone, "seguimiento_negativo", {"respuesta": tl, "especialidad": esp})
-            # Si responde PEOR, alertar al doctor
-            if tl == "seg_peor" and ADMIN_ALERT_PHONE:
+
+            if categoria == "mejor":
+                log_event(phone, "seguimiento_mejor",
+                          {"especialidad": esp, "rating": rating})
+                # Pide reseña Google solo a promotores (rating ≥ 4)
+                try:
+                    from resilience import spawn_task
+                    spawn_task(_send_review_request_if_due(phone, esp))
+                except Exception:
+                    pass
+                # Cross-sell inteligente según especialidad
+                upsell = UPSELL_POSTCONSULTA.get(esp.lower()) if esp else None
+                if upsell:
+                    upsell_msg, upsell_esp = upsell
+                    data["upsell_especialidad"] = upsell_esp
+                    save_session(phone, "IDLE", data)
+                    log_event(phone, "upsell_postconsulta_ofrecido",
+                              {"especialidad_origen": esp, "especialidad_destino": upsell_esp})
+                    return _btn_msg(
+                        f"Qué bueno saberlo 😊 Nos alegra que te sientas bien.\n\n{upsell_msg}",
+                        [{"id": "upsell_si", "title": "Sí, me interesa"},
+                         {"id": "no_control", "title": "No por ahora"}]
+                    )
+                return _btn_msg(
+                    "Qué bueno saberlo 😊 Nos alegra que te sientas bien.\n\n"
+                    "¿Quieres agendar tu control de seguimiento?",
+                    [{"id": "1", "title": "Sí, agendar control"},
+                     {"id": "no_control", "title": "Por ahora no"}]
+                )
+
+            # Detractor (peor, rating 1-2) o neutro (igual, rating 3)
+            log_event(phone, "seguimiento_negativo",
+                      {"respuesta": categoria, "rating": rating, "especialidad": esp})
+            # Alerta al doctor SOLO si es detractor (peor)
+            if categoria == "peor" and ADMIN_ALERT_PHONE:
                 perfil = get_profile(phone)
                 nombre_pac = perfil["nombre"] if perfil else phone
                 alerta = (
                     f"⚠️ *Alerta seguimiento*\n\n"
-                    f"Paciente *{nombre_pac}* ({phone}) reporta sentirse *PEOR* "
+                    f"Paciente *{nombre_pac}* ({phone}) calificó {rating}/5 "
                     f"después de {esp} con {prof}.\n"
                     f"Revisar situación clínica."
                 )
                 log_event(phone, "seguimiento_alerta_peor",
-                          {"especialidad": esp, "profesional": prof})
+                          {"especialidad": esp, "profesional": prof, "rating": rating})
                 try:
                     from resilience import spawn_task
                     spawn_task(send_whatsapp(ADMIN_ALERT_PHONE, alerta))
