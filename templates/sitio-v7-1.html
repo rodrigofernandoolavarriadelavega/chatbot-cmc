@@ -1255,11 +1255,13 @@ section.compact { padding: 64px 0; }
   font-family: var(--font-display); font-weight: 800; font-size: 18px;
   margin-bottom: 16px;
 }
-.footer-brand .name .logo {
-  width: 40px; height: 40px;
+.footer-brand .name .footer-logo-img {
+  width: 44px; height: 44px;
+  object-fit: contain;
+  background: white;
   border-radius: 10px;
-  background: linear-gradient(135deg, var(--brand-teal) 0%, var(--brand-deep) 100%);
-  display: grid; place-items: center;
+  padding: 4px;
+  flex-shrink: 0;
 }
 .footer-brand p { font-size: 14px; line-height: 1.6; max-width: 320px; margin-bottom: 16px; }
 .footer-social { display: flex; gap: 10px; }
@@ -2597,9 +2599,7 @@ section.compact { padding: 64px 0; }
     <div class="footer-grid">
       <div class="footer-brand">
         <div class="name">
-          <span class="logo" aria-hidden="true">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M9 2v7H2v6h7v7h6v-7h7V9h-7V2z"/></svg>
-          </span>
+          <img src="https://centromedicocarampangue.cl/wp-content/uploads/2025/08/cropped-logo-carampangue.png" alt="Logo Centro Médico Carampangue" width="44" height="44" class="footer-logo-img" />
           Centro Médico Carampangue
         </div>
         <p>17 especialidades médicas y dentales en el corazón de la Provincia de Arauco. Salud cercana, profesional y humana.</p>
