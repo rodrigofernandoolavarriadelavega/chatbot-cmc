@@ -1367,6 +1367,8 @@ function updateKpis(){
   $("#tabWaitingN").textContent = waitingN;
   $("#tabEcografiasN").textContent = ecografiasPhones.size;
   $("#tabWaitlistN").textContent = waitlistPhones.size;
+  // Sincroniza badge nativo del ícono PWA (estilo WhatsApp/Gmail)
+  syncAppBadge(unreadConvs);
 }
 
 async function loadWaitlistPhones(){
@@ -2216,11 +2218,19 @@ function setup(){
   };
   $("#btnNotif").onclick = async () => {
     if (!("Notification" in window)) return toast("Tu navegador no soporta notificaciones","error");
-    if (Notification.permission !== "granted"){
-      const p = await Notification.requestPermission();
-      if (p !== "granted") return;
+    if (notifOn) {
+      // Apagar: desuscribir push también
+      await disablePush();
+      notifOn = false;
+    } else {
+      // Encender: pedir permiso + suscribir push
+      const ok = await enablePush();
+      if (!ok) return;
+      notifOn = true;
+      toast("Notificaciones activadas en este dispositivo", "success");
     }
-    notifOn = !notifOn; localStorage.setItem("v2_notif", notifOn?"on":"off"); updateBtns();
+    localStorage.setItem("v2_notif", notifOn?"on":"off");
+    updateBtns();
   };
 
   setupAttach();
@@ -2234,12 +2244,87 @@ function setup(){
 
 document.addEventListener("DOMContentLoaded", setup);
 
-// PWA: registrar service worker (scope /admin/)
+// ── PWA: service worker + Web Push + App Badge ─────────────────────────────
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("/admin/sw.js", { scope: "/admin/" })
       .catch(err => console.warn("[PWA] SW register failed:", err));
   });
+  // Cuando llega un push, refrescar inbox para reflejar el nuevo mensaje
+  navigator.serviceWorker.addEventListener("message", (e) => {
+    if (e.data && e.data.type === "cmc-push") {
+      try { loadInbox(); } catch(_){}
+    }
+  });
+}
+
+function _b64ToUint8(base64) {
+  const padding = "=".repeat((4 - base64.length % 4) % 4);
+  const b64 = (base64 + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(b64);
+  const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
+async function enablePush() {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+    toast("Tu navegador no soporta push (instalá la PWA primero)", "error");
+    return false;
+  }
+  if (Notification.permission !== "granted") {
+    const p = await Notification.requestPermission();
+    if (p !== "granted") { toast("Permiso denegado", "error"); return false; }
+  }
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      const k = await api("/admin/api/push/vapid-key");
+      if (!k || !k.public_key) { toast("Servidor sin VAPID key", "error"); return false; }
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: _b64ToUint8(k.public_key),
+      });
+    }
+    const label = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || "";
+    await api("/admin/api/push/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subscription: sub.toJSON(), label }),
+    });
+    return true;
+  } catch (e) {
+    console.error("[push] enable failed", e);
+    toast("No se pudo activar push: " + (e.message || e), "error");
+    return false;
+  }
+}
+
+async function disablePush() {
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = reg && (await reg.pushManager.getSubscription());
+    if (sub) {
+      try {
+        await api("/admin/api/push/unsubscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint: sub.endpoint }),
+        });
+      } catch(_){}
+      await sub.unsubscribe();
+    }
+  } catch(e){ console.warn("[push] disable error", e); }
+}
+
+function syncAppBadge(count) {
+  if ("setAppBadge" in navigator) {
+    try { count > 0 ? navigator.setAppBadge(count) : navigator.clearAppBadge(); } catch(_){}
+  }
+  if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
+    try { navigator.serviceWorker.controller.postMessage({ type: "cmc-set-badge", count }); } catch(_){}
+  }
 }
 </script>
 </body>

@@ -2,7 +2,7 @@
 // Estrategia: network-first para HTML/API, cache-first para assets estáticos.
 // Permite la app instalable y un fallback offline básico.
 
-const CACHE_VERSION = 'cmc-admin-v2';
+const CACHE_VERSION = 'cmc-admin-v3';
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const ASSETS_CACHE = `${CACHE_VERSION}-assets`;
 
@@ -73,5 +73,71 @@ self.addEventListener('fetch', (event) => {
         return res;
       }).catch(() => caches.match('/admin/v2'))
     );
+  }
+});
+
+
+// ── Web Push: notificación nativa + badge en ícono PWA ──────────────────────
+self.addEventListener('push', (event) => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch (e) { data = { title: 'CMC', body: event.data ? event.data.text() : '' }; }
+
+  const title = data.title || 'Centro Médico Carampangue';
+  const body = data.body || '';
+  const url = data.url || '/admin/v2';
+  const tag = data.tag || 'cmc-msg';
+  const badge = (typeof data.badge === 'number') ? data.badge : null;
+
+  const ops = [
+    self.registration.showNotification(title, {
+      body,
+      icon: '/static/pwa/icon-192.png',
+      badge: '/static/pwa/icon-192.png',
+      tag,
+      renotify: true,
+      requireInteraction: false,
+      vibrate: [180, 80, 180],
+      data: { url },
+    }),
+  ];
+
+  if (badge !== null && 'setAppBadge' in self.navigator) {
+    ops.push(badge > 0 ? self.navigator.setAppBadge(badge) : self.navigator.clearAppBadge());
+  }
+
+  // Notificar a clientes abiertos para que actualicen UI in-app sin recargar
+  ops.push(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+    clients.forEach((c) => c.postMessage({ type: 'cmc-push', payload: data }));
+  }));
+
+  event.waitUntil(Promise.all(ops));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const target = (event.notification.data && event.notification.data.url) || '/admin/v2';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      // Si hay una ventana de admin abierta, enfocala y navegá ahí
+      for (const c of clients) {
+        if (c.url.includes('/admin/v2')) {
+          c.navigate(target).catch(() => null);
+          return c.focus();
+        }
+      }
+      return self.clients.openWindow(target);
+    })
+  );
+});
+
+// Permitir limpiar el badge desde el cliente cuando lee
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'cmc-clear-badge') {
+    if ('clearAppBadge' in self.navigator) self.navigator.clearAppBadge();
+  } else if (event.data && event.data.type === 'cmc-set-badge') {
+    const n = event.data.count || 0;
+    if ('setAppBadge' in self.navigator) {
+      n > 0 ? self.navigator.setAppBadge(n) : self.navigator.clearAppBadge();
+    }
   }
 });

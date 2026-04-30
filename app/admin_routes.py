@@ -8,7 +8,7 @@ from datetime import date, timedelta
 from collections import defaultdict, deque
 
 from fastapi import APIRouter, Request, Query, HTTPException, Header, Depends, Cookie, Form, File, UploadFile
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, RedirectResponse, Response, JSONResponse
 
 from config import ADMIN_TOKEN, ORTODONCIA_TOKEN, COOKIE_SECRET, STAFF_PHONES
 from messaging import send_whatsapp, send_instagram, send_messenger, edit_whatsapp_message
@@ -1731,6 +1731,57 @@ def api_last_seen(phone: str, _=Depends(require_admin)):
 def api_unread_counts(_=Depends(require_admin)):
     """Retorna mapa {phone: cantidad} de mensajes inbound no leídos por phone."""
     return get_unread_counts()
+
+
+# ── Web Push (notificaciones nativas a la PWA admin) ───────────────────────
+
+@router.get("/admin/api/push/vapid-key")
+def api_push_vapid_key(_=Depends(require_admin)):
+    """Retorna la clave pública VAPID para que el browser se suscriba."""
+    import push as _push
+    return {"public_key": _push.VAPID_PUBLIC_KEY}
+
+
+@router.post("/admin/api/push/subscribe")
+async def api_push_subscribe(request: Request, _=Depends(require_admin)):
+    """Guarda una suscripción del browser. Body: {subscription:{...}, label:"..."}"""
+    import push as _push
+    body = await request.json()
+    sub = body.get("subscription") or {}
+    label = (body.get("label") or "").strip()[:80]
+    user_agent = request.headers.get("user-agent", "")[:200]
+    try:
+        sid = _push.save_subscription(sub, role="admin", label=label, user_agent=user_agent)
+        return {"ok": True, "id": sid}
+    except ValueError as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
+
+
+@router.post("/admin/api/push/unsubscribe")
+async def api_push_unsubscribe(request: Request, _=Depends(require_admin)):
+    """Elimina una suscripción. Body: {endpoint:"..."}"""
+    import push as _push
+    body = await request.json()
+    endpoint = (body.get("endpoint") or "").strip()
+    if not endpoint:
+        return JSONResponse({"ok": False, "error": "endpoint requerido"}, status_code=400)
+    removed = _push.delete_subscription(endpoint)
+    return {"ok": True, "removed": removed}
+
+
+@router.post("/admin/api/push/test")
+async def api_push_test(_=Depends(require_admin)):
+    """Envía un push de prueba a todas las suscripciones admin."""
+    import push as _push
+    stats = _push.send_to_role(
+        "admin",
+        title="Test CMC",
+        body="Si ves esto, las notificaciones funcionan correctamente.",
+        url="/admin/v2",
+        badge=_push.count_unread_conversations(),
+        tag="cmc-test",
+    )
+    return stats
 
 
 # ── Marcar paciente como agendado manualmente ──────────────────────────────

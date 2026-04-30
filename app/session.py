@@ -1088,6 +1088,47 @@ def log_message(phone: str, direction: str, text: str, state: str = "IDLE",
             (phone, direction, str(text)[:2000], state, canal, wamid)
         )
         conn.commit()
+    # Web Push: notificar a la PWA admin en cada mensaje entrante de paciente.
+    if direction == "in":
+        try:
+            import threading
+            threading.Thread(target=_fire_push_on_inbound, args=(phone, str(text), canal), daemon=True).start()
+        except Exception:
+            pass
+
+
+def _fire_push_on_inbound(phone: str, text: str, canal: str):
+    """Background helper: lookup nombre + envía push broadcast a admins."""
+    try:
+        import push as _push
+        # Nombre del contacto si lo tenemos, fallback al teléfono
+        nombre = None
+        try:
+            with _conn() as c:
+                row = c.execute("SELECT nombre FROM contact_profiles WHERE phone=?", (phone,)).fetchone()
+                if row and row["nombre"]:
+                    nombre = str(row["nombre"]).strip().split()[0:2]
+                    nombre = " ".join(nombre)
+        except Exception:
+            pass
+        title = nombre or phone
+        if canal == "instagram":
+            title = f"[IG] {title}"
+        elif canal == "messenger":
+            title = f"[FB] {title}"
+        body = (text or "").strip()[:140] or "(sin texto)"
+        badge = _push.count_unread_conversations()
+        _push.send_to_role(
+            "admin",
+            title=title,
+            body=body,
+            url=f"/admin/v2?phone={phone}",
+            badge=badge,
+            tag=f"cmc-msg-{phone}",
+        )
+    except Exception as e:
+        import logging
+        logging.getLogger("bot.push").warning("push trigger failed for %s: %s", phone, e)
 
 
 def update_message_text_by_wamid(wamid: str, new_text: str) -> bool:
