@@ -1,0 +1,87 @@
+<!--
+  JSON-LD Physician (x3) — Centro Médico Carampangue
+  ==================================================
+  Schema por cada profesional. Pegar en /profesionales/ (como bloque HTML de Elementor)
+  o bien añadir cada <script> individualmente a la ficha de cada médico si tienen página propia.
+
+  Solo detecté 3 profesionales en el scraping. Si hay más, agrégalos copiando el patrón.
+
+  Validar en: https://search.google.com/test/rich-results
+-->
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Physician",
+  "@id": "https://centromedicocarampangue.cl/profesionales/#paulette-abrigo",
+  "name": "Dra. Paulette Abrigo Ibáñez",
+  "jobTitle": "Médica Cirujana",
+  "medicalSpecialty": "GeneralPractice",
+  "worksFor": {
+    "@type": "MedicalClinic",
+    "@id": "https://centromedicocarampangue.cl/#medicalclinic"
+  },
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "República 102",
+    "addressLocality": "Carampangue",
+    "addressRegion": "Biobío",
+    "addressCountry": "CL"
+  }
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Physician",
+  "@id": "https://centromedicocarampangue.cl/profesionales/#giulia-cassinelli",
+  "name": "Dra. Giulia Cassinelli",
+  "jobTitle": "Médica Cirujana",
+  "medicalSpecialty": "GeneralPractice",
+  "worksFor": {
+    "@type": "MedicalClinic",
+    "@id": "https://centromedicocarampangue.cl/#medicalclinic"
+  },
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "República 102",
+    "addressLocality": "Carampangue",
+    "addressRegion": "Biobío",
+    "addressCountry": "CL"
+  }
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "@id": "https://centromedicocarampangue.cl/profesionales/#florencia-gonzalez",
+  "name": "María Florencia Gonzalez Bravo",
+  "jobTitle": "Nutricionista",
+  "worksFor": {
+    "@type": "MedicalClinic",
+    "@id": "https://centromedicocarampangue.cl/#medicalclinic"
+  }
+}
+</script>
+
+<!--
+  PLANTILLA para agregar más profesionales — duplica y completa:
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Physician",
+  "@id": "https://centromedicocarampangue.cl/profesionales/#SLUG-NOMBRE",
+  "name": "Dr/Dra. NOMBRE COMPLETO",
+  "jobTitle": "TÍTULO (ej: Médico Cirujano, Odontólogo, Kinesiólogo)",
+  "medicalSpecialty": "ESPECIALIDAD (opciones schema.org: GeneralPractice, Cardiovascular, Gynecologic, Otolaryngologic, Orthopedic, Psychiatric, Dietetics, Dentistry, Physiotherapy, Podiatric, Pediatric)",
+  "worksFor": {
+    "@type": "MedicalClinic",
+    "@id": "https://centromedicocarampangue.cl/#medicalclinic"
+  }
+}
+</script>
+-->

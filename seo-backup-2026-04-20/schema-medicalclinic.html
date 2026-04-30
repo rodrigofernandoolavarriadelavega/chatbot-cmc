@@ -1,0 +1,137 @@
+<!--
+  JSON-LD MedicalClinic — Centro Médico Carampangue
+  =================================================
+  Copia TODO el <script> de abajo y pégalo en:
+
+  Opción A (WPCode Lite / Insert Headers and Footers):
+    Code Snippets → Add Snippet → HTML → Location: Header (site-wide)
+    Condition: Only on Front Page (opcional: aplicar solo en /)
+    Active: ON
+
+  Opción B (functions.php del tema child):
+    Envolver en add_action('wp_head', function() { ?> ... <?php });
+
+  Opción C (Yoast custom): Yoast Premium tiene schema override, free no.
+
+  IMPORTANTE:
+  - Verificar la imagen del logo existe en la URL indicada.
+  - Coordenadas son aproximadas para Carampangue. Afínalas con Google Maps
+    en https://www.google.com/maps buscando "República 102, Carampangue"
+    → click derecho → copiar coordenadas → reemplazar latitude/longitude.
+  - Si cambia el teléfono o email, actualizar aquí.
+-->
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "MedicalClinic",
+  "@id": "https://centromedicocarampangue.cl/#medicalclinic",
+  "name": "Centro Médico Carampangue",
+  "alternateName": "CMC",
+  "url": "https://centromedicocarampangue.cl/",
+  "logo": "https://centromedicocarampangue.cl/wp-content/uploads/2025/08/cropped-logo-carampangue.png",
+  "image": "https://centromedicocarampangue.cl/wp-content/uploads/2025/08/cropped-logo-carampangue.png",
+  "description": "Centro médico y dental en Carampangue, provincia de Arauco. Ofrecemos medicina general, más de 15 especialidades médicas, odontología y atención Fonasa/particular.",
+  "telephone": "+56442965226",
+  "email": "centromedicocarampangue@gmail.com",
+  "priceRange": "$$",
+  "currenciesAccepted": "CLP",
+  "paymentAccepted": "Efectivo, Tarjetas de débito/crédito, Transferencia, Fonasa",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "República 102",
+    "addressLocality": "Carampangue",
+    "addressRegion": "Biobío",
+    "postalCode": "4360000",
+    "addressCountry": "CL"
+  },
+  "geo": {
+    "@type": "GeoCoordinates",
+    "latitude": -37.2548769,
+    "longitude": -73.2355041
+  },
+  "hasMap": "https://maps.google.com/?q=Centro+Medico+Carampangue",
+  "openingHoursSpecification": [
+    {
+      "@type": "OpeningHoursSpecification",
+      "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+      "opens": "08:00",
+      "closes": "21:00"
+    },
+    {
+      "@type": "OpeningHoursSpecification",
+      "dayOfWeek": "Saturday",
+      "opens": "10:00",
+      "closes": "14:00"
+    }
+  ],
+  "contactPoint": [
+    {
+      "@type": "ContactPoint",
+      "telephone": "+56442965226",
+      "contactType": "reservations",
+      "areaServed": "CL",
+      "availableLanguage": ["Spanish"]
+    },
+    {
+      "@type": "ContactPoint",
+      "telephone": "+56966610737",
+      "contactType": "customer support",
+      "contactOption": "WhatsApp",
+      "areaServed": "CL",
+      "availableLanguage": ["Spanish"]
+    }
+  ],
+  "sameAs": [
+    "https://www.facebook.com/centromedicocarampangue/",
+    "https://www.instagram.com/centromedicocarampangue/"
+  ],
+  "medicalSpecialty": [
+    "GeneralPractice",
+    "FamilyMedicine",
+    "Cardiovascular",
+    "Gynecologic",
+    "Otolaryngologic",
+    "Physiotherapy",
+    "Dietetics",
+    "Psychiatric",
+    "Podiatric",
+    "Dentistry"
+  ],
+  "availableService": [
+    { "@type": "MedicalProcedure", "name": "Medicina General" },
+    { "@type": "MedicalProcedure", "name": "Medicina Familiar" },
+    { "@type": "MedicalProcedure", "name": "Cardiología" },
+    { "@type": "MedicalProcedure", "name": "Ginecología" },
+    { "@type": "MedicalProcedure", "name": "Otorrinolaringología" },
+    { "@type": "MedicalProcedure", "name": "Traumatología" },
+    { "@type": "MedicalProcedure", "name": "Kinesiología" },
+    { "@type": "MedicalProcedure", "name": "Kinesiología Respiratoria" },
+    { "@type": "MedicalProcedure", "name": "Kinesiología Musculoesquelética" },
+    { "@type": "MedicalProcedure", "name": "Kinesiología a Domicilio" },
+    { "@type": "MedicalProcedure", "name": "Nutrición" },
+    { "@type": "MedicalProcedure", "name": "Psicología Adulto" },
+    { "@type": "MedicalProcedure", "name": "Psicología Infantil" },
+    { "@type": "MedicalProcedure", "name": "Fonoaudiología" },
+    { "@type": "MedicalProcedure", "name": "Podología" },
+    { "@type": "MedicalProcedure", "name": "Odontología General" },
+    { "@type": "MedicalProcedure", "name": "Ortodoncia" },
+    { "@type": "MedicalProcedure", "name": "Implantología" },
+    { "@type": "MedicalProcedure", "name": "Endodoncia" },
+    { "@type": "MedicalProcedure", "name": "Estética Facial" }
+  ],
+  "areaServed": [
+    { "@type": "City", "name": "Carampangue" },
+    { "@type": "City", "name": "Arauco" },
+    { "@type": "City", "name": "Coronel" },
+    { "@type": "City", "name": "Curanilahue" },
+    { "@type": "AdministrativeArea", "name": "Provincia de Arauco" },
+    { "@type": "AdministrativeArea", "name": "Región del Biobío" }
+  ],
+  "potentialAction": {
+    "@type": "ReserveAction",
+    "target": "https://n9.cl/centromedicocarampangue",
+    "name": "Agendar hora online"
+  }
+}
+</script>
