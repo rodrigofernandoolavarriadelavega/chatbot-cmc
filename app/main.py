@@ -17,7 +17,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from fastapi import FastAPI, Request, Response, Query, HTTPException, Cookie
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from config import (META_VERIFY_TOKEN, CMC_TELEFONO, ADMIN_TOKEN,
@@ -550,6 +550,20 @@ def admin_service_worker():
         media_type="application/javascript",
         headers={"Cache-Control": "no-cache", "Service-Worker-Allowed": "/admin/"},
     )
+
+
+@app.get("/admin/v2/manifest.webmanifest", include_in_schema=False)
+def admin_manifest(token: str | None = Query(None),
+                   cmc_session: str | None = Cookie(None)):
+    """Manifest dinámico: embebe token en start_url si el requester está autenticado."""
+    import json as _json
+    from admin_routes import _verify_cookie
+    base = _json.loads((Path(__file__).parent.parent / "static" / "pwa" / "admin-manifest.webmanifest").read_text(encoding="utf-8"))
+    if token and token == ADMIN_TOKEN:
+        base["start_url"] = f"/admin/v2?token={token}"
+    elif cmc_session and _verify_cookie(cmc_session) in ("admin", "ortodoncia"):
+        base["start_url"] = "/admin/v2"  # cookie sigue válida en próximos launches
+    return JSONResponse(base, media_type="application/manifest+json")
 
 
 @app.get("/portal/sw.js", include_in_schema=False)
