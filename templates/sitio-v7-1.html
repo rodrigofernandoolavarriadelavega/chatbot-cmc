@@ -1678,6 +1678,29 @@ section.compact { padding: 64px 0; }
   font-family: var(--font-display);
 }
 .hor-day.on { background: var(--brand-teal); color: var(--paper); }
+
+/* Fila "a coordinar" — para especialistas que vienen según demanda (ej: Endodoncia) */
+.hor-coord {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 12.5px; color: var(--ink-700);
+  font-weight: 600; font-family: var(--font-display);
+}
+.hor-coord .hc-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(245,158,11,.12);
+  color: #b45309;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 11.5px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.hor-coord .hc-badge svg { width: 12px; height: 12px; }
+.hor-coord .hc-note { color: var(--ink-500); font-weight: 500; font-family: var(--font-body); }
+@media (max-width: 720px) {
+  .hor-coord { font-size: 11.5px; gap: 6px; flex-wrap: wrap; }
+  .hor-coord .hc-note { font-size: 11px; }
+}
 @media (max-width: 760px) {
   .hor-table-wrap { overflow-x: auto; }
   .hor-table { min-width: 640px; }
@@ -2131,7 +2154,7 @@ section.compact { padding: 64px 0; }
           <tr><td>Odontología General</td><td>Dra. J. Burgos · Dr. C. Jiménez</td><td><span class="hor-day on">L</span></td><td><span class="hor-day on">M</span></td><td><span class="hor-day on">X</span></td><td><span class="hor-day on">J</span></td><td><span class="hor-day on">V</span></td><td><span class="hor-day on">S</span></td></tr>
           <tr><td>Estética Facial</td><td>Dra. Valentina Fuentealba</td><td><span class="hor-day">L</span></td><td><span class="hor-day on">M</span></td><td><span class="hor-day">X</span></td><td><span class="hor-day on">J</span></td><td><span class="hor-day">V</span></td><td><span class="hor-day">S</span></td></tr>
           <tr><td>Ortodoncia</td><td>Dra. Daniela Castillo</td><td><span class="hor-day">L</span></td><td><span class="hor-day on">M</span></td><td><span class="hor-day">X</span></td><td><span class="hor-day on">J</span></td><td><span class="hor-day">V</span></td><td><span class="hor-day on">S</span></td></tr>
-          <tr><td>Endodoncia</td><td>Dr. Fernando Fredes</td><td><span class="hor-day">L</span></td><td><span class="hor-day">M</span></td><td><span class="hor-day on">X</span></td><td><span class="hor-day">J</span></td><td><span class="hor-day on">V</span></td><td><span class="hor-day">S</span></td></tr>
+          <tr><td>Endodoncia</td><td>Dr. Fernando Fredes</td><td colspan="6"><div class="hor-coord"><span class="hc-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>A coordinar</span><span class="hc-note">Atención según demanda — la odontóloga general deriva y coordina la fecha contigo</span></div></td></tr>
           <tr><td>Implantología</td><td>Dra. Aurora Valdés</td><td><span class="hor-day">L</span></td><td><span class="hor-day on">M</span></td><td><span class="hor-day">X</span></td><td><span class="hor-day on">J</span></td><td><span class="hor-day">V</span></td><td><span class="hor-day">S</span></td></tr>
         </tbody>
       </table>
