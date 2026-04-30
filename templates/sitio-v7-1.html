@@ -1289,12 +1289,22 @@ section.compact { padding: 64px 0; }
   margin-bottom: 16px;
 }
 .footer-brand .name .footer-logo-img {
-  width: 44px; height: 44px;
+  width: 48px; height: 48px;
   object-fit: contain;
-  background: white;
-  border-radius: 10px;
-  padding: 4px;
   flex-shrink: 0;
+  /* Sin fondo blanco — el logo del CMC ya tiene su propio fondo claro */
+}
+.footer-brand-text {
+  display: flex; flex-direction: column;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.footer-brand-sub {
+  font-family: var(--font-body);
+  font-size: 11px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.18em;
+  color: rgba(255,255,255,0.55);
+  margin-top: 4px;
 }
 .footer-brand p { font-size: 14px; line-height: 1.6; max-width: 320px; margin-bottom: 16px; }
 .footer-social { display: flex; gap: 10px; }
@@ -2650,8 +2660,11 @@ section.compact { padding: 64px 0; }
     <div class="footer-grid">
       <div class="footer-brand">
         <div class="name">
-          <img src="https://centromedicocarampangue.cl/wp-content/uploads/2025/08/cropped-logo-carampangue.png" alt="Logo Centro Médico Carampangue" width="44" height="44" class="footer-logo-img" />
-          Centro Médico Carampangue
+          <img src="https://centromedicocarampangue.cl/wp-content/uploads/2025/08/cropped-logo-carampangue.png" alt="Logo Centro Médico Carampangue" width="48" height="48" class="footer-logo-img" />
+          <span class="footer-brand-text">
+            Carampangue
+            <span class="footer-brand-sub">Centro Médico</span>
+          </span>
         </div>
         <p>19 especialidades médicas y dentales en el corazón de la Provincia de Arauco. Salud cercana, profesional y humana.</p>
         <div class="footer-social">
