@@ -348,6 +348,7 @@ _SITIO_FLAGSHIP_HTML = (_TEMPLATE_DIR / "sitio-flagship.html").read_text(encodin
 _SITIO_V4_HTML = (_TEMPLATE_DIR / "sitio-v4.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio-v4.html").exists() else ""
 _SITIO_V5_HTML = (_TEMPLATE_DIR / "sitio-v5.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio-v5.html").exists() else ""
 _SITIO_V6_HTML = (_TEMPLATE_DIR / "sitio-v6.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio-v6.html").exists() else ""
+_SITIO_V7_HTML = (_TEMPLATE_DIR / "sitio-v7.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio-v7.html").exists() else ""
 _HEATMAP_COMUNAS_HTML = (_TEMPLATE_DIR / "heatmap_comunas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "heatmap_comunas.html").exists() else ""
 _HEATMAP_DIRECCIONES_HTML = (_TEMPLATE_DIR / "heatmap_direcciones.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "heatmap_direcciones.html").exists() else ""
 _SEO_DASHBOARD_HTML = (_TEMPLATE_DIR / "seo_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "seo_dashboard.html").exists() else ""
@@ -440,6 +441,16 @@ async def sitio_v6():
     return _render_sitio_dynamic(_SITIO_V6_HTML, rating_data)
 
 
+@app.get("/sitio/v7", response_class=HTMLResponse)
+async def sitio_v7():
+    """Sitio web v7 — versión FINAL consolidada. Base v6 con SEO técnico endurecido,
+    Schema Physician individual (EEAT), fallback honesto sin reseñas fabricadas,
+    canonical apuntando a centromedicocarampangue.cl. v2-v6 ahora noindex/nofollow."""
+    from google_rating import fetch_rating
+    rating_data = await fetch_rating()
+    return _render_sitio_dynamic(_SITIO_V7_HTML, rating_data)
+
+
 @app.get("/api/google-rating")
 async def api_google_rating():
     """Rating + reseñas de Google Places para el CMC (cache 6h)."""
@@ -489,11 +500,15 @@ def _render_sitio_dynamic(html: str, rating_data: dict) -> str:
         agg = ""
     html = html.replace("<!--CMC_AGGREGATE_RATING-->", agg)
 
-    # Placeholders v6 — rating-card del bloque testimonios (formato grande "4.8" + "247 reseñas en Google")
+    # Placeholders v6/v7 — rating-card del bloque testimonios (formato grande)
+    # v6 fallback: "4.8" + "247 reseñas en Google" (estático, viola guidelines si la API falla)
+    # v7 fallback: "Reseñas reales" + "Verificadas en Google" (honesto sin número fabricado)
     if rating and count:
         rt = f"{rating:.1f}".replace(".", ",")
         html = html.replace("<!--CMC_RATING_BIG-->4.8", f"<!--CMC_RATING_BIG-->{rt}")
+        html = html.replace("<!--CMC_RATING_BIG-->Reseñas reales", f"<!--CMC_RATING_BIG-->{rt}")
         html = html.replace("<!--CMC_RATING_DESC-->247 reseñas en Google", f"<!--CMC_RATING_DESC-->{count} reseñas en Google")
+        html = html.replace("<!--CMC_RATING_DESC-->Verificadas en Google", f"<!--CMC_RATING_DESC-->{count} reseñas en Google")
 
     if reviews:
         from google_rating import initials
