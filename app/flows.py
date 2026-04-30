@@ -2186,6 +2186,17 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
     # ── IDLE: detectar intención ──────────────────────────────────────────────
     if state == "IDLE":
+        # Detectar "para hoy/mañana/pasado mañana" UNA VEZ al entrar a IDLE y
+        # stash en data. Cualquier path que termine llamando _iniciar_agendar
+        # (intent=agendar, triage GES, apellido shortcut, motivo del menú,
+        # quick_book) propaga la fecha pedida al disclaimer. Antes solo el
+        # branch agendar la propagaba; "Medico para hoy tiene?" pasaba por
+        # triage GES y perdía la fecha → bot mostraba sábado sin avisar
+        # (caso María 56968621918 + Norma Muñoz, CLAUDE.md pendiente #1).
+        _fp_idle_top = _detectar_fecha_pedida_idle(txt)
+        if _fp_idle_top:
+            data["fecha_pedida_idle"] = _fp_idle_top
+
         # ── Botones residuales de WAIT_SLOT que llegaron tarde (sesión expiró,
         # usuario volvió al menú pero el mensaje tardó en llegar). En vez de
         # devolver el menú genérico, relanzar el flujo de agendar. ──
@@ -2688,6 +2699,17 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             "arratia", "saraí", "sarai", "guevara", "pardo",
             # "horita" usado como diminutivo de "hora" (cita), muy común en CMC
             "horita",
+            # "para hoy"/"para mañana"/"para el [día]" = scheduling intent, NO síntoma.
+            # Visto 2026-04-27 (56964679269): "Medico para hoy tiene?" pasaba a
+            # triage GES → matcheaba odontología por "medico" → bot ofrecía
+            # Carlos Jiménez. Skip triage cuando hay marcador temporal explícito.
+            "para hoy", "para manana", "para mañana", "para el lunes",
+            "para el martes", "para el miercoles", "para el miércoles",
+            "para el jueves", "para el viernes", "para el sabado",
+            "para el sábado", "tiene hora", "tiene horita", "tiene medico",
+            "tiene doctor", "hay hora", "hay horita", "hay medico",
+            "hay doctor", "habra hora", "habrá hora", "tendra hora",
+            "tendrá hora",
         )
         _skip_triage = any(k in tl for k in _TRIAGE_SKIP_KWS)
         if len(txt) >= 10 and not txt.isdigit() and not _skip_triage:
@@ -4060,7 +4082,18 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if _slot_resp_c is None:
                 return _hdr + "\n\n_No hay otros horarios disponibles ese día._"
             if isinstance(_slot_resp_c, dict):
-                await send_whatsapp(phone, _hdr)
+                # Inyectar el header en el body de la lista interactiva en vez
+                # de mandar dos mensajes (el segundo send_whatsapp se perdía
+                # silenciosamente para usuarios IG/FB cuyos phones empiezan
+                # con `fb_`/`ig_` y no son números WhatsApp válidos — caso
+                # 2026-04-30 fb_9644586545608248 con "A las 11-15", el bot
+                # mostraba slots sin avisar que no había hora exacta).
+                try:
+                    _body = _slot_resp_c.get("interactive", {}).get("body", {})
+                    _orig = _body.get("text", "")
+                    _body["text"] = (_hdr + "\n\n" + _orig)[:1024]
+                except Exception:
+                    await send_whatsapp(phone, _hdr)
                 return _slot_resp_c
             return _hdr + "\n\n" + _slot_resp_c
 

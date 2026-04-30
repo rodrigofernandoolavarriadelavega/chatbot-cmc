@@ -166,7 +166,7 @@ def parse_hora(texto: str) -> Optional[Tuple[int, int]]:
         r"sobre\s+las?|cerca\s+de\s+las?|por\s+ah[ií]\s+de\s+las?|"
         r"para\s+las?|las?)?\s*"
         r"\b(\d{1,2})"
-        r"(?:\s*[:.\-,]\s*(\d{2})"
+        r"(?:\s*[:.\-,=;]\s*(\d{2})"
         r"|\s*h\s*(\d{2})"
         r"|\s+(\d{2})(?!\d)"
         r"|(\d{2})(?!\d))?"

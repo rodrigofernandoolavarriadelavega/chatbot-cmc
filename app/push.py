@@ -30,10 +30,12 @@ _DB_INIT_DONE = False
 
 
 def _conn():
-    conn = sqlite3.connect(str(DB_PATH), timeout=10)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA busy_timeout=5000")
-    return conn
+    """Reusa session._conn: maneja SQLCipher si está activo en producción.
+    Antes este módulo abría sessions.db con sqlite3 plano y fallaba con
+    'file is not a database' en cada call después de activar SQLCipher en
+    el VPS, bloqueando push notifications al admin (visto 2026-04-30)."""
+    from session import _conn as _session_conn
+    return _session_conn()
 
 
 def init_db():
