@@ -349,6 +349,7 @@ _SITIO_V4_HTML = (_TEMPLATE_DIR / "sitio-v4.html").read_text(encoding="utf-8") i
 _SITIO_V5_HTML = (_TEMPLATE_DIR / "sitio-v5.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio-v5.html").exists() else ""
 _SITIO_V6_HTML = (_TEMPLATE_DIR / "sitio-v6.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio-v6.html").exists() else ""
 _SITIO_V7_HTML = (_TEMPLATE_DIR / "sitio-v7.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio-v7.html").exists() else ""
+_SITIO_V7_1_HTML = (_TEMPLATE_DIR / "sitio-v7-1.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio-v7-1.html").exists() else ""
 _HEATMAP_COMUNAS_HTML = (_TEMPLATE_DIR / "heatmap_comunas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "heatmap_comunas.html").exists() else ""
 _HEATMAP_DIRECCIONES_HTML = (_TEMPLATE_DIR / "heatmap_direcciones.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "heatmap_direcciones.html").exists() else ""
 _SEO_DASHBOARD_HTML = (_TEMPLATE_DIR / "seo_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "seo_dashboard.html").exists() else ""
@@ -443,12 +444,26 @@ async def sitio_v6():
 
 @app.get("/sitio/v7", response_class=HTMLResponse)
 async def sitio_v7():
-    """Sitio web v7 — versión FINAL consolidada. Base v6 con SEO técnico endurecido,
-    Schema Physician individual (EEAT), fallback honesto sin reseñas fabricadas,
-    canonical apuntando a centromedicocarampangue.cl. v2-v6 ahora noindex/nofollow."""
+    """Sitio web v7 — versión consolidada inicial (preview/staging, noindex).
+    Base v6 con SEO técnico endurecido, Schema Physician (EEAT). Reemplazada
+    por v7-1 que incluye correcciones de auditoría senior (H1 SEO, cards
+    transaccionales, copy regulatorio, claims honestos)."""
     from google_rating import fetch_rating
     rating_data = await fetch_rating()
     return _render_sitio_dynamic(_SITIO_V7_HTML, rating_data)
+
+
+@app.get("/sitio/v7-1", response_class=HTMLResponse)
+async def sitio_v7_1():
+    """Sitio web v7.1 — versión FINAL en producción. Sobre v7 aplica auditoría
+    senior: H1 con keyword local "Centro médico en Carampangue", cards
+    transaccionales con price-row honesta y CTA "Agendar", copy regulatorio
+    correcto ("Profesionales habilitados" en vez de "Acreditados"),
+    claim de disponibilidad sin número fabricado, reseñas dinámicas Google
+    Places con fallback honesto al perfil de Google Maps."""
+    from google_rating import fetch_rating
+    rating_data = await fetch_rating()
+    return _render_sitio_dynamic(_SITIO_V7_1_HTML, rating_data)
 
 
 @app.get("/api/google-rating")
