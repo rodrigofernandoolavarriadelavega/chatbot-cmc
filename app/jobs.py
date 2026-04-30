@@ -195,6 +195,16 @@ async def _job_postconsulta():
         send_text_fn=send_whatsapp, buscar_paciente_fn=buscar_paciente,
     )
 
+async def _job_abarca_sync():
+    """Sync diario de atenciones del Dr. Abarca. Solo trae el día actual (delta).
+    Si la tabla está vacía hace seed completo automáticamente."""
+    from main import sync_abarca_atenciones
+    from session import abarca_cache_count
+    if abarca_cache_count() == 0:
+        await sync_abarca_atenciones(desde="2025-05-01", solo_hoy=False)
+    else:
+        await sync_abarca_atenciones(solo_hoy=True)
+
 async def _job_reactivacion():
     await enviar_reactivacion_pacientes(send_whatsapp, send_template_fn=_tpl)
 

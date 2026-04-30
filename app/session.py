@@ -168,6 +168,18 @@ def _conn():
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_cache_fecha ON citas_cache(fecha)")
     conn.execute("""
+        CREATE TABLE IF NOT EXISTS abarca_atenciones_cache (
+            id_cita         INTEGER PRIMARY KEY,
+            fecha           TEXT,
+            hora_inicio     TEXT,
+            estado_cita     TEXT,
+            id_paciente     INTEGER,
+            paciente_nombre TEXT,
+            synced_at       TEXT DEFAULT (datetime('now'))
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_abarca_fecha ON abarca_atenciones_cache(fecha)")
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS ortodoncia_cache (
             id_atencion     INTEGER PRIMARY KEY,
             id_paciente     INTEGER,
@@ -2385,6 +2397,68 @@ def get_citas_cache_mes(year: int, month: int, ids_prof: list[int]) -> list[dict
             (*ids_prof, fecha_ini, fecha_fin)
         ).fetchall()
         return [dict(r) for r in rows]
+
+
+# ── Cache de atenciones Dr. Abarca (id 73) ────────────────────────────────────
+# Usado por /api/abarca/data. Persistente en sessions.db, sync diario via cron.
+
+def upsert_abarca_atenciones(citas: list[dict]) -> int:
+    """Inserta o actualiza atenciones del Dr. Abarca. Retorna n filas afectadas."""
+    if not citas:
+        return 0
+    n = 0
+    with _conn() as conn:
+        for c in citas:
+            cid = c.get("id")
+            if not cid:
+                continue
+            conn.execute("""
+                INSERT INTO abarca_atenciones_cache
+                  (id_cita, fecha, hora_inicio, estado_cita, id_paciente, paciente_nombre, synced_at)
+                VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+                ON CONFLICT(id_cita) DO UPDATE SET
+                  fecha=excluded.fecha,
+                  hora_inicio=excluded.hora_inicio,
+                  estado_cita=excluded.estado_cita,
+                  id_paciente=excluded.id_paciente,
+                  paciente_nombre=excluded.paciente_nombre,
+                  synced_at=datetime('now')
+            """, (cid, (c.get("fecha") or "")[:10], c.get("hora_inicio"),
+                  c.get("estado_cita"), c.get("id_paciente"), c.get("paciente_nombre")))
+            n += 1
+    return n
+
+
+def delete_abarca_atenciones_fecha(fecha: str) -> int:
+    """Borra todas las atenciones de una fecha (para reemplazar con un fetch fresco)."""
+    with _conn() as conn:
+        cur = conn.execute("DELETE FROM abarca_atenciones_cache WHERE fecha=?", (fecha,))
+        return cur.rowcount
+
+
+def get_abarca_atenciones(desde: str = "2025-05-01") -> list[dict]:
+    """Lee todas las atenciones desde la fecha indicada. Formato compatible con
+    el endpoint /api/abarca/data (campos: id, fecha, hora_inicio, estado_cita, id_paciente, paciente_nombre)."""
+    with _conn() as conn:
+        rows = conn.execute(
+            "SELECT id_cita AS id, fecha, hora_inicio, estado_cita, id_paciente, paciente_nombre "
+            "FROM abarca_atenciones_cache WHERE fecha >= ? ORDER BY fecha, hora_inicio",
+            (desde,)
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def abarca_cache_count() -> int:
+    """Total de atenciones cacheadas (0 si tabla recién creada)."""
+    with _conn() as conn:
+        return conn.execute("SELECT COUNT(*) FROM abarca_atenciones_cache").fetchone()[0]
+
+
+def abarca_cache_max_fecha() -> str | None:
+    """Fecha más reciente cacheada (YYYY-MM-DD) o None si vacío."""
+    with _conn() as conn:
+        row = conn.execute("SELECT MAX(fecha) FROM abarca_atenciones_cache").fetchone()
+        return row[0] if row and row[0] else None
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -36,7 +36,7 @@ from session import (get_session, is_duplicate, reset_session, save_session,
 from resilience import is_medilink_down
 from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_recordatorios, _job_recordatorios_2h,
-                  _job_postconsulta, _job_reactivacion,
+                  _job_postconsulta, _job_reactivacion, _job_abarca_sync,
                   _job_adherencia_kine, _job_control_especialidad,
                   _job_crosssell_kine, _job_crosssell_orl_fono,
                   _job_crosssell_odonto_estetica, _job_crosssell_mg_chequeo,
@@ -147,6 +147,13 @@ async def lifespan(app: FastAPI):
         _job_postconsulta,
         CronTrigger(hour=22, minute=0, timezone=_CLT),
         id="seguimiento_postconsulta",
+        replace_existing=True,
+    )
+    # Sync atenciones Dr. Abarca: cierre del día a las 23:55 CLT
+    scheduler.add_job(
+        _job_abarca_sync,
+        CronTrigger(hour=23, minute=55, timezone=_CLT),
+        id="abarca_sync_diario",
         replace_existing=True,
     )
     # Reactivación: todos los lunes a las 10:30 AM CLT
@@ -876,96 +883,104 @@ def abarca_dashboard_page():
     return _ABARCA_DASHBOARD_HTML
 
 
-_ABARCA_CACHE_PATH = Path(__file__).parent.parent / "data" / "abarca_cache.json"
-_ABARCA_CACHE_TTL_SEC = 86400  # 24h (refresh manual con ?refresh=1)
+async def _fetch_abarca_dia(cli: httpx.AsyncClient, fecha_iso: str) -> list[dict]:
+    """Fetch atenciones del Dr. Abarca para una fecha. Retorna lista de citas crudas."""
+    import json as _json_ab
+    import asyncio as _aio_ab
+    from config import MEDILINK_BASE_URL as _MB
+    params = {"id_sucursal": {"eq": 1}, "id_profesional": {"eq": 73},
+              "fecha": {"eq": fecha_iso}}
+    pq = {"q": _json_ab.dumps(params, separators=(",", ":"))}
+    for attempt in range(6):
+        resp = await cli.get(f"{_MB}/citas", params=pq, headers=HEADERS_MEDILINK)
+        if resp.status_code == 200:
+            return resp.json().get("data", []) or []
+        if resp.status_code == 429:
+            await _aio_ab.sleep(1.5 + attempt * 1.5)
+            continue
+        break
+    return []
+
+
+async def sync_abarca_atenciones(desde: str = "2025-05-01", solo_hoy: bool = False) -> dict:
+    """Sincroniza atenciones del Dr. Abarca desde Medilink hacia abarca_atenciones_cache.
+
+    `solo_hoy=True`: solo refresca el día actual (uso típico del cron diario).
+    `solo_hoy=False`: barre desde `desde` hasta hoy, completando días faltantes.
+    """
+    from datetime import date as _date_s, timedelta as _td_s
+    import asyncio as _aio_s
+    from session import upsert_abarca_atenciones, delete_abarca_atenciones_fecha
+
+    hoy = _date_s.today()
+    if solo_hoy:
+        fechas = [hoy.isoformat()]
+    else:
+        try:
+            d = _date_s.fromisoformat(desde)
+        except ValueError:
+            d = _date_s(2025, 5, 1)
+        fechas = []
+        while d <= hoy:
+            if d.weekday() != 6:  # skip domingos
+                fechas.append(d.isoformat())
+            d += _td_s(days=1)
+
+    total = 0
+    async with httpx.AsyncClient(timeout=30) as cli:
+        for f in fechas:
+            citas = await _fetch_abarca_dia(cli, f)
+            delete_abarca_atenciones_fecha(f)
+            n = upsert_abarca_atenciones(citas)
+            total += n
+            if not solo_hoy:
+                await _aio_s.sleep(0.15)
+    log.info("abarca sync done: %d atenciones, %d días", total, len(fechas))
+    return {"total": total, "dias": len(fechas)}
 
 
 @app.get("/api/abarca/data")
 async def api_abarca_data(refresh: int = 0, desde: str = "2025-05-01"):
-    """Atenciones del Dr. Abarca (id=73). El cache crudo va desde 2025-05-01.
+    """Atenciones del Dr. Abarca (id=73). Lee de abarca_atenciones_cache (sessions.db).
 
     `?desde=YYYY-MM-DD` filtra agregaciones desde esa fecha (default 2025-05-01).
-    `?refresh=1` fuerza recarga desde Medilink.
+    `?refresh=1` dispara sync delta de hoy desde Medilink antes de devolver.
     """
-    import json as _json_ab
-    import time as _time_ab
     from datetime import datetime as _dt_ab, date as _date_ab
     from collections import defaultdict as _dd_ab, Counter as _ct_ab
-    from config import MEDILINK_BASE_URL as _MB
+    from session import get_abarca_atenciones, abarca_cache_count
 
-    raw = None
-    cache_age = None
-    if not refresh and _ABARCA_CACHE_PATH.exists():
-        cache_age = _time_ab.time() - _ABARCA_CACHE_PATH.stat().st_mtime
-        if cache_age < _ABARCA_CACHE_TTL_SEC:
+    # Si la tabla está vacía, hacer un seed completo (solo pasa la primera vez)
+    if abarca_cache_count() == 0:
+        log.info("abarca cache vacío — seed completo desde Medilink")
+        await sync_abarca_atenciones(desde="2025-05-01", solo_hoy=False)
+    elif refresh:
+        await sync_abarca_atenciones(solo_hoy=True)
+    else:
+        # Delta liviano: refrescar hoy si la última sync de hoy es vieja (>30 min)
+        from session import _conn as _conn_ab
+        from datetime import date as _date_chk
+        hoy_iso = _date_chk.today().isoformat()
+        with _conn_ab() as _c:
+            row = _c.execute(
+                "SELECT MAX(synced_at) FROM abarca_atenciones_cache WHERE fecha=?",
+                (hoy_iso,)
+            ).fetchone()
+        last_sync = row[0] if row else None
+        needs_refresh = True
+        if last_sync:
             try:
-                raw = _json_ab.loads(_ABARCA_CACHE_PATH.read_text(encoding="utf-8"))
+                age = (_dt_ab.utcnow() - _dt_ab.fromisoformat(last_sync)).total_seconds()
+                needs_refresh = age > 1800  # 30 min
             except Exception:
-                raw = None
+                needs_refresh = True
+        if needs_refresh:
+            try:
+                await sync_abarca_atenciones(solo_hoy=True)
+            except Exception as e:
+                log.warning("abarca delta hoy falló: %s", e)
 
-    if raw is None:
-        # Fetch día a día (eq por fecha = sin problema de paginación, secuencial = sin 429)
-        from datetime import date as _date_ab2, timedelta as _td_ab2
-        import asyncio as _aio_ab
-        raw = []
-        seen_ids = set()
-        d = _date_ab2(2025, 5, 1)
-        hoy = _date_ab2.today()
-        async with httpx.AsyncClient(timeout=30) as cli:
-            while d <= hoy:
-                if d.weekday() == 6:  # domingo, sin atenciones
-                    d += _td_ab2(days=1); continue
-                params = {"id_sucursal": {"eq": 1}, "id_profesional": {"eq": 73},
-                          "fecha": {"eq": d.isoformat()}}
-                pq = {"q": _json_ab.dumps(params, separators=(",", ":"))}
-                resp = None
-                for attempt in range(6):
-                    resp = await cli.get(f"{_MB}/citas", params=pq, headers=HEADERS_MEDILINK)
-                    if resp.status_code == 200:
-                        break
-                    if resp.status_code == 429:
-                        await _aio_ab.sleep(1.5 + attempt * 1.5)
-                        continue
-                    break
-                if resp is not None and resp.status_code == 200:
-                    for c in resp.json().get("data", []):
-                        cid = c.get("id")
-                        if cid in seen_ids:
-                            continue
-                        seen_ids.add(cid)
-                        raw.append(c)
-                d += _td_ab2(days=1)
-                await _aio_ab.sleep(0.15)
-        try:
-            _ABARCA_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
-            _ABARCA_CACHE_PATH.write_text(_json_ab.dumps(raw, ensure_ascii=False, default=str), encoding="utf-8")
-        except Exception:
-            pass
-
-    # ── Delta refresh: siempre traer las atenciones de HOY ────────────────────
-    # El cache vive 24h, pero el día actual cambia constantemente. Una llamada
-    # extra a Medilink mantiene la métrica de hoy fresca sin esperar refresh
-    # completo de 7 min.
-    from datetime import date as _date_dr
-    from config import MEDILINK_BASE_URL as _MB_dr
-    hoy_iso = _date_dr.today().isoformat()
-    try:
-        params_hoy = {"id_sucursal": {"eq": 1}, "id_profesional": {"eq": 73},
-                      "fecha": {"eq": hoy_iso}}
-        async with httpx.AsyncClient(timeout=10) as cli_dr:
-            resp_dr = await cli_dr.get(
-                f"{_MB_dr}/citas",
-                params={"q": _json_ab.dumps(params_hoy, separators=(",", ":"))},
-                headers=HEADERS_MEDILINK,
-            )
-        if resp_dr.status_code == 200:
-            citas_hoy = resp_dr.json().get("data", [])
-            raw = [c for c in raw if (c.get("fecha") or "")[:10] != hoy_iso] + citas_hoy
-            log.info("abarca delta refresh hoy=%s: %d citas", hoy_iso, len(citas_hoy))
-        else:
-            log.warning("abarca delta refresh hoy=%s HTTP %s", hoy_iso, resp_dr.status_code)
-    except Exception as _e_dr:
-        log.warning("abarca delta refresh hoy falló: %s", _e_dr)
+    raw = get_abarca_atenciones(desde=desde)
 
     # ── Agregaciones ──
     por_dia: dict = {}
@@ -1041,7 +1056,7 @@ async def api_abarca_data(refresh: int = 0, desde: str = "2025-05-01"):
 
     return {
         "fecha_actualizacion": _dt_ab.now().strftime("%Y-%m-%d %H:%M"),
-        "fuente_cache": "json local (TTL 24h)" if cache_age and cache_age < _ABARCA_CACHE_TTL_SEC else "Medilink fresh",
+        "fuente_cache": "sqlite (sync diario 23:55 CLT + delta hoy on-read)",
         "por_dia": por_dia,
         "por_mes": dict(por_mes),
         "por_dow": dow_stats,
