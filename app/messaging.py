@@ -166,10 +166,24 @@ def _final_phone_guard(text: str) -> str:
     return text
 
 
-async def send_whatsapp(to: str, body: str) -> str | None:
-    """Envía mensaje de texto vía Meta Cloud API. Retorna wamid o None si falla.
+async def send_whatsapp(to: str, body) -> str | None:
+    """Envía mensaje de texto (o interactivo) vía Meta Cloud API.
+    Retorna wamid o None si falla.
+
+    Si recibe un dict con `type=interactive`, auto-routea a send_whatsapp_interactive.
+    Caso real 2026-04-30: jobs de cross-sell (ORL↔Fono, Odonto-Estética, MG-Chequeo)
+    crashearon con `'dict' has no attribute 'strip'` porque sus _msg_*() arman dicts
+    interactive y los pasan directo a send_fn=send_whatsapp. Antes: 6+ pacientes
+    fallidos cada vez que corría el cron.
+
     Si el mismo body fue enviado a `to` en los últimos 2 min, skip (dedupe)."""
-    if not body or not body.strip():
+    if isinstance(body, dict):
+        if body.get("type") == "interactive" and "interactive" in body:
+            return await send_whatsapp_interactive(to, body["interactive"])
+        # Otros payloads dict no soportados acá → log + None
+        log.warning("send_whatsapp recibió dict sin type=interactive: keys=%s", list(body.keys()))
+        return None
+    if not body or not str(body).strip():
         return None
     body = _final_phone_guard(body)
     body = _normalize_markdown_for_chat(body)
