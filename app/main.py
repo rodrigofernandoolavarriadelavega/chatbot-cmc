@@ -5,6 +5,7 @@ Webhook de Meta Cloud API → FastAPI → Claude + Medilink
 import sys, os
 sys.path.insert(0, os.path.dirname(__file__))
 
+import asyncio
 import logging
 import logging.config
 from collections import deque
@@ -902,41 +903,62 @@ async def _fetch_abarca_dia(cli: httpx.AsyncClient, fecha_iso: str) -> list[dict
     return []
 
 
+_ABARCA_SYNC_LOCK = asyncio.Lock()
+
+
 async def sync_abarca_atenciones(desde: str = "2025-05-01", solo_hoy: bool = False) -> dict:
     """Sincroniza atenciones del Dr. Abarca desde Medilink hacia abarca_atenciones_cache.
 
     `solo_hoy=True`: solo refresca el día actual (uso típico del cron diario).
-    `solo_hoy=False`: barre desde `desde` hasta hoy, completando días faltantes.
+    `solo_hoy=False`: barre desde `desde` hasta hoy, completando solo los días
+    faltantes en cache (NO re-sincroniza días ya guardados — evita el barrido
+    de 313 días que saturaba Medilink con 429s y disparaba SIGBUS por OOM
+    con admin polling concurrente, visto 2026-04-30).
+
+    Mutex global: si ya hay un sync corriendo, este await espera a que termine
+    y retorna sin re-ejecutar (defense-in-depth contra dispatchers concurrentes
+    desde /api/abarca/data + cron + /abarca dashboard hits paralelos).
     """
     from datetime import date as _date_s, timedelta as _td_s
     import asyncio as _aio_s
-    from session import upsert_abarca_atenciones, delete_abarca_atenciones_fecha
+    from session import (upsert_abarca_atenciones, delete_abarca_atenciones_fecha,
+                         get_abarca_fechas_existentes)
 
-    hoy = _date_s.today()
-    if solo_hoy:
-        fechas = [hoy.isoformat()]
-    else:
-        try:
-            d = _date_s.fromisoformat(desde)
-        except ValueError:
-            d = _date_s(2025, 5, 1)
-        fechas = []
-        while d <= hoy:
-            if d.weekday() != 6:  # skip domingos
-                fechas.append(d.isoformat())
-            d += _td_s(days=1)
+    if _ABARCA_SYNC_LOCK.locked():
+        log.info("abarca sync ya en curso — esperando lock antes de retornar")
+        async with _ABARCA_SYNC_LOCK:
+            return {"total": 0, "dias": 0, "skipped": "in_progress"}
 
-    total = 0
-    async with httpx.AsyncClient(timeout=30) as cli:
-        for f in fechas:
-            citas = await _fetch_abarca_dia(cli, f)
-            delete_abarca_atenciones_fecha(f)
-            n = upsert_abarca_atenciones(citas)
-            total += n
-            if not solo_hoy:
-                await _aio_s.sleep(0.15)
-    log.info("abarca sync done: %d atenciones, %d días", total, len(fechas))
-    return {"total": total, "dias": len(fechas)}
+    async with _ABARCA_SYNC_LOCK:
+        hoy = _date_s.today()
+        if solo_hoy:
+            fechas = [hoy.isoformat()]
+        else:
+            try:
+                d = _date_s.fromisoformat(desde)
+            except ValueError:
+                d = _date_s(2025, 5, 1)
+            todas: list[str] = []
+            while d <= hoy:
+                if d.weekday() != 6:  # skip domingos
+                    todas.append(d.isoformat())
+                d += _td_s(days=1)
+            existentes = get_abarca_fechas_existentes()
+            # Siempre re-sync HOY (puede tener atenciones nuevas) + faltantes históricos.
+            fechas = [f for f in todas if f not in existentes or f == hoy.isoformat()]
+
+        total = 0
+        async with httpx.AsyncClient(timeout=30) as cli:
+            for f in fechas:
+                citas = await _fetch_abarca_dia(cli, f)
+                delete_abarca_atenciones_fecha(f)
+                n = upsert_abarca_atenciones(citas)
+                total += n
+                if not solo_hoy:
+                    await _aio_s.sleep(0.5)  # 0.15→0.5: menos 429s
+        log.info("abarca sync done: %d atenciones, %d días (solo_hoy=%s)",
+                 total, len(fechas), solo_hoy)
+        return {"total": total, "dias": len(fechas)}
 
 
 @app.get("/api/abarca/data")

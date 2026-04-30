@@ -3548,8 +3548,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             # Dr. Abarca 08:00, paciente clickeó "ver_otros", bot mostró el
             # mismo slot duplicado.
             if len(todos_slots or []) <= 1:
-                # Buscar slots de OTROS días para esta especialidad
-                from medilink import buscar_primer_dia
+                # Buscar slots de OTROS días para esta especialidad.
+                # NO re-importar buscar_primer_dia: ya está al tope del módulo (línea 15).
+                # Un `from medilink import buscar_primer_dia` local marca la variable
+                # como local en TODA la función handle_message (compile-time), y dispara
+                # UnboundLocalError en cualquier otro branch que la use antes
+                # (visto 2026-04-30 en otro_prof y otro_dia con varios pacientes).
                 fechas_vistas = data.get("fechas_vistas") or []
                 if not isinstance(fechas_vistas, list):
                     fechas_vistas = list(fechas_vistas)

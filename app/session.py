@@ -2461,6 +2461,18 @@ def abarca_cache_max_fecha() -> str | None:
         return row[0] if row and row[0] else None
 
 
+def get_abarca_fechas_existentes() -> set[str]:
+    """Set de fechas (YYYY-MM-DD) que ya tienen al menos 1 fila en cache.
+    Usado por sync_abarca_atenciones para saltar días ya sincronizados y
+    evitar barridos completos de 313 días en cada llamada (crash 2026-04-30
+    SIGBUS por OOM con admin polling concurrente)."""
+    with _conn() as conn:
+        rows = conn.execute(
+            "SELECT DISTINCT fecha FROM abarca_atenciones_cache"
+        ).fetchall()
+        return {r[0] for r in rows if r[0]}
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Modo degradado: cola de intenciones + estado del sistema
 # ─────────────────────────────────────────────────────────────────────────────
