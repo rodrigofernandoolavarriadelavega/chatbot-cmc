@@ -1531,6 +1531,46 @@ section.compact { padding: 64px 0; }
   .modal-card { border-radius: 24px 24px 0 0; max-width: 100%; max-height: 88vh; padding: 28px 22px 32px; }
 }
 
+/* ═══ MOB-BAR fija (mobile) — 2 botones full-width: Agendar + WhatsApp ═══ */
+.mob-bar {
+  display: none;
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 60;
+  background: white;
+  border-top: 1px solid var(--ink-100);
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0));
+  gap: 8px;
+  box-shadow: 0 -8px 24px rgba(11,79,122,.10);
+}
+.mob-bar a, .mob-bar button {
+  flex: 1;
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 7px;
+  padding: 14px 12px;
+  border-radius: 12px;
+  font-weight: 700; font-size: 14.5px;
+  font-family: var(--font-display);
+  text-align: center;
+  cursor: pointer;
+  border: 0;
+  transition: transform .15s;
+}
+.mob-bar a:active, .mob-bar button:active { transform: scale(.97); }
+.mob-bar .mb-ag { background: var(--brand-navy); color: #fff; }
+.mob-bar .mb-wa { background: #25d366; color: #fff; }
+
+@media (max-width: 720px) {
+  .mob-bar { display: flex; }
+  body { padding-bottom: calc(82px + env(safe-area-inset-bottom, 0)); }
+  /* WhatsApp float: subir para no chocar con la mob-bar */
+  .wa-float { bottom: calc(96px + env(safe-area-inset-bottom, 0)); right: 16px; width: 54px; height: 54px; }
+}
+@media (max-width: 420px) {
+  .mob-bar a, .mob-bar button { font-size: 13.5px; padding: 13px 8px; }
+  .mob-bar a svg, .mob-bar button svg { width: 16px; height: 16px; }
+}
+
 /* ═══ INSURANCE BAR (de v4: formas de pago + bono fonasa) ═══ */
 .insurance-bar {
   background: linear-gradient(180deg, #ffffff, var(--ink-50));
@@ -2613,9 +2653,21 @@ section.compact { padding: 64px 0; }
 </footer>
 
 <!-- ========== WHATSAPP FLOAT ========== -->
-<a href="https://wa.me/56966610737" class="wa-float" id="waFloat" aria-label="Escribir por WhatsApp">
+<a href="https://wa.me/56966610737" class="wa-float" id="waFloat" aria-label="Escribir por WhatsApp" target="_blank" rel="noopener">
   <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.8-.8-1.4-1.7-1.5-2-.2-.3 0-.4.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 2-1.4.2-.6.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.4 5L2 22l5.1-1.3c1.4.8 3 1.3 4.9 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2"/></svg>
 </a>
+
+<!-- ========== MOB-BAR fija (solo mobile ≤720px) ========== -->
+<div class="mob-bar" role="navigation" aria-label="Acciones rápidas">
+  <button type="button" class="mb-ag" data-open-booking aria-label="Agendar hora online">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    Agendar hora
+  </button>
+  <a class="mb-wa" href="https://wa.me/56966610737" target="_blank" rel="noopener" aria-label="Escribir por WhatsApp">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.8-.8-1.4-1.7-1.5-2-.2-.3 0-.4.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 2-1.4.2-.6.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.4 5L2 22l5.1-1.3c1.4.8 3 1.3 4.9 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2"/></svg>
+    WhatsApp
+  </a>
+</div>
 
 <!-- ========== BOOKING MODAL ========== -->
 <div class="modal-backdrop" id="bookingModal" hidden role="dialog" aria-modal="true" aria-labelledby="modalTitle">
