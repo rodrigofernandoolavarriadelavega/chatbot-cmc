@@ -884,8 +884,9 @@ def abarca_dashboard_page():
     return _ABARCA_DASHBOARD_HTML
 
 
-async def _fetch_abarca_dia(cli: httpx.AsyncClient, fecha_iso: str) -> list[dict]:
-    """Fetch atenciones del Dr. Abarca para una fecha. Retorna lista de citas crudas."""
+async def _fetch_abarca_dia(cli: httpx.AsyncClient, fecha_iso: str) -> list[dict] | None:
+    """Fetch atenciones del Dr. Abarca para una fecha. Retorna None si el fetch
+    falla (preserva cache existente); [] o lista poblada si tuvo éxito."""
     import json as _json_ab
     import asyncio as _aio_ab
     from config import MEDILINK_BASE_URL as _MB
@@ -893,14 +894,21 @@ async def _fetch_abarca_dia(cli: httpx.AsyncClient, fecha_iso: str) -> list[dict
               "fecha": {"eq": fecha_iso}}
     pq = {"q": _json_ab.dumps(params, separators=(",", ":"))}
     for attempt in range(6):
-        resp = await cli.get(f"{_MB}/citas", params=pq, headers=HEADERS_MEDILINK)
+        try:
+            resp = await cli.get(f"{_MB}/citas", params=pq, headers=HEADERS_MEDILINK)
+        except Exception as e:
+            log.warning("abarca fetch %s attempt=%d excepción: %s", fecha_iso, attempt, e)
+            await _aio_ab.sleep(1.5 + attempt * 1.5)
+            continue
         if resp.status_code == 200:
             return resp.json().get("data", []) or []
         if resp.status_code == 429:
             await _aio_ab.sleep(1.5 + attempt * 1.5)
             continue
-        break
-    return []
+        log.warning("abarca fetch %s HTTP %s — preservo cache", fecha_iso, resp.status_code)
+        return None
+    log.warning("abarca fetch %s: 6 intentos fallidos — preservo cache", fecha_iso)
+    return None
 
 
 _ABARCA_SYNC_LOCK = asyncio.Lock()
@@ -948,17 +956,23 @@ async def sync_abarca_atenciones(desde: str = "2025-05-01", solo_hoy: bool = Fal
             fechas = [f for f in todas if f not in existentes or f == hoy.isoformat()]
 
         total = 0
+        skipped_fail = 0
         async with httpx.AsyncClient(timeout=30) as cli:
             for f in fechas:
                 citas = await _fetch_abarca_dia(cli, f)
+                if citas is None:
+                    skipped_fail += 1
+                    if not solo_hoy:
+                        await _aio_s.sleep(0.5)
+                    continue
                 delete_abarca_atenciones_fecha(f)
                 n = upsert_abarca_atenciones(citas)
                 total += n
                 if not solo_hoy:
                     await _aio_s.sleep(0.5)  # 0.15→0.5: menos 429s
-        log.info("abarca sync done: %d atenciones, %d días (solo_hoy=%s)",
-                 total, len(fechas), solo_hoy)
-        return {"total": total, "dias": len(fechas)}
+        log.info("abarca sync done: %d atenciones, %d días, %d failed (solo_hoy=%s)",
+                 total, len(fechas), skipped_fail, solo_hoy)
+        return {"total": total, "dias": len(fechas), "failed": skipped_fail}
 
 
 @app.get("/api/abarca/data")
