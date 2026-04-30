@@ -1202,13 +1202,13 @@ section.compact { padding: 64px 0; }
 .loc-card p { font-size: 14px; color: var(--ink-600); line-height: 1.5; }
 .loc-card a { color: var(--brand-deep); font-weight: 600; }
 .loc-map {
-  aspect-ratio: 4/5;
   border-radius: var(--radius-lg);
   overflow: hidden;
   border: 1px solid var(--ink-100);
   box-shadow: var(--shadow);
+  min-height: 480px;
 }
-.loc-map iframe { width: 100%; height: 100%; border: 0; }
+.loc-map iframe { width: 100% !important; height: 480px !important; border: 0; display: block; }
 
 /* ========== CTA BAND ========== */
 .cta-band {
@@ -1390,7 +1390,8 @@ section.compact { padding: 64px 0; }
   .lm-visual { display: none; }
   .faq-grid { grid-template-columns: 1fr; gap: 32px; }
   .loc-grid { grid-template-columns: 1fr; }
-  .loc-map { aspect-ratio: 16/10; }
+  .loc-map { min-height: 360px; }
+  .loc-map iframe { height: 360px !important; }
 }
 @media (max-width: 768px) {
   section { padding: 56px 0; }
@@ -1491,7 +1492,8 @@ section.compact { padding: 64px 0; }
   .footer-grid { gap: 24px; }
   .cta-band h2 { font-size: clamp(26px, 7vw, 36px); }
   .lm-card .lm-content h2 { font-size: clamp(24px, 6.4vw, 32px); }
-  .loc-map iframe { height: 280px; }
+  .loc-map { min-height: 280px; }
+  .loc-map iframe { height: 280px !important; }
   .test-card-cta-google a, .test-card-cta-wa a { width: 100%; justify-content: center; }
 }
 
