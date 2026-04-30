@@ -346,6 +346,7 @@ _SITIO_V3_HTML = (_TEMPLATE_DIR / "sitio-v3.html").read_text(encoding="utf-8") i
 _SITIO_V2_HTML = (_TEMPLATE_DIR / "sitio-v2.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio-v2.html").exists() else ""
 _SITIO_FLAGSHIP_HTML = (_TEMPLATE_DIR / "sitio-flagship.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio-flagship.html").exists() else ""
 _SITIO_V4_HTML = (_TEMPLATE_DIR / "sitio-v4.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio-v4.html").exists() else ""
+_SITIO_V5_HTML = (_TEMPLATE_DIR / "sitio-v5.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio-v5.html").exists() else ""
 _HEATMAP_COMUNAS_HTML = (_TEMPLATE_DIR / "heatmap_comunas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "heatmap_comunas.html").exists() else ""
 _HEATMAP_DIRECCIONES_HTML = (_TEMPLATE_DIR / "heatmap_direcciones.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "heatmap_direcciones.html").exists() else ""
 _SEO_DASHBOARD_HTML = (_TEMPLATE_DIR / "seo_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "seo_dashboard.html").exists() else ""
@@ -420,6 +421,15 @@ async def sitio_v4():
     return _render_sitio_v4(rating_data)
 
 
+@app.get("/sitio/v5", response_class=HTMLResponse)
+async def sitio_v5():
+    """Sitio web v5 — toma v4 y restaura lo mejor de v3 flagship: trust strip
+    con aseguradoras, floating chip de disponibilidad, stats animados, lead magnet."""
+    from google_rating import fetch_rating
+    rating_data = await fetch_rating()
+    return _render_sitio_dynamic(_SITIO_V5_HTML, rating_data)
+
+
 @app.get("/api/google-rating")
 async def api_google_rating():
     """Rating + reseñas de Google Places para el CMC (cache 6h)."""
@@ -428,11 +438,14 @@ async def api_google_rating():
 
 
 def _render_sitio_v4(rating_data: dict) -> str:
+    return _render_sitio_dynamic(_SITIO_V4_HTML, rating_data)
+
+
+def _render_sitio_dynamic(html: str, rating_data: dict) -> str:
     """Reemplaza placeholders del template con rating real de Google.
     Si no hay API key o falla, deja la pill genérica y omite aggregateRating
-    (cumple Google guidelines: no fabricar reviews)."""
+    (cumple Google guidelines: no fabricar reviews). Usado por v4 y v5."""
     import html as _html
-    html = _SITIO_V4_HTML
     rating  = rating_data.get("rating")
     count   = rating_data.get("review_count")
     reviews = rating_data.get("reviews") or []
