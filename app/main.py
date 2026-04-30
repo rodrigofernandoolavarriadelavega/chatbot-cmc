@@ -512,18 +512,22 @@ def _render_sitio_dynamic(html: str, rating_data: dict) -> str:
 
     if reviews:
         from google_rating import initials
-        cards = []
+        # Formato v4/v5: clases .testi / .testi-text / .testi-author
+        cards_v45 = []
+        # Formato v7: clases .test-card / .test-quote / .test-author / .verif (SVG inline, sin fontawesome)
+        cards_v7 = []
+        star_svg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'
         for rv in reviews[:3]:
             txt = (rv.get("text") or "").strip()
             if len(txt) < 25:
                 continue
             txt_short = txt[:240] + ("…" if len(txt) > 240 else "")
             author = rv.get("author") or "Anónimo"
-            stars  = "★" * int(rv.get("rating") or 5)
-            when   = rv.get("relative_time") or ""
-            cards.append(
+            n_stars = int(rv.get("rating") or 5)
+            when    = rv.get("relative_time") or ""
+            cards_v45.append(
                 '<article class="testi reveal">\n'
-                f'  <div class="testi-stars">{stars}</div>\n'
+                f'  <div class="testi-stars">{"★" * n_stars}</div>\n'
                 f'  <p class="testi-text">"{_html.escape(txt_short)}"</p>\n'
                 '  <div class="testi-author">\n'
                 f'    <div class="testi-avatar">{_html.escape(initials(author))}</div>\n'
@@ -531,12 +535,37 @@ def _render_sitio_dynamic(html: str, rating_data: dict) -> str:
                 f'      <div class="testi-name">{_html.escape(author)}</div>\n'
                 f'      <div class="testi-role">Reseña Google · {_html.escape(when)}</div>\n'
                 '    </div>\n'
-                '    <div class="testi-verified"><i class="fab fa-google"></i> Verificado</div>\n'
+                '    <div class="testi-verified">Verificado</div>\n'
                 '  </div>\n'
                 '</article>'
             )
-        if cards:
-            html = html.replace("<!--CMC_TESTIMONIOS_REALES-->", "\n".join(cards))
+            cards_v7.append(
+                '<div class="test-card">\n'
+                f'  <div class="test-stars">{star_svg * n_stars}</div>\n'
+                f'  <p class="test-quote">"{_html.escape(txt_short)}"</p>\n'
+                '  <div class="test-author">\n'
+                f'    <div class="avatar">{_html.escape(initials(author))}</div>\n'
+                '    <div>\n'
+                f'      <div class="name">{_html.escape(author)}</div>\n'
+                f'      <div class="loc">Reseña Google · {_html.escape(when)}</div>\n'
+                '    </div>\n'
+                '    <div class="verif"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Verificado</div>\n'
+                '  </div>\n'
+                '</div>'
+            )
+        if cards_v45:
+            html = html.replace("<!--CMC_TESTIMONIOS_REALES-->", "\n".join(cards_v45))
+        if cards_v7:
+            # En v7, los placeholders START/END delimitan el bloque a reemplazar
+            # cuando hay reviews reales (cae el fallback "Leer reseñas en Google").
+            import re as _re
+            html = _re.sub(
+                r'<!--CMC_TESTIMONIOS_V7_START-->.*?<!--CMC_TESTIMONIOS_V7_END-->',
+                '\n      ' + '\n      '.join(cards_v7),
+                html,
+                count=1,
+                flags=_re.DOTALL
+            )
 
     return html
 
