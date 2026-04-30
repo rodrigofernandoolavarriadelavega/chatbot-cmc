@@ -216,6 +216,8 @@
   .detail-link:hover { background: rgba(168, 130, 255, 0.22); }
   .detail-link.cmc { background: rgba(56, 189, 248, 0.12); border-color: rgba(56, 189, 248, 0.3); color: #7dd3fc; }
   .detail-link.cmc:hover { background: rgba(56, 189, 248, 0.22); }
+  .detail-link.buses { background: rgba(45, 212, 191, 0.12); border-color: rgba(45, 212, 191, 0.3); color: #5eead4; }
+  .detail-link.buses:hover { background: rgba(45, 212, 191, 0.22); }
 
   @media (max-width: 720px) {
     .overlay-header { flex-direction: column; align-items: flex-start; gap: 10px; }
@@ -235,7 +237,7 @@
       <div class="brand-title">OLACORE · Proyectos 2026</div>
       <div class="brand-subtitle">Meridiano Sur · agentecmc.cl</div>
     </div>
-    <span class="year-badge">2 proyectos activos</span>
+    <span class="year-badge">3 proyectos activos</span>
   </div>
   <div class="filters" id="filters"></div>
 </header>
@@ -250,8 +252,8 @@
 <div class="stats-overlay">
   <div class="stat-item"><span class="stat-value" id="stat-nodes">0</span><span class="stat-label">Componentes</span></div>
   <div class="stat-item"><span class="stat-value" id="stat-edges">0</span><span class="stat-label">Conexiones</span></div>
-  <div class="stat-item"><span class="stat-value">2</span><span class="stat-label">Proyectos</span></div>
-  <div class="stat-item"><span class="stat-value">1</span><span class="stat-label">En prod</span></div>
+  <div class="stat-item"><span class="stat-value">3</span><span class="stat-label">Proyectos</span></div>
+  <div class="stat-item"><span class="stat-value">2</span><span class="stat-label">En prod</span></div>
   <div class="stat-item"><span class="stat-value">1</span><span class="stat-label">En MVP</span></div>
 </div>
 
@@ -269,10 +271,11 @@
 
 <script>
 const CATEGORIES = {
-  cmc:      { label: 'CMC Salud',    color: '#38bdf8' },
-  meulen:   { label: 'Meulen Retail', color: '#a882ff' },
-  shared:   { label: 'Stack común',   color: '#4ade80' },
-  external: { label: 'Integraciones', color: '#fb923c' },
+  cmc:      { label: 'CMC Salud',       color: '#38bdf8' },
+  meulen:   { label: 'Meulen Retail',   color: '#a882ff' },
+  buses:    { label: 'Buses Estuario',  color: '#2dd4bf' },
+  shared:   { label: 'Stack común',     color: '#4ade80' },
+  external: { label: 'Integraciones',   color: '#fb923c' },
 };
 
 const NODES = [
@@ -340,6 +343,34 @@ const NODES = [
     desc: 'Bitácora con before/after JSON de ventas, ajustes, cierres, logins. IP capturada.',
   },
 
+  // =========== BUSES ESTUARIO RELONCAVÍ HUB ===========
+  { id: 'buses-hub', label: 'Buses Estuario\nReloncaví', icon: '🚌', cat: 'buses', size: 46,
+    badge: 'PROD', badgeColor: '#2dd4bf',
+    desc: 'Sitio web oficial de Buses Estuario Reloncaví, empresa familiar de transporte interurbano de la Región de Los Lagos. Slogan: "Conectamos lo que importa". Stack HTML5+CSS+Vanilla JS sin build step, deployado bajo subpath de agentecmc.cl.',
+    items: [
+      { icon: '🛣️', text: 'Rutas: Calbuco · Cochamó · Río Puelo · Hornopirén · Llanada Grande' },
+      { icon: '🔍', text: 'Páginas SEO por ruta + Schema.org TransitAgency' },
+      { icon: '🎨', text: 'Identidad: Navy #0D2B45, Verde lima #7DBA4D' },
+      { icon: '🛒', text: 'Flujo de compra (pendiente)' },
+      { icon: '📊', text: 'Dashboard interno /admin/avance' },
+    ],
+    links: [
+      { label: 'Sitio público', href: '/busesestuarioreloncavi/', kind: 'buses' },
+    ],
+  },
+  { id: 'buses-web', label: 'Sitio\npúblico', icon: '🌐', cat: 'buses', size: 26,
+    desc: 'Home con buscador + páginas estáticas. Tipografía Poppins+Inter. Sin build step, sin framework. Servido por nginx desde /var/www/busesestuarioreloncavi/.',
+  },
+  { id: 'buses-rutas', label: 'Páginas SEO\npor ruta', icon: '🛣️', cat: 'buses', size: 22,
+    desc: 'Rutas como /rutas/puerto-montt-calbuco/ con Schema.org BusTrip + FAQPage + BreadcrumbList. Optimizadas para captar búsquedas long-tail de pasajeros.',
+  },
+  { id: 'buses-comprar', label: 'Flujo de\ncompra', icon: '🎫', cat: 'buses', size: 20,
+    desc: 'Compra online de pasajes. Pendiente de implementación.',
+  },
+  { id: 'buses-admin', label: 'Dashboard\navance', icon: '📈', cat: 'buses', size: 18,
+    desc: 'Panel interno /admin/avance/ — no se publica al usuario final.',
+  },
+
   // =========== STACK COMPARTIDO ===========
   { id: 'fastapi', label: 'FastAPI\nPython 3.11', icon: '⚡', cat: 'shared', size: 28,
     desc: 'Framework backend común a ambos proyectos. Async, OpenAPI auto, routers modulares.',
@@ -402,6 +433,13 @@ const EDGES = [
   { from: 'meulen-hub', to: 'meulen-audit' },
   { from: 'meulen-pos', to: 'meulen-inventory', label: 'descuenta stock' },
 
+  // Buses Estuario interno
+  { from: 'buses-hub', to: 'buses-web' },
+  { from: 'buses-hub', to: 'buses-rutas' },
+  { from: 'buses-hub', to: 'buses-comprar' },
+  { from: 'buses-hub', to: 'buses-admin' },
+  { from: 'buses-web', to: 'buses-rutas' },
+
   // Stack compartido (ambos proyectos apuntan acá)
   { from: 'cmc-chatbot', to: 'fastapi' },
   { from: 'meulen-pos', to: 'fastapi' },
@@ -414,9 +452,11 @@ const EDGES = [
   { from: 'meulen-inventory', to: 'sqlite' },
   { from: 'cmc-hub', to: 'do-vps', label: 'prod' },
   { from: 'meulen-hub', to: 'do-vps', label: 'visualizaciones' },
+  { from: 'buses-hub', to: 'do-vps', label: 'subpath' },
   { from: 'cmc-chatbot', to: 'claude', label: 'Haiku' },
   { from: 'cmc-hub', to: 'notion' },
   { from: 'meulen-hub', to: 'notion' },
+  { from: 'buses-hub', to: 'notion' },
 
   // Externas
   { from: 'cmc-chatbot', to: 'whatsapp' },
@@ -444,12 +484,13 @@ resize();
 
 const nodeMap = new Map();
 NODES.forEach((n, i) => {
-  // Posicionar CMC en la izquierda y Meulen en la derecha, shared al medio-abajo
+  // Posicionar CMC izquierda, Meulen derecha, Buses arriba, shared al medio-abajo
   let bias = { x: 0, y: 0 };
-  if (n.cat === 'cmc') bias = { x: -300, y: 0 };
-  else if (n.cat === 'meulen') bias = { x: 300, y: 0 };
-  else if (n.cat === 'shared') bias = { x: 0, y: 250 };
-  else if (n.cat === 'external') bias = { x: (Math.random() > 0.5 ? 550 : -550), y: -250 };
+  if (n.cat === 'cmc') bias = { x: -350, y: 80 };
+  else if (n.cat === 'meulen') bias = { x: 350, y: 80 };
+  else if (n.cat === 'buses') bias = { x: 0, y: -380 };
+  else if (n.cat === 'shared') bias = { x: 0, y: 280 };
+  else if (n.cat === 'external') bias = { x: (Math.random() > 0.5 ? 600 : -600), y: -120 };
   const angle = (i / NODES.length) * Math.PI * 2;
   n.x = bias.x + Math.cos(angle) * 120 + (Math.random() - 0.5) * 60;
   n.y = bias.y + Math.sin(angle) * 120 + (Math.random() - 0.5) * 60;

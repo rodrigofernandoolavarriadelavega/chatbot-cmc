@@ -16,6 +16,7 @@
   --text:#dcddde; --text-dim:#999; --text-muted:#666;
   --cmc:#38bdf8; --cmc-dim:rgba(56,189,248,.12);
   --meulen:#a882ff; --meulen-dim:rgba(168,130,255,.12);
+  --buses:#2dd4bf; --buses-dim:rgba(45,212,191,.12);
   --tech:#fb923c; --tech-dim:rgba(251,146,60,.12);
   --ext:#4ade80; --ext-dim:rgba(74,222,128,.12);
 }
@@ -70,6 +71,7 @@ p.lead code{
 }
 .section-head .tag.cmc{color:var(--cmc);background:var(--cmc-dim)}
 .section-head .tag.meulen{color:var(--meulen);background:var(--meulen-dim)}
+.section-head .tag.buses{color:var(--buses);background:var(--buses-dim)}
 .section-head .tag.tech{color:var(--tech);background:var(--tech-dim)}
 .section-head h2{font-size:18px;font-weight:600;letter-spacing:-.2px}
 .section-head .hint{
@@ -99,6 +101,7 @@ p.lead code{
 }
 .card.cmc:hover::before{background:var(--cmc)}
 .card.meulen:hover::before{background:var(--meulen)}
+.card.buses:hover::before{background:var(--buses)}
 .card.tech:hover::before{background:var(--tech)}
 .card.ext:hover::before{background:var(--ext)}
 
@@ -153,6 +156,7 @@ footer .dot{width:6px;height:6px;border-radius:50%}
     Un solo VPS (<code>chatbot-cmc</code>) sirve distintos productos bajo <code>agentecmc.cl</code>:
     el chatbot y portal del <strong style="color:var(--cmc)">Centro Médico Carampangue</strong>,
     las visualizaciones del proyecto <strong style="color:var(--meulen)">Supermercado Meulen</strong>,
+    el sitio de <strong style="color:var(--buses)">Buses Estuario Reloncaví</strong>,
     y los endpoints técnicos. Esta página es el único punto con navegación cruzada — dentro de cada
     producto no se enlazan rutas entre sí (excepto dentro de <code>/meulen</code>).
   </p>
@@ -162,7 +166,7 @@ footer .dot{width:6px;height:6px;border-radius:50%}
     <div class="section-head">
       <span class="tag" style="color:#e2e8f0;background:rgba(226,232,240,.1)">🪐 Meta</span>
       <h2>Vista cruzada · proyectos hermanos</h2>
-      <span class="hint">CMC + Meulen en un mismo canvas</span>
+      <span class="hint">CMC + Meulen + Buses en un mismo canvas</span>
     </div>
     <div class="grid">
       <a class="card" href="/proyectos2026" style="border-color:var(--border-light)">
@@ -172,7 +176,7 @@ footer .dot{width:6px;height:6px;border-radius:50%}
           <span class="badge" style="color:#e2e8f0;background:rgba(226,232,240,.1)">Meta</span>
         </div>
         <div class="path">/proyectos2026</div>
-        <div class="desc">Visualización force-directed con CMC y Meulen como hubs, stack compartido (FastAPI, SQLAlchemy, JWT, SQLite, DigitalOcean) y servicios externos.</div>
+        <div class="desc">Visualización force-directed con CMC, Meulen y Buses Estuario Reloncaví como hubs, stack compartido (FastAPI, SQLAlchemy, JWT, SQLite, DigitalOcean) y servicios externos.</div>
       </a>
     </div>
   </section>
@@ -316,6 +320,33 @@ footer .dot{width:6px;height:6px;border-radius:50%}
     </div>
   </section>
 
+  <!-- ═══════════════════════════════════════════════════════════ Buses Estuario Reloncaví -->
+  <section class="section">
+    <div class="section-head">
+      <span class="tag buses">🚌 Buses</span>
+      <h2>Buses Estuario Reloncaví</h2>
+      <span class="hint">Transporte interurbano · Región de Los Lagos</span>
+    </div>
+
+    <div class="grid">
+      <a class="card buses" href="/busesestuarioreloncavi/" target="_blank" rel="noopener">
+        <div class="head"><span class="icon">🌐</span><span class="name">Sitio público</span><span class="badge prod">Prod</span></div>
+        <div class="path">/busesestuarioreloncavi/</div>
+        <div class="desc">Sitio oficial — home con buscador, slogan "Conectamos lo que importa". HTML5 + CSS + Vanilla JS sin build step. Servido por nginx desde subpath dedicado.</div>
+      </a>
+      <a class="card buses" href="/busesestuarioreloncavi/rutas/puerto-montt-calbuco/" target="_blank" rel="noopener">
+        <div class="head"><span class="icon">🛣️</span><span class="name">Páginas SEO por ruta</span><span class="badge prod">Prod</span></div>
+        <div class="path">/busesestuarioreloncavi/rutas/...</div>
+        <div class="desc">Ruta-modelo Puerto Montt → Calbuco. Schema.org TransitAgency + BusTrip + FAQPage + BreadcrumbList. Patrón replicable para Cochamó, Río Puelo, Hornopirén, Llanada Grande.</div>
+      </a>
+      <a class="card buses" href="/busesestuarioreloncavi/comprar/" target="_blank" rel="noopener">
+        <div class="head"><span class="icon">🎫</span><span class="name">Flujo de compra</span><span class="badge mvp">Pendiente</span></div>
+        <div class="path">/busesestuarioreloncavi/comprar/</div>
+        <div class="desc">Compra online de pasajes. Stub publicado, lógica pendiente de implementación.</div>
+      </a>
+    </div>
+  </section>
+
   <!-- ═══════════════════════════════════════════════════════════ Técnico -->
   <section class="section">
     <div class="section-head">
@@ -373,6 +404,7 @@ footer .dot{width:6px;height:6px;border-radius:50%}
   <footer>
     <span><span class="dot" style="background:var(--cmc)"></span>CMC</span>
     <span><span class="dot" style="background:var(--meulen)"></span>Meulen</span>
+    <span><span class="dot" style="background:var(--buses)"></span>Buses</span>
     <span><span class="dot" style="background:var(--tech)"></span>Técnico</span>
     <span><span class="dot" style="background:var(--ext)"></span>Externo</span>
     <span style="margin-left:auto">agentecmc.cl · DigitalOcean · uvicorn + nginx</span>
