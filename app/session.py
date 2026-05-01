@@ -187,6 +187,8 @@ def _conn():
             estado_cita     TEXT,
             id_paciente     INTEGER,
             paciente_nombre TEXT,
+            id_atencion     INTEGER,
+            monto_facturado INTEGER,
             synced_at       TEXT DEFAULT (datetime('now'))
         )
     """)
@@ -2497,21 +2499,44 @@ def upsert_olavarria_atenciones(citas: list[dict]) -> int:
             cid = c.get("id")
             if not cid:
                 continue
+            # Preserve monto_facturado existente: solo actualiza id_atencion si Medilink lo trae.
             conn.execute("""
                 INSERT INTO olavarria_atenciones_cache
-                  (id_cita, fecha, hora_inicio, estado_cita, id_paciente, paciente_nombre, synced_at)
-                VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+                  (id_cita, fecha, hora_inicio, estado_cita, id_paciente, paciente_nombre, id_atencion, synced_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
                 ON CONFLICT(id_cita) DO UPDATE SET
                   fecha=excluded.fecha,
                   hora_inicio=excluded.hora_inicio,
                   estado_cita=excluded.estado_cita,
                   id_paciente=excluded.id_paciente,
                   paciente_nombre=excluded.paciente_nombre,
+                  id_atencion=COALESCE(excluded.id_atencion, olavarria_atenciones_cache.id_atencion),
                   synced_at=datetime('now')
             """, (cid, (c.get("fecha") or "")[:10], c.get("hora_inicio"),
-                  c.get("estado_cita"), c.get("id_paciente"), c.get("paciente_nombre")))
+                  c.get("estado_cita"), c.get("id_paciente"), c.get("paciente_nombre"),
+                  c.get("id_atencion")))
             n += 1
     return n
+
+
+def update_olavarria_monto(id_cita: int, monto: int) -> None:
+    """Setea monto_facturado para una cita específica (no toca otros campos)."""
+    with _conn() as conn:
+        conn.execute(
+            "UPDATE olavarria_atenciones_cache SET monto_facturado=? WHERE id_cita=?",
+            (monto, id_cita)
+        )
+
+
+def get_olavarria_atenciones_sin_monto() -> list[dict]:
+    """Atenciones (estado=atendido) con id_atencion conocido pero sin monto_facturado todavía."""
+    with _conn() as conn:
+        rows = conn.execute(
+            "SELECT id_cita, id_atencion FROM olavarria_atenciones_cache "
+            "WHERE LOWER(estado_cita)='atendido' AND id_atencion IS NOT NULL AND monto_facturado IS NULL "
+            "ORDER BY fecha"
+        ).fetchall()
+        return [dict(r) for r in rows]
 
 
 def delete_olavarria_atenciones_fecha(fecha: str) -> int:
@@ -2523,7 +2548,8 @@ def delete_olavarria_atenciones_fecha(fecha: str) -> int:
 def get_olavarria_atenciones(desde: str = "2025-05-01") -> list[dict]:
     with _conn() as conn:
         rows = conn.execute(
-            "SELECT id_cita AS id, fecha, hora_inicio, estado_cita, id_paciente, paciente_nombre "
+            "SELECT id_cita AS id, fecha, hora_inicio, estado_cita, id_paciente, paciente_nombre, "
+            "       id_atencion, monto_facturado "
             "FROM olavarria_atenciones_cache WHERE fecha >= ? ORDER BY fecha, hora_inicio",
             (desde,)
         ).fetchall()

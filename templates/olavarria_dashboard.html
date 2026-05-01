@@ -70,10 +70,10 @@
       <div>
         <div class="slider-label">
           <span class="mono text-xs uppercase tracking-wider" style="color:var(--cobre)">Tarifa por atención</span>
-          <span class="mono text-sm" id="lblTarifa">$30.000</span>
+          <span class="mono text-sm" id="lblTarifa">$15.100</span>
         </div>
-        <input type="range" min="15000" max="60000" step="500" value="30000" id="tarifaInput" class="w-full">
-        <p class="text-xs opacity-60 mt-1">Mix Fonasa MLE / Particular. Ajustá según tu realidad.</p>
+        <input type="range" min="0" max="40000" step="100" value="15100" id="tarifaInput" class="w-full">
+        <p class="text-xs opacity-60 mt-1">Default $15.100 (mix Fonasa MLE + controles gratis). Particular puro = $25-30k.</p>
       </div>
       <div>
         <div class="slider-label">
@@ -96,14 +96,30 @@
         <p class="kpi-sub">CLP brutos</p>
       </div>
       <div>
+        <p class="kpi-label">Días bajo objetivo</p>
+        <p class="kpi-num neg" id="kpiBajoObj">—</p>
+        <p class="kpi-sub" id="kpiBajoObjSub">—</p>
+      </div>
+      <div>
+        <p class="kpi-label">Ingreso REAL Medilink</p>
+        <p class="kpi-num" id="kpiIngReal">—</p>
+        <p class="kpi-sub" id="kpiIngRealSub">cobertura —</p>
+      </div>
+    </div>
+    <div class="border-t mt-5 pt-4 grid md:grid-cols-3 gap-4 items-center">
+      <div>
         <p class="kpi-label">Mejor mes histórico</p>
         <p class="kpi-num" id="kpiTopMes">—</p>
         <p class="kpi-sub" id="kpiTopMesSub">—</p>
       </div>
       <div>
-        <p class="kpi-label">Días bajo objetivo</p>
-        <p class="kpi-num neg" id="kpiBajoObj">—</p>
-        <p class="kpi-sub" id="kpiBajoObjSub">—</p>
+        <p class="kpi-label">Tarifa promedio real</p>
+        <p class="kpi-num" id="kpiTarifaReal">—</p>
+        <p class="kpi-sub" id="kpiTarifaRealSub">vs $ estimado del slider</p>
+      </div>
+      <div>
+        <button id="btnSyncMontos" class="scenario-btn" style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;padding:8px 14px;border:1px solid rgba(31,51,64,.2);border-radius:4px;background:white;cursor:pointer;">⟳ Sincronizar montos reales (background)</button>
+        <p class="text-xs opacity-60 mt-1">Tarda ~40 min con todas las atenciones. No bloquea el dashboard.</p>
       </div>
     </div>
   </section>
@@ -146,8 +162,8 @@
   <section class="mb-10 panel">
     <p class="section-head">02 — Detalle mensual + proyección</p>
     <h2 class="section-title">Mes a mes.</h2>
-    <table class="tidy" id="tablaMes"><thead><tr><th>Mes</th><th>Atend.</th><th>No asiste</th><th>Anul.</th><th>Ingreso</th></tr></thead><tbody></tbody></table>
-    <p class="text-xs opacity-60 mt-3">Filas en azul = proyección lineal sobre los próximos 6 meses (basada en tendencia últimos 6).</p>
+    <table class="tidy" id="tablaMes"><thead><tr><th>Mes</th><th>Atend.</th><th>No asiste</th><th>Anul.</th><th>Ingreso estimado</th><th>Ingreso REAL Medilink</th><th>Δ</th></tr></thead><tbody></tbody></table>
+    <p class="text-xs opacity-60 mt-3">Estimado = atendidos × tarifa del slider. Real = suma de <span class="mono">atenciones.total</span> de Medilink (se va llenando con la sync de fondo). Δ = real − estimado.</p>
   </section>
 
   <!-- Calendario heatmap -->
@@ -241,6 +257,21 @@ function render(){
   document.getElementById('kpiAvgMesSub').textContent = `n=${k.n_meses} meses`;
   document.getElementById('kpiIngMes').textContent = moneda(k.ing_avg_mes);
 
+  // Ingreso real Medilink (parcial mientras se va sincronizando)
+  if (k.cobertura_real_pct > 0){
+    const realAvgMes = Math.round(k.monto_real_total / k.n_meses);
+    document.getElementById('kpiIngReal').textContent = moneda(realAvgMes);
+    document.getElementById('kpiIngRealSub').textContent = `cobertura ${k.cobertura_real_pct}% (${k.monto_real_n_atend} atend)`;
+    document.getElementById('kpiTarifaReal').textContent = clp(k.tarifa_real_promedio);
+    const diff = k.tarifa_real_promedio - tarifa;
+    document.getElementById('kpiTarifaRealSub').textContent = (diff >= 0 ? `+${clp(diff)}` : clp(diff)) + " vs slider";
+  } else {
+    document.getElementById('kpiIngReal').textContent = "—";
+    document.getElementById('kpiIngRealSub').textContent = "sin sync · click el botón →";
+    document.getElementById('kpiTarifaReal').textContent = "—";
+    document.getElementById('kpiTarifaRealSub').textContent = "vs slider";
+  }
+
   // Mejor mes
   const meses = Object.entries(DATA.por_mes).sort((a,b) => b[1].atend - a[1].atend);
   if (meses.length){
@@ -322,11 +353,26 @@ function renderTablaMes(){
   let html = "";
   for (const m of meses){
     const v = DATA.por_mes[m];
-    html += `<tr><td class="mono">${m}</td><td>${v.atend}</td><td>${v.no_asiste}</td><td>${v.anul}</td><td class="mono">${clp(v.atend*tarifa)}</td></tr>`;
+    const est = v.atend * tarifa;
+    const real = v.monto_real || 0;
+    const realN = v.monto_real_n || 0;
+    const cobertura = v.atend ? Math.round(realN * 100 / v.atend) : 0;
+    let realCell, deltaCell;
+    if (realN === 0){
+      realCell = `<span class="opacity-40">—</span>`;
+      deltaCell = `<span class="opacity-40">—</span>`;
+    } else {
+      const tag = cobertura < 100 ? `<span class="opacity-50 text-xs">(${cobertura}%)</span>` : "";
+      realCell = `<span class="mono">${clp(real)}</span> ${tag}`;
+      const delta = real - est;
+      const cls = delta >= 0 ? 'pos' : 'neg';
+      deltaCell = `<span class="mono ${cls}">${delta>=0?'+':''}${clp(delta)}</span>`;
+    }
+    html += `<tr><td class="mono">${m}</td><td>${v.atend}</td><td>${v.no_asiste}</td><td>${v.anul}</td><td class="mono">${clp(est)}</td><td>${realCell}</td><td>${deltaCell}</td></tr>`;
   }
   const proy = DATA.proyeccion || {};
   for (const m of Object.keys(proy).sort()){
-    html += `<tr class="proy"><td class="mono">${m} · proy</td><td>${proy[m].atend}</td><td>—</td><td>—</td><td class="mono">${clp(proy[m].ingreso)}</td></tr>`;
+    html += `<tr class="proy"><td class="mono">${m} · proy</td><td>${proy[m].atend}</td><td>—</td><td>—</td><td class="mono">${clp(proy[m].ingreso)}</td><td class="opacity-40">—</td><td class="opacity-40">—</td></tr>`;
   }
   tbody.innerHTML = html;
 }
@@ -448,6 +494,17 @@ document.getElementById('objetivoInput').addEventListener('input', e => {
   if (DATA) render();  // recalcula calendario y KPI sin re-fetch
 });
 document.getElementById('btnRefresh').addEventListener('click', () => loadData(true));
+document.getElementById('btnSyncMontos').addEventListener('click', async () => {
+  const btn = document.getElementById('btnSyncMontos');
+  btn.disabled = true; btn.textContent = "⟳ disparado en background…";
+  try {
+    await fetch('/api/olavarria/sync-montos', { method: 'POST' });
+    btn.textContent = "✓ corriendo · refresh manual en ~40 min";
+  } catch (e) {
+    btn.textContent = "✗ error: " + e.message;
+    btn.disabled = false;
+  }
+});
 
 loadData(false);
 </script>

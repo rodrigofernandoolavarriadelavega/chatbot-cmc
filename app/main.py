@@ -1208,7 +1208,7 @@ async def sync_olavarria_atenciones(desde: str = "2024-01-01", solo_hoy: bool = 
 
 
 @app.get("/api/olavarria/data")
-async def api_olavarria_data(refresh: int = 0, desde: str = "2024-01-01", tarifa: int = 30000):
+async def api_olavarria_data(refresh: int = 0, desde: str = "2024-01-01", tarifa: int = 15100):
     """Atenciones del Dr. Olavarría (id 1) con agregaciones para proyección de ingreso.
 
     `?desde=YYYY-MM-DD` filtra agregaciones desde esa fecha (default 2024-01-01).
@@ -1264,7 +1264,8 @@ async def api_olavarria_data(refresh: int = 0, desde: str = "2024-01-01", tarifa
     raw = get_olavarria_atenciones(desde=desde)
 
     por_dia: dict = {}
-    por_mes: dict = _dd_ol(lambda: {"atend": 0, "anul": 0, "no_asiste": 0, "otros": 0, "total": 0})
+    por_mes: dict = _dd_ol(lambda: {"atend": 0, "anul": 0, "no_asiste": 0, "otros": 0, "total": 0,
+                                     "monto_real": 0, "monto_real_n": 0})
     por_dow: dict = _dd_ol(list)
     por_hora: dict = _dd_ol(int)
     estados: dict = _ct_ol()
@@ -1283,6 +1284,11 @@ async def api_olavarria_data(refresh: int = 0, desde: str = "2024-01-01", tarifa
             h = (c.get("hora_inicio") or "")[:2]
             if h.isdigit():
                 por_hora[int(h)] += 1
+            # Monto facturado real (si ya se sincronizó desde /atenciones)
+            mr = c.get("monto_facturado")
+            if mr is not None:
+                por_mes[m]["monto_real"] += int(mr)
+                por_mes[m]["monto_real_n"] += 1
         elif st == "anulado" or "anulad" in st:
             por_mes[m]["anul"] += 1
         elif "asiste" in st:
@@ -1329,6 +1335,11 @@ async def api_olavarria_data(refresh: int = 0, desde: str = "2024-01-01", tarifa
     n_meses = max(1, len(por_mes))
     atend_avg_mes = total_atend / n_meses
     ing_avg_mes = atend_avg_mes * tarifa
+    # Monto real Medilink (suma de los meses donde hay datos sincronizados)
+    monto_real_total = sum(v["monto_real"] for v in por_mes.values())
+    monto_real_n_atend = sum(v["monto_real_n"] for v in por_mes.values())
+    cobertura_real_pct = (monto_real_n_atend / total_atend * 100) if total_atend else 0
+    tarifa_real_promedio = (monto_real_total / monto_real_n_atend) if monto_real_n_atend else 0
 
     # Proyección lineal: regresión simple sobre los últimos 6 meses con datos
     meses_ord = sorted(por_mes.keys())
@@ -1370,8 +1381,59 @@ async def api_olavarria_data(refresh: int = 0, desde: str = "2024-01-01", tarifa
             "atend_avg_mes": round(atend_avg_mes, 1),
             "ing_avg_mes": round(ing_avg_mes),
             "n_meses": n_meses,
+            "monto_real_total": monto_real_total,
+            "monto_real_n_atend": monto_real_n_atend,
+            "cobertura_real_pct": round(cobertura_real_pct, 1),
+            "tarifa_real_promedio": round(tarifa_real_promedio),
         },
     }
+
+
+async def sync_olavarria_montos(limite: int = 0, delay: float = 0.5) -> dict:
+    """Rellena monto_facturado consultando /atenciones/{id} por cada cita atendida
+    sin monto. NO sobreescribe los ya cargados. `limite=0` procesa todos."""
+    import asyncio as _aio_m
+    from session import get_olavarria_atenciones_sin_monto, update_olavarria_monto
+    from config import MEDILINK_BASE_URL as _MB
+
+    pendientes = get_olavarria_atenciones_sin_monto()
+    if limite > 0:
+        pendientes = pendientes[:limite]
+
+    ok = 0; fail = 0; sin_id = 0
+    async with httpx.AsyncClient(timeout=20) as cli:
+        for row in pendientes:
+            id_aten = row.get("id_atencion")
+            id_cita = row.get("id_cita")
+            if not id_aten:
+                sin_id += 1; continue
+            for attempt in range(5):
+                try:
+                    r = await cli.get(f"{_MB}/atenciones/{id_aten}", headers=HEADERS_MEDILINK)
+                except Exception:
+                    await _aio_m.sleep(1 + attempt)
+                    continue
+                if r.status_code == 200:
+                    total = (r.json().get("data") or {}).get("total", 0) or 0
+                    update_olavarria_monto(id_cita, int(total))
+                    ok += 1
+                    break
+                if r.status_code == 429:
+                    await _aio_m.sleep(1.5 + attempt * 1.5)
+                    continue
+                fail += 1
+                break
+            await _aio_m.sleep(delay)
+
+    log.info("olavarria montos sync: ok=%d fail=%d sin_id=%d", ok, fail, sin_id)
+    return {"ok": ok, "fail": fail, "sin_id": sin_id, "pendientes": len(pendientes)}
+
+
+@app.post("/api/olavarria/sync-montos")
+async def api_olavarria_sync_montos(limite: int = 0):
+    """Dispara el llenado de monto_facturado desde Medilink. Background."""
+    asyncio.create_task(sync_olavarria_montos(limite=limite))
+    return {"started": True, "limite": limite or "todos"}
 
 
 @app.get("/api/atribucion/today")
