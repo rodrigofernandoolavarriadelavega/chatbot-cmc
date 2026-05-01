@@ -1220,10 +1220,10 @@ async def api_olavarria_data(refresh: int = 0, desde: str = "2024-01-01", tarifa
     from session import get_olavarria_atenciones, olavarria_cache_count
 
     if olavarria_cache_count() == 0:
-        log.info("olavarria cache vacío — seed completo desde Medilink")
-        await sync_olavarria_atenciones(desde=desde, solo_hoy=False)
+        log.info("olavarria cache vacío — kickoff seed completo en background")
+        asyncio.create_task(sync_olavarria_atenciones(desde=desde, solo_hoy=False))
     elif refresh:
-        await sync_olavarria_atenciones(solo_hoy=True)
+        asyncio.create_task(sync_olavarria_atenciones(solo_hoy=True))
     else:
         from session import _conn as _conn_ol
         hoy_iso = _date_ol.today().isoformat()
@@ -1241,10 +1241,7 @@ async def api_olavarria_data(refresh: int = 0, desde: str = "2024-01-01", tarifa
             except Exception:
                 needs_refresh = True
         if needs_refresh:
-            try:
-                await sync_olavarria_atenciones(solo_hoy=True)
-            except Exception as e:
-                log.warning("olavarria delta hoy falló: %s", e)
+            asyncio.create_task(sync_olavarria_atenciones(solo_hoy=True))
 
     raw = get_olavarria_atenciones(desde=desde)
 

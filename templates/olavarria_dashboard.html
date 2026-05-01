@@ -193,8 +193,17 @@ async function loadData(refresh=false){
   }
   DATA = await r.json();
   document.getElementById('metaSubtitle').textContent =
-    `actualizado ${DATA.fecha_actualizacion} · ${DATA.fuente_cache}`;
+    `actualizado ${DATA.fecha_actualizacion} · ${DATA.fuente_cache} · ${DATA.kpis.total_atend} atenciones cargadas`;
   render();
+  // Si el seed inicial todavía no llegó al mes actual, auto-refresh cada 30s
+  const meses = Object.keys(DATA.por_mes || {}).sort();
+  const ultimoCargado = meses.length ? meses[meses.length - 1] : null;
+  const mesHoy = new Date().toISOString().slice(0,7);
+  if (!ultimoCargado || ultimoCargado < mesHoy){
+    document.getElementById('metaSubtitle').textContent += " · seed en curso, auto-refresh 30s";
+    if (window._reloadTimer) clearTimeout(window._reloadTimer);
+    window._reloadTimer = setTimeout(() => loadData(false), 30000);
+  }
 }
 
 function render(){
