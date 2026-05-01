@@ -24,6 +24,9 @@
   .calday{ width:34px; height:34px; border-radius:4px; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:9px; line-height:1.05; color:var(--fiordo); position:relative; }
   .calday .n{ font-size:11px; font-weight:600; }
   .calday-empty{ background:#EFE9DD; border:1px dashed #d4cdb8; }
+  .calday .delta{ font-size:8.5px; opacity:.85; margin-top:1px; }
+  .calday .delta.pos{ color:#3a6b2a; font-weight:600; }
+  .calday .delta.neg{ color:#7a1f1f; font-weight:600; }
   .pos{ color:var(--musgo); }
   .neg{ color:var(--lacre); }
   table.tidy{ width:100%; border-collapse:collapse; font-size:13px; }
@@ -61,9 +64,9 @@
     <p class="mono text-xs opacity-60 mt-3" id="metaSubtitle">cargando datos Medilink…</p>
   </header>
 
-  <!-- Tarifa -->
+  <!-- Controles: Tarifa + Objetivo pacientes/día -->
   <section class="mb-8 panel">
-    <div class="grid md:grid-cols-3 gap-6 items-center">
+    <div class="grid md:grid-cols-2 gap-6 items-start">
       <div>
         <div class="slider-label">
           <span class="mono text-xs uppercase tracking-wider" style="color:var(--cobre)">Tarifa por atención</span>
@@ -72,22 +75,35 @@
         <input type="range" min="15000" max="60000" step="500" value="30000" id="tarifaInput" class="w-full">
         <p class="text-xs opacity-60 mt-1">Mix Fonasa MLE / Particular. Ajustá según tu realidad.</p>
       </div>
-      <div class="md:col-span-2 grid grid-cols-3 gap-3">
-        <div>
-          <p class="kpi-label">Promedio mensual</p>
-          <p class="kpi-num" id="kpiAvgMes">—</p>
-          <p class="kpi-sub" id="kpiAvgMesSub">atendidos/mes</p>
+      <div>
+        <div class="slider-label">
+          <span class="mono text-xs uppercase tracking-wider" style="color:var(--cobre)">Objetivo pacientes/día</span>
+          <span class="mono text-sm" id="lblObjetivo">15</span>
         </div>
-        <div>
-          <p class="kpi-label">Ingreso promedio/mes</p>
-          <p class="kpi-num" id="kpiIngMes">—</p>
-          <p class="kpi-sub">CLP brutos</p>
-        </div>
-        <div>
-          <p class="kpi-label">Mejor mes histórico</p>
-          <p class="kpi-num" id="kpiTopMes">—</p>
-          <p class="kpi-sub" id="kpiTopMesSub">—</p>
-        </div>
+        <input type="range" min="1" max="40" step="1" value="15" id="objetivoInput" class="w-full">
+        <p class="text-xs opacity-60 mt-1">Días bajo el objetivo se pintan <span class="neg font-medium">rojos</span> en el calendario, los que lo superan <span class="pos font-medium">verdes</span>.</p>
+      </div>
+    </div>
+    <div class="border-t mt-5 pt-5 grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div>
+        <p class="kpi-label">Promedio mensual</p>
+        <p class="kpi-num" id="kpiAvgMes">—</p>
+        <p class="kpi-sub" id="kpiAvgMesSub">atendidos/mes</p>
+      </div>
+      <div>
+        <p class="kpi-label">Ingreso promedio/mes</p>
+        <p class="kpi-num" id="kpiIngMes">—</p>
+        <p class="kpi-sub">CLP brutos</p>
+      </div>
+      <div>
+        <p class="kpi-label">Mejor mes histórico</p>
+        <p class="kpi-num" id="kpiTopMes">—</p>
+        <p class="kpi-sub" id="kpiTopMesSub">—</p>
+      </div>
+      <div>
+        <p class="kpi-label">Días bajo objetivo</p>
+        <p class="kpi-num neg" id="kpiBajoObj">—</p>
+        <p class="kpi-sub" id="kpiBajoObjSub">—</p>
       </div>
     </div>
   </section>
@@ -138,14 +154,22 @@
   <section class="mb-10 panel">
     <p class="section-head">03 — Calendario diario</p>
     <h2 class="section-title">¿Qué días atendiste y cuánto?</h2>
-    <div id="heatmap" class="font-mono text-xs"></div>
-    <div class="flex flex-wrap items-center gap-3 mt-4 text-xs">
-      <span class="opacity-60 mr-2">Atenciones por día:</span>
-      <span class="calday" style="background:#EFE9DD;border:1px solid #d4cdb8;">0</span>
-      <span class="calday" style="background:#D9E5DD;">1-3</span>
-      <span class="calday" style="background:#9FCB8E;">4-7</span>
-      <span class="calday" style="background:#5FA858;color:white;">8-12</span>
-      <span class="calday" style="background:#2D7A30;color:white;">13+</span>
+    <div id="heatmap"></div>
+    <p class="text-xs opacity-70 mt-4">Cada celda muestra <strong>nº atendidos</strong> arriba y <strong>delta vs objetivo</strong> abajo (mové el slider del objetivo de pacientes/día y el calendario se recalcula en vivo).</p>
+    <div class="flex flex-wrap items-center gap-3 mt-3 text-xs">
+      <span class="opacity-60 mr-2">Faltaron (bajo objetivo):</span>
+      <span class="calday" style="background:#F0CFCB;"></span><span class="opacity-70">1–2</span>
+      <span class="calday" style="background:#DC8E86;"></span><span class="opacity-70">3–5</span>
+      <span class="calday" style="background:#B85040;color:white;"></span><span class="opacity-70">6–9</span>
+      <span class="calday" style="background:#8A2418;color:white;"></span><span class="opacity-70">10+</span>
+      <span class="opacity-60 mx-2">·</span>
+      <span class="calday" style="background:#D9D4C5;"></span><span class="opacity-70">justo (=)</span>
+      <span class="opacity-60 mx-2">·</span>
+      <span class="opacity-60 mr-2">Sobraron:</span>
+      <span class="calday" style="background:#CFE3C5;"></span><span class="opacity-70">1–2</span>
+      <span class="calday" style="background:#9FCB8E;"></span><span class="opacity-70">3–5</span>
+      <span class="calday" style="background:#5FA858;color:white;"></span><span class="opacity-70">6–9</span>
+      <span class="calday" style="background:#2D7A30;color:white;"></span><span class="opacity-70">10+</span>
     </div>
   </section>
 
@@ -176,9 +200,11 @@
 
 <script>
 const TZ = "America/Santiago";
+const MESES = {'01':'Enero','02':'Febrero','03':'Marzo','04':'Abril','05':'Mayo','06':'Junio','07':'Julio','08':'Agosto','09':'Septiembre','10':'Octubre','11':'Noviembre','12':'Diciembre'};
 const clp = n => n == null ? "—" : "$" + Math.round(n).toLocaleString("es-CL");
 const moneda = n => n == null ? "—" : "$" + Math.round(n/1000).toLocaleString("es-CL") + "K";
 let DATA = null;
+let OBJETIVO = 15;
 
 async function loadData(refresh=false){
   document.getElementById('metaSubtitle').textContent = "cargando…";
@@ -228,6 +254,18 @@ function render(){
   document.getElementById('kpiDias').textContent = k.dias_con_atencion;
   const pxDia = k.dias_con_atencion ? (k.total_atend / k.dias_con_atencion).toFixed(1) : "—";
   document.getElementById('kpiPxDia').textContent = pxDia;
+
+  // Días bajo objetivo (excluye domingos y días con 0 atenciones)
+  let bajo = 0, total = 0;
+  Object.entries(DATA.por_dia).forEach(([f, n]) => {
+    const dow = (new Date(f + 'T12:00').getDay() + 6) % 7;
+    if (dow === 6) return; // domingo
+    if (n === 0) return;   // día no trabajado
+    total++;
+    if (n < OBJETIVO) bajo++;
+  });
+  document.getElementById('kpiBajoObj').textContent = bajo;
+  document.getElementById('kpiBajoObjSub').textContent = total ? `${(bajo*100/total).toFixed(0)}% de ${total} días trabajados` : '—';
 
   // Tendencia: últimos 3 meses vs avg
   const mesesOrd = Object.keys(DATA.por_mes).sort();
@@ -293,12 +331,28 @@ function renderTablaMes(){
   tbody.innerHTML = html;
 }
 
-function colorDia(n){
-  if (n === 0) return "#EFE9DD";
-  if (n <= 3)  return "#D9E5DD";
-  if (n <= 7)  return "#9FCB8E";
-  if (n <= 12) return "#5FA858";
-  return "#2D7A30";
+function colorByDelta(n, cap){
+  if (n === 0 && cap === 0) return '#EFE9DD';
+  if (n === 0) return '#F5F1E8';
+  const delta = n - cap;
+  if (delta === 0) return '#D9D4C5';
+  if (delta > 0){
+    if (delta <= 2) return '#CFE3C5';
+    if (delta <= 5) return '#9FCB8E';
+    if (delta <= 9) return '#5FA858';
+    return '#2D7A30';
+  } else {
+    const a = -delta;
+    if (a <= 2) return '#F0CFCB';
+    if (a <= 5) return '#DC8E86';
+    if (a <= 9) return '#B85040';
+    return '#8A2418';
+  }
+}
+function isDarkBg(n, cap){
+  if (n === 0) return false;
+  const delta = n - cap;
+  return delta >= 6 || delta <= -6;
 }
 
 function renderHeatmap(){
@@ -307,22 +361,42 @@ function renderHeatmap(){
   if (!dias.length){ cont.innerHTML = "<p class='opacity-60'>Sin datos</p>"; return; }
   const byMonth = {};
   dias.forEach(f => { const m = f.slice(0,7); (byMonth[m] = byMonth[m] || []).push(f); });
-  let html = "";
+  let html = '<div class="grid md:grid-cols-3 lg:grid-cols-4 gap-6">';
   Object.keys(byMonth).sort().forEach(m => {
-    html += `<div class="mb-5"><p class="mono text-xs opacity-60 mb-2">${m}</p><div class="flex flex-wrap gap-1">`;
-    const firstDow = new Date(byMonth[m][0]).getUTCDay(); // 0=Dom
-    const lead = (firstDow + 6) % 7; // empezar lunes
-    for (let i=0; i<lead; i++) html += `<span class="calday calday-empty"></span>`;
-    byMonth[m].forEach(f => {
-      const n = DATA.por_dia[f] || 0;
-      const dom = new Date(f).getUTCDay() === 0;
-      const bg = dom ? "#EFE9DD" : colorDia(n);
-      const tcolor = (n > 7) ? "white" : "var(--fiordo)";
-      const day = f.slice(8);
-      html += `<span class="calday" title="${f}: ${n}" style="background:${bg};color:${tcolor};"><span class="n">${day}</span><span>${n||""}</span></span>`;
+    html += `<div><div class="mono text-xs uppercase opacity-60 mb-2">${MESES[m.slice(5)]} ${m.slice(0,4)}</div>`;
+    html += '<div class="grid grid-cols-7 gap-1">';
+    // Cabecera L M M J V S D
+    ["L","M","M","J","V","S","D"].forEach(d => {
+      html += `<div class="mono text-[9px] opacity-50 text-center">${d}</div>`;
     });
-    html += `</div></div>`;
+    const first = new Date(byMonth[m][0] + 'T12:00');
+    const startDow = (first.getDay() + 6) % 7; // L=0..D=6
+    for (let i = 0; i < startDow; i++) html += '<div></div>';
+    byMonth[m].forEach(f => {
+      const dt = new Date(f + 'T12:00');
+      const dow = (dt.getDay() + 6) % 7;
+      const n = DATA.por_dia[f] || 0;
+      if (dow === 6){ // domingo
+        html += `<div class="calday calday-empty" title="${f}: domingo"></div>`;
+        return;
+      }
+      const cap = OBJETIVO;
+      const bg = colorByDelta(n, cap);
+      const dark = isDarkBg(n, cap);
+      let deltaHtml = '';
+      if (n > 0 || cap > 0){
+        const delta = n - cap;
+        if (delta > 0)      deltaHtml = `<div class="delta pos">+${delta}</div>`;
+        else if (delta < 0) deltaHtml = `<div class="delta neg">${delta}</div>`;
+        else                deltaHtml = `<div class="delta" style="opacity:.5">=</div>`;
+      }
+      const txtColor = dark ? 'color:white;' : '';
+      const title = `${f}: ${n} atend · objetivo ${cap} · delta ${n - cap}`;
+      html += `<div class="calday" style="background:${bg};${txtColor}" title="${title}"><div class="n">${n||'·'}</div>${deltaHtml}</div>`;
+    });
+    html += '</div></div>';
   });
+  html += '</div>';
   cont.innerHTML = html;
 }
 
@@ -368,6 +442,11 @@ document.getElementById('tarifaInput').addEventListener('input', e => {
   document.getElementById('lblTarifa').textContent = clp(parseInt(e.target.value));
 });
 document.getElementById('tarifaInput').addEventListener('change', () => loadData(false));
+document.getElementById('objetivoInput').addEventListener('input', e => {
+  OBJETIVO = parseInt(e.target.value);
+  document.getElementById('lblObjetivo').textContent = OBJETIVO;
+  if (DATA) render();  // recalcula calendario y KPI sin re-fetch
+});
 document.getElementById('btnRefresh').addEventListener('click', () => loadData(true));
 
 loadData(false);
