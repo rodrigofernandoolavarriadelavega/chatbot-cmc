@@ -180,6 +180,18 @@ def _conn():
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_abarca_fecha ON abarca_atenciones_cache(fecha)")
     conn.execute("""
+        CREATE TABLE IF NOT EXISTS olavarria_atenciones_cache (
+            id_cita         INTEGER PRIMARY KEY,
+            fecha           TEXT,
+            hora_inicio     TEXT,
+            estado_cita     TEXT,
+            id_paciente     INTEGER,
+            paciente_nombre TEXT,
+            synced_at       TEXT DEFAULT (datetime('now'))
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_olav_fecha ON olavarria_atenciones_cache(fecha)")
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS ortodoncia_cache (
             id_atencion     INTEGER PRIMARY KEY,
             id_paciente     INTEGER,
@@ -2469,6 +2481,64 @@ def get_abarca_fechas_existentes() -> set[str]:
     with _conn() as conn:
         rows = conn.execute(
             "SELECT DISTINCT fecha FROM abarca_atenciones_cache"
+        ).fetchall()
+        return {r[0] for r in rows if r[0]}
+
+
+# ── Cache de atenciones Dr. Olavarría (id 1) ─────────────────────────────────
+# Usado por /api/olavarria/data. Mismo patrón que abarca_atenciones_cache.
+
+def upsert_olavarria_atenciones(citas: list[dict]) -> int:
+    if not citas:
+        return 0
+    n = 0
+    with _conn() as conn:
+        for c in citas:
+            cid = c.get("id")
+            if not cid:
+                continue
+            conn.execute("""
+                INSERT INTO olavarria_atenciones_cache
+                  (id_cita, fecha, hora_inicio, estado_cita, id_paciente, paciente_nombre, synced_at)
+                VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+                ON CONFLICT(id_cita) DO UPDATE SET
+                  fecha=excluded.fecha,
+                  hora_inicio=excluded.hora_inicio,
+                  estado_cita=excluded.estado_cita,
+                  id_paciente=excluded.id_paciente,
+                  paciente_nombre=excluded.paciente_nombre,
+                  synced_at=datetime('now')
+            """, (cid, (c.get("fecha") or "")[:10], c.get("hora_inicio"),
+                  c.get("estado_cita"), c.get("id_paciente"), c.get("paciente_nombre")))
+            n += 1
+    return n
+
+
+def delete_olavarria_atenciones_fecha(fecha: str) -> int:
+    with _conn() as conn:
+        cur = conn.execute("DELETE FROM olavarria_atenciones_cache WHERE fecha=?", (fecha,))
+        return cur.rowcount
+
+
+def get_olavarria_atenciones(desde: str = "2025-05-01") -> list[dict]:
+    with _conn() as conn:
+        rows = conn.execute(
+            "SELECT id_cita AS id, fecha, hora_inicio, estado_cita, id_paciente, paciente_nombre "
+            "FROM olavarria_atenciones_cache WHERE fecha >= ? ORDER BY fecha, hora_inicio",
+            (desde,)
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def olavarria_cache_count() -> int:
+    with _conn() as conn:
+        return conn.execute("SELECT COUNT(*) FROM olavarria_atenciones_cache").fetchone()[0]
+
+
+def get_olavarria_fechas_existentes() -> set[str]:
+    with _conn() as conn:
+        rows = conn.execute(
+            "SELECT DISTINCT fecha FROM olavarria_atenciones_cache"
         ).fetchall()
         return {r[0] for r in rows if r[0]}
 

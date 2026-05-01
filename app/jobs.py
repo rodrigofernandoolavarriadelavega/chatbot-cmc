@@ -205,6 +205,16 @@ async def _job_abarca_sync():
     else:
         await sync_abarca_atenciones(solo_hoy=True)
 
+
+async def _job_olavarria_sync():
+    """Sync diario de atenciones del Dr. Olavarría (id 1). Mismo patrón que Abarca."""
+    from main import sync_olavarria_atenciones
+    from session import olavarria_cache_count
+    if olavarria_cache_count() == 0:
+        await sync_olavarria_atenciones(desde="2024-01-01", solo_hoy=False)
+    else:
+        await sync_olavarria_atenciones(solo_hoy=True)
+
 async def _job_reactivacion():
     await enviar_reactivacion_pacientes(send_whatsapp, send_template_fn=_tpl)
 
