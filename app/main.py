@@ -1222,26 +1222,44 @@ async def api_olavarria_data(refresh: int = 0, desde: str = "2024-01-01", tarifa
     if olavarria_cache_count() == 0:
         log.info("olavarria cache vacío — kickoff seed completo en background")
         asyncio.create_task(sync_olavarria_atenciones(desde=desde, solo_hoy=False))
-    elif refresh:
-        asyncio.create_task(sync_olavarria_atenciones(solo_hoy=True))
     else:
+        # Detectar cache incompleto: si la fecha máxima en cache es más vieja
+        # que hace 7 días, retomar seed completo. Si no, solo delta de hoy.
         from session import _conn as _conn_ol
-        hoy_iso = _date_ol.today().isoformat()
+        hoy = _date_ol.today()
         with _conn_ol() as _c:
             row = _c.execute(
-                "SELECT MAX(synced_at) FROM olavarria_atenciones_cache WHERE fecha=?",
-                (hoy_iso,)
+                "SELECT MAX(fecha) FROM olavarria_atenciones_cache"
             ).fetchone()
-        last_sync = row[0] if row else None
-        needs_refresh = True
-        if last_sync:
+        max_fecha = row[0] if row else None
+        cache_incompleto = False
+        if max_fecha:
             try:
-                age = (_dt_ol.utcnow() - _dt_ol.fromisoformat(last_sync)).total_seconds()
-                needs_refresh = age > 1800
+                gap_dias = (hoy - _date_ol.fromisoformat(max_fecha)).days
+                cache_incompleto = gap_dias > 7
             except Exception:
-                needs_refresh = True
-        if needs_refresh:
+                pass
+        if cache_incompleto:
+            log.info("olavarria cache incompleto (max=%s, gap>7d) — retomando seed", max_fecha)
+            asyncio.create_task(sync_olavarria_atenciones(desde=desde, solo_hoy=False))
+        elif refresh:
             asyncio.create_task(sync_olavarria_atenciones(solo_hoy=True))
+        else:
+            with _conn_ol() as _c:
+                row = _c.execute(
+                    "SELECT MAX(synced_at) FROM olavarria_atenciones_cache WHERE fecha=?",
+                    (hoy.isoformat(),)
+                ).fetchone()
+            last_sync = row[0] if row else None
+            needs_refresh = True
+            if last_sync:
+                try:
+                    age = (_dt_ol.utcnow() - _dt_ol.fromisoformat(last_sync)).total_seconds()
+                    needs_refresh = age > 1800
+                except Exception:
+                    needs_refresh = True
+            if needs_refresh:
+                asyncio.create_task(sync_olavarria_atenciones(solo_hoy=True))
 
     raw = get_olavarria_atenciones(desde=desde)
 
