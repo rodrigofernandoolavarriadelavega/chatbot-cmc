@@ -872,9 +872,17 @@ def try_autocapture_rut_name(phone: str, text: str) -> dict | None:
     if not rut_fmt:
         return None  # sin RUT válido no guardamos nada para no meter nombres sueltos
 
-    # Extraer palabras candidato a nombre alrededor del RUT
+    # Extraer palabras candidato a nombre alrededor del RUT.
+    # Si el texto tiene múltiples líneas, limitar al primer renglón que
+    # contiene el RUT para evitar que direcciones, meses u otros datos
+    # de líneas posteriores contaminen el nombre capturado.
     import re as _re
-    around = (text[:m.start()] + " " + text[m.end():])
+    first_line = text.split("\n")[0] if "\n" in text else text
+    m_line = _RUT_RE.search(first_line)
+    if m_line:
+        around = (first_line[:m_line.start()] + " " + first_line[m_line.end():])
+    else:
+        around = (text[:m.start()] + " " + text[m.end():])
     tokens = _re.findall(r"[A-Za-zÁÉÍÓÚÑáéíóúñ]{2,}", around)
     filtrados = [t for t in tokens if t.lower() not in _PALABRAS_BASURA]
     # Tomar hasta 4 palabras consecutivas tras el primer match, con cap sensato

@@ -17,7 +17,7 @@ from medilink import (buscar_primer_dia, buscar_slots_dia, buscar_slots_dia_por_
                       listar_citas_paciente, cancelar_cita, obtener_agenda_dia,
                       valid_rut, clean_rut, especialidades_disponibles,
                       consultar_proxima_fecha, verificar_slot_disponible)
-from session import (save_session, reset_session, save_tag, delete_tag, get_tags,
+from session import (save_session, reset_session, get_session, save_tag, delete_tag, get_tags,
                      save_cita_bot, log_event, has_recent_event,
                      save_profile, get_profile, save_fidelizacion_respuesta, get_ultimo_seguimiento,
                      enqueue_intent, add_to_waitlist, cancel_waitlist,
@@ -1482,7 +1482,6 @@ async def _responder_pregunta_horario(phone: str, state: str, data: dict, txt: s
                     prof_id = prof_mencionado_id
                     # Intentar cargar slots del nuevo doctor para ofrecerlos
                     try:
-                        from medilink import PROFESIONALES, buscar_primer_dia
                         esp_prof = PROFESIONALES.get(int(prof_id), {}).get("especialidad", "").lower()
                         if esp_prof:
                             smart, todos = await buscar_primer_dia(esp_prof, solo_ids=[int(prof_id)])
@@ -3783,10 +3782,16 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 smart_nuevo, todos_nuevo = await buscar_primer_dia(
                     especialidad, excluir=fechas_vistas, intervalo_override=_maso_override)
             if not todos_nuevo:
-                reset_session(phone)
-                return (
-                    "No encontré más disponibilidad en los próximos días 😕\n\n"
-                    f"Llama a recepción para más opciones:\n📞 *{CMC_TELEFONO}*"
+                data["waitlist_especialidad"] = especialidad
+                data["waitlist_id_prof_pref"] = data.get("prof_sugerido_id")
+                save_session(phone, "WAIT_WAITLIST_CONFIRM", data)
+                return _btn_msg(
+                    f"No encontré más disponibilidad para *{especialidad}* en los próximos días 😕\n\n"
+                    "¿Quieres que te avise apenas se libere un cupo?",
+                    [
+                        {"id": "waitlist_si", "title": "📝 Sí, inscribirme"},
+                        {"id": "waitlist_no", "title": "No, gracias"},
+                    ]
                 )
             nueva_fecha = todos_nuevo[0]["fecha"]
             fechas_vistas = fechas_vistas + [nueva_fecha]
