@@ -910,6 +910,37 @@ def bi_farmacia_ideas_page():
     return html
 
 
+# ── Farmacia CMC (sitio público sub-marca) ─────────────────────────────────
+
+@app.get("/farmacia", response_class=HTMLResponse)
+def farmacia_home():
+    """Página madre de la Farmacia CMC — sub-marca del CMC bajo OLACORE."""
+    html = _read_template("farmacia.html")
+    if not html:
+        raise HTTPException(404, "Farmacia no disponible")
+    return html
+
+
+_FARMACIA_PAGES = {
+    "medicamentos": "Medicamentos · CENABAST y SNRE",
+    "dermocosmetica": "Dermocosmética · Marcas curadas",
+    "recetario-magistral": "Recetario magistral",
+    "servicios-clinicos": "Servicios clínicos",
+    "dental-supply": "Dental Supply CMC B2B",
+}
+
+
+@app.get("/farmacia/{page}", response_class=HTMLResponse)
+def farmacia_subpage(page: str):
+    """Sub-páginas verticales de la Farmacia CMC."""
+    if page not in _FARMACIA_PAGES:
+        return HTMLResponse("<h1>404 — página no encontrada</h1>", status_code=404)
+    p = _TEMPLATE_DIR / "farmacia" / f"{page}.html"
+    if not p.exists():
+        raise HTTPException(404, f"Farmacia/{page} no disponible")
+    return p.read_text(encoding="utf-8")
+
+
 @app.get("/bi/meulen-roadmap", response_class=HTMLResponse)
 def bi_meulen_roadmap_page():
     """Roadmap estratégico Meulen: fases, módulos, hitos."""
