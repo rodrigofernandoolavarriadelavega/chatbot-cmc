@@ -67,7 +67,7 @@
   "telephone": "+56-44-2965226",
   "priceRange": "$$",
   "currenciesAccepted": "CLP",
-  "paymentAccepted": "Efectivo, Transferencia, Débito, Crédito, Fonasa, Isapres",
+  "paymentAccepted": "Efectivo, Transferencia, Débito, Crédito, Fonasa",
   "address": {
     "@type": "PostalAddress",
     "streetAddress": "República 102",
@@ -85,9 +85,15 @@
   "areaServed": [
     {"@type":"City","name":"Carampangue"},
     {"@type":"City","name":"Arauco"},
-    {"@type":"City","name":"Tubul"},
+    {"@type":"City","name":"Lebu"},
+    {"@type":"City","name":"Cañete"},
+    {"@type":"City","name":"Contulmo"},
     {"@type":"City","name":"Curanilahue"},
-    {"@type":"City","name":"Lota"}
+    {"@type":"City","name":"Los Álamos"},
+    {"@type":"City","name":"Tirúa"},
+    {"@type":"City","name":"Tubul"},
+    {"@type":"AdministrativeArea","name":"Provincia de Arauco"},
+    {"@type":"AdministrativeArea","name":"Región del Biobío"}
   ]<!--CMC_AGGREGATE_RATING-->,
   "sameAs": [
     "https://www.facebook.com/centromedicocarampangue",
@@ -103,12 +109,12 @@
   "@type": "FAQPage",
   "mainEntity": [
     {"@type":"Question","name":"¿Cómo agendo una hora médica en CMC?","acceptedAnswer":{"@type":"Answer","text":"Puedes agendar online a través de nuestro sistema de reservas, por WhatsApp al +56 9 6661 0737, o llamando al (44) 296 5226. La confirmación es inmediata."}},
-    {"@type":"Question","name":"¿Qué previsiones atienden?","acceptedAnswer":{"@type":"Answer","text":"Atendemos Fonasa, Isapres (Colmena, Banmédica, Cruz Blanca, Consalud, Nueva Masvida) y atención particular con boleta."}},
+    {"@type":"Question","name":"¿Qué previsiones atienden?","acceptedAnswer":{"@type":"Answer","text":"Atendemos Fonasa y particular. El bono Fonasa se emite en el mismo centro con huella biométrica para Medicina General, Medicina Familiar, Kinesiología, Nutrición, Psicología Adulto y Psicología Infantil. También tenemos convenio con varios seguros complementarios vía IMED — consúltanos al agendar."}},
     {"@type":"Question","name":"¿Atienden urgencias?","acceptedAnswer":{"@type":"Answer","text":"No somos servicio de urgencias. Para emergencias llama al SAMU 131. Sí ofrecemos atención de morbilidad con hora el mismo día en medicina general según disponibilidad."}},
-    {"@type":"Question","name":"¿Dónde están ubicados?","acceptedAnswer":{"@type":"Answer","text":"República 102, Carampangue, Provincia de Arauco, Región del Biobío. Contamos con estacionamiento y acceso universal."}},
-    {"@type":"Question","name":"¿Atienden a niños?","acceptedAnswer":{"@type":"Answer","text":"Sí. Tenemos psicología infantil, fonoaudiología pediátrica y odontopediatría. Medicina familiar también atiende a menores."}},
+    {"@type":"Question","name":"¿Dónde están ubicados?","acceptedAnswer":{"@type":"Answer","text":"República 102, Carampangue, Provincia de Arauco, Región del Biobío. Atendemos a pacientes de Arauco, Lebu, Cañete, Contulmo, Curanilahue, Los Álamos y Tirúa."}},
+    {"@type":"Question","name":"¿Atienden a niños?","acceptedAnswer":{"@type":"Answer","text":"Sí. Tenemos Psicología Infantil y Fonoaudiología pediátrica. Medicina Familiar también atiende a menores. Nuestros odontólogos generales (Dra. Burgos y Dr. Jiménez) también ven niños."}},
     {"@type":"Question","name":"¿Qué métodos de pago aceptan?","acceptedAnswer":{"@type":"Answer","text":"En atención médica: efectivo y transferencia. En atención dental: efectivo, transferencia, débito y crédito."}},
-    {"@type":"Question","name":"¿Qué debo traer a mi cita?","acceptedAnswer":{"@type":"Answer","text":"Carnet de identidad, credencial Fonasa o Isapre vigente, exámenes previos si los tienes y la lista de medicamentos que tomas."}},
+    {"@type":"Question","name":"¿Qué debo traer a mi cita?","acceptedAnswer":{"@type":"Answer","text":"Solo el carnet de identidad. Con tu RUT consultamos automáticamente vía IMED si tienes Fonasa o seguro complementario. Trae también exámenes previos si los tienes y la lista de medicamentos que tomas."}},
     {"@type":"Question","name":"¿Puedo cancelar o reagendar mi hora?","acceptedAnswer":{"@type":"Answer","text":"Sí, sin costo. Avísanos por WhatsApp al +56 9 6661 0737 con al menos 2 horas de anticipación."}}
   ]
 }
@@ -2657,7 +2663,7 @@ section.compact { padding: 64px 0; }
         </details>
         <details>
           <summary>¿Qué previsiones atienden? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></summary>
-          <div class="answer">Atendemos Fonasa, Isapres (Colmena, Banmédica, Cruz Blanca, Consalud, Nueva Masvida) y atención particular con boleta. El bono Fonasa se vende en el mismo centro con huella biométrica.</div>
+          <div class="answer">Atendemos <strong>Fonasa</strong> y <strong>atención particular</strong>. El bono Fonasa se emite en el mismo centro con huella biométrica para Medicina General, Medicina Familiar, Kinesiología, Nutrición, Psicología Adulto y Psicología Infantil. También tenemos convenio con varios <strong>seguros complementarios vía IMED</strong> — consúltanos al agendar para confirmar el tuyo.</div>
         </details>
         <details>
           <summary>¿Atienden urgencias? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></summary>
@@ -2669,11 +2675,11 @@ section.compact { padding: 64px 0; }
         </details>
         <details>
           <summary>¿Qué debo traer a mi cita? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></summary>
-          <div class="answer">Carnet de identidad, credencial Fonasa o Isapre vigente, exámenes previos si los tienes y la lista de medicamentos que tomas. Para niños: carnet de control y carnet de vacunas.</div>
+          <div class="answer">Solo el <strong>carnet de identidad</strong>. Con tu RUT consultamos automáticamente vía IMED si tienes Fonasa o seguro complementario, y aplicamos el descuento al instante. Trae también exámenes previos si los tienes y la lista de medicamentos que tomas. Para niños: carnet de control y carnet de vacunas.</div>
         </details>
         <details>
           <summary>¿Atienden a niños? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></summary>
-          <div class="answer">Sí. Tenemos psicología infantil, fonoaudiología pediátrica y odontopediatría. Medicina familiar también atiende a menores. Recordatorios automáticos del calendario PNI al confirmar cita.</div>
+          <div class="answer">Sí. Tenemos <strong>Psicología Infantil</strong> y <strong>Fonoaudiología</strong> pediátrica. <strong>Medicina Familiar</strong> también atiende a menores. Nuestros <strong>odontólogos generales</strong> (Dra. Burgos y Dr. Jiménez) también ven niños. Recordatorios automáticos del calendario PNI al confirmar cita.</div>
         </details>
         <details>
           <summary>¿Puedo cancelar o reagendar mi hora? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></summary>
@@ -2681,11 +2687,11 @@ section.compact { padding: 64px 0; }
         </details>
         <details>
           <summary>¿Ofrecen exámenes de laboratorio? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></summary>
-          <div class="answer">Realizamos tomas de muestra en convenio con laboratorios certificados. Consulta con tu médico por las órdenes específicas. Resultados disponibles en pocos días.</div>
+          <div class="answer">Por ahora <strong>no realizamos tomas de muestra en el centro</strong>. Tu médico puede emitir las órdenes para que las realices en el laboratorio de tu preferencia.</div>
         </details>
         <details>
           <summary>¿Tienen estacionamiento? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></summary>
-          <div class="answer">Sí. Contamos con estacionamiento gratuito y acceso universal para personas con movilidad reducida. Salida directa hacia República.</div>
+          <div class="answer">No tenemos estacionamiento dedicado, pero hay <strong>estacionamiento libre en la calle República</strong> frente al centro y en las cuadras adyacentes.</div>
         </details>
       </div>
     </div>
@@ -2701,7 +2707,7 @@ section.compact { padding: 64px 0; }
         Estamos en el corazón de Carampangue
       </h2>
       <p class="lead">
-        República 102, frente a la plaza. Acceso fácil desde Arauco, Tubul, Curanilahue y Lota.
+        República 102, Carampangue. Atendemos a pacientes de toda la <strong>Provincia de Arauco</strong>: Arauco, Lebu, Cañete, Contulmo, Curanilahue, Los Álamos y Tirúa.
       </p>
     </div>
     <div class="loc-grid">
