@@ -569,8 +569,8 @@ def is_duplicate(msg_id: str) -> bool:
         cur = conn.execute(
             "INSERT OR IGNORE INTO processed_msgs (msg_id) VALUES (?)", (msg_id,)
         )
-        # Limpiar entradas de más de 1 hora para no crecer indefinidamente
-        conn.execute("DELETE FROM processed_msgs WHERE created_at < datetime('now', '-1 hour')")
+        # FIX-16: Meta puede reintentar hasta 7 días. TTL ampliado de 1h → 7d.
+        conn.execute("DELETE FROM processed_msgs WHERE created_at < datetime('now', '-7 days')")
         conn.commit()
         return cur.rowcount == 0
 

@@ -824,13 +824,26 @@ async def _slot_confirmed(phone: str, data: dict, slot: dict) -> str | dict:
     )
 
 
-def _menu_msg() -> dict:
-    return _list_msg(
-        body_text=(
+def _menu_msg(primer_contacto: bool = False) -> dict:
+    """Menú principal. Si primer_contacto=True agrega disclosure Ley 21.719."""
+    if primer_contacto:
+        # FIX-17: Disclosure obligatorio primera vez (Ley 21.719 + best practices)
+        intro = (
+            "Hola 👋 Soy el *asistente automático* del Centro Médico Carampangue "
+            "(no soy una persona).\n\n"
+            "_No entrego consejo médico ni evalúo síntomas. "
+            "Si es una urgencia, llama al *SAMU 131*._\n\n"
+            "📍 Monsalve 102, Carampangue.\n\n"
+            "¿Qué necesitas hoy?"
+        )
+    else:
+        intro = (
             "Hola 👋 Soy el asistente del *Centro Médico Carampangue*.\n\n"
             "📍 *Monsalve 102, frente a la antigua estación de trenes*, Carampangue.\n\n"
             "¿Qué necesitas hoy?"
-        ),
+        )
+    return _list_msg(
+        body_text=intro,
         button_label="Ver opciones",
         sections=[
             {
@@ -2135,7 +2148,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "Escribe *modo* para cambiar."
                 )
             return _doctor_mode_menu()
-        return _menu_msg()
+        # FIX-17: disclosure en primer contacto (Ley 21.719)
+        _primer_contacto_disclosure = not has_recent_event(phone, "disclosure_enviado", days=3650)
+        if _primer_contacto_disclosure:
+            log_event(phone, "disclosure_enviado", {})
+        return _menu_msg(primer_contacto=_primer_contacto_disclosure)
 
     # ── Detección pasiva de Arauco (guarda tag sin interrumpir el flujo) ──────
     if "arauco" in tl_norm:
