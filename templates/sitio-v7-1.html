@@ -660,11 +660,16 @@ section.compact { padding: 64px 0; }
 .hero-visual {
   aspect-ratio: 4/5;
   border-radius: var(--radius-xl);
-  background: linear-gradient(145deg, #4FBECE 0%, #1172AB 100%);
-  overflow: hidden;
-  box-shadow: 0 40px 80px -30px rgba(17,114,171,0.4);
+  background: transparent;
+  overflow: visible;
+  box-shadow: none;
   position: relative;
 }
+/* Decorativos del bg azul ya no aplican en versión transparente */
+.hero-visual svg.illustration,
+.hero-visual .floating-chip,
+.hero-visual .overlay-team,
+.hero-visual .hero-logo-caption { display: none; }
 .hero-visual svg.illustration { position: absolute; inset: 0; width: 100%; height: 100%; }
 .hero-visual .hero-logo-mark {
   position: absolute;
@@ -2345,18 +2350,21 @@ section.compact { padding: 64px 0; }
   <strong>Emergencias:</strong> llama al SAMU <a href="tel:131">131</a> · No somos servicio de urgencias
 </div>
 
-<!-- HOURS BAR — Agenda 24/7 por WhatsApp + horario presencial -->
-<a class="hours-bar" href="https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20una%20hora." target="_blank" rel="noopener" aria-label="Agendar por WhatsApp 24/7">
+<!-- HOURS BAR — estado dinámico (abierto/cerrado según hora real America/Santiago) + tag WhatsApp 24/7 -->
+<a class="hours-bar" id="hoursBar" href="https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20una%20hora." target="_blank" rel="noopener" aria-label="Agendar por WhatsApp">
   <div class="container hours-bar-inner">
     <span class="hb-led" aria-hidden="true"></span>
-    <span class="hb-label">Agenda 24/7 por WhatsApp</span>
+    <span class="hb-label" id="hbLabel">Atendiendo ahora</span>
     <span class="hb-sep">·</span>
-    <span class="hb-text">
-      Atención presencial <strong>Lun–Vie 08:00 – 21:00</strong>
+    <span class="hb-text" id="hbText">
+      <strong>Lun–Vie 08:00 – 21:00</strong>
       <span class="hb-dot">·</span>
       <strong>Sáb 09:00 – 14:00</strong>
     </span>
-    <span class="hb-tag">Horario extendido</span>
+    <span class="hb-tag hb-tag-wa">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.8-.8-1.4-1.7-1.5-2-.2-.3 0-.4.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 2-1.4.2-.6.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.4 5L2 22l5.1-1.3c1.4.8 3 1.3 4.9 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2"/></svg>
+      Agenda 24/7
+    </span>
   </div>
 </a>
 
