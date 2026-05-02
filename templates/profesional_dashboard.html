@@ -235,19 +235,20 @@ function renderChartMes(){
 function renderTablaMes(){
   const tbody = document.querySelector("#tablaMes tbody");
   const meses = Object.keys(DATA.por_mes).sort();
-  // reescribo el header para reflejar caja real
-  document.querySelector("#tablaMes thead").innerHTML = '<tr><th>Mes</th><th>Atend.</th><th>Facturado</th><th>CAJA REAL</th><th>Δ no entró caja</th><th>Pagos</th></tr>';
+  document.querySelector("#tablaMes thead").innerHTML = '<tr><th>Mes</th><th>Atendidos</th><th>Pagaron</th><th>Controles</th><th>CAJA REAL</th><th>Facturado</th></tr>';
   let html = "";
   for(const m of meses){
     const v = DATA.por_mes[m];
-    const caja = v.caja_real || 0;
-    const delta = (v.monto_total||0) - caja;
-    const dCls = delta > 0 ? "neg" : "";
-    html += `<tr><td class="mono">${m}</td><td>${v.atend}</td><td class="mono">${clp(v.monto_total)}</td><td class="mono pos"><strong>${clp(caja)}</strong></td><td class="mono ${dCls}">${delta>0?'-':''}${clp(delta)}</td><td>${v.n_pagos||0}</td></tr>`;
+    const atend = v.atendidos_total || v.atend || 0;
+    const pago = v.pagaron != null ? v.pagaron : v.atend_pagadas || 0;
+    const ctrl = v.controles_gratis != null ? v.controles_gratis : Math.max(0, atend - pago);
+    const caja = v.monto_cobrado || 0;
+    const fact = v.monto_total || 0;
+    html += `<tr><td class="mono">${m}</td><td>${atend}</td><td class="mono pos"><strong>${pago}</strong></td><td class="opacity-60">${ctrl}</td><td class="mono pos">${clp(caja)}</td><td class="mono opacity-60">${clp(fact)}</td></tr>`;
   }
   const proy = DATA.proyeccion || {};
   for(const m of Object.keys(proy).sort()){
-    html += `<tr class="proy"><td class="mono">${m} · proy</td><td>${proy[m].atend}</td><td class="mono">${clp(proy[m].ingreso)}</td><td class="mono">${clp(proy[m].ingreso)}</td><td>—</td><td>—</td></tr>`;
+    html += `<tr class="proy"><td class="mono">${m} · proy</td><td>${proy[m].atend}</td><td>—</td><td>—</td><td class="mono">${clp(proy[m].ingreso)}</td><td class="mono opacity-60">—</td></tr>`;
   }
   tbody.innerHTML = html;
 }
@@ -280,7 +281,11 @@ function renderHeatmap(){
     byMonth[m].forEach(f => {
       const dt = new Date(f+"T12:00");
       const dow = (dt.getDay() + 6) % 7;
-      const n = DATA.por_dia[f] || 0;
+      const detalle = (DATA.por_dia_detalle || {})[f] || {};
+      const atend = detalle.atendidos != null ? detalle.atendidos : (DATA.por_dia[f] || 0);
+      const pago = detalle.pagaron != null ? detalle.pagaron : (DATA.por_dia[f] || 0);
+      const ctrl = detalle.controles_gratis || 0;
+      const n = atend; // métrica principal para el delta vs objetivo
       if(dow === 6){ html += `<div class="calday calday-empty"></div>`; return; }
       const cap = OBJETIVO;
       const bg = colorByDelta(n, cap);
@@ -289,7 +294,9 @@ function renderHeatmap(){
       if(n>0||cap>0){ const d = n-cap; if(d>0) dh = `<div class="delta pos">+${d}</div>`;
         else if(d<0) dh = `<div class="delta neg">${d}</div>`; else dh = `<div class="delta" style="opacity:.5">=</div>`; }
       const tc = dark?"color:white;":"";
-      html += `<div class="calday" style="background:${bg};${tc}" title="${f}: ${n} atend"><div class="n">${n||"·"}</div>${dh}</div>`;
+      const tt = `${f}: ${atend} atendidos · ${pago} pagaron${ctrl?` · ${ctrl} controles`:""}`;
+      const subtxt = ctrl > 0 ? `<span style="font-size:7px;opacity:.6">${pago}/${atend}</span>` : "";
+      html += `<div class="calday" style="background:${bg};${tc}" title="${tt}"><div class="n">${n||"·"}</div>${dh}</div>`;
     });
     html += "</div></div>";
   });

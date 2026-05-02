@@ -228,35 +228,58 @@ def stats_profesional(id_profesional: int, desde: str = "2024-01-01") -> dict:
             WHERE id_profesional=? AND fecha>=?
         """, (id_profesional, desde)).fetchall()
 
-    # Pacientes únicos POR DÍA y POR MES desde bi_pagos_caja (= CSV oficial Medilink)
-    pacientes_dia: dict = defaultdict(set)
-    pacientes_mes: dict = defaultdict(set)
+    # PAGARON: pacientes únicos por día/mes desde bi_pagos_caja (CSV oficial)
+    pacientes_dia_pago: dict = defaultdict(set)
+    pacientes_mes_pago: dict = defaultdict(set)
     monto_cobrado_mes: dict = defaultdict(int)
-    monto_total_mes: dict = defaultdict(int)
-
     for r in pagos:
         f = (r["fecha"] or "")[:10]
         if not f:
             continue
         m = f[:7]
-        pacientes_mes[m].add(r["id_paciente"])
-        pacientes_dia[f].add(r["id_paciente"])
+        pacientes_mes_pago[m].add(r["id_paciente"])
+        pacientes_dia_pago[f].add(r["id_paciente"])
         monto_cobrado_mes[m] += int(r["monto"] or 0)
 
-    # Facturado total desde bi_atenciones (no para conteo, solo monto)
+    # ATENDIDOS: pacientes únicos por día/mes desde bi_atenciones (incluye controles $0)
+    pacientes_dia_atend: dict = defaultdict(set)
+    pacientes_mes_atend: dict = defaultdict(set)
+    monto_total_mes: dict = defaultdict(int)
     for r in atens:
         f = (r["fecha"] or "")[:10]
         if not f:
             continue
-        monto_total_mes[f[:7]] += int(r["total"] or 0)
+        m = f[:7]
+        if r["id_paciente"]:
+            pacientes_dia_atend[f].add(r["id_paciente"])
+            pacientes_mes_atend[m].add(r["id_paciente"])
+        monto_total_mes[m] += int(r["total"] or 0)
 
-    por_dia: dict = {f: len(s) for f, s in pacientes_dia.items()}
+    # Día: dict simple para retro-compat (cuenta pacientes que PAGARON)
+    por_dia: dict = {f: len(s) for f, s in pacientes_dia_pago.items()}
+    # Día detallado: separa atendidos vs pagaron
+    por_dia_detalle: dict = {}
+    for f in set(list(pacientes_dia_pago.keys()) + list(pacientes_dia_atend.keys())):
+        atend_n = len(pacientes_dia_atend.get(f, set()))
+        pago_n = len(pacientes_dia_pago.get(f, set()))
+        por_dia_detalle[f] = {
+            "atendidos": atend_n,
+            "pagaron": pago_n,
+            "controles_gratis": max(0, atend_n - pago_n),
+        }
     por_dow: dict = defaultdict(list)
     por_mes: dict = {}
-    for m in set(list(pacientes_mes.keys()) + list(monto_total_mes.keys()) + list(monto_cobrado_mes.keys())):
-        n = len(pacientes_mes.get(m, set()))
+    todos_meses = set(list(pacientes_mes_pago.keys()) + list(pacientes_mes_atend.keys()) +
+                      list(monto_total_mes.keys()))
+    for m in todos_meses:
+        atend_n = len(pacientes_mes_atend.get(m, set()))
+        pago_n = len(pacientes_mes_pago.get(m, set()))
         por_mes[m] = {
-            "atend": n, "atend_pagadas": n,
+            "atend": pago_n,  # retro-compat
+            "atend_pagadas": pago_n,
+            "atendidos_total": atend_n,
+            "pagaron": pago_n,
+            "controles_gratis": max(0, atend_n - pago_n),
             "monto_total": monto_total_mes.get(m, 0),
             "monto_cobrado": monto_cobrado_mes.get(m, 0),
         }
@@ -330,6 +353,7 @@ def stats_profesional(id_profesional: int, desde: str = "2024-01-01") -> dict:
     return {
         "fecha_actualizacion": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "fuente": "bi_atenciones (Medilink × validación cobrado)",
+        "por_dia_detalle": por_dia_detalle,
         "id_profesional": id_profesional,
         "nombre_profesional": prof_info.get("nombre", f"Profesional {id_profesional}"),
         "especialidad": prof_info.get("especialidad", ""),
