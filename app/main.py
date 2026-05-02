@@ -1207,8 +1207,149 @@ async def sync_olavarria_atenciones(desde: str = "2024-01-01", solo_hoy: bool = 
         return {"total": total, "dias": len(fechas), "failed": skipped_fail}
 
 
+def _api_olavarria_data_from_bi(desde: str = "2024-01-01"):
+    """Lee desde olavarria_bi_ingresos (tabla cargada desde BI Postgres) y arma
+    la misma estructura que devolvía el endpoint anterior. Tarifa real = avg(monto_bruto)."""
+    from datetime import datetime as _dt_b, date as _date_b, timedelta as _td_b
+    from collections import defaultdict as _dd_b
+    from session import _conn as _conn_b
+
+    with _conn_b() as _c:
+        rows = _c.execute(
+            "SELECT atencion_id, fecha, paciente_id, monto_bruto "
+            "FROM olavarria_bi_ingresos WHERE fecha >= ? ORDER BY fecha",
+            (desde,)
+        ).fetchall()
+
+    por_dia: dict = {}
+    por_mes: dict = _dd_b(lambda: {"atend": 0, "monto": 0})
+    por_dow: dict = _dd_b(list)
+    pacientes_dia: dict = _dd_b(set)
+
+    for r in rows:
+        f = (r["fecha"] or "")[:10]
+        m = f[:7]
+        monto = int(r["monto_bruto"] or 0)
+        por_mes[m]["atend"] += 1
+        por_mes[m]["monto"] += monto
+        por_dia[f] = por_dia.get(f, 0) + 1
+        pacientes_dia[f].add(r["paciente_id"])
+
+    # Backfill días vacíos
+    try:
+        start = _date_b.fromisoformat(desde)
+    except ValueError:
+        start = _date_b(2024, 1, 1)
+    end = _date_b.today()
+    d = start
+    while d <= end:
+        f = d.isoformat()
+        por_dia.setdefault(f, 0)
+        d += _td_b(days=1)
+
+    for f, n in por_dia.items():
+        if n > 0:
+            dt = _date_b.fromisoformat(f)
+            por_dow[dt.weekday()].append(n)
+
+    dow_stats = {}
+    for w in range(7):
+        vals = sorted(por_dow.get(w, []))
+        if not vals:
+            dow_stats[w] = {"avg": 0, "median": 0, "min": 0, "max": 0, "p90": 0, "n": 0}
+        else:
+            n_v = len(vals)
+            p90_idx = max(0, int(n_v * 0.9) - 1) if n_v >= 10 else n_v - 1
+            dow_stats[w] = {
+                "avg": round(sum(vals) / n_v, 2),
+                "median": vals[n_v // 2],
+                "min": vals[0], "max": vals[-1],
+                "p90": vals[p90_idx], "n": n_v,
+            }
+
+    total_atend = sum(v["atend"] for v in por_mes.values())
+    total_facturado = sum(v["monto"] for v in por_mes.values())
+    n_meses = max(1, len(por_mes))
+    atend_avg_mes = total_atend / n_meses
+    tarifa_real = total_facturado / total_atend if total_atend else 0
+    ing_avg_mes = total_facturado / n_meses
+    dias_trab = sum(1 for v in por_dia.values() if v > 0)
+
+    # Breakdown estimado caja vs bono Fonasa
+    # Cruce 15-may-2024: BI=$479.560, Caja=$354.670 → caja ~74% del total facturado
+    # Aplicamos factor 0.74 caja / 0.26 bono Fonasa al médico
+    FACTOR_CAJA = 0.74
+    FACTOR_BONO = 1 - FACTOR_CAJA
+
+    # Proyección lineal últimos 6 meses con datos
+    meses_ord = sorted(por_mes.keys())
+    ult6 = meses_ord[-6:] if len(meses_ord) >= 6 else meses_ord
+    proyeccion = {}
+    if len(ult6) >= 2:
+        ys = [por_mes[m]["atend"] for m in ult6]
+        xs = list(range(len(ys)))
+        n_x = len(xs)
+        mean_x = sum(xs) / n_x
+        mean_y = sum(ys) / n_x
+        num = sum((xs[i] - mean_x) * (ys[i] - mean_y) for i in range(n_x))
+        den = sum((xs[i] - mean_x) ** 2 for i in range(n_x))
+        slope = num / den if den else 0
+        intercept = mean_y - slope * mean_x
+        last_m = _date_b.fromisoformat(meses_ord[-1] + "-01") if meses_ord else _date_b.today()
+        for k in range(1, 7):
+            yr = last_m.year + ((last_m.month + k - 1) // 12)
+            mo = ((last_m.month + k - 1) % 12) + 1
+            key = f"{yr}-{mo:02d}"
+            est = max(0, round(intercept + slope * (n_x - 1 + k)))
+            proyeccion[key] = {"atend": est, "ingreso": round(est * tarifa_real)}
+
+    return {
+        "fecha_actualizacion": _dt_b.now().strftime("%Y-%m-%d %H:%M"),
+        "fuente_cache": f"BI Postgres health-bi-project (rows={len(rows)})",
+        "tarifa": round(tarifa_real),
+        "tarifa_real_promedio": round(tarifa_real),
+        "factor_caja": FACTOR_CAJA,
+        "por_dia": por_dia,
+        "por_mes": {m: {"atend": v["atend"], "anul": 0, "no_asiste": 0, "otros": 0,
+                         "total": v["atend"], "monto_real": v["monto"], "monto_real_n": v["atend"]}
+                     for m, v in por_mes.items()},
+        "por_dow": dow_stats,
+        "por_hora": {},  # BI no expone hora_inicio
+        "estados": {"atendido": total_atend},
+        "proyeccion": proyeccion,
+        "kpis": {
+            "total_atend": total_atend,
+            "dias_con_atencion": dias_trab,
+            "atend_avg_mes": round(atend_avg_mes, 1),
+            "ing_avg_mes": round(ing_avg_mes),
+            "n_meses": n_meses,
+            "monto_real_total": total_facturado,
+            "monto_real_n_atend": total_atend,
+            "cobertura_real_pct": 100.0,
+            "tarifa_real_promedio": round(tarifa_real),
+            "ing_caja_estimado_mes": round(ing_avg_mes * FACTOR_CAJA),
+            "ing_bono_estimado_mes": round(ing_avg_mes * FACTOR_BONO),
+            "ing_total_historico": total_facturado,
+        },
+    }
+
+
 @app.get("/api/olavarria/data")
 async def api_olavarria_data(refresh: int = 0, desde: str = "2024-01-01", tarifa: int = 15100):
+    """
+    FUENTE PRIMARIA: olavarria_bi_ingresos (importada del BI Postgres health-bi-project,
+    refleja /atenciones de Medilink con monto_bruto real). Más confiable que el cache
+    propio del bot, que filtraba por estado_cita='atendido' en /citas y subestimaba ~22%.
+    Si la tabla BI está vacía cae al cache antiguo (degradación graceful).
+    """
+    from datetime import datetime as _dt_b, date as _date_b, timedelta as _td_b
+    from collections import defaultdict as _dd_b, Counter as _ct_b
+    from session import _conn as _conn_b
+    with _conn_b() as _c:
+        bi_count = _c.execute("SELECT COUNT(*) FROM olavarria_bi_ingresos WHERE fecha >= ?", (desde,)).fetchone()[0]
+    if bi_count > 0:
+        return _api_olavarria_data_from_bi(desde=desde)
+    # Fallback al cache antiguo:
     """Atenciones del Dr. Olavarría (id 1) con agregaciones para proyección de ingreso.
 
     `?desde=YYYY-MM-DD` filtra agregaciones desde esa fecha (default 2024-01-01).
