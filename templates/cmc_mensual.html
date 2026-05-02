@@ -2056,10 +2056,8 @@ const _MES_NOMS = {"01":"Enero","02":"Febrero","03":"Marzo","04":"Abril","05":"M
 const _fmtMes = m => `${_MES_NOMS[m.slice(5,7)]} ${m.slice(0,4)}`;
 
 // Mapa nombre ORIGINAL → id_profesional Medilink (PRINCIPAL — recibe el total real)
-// Los duplicados (Abarca Contrato, Tirso medicina, etc.) reciben $0 — solo aportan
-// con su honorario fijo o subárea aparte.
 const _NOMBRE_TO_ID = {
-  "Dr. Olavarría": 1, "Dr. Abarca": 73,
+  "Dr. Olavarría": 1,
   "Dr. Márquez": 13, "Dr. Borrego": 23, "Dr. Millán": 60,
   "Dr. Tirso gine": 61,
   "Dr. Quijano": 65, "Dr. Barraza": 64, "David Pardo": 68,
@@ -2070,12 +2068,13 @@ const _NOMBRE_TO_ID = {
   "Nutri Gise": 52, "Psicólogo Jorge": 74, "Psicólogo Juan Pablo": 49,
   "Dra. Juana": 70, "Matrona Saraí": 67, "Podóloga Andrea": 56,
 };
-// Duplicados: NO mapearlos a un id real para evitar doble conteo.
-// "Dr. Abarca Contrato": solo sueldo fijo, total caja = 0
-// "Dr. Tirso medicina": Tirso solo factura via gine, total caja aquí = 0
-// "Dr. Araneda": no existe en Medilink
+// Abarca: cambió de % variable a sueldo fijo en agosto 2024.
+// Antes 2024-08: total va a "Dr. Abarca" (% variable)
+// Desde 2024-08: total va a "Dr. Abarca Contrato" (fijo $3.414.126)
+const _ABARCA_CONTRATO_DESDE = "2024-08";
+// Duplicados sin total (siempre $0): existen en ORIGINAL pero no producen caja
 const _SIN_TOTAL = new Set([
-  "Dr. Abarca Contrato", "Dr. Tirso medicina", "Dr. Araneda",
+  "Dr. Tirso medicina", "Dr. Araneda",
 ]);
 
 let _CMC_MESES = [];
@@ -2089,16 +2088,23 @@ async function _cmcLoadMes(mes){
   // Mapa id_profesional → total cobrado
   const totByProf = {};
   for(const p of d.profesionales){ totByProf[p.id] = p.total; }
-  // Aplicar al data: actualizar total + recalcular prof + cmc según % original
+  // Aplicar al data: actualizar total + recalcular prof + cmc
+  const abarcaContratoActivo = d.mes >= _ABARCA_CONTRATO_DESDE;
   for(const row of data){
-    const id = _NOMBRE_TO_ID[row.name];
-    const total = totByProf[id] || 0;
+    let id = _NOMBRE_TO_ID[row.name];
+    let total = id ? (totByProf[id] || 0) : 0;
+    // Caso especial Abarca: depende del mes
+    if(row.name === 'Dr. Abarca'){
+      total = abarcaContratoActivo ? 0 : (totByProf[73] || 0);
+    } else if(row.name === 'Dr. Abarca Contrato'){
+      total = abarcaContratoActivo ? (totByProf[73] || 0) : 0;
+    }
+    if(_SIN_TOTAL.has(row.name)) total = 0;
     row.total = total;
     if(row.tipo_pago === 'fijo'){
       row.prof = row.hono_fijo;
       row.cmc = total - row.hono_fijo;
     } else {
-      // Mantener el % del ORIGINAL (calculado del snapshot marzo 2026)
       const origIdx = ORIGINAL.findIndex(o => o.name === row.name);
       const orig = origIdx >= 0 ? ORIGINAL[origIdx] : null;
       const pct = (orig && orig.total > 0) ? (orig.prof / orig.total) : 0.70;
