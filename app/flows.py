@@ -24,7 +24,8 @@ from session import (save_session, reset_session, get_session, save_tag, delete_
                      get_cita_bot_by_id_cita, mark_cita_confirmation, get_phone_by_rut,
                      save_demanda_no_disponible, get_waitlist_by_especialidad,
                      mark_waitlist_notified, get_ultima_cita_paciente,
-                     has_privacy_consent, save_privacy_consent, revoke_privacy_consent)
+                     has_privacy_consent, save_privacy_consent, revoke_privacy_consent,
+                     get_citas_bot_futuras)
 from resilience import is_medilink_down
 from triage_ges import triage_sintomas, normalizar_texto_paciente
 from pni import get_vaccine_reminder
@@ -5081,7 +5082,38 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "_Escribe *menu* para volver._"
             )
 
-        citas = await listar_citas_paciente(paciente["id"], rut=paciente.get("rut"))
+        # BUG-01: fallback a citas_bot local para cubrir lag de indexación de Medilink.
+        # Caso real: Beatriz creó cita y al cancelar inmediatamente, Medilink aún
+        # no la indexó → devolvía lista vacía. Lógica:
+        #   lista_A = Medilink (puede ser [] por lag o por error de red)
+        #   lista_B = citas_bot local (solo citas recientes ≤10 min, con id_cita)
+        #   merge deduplic. por id → si ambas vacías → mensaje normal
+        medilink_error = False
+        try:
+            citas_medilink = await listar_citas_paciente(paciente["id"], rut=paciente.get("rut"))
+        except Exception as _e:
+            log.warning("WAIT_RUT_CANCELAR: listar_citas_paciente falló phone=%s: %s", phone, _e)
+            citas_medilink = []
+            medilink_error = True
+
+        # Fallback local: solo si Medilink devuelve vacío
+        if not citas_medilink:
+            citas_local = get_citas_bot_futuras(phone, max_age_minutes=10)
+            if citas_local:
+                log_event(phone, "cancelar_fallback_local", {
+                    "n_local": len(citas_local),
+                    "medilink_error": medilink_error,
+                })
+            citas = citas_local
+        else:
+            # Medilink devolvió resultados: agregar locales que no estén ya (dedup por id)
+            ids_medilink = {str(c["id"]) for c in citas_medilink}
+            citas_local_extra = [
+                c for c in get_citas_bot_futuras(phone, max_age_minutes=10)
+                if str(c["id"]) not in ids_medilink
+            ]
+            citas = citas_medilink + citas_local_extra
+
         if not citas:
             reset_session(phone)
             return (

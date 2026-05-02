@@ -1098,6 +1098,64 @@ def mark_cita_confirmation(id_cita: str, phone: str, status: str):
         conn.commit()
 
 
+def get_citas_bot_futuras(phone: str, max_age_minutes: int = 10) -> list[dict]:
+    """Retorna citas futuras de citas_bot para un phone dado.
+
+    Usado como fallback cuando Medilink devuelve lista vacía por lag de
+    indexación (caso típico: cita recién creada y paciente cancela al instante).
+    Solo incluye citas creadas en los últimos `max_age_minutes` minutos para
+    evitar mostrar citas ya canceladas o expiradas que Medilink no devolvió
+    por otro motivo.
+
+    El shape del dict devuelto es compatible con listar_citas_paciente():
+    id, profesional, especialidad, fecha, fecha_display, hora_inicio, estado.
+    """
+    hoy = datetime.now(ZoneInfo("America/Santiago")).strftime("%Y-%m-%d")
+    cutoff = datetime.now(ZoneInfo("America/Santiago")) - timedelta(minutes=max_age_minutes)
+    cutoff_str = cutoff.strftime("%Y-%m-%d %H:%M:%S")
+    with _conn() as conn:
+        rows = conn.execute(
+            """SELECT id_cita, especialidad, profesional, fecha, hora
+               FROM citas_bot
+               WHERE phone=?
+                 AND fecha >= ?
+                 AND id_cita IS NOT NULL
+                 AND created_at >= ?
+               ORDER BY fecha ASC, hora ASC
+               LIMIT 5""",
+            (phone, hoy, cutoff_str),
+        ).fetchall()
+    result = []
+    for r in rows:
+        fecha_iso = r["fecha"]  # YYYY-MM-DD
+        fecha_display = _fmt_fecha_iso(fecha_iso)
+        result.append({
+            "id":           r["id_cita"],
+            "profesional":  r["profesional"] or "",
+            "especialidad": r["especialidad"] or "",
+            "fecha":        fecha_iso,
+            "fecha_display": fecha_display,
+            "hora_inicio":  (r["hora"] or "")[:5],
+            "estado":       "Confirmada",
+            "_from_local":  True,  # marca interna para logs
+        })
+    return result
+
+
+def _fmt_fecha_iso(fecha_iso: str) -> str:
+    """Convierte 'YYYY-MM-DD' al formato display 'lunes 5 de mayo'."""
+    try:
+        from datetime import date as _date
+        import locale as _locale
+        d = _date.fromisoformat(fecha_iso)
+        dias = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+        meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
+                 "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+        return f"{dias[d.weekday()]} {d.day} de {meses[d.month - 1]}"
+    except Exception:
+        return fecha_iso
+
+
 def get_confirmaciones_dia(fecha: str) -> list[dict]:
     """Devuelve las citas del bot para una fecha con su estado de confirmación.
     Usado por el panel admin para mostrar el estado."""
