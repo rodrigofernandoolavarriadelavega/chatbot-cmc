@@ -54,13 +54,14 @@ def _month_chunks(desde: date, hasta: date):
 
 async def _fetch_atenciones_rango(cli: httpx.AsyncClient, gte: str, lte: str
                                    ) -> AsyncIterator[list[dict]]:
-    """Genera lotes de atenciones para el rango de fechas. Maneja paginación."""
+    """Genera lotes de atenciones para el rango de fechas. Maneja paginación
+    con backoff agresivo (Medilink rate-limita fuerte en histórico)."""
     q = {"fecha": {"gte": gte, "lte": lte}}
     pq = {"q": json.dumps(q, separators=(",", ":"))}
     next_url: str | None = ATEN_URL
     first = True
     while next_url:
-        for attempt in range(6):
+        for attempt in range(12):  # antes 6
             try:
                 if first:
                     r = await cli.get(next_url, params=pq, headers=HEADERS)
@@ -69,7 +70,7 @@ async def _fetch_atenciones_rango(cli: httpx.AsyncClient, gte: str, lte: str
             except Exception as e:
                 log.warning("bi_sync %s..%s attempt=%d excepción: %s",
                             gte, lte, attempt, e)
-                await asyncio.sleep(2 + attempt * 2)
+                await asyncio.sleep(min(60, 3 + attempt * 5))
                 continue
             if r.status_code == 200:
                 d = r.json()
@@ -79,14 +80,14 @@ async def _fetch_atenciones_rango(cli: httpx.AsyncClient, gte: str, lte: str
                 first = False
                 break
             if r.status_code == 429:
-                await asyncio.sleep(2 + attempt * 2)
+                await asyncio.sleep(min(90, 5 + attempt * 8))
                 continue
             log.warning("bi_sync %s..%s HTTP %s — abort chunk", gte, lte, r.status_code)
             return
         else:
-            log.warning("bi_sync %s..%s sin éxito tras 6 intentos", gte, lte)
+            log.warning("bi_sync %s..%s sin éxito tras 12 intentos", gte, lte)
             return
-        await asyncio.sleep(0.25)
+        await asyncio.sleep(0.8)  # antes 0.25
 
 
 async def sync_rango(desde: str = "2024-01-01", hasta: str | None = None,
@@ -146,6 +147,8 @@ async def sync_rango(desde: str = "2024-01-01", hasta: str | None = None,
                     total_aten += n
                 if pages == 0:
                     total_err += 1
+                # Pausa entre chunks para no saturar Medilink
+                await asyncio.sleep(2)
 
         fin = datetime.utcnow().isoformat()
         log_bi_sync("rango", id_profesional or 0, f"{desde}..{hasta or date.today()}",
