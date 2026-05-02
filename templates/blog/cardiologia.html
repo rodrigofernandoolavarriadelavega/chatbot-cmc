@@ -14,7 +14,6 @@
 
 <link rel="icon" type="image/png" href="https://centromedicocarampangue.cl/wp-content/uploads/2025/08/cropped-logo-carampangue.png" />
 
-<!-- Schema.org Article -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -33,7 +32,6 @@
 }
 </script>
 
-<!-- Schema.org Breadcrumb -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -46,7 +44,6 @@
 }
 </script>
 
-<!-- Schema.org FAQ -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -63,32 +60,42 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,800;9..144,900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800;9..144,900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
 <style>
+/* ============================================================
+   CMC Blog — usa el design system del sitio madre v7-1
+   ============================================================ */
+
 :root {
-  --brand-deep: #0F3F68;
-  --brand-deep-soft: #E8F0F8;
-  --brand-navy: #0A2845;
+  --brand-deep: #1172AB;
+  --brand-deep-ink: #0B4F7A;
+  --brand-deep-soft: #E8F2F9;
+  --brand-navy: #0F3F68;
   --brand-teal: #4FBECE;
-  --brand-teal-soft: #E6F7FB;
+  --brand-teal-soft: #E6F6F8;
   --brand-teal-ink: #1F7E8C;
+  --ink-900: #0A1A28;
+  --ink-800: #11283C;
+  --ink-700: #223548;
+  --ink-600: #3C5166;
+  --ink-500: #5E7183;
+  --ink-400: #8A97A6;
+  --ink-300: #BAC4CE;
+  --ink-200: #DFE5EC;
+  --ink-100: #EEF2F6;
+  --ink-50:  #F7F9FB;
+  --paper:   #FFFFFF;
+  --accent-success: #16A34A;
   --accent-coral: #F2825E;
-  --accent-coral-soft: #FBE5DC;
-  --paper: #FFFFFF;
-  --ink-50: #F7F8FA;
-  --ink-100: #ECEEF2;
-  --ink-200: #D7DCE3;
-  --ink-300: #B5BDC9;
-  --ink-500: #6E7785;
-  --ink-600: #565E6B;
-  --ink-700: #3F4651;
-  --ink-900: #1B2230;
+  --accent-danger: #DC2626;
   --shadow-sm: 0 2px 8px rgba(15,63,104,0.06);
   --shadow: 0 8px 24px rgba(15,63,104,0.10);
+  --shadow-lg: 0 18px 40px rgba(15,63,104,0.14);
   --radius: 16px;
+  --radius-lg: 22px;
   --radius-pill: 999px;
-  --font-display: 'Fraunces', Georgia, serif;
+  --font-display: 'Fraunces', 'Times New Roman', serif;
   --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
@@ -102,23 +109,99 @@ body {
   background: var(--paper);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 a { color: inherit; text-decoration: none; }
 img { max-width: 100%; display: block; }
 .container { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
 
-/* Emergency strip + Hours bar (igual que v7-1) */
+.display {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+  color: var(--ink-900);
+  text-wrap: balance;
+}
+.display em, h2 em, h1 em {
+  font-style: italic;
+  color: var(--brand-teal-ink);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 14px;
+  background: var(--brand-teal-soft);
+  color: var(--brand-teal-ink);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-body);
+  font-weight: 700; font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+.eyebrow::before {
+  content: '';
+  width: 14px; height: 2px;
+  background: currentColor;
+  border-radius: 2px;
+}
+
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 13px 22px;
+  font-family: var(--font-body);
+  font-size: 14.5px; font-weight: 700;
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: transform .2s, background .2s, box-shadow .2s, border-color .2s;
+  text-decoration: none;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+}
+.btn-primary {
+  background: var(--brand-deep);
+  color: white;
+  box-shadow: 0 8px 18px -8px rgba(17,114,171,0.55);
+}
+.btn-primary:hover {
+  background: var(--brand-deep-ink);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px -8px rgba(17,114,171,0.6);
+}
+.btn-ghost {
+  color: var(--ink-800);
+  background: transparent;
+  border: 1.5px solid var(--ink-200);
+}
+.btn-ghost:hover { border-color: var(--brand-deep); color: var(--brand-deep); }
+.btn-wa {
+  background: #25D366;
+  color: white;
+  box-shadow: 0 6px 16px -4px rgba(37,211,102,0.45);
+}
+.btn-wa:hover {
+  background: #1ebe5a;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px -4px rgba(37,211,102,0.55);
+}
+.btn-lg { padding: 15px 28px; font-size: 15.5px; }
+
+/* Emergency strip */
 .emergency-strip {
-  background: #DC2626;
+  background: linear-gradient(90deg, #DC2626 0%, #B91C1C 100%);
   color: white;
   padding: 8px 0;
   font-size: 13px;
   text-align: center;
   font-weight: 600;
+  letter-spacing: 0.005em;
 }
-.emergency-strip a { color: #FECACA; text-decoration: underline; }
+.emergency-strip a { color: #FECACA; text-decoration: underline; font-weight: 700; }
 
-/* Header / nav */
+/* Navbar idéntico al sitio madre */
 .nav-wrap {
   position: sticky; top: 0; z-index: 50;
   background: rgba(255,255,255,0.94);
@@ -141,72 +224,69 @@ img { max-width: 100%; display: block; }
   text-transform: uppercase; letter-spacing: 0.18em;
   color: var(--ink-500); margin-top: 2px;
 }
-.nav-menu { display: flex; gap: 26px; margin-left: auto; }
+.nav-menu { display: flex; align-items: center; gap: 28px; margin-left: auto; }
 .nav-menu a {
-  font-size: 14.5px; font-weight: 500; color: var(--ink-700);
+  font-size: 14px; font-weight: 600;
+  color: var(--ink-700);
+  font-family: var(--font-display);
   transition: color .15s;
 }
 .nav-menu a:hover, .nav-menu a.active { color: var(--brand-deep); }
 .nav-cta { display: flex; gap: 10px; align-items: center; }
-.btn {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 11px 20px;
-  font-family: var(--font-body);
-  font-size: 14px; font-weight: 600;
-  border-radius: var(--radius-pill);
-  border: 1px solid transparent;
+.nav-toggle {
+  display: none;
+  width: 44px; height: 44px;
+  border-radius: 10px;
+  background: var(--ink-50);
+  border: 0;
+  align-items: center; justify-content: center;
   cursor: pointer;
-  transition: transform .2s, background .2s, box-shadow .2s, border-color .2s;
-  text-decoration: none;
-  letter-spacing: -0.005em;
 }
-.btn-primary { background: var(--brand-deep); color: white; }
-.btn-primary:hover { background: var(--brand-navy); transform: translateY(-1px); box-shadow: var(--shadow); }
-.btn-ghost { background: transparent; color: var(--ink-700); border-color: var(--ink-200); }
-.btn-ghost:hover { border-color: var(--brand-deep); color: var(--brand-deep); }
-.btn-wa { background: #25d366; color: white; }
-.btn-wa:hover { background: #1da851; transform: translateY(-1px); }
-.btn-lg { padding: 15px 28px; font-size: 15px; }
+@media (max-width: 960px) {
+  .nav-menu { display: none; }
+  .nav-toggle { display: inline-flex; }
+  .nav-cta .btn-ghost { display: none; }
+}
+@media (max-width: 640px) {
+  .nav-cta .btn-primary { display: none; }
+  .nav-wa-btn { padding: 9px 12px; font-size: 0; gap: 0; }
+  .nav-wa-btn svg { margin: 0; }
+  .nav-brand { font-size: 15px; gap: 8px; min-width: 0; flex-shrink: 1; overflow: hidden; }
+  .nav-brand .brand-logo-img { width: 36px; height: 36px; }
+  .nav-brand .brand-text { overflow: hidden; }
+  .nav-brand-sub { font-size: 9.5px; }
+  .nav { gap: 10px; height: 64px; }
+  .nav-cta { gap: 6px; flex-shrink: 0; }
+  .nav-toggle { width: 40px; height: 40px; }
+}
 
-/* Blog hero */
+/* Blog hero — usa la estética del hero del sitio madre */
 .blog-hero {
-  padding: 64px 0 48px;
-  background: linear-gradient(180deg, #F7FCFD 0%, #FFFFFF 100%);
+  padding: 56px 0 40px;
+  background: var(--paper);
   border-bottom: 1px solid var(--ink-100);
 }
 .breadcrumb {
-  display: flex; gap: 6px; align-items: center;
+  display: flex; gap: 8px; align-items: center;
+  font-family: var(--font-body);
   font-size: 13px; color: var(--ink-500);
-  margin-bottom: 22px; flex-wrap: wrap;
+  margin-bottom: 20px; flex-wrap: wrap;
 }
 .breadcrumb a { color: var(--ink-500); transition: color .15s; }
 .breadcrumb a:hover { color: var(--brand-deep); }
 .breadcrumb .sep { color: var(--ink-300); }
 .breadcrumb .current { color: var(--ink-700); font-weight: 600; }
-.eyebrow {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 6px 12px;
-  background: var(--brand-teal-soft);
-  color: var(--brand-teal-ink);
-  border-radius: var(--radius-pill);
-  font-family: var(--font-body);
-  font-weight: 700; font-size: 11.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  margin-bottom: 18px;
-}
-.eyebrow::before {
-  content: ''; width: 14px; height: 2px; background: currentColor; border-radius: 2px;
-}
+.blog-hero .eyebrow { margin-bottom: 18px; }
 .blog-h1 {
   font-family: var(--font-display);
   font-weight: 900;
-  font-size: clamp(32px, 5vw, 54px);
+  font-size: clamp(34px, 5.5vw, 60px);
   line-height: 1.05;
   letter-spacing: -0.025em;
   color: var(--ink-900);
-  margin: 0 0 20px;
-  max-width: 820px;
+  margin: 0 0 22px;
+  max-width: 880px;
+  text-wrap: balance;
 }
 .blog-h1 em {
   font-style: italic;
@@ -214,47 +294,61 @@ img { max-width: 100%; display: block; }
   font-weight: 700;
 }
 .blog-lead {
-  font-size: 18.5px;
+  font-size: 19px;
   line-height: 1.55;
   color: var(--ink-600);
-  max-width: 720px;
+  max-width: 740px;
   margin: 0 0 28px;
+  text-wrap: pretty;
 }
 .blog-meta {
-  display: flex; flex-wrap: wrap; gap: 18px; align-items: center;
+  display: flex; flex-wrap: wrap; gap: 18px 24px; align-items: center;
   font-size: 13.5px; color: var(--ink-500);
+  font-family: var(--font-body);
 }
 .blog-meta-item { display: inline-flex; align-items: center; gap: 6px; }
 .blog-meta-item svg { color: var(--brand-teal-ink); }
-.blog-meta-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--ink-300); }
+.blog-meta-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--ink-300); }
 
-/* Blog body */
-.blog-body { padding: 56px 0 32px; }
+/* Body */
+.blog-body { padding: 64px 0 48px; background: var(--ink-50); }
 .blog-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 64px;
+  gap: 56px;
   align-items: start;
 }
-.blog-content { max-width: 720px; }
+.blog-content {
+  max-width: 760px;
+  background: var(--paper);
+  padding: 48px 48px 36px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
 .blog-content h2 {
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: clamp(24px, 3vw, 32px);
-  line-height: 1.2;
-  letter-spacing: -0.015em;
+  font-size: clamp(24px, 3vw, 34px);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
   color: var(--ink-900);
-  margin: 56px 0 18px;
+  margin: 56px 0 16px;
   scroll-margin-top: 100px;
+  text-wrap: balance;
 }
-.blog-content h2:first-child { margin-top: 0; }
+.blog-content h2:first-of-type { margin-top: 0; }
+.blog-content h2 em {
+  font-style: italic;
+  color: var(--brand-teal-ink);
+  font-weight: 700;
+}
 .blog-content h3 {
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 19px;
   letter-spacing: -0.005em;
   color: var(--ink-900);
-  margin: 32px 0 10px;
+  margin: 28px 0 8px;
 }
 .blog-content p {
   font-size: 16.5px;
@@ -270,39 +364,40 @@ img { max-width: 100%; display: block; }
 }
 .blog-content ul li {
   position: relative;
-  padding: 8px 0 8px 28px;
-  font-size: 16px;
+  padding: 9px 0 9px 28px;
+  font-size: 15.5px;
   line-height: 1.6;
   color: var(--ink-700);
   border-bottom: 1px dashed var(--ink-100);
 }
-.blog-content ul li:last-child { border-bottom: 0; }
+.blog-content ul li:last-child { border-bottom: 0; padding-bottom: 0; }
 .blog-content ul li::before {
   content: '';
   position: absolute;
-  left: 0; top: 17px;
+  left: 0; top: 18px;
   width: 14px; height: 2px;
   background: var(--brand-teal);
   border-radius: 2px;
 }
 
-/* Callouts */
+/* Callouts con la paleta del sitio madre */
 .callout {
   display: flex; gap: 14px; align-items: flex-start;
   padding: 18px 22px;
   border-left: 4px solid var(--brand-teal);
   background: var(--brand-teal-soft);
   border-radius: 0 var(--radius) var(--radius) 0;
-  margin: 24px 0 28px;
+  margin: 26px 0;
 }
 .callout-warn { border-left-color: #F59E0B; background: #FEF3C7; }
-.callout-danger { border-left-color: #DC2626; background: #FEE2E2; }
+.callout-danger { border-left-color: var(--accent-danger); background: #FEE2E2; }
 .callout-info { border-left-color: var(--brand-deep); background: var(--brand-deep-soft); }
 .callout-icon {
-  flex-shrink: 0; width: 28px; height: 28px;
+  flex-shrink: 0;
+  width: 30px; height: 30px;
   display: grid; place-items: center;
   border-radius: 8px;
-  background: rgba(255,255,255,0.6);
+  background: rgba(255,255,255,0.65);
   color: var(--brand-teal-ink);
 }
 .callout-warn .callout-icon { color: #B45309; }
@@ -316,45 +411,57 @@ img { max-width: 100%; display: block; }
 }
 .callout p strong { color: var(--ink-900); }
 
-/* Symptom cards */
+/* Symptom cards estilo spec-card */
 .symptom-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 14px;
+  gap: 12px;
   margin: 22px 0 32px;
 }
 .symptom-card {
   display: flex; gap: 12px; align-items: flex-start;
   padding: 16px 18px;
   background: var(--paper);
-  border: 1px solid var(--ink-200);
-  border-left: 4px solid var(--brand-teal);
+  border: 1px solid var(--ink-100);
   border-radius: var(--radius);
+  transition: transform .2s, box-shadow .2s, border-color .2s;
+  position: relative;
+  overflow: hidden;
 }
+.symptom-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--brand-teal);
+}
+.symptom-card.is-danger::before { background: var(--accent-danger); }
+.symptom-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); border-color: var(--brand-teal); }
 .symptom-card .ico {
-  flex-shrink: 0; width: 32px; height: 32px;
+  flex-shrink: 0;
+  width: 32px; height: 32px;
   display: grid; place-items: center;
   background: var(--brand-teal-soft);
   color: var(--brand-teal-ink);
   border-radius: 8px;
 }
-.symptom-card .body { flex: 1; }
+.symptom-card.is-danger .ico { background: #FEE2E2; color: #991B1B; }
+.symptom-card .body { flex: 1; min-width: 0; }
 .symptom-card .body strong {
   display: block;
   font-family: var(--font-display);
   font-weight: 700; font-size: 15px;
   color: var(--ink-900);
-  margin-bottom: 2px;
+  margin-bottom: 3px;
+  letter-spacing: -0.005em;
 }
 .symptom-card .body span {
   font-size: 13.5px;
   color: var(--ink-600);
-  line-height: 1.45;
+  line-height: 1.5;
 }
-.symptom-card.is-danger { border-left-color: #DC2626; }
-.symptom-card.is-danger .ico { background: #FEE2E2; color: #991B1B; }
 
-/* Habit cards */
+/* Habit cards estilo why-card */
 .habit-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -362,64 +469,89 @@ img { max-width: 100%; display: block; }
   margin: 22px 0 32px;
 }
 .habit-card {
-  padding: 22px;
+  padding: 24px;
   background: var(--paper);
-  border: 1px solid var(--ink-200);
+  border: 1px solid var(--ink-100);
   border-radius: var(--radius);
   transition: transform .2s, box-shadow .2s;
 }
 .habit-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
-.habit-card .emoji { font-size: 28px; margin-bottom: 10px; line-height: 1; }
+.habit-card .ico-circle {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  background: var(--brand-teal-soft);
+  color: var(--brand-teal-ink);
+  display: grid; place-items: center;
+  font-size: 22px;
+  margin-bottom: 14px;
+}
 .habit-card h3 {
   font-family: var(--font-display);
   font-weight: 700; font-size: 17px;
-  color: var(--ink-900); margin: 0 0 8px !important;
+  color: var(--ink-900);
+  margin: 0 0 8px !important;
+  letter-spacing: -0.005em;
 }
 .habit-card p {
   margin: 0 !important;
   font-size: 14.5px !important;
-  line-height: 1.55 !important;
+  line-height: 1.6 !important;
   color: var(--ink-600) !important;
 }
 
-/* CTA inline */
+/* CTA inline al estilo del cta-band */
 .cta-inline {
-  margin: 40px 0;
-  padding: 36px 32px;
+  margin: 44px 0 36px;
+  padding: 36px 36px;
   background: linear-gradient(135deg, var(--brand-navy) 0%, var(--brand-deep) 100%);
   border-radius: var(--radius);
   color: white;
-  display: flex; gap: 24px; align-items: center; flex-wrap: wrap;
+  display: flex; gap: 28px; align-items: center; flex-wrap: wrap;
+  position: relative;
+  overflow: hidden;
 }
+.cta-inline::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(700px 300px at 95% -20%, rgba(79,190,206,0.32), transparent 55%);
+  pointer-events: none;
+}
+.cta-inline > * { position: relative; }
 .cta-inline > div { flex: 1; min-width: 240px; }
 .cta-inline h3 {
   font-family: var(--font-display);
   font-weight: 800; font-size: 22px;
   margin: 0 0 6px !important;
   color: white !important;
+  letter-spacing: -0.01em;
+}
+.cta-inline h3 em {
+  font-style: italic;
+  color: var(--brand-teal);
+  font-weight: 700;
 }
 .cta-inline p {
   margin: 0 !important;
   font-size: 14.5px !important;
-  color: rgba(255,255,255,0.85) !important;
+  color: rgba(255,255,255,0.86) !important;
+  line-height: 1.55;
 }
 .cta-inline .btn-wa {
-  background: #25d366;
-  color: white;
   padding: 14px 26px;
-  font-size: 14.5px;
-  font-weight: 700;
+  font-size: 15px;
 }
 
-/* FAQ */
-.faq-list { margin: 22px 0 32px; }
+/* FAQ con estética del sitio madre */
+.faq-list { margin: 22px 0 4px; }
 .faq-list details {
-  border: 1px solid var(--ink-200);
+  border: 1px solid var(--ink-100);
   border-radius: var(--radius);
   margin-bottom: 10px;
   overflow: hidden;
   background: var(--paper);
+  transition: border-color .2s, box-shadow .2s;
 }
+.faq-list details[open] { border-color: var(--brand-teal); box-shadow: var(--shadow-sm); }
 .faq-list summary {
   padding: 18px 22px;
   font-family: var(--font-display);
@@ -428,6 +560,7 @@ img { max-width: 100%; display: block; }
   cursor: pointer;
   list-style: none;
   display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  transition: color .2s;
 }
 .faq-list summary::-webkit-details-marker { display: none; }
 .faq-list summary svg { color: var(--ink-500); transition: transform .2s; flex-shrink: 0; }
@@ -438,72 +571,150 @@ img { max-width: 100%; display: block; }
   line-height: 1.65;
   color: var(--ink-600);
 }
+.faq-list .answer strong { color: var(--ink-900); }
 
 /* Sidebar */
-.blog-sidebar { position: sticky; top: 92px; }
+.blog-sidebar { position: sticky; top: 100px; }
 .side-card {
   padding: 24px;
   background: var(--paper);
-  border: 1px solid var(--ink-200);
+  border: 1px solid var(--ink-100);
   border-radius: var(--radius);
   margin-bottom: 16px;
 }
 .side-card h4 {
   font-family: var(--font-display);
-  font-weight: 800; font-size: 13px;
-  text-transform: uppercase; letter-spacing: 0.1em;
-  color: var(--brand-deep); margin: 0 0 16px;
+  font-weight: 800; font-size: 12px;
+  text-transform: uppercase; letter-spacing: 0.12em;
+  color: var(--brand-deep); margin: 0 0 14px;
 }
 .side-card-cta {
-  background: linear-gradient(135deg, var(--brand-teal) 0%, var(--brand-teal-ink) 100%);
+  background: linear-gradient(135deg, var(--brand-navy) 0%, var(--brand-deep) 100%);
   color: white; border: 0;
+  position: relative;
+  overflow: hidden;
 }
-.side-card-cta h4 { color: rgba(255,255,255,0.9); }
-.side-card-cta p { font-size: 14.5px; line-height: 1.55; color: rgba(255,255,255,0.92); margin: 0 0 14px; }
-.side-card-cta .btn { width: 100%; justify-content: center; background: white; color: var(--brand-navy); }
-.side-card-cta .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,0.18); }
+.side-card-cta::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(400px 300px at 100% 0%, rgba(79,190,206,0.30), transparent 55%);
+  pointer-events: none;
+}
+.side-card-cta > * { position: relative; }
+.side-card-cta h4 { color: rgba(255,255,255,0.88); }
+.side-card-cta p { font-size: 14.5px; line-height: 1.55; color: rgba(255,255,255,0.92); margin: 0 0 16px; }
+.side-card-cta .btn { width: 100%; justify-content: center; background: #25D366; color: white; }
+.side-card-cta .btn:hover { background: #1ebe5a; transform: translateY(-1px); }
+.side-card-hours { font-family: var(--font-body); }
+.side-card-hours .hr {
+  display: flex; justify-content: space-between;
+  padding: 8px 0;
+  font-size: 14px;
+  color: var(--ink-700);
+  border-bottom: 1px dashed var(--ink-100);
+}
+.side-card-hours .hr:last-of-type { border-bottom: 0; }
+.side-card-hours .hr strong { font-family: var(--font-display); font-weight: 700; color: var(--ink-900); }
+.side-card-hours .hr.is-closed strong { color: var(--accent-danger); }
+.side-card-hours .addr {
+  font-size: 13px; color: var(--ink-500);
+  padding-top: 12px;
+  border-top: 1px solid var(--ink-100);
+  margin-top: 10px;
+  line-height: 1.5;
+}
 
 .related-list { list-style: none; padding: 0; margin: 0; }
-.related-list li { margin-bottom: 10px; }
+.related-list li { margin-bottom: 6px; }
 .related-list a {
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: 10px;
   padding: 10px 12px;
-  font-size: 14.5px; font-weight: 500;
+  font-size: 14.5px; font-weight: 600;
   color: var(--ink-700);
+  font-family: var(--font-display);
   border-radius: 10px;
   transition: background .15s, color .15s;
 }
 .related-list a:hover { background: var(--ink-50); color: var(--brand-deep); }
 .related-list a svg { color: var(--brand-teal-ink); flex-shrink: 0; }
 
-/* Final CTA */
+/* Final CTA band idéntico al sitio madre */
 .cta-band {
   background: linear-gradient(135deg, var(--brand-navy) 0%, var(--brand-deep) 100%);
   color: white; padding: 80px 0; text-align: center;
   position: relative; overflow: hidden;
 }
+.cta-band::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(800px 400px at 95% -10%, rgba(79,190,206,0.32), transparent 55%),
+    radial-gradient(600px 600px at 5% 120%, rgba(79,190,206,0.16), transparent 55%);
+  pointer-events: none;
+}
+.cta-band > .container { position: relative; }
 .cta-band h2 {
   font-family: var(--font-display);
   font-weight: 800; font-size: clamp(30px, 4vw, 48px);
   letter-spacing: -0.02em; line-height: 1.05;
   margin: 0 0 14px; color: white;
 }
-.cta-band p { font-size: 17px; max-width: 580px; margin: 0 auto 32px; color: rgba(255,255,255,0.9); }
+.cta-band h2 em {
+  font-style: italic;
+  color: var(--brand-teal);
+  font-weight: 700;
+}
+.cta-band p { font-size: 17px; max-width: 580px; margin: 0 auto 32px; color: rgba(255,255,255,0.92); }
 .cta-band .ctas { display: inline-flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
-.cta-band .btn-white { background: white; color: var(--brand-navy); }
-.cta-band .btn-white:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,0.2); }
+.cta-band .btn-wa {
+  padding: 18px 32px;
+  font-size: 16px;
+  font-weight: 800;
+  font-family: var(--font-display);
+  box-shadow: 0 12px 32px rgba(37,211,102,0.42), inset 0 0 0 2px rgba(255,255,255,0.18);
+}
+.cta-band .btn-wa:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 16px 40px rgba(37,211,102,0.55), inset 0 0 0 2px rgba(255,255,255,0.28);
+}
+.cta-band .btn-white {
+  background: white;
+  color: var(--brand-navy);
+  border-color: rgba(255,255,255,0.6);
+}
+.cta-band .btn-white:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.2);
+}
 
-/* Footer (compact, alineado con sitio v7-1) */
+/* Footer idéntico al sitio madre */
 .footer {
   background: #0A1A28;
   color: rgba(255,255,255,0.72);
-  padding: 60px 0 26px;
+  padding: 84px 0 28px;
+  position: relative;
+  overflow: hidden;
 }
+.footer::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 6px;
+  background: linear-gradient(90deg, var(--brand-teal) 0%, var(--brand-deep) 50%, var(--brand-teal) 100%);
+}
+.footer::after {
+  content: '';
+  position: absolute;
+  top: -1px; left: 0; right: 0; height: 60px;
+  background: radial-gradient(ellipse 80% 60px at 50% 0%, rgba(79,190,206,0.18), transparent 70%);
+  pointer-events: none;
+}
+.footer > .container { position: relative; z-index: 1; }
 .footer-grid {
   display: grid;
   grid-template-columns: 1.6fr 1fr 1fr 1fr;
   gap: 40px;
-  margin-bottom: 42px;
+  margin-bottom: 44px;
   align-items: start;
 }
 .footer-brand .name {
@@ -512,66 +723,78 @@ img { max-width: 100%; display: block; }
   margin-bottom: 14px;
 }
 .footer-brand .name img { width: 44px; height: 44px; object-fit: contain; }
-.footer-brand-text { display: flex; flex-direction: column; line-height: 1.1; letter-spacing: -0.02em; }
+.footer-brand-text {
+  display: flex; flex-direction: column;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
 .footer-brand-sub {
   font-family: var(--font-body); font-size: 11px; font-weight: 500;
   text-transform: uppercase; letter-spacing: 0.18em;
   color: rgba(255,255,255,0.55); margin-top: 4px;
 }
 .footer-brand p {
-  font-size: 14px; line-height: 1.6; max-width: 360px;
-  margin-bottom: 18px; color: rgba(255,255,255,0.7);
+  font-size: 14px; line-height: 1.6;
+  max-width: 360px;
+  margin-bottom: 18px;
+  color: rgba(255,255,255,0.7);
 }
 .footer-col h4 {
-  color: white; font-family: var(--font-display); font-weight: 800;
-  font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em;
-  margin: 0 0 16px;
+  color: white;
+  font-family: var(--font-display); font-weight: 800;
+  font-size: 13px;
+  text-transform: uppercase; letter-spacing: 0.1em;
+  margin: 0 0 18px;
 }
 .footer-col ul { list-style: none; padding: 0; margin: 0; }
-.footer-col li { margin-bottom: 9px; }
+.footer-col li { margin-bottom: 10px; }
 .footer-col a {
-  font-size: 14px; color: rgba(255,255,255,0.72);
+  font-size: 14px;
+  color: rgba(255,255,255,0.72);
   transition: color .15s;
 }
 .footer-col a:hover { color: white; }
 .footer-foot {
   border-top: 1px solid rgba(255,255,255,0.08);
-  padding-top: 22px;
+  padding-top: 24px;
   display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
-  font-size: 12.5px; color: rgba(255,255,255,0.55);
+  font-size: 12.5px;
+  color: rgba(255,255,255,0.55);
 }
 
 /* WA float */
 .wa-float {
-  position: fixed; right: 22px; bottom: 22px; z-index: 70;
+  position: fixed;
+  right: 22px; bottom: 22px;
+  z-index: 70;
   width: 60px; height: 60px;
-  border-radius: 50%; background: #25D366; color: white;
+  border-radius: 50%;
+  background: #25D366;
+  color: white;
   display: grid; place-items: center;
-  box-shadow: 0 8px 22px rgba(37,211,102,0.4);
+  box-shadow: 0 12px 28px rgba(37,211,102,0.42);
   transition: transform .2s;
 }
 .wa-float:hover { transform: scale(1.06); }
 
 /* Responsive */
 @media (max-width: 960px) {
-  .blog-grid { grid-template-columns: 1fr; gap: 36px; }
+  .blog-grid { grid-template-columns: 1fr; gap: 32px; }
   .blog-sidebar { position: static; }
-  .nav-menu { display: none; }
   .symptom-grid, .habit-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 720px) {
   .container { padding: 0 18px; }
-  .blog-hero { padding: 40px 0 32px; }
-  .blog-body { padding: 36px 0 24px; }
-  .blog-content h2 { margin-top: 40px; font-size: 24px; }
-  .cta-inline { padding: 28px 24px; }
+  .blog-hero { padding: 36px 0 28px; }
+  .blog-body { padding: 36px 0 28px; }
+  .blog-content { padding: 28px 22px 24px; border-radius: var(--radius); }
+  .blog-content h2 { margin-top: 36px; font-size: 24px; }
+  .cta-inline { padding: 26px 22px; }
   .footer-grid { grid-template-columns: 1fr 1fr; gap: 28px; }
   .footer-brand { grid-column: 1 / -1; }
-  .nav-cta .btn:not(.btn-wa) { display: none; }
 }
 @media (max-width: 480px) {
   .footer-grid { grid-template-columns: 1fr; }
-  .nav-cta .btn-wa span { display: none; }
 }
 </style>
 </head>
@@ -591,7 +814,7 @@ img { max-width: 100%; display: block; }
           <span class="nav-brand-sub">Centro Médico</span>
         </span>
       </a>
-      <div class="nav-menu">
+      <div class="nav-menu" id="nav-menu">
         <a href="/sitio/v7-1#especialidades">Especialidades</a>
         <a href="/sitio/v7-1#horarios">Horarios</a>
         <a href="/blog" class="active">Blog</a>
@@ -599,10 +822,17 @@ img { max-width: 100%; display: block; }
         <a href="/sitio/v7-1#contacto">Contacto</a>
       </div>
       <div class="nav-cta">
-        <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20una%20hora%20de%20Cardiolog%C3%ADa." class="btn btn-wa" aria-label="Agendar Cardiología por WhatsApp">
+        <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20una%20consulta%20de%20Cardiolog%C3%ADa." class="btn btn-wa nav-wa-btn" aria-label="Agendar Cardiología por WhatsApp">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.8-.8-1.4-1.7-1.5-2-.2-.3 0-.4.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 2-1.4.2-.6.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.4 5L2 22l5.1-1.3c1.4.8 3 1.3 4.9 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2"/></svg>
-          <span>Agendar</span>
+          WhatsApp
         </a>
+        <a href="/sitio/v7-1" class="btn btn-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Agendar
+        </a>
+        <button class="nav-toggle" aria-label="Abrir menú" id="nav-toggle">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
       </div>
     </nav>
   </div>
@@ -621,7 +851,7 @@ img { max-width: 100%; display: block; }
       <span class="current">Cardiología</span>
     </nav>
     <div class="eyebrow">Cardiología · Salud cardiovascular</div>
-    <h1 class="blog-h1">Tu corazón merece los mejores cuidados: <em>cardiología</em> especializada</h1>
+    <h1 class="blog-h1">Tu corazón merece <em>los mejores cuidados</em></h1>
     <p class="blog-lead">
       Las enfermedades cardiovasculares son la primera causa de muerte en Chile. Aprende a reconocer las señales de alerta, cuáles son los exámenes preventivos y cómo cuidar tu corazón día a día.
     </p>
@@ -636,7 +866,10 @@ img { max-width: 100%; display: block; }
         Actualizado may 2026
       </span>
       <span class="blog-meta-dot"></span>
-      <span class="blog-meta-item">Equipo CMC</span>
+      <span class="blog-meta-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Equipo CMC
+      </span>
     </div>
   </div>
 </section>
@@ -648,7 +881,7 @@ img { max-width: 100%; display: block; }
 
       <article class="blog-content">
 
-        <h2>¿Qué es la Cardiología?</h2>
+        <h2>¿Qué es la <em>Cardiología</em>?</h2>
         <p>La cardiología es la especialidad médica dedicada al estudio, diagnóstico y tratamiento de las enfermedades del corazón y del sistema cardiovascular. El cardiólogo es el médico especialista en el corazón, las arterias, las venas y los trastornos que afectan su funcionamiento.</p>
         <p>En Chile, las enfermedades cardiovasculares representan la <strong>primera causa de mortalidad</strong>, por lo que la atención cardiológica preventiva y oportuna es de vital importancia para la salud pública.</p>
 
@@ -659,7 +892,7 @@ img { max-width: 100%; display: block; }
           <p><strong>Estadística clave:</strong> según el Minsal, las enfermedades del sistema circulatorio representan el 27% de todas las muertes en Chile. La detección temprana puede salvar vidas.</p>
         </div>
 
-        <h2>Señales de alerta cardiovascular</h2>
+        <h2><em>Señales de alerta</em> cardiovascular</h2>
         <p>No ignores estos síntomas: pueden ser la primera señal de una enfermedad cardíaca tratable.</p>
         <div class="symptom-grid">
           <div class="symptom-card">
@@ -667,7 +900,7 @@ img { max-width: 100%; display: block; }
             <div class="body"><strong>Dolor o presión en el pecho</strong><span>Sensación de opresión, ardor o peso en el pecho, especialmente con el esfuerzo físico o el estrés.</span></div>
           </div>
           <div class="symptom-card">
-            <div class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v6m0 4v10"/><circle cx="12" cy="10" r="2"/></svg></div>
+            <div class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h6l3-9 4 18 3-9h4"/></svg></div>
             <div class="body"><strong>Dificultad para respirar</strong><span>Falta de aire al realizar actividades cotidianas que antes hacías sin problemas.</span></div>
           </div>
           <div class="symptom-card">
@@ -688,7 +921,7 @@ img { max-width: 100%; display: block; }
           </div>
         </div>
 
-        <h2>Emergencias cardíacas: llama al 131 de inmediato</h2>
+        <h2>Emergencias cardíacas: <em>llama al 131</em> de inmediato</h2>
         <p>Estos síntomas son señal de un posible infarto u otra emergencia cardíaca. <strong>No esperes</strong>: actúa de inmediato.</p>
         <div class="symptom-grid">
           <div class="symptom-card is-danger"><div class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><div class="body"><strong>Dolor irradiado</strong><span>Dolor intenso en el pecho que irradia al brazo izquierdo o mandíbula.</span></div></div>
@@ -704,7 +937,7 @@ img { max-width: 100%; display: block; }
           <p><strong>Ante sospecha de infarto:</strong> llama al SAMU 131, mantén al paciente en reposo, afloja la ropa ajustada y no le des agua ni medicamentos sin indicación médica. <em>El tiempo es músculo cardíaco.</em></p>
         </div>
 
-        <h2>Exámenes cardiológicos preventivos</h2>
+        <h2>Exámenes cardiológicos <em>preventivos</em></h2>
         <p>El cardiólogo dispone de varios exámenes para evaluar la salud del corazón antes de que aparezcan síntomas graves:</p>
         <ul>
           <li><strong>Electrocardiograma (ECG):</strong> registro eléctrico del corazón, detecta arritmias y signos de daño miocárdico.</li>
@@ -717,47 +950,55 @@ img { max-width: 100%; display: block; }
 
         <div class="cta-inline">
           <div>
-            <h3>Agenda tu evaluación cardiológica</h3>
+            <h3>Agenda tu evaluación <em>cardiológica</em></h3>
             <p>Atención con Dr. Miguel Millán · Fechas mensuales según disponibilidad. Te confirmamos por WhatsApp.</p>
           </div>
-          <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20una%20consulta%20de%20Cardiolog%C3%ADa." target="_blank" rel="noopener" class="btn btn-wa btn-lg">
+          <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20una%20consulta%20de%20Cardiolog%C3%ADa." target="_blank" rel="noopener" class="btn btn-wa">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.8-.8-1.4-1.7-1.5-2-.2-.3 0-.4.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 2-1.4.2-.6.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.4 5L2 22l5.1-1.3c1.4.8 3 1.3 4.9 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2"/></svg>
             Agendar por WhatsApp
           </a>
         </div>
 
-        <h2>Hábitos que protegen tu corazón</h2>
+        <h2>Hábitos que <em>protegen tu corazón</em></h2>
         <p>La salud cardiovascular se cuida día a día con decisiones cotidianas:</p>
         <div class="habit-grid">
           <div class="habit-card">
-            <div class="emoji">🏃</div>
+            <div class="ico-circle">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13" cy="4" r="2"/><path d="m6 14 2.5-3 2.5 1 3-3 4 5"/><path d="M11 12v9"/><path d="M16 21v-5"/><path d="M3 21h18"/></svg>
+            </div>
             <h3>Muévete cada día</h3>
             <p>150 minutos semanales de actividad física moderada reducen el riesgo cardiovascular en un 35%. Caminar 30 minutos diarios es un excelente punto de partida.</p>
           </div>
           <div class="habit-card">
-            <div class="emoji">🥗</div>
+            <div class="ico-circle">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            </div>
             <h3>Dieta cardioprotectora</h3>
-            <p>Consume más frutas, verduras, pescado azul, nueces y aceite de oliva. Reduce el sodio, las grasas saturadas y los alimentos ultraprocesados.</p>
+            <p>Más frutas, verduras, pescado azul, nueces y aceite de oliva. Reduce el sodio, las grasas saturadas y los alimentos ultraprocesados.</p>
           </div>
           <div class="habit-card">
-            <div class="emoji">🚭</div>
+            <div class="ico-circle">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+            </div>
             <h3>No fumes</h3>
             <p>El tabaco duplica el riesgo de infarto. A los 5 años de dejar de fumar, el riesgo cardiovascular se equipara al de un no fumador.</p>
           </div>
           <div class="habit-card">
-            <div class="emoji">📊</div>
+            <div class="ico-circle">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg>
+            </div>
             <h3>Controla tus cifras</h3>
-            <p>Mantén controlada la presión arterial (&lt;130/80 mmHg), el colesterol LDL y la glicemia. Son los principales predictores de riesgo cardiovascular.</p>
+            <p>Mantén la presión arterial bajo 130/80, el colesterol LDL y la glicemia controlados. Son los tres principales predictores cardiovasculares.</p>
           </div>
         </div>
 
-        <h2>Preguntas frecuentes sobre cardiología</h2>
+        <h2>Preguntas <em>frecuentes</em> sobre cardiología</h2>
         <div class="faq-list">
           <details>
             <summary>¿A qué edad debo hacerme mi primer control cardiológico?
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
             </summary>
-            <div class="answer">Se recomienda evaluación cardiológica preventiva a partir de los 40 años, o antes si tienes antecedentes familiares de enfermedad cardíaca, hipertensión, diabetes o factores de riesgo conocidos.</div>
+            <div class="answer">Se recomienda evaluación cardiológica preventiva a partir de los <strong>40 años</strong>, o antes si tienes antecedentes familiares de enfermedad cardíaca, hipertensión, diabetes o factores de riesgo conocidos.</div>
           </details>
           <details>
             <summary>¿El estrés daña el corazón?
@@ -781,7 +1022,7 @@ img { max-width: 100%; display: block; }
             <summary>¿Atienden con Fonasa?
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
             </summary>
-            <div class="answer">Atendemos Fonasa y particular. Te orientamos sobre bonificaciones disponibles para la consulta y los exámenes cardiológicos al momento de agendar.</div>
+            <div class="answer"><strong>Sí.</strong> Atendemos Fonasa y particular. Te orientamos sobre bonificaciones disponibles para la consulta y los exámenes cardiológicos al momento de agendar.</div>
           </details>
         </div>
 
@@ -791,10 +1032,17 @@ img { max-width: 100%; display: block; }
         <div class="side-card side-card-cta">
           <h4>Agenda tu hora</h4>
           <p>Cardiología con confirmación inmediata por WhatsApp. Atendemos Fonasa y particular.</p>
-          <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20una%20consulta%20de%20Cardiolog%C3%ADa." target="_blank" rel="noopener" class="btn">
+          <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20una%20consulta%20de%20Cardiolog%C3%ADa." target="_blank" rel="noopener" class="btn btn-wa">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.8-.8-1.4-1.7-1.5-2-.2-.3 0-.4.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 2-1.4.2-.6.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.4 5L2 22l5.1-1.3c1.4.8 3 1.3 4.9 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2"/></svg>
             Agendar Cardiología
           </a>
+        </div>
+        <div class="side-card side-card-hours">
+          <h4>Horarios de atención</h4>
+          <div class="hr"><span>Lun – Vie</span><strong>08:00 – 21:00</strong></div>
+          <div class="hr"><span>Sábado</span><strong>09:00 – 14:00</strong></div>
+          <div class="hr is-closed"><span>Domingo</span><strong>Cerrado</strong></div>
+          <div class="addr">República 102, Carampangue · Provincia de Arauco</div>
         </div>
         <div class="side-card">
           <h4>Otras especialidades</h4>
@@ -806,12 +1054,6 @@ img { max-width: 100%; display: block; }
             <li><a href="/blog/psicologia-adulto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg> Psicología Adulto</a></li>
           </ul>
         </div>
-        <div class="side-card">
-          <h4>Horarios</h4>
-          <p style="font-size: 14.5px; color: var(--ink-700); margin: 0 0 6px;"><strong>Lun – Vie:</strong> 08:00 – 21:00</p>
-          <p style="font-size: 14.5px; color: var(--ink-700); margin: 0 0 6px;"><strong>Sábado:</strong> 09:00 – 14:00</p>
-          <p style="font-size: 13.5px; color: var(--ink-500); margin: 12px 0 0;">República 102, Carampangue · Provincia de Arauco</p>
-        </div>
       </aside>
 
     </div>
@@ -821,7 +1063,7 @@ img { max-width: 100%; display: block; }
 <!-- FINAL CTA -->
 <section class="cta-band">
   <div class="container">
-    <h2>Tu corazón no espera</h2>
+    <h2>Tu corazón <em>no espera</em></h2>
     <p>Agenda tu consulta cardiológica por WhatsApp. Disponibilidad real consultable las 24 horas.</p>
     <div class="ctas">
       <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20una%20consulta%20de%20Cardiolog%C3%ADa." target="_blank" rel="noopener" class="btn btn-wa btn-lg">
@@ -838,7 +1080,7 @@ img { max-width: 100%; display: block; }
 
 </main>
 
-<!-- FOOTER -->
+<!-- FOOTER idéntico al sitio madre -->
 <footer class="footer">
   <div class="container">
     <div class="footer-grid">
@@ -847,7 +1089,7 @@ img { max-width: 100%; display: block; }
           <img src="https://centromedicocarampangue.cl/wp-content/uploads/2025/08/cropped-logo-carampangue.png" alt="Logo CMC" />
           <span class="footer-brand-text">Carampangue<span class="footer-brand-sub">Centro Médico</span></span>
         </div>
-        <p>19 especialidades médicas y dentales en el corazón de la Provincia de Arauco. Salud cercana, profesional y humana.</p>
+        <p><strong style="color:rgba(255,255,255,0.92);font-style:italic;font-family:var(--font-display);font-weight:600;">Cuidamos a tu familia, cerca de casa.</strong><br>19 especialidades médicas y dentales en el corazón de la Provincia de Arauco.</p>
       </div>
       <div class="footer-col">
         <h4>Contacto</h4>
