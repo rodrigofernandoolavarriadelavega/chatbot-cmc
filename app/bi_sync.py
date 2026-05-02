@@ -360,10 +360,7 @@ def stats_profesional(id_profesional: int, desde: str = "2024-01-01") -> dict:
         "tarifa_real_promedio": round(tarifa_real),
         "cobertura_pct": cobertura_pct,
         "por_dia": por_dia,
-        "por_mes": {m: {"atend": v["atend"], "monto_total": v["monto_total"],
-                         "monto_cobrado": v["monto_cobrado"],
-                         "atend_pagadas": v["atend_pagadas"]}
-                     for m, v in por_mes.items()},
+        "por_mes": por_mes,  # incluye atend, atendidos_total, pagaron, controles_gratis, monto_total, monto_cobrado
         "por_dow": dow_stats,
         "proyeccion": proyeccion,
         "kpis": {
