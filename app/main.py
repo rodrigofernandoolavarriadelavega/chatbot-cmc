@@ -3929,7 +3929,8 @@ async def webhook(request: Request):
             log.info("MSG tipo desconocido from=%s type=%s — ignorado", phone, msg_type)
             return Response(status_code=200)
 
-        log.info("MSG from=%s id=%s type=%s text=%r", phone, msg_id, msg_type, texto[:100])
+        from session import _scrub_pii as _sp
+        log.info("MSG from=%s id=%s type=%s text=%r", phone, msg_id, msg_type, _sp(texto[:100]))
 
         from resilience import get_phone_lock
         async with get_phone_lock(phone):

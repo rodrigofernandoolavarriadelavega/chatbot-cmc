@@ -1253,6 +1253,20 @@ def purge_old_data(msgs_days: int = 90, events_days: int = 180) -> dict:
     return {"messages_deleted": msgs_del, "events_deleted": events_del}
 
 
+# FIX-18: scrub PII en logs (RUT, teléfonos extra) ─────────────────────────
+_RX_RUT_PII = re.compile(
+    r"\b(\d{1,2})[.\s]?(\d{3})[.\s]?(\d{3})[-\s]?([0-9kK])\b"
+)
+
+def _scrub_pii(text: str) -> str:
+    """Enmascara RUTs chilenos para logging (no para BD de mensajes)."""
+    if not text:
+        return text
+    def _mask_rut(m: re.Match) -> str:
+        return f"{m.group(1)}.***.**{m.group(3)[-1]}-{m.group(4)}"
+    return _RX_RUT_PII.sub(_mask_rut, text)
+
+
 def log_message(phone: str, direction: str, text: str, state: str = "IDLE",
                 canal: str = "whatsapp", wamid: str | None = None):
     """Registra un mensaje entrante ('in') o saliente ('out') en el historial."""
