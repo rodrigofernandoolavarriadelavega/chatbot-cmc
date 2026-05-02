@@ -1,0 +1,670 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Suplementos MVP · Control de Inventario</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  .tab-active { background: linear-gradient(135deg, #10b981, #0d9488); color: white; }
+  .kpi-card { transition: transform 0.15s; }
+  .kpi-card:hover { transform: translateY(-2px); }
+</style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+<header class="bg-white border-b shadow-sm sticky top-0 z-40">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-2xl shadow-lg">💪</div>
+      <div>
+        <h1 class="text-lg font-bold">Suplementos MVP</h1>
+        <p class="text-xs text-slate-500">Inventario · ganancias · control interno</p>
+      </div>
+    </div>
+    <div class="flex gap-2">
+      <button onclick="exportData()" class="px-3 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50">⬇️ Exportar</button>
+      <label class="px-3 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50 cursor-pointer">
+        ⬆️ Importar
+        <input type="file" accept=".json" class="hidden" onchange="importData(event)">
+      </label>
+      <button onclick="seedData()" class="px-3 py-2 text-sm bg-slate-900 text-white rounded-lg hover:bg-slate-700">🎲 Datos demo</button>
+      <button onclick="if(confirm('¿Borrar todo?'))resetData()" class="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg">🗑️</button>
+    </div>
+  </div>
+  <nav class="max-w-7xl mx-auto px-6 flex gap-1 border-t border-slate-100">
+    <button class="tab-btn tab-active px-5 py-3 text-sm font-medium rounded-t-lg" data-tab="dashboard">📊 Dashboard</button>
+    <button class="tab-btn px-5 py-3 text-sm font-medium rounded-t-lg hover:bg-slate-50" data-tab="inventario">📦 Inventario</button>
+    <button class="tab-btn px-5 py-3 text-sm font-medium rounded-t-lg hover:bg-slate-50" data-tab="ventas">💰 Ventas</button>
+    <button class="tab-btn px-5 py-3 text-sm font-medium rounded-t-lg hover:bg-slate-50" data-tab="analisis">📈 Análisis</button>
+  </nav>
+</header>
+
+<main class="max-w-7xl mx-auto px-6 py-8">
+
+  <!-- DASHBOARD -->
+  <section id="tab-dashboard" class="tab-content space-y-6">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="kpi-card bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+        <p class="text-xs text-slate-500 uppercase tracking-wide">Valor inventario</p>
+        <p id="kpi-stock" class="text-2xl font-bold mt-2">$0</p>
+        <p id="kpi-stock-sub" class="text-xs text-slate-400 mt-1">0 unidades totales</p>
+      </div>
+      <div class="kpi-card bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+        <p class="text-xs text-slate-500 uppercase tracking-wide">Ventas del mes</p>
+        <p id="kpi-ventas" class="text-2xl font-bold mt-2 text-emerald-600">$0</p>
+        <p id="kpi-ventas-sub" class="text-xs text-slate-400 mt-1">0 transacciones</p>
+      </div>
+      <div class="kpi-card bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+        <p class="text-xs text-slate-500 uppercase tracking-wide">Ganancia del mes</p>
+        <p id="kpi-ganancia" class="text-2xl font-bold mt-2 text-teal-600">$0</p>
+        <p id="kpi-margen" class="text-xs text-slate-400 mt-1">Margen: 0%</p>
+      </div>
+      <div class="kpi-card bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+        <p class="text-xs text-slate-500 uppercase tracking-wide">Alertas</p>
+        <p id="kpi-alertas" class="text-2xl font-bold mt-2 text-amber-600">0</p>
+        <p class="text-xs text-slate-400 mt-1">Productos bajo stock mínimo</p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 lg:col-span-2">
+        <h3 class="font-semibold mb-4">Top 5 productos por ingresos</h3>
+        <canvas id="chart-top"></canvas>
+      </div>
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+        <h3 class="font-semibold mb-4">Inventario por categoría</h3>
+        <canvas id="chart-cat"></canvas>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+      <h3 class="font-semibold mb-4">⚠️ Stock crítico</h3>
+      <div id="alertas-list" class="space-y-2 text-sm"></div>
+    </div>
+  </section>
+
+  <!-- INVENTARIO -->
+  <section id="tab-inventario" class="tab-content hidden space-y-4">
+    <div class="flex items-center justify-between gap-4">
+      <input id="search-inv" placeholder="🔍 Buscar producto…" class="flex-1 px-4 py-2 border border-slate-300 rounded-lg" oninput="renderInventario()">
+      <button onclick="openProductModal()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium whitespace-nowrap">+ Agregar producto</button>
+    </div>
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-xs uppercase text-slate-500">
+          <tr>
+            <th class="text-left px-4 py-3">Producto</th>
+            <th class="text-left px-4 py-3">Categoría</th>
+            <th class="text-right px-4 py-3">Stock</th>
+            <th class="text-right px-4 py-3">Min</th>
+            <th class="text-right px-4 py-3">Compra</th>
+            <th class="text-right px-4 py-3">Venta</th>
+            <th class="text-right px-4 py-3">Margen</th>
+            <th class="text-right px-4 py-3">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="inv-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- VENTAS -->
+  <section id="tab-ventas" class="tab-content hidden space-y-4">
+    <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+      <h3 class="font-semibold mb-4">💰 Registrar venta</h3>
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+        <select id="venta-prod" class="md:col-span-2 px-3 py-2 border border-slate-300 rounded-lg"></select>
+        <input id="venta-qty" type="number" min="1" value="1" placeholder="Cantidad" class="px-3 py-2 border border-slate-300 rounded-lg">
+        <select id="venta-pago" class="px-3 py-2 border border-slate-300 rounded-lg">
+          <option>Efectivo</option><option>Débito</option><option>Crédito</option><option>Transferencia</option>
+        </select>
+        <button onclick="registrarVenta()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium">Registrar</button>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+        <p class="text-xs text-slate-500 uppercase">Hoy</p>
+        <p id="ventas-hoy" class="text-xl font-bold mt-1">$0</p>
+      </div>
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+        <p class="text-xs text-slate-500 uppercase">Últimos 7 días</p>
+        <p id="ventas-semana" class="text-xl font-bold mt-1">$0</p>
+      </div>
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+        <p class="text-xs text-slate-500 uppercase">Mes actual</p>
+        <p id="ventas-mes" class="text-xl font-bold mt-1">$0</p>
+      </div>
+    </div>
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-xs uppercase text-slate-500">
+          <tr>
+            <th class="text-left px-4 py-3">Fecha</th>
+            <th class="text-left px-4 py-3">Producto</th>
+            <th class="text-right px-4 py-3">Cant</th>
+            <th class="text-right px-4 py-3">Precio</th>
+            <th class="text-right px-4 py-3">Total</th>
+            <th class="text-right px-4 py-3">Ganancia</th>
+            <th class="text-left px-4 py-3">Pago</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="ventas-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ANALISIS -->
+  <section id="tab-analisis" class="tab-content hidden space-y-4">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+        <h3 class="font-semibold mb-1">Matriz rotación × margen</h3>
+        <p class="text-xs text-slate-500 mb-3">🟢 Prioridad · 🔵 Volumen · 🟡 Nicho · 🔴 Evaluar</p>
+        <canvas id="chart-bcg"></canvas>
+      </div>
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+        <h3 class="font-semibold mb-1">Clasificación estratégica</h3>
+        <p class="text-xs text-slate-500 mb-3">Basada en la mediana de rotación y margen</p>
+        <div id="clasificacion-list" class="space-y-2 text-sm max-h-96 overflow-y-auto"></div>
+      </div>
+    </div>
+    <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+      <h3 class="font-semibold mb-3">🏆 Pareto 80/20 — productos que generan el 80% de tus ingresos</h3>
+      <div id="pareto-list" class="space-y-1 text-sm"></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- MODAL PRODUCTO -->
+<div id="modal-producto" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl p-6 max-w-lg w-full shadow-2xl">
+    <h3 id="modal-title" class="text-lg font-bold mb-4">Nuevo producto</h3>
+    <form id="form-producto" class="space-y-3">
+      <input type="hidden" id="p-id">
+      <div>
+        <label class="text-xs font-medium text-slate-600">Nombre</label>
+        <input id="p-nombre" required class="w-full px-3 py-2 border border-slate-300 rounded-lg">
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs font-medium text-slate-600">Categoría</label>
+          <select id="p-categoria" class="w-full px-3 py-2 border border-slate-300 rounded-lg">
+            <option>Proteína</option><option>Creatina</option><option>Pre-entreno</option>
+            <option>Aminoácidos</option><option>Vitaminas</option><option>Quemador</option>
+            <option>Ganador de masa</option><option>Otro</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-medium text-slate-600">Proveedor</label>
+          <input id="p-proveedor" class="w-full px-3 py-2 border border-slate-300 rounded-lg">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs font-medium text-slate-600">Stock actual</label>
+          <input id="p-stock" type="number" min="0" value="0" required class="w-full px-3 py-2 border border-slate-300 rounded-lg">
+        </div>
+        <div>
+          <label class="text-xs font-medium text-slate-600">Stock mínimo</label>
+          <input id="p-min" type="number" min="0" value="5" required class="w-full px-3 py-2 border border-slate-300 rounded-lg">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs font-medium text-slate-600">Precio compra ($)</label>
+          <input id="p-compra" type="number" min="0" required class="w-full px-3 py-2 border border-slate-300 rounded-lg">
+        </div>
+        <div>
+          <label class="text-xs font-medium text-slate-600">Precio venta ($)</label>
+          <input id="p-venta" type="number" min="0" required class="w-full px-3 py-2 border border-slate-300 rounded-lg">
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" onclick="closeProductModal()" class="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50">Cancelar</button>
+        <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+// ============ STATE ============
+const STORAGE_KEY = 'suplementos_mvp_v1';
+let state = loadState();
+let charts = {};
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return { productos: [], ventas: [] };
+}
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+const CLP = v => '$' + Math.round(v || 0).toLocaleString('es-CL');
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const escapeHtml = s => String(s || '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+
+// ============ TABS ============
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tab = btn.dataset.tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('tab-active'));
+    btn.classList.add('tab-active');
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+    document.getElementById('tab-' + tab).classList.remove('hidden');
+    if (tab === 'dashboard') renderDashboard();
+    if (tab === 'inventario') renderInventario();
+    if (tab === 'ventas') renderVentas();
+    if (tab === 'analisis') renderAnalisis();
+  });
+});
+
+// ============ DASHBOARD ============
+function renderDashboard() {
+  const totalUnidades = state.productos.reduce((a, p) => a + (+p.stock || 0), 0);
+  const valorInv = state.productos.reduce((a, p) => a + (+p.stock * +p.precio_compra || 0), 0);
+  document.getElementById('kpi-stock').textContent = CLP(valorInv);
+  document.getElementById('kpi-stock-sub').textContent = totalUnidades + ' unidades totales';
+
+  const now = new Date();
+  const primerDia = new Date(now.getFullYear(), now.getMonth(), 1);
+  const ventasMes = state.ventas.filter(v => new Date(v.fecha) >= primerDia);
+  const totalMes = ventasMes.reduce((a, v) => a + v.total, 0);
+  const gananciaMes = ventasMes.reduce((a, v) => a + v.ganancia, 0);
+  document.getElementById('kpi-ventas').textContent = CLP(totalMes);
+  document.getElementById('kpi-ventas-sub').textContent = ventasMes.length + ' transacciones';
+  document.getElementById('kpi-ganancia').textContent = CLP(gananciaMes);
+  const margen = totalMes > 0 ? (gananciaMes / totalMes * 100).toFixed(1) : 0;
+  document.getElementById('kpi-margen').textContent = 'Margen: ' + margen + '%';
+
+  const alertas = state.productos.filter(p => +p.stock <= +p.stock_minimo);
+  document.getElementById('kpi-alertas').textContent = alertas.length;
+
+  const alertasEl = document.getElementById('alertas-list');
+  if (alertas.length === 0) {
+    alertasEl.innerHTML = '<p class="text-slate-400 text-sm">✅ Todo el stock está OK</p>';
+  } else {
+    alertasEl.innerHTML = alertas.map(p => `
+      <div class="flex items-center justify-between p-3 bg-amber-50 border border-amber-200 rounded-lg">
+        <div>
+          <p class="font-medium">${escapeHtml(p.nombre)}</p>
+          <p class="text-xs text-slate-500">${escapeHtml(p.categoria)} · ${escapeHtml(p.proveedor || '—')}</p>
+        </div>
+        <div class="text-right">
+          <p class="text-sm font-bold text-amber-700">${p.stock} / ${p.stock_minimo}</p>
+          <p class="text-xs text-slate-500">actual / mínimo</p>
+        </div>
+      </div>`).join('');
+  }
+
+  const ingresosPorProducto = {};
+  state.ventas.forEach(v => {
+    ingresosPorProducto[v.producto_nombre] = (ingresosPorProducto[v.producto_nombre] || 0) + v.total;
+  });
+  const top = Object.entries(ingresosPorProducto).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  renderChart('chart-top', {
+    type: 'bar',
+    data: {
+      labels: top.length ? top.map(t => t[0]) : ['Sin datos'],
+      datasets: [{ label: 'Ingresos', data: top.length ? top.map(t => t[1]) : [0], backgroundColor: '#10b981', borderRadius: 6 }]
+    },
+    options: { responsive: true, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { ticks: { callback: v => CLP(v) } } } }
+  });
+
+  const porCat = {};
+  state.productos.forEach(p => {
+    porCat[p.categoria] = (porCat[p.categoria] || 0) + (+p.stock * +p.precio_compra);
+  });
+  const cats = Object.entries(porCat);
+  renderChart('chart-cat', {
+    type: 'doughnut',
+    data: {
+      labels: cats.length ? cats.map(c => c[0]) : ['Sin datos'],
+      datasets: [{ data: cats.length ? cats.map(c => c[1]) : [1], backgroundColor: ['#10b981','#0d9488','#f59e0b','#3b82f6','#8b5cf6','#ef4444','#6b7280','#ec4899'] }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
+  });
+}
+
+function renderChart(id, cfg) {
+  if (charts[id]) charts[id].destroy();
+  charts[id] = new Chart(document.getElementById(id), cfg);
+}
+
+// ============ INVENTARIO ============
+function renderInventario() {
+  const q = (document.getElementById('search-inv').value || '').toLowerCase();
+  const rows = state.productos.filter(p => p.nombre.toLowerCase().includes(q) || p.categoria.toLowerCase().includes(q));
+  const tbody = document.getElementById('inv-tbody');
+  if (rows.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-8 text-slate-400">Sin productos. Agrega uno o carga datos demo.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(p => {
+    const margen = p.precio_venta > 0 ? ((p.precio_venta - p.precio_compra) / p.precio_venta * 100).toFixed(0) : 0;
+    const low = +p.stock <= +p.stock_minimo;
+    return `
+    <tr class="border-t border-slate-100 hover:bg-slate-50">
+      <td class="px-4 py-3 font-medium">${escapeHtml(p.nombre)}<div class="text-xs text-slate-400">${escapeHtml(p.proveedor || '')}</div></td>
+      <td class="px-4 py-3"><span class="text-xs bg-slate-100 px-2 py-0.5 rounded">${escapeHtml(p.categoria)}</span></td>
+      <td class="px-4 py-3 text-right ${low ? 'text-red-600 font-bold' : ''}">${p.stock}${low ? ' ⚠️' : ''}</td>
+      <td class="px-4 py-3 text-right text-slate-400">${p.stock_minimo}</td>
+      <td class="px-4 py-3 text-right">${CLP(p.precio_compra)}</td>
+      <td class="px-4 py-3 text-right font-medium">${CLP(p.precio_venta)}</td>
+      <td class="px-4 py-3 text-right"><span class="text-xs font-bold text-emerald-700">${margen}%</span></td>
+      <td class="px-4 py-3 text-right whitespace-nowrap">
+        <button onclick="openProductModal('${p.id}')" class="text-blue-600 hover:underline text-xs mr-2">Editar</button>
+        <button onclick="deleteProduct('${p.id}')" class="text-red-600 hover:underline text-xs">Borrar</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function openProductModal(id) {
+  const modal = document.getElementById('modal-producto');
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+  document.getElementById('form-producto').reset();
+  document.getElementById('p-id').value = '';
+  if (id) {
+    const p = state.productos.find(x => x.id === id);
+    if (!p) return;
+    document.getElementById('modal-title').textContent = 'Editar producto';
+    document.getElementById('p-id').value = p.id;
+    document.getElementById('p-nombre').value = p.nombre;
+    document.getElementById('p-categoria').value = p.categoria;
+    document.getElementById('p-proveedor').value = p.proveedor || '';
+    document.getElementById('p-stock').value = p.stock;
+    document.getElementById('p-min').value = p.stock_minimo;
+    document.getElementById('p-compra').value = p.precio_compra;
+    document.getElementById('p-venta').value = p.precio_venta;
+  } else {
+    document.getElementById('modal-title').textContent = 'Nuevo producto';
+  }
+}
+function closeProductModal() {
+  const modal = document.getElementById('modal-producto');
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
+}
+
+document.getElementById('form-producto').addEventListener('submit', e => {
+  e.preventDefault();
+  const id = document.getElementById('p-id').value || uid();
+  const p = {
+    id,
+    nombre: document.getElementById('p-nombre').value.trim(),
+    categoria: document.getElementById('p-categoria').value,
+    proveedor: document.getElementById('p-proveedor').value.trim(),
+    stock: +document.getElementById('p-stock').value,
+    stock_minimo: +document.getElementById('p-min').value,
+    precio_compra: +document.getElementById('p-compra').value,
+    precio_venta: +document.getElementById('p-venta').value,
+    fecha_ingreso: new Date().toISOString(),
+  };
+  const idx = state.productos.findIndex(x => x.id === id);
+  if (idx >= 0) state.productos[idx] = p;
+  else state.productos.push(p);
+  saveState();
+  closeProductModal();
+  renderInventario();
+  refreshVentasSelect();
+});
+
+function deleteProduct(id) {
+  if (!confirm('¿Borrar este producto?')) return;
+  state.productos = state.productos.filter(p => p.id !== id);
+  saveState();
+  renderInventario();
+}
+
+// ============ VENTAS ============
+function refreshVentasSelect() {
+  const sel = document.getElementById('venta-prod');
+  sel.innerHTML = state.productos.length === 0
+    ? '<option value="">(Sin productos — agrega uno primero)</option>'
+    : state.productos.map(p => `<option value="${p.id}">${escapeHtml(p.nombre)} · ${CLP(p.precio_venta)} · stock ${p.stock}</option>`).join('');
+}
+
+function renderVentas() {
+  refreshVentasSelect();
+  const now = new Date();
+  const inicioHoy = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const inicioSemana = new Date(inicioHoy); inicioSemana.setDate(inicioSemana.getDate() - 7);
+  const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const sum = arr => arr.reduce((a, v) => a + v.total, 0);
+  const hoy = state.ventas.filter(v => new Date(v.fecha) >= inicioHoy);
+  const sem = state.ventas.filter(v => new Date(v.fecha) >= inicioSemana);
+  const mes = state.ventas.filter(v => new Date(v.fecha) >= inicioMes);
+  document.getElementById('ventas-hoy').textContent = CLP(sum(hoy));
+  document.getElementById('ventas-semana').textContent = CLP(sum(sem));
+  document.getElementById('ventas-mes').textContent = CLP(sum(mes));
+
+  const tbody = document.getElementById('ventas-tbody');
+  const recent = [...state.ventas].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).slice(0, 100);
+  if (recent.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-8 text-slate-400">Sin ventas aún.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = recent.map(v => `
+    <tr class="border-t border-slate-100 hover:bg-slate-50">
+      <td class="px-4 py-3 text-xs text-slate-500">${new Date(v.fecha).toLocaleString('es-CL', { dateStyle: 'short', timeStyle: 'short' })}</td>
+      <td class="px-4 py-3 font-medium">${escapeHtml(v.producto_nombre)}</td>
+      <td class="px-4 py-3 text-right">${v.cantidad}</td>
+      <td class="px-4 py-3 text-right">${CLP(v.precio_unit)}</td>
+      <td class="px-4 py-3 text-right font-bold">${CLP(v.total)}</td>
+      <td class="px-4 py-3 text-right text-emerald-600 font-medium">${CLP(v.ganancia)}</td>
+      <td class="px-4 py-3"><span class="text-xs bg-slate-100 px-2 py-0.5 rounded">${escapeHtml(v.pago)}</span></td>
+      <td class="px-4 py-3 text-right"><button onclick="deleteVenta('${v.id}')" class="text-red-500 hover:underline text-xs">Borrar</button></td>
+    </tr>`).join('');
+}
+
+function registrarVenta() {
+  const pid = document.getElementById('venta-prod').value;
+  const qty = +document.getElementById('venta-qty').value;
+  const pago = document.getElementById('venta-pago').value;
+  const prod = state.productos.find(p => p.id === pid);
+  if (!prod) return alert('Selecciona un producto');
+  if (qty <= 0) return alert('Cantidad inválida');
+  if (prod.stock < qty) {
+    if (!confirm('⚠️ Stock insuficiente (disponible: ' + prod.stock + '). ¿Registrar de todas formas?')) return;
+  }
+  const venta = {
+    id: uid(),
+    fecha: new Date().toISOString(),
+    producto_id: pid,
+    producto_nombre: prod.nombre,
+    cantidad: qty,
+    precio_unit: prod.precio_venta,
+    total: prod.precio_venta * qty,
+    costo: prod.precio_compra * qty,
+    ganancia: (prod.precio_venta - prod.precio_compra) * qty,
+    pago,
+  };
+  state.ventas.push(venta);
+  prod.stock = Math.max(0, prod.stock - qty);
+  saveState();
+  renderVentas();
+}
+
+function deleteVenta(id) {
+  if (!confirm('¿Borrar esta venta? (No repone stock)')) return;
+  state.ventas = state.ventas.filter(v => v.id !== id);
+  saveState();
+  renderVentas();
+}
+
+// ============ ANALISIS ============
+function renderAnalisis() {
+  const data = state.productos.map(p => {
+    const ventasProd = state.ventas.filter(v => v.producto_id === p.id);
+    const unidadesVendidas = ventasProd.reduce((a, v) => a + v.cantidad, 0);
+    const ingresos = ventasProd.reduce((a, v) => a + v.total, 0);
+    const margen = p.precio_venta > 0 ? ((p.precio_venta - p.precio_compra) / p.precio_venta * 100) : 0;
+    return { ...p, unidadesVendidas, margen, ingresos };
+  });
+
+  const median = arr => {
+    if (arr.length === 0) return 0;
+    const s = [...arr].sort((a, b) => a - b);
+    return s[Math.floor(s.length / 2)];
+  };
+  const medRot = median(data.map(d => d.unidadesVendidas));
+  const medMar = median(data.map(d => d.margen));
+
+  const quadColor = d => {
+    if (d.unidadesVendidas >= medRot && d.margen >= medMar) return '#10b981';
+    if (d.unidadesVendidas >= medRot && d.margen < medMar) return '#3b82f6';
+    if (d.unidadesVendidas < medRot && d.margen >= medMar) return '#f59e0b';
+    return '#ef4444';
+  };
+  renderChart('chart-bcg', {
+    type: 'scatter',
+    data: {
+      datasets: [{
+        label: 'Productos',
+        data: data.map(d => ({ x: d.unidadesVendidas, y: d.margen, label: d.nombre })),
+        backgroundColor: data.map(quadColor),
+        pointRadius: 9,
+        pointHoverRadius: 12,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ctx.raw.label + ' · ' + ctx.raw.x + ' und · ' + ctx.raw.y.toFixed(0) + '%' } }
+      },
+      scales: {
+        x: { title: { display: true, text: 'Unidades vendidas (rotación)' }, beginAtZero: true },
+        y: { title: { display: true, text: 'Margen (%)' }, ticks: { callback: v => v + '%' }, beginAtZero: true }
+      }
+    }
+  });
+
+  const clasifica = d => {
+    if (d.unidadesVendidas >= medRot && d.margen >= medMar) return { tag: '🔥 Prioridad', color: 'bg-emerald-100 text-emerald-800' };
+    if (d.unidadesVendidas >= medRot && d.margen < medMar) return { tag: '⚖️ Volumen', color: 'bg-blue-100 text-blue-800' };
+    if (d.unidadesVendidas < medRot && d.margen >= medMar) return { tag: '🎯 Nicho', color: 'bg-amber-100 text-amber-800' };
+    return { tag: '❌ Evaluar', color: 'bg-red-100 text-red-800' };
+  };
+  const sorted = [...data].sort((a, b) => b.ingresos - a.ingresos);
+  document.getElementById('clasificacion-list').innerHTML = sorted.length === 0
+    ? '<p class="text-slate-400">Sin productos.</p>'
+    : sorted.map(d => {
+        const c = clasifica(d);
+        return `
+          <div class="flex items-center justify-between p-2 border border-slate-100 rounded-lg">
+            <div>
+              <p class="font-medium">${escapeHtml(d.nombre)}</p>
+              <p class="text-xs text-slate-500">${d.unidadesVendidas} und · margen ${d.margen.toFixed(0)}% · ${CLP(d.ingresos)}</p>
+            </div>
+            <span class="text-xs px-2 py-1 rounded ${c.color}">${c.tag}</span>
+          </div>`;
+      }).join('');
+
+  const totalIng = sorted.reduce((a, d) => a + d.ingresos, 0);
+  let acc = 0;
+  const pareto = [];
+  for (const d of sorted) {
+    if (d.ingresos === 0) break;
+    acc += d.ingresos;
+    pareto.push({ ...d, acumuladoPct: totalIng > 0 ? (acc / totalIng * 100) : 0 });
+    if (acc / totalIng >= 0.8) break;
+  }
+  document.getElementById('pareto-list').innerHTML = pareto.length === 0
+    ? '<p class="text-slate-400">Sin ventas aún.</p>'
+    : pareto.map((d, i) => `
+        <div class="flex items-center justify-between p-2 border-b border-slate-100">
+          <span class="font-medium">${i + 1}. ${escapeHtml(d.nombre)}</span>
+          <span class="text-xs text-slate-600">${CLP(d.ingresos)} · <b>${d.acumuladoPct.toFixed(0)}%</b> acumulado</span>
+        </div>`).join('');
+}
+
+// ============ IMPORT / EXPORT ============
+function exportData() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'suplementos_backup_' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click();
+}
+function importData(ev) {
+  const file = ev.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const obj = JSON.parse(e.target.result);
+      if (!obj.productos || !obj.ventas) throw new Error('Formato inválido');
+      state = obj;
+      saveState();
+      renderDashboard();
+      alert('✅ Datos importados correctamente');
+    } catch (err) { alert('Error al importar: ' + err.message); }
+  };
+  reader.readAsText(file);
+}
+function resetData() {
+  state = { productos: [], ventas: [] };
+  saveState();
+  renderDashboard();
+  renderInventario();
+  renderVentas();
+}
+
+function seedData() {
+  if (state.productos.length > 0 && !confirm('Ya tienes datos. ¿Reemplazar con demo?')) return;
+  const demo = [
+    { nombre: 'Whey Protein 1kg Vainilla',    categoria: 'Proteína',    proveedor: 'MuscleTech',  stock: 28, stock_minimo: 8, precio_compra: 15000, precio_venta: 25000 },
+    { nombre: 'Whey Protein 1kg Chocolate',   categoria: 'Proteína',    proveedor: 'MuscleTech',  stock: 32, stock_minimo: 8, precio_compra: 15000, precio_venta: 25000 },
+    { nombre: 'Creatina Monohidratada 300g',  categoria: 'Creatina',    proveedor: 'Optimum',     stock: 15, stock_minimo: 6, precio_compra: 12000, precio_venta: 22000 },
+    { nombre: 'Pre-entreno Explosivo 30sv',   categoria: 'Pre-entreno', proveedor: 'C4',          stock: 4,  stock_minimo: 5, precio_compra: 14000, precio_venta: 28000 },
+    { nombre: 'BCAA 400g Sandía',             categoria: 'Aminoácidos', proveedor: 'Scitec',      stock: 10, stock_minimo: 4, precio_compra: 9000,  precio_venta: 18000 },
+    { nombre: 'Multivitamínico 90caps',       categoria: 'Vitaminas',   proveedor: 'Now Foods',   stock: 22, stock_minimo: 5, precio_compra: 6000,  precio_venta: 14000 },
+    { nombre: 'Omega 3 120caps',              categoria: 'Vitaminas',   proveedor: 'Now Foods',   stock: 18, stock_minimo: 5, precio_compra: 5500,  precio_venta: 12000 },
+    { nombre: 'Quemador Termogénico 60caps',  categoria: 'Quemador',    proveedor: 'Hydroxycut',  stock: 6,  stock_minimo: 4, precio_compra: 11000, precio_venta: 21000 },
+    { nombre: 'Mass Gainer 3kg',              categoria: 'Ganador de masa', proveedor: 'ON',      stock: 9,  stock_minimo: 3, precio_compra: 28000, precio_venta: 42000 },
+  ].map(p => ({ ...p, id: uid(), fecha_ingreso: new Date().toISOString() }));
+
+  const ventasDemo = [];
+  const now = Date.now();
+  const pagos = ['Efectivo', 'Débito', 'Crédito', 'Transferencia'];
+  for (let i = 0; i < 55; i++) {
+    const p = demo[Math.floor(Math.random() * demo.length)];
+    const qty = 1 + Math.floor(Math.random() * 3);
+    const d = new Date(now - Math.floor(Math.random() * 30 * 86400000));
+    ventasDemo.push({
+      id: uid(),
+      fecha: d.toISOString(),
+      producto_id: p.id,
+      producto_nombre: p.nombre,
+      cantidad: qty,
+      precio_unit: p.precio_venta,
+      total: p.precio_venta * qty,
+      costo: p.precio_compra * qty,
+      ganancia: (p.precio_venta - p.precio_compra) * qty,
+      pago: pagos[Math.floor(Math.random() * pagos.length)],
+    });
+  }
+
+  state = { productos: demo, ventas: ventasDemo };
+  saveState();
+  renderDashboard();
+  alert('✅ Datos demo cargados — 9 productos, 55 ventas');
+}
+
+// ============ INIT ============
+renderDashboard();
+</script>
+</body>
+</html>

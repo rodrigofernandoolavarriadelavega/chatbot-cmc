@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MEULEN — Roadmap Frutería de Barrio</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Inter:wght@300..600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --verde-molino: #2F3E34;
+  --tierra: #8B6B4E;
+  --trigo: #D9C7A1;
+  --crema: #F2EFE6;
+  --carbon: #1A1A1A;
+  --musgo: #4A5F3A;
+  --cobre: #B86D3F;
+  --lacre: #8C2A2A;
+}
+* { box-sizing: border-box; }
+body { font-family: 'Inter', sans-serif; background: var(--crema); color: var(--carbon); margin: 0; }
+h1, h2, h3, .serif { font-family: 'Fraunces', serif; }
+.mono { font-family: 'IBM Plex Mono', monospace; }
+
+/* NAV */
+.topnav { background: var(--verde-molino); color: #fff; padding: 0.75rem 1.5rem; display: flex; align-items: center; gap: 1.5rem; position: sticky; top: 0; z-index: 100; }
+.topnav a { color: rgba(217,199,161,0.7); font-size: 0.8rem; text-decoration: none; transition: color 0.15s; }
+.topnav a:hover { color: var(--trigo); }
+.topnav .brand { font-family: 'Fraunces', serif; font-size: 1.1rem; color: var(--trigo); margin-right: auto; display: flex; align-items: center; gap: 0.5rem; }
+
+/* HERO */
+.hero { background: var(--verde-molino); color: #fff; padding: 3rem 2rem 2.5rem; position: relative; overflow: hidden; }
+.hero::before {
+  content: '';
+  position: absolute;
+  right: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--trigo), transparent, var(--tierra));
+  opacity: 0.7;
+}
+.hero-inner { display: flex; align-items: center; gap: 2.5rem; }
+.hero-text { flex: 1; min-width: 0; }
+.hero-logo-side { width: 220px; flex-shrink: 0; height: auto; filter: drop-shadow(0 6px 18px rgba(0,0,0,0.3)); }
+.hero h1 { font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 700; margin: 0 0 0.5rem; letter-spacing: -0.02em; color: var(--trigo); }
+.hero .slogan { font-style: italic; color: rgba(217,199,161,0.85); font-size: 1.05rem; font-family: 'Fraunces', serif; margin: 0 0 1rem; }
+.hero p { color: rgba(255,255,255,0.75); font-size: 0.95rem; max-width: 680px; margin: 0 0 1.5rem; line-height: 1.55; }
+.badge-meulen { background: var(--tierra); color: #fff; font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; padding: 0.2rem 0.6rem; border-radius: 2px; text-transform: uppercase; letter-spacing: 0.1em; }
+.badge-fecha { background: rgba(217,199,161,0.15); color: var(--trigo); font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; padding: 0.2rem 0.6rem; border-radius: 2px; letter-spacing: 0.05em; }
+.hero-badges { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+
+/* MOLINO LOGO */
+.molino-logo { width: 32px; height: 32px; flex-shrink: 0; object-fit: contain; }
+.hero-logo { width: 120px; height: auto; display: block; margin-bottom: 1.25rem; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.25)); }
+
+/* KPI CARDS */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; padding: 1.5rem 2rem; background: white; border-bottom: 1px solid #e5dfd0; }
+.kpi-card { text-align: center; padding: 1rem; border-radius: 6px; background: var(--crema); border-left: 3px solid var(--tierra); }
+.kpi-num { font-family: 'Fraunces', serif; font-size: 2rem; font-weight: 700; color: var(--verde-molino); line-height: 1; }
+.kpi-label { font-size: 0.72rem; color: #666; margin-top: 0.3rem; font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* TABS */
+.tabs-wrapper { background: white; border-bottom: 1px solid #e5dfd0; position: sticky; top: 45px; z-index: 90; }
+.tabs-scroll { display: flex; overflow-x: auto; gap: 0; padding: 0 1.5rem; scrollbar-width: none; }
+.tabs-scroll::-webkit-scrollbar { display: none; }
+.tab-btn { white-space: nowrap; padding: 0.85rem 1rem; font-size: 0.8rem; border: none; background: none; cursor: pointer; color: #666; border-bottom: 2px solid transparent; font-family: 'Inter', sans-serif; transition: all 0.15s; }
+.tab-btn:hover { color: var(--verde-molino); }
+.tab-btn.active { color: var(--verde-molino); border-bottom-color: var(--tierra); font-weight: 600; }
+
+/* MAIN */
+.main-content { max-width: 1280px; margin: 0 auto; padding: 1.5rem 1.5rem 3rem; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* SECTION TITLES */
+.section-title { font-family: 'Fraunces', serif; font-size: 1.4rem; color: var(--verde-molino); margin: 0 0 0.25rem; }
+.section-sub { font-size: 0.9rem; color: #6b6b6b; margin: 0 0 1.25rem; line-height: 1.55; }
+.section-header { margin-bottom: 1.25rem; border-bottom: 1px solid #e5dfd0; padding-bottom: 1rem; }
+
+/* IDEA CARDS */
+.cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 1rem; }
+.idea-card { background: white; border-radius: 8px; border: 1px solid #e5dfd0; border-left: 4px solid #d6cfbf; padding: 1rem 1.1rem; transition: box-shadow 0.15s, transform 0.15s; position: relative; }
+.idea-card:hover { box-shadow: 0 4px 16px rgba(47,62,52,0.10); transform: translateY(-1px); }
+.idea-card.alta { border-left-color: var(--musgo); }
+.idea-card.media { border-left-color: var(--tierra); }
+.idea-card.baja { border-left-color: #b0aaa0; }
+.card-badges { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-bottom: 0.6rem; }
+.badge { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; padding: 0.18rem 0.5rem; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; }
+.badge-prio-alta { background: #e8f0e6; color: var(--musgo); }
+.badge-prio-media { background: #f5ead8; color: var(--tierra); }
+.badge-prio-baja { background: #f0ede8; color: #888; }
+.badge-esf-bajo { background: #e8f0e6; color: var(--musgo); }
+.badge-esf-medio { background: #f5ead8; color: var(--tierra); }
+.badge-esf-alto { background: #f5dada; color: var(--lacre); }
+.badge-qw { background: var(--tierra); color: white; }
+.badge-moat { background: var(--verde-molino); color: var(--trigo); }
+.badge-pillar { background: var(--trigo); color: var(--verde-molino); }
+.card-title { font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 600; color: var(--verde-molino); margin: 0 0 0.3rem; line-height: 1.3; }
+.card-desc { font-size: 0.82rem; color: #555; margin: 0 0 0.75rem; line-height: 1.5; }
+.card-meta { display: flex; flex-direction: column; gap: 0.25rem; }
+.card-meta-row { font-size: 0.74rem; color: #666; line-height: 1.45; }
+.card-meta-row strong { color: var(--verde-molino); font-weight: 600; }
+
+/* ROADMAP */
+.phase-block { margin-bottom: 2rem; }
+.phase-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; padding: 0.75rem 1rem; background: white; border-radius: 6px; border-left: 4px solid var(--tierra); }
+.phase-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+.phase-title { font-family: 'Fraunces', serif; font-size: 1.15rem; font-weight: 600; color: var(--verde-molino); }
+.phase-sub { font-size: 0.78rem; color: #888; font-family: 'IBM Plex Mono', monospace; margin-left: auto; }
+.roadmap-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 0.8rem; }
+.roadmap-card { background: white; border: 1px solid #e5dfd0; border-radius: 8px; padding: 0.9rem 1rem; }
+.roadmap-card-title { font-weight: 600; font-size: 0.92rem; color: var(--verde-molino); margin-bottom: 0.3rem; font-family: 'Fraunces', serif; }
+.roadmap-card-desc { font-size: 0.78rem; color: #666; margin-bottom: 0.6rem; line-height: 1.45; }
+
+/* NOTE BLOCK */
+.note-block { background: var(--verde-molino); color: white; border-radius: 8px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; border-left: 4px solid var(--trigo); }
+.note-block h3 { font-family: 'Fraunces', serif; font-size: 1.05rem; margin: 0 0 0.5rem; color: var(--trigo); }
+.note-block p { font-size: 0.88rem; color: rgba(255,255,255,0.88); margin: 0; line-height: 1.6; }
+.note-block p + p { margin-top: 0.5rem; }
+
+/* CHARTS */
+.charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-top: 1.5rem; }
+.chart-card { background: white; border: 1px solid #e5dfd0; border-radius: 8px; padding: 1.25rem; }
+.chart-title { font-family: 'Fraunces', serif; font-size: 1rem; color: var(--verde-molino); margin: 0 0 1rem; }
+.chart-wrap { position: relative; height: 260px; }
+
+/* FOOTER */
+footer { background: var(--verde-molino); color: rgba(217,199,161,0.7); padding: 2rem 2rem 1.5rem; font-size: 0.78rem; }
+footer h4 { font-family: 'Fraunces', serif; color: var(--trigo); font-size: 0.95rem; margin: 0 0 0.5rem; }
+footer .footer-bottom { border-top: 1px solid rgba(217,199,161,0.15); padding-top: 1rem; margin-top: 1rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; }
+
+/* COMPETITION TABLE */
+.compete-table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; border: 1px solid #e5dfd0; font-size: 0.85rem; }
+.compete-table th { background: var(--verde-molino); color: var(--trigo); text-align: left; padding: 0.75rem 1rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.compete-table td { padding: 0.75rem 1rem; border-bottom: 1px solid #e5dfd0; vertical-align: top; }
+.compete-table tr:last-child td { border-bottom: none; }
+.compete-table .win { color: var(--musgo); font-weight: 600; }
+.compete-table .lose { color: var(--lacre); }
+.compete-table .neutral { color: #888; }
+.compete-table .row-label { font-family: 'Fraunces', serif; font-weight: 600; color: var(--verde-molino); }
+
+/* TABLE WRAPPER for horizontal scroll on mobile */
+.table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* ============================================ */
+/* RESPONSIVE — Tablet (≤ 1024px) */
+/* ============================================ */
+@media (max-width: 1024px) {
+  .main-content { padding: 1.25rem 1rem 2.5rem; max-width: 100%; }
+  .hero { padding: 2.5rem 1.5rem 2rem; }
+  .hero-logo { width: 100px; }
+  .hero-inner { gap: 1.75rem; }
+  .hero-logo-side { width: 170px; }
+  .kpi-grid { padding: 1.25rem 1.5rem; gap: 0.75rem; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+  .kpi-num { font-size: 1.7rem; }
+  .cards-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0.85rem; }
+  .roadmap-cards { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+  .charts-grid { grid-template-columns: 1fr; gap: 1rem; }
+}
+
+/* ============================================ */
+/* RESPONSIVE — Mobile landscape (≤ 768px) */
+/* ============================================ */
+@media (max-width: 768px) {
+  .topnav { padding: 0.6rem 0.85rem; gap: 0.5rem; flex-wrap: wrap; }
+  .topnav .brand { font-size: 0.95rem; gap: 0.4rem; }
+  .topnav .molino-logo { width: 26px; height: 26px; }
+  .topnav a { font-size: 0.7rem; }
+
+  .hero { padding: 1.75rem 1rem 1.5rem; }
+  .hero-logo { width: 84px; margin-bottom: 1rem; }
+  .hero-inner { flex-direction: column-reverse; gap: 1.25rem; align-items: flex-start; }
+  .hero-logo-side { width: 130px; align-self: center; }
+  .hero h1 { font-size: 1.45rem; line-height: 1.18; }
+  .hero-br { display: none; }
+  .hero p { font-size: 0.85rem; line-height: 1.5; }
+  .hero .slogan { font-size: 0.92rem; }
+
+  .kpi-grid { padding: 1rem 0.85rem; gap: 0.5rem; grid-template-columns: repeat(2, 1fr); }
+  .kpi-card { padding: 0.7rem 0.4rem; }
+  .kpi-num { font-size: 1.35rem; }
+  .kpi-label { font-size: 0.6rem; }
+
+  .tabs-wrapper { top: 50px; }
+  .tabs-scroll { padding: 0 0.85rem; }
+  .tab-btn { padding: 0.65rem 0.7rem; font-size: 0.7rem; }
+
+  .main-content { padding: 1rem 0.85rem 2rem; }
+  .section-title { font-size: 1.15rem; }
+  .section-sub { font-size: 0.82rem; }
+
+  .cards-grid { grid-template-columns: 1fr; gap: 0.75rem; }
+  .idea-card { padding: 0.85rem 0.95rem; }
+  .card-title { font-size: 0.95rem; }
+  .card-desc { font-size: 0.78rem; }
+
+  .roadmap-cards { grid-template-columns: 1fr; gap: 0.65rem; }
+  .roadmap-card { padding: 0.8rem 0.9rem; }
+  .phase-header { padding: 0.65rem 0.85rem; flex-wrap: wrap; }
+  .phase-title { font-size: 1.02rem; }
+  .phase-sub { font-size: 0.7rem; margin-left: 0; flex-basis: 100%; }
+
+  .note-block { padding: 1rem 1.1rem; }
+  .note-block h3 { font-size: 0.98rem; }
+  .note-block p { font-size: 0.82rem; }
+
+  .chart-card { padding: 1rem; }
+  .chart-wrap { height: 240px; }
+
+  .compete-table { font-size: 0.75rem; min-width: 540px; }
+  .compete-table th, .compete-table td { padding: 0.5rem 0.55rem; }
+
+  footer { padding: 1.5rem 1rem 1rem; }
+  footer h4 { font-size: 0.88rem; }
+  footer p { font-size: 0.75rem !important; }
+}
+
+/* ============================================ */
+/* RESPONSIVE — Mobile portrait (≤ 480px) */
+/* ============================================ */
+@media (max-width: 480px) {
+  .topnav { padding: 0.55rem 0.7rem; }
+  .topnav .brand { font-size: 0.85rem; }
+  .topnav .molino-logo { width: 22px; height: 22px; }
+  .topnav a { font-size: 0.65rem; }
+
+  .hero { padding: 1.5rem 0.85rem 1.25rem; }
+  .hero-logo { width: 72px; }
+  .hero-logo-side { width: 110px; }
+  .hero h1 { font-size: 1.25rem; }
+  .hero p { font-size: 0.8rem; }
+  .hero .slogan { font-size: 0.85rem; }
+  .badge-meulen, .badge-fecha { font-size: 0.58rem; padding: 0.18rem 0.45rem; }
+
+  .kpi-grid { padding: 0.85rem 0.7rem; gap: 0.45rem; }
+  .kpi-card { padding: 0.6rem 0.35rem; }
+  .kpi-num { font-size: 1.2rem; }
+  .kpi-label { font-size: 0.55rem; letter-spacing: 0.03em; }
+
+  .tabs-scroll { padding: 0 0.7rem; }
+  .tab-btn { padding: 0.6rem 0.55rem; font-size: 0.66rem; }
+
+  .main-content { padding: 0.85rem 0.7rem 1.75rem; }
+  .section-title { font-size: 1.05rem; }
+  .section-sub { font-size: 0.78rem; }
+  .section-header { padding-bottom: 0.7rem; margin-bottom: 0.85rem; }
+
+  .idea-card { padding: 0.75rem 0.85rem; }
+  .card-badges { gap: 0.25rem; }
+  .badge { font-size: 0.55rem; padding: 0.13rem 0.4rem; }
+  .card-title { font-size: 0.9rem; }
+  .card-desc { font-size: 0.75rem; }
+  .card-meta-row { font-size: 0.7rem; }
+
+  .roadmap-card-title { font-size: 0.85rem; }
+  .roadmap-card-desc { font-size: 0.74rem; }
+
+  .chart-wrap { height: 220px; }
+  .chart-title { font-size: 0.92rem; }
+}
+
+/* ============================================ */
+/* RESPONSIVE — Very small (≤ 360px) */
+/* ============================================ */
+@media (max-width: 360px) {
+  .kpi-grid { grid-template-columns: 1fr 1fr; }
+  .kpi-num { font-size: 1.1rem; }
+  .hero h1 { font-size: 1.15rem; }
+  .tab-btn { padding: 0.55rem 0.45rem; font-size: 0.62rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="topnav">
+  <div class="brand">
+    <img class="molino-logo" src="assets/logo-meulen-128-trigo.png" alt="Meulen logo">
+    <span class="brand-text">MEULEN · Roadmap</span>
+  </div>
+  <a href="../farmacia-ideas/index.html">Farmacia</a>
+  <a href="#">CMC</a>
+  <a href="#">Olavega</a>
+  <span style="color:rgba(217,199,161,0.4); font-size:0.7rem; font-family:'IBM Plex Mono',monospace;">OLACORE</span>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-badges">
+    <span class="badge-meulen">MEULEN · BRAND ROADMAP</span>
+    <span class="badge-fecha">MAY 2026</span>
+  </div>
+  <h1>Frutería de barrio,<br class="hero-br">hecha para mover lo imposible.</h1>
+  <p class="slogan">"Hacemos posible lo imposible."</p>
+  <p>Plan exhaustivo para convertir Meulen en la frutería + abarrotes de referencia de Jardines del Mirador, Puerto Montt. Investigación cruzada Chile + benchmarks globales (España, USA, UK, Latam) sobre fruterías de barrio, corner stores como hubs comunitarios, modelos de suscripción y reducción de mermas.</p>
+</header>
+
+<!-- KPI -->
+<section class="kpi-grid">
+  <div class="kpi-card"><div class="kpi-num" id="kpi-pillars">10</div><div class="kpi-label">Pilares</div></div>
+  <div class="kpi-card"><div class="kpi-num" id="kpi-cards">52</div><div class="kpi-label">Iniciativas</div></div>
+  <div class="kpi-card"><div class="kpi-num" id="kpi-qw">14</div><div class="kpi-label">Quick wins</div></div>
+  <div class="kpi-card"><div class="kpi-num" id="kpi-moats">6</div><div class="kpi-label">Moats</div></div>
+  <div class="kpi-card"><div class="kpi-num">30-50%</div><div class="kpi-label">Margen objetivo</div></div>
+  <div class="kpi-card"><div class="kpi-num">Q4 26</div><div class="kpi-label">Hub completo</div></div>
+</section>
+
+<!-- TABS -->
+<div class="tabs-wrapper">
+  <div class="tabs-scroll">
+    <button class="tab-btn active" data-tab="vision">Visión</button>
+    <button class="tab-btn" data-tab="producto">Producto & Display</button>
+    <button class="tab-btn" data-tab="tecnologia">Tecnología</button>
+    <button class="tab-btn" data-tab="canales">Canales digitales</button>
+    <button class="tab-btn" data-tab="fidelizacion">Fidelización</button>
+    <button class="tab-btn" data-tab="hub">Hub comunitario</button>
+    <button class="tab-btn" data-tab="mermas">Mermas & Sostenibilidad</button>
+    <button class="tab-btn" data-tab="diferenciacion">Diferenciación</button>
+    <button class="tab-btn" data-tab="financiero">Financiero</button>
+    <button class="tab-btn" data-tab="roadmap">Roadmap</button>
+  </div>
+</div>
+
+<main class="main-content">
+
+<!-- =========== TAB: VISION =========== -->
+<section class="tab-content active" id="vision">
+  <div class="section-header">
+    <h2 class="section-title">Tesis y posicionamiento</h2>
+    <p class="section-sub">Por qué Meulen no compite con Jumbo/Líder/Tottus, y qué tiene que defender para ganar el barrio.</p>
+  </div>
+
+  <div class="note-block">
+    <h3>El cuadro de partida</h3>
+    <p><strong>El supermercado pierde donde Meulen puede ganar.</strong> Estudios chilenos confirman que aunque el supermercado capta el 52% del volumen de fruta y verdura, está último en calidad, frescura, precio percibido y rapidez de atención. La feria y la frutería especializada lideran ahí.</p>
+    <p>Meulen NO compite con Jumbo. Compite con la pregunta "¿abro WhatsApp y le digo al almacén que me mande?" — el reflejo del vecino. Esa decisión se gana con frescura visible, surtido bien curado, atención que recuerda nombres y un canal digital sin fricción.</p>
+  </div>
+
+  <h3 class="serif" style="font-size:1.15rem; color:var(--verde-molino); margin: 1.5rem 0 0.75rem;">Los 5 pilares no negociables</h3>
+  <div class="cards-grid">
+
+    <div class="idea-card alta">
+      <div class="card-badges"><span class="badge badge-pillar">Pilar 1</span><span class="badge badge-moat">Moat</span></div>
+      <h4 class="card-title">Frescura visible</h4>
+      <p class="card-desc">El cliente entra y "ve" frescura: producto recién mojado, color saturado, FIFO sin productos pasados a la vista. Es lo único que el supermercado grande no puede igualar.</p>
+      <div class="card-meta">
+        <div class="card-meta-row"><strong>KPI:</strong> Merma F&V &lt; 6% del costo</div>
+        <div class="card-meta-row"><strong>Defensa:</strong> revisión 3-4 veces/día, mister automático</div>
+      </div>
+    </div>
+
+    <div class="idea-card alta">
+      <div class="card-badges"><span class="badge badge-pillar">Pilar 2</span><span class="badge badge-moat">Moat</span></div>
+      <h4 class="card-title">Curaduría local imposible de copiar</h4>
+      <p class="card-desc">Productos que Líder/Jumbo nunca tendrán: queso de campo de Chiloé, miel de Chamiza, cordero patagónico, cochayuyo seco, ajo chilote, mermeladas de huerta. La identidad del sur en góndola.</p>
+      <div class="card-meta">
+        <div class="card-meta-row"><strong>KPI:</strong> 25%+ del SKU es local exclusivo</div>
+        <div class="card-meta-row"><strong>Defensa:</strong> red propia de productores con relación directa</div>
+      </div>
+    </div>
+
+    <div class="idea-card alta">
+      <div class="card-badges"><span class="badge badge-pillar">Pilar 3</span><span class="badge badge-moat">Moat</span></div>
+      <h4 class="card-title">WhatsApp sin fricción</h4>
+      <p class="card-desc">Pedido por WA en menos de 60 segundos. Catálogo activo, ofertas del día empujadas a lista VIP, despacho confirmado por el mismo canal. Es el reemplazo del supermercado para el vecino flojo.</p>
+      <div class="card-meta">
+        <div class="card-meta-row"><strong>KPI:</strong> 40%+ ventas vía WhatsApp en 12 meses</div>
+        <div class="card-meta-row"><strong>Defensa:</strong> base de números + historial de compra</div>
+      </div>
+    </div>
+
+    <div class="idea-card alta">
+      <div class="card-badges"><span class="badge badge-pillar">Pilar 4</span></div>
+      <h4 class="card-title">Atención que recuerda nombres</h4>
+      <p class="card-desc">El supermercado nunca te llama por tu nombre. Meulen sí. CRM ligero ata teléfono → nombre → compras frecuentes y permite saludar, recordar el cumpleaños y sugerir reposición.</p>
+      <div class="card-meta">
+        <div class="card-meta-row"><strong>KPI:</strong> 70% clientes recurrentes &gt;1 vez/semana</div>
+        <div class="card-meta-row"><strong>Defensa:</strong> POS con perfil de cliente</div>
+      </div>
+    </div>
+
+    <div class="idea-card alta">
+      <div class="card-badges"><span class="badge badge-pillar">Pilar 5</span><span class="badge badge-moat">Moat</span></div>
+      <h4 class="card-title">Identidad de marca que se siente</h4>
+      <p class="card-desc">Verde molino, trigo, tarima rústica, logo xilográfico, bolsa reutilizable Meulen, pizarra de tiza con ofertas. El local se ve, huele y suena como ningún competidor en Puerto Montt.</p>
+      <div class="card-meta">
+        <div class="card-meta-row"><strong>KPI:</strong> Reseñas Google &gt; 4.7 con menciones a "ambiente"</div>
+        <div class="card-meta-row"><strong>Defensa:</strong> brand book OLACORE aplicado</div>
+      </div>
+    </div>
+
+  </div>
+
+  <h3 class="serif" style="font-size:1.15rem; color:var(--verde-molino); margin: 2rem 0 0.75rem;">Comparación con la competencia local</h3>
+  <div class="table-wrap">
+  <table class="compete-table">
+    <thead>
+      <tr><th>Atributo</th><th>Meulen</th><th>Jumbo / Líder</th><th>Frutería estándar barrio</th><th>Feria libre</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="row-label">Frescura</td><td class="win">Alta (revisión diaria)</td><td class="lose">Media (rotación lenta)</td><td class="neutral">Variable</td><td class="win">Alta</td></tr>
+      <tr><td class="row-label">Atención personalizada</td><td class="win">Por diseño</td><td class="lose">Nula</td><td class="neutral">A veces</td><td class="neutral">A veces</td></tr>
+      <tr><td class="row-label">Productos locales únicos</td><td class="win">Curaduría intencional</td><td class="lose">Genéricos</td><td class="neutral">Algunos</td><td class="win">Sí</td></tr>
+      <tr><td class="row-label">WhatsApp / despacho</td><td class="win">Pilar central</td><td class="neutral">App propia rígida</td><td class="lose">Inexistente</td><td class="lose">Inexistente</td></tr>
+      <tr><td class="row-label">Surtido completo abarrotes</td><td class="neutral">Selectivo</td><td class="win">Total</td><td class="lose">Mínimo</td><td class="lose">Nulo</td></tr>
+      <tr><td class="row-label">Precio promedio</td><td class="neutral">Justo</td><td class="win">Más bajo en marca propia</td><td class="neutral">Variable</td><td class="win">Bajo</td></tr>
+      <tr><td class="row-label">Identidad de marca</td><td class="win">Diferencial fuerte</td><td class="neutral">Genérica</td><td class="lose">Inexistente</td><td class="lose">Inexistente</td></tr>
+      <tr><td class="row-label">Comodidad / cercanía</td><td class="win">A pasos del vecino</td><td class="lose">Hay que tomar auto</td><td class="win">Cerca</td><td class="neutral">Solo días específicos</td></tr>
+      <tr><td class="row-label">Hub comunitario (café, prep)</td><td class="win">En roadmap</td><td class="lose">Imposible</td><td class="lose">Inexistente</td><td class="lose">Inexistente</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- =========== TAB: PRODUCTO =========== -->
+<section class="tab-content" id="producto">
+  <div class="section-header">
+    <h2 class="section-title">Producto & Display</h2>
+    <p class="section-sub">Cómo se ven, se cuidan y se rotan las frutas y verduras. Es el 70% de la primera impresión del local.</p>
+  </div>
+
+  <div class="cards-grid">
+    <div class="idea-card alta">
+      <div class="card-badges"><span class="badge badge-prio-alta">Alta</span><span class="badge badge-esf-bajo">Esfuerzo bajo</span><span class="badge badge-qw">Quick win</span></div>
+      <h4 class="card-title">Color blocking en F&V</h4>
+      <p class="card-desc">Agrupar producto por bloques de color (rojos, verdes, naranjos) en vez de por categoría tradicional. Práctica estándar en mejores fruterías globales — atrae el ojo y comunica frescura inmediata.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Implementar:</strong> Reorganización display sábado mañana</div></div>
+    </div>
+
+    <div class="idea-card alta">
+      <div class="card-badges"><span class="badge badge-prio-alta">Alta</span><span class="badge badge-esf-bajo">Esfuerzo bajo</span><span class="badge badge-qw">Quick win</span></div>
+      <h4 class="card-title">Display "abundancia"</h4>
+      <p class="card-desc">Cestos rebosantes, tarimas a distintas alturas, pirámides de cítricos. Cero góndola plana — el cerebro asocia abundancia con frescura. Estilo bazar oriental.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Compra:</strong> 6 cestos mimbre + 3 tarimas madera</div></div>
+    </div>
+
+    <div class="idea-card alta">
+      <div class="card-badges"><span class="badge badge-prio-alta">Alta</span><span class="badge badge-esf-medio">Esfuerzo medio</span></div>
+      <h4 class="card-title">Mister automático sobre verde</h4>
+      <p class="card-desc">Atomizador cada 10 min × 10 seg sobre lechuga, espinaca, ciboulette, cilantro. Reduce shrink documentado en 30-40% y duplica vida útil visual.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Inversión:</strong> ~$180k CLP equipo + instalación</div></div>
+    </div>
+
+    <div class="idea-card alta">
+      <div class="card-badges"><span class="badge badge-prio-alta">Alta</span><span class="badge badge-esf-bajo">Esfuerzo bajo</span></div>
+      <h4 class="card-title">FIFO disciplinado + check 3x/día</h4>
+      <p class="card-desc">Rutina escrita: 9am, 13pm, 18pm. Producto al frente, nuevo atrás. Quitar lo dañado antes que el cliente lo vea. La merma se mata aquí.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Tool:</strong> checklist físico + foto al cierre</div></div>
+    </div>
+
+    <div class="idea-card media">
+      <div class="card-badges"><span class="badge badge-prio-media">Media</span><span class="badge badge-esf-medio">Esfuerzo medio</span></div>
+      <h4 class="card-title">Sección "Imperfectos Meulen"</h4>
+      <p class="card-desc">Producto cosmeticamente feo, sano por dentro, a 30-40% descuento. Modelo Maifud Chile / Talkual España. Reduce merma y atrae cliente sensible al precio sin canibalizar.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Volumen:</strong> 1 cesto fijo en entrada</div></div>
+    </div>
+
+    <div class="idea-card alta">
+      <div class="card-badges"><span class="badge badge-prio-alta">Alta</span><span class="badge badge-esf-bajo">Esfuerzo bajo</span><span class="badge badge-qw">Quick win</span></div>
+      <h4 class="card-title">Pizarra de tiza con ofertas del día</h4>
+      <p class="card-desc">Pizarra grande negra, tiza blanca, escrita a mano todos los días por una persona del equipo. Vibe de almacén tradicional + flexibilidad total. Foto a IG cada mañana.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Costo:</strong> &lt; $40k CLP setup</div></div>
+    </div>
+
+    <div class="idea-card media">
+      <div class="card-badges"><span class="badge badge-prio-media">Media</span><span class="badge badge-esf-medio">Esfuerzo medio</span></div>
+      <h4 class="card-title">Etiquetas con origen del productor</h4>
+      <p class="card-desc">"Tomates · Familia González · Llanquihue" en vez de "tomate $1.290". Storytelling de góndola. El cliente paga 15-20% más por origen claro.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Tool:</strong> tarjetas kraft + plantilla repetible</div></div>
+    </div>
+
+    <div class="idea-card alta">
+      <div class="card-badges"><span class="badge badge-prio-alta">Alta</span><span class="badge badge-esf-medio">Esfuerzo medio</span><span class="badge badge-moat">Moat</span></div>
+      <h4 class="card-title">Curaduría de surtido local</h4>
+      <p class="card-desc">SKUs imposibles de encontrar en supermercado: cochayuyo, merkén ahumado de Temuco, ajo chilote, queso fresco artesanal, miel de ulmo, cordero patagón.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Meta:</strong> 25-30% del SKU = local exclusivo</div></div>
+    </div>
+
+    <div class="idea-card media">
+      <div class="card-badges"><span class="badge badge-prio-media">Media</span><span class="badge badge-esf-medio">Esfuerzo medio</span></div>
+      <h4 class="card-title">Combos prearmados visibles</h4>
+      <p class="card-desc">Canasta "Ensalada para 4", "Once familiar", "Sopa del sur". Cesto en entrada, precio único, pre-armado. Reduce decisión del cliente y rota producto.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>SKUs:</strong> 4-6 combos rotativos</div></div>
+    </div>
+
+    <div class="idea-card baja">
+      <div class="card-badges"><span class="badge badge-prio-baja">Baja</span><span class="badge badge-esf-alto">Esfuerzo alto</span></div>
+      <h4 class="card-title">Cámara de frío vidriada visible</h4>
+      <p class="card-desc">Que el cliente vea el producto entrando a frío detrás del mostrador. Refuerzo visual de cuidado y frescura. Inversión grande pero diferencial fuerte.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Inversión:</strong> ~$3-4M CLP, fase 2027</div></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- =========== TAB: TECNOLOGIA =========== -->
+<section class="tab-content" id="tecnologia">
+  <div class="section-header">
+    <h2 class="section-title">Tecnología</h2>
+    <p class="section-sub">POS, inventario, automatización del catálogo. Sin sobreingeniería — tools que pequeños grocers globales ya validaron.</p>
+  </div>
+
+  <div class="cards-grid">
+
+    <div class="idea-card alta">
+      <div class="card-badges"><span class="badge badge-prio-alta">Alta</span><span class="badge badge-esf-medio">Esfuerzo medio</span><span class="badge badge-qw">Quick win</span></div>
+      <h4 class="card-title">POS Loyverse o Square</h4>
+      <p class="card-desc">Loyverse es gratis hasta 5 dispositivos, tiene inventario, fidelización, multi-empleado. Square es más caro pero con mejor reporting. Reemplaza la calculadora + cuaderno.</p>
+      <div class="card-meta">
+        <div class="card-meta-row"><strong>Costo:</strong> $0–$30 USD/mes</div>
+        <div class="card-meta-row"><strong>Implementar:</strong> 2 semanas (carga SKUs + entrenamiento)</div>
+      </div>
+    </div>
+
+    <div class="idea-card alta">
+      <div class="card-badges"><span class="badge badge-prio-alta">Alta</span><span class="badge badge-esf-medio">Esfuerzo medio</span></div>
+      <h4 class="card-title">WhatsApp Business + catálogo</h4>
+      <p class="card-desc">Catálogo nativo de WA Business con foto, precio, descripción. El cliente arma carrito y lo envía. Sin app externa, sin fricción.</p>
+      <div class="card-meta">
+        <div class="card-meta-row"><strong>Costo:</strong> Gratis</div>
+        <div class="card-meta-row"><strong>Volumen:</strong> 80-120 SKUs top en catálogo</div>
+      </div>
+    </div>
+
+    <div class="idea-card media">
+      <div class="card-badges"><span class="badge badge-prio-media">Media</span><span class="badge badge-esf-alto">Esfuerzo alto</span></div>
+      <h4 class="card-title">Bot WhatsApp con menú interactivo</h4>
+      <p class="card-desc">Reutilizar arquitectura del bot CMC (Python + Meta API): "1️⃣ Ver ofertas · 2️⃣ Pedir · 3️⃣ Hablar con el local". Auto-respuesta fuera de horario.</p>
+      <div class="card-meta">
+        <div class="card-meta-row"><strong>Stack:</strong> Reusar chatbot-cmc adaptado</div>
+        <div class="card-meta-row"><strong>Timeline:</strong> Q3 2026</div>
+      </div>
+    </div>
+
+    <div class="idea-card alta">
+      <div class="card-badges"><span class="badge badge-prio-alta">Alta</span><span class="badge badge-esf-bajo">Esfuerzo bajo</span><span class="badge badge-qw">Quick win</span></div>
+      <h4 class="card-title">Google Business Profile completo</h4>
+      <p class="card-desc">Fotos reales del local, horario, productos destacados, reseñas activas. SEO local mata supermercado en búsquedas "frutería cerca de mí". Es gratis.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Implementar:</strong> 1 tarde</div></div>
+    </div>
+
+    <div class="idea-card media">
+      <div class="card-badges"><span class="badge badge-prio-media">Media</span><span class="badge badge-esf-medio">Esfuerzo medio</span></div>
+      <h4 class="card-title">Forecast de compra por estacionalidad</h4>
+      <p class="card-desc">Hoja de cálculo o módulo POS que muestre demanda histórica por SKU + temporada. Reduce sobre-compra (causa #1 de merma en grocers chicos).</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Tool:</strong> reporte semanal Loyverse + Sheet</div></div>
+    </div>
+
+    <div class="idea-card media">
+      <div class="card-badges"><span class="badge badge-prio-media">Media</span><span class="badge badge-esf-medio">Esfuerzo medio</span></div>
+      <h4 class="card-title">Pago digital sin fricción</h4>
+      <p class="card-desc">Mach, Mercado Pago QR, transferencia simplificada. 57% de fruterías chilenas todavía cobran solo efectivo — eso es ticket promedio menor por límite de billete.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>KPI:</strong> 50%+ ventas con pago digital</div></div>
+    </div>
+
+    <div class="idea-card baja">
+      <div class="card-badges"><span class="badge badge-prio-baja">Baja</span><span class="badge badge-esf-alto">Esfuerzo alto</span></div>
+      <h4 class="card-title">App móvil propia Meulen</h4>
+      <p class="card-desc">Solo después de validar volumen WhatsApp. Apps requieren crítica masiva de usuarios. Hoy la fricción de descarga mata el experimento.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Cuándo:</strong> No antes de 2027</div></div>
+    </div>
+
+    <div class="idea-card media">
+      <div class="card-badges"><span class="badge badge-prio-media">Media</span><span class="badge badge-esf-bajo">Esfuerzo bajo</span></div>
+      <h4 class="card-title">Etiquetas QR a producto local</h4>
+      <p class="card-desc">QR en tarjeta del productor → video de 30 seg del campo donde se cosecha. Eleva el ticket promedio y crea historia compartible en redes.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Tool:</strong> Linktree o Bitly + IG reels</div></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- =========== TAB: CANALES =========== -->
+<section class="tab-content" id="canales">
+  <div class="section-header">
+    <h2 class="section-title">Canales digitales</h2>
+    <p class="section-sub">Dónde aparece Meulen cuando el vecino tiene hambre o se le acabaron las cebollas.</p>
+  </div>
+
+  <div class="cards-grid">
+
+    <div class="idea-card alta">
+      <div class="card-badges"><span class="badge badge-prio-alta">Alta</span><span class="badge badge-esf-bajo">Esfuerzo bajo</span><span class="badge badge-qw">Quick win</span></div>
+      <h4 class="card-title">Instagram con foto diaria del producto</h4>
+      <p class="card-desc">Una foto cada mañana de "lo que llegó hoy" + 3 stories con ofertas. Es el canal #1 de fruterías exitosas. Hashtag #JardinesDelMirador #PuertoMontt.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Cadencia:</strong> 1 post + 3 stories/día</div></div>
+    </div>
+
+    <div class="idea-card alta">
+      <div class="card-badges"><span class="badge badge-prio-alta">Alta</span><span class="badge badge-esf-bajo">Esfuerzo bajo</span><span class="badge badge-qw">Quick win</span></div>
+      <h4 class="card-title">Lista VIP WhatsApp de ofertas</h4>
+      <p class="card-desc">Lista de difusión (no grupo) con 200-500 vecinos. Cada mañana mensaje único con 3-5 ofertas + foto. Conversión típica 8-15% el día del envío.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Captura:</strong> formulario en local + web + IG</div></div>
+    </div>
+
+    <div class="idea-card alta">
+      <div class="card-badges"><span class="badge badge-prio-alta">Alta</span><span class="badge badge-esf-bajo">Esfuerzo bajo</span></div>
+      <h4 class="card-title">Web landing simple ya definida</h4>
+      <p class="card-desc">v1: Inicio + Ofertas + Combos + WhatsApp + Ubicación. NO ecommerce. Botón flotante "Comprar ahora" → WA prellenado. Brief ya cerrado en brand.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Status:</strong> Brief listo, falta deploy</div></div>
+    </div>
+
+    <div class="idea-card media">
+      <div class="card-badges"><span class="badge badge-prio-media">Media</span><span class="badge badge-esf-medio">Esfuerzo medio</span></div>
+      <h4 class="card-title">Newsletter mensual del barrio</h4>
+      <p class="card-desc">Email corto con frutas de temporada + receta + productor destacado del mes + 1 cupón. Refuerza identidad de marca, no vende directo.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Tool:</strong> Mailerlite gratis hasta 1.000 contactos</div></div>
+    </div>
+
+    <div class="idea-card media">
+      <div class="card-badges"><span class="badge badge-prio-media">Media</span><span class="badge badge-esf-bajo">Esfuerzo bajo</span></div>
+      <h4 class="card-title">Reseñas Google activas</h4>
+      <p class="card-desc">Pedir reseña al cliente recurrente cara a cara + QR en boleta. Meta: 50+ reseñas con 4.7 estrellas en 6 meses. Cambia el ranking SEO local.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>KPI:</strong> +5 reseñas/mes</div></div>
+    </div>
+
+    <div class="idea-card baja">
+      <div class="card-badges"><span class="badge badge-prio-baja">Baja</span><span class="badge badge-esf-medio">Esfuerzo medio</span></div>
+      <h4 class="card-title">TikTok local</h4>
+      <p class="card-desc">Videos cortos del local, recetas, productores. Riesgo: alta inversión de tiempo, ROI lento. Validar después que IG funcione.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Cuándo:</strong> Tras 6 meses IG consolidado</div></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- =========== TAB: FIDELIZACION =========== -->
+<section class="tab-content" id="fidelizacion">
+  <div class="section-header">
+    <h2 class="section-title">Fidelización & Retención</h2>
+    <p class="section-sub">Captar un cliente nuevo cuesta 6-7x más que retener uno actual. Ahí está el margen.</p>
+  </div>
+
+  <div class="cards-grid">
+
+    <div class="idea-card alta">
+      <div class="card-badges"><span class="badge badge-prio-alta">Alta</span><span class="badge badge-esf-bajo">Esfuerzo bajo</span><span class="badge badge-qw">Quick win</span></div>
+      <h4 class="card-title">10ª compra gratis (tarjeta digital)</h4>
+      <p class="card-desc">QR en boleta → cuenta automática → 10ª compra con descuento de $5.000. Sin app, sin login. POS Loyverse lo trae nativo.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>KPI:</strong> 35%+ clientes con tarjeta activa</div></div>
+    </div>
+
+    <div class="idea-card alta">
+      <div class="card-badges"><span class="badge badge-prio-alta">Alta</span><span class="badge badge-esf-medio">Esfuerzo medio</span><span class="badge badge-moat">Moat</span></div>
+      <h4 class="card-title">Suscripción canasta semanal</h4>
+      <p class="card-desc">"Canasta Meulen" — 8-12 productos frescos semanales por $18.900 con despacho gratis. Modelo ComeFruta/Talkual. Ingreso recurrente predecible mata estacionalidad.</p>
+      <div class="card-meta">
+        <div class="card-meta-row"><strong>Meta:</strong> 50 suscriptores en 6 meses</div>
+        <div class="card-meta-row"><strong>Margen estimado:</strong> 35%</div>
+      </div>
+    </div>
+
+    <div class="idea-card media">
+      <div class="card-badges"><span class="badge badge-prio-media">Media</span><span class="badge badge-esf-bajo">Esfuerzo bajo</span></div>
+      <h4 class="card-title">Cumple = 20% off ese día</h4>
+      <p class="card-desc">CRM dispara mensaje WA el día del cumple del cliente. Costo bajo, gancho emocional alto. Recordar al cliente que existe.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Tool:</strong> Loyverse customer field "fecha nacimiento"</div></div>
+    </div>
+
+    <div class="idea-card media">
+      <div class="card-badges"><span class="badge badge-prio-media">Media</span><span class="badge badge-esf-medio">Esfuerzo medio</span></div>
+      <h4 class="card-title">Programa "Vecino frecuente"</h4>
+      <p class="card-desc">5% off permanente para clientes que compran &gt;2 veces/semana hace 3+ meses. Beneficio invisible al ojo nuevo, premia fidelidad real.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Implementar:</strong> Loyverse rules</div></div>
+    </div>
+
+    <div class="idea-card media">
+      <div class="card-badges"><span class="badge badge-prio-media">Media</span><span class="badge badge-esf-bajo">Esfuerzo bajo</span></div>
+      <h4 class="card-title">Recuperación carrito abandonado WA</h4>
+      <p class="card-desc">Cliente preguntó por catálogo y no compró → mensaje de seguimiento 24h después con oferta puntual. Conversión típica 12-18%.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Tool:</strong> Bot WA + tag "interesado no convertido"</div></div>
+    </div>
+
+    <div class="idea-card baja">
+      <div class="card-badges"><span class="badge badge-prio-baja">Baja</span><span class="badge badge-esf-medio">Esfuerzo medio</span></div>
+      <h4 class="card-title">Referidos: trae un vecino, ambos ganan</h4>
+      <p class="card-desc">Cliente trae a un nuevo → ambos reciben $3.000 en próxima compra. Crece base local sin pagar Meta Ads.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Riesgo:</strong> Latam tiene resistencia a programas formales</div></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- =========== TAB: HUB =========== -->
+<section class="tab-content" id="hub">
+  <div class="section-header">
+    <h2 class="section-title">Hub comunitario</h2>
+    <p class="section-sub">Tendencia global validada (USA, UK, Boston, Philly): el corner store gana dejando de ser solo tienda y siendo punto de encuentro.</p>
+  </div>
+
+  <div class="note-block">
+    <h3>Por qué un hub funciona</h3>
+    <p>Investigación 2025 muestra que corner stores convertidos en hubs comunitarios suben ticket promedio 40%, recurrencia 60% y reseñas positivas. El cliente ya no solo "va a comprar" — va a estar. El olor a café + pan recién horneado es el imán de tráfico mejor documentado en retail food.</p>
+  </div>
+
+  <div class="cards-grid">
+
+    <div class="idea-card alta">
+      <div class="card-badges"><span class="badge badge-prio-alta">Alta</span><span class="badge badge-esf-medio">Esfuerzo medio</span><span class="badge badge-moat">Moat</span></div>
+      <h4 class="card-title">Esquina de café local</h4>
+      <p class="card-desc">Máquina espresso decente + barista part-time + 2 mesas altas. Café de tostador local Puerto Montt. Costo de instalación &lt; $2M, payback en 8-10 meses.</p>
+      <div class="card-meta">
+        <div class="card-meta-row"><strong>Margen café:</strong> 70-80%</div>
+        <div class="card-meta-row"><strong>Tracción:</strong> 30-50 cafés/día desde mes 3</div>
+      </div>
+    </div>
+
+    <div class="idea-card alta">
+      <div class="card-badges"><span class="badge badge-prio-alta">Alta</span><span class="badge badge-esf-medio">Esfuerzo medio</span></div>
+      <h4 class="card-title">Cocina chica: ensaladas, sándwiches, sopas</h4>
+      <p class="card-desc">Usa producto F&V próximo a vencer. Ensalada del día, sopa del sur, sándwich del campo, jugos. Reduce merma + aumenta ticket. Modelo Two Pence Market.</p>
+      <div class="card-meta">
+        <div class="card-meta-row"><strong>SKUs:</strong> 4-6 platos rotativos</div>
+        <div class="card-meta-row"><strong>Margen:</strong> 55-65%</div>
+      </div>
+    </div>
+
+    <div class="idea-card media">
+      <div class="card-badges"><span class="badge badge-prio-media">Media</span><span class="badge badge-esf-medio">Esfuerzo medio</span></div>
+      <h4 class="card-title">Smoothie / jugo bar</h4>
+      <p class="card-desc">Jugos prensados con frutas del día. Producto ultra fresco, sale del local en 5 min. Margen alto y refuerza narrativa de frescura.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>SKUs:</strong> 5 jugos fijos + smoothie del día</div></div>
+    </div>
+
+    <div class="idea-card media">
+      <div class="card-badges"><span class="badge badge-prio-media">Media</span><span class="badge badge-esf-alto">Esfuerzo alto</span></div>
+      <h4 class="card-title">Panadería propia / artesanal</h4>
+      <p class="card-desc">Pan amasado + masa madre 2 hornadas/día. El olor es el activo más caro del retail food. Si ya hay panadería en barrio, alianza vs competir.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Decisión:</strong> evaluar con panadería local — alianza vs build</div></div>
+    </div>
+
+    <div class="idea-card baja">
+      <div class="card-badges"><span class="badge badge-prio-baja">Baja</span><span class="badge badge-esf-medio">Esfuerzo medio</span></div>
+      <h4 class="card-title">Eventos: clase de cocina, cata, productor del mes</h4>
+      <p class="card-desc">1 evento/mes. Cliente paga simbólico ($5k) por noche con productor local + degustación. Genera contenido + lealtad emocional.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>ROI:</strong> Indirecto, pero refuerza marca fuerte</div></div>
+    </div>
+
+    <div class="idea-card media">
+      <div class="card-badges"><span class="badge badge-prio-media">Media</span><span class="badge badge-esf-medio">Esfuerzo medio</span></div>
+      <h4 class="card-title">Mesa de productos del productor del mes</h4>
+      <p class="card-desc">Cada mes se destaca a un productor local. Foto, historia, mesa especial cerca de caja. Crea narrativa rotativa y profundiza relación con red de proveedores.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Cadencia:</strong> 1 productor nuevo/mes</div></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- =========== TAB: MERMAS =========== -->
+<section class="tab-content" id="mermas">
+  <div class="section-header">
+    <h2 class="section-title">Mermas & Sostenibilidad</h2>
+    <p class="section-sub">El asesino silencioso de margen. Una frutería con 12% de merma puede tener un 0% de utilidad neta.</p>
+  </div>
+
+  <div class="cards-grid">
+
+    <div class="idea-card alta">
+      <div class="card-badges"><span class="badge badge-prio-alta">Alta</span><span class="badge badge-esf-medio">Esfuerzo medio</span></div>
+      <h4 class="card-title">Auto-mister sobre verde de hoja</h4>
+      <p class="card-desc">Documentado: reduce shrink 30-40% y duplica vida útil de lechuga, espinaca, ciboulette. Cada 10 min × 10 seg.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Inversión:</strong> ~$180k CLP</div></div>
+    </div>
+
+    <div class="idea-card alta">
+      <div class="card-badges"><span class="badge badge-prio-alta">Alta</span><span class="badge badge-esf-bajo">Esfuerzo bajo</span><span class="badge badge-qw">Quick win</span></div>
+      <h4 class="card-title">Cobertores nocturnos sobre F&V</h4>
+      <p class="card-desc">Sábanas térmicas livianas que se ponen al cierre y se sacan al abrir. Reducen evaporación nocturna y queman 4-7% menos producto.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Costo:</strong> &lt; $80k CLP</div></div>
+    </div>
+
+    <div class="idea-card alta">
+      <div class="card-badges"><span class="badge badge-prio-alta">Alta</span><span class="badge badge-esf-medio">Esfuerzo medio</span></div>
+      <h4 class="card-title">Markdown progresivo automático</h4>
+      <p class="card-desc">Producto a 2 días de vencer = -20%, a 1 día = -40%. Etiqueta amarilla visible. POS Loyverse maneja descuentos por fecha.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Conversión:</strong> 75%+ de marcado se vende</div></div>
+    </div>
+
+    <div class="idea-card media">
+      <div class="card-badges"><span class="badge badge-prio-media">Media</span><span class="badge badge-esf-medio">Esfuerzo medio</span></div>
+      <h4 class="card-title">Producto "feo" a la cocina interna</h4>
+      <p class="card-desc">Tomate maduro → salsa del día. Manzana golpeada → compota. Pan duro → croutons. Cierra el ciclo y mata merma a costo cero.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Sinergia:</strong> con tab Hub (cocina chica)</div></div>
+    </div>
+
+    <div class="idea-card media">
+      <div class="card-badges"><span class="badge badge-prio-media">Media</span><span class="badge badge-esf-bajo">Esfuerzo bajo</span></div>
+      <h4 class="card-title">Compostaje del local</h4>
+      <p class="card-desc">Restos no usables → compost. Acuerdo con vecino huertero o productor: tú das compost, él da producto descontado. Cero costo, narrativa fuerte.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Setup:</strong> 1 contenedor + 1 alianza</div></div>
+    </div>
+
+    <div class="idea-card alta">
+      <div class="card-badges"><span class="badge badge-prio-alta">Alta</span><span class="badge badge-esf-bajo">Esfuerzo bajo</span><span class="badge badge-qw">Quick win</span></div>
+      <h4 class="card-title">Cero plástico en F&V</h4>
+      <p class="card-desc">Bolsas kraft de papel + bolsas reutilizables Meulen ($1.500 con marca). Se vende como sostenibilidad, baja costo, refuerza marca.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Costo bolsa Meulen:</strong> $400 CLP, vende $1.500</div></div>
+    </div>
+
+    <div class="idea-card media">
+      <div class="card-badges"><span class="badge badge-prio-media">Media</span><span class="badge badge-esf-medio">Esfuerzo medio</span></div>
+      <h4 class="card-title">Forecast por estacionalidad</h4>
+      <p class="card-desc">Histórico de ventas por SKU + temporada. Compra 8% menos en ítems de alta merma. Hoja de cálculo simple basta el primer año.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Tool:</strong> Sheet + reporte Loyverse</div></div>
+    </div>
+
+    <div class="idea-card baja">
+      <div class="card-badges"><span class="badge badge-prio-baja">Baja</span><span class="badge badge-esf-medio">Esfuerzo medio</span></div>
+      <h4 class="card-title">Donación de excedente a comedor</h4>
+      <p class="card-desc">Acuerdo con organización local: producto no vendible pero comestible va a comedor solidario. Sostenibilidad real + impacto social comunicable.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Marketing:</strong> alto, costo bajo</div></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- =========== TAB: DIFERENCIACION =========== -->
+<section class="tab-content" id="diferenciacion">
+  <div class="section-header">
+    <h2 class="section-title">Diferenciación & Marca propia</h2>
+    <p class="section-sub">Productos que sólo se consiguen en Meulen. El moat más profundo del modelo.</p>
+  </div>
+
+  <div class="cards-grid">
+
+    <div class="idea-card alta">
+      <div class="card-badges"><span class="badge badge-prio-alta">Alta</span><span class="badge badge-esf-medio">Esfuerzo medio</span><span class="badge badge-moat">Moat</span></div>
+      <h4 class="card-title">Mermeladas Meulen (marca propia)</h4>
+      <p class="card-desc">Productor artesanal local fabrica con frutas del local + etiqueta Meulen. Margen 50-70% (vs 25-30% en marca ajena). Frutilla, murta, calafate, mora.</p>
+      <div class="card-meta">
+        <div class="card-meta-row"><strong>SKUs:</strong> 4 sabores fijos + 2 estacionales</div>
+        <div class="card-meta-row"><strong>Margen:</strong> ~60% bruto</div>
+      </div>
+    </div>
+
+    <div class="idea-card alta">
+      <div class="card-badges"><span class="badge badge-prio-alta">Alta</span><span class="badge badge-esf-medio">Esfuerzo medio</span><span class="badge badge-moat">Moat</span></div>
+      <h4 class="card-title">Granola Meulen del sur</h4>
+      <p class="card-desc">Avena, miel de ulmo, calafate, nuez chilena, semillas. Fabricación tercerizada con receta propia. Producto firma, alto ticket, alta recompra.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Pack:</strong> bolsa kraft 500g, $4.990</div></div>
+    </div>
+
+    <div class="idea-card alta">
+      <div class="card-badges"><span class="badge badge-prio-alta">Alta</span><span class="badge badge-esf-bajo">Esfuerzo bajo</span><span class="badge badge-moat">Moat</span></div>
+      <h4 class="card-title">Bolsas reutilizables Meulen</h4>
+      <p class="card-desc">Tela cruda + serigrafía verde molino del logo. Se venden por $1.500 (costo $400). Cliente la usa como cartera = walking ad gratis.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Margen:</strong> 73%</div></div>
+    </div>
+
+    <div class="idea-card media">
+      <div class="card-badges"><span class="badge badge-prio-media">Media</span><span class="badge badge-esf-medio">Esfuerzo medio</span></div>
+      <h4 class="card-title">Sopa congelada del sur (línea fría)</h4>
+      <p class="card-desc">Crema de zapallo, sopa de cordero patagón, lentejas con merkén. Pack 500g. Producto premium, congelado, alta rotación en invierno.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Lanzamiento:</strong> mayo (entrada de invierno)</div></div>
+    </div>
+
+    <div class="idea-card media">
+      <div class="card-badges"><span class="badge badge-prio-media">Media</span><span class="badge badge-esf-medio">Esfuerzo medio</span></div>
+      <h4 class="card-title">Aceites infusionados</h4>
+      <p class="card-desc">Aceite de oliva con merkén, ajo, hierbas del sur. Botella 250ml. Producto regalo + alta gama. Margen estimado 65%.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>SKUs:</strong> 3 variedades</div></div>
+    </div>
+
+    <div class="idea-card media">
+      <div class="card-badges"><span class="badge badge-prio-media">Media</span><span class="badge badge-esf-medio">Esfuerzo medio</span></div>
+      <h4 class="card-title">Programa "Productor del Sur"</h4>
+      <p class="card-desc">Sello visible "Producido en Los Lagos · Familia X" que aplica a 30+ SKUs. No es marca propia, es curaduría con contrato exclusivo en Puerto Montt.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Defensa:</strong> exclusividad por categoría</div></div>
+    </div>
+
+    <div class="idea-card baja">
+      <div class="card-badges"><span class="badge badge-prio-baja">Baja</span><span class="badge badge-esf-alto">Esfuerzo alto</span></div>
+      <h4 class="card-title">Cerveza artesanal Meulen</h4>
+      <p class="card-desc">Co-brand con cervecería local. Etiqueta Meulen, receta propia. Riesgo regulatorio alto + inversión alta. Pensar 2027+.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Cuándo:</strong> 2027+</div></div>
+    </div>
+
+    <div class="idea-card media">
+      <div class="card-badges"><span class="badge badge-prio-media">Media</span><span class="badge badge-esf-bajo">Esfuerzo bajo</span></div>
+      <h4 class="card-title">Etiqueta marca Meulen para producto suelto</h4>
+      <p class="card-desc">Stickers redondos verdes con molino que se pegan al pack que el cliente arma (frutos secos a granel, pan, miel). Marca + cualquier producto.</p>
+      <div class="card-meta"><div class="card-meta-row"><strong>Costo:</strong> &lt; $50k CLP por mil stickers</div></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- =========== TAB: FINANCIERO =========== -->
+<section class="tab-content" id="financiero">
+  <div class="section-header">
+    <h2 class="section-title">Vista financiera</h2>
+    <p class="section-sub">Investigación benchmarks: márgenes, inversión inicial, payback de iniciativas clave.</p>
+  </div>
+
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h3 class="chart-title">Margen bruto por categoría</h3>
+      <div class="chart-wrap"><canvas id="chartMargen"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3 class="chart-title">Inversión estimada por iniciativa (CLP)</h3>
+      <div class="chart-wrap"><canvas id="chartInv"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3 class="chart-title">Mix de ventas objetivo (Q4 2026)</h3>
+      <div class="chart-wrap"><canvas id="chartMix"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3 class="chart-title">Payback estimado (meses)</h3>
+      <div class="chart-wrap"><canvas id="chartPayback"></canvas></div>
+    </div>
+  </div>
+
+  <div class="note-block" style="margin-top:2rem;">
+    <h3>Lectura de los benchmarks</h3>
+    <p>Frutería tradicional bien gestionada: 30-50% margen bruto en F&V, pero merma típica de 8-15% se come 5-10 puntos. Marca propia eleva +15-30 puntos sobre marca ajena. Café y preparados son los productos con mayor margen unitario (60-80%) y son la palanca para subir el ticket promedio.</p>
+    <p>Inversión inicial total estimada para llevar Meulen al modelo completo (POS + mister + cocina chica + café + bolsas marca): <strong>$8-12M CLP</strong> con payback 14-20 meses si se ejecuta el roadmap completo y se mantienen los KPIs operativos.</p>
+  </div>
+</section>
+
+<!-- =========== TAB: ROADMAP =========== -->
+<section class="tab-content" id="roadmap">
+  <div class="section-header">
+    <h2 class="section-title">Roadmap por trimestres</h2>
+    <p class="section-sub">Qué se hace cuándo. Empezamos por lo que mueve la aguja con menor inversión.</p>
+  </div>
+
+  <!-- Q2 2026 -->
+  <div class="phase-block">
+    <div class="phase-header">
+      <span class="phase-dot" style="background:var(--musgo);"></span>
+      <span class="phase-title">Q2 2026 — Quick wins de barrio</span>
+      <span class="phase-sub">May–Jun 2026</span>
+    </div>
+    <div class="roadmap-cards">
+      <div class="roadmap-card"><div class="roadmap-card-title">Reorganización display + color blocking</div><div class="roadmap-card-desc">1 sábado de trabajo. Cestos, tarimas, abundancia visible.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Pizarra de tiza con ofertas del día</div><div class="roadmap-card-desc">Setup &lt; $40k. Foto a IG cada mañana.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Google Business Profile completo</div><div class="roadmap-card-desc">Fotos reales, horarios, productos. SEO local activado.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Lista VIP WhatsApp</div><div class="roadmap-card-desc">Captura en local + IG. Meta: 200 contactos en 30 días.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Web v1 (brief ya cerrado)</div><div class="roadmap-card-desc">Inicio + Ofertas + Combos + WhatsApp + Ubicación.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Bolsas reutilizables Meulen</div><div class="roadmap-card-desc">500 unidades primera tanda, $400 costo, $1.500 venta.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Sección Imperfectos Meulen</div><div class="roadmap-card-desc">1 cesto fijo en entrada con producto -30/-40%.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Cero plástico en F&V</div><div class="roadmap-card-desc">Reemplazo total por kraft + bolsa Meulen.</div></div>
+    </div>
+  </div>
+
+  <!-- Q3 2026 -->
+  <div class="phase-block">
+    <div class="phase-header">
+      <span class="phase-dot" style="background:var(--tierra);"></span>
+      <span class="phase-title">Q3 2026 — Tecnología y datos</span>
+      <span class="phase-sub">Jul–Sep 2026</span>
+    </div>
+    <div class="roadmap-cards">
+      <div class="roadmap-card"><div class="roadmap-card-title">POS Loyverse + carga SKUs</div><div class="roadmap-card-desc">2 semanas implementación. Inventario, fidelización, reporting.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">WhatsApp Business catálogo</div><div class="roadmap-card-desc">80-120 SKUs top con foto y precio.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Programa 10ª compra gratis</div><div class="roadmap-card-desc">Loyverse customer rules. QR en boleta.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Mister automático sobre verde</div><div class="roadmap-card-desc">$180k inversión. Reduce shrink 30-40%.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Pago digital (Mach + transferencia)</div><div class="roadmap-card-desc">Sticker QR visible en caja. Meta 50% pago digital.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Mermeladas Meulen — primer batch</div><div class="roadmap-card-desc">4 sabores, productor local, 200 unidades primera tanda.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Bot WhatsApp básico</div><div class="roadmap-card-desc">Reusa stack chatbot-cmc adaptado al menú Meulen.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Programa Productor del Sur</div><div class="roadmap-card-desc">Sello visible + 5 productores con contrato inicial.</div></div>
+    </div>
+  </div>
+
+  <!-- Q4 2026 -->
+  <div class="phase-block">
+    <div class="phase-header">
+      <span class="phase-dot" style="background:var(--cobre);"></span>
+      <span class="phase-title">Q4 2026 — Hub comunitario abre</span>
+      <span class="phase-sub">Oct–Dic 2026</span>
+    </div>
+    <div class="roadmap-cards">
+      <div class="roadmap-card"><div class="roadmap-card-title">Esquina café local</div><div class="roadmap-card-desc">Espresso + 2 mesas. Tostador local. Margen 70%.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Cocina chica: ensaladas + sopas</div><div class="roadmap-card-desc">4-6 platos rotativos del día. Usa F&V próximo a vencer.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Smoothie / jugo bar</div><div class="roadmap-card-desc">5 jugos fijos + 1 del día. Frutas del local.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Granola Meulen del sur</div><div class="roadmap-card-desc">Receta propia, fabricación tercerizada.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Sopa congelada del sur</div><div class="roadmap-card-desc">Línea fría. Lanzamiento mayo del frío.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Suscripción Canasta Meulen</div><div class="roadmap-card-desc">Piloto 30 suscriptores. Meta 50 a fin de año.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Newsletter mensual del barrio</div><div class="roadmap-card-desc">Mailerlite gratis. Cadencia primera semana del mes.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">50+ reseñas Google con 4.7</div><div class="roadmap-card-desc">QR en boleta + pedido cara a cara.</div></div>
+    </div>
+  </div>
+
+  <!-- 2027 -->
+  <div class="phase-block">
+    <div class="phase-header">
+      <span class="phase-dot" style="background:var(--lacre);"></span>
+      <span class="phase-title">2027 — Profundización y escala</span>
+      <span class="phase-sub">2027+</span>
+    </div>
+    <div class="roadmap-cards">
+      <div class="roadmap-card"><div class="roadmap-card-title">Cámara de frío vidriada visible</div><div class="roadmap-card-desc">Inversión $3-4M. Refuerza visualización de cuidado.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Panadería propia o alianza</div><div class="roadmap-card-desc">Decisión: build vs alianza con panadería local.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">App móvil Meulen</div><div class="roadmap-card-desc">Sólo si volumen WhatsApp justifica el costo.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Cerveza artesanal Meulen</div><div class="roadmap-card-desc">Co-brand con cervecería local de la región.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Eventos: catas + clases + productor del mes</div><div class="roadmap-card-desc">1 evento/mes, monetizable + contenido.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Segunda sucursal exploratoria</div><div class="roadmap-card-desc">Si el modelo está validado, escalar a otro barrio.</div></div>
+    </div>
+  </div>
+
+</section>
+
+</main>
+
+<footer>
+  <div style="max-width:1280px; margin:0 auto;">
+    <div style="display:flex; flex-wrap:wrap; gap:2rem;">
+      <div style="flex:1; min-width:200px;">
+        <h4>MEULEN</h4>
+        <p style="margin:0; font-size:0.78rem; line-height:1.55;">Frutería de barrio · Abarrotes<br>Calle 3, Casa 1056, Jardines del Mirador<br>Puerto Montt · Chile</p>
+      </div>
+      <div style="flex:1; min-width:200px;">
+        <h4>OLACORE Holding</h4>
+        <p style="margin:0; font-size:0.78rem; line-height:1.55;">CMC · Meulen · Olavega<br>Estación Olavarría — Piedra Azul<br>Puerto Montt · Chile</p>
+      </div>
+      <div style="flex:1; min-width:200px;">
+        <h4>Roadmap</h4>
+        <p style="margin:0; font-size:0.78rem; line-height:1.55;">10 pilares · 52 iniciativas<br>Q2 2026 → 2027<br>Inversión total est. $8-12M CLP</p>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      MEULEN BRAND ROADMAP · v1 · MAY 2026 · "Hacemos posible lo imposible" · Investigación cruzada Chile + benchmarks globales (España, USA, UK, Latam)
+    </div>
+  </div>
+</footer>
+
+<script>
+// TABS
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    const id = btn.dataset.tab;
+    document.getElementById(id).classList.add('active');
+    if (id === 'financiero') renderCharts();
+    window.scrollTo({top: 0, behavior: 'smooth'});
+  });
+});
+
+// COUNT KPIs
+function recountKPIs() {
+  const cards = document.querySelectorAll('.idea-card');
+  const qw = document.querySelectorAll('.badge-qw').length;
+  const moats = document.querySelectorAll('.badge-moat').length;
+  document.getElementById('kpi-cards').textContent = cards.length;
+  document.getElementById('kpi-qw').textContent = qw;
+  document.getElementById('kpi-moats').textContent = moats;
+}
+recountKPIs();
+
+// CHART COLORS
+const colors = {
+  verdeMolino: '#2F3E34',
+  tierra: '#8B6B4E',
+  trigo: '#D9C7A1',
+  musgo: '#4A5F3A',
+  cobre: '#B86D3F',
+  lacre: '#8C2A2A',
+  crema: '#F2EFE6'
+};
+
+let chartsRendered = false;
+function renderCharts() {
+  if (chartsRendered) return;
+  chartsRendered = true;
+
+  // Margen bruto
+  new Chart(document.getElementById('chartMargen'), {
+    type: 'bar',
+    data: {
+      labels: ['F&V', 'Abarrotes', 'Marca propia', 'Café', 'Sopa/Ensalada', 'Jugos'],
+      datasets: [{
+        label: 'Margen bruto %',
+        data: [40, 22, 60, 75, 60, 65],
+        backgroundColor: [colors.musgo, colors.tierra, colors.verdeMolino, colors.cobre, colors.lacre, colors.trigo],
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } }
+    }
+  });
+
+  // Inversión por iniciativa
+  new Chart(document.getElementById('chartInv'), {
+    type: 'bar',
+    data: {
+      labels: ['Display + cestos', 'Mister auto', 'POS Loyverse', 'Bolsas Meulen', 'Café (esquina)', 'Cocina chica', 'Cámara frío', 'Panadería'],
+      datasets: [{
+        label: 'CLP (miles)',
+        data: [200, 180, 120, 200, 2000, 1500, 3500, 4000],
+        backgroundColor: colors.tierra,
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales: { x: { ticks: { callback: v => '$' + v + 'k' } } }
+    }
+  });
+
+  // Mix de ventas objetivo
+  new Chart(document.getElementById('chartMix'), {
+    type: 'doughnut',
+    data: {
+      labels: ['F&V tradicional', 'Abarrotes', 'Marca propia Meulen', 'Café + preparados', 'Suscripción canasta'],
+      datasets: [{
+        data: [42, 25, 12, 13, 8],
+        backgroundColor: [colors.musgo, colors.tierra, colors.verdeMolino, colors.cobre, colors.trigo],
+        borderWidth: 2, borderColor: '#fff'
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'right', labels: { font: { size: 11 } } } }
+    }
+  });
+
+  // Payback meses
+  new Chart(document.getElementById('chartPayback'), {
+    type: 'bar',
+    data: {
+      labels: ['Bolsas Meulen', 'Mister auto', 'POS Loyverse', 'Pizarra tiza', 'Esquina café', 'Cocina chica', 'Mermeladas Meulen', 'Cámara frío'],
+      datasets: [{
+        label: 'Meses',
+        data: [2, 6, 8, 1, 9, 11, 4, 22],
+        backgroundColor: ctx => {
+          const v = ctx.parsed.y;
+          if (v <= 4) return colors.musgo;
+          if (v <= 12) return colors.tierra;
+          return colors.lacre;
+        },
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { callback: v => v + 'm' } } }
+    }
+  });
+}
+</script>
+</body>
+</html>

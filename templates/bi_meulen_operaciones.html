@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MEULEN — Orden Interno & Operaciones</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Inter:wght@300..600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --verde-molino: #2F3E34;
+  --tierra: #8B6B4E;
+  --trigo: #D9C7A1;
+  --crema: #F2EFE6;
+  --carbon: #1A1A1A;
+  --musgo: #4A5F3A;
+  --cobre: #B86D3F;
+  --lacre: #8C2A2A;
+}
+* { box-sizing: border-box; }
+body { font-family: 'Inter', sans-serif; background: var(--crema); color: var(--carbon); margin: 0; }
+h1, h2, h3, .serif { font-family: 'Fraunces', serif; }
+.mono { font-family: 'IBM Plex Mono', monospace; }
+
+/* NAV */
+.topnav { background: var(--verde-molino); color: #fff; padding: 0.75rem 1.5rem; display: flex; align-items: center; gap: 1.5rem; position: sticky; top: 0; z-index: 100; }
+.topnav a { color: rgba(217,199,161,0.7); font-size: 0.8rem; text-decoration: none; transition: color 0.15s; }
+.topnav a:hover { color: var(--trigo); }
+.topnav .brand { font-family: 'Fraunces', serif; font-size: 1.1rem; color: var(--trigo); margin-right: auto; display: flex; align-items: center; gap: 0.5rem; }
+.molino-logo { width: 32px; height: 32px; flex-shrink: 0; object-fit: contain; }
+
+/* HERO */
+.hero { background: var(--verde-molino); color: #fff; padding: 3rem 2rem 2.5rem; position: relative; overflow: hidden; }
+.hero::before { content:''; position:absolute; right:0; top:0; bottom:0; width:4px; background: linear-gradient(180deg, var(--trigo), transparent, var(--tierra)); opacity: 0.7; }
+.hero h1 { font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 700; margin: 0 0 0.5rem; letter-spacing: -0.02em; color: var(--trigo); }
+.hero .slogan { font-style: italic; color: rgba(217,199,161,0.85); font-size: 1.05rem; font-family: 'Fraunces', serif; margin: 0 0 1rem; }
+.hero p { color: rgba(255,255,255,0.75); font-size: 0.95rem; max-width: 720px; margin: 0 0 1.5rem; line-height: 1.55; }
+.hero-badges { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+.badge-meulen { background: var(--tierra); color: #fff; font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; padding: 0.2rem 0.6rem; border-radius: 2px; text-transform: uppercase; letter-spacing: 0.1em; }
+.badge-fecha { background: rgba(217,199,161,0.15); color: var(--trigo); font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; padding: 0.2rem 0.6rem; border-radius: 2px; letter-spacing: 0.05em; }
+
+/* KPI */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; padding: 1.5rem 2rem; background: white; border-bottom: 1px solid #e5dfd0; }
+.kpi-card { text-align: center; padding: 1rem; border-radius: 6px; background: var(--crema); border-left: 3px solid var(--tierra); }
+.kpi-num { font-family: 'Fraunces', serif; font-size: 2rem; font-weight: 700; color: var(--verde-molino); line-height: 1; }
+.kpi-label { font-size: 0.72rem; color: #666; margin-top: 0.3rem; font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* TABS */
+.tabs-wrapper { background: white; border-bottom: 1px solid #e5dfd0; position: sticky; top: 45px; z-index: 90; }
+.tabs-scroll { display: flex; overflow-x: auto; gap: 0; padding: 0 1.5rem; scrollbar-width: none; }
+.tabs-scroll::-webkit-scrollbar { display: none; }
+.tab-btn { white-space: nowrap; padding: 0.85rem 1rem; font-size: 0.8rem; border: none; background: none; cursor: pointer; color: #666; border-bottom: 2px solid transparent; font-family: 'Inter', sans-serif; transition: all 0.15s; }
+.tab-btn:hover { color: var(--verde-molino); }
+.tab-btn.active { color: var(--verde-molino); border-bottom-color: var(--tierra); font-weight: 600; }
+
+/* MAIN */
+.main-content { max-width: 1280px; margin: 0 auto; padding: 1.5rem 1.5rem 3rem; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* SECTION */
+.section-title { font-family: 'Fraunces', serif; font-size: 1.4rem; color: var(--verde-molino); margin: 0 0 0.25rem; }
+.section-sub { font-size: 0.9rem; color: #6b6b6b; margin: 0 0 1.25rem; line-height: 1.55; }
+.section-header { margin-bottom: 1.25rem; border-bottom: 1px solid #e5dfd0; padding-bottom: 1rem; }
+
+/* CARDS */
+.cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 1rem; }
+.idea-card { background: white; border-radius: 8px; border: 1px solid #e5dfd0; border-left: 4px solid #d6cfbf; padding: 1rem 1.1rem; transition: box-shadow 0.15s, transform 0.15s; position: relative; }
+.idea-card:hover { box-shadow: 0 4px 16px rgba(47,62,52,0.10); transform: translateY(-1px); }
+.idea-card.diario { border-left-color: var(--musgo); }
+.idea-card.semanal { border-left-color: var(--tierra); }
+.idea-card.mensual { border-left-color: var(--cobre); }
+.idea-card.evento { border-left-color: var(--lacre); }
+.idea-card.permanente { border-left-color: var(--verde-molino); }
+.card-badges { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-bottom: 0.6rem; }
+.badge { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; padding: 0.18rem 0.5rem; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; }
+.badge-freq-d { background: #e8f0e6; color: var(--musgo); }
+.badge-freq-s { background: #f5ead8; color: var(--tierra); }
+.badge-freq-m { background: #fce8d8; color: var(--cobre); }
+.badge-freq-e { background: #f5dada; color: var(--lacre); }
+.badge-freq-p { background: var(--verde-molino); color: var(--trigo); }
+.badge-resp { background: var(--trigo); color: var(--verde-molino); }
+.badge-fase { background: var(--tierra); color: #fff; }
+.badge-critico { background: var(--lacre); color: #fff; }
+.card-title { font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 600; color: var(--verde-molino); margin: 0 0 0.3rem; line-height: 1.3; }
+.card-desc { font-size: 0.82rem; color: #555; margin: 0 0 0.75rem; line-height: 1.5; }
+.card-meta { display: flex; flex-direction: column; gap: 0.25rem; }
+.card-meta-row { font-size: 0.74rem; color: #666; line-height: 1.45; }
+.card-meta-row strong { color: var(--verde-molino); font-weight: 600; }
+
+/* CHECKLIST style */
+.checklist { background: white; border: 1px solid #e5dfd0; border-radius: 8px; padding: 1.25rem 1.4rem; margin-bottom: 1.25rem; }
+.checklist h4 { font-family: 'Fraunces', serif; color: var(--verde-molino); font-size: 1.05rem; margin: 0 0 0.85rem; padding-bottom: 0.5rem; border-bottom: 1px solid #ede6d3; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; }
+.checklist h4 .time-tag { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--tierra); background: #f5ead8; padding: 0.2rem 0.55rem; border-radius: 3px; letter-spacing: 0.05em; }
+.checklist ul { list-style: none; padding: 0; margin: 0; }
+.checklist li { font-size: 0.85rem; color: #444; padding: 0.45rem 0 0.45rem 1.6rem; position: relative; line-height: 1.5; border-bottom: 1px dashed #ede6d3; }
+.checklist li:last-child { border-bottom: none; }
+.checklist li::before { content: '✓'; position: absolute; left: 0; top: 0.45rem; color: var(--musgo); font-weight: 700; font-size: 0.95rem; width: 1.1rem; height: 1.1rem; }
+.checklist li strong { color: var(--verde-molino); font-weight: 600; }
+
+/* NOTE BLOCK */
+.note-block { background: var(--verde-molino); color: white; border-radius: 8px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; border-left: 4px solid var(--trigo); }
+.note-block h3 { font-family: 'Fraunces', serif; font-size: 1.05rem; margin: 0 0 0.5rem; color: var(--trigo); }
+.note-block p { font-size: 0.88rem; color: rgba(255,255,255,0.88); margin: 0; line-height: 1.6; }
+.note-block p + p { margin-top: 0.5rem; }
+
+/* PHASE BLOCK (cronograma) */
+.phase-block { margin-bottom: 2rem; }
+.phase-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; padding: 0.75rem 1rem; background: white; border-radius: 6px; border-left: 4px solid var(--tierra); }
+.phase-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+.phase-title { font-family: 'Fraunces', serif; font-size: 1.15rem; font-weight: 600; color: var(--verde-molino); }
+.phase-sub { font-size: 0.78rem; color: #888; font-family: 'IBM Plex Mono', monospace; margin-left: auto; }
+.roadmap-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 0.8rem; }
+.roadmap-card { background: white; border: 1px solid #e5dfd0; border-radius: 8px; padding: 0.9rem 1rem; }
+.roadmap-card-title { font-weight: 600; font-size: 0.92rem; color: var(--verde-molino); margin-bottom: 0.3rem; font-family: 'Fraunces', serif; }
+.roadmap-card-desc { font-size: 0.78rem; color: #666; line-height: 1.45; }
+
+/* TABLE */
+.table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.compete-table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; border: 1px solid #e5dfd0; font-size: 0.85rem; }
+.compete-table th { background: var(--verde-molino); color: var(--trigo); text-align: left; padding: 0.75rem 1rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.compete-table td { padding: 0.75rem 1rem; border-bottom: 1px solid #e5dfd0; vertical-align: top; }
+.compete-table tr:last-child td { border-bottom: none; }
+.compete-table .row-label { font-family: 'Fraunces', serif; font-weight: 600; color: var(--verde-molino); }
+.compete-table .pill { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 3px; font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; font-weight: 500; }
+.pill-a { background: #e8f0e6; color: var(--musgo); }
+.pill-b { background: #f5ead8; color: var(--tierra); }
+.pill-c { background: #f0ede8; color: #888; }
+
+/* CHARTS */
+.charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-top: 1.5rem; }
+.chart-card { background: white; border: 1px solid #e5dfd0; border-radius: 8px; padding: 1.25rem; }
+.chart-title { font-family: 'Fraunces', serif; font-size: 1rem; color: var(--verde-molino); margin: 0 0 1rem; }
+.chart-wrap { position: relative; height: 260px; }
+
+/* FOOTER */
+footer { background: var(--verde-molino); color: rgba(217,199,161,0.7); padding: 2rem 2rem 1.5rem; font-size: 0.78rem; }
+footer h4 { font-family: 'Fraunces', serif; color: var(--trigo); font-size: 0.95rem; margin: 0 0 0.5rem; }
+footer .footer-bottom { border-top: 1px solid rgba(217,199,161,0.15); padding-top: 1rem; margin-top: 1rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; }
+
+/* RESPONSIVE */
+@media (max-width: 1024px) {
+  .main-content { padding: 1.25rem 1rem 2.5rem; max-width: 100%; }
+  .hero { padding: 2.5rem 1.5rem 2rem; }
+  .kpi-grid { padding: 1.25rem 1.5rem; gap: 0.75rem; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+  .kpi-num { font-size: 1.7rem; }
+  .cards-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0.85rem; }
+  .roadmap-cards { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+  .charts-grid { grid-template-columns: 1fr; gap: 1rem; }
+}
+@media (max-width: 768px) {
+  .topnav { padding: 0.6rem 0.85rem; gap: 0.5rem; flex-wrap: wrap; }
+  .topnav .brand { font-size: 0.95rem; gap: 0.4rem; }
+  .topnav .molino-logo { width: 26px; height: 26px; }
+  .topnav a { font-size: 0.7rem; }
+  .hero { padding: 1.75rem 1rem 1.5rem; }
+  .hero h1 { font-size: 1.45rem; line-height: 1.18; }
+  .hero p { font-size: 0.85rem; line-height: 1.5; }
+  .hero .slogan { font-size: 0.92rem; }
+  .kpi-grid { padding: 1rem 0.85rem; gap: 0.5rem; grid-template-columns: repeat(2, 1fr); }
+  .kpi-card { padding: 0.7rem 0.4rem; }
+  .kpi-num { font-size: 1.35rem; }
+  .kpi-label { font-size: 0.6rem; }
+  .tabs-wrapper { top: 50px; }
+  .tabs-scroll { padding: 0 0.85rem; }
+  .tab-btn { padding: 0.65rem 0.7rem; font-size: 0.7rem; }
+  .main-content { padding: 1rem 0.85rem 2rem; }
+  .section-title { font-size: 1.15rem; }
+  .section-sub { font-size: 0.82rem; }
+  .cards-grid { grid-template-columns: 1fr; gap: 0.75rem; }
+  .idea-card { padding: 0.85rem 0.95rem; }
+  .card-title { font-size: 0.95rem; }
+  .card-desc { font-size: 0.78rem; }
+  .roadmap-cards { grid-template-columns: 1fr; gap: 0.65rem; }
+  .roadmap-card { padding: 0.8rem 0.9rem; }
+  .phase-header { padding: 0.65rem 0.85rem; flex-wrap: wrap; }
+  .phase-title { font-size: 1.02rem; }
+  .phase-sub { font-size: 0.7rem; margin-left: 0; flex-basis: 100%; }
+  .note-block { padding: 1rem 1.1rem; }
+  .note-block h3 { font-size: 0.98rem; }
+  .note-block p { font-size: 0.82rem; }
+  .checklist { padding: 1rem 1.1rem; }
+  .checklist h4 { font-size: 0.98rem; }
+  .checklist li { font-size: 0.8rem; }
+  .compete-table { font-size: 0.75rem; min-width: 540px; }
+  .compete-table th, .compete-table td { padding: 0.5rem 0.55rem; }
+  .chart-wrap { height: 240px; }
+  footer { padding: 1.5rem 1rem 1rem; }
+}
+@media (max-width: 480px) {
+  .hero h1 { font-size: 1.25rem; }
+  .hero p { font-size: 0.8rem; }
+  .kpi-num { font-size: 1.2rem; }
+  .kpi-label { font-size: 0.55rem; letter-spacing: 0.03em; }
+  .tab-btn { padding: 0.6rem 0.55rem; font-size: 0.66rem; }
+  .idea-card { padding: 0.75rem 0.85rem; }
+  .card-title { font-size: 0.9rem; }
+  .card-desc { font-size: 0.75rem; }
+  .roadmap-card-title { font-size: 0.85rem; }
+  .roadmap-card-desc { font-size: 0.74rem; }
+  .chart-wrap { height: 220px; }
+}
+@media (max-width: 360px) {
+  .kpi-grid { grid-template-columns: 1fr 1fr; }
+  .hero h1 { font-size: 1.15rem; }
+}
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="brand">
+    <img class="molino-logo" src="assets/logo-meulen-128-trigo.png" alt="Meulen logo">
+    <span class="brand-text">MEULEN · Operaciones</span>
+  </div>
+  <a href="../meulen-roadmap/index.html">Roadmap</a>
+  <a href="../farmacia-ideas/index.html">Farmacia</a>
+  <span style="color:rgba(217,199,161,0.4); font-size:0.7rem; font-family:'IBM Plex Mono',monospace;">OLACORE</span>
+</nav>
+
+<header class="hero">
+  <div class="hero-badges">
+    <span class="badge-meulen">MEULEN · ORDEN INTERNO</span>
+    <span class="badge-fecha">MAY 2026</span>
+  </div>
+  <h1>El orden interno<br class="hero-br">que hace al barrio funcionar.</h1>
+  <p class="slogan">"El supermercado se vence con disciplina, no con tamaño."</p>
+  <p>Manual operativo cruzado: mejores prácticas internacionales (USA, UK, España, Latam) en fruterías de barrio + adaptación a Puerto Montt (clima frío, leña, productores locales). Apertura, cierre, stock, proveedores, equipo, caja, limpieza, leña — todo en orden de implementación.</p>
+</header>
+
+<section class="kpi-grid">
+  <div class="kpi-card"><div class="kpi-num">12</div><div class="kpi-label">Áreas operativas</div></div>
+  <div class="kpi-card"><div class="kpi-num">68</div><div class="kpi-label">Procedimientos</div></div>
+  <div class="kpi-card"><div class="kpi-num">22</div><div class="kpi-label">Diarios</div></div>
+  <div class="kpi-card"><div class="kpi-num">4</div><div class="kpi-label">Fases impl.</div></div>
+  <div class="kpi-card"><div class="kpi-num">&lt;6%</div><div class="kpi-label">Merma objetivo</div></div>
+  <div class="kpi-card"><div class="kpi-num">95%+</div><div class="kpi-label">Servicio objetivo</div></div>
+</section>
+
+<div class="tabs-wrapper">
+  <div class="tabs-scroll">
+    <button class="tab-btn active" data-tab="vision">Visión</button>
+    <button class="tab-btn" data-tab="dia">Día tipo</button>
+    <button class="tab-btn" data-tab="stock">Stock & Reposición</button>
+    <button class="tab-btn" data-tab="proveedores">Proveedores</button>
+    <button class="tab-btn" data-tab="producto">Producto fresco</button>
+    <button class="tab-btn" data-tab="equipo">Equipo & RR.HH.</button>
+    <button class="tab-btn" data-tab="caja">Caja & Efectivo</button>
+    <button class="tab-btn" data-tab="limpieza">Limpieza & Higiene</button>
+    <button class="tab-btn" data-tab="lena">Leña, Carbón & Estacional</button>
+    <button class="tab-btn" data-tab="mermas">Mermas & Calidad</button>
+    <button class="tab-btn" data-tab="datos">Datos operativos</button>
+    <button class="tab-btn" data-tab="cronograma">Cronograma</button>
+  </div>
+</div>
+
+<main class="main-content">
+
+<!-- VISION -->
+<section class="tab-content active" id="vision">
+  <div class="section-header">
+    <h2 class="section-title">Principios operativos</h2>
+    <p class="section-sub">Lo que rige cada decisión del día. La operación es lo que separa una frutería que sobrevive de una que crece.</p>
+  </div>
+
+  <div class="note-block">
+    <h3>El sesgo operativo de Meulen</h3>
+    <p><strong>Disciplina, no tamaño.</strong> Una frutería de barrio compite con disciplina diaria, no con escala. Cada hora del día tiene un protocolo, cada SKU tiene un PAR level, cada turno tiene un responsable claro.</p>
+    <p>El supermercado tiene mejor logística — Meulen tiene mejor ojo. Eso solo se sostiene si la operación está escrita, no en la cabeza del dueño.</p>
+  </div>
+
+  <h3 class="serif" style="font-size:1.15rem; color:var(--verde-molino); margin: 1.5rem 0 0.75rem;">Los 7 principios</h3>
+  <div class="cards-grid">
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">FIFO sin excepción</h4><p class="card-desc">Lo que entró primero, sale primero. Producto nuevo siempre atrás, producto viejo al frente. Vale para F&V, abarrotes, leña, queso, todo.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">Todo SKU tiene PAR level</h4><p class="card-desc">Stock mínimo y stock objetivo definidos por SKU. Sin cabeza-de-dueño. Quien repone sigue la lista.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">Un dueño por proceso</h4><p class="card-desc">Apertura, cierre, recepción, caja, limpieza, leña — cada uno con responsable nombrado. No hay procesos huérfanos.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">Conteo antes de creer</h4><p class="card-desc">Caja se cuenta dos veces, stock crítico se cuenta semanal, recepción se pesa antes de pagar. Si no se mide, se pierde.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">El cliente no entra al desorden</h4><p class="card-desc">Reposición se hace antes de abrir y entre clientes. Cajón vacío, caja sucia, fruta golpeada visible = descalificación inmediata.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">Dato del día siempre cerrado</h4><p class="card-desc">Cada noche: ventas, merma, caja, stock crítico. Sin dato cerrado, no se aprende. POS hace 80% del trabajo.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">El cliente recurrente tiene cara y nombre</h4><p class="card-desc">Equipo aprende los nombres. POS guarda historial. El supermercado nunca te llama Don Juan.</p></div>
+  </div>
+
+  <h3 class="serif" style="font-size:1.15rem; color:var(--verde-molino); margin: 2rem 0 0.75rem;">Estructura de áreas operativas</h3>
+  <div class="table-wrap">
+  <table class="compete-table">
+    <thead><tr><th>Área</th><th>Responsable</th><th>Frecuencia</th><th>KPI principal</th></tr></thead>
+    <tbody>
+      <tr><td class="row-label">Apertura</td><td>Encargado de turno</td><td><span class="pill pill-a">Diaria</span></td><td>Local listo a horario</td></tr>
+      <tr><td class="row-label">Cierre</td><td>Encargado de turno</td><td><span class="pill pill-a">Diaria</span></td><td>Cuadre caja sin diferencias</td></tr>
+      <tr><td class="row-label">Stock & reposición</td><td>Reponedor + dueño</td><td><span class="pill pill-a">Diaria</span></td><td>0 quiebres en SKUs A</td></tr>
+      <tr><td class="row-label">Recepción proveedores</td><td>Encargado</td><td><span class="pill pill-b">Semanal</span></td><td>100% pesado y verificado</td></tr>
+      <tr><td class="row-label">Producto fresco (F&V)</td><td>Reponedor</td><td><span class="pill pill-a">Diaria</span></td><td>Merma F&V &lt; 6%</td></tr>
+      <tr><td class="row-label">Equipo & turnos</td><td>Dueño</td><td><span class="pill pill-b">Semanal</span></td><td>0 turnos sin cubrir</td></tr>
+      <tr><td class="row-label">Caja & efectivo</td><td>Cajero</td><td><span class="pill pill-a">Por turno</span></td><td>Diferencia &lt; $500/turno</td></tr>
+      <tr><td class="row-label">Limpieza & higiene</td><td>Equipo rotativo</td><td><span class="pill pill-a">Diaria</span></td><td>Checklist 100% completo</td></tr>
+      <tr><td class="row-label">Leña</td><td>Encargado</td><td><span class="pill pill-b">Semanal</span></td><td>Stock seco &gt; 4 sacos</td></tr>
+      <tr><td class="row-label">Mermas & control</td><td>Dueño</td><td><span class="pill pill-a">Diaria</span></td><td>Reporte semanal &lt; 6%</td></tr>
+      <tr><td class="row-label">Marketing diario (IG/WA)</td><td>Encargado/dueño</td><td><span class="pill pill-a">Diaria</span></td><td>1 post + 3 stories/día</td></tr>
+      <tr><td class="row-label">Cierre financiero</td><td>Dueño</td><td><span class="pill pill-c">Mensual</span></td><td>Margen bruto &gt; 35%</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- DIA TIPO -->
+<section class="tab-content" id="dia">
+  <div class="section-header">
+    <h2 class="section-title">Día tipo Meulen</h2>
+    <p class="section-sub">El cronograma operativo del día completo. Cada bloque tiene checklist y responsable.</p>
+  </div>
+
+  <div class="checklist">
+    <h4>Pre-apertura <span class="time-tag">07:00 — 08:30</span></h4>
+    <ul>
+      <li><strong>Encender luces y vitrinas.</strong> Verificar temperatura de cámara fría (3-7°C F&V, 0-4°C lácteos).</li>
+      <li><strong>Revisar producto F&V por bandeja:</strong> retirar dañado, rotar al frente lo más viejo, color blocking ordenado.</li>
+      <li><strong>Reposición desde bodega:</strong> rellenar góndolas según PAR levels marcados en etiqueta de cajón.</li>
+      <li><strong>Pizarra del día:</strong> escribir 4-6 ofertas del día con tiza, foto a IG.</li>
+      <li><strong>Caja inicial:</strong> entregar fondo de $50.000 al cajero, contar a dos manos, firmar planilla.</li>
+      <li><strong>Aroma de café encendido</strong> 15 min antes de abrir (cuando esté fase Hub).</li>
+      <li><strong>Verificar baño y caja en orden,</strong> piso barrido, mostrador limpio.</li>
+    </ul>
+  </div>
+
+  <div class="checklist">
+    <h4>Apertura → almuerzo <span class="time-tag">08:30 — 13:00</span></h4>
+    <ul>
+      <li><strong>Atención normal con check de bandejas cada hora:</strong> retirar dañado, mojar verde de hoja con mister manual si no hay automático.</li>
+      <li><strong>Recepción proveedores</strong> si día programado (usar protocolo recepción del tab Proveedores).</li>
+      <li><strong>Reposición continua entre clientes</strong> — cajón nunca vacío frente a cliente.</li>
+      <li><strong>Subir 1-2 stories a IG</strong> con producto destacado, ofertas del día.</li>
+      <li><strong>Mensaje matinal lista VIP WhatsApp</strong> con 3-5 ofertas + foto a las 09:30.</li>
+    </ul>
+  </div>
+
+  <div class="checklist">
+    <h4>Mediodía <span class="time-tag">13:00 — 14:00</span></h4>
+    <ul>
+      <li><strong>Pico fuerte:</strong> dos personas en piso, una en caja. NO reposiciones grandes en este bloque.</li>
+      <li><strong>Productos preparados rotando</strong> (cuando esté fase Hub): ensalada del día, sopa, sándwich.</li>
+      <li><strong>Cambio de turno cajero</strong> si aplica: cuadre intermedio, ambos firman planilla.</li>
+    </ul>
+  </div>
+
+  <div class="checklist">
+    <h4>Tarde <span class="time-tag">14:00 — 19:00</span></h4>
+    <ul>
+      <li><strong>Check de bandejas 14:30 y 17:30:</strong> rotar, retirar dañado, marcar producto a 1 día con etiqueta amarilla -40%.</li>
+      <li><strong>Reposición segunda ola</strong> desde bodega para preparar pico vespertino.</li>
+      <li><strong>Mensaje tarde lista VIP</strong> con ofertas del día restantes a las 17:00.</li>
+      <li><strong>Despachos WhatsApp</strong> programados a esta hora si hay ruta.</li>
+      <li><strong>Reposición de leña</strong> si stock cayó bajo 4 sacos (en invierno).</li>
+    </ul>
+  </div>
+
+  <div class="checklist">
+    <h4>Cierre <span class="time-tag">19:00 — 20:30</span></h4>
+    <ul>
+      <li><strong>Conteo de caja a dos personas:</strong> cajero + encargado, firman planilla, retirar exceso a caja fuerte.</li>
+      <li><strong>Cobertores nocturnos sobre F&V</strong> y temperatura cámara verificada.</li>
+      <li><strong>Producto pasado del día</strong> separado: a cocina interna (cuando esté hub) o a basura/compost si no.</li>
+      <li><strong>Limpieza profunda piso, mostrador y baño.</strong> Luces tenues, alarma activada.</li>
+      <li><strong>Cierre POS:</strong> emitir Z, anotar merma, anotar stock crítico para compra del día siguiente.</li>
+      <li><strong>Foto del local cerrado</strong> con pizarra a IG stories ("hasta mañana, vecino").</li>
+    </ul>
+  </div>
+
+  <div class="checklist">
+    <h4>Tareas semanales <span class="time-tag">Lunes / Domingo</span></h4>
+    <ul>
+      <li><strong>Lunes:</strong> conteo físico SKUs A (top 20% por venta), comparar con POS. Lista de compra Temuco para martes.</li>
+      <li><strong>Martes:</strong> <strong>viaje a Temuco mayorista</strong> (4am salida, 14h vuelta) — F&V + carbón + productos del sur. Recepción y refrigeración inmediata.</li>
+      <li><strong>Miércoles:</strong> orden a distribuidoras de abarrotes secos. Revisión PAR levels — actualizar SKUs con cambio de demanda.</li>
+      <li><strong>Jueves:</strong> recepción distribuidoras + visita rotativa a productor local (Llanquihue/Maullín/Frutillar). Pago a productores.</li>
+      <li><strong>Viernes:</strong> auditoría visual del local (caminar como cliente, foto de problemas). Preparar kits asado para fin de semana.</li>
+      <li><strong>Sábado:</strong> reposición estética (sábado mañana = pico semanal).</li>
+      <li><strong>Domingo:</strong> cierre semanal — reporte ventas, merma, caja consolidada.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- STOCK -->
+<section class="tab-content" id="stock">
+  <div class="section-header">
+    <h2 class="section-title">Stock & Reposición</h2>
+    <p class="section-sub">PAR levels + ABC + FIFO + reorder point. La fórmula del control de inventario aplicada a frutería.</p>
+  </div>
+
+  <div class="note-block">
+    <h3>El método</h3>
+    <p><strong>ABC + PAR + ROP = sistema completo.</strong> Cada SKU se clasifica como A (top 20%, 80% de la venta), B (siguiente 30%) o C (50% restante). Cada SKU tiene PAR level (stock objetivo) y reorder point (cuándo pedir). FIFO siempre.</p>
+    <p>Esto convierte la reposición de "intuición del dueño" a "tarea ejecutable por cualquiera del equipo".</p>
+  </div>
+
+  <div class="cards-grid">
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span><span class="badge badge-fase">Fase 1</span><span class="badge badge-critico">Crítico</span></div><h4 class="card-title">Clasificación ABC del catálogo</h4><p class="card-desc">Top 20% (clase A: tomate, palta, papa, cebolla, lechuga, plátano, pollo, pan, etc.) recibe seguimiento semanal estricto. B: mensual. C: trimestral.</p><div class="card-meta"><div class="card-meta-row"><strong>Tool:</strong> reporte Loyverse + planilla simple</div></div></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span><span class="badge badge-fase">Fase 1</span></div><h4 class="card-title">PAR levels visibles en cajón</h4><p class="card-desc">Cada bandeja tiene una etiqueta: "Tomate · Mín 8kg · Máx 20kg". Reponedor mira y rellena. Fin de la pregunta "¿hay que pedir tomate?".</p><div class="card-meta"><div class="card-meta-row"><strong>Tool:</strong> etiquetas plásticas reusables</div></div></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span><span class="badge badge-fase">Fase 1</span><span class="badge badge-critico">Crítico</span></div><h4 class="card-title">Reorder Point por SKU</h4><p class="card-desc">ROP = (demanda diaria × lead time) + stock seguridad. Ej: tomate 5kg/día × 2 días lead × 1.3 = 13kg. Bajo eso, se pide.</p><div class="card-meta"><div class="card-meta-row"><strong>Tool:</strong> Sheet "ROP-Meulen" actualizada mensual</div></div></div>
+    <div class="idea-card diario"><div class="card-badges"><span class="badge badge-freq-d">Diario</span><span class="badge badge-resp">Reponedor</span></div><h4 class="card-title">FIFO en cada reposición</h4><p class="card-desc">Producto nuevo SIEMPRE atrás. Producto viejo al frente. Verificación visual por encargado al cierre del día.</p><div class="card-meta"><div class="card-meta-row"><strong>Verificación:</strong> foto de bandejas al cierre</div></div></div>
+    <div class="idea-card semanal"><div class="card-badges"><span class="badge badge-freq-s">Semanal</span><span class="badge badge-fase">Fase 2</span></div><h4 class="card-title">Conteo físico SKUs clase A</h4><p class="card-desc">Cada lunes 30 min antes de abrir: conteo de los 20 SKUs top, comparar con POS, ajustar diferencia, investigar varianzas &gt;5%.</p><div class="card-meta"><div class="card-meta-row"><strong>Output:</strong> reporte de varianza al dueño</div></div></div>
+    <div class="idea-card mensual"><div class="card-badges"><span class="badge badge-freq-m">Mensual</span></div><h4 class="card-title">Conteo SKUs clase B</h4><p class="card-desc">Conteo mensual de SKUs medianos. Detecta merma silenciosa de productos no vigilados.</p></div>
+    <div class="idea-card mensual"><div class="card-badges"><span class="badge badge-freq-m">Trimestral</span></div><h4 class="card-title">Inventario completo (cierre fiscal)</h4><p class="card-desc">Cada 3 meses, conteo completo de todo. Sirve para tax + identificar SKUs muertos.</p></div>
+    <div class="idea-card semanal"><div class="card-badges"><span class="badge badge-freq-s">Semanal</span><span class="badge badge-fase">Fase 2</span></div><h4 class="card-title">Reposición estética sábado mañana</h4><p class="card-desc">Sábado es pico semanal. Viernes noche o sábado 7am: reorganización completa, color blocking impecable, abundancia visible.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">Lista de quiebres en POS</h4><p class="card-desc">Cuando un cliente pide algo que no hay, se anota en POS ("solicitado: quínoa orgánica"). Informa qué SKU C podría subir a B.</p></div>
+    <div class="idea-card mensual"><div class="card-badges"><span class="badge badge-freq-m">Mensual</span></div><h4 class="card-title">Revisión SKUs muertos</h4><p class="card-desc">SKUs sin venta en 60 días → liquidación o eliminación. No ocupan góndola productos zombies.</p></div>
+  </div>
+</section>
+
+<!-- PROVEEDORES -->
+<section class="tab-content" id="proveedores">
+  <div class="section-header">
+    <h2 class="section-title">Proveedores</h2>
+    <p class="section-sub">Selección, recepción, control de calidad. La merma se decide al recibir, no al vender.</p>
+  </div>
+
+  <div class="cards-grid">
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span><span class="badge badge-fase">Fase 1</span></div><h4 class="card-title">Maestro de proveedores documentado</h4><p class="card-desc">Cada proveedor: nombre, RUT, contacto, productos, precios, lead time, frecuencia, condiciones de pago. Una hoja por proveedor.</p><div class="card-meta"><div class="card-meta-row"><strong>Tool:</strong> Sheet "Maestro-Proveedores"</div></div></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span><span class="badge badge-fase">Fase 1</span><span class="badge badge-critico">Crítico</span></div><h4 class="card-title">Mínimo 3 proveedores por categoría crítica</h4><p class="card-desc">F&V: Lo Valledor + 2 productores locales. Abarrotes: 2 distribuidoras. Lácteos: 2-3 fuentes. Sin dependencia de un solo punto.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span><span class="badge badge-critico">Crítico</span></div><h4 class="card-title">Protocolo de recepción</h4><p class="card-desc">1) Pesar/contar. 2) Inspeccionar visualmente. 3) Probar muestra (fruta firme, color, olor). 4) Aceptar o rechazar. 5) Firmar guía. 6) Anotar en POS.</p><div class="card-meta"><div class="card-meta-row"><strong>Regla:</strong> nunca pagar antes de inspeccionar</div></div></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">Criterios de rechazo claros</h4><p class="card-desc">Producto golpeado &gt;15%, fuera de calibre, vencimiento &lt;7 días en abarrote, temperatura fuera de rango. Sin ambigüedad.</p></div>
+    <div class="idea-card semanal"><div class="card-badges"><span class="badge badge-freq-s">Semanal</span></div><h4 class="card-title">Calendario fijo de recepción</h4><p class="card-desc">Lunes 7am: Lo Valledor F&V. Miércoles 8am: distribuidora abarrotes. Jueves: productores locales. Recepciones fuera de calendario son excepción documentada.</p></div>
+    <div class="idea-card mensual"><div class="card-badges"><span class="badge badge-freq-m">Mensual</span></div><h4 class="card-title">Score card de proveedor</h4><p class="card-desc">Cada mes: % puntualidad, % calidad aceptada, varianza precio. Score &lt;80 = conversación. &lt;70 = reemplazo.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span><span class="badge badge-fase">Fase 2</span></div><h4 class="card-title">Red de productores locales con contrato</h4><p class="card-desc">Acuerdo formal con 8-12 productores Los Lagos: cantidad mínima mensual, precio referencia, entrega exclusiva en zona. Diferencial Meulen.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">Pago consistente y a tiempo</h4><p class="card-desc">Productores chicos pagan al contado, distribuidoras a 30 días. Cumplir religiosamente — relación a largo plazo se construye con pago, no con precio.</p></div>
+    <div class="idea-card semanal"><div class="card-badges"><span class="badge badge-freq-s">Semanal</span><span class="badge badge-critico">Crítico</span></div><h4 class="card-title">Viaje semanal a Temuco mayorista</h4><p class="card-desc">Mercado Mayorista de Temuco (Avda. Pedro de Valdivia) es el hub de F&V del sur. Productos a 30-40% menor precio que distribuidor PMC + variedad imposible localmente. Camionada propia: martes 4am salida, vuelta 14h.</p><div class="card-meta"><div class="card-meta-row"><strong>Lead time:</strong> 1 día (compra martes, llega martes tarde)</div><div class="card-meta-row"><strong>ROI estimado:</strong> ahorro 25-35% en F&V vs distribuidor</div></div></div>
+    <div class="idea-card semanal"><div class="card-badges"><span class="badge badge-freq-s">Semanal</span></div><h4 class="card-title">Protocolo viaje a Temuco</h4><p class="card-desc">Lista de compra preparada lunes (basada en PAR levels + ofertas WA del mayorista). Plata efectivo + tarjeta. Camioneta limpia con pallets + lonas. Vuelta directo a cámara fría.</p><div class="card-meta"><div class="card-meta-row"><strong>Costo viaje:</strong> bencina ~$45k + peaje ~$8k</div><div class="card-meta-row"><strong>Compensar costo:</strong> volumen mínimo $400k justifica viaje</div></div></div>
+    <div class="idea-card mensual"><div class="card-badges"><span class="badge badge-freq-m">Mensual</span></div><h4 class="card-title">Visita Lo Valledor (Santiago) cuando aplica</h4><p class="card-desc">Para SKUs de mayor margen (productos exóticos, importados, especialidades) un viaje al mayorista de Santiago al mes amplía mucho el surtido vs Temuco.</p></div>
+    <div class="idea-card semanal"><div class="card-badges"><span class="badge badge-freq-s">Semanal</span></div><h4 class="card-title">Productores locales rurales</h4><p class="card-desc">Llanquihue, Maullín, Frutillar, Calbuco, Cochamó: papas, miel, queso, cordero, frutillas, mermeladas. Visita rotativa 1-2 productores/semana = relación viva + producto único.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">Trazabilidad básica</h4><p class="card-desc">Por cada lote, anotar proveedor + fecha. Si hay problema (cliente reclama), se rastrea en 5 min y se contacta al proveedor.</p></div>
+  </div>
+</section>
+
+<!-- PRODUCTO FRESCO -->
+<section class="tab-content" id="producto">
+  <div class="section-header">
+    <h2 class="section-title">Producto fresco — manejo y cuidado</h2>
+    <p class="section-sub">F&V, lácteos, carnes, pan. Lo que define la calidad percibida y la merma real.</p>
+  </div>
+
+  <div class="cards-grid">
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span><span class="badge badge-critico">Crítico</span></div><h4 class="card-title">Cámara fría con temperaturas separadas</h4><p class="card-desc">F&V: 3-7°C, 85-95% humedad. Lácteos: 0-4°C. Carnes: -1 a 2°C. Termómetro visible en cada zona, lectura registrada 2x/día.</p></div>
+    <div class="idea-card diario"><div class="card-badges"><span class="badge badge-freq-d">Diario</span><span class="badge badge-resp">Encargado</span></div><h4 class="card-title">Bitácora de temperatura</h4><p class="card-desc">Mañana 8am y cierre 19:30: anotar temp y humedad de cada cámara. Si fuera de rango, alerta inmediata.</p></div>
+    <div class="idea-card diario"><div class="card-badges"><span class="badge badge-freq-d">Diario</span><span class="badge badge-resp">Reponedor</span></div><h4 class="card-title">Mister manual o automático sobre verde</h4><p class="card-desc">Lechuga, espinaca, ciboulette, cilantro: humedecer cada 1-2 horas. Si automático, cada 10 min × 10 seg.</p></div>
+    <div class="idea-card diario"><div class="card-badges"><span class="badge badge-freq-d">Diario</span></div><h4 class="card-title">Separación etileno-sensitivos</h4><p class="card-desc">Plátano, palta, manzana producen etileno y maduran lo cercano. NO juntar con verde de hoja, brócoli, coliflor.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">Etiqueta de origen visible</h4><p class="card-desc">"Tomate · Familia González · Llanquihue · 1.290/kg". Storytelling de góndola sube ticket 15-20%.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">Color blocking</h4><p class="card-desc">Agrupar por color (rojos juntos, verdes juntos, naranjos juntos) en lugar de por categoría tradicional. Atrae el ojo y comunica frescura.</p></div>
+    <div class="idea-card diario"><div class="card-badges"><span class="badge badge-freq-d">Diario</span></div><h4 class="card-title">Display de abundancia</h4><p class="card-desc">Cestos rebosantes, pirámides de cítricos. Cuando un cesto baja a 30% → rellenar o consolidar. Nunca cesto a 10% visible.</p></div>
+    <div class="idea-card diario"><div class="card-badges"><span class="badge badge-freq-d">Diario</span></div><h4 class="card-title">Cobertores nocturnos</h4><p class="card-desc">Sábanas térmicas livianas sobre F&V al cierre. Reducen evaporación nocturna y queman 4-7% menos producto.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span><span class="badge badge-fase">Fase 2</span></div><h4 class="card-title">Markdown progresivo automático</h4><p class="card-desc">2 días para vencer = -20%, 1 día = -40%. Etiqueta amarilla visible. Loyverse maneja descuentos por fecha.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">Lavado y desinfección F&V (back of house)</h4><p class="card-desc">Producto que se vende preparado (ensalada lista) se lava con agua + 10ml hipoclorito por L, enjuague abundante. Norma sanitaria + protección al cliente.</p></div>
+  </div>
+</section>
+
+<!-- EQUIPO -->
+<section class="tab-content" id="equipo">
+  <div class="section-header">
+    <h2 class="section-title">Equipo & RR.HH.</h2>
+    <p class="section-sub">Roles claros, turnos predecibles, capacitación continua. La rotación de personal es el mayor enemigo silencioso.</p>
+  </div>
+
+  <div class="cards-grid">
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span><span class="badge badge-fase">Fase 1</span></div><h4 class="card-title">Organigrama básico</h4><p class="card-desc">Dueño · Encargado de turno · Cajero · Reponedor · Despachador (mañanas). Cada rol con descripción y responsabilidades escritas.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span><span class="badge badge-fase">Fase 1</span><span class="badge badge-critico">Crítico</span></div><h4 class="card-title">Manual de cargo escrito</h4><p class="card-desc">1-2 páginas por cargo: tareas diarias, tareas semanales, KPIs, qué NO hacer, a quién acudir si pasa X. Inducción en 2 horas.</p></div>
+    <div class="idea-card semanal"><div class="card-badges"><span class="badge badge-freq-s">Semanal</span><span class="badge badge-resp">Dueño</span></div><h4 class="card-title">Programación de turnos jueves</h4><p class="card-desc">Cada jueves se publica el turno de la próxima semana. Cubrir picos: sábado AM, viernes PM. Domingo cerrado o turno corto.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">Cross-training</h4><p class="card-desc">Cada persona sabe hacer al menos 2 roles. Cajero sabe reponer. Reponedor sabe atender caja. Sin "no puedo, no es mi cargo".</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">Onboarding de 5 días</h4><p class="card-desc">Día 1: tour + manual. Día 2: shadowing reposición. Día 3: shadowing caja. Día 4: turno acompañado. Día 5: turno solo con supervisión.</p></div>
+    <div class="idea-card semanal"><div class="card-badges"><span class="badge badge-freq-s">Semanal</span></div><h4 class="card-title">Reunión de equipo lunes 8am</h4><p class="card-desc">15 min antes de abrir. Repaso ventas/merma de la semana, novedades de producto, reconocimiento + lo que viene.</p></div>
+    <div class="idea-card mensual"><div class="card-badges"><span class="badge badge-freq-m">Mensual</span></div><h4 class="card-title">1:1 con cada miembro</h4><p class="card-desc">30 min con dueño. ¿Cómo te sientes? ¿Qué te frustra? ¿Qué cambiarías? Notas y compromisos. Retención se gana aquí.</p></div>
+    <div class="idea-card mensual"><div class="card-badges"><span class="badge badge-freq-m">Mensual</span></div><h4 class="card-title">Capacitación continua corta</h4><p class="card-desc">Cada mes 1 hora: temporada de fruta, productores nuevos, técnica de display, atención difícil. Mantiene equipo enganchado.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">Bono por desempeño claro</h4><p class="card-desc">5% extra al sueldo si: merma &lt;6%, 0 incidentes caja, &gt;10 reseñas Google con su nombre mencionado. Motivación alineada con KPIs.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">Uniforme Meulen</h4><p class="card-desc">Polera trigo + delantal verde molino con logo. Identifica al equipo, profesionaliza, refuerza marca a cliente. Cada empleado: 3 poleras + 2 delantales.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">Política de errores honesta</h4><p class="card-desc">Si rompiste algo, se reporta. No se descuenta del sueldo (Chile prohíbe). Reincidencia con dolo = conversación seria, no antes.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">Contrato + previsión al día</h4><p class="card-desc">100% del equipo con contrato, AFP, salud, mutual. Sin atajos. Inspección laboral chilena es estricta y la marca se hunde con un escándalo.</p></div>
+  </div>
+</section>
+
+<!-- CAJA -->
+<section class="tab-content" id="caja">
+  <div class="section-header">
+    <h2 class="section-title">Caja & Efectivo</h2>
+    <p class="section-sub">El control de efectivo es el control del negocio. Sin caja cuadrada, no hay realidad financiera.</p>
+  </div>
+
+  <div class="cards-grid">
+    <div class="idea-card diario"><div class="card-badges"><span class="badge badge-freq-d">Diario</span><span class="badge badge-fase">Fase 1</span><span class="badge badge-critico">Crítico</span></div><h4 class="card-title">Apertura caja con fondo fijo</h4><p class="card-desc">$50.000 en monedas y billetes chicos. Contado a dos manos (cajero + encargado), firma planilla con monto y hora.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span><span class="badge badge-critico">Crítico</span></div><h4 class="card-title">Cuadre por turno (no solo al cierre)</h4><p class="card-desc">Cambio de cajero a media tarde = cuadre intermedio. Diferencia se detecta al turno, no al cierre con 8 horas en medio.</p></div>
+    <div class="idea-card diario"><div class="card-badges"><span class="badge badge-freq-d">Diario</span><span class="badge badge-resp">Cajero + Encargado</span></div><h4 class="card-title">Cuadre cierre a dos personas</h4><p class="card-desc">Cajero cuenta. Encargado cuenta. Comparan. Si difieren &gt;$500, recuento. Ambos firman planilla. Diferencia &gt;$2.000 se investiga.</p></div>
+    <div class="idea-card diario"><div class="card-badges"><span class="badge badge-freq-d">Diario</span></div><h4 class="card-title">Retiro a caja fuerte</h4><p class="card-desc">Sobre $300.000 en caja → retiro a caja fuerte (con sobre + planilla firmada). Tope cajón abierto: $300.000.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">Caja chica separada</h4><p class="card-desc">Caja chica $50.000 para gastos menores (lavado, repuestos, propina). Bitácora con fecha + monto + concepto + recibo. Reposición semanal.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">Solo el dueño abre la caja fuerte</h4><p class="card-desc">Una sola persona con código. Si va de viaje, deja sobre cerrado con encargado y código por mensaje. Sin múltiples llaves.</p></div>
+    <div class="idea-card diario"><div class="card-badges"><span class="badge badge-freq-d">Diario</span><span class="badge badge-fase">Fase 2</span></div><h4 class="card-title">Pago digital prioritario</h4><p class="card-desc">Sticker Mach + Mercado Pago QR + transferencia visibles en caja. Reduce manejo efectivo, baja riesgo robo, sube ticket promedio.</p></div>
+    <div class="idea-card semanal"><div class="card-badges"><span class="badge badge-freq-s">Semanal</span></div><h4 class="card-title">Depósito bancario lunes</h4><p class="card-desc">Lunes mañana: depósito de la semana en banco. NO acumular efectivo en local. Recibo del banco en carpeta financiera.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">Cámara visible sobre caja</h4><p class="card-desc">Cámara grabando 24/7 enfocada en caja. Disuasivo + evidencia si hay diferencia. Cuesta poco, ahorra mucho.</p></div>
+    <div class="idea-card mensual"><div class="card-badges"><span class="badge badge-freq-m">Mensual</span></div><h4 class="card-title">Conciliación mensual con banco</h4><p class="card-desc">Estado de cuenta vs registro POS vs cierres diarios. Cualquier desfase &gt;$5.000 se investiga.</p></div>
+  </div>
+</section>
+
+<!-- LIMPIEZA -->
+<section class="tab-content" id="limpieza">
+  <div class="section-header">
+    <h2 class="section-title">Limpieza & Higiene</h2>
+    <p class="section-sub">Cumple norma sanitaria + es percepción de calidad. El cliente nota lo limpio antes que lo bonito.</p>
+  </div>
+
+  <h3 class="serif" style="font-size:1.05rem; color:var(--verde-molino); margin-bottom: 0.85rem;">Diaria</h3>
+  <div class="checklist">
+    <h4>Apertura <span class="time-tag">07:30 — 08:00</span></h4>
+    <ul>
+      <li>Barrido y trapeado completo del piso de venta y bodega.</li>
+      <li>Mostrador, romana y POS limpios con paño desinfectado.</li>
+      <li>Baño limpio: WC, lavamanos, espejo, papel.</li>
+      <li>Vitrinas exteriores limpias (importante: la primera impresión desde la calle).</li>
+      <li>Tarja de lavado de F&V con cloro disuelto fresco.</li>
+    </ul>
+  </div>
+  <div class="checklist">
+    <h4>Durante el día <span class="time-tag">según necesidad</span></h4>
+    <ul>
+      <li>Romana después de cada producto graso (palta, queso, carne).</li>
+      <li>Piso bajo bandejas de F&V — saca hojas y agua acumulada.</li>
+      <li>Mesón de caja seco y libre de boletas viejas.</li>
+      <li>Baño revisado a media mañana y media tarde.</li>
+    </ul>
+  </div>
+  <div class="checklist">
+    <h4>Cierre <span class="time-tag">19:30 — 20:00</span></h4>
+    <ul>
+      <li>Limpieza profunda piso, mostrador, baño.</li>
+      <li>Cestos vacíos de F&V se sacan, lavan, secan, vuelven mañana.</li>
+      <li>Tarja de lavado desinfectada.</li>
+      <li>Basuras vaciadas, contenedores con bolsa nueva.</li>
+      <li>Compostaje (residuo F&V) separado en su contenedor.</li>
+    </ul>
+  </div>
+
+  <h3 class="serif" style="font-size:1.05rem; color:var(--verde-molino); margin: 1.5rem 0 0.85rem;">Semanal</h3>
+  <div class="checklist">
+    <h4>Profunda — Lunes pre-apertura <span class="time-tag">07:00 — 09:00</span></h4>
+    <ul>
+      <li>Cámara fría: vaciar, limpiar paredes y rejillas, revisar gomas, secar antes de recargar.</li>
+      <li>Romanas: calibrar y limpiar interno.</li>
+      <li>Vidrios y pizarras limpiados completamente.</li>
+      <li>Bodega: aspirado, control de plagas (trampas).</li>
+      <li>Refrigeradores: descongelar si hay escarcha &gt;2mm.</li>
+    </ul>
+  </div>
+
+  <h3 class="serif" style="font-size:1.05rem; color:var(--verde-molino); margin: 1.5rem 0 0.85rem;">Mensual / Trimestral</h3>
+  <div class="checklist">
+    <h4>Mensual</h4>
+    <ul>
+      <li>Control de plagas profesional contratado (cuenta corriente con empresa certificada SEREMI).</li>
+      <li>Mantención cámara fría: limpieza condensador, revisión sello.</li>
+      <li>Revisión extintor de incendios (vencimiento + carga).</li>
+      <li>Renovación stock cloro / sanitizantes / paños.</li>
+    </ul>
+  </div>
+  <div class="checklist">
+    <h4>Trimestral</h4>
+    <ul>
+      <li>Curso refresco manipulación de alimentos para todo el equipo.</li>
+      <li>Auditoría sanitaria interna (caminata con checklist SEREMI).</li>
+      <li>Pintura retoque zonas con desgaste.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- LEÑA -->
+<section class="tab-content" id="lena">
+  <div class="section-header">
+    <h2 class="section-title">Leña, carbón y productos estacionales</h2>
+    <p class="section-sub">Puerto Montt = clima frío 6 meses al año. Leña + carbón son categorías de alto ticket y margen. Manejo correcto = oportunidad de margen + reputación + tráfico.</p>
+  </div>
+
+  <div class="note-block">
+    <h3>El criterio leña + carbón en Puerto Montt</h3>
+    <p>Leña húmeda contamina, calienta menos y arruina chimenea. <strong>Vender solo leña 100% seca certificada</strong> (humedad &lt;25%) — es ley en zona regulada y es lo que el cliente exige. Fuentes locales: Ecoleña, Bullenergy, productores certificados Los Lagos.</p>
+    <p>El carbón vegetal del sur (Curacautín, Lonquimay) es de mejor calidad que el carbón paraguayo importado y se trae bien en el mismo viaje semanal a Temuco junto con las frutas. <strong>Sinergia logística:</strong> camionada a Temuco vuelve cargada con F&V + carbón + productos del sur.</p>
+    <p>El cliente que compra leña o carbón casi siempre compra otra cosa: queso, vino, miel, sal de mar, chocolate. <strong>Tratar leña/carbón como gancho de tráfico,</strong> no como categoría aislada — kits y bundles suben ticket 3-4x.</p>
+  </div>
+
+  <div class="cards-grid">
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span><span class="badge badge-critico">Crítico</span></div><h4 class="card-title">Solo leña certificada seca</h4><p class="card-desc">Humedad &lt;25% verificada con higrómetro de pin. Proveedor entrega con certificación. Sin certificado = no entra. Ley 21.305 de zonas saturadas (Puerto Montt aplica).</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">Almacenamiento bajo techo ventilado</h4><p class="card-desc">Leña apilada sobre tarima de madera, separada del muro 10cm, con techo y ventilación lateral. Nunca en suelo de cemento sin tarima.</p></div>
+    <div class="idea-card semanal"><div class="card-badges"><span class="badge badge-freq-s">Semanal</span></div><h4 class="card-title">Stock objetivo invierno: 8 sacos visibles</h4><p class="card-desc">Abr-sep: PAR 8 sacos en local + reserva 12 en bodega. ROP a 4 sacos. Reposición miércoles + sábado.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">3 formatos disponibles</h4><p class="card-desc">Saco 25 kg ($4.500-5.500), media vara ($35.000), vara completa ($65.000-70.000). Cliente elige según uso (cocina ocasional vs estufa diaria).</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">Despacho leña al barrio</h4><p class="card-desc">Camioneta del local entrega vara/media vara dentro de 5 km. Costo $5.000 incluido sobre $50.000 de compra. Diferencial fuerte vs proveedor anónimo.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">Bundling con leña</h4><p class="card-desc">Cliente lleva vara → ofrecer "kit invierno": vino tinto, queso de campo, palta, pan amasado. Sube ticket de $35k a $50-60k.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">Catálogo estacional rotativo</h4><p class="card-desc">Mar-Abr: leña + cosecha (manzana, membrillo). May-Jul: leña + sopa congelada + miel. Ago-Sep: leña + chocolate caliente. Oct-Feb: BBQ + verano local.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">Productos del mar local</h4><p class="card-desc">Ostiones, choritos, salmón ahumado, cochayuyo seco. Imposible de encontrar bien en supermercado. Frecuencia variable según pesca.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span><span class="badge badge-critico">Crítico</span></div><h4 class="card-title">Carbón vegetal stock permanente</h4><p class="card-desc">Carbón mantiene venta todo el año (parrilladas verano + brasero invierno). Stock objetivo: 15 sacos 5kg + 10 sacos 15kg. Proveedor sur (Curacautín, Lonquimay) = mejor calidad que carbón importado paraguayo.</p><div class="card-meta"><div class="card-meta-row"><strong>PAR levels:</strong> 15×5kg + 10×15kg verano, 8×5kg + 5×15kg invierno</div><div class="card-meta-row"><strong>Margen:</strong> 35-45%</div></div></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">Bracitas / encendedores naturales</h4><p class="card-desc">Bracitas de pino, cubitos parafínicos, encendedores piezo, fósforos largos. Categoría chica pero asociada al asado y al fuego del hogar — alto attach rate.</p><div class="card-meta"><div class="card-meta-row"><strong>SKUs:</strong> 4-6 fijos en mostrador caja</div></div></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">Kit Asado fin de semana</h4><p class="card-desc">Bundle pre-armado en sobre kraft Meulen: carbón 5kg + bracitas + sal de mar + sales especiadas + carbón aroma. Visible jueves-sábado. Sube ticket de $5k a $18-25k.</p><div class="card-meta"><div class="card-meta-row"><strong>Margen consolidado:</strong> 50%+</div></div></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">Almacenamiento carbón seco</h4><p class="card-desc">Carbón en zona ventilada bajo techo, sobre tarima, lejos de leña (carbón húmedo cae rápido en calidad). Sacos sellados — humedad arruina venta.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">Pellets para estufa (categoría B)</h4><p class="card-desc">Cada vez más casas con estufa pellet certificada. Saco 18kg como SKU complementario — clientes leen/comparan precio vs Líder. Mantener 5-8 sacos en bodega.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span><span class="badge badge-fase">Fase 2</span></div><h4 class="card-title">Fardos de pasto / paja</h4><p class="card-desc">Demanda invernal de vecinos con perros, gatos, gallinas, conejos. Categoría B nicho que muchos competidores ignoran.</p></div>
+  </div>
+</section>
+
+<!-- MERMAS -->
+<section class="tab-content" id="mermas">
+  <div class="section-header">
+    <h2 class="section-title">Mermas & Control de Calidad</h2>
+    <p class="section-sub">Toda merma tiene origen. Si no se mide, se acepta. Objetivo: F&V &lt;6%, abarrotes &lt;1%, leña 0%.</p>
+  </div>
+
+  <div class="cards-grid">
+    <div class="idea-card diario"><div class="card-badges"><span class="badge badge-freq-d">Diario</span><span class="badge badge-critico">Crítico</span></div><h4 class="card-title">Registro de merma diaria</h4><p class="card-desc">Producto retirado se anota: SKU, kg/unidades, motivo (vencido, dañado, robado, otro). 2 min al cierre. Sin esto no hay mejora.</p><div class="card-meta"><div class="card-meta-row"><strong>Tool:</strong> planilla simple o Loyverse "ajuste"</div></div></div>
+    <div class="idea-card semanal"><div class="card-badges"><span class="badge badge-freq-s">Semanal</span></div><h4 class="card-title">Análisis merma por SKU</h4><p class="card-desc">Lunes: identificar top 5 SKU con más merma. ¿Por qué? Sobre-compra, mala rotación, mal almacenaje, calidad proveedor.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">5 categorías de causa</h4><p class="card-desc">1) Vencimiento. 2) Daño físico (manipulación). 3) Calidad recepción. 4) Falla de frío. 5) Robo / desaparición. Acción es distinta para cada una.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">Markdown rota merma a venta</h4><p class="card-desc">Lo que está a 1-2 días de vencer pasa a sección amarilla -30/-40%. 75%+ se vende. Lo que sobra a cocina interna o compostaje.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">Sección "Imperfectos Meulen"</h4><p class="card-desc">Producto cosméticamente feo pero sano: cesto fijo en entrada con -30%. Modelo Maifud. Cliente sensible al precio sin canibalizar.</p></div>
+    <div class="idea-card mensual"><div class="card-badges"><span class="badge badge-freq-m">Mensual</span></div><h4 class="card-title">Score card de merma</h4><p class="card-desc">% merma por categoría / mes. Comparar contra mes anterior + benchmark (F&V 4-6% es excelente, &gt;10% es alarma).</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">Producto "feo" a cocina interna</h4><p class="card-desc">Sinergia con tab Hub: tomate maduro → salsa, manzana golpeada → compota, pan duro → croutons. Cierra el ciclo a costo cero.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">Donación a comedor solidario</h4><p class="card-desc">Producto no vendible pero comestible se dona. Sostenibilidad real + impacto social comunicable. Marketing alto, costo cero.</p></div>
+    <div class="idea-card permanente"><div class="card-badges"><span class="badge badge-freq-p">Permanente</span></div><h4 class="card-title">Compostaje del local</h4><p class="card-desc">Restos no comestibles → contenedor compostaje. Acuerdo con productor local: compost por descuento.</p></div>
+  </div>
+</section>
+
+<!-- DATOS -->
+<section class="tab-content" id="datos">
+  <div class="section-header">
+    <h2 class="section-title">Datos operativos</h2>
+    <p class="section-sub">Las 4 visualizaciones que hablan a primera vista del estado del negocio.</p>
+  </div>
+  <div class="charts-grid">
+    <div class="chart-card"><h3 class="chart-title">Distribución ABC del catálogo</h3><div class="chart-wrap"><canvas id="chartABC"></canvas></div></div>
+    <div class="chart-card"><h3 class="chart-title">Merma % objetivo por categoría</h3><div class="chart-wrap"><canvas id="chartMerma"></canvas></div></div>
+    <div class="chart-card"><h3 class="chart-title">Distribución de procedimientos por frecuencia</h3><div class="chart-wrap"><canvas id="chartFreq"></canvas></div></div>
+    <div class="chart-card"><h3 class="chart-title">Carga horaria del día tipo</h3><div class="chart-wrap"><canvas id="chartDia"></canvas></div></div>
+  </div>
+</section>
+
+<!-- CRONOGRAMA -->
+<section class="tab-content" id="cronograma">
+  <div class="section-header">
+    <h2 class="section-title">Cronograma de implementación</h2>
+    <p class="section-sub">El orden en que se debe instalar cada protocolo. Empezando por lo que duele más si falta.</p>
+  </div>
+
+  <div class="phase-block">
+    <div class="phase-header">
+      <span class="phase-dot" style="background:var(--lacre);"></span>
+      <span class="phase-title">Fase 1 — Críticos (semana 1-2)</span>
+      <span class="phase-sub">Sin esto la operación pierde plata todos los días</span>
+    </div>
+    <div class="roadmap-cards">
+      <div class="roadmap-card"><div class="roadmap-card-title">Apertura + cierre con checklist</div><div class="roadmap-card-desc">Imprimir, plastificar, pegar en pared. Equipo lo sigue desde día 1.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Cuadre de caja a dos personas</div><div class="roadmap-card-desc">Planilla + firma + retiro a caja fuerte sobre $300k.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Maestro de proveedores básico</div><div class="roadmap-card-desc">Lista en Sheet con contacto + lead time + condiciones.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Protocolo de recepción</div><div class="roadmap-card-desc">Pesar + inspeccionar + firmar guía. Sin saltarse.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Registro diario de merma</div><div class="roadmap-card-desc">Anotar al cierre. Tabla simple SKU/kg/motivo.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">FIFO en cada reposición</div><div class="roadmap-card-desc">Verificación visual encargado al cierre.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Manual de cargo escrito</div><div class="roadmap-card-desc">1-2 páginas por rol. Inducción a 2 horas.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Control de leña + carbón certificado</div><div class="roadmap-card-desc">Cumplimiento normativa + diferencial calidad. Carbón sur, no paraguayo.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Protocolo viaje semanal a Temuco</div><div class="roadmap-card-desc">Martes 4am. Lista preparada lunes. Carga F&V + carbón + productos sur.</div></div>
+    </div>
+  </div>
+
+  <div class="phase-block">
+    <div class="phase-header">
+      <span class="phase-dot" style="background:var(--cobre);"></span>
+      <span class="phase-title">Fase 2 — Sistemas (semana 3-6)</span>
+      <span class="phase-sub">Ya con base, ahora se digitaliza y se optimiza</span>
+    </div>
+    <div class="roadmap-cards">
+      <div class="roadmap-card"><div class="roadmap-card-title">POS Loyverse + carga SKUs</div><div class="roadmap-card-desc">Inventario, fidelización, reportes diarios.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Clasificación ABC del catálogo</div><div class="roadmap-card-desc">Top 20% vs resto. Define donde poner energía.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">PAR levels visibles en cajón</div><div class="roadmap-card-desc">Etiqueta plástica con mín/máx. Reposición autónoma.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Reorder Point por SKU A</div><div class="roadmap-card-desc">Sheet con cálculo. Disparador de compra automático.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Markdown progresivo automático</div><div class="roadmap-card-desc">Loyverse rules: -20%/-40% por días a vencer.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Pago digital en caja</div><div class="roadmap-card-desc">QR Mach + Mercado Pago + transferencia visibles.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Score card mensual proveedores</div><div class="roadmap-card-desc">Puntualidad + calidad + precio.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Bitácora temperatura cámara</div><div class="roadmap-card-desc">2x/día. Detectar fallas de frío antes de perder producto.</div></div>
+    </div>
+  </div>
+
+  <div class="phase-block">
+    <div class="phase-header">
+      <span class="phase-dot" style="background:var(--tierra);"></span>
+      <span class="phase-title">Fase 3 — Cultura (mes 2-3)</span>
+      <span class="phase-sub">El equipo se vuelve dueño de la operación</span>
+    </div>
+    <div class="roadmap-cards">
+      <div class="roadmap-card"><div class="roadmap-card-title">Reunión semanal lunes 8am</div><div class="roadmap-card-desc">15 min. Ventas/merma + reconocimiento + lo que viene.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">1:1 mensual con cada miembro</div><div class="roadmap-card-desc">30 min con dueño. Frustraciones + ideas + compromisos.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Cross-training rotativo</div><div class="roadmap-card-desc">Cada persona puede cubrir 2 roles. Resiliencia operacional.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Capacitación mensual 1h</div><div class="roadmap-card-desc">Temporada, productores, técnica display, atención difícil.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Bono por desempeño claro</div><div class="roadmap-card-desc">5% extra si KPIs mensuales se cumplen.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Uniforme Meulen completo</div><div class="roadmap-card-desc">Polera trigo + delantal verde con logo.</div></div>
+    </div>
+  </div>
+
+  <div class="phase-block">
+    <div class="phase-header">
+      <span class="phase-dot" style="background:var(--musgo);"></span>
+      <span class="phase-title">Fase 4 — Profundización (mes 4-6)</span>
+      <span class="phase-sub">Excelencia operacional + sostenibilidad</span>
+    </div>
+    <div class="roadmap-cards">
+      <div class="roadmap-card"><div class="roadmap-card-title">Red de productores con contrato</div><div class="roadmap-card-desc">8-12 productores Los Lagos en relación formal.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Trazabilidad por lote</div><div class="roadmap-card-desc">Lote + fecha + proveedor anotado. Si reclama cliente, 5 min al origen.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Auditoría sanitaria interna trimestral</div><div class="roadmap-card-desc">Caminata con checklist SEREMI. Anticipar fiscalización.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Compostaje + donación a comedor</div><div class="roadmap-card-desc">Cierre del ciclo de merma. Marketing alto, costo cero.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Cámara visible sobre caja</div><div class="roadmap-card-desc">Disuasivo + evidencia. Bajo costo, alto retorno.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Conciliación bancaria mensual</div><div class="roadmap-card-desc">Banco vs POS vs cierres. Detección anomalías financieras.</div></div>
+      <div class="roadmap-card"><div class="roadmap-card-title">Inventario completo trimestral</div><div class="roadmap-card-desc">Conteo total. Tax + identificación SKUs muertos.</div></div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div style="max-width:1280px; margin:0 auto;">
+    <div style="display:flex; flex-wrap:wrap; gap:2rem;">
+      <div style="flex:1; min-width:200px;"><h4>MEULEN</h4><p style="margin:0; font-size:0.78rem; line-height:1.55;">Frutería de barrio · Abarrotes<br>Calle 3, Casa 1056, Jardines del Mirador<br>Puerto Montt · Chile</p></div>
+      <div style="flex:1; min-width:200px;"><h4>OLACORE Holding</h4><p style="margin:0; font-size:0.78rem; line-height:1.55;">CMC · Meulen · Olavega<br>Estación Olavarría — Piedra Azul<br>Puerto Montt · Chile</p></div>
+      <div style="flex:1; min-width:200px;"><h4>Operaciones</h4><p style="margin:0; font-size:0.78rem; line-height:1.55;">12 áreas · 68 procedimientos<br>4 fases · 6 meses<br>Merma objetivo &lt;6%</p></div>
+    </div>
+    <div class="footer-bottom">MEULEN ORDEN INTERNO · v1 · MAY 2026 · "El supermercado se vence con disciplina, no con tamaño." · Investigación cruzada Chile + benchmarks globales</div>
+  </div>
+</footer>
+
+<script>
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    const id = btn.dataset.tab;
+    document.getElementById(id).classList.add('active');
+    if (id === 'datos') renderCharts();
+    window.scrollTo({top: 0, behavior: 'smooth'});
+  });
+});
+
+const colors = { verdeMolino:'#2F3E34', tierra:'#8B6B4E', trigo:'#D9C7A1', musgo:'#4A5F3A', cobre:'#B86D3F', lacre:'#8C2A2A' };
+let chartsRendered = false;
+function renderCharts() {
+  if (chartsRendered) return;
+  chartsRendered = true;
+
+  new Chart(document.getElementById('chartABC'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Clase A (top 20% SKU = 80% venta)', 'Clase B (siguiente 30% SKU = 15% venta)', 'Clase C (resto 50% SKU = 5% venta)'],
+      datasets: [{ data: [80, 15, 5], backgroundColor: [colors.musgo, colors.tierra, colors.trigo], borderWidth: 2, borderColor: '#fff' }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } } } }
+  });
+
+  new Chart(document.getElementById('chartMerma'), {
+    type: 'bar',
+    data: {
+      labels: ['F&V', 'Lácteos', 'Carnes', 'Pan', 'Abarrotes', 'Leña'],
+      datasets: [{ label: 'Merma máx %', data: [6, 3, 2, 5, 1, 0], backgroundColor: [colors.musgo, colors.tierra, colors.cobre, colors.tierra, colors.trigo, colors.verdeMolino], borderRadius: 4 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 10, ticks: { callback: v => v + '%' } } } }
+  });
+
+  new Chart(document.getElementById('chartFreq'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Diarios (22)', 'Semanales (14)', 'Mensuales (10)', 'Permanentes (18)', 'Trimestral / Eventual (4)'],
+      datasets: [{ data: [22, 14, 10, 18, 4], backgroundColor: [colors.musgo, colors.tierra, colors.cobre, colors.verdeMolino, colors.lacre], borderWidth: 2, borderColor: '#fff' }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } } } }
+  });
+
+  new Chart(document.getElementById('chartDia'), {
+    type: 'bar',
+    data: {
+      labels: ['Pre-apertura', 'Apertura', 'Mediodía', 'Tarde', 'Cierre'],
+      datasets: [{ label: 'Personas requeridas', data: [2, 2, 3, 2, 2], backgroundColor: colors.tierra, borderRadius: 4 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 4, ticks: { stepSize: 1 } } } }
+  });
+}
+</script>
+</body>
+</html>

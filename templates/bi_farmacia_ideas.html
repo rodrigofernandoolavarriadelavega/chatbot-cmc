@@ -1,0 +1,1603 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Salud CMC — Idea Bank Farmacia Rural</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Inter:wght@300..600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --fiordo: #1F3340;
+  --cobre: #B86D3F;
+  --neblina: #EFE9DD;
+  --musgo: #4A5F3A;
+  --lacre: #8C2A2A;
+  --lenga: #D4A87A;
+  --slate-light: #f8f7f4;
+}
+* { box-sizing: border-box; }
+body { font-family: 'Inter', sans-serif; background: var(--neblina); color: #1a1a1a; margin: 0; }
+h1, h2, h3, .serif { font-family: 'Fraunces', serif; }
+.mono { font-family: 'IBM Plex Mono', monospace; }
+
+/* NAV */
+.topnav { background: var(--fiordo); color: #fff; padding: 0.75rem 1.5rem; display: flex; align-items: center; gap: 1.5rem; position: sticky; top: 0; z-index: 100; }
+.topnav a { color: rgba(255,255,255,0.7); font-size: 0.8rem; text-decoration: none; }
+.topnav a:hover { color: #fff; }
+.topnav .brand { font-family: 'Fraunces', serif; font-size: 1.1rem; color: #fff; margin-right: auto; }
+
+/* HEADER */
+.hero { background: var(--fiordo); color: #fff; padding: 3rem 2rem 2.5rem; position: relative; overflow: hidden; }
+.hero::before {
+  content: '';
+  position: absolute;
+  right: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--cobre), transparent, var(--lenga));
+  opacity: 0.6;
+}
+.hero h1 { font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 700; margin: 0 0 0.5rem; letter-spacing: -0.02em; }
+.hero p { color: rgba(255,255,255,0.7); font-size: 0.95rem; max-width: 600px; margin: 0 0 1.5rem; }
+.badge-olacore { background: var(--cobre); color: #fff; font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; padding: 0.2rem 0.6rem; border-radius: 2px; text-transform: uppercase; letter-spacing: 0.1em; }
+.badge-fecha { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; padding: 0.2rem 0.6rem; border-radius: 2px; letter-spacing: 0.05em; }
+
+/* KPI CARDS */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; padding: 1.5rem 2rem; background: white; border-bottom: 1px solid #e5e0d8; }
+.kpi-card { text-align: center; padding: 1rem; border-radius: 6px; background: var(--neblina); }
+.kpi-num { font-family: 'Fraunces', serif; font-size: 2rem; font-weight: 700; color: var(--fiordo); line-height: 1; }
+.kpi-label { font-size: 0.72rem; color: #666; margin-top: 0.25rem; font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* TABS */
+.tabs-wrapper { background: white; border-bottom: 1px solid #e5e0d8; position: sticky; top: 45px; z-index: 90; }
+.tabs-scroll { display: flex; overflow-x: auto; gap: 0; padding: 0 1.5rem; scrollbar-width: none; }
+.tabs-scroll::-webkit-scrollbar { display: none; }
+.tab-btn { white-space: nowrap; padding: 0.85rem 1rem; font-size: 0.8rem; border: none; background: none; cursor: pointer; color: #666; border-bottom: 2px solid transparent; font-family: 'Inter', sans-serif; transition: all 0.15s; }
+.tab-btn:hover { color: var(--fiordo); }
+.tab-btn.active { color: var(--fiordo); border-bottom-color: var(--cobre); font-weight: 600; }
+
+/* MAIN */
+.main-content { max-width: 1280px; margin: 0 auto; padding: 1.5rem 1.5rem 3rem; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* FILTERS */
+.filters-bar { background: white; border: 1px solid #e5e0d8; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
+.filter-label { font-size: 0.7rem; font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; color: #888; letter-spacing: 0.05em; }
+.filter-group { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
+.filter-btn { padding: 0.3rem 0.7rem; border-radius: 20px; border: 1px solid #d1ccc4; background: none; font-size: 0.75rem; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.15s; color: #555; }
+.filter-btn:hover { border-color: var(--cobre); color: var(--cobre); }
+.filter-btn.active-filter { background: var(--fiordo); color: white; border-color: var(--fiordo); }
+.search-input { padding: 0.35rem 0.75rem; border: 1px solid #d1ccc4; border-radius: 20px; font-size: 0.8rem; font-family: 'Inter', sans-serif; outline: none; min-width: 200px; }
+.search-input:focus { border-color: var(--cobre); }
+
+/* IDEA CARDS */
+.cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
+.idea-card { background: white; border-radius: 8px; border: 1px solid #e5e0d8; border-left: 4px solid #e5e0d8; padding: 1rem 1.1rem; transition: box-shadow 0.15s, transform 0.15s; position: relative; }
+.idea-card:hover { box-shadow: 0 4px 16px rgba(31,51,64,0.10); transform: translateY(-1px); }
+.idea-card.alta { border-left-color: var(--musgo); }
+.idea-card.media { border-left-color: var(--cobre); }
+.idea-card.baja { border-left-color: #b0aaa0; }
+.card-badges { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-bottom: 0.6rem; }
+.badge { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; padding: 0.15rem 0.5rem; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; }
+.badge-ap-alta { background: #e8f5e9; color: var(--musgo); }
+.badge-ap-media { background: #fef3e0; color: #B86D3F; }
+.badge-ap-baja { background: #f0ede8; color: #888; }
+.badge-sin-alta { background: #e3eaf0; color: var(--fiordo); }
+.badge-sin-media { background: #fef3e0; color: #B86D3F; }
+.badge-sin-baja { background: #f0ede8; color: #888; }
+.badge-esf-bajo { background: #e8f5e9; color: var(--musgo); }
+.badge-esf-medio { background: #fef3e0; color: #B86D3F; }
+.badge-esf-alto { background: #fee; color: var(--lacre); }
+.badge-qw { background: var(--cobre); color: white; }
+.badge-moat { background: var(--lacre); color: white; }
+.card-title { font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 600; color: var(--fiordo); margin: 0 0 0.3rem; }
+.card-desc { font-size: 0.8rem; color: #555; margin: 0 0 0.75rem; line-height: 1.5; }
+.card-meta { display: flex; flex-direction: column; gap: 0.25rem; }
+.card-meta-row { font-size: 0.75rem; color: #666; line-height: 1.4; }
+.card-meta-row strong { color: var(--fiordo); font-weight: 500; }
+
+/* SECTION TITLES */
+.section-title { font-family: 'Fraunces', serif; font-size: 1.4rem; color: var(--fiordo); margin: 0 0 0.25rem; }
+.section-sub { font-size: 0.85rem; color: #777; margin: 0 0 1.25rem; }
+.section-header { margin-bottom: 1.25rem; border-bottom: 1px solid #e5e0d8; padding-bottom: 1rem; }
+
+/* ROADMAP */
+.phase-block { margin-bottom: 2rem; }
+.phase-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
+.phase-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+.phase-title { font-family: 'Fraunces', serif; font-size: 1.1rem; font-weight: 600; color: var(--fiordo); }
+.phase-sub { font-size: 0.78rem; color: #888; font-family: 'IBM Plex Mono', monospace; }
+.roadmap-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 0.8rem; }
+.roadmap-card { background: white; border: 1px solid #e5e0d8; border-radius: 8px; padding: 0.9rem 1rem; }
+.roadmap-card-title { font-weight: 600; font-size: 0.9rem; color: var(--fiordo); margin-bottom: 0.25rem; }
+.roadmap-card-desc { font-size: 0.78rem; color: #666; margin-bottom: 0.6rem; line-height: 1.45; }
+
+/* NOTE BLOCK */
+.note-block { background: var(--fiordo); color: white; border-radius: 8px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; }
+.note-block h3 { font-family: 'Fraunces', serif; font-size: 1rem; margin: 0 0 0.4rem; color: var(--lenga); }
+.note-block p { font-size: 0.85rem; color: rgba(255,255,255,0.85); margin: 0; line-height: 1.6; }
+
+/* CHARTS */
+.charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-top: 1.5rem; }
+.chart-card { background: white; border: 1px solid #e5e0d8; border-radius: 8px; padding: 1.25rem; }
+.chart-title { font-family: 'Fraunces', serif; font-size: 1rem; color: var(--fiordo); margin: 0 0 1rem; }
+.chart-wrap { position: relative; height: 260px; }
+
+/* FOOTER */
+footer { background: var(--fiordo); color: rgba(255,255,255,0.6); padding: 2rem 2rem 1.5rem; font-size: 0.78rem; }
+footer .footer-top { display: flex; flex-wrap: wrap; gap: 2rem; margin-bottom: 1.25rem; }
+footer h4 { font-family: 'Fraunces', serif; color: rgba(255,255,255,0.9); font-size: 0.9rem; margin: 0 0 0.5rem; }
+footer a { color: rgba(255,255,255,0.5); text-decoration: none; }
+footer a:hover { color: rgba(255,255,255,0.9); }
+footer .footer-bottom { border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; }
+
+/* COMPASS SVG */
+.compass { display: inline-block; margin-left: 0.75rem; opacity: 0.5; vertical-align: middle; }
+
+/* HIDDEN CARD */
+.idea-card.hidden-card { display: none; }
+
+/* SCATTER */
+#scatterWrap { position: relative; height: 320px; }
+
+/* VERTICAL LINE */
+.meridian { position: absolute; right: 80px; top: 0; bottom: 0; width: 1px; background: linear-gradient(180deg, transparent, var(--cobre), transparent); opacity: 0.15; pointer-events: none; }
+
+/* ============================================ */
+/* RESPONSIVE — Tablet (<= 1024px) */
+/* ============================================ */
+@media (max-width: 1024px) {
+  .main-content { padding: 1.25rem 1rem 2.5rem; max-width: 100%; }
+  .hero { padding: 2.5rem 1.5rem 2rem; }
+  .kpi-grid { padding: 1.25rem 1.5rem; gap: 0.75rem; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+  .kpi-num { font-size: 1.7rem; }
+  .cards-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0.85rem; }
+  .roadmap-cards { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+  .charts-grid { grid-template-columns: 1fr; gap: 1rem; }
+  .chart-wrap { height: 280px; }
+  #scatterWrap { height: 340px; }
+  .meridian { right: 40px; }
+}
+
+/* ============================================ */
+/* RESPONSIVE — Mobile landscape / small tablet (<= 768px) */
+/* ============================================ */
+@media (max-width: 768px) {
+  /* TOPNAV */
+  .topnav { padding: 0.65rem 1rem; gap: 0.75rem; flex-wrap: wrap; }
+  .topnav .brand { font-size: 1rem; }
+  .topnav a { font-size: 0.72rem; }
+
+  /* HERO */
+  .hero { padding: 2rem 1rem 1.75rem; }
+  .hero h1 { font-size: 1.6rem; line-height: 1.15; }
+  .hero h1 br { display: none; }
+  .hero p { font-size: 0.85rem; }
+  .hero .badge-olacore, .hero .badge-fecha { font-size: 0.6rem; padding: 0.18rem 0.5rem; }
+  .hero > div[style*="display:flex"] { gap: 0.5rem !important; }
+  .meridian { display: none; }
+
+  /* KPI GRID — 2 columnas en mobile */
+  .kpi-grid { padding: 1rem; gap: 0.6rem; grid-template-columns: repeat(2, 1fr); }
+  .kpi-card { padding: 0.75rem 0.5rem; }
+  .kpi-num { font-size: 1.5rem; }
+  .kpi-label { font-size: 0.62rem; }
+
+  /* TABS */
+  .tabs-wrapper { top: 50px; }
+  .tabs-scroll { padding: 0 1rem; }
+  .tab-btn { padding: 0.7rem 0.75rem; font-size: 0.72rem; }
+
+  /* MAIN */
+  .main-content { padding: 1rem 1rem 2rem; }
+
+  /* SECTION TITLES */
+  .section-title { font-size: 1.2rem; }
+  .section-sub { font-size: 0.8rem; }
+  .section-header { padding-bottom: 0.75rem; margin-bottom: 1rem; }
+
+  /* FILTERS — stack y ancho completo */
+  .filters-bar { padding: 0.85rem 1rem; gap: 0.6rem; flex-direction: column; align-items: stretch; }
+  .filter-group { width: 100%; justify-content: flex-start; }
+  .filter-label { width: 100%; }
+  .filter-btn { font-size: 0.7rem; padding: 0.3rem 0.6rem; }
+  .search-input { width: 100%; min-width: 0; }
+
+  /* CARDS — 1 columna */
+  .cards-grid { grid-template-columns: 1fr; gap: 0.75rem; }
+  .idea-card { padding: 0.9rem 1rem; }
+  .card-title { font-size: 0.95rem; }
+  .card-desc { font-size: 0.78rem; }
+  .badge { font-size: 0.55rem; padding: 0.12rem 0.45rem; }
+
+  /* ROADMAP */
+  .phase-block { margin-bottom: 1.5rem; }
+  .phase-title { font-size: 1rem; }
+  .phase-sub { font-size: 0.7rem; }
+  .roadmap-cards { grid-template-columns: 1fr; gap: 0.7rem; }
+  .roadmap-card { padding: 0.85rem 0.95rem; }
+  .roadmap-card-title { font-size: 0.88rem; }
+  .roadmap-card-desc { font-size: 0.75rem; }
+
+  /* NOTE BLOCK */
+  .note-block { padding: 1rem 1.1rem; }
+  .note-block h3 { font-size: 0.92rem; }
+  .note-block p { font-size: 0.78rem; }
+
+  /* CHARTS */
+  .chart-card { padding: 1rem; }
+  .chart-title { font-size: 0.92rem; }
+  .chart-wrap { height: 240px; }
+  #scatterWrap { height: 300px; }
+
+  /* FOOTER */
+  footer { padding: 1.5rem 1rem 1rem; }
+  footer .footer-top { gap: 1.25rem; flex-direction: column; }
+  footer h4 { font-size: 0.85rem; }
+  footer .footer-bottom { font-size: 0.62rem; }
+}
+
+/* ============================================ */
+/* RESPONSIVE — Mobile (<= 480px) */
+/* ============================================ */
+@media (max-width: 480px) {
+  /* TOPNAV mas compacto */
+  .topnav { padding: 0.55rem 0.75rem; }
+  .topnav a[href="#"]:last-child { font-size: 0.6rem !important; }
+
+  /* HERO mas compacto */
+  .hero { padding: 1.5rem 1rem 1.5rem; }
+  .hero h1 { font-size: 1.4rem; }
+  .hero p { font-size: 0.8rem; }
+  /* Stats blocks dentro del hero — full width */
+  .hero > div[style*="display:flex"]:last-child { flex-direction: column; gap: 0.5rem !important; }
+  .hero > div[style*="display:flex"]:last-child > div { width: 100%; }
+  .hero > div[style*="display:flex"]:last-child > div > div:first-child { font-size: 1.2rem !important; }
+
+  /* KPI — 2 cols, mas compactos */
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); padding: 0.85rem; gap: 0.5rem; }
+  .kpi-card { padding: 0.65rem 0.4rem; }
+  .kpi-num { font-size: 1.3rem; }
+  .kpi-label { font-size: 0.55rem; letter-spacing: 0.03em; }
+
+  /* TABS */
+  .tab-btn { padding: 0.6rem 0.6rem; font-size: 0.68rem; }
+  .tabs-wrapper { top: 56px; }
+
+  /* MAIN tighter */
+  .main-content { padding: 0.85rem 0.85rem 1.5rem; }
+
+  /* SECTION */
+  .section-title { font-size: 1.05rem; }
+  .section-sub { font-size: 0.75rem; }
+
+  /* CARDS */
+  .idea-card { padding: 0.8rem 0.9rem; }
+  .card-title { font-size: 0.9rem; }
+  .card-desc { font-size: 0.74rem; line-height: 1.45; }
+  .card-meta-row { font-size: 0.7rem; }
+  .card-badges { gap: 0.25rem; margin-bottom: 0.5rem; }
+  .badge { font-size: 0.52rem; padding: 0.1rem 0.4rem; }
+
+  /* ROADMAP */
+  .phase-header { gap: 0.5rem; }
+  .roadmap-card-title { font-size: 0.85rem; }
+  .roadmap-card-desc { font-size: 0.72rem; }
+
+  /* NOTE */
+  .note-block { padding: 0.9rem 1rem; border-radius: 6px; }
+
+  /* CHARTS */
+  .chart-card { padding: 0.85rem; border-radius: 6px; }
+  .chart-wrap { height: 220px; }
+  #scatterWrap { height: 280px; }
+
+  /* FILTERS */
+  .filters-bar { padding: 0.75rem 0.85rem; }
+  .filter-btn { font-size: 0.68rem; padding: 0.25rem 0.55rem; }
+  .search-input { font-size: 0.78rem; padding: 0.35rem 0.7rem; }
+
+  /* FOOTER mas compacto */
+  footer { padding: 1.25rem 0.85rem 0.85rem; font-size: 0.72rem; }
+}
+
+/* ============================================ */
+/* RESPONSIVE — Touch + accesibilidad */
+/* ============================================ */
+@media (hover: none) and (pointer: coarse) {
+  .idea-card:hover { transform: none; box-shadow: none; }
+  .tab-btn { -webkit-tap-highlight-color: transparent; }
+  .filter-btn { min-height: 32px; }
+  /* Tap targets minimo 44px en interactivos clave */
+  .tab-btn { min-height: 44px; }
+}
+
+/* ============================================ */
+/* RESPONSIVE — Print friendly (para imprimir o PDF) */
+/* ============================================ */
+@media print {
+  .topnav, .tabs-wrapper, .filters-bar, footer { display: none !important; }
+  .hero { background: white; color: var(--fiordo); }
+  .hero h1, .hero p { color: var(--fiordo); }
+  .tab-content { display: block !important; page-break-inside: avoid; }
+  .idea-card, .roadmap-card { break-inside: avoid; box-shadow: none; }
+  body { background: white; }
+}
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav class="topnav">
+  <span class="brand">CMC
+    <svg class="compass" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polygon points="12,2 14.5,9.5 12,8 9.5,9.5" fill="white" opacity="0.9"/><polygon points="12,22 14.5,14.5 12,16 9.5,14.5" fill="white" opacity="0.4"/><line x1="12" y1="2" x2="12" y2="22" stroke="white" stroke-width="0.5" opacity="0.3"/></svg>
+  </span>
+  <a href="#">Salud CMC</a>
+  <a href="#" style="color:rgba(255,255,255,0.4); font-size:0.7rem; margin-left:auto; font-family:'IBM Plex Mono',monospace;">OLACORE HOLDING</a>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="meridian"></div>
+  <div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">
+    <span class="badge-olacore">OLACORE</span>
+    <span class="badge-fecha">Mayo 2026</span>
+    <span class="badge-fecha">Exploratorio Estrategico</span>
+  </div>
+  <h1>Salud CMC<br>Idea Bank — Farmacia Rural</h1>
+  <p>Modelos, servicios y verticales para una farmacia rural integrada al CMC. Investigacion Chile + mundo.</p>
+  <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-top:1rem;">
+    <div style="background:rgba(255,255,255,0.08); border-radius:6px; padding:0.5rem 1rem;">
+      <div style="font-family:'Fraunces',serif; font-size:1.5rem; font-weight:700;">5</div>
+      <div style="font-size:0.65rem; opacity:0.6; font-family:'IBM Plex Mono',monospace; text-transform:uppercase; letter-spacing:0.08em;">Verticales nucleo</div>
+    </div>
+    <div style="background:rgba(184,109,63,0.3); border-radius:6px; padding:0.5rem 1rem;">
+      <div style="font-family:'Fraunces',serif; font-size:1.1rem; font-weight:700; color:var(--lenga); line-height:1.3;">Farmacos · Dermo · Kine · Dental retail · Dental B2B</div>
+      <div style="font-size:0.65rem; opacity:0.6; font-family:'IBM Plex Mono',monospace; text-transform:uppercase; letter-spacing:0.08em;">Base de integracion CMC</div>
+    </div>
+  </div>
+</header>
+
+<!-- KPIs -->
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-num">98</div>
+    <div class="kpi-label">Ideas catalogadas</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-num">10</div>
+    <div class="kpi-label">Categorias</div>
+  </div>
+  <div class="kpi-card" style="background:#e8f5e9;">
+    <div class="kpi-num" style="color:var(--musgo);">24</div>
+    <div class="kpi-label">Quick wins</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-num">15</div>
+    <div class="kpi-label">Modelos internac.</div>
+  </div>
+  <div class="kpi-card" style="background:#e3eaf0;">
+    <div class="kpi-num" style="color:var(--fiordo);">5</div>
+    <div class="kpi-label">Verticales nucleo</div>
+  </div>
+</div>
+
+<!-- TABS NAV -->
+<div class="tabs-wrapper">
+  <div class="tabs-scroll">
+    <button class="tab-btn active" data-tab="roadmap">Roadmap</button>
+    <button class="tab-btn" data-tab="clinicos">Servicios clinicos</button>
+    <button class="tab-btn" data-tab="productos">Categorias producto</button>
+    <button class="tab-btn" data-tab="magistral">Recetario magistral</button>
+    <button class="tab-btn" data-tab="modelos">Modelos servicio</button>
+    <button class="tab-btn" data-tab="comunidad">Comunitarios</button>
+    <button class="tab-btn" data-tab="hibridos">Verticales hibridos</button>
+    <button class="tab-btn" data-tab="tecnologia">Tecnologia</button>
+    <button class="tab-btn" data-tab="chile">Casos Chile</button>
+    <button class="tab-btn" data-tab="tendencias">Tendencias</button>
+    <button class="tab-btn" data-tab="marketing">Comunidad / Marketing</button>
+    <button class="tab-btn" data-tab="dental-b2b" style="color:var(--lacre); font-weight:600;">Dental Supply B2B</button>
+    <button class="tab-btn" data-tab="visualizaciones">Visualizaciones</button>
+  </div>
+</div>
+
+<div class="main-content">
+
+<!-- ==================== TAB ROADMAP ==================== -->
+<div class="tab-content active" id="tab-roadmap">
+  <div class="section-header">
+    <h2 class="section-title">Roadmap de implementacion</h2>
+    <p class="section-sub">Prioridad sugerida basada en esfuerzo bajo + sinergia alta con CMC existente.</p>
+  </div>
+
+  <div class="phase-block">
+    <div class="phase-header">
+      <div class="phase-dot" style="background:var(--musgo);"></div>
+      <div>
+        <div class="phase-title">Q1 — Primeros 90 dias</div>
+        <div class="phase-sub">Quick wins · Base operacional · Sinergia inmediata con CMC</div>
+      </div>
+    </div>
+    <div class="roadmap-cards">
+      <div class="roadmap-card" style="border-left:3px solid var(--musgo);">
+        <div style="display:flex; gap:0.35rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+          <span class="badge badge-qw">Quick win</span>
+          <span class="badge badge-ap-alta">Aplicabilidad alta</span>
+        </div>
+        <div class="roadmap-card-title">Mediciones rapidas en farmacia</div>
+        <div class="roadmap-card-desc">PA, glicemia capilar, oximetria, IMC. Sin receta, sin agenda. Volumen inmediato de pacientes cronicos del CMC.</div>
+        <div style="display:flex; gap:0.35rem; flex-wrap:wrap;">
+          <span class="badge badge-sin-alta">Sinergia alta</span>
+          <span class="badge badge-esf-bajo">Esfuerzo bajo</span>
+        </div>
+      </div>
+      <div class="roadmap-card" style="border-left:3px solid var(--musgo);">
+        <div style="display:flex; gap:0.35rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+          <span class="badge badge-qw">Quick win</span>
+          <span class="badge badge-ap-alta">Aplicabilidad alta</span>
+        </div>
+        <div class="roadmap-card-title">POS + SNRE desde dia 1</div>
+        <div class="roadmap-card-desc">Sistema de receta electronica obligatorio dic 2025. Instalarlo correctamente desde la apertura evita multas y habilita operacion legal.</div>
+        <div style="display:flex; gap:0.35rem; flex-wrap:wrap;">
+          <span class="badge badge-sin-alta">Sinergia alta</span>
+          <span class="badge badge-esf-bajo">Esfuerzo bajo</span>
+        </div>
+      </div>
+      <div class="roadmap-card" style="border-left:3px solid var(--musgo);">
+        <div style="display:flex; gap:0.35rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+          <span class="badge badge-qw">Quick win</span>
+          <span class="badge badge-ap-alta">Aplicabilidad alta</span>
+        </div>
+        <div class="roadmap-card-title">Click & Collect WhatsApp</div>
+        <div class="roadmap-card-desc">El mismo canal WhatsApp del CMC acepta pedidos de farmacia. Retiro en farmacia o en CMC. Cero costo adicional de canal.</div>
+        <div style="display:flex; gap:0.35rem; flex-wrap:wrap;">
+          <span class="badge badge-sin-alta">Sinergia alta</span>
+          <span class="badge badge-esf-bajo">Esfuerzo bajo</span>
+        </div>
+      </div>
+      <div class="roadmap-card" style="border-left:3px solid var(--musgo);">
+        <div style="display:flex; gap:0.35rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+          <span class="badge badge-qw">Quick win</span>
+          <span class="badge badge-ap-alta">Aplicabilidad alta</span>
+        </div>
+        <div class="roadmap-card-title">Adhesion CENABAST</div>
+        <div class="roadmap-card-desc">1.200+ farmacias adheridas en Chile. Acceso a medicamentos a precio regulado. Diferencial vs cadenas en precios de cronicos.</div>
+        <div style="display:flex; gap:0.35rem; flex-wrap:wrap;">
+          <span class="badge badge-sin-alta">Sinergia alta</span>
+          <span class="badge badge-esf-bajo">Esfuerzo bajo</span>
+        </div>
+      </div>
+      <div class="roadmap-card" style="border-left:3px solid var(--musgo);">
+        <div style="display:flex; gap:0.35rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+          <span class="badge badge-qw">Quick win</span>
+          <span class="badge badge-ap-alta">Aplicabilidad alta</span>
+        </div>
+        <div class="roadmap-card-title">Vacunacion extendida</div>
+        <div class="roadmap-card-desc">Influenza, neumo, zoster, HPV, viajero. CMC ya tiene base de pacientes cronicos. La farmacia puede operar como vacunatorio satelite.</div>
+        <div style="display:flex; gap:0.35rem; flex-wrap:wrap;">
+          <span class="badge badge-sin-alta">Sinergia alta</span>
+          <span class="badge badge-esf-medio">Esfuerzo medio</span>
+        </div>
+      </div>
+      <div class="roadmap-card" style="border-left:3px solid var(--musgo);">
+        <div style="display:flex; gap:0.35rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+          <span class="badge badge-qw">Quick win</span>
+          <span class="badge badge-ap-alta">Aplicabilidad alta</span>
+        </div>
+        <div class="roadmap-card-title">Dermocostetica premium seleccionada</div>
+        <div class="roadmap-card-desc">Margen 40-60%. Mercado Chile USD 374M. Curaduria de 3-4 marcas (no catalogo masivo). Diferencia inmediata vs farmacia anterior.</div>
+        <div style="display:flex; gap:0.35rem; flex-wrap:wrap;">
+          <span class="badge badge-sin-media">Sinergia media</span>
+          <span class="badge badge-esf-bajo">Esfuerzo bajo</span>
+        </div>
+      </div>
+      <div class="roadmap-card" style="border-left:3px solid var(--musgo);">
+        <div style="display:flex; gap:0.35rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+          <span class="badge badge-qw">Quick win</span>
+          <span class="badge badge-ap-alta">Aplicabilidad alta</span>
+        </div>
+        <div class="roadmap-card-title">Insumos kine + dental retail</div>
+        <div class="roadmap-card-desc">Kine y dental ya generan demanda de insumos. Tener stock en farmacia cierra el loop. Venta cruzada con receta del propio CMC.</div>
+        <div style="display:flex; gap:0.35rem; flex-wrap:wrap;">
+          <span class="badge badge-sin-alta">Sinergia alta</span>
+          <span class="badge badge-esf-bajo">Esfuerzo bajo</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="phase-block">
+    <div class="phase-header">
+      <div class="phase-dot" style="background:var(--cobre);"></div>
+      <div>
+        <div class="phase-title">Q2 — 3 a 6 meses</div>
+        <div class="phase-sub">Consolidacion · Servicios clínicos · Recetario magistral piloto</div>
+      </div>
+    </div>
+    <div class="roadmap-cards">
+      <div class="roadmap-card" style="border-left:3px solid var(--cobre);">
+        <div style="display:flex; gap:0.35rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+          <span class="badge badge-ap-alta">Aplicabilidad alta</span>
+        </div>
+        <div class="roadmap-card-title">Recetario magistral — cremas y geles</div>
+        <div class="roadmap-card-desc">Empezar con cremas dermato personalizadas y geles topicos para kine. Margen 60%+. El verdadero moat vs cadenas.</div>
+        <div style="display:flex; gap:0.35rem; flex-wrap:wrap;">
+          <span class="badge badge-sin-alta">Sinergia alta</span>
+          <span class="badge badge-esf-medio">Esfuerzo medio</span>
+        </div>
+      </div>
+      <div class="roadmap-card" style="border-left:3px solid var(--cobre);">
+        <div style="display:flex; gap:0.35rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+          <span class="badge badge-ap-alta">Aplicabilidad alta</span>
+        </div>
+        <div class="roadmap-card-title">Pastillero SPD adherencia</div>
+        <div class="roadmap-card-desc">Sistema de dosis unitaria personalizada para cronicos. Modelo Europeo y Salcobrand Comunidad. Diferencial de servicio real.</div>
+        <div style="display:flex; gap:0.35rem; flex-wrap:wrap;">
+          <span class="badge badge-sin-alta">Sinergia alta</span>
+          <span class="badge badge-esf-medio">Esfuerzo medio</span>
+        </div>
+      </div>
+      <div class="roadmap-card" style="border-left:3px solid var(--cobre);">
+        <div style="display:flex; gap:0.35rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+          <span class="badge badge-ap-alta">Aplicabilidad alta</span>
+        </div>
+        <div class="roadmap-card-title">Convenio empresas forestales</div>
+        <div class="roadmap-card-desc">Mininco, Arauco, CMPC operan en la zona. Convenio B2B para medicamentos de trabajadores. Volumen predecible, pago a 30 dias.</div>
+        <div style="display:flex; gap:0.35rem; flex-wrap:wrap;">
+          <span class="badge badge-sin-media">Sinergia media</span>
+          <span class="badge badge-esf-medio">Esfuerzo medio</span>
+        </div>
+      </div>
+      <div class="roadmap-card" style="border-left:3px solid var(--cobre);">
+        <div style="display:flex; gap:0.35rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+          <span class="badge badge-ap-media">Aplicabilidad media</span>
+        </div>
+        <div class="roadmap-card-title">Test rapidos en mesón</div>
+        <div class="roadmap-card-desc">HbA1c, colesterol, COVID, embarazo, ITU. Algunos requieren quimico a cargo. Evaluar tercerización con CMC.</div>
+        <div style="display:flex; gap:0.35rem; flex-wrap:wrap;">
+          <span class="badge badge-sin-alta">Sinergia alta</span>
+          <span class="badge badge-esf-medio">Esfuerzo medio</span>
+        </div>
+      </div>
+      <div class="roadmap-card" style="border-left:3px solid var(--cobre);">
+        <div style="display:flex; gap:0.35rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+          <span class="badge badge-ap-alta">Aplicabilidad alta</span>
+        </div>
+        <div class="roadmap-card-title">Programa Vecino Sano</div>
+        <div class="roadmap-card-desc">Fidelizacion familiar: registro, historial de compras, alertas de renovacion, precio preferente para cronicos. CRM simple en WhatsApp.</div>
+        <div style="display:flex; gap:0.35rem; flex-wrap:wrap;">
+          <span class="badge badge-sin-alta">Sinergia alta</span>
+          <span class="badge badge-esf-medio">Esfuerzo medio</span>
+        </div>
+      </div>
+      <div class="roadmap-card" style="border-left:3px solid var(--cobre);">
+        <div style="display:flex; gap:0.35rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+          <span class="badge badge-ap-alta">Aplicabilidad alta</span>
+          <span class="badge badge-moat">Vertical B2B</span>
+        </div>
+        <div class="roadmap-card-title">Dental Supply CMC — consumo interno</div>
+        <div class="roadmap-card-desc">Sociedad B2B paralela. Compra al por mayor a 3M Espe / Dentsply / Ivoclar / Dental Salud / Henry Schein. Ahorro 15-30% para los dentistas del CMC desde el dia 1. Bodega-tienda fuera del recinto ISP de farmacia. Venta externa a otros dentistas se abre en mes 12+.</div>
+        <div style="display:flex; gap:0.35rem; flex-wrap:wrap;">
+          <span class="badge badge-sin-alta">Sinergia alta</span>
+          <span class="badge badge-esf-medio">Esfuerzo medio</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="phase-block">
+    <div class="phase-header">
+      <div class="phase-dot" style="background:var(--fiordo);"></div>
+      <div>
+        <div class="phase-title">Year 1+ — Diferenciadores estructurales</div>
+        <div class="phase-sub">Moat · Integracion profunda · Nuevas verticales</div>
+      </div>
+    </div>
+    <div class="roadmap-cards">
+      <div class="roadmap-card" style="border-left:3px solid var(--fiordo);">
+        <div style="display:flex; gap:0.35rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+          <span class="badge badge-ap-media">Aplicabilidad media</span>
+          <span class="badge badge-moat">Moat</span>
+        </div>
+        <div class="roadmap-card-title">Farmacia clinica satelite CMC</div>
+        <div class="roadmap-card-desc">Quimico farmaceutico compartido entre CMC y farmacia. Interconsultas, atencion farmaceutica formal, revision de polifarmacia. Modelo Boots UK adaptado.</div>
+        <div style="display:flex; gap:0.35rem; flex-wrap:wrap;">
+          <span class="badge badge-sin-alta">Sinergia alta</span>
+          <span class="badge badge-esf-alto">Esfuerzo alto</span>
+        </div>
+      </div>
+      <div class="roadmap-card" style="border-left:3px solid var(--fiordo);">
+        <div style="display:flex; gap:0.35rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+          <span class="badge badge-ap-media">Aplicabilidad media</span>
+        </div>
+        <div class="roadmap-card-title">Suscripcion cronicos auto-refill</div>
+        <div class="roadmap-card-desc">Modelo mPharma/Hims&Hers: paciente suscribe su tratamiento cronico. Farmacia despacha automaticamente. Reduce no-adherencia.</div>
+        <div style="display:flex; gap:0.35rem; flex-wrap:wrap;">
+          <span class="badge badge-sin-alta">Sinergia alta</span>
+          <span class="badge badge-esf-alto">Esfuerzo alto</span>
+        </div>
+      </div>
+      <div class="roadmap-card" style="border-left:3px solid var(--fiordo);">
+        <div style="display:flex; gap:0.35rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+          <span class="badge badge-ap-media">Aplicabilidad media</span>
+        </div>
+        <div class="roadmap-card-title">Magistral veterinario rural</div>
+        <div class="roadmap-card-desc">Zona rural con alta actividad agricola y ganadera. Formulas magistrales veterinarias para pequeños y grandes animales. Sin competencia directa.</div>
+        <div style="display:flex; gap:0.35rem; flex-wrap:wrap;">
+          <span class="badge badge-sin-baja">Sinergia baja</span>
+          <span class="badge badge-esf-alto">Esfuerzo alto</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="phase-block">
+    <div class="phase-header">
+      <div class="phase-dot" style="background:#b0aaa0;"></div>
+      <div>
+        <div class="phase-title">Postergar / No hacer ahora</div>
+        <div class="phase-sub">Alto esfuerzo · Baja aplicabilidad · Riesgo regulatorio</div>
+      </div>
+    </div>
+    <div class="roadmap-cards">
+      <div class="roadmap-card" style="border-left:3px solid #b0aaa0; opacity:0.7;">
+        <div style="display:flex; gap:0.35rem; margin-bottom:0.5rem;"><span class="badge badge-ap-baja">Postergar</span></div>
+        <div class="roadmap-card-title">Robot dispensacion automatica</div>
+        <div class="roadmap-card-desc">Costo USD 80-150K. No aplica para volumen rural inicial.</div>
+      </div>
+      <div class="roadmap-card" style="border-left:3px solid #b0aaa0; opacity:0.7;">
+        <div style="display:flex; gap:0.35rem; margin-bottom:0.5rem;"><span class="badge badge-ap-baja">Postergar</span></div>
+        <div class="roadmap-card-title">Petfood + veterinaria OTC masiva</div>
+        <div class="roadmap-card-desc">Distrae del foco salud humana. Evaluar solo si hay local separado.</div>
+      </div>
+      <div class="roadmap-card" style="border-left:3px solid #b0aaa0; opacity:0.7;">
+        <div style="display:flex; gap:0.35rem; margin-bottom:0.5rem;"><span class="badge badge-ap-baja">Postergar</span></div>
+        <div class="roadmap-card-title">Clinica de dia integrada</div>
+        <div class="roadmap-card-desc">CVS y Walgreens fracasaron. El CMC ya es la clinica. No duplicar.</div>
+      </div>
+      <div class="roadmap-card" style="border-left:3px solid #b0aaa0; opacity:0.7;">
+        <div style="display:flex; gap:0.35rem; margin-bottom:0.5rem;"><span class="badge badge-ap-baja">Postergar</span></div>
+        <div class="roadmap-card-title">Homeopatia / flores de Bach</div>
+        <div class="roadmap-card-desc">Bajo margen, conflicto de imagen clinica. Solo si demanda local lo exige.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== TAB SERVICIOS CLINICOS ==================== -->
+<div class="tab-content" id="tab-clinicos">
+  <div class="section-header">
+    <h2 class="section-title">Servicios clinicos</h2>
+    <p class="section-sub">25 ideas. Servicios que la farmacia puede ofrecer directamente, con o sin derivacion al CMC.</p>
+  </div>
+  <div class="filters-bar" data-filter-tab="clinicos">
+    <span class="filter-label">Aplicabilidad</span>
+    <div class="filter-group">
+      <button class="filter-btn active-filter" data-filter="aplicabilidad" data-val="todos">Todas</button>
+      <button class="filter-btn" data-filter="aplicabilidad" data-val="alta">Alta</button>
+      <button class="filter-btn" data-filter="aplicabilidad" data-val="media">Media</button>
+      <button class="filter-btn" data-filter="aplicabilidad" data-val="baja">Baja</button>
+    </div>
+    <span class="filter-label">Sinergia</span>
+    <div class="filter-group">
+      <button class="filter-btn active-filter" data-filter="sinergia" data-val="todos">Todas</button>
+      <button class="filter-btn" data-filter="sinergia" data-val="alta">Alta</button>
+      <button class="filter-btn" data-filter="sinergia" data-val="media">Media</button>
+      <button class="filter-btn" data-filter="sinergia" data-val="baja">Baja</button>
+    </div>
+    <input type="text" class="search-input" placeholder="Buscar idea..." data-search-tab="clinicos">
+  </div>
+  <div class="cards-grid" id="grid-clinicos">
+    <!-- cards inserted by JS -->
+  </div>
+</div>
+
+<!-- ==================== TAB PRODUCTOS ==================== -->
+<div class="tab-content" id="tab-productos">
+  <div class="section-header">
+    <h2 class="section-title">Categorias de producto</h2>
+    <p class="section-sub">19 ideas. Lineas de producto para ampliar mix y margen de la farmacia.</p>
+  </div>
+  <div class="filters-bar" data-filter-tab="productos">
+    <span class="filter-label">Aplicabilidad</span>
+    <div class="filter-group">
+      <button class="filter-btn active-filter" data-filter="aplicabilidad" data-val="todos">Todas</button>
+      <button class="filter-btn" data-filter="aplicabilidad" data-val="alta">Alta</button>
+      <button class="filter-btn" data-filter="aplicabilidad" data-val="media">Media</button>
+      <button class="filter-btn" data-filter="aplicabilidad" data-val="baja">Baja</button>
+    </div>
+    <input type="text" class="search-input" placeholder="Buscar idea..." data-search-tab="productos">
+  </div>
+  <div class="cards-grid" id="grid-productos"></div>
+</div>
+
+<!-- ==================== TAB MAGISTRAL ==================== -->
+<div class="tab-content" id="tab-magistral">
+  <div class="note-block">
+    <h3>El verdadero moat vs cadenas</h3>
+    <p>Cruz Verde no produce, deriva. La preparacion magistral es el servicio que ninguna cadena puede replicar localmente. Margen promedio 60%+ sobre costo de materias primas. Cada formula es diferenciadora. Requiere quimico con competencia y area habilitada por ISP, pero el volumen de recetas del CMC justifica la inversion desde el primer ano.</p>
+  </div>
+  <div class="section-header">
+    <h2 class="section-title">Recetario magistral</h2>
+    <p class="section-sub">7 lineas. Preparaciones que el CMC puede prescribir y la farmacia puede producir.</p>
+  </div>
+  <div class="cards-grid" id="grid-magistral"></div>
+</div>
+
+<!-- ==================== TAB MODELOS SERVICIO ==================== -->
+<div class="tab-content" id="tab-modelos">
+  <div class="section-header">
+    <h2 class="section-title">Modelos de servicio</h2>
+    <p class="section-sub">12 ideas. Como se entrega el servicio, no que se vende.</p>
+  </div>
+  <div class="filters-bar" data-filter-tab="modelos">
+    <span class="filter-label">Sinergia</span>
+    <div class="filter-group">
+      <button class="filter-btn active-filter" data-filter="sinergia" data-val="todos">Todas</button>
+      <button class="filter-btn" data-filter="sinergia" data-val="alta">Alta</button>
+      <button class="filter-btn" data-filter="sinergia" data-val="media">Media</button>
+    </div>
+    <input type="text" class="search-input" placeholder="Buscar..." data-search-tab="modelos">
+  </div>
+  <div class="cards-grid" id="grid-modelos"></div>
+</div>
+
+<!-- ==================== TAB COMUNITARIOS ==================== -->
+<div class="tab-content" id="tab-comunidad">
+  <div class="section-header">
+    <h2 class="section-title">Modelos comunitarios</h2>
+    <p class="section-sub">7 ideas. Alianzas, convenios y posicionamiento en el ecosistema local.</p>
+  </div>
+  <div class="cards-grid" id="grid-comunidad"></div>
+</div>
+
+<!-- ==================== TAB HIBRIDOS ==================== -->
+<div class="tab-content" id="tab-hibridos">
+  <div class="section-header">
+    <h2 class="section-title">Verticales hibridos</h2>
+    <p class="section-sub">15 ideas. Modelos internacionales que combinan farmacia con otros servicios. Aprender de fracasos y exitos.</p>
+  </div>
+  <div class="cards-grid" id="grid-hibridos"></div>
+</div>
+
+<!-- ==================== TAB TECNOLOGIA ==================== -->
+<div class="tab-content" id="tab-tecnologia">
+  <div class="section-header">
+    <h2 class="section-title">Tecnologia</h2>
+    <p class="section-sub">12 ideas. Stack minimo requerido y tecnologia opcional para escalar.</p>
+  </div>
+  <div class="cards-grid" id="grid-tecnologia"></div>
+</div>
+
+<!-- ==================== TAB CHILE ==================== -->
+<div class="tab-content" id="tab-chile">
+  <div class="section-header">
+    <h2 class="section-title">Casos Chile</h2>
+    <p class="section-sub">7 referencias locales. Modelos vigentes, lecciones y advertencias.</p>
+  </div>
+  <div class="cards-grid" id="grid-chile"></div>
+</div>
+
+<!-- ==================== TAB TENDENCIAS ==================== -->
+<div class="tab-content" id="tab-tendencias">
+  <div class="section-header">
+    <h2 class="section-title">Tendencias 2025–2030</h2>
+    <p class="section-sub">10 tendencias regulatorias, tecnologicas y de demanda que moldean la farmacia del futuro.</p>
+  </div>
+  <div class="cards-grid" id="grid-tendencias"></div>
+</div>
+
+<!-- ==================== TAB MARKETING ==================== -->
+<div class="tab-content" id="tab-marketing">
+  <div class="section-header">
+    <h2 class="section-title">Comunidad y Marketing</h2>
+    <p class="section-sub">12 ideas. Construccion de marca local y vinculo comunitario.</p>
+  </div>
+  <div class="cards-grid" id="grid-marketing"></div>
+</div>
+
+<!-- ==================== TAB DENTAL SUPPLY B2B ==================== -->
+<div class="tab-content" id="tab-dental-b2b">
+  <div class="section-header">
+    <h2 class="section-title" style="color:var(--lacre);">Dental Supply CMC — Vertical B2B</h2>
+    <p class="section-sub">Canal mayorista de insumos dentales profesionales. Sociedad paralela. Cliente cautivo CMC + venta externa a dentistas Arauco/Curanilahue/Cañete.</p>
+  </div>
+
+  <!-- TESIS BLOCK -->
+  <div class="note-block" style="background:var(--lacre); margin-bottom:1.5rem;">
+    <h3 style="color:var(--lenga);">Tesis</h3>
+    <p>Los dentistas del CMC son cliente cautivo dia 1: lo que hoy compran a Dental Salud / Henry Schein / 3M Espe via Concepcion, lo pueden comprar al canal propio con ahorro 15-30%. Cero proveedor de insumos dentales en Carampangue/Arauco. Si OLACORE escala a Tirua/Cañete/Estacion Olavarria con mas dentales, este canal se vuelve infraestructura critica del holding. Estructura: <strong>Dental Supply CMC SpA</strong> — sociedad separada, bodega-tienda fuera del recinto ISP de la farmacia, boleta empresa B2B.</p>
+  </div>
+
+  <!-- KPIs ESTIMADOS -->
+  <div class="kpi-grid" style="background:white; border-radius:8px; border:1px solid #e5e0d8; margin-bottom:1.5rem; padding:1.25rem;">
+    <div class="kpi-card" style="background:#fee;">
+      <div class="kpi-num" style="color:var(--lacre);">15-30%</div>
+      <div class="kpi-label">Ahorro estimado CMC</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-num">~6</div>
+      <div class="kpi-label">Dentistas CMC cautivos</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-num">~25</div>
+      <div class="kpi-label">Dentistas zona externos</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-num">M12+</div>
+      <div class="kpi-label">Apertura venta externa</div>
+    </div>
+    <div class="kpi-card" style="background:#e8f5e9;">
+      <div class="kpi-num" style="color:var(--musgo);">9</div>
+      <div class="kpi-label">Categorias insumos</div>
+    </div>
+  </div>
+
+  <!-- CATEGORIAS DE INSUMOS -->
+  <h3 class="section-title" style="font-size:1.15rem; margin:1.5rem 0 0.5rem;">Categorias de insumos</h3>
+  <p class="section-sub" style="margin-bottom:1rem;">Lo que un canal B2B dental tiene que cubrir. Stock alineado al consumo real del CMC + crecimiento incremental.</p>
+  <div class="cards-grid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr));">
+
+    <div class="idea-card alta">
+      <div class="card-badges">
+        <span class="badge badge-ap-alta">Volumen alto</span>
+        <span class="badge badge-moat">Vencimiento</span>
+      </div>
+      <div class="card-title">Restauracion</div>
+      <div class="card-desc">Composites (3M Filtek, Tetric, Z350), adhesivos (Single Bond, Adper), acidos grabadores, ionomeros de vidrio.</div>
+      <div class="card-meta">
+        <div class="card-meta-row"><strong>Proveedores:</strong> 3M Espe · Ivoclar · GC · Kerr</div>
+        <div class="card-meta-row"><strong>Almacenaje:</strong> oscuridad, temp controlada</div>
+        <div class="card-meta-row"><strong>Vida util:</strong> 12-24 meses</div>
+      </div>
+    </div>
+
+    <div class="idea-card alta">
+      <div class="card-badges">
+        <span class="badge badge-ap-alta">Volumen alto</span>
+        <span class="badge badge-moat">Receta</span>
+      </div>
+      <div class="card-title">Anestesia</div>
+      <div class="card-desc">Anestesicos locales (lidocaina 2%, mepivacaina, articaina), agujas cortas/largas, jeringas carpule, aspiradoras.</div>
+      <div class="card-meta">
+        <div class="card-meta-row"><strong>Proveedores:</strong> Septodont · DFL · Inibsa</div>
+        <div class="card-meta-row"><strong>Almacenaje:</strong> temp ambiente</div>
+        <div class="card-meta-row"><strong>Notas:</strong> control venta a profesional</div>
+      </div>
+    </div>
+
+    <div class="idea-card alta">
+      <div class="card-badges">
+        <span class="badge badge-ap-alta">Volumen medio</span>
+      </div>
+      <div class="card-title">Endodoncia</div>
+      <div class="card-desc">Limas K/H, limas rotatorias (ProTaper, WaveOne), conos gutapercha, cementos selladores (AH Plus), hipoclorito.</div>
+      <div class="card-meta">
+        <div class="card-meta-row"><strong>Proveedores:</strong> Dentsply Maillefer · VDW · FKG</div>
+        <div class="card-meta-row"><strong>Margen:</strong> alto en limas premium</div>
+      </div>
+    </div>
+
+    <div class="idea-card alta">
+      <div class="card-badges">
+        <span class="badge badge-ap-alta">Alto valor</span>
+        <span class="badge badge-moat">Sinergia ortodoncia</span>
+      </div>
+      <div class="card-title">Ortodoncia</div>
+      <div class="card-desc">Brackets metalicos/esteticos, alambres NiTi/SS, ligas elasticas, mini-implantes, alineadores transparentes.</div>
+      <div class="card-meta">
+        <div class="card-meta-row"><strong>Proveedores:</strong> 3M Unitek · Morelli · ORMCO · Bioart</div>
+        <div class="card-meta-row"><strong>Notas:</strong> ortodoncia CMC = miles USD/mes</div>
+      </div>
+    </div>
+
+    <div class="idea-card alta">
+      <div class="card-badges">
+        <span class="badge badge-ap-alta">Alto valor</span>
+        <span class="badge badge-moat">Capital alto</span>
+      </div>
+      <div class="card-title">Implantologia</div>
+      <div class="card-desc">Implantes (Straumann, Neodent, BTI, MIS), pilares, fresas quirurgicas, suturas, regeneradores oseos.</div>
+      <div class="card-meta">
+        <div class="card-meta-row"><strong>Proveedores:</strong> Straumann · Neodent · MIS · BTI</div>
+        <div class="card-meta-row"><strong>Notas:</strong> stock por talla, cuenta consignada con proveedor</div>
+      </div>
+    </div>
+
+    <div class="idea-card media">
+      <div class="card-badges">
+        <span class="badge badge-ap-media">Volumen medio</span>
+      </div>
+      <div class="card-title">Periodoncia y cirugia</div>
+      <div class="card-desc">Curetas Gracey, ultrasonido puntas, suturas (Vicryl, seda), gasas, hisopos, instrumental quirurgico.</div>
+      <div class="card-meta">
+        <div class="card-meta-row"><strong>Proveedores:</strong> Hu-Friedy · Aesculap · DFL</div>
+      </div>
+    </div>
+
+    <div class="idea-card alta">
+      <div class="card-badges">
+        <span class="badge badge-ap-alta">Volumen alto</span>
+      </div>
+      <div class="card-title">Protesis y laboratorio</div>
+      <div class="card-desc">Acrilicos, resinas, ceras, yesos tipo III/IV, alginatos, siliconas de impresion, cubetas.</div>
+      <div class="card-meta">
+        <div class="card-meta-row"><strong>Proveedores:</strong> GC · Zhermack · Heraeus · Vipi</div>
+      </div>
+    </div>
+
+    <div class="idea-card alta">
+      <div class="card-badges">
+        <span class="badge badge-ap-alta">Volumen alto</span>
+        <span class="badge badge-qw">Recurrente</span>
+      </div>
+      <div class="card-title">Esterilizacion + EPP</div>
+      <div class="card-desc">Bolsas autoclave, indicadores quimicos/biologicos, mascarillas, guantes nitrilo/latex, batas, gorros, lentes.</div>
+      <div class="card-meta">
+        <div class="card-meta-row"><strong>Proveedores:</strong> 3M · Sterimed · Ansell</div>
+        <div class="card-meta-row"><strong>Notas:</strong> consumo recurrente, baja complejidad</div>
+      </div>
+    </div>
+
+    <div class="idea-card media">
+      <div class="card-badges">
+        <span class="badge badge-ap-media">Capital alto</span>
+      </div>
+      <div class="card-title">Pequeno equipamiento</div>
+      <div class="card-desc">Turbinas, micromotores, lamparas LED de polimerizacion, ultrasonidos, contra-angulos, fresas diamantadas/carburo.</div>
+      <div class="card-meta">
+        <div class="card-meta-row"><strong>Proveedores:</strong> NSK · W&H · KaVo · Bien-Air</div>
+        <div class="card-meta-row"><strong>Notas:</strong> stock limitado, venta a pedido</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- PROVEEDORES ESTRATEGICOS -->
+  <h3 class="section-title" style="font-size:1.15rem; margin:2rem 0 0.5rem;">Proveedores estrategicos</h3>
+  <p class="section-sub" style="margin-bottom:1rem;">Marcas con representacion en Chile o importacion directa. Lista priorizada por volumen y margen.</p>
+  <div class="cards-grid" style="grid-template-columns:repeat(auto-fill,minmax(240px,1fr));">
+
+    <div class="idea-card alta">
+      <div class="card-title">3M Espe / Unitek</div>
+      <div class="card-desc">Restauracion, ortodoncia, esterilizacion, EPP. Marca premium, distribuidor oficial Chile.</div>
+      <div class="card-meta-row"><strong>Foco:</strong> Filtek, Single Bond, brackets Unitek, bolsas autoclave</div>
+    </div>
+
+    <div class="idea-card alta">
+      <div class="card-title">Dentsply Sirona</div>
+      <div class="card-desc">Endodoncia (ProTaper, WaveOne), implantes Astra Tech, ortodoncia, equipamiento.</div>
+      <div class="card-meta-row"><strong>Foco:</strong> limas rotatorias, sistema endo</div>
+    </div>
+
+    <div class="idea-card alta">
+      <div class="card-title">Ivoclar Vivadent</div>
+      <div class="card-desc">Composites (Tetric N-Ceram), ceramicas (e.max, IPS), CAD/CAM dental.</div>
+      <div class="card-meta-row"><strong>Foco:</strong> estetica anterior</div>
+    </div>
+
+    <div class="idea-card alta">
+      <div class="card-title">Henry Schein</div>
+      <div class="card-desc">Distribuidor mundial multi-marca. Modelo de catalogo amplio + e-commerce + delivery.</div>
+      <div class="card-meta-row"><strong>Foco:</strong> referencia operacional del canal</div>
+    </div>
+
+    <div class="idea-card alta">
+      <div class="card-title">Dental Salud Chile</div>
+      <div class="card-desc">Incumbente nacional. Distribucion + capacitacion + financiamiento. Competencia directa.</div>
+      <div class="card-meta-row"><strong>Foco:</strong> conocer su pricing y servicio</div>
+    </div>
+
+    <div class="idea-card alta">
+      <div class="card-title">Morelli / Bioart</div>
+      <div class="card-desc">Brasileros, foco ortodoncia. Excelente relacion precio-calidad. Importacion directa rentable.</div>
+      <div class="card-meta-row"><strong>Foco:</strong> brackets, alambres, accesorios orto</div>
+    </div>
+
+    <div class="idea-card media">
+      <div class="card-title">Straumann / Neodent</div>
+      <div class="card-desc">Implantes premium y mid-market. Modelo de cuenta consignada con consultor tecnico.</div>
+      <div class="card-meta-row"><strong>Foco:</strong> implantologia CMC</div>
+    </div>
+
+    <div class="idea-card media">
+      <div class="card-title">GC / VOCO / Kerr</div>
+      <div class="card-desc">Restauracion, profilaxis, prevencion. Linea completa para clinica general.</div>
+      <div class="card-meta-row"><strong>Foco:</strong> volumen general</div>
+    </div>
+
+    <div class="idea-card media">
+      <div class="card-title">Hu-Friedy / Aesculap</div>
+      <div class="card-desc">Instrumental quirurgico premium. Compra unica, alta durabilidad, alto ticket.</div>
+      <div class="card-meta-row"><strong>Foco:</strong> instrumental cirugia</div>
+    </div>
+
+    <div class="idea-card media">
+      <div class="card-title">NSK / W&H / KaVo</div>
+      <div class="card-desc">Equipamiento mecanico (turbinas, micromotores, ultrasonidos). Alto ticket, baja rotacion.</div>
+      <div class="card-meta-row"><strong>Foco:</strong> stock minimo + venta a pedido</div>
+    </div>
+
+  </div>
+
+  <!-- ROADMAP DENTAL B2B -->
+  <h3 class="section-title" style="font-size:1.15rem; margin:2rem 0 0.5rem;">Roadmap especifico Dental Supply</h3>
+  <p class="section-sub" style="margin-bottom:1rem;">Fases con cliente cautivo CMC primero, externo despues.</p>
+
+  <div class="phase-block">
+    <div class="phase-header">
+      <div class="phase-dot" style="background:var(--musgo);"></div>
+      <div>
+        <div class="phase-title">Mes 0-3 — Due diligence interna</div>
+        <div class="phase-sub">Lo que hoy gasta el CMC en insumos dentales</div>
+      </div>
+    </div>
+    <div class="roadmap-cards">
+      <div class="roadmap-card" style="border-left:3px solid var(--musgo);">
+        <div class="roadmap-card-title">Auditoria de consumo CMC</div>
+        <div class="roadmap-card-desc">Revisar facturas dentales 12 meses. Cuanto se gasta, en que SKUs, a que proveedores, con que frecuencia. Sin este dato, la sociedad opera a ciegas.</div>
+      </div>
+      <div class="roadmap-card" style="border-left:3px solid var(--musgo);">
+        <div class="roadmap-card-title">Encuesta a dentistas CMC</div>
+        <div class="roadmap-card-desc">Top 30 SKUs criticos por dentista, marca preferida, frustraciones con proveedor actual. Compromiso implicito de derivacion.</div>
+      </div>
+      <div class="roadmap-card" style="border-left:3px solid var(--musgo);">
+        <div class="roadmap-card-title">Mapa de dentistas zona</div>
+        <div class="roadmap-card-desc">Censo de dentales independientes Carampangue / Arauco / Curanilahue / Cañete. Universo de clientes externos potenciales.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="phase-block">
+    <div class="phase-header">
+      <div class="phase-dot" style="background:var(--cobre);"></div>
+      <div>
+        <div class="phase-title">Mes 3-6 — Constitucion + arranque interno</div>
+        <div class="phase-sub">Sociedad operativa, primera compra al por mayor</div>
+      </div>
+    </div>
+    <div class="roadmap-cards">
+      <div class="roadmap-card" style="border-left:3px solid var(--cobre);">
+        <div class="roadmap-card-title">Constituir Dental Supply CMC SpA</div>
+        <div class="roadmap-card-desc">Sociedad separada de la farmacia. Giro: comercio al por mayor de insumos medicos y dentales. Iniciar actividades SII.</div>
+      </div>
+      <div class="roadmap-card" style="border-left:3px solid var(--cobre);">
+        <div class="roadmap-card-title">Bodega-tienda B2B</div>
+        <div class="roadmap-card-desc">Espacio fisico fuera del recinto ISP de farmacia. Refrigeracion, oscuridad, control acceso. Puede ser local pequeño contiguo o oficina-bodega.</div>
+      </div>
+      <div class="roadmap-card" style="border-left:3px solid var(--cobre);">
+        <div class="roadmap-card-title">Apertura cuentas mayoristas</div>
+        <div class="roadmap-card-desc">3M Espe, Dentsply, Ivoclar, Dental Salud. Volumen del CMC suele ser suficiente para abrir cuentas con descuento mayorista.</div>
+      </div>
+      <div class="roadmap-card" style="border-left:3px solid var(--cobre);">
+        <div class="roadmap-card-title">Sistema ERP B2B + catalogo</div>
+        <div class="roadmap-card-desc">ERP con cuenta corriente cliente, lista precios, control vencimientos por lote. Catalogo digital con WhatsApp para pedidos rapidos.</div>
+      </div>
+      <div class="roadmap-card" style="border-left:3px solid var(--cobre);">
+        <div class="roadmap-card-title">Primera compra calibrada</div>
+        <div class="roadmap-card-desc">Stock para 3 meses de consumo CMC + 20% buffer. Foco en categorias de alta rotacion: restauracion, anestesia, EPP, ortodoncia.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="phase-block">
+    <div class="phase-header">
+      <div class="phase-dot" style="background:var(--cobre);"></div>
+      <div>
+        <div class="phase-title">Mes 6-12 — Optimizacion consumo interno</div>
+        <div class="phase-sub">Validar ahorro, ajustar stock, capacitar dentistas CMC</div>
+      </div>
+    </div>
+    <div class="roadmap-cards">
+      <div class="roadmap-card" style="border-left:3px solid var(--cobre);">
+        <div class="roadmap-card-title">Medir ahorro real CMC</div>
+        <div class="roadmap-card-desc">Comparar gasto pre vs post sociedad. Validar tesis 15-30% ahorro. Documentar para escalar.</div>
+      </div>
+      <div class="roadmap-card" style="border-left:3px solid var(--cobre);">
+        <div class="roadmap-card-title">Stock data-driven</div>
+        <div class="roadmap-card-desc">Ajuste mensual de SKUs basado en consumo real CMC. Discontinuar lo que no rota, profundizar lo que si.</div>
+      </div>
+      <div class="roadmap-card" style="border-left:3px solid var(--cobre);">
+        <div class="roadmap-card-title">Convenios con representantes</div>
+        <div class="roadmap-card-desc">Capacitacion gratuita para dentistas CMC con visitas tecnicas de 3M, Ivoclar, etc. Beneficio adicional + relacion comercial.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="phase-block">
+    <div class="phase-header">
+      <div class="phase-dot" style="background:var(--fiordo);"></div>
+      <div>
+        <div class="phase-title">Mes 12+ — Apertura venta externa</div>
+        <div class="phase-sub">Dentistas Arauco/Curanilahue/Cañete + escalamiento OLACORE</div>
+      </div>
+    </div>
+    <div class="roadmap-cards">
+      <div class="roadmap-card" style="border-left:3px solid var(--fiordo);">
+        <div class="roadmap-card-title">Catalogo publico + WhatsApp B2B</div>
+        <div class="roadmap-card-desc">Lista precios para dentistas externos. Pedido por WhatsApp, despacho semanal por ruta zona Arauco.</div>
+      </div>
+      <div class="roadmap-card" style="border-left:3px solid var(--fiordo);">
+        <div class="roadmap-card-title">Vendedor B2B itinerante</div>
+        <div class="roadmap-card-desc">Una persona visitando dentales 1-2 dias/sem por la zona. Captacion + soporte tecnico + cobranza.</div>
+      </div>
+      <div class="roadmap-card" style="border-left:3px solid var(--fiordo);">
+        <div class="roadmap-card-title">Convenio cuenta corriente</div>
+        <div class="roadmap-card-desc">Pago a 30 dias para dentales con flujo predecible. Politica de credito clara con tope por cliente.</div>
+      </div>
+      <div class="roadmap-card" style="border-left:3px solid var(--fiordo);">
+        <div class="roadmap-card-title">Escalamiento OLACORE</div>
+        <div class="roadmap-card-desc">Si se abre dental en Estacion Olavarria, Tirua o Cañete, Dental Supply CMC ya es la infraestructura preexistente. Ventaja inmensa de costo.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIESGOS -->
+  <h3 class="section-title" style="font-size:1.15rem; margin:2rem 0 0.5rem;">Riesgos especificos</h3>
+  <div class="cards-grid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr));">
+
+    <div class="idea-card baja" style="border-left-color:var(--lacre);">
+      <div class="card-badges"><span class="badge badge-esf-alto">Riesgo alto</span></div>
+      <div class="card-title">Capital de trabajo elevado</div>
+      <div class="card-desc">Insumos premium (composites, implantes, equipamiento) son caros. Stock para 6 dentistas + buffer ronda los $15-25M CLP.</div>
+      <div class="card-meta-row"><strong>Mitigacion:</strong> empezar con categorias alta rotacion, evitar implantologia/equipamiento mes 1</div>
+    </div>
+
+    <div class="idea-card baja" style="border-left-color:var(--lacre);">
+      <div class="card-badges"><span class="badge badge-esf-medio">Riesgo medio</span></div>
+      <div class="card-title">Vencimientos en composite y anestesicos</div>
+      <div class="card-desc">Material que no rota a tiempo se vence. Composite: 12-24 meses. Anestesico: 18 meses. Castigo 3-5% del stock al año.</div>
+      <div class="card-meta-row"><strong>Mitigacion:</strong> ERP con FEFO, monitoreo mensual, devolucion a proveedor cuando contrato lo permite</div>
+    </div>
+
+    <div class="idea-card baja" style="border-left-color:var(--lacre);">
+      <div class="card-badges"><span class="badge badge-esf-medio">Riesgo medio</span></div>
+      <div class="card-title">Almacenamiento especifico</div>
+      <div class="card-desc">Composite requiere oscuridad. Algunos materiales refrigeracion. Anestesicos en zona segura. EPP en zona seca.</div>
+      <div class="card-meta-row"><strong>Mitigacion:</strong> bodega con zonificacion + termo-higrometro</div>
+    </div>
+
+    <div class="idea-card baja" style="border-left-color:var(--lacre);">
+      <div class="card-badges"><span class="badge badge-esf-medio">Riesgo medio</span></div>
+      <div class="card-title">Competencia incumbente</div>
+      <div class="card-desc">Dental Salud y otros llevan decadas con relaciones de cuenta corriente, financiamiento y capacitacion. Ganar dentistas externos toma tiempo.</div>
+      <div class="card-meta-row"><strong>Mitigacion:</strong> primero cliente cautivo CMC. Externo recien mes 12+.</div>
+    </div>
+
+    <div class="idea-card baja" style="border-left-color:var(--lacre);">
+      <div class="card-badges"><span class="badge badge-esf-bajo">Riesgo bajo</span></div>
+      <div class="card-title">Regulatorio</div>
+      <div class="card-desc">Insumos dentales son productos sanitarios bajo Decreto 825 ISP. Distribuidor B2B requiere autorizacion sanitaria, mas liviana que farmacia abierta.</div>
+      <div class="card-meta-row"><strong>Mitigacion:</strong> tramite ISP via abogado especialista (~30-60 dias)</div>
+    </div>
+
+    <div class="idea-card baja" style="border-left-color:var(--lacre);">
+      <div class="card-badges"><span class="badge badge-esf-medio">Riesgo medio</span></div>
+      <div class="card-title">Cuenta corriente externa</div>
+      <div class="card-desc">Dentistas independientes con flujo irregular pueden atrasarse en pagos. Mora afecta capital de trabajo.</div>
+      <div class="card-meta-row"><strong>Mitigacion:</strong> politica credito clara, tope por cliente, scoring inicial, primer pedido al contado</div>
+    </div>
+
+  </div>
+
+  <!-- METRICAS A TRACKEAR -->
+  <div class="note-block" style="margin-top:1.5rem;">
+    <h3>Metricas a trackear</h3>
+    <p style="margin-bottom:0.5rem;">El dashboard operativo del Dental Supply debe medir mensualmente:</p>
+    <ul style="margin:0; padding-left:1.2rem; color:rgba(255,255,255,0.85); font-size:0.85rem; line-height:1.7;">
+      <li>Ahorro % CMC vs benchmark proveedor anterior (objetivo: 15-30%)</li>
+      <li>Rotacion de stock por categoria (objetivo: 4-6x/año en alta rotacion)</li>
+      <li>Ratio vencimiento (objetivo: &lt;3% castigo anual)</li>
+      <li>Clientes externos captados (mes 12+: empezar 1-2/mes)</li>
+      <li>Ticket promedio por cliente externo</li>
+      <li>Dias promedio de cobranza cuenta corriente (objetivo: &lt;35)</li>
+      <li>% mix categorias (alta rotacion vs alto valor)</li>
+    </ul>
+  </div>
+
+</div>
+
+<!-- ==================== TAB VISUALIZACIONES ==================== -->
+<div class="tab-content" id="tab-visualizaciones">
+  <div class="section-header">
+    <h2 class="section-title">Visualizaciones del Idea Bank</h2>
+    <p class="section-sub">Panorama del banco de ideas por categoria, sinergia, esfuerzo y aplicabilidad.</p>
+  </div>
+  <div class="charts-grid">
+    <div class="chart-card" style="grid-column: 1 / -1;">
+      <div class="chart-title">Ideas por categoria</div>
+      <div class="chart-wrap"><canvas id="chartDonut"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Distribucion sinergia × esfuerzo</div>
+      <div class="chart-wrap"><canvas id="chartBar"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Matrix quick wins (aplicabilidad vs sinergia)</div>
+      <div id="scatterWrap"><canvas id="chartScatter"></canvas></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main-content -->
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-top">
+    <div>
+      <h4>Salud CMC — Idea Bank Farmacia Rural</h4>
+      <p style="margin:0; line-height:1.7;">Documento estrategico exploratorio.<br>No constituye plan de negocio ni proyeccion financiera.</p>
+    </div>
+    <div>
+      <h4>Fuentes</h4>
+      <ul style="list-style:none; padding:0; margin:0; line-height:2;">
+        <li><a href="https://www.ispch.cl" target="_blank">ISP Chile — Normativa farmacia</a></li>
+        <li><a href="https://www.cenabast.cl" target="_blank">CENABAST — Adhesion farmacias</a></li>
+        <li><a href="https://www.q-far.cl" target="_blank">Q-Far — Telefarmacia Chile</a></li>
+        <li><a href="https://www.boots.com" target="_blank">Boots UK — Pharmacy Hub</a></li>
+        <li><a href="https://www.himsandhers.com" target="_blank">Hims&Hers — Telehealth+farmacia</a></li>
+        <li><a href="https://mpharma.com" target="_blank">mPharma — Africa modelo Mutti+</a></li>
+        <li>Drogasil RD Saude Brasil · Apollo Pharmacy India · MedPlus India</li>
+        <li>Informe Cosmeticos Chile 2024 — CCS</li>
+      </ul>
+    </div>
+    <div>
+      <h4>OLACORE Holding</h4>
+      <p style="margin:0; line-height:1.7;">Sub-marca: CMC — Salud<br>Centro Medico Carampangue<br>Carampangue, Region del Biobio, Chile</p>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    OLACORE HOLDING — MERIDIANO SUR &nbsp;|&nbsp; Generado Mayo 2026 &nbsp;|&nbsp; Documento interno exploratorio
+  </div>
+</footer>
+
+<script>
+// ===================== DATA =====================
+const IDEAS = {
+  clinicos: [
+    { title:"Vacunacion influenza + neumo", desc:"Vacunacion de temporada administrada por tecnico paramedico en farmacia. Sin agenda previa.", donde:"Walgreens USA, Boots UK, Salcobrand Chile", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"medio", por_que:"Base de pacientes cronicos del CMC lista para captar. Temporada invernal = alta demanda concentrada." },
+    { title:"Vacunacion zooster + HPV + viajero", desc:"Vacunas privadas de alto margen. HPV adultos aun bajo cobertura publica. Viajero = diferencial unico en zona.", donde:"CVS Pharmacy USA, Farmacias Dr. Simi Mexico", aplicabilidad:"media", sinergia:"alta", esfuerzo:"medio", por_que:"Margen alto, baja frecuencia pero alto ticket. Diferencial de imagen clinica." },
+    { title:"Medicion PA + glicemia + oximetria + IMC", desc:"Cuatro mediciones en menos de 5 minutos. Sin turno. Triage informal y derivacion al CMC.", donde:"Boots UK (Walk-in Health), CVS MinuteClinic, Salcobrand", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"bajo", por_que:"Cronicos requieren control frecuente. La farmacia absorbe la demanda que el CMC no puede agendar para control simple." },
+    { title:"Test rapido HbA1c + colesterol", desc:"Resultados en 5 minutos desde muestra capilar. Requiere quimico o protocolo supervisado.", donde:"LloydsPharmacy UK, Farmatodo Venezuela", aplicabilidad:"media", sinergia:"alta", esfuerzo:"medio", por_que:"Diabetes + cardiovascular son las principales cargas del perfil epidemiologico de la zona." },
+    { title:"Test rapido COVID + ITU + embarazo", desc:"Tests de farmacia clasicos. Bajo costo, alta rotacion, margen razonable.", donde:"Todas las cadenas mundiales", aplicabilidad:"alta", sinergia:"media", esfuerzo:"bajo", por_que:"Demanda constante. Genera trafico. La farmacia que los tiene siempre gana fidelidad de madres con ninos." },
+    { title:"Tamizaje PHQ-9 + GAD-7", desc:"Cuestionarios de salud mental administrados por farmaceutico. Derivacion al psicologo del CMC.", donde:"Boots UK, Community pharmacy UK", aplicabilidad:"media", sinergia:"alta", esfuerzo:"bajo", por_que:"Salud mental es la tendencia de mayor crecimiento en retail de salud post-2020." },
+    { title:"Tamizaje MMSE deterioro cognitivo", desc:"Mini-Mental State Examination. 10 minutos. Detecta deterioro cognitivo leve. Derivar a medico del CMC.", donde:"Community pharmacy Canada", aplicabilidad:"media", sinergia:"alta", esfuerzo:"bajo", por_que:"Adulto mayor es el segmento dominante de la zona. Modelo preventivo con alto valor clinico y de imagen." },
+    { title:"Tamizaje obesidad + derivacion nutricion", desc:"IMC + perimetro abdominal + derivacion al nutricionista del CMC. Flujo automatico.", donde:"Boots UK, Farmacias Comunidad Salcobrand", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"bajo", por_que:"Cierra el loop farmacia-CMC sin fricciones. Aumenta agenda nutricion." },
+    { title:"Atencion farmaceutica formal", desc:"Revision de medicacion en pacientes con 5+ farmacos. Detecta duplicidades, interacciones, no-adherencia.", donde:"NHS UK, programa PAFR Chile", aplicabilidad:"media", sinergia:"alta", esfuerzo:"medio", por_que:"La polifarmacia en adultos mayores rurales es el principal problema de seguridad del medicamento en Chile." },
+    { title:"Pastillero SPD adherencia", desc:"Blister personalizado semanal/mensual para cronicos. Farmaceutico prepara y paciente retira o recibe en domicilio.", donde:"Nomad UK, Salcobrand Comunidad, Europa en general", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"medio", por_que:"Adherencia cronica es el problema numero 1. SPD reduce hospitalizaciones. Fideliza al paciente de por vida." },
+    { title:"Inyectables B12 + hierro + anticoncepcion depot", desc:"Administracion de inyectables de prescripcion medica del CMC. Tecnico o TENS capacitado.", donde:"Community pharmacy UK, modelos latinoamerica", aplicabilidad:"media", sinergia:"alta", esfuerzo:"medio", por_que:"Evita que el paciente deba volver al CMC para una inyeccion. Comoda derivacion de bajo riesgo." },
+    { title:"Nebulizacion + curaciones simples", desc:"Area de procedimientos basicos. Nebulizacion para asmaticos, curacion de heridas superficiales.", donde:"Cruz Verde Chile, cadenas latinoamerica", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"medio", por_que:"Alta demanda en zona de clima humedo. Curaciones son un flujo diario desde CMC (kinesiologia)." },
+    { title:"PSCV farmaceutico", desc:"Programa de Salud Cardiovascular con seguimiento farmaceutico. Cronicos HTA + DM2 con control mensual en farmacia.", donde:"Modelo chileno ISP", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"medio", por_que:"Complementa al PSCV del CESFAM. La farmacia puede actuar como refuerzo privado del programa publico." },
+    { title:"Cesacion tabaquica", desc:"Protocolo de cesacion con vareniclina o bupropion + seguimiento. QF puede liderar el proceso.", donde:"Boots UK, CVS USA, Ahumada Chile", aplicabilidad:"media", sinergia:"media", esfuerzo:"medio", por_que:"Alta prevalencia de tabaquismo en zona. Margen en farmacoterapia y diferencial de imagen de salud." },
+    { title:"Anticoncepcion de emergencia + consejeria", desc:"PAE mas consejeria privada, discreta. Zona rural = menos acceso a ginecologia.", donde:"Standar global", aplicabilidad:"alta", sinergia:"media", esfuerzo:"bajo", por_que:"Acceso critico en zona rural. La farmacia es el unico punto privado disponible en la zona." },
+    { title:"Despacho receta GES", desc:"Farmacia habilitada para despacho de recetas del sistema GES. Requiere convenio con FONASA.", donde:"RedFarma, farmacias populares Chile", aplicabilidad:"media", sinergia:"alta", esfuerzo:"alto", por_que:"Volumen garantizado de recetas publicas. Diferencial social y de acceso." },
+    { title:"Adhesion CENABAST", desc:"Acceso a medicamentos a precio regulado (50-70% mas barato que canal privado). Requiere proceso ISP.", donde:"1.200+ farmacias chilenas adheridas", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"bajo", por_que:"Diferencial de precio vs Cruz Verde en cronicos. Argumento de venta poderoso para adultos mayores." },
+    { title:"Farmacia clinica satelite CMC", desc:"QF con cargo compartido CMC-farmacia. Interconsultas, revision de polifarmacia, atencion farmaceutica formal integrada.", donde:"Boots UK Pharmacy Hub, modelo hospitalario adaptado", aplicabilidad:"media", sinergia:"alta", esfuerzo:"alto", por_que:"El modelo de maxima integracion. Genera diferencial competitivo insuperable para las cadenas." },
+    { title:"Box privado consejeria", desc:"Espacio privado de 2x2m para consejeria de salud sexual, mental o de medicacion. Discrecion = confianza.", donde:"Boots UK, cadenas europeas", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"bajo", por_que:"En zona rural la discrecion es un valor critico. Genera confianza que ninguna cadena puede igualar." },
+    { title:"Despacho domicilio integrado kine", desc:"Despacho de medicamentos e insumos de kine a domicilio, coordinado con el kinesiologo del CMC.", donde:"mPharma Africa, modelos domicilio Chile pandemia", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"medio", por_que:"Kine domicilio es tendencia post-COVID. La farmacia cierra el loop de insumos sin costo adicional para el paciente." },
+    { title:"Receta digital + SNRE", desc:"Sistema Nacional de Receta Electronica. Obligatorio desde diciembre 2025. La farmacia debe estar conectada.", donde:"Chile — normativa ISP", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"bajo", por_que:"Obligatorio. No tenerlo es incumplimiento legal. Tenerlo permite recibir recetas electronicas del CMC directamente." },
+    { title:"Atencion salud sexual masculina", desc:"Consejeria y dispensa discreta de farmacos de disfuncion erectil, anticoncepcion masculina, ITS.", donde:"Hims USA, Lemonaid Health", aplicabilidad:"media", sinergia:"media", esfuerzo:"bajo", por_que:"Demanda reprimida en zona rural por verguenza. Farmacia con box privado = canal ideal." },
+    { title:"Telefarmacia Q-Far", desc:"Consulta farmaceutica por videollamada. QF remoto cubre turno de noche o zona de baja demanda.", donde:"Q-Far Chile — modelo validado", aplicabilidad:"media", sinergia:"media", esfuerzo:"medio", por_que:"Reduce costo de QF tiempo completo en etapa inicial. Cubre domingos y feriados." },
+    { title:"Programa adulto mayor integral", desc:"Pack mensual: pastillero SPD + medicion PA + glicemia + entrega medicamentos a domicilio.", donde:"Boots UK care home, NHS", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"medio", por_que:"Adulto mayor es el nucleo de la zona. Pack integrado = alta fidelizacion y boca a boca comunitario." },
+    { title:"Seguimiento adherencia enfermedades raras", desc:"Dispensacion controlada y seguimiento personalizado para pacientes con enfermedades poco frecuentes.", donde:"Farmacia especializada Espana, FOFAR Chile", aplicabilidad:"baja", sinergia:"media", esfuerzo:"alto", por_que:"Nicho de alto valor por paciente. Requiere especializacion. Evaluar como evolucion a 3+ anos." },
+  ],
+  productos: [
+    { title:"Dermocosmetica premium", desc:"Curaduria de 3-4 marcas: La Roche-Posay, Eucerin, Avene, Bioderma. Margen 40-60%. Mercado Chile USD 374M.", donde:"Farmacia Galeno, Knop, Medicity", aplicabilidad:"alta", sinergia:"media", esfuerzo:"bajo", por_que:"El mayor generador de margen por m2 en farmacia moderna. Diferencia inmediata de la farmacia anterior." },
+    { title:"Higiene intima + ginecologica", desc:"Lubricantes, lavados, antifungicos OTC, probioticos vaginales. Demanda constante y poca visibilidad rural.", donde:"Standar global", aplicabilidad:"alta", sinergia:"media", esfuerzo:"bajo", por_que:"Alta demanda reprimida por falta de oferta en zona. Margen bueno y rotacion constante." },
+    { title:"Suplementos y nutraceuticos", desc:"Omega 3, vitamina D, magnesio, collagen, hierro, B12. Solo marcas con evidencia cientifica.", donde:"iHerb USA, Knop Chile, Sanitas", aplicabilidad:"alta", sinergia:"media", esfuerzo:"bajo", por_que:"El segmento de mayor crecimiento global en farmacia. El CMC puede prescribir y la farmacia despacha." },
+    { title:"Linea bebes + ninos", desc:"Formula lagrimal, antipireticos, probioticos, cremas pañal, productos de higiene. Alta rotacion.", donde:"Estandar global, Farmacias Ahumada", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"bajo", por_que:"Pediatria y medicina familiar del CMC generan flujo constante. La farmacia cierra el loop." },
+    { title:"Linea adulto mayor", desc:"Suplementos calcioneutrientes, calcio+vitamina D, incontinencia, movilidad, audicion.", donde:"Estandar global, foco en zona rural", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"bajo", por_que:"El segmento dominante de la zona. Alta frecuencia de compra y fidelidad de marca." },
+    { title:"Linea diabetico", desc:"Glucometros, lancetas, tiras, insulinas refrigeradas, calcetines compresion, cremas pie diabetico.", donde:"CVS USA, Cruz Verde Chile", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"medio", por_que:"Prevalencia de DM2 alta en zona. El CMC ya tiene el volumen de pacientes. Solo necesita el stock." },
+    { title:"Insumos kine retail", desc:"Bandas elasticas, ultrasonido gel, kinesio tape, bolsas termicas, espumas de posicionamiento.", donde:"Kinesio Chile, Medisport", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"bajo", por_que:"Kine CMC genera la demanda. La farmacia satisface en el acto. Margen directo." },
+    { title:"Insumos dentales retail", desc:"Hilo dental especializado, irrigadores bucales, blanqueadores OTC, cepillos electricos, flúor.", donde:"Estandar dental global", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"bajo", por_que:"Dental CMC es uno de los servicios mas demandados. Los insumos son parte del plan de tratamiento." },
+    { title:"Insumos dentales B2B profesional", desc:"Composite, anestesicos, fresas, brackets, alambres, ligas, alineadores, materiales de impresion, gutapercha, conos, instrumental. Canal B2B, no retail.", donde:"3M Espe, Dentsply Sirona, Ivoclar, Dental Salud, Henry Schein. Modelo distribuidor regional.", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"medio", por_que:"Los dentistas del CMC son cliente cautivo dia 1: ahorro 15-30% vs comprar a Concepcion. No hay proveedor de insumos dentales en Carampangue/Arauco. Si OLACORE escala a mas clinicas dentales (Estacion Olavarria, Tirua, Cañete), este canal se vuelve infraestructura critica. Sinergia ortodoncia CMC = miles USD/mes en brackets+alambres+alineadores. Sociedad separada (Dental Supply CMC SpA), bodega-tienda B2B fuera del recinto ISP de farmacia." },
+    { title:"Cesacion tabaquica OTC", desc:"Parches nicotin, chicles, vaporizadores aprobados ISP. Complemento al protocolo clinico.", donde:"Boots UK, CVS USA", aplicabilidad:"media", sinergia:"media", esfuerzo:"bajo", por_que:"Alta prevalencia tabaquismo zona. El producto es de mostrador, no requiere QF para venta." },
+    { title:"Linea sexual adultos", desc:"Preservativos (premium y genericos), lubricantes, productos de bienestar. Presentacion discreta.", donde:"Boots UK, Farmacity Argentina", aplicabilidad:"alta", sinergia:"baja", esfuerzo:"bajo", por_que:"Alta demanda reprimida. El mercado rural no tiene oferta digna. Margen alto en premium." },
+    { title:"Cannabis medicinal CBD", desc:"Productos CBD con registro ISP. Aceites, capsulas, topicos. Solo marcas certificadas.", donde:"Khiron Chile, Knop CBD, MedReleaf Canada", aplicabilidad:"media", sinergia:"media", esfuerzo:"medio", por_que:"Mercado emergente con alta demanda en dolor cronico y ansiedad. La regulacion chilena ya lo permite." },
+    { title:"Fitofármacos y herbolaria certificada", desc:"Valeriana, pasiflora, cimicifuga, alcachofa. Solo con registro ISP. Complementa medicina integrativa.", donde:"Knop Chile, Arkopharma Europa", aplicabilidad:"media", sinergia:"baja", esfuerzo:"bajo", por_que:"Demanda real en zona rural. Baja inversion, margen razonable. Riesgo bajo." },
+    { title:"Equipamiento domestico salud", desc:"Tensiómetros digitales, oximetros, nebulizadores, camas ortopedicas, andadores, muletas.", donde:"Estandar global", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"bajo", por_que:"Alta demanda post-hospitalizacion. El CMC es el punto de alta. La farmacia es el punto de provision." },
+    { title:"Calzado ortopedico funcional", desc:"Plantillas, calzado diabetico, calcetines compresion. Solo seleccion curada, no catalogo masivo.", donde:"Boots UK orthotics, farmacias ortopedicas Espana", aplicabilidad:"media", sinergia:"alta", esfuerzo:"medio", por_que:"Kine y medico general CMC prescriben plantillas y calzado especializado. Flujo garantizado." },
+    { title:"Linea sleep y bienestar", desc:"Melatonina, mascaras sueno, ruido blanco, suplementos relax. Segmento wellness de rapido crecimiento.", donde:"Iherb, Pharmaton, tendencia global", aplicabilidad:"media", sinergia:"baja", esfuerzo:"bajo", por_que:"Post-pandemia: ansiedad y trastornos del sueno son demanda creciente en todos los segmentos." },
+    { title:"Alimentos funcionales", desc:"Proteinas, collagen peptidos, cereales funcionales. Solo si hay espacio fisico y volumen suficiente.", donde:"Nutraceutix, Pharmaton, GNC", aplicabilidad:"baja", sinergia:"baja", esfuerzo:"medio", por_que:"Nicho creciente pero distrae del foco farmacia. Evaluar solo si hay demanda local comprobada." },
+    { title:"Linea natural y organica", desc:"Cosmetica organica certificada, higiene natural. Para segmento premium local.", donde:"Weleda, Yves Rocher", aplicabilidad:"media", sinergia:"baja", esfuerzo:"bajo", por_que:"Nicho pequeno pero fiel. Diferencial de imagen y margen alto." },
+    { title:"Homeopatia y flores de Bach", desc:"Demanda de segmento especifico. Tension con imagen clinica del CMC.", donde:"Laboratorio Homeopatico Nacional Chile", aplicabilidad:"baja", sinergia:"baja", esfuerzo:"bajo", por_que:"Incluir solo si la demanda local lo exige. Evaluar impacto en imagen clinica-cientifica." },
+    { title:"Petfood + veterinaria OTC", desc:"Antiparasitarios animales, vitaminas, alimentos medicados. Zona rural = ganaderia y mascotas.", donde:"Veterquimica Chile, petfood global", aplicabilidad:"baja", sinergia:"baja", esfuerzo:"medio", por_que:"Potencial alto en zona rural pero distrae del foco. Solo si hay espacio fisico separado." },
+  ],
+  magistral: [
+    { title:"Cremas dermato personalizadas", desc:"Formulas magistrales para acne, rosácea, hiperpigmentacion, dermatitis. Dermatologo o medico prescribe, QF elabora.", donde:"Magistral global. En Chile: Laboratorio Galenicum, Of. Magistral Santiago", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"medio", por_que:"El primer diferenciador magistral. Margen 60%+. Cruz Verde no lo hace. La formula es del paciente." },
+    { title:"Formulas pediatricas", desc:"Suspensiones y jarabes en dosis y sabores adecuados para ninos. La industria no siempre tiene el formato correcto.", donde:"Magistral UK, USA, Europa en general", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"medio", por_que:"Pediatria CMC genera demanda constante. El medico prescribe el magistral y la farmacia elabora. Loop cerrado." },
+    { title:"Geles topicos dolor para kine", desc:"Diclofenac gel, arnica, ketoprofeno, mentol en formulaciones especificas. Kinesiologo prescribe.", donde:"Magistral kinesiologia. Farmacias deportivas USA", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"medio", por_que:"Kine CMC tiene muchos pacientes. El gel magistral es parte del tratamiento. Margen alto, demanda fija." },
+    { title:"Enjuagues bucales post-cirugia dental", desc:"Clorhexidina + analgesico + antinflamatorio en formula personalizada para post-operatorio dental.", donde:"Magistral dental USA, Australia", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"bajo", por_que:"Cada cirugia dental del CMC genera un pedido. Formula unica, margen alto, paciente cautivo." },
+    { title:"Cosmetica magistral", desc:"Serums y cremas base personalizados. Activos: acido hialuronico, retinol, vitamina C en concentraciones medicas.", donde:"Magistral cosmetica Europa, USA", aplicabilidad:"media", sinergia:"media", esfuerzo:"medio", por_que:"Segmento premium creciente. Diferencia al QF como experto de formula. No lo hace ninguna cadena." },
+    { title:"Veterinaria magistral rural", desc:"Formulas para ganado y animales de trabajo. Antibioticos en dosis correctas, antiparasitarios topicos.", donde:"Magistral veterinario Argentina, Nueva Zelanda", aplicabilidad:"media", sinergia:"baja", esfuerzo:"alto", por_que:"Zona rural con alta actividad agropecuaria. Sin competencia directa. QF veterinario o protocolo especifico." },
+    { title:"Troches + colirios + ovulos vaginales", desc:"Formas farmaceuticas especiales que la industria no fabrica en dosis o formatos convenientes.", donde:"Magistral global estandar", aplicabilidad:"media", sinergia:"alta", esfuerzo:"alto", por_que:"Formas especiales: nicho de alto valor, bajo volumen pero margen maximo. Ginecologia y oftalmologia CMC." },
+  ],
+  modelos: [
+    { title:"Despacho domicilio integrado kine", desc:"Medicamentos + insumos de kine a domicilio. Coordinado via WhatsApp. El mismo vehiculo del servicio kine domicilio.", donde:"mPharma Africa, modelos pandemia Chile 2020", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"medio", por_que:"Adultos mayores y postoperados no se movilizan. La farmacia que llega al domicilio fideliza de por vida." },
+    { title:"Click & Collect WhatsApp", desc:"Pedido por WhatsApp, retiro en farmacia o CMC. Sin app, sin web. El canal ya existe.", donde:"Farmacia el Aguilar Mexico, modelos latam WhatsApp", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"bajo", por_que:"WhatsApp ya tiene volumen y confianza. La farmacia hereda el canal sin costo." },
+    { title:"Suscripcion cronicos auto-refill", desc:"Paciente suscribe su medicacion mensual. Farmacia dispensa automaticamente. Pago a fin de mes.", donde:"mPharma Mutti+ Africa, Hims&Hers USA, PillPack Amazon", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"alto", por_que:"El mejor modelo de fidelizacion de un cronico. Cero esfuerzo para el paciente. Ingreso recurrente para farmacia." },
+    { title:"Pastillero SPD semanal", desc:"Preparacion de blister personalizado por el QF. Paciente retira o recibe a domicilio. Control mensual.", donde:"Nomad UK, Medisafe app, Europa en general", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"medio", por_que:"Diferencial de adherencia. Ninguna cadena lo hace en zona rural. El paciente no olvida mas su medicacion." },
+    { title:"Telefarmacia Q-Far", desc:"Consulta farmaceutica remota por video. QF cubre turno parcial o zona de baja demanda.", donde:"Q-Far Chile — unico operador nacional validado", aplicabilidad:"media", sinergia:"media", esfuerzo:"medio", por_que:"Reduce costo de QF tiempo completo en etapa inicial. Cumple con exigencia legal de QF presente." },
+    { title:"Receta digital SNRE", desc:"Conexion al Sistema Nacional de Receta Electronica. Obligatorio dic 2025. Recibe recetas CMC directo.", donde:"Chile — normativa ISP 2024", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"bajo", por_que:"Obligatorio. Conectado al CMC = receta llega antes que el paciente. Experiencia de servicio superior." },
+    { title:"Programa Vecino Sano fidelizacion", desc:"Registro familiar, historial compras, alertas renovacion, precio preferente cronicos. Sin app. Solo WhatsApp y nombre.", donde:"Farmacia Popular Recoleta modelo comunitario", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"medio", por_que:"El nombre del paciente importa. El farmaceutico que te conoce te retiene. Cero inversion tecnologica inicial." },
+    { title:"Pago a fin de mes / fiado controlado", desc:"Credito informal controlado para familias conocidas y trabajadores forestales. Facturacion mensual.", donde:"Farmacia rural tradicional Chile, modelo rural universal", aplicabilidad:"alta", sinergia:"media", esfuerzo:"bajo", por_que:"Practica cultural arraigada en zonas rurales de Chile. Genera lealtad. Riesgo controlable con base conocida." },
+    { title:"Convenios B2B empresas forestales", desc:"Mininco, Arauco, CMPC. Medicamentos para trabajadores. Pago a 30 dias. Volumen predecible.", donde:"Modelos B2B farmacias industriales Espana, Colombia", aplicabilidad:"alta", sinergia:"media", esfuerzo:"medio", por_que:"Las forestales necesitan proveedor local serio. El CMC ya tiene credibilidad institucional en la zona." },
+    { title:"WhatsApp canal unico", desc:"Un numero, un canal: agenda CMC + pedidos farmacia + consultas + seguimiento. Sin bifurcacion.", donde:"CMC ya opera asi — modelo a mantener", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"bajo", por_que:"La simplicidad es ventaja competitiva. El paciente no quiere dos numeros ni dos apps." },
+    { title:"Drive-thru retiro rapido", desc:"Ventanilla lateral o entrada vehicular para retiro sin bajar del auto. Ideal para zona de vehiculos.", donde:"CVS USA drive-thru pharmacy, Farmatodo Venezuela", aplicabilidad:"media", sinergia:"baja", esfuerzo:"alto", por_que:"Zona rural = alta dependencia del auto. Si la ubicacion fisica lo permite, el diferencial es fuerte." },
+    { title:"Box privado consejeria", desc:"2x2m de privacidad para salud sexual, mental, oncologica. Sin audiencia en mesón.", donde:"Boots UK consultation room, estandar europeo", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"bajo", por_que:"En zona pequena la discrecion es un valor critico. Genera confianza estructural irreplicable." },
+  ],
+  comunidad: [
+    { title:"Convenio CMC-farmacia modelo popular privado", desc:"CMC prescribe, farmacia despacha. Precio preferente para pacientes CMC. Flujo garantizado sin publicidad.", donde:"Modelo vertical integrado — propio", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"bajo", por_que:"La sinergia mas directa. Si Rodrigo es dueno de ambos, el flujo es controlado y no depende de terceros." },
+    { title:"Adhesion CENABAST", desc:"Proceso ISP para acceder a medicamentos CENABAST. 1.200 farmacias adheridas. Precios hasta 70% menores.", donde:"Chile — Ley 20.724", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"bajo", por_que:"Diferencial de precio en cronicos es el argumento mas poderoso vs Cruz Verde en zona rural." },
+    { title:"Convenio Municipalidad Arauco", desc:"Dispensa de medicamentos municipales, vacunacion comunitaria, atenciones de salud en ferias.", donde:"Modelo farmacias comunitarias municipales Chile", aplicabilidad:"media", sinergia:"alta", esfuerzo:"medio", por_que:"Legitima la farmacia como actor de salud publica local. Acceso a subvencion y volumen garantizado." },
+    { title:"Convenio CESFAM / SS Arauco", desc:"Apoyo al sistema publico en zona de alta demanda. Dispensacion de recetas en desabastecimiento.", donde:"Modelo colaborativo farmacias-CESFAM pandemia Chile", aplicabilidad:"media", sinergia:"alta", esfuerzo:"alto", por_que:"Posicionamiento estrategico de largo plazo. En emergencias sanitarias, el actor preparado gana." },
+    { title:"Modelo Farmacia Popular Recoleta", desc:"Referencia: Municipalidad de Recoleta, medicamentos a costo. No replicable en privado pero el concepto de precio justo si.", donde:"Recoleta, Chile — modelo pionero Latinoamerica", aplicabilidad:"media", sinergia:"media", esfuerzo:"bajo", por_que:"Inspiracion para comunicar el foco social. CENABAST + precios justos = mismo impacto con sostenibilidad privada." },
+    { title:"Modelo Dr. Simi insight branding", desc:"El guardapolvo blanco con mascota es branding de comunidad. En zona rural la confianza visual importa.", donde:"Farmacias del Ahorro / Dr. Simi Mexico y Chile", aplicabilidad:"alta", sinergia:"media", esfuerzo:"bajo", por_que:"No copiar el modelo de precio. Aprender la logica de construir identidad comunitaria fuerte y reconocible." },
+    { title:"RedFarma cooperativa independientes", desc:"Red de farmacias independientes chilenas para compras conjuntas y escala de negociacion.", donde:"RedFarma Chile — cooperativa activa", aplicabilidad:"media", sinergia:"baja", esfuerzo:"medio", por_que:"Mejora poder de compra sin escala propia. Util en etapa inicial si los volumenes son bajos." },
+  ],
+  hibridos: [
+    { title:"Farmacia + clinica de dia (CVS/Walgreens)", desc:"CVS cerro sus HealthHUB clinics en 2023. Walgreens tambien. El modelo no funciono a escala.", donde:"CVS USA (fracaso), Walgreens USA (fracaso parcial)", aplicabilidad:"baja", sinergia:"media", esfuerzo:"alto", por_que:"Leccion critica: no duplicar el CMC en la farmacia. La clinica ya existe a 1 cuadra. La farmacia es satelite, no clinica." },
+    { title:"Farmacia + telemedicina Hims&Hers", desc:"USD 2.3B de valoracion. Telehealth + dispensa propia. Modelo vertically integrated DTC.", donde:"Hims&Hers USA, Roman Health, Keeps", aplicabilidad:"media", sinergia:"alta", esfuerzo:"medio", por_que:"La telemedicina del CMC puede prescribir y la farmacia despachar. Modelo natural de integracion." },
+    { title:"Farmacia + nutricion clinica", desc:"Nutricionista en farmacia o derivacion activa. Suplementos + plan nutricional + seguimiento.", donde:"Boots UK Wellbeing Hub, farmacia nutricion Espana", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"bajo", por_que:"Nutricion CMC ya existe. La farmacia puede vender los suplementos prescritos y hacer seguimiento de peso." },
+    { title:"Farmacia + optica", desc:"Mesa de vision, lentes OTC. En zona rural la optica mas cercana puede estar a 30+ km.", donde:"Specsavers UK, Opticas Chile en farmacia", aplicabilidad:"media", sinergia:"media", esfuerzo:"alto", por_que:"Brecha de acceso optica en zona rural. Requiere optico matriculado o acuerdo con uno." },
+    { title:"Farmacia + audiologia", desc:"Audiometria de screening, audionos OTC. Adulto mayor con hipoacusia es segmento amplio.", donde:"Specsavers Audiology UK, Boots Hearing Care", aplicabilidad:"baja", sinergia:"media", esfuerzo:"alto", por_que:"Largo plazo. La hipoacusia en adulto mayor rural es epidemia silenciosa. Oportunidad de nicho." },
+    { title:"Farmacia + estetica medica", desc:"Dermatologo del CMC + productos magistrales + tratamientos esteticos menores en farmacia.", donde:"Medicity Chile, farmacias estetica Colombia", aplicabilidad:"media", sinergia:"alta", esfuerzo:"alto", por_que:"El magistral dermato abre la puerta. Un dermatologo visitante + espacio en farmacia = paquete completo." },
+    { title:"Farmacia + laboratorio rapido", desc:"Toma de muestras + laboratorio externo + resultados en 24h. La farmacia actua como punto de toma.", donde:"Farmalisto Colombia, laboratorios satelite Chile", aplicabilidad:"media", sinergia:"alta", esfuerzo:"alto", por_que:"CMC ya hace laboratorio. La farmacia puede absorber toma de muestras y ampliar cobertura horaria." },
+    { title:"Pharmacy Hub Boots UK", desc:"El modelo mas completo del mundo. 1 millon de consultas anuales. Optometria + audiologia + quimioterapia oral + consejeria.", donde:"Boots UK — 2.500 farmacias", aplicabilidad:"baja", sinergia:"alta", esfuerzo:"alto", por_que:"Inspiracion a 10 anos. El camino de Salud CMC es convertirse en el Boots de la zona rural del sur de Chile." },
+    { title:"mPharma Mutti+ Africa", desc:"Subscripcion cronicas + adherencia + acceso. 500+ farmacias. Modelo para mercados de bajos ingresos con alta carga cronica.", donde:"mPharma — Ghana, Nigeria, Kenia, Zambia", aplicabilidad:"media", sinergia:"alta", esfuerzo:"medio", por_que:"El modelo de subscripcion de cronicos mas probado del mundo. Adaptable a zona rural chilena." },
+    { title:"Drogasil RD Saude Brasil", desc:"3.000 sucursales. Farmacia + clinica + laboratorio + optica. La cadena de salud mas grande de Brasil.", donde:"RD Saude — Brasil", aplicabilidad:"baja", sinergia:"media", esfuerzo:"alto", por_que:"Referencia de crecimiento organico desde farmacia independiente. El roadmap a 20 anos de Salud CMC." },
+    { title:"Apollo Pharmacy India", desc:"Farmacia integrada a red hospitalaria. 5.000 puntos de venta. Prescripcion + dispensa + seguimiento.", donde:"Apollo Hospitals Group — India", aplicabilidad:"baja", sinergia:"alta", esfuerzo:"alto", por_que:"El CMC puede replicar la logica Apollo a escala micro: hospital-farmacia con datos compartidos." },
+    { title:"MedPlus India farmacia + diagnostico", desc:"Cadena con laboratorio integrado en cada farmacia. Muestra → resultado → prescripcion → dispensa en mismo local.", donde:"MedPlus Health Services — India, 3.500 puntos", aplicabilidad:"baja", sinergia:"alta", esfuerzo:"alto", por_que:"El ciclo completo de atencion en un local. Referencia para version mini de Salud CMC a largo plazo." },
+    { title:"Farmacia + ortopedia y movilidad", desc:"Sillas de ruedas, muletas, ortesis, colchones antiescaras. Post-alta hospitalaria y traumatologia.", donde:"Farmacia ortopedica Espana, OrthoFarma LatAm", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"medio", por_que:"CMC tiene traumatologia. Alta hospitalaria = necesidad inmediata de equipamiento. La farmacia ya deberia tenerlo." },
+    { title:"Farmacia + veterinaria OTC separada", desc:"Espacio o local separado con productos veterinarios. Zona agricola-ganadera.", donde:"Farmacia rural Argentina, rural pharmacy USA", aplicabilidad:"baja", sinergia:"baja", esfuerzo:"alto", por_que:"Solo si hay local fisicamente separado. No mezclar imagen salud humana con veterinaria." },
+    { title:"Farmacia + Dental Supply B2B", desc:"Canal B2B de insumos dentales profesionales: composite, anestesicos, fresas, brackets, alambres, ligas, alineadores, gutapercha, instrumental. Modelo distribuidor regional. No retail abierto.", donde:"Dental Salud Chile, Henry Schein global, 3M Espe, Dentsply Sirona, Ivoclar. Modelo distribuidor regional latinoamericano.", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"medio", por_que:"Los dentistas del CMC son cliente cautivo dia 1 con ahorro 15-30% vs comprar a Concepcion. Cero proveedor de insumos dentales en Carampangue/Arauco. Si OLACORE escala a Tirua/Cañete/Estacion Olavarria con mas dentales, este canal es infraestructura critica del holding. Sociedad separada (Dental Supply CMC SpA), bodega-tienda fuera del recinto ISP de farmacia. Venta externa a otros dentistas se abre en mes 12+." },
+  ],
+  tecnologia: [
+    { title:"POS + SNRE desde apertura", desc:"Sistema de punto de venta integrado al Sistema Nacional de Receta Electronica. Obligatorio desde dic 2025.", donde:"Farmacia Software Chile: Nixfarma, Farmabase, Farmatools", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"bajo", por_que:"Obligatorio legalmente. La base de toda operacion. No hay farmacia sin esto." },
+    { title:"ERP con FEFO automatico", desc:"Gestion de stock con FEFO (First Expired First Out). Critico para farmacia: evita multas ISP por vencidos.", donde:"Estandar global farmacia", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"bajo", por_que:"Un vencido es una multa ISP, un problema legal y un riesgo de imagen. El ERP lo previene automaticamente." },
+    { title:"Inventario data-driven desde recetario CMC", desc:"El historial de recetas del CMC predice la demanda de la farmacia. Stock inteligente desde dia 1.", donde:"Modelo propio — ventaja diferencial unica", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"medio", por_que:"Nadie mas tiene este dato. La farmacia independiente con datos del CMC es mas eficiente que Cruz Verde." },
+    { title:"Bot WhatsApp farmacia", desc:"Mismo numero del CMC. Bot gestiona pedidos, confirmaciones de retiro, alertas de medicacion lista.", donde:"CMC ya tiene bot. Extensión natural", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"bajo", por_que:"La infraestructura ya existe. Solo hay que agregar los flujos de farmacia al bot actual." },
+    { title:"PSCV digital seguimiento", desc:"Registro digital de pacientes cronicos PSCV. Alerta automatica de renovacion de receta cada 30/60/90 dias.", donde:"Modelo propio adaptado de plataformas PSCV Chile", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"medio", por_que:"El PSCV es el mayor flujo de recetas repetidas. Automatizarlo aumenta adherencia y ventas simultaneamente." },
+    { title:"Telemedicina integrada farmacia-CMC", desc:"Plataforma de videoconsulta para receta de medicamentos sin presencia fisica en CMC. Farmacia recibe receta digital.", donde:"Mediclic Chile, FONASA telemedicina, Hims&Hers", aplicabilidad:"media", sinergia:"alta", esfuerzo:"medio", por_que:"El paciente consulta por video, el medico prescribe, la farmacia despacha. Sin traslados." },
+    { title:"Wearables y adherencia", desc:"Integracion con datos de glucometros digitales, tensiómetros conectados. Alertas automaticas al QF.", donde:"Omron connect, Dexcom, mSafeMeds USA", aplicabilidad:"baja", sinergia:"media", esfuerzo:"alto", por_que:"Largo plazo. El QF como monitor de salud digital del paciente cronico." },
+    { title:"IA interacciones medicamentosas", desc:"Asistente IA que alerta al QF sobre interacciones al dispensar. Ya disponible en varios ERP.", donde:"Nixfarma IA, Farmabase, sistemas FDEN Chile", aplicabilidad:"media", sinergia:"media", esfuerzo:"bajo", por_que:"Seguridad del medicamento. En polifarmacia del adulto mayor, las interacciones son riesgo real." },
+    { title:"App paciente Salud CMC", desc:"App unica para agenda CMC + pedidos farmacia + historial. Largo plazo.", donde:"Apollo 247 India, Walgreens app USA", aplicabilidad:"baja", sinergia:"alta", esfuerzo:"alto", por_que:"Largo plazo. En etapa inicial WhatsApp es suficiente y superior en penetracion rural." },
+    { title:"Robot dispensacion automatica", desc:"Robot de dispensacion unitaria. Costo USD 80-150K. Para volumenes de 500+ recetas diarias.", donde:"Omnicell USA, BD Rowa Europa", aplicabilidad:"baja", sinergia:"baja", esfuerzo:"alto", por_que:"No aplica en etapa inicial. Referencia para escala futura si la farmacia crece a multiples puntos." },
+    { title:"Analítica de prescripcion CMC", desc:"Dashboard que cruza lo que prescribe el CMC con lo que dispensa la farmacia. Detecta gaps de stock.", donde:"Modelo propio — ventaja diferencial", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"medio", por_que:"Datos compartidos CMC-farmacia = eficiencia imposible para una cadena. El moat informacional." },
+    { title:"Trazabilidad magistral digital", desc:"Registro digital de cada formula magistral: ingredientes, lote, fecha, QF responsable, paciente.", donde:"Estandar ISP Chile, Farmabase magistral", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"medio", por_que:"Obligatorio para habilitacion magistral ISP. La trazabilidad protege al QF y al paciente." },
+  ],
+  chile: [
+    { title:"Knop — Dermocosmetica y natural", desc:"Laboratorio nacional lider en dermocosmetica, fitofármacos y OTC premium. Margen alto, presencia en farmacias independientes.", donde:"Chile — 80 anos de historia", aplicabilidad:"alta", sinergia:"media", esfuerzo:"bajo", por_que:"Proveedor estrategico natural. Ofrece capacitacion, material POP y margen diferenciado para farmacias que destacan su linea." },
+    { title:"Salcobrand Comunidad", desc:"Modelo de farmacia comunitaria de Salcobrand. Pastillero SPD, atencion farmaceutica, convenios ISAPRE.", donde:"Salcobrand Chile — cadena nacional", aplicabilidad:"media", sinergia:"media", esfuerzo:"bajo", por_que:"Referencia de lo que una cadena puede hacer bien. Aprender el modelo SPD y farmacia clinica para adaptarlo." },
+    { title:"Dr. Simi Chile", desc:"Farmacia del Ahorro expandiendose en Chile. Genéricos + precio + mascota. Jugador agresivo en zonas de bajo poder adquisitivo.", donde:"Chile — expansion desde 2018", aplicabilidad:"baja", sinergia:"baja", esfuerzo:"bajo", por_que:"No competir en precio con Dr. Simi. La respuesta es servicio clinico, magistral y sinergia CMC. El precio no puede ser el diferenciador." },
+    { title:"Farmacias Populares Chile", desc:"Red municipal de farmacias a precio CENABAST. 60+ municipios. Precio 50-70% menor que cadenas.", donde:"Chile — modelo Recoleta expandido", aplicabilidad:"media", sinergia:"media", esfuerzo:"bajo", por_que:"La farmacia popular es competencia en precio pero no en servicio. Responder con calidad clinica." },
+    { title:"RedFarma cooperativa", desc:"Cooperativa de farmacias independientes chilenas. Compra conjunta, capacitacion, sistemas compartidos.", donde:"Chile — RedFarma activa", aplicabilidad:"media", sinergia:"baja", esfuerzo:"medio", por_que:"Adhesion en etapa inicial mejora poder de compra sin escala propia. Evaluar beneficio concreto." },
+    { title:"FOFAR farmacias especialidad", desc:"Farmacias de especialidad para enfermedades raras y oncologia. Regulacion especial ISP.", donde:"Chile — habilitacion ISP especial", aplicabilidad:"baja", sinergia:"media", esfuerzo:"alto", por_que:"Nicho de altisimo margen pero altisima complejidad. Referencia para evolucion a 5+ anos." },
+    { title:"Casos de fracaso rurales tipicos", desc:"Farmacia rural que quiebra por: stock excesivo de cronicos sin rotacion, mora del fiado, competencia precio cadenas en pueblo cercano.", donde:"Chile rural — patron recurrente", aplicabilidad:"alta", sinergia:"media", esfuerzo:"bajo", por_que:"Aprender de los fracasos. El foco es: stock lean basado en recetario CMC, magistral inreplicable, servicio clinico diferenciado." },
+  ],
+  tendencias: [
+    { title:"SNRE obligatorio diciembre 2025", desc:"El Sistema Nacional de Receta Electronica es obligatorio desde diciembre 2025 para todas las farmacias y prescriptores de Chile.", donde:"ISP Chile — Decreto 2024", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"bajo", por_que:"Obligatorio. La farmacia que abra en 2026 ya debe estar conectada. El CMC tambien debe estar conectado para enviar recetas digitales." },
+    { title:"Bioequivalencia ampliada", desc:"Expansion del listado de medicamentos bioequivalentes. Mayor presion de precio en genericos. La farmacia independiente debe diferenciarse por servicio.", donde:"ISP Chile — politica publica", aplicabilidad:"alta", sinergia:"media", esfuerzo:"bajo", por_que:"Si el generico se masifica, el precio deja de ser diferenciador. El servicio clinico y el magistral son el unico moat." },
+    { title:"Salud mental en retail", desc:"Post-pandemia: depresion, ansiedad, burnout. La demanda de atencion en salud mental supera la oferta clinica.", donde:"Global — tendencia transversal 2023-2030", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"bajo", por_que:"La farmacia con tamizaje PHQ-9/GAD-7 y derivacion al psicologo del CMC es el modelo natural de respuesta." },
+    { title:"Quick commerce salud", desc:"Despacho de medicamentos en menos de 2 horas. Rappi Farma, pedidosya salud. Presion en zonas urbanas.", donde:"Rappi Colombia/Chile, Pedidosya, iFood Brasil", aplicabilidad:"baja", sinergia:"media", esfuerzo:"medio", por_que:"No aplica en zona rural. Pero el modelo WhatsApp + despacho mismo dia es la respuesta rural equivalente." },
+    { title:"Pago por valor (value-based pharmacy)", desc:"Las ISAPRES y seguros pagan resultados clinicos, no volumen. La farmacia que demuestra adherencia cobra mas.", donde:"USA Pharmacy Value-Based Contracts, NHS UK", aplicabilidad:"baja", sinergia:"alta", esfuerzo:"alto", por_que:"Tendencia de largo plazo que justifica la inversion en pastillero SPD y adherencia. El dato de CMC es la prueba." },
+    { title:"Cannabis medicinal regulado", desc:"Mercado emergente. ISP otorgo registros. Aceites CBD y productos magistrales con tetrahidrocannabinol para dolor cronico.", donde:"Khiron Chile, Knop CBD, Canada modelo", aplicabilidad:"media", sinergia:"media", esfuerzo:"medio", por_que:"Alta demanda en dolor cronico, oncologia, ansiedad. La regulacion ya existe. El QF es el profesional clave." },
+    { title:"Telemedicina post-COVID consolidada", desc:"La teleconsulta es estandar. El CMC puede prescribir remotamente y la farmacia despacha. Flujo digital completo.", donde:"Chile — crecimiento 300% post-2020", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"bajo", por_que:"El modelo ya funciona. La farmacia integrada al CMC es el receptor natural de recetas telemedicas." },
+    { title:"IA conversacional en farmacia", desc:"Chatbot farmaceutico para consultas de primer nivel, interacciones, posologias. Complemento al QF.", donde:"Apotheco AI USA, Pillsy, modelos globales 2024-2025", aplicabilidad:"media", sinergia:"alta", esfuerzo:"medio", por_que:"El bot del CMC puede ampliarse para consultas farmaceuticas simples. Reduce carga del QF en horas pico." },
+    { title:"Wearables y datos continuos", desc:"Glucometros CGM, tensiómetros Bluetooth, oximetros conectados. El QF recibe alertas de descompensacion.", donde:"Dexcom, Abbott FreeStyle, Omron Connect", aplicabilidad:"baja", sinergia:"alta", esfuerzo:"alto", por_que:"Tendencia a 5+ anos. El farmaceutico como monitor de salud continua del cronico. El dato es el nuevo medicamento." },
+    { title:"Sostenibilidad y farmacia verde", desc:"Reciclaje de medicamentos, packaging biodegradable, cadena de frio eficiente. Exigencia regulatoria creciente.", donde:"Green Pharmacy UK, estandar europeo", aplicabilidad:"baja", sinergia:"baja", esfuerzo:"medio", por_que:"Tendencia de imagen y regulatoria. El ISP ya exige programa de devolucion de medicamentos vencidos." },
+    { title:"Envejecimiento acelerado zona rural", desc:"La Region del Biobio tiene uno de los indices de envejecimiento mas altos de Chile. La demanda de farmacia cronica crece sin competencia nueva.", donde:"INE Chile — proyecciones demograficas 2030", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"bajo", por_que:"El mercado viene hacia la farmacia. La apuesta demografica es la mas solida de todas las tendencias." },
+  ],
+  marketing: [
+    { title:"Charlas mensuales de salud", desc:"Charla de 45 minutos en local o JJVV. Temas: cronicos, medicamentos, prevencion estacional. Liderado por QF o medico CMC.", donde:"Farmacia comunitaria UK, modelo farmacia popular Chile", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"bajo", por_que:"La charla es publicidad disfrazada de servicio. Construye autoridad local sin costo publicitario." },
+    { title:"Campanas estacionales", desc:"Invierno: kit gripe + vacunacion. Verano: protector solar + hidratacion. Mes del corazon. Dia del adulto mayor.", donde:"Boots UK seasonal campaigns, Salcobrand Chile", aplicabilidad:"alta", sinergia:"media", esfuerzo:"bajo", por_que:"El calendario de salud genera contenido y ventas de forma predecible. Requiere planificacion minima." },
+    { title:"Dia del paciente cronico", desc:"Un dia al mes con precio especial en cronicos, medicion gratuita y consejeria farmaceutica. Alta visibilidad comunitaria.", donde:"Farmacias populares, modelo propio", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"bajo", por_que:"El cronico es el cliente mas valioso. Un dia especial genera fidelidad y boca a boca en todo su circulo familiar." },
+    { title:"Mes del adulto mayor", desc:"Octubre: precio especial en medicamentos, pastillero SPD gratis el primer mes, visita domiciliaria de QF.", donde:"Modelo Salud CMC propio", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"bajo", por_que:"El segmento de mayor lealtad y mayor volumen. Un mes de atencion especial = clientes de por vida." },
+    { title:"Convenios JJVV + clubes + colegios", desc:"Precio de convenio para socios de juntas de vecinos. Colacion saludable en colegios (productos farmacia). Convenio adulto mayor club.", donde:"Modelo farmacia comunitaria Chile", aplicabilidad:"alta", sinergia:"media", esfuerzo:"bajo", por_que:"Las JJVV son el tejido social rural. Convenio con ellas es publicidad gratuita y volumen predecible." },
+    { title:"Ferias de salud bianuales", desc:"Stand en feria de la primavera y fiestas patrias. Mediciones gratuitas, sorteos, muestra de productos.", donde:"Modelo farmacia rural Chile, Boots UK health fair", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"bajo", por_que:"La feria es el evento de mayor concentracion de publico del ano. Presencia = notoriedad masiva en la zona." },
+    { title:"Auspicios fonda 18", desc:"Botiquin del evento, agua, protector solar. Presencia de marca en el evento social mas importante del ano.", donde:"Modelo auspicio marcas locales Chile", aplicabilidad:"alta", sinergia:"baja", esfuerzo:"bajo", por_que:"Costo minimo, impacto alto en identidad local. La farmacia que cuida la fonda es la farmacia del pueblo." },
+    { title:"Newsletter WhatsApp mensual", desc:"Un mensaje por mes: tips de salud, recordatorio de vacunas, oferta del mes. Sin spam.", donde:"Modelo CMC — ya opera", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"bajo", por_que:"El canal ya existe con base de contactos del CMC. Solo hay que activar el segmento farmacia." },
+    { title:"Programa Vecino Sano branding", desc:"Nombre del programa de fidelizacion. Tarjeta simple (o en WhatsApp), puntos, descuento mensual para inscritos.", donde:"Farmacia Popular Recoleta, modelo propio", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"medio", por_que:"El nombre es el activo. Vecino Sano es la identidad comunitaria de la farmacia. No un programa de puntos, un vinculo." },
+    { title:"Branding emocional mascota OLACORE", desc:"Una figura recognocible local. Puede ser el emblema de la brujula OLACORE adaptado a personaje amigable de salud.", donde:"Dr. Simi (insight), Milky Way Boots, Mr. Muscle (empatia marca)", aplicabilidad:"media", sinergia:"media", esfuerzo:"medio", por_que:"En zona rural, una mascota se vuelve un codigo compartido. El branding emocional es mas economico que la publicidad pagada." },
+    { title:"Convenios empresas forestales comunicacion", desc:"Informativo mensual para trabajadores forestales. Campanas de salud ocupacional. Feria en campamento.", donde:"Modelo salud ocupacional Arauco, CMPC salud", aplicabilidad:"alta", sinergia:"media", esfuerzo:"medio", por_que:"Las forestales pagan por programas de salud para sus trabajadores. Doble beneficio: volumen + imagen institucional." },
+    { title:"Presencia digital minima efectiva", desc:"Google My Business actualizado + Instagram 2 publicaciones semanales. Suficiente para zona rural. Sin inversion en ads.", donde:"Modelo small business rural digital Chile", aplicabilidad:"alta", sinergia:"alta", esfuerzo:"bajo", por_que:"La busqueda de google 'farmacia Carampangue' es el canal de adquisicion mas barato. Solo requiere informacion actualizada." },
+  ]
+};
+
+// ===================== RENDER CARDS =====================
+function renderCards(gridId, items) {
+  const grid = document.getElementById(gridId);
+  if (!grid) return;
+  grid.innerHTML = items.map(item => {
+    const apClass = item.aplicabilidad === 'alta' ? 'alta' : item.aplicabilidad === 'media' ? 'media' : 'baja';
+    const apBadge = item.aplicabilidad === 'alta' ? 'badge-ap-alta' : item.aplicabilidad === 'media' ? 'badge-ap-media' : 'badge-ap-baja';
+    const sinBadge = item.sinergia === 'alta' ? 'badge-sin-alta' : item.sinergia === 'media' ? 'badge-sin-media' : 'badge-sin-baja';
+    const esfBadge = item.esfuerzo === 'bajo' ? 'badge-esf-bajo' : item.esfuerzo === 'medio' ? 'badge-esf-medio' : 'badge-esf-alto';
+    const isQW = item.aplicabilidad === 'alta' && item.sinergia === 'alta' && item.esfuerzo === 'bajo';
+    return `<div class="idea-card ${apClass}" data-aplicabilidad="${item.aplicabilidad}" data-sinergia="${item.sinergia}" data-esfuerzo="${item.esfuerzo}" data-title="${item.title.toLowerCase()}">
+      <div class="card-badges">
+        ${isQW ? '<span class="badge badge-qw">Quick win</span>' : ''}
+        <span class="badge ${apBadge}">Aplic. ${item.aplicabilidad}</span>
+        <span class="badge ${sinBadge}">Sinergia ${item.sinergia}</span>
+        <span class="badge ${esfBadge}">Esfuerzo ${item.esfuerzo}</span>
+      </div>
+      <div class="card-title">${item.title}</div>
+      <div class="card-desc">${item.desc}</div>
+      <div class="card-meta">
+        ${item.donde ? `<div class="card-meta-row"><strong>Donde funciona:</strong> ${item.donde}</div>` : ''}
+        ${item.por_que ? `<div class="card-meta-row"><strong>Por que importa:</strong> ${item.por_que}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ===================== INIT GRIDS =====================
+Object.entries(IDEAS).forEach(([key, items]) => renderCards('grid-' + key, items));
+
+// ===================== TABS =====================
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    if (btn.dataset.tab === 'visualizaciones') initCharts();
+  });
+});
+
+// ===================== FILTERS =====================
+document.querySelectorAll('.filters-bar').forEach(bar => {
+  const tab = bar.dataset.filterTab;
+  const grid = document.getElementById('grid-' + tab);
+  if (!grid) return;
+
+  let activeFilters = { aplicabilidad: 'todos', sinergia: 'todos', esfuerzo: 'todos', search: '' };
+
+  function applyFilters() {
+    grid.querySelectorAll('.idea-card').forEach(card => {
+      const ap = card.dataset.aplicabilidad;
+      const sin = card.dataset.sinergia;
+      const esf = card.dataset.esfuerzo;
+      const title = card.dataset.title || '';
+      const matchAp = activeFilters.aplicabilidad === 'todos' || ap === activeFilters.aplicabilidad;
+      const matchSin = activeFilters.sinergia === 'todos' || sin === activeFilters.sinergia;
+      const matchEsf = activeFilters.esfuerzo === 'todos' || esf === activeFilters.esfuerzo;
+      const matchSearch = !activeFilters.search || title.includes(activeFilters.search.toLowerCase());
+      card.style.display = (matchAp && matchSin && matchEsf && matchSearch) ? '' : 'none';
+    });
+  }
+
+  bar.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const filterType = btn.dataset.filter;
+      bar.querySelectorAll(`.filter-btn[data-filter="${filterType}"]`).forEach(b => b.classList.remove('active-filter'));
+      btn.classList.add('active-filter');
+      activeFilters[filterType] = btn.dataset.val;
+      applyFilters();
+    });
+  });
+
+  const search = bar.querySelector('.search-input');
+  if (search) {
+    search.addEventListener('input', e => {
+      activeFilters.search = e.target.value;
+      applyFilters();
+    });
+  }
+});
+
+// ===================== CHARTS =====================
+let chartsInited = false;
+function initCharts() {
+  if (chartsInited) return;
+  chartsInited = true;
+
+  const palette = ['#1F3340','#B86D3F','#4A5F3A','#8C2A2A','#D4A87A','#6B8FA0','#C4956A','#3D5C4E','#A04040','#8090A0','#5A7A6A','#D4C090'];
+
+  // Donut — ideas por categoria
+  const labels = ['Clinicos','Productos','Magistral','Modelos','Comunidad','Hibridos','Tecnologia','Chile','Tendencias','Marketing'];
+  const counts = [IDEAS.clinicos.length, IDEAS.productos.length, IDEAS.magistral.length, IDEAS.modelos.length, IDEAS.comunidad.length, IDEAS.hibridos.length, IDEAS.tecnologia.length, IDEAS.chile.length, IDEAS.tendencias.length, IDEAS.marketing.length];
+
+  new Chart(document.getElementById('chartDonut'), {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{ data: counts, backgroundColor: palette, borderWidth: 2, borderColor: '#EFE9DD' }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { font: { family: 'IBM Plex Mono', size: 11 }, padding: 12 } }
+      }
+    }
+  });
+
+  // Bar — sinergia x esfuerzo
+  const allIdeas = Object.values(IDEAS).flat();
+  const combinations = [
+    ['alta','bajo'], ['alta','medio'], ['alta','alto'],
+    ['media','bajo'], ['media','medio'], ['media','alto'],
+    ['baja','bajo'], ['baja','medio'], ['baja','alto'],
+  ];
+  const barLabels = combinations.map(([s,e]) => `Sin ${s} / Esf ${e}`);
+  const barData = combinations.map(([s,e]) => allIdeas.filter(i => i.sinergia === s && i.esfuerzo === e).length);
+
+  new Chart(document.getElementById('chartBar'), {
+    type: 'bar',
+    data: {
+      labels: barLabels,
+      datasets: [{ label: 'Ideas', data: barData, backgroundColor: barLabels.map((_, i) => palette[i % palette.length]), borderRadius: 4 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: '#f0ede8' }, ticks: { font: { family: 'IBM Plex Mono', size: 10 } } },
+        y: { ticks: { font: { family: 'IBM Plex Mono', size: 9 } } }
+      }
+    }
+  });
+
+  // Scatter — aplicabilidad vs sinergia
+  const scatterMap = { alta: 3, media: 2, baja: 1 };
+  const scatterData = allIdeas.map(i => ({
+    x: scatterMap[i.aplicabilidad] + (Math.random() - 0.5) * 0.3,
+    y: scatterMap[i.sinergia] + (Math.random() - 0.5) * 0.3,
+    r: i.esfuerzo === 'bajo' ? 10 : i.esfuerzo === 'medio' ? 7 : 4
+  }));
+
+  const colorMap = allIdeas.map(i => {
+    if (i.aplicabilidad === 'alta' && i.sinergia === 'alta') return 'rgba(74,95,58,0.7)';
+    if (i.aplicabilidad === 'alta' || i.sinergia === 'alta') return 'rgba(184,109,63,0.7)';
+    return 'rgba(31,51,64,0.4)';
+  });
+
+  new Chart(document.getElementById('chartScatter'), {
+    type: 'bubble',
+    data: {
+      datasets: [{
+        label: 'Ideas',
+        data: scatterData,
+        backgroundColor: colorMap,
+        borderColor: 'transparent'
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const idea = allIdeas[ctx.dataIndex];
+              return `${idea.title} — Esf: ${idea.esfuerzo}`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          min: 0.5, max: 3.7,
+          title: { display: true, text: 'Aplicabilidad (1=baja, 3=alta)', font: { family: 'IBM Plex Mono', size: 10 } },
+          ticks: {
+            callback: v => ({ 1:'Baja', 2:'Media', 3:'Alta' }[Math.round(v)] || ''),
+            font: { family: 'IBM Plex Mono', size: 10 }
+          }
+        },
+        y: {
+          min: 0.5, max: 3.7,
+          title: { display: true, text: 'Sinergia CMC (1=baja, 3=alta)', font: { family: 'IBM Plex Mono', size: 10 } },
+          ticks: {
+            callback: v => ({ 1:'Baja', 2:'Media', 3:'Alta' }[Math.round(v)] || ''),
+            font: { family: 'IBM Plex Mono', size: 10 }
+          }
+        }
+      }
+    }
+  });
+}
+</script>
+</body>
+</html>

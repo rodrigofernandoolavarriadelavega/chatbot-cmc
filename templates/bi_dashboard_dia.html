@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard Diario — Centro Médico Carampangue</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f0f4f8; color: #1e293b; }
+
+    header {
+      background: linear-gradient(135deg, #1e3a5f, #2563eb);
+      color: white;
+      padding: 24px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    header .logo { font-size: 28px; }
+    header h1 { font-size: 1.4rem; font-weight: 700; }
+    header p { font-size: 0.85rem; opacity: 0.8; margin-top: 2px; }
+
+    .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+
+    /* KPI Cards */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .kpi-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px 24px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+      border-left: 4px solid;
+    }
+    .kpi-card.total  { border-color: #2563eb; }
+    .kpi-card.prof   { border-color: #16a34a; }
+    .kpi-card.cmc    { border-color: #ea580c; }
+    .kpi-card.activos{ border-color: #7c3aed; }
+    .kpi-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: #64748b; }
+    .kpi-value { font-size: 1.55rem; font-weight: 800; margin: 6px 0 2px; }
+    .kpi-card.total  .kpi-value { color: #2563eb; }
+    .kpi-card.prof   .kpi-value { color: #16a34a; }
+    .kpi-card.cmc    .kpi-value { color: #ea580c; }
+    .kpi-card.activos .kpi-value { color: #7c3aed; }
+    .kpi-sub { font-size: 0.75rem; color: #94a3b8; }
+
+    /* Chart grid */
+    .chart-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 900px) { .chart-grid { grid-template-columns: 1fr; } }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px 24px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    }
+    .card h2 { font-size: 0.95rem; font-weight: 700; color: #374151; margin-bottom: 16px; }
+
+    .chart-wrap { position: relative; }
+
+    /* Table */
+    .table-card { background: white; border-radius: 12px; padding: 20px 24px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+    .table-card h2 { font-size: 0.95rem; font-weight: 700; color: #374151; margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    thead th {
+      background: #f8fafc;
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #64748b;
+      letter-spacing: .05em;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    thead th.num { text-align: right; }
+    tbody tr { border-bottom: 1px solid #f1f5f9; transition: background .15s; }
+    tbody tr:hover { background: #f8fafc; }
+    tbody tr.inactive { opacity: .45; }
+    td { padding: 10px 14px; }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .badge-area {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+    .badge-med  { background:#dbeafe; color:#1d4ed8; }
+    .badge-kine { background:#dcfce7; color:#15803d; }
+    .badge-dent { background:#fef3c7; color:#b45309; }
+    .badge-otro { background:#f3e8ff; color:#6d28d9; }
+
+    .bar-mini {
+      height: 6px;
+      border-radius: 3px;
+      background: #e2e8f0;
+      margin-top: 4px;
+    }
+    .bar-mini-fill { height: 100%; border-radius: 3px; background: #ea580c; }
+
+    tfoot td { font-weight: 700; background: #f8fafc; border-top: 2px solid #e2e8f0; }
+
+    footer { text-align: center; padding: 20px; font-size: 0.75rem; color: #94a3b8; }
+  </style>
+</head>
+<body>
+<header>
+  <div class="logo">🏥</div>
+  <div>
+    <h1>Dashboard Diario — Centro Médico Carampangue</h1>
+    <p>Ingresos del día por profesional</p>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi-card total">
+      <div class="kpi-label">Total del Día</div>
+      <div class="kpi-value" id="kpi-total">—</div>
+      <div class="kpi-sub">Ingresos brutos</div>
+    </div>
+    <div class="kpi-card prof">
+      <div class="kpi-label">Honorarios Profesionales</div>
+      <div class="kpi-value" id="kpi-prof">—</div>
+      <div class="kpi-sub" id="kpi-prof-pct">—</div>
+    </div>
+    <div class="kpi-card cmc">
+      <div class="kpi-label">Margen CMC</div>
+      <div class="kpi-value" id="kpi-cmc">—</div>
+      <div class="kpi-sub" id="kpi-cmc-pct">—</div>
+    </div>
+    <div class="kpi-card activos">
+      <div class="kpi-label">Profesionales Activos</div>
+      <div class="kpi-value" id="kpi-activos">—</div>
+      <div class="kpi-sub" id="kpi-total-profs">—</div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="chart-grid">
+    <div class="card">
+      <h2>Ingresos por Profesional</h2>
+      <div class="chart-wrap" style="height:340px;">
+        <canvas id="barChart"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Distribución Total vs Honorarios vs CMC</h2>
+      <div class="chart-wrap" style="height:340px;">
+        <canvas id="doughnutChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="table-card">
+    <h2>Detalle por Profesional</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Profesional</th>
+          <th>Área</th>
+          <th class="num">Total Día</th>
+          <th class="num">Honorarios</th>
+          <th class="num">CMC</th>
+          <th class="num">% CMC</th>
+          <th style="width:120px">Margen</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2"><strong>TOTAL</strong></td>
+          <td class="num" id="foot-total">—</td>
+          <td class="num" id="foot-prof">—</td>
+          <td class="num" id="foot-cmc">—</td>
+          <td class="num" id="foot-pct">—</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+</div>
+
+<footer>Centro Médico Carampangue · Reporte generado automáticamente</footer>
+
+<script>
+const raw = [
+  { name: "Dr. Tirso gine",              total: 774870,   prof: 541634,   cmc: 233236,  area: "med"  },
+  { name: "Dr. Tirso medicina",           total: 0,        prof: 0,        cmc: 0,       area: "med"  },
+  { name: "Dr. Borrego",                  total: 704000,   prof: 528000,   cmc: 176000,  area: "med"  },
+  { name: "Dr. Quijano",                  total: 210000,   prof: 150003,   cmc: 59997,   area: "med"  },
+  { name: "Dr. Márquez",                  total: 1513750,  prof: 1126199,  cmc: 378438,  area: "med"  },
+  { name: "Dr. Araneda",                  total: 0,        prof: 0,        cmc: 0,       area: "med"  },
+  { name: "Dr. Olavarría",                total: 1750870,  prof: 1246791,  cmc: 525261,  area: "med"  },
+  { name: "Dr. Abarca",                   total: 0,        prof: 0,        cmc: 0,       area: "med"  },
+  { name: "Dr. Abarca Contrato",          total: 1503850,  prof: 3414126,  cmc: -1910276,area: "med"  },
+  { name: "Dr. Barraza",                  total: 600000,   prof: 528427,   cmc: 171546,  area: "med"  },
+  { name: "David Pardo",                  total: 1330000,  prof: 931000,   cmc: 399000,  area: "med"  },
+  { name: "Dr. Millán",                   total: 970000,   prof: 666875,   cmc: 303125,  area: "med"  },
+  { name: "Dra. Juana",                   total: 205000,   prof: 143430,   cmc: 61500,   area: "med"  },
+  { name: "Kine Leo",                     total: 2106220,  prof: 1118398,  cmc: 1053110, area: "kine" },
+  { name: "Kine Paola",                   total: 0,        prof: 0,        cmc: 0,       area: "kine" },
+  { name: "Nutri Gise",                   total: 217960,   prof: 152572,   cmc: 65388,   area: "otro" },
+  { name: "Matrona Saraí",                total: 164000,   prof: 109736,   cmc: 57400,   area: "otro" },
+  { name: "Podóloga Andrea",              total: 307000,   prof: 214900,   cmc: 92100,   area: "otro" },
+  { name: "Dentista Carlos",              total: 355000,   prof: 159750,   cmc: 195250,  area: "dent" },
+  { name: "Dentista Javi",                total: 1480000,  prof: 757910,   cmc: 740000,  area: "dent" },
+  { name: "Dentista Daniela",             total: 1500000,  prof: 900000,   cmc: 600000,  area: "dent" },
+  { name: "Impl. Aurora",                 total: 0,        prof: 0,        cmc: 0,       area: "dent" },
+  { name: "Endodoncista Eduardo",         total: 330000,   prof: 214500,   cmc: 115500,  area: "dent" },
+  { name: "Estética Valentina Fuentealba",total: 319980,   prof: 127992,   cmc: 111993,  area: "otro" },
+  { name: "Psicólogo Juan Pablo",         total: 20610,    prof: 14427,    cmc: 6183,    area: "otro" },
+  { name: "Psicólogo Jorge",              total: 290020,   prof: 203014,   cmc: 87006,   area: "otro" },
+];
+
+const fmt = n => {
+  const abs = Math.abs(n);
+  const str = '$ ' + abs.toLocaleString('es-CL');
+  return n < 0 ? `<span style="color:#dc2626">-${str}</span>` : str;
+};
+const fmtPlain = n => {
+  const abs = Math.abs(n);
+  const str = '$ ' + abs.toLocaleString('es-CL');
+  return n < 0 ? `-${str}` : str;
+};
+const pct = (a, b) => b === 0 ? '—' : (a / b * 100).toFixed(1) + '%';
+
+const active = raw.filter(d => d.total > 0);
+const totalDia  = raw.reduce((s, d) => s + d.total, 0);
+const totalProf = raw.reduce((s, d) => s + d.prof,  0);
+const totalCmc  = raw.reduce((s, d) => s + d.cmc,   0);
+
+// KPIs
+document.getElementById('kpi-total').textContent   = fmtPlain(totalDia);
+document.getElementById('kpi-prof').textContent    = fmtPlain(totalProf);
+document.getElementById('kpi-cmc').textContent     = fmtPlain(totalCmc);
+document.getElementById('kpi-activos').textContent = active.length;
+document.getElementById('kpi-prof-pct').textContent = pct(totalProf, totalDia) + ' del total';
+document.getElementById('kpi-cmc-pct').textContent  = pct(totalCmc, totalDia)  + ' del total';
+document.getElementById('kpi-total-profs').textContent = `de ${raw.length} en nómina`;
+
+// Foot
+document.getElementById('foot-total').innerHTML = fmt(totalDia);
+document.getElementById('foot-prof').innerHTML  = fmt(totalProf);
+document.getElementById('foot-cmc').innerHTML   = fmt(totalCmc);
+document.getElementById('foot-pct').textContent = pct(totalCmc, totalDia);
+
+// Table
+const areaLabel = { med: 'Médico', kine: 'Kinesiología', dent: 'Dental', otro: 'Otro' };
+const areaClass = { med: 'badge-med', kine: 'badge-kine', dent: 'badge-dent', otro: 'badge-otro' };
+const maxCmc = Math.max(...raw.map(d => Math.abs(d.cmc)));
+
+const tbody = document.getElementById('tableBody');
+raw.forEach(d => {
+  const inactive = d.total === 0;
+  const cmcPct = d.total !== 0 ? (d.cmc / d.total * 100).toFixed(1) : '—';
+  const barWidth = d.total !== 0 ? Math.min(100, Math.abs(d.cmc) / maxCmc * 100) : 0;
+  const barColor = d.cmc < 0 ? '#dc2626' : '#ea580c';
+  const tr = document.createElement('tr');
+  if (inactive) tr.classList.add('inactive');
+  tr.innerHTML = `
+    <td>${d.name}</td>
+    <td><span class="badge-area ${areaClass[d.area]}">${areaLabel[d.area]}</span></td>
+    <td class="num">${fmt(d.total)}</td>
+    <td class="num">${fmt(d.prof)}</td>
+    <td class="num">${fmt(d.cmc)}</td>
+    <td class="num">${cmcPct !== '—' ? cmcPct + '%' : '—'}</td>
+    <td>
+      <div class="bar-mini">
+        <div class="bar-mini-fill" style="width:${barWidth}%;background:${barColor}"></div>
+      </div>
+    </td>`;
+  tbody.appendChild(tr);
+});
+
+// Bar Chart (active only, sorted by total desc)
+const sorted = [...active].sort((a, b) => b.total - a.total);
+new Chart(document.getElementById('barChart'), {
+  type: 'bar',
+  data: {
+    labels: sorted.map(d => d.name),
+    datasets: [
+      {
+        label: 'Total Día',
+        data: sorted.map(d => d.total),
+        backgroundColor: 'rgba(37,99,235,0.2)',
+        borderColor: '#2563eb',
+        borderWidth: 1.5,
+        borderRadius: 4,
+      },
+      {
+        label: 'Honorarios',
+        data: sorted.map(d => d.prof),
+        backgroundColor: 'rgba(22,163,74,0.2)',
+        borderColor: '#16a34a',
+        borderWidth: 1.5,
+        borderRadius: 4,
+      },
+      {
+        label: 'CMC',
+        data: sorted.map(d => d.cmc),
+        backgroundColor: sorted.map(d => d.cmc < 0 ? 'rgba(220,38,38,0.25)' : 'rgba(234,88,12,0.25)'),
+        borderColor: sorted.map(d => d.cmc < 0 ? '#dc2626' : '#ea580c'),
+        borderWidth: 1.5,
+        borderRadius: 4,
+      },
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom', labels: { font: { size: 11 } } },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ${ctx.dataset.label}: $${ctx.parsed.y.toLocaleString('es-CL')}`
+        }
+      }
+    },
+    scales: {
+      x: { ticks: { font: { size: 10 }, maxRotation: 45 }, grid: { display: false } },
+      y: {
+        ticks: {
+          callback: v => '$' + (v / 1000).toFixed(0) + 'k',
+          font: { size: 10 }
+        },
+        grid: { color: '#f1f5f9' }
+      }
+    }
+  }
+});
+
+// Doughnut
+const areaTotals = { med: 0, kine: 0, dent: 0, otro: 0 };
+active.forEach(d => { if (d.total > 0) areaTotals[d.area] += d.total; });
+
+new Chart(document.getElementById('doughnutChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Médicos', 'Kinesiología', 'Dental', 'Otros'],
+    datasets: [{
+      data: [areaTotals.med, areaTotals.kine, areaTotals.dent, areaTotals.otro],
+      backgroundColor: ['#3b82f6','#22c55e','#f59e0b','#a78bfa'],
+      borderWidth: 2,
+      borderColor: '#fff',
+      hoverOffset: 8,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom', labels: { font: { size: 11 } } },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ${ctx.label}: $${ctx.parsed.toLocaleString('es-CL')} (${(ctx.parsed / totalDia * 100).toFixed(1)}%)`
+        }
+      }
+    }
+  }
+});
+</script>
+</body>
+</html>

@@ -361,6 +361,53 @@ footer .dot{width:6px;height:6px;border-radius:50%}
     </div>
   </section>
 
+  <!-- ═══════════════════════════════════════════════════════════ Health BI -->
+  <section class="section">
+    <div class="section-head">
+      <span class="tag cmc">📊 Health BI</span>
+      <h2>Health BI Project (CMC)</h2>
+      <span class="hint">Inteligencia de negocio clínica</span>
+    </div>
+    <div class="grid">
+      <a class="card cmc" href="/bi/mensual">
+        <div class="head"><span class="icon">📅</span><span class="name">Dashboard Mensual</span><span class="badge prod">Prod</span></div>
+        <div class="path">/bi/mensual</div>
+        <div class="desc">Facturación por profesional, área y subárea (Marzo 2026 baseline). Simulador de honorarios, % vs honorario fijo, distribución por especialidad.</div>
+      </a>
+      <a class="card cmc" href="/bi/dia">
+        <div class="head"><span class="icon">🗓️</span><span class="name">Dashboard Diario</span><span class="badge prod">Prod</span></div>
+        <div class="path">/bi/dia</div>
+        <div class="desc">Caja del día: pagos Medilink, conciliación efectivo/transbank/transferencia, cruce vs atenciones registradas.</div>
+      </a>
+      <a class="card cmc" href="/bi/proyecto">
+        <div class="head"><span class="icon">🗺️</span><span class="name">Mapa del proyecto BI</span><span class="badge prod">Prod</span></div>
+        <div class="path">/bi/proyecto</div>
+        <div class="desc">Arquitectura health-bi-project: archivos clave, flujo ETL, endpoints FastAPI, fuentes de datos, scripts seed.</div>
+      </a>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════ Suplementos -->
+  <section class="section">
+    <div class="section-head">
+      <span class="tag" style="color:#10b981;background:rgba(16,185,129,.1)">💊 Farmacia</span>
+      <h2>Suplementos · Farmacia CMC</h2>
+      <span class="hint">Inventario · Ganancias · Control interno</span>
+    </div>
+    <div class="grid">
+      <a class="card cmc" href="/suplementos">
+        <div class="head"><span class="icon">💪</span><span class="name">Suplementos MVP</span><span class="badge prod">Prod</span></div>
+        <div class="path">/suplementos</div>
+        <div class="desc">Dashboard MVP de control: inventario, ventas, ganancias, alertas de stock, top productos, BCG por categoría. Datos en localStorage del navegador.</div>
+      </a>
+      <a class="card cmc" href="/bi/farmacia-ideas">
+        <div class="head"><span class="icon">💡</span><span class="name">Ideas Farmacia</span><span class="badge prod">Prod</span></div>
+        <div class="path">/bi/farmacia-ideas</div>
+        <div class="desc">Brainstorm catálogo farmacia: SKUs candidatos, márgenes, proveedores, modelo comercial CMC.</div>
+      </a>
+    </div>
+  </section>
+
   <!-- ═══════════════════════════════════════════════════════════ Meulen -->
   <section class="section">
     <div class="section-head">
@@ -369,27 +416,255 @@ footer .dot{width:6px;height:6px;border-radius:50%}
       <span class="hint">MVP POS · Inventario · Puerto Montt</span>
     </div>
 
-    <div class="grid">
-      <a class="card meulen" href="/supermercadomeulen/menu">
-        <div class="head"><span class="icon">🛍️</span><span class="name">App Meulen (POS + Admin)</span><span class="badge prod">Prod</span></div>
-        <div class="path">/supermercadomeulen/menu</div>
-        <div class="desc">Aplicación operativa Meulen — POS táctil, admin, ingresos, pagos, menú, kutral, viaje. React + Vite + PWA, JWT auth.</div>
-      </a>
-      <a class="card meulen" href="/meulen/ecosistemameulen">
-        <div class="head"><span class="icon">🕸️</span><span class="name">Ecosistema Meulen</span><span class="badge mvp">MVP</span></div>
-        <div class="path">/meulen/ecosistemameulen</div>
-        <div class="desc">Visualización Canvas 2D del sistema POS + inventario: módulos backend, frontend, datos e integraciones.</div>
-      </a>
-      <a class="card meulen" href="/meulen/dashboardplanificacion">
-        <div class="head"><span class="icon">📈</span><span class="name">Dashboard planificación</span><span class="badge mvp">MVP</span></div>
-        <div class="path">/meulen/dashboardplanificacion</div>
-        <div class="desc">KPIs de avance, módulos, roadmap por fases, reglas de negocio y riesgos.</div>
-      </a>
-      <a class="card meulen" href="/meulen/kpis">
-        <div class="head"><span class="icon">📊</span><span class="name">KPIs Meulen</span><span class="badge mvp">MVP</span></div>
-        <div class="path">/meulen/kpis</div>
-        <div class="desc">Estado del MVP: avance fases, módulos completados, cobertura tests (83%), próximas fases, riesgos y stack técnico.</div>
-      </a>
+    <div class="group">
+      <div class="group-title">Operativo · POS y caja</div>
+      <div class="grid">
+        <a class="card meulen" href="/supermercadomeulen/menu">
+          <div class="head"><span class="icon">🛍️</span><span class="name">App Meulen (menú)</span><span class="badge prod">Prod</span></div>
+          <div class="path">/supermercadomeulen/menu</div>
+          <div class="desc">Hub principal de la app — accesos a POS, ingresos, pagos, kutral, viaje, admin. React + Vite + PWA.</div>
+        </a>
+        <a class="card meulen" href="/supermercadomeulen/ingresos/sale">
+          <div class="head"><span class="icon">💵</span><span class="name">POS · Venta</span><span class="badge auth">Auth</span></div>
+          <div class="path">/ingresos/sale</div>
+          <div class="desc">Pantalla de venta táctil: lectura de código de barras, carrito, total, métodos de pago, boleta Bsale.</div>
+        </a>
+        <a class="card meulen" href="/supermercadomeulen/ingresos/open-cash">
+          <div class="head"><span class="icon">🔓</span><span class="name">Apertura de caja</span><span class="badge auth">Auth</span></div>
+          <div class="path">/ingresos/open-cash</div>
+          <div class="desc">Apertura sesión de caja con monto inicial.</div>
+        </a>
+        <a class="card meulen" href="/supermercadomeulen/ingresos/close-cash">
+          <div class="head"><span class="icon">🔒</span><span class="name">Cierre de caja</span><span class="badge auth">Auth</span></div>
+          <div class="path">/ingresos/close-cash</div>
+          <div class="desc">Cierre con conteo y diferencia vs sistema.</div>
+        </a>
+        <a class="card meulen" href="/supermercadomeulen/admin/cash/sessions">
+          <div class="head"><span class="icon">🧮</span><span class="name">Sesiones de caja</span><span class="badge auth">Auth</span></div>
+          <div class="path">/admin/cash/sessions</div>
+          <div class="desc">Histórico de aperturas/cierres por cajero, diferencias y auditoría.</div>
+        </a>
+        <a class="card meulen" href="/supermercadomeulen/admin/sales">
+          <div class="head"><span class="icon">🧾</span><span class="name">Ventas</span><span class="badge auth">Auth</span></div>
+          <div class="path">/admin/sales</div>
+          <div class="desc">Listado de ventas con detalle por boleta, método de pago, ítems.</div>
+        </a>
+        <a class="card meulen" href="/supermercadomeulen/admin/refunds">
+          <div class="head"><span class="icon">↩️</span><span class="name">Devoluciones</span><span class="badge auth">Auth</span></div>
+          <div class="path">/admin/refunds</div>
+          <div class="desc">Registro y aprobación de devoluciones, anulación parcial/total.</div>
+        </a>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-title">Orden interno · Inventario y compras</div>
+      <div class="grid">
+        <a class="card meulen" href="/supermercadomeulen/admin/products">
+          <div class="head"><span class="icon">📦</span><span class="name">Productos</span><span class="badge auth">Auth</span></div>
+          <div class="path">/admin/products</div>
+          <div class="desc">Catálogo: alta, edición, precios, código de barras, categorías. Carga masiva de precios.</div>
+        </a>
+        <a class="card meulen" href="/supermercadomeulen/admin/inventory/stock">
+          <div class="head"><span class="icon">🏷️</span><span class="name">Stock</span><span class="badge auth">Auth</span></div>
+          <div class="path">/admin/inventory/stock</div>
+          <div class="desc">Stock actual por SKU, alertas de mínimo, valorización.</div>
+        </a>
+        <a class="card meulen" href="/supermercadomeulen/admin/inventory/movements">
+          <div class="head"><span class="icon">🔁</span><span class="name">Movimientos</span><span class="badge auth">Auth</span></div>
+          <div class="path">/admin/inventory/movements</div>
+          <div class="desc">Histórico de entradas/salidas: ventas, compras, ajustes, mermas, transformaciones.</div>
+        </a>
+        <a class="card meulen" href="/supermercadomeulen/admin/inventory/counts">
+          <div class="head"><span class="icon">🔢</span><span class="name">Conteos</span><span class="badge auth">Auth</span></div>
+          <div class="path">/admin/inventory/counts</div>
+          <div class="desc">Inventarios cíclicos: planificación, conteo, diferencias y ajustes.</div>
+        </a>
+        <a class="card meulen" href="/supermercadomeulen/admin/inventory/wastage">
+          <div class="head"><span class="icon">🗑️</span><span class="name">Mermas</span><span class="badge auth">Auth</span></div>
+          <div class="path">/admin/inventory/wastage</div>
+          <div class="desc">Registro de productos perdidos/vencidos/dañados con motivo y costo.</div>
+        </a>
+        <a class="card meulen" href="/supermercadomeulen/admin/inventory/adjustments">
+          <div class="head"><span class="icon">⚖️</span><span class="name">Ajustes</span><span class="badge auth">Auth</span></div>
+          <div class="path">/admin/inventory/adjustments</div>
+          <div class="desc">Ajustes manuales de stock con razón documentada.</div>
+        </a>
+        <a class="card meulen" href="/supermercadomeulen/admin/categories">
+          <div class="head"><span class="icon">📂</span><span class="name">Categorías</span><span class="badge auth">Auth</span></div>
+          <div class="path">/admin/categories</div>
+          <div class="desc">Árbol de categorías y subcategorías de productos.</div>
+        </a>
+        <a class="card meulen" href="/supermercadomeulen/admin/suppliers">
+          <div class="head"><span class="icon">🏭</span><span class="name">Proveedores</span><span class="badge auth">Auth</span></div>
+          <div class="path">/admin/suppliers</div>
+          <div class="desc">Maestro de proveedores, condiciones comerciales y contactos.</div>
+        </a>
+        <a class="card meulen" href="/supermercadomeulen/admin/purchases">
+          <div class="head"><span class="icon">🛒</span><span class="name">Compras</span><span class="badge auth">Auth</span></div>
+          <div class="path">/admin/purchases</div>
+          <div class="desc">Órdenes de compra, recepciones, costos.</div>
+        </a>
+        <a class="card meulen" href="/supermercadomeulen/admin/labels">
+          <div class="head"><span class="icon">🖨️</span><span class="name">Etiquetas / códigos barra</span><span class="badge auth">Auth</span></div>
+          <div class="path">/admin/labels</div>
+          <div class="desc">Impresión de etiquetas con código de barras y precio.</div>
+        </a>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-title">Cuentas por pagar (AP)</div>
+      <div class="grid">
+        <a class="card meulen" href="/supermercadomeulen/admin/ap/calendar">
+          <div class="head"><span class="icon">📆</span><span class="name">Calendario AP</span><span class="badge auth">Auth</span></div>
+          <div class="path">/admin/ap/calendar</div>
+          <div class="desc">Vencimientos de facturas y cheques por día.</div>
+        </a>
+        <a class="card meulen" href="/supermercadomeulen/admin/ap/invoices/new">
+          <div class="head"><span class="icon">🧾</span><span class="name">Nueva factura</span><span class="badge auth">Auth</span></div>
+          <div class="path">/admin/ap/invoices/new</div>
+          <div class="desc">Carga de factura de proveedor con vencimiento.</div>
+        </a>
+        <a class="card meulen" href="/supermercadomeulen/admin/ap/payments/new">
+          <div class="head"><span class="icon">💸</span><span class="name">Nuevo pago</span><span class="badge auth">Auth</span></div>
+          <div class="path">/admin/ap/payments/new</div>
+          <div class="desc">Registro de pago contra una o varias facturas.</div>
+        </a>
+        <a class="card meulen" href="/supermercadomeulen/admin/ap/checks">
+          <div class="head"><span class="icon">📑</span><span class="name">Cheques</span><span class="badge auth">Auth</span></div>
+          <div class="path">/admin/ap/checks</div>
+          <div class="desc">Cartera de cheques emitidos y su estado.</div>
+        </a>
+        <a class="card meulen" href="/supermercadomeulen/admin/ap/simulator">
+          <div class="head"><span class="icon">🧠</span><span class="name">Simulador de ofertas</span><span class="badge auth">Auth</span></div>
+          <div class="path">/admin/ap/simulator</div>
+          <div class="desc">Simulador de descuentos y plazos de proveedores.</div>
+        </a>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-title">Estratégicos · Reportes y analytics</div>
+      <div class="grid">
+        <a class="card meulen" href="/supermercadomeulen/admin/reports/sales">
+          <div class="head"><span class="icon">📈</span><span class="name">Reporte ventas</span><span class="badge auth">Auth</span></div>
+          <div class="path">/admin/reports/sales</div>
+          <div class="desc">Ventas por período, categoría, producto, canal, cajero.</div>
+        </a>
+        <a class="card meulen" href="/supermercadomeulen/admin/reports/inventory">
+          <div class="head"><span class="icon">📊</span><span class="name">Reporte inventario</span><span class="badge auth">Auth</span></div>
+          <div class="path">/admin/reports/inventory</div>
+          <div class="desc">Valorización inventario, rotación, días de cobertura.</div>
+        </a>
+        <a class="card meulen" href="/supermercadomeulen/admin/reports/margin">
+          <div class="head"><span class="icon">💹</span><span class="name">Margen</span><span class="badge auth">Auth</span></div>
+          <div class="path">/admin/reports/margin</div>
+          <div class="desc">Margen bruto por SKU, categoría y proveedor.</div>
+        </a>
+        <a class="card meulen" href="/supermercadomeulen/admin/reports/bcg">
+          <div class="head"><span class="icon">🎯</span><span class="name">Matriz BCG</span><span class="badge auth">Auth</span></div>
+          <div class="path">/admin/reports/bcg</div>
+          <div class="desc">Estrellas / vacas / interrogantes / perros por categoría — rotación vs margen.</div>
+        </a>
+        <a class="card meulen" href="/supermercadomeulen/admin/reports/dead-stock">
+          <div class="head"><span class="icon">🪦</span><span class="name">Dead stock</span><span class="badge auth">Auth</span></div>
+          <div class="path">/admin/reports/dead-stock</div>
+          <div class="desc">Productos sin movimiento — alerta de capital atrapado.</div>
+        </a>
+        <a class="card meulen" href="/supermercadomeulen/admin/reports/replenishment">
+          <div class="head"><span class="icon">🔄</span><span class="name">Reposición</span><span class="badge auth">Auth</span></div>
+          <div class="path">/admin/reports/replenishment</div>
+          <div class="desc">Sugerencia de reposición basada en velocidad de venta y lead-time.</div>
+        </a>
+        <a class="card meulen" href="/supermercadomeulen/admin/reports/pricing-alerts">
+          <div class="head"><span class="icon">🚨</span><span class="name">Alertas precio</span><span class="badge auth">Auth</span></div>
+          <div class="path">/admin/reports/pricing-alerts</div>
+          <div class="desc">SKUs vendiéndose bajo costo o con margen anómalo.</div>
+        </a>
+        <a class="card meulen" href="/supermercadomeulen/admin/reports/cashiers">
+          <div class="head"><span class="icon">👥</span><span class="name">Performance cajeros</span><span class="badge auth">Auth</span></div>
+          <div class="path">/admin/reports/cashiers</div>
+          <div class="desc">Productividad por cajero, ticket promedio, items/venta, diferencias caja.</div>
+        </a>
+        <a class="card meulen" href="/supermercadomeulen/admin/reports/hourly-heatmap">
+          <div class="head"><span class="icon">🔥</span><span class="name">Heatmap horario</span><span class="badge auth">Auth</span></div>
+          <div class="path">/admin/reports/hourly-heatmap</div>
+          <div class="desc">Mapa de calor de ventas hora × día — base para staffing y promociones.</div>
+        </a>
+        <a class="card meulen" href="/supermercadomeulen/admin/reports/refunds">
+          <div class="head"><span class="icon">↩️</span><span class="name">Reporte devoluciones</span><span class="badge auth">Auth</span></div>
+          <div class="path">/admin/reports/refunds</div>
+          <div class="desc">Tasa y motivos de devolución por producto y cajero.</div>
+        </a>
+        <a class="card meulen" href="/supermercadomeulen/admin/reports/alerts/stock">
+          <div class="head"><span class="icon">⚠️</span><span class="name">Alertas stock</span><span class="badge auth">Auth</span></div>
+          <div class="path">/admin/reports/alerts/stock</div>
+          <div class="desc">SKUs bajo mínimo o sobre máximo.</div>
+        </a>
+        <a class="card meulen" href="/supermercadomeulen/admin/audit">
+          <div class="head"><span class="icon">🔍</span><span class="name">Auditoría</span><span class="badge auth">Auth</span></div>
+          <div class="path">/admin/audit</div>
+          <div class="desc">Log de acciones críticas con usuario, timestamp y diff.</div>
+        </a>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-title">Estratégicos · Visión y planning</div>
+      <div class="grid">
+        <a class="card meulen" href="/meulen/kpis">
+          <div class="head"><span class="icon">📊</span><span class="name">KPIs Meulen</span><span class="badge mvp">MVP</span></div>
+          <div class="path">/meulen/kpis</div>
+          <div class="desc">Estado del MVP: avance fases, módulos completados, cobertura tests (83%), próximas fases, riesgos y stack técnico.</div>
+        </a>
+        <a class="card meulen" href="/meulen/dashboardplanificacion">
+          <div class="head"><span class="icon">📈</span><span class="name">Dashboard planificación</span><span class="badge mvp">MVP</span></div>
+          <div class="path">/meulen/dashboardplanificacion</div>
+          <div class="desc">KPIs de avance, módulos, roadmap por fases, reglas de negocio y riesgos.</div>
+        </a>
+        <a class="card meulen" href="/meulen/ecosistemameulen">
+          <div class="head"><span class="icon">🕸️</span><span class="name">Ecosistema Meulen</span><span class="badge mvp">MVP</span></div>
+          <div class="path">/meulen/ecosistemameulen</div>
+          <div class="desc">Visualización Canvas 2D del sistema POS + inventario: módulos backend, frontend, datos e integraciones.</div>
+        </a>
+        <a class="card meulen" href="/bi/meulen-roadmap">
+          <div class="head"><span class="icon">🗺️</span><span class="name">Roadmap estratégico</span><span class="badge prod">Prod</span></div>
+          <div class="path">/bi/meulen-roadmap</div>
+          <div class="desc">Roadmap Meulen completo: fases, módulos, hitos, dependencias.</div>
+        </a>
+        <a class="card meulen" href="/bi/meulen-operaciones">
+          <div class="head"><span class="icon">⚙️</span><span class="name">Operaciones internas</span><span class="badge prod">Prod</span></div>
+          <div class="path">/bi/meulen-operaciones</div>
+          <div class="desc">Dashboard de orden interno: procesos, métricas operativas, salud diaria del MVP.</div>
+        </a>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-title">Otros</div>
+      <div class="grid">
+        <a class="card meulen" href="/supermercadomeulen/admin/users">
+          <div class="head"><span class="icon">👤</span><span class="name">Usuarios</span><span class="badge auth">Auth</span></div>
+          <div class="path">/admin/users</div>
+          <div class="desc">Gestión de usuarios, roles y permisos.</div>
+        </a>
+        <a class="card meulen" href="/supermercadomeulen/kutral/transformar">
+          <div class="head"><span class="icon">🌾</span><span class="name">Kutral · Transformar</span><span class="badge auth">Auth</span></div>
+          <div class="path">/kutral/transformar</div>
+          <div class="desc">Transformaciones de bodega (kutral): granel a empaque, mermas controladas.</div>
+        </a>
+        <a class="card meulen" href="/supermercadomeulen/viaje/nuevo">
+          <div class="head"><span class="icon">🚚</span><span class="name">Viaje nuevo</span><span class="badge auth">Auth</span></div>
+          <div class="path">/viaje/nuevo</div>
+          <div class="desc">Registro de viaje de reposición: proveedor, costos, items.</div>
+        </a>
+        <a class="card meulen" href="/supermercadomeulen/pagos/calendario">
+          <div class="head"><span class="icon">📅</span><span class="name">Pagos · Calendario</span><span class="badge auth">Auth</span></div>
+          <div class="path">/pagos/calendario</div>
+          <div class="desc">Calendario de pagos pendientes/realizados.</div>
+        </a>
+      </div>
     </div>
   </section>
 

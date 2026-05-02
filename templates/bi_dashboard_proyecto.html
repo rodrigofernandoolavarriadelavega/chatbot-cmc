@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Proyecto BI — Centro Médico Carampangue</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}
+
+.header{background:linear-gradient(135deg,#1e3a5f 0%,#0f172a 100%);padding:28px 40px;border-bottom:1px solid #1e293b;display:flex;align-items:center;gap:16px}
+.header-icon{font-size:2.2rem}
+.header-title{font-size:1.5rem;font-weight:800;color:#f8fafc}
+.header-sub{font-size:.85rem;color:#94a3b8;margin-top:3px}
+.badge-live{background:#2563eb;color:#fff;font-size:.65rem;font-weight:700;padding:3px 8px;border-radius:20px;letter-spacing:.5px}
+
+.nav{display:flex;gap:0;padding:0 40px;background:#0f172a;border-bottom:1px solid #1e293b;flex-wrap:wrap}
+.nav-tab{padding:12px 20px;font-size:.78rem;font-weight:600;cursor:pointer;color:#64748b;border-bottom:2px solid transparent;transition:.15s;white-space:nowrap}
+.nav-tab.active,.nav-tab:hover{color:#38bdf8;border-bottom-color:#38bdf8}
+
+.panel{display:none;padding:32px 40px}
+.panel.active{display:block}
+
+.sec-title{font-size:1rem;font-weight:700;color:#f8fafc;margin-bottom:18px;display:flex;align-items:center;gap:8px}
+
+/* KPIs */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:28px}
+.kpi-card{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:18px 16px}
+.kpi-card.blue{border-top:3px solid #3b82f6}
+.kpi-card.green{border-top:3px solid #22c55e}
+.kpi-card.orange{border-top:3px solid #f59e0b}
+.kpi-card.violet{border-top:3px solid #a855f7}
+.kpi-card.slate{border-top:3px solid #64748b}
+.kpi-label{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin-bottom:6px}
+.kpi-value{font-size:1.4rem;font-weight:800;color:#f1f5f9}
+.kpi-card.blue .kpi-value{color:#60a5fa}
+.kpi-card.green .kpi-value{color:#4ade80}
+.kpi-card.orange .kpi-value{color:#fbbf24}
+.kpi-card.violet .kpi-value{color:#c084fc}
+.kpi-sub{font-size:.68rem;color:#64748b;margin-top:4px}
+
+/* Arquitectura */
+.arch{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding-bottom:12px}
+.arch-node{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:16px 14px;min-width:150px;text-align:center;flex-shrink:0}
+.arch-node.blue{border-color:#38bdf8;background:#0c1a2e}
+.arch-node.green{border-color:#22c55e;background:#052e16}
+.arch-node.purple{border-color:#a855f7;background:#1a0a2e}
+.arch-node.orange{border-color:#fb923c;background:#1c0f04}
+.arch-icon{font-size:1.8rem;margin-bottom:6px}
+.arch-label{font-size:.75rem;font-weight:700;color:#f1f5f9;line-height:1.3}
+.arch-sub{font-size:.62rem;color:#94a3b8;margin-top:5px;line-height:1.5}
+.arch-arrow{display:flex;align-items:center;padding:0 8px;color:#334155;font-size:1.6rem;flex-shrink:0;align-self:center}
+
+/* Componentes */
+.comp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-bottom:28px}
+.comp-card{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:18px}
+.comp-card.active{border-left:3px solid #22c55e}
+.comp-card.pending{border-left:3px solid #f59e0b}
+.comp-name{font-size:.85rem;font-weight:700;color:#f1f5f9;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.comp-url{font-size:.72rem;color:#38bdf8;font-family:monospace;margin-bottom:8px}
+.comp-desc{font-size:.72rem;color:#94a3b8;line-height:1.5}
+.status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dot-green{background:#22c55e}.dot-yellow{background:#f59e0b}.dot-gray{background:#475569}
+
+/* Tabla */
+table{width:100%;border-collapse:collapse;font-size:.78rem}
+thead th{padding:9px 12px;text-align:left;font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#475569;border-bottom:1px solid #1e293b}
+tbody tr{border-bottom:1px solid #1e293b}
+tbody tr:hover{background:#1e293b}
+td{padding:9px 12px;color:#cbd5e1;vertical-align:middle}
+code{background:#0f172a;color:#38bdf8;padding:2px 7px;border-radius:5px;font-size:.7rem;font-family:monospace}
+
+/* Pendientes */
+.task-list{display:flex;flex-direction:column;gap:0}
+.task{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid #1e293b}
+.task:last-child{border-bottom:none}
+.prio-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.prio-alta{background:#f87171}.prio-media{background:#fbbf24}.prio-baja{background:#4ade80}
+.task-text{font-size:.8rem;color:#e2e8f0;flex:1}
+.task-meta{font-size:.68rem;color:#475569;margin-top:3px}
+
+/* Vistas */
+.vista-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+.vista-item{background:#1e293b;border:1px solid #1e3a5f;border-radius:8px;padding:12px 14px}
+.vista-name{font-size:.75rem;font-weight:700;color:#38bdf8;font-family:monospace;margin-bottom:3px}
+.vista-desc{font-size:.7rem;color:#64748b}
+
+/* Áreas */
+.area-chip{display:inline-flex;align-items:center;gap:6px;background:#1e293b;border:1px solid #334155;border-radius:20px;padding:5px 12px;font-size:.75rem;font-weight:600;color:#e2e8f0;margin:3px}
+.chip-dot{width:8px;height:8px;border-radius:50%}
+
+/* Grid */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:20px}
+@media(max-width:900px){.grid-2,.grid-3{grid-template-columns:1fr}}
+.card{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:20px;margin-bottom:20px}
+
+footer{text-align:center;padding:20px;font-size:.7rem;color:#334155;border-top:1px solid #1e293b;margin-top:20px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-icon">📊</div>
+  <div>
+    <div class="header-title">Centro Médico Carampangue — BI Project <span class="badge-live">ACTIVO</span></div>
+    <div class="header-sub">Sistema de Business Intelligence · Actualizado 27 Mar 2026</div>
+  </div>
+</div>
+
+<div class="nav">
+  <div class="nav-tab active" onclick="show('resumen')">Resumen</div>
+  <div class="nav-tab" onclick="show('arquitectura')">Arquitectura</div>
+  <div class="nav-tab" onclick="show('componentes')">Componentes</div>
+  <div class="nav-tab" onclick="show('datos')">Datos</div>
+  <div class="nav-tab" onclick="show('pendientes')">Pendientes</div>
+  <div class="nav-tab" onclick="show('comandos')">Comandos</div>
+</div>
+
+<!-- RESUMEN -->
+<div class="panel active" id="panel-resumen">
+  <div class="kpi-grid">
+    <div class="kpi-card blue">
+      <div class="kpi-label">Ingresos Marzo 2026</div>
+      <div class="kpi-value">$20.275.330</div>
+      <div class="kpi-sub">Total del mes</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">Margen CMC</div>
+      <div class="kpi-value">$5.300.356</div>
+      <div class="kpi-sub">26.1% del total</div>
+    </div>
+    <div class="kpi-card orange">
+      <div class="kpi-label">Profesionales</div>
+      <div class="kpi-value">27 / 22</div>
+      <div class="kpi-sub">Total / activos este mes</div>
+    </div>
+    <div class="kpi-card violet">
+      <div class="kpi-label">Vistas SQL</div>
+      <div class="kpi-value">14</div>
+      <div class="kpi-sub">Schema bi en PostgreSQL</div>
+    </div>
+    <div class="kpi-card slate">
+      <div class="kpi-label">Cobertura histórica</div>
+      <div class="kpi-value">30 días</div>
+      <div class="kpi-sub">Carga completa 2020 pendiente</div>
+    </div>
+    <div class="kpi-card slate">
+      <div class="kpi-label">Áreas configuradas</div>
+      <div class="kpi-value">9</div>
+      <div class="kpi-sub">Med · Kine · Dental + 6 más</div>
+    </div>
+  </div>
+
+  <div class="sec-title"><span>🔗</span> Flujo general</div>
+  <div class="arch" style="margin-bottom:28px">
+    <div class="arch-node blue">
+      <div class="arch-icon">🔌</div>
+      <div class="arch-label">Medilink API</div>
+      <div class="arch-sub">medilink2.healthatom.com<br>Auth: Token<br>Rate: 20 req/min<br>Paginación: cursor</div>
+    </div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-node green">
+      <div class="arch-icon">⚙️</div>
+      <div class="arch-label">ETL Python</div>
+      <div class="arch-sub">etl/main.py<br>Incremental (30 días)<br>Full (desde 2020)<br>dim + fact tables</div>
+    </div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-node purple">
+      <div class="arch-icon">🗄️</div>
+      <div class="arch-label">PostgreSQL 16</div>
+      <div class="arch-sub">DB: health_bi<br>Schema: bi<br>14 vistas SQL<br>Docker container</div>
+    </div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-node orange">
+      <div class="arch-icon">📊</div>
+      <div class="arch-label">Dashboard HTML</div>
+      <div class="arch-sub">localhost:8000<br>FastAPI + HTML<br>5 tabs interactivos<br>Simulación + Box</div>
+    </div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-node" style="border-color:#475569">
+      <div class="arch-icon">📈</div>
+      <div class="arch-label">Metabase</div>
+      <div class="arch-sub">localhost:3000<br>Dashboard Ejecutivo<br>ID: 2 (incompleto)</div>
+    </div>
+  </div>
+
+  <div class="sec-title"><span>🏷️</span> Áreas del CMC</div>
+  <div style="margin-bottom:10px">
+    <div class="area-chip"><div class="chip-dot" style="background:#3b82f6"></div>Médico</div>
+    <div class="area-chip"><div class="chip-dot" style="background:#22c55e"></div>Kinesiología</div>
+    <div class="area-chip"><div class="chip-dot" style="background:#f59e0b"></div>Dental</div>
+    <div class="area-chip"><div class="chip-dot" style="background:#a78bfa"></div>Psicología</div>
+    <div class="area-chip"><div class="chip-dot" style="background:#fb923c"></div>Tecnólogo médico</div>
+    <div class="area-chip"><div class="chip-dot" style="background:#ec4899"></div>Fonoaudióloga</div>
+    <div class="area-chip"><div class="chip-dot" style="background:#4ade80"></div>Nutrición</div>
+    <div class="area-chip"><div class="chip-dot" style="background:#f87171"></div>Podóloga</div>
+    <div class="area-chip"><div class="chip-dot" style="background:#60a5fa"></div>Matrona</div>
+  </div>
+  <div style="font-size:.72rem;color:#475569;margin-top:8px">
+    Subáreas Médico: Ginecología · Traumatología · Medicina General · Medicina Familiar · Otorrinolaringología · Gastroenterología · Cardiología<br>
+    Subáreas Dental: Odontología General · Ortodoncia · Implantología · Endodoncia · Estética Dental
+  </div>
+</div>
+
+<!-- ARQUITECTURA -->
+<div class="panel" id="panel-arquitectura">
+  <div class="sec-title"><span>🗂️</span> Estructura de archivos</div>
+  <div class="card">
+    <table>
+      <thead><tr><th>Archivo</th><th>Rol</th><th>Notas</th></tr></thead>
+      <tbody>
+        <tr><td><code>dashboard-mensual.html</code></td><td style="color:#4ade80;font-weight:600">Dashboard principal</td><td>Editar ESTE archivo. Bind mount → localhost:8000</td></tr>
+        <tr><td><code>dashboard-dia.html</code></td><td style="color:#60a5fa">Dashboard del día</td><td>Abrir como file:// local</td></tr>
+        <tr><td><code>api/main.py</code></td><td style="color:#60a5fa">FastAPI backend</td><td>Sirve HTML + /api/state GET/PUT · No-cache headers</td></tr>
+        <tr><td><code>api/static/index.html</code></td><td style="color:#f87171">NO EDITAR</td><td>Es el bind mount de dashboard-mensual.html</td></tr>
+        <tr><td><code>etl/main.py</code></td><td style="color:#fbbf24">ETL principal</td><td>Carga incremental o full</td></tr>
+        <tr><td><code>docker/docker-compose.yml</code></td><td style="color:#c084fc">Orquestación</td><td>3 contenedores: postgres, metabase, api</td></tr>
+        <tr><td><code>sql/</code></td><td style="color:#94a3b8">Vistas SQL</td><td>14 vistas en schema bi</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sec-title"><span>🐳</span> Contenedores Docker</div>
+  <div class="card">
+    <table>
+      <thead><tr><th>Contenedor</th><th>Imagen</th><th>Puerto</th><th>Estado</th></tr></thead>
+      <tbody>
+        <tr><td><code>health_bi_postgres</code></td><td>postgres:16-alpine</td><td>5432</td><td style="color:#4ade80">● Activo</td></tr>
+        <tr><td><code>health_bi_metabase</code></td><td>metabase/metabase:latest</td><td>3000</td><td style="color:#4ade80">● Activo</td></tr>
+        <tr><td><code>health_bi_api</code></td><td>docker-api (FastAPI)</td><td>8000</td><td style="color:#4ade80">● Activo</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sec-title"><span>⚠️</span> Regla importante</div>
+  <div class="card" style="border-left:3px solid #f87171">
+    <div style="font-size:.82rem;color:#fca5a5;font-weight:700;margin-bottom:8px">Editar el dashboard</div>
+    <div style="font-size:.78rem;color:#94a3b8;line-height:1.8">
+      1. Editar <code>dashboard-mensual.html</code> (NO api/static/index.html)<br>
+      2. Reiniciar contenedor: <code>docker compose restart api</code><br>
+      3. El browser cachea agresivamente → usar <code>Cmd+Shift+R</code> o agregar <code>?nocache=xxx</code><br>
+      4. El servidor ya tiene headers no-cache desde 2026-03-27
+    </div>
+  </div>
+</div>
+
+<!-- COMPONENTES -->
+<div class="panel" id="panel-componentes">
+  <div class="sec-title"><span>🧩</span> Componentes activos</div>
+  <div class="comp-grid">
+    <div class="comp-card active">
+      <div class="comp-name"><div class="status-dot dot-green"></div>Dashboard Mensual</div>
+      <div class="comp-url">localhost:8000</div>
+      <div class="comp-desc">Ingresos por profesional · Simulación de escenarios · Box scheduler · Editor de áreas/profesionales · Gráficos personalizados</div>
+    </div>
+    <div class="comp-card active">
+      <div class="comp-name"><div class="status-dot dot-green"></div>Dashboard del Día</div>
+      <div class="comp-url">file:// local</div>
+      <div class="comp-desc">KPIs diarios desde Medilink · Agenda por hora · Rendimiento de profesionales · Producción clínica</div>
+    </div>
+    <div class="comp-card active">
+      <div class="comp-name"><div class="status-dot dot-green"></div>FastAPI</div>
+      <div class="comp-url">localhost:8000/api/state</div>
+      <div class="comp-desc">Sirve dashboard HTML · Persiste estado en PostgreSQL · Headers no-cache · Google Sheets sync (opcional)</div>
+    </div>
+    <div class="comp-card active">
+      <div class="comp-name"><div class="status-dot dot-green"></div>PostgreSQL 16</div>
+      <div class="comp-url">localhost:5432 · DB: health_bi</div>
+      <div class="comp-desc">Schema bi · 10 tablas (dim + fact) · 14 vistas SQL · Estado del dashboard persistido</div>
+    </div>
+    <div class="comp-card active">
+      <div class="comp-name"><div class="status-dot dot-yellow"></div>Metabase</div>
+      <div class="comp-url">localhost:3000</div>
+      <div class="comp-desc">Dashboard Ejecutivo ID:2 — incompleto · Solo tiene tarjeta "Ingreso del mes" · Faltan 3 dashboards más</div>
+    </div>
+    <div class="comp-card pending">
+      <div class="comp-name"><div class="status-dot dot-gray"></div>Cron ETL automático</div>
+      <div class="comp-url">— pendiente</div>
+      <div class="comp-desc">ETL diario no configurado · Actualmente se corre manualmente · Programar con cron o Task</div>
+    </div>
+  </div>
+</div>
+
+<!-- DATOS -->
+<div class="panel" id="panel-datos">
+  <div class="grid-2">
+    <div>
+      <div class="sec-title"><span>📋</span> Tablas en PostgreSQL</div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Tabla</th><th>Tipo</th><th>Aprox.</th></tr></thead>
+          <tbody>
+            <tr><td><code>dim_especialidad</code></td><td style="color:#60a5fa">Dimensión</td><td>21</td></tr>
+            <tr><td><code>dim_sucursal</code></td><td style="color:#60a5fa">Dimensión</td><td>3</td></tr>
+            <tr><td><code>dim_paciente</code></td><td style="color:#60a5fa">Dimensión</td><td>50+</td></tr>
+            <tr><td><code>dim_profesional</code></td><td style="color:#60a5fa">Dimensión</td><td>50+</td></tr>
+            <tr><td><code>dim_prestacion</code></td><td style="color:#60a5fa">Dimensión</td><td>509</td></tr>
+            <tr><td><code>dim_fecha</code></td><td style="color:#60a5fa">Dimensión</td><td>4.018</td></tr>
+            <tr><td><code>fact_citas</code></td><td style="color:#c084fc">Hecho</td><td>1.665+</td></tr>
+            <tr><td><code>fact_atenciones</code></td><td style="color:#c084fc">Hecho</td><td>1.230+</td></tr>
+            <tr><td><code>fact_ingresos</code></td><td style="color:#c084fc">Hecho</td><td>1.071+</td></tr>
+            <tr><td><code>fact_pagos</code></td><td style="color:#c084fc">Hecho</td><td>50+</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div>
+      <div class="sec-title"><span>👁️</span> Vistas SQL (14)</div>
+      <div class="vista-grid">
+        <div class="vista-item"><div class="vista-name">v_kpi_ejecutivo_mes</div><div class="vista-desc">KPIs del mes actual</div></div>
+        <div class="vista-item"><div class="vista-name">v_productividad_medicos</div><div class="vista-desc">Atenciones e ingresos por médico/mes</div></div>
+        <div class="vista-item"><div class="vista-name">v_estado_citas</div><div class="vista-desc">Distribución de estados por mes</div></div>
+        <div class="vista-item"><div class="vista-name">v_ocupacion_agenda</div><div class="vista-desc">Ocupación de agenda</div></div>
+        <div class="vista-item"><div class="vista-name">v_ingresos_mensual</div><div class="vista-desc">Ingresos por mes</div></div>
+        <div class="vista-item"><div class="vista-name">v_ingresos_por_convenio</div><div class="vista-desc">Ingresos por convenio</div></div>
+        <div class="vista-item"><div class="vista-name">v_ingresos_por_especialidad</div><div class="vista-desc">Ingresos por especialidad</div></div>
+        <div class="vista-item"><div class="vista-name">v_ingresos_por_sucursal</div><div class="vista-desc">Ingresos por sucursal</div></div>
+        <div class="vista-item"><div class="vista-name">v_top_prestaciones</div><div class="vista-desc">Prestaciones más frecuentes</div></div>
+        <div class="vista-item"><div class="vista-name">v_ranking_medicos</div><div class="vista-desc">Ranking de médicos</div></div>
+        <div class="vista-item"><div class="vista-name">v_metodos_pago</div><div class="vista-desc">Distribución métodos de pago</div></div>
+        <div class="vista-item"><div class="vista-name">v_crecimiento_mensual</div><div class="vista-desc">Tendencia mensual</div></div>
+        <div class="vista-item"><div class="vista-name">v_atenciones_por_dia_semana</div><div class="vista-desc">Distribución por día de semana</div></div>
+        <div class="vista-item"><div class="vista-name">v_inasistencias_detalle</div><div class="vista-desc">Detalle de inasistencias</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PENDIENTES -->
+<div class="panel" id="panel-pendientes">
+  <div class="grid-2">
+    <div>
+      <div class="sec-title"><span>🔴</span> Alta prioridad</div>
+      <div class="card">
+        <div class="task-list">
+          <div class="task">
+            <div class="prio-dot prio-alta"></div>
+            <div>
+              <div class="task-text">Carga histórica completa desde 2020</div>
+              <div class="task-meta">cd etl/ && python3 main.py --full · ~30-60 min · Limita rate API</div>
+            </div>
+          </div>
+          <div class="task">
+            <div class="prio-dot prio-alta"></div>
+            <div>
+              <div class="task-text">Configurar cron job para ETL diario automático</div>
+              <div class="task-meta">Actualmente es manual · Usar cron o Task de Claude Code</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="sec-title"><span>🟡</span> Media prioridad</div>
+      <div class="card">
+        <div class="task-list">
+          <div class="task">
+            <div class="prio-dot prio-media"></div>
+            <div>
+              <div class="task-text">Terminar Dashboard Ejecutivo en Metabase (ID: 2)</div>
+              <div class="task-meta">Agregar: citas por día, estados, top médicos, pacientes únicos</div>
+            </div>
+          </div>
+          <div class="task">
+            <div class="prio-dot prio-media"></div>
+            <div>
+              <div class="task-text">Dashboard Productividad Médica en Metabase</div>
+              <div class="task-meta">Vista: v_productividad_medicos</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="sec-title"><span>🟢</span> Baja prioridad</div>
+      <div class="card">
+        <div class="task-list">
+          <div class="task">
+            <div class="prio-dot prio-baja"></div>
+            <div>
+              <div class="task-text">Dashboard Operacional en Metabase</div>
+              <div class="task-meta">v_estado_citas · v_ocupacion_agenda · v_inasistencias_detalle</div>
+            </div>
+          </div>
+          <div class="task">
+            <div class="prio-dot prio-baja"></div>
+            <div>
+              <div class="task-text">Dashboard Financiero en Metabase</div>
+              <div class="task-meta">v_ingresos_mensual · v_metodos_pago · v_crecimiento_mensual</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- COMANDOS -->
+<div class="panel" id="panel-comandos">
+  <div class="grid-2">
+    <div>
+      <div class="sec-title"><span>🐳</span> Docker</div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Acción</th><th>Comando</th></tr></thead>
+          <tbody>
+            <tr><td>Levantar todo</td><td><code>docker compose up -d</code></td></tr>
+            <tr><td>Ver estado</td><td><code>docker compose ps</code></td></tr>
+            <tr><td>Reiniciar API</td><td><code>docker compose restart api</code></td></tr>
+            <tr><td>Detener todo</td><td><code>docker compose down</code></td></tr>
+            <tr><td>Ver logs API</td><td><code>docker compose logs api -f</code></td></tr>
+          </tbody>
+        </table>
+        <div style="font-size:.7rem;color:#475569;margin-top:10px">Directorio: /Users/rodrigoolavarria/health-bi-project/docker/</div>
+      </div>
+    </div>
+    <div>
+      <div class="sec-title"><span>⚙️</span> ETL</div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Acción</th><th>Comando</th></tr></thead>
+          <tbody>
+            <tr><td>Incremental (30 días)</td><td><code>python3 main.py</code></td></tr>
+            <tr><td>Completo (desde 2020)</td><td><code>python3 main.py --full</code></td></tr>
+            <tr><td>Solo dimensiones</td><td><code>python3 main.py --only dim</code></td></tr>
+            <tr><td>Solo hechos</td><td><code>python3 main.py --only fact</code></td></tr>
+          </tbody>
+        </table>
+        <div style="font-size:.7rem;color:#475569;margin-top:10px">Directorio: /Users/rodrigoolavarria/health-bi-project/etl/</div>
+      </div>
+    </div>
+  </div>
+  <div class="sec-title"><span>🌐</span> URLs</div>
+  <div class="card">
+    <table>
+      <thead><tr><th>Servicio</th><th>URL</th><th>Credenciales</th></tr></thead>
+      <tbody>
+        <tr><td>Dashboard Mensual</td><td><code>http://localhost:8000</code></td><td>—</td></tr>
+        <tr><td>Metabase</td><td><code>http://localhost:3000</code></td><td>Ver .env</td></tr>
+        <tr><td>PostgreSQL</td><td><code>localhost:5432</code></td><td>user: health_user · DB: health_bi</td></tr>
+        <tr><td>Medilink API</td><td><code>https://api.medilink2.healthatom.com</code></td><td>Token en .env ETL</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<footer>Centro Médico Carampangue · BI Project · /Users/rodrigoolavarria/health-bi-project/</footer>
+
+<script>
+function show(tab){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+tab).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>

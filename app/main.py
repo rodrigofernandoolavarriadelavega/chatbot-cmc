@@ -790,6 +790,76 @@ def meulen_kpis_page():
     return _MEULEN_KPIS_HTML
 
 
+def _read_template(name: str) -> str:
+    p = _TEMPLATE_DIR / name
+    return p.read_text(encoding="utf-8") if p.exists() else ""
+
+
+@app.get("/suplementos", response_class=HTMLResponse)
+def suplementos_page():
+    """Dashboard MVP de inventario, ventas y ganancias para línea Farmacia/Suplementos."""
+    html = _read_template("suplementos.html")
+    if not html:
+        raise HTTPException(404, "Suplementos MVP no disponible")
+    return html
+
+
+@app.get("/bi/mensual", response_class=HTMLResponse)
+@app.get("/bi/dashboard-mensual", response_class=HTMLResponse)
+def bi_dashboard_mensual_page():
+    """Dashboard mensual Health BI (CMC): facturación por profesional/área, simulador honorarios."""
+    html = _read_template("bi_dashboard_mensual.html")
+    if not html:
+        raise HTTPException(404, "Dashboard mensual no disponible")
+    return html
+
+
+@app.get("/bi/dia", response_class=HTMLResponse)
+@app.get("/bi/dashboard-dia", response_class=HTMLResponse)
+def bi_dashboard_dia_page():
+    """Dashboard diario Health BI (CMC): caja del día, conciliación pagos."""
+    html = _read_template("bi_dashboard_dia.html")
+    if not html:
+        raise HTTPException(404, "Dashboard diario no disponible")
+    return html
+
+
+@app.get("/bi/proyecto", response_class=HTMLResponse)
+def bi_proyecto_page():
+    """Mapa del proyecto Health BI: arquitectura, archivos clave, flujo ETL."""
+    html = _read_template("bi_dashboard_proyecto.html")
+    if not html:
+        raise HTTPException(404, "Dashboard proyecto BI no disponible")
+    return html
+
+
+@app.get("/bi/farmacia-ideas", response_class=HTMLResponse)
+def bi_farmacia_ideas_page():
+    """Brainstorm farmacia/suplementos: ideas de catálogo, márgenes, plan."""
+    html = _read_template("bi_farmacia_ideas.html")
+    if not html:
+        raise HTTPException(404, "Dashboard farmacia ideas no disponible")
+    return html
+
+
+@app.get("/bi/meulen-roadmap", response_class=HTMLResponse)
+def bi_meulen_roadmap_page():
+    """Roadmap estratégico Meulen: fases, módulos, hitos."""
+    html = _read_template("bi_meulen_roadmap.html")
+    if not html:
+        raise HTTPException(404, "Dashboard meulen roadmap no disponible")
+    return html
+
+
+@app.get("/bi/meulen-operaciones", response_class=HTMLResponse)
+def bi_meulen_operaciones_page():
+    """Dashboard operaciones internas Meulen: orden interno, procesos, métricas."""
+    html = _read_template("bi_meulen_operaciones.html")
+    if not html:
+        raise HTTPException(404, "Dashboard meulen operaciones no disponible")
+    return html
+
+
 @app.get("/menu", response_class=HTMLResponse)
 def menu_page():
     """Landing esquemático con todas las rutas desplegadas en agentecmc.cl."""
