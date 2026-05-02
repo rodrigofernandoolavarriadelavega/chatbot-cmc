@@ -412,6 +412,58 @@ section.compact { padding: 64px 0; }
 }
 .fade-in { animation: fadeUp .6s ease both; }
 
+/* ========== HOURS BAR (horario extendido como ventaja competitiva) ========== */
+.hours-bar {
+  background: linear-gradient(90deg, var(--brand-deep-soft) 0%, #ffffff 100%);
+  border-bottom: 1px solid var(--ink-100);
+  font-family: var(--font-body);
+  padding: 9px 0;
+  font-size: 13.5px;
+  color: var(--ink-700);
+}
+.hours-bar-inner {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  flex-wrap: wrap;
+}
+.hours-bar .hb-led {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #16A34A;
+  box-shadow: 0 0 0 4px rgba(22,163,74,.18);
+  animation: pulse-led 2.2s ease-in-out infinite;
+  display: inline-block;
+}
+@keyframes pulse-led {
+  0%,100% { box-shadow: 0 0 0 4px rgba(22,163,74,.20); }
+  50%     { box-shadow: 0 0 0 8px rgba(22,163,74,0); }
+}
+.hours-bar .hb-label {
+  font-weight: 700; color: #15803D;
+  font-family: var(--font-display);
+  letter-spacing: -0.005em;
+}
+.hours-bar .hb-sep, .hours-bar .hb-dot { color: var(--ink-400); }
+.hours-bar .hb-text strong { color: var(--ink-900); font-weight: 700; }
+.hours-bar .hb-tag {
+  margin-left: 6px;
+  background: var(--brand-deep);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 11px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: .08em;
+  padding: 4px 9px;
+  border-radius: var(--radius-pill);
+}
+@media (max-width: 720px) {
+  .hours-bar { font-size: 12.5px; padding: 8px 0; }
+  .hours-bar .hb-tag { font-size: 10px; padding: 3px 7px; }
+  .hours-bar-inner { gap: 7px; }
+  .hours-bar .hb-sep { display: none; }
+}
+@media (max-width: 480px) {
+  .hours-bar .hb-label { width: 100%; text-align: center; }
+  .hours-bar .hb-led { display: none; }
+}
+
 /* ========== ALERT BAR (SAMU 131) ========== */
 .alert-bar {
   background: linear-gradient(90deg, #DC2626 0%, #B91C1C 100%);
@@ -1244,31 +1296,134 @@ section.compact { padding: 64px 0; }
 /* ========== LOCATION ========== */
 .location { background: white; }
 .loc-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: stretch;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: start;
 }
-.loc-info { display: flex; flex-direction: column; gap: 20px; }
+.loc-info { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+/* Card base interactiva */
 .loc-card {
-  padding: 24px;
-  background: var(--ink-50);
+  position: relative;
+  padding: 22px 22px 24px;
+  background: var(--paper);
   border-radius: var(--radius);
   border: 1px solid var(--ink-100);
-  display: flex; gap: 16px; align-items: flex-start;
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  transition: transform .25s, box-shadow .25s, border-color .25s;
+  overflow: hidden;
 }
+.loc-card::before {
+  content: '';
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: var(--brand-deep);
+  transition: width .25s;
+}
+.loc-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-sm);
+  border-color: var(--brand-deep);
+}
+.loc-card:hover::before { width: 6px; }
+
 .loc-card .ico {
   width: 44px; height: 44px;
   border-radius: 12px;
   background: var(--brand-deep-soft);
   color: var(--brand-deep);
   display: grid; place-items: center;
-  flex-shrink: 0;
+  margin-bottom: 14px;
+  transition: transform .25s, background .25s;
 }
+.loc-card:hover .ico { transform: scale(1.06); }
+
 .loc-card h3 {
   font-family: var(--font-display); font-weight: 800;
   font-size: 15px; color: var(--ink-900);
+  margin-bottom: 6px;
+}
+.loc-card p { font-size: 14px; color: var(--ink-600); line-height: 1.5; margin: 0; }
+.loc-card .strong-line { color: var(--ink-900); font-weight: 700; }
+.loc-card .arrow-cta {
+  display: inline-flex; align-items: center; gap: 4px;
+  margin-top: 10px;
+  font-size: 13px; font-weight: 700;
+  color: var(--brand-deep);
+  font-family: var(--font-display);
+}
+.loc-card .arrow-cta::after {
+  content: "→"; transition: transform .2s;
+}
+.loc-card:hover .arrow-cta::after { transform: translateX(3px); }
+
+/* Variantes por color */
+.loc-card.is-wa::before { background: #25d366; }
+.loc-card.is-wa:hover { border-color: #25d366; }
+.loc-card.is-wa .ico { background: rgba(37,211,102,.12); color: #1da851; }
+.loc-card.is-wa .arrow-cta { color: #1da851; }
+.loc-card.is-phone::before { background: var(--brand-teal-ink); }
+.loc-card.is-phone:hover { border-color: var(--brand-teal); }
+.loc-card.is-phone .ico { background: var(--brand-teal-soft); color: var(--brand-teal-ink); }
+.loc-card.is-phone .arrow-cta { color: var(--brand-teal-ink); }
+
+/* Card de horarios destacada (full-width, con grid de días) */
+.loc-card-hours {
+  grid-column: 1 / -1;
+  padding: 22px 24px 24px;
+}
+.loc-card-hours .hours-badge {
+  position: absolute; top: 18px; right: 18px;
+  font-family: var(--font-display);
+  font-size: 10.5px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: .08em;
+  color: var(--brand-deep);
+  background: var(--brand-deep-soft);
+  padding: 5px 10px; border-radius: var(--radius-pill);
+}
+.loc-card-hours .hours-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-top: 14px;
+}
+.loc-card-hours .hours-grid .day {
+  text-align: center;
+  background: var(--ink-50);
+  border-radius: 10px;
+  padding: 8px 4px;
+  border: 1px solid transparent;
+  transition: border-color .2s;
+}
+.loc-card-hours .hours-grid .day.open { background: var(--brand-deep-soft); }
+.loc-card-hours .hours-grid .day.closed { opacity: .55; }
+.loc-card-hours .hours-grid .day.today { border-color: var(--brand-deep); box-shadow: 0 0 0 2px rgba(17,114,171,.12); }
+.loc-card-hours .hours-grid .d-name {
+  font-family: var(--font-display);
+  font-size: 11px; font-weight: 700;
+  color: var(--ink-700);
+  text-transform: uppercase; letter-spacing: .04em;
   margin-bottom: 4px;
 }
-.loc-card p { font-size: 14px; color: var(--ink-600); line-height: 1.5; }
-.loc-card a { color: var(--brand-deep); font-weight: 600; }
+.loc-card-hours .hours-grid .d-time {
+  font-size: 10.5px; color: var(--ink-500); font-weight: 600;
+  white-space: nowrap;
+}
+.loc-card-hours .hours-grid .day.open .d-time { color: var(--brand-deep); }
+.loc-card-hours .hours-foot {
+  margin-top: 12px;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12.5px; color: var(--ink-600);
+}
+.loc-card-hours .hours-foot strong { color: var(--ink-900); }
+
+@media (max-width: 720px) {
+  .loc-info { grid-template-columns: 1fr; }
+  .loc-card-hours .hours-grid { grid-template-columns: repeat(7, 1fr); gap: 3px; }
+  .loc-card-hours .hours-grid .day { padding: 7px 2px; }
+  .loc-card-hours .hours-grid .d-name { font-size: 10px; }
+  .loc-card-hours .hours-grid .d-time { font-size: 9.5px; }
+}
 .loc-map {
   border-radius: var(--radius-lg);
   overflow: hidden;
@@ -1366,6 +1521,59 @@ section.compact { padding: 64px 0; }
   transition: color .15s;
 }
 .footer-col a:hover { color: white; }
+
+/* Lista de contacto con iconos + jerarquía */
+.ft-contact-list { display: flex; flex-direction: column; gap: 14px; }
+.ft-contact-list li {
+  display: flex; gap: 12px; align-items: flex-start;
+  margin-bottom: 0;
+}
+.ft-contact-list .ft-ico {
+  width: 32px; height: 32px;
+  border-radius: 9px;
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.85);
+  display: grid; place-items: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.ft-contact-list a {
+  display: block; line-height: 1.35;
+  color: rgba(255,255,255,0.85);
+}
+.ft-contact-list a:hover { color: #fff; }
+.ft-contact-list a strong, .ft-contact-list strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 13.5px; font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.005em;
+}
+.ft-contact-list .ft-line2 {
+  font-size: 13px;
+  color: rgba(255,255,255,0.62);
+}
+.ft-contact-list .ft-hours-block > div { flex: 1; }
+.ft-hours-row {
+  display: flex; justify-content: space-between; gap: 10px;
+  padding: 5px 0;
+  font-size: 12.5px;
+  color: rgba(255,255,255,0.7);
+  border-bottom: 1px dashed rgba(255,255,255,0.10);
+}
+.ft-hours-row:last-child { border-bottom: 0; }
+.ft-hours-row span:last-child {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: rgba(255,255,255,0.92);
+  white-space: nowrap;
+}
+.ft-hours-closed span:last-child {
+  color: rgba(252,165,165,0.78);
+}
+.ft-contact-list .ft-hours-block strong {
+  margin-bottom: 4px;
+}
 .footer-foot {
   border-top: 1px solid rgba(255,255,255,0.08);
   padding-top: 28px;
@@ -1855,6 +2063,21 @@ section.compact { padding: 64px 0; }
 <!-- ALERT BAR (SAMU) -->
 <div class="alert-bar" role="alert">
   <strong>Emergencias:</strong> llama al SAMU <a href="tel:131">131</a> · No somos servicio de urgencias
+</div>
+
+<!-- HOURS BAR — ventaja competitiva: horario extendido -->
+<div class="hours-bar" aria-label="Horario de atención">
+  <div class="container hours-bar-inner">
+    <span class="hb-led" aria-hidden="true"></span>
+    <span class="hb-label">Atendiendo ahora</span>
+    <span class="hb-sep">·</span>
+    <span class="hb-text">
+      <strong>Lun–Vie 08:00 – 21:00</strong>
+      <span class="hb-dot">·</span>
+      <strong>Sáb 09:00 – 14:00</strong>
+    </span>
+    <span class="hb-tag">Horario extendido</span>
+  </div>
 </div>
 
 <!-- NAV -->
@@ -2712,34 +2935,47 @@ section.compact { padding: 64px 0; }
     </div>
     <div class="loc-grid">
       <div class="loc-info">
-        <div class="loc-card">
-          <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
-          <div>
-            <h3>Dirección</h3>
-            <p>República 102, Carampangue<br>Provincia de Arauco · Región del Biobío</p>
-          </div>
-        </div>
-        <div class="loc-card">
+        <!-- Card horarios destacada con grid visual de días -->
+        <div class="loc-card loc-card-hours">
+          <span class="hours-badge">Horario extendido</span>
           <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
-          <div>
-            <h3>Horarios</h3>
-            <p>Lunes a Viernes: 08:00 – 21:00<br>Sábado: 09:00 – 14:00<br>Domingo: cerrado</p>
+          <h3>Horarios de atención</h3>
+          <p>Lunes a viernes <strong class="strong-line">08:00 – 21:00</strong> · Sábado <strong class="strong-line">09:00 – 14:00</strong></p>
+          <div class="hours-grid" id="hoursGrid">
+            <div class="day open" data-d="1"><div class="d-name">Lun</div><div class="d-time">08–21</div></div>
+            <div class="day open" data-d="2"><div class="d-name">Mar</div><div class="d-time">08–21</div></div>
+            <div class="day open" data-d="3"><div class="d-name">Mié</div><div class="d-time">08–21</div></div>
+            <div class="day open" data-d="4"><div class="d-name">Jue</div><div class="d-time">08–21</div></div>
+            <div class="day open" data-d="5"><div class="d-name">Vie</div><div class="d-time">08–21</div></div>
+            <div class="day open" data-d="6"><div class="d-name">Sáb</div><div class="d-time">09–14</div></div>
+            <div class="day closed" data-d="0"><div class="d-name">Dom</div><div class="d-time">Cerrado</div></div>
+          </div>
+          <div class="hours-foot">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#16A34A" aria-hidden="true"><path d="M12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26z"/></svg>
+            <span>Pocos centros médicos en la zona atienden hasta las 21:00 — <strong>nosotros sí</strong>.</span>
           </div>
         </div>
-        <div class="loc-card">
+
+        <a class="loc-card" href="https://maps.google.com/?cid=10513149036960472838" target="_blank" rel="noopener">
+          <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+          <h3>Dirección</h3>
+          <p><span class="strong-line">República 102, Carampangue</span><br>Provincia de Arauco · Región del Biobío</p>
+          <span class="arrow-cta">Cómo llegar</span>
+        </a>
+
+        <a class="loc-card is-phone" href="tel:+56442965226">
           <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
-          <div>
-            <h3>Teléfono fijo</h3>
-            <p><a href="tel:+56442965226">(44) 296 5226</a></p>
-          </div>
-        </div>
-        <div class="loc-card">
-          <div class="ico" style="background: #DCFCE7; color: #16A34A;"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.8-.8-1.4-1.7-1.5-2-.2-.3 0-.4.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 2-1.4.2-.6.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.4 5L2 22l5.1-1.3c1.4.8 3 1.3 4.9 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2"/></svg></div>
-          <div>
-            <h3>WhatsApp</h3>
-            <p><a href="https://wa.me/56966610737">+56 9 6661 0737</a> · Respuesta en minutos</p>
-          </div>
-        </div>
+          <h3>Llamar al fijo</h3>
+          <p><span class="strong-line">(44) 296 5226</span><br>Recepción · Lun a Sáb</p>
+          <span class="arrow-cta">Llamar ahora</span>
+        </a>
+
+        <a class="loc-card is-wa" href="https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20una%20hora." target="_blank" rel="noopener" style="grid-column: 1 / -1;">
+          <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.8-.8-1.4-1.7-1.5-2-.2-.3 0-.4.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 2-1.4.2-.6.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.4 5L2 22l5.1-1.3c1.4.8 3 1.3 4.9 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2"/></svg></div>
+          <h3>Agendar por WhatsApp</h3>
+          <p><span class="strong-line">+56 9 6661 0737</span> · Respuesta en minutos · Confirmación inmediata</p>
+          <span class="arrow-cta">Escribir ahora</span>
+        </a>
       </div>
       <div class="loc-map">
         <iframe
@@ -2816,13 +3052,30 @@ section.compact { padding: 64px 0; }
           <li><a href="/privacidad">Política de privacidad</a></li>
         </ul>
       </div>
-      <div class="footer-col">
+      <div class="footer-col footer-col-contact">
         <h4>Contacto</h4>
-        <ul>
-          <li><a href="tel:+56442965226">(44) 296 5226</a></li>
-          <li><a href="https://wa.me/56966610737">WhatsApp +56 9 6661 0737</a></li>
-          <li>República 102, Carampangue</li>
-          <li>Lun–Vie 08:00–21:00 · Sáb 09:00–14:00</li>
+        <ul class="ft-contact-list">
+          <li>
+            <span class="ft-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.8-.8-1.4-1.7-1.5-2-.2-.3 0-.4.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 2-1.4.2-.6.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.4 5L2 22l5.1-1.3c1.4.8 3 1.3 4.9 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2"/></svg></span>
+            <a href="https://wa.me/56966610737" target="_blank" rel="noopener"><strong>WhatsApp</strong><br><span class="ft-line2">+56 9 6661 0737</span></a>
+          </li>
+          <li>
+            <span class="ft-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span>
+            <a href="tel:+56442965226"><strong>Teléfono fijo</strong><br><span class="ft-line2">(44) 296 5226</span></a>
+          </li>
+          <li>
+            <span class="ft-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
+            <a href="https://maps.google.com/?cid=10513149036960472838" target="_blank" rel="noopener"><strong>República 102</strong><br><span class="ft-line2">Carampangue · Arauco</span></a>
+          </li>
+          <li class="ft-hours-block">
+            <span class="ft-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
+            <div>
+              <strong>Horarios</strong>
+              <div class="ft-hours-row"><span>Lun – Vie</span><span>08:00 – 21:00</span></div>
+              <div class="ft-hours-row"><span>Sábado</span><span>09:00 – 14:00</span></div>
+              <div class="ft-hours-row ft-hours-closed"><span>Domingo</span><span>Cerrado</span></div>
+            </div>
+          </li>
         </ul>
       </div>
     </div>
@@ -2945,6 +3198,15 @@ section.compact { padding: 64px 0; }
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !modal.hidden) closeBooking();
   });
+
+  // ========== Resaltar día actual en grid de horarios ==========
+  (function highlightToday(){
+    const grid = document.getElementById('hoursGrid');
+    if (!grid) return;
+    const todayDow = new Date().getDay(); // 0=Dom, 1=Lun, ... 6=Sáb
+    const todayCell = grid.querySelector(`.day[data-d="${todayDow}"]`);
+    if (todayCell) todayCell.classList.add('today');
+  })();
 
   // ========== WhatsApp float (visible after scroll 200px) ==========
   const waFloat = document.getElementById('waFloat');
