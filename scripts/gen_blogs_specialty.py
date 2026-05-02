@@ -274,7 +274,7 @@ ORT_BODY = f'''
         <p>La ortodoncia es la rama de la odontología que corrige la posición de los dientes y los huesos de la mandíbula. Mejora la mordida, la masticación, la salud dental a largo plazo y, por supuesto, la sonrisa.</p>
         <p>En el CMC ofrecemos tratamiento con <strong>brackets metálicos tradicionales</strong> y seguimiento mes a mes con la <strong>Dra. Daniela Castillo</strong>, ortodoncista que viene desde Concepción a coordinar fechas según demanda.</p>
 
-        {callout_info('<strong>El proceso parte siempre con tu dentista general</strong>: ella te evalúa, indica radiografías y, si todo está OK, te deriva a la ortodoncista. Esto evita problemas (caries, encías) que comprometan el tratamiento.')}
+        {callout_info('<strong>El proceso parte siempre con tu dentista general</strong>: ella te evalúa, indica radiografías y, si todo está OK, te deriva a la ortodoncista. Esto evita problemas (caries, encías inflamadas) que comprometan el tratamiento.')}
 
         <h2>¿Cuándo necesitas <em>ortodoncia</em>?</h2>
         <div class="symptom-grid">
