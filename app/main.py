@@ -413,6 +413,10 @@ _META_DASHBOARD_HTML = (_TEMPLATE_DIR / "meta_dashboard.html").read_text(encodin
 _HORIZONTE_DASHBOARD_HTML = (_TEMPLATE_DIR / "horizonte_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "horizonte_dashboard.html").exists() else ""
 _PRIVACIDAD_HTML = (_TEMPLATE_DIR / "privacidad.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "privacidad.html").exists() else ""
 _PROFESIONALES_CMC_HTML = (_TEMPLATE_DIR / "profesionales_cmc.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "profesionales_cmc.html").exists() else ""
+_TRAUMATOLOGO_CURANILAHUE_HTML = (_TEMPLATE_DIR / "traumatologo-curanilahue.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "traumatologo-curanilahue.html").exists() else ""
+_OTORRINO_CURANILAHUE_HTML = (_TEMPLATE_DIR / "otorrino-curanilahue.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "otorrino-curanilahue.html").exists() else ""
+_GINECOLOGO_CURANILAHUE_HTML = (_TEMPLATE_DIR / "ginecologo-curanilahue.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "ginecologo-curanilahue.html").exists() else ""
+_DENTISTA_CURANILAHUE_HTML = (_TEMPLATE_DIR / "dentista-curanilahue.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "dentista-curanilahue.html").exists() else ""
 
 
 # ── Endpoints ────────────────────────────────────────────────────────────────
@@ -448,6 +452,30 @@ async def health():
 def landing():
     """Landing page SEO del Centro Médico Carampangue."""
     return _LANDING_HTML
+
+
+@app.get("/traumatologo-curanilahue", response_class=HTMLResponse)
+def traumatologo_curanilahue():
+    """Landing SEO — Traumatólogo en Curanilahue."""
+    return _TRAUMATOLOGO_CURANILAHUE_HTML
+
+
+@app.get("/otorrino-curanilahue", response_class=HTMLResponse)
+def otorrino_curanilahue():
+    """Landing SEO — Otorrinolaringólogo en Curanilahue."""
+    return _OTORRINO_CURANILAHUE_HTML
+
+
+@app.get("/ginecologo-curanilahue", response_class=HTMLResponse)
+def ginecologo_curanilahue():
+    """Landing SEO — Ginecólogo en Curanilahue."""
+    return _GINECOLOGO_CURANILAHUE_HTML
+
+
+@app.get("/dentista-curanilahue", response_class=HTMLResponse)
+def dentista_curanilahue():
+    """Landing SEO — Dentista en Curanilahue."""
+    return _DENTISTA_CURANILAHUE_HTML
 
 
 @app.get("/sitio", response_class=HTMLResponse)

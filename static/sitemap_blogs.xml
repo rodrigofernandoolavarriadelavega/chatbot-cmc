@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Landings de especialidad originales -->
   <url>
     <loc>https://centromedicocarampangue.cl/blog/cardiologia</loc>
     <lastmod>2026-05-02</lastmod>
@@ -40,6 +41,98 @@
     <loc>https://centromedicocarampangue.cl/blog/ortodoncia</loc>
     <lastmod>2026-05-02</lastmod>
     <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <!-- Nuevas landings Curanilahue -->
+  <url>
+    <loc>https://centromedicocarampangue.cl/traumatologo-curanilahue</loc>
+    <lastmod>2026-05-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://centromedicocarampangue.cl/otorrino-curanilahue</loc>
+    <lastmod>2026-05-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://centromedicocarampangue.cl/ginecologo-curanilahue</loc>
+    <lastmod>2026-05-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://centromedicocarampangue.cl/dentista-curanilahue</loc>
+    <lastmod>2026-05-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <!-- Nuevos posts long-tail -->
+  <url>
+    <loc>https://centromedicocarampangue.cl/blog/precio-ortodoncia-arauco</loc>
+    <lastmod>2026-05-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://centromedicocarampangue.cl/blog/precio-implante-dental-arauco</loc>
+    <lastmod>2026-05-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://centromedicocarampangue.cl/blog/dolor-lumbar-cuando-consultar</loc>
+    <lastmod>2026-05-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://centromedicocarampangue.cl/blog/cefalea-tipos-tratamiento</loc>
+    <lastmod>2026-05-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://centromedicocarampangue.cl/blog/embarazo-controles-mensuales</loc>
+    <lastmod>2026-05-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://centromedicocarampangue.cl/blog/rinoplastia-funcional-tabique</loc>
+    <lastmod>2026-05-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://centromedicocarampangue.cl/blog/diabetes-tipo-2-control</loc>
+    <lastmod>2026-05-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://centromedicocarampangue.cl/blog/hipertension-arterial-control</loc>
+    <lastmod>2026-05-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://centromedicocarampangue.cl/blog/psicologia-infantil-cuando-consultar</loc>
+    <lastmod>2026-05-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://centromedicocarampangue.cl/blog/nutricion-baja-peso-saludable</loc>
+    <lastmod>2026-05-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://centromedicocarampangue.cl/blog/vacunas-pni-calendario-2026</loc>
+    <lastmod>2026-05-02</lastmod>
+    <changefreq>yearly</changefreq>
     <priority>0.8</priority>
   </url>
 </urlset>
