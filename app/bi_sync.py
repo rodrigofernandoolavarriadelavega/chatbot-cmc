@@ -37,7 +37,9 @@ import logging
 log = logging.getLogger("bot")
 
 ATEN_URL = f"{MEDILINK_BASE_URL}/atenciones"
+PAGOS_URL = f"{MEDILINK_BASE_URL}/pagos"
 SYNC_LOCK = asyncio.Lock()
+PAGOS_LOCK = asyncio.Lock()
 
 
 def _month_chunks(desde: date, hasta: date):
@@ -304,6 +306,7 @@ def stats_profesional(id_profesional: int, desde: str = "2024-01-01") -> dict:
             proyeccion[key] = {"atend": est, "ingreso": round(est * tarifa_real)}
 
     prof_info = PROFESIONALES.get(id_profesional, {})
+    # NOTA: post-procesado en main.py inyecta caja_real por mes desde bi_pagos_caja
     return {
         "fecha_actualizacion": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "fuente": "bi_atenciones (Medilink × validación cobrado)",
@@ -331,3 +334,188 @@ def stats_profesional(id_profesional: int, desde: str = "2024-01-01") -> dict:
             "n_meses": n_meses,
         },
     }
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# /pagos sync — fuente PRIMARIA de ingreso real (módulo Cajas Medilink)
+# ════════════════════════════════════════════════════════════════════════════
+
+async def _fetch_pagos_dia(cli: httpx.AsyncClient, fecha: str) -> AsyncIterator[list[dict]]:
+    """Pagina /pagos?q={fecha_recepcion:eq fecha}."""
+    q = {"fecha_recepcion": {"eq": fecha}}
+    pq = {"q": json.dumps(q, separators=(",", ":"))}
+    next_url: str | None = PAGOS_URL
+    first = True
+    while next_url:
+        for attempt in range(12):
+            try:
+                if first:
+                    r = await cli.get(next_url, params=pq, headers=HEADERS)
+                else:
+                    r = await cli.get(next_url, headers=HEADERS)
+            except Exception as e:
+                log.warning("pagos %s attempt=%d excepción: %s", fecha, attempt, e)
+                await asyncio.sleep(min(60, 3 + attempt * 5))
+                continue
+            if r.status_code == 200:
+                d = r.json()
+                yield d.get("data", []) or []
+                links = d.get("links", {}) if isinstance(d, dict) else {}
+                next_url = links.get("next")
+                first = False
+                break
+            if r.status_code == 429:
+                await asyncio.sleep(min(90, 5 + attempt * 8))
+                continue
+            log.warning("pagos %s HTTP %s — abort día", fecha, r.status_code)
+            return
+        else:
+            log.warning("pagos %s sin éxito tras 12 intentos", fecha)
+            return
+        await asyncio.sleep(0.8)
+
+
+def _resolver_profesional_pago(c, pago: dict) -> tuple[int | None, int | None]:
+    """Cruza un pago contra bi_atenciones para inferir id_profesional.
+    Reglas:
+    1. Si en (id_paciente, fecha) hay 1 sola atención → ese profesional
+    2. Si hay varias → matchear por monto (atención.total == pago.monto)
+    3. Si igual hay ambigüedad → la primera con menor abs(total - monto)
+    Retorna (id_profesional, atencion_id) o (None, None)."""
+    pid = pago.get("id_paciente")
+    fecha = pago.get("fecha_recepcion") or pago.get("fecha")
+    monto = pago.get("monto_pago") or 0
+    if not pid or not fecha:
+        return None, None
+    rows = c.execute(
+        "SELECT atencion_id, id_profesional, total FROM bi_atenciones "
+        "WHERE id_paciente=? AND fecha=?", (pid, fecha[:10])
+    ).fetchall()
+    if not rows:
+        return None, None
+    if len(rows) == 1:
+        return rows[0]["id_profesional"], rows[0]["atencion_id"]
+    # Múltiples atenciones mismo día: matchear por monto
+    rows_ranked = sorted(rows, key=lambda r: abs((r["total"] or 0) - monto))
+    return rows_ranked[0]["id_profesional"], rows_ranked[0]["atencion_id"]
+
+
+def _upsert_pagos(records: list[dict]) -> tuple[int, int]:
+    """Upsert pagos a bi_pagos_caja con id_profesional resuelto via cruce.
+    Retorna (n_pagos_guardados, n_sin_profesional)."""
+    if not records:
+        return 0, 0
+    n_ok = 0
+    n_sin_prof = 0
+    with _bi_conn() as c:
+        for p in records:
+            pago_id = p.get("id")
+            if not pago_id:
+                continue
+            id_prof, atencion_id = _resolver_profesional_pago(c, p)
+            if id_prof is None:
+                n_sin_prof += 1
+            c.execute("""
+                INSERT INTO bi_pagos_caja
+                  (pago_id, atencion_id, fecha, id_profesional, id_paciente,
+                   monto, metodo_pago, n_folio, synced_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                ON CONFLICT(pago_id) DO UPDATE SET
+                  atencion_id=excluded.atencion_id,
+                  fecha=excluded.fecha,
+                  id_profesional=excluded.id_profesional,
+                  id_paciente=excluded.id_paciente,
+                  monto=excluded.monto,
+                  metodo_pago=excluded.metodo_pago,
+                  n_folio=excluded.n_folio,
+                  synced_at=datetime('now')
+            """, (pago_id, atencion_id,
+                   (p.get("fecha_recepcion") or "")[:10], id_prof,
+                   p.get("id_paciente"), p.get("monto_pago"),
+                   p.get("medio_pago"), p.get("numero_referencia")))
+            n_ok += 1
+    return n_ok, n_sin_prof
+
+
+async def sync_pagos_rango(desde: str = "2024-01-01", hasta: str | None = None,
+                            force: bool = False) -> dict:
+    """Sincroniza pagos día por día. Skip incremental si la fecha ya está cacheada
+    (al menos 1 pago para esa fecha)."""
+    async with PAGOS_LOCK:
+        try:
+            d_desde = date.fromisoformat(desde)
+            d_hasta = date.fromisoformat(hasta) if hasta else date.today()
+        except ValueError:
+            return {"ok": False, "error": "fechas inválidas"}
+
+        inicio = datetime.utcnow().isoformat()
+
+        fechas_existentes: set[str] = set()
+        if not force:
+            with _bi_conn() as c:
+                rows = c.execute(
+                    "SELECT DISTINCT fecha FROM bi_pagos_caja WHERE fecha IS NOT NULL"
+                ).fetchall()
+                fechas_existentes = {r[0] for r in rows if r[0]}
+
+        total_pagos = 0
+        total_sin_prof = 0
+        total_dias = 0
+        d = d_desde
+        async with httpx.AsyncClient(timeout=30) as cli:
+            while d <= d_hasta:
+                fiso = d.isoformat()
+                if d.weekday() != 6 and (force or fiso not in fechas_existentes):
+                    log.info("pagos sync %s", fiso)
+                    pagos_dia: list[dict] = []
+                    async for batch in _fetch_pagos_dia(cli, fiso):
+                        pagos_dia.extend(batch)
+                    if pagos_dia:
+                        n_ok, n_sin = _upsert_pagos(pagos_dia)
+                        total_pagos += n_ok
+                        total_sin_prof += n_sin
+                        total_dias += 1
+                    await asyncio.sleep(1.0)  # entre días
+                d += timedelta(days=1)
+
+        fin = datetime.utcnow().isoformat()
+        log_bi_sync("pagos", 0, f"{desde}..{hasta or date.today()}",
+                    inicio, fin, total_pagos, total_sin_prof, True)
+        log.info("pagos sync done: dias=%d pagos=%d sin_prof=%d",
+                 total_dias, total_pagos, total_sin_prof)
+        return {"ok": True, "dias": total_dias, "pagos": total_pagos,
+                "sin_profesional": total_sin_prof}
+
+
+def stats_profesional_caja(id_profesional: int, desde: str = "2024-01-01") -> dict:
+    """Sumas mensuales de bi_pagos_caja para un profesional. Ese es el INGRESO REAL
+    al CMC (módulo Cajas Medilink)."""
+    from collections import defaultdict
+    with _bi_conn() as c:
+        rows = c.execute("""
+            SELECT fecha, SUM(monto) AS total, COUNT(*) AS n,
+                   GROUP_CONCAT(DISTINCT metodo_pago) AS medios
+            FROM bi_pagos_caja
+            WHERE id_profesional=? AND fecha>=?
+            GROUP BY fecha
+            ORDER BY fecha
+        """, (id_profesional, desde)).fetchall()
+
+    por_mes = defaultdict(lambda: {"caja": 0, "n_pagos": 0})
+    total_caja = 0
+    total_pagos = 0
+    for r in rows:
+        m = (r["fecha"] or "")[:7]
+        if not m:
+            continue
+        por_mes[m]["caja"] += int(r["total"] or 0)
+        por_mes[m]["n_pagos"] += int(r["n"] or 0)
+        total_caja += int(r["total"] or 0)
+        total_pagos += int(r["n"] or 0)
+
+    return {
+        "por_mes": dict(por_mes),
+        "total_caja": total_caja,
+        "total_pagos": total_pagos,
+    }
+

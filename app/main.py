@@ -1615,11 +1615,12 @@ def profesional_dashboard_page(id_prof: int):
 @app.get("/api/profesional/{id_prof}/data")
 async def api_profesional_data(id_prof: int, desde: str = "2024-01-01",
                                 refresh: int = 0):
-    """KPIs unificados por profesional. Lee de bi_atenciones (BI v2 in-VPS).
-    refresh=1 dispara sync incremental en background antes de devolver."""
-    from bi_sync import sync_profesional, stats_profesional
+    """KPIs por profesional. Mezcla:
+    - bi_atenciones (volumen + facturado total)
+    - bi_pagos_caja (CAJA REAL — fuente primaria de ingreso, igual a Medilink Cajas)
+    """
+    from bi_sync import sync_profesional, stats_profesional, stats_profesional_caja
     from session import _conn as _c_p
-    # Si tabla vacía o refresh, kickoff sync en background
     with _c_p() as c:
         n_rows = c.execute(
             "SELECT COUNT(*) FROM bi_atenciones WHERE id_profesional=?", (id_prof,)
@@ -1629,16 +1630,44 @@ async def api_profesional_data(id_prof: int, desde: str = "2024-01-01",
         asyncio.create_task(sync_profesional(id_prof, desde=desde))
     elif refresh:
         asyncio.create_task(sync_profesional(id_prof, desde=desde, force=False))
-    return stats_profesional(id_prof, desde=desde)
+
+    base = stats_profesional(id_prof, desde=desde)
+    caja = stats_profesional_caja(id_prof, desde=desde)
+
+    # Inyectar caja real por mes en por_mes
+    for m, v in base["por_mes"].items():
+        c = caja["por_mes"].get(m, {})
+        v["caja_real"] = c.get("caja", 0)
+        v["n_pagos"] = c.get("n_pagos", 0)
+
+    # KPIs caja real
+    n_meses = base["kpis"]["n_meses"]
+    base["kpis"]["caja_real_total"] = caja["total_caja"]
+    base["kpis"]["caja_real_avg_mes"] = round(caja["total_caja"] / n_meses) if n_meses else 0
+    base["kpis"]["n_pagos_total"] = caja["total_pagos"]
+    # Cobertura caja/facturado
+    fac = base["kpis"]["total_facturado"]
+    base["kpis"]["cobertura_caja_pct"] = round(100 * caja["total_caja"] / fac, 1) if fac else 0
+    base["fuente"] = "bi_atenciones (volumen) + bi_pagos_caja (CAJA REAL)"
+    return base
 
 
 @app.post("/api/profesional/{id_prof}/sync")
 async def api_profesional_sync(id_prof: int, desde: str = "2024-01-01",
                                 force: int = 0):
-    """Dispara sync manual en background."""
+    """Dispara sync manual de atenciones en background."""
     from bi_sync import sync_profesional
     asyncio.create_task(sync_profesional(id_prof, desde=desde, force=bool(force)))
     return {"started": True, "id_profesional": id_prof, "desde": desde, "force": bool(force)}
+
+
+@app.post("/api/bi/sync-pagos")
+async def api_bi_sync_pagos(desde: str = "2024-01-01", hasta: str | None = None,
+                              force: int = 0):
+    """Dispara sync de /pagos a bi_pagos_caja (fuente primaria caja real)."""
+    from bi_sync import sync_pagos_rango
+    asyncio.create_task(sync_pagos_rango(desde=desde, hasta=hasta, force=bool(force)))
+    return {"started": True, "desde": desde, "hasta": hasta or "today", "force": bool(force)}
 
 
 @app.get("/api/profesionales")

@@ -105,15 +105,15 @@
         <div class="kpi-num" id="kpiAvgMes">—</div>
         <div class="kpi-sub">atend/mes</div>
       </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Ingreso real avg/mes</div>
-        <div class="kpi-num" id="kpiIngMes">—</div>
-        <div class="kpi-sub">CLP cobrado</div>
+      <div class="kpi-card" style="background:linear-gradient(180deg,#FFFFFF 0%, #F5F1E8 100%); border-color:rgba(184,109,63,.4)">
+        <div class="kpi-label" style="color:var(--cobre)">CAJA real avg/mes</div>
+        <div class="kpi-num" id="kpiCajaMes" style="color:var(--cobre)">—</div>
+        <div class="kpi-sub">igual a módulo Cajas Medilink</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Total cobrado histórico</div>
-        <div class="kpi-num" id="kpiTotalCob">—</div>
-        <div class="kpi-sub" id="kpiTotalCobSub">CLP</div>
+        <div class="kpi-label">Caja real total histórica</div>
+        <div class="kpi-num" id="kpiCajaTotal">—</div>
+        <div class="kpi-sub" id="kpiCajaTotalSub">CLP cobrado · n pagos</div>
       </div>
     </div>
   </section>
@@ -196,9 +196,9 @@ function render(){
   document.getElementById("kpiTotalAtend").textContent = k.total_atend;
   document.getElementById("kpiTotalAtendSub").textContent = `${k.dias_con_atencion} días trabajados`;
   document.getElementById("kpiAvgMes").textContent = k.atend_avg_mes;
-  document.getElementById("kpiIngMes").textContent = moneda(k.ing_avg_mes);
-  document.getElementById("kpiTotalCob").textContent = moneda(k.total_cobrado);
-  document.getElementById("kpiTotalCobSub").textContent = `de ${moneda(k.total_facturado)} facturado`;
+  document.getElementById("kpiCajaMes").textContent = moneda(k.caja_real_avg_mes||0);
+  document.getElementById("kpiCajaTotal").textContent = moneda(k.caja_real_total||0);
+  document.getElementById("kpiCajaTotalSub").textContent = `${k.n_pagos_total||0} pagos · ${k.cobertura_caja_pct||0}% del facturado`;
 
   renderChartMes();
   renderTablaMes();
@@ -215,7 +215,7 @@ function renderChartMes(){
   const labels = [...meses, ...proyMeses];
   const real = meses.map(m => DATA.por_mes[m].atend).concat(proyMeses.map(_ => null));
   const proyVals = meses.map(_ => null).concat(proyMeses.map(m => proy[m].atend));
-  const ingreso = meses.map(m => DATA.por_mes[m].monto_cobrado).concat(proyMeses.map(m => proy[m].ingreso));
+  const ingreso = meses.map(m => DATA.por_mes[m].caja_real || 0).concat(proyMeses.map(m => proy[m].ingreso));
 
   const ctx = document.getElementById("chartMes").getContext("2d");
   if(window._chMes) window._chMes.destroy();
@@ -224,7 +224,7 @@ function renderChartMes(){
     data:{ labels, datasets:[
       { label:"Atendidos (real)", data:real, backgroundColor:"rgba(184,109,63,.85)", yAxisID:"y" },
       { label:"Atendidos (proyección)", data:proyVals, backgroundColor:"rgba(91,139,150,.55)", yAxisID:"y" },
-      { label:"Ingreso CLP cobrado", data:ingreso, type:"line", borderColor:"#1F3340", backgroundColor:"transparent", borderDash:[4,4], yAxisID:"y1", tension:.25, pointRadius:3 },
+      { label:"CAJA REAL CLP", data:ingreso, type:"line", borderColor:"#B86D3F", backgroundColor:"transparent", borderWidth:2, yAxisID:"y1", tension:.25, pointRadius:3 },
     ]},
     options:{ responsive:true, plugins:{ legend:{ labels:{ font:{family:"IBM Plex Mono", size:10} } } },
       scales:{ y:{ beginAtZero:true, title:{ display:true, text:"Atendidos" } },
@@ -235,16 +235,19 @@ function renderChartMes(){
 function renderTablaMes(){
   const tbody = document.querySelector("#tablaMes tbody");
   const meses = Object.keys(DATA.por_mes).sort();
+  // reescribo el header para reflejar caja real
+  document.querySelector("#tablaMes thead").innerHTML = '<tr><th>Mes</th><th>Atend.</th><th>Facturado</th><th>CAJA REAL</th><th>Δ no entró caja</th><th>Pagos</th></tr>';
   let html = "";
   for(const m of meses){
     const v = DATA.por_mes[m];
-    const delta = v.monto_total - v.monto_cobrado;
+    const caja = v.caja_real || 0;
+    const delta = (v.monto_total||0) - caja;
     const dCls = delta > 0 ? "neg" : "";
-    html += `<tr><td class="mono">${m}</td><td>${v.atend}</td><td>${v.atend_pagadas}</td><td class="mono">${clp(v.monto_total)}</td><td class="mono">${clp(v.monto_cobrado)}</td><td class="mono ${dCls}">${delta>0?'-':''}${clp(delta)}</td></tr>`;
+    html += `<tr><td class="mono">${m}</td><td>${v.atend}</td><td class="mono">${clp(v.monto_total)}</td><td class="mono pos"><strong>${clp(caja)}</strong></td><td class="mono ${dCls}">${delta>0?'-':''}${clp(delta)}</td><td>${v.n_pagos||0}</td></tr>`;
   }
   const proy = DATA.proyeccion || {};
   for(const m of Object.keys(proy).sort()){
-    html += `<tr class="proy"><td class="mono">${m} · proy</td><td>${proy[m].atend}</td><td>—</td><td class="mono">${clp(proy[m].ingreso)}</td><td class="mono">${clp(proy[m].ingreso)}</td><td>—</td></tr>`;
+    html += `<tr class="proy"><td class="mono">${m} · proy</td><td>${proy[m].atend}</td><td class="mono">${clp(proy[m].ingreso)}</td><td class="mono">${clp(proy[m].ingreso)}</td><td>—</td><td>—</td></tr>`;
   }
   tbody.innerHTML = html;
 }
@@ -319,13 +322,14 @@ function renderLectura(){
   const proyMeses = Object.keys(proy).sort();
   const proyTotal = proyMeses.reduce((s,m) => s + (proy[m].ingreso||0), 0);
   const proy6m = proyMeses.length ? Math.round(proyTotal / proyMeses.length) : 0;
+  const cajaTotal = k.caja_real_total || 0;
+  const fac = k.total_facturado || 0;
+  const gap = fac - cajaTotal;
   const txt = `**${DATA.nombre_profesional}** atendió **${k.total_atend}** pacientes en ${k.n_meses} meses, ` +
     `promedio **${k.atend_avg_mes}/mes** (${k.dias_con_atencion} días trabajados). ` +
-    `Tarifa real cobrada: **${clp(k.tarifa_real_promedio)}** por atención. ` +
-    `Cobertura **${k.cobertura_pct}%** del facturado entra realmente como caja. ` +
-    `Ingreso promedio: **${clp(k.ing_avg_mes)}/mes**. ` +
-    `Total cobrado histórico: **${clp(k.total_cobrado)}** (de ${clp(k.total_facturado)} facturado, gap = ${clp(k.total_facturado - k.total_cobrado)} en atenciones-fantasma). ` +
-    `Proyección 6m: **${clp(proy6m)}/mes** promedio (total ${clp(proyTotal)}).`;
+    `Caja REAL al CMC: **${clp(k.caja_real_avg_mes)}/mes** promedio · histórico **${clp(cajaTotal)}** (${k.n_pagos_total||0} pagos en bi_pagos_caja). ` +
+    `Cobertura **${k.cobertura_caja_pct||0}%** vs facturado total **${clp(fac)}** (gap ${clp(gap)} en bonos/sin cobrar). ` +
+    `Proyección 6m: **${clp(proy6m)}/mes** promedio.`;
   document.getElementById("lectura").innerHTML = txt.replace(/\*\*(.+?)\*\*/g, '<strong style="color:#fff">$1</strong>');
 }
 
