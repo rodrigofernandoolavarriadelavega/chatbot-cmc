@@ -217,14 +217,44 @@ async def _job_olavarria_sync():
 
 
 async def _job_bi_sync_diario():
-    """BI v2: sincroniza atenciones del día anterior + hoy para todos los
-    profesionales. Reemplaza _job_abarca/olavarria progresivamente."""
-    from bi_sync import sync_diario
+    """BI v2: sincroniza atenciones + pagos del día anterior y hoy. Después
+    re-cruza pagos huérfanos por si alguna atención llegó tarde."""
+    from bi_sync import sync_diario, sync_pagos_rango, _resolver_profesional_pago
+    from session import _conn as _c_b
+    from datetime import date, timedelta
     try:
-        r = await sync_diario()
-        log.info("bi_sync_diario done: %s", r)
+        r1 = await sync_diario()
+        log.info("bi_sync_diario atenciones: %s", r1)
     except Exception as e:
-        log.warning("bi_sync_diario fallo: %s", e)
+        log.warning("bi_sync_diario atenciones fallo: %s", e)
+    try:
+        ayer = (date.today() - timedelta(days=1)).isoformat()
+        hoy = date.today().isoformat()
+        r2 = await sync_pagos_rango(desde=ayer, hasta=hoy, force=True)
+        log.info("bi_sync_diario pagos: %s", r2)
+    except Exception as e:
+        log.warning("bi_sync_diario pagos fallo: %s", e)
+    # Re-cross pagos huérfanos (por si la sync de atenciones llenó gaps)
+    try:
+        with _c_b() as c:
+            rows = c.execute(
+                "SELECT pago_id, fecha, id_paciente, monto FROM bi_pagos_caja "
+                "WHERE id_profesional IS NULL AND fecha >= ?",
+                ((date.today() - timedelta(days=14)).isoformat(),)
+            ).fetchall()
+            recovered = 0
+            for r in rows:
+                p = {"id_paciente": r["id_paciente"], "fecha_recepcion": r["fecha"],
+                     "monto_pago": r["monto"]}
+                id_prof, aid = _resolver_profesional_pago(c, p)
+                if id_prof is not None:
+                    c.execute("UPDATE bi_pagos_caja SET id_profesional=?, atencion_id=? "
+                              "WHERE pago_id=?", (id_prof, aid, r["pago_id"]))
+                    recovered += 1
+            log.info("bi_sync_diario re-cross: %d/%d pagos recuperados",
+                     recovered, len(rows))
+    except Exception as e:
+        log.warning("bi_sync_diario re-cross fallo: %s", e)
 
 async def _job_reactivacion():
     await enviar_reactivacion_pacientes(send_whatsapp, send_template_fn=_tpl)
