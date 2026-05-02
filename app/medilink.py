@@ -1601,6 +1601,37 @@ def _calcular_dv_rut(cuerpo: str) -> str:
     return "0" if resto == 11 else ("K" if resto == 10 else str(resto))
 
 
+def hint_rut_error(rut_raw: str) -> str:
+    """Devuelve un mensaje de error descriptivo para un RUT inválido.
+    Si el cuerpo numérico parece válido (7-9 dígitos) pero el DV no cuadra,
+    sugiere el DV correcto. Útil para mensajes de error al usuario.
+    """
+    try:
+        limpio = rut_raw.replace(".", "").replace("-", "").strip().upper()
+        # Separar cuerpo y DV: si tiene guion original, último token
+        if "-" in rut_raw:
+            partes = rut_raw.replace(".", "").strip().upper().split("-")
+            cuerpo = partes[0]
+            dv_ingresado = partes[1] if len(partes) > 1 else ""
+        else:
+            cuerpo = limpio[:-1]
+            dv_ingresado = limpio[-1] if limpio else ""
+        if cuerpo.isdigit() and 7 <= len(cuerpo) <= 9:
+            dv_correcto = _calcular_dv_rut(cuerpo)
+            if dv_correcto and dv_ingresado and dv_ingresado != dv_correcto:
+                return (
+                    f"El dígito verificador de ese RUT no coincide.\n"
+                    f"Si tu RUT es *{cuerpo}*, el dígito correcto es *{dv_correcto}*.\n"
+                    f"Escríbelo como: *{cuerpo}-{dv_correcto}*"
+                )
+    except Exception:
+        pass
+    return (
+        "Hmm, no reconozco ese RUT.\n"
+        "Escríbelo con dígito verificador, por ejemplo: *12.345.678-9*"
+    )
+
+
 def clean_rut(rut: str) -> str:
     """Normaliza RUT con múltiples formatos aceptados:
     - '12.345.678-9' / '12345678-9'      → '12345678-9' (ya válido)

@@ -15,7 +15,7 @@ from claude_helper import (detect_intent, respuesta_faq, clasificar_respuesta_se
 from medilink import (buscar_primer_dia, buscar_slots_dia, buscar_slots_dia_por_ids,
                       buscar_paciente, buscar_paciente_por_nombre, crear_paciente, crear_cita,
                       listar_citas_paciente, cancelar_cita, obtener_agenda_dia,
-                      valid_rut, clean_rut, especialidades_disponibles,
+                      valid_rut, clean_rut, hint_rut_error, especialidades_disponibles,
                       consultar_proxima_fecha, verificar_slot_disponible)
 from session import (save_session, reset_session, get_session, save_tag, delete_tag, get_tags,
                      save_cita_bot, log_event, has_recent_event,
@@ -4753,10 +4753,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if data["intentos_fallidos"] >= 3:
                 return _derivar_humano(phone=phone, contexto="frustración WAIT_RUT_AGENDAR")
             save_session(phone, "WAIT_RUT_AGENDAR", data)
-            return (
-                "Hmm, no reconozco ese RUT 🤔\n"
-                "Escríbelo con dígito verificador, por ejemplo: *12.345.678-9*"
-            )
+            return hint_rut_error(txt)
 
         _ensure_consent(phone)
         paciente, transient = await _buscar_paciente_safe(rut)
@@ -5595,9 +5592,20 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     if state == "WAIT_DATOS_NUEVO":
         raw = txt.strip()
 
+        # ── Filtrar prefijos que son respuesta a la pregunta "¿es primera vez?" ──
+        # Caso real: paciente escribe "Si primera vez\nLeonor Eduvijes\n..."
+        # El parser tomaba "Si primera vez" como nombre. Estos tokens se descartan.
+        _PREFIJOS_PRIMERA_VEZ = re.compile(
+            r'^(s[ií]\s+primera\s+vez|primera\s+vez|primera|s[ií]|no|control|'
+            r'continuaci[oó]n|seguimiento|segunda\s+vez|es\s+primera|es\s+primera\s+vez)\s*$',
+            re.I
+        )
+
         # ── Separar por comas, punto y coma, pipe, barras, saltos de línea
         # y guiones/raya larga con espacios ("Ruth - Femenino - 28/05/1939"). ──
-        parts = [p.strip() for p in re.split(r'[,;|/\n]+|\s+[-–—]+\s+', raw) if p.strip()]
+        parts_raw = [p.strip() for p in re.split(r'[,;|/\n]+|\s+[-–—]+\s+', raw) if p.strip()]
+        # Descartar partes que son solo prefijos de respuesta previa (no son nombre)
+        parts = [p for p in parts_raw if not _PREFIJOS_PRIMERA_VEZ.match(p)]
 
         nombre_raw = None
         sexo = None
