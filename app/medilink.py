@@ -393,10 +393,16 @@ async def _fetch_agendas_raw(client: httpx.AsyncClient, id_prof: int) -> list:
     return data
 
 
-async def _slots_desde_agendas(client: httpx.AsyncClient, id_prof: int, fecha: str) -> list:
+async def _slots_desde_agendas(client: httpx.AsyncClient, id_prof: int, fecha: str,
+                                compact: bool = True) -> list:
     """Para profesionales con `usa_agendas=True` (sin horario base recurrente),
     devuelve slots libres (id_paciente=0) de la fecha pedida. Usa
     `_fetch_agendas_raw` para no spamear Medilink en buscar_primer_dia.
+
+    Si compact=True (default), aplica el intervalo configurado en PROFESIONALES
+    como step entre slots (ej. Pardo cada 15 min aunque Medilink tenga cupos
+    cargados cada 5 min). Para verificar disponibilidad de un slot específico,
+    pasar compact=False.
     """
     fecha_dt = datetime.strptime(fecha, "%Y-%m-%d").date()
     fecha_dmy = fecha_dt.strftime("%d/%m/%Y")
@@ -422,6 +428,22 @@ async def _slots_desde_agendas(client: httpx.AsyncClient, id_prof: int, fecha: s
             "id_recurso":     slot.get("id_recurso", 1),
         })
     libres.sort(key=lambda x: x["hora_inicio"])
+    # Aplicar el intervalo configurado en PROFESIONALES como step entre slots:
+    # Medilink puede tener cupos cargados cada 5 min, pero el bot debe ofrecer
+    # según el intervalo de la especialidad (ej. Ecografía/Pardo = 15 min).
+    intervalo = PROFESIONALES.get(id_prof, {}).get("intervalo", 0)
+    if compact and intervalo > 0 and libres:
+        compactados = []
+        last_min = None
+        for s in libres:
+            m = _h_to_min(s["hora_inicio"])
+            if last_min is None or (m - last_min) >= intervalo:
+                compactados.append(s)
+                last_min = m
+        if len(compactados) != len(libres):
+            log.info("Slots /agendas prof %d fecha %s: compactados %d→%d (intervalo=%dmin)",
+                     id_prof, fecha, len(libres), len(compactados), intervalo)
+        libres = compactados
     log.info("Slots /agendas prof %d fecha %s: %d libres", id_prof, fecha, len(libres))
     return libres
 
@@ -987,7 +1009,7 @@ async def verificar_slot_disponible(id_profesional: int, fecha: str,
             h = {}
         if h.get("usa_agendas"):
             try:
-                libres = await _slots_desde_agendas(client, id_profesional, fecha)
+                libres = await _slots_desde_agendas(client, id_profesional, fecha, compact=False)
             except Exception as e:
                 log.warning("verificar_slot agendas: error prof %d fecha %s: %s",
                             id_profesional, fecha, e)
