@@ -393,6 +393,7 @@ _SITIO_V5_HTML = (_TEMPLATE_DIR / "sitio-v5.html").read_text(encoding="utf-8") i
 _SITIO_V6_HTML = (_TEMPLATE_DIR / "sitio-v6.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio-v6.html").exists() else ""
 _SITIO_V7_HTML = (_TEMPLATE_DIR / "sitio-v7.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio-v7.html").exists() else ""
 _SITIO_V7_1_HTML = (_TEMPLATE_DIR / "sitio-v7-1.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio-v7-1.html").exists() else ""
+_BLOG_DIR = _TEMPLATE_DIR / "blog"
 _HEATMAP_COMUNAS_HTML = (_TEMPLATE_DIR / "heatmap_comunas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "heatmap_comunas.html").exists() else ""
 _HEATMAP_DIRECCIONES_HTML = (_TEMPLATE_DIR / "heatmap_direcciones.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "heatmap_direcciones.html").exists() else ""
 _SEO_DASHBOARD_HTML = (_TEMPLATE_DIR / "seo_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "seo_dashboard.html").exists() else ""
@@ -507,6 +508,19 @@ async def sitio_v7_1():
     from google_rating import fetch_rating
     rating_data = await fetch_rating()
     return _render_sitio_dynamic(_SITIO_V7_1_HTML, rating_data)
+
+
+@app.get("/blog/{slug}", response_class=HTMLResponse)
+async def blog_post(slug: str):
+    """Blogs por especialidad — sistema de diseño v7-1.
+    Sirve templates/blog/{slug}.html. Slug whitelist por seguridad."""
+    import re as _re
+    if not _re.fullmatch(r"[a-z0-9-]{1,60}", slug):
+        return HTMLResponse("<h1>404</h1>", status_code=404)
+    blog_path = _BLOG_DIR / f"{slug}.html"
+    if not blog_path.exists():
+        return HTMLResponse("<h1>404 — Artículo no encontrado</h1>", status_code=404)
+    return blog_path.read_text(encoding="utf-8")
 
 
 @app.get("/api/google-rating")
