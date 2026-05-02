@@ -1157,6 +1157,19 @@ async def detect_intent(mensaje: str) -> dict:
         return {**_INTENT_CACHE[clave_sin_punto], "respuesta_directa": None}
 
     try:
+        # FIX-15: inyectar fecha/hora Chile para que Claude resuelva "mañana",
+        # "el viernes", "próxima semana" con el año/día correcto.
+        from datetime import datetime as _dt15
+        from zoneinfo import ZoneInfo as _Z15
+        _hoy15 = _dt15.now(_Z15("America/Santiago"))
+        _DIAS15 = ["lunes","martes","miércoles","jueves","viernes","sábado","domingo"]
+        _MESES15 = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"]
+        _ctx_fecha15 = (
+            f"[CONTEXTO TEMPORAL] Hoy es {_DIAS15[_hoy15.weekday()]} "
+            f"{_hoy15.day} de {_MESES15[_hoy15.month-1]} de {_hoy15.year}, "
+            f"{_hoy15.strftime('%H:%M')} hora de Chile. "
+            f"Usa este año ({_hoy15.year}) al resolver fechas relativas.\n\n"
+        )
         resp = await client.messages.create(
             model="claude-haiku-4-5-20251001",
             max_tokens=1024,
@@ -1165,7 +1178,7 @@ async def detect_intent(mensaje: str) -> dict:
                 "text": SYSTEM_PROMPT,
                 "cache_control": {"type": "ephemeral"},
             }],
-            messages=[{"role": "user", "content": mensaje}],
+            messages=[{"role": "user", "content": _ctx_fecha15 + mensaje}],
         )
         text = _strip_markdown_json(resp.content[0].text)
         if resp.stop_reason == "max_tokens":
@@ -1386,6 +1399,12 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
     (("estacionamient",),
      "🚗 Sí, contamos con estacionamiento en el mismo centro, en Monsalve 102. "
      "Es gratuito para pacientes del CMC."),
+    # FIX-4: boletas/comprobantes — evitar derivaciones repetidas al mismo paciente
+    (("boleta", "comprobante", "factura", "reimprimir", "imprimir mi", "duplicado"),
+     "Las boletas electrónicas emitidas por *transferencia* o *Fonasa* no se pueden "
+     "reimprimir desde nuestro sistema.\n\n"
+     "Si pagaste con *tarjeta*, el duplicado se gestiona en mesón directamente.\n\n"
+     "Para casos especiales escribe *humano* y te conectamos con recepción."),
 ]
 
 
@@ -1437,6 +1456,17 @@ async def respuesta_faq(mensaje: str) -> str:
 
     text = ""
     try:
+        # FIX-15: inyectar fecha/hora Chile (mismo patrón que detect_intent).
+        from datetime import datetime as _dt15f
+        from zoneinfo import ZoneInfo as _Z15f
+        _hoy15f = _dt15f.now(_Z15f("America/Santiago"))
+        _DIAS15f = ["lunes","martes","miércoles","jueves","viernes","sábado","domingo"]
+        _MESES15f = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"]
+        _ctx_fecha15f = (
+            f"[CONTEXTO TEMPORAL] Hoy es {_DIAS15f[_hoy15f.weekday()]} "
+            f"{_hoy15f.day} de {_MESES15f[_hoy15f.month-1]} de {_hoy15f.year}, "
+            f"{_hoy15f.strftime('%H:%M')} hora de Chile.\n\n"
+        )
         resp = await client.messages.create(
             model="claude-haiku-4-5-20251001",
             max_tokens=1024,
@@ -1445,7 +1475,7 @@ async def respuesta_faq(mensaje: str) -> str:
                 "text": SYSTEM_PROMPT,
                 "cache_control": {"type": "ephemeral"},
             }],
-            messages=[{"role": "user", "content": mensaje}],
+            messages=[{"role": "user", "content": _ctx_fecha15f + mensaje}],
         )
         text = _strip_markdown_json(resp.content[0].text)
         if resp.stop_reason == "max_tokens":
