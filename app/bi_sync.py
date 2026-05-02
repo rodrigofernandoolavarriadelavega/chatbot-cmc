@@ -365,8 +365,15 @@ async def _fetch_pagos_dia(cli: httpx.AsyncClient, fecha: str) -> AsyncIterator[
                     next_url = None
                 else:
                     yield d.get("data", []) or []
-                    links = d.get("links", {}) if isinstance(d, dict) else {}
-                    next_url = links.get("next")
+                    links = d.get("links")
+                    # /pagos devuelve links como list[{rel,href}]; /atenciones como dict
+                    if isinstance(links, dict):
+                        next_url = links.get("next")
+                    elif isinstance(links, list):
+                        next_url = next((l.get("href") for l in links
+                                          if isinstance(l, dict) and l.get("rel") == "next"), None)
+                    else:
+                        next_url = None
                 first = False
                 break
             if r.status_code == 429:
