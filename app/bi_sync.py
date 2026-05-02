@@ -359,9 +359,14 @@ async def _fetch_pagos_dia(cli: httpx.AsyncClient, fecha: str) -> AsyncIterator[
                 continue
             if r.status_code == 200:
                 d = r.json()
-                yield d.get("data", []) or []
-                links = d.get("links", {}) if isinstance(d, dict) else {}
-                next_url = links.get("next")
+                # Algunos días vienen como lista directa (sin envoltorio data/links)
+                if isinstance(d, list):
+                    yield d
+                    next_url = None
+                else:
+                    yield d.get("data", []) or []
+                    links = d.get("links", {}) if isinstance(d, dict) else {}
+                    next_url = links.get("next")
                 first = False
                 break
             if r.status_code == 429:
