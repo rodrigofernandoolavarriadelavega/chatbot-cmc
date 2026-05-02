@@ -549,6 +549,16 @@ async def sitio_v7_1():
     return _render_sitio_dynamic(_SITIO_HTML, rating_data)
 
 
+@app.get("/blog", response_class=HTMLResponse)
+@app.get("/blog/", response_class=HTMLResponse)
+async def blog_index():
+    """Índice del blog: lista las 20 especialidades."""
+    p = _TEMPLATE_DIR / "blog_index.html"
+    if p.exists():
+        return p.read_text(encoding="utf-8")
+    return HTMLResponse("<h1>Blog</h1>", status_code=200)
+
+
 @app.get("/blog/{slug}", response_class=HTMLResponse)
 async def blog_post(slug: str):
     """Blogs por especialidad. Si el slug termina con sufijo de comuna
