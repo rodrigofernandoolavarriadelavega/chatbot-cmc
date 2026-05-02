@@ -206,40 +206,63 @@ def cobertura_validacion(id_profesional: int, mes: str) -> dict:
 
 
 def stats_profesional(id_profesional: int, desde: str = "2024-01-01") -> dict:
-    """KPIs agregados de un profesional desde fecha. Devuelve la estructura
-    esperada por el endpoint /api/profesional/{id}/data."""
+    """KPIs agregados de un profesional.
+
+    Conteo de pacientes/día y mes = PACIENTES ÚNICOS (DISTINCT id_paciente)
+    desde bi_atenciones — un paciente con 3 prestaciones el mismo día cuenta
+    como 1 paciente, no 3. Incluye controles ($0).
+
+    Monto cobrado = SUM bi_pagos_caja (caja real Medilink).
+    Monto facturado = SUM bi_atenciones.total (lo registrado en sistema)."""
     from collections import defaultdict
     with _bi_conn() as c:
-        rows = c.execute("""
-            SELECT atencion_id, fecha, id_paciente, total, abonado,
-                   finalizado, bloqueado
+        # Pacientes únicos por día desde bi_atenciones
+        atens = c.execute("""
+            SELECT fecha, id_paciente, total
             FROM bi_atenciones
             WHERE id_profesional=? AND fecha>=?
-            ORDER BY fecha
+        """, (id_profesional, desde)).fetchall()
+        # Cobrado real desde bi_pagos_caja
+        pagos = c.execute("""
+            SELECT fecha, monto FROM bi_pagos_caja
+            WHERE id_profesional=? AND fecha>=?
         """, (id_profesional, desde)).fetchall()
 
     por_dia: dict = {}
-    por_mes: dict = defaultdict(lambda: {"atend": 0, "monto_total": 0, "monto_cobrado": 0,
-                                          "atend_pagadas": 0})
+    pacientes_dia: dict = defaultdict(set)
+    pacientes_mes: dict = defaultdict(set)
+    monto_total_mes: dict = defaultdict(int)
+    monto_cobrado_mes: dict = defaultdict(int)
     por_dow: dict = defaultdict(list)
 
-    for r in rows:
+    for r in atens:
         f = (r["fecha"] or "")[:10]
         if not f:
             continue
         m = f[:7]
-        total = int(r["total"] or 0)
-        abonado = int(r["abonado"] or 0)
-        # Solo cuenta como atención real si total > 0 (descarta los $0)
-        if total <= 0:
+        pid = r["id_paciente"]
+        if pid:
+            pacientes_dia[f].add(pid)
+            pacientes_mes[m].add(pid)
+        monto_total_mes[m] += int(r["total"] or 0)
+
+    for r in pagos:
+        f = (r["fecha"] or "")[:10]
+        if not f:
             continue
-        por_mes[m]["atend"] += 1
-        por_mes[m]["monto_total"] += total
-        # Cobrado real ≈ abonado (lo que efectivamente entró)
-        por_mes[m]["monto_cobrado"] += abonado
-        if abonado >= total:
-            por_mes[m]["atend_pagadas"] += 1
-        por_dia[f] = por_dia.get(f, 0) + 1
+        m = f[:7]
+        monto_cobrado_mes[m] += int(r["monto"] or 0)
+
+    for f, pset in pacientes_dia.items():
+        por_dia[f] = len(pset)
+    por_mes: dict = {}
+    for m in set(list(pacientes_mes.keys()) + list(monto_total_mes.keys()) + list(monto_cobrado_mes.keys())):
+        por_mes[m] = {
+            "atend": len(pacientes_mes.get(m, set())),
+            "atend_pagadas": len(pacientes_mes.get(m, set())),
+            "monto_total": monto_total_mes.get(m, 0),
+            "monto_cobrado": monto_cobrado_mes.get(m, 0),
+        }
 
     # backfill días vacíos
     try:
