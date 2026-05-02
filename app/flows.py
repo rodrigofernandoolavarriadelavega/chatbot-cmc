@@ -7625,7 +7625,11 @@ def _format_slots(slots: list, mostrar_todos: bool = False):
 
 
 def _parse_slot_selection(txt: str, slots: list) -> int | None:
-    """Interpreta texto libre como selección de slot. Retorna índice (0-based) o None."""
+    """Interpreta texto libre como selección de slot. Retorna índice (0-based) o None.
+
+    FIX-1: expandido para manejar ordinales en español y confirmaciones cortas
+    cuando hay un solo slot mostrado.
+    """
     if not slots:
         return None
     tl = txt.strip().lower()
@@ -7637,6 +7641,22 @@ def _parse_slot_selection(txt: str, slots: list) -> int | None:
             return idx
     except ValueError:
         pass
+
+    # FIX-1: Ordinales en español → mapear a índice.
+    # "la primera", "el primero", "primer hora", "la segunda", "el último", etc.
+    _ORDINALES: dict[str, int] = {
+        "primer":   0, "primera":  0, "primero":  0, "1er": 0, "1ro": 0, "1ra": 0,
+        "segund":   1, "segunda":  1, "segundo":  1, "2do": 1, "2da": 1,
+        "tercer":   2, "tercera":  2, "tercero":  2, "3ro": 2, "3ra": 2,
+        "cuart":    3, "cuarta":   3, "cuarto":   3,
+        "quint":    4, "quinta":   4, "quinto":   4,
+    }
+    for token, ord_idx in _ORDINALES.items():
+        if token in tl and 0 <= ord_idx < len(slots):
+            return ord_idx
+    # "el último" / "la última" → último slot disponible
+    if any(k in tl for k in ("ultim", "último", "ultima", "última", "last")):
+        return len(slots) - 1
 
     # Número dentro del texto: "el 1", "opción 2", "quiero el 3"
     m = re.search(r'\b([1-9])\b', tl)
