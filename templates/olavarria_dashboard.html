@@ -101,26 +101,21 @@
         <p class="kpi-sub" id="kpiBajoObjSub">—</p>
       </div>
       <div>
-        <p class="kpi-label">CAJA CMC estimada/mes</p>
-        <p class="kpi-num pos" id="kpiCajaMes">—</p>
-        <p class="kpi-sub">~74% del total · efectivo+transfer</p>
-      </div>
-    </div>
-    <div class="border-t mt-5 pt-4 grid md:grid-cols-3 gap-4 items-center">
-      <div>
         <p class="kpi-label">Mejor mes histórico</p>
         <p class="kpi-num" id="kpiTopMes">—</p>
         <p class="kpi-sub" id="kpiTopMesSub">—</p>
       </div>
-      <div>
-        <p class="kpi-label">BONO FONASA estimado/mes</p>
-        <p class="kpi-num" id="kpiBonoMes">—</p>
-        <p class="kpi-sub">~26% · cobrado por Fonasa al médico</p>
-      </div>
+    </div>
+    <div class="border-t mt-5 pt-4 grid md:grid-cols-2 gap-4 items-center">
       <div>
         <p class="kpi-label">Tarifa real promedio</p>
         <p class="kpi-num" id="kpiTarifaReal">—</p>
-        <p class="kpi-sub">avg(monto_bruto BI)</p>
+        <p class="kpi-sub">tras factor corrección Caja Medilink</p>
+      </div>
+      <div class="text-xs opacity-70 leading-relaxed" style="background:rgba(184,109,63,.08);padding:10px 12px;border-radius:4px;">
+        <strong>Nota metodológica:</strong> los montos se basan en BI Postgres × 0.85.
+        El BI sobreestima ~15% (atenciones registradas pero no cobradas). Cruce con Caja
+        Medilink real (mayo 2024) confirma factor 0.85.
       </div>
     </div>
   </section>
@@ -258,9 +253,7 @@ function render(){
   document.getElementById('kpiAvgMesSub').textContent = `n=${k.n_meses} meses`;
   document.getElementById('kpiIngMes').textContent = moneda(k.ing_avg_mes);
 
-  // Breakdown caja CMC vs bono Fonasa (factor 0.74 / 0.26 cruzado con Caja Medilink 15-may-2024)
-  document.getElementById('kpiCajaMes').textContent = moneda(k.ing_caja_estimado_mes || 0);
-  document.getElementById('kpiBonoMes').textContent = moneda(k.ing_bono_estimado_mes || 0);
+  // Tarifa real ya tiene factor corrección aplicado en backend
   document.getElementById('kpiTarifaReal').textContent = clp(k.tarifa_real_promedio || 0);
 
   // Mejor mes
@@ -473,11 +466,9 @@ function renderLectura(deltaPct, avg3){
   const txt = `Atendiste **${k.total_atend}** pacientes en ${k.n_meses} meses, promedio **${k.atend_avg_mes}/mes** ` +
     `(${k.dias_con_atencion} días trabajados). Tarifa real promedio: **${clp(k.tarifa_real_promedio)}** por atención. ` +
     `Estás ${tendTxt}. ` +
-    `Tu ingreso TOTAL promedio es **${clp(k.ing_avg_mes)}/mes**, que se reparte: ` +
-    `**${clp(k.ing_caja_estimado_mes)} a la caja del CMC** (efectivo + transferencia) y ` +
-    `**${clp(k.ing_bono_estimado_mes)} a tu cuenta médico** vía bonos Fonasa. ` +
-    `Histórico total facturado: **${clp(k.ing_total_historico)}**. ` +
-    `Si la tendencia continúa, la proyección de los próximos 6 meses es **${clp(proy6mPromedio)}/mes** en promedio (total ${clp(proyTotal)}).`;
+    `Tu ingreso real al bolsillo: **${clp(k.ing_avg_mes)}/mes** promedio (BI corregido × 0.85 vs Caja Medilink). ` +
+    `Histórico total cobrado: **${clp(k.ing_total_historico)}**. ` +
+    `Proyección próximos 6 meses: **${clp(proy6mPromedio)}/mes** (total ${clp(proyTotal)}).`;
   document.getElementById('lectura').innerHTML = txt.replace(/\*\*(.+?)\*\*/g, '<strong style="color:#fff">$1</strong>');
 }
 

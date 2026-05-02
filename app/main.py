@@ -1275,11 +1275,13 @@ def _api_olavarria_data_from_bi(desde: str = "2024-01-01"):
     ing_avg_mes = total_facturado / n_meses
     dias_trab = sum(1 for v in por_dia.values() if v > 0)
 
-    # Breakdown estimado caja vs bono Fonasa
-    # Cruce 15-may-2024: BI=$479.560, Caja=$354.670 → caja ~74% del total facturado
-    # Aplicamos factor 0.74 caja / 0.26 bono Fonasa al médico
-    FACTOR_CAJA = 0.74
-    FACTOR_BONO = 1 - FACTOR_CAJA
+    # FACTOR DE CORRECCIÓN BI → CAJA REAL
+    # Cruce 15-may-2024: BI=$479.560, Caja real Medilink=$354.670 → factor 0.74
+    # Cruce mayo-2024 completo: BI=$8.42M, Caja=$7.17M → factor 0.851
+    # El BI sobrestima ~15% por atenciones registradas pero no cobradas (bug ETL)
+    # NO es split caja vs bono — el usuario carga TODO como efectivo en caja, así
+    # que la Caja real ya incluye bonos. La diferencia con BI son ingresos-fantasma.
+    FACTOR_REAL = 0.85
 
     # Proyección lineal últimos 6 meses con datos
     meses_ord = sorted(por_mes.keys())
@@ -1303,33 +1305,47 @@ def _api_olavarria_data_from_bi(desde: str = "2024-01-01"):
             est = max(0, round(intercept + slope * (n_x - 1 + k)))
             proyeccion[key] = {"atend": est, "ingreso": round(est * tarifa_real)}
 
+    # Aplicar factor de corrección a montos por mes y proyección (real ≈ BI × 0.85)
+    por_mes_corr = {}
+    for m, v in por_mes.items():
+        ing_real = round(v["monto"] * FACTOR_REAL)
+        por_mes_corr[m] = {"atend": v["atend"], "anul": 0, "no_asiste": 0, "otros": 0,
+                            "total": v["atend"], "monto_bi": v["monto"], "monto_real": ing_real,
+                            "monto_real_n": v["atend"]}
+    proy_corr = {}
+    for m, v in proyeccion.items():
+        proy_corr[m] = {"atend": v["atend"], "ingreso": round(v["ingreso"] * FACTOR_REAL)}
+
+    ing_avg_real = round(ing_avg_mes * FACTOR_REAL)
+    total_real_historico = round(total_facturado * FACTOR_REAL)
+    tarifa_real_corr = round(tarifa_real * FACTOR_REAL)
+
     return {
         "fecha_actualizacion": _dt_b.now().strftime("%Y-%m-%d %H:%M"),
-        "fuente_cache": f"BI Postgres health-bi-project (rows={len(rows)})",
-        "tarifa": round(tarifa_real),
-        "tarifa_real_promedio": round(tarifa_real),
-        "factor_caja": FACTOR_CAJA,
+        "fuente_cache": f"BI Postgres × {FACTOR_REAL} (cruzado con Caja Medilink real)",
+        "tarifa": tarifa_real_corr,
+        "tarifa_real_promedio": tarifa_real_corr,
+        "factor_real": FACTOR_REAL,
         "por_dia": por_dia,
-        "por_mes": {m: {"atend": v["atend"], "anul": 0, "no_asiste": 0, "otros": 0,
-                         "total": v["atend"], "monto_real": v["monto"], "monto_real_n": v["atend"]}
-                     for m, v in por_mes.items()},
+        "por_mes": por_mes_corr,
         "por_dow": dow_stats,
-        "por_hora": {},  # BI no expone hora_inicio
+        "por_hora": {},
         "estados": {"atendido": total_atend},
-        "proyeccion": proyeccion,
+        "proyeccion": proy_corr,
         "kpis": {
             "total_atend": total_atend,
             "dias_con_atencion": dias_trab,
             "atend_avg_mes": round(atend_avg_mes, 1),
-            "ing_avg_mes": round(ing_avg_mes),
+            "ing_avg_mes": ing_avg_real,
+            "ing_avg_mes_bi": round(ing_avg_mes),
             "n_meses": n_meses,
-            "monto_real_total": total_facturado,
+            "monto_real_total": total_real_historico,
             "monto_real_n_atend": total_atend,
             "cobertura_real_pct": 100.0,
-            "tarifa_real_promedio": round(tarifa_real),
-            "ing_caja_estimado_mes": round(ing_avg_mes * FACTOR_CAJA),
-            "ing_bono_estimado_mes": round(ing_avg_mes * FACTOR_BONO),
-            "ing_total_historico": total_facturado,
+            "tarifa_real_promedio": tarifa_real_corr,
+            "ing_total_historico": total_real_historico,
+            "ing_total_bi": total_facturado,
+            "factor_aplicado": FACTOR_REAL,
         },
     }
 
