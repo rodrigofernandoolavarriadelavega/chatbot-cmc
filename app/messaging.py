@@ -187,6 +187,26 @@ async def send_whatsapp(to: str, body) -> str | None:
         return None
     body = _final_phone_guard(body)
     body = _normalize_markdown_for_chat(body)
+    # FIX-8: WhatsApp rechaza mensajes >4096 chars. Si es largo, dividir en chunks
+    # como IG/FB (usando _split_long_msg). Evita error 131009 silencioso de Meta.
+    if isinstance(body, str) and len(body) > 4000:
+        log.warning("send_whatsapp: mensaje largo %d chars → dividiendo en chunks", len(body))
+        wamid = None
+        for chunk in _split_long_msg(body, limit=4000):
+            chunk = chunk.strip()
+            if not chunk:
+                continue
+            if _is_dupe_outbound(to, chunk):
+                continue
+            wamid = await _post_meta({
+                "messaging_product": "whatsapp",
+                "to": to,
+                "type": "text",
+                "text": {"body": chunk},
+            })
+            import asyncio as _asyncio
+            await _asyncio.sleep(0.5)
+        return wamid
     if _is_dupe_outbound(to, body):
         log.info("dedupe outbound skipped to=%s len=%d", to, len(body))
         return None
