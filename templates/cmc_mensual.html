@@ -1,216 +1,2122 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<title>CMC — Dashboard Mensual v2</title>
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.tailwindcss.com"></script>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Dashboard Mensual — Centro Médico Carampangue</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+function _showError(msg, detail){
+  var el=document.getElementById('_err_overlay');
+  if(!el){el=document.createElement('div');el.id='_err_overlay';el.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#fef2f2;border-bottom:3px solid #dc2626;padding:10px 16px;font-family:monospace;font-size:.8rem;max-height:40vh;overflow:auto';document.body.appendChild(el);}
+  el.innerHTML='<b style="color:#dc2626">⚠️ Error JS: '+msg+'</b><pre style="margin:4px 0 0;white-space:pre-wrap;font-size:.72rem">'+detail+'</pre>';
+}
+window.onerror = function(msg, src, line, col, err){
+  _showError(msg, (err&&err.stack?err.stack:'Línea '+line+' Col '+col+'\n'+src));
+};
+window.addEventListener('unhandledrejection', function(e){
+  _showError('Promise error: '+(e.reason&&e.reason.message||String(e.reason)),
+             e.reason&&e.reason.stack||String(e.reason));
+});
+</script>
 <style>
-  :root{ --fiordo:#1F3340; --cobre:#B86D3F; --neblina:#EFE9DD; --musgo:#4A5F3A; --lacre:#8C2A2A; --agua:#5B8B96; }
-  *{box-sizing:border-box}
-  body{margin:0;font-family:system-ui,-apple-system,sans-serif;background:#f4f6f8;color:#1f2937}
-  .topbar{background:linear-gradient(180deg,#1F3340 0%,#122028 100%);color:#fff;padding:16px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-  .topbar h1{margin:0;font-size:22px;font-weight:600}
-  .topbar select{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);padding:8px 12px;border-radius:6px;font-size:14px}
-  .topbar select option{background:#1F3340}
-  .topbar .meta{font-size:11px;color:#B86D3F;font-family:monospace;letter-spacing:1.5px}
-  .container{max-width:1400px;margin:0 auto;padding:20px}
-  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
-  @media(max-width:900px){.kpi-grid{grid-template-columns:1fr 1fr}}
-  .kpi-card{background:#fff;border-radius:11px;padding:18px 22px;box-shadow:0 1px 4px rgba(0,0,0,.07);border-left:4px solid}
-  .kpi-card.c-total{border-color:#2563eb}.kpi-card.c-prof{border-color:#16a34a}
-  .kpi-card.c-cmc{border-color:#ea580c}.kpi-card.c-activos{border-color:#7c3aed}
-  .kpi-label{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#6b7280;margin-bottom:4px}
-  .kpi-value{font-size:26px;font-weight:600;line-height:1}
-  .kpi-card.c-total .kpi-value{color:#2563eb}
-  .kpi-card.c-prof .kpi-value{color:#16a34a}
-  .kpi-card.c-cmc .kpi-value{color:#ea580c}
-  .kpi-card.c-activos .kpi-value{color:#7c3aed}
-  .kpi-sub{font-size:12px;color:#6b7280;margin-top:4px}
-  .chart-row-2{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px}
-  @media(max-width:900px){.chart-row-2{grid-template-columns:1fr}}
-  .card{background:#fff;border-radius:11px;padding:18px 22px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
-  .card h2{margin:0 0 12px;font-size:15px;color:#374151;font-weight:600}
-  table{width:100%;border-collapse:collapse;font-size:13px}
-  th{text-align:left;color:#6b7280;font-size:11px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #e5e7eb;padding:10px 8px;font-weight:500}
-  td{padding:10px 8px;border-bottom:1px solid #f3f4f6}
-  tr:hover td{background:#fafafa}
-  .num{font-family:'IBM Plex Mono',monospace;text-align:right}
-  .pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
-  .area-med{background:#dbeafe;color:#1e40af}
-  .area-dent{background:#fce7f3;color:#9d174d}
-  .area-kine{background:#dcfce7;color:#166534}
-  .area-maso{background:#fef3c7;color:#854d0e}
-  .area-nutri{background:#fed7aa;color:#9a3412}
-  .area-psico{background:#ddd6fe;color:#5b21b6}
-  .area-fono{background:#d1fae5;color:#065f46}
-  .area-matrona{background:#fbcfe8;color:#831843}
-  .area-podo{background:#e0e7ff;color:#3730a3}
-  .area-tecmed{background:#cffafe;color:#155e75}
-  .area-otros{background:#e5e7eb;color:#374151}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f4f8;color:#1e293b;min-height:100vh}
+
+header{background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.header-left{display:flex;align-items:center;gap:12px}
+.logo{font-size:26px}
+header h1{font-size:1.15rem;font-weight:700}
+header p{font-size:.78rem;opacity:.75;margin-top:1px}
+.header-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#mesLabel{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:.82rem;font-weight:600;padding:5px 10px;border-radius:7px;outline:none;cursor:pointer}
+#mesLabel option{color:#1e293b;background:#fff}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:7px;font-size:.78rem;font-weight:600;cursor:pointer;border:none;transition:.15s;white-space:nowrap}
+.btn-ghost{background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.3)}.btn-ghost:hover{background:rgba(255,255,255,.28)}
+.btn-white{background:#fff;color:#1e3a5f}.btn-white:hover{background:#e0e7ff}
+.btn-danger{background:#fecaca;color:#991b1b}.btn-danger:hover{background:#fca5a5}
+.btn-violet{background:rgba(124,58,237,.28);color:#fff;border:1px solid rgba(255,255,255,.25)}.btn-violet:hover{background:rgba(124,58,237,.45)}
+.btn-green{background:#dcfce7;color:#166534;border:1px solid #86efac}.btn-green:hover{background:#bbf7d0}
+.btn-blue{background:#dbeafe;color:#1e40af;border:1px solid #93c5fd}.btn-blue:hover{background:#bfdbfe}
+.btn-sm{padding:4px 9px;font-size:.74rem}
+
+.tabs{display:flex;flex-wrap:wrap;padding:0 16px;background:#fff;border-bottom:2px solid #e2e8f0;gap:0}
+.tab{padding:10px 18px;font-size:.8rem;font-weight:600;cursor:pointer;color:#64748b;border-bottom:3px solid transparent;transition:.15s;white-space:nowrap}
+.tab.active{color:#2563eb;border-color:#2563eb;background:#f0f6ff}
+.tab.sim-tab.active{color:#7c3aed;border-color:#7c3aed;background:#f5f3ff}
+.tab:hover:not(.active){background:#f8fafc;color:#374151}
+
+.container{max-width:1500px;margin:0 auto;padding:16px 22px}
+.panel{display:none}.panel.active{display:block}
+
+/* CARDS */
+.card{background:#fff;border-radius:11px;padding:16px 20px;box-shadow:0 1px 4px rgba(0,0,0,.07);margin-bottom:14px}
+.card h2{font-size:.85rem;font-weight:700;color:#374151;margin-bottom:12px;display:flex;align-items:center;gap:7px}
+
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:14px}
+.kpi-card{background:#fff;border-radius:11px;padding:16px 20px;box-shadow:0 1px 4px rgba(0,0,0,.07);border-left:4px solid}
+.kpi-card.c-total{border-color:#2563eb}.kpi-card.c-prof{border-color:#16a34a}.kpi-card.c-cmc{border-color:#ea580c}.kpi-card.c-activos{border-color:#7c3aed}
+.kpi-card.sim.c-total{border-color:#6d28d9}.kpi-card.sim.c-cmc{border-color:#db2777}
+.kpi-label{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#64748b}
+.kpi-value{font-size:1.35rem;font-weight:800;margin:4px 0 2px}
+.kpi-card.c-total .kpi-value{color:#2563eb}.kpi-card.c-prof .kpi-value{color:#16a34a}.kpi-card.c-cmc .kpi-value{color:#ea580c}.kpi-card.c-activos .kpi-value{color:#7c3aed}
+.kpi-card.sim.c-total .kpi-value{color:#6d28d9}.kpi-card.sim.c-cmc .kpi-value{color:#db2777}
+.kpi-sub{font-size:.7rem;color:#94a3b8}
+.delta-pos{color:#16a34a;font-weight:700}.delta-neg{color:#dc2626;font-weight:700}
+
+/* CHARTS GRIDS */
+.chart-row-2{display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:14px}
+.chart-row-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
+.chart-row-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+.chart-row-side{display:grid;grid-template-rows:1fr 1fr;gap:12px}
+@media(max-width:900px){.chart-row-2,.chart-row-3,.chart-row-4{grid-template-columns:1fr}}
+
+/* TABLE */
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.8rem}
+thead th{background:#f8fafc;padding:8px 10px;text-align:left;font-size:.67rem;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:.04em;border-bottom:2px solid #e2e8f0;white-space:nowrap}
+thead th.r{text-align:right}
+tbody tr{border-bottom:1px solid #f1f5f9;transition:background .12s}
+tbody tr:hover{background:#f8fafc}
+tbody tr.inactive{opacity:.38}
+td{padding:8px 10px;vertical-align:middle}
+td.r{text-align:right;font-variant-numeric:tabular-nums}
+tfoot td{font-weight:700;background:#f8fafc;border-top:2px solid #e2e8f0;padding:8px 10px}
+tfoot td.r{text-align:right}
+.neg{color:#dc2626}
+
+.badge{display:inline-block;font-size:.63rem;font-weight:700;padding:2px 7px;border-radius:999px}
+.bar-mini{height:4px;border-radius:2px;background:#e2e8f0;margin-top:3px;min-width:80px}
+.bar-mini-fill{height:100%;border-radius:2px}
+
+/* EDIT PANEL */
+.tb-input{width:100%;border:1px solid transparent;border-radius:5px;padding:4px 7px;font-size:.78rem;background:transparent;transition:.12s;font-family:inherit}
+.tb-input:focus{background:#fff;border-color:#93c5fd;outline:none;box-shadow:0 0 0 2px rgba(59,130,246,.18)}
+.tb-input.r{text-align:right}
+.tb-input.pct-input{width:70px;color:#7c3aed;font-weight:600}
+tr:hover .tb-input{background:#f8fafc}
+.del-btn{background:none;border:none;cursor:pointer;color:#cbd5e1;font-size:.95rem;padding:2px 5px;border-radius:4px;transition:.12s}
+.del-btn:hover{color:#dc2626;background:#fee2e2}
+tr.drag-over{outline:2px dashed #7c3aed;background:#f5f3ff}
+.add-btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;background:#f0f9ff;color:#0284c7;border:1px dashed #7dd3fc;border-radius:7px;font-size:.78rem;font-weight:600;cursor:pointer;transition:.15s;margin-top:8px}
+.add-btn:hover{background:#e0f2fe}
+.add-btn.violet{background:#f5f3ff;color:#6d28d9;border-color:#c4b5fd}.add-btn.violet:hover{background:#ede9fe}
+
+/* ÁREA MANAGER */
+.area-block{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:8px}
+.area-block-header{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.area-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+.area-name-inp{border:1px solid #e2e8f0;border-radius:6px;padding:4px 8px;font-size:.82rem;font-family:inherit;width:140px}
+.area-name-inp:focus{border-color:#93c5fd;outline:none}
+.color-inp{width:30px;height:26px;border:none;border-radius:5px;cursor:pointer;padding:0}
+.subareas-wrap{margin-left:24px;display:flex;flex-wrap:wrap;gap:7px}
+.subarea-item{display:flex;align-items:center;gap:6px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:5px 9px;font-size:.78rem}
+/* ── Box scheduler ── */
+.box-chip{padding:4px 9px;border-radius:6px;font-size:.7rem;font-weight:600;cursor:grab;user-select:none;border:1.5px solid;white-space:nowrap;transition:.1s}
+.box-chip:hover{opacity:.8}.box-chip:active{cursor:grabbing}
+.box-ev{position:absolute;left:3px;right:3px;border-radius:5px;padding:3px 6px 10px;font-size:.65rem;font-weight:600;color:#fff;cursor:grab;overflow:hidden;user-select:none;box-sizing:border-box;z-index:2;box-shadow:0 1px 4px rgba(0,0,0,.25);transition:opacity .12s}
+.box-ev:active{cursor:grabbing}.box-ev.drag-ghost{opacity:.3}
+.ev-rh{position:absolute;bottom:0;left:0;right:0;height:7px;cursor:s-resize;background:rgba(0,0,0,.2);border-radius:0 0 4px 4px}
+.box-drop{background:rgba(37,99,235,.1)!important}
+
+/* DRAG & DROP */
+.drag-handle{color:#cbd5e1;padding:0 5px;cursor:grab;user-select:none;font-size:1rem;flex-shrink:0}
+.drag-handle:hover{color:#7c3aed}
+.draggable{cursor:grab}
+.dragging{opacity:.35;box-shadow:0 4px 16px rgba(0,0,0,.15)}
+.drag-over{outline:2px dashed #7c3aed !important;outline-offset:2px;background:#faf5ff !important}
+.card.drag-over h2{color:#7c3aed}
+.area-block.drag-over,.subarea-item.drag-over{background:#ede9fe !important;border-color:#a78bfa !important}
+.subarea-item input[type=text]{border:1px solid #e2e8f0;border-radius:5px;padding:3px 6px;font-size:.76rem;font-family:inherit;width:120px}
+.subarea-item input[type=text]:focus{border-color:#93c5fd;outline:none}
+.subarea-item input[type=color]{width:26px;height:22px;border:none;border-radius:4px;cursor:pointer;padding:0}
+
+/* SIM */
+.sim-banner{background:linear-gradient(90deg,#7c3aed,#6d28d9);color:#fff;border-radius:9px;padding:9px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px;font-size:.8rem}
+.sim-banner strong{font-size:.86rem}
+.sim-global{display:flex;align-items:center;gap:14px;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:9px;padding:10px 16px;margin-bottom:12px;flex-wrap:wrap}
+.sim-global label{font-size:.8rem;font-weight:600;color:#5b21b6}
+.sim-global input{border:1px solid #c4b5fd;border-radius:5px;padding:4px 9px;font-size:.82rem;width:65px;text-align:right;font-family:inherit}
+.sim-global input:focus{outline:none;border-color:#7c3aed}
+.sim-global .hint{font-size:.72rem;color:#7c3aed;opacity:.8}
+.calc-cell{color:#6d28d9;font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
+.cmc-sim-cell{color:#db2777;font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
+.pct-cell{color:#64748b;font-size:.75rem;text-align:right}
+
+/* CUSTOM CHART BUILDER */
+.custom-charts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;margin-bottom:6px}
+.custom-chart-card{background:#fff;border-radius:11px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.07);border:2px solid transparent;transition:.2s}
+.custom-chart-card.editing{border-color:#c4b5fd}
+.cc-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.cc-title-inp{border:none;font-size:.88rem;font-weight:700;color:#374151;flex:1;padding:2px 4px;border-radius:4px;font-family:inherit}
+.cc-title-inp:focus{outline:none;background:#f8fafc}
+.cc-config{background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:10px 12px;margin-top:10px;font-size:.78rem}
+.cc-config-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.cc-config-row label{font-weight:600;color:#5b21b6;white-space:nowrap}
+.cc-config select{border:1px solid #c4b5fd;border-radius:5px;padding:3px 7px;font-size:.78rem;font-family:inherit;outline:none}
+.seg-list{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.seg-check{display:flex;align-items:center;gap:4px;background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:.74rem;transition:.12s}
+.seg-check:hover{border-color:#c4b5fd;background:#faf5ff}
+.seg-check input{cursor:pointer}
+.seg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.add-chart-card{background:#f8fafc;border:2px dashed #cbd5e1;border-radius:11px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;min-height:200px;transition:.15s;color:#64748b}
+.add-chart-card:hover{border-color:#7c3aed;background:#f5f3ff;color:#7c3aed}
+.add-chart-card .icon{font-size:2rem}
+.add-chart-card span{font-size:.82rem;font-weight:600}
+
+.section-lbl{font-size:.8rem;font-weight:700;color:#374151;margin:16px 0 10px;display:flex;align-items:center;gap:7px;border-left:3px solid #2563eb;padding-left:10px}
+.section-lbl.violet{border-color:#7c3aed}
+
+.alert-neg{background:#fef2f2;border:1px solid #fecaca;border-radius:7px;padding:9px 12px;font-size:.77rem;color:#b91c1c;margin-bottom:12px;display:none}
+
+footer{text-align:center;padding:16px;font-size:.7rem;color:#94a3b8}
 </style>
 </head>
 <body>
-<div class="topbar">
-  <h1>CMC · Dashboard Mensual v2</h1>
-  <span class="meta" id="meta">cargando…</span>
-  <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
-    <label style="font-size:12px;opacity:.8">Mes:</label>
-    <select id="mesSel"><option>cargando…</option></select>
-    <a href="/profesional/1" style="color:#fff;font-size:12px;opacity:.7;margin-left:12px">Profesional →</a>
-    <a href="/menu" style="color:#fff;font-size:12px;opacity:.5">Menú</a>
+
+<header>
+  <div class="header-left">
+    <div class="logo">🏥</div>
+    <div><h1>Centro Médico Carampangue</h1><p>Ingresos mensuales por profesional</p></div>
   </div>
+  <div class="header-right">
+    <select id="mesLabel"><option>cargando…</option></select>
+    <button class="btn btn-ghost" onclick="switchTab('edit')">✏️ Editar datos</button>
+    <button class="btn btn-violet" onclick="switchTab('sim')">🔮 Simulación</button>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active"  onclick="switchTab('dashboard')" id="tab-dashboard">📊 Dashboard</div>
+  <div class="tab"         onclick="switchTab('edit')"      id="tab-edit">✏️ Editor de datos</div>
+  <div class="tab sim-tab" onclick="switchTab('sim')"       id="tab-sim">🔮 Dashboard Simulación</div>
+  <div class="tab sim-tab" onclick="switchTab('simdata')"   id="tab-simdata">🧮 Datos Simulación</div>
+  <div class="tab"         onclick="switchTab('boxes')"    id="tab-boxes">📅 Box</div>
+  <div id="save-indicator" style="margin-left:auto;font-size:.75rem;padding:4px 10px;border-radius:20px;opacity:0;transition:opacity .4s;background:#dcfce7;color:#166534;align-self:center;pointer-events:none"></div>
 </div>
 
 <div class="container">
+
+<!-- ═══════════════════ TAB 1: DASHBOARD ═══════════════════ -->
+<div class="panel active" id="panel-dashboard">
   <div class="kpi-grid">
-    <div class="kpi-card c-total">
-      <div class="kpi-label">Total Caja del Mes</div>
-      <div class="kpi-value" id="kpi-total">—</div>
-      <div class="kpi-sub" id="kpi-pagos">— pagos</div>
-    </div>
-    <div class="kpi-card c-activos">
-      <div class="kpi-label">Profesionales Activos</div>
-      <div class="kpi-value" id="kpi-profs">—</div>
-      <div class="kpi-sub" id="kpi-dias">— días con actividad</div>
-    </div>
-    <div class="kpi-card c-prof">
-      <div class="kpi-label">Top Profesional</div>
-      <div class="kpi-value" id="kpi-top" style="font-size:18px">—</div>
-      <div class="kpi-sub" id="kpi-top-monto">—</div>
-    </div>
-    <div class="kpi-card c-cmc">
-      <div class="kpi-label">Top Área</div>
-      <div class="kpi-value" id="kpi-toparea" style="font-size:18px">—</div>
-      <div class="kpi-sub" id="kpi-toparea-monto">—</div>
-    </div>
+    <div class="kpi-card c-total"><div class="kpi-label">Total del Mes</div><div class="kpi-value" id="kpi-total">—</div><div class="kpi-sub">Ingresos brutos</div></div>
+    <div class="kpi-card c-prof"><div class="kpi-label">Honorarios</div><div class="kpi-value" id="kpi-prof">—</div><div class="kpi-sub" id="kpi-prof-pct">—</div></div>
+    <div class="kpi-card c-cmc"><div class="kpi-label">Margen CMC</div><div class="kpi-value" id="kpi-cmc">—</div><div class="kpi-sub" id="kpi-cmc-pct">—</div></div>
+    <div class="kpi-card c-activos"><div class="kpi-label">Profesionales Activos</div><div class="kpi-value" id="kpi-activos">—</div><div class="kpi-sub" id="kpi-total-profs">—</div></div>
   </div>
 
+  <!-- Bar + side doughnuts -->
   <div class="chart-row-2">
-    <div class="card">
-      <h2>Ingresos por Profesional — <span id="chart-mes-label"></span></h2>
-      <div style="position:relative;height:380px"><canvas id="barChart"></canvas></div>
-    </div>
-    <div class="card">
-      <h2>Ingresos por Área</h2>
-      <div style="position:relative;height:380px"><canvas id="doughnutChart"></canvas></div>
+    <div class="card"><h2>Ingresos por Profesional — <span id="chart-mes-label">Marzo 2026</span></h2><div style="position:relative;height:320px"><canvas id="barChart"></canvas></div></div>
+    <div class="chart-row-side">
+      <div class="card"><h2>Ingresos por Área</h2><div style="position:relative;height:135px"><canvas id="doughnutChart"></canvas></div></div>
+      <div class="card"><h2>CMC por Área</h2><div style="position:relative;height:135px"><canvas id="cmcDoughnutChart"></canvas></div></div>
     </div>
   </div>
 
-  <div class="card" style="margin-bottom:14px">
-    <h2>Atendidos por día</h2>
-    <div style="position:relative;height:200px"><canvas id="lineChart"></canvas></div>
+  <!-- Sub-area charts -->
+  <div class="section-lbl">🔬 Análisis por Subárea</div>
+  <div class="chart-row-4">
+    <div class="card"><h2 id="medSubTitle">Medicina — Ingresos por Subárea</h2><div style="position:relative;height:220px"><canvas id="medSubChart"></canvas></div></div>
+    <div class="card"><h2 id="dentSubTitle">Dental — Ingresos por Subárea</h2><div style="position:relative;height:220px"><canvas id="dentSubChart"></canvas></div></div>
+    <div class="card"><h2 id="otroSubTitle">Otros Servicios — Ingresos</h2><div style="position:relative;height:220px"><canvas id="otroSubChart"></canvas></div></div>
+    <div class="card"><h2>Todas las Subáreas — Ingresos</h2><div style="position:relative;height:220px"><canvas id="allSubChart"></canvas></div></div>
+  </div>
+  <div class="chart-row-4">
+    <div class="card"><h2 id="medSubCmcTitle">Medicina — CMC por Subárea</h2><div style="position:relative;height:220px"><canvas id="medSubCmcChart"></canvas></div></div>
+    <div class="card"><h2 id="dentSubCmcTitle">Dental — CMC por Subárea</h2><div style="position:relative;height:220px"><canvas id="dentSubCmcChart"></canvas></div></div>
+    <div class="card"><h2 id="otroSubCmcTitle">Otros Servicios — CMC</h2><div style="position:relative;height:220px"><canvas id="otroSubCmcChart"></canvas></div></div>
+    <div class="card"><h2>Todas las Subáreas — CMC</h2><div style="position:relative;height:220px"><canvas id="allSubCmcChart"></canvas></div></div>
   </div>
 
+  <!-- Detail table -->
   <div class="card">
     <h2>Detalle por Profesional</h2>
-    <table id="tabla">
-      <thead><tr><th>#</th><th>Profesional</th><th>Área</th><th>Especialidad</th><th class="num">Pacientes</th><th class="num">Pagos</th><th class="num">Total Caja</th><th class="num">% del mes</th></tr></thead>
-      <tbody></tbody>
-    </table>
+    <div id="alert-neg" class="alert-neg">⚠️ Hay profesionales con margen CMC negativo.</div>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Profesional</th><th>Área</th><th>Subárea</th><th class="r">Total Mes</th><th class="r">Honorarios</th><th class="r">CMC</th><th class="r">% CMC</th><th style="width:90px">Margen</th></tr></thead>
+        <tbody id="viewTableBody"></tbody>
+        <tfoot><tr><td colspan="3">TOTAL</td><td class="r" id="foot-total">—</td><td class="r" id="foot-prof">—</td><td class="r" id="foot-cmc">—</td><td class="r" id="foot-pct">—</td><td></td></tr></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- Custom charts section -->
+  <div class="section-lbl violet">📐 Gráficos Personalizados</div>
+  <div class="custom-charts-grid" id="customChartsGrid"></div>
+  <div class="add-chart-card" onclick="addCustomChart()" style="max-width:340px">
+    <div class="icon">+</div><span>Crear nuevo gráfico</span>
   </div>
 </div>
 
+<!-- ═══════════════════ TAB 2: EDITOR ═══════════════════ -->
+<div class="panel" id="panel-edit">
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <strong>🗂️ Gestionar Áreas y Subáreas</strong>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-white" onclick="applyAndSwitch()">✅ Ver Dashboard</button>
+        <button class="btn btn-danger" onclick="resetData()">↩️ Restaurar</button>
+      </div>
+    </div>
+    <div id="areasEditor"></div>
+    <button class="add-btn" onclick="addArea()">+ Nueva área</button>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+      <strong>👤 Profesionales</strong>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="add-btn" onclick="addRow()" style="margin-top:0">+ Agregar profesional</button>
+        <button class="btn btn-white" onclick="exportExcel()" title="Descargar Excel con todos los datos">⬇️ Exportar Excel</button>
+        <label class="btn btn-white" style="cursor:pointer;margin:0" title="Cargar Excel previamente exportado">
+          ⬆️ Importar Excel
+          <input type="file" accept=".xlsx,.xls" onchange="importExcel(this.files[0]);this.value=''" style="display:none"/>
+        </label>
+      </div>
+    </div>
+    <div class="tw">
+      <table id="editTable">
+        <thead><tr><th></th><th>Nombre</th><th>Área</th><th>Subárea</th><th class="r">Total Mes</th><th>Tipo pago</th><th class="r">% / Monto fijo</th><th class="r">Honorarios</th><th class="r">CMC</th></tr></thead>
+        <tbody id="editBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ TAB 3: SIM DASHBOARD ═══════════════════ -->
+<div class="panel" id="panel-sim">
+  <div class="sim-banner">
+    <span style="font-size:1.2rem">🔮</span>
+    <div><strong>Modo Simulación</strong><div style="opacity:.85;margin-top:2px">Proyecciones basadas en Pac/día × $/Paciente × Días. % honorarios tomados del mes real.</div></div>
+    <button class="btn btn-ghost" onclick="switchTab('simdata')" style="margin-left:auto">🧮 Editar</button>
+  </div>
+  <div class="kpi-grid">
+    <div class="kpi-card sim c-total"><div class="kpi-label">Total Simulado</div><div class="kpi-value" id="skpi-total">—</div><div class="kpi-sub" id="skpi-vs-real">—</div></div>
+    <div class="kpi-card c-prof"><div class="kpi-label">Honorarios Simulados</div><div class="kpi-value" id="skpi-prof">—</div><div class="kpi-sub" id="skpi-prof-pct">—</div></div>
+    <div class="kpi-card sim c-cmc"><div class="kpi-label">CMC Simulado</div><div class="kpi-value" id="skpi-cmc">—</div><div class="kpi-sub" id="skpi-cmc-pct">—</div></div>
+    <div class="kpi-card c-activos"><div class="kpi-label">Con actividad</div><div class="kpi-value" id="skpi-activos">—</div><div class="kpi-sub" id="skpi-profs">—</div></div>
+  </div>
+  <div class="chart-row-2">
+    <div class="card"><h2>Ingresos Simulados por Profesional</h2><div style="position:relative;height:300px"><canvas id="simBarChart"></canvas></div></div>
+    <div class="chart-row-side">
+      <div class="card"><h2>Ingresos por Área</h2><div style="position:relative;height:135px"><canvas id="simDoughnutChart"></canvas></div></div>
+      <div class="card"><h2>CMC por Área</h2><div style="position:relative;height:135px"><canvas id="simCmcChart"></canvas></div></div>
+    </div>
+  </div>
+  <!-- Sub-area charts (sim) -->
+  <div class="section-lbl violet">🔬 Análisis por Subárea — Simulado</div>
+  <div class="chart-row-4">
+    <div class="card"><h2 id="simMedSubTitle">Medicina — Ingresos por Subárea</h2><div style="position:relative;height:220px"><canvas id="simMedSubChart"></canvas></div></div>
+    <div class="card"><h2 id="simDentSubTitle">Dental — Ingresos por Subárea</h2><div style="position:relative;height:220px"><canvas id="simDentSubChart"></canvas></div></div>
+    <div class="card"><h2 id="simOtroSubTitle">Otros Servicios — Ingresos</h2><div style="position:relative;height:220px"><canvas id="simOtroSubChart"></canvas></div></div>
+    <div class="card"><h2>Todas las Subáreas — Ingresos</h2><div style="position:relative;height:220px"><canvas id="simAllSubChart"></canvas></div></div>
+  </div>
+  <div class="chart-row-4">
+    <div class="card"><h2 id="simMedSubCmcTitle">Medicina — CMC por Subárea</h2><div style="position:relative;height:220px"><canvas id="simMedSubCmcChart"></canvas></div></div>
+    <div class="card"><h2 id="simDentSubCmcTitle">Dental — CMC por Subárea</h2><div style="position:relative;height:220px"><canvas id="simDentSubCmcChart"></canvas></div></div>
+    <div class="card"><h2 id="simOtroSubCmcTitle">Otros Servicios — CMC</h2><div style="position:relative;height:220px"><canvas id="simOtroSubCmcChart"></canvas></div></div>
+    <div class="card"><h2>Todas las Subáreas — CMC</h2><div style="position:relative;height:220px"><canvas id="simAllSubCmcChart"></canvas></div></div>
+  </div>
+
+  <div class="card">
+    <h2>Detalle Simulado</h2>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Profesional</th><th>Área</th><th class="r">Pac/día</th><th class="r">$/Pac</th><th class="r">Días</th><th class="r">Total Sim.</th><th class="r">Honorarios</th><th class="r">CMC</th><th class="r">% CMC</th></tr></thead>
+        <tbody id="simViewBody"></tbody>
+        <tfoot><tr><td colspan="5">TOTAL</td><td class="r calc-cell" id="sfoot-total">—</td><td class="r" id="sfoot-prof">—</td><td class="r cmc-sim-cell" id="sfoot-cmc">—</td><td class="r" id="sfoot-pct">—</td></tr></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- Custom charts (sim) -->
+  <div class="section-lbl violet">📐 Gráficos Personalizados — Simulación</div>
+  <div class="custom-charts-grid" id="simCustomChartsGrid"></div>
+  <div class="add-chart-card" onclick="addSimCustomChart()" style="max-width:340px">
+    <div class="icon">+</div><span>Crear nuevo gráfico simulado</span>
+  </div>
+</div>
+
+<!-- ═══════════════════ TAB 4: SIM DATA ═══════════════════ -->
+<div class="panel" id="panel-simdata">
+  <div class="card">
+    <div class="section-lbl" style="margin-top:0">⚙️ Configuración Global</div>
+    <div class="sim-global">
+      <label>Días laborales:</label>
+      <input type="number" id="globalDias" value="22" min="1" max="31" oninput="setGlobalDias(this.value)"/>
+      <div class="hint">Default para profesionales sin días personalizados</div>
+      <button class="btn btn-danger btn-sm" onclick="resetSim()" style="margin-left:auto">↩️ Limpiar sim.</button>
+      <button class="btn btn-green btn-sm" onclick="importFromReal()">📥 Importar desde real</button>
+    </div>
+  </div>
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+      <strong>🧮 Parámetros por Profesional</strong>
+      <span style="font-size:.73rem;color:#7c3aed">Total = Pac/día × $/Paciente × Días</span>
+      <button class="btn btn-violet" onclick="switchTab('sim')" style="background:#7c3aed;color:#fff">🔮 Ver Dashboard Sim.</button>
+    </div>
+    <div class="tw">
+      <table id="simTable">
+        <thead><tr><th>Profesional</th><th>Área</th><th>Subárea</th><th>Tipo pago</th><th class="r">% / Monto fijo</th><th class="r">Pac/día</th><th class="r">$/Paciente</th><th class="r">Días</th><th class="r" style="color:#6d28d9">Total Sim.</th><th class="r" style="color:#64748b">% efect.</th><th class="r" style="color:#6d28d9">Honorarios</th><th class="r" style="color:#db2777">CMC</th></tr></thead>
+        <tbody id="simBody"></tbody>
+        <tfoot><tr><td colspan="8">TOTAL</td><td class="r calc-cell" id="simfoot-total">—</td><td>—</td><td class="r calc-cell" id="simfoot-prof">—</td><td class="r cmc-sim-cell" id="simfoot-cmc">—</td></tr></tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ TAB 5: BOX SCHEDULER ═══════════════════ -->
+<div class="panel" id="panel-boxes">
+  <div class="container">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+      <span style="font-size:1rem;font-weight:700;color:#1e293b">📅 Ocupación de Box</span>
+      <button class="add-btn" onclick="addBox()">+ Agregar Box</button>
+      <label style="font-size:.78rem;color:#64748b;display:flex;align-items:center;gap:5px">
+        Desde <input type="time" id="boxStart" value="08:00" style="padding:3px 7px;border:1px solid #e2e8f0;border-radius:5px;font-size:.78rem" onchange="renderBoxGrid()">
+      </label>
+      <label style="font-size:.78rem;color:#64748b;display:flex;align-items:center;gap:5px">
+        Hasta <input type="time" id="boxEnd" value="20:00" style="padding:3px 7px;border:1px solid #e2e8f0;border-radius:5px;font-size:.78rem" onchange="renderBoxGrid()">
+      </label>
+    </div>
+    <div style="padding:10px 14px;background:#f8fafc;border-radius:9px;border:1px solid #e2e8f0;margin-bottom:14px">
+      <div style="font-size:.68rem;font-weight:700;letter-spacing:.06em;color:#64748b;margin-bottom:8px">PROFESIONALES — arrastrá al box</div>
+      <div id="boxPalette" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+    </div>
+    <div style="overflow:auto;max-height:68vh;border:1px solid #e2e8f0;border-radius:10px;background:#fff">
+      <div id="boxScheduler" style="display:flex;min-width:max-content"></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /container -->
+<footer>Centro Médico Carampangue · Dashboard interactivo</footer>
+
 <script>
-const clp = n => "$" + Math.round(n||0).toLocaleString("es-CL");
-const monedaK = n => "$" + Math.round((n||0)/1000).toLocaleString("es-CL") + "K";
-const MES_NOMS = {"01":"Enero","02":"Febrero","03":"Marzo","04":"Abril","05":"Mayo","06":"Junio","07":"Julio","08":"Agosto","09":"Septiembre","10":"Octubre","11":"Noviembre","12":"Diciembre"};
-const fmtMes = m => `${MES_NOMS[m.slice(5,7)]} ${m.slice(0,4)}`;
+/* ══════════ ÁREAS + SUBÁREAS ══════════ */
+const ORIGINAL_AREAS = [
+  { key:'med',    label:'Médico',          color:'#3b82f6',
+    subareas:[
+      {key:'gine',     label:'Ginecología',          color:'#60a5fa'},
+      {key:'trauma',   label:'Traumatología',         color:'#818cf8'},
+      {key:'med_gral', label:'Medicina General',      color:'#38bdf8'},
+      {key:'med_fam',  label:'Medicina Familiar',     color:'#7dd3fc'},
+      {key:'orl',      label:'Otorrinolaringología',  color:'#a5b4fc'},
+      {key:'gastro',   label:'Gastroenterología',     color:'#6ee7b7'},
+      {key:'cardio',   label:'Cardiología',           color:'#fca5a5'},
+    ]},
+  { key:'kine',   label:'Kinesiología',    color:'#22c55e', subareas:[] },
+  { key:'dent',   label:'Dental',          color:'#f59e0b',
+    subareas:[
+      {key:'odont', label:'Odontología General', color:'#fbbf24'},
+      {key:'ortod', label:'Ortodoncia',           color:'#f97316'},
+      {key:'impl',  label:'Implantología',        color:'#fb923c'},
+      {key:'endod', label:'Endodoncia',           color:'#fdba74'},
+      {key:'est_d', label:'Estética Dental',      color:'#fde68a'},
+    ]},
+  { key:'tecmed', label:'Tecnólogo Médico', color:'#c4b5fd', subareas:[] },
+  { key:'fono',   label:'Fonoaudiología',   color:'#86efac', subareas:[] },
+  { key:'psico',  label:'Psicología',       color:'#f9a8d4', subareas:[] },
+  { key:'nutri',  label:'Nutrición',        color:'#6ee7b7', subareas:[] },
+  { key:'podo',   label:'Podología',        color:'#fcd34d', subareas:[] },
+  { key:'matro',  label:'Matrona',          color:'#f87171', subareas:[] },
+];
+let areas = JSON.parse(JSON.stringify(ORIGINAL_AREAS));
 
-const COLORS = ['#2563eb','#16a34a','#ea580c','#7c3aed','#db2777','#0891b2','#65a30d','#ca8a04','#dc2626','#7e22ce','#0284c7','#059669','#9333ea','#e11d48','#0d9488','#a16207','#be123c','#0c4a6e','#1e3a8a','#365314','#7c2d12','#52525b','#831843','#475569'];
+const areaByKey    = k => areas.find(a=>a.key===k)||{label:k,color:'#94a3b8',subareas:[]};
+const subareaByKey = (aKey,sKey) => (areaByKey(aKey).subareas||[]).find(s=>s.key===sKey)||null;
 
-let DATA = null;
+/* ══════════ DATOS REALES ══════════ */
+const ORIGINAL = [
+  {name:"Dr. Tirso gine",               total:774870,  prof:541634,  cmc:233236,   area:"med",    subarea:"gine",    tipo_pago:"pct", hono_fijo:0},
+  {name:"Dr. Tirso medicina",            total:0,       prof:0,       cmc:0,        area:"med",    subarea:"med_gral",tipo_pago:"pct", hono_fijo:0},
+  {name:"Dr. Borrego",                   total:1112130, prof:834098,  cmc:278033,   area:"med",    subarea:"med_gral",tipo_pago:"pct", hono_fijo:0},
+  {name:"Dr. Quijano",                   total:367500,  prof:262505,  cmc:104995,   area:"med",    subarea:"gastro",  tipo_pago:"pct", hono_fijo:0},
+  {name:"Dr. Márquez",                   total:2269730, prof:1693184, cmc:567433,   area:"med",    subarea:"med_fam", tipo_pago:"pct", hono_fijo:0},
+  {name:"Dr. Araneda",                   total:0,       prof:0,       cmc:0,        area:"med",    subarea:"med_gral",tipo_pago:"pct", hono_fijo:0},
+  {name:"Dr. Olavarría",                 total:2431070, prof:1722931, cmc:729321,   area:"med",    subarea:"med_gral",tipo_pago:"pct", hono_fijo:0},
+  {name:"Dr. Abarca",                    total:0,       prof:0,       cmc:0,        area:"med",    subarea:"med_gral",tipo_pago:"pct", hono_fijo:0},
+  {name:"Dr. Abarca Contrato",           total:2451080, prof:3414126, cmc:-963046,  area:"med",    subarea:"med_gral",tipo_pago:"fijo",hono_fijo:3414126},
+  {name:"Dr. Barraza",                   total:1040000, prof:742654,  cmc:297346,   area:"med",    subarea:"trauma",  tipo_pago:"pct", hono_fijo:0},
+  {name:"David Pardo",                   total:1730000, prof:1211000, cmc:519000,   area:"tecmed", subarea:"",        tipo_pago:"pct", hono_fijo:0},
+  {name:"Dr. Millán",                    total:1770000, prof:1216875, cmc:553125,   area:"med",    subarea:"cardio",  tipo_pago:"pct", hono_fijo:0},
+  {name:"Dra. Juana",                    total:255000,  prof:178430,  cmc:76500,    area:"fono",   subarea:"",        tipo_pago:"pct", hono_fijo:0},
+  {name:"Kine Leo",                      total:2985880, prof:1558228, cmc:1492940,  area:"kine",   subarea:"",        tipo_pago:"pct", hono_fijo:0},
+  {name:"Kine Luis",                     total:239740,  prof:98480,   cmc:119870,   area:"kine",   subarea:"",        tipo_pago:"pct", hono_fijo:0},
+  {name:"Kine Paola",                    total:0,       prof:0,       cmc:0,        area:"kine",   subarea:"",        tipo_pago:"pct", hono_fijo:0},
+  {name:"Nutri Gise",                    total:285490,  prof:199843,  cmc:85647,    area:"nutri",  subarea:"",        tipo_pago:"pct", hono_fijo:0},
+  {name:"Matrona Saraí",                 total:200000,  prof:133136,  cmc:70000,    area:"matro",  subarea:"",        tipo_pago:"pct", hono_fijo:0},
+  {name:"Podóloga Andrea",               total:398000,  prof:278600,  cmc:119400,   area:"podo",   subarea:"",        tipo_pago:"pct", hono_fijo:0},
+  {name:"Dentista Carlos",               total:555000,  prof:249750,  cmc:305250,   area:"dent",   subarea:"odont",   tipo_pago:"pct", hono_fijo:0},
+  {name:"Dentista Javi",                 total:2305000, prof:1170410, cmc:1152500,  area:"dent",   subarea:"odont",   tipo_pago:"pct", hono_fijo:0},
+  {name:"Dentista Daniela",              total:1800000, prof:1080000, cmc:720000,   area:"dent",   subarea:"ortod",   tipo_pago:"pct", hono_fijo:0},
+  {name:"Impl. Aurora",                  total:0,       prof:0,       cmc:0,        area:"dent",   subarea:"impl",    tipo_pago:"pct", hono_fijo:0},
+  {name:"Endodoncista Eduardo",          total:660000,  prof:451000,  cmc:231000,   area:"dent",   subarea:"endod",   tipo_pago:"pct", hono_fijo:0},
+  {name:"Estética Valentina Fuentealba", total:319980,  prof:127992,  cmc:111993,   area:"dent",   subarea:"est_d",   tipo_pago:"pct", hono_fijo:0},
+  {name:"Psicólogo Juan Pablo",          total:62570,   prof:43799,   cmc:18771,    area:"psico",  subarea:"",        tipo_pago:"pct", hono_fijo:0},
+  {name:"Psicólogo Jorge",               total:415900,  prof:291130,  cmc:124770,   area:"psico",  subarea:"",        tipo_pago:"pct", hono_fijo:0},
+];
+let data = JSON.parse(JSON.stringify(ORIGINAL));
 
-async function loadMes(mes){
-  const url = mes ? `/api/cmc/mensual?mes=${mes}` : '/api/cmc/mensual';
-  const r = await fetch(url);
-  DATA = await r.json();
-  document.getElementById('meta').textContent = `actualizado ${DATA.fecha_actualizacion} · fuente: bi_pagos_caja (CSV oficial Medilink)`;
-  document.getElementById('chart-mes-label').textContent = fmtMes(DATA.mes);
-  // Llenar selector si está vacío
-  const sel = document.getElementById('mesSel');
-  if(sel.options.length <= 1){
-    sel.innerHTML = (DATA.meses_disponibles||[]).map(m =>
-      `<option value="${m}"${m===DATA.mes?' selected':''}>${fmtMes(m)}</option>`
-    ).join('');
-    sel.value = DATA.mes;
-  }
-  render();
+/* ══════════ SIMULACIÓN ══════════ */
+let globalDias = 22;
+let simParams  = ORIGINAL.map(()=>({pacDia:0,ingPaciente:0,dias:null,profPct:null,tipo_pago_sim:null,hono_fijo_sim:null}));
+
+// Tipo de pago efectivo para simulación (null = heredar del dato real)
+const tipoPagoSim = (i)=> simParams[i].tipo_pago_sim ?? (data[i].tipo_pago||'pct');
+// Honorarios fijos efectivos para simulación
+const honoFijoSim = (i)=> simParams[i].hono_fijo_sim != null ? simParams[i].hono_fijo_sim : (data[i].hono_fijo||0);
+// % efectivo para tipo pct
+const profPctFor  = (i)=> simParams[i].profPct != null ? simParams[i].profPct/100 : (data[i].total>0?data[i].prof/data[i].total:0.70);
+const realProfPct = ()=> data.map((_,i)=>profPctFor(i));
+
+function calcSim(){
+  return data.map((d,i)=>{
+    const p=simParams[i], dias=p.dias!==null?p.dias:globalDias;
+    const total=Math.round(p.pacDia*p.ingPaciente*dias);
+    let prof, effPct;
+    if(tipoPagoSim(i)==='fijo'){
+      prof   = honoFijoSim(i);
+      effPct = total>0 ? prof/total : 0;
+    } else {
+      const pct=profPctFor(i);
+      prof   = Math.round(total*pct);
+      effPct = pct;
+    }
+    const cmc=total-prof;
+    return {name:d.name,area:d.area,subarea:d.subarea,pacDia:p.pacDia,ingPaciente:p.ingPaciente,dias,total,prof,cmc,profPct:effPct};
+  });
 }
 
-function render(){
-  const top = (DATA.profesionales[0]||{});
-  const topArea = (DATA.areas[0]||{});
-  document.getElementById('kpi-total').textContent = clp(DATA.total_mes);
-  document.getElementById('kpi-pagos').textContent = `${DATA.n_pagos_total} pagos`;
-  document.getElementById('kpi-profs').textContent = DATA.n_profesionales_activos;
-  document.getElementById('kpi-dias').textContent = `${DATA.dias_con_actividad} días con actividad`;
-  document.getElementById('kpi-top').textContent = (top.nombre||'—').replace('Dr. ','').replace('Dra. ','').slice(0,28);
-  document.getElementById('kpi-top-monto').textContent = clp(top.total) + ' · ' + (top.pacientes||0) + ' pacientes';
-  document.getElementById('kpi-toparea').textContent = topArea.label||'—';
-  document.getElementById('kpi-toparea-monto').textContent = clp(topArea.total);
+/* ══════════ CUSTOM CHARTS ══════════ */
+let customCharts = [];
+let customChartInstances = {};
+let simCustomCharts = [];
+let simCustomChartInstances = {};
 
-  // Bar chart
-  const labels = DATA.profesionales.map(p => p.nombre.replace('Dr. ','').replace('Dra. ','').split(' ').slice(0,2).join(' '));
-  const data = DATA.profesionales.map(p => p.total);
-  if(window._bar) window._bar.destroy();
-  window._bar = new Chart(document.getElementById('barChart').getContext('2d'), {
+/* ══════════ UTILS ══════════ */
+const fmtCLP   = n=>{const s=Math.abs(n).toLocaleString('es-CL');return n<0?`<span class="neg">-$${s}</span>`:`$${s}`;};
+const fmtPlain = n=>{const s=Math.abs(n).toLocaleString('es-CL');return(n<0?'-':'')+'$'+s;};
+const pctFmt   = (a,b)=>b===0?'—':(a/b*100).toFixed(1)+'%';
+const h2r      = (hex,a)=>{const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return`rgba(${r},${g},${b},${a})`;};
+const delta    = (sim,real)=>{if(!real)return'';const d=sim-real,p=(d/Math.abs(real)*100).toFixed(1);return d>=0?`<span class="delta-pos">▲ ${fmtPlain(d)} (+${p}%)</span>`:`<span class="delta-neg">▼ ${fmtPlain(Math.abs(d))} (${p}%)</span>`;};
+
+/* ══════════ CHART INSTANCES ══════════ */
+let barChart,doughnutChart,cmcDoughnutChart,medSubChart,dentSubChart,otroSubChart,allSubChart,medSubCmcChart,dentSubCmcChart,otroSubCmcChart,allSubCmcChart;
+let simBarChart,simDoughnutChart,simCmcChart,simMedSubChart,simDentSubChart,simOtroSubChart,simAllSubChart,simMedSubCmcChart,simDentSubCmcChart,simOtroSubCmcChart,simAllSubCmcChart;
+
+function initCharts(){
+  barChart         = makeBar('barChart','#2563eb','#16a34a');
+  simBarChart      = makeBar('simBarChart','#6d28d9','#16a34a',true);
+  doughnutChart    = makePie('doughnutChart');
+  cmcDoughnutChart = makePie('cmcDoughnutChart');
+  medSubChart      = makePie('medSubChart');
+  dentSubChart     = makePie('dentSubChart');
+  otroSubChart     = makePie('otroSubChart');
+  allSubChart      = makePie('allSubChart');
+  simDoughnutChart = makePie('simDoughnutChart');
+  simCmcChart      = makePie('simCmcChart');
+  simMedSubChart      = makePie('simMedSubChart');
+  simDentSubChart     = makePie('simDentSubChart');
+  simOtroSubChart     = makePie('simOtroSubChart');
+  simAllSubChart      = makePie('simAllSubChart');
+  medSubCmcChart      = makePie('medSubCmcChart');
+  dentSubCmcChart     = makePie('dentSubCmcChart');
+  otroSubCmcChart     = makePie('otroSubCmcChart');
+  allSubCmcChart      = makePie('allSubCmcChart');
+  simMedSubCmcChart   = makePie('simMedSubCmcChart');
+  simDentSubCmcChart  = makePie('simDentSubCmcChart');
+  simOtroSubCmcChart  = makePie('simOtroSubCmcChart');
+  simAllSubCmcChart   = makePie('simAllSubCmcChart');
+}
+
+function makeBar(id,c1,c2,isSim){
+  return new Chart(document.getElementById(id),{
     type:'bar',
-    data:{ labels, datasets:[{ label:'Total', data, backgroundColor: data.map((_,i)=>COLORS[i%COLORS.length]) }]},
-    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>clp(c.parsed.x)}} },
-      scales:{ x:{ticks:{callback:v=>monedaK(v)}} } }
+    data:{labels:[],datasets:[
+      {label:isSim?'Total Sim.':'Total Mes',   backgroundColor:h2r(c1,.2),borderColor:c1,borderWidth:1.5,borderRadius:4,data:[]},
+      {label:'Honorarios', backgroundColor:h2r(c2,.2),borderColor:c2,borderWidth:1.5,borderRadius:4,data:[]},
+      {label:'CMC',        backgroundColor:[],borderColor:[],borderWidth:1.5,borderRadius:4,data:[]},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{font:{size:10}}},
+               tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fmtPlain(c.parsed.y)}`}}},
+      scales:{x:{ticks:{font:{size:9},maxRotation:45},grid:{display:false}},
+              y:{ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k',font:{size:9}},grid:{color:'#f1f5f9'}}}}
   });
+}
 
-  // Doughnut por área
-  const areaLabels = DATA.areas.map(a => a.label);
-  const areaData = DATA.areas.map(a => a.total);
-  if(window._dn) window._dn.destroy();
-  window._dn = new Chart(document.getElementById('doughnutChart').getContext('2d'), {
+const centerTotalPlugin = {
+  id:'centerTotal',
+  afterDraw(chart){
+    if(chart.config.type!=='doughnut') return;
+    const total=chart.data.datasets[0].data.reduce((a,b)=>a+(b||0),0);
+    if(!total) return;
+    const {ctx,chartArea:{left,right,top,bottom}}=chart;
+    const cx=(left+right)/2, cy=(top+bottom)/2;
+    const label = total>=1e6 ? '$'+(total/1e6).toFixed(1)+'M'
+                : total>=1e3 ? '$'+(total/1e3).toFixed(0)+'k'
+                : '$'+total.toLocaleString('es-CL');
+    ctx.save();
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.font='bold 12px Segoe UI,system-ui,sans-serif';
+    ctx.fillStyle='#1e293b';
+    ctx.fillText(label, cx, cy-7);
+    ctx.font='9px Segoe UI,system-ui,sans-serif';
+    ctx.fillStyle='#94a3b8';
+    ctx.fillText('total', cx, cy+8);
+    ctx.restore();
+  }
+};
+
+function makePie(id){
+  return new Chart(document.getElementById(id),{
     type:'doughnut',
-    data:{ labels:areaLabels, datasets:[{ data:areaData, backgroundColor:areaLabels.map((_,i)=>COLORS[i%COLORS.length]) }]},
-    options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{position:'right', labels:{font:{size:11}}},
-                 tooltip:{callbacks:{label:c=>{
-                   const tot = c.dataset.data.reduce((a,b)=>a+b,0);
-                   const pct = tot ? (c.parsed/tot*100).toFixed(1) : 0;
-                   return ` ${c.label}: ${clp(c.parsed)} (${pct}%)`;
-                 }}}} }
+    data:{labels:[],datasets:[{data:[],backgroundColor:[],borderWidth:2,borderColor:'#fff',hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'right',labels:{font:{size:9},boxWidth:10}},
+               tooltip:{callbacks:{label:c=>{const tot=c.dataset.data.reduce((a,b)=>a+(b||0),0);const pct=tot>0?(c.parsed/tot*100).toFixed(1)+'%':'—';return ` ${c.label}: ${fmtPlain(c.parsed)} (${pct})`;}}}}},
+    plugins:[centerTotalPlugin]
   });
+}
 
-  // Line chart por día
-  if(window._ln) window._ln.destroy();
-  window._ln = new Chart(document.getElementById('lineChart').getContext('2d'), {
-    type:'line',
-    data:{ labels: DATA.por_dia.map(d => d.fecha.slice(8,10)),
-           datasets:[{ label:'Pacientes', data:DATA.por_dia.map(d=>d.pacientes),
-                       borderColor:'#16a34a', backgroundColor:'rgba(22,163,74,.1)', fill:true, tension:.3, pointRadius:3 }]},
-    options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false} }, scales:{y:{beginAtZero:true}} }
+function setPieData(ch,labels,values,colors){
+  ch.data.labels=labels; ch.data.datasets[0].data=values; ch.data.datasets[0].backgroundColor=colors; ch.update();
+}
+
+/* ══════════ SEGMENTOS (para gráficos de subárea y custom) ══════════ */
+// Devuelve lista de segmentos {label,color,value(metric)} para el gráfico "todas las subáreas"
+function allSubareaSegments(metric){
+  const segs=[];
+  areas.forEach(a=>{
+    if(a.subareas && a.subareas.length>0){
+      a.subareas.forEach(s=>{
+        const val=data.filter(d=>d.area===a.key&&d.subarea===s.key&&d.total>0).reduce((sum,d)=>sum+d[metric],0);
+        if(val>0) segs.push({label:s.label,color:s.color,value:val});
+      });
+      // professionals sin subárea dentro de esta área
+      const noSub=data.filter(d=>d.area===a.key&&(!d.subarea||!a.subareas.find(s=>s.key===d.subarea))&&d.total>0).reduce((sum,d)=>sum+d[metric],0);
+      if(noSub>0) segs.push({label:a.label+' (sin subárea)',color:h2r(a.color,.6),value:noSub});
+    } else {
+      const val=data.filter(d=>d.area===a.key&&d.total>0).reduce((sum,d)=>sum+d[metric],0);
+      if(val>0) segs.push({label:a.label,color:a.color,value:val});
+    }
   });
+  return segs;
+}
+
+function subareaSegmentsFor(areaKey,metric){
+  const a=areaByKey(areaKey);
+  const activeF = d => metric==='cmc' ? d.cmc>0 : d.total>0;
+  const segs=[];
+  (a.subareas||[]).forEach(s=>{
+    const val=data.filter(d=>d.area===areaKey&&d.subarea===s.key&&activeF(d)).reduce((sum,d)=>sum+d[metric],0);
+    if(val>0) segs.push({label:s.label,color:s.color,value:val});
+  });
+  const noSub=data.filter(d=>d.area===areaKey&&(!d.subarea||!(a.subareas||[]).find(s=>s.key===d.subarea))&&activeF(d)).reduce((sum,d)=>sum+d[metric],0);
+  if(noSub>0) segs.push({label:'Sin subárea',color:h2r(a.color,.5),value:noSub});
+  return segs;
+}
+
+function otherAreasSegments(metric){
+  const excl=['med','dent'];
+  const activeF = d => metric==='cmc' ? d.cmc>0 : d.total>0;
+  return areas.filter(a=>!excl.includes(a.key)).reduce((segs,a)=>{
+    const val=data.filter(d=>d.area===a.key&&activeF(d)).reduce((sum,d)=>sum+d[metric],0);
+    if(val>0) segs.push({label:a.label,color:a.color,value:val});
+    return segs;
+  },[]);
+}
+
+/* ══════════ SEGMENTOS SIMULADOS ══════════ */
+function simSegValue(seg, sd){
+  if(seg.type==='area')
+    return sd.filter(d=>d.area===seg.areaKey&&d.total>0).reduce((s,d)=>s+d[seg.metric||'total'],0);
+  return sd.filter(d=>d.area===seg.areaKey&&d.subarea===seg.subareaKey&&d.total>0).reduce((s,d)=>s+d[seg.metric||'total'],0);
+}
+
+function simOtherAreasSegments(metric, sd){
+  const excl=['med','dent'];
+  const activeF = d => metric==='cmc' ? d.cmc>0 : d.total>0;
+  return areas.filter(a=>!excl.includes(a.key)).reduce((segs,a)=>{
+    const val=sd.filter(d=>d.area===a.key&&activeF(d)).reduce((sum,d)=>sum+d[metric],0);
+    if(val>0) segs.push({label:a.label,color:a.color,value:val});
+    return segs;
+  },[]);
+}
+
+function simSubareaSegmentsFor(areaKey, metric, sd){
+  const a=areaByKey(areaKey), segs=[];
+  const activeF = d => metric==='cmc' ? d.cmc>0 : d.total>0;
+  (a.subareas||[]).forEach(s=>{
+    const val=sd.filter(d=>d.area===areaKey&&d.subarea===s.key&&activeF(d)).reduce((sum,d)=>sum+d[metric],0);
+    if(val>0) segs.push({label:s.label,color:s.color,value:val});
+  });
+  const noSub=sd.filter(d=>d.area===areaKey&&(!d.subarea||!(a.subareas||[]).find(s=>s.key===d.subarea))&&activeF(d)).reduce((sum,d)=>sum+d[metric],0);
+  if(noSub>0) segs.push({label:'Sin subárea',color:h2r(a.color,.5),value:noSub});
+  return segs;
+}
+
+function simAllSubareaSegments(metric, sd){
+  const segs=[];
+  areas.forEach(a=>{
+    if(a.subareas&&a.subareas.length>0){
+      a.subareas.forEach(s=>{
+        const val=sd.filter(d=>d.area===a.key&&d.subarea===s.key&&d.total>0).reduce((sum,d)=>sum+d[metric],0);
+        if(val>0) segs.push({label:s.label,color:s.color,value:val});
+      });
+      const noSub=sd.filter(d=>d.area===a.key&&(!d.subarea||!a.subareas.find(s=>s.key===d.subarea))&&d.total>0).reduce((sum,d)=>sum+d[metric],0);
+      if(noSub>0) segs.push({label:a.label+' (sin subárea)',color:h2r(a.color,.6),value:noSub});
+    } else {
+      const val=sd.filter(d=>d.area===a.key&&d.total>0).reduce((sum,d)=>sum+d[metric],0);
+      if(val>0) segs.push({label:a.label,color:a.color,value:val});
+    }
+  });
+  return segs;
+}
+
+/* ══════════ SIM CUSTOM CHART BUILDER ══════════ */
+function addSimCustomChart(){
+  const id='scc_'+Date.now();
+  const allSegs=buildSegmentList();
+  simCustomCharts.push({id,title:'Gráfico simulado',metric:'total',segments:allSegs.slice(0,4).map(s=>s.id),editing:true});
+  renderSimCustomCharts();
+}
+
+function renderSimCustomCharts(){
+  const grid=document.getElementById('simCustomChartsGrid'); grid.innerHTML='';
+  simCustomCharts.forEach(cc=>{ grid.appendChild(buildSimCustomCard(cc)); });
+}
+
+function buildSimCustomCard(cc){
+  const sd=calcSim();
+  const allSegs=buildSegmentList();
+  const card=document.createElement('div');
+  card.className='custom-chart-card'+(cc.editing?' editing':'');
+  card.id='card_'+cc.id;
+  const canvasId='canvas_'+cc.id;
+  const chosen=allSegs.filter(s=>cc.segments.includes(s.id));
+
+  const calcVal=(seg)=>{
+    if(seg.type==='area') return sd.filter(d=>d.area===seg.areaKey&&d.total>0).reduce((s,d)=>s+d[cc.metric],0);
+    return sd.filter(d=>d.area===seg.areaKey&&d.subarea===seg.subareaKey&&d.total>0).reduce((s,d)=>s+d[cc.metric],0);
+  };
+
+  const checkItems=allSegs.map(s=>`
+    <label class="seg-check">
+      <input type="checkbox" ${cc.segments.includes(s.id)?'checked':''}
+             onchange="toggleSimSegment('${cc.id}','${s.id}',this.checked)"/>
+      <span class="seg-dot" style="background:${s.color}"></span>${s.label}
+    </label>`).join('');
+
+  card.innerHTML=`
+    <div class="cc-header">
+      <input class="cc-title-inp" value="${cc.title}" onchange="setSimChartProp('${cc.id}','title',this.value)" placeholder="Título"/>
+      <button class="btn btn-sm btn-blue" onclick="toggleSimEditing('${cc.id}')">${cc.editing?'✓ Listo':'⚙️'}</button>
+      <button class="del-btn" onclick="deleteSimCustomChart('${cc.id}')">✕</button>
+    </div>
+    <div style="position:relative;height:200px"><canvas id="${canvasId}"></canvas></div>
+    ${cc.editing?`<div class="cc-config">
+      <div class="cc-config-row">
+        <label>Métrica:</label>
+        <select onchange="setSimChartProp('${cc.id}','metric',this.value)">
+          <option value="total" ${cc.metric==='total'?'selected':''}>Total simulado</option>
+          <option value="prof"  ${cc.metric==='prof' ?'selected':''}>Honorarios</option>
+          <option value="cmc"   ${cc.metric==='cmc'  ?'selected':''}>Margen CMC</option>
+        </select>
+      </div>
+      <div style="font-size:.74rem;font-weight:600;color:#5b21b6;margin-bottom:5px">Segmentos:</div>
+      <div class="seg-list">${checkItems}</div>
+    </div>`:''}`;
+
+  setTimeout(()=>{
+    const ctx=document.getElementById(canvasId); if(!ctx) return;
+    if(simCustomChartInstances[cc.id]) simCustomChartInstances[cc.id].destroy();
+    simCustomChartInstances[cc.id]=new Chart(ctx,{
+      type:'doughnut',
+      data:{labels:chosen.map(s=>s.label),datasets:[{data:chosen.map(s=>calcVal(s)),backgroundColor:chosen.map(s=>s.color),borderWidth:2,borderColor:'#fff',hoverOffset:6}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{position:'right',labels:{font:{size:9},boxWidth:10}},
+                 tooltip:{callbacks:{label:c=>{const tot=c.dataset.data.reduce((a,b)=>a+(b||0),0);const pct=tot>0?(c.parsed/tot*100).toFixed(1)+'%':'—';return ` ${c.label}: ${fmtPlain(c.parsed)} (${pct})`;}}}}},
+      plugins:[centerTotalPlugin]
+    });
+  },0);
+  return card;
+}
+
+function refreshSimCustomCharts(){
+  const sd=calcSim();
+  simCustomCharts.forEach(cc=>{
+    const ch=simCustomChartInstances[cc.id]; if(!ch) return;
+    const allSegs=buildSegmentList();
+    const chosen=allSegs.filter(s=>cc.segments.includes(s.id));
+    const calcVal=(seg)=>{
+      if(seg.type==='area') return sd.filter(d=>d.area===seg.areaKey&&d.total>0).reduce((s,d)=>s+d[cc.metric],0);
+      return sd.filter(d=>d.area===seg.areaKey&&d.subarea===seg.subareaKey&&d.total>0).reduce((s,d)=>s+d[cc.metric],0);
+    };
+    ch.data.labels=chosen.map(s=>s.label);
+    ch.data.datasets[0].data=chosen.map(s=>calcVal(s));
+    ch.data.datasets[0].backgroundColor=chosen.map(s=>s.color);
+    ch.update();
+  });
+}
+
+function setSimChartProp(id,prop,val){
+  const cc=simCustomCharts.find(c=>c.id===id); if(!cc) return;
+  cc[prop]=val;
+  if(simCustomChartInstances[id]) simCustomChartInstances[id].destroy();
+  delete simCustomChartInstances[id];
+  renderSimCustomCharts();
+}
+function toggleSimSegment(id,segId,checked){
+  const cc=simCustomCharts.find(c=>c.id===id); if(!cc) return;
+  if(checked) cc.segments.push(segId); else cc.segments=cc.segments.filter(s=>s!==segId);
+  const ch=simCustomChartInstances[id]; if(!ch) return;
+  const sd=calcSim(), allSegs=buildSegmentList();
+  const chosen=allSegs.filter(s=>cc.segments.includes(s.id));
+  const calcVal=(seg)=>{
+    if(seg.type==='area') return sd.filter(d=>d.area===seg.areaKey&&d.total>0).reduce((s,d)=>s+d[cc.metric],0);
+    return sd.filter(d=>d.area===seg.areaKey&&d.subarea===seg.subareaKey&&d.total>0).reduce((s,d)=>s+d[cc.metric],0);
+  };
+  ch.data.labels=chosen.map(s=>s.label);
+  ch.data.datasets[0].data=chosen.map(s=>calcVal(s));
+  ch.data.datasets[0].backgroundColor=chosen.map(s=>s.color);
+  ch.update();
+}
+function toggleSimEditing(id){
+  const cc=simCustomCharts.find(c=>c.id===id); if(!cc) return;
+  cc.editing=!cc.editing;
+  if(simCustomChartInstances[id]) simCustomChartInstances[id].destroy();
+  delete simCustomChartInstances[id];
+  renderSimCustomCharts();
+}
+function deleteSimCustomChart(id){
+  if(simCustomChartInstances[id]) simCustomChartInstances[id].destroy();
+  delete simCustomChartInstances[id];
+  simCustomCharts=simCustomCharts.filter(c=>c.id!==id);
+  renderSimCustomCharts();
+}
+
+/* ══════════ RENDER DASHBOARD ══════════ */
+function renderDashboard(){
+  const active=data.filter(d=>d.total>0);
+  const sT=data.reduce((s,d)=>s+d.total,0), sP=data.reduce((s,d)=>s+d.prof,0), sC=data.reduce((s,d)=>s+d.cmc,0);
+  document.getElementById('kpi-total').textContent=fmtPlain(sT);
+  document.getElementById('kpi-prof').textContent=fmtPlain(sP);
+  document.getElementById('kpi-cmc').textContent=fmtPlain(sC);
+  document.getElementById('kpi-activos').textContent=active.length;
+  document.getElementById('kpi-prof-pct').textContent=pctFmt(sP,sT)+' del total';
+  document.getElementById('kpi-cmc-pct').textContent=pctFmt(sC,sT)+' del total';
+  document.getElementById('kpi-total-profs').textContent=`de ${data.length} en nómina`;
+  document.getElementById('foot-total').innerHTML=fmtCLP(sT);
+  document.getElementById('foot-prof').innerHTML=fmtCLP(sP);
+  document.getElementById('foot-cmc').innerHTML=fmtCLP(sC);
+  document.getElementById('foot-pct').textContent=pctFmt(sC,sT);
+  document.getElementById('alert-neg').style.display=data.some(d=>d.cmc<0)?'block':'none';
+  document.getElementById('chart-mes-label').textContent=document.getElementById('mesLabel').value;
 
   // Tabla
-  const tbody = document.querySelector('#tabla tbody');
-  let html='';
-  DATA.profesionales.forEach((p,i) => {
-    const pct = DATA.total_mes ? (p.total/DATA.total_mes*100).toFixed(1) : 0;
-    html += `<tr>
-      <td>${i+1}</td>
-      <td><strong>${p.nombre}</strong></td>
-      <td><span class="pill area-${p.area}">${p.area_label}</span></td>
-      <td style="color:#6b7280">${p.especialidad}</td>
-      <td class="num">${p.pacientes}</td>
-      <td class="num">${p.n_pagos}</td>
-      <td class="num"><strong>${clp(p.total)}</strong></td>
-      <td class="num">${pct}%</td>
-    </tr>`;
+  const tbody=document.getElementById('viewTableBody'); tbody.innerHTML='';
+  const maxC=Math.max(...data.map(d=>Math.abs(d.cmc)),1);
+  data.forEach(d=>{
+    const a=areaByKey(d.area), bg=h2r(a.color,.13);
+    const sub=subareaByKey(d.area,d.subarea);
+    const cmcP=d.total?(d.cmc/d.total*100).toFixed(1)+'%':'—';
+    const bw=Math.min(100,Math.abs(d.cmc)/maxC*100), bc=d.cmc<0?'#dc2626':a.color;
+    const tr=document.createElement('tr'); if(d.total===0) tr.classList.add('inactive');
+    tr.innerHTML=`<td>${d.name}</td>
+      <td><span class="badge" style="background:${bg};color:${a.color}">${a.label}</span></td>
+      <td>${sub?`<span class="badge" style="background:${h2r(sub.color,.18)};color:${sub.color}">${sub.label}</span>`:'<span style="color:#cbd5e1;font-size:.72rem">—</span>'}</td>
+      <td class="r">${fmtCLP(d.total)}</td><td class="r">${fmtCLP(d.prof)}</td>
+      <td class="r">${fmtCLP(d.cmc)}</td><td class="r ${d.cmc<0?'neg':''}">${cmcP}</td>
+      <td><div class="bar-mini"><div class="bar-mini-fill" style="width:${bw}%;background:${bc}"></div></div></td>`;
+    tbody.appendChild(tr);
   });
-  tbody.innerHTML = html;
+
+  // Bar chart
+  const sorted=[...active].sort((a,b)=>b.total-a.total);
+  barChart.data.labels=sorted.map(d=>d.name);
+  barChart.data.datasets[0].data=sorted.map(d=>d.total);
+  barChart.data.datasets[1].data=sorted.map(d=>d.prof);
+  barChart.data.datasets[2].data=sorted.map(d=>d.cmc);
+  barChart.data.datasets[2].backgroundColor=sorted.map(d=>d.cmc<0?'rgba(220,38,38,.25)':h2r(areaByKey(d.area).color,.25));
+  barChart.data.datasets[2].borderColor=sorted.map(d=>d.cmc<0?'#dc2626':areaByKey(d.area).color);
+  barChart.update();
+
+  // Area doughnuts
+  setPieData(doughnutChart,
+    areas.map(a=>a.label),
+    areas.map(a=>active.filter(d=>d.area===a.key).reduce((s,d)=>s+d.total,0)),
+    areas.map(a=>a.color));
+  setPieData(cmcDoughnutChart,
+    areas.map(a=>a.label),
+    areas.map(a=>data.filter(d=>d.area===a.key&&d.cmc>0).reduce((s,d)=>s+d.cmc,0)),
+    areas.map(a=>a.color));
+
+  // Medicina subarea
+  const medA=areaByKey('med');
+  const medSegs=subareaSegmentsFor('med','total');
+  document.getElementById('medSubTitle').textContent=medA.label+' por Subárea';
+  setPieData(medSubChart,medSegs.map(s=>s.label),medSegs.map(s=>s.value),medSegs.map(s=>s.color));
+
+  // Dental subarea
+  const dentA=areaByKey('dent');
+  const dentSegs=subareaSegmentsFor('dent','total');
+  document.getElementById('dentSubTitle').textContent=dentA.label+' por Subárea';
+  setPieData(dentSubChart,dentSegs.map(s=>s.label),dentSegs.map(s=>s.value),dentSegs.map(s=>s.color));
+
+  // Otros Servicios subarea — ingresos
+  const otroSegs=otherAreasSegments('total');
+  setPieData(otroSubChart,otroSegs.map(s=>s.label),otroSegs.map(s=>s.value),otroSegs.map(s=>s.color));
+
+  // All subareas — ingresos
+  const allSegs=allSubareaSegments('total');
+  setPieData(allSubChart,allSegs.map(s=>s.label),allSegs.map(s=>s.value),allSegs.map(s=>s.color));
+
+  // CMC por subárea
+  const medCmcSegs=subareaSegmentsFor('med','cmc');
+  document.getElementById('medSubCmcTitle').textContent=areaByKey('med').label+' — CMC por Subárea';
+  setPieData(medSubCmcChart,medCmcSegs.map(s=>s.label),medCmcSegs.map(s=>s.value),medCmcSegs.map(s=>s.color));
+
+  const dentCmcSegs=subareaSegmentsFor('dent','cmc');
+  document.getElementById('dentSubCmcTitle').textContent=areaByKey('dent').label+' — CMC por Subárea';
+  setPieData(dentSubCmcChart,dentCmcSegs.map(s=>s.label),dentCmcSegs.map(s=>s.value),dentCmcSegs.map(s=>s.color));
+
+  // Otros Servicios — CMC
+  const otroCmcSegs=otherAreasSegments('cmc');
+  setPieData(otroSubCmcChart,otroCmcSegs.map(s=>s.label),otroCmcSegs.map(s=>s.value),otroCmcSegs.map(s=>s.color));
+
+  const allCmcSegs=allSubareaSegments('cmc');
+  setPieData(allSubCmcChart,allCmcSegs.map(s=>s.label),allCmcSegs.map(s=>s.value),allCmcSegs.map(s=>s.color));
+
+  // Custom charts
+  refreshCustomCharts();
+  applyChartDrag();
 }
 
-document.getElementById('mesSel').addEventListener('change', e => loadMes(e.target.value));
-loadMes();
+/* ══════════ CUSTOM CHART BUILDER ══════════ */
+function buildSegmentList(){
+  // Returns all possible segments: {id, label, color, type:'area'|'subarea', areaKey, subareaKey?}
+  const segs=[];
+  areas.forEach(a=>{
+    segs.push({id:'a_'+a.key,label:a.label,color:a.color,type:'area',areaKey:a.key});
+    (a.subareas||[]).forEach(s=>{
+      segs.push({id:'s_'+a.key+'_'+s.key,label:`${a.label} › ${s.label}`,color:s.color,type:'subarea',areaKey:a.key,subareaKey:s.key});
+    });
+  });
+  return segs;
+}
+
+function calcSegmentValue(seg,metric){
+  if(seg.type==='area'){
+    return data.filter(d=>d.area===seg.areaKey&&d.total>0).reduce((s,d)=>s+d[metric],0);
+  } else {
+    return data.filter(d=>d.area===seg.areaKey&&d.subarea===seg.subareaKey&&d.total>0).reduce((s,d)=>s+d[metric],0);
+  }
+}
+
+function addCustomChart(){
+  const id='cc_'+Date.now();
+  const allSegs=buildSegmentList();
+  customCharts.push({
+    id, title:'Nuevo gráfico',
+    metric:'total',
+    segments: allSegs.slice(0,4).map(s=>s.id), // default: primeros 4 segmentos
+    editing: true
+  });
+  renderCustomCharts();
+}
+
+function renderCustomCharts(){
+  const grid=document.getElementById('customChartsGrid');
+  grid.innerHTML='';
+  customCharts.forEach(cc=>{ grid.appendChild(buildCustomCard(cc)); });
+}
+
+function buildCustomCard(cc){
+  const allSegs=buildSegmentList();
+  const card=document.createElement('div');
+  card.className='custom-chart-card'+(cc.editing?' editing':'');
+  card.id='card_'+cc.id;
+
+  const canvasId='canvas_'+cc.id;
+
+  // Segments labels for pie
+  const chosen=allSegs.filter(s=>cc.segments.includes(s.id));
+  const labels=chosen.map(s=>s.label);
+  const values=chosen.map(s=>calcSegmentValue(s,cc.metric));
+  const colors=chosen.map(s=>s.color);
+
+  // Build checklist
+  const checkItems=allSegs.map(s=>`
+    <label class="seg-check">
+      <input type="checkbox" ${cc.segments.includes(s.id)?'checked':''}
+             onchange="toggleSegment('${cc.id}','${s.id}',this.checked)"/>
+      <span class="seg-dot" style="background:${s.color}"></span>${s.label}
+    </label>`).join('');
+
+  card.innerHTML=`
+    <div class="cc-header">
+      <input class="cc-title-inp" value="${cc.title}" onchange="setChartProp('${cc.id}','title',this.value)" placeholder="Título"/>
+      <button class="btn btn-sm btn-blue" onclick="toggleEditing('${cc.id}')">${cc.editing?'✓ Listo':'⚙️'}</button>
+      <button class="del-btn" onclick="deleteCustomChart('${cc.id}')" title="Eliminar">✕</button>
+    </div>
+    <div style="position:relative;height:200px"><canvas id="${canvasId}"></canvas></div>
+    ${cc.editing?`<div class="cc-config">
+      <div class="cc-config-row">
+        <label>Métrica:</label>
+        <select onchange="setChartProp('${cc.id}','metric',this.value)">
+          <option value="total" ${cc.metric==='total'?'selected':''}>Total ingresos</option>
+          <option value="prof"  ${cc.metric==='prof' ?'selected':''}>Honorarios</option>
+          <option value="cmc"   ${cc.metric==='cmc'  ?'selected':''}>Margen CMC</option>
+        </select>
+      </div>
+      <div style="font-size:.74rem;font-weight:600;color:#5b21b6;margin-bottom:5px">Segmentos a incluir:</div>
+      <div class="seg-list">${checkItems}</div>
+    </div>`:''} `;
+
+  // Mount chart after DOM insertion (use setTimeout)
+  setTimeout(()=>{
+    const ctx=document.getElementById(canvasId);
+    if(!ctx) return;
+    if(customChartInstances[cc.id]) customChartInstances[cc.id].destroy();
+    customChartInstances[cc.id]=new Chart(ctx,{
+      type:'doughnut',
+      data:{labels,datasets:[{data:values,backgroundColor:colors,borderWidth:2,borderColor:'#fff',hoverOffset:6}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{position:'right',labels:{font:{size:9},boxWidth:10}},
+                 tooltip:{callbacks:{label:c=>{const tot=c.dataset.data.reduce((a,b)=>a+(b||0),0);const pct=tot>0?(c.parsed/tot*100).toFixed(1)+'%':'—';return ` ${c.label}: ${fmtPlain(c.parsed)} (${pct})`;}}}}},
+      plugins:[centerTotalPlugin]
+    });
+  },0);
+
+  return card;
+}
+
+function refreshCustomCharts(){
+  // Re-render all custom charts with updated data (non-editing: just update values)
+  customCharts.forEach(cc=>{
+    const ch=customChartInstances[cc.id];
+    if(!ch) return;
+    const allSegs=buildSegmentList();
+    const chosen=allSegs.filter(s=>cc.segments.includes(s.id));
+    ch.data.labels=chosen.map(s=>s.label);
+    ch.data.datasets[0].data=chosen.map(s=>calcSegmentValue(s,cc.metric));
+    ch.data.datasets[0].backgroundColor=chosen.map(s=>s.color);
+    ch.update();
+  });
+}
+
+function setChartProp(id,prop,val){
+  const cc=customCharts.find(c=>c.id===id); if(!cc) return;
+  cc[prop]=val;
+  if(customChartInstances[id]) customChartInstances[id].destroy();
+  delete customChartInstances[id];
+  renderCustomCharts();
+}
+
+function toggleSegment(id,segId,checked){
+  const cc=customCharts.find(c=>c.id===id); if(!cc) return;
+  if(checked) cc.segments.push(segId);
+  else cc.segments=cc.segments.filter(s=>s!==segId);
+  // update chart data without full re-render
+  const ch=customChartInstances[id]; if(!ch) return;
+  const allSegs=buildSegmentList();
+  const chosen=allSegs.filter(s=>cc.segments.includes(s.id));
+  ch.data.labels=chosen.map(s=>s.label);
+  ch.data.datasets[0].data=chosen.map(s=>calcSegmentValue(s,cc.metric));
+  ch.data.datasets[0].backgroundColor=chosen.map(s=>s.color);
+  ch.update();
+}
+
+function toggleEditing(id){
+  const cc=customCharts.find(c=>c.id===id); if(!cc) return;
+  cc.editing=!cc.editing;
+  if(customChartInstances[id]) customChartInstances[id].destroy();
+  delete customChartInstances[id];
+  renderCustomCharts();
+}
+
+function deleteCustomChart(id){
+  if(customChartInstances[id]) customChartInstances[id].destroy();
+  delete customChartInstances[id];
+  customCharts=customCharts.filter(c=>c.id!==id);
+  renderCustomCharts();
+}
+
+/* ══════════ RENDER EDITOR ÁREAS ══════════ */
+function renderAreasEditor(){
+  const container=document.getElementById('areasEditor'); container.innerHTML='';
+  areas.forEach((a,ai)=>{
+    const div=document.createElement('div');
+    div.className='area-block'; div.dataset.akey=a.key;
+
+    const subHTML=(a.subareas||[]).map((s,si)=>`
+      <div class="subarea-item" data-skey="${s.key}">
+        <span class="drag-handle" title="Arrastrar">⠿</span>
+        <div class="area-dot" style="background:${s.color}"></div>
+        <input type="text" value="${s.label}" onchange="setSubareaField('${a.key}','${s.key}','label',this.value)"
+               placeholder="Nombre subárea"/>
+        <input type="color" value="${s.color}"
+               oninput="setSubareaField('${a.key}','${s.key}','color',this.value);this.previousElementSibling.previousElementSibling.style.background=this.value"/>
+        <button class="del-btn" onclick="deleteSubarea(${ai},${si})">✕</button>
+      </div>`).join('');
+
+    div.innerHTML=`
+      <div class="area-block-header">
+        <span class="drag-handle" title="Arrastrar área">⠿</span>
+        <div class="area-dot" id="adot_${ai}" style="background:${a.color}"></div>
+        <input class="area-name-inp" type="text" value="${a.label}" onchange="areas[${ai}].label=this.value;saveState()"/>
+        <input class="color-inp" type="color" value="${a.color}"
+               oninput="areas[${ai}].color=this.value;document.getElementById('adot_${ai}').style.background=this.value;saveState()"/>
+        <button class="del-btn" onclick="deleteArea(${ai})" title="Eliminar área">✕</button>
+        <button class="btn btn-sm btn-blue" onclick="addSubarea(${ai})" style="margin-left:4px">+ Subárea</button>
+      </div>
+      <div class="subareas-wrap" data-for="${a.key}">${subHTML}</div>`;
+    container.appendChild(div);
+  });
+
+  // Drag areas
+  makeDraggable(container, syncAreasAfterDrop);
+
+  // Drag subareas within each area
+  container.querySelectorAll('.subareas-wrap').forEach(wrap=>{
+    if(wrap.children.length>1)
+      makeDraggable(wrap, ()=>syncSubareasAfterDrop(wrap.dataset.for));
+  });
+}
+
+function setSubareaField(akey,skey,field,val){
+  const a=areas.find(x=>x.key===akey); if(!a) return;
+  const s=a.subareas.find(x=>x.key===skey); if(s) s[field]=val;
+  saveState();
+}
+
+function addSubarea(ai){
+  const pal=['#60a5fa','#34d399','#f472b6','#a78bfa','#fb923c','#38bdf8','#facc15'];
+  areas[ai].subareas=areas[ai].subareas||[];
+  const color=pal[areas[ai].subareas.length%pal.length];
+  areas[ai].subareas.push({key:'sub_'+Date.now(),label:'Nueva subárea',color});
+  renderAreasEditor();
+  saveState();
+}
+
+function deleteSubarea(ai,si){
+  const key=areas[ai].subareas[si].key;
+  if(data.some(d=>d.subarea===key)){alert('Hay profesionales con esta subárea asignada.');return;}
+  areas[ai].subareas.splice(si,1); renderAreasEditor(); saveState();
+}
+
+function addArea(){
+  const pal=['#06b6d4','#f43f5e','#84cc16','#fb923c','#8b5cf6'];
+  areas.push({key:'area_'+Date.now(),label:'Nueva área',color:pal[areas.length%pal.length],subareas:[]});
+  renderAreasEditor(); saveState();
+}
+
+function deleteArea(ai){
+  if(data.some(d=>d.area===areas[ai].key)){alert('Hay profesionales con esta área asignada.');return;}
+  areas.splice(ai,1); renderAreasEditor(); saveState();
+}
+
+/* ══════════ RENDER EDITOR PROFESIONALES ══════════ */
+function renderEdit(){
+  renderAreasEditor();
+  const tbody=document.getElementById('editBody'); tbody.innerHTML='';
+  data.forEach((d,i)=>{
+    const tr=document.createElement('tr');
+    const areaOpts=areas.map(a=>`<option value="${a.key}"${d.area===a.key?' selected':''}>${a.label}</option>`).join('');
+    const curArea=areaByKey(d.area);
+    const subOpts=`<option value="">—</option>`+(curArea.subareas||[]).map(s=>`<option value="${s.key}"${d.subarea===s.key?' selected':''}>${s.label}</option>`).join('');
+    tr.dataset.origI=i;
+    tr.innerHTML=`
+      <td style="white-space:nowrap">
+        <span class="drag-handle" title="Arrastrar para reordenar" style="cursor:grab;margin-right:4px;color:#94a3b8;font-size:1.1rem;user-select:none"
+          onmousedown="this.closest('tr').setAttribute('draggable','true')"
+          onmouseup="this.closest('tr').setAttribute('draggable','false')">⠿</span>
+        <button class="del-btn" onclick="deleteRow(${i})">✕</button>
+      </td>
+      <td><input class="tb-input" type="text" value="${d.name}" onchange="setField(${i},'name',this.value)"/></td>
+      <td><select class="tb-input" id="areasel_${i}" onchange="setField(${i},'area',this.value);refreshSubareaSelect(${i})">${areaOpts}</select></td>
+      <td><select class="tb-input" id="subsel_${i}" onchange="setField(${i},'subarea',this.value)">${subOpts}</select></td>
+      <td><input class="tb-input r" type="text" value="${d.total.toLocaleString('es-CL')}" onchange="setNum(${i},'total',this.value);autoRecalcPct(${i})"/></td>
+      <td>
+        <select class="tb-input" style="width:80px" onchange="setTipoPago(${i},this.value)">
+          <option value="pct"  ${(d.tipo_pago||'pct')==='pct' ?'selected':''}>% Variable</option>
+          <option value="fijo" ${(d.tipo_pago||'pct')==='fijo'?'selected':''}>$ Fijo</option>
+        </select>
+      </td>
+      <td id="epago_cell_${i}">${buildPagoCell(i)}</td>
+      <td><input class="tb-input r" type="text" id="eprof_${i}" value="${d.prof.toLocaleString('es-CL')}"  onchange="setNum(${i},'prof',this.value);syncRealPctDisplay(${i})"/></td>
+      <td><input class="tb-input r" type="text" id="ecmc_${i}"  value="${d.cmc.toLocaleString('es-CL')}"   onchange="setNum(${i},'cmc',this.value);syncRealPctDisplay(${i})"/></td>`;
+    tbody.appendChild(tr);
+  });
+  applyEditDrag();
+}
+
+function applyEditDrag(){
+  const tbody=document.getElementById('editBody');
+  let dragSrc=null;
+  tbody.querySelectorAll('tr').forEach(tr=>{
+    tr.addEventListener('dragstart',e=>{
+      dragSrc=tr;
+      tr.style.opacity='0.4';
+      e.dataTransfer.effectAllowed='move';
+    });
+    tr.addEventListener('dragend',()=>{
+      tr.style.opacity='';
+      tr.setAttribute('draggable','false');
+      tbody.querySelectorAll('tr').forEach(r=>r.classList.remove('drag-over'));
+    });
+    tr.addEventListener('dragover',e=>{
+      e.preventDefault();
+      e.dataTransfer.dropEffect='move';
+      tbody.querySelectorAll('tr').forEach(r=>r.classList.remove('drag-over'));
+      if(tr!==dragSrc) tr.classList.add('drag-over');
+    });
+    tr.addEventListener('drop',e=>{
+      e.preventDefault();
+      if(!dragSrc||dragSrc===tr) return;
+      const fromI=parseInt(dragSrc.dataset.origI);
+      const toI  =parseInt(tr.dataset.origI);
+      // reorder data and simParams
+      const dItem=data.splice(fromI,1)[0];
+      const sItem=simParams.splice(fromI,1)[0];
+      // after splicing fromI out, toI shifts by -1 if fromI < toI
+      const insertAt=fromI<toI?toI-1:toI;
+      data.splice(insertAt,0,dItem);
+      simParams.splice(insertAt,0,sItem);
+      renderEdit();
+      saveState();
+    });
+  });
+}
+
+function refreshSubareaSelect(i){
+  const aKey=document.getElementById('areasel_'+i)?.value||data[i].area;
+  data[i].area=aKey; data[i].subarea='';
+  const sel=document.getElementById('subsel_'+i); if(!sel) return;
+  const a=areaByKey(aKey);
+  sel.innerHTML=`<option value="">—</option>`+(a.subareas||[]).map(s=>`<option value="${s.key}">${s.label}</option>`).join('');
+}
+
+function setField(i,k,v){data[i][k]=v;saveState();}
+function setNum(i,k,v){const neg=String(v).trim().startsWith('-');const n=parseInt(String(v).replace(/[^\d]/g,''))||0;data[i][k]=neg?-n:n;saveState();}
+
+// ── Tipo de pago (editor real) ────────────────────────────────────────
+function buildPagoCell(i){
+  const d=data[i], tipo=d.tipo_pago||'pct';
+  if(tipo==='fijo'){
+    const pctEfect=d.total>0?(d.prof/d.total*100).toFixed(1):'—';
+    return `<input class="tb-input r pct-input" id="epct_${i}" type="number" min="0" step="1000"
+              value="${d.prof}" onchange="setHonoFijo(${i},this.value)"
+              title="Monto fijo mensual"/>
+            <span style="font-size:.7rem;color:#64748b;display:block" id="efijopct_${i}">${pctEfect}% efect.</span>`;
+  } else {
+    const pct=d.total>0?(d.prof/d.total*100).toFixed(1):70;
+    return `<input class="tb-input r pct-input" id="epct_${i}" type="number" min="0" max="100" step="0.1"
+              value="${pct}" onchange="setRealPct(${i},this.value)" title="% honorarios"/>`;
+  }
+}
+function setTipoPago(i,v){
+  data[i].tipo_pago=v;
+  if(v==='fijo'){ data[i].hono_fijo=data[i].prof; }
+  const cell=document.getElementById('epago_cell_'+i);
+  if(cell) cell.innerHTML=buildPagoCell(i);
+  saveState();
+}
+function setHonoFijo(i,v){
+  const n=parseInt(String(v).replace(/[^\d]/g,''))||0;
+  data[i].hono_fijo=n; data[i].prof=n; data[i].cmc=data[i].total-n;
+  const ep=document.getElementById('eprof_'+i), ec=document.getElementById('ecmc_'+i);
+  if(ep) ep.value=data[i].prof.toLocaleString('es-CL');
+  if(ec) ec.value=data[i].cmc.toLocaleString('es-CL');
+  const ps=document.getElementById('efijopct_'+i);
+  if(ps) ps.textContent=(data[i].total>0?(n/data[i].total*100).toFixed(1):'—')+'% efect.';
+  saveState();
+}
+
+// ── Tipo de pago (simulación) ─────────────────────────────────────────
+function buildSimPagoCell(i){
+  const tipo=tipoPagoSim(i);
+  const d=data[i], p=simParams[i];
+  if(tipo==='fijo'){
+    const fijoVal=p.hono_fijo_sim!==null?p.hono_fijo_sim:(d.hono_fijo||d.prof||0);
+    return `<input class="tb-input r pct-input" type="number" min="0" step="1000"
+              value="${fijoVal||''}" placeholder="${d.hono_fijo||d.prof||0}"
+              oninput="simParams[${i}].hono_fijo_sim=this.value?parseInt(this.value):null;updateSimRow(${i})"
+              title="Monto fijo"/>`;
+  } else {
+    const realPct=(d.total>0?d.prof/d.total:0.70)*100;
+    const simPctVal=p.profPct;
+    return `<input class="tb-input r pct-input" type="number" min="0" max="100" step="0.1"
+              value="${simPctVal!==null?simPctVal:''}" placeholder="${realPct.toFixed(1)}"
+              oninput="simParams[${i}].profPct=this.value?Math.min(100,Math.max(0,parseFloat(this.value))):null;updateSimRow(${i})"
+              title="% honorarios"/>`;
+  }
+}
+function setSimTipoPago(i,v){
+  simParams[i].tipo_pago_sim=v;
+  const cell=document.getElementById('smpago_cell_'+i);
+  if(cell) cell.innerHTML=buildSimPagoCell(i);
+  updateSimRow(i);
+}
+// Recalculate prof/cmc when % changes in real editor
+function setRealPct(i,v){
+  const pct=Math.min(100,Math.max(0,parseFloat(v)||0));
+  data[i].prof=Math.round(data[i].total*pct/100);
+  data[i].cmc=data[i].total-data[i].prof;
+  const ep=document.getElementById('eprof_'+i), ec=document.getElementById('ecmc_'+i);
+  if(ep) ep.value=data[i].prof.toLocaleString('es-CL');
+  if(ec) ec.value=data[i].cmc.toLocaleString('es-CL');
+  saveState();
+}
+// Sync % display when prof/cmc edited directly
+function syncRealPctDisplay(i){
+  const el=document.getElementById('epct_'+i);
+  if(el) el.value=data[i].total>0?(data[i].prof/data[i].total*100).toFixed(1):70;
+}
+// Re-sync % and recalc when total changes
+function autoRecalcPct(i){
+  const el=document.getElementById('epct_'+i);
+  const pct=el?parseFloat(el.value)||70:70;
+  setRealPct(i,pct);
+}
+function deleteRow(i){data.splice(i,1);simParams.splice(i,1);renderEdit();saveState();}
+function addRow(){
+  const def=areas[0]?.key||'otro';
+  data.push({name:'Nuevo profesional',total:0,prof:0,cmc:0,area:def,subarea:'',tipo_pago:'pct',hono_fijo:0});
+  simParams.push({pacDia:0,ingPaciente:0,dias:null,profPct:null,tipo_pago_sim:null,hono_fijo_sim:null});
+  renderEdit();
+  document.getElementById('editBody').lastChild?.scrollIntoView({behavior:'smooth'});
+  saveState();
+}
+function resetData(){
+  if(!confirm('¿Restaurar datos originales? (Las áreas y subáreas NO se modifican)'))return;
+  data=JSON.parse(JSON.stringify(ORIGINAL));
+  simParams=ORIGINAL.map(()=>({pacDia:0,ingPaciente:0,dias:null,profPct:null,tipo_pago_sim:null,hono_fijo_sim:null}));
+  renderEdit();
+  saveState();
+}
+function applyAndSwitch(){switchTab('dashboard');}
+
+/* ══════════ EXCEL EXPORT / IMPORT ══════════ */
+function exportExcel(){
+  const wb = XLSX.utils.book_new();
+
+  // ── Hoja 1: Profesionales ──────────────────────────────────────────
+  const profHdr = ["Nombre","Área Key","Área","Subárea Key","Subárea","Total Mes","% Médico","Honorarios","CMC"];
+  const profRows = data.map(d=>{
+    const a=areaByKey(d.area);
+    const s=a.subareas?.find(x=>x.key===d.subarea);
+    const pct=d.total>0?+(d.prof/d.total*100).toFixed(1):70;
+    return [d.name, d.area, a.label, d.subarea||"", s?.label||"", d.total, pct, d.prof, d.cmc];
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([profHdr,...profRows]), "Profesionales");
+
+  // ── Hoja 2: Simulación ─────────────────────────────────────────────
+  const simHdr = ["Nombre","Área","Subárea","Pac/día","$/Paciente","Días","% Médico (sim)","Total Simulado","Hon. Simulado","CMC Simulado"];
+  const simRows = data.map((d,i)=>{
+    const a=areaByKey(d.area);
+    const s=a.subareas?.find(x=>x.key===d.subarea);
+    const sp=simParams[i]||{};
+    const dias=sp.dias!==null?sp.dias:"";
+    const dd=sp.dias!==null?sp.dias:globalDias;
+    const tot=Math.round((sp.pacDia||0)*(sp.ingPaciente||0)*dd);
+    const realPct=d.total>0?d.prof/d.total:0.70;
+    const pct=sp.profPct!==null?sp.profPct/100:realPct;
+    const hon=Math.round(tot*pct), cmc=tot-hon;
+    return [d.name, a.label, s?.label||"", sp.pacDia||"", sp.ingPaciente||"",
+            dias, sp.profPct!==null?sp.profPct:"", tot||"", hon||"", cmc||""];
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([simHdr,...simRows]), "Simulación");
+
+  // ── Hoja 3: Áreas ──────────────────────────────────────────────────
+  const areasRows = areas.map(a=>[a.key, a.label, a.color]);
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Key","Nombre","Color"],...areasRows]), "Áreas");
+
+  // ── Hoja 4: Subáreas ───────────────────────────────────────────────
+  const subRows = areas.flatMap(a=>(a.subareas||[]).map(s=>[a.key, s.key, s.label, s.color]));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Área Key","Subárea Key","Nombre","Color"],...subRows]), "Subáreas");
+
+  // ── Hoja 5: Configuración ──────────────────────────────────────────
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
+    ["Parámetro","Valor"],
+    ["dias_laborales", globalDias],
+    ["exportado_en",   new Date().toLocaleString('es-CL')],
+  ]), "Configuración");
+
+  const fecha = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `CMC_Dashboard_${fecha}.xlsx`);
+}
+
+function importExcel(file){
+  if(!file) return;
+  if(!confirm('¿Importar datos desde el Excel? Se reemplazará el estado actual.')) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'binary'});
+
+      // Profesionales
+      const ws1=wb.Sheets['Profesionales'];
+      if(ws1){
+        const rows=XLSX.utils.sheet_to_json(ws1);
+        data=rows.filter(r=>String(r['Nombre']||'').trim()).map(r=>{
+          const total=parseInt(r['Total Mes'])||0;
+          const pct=parseFloat(r['% Médico'])||70;
+          const prof=parseInt(r['Honorarios']) || Math.round(total*pct/100);
+          const cmc=parseInt(r['CMC'])         || total-prof;
+          return {name:String(r['Nombre']).trim(), area:String(r['Área Key']||'').trim(),
+                  subarea:String(r['Subárea Key']||'').trim(), total, prof, cmc};
+        });
+      }
+
+      // Áreas + Subáreas
+      const ws3=wb.Sheets['Áreas'], ws4=wb.Sheets['Subáreas'];
+      if(ws3 && ws4){
+        const aRows=XLSX.utils.sheet_to_json(ws3);
+        const sRows=XLSX.utils.sheet_to_json(ws4);
+        areas=aRows.filter(r=>String(r['Key']||'').trim()).map(r=>{
+          const key=String(r['Key']).trim();
+          return {key, label:String(r['Nombre']||'').trim(), color:String(r['Color']||'#94a3b8').trim(),
+                  subareas:sRows.filter(s=>String(s['Área Key']||'').trim()===key).map(s=>({
+                    key:String(s['Subárea Key']||'').trim(),
+                    label:String(s['Nombre']||'').trim(),
+                    color:String(s['Color']||'#94a3b8').trim()
+                  }))};
+        });
+      }
+
+      // Simulación
+      const ws2=wb.Sheets['Simulación'];
+      if(ws2){
+        const sMap={};
+        XLSX.utils.sheet_to_json(ws2).forEach(r=>{ sMap[String(r['Nombre']||'').trim()]=r; });
+        simParams=data.map(d=>{
+          const r=sMap[d.name]||{};
+          const diasV=r['Días'], pctV=r['% Médico (sim)'];
+          return {
+            pacDia:     parseFloat(r['Pac/día']||0)||0,
+            ingPaciente:parseFloat(r['$/Paciente']||0)||0,
+            dias:       (diasV!==undefined&&String(diasV).trim()!=='')?parseInt(diasV):null,
+            profPct:    (pctV!==undefined&&String(pctV).trim()!=='')?parseFloat(pctV):null,
+          };
+        });
+      } else {
+        simParams=data.map(()=>({pacDia:0,ingPaciente:0,dias:null,profPct:null}));
+      }
+
+      // Configuración
+      const ws5=wb.Sheets['Configuración'];
+      if(ws5){
+        const cfgRow=XLSX.utils.sheet_to_json(ws5).find(r=>r['Parámetro']==='dias_laborales');
+        if(cfgRow) globalDias=parseInt(cfgRow['Valor'])||22;
+      }
+
+      saveState();
+      renderEdit();
+      const ind=document.getElementById('save-indicator');
+      if(ind){ind.textContent='✓ Excel importado';ind.style.opacity='1';ind.style.background='#dcfce7';ind.style.color='#166534';
+               setTimeout(()=>{ind.style.opacity='0';},2500);}
+    } catch(err){
+      alert('Error al leer el archivo: '+err.message);
+      console.error(err);
+    }
+  };
+  reader.readAsBinaryString(file);
+}
+
+/* ══════════ RENDER SIM DASHBOARD ══════════ */
+function renderSimDashboard(){
+  const sd=calcSim();
+  const active=sd.filter(d=>d.total>0);
+  const sT=sd.reduce((s,d)=>s+d.total,0),sP=sd.reduce((s,d)=>s+d.prof,0),sC=sd.reduce((s,d)=>s+d.cmc,0);
+  const realT=data.reduce((s,d)=>s+d.total,0);
+  document.getElementById('skpi-total').textContent=fmtPlain(sT);
+  document.getElementById('skpi-prof').textContent=fmtPlain(sP);
+  document.getElementById('skpi-cmc').textContent=fmtPlain(sC);
+  document.getElementById('skpi-activos').textContent=active.length;
+  document.getElementById('skpi-prof-pct').textContent=pctFmt(sP,sT)+' del total';
+  document.getElementById('skpi-cmc-pct').textContent=pctFmt(sC,sT)+' del total';
+  document.getElementById('skpi-profs').textContent=`de ${sd.length} en nómina`;
+  document.getElementById('skpi-vs-real').innerHTML=delta(sT,realT)||'sin datos reales';
+  document.getElementById('sfoot-total').innerHTML=fmtCLP(sT);
+  document.getElementById('sfoot-prof').innerHTML=fmtCLP(sP);
+  document.getElementById('sfoot-cmc').innerHTML=fmtCLP(sC);
+  document.getElementById('sfoot-pct').textContent=pctFmt(sC,sT);
+
+  const tbody=document.getElementById('simViewBody'); tbody.innerHTML='';
+  sd.forEach(d=>{
+    const a=areaByKey(d.area),bg=h2r(a.color,.12);
+    const cmcP=d.total?(d.cmc/d.total*100).toFixed(1)+'%':'—';
+    const tr=document.createElement('tr'); if(d.total===0) tr.classList.add('inactive');
+    tr.innerHTML=`<td>${d.name}</td><td><span class="badge" style="background:${bg};color:${a.color}">${a.label}</span></td>
+      <td class="r">${d.pacDia||'—'}</td><td class="r">${d.ingPaciente?fmtPlain(d.ingPaciente):'—'}</td><td class="r">${d.dias}</td>
+      <td class="r calc-cell">${fmtCLP(d.total)}</td><td class="r">${fmtCLP(d.prof)}</td>
+      <td class="r cmc-sim-cell">${fmtCLP(d.cmc)}</td><td class="r">${cmcP}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  const sorted=[...active].sort((a,b)=>b.total-a.total);
+  simBarChart.data.labels=sorted.map(d=>d.name);
+  simBarChart.data.datasets[0].data=sorted.map(d=>d.total);
+  simBarChart.data.datasets[1].data=sorted.map(d=>d.prof);
+  simBarChart.data.datasets[2].data=sorted.map(d=>d.cmc);
+  simBarChart.data.datasets[2].backgroundColor=sorted.map(d=>'rgba(219,39,119,.22)');
+  simBarChart.data.datasets[2].borderColor=sorted.map(()=>'#db2777');
+  simBarChart.update();
+  setPieData(simDoughnutChart,areas.map(a=>a.label),areas.map(a=>active.filter(d=>d.area===a.key).reduce((s,d)=>s+d.total,0)),areas.map(a=>a.color));
+  setPieData(simCmcChart,areas.map(a=>a.label),areas.map(a=>sd.filter(d=>d.area===a.key&&d.cmc>0).reduce((s,d)=>s+d.cmc,0)),areas.map(a=>a.color));
+
+  // Medicina subárea (sim)
+  const smSegs=simSubareaSegmentsFor('med','total',sd);
+  document.getElementById('simMedSubTitle').textContent=areaByKey('med').label+' por Subárea';
+  setPieData(simMedSubChart,smSegs.map(s=>s.label),smSegs.map(s=>s.value),smSegs.map(s=>s.color));
+
+  // Dental subárea (sim)
+  const sdSegs=simSubareaSegmentsFor('dent','total',sd);
+  document.getElementById('simDentSubTitle').textContent=areaByKey('dent').label+' por Subárea';
+  setPieData(simDentSubChart,sdSegs.map(s=>s.label),sdSegs.map(s=>s.value),sdSegs.map(s=>s.color));
+
+  // Otros Servicios (sim) — ingresos
+  const soSegs=simOtherAreasSegments('total',sd);
+  setPieData(simOtroSubChart,soSegs.map(s=>s.label),soSegs.map(s=>s.value),soSegs.map(s=>s.color));
+
+  // Todas las subáreas (sim) — ingresos
+  const saSegs=simAllSubareaSegments('total',sd);
+  setPieData(simAllSubChart,saSegs.map(s=>s.label),saSegs.map(s=>s.value),saSegs.map(s=>s.color));
+
+  // CMC por subárea (sim)
+  const smCmcSegs=simSubareaSegmentsFor('med','cmc',sd);
+  document.getElementById('simMedSubCmcTitle').textContent=areaByKey('med').label+' — CMC por Subárea';
+  setPieData(simMedSubCmcChart,smCmcSegs.map(s=>s.label),smCmcSegs.map(s=>s.value),smCmcSegs.map(s=>s.color));
+
+  const sdCmcSegs=simSubareaSegmentsFor('dent','cmc',sd);
+  document.getElementById('simDentSubCmcTitle').textContent=areaByKey('dent').label+' — CMC por Subárea';
+  setPieData(simDentSubCmcChart,sdCmcSegs.map(s=>s.label),sdCmcSegs.map(s=>s.value),sdCmcSegs.map(s=>s.color));
+
+  // Otros Servicios (sim) — CMC
+  const soCmcSegs=simOtherAreasSegments('cmc',sd);
+  setPieData(simOtroSubCmcChart,soCmcSegs.map(s=>s.label),soCmcSegs.map(s=>s.value),soCmcSegs.map(s=>s.color));
+
+  const saCmcSegs=simAllSubareaSegments('cmc',sd);
+  setPieData(simAllSubCmcChart,saCmcSegs.map(s=>s.label),saCmcSegs.map(s=>s.value),saCmcSegs.map(s=>s.color));
+
+  // Custom charts
+  renderSimCustomCharts();
+  applyChartDrag();
+}
+
+/* ══════════ RENDER SIM EDITOR ══════════ */
+function renderSimEditor(){
+  document.getElementById('globalDias').value=globalDias;
+  const tbody=document.getElementById('simBody'); tbody.innerHTML='';
+  data.forEach((d,i)=>{
+    const p=simParams[i], dias=p.dias!==null?p.dias:globalDias;
+    const total=Math.round(p.pacDia*p.ingPaciente*dias);
+    let prof, effPct;
+    if(tipoPagoSim(i)==='fijo'){
+      prof=honoFijoSim(i); effPct=total>0?prof/total:0;
+    } else {
+      const pct=profPctFor(i); prof=Math.round(total*pct); effPct=pct;
+    }
+    const cmc=total-prof;
+    const a=areaByKey(d.area),bg=h2r(a.color,.12);
+    const tr=document.createElement('tr');
+    const sub=a.subareas?.find(s=>s.key===d.subarea);
+    const tipoSim=tipoPagoSim(i);
+    const realPct=(d.total>0?d.prof/d.total:0.70)*100;
+    const simPctVal=p.profPct!==null?p.profPct:null;
+    const simFijoVal=p.hono_fijo_sim!==null?p.hono_fijo_sim:(d.hono_fijo||0);
+    tr.innerHTML=`
+      <td style="font-size:.78rem">${d.name}</td>
+      <td><span class="badge" style="background:${bg};color:${a.color}">${a.label}</span></td>
+      <td style="font-size:.78rem;color:#64748b">${sub?sub.label:'—'}</td>
+      <td>
+        <select class="tb-input" style="width:80px" onchange="setSimTipoPago(${i},this.value)">
+          <option value="pct"  ${tipoSim==='pct' ?'selected':''}>% Var.</option>
+          <option value="fijo" ${tipoSim==='fijo'?'selected':''}>$ Fijo</option>
+        </select>
+      </td>
+      <td id="smpago_cell_${i}">${buildSimPagoCell(i)}</td>
+      <td><input class="tb-input r" type="number" min="0" value="${p.pacDia||''}" placeholder="0"
+           oninput="simParams[${i}].pacDia=parseFloat(this.value)||0;updateSimRow(${i})"/></td>
+      <td><input class="tb-input r" type="number" min="0" value="${p.ingPaciente||''}" placeholder="0"
+           oninput="simParams[${i}].ingPaciente=parseFloat(this.value)||0;updateSimRow(${i})"/></td>
+      <td><input class="tb-input r" type="number" min="1" max="31" value="${p.dias!==null?p.dias:''}" placeholder="${globalDias}"
+           oninput="simParams[${i}].dias=this.value?parseInt(this.value):null;updateSimRow(${i})"/></td>
+      <td class="calc-cell" id="sc-t-${i}">${total?fmtPlain(total):'—'}</td>
+      <td class="pct-cell"  id="sc-epct-${i}">${total?(effPct*100).toFixed(1)+'%':'—'}</td>
+      <td class="calc-cell" id="sc-p-${i}">${prof?fmtPlain(prof):'—'}</td>
+      <td class="cmc-sim-cell" id="sc-c-${i}">${cmc?fmtPlain(cmc):'—'}</td>`;
+    tbody.appendChild(tr);
+  });
+  updateSimFooter();
+}
+
+function updateSimRow(i){
+  const p=simParams[i];
+  const dias=p.dias!==null?p.dias:globalDias;
+  const total=Math.round(p.pacDia*p.ingPaciente*dias);
+  let prof, effPct;
+  if(tipoPagoSim(i)==='fijo'){
+    prof   = honoFijoSim(i);
+    effPct = total>0?prof/total:0;
+  } else {
+    const pct=profPctFor(i);
+    prof=Math.round(total*pct); effPct=pct;
+  }
+  const cmc=total-prof;
+  const t=document.getElementById('sc-t-'+i),pp=document.getElementById('sc-p-'+i),
+        c=document.getElementById('sc-c-'+i),ep=document.getElementById('sc-epct-'+i);
+  if(t)  t.textContent =total?fmtPlain(total):'—';
+  if(pp) pp.textContent=prof ?fmtPlain(prof) :'—';
+  if(c)  c.textContent =cmc  ?fmtPlain(cmc)  :'—';
+  if(ep) ep.textContent=total?(effPct*100).toFixed(1)+'%':'—';
+  updateSimFooter();
+  saveState();
+}
+
+function updateSimFooter(){
+  const sd=calcSim();
+  const sT=sd.reduce((s,d)=>s+d.total,0),sP=sd.reduce((s,d)=>s+d.prof,0),sC=sd.reduce((s,d)=>s+d.cmc,0);
+  document.getElementById('simfoot-total').textContent=fmtPlain(sT||0);
+  document.getElementById('simfoot-prof').textContent=fmtPlain(sP||0);
+  document.getElementById('simfoot-cmc').textContent=fmtPlain(sC||0);
+}
+
+function setGlobalDias(v){
+  globalDias=parseInt(v)||22;
+  data.forEach((_,i)=>{if(simParams[i].dias===null) updateSimRow(i);});
+  saveState();
+}
+function resetSim(){if(!confirm('¿Limpiar simulación?'))return;simParams=data.map(()=>({pacDia:0,ingPaciente:0,dias:null,profPct:null,tipo_pago_sim:null,hono_fijo_sim:null}));globalDias=22;renderSimEditor();saveState();}
+function importFromReal(){
+  data.forEach((d,i)=>{if(d.total>0){simParams[i].pacDia=5;simParams[i].ingPaciente=Math.round(d.total/(5*globalDias));simParams[i].dias=null;}});
+  renderSimEditor();
+  saveState();
+}
+
+/* ══════════ DRAG & DROP ══════════ */
+function makeDraggable(container, afterDrop){
+  if(!container) return;
+  let src=null;
+
+  function wire(el){
+    el.setAttribute('draggable','true');
+    el.addEventListener('dragstart', e=>{
+      src=el;
+      e.dataTransfer.effectAllowed='move';
+      requestAnimationFrame(()=>el.classList.add('dragging'));
+    });
+    el.addEventListener('dragend', ()=>{
+      el.classList.remove('dragging');
+      [...container.children].forEach(c=>c.classList.remove('drag-over'));
+    });
+    el.addEventListener('dragover', e=>{
+      e.preventDefault();
+      if(src && src!==el) el.classList.add('drag-over');
+    });
+    el.addEventListener('dragleave', ()=>el.classList.remove('drag-over'));
+    el.addEventListener('drop', e=>{
+      e.preventDefault(); e.stopPropagation();
+      el.classList.remove('drag-over');
+      if(!src||src===el) return;
+      const kids=[...container.children];
+      const fi=kids.indexOf(src), ti=kids.indexOf(el);
+      if(fi<ti) container.insertBefore(src,el.nextSibling);
+      else      container.insertBefore(src,el);
+      // resize any Charts inside
+      container.querySelectorAll('canvas').forEach(c=>{
+        const ch=Chart.getChart(c); if(ch) setTimeout(()=>ch.resize(),60);
+      });
+      if(afterDrop) afterDrop();
+    });
+  }
+
+  [...container.children].forEach(wire);
+  return wire; // return wire() so new items can be attached
+}
+
+// Sync areas[] order from DOM after drag
+function syncAreasAfterDrop(){
+  const blocks=[...document.getElementById('areasEditor').children];
+  areas=blocks.map(b=>areas.find(a=>a.key===b.dataset.akey)).filter(Boolean);
+  saveState();
+}
+
+// Sync subareas[] order from DOM after drag
+function syncSubareasAfterDrop(akey){
+  const area=areas.find(a=>a.key===akey); if(!area) return;
+  const wrap=document.querySelector(`.subareas-wrap[data-for="${akey}"]`); if(!wrap) return;
+  area.subareas=[...wrap.children].map(el=>area.subareas.find(s=>s.key===el.dataset.skey)).filter(Boolean);
+  saveState();
+}
+
+// Apply drag to all pie chart rows in dashboard and sim
+function applyChartDrag(){
+  document.querySelectorAll('.chart-row-3,.chart-row-4,.chart-row-side').forEach(row=>{
+    makeDraggable(row);
+  });
+  makeDraggable(document.getElementById('customChartsGrid'));
+  makeDraggable(document.getElementById('simCustomChartsGrid'));
+}
+
+/* ══════════ TABS ══════════ */
+const ALL_TABS=['dashboard','edit','sim','simdata','boxes'];
+function switchTab(tab){
+  ALL_TABS.forEach(t=>{
+    document.getElementById('panel-'+t).classList.toggle('active',t===tab);
+    document.getElementById('tab-'+t).classList.toggle('active',t===tab);
+  });
+  if(tab==='dashboard'){renderDashboard();}
+  if(tab==='edit'){renderEdit();}
+  if(tab==='sim'){renderSimDashboard();}
+  if(tab==='simdata'){renderSimEditor();}
+  if(tab==='boxes'){renderBoxScheduler();}
+}
+
+document.getElementById('mesLabel').addEventListener('change',()=>{
+  if(document.getElementById('panel-dashboard').classList.contains('active')) renderDashboard();
+});
+
+/* ══════════ PERSISTENCIA POSTGRESQL ══════════ */
+// Si el dashboard se abre desde http://localhost:8000 → rutas relativas.
+// Si se abre como archivo local (file://) → apunta al puerto 8000.
+const API_BASE = window.location.protocol === 'file:' ? 'http://localhost:8000' : '';
+
+let _saveTimer = null;
+function saveState(){
+  clearTimeout(_saveTimer);
+  const ind = document.getElementById('save-indicator');
+  if(ind){ ind.textContent='Guardando…'; ind.style.opacity='1'; ind.style.background='#fef9c3'; ind.style.color='#854d0e'; }
+  _saveTimer = setTimeout(async ()=>{
+    const payload = {
+      profesionales:    data,
+      areas,
+      sim_params:       simParams,
+      global_dias:      globalDias,
+      custom_charts:    customCharts.map(c=>({...c,editing:false})),
+      sim_custom_charts:simCustomCharts.map(c=>({...c,editing:false})),
+      box_data:         boxData,
+    };
+    try {
+      const r = await fetch(API_BASE+'/api/state',{
+        method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
+      if(r.ok && ind){
+        ind.textContent='✓ Guardado';
+        ind.style.background='#dcfce7'; ind.style.color='#166534';
+        setTimeout(()=>{ ind.style.opacity='0'; },1800);
+      }
+    } catch(e){
+      console.warn('Sin conexión con la API, datos solo en memoria.');
+      if(ind){ ind.textContent='Sin conexión'; ind.style.background='#fee2e2'; ind.style.color='#991b1b';
+               setTimeout(()=>{ ind.style.opacity='0'; },2500); }
+    }
+  }, 800);
+}
+
+/* ══════════ GOOGLE SHEETS SYNC ══════════ */
+let _sheetsConfigured = false;
+let _sheetsPollTimer  = null;
+
+function _sheetsInd(msg, bg, color, fade){
+  const el=document.getElementById('sheets-indicator');
+  if(!el) return;
+  el.textContent=msg; el.style.background=bg; el.style.color=color; el.style.opacity='1';
+  if(fade) setTimeout(()=>{el.style.opacity='0';},fade);
+}
+
+async function checkSheetsStatus(){
+  try{
+    const r=await fetch(API_BASE+'/api/sheets/status');
+    if(!r.ok) return;
+    const s=await r.json();
+    _sheetsConfigured=s.configured;
+    const btn=document.getElementById('sheets-btn');
+    if(btn) btn.style.display=_sheetsConfigured?'block':'none';
+    if(_sheetsConfigured) startSheetsPoll();
+  }catch(e){ /* sin API */ }
+}
+
+function startSheetsPoll(){
+  if(_sheetsPollTimer) clearInterval(_sheetsPollTimer);
+  _sheetsPollTimer=setInterval(()=>sheetsPull(false), 30000); // cada 30s
+}
+
+async function sheetsPull(manual=true){
+  if(!_sheetsConfigured) return;
+  if(manual) _sheetsInd('🔄 Leyendo Sheets…','#e8f0fe','#1a56db',0);
+  try{
+    const r=await fetch(API_BASE+'/api/sheets/pull',{method:'POST'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    if(d.changed && d.state){
+      data       = d.state.profesionales;
+      areas      = d.state.areas;
+      simParams  = d.state.sim_params;
+      globalDias = d.state.global_dias ?? 22;
+      _sheetsInd('📊 Sheets actualizado','#dcfce7','#166534',3000);
+      // Re-render la pestaña activa
+      const active=document.querySelector('.panel.active');
+      if(active){
+        if(active.id==='panel-dashboard') renderDashboard();
+        else if(active.id==='panel-edit')  renderEdit();
+        else if(active.id==='panel-sim')   renderSimDashboard();
+        else if(active.id==='panel-simdata') renderSimEditor();
+      }
+    } else {
+      if(manual) _sheetsInd('✓ Sin cambios','#dcfce7','#166534',2000);
+    }
+  }catch(e){
+    if(manual) _sheetsInd('⚠️ Error leyendo Sheets','#fee2e2','#991b1b',3000);
+    console.warn('[sheets pull]',e);
+  }
+}
+
+async function manualSheetsPull(){
+  await sheetsPull(true);
+}
+
+/* ══════════ BOX SCHEDULER ══════════ */
+let boxData = {
+  boxes:[{id:'b1',name:'Box 1'},{id:'b2',name:'Box 2'},{id:'b3',name:'Box 3'},{id:'b4',name:'Box 4'}],
+  events:[],
+};
+const BOX_CELL_H=16; // px por intervalo de 10 min
+
+function _boxRange(){
+  const sv=(document.getElementById('boxStart')||{value:'08:00'}).value||'08:00';
+  const ev=(document.getElementById('boxEnd')||{value:'20:00'}).value||'20:00';
+  const [sh,sm]=sv.split(':').map(Number), [eh,em]=ev.split(':').map(Number);
+  return{startMin:sh*60+sm, endMin:eh*60+em};
+}
+function _m2t(m){return Math.floor(m/60).toString().padStart(2,'0')+':'+(m%60).toString().padStart(2,'0');}
+
+function renderBoxScheduler(){renderBoxPalette();renderBoxGrid();}
+
+function renderBoxPalette(){
+  const el=document.getElementById('boxPalette'); if(!el)return;
+  el.innerHTML='';
+  data.forEach((d,i)=>{
+    const a=areaByKey(d.area);
+    const chip=document.createElement('div');
+    chip.className='box-chip'; chip.draggable=true; chip.dataset.pi=i;
+    chip.style.background=h2r(a.color,.12); chip.style.color=a.color; chip.style.borderColor=a.color;
+    chip.textContent=d.name;
+    chip.addEventListener('dragstart',e=>{
+      e.dataTransfer.setData('pi',i); e.dataTransfer.setData('eid','');
+      e.dataTransfer.effectAllowed='copy';
+    });
+    el.appendChild(chip);
+  });
+}
+
+function renderBoxGrid(){
+  const sched=document.getElementById('boxScheduler'); if(!sched)return;
+  sched.innerHTML='';
+  const{startMin,endMin}=_boxRange();
+  const slots=(endMin-startMin)/10;
+
+  // Columna de tiempo
+  const tc=document.createElement('div');
+  tc.style.cssText='width:52px;flex-shrink:0;border-right:1px solid #e2e8f0;background:#f8fafc';
+  const tcH=document.createElement('div');
+  tcH.style.cssText='height:40px;border-bottom:2px solid #e2e8f0;background:#f1f5f9';
+  tc.appendChild(tcH);
+  for(let s=0;s<slots;s++){
+    const min=startMin+s*10;
+    const cell=document.createElement('div');
+    cell.style.cssText=`height:${BOX_CELL_H}px;box-sizing:border-box;padding:0 4px;line-height:${BOX_CELL_H}px`;
+    if(min%60===0){
+      cell.style.borderTop='1px solid #e2e8f0';
+      cell.style.cssText+=`;font-size:.62rem;color:#475569;font-weight:700`;
+      cell.textContent=_m2t(min);
+    } else if(min%30===0){
+      cell.style.borderTop='1px dotted #e2e8f0';
+      cell.style.cssText+=`;font-size:.58rem;color:#cbd5e1`;
+      cell.textContent=_m2t(min);
+    }
+    tc.appendChild(cell);
+  }
+  sched.appendChild(tc);
+
+  // Columnas de box
+  boxData.boxes.forEach(box=>{
+    const col=document.createElement('div');
+    col.style.cssText='min-width:160px;flex:1;border-right:1px solid #e2e8f0;display:flex;flex-direction:column';
+
+    // Cabecera
+    const head=document.createElement('div');
+    head.style.cssText='height:40px;border-bottom:2px solid #e2e8f0;background:#f1f5f9;display:flex;align-items:center;padding:0 8px;gap:4px;flex-shrink:0';
+    const ni=document.createElement('input');
+    ni.value=box.name;
+    ni.style.cssText='border:none;background:transparent;font-weight:700;font-size:.84rem;color:#1e293b;flex:1;outline:none;min-width:0';
+    ni.addEventListener('change',()=>{box.name=ni.value;saveState();});
+    const db=document.createElement('button');
+    db.textContent='✕'; db.title='Eliminar box';
+    db.style.cssText='border:none;background:none;color:#cbd5e1;cursor:pointer;font-size:.75rem;padding:2px;line-height:1;flex-shrink:0';
+    db.addEventListener('click',()=>deleteBox(box.id));
+    head.appendChild(ni); head.appendChild(db);
+    col.appendChild(head);
+
+    // Grilla
+    const grid=document.createElement('div');
+    grid.style.cssText=`position:relative;flex:1;height:${slots*BOX_CELL_H}px`;
+    grid.dataset.boxId=box.id;
+
+    // Celdas de fondo (drop targets)
+    for(let s=0;s<slots;s++){
+      const min=startMin+s*10;
+      const cell=document.createElement('div');
+      cell.style.cssText=`position:absolute;left:0;right:0;top:${s*BOX_CELL_H}px;height:${BOX_CELL_H}px;box-sizing:border-box`;
+      if(min%60===0)      cell.style.borderTop='1px solid #e2e8f0';
+      else if(min%30===0) cell.style.borderTop='1px dotted #e2e8f0';
+      cell.addEventListener('dragover',e=>{e.preventDefault();cell.classList.add('box-drop');});
+      cell.addEventListener('dragleave',()=>cell.classList.remove('box-drop'));
+      cell.addEventListener('drop',e=>{
+        e.preventDefault(); cell.classList.remove('box-drop');
+        const eid=e.dataTransfer.getData('eid');
+        const pi=e.dataTransfer.getData('pi');
+        if(eid){
+          const ev=boxData.events.find(ev=>ev.id===eid);
+          if(ev){ev.boxId=box.id;ev.startMin=min;}
+          renderBoxGrid(); saveState();
+        } else if(pi!==''){
+          _addBoxEvent(box.id,parseInt(pi),min);
+        }
+      });
+      grid.appendChild(cell);
+    }
+
+    // Eventos de este box
+    boxData.events.filter(ev=>ev.boxId===box.id).forEach(ev=>_renderBoxEv(grid,ev,startMin));
+    col.appendChild(grid);
+    sched.appendChild(col);
+  });
+}
+
+function _renderBoxEv(grid,ev,startMin){
+  const a=areaByKey(ev.areaKey);
+  const top=(ev.startMin-startMin)/10*BOX_CELL_H;
+  const h=Math.max(BOX_CELL_H*3,ev.durationMin/10*BOX_CELL_H);
+  const el=document.createElement('div');
+  el.className='box-ev'; el.draggable=true;
+  el.style.top=top+'px'; el.style.height=h+'px';
+  el.style.background=a.color; el.style.border=`1.5px solid ${a.color}`;
+  el.innerHTML=`
+    <div style="display:flex;align-items:flex-start;gap:2px;margin-bottom:2px">
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3">${ev.profName}</span>
+      <button onclick="deleteBoxEvent('${ev.id}')" style="border:none;background:rgba(0,0,0,.3);color:#fff;cursor:pointer;border-radius:3px;padding:0 3px;font-size:.55rem;line-height:1.5;flex-shrink:0">✕</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:2px">
+      <input type="time" class="ev-time-inp" data-role="start" value="${_m2t(ev.startMin)}"
+        style="width:60px;font-size:.58rem;padding:1px 2px;background:rgba(255,255,255,.25);border:none;border-radius:3px;color:#fff;cursor:text;outline:none">
+      <span style="font-size:.55rem;opacity:.8">–</span>
+      <input type="time" class="ev-time-inp" data-role="end" value="${_m2t(ev.startMin+ev.durationMin)}"
+        style="width:60px;font-size:.58rem;padding:1px 2px;background:rgba(255,255,255,.25);border:none;border-radius:3px;color:#fff;cursor:text;outline:none">
+    </div>
+    <div class="ev-rh"></div>`;
+
+  // Evitar que los inputs disparen el drag
+  el.querySelectorAll('.ev-time-inp').forEach(inp=>{
+    inp.addEventListener('mousedown',e=>e.stopPropagation());
+    inp.addEventListener('click',e=>e.stopPropagation());
+    inp.addEventListener('change',e=>{
+      e.stopPropagation();
+      const {startMin:rngS,endMin:rngE}=_boxRange();
+      const parseT=v=>{const[hh,mm]=v.split(':').map(Number);return hh*60+mm;};
+      const inpS=el.querySelector('[data-role="start"]');
+      const inpE=el.querySelector('[data-role="end"]');
+      let ns=Math.round(parseT(inpS.value)/10)*10;
+      let ne=Math.round(parseT(inpE.value)/10)*10;
+      if(ne<=ns) ne=ns+10;
+      ns=Math.max(rngS,Math.min(rngE-10,ns));
+      ne=Math.max(ns+10,Math.min(rngE,ne));
+      ev.startMin=ns; ev.durationMin=ne-ns;
+      renderBoxGrid(); saveState();
+    });
+  });
+
+  // Drag para mover (cross-box)
+  el.addEventListener('dragstart',e=>{
+    e.dataTransfer.setData('eid',ev.id); e.dataTransfer.setData('pi','');
+    e.dataTransfer.effectAllowed='move';
+    setTimeout(()=>el.classList.add('drag-ghost'),0);
+  });
+  el.addEventListener('dragend',()=>el.classList.remove('drag-ghost'));
+
+  // Resize (arrastrar borde inferior)
+  const rh=el.querySelector('.ev-rh');
+  rh.addEventListener('mousedown',e=>{
+    e.preventDefault(); e.stopPropagation();
+    const startY=e.clientY, startH=h;
+    const inpE=el.querySelector('[data-role="end"]');
+    const onMove=e2=>{
+      const newH=Math.max(BOX_CELL_H*3,Math.round((startH+e2.clientY-startY)/BOX_CELL_H)*BOX_CELL_H);
+      el.style.height=newH+'px';
+      ev.durationMin=Math.round(newH/BOX_CELL_H)*10;
+      if(inpE) inpE.value=_m2t(ev.startMin+ev.durationMin);
+    };
+    const onUp=()=>{
+      document.removeEventListener('mousemove',onMove);
+      document.removeEventListener('mouseup',onUp);
+      saveState();
+    };
+    document.addEventListener('mousemove',onMove);
+    document.addEventListener('mouseup',onUp);
+  });
+  grid.appendChild(el);
+}
+
+function _addBoxEvent(boxId,profIdx,startMin){
+  const d=data[profIdx];
+  boxData.events.push({
+    id:'ev'+Date.now()+Math.random().toString(36).slice(2,5),
+    boxId, profName:d.name, areaKey:d.area, startMin, durationMin:30,
+  });
+  renderBoxGrid(); saveState();
+}
+function deleteBoxEvent(evId){
+  boxData.events=boxData.events.filter(e=>e.id!==evId);
+  renderBoxGrid(); saveState();
+}
+function addBox(){
+  boxData.boxes.push({id:'b'+Date.now(),name:`Box ${boxData.boxes.length+1}`});
+  renderBoxScheduler(); saveState();
+}
+function deleteBox(id){
+  if(!confirm('¿Eliminar este box y sus eventos?'))return;
+  boxData.boxes=boxData.boxes.filter(b=>b.id!==id);
+  boxData.events=boxData.events.filter(e=>e.boxId!==id);
+  renderBoxScheduler(); saveState();
+}
+
+/* ══════════ INIT ══════════ */
+async function init(){
+  const ind = document.getElementById('save-indicator');
+  if(ind){ ind.textContent='Cargando…'; ind.style.opacity='1'; ind.style.background='#e0f2fe'; ind.style.color='#0369a1'; }
+  try {
+    const r = await fetch(API_BASE+'/api/state');
+    if(r.ok){
+      const s = await r.json();
+      if(s.profesionales?.length){
+        data             = s.profesionales;
+        areas            = s.areas;
+        simParams        = s.sim_params;
+        globalDias       = s.global_dias ?? 22;
+        if(s.custom_charts?.length)     customCharts     = s.custom_charts;
+        if(s.sim_custom_charts?.length) simCustomCharts  = s.sim_custom_charts;
+        if(s.box_data?.boxes?.length)   boxData          = s.box_data;
+        if(ind){ ind.textContent='✓ Datos cargados'; ind.style.background='#dcfce7'; ind.style.color='#166534';
+                 setTimeout(()=>{ ind.style.opacity='0'; },2000); }
+      } else {
+        // Primera vez: guardar datos por defecto en la BD
+        if(ind){ ind.style.opacity='0'; }
+        saveState();
+      }
+    }
+  } catch(e){
+    console.warn('API no disponible, usando datos en memoria.');
+    if(ind){ ind.textContent='Sin conexión con API'; ind.style.background='#fee2e2'; ind.style.color='#991b1b';
+             setTimeout(()=>{ ind.style.opacity='0'; },3000); }
+  }
+  // Debug temporal — se puede eliminar después
+  const dbg=document.createElement('div');
+  dbg.id='debug-init';
+  dbg.style.cssText='position:fixed;top:10px;right:10px;z-index:9999;background:#1e293b;color:#fff;font:11px monospace;padding:8px 12px;border-radius:8px;max-width:340px;white-space:pre-wrap';
+  dbg.textContent='⏳ Iniciando...';
+  document.body.appendChild(dbg);
+
+  try { initCharts(); dbg.textContent+=' ✓ initCharts'; } catch(e){ _showError('Error initCharts: '+e.message, e.stack||String(e)); return; }
+  try {
+    dbg.textContent+='\ndata.length='+data.length+' sT='+data.reduce((s,d)=>s+d.total,0);
+    renderDashboard();
+    dbg.textContent+=' ✓ renderDashboard';
+  } catch(e){ _showError('Error renderDashboard: '+e.message, e.stack||String(e)); return; }
+  setTimeout(()=>{ const el=document.getElementById('debug-init'); if(el) el.remove(); }, 8000);
+  checkSheetsStatus();
+}
+init();
 </script>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     CMC v2 BRIDGE — sobreescribe la data hardcoded de ORIGINAL con datos
+     reales de bi_pagos_caja (CSV oficial Medilink). Mantiene los % de
+     honorarios y subáreas del ORIGINAL hardcoded; solo reemplaza totales.
+     ════════════════════════════════════════════════════════════════════ -->
+<script>
+const _MES_NOMS = {"01":"Enero","02":"Febrero","03":"Marzo","04":"Abril","05":"Mayo","06":"Junio","07":"Julio","08":"Agosto","09":"Septiembre","10":"Octubre","11":"Noviembre","12":"Diciembre"};
+const _fmtMes = m => `${_MES_NOMS[m.slice(5,7)]} ${m.slice(0,4)}`;
+
+// Mapa nombre ORIGINAL → id_profesional Medilink (para cruzar)
+const _NOMBRE_TO_ID = {
+  "Dr. Olavarría": 1, "Dr. Abarca": 73, "Dr. Abarca Contrato": 73,
+  "Dr. Márquez": 13, "Dr. Borrego": 23, "Dr. Millán": 60,
+  "Dr. Tirso gine": 61, "Dr. Tirso medicina": 61,
+  "Dr. Quijano": 65, "Dr. Barraza": 64, "David Pardo": 68,
+  "Dr. Araneda": 1001,
+  "Dentista Javi": 55, "Dentista Carlos": 72, "Dentista Daniela": 66,
+  "Endodoncista Eduardo": 75, "Impl. Aurora": 69,
+  "Estética Valentina Fuentealba": 76,
+  "Kine Paola": 59, "Kine Luis": 77, "Kine Leo": 21,
+  "Nutri Gise": 52, "Psicólogo Jorge": 74, "Psicólogo Juan Pablo": 49,
+  "Dra. Juana": 70, "Matrona Saraí": 67, "Podóloga Andrea": 56,
+};
+
+let _CMC_MESES = [];
+let _CMC_MES_ACTUAL = null;
+
+async function _cmcLoadMes(mes){
+  const url = mes ? `/api/cmc/mensual?mes=${mes}` : '/api/cmc/mensual';
+  const r = await fetch(url);
+  const d = await r.json();
+  _CMC_MES_ACTUAL = d.mes;
+  // Mapa id_profesional → total cobrado
+  const totByProf = {};
+  for(const p of d.profesionales){ totByProf[p.id] = p.total; }
+  // Aplicar al data: actualizar total + recalcular prof + cmc según % original
+  for(const row of data){
+    const id = _NOMBRE_TO_ID[row.name];
+    const total = totByProf[id] || 0;
+    row.total = total;
+    if(row.tipo_pago === 'fijo'){
+      row.prof = row.hono_fijo;
+      row.cmc = total - row.hono_fijo;
+    } else {
+      // Mantener el % del ORIGINAL (calculado del snapshot marzo 2026)
+      const origIdx = ORIGINAL.findIndex(o => o.name === row.name);
+      const orig = origIdx >= 0 ? ORIGINAL[origIdx] : null;
+      const pct = (orig && orig.total > 0) ? (orig.prof / orig.total) : 0.70;
+      row.prof = Math.round(total * pct);
+      row.cmc = total - row.prof;
+    }
+  }
+  // Render
+  document.getElementById('chart-mes-label').textContent = _fmtMes(d.mes);
+  if(typeof renderDashboard === 'function'){ renderDashboard(); }
+  // Llenar selector si hace falta
+  if(_CMC_MESES.length === 0 && d.meses_disponibles){
+    _CMC_MESES = d.meses_disponibles;
+    const sel = document.getElementById('mesLabel');
+    sel.innerHTML = _CMC_MESES.map(m => `<option value="${m}"${m===d.mes?' selected':''}>${_fmtMes(m)}</option>`).join('');
+    sel.value = d.mes;
+    sel.addEventListener('change', e => _cmcLoadMes(e.target.value));
+  }
+}
+
+// Reemplazar el bootstrap original: en vez de usar data hardcoded marzo 2026
+// pisamos los totales con los del CSV. Esperamos a que init() haya corrido.
+window.addEventListener('load', () => {
+  setTimeout(() => _cmcLoadMes(), 300);
+});
+</script>
+
 </body>
 </html>
