@@ -5187,6 +5187,23 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     f"¡Te esperamos! 😊{cross_ref}"
                     f"{pni_msg}"
                 )
+                # ── Tracking referral_source pasivo (sin preguntar al paciente) ──
+                # Si la sesión tiene fbclid → proviene de Meta Ads; taggear antes
+                # de preguntar para no perder la atribución si salta la pregunta.
+                if data.get("fbclid"):
+                    save_tag(phone, "referral_source:meta_ads")
+                    log_event(phone, "referral_source_auto", {"source": "meta_ads", "fbclid": data["fbclid"][:40]})
+                # Si el primer mensaje contiene un slug de blog → SEO orgánico
+                else:
+                    import re as _re_rs
+                    _first_msg = (data.get("first_message") or "")
+                    _blog_match = _re_rs.search(r"/blog/([\w-]+)", _first_msg)
+                    if _blog_match:
+                        _blog_slug = _blog_match.group(1)
+                        save_tag(phone, f"referral_source:seo_{_blog_slug}")
+                        log_event(phone, "referral_source_auto", {"source": f"seo_{_blog_slug}"})
+                # ── fin tracking referral_source ──────────────────────────────
+
                 # Si es paciente nuevo registrado en este flujo, pedir referido
                 # como segundo mensaje con botones (post-confirmación, baja fricción).
                 if data.get("is_paciente_nuevo_post_referral"):

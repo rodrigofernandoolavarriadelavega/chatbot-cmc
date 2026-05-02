@@ -651,3 +651,76 @@ async def _job_cleanup_stuck_sessions():
             log.info("cleanup_stuck_sessions: %d sesiones reseteadas", n)
     except Exception as e:
         log.error("cleanup_stuck_sessions fallo: %s", e)
+
+
+async def _job_regenerate_heatmap_cache():
+    """Cada 6h: regenera heatmap_cache.json con conteos de comunas desde sessions.db.
+
+    Lee conversations + citas_cache, agrupa pacientes por comuna/región
+    y guarda el resultado en data/heatmap_cache.json para que /api/seo/geo
+    lo sirva sin recalcular en cada request.
+    """
+    try:
+        import json as _json
+        import sqlite3 as _sqlite3
+        from pathlib import Path as _Path
+        from collections import defaultdict as _dd
+
+        _db_sessions = _Path(__file__).parent.parent / "data" / "sessions.db"
+        _db_heatmap  = _Path(__file__).parent.parent / "data" / "heatmap_cache.db"
+        _out_file    = _Path(__file__).parent.parent / "data" / "heatmap_cache.json"
+
+        # Leer comunas desde contact_profiles (sessions.db)
+        comunas: dict = _dd(lambda: {"pacientes": 0, "citas": 0})
+
+        if _db_sessions.exists():
+            conn = _sqlite3.connect(str(_db_sessions))
+            conn.row_factory = _sqlite3.Row
+            try:
+                # Comunas registradas en perfiles de contacto
+                rows = conn.execute(
+                    "SELECT UPPER(TRIM(comuna)) AS c, COUNT(DISTINCT phone) AS n "
+                    "FROM contact_profiles WHERE comuna IS NOT NULL AND comuna != '' "
+                    "GROUP BY UPPER(TRIM(comuna))"
+                ).fetchall()
+                for r in rows:
+                    comunas[r["c"]]["pacientes"] += r["n"]
+                # Tags de arauco como fallback
+                arauco_phones = conn.execute(
+                    "SELECT COUNT(DISTINCT phone) FROM tags WHERE tag='arauco'"
+                ).fetchone()[0]
+                if arauco_phones and "ARAUCO" not in comunas:
+                    comunas["ARAUCO"]["pacientes"] += arauco_phones
+            finally:
+                conn.close()
+
+        # Sumar citas desde heatmap_cache.db si existe
+        if _db_heatmap.exists():
+            conn2 = _sqlite3.connect(str(_db_heatmap))
+            conn2.row_factory = _sqlite3.Row
+            try:
+                rows2 = conn2.execute(
+                    "SELECT UPPER(TRIM(comuna)) AS c, COUNT(*) AS n "
+                    "FROM citas_heatmap WHERE comuna IS NOT NULL AND comuna != '' "
+                    "GROUP BY UPPER(TRIM(comuna))"
+                ).fetchall()
+                for r in rows2:
+                    comunas[r["c"]]["citas"] += r["n"]
+            except Exception:
+                pass
+            finally:
+                conn2.close()
+
+        result = {
+            "generado_en": __import__("datetime").datetime.utcnow().isoformat() + "Z",
+            "fuente": "sessions.db + heatmap_cache.db",
+            "comunas": [
+                {"comuna": k, "pacientes": v["pacientes"], "citas": v["citas"]}
+                for k, v in sorted(comunas.items(), key=lambda x: -x[1]["pacientes"])
+            ]
+        }
+        _out_file.parent.mkdir(parents=True, exist_ok=True)
+        _out_file.write_text(_json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+        log.info("heatmap_cache regenerado: %d comunas", len(comunas))
+    except Exception as e:
+        log.error("_job_regenerate_heatmap_cache fallo: %s", e)

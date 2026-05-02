@@ -121,6 +121,7 @@
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="roadmap">🗺 Roadmap</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="metas">🎯 Metas / OKRs</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="reporte">📋 Reporte estratégico</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="creative">🎨 Creatives</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="capi">⚡ CAPI</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="glosario">📚 Glosario</button>
     </nav>
@@ -558,6 +559,38 @@ Estimación CAC (asumiendo Meta atribuye 50-60% de pacientes nuevos):
     </div>
   </section>
 
+  <!-- ──────────────────────── CREATIVES ──────────────────────── -->
+  <section id="tab-creative" class="tab-content hidden">
+    <div class="meta-section">
+      <div class="flex items-center justify-between mb-5">
+        <div>
+          <h3 class="mb-1">Creatives activos — últimos 30 días</h3>
+          <p class="text-sm opacity-75">Datos en vivo desde Marketing API. Gasto, alcance, CTR y conversaciones por pieza.</p>
+        </div>
+        <button onclick="loadCreatives()" class="px-4 py-2 text-sm font-medium rounded-lg" style="background:var(--olacore-fiordo);color:#fff">Actualizar</button>
+      </div>
+      <div id="creative-loading" class="text-center py-8 text-sm opacity-60 hidden">Cargando creatives...</div>
+      <div id="creative-empty" class="text-center py-8 text-sm opacity-60 hidden">No hay creatives activos en los últimos 30 días.</div>
+      <div id="creative-error" class="text-center py-8 text-sm text-red-400 hidden"></div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm" id="creative-table" style="display:none">
+          <thead>
+            <tr class="border-b border-slate-200 text-left">
+              <th class="py-2 pr-4 font-medium opacity-60">Thumbnail</th>
+              <th class="py-2 pr-4 font-medium opacity-60">Nombre</th>
+              <th class="py-2 pr-4 font-medium opacity-60 text-right">Gasto</th>
+              <th class="py-2 pr-4 font-medium opacity-60 text-right">Impresiones</th>
+              <th class="py-2 pr-4 font-medium opacity-60 text-right">CTR</th>
+              <th class="py-2 pr-4 font-medium opacity-60 text-right">Conversaciones</th>
+              <th class="py-2 font-medium opacity-60 text-center">Saturación</th>
+            </tr>
+          </thead>
+          <tbody id="creative-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
   <!-- ──────────────────────── GLOSARIO ──────────────────────── -->
   <section id="tab-glosario" class="tab-content hidden">
     <div class="meta-section">
@@ -983,8 +1016,79 @@ async function capiTest() {
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     if (btn.dataset.tab === 'capi') loadCapiStats();
+    if (btn.dataset.tab === 'creative') loadCreatives();
   });
 });
+
+// ── Tab Creative ─────────────────────────────────────────────────────────────
+async function loadCreatives() {
+  const loading = document.getElementById('creative-loading');
+  const empty   = document.getElementById('creative-empty');
+  const errEl   = document.getElementById('creative-error');
+  const table   = document.getElementById('creative-table');
+  const tbody   = document.getElementById('creative-tbody');
+
+  loading.classList.remove('hidden');
+  empty.classList.add('hidden');
+  errEl.classList.add('hidden');
+  table.style.display = 'none';
+  tbody.innerHTML = '';
+
+  // Obtener token del dashboard SEO o de URL
+  const tok = (new URLSearchParams(window.location.search)).get('token') || '';
+
+  try {
+    const res = await fetch('/api/seo/meta-creatives?token=' + encodeURIComponent(tok));
+    if (!res.ok) { throw new Error('HTTP ' + res.status); }
+    const data = await res.json();
+
+    loading.classList.add('hidden');
+
+    if (data.error) {
+      errEl.textContent = 'Error de API: ' + data.error;
+      errEl.classList.remove('hidden');
+      return;
+    }
+    const creatives = data.creatives || [];
+    if (!creatives.length) {
+      empty.classList.remove('hidden');
+      return;
+    }
+
+    const fmtCLP2 = n => 'CLP ' + Math.round(n).toLocaleString('es-CL');
+    const fmtPct  = n => (n ? parseFloat(n).toFixed(2) + '%' : '—');
+    const satIcon = freq => {
+      const f = parseFloat(freq) || 0;
+      if (f > 8) return '<span style="color:#ef4444">Saturado</span>';
+      if (f > 4) return '<span style="color:#f97316">Medio</span>';
+      return '<span style="color:#22c55e">Ok</span>';
+    };
+
+    creatives.forEach(c => {
+      const tr = document.createElement('tr');
+      tr.className = 'border-b border-slate-100 hover:bg-slate-50';
+      const thumb = c.thumbnail_url
+        ? `<img src="${c.thumbnail_url}" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:4px">`
+        : '<div style="width:48px;height:48px;background:#e2e8f0;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#94a3b8">Sin img</div>';
+      tr.innerHTML = `
+        <td class="py-2 pr-4">${thumb}</td>
+        <td class="py-2 pr-4" style="max-width:220px;word-break:break-word">${c.nombre || '—'}</td>
+        <td class="py-2 pr-4 text-right font-mono">${fmtCLP2(c.gasto || 0)}</td>
+        <td class="py-2 pr-4 text-right font-mono">${(c.impresiones || 0).toLocaleString('es-CL')}</td>
+        <td class="py-2 pr-4 text-right font-mono">${fmtPct(c.ctr)}</td>
+        <td class="py-2 pr-4 text-right font-mono">${c.conversaciones || 0}</td>
+        <td class="py-2 text-center">${satIcon(c.frecuencia)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    table.style.display = '';
+  } catch(e) {
+    loading.classList.add('hidden');
+    errEl.textContent = 'Error cargando creatives: ' + e.message;
+    errEl.classList.remove('hidden');
+  }
+}
 </script>
 </body>
 </html>

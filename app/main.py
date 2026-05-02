@@ -48,7 +48,8 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_doctor_resumen_precita, _job_doctor_reporte_progreso,
                   _job_doctor_reset_diario,
                   _job_cumpleanos, _job_winback,
-                  _job_takeover_ttl, _job_takeover_media_ttl)
+                  _job_takeover_ttl, _job_takeover_media_ttl,
+                  _job_regenerate_heatmap_cache)
 import admin_routes
 import portal_routes
 
@@ -331,6 +332,16 @@ async def lifespan(app: FastAPI):
         id="cleanup_stuck_sessions",
         replace_existing=True,
     )
+    # Regenerar heatmap_cache.json cada 6h (00:05, 06:05, 12:05, 18:05 CLT)
+    scheduler.add_job(
+        _job_regenerate_heatmap_cache,
+        CronTrigger(hour="*/6", minute=5, timezone=_CLT),
+        id="regenerate_heatmap_cache",
+        replace_existing=True,
+    )
+    # Primera generación al arrancar (sin await — no bloquear startup)
+    import asyncio as _asyncio_startup
+    _asyncio_startup.get_event_loop().create_task(_job_regenerate_heatmap_cache())
     scheduler.start()
     log.info(
         "Scheduler iniciado — recordatorios 09:00 · recordatorios 2h cada 15min · cumpleaños 10:00 · "
@@ -649,9 +660,51 @@ async def sitemap_xml():
     return Response(content="\n".join(parts), media_type="application/xml")
 
 
+@app.get("/sitemap_blogs.xml")
+async def sitemap_blogs_xml():
+    """Sitemap estático para los 7 blogs base (sin localizaciones)."""
+    from fastapi.responses import Response
+    from pathlib import Path as _P
+    _f = _P(__file__).parent.parent / "static" / "sitemap_blogs.xml"
+    if _f.exists():
+        return Response(content=_f.read_text(encoding="utf-8"), media_type="application/xml")
+    # fallback dinámico
+    BLOGS_BASE = ["cardiologia", "ecografia", "estetica-facial",
+                  "kinesiologia", "medicina-general", "odontologia-general", "ortodoncia"]
+    base_url = "https://centromedicocarampangue.cl"
+    today = "2026-05-02"
+    parts = ['<?xml version="1.0" encoding="UTF-8"?>',
+             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+    for slug in BLOGS_BASE:
+        parts.append(
+            f'  <url><loc>{base_url}/blog/{slug}</loc>'
+            f'<lastmod>{today}</lastmod>'
+            f'<changefreq>monthly</changefreq><priority>0.8</priority></url>'
+        )
+    parts.append('</urlset>')
+    return Response(content="\n".join(parts), media_type="application/xml")
+
+
+@app.get("/sitemap_index.xml")
+async def sitemap_index_xml():
+    """Sitemap index que referencia el sitemap principal + el de blogs."""
+    from fastapi.responses import Response
+    today = "2026-05-02"
+    content = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        f'  <sitemap><loc>https://centromedicocarampangue.cl/sitemap.xml</loc>'
+        f'<lastmod>{today}</lastmod></sitemap>\n'
+        f'  <sitemap><loc>https://centromedicocarampangue.cl/sitemap_blogs.xml</loc>'
+        f'<lastmod>{today}</lastmod></sitemap>\n'
+        '</sitemapindex>\n'
+    )
+    return Response(content=content, media_type="application/xml")
+
+
 @app.get("/robots.txt")
 async def robots_txt():
-    """robots.txt apuntando al sitemap dinámico."""
+    """robots.txt apuntando al sitemap index y sitemaps dinámicos."""
     from fastapi.responses import PlainTextResponse
     body = (
         "User-agent: *\n"
@@ -659,8 +712,9 @@ async def robots_txt():
         "Disallow: /admin\n"
         "Disallow: /api/\n"
         "\n"
+        "Sitemap: https://centromedicocarampangue.cl/sitemap_index.xml\n"
         "Sitemap: https://centromedicocarampangue.cl/sitemap.xml\n"
-        "Sitemap: https://agentecmc.cl/sitemap.xml\n"
+        "Sitemap: https://centromedicocarampangue.cl/sitemap_blogs.xml\n"
     )
     return PlainTextResponse(body)
 
@@ -1128,6 +1182,7 @@ def _seo_api_auth(token: str, cmc_session: str | None) -> None:
 
 
 @app.get("/seo/dashboard", response_class=HTMLResponse)
+@app.get("/seo-dashboard", response_class=HTMLResponse)
 def seo_dashboard_page(request: Request, token: str = "",
                        cmc_session: str | None = Cookie(None)):
     """Dashboard SEO. Acepta auth via ?token=... o cookie cmc_session
@@ -3647,6 +3702,68 @@ def seo_meta_api(dias: int = 30, token: str = "",
         "templates": templates,
         "serie": serie,
     }
+
+
+@app.get("/api/seo/meta-creatives")
+async def seo_meta_creatives_api(
+    account_id: str | None = None,
+    token: str = "",
+    cmc_session: str | None = Cookie(None),
+):
+    """Creatives activos en Meta Ads — últimos 30 días.
+    Llama a Marketing API ads?fields=name,creative{thumbnail_url,...},insights{...}
+    Devuelve array de creatives con gasto, impresiones, CTR, conversaciones y frecuencia.
+    Si la API falla o no hay creatives, devuelve {"creatives": []}.
+    """
+    _seo_api_auth(token, cmc_session)
+
+    acct = account_id or _CFG_META_ACCOUNT_ID
+
+    resp = await _meta_get(
+        f"{acct}/ads",
+        {
+            "fields": (
+                "name,"
+                "creative{thumbnail_url,object_story_spec,effective_object_story_id},"
+                "insights{spend,impressions,clicks,ctr,frequency,actions}"
+            ),
+            "limit": 50,
+            "date_preset": "last_30d",
+        }
+    )
+
+    if "error" in resp:
+        return {"creatives": [], "error": resp["error"]}
+
+    creatives = []
+    for ad in resp.get("data", []):
+        ins = (ad.get("insights") or {})
+        ins_data = ins.get("data", [{}])
+        d = ins_data[0] if ins_data else {}
+        gasto = float(d.get("spend", 0))
+        if gasto < 10:
+            continue  # filtrar ads sin gasto significativo
+
+        cre = ad.get("creative") or {}
+        thumb = cre.get("thumbnail_url") or None
+
+        actions = d.get("actions") or []
+        conversaciones = _sum_conv(actions)
+        frecuencia = float(d.get("frequency", 0))
+
+        creatives.append({
+            "nombre":         (ad.get("name") or "")[:80],
+            "thumbnail_url":  thumb,
+            "gasto":          gasto,
+            "impresiones":    int(d.get("impressions", 0)),
+            "clicks":         int(d.get("clicks", 0)),
+            "ctr":            d.get("ctr"),
+            "conversaciones": conversaciones,
+            "frecuencia":     frecuencia,
+        })
+
+    creatives.sort(key=lambda x: -x["gasto"])
+    return {"creatives": creatives, "ad_account_id": acct, "periodo": "last_30d"}
 
 
 @app.get("/api/seo/cruce-pacientes")
