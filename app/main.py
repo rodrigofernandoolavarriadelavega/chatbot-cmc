@@ -569,13 +569,15 @@ def _render_sitio_dynamic(html: str, rating_data: dict) -> str:
         html = html.replace("<!--CMC_RATING_DESC-->Verificadas en Google", f"<!--CMC_RATING_DESC-->{count} reseñas en Google")
 
     if reviews:
-        from google_rating import initials
+        from google_rating import initials, PLACE_ID
         # Formato v4/v5: clases .testi / .testi-text / .testi-author
         cards_v45 = []
         # Formato v7: clases .test-card / .test-quote / .test-author / .verif (SVG inline, sin fontawesome)
         cards_v7 = []
         star_svg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'
-        for rv in reviews[:3]:
+        # Filtrar reseñas con texto y mostrar hasta 5 (deja espacio para los 2 CTAs en el grid)
+        reviews_with_text = [r for r in reviews if (r.get("text") or "").strip()]
+        for rv in reviews_with_text[:5]:
             txt = (rv.get("text") or "").strip()
             if len(txt) < 25:
                 continue
@@ -611,6 +613,36 @@ def _render_sitio_dynamic(html: str, rating_data: dict) -> str:
                 '  </div>\n'
                 '</div>'
             )
+        # CTAs siempre visibles al final del grid: "Ver todas en Google" + "Dejar tu reseña"
+        google_g_svg = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21.35 11.1H12v3.83h5.51c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09 0-.78-.07-1.53-.2-2.25z"/><path d="M12 22c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 19.98 7.7 22 12 22z" opacity=".75"/><path d="M5.84 13.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V6.07H2.18C1.43 7.55 1 9.22 1 11s.43 3.45 1.18 4.93l3.66-2.84z" opacity=".5"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.02 2.18 6.07l3.66 2.84c.87-2.6 3.3-3.53 6.16-3.53z" opacity=".3"/></svg>'
+        rt = rating_data.get("rating") or "4.8"
+        review_count = rating_data.get("review_count") or 8
+        cards_v7.append(
+            '<a class="test-card test-cta-card" '
+            f'href="https://search.google.com/local/reviews?placeid={PLACE_ID}" '
+            'target="_blank" rel="noopener" '
+            'style="display: flex; flex-direction: column; background: rgba(79,190,206,0.10); border-style: dashed; border-color: var(--brand-teal); text-decoration: none;">\n'
+            f'  <div style="color: var(--brand-teal); margin-bottom: 12px;">{google_g_svg}</div>\n'
+            f'  <p class="test-quote" style="margin-bottom: 14px; font-size: 15px;">Mira las <strong style="color: var(--brand-teal);">{review_count} reseñas</strong> de pacientes en Google · <strong>{rt}★</strong></p>\n'
+            '  <div style="display: inline-flex; align-items: center; gap: 6px; margin-top: auto; padding: 11px 16px; background: white; color: var(--brand-navy); border-radius: var(--radius-pill); font-weight: 700; font-size: 13px; font-family: var(--font-display); align-self: flex-start;">\n'
+            '    Ver todas en Google →\n'
+            '  </div>\n'
+            '</a>'
+        )
+        cards_v7.append(
+            '<a class="test-card test-cta-card" '
+            f'href="https://search.google.com/local/writereview?placeid={PLACE_ID}" '
+            'target="_blank" rel="noopener" '
+            'style="display: flex; flex-direction: column; background: rgba(37,211,102,0.08); border-style: dashed; border-color: #25d366; text-decoration: none;">\n'
+            '  <div style="color: #25d366; margin-bottom: 12px;">'
+            '<svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.4 2.6c.3-.6 1-.6 1.3 0l2.4 5 5.5.8c.7.1 1 .9.5 1.4l-4 3.9.9 5.5c.1.7-.6 1.2-1.2.9L12 17.5l-4.9 2.6c-.6.3-1.3-.2-1.2-.9l.9-5.5-4-3.9c-.5-.5-.2-1.3.5-1.4l5.5-.8 2.6-5z"/></svg>'
+            '</div>\n'
+            '  <p class="test-quote" style="margin-bottom: 14px;">¿Te atendiste con nosotros? <strong style="color: #25d366;">Tu opinión nos ayuda a seguir mejorando.</strong></p>\n'
+            '  <div style="display: inline-flex; align-items: center; gap: 6px; margin-top: auto; padding: 11px 16px; background: white; color: var(--brand-navy); border-radius: var(--radius-pill); font-weight: 700; font-size: 13px; font-family: var(--font-display); align-self: flex-start;">\n'
+            '    Dejar tu reseña →\n'
+            '  </div>\n'
+            '</a>'
+        )
         if cards_v45:
             html = html.replace("<!--CMC_TESTIMONIOS_REALES-->", "\n".join(cards_v45))
         if cards_v7:
