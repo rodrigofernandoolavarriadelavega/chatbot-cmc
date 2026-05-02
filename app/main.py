@@ -71,6 +71,26 @@ logging.config.dictConfig({
 })
 log = logging.getLogger("bot")
 
+# ── Background task helper (FIX-7) ──────────────────────────────────────────
+# asyncio.create_task() sin guardar referencia permite que el GC elimine la
+# tarea y cualquier excepción queda silenciada ("Task exception was never
+# retrieved"). _spawn_bg mantiene referencia fuerte en _BG_TASKS y loguea
+# errores explícitamente.
+_BG_TASKS: set[asyncio.Task] = set()
+
+def _spawn_bg(coro, name: str = "bg") -> asyncio.Task:
+    task = asyncio.create_task(coro, name=name)
+    _BG_TASKS.add(task)
+    task.add_done_callback(_BG_TASKS.discard)
+    def _on_done(t: asyncio.Task) -> None:
+        if t.cancelled():
+            return
+        exc = t.exception()
+        if exc:
+            log.error("BG_TASK_FAIL name=%s exc=%s", t.get_name(), exc, exc_info=exc)
+    task.add_done_callback(_on_done)
+    return task
+
 scheduler = AsyncIOScheduler(timezone="America/Santiago")
 
 HEADERS_MEDILINK = {"Authorization": f"Token {MEDILINK_TOKEN}"}
@@ -860,6 +880,16 @@ def bi_meulen_operaciones_page():
     return html
 
 
+@app.get("/agentes", response_class=HTMLResponse)
+@app.get("/agentes/dashboard", response_class=HTMLResponse)
+def agentes_dashboard_page():
+    """Mapa de subagentes Claude Code + automatizaciones del ecosistema OLACORE."""
+    html = _read_template("agentes_dashboard.html")
+    if not html:
+        raise HTTPException(404, "Dashboard de agentes no disponible")
+    return html
+
+
 @app.get("/menu", response_class=HTMLResponse)
 def menu_page():
     """Landing esquemático con todas las rutas desplegadas en agentecmc.cl."""
@@ -1457,7 +1487,7 @@ async def api_olavarria_data(refresh: int = 0, desde: str = "2024-01-01", tarifa
 
     if olavarria_cache_count() == 0:
         log.info("olavarria cache vacío — kickoff seed completo en background")
-        asyncio.create_task(sync_olavarria_atenciones(desde=desde, solo_hoy=False))
+        _spawn_bg(sync_olavarria_atenciones(desde=desde, solo_hoy=False), name="seed_olavarria")
     else:
         # Detectar cache incompleto: si la fecha máxima en cache es más vieja
         # que hace 7 días, retomar seed completo. Si no, solo delta de hoy.
@@ -1477,9 +1507,9 @@ async def api_olavarria_data(refresh: int = 0, desde: str = "2024-01-01", tarifa
                 pass
         if cache_incompleto:
             log.info("olavarria cache incompleto (max=%s, gap>7d) — retomando seed", max_fecha)
-            asyncio.create_task(sync_olavarria_atenciones(desde=desde, solo_hoy=False))
+            _spawn_bg(sync_olavarria_atenciones(desde=desde, solo_hoy=False), name="seed_olavarria_resumido")
         elif refresh:
-            asyncio.create_task(sync_olavarria_atenciones(solo_hoy=True))
+            _spawn_bg(sync_olavarria_atenciones(solo_hoy=True), name="refresh_olavarria_hoy")
         else:
             with _conn_ol() as _c:
                 row = _c.execute(
@@ -1495,7 +1525,7 @@ async def api_olavarria_data(refresh: int = 0, desde: str = "2024-01-01", tarifa
                 except Exception:
                     needs_refresh = True
             if needs_refresh:
-                asyncio.create_task(sync_olavarria_atenciones(solo_hoy=True))
+                _spawn_bg(sync_olavarria_atenciones(solo_hoy=True), name="delta_olavarria_hoy")
 
     raw = get_olavarria_atenciones(desde=desde)
 
@@ -1668,7 +1698,7 @@ async def sync_olavarria_montos(limite: int = 0, delay: float = 0.5) -> dict:
 @app.post("/api/olavarria/sync-montos")
 async def api_olavarria_sync_montos(limite: int = 0):
     """Dispara el llenado de monto_facturado desde Medilink. Background."""
-    asyncio.create_task(sync_olavarria_montos(limite=limite))
+    _spawn_bg(sync_olavarria_montos(limite=limite), name="sync_olavarria_montos")
     return {"started": True, "limite": limite or "todos"}
 
 
@@ -1697,9 +1727,9 @@ async def api_profesional_data(id_prof: int, desde: str = "2024-01-01",
         ).fetchone()[0]
     if n_rows == 0:
         log.info("BI v2: prof=%d cache vacío → kickoff seed en background", id_prof)
-        asyncio.create_task(sync_profesional(id_prof, desde=desde))
+        _spawn_bg(sync_profesional(id_prof, desde=desde), name=f"seed_prof_{id_prof}")
     elif refresh:
-        asyncio.create_task(sync_profesional(id_prof, desde=desde, force=False))
+        _spawn_bg(sync_profesional(id_prof, desde=desde, force=False), name=f"refresh_prof_{id_prof}")
 
     base = stats_profesional(id_prof, desde=desde)
     caja = stats_profesional_caja(id_prof, desde=desde)
@@ -1727,7 +1757,7 @@ async def api_profesional_sync(id_prof: int, desde: str = "2024-01-01",
                                 force: int = 0):
     """Dispara sync manual de atenciones en background."""
     from bi_sync import sync_profesional
-    asyncio.create_task(sync_profesional(id_prof, desde=desde, force=bool(force)))
+    _spawn_bg(sync_profesional(id_prof, desde=desde, force=bool(force)), name=f"manual_sync_prof_{id_prof}")
     return {"started": True, "id_profesional": id_prof, "desde": desde, "force": bool(force)}
 
 
@@ -1736,7 +1766,7 @@ async def api_bi_sync_pagos(desde: str = "2024-01-01", hasta: str | None = None,
                               force: int = 0):
     """Dispara sync de /pagos a bi_pagos_caja (fuente primaria caja real)."""
     from bi_sync import sync_pagos_rango
-    asyncio.create_task(sync_pagos_rango(desde=desde, hasta=hasta, force=bool(force)))
+    _spawn_bg(sync_pagos_rango(desde=desde, hasta=hasta, force=bool(force)), name="sync_pagos_rango")
     return {"started": True, "desde": desde, "hasta": hasta or "today", "force": bool(force)}
 
 
