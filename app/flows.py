@@ -2172,7 +2172,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 and all(isinstance(s, dict) and s.get("hora_inicio") for s in _ls)
             )
             if _ls_valido and _parse_hora_idle(txt):
+                # FIX-9: last_slots_ts puede ser naive (guardado sin tz).
+                # Comparar naive con aware causa TypeError silenciado por el except.
                 _ts_snap = datetime.fromisoformat(data["last_slots_ts"])
+                if _ts_snap.tzinfo is None:
+                    _ts_snap = _ts_snap.replace(tzinfo=timezone.utc)
                 _edad = datetime.now(timezone.utc) - _ts_snap
                 if _edad < timedelta(minutes=60):
                     data["todos_slots"] = _ls
@@ -2257,8 +2261,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             _es_post_confirm = False
             if _last_book_ts:
                 try:
-                    _delta = (_dt_titular.now(_tz_titular.utc)
-                              - _dt_titular.fromisoformat(_last_book_ts))
+                    _ts_book = _dt_titular.fromisoformat(_last_book_ts)
+                    if _ts_book.tzinfo is None:  # FIX-9: naive guard
+                        _ts_book = _ts_book.replace(tzinfo=_tz_titular.utc)
+                    _delta = _dt_titular.now(_tz_titular.utc) - _ts_book
                     _es_post_confirm = _delta.total_seconds() < 1800  # 30 min
                 except Exception:
                     pass
@@ -2929,7 +2935,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if _ctx_esp and _ctx_ts:
             try:
                 from datetime import datetime as _dt_ctx2
-                _edad = _dt_ctx2.now(timezone.utc) - _dt_ctx2.fromisoformat(_ctx_ts)
+                _ts_ctx2 = _dt_ctx2.fromisoformat(_ctx_ts)
+                if _ts_ctx2.tzinfo is None:  # FIX-9: naive guard
+                    _ts_ctx2 = _ts_ctx2.replace(tzinfo=timezone.utc)
+                _edad = _dt_ctx2.now(timezone.utc) - _ts_ctx2
                 if _edad < timedelta(minutes=5):
                     _pivot_kw = ("cupo", "cupos", "disponib", "hora dispon",
                                  "horario", "cuando hay", "cuándo hay",
@@ -5359,10 +5368,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if any(kw in tl for kw in _NUEVO_INTENT_KW):
             log_event(phone, "waitlist_confirm_break", {"txt": txt[:120]})
             reset_session(phone)
-            # Reentrar handle_message con la sesión limpia para procesar el
-            # nuevo intent. Es recursión controlada (1 nivel máximo: IDLE no
-            # vuelve a WAIT_WAITLIST_CONFIRM dentro del mismo turn).
-            return await handle_message(phone, txt, get_session(phone))
+            # FIX-10: pasar dict limpio en lugar de get_session() post-reset
+            # (evita lectura redundante a SQLite y fragilidad ante busy).
+            return await handle_message(phone, txt, {"state": "IDLE", "data": {}})
         return "Responde *SÍ* para inscribirte o *NO* si prefieres llamar a recepción."
 
     # ── WAIT_WAITLIST_RUT ─────────────────────────────────────────────────────
@@ -7318,7 +7326,8 @@ async def _iniciar_cancelar(phone: str, data: dict, txt: str = "") -> str:
         _rut_emb = _cr(txt)
         if _vr(_rut_emb):
             log_event(phone, "rut_extraido_de_frase", {"flow": "cancelar"})
-            return await handle_message(phone, _rut_emb, get_session(phone))
+            # FIX-10: sesión ya fue saved con WAIT_RUT_CANCELAR arriba; leer de nuevo es redundante
+            return await handle_message(phone, _rut_emb, {"state": "WAIT_RUT_CANCELAR", "data": data})
     return (
         "Claro, te ayudo a cancelar una hora.\n\n"
         "Necesito tu RUT para buscarte:\n"
@@ -7337,7 +7346,8 @@ async def _iniciar_ver(phone: str, data: dict, txt: str = "") -> str:
         _rut_emb = _cr(txt)
         if _vr(_rut_emb):
             log_event(phone, "rut_extraido_de_frase", {"flow": "ver"})
-            return await handle_message(phone, _rut_emb, get_session(phone))
+            # FIX-10: sesión ya fue saved con WAIT_RUT_VER arriba; leer de nuevo es redundante
+            return await handle_message(phone, _rut_emb, {"state": "WAIT_RUT_VER", "data": data})
     return (
         "Claro, te muestro tus reservas.\n\n"
         "Necesito tu RUT:\n"
