@@ -392,7 +392,7 @@ _SITIO_V4_HTML = (_TEMPLATE_DIR / "sitio-v4.html").read_text(encoding="utf-8") i
 _SITIO_V5_HTML = (_TEMPLATE_DIR / "sitio-v5.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio-v5.html").exists() else ""
 _SITIO_V6_HTML = (_TEMPLATE_DIR / "sitio-v6.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio-v6.html").exists() else ""
 _SITIO_V7_HTML = (_TEMPLATE_DIR / "sitio-v7.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio-v7.html").exists() else ""
-_SITIO_V7_1_HTML = (_TEMPLATE_DIR / "sitio-v7-1.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio-v7-1.html").exists() else ""
+_SITIO_HTML = (_TEMPLATE_DIR / "sitio.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio.html").exists() else ""
 _BLOG_DIR = _TEMPLATE_DIR / "blog"
 _HEATMAP_COMUNAS_HTML = (_TEMPLATE_DIR / "heatmap_comunas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "heatmap_comunas.html").exists() else ""
 _HEATMAP_DIRECCIONES_HTML = (_TEMPLATE_DIR / "heatmap_direcciones.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "heatmap_direcciones.html").exists() else ""
@@ -507,7 +507,7 @@ async def sitio_v7_1():
     Places con fallback honesto al perfil de Google Maps."""
     from google_rating import fetch_rating
     rating_data = await fetch_rating()
-    return _render_sitio_dynamic(_SITIO_V7_1_HTML, rating_data)
+    return _render_sitio_dynamic(_SITIO_HTML, rating_data)
 
 
 @app.get("/blog/{slug}", response_class=HTMLResponse)
@@ -539,6 +539,11 @@ async def blog_post(slug: str):
 # COMUNAS DE LA PROVINCIA DE ARAUCO (SEO local)
 # ============================================================
 COMUNAS_ARAUCO = {
+    # Localidades fuertes (mayor concentración de pacientes)
+    "carampangue": {"nombre": "Carampangue", "km": 0,   "min": 0,   "ruta": "—",              "tipo": "local"},
+    "laraquete":   {"nombre": "Laraquete",   "km": 8,   "min": 10,  "ruta": "Ruta 160 norte", "tipo": "cercana"},
+    "ramadilla":   {"nombre": "Ramadilla",   "km": 6,   "min": 10,  "ruta": "ruta rural",     "tipo": "cercana"},
+    # Comunas Provincia de Arauco
     "arauco":      {"nombre": "Arauco",      "km": 15,  "min": 20,  "ruta": "Ruta P-22"},
     "lebu":        {"nombre": "Lebu",        "km": 50,  "min": 60,  "ruta": "Ruta P-40"},
     "canete":      {"nombre": "Cañete",      "km": 70,  "min": 80,  "ruta": "Ruta P-72"},
@@ -564,10 +569,14 @@ def _localize_blog(html: str, base_slug: str, comuna_slug: str) -> str:
         rf'\1 desde {nombre}\2', html, count=1
     )
 
-    # Meta description con localidad
+    # Meta description con localidad (Carampangue es la sede, no decir "desde")
+    if comuna_slug == "carampangue":
+        meta_extra = f' Atención en Carampangue, Provincia de Arauco.'
+    else:
+        meta_extra = f' Atendemos pacientes desde {nombre} ({km} km · {minutos} min). Provincia de Arauco.'
     html = _re.sub(
         r'(<meta name="description" content="[^"]*?)(\s*"\s*/>)',
-        rf'\1 Atendemos pacientes desde {nombre} ({km} km · {minutos} min). Provincia de Arauco."\2',
+        rf'\1{meta_extra}"\2',
         html, count=1
     )
 
@@ -596,10 +605,14 @@ def _localize_blog(html: str, base_slug: str, comuna_slug: str) -> str:
         rf'\1 · {nombre}\2', html, count=1
     )
 
-    # Lead: prefix con localidad y datos de viaje
+    # Lead: prefix con localidad. Carampangue tiene caso especial (es la sede)
+    if comuna_slug == "carampangue":
+        lead_prefix = f'<strong>Atendemos a la comunidad de Carampangue.</strong> '
+    else:
+        lead_prefix = f'<strong>Pacientes desde {nombre}</strong> ({km} km · {minutos} min en auto). '
     html = _re.sub(
         r'(<p class="blog-lead">\s*)',
-        rf'\1<strong>Pacientes desde {nombre}</strong> ({km} km · {minutos} min en auto). ',
+        rf'\1{lead_prefix}',
         html, count=1
     )
 
