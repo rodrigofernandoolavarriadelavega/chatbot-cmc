@@ -640,7 +640,11 @@ section.compact { padding: 64px 0; }
   margin-bottom: 24px;
 }
 .hero h1 .accent-deep { color: var(--brand-deep); }
-.hero h1 .accent-teal { color: var(--brand-teal); }
+.hero h1 .accent-teal {
+  color: var(--brand-teal-ink);
+  font-style: italic;
+  font-weight: 700;
+}
 .hero-pre {
   display: flex; gap: 10px; align-items: center;
   margin-bottom: 24px; flex-wrap: wrap;
@@ -1542,7 +1546,20 @@ section.compact { padding: 64px 0; }
 }
 
 /* ========== LOCATION ========== */
-.location { background: white; }
+.location {
+  background: linear-gradient(180deg, var(--paper) 0%, var(--brand-teal-soft) 100%);
+  position: relative;
+  overflow: hidden;
+}
+.location::before {
+  content: '';
+  position: absolute;
+  top: 60px; right: -50px;
+  width: 220px; height: 220px;
+  background: radial-gradient(circle, rgba(79,190,206,0.20) 0%, transparent 70%);
+  pointer-events: none;
+}
+.location > .container { position: relative; z-index: 1; }
 .loc-grid {
   display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: start;
 }
@@ -2574,7 +2591,31 @@ section.compact { padding: 64px 0; }
 }
 
 /* ═══ HORARIOS POR ESPECIALIDAD (tabla, traída de v4) ═══ */
-.hours { background: linear-gradient(180deg, var(--ink-50) 0%, var(--paper) 100%); padding: 80px 0; }
+.hours {
+  background: linear-gradient(180deg, var(--ink-50) 0%, var(--paper) 100%);
+  padding: 80px 0;
+  position: relative;
+  overflow: hidden;
+}
+.hours::before {
+  content: '';
+  position: absolute;
+  top: 100px; right: 4%;
+  width: 56px; height: 56px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M40 10h20v30h30v20H60v30H40V60H10V40h30z' fill='%234FBECE' opacity='0.22'/%3E%3C/svg%3E");
+  background-size: contain;
+  pointer-events: none;
+}
+.hours::after {
+  content: '';
+  position: absolute;
+  bottom: 80px; left: -40px;
+  width: 200px; height: 200px;
+  background-image: radial-gradient(rgba(31,126,140,0.10) 1.5px, transparent 1.5px);
+  background-size: 16px 16px;
+  pointer-events: none;
+}
+.hours > .container { position: relative; z-index: 1; }
 .hours-head { max-width: 720px; margin: 0 auto 40px; text-align: center; }
 .hours-head .eyebrow { margin-bottom: 12px; }
 .hours-head h2 {
