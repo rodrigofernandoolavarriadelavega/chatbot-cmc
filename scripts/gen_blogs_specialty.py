@@ -329,7 +329,7 @@ ORT_BODY = f'''
         <h2>Preguntas <em>frecuentes</em></h2>
         <div class="faq-list">
           {faq_item('¿Cuánto cuesta la ortodoncia?', '<strong>Instalación de brackets metálicos $120.000 · Controles $30.000 cada uno</strong>. La duración es de 18–24 meses, depende de cada caso. El presupuesto inicial cuesta $15.000 (gratis si comienzas tratamiento ese día).')}
-          {faq_item('¿Por qué no puedo agendar directo con la ortodoncista?', 'Para que tu tratamiento sea exitoso, primero necesitamos descartar caries, problemas de encías o de mordida que requieran tratamiento previo. La dentista general es quien evalúa eso y te entrega la orden de derivación.')}
+          {faq_item('¿Por qué no puedo agendar directo con la ortodoncista?', 'Para que tu tratamiento sea exitoso, primero necesitamos descartar caries o problemas de encías que requieran tratamiento previo. La dentista general es quien evalúa eso y te entrega la orden de derivación.')}
           {faq_item('¿Cuánto demora el tratamiento?', 'Entre 18 y 36 meses según la complejidad del caso. Los simples se acercan a 18 meses; complejidad mediana suele pasar de 24 controles. La constancia con los controles cada 3–4 semanas es lo que define el tiempo total.')}
           {faq_item('¿Atienden ortodoncia para niños?', 'Sí. Hay momentos clave en la dentición mixta (8–12 años) donde la ortodoncia previene problemas mayores. La dentista general evalúa si tu hijo necesita tratamiento ahora o esperar.')}
           {faq_item('¿Aceptan Fonasa?', 'No. La ortodoncia es atención particular. Aceptamos efectivo, transferencia, débito y crédito. Algunos seguros complementarios pueden cubrir parte vía reembolso — consulta con el tuyo.')}
@@ -337,7 +337,7 @@ ORT_BODY = f'''
 
 ORT_FAQ_JSONLD = '''
     {"@type":"Question","name":"¿Cuánto cuesta la ortodoncia?","acceptedAnswer":{"@type":"Answer","text":"Instalación de brackets metálicos $120.000 y controles $30.000 cada uno. Duración 18-24 meses. Presupuesto inicial $15.000 (gratis si comienzas tratamiento ese día)."}},
-    {"@type":"Question","name":"¿Por qué no puedo agendar directo con la ortodoncista?","acceptedAnswer":{"@type":"Answer","text":"Para que el tratamiento sea exitoso primero hay que descartar caries, problemas de encías o de mordida que requieran tratamiento previo. La dentista general lo evalúa y entrega la orden de derivación."}},
+    {"@type":"Question","name":"¿Por qué no puedo agendar directo con la ortodoncista?","acceptedAnswer":{"@type":"Answer","text":"Para que el tratamiento sea exitoso primero hay que descartar caries o problemas de encías que requieran tratamiento previo. La dentista general lo evalúa y entrega la orden de derivación."}},
     {"@type":"Question","name":"¿Cuánto demora el tratamiento de ortodoncia?","acceptedAnswer":{"@type":"Answer","text":"Entre 18 y 36 meses según la complejidad. Casos simples cerca de 18 meses; complejidad mediana suele pasar de 24 controles."}},
     {"@type":"Question","name":"¿Atienden ortodoncia para niños?","acceptedAnswer":{"@type":"Answer","text":"Sí. La dentista general evalúa si el niño necesita tratamiento ahora o esperar."}},
     {"@type":"Question","name":"¿Aceptan Fonasa en ortodoncia?","acceptedAnswer":{"@type":"Answer","text":"No, es atención particular. Aceptamos efectivo, transferencia, débito y crédito."}}'''
