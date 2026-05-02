@@ -389,27 +389,91 @@ async def _fetch_pagos_dia(cli: httpx.AsyncClient, fecha: str) -> AsyncIterator[
 
 def _resolver_profesional_pago(c, pago: dict) -> tuple[int | None, int | None]:
     """Cruza un pago contra bi_atenciones para inferir id_profesional.
-    Reglas:
-    1. Si en (id_paciente, fecha) hay 1 sola atención → ese profesional
-    2. Si hay varias → matchear por monto (atención.total == pago.monto)
-    3. Si igual hay ambigüedad → la primera con menor abs(total - monto)
-    Retorna (id_profesional, atencion_id) o (None, None)."""
+
+    Los pagos pueden llegar días o semanas después de la atención (tratamientos
+    dentales, kine, paquetes pagados al final). Estrategia en cascada:
+
+    1. Mismo día + monto exacto match por atención.total
+    2. Ventana ±60 días + monto exacto (atención más cercana en fecha)
+    3. Ventana ±60 días + monto cercano (delta abs mínimo)
+    4. Ventana ±60 días + atención con deuda > 0 (FIFO la más antigua con deuda)
+    5. Si paciente tiene un único profesional histórico → ese
+    Retorna (id_profesional, atencion_id) o (None, None).
+    """
+    from datetime import date, timedelta
     pid = pago.get("id_paciente")
     fecha = pago.get("fecha_recepcion") or pago.get("fecha")
-    monto = pago.get("monto_pago") or 0
+    monto = int(pago.get("monto_pago") or 0)
     if not pid or not fecha:
         return None, None
+    fecha_iso = fecha[:10]
+
+    # Atenciones del paciente con total > 0 (descarta controles $0)
     rows = c.execute(
-        "SELECT atencion_id, id_profesional, total FROM bi_atenciones "
-        "WHERE id_paciente=? AND fecha=?", (pid, fecha[:10])
+        "SELECT atencion_id, id_profesional, total, abonado, deuda, fecha "
+        "FROM bi_atenciones WHERE id_paciente=? AND total>0 "
+        "ORDER BY fecha", (pid,)
     ).fetchall()
     if not rows:
         return None, None
-    if len(rows) == 1:
-        return rows[0]["id_profesional"], rows[0]["atencion_id"]
-    # Múltiples atenciones mismo día: matchear por monto
-    rows_ranked = sorted(rows, key=lambda r: abs((r["total"] or 0) - monto))
-    return rows_ranked[0]["id_profesional"], rows_ranked[0]["atencion_id"]
+
+    try:
+        f_pago = date.fromisoformat(fecha_iso)
+    except ValueError:
+        return None, None
+
+    # 1. Mismo día + monto exacto
+    same_day = [r for r in rows if r["fecha"] == fecha_iso and (r["total"] or 0) == monto]
+    if same_day:
+        r = same_day[0]
+        return r["id_profesional"], r["atencion_id"]
+
+    # 2. Ventana ±60d + monto exacto, ordenar por proximidad temporal
+    en_ventana = []
+    for r in rows:
+        try:
+            f_at = date.fromisoformat(r["fecha"])
+        except (ValueError, TypeError):
+            continue
+        delta_d = abs((f_pago - f_at).days)
+        if delta_d <= 60:
+            en_ventana.append((delta_d, r))
+    en_ventana.sort(key=lambda x: x[0])
+
+    monto_exacto = [t for t in en_ventana if (t[1]["total"] or 0) == monto]
+    if monto_exacto:
+        r = monto_exacto[0][1]
+        return r["id_profesional"], r["atencion_id"]
+
+    # 3. Ventana ±60d + monto cercano (delta < 5%)
+    if en_ventana:
+        ranked = sorted(
+            en_ventana,
+            key=lambda t: (abs((t[1]["total"] or 0) - monto), t[0])
+        )
+        best_delta = abs((ranked[0][1]["total"] or 0) - monto)
+        if best_delta <= max(2000, monto * 0.05):
+            r = ranked[0][1]
+            return r["id_profesional"], r["atencion_id"]
+
+    # 4. Atención con deuda > 0 anterior al pago (FIFO)
+    deudoras = [r for r in rows
+                if (r["deuda"] or 0) > 0 and r["fecha"] and r["fecha"] <= fecha_iso]
+    if deudoras:
+        r = deudoras[-1]  # la más reciente con deuda
+        return r["id_profesional"], r["atencion_id"]
+
+    # 5. Si todas las atenciones del paciente son de un mismo profesional
+    profs = set(r["id_profesional"] for r in rows if r["id_profesional"])
+    if len(profs) == 1:
+        prof_unico = next(iter(profs))
+        # Asignar a la atención más cercana en fecha
+        rows_ranked = sorted(rows, key=lambda r: abs(
+            (date.fromisoformat(r["fecha"]) - f_pago).days
+        ) if r["fecha"] else 999999)
+        return prof_unico, rows_ranked[0]["atencion_id"]
+
+    return None, None
 
 
 def _upsert_pagos(records: list[dict]) -> tuple[int, int]:
