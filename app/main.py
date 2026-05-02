@@ -1924,9 +1924,10 @@ def api_cmc_mensual(mes: str | None = None):
         por_area[area]["n_pagos"] += r["n"]
         total_mes += total
 
+    from datetime import datetime as _dt_cm
     return {
         "mes": mes,
-        "fecha_actualizacion": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "fecha_actualizacion": _dt_cm.now().strftime("%Y-%m-%d %H:%M"),
         "total_mes": total_mes,
         "n_profesionales_activos": len(profs),
         "n_pagos_total": sum(p["n_pagos"] for p in profs),
