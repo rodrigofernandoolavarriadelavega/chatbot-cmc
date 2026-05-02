@@ -1827,6 +1827,17 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     txt   = texto.strip()
     tl    = txt.lower()
 
+    # ── FIX-3: Staff whitelist — personal del CMC al canal público ──────────
+    # Personal médico/admin escribe al bot como si fuera un paciente (consultas,
+    # confirmaciones, etc.). 14 takeovers/mes atribuidos a esta causa.
+    # Si el phone está en la whitelist, derivar directo a HUMAN_TAKEOVER.
+    from staff_whitelist import is_staff, get_staff_name
+    if is_staff(phone) and state != "HUMAN_TAKEOVER":
+        nombre_staff = get_staff_name(phone)
+        save_session(phone, "HUMAN_TAKEOVER", data)
+        log_event(phone, "staff_directo", {"nombre": nombre_staff})
+        return f"Hola {nombre_staff.split()[0] if nombre_staff else ''}, te paso a recepción. ✋"
+
     # ── Comando admin: /status (y sinónimos) desde el celular del admin ───
     # Abre la ventana 24h de WhatsApp y devuelve el reporte EN VIVO. Útil
     # cuando el job periódico no llegó por "Re-engagement message" (131047).

@@ -2357,3 +2357,36 @@ async def admin_send_pediatric_info(request: Request, _: str = Depends(require_a
 
     log_event(phone, "pediatric_info_sent", {"include": include, "source": "ges"})
     return {"sent": True, "wamid": wamid, "include": include, "chars": len(texto)}
+
+
+# ── FIX-3: Staff whitelist endpoints ────────────────────────────────────────
+
+@router.get("/admin/api/staff")
+async def api_get_staff(_auth=Depends(_require_admin)):
+    """Lista los números en la whitelist de staff."""
+    from staff_whitelist import get_all_staff
+    return {"staff": get_all_staff()}
+
+
+@router.post("/admin/api/staff/add")
+async def api_add_staff(request: Request, _auth=Depends(_require_admin)):
+    """Agrega un número al whitelist de staff (runtime, volátil).
+    Para persistir, agregar a STAFF_PHONES en .env del servidor.
+    Body: {"phone": "56XXXXXXXXX", "nombre": "Dr. Nombre"}
+    """
+    body = await request.json()
+    phone_raw = str(body.get("phone", "")).strip().lstrip("+")
+    nombre = str(body.get("nombre", "")).strip()
+    if not phone_raw or not nombre:
+        raise HTTPException(400, "Se requieren 'phone' y 'nombre'")
+    from staff_whitelist import add_staff_runtime
+    add_staff_runtime(phone_raw, nombre)
+    return {"ok": True, "phone": phone_raw, "nombre": nombre}
+
+
+@router.delete("/admin/api/staff/{phone}")
+async def api_remove_staff(phone: str, _auth=Depends(_require_admin)):
+    """Elimina un número del whitelist runtime."""
+    from staff_whitelist import remove_staff_runtime
+    removed = remove_staff_runtime(phone.lstrip("+"))
+    return {"ok": True, "removed": removed}
