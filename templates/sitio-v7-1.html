@@ -907,6 +907,55 @@ section.compact { padding: 64px 0; }
 }
 .how-step p { font-size: 14.5px; color: var(--ink-600); line-height: 1.6; position: relative; z-index: 1; }
 
+/* ========== TOUR (Conoce el centro — fotos reales) ========== */
+.tour { background: var(--paper); }
+.tour-head { max-width: 760px; margin-bottom: 40px; }
+.tour-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+.tour-card {
+  position: relative;
+  margin: 0;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--ink-100);
+  aspect-ratio: 4 / 3;
+  box-shadow: var(--shadow-sm);
+  transition: transform .25s, box-shadow .25s;
+}
+.tour-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow);
+}
+.tour-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform .4s;
+}
+.tour-card:hover img { transform: scale(1.04); }
+.tour-card figcaption {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  padding: 22px 18px 14px;
+  background: linear-gradient(180deg, rgba(15,63,104,0) 0%, rgba(15,63,104,0.88) 100%);
+  color: white;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14.5px;
+  letter-spacing: -0.005em;
+}
+@media (max-width: 1024px) {
+  .tour-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
+}
+@media (max-width: 540px) {
+  .tour-grid { grid-template-columns: 1fr; gap: 12px; }
+  .tour-card { aspect-ratio: 16 / 11; }
+}
+
 /* ========== SPECIALTIES ========== */
 .specs { background: var(--ink-50); }
 .specs-head {
@@ -1501,7 +1550,34 @@ section.compact { padding: 64px 0; }
   box-shadow: var(--shadow);
   min-height: 480px;
 }
-.loc-map iframe { width: 100% !important; height: 480px !important; border: 0; display: block; }
+.loc-map iframe { width: 100% !important; height: 380px !important; border: 0; display: block; }
+
+/* Visual stack: foto fachada arriba + mapa abajo en misma columna */
+.loc-visual { display: flex; flex-direction: column; gap: 18px; }
+.loc-fachada {
+  position: relative;
+  margin: 0;
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  aspect-ratio: 16 / 10;
+}
+.loc-fachada img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.loc-fachada figcaption {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  padding: 22px 18px 14px;
+  background: linear-gradient(180deg, rgba(15,63,104,0) 0%, rgba(15,63,104,0.85) 100%);
+  color: white;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: -0.005em;
+}
 
 /* ========== CTA BAND ========== */
 .cta-band {
@@ -2693,6 +2769,53 @@ section.compact { padding: 64px 0; }
   </div>
 </section>
 
+<!-- ========== CONOCE EL CENTRO (fotos reales del recinto) ========== -->
+<section class="tour" id="tour" aria-label="Conoce el Centro Médico Carampangue">
+  <div class="container">
+    <div class="tour-head">
+      <div>
+        <div class="eyebrow" style="margin-bottom: 12px;">Conoce el centro</div>
+        <h2 class="display" style="font-size: clamp(28px, 4vw, 44px); margin-bottom: 12px;">
+          Espacios cuidados, pensados para ti
+        </h2>
+        <p class="lead" style="max-width: 580px;">
+          Recepción cálida, boxes equipados con luz natural y atención cercana en pleno centro de Carampangue.
+        </p>
+      </div>
+    </div>
+    <div class="tour-grid">
+      <figure class="tour-card">
+        <picture>
+          <source srcset="/static/images/centro/recepcion.webp" type="image/webp">
+          <img src="/static/images/centro/recepcion.jpg" alt="Recepción del Centro Médico Carampangue con mostrador de madera y zona de espera" loading="lazy" width="1400" height="1173">
+        </picture>
+        <figcaption>Recepción</figcaption>
+      </figure>
+      <figure class="tour-card">
+        <picture>
+          <source srcset="/static/images/centro/box-luz-natural.webp" type="image/webp">
+          <img src="/static/images/centro/box-luz-natural.jpg" alt="Box médico con camilla, escritorio y ventanal con luz natural" loading="lazy" width="1400" height="1173">
+        </picture>
+        <figcaption>Box médico con luz natural</figcaption>
+      </figure>
+      <figure class="tour-card">
+        <picture>
+          <source srcset="/static/images/centro/box-medico.webp" type="image/webp">
+          <img src="/static/images/centro/box-medico.jpg" alt="Box de atención médica con camilla, escritorio y lavamanos" loading="lazy" width="1400" height="1173">
+        </picture>
+        <figcaption>Box de atención</figcaption>
+      </figure>
+      <figure class="tour-card">
+        <picture>
+          <source srcset="/static/images/centro/sala-espera.webp" type="image/webp">
+          <img src="/static/images/centro/sala-espera.jpg" alt="Sala de espera con sillones y vista a la calle desde ventanal grande" loading="lazy" width="1400" height="1173">
+        </picture>
+        <figcaption>Sala de espera</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
 <!-- ========== SPECIALTIES ========== -->
 <section class="specs" id="especialidades">
   <div class="container">
@@ -3335,13 +3458,22 @@ section.compact { padding: 64px 0; }
           <span class="arrow-cta">Escribir ahora</span>
         </a>
       </div>
-      <div class="loc-map">
-        <iframe
-          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3762.86507194731!2d-73.236079!3d-37.254995199999996!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x9669efa4adb30a7f%3A0x91e4bc8597845b06!2sCentro%20M%C3%A9dico%20Carampangue!5e1!3m2!1ses!2scl!4v1773624258508!5m2!1ses!2scl"
-          loading="lazy"
-          allowfullscreen=""
-          referrerpolicy="no-referrer-when-downgrade"
-          title="Mapa ubicación Centro Médico Carampangue · República 102, Carampangue"></iframe>
+      <div class="loc-visual">
+        <figure class="loc-fachada">
+          <picture>
+            <source srcset="/static/images/centro/fachada.webp" type="image/webp">
+            <img src="/static/images/centro/fachada.jpg" alt="Fachada del Centro Médico Carampangue en República 102, esquina." loading="lazy" width="1280" height="960">
+          </picture>
+          <figcaption>Reconócenos en la esquina · República 102</figcaption>
+        </figure>
+        <div class="loc-map">
+          <iframe
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3762.86507194731!2d-73.236079!3d-37.254995199999996!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x9669efa4adb30a7f%3A0x91e4bc8597845b06!2sCentro%20M%C3%A9dico%20Carampangue!5e1!3m2!1ses!2scl!4v1773624258508!5m2!1ses!2scl"
+            loading="lazy"
+            allowfullscreen=""
+            referrerpolicy="no-referrer-when-downgrade"
+            title="Mapa ubicación Centro Médico Carampangue · República 102, Carampangue"></iframe>
+        </div>
       </div>
     </div>
   </div>
