@@ -9,7 +9,10 @@ Flujos de fidelización:
   7. Win-back (pacientes >90 días sin cita)
 """
 import logging
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
+
+_TZ_CHILE = ZoneInfo("America/Santiago")
 
 from config import USE_TEMPLATES
 from session import (get_citas_para_seguimiento, get_pacientes_inactivos,
@@ -125,11 +128,19 @@ async def enviar_seguimiento_postconsulta(send_fn, send_template_fn=None,
     send_text_fn: envía mensaje de texto plano (para tips)
     buscar_paciente_fn: async fn(rut) → dict con fecha_nacimiento, sexo, etc.
     """
-    hoy = date.today().isoformat()
-    citas = get_citas_para_seguimiento(hoy)
+    # FIX 2026-05-02: usar fecha en zona horaria CLT, no UTC del servidor.
+    # A las 22:00 CLT = 02:00 UTC siguiente día → date.today() del servidor devuelve
+    # la fecha de mañana → mandaba postconsulta de citas que aún NO han ocurrido.
+    # Caso real: David Valenzuela reservó 1-may para 2-may 11:15; el bot le mandó
+    # "¿cómo te fue?" el 1-may a las 22:00, antes de la atención.
+    ahora_clt = datetime.now(_TZ_CHILE)
+    hoy = ahora_clt.date().isoformat()
+    hora_actual = ahora_clt.strftime("%H:%M")
+    citas = get_citas_para_seguimiento(hoy, hora_actual)
 
     if not citas:
-        log.info("Post-consulta: sin citas de %s para hacer seguimiento", hoy)
+        log.info("Post-consulta: sin citas de %s ya ocurridas (corte %s) para seguimiento",
+                 hoy, hora_actual)
         return
 
     log.info("Post-consulta: enviando %d seguimiento(s) de %s", len(citas), hoy)

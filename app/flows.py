@@ -1402,22 +1402,26 @@ def _format_horario_prof(horario: dict) -> str:
     return ", ".join(partes)
 
 
-async def _send_review_request_if_due(phone: str, especialidad: str = "") -> None:
+async def _send_review_request_if_due(phone: str, especialidad: str = "", rating: int | None = None) -> None:
     """Pide al paciente que dejó 'mejor' que califique en Google.
     Anti-spam: máx 1 vez cada 90 días por teléfono.
     Se dispara con spawn_task tras la respuesta de upsell/control para no
     competir con el cross-sell ni bloquear la conversación."""
     import asyncio
     if has_recent_event(phone, "review_request_sent", days=90):
+        log.info("review_request omitido (anti-spam 90d) phone=%s rating=%s", phone, rating)
         return
-    await asyncio.sleep(4)  # respiro tras el msg de upsell/control
+    # Sleep corto: solo respiro tras el msg de upsell. Antes 4s, reducido a 2s
+    # para minimizar ventana de cancelación si el paciente responde rápido.
+    await asyncio.sleep(2)
     try:
         from google_rating import get_review_link
         link = get_review_link()
     except Exception:
         link = "https://search.google.com/local/writereview?placeid=ChIJfwqzraTvaZYRBlt0l4W85JE"
+    estrellas = "⭐" * (rating or 5)
     msg = (
-        "Una última cosa 🌟\n\n"
+        f"Una última cosa {estrellas}\n\n"
         "Si te tomas 30 segundos, ¿podrías dejarnos una reseña en Google? "
         "Tu opinión ayuda a otras familias de Arauco a encontrarnos.\n\n"
         f"👉 {link}\n\n"
@@ -1425,7 +1429,8 @@ async def _send_review_request_if_due(phone: str, especialidad: str = "") -> Non
     )
     try:
         await send_whatsapp(phone, msg)
-        log_event(phone, "review_request_sent", {"especialidad": especialidad})
+        log_event(phone, "review_request_sent", {"especialidad": especialidad, "rating": rating})
+        log.info("review_request enviado phone=%s rating=%s esp=%s", phone, rating, especialidad)
     except Exception as e:
         log.warning("review_request fallo phone=%s: %s", phone, e)
 
@@ -2499,7 +2504,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 # Pide reseña Google solo a promotores (rating ≥ 4)
                 try:
                     from resilience import spawn_task
-                    spawn_task(_send_review_request_if_due(phone, esp))
+                    spawn_task(_send_review_request_if_due(phone, esp, rating=rating))
                 except Exception:
                     pass
                 # Cross-sell inteligente según especialidad
@@ -2679,10 +2684,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 prof = seg_pendiente.get("profesional", "")
                 save_fidelizacion_respuesta(phone, "postconsulta", clasificacion)
                 if clasificacion == "mejor":
-                    log_event(phone, "seguimiento_mejor", {"especialidad": esp, "fuente": "texto_libre"})
+                    # Texto libre: si el paciente escribió "5" o "excelente",
+                    # usamos rating 5 implícito para que el mensaje muestre 5⭐.
+                    rating_libre = 5 if "5" in (txt or "") else 4
+                    log_event(phone, "seguimiento_mejor",
+                              {"especialidad": esp, "fuente": "texto_libre", "rating": rating_libre})
                     try:
                         from resilience import spawn_task
-                        spawn_task(_send_review_request_if_due(phone, esp))
+                        spawn_task(_send_review_request_if_due(phone, esp, rating=rating_libre))
                     except Exception:
                         pass
                     upsell = UPSELL_POSTCONSULTA.get(esp.lower()) if esp else None

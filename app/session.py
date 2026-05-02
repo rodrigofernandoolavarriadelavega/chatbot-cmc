@@ -1708,20 +1708,42 @@ def get_sesiones_abandonadas() -> list[dict]:
 
 # ── Fidelización ──────────────────────────────────────────────────────────────
 
-def get_citas_para_seguimiento(fecha_ayer: str) -> list[dict]:
-    """Citas del bot de ayer que aún no tienen seguimiento post-consulta enviado."""
+def get_citas_para_seguimiento(fecha_hoy: str, hora_corte: str | None = None) -> list[dict]:
+    """Citas del bot ya ocurridas que no tienen seguimiento post-consulta enviado.
+
+    fecha_hoy: 'YYYY-MM-DD' en zona horaria Chile (no UTC).
+    hora_corte: 'HH:MM' en CLT. Si se pasa, solo retorna citas con hora <= corte,
+                evitando mandar postconsulta antes de que ocurra la atención.
+                Caso real 2026-05-02: David reservó 1-may para 2-may 11:15;
+                el bot mandó "¿cómo te fue?" el 1-may a las 22:00 porque
+                date.today() en servidor UTC ya marcaba 2-may.
+    """
     with _conn() as conn:
-        rows = conn.execute("""
-            SELECT cb.id, cb.phone, cb.id_cita, cb.especialidad, cb.profesional, cb.fecha, cb.hora,
-                   p.nombre
-            FROM citas_bot cb
-            LEFT JOIN contact_profiles p ON p.phone = cb.phone
-            WHERE cb.fecha = ?
-            AND NOT EXISTS (
-                SELECT 1 FROM fidelizacion_msgs f
-                WHERE f.phone = cb.phone AND f.tipo = 'postconsulta' AND f.cita_id = cb.id_cita
-            )
-        """, (fecha_ayer,)).fetchall()
+        if hora_corte is not None:
+            rows = conn.execute("""
+                SELECT cb.id, cb.phone, cb.id_cita, cb.especialidad, cb.profesional, cb.fecha, cb.hora,
+                       p.nombre
+                FROM citas_bot cb
+                LEFT JOIN contact_profiles p ON p.phone = cb.phone
+                WHERE cb.fecha = ?
+                AND substr(cb.hora, 1, 5) <= ?
+                AND NOT EXISTS (
+                    SELECT 1 FROM fidelizacion_msgs f
+                    WHERE f.phone = cb.phone AND f.tipo = 'postconsulta' AND f.cita_id = cb.id_cita
+                )
+            """, (fecha_hoy, hora_corte)).fetchall()
+        else:
+            rows = conn.execute("""
+                SELECT cb.id, cb.phone, cb.id_cita, cb.especialidad, cb.profesional, cb.fecha, cb.hora,
+                       p.nombre
+                FROM citas_bot cb
+                LEFT JOIN contact_profiles p ON p.phone = cb.phone
+                WHERE cb.fecha = ?
+                AND NOT EXISTS (
+                    SELECT 1 FROM fidelizacion_msgs f
+                    WHERE f.phone = cb.phone AND f.tipo = 'postconsulta' AND f.cita_id = cb.id_cita
+                )
+            """, (fecha_hoy,)).fetchall()
         return [dict(r) for r in rows]
 
 
