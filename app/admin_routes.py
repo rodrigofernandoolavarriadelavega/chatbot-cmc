@@ -2430,7 +2430,7 @@ def capi_stats(dias: int = 7, _auth=Depends(require_admin)):
             SELECT event, COUNT(*) as total
             FROM conversation_events
             WHERE (event LIKE 'capi_%' OR event = 'fbclid_captured')
-              AND created_at >= datetime('now', ? || ' days')
+              AND ts >= datetime('now', ? || ' days')
             GROUP BY event
             ORDER BY total DESC
             """,
@@ -2441,11 +2441,11 @@ def capi_stats(dias: int = 7, _auth=Depends(require_admin)):
         # Últimos 20 eventos
         cur.execute(
             """
-            SELECT phone, event, data, created_at
+            SELECT phone, event, meta, ts
             FROM conversation_events
             WHERE (event LIKE 'capi_%' OR event = 'fbclid_captured')
-              AND created_at >= datetime('now', ? || ' days')
-            ORDER BY created_at DESC
+              AND ts >= datetime('now', ? || ' days')
+            ORDER BY ts DESC
             LIMIT 20
             """,
             (f"-{dias}",),
@@ -2461,7 +2461,7 @@ def capi_stats(dias: int = 7, _auth=Depends(require_admin)):
                 "phone": row[0][:6] + "XXXXX",  # ofuscar
                 "event": row[1],
                 "data": d,
-                "created_at": row[3],
+                "ts": row[3],
             })
 
         from config import META_PIXEL_ID
