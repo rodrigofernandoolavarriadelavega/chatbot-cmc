@@ -193,6 +193,67 @@ def _conn():
         )
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_olav_fecha ON olavarria_atenciones_cache(fecha)")
+    # ── BI v2: tablas unificadas de atenciones y pagos por profesional ──────
+    # bi_atenciones: descargado de /api/v5/atenciones, fuente cruda Medilink.
+    # bi_pagos_caja: descargado del módulo Cajas/Recaudación, refleja cobros reales.
+    # cobrado_caja en bi_atenciones se setea cruzando ambas tablas → identifica
+    # atenciones-fantasma (registradas pero nunca cobradas).
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS bi_atenciones (
+            atencion_id        INTEGER PRIMARY KEY,
+            fecha              TEXT,
+            id_paciente        INTEGER,
+            id_profesional     INTEGER,
+            id_sucursal        INTEGER,
+            id_convenio        INTEGER,
+            id_tipo            INTEGER,
+            nombre_tipo        TEXT,
+            nombre_convenio    TEXT,
+            paciente_nombre    TEXT,
+            total              INTEGER,
+            abonado            INTEGER,
+            deuda              INTEGER,
+            abono_libre        INTEGER,
+            asignado_realizado INTEGER,
+            total_realizado    INTEGER,
+            finalizado         INTEGER,
+            bloqueado          INTEGER,
+            cobrado_caja       INTEGER,
+            synced_at          TEXT
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_bi_aten_fecha ON bi_atenciones(fecha)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_bi_aten_prof ON bi_atenciones(id_profesional, fecha)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_bi_aten_pac ON bi_atenciones(id_paciente)")
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS bi_pagos_caja (
+            pago_id        INTEGER PRIMARY KEY,
+            atencion_id    INTEGER,
+            fecha          TEXT,
+            id_profesional INTEGER,
+            id_paciente    INTEGER,
+            monto          INTEGER,
+            metodo_pago    TEXT,
+            n_folio        TEXT,
+            synced_at      TEXT
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_bi_pago_fecha ON bi_pagos_caja(fecha)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_bi_pago_prof ON bi_pagos_caja(id_profesional, fecha)")
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS bi_sync_log (
+            id             INTEGER PRIMARY KEY AUTOINCREMENT,
+            tipo           TEXT,
+            id_profesional INTEGER,
+            fecha          TEXT,
+            inicio         TEXT,
+            fin            TEXT,
+            n_registros    INTEGER,
+            n_errores      INTEGER,
+            ok             INTEGER
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_bi_log_prof_fecha ON bi_sync_log(id_profesional, fecha)")
     conn.execute("""
         CREATE TABLE IF NOT EXISTS ortodoncia_cache (
             id_atencion     INTEGER PRIMARY KEY,
@@ -2575,6 +2636,92 @@ def get_olavarria_fechas_existentes() -> set[str]:
             "SELECT DISTINCT fecha FROM olavarria_atenciones_cache"
         ).fetchall()
         return {r[0] for r in rows if r[0]}
+
+
+# ── BI v2 helpers ─────────────────────────────────────────────────────────────
+
+def upsert_bi_atenciones(records: list[dict]) -> int:
+    """Inserta/actualiza atenciones desde /api/v5/atenciones de Medilink.
+    Retorna n filas afectadas. NO setea cobrado_caja (eso lo hace el job de cruce)."""
+    if not records:
+        return 0
+    n = 0
+    with _conn() as conn:
+        for r in records:
+            aid = r.get("id")
+            if not aid:
+                continue
+            conn.execute("""
+                INSERT INTO bi_atenciones
+                  (atencion_id, fecha, id_paciente, id_profesional, id_sucursal,
+                   id_convenio, id_tipo, nombre_tipo, nombre_convenio, paciente_nombre,
+                   total, abonado, deuda, abono_libre, asignado_realizado,
+                   total_realizado, finalizado, bloqueado, synced_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                ON CONFLICT(atencion_id) DO UPDATE SET
+                  fecha=excluded.fecha,
+                  id_paciente=excluded.id_paciente,
+                  id_profesional=excluded.id_profesional,
+                  id_sucursal=excluded.id_sucursal,
+                  id_convenio=excluded.id_convenio,
+                  id_tipo=excluded.id_tipo,
+                  nombre_tipo=excluded.nombre_tipo,
+                  nombre_convenio=excluded.nombre_convenio,
+                  paciente_nombre=excluded.paciente_nombre,
+                  total=excluded.total,
+                  abonado=excluded.abonado,
+                  deuda=excluded.deuda,
+                  abono_libre=excluded.abono_libre,
+                  asignado_realizado=excluded.asignado_realizado,
+                  total_realizado=excluded.total_realizado,
+                  finalizado=excluded.finalizado,
+                  bloqueado=excluded.bloqueado,
+                  synced_at=datetime('now')
+            """, (
+                aid, (r.get("fecha") or "")[:10],
+                r.get("id_paciente"), r.get("id_profesional"), r.get("id_sucursal"),
+                r.get("id_convenio"), r.get("id_tipo"), r.get("nombre_tipo"),
+                r.get("nombre_convenio"), r.get("nombre_paciente"),
+                r.get("total"), r.get("abonado"), r.get("deuda"),
+                r.get("abono_libre"), r.get("asignado_realizado"),
+                r.get("total_realizado"),
+                r.get("finalizado"), r.get("bloqueado"),
+            ))
+            n += 1
+    return n
+
+
+def get_bi_fechas_sincronizadas(id_profesional: int) -> set[str]:
+    """Set de fechas YYYY-MM-DD que ya tienen al menos 1 atención cargada
+    para el profesional dado. Usado por el sync para skip incremental."""
+    with _conn() as conn:
+        rows = conn.execute(
+            "SELECT DISTINCT fecha FROM bi_atenciones WHERE id_profesional=? AND fecha IS NOT NULL",
+            (id_profesional,)
+        ).fetchall()
+        return {r[0] for r in rows if r[0]}
+
+
+def get_bi_atenciones_profesional(id_profesional: int, desde: str = "2024-01-01") -> list[dict]:
+    """Atenciones de un profesional desde la fecha indicada."""
+    with _conn() as conn:
+        rows = conn.execute(
+            "SELECT * FROM bi_atenciones WHERE id_profesional=? AND fecha>=? "
+            "ORDER BY fecha, atencion_id",
+            (id_profesional, desde)
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def log_bi_sync(tipo: str, id_profesional: int, fecha: str, inicio: str,
+                fin: str, n_registros: int, n_errores: int, ok: bool) -> None:
+    with _conn() as conn:
+        conn.execute(
+            "INSERT INTO bi_sync_log (tipo, id_profesional, fecha, inicio, fin, "
+            "n_registros, n_errores, ok) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (tipo, id_profesional, fecha, inicio, fin, n_registros, n_errores,
+             1 if ok else 0)
+        )
 
 
 # ─────────────────────────────────────────────────────────────────────────────

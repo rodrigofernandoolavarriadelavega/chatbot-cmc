@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CMC — Dashboard profesional</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{ --fiordo:#1F3340; --cobre:#B86D3F; --neblina:#EFE9DD; --musgo:#4A5F3A; --lacre:#8C2A2A; --agua:#5B8B96; --noche:#122028; }
+  body{ font-family:'Inter',sans-serif; background:var(--neblina); color:var(--fiordo); }
+  h1,h2,h3,.serif{ font-family:'Fraunces',serif; }
+  .mono{ font-family:'IBM Plex Mono',monospace; }
+  .kpi-card{ background:white; border:1px solid rgba(31,51,64,.1); border-radius:6px; padding:18px 22px; }
+  .kpi-num{ font-family:'Fraunces',serif; font-size:30px; font-weight:500; line-height:1; color:var(--fiordo); }
+  .kpi-label{ font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--cobre); margin-bottom:8px; }
+  .kpi-sub{ font-size:11px; color:rgba(31,51,64,.6); margin-top:4px; }
+  .section-head{ font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:3px; text-transform:uppercase; color:var(--cobre); margin-bottom:8px; }
+  .section-title{ font-family:'Fraunces',serif; font-size:30px; font-weight:500; line-height:1.05; margin-bottom:18px; }
+  .panel{ background:white; border:1px solid rgba(31,51,64,.1); border-radius:6px; padding:22px; }
+  .calday{ width:34px; height:34px; border-radius:4px; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:9px; line-height:1.05; color:var(--fiordo); }
+  .calday .n{ font-size:11px; font-weight:600; }
+  .calday .delta{ font-size:8.5px; opacity:.85; }
+  .calday .delta.pos{ color:#3a6b2a; font-weight:600; }
+  .calday .delta.neg{ color:#7a1f1f; font-weight:600; }
+  .calday-empty{ background:#EFE9DD; border:1px dashed #d4cdb8; }
+  .pos{ color:var(--musgo); }
+  .neg{ color:var(--lacre); }
+  table.tidy{ width:100%; border-collapse:collapse; font-size:13px; }
+  table.tidy th{ text-align:left; font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--cobre); border-bottom:1px solid rgba(31,51,64,.15); padding:8px 6px; }
+  table.tidy td{ padding:8px 6px; border-bottom:1px solid rgba(31,51,64,.05); }
+  table.tidy tr:hover td{ background:rgba(184,109,63,.05); }
+  table.tidy tr.proy td{ background:rgba(91,139,150,.10); font-style:italic; }
+  input[type=range]{ -webkit-appearance:none; appearance:none; height:4px; background:rgba(31,51,64,.15); border-radius:2px; outline:none; width:100%; }
+  input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; appearance:none; width:18px; height:18px; border-radius:50%; background:var(--cobre); cursor:pointer; border:2px solid white; box-shadow:0 1px 3px rgba(0,0,0,.2); }
+  .scenario-btn{ font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:1px; text-transform:uppercase; padding:8px 14px; border:1px solid rgba(31,51,64,.2); border-radius:4px; background:white; cursor:pointer; }
+  .prof-pill{ display:inline-flex; align-items:center; padding:4px 10px; border-radius:20px; background:rgba(91,139,150,.15); color:#1F3340; font-family:'IBM Plex Mono',monospace; font-size:11px; margin:2px 4px 2px 0; cursor:pointer; }
+  .prof-pill:hover{ background:rgba(91,139,150,.30); }
+  .prof-pill.active{ background:var(--cobre); color:white; }
+</style>
+</head>
+<body>
+
+<nav class="border-b border-stone-300 sticky top-0 bg-white/90 backdrop-blur z-50">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4 text-sm">
+    <span class="serif text-lg font-medium" style="color:var(--fiordo)">CMC</span>
+    <span class="mono text-xs opacity-50">BI v2 · análisis profesional</span>
+    <button id="btnRefresh" class="ml-auto mono text-xs opacity-70 hover:opacity-100" title="Forzar resync">⟳ Refrescar</button>
+    <a href="/horizonte" class="opacity-70 hover:opacity-100">Horizonte</a>
+    <a href="/atribucion" class="opacity-70 hover:opacity-100">Atribución</a>
+    <a href="/menu" class="opacity-50 hover:opacity-100">← Menú</a>
+  </div>
+</nav>
+
+<main class="max-w-7xl mx-auto px-4 py-8">
+  <header class="mb-8">
+    <p class="section-head" id="ctxLabel">CMC · Recurso humano · Análisis económico</p>
+    <div class="flex items-end gap-4 flex-wrap">
+      <h1 class="text-5xl md:text-6xl font-medium leading-none mb-2" style="color:var(--fiordo)" id="profName">—<em class="italic" style="color:var(--cobre)">.</em></h1>
+    </div>
+    <p class="serif italic text-xl opacity-75" id="profEspecialidad">cargando…</p>
+    <p class="mono text-xs opacity-60 mt-3" id="metaSubtitle">cargando datos…</p>
+    <div class="mt-4" id="profPills"></div>
+  </header>
+
+  <!-- Slider objetivo -->
+  <section class="mb-8 panel">
+    <div class="grid md:grid-cols-2 gap-6 items-start">
+      <div>
+        <div class="flex justify-between items-baseline mb-2">
+          <span class="mono text-xs uppercase tracking-wider" style="color:var(--cobre)">Objetivo pacientes/día</span>
+          <span class="mono text-sm" id="lblObjetivo">15</span>
+        </div>
+        <input type="range" min="1" max="40" step="1" value="15" id="objetivoInput">
+        <p class="text-xs opacity-60 mt-1">Días bajo objetivo se pintan rojos. Súbete o súbele para ver el delta.</p>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <p class="kpi-label">Cobertura cobrado/facturado</p>
+          <p class="kpi-num" id="kpiCobertura">—</p>
+          <p class="kpi-sub">% de lo que efectivamente entró</p>
+        </div>
+        <div>
+          <p class="kpi-label">Tarifa real promedio</p>
+          <p class="kpi-num" id="kpiTarifa">—</p>
+          <p class="kpi-sub">cobrado / atención</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- KPIs -->
+  <section class="mb-10">
+    <div class="grid md:grid-cols-4 gap-3">
+      <div class="kpi-card">
+        <div class="kpi-label">Total atendidos</div>
+        <div class="kpi-num" id="kpiTotalAtend">—</div>
+        <div class="kpi-sub" id="kpiTotalAtendSub">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Promedio mes</div>
+        <div class="kpi-num" id="kpiAvgMes">—</div>
+        <div class="kpi-sub">atend/mes</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Ingreso real avg/mes</div>
+        <div class="kpi-num" id="kpiIngMes">—</div>
+        <div class="kpi-sub">CLP cobrado</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Total cobrado histórico</div>
+        <div class="kpi-num" id="kpiTotalCob">—</div>
+        <div class="kpi-sub" id="kpiTotalCobSub">CLP</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Por mes -->
+  <section class="mb-10 panel">
+    <p class="section-head">01 — Atenciones e ingreso por mes</p>
+    <h2 class="section-title">¿Cuándo creció?</h2>
+    <canvas id="chartMes" height="120"></canvas>
+    <p class="text-xs opacity-60 mt-3">Barras = atendidos por mes. Línea = ingreso CLP cobrado (eje derecho). Color claro = proyección 6m.</p>
+  </section>
+
+  <section class="mb-10 panel">
+    <p class="section-head">02 — Detalle mensual</p>
+    <h2 class="section-title">Mes a mes.</h2>
+    <table class="tidy" id="tablaMes"><thead><tr><th>Mes</th><th>Atend.</th><th>Pagadas</th><th>Facturado</th><th>Cobrado</th><th>Δ no cobrado</th></tr></thead><tbody></tbody></table>
+    <p class="text-xs opacity-60 mt-3">Δ = facturado − cobrado. Atenciones registradas en sistema pero no cobradas en caja real (atenciones-fantasma).</p>
+  </section>
+
+  <section class="mb-10 panel">
+    <p class="section-head">03 — Calendario diario</p>
+    <h2 class="section-title">Días trabajados.</h2>
+    <div id="heatmap"></div>
+  </section>
+
+  <section class="mb-10 grid md:grid-cols-2 gap-6">
+    <div class="panel">
+      <p class="section-head">04 — Día de la semana</p>
+      <h2 class="section-title">Carga por día.</h2>
+      <canvas id="chartDow" height="180"></canvas>
+    </div>
+    <div class="panel">
+      <p class="section-head">05 — Proyección</p>
+      <h2 class="section-title">Próximos 6 meses.</h2>
+      <table class="tidy" id="tablaProy"><thead><tr><th>Mes</th><th>Atend (proy)</th><th>Ingreso (proy)</th></tr></thead><tbody></tbody></table>
+    </div>
+  </section>
+
+  <section class="mb-10 panel" style="background:linear-gradient(180deg,#1F3340 0%,#122028 100%);color:#EFE9DD;">
+    <p class="section-head" style="color:#B86D3F">06 — Lectura</p>
+    <h2 class="section-title text-white">Resumen.</h2>
+    <p id="lectura" class="text-base leading-relaxed opacity-90"></p>
+  </section>
+</main>
+
+<script>
+const MESES = {'01':'Enero','02':'Febrero','03':'Marzo','04':'Abril','05':'Mayo','06':'Junio','07':'Julio','08':'Agosto','09':'Septiembre','10':'Octubre','11':'Noviembre','12':'Diciembre'};
+const clp = n => n == null ? "—" : "$" + Math.round(n).toLocaleString("es-CL");
+const moneda = n => n == null ? "—" : "$" + Math.round(n/1000).toLocaleString("es-CL") + "K";
+let DATA = null;
+let OBJETIVO = 15;
+const ID_PROF = parseInt(window.location.pathname.split("/").pop());
+
+async function loadProfesionales(){
+  const r = await fetch("/api/profesionales");
+  const d = await r.json();
+  const cont = document.getElementById("profPills");
+  cont.innerHTML = d.profesionales.map(p =>
+    `<a href="${p.dashboard}" class="prof-pill${p.id===ID_PROF?' active':''}" title="${p.especialidad}">${p.id}·${p.nombre.replace('Dr. ','').replace('Dra. ','').replace('Dr ','').slice(0,20)}</a>`
+  ).join("");
+}
+
+async function loadData(refresh=false){
+  document.getElementById("metaSubtitle").textContent = "cargando…";
+  const url = `/api/profesional/${ID_PROF}/data${refresh?'?refresh=1':''}`;
+  const r = await fetch(url);
+  if(!r.ok){ document.getElementById("metaSubtitle").textContent = `error ${r.status}`; return; }
+  DATA = await r.json();
+  document.getElementById("profName").innerHTML = (DATA.nombre_profesional||"Profesional")+'<em class="italic" style="color:var(--cobre)">.</em>';
+  document.getElementById("profEspecialidad").textContent = DATA.especialidad || "";
+  document.getElementById("ctxLabel").textContent = `CMC · ID ${DATA.id_profesional} · BI v2 (cobrado real)`;
+  document.getElementById("metaSubtitle").textContent = `${DATA.fuente} · actualizado ${DATA.fecha_actualizacion} · ${DATA.kpis.total_atend} atenciones cargadas`;
+  render();
+}
+
+function render(){
+  const k = DATA.kpis;
+  document.getElementById("kpiCobertura").textContent = (k.cobertura_pct||0) + "%";
+  document.getElementById("kpiTarifa").textContent = clp(k.tarifa_real_promedio);
+  document.getElementById("kpiTotalAtend").textContent = k.total_atend;
+  document.getElementById("kpiTotalAtendSub").textContent = `${k.dias_con_atencion} días trabajados`;
+  document.getElementById("kpiAvgMes").textContent = k.atend_avg_mes;
+  document.getElementById("kpiIngMes").textContent = moneda(k.ing_avg_mes);
+  document.getElementById("kpiTotalCob").textContent = moneda(k.total_cobrado);
+  document.getElementById("kpiTotalCobSub").textContent = `de ${moneda(k.total_facturado)} facturado`;
+
+  renderChartMes();
+  renderTablaMes();
+  renderHeatmap();
+  renderDow();
+  renderProy();
+  renderLectura();
+}
+
+function renderChartMes(){
+  const meses = Object.keys(DATA.por_mes).sort();
+  const proy = DATA.proyeccion || {};
+  const proyMeses = Object.keys(proy).sort();
+  const labels = [...meses, ...proyMeses];
+  const real = meses.map(m => DATA.por_mes[m].atend).concat(proyMeses.map(_ => null));
+  const proyVals = meses.map(_ => null).concat(proyMeses.map(m => proy[m].atend));
+  const ingreso = meses.map(m => DATA.por_mes[m].monto_cobrado).concat(proyMeses.map(m => proy[m].ingreso));
+
+  const ctx = document.getElementById("chartMes").getContext("2d");
+  if(window._chMes) window._chMes.destroy();
+  window._chMes = new Chart(ctx, {
+    type:"bar",
+    data:{ labels, datasets:[
+      { label:"Atendidos (real)", data:real, backgroundColor:"rgba(184,109,63,.85)", yAxisID:"y" },
+      { label:"Atendidos (proyección)", data:proyVals, backgroundColor:"rgba(91,139,150,.55)", yAxisID:"y" },
+      { label:"Ingreso CLP cobrado", data:ingreso, type:"line", borderColor:"#1F3340", backgroundColor:"transparent", borderDash:[4,4], yAxisID:"y1", tension:.25, pointRadius:3 },
+    ]},
+    options:{ responsive:true, plugins:{ legend:{ labels:{ font:{family:"IBM Plex Mono", size:10} } } },
+      scales:{ y:{ beginAtZero:true, title:{ display:true, text:"Atendidos" } },
+               y1:{ beginAtZero:true, position:"right", grid:{ drawOnChartArea:false }, title:{ display:true, text:"CLP" }, ticks:{ callback:v => "$"+(v/1000).toLocaleString("es-CL")+"K" } } } }
+  });
+}
+
+function renderTablaMes(){
+  const tbody = document.querySelector("#tablaMes tbody");
+  const meses = Object.keys(DATA.por_mes).sort();
+  let html = "";
+  for(const m of meses){
+    const v = DATA.por_mes[m];
+    const delta = v.monto_total - v.monto_cobrado;
+    const dCls = delta > 0 ? "neg" : "";
+    html += `<tr><td class="mono">${m}</td><td>${v.atend}</td><td>${v.atend_pagadas}</td><td class="mono">${clp(v.monto_total)}</td><td class="mono">${clp(v.monto_cobrado)}</td><td class="mono ${dCls}">${delta>0?'-':''}${clp(delta)}</td></tr>`;
+  }
+  const proy = DATA.proyeccion || {};
+  for(const m of Object.keys(proy).sort()){
+    html += `<tr class="proy"><td class="mono">${m} · proy</td><td>${proy[m].atend}</td><td>—</td><td class="mono">${clp(proy[m].ingreso)}</td><td class="mono">${clp(proy[m].ingreso)}</td><td>—</td></tr>`;
+  }
+  tbody.innerHTML = html;
+}
+
+function colorByDelta(n, cap){
+  if(n===0 && cap===0) return "#EFE9DD";
+  if(n===0) return "#F5F1E8";
+  const d = n - cap;
+  if(d===0) return "#D9D4C5";
+  if(d>0){ if(d<=2) return "#CFE3C5"; if(d<=5) return "#9FCB8E"; if(d<=9) return "#5FA858"; return "#2D7A30"; }
+  const a = -d;
+  if(a<=2) return "#F0CFCB"; if(a<=5) return "#DC8E86"; if(a<=9) return "#B85040"; return "#8A2418";
+}
+function isDarkBg(n,cap){ if(n===0) return false; const d=n-cap; return d>=6||d<=-6; }
+
+function renderHeatmap(){
+  const cont = document.getElementById("heatmap");
+  const dias = Object.keys(DATA.por_dia).sort();
+  if(!dias.length){ cont.innerHTML = "<p class='opacity-60'>Sin datos</p>"; return; }
+  const byMonth = {};
+  dias.forEach(f => { const m = f.slice(0,7); (byMonth[m] = byMonth[m] || []).push(f); });
+  let html = '<div class="grid md:grid-cols-3 lg:grid-cols-4 gap-6">';
+  Object.keys(byMonth).sort().forEach(m => {
+    html += `<div><div class="mono text-xs uppercase opacity-60 mb-2">${MESES[m.slice(5)]} ${m.slice(0,4)}</div>`;
+    html += '<div class="grid grid-cols-7 gap-1">';
+    ["L","M","M","J","V","S","D"].forEach(d => html += `<div class="mono text-[9px] opacity-50 text-center">${d}</div>`);
+    const first = new Date(byMonth[m][0]+"T12:00");
+    const startDow = (first.getDay() + 6) % 7;
+    for(let i=0;i<startDow;i++) html += "<div></div>";
+    byMonth[m].forEach(f => {
+      const dt = new Date(f+"T12:00");
+      const dow = (dt.getDay() + 6) % 7;
+      const n = DATA.por_dia[f] || 0;
+      if(dow === 6){ html += `<div class="calday calday-empty"></div>`; return; }
+      const cap = OBJETIVO;
+      const bg = colorByDelta(n, cap);
+      const dark = isDarkBg(n, cap);
+      let dh = "";
+      if(n>0||cap>0){ const d = n-cap; if(d>0) dh = `<div class="delta pos">+${d}</div>`;
+        else if(d<0) dh = `<div class="delta neg">${d}</div>`; else dh = `<div class="delta" style="opacity:.5">=</div>`; }
+      const tc = dark?"color:white;":"";
+      html += `<div class="calday" style="background:${bg};${tc}" title="${f}: ${n} atend"><div class="n">${n||"·"}</div>${dh}</div>`;
+    });
+    html += "</div></div>";
+  });
+  html += "</div>";
+  cont.innerHTML = html;
+}
+
+function renderDow(){
+  const labels = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
+  const data = labels.map((_,i) => (DATA.por_dow[i]||{}).avg||0);
+  const ctx = document.getElementById("chartDow").getContext("2d");
+  if(window._chDow) window._chDow.destroy();
+  window._chDow = new Chart(ctx, {
+    type:"bar",
+    data:{ labels, datasets:[{label:"Avg atendidos", data, backgroundColor:"rgba(74,95,58,.8)"}]},
+    options:{ responsive:true, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
+  });
+}
+
+function renderProy(){
+  const proy = DATA.proyeccion || {};
+  const tbody = document.querySelector("#tablaProy tbody");
+  const meses = Object.keys(proy).sort();
+  tbody.innerHTML = meses.map(m => `<tr><td class="mono">${m}</td><td>${proy[m].atend}</td><td class="mono">${clp(proy[m].ingreso)}</td></tr>`).join("");
+}
+
+function renderLectura(){
+  const k = DATA.kpis;
+  const proy = DATA.proyeccion || {};
+  const proyMeses = Object.keys(proy).sort();
+  const proyTotal = proyMeses.reduce((s,m) => s + (proy[m].ingreso||0), 0);
+  const proy6m = proyMeses.length ? Math.round(proyTotal / proyMeses.length) : 0;
+  const txt = `**${DATA.nombre_profesional}** atendió **${k.total_atend}** pacientes en ${k.n_meses} meses, ` +
+    `promedio **${k.atend_avg_mes}/mes** (${k.dias_con_atencion} días trabajados). ` +
+    `Tarifa real cobrada: **${clp(k.tarifa_real_promedio)}** por atención. ` +
+    `Cobertura **${k.cobertura_pct}%** del facturado entra realmente como caja. ` +
+    `Ingreso promedio: **${clp(k.ing_avg_mes)}/mes**. ` +
+    `Total cobrado histórico: **${clp(k.total_cobrado)}** (de ${clp(k.total_facturado)} facturado, gap = ${clp(k.total_facturado - k.total_cobrado)} en atenciones-fantasma). ` +
+    `Proyección 6m: **${clp(proy6m)}/mes** promedio (total ${clp(proyTotal)}).`;
+  document.getElementById("lectura").innerHTML = txt.replace(/\*\*(.+?)\*\*/g, '<strong style="color:#fff">$1</strong>');
+}
+
+document.getElementById("objetivoInput").addEventListener("input", e => {
+  OBJETIVO = parseInt(e.target.value);
+  document.getElementById("lblObjetivo").textContent = OBJETIVO;
+  if(DATA) renderHeatmap();
+});
+document.getElementById("btnRefresh").addEventListener("click", () => loadData(true));
+
+loadProfesionales();
+loadData(false);
+</script>
+</body>
+</html>

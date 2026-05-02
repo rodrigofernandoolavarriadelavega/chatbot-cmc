@@ -215,6 +215,17 @@ async def _job_olavarria_sync():
     else:
         await sync_olavarria_atenciones(solo_hoy=True)
 
+
+async def _job_bi_sync_diario():
+    """BI v2: sincroniza atenciones del día anterior + hoy para todos los
+    profesionales. Reemplaza _job_abarca/olavarria progresivamente."""
+    from bi_sync import sync_diario
+    try:
+        r = await sync_diario()
+        log.info("bi_sync_diario done: %s", r)
+    except Exception as e:
+        log.warning("bi_sync_diario fallo: %s", e)
+
 async def _job_reactivacion():
     await enviar_reactivacion_pacientes(send_whatsapp, send_template_fn=_tpl)
 

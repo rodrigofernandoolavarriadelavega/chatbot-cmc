@@ -38,6 +38,7 @@ from resilience import is_medilink_down
 from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_recordatorios, _job_recordatorios_2h,
                   _job_postconsulta, _job_reactivacion, _job_abarca_sync, _job_olavarria_sync,
+                  _job_bi_sync_diario,
                   _job_adherencia_kine, _job_control_especialidad,
                   _job_crosssell_kine, _job_crosssell_orl_fono,
                   _job_crosssell_odonto_estetica, _job_crosssell_mg_chequeo,
@@ -162,6 +163,13 @@ async def lifespan(app: FastAPI):
         _job_olavarria_sync,
         CronTrigger(hour=23, minute=57, timezone=_CLT),
         id="olavarria_sync_diario",
+        replace_existing=True,
+    )
+    # BI v2: sync diario de TODOS los profesionales 23:59 CLT
+    scheduler.add_job(
+        _job_bi_sync_diario,
+        CronTrigger(hour=23, minute=59, timezone=_CLT),
+        id="bi_sync_v2_diario",
         replace_existing=True,
     )
     # Reactivación: todos los lunes a las 10:30 AM CLT
@@ -872,6 +880,7 @@ def horizonte_dashboard_page():
 _ATRIBUCION_DASHBOARD_HTML = (_TEMPLATE_DIR / "atribucion_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "atribucion_dashboard.html").exists() else ""
 _ABARCA_DASHBOARD_HTML = (_TEMPLATE_DIR / "abarca_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "abarca_dashboard.html").exists() else ""
 _OLAVARRIA_DASHBOARD_HTML = (_TEMPLATE_DIR / "olavarria_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "olavarria_dashboard.html").exists() else ""
+_PROF_DASHBOARD_HTML = (_TEMPLATE_DIR / "profesional_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "profesional_dashboard.html").exists() else ""
 
 @app.get("/atribucion", response_class=HTMLResponse)
 @app.get("/atribucion/dashboard", response_class=HTMLResponse)
@@ -1591,6 +1600,60 @@ async def api_olavarria_sync_montos(limite: int = 0):
     """Dispara el llenado de monto_facturado desde Medilink. Background."""
     asyncio.create_task(sync_olavarria_montos(limite=limite))
     return {"started": True, "limite": limite or "todos"}
+
+
+# ── BI v2: dashboard genérico por profesional ───────────────────────────────
+
+@app.get("/profesional/{id_prof}", response_class=HTMLResponse)
+def profesional_dashboard_page(id_prof: int):
+    """Dashboard genérico por profesional. Reemplaza /abarca y /olavarria."""
+    if not _PROF_DASHBOARD_HTML:
+        raise HTTPException(404, "Dashboard profesional no disponible")
+    return _PROF_DASHBOARD_HTML
+
+
+@app.get("/api/profesional/{id_prof}/data")
+async def api_profesional_data(id_prof: int, desde: str = "2024-01-01",
+                                refresh: int = 0):
+    """KPIs unificados por profesional. Lee de bi_atenciones (BI v2 in-VPS).
+    refresh=1 dispara sync incremental en background antes de devolver."""
+    from bi_sync import sync_profesional, stats_profesional
+    from session import _conn as _c_p
+    # Si tabla vacía o refresh, kickoff sync en background
+    with _c_p() as c:
+        n_rows = c.execute(
+            "SELECT COUNT(*) FROM bi_atenciones WHERE id_profesional=?", (id_prof,)
+        ).fetchone()[0]
+    if n_rows == 0:
+        log.info("BI v2: prof=%d cache vacío → kickoff seed en background", id_prof)
+        asyncio.create_task(sync_profesional(id_prof, desde=desde))
+    elif refresh:
+        asyncio.create_task(sync_profesional(id_prof, desde=desde, force=False))
+    return stats_profesional(id_prof, desde=desde)
+
+
+@app.post("/api/profesional/{id_prof}/sync")
+async def api_profesional_sync(id_prof: int, desde: str = "2024-01-01",
+                                force: int = 0):
+    """Dispara sync manual en background."""
+    from bi_sync import sync_profesional
+    asyncio.create_task(sync_profesional(id_prof, desde=desde, force=bool(force)))
+    return {"started": True, "id_profesional": id_prof, "desde": desde, "force": bool(force)}
+
+
+@app.get("/api/profesionales")
+def api_profesionales_list():
+    """Lista de profesionales del CMC con sus IDs Medilink."""
+    from medilink import PROFESIONALES
+    return {
+        "profesionales": [
+            {"id": pid, "nombre": info.get("nombre"),
+             "especialidad": info.get("especialidad"),
+             "intervalo": info.get("intervalo"),
+             "dashboard": f"/profesional/{pid}"}
+            for pid, info in sorted(PROFESIONALES.items())
+        ]
+    }
 
 
 @app.get("/api/atribucion/today")
