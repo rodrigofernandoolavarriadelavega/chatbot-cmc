@@ -1887,10 +1887,12 @@ section.compact { padding: 64px 0; }
   .footer-bottom { flex-direction: column; gap: 8px; text-align: center; }
 }
 
-/* Safe-area iOS notch / dynamic island */
+/* Safe-area iOS notch / dynamic island — solo aplica en mobile (donde existe la mob-bar fija) */
 @supports (padding: max(0px)) {
   .nav-wrap { padding-top: env(safe-area-inset-top); }
-  body { padding-bottom: max(80px, env(safe-area-inset-bottom)); }
+  @media (max-width: 720px) {
+    body { padding-bottom: max(80px, env(safe-area-inset-bottom)); }
+  }
 }
 
 /* Asegurar que tablas largas no rompan layout */
