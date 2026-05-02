@@ -101,7 +101,15 @@
       </a>
     </div>
     <div class="flex items-center gap-3">
-      <div class="text-xs text-slate-400">Live: <span id="updated-date">cargando...</span></div>
+      <select id="periodo-select" style="font-size:0.8rem;padding:4px 8px;border-radius:6px;border:1px solid rgba(14,37,48,0.2);background:#fffcf5;color:var(--olacore-fiordo);cursor:pointer">
+        <option value="last_7d">7 dias</option>
+        <option value="last_30d">30 dias</option>
+        <option value="last_90d">90 dias</option>
+        <option value="maximum" selected>Maximo (lifetime)</option>
+      </select>
+      <button id="btn-refresh" title="Actualizar datos" style="font-size:0.8rem;padding:4px 10px;border-radius:6px;border:1px solid rgba(14,37,48,0.2);background:#fffcf5;color:var(--olacore-fiordo);cursor:pointer">&#8635; Actualizar</button>
+      <div id="loading-indicator" style="display:none;font-size:0.75rem;color:var(--olacore-cobre)">Cargando...</div>
+      <div class="text-xs text-slate-400">Actualizado: <span id="updated-date">—</span></div>
     </div>
   </div>
   <div class="max-w-7xl mx-auto px-6">
@@ -110,8 +118,6 @@
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="performance">📈 Performance</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="campaigns">🎯 Campañas</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="audiencias">👥 Audiencias</button>
-      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="creative">🎨 Creative</button>
-      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="capi">⚡ CAPI</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="roadmap">🗺 Roadmap</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="metas">🎯 Metas / OKRs</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="reporte">📋 Reporte estratégico</button>
@@ -261,89 +267,6 @@
         <li><strong>Pacientes activos del CMC</strong> (de tu base): ya son clientes, no son lead nuevo</li>
         <li><strong>Engagement &gt;3 con tus posts últimos 90d</strong>: ya están "warm", mejor mostrarles ad de remarketing distinto</li>
       </ul>
-    </div>
-  </section>
-
-  <!-- ──────────────────────── CREATIVE ──────────────────────── -->
-  <section id="tab-creative" class="tab-content hidden">
-    <div class="meta-section">
-      <h3>Estrategia de creative</h3>
-      <p class="text-sm leading-relaxed mb-4">El creative es el 70% del éxito de un ad en 2026 (lo que va al algoritmo es secundario). Tu problema actual: <strong>1 sola pieza concentra 45% del spend</strong> y ya tiene fatiga.</p>
-
-      <h4>Reglas para creative que funciona en healthcare local</h4>
-      <ul class="text-sm space-y-2 list-disc ml-5 mb-5">
-        <li><strong>Foto real del equipo</strong> &gt; stock photo (3× CTR)</li>
-        <li><strong>Especialista mirando a cámara</strong> (no posando) &gt; foto de ambiente</li>
-        <li><strong>Texto sobre imagen máximo 20%</strong> (Meta penaliza más texto)</li>
-        <li><strong>Copy con dolor primero, solución después</strong>: "¿Dolor lumbar hace meses? Especialistas en kine en Carampangue"</li>
-        <li><strong>CTA con verbo + horario</strong>: "Agenda hoy por WhatsApp"</li>
-        <li><strong>Video 9:16 vertical</strong> para Reels y Stories (no recortar de Feed)</li>
-        <li><strong>Variantes en serie</strong>: 5 variantes de la misma idea, no 5 ideas distintas (test es sobre el detalle no el concepto)</li>
-      </ul>
-
-      <h4>Calendario de refresh sugerido</h4>
-      <div class="font-mono text-xs whitespace-pre" style="background:rgba(232,224,208,0.4);padding:14px;border-radius:6px;line-height:1.7">Ad alcanza frecuencia 4    →  alerta amarilla, planear refresh
-Ad alcanza frecuencia 6    →  pausar y reemplazar
-Cada 30 días                →  inyectar 1 nuevo creative al mix
-Cada 90 días                →  rotación completa de la cartera</div>
-
-      <h4 class="mt-5">Formats prioritarios para tu audiencia (mujeres 25-54)</h4>
-      <ol class="text-sm space-y-1 list-decimal ml-5">
-        <li><strong>Carrusel testimonio</strong> (3-5 fotos pacientes reales con copy corto) — 2× engagement</li>
-        <li><strong>Video 30s "día en el CMC"</strong> — humaniza la marca</li>
-        <li><strong>Reel vertical 15s</strong> con doctor explicando 1 problema clínico común</li>
-        <li><strong>Story con sticker WhatsApp</strong> + countdown (urgencia)</li>
-        <li><strong>Carousel "antes/después"</strong> en odontología y estética facial</li>
-      </ol>
-    </div>
-  </section>
-
-  <!-- ──────────────────────── CAPI ──────────────────────── -->
-  <section id="tab-capi" class="tab-content hidden">
-    <div class="meta-section">
-      <h3>⚡ Conversion API (CAPI) — el upgrade #1</h3>
-      <p class="text-sm opacity-75 mb-4">El cambio técnico de mayor impacto este año en tu canal. Reduce CAC 30-50% sin gastar un peso más.</p>
-
-      <h4>¿Qué es?</h4>
-      <p class="text-sm leading-relaxed mb-3">CAPI es un canal <strong>servidor-a-servidor</strong> entre el chatbot y Meta. Le mandás eventos de conversión que pasan <strong>fuera del navegador</strong>: cita confirmada, pago, paciente que volvió.</p>
-
-      <div class="grid md:grid-cols-2 gap-4 mb-5">
-        <div class="tone-lacre p-4 rounded">
-          <div class="text-xs uppercase font-semibold mb-2">❌ Sin CAPI (hoy)</div>
-          <div class="font-mono text-xs leading-relaxed mb-2" style="background:rgba(154,62,47,0.05);padding:8px;border-radius:4px">Meta ve: ad → click → conversación
-NO ve: cita → asistió → pagó</div>
-          <p class="text-sm">El algoritmo busca <strong>"gente que conversa"</strong>. Atrae curiosos.</p>
-        </div>
-        <div class="tone-musgo p-4 rounded">
-          <div class="text-xs uppercase font-semibold mb-2">✅ Con CAPI</div>
-          <div class="font-mono text-xs leading-relaxed mb-2" style="background:rgba(74,93,68,0.05);padding:8px;border-radius:4px">Meta ve: ad → click → conv → CITA → atendió</div>
-          <p class="text-sm">El algoritmo busca <strong>"pacientes reales"</strong>. CAC -30 a -50%.</p>
-        </div>
-      </div>
-
-      <h4>Plan de implementación (~6-8h totales)</h4>
-      <div class="space-y-3" id="capi-pasos"></div>
-
-      <h4 class="mt-6">Eventos que vamos a mandar</h4>
-      <table class="w-full text-sm">
-        <thead><tr class="border-b border-slate-200"><th class="text-left py-2">Evento Meta</th><th class="text-left py-2">Cuándo se dispara</th><th class="text-left py-2">Valor (CLP)</th></tr></thead>
-        <tbody class="divide-y divide-slate-100">
-          <tr><td class="py-2"><code class="inline">Lead</code></td><td>Confirmación cita 24h antes (alta intención)</td><td>—</td></tr>
-          <tr><td class="py-2"><code class="inline">CompleteRegistration</code></td><td>Paciente nuevo registrado (RUT + datos)</td><td>—</td></tr>
-          <tr><td class="py-2"><code class="inline">Schedule</code></td><td>Cita reservada en Medilink</td><td>Precio según especialidad</td></tr>
-          <tr><td class="py-2"><code class="inline">Purchase</code></td><td>Pago confirmado (futuro, requiere Transbank API)</td><td>Monto real</td></tr>
-        </tbody>
-      </table>
-
-      <h4 class="mt-6">⚖️ Compliance Ley 19.628</h4>
-      <div class="tone-cobre p-4 rounded">
-        <p class="text-sm leading-relaxed mb-2">CAPI requiere mandar PII (email, teléfono) a Meta. Ley chilena exige consentimiento.</p>
-        <ul class="text-sm space-y-1 list-disc ml-5">
-          <li>Toda PII se hashea SHA-256 antes de enviar (irreversible)</li>
-          <li>Agregar al opt-in del chatbot: "Acepto compartir datos anónimos con Meta"</li>
-          <li>Endpoint <code class="inline">/admin/api/patient/forget</code> ya existe — agregar también notificar a Meta para borrar</li>
-        </ul>
-      </div>
     </div>
   </section>
 
@@ -775,14 +698,6 @@ STATIC.audiencias.forEach(a => {
   audTb.appendChild(tr);
 });
 
-const capiPasos = document.getElementById('capi-pasos');
-STATIC.capi_pasos.forEach(p => {
-  const div = document.createElement('div');
-  div.className = 'border border-slate-200 rounded-lg p-4';
-  div.innerHTML = `<div class="flex items-baseline justify-between mb-1"><strong class="text-sm">${p.paso}</strong><span class="text-xs opacity-60">${p.tiempo}</span></div><p class="text-xs opacity-85 mt-1">${p.detalle}</p>`;
-  capiPasos.appendChild(div);
-});
-
 const roadEl = document.getElementById('roadmap-fases');
 STATIC.fases_roadmap.forEach(f => {
   const card = document.createElement('div');
@@ -837,10 +752,24 @@ STATIC.glosario.forEach(g => {
 
 // Cargar datos live de Meta
 function loadMeta() {
-  fetch('/api/seo/meta-ads?token=cmc_admin_2026')
+  const periodo = document.getElementById('periodo-select').value;
+  const loading = document.getElementById('loading-indicator');
+  const btnRefresh = document.getElementById('btn-refresh');
+  loading.style.display = 'inline';
+  btnRefresh.disabled = true;
+
+  // Destruir charts anteriores para evitar canvas reuse error
+  Object.values(_charts).forEach(c => { try { c.destroy(); } catch(_){} });
+  _charts = {};
+
+  fetch('/api/seo/meta-ads?token=cmc_admin_2026&periodo=' + encodeURIComponent(periodo))
     .then(r => r.json())
     .then(d => {
-      document.getElementById('updated-date').textContent = new Date().toLocaleString('es-CL', {dateStyle:'short', timeStyle:'short'});
+      loading.style.display = 'none';
+      btnRefresh.disabled = false;
+      const now = new Date();
+      document.getElementById('updated-date').textContent =
+        now.toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit'});
       const lt = d.lifetime || {};
       document.getElementById('kpi-spend').textContent = fmtCLP(lt.spend || 0);
       const mes_avg = (d.monthly && d.monthly.length) ? lt.spend / d.monthly.length : 0;
@@ -901,8 +830,20 @@ function loadMeta() {
         tb.appendChild(tr);
       });
     })
-    .catch(e => { document.getElementById('updated-date').textContent = '❌ ' + e; });
+    .catch(e => {
+      loading.style.display = 'none';
+      btnRefresh.disabled = false;
+      document.getElementById('updated-date').textContent = 'Error: ' + e;
+    });
 }
+
+// Selector de periodo dispara recarga
+document.getElementById('periodo-select').addEventListener('change', loadMeta);
+// Boton manual
+document.getElementById('btn-refresh').addEventListener('click', loadMeta);
+// Auto-refresh cada 5 min
+setInterval(loadMeta, 300000);
+
 loadMeta();
 </script>
 </body>

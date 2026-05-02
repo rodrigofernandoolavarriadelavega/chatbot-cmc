@@ -22,7 +22,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, JSON
 from fastapi.staticfiles import StaticFiles
 
 from config import (META_VERIFY_TOKEN, CMC_TELEFONO, ADMIN_TOKEN,
-                    MEDILINK_TOKEN)
+                    MEDILINK_TOKEN, META_AD_ACCOUNT_ID as _CFG_META_ACCOUNT_ID)
 from flows import handle_message
 from messaging import (send_whatsapp, send_whatsapp_interactive,
                        send_whatsapp_location,
@@ -2192,26 +2192,56 @@ def hiring_pipeline_delete(item_id: int):
 # ─────────────────────────────────────────────────────────────────────────
 # Meta Ads (Marketing API) — análisis y cruce con citas del chatbot
 # ─────────────────────────────────────────────────────────────────────────
+# account_id: leído desde config (META_AD_ACCOUNT_ID env var, default act_220608142267129)
+# Override por query param: /api/seo/meta-ads?account_id=act_XXX
 
-META_AD_ACCOUNT_ID = "act_220608142267129"
+# Cliente httpx compartido (singleton) — reutiliza conexiones HTTP/2 con graph.facebook.com
+_META_HTTP: httpx.AsyncClient | None = None
+
+def _get_meta_client() -> httpx.AsyncClient:
+    global _META_HTTP
+    if _META_HTTP is None or _META_HTTP.is_closed:
+        _META_HTTP = httpx.AsyncClient(
+            base_url="https://graph.facebook.com/v19.0",
+            timeout=10.0,
+            http2=False,  # graph.facebook.com no siempre negocia h2 limpiamente
+        )
+    return _META_HTTP
 
 
-def _meta_get(path: str, params: dict | None = None) -> dict:
-    """Helper para llamar Marketing API con el token del .env."""
-    import os, json, urllib.request, urllib.parse
+async def _meta_get(path: str, params: dict | None = None) -> dict:
+    """Async helper para Marketing API. Token en Authorization header (no en URL).
+    Retry automático: max 3 intentos con backoff 0.5/1/2s en 429/5xx.
+    En 4xx (salvo 429) no reintenta.
+    """
     token = os.getenv("META_ACCESS_TOKEN", "")
     if not token:
         return {"error": "no META_ACCESS_TOKEN"}
-    base = "https://graph.facebook.com/v19.0"
+    client = _get_meta_client()
     p = dict(params or {})
-    p["access_token"] = token
-    url = f"{base}/{path}?" + urllib.parse.urlencode(p)
-    try:
-        req = urllib.request.Request(url, headers={"Accept": "application/json"})
-        with urllib.request.urlopen(req, timeout=30) as r:
-            return json.loads(r.read())
-    except Exception as e:
-        return {"error": str(e)}
+    delays = [0.5, 1.0, 2.0]
+    last_err: str = "unknown"
+    for attempt, delay in enumerate(delays, 1):
+        try:
+            resp = await client.get(
+                path,
+                params=p,
+                headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
+            )
+            if resp.status_code == 200:
+                return resp.json()
+            last_err = f"HTTP {resp.status_code}"
+            # 4xx (salvo 429): no reintentar
+            if 400 <= resp.status_code < 500 and resp.status_code != 429:
+                return {"error": last_err, "body": resp.text[:300]}
+            # 429 / 5xx: reintentar con backoff
+            if attempt < len(delays):
+                await asyncio.sleep(delay)
+        except Exception as e:
+            last_err = str(e)
+            if attempt < len(delays):
+                await asyncio.sleep(delay)
+    return {"error": last_err}
 
 
 def _sum_conv(actions: list) -> int:
@@ -2223,60 +2253,103 @@ def _sum_conv(actions: list) -> int:
     return sum(int(a.get("value", 0)) for a in actions if a.get("action_type") in types)
 
 
+# Mapa de periodo (query param) → date_preset de Graph API
+_PERIODO_MAP: dict[str, str] = {
+    "last_7d":  "last_7d",
+    "last_30d": "last_30d",
+    "last_90d": "last_90d",
+    "maximum":  "maximum",
+}
+
+
 @app.get("/api/seo/meta-ads")
-def seo_meta_ads_api(periodo: str = "last_90d", token: str = "",
-                    cmc_session: str | None = Cookie(None)):
-    """Análisis de Meta Ads (FB+IG → WhatsApp) cruzado con citas del chatbot."""
+async def seo_meta_ads_api(
+    periodo: str = "maximum",
+    account_id: str | None = None,
+    token: str = "",
+    cmc_session: str | None = Cookie(None),
+):
+    """Análisis de Meta Ads (FB+IG → WhatsApp) cruzado con citas del chatbot.
+    periodo: last_7d | last_30d | last_90d | maximum (default)
+    account_id: override del account (fallback a META_AD_ACCOUNT_ID en config/.env)
+    """
     _seo_api_auth(token, cmc_session)
 
-    # 1. Lifetime totales
-    lifetime = _meta_get(f"{META_AD_ACCOUNT_ID}/insights",
-                         {"fields": "spend,impressions,reach,clicks,actions",
-                          "date_preset": "maximum"})
+    acct = account_id or _CFG_META_ACCOUNT_ID
+    preset = _PERIODO_MAP.get(periodo, "maximum")
 
-    # 2. Serie mensual (todos los meses)
-    monthly = _meta_get(f"{META_AD_ACCOUNT_ID}/insights",
-                        {"fields": "spend,impressions,reach,clicks,frequency,actions",
-                         "time_increment": "monthly", "date_preset": "maximum"})
+    # Nota: breakdowns (demografía, placement, horario) no siempre aceptan
+    # date_preset con todos los valores en combination — si falla, la llamada
+    # retorna {"error": ...} y el gather captura la excepción sin romper el resto.
+    # hourly_stats solo está disponible con rango ≤ 90 días; si el preset es
+    # "maximum" lo limitamos a "last_90d" para ese breakdown.
+    hourly_preset = preset if preset != "maximum" else "last_90d"
 
-    # 3. Top campañas (lifetime)
-    campaigns = _meta_get(f"{META_AD_ACCOUNT_ID}/insights",
-                          {"fields": "campaign_name,spend,impressions,clicks,frequency,actions",
-                           "level": "campaign", "date_preset": "maximum", "limit": 50})
+    # Las 7 llamadas en paralelo; return_exceptions=True para resiliencia parcial
+    (lifetime, monthly, campaigns, placement, demo, hourly) = await asyncio.gather(
+        _meta_get(f"{acct}/insights",
+                  {"fields": "spend,impressions,reach,clicks,actions",
+                   "date_preset": preset}),
+        _meta_get(f"{acct}/insights",
+                  {"fields": "spend,impressions,reach,clicks,frequency,actions",
+                   "time_increment": "monthly", "date_preset": preset}),
+        _meta_get(f"{acct}/insights",
+                  {"fields": "campaign_name,spend,impressions,clicks,frequency,actions",
+                   "level": "campaign", "date_preset": preset, "limit": 50}),
+        _meta_get(f"{acct}/insights",
+                  {"fields": "spend,impressions,clicks,actions",
+                   "breakdowns": "publisher_platform,platform_position",
+                   "date_preset": preset}),
+        _meta_get(f"{acct}/insights",
+                  {"fields": "spend,impressions,clicks,actions",
+                   "breakdowns": "age,gender", "date_preset": preset}),
+        _meta_get(f"{acct}/insights",
+                  {"fields": "spend,clicks,actions",
+                   "breakdowns": "hourly_stats_aggregated_by_advertiser_time_zone",
+                   "date_preset": hourly_preset}),
+        return_exceptions=True,
+    )
 
-    # 4. Por placement
-    placement = _meta_get(f"{META_AD_ACCOUNT_ID}/insights",
-                          {"fields": "spend,impressions,clicks,actions",
-                           "breakdowns": "publisher_platform,platform_position",
-                           "date_preset": "maximum"})
+    # Normalizar excepciones a dicts de error
+    def _safe(r):
+        return r if isinstance(r, dict) else {"error": str(r)}
+    lifetime, monthly, campaigns, placement, demo, hourly = (
+        _safe(lifetime), _safe(monthly), _safe(campaigns),
+        _safe(placement), _safe(demo), _safe(hourly)
+    )
 
-    # 5. Demografía
-    demo = _meta_get(f"{META_AD_ACCOUNT_ID}/insights",
-                     {"fields": "spend,impressions,clicks,actions",
-                      "breakdowns": "age,gender", "date_preset": "maximum"})
-
-    # 6. Por hora (últimos 90d para no sobrepasar)
-    hourly = _meta_get(f"{META_AD_ACCOUNT_ID}/insights",
-                       {"fields": "spend,clicks,actions",
-                        "breakdowns": "hourly_stats_aggregated_by_advertiser_time_zone",
-                        "date_preset": "last_90d"})
-
-    # 7. Cruce con chatbot: pacientes nuevos por mes (correlación)
+    # 7. Cruce con chatbot: pacientes nuevos por mes (filtrado por periodo)
     import sqlite3
     from pathlib import Path as _Path
     db_path = _Path(__file__).parent.parent / "data" / "heatmap_cache.db"
     nuevos_mes = []
     if db_path.exists():
+        # Calcular fecha_desde según periodo para filtrar citas_heatmap
+        from datetime import date, timedelta
+        _hoy = date.today()
+        _dias = {"last_7d": 7, "last_30d": 30, "last_90d": 90}
+        _desde = (_hoy - timedelta(days=_dias[preset])).isoformat() if preset in _dias else None
         conn = sqlite3.connect(str(db_path))
         try:
-            for mes, n in conn.execute("""
-                WITH primera AS (
-                    SELECT id_paciente, MIN(fecha) AS f
-                    FROM citas_heatmap WHERE id_paciente IS NOT NULL
-                    GROUP BY id_paciente)
-                SELECT substr(f,1,7) AS mes, COUNT(*) FROM primera
-                GROUP BY mes ORDER BY mes
-            """).fetchall():
+            if _desde:
+                rows = conn.execute("""
+                    WITH primera AS (
+                        SELECT id_paciente, MIN(fecha) AS f
+                        FROM citas_heatmap WHERE id_paciente IS NOT NULL AND fecha >= ?
+                        GROUP BY id_paciente)
+                    SELECT substr(f,1,7) AS mes, COUNT(*) FROM primera
+                    GROUP BY mes ORDER BY mes
+                """, (_desde,)).fetchall()
+            else:
+                rows = conn.execute("""
+                    WITH primera AS (
+                        SELECT id_paciente, MIN(fecha) AS f
+                        FROM citas_heatmap WHERE id_paciente IS NOT NULL
+                        GROUP BY id_paciente)
+                    SELECT substr(f,1,7) AS mes, COUNT(*) FROM primera
+                    GROUP BY mes ORDER BY mes
+                """).fetchall()
+            for mes, n in rows:
                 nuevos_mes.append({"mes": mes, "pacientes_nuevos": n})
         finally:
             conn.close()
@@ -2374,9 +2447,10 @@ def seo_meta_ads_api(periodo: str = "last_90d", token: str = "",
             })
         return sorted(out, key=lambda x: x["hora"])
 
-    return {
+    result = {
         "fuente": "meta_marketing_api",
-        "ad_account_id": META_AD_ACCOUNT_ID,
+        "ad_account_id": acct,
+        "periodo": preset,
         "lifetime": proc_lifetime(lifetime),
         "monthly": proc_monthly(monthly),
         "top_campaigns": proc_campaigns(campaigns)[:20],
@@ -2385,6 +2459,14 @@ def seo_meta_ads_api(periodo: str = "last_90d", token: str = "",
         "hourly": proc_hourly(hourly),
         "pacientes_nuevos_chatbot": nuevos_mes,
     }
+    # Incluir errores parciales para diagnóstico
+    errs = {k: v["error"] for k, v in [
+        ("lifetime", lifetime), ("monthly", monthly), ("campaigns", campaigns),
+        ("placement", placement), ("demografia", demo), ("hourly", hourly),
+    ] if isinstance(v, dict) and "error" in v}
+    if errs:
+        result["partial_errors"] = errs
+    return result
 
 
 # Población oficial INE (Censo 2017 / proyección 2024). Provincia de Arauco

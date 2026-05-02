@@ -108,3 +108,7 @@ ALTERNATIVA_ESPECIALIDAD: dict[str, str] = {
     "psicologia adulto":   "psicologia infantil",
     "psicologia infantil": "psicologia adulto",
 }
+
+# Meta Marketing API — cuenta publicitaria del CMC.
+# Override en .env: META_AD_ACCOUNT_ID=act_XXXXXXXXXXXXX
+META_AD_ACCOUNT_ID = os.getenv("META_AD_ACCOUNT_ID", "act_220608142267129")
