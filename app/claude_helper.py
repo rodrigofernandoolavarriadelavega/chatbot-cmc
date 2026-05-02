@@ -1080,7 +1080,11 @@ async def detect_intent(mensaje: str) -> dict:
     # ANTES de _CANCEL_VERB_RE para no caer en flujo de anulación por error.
     _CANCEL_AS_PAY_RE = _re_w.compile(
         r"(hay que cancelar|se cancela (?:al tiro|altiro|ahora|adelantado|por adelantado|en |con )|"
-        r"cuando (?:se )?cancela|cuanto (?:hay que )?cancel|"
+        # "se cancela allá / acá / ahí / en el lugar / en el centro" (chilenismo pago)
+        r"se cancela (?:all[aá]|ac[aá]|ah[ií]|en el|al llegar|antes|despues|después|"
+        r"al dia|al d[ií]a|el d[ií]a|el dia)|"
+        r"cancela(?:r)? (?:all[aá]|ac[aá]|ah[ií]|en el centro|en recepcion|en recepción)|"
+        r"cuando (?:se )?cancela|como (?:se )?cancela(?! (?:la|mi|una|el) (?:hora|cita))|cuanto (?:hay que )?cancel|"
         r"cancelar (?:al tiro|altiro|por adelantado|adelantado|en efectivo|"
         r"con (?:efectivo|debito|débito|credito|crédito|transferencia|tarjeta))|"
         r"\bse paga\b|\bhay que pagar\b|\bcomo (?:se )?paga\b|\bcuando (?:se )?paga\b)"

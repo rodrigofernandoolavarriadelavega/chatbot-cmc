@@ -5190,10 +5190,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return await _iniciar_agendar(phone, {}, apellido_esc)
         rut = clean_rut(txt)
         if not valid_rut(rut):
-            return (
-                "Hmm, no reconozco ese RUT 🤔\n"
-                "Escríbelo así: *12.345.678-9*"
-            )
+            return hint_rut_error(txt)
 
         _ensure_consent(phone)
         paciente, transient = await _buscar_paciente_safe(rut)
@@ -5376,9 +5373,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         rut = clean_rut(txt)
         if not valid_rut(rut):
             return (
-                "Hmm, no reconozco ese RUT 🤔\n"
-                "Escríbelo así: *12.345.678-9*\n\n"
-                "_Si quieres cancelar, escribe *menu*._"
+                hint_rut_error(txt) + "\n\n_Si quieres cancelar, escribe *menu*._"
             )
 
         _ensure_consent(phone)
@@ -5494,10 +5489,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     if state == "WAIT_WAITLIST_RUT":
         rut = clean_rut(txt)
         if not valid_rut(rut):
-            return (
-                "Hmm, no reconozco ese RUT 🤔\n"
-                "Escríbelo así: *12.345.678-9*"
-            )
+            return hint_rut_error(txt)
         _ensure_consent(phone)
         data["rut"] = rut
         # Buscar paciente en Medilink para traer el nombre
@@ -5550,10 +5542,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             )
         rut = clean_rut(txt)
         if not valid_rut(rut):
-            return (
-                "Hmm, no reconozco ese RUT 🤔\n"
-                "Escríbelo así: *12.345.678-9*"
-            )
+            return hint_rut_error(txt)
 
         _ensure_consent(phone)
         paciente, transient = await _buscar_paciente_safe(rut)
