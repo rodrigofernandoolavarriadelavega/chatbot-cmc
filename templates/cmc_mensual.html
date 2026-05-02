@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>CMC — Dashboard Mensual v2</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{ --fiordo:#1F3340; --cobre:#B86D3F; --neblina:#EFE9DD; --musgo:#4A5F3A; --lacre:#8C2A2A; --agua:#5B8B96; }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,sans-serif;background:#f4f6f8;color:#1f2937}
+  .topbar{background:linear-gradient(180deg,#1F3340 0%,#122028 100%);color:#fff;padding:16px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .topbar h1{margin:0;font-size:22px;font-weight:600}
+  .topbar select{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);padding:8px 12px;border-radius:6px;font-size:14px}
+  .topbar select option{background:#1F3340}
+  .topbar .meta{font-size:11px;color:#B86D3F;font-family:monospace;letter-spacing:1.5px}
+  .container{max-width:1400px;margin:0 auto;padding:20px}
+  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+  @media(max-width:900px){.kpi-grid{grid-template-columns:1fr 1fr}}
+  .kpi-card{background:#fff;border-radius:11px;padding:18px 22px;box-shadow:0 1px 4px rgba(0,0,0,.07);border-left:4px solid}
+  .kpi-card.c-total{border-color:#2563eb}.kpi-card.c-prof{border-color:#16a34a}
+  .kpi-card.c-cmc{border-color:#ea580c}.kpi-card.c-activos{border-color:#7c3aed}
+  .kpi-label{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#6b7280;margin-bottom:4px}
+  .kpi-value{font-size:26px;font-weight:600;line-height:1}
+  .kpi-card.c-total .kpi-value{color:#2563eb}
+  .kpi-card.c-prof .kpi-value{color:#16a34a}
+  .kpi-card.c-cmc .kpi-value{color:#ea580c}
+  .kpi-card.c-activos .kpi-value{color:#7c3aed}
+  .kpi-sub{font-size:12px;color:#6b7280;margin-top:4px}
+  .chart-row-2{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px}
+  @media(max-width:900px){.chart-row-2{grid-template-columns:1fr}}
+  .card{background:#fff;border-radius:11px;padding:18px 22px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+  .card h2{margin:0 0 12px;font-size:15px;color:#374151;font-weight:600}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;color:#6b7280;font-size:11px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #e5e7eb;padding:10px 8px;font-weight:500}
+  td{padding:10px 8px;border-bottom:1px solid #f3f4f6}
+  tr:hover td{background:#fafafa}
+  .num{font-family:'IBM Plex Mono',monospace;text-align:right}
+  .pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+  .area-med{background:#dbeafe;color:#1e40af}
+  .area-dent{background:#fce7f3;color:#9d174d}
+  .area-kine{background:#dcfce7;color:#166534}
+  .area-maso{background:#fef3c7;color:#854d0e}
+  .area-nutri{background:#fed7aa;color:#9a3412}
+  .area-psico{background:#ddd6fe;color:#5b21b6}
+  .area-fono{background:#d1fae5;color:#065f46}
+  .area-matrona{background:#fbcfe8;color:#831843}
+  .area-podo{background:#e0e7ff;color:#3730a3}
+  .area-tecmed{background:#cffafe;color:#155e75}
+  .area-otros{background:#e5e7eb;color:#374151}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <h1>CMC · Dashboard Mensual v2</h1>
+  <span class="meta" id="meta">cargando…</span>
+  <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+    <label style="font-size:12px;opacity:.8">Mes:</label>
+    <select id="mesSel"><option>cargando…</option></select>
+    <a href="/profesional/1" style="color:#fff;font-size:12px;opacity:.7;margin-left:12px">Profesional →</a>
+    <a href="/menu" style="color:#fff;font-size:12px;opacity:.5">Menú</a>
+  </div>
+</div>
+
+<div class="container">
+  <div class="kpi-grid">
+    <div class="kpi-card c-total">
+      <div class="kpi-label">Total Caja del Mes</div>
+      <div class="kpi-value" id="kpi-total">—</div>
+      <div class="kpi-sub" id="kpi-pagos">— pagos</div>
+    </div>
+    <div class="kpi-card c-activos">
+      <div class="kpi-label">Profesionales Activos</div>
+      <div class="kpi-value" id="kpi-profs">—</div>
+      <div class="kpi-sub" id="kpi-dias">— días con actividad</div>
+    </div>
+    <div class="kpi-card c-prof">
+      <div class="kpi-label">Top Profesional</div>
+      <div class="kpi-value" id="kpi-top" style="font-size:18px">—</div>
+      <div class="kpi-sub" id="kpi-top-monto">—</div>
+    </div>
+    <div class="kpi-card c-cmc">
+      <div class="kpi-label">Top Área</div>
+      <div class="kpi-value" id="kpi-toparea" style="font-size:18px">—</div>
+      <div class="kpi-sub" id="kpi-toparea-monto">—</div>
+    </div>
+  </div>
+
+  <div class="chart-row-2">
+    <div class="card">
+      <h2>Ingresos por Profesional — <span id="chart-mes-label"></span></h2>
+      <div style="position:relative;height:380px"><canvas id="barChart"></canvas></div>
+    </div>
+    <div class="card">
+      <h2>Ingresos por Área</h2>
+      <div style="position:relative;height:380px"><canvas id="doughnutChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <h2>Atendidos por día</h2>
+    <div style="position:relative;height:200px"><canvas id="lineChart"></canvas></div>
+  </div>
+
+  <div class="card">
+    <h2>Detalle por Profesional</h2>
+    <table id="tabla">
+      <thead><tr><th>#</th><th>Profesional</th><th>Área</th><th>Especialidad</th><th class="num">Pacientes</th><th class="num">Pagos</th><th class="num">Total Caja</th><th class="num">% del mes</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const clp = n => "$" + Math.round(n||0).toLocaleString("es-CL");
+const monedaK = n => "$" + Math.round((n||0)/1000).toLocaleString("es-CL") + "K";
+const MES_NOMS = {"01":"Enero","02":"Febrero","03":"Marzo","04":"Abril","05":"Mayo","06":"Junio","07":"Julio","08":"Agosto","09":"Septiembre","10":"Octubre","11":"Noviembre","12":"Diciembre"};
+const fmtMes = m => `${MES_NOMS[m.slice(5,7)]} ${m.slice(0,4)}`;
+
+const COLORS = ['#2563eb','#16a34a','#ea580c','#7c3aed','#db2777','#0891b2','#65a30d','#ca8a04','#dc2626','#7e22ce','#0284c7','#059669','#9333ea','#e11d48','#0d9488','#a16207','#be123c','#0c4a6e','#1e3a8a','#365314','#7c2d12','#52525b','#831843','#475569'];
+
+let DATA = null;
+
+async function loadMes(mes){
+  const url = mes ? `/api/cmc/mensual?mes=${mes}` : '/api/cmc/mensual';
+  const r = await fetch(url);
+  DATA = await r.json();
+  document.getElementById('meta').textContent = `actualizado ${DATA.fecha_actualizacion} · fuente: bi_pagos_caja (CSV oficial Medilink)`;
+  document.getElementById('chart-mes-label').textContent = fmtMes(DATA.mes);
+  // Llenar selector si está vacío
+  const sel = document.getElementById('mesSel');
+  if(sel.options.length <= 1){
+    sel.innerHTML = (DATA.meses_disponibles||[]).map(m =>
+      `<option value="${m}"${m===DATA.mes?' selected':''}>${fmtMes(m)}</option>`
+    ).join('');
+    sel.value = DATA.mes;
+  }
+  render();
+}
+
+function render(){
+  const top = (DATA.profesionales[0]||{});
+  const topArea = (DATA.areas[0]||{});
+  document.getElementById('kpi-total').textContent = clp(DATA.total_mes);
+  document.getElementById('kpi-pagos').textContent = `${DATA.n_pagos_total} pagos`;
+  document.getElementById('kpi-profs').textContent = DATA.n_profesionales_activos;
+  document.getElementById('kpi-dias').textContent = `${DATA.dias_con_actividad} días con actividad`;
+  document.getElementById('kpi-top').textContent = (top.nombre||'—').replace('Dr. ','').replace('Dra. ','').slice(0,28);
+  document.getElementById('kpi-top-monto').textContent = clp(top.total) + ' · ' + (top.pacientes||0) + ' pacientes';
+  document.getElementById('kpi-toparea').textContent = topArea.label||'—';
+  document.getElementById('kpi-toparea-monto').textContent = clp(topArea.total);
+
+  // Bar chart
+  const labels = DATA.profesionales.map(p => p.nombre.replace('Dr. ','').replace('Dra. ','').split(' ').slice(0,2).join(' '));
+  const data = DATA.profesionales.map(p => p.total);
+  if(window._bar) window._bar.destroy();
+  window._bar = new Chart(document.getElementById('barChart').getContext('2d'), {
+    type:'bar',
+    data:{ labels, datasets:[{ label:'Total', data, backgroundColor: data.map((_,i)=>COLORS[i%COLORS.length]) }]},
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>clp(c.parsed.x)}} },
+      scales:{ x:{ticks:{callback:v=>monedaK(v)}} } }
+  });
+
+  // Doughnut por área
+  const areaLabels = DATA.areas.map(a => a.label);
+  const areaData = DATA.areas.map(a => a.total);
+  if(window._dn) window._dn.destroy();
+  window._dn = new Chart(document.getElementById('doughnutChart').getContext('2d'), {
+    type:'doughnut',
+    data:{ labels:areaLabels, datasets:[{ data:areaData, backgroundColor:areaLabels.map((_,i)=>COLORS[i%COLORS.length]) }]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{position:'right', labels:{font:{size:11}}},
+                 tooltip:{callbacks:{label:c=>{
+                   const tot = c.dataset.data.reduce((a,b)=>a+b,0);
+                   const pct = tot ? (c.parsed/tot*100).toFixed(1) : 0;
+                   return ` ${c.label}: ${clp(c.parsed)} (${pct}%)`;
+                 }}}} }
+  });
+
+  // Line chart por día
+  if(window._ln) window._ln.destroy();
+  window._ln = new Chart(document.getElementById('lineChart').getContext('2d'), {
+    type:'line',
+    data:{ labels: DATA.por_dia.map(d => d.fecha.slice(8,10)),
+           datasets:[{ label:'Pacientes', data:DATA.por_dia.map(d=>d.pacientes),
+                       borderColor:'#16a34a', backgroundColor:'rgba(22,163,74,.1)', fill:true, tension:.3, pointRadius:3 }]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false} }, scales:{y:{beginAtZero:true}} }
+  });
+
+  // Tabla
+  const tbody = document.querySelector('#tabla tbody');
+  let html='';
+  DATA.profesionales.forEach((p,i) => {
+    const pct = DATA.total_mes ? (p.total/DATA.total_mes*100).toFixed(1) : 0;
+    html += `<tr>
+      <td>${i+1}</td>
+      <td><strong>${p.nombre}</strong></td>
+      <td><span class="pill area-${p.area}">${p.area_label}</span></td>
+      <td style="color:#6b7280">${p.especialidad}</td>
+      <td class="num">${p.pacientes}</td>
+      <td class="num">${p.n_pagos}</td>
+      <td class="num"><strong>${clp(p.total)}</strong></td>
+      <td class="num">${pct}%</td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+}
+
+document.getElementById('mesSel').addEventListener('change', e => loadMes(e.target.value));
+loadMes();
+</script>
+</body>
+</html>

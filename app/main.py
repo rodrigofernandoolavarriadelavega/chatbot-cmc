@@ -1849,6 +1849,104 @@ async def api_bi_sync_pagos(desde: str = "2024-01-01", hasta: str | None = None,
     return {"started": True, "desde": desde, "hasta": hasta or "today", "force": bool(force)}
 
 
+@app.get("/api/cmc/mensual")
+def api_cmc_mensual(mes: str | None = None):
+    """Agrega bi_pagos_caja por profesional y por área para un mes (YYYY-MM).
+    Si mes es None, usa el mes actual."""
+    from session import _conn as _c_m
+    from medilink import PROFESIONALES
+    from datetime import date as _d_m
+
+    AREA_MAP = {
+        1: "med", 73: "med", 13: "med", 23: "med", 60: "med", 61: "med",
+        65: "med", 64: "med",
+        68: "tecmed",
+        55: "dent", 72: "dent", 66: "dent", 75: "dent", 69: "dent", 76: "dent",
+        59: "maso", 77: "kine", 21: "kine",
+        52: "nutri", 74: "psico", 49: "psico", 70: "fono",
+        67: "matrona", 56: "podo",
+    }
+    AREA_LABELS = {
+        "med": "Medicina", "dent": "Dental", "kine": "Kinesiología",
+        "maso": "Masoterapia", "nutri": "Nutrición", "psico": "Psicología",
+        "fono": "Fonoaudiología", "matrona": "Matrona", "podo": "Podología",
+        "tecmed": "Ecografía", "otros": "Otros",
+    }
+
+    if not mes:
+        mes = _d_m.today().strftime("%Y-%m")
+    inicio = f"{mes}-01"
+    yr, mo = int(mes[:4]), int(mes[5:7])
+    fin_y = yr + (mo // 12); fin_mo = (mo % 12) + 1
+    fin = f"{fin_y}-{fin_mo:02d}-01"
+
+    with _c_m() as c:
+        rows = c.execute(
+            "SELECT id_profesional, COUNT(*) AS n, SUM(monto) AS total, "
+            "       COUNT(DISTINCT id_paciente) AS pacientes "
+            "FROM bi_pagos_caja WHERE fecha>=? AND fecha<? "
+            "AND id_profesional IS NOT NULL "
+            "GROUP BY id_profesional ORDER BY 3 DESC",
+            (inicio, fin)
+        ).fetchall()
+        dia_count = c.execute(
+            "SELECT COUNT(DISTINCT fecha) FROM bi_pagos_caja "
+            "WHERE fecha>=? AND fecha<?", (inicio, fin)
+        ).fetchone()[0] or 0
+        rows_dia = c.execute(
+            "SELECT fecha, COUNT(DISTINCT id_paciente) AS n, SUM(monto) AS total "
+            "FROM bi_pagos_caja WHERE fecha>=? AND fecha<? "
+            "GROUP BY fecha ORDER BY fecha", (inicio, fin)
+        ).fetchall()
+        # Lista de meses disponibles
+        meses_rows = c.execute(
+            "SELECT DISTINCT substr(fecha,1,7) AS m FROM bi_pagos_caja "
+            "WHERE fecha>='2024-01-01' ORDER BY m DESC"
+        ).fetchall()
+
+    profs = []
+    por_area: dict = {}
+    total_mes = 0
+    for r in rows:
+        pid = r["id_profesional"]
+        info = PROFESIONALES.get(pid, {})
+        nombre = info.get("nombre") or f"Prof {pid}"
+        area = AREA_MAP.get(pid, "otros")
+        total = int(r["total"] or 0)
+        profs.append({
+            "id": pid, "nombre": nombre,
+            "especialidad": info.get("especialidad", ""),
+            "area": area, "area_label": AREA_LABELS.get(area, area),
+            "total": total, "n_pagos": r["n"], "pacientes": r["pacientes"],
+        })
+        por_area.setdefault(area, {"label": AREA_LABELS.get(area, area), "total": 0, "n_pagos": 0})
+        por_area[area]["total"] += total
+        por_area[area]["n_pagos"] += r["n"]
+        total_mes += total
+
+    return {
+        "mes": mes,
+        "fecha_actualizacion": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "total_mes": total_mes,
+        "n_profesionales_activos": len(profs),
+        "n_pagos_total": sum(p["n_pagos"] for p in profs),
+        "dias_con_actividad": dia_count,
+        "profesionales": profs,
+        "areas": [{"key": k, **v} for k, v in sorted(por_area.items(), key=lambda x: -x[1]["total"])],
+        "por_dia": [{"fecha": r["fecha"], "pacientes": r["n"], "total": int(r["total"] or 0)} for r in rows_dia],
+        "meses_disponibles": [r["m"] for r in meses_rows],
+    }
+
+
+@app.get("/cmc/mensual", response_class=HTMLResponse)
+def cmc_mensual_page():
+    """Dashboard mensual v2 — leído de bi_pagos_caja (CSV oficial Medilink)."""
+    p = _TEMPLATE_DIR / "cmc_mensual.html"
+    if not p.exists():
+        raise HTTPException(404, "Dashboard mensual no disponible")
+    return p.read_text(encoding="utf-8")
+
+
 @app.get("/api/profesionales")
 def api_profesionales_list():
     """Lista de profesionales del CMC con sus IDs Medilink."""
