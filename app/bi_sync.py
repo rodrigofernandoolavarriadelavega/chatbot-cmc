@@ -228,38 +228,35 @@ def stats_profesional(id_profesional: int, desde: str = "2024-01-01") -> dict:
             WHERE id_profesional=? AND fecha>=?
         """, (id_profesional, desde)).fetchall()
 
-    por_dia: dict = {}
+    # Pacientes únicos POR DÍA y POR MES desde bi_pagos_caja (= CSV oficial Medilink)
     pacientes_dia: dict = defaultdict(set)
     pacientes_mes: dict = defaultdict(set)
-    monto_total_mes: dict = defaultdict(int)
     monto_cobrado_mes: dict = defaultdict(int)
-    por_dow: dict = defaultdict(list)
-
-    for r in atens:
-        f = (r["fecha"] or "")[:10]
-        if not f:
-            continue
-        m = f[:7]
-        pid = r["id_paciente"]
-        if pid:
-            pacientes_dia[f].add(pid)
-            pacientes_mes[m].add(pid)
-        monto_total_mes[m] += int(r["total"] or 0)
+    monto_total_mes: dict = defaultdict(int)
 
     for r in pagos:
         f = (r["fecha"] or "")[:10]
         if not f:
             continue
         m = f[:7]
+        pacientes_mes[m].add(r["id_paciente"])
+        pacientes_dia[f].add(r["id_paciente"])
         monto_cobrado_mes[m] += int(r["monto"] or 0)
 
-    for f, pset in pacientes_dia.items():
-        por_dia[f] = len(pset)
+    # Facturado total desde bi_atenciones (no para conteo, solo monto)
+    for r in atens:
+        f = (r["fecha"] or "")[:10]
+        if not f:
+            continue
+        monto_total_mes[f[:7]] += int(r["total"] or 0)
+
+    por_dia: dict = {f: len(s) for f, s in pacientes_dia.items()}
+    por_dow: dict = defaultdict(list)
     por_mes: dict = {}
     for m in set(list(pacientes_mes.keys()) + list(monto_total_mes.keys()) + list(monto_cobrado_mes.keys())):
+        n = len(pacientes_mes.get(m, set()))
         por_mes[m] = {
-            "atend": len(pacientes_mes.get(m, set())),
-            "atend_pagadas": len(pacientes_mes.get(m, set())),
+            "atend": n, "atend_pagadas": n,
             "monto_total": monto_total_mes.get(m, 0),
             "monto_cobrado": monto_cobrado_mes.get(m, 0),
         }
