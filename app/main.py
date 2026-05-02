@@ -680,7 +680,7 @@ async def sitemap_xml():
     from fastapi.responses import Response
     BLOGS_BASE = ["cardiologia", "medicina-general", "ortodoncia", "ecografia",
                   "estetica-facial", "kinesiologia", "odontologia-general",
-                  "otorrinolaringologia", "traumatologia", "ginecologia",
+                  "otorrinolaringologia", "ginecologia",
                   "gastroenterologia", "endodoncia", "implantologia",
                   "masoterapia", "nutricion", "psicologia-adulto",
                   "psicologia-infantil", "fonoaudiologia", "matrona", "podologia"]
@@ -716,7 +716,7 @@ async def sitemap_blogs_xml():
                   "implantologia", "kinesiologia", "masoterapia", "matrona",
                   "medicina-general", "nutricion", "odontologia-general",
                   "ortodoncia", "otorrinolaringologia", "podologia",
-                  "psicologia-adulto", "psicologia-infantil", "traumatologia"]
+                  "psicologia-adulto", "psicologia-infantil"]
     base_url = "https://centromedicocarampangue.cl"
     today = "2026-05-02"
     parts = ['<?xml version="1.0" encoding="UTF-8"?>',
