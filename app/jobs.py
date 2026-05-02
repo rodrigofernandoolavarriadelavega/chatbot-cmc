@@ -4,7 +4,7 @@ import logging
 import httpx
 
 from config import MEDILINK_BASE_URL, MEDILINK_TOKEN, ADMIN_ALERT_PHONE, USE_TEMPLATES
-from messaging import (send_whatsapp, send_whatsapp_interactive,
+from messaging import (send_whatsapp, send_whatsapp_interactive, send_instagram, send_messenger,
                        send_whatsapp_template)
 from reminders import enviar_recordatorios, enviar_recordatorios_2h
 from fidelizacion import (enviar_seguimiento_postconsulta, enviar_reactivacion_pacientes,
@@ -31,11 +31,31 @@ log = logging.getLogger("bot")
 HEADERS_MEDILINK = {"Authorization": f"Token {MEDILINK_TOKEN}"}
 
 
+def _canal_de_phone(phone: str) -> str:
+    """Devuelve 'wa', 'ig', 'fb' o 'unknown' según el prefijo del id de sesión."""
+    p = str(phone or "")
+    if p.startswith("ig_"):
+        return "ig"
+    if p.startswith("fb_"):
+        return "fb"
+    if p.startswith("TEST_"):
+        return "unknown"
+    if p.isdigit() and len(p) >= 10:
+        return "wa"
+    return "unknown"
+
+
 async def _enviar_reenganche():
-    """Reenganche agresivo: slot real + urgencia + botón directo."""
+    """Reenganche agresivo: slot real + urgencia + botón directo.
+
+    Cubre WhatsApp, Instagram y Messenger. Antes el filtro `phone.isdigit()`
+    excluía silenciosamente todas las sesiones de IG/FB (fix 2026-04-24
+    eliminó el envío erróneo a Meta API por canal equivocado pero también
+    cortó el reenganche a esos pacientes). Ahora se rutea al canal correcto.
+    """
     sesiones = get_sesiones_abandonadas()
-    # Filtrar phones no-WhatsApp (fb_*, ig_*, TEST_*, IDs numericos raros)
-    sesiones = [s for s in sesiones if str(s.get("phone", "")).isdigit() and len(str(s["phone"])) >= 10]
+    # Sólo phones con canal conocido. TEST_* y otros raros se descartan.
+    sesiones = [s for s in sesiones if _canal_de_phone(s.get("phone", "")) != "unknown"]
     for s in sesiones:
         phone = s["phone"]
         state = s["state"]
@@ -83,18 +103,34 @@ async def _enviar_reenganche():
                 "¿Te la reservo antes de que se llene?"
             )
 
+        canal = _canal_de_phone(phone)
         try:
-            from flows import _btn_msg as _btn_msg_j
-            _bt_msg = _btn_msg_j(msg, [
-                {"id": "menu", "title": "✅ Sí, continuar"},
-                {"id": "no_gracias_reeng", "title": "No por ahora"},
-            ])
-            await send_whatsapp_interactive(phone, _bt_msg["interactive"])
+            if canal == "wa":
+                from flows import _btn_msg as _btn_msg_j
+                _bt_msg = _btn_msg_j(msg, [
+                    {"id": "menu", "title": "✅ Sí, continuar"},
+                    {"id": "no_gracias_reeng", "title": "No por ahora"},
+                ])
+                await send_whatsapp_interactive(phone, _bt_msg["interactive"])
+            elif canal == "ig":
+                igsid = phone[3:]  # strip "ig_"
+                await send_instagram(igsid, msg + "\n\nEscribe *menu* para continuar o *no* si ya no te interesa.")
+            elif canal == "fb":
+                psid = phone[3:]  # strip "fb_"
+                await send_messenger(psid, msg + "\n\nEscribe *menu* para continuar o *no* si ya no te interesa.")
         except Exception:
-            await send_whatsapp(phone, msg + "\n\nEscribe *menu* para continuar.")
+            if canal == "wa":
+                try:
+                    await send_whatsapp(phone, msg + "\n\nEscribe *menu* para continuar.")
+                except Exception:
+                    log.exception("Reenganche fallback wa falló phone=%s", phone)
+                    continue
+            else:
+                log.exception("Reenganche %s falló phone=%s", canal, phone)
+                continue
         data["reenganche_sent"] = True
         save_session(phone, state, data)
-        log.info("Reenganche enviado → %s (estado: %s)", phone, state)
+        log.info("Reenganche enviado → %s (estado: %s, canal: %s)", phone, state, canal)
 
 
 async def enviar_reagendar_por_cancelacion(id_cita: str, motivo: str = "doctor_cancel") -> dict:

@@ -1653,16 +1653,28 @@ def get_conversations(limit: int = 2000) -> list[dict]:
 
 
 def get_sesiones_abandonadas() -> list[dict]:
-    """Retorna sesiones activas sin actividad entre 10 y 60 minutos (candidatas a reenganche)."""
-    estados = ("WAIT_SLOT", "WAIT_MODALIDAD", "WAIT_RUT_AGENDAR", "WAIT_DATOS_NUEVO", "WAIT_NOMBRE_NUEVO")
-    placeholders = ",".join("?" * len(estados))
+    """Retorna sesiones en cualquier estado activo (no IDLE/COMPLETED/HUMAN_TAKEOVER)
+    sin actividad entre 10 y 90 minutos (candidatas a reenganche).
+
+    Antes la lista era explícita y solo cubría 5 estados. Eso dejaba fuera
+    WAIT_ESPECIALIDAD, WAIT_BOOKING_FOR, WAIT_PHONE_OWNER_NAME, CONFIRMING_CITA,
+    WAIT_FECHA_NAC, WAIT_SEXO, WAIT_COMUNA, WAIT_EMAIL, WAIT_REFERRAL*,
+    WAIT_QUICK_BOOK, WAIT_DURACION_MASOTERAPIA, WAIT_WAITLIST_*, WAIT_CITA_*,
+    WAIT_RUT_VER y otros. El bot dejaba al paciente colgado en la mayoría
+    de los estados de un agendamiento. Ahora la condición es la inversa
+    (estado activo) y cubre todo el flujo.
+    """
+    excluidos = ("IDLE", "COMPLETED", "HUMAN_TAKEOVER")
+    placeholders = ",".join("?" * len(excluidos))
     with _conn() as conn:
         rows = conn.execute(f"""
             SELECT phone, state, data FROM sessions
-            WHERE state IN ({placeholders})
+            WHERE state NOT IN ({placeholders})
+            AND state IS NOT NULL
+            AND state != ''
             AND updated_at < datetime('now', '-10 minutes')
-            AND updated_at > datetime('now', '-60 minutes')
-        """, estados).fetchall()
+            AND updated_at > datetime('now', '-90 minutes')
+        """, excluidos).fetchall()
         result = []
         for r in rows:
             d = dict(r)
