@@ -613,6 +613,19 @@ section.compact { padding: 64px 0; }
   .nav-toggle { display: inline-flex; }
   .nav-cta .btn-ghost { display: none; }
 }
+@media (max-width: 640px) {
+  /* Navbar mobile: solo logo + WhatsApp icono + toggle */
+  .nav-cta .btn-primary { display: none; }
+  .nav-wa-btn { padding: 9px 12px; font-size: 0; gap: 0; }
+  .nav-wa-btn svg { margin: 0; }
+  .nav-brand { font-size: 15px; gap: 8px; min-width: 0; flex-shrink: 1; overflow: hidden; }
+  .nav-brand .brand-logo-img { width: 36px; height: 36px; }
+  .nav-brand .brand-text { overflow: hidden; }
+  .nav-brand-sub { font-size: 9.5px; }
+  .nav { gap: 10px; height: 64px; }
+  .nav-cta { gap: 6px; flex-shrink: 0; }
+  .nav-toggle { width: 40px; height: 40px; }
+}
 
 /* ========== HERO ========== */
 .hero {
@@ -2302,21 +2315,10 @@ section.compact { padding: 64px 0; }
     font-size: 11.5px;
     bottom: calc(50% - 90px);
   }
-  .hero-visual .floating-chip {
-    top: 14px; left: -10px;
-    padding: 9px 12px;
-  }
-  .hero-visual .chip-icon { width: 32px; height: 32px; }
-  .hero-visual .chip-icon svg { width: 16px; height: 16px; }
-  .hero-visual .chip-label { font-size: 9.5px; }
-  .hero-visual .chip-value { font-size: 12.5px; }
-  .hero-visual .overlay-team {
-    bottom: 12px; left: 12px; right: 12px;
-    padding: 11px 14px; border-radius: 12px;
-  }
-  .hero-visual .overlay-team .label { font-size: 9.5px; }
-  .hero-visual .overlay-team .value { font-size: 12.5px; }
-  .hero-visual .avatars span { width: 26px; height: 26px; font-size: 10px; }
+  /* En mobile el hero-visual es solo la cruz centrada — overlay-team y chip
+     se duplican con info que ya está en la columna izquierda y rompen layout */
+  .hero-visual .floating-chip,
+  .hero-visual .overlay-team { display: none !important; }
 
   /* Hero text: más respiración + lead más legible */
   .hero { padding: 24px 0 40px; }
