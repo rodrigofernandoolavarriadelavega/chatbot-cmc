@@ -2055,13 +2055,14 @@ init();
 const _MES_NOMS = {"01":"Enero","02":"Febrero","03":"Marzo","04":"Abril","05":"Mayo","06":"Junio","07":"Julio","08":"Agosto","09":"Septiembre","10":"Octubre","11":"Noviembre","12":"Diciembre"};
 const _fmtMes = m => `${_MES_NOMS[m.slice(5,7)]} ${m.slice(0,4)}`;
 
-// Mapa nombre ORIGINAL → id_profesional Medilink (para cruzar)
+// Mapa nombre ORIGINAL → id_profesional Medilink (PRINCIPAL — recibe el total real)
+// Los duplicados (Abarca Contrato, Tirso medicina, etc.) reciben $0 — solo aportan
+// con su honorario fijo o subárea aparte.
 const _NOMBRE_TO_ID = {
-  "Dr. Olavarría": 1, "Dr. Abarca": 73, "Dr. Abarca Contrato": 73,
+  "Dr. Olavarría": 1, "Dr. Abarca": 73,
   "Dr. Márquez": 13, "Dr. Borrego": 23, "Dr. Millán": 60,
-  "Dr. Tirso gine": 61, "Dr. Tirso medicina": 61,
+  "Dr. Tirso gine": 61,
   "Dr. Quijano": 65, "Dr. Barraza": 64, "David Pardo": 68,
-  "Dr. Araneda": 1001,
   "Dentista Javi": 55, "Dentista Carlos": 72, "Dentista Daniela": 66,
   "Endodoncista Eduardo": 75, "Impl. Aurora": 69,
   "Estética Valentina Fuentealba": 76,
@@ -2069,6 +2070,13 @@ const _NOMBRE_TO_ID = {
   "Nutri Gise": 52, "Psicólogo Jorge": 74, "Psicólogo Juan Pablo": 49,
   "Dra. Juana": 70, "Matrona Saraí": 67, "Podóloga Andrea": 56,
 };
+// Duplicados: NO mapearlos a un id real para evitar doble conteo.
+// "Dr. Abarca Contrato": solo sueldo fijo, total caja = 0
+// "Dr. Tirso medicina": Tirso solo factura via gine, total caja aquí = 0
+// "Dr. Araneda": no existe en Medilink
+const _SIN_TOTAL = new Set([
+  "Dr. Abarca Contrato", "Dr. Tirso medicina", "Dr. Araneda",
+]);
 
 let _CMC_MESES = [];
 let _CMC_MES_ACTUAL = null;
