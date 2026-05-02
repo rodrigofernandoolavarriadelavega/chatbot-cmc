@@ -298,6 +298,14 @@ button { font: inherit; cursor: pointer; border: 0; background: none; color: inh
   color: var(--ink-900);
   text-wrap: balance;
 }
+.display em, h2 em, .blog-h1 em {
+  font-style: italic;
+  color: var(--brand-teal-ink);
+  font-weight: 700;
+  position: relative;
+  white-space: nowrap;
+}
+.hor-table h2 em, .hours-head h2 em { color: var(--brand-teal-ink); }
 .eyebrow {
   font-family: var(--font-display);
   font-weight: 700;
@@ -1075,7 +1083,6 @@ section.compact { padding: 64px 0; }
   cursor: pointer;
   background: white;
   border: 1px solid var(--ink-100);
-  border-top: 4px solid var(--brand-teal);
   border-radius: var(--radius);
   transition: transform .25s, box-shadow .25s, border-color .2s;
   text-align: left;
@@ -1087,19 +1094,20 @@ section.compact { padding: 64px 0; }
   position: absolute;
   top: 0; left: 0; right: 0;
   height: 4px;
-  background: linear-gradient(90deg, var(--brand-teal) 0%, var(--brand-deep) 100%);
-  transform: translateY(-4px);
-  transition: transform .25s;
+  background: var(--brand-teal);
+  transition: background .25s, height .25s;
 }
-.spec-card:hover::before { transform: translateY(0); }
+.spec-card:hover::before {
+  background: linear-gradient(90deg, var(--brand-teal) 0%, var(--brand-deep) 100%);
+  height: 6px;
+}
 .spec-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 12px 28px rgba(15,63,104,0.14);
   border-color: var(--brand-teal);
-  border-top-color: transparent;
 }
-.spec-card[data-cat="dental"] { border-top-color: var(--brand-teal-ink); }
-.spec-card[data-cat="dental"]::before { background: linear-gradient(90deg, var(--brand-teal-ink) 0%, var(--brand-deep) 100%); }
+.spec-card[data-cat="dental"]::before { background: var(--brand-teal-ink); }
+.spec-card[data-cat="dental"]:hover::before { background: linear-gradient(90deg, var(--brand-teal-ink) 0%, var(--brand-deep) 100%); }
 .spec-card .badge {
   position: absolute; top: 14px; right: 14px;
   font-size: 10.5px; padding: 4px 10px;
@@ -2888,7 +2896,7 @@ section.compact { padding: 64px 0; }
     <div class="how-head">
       <div class="eyebrow" style="margin-bottom: 12px;">Cómo agendar</div>
       <h2 class="display" style="font-size: clamp(28px, 4vw, 44px); margin-bottom: 12px;">
-        Tu hora médica en 3 pasos
+        Tu hora médica <em>en 3 pasos</em>
       </h2>
       <p class="lead">
         Sin filas, sin esperas largas, sin llamadas eternas. Reserva en 30 segundos por WhatsApp o desde la web.
@@ -2930,7 +2938,7 @@ section.compact { padding: 64px 0; }
       <div>
         <div class="eyebrow" style="margin-bottom: 12px;">Conoce el centro</div>
         <h2 class="display" style="font-size: clamp(28px, 4vw, 44px); margin-bottom: 12px;">
-          Espacios cuidados, pensados para ti
+          Espacios <em>cuidados</em>, pensados para ti
         </h2>
         <p class="lead" style="max-width: 580px;">
           Recepción cálida, boxes equipados con luz natural y atención cercana en pleno centro de Carampangue.
@@ -2977,7 +2985,7 @@ section.compact { padding: 64px 0; }
       <div>
         <div class="eyebrow" style="margin-bottom: 12px;">Especialidades</div>
         <h2 class="display" style="font-size: clamp(32px, 4vw, 52px); margin-bottom: 12px;">
-          Atención integral para<br>toda tu familia
+          Atención integral para<br><em>toda tu familia</em>
         </h2>
         <p class="lead">
           19 especialidades médicas y dentales bajo un mismo techo, con tecnología de diagnóstico y atención cercana.
