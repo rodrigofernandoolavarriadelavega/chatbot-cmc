@@ -224,7 +224,7 @@ def stats_profesional(id_profesional: int, desde: str = "2024-01-01") -> dict:
         """, (id_profesional, desde)).fetchall()
         # Cobrado real desde bi_pagos_caja
         pagos = c.execute("""
-            SELECT fecha, monto FROM bi_pagos_caja
+            SELECT fecha, id_paciente, monto FROM bi_pagos_caja
             WHERE id_profesional=? AND fecha>=?
         """, (id_profesional, desde)).fetchall()
 
