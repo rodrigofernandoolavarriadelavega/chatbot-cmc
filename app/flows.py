@@ -1620,6 +1620,32 @@ async def _pre_router_wait(phone: str, txt: str, tl: str, state: str, data: dict
     Pre-router universal para estados WAIT_*.
     Retorna str (respuesta final) si tomó control; None si el handler normal debe continuar.
     """
+    # FIX-12: Rescue intents globales — deben funcionar en CUALQUIER estado.
+    # Se procesan ANTES del clasificador (sin costo de Haiku) para máxima fiabilidad.
+    # NOTA: "cancelar" NO se incluye aquí porque en WAIT_RUT_CANCELAR el paciente
+    # puede escribir "cancelar" como acción del flujo, no para salir.
+    tl_rescue = tl.strip()
+    _HUMANO_KW = {"humano", "agente", "persona", "secretaria", "secretario",
+                  "recepcion", "recepción", "atencion humana", "atención humana",
+                  "hablar con alguien", "quiero hablar", "asistente humano"}
+    _MENU_KW = {"menu", "menú", "inicio", "reiniciar", "empezar de nuevo", "volver al inicio"}
+    _SALIR_KW = {"salir", "olvida", "olvidalo", "olvídalo", "olvida todo",
+                 "cancelar flujo", "no quiero nada", "no importa"}
+
+    if tl_rescue in _HUMANO_KW or any(k in tl_rescue for k in _HUMANO_KW if len(k) > 7):
+        log_event(phone, "rescue_humano", {"state": state, "txt": txt[:80]})
+        return _derivar_humano(phone=phone, contexto=f"rescue desde {state}")
+
+    if tl_rescue in _MENU_KW:
+        log_event(phone, "rescue_menu", {"state": state})
+        reset_session(phone)
+        return _menu_msg()
+
+    if tl_rescue in _SALIR_KW:
+        log_event(phone, "rescue_salir", {"state": state})
+        reset_session(phone)
+        return "Listo, salimos del proceso. Escribe *menu* cuando quieras retomar."
+
     # Fast path — evita Claude cuando la respuesta es obvia
     if _es_respuesta_obvia_al_prompt(txt, tl, state, data):
         return None
@@ -4387,16 +4413,22 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if any(f in tl for f in _DERIVAR_FRASES):
                 log_event(phone, "wait_slot_consulta_libre", {"texto": txt[:120]})
                 return _derivar_humano(phone=phone, contexto="consulta libre WAIT_SLOT")
-            # Frustration detector — escalada en 3 niveles
+            # FIX-11: Frustration detector — escalada en 3 niveles.
+            # Nivel 2: ofrecer botón de recepción explícito.
             data["intentos_fallidos"] = data.get("intentos_fallidos", 0) + 1
             intentos = data["intentos_fallidos"]
             if intentos >= 3:
                 return _derivar_humano(phone=phone, contexto="frustración WAIT_SLOT")
             save_session(phone, "WAIT_SLOT", data)
             if intentos == 2:
-                return (
+                return _btn_msg(
                     "Todavía no logro entenderte 😕\n\n"
-                    "Escribe el *número* del horario que prefieres, *otro día* para cambiar de día, o *menu* para reiniciar."
+                    "Elige una opción o escribe el *número* del horario:",
+                    [
+                        {"id": "ver_todos",       "title": "📋 Ver todos los horarios"},
+                        {"id": "otro_dia",        "title": "📅 Buscar otro día"},
+                        {"id": "accion_recepcion","title": "💬 Hablar con recepción"},
+                    ]
                 )
             return (
                 "No te entendí bien 😅\n\n"
