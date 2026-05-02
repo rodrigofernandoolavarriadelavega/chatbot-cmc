@@ -669,7 +669,11 @@ async def sitemap_xml():
     """Sitemap dinámico con todas las URLs (home + 7 blogs base + 49 localizadas)."""
     from fastapi.responses import Response
     BLOGS_BASE = ["cardiologia", "medicina-general", "ortodoncia", "ecografia",
-                  "estetica-facial", "kinesiologia", "odontologia-general"]
+                  "estetica-facial", "kinesiologia", "odontologia-general",
+                  "otorrinolaringologia", "traumatologia", "ginecologia",
+                  "gastroenterologia", "endodoncia", "implantologia",
+                  "masoterapia", "nutricion", "psicologia-adulto",
+                  "psicologia-infantil", "fonoaudiologia", "matrona", "podologia"]
     base_url = "https://centromedicocarampangue.cl"
     today = "2026-05-02"
     urls = [(f"{base_url}/", "1.0", "weekly")]
@@ -697,8 +701,12 @@ async def sitemap_blogs_xml():
     if _f.exists():
         return Response(content=_f.read_text(encoding="utf-8"), media_type="application/xml")
     # fallback dinámico
-    BLOGS_BASE = ["cardiologia", "ecografia", "estetica-facial",
-                  "kinesiologia", "medicina-general", "odontologia-general", "ortodoncia"]
+    BLOGS_BASE = ["cardiologia", "ecografia", "endodoncia", "estetica-facial",
+                  "fonoaudiologia", "gastroenterologia", "ginecologia",
+                  "implantologia", "kinesiologia", "masoterapia", "matrona",
+                  "medicina-general", "nutricion", "odontologia-general",
+                  "ortodoncia", "otorrinolaringologia", "podologia",
+                  "psicologia-adulto", "psicologia-infantil", "traumatologia"]
     base_url = "https://centromedicocarampangue.cl"
     today = "2026-05-02"
     parts = ['<?xml version="1.0" encoding="UTF-8"?>',
