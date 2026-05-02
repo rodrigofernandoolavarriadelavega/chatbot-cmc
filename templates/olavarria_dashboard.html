@@ -101,9 +101,9 @@
         <p class="kpi-sub" id="kpiBajoObjSub">—</p>
       </div>
       <div>
-        <p class="kpi-label">Ingreso REAL Medilink</p>
-        <p class="kpi-num" id="kpiIngReal">—</p>
-        <p class="kpi-sub" id="kpiIngRealSub">cobertura —</p>
+        <p class="kpi-label">CAJA CMC estimada/mes</p>
+        <p class="kpi-num pos" id="kpiCajaMes">—</p>
+        <p class="kpi-sub">~74% del total · efectivo+transfer</p>
       </div>
     </div>
     <div class="border-t mt-5 pt-4 grid md:grid-cols-3 gap-4 items-center">
@@ -113,13 +113,14 @@
         <p class="kpi-sub" id="kpiTopMesSub">—</p>
       </div>
       <div>
-        <p class="kpi-label">Tarifa promedio real</p>
-        <p class="kpi-num" id="kpiTarifaReal">—</p>
-        <p class="kpi-sub" id="kpiTarifaRealSub">vs $ estimado del slider</p>
+        <p class="kpi-label">BONO FONASA estimado/mes</p>
+        <p class="kpi-num" id="kpiBonoMes">—</p>
+        <p class="kpi-sub">~26% · cobrado por Fonasa al médico</p>
       </div>
       <div>
-        <button id="btnSyncMontos" class="scenario-btn" style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;padding:8px 14px;border:1px solid rgba(31,51,64,.2);border-radius:4px;background:white;cursor:pointer;">⟳ Sincronizar montos reales (background)</button>
-        <p class="text-xs opacity-60 mt-1">Tarda ~40 min con todas las atenciones. No bloquea el dashboard.</p>
+        <p class="kpi-label">Tarifa real promedio</p>
+        <p class="kpi-num" id="kpiTarifaReal">—</p>
+        <p class="kpi-sub">avg(monto_bruto BI)</p>
       </div>
     </div>
   </section>
@@ -257,20 +258,10 @@ function render(){
   document.getElementById('kpiAvgMesSub').textContent = `n=${k.n_meses} meses`;
   document.getElementById('kpiIngMes').textContent = moneda(k.ing_avg_mes);
 
-  // Ingreso real Medilink (parcial mientras se va sincronizando)
-  if (k.cobertura_real_pct > 0){
-    const realAvgMes = Math.round(k.monto_real_total / k.n_meses);
-    document.getElementById('kpiIngReal').textContent = moneda(realAvgMes);
-    document.getElementById('kpiIngRealSub').textContent = `cobertura ${k.cobertura_real_pct}% (${k.monto_real_n_atend} atend)`;
-    document.getElementById('kpiTarifaReal').textContent = clp(k.tarifa_real_promedio);
-    const diff = k.tarifa_real_promedio - tarifa;
-    document.getElementById('kpiTarifaRealSub').textContent = (diff >= 0 ? `+${clp(diff)}` : clp(diff)) + " vs slider";
-  } else {
-    document.getElementById('kpiIngReal').textContent = "—";
-    document.getElementById('kpiIngRealSub').textContent = "sin sync · click el botón →";
-    document.getElementById('kpiTarifaReal').textContent = "—";
-    document.getElementById('kpiTarifaRealSub').textContent = "vs slider";
-  }
+  // Breakdown caja CMC vs bono Fonasa (factor 0.74 / 0.26 cruzado con Caja Medilink 15-may-2024)
+  document.getElementById('kpiCajaMes').textContent = moneda(k.ing_caja_estimado_mes || 0);
+  document.getElementById('kpiBonoMes').textContent = moneda(k.ing_bono_estimado_mes || 0);
+  document.getElementById('kpiTarifaReal').textContent = clp(k.tarifa_real_promedio || 0);
 
   // Mejor mes
   const meses = Object.entries(DATA.por_mes).sort((a,b) => b[1].atend - a[1].atend);
@@ -472,7 +463,6 @@ function renderHora(){
 
 function renderLectura(deltaPct, avg3){
   const k = DATA.kpis;
-  const tarifa = DATA.tarifa;
   const proy = DATA.proyeccion || {};
   const proyMeses = Object.keys(proy).sort();
   const proyTotal = proyMeses.reduce((s,m) => s + (proy[m].ingreso||0), 0);
@@ -480,7 +470,14 @@ function renderLectura(deltaPct, avg3){
   const tendTxt = deltaPct >= 5 ? `**creciendo** (últimos 3 meses ${deltaPct.toFixed(0)}% sobre promedio)` :
                   deltaPct <= -5 ? `**bajando** (últimos 3 meses ${deltaPct.toFixed(0)}% bajo promedio)` :
                   `**estable** (variación ${deltaPct.toFixed(0)}% vs promedio)`;
-  const txt = `Atendiste **${k.total_atend}** pacientes en ${k.n_meses} meses, promedio **${k.atend_avg_mes}/mes** (${k.dias_con_atencion} días trabajados, ${(k.total_atend/k.dias_con_atencion).toFixed(1)} pac/día). Estás ${tendTxt}. Con tarifa de **${clp(tarifa)}** por atención, tu ingreso bruto promedio es **${clp(k.ing_avg_mes)}/mes**. Si la tendencia continúa, la proyección de los próximos 6 meses es **${clp(proy6mPromedio)}/mes** en promedio (total ${clp(proyTotal)}).`;
+  const txt = `Atendiste **${k.total_atend}** pacientes en ${k.n_meses} meses, promedio **${k.atend_avg_mes}/mes** ` +
+    `(${k.dias_con_atencion} días trabajados). Tarifa real promedio: **${clp(k.tarifa_real_promedio)}** por atención. ` +
+    `Estás ${tendTxt}. ` +
+    `Tu ingreso TOTAL promedio es **${clp(k.ing_avg_mes)}/mes**, que se reparte: ` +
+    `**${clp(k.ing_caja_estimado_mes)} a la caja del CMC** (efectivo + transferencia) y ` +
+    `**${clp(k.ing_bono_estimado_mes)} a tu cuenta médico** vía bonos Fonasa. ` +
+    `Histórico total facturado: **${clp(k.ing_total_historico)}**. ` +
+    `Si la tendencia continúa, la proyección de los próximos 6 meses es **${clp(proy6mPromedio)}/mes** en promedio (total ${clp(proyTotal)}).`;
   document.getElementById('lectura').innerHTML = txt.replace(/\*\*(.+?)\*\*/g, '<strong style="color:#fff">$1</strong>');
 }
 
@@ -494,17 +491,7 @@ document.getElementById('objetivoInput').addEventListener('input', e => {
   if (DATA) render();  // recalcula calendario y KPI sin re-fetch
 });
 document.getElementById('btnRefresh').addEventListener('click', () => loadData(true));
-document.getElementById('btnSyncMontos').addEventListener('click', async () => {
-  const btn = document.getElementById('btnSyncMontos');
-  btn.disabled = true; btn.textContent = "⟳ disparado en background…";
-  try {
-    await fetch('/api/olavarria/sync-montos', { method: 'POST' });
-    btn.textContent = "✓ corriendo · refresh manual en ~40 min";
-  } catch (e) {
-    btn.textContent = "✗ error: " + e.message;
-    btn.disabled = false;
-  }
-});
+// Botón sync montos retirado: dashboard ahora lee de BI Postgres directamente.
 
 loadData(false);
 </script>
