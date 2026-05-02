@@ -53,14 +53,14 @@ async def fetch_rating(force: bool = False) -> dict[str, Any]:
         "X-Goog-Api-Key": API_KEY,
         "X-Goog-FieldMask": (
             "rating,userRatingCount,"
-            "reviews.text,reviews.rating,"
+            "reviews.text,reviews.originalText,reviews.rating,"
             "reviews.authorAttribution.displayName,"
             "reviews.publishTime,reviews.relativePublishTimeDescription"
         ),
     }
     try:
         async with httpx.AsyncClient(timeout=8) as client:
-            r = await client.get(url, headers=headers)
+            r = await client.get(url, headers=headers, params={"languageCode": "es-CL"})
         if r.status_code != 200:
             log.warning("google_rating http %s: %s", r.status_code, r.text[:160])
             return _CACHE["data"] or {
@@ -89,8 +89,12 @@ async def fetch_rating(force: bool = False) -> dict[str, Any]:
 
 
 def _normalize_review(rv: dict) -> dict:
-    """Saca campos planos del schema anidado de Google Places v1."""
-    text = (rv.get("text") or {}).get("text", "") or ""
+    """Saca campos planos del schema anidado de Google Places v1.
+    Prioriza `originalText` (idioma del autor) sobre `text` (traducción de Google),
+    para no mostrar reseñas chilenas traducidas al inglés."""
+    original = (rv.get("originalText") or {}).get("text", "") or ""
+    translated = (rv.get("text") or {}).get("text", "") or ""
+    text = original or translated
     return {
         "author":        (rv.get("authorAttribution") or {}).get("displayName", "Anónimo"),
         "rating":        rv.get("rating"),
