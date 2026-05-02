@@ -425,6 +425,18 @@ def _resolver_profesional_pago(c, pago: dict) -> tuple[int | None, int | None]:
     # 1. Mismo día + monto exacto
     same_day = [r for r in rows if r["fecha"] == fecha_iso and (r["total"] or 0) == monto]
     if same_day:
+        # Si hay múltiples atenciones mismo día con mismo monto → prioridad por:
+        # (a) atención con deuda > 0 (el pago paga esa deuda)
+        # (b) atención sin abonar todavía (abonado < total)
+        # (c) primera en orden cronológico
+        with_debt = [r for r in same_day if (r["deuda"] or 0) > 0]
+        if with_debt:
+            r = with_debt[0]
+            return r["id_profesional"], r["atencion_id"]
+        unpaid = [r for r in same_day if (r["abonado"] or 0) < (r["total"] or 0)]
+        if unpaid:
+            r = unpaid[0]
+            return r["id_profesional"], r["atencion_id"]
         r = same_day[0]
         return r["id_profesional"], r["atencion_id"]
 
