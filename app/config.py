@@ -112,3 +112,13 @@ ALTERNATIVA_ESPECIALIDAD: dict[str, str] = {
 # Meta Marketing API — cuenta publicitaria del CMC.
 # Override en .env: META_AD_ACCOUNT_ID=act_XXXXXXXXXXXXX
 META_AD_ACCOUNT_ID = os.getenv("META_AD_ACCOUNT_ID", "act_220608142267129")
+
+# Meta Conversion API (CAPI) — server-side events.
+# META_PIXEL_ID: vacío = CAPI deshabilitado (modo OFF seguro).
+# META_CAPI_ACCESS_TOKEN: token del System User con permisos ads_management.
+#   Fallback a META_ACCESS_TOKEN si no se define por separado.
+# META_CAPI_TEST_EVENT_CODE: solo durante testing en Events Manager.
+#   Eliminar después de 24-48h con eventos llegando bien.
+META_PIXEL_ID             = os.getenv("META_PIXEL_ID", "")
+META_CAPI_ACCESS_TOKEN    = os.getenv("META_CAPI_ACCESS_TOKEN", "") or os.getenv("META_ACCESS_TOKEN", "")
+META_CAPI_TEST_EVENT_CODE = os.getenv("META_CAPI_TEST_EVENT_CODE", "")

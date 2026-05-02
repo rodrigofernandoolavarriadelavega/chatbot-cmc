@@ -512,15 +512,144 @@ async def sitio_v7_1():
 
 @app.get("/blog/{slug}", response_class=HTMLResponse)
 async def blog_post(slug: str):
-    """Blogs por especialidad — sistema de diseño v7-1.
-    Sirve templates/blog/{slug}.html. Slug whitelist por seguridad."""
+    """Blogs por especialidad. Si el slug termina con sufijo de comuna
+    de Arauco (ej. 'medicina-general-arauco'), genera versión localizada SEO."""
     import re as _re
-    if not _re.fullmatch(r"[a-z0-9-]{1,60}", slug):
+    if not _re.fullmatch(r"[a-z0-9-]{1,80}", slug):
         return HTMLResponse("<h1>404</h1>", status_code=404)
+
+    # Detectar localización por sufijo conocido
+    for comuna_slug in COMUNAS_ARAUCO:
+        suffix = "-" + comuna_slug
+        if slug.endswith(suffix):
+            base_slug = slug[:-len(suffix)]
+            base_path = _BLOG_DIR / f"{base_slug}.html"
+            if base_path.exists():
+                html = base_path.read_text(encoding="utf-8")
+                return _localize_blog(html, base_slug, comuna_slug)
+
+    # Sin localización: blog base
     blog_path = _BLOG_DIR / f"{slug}.html"
     if not blog_path.exists():
         return HTMLResponse("<h1>404 — Artículo no encontrado</h1>", status_code=404)
     return blog_path.read_text(encoding="utf-8")
+
+
+# ============================================================
+# COMUNAS DE LA PROVINCIA DE ARAUCO (SEO local)
+# ============================================================
+COMUNAS_ARAUCO = {
+    "arauco":      {"nombre": "Arauco",      "km": 15,  "min": 20,  "ruta": "Ruta P-22"},
+    "lebu":        {"nombre": "Lebu",        "km": 50,  "min": 60,  "ruta": "Ruta P-40"},
+    "canete":      {"nombre": "Cañete",      "km": 70,  "min": 80,  "ruta": "Ruta P-72"},
+    "tirua":       {"nombre": "Tirúa",       "km": 110, "min": 120, "ruta": "Ruta P-72 sur"},
+    "curanilahue": {"nombre": "Curanilahue", "km": 25,  "min": 30,  "ruta": "Ruta 160"},
+    "los-alamos":  {"nombre": "Los Álamos",  "km": 35,  "min": 40,  "ruta": "Ruta 160"},
+    "contulmo":    {"nombre": "Contulmo",    "km": 90,  "min": 100, "ruta": "Ruta P-72 + P-60"},
+}
+
+
+def _localize_blog(html: str, base_slug: str, comuna_slug: str) -> str:
+    """Genera versión localizada del blog para una comuna de Arauco.
+    Cambia title/meta/h1/lead/canonical y agrega referencia de la comuna."""
+    import re as _re
+    c = COMUNAS_ARAUCO[comuna_slug]
+    nombre = c["nombre"]
+    km = c["km"]
+    minutos = c["min"]
+
+    # Title con sufijo de comuna
+    html = _re.sub(
+        r'(<title>[^<]*?)(\s*\|\s*CMC</title>)',
+        rf'\1 desde {nombre}\2', html, count=1
+    )
+
+    # Meta description con localidad
+    html = _re.sub(
+        r'(<meta name="description" content="[^"]*?)(\s*"\s*/>)',
+        rf'\1 Atendemos pacientes desde {nombre} ({km} km · {minutos} min). Provincia de Arauco."\2',
+        html, count=1
+    )
+
+    # og:title
+    html = _re.sub(
+        r'(<meta property="og:title" content="[^"]*?)(\s*"\s*/>)',
+        rf'\1 desde {nombre}\2', html, count=1
+    )
+
+    # Canonical apunta a versión localizada en centromedicocarampangue.cl
+    html = _re.sub(
+        rf'<link rel="canonical" href="https://agentecmc\.cl/blog/{base_slug}"\s*/>',
+        f'<link rel="canonical" href="https://centromedicocarampangue.cl/blog/{base_slug}-{comuna_slug}" />',
+        html
+    )
+
+    # Schema URLs apuntan a versión localizada
+    html = html.replace(
+        f'"https://agentecmc.cl/blog/{base_slug}"',
+        f'"https://centromedicocarampangue.cl/blog/{base_slug}-{comuna_slug}"'
+    )
+
+    # H1: agregar " · {nombre}" al final
+    html = _re.sub(
+        r'(<h1 class="blog-h1">[^<]*?)(</h1>)',
+        rf'\1 · {nombre}\2', html, count=1
+    )
+
+    # Lead: prefix con localidad y datos de viaje
+    html = _re.sub(
+        r'(<p class="blog-lead">\s*)',
+        rf'\1<strong>Pacientes desde {nombre}</strong> ({km} km · {minutos} min en auto). ',
+        html, count=1
+    )
+
+    # Breadcrumb visible
+    html = _re.sub(
+        r'(<span class="current">)([^<]+)(</span>)',
+        rf'\1\2 · {nombre}\3', html, count=1
+    )
+
+    return html
+
+
+@app.get("/sitemap.xml")
+async def sitemap_xml():
+    """Sitemap dinámico con todas las URLs (home + 7 blogs base + 49 localizadas)."""
+    from fastapi.responses import Response
+    BLOGS_BASE = ["cardiologia", "medicina-general", "ortodoncia", "ecografia",
+                  "estetica-facial", "kinesiologia", "odontologia-general"]
+    base_url = "https://centromedicocarampangue.cl"
+    today = "2026-05-02"
+    urls = [(f"{base_url}/", "1.0", "weekly")]
+    for slug in BLOGS_BASE:
+        urls.append((f"{base_url}/blog/{slug}", "0.9", "monthly"))
+        for comuna_slug in COMUNAS_ARAUCO:
+            urls.append((f"{base_url}/blog/{slug}-{comuna_slug}", "0.7", "monthly"))
+    parts = ['<?xml version="1.0" encoding="UTF-8"?>',
+             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+    for url, priority, freq in urls:
+        parts.append(
+            f'  <url><loc>{url}</loc><lastmod>{today}</lastmod>'
+            f'<changefreq>{freq}</changefreq><priority>{priority}</priority></url>'
+        )
+    parts.append('</urlset>')
+    return Response(content="\n".join(parts), media_type="application/xml")
+
+
+@app.get("/robots.txt")
+async def robots_txt():
+    """robots.txt apuntando al sitemap dinámico."""
+    from fastapi.responses import PlainTextResponse
+    body = (
+        "User-agent: *\n"
+        "Allow: /\n"
+        "Disallow: /admin\n"
+        "Disallow: /api/\n"
+        "\n"
+        "Sitemap: https://centromedicocarampangue.cl/sitemap.xml\n"
+        "Sitemap: https://agentecmc.cl/sitemap.xml\n"
+    )
+    return PlainTextResponse(body)
 
 
 @app.get("/api/google-rating")

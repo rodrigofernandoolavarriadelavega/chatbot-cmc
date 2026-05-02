@@ -5090,6 +5090,32 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "modalidad": data.get("modalidad", "particular"),
                     "id_cita_old": cita_old.get("id") if reagendar else None,
                 })
+                # ── Meta CAPI: evento Schedule ─────────────────────────────
+                # create_task: no bloquea el flujo si CAPI falla o tarda.
+                try:
+                    import meta_capi as _mc
+                    _capi_rut = data.get("rut") or ""
+                    _capi_nom = (paciente.get("nombre") or "").split()
+                    _capi_fn  = _capi_nom[0] if _capi_nom else None
+                    _capi_ln  = _capi_nom[-1] if len(_capi_nom) > 1 else None
+                    _capi_email = data.get("reg_email") or data.get("email") or None
+                    asyncio.create_task(_mc.send_event(
+                        "Schedule",
+                        phone=phone,
+                        rut=_capi_rut or None,
+                        first_name=_capi_fn,
+                        last_name=_capi_ln,
+                        email=_capi_email,
+                        fbclid=data.get("fbclid"),
+                        fbclid_ts=data.get("fbclid_ts"),
+                        custom_data={
+                            "content_name": esp,
+                            "content_category": "appointment",
+                        },
+                    ))
+                except Exception as _capi_err:
+                    log.debug("CAPI Schedule create_task falló: %s", _capi_err)
+                # ── fin CAPI ───────────────────────────────────────────────
                 cross_ref = _cross_reference_msg(esp)
                 # Recordatorio PNI para pacientes pediátricos
                 fecha_nac = (data.get("reg_fecha_nacimiento")
