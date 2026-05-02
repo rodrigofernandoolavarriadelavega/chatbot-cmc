@@ -80,3 +80,31 @@ USE_TEMPLATES = os.getenv("USE_TEMPLATES", "false").lower() in ("true", "1", "ye
 # GA4_CREDENTIALS_PATH: ruta al JSON de la cuenta de servicio
 GA4_PROPERTY_ID      = os.getenv("GA4_PROPERTY_ID", "529028500")
 GA4_CREDENTIALS_PATH = os.getenv("GA4_CREDENTIALS_PATH", "")
+
+# FIX-13: Validación pre-flight edad/género por especialidad ─────────────────
+# Evita agendar menores en especialidades adultas o vice-versa. El check se
+# hace en WAIT_RUT_AGENDAR cuando ya tenemos sexo y fecha_nacimiento del paciente.
+EDAD_MIN_ESPECIALIDAD: dict[str, int] = {
+    "psicologia adulto":  18,
+    "gastroenterologia":  16,
+    "cardiologia":        16,
+    "implantologia":      18,
+    "ginecologia":        12,
+    "otorrinolaringologia": 5,
+}
+
+EDAD_MAX_ESPECIALIDAD: dict[str, int] = {
+    "psicologia infantil": 17,
+}
+
+# "M" = masculino, "F" = femenino (según campo sexo de Medilink)
+GENERO_REQUERIDO: dict[str, str] = {
+    "ginecologia": "F",
+    "matrona":     "F",
+}
+
+# Alternativa sugerida si no cumple restricción
+ALTERNATIVA_ESPECIALIDAD: dict[str, str] = {
+    "psicologia adulto":   "psicologia infantil",
+    "psicologia infantil": "psicologia adulto",
+}

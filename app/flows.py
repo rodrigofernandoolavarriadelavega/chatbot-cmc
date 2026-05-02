@@ -4779,6 +4779,57 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "_Ejemplo: *María González López, F, 15/03/1990*_"
             )
 
+        # FIX-13: Validación pre-flight edad/género antes de confirmar cita.
+        # Evita agendar menores en especialidades adultas (o vice-versa).
+        try:
+            from config import (EDAD_MIN_ESPECIALIDAD, EDAD_MAX_ESPECIALIDAD,
+                                GENERO_REQUERIDO, ALTERNATIVA_ESPECIALIDAD)
+            _esp_lower = (data.get("especialidad") or "").lower().strip()
+            _sexo_pac = (paciente.get("sexo") or "").upper()[:1]
+            _fn_pac = paciente.get("fecha_nacimiento") or ""
+            _edad_pac: int | None = None
+            if _fn_pac:
+                try:
+                    from datetime import datetime as _dtpf, date as _dpf
+                    # Medilink devuelve DD/MM/YYYY
+                    _dparsed = datetime.strptime(_fn_pac, "%d/%m/%Y").date()
+                    _today = datetime.now(_CHILE_TZ).date()
+                    _edad_pac = (_today - _dparsed).days // 365
+                except Exception:
+                    pass
+            _pf_err: str | None = None
+            if _edad_pac is not None:
+                _min_e = EDAD_MIN_ESPECIALIDAD.get(_esp_lower)
+                _max_e = EDAD_MAX_ESPECIALIDAD.get(_esp_lower)
+                if _min_e and _edad_pac < _min_e:
+                    alt = ALTERNATIVA_ESPECIALIDAD.get(_esp_lower, "")
+                    _pf_err = (
+                        f"Esta especialidad (*{_esp_lower.title()}*) es para mayores de {_min_e} años. "
+                        f"El paciente tiene {_edad_pac} años."
+                        + (f"\n\n¿Quieres agendar *{alt.title()}* en su lugar? Escribe *{alt}* o *menu*." if alt else "")
+                    )
+                elif _max_e and _edad_pac > _max_e:
+                    alt = ALTERNATIVA_ESPECIALIDAD.get(_esp_lower, "")
+                    _pf_err = (
+                        f"Esta especialidad (*{_esp_lower.title()}*) es para menores de {_max_e + 1} años. "
+                        f"El paciente tiene {_edad_pac} años."
+                        + (f"\n\n¿Quieres agendar *{alt.title()}* en su lugar? Escribe *{alt}* o *menu*." if alt else "")
+                    )
+            _genero_req = GENERO_REQUERIDO.get(_esp_lower)
+            if not _pf_err and _genero_req and _sexo_pac and _sexo_pac != _genero_req:
+                _lbl = "mujeres" if _genero_req == "F" else "hombres"
+                _pf_err = (
+                    f"La especialidad *{_esp_lower.title()}* solo atiende {_lbl}. "
+                    "Puedo ayudarte a buscar otra especialidad."
+                )
+            if _pf_err:
+                log_event(phone, "preflight_edad_genero_fallo",
+                          {"esp": _esp_lower, "edad": _edad_pac, "sexo": _sexo_pac})
+                reset_session(phone)
+                return _pf_err
+        except Exception as _e_pf:
+            log.warning("preflight edad/genero error (ignorado): %s", _e_pf)
+
         data.update({"paciente": paciente, "rut": rut})
         save_session(phone, "CONFIRMING_CITA", data)
 
