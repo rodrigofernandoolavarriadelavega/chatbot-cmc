@@ -228,7 +228,17 @@
 
 * { box-sizing: border-box; }
 
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  /* Overscroll bounce: arriba = rojo SAMU, abajo = navy footer.
+     El gradiente fixed se ve solo cuando hay rebote elástico (iOS, trackpad). */
+  background:
+    linear-gradient(to bottom,
+      #dc2626 0,
+      #dc2626 50%,
+      #0A1A28 50%,
+      #0A1A28 100%) fixed;
+}
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
@@ -414,12 +424,18 @@ section.compact { padding: 64px 0; }
 
 /* ========== HOURS BAR (horario extendido como ventaja competitiva) ========== */
 .hours-bar {
+  display: block;
   background: linear-gradient(90deg, var(--brand-deep-soft) 0%, #ffffff 100%);
   border-bottom: 1px solid var(--ink-100);
   font-family: var(--font-body);
   padding: 9px 0;
   font-size: 13.5px;
   color: var(--ink-700);
+  text-decoration: none;
+  transition: background .25s;
+}
+.hours-bar:hover {
+  background: linear-gradient(90deg, #d6e8f3 0%, #f5f9fc 100%);
 }
 .hours-bar-inner {
   display: flex; align-items: center; justify-content: center; gap: 10px;
@@ -452,6 +468,18 @@ section.compact { padding: 64px 0; }
   text-transform: uppercase; letter-spacing: .08em;
   padding: 4px 9px;
   border-radius: var(--radius-pill);
+}
+/* Estado cerrado — LED gris/coral, label más sobrio */
+.hours-bar.is-closed {
+  background: linear-gradient(90deg, var(--ink-50) 0%, #ffffff 100%);
+}
+.hours-bar.is-closed .hb-led {
+  background: var(--ink-400);
+  box-shadow: 0 0 0 4px rgba(138,151,166,.18);
+  animation: none;
+}
+.hours-bar.is-closed .hb-label {
+  color: var(--ink-700);
 }
 @media (max-width: 720px) {
   .hours-bar { font-size: 12.5px; padding: 8px 0; }
@@ -641,12 +669,24 @@ section.compact { padding: 64px 0; }
 .hero-visual .hero-logo-mark {
   position: absolute;
   top: 50%; left: 50%;
-  transform: translate(-50%, -54%);
   width: 58%;
   max-width: 240px;
   height: auto;
-  filter: drop-shadow(0 14px 40px rgba(0,0,0,0.18));
+  background: #fff;
+  padding: 28px;
+  border-radius: 28px;
+  box-shadow: 0 24px 60px -16px rgba(0,0,0,0.30), 0 0 0 1px rgba(255,255,255,0.4);
+  object-fit: contain;
   z-index: 1;
+  animation: heroLogoFloat 5s ease-in-out infinite;
+}
+@keyframes heroLogoFloat {
+  0%   { transform: translate(-50%, -54%) rotate(-1deg); }
+  50%  { transform: translate(-50%, -60%) rotate(1deg); }
+  100% { transform: translate(-50%, -54%) rotate(-1deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-visual .hero-logo-mark { animation: none; transform: translate(-50%, -54%); }
 }
 .hero-visual .hero-logo-caption {
   position: absolute;
@@ -2305,20 +2345,20 @@ section.compact { padding: 64px 0; }
   <strong>Emergencias:</strong> llama al SAMU <a href="tel:131">131</a> · No somos servicio de urgencias
 </div>
 
-<!-- HOURS BAR — ventaja competitiva: horario extendido -->
-<div class="hours-bar" aria-label="Horario de atención">
+<!-- HOURS BAR — Agenda 24/7 por WhatsApp + horario presencial -->
+<a class="hours-bar" href="https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20una%20hora." target="_blank" rel="noopener" aria-label="Agendar por WhatsApp 24/7">
   <div class="container hours-bar-inner">
     <span class="hb-led" aria-hidden="true"></span>
-    <span class="hb-label">Atendiendo ahora</span>
+    <span class="hb-label">Agenda 24/7 por WhatsApp</span>
     <span class="hb-sep">·</span>
     <span class="hb-text">
-      <strong>Lun–Vie 08:00 – 21:00</strong>
+      Atención presencial <strong>Lun–Vie 08:00 – 21:00</strong>
       <span class="hb-dot">·</span>
       <strong>Sáb 09:00 – 14:00</strong>
     </span>
     <span class="hb-tag">Horario extendido</span>
   </div>
-</div>
+</a>
 
 <!-- NAV -->
 <header class="nav-wrap">
