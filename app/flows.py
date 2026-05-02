@@ -2087,6 +2087,20 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 {"id": "retomar_menu", "title": "📋 Ver menú"},
             ]
         )
+    # BUG-02: Si el paciente escribe otro saludo después de que ya se ofreció
+    # retomar (segunda vez "hola"), re-mostrar el prompt de retomar en vez de
+    # resetear. Sin este guard caía al _es_comando_reset y destruía el estado.
+    if _es_saludo_puro and state in _FLUJO_RETOMABLE and data.get("_retomar_ofrecido"):
+        esp_retomar = data.get("especialidad") or data.get("quick_esp") or "tu cita"
+        return _btn_msg(
+            f"¡Hola! Tienes un trámite pendiente de *{esp_retomar}*. "
+            "¿Continuamos o prefieres empezar de cero?",
+            [
+                {"id": "retomar_si", "title": "✅ Retomar"},
+                {"id": "retomar_no", "title": "🔄 Empezar de cero"},
+                {"id": "retomar_menu", "title": "📋 Ver menú"},
+            ]
+        )
     # Handler de los botones de retomar (llega antes del reset_session general)
     if tl in ("retomar_si",):
         data.pop("_retomar_ofrecido", None)
@@ -4177,6 +4191,34 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 reset_session(phone)
                 return await _iniciar_agendar(phone, {}, apellido_key)
 
+        # BUG-05: Bypass determinístico de precio en WAIT_SLOT con especialidad activa.
+        # Sin esto, inputs cortos como "precio" o "cuánto" pasan a detect_intent que
+        # puede retornar intent != "precio" y la respuesta es inconsistente (FAQ genérica
+        # o "comunícate con recepción"). Con especialidad activa: siempre precio directo.
+        _PRECIO_KW_SLOT = ("precio", "cuánto", "cuanto", "vale", "cuesta", "costo",
+                           "valor", "bono", "cobran", "cobra")
+        if idx is None and any(k in tl_norm_slot for k in _PRECIO_KW_SLOT):
+            _esp_precio = todos_slots[0]["especialidad"] if todos_slots else especialidad
+            if _esp_precio:
+                _precio_resp = _precio_line(_esp_precio)
+                if _precio_resp:
+                    save_session(phone, "WAIT_SLOT", data)
+                    return (
+                        f"{_precio_resp}\n\n"
+                        "_Elige un número para continuar con tu reserva o escribe *menu* para volver._"
+                    )
+            # Sin precio en tabla → respuesta_faq con contexto de especialidad
+            _consulta_precio = f"¿Cuánto cuesta una consulta de {_esp_precio}?" if _esp_precio else txt
+            try:
+                _resp_p = await respuesta_faq(_consulta_precio)
+            except Exception:
+                _resp_p = f"Para precios comunícate con recepción: 📞 *{CMC_TELEFONO}*"
+            save_session(phone, "WAIT_SLOT", data)
+            return (
+                f"{_resp_p}\n\n"
+                "_Elige un número para continuar con tu reserva o escribe *menu* para volver._"
+            )
+
         if idx is None:
             # Si el texto parece una hora pero no coincide con slots, mostrar opciones
             import re as _re
@@ -4346,6 +4388,52 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if txt.startswith("motivo_") or tl in ("menu", "menú", "inicio", "hola", "volver"):
                 reset_session(phone)
                 return await handle_message(phone, txt, {"state": "IDLE", "data": {}})
+            # BUG-03: Escape explícito "no quiero" / "cancelar" / "salir" → reset limpio
+            _NO_QUIERO_KW = ("no quiero", "no quero", "ya no quiero", "ya no", "no gracias",
+                             "cancelar", "cancel", "salir", "no necesito", "dejalo", "déjalo",
+                             "olvida", "olvidalo", "olvídalo", "no importa", "nada")
+            if any(k in tl for k in _NO_QUIERO_KW) or tl in NEGACIONES:
+                reset_session(phone)
+                return (
+                    "Entendido, no hay problema 😊\n\n"
+                    "_Escribe *menu* si necesitas algo más._"
+                )
+            # BUG-03: Pregunta de precio → responder con precio de la especialidad activa
+            _PRECIO_KW = ("precio", "cuánto", "cuanto", "vale", "cuesta", "costo", "valor", "bono")
+            if any(k in tl for k in _PRECIO_KW):
+                esp_modal = data.get("especialidad", "")
+                if esp_modal:
+                    precio_l = _precio_line(esp_modal)
+                    if precio_l:
+                        save_session(phone, "WAIT_MODALIDAD", data)
+                        return _btn_msg(
+                            f"{precio_l}\n\n¿La atención será *Fonasa* o *Particular*?",
+                            [{"id": "1", "title": "Fonasa"},
+                             {"id": "2", "title": "Particular"}]
+                        )
+                # Sin especialidad conocida: derivar a FAQ
+                try:
+                    resp_faq = await respuesta_faq(txt)
+                except Exception:
+                    resp_faq = f"Para precios comunícate con recepción: 📞 *{CMC_TELEFONO}*"
+                save_session(phone, "WAIT_MODALIDAD", data)
+                return _btn_msg(
+                    f"{resp_faq}\n\n¿La atención será *Fonasa* o *Particular*?",
+                    [{"id": "1", "title": "Fonasa"},
+                     {"id": "2", "title": "Particular"}]
+                )
+            # BUG-03: Pregunta libre (contiene "?") → responder y volver a pedir modalidad
+            if "?" in txt and len(txt) >= 5:
+                try:
+                    resp_faq = await respuesta_faq(txt)
+                except Exception:
+                    resp_faq = f"Para más información llama a recepción: 📞 *{CMC_TELEFONO}*"
+                save_session(phone, "WAIT_MODALIDAD", data)
+                return _btn_msg(
+                    f"{resp_faq}\n\n¿La atención será *Fonasa* o *Particular*?",
+                    [{"id": "1", "title": "Fonasa"},
+                     {"id": "2", "title": "Particular"}]
+                )
             # Escape: menciona "otra persona" → saltar a flujo de terceros
             # Regex con word-boundary evita matchear "para otro DÍA" o
             # "para otra CITA". Caso real 2026-04-21 (56982709417): "necesito
@@ -6702,7 +6790,20 @@ def _detectar_especialidad_en_texto(txt: str) -> str | None:
     (j→g, y→ll, sh→ch, sin tildes) y reintenta."""
     if not txt:
         return None
-    tl = txt.lower()
+    tl = txt.lower().strip()
+    # BUG-04: "eco" solo (o "eco" como palabra) → ecografía.
+    # "eco" es 3 chars: match substring daría falsos positivos ("económico", "ecología").
+    # Usar word-boundary para palabras ≤4 caracteres que son ambiguas.
+    import re as _re
+    _SHORT_EXACT = {
+        "eco": "ecografía",
+        "orl": "otorrinolaringología",
+        "kine": "kinesiología",
+        "fono": "fonoaudiología",
+    }
+    for _word, _esp in _SHORT_EXACT.items():
+        if _re.search(r'\b' + _re.escape(_word) + r'\b', tl):
+            return _esp
     for frase, key in _FRASES_ESPECIALIDAD:
         if frase in tl:
             return key

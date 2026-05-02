@@ -1118,9 +1118,12 @@ async def listar_citas_paciente(id_paciente: int, rut: str | None = None) -> lis
             except httpx.RequestError as e:
                 log.error("listar_citas_paciente id=%d: %s", id_paciente, e)
                 return []
-        # Filtrar por id_paciente en cliente por si el RUT tiene más de un registro
-        if rut:
-            data = [c for c in data if not c.get("id_paciente") or c.get("id_paciente") == id_paciente]
+        # BUG-01: no filtrar por id_paciente clientside cuando se buscó por RUT.
+        # Medilink puede retornar id_paciente como str o int, y una cita recién
+        # creada puede tener un id_paciente distinto al del perfil buscado por
+        # buscar_paciente() si el paciente tiene dos registros. El RUT ya filtra
+        # correctamente. Eliminar este filtro para que citas recién creadas aparezcan.
+        # (Antes: data = [c for c in data if not c.get("id_paciente") or c.get("id_paciente") == id_paciente])
         citas = []
         for c in data:
             id_prof = c.get("id_profesional")

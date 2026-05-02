@@ -62,6 +62,20 @@ else:
     _OPERATIONAL_ERRORS = (sqlite3.OperationalError,)
 
 
+def normalize_wa_id(raw: str) -> str:
+    """BUG-09: Normaliza un número de teléfono al formato canónico sin '+'.
+    Aplica en webhook, admin_routes, jobs y fidelización para que nunca
+    existan filas duplicadas '56XXX' y '+56XXX' en sessions/citas_bot.
+    Ejemplos: '+56978737250' → '56978737250', '56978737250' → '56978737250'.
+    No-WA IDs (fb_*, ig_*, TEST_*) se devuelven sin modificar."""
+    if not raw:
+        return raw
+    # Preservar prefijos de redes sociales y otros canales
+    if not raw.lstrip("+").isdigit():
+        return raw
+    return raw.lstrip("+")
+
+
 def _conn():
     DB_PATH.parent.mkdir(exist_ok=True)
     if _USE_SQLCIPHER:
@@ -567,6 +581,7 @@ def get_session(phone: str) -> dict:
     - Flujos activos (WAIT_*, CONFIRMING_*): 4h (paciente volviendo retoma)
     - IDLE / HUMAN_TAKEOVER / otros: 30 min
     """
+    phone = normalize_wa_id(phone)  # BUG-09: formato canónico sin '+'
     with _conn() as conn:
         row = conn.execute("SELECT * FROM sessions WHERE phone=?", (phone,)).fetchone()
         if not row:
@@ -596,6 +611,7 @@ def get_session(phone: str) -> dict:
 
 def save_session(phone: str, state: str, data: dict):
     """Guarda o actualiza la sesión."""
+    phone = normalize_wa_id(phone)  # BUG-09: formato canónico sin '+'
     with _conn() as conn:
         conn.execute("""
             INSERT INTO sessions (phone, state, data, updated_at)
@@ -610,6 +626,7 @@ def save_session(phone: str, state: str, data: dict):
 
 def reset_session(phone: str):
     """Reinicia la sesión a IDLE."""
+    phone = normalize_wa_id(phone)  # BUG-09: formato canónico sin '+'
     with _conn() as conn:
         _reset(conn, phone)
 
