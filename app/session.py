@@ -33,6 +33,10 @@ _FLUJO_ACTIVO_STATES = {
     "CONFIRMING_CITA", "WAIT_DURACION_MASOTERAPIA",
     "WAIT_RUT_CANCELAR", "WAIT_CITA_CANCELAR", "CONFIRMING_CANCEL",
     "WAIT_RUT_REAGENDAR", "WAIT_CITA_REAGENDAR", "WAIT_QUICK_BOOK",
+    # FIX-6: estos 4 estados tenían handlers pero NO estaban aquí → timeout
+    # 30 min en lugar de 240 min, pacientes perdían contexto mid-flujo.
+    "WAIT_RUT_VER", "WAIT_WAITLIST_CONFIRM", "WAIT_WAITLIST_RUT",
+    "WAIT_REFERRAL_POST",
 }
 
 # ── SQLCipher opcional ───────────────────────────────────────────────────────
