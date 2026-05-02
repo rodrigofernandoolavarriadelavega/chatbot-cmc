@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OLACORE · Agentes & Automatizaciones</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --fiordo:#1F3340; --cobre:#B86D3F; --neblina:#EFE9DD; --musgo:#4A5F3A;
+    --lacre:#8C2A2A; --agua:#5B8B96; --noche:#122028; --line:rgba(31,51,64,.12);
+  }
+  body{ font-family:'Inter',sans-serif; background:var(--neblina); color:var(--fiordo); }
+  h1,h2,h3,.serif{ font-family:'Fraunces',serif; }
+  .mono{ font-family:'IBM Plex Mono',monospace; }
+  .kpi-card{ background:white; border:1px solid var(--line); border-radius:6px; padding:18px 22px; }
+  .kpi-num{ font-family:'Fraunces',serif; font-size:34px; font-weight:500; line-height:1; color:var(--fiordo); }
+  .kpi-label{ font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--cobre); margin-bottom:8px; }
+  .kpi-sub{ font-size:11px; color:rgba(31,51,64,.6); margin-top:4px; }
+  .section-head{ font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:3px; text-transform:uppercase; color:var(--cobre); margin-bottom:8px; }
+  .section-title{ font-family:'Fraunces',serif; font-size:32px; font-weight:500; line-height:1.05; margin-bottom:24px; }
+
+  .agent-card{ background:white; border:1px solid var(--line); border-radius:6px; padding:18px 20px; transition:all .15s; position:relative; }
+  .agent-card:hover{ border-color:var(--cobre); transform:translateY(-1px); box-shadow:0 6px 20px rgba(31,51,64,.06); }
+  .agent-card .name{ font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--fiordo); font-weight:500; }
+  .agent-card .role{ font-family:'Fraunces',serif; font-size:18px; font-style:italic; color:var(--cobre); margin-top:2px; }
+  .agent-card .desc{ font-size:13px; line-height:1.5; color:rgba(31,51,64,.78); margin-top:10px; }
+  .agent-card .tools{ font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:1px; color:rgba(31,51,64,.5); margin-top:10px; padding-top:10px; border-top:1px dashed var(--line); }
+  .badge{ font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:1.5px; text-transform:uppercase; padding:2px 8px; border-radius:3px; display:inline-block; }
+  .badge-aud{ background:rgba(140,42,42,.1); color:var(--lacre); }
+  .badge-build{ background:rgba(74,95,58,.12); color:var(--musgo); }
+  .badge-strat{ background:rgba(91,139,150,.15); color:var(--agua); }
+  .badge-model{ background:rgba(184,109,63,.12); color:var(--cobre); }
+
+  .auto-row{ display:grid; grid-template-columns:auto 1fr auto auto; gap:16px; align-items:center; padding:14px 18px; background:white; border:1px solid var(--line); border-radius:6px; margin-bottom:8px; }
+  .auto-row .ico{ width:36px; height:36px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-family:'Fraunces',serif; font-size:18px; }
+  .auto-row .name{ font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--fiordo); font-weight:500; }
+  .auto-row .desc{ font-size:12px; color:rgba(31,51,64,.65); margin-top:2px; }
+  .auto-row .freq{ font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:1px; color:var(--cobre); text-align:right; }
+  .auto-row .status{ font-family:'IBM Plex Mono',monospace; font-size:9px; padding:3px 9px; border-radius:3px; letter-spacing:1px; }
+  .status-on{ background:rgba(74,95,58,.15); color:var(--musgo); }
+  .status-off{ background:rgba(31,51,64,.08); color:rgba(31,51,64,.5); }
+
+  .pipe{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .pipe-step{ background:white; border:1px solid var(--line); border-radius:5px; padding:10px 14px; font-family:'IBM Plex Mono',monospace; font-size:11px; }
+  .pipe-arrow{ color:var(--cobre); font-family:'Fraunces',serif; font-size:18px; }
+</style>
+</head>
+<body>
+
+<nav class="border-b border-stone-300 sticky top-0 bg-white/90 backdrop-blur z-50">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4 text-sm">
+    <span class="serif text-lg font-medium" style="color:var(--fiordo)">OLACORE</span>
+    <span class="mono text-xs opacity-50">Agentes</span>
+    <a href="/menu" class="ml-auto opacity-50 hover:opacity-100">← Menú</a>
+    <a href="/horizonte" class="opacity-70 hover:opacity-100">Horizonte</a>
+    <a href="/atribucion" class="opacity-70 hover:opacity-100">Atribución</a>
+    <a href="/ecosistema" class="opacity-70 hover:opacity-100">Ecosistema</a>
+  </div>
+</nav>
+
+<main class="max-w-7xl mx-auto px-4 py-8">
+
+  <header class="mb-10">
+    <p class="section-head">OLACORE · Operación · Sistema de agentes</p>
+    <h1 class="text-5xl md:text-6xl font-medium leading-none mb-2" style="color:var(--fiordo)">Agentes &amp; Automatizaciones<em class="italic" style="color:var(--cobre)">.</em></h1>
+    <p class="serif italic text-xl opacity-75">Quiénes piensan, quiénes construyen, qué corre solo.</p>
+    <p class="mono text-xs opacity-60 mt-3">Mapa completo del equipo digital del CMC + holding</p>
+  </header>
+
+  <!-- KPIs -->
+  <section class="mb-12">
+    <div class="grid md:grid-cols-4 gap-3">
+      <div class="kpi-card">
+        <div class="kpi-label">Subagentes Claude</div>
+        <div class="kpi-num">12</div>
+        <div class="kpi-sub">5 auditores · 6 constructores · 1 estratega</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Servicios producción</div>
+        <div class="kpi-num">3</div>
+        <div class="kpi-sub">chatbot-cmc · meulen-chatbot · ges-assistant</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Cron jobs in-app</div>
+        <div class="kpi-num">15+</div>
+        <div class="kpi-sub">recordatorios · fidelización · alertas</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Healthcheck systemd</div>
+        <div class="kpi-num">1h</div>
+        <div class="kpi-sub">cmc-healthcheck.timer activo</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AUDITORES -->
+  <section class="mb-14">
+    <p class="section-head">01 — Equipo de auditores · read-only</p>
+    <h2 class="section-title">Los que <em class="italic" style="color:var(--cobre)">revisan</em>.</h2>
+    <p class="text-sm opacity-70 mb-6 max-w-2xl">Revisan código, logs y producción desde un ángulo específico. Nunca escriben — solo levantan hallazgos para decidir qué arreglar.</p>
+
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+      <div class="agent-card">
+        <span class="badge badge-aud">Auditor</span>
+        <div class="name mt-3">cmc-bugs</div>
+        <div class="role">Cazador general de bugs</div>
+        <div class="desc">Pasada completa por logs recientes y código en busca de bugs sin foco específico. Útil tras deploy o como ronda regular.</div>
+        <div class="tools">Bash · Read · Glob · Grep</div>
+      </div>
+
+      <div class="agent-card">
+        <span class="badge badge-aud">Auditor</span>
+        <div class="name mt-3">cmc-medical</div>
+        <div class="role">Exactitud médica & clínica</div>
+        <div class="desc">Detecta precios desactualizados, derivaciones erróneas, triage que pierde patología grave o info de profesionales desfasada.</div>
+        <div class="tools">Bash · Read · Glob · Grep</div>
+      </div>
+
+      <div class="agent-card">
+        <span class="badge badge-aud">Auditor</span>
+        <div class="name mt-3">cmc-performance</div>
+        <div class="role">Performance & escalabilidad</div>
+        <div class="desc">Queries lentas, N+1, cache stampede, memory leaks, locks demasiado amplios, httpx clients no reutilizados.</div>
+        <div class="tools">Bash · Read · Glob · Grep</div>
+      </div>
+
+      <div class="agent-card">
+        <span class="badge badge-aud">Auditor</span>
+        <div class="name mt-3">cmc-security</div>
+        <div class="role">Seguridad & compliance</div>
+        <div class="desc">Leaks de tokens, SQL injection, CSRF, rate-limiting, validación. Compliance Ley 21.719 y WhatsApp Business Policy.</div>
+        <div class="tools">Bash · Read · Glob · Grep</div>
+      </div>
+
+      <div class="agent-card">
+        <span class="badge badge-aud">Auditor</span>
+        <div class="name mt-3">cmc-ux</div>
+        <div class="role">UX conversacional</div>
+        <div class="desc">Mensajes confusos, flujos rotos, botones mal etiquetados, loops, redundancias y problemas de tono/formato del bot.</div>
+        <div class="tools">Bash · Read · Glob · Grep</div>
+      </div>
+
+      <div class="agent-card">
+        <span class="badge badge-aud">Auditor</span>
+        <div class="name mt-3">cmc-conversation-auditor</div>
+        <div class="role">Conversaciones reales en prod</div>
+        <div class="desc">Trabaja directo sobre <span class="mono">sessions.db</span>: detecta bugs en producción, casos edge, frustración del paciente, oportunidades comerciales perdidas.</div>
+        <div class="tools">Bash · Read · Glob · Grep · SQLCipher</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- CONSTRUCTORES -->
+  <section class="mb-14">
+    <p class="section-head">02 — Equipo de constructores · escriben código</p>
+    <h2 class="section-title">Los que <em class="italic" style="color:var(--cobre)">implementan</em>.</h2>
+    <p class="text-sm opacity-70 mb-6 max-w-2xl">Escriben código, ejecutan deploys, crean dashboards y assets de marca. Cada uno con conocimiento profundo de su dominio.</p>
+
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+      <div class="agent-card">
+        <span class="badge badge-build">Constructor</span>
+        <span class="badge badge-model ml-1">sonnet</span>
+        <div class="name mt-3">cmc-bot-engineer</div>
+        <div class="role">Ingeniero del chatbot</div>
+        <div class="desc">Bugfixes, features, refactors en <span class="mono">flows.py</span>, <span class="mono">claude_helper</span>, <span class="mono">medilink</span>, <span class="mono">jobs</span>. Sabe la máquina de estados, IDs Medilink, gotchas API, glosario médico, deploy via systemd.</div>
+        <div class="tools">Bash · Read · Write · Edit · Glob · Grep</div>
+      </div>
+
+      <div class="agent-card">
+        <span class="badge badge-build">Constructor</span>
+        <span class="badge badge-model ml-1">sonnet</span>
+        <div class="name mt-3">cmc-data-analyst</div>
+        <div class="role">Analista de datos clínicos</div>
+        <div class="desc">SQL a <span class="mono">sessions.db</span> (SQLCipher) y <span class="mono">heatmap_cache.db</span>. Conversión por especialidad, friction hotspots, NPS, heatmaps geográficos, win-back, demanda no satisfecha.</div>
+        <div class="tools">Bash · Read · Write · Glob · Grep</div>
+      </div>
+
+      <div class="agent-card">
+        <span class="badge badge-build">Constructor</span>
+        <span class="badge badge-model ml-1">sonnet</span>
+        <div class="name mt-3">cmc-dashboard-builder</div>
+        <div class="role">Constructor de dashboards</div>
+        <div class="desc">FastAPI + Tailwind + Chart.js bajo identidad OLACORE. Conoce el patrón de registro en <span class="mono">main.py</span>, cross-nav, branding aplicado a tabs interactivos.</div>
+        <div class="tools">Read · Write · Edit · Bash · Glob · Grep</div>
+      </div>
+
+      <div class="agent-card">
+        <span class="badge badge-build">Constructor</span>
+        <span class="badge badge-model ml-1">sonnet</span>
+        <div class="name mt-3">cmc-attribution-reporter</div>
+        <div class="role">Reporta cruces Meta × Bot</div>
+        <div class="desc">Reporte diario/semanal Meta Ads × Bot CMC × Pacientes nuevos × Referidos. Para decisiones de marketing en base al embudo real.</div>
+        <div class="tools">Bash · Read · Glob · Grep</div>
+      </div>
+
+      <div class="agent-card">
+        <span class="badge badge-build">Constructor</span>
+        <span class="badge badge-model ml-1">sonnet</span>
+        <div class="name mt-3">olacore-brand-designer</div>
+        <div class="role">Diseñador de identidad</div>
+        <div class="desc">Brand boards completos (HTML+CSS+SVG) de sub-marcas OLACORE. Sellos, wordmarks, lockups, paletas, mockups (tarjeta, fachada, Instagram).</div>
+        <div class="tools">Read · Write · Edit · Bash · Glob</div>
+      </div>
+
+      <div class="agent-card">
+        <span class="badge badge-strat">Estratega</span>
+        <span class="badge badge-model ml-1">opus</span>
+        <div class="name mt-3">clinic-strategist</div>
+        <div class="role">Consultor de fondo</div>
+        <div class="desc">Conversaciones estratégicas: escenarios de crecimiento, marca, expansión geográfica, contratación, modelos de negocio. <strong>No implementa</strong> — piensa, compara, recomienda.</div>
+        <div class="tools">Read · Bash · Glob · Grep · WebFetch</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- FLUJO RECOMENDADO -->
+  <section class="mb-14">
+    <p class="section-head">03 — Cómo encadenarlos</p>
+    <h2 class="section-title">Flujo <em class="italic" style="color:var(--cobre)">recomendado</em>.</h2>
+
+    <div class="bg-white border border-stone-200 rounded-md p-6">
+      <div class="pipe">
+        <div class="pipe-step" style="background:rgba(140,42,42,.06); border-color:rgba(140,42,42,.2)"><strong>cmc-bugs</strong><br><span class="opacity-60">detecta</span></div>
+        <span class="pipe-arrow">→</span>
+        <div class="pipe-step" style="background:rgba(140,42,42,.06); border-color:rgba(140,42,42,.2)"><strong>cmc-conversation-auditor</strong><br><span class="opacity-60">en prod</span></div>
+        <span class="pipe-arrow">→</span>
+        <div class="pipe-step" style="background:rgba(31,51,64,.04)"><strong>cmc-data-analyst</strong><br><span class="opacity-60">cuantifica</span></div>
+        <span class="pipe-arrow">→</span>
+        <div class="pipe-step" style="background:rgba(91,139,150,.08); border-color:rgba(91,139,150,.25)"><strong>clinic-strategist</strong><br><span class="opacity-60">decide</span></div>
+        <span class="pipe-arrow">→</span>
+        <div class="pipe-step" style="background:rgba(74,95,58,.08); border-color:rgba(74,95,58,.25)"><strong>cmc-bot-engineer</strong><br><span class="opacity-60">implementa</span></div>
+        <span class="pipe-arrow">→</span>
+        <div class="pipe-step" style="background:rgba(74,95,58,.08); border-color:rgba(74,95,58,.25)"><strong>cmc-dashboard-builder</strong><br><span class="opacity-60">visualiza</span></div>
+      </div>
+      <p class="text-xs opacity-60 mt-5 italic serif">Auditores nunca implementan. Constructores no auditan code review. La frontera mantiene la calidad.</p>
+    </div>
+  </section>
+
+  <!-- AUTOMATIZACIONES SERVIDOR -->
+  <section class="mb-14">
+    <p class="section-head">04 — Servidor DigitalOcean · 157.245.13.107</p>
+    <h2 class="section-title">Servicios &amp; <em class="italic" style="color:var(--cobre)">timers</em>.</h2>
+
+    <div class="grid md:grid-cols-2 gap-4 mb-8">
+      <div>
+        <p class="mono text-xs opacity-60 mb-2">SYSTEMD SERVICES (auto-restart)</p>
+
+        <div class="auto-row">
+          <div class="ico" style="background:rgba(184,109,63,.12); color:var(--cobre)">⏵</div>
+          <div>
+            <div class="name">chatbot-cmc.service</div>
+            <div class="desc">uvicorn 0.0.0.0:8001 · WhatsApp Bot CMC</div>
+          </div>
+          <div class="freq">always-on</div>
+          <div class="status status-on">RUNNING</div>
+        </div>
+
+        <div class="auto-row">
+          <div class="ico" style="background:rgba(74,95,58,.15); color:var(--musgo)">⏵</div>
+          <div>
+            <div class="name">meulen-chatbot.service</div>
+            <div class="desc">Chatbot WhatsApp Supermercado Meulen</div>
+          </div>
+          <div class="freq">always-on</div>
+          <div class="status status-on">RUNNING</div>
+        </div>
+
+        <div class="auto-row">
+          <div class="ico" style="background:rgba(91,139,150,.15); color:var(--agua)">⏵</div>
+          <div>
+            <div class="name">ges-assistant.service</div>
+            <div class="desc">uvicorn 127.0.0.1:8002 · backend GES Clinical</div>
+          </div>
+          <div class="freq">always-on</div>
+          <div class="status status-on">RUNNING</div>
+        </div>
+      </div>
+
+      <div>
+        <p class="mono text-xs opacity-60 mb-2">SYSTEMD TIMERS</p>
+
+        <div class="auto-row">
+          <div class="ico" style="background:rgba(184,109,63,.12); color:var(--cobre)">◷</div>
+          <div>
+            <div class="name">cmc-healthcheck.timer</div>
+            <div class="desc">healthcheck.sh · ping Medilink + bot status</div>
+          </div>
+          <div class="freq">cada 1h</div>
+          <div class="status status-on">ACTIVE</div>
+        </div>
+
+        <div class="auto-row">
+          <div class="ico" style="background:rgba(31,51,64,.06)">◷</div>
+          <div>
+            <div class="name">certbot.timer</div>
+            <div class="desc">Renovación SSL agentecmc.cl · Cloudflare → DO</div>
+          </div>
+          <div class="freq">2× día</div>
+          <div class="status status-on">ACTIVE</div>
+        </div>
+
+        <div class="auto-row">
+          <div class="ico" style="background:rgba(31,51,64,.06)">◷</div>
+          <div>
+            <div class="name">logrotate.timer</div>
+            <div class="desc">Rotación de <span class="mono">/var/log/cmc-bot.log</span></div>
+          </div>
+          <div class="freq">diario 00:00</div>
+          <div class="status status-on">ACTIVE</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CRON JOBS IN-APP -->
+  <section class="mb-14">
+    <p class="section-head">05 — APScheduler · jobs.py · timezone America/Santiago</p>
+    <h2 class="section-title">Cron jobs <em class="italic" style="color:var(--cobre)">in-app</em>.</h2>
+    <p class="text-sm opacity-70 mb-6 max-w-2xl">Corren dentro del proceso del chatbot. Si <span class="mono">chatbot-cmc.service</span> reinicia, se rearman desde 0 con persistencia en SQLite.</p>
+
+    <div class="grid md:grid-cols-2 gap-3">
+
+      <div class="auto-row">
+        <div class="ico" style="background:rgba(184,109,63,.12); color:var(--cobre)">📋</div>
+        <div>
+          <div class="name">recordatorio_cita_dia</div>
+          <div class="desc">Aviso 09:00 a pacientes con cita ese día</div>
+        </div>
+        <div class="freq">09:00 CLT</div>
+        <div class="status status-on">ON</div>
+      </div>
+
+      <div class="auto-row">
+        <div class="ico" style="background:rgba(184,109,63,.12); color:var(--cobre)">⏰</div>
+        <div>
+          <div class="name">recordatorio_cita_2h</div>
+          <div class="desc">Aviso 2h antes de la cita</div>
+        </div>
+        <div class="freq">cada 15min · 7:30–21:30</div>
+        <div class="status status-on">ON</div>
+      </div>
+
+      <div class="auto-row">
+        <div class="ico" style="background:rgba(74,95,58,.15); color:var(--musgo)">↻</div>
+        <div>
+          <div class="name">reenganche_abandono</div>
+          <div class="desc">Recupera flujos abandonados 10–60 min</div>
+        </div>
+        <div class="freq">cada 5min</div>
+        <div class="status status-on">ON</div>
+      </div>
+
+      <div class="auto-row">
+        <div class="ico" style="background:rgba(91,139,150,.15); color:var(--agua)">⚕</div>
+        <div>
+          <div class="name">medilink_watchdog</div>
+          <div class="desc">Circuit breaker + flap protection 30min</div>
+        </div>
+        <div class="freq">cada 1min</div>
+        <div class="status status-on">ON</div>
+      </div>
+
+      <div class="auto-row">
+        <div class="ico" style="background:rgba(91,139,150,.15); color:var(--agua)">📩</div>
+        <div>
+          <div class="name">postconsulta_seguimiento</div>
+          <div class="desc">Mensaje "¿cómo te sentiste?" 22:00 mismo día</div>
+        </div>
+        <div class="freq">22:00 CLT</div>
+        <div class="status status-on">ON</div>
+      </div>
+
+      <div class="auto-row">
+        <div class="ico" style="background:rgba(91,139,150,.15); color:var(--agua)">⌚</div>
+        <div>
+          <div class="name">waitlist_notify</div>
+          <div class="desc">Lista espera + cancelación → cupo disponible</div>
+        </div>
+        <div class="freq">07:00 + event-driven</div>
+        <div class="status status-on">ON</div>
+      </div>
+
+      <div class="auto-row">
+        <div class="ico" style="background:rgba(140,42,42,.1); color:var(--lacre)">🎂</div>
+        <div>
+          <div class="name">cumpleanos_diario</div>
+          <div class="desc">Saludo + tips preventivos por edad</div>
+        </div>
+        <div class="freq">08:00 diario</div>
+        <div class="status status-on">ON</div>
+      </div>
+
+      <div class="auto-row">
+        <div class="ico" style="background:rgba(140,42,42,.1); color:var(--lacre)">↩</div>
+        <div>
+          <div class="name">winback_mensual</div>
+          <div class="desc">Pacientes &gt;90 días sin cita · personalizado por dx:*</div>
+        </div>
+        <div class="freq">1er lunes 10:00</div>
+        <div class="status status-on">ON</div>
+      </div>
+
+      <div class="auto-row">
+        <div class="ico" style="background:rgba(74,95,58,.15); color:var(--musgo)">💪</div>
+        <div>
+          <div class="name">adherencia_kine</div>
+          <div class="desc">Recordatorio kine en pacientes con sesiones recurrentes</div>
+        </div>
+        <div class="freq">según ciclo</div>
+        <div class="status status-on">ON</div>
+      </div>
+
+      <div class="auto-row">
+        <div class="ico" style="background:rgba(74,95,58,.15); color:var(--musgo)">🦷</div>
+        <div>
+          <div class="name">control_especialidad</div>
+          <div class="desc">Cross-sell ortodoncia, implantología, estética</div>
+        </div>
+        <div class="freq">según ciclo</div>
+        <div class="status status-on">ON</div>
+      </div>
+
+      <div class="auto-row">
+        <div class="ico" style="background:rgba(31,51,64,.06)">📦</div>
+        <div>
+          <div class="name">citas_cache_sync</div>
+          <div class="desc">Sincroniza tabla <span class="mono">citas_cache</span> desde Medilink</div>
+        </div>
+        <div class="freq">23:50 CLT</div>
+        <div class="status status-on">ON</div>
+      </div>
+
+      <div class="auto-row">
+        <div class="ico" style="background:rgba(31,51,64,.06)">🩺</div>
+        <div>
+          <div class="name">doctor_alerts</div>
+          <div class="desc">Resumen pre-cita 10min antes + reportes 09/12/16/20</div>
+        </div>
+        <div class="freq">eventos + horarios</div>
+        <div class="status status-on">ON</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- WEBHOOKS / INTEGRACIONES -->
+  <section class="mb-14">
+    <p class="section-head">06 — Integraciones externas</p>
+    <h2 class="section-title">Webhooks &amp; <em class="italic" style="color:var(--cobre)">APIs</em>.</h2>
+
+    <div class="grid md:grid-cols-2 gap-3">
+      <div class="auto-row">
+        <div class="ico" style="background:rgba(74,95,58,.15); color:var(--musgo)">M</div>
+        <div>
+          <div class="name">Meta Cloud API · WhatsApp</div>
+          <div class="desc">Webhook <span class="mono">POST /webhook</span> · bot +56 9 6661 0737</div>
+        </div>
+        <div class="freq">push real-time</div>
+        <div class="status status-on">CONNECTED</div>
+      </div>
+
+      <div class="auto-row">
+        <div class="ico" style="background:rgba(91,139,150,.15); color:var(--agua)">M</div>
+        <div>
+          <div class="name">Medilink API v5</div>
+          <div class="desc">api.medilink2.healthatom.com · slots, citas, pacientes</div>
+        </div>
+        <div class="freq">on-demand</div>
+        <div class="status status-on">UP</div>
+      </div>
+
+      <div class="auto-row">
+        <div class="ico" style="background:rgba(184,109,63,.12); color:var(--cobre)">A</div>
+        <div>
+          <div class="name">Anthropic · Claude Haiku</div>
+          <div class="desc">detect_intent · respuesta_faq · _scrub_telefonos</div>
+        </div>
+        <div class="freq">por mensaje</div>
+        <div class="status status-on">UP</div>
+      </div>
+
+      <div class="auto-row">
+        <div class="ico" style="background:rgba(140,42,42,.1); color:var(--lacre)">W</div>
+        <div>
+          <div class="name">OpenAI · Whisper</div>
+          <div class="desc">Transcripción de notas de voz WhatsApp</div>
+        </div>
+        <div class="freq">por audio</div>
+        <div class="status status-on">UP</div>
+      </div>
+
+      <div class="auto-row">
+        <div class="ico" style="background:rgba(31,51,64,.06)">F</div>
+        <div>
+          <div class="name">Meta Marketing API</div>
+          <div class="desc">Spend, impresiones, reach · cruce <span class="mono">/atribucion</span></div>
+        </div>
+        <div class="freq">refresh /atribucion</div>
+        <div class="status status-on">UP</div>
+      </div>
+
+      <div class="auto-row">
+        <div class="ico" style="background:rgba(31,51,64,.06)">G</div>
+        <div>
+          <div class="name">GES Clinical Engine</div>
+          <div class="desc">localhost:8002 · triage síntomas → especialidad</div>
+        </div>
+        <div class="freq">por intent síntoma</div>
+        <div class="status status-on">UP</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMO INVOCARLOS -->
+  <section class="mb-14">
+    <p class="section-head">07 — Cómo invocarlos</p>
+    <h2 class="section-title">Tres <em class="italic" style="color:var(--cobre)">formas</em>.</h2>
+
+    <div class="grid md:grid-cols-3 gap-4">
+      <div class="bg-white border border-stone-200 rounded-md p-5">
+        <p class="mono text-xs" style="color:var(--cobre)">01 · AUTOMÁTICO</p>
+        <h3 class="serif text-xl mt-2">Por descripción</h3>
+        <p class="text-sm mt-3 opacity-80">Le pides algo a Claude principal. Si la tarea calza con la <span class="mono">description</span> de un agente, lo invoca solo.</p>
+        <div class="mono text-xs mt-4 p-3 bg-stone-100 rounded" style="color:var(--fiordo)">"analiza la conversión por especialidad"<br>→ <strong>cmc-data-analyst</strong></div>
+      </div>
+
+      <div class="bg-white border border-stone-200 rounded-md p-5">
+        <p class="mono text-xs" style="color:var(--cobre)">02 · EXPLÍCITO</p>
+        <h3 class="serif text-xl mt-2">Por nombre</h3>
+        <p class="text-sm mt-3 opacity-80">Le indicas qué agente usar. Claude obedece sin interpretar.</p>
+        <div class="mono text-xs mt-4 p-3 bg-stone-100 rounded" style="color:var(--fiordo)">"usá el agente <strong>cmc-bot-engineer</strong> para arreglar el bug en flows.py"</div>
+      </div>
+
+      <div class="bg-white border border-stone-200 rounded-md p-5">
+        <p class="mono text-xs" style="color:var(--cobre)">03 · INTERNO · TASK</p>
+        <h3 class="serif text-xl mt-2">Por API</h3>
+        <p class="text-sm mt-3 opacity-80">Internamente Claude usa la herramienta <span class="mono">Agent</span>.</p>
+        <div class="mono text-xs mt-4 p-3 bg-stone-100 rounded" style="color:var(--fiordo)">Agent(subagent_type=<br>"cmc-medical",<br>prompt="...")</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONVENCIONES -->
+  <section class="mb-12">
+    <p class="section-head">08 — Convenciones del equipo</p>
+    <h2 class="section-title">Reglas <em class="italic" style="color:var(--cobre)">comunes</em>.</h2>
+
+    <div class="bg-white border border-stone-200 rounded-md p-6">
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="mono text-xs opacity-50 mt-1">·</span><span><strong>Sin emojis</strong> salvo que el usuario los pida.</span></li>
+        <li class="flex gap-3"><span class="mono text-xs opacity-50 mt-1">·</span><span>Español <strong>chileno neutro</strong>: tú estándar, sin "vos/che" ni excesos de "po/cachái".</span></li>
+        <li class="flex gap-3"><span class="mono text-xs opacity-50 mt-1">·</span><span>Número personal <span class="mono">+56987834148</span> <strong>nunca</strong> customer-facing. Usar <span class="mono">+56966610737</span> (bot) o <span class="mono">(41) 296 5226</span> (fijo).</span></li>
+        <li class="flex gap-3"><span class="mono text-xs opacity-50 mt-1">·</span><span><strong>Arreglos sistémicos</strong>, no parches. Atacar la raíz.</span></li>
+        <li class="flex gap-3"><span class="mono text-xs opacity-50 mt-1">·</span><span>Backup antes de UPDATE/DELETE en producción.</span></li>
+        <li class="flex gap-3"><span class="mono text-xs opacity-50 mt-1">·</span><span>Tests antes de deploy en chatbot (<span class="mono">harness_50</span>, <span class="mono">stress_200</span>, <span class="mono">normalizer</span>).</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <footer class="mt-16 pt-8 border-t border-stone-300 text-xs opacity-60">
+    <div class="flex justify-between items-center">
+      <span class="mono">OLACORE · Centro Médico Carampangue</span>
+      <span class="mono">Agentes definidos en <span class="opacity-90">~/.claude/agents/</span> · Servicios en <span class="opacity-90">/etc/systemd/system/</span></span>
+    </div>
+  </footer>
+
+</main>
+
+</body>
+</html>

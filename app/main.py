@@ -575,9 +575,11 @@ def _render_sitio_dynamic(html: str, rating_data: dict) -> str:
         # Formato v7: clases .test-card / .test-quote / .test-author / .verif (SVG inline, sin fontawesome)
         cards_v7 = []
         star_svg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'
-        # Filtrar reseñas con texto y mostrar hasta 5 (deja espacio para los 2 CTAs en el grid)
+        # Filtrar reseñas con texto, ordenar por fecha de publicación DESC (más recientes primero)
+        # y mostrar hasta 7 (deja espacio para los 2 CTAs en el grid → max 9 cards = 3 filas de 3)
         reviews_with_text = [r for r in reviews if (r.get("text") or "").strip()]
-        for rv in reviews_with_text[:5]:
+        reviews_with_text.sort(key=lambda r: r.get("publish_time") or "", reverse=True)
+        for rv in reviews_with_text[:7]:
             txt = (rv.get("text") or "").strip()
             if len(txt) < 25:
                 continue
