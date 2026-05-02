@@ -814,6 +814,54 @@ section.compact { padding: 64px 0; }
   font-size: 12px; font-weight: 700; color: var(--ink-800);
   display: grid; place-items: center; font-family: var(--font-display);
 }
+
+/* Hero rating Google — pill compacta dinámica abajo de la cruz */
+.hero-visual .hero-rating {
+  position: absolute;
+  bottom: 24px; left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex; align-items: center; gap: 12px;
+  padding: 12px 18px;
+  background: rgba(255,255,255,0.96);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(15,63,104,0.10);
+  border-radius: var(--radius-pill);
+  box-shadow: 0 8px 22px rgba(15,63,104,0.14);
+  color: var(--ink-900);
+  text-decoration: none;
+  transition: transform .2s, box-shadow .2s;
+  white-space: nowrap;
+}
+.hero-visual .hero-rating:hover {
+  transform: translateX(-50%) translateY(-2px);
+  box-shadow: 0 12px 28px rgba(15,63,104,0.20);
+}
+.hero-rating-stars {
+  display: inline-flex; gap: 1px;
+  color: #FFC53D;
+}
+.hero-rating-text {
+  display: flex; align-items: baseline; gap: 6px;
+  font-size: 13px;
+  color: var(--ink-700);
+}
+.hero-rating-text strong {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--ink-900);
+  letter-spacing: -0.01em;
+}
+.hero-rating-arrow {
+  color: var(--brand-deep);
+  flex-shrink: 0;
+}
+@media (max-width: 540px) {
+  .hero-visual .hero-rating { padding: 10px 14px; gap: 8px; bottom: 16px; }
+  .hero-rating-text { font-size: 12px; }
+  .hero-rating-text strong { font-size: 14px; }
+}
 .hero-visual .avatars span:not(:first-child) { margin-left: -8px; }
 
 /* Quick book widget — debajo de la ilustración, no superpuesto */
@@ -2822,12 +2870,20 @@ section.compact { padding: 64px 0; }
               <div class="chip-value">Disponible por WhatsApp</div>
             </div>
           </div>
-          <div class="overlay-team">
-            <div>
-              <div class="label">Equipo profesional</div>
-              <div class="value">Médicos y dentistas</div>
+          <a class="hero-rating" href="#opiniones" aria-label="Ver opiniones reales en Google">
+            <div class="hero-rating-stars" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
             </div>
-          </div>
+            <div class="hero-rating-text">
+              <strong>4.8</strong>
+              <span>en Google</span>
+            </div>
+            <svg class="hero-rating-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </a>
         </div>
 
         <!-- Quick book widget — el botón final envía a WhatsApp con la especialidad
