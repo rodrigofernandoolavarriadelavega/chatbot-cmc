@@ -2362,14 +2362,14 @@ async def admin_send_pediatric_info(request: Request, _: str = Depends(require_a
 # ── FIX-3: Staff whitelist endpoints ────────────────────────────────────────
 
 @router.get("/admin/api/staff")
-async def api_get_staff(_auth=Depends(_require_admin)):
+async def api_get_staff(_auth=Depends(require_admin)):
     """Lista los números en la whitelist de staff."""
     from staff_whitelist import get_all_staff
     return {"staff": get_all_staff()}
 
 
 @router.post("/admin/api/staff/add")
-async def api_add_staff(request: Request, _auth=Depends(_require_admin)):
+async def api_add_staff(request: Request, _auth=Depends(require_admin)):
     """Agrega un número al whitelist de staff (runtime, volátil).
     Para persistir, agregar a STAFF_PHONES en .env del servidor.
     Body: {"phone": "56XXXXXXXXX", "nombre": "Dr. Nombre"}
@@ -2385,7 +2385,7 @@ async def api_add_staff(request: Request, _auth=Depends(_require_admin)):
 
 
 @router.delete("/admin/api/staff/{phone}")
-async def api_remove_staff(phone: str, _auth=Depends(_require_admin)):
+async def api_remove_staff(phone: str, _auth=Depends(require_admin)):
     """Elimina un número del whitelist runtime."""
     from staff_whitelist import remove_staff_runtime
     removed = remove_staff_runtime(phone.lstrip("+"))
