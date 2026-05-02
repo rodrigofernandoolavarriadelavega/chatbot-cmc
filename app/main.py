@@ -4333,6 +4333,26 @@ async def webhook(request: Request):
             except Exception:
                 pass
 
+            # ── Captura fbclid desde primer mensaje (una sola vez por sesión) ──
+            # Meta puede precargar mensajes de ad con "Hola [fbclid:XXX]".
+            # Guardamos en session data para mandarlo con eventos CAPI.
+            try:
+                import re as _re_fbclid
+                import time as _time_fb
+                _fbclid_re = _re_fbclid.compile(r"fbclid[=:]([A-Za-z0-9_-]+)", _re_fbclid.IGNORECASE)
+                _fbclid_m = _fbclid_re.search(texto or "")
+                if _fbclid_m:
+                    _sess_fb = get_session(phone)
+                    _data_fb = _sess_fb.get("data") or {}
+                    if not _data_fb.get("fbclid"):
+                        _data_fb["fbclid"] = _fbclid_m.group(1)
+                        _data_fb["fbclid_ts"] = int(_time_fb.time())
+                        save_session(phone, _sess_fb.get("state", "IDLE"), _data_fb)
+                        log_event(phone, "fbclid_captured", {"fbclid": _fbclid_m.group(1)[:20]})
+            except Exception as _fbclid_err:
+                log.debug("fbclid capture error: %s", _fbclid_err)
+            # ── fin captura fbclid ──────────────────────────────────────────
+
             # Indicador de "pensando" — reacción ⏳ al mensaje del paciente
             await react_whatsapp(phone, msg_id)
 

@@ -121,6 +121,7 @@
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="roadmap">🗺 Roadmap</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="metas">🎯 Metas / OKRs</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="reporte">📋 Reporte estratégico</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="capi">⚡ CAPI</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="glosario">📚 Glosario</button>
     </nav>
   </div>
@@ -507,6 +508,56 @@ Estimación CAC (asumiendo Meta atribuye 50-60% de pacientes nuevos):
 
   </section>
 
+  <!-- ──────────────────────── CAPI ──────────────────────── -->
+  <section id="tab-capi" class="tab-content hidden">
+    <div class="meta-section">
+      <h3>Conversion API (CAPI) — Estado del setup</h3>
+      <p class="text-sm opacity-75 mb-4">Eventos server-side enviados desde el chatbot a Meta. Permite optimizar campañas por citas reales, no clicks.</p>
+      <div class="flex gap-3 mb-6 flex-wrap" id="capi-status-bar">
+        <span id="capi-pixel-badge" class="px-3 py-1 rounded-full text-xs font-semibold tone-neblina">Cargando...</span>
+        <a href="https://business.facebook.com/events_manager" target="_blank" rel="noopener"
+           class="px-3 py-1 rounded-full text-xs font-semibold tone-cobre">Abrir Events Manager →</a>
+      </div>
+      <div class="grid grid-cols-2 gap-4 mb-6" id="capi-kpis" style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr))">
+        <!-- rellenado por JS -->
+      </div>
+      <h4>Últimos 20 eventos (7 días)</h4>
+      <div style="overflow-x:auto">
+        <table class="w-full text-sm" id="capi-events-table">
+          <thead>
+            <tr class="text-left text-xs opacity-60 border-b border-slate-200">
+              <th class="py-2 pr-4">Evento</th>
+              <th class="py-2 pr-4">Phone</th>
+              <th class="py-2 pr-4">Data</th>
+              <th class="py-2">Hora</th>
+            </tr>
+          </thead>
+          <tbody id="capi-events-body">
+            <tr><td colspan="4" class="py-4 text-center opacity-50 text-xs">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="mt-6 p-4 rounded-lg tone-neblina text-sm">
+        <strong>Pasos manuales pendientes:</strong>
+        <ol class="list-decimal pl-5 mt-2 space-y-1 opacity-80">
+          <li>Events Manager → crear Dataset asociado a la app <em>Chatbot CMC</em> → copiar Pixel ID → pegar en <code class="inline">META_PIXEL_ID</code> en .env del VPS</li>
+          <li>Business Settings → System Users → <em>Chatbotcmc-systemuser</em> → Generate Token → permisos <code class="inline">ads_management</code>, <code class="inline">business_management</code> → pegar en <code class="inline">META_CAPI_ACCESS_TOKEN</code></li>
+          <li>(Opcional) Events Manager → Test Events → copiar Test Event Code → pegar en <code class="inline">META_CAPI_TEST_EVENT_CODE</code>. Eliminar después de 24-48h.</li>
+        </ol>
+        <p class="mt-3 opacity-70">Después de configurar, reiniciar el servicio: <code class="inline">systemctl restart chatbot-cmc</code></p>
+      </div>
+    </div>
+    <div class="meta-section">
+      <h4>Test en vivo</h4>
+      <p class="text-sm opacity-75 mb-3">Envía un evento <code class="inline">Schedule</code> de prueba al pixel configurado.</p>
+      <button id="capi-test-btn" onclick="capiTest()"
+        class="px-4 py-2 rounded-lg text-sm font-semibold tone-cobre cursor-pointer">
+        Enviar evento de prueba
+      </button>
+      <pre id="capi-test-result" class="mt-3 text-xs p-3 rounded hidden" style="background:rgba(14,37,48,0.06);white-space:pre-wrap;word-break:break-all"></pre>
+    </div>
+  </section>
+
   <!-- ──────────────────────── GLOSARIO ──────────────────────── -->
   <section id="tab-glosario" class="tab-content hidden">
     <div class="meta-section">
@@ -845,6 +896,95 @@ document.getElementById('btn-refresh').addEventListener('click', loadMeta);
 setInterval(loadMeta, 300000);
 
 loadMeta();
+
+// ── CAPI tab ──────────────────────────────────────────────────────────────────
+const TOKEN = new URLSearchParams(location.search).get('token') || '';
+
+async function loadCapiStats() {
+  try {
+    const r = await fetch(`/admin/api/capi/stats?dias=7&token=${TOKEN}`);
+    if (!r.ok) return;
+    const d = await r.json();
+    // Badge pixel
+    const badge = document.getElementById('capi-pixel-badge');
+    if (badge) {
+      if (d.pixel_configurado) {
+        badge.textContent = 'Pixel configurado ✓';
+        badge.className = badge.className.replace('tone-neblina','') + ' tone-musgo';
+      } else {
+        badge.textContent = 'Pixel no configurado — CAPI deshabilitado';
+        badge.className = badge.className.replace('tone-musgo','') + ' tone-lacre';
+      }
+    }
+    // KPIs
+    const kpiEl = document.getElementById('capi-kpis');
+    if (kpiEl && d.conteos) {
+      const labels = {
+        'capi_send_failed': 'Envíos fallidos',
+        'fbclid_captured': 'fbclid capturados',
+      };
+      const eventOrder = ['fbclid_captured', 'capi_send_failed'];
+      const allKeys = [...new Set([...eventOrder, ...Object.keys(d.conteos)])];
+      kpiEl.innerHTML = allKeys.map(k => {
+        const val = d.conteos[k] || 0;
+        const lbl = labels[k] || k.replace('capi_','').replace(/_/g,' ');
+        const tone = k === 'capi_send_failed' ? 'tone-lacre' : 'tone-musgo';
+        return `<div class="kpi-card rounded-xl p-4 ${tone}">
+          <div class="text-2xl font-bold font-mono">${val}</div>
+          <div class="text-xs mt-1 opacity-80">${lbl}</div>
+        </div>`;
+      }).join('');
+    }
+    // Tabla eventos
+    const tbody = document.getElementById('capi-events-body');
+    if (tbody) {
+      if (!d.ultimos || d.ultimos.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="py-4 text-center opacity-50 text-xs">Sin eventos en los últimos ' + d.dias + ' días</td></tr>';
+      } else {
+        tbody.innerHTML = d.ultimos.map(ev => {
+          const dataStr = JSON.stringify(ev.data || {}).slice(0, 80);
+          const hora = (ev.created_at || '').replace('T', ' ').slice(0, 16);
+          const badge = ev.event === 'capi_send_failed'
+            ? `<span class="tone-lacre px-2 py-0.5 rounded text-xs">${ev.event}</span>`
+            : `<span class="tone-musgo px-2 py-0.5 rounded text-xs">${ev.event}</span>`;
+          return `<tr class="border-b border-slate-100">
+            <td class="py-2 pr-4">${badge}</td>
+            <td class="py-2 pr-4 font-mono text-xs">${ev.phone}</td>
+            <td class="py-2 pr-4 text-xs opacity-70">${dataStr}</td>
+            <td class="py-2 text-xs opacity-60">${hora}</td>
+          </tr>`;
+        }).join('');
+      }
+    }
+  } catch(e) {
+    console.warn('CAPI stats error:', e);
+  }
+}
+
+async function capiTest() {
+  const btn = document.getElementById('capi-test-btn');
+  const result = document.getElementById('capi-test-result');
+  if (btn) btn.disabled = true;
+  try {
+    const r = await fetch(`/admin/api/capi/test?token=${TOKEN}`, {method: 'POST'});
+    const d = await r.json();
+    if (result) {
+      result.textContent = JSON.stringify(d, null, 2);
+      result.classList.remove('hidden');
+    }
+  } catch(e) {
+    if (result) { result.textContent = 'Error: ' + e.message; result.classList.remove('hidden'); }
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+// Cargar stats CAPI al entrar al tab
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (btn.dataset.tab === 'capi') loadCapiStats();
+  });
+});
 </script>
 </body>
 </html>

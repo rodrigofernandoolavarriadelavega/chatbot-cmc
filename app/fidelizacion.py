@@ -186,6 +186,30 @@ async def enviar_seguimiento_postconsulta(send_fn, send_template_fn=None,
 
             save_fidelizacion_msg(cita["phone"], "postconsulta", str(cita.get("id_cita", "")))
             log.info("Seguimiento enviado → %s (%s)", cita["phone"], cita.get("especialidad"))
+            # ── Meta CAPI: evento Purchase — cita ocurrida (proxy más confiable) ─
+            # El post-consulta se manda solo cuando la cita ya pasó (filtro hora_actual).
+            # Es el momento más cercano a "compra confirmada" sin integración de caja.
+            try:
+                import asyncio as _asyncio_fidel
+                import meta_capi as _mc_purch
+                from session import get_profile as _gp_fidel
+                _prof_fidel = _gp_fidel(cita["phone"]) or {}
+                _nom_fidel = (cita.get("nombre") or _prof_fidel.get("nombre") or "").split()
+                _asyncio_fidel.create_task(_mc_purch.send_event(
+                    "Purchase",
+                    phone=cita["phone"],
+                    rut=_prof_fidel.get("rut") or None,
+                    first_name=_nom_fidel[0] if _nom_fidel else None,
+                    last_name=_nom_fidel[-1] if len(_nom_fidel) > 1 else None,
+                    custom_data={
+                        "content_name": cita.get("especialidad") or "",
+                        "content_category": "medical_appointment",
+                        "currency": "CLP",
+                    },
+                ))
+            except Exception as _capi_purch_err:
+                log.debug("CAPI Purchase create_task falló: %s", _capi_purch_err)
+            # ── fin CAPI Purchase ────────────────────────────────────────────
         except Exception as e:
             log.error("Error seguimiento phone=%s: %s", cita.get("phone"), e)
 

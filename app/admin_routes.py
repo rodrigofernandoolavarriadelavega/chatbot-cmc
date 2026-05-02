@@ -2390,3 +2390,87 @@ async def api_remove_staff(phone: str, _auth=Depends(require_admin)):
     from staff_whitelist import remove_staff_runtime
     removed = remove_staff_runtime(phone.lstrip("+"))
     return {"ok": True, "removed": removed}
+
+
+# ── Meta CAPI endpoints ────────────────────────────────────────────────────────
+
+@router.post("/admin/api/capi/test")
+async def capi_test(_auth=Depends(require_admin)):
+    """Envía un evento de prueba a Meta CAPI.
+    Retorna {"skipped": "no_pixel_id"} si META_PIXEL_ID no está configurado.
+    """
+    import meta_capi
+    result = await meta_capi.send_event(
+        "Schedule",
+        phone="+56966610737",
+        first_name="Test",
+        last_name="CAPI",
+        email="test@cmc.cl",
+        custom_data={"test": True, "content_name": "test_endpoint"},
+    )
+    return result
+
+
+@router.get("/admin/api/capi/stats")
+def capi_stats(dias: int = 7, _auth=Depends(require_admin)):
+    """Estadísticas de eventos CAPI enviados.
+
+    Filtra conversation_events buscando eventos cuyo nombre empieza con 'capi_'
+    o es exactamente 'fbclid_captured'.
+    Devuelve conteos por evento y los últimos 20 registros.
+    """
+    from session import _conn
+    import json as _json_capi
+    try:
+        con = _conn()
+        cur = con.cursor()
+        # Conteos por tipo de evento en los últimos N días
+        cur.execute(
+            """
+            SELECT event, COUNT(*) as total
+            FROM conversation_events
+            WHERE (event LIKE 'capi_%' OR event = 'fbclid_captured')
+              AND created_at >= datetime('now', ? || ' days')
+            GROUP BY event
+            ORDER BY total DESC
+            """,
+            (f"-{dias}",),
+        )
+        conteos = {row[0]: row[1] for row in cur.fetchall()}
+
+        # Últimos 20 eventos
+        cur.execute(
+            """
+            SELECT phone, event, data, created_at
+            FROM conversation_events
+            WHERE (event LIKE 'capi_%' OR event = 'fbclid_captured')
+              AND created_at >= datetime('now', ? || ' days')
+            ORDER BY created_at DESC
+            LIMIT 20
+            """,
+            (f"-{dias}",),
+        )
+        rows = cur.fetchall()
+        ultimos = []
+        for row in rows:
+            try:
+                d = _json_capi.loads(row[2]) if row[2] else {}
+            except Exception:
+                d = {"raw": str(row[2])[:100]}
+            ultimos.append({
+                "phone": row[0][:6] + "XXXXX",  # ofuscar
+                "event": row[1],
+                "data": d,
+                "created_at": row[3],
+            })
+
+        from config import META_PIXEL_ID
+        return {
+            "dias": dias,
+            "pixel_configurado": bool(META_PIXEL_ID),
+            "conteos": conteos,
+            "total_eventos": sum(conteos.values()),
+            "ultimos": ultimos,
+        }
+    except Exception as e:
+        return {"error": str(e), "dias": dias}

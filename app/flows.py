@@ -4568,6 +4568,25 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                  {"id": "rut_nuevo", "title": "Ingresar otro RUT"}]
             )
 
+        # ── Meta CAPI: evento Lead — paciente calificado (eligió esp + modalidad) ──
+        try:
+            import meta_capi as _mc_lead
+            _lead_esp = data.get("especialidad") or data.get("quick_esp") or ""
+            asyncio.create_task(_mc_lead.send_event(
+                "Lead",
+                phone=phone,
+                fbclid=data.get("fbclid"),
+                fbclid_ts=data.get("fbclid_ts"),
+                custom_data={
+                    "content_name": _lead_esp,
+                    "content_category": "appointment_intent",
+                    "lead_source": "whatsapp_flow",
+                },
+            ))
+        except Exception as _capi_lead_err:
+            log.debug("CAPI Lead create_task falló: %s", _capi_lead_err)
+        # ── fin CAPI Lead ──────────────────────────────────────────────────
+
         save_session(phone, "WAIT_RUT_AGENDAR", data)
         return (
             f"Perfecto, atención *{modalidad_str}* 😊\n\n"
@@ -5963,6 +5982,24 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # Guardar perfil con fecha_nacimiento para campaña de cumpleaños
         save_profile(phone, rut, paciente["nombre"],
                      fecha_nacimiento=data.get("reg_fecha_nacimiento"))
+        # ── Meta CAPI: evento CompleteRegistration ─────────────────────────
+        try:
+            import meta_capi as _mc_reg
+            _reg_nom = (paciente.get("nombre") or "").split()
+            asyncio.create_task(_mc_reg.send_event(
+                "CompleteRegistration",
+                phone=phone,
+                rut=rut or None,
+                first_name=_reg_nom[0] if _reg_nom else nombre or None,
+                last_name=_reg_nom[-1] if len(_reg_nom) > 1 else apellidos or None,
+                email=data.get("reg_email") or None,
+                fbclid=data.get("fbclid"),
+                fbclid_ts=data.get("fbclid_ts"),
+                custom_data={"registration_method": "whatsapp"},
+            ))
+        except Exception as _capi_reg_err:
+            log.debug("CAPI CompleteRegistration create_task falló: %s", _capi_reg_err)
+        # ── fin CAPI ───────────────────────────────────────────────────────
         # Enviar mensaje de bienvenida (no-blocking)
         try:
             bienvenida = (
