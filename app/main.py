@@ -748,9 +748,10 @@ async def sitemap_blogs_xml():
 
 @app.get("/sitemap_index.xml")
 async def sitemap_index_xml():
-    """Sitemap index que referencia el sitemap principal + el de blogs."""
+    """Sitemap index que referencia el sitemap principal + el de blogs + imágenes."""
     from fastapi.responses import Response
-    today = "2026-05-02"
+    from datetime import datetime as _dt
+    today = _dt.now().strftime("%Y-%m-%d")
     content = (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
@@ -758,9 +759,42 @@ async def sitemap_index_xml():
         f'<lastmod>{today}</lastmod></sitemap>\n'
         f'  <sitemap><loc>https://centromedicocarampangue.cl/sitemap_blogs.xml</loc>'
         f'<lastmod>{today}</lastmod></sitemap>\n'
+        f'  <sitemap><loc>https://centromedicocarampangue.cl/sitemap_images.xml</loc>'
+        f'<lastmod>{today}</lastmod></sitemap>\n'
         '</sitemapindex>\n'
     )
     return Response(content=content, media_type="application/xml")
+
+
+@app.get("/sitemap_images.xml")
+async def sitemap_images_xml():
+    """Image sitemap — declara imágenes del centro para Google Images."""
+    from fastapi.responses import Response
+    base = "https://centromedicocarampangue.cl"
+    img_base = "https://agentecmc.cl/static/images/centro"
+    photos = [
+        ("fachada.jpg", "Fachada del Centro Médico Carampangue en República 102, esquina."),
+        ("recepcion.jpg", "Recepción del Centro Médico Carampangue con mostrador de madera y zona de espera"),
+        ("sala-espera.jpg", "Sala de espera con sillones y vista a la calle desde ventanal grande"),
+        ("box-medico.jpg", "Box de atención médica con camilla, escritorio y lavamanos"),
+        ("box-luz-natural.jpg", "Box médico con camilla, escritorio y ventanal con luz natural"),
+    ]
+    parts = ['<?xml version="1.0" encoding="UTF-8"?>',
+             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"',
+             '        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">',
+             f'  <url><loc>{base}/</loc>']
+    for fname, alt in photos:
+        parts.append(f'    <image:image><image:loc>{img_base}/{fname}</image:loc>'
+                     f'<image:caption>{alt}</image:caption>'
+                     f'<image:title>{alt[:80]}</image:title></image:image>')
+    parts.append('  </url>')
+    # Logo + og-image on home
+    parts.append(f'  <url><loc>{base}/</loc>')
+    parts.append(f'    <image:image><image:loc>https://agentecmc.cl/static/og-image.png</image:loc>'
+                 f'<image:caption>Centro Médico Carampangue — Médico y Dentista en Arauco</image:caption></image:image>')
+    parts.append('  </url>')
+    parts.append('</urlset>')
+    return Response(content="\n".join(parts), media_type="application/xml")
 
 
 @app.get("/robots.txt")
