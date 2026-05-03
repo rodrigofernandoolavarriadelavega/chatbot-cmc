@@ -150,34 +150,81 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 }
 </script>
 
-<!-- Schema.org: OfferCatalog (Especialidades) -->
+<!-- Schema.org: OfferCatalog (Especialidades con precios reales) -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "OfferCatalog",
   "name": "Especialidades médicas y dentales CMC",
   "itemListElement": [
-    {"@type":"Offer","itemOffered":{"@type":"MedicalProcedure","name":"Medicina General"}},
-    {"@type":"Offer","itemOffered":{"@type":"MedicalProcedure","name":"Medicina Familiar"}},
-    {"@type":"Offer","itemOffered":{"@type":"MedicalProcedure","name":"Cardiología"}},
-    {"@type":"Offer","itemOffered":{"@type":"MedicalProcedure","name":"Otorrinolaringología"}},
-    
-    {"@type":"Offer","itemOffered":{"@type":"MedicalProcedure","name":"Ginecología"}},
-    {"@type":"Offer","itemOffered":{"@type":"MedicalProcedure","name":"Gastroenterología"}},
-    {"@type":"Offer","itemOffered":{"@type":"MedicalProcedure","name":"Kinesiología"}},
-    {"@type":"Offer","itemOffered":{"@type":"MedicalProcedure","name":"Nutrición"}},
-    {"@type":"Offer","itemOffered":{"@type":"MedicalProcedure","name":"Psicología Adulto"}},
-    {"@type":"Offer","itemOffered":{"@type":"MedicalProcedure","name":"Psicología Infantil"}},
-    {"@type":"Offer","itemOffered":{"@type":"MedicalProcedure","name":"Fonoaudiología"}},
-    {"@type":"Offer","itemOffered":{"@type":"MedicalProcedure","name":"Podología"}},
-    {"@type":"Offer","itemOffered":{"@type":"MedicalProcedure","name":"Ecografía"}},
-    {"@type":"Offer","itemOffered":{"@type":"MedicalProcedure","name":"Matrona"}},
-    {"@type":"Offer","itemOffered":{"@type":"MedicalProcedure","name":"Odontología General"}},
-    {"@type":"Offer","itemOffered":{"@type":"MedicalProcedure","name":"Ortodoncia"}},
-    {"@type":"Offer","itemOffered":{"@type":"MedicalProcedure","name":"Implantología"}},
-    {"@type":"Offer","itemOffered":{"@type":"MedicalProcedure","name":"Endodoncia"}},
-    {"@type":"Offer","itemOffered":{"@type":"MedicalProcedure","name":"Estética Facial"}}
+    {"@type":"Offer","name":"Consulta Medicina General","description":"Diagnóstico, tratamiento, licencias médicas, recetas, derivaciones a especialista. Bono Fonasa MLE disponible con huella biométrica en el centro.","price":"7880","priceCurrency":"CLP","priceSpecification":[{"@type":"PriceSpecification","price":"7880","priceCurrency":"CLP","name":"Bono Fonasa MLE"},{"@type":"PriceSpecification","price":"25000","priceCurrency":"CLP","name":"Particular"}],"itemOffered":{"@type":"MedicalProcedure","name":"Medicina General","procedureType":"https://schema.org/DiagnosticProcedure"},"provider":{"@id":"https://centromedicocarampangue.cl/#clinic"},"availability":"https://schema.org/InStock"},
+    {"@type":"Offer","name":"Consulta Medicina Familiar","description":"Enfoque integral del paciente y su familia; manejo de crónicos, controles preventivos, salud mental leve.","price":"7880","priceCurrency":"CLP","priceSpecification":[{"@type":"PriceSpecification","price":"7880","priceCurrency":"CLP","name":"Bono Fonasa MLE"},{"@type":"PriceSpecification","price":"30000","priceCurrency":"CLP","name":"Particular"}],"itemOffered":{"@type":"MedicalProcedure","name":"Medicina Familiar"},"provider":{"@id":"https://centromedicocarampangue.cl/#dr-marquez"}},
+    {"@type":"Offer","name":"Consulta Cardiología","description":"Evaluación cardiovascular, hipertensión, dolor torácico, palpitaciones. Solo particular.","price":"40000","priceCurrency":"CLP","itemOffered":{"@type":"MedicalProcedure","name":"Cardiología"},"provider":{"@id":"https://centromedicocarampangue.cl/#dr-millan"}},
+    {"@type":"Offer","name":"Electrocardiograma","description":"ECG en reposo de 12 derivaciones.","price":"20000","priceCurrency":"CLP","itemOffered":{"@type":"MedicalProcedure","name":"Electrocardiograma","procedureType":"https://schema.org/DiagnosticProcedure"},"provider":{"@id":"https://centromedicocarampangue.cl/#dr-millan"}},
+    {"@type":"Offer","name":"Consulta Otorrinolaringología","description":"Patología de oído, nariz y garganta para adultos y niños. Solo particular.","price":"35000","priceCurrency":"CLP","itemOffered":{"@type":"MedicalProcedure","name":"Otorrinolaringología"},"provider":{"@id":"https://centromedicocarampangue.cl/#dr-borrego"}},
+    {"@type":"Offer","name":"Lavado de oídos","description":"Extracción de tapón de cera con irrigación. Aparte de la consulta.","price":"10000","priceCurrency":"CLP","itemOffered":{"@type":"MedicalProcedure","name":"Lavado de oídos","procedureType":"https://schema.org/TherapeuticProcedure"},"provider":{"@id":"https://centromedicocarampangue.cl/#dr-borrego"}},
+    {"@type":"Offer","name":"Consulta Ginecología","description":"Controles ginecológicos, anticoncepción, climaterio. Solo particular.","price":"30000","priceCurrency":"CLP","itemOffered":{"@type":"MedicalProcedure","name":"Ginecología"},"provider":{"@id":"https://centromedicocarampangue.cl/#dr-rejon"}},
+    {"@type":"Offer","name":"Ecografía ginecológica/transvaginal","description":"Evalúa útero, ovarios y detecta quistes, miomas o irregularidades.","price":"35000","priceCurrency":"CLP","itemOffered":{"@type":"MedicalProcedure","name":"Ecografía ginecológica","procedureType":"https://schema.org/DiagnosticProcedure"},"provider":{"@id":"https://centromedicocarampangue.cl/#dr-rejon"}},
+    {"@type":"Offer","name":"Consulta Gastroenterología","description":"Reflujo, colon irritable, helicobacter pylori, dolor abdominal.","price":"35000","priceCurrency":"CLP","itemOffered":{"@type":"MedicalProcedure","name":"Gastroenterología"},"provider":{"@id":"https://centromedicocarampangue.cl/#dr-quijano"}},
+    {"@type":"Offer","name":"Sesión Kinesiología","description":"Rehabilitación física: ejercicios, electroterapia, ultrasonido. Lesiones, dolor muscular, post-operatorio.","price":"7830","priceCurrency":"CLP","priceSpecification":[{"@type":"PriceSpecification","price":"7830","priceCurrency":"CLP","name":"Bono Fonasa MLE"},{"@type":"PriceSpecification","price":"20000","priceCurrency":"CLP","name":"Particular"}],"itemOffered":{"@type":"MedicalProcedure","name":"Kinesiología","procedureType":"https://schema.org/TherapeuticProcedure"},"provider":[{"@id":"https://centromedicocarampangue.cl/#armijo"},{"@id":"https://centromedicocarampangue.cl/#etcheverry"}]},
+    {"@type":"Offer","name":"Pack 10 sesiones Kinesiología (Fonasa)","description":"Pack completo de rehabilitación habitualmente prescrito por traumatólogo o médico general.","price":"83360","priceCurrency":"CLP","itemOffered":{"@type":"MedicalProcedure","name":"Kinesiología pack 10 sesiones"}},
+    {"@type":"Offer","name":"Consulta Nutrición","description":"Plan de alimentación personalizado para baja de peso, diabetes, hipertensión, embarazo.","price":"4770","priceCurrency":"CLP","priceSpecification":[{"@type":"PriceSpecification","price":"4770","priceCurrency":"CLP","name":"Bono Fonasa MLE"},{"@type":"PriceSpecification","price":"20000","priceCurrency":"CLP","name":"Particular"}],"itemOffered":{"@type":"MedicalProcedure","name":"Nutrición"},"provider":{"@id":"https://centromedicocarampangue.cl/#pinto"}},
+    {"@type":"Offer","name":"Consulta Psicología Adulto","description":"Terapia para ansiedad, depresión, duelo, crisis vitales.","price":"14420","priceCurrency":"CLP","priceSpecification":[{"@type":"PriceSpecification","price":"14420","priceCurrency":"CLP","name":"Bono Fonasa MLE"},{"@type":"PriceSpecification","price":"20000","priceCurrency":"CLP","name":"Particular"}],"itemOffered":{"@type":"MedicalProcedure","name":"Psicología Adulto","procedureType":"https://schema.org/TherapeuticProcedure"},"provider":[{"@id":"https://centromedicocarampangue.cl/#montalba"},{"@id":"https://centromedicocarampangue.cl/#rodriguez"}]},
+    {"@type":"Offer","name":"Consulta Psicología Infantil","description":"Terapia para niños y adolescentes: trastornos conductuales, ansiedad, problemas escolares.","price":"14420","priceCurrency":"CLP","priceSpecification":[{"@type":"PriceSpecification","price":"14420","priceCurrency":"CLP","name":"Bono Fonasa MLE"},{"@type":"PriceSpecification","price":"20000","priceCurrency":"CLP","name":"Particular"}],"itemOffered":{"@type":"MedicalProcedure","name":"Psicología Infantil","procedureType":"https://schema.org/TherapeuticProcedure"},"provider":{"@id":"https://centromedicocarampangue.cl/#montalba"}},
+    {"@type":"Offer","name":"Consulta Fonoaudiología","description":"Trastornos del lenguaje, habla, voz, deglución y audiología en niños y adultos.","price":"25000","priceCurrency":"CLP","itemOffered":{"@type":"MedicalProcedure","name":"Fonoaudiología","procedureType":"https://schema.org/TherapeuticProcedure"},"provider":{"@id":"https://centromedicocarampangue.cl/#arratia"}},
+    {"@type":"Offer","name":"Audiometría","description":"Examen de audición en cabina audiométrica.","price":"25000","priceCurrency":"CLP","itemOffered":{"@type":"MedicalProcedure","name":"Audiometría","procedureType":"https://schema.org/DiagnosticProcedure"},"provider":{"@id":"https://centromedicocarampangue.cl/#arratia"}},
+    {"@type":"Offer","name":"Consulta Podología clínica","description":"Uñas encarnadas, callos, hongos, podología diabética.","priceSpecification":{"@type":"PriceSpecification","minPrice":"20000","maxPrice":"35000","priceCurrency":"CLP"},"itemOffered":{"@type":"MedicalProcedure","name":"Podología","procedureType":"https://schema.org/TherapeuticProcedure"},"provider":{"@id":"https://centromedicocarampangue.cl/#guevara"}},
+    {"@type":"Offer","name":"Ecografía abdominal/renal/partes blandas","description":"Diagnóstico por imagen no invasivo.","price":"35000","priceCurrency":"CLP","itemOffered":{"@type":"MedicalProcedure","name":"Ecografía","procedureType":"https://schema.org/DiagnosticProcedure"},"provider":{"@id":"https://centromedicocarampangue.cl/#pardo"}},
+    {"@type":"Offer","name":"Consulta Matrona","description":"Control prenatal, PAP, anticoncepción, salud sexual y reproductiva.","price":"16000","priceCurrency":"CLP","priceSpecification":[{"@type":"PriceSpecification","price":"16000","priceCurrency":"CLP","name":"Tarifa preferencial Fonasa"},{"@type":"PriceSpecification","price":"30000","priceCurrency":"CLP","name":"Particular"}],"itemOffered":{"@type":"MedicalProcedure","name":"Matrona"},"provider":{"@id":"https://centromedicocarampangue.cl/#gomez"}},
+    {"@type":"Offer","name":"PAP / Papanicolau","description":"Examen de cuello del útero para detección temprana de cáncer cervicouterino.","price":"20000","priceCurrency":"CLP","itemOffered":{"@type":"MedicalProcedure","name":"Papanicolau","procedureType":"https://schema.org/DiagnosticProcedure"},"provider":{"@id":"https://centromedicocarampangue.cl/#gomez"}},
+    {"@type":"Offer","name":"Masoterapia 20 min","description":"Masaje descontracturante de espalda y cuello.","price":"17990","priceCurrency":"CLP","itemOffered":{"@type":"MedicalProcedure","name":"Masoterapia","procedureType":"https://schema.org/TherapeuticProcedure"},"provider":{"@id":"https://centromedicocarampangue.cl/#acosta"}},
+    {"@type":"Offer","name":"Masoterapia 40 min","description":"Masaje terapéutico extendido incluyendo zona lumbar.","price":"26990","priceCurrency":"CLP","itemOffered":{"@type":"MedicalProcedure","name":"Masoterapia"},"provider":{"@id":"https://centromedicocarampangue.cl/#acosta"}},
+    {"@type":"Offer","name":"Tapadura/Empaste de resina","description":"Restauración de pieza con caries usando resina del color del diente.","priceSpecification":{"@type":"PriceSpecification","minPrice":"35000","priceCurrency":"CLP"},"itemOffered":{"@type":"MedicalProcedure","name":"Restauración con resina","procedureType":"https://schema.org/TherapeuticProcedure"},"provider":[{"@id":"https://centromedicocarampangue.cl/#dra-burgos"},{"@id":"https://centromedicocarampangue.cl/#dr-jimenez"}]},
+    {"@type":"Offer","name":"Limpieza dental (destartraje)","description":"Destartraje + profilaxis ~40 min, sin dolor.","price":"30000","priceCurrency":"CLP","itemOffered":{"@type":"MedicalProcedure","name":"Limpieza dental","procedureType":"https://schema.org/TherapeuticProcedure"},"provider":[{"@id":"https://centromedicocarampangue.cl/#dra-burgos"},{"@id":"https://centromedicocarampangue.cl/#dr-jimenez"}]},
+    {"@type":"Offer","name":"Extracción dental simple","description":"Exodoncia de pieza con anestesia local, ~30-45 min.","price":"40000","priceCurrency":"CLP","itemOffered":{"@type":"MedicalProcedure","name":"Extracción dental"}},
+    {"@type":"Offer","name":"Blanqueamiento dental","description":"Aclarado de varios tonos con gel especial, ~60 min, indoloro.","price":"75000","priceCurrency":"CLP","itemOffered":{"@type":"MedicalProcedure","name":"Blanqueamiento dental"}},
+    {"@type":"Offer","name":"Tratamiento de Ortodoncia","description":"Brackets metálicos o estéticos, controles cada 3-4 semanas. Duración 18-36 meses según complejidad.","priceSpecification":{"@type":"PriceSpecification","price":"450000","priceCurrency":"CLP","name":"Plan completo (referencial, varía según caso)"},"itemOffered":{"@type":"MedicalProcedure","name":"Ortodoncia","procedureType":"https://schema.org/TherapeuticProcedure"},"provider":{"@id":"https://centromedicocarampangue.cl/#dra-castillo"}},
+    {"@type":"Offer","name":"Tratamiento de Endodoncia","description":"Tratamiento de conducto para rescatar dientes con caries profunda o dolor.","priceSpecification":{"@type":"PriceSpecification","minPrice":"100000","priceCurrency":"CLP","name":"Desde"},"itemOffered":{"@type":"MedicalProcedure","name":"Endodoncia","procedureType":"https://schema.org/TherapeuticProcedure"},"provider":{"@id":"https://centromedicocarampangue.cl/#dr-fredes"}},
+    {"@type":"Offer","name":"Implante dental","description":"Reposición de pieza perdida con implante de titanio + corona.","priceSpecification":{"@type":"PriceSpecification","minPrice":"650000","priceCurrency":"CLP","name":"Desde (implante + corona)"},"itemOffered":{"@type":"MedicalProcedure","name":"Implante dental","procedureType":"https://schema.org/TherapeuticProcedure"},"provider":{"@id":"https://centromedicocarampangue.cl/#dra-valdes"}},
+    {"@type":"Offer","name":"Estética Facial","description":"Procedimientos no quirúrgicos: toxina botulínica, ácido hialurónico, bioestimuladores, hilos tensores, peeling.","priceSpecification":{"@type":"PriceSpecification","minPrice":"15000","priceCurrency":"CLP","name":"Evaluación"},"itemOffered":{"@type":"MedicalProcedure","name":"Estética Facial","procedureType":"https://schema.org/TherapeuticProcedure"},"provider":{"@id":"https://centromedicocarampangue.cl/#dra-fuentealba"}}
   ]
+}
+</script>
+
+<!-- Schema.org: WebSite con SearchAction (sitelinks searchbox + entity establishment) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "@id": "https://centromedicocarampangue.cl/#website",
+  "url": "https://centromedicocarampangue.cl/",
+  "name": "Centro Médico Carampangue",
+  "alternateName": ["CMC", "Centro Médico Carampangue Arauco"],
+  "description": "Centro médico y dental privado en Carampangue, Provincia de Arauco. 22 profesionales y 19 especialidades.",
+  "inLanguage": "es-CL",
+  "publisher": {"@id":"https://centromedicocarampangue.cl/#clinic"},
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": {
+      "@type": "EntryPoint",
+      "urlTemplate": "https://centromedicocarampangue.cl/?s={search_term_string}"
+    },
+    "query-input": "required name=search_term_string"
+  }
+}
+</script>
+
+<!-- Schema.org: ImageObject (logo del centro) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "ImageObject",
+  "@id": "https://centromedicocarampangue.cl/#logo",
+  "url": "https://centromedicocarampangue.cl/static/logo.png",
+  "contentUrl": "https://centromedicocarampangue.cl/static/logo.png",
+  "caption": "Centro Médico Carampangue — logo institucional",
+  "width": 512,
+  "height": 512
 }
 </script>
 
