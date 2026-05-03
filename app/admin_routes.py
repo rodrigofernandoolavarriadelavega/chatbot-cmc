@@ -2537,3 +2537,19 @@ def capi_stats(dias: int = 7, _auth=Depends(require_admin)):
         }
     except Exception as e:
         return {"error": str(e), "dias": dias}
+
+
+@router.get("/admin/api/referrals/recientes")
+async def admin_meta_referrals_recientes(
+    limit: int = 100,
+    token: str = "",
+    _auth=Depends(require_admin),
+):
+    """Últimos referrals de campañas Meta (Click-to-WhatsApp / IG / FB Messenger).
+    Permite al dueño ver de qué anuncios llegan los pacientes."""
+    try:
+        from session import get_meta_referrals_recientes
+        rows = get_meta_referrals_recientes(limit=min(limit, 500))
+        return {"total": len(rows), "referrals": rows}
+    except Exception as e:
+        return {"error": str(e)}

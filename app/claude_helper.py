@@ -1088,11 +1088,17 @@ def _strip_markdown_json(text: str) -> str:
     return text
 
 
-async def detect_intent(mensaje: str, recepcion_resumen: list | None = None) -> dict:
+async def detect_intent(mensaje: str, recepcion_resumen: list | None = None,
+                        meta_referral: dict | None = None) -> dict:
     """Detecta intención del mensaje. Devuelve dict con intent, especialidad, respuesta_directa.
 
     recepcion_resumen: mensajes recientes de la recepcionista (post-HUMAN_TAKEOVER);
     se inyectan como contexto previo para evitar contradicciones.
+
+    meta_referral: objeto referral Meta (headline, source_id, etc.) si el paciente
+    llegó desde un anuncio. Se inyecta como contexto al LLM para interpretar
+    correctamente mensajes ambiguos (ej. "¿necesito orden?" cuando vino del
+    anuncio de ecografía).
     """
     import re as _re_w
     # Normaliza: minúsculas, strip, colapsa espacios internos, quita signos dobles
@@ -1155,9 +1161,44 @@ async def detect_intent(mensaje: str, recepcion_resumen: list | None = None) -> 
         log.info("orden-requisito prefilter: %r", clave[:80])
         try:
             from session import log_event as _log_event
-            _log_event("", "intent_orden_requisito_prefilter", {"texto": clave[:120]})
+            _log_event("", "intent_orden_requisito_prefilter", {
+                "texto": clave[:120],
+                "referral_headline": (meta_referral or {}).get("headline", "")[:80],
+            })
         except Exception:
             pass
+        # Si el paciente llegó desde un anuncio de examen (eco, radio, lab),
+        # responder específicamente para ese examen en vez de la respuesta genérica.
+        _ref_headline_lower = ((meta_referral or {}).get("headline") or "").lower()
+        _ECO_KW = re.compile(
+            r"\b(eco(?:tomograf[ií]a|graf[ií]a)?|ecotomo|ultras(?:onido|onograf[ií]a)?"
+            r"|radio(?:graf[ií]a)?|mamograf[ií]a|rx\b|examen(?:es)?|laboratorio|lab\b|"
+            r"densitometr[ií]a)",
+            re.IGNORECASE,
+        )
+        if _ref_headline_lower and _ECO_KW.search(_ref_headline_lower):
+            # Determinar tipo de examen desde el headline del anuncio
+            _is_eco = re.search(r"\beco", _ref_headline_lower)
+            _is_radio = re.search(r"\bradio|rx\b|mamogr", _ref_headline_lower)
+            _is_lab = re.search(r"\blab|examen|laboratorio", _ref_headline_lower)
+            _examen_label = (
+                "la ecografía" if _is_eco
+                else "la radiografía / mamografía" if _is_radio
+                else "los exámenes de laboratorio" if _is_lab
+                else "ese examen"
+            )
+            return {
+                "intent": "faq",
+                "especialidad": None,
+                "respuesta_directa": (
+                    f"Para *{_examen_label}* sí necesitas orden médica 📋\n\n"
+                    "La orden la puede emitir cualquier médico general o especialista.\n\n"
+                    "Si aún no tienes la orden, puedes agendar *Medicina General* acá "
+                    "en el CMC y el doctor te la entrega el mismo día.\n\n"
+                    "¿Quieres agendar?"
+                ),
+            }
+        # Sin referral o headline sin keywords de examen → respuesta genérica
         return {
             "intent": "faq",
             "especialidad": None,
@@ -1298,6 +1339,17 @@ async def detect_intent(mensaje: str, recepcion_resumen: list | None = None) -> 
                 + "\nNo la contradigas. Si el paciente hace una pregunta de seguimiento, "
                 "asume ese contexto.\n\n"
             )
+        # Inyectar contexto del anuncio Meta si existe
+        _referral_ctx15 = ""
+        if meta_referral and meta_referral.get("headline"):
+            _referral_ctx15 = (
+                f"[CONTEXTO IMPORTANTE] El paciente llegó al chat desde un anuncio "
+                f"de Meta sobre \"{meta_referral['headline']}\". "
+                f"Su mensaje debe interpretarse en ese contexto. "
+                f"Por ejemplo, si pregunta \"¿necesito orden?\", probablemente "
+                f"pregunta si necesita orden para ese servicio/examen, no que quiere "
+                f"emitir una orden.\n\n"
+            )
         resp = await client.messages.create(
             model="claude-haiku-4-5-20251001",
             max_tokens=1024,
@@ -1306,7 +1358,7 @@ async def detect_intent(mensaje: str, recepcion_resumen: list | None = None) -> 
                 "text": SYSTEM_PROMPT,
                 "cache_control": {"type": "ephemeral"},
             }],
-            messages=[{"role": "user", "content": _ctx_fecha15 + _recepcion_ctx15 + mensaje}],
+            messages=[{"role": "user", "content": _ctx_fecha15 + _recepcion_ctx15 + _referral_ctx15 + mensaje}],
         )
         text = _strip_markdown_json(resp.content[0].text)
         if resp.stop_reason == "max_tokens":
@@ -1571,12 +1623,15 @@ def _local_faq_fallback(mensaje: str) -> str | None:
     return None
 
 
-async def respuesta_faq(mensaje: str, recepcion_resumen: list | None = None) -> str:
+async def respuesta_faq(mensaje: str, recepcion_resumen: list | None = None,
+                        meta_referral: dict | None = None) -> str:
     """Responde preguntas frecuentes. Primero intenta con el FAQ local
     (keywords inequívocas — sin llamada a Claude); si no hay match, usa Claude.
 
     recepcion_resumen: mensajes recientes de la recepcionista (post-HUMAN_TAKEOVER);
     se inyectan para no contradecir lo que ya dijo.
+
+    meta_referral: objeto referral Meta; si existe, se inyecta como contexto al LLM.
     """
     # Fast-path: FAQ local cubre preguntas simples de precio/Fonasa/horarios.
     # Ahorra llamada a Claude (latencia 200-400ms + tokens).
@@ -1612,6 +1667,14 @@ async def respuesta_faq(mensaje: str, recepcion_resumen: list | None = None) -> 
                 + "\nNo la contradigas. Si el paciente hace una pregunta de seguimiento, "
                 "asume ese contexto.\n\n"
             )
+        # Inyectar contexto del anuncio Meta si existe
+        _referral_ctx15f = ""
+        if meta_referral and meta_referral.get("headline"):
+            _referral_ctx15f = (
+                f"[CONTEXTO IMPORTANTE] El paciente llegó al chat desde un anuncio "
+                f"de Meta sobre \"{meta_referral['headline']}\". "
+                f"Responde teniendo en cuenta ese contexto.\n\n"
+            )
         resp = await client.messages.create(
             model="claude-haiku-4-5-20251001",
             max_tokens=1024,
@@ -1620,7 +1683,7 @@ async def respuesta_faq(mensaje: str, recepcion_resumen: list | None = None) -> 
                 "text": SYSTEM_PROMPT,
                 "cache_control": {"type": "ephemeral"},
             }],
-            messages=[{"role": "user", "content": _ctx_fecha15f + _recepcion_ctx15f + mensaje}],
+            messages=[{"role": "user", "content": _ctx_fecha15f + _recepcion_ctx15f + _referral_ctx15f + mensaje}],
         )
         text = _strip_markdown_json(resp.content[0].text)
         if resp.stop_reason == "max_tokens":

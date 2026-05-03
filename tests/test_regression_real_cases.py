@@ -951,3 +951,200 @@ class TestBug5SessionHelper(unittest.TestCase):
         sys.path.insert(0, str(ROOT / "app"))
         from session import get_proxima_cita_paciente
         self.assertTrue(callable(get_proxima_cita_paciente))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Meta Referral — feature 2026-05-03
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestMetaReferralSession(unittest.TestCase):
+    """save_meta_referral + get_meta_referral_fresh con TTL."""
+
+    def setUp(self):
+        import tempfile, os
+        self._db_fd, self._db_path = tempfile.mkstemp(suffix=".db")
+        os.close(self._db_fd)
+        # Apuntar session.py a la DB temporal
+        import session as _sess
+        from pathlib import Path
+        self._orig_path = _sess.DB_PATH
+        _sess.DB_PATH = Path(self._db_path)
+        # Limpiar conexiones cacheadas para forzar reconexión con la DB temporal
+        if hasattr(_sess, '_local'):
+            _sess._local = {}
+        # _conn() crea las tablas al conectar (llama a init_db internamente)
+        _sess._conn()
+
+    def tearDown(self):
+        import session as _sess
+        _sess.DB_PATH = self._orig_path
+        _sess._local = {}
+        import os
+        os.unlink(self._db_path)
+
+    def _sess(self):
+        import session
+        return session
+
+    def test_save_and_get_fresh(self):
+        sess = self._sess()
+        phone = "56912345678"
+        referral = {
+            "headline": "Ecotomografía mamaria $40.000",
+            "source_id": "ad_123",
+            "source_type": "ad",
+            "body": "Agenda fácil por WhatsApp",
+            "ctwa_clid": "token_abc",
+        }
+        sess.save_meta_referral(phone, referral, canal="whatsapp")
+        result = sess.get_meta_referral_fresh(phone, ttl_horas=24)
+        self.assertIsNotNone(result, "Debe retornar el referral recién guardado")
+        self.assertEqual(result["headline"], "Ecotomografía mamaria $40.000")
+        self.assertEqual(result["source_id"], "ad_123")
+
+    def test_get_fresh_expired_returns_none(self):
+        """TTL negativo debe considerar cualquier referral como expirado."""
+        import time
+        sess = self._sess()
+        phone = "56911111111"
+        referral = {"headline": "Consulta médica", "source_id": "ad_999"}
+        sess.save_meta_referral(phone, referral)
+        # TTL negativo → cutoff en el futuro → ningún ts lo satisface
+        result = sess.get_meta_referral_fresh(phone, ttl_horas=-1)
+        self.assertIsNone(result, "TTL negativo debe retornar None")
+
+    def test_get_fresh_no_referral_returns_none(self):
+        sess = self._sess()
+        result = sess.get_meta_referral_fresh("56999999999", ttl_horas=24)
+        self.assertIsNone(result, "Sin referral debe retornar None")
+
+    def test_get_referrals_recientes(self):
+        sess = self._sess()
+        for i in range(3):
+            sess.save_meta_referral(f"5691000000{i}", {"headline": f"Anuncio {i}"})
+        rows = sess.get_meta_referrals_recientes(limit=10)
+        self.assertEqual(len(rows), 3)
+        # Debe venir ordenado del más reciente al más antiguo
+        headlines = [r["headline"] for r in rows]
+        self.assertIn("Anuncio 0", headlines)
+
+
+class TestOrdenRequisitoConReferral(unittest.TestCase):
+    """detect_intent prefilter: referral + headline de eco → respuesta específica."""
+
+    def _run_detect_intent_sync(self, mensaje, meta_referral=None):
+        """Wrapper síncrono para detect_intent (función async)."""
+        import asyncio
+        # Mockear el cliente Anthropic para no llamar a la API real
+        import claude_helper as ch
+        _orig_client = ch.client
+
+        class _FakeClient:
+            class messages:
+                @staticmethod
+                async def create(**kwargs):
+                    raise RuntimeError("No debe llamar a API real en tests")
+
+        ch.client = _FakeClient()
+        try:
+            # Para prefilters que no llegan a Claude podemos correr sin mock
+            loop = asyncio.new_event_loop()
+            result = loop.run_until_complete(
+                ch.detect_intent(mensaje, meta_referral=meta_referral)
+            )
+            loop.close()
+        finally:
+            ch.client = _orig_client
+        return result
+
+    def test_orden_medica_con_referral_eco_da_respuesta_especifica(self):
+        """Caso real 2026-05-03: 'necesito orden médica?' + referral ecotomografía
+        debe dar respuesta específica sobre eco, no genérica."""
+        referral = {"headline": "Ecotomografía mamaria $40.000"}
+        result = self._run_detect_intent_sync(
+            "hola necesito orden médica?",
+            meta_referral=referral,
+        )
+        self.assertEqual(result["intent"], "faq")
+        resp = result.get("respuesta_directa") or ""
+        # Debe mencionar ecografía específicamente
+        self.assertIn("ecograf", resp.lower(),
+                      "Respuesta debe mencionar ecografía cuando referral es de eco")
+        # NO debe mostrar la lista genérica con bullets de todas las categorías
+        self.assertNotIn("Kinesiología con bono Fonasa", resp,
+                         "Respuesta específica de eco NO debe tener bullets genéricos")
+
+    def test_orden_medica_sin_referral_da_respuesta_generica(self):
+        """Sin referral → respuesta genérica con lista de exámenes."""
+        result = self._run_detect_intent_sync(
+            "hola necesito orden médica?",
+            meta_referral=None,
+        )
+        self.assertEqual(result["intent"], "faq")
+        resp = result.get("respuesta_directa") or ""
+        # Respuesta genérica debe incluir la lista de bullets
+        self.assertIn("Kinesiología con bono Fonasa", resp,
+                      "Sin referral debe dar respuesta genérica con lista")
+
+    def test_orden_medica_con_referral_no_eco_da_respuesta_generica(self):
+        """Referral de un anuncio de medicina general (sin keywords de examen)
+        → respuesta genérica."""
+        referral = {"headline": "Consulta Medicina General $10.000"}
+        result = self._run_detect_intent_sync(
+            "necesito orden médica?",
+            meta_referral=referral,
+        )
+        self.assertEqual(result["intent"], "faq")
+        resp = result.get("respuesta_directa") or ""
+        # Sin keywords de eco/radio/lab → genérica
+        self.assertIn("Kinesiología con bono Fonasa", resp,
+                      "Referral sin keywords de examen debe dar respuesta genérica")
+
+    def test_se_necesita_orden_con_referral_radiografia(self):
+        """Headline con 'radiografía' → respuesta específica de radio."""
+        referral = {"headline": "Radiografía tórax + informe $15.000"}
+        result = self._run_detect_intent_sync(
+            "se necesita orden médica?",
+            meta_referral=referral,
+        )
+        resp = result.get("respuesta_directa") or ""
+        self.assertIn("radiograf", resp.lower(),
+                      "Referral con radiografía debe dar respuesta específica de radio")
+
+
+class TestMetaReferralFunctionsExist(unittest.TestCase):
+    """Verifica que los helpers existen y son importables."""
+
+    def test_save_meta_referral_importable(self):
+        from session import save_meta_referral
+        self.assertTrue(callable(save_meta_referral))
+
+    def test_get_meta_referral_fresh_importable(self):
+        from session import get_meta_referral_fresh
+        self.assertTrue(callable(get_meta_referral_fresh))
+
+    def test_get_meta_referrals_recientes_importable(self):
+        from session import get_meta_referrals_recientes
+        self.assertTrue(callable(get_meta_referrals_recientes))
+
+    def test_detect_intent_acepta_meta_referral_kwarg(self):
+        """detect_intent debe aceptar meta_referral como parámetro."""
+        import inspect
+        from claude_helper import detect_intent
+        sig = inspect.signature(detect_intent)
+        self.assertIn("meta_referral", sig.parameters,
+                      "detect_intent debe tener parámetro meta_referral")
+
+    def test_respuesta_faq_acepta_meta_referral_kwarg(self):
+        """respuesta_faq debe aceptar meta_referral como parámetro."""
+        import inspect
+        from claude_helper import respuesta_faq
+        sig = inspect.signature(respuesta_faq)
+        self.assertIn("meta_referral", sig.parameters,
+                      "respuesta_faq debe tener parámetro meta_referral")
+
+    def test_admin_endpoint_en_admin_routes(self):
+        """admin_routes.py debe tener el endpoint /admin/api/referrals/recientes."""
+        content = (ROOT / "app" / "admin_routes.py").read_text(encoding="utf-8")
+        self.assertIn("/admin/api/referrals/recientes", content,
+                      "admin_routes debe tener endpoint de referrals")

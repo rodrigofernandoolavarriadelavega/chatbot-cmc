@@ -636,6 +636,25 @@ def _conn():
     conn.execute("CREATE INDEX IF NOT EXISTS idx_hv_phone ON horas_vacias_envios(phone)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_hv_esp ON horas_vacias_envios(especialidad)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_hv_ts ON horas_vacias_envios(enviado_ts)")
+    # ── Meta referrals (Click-to-WhatsApp / IG / FB Messenger) ───────────────
+    # Cada vez que un paciente llega al bot desde un anuncio de Meta, guardamos
+    # el objeto referral para analytics permanente y para contexto al LLM.
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS meta_referrals (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            phone       TEXT NOT NULL,
+            source_type TEXT,
+            source_id   TEXT,
+            headline    TEXT,
+            body        TEXT,
+            media_type  TEXT,
+            ctwa_clid   TEXT,
+            canal       TEXT DEFAULT 'whatsapp',
+            ts          INTEGER NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_meta_ref_phone ON meta_referrals(phone)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_meta_ref_ts ON meta_referrals(ts)")
     conn.commit()
     return conn
 
@@ -4422,3 +4441,110 @@ def get_horas_vacias_envios_hoy(especialidad: str) -> int:
             (especialidad.lower(), inicio_dia)
         ).fetchone()
         return row["cnt"] if row else 0
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Meta Referral — Click-to-WhatsApp / IG / FB Ads
+# ─────────────────────────────────────────────────────────────────────────────
+
+def save_meta_referral(phone: str, referral_obj: dict, canal: str = "whatsapp") -> None:
+    """Guarda el referral del anuncio Meta en la sesión (data) y en la tabla
+    meta_referrals para analytics permanente.  También emite un log_event.
+
+    referral_obj: objeto referral tal como llega del webhook Meta.
+    """
+    import json as _json_mr
+    ts = int(time.time())
+    headline = (referral_obj.get("headline") or "").strip()[:255]
+    source_id = (referral_obj.get("source_id") or "").strip()[:255]
+    source_type = (referral_obj.get("source_type") or "").strip()[:64]
+    body_text = (referral_obj.get("body") or "").strip()[:512]
+    media_type = (referral_obj.get("media_type") or "").strip()[:64]
+    ctwa_clid = (referral_obj.get("ctwa_clid") or "").strip()[:512]
+
+    with _conn() as conn:
+        conn.execute(
+            """INSERT INTO meta_referrals
+               (phone, source_type, source_id, headline, body, media_type,
+                ctwa_clid, canal, ts)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (phone, source_type, source_id, headline, body_text,
+             media_type, ctwa_clid, canal, ts),
+        )
+        conn.commit()
+
+    # Persistir en session data para que el LLM lo consuma sin DB round-trip
+    sess = get_session(phone)
+    data = sess.get("data") or {}
+    data["meta_referral"] = {
+        "headline": headline,
+        "source_id": source_id,
+        "source_type": source_type,
+        "body": body_text,
+        "ctwa_clid": ctwa_clid,
+    }
+    data["meta_referral_ts"] = ts
+    save_session(phone, sess.get("state", "IDLE"), data)
+
+    log_event(phone, "meta_referral_capturado", {
+        "headline": headline[:80],
+        "source_id": source_id[:40],
+        "canal": canal,
+    })
+
+
+def get_meta_referral_fresh(phone: str, ttl_horas: int = 24) -> dict | None:
+    """Retorna el referral si tiene menos de `ttl_horas` de antigüedad.
+
+    Primero intenta desde session data (fast path, sin DB).
+    Si no está en sesión, consulta la tabla meta_referrals (fallback tras
+    reinicio de sesión o timeout).
+    Retorna None si no hay referral fresco.
+    """
+    sess = get_session(phone)
+    data = sess.get("data") or {}
+    ref = data.get("meta_referral")
+    ref_ts = data.get("meta_referral_ts")
+
+    if ref and ref_ts:
+        try:
+            age_s = time.time() - float(ref_ts)
+            if age_s <= ttl_horas * 3600:
+                return ref
+        except Exception:
+            pass
+
+    # Fallback: última fila en DB
+    cutoff = int(time.time()) - ttl_horas * 3600
+    with _conn() as conn:
+        row = conn.execute(
+            """SELECT source_type, source_id, headline, body, ctwa_clid
+               FROM meta_referrals
+               WHERE phone=? AND ts >= ?
+               ORDER BY ts DESC LIMIT 1""",
+            (phone, cutoff),
+        ).fetchone()
+    if row:
+        return {
+            "source_type": row["source_type"] or "",
+            "source_id": row["source_id"] or "",
+            "headline": row["headline"] or "",
+            "body": row["body"] or "",
+            "ctwa_clid": row["ctwa_clid"] or "",
+        }
+    return None
+
+
+def get_meta_referrals_recientes(limit: int = 100) -> list[dict]:
+    """Retorna los últimos `limit` referrals de campañas Meta para el panel admin."""
+    with _conn() as conn:
+        rows = conn.execute(
+            """SELECT phone, source_type, source_id, headline, body,
+                      media_type, ctwa_clid, canal,
+                      datetime(ts, 'unixepoch', 'localtime') AS ts_local
+               FROM meta_referrals
+               ORDER BY ts DESC
+               LIMIT ?""",
+            (limit,),
+        ).fetchall()
+    return [dict(r) for r in rows]
