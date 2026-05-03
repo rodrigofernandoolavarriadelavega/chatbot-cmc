@@ -150,7 +150,7 @@ def _detect_cancelar_con_pay() -> list[dict]:
               "cuanto sale", "cuánto sale", "cuanto vale", "cuánto vale")
     with _conn() as c:
         rows = c.execute("""
-            SELECT phone, ts, body
+            SELECT phone, ts, text
             FROM messages
             WHERE direction = 'in'
             AND ts > datetime('now', '-2 hours')
@@ -162,7 +162,7 @@ def _detect_cancelar_con_pay() -> list[dict]:
             )
         """).fetchall()
         for r in rows:
-            body = (r["body"] or "").lower()
+            body = (r["text"] or "").lower()
             for kw in pay_kw:
                 if kw in body:
                     out.append({"phone": r["phone"], "ts": r["ts"],
@@ -180,7 +180,7 @@ def _detect_fallback_loop() -> list[dict]:
             FROM messages
             WHERE direction = 'out'
             AND ts > datetime('now', '-2 hours')
-            AND (body LIKE '%no te entend%' OR body LIKE '%no logro entenderte%' OR body LIKE '%Hmm, no reconozco%')
+            AND (text LIKE '%no te entend%' OR text LIKE '%no logro entenderte%' OR text LIKE '%Hmm, no reconozco%')
             GROUP BY phone
             HAVING cnt >= 3
         """).fetchall()
@@ -198,7 +198,7 @@ def _detect_menu_repetido() -> list[dict]:
             FROM messages
             WHERE direction = 'out'
             AND ts > datetime('now', '-4 hours')
-            AND (body LIKE '%¿En qué te ayudo%' OR body LIKE '%Qué necesitas hoy%')
+            AND (text LIKE '%¿En qué te ayudo%' OR text LIKE '%Qué necesitas hoy%')
             GROUP BY phone
             HAVING cnt >= 3
         """).fetchall()
@@ -212,16 +212,16 @@ def _detect_leak_numero_personal() -> list[dict]:
     out = []
     with _conn() as c:
         rows = c.execute("""
-            SELECT phone, ts, body
+            SELECT phone, ts, text
             FROM messages
             WHERE direction = 'out'
             AND ts > datetime('now', '-24 hours')
-            AND body LIKE '%987834148%'
+            AND text LIKE '%987834148%'
             AND phone NOT LIKE '%987834148%'
         """).fetchall()
         for r in rows:
             out.append({"phone": r["phone"], "ts": r["ts"],
-                        "snippet": (r["body"] or "")[:140]})
+                        "snippet": (r["text"] or "")[:140]})
     return out
 
 
