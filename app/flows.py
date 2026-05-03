@@ -8546,7 +8546,6 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
     if not todos or not mejor:
         log_event(phone, "sin_disponibilidad", {"especialidad": (especialidad or "").strip().lower()})
         save_tag(phone, "sin-disponibilidad")
-        # Ofrecer lista de espera en lugar de terminar la conversación
         # Si la especialidad resuelve a un único profesional (ej. "olavarria",
         # "castillo"), lo guardamos como preferencia → el cron buscará solo a ese.
         from medilink import _ids_para_especialidad
@@ -8554,6 +8553,36 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
         id_prof_pref = int(ids_resueltos[0]) if len(ids_resueltos) == 1 else None
         data["waitlist_especialidad"] = especialidad_lower
         data["waitlist_id_prof_pref"] = id_prof_pref
+
+        # Auditoría 2026-05-03: 145 sin_disponibilidad/30d → 0 inserts en waitlist.
+        # Pacientes abandonaban en WAIT_WAITLIST_CONFIRM sin responder. Fix: si ya
+        # conocemos al paciente (perfil completo) inscribir AUTOMÁTICO con opt-out
+        # (sin fricción). Si no, fallback al flujo de pregunta explícita.
+        perfil = get_profile(phone)
+        if perfil and perfil.get("rut") and perfil.get("nombre"):
+            data["rut"] = perfil["rut"]
+            data["paciente_nombre"] = perfil["nombre"]
+            try:
+                wid = add_to_waitlist(phone, perfil["rut"], perfil["nombre"],
+                                       especialidad_lower, id_prof_pref)
+                save_tag(phone, f"waitlist-{especialidad_lower}")
+                log_event(phone, "waitlist_inscrito_auto",
+                          {"id": wid, "especialidad": especialidad_lower,
+                           "id_prof_pref": id_prof_pref})
+                reset_session(phone)
+                nombre_corto = _first_name(perfil["nombre"])
+                saludo = f"*{nombre_corto}*, " if nombre_corto else ""
+                return (
+                    f"No hay horas disponibles para *{especialidad}* en los próximos días 😕\n\n"
+                    f"Te inscribí {saludo}en la lista de espera. Apenas se libere un cupo "
+                    "te aviso por este mismo chat 📱\n\n"
+                    "Si prefieres no recibir aviso, responde *BAJA*.\n"
+                    "_Escribe *menu* si necesitas algo más._"
+                )
+            except Exception as e:
+                log.warning("Error en auto-inscripción waitlist phone=%s: %s", phone, e)
+                # cae al flujo con pregunta explícita
+
         save_session(phone, "WAIT_WAITLIST_CONFIRM", data)
         return _btn_msg(
             f"No encontré horas disponibles para *{especialidad}* en los próximos días 😕\n\n"
