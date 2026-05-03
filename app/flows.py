@@ -4808,12 +4808,19 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     f"{resp_faq}\n\n"
                     "_Cuando quieras continuar con tu reserva, envíame tu RUT 😊_"
                 )
+            # BUG-06: contador específico para RUT inválido (distinto del genérico intentos_fallidos)
+            data["intentos_rut_invalido"] = data.get("intentos_rut_invalido", 0) + 1
             data["intentos_fallidos"] = data.get("intentos_fallidos", 0) + 1
-            if data["intentos_fallidos"] >= 3:
-                return _derivar_humano(phone=phone, contexto="frustración WAIT_RUT_AGENDAR")
+            intentos_rut = data["intentos_rut_invalido"]
+            if intentos_rut >= 3:
+                return _derivar_humano(phone=phone, contexto="RUT inválido repetido WAIT_RUT_AGENDAR")
             save_session(phone, "WAIT_RUT_AGENDAR", data)
-            return hint_rut_error(txt)
+            hint = hint_rut_error(txt)
+            if intentos_rut >= 2:
+                hint += "\n\n_Si el número también es incorrecto, escribe *otra persona* y te ayudo._"
+            return hint
 
+        data.pop("intentos_rut_invalido", None)  # BUG-06: reset al RUT valido
         _ensure_consent(phone)
         paciente, transient = await _buscar_paciente_safe(rut)
         if transient:
