@@ -312,10 +312,14 @@ class TestMarkdownPostProcesador(unittest.TestCase):
         if idx_end == -1:
             idx_end = contenido.find("\ndef ", idx + 10)
         bloque = contenido[idx:idx_end] if idx_end != -1 else contenido[idx:]
-        # Debe haber un replace de ** por *
+        # Debe normalizar ** a * (str.replace simple o re.sub más preciso)
         self.assertTrue(
-            'replace("**", "*")' in bloque or "replace('**', '*')" in bloque,
-            "respuesta_faq debe tener replace('**', '*') para WhatsApp"
+            'replace("**", "*")' in bloque
+            or "replace('**', '*')" in bloque
+            or "re.sub(r'\\*\\*([^*]+)\\*\\*'" in bloque
+            or 're.sub(r"\\*\\*([^*]+)\\*\\*"' in bloque
+            or '\\*\\*([^*]+)\\*\\*' in bloque,
+            "respuesta_faq debe normalizar ** a * para WhatsApp"
         )
 
 
