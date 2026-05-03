@@ -1574,6 +1574,18 @@ def empresas_page():
     return _EMPRESAS_HTML
 
 
+_IDEAS_REVISION_HTML = (_TEMPLATE_DIR / "ideas_revision.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "ideas_revision.html").exists() else ""
+
+
+@app.get("/ideas", response_class=HTMLResponse)
+@app.get("/ideas-revision", response_class=HTMLResponse)
+@app.get("/ideas/revision", response_class=HTMLResponse)
+def ideas_revision_page():
+    """Dashboard interno: features pausadas con feature flag — tabla de pendientes para Rodrigo."""
+    return _IDEAS_REVISION_HTML
+
+
+
 _COMUNA_TEMPLATE_HTML = (_TEMPLATE_DIR / "comuna_template.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "comuna_template.html").exists() else ""
 
 _COMUNAS_DATA = {
@@ -4892,6 +4904,19 @@ async def webhook(request: Request):
                         save_profile(phone, "", sender_name)
                     elif not sender_name:
                         await _fetch_social_name(sender_id, phone, "instagram")
+                    # Capturar referral Meta (anuncio Click-to-Instagram DM)
+                    _ig_referral = ev.get("referral") or {}
+                    if not _ig_referral:
+                        # IG también puede traerlo en postback.referral
+                        _ig_referral = ev.get("postback", {}).get("referral") or {}
+                    if _ig_referral:
+                        try:
+                            from session import save_meta_referral as _smr
+                            _smr(phone, _ig_referral, canal="instagram")
+                            log.info("META_REFERRAL IG capturado phone=%s headline=%r",
+                                     phone, _ig_referral.get("headline", "")[:60])
+                        except Exception as _ref_err:
+                            log.debug("meta_referral IG error: %s", _ref_err)
                     # Procesar con el chatbot completo
                     from messaging import send_instagram
                     await _process_social(phone, sender_id, texto, "instagram", send_instagram)
@@ -4927,6 +4952,16 @@ async def webhook(request: Request):
                         save_profile(phone, "", sender_name)
                     elif not sender_name:
                         await _fetch_social_name(sender_id, phone, "facebook")
+                    # Capturar referral Meta (anuncio Click-to-Messenger)
+                    _fb_referral = ev.get("referral") or {}
+                    if _fb_referral:
+                        try:
+                            from session import save_meta_referral as _smr
+                            _smr(phone, _fb_referral, canal="messenger")
+                            log.info("META_REFERRAL FB capturado phone=%s headline=%r",
+                                     phone, _fb_referral.get("headline", "")[:60])
+                        except Exception as _ref_err:
+                            log.debug("meta_referral FB error: %s", _ref_err)
                     from messaging import send_messenger
                     await _process_social(phone, sender_id, texto, "messenger", send_messenger)
         except Exception as e:
@@ -5295,6 +5330,25 @@ async def webhook(request: Request):
             except Exception as _fbclid_err:
                 log.debug("fbclid capture error: %s", _fbclid_err)
             # ── fin captura fbclid ──────────────────────────────────────────
+
+            # ── Captura referral Meta (Click-to-WhatsApp desde anuncio) ──────
+            # WhatsApp Cloud API incluye `messages[0].referral` cuando el usuario
+            # hizo clic en un anuncio "Send Message" de Meta para abrir la conversación.
+            # Solo procesamos el primer mensaje de la sesión (cuando aún no hay
+            # meta_referral guardado) para no sobreescribir si el paciente responde
+            # múltiples veces desde el mismo anuncio.
+            try:
+                _wa_referral = msg.get("referral") or {}
+                if _wa_referral:
+                    _existing_ref = (get_session(phone).get("data") or {}).get("meta_referral")
+                    if not _existing_ref:
+                        from session import save_meta_referral as _smr_wa
+                        _smr_wa(phone, _wa_referral, canal="whatsapp")
+                        log.info("META_REFERRAL WA capturado phone=%s headline=%r",
+                                 phone, _wa_referral.get("headline", "")[:60])
+            except Exception as _wa_ref_err:
+                log.debug("meta_referral WA error: %s", _wa_ref_err)
+            # ── fin captura referral ────────────────────────────────────────
 
             # Indicador de "pensando" — reacción ⏳ al mensaje del paciente
             await react_whatsapp(phone, msg_id)

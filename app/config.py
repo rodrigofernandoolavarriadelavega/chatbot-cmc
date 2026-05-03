@@ -48,6 +48,11 @@ if "(44)" in CMC_TELEFONO_FIJO:
     CMC_TELEFONO_FIJO = "(41) 296 5226"
 
 ADMIN_TOKEN        = os.getenv("ADMIN_TOKEN", "cmc_admin_2026")
+
+# Feature flags — se activan cuando Rodrigo apruebe condiciones comerciales
+# (precios, % descuento, cuenta bancaria, templates Meta).
+TELEMEDICINA_ENABLED   = os.getenv("TELEMEDICINA_ENABLED", "false").lower() == "true"
+REFERRAL_BONOS_ENABLED = os.getenv("REFERRAL_BONOS_ENABLED", "false").lower() == "true"
 ORTODONCIA_TOKEN   = os.getenv("ORTODONCIA_TOKEN", "cmc_ortodoncia_2026")
 
 # Secreto para firmar cookies de sesión admin.

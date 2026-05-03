@@ -416,10 +416,21 @@ _CROSS_SELL_RULES: dict[str, list[tuple[str, str]]] = {
          "La Dra. Valentina Fuentealba realiza blanqueamiento, armonización facial y más. "
          "¿Te interesa agendar una evaluación?"),
     ],
-    "Ecografía": [
-        ("Ginecología",
-         "Tras una ecografía ginecológica, es recomendable un control con el ginecólogo.\n\n"
-         "El Dr. Tirso Rejón tiene horas disponibles. ¿Te agendo una consulta?"),
+    # Ecografía: sin cross-sell automático. Las ecografías son multi-tipo
+    # (abdominal, tiroidea, musculoesquelética, mamaria, próstata) y muchos
+    # pacientes son hombres. Sugerir Ginecología por defecto sería absurdo.
+    # Cuando el bot diferencie ECO transvaginal del resto, ahí sí mapear
+    # ECO TV → control con Ginecología.
+    "Odontología General": [
+        ("Ortodoncia",
+         "Si quieres alinear tus dientes, este es buen momento para evaluarlo.\n\n"
+         "La Dra. Daniela Castillo (ortodoncista) atiende en el CMC. "
+         "¿Te interesa una evaluación de ortodoncia?"),
+        ("Estética Facial",
+         "Si te gustaría complementar tu sonrisa con tratamientos estéticos "
+         "(blanqueamiento, armonización, rellenos), la Dra. Valentina Fuentealba "
+         "atiende en el CMC.\n\n"
+         "¿Te interesa una evaluación?"),
     ],
     "Implantología": [
         ("Odontología General",
@@ -2361,6 +2372,25 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         _primer_contacto_disclosure = not has_recent_event(phone, "disclosure_enviado", days=3650)
         if _primer_contacto_disclosure:
             log_event(phone, "disclosure_enviado", {})
+
+        # ── Saludo adaptativo si el paciente llegó desde un anuncio Meta ──────
+        # Si es primer contacto y hay referral fresco, personalizar el saludo
+        # con el nombre del anuncio en lugar del menú genérico.
+        if _primer_contacto_disclosure:
+            try:
+                from session import get_meta_referral_fresh as _get_ref_bienvenida
+                _ref_bienvenida = _get_ref_bienvenida(phone, ttl_horas=24)
+                if _ref_bienvenida and _ref_bienvenida.get("headline"):
+                    _headline_bv = _ref_bienvenida["headline"]
+                    log_event(phone, "bienvenida_adaptativa_meta", {"headline": _headline_bv[:80]})
+                    return (
+                        f"Hola, bienvenido/a al *Centro Médico Carampangue*. "
+                        f"Vi que llegaste desde nuestro aviso de *{_headline_bv}*.\n\n"
+                        f"¿Quieres agendar una hora o tienes alguna pregunta?"
+                    )
+            except Exception:
+                pass
+
         return _menu_msg(primer_contacto=_primer_contacto_disclosure)
 
     # ── Detección pasiva de Arauco (guarda tag sin interrumpir el flujo) ──────
@@ -3270,7 +3300,16 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     log_event(phone, "horario_consultado", {"esp": _esp_h, "fuente": "medilink"})
                     return _resp_h
 
-        result = await detect_intent(txt, recepcion_resumen=_recepcion_resumen)
+        # Obtener referral Meta fresco (anuncio Click-to-WA/IG/FB) si existe
+        _meta_referral_ctx: dict | None = None
+        try:
+            from session import get_meta_referral_fresh as _get_ref
+            _meta_referral_ctx = _get_ref(phone, ttl_horas=24)
+        except Exception:
+            pass
+
+        result = await detect_intent(txt, recepcion_resumen=_recepcion_resumen,
+                                     meta_referral=_meta_referral_ctx)
         intent = result.get("intent", "otro")
         log_event(phone, "intent_detectado", {"intent": intent, "esp": result.get("especialidad")})
 
@@ -3477,6 +3516,16 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
         # ── Intent telemedicina ───────────────────────────────────────────────
         if intent == "telemedicina":
+            from config import TELEMEDICINA_ENABLED
+            if not TELEMEDICINA_ENABLED:
+                log_event(phone, "telemedicina_pedida_pausada", {"texto": txt[:120]})
+                return _txt(
+                    "Por ahora atendemos solo de forma presencial en el centro. "
+                    "Estamos preparando atención por videollamada y la habilitaremos "
+                    "muy pronto.\n\n"
+                    "Si tu consulta es urgente, escribe *agendar* y te coordinamos "
+                    "una hora presencial."
+                )
             save_session(phone, "WAIT_TELEMEDICINA_ESPECIALIDAD", data)
             return _btn_msg(
                 "Sí, ofrecemos atención por videollamada en algunas especialidades:\n\n"
@@ -3499,6 +3548,16 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         "trae amigo", "traer amigo", "recomendar amigo", "invitar amigo",
                         "mi codigo", "mi código", "quiero referir")
         if any(kw in tl_norm for kw in _REFERIDO_KW) or intent == "referido":
+            from config import REFERRAL_BONOS_ENABLED
+            if not REFERRAL_BONOS_ENABLED:
+                log_event(phone, "referido_pedido_pausado", {"texto": txt[:120]})
+                return _txt(
+                    "Gracias por querer recomendarnos. Estamos terminando de "
+                    "definir los detalles del programa de referidos y lo "
+                    "habilitaremos pronto.\n\n"
+                    "Mientras tanto, si quieres que un familiar o amigo agende, "
+                    "puede escribirnos directamente a este WhatsApp."
+                )
             from session import generate_referral_code, get_referral_code
             _existing = get_referral_code(phone)
             _code = _existing or generate_referral_code(phone)
@@ -3613,7 +3672,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 data["last_esp_context"] = _esp_ctx
                 data["last_esp_context_ts"] = _dt_ctx.now(timezone.utc).isoformat()
                 save_session(phone, "IDLE", data)
-            resp = result.get("respuesta_directa") or await respuesta_faq(txt_enriquecido, recepcion_resumen=_recepcion_resumen)
+            resp = result.get("respuesta_directa") or await respuesta_faq(txt_enriquecido, recepcion_resumen=_recepcion_resumen, meta_referral=_meta_referral_ctx)
             resp = _strip_canal_circular(resp, phone)  # BUG-F
             esp_sug = (result.get("especialidad") or "").strip()
             # Si Claude infirió una especialidad, intentamos mostrar el próximo slot

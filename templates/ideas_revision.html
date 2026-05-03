@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0E2530">
+<title>Ideas en revisión — CMC · OLACORE</title>
+<link rel="icon" type="image/png" href="/static/olacore_sello_simple.png">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fraunces:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --olacore-fiordo: #0E2530;
+  --olacore-fiordo-2: #17323F;
+  --olacore-neblina: #E8E0D0;
+  --olacore-cobre: #B98149;
+  --olacore-lenga: #7C4A2A;
+  --olacore-lacre: #9A3E2F;
+  --olacore-verde-musgo: #4A5D44;
+}
+body { font-family: 'Inter', system-ui, sans-serif; background: #faf6ee; color: var(--olacore-fiordo); }
+h1, h2, h3, h4 { font-family: 'Fraunces', serif; font-weight: 600; color: var(--olacore-fiordo); }
+.mono { font-family: 'IBM Plex Mono', monospace; }
+.idea-card { background: #fffcf5; border: 1px solid rgba(14,37,48,0.12); border-left: 4px solid var(--olacore-cobre); border-radius: 8px; padding: 24px; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(14,37,48,0.06); }
+.idea-card.paused { border-left-color: var(--olacore-lacre); }
+.tag { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; }
+.tag-paused { background: rgba(154,62,47,0.1); color: var(--olacore-lacre); }
+.tag-flag { background: rgba(185,129,73,0.15); color: var(--olacore-lenga); }
+.tag-pending { background: rgba(74,93,68,0.15); color: var(--olacore-verde-musgo); }
+.checklist li { padding: 4px 0; padding-left: 22px; position: relative; font-size: 14px; }
+.checklist li::before { content: "☐"; position: absolute; left: 0; font-size: 16px; color: var(--olacore-cobre); }
+.checklist li.done::before { content: "✓"; color: var(--olacore-verde-musgo); }
+.checklist li.done { text-decoration: line-through; opacity: 0.6; }
+.code-snip { background: #0E2530; color: #E8E0D0; font-family: 'IBM Plex Mono', monospace; font-size: 12px; padding: 10px 14px; border-radius: 6px; overflow-x: auto; }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- TOPBAR -->
+<header class="border-b border-slate-200 bg-white/80 backdrop-blur sticky top-0 z-10">
+  <div class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-full bg-gradient-to-br from-[#0E2530] to-[#17323F] flex items-center justify-center text-white font-bold">◐</div>
+      <div>
+        <div class="text-sm font-semibold tracking-tight">Ideas en revisión</div>
+        <div class="text-xs text-slate-500">Features comerciales pendientes de aprobación</div>
+      </div>
+    </div>
+    <nav class="flex gap-3 text-sm">
+      <a href="/camino-50m" class="text-slate-600 hover:text-[#B98149]">Camino 50M</a>
+      <a href="/horizonte" class="text-slate-600 hover:text-[#B98149]">Horizonte</a>
+      <a href="/menu" class="text-slate-600 hover:text-[#B98149]">Menú</a>
+    </nav>
+  </div>
+</header>
+
+<main class="max-w-5xl mx-auto px-6 py-10">
+
+  <div class="mb-10">
+    <h1 class="text-3xl mb-2">Ideas pausadas y listas para activar</h1>
+    <p class="text-slate-600 max-w-2xl">Estas features están construidas y commiteadas en el código del bot, pero deshabilitadas con feature flag hasta que apruebes los términos comerciales (precios, descuentos, cuentas bancarias, templates Meta).</p>
+    <p class="mono text-xs text-slate-400 mt-3">Activación: editar <code>.env</code> en VPS y reiniciar servicio. 2 minutos cuando todo esté aprobado.</p>
+  </div>
+
+  <!-- TELEMEDICINA -->
+  <div class="idea-card paused">
+    <div class="flex items-start justify-between mb-4">
+      <div>
+        <h2 class="text-2xl mb-1">Telemedicina MVP</h2>
+        <p class="text-sm text-slate-500">Atención por videollamada para Medicina General, Psicología, Nutrición, Pediatría y Cardiología.</p>
+      </div>
+      <div class="flex gap-2 flex-wrap justify-end">
+        <span class="tag tag-paused">Pausada</span>
+        <span class="tag tag-flag">TELEMEDICINA_ENABLED=false</span>
+      </div>
+    </div>
+
+    <h3 class="text-sm font-semibold mb-2 mt-4">Qué hace</h3>
+    <p class="text-sm text-slate-700 mb-3">El bot detecta intent (telemedicina, online, videollamada, virtual, remoto). Si está activado: avanza al flow de selección de especialidad, valida si es primera consulta, muestra requisitos, agenda con flag <code class="mono text-xs bg-slate-100 px-1">[ONLINE]</code> en Medilink, genera link Jitsi único, manda recordatorios 24h y 30min antes.</p>
+
+    <h3 class="text-sm font-semibold mb-2 mt-4">Estado actual con flag OFF</h3>
+    <p class="text-sm text-slate-700 mb-3">Si un paciente pregunta "hacen telemedicina?", el bot responde: <em>"Por ahora atendemos solo de forma presencial. Estamos preparando videollamada y la habilitaremos muy pronto. Si tu consulta es urgente, escribe agendar..."</em></p>
+
+    <h3 class="text-sm font-semibold mb-2 mt-4">Para activar necesito de ti</h3>
+    <ul class="checklist text-slate-800">
+      <li>Confirmar <strong>cuenta bancaria real</strong> del CMC (en código quedó placeholder <code class="mono text-xs bg-slate-100 px-1">RUT 16.625.671-3</code>, hay que cambiarlo en <code class="mono text-xs bg-slate-100 px-1">app/flows.py</code>)</li>
+      <li>Definir <strong>precio por especialidad</strong> en modalidad online (¿igual que presencial? ¿descuento? ¿recargo?)</li>
+      <li>Crear y aprobar 2 templates Meta UTILITY (<code class="mono text-xs bg-slate-100 px-1">tele_recordatorio_24h</code> y <code class="mono text-xs bg-slate-100 px-1">tele_recordatorio_30min</code>)</li>
+      <li>Confirmar plataforma videollamada (default Jitsi gratis, alternativa Doxy.me HIPAA)</li>
+      <li>Quien valida el comprobante de pago antes de activar la videollamada</li>
+    </ul>
+
+    <h3 class="text-sm font-semibold mb-2 mt-4">Δ ingreso estimado</h3>
+    <p class="text-sm text-slate-700">+1 a 3 millones/mes en 90 días. Captura mercado fuera de Arauco (Concepción, Santiago, regiones).</p>
+
+    <div class="code-snip mt-4">echo "TELEMEDICINA_ENABLED=true" >> /opt/chatbot-cmc/.env<br>systemctl restart chatbot-cmc</div>
+  </div>
+
+  <!-- REFERIDOS -->
+  <div class="idea-card paused">
+    <div class="flex items-start justify-between mb-4">
+      <div>
+        <h2 class="text-2xl mb-1">Programa de referidos automatizado</h2>
+        <p class="text-sm text-slate-500">"Trae un amigo" con código único + bono al referente cuando el referido completa primera cita.</p>
+      </div>
+      <div class="flex gap-2 flex-wrap justify-end">
+        <span class="tag tag-paused">Pausada</span>
+        <span class="tag tag-flag">REFERRAL_BONOS_ENABLED=false</span>
+      </div>
+    </div>
+
+    <h3 class="text-sm font-semibold mb-2 mt-4">Qué hace</h3>
+    <p class="text-sm text-slate-700 mb-3">Si está activado: cualquier paciente que diga "quiero referir / trae amigo / mi código" recibe un código único <code class="mono text-xs bg-slate-100 px-1">CMC-XXXX</code>. Cuando el nuevo paciente lo ingresa al iniciar conversación + completa su primera cita, el bot le notifica al referente que ganó el bono y queda registrado en tabla <code class="mono text-xs bg-slate-100 px-1">referral_bonos</code>. Recepción canjea el bono cuando el referente vuelve.</p>
+
+    <h3 class="text-sm font-semibold mb-2 mt-4">Estado actual con flag OFF</h3>
+    <p class="text-sm text-slate-700 mb-3">Si alguien pide código, el bot responde: <em>"Gracias por querer recomendarnos. Estamos terminando de definir los detalles del programa de referidos y lo habilitaremos pronto. Mientras tanto, si quieres que un familiar o amigo agende, puede escribirnos..."</em></p>
+
+    <h3 class="text-sm font-semibold mb-2 mt-4">Términos propuestos por mí (REVISAR)</h3>
+    <div class="bg-amber-50 border border-amber-300 rounded p-3 text-sm text-slate-800 mb-3">
+      <strong>Bono al referente:</strong>
+      <ul class="mt-1 ml-4 list-disc">
+        <li><strong>20%</strong> descuento próxima consulta médica</li>
+        <li><strong>15%</strong> descuento próxima atención dental</li>
+        <li>Acumulable hasta <strong>3 referidos por mes</strong></li>
+      </ul>
+      <p class="text-xs text-slate-600 mt-2 italic">Estos números los puse yo como propuesta. Ajusta libremente.</p>
+    </div>
+
+    <h3 class="text-sm font-semibold mb-2 mt-4">Para activar necesito de ti</h3>
+    <ul class="checklist text-slate-800">
+      <li>Aprobar o ajustar % de descuento (médico y dental)</li>
+      <li>Aprobar o ajustar tope mensual (3 referidos/mes)</li>
+      <li>Definir vigencia del bono (¿caduca a los 60 días? ¿90?)</li>
+      <li>Definir si aplica solo a primera cita del referido o también a sus siguientes</li>
+      <li>Capacitar recepción para canjear bono (endpoint admin <code class="mono text-xs bg-slate-100 px-1">POST /admin/api/referral-bonos/&lt;id&gt;/aplicar</code> ya existe)</li>
+    </ul>
+
+    <h3 class="text-sm font-semibold mb-2 mt-4">Δ ingreso estimado</h3>
+    <p class="text-sm text-slate-700">+1 a 2 millones/mes en pacientes nuevos referidos. CAC = 0 (es boca-a-boca con tracking).</p>
+
+    <div class="code-snip mt-4">echo "REFERRAL_BONOS_ENABLED=true" >> /opt/chatbot-cmc/.env<br>systemctl restart chatbot-cmc</div>
+  </div>
+
+  <!-- INFO MENOR -->
+  <div class="bg-white border border-slate-200 rounded-lg p-5 mt-8">
+    <h3 class="text-base font-semibold mb-2">Otras features que sí están activas en producción</h3>
+    <ul class="text-sm text-slate-700 list-disc ml-5 space-y-1">
+      <li><strong>Cross-sell post-cita</strong> (sin precio nuevo, solo sugerencias de servicios relacionados): Gineco→ECO TV, Trauma→Kine, MG/MF→Kine, Ortodoncia→Estética, Implanto→Odonto, <strong>Odonto General→Ortodoncia+Estética</strong> (nuevo). Removida regla Eco→Gineco (la pedían hombres también).</li>
+      <li><strong>Job horas vacías D+1</strong> (cron 14:00 CLT diario, push a candidatos). Pendiente: aprobar template Meta UTILITY.</li>
+      <li><strong>Landings públicas</strong> /chequeos y /empresas — paquetes preventivos con precios sugeridos pendientes de aprobar.</li>
+      <li><strong>Dashboard productividad profesional</strong> /profesional/dashboard — TODO: cargar <code class="mono text-xs bg-slate-100 px-1">PROF_PHONES</code> antes de activar envío semanal.</li>
+    </ul>
+  </div>
+
+  <p class="text-xs text-slate-400 mt-10 mono">Generado 2026-05-03. CMC × OLACORE.</p>
+</main>
+
+</body>
+</html>
