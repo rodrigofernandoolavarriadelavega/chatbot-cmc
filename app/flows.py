@@ -7309,6 +7309,8 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
         save_session(phone, "WAIT_ESPECIALIDAD", data)
         return f"Claro, te ayudo a agendar 😊\n\n¿Qué especialidad necesitas?\n\n{_ESPECIALIDADES_TEXTO}"
     especialidad_lower = especialidad.lower().strip()
+    # BUG-02: capturar especialidad pedida antes de normalizar
+    _esp_pedida_original = especialidad_lower
     # ── "general" / "generica" solas → medicina general ──
     # Caso 2026-04-23 (56968396554): paciente en WAIT_ESPECIALIDAD respondió
     # "General" (nombre de la especialidad); sin alias, Claude la mandaba
@@ -7331,6 +7333,15 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
             )
         especialidad = "medicina general"
         especialidad_lower = "medicina general"
+    # BUG-02: nota cuando medicina familiar se mapea a medicina general
+    if (_esp_pedida_original in ("medicina familiar", "médico familiar",
+                                 "medico familiar", "familiar")
+            and especialidad_lower == "medicina general"
+            and not saludo_prefix):
+        saludo_prefix = (
+            "*Medicina Familiar* y *Medicina General* comparten agenda en el CMC.\n"
+            "Nuestros médicos generales atienden ambas modalidades.\n\n"
+        )
     # Detectar si la especialidad no existe en nuestro catálogo
     from medilink import _ids_para_especialidad as _ids_esp_check
     if not _ids_esp_check(especialidad_lower):
