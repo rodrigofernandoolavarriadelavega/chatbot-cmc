@@ -5037,6 +5037,30 @@ async def webhook(request: Request):
             log.warning("Rate limit excedido WA phone=%s rut_hash=%s type=%s", phone, _rut_log, msg_type)
             return Response(status_code=200)
 
+        # BUG-B: en algunos dispositivos/versiones de WA, los button payloads
+        # llegan como msg_type="text" en vez de "interactive". El set cubre todos
+        # los payloads conocidos del bot. Si el texto coincide exactamente, se
+        # procesa como si fuera un button_reply — evita "no te entendí" o Claude.
+        _BUTTON_PAYLOADS_KNOWN = {
+            "menu", "menu_volver", "agendar_sugerido", "ver_otros", "otro_dia",
+            "otro_prof", "confirmar_sugerido", "no_gracias_reeng",
+            "accion_recepcion", "quick_other", "quick_book", "quick_yes",
+            "quick_cancel", "waitlist_si", "waitlist_no", "reac_si", "reac_luego",
+            "ped_continuar", "ped_no", "no_pediatra", "no_agendar",
+            "menor_confirma_menor", "menor_confirma_adulto",
+            "menor_es_adulto", "menor_es_menor",
+            "ig_recepcion", "fb_recepcion", "humano",
+            "seg_1", "seg_2", "seg_3", "seg_4", "seg_5",
+            "seg_mejor", "seg_igual", "seg_peor",
+            "tele_mg", "tele_psico", "tele_nutri", "tele_otro",
+            "cita_confirm", "cita_reagendar", "cita_cancelar",
+            "ref_amigo", "ref_rrss", "ref_recurrente", "ref_google",
+            "maso_20", "maso_40",
+            "medfam_fallback_si", "medfam_fallback_no",
+            "waitlist_confirmar", "waitlist_cancelar",
+            "cat_medico", "cat_dental",
+        }
+
         # Extraer texto de mensajes de texto, respuestas interactivas o audio
         if msg_type == "text":
             texto = msg["text"]["body"].strip()
@@ -5049,6 +5073,16 @@ async def webhook(request: Request):
             if _re_noise.fullmatch(r"[^\w\s]{1,10}", texto):
                 log.info("noise msg ignored from=%s txt=%r", phone, texto)
                 return Response(status_code=200)
+            # BUG-B: payload de botón llegó como texto (algunos dispositivos WA)
+            if texto.strip().lower() in _BUTTON_PAYLOADS_KNOWN:
+                log.info("button_payload_as_text from=%s payload=%r", phone, texto)
+                try:
+                    from session import log_event as _log_ev_bb
+                    _log_ev_bb(phone, "button_payload_as_text", {"payload": texto})
+                except Exception:
+                    pass
+                # Tratar como si viniera del canal interactivo (ya normalizado)
+                texto = texto.strip().lower()
         elif msg_type == "interactive":
             interactive = msg.get("interactive", {})
             itype = interactive.get("type", "")
