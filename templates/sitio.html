@@ -228,6 +228,37 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 }
 </script>
 
+<!-- Schema.org: WebPage con Speakable (voice search / Google Assistant) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "@id": "https://centromedicocarampangue.cl/#webpage",
+  "url": "https://centromedicocarampangue.cl/",
+  "name": "Centro Médico Carampangue · Médico y Dentista en Arauco",
+  "isPartOf": {"@id":"https://centromedicocarampangue.cl/#website"},
+  "about": {"@id":"https://centromedicocarampangue.cl/#clinic"},
+  "primaryImageOfPage": {"@id":"https://centromedicocarampangue.cl/#logo"},
+  "inLanguage": "es-CL",
+  "isAccessibleForFree": true,
+  "speakable": {
+    "@type": "SpeakableSpecification",
+    "cssSelector": ["#faq", ".faq-list", "h1", "meta[name='description']"]
+  }
+}
+</script>
+
+<!-- Schema.org: BreadcrumbList (root) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {"@type":"ListItem","position":1,"name":"Inicio","item":"https://centromedicocarampangue.cl/"}
+  ]
+}
+</script>
+
 <!-- Schema.org: Physician/Dentist — todos los profesionales habilitados (EEAT) -->
 <script type="application/ld+json">
 {
