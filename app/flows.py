@@ -2930,6 +2930,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             )
         ) and not _ES_PREGUNTA_INFO:
             log_event(phone, "intent_detectado_local", {"esp": _esp_idle})
+            data["_txt_raw"] = txt
             return await _iniciar_agendar(phone, data, _esp_idle)
         # Pregunta "¿realizan X?" (existencia del servicio) con especialidad →
         # FAQ local antes de Claude. Robusto ante outages.
@@ -3178,6 +3179,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             _fp = _detectar_fecha_pedida_idle(txt)
             if _fp:
                 data["fecha_pedida_idle"] = _fp
+            data["_txt_raw"] = txt
             return await _iniciar_agendar(phone, data, especialidad)
 
         if intent == "reagendar":
@@ -3339,6 +3341,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     if esp_lower in _ESP_MED_GENERAL:
                         _smart, _todos = await buscar_primer_dia(esp_lower, solo_ids=_MED_AO_IDS)
                         mejor = _todos[0] if _todos else None
+                    elif esp_lower in _ESP_MED_FAMILIAR:
+                        _smart, _todos = await buscar_primer_dia("medicina general", solo_ids=_MED_FAMILIAR_IDS)
+                        mejor = _todos[0] if _todos else None
+                        if mejor:
+                            mejor["especialidad"] = "Medicina Familiar"
                     elif esp_lower in ("masoterapia", "masaje", "masajes"):
                         # Masoterapia requiere preguntar duración: no pre-lookup.
                         mejor = None
@@ -3468,6 +3475,62 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         return _menu_msg()
 
     # ── WAIT_DURACION_MASOTERAPIA ──────────────────────────────────────────────
+    # ── WAIT_CONFIRMAR_ADULTO ────────────────────────────────────────────────
+    # Paciente mencionó menor en flujo de MG/MF — confirmar si la cita es para adulto
+    if state == "WAIT_CONFIRMAR_ADULTO":
+        esp_pendiente = data.pop("_especialidad_pendiente", None) or "medicina general"
+        if tl in ("menor_es_adulto", "continuar", "adulto", "es adulto", "para adulto", "si", "sí", "1"):
+            log_event(phone, "menor_confirma_adulto", {"phone": phone})
+            data["_menor_confirmado_adulto"] = True
+            return await _iniciar_agendar(phone, data, esp_pendiente)
+        if tl in ("menor_es_menor", "menor", "no", "2", "es menor", "para menor", "para el menor"):
+            log_event(phone, "menor_confirma_menor", {"phone": phone})
+            reset_session(phone)
+            return (
+                "Entendido. El CMC no atiende pediatría directamente.\n\n"
+                "Te recomendamos:\n"
+                "- *CESFAM* de tu sector (citas gratuitas con tarjeta de control)\n"
+                "- *Hospital de Curanilahue* para urgencias\n"
+                "- *Pediatras privados en Concepción* (Clínica Universitaria, Sanatorio Alemán)\n\n"
+                f"Si tienes dudas, llama a recepción: {CMC_TELEFONO}\n\n"
+                "_Escribe *menu* para volver al inicio._"
+            )
+        data["_especialidad_pendiente"] = esp_pendiente
+        save_session(phone, "WAIT_CONFIRMAR_ADULTO", data)
+        return _btn_msg(
+            "¿La cita es para un adulto o para un menor?",
+            [
+                {"id": "menor_es_adulto", "title": "Continuar (es adulto)"},
+                {"id": "menor_es_menor",  "title": "Es para un menor"},
+            ]
+        )
+
+    # ── WAIT_MEDFAM_FALLBACK ─────────────────────────────────────────────────
+    # Márquez (Medicina Familiar) sin cupo → paciente decidió si acepta MG en cambio.
+    if state == "WAIT_MEDFAM_FALLBACK":
+        if tl in ("medfam_fallback_si", "si", "sí", "1", "ok", "dale", "mostrar", "claro"):
+            log_event(phone, "medfam_fallback_acepta_mg", {"phone": phone})
+            data.pop("medfam_solo_marquez", None)
+            data.pop("force_prof_ids", None)
+            data.pop("medfam_sin_cupo_ofrecer_mg", None)
+            return await _iniciar_agendar(phone, data, "medicina general")
+        if tl in ("medfam_fallback_no", "no", "2", "gracias", "no gracias"):
+            log_event(phone, "medfam_fallback_rechaza_mg", {"phone": phone})
+            reset_session(phone)
+            return (
+                "Sin problema. Si en otro momento quieres buscar hora con el Dr. Márquez, "
+                "escribe *menu* y elige Medicina Familiar.\n\n"
+                f"También puedes llamar a recepción: {CMC_TELEFONO}"
+            )
+        save_session(phone, "WAIT_MEDFAM_FALLBACK", data)
+        return _btn_msg(
+            "¿Quieres que te muestre horas con *Medicina General*?",
+            [
+                {"id": "medfam_fallback_si", "title": "Sí, mostrar Medicina General"},
+                {"id": "medfam_fallback_no", "title": "No, gracias"},
+            ]
+        )
+
     if state == "WAIT_DURACION_MASOTERAPIA":
         # Matchear número exacto o texto escrito
         num = re.findall(r"\b(20|40)\b", txt)
@@ -3722,6 +3785,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             ids_esp = _ids_para_especialidad(especialidad)
             if especialidad in _ESP_MED_GENERAL:
                 ids_esp = list(_MED_GENERAL_IDS)  # [73, 1, 13] = Abarca, Olavarría, Márquez
+            elif especialidad in _ESP_MED_FAMILIAR:
+                ids_esp = list(_MED_FAMILIAR_IDS)  # Solo Márquez (ID 13)
             # Tracking de profesionales vistos — evita loops entre los mismos 2
             profs_vistos = set(data.get("profs_vistos", []))
             if prof_sugerido_id:
@@ -3746,8 +3811,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
             # 2) No hay cupo de los otros en ese día → buscar su próximo día disponible
             _maso_override = {59: data["maso_duracion"]} if especialidad == "masoterapia" and data.get("maso_duracion") else None
+            # Medicina Familiar usa key "medicina general" en la API (Medilink no tiene
+            # especialidad "medicina familiar" como entidad separada en la agenda)
+            _esp_api = "medicina general" if especialidad in _ESP_MED_FAMILIAR else especialidad
             smart_nuevo, todos_nuevo = await buscar_primer_dia(
-                especialidad, excluir=fechas_vistas,
+                _esp_api, excluir=fechas_vistas,
                 solo_ids=otros_ids, intervalo_override=_maso_override)
             if not todos_nuevo:
                 return (
@@ -3897,6 +3965,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 if not todos_nuevo:  # overflow a Márquez
                     smart_nuevo, todos_nuevo = await buscar_primer_dia(
                         especialidad, excluir=fechas_vistas, solo_ids=[_MED_OVERFLOW_ID])
+            elif especialidad in _ESP_MED_FAMILIAR:
+                smart_nuevo, todos_nuevo = await buscar_primer_dia(
+                    "medicina general", excluir=fechas_vistas, solo_ids=_MED_FAMILIAR_IDS)
+                for s in (todos_nuevo or []):
+                    if isinstance(s, dict):
+                        s["especialidad"] = "Medicina Familiar"
             else:
                 smart_nuevo, todos_nuevo = await buscar_primer_dia(
                     especialidad, excluir=fechas_vistas, intervalo_override=_maso_override)
@@ -7344,10 +7418,58 @@ def _normalizar_slot_especialidad(slots: list, esp_solicitada: str) -> None:
             s["especialidad"] = label
 
 
+_RE_MENOR_KEYWORDS = re.compile(
+    r"\b(bebe|bebé|bebita|guagua|guagüita|niño|niña|nino|nina|hijo|hija|"
+    r"infante|chico|chica|pequeño|pequeña|menor|adolescente|"
+    r"([0-9]+)\s*(años?|meses?))\b",
+    re.IGNORECASE,
+)
+_RE_MENOR_EDAD = re.compile(r"\b([0-9]{1,2})\s*años?\b", re.IGNORECASE)
+
+def _detectar_menor_en_texto(txt: str) -> bool:
+    """Retorna True si el texto menciona a un menor (edad < 14 años o keyword de niño)."""
+    if not txt:
+        return False
+    txt_l = txt.lower()
+    # Keywords directas de menor sin edad
+    _MENOR_KW = {"bebe", "bebé", "bebita", "guagua", "guagüita", "guagüa",
+                 "niño", "niña", "nino", "nina", "infante"}
+    if any(k in txt_l for k in _MENOR_KW):
+        return True
+    # Edad explícita < 14
+    for m in _RE_MENOR_EDAD.finditer(txt_l):
+        if int(m.group(1)) < 14:
+            return True
+    return False
+
+
 async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
                             saludo_prefix: str | None = None) -> str:
     if is_medilink_down():
         return _modo_degradado(phone, "agendar", especialidad or "")
+    # ── Detección de menor (bonus 2026-05-03) ──
+    # Si el paciente menciona un niño/bebé/edad < 14 durante el flujo de
+    # Medicina Familiar o Medicina General, pausar y aclarar que el CMC no
+    # atiende pediatría directamente.
+    _esp_para_menor = (especialidad or "").lower()
+    if _esp_para_menor in (_ESP_MED_GENERAL | _ESP_MED_FAMILIAR):
+        _txt_raw = data.pop("_txt_raw", "") or ""
+        if _txt_raw and _detectar_menor_en_texto(_txt_raw) and not data.get("_menor_confirmado_adulto"):
+            log_event(phone, "menor_detectado_mg", {"txt": _txt_raw[:120]})
+            data["_especialidad_pendiente"] = especialidad
+            save_session(phone, "WAIT_CONFIRMAR_ADULTO", data)
+            return _btn_msg(
+                "¿La cita es para un menor?\n\n"
+                "El CMC no atiende pediatría directamente.\n"
+                "Te recomendamos el CESFAM más cercano o un pediatra externo.\n\n"
+                "Si la cita es para un adulto, presiona *Continuar*.",
+                [
+                    {"id": "menor_es_adulto", "title": "Continuar (es adulto)"},
+                    {"id": "menor_es_menor",  "title": "Es para un menor"},
+                ]
+            )
+    elif "_txt_raw" in data:
+        data.pop("_txt_raw", None)
     # ── BUG-fix 2026-05-03: solo Dr. Márquez atiende Medicina Familiar ──
     # Antes "medicina familiar" caía en _ESP_MED_GENERAL → ofrecía Abarca/Olavarría
     # primero. Forzar id_profesional=13 (Márquez) y guardar nota explicativa.
@@ -7384,15 +7506,8 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
             )
         especialidad = "medicina general"
         especialidad_lower = "medicina general"
-    # BUG-02: nota cuando medicina familiar se mapea a medicina general
-    if (_esp_pedida_original in ("medicina familiar", "médico familiar",
-                                 "medico familiar", "familiar")
-            and especialidad_lower == "medicina general"
-            and not saludo_prefix):
-        saludo_prefix = (
-            "*Medicina Familiar* y *Medicina General* comparten agenda en el CMC.\n"
-            "Nuestros médicos generales atienden ambas modalidades.\n\n"
-        )
+    # Medicina Familiar: NO convertir a medicina general — tiene su propio branch de búsqueda
+    # (antes este bloque ponía un saludo_prefix engañoso asumiendo que se mapeaba a MG)
     # Detectar si la especialidad no existe en nuestro catálogo
     from medilink import _ids_para_especialidad as _ids_esp_check
     if not _ids_esp_check(especialidad_lower):
@@ -7504,6 +7619,45 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
                 # Abarca + Olavarría sin disponibilidad → Márquez como overflow
                 smart, todos = await buscar_primer_dia(especialidad_lower, solo_ids=[_MED_OVERFLOW_ID])
                 mejor = todos[0] if todos else None
+    elif especialidad_lower in _ESP_MED_FAMILIAR:
+        # Solo Dr. Alonso Márquez (ID 13) atiende Medicina Familiar en el CMC.
+        # Si no tiene horas esta semana, ofrecer explícitamente cambio a Medicina General
+        # — NO autoswitch silencioso a otros profesionales.
+        _fp_mf = data.get("fecha_preferida")
+        if _fp_mf:
+            smart, todos = await buscar_slots_dia("medicina general", _fp_mf)
+            todos = [s for s in (todos or []) if s.get("fecha") == _fp_mf and s.get("id_profesional") in _MED_FAMILIAR_IDS]
+            smart = [s for s in (smart or []) if s.get("fecha") == _fp_mf and s.get("id_profesional") in _MED_FAMILIAR_IDS]
+            if todos:
+                mejor = todos[0]
+            else:
+                data["_aviso_sin_fecha_pedida"] = _fp_mf
+                data.pop("fecha_preferida", None)
+                smart, todos = await buscar_primer_dia("medicina general", solo_ids=_MED_FAMILIAR_IDS)
+                mejor = todos[0] if todos else None
+        else:
+            smart, todos = await buscar_primer_dia("medicina general", solo_ids=_MED_FAMILIAR_IDS)
+            mejor = todos[0] if todos else None
+        # Normalizar label del slot a "Medicina Familiar" para display correcto
+        for s in (todos or []):
+            if isinstance(s, dict):
+                s["especialidad"] = "Medicina Familiar"
+        if mejor and isinstance(mejor, dict):
+            mejor["especialidad"] = "Medicina Familiar"
+        # Sin disponibilidad de Márquez → ofrecer cambio explícito a Medicina General,
+        # NO caer silenciosamente a Abarca/Olavarría.
+        if not todos or not mejor:
+            data["medfam_sin_cupo_ofrecer_mg"] = True
+            save_session(phone, "WAIT_MEDFAM_FALLBACK", data)
+            return _btn_msg(
+                "El Dr. Márquez (*Medicina Familiar*) no tiene horas disponibles esta semana.\n\n"
+                "¿Te muestro horas con *Medicina General* (Dr. Abarca, Dr. Olavarría o Dr. Márquez)?",
+                [
+                    {"id": "medfam_fallback_si", "title": "Sí, mostrar Medicina General"},
+                    {"id": "medfam_fallback_no", "title": "No, gracias"},
+                ]
+            )
+        especialidad_lower = "medicina familiar"
     else:
         # Si el paciente indicó una fecha preferida ("mañana", "viernes", etc.),
         # buscarla directamente en vez de usar primer_dia.
@@ -7589,6 +7743,8 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
     ids_esp = _ids_para_especialidad(especialidad_lower)
     if especialidad_lower in _ESP_MED_GENERAL:
         ids_esp = list(_MED_GENERAL_IDS)  # Abarca, Olavarría, Márquez
+    elif especialidad_lower in _ESP_MED_FAMILIAR:
+        ids_esp = list(_MED_FAMILIAR_IDS)  # Solo Márquez — no hay "otro profesional"
     hay_otros = len([i for i in ids_esp if i != prof_sugerido_id]) > 0
 
     botones = [
