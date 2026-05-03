@@ -3,300 +3,510 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CMC — Dashboard profesional</title>
+<title>CMC — Tu semana</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  :root{ --fiordo:#1F3340; --cobre:#B86D3F; --neblina:#EFE9DD; --musgo:#4A5F3A; --lacre:#8C2A2A; --agua:#5B8B96; --noche:#122028; }
-  body{ font-family:'Inter',sans-serif; background:var(--neblina); color:var(--fiordo); }
-  h1,h2,h3,.serif{ font-family:'Fraunces',serif; }
-  .mono{ font-family:'IBM Plex Mono',monospace; }
-  .kpi-card{ background:white; border:1px solid rgba(31,51,64,.1); border-radius:6px; padding:18px 22px; }
-  .kpi-num{ font-family:'Fraunces',serif; font-size:30px; font-weight:500; line-height:1; color:var(--fiordo); }
-  .kpi-label{ font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--cobre); margin-bottom:8px; }
-  .kpi-sub{ font-size:11px; color:rgba(31,51,64,.6); margin-top:4px; }
-  .section-head{ font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:3px; text-transform:uppercase; color:var(--cobre); margin-bottom:8px; }
-  .section-title{ font-family:'Fraunces',serif; font-size:30px; font-weight:500; line-height:1.05; margin-bottom:18px; }
-  .panel{ background:white; border:1px solid rgba(31,51,64,.1); border-radius:6px; padding:22px; }
-  .calday{ width:34px; height:34px; border-radius:4px; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:9px; line-height:1.05; color:var(--fiordo); }
-  .calday .n{ font-size:11px; font-weight:600; }
-  .calday .delta{ font-size:8.5px; opacity:.85; }
-  .calday .delta.pos{ color:#3a6b2a; font-weight:600; }
-  .calday .delta.neg{ color:#7a1f1f; font-weight:600; }
-  .calday-empty{ background:#EFE9DD; border:1px dashed #d4cdb8; }
-  .pos{ color:var(--musgo); }
-  .neg{ color:var(--lacre); }
-  table.tidy{ width:100%; border-collapse:collapse; font-size:13px; }
-  table.tidy th{ text-align:left; font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--cobre); border-bottom:1px solid rgba(31,51,64,.15); padding:8px 6px; }
-  table.tidy td{ padding:8px 6px; border-bottom:1px solid rgba(31,51,64,.05); }
-  table.tidy tr:hover td{ background:rgba(184,109,63,.05); }
-  table.tidy tr.proy td{ background:rgba(91,139,150,.10); font-style:italic; }
-  input[type=range]{ -webkit-appearance:none; appearance:none; height:4px; background:rgba(31,51,64,.15); border-radius:2px; outline:none; width:100%; }
-  input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; appearance:none; width:18px; height:18px; border-radius:50%; background:var(--cobre); cursor:pointer; border:2px solid white; box-shadow:0 1px 3px rgba(0,0,0,.2); }
-  .scenario-btn{ font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:1px; text-transform:uppercase; padding:8px 14px; border:1px solid rgba(31,51,64,.2); border-radius:4px; background:white; cursor:pointer; }
-  .prof-pill{ display:inline-flex; align-items:center; padding:4px 10px; border-radius:20px; background:rgba(91,139,150,.15); color:#1F3340; font-family:'IBM Plex Mono',monospace; font-size:11px; margin:2px 4px 2px 0; cursor:pointer; }
-  .prof-pill:hover{ background:rgba(91,139,150,.30); }
-  .prof-pill.active{ background:var(--cobre); color:white; }
+  :root {
+    --cmc-aqua: #4FBECE;
+    --cmc-blue: #1172AB;
+    --cmc-navy: #0F3F68;
+    --cmc-navy-xs: rgba(15,63,104,.06);
+    --cmc-navy-sm: rgba(15,63,104,.12);
+    --cmc-navy-md: rgba(15,63,104,.20);
+    --cmc-text: #1a2e3d;
+    --cmc-muted: rgba(26,46,61,.55);
+    --cmc-bg: #f5f8fb;
+    --cmc-green: #2d7a4f;
+    --cmc-green-bg: #e8f5ee;
+    --cmc-red: #8a2418;
+    --cmc-red-bg: #fdecea;
+    --cmc-amber: #8a5c00;
+    --cmc-amber-bg: #fef3dc;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: 'Montserrat', sans-serif; background: var(--cmc-bg); color: var(--cmc-text); margin: 0; }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+
+  /* Cards */
+  .card { background: white; border-radius: 10px; box-shadow: 0 1px 3px var(--cmc-navy-sm), 0 0 0 1px var(--cmc-navy-xs); padding: 20px 24px; }
+  .card-hero { background: linear-gradient(135deg, var(--cmc-navy) 0%, var(--cmc-blue) 100%); color: white; border-radius: 10px; padding: 28px 28px 24px; }
+
+  /* KPI */
+  .kpi-num { font-size: 32px; font-weight: 700; line-height: 1; color: var(--cmc-navy); }
+  .kpi-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--cmc-aqua); margin-bottom: 6px; }
+  .kpi-sub { font-size: 11px; color: var(--cmc-muted); margin-top: 4px; }
+  .kpi-delta-pos { font-size: 11px; font-weight: 600; color: var(--cmc-green); background: var(--cmc-green-bg); padding: 2px 7px; border-radius: 20px; display: inline-block; margin-top: 4px; }
+  .kpi-delta-neg { font-size: 11px; font-weight: 600; color: var(--cmc-red); background: var(--cmc-red-bg); padding: 2px 7px; border-radius: 20px; display: inline-block; margin-top: 4px; }
+  .kpi-delta-neu { font-size: 11px; font-weight: 600; color: var(--cmc-muted); background: var(--cmc-navy-xs); padding: 2px 7px; border-radius: 20px; display: inline-block; margin-top: 4px; }
+
+  /* Section labels */
+  .sec-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: var(--cmc-aqua); margin-bottom: 6px; }
+  .sec-title { font-size: 22px; font-weight: 700; color: var(--cmc-navy); margin-bottom: 16px; line-height: 1.15; }
+
+  /* Progress bar */
+  .prog-track { background: var(--cmc-navy-xs); border-radius: 4px; height: 8px; width: 100%; overflow: hidden; }
+  .prog-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--cmc-aqua), var(--cmc-blue)); transition: width .4s ease; }
+
+  /* Action card */
+  .action-card { border-left: 3px solid var(--cmc-aqua); background: white; border-radius: 0 8px 8px 0; padding: 12px 16px; box-shadow: 0 1px 3px var(--cmc-navy-xs); }
+  .action-card.urgente { border-left-color: var(--cmc-red); }
+  .action-card.neutro { border-left-color: var(--cmc-muted); }
+
+  /* Ranking badge */
+  .rank-badge { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; font-weight: 700; font-size: 14px; }
+  .rank-1 { background: #FEF3DC; color: #8a5c00; }
+  .rank-2 { background: #e8f5ee; color: #2d7a4f; }
+  .rank-other { background: var(--cmc-navy-xs); color: var(--cmc-navy); }
+
+  /* NPS gauge */
+  .nps-ring { position: relative; width: 90px; height: 90px; flex-shrink: 0; }
+  .nps-ring svg { transform: rotate(-90deg); }
+  .nps-ring .nps-val { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; color: var(--cmc-navy); }
+  .nps-ring .nps-unit { font-size: 9px; color: var(--cmc-muted); margin-top: -2px; }
+
+  /* Heatmap calendar */
+  .calday { width: 30px; height: 30px; border-radius: 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 10px; line-height: 1.1; }
+  .calday-empty { background: var(--cmc-navy-xs); opacity: .3; }
+
+  /* No-show pill */
+  .pill-stat { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+
+  /* Error / loading states */
+  .state-loading { text-align: center; padding: 60px 20px; color: var(--cmc-muted); }
+  .state-error { text-align: center; padding: 40px 20px; color: var(--cmc-red); }
+
+  /* Topbar */
+  .topbar { background: white; border-bottom: 1px solid var(--cmc-navy-xs); position: sticky; top: 0; z-index: 50; }
 </style>
 </head>
 <body>
 
-<nav class="border-b border-stone-300 sticky top-0 bg-white/90 backdrop-blur z-50">
-  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4 text-sm">
-    <span class="serif text-lg font-medium" style="color:var(--fiordo)">CMC</span>
-    <span class="mono text-xs opacity-50">BI v2 · análisis profesional</span>
-    <button id="btnRefresh" class="ml-auto mono text-xs opacity-70 hover:opacity-100" title="Forzar resync">⟳ Refrescar</button>
-    <a href="/horizonte" class="opacity-70 hover:opacity-100">Horizonte</a>
-    <a href="/atribucion" class="opacity-70 hover:opacity-100">Atribución</a>
-    <a href="/menu" class="opacity-50 hover:opacity-100">← Menú</a>
+<!-- Topbar -->
+<nav class="topbar">
+  <div class="max-w-3xl mx-auto px-4 py-3 flex items-center gap-3">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style="flex-shrink:0">
+      <rect width="24" height="24" rx="5" fill="#0F3F68"/>
+      <path d="M12 5v14M5 12h14" stroke="#4FBECE" stroke-width="2.5" stroke-linecap="round"/>
+    </svg>
+    <span style="font-weight:700;font-size:15px;color:var(--cmc-navy)">Centro Médico Carampangue</span>
+    <span class="mono" style="font-size:10px;color:var(--cmc-muted);margin-left:auto" id="labelPeriodo">cargando...</span>
   </div>
 </nav>
 
-<main class="max-w-7xl mx-auto px-4 py-8">
-  <header class="mb-8">
-    <p class="section-head" id="ctxLabel">CMC · Recurso humano · Análisis económico</p>
-    <div class="flex items-end gap-4 flex-wrap">
-      <h1 class="text-5xl md:text-6xl font-medium leading-none mb-2" style="color:var(--fiordo)" id="profName">—<em class="italic" style="color:var(--cobre)">.</em></h1>
-    </div>
-    <p class="serif italic text-xl opacity-75" id="profEspecialidad">cargando…</p>
-    <p class="mono text-xs opacity-60 mt-3" id="metaSubtitle">cargando datos…</p>
-    <div class="mt-4" id="profPills"></div>
-  </header>
-
-  <!-- Slider objetivo -->
-  <section class="mb-8 panel">
-    <div class="grid md:grid-cols-2 gap-6 items-start">
-      <div>
-        <div class="flex justify-between items-baseline mb-2">
-          <span class="mono text-xs uppercase tracking-wider" style="color:var(--cobre)">Objetivo pacientes/día</span>
-          <span class="mono text-sm" id="lblObjetivo">15</span>
-        </div>
-        <input type="range" min="1" max="40" step="1" value="15" id="objetivoInput">
-        <p class="text-xs opacity-60 mt-1">Días bajo objetivo se pintan rojos. Súbete o súbele para ver el delta.</p>
-      </div>
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <p class="kpi-label">Cobertura cobrado/facturado</p>
-          <p class="kpi-num" id="kpiCobertura">—</p>
-          <p class="kpi-sub">% de lo que efectivamente entró</p>
-        </div>
-        <div>
-          <p class="kpi-label">Tarifa real promedio</p>
-          <p class="kpi-num" id="kpiTarifa">—</p>
-          <p class="kpi-sub">cobrado / atención</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- KPIs -->
-  <section class="mb-10">
-    <div class="grid md:grid-cols-4 gap-3">
-      <div class="kpi-card">
-        <div class="kpi-label">Total atendidos</div>
-        <div class="kpi-num" id="kpiTotalAtend">—</div>
-        <div class="kpi-sub" id="kpiTotalAtendSub">—</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Promedio mes</div>
-        <div class="kpi-num" id="kpiAvgMes">—</div>
-        <div class="kpi-sub">atend/mes</div>
-      </div>
-      <div class="kpi-card" style="background:linear-gradient(180deg,#FFFFFF 0%, #F5F1E8 100%); border-color:rgba(184,109,63,.4)">
-        <div class="kpi-label" style="color:var(--cobre)">CAJA real avg/mes</div>
-        <div class="kpi-num" id="kpiCajaMes" style="color:var(--cobre)">—</div>
-        <div class="kpi-sub">igual a módulo Cajas Medilink</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Caja real total histórica</div>
-        <div class="kpi-num" id="kpiCajaTotal">—</div>
-        <div class="kpi-sub" id="kpiCajaTotalSub">CLP cobrado · n pagos</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Por mes -->
-  <section class="mb-10 panel">
-    <p class="section-head">01 — Atenciones e ingreso por mes</p>
-    <h2 class="section-title">¿Cuándo creció?</h2>
-    <canvas id="chartMes" height="120"></canvas>
-    <p class="text-xs opacity-60 mt-3">Barras = atendidos por mes. Línea = ingreso CLP cobrado (eje derecho). Color claro = proyección 6m.</p>
-  </section>
-
-  <section class="mb-10 panel">
-    <p class="section-head">02 — Detalle mensual</p>
-    <h2 class="section-title">Mes a mes.</h2>
-    <table class="tidy" id="tablaMes"><thead><tr><th>Mes</th><th>Atend.</th><th>Pagadas</th><th>Facturado</th><th>Cobrado</th><th>Δ no cobrado</th></tr></thead><tbody></tbody></table>
-    <p class="text-xs opacity-60 mt-3">Δ = facturado − cobrado. Atenciones registradas en sistema pero no cobradas en caja real (atenciones-fantasma).</p>
-  </section>
-
-  <section class="mb-10 panel">
-    <p class="section-head">03 — Calendario diario</p>
-    <h2 class="section-title">Días trabajados.</h2>
-    <div id="heatmap"></div>
-  </section>
-
-  <section class="mb-10 grid md:grid-cols-2 gap-6">
-    <div class="panel">
-      <p class="section-head">04 — Día de la semana</p>
-      <h2 class="section-title">Carga por día.</h2>
-      <canvas id="chartDow" height="180"></canvas>
-    </div>
-    <div class="panel">
-      <p class="section-head">05 — Proyección</p>
-      <h2 class="section-title">Próximos 6 meses.</h2>
-      <table class="tidy" id="tablaProy"><thead><tr><th>Mes</th><th>Atend (proy)</th><th>Ingreso (proy)</th></tr></thead><tbody></tbody></table>
-    </div>
-  </section>
-
-  <section class="mb-10 panel" style="background:linear-gradient(180deg,#1F3340 0%,#122028 100%);color:#EFE9DD;">
-    <p class="section-head" style="color:#B86D3F">06 — Lectura</p>
-    <h2 class="section-title text-white">Resumen.</h2>
-    <p id="lectura" class="text-base leading-relaxed opacity-90"></p>
-  </section>
+<main class="max-w-3xl mx-auto px-4 py-8" id="mainContent">
+  <div class="state-loading" id="loadingState">
+    <p class="mono text-sm" style="color:var(--cmc-muted)">Cargando tu dashboard...</p>
+  </div>
 </main>
 
+<template id="tplDashboard">
+
+<!-- Hero header -->
+<div class="card-hero mb-6">
+  <p class="mono" style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(79,190,206,.8);margin-bottom:8px" id="hLabelMes">—</p>
+  <h1 style="font-size:28px;font-weight:700;margin:0 0 4px" id="hNombre">—</h1>
+  <p style="font-size:14px;opacity:.75;margin:0" id="hEspecialidad">—</p>
+  <div class="mt-4 pt-4" style="border-top:1px solid rgba(255,255,255,.15)">
+    <p style="font-size:12px;opacity:.65;margin:0" id="hSubtitle">Tu resumen del mes.</p>
+  </div>
+</div>
+
+<!-- KPIs principales -->
+<section class="mb-6">
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div class="card">
+      <div class="kpi-label">Atenciones mes</div>
+      <div class="kpi-num" id="kpiAtend">—</div>
+      <div id="kpiAtendDelta" class="kpi-delta-neu mt-1">—</div>
+      <div class="kpi-sub">vs mismo mes año ant.</div>
+    </div>
+    <div class="card">
+      <div class="kpi-label">Promedio centro</div>
+      <div class="kpi-num" id="kpiPromCentro">—</div>
+      <div class="kpi-sub">atend/mes · tu especialidad</div>
+    </div>
+    <div class="card">
+      <div class="kpi-label">No-shows</div>
+      <div class="kpi-num" id="kpiNoshow">—</div>
+      <div id="kpiNoshowPct" class="kpi-delta-neu mt-1">—</div>
+      <div class="kpi-sub">del total citados este mes</div>
+    </div>
+    <div class="card">
+      <div class="kpi-label">Utiliz. agenda</div>
+      <div class="kpi-num" id="kpiUtil">—</div>
+      <div class="kpi-sub" id="kpiUtilSub">slots ocupados / total</div>
+    </div>
+  </div>
+</section>
+
+<!-- Ingreso estimado (opcional) -->
+<section class="mb-6" id="secIngreso" style="display:none">
+  <div class="card" style="border-left:4px solid var(--cmc-blue)">
+    <div class="kpi-label">Ingreso estimado del mes</div>
+    <div class="kpi-num" style="color:var(--cmc-blue)" id="kpiIngreso">—</div>
+    <div class="kpi-sub mt-1">Basado en CAJA REAL · fuente: Medilink Cajas</div>
+  </div>
+</section>
+
+<!-- Utilización visual -->
+<section class="mb-6">
+  <div class="card">
+    <div class="sec-label">Ocupacion de agenda</div>
+    <div class="flex items-center justify-between mb-2">
+      <span style="font-size:14px;font-weight:600;color:var(--cmc-navy)" id="lblUtilPct">—</span>
+      <span class="mono" style="font-size:11px;color:var(--cmc-muted)" id="lblUtilSlots">— / — slots</span>
+    </div>
+    <div class="prog-track">
+      <div class="prog-fill" id="progUtil" style="width:0%"></div>
+    </div>
+    <p style="font-size:11px;color:var(--cmc-muted);margin-top:8px" id="lblUtilMeta">—</p>
+  </div>
+</section>
+
+<!-- Atenciones mes actual vs año anterior -->
+<section class="mb-6">
+  <div class="card">
+    <div class="sec-label">Tendencia</div>
+    <div class="sec-title" style="margin-bottom:12px">Tus atenciones mes a mes.</div>
+    <canvas id="chartTendencia" height="140"></canvas>
+    <p style="font-size:11px;color:var(--cmc-muted);margin-top:8px">Barras = mes actual · Línea = mismo mes año anterior</p>
+  </div>
+</section>
+
+<!-- NPS + Ranking lado a lado -->
+<section class="mb-6 grid md:grid-cols-2 gap-4">
+
+  <!-- NPS -->
+  <div class="card">
+    <div class="sec-label">Satisfaccion pacientes</div>
+    <div class="sec-title" style="margin-bottom:16px">NPS de tus pacientes.</div>
+    <div class="flex items-center gap-5">
+      <div class="nps-ring" id="npsRing">
+        <svg viewBox="0 0 90 90" width="90" height="90">
+          <circle cx="45" cy="45" r="35" fill="none" stroke="var(--cmc-navy-xs)" stroke-width="9"/>
+          <circle cx="45" cy="45" r="35" fill="none" stroke="var(--cmc-aqua)" stroke-width="9"
+                  stroke-dasharray="219.9" stroke-dashoffset="219.9"
+                  id="npsArc" stroke-linecap="round"/>
+        </svg>
+        <div class="nps-val"><span id="npsVal">—</span><span class="nps-unit">NPS</span></div>
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--cmc-muted);margin-bottom:6px"><span id="npsMejor" style="color:var(--cmc-green);font-weight:600">—</span> respondieron <strong>Mejor</strong></div>
+        <div style="font-size:12px;color:var(--cmc-muted);margin-bottom:6px"><span id="npsIgual" style="font-weight:600">—</span> respondieron <strong>Igual</strong></div>
+        <div style="font-size:12px;color:var(--cmc-muted);margin-bottom:6px"><span id="npsPeror" style="color:var(--cmc-red);font-weight:600">—</span> respondieron <strong>Peor</strong></div>
+        <div class="mono" style="font-size:10px;color:var(--cmc-muted);margin-top:8px" id="npsBase">— respuestas totales</div>
+      </div>
+    </div>
+    <p style="font-size:11px;color:var(--cmc-muted);margin-top:12px">NPS = % Mejor − % Peor sobre respuestas post-consulta recibidas por WhatsApp.</p>
+  </div>
+
+  <!-- Ranking -->
+  <div class="card">
+    <div class="sec-label">Posicion en tu especialidad</div>
+    <div class="sec-title" style="margin-bottom:16px">Tu lugar este mes.</div>
+    <div class="flex items-center gap-4 mb-4">
+      <div class="rank-badge" id="rankBadge">—</div>
+      <div>
+        <div style="font-size:15px;font-weight:700;color:var(--cmc-navy)" id="rankTexto">—</div>
+        <div style="font-size:12px;color:var(--cmc-muted)" id="rankEsp">—</div>
+      </div>
+    </div>
+    <div class="prog-track mb-1">
+      <div class="prog-fill" id="progRank" style="width:0%"></div>
+    </div>
+    <p style="font-size:11px;color:var(--cmc-muted);margin-top:6px" id="rankSub">—</p>
+    <p style="font-size:11px;color:var(--cmc-muted);margin-top:8px">La posicion es anonima: solo ves tu lugar, no los datos de tus colegas.</p>
+  </div>
+</section>
+
+<!-- Calendario heatmap del mes -->
+<section class="mb-6">
+  <div class="card">
+    <div class="sec-label">Dias trabajados</div>
+    <div class="sec-title" style="margin-bottom:12px">Tu calendario.</div>
+    <div id="heatmapCal"></div>
+    <div class="flex gap-3 mt-3 flex-wrap" style="font-size:11px;color:var(--cmc-muted)">
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#2d7a4f;margin-right:4px"></span>Sobre objetivo</span>
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#e8f5ee;border:1px solid #2d7a4f;margin-right:4px"></span>Bajo objetivo</span>
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--cmc-navy-xs);margin-right:4px"></span>Sin atencion</span>
+    </div>
+  </div>
+</section>
+
+<!-- Acciones sugeridas -->
+<section class="mb-8">
+  <div class="sec-label">Para esta semana</div>
+  <div class="sec-title">3 acciones concretas.</div>
+  <div class="flex flex-col gap-3" id="accionesList"></div>
+</section>
+
+<!-- Footer -->
+<footer style="text-align:center;padding:24px 0 40px;border-top:1px solid var(--cmc-navy-xs)">
+  <p class="mono" style="font-size:10px;color:var(--cmc-muted)">Centro Médico Carampangue · dashboard generado automaticamente · <span id="footerFecha">—</span></p>
+  <p style="font-size:11px;color:var(--cmc-muted);margin-top:4px">Consultas a recepcion: (44) 296 5226</p>
+</footer>
+
+</template>
+
 <script>
-const MESES = {'01':'Enero','02':'Febrero','03':'Marzo','04':'Abril','05':'Mayo','06':'Junio','07':'Julio','08':'Agosto','09':'Septiembre','10':'Octubre','11':'Noviembre','12':'Diciembre'};
 const clp = n => n == null ? "—" : "$" + Math.round(n).toLocaleString("es-CL");
-const moneda = n => n == null ? "—" : "$" + Math.round(n/1000).toLocaleString("es-CL") + "K";
-let DATA = null;
-let OBJETIVO = 15;
-const ID_PROF = parseInt(window.location.pathname.split("/").pop());
+const monedaK = n => n == null ? "—" : "$" + Math.round(n/1000).toLocaleString("es-CL") + "K";
+const pct = (n, d) => d ? Math.round(100*n/d) + "%" : "—";
 
-async function loadProfesionales(){
-  const r = await fetch("/api/profesionales");
-  const d = await r.json();
-  const cont = document.getElementById("profPills");
-  cont.innerHTML = d.profesionales.map(p =>
-    `<a href="${p.dashboard}" class="prof-pill${p.id===ID_PROF?' active':''}" title="${p.especialidad}">${p.id}·${p.nombre.replace('Dr. ','').replace('Dra. ','').replace('Dr ','').slice(0,20)}</a>`
-  ).join("");
+// Leer token desde URL
+const params = new URLSearchParams(window.location.search);
+const TOKEN = params.get("token") || "";
+
+async function loadDashboard() {
+  if (!TOKEN) {
+    showError("Link invalido. Cada profesional recibe su propio link semanal.");
+    return;
+  }
+
+  let data;
+  try {
+    const r = await fetch(`/api/profesional/dashboard?token=${encodeURIComponent(TOKEN)}`);
+    if (r.status === 401 || r.status === 403) { showError("Link invalido o expirado."); return; }
+    if (!r.ok) { showError(`Error del servidor (${r.status}).`); return; }
+    data = await r.json();
+  } catch(e) {
+    showError("No se pudo conectar al servidor.");
+    return;
+  }
+
+  // Inyectar template
+  const tpl = document.getElementById("tplDashboard");
+  const content = tpl.content.cloneNode(true);
+  const main = document.getElementById("mainContent");
+  main.innerHTML = "";
+  main.appendChild(content);
+
+  renderDashboard(data);
 }
 
-async function loadData(refresh=false){
-  document.getElementById("metaSubtitle").textContent = "cargando…";
-  const url = `/api/profesional/${ID_PROF}/data${refresh?'?refresh=1':''}`;
-  const r = await fetch(url);
-  if(!r.ok){ document.getElementById("metaSubtitle").textContent = `error ${r.status}`; return; }
-  DATA = await r.json();
-  document.getElementById("profName").innerHTML = (DATA.nombre_profesional||"Profesional")+'<em class="italic" style="color:var(--cobre)">.</em>';
-  document.getElementById("profEspecialidad").textContent = DATA.especialidad || "";
-  document.getElementById("ctxLabel").textContent = `CMC · ID ${DATA.id_profesional} · BI v2 (cobrado real)`;
-  document.getElementById("metaSubtitle").textContent = `${DATA.fuente} · actualizado ${DATA.fecha_actualizacion} · ${DATA.kpis.total_atend} atenciones cargadas`;
-  render();
+function showError(msg) {
+  document.getElementById("mainContent").innerHTML = `
+    <div class="state-error">
+      <p style="font-weight:600;margin-bottom:8px">No se pudo cargar el dashboard</p>
+      <p class="mono" style="font-size:12px">${msg}</p>
+    </div>`;
 }
 
-function render(){
-  const k = DATA.kpis;
-  document.getElementById("kpiCobertura").textContent = (k.cobertura_pct||0) + "%";
-  document.getElementById("kpiTarifa").textContent = clp(k.tarifa_real_promedio);
-  document.getElementById("kpiTotalAtend").textContent = k.total_atend;
-  document.getElementById("kpiTotalAtendSub").textContent = `${k.dias_con_atencion} días trabajados`;
-  document.getElementById("kpiAvgMes").textContent = k.atend_avg_mes;
-  document.getElementById("kpiCajaMes").textContent = moneda(k.caja_real_avg_mes||0);
-  document.getElementById("kpiCajaTotal").textContent = moneda(k.caja_real_total||0);
-  document.getElementById("kpiCajaTotalSub").textContent = `${k.n_pagos_total||0} pagos · ${k.cobertura_caja_pct||0}% del facturado`;
+function renderDashboard(d) {
+  const k = d.kpis || {};
+  const mes = d.mes_label || "";
+  const nombre = d.nombre || "Profesional";
+  const esp = d.especialidad || "";
 
-  renderChartMes();
-  renderTablaMes();
-  renderHeatmap();
-  renderDow();
-  renderProy();
-  renderLectura();
+  // Topbar
+  document.getElementById("labelPeriodo").textContent = mes;
+
+  // Hero
+  document.getElementById("hLabelMes").textContent = "Tu resumen · " + mes;
+  document.getElementById("hNombre").textContent = nombre;
+  document.getElementById("hEspecialidad").textContent = esp;
+  document.getElementById("hSubtitle").textContent =
+    `${k.atend_mes || 0} atenciones este mes · ${k.dias_trabajados || 0} dias trabajados`;
+
+  // KPIs
+  setText("kpiAtend", k.atend_mes ?? "—");
+
+  const deltaAnio = k.atend_mes_anio_anterior != null && k.atend_mes != null
+    ? k.atend_mes - k.atend_mes_anio_anterior : null;
+  renderDelta("kpiAtendDelta", deltaAnio, k.atend_mes_anio_anterior,
+    k.atend_mes_anio_anterior != null ? "vs " + k.atend_mes_anio_anterior + " (año ant.)" : "sin dato año anterior");
+
+  setText("kpiPromCentro", k.prom_especialidad ?? "—");
+  setText("kpiNoshow", k.noshows ?? "—");
+
+  const nshPct = k.noshows != null && k.citados_mes
+    ? Math.round(100*k.noshows/k.citados_mes) : null;
+  if (nshPct != null) {
+    const el = document.getElementById("kpiNoshowPct");
+    el.textContent = nshPct + "% de no-shows";
+    el.className = nshPct > 20 ? "kpi-delta-neg mt-1" : nshPct > 10 ? "kpi-delta-neu mt-1" : "kpi-delta-pos mt-1";
+  }
+
+  const util = k.slots_ocupados != null && k.slots_total
+    ? Math.round(100*k.slots_ocupados/k.slots_total) : null;
+  setText("kpiUtil", util != null ? util + "%" : "—");
+  setText("kpiUtilSub", k.slots_ocupados != null ? `${k.slots_ocupados} / ${k.slots_total} slots` : "sin dato");
+
+  // Ingreso
+  if (k.ingreso_mes != null) {
+    document.getElementById("secIngreso").style.display = "";
+    document.getElementById("kpiIngreso").textContent = monedaK(k.ingreso_mes);
+  }
+
+  // Barra utilización
+  if (util != null) {
+    document.getElementById("lblUtilPct").textContent = util + "% de ocupacion";
+    document.getElementById("lblUtilSlots").textContent = `${k.slots_ocupados} / ${k.slots_total} slots`;
+    document.getElementById("progUtil").style.width = Math.min(util, 100) + "%";
+    const meta = k.slots_total > 0
+      ? (util >= 80 ? "Excelente ocupacion este mes." : util >= 60 ? "Buena ocupacion — hay margen para crecer." : "Agenda con capacidad disponible.")
+      : "";
+    document.getElementById("lblUtilMeta").textContent = meta;
+  }
+
+  // Tendencia chart
+  renderChartTendencia(d.tendencia || {});
+
+  // NPS
+  renderNPS(d.nps || {});
+
+  // Ranking
+  renderRanking(d.ranking || {}, esp);
+
+  // Heatmap
+  renderHeatmap(d.por_dia || {}, k.atend_avg_dia || 10);
+
+  // Acciones
+  renderAcciones(d.acciones || []);
+
+  // Footer
+  document.getElementById("footerFecha").textContent =
+    new Date().toLocaleDateString("es-CL", {day:"2-digit",month:"long",year:"numeric"});
 }
 
-function renderChartMes(){
-  const meses = Object.keys(DATA.por_mes).sort();
-  const proy = DATA.proyeccion || {};
-  const proyMeses = Object.keys(proy).sort();
-  const labels = [...meses, ...proyMeses];
-  const real = meses.map(m => DATA.por_mes[m].atend).concat(proyMeses.map(_ => null));
-  const proyVals = meses.map(_ => null).concat(proyMeses.map(m => proy[m].atend));
-  const ingreso = meses.map(m => DATA.por_mes[m].caja_real || 0).concat(proyMeses.map(m => proy[m].ingreso));
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
 
-  const ctx = document.getElementById("chartMes").getContext("2d");
-  if(window._chMes) window._chMes.destroy();
-  window._chMes = new Chart(ctx, {
-    type:"bar",
-    data:{ labels, datasets:[
-      { label:"Atendidos (real)", data:real, backgroundColor:"rgba(184,109,63,.85)", yAxisID:"y" },
-      { label:"Atendidos (proyección)", data:proyVals, backgroundColor:"rgba(91,139,150,.55)", yAxisID:"y" },
-      { label:"CAJA REAL CLP", data:ingreso, type:"line", borderColor:"#B86D3F", backgroundColor:"transparent", borderWidth:2, yAxisID:"y1", tension:.25, pointRadius:3 },
-    ]},
-    options:{ responsive:true, plugins:{ legend:{ labels:{ font:{family:"IBM Plex Mono", size:10} } } },
-      scales:{ y:{ beginAtZero:true, title:{ display:true, text:"Atendidos" } },
-               y1:{ beginAtZero:true, position:"right", grid:{ drawOnChartArea:false }, title:{ display:true, text:"CLP" }, ticks:{ callback:v => "$"+(v/1000).toLocaleString("es-CL")+"K" } } } }
+function renderDelta(id, delta, base, label) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (delta == null) { el.textContent = label || "sin dato"; el.className = "kpi-delta-neu mt-1"; return; }
+  const sign = delta > 0 ? "+" : "";
+  const pctStr = base ? ` (${delta > 0?"+":""}${Math.round(100*delta/base)}%)` : "";
+  el.textContent = `${sign}${delta} vs año ant.${pctStr}`;
+  el.className = delta > 0 ? "kpi-delta-pos mt-1" : delta < 0 ? "kpi-delta-neg mt-1" : "kpi-delta-neu mt-1";
+}
+
+function renderChartTendencia(tendencia) {
+  // tendencia = { meses: ["2025-04","2025-05",...], actual: [N,...], anterior: [N,...] }
+  const ctx = document.getElementById("chartTendencia");
+  if (!ctx) return;
+  const meses = tendencia.meses || [];
+  const actual = tendencia.actual || [];
+  const anterior = tendencia.anterior || [];
+  const labels = meses.map(m => {
+    const [y, mo] = m.split("-");
+    const nombres = ["","Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+    return nombres[parseInt(mo)] + " " + y.slice(2);
+  });
+  if (window._chTend) window._chTend.destroy();
+  window._chTend = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [
+        { label: "Este año", data: actual, backgroundColor: "rgba(17,114,171,.8)", borderRadius: 3, yAxisID: "y" },
+        { label: "Año anterior", data: anterior, type: "line", borderColor: "#4FBECE",
+          backgroundColor: "transparent", borderWidth: 2, pointRadius: 3, tension: .25, yAxisID: "y" },
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { font: { family: "IBM Plex Mono", size: 10 }, boxWidth: 12 } } },
+      scales: {
+        y: { beginAtZero: true, grid: { color: "rgba(15,63,104,.06)" },
+             ticks: { font: { family: "IBM Plex Mono", size: 10 } } },
+        x: { ticks: { font: { family: "IBM Plex Mono", size: 10 } } }
+      }
+    }
   });
 }
 
-function renderTablaMes(){
-  const tbody = document.querySelector("#tablaMes tbody");
-  const meses = Object.keys(DATA.por_mes).sort();
-  document.querySelector("#tablaMes thead").innerHTML = '<tr><th>Mes</th><th>Atendidos</th><th>Pagaron</th><th>Controles</th><th>CAJA REAL</th><th>Facturado</th></tr>';
-  let html = "";
-  for(const m of meses){
-    const v = DATA.por_mes[m];
-    const atend = v.atendidos_total || v.atend || 0;
-    const pago = v.pagaron != null ? v.pagaron : v.atend_pagadas || 0;
-    const ctrl = v.controles_gratis != null ? v.controles_gratis : Math.max(0, atend - pago);
-    const caja = v.monto_cobrado || 0;
-    const fact = v.monto_total || 0;
-    html += `<tr><td class="mono">${m}</td><td>${atend}</td><td class="mono pos"><strong>${pago}</strong></td><td class="opacity-60">${ctrl}</td><td class="mono pos">${clp(caja)}</td><td class="mono opacity-60">${clp(fact)}</td></tr>`;
+function renderNPS(nps) {
+  // nps = { nps: 72, total: 18, mejor: 14, igual: 3, peor: 1 }
+  const val = nps.nps ?? null;
+  const total = nps.total || 0;
+  if (val == null || total === 0) {
+    document.getElementById("npsVal").textContent = "—";
+    document.getElementById("npsBase").textContent = "Sin respuestas aun";
+    return;
   }
-  const proy = DATA.proyeccion || {};
-  for(const m of Object.keys(proy).sort()){
-    html += `<tr class="proy"><td class="mono">${m} · proy</td><td>${proy[m].atend}</td><td>—</td><td>—</td><td class="mono">${clp(proy[m].ingreso)}</td><td class="mono opacity-60">—</td></tr>`;
+  document.getElementById("npsVal").textContent = val > 0 ? "+" + val : val;
+  document.getElementById("npsMejor").textContent = nps.mejor ?? 0;
+  document.getElementById("npsIgual").textContent = nps.igual ?? 0;
+  document.getElementById("npsPeror").textContent = nps.peor ?? 0;
+  document.getElementById("npsBase").textContent = total + " respuestas totales";
+
+  // Arc: NPS range [-100, +100] → map to 0–100%
+  const pctArc = Math.max(0, Math.min(100, (val + 100) / 2));
+  const circumference = 2 * Math.PI * 35; // r=35
+  const offset = circumference * (1 - pctArc / 100);
+  const arc = document.getElementById("npsArc");
+  if (arc) {
+    arc.setAttribute("stroke-dasharray", circumference.toFixed(1));
+    arc.setAttribute("stroke-dashoffset", offset.toFixed(1));
+    arc.setAttribute("stroke", val >= 50 ? "#2d7a4f" : val >= 0 ? "#4FBECE" : "#8a2418");
   }
-  tbody.innerHTML = html;
 }
 
-function colorByDelta(n, cap){
-  if(n===0 && cap===0) return "#EFE9DD";
-  if(n===0) return "#F5F1E8";
-  const d = n - cap;
-  if(d===0) return "#D9D4C5";
-  if(d>0){ if(d<=2) return "#CFE3C5"; if(d<=5) return "#9FCB8E"; if(d<=9) return "#5FA858"; return "#2D7A30"; }
-  const a = -d;
-  if(a<=2) return "#F0CFCB"; if(a<=5) return "#DC8E86"; if(a<=9) return "#B85040"; return "#8A2418";
-}
-function isDarkBg(n,cap){ if(n===0) return false; const d=n-cap; return d>=6||d<=-6; }
+function renderRanking(ranking, esp) {
+  // ranking = { posicion: 1, total: 3, pct_ile: 85, atend_mes: 87 }
+  const pos = ranking.posicion;
+  const total = ranking.total;
+  if (!pos || !total) {
+    document.getElementById("rankTexto").textContent = "Sin dato";
+    document.getElementById("rankEsp").textContent = esp;
+    document.getElementById("rankSub").textContent = "No hay suficientes datos para calcular ranking.";
+    return;
+  }
+  const badge = document.getElementById("rankBadge");
+  badge.textContent = "#" + pos;
+  badge.className = "rank-badge " + (pos === 1 ? "rank-1" : pos === 2 ? "rank-2" : "rank-other");
 
-function renderHeatmap(){
-  const cont = document.getElementById("heatmap");
-  const dias = Object.keys(DATA.por_dia).sort();
-  if(!dias.length){ cont.innerHTML = "<p class='opacity-60'>Sin datos</p>"; return; }
+  const textos = ["Primer lugar", "Segundo lugar", "Tercer lugar"];
+  document.getElementById("rankTexto").textContent = pos <= 3 ? textos[pos-1] : `Lugar ${pos} de ${total}`;
+  document.getElementById("rankEsp").textContent = `en ${esp} · ${total} profesionales`;
+
+  const pct = Math.round(100 * (total - pos + 1) / total);
+  document.getElementById("progRank").style.width = pct + "%";
+  document.getElementById("rankSub").textContent = `Estas en el percentil ${pct} de tu especialidad este mes.`;
+}
+
+function renderHeatmap(porDia, objetivo) {
+  const cont = document.getElementById("heatmapCal");
+  if (!cont) return;
+  const dias = Object.keys(porDia).sort();
+  if (!dias.length) { cont.innerHTML = "<p style='font-size:12px;color:var(--cmc-muted)'>Sin datos de dias trabajados.</p>"; return; }
+
+  // Agrupar por mes
   const byMonth = {};
-  dias.forEach(f => { const m = f.slice(0,7); (byMonth[m] = byMonth[m] || []).push(f); });
-  let html = '<div class="grid md:grid-cols-3 lg:grid-cols-4 gap-6">';
-  Object.keys(byMonth).sort().forEach(m => {
-    html += `<div><div class="mono text-xs uppercase opacity-60 mb-2">${MESES[m.slice(5)]} ${m.slice(0,4)}</div>`;
-    html += '<div class="grid grid-cols-7 gap-1">';
-    ["L","M","M","J","V","S","D"].forEach(d => html += `<div class="mono text-[9px] opacity-50 text-center">${d}</div>`);
+  dias.forEach(f => { const m = f.slice(0,7); (byMonth[m] = byMonth[m]||[]).push(f); });
+
+  const MESES = ["","Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  let html = '<div class="grid md:grid-cols-2 gap-6">';
+  Object.keys(byMonth).sort().slice(-3).forEach(m => {
+    const [y, mo] = m.split("-");
+    html += `<div><div class="mono" style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--cmc-aqua);margin-bottom:8px">${MESES[parseInt(mo)]} ${y}</div>`;
+    html += '<div style="display:grid;grid-template-columns:repeat(7,30px);gap:3px">';
+    ["L","M","M","J","V","S","D"].forEach(d => {
+      html += `<div class="mono" style="font-size:9px;text-align:center;color:var(--cmc-muted)">${d}</div>`;
+    });
     const first = new Date(byMonth[m][0]+"T12:00");
     const startDow = (first.getDay() + 6) % 7;
-    for(let i=0;i<startDow;i++) html += "<div></div>";
+    for (let i=0; i<startDow; i++) html += "<div></div>";
+
     byMonth[m].forEach(f => {
-      const dt = new Date(f+"T12:00");
-      const dow = (dt.getDay() + 6) % 7;
-      const detalle = (DATA.por_dia_detalle || {})[f] || {};
-      const atend = detalle.atendidos != null ? detalle.atendidos : (DATA.por_dia[f] || 0);
-      const pago = detalle.pagaron != null ? detalle.pagaron : (DATA.por_dia[f] || 0);
-      const ctrl = detalle.controles_gratis || 0;
-      const n = atend; // métrica principal para el delta vs objetivo
-      if(dow === 6){ html += `<div class="calday calday-empty"></div>`; return; }
-      const cap = OBJETIVO;
-      const bg = colorByDelta(n, cap);
-      const dark = isDarkBg(n, cap);
-      let dh = "";
-      if(n>0||cap>0){ const d = n-cap; if(d>0) dh = `<div class="delta pos">+${d}</div>`;
-        else if(d<0) dh = `<div class="delta neg">${d}</div>`; else dh = `<div class="delta" style="opacity:.5">=</div>`; }
-      const tc = dark?"color:white;":"";
-      const tt = `${f}: ${atend} atendidos · ${pago} pagaron${ctrl?` · ${ctrl} controles`:""}`;
-      const subtxt = ctrl > 0 ? `<span style="font-size:7px;opacity:.6">${pago}/${atend}</span>` : "";
-      html += `<div class="calday" style="background:${bg};${tc}" title="${tt}"><div class="n">${n||"·"}</div>${dh}</div>`;
+      const n = porDia[f] || 0;
+      const dow = (new Date(f+"T12:00").getDay()+6)%7;
+      if (dow === 6) { html += '<div class="calday calday-empty"></div>'; return; }
+      let bg, tc;
+      if (n === 0) { bg = "var(--cmc-navy-xs)"; tc = "color:var(--cmc-muted)"; }
+      else if (n >= objetivo) { bg = n >= objetivo*1.5 ? "#2d7a4f" : "#5fa858"; tc = "color:white"; }
+      else { bg = "#fdecea"; tc = "color:var(--cmc-red)"; }
+      html += `<div class="calday" style="background:${bg};${tc}" title="${f}: ${n} atenciones">
+        <span style="font-size:11px;font-weight:600">${n||"·"}</span>
+      </div>`;
     });
     html += "</div></div>";
   });
@@ -304,51 +514,28 @@ function renderHeatmap(){
   cont.innerHTML = html;
 }
 
-function renderDow(){
-  const labels = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
-  const data = labels.map((_,i) => (DATA.por_dow[i]||{}).avg||0);
-  const ctx = document.getElementById("chartDow").getContext("2d");
-  if(window._chDow) window._chDow.destroy();
-  window._chDow = new Chart(ctx, {
-    type:"bar",
-    data:{ labels, datasets:[{label:"Avg atendidos", data, backgroundColor:"rgba(74,95,58,.8)"}]},
-    options:{ responsive:true, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
-  });
+function renderAcciones(acciones) {
+  const cont = document.getElementById("accionesList");
+  if (!cont) return;
+  if (!acciones.length) {
+    cont.innerHTML = "<p style='font-size:12px;color:var(--cmc-muted)'>Sin acciones sugeridas esta semana.</p>";
+    return;
+  }
+  cont.innerHTML = acciones.map((a, i) => {
+    const cls = a.tipo === "urgente" ? "urgente" : a.tipo === "info" ? "neutro" : "";
+    return `<div class="action-card ${cls}">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div class="rank-badge ${i===0?'rank-1':i===1?'rank-2':'rank-other'}" style="width:26px;height:26px;font-size:12px;flex-shrink:0;margin-top:1px">${i+1}</div>
+        <div>
+          <div style="font-weight:600;font-size:13px;color:var(--cmc-navy);margin-bottom:2px">${a.titulo}</div>
+          <div style="font-size:12px;color:var(--cmc-muted)">${a.descripcion}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
 }
 
-function renderProy(){
-  const proy = DATA.proyeccion || {};
-  const tbody = document.querySelector("#tablaProy tbody");
-  const meses = Object.keys(proy).sort();
-  tbody.innerHTML = meses.map(m => `<tr><td class="mono">${m}</td><td>${proy[m].atend}</td><td class="mono">${clp(proy[m].ingreso)}</td></tr>`).join("");
-}
-
-function renderLectura(){
-  const k = DATA.kpis;
-  const proy = DATA.proyeccion || {};
-  const proyMeses = Object.keys(proy).sort();
-  const proyTotal = proyMeses.reduce((s,m) => s + (proy[m].ingreso||0), 0);
-  const proy6m = proyMeses.length ? Math.round(proyTotal / proyMeses.length) : 0;
-  const cajaTotal = k.caja_real_total || 0;
-  const fac = k.total_facturado || 0;
-  const gap = fac - cajaTotal;
-  const txt = `**${DATA.nombre_profesional}** atendió **${k.total_atend}** pacientes en ${k.n_meses} meses, ` +
-    `promedio **${k.atend_avg_mes}/mes** (${k.dias_con_atencion} días trabajados). ` +
-    `Caja REAL al CMC: **${clp(k.caja_real_avg_mes)}/mes** promedio · histórico **${clp(cajaTotal)}** (${k.n_pagos_total||0} pagos en bi_pagos_caja). ` +
-    `Cobertura **${k.cobertura_caja_pct||0}%** vs facturado total **${clp(fac)}** (gap ${clp(gap)} en bonos/sin cobrar). ` +
-    `Proyección 6m: **${clp(proy6m)}/mes** promedio.`;
-  document.getElementById("lectura").innerHTML = txt.replace(/\*\*(.+?)\*\*/g, '<strong style="color:#fff">$1</strong>');
-}
-
-document.getElementById("objetivoInput").addEventListener("input", e => {
-  OBJETIVO = parseInt(e.target.value);
-  document.getElementById("lblObjetivo").textContent = OBJETIVO;
-  if(DATA) renderHeatmap();
-});
-document.getElementById("btnRefresh").addEventListener("click", () => loadData(true));
-
-loadProfesionales();
-loadData(false);
+loadDashboard();
 </script>
 </body>
 </html>

@@ -897,3 +897,59 @@ async def _job_regenerate_heatmap_cache():
         log.info("heatmap_cache regenerado: %d comunas", len(comunas))
     except Exception as e:
         log.error("_job_regenerate_heatmap_cache fallo: %s", e)
+
+
+async def _job_enviar_dashboards_semanales(forzar: bool = False):
+    """Lunes 09:00 CLT: envía por WhatsApp a cada profesional su link de dashboard semanal.
+
+    El link es /profesional/dashboard?token=<HMAC32>  — no expira (revocable generando nuevo token).
+    Profesionales sin número de WA definido en PROF_PHONES son saltados silenciosamente.
+    """
+    try:
+        import hmac as _hm, hashlib as _hl
+        from datetime import date as _date
+        from config import ADMIN_TOKEN as _AT
+        from medilink import PROFESIONALES
+
+        # TODO: mover a config.py o a una tabla en sessions.db cuando haya mas profesionales.
+        # Formato: id_profesional → numero WA sin '+' (ej. "56912345678")
+        PROF_PHONES: dict[int, str] = {
+            # 1: "56987834148",   # Dr. Olavarría — número personal, NO habilitar
+            # 73: "569XXXXXXXX",  # Dr. Abarca
+            # Agregar el WA de cada profesional aqui antes de activar.
+        }
+
+        if not PROF_PHONES and not forzar:
+            log.info("dashboards_semanales: sin números de WA configurados — agrega PROF_PHONES en jobs.py")
+            return
+
+        hoy = _date.today()
+        mes_nombres = ["","Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio",
+                       "Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
+        mes_label = f"{mes_nombres[hoy.month]} {hoy.year}"
+
+        enviados = 0
+        for id_prof, wa_phone in PROF_PHONES.items():
+            if id_prof not in PROFESIONALES:
+                log.warning("dashboards_semanales: prof %d no en PROFESIONALES, saltando", id_prof)
+                continue
+            nombre = PROFESIONALES[id_prof]["nombre"]
+            raw = f"prof:{id_prof}:{_AT}"
+            token = _hm.new(_AT.encode(), raw.encode(), _hl.sha256).hexdigest()[:32]
+            link = f"https://agentecmc.cl/profesional/dashboard?token={token}"
+            texto = (
+                f"Hola {nombre.split()[1] if len(nombre.split())>1 else nombre}, "
+                f"aqui tienes tu resumen de {mes_label} en el CMC:\n\n"
+                f"{link}\n\n"
+                f"El link es personal — incluye tus atenciones, NPS de tus pacientes y acciones sugeridas para la semana."
+            )
+            try:
+                await send_whatsapp(wa_phone, texto)
+                log.info("dashboards_semanales: enviado a prof=%d phone=%s", id_prof, wa_phone[:6]+"***")
+                enviados += 1
+            except Exception as _e:
+                log.error("dashboards_semanales: error enviando a prof=%d: %s", id_prof, _e)
+
+        log.info("dashboards_semanales: %d links enviados (%s)", enviados, hoy.isoformat())
+    except Exception as e:
+        log.error("_job_enviar_dashboards_semanales fallo: %s", e)

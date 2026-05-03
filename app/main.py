@@ -52,7 +52,8 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_doctor_reset_diario,
                   _job_cumpleanos, _job_winback,
                   _job_takeover_ttl, _job_takeover_media_ttl,
-                  _job_regenerate_heatmap_cache)
+                  _job_regenerate_heatmap_cache,
+                  _job_enviar_dashboards_semanales)
 import admin_routes
 import portal_routes
 
@@ -367,6 +368,13 @@ async def lifespan(app: FastAPI):
         _job_regenerate_heatmap_cache,
         CronTrigger(hour="*/6", minute=5, timezone=_CLT),
         id="regenerate_heatmap_cache",
+        replace_existing=True,
+    )
+    # Dashboards semanales a profesionales: lunes 09:00 CLT
+    scheduler.add_job(
+        _job_enviar_dashboards_semanales,
+        CronTrigger(day_of_week="mon", hour=9, minute=0, timezone=_CLT),
+        id="dashboards_semanales_profesionales",
         replace_existing=True,
     )
     # Primera generación al arrancar (sin await — no bloquear startup)
@@ -2394,6 +2402,253 @@ async def api_profesional_sync(id_prof: int, desde: str = "2024-01-01",
     from bi_sync import sync_profesional
     _spawn_bg(sync_profesional(id_prof, desde=desde, force=bool(force)), name=f"manual_sync_prof_{id_prof}")
     return {"started": True, "id_profesional": id_prof, "desde": desde, "force": bool(force)}
+
+
+# ── Dashboard personal por profesional (token-auth) ──────────────────────────
+
+# Tabla de tokens: id_profesional → token (HMAC-SHA256 de "prof:{id}:{secret}")
+# Generados una vez, almacenados como config estática. Nunca expiran (30d reservado para futuro).
+
+def _make_prof_token(id_prof: int) -> str:
+    """Genera token determinístico para un profesional usando ADMIN_TOKEN como secreto."""
+    import hashlib as _hl, hmac as _hm
+    raw = f"prof:{id_prof}:{ADMIN_TOKEN}"
+    return _hm.new(ADMIN_TOKEN.encode(), raw.encode(), _hl.sha256).hexdigest()[:32]
+
+@app.get("/profesional/dashboard", response_class=HTMLResponse)
+def profesional_dashboard_token_page():
+    """Dashboard personal del profesional — auth por token en query string."""
+    if not _PROF_DASHBOARD_HTML:
+        raise HTTPException(404, "Dashboard profesional no disponible")
+    return _PROF_DASHBOARD_HTML
+
+@app.get("/api/profesional/dashboard")
+async def api_profesional_dashboard_data(token: str = ""):
+    """KPIs del mes actual + tendencia + NPS + ranking + acciones sugeridas.
+    Autenticado por token individual firmado HMAC. Sin admin token requerido."""
+    import hmac as _hm, hashlib as _hl
+    from datetime import date as _date
+    from medilink import PROFESIONALES
+    from session import get_nps_por_profesional
+    from bi_sync import stats_profesional, stats_profesional_caja
+
+    # Verificar token: buscar qué profesional corresponde
+    id_prof = None
+    for pid in PROFESIONALES:
+        expected = _make_prof_token(pid)
+        if _hm.compare_digest(expected, (token or "")[:32]):
+            id_prof = pid
+            break
+    if id_prof is None:
+        raise HTTPException(401, "Token inválido")
+
+    prof_info = PROFESIONALES[id_prof]
+    hoy = _date.today()
+    mes_actual = hoy.strftime("%Y-%m")
+    mes_anterior_anio = f"{hoy.year-1}-{hoy.month:02d}"
+    desde_anio = f"{hoy.year-1}-01-01"
+
+    # Datos BI
+    try:
+        base = stats_profesional(id_prof, desde=desde_anio)
+        caja = stats_profesional_caja(id_prof, desde=desde_anio)
+    except Exception as _e:
+        log.warning("api_profesional_dashboard stats error prof=%d: %s", id_prof, _e)
+        base = {"por_mes": {}, "kpis": {}, "por_dia": {}, "proyeccion": {}}
+        caja = {"por_mes": {}, "total_caja": 0, "total_pagos": 0}
+
+    pm = base.get("por_mes", {})
+    pd = base.get("por_dia", {})
+
+    # KPIs del mes actual
+    mes_data = pm.get(mes_actual, {})
+    mes_ant_data = pm.get(mes_anterior_anio, {})
+    atend_mes = mes_data.get("atend") or mes_data.get("atendidos_total") or 0
+    atend_ant = mes_ant_data.get("atend") or mes_ant_data.get("atendidos_total") or None
+
+    # Ingreso mes actual desde caja real
+    caja_mes = caja.get("por_mes", {}).get(mes_actual, {})
+    ingreso_mes = caja_mes.get("caja") or None
+
+    # No-shows y utilización: TODO — Medilink no expone este campo directo en /citas BI.
+    # Se necesita cruzar /citas?estado_anulacion=0 con /citas?id_estado=1 por mes y profesional.
+    # Por ahora se devuelven como null para que el frontend muestre "—".
+    noshows = None
+    citados_mes = None
+    slots_ocupados = None
+    slots_total = None
+
+    # NPS desde fidelizacion_msgs
+    try:
+        nps_data = get_nps_por_profesional(dias=90)
+        nps_prof = next((p for p in nps_data.get("por_profesional", [])
+                         if p.get("profesional") == prof_info["nombre"]), {})
+    except Exception:
+        nps_prof = {}
+
+    # Ranking dentro de la especialidad (atenciones mes actual)
+    especialidad = prof_info["especialidad"]
+    pares = [pid for pid, p in PROFESIONALES.items() if p["especialidad"] == especialidad]
+    atend_pares = {}
+    for pid in pares:
+        try:
+            pd2 = stats_profesional(pid, desde=f"{hoy.year}-01-01")
+            atend_pares[pid] = pd2.get("por_mes", {}).get(mes_actual, {}).get("atend") or 0
+        except Exception:
+            atend_pares[pid] = 0
+
+    sorted_pares = sorted(atend_pares.items(), key=lambda x: -x[1])
+    pos = next((i+1 for i, (pid, _) in enumerate(sorted_pares) if pid == id_prof), None)
+    ranking = {
+        "posicion": pos,
+        "total": len(pares),
+        "pct_ile": round(100*(len(pares)-pos+1)/len(pares)) if pos else None,
+    }
+
+    # Tendencia últimos 12 meses vs año anterior
+    from datetime import date as _d2
+    meses_tend = []
+    actual_vals = []
+    anterior_vals = []
+    for i in range(11, -1, -1):
+        import calendar as _cal
+        base_d = _date(hoy.year, hoy.month, 1)
+        # retroceder i meses
+        y, m = base_d.year, base_d.month - i
+        while m <= 0: m += 12; y -= 1
+        mk = f"{y}-{m:02d}"
+        mk_ant = f"{y-1}-{m:02d}"
+        meses_tend.append(mk)
+        actual_vals.append(pm.get(mk, {}).get("atend") or 0)
+        anterior_vals.append(pm.get(mk_ant, {}).get("atend") or 0)
+
+    # Promedio especialidad (atend mes actual)
+    prom_esp = round(sum(atend_pares.values()) / len(pares)) if pares else None
+
+    # Dias trabajados del mes (para heatmap)
+    dias_mes = {f: pd.get(f, 0) for f in pd if f.startswith(mes_actual)}
+
+    # Avg diario para referencia del heatmap
+    dias_vals = [v for v in dias_mes.values() if v > 0]
+    avg_dia = round(sum(dias_vals)/len(dias_vals)) if dias_vals else 10
+
+    # Acciones sugeridas (heurísticas simples)
+    acciones = _generar_acciones(id_prof, atend_mes, atend_ant, nps_prof, ranking, hoy)
+
+    nombres_meses = ["","Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto",
+                     "Septiembre","Octubre","Noviembre","Diciembre"]
+    mes_label = f"{nombres_meses[hoy.month]} {hoy.year}"
+
+    return {
+        "id_profesional": id_prof,
+        "nombre": prof_info["nombre"],
+        "especialidad": especialidad,
+        "mes_label": mes_label,
+        "kpis": {
+            "atend_mes": atend_mes,
+            "atend_mes_anio_anterior": atend_ant,
+            "prom_especialidad": prom_esp,
+            "noshows": noshows,
+            "citados_mes": citados_mes,
+            "slots_ocupados": slots_ocupados,
+            "slots_total": slots_total,
+            "ingreso_mes": ingreso_mes,
+            "dias_trabajados": len([v for v in dias_mes.values() if v > 0]),
+            "atend_avg_dia": avg_dia,
+        },
+        "tendencia": {
+            "meses": meses_tend,
+            "actual": actual_vals,
+            "anterior": anterior_vals,
+        },
+        "nps": {
+            "nps": nps_prof.get("nps"),
+            "total": nps_prof.get("total", 0),
+            "mejor": nps_prof.get("mejor", 0),
+            "igual": nps_prof.get("igual", 0),
+            "peor": nps_prof.get("peor", 0),
+        },
+        "ranking": ranking,
+        "por_dia": dias_mes,
+        "acciones": acciones,
+    }
+
+def _generar_acciones(id_prof: int, atend_mes: int, atend_ant, nps_prof: dict,
+                      ranking: dict, hoy) -> list[dict]:
+    """Genera hasta 3 acciones sugeridas basadas en datos reales."""
+    from medilink import PROFESIONALES
+    acciones = []
+
+    # Accion 1: comparativa año anterior
+    if atend_ant is not None:
+        delta = atend_mes - atend_ant
+        if delta < 0:
+            acciones.append({
+                "titulo": f"Recuperar {-delta} atenciones vs el año pasado",
+                "descripcion": (f"Este mes vas con {atend_mes} atenciones; el mismo mes del año pasado "
+                                f"tuviste {atend_ant}. Revisa si hay horas libres esta semana."),
+                "tipo": "urgente" if delta < -5 else "normal",
+            })
+        elif delta > 0:
+            acciones.append({
+                "titulo": f"Vas {delta} atenciones arriba vs el año pasado",
+                "descripcion": (f"{atend_mes} atenciones este mes vs {atend_ant} el año anterior. "
+                                f"Buen ritmo — mantenerlo es clave para el cierre del mes."),
+                "tipo": "normal",
+            })
+
+    # Accion 2: NPS
+    nps_val = nps_prof.get("nps")
+    nps_total = nps_prof.get("total", 0)
+    if nps_total >= 3 and nps_val is not None:
+        if nps_val < 30:
+            acciones.append({
+                "titulo": "Revisar feedbacks negativos recientes",
+                "descripcion": (f"Tu NPS de los últimos 90 días está en {nps_val:+.0f}. "
+                                f"Hay {nps_prof.get('peor', 0)} respuestas 'Peor'. "
+                                f"Coordina con recepción para revisar esas conversaciones."),
+                "tipo": "urgente",
+            })
+        elif nps_val >= 70:
+            acciones.append({
+                "titulo": "Pide a tus pacientes satisfechos que recomienden el CMC",
+                "descripcion": (f"Tu NPS es {nps_val:+.0f} — en el top del centro. "
+                                f"Es el momento ideal para activar referidos: un paciente contento "
+                                f"trae entre 1 y 2 pacientes nuevos en promedio."),
+                "tipo": "normal",
+            })
+
+    # Accion 3: ranking
+    pos = ranking.get("posicion")
+    total = ranking.get("total")
+    if pos and total and total > 1:
+        if pos == 1:
+            acciones.append({
+                "titulo": "Primer lugar en tu especialidad este mes",
+                "descripcion": f"Lideras el ranking de {PROFESIONALES[id_prof]['especialidad']} con {atend_mes} atenciones. Compartir agenda con recepcion para mantener la ocupacion.",
+                "tipo": "normal",
+            })
+        elif pos == total:
+            acciones.append({
+                "titulo": "Hay espacio para subir en el ranking esta semana",
+                "descripcion": (f"Vas en la posicion {pos} de {total} en {PROFESIONALES[id_prof]['especialidad']}. "
+                                f"Coordina con recepcion: ¿hay horas sin confirmar que se puedan abrir?"),
+                "tipo": "urgente",
+            })
+
+    # Limitar a 3
+    return acciones[:3]
+
+@app.get("/admin/enviar-dashboard-semanal")
+async def admin_enviar_dashboard_semanal(forzar: int = 0, token: str | None = Query(None)):
+    """Dispara envío manual del dashboard semanal a todos los profesionales (requiere auth admin)."""
+    import hmac as _hm2
+    if not token or not _hm2.compare_digest(token, ADMIN_TOKEN):
+        raise HTTPException(403, "Forbidden")
+    from jobs import _job_enviar_dashboards_semanales
+    _spawn_bg(_job_enviar_dashboards_semanales(forzar=bool(forzar)), name="dashboard_semanal_manual")
+    return {"started": True, "nota": "Enviando en background. Ver logs para estado."}
+
 
 
 @app.post("/api/bi/sync-pagos")
