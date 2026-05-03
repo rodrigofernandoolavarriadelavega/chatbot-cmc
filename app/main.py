@@ -676,21 +676,35 @@ def _localize_blog(html: str, base_slug: str, comuna_slug: str) -> str:
 
 @app.get("/sitemap.xml")
 async def sitemap_xml():
-    """Sitemap dinámico con todas las URLs (home + 7 blogs base + 49 localizadas)."""
+    """Sitemap dinámico con todas las URLs (home + 19 especialidades + localidades + topic blogs + /blog index)."""
     from fastapi.responses import Response
+    from datetime import datetime
     BLOGS_BASE = ["cardiologia", "medicina-general", "ortodoncia", "ecografia",
                   "estetica-facial", "kinesiologia", "odontologia-general",
                   "otorrinolaringologia", "ginecologia",
                   "gastroenterologia", "endodoncia", "implantologia",
                   "masoterapia", "nutricion", "psicologia-adulto",
                   "psicologia-infantil", "fonoaudiologia", "matrona", "podologia"]
+    BLOGS_TOPICS = [
+        "cefalea-tipos-tratamiento", "diabetes-tipo-2-control",
+        "dolor-lumbar-cuando-consultar", "embarazo-controles-mensuales",
+        "hipertension-arterial-control", "nutricion-baja-peso-saludable",
+        "precio-implante-dental-arauco", "precio-ortodoncia-arauco",
+        "psicologia-infantil-cuando-consultar", "rinoplastia-funcional-tabique",
+        "vacunas-pni-calendario-2026",
+    ]
     base_url = "https://centromedicocarampangue.cl"
-    today = "2026-05-02"
-    urls = [(f"{base_url}/", "1.0", "weekly")]
+    today = datetime.now().strftime("%Y-%m-%d")
+    urls = [
+        (f"{base_url}/", "1.0", "weekly"),
+        (f"{base_url}/blog", "0.95", "weekly"),
+    ]
     for slug in BLOGS_BASE:
         urls.append((f"{base_url}/blog/{slug}", "0.9", "monthly"))
         for comuna_slug in COMUNAS_ARAUCO:
             urls.append((f"{base_url}/blog/{slug}-{comuna_slug}", "0.7", "monthly"))
+    for slug in BLOGS_TOPICS:
+        urls.append((f"{base_url}/blog/{slug}", "0.85", "monthly"))
     parts = ['<?xml version="1.0" encoding="UTF-8"?>',
              '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
     for url, priority, freq in urls:
