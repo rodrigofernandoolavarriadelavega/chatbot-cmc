@@ -8558,11 +8558,28 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
     # Caso real 2026-04-23: 56954490708, 56951933878, 56941520432 — pacientes
     # preguntaban por traumatólogo y el bot ofrecía MG sin explicar el cambio.
     if especialidad_lower in ("traumatología", "traumatologia", "traumatólogo", "traumatologo"):
+        # BUG-4: presentar oferta explícita con botón de lista de espera antes
+        # de redirigir a MG. Solo si no viene ya confirmado.
+        if not data.pop("_traumato_redirect_confirmed", False):
+            data["_traumato_redirect_confirmed"] = True
+            data["_waitlist_trauma_pending"] = True
+            save_session(phone, "IDLE", data)
+            log_event(phone, "traumato_redirect_ofrecido", {"phone": phone})
+            return _btn_msg(
+                "🏥 *Medicina General* — Dr. Rodrigo Olavarría\n"
+                "_Nuestro traumatólogo no está disponible. Medicina General puede "
+                "evaluar inicialmente y derivarte si es necesario._\n\n"
+                "¿Continúas con Medicina General o prefieres esperar al traumatólogo?",
+                [
+                    {"id": "trauma_mg",       "title": "✅ Continuar con MG"},
+                    {"id": "trauma_waitlist", "title": "⏳ Esperar al traumatólogo"},
+                ]
+            )
         if not saludo_prefix:
             saludo_prefix = (
-                "Actualmente nuestro *traumatólogo* no está disponible 😔\n"
-                "Te ofrezco *Medicina General* — puede evaluar tu caso y "
-                "derivar a kinesiología o solicitar imágenes si corresponde.\n\n"
+                "🏥 *Medicina General* — Dr. Rodrigo Olavarría\n"
+                "_Nuestro traumatólogo no está disponible. Medicina General puede "
+                "evaluar inicialmente y derivarte si es necesario._\n\n"
             )
         especialidad = "medicina general"
         especialidad_lower = "medicina general"
