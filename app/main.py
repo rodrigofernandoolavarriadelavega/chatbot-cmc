@@ -698,6 +698,7 @@ async def sitemap_xml():
     urls = [
         (f"{base_url}/", "1.0", "weekly"),
         (f"{base_url}/blog", "0.95", "weekly"),
+        (f"{base_url}/privacidad", "0.3", "yearly"),
     ]
     for slug in BLOGS_BASE:
         urls.append((f"{base_url}/blog/{slug}", "0.9", "monthly"))
