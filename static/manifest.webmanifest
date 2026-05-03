@@ -1,0 +1,61 @@
+{
+  "name": "Centro Médico Carampangue",
+  "short_name": "CMC",
+  "description": "Centro médico y dental en Carampangue, Provincia de Arauco. 23 profesionales, 19 especialidades. Agenda por WhatsApp 24/7.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#0F3F68",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "es-CL",
+  "categories": ["health", "medical"],
+  "icons": [
+    {
+      "src": "/static/favicon-circle-32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/favicon-circle-64.png",
+      "sizes": "64x64",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/favicon-circle-128.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/favicon-circle-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/favicon-circle-256.png",
+      "sizes": "256x256",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/favicon-circle.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Agendar por WhatsApp",
+      "short_name": "Agendar",
+      "url": "https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar",
+      "icons": [{"src": "/static/favicon-circle-128.png", "sizes": "128x128"}]
+    },
+    {
+      "name": "Llamar al fijo",
+      "short_name": "Llamar",
+      "url": "tel:+56442965226",
+      "icons": [{"src": "/static/favicon-circle-128.png", "sizes": "128x128"}]
+    }
+  ]
+}

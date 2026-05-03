@@ -1,0 +1,21 @@
+/* TEAM */
+
+Centro Médico Carampangue
+Dirección: República 102, Carampangue, Provincia de Arauco
+Región: Biobío, Chile
+WhatsApp: +56 9 6661 0737
+Fijo: (44) 296 5226
+Email: contacto@centromedicocarampangue.cl
+Site: https://centromedicocarampangue.cl/
+
+/* THANKS */
+
+A los pacientes de Arauco, Curanilahue, Lebu, Cañete, Tirúa, Contulmo
+y Los Álamos que confían en nosotros.
+
+/* SITE */
+
+Last update: 2026-05-03
+Standards: HTML5, CSS3, ES2021
+Components: FastAPI, WordPress, GA4, GTM
+IDE: Claude Code, VS Code
