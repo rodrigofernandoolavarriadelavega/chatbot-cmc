@@ -559,6 +559,159 @@ async def blog_index():
     return HTMLResponse("<h1>Blog</h1>", status_code=200)
 
 
+# Comuna hubs — landing por localidad con todas las especialidades
+_COMUNA_HUB_TPL = (_TEMPLATE_DIR / "comuna_hub.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "comuna_hub.html").exists() else ""
+
+_COMUNA_SPECIALTIES = [
+    ("medicina-general", "Medicina General", "Bono Fonasa $7.880", "Dr. Olavarría · Dr. Abarca", "Medicina"),
+    ("cardiologia", "Cardiología", "Particular $40.000", "Dr. Miguel Millán", "Especialidades"),
+    ("otorrinolaringologia", "Otorrinolaringología", "Particular $35.000", "Dr. Manuel Borrego", "Especialidades"),
+    ("ginecologia", "Ginecología", "Particular $30.000", "Dr. Tirso Rejón", "Especialidades"),
+    ("gastroenterologia", "Gastroenterología", "Particular $35.000", "Dr. Nicolás Quijano", "Especialidades"),
+    ("kinesiologia", "Kinesiología", "Bono Fonasa $7.830", "Luis Armijo · Leo Etcheverry", "Rehabilitación"),
+    ("nutricion", "Nutrición", "Bono Fonasa $4.770", "Gisela Pinto", "Bienestar"),
+    ("psicologia-adulto", "Psicología Adulto", "Bono Fonasa $14.420", "J. Montalba · J.P. Rodríguez", "Salud Mental"),
+    ("psicologia-infantil", "Psicología Infantil", "Bono Fonasa $14.420", "Jorge Montalba", "Salud Mental"),
+    ("fonoaudiologia", "Fonoaudiología", "Particular $25.000", "Juana Arratia", "Rehabilitación"),
+    ("matrona", "Matrona", "Tarifa Fonasa $16.000", "Sarai Gómez", "Salud Mujer"),
+    ("podologia", "Podología", "$20.000–$35.000", "Andrea Guevara", "Bienestar"),
+    ("ecografia", "Ecografía", "$35.000", "Dr. David Pardo", "Diagnóstico"),
+    ("masoterapia", "Masoterapia", "$17.990 (20 min)", "Paola Acosta", "Bienestar"),
+    ("odontologia-general", "Odontología General", "Limpieza desde $30.000", "Dra. Burgos · Dr. Jiménez", "Dental"),
+    ("ortodoncia", "Ortodoncia", "Brackets metálicos/estéticos", "Dra. Daniela Castillo", "Dental"),
+    ("endodoncia", "Endodoncia", "Tratamiento conducto", "Dr. Fernando Fredes", "Dental"),
+    ("implantologia", "Implantología", "Implante + corona desde $650.000", "Dra. Aurora Valdés", "Dental"),
+    ("estetica-facial", "Estética Facial", "Evaluación $15.000", "Dra. Valentina Fuentealba", "Estética"),
+]
+
+
+@app.get("/comuna/{slug}", response_class=HTMLResponse)
+@app.get("/comuna/{slug}/", response_class=HTMLResponse)
+async def comuna_hub(slug: str):
+    """Hub landing por comuna — agrupa todas las especialidades para esa localidad."""
+    if slug not in COMUNAS_ARAUCO or not _COMUNA_HUB_TPL:
+        return HTMLResponse("Not found", status_code=404)
+    c = COMUNAS_ARAUCO[slug]
+    nombre = c["nombre"]
+    km = c.get("km", 0)
+    minutos = c.get("min", 0)
+    ruta = c.get("ruta", "")
+
+    # Title con descriptor de distancia
+    if km == 0:
+        title = f"Médico y Dentista en {nombre} · Centro Médico Carampangue"
+        km_txt = "en el centro de la localidad"
+        min_txt = ""
+        lead = (f"Centro Médico Carampangue está físicamente en {nombre}, en República 102. "
+                f"23 profesionales y 19 especialidades médicas y dentales. Bono Fonasa MLE en sucursal con huella biométrica.")
+    else:
+        title = f"Médico y Dentista en {nombre} · CMC a {km} km ({minutos} min)"
+        km_txt = f"a {km} km"
+        min_txt = f" · {minutos} min" if minutos else ""
+        lead = (f"Atendemos pacientes desde {nombre} ({c['tipo'] if 'tipo' in c else 'Provincia de Arauco'}). "
+                f"Centro Médico Carampangue está a {km} km vía {ruta}. "
+                f"23 profesionales · 19 especialidades · Bono Fonasa MLE · Agenda WhatsApp 24/7.")
+
+    description = (f"Médico y dentista para pacientes de {nombre} (Provincia de Arauco). "
+                   f"23 profesionales, 19 especialidades · Bono Fonasa MLE · "
+                   f"a {km} km del centro" if km > 0 else
+                   f"Médico y dentista en {nombre}: 23 profesionales, 19 especialidades. Bono Fonasa MLE.")
+
+    wa_text = f"quiero%20agendar%20una%20hora%20desde%20{nombre.replace(' ', '%20')}"
+
+    # Render specialty cards
+    cards = []
+    for sp_slug, sp_name, sp_price, sp_pro, sp_cat in _COMUNA_SPECIALTIES:
+        url = f"/blog/{sp_slug}-{slug}" if km > 0 else f"/blog/{sp_slug}"
+        cards.append(f'''<a class="spec-card" href="{url}">
+        <span class="pill">{sp_cat}</span>
+        <h3>{sp_name}</h3>
+        <p>{sp_pro}</p>
+        <div class="price">{sp_price}</div>
+        <span class="read">Leer más
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </span>
+      </a>''')
+    cards_html = "\n      ".join(cards)
+
+    # ItemList JSON for SEO
+    import json as _json
+    itemlist = {
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        "name": f"Especialidades disponibles para pacientes de {nombre}",
+        "numberOfItems": len(_COMUNA_SPECIALTIES),
+        "itemListElement": [
+            {
+                "@type": "ListItem",
+                "position": i + 1,
+                "url": f"https://centromedicocarampangue.cl/blog/{sp[0]}-{slug}" if km > 0 else f"https://centromedicocarampangue.cl/blog/{sp[0]}",
+                "name": f"{sp[1]} en {nombre}"
+            } for i, sp in enumerate(_COMUNA_SPECIALTIES)
+        ]
+    }
+    itemlist_json = _json.dumps(itemlist, ensure_ascii=False, indent=2)
+
+    html = (_COMUNA_HUB_TPL
+            .replace("{{TITLE}}", title)
+            .replace("{{DESCRIPTION}}", description)
+            .replace("{{COMUNA_NOMBRE}}", nombre)
+            .replace("{{COMUNA_SLUG}}", slug)
+            .replace("{{KM_TXT}}", km_txt)
+            .replace("{{MIN_TXT}}", min_txt)
+            .replace("{{RUTA}}", ruta or "varias rutas")
+            .replace("{{LEAD_TEXT}}", lead)
+            .replace("{{WA_TEXT}}", wa_text)
+            .replace("{{SPECIALTY_CARDS}}", cards_html)
+            .replace("{{ITEMLIST_JSON}}", itemlist_json))
+    return html
+
+
+@app.get("/comuna", response_class=HTMLResponse)
+@app.get("/comuna/", response_class=HTMLResponse)
+async def comuna_index():
+    """Índice de comunas — lista todas las localidades atendidas."""
+    items = []
+    for slug, c in COMUNAS_ARAUCO.items():
+        nombre = c["nombre"]
+        km = c.get("km", 0)
+        minutos = c.get("min", 0)
+        if km == 0:
+            distancia = "Sede principal"
+        else:
+            distancia = f"a {km} km · {minutos} min"
+        items.append(f'<li><a href="/comuna/{slug}"><strong>{nombre}</strong><br><small>{distancia}</small></a></li>')
+    items_html = "\n      ".join(items)
+    return f"""<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Servicios médicos por comuna · Provincia de Arauco | CMC</title>
+<meta name="description" content="Centro Médico Carampangue atiende pacientes de toda la Provincia de Arauco: Carampangue, Arauco, Lebu, Cañete, Curanilahue, Los Álamos, Tirúa, Contulmo, Laraquete, Ramadilla.">
+<link rel="canonical" href="https://centromedicocarampangue.cl/comuna/">
+<style>
+body{{font-family:-apple-system,Segoe UI,sans-serif;max-width:780px;margin:40px auto;padding:0 24px;color:#0a1a28;background:#FAF8F5}}
+h1{{font-family:Fraunces,serif;font-weight:800;color:#0F3F68}}
+ul{{list-style:none;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}}
+li{{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:18px;transition:.2s}}
+li:hover{{border-color:#4FBECE;transform:translateY(-2px);box-shadow:0 8px 20px -8px rgba(15,63,104,.2)}}
+li a{{text-decoration:none;color:inherit;display:block}}
+small{{color:#5e7183}}
+nav a{{color:#1F7E8C;font-weight:600}}
+</style>
+</head>
+<body>
+<nav><a href="/">← Inicio</a></nav>
+<h1>Servicios médicos por comuna</h1>
+<p>Centro Médico Carampangue atiende pacientes de toda la Provincia de Arauco. Selecciona tu comuna para ver detalles, distancias y especialidades disponibles.</p>
+<ul>
+      {items_html}
+</ul>
+</body>
+</html>"""
+
+
 @app.get("/blog/{slug}", response_class=HTMLResponse)
 async def blog_post(slug: str):
     """Blogs por especialidad. Si el slug termina con sufijo de comuna
@@ -698,8 +851,12 @@ async def sitemap_xml():
     urls = [
         (f"{base_url}/", "1.0", "weekly"),
         (f"{base_url}/blog", "0.95", "weekly"),
+        (f"{base_url}/comuna/", "0.85", "monthly"),
         (f"{base_url}/privacidad", "0.3", "yearly"),
     ]
+    # Comuna hubs
+    for comuna_slug in COMUNAS_ARAUCO:
+        urls.append((f"{base_url}/comuna/{comuna_slug}", "0.85", "monthly"))
     for slug in BLOGS_BASE:
         urls.append((f"{base_url}/blog/{slug}", "0.9", "monthly"))
         for comuna_slug in COMUNAS_ARAUCO:

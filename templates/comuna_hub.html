@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{{TITLE}}</title>
+<meta name="description" content="{{DESCRIPTION}}">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+<meta name="geo.region" content="CL-BI">
+<meta name="geo.placename" content="{{COMUNA_NOMBRE}}, Provincia de Arauco">
+<link rel="canonical" href="https://centromedicocarampangue.cl/comuna/{{COMUNA_SLUG}}">
+<link rel="alternate" hreflang="es-CL" href="https://centromedicocarampangue.cl/comuna/{{COMUNA_SLUG}}">
+
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:locale" content="es_CL">
+<meta property="og:title" content="{{TITLE}}">
+<meta property="og:description" content="{{DESCRIPTION}}">
+<meta property="og:url" content="https://centromedicocarampangue.cl/comuna/{{COMUNA_SLUG}}">
+<meta property="og:site_name" content="Centro Médico Carampangue">
+<meta property="og:image" content="https://agentecmc.cl/static/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@CMCarampangue">
+<meta name="twitter:title" content="{{TITLE}}">
+<meta name="twitter:description" content="{{DESCRIPTION}}">
+
+<!-- Favicons -->
+<link rel="icon" type="image/png" sizes="32x32" href="https://agentecmc.cl/static/favicon-circle-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="https://agentecmc.cl/static/favicon-circle-192.png">
+<link rel="apple-touch-icon" sizes="192x192" href="https://agentecmc.cl/static/favicon-circle-192.png">
+
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-W428KN3R');</script>
+
+<!-- Schema: Place + LocalBusiness serviceArea -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Place",
+      "@id": "https://centromedicocarampangue.cl/comuna/{{COMUNA_SLUG}}#place",
+      "name": "{{COMUNA_NOMBRE}}",
+      "addressRegion": "Biobío",
+      "addressCountry": "CL",
+      "containedInPlace": {"@type":"AdministrativeArea","name":"Provincia de Arauco"}
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://centromedicocarampangue.cl/comuna/{{COMUNA_SLUG}}#webpage",
+      "url": "https://centromedicocarampangue.cl/comuna/{{COMUNA_SLUG}}",
+      "name": "{{TITLE}}",
+      "isPartOf": {"@id":"https://centromedicocarampangue.cl/#website"},
+      "about": {"@id":"https://centromedicocarampangue.cl/comuna/{{COMUNA_SLUG}}#place"},
+      "primaryImageOfPage": {"@id":"https://centromedicocarampangue.cl/#logo"},
+      "inLanguage": "es-CL",
+      "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": ["h1", ".lead", ".faq"]
+      }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {"@type":"ListItem","position":1,"name":"Inicio","item":"https://centromedicocarampangue.cl/"},
+        {"@type":"ListItem","position":2,"name":"Servicios por comuna","item":"https://centromedicocarampangue.cl/comuna/"},
+        {"@type":"ListItem","position":3,"name":"{{COMUNA_NOMBRE}}","item":"https://centromedicocarampangue.cl/comuna/{{COMUNA_SLUG}}"}
+      ]
+    }
+  ]
+}
+</script>
+
+<!-- Schema: ItemList of specialties served -->
+<script type="application/ld+json">
+{{ITEMLIST_JSON}}
+</script>
+
+<!-- Schema: FAQPage -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type":"Question","name":"¿El Centro Médico Carampangue atiende a pacientes de {{COMUNA_NOMBRE}}?","acceptedAnswer":{"@type":"Answer","text":"Sí. Atendemos pacientes de toda la Provincia de Arauco. Desde {{COMUNA_NOMBRE}} estamos a {{KM_TXT}}{{MIN_TXT}} por {{RUTA}}. Agenda directamente por WhatsApp +56 9 6661 0737."}},
+    {"@type":"Question","name":"¿Cómo agendo desde {{COMUNA_NOMBRE}}?","acceptedAnswer":{"@type":"Answer","text":"Por WhatsApp al +56 9 6661 0737 a cualquier hora. Nuestro asistente automático revisa disponibilidad real y te confirma al instante. También puedes llamar al (44) 296 5226."}},
+    {"@type":"Question","name":"¿Qué especialidades hay disponibles?","acceptedAnswer":{"@type":"Answer","text":"19 especialidades médicas y dentales: Medicina General, Medicina Familiar, Cardiología, Otorrinolaringología, Ginecología, Gastroenterología, Kinesiología, Psicología (adulto e infantil), Nutrición, Fonoaudiología, Matrona, Podología, Ecografía, Masoterapia, Odontología General, Ortodoncia, Endodoncia, Implantología y Estética Facial."}},
+    {"@type":"Question","name":"¿Aceptan Bono Fonasa?","acceptedAnswer":{"@type":"Answer","text":"Sí, en Medicina General, Medicina Familiar, Kinesiología, Nutrición, Psicología Adulto y Psicología Infantil. El bono se emite en el centro con huella biométrica. Matrona tiene tarifa preferencial Fonasa ($16.000)."}}
+  ]
+}
+</script>
+
+<style>
+:root {
+  --navy:#0F3F68; --navy-deep:#0a2c4d;
+  --teal:#1F7E8C; --aqua:#4FBECE; --aqua-soft:#B6E3D4;
+  --cream:#F4F1ED; --cream-soft:#FAF8F5; --paper:#FFFFFF;
+  --ink-900:#0a1a28; --ink-700:#3c5166; --ink-500:#5e7183; --ink-300:#bac4ce;
+  --shadow-sm:0 2px 8px rgba(15,63,104,0.06);
+  --shadow:0 8px 24px rgba(15,63,104,0.10);
+  --radius:16px; --radius-pill:999px;
+  --font-display:'Fraunces','Times New Roman',serif;
+  --font-body:'Inter',-apple-system,sans-serif;
+}
+*{box-sizing:border-box}body{margin:0;font-family:var(--font-body);font-size:16px;color:var(--ink-700);background:var(--paper);line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}img{max-width:100%;display:block}
+.container{max-width:1180px;margin:0 auto;padding:0 24px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:13px 22px;font-family:var(--font-body);font-size:14.5px;font-weight:700;border-radius:var(--radius-pill);border:1px solid transparent;cursor:pointer;transition:transform .2s,background .2s;text-decoration:none;white-space:nowrap}
+.btn-wa{background:#25D366;color:white;box-shadow:0 6px 16px -4px rgba(37,211,102,0.45)}
+.btn-wa:hover{background:#1ebe5a;transform:translateY(-1px)}
+.btn-lg{padding:15px 28px;font-size:15.5px}
+.nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,0.94);backdrop-filter:blur(18px);border-bottom:1px solid #e5e7eb;height:64px;display:flex;align-items:center}
+.nav-brand{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:800;font-size:17px;color:var(--navy)}
+.nav-brand img{width:38px;height:38px}
+.hero{background:linear-gradient(135deg,var(--navy-deep) 0%,var(--navy) 50%,var(--teal) 100%);color:white;padding:60px 0 80px;text-align:center;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:0;right:0;width:300px;height:200px;background:var(--aqua);opacity:0.15;clip-path:polygon(100% 0,0 0,100% 100%)}
+.eyebrow{display:inline-block;padding:6px 16px;background:rgba(255,255,255,0.15);border-radius:var(--radius-pill);font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:18px;backdrop-filter:blur(10px)}
+.hero h1{font-family:var(--font-display);font-weight:900;font-size:clamp(32px,5.5vw,52px);line-height:1.1;margin:0 0 20px;letter-spacing:-0.02em}
+.hero h1 em{color:var(--aqua);font-style:italic;font-weight:700}
+.hero .lead{font-size:clamp(17px,2vw,21px);max-width:720px;margin:0 auto 32px;opacity:0.95;line-height:1.5}
+.hero-meta{display:inline-flex;flex-wrap:wrap;gap:18px 28px;justify-content:center;margin-bottom:32px;font-size:14px;font-weight:600}
+.hero-meta-item{display:flex;align-items:center;gap:6px;opacity:0.9}
+.hero-meta-item svg{flex:none}
+.section{padding:64px 0}
+.section-title{font-family:var(--font-display);font-weight:800;font-size:clamp(28px,3.5vw,40px);color:var(--ink-900);margin:0 0 12px;letter-spacing:-0.015em;text-align:center}
+.section-sub{font-size:17px;color:var(--ink-500);max-width:680px;margin:0 auto 40px;text-align:center;line-height:1.5}
+.spec-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px}
+.spec-card{display:flex;flex-direction:column;background:white;border:1px solid #e5e7eb;border-radius:var(--radius);padding:22px 22px 18px;transition:transform .2s,box-shadow .2s,border-color .2s}
+.spec-card:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-color:var(--aqua)}
+.spec-card .pill{display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:4px 10px;border-radius:var(--radius-pill);background:var(--aqua-soft);color:var(--teal);align-self:flex-start;margin-bottom:12px}
+.spec-card h3{font-family:var(--font-display);font-weight:700;font-size:19px;color:var(--ink-900);margin:0 0 8px}
+.spec-card p{font-size:14px;color:var(--ink-500);margin:0 0 14px;flex:1}
+.spec-card .price{font-size:13.5px;font-weight:600;color:var(--navy);margin-bottom:6px}
+.spec-card .read{font-size:13px;font-weight:600;color:var(--teal);display:inline-flex;align-items:center;gap:6px}
+.cta-band{background:linear-gradient(135deg,var(--aqua) 0%,var(--teal) 100%);color:white;padding:56px 24px;text-align:center;border-radius:var(--radius);margin:64px 0}
+.cta-band h2{font-family:var(--font-display);font-size:clamp(26px,3.5vw,38px);font-weight:800;margin:0 0 14px}
+.cta-band p{font-size:17px;opacity:0.95;max-width:580px;margin:0 auto 24px}
+.faq{background:var(--cream-soft);padding:64px 0}
+.faq-list{max-width:780px;margin:0 auto}
+.faq-item{background:white;border:1px solid #e5e7eb;border-radius:var(--radius);padding:24px 28px;margin-bottom:14px}
+.faq-q{font-family:var(--font-display);font-weight:700;font-size:18px;color:var(--ink-900);margin:0 0 10px}
+.faq-a{font-size:15.5px;color:var(--ink-700);margin:0;line-height:1.6}
+footer{background:var(--ink-900);color:#94a3b8;padding:40px 24px;text-align:center;font-size:14px}
+footer a{color:var(--aqua)}
+.wa-float{position:fixed;bottom:24px;right:24px;width:60px;height:60px;background:#25D366;color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px -4px rgba(37,211,102,0.5);z-index:100;transition:transform .2s}
+.wa-float:hover{transform:scale(1.08)}
+</style>
+</head>
+<body>
+
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-W428KN3R" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+
+<header class="nav">
+  <div class="container" style="display:flex;align-items:center;gap:18px;width:100%">
+    <a class="nav-brand" href="https://centromedicocarampangue.cl/">
+      <img src="https://agentecmc.cl/static/isotipo.png" alt="CMC Logo">
+      <span>Centro Médico Carampangue</span>
+    </a>
+    <a class="btn btn-wa" style="margin-left:auto" href="https://wa.me/56966610737?text=Hola%20{{WA_TEXT}}&utm_source=comuna&utm_medium=organic&utm_campaign={{COMUNA_SLUG}}" target="_blank" rel="noopener">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+      Agendar
+    </a>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="container">
+    <span class="eyebrow">Servicios médicos · {{COMUNA_NOMBRE}}</span>
+    <h1>Médico y Dentista en <em>{{COMUNA_NOMBRE}}</em><br>Centro Médico Carampangue</h1>
+    <p class="lead">{{LEAD_TEXT}}</p>
+    <div class="hero-meta">
+      <span class="hero-meta-item">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        {{KM_TXT}}{{MIN_TXT}}
+      </span>
+      <span class="hero-meta-item">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        Lun-Sáb hasta 21:00
+      </span>
+      <span class="hero-meta-item">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Agenda WhatsApp 24/7
+      </span>
+    </div>
+    <a class="btn btn-wa btn-lg" href="https://wa.me/56966610737?text=Hola%20{{WA_TEXT}}&utm_source=comuna&utm_medium=organic&utm_campaign={{COMUNA_SLUG}}" target="_blank" rel="noopener">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+      Agendar por WhatsApp desde {{COMUNA_NOMBRE}}
+    </a>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <h2 class="section-title">19 especialidades para pacientes de {{COMUNA_NOMBRE}}</h2>
+    <p class="section-sub">Consulta disponibilidad real al instante por WhatsApp. Bono Fonasa MLE en sucursal con huella biométrica.</p>
+    <div class="spec-grid">
+      {{SPECIALTY_CARDS}}
+    </div>
+  </div>
+</section>
+
+<section class="container">
+  <div class="cta-band">
+    <h2>{{COMUNA_NOMBRE}} a {{KM_TXT}} del CMC</h2>
+    <p>Atendemos pacientes de toda la Provincia de Arauco. Ruta {{RUTA}}. Confirma tu hora por WhatsApp en menos de 1 minuto.</p>
+    <a class="btn btn-wa btn-lg" href="https://wa.me/56966610737?text=Hola%20{{WA_TEXT}}&utm_source=comuna_cta&utm_medium=organic&utm_campaign={{COMUNA_SLUG}}" target="_blank" rel="noopener">
+      Agendar ahora
+    </a>
+  </div>
+</section>
+
+<section class="faq">
+  <div class="container">
+    <h2 class="section-title">Preguntas frecuentes desde {{COMUNA_NOMBRE}}</h2>
+    <div class="faq-list">
+      <div class="faq-item">
+        <p class="faq-q">¿El Centro Médico Carampangue atiende a pacientes de {{COMUNA_NOMBRE}}?</p>
+        <p class="faq-a">Sí. Atendemos pacientes de toda la Provincia de Arauco. Desde {{COMUNA_NOMBRE}} estás a {{KM_TXT}}{{MIN_TXT}} por {{RUTA}}.</p>
+      </div>
+      <div class="faq-item">
+        <p class="faq-q">¿Cómo agendo desde {{COMUNA_NOMBRE}}?</p>
+        <p class="faq-a">Por WhatsApp al +56 9 6661 0737 a cualquier hora — el asistente automático revisa disponibilidad real y te confirma al instante. También puedes llamar al (44) 296 5226 en horario de recepción.</p>
+      </div>
+      <div class="faq-item">
+        <p class="faq-q">¿Aceptan Bono Fonasa?</p>
+        <p class="faq-a">Sí, en Medicina General, Medicina Familiar, Kinesiología, Nutrición, Psicología Adulto y Psicología Infantil. El bono se emite en el centro con huella biométrica. Matrona tiene tarifa preferencial Fonasa ($16.000).</p>
+      </div>
+      <div class="faq-item">
+        <p class="faq-q">¿Qué horarios de atención tienen?</p>
+        <p class="faq-a">Lunes a viernes 08:00 a 21:00, sábados 09:00 a 14:00. Algunos profesionales tienen días específicos — consulta disponibilidad real por WhatsApp.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p><strong>Centro Médico Carampangue</strong> · República 102, Carampangue · Provincia de Arauco · Región del Biobío</p>
+  <p>WhatsApp <a href="https://wa.me/56966610737?utm_source=comuna_footer&utm_campaign={{COMUNA_SLUG}}">+56 9 6661 0737</a> · Fijo (44) 296 5226</p>
+  <p>Servimos también a: <a href="/comuna/arauco">Arauco</a> · <a href="/comuna/lebu">Lebu</a> · <a href="/comuna/canete">Cañete</a> · <a href="/comuna/curanilahue">Curanilahue</a> · <a href="/comuna/los-alamos">Los Álamos</a> · <a href="/comuna/tirua">Tirúa</a> · <a href="/comuna/contulmo">Contulmo</a></p>
+</footer>
+
+<a class="wa-float" href="https://wa.me/56966610737?text=Hola%20{{WA_TEXT}}&utm_source=comuna_float&utm_campaign={{COMUNA_SLUG}}" target="_blank" rel="noopener" aria-label="WhatsApp">
+  <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+</a>
+
+</body>
+</html>
