@@ -2513,6 +2513,28 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                   "otro_prof", "confirmar_sugerido"):
             return await _iniciar_agendar(phone, data, None)
 
+        # ── BUG-4: botones de la oferta traumatología → MG ──────────────────
+        if tl == "trauma_mg":
+            data.pop("_traumato_redirect_confirmed", None)
+            data.pop("_waitlist_trauma_pending", None)
+            data["_traumato_redirect_confirmed"] = True
+            log_event(phone, "traumato_acepta_mg", {"phone": phone})
+            return await _iniciar_agendar(phone, data, "medicina general")
+        if tl == "trauma_waitlist":
+            data.pop("_traumato_redirect_confirmed", None)
+            data.pop("_waitlist_trauma_pending", None)
+            data["waitlist_especialidad"] = "traumatología"
+            save_session(phone, "WAIT_WAITLIST_CONFIRM", data)
+            log_event(phone, "traumato_elige_waitlist", {"phone": phone})
+            return _btn_msg(
+                "Te anoto en lista de espera para *Traumatología* 📋\n\n"
+                "Te avisaremos en cuanto el Dr. Barraza esté disponible.",
+                [
+                    {"id": "waitlist_si", "title": "📝 Sí, anotarme"},
+                    {"id": "waitlist_no", "title": "No, gracias"},
+                ]
+            )
+
         # ── Closings conversacionales (no re-mostrar menú) ────────────────────
         # "gracias", "ok", "dale", "chao" tras un flujo completado — el paciente
         # está cerrando la conversación, no iniciando otra. Evita saludarlo de
@@ -2623,6 +2645,24 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # Debe ir ANTES de los atajos numéricos (1..4) porque aquí interpretamos
         # "1"/"sí"/botón como "agendar la especialidad ya sugerida en el FAQ".
         esp_sug_prev = data.get("especialidad_sugerida")
+        # BUG-8: verificar timestamp de especialidad_sugerida. Si tiene >2 min
+        # y el paciente no está respondiendo al botón explícito, limpiar para
+        # evitar agendar lo equivocado en otro contexto.
+        if esp_sug_prev and tl not in ("agendar_sugerido", "no_agendar"):
+            _esp_ts8 = data.get("especialidad_sugerida_ts")
+            if _esp_ts8:
+                try:
+                    from datetime import datetime as _dt8
+                    _ts8 = _dt8.fromisoformat(_esp_ts8)
+                    if _ts8.tzinfo is None:
+                        _ts8 = _ts8.replace(tzinfo=timezone.utc)
+                    if (datetime.now(timezone.utc) - _ts8).total_seconds() > 120:
+                        data.pop("especialidad_sugerida", None)
+                        data.pop("especialidad_sugerida_ts", None)
+                        esp_sug_prev = None
+                        log_event(phone, "esp_sugerida_expirada", {"esp": esp_sug_prev})
+                except Exception:
+                    pass
         # ── Defensa sistémica: payload de botón viejo sin contexto ────────────
         # El paciente clickeó un botón "Sí, agendar" / "Otros horarios" / etc.
         # pero la sesión expiró (timeout 30 min) o nunca se guardó el contexto.
@@ -3237,6 +3277,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if _faq_fb:
                 log_event(phone, "faq_local_hit", {"esp": _esp_idle})
                 data["especialidad_sugerida"] = _esp_idle
+                data["especialidad_sugerida_ts"] = datetime.now(timezone.utc).isoformat()
                 save_session(phone, "IDLE", data)
                 return _btn_msg(
                     f"{_faq_fb}\n\n¿Te agendo en *{_esp_idle}*?",
@@ -3750,6 +3791,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 fecha = await consultar_proxima_fecha(especialidad)
                 if fecha:
                     data["especialidad_sugerida"] = especialidad.lower()
+                    data["especialidad_sugerida_ts"] = datetime.now(timezone.utc).isoformat()
                     save_session(phone, "IDLE", data)
                     return _btn_msg(
                         f"Sí, para *{especialidad}* hay hora disponible el *{fecha}* 📅\n\n"
@@ -3835,6 +3877,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
                 if mejor:
                     data["especialidad_sugerida"] = esp_lower
+                    data["especialidad_sugerida_ts"] = datetime.now(timezone.utc).isoformat()
                     save_session(phone, "IDLE", data)
                     preview = (
                         f"📅 *{mejor['fecha_display']}* · "
@@ -3853,6 +3896,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 # Fallback: guardamos la especialidad igual para que "sí" funcione
                 if esp_lower:
                     data["especialidad_sugerida"] = esp_lower
+                    data["especialidad_sugerida_ts"] = datetime.now(timezone.utc).isoformat()
                     save_session(phone, "IDLE", data)
                     return _btn_msg(
                         f"{resp}\n\n¿Te agendo en *{esp_sug}*?",
@@ -4022,10 +4066,30 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         num = re.findall(r"\b(20|40)\b", txt)
         _es_20 = tl == "maso_20" or (num and num[0] == "20") or "veinte" in tl
         _es_40 = tl == "maso_40" or (num and num[0] == "40") or "cuarenta" in tl
+        # BUG-5: detectar "30" / "media hora" / "sesión corta" → responder
+        # con mensaje específico en vez de re-preguntar genéricamente.
+        _es_30 = (
+            re.search(r"\b30\b", txt) is not None
+            or "media hora" in tl
+            or "media hr" in tl
+            or "sesion corta" in tl
+            or "sesión corta" in tl
+            or "treinta" in tl
+        )
         if _es_20:
             duracion_maso = 20
         elif _es_40:
             duracion_maso = 40
+        elif _es_30:
+            save_session(phone, "WAIT_DURACION_MASOTERAPIA", data)
+            return _btn_msg(
+                "Solo tenemos sesiones de *20 minutos* (más rápido) o *40 minutos* "
+                "(más completo).\n\nMedia hora no está disponible. ¿Cuál prefieres?",
+                [
+                    {"id": "maso_20", "title": "20 min"},
+                    {"id": "maso_40", "title": "40 min"},
+                ]
+            )
         else:
             save_session(phone, "WAIT_DURACION_MASOTERAPIA", data)
             return _btn_msg(
@@ -4175,13 +4239,26 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # (fb_27066996906237198): bot ofreció Podología 14:00, paciente preguntó
         # "¿Puedo reservar una cita?" como confirmación implícita y el bot
         # reseteó el flow con "Claro, te ayudo a agendar 😊".
+        # BUG-10: ampliar afirmaciones libres específicas a WAIT_SLOT.
+        # Frases como "si la tomo", "me acomoda", "está bien", "me sirve"
+        # deben confirmar el slot prominente directamente.
+        _AFIRM_SLOT_EXTRA = {
+            "si la tomo", "si, la tomo", "la tomo", "tomo la hora", "tomo esa",
+            "esa misma", "esa hora", "me acomoda", "me acomoda esa",
+            "esta bien", "está bien", "ta bien", "tá bien",
+            "ok la tomo", "dale la tomo", "dale", "me sirve esa",
+            "me sirve", "ok me sirve",
+        }
         _afirm_libre = (
-            ("reserv" in tl or "agenda" in tl or "tomo" in tl or "tomar" in tl
-             or "confirm" in tl or "esa hora" in tl or "esa hora me sirve" in tl)
-            and not any(neg in tl for neg in (
-                "no reserv", "no quiero reserv", "no agenda",
-                "no la reserv", "no me sirve", "no gracias",
-            ))
+            tl_norm_slot in _AFIRM_SLOT_EXTRA
+            or (
+                ("reserv" in tl or "agenda" in tl or "tomo" in tl or "tomar" in tl
+                 or "confirm" in tl or "esa hora" in tl or "esa hora me sirve" in tl)
+                and not any(neg in tl for neg in (
+                    "no reserv", "no quiero reserv", "no agenda",
+                    "no la reserv", "no me sirve", "no gracias",
+                ))
+            )
         )
         if (tl == "confirmar_sugerido" or tl in AFIRMACIONES or tl_norm in AFIRMACIONES or _afirm_libre) and slots_mostrados:
             # Si el paciente pidió explicitamente otro profesional antes y los
@@ -4970,6 +5047,30 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 hora_str = f"{h_pedida}:{m_pedida}" if m_pedida else f"{h_pedida}:00"
                 horas_disp = sorted({s.get("hora_inicio", "")[:5] for s in todos_slots if s.get("hora_inicio")})
                 if horas_disp and hora_str not in horas_disp:
+                    # BUG-7: mostrar slots de la misma franja horaria en vez de
+                    # solo listar texto. "10" → mostrar 10:20, 10:40 como opciones.
+                    _h_int_ped = int(_hora_match.group(1))
+                    _slots_franja = [
+                        s for s in todos_slots
+                        if s.get("hora_inicio", "")[:2].lstrip("0") == str(_h_int_ped)
+                        or s.get("hora_inicio", "")[:2] == f"{_h_int_ped:02d}"
+                    ]
+                    if _slots_franja:
+                        data["slots"] = _slots_franja[:10]
+                        save_session(phone, "WAIT_SLOT", data)
+                        _hdr7 = (
+                            f"A las *{h_pedida}:00* en punto no tengo, pero sí cerca:\n\n"
+                        )
+                        _fmt7 = _format_slots(_slots_franja[:10], mostrar_todos=True)
+                        if isinstance(_fmt7, dict):
+                            try:
+                                _body7 = _fmt7.get("interactive", {}).get("body", {})
+                                _orig7 = _body7.get("text", "")
+                                _body7["text"] = (_hdr7 + _orig7)[:1024]
+                            except Exception:
+                                pass
+                            return _fmt7
+                        return _hdr7 + _fmt7
                     return (
                         f"La hora *{hora_str}* no está disponible para este profesional 😕\n\n"
                         f"Horarios disponibles:\n{', '.join(horas_disp[:12])}"
@@ -6963,11 +7064,23 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 esp_tele = "Nutrición"
             elif any(w in tl_low for w in ("cardio")):
                 esp_tele = "Cardiología"
+        # BUG-6: si el texto libre corresponde a una especialidad no-telemedicina,
+        # no asumir MG silenciosamente — mostrar lista de disponibles.
+        _TELE_NO_DISPONIBLES = (
+            "traumato", "gine", "otorrino", "orl", "gastro", "matrona",
+            "fono", "podo", "kine", "ortod", "endod", "implant", "estetic",
+            "ecograf", "maso",
+        )
+        if not esp_tele and any(k in tl for k in _TELE_NO_DISPONIBLES):
+            esp_tele = None  # Forzar el fallback de "no disponible"
         if not esp_tele or tl in ("tele_otro", "otro", "otra"):
             reset_session(phone)
             return (
-                "Por ahora ofrecemos videollamada solo para Medicina General, "
-                "Psicología, Nutrición y Cardiología.\n\n"
+                "Por ahora ofrecemos videollamada solo para:\n\n"
+                "✅ *Medicina General* — controles y recetas crónicas\n"
+                "✅ *Psicología* — sesiones de seguimiento\n"
+                "✅ *Nutrición* — controles\n"
+                "✅ *Cardiología* — interpretación de exámenes\n\n"
                 "Para otras especialidades la atención es presencial en "
                 "*Monsalve 102, Carampangue*.\n\n"
                 "Escribe *agendar* si quieres reservar una hora presencial."

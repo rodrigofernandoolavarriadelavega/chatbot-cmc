@@ -1822,8 +1822,18 @@ def _local_faq_fallback(mensaje: str) -> str | None:
             "(dolor muscular, rehabilitación). $7.830 bono Fonasa · $15.000 particular\n\n"
             "Responde *1* o *2* para que te ayude a agendar."
         )
+    # BUG-9: si el mensaje contiene una negación, no disparar fallback positivo.
+    # Caso: "¿Hay cardiólogo? porque en Cañete no hay" → no retornar "Sí, tenemos cardiólogo".
+    _NEGACIONES_FAQ = (
+        "no hay", "tampoco", "busco en otra parte", "no encuentro",
+        "no tienen", "no tienen", "no encontre", "no encontré",
+        "en otra parte", "en otro lado", "pero no hay",
+    )
+    _tiene_negacion = any(n in tl_na for n in _NEGACIONES_FAQ)
     for keywords, respuesta in _FAQ_LOCAL_FALLBACKS:
         if all(k in tl_na for k in keywords):
+            if _tiene_negacion:
+                return None  # Dejar a Claude para respuesta contextual
             return respuesta
     return None
 
