@@ -37,7 +37,8 @@ from session import (get_session, is_duplicate, reset_session, save_session,
 from resilience import is_medilink_down
 from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_recordatorios, _job_recordatorios_2h,
-                  _job_postconsulta, _job_reactivacion, _job_abarca_sync, _job_olavarria_sync,
+                  _job_postconsulta, _job_detectar_cancelaciones,
+                  _job_reactivacion, _job_abarca_sync, _job_olavarria_sync,
                   _job_bi_sync_diario,
                   _job_adherencia_kine, _job_control_especialidad,
                   _job_crosssell_kine, _job_crosssell_orl_fono,
@@ -170,6 +171,16 @@ async def lifespan(app: FastAPI):
         _job_postconsulta,
         CronTrigger(hour=22, minute=0, timezone=_CLT),
         id="seguimiento_postconsulta",
+        replace_existing=True,
+    )
+    # Detectar cancelaciones hechas en Medilink: cada hora barre citas futuras
+    # (hoy + 14 días), valida contra Medilink, marca canceladas y reagenda
+    # automáticamente las próximas (≤48h). Implementado tras caso 2026-05-03
+    # (cita 54874 anulada hace 20 días seguía generando recordatorios).
+    scheduler.add_job(
+        _job_detectar_cancelaciones,
+        CronTrigger(minute=15, timezone=_CLT),  # cada hora :15
+        id="detectar_cancelaciones",
         replace_existing=True,
     )
     # Sync atenciones Dr. Abarca: cierre del día a las 23:55 CLT

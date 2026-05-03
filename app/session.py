@@ -814,6 +814,29 @@ def save_cita_bot(phone: str, id_cita: str, especialidad: str,
         conn.commit()
 
 
+def get_citas_bot_para_validar(dias_adelante: int = 14) -> list[dict]:
+    """Citas futuras (hoy hasta hoy+N días) sin cancel_detected_at.
+
+    Usado por _job_detectar_cancelaciones para barrer y validar contra Medilink
+    de forma preventiva (cada hora), no solo en el momento del recordatorio.
+    Limita a dias_adelante para no procesar 1000s de citas viejas.
+    """
+    with _conn() as conn:
+        rows = conn.execute(
+            """SELECT id, phone, id_cita, especialidad, profesional, fecha, hora, modalidad,
+                      paciente_nombre, id_paciente_medilink, created_at
+               FROM citas_bot
+               WHERE fecha >= date('now')
+               AND fecha <= date('now', ? )
+               AND cancel_detected_at IS NULL
+               AND id_cita IS NOT NULL
+               AND id_cita != ''
+               ORDER BY fecha, hora""",
+            (f"+{int(dias_adelante)} days",)
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
 def get_citas_bot_pendientes(fecha: str) -> list[dict]:
     """Devuelve citas del bot para una fecha dada donde aún no se envió recordatorio.
     Filtra citas con cancel_detected_at NOT NULL (canceladas detectadas previamente).

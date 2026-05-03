@@ -231,6 +231,103 @@ async def _job_postconsulta():
         send_text_fn=send_whatsapp, buscar_paciente_fn=buscar_paciente,
     )
 
+
+async def _job_detectar_cancelaciones():
+    """Cada hora: barrer citas futuras (hoy + 14 días) y detectar cancelaciones
+    hechas directamente en Medilink (cuando un doctor o recepción anula sin pasar
+    por el bot). Marca cancel_detected_at en citas_bot y, si la cita es próxima
+    (≤48h), dispara reagendamiento automático con 3 slots alternativos.
+
+    Caso real 2026-05-03: cita 54874 (Quijano lunes 4-may) anulada hace 20 días
+    en Medilink seguía generando recordatorios. La pre-validación en
+    enviar_recordatorios resuelve el síntoma; este job es la solución preventiva
+    (detecta antes del recordatorio y reagenda al paciente con tiempo).
+
+    Rate-limit-aware: pausa 200ms entre requests para no saturar Medilink.
+    """
+    import asyncio
+    from session import get_citas_bot_para_validar, mark_cita_cancel_detected
+    from medilink import get_cita
+    from datetime import datetime, timezone, timedelta
+    from zoneinfo import ZoneInfo
+    _CL = ZoneInfo("America/Santiago")
+
+    if is_medilink_down():
+        log.info("Detect cancelaciones: Medilink down, skip")
+        return
+
+    citas = get_citas_bot_para_validar(dias_adelante=14)
+    if not citas:
+        log.info("Detect cancelaciones: 0 citas a validar")
+        return
+
+    log.info("Detect cancelaciones: validando %d citas futuras", len(citas))
+    ahora = datetime.now(_CL)
+    canceladas_proximas = []
+    canceladas_lejanas = 0
+    errores = 0
+
+    for c in citas:
+        id_cita = c.get("id_cita")
+        try:
+            cita_ml = await get_cita(int(id_cita))
+        except (TypeError, ValueError):
+            continue
+        except Exception as e:
+            errores += 1
+            log.debug("get_cita falló id=%s: %s", id_cita, e)
+            await asyncio.sleep(0.5)
+            continue
+        await asyncio.sleep(0.2)  # rate-limit
+        if cita_ml is None:
+            continue
+
+        anulada = (cita_ml.get("id_estado") == 1
+                   or cita_ml.get("estado_anulacion") == 1)
+        # Slot reasignado a otro paciente (también es "cancelación" para el original)
+        id_pac_local = c.get("id_paciente_medilink")
+        id_pac_ml = cita_ml.get("id_paciente")
+        reasignada = (id_pac_local and id_pac_ml
+                      and str(id_pac_local) != str(id_pac_ml))
+
+        if not (anulada or reasignada):
+            continue
+
+        mark_cita_cancel_detected(str(id_cita))
+        log_event(c.get("phone", ""), "cita_cancelada_detectada",
+                  {"id_cita": id_cita, "fecha": c.get("fecha"),
+                   "hora": c.get("hora"), "tipo": "anulada" if anulada else "reasignada"})
+
+        # ¿Cita próxima? — calcular delta horas
+        try:
+            fh = datetime.strptime(
+                f"{c['fecha']} {c['hora'][:5]}", "%Y-%m-%d %H:%M"
+            ).replace(tzinfo=_CL)
+            horas_hasta = (fh - ahora).total_seconds() / 3600
+        except (ValueError, KeyError):
+            horas_hasta = 9999
+
+        if 0 < horas_hasta <= 48:
+            canceladas_proximas.append({"id_cita": id_cita, "horas": horas_hasta,
+                                        "phone": c.get("phone")})
+        else:
+            canceladas_lejanas += 1
+
+    log.info("Detect cancelaciones: %d próximas (≤48h) · %d lejanas · %d errores",
+             len(canceladas_proximas), canceladas_lejanas, errores)
+
+    # Disparar reagendamiento automático para las próximas
+    for cp in canceladas_proximas:
+        try:
+            res = await enviar_reagendar_por_cancelacion(
+                str(cp["id_cita"]), motivo="medilink_cancel_detected"
+            )
+            log.info("Reagendar auto id=%s phone=%s: %s",
+                     cp["id_cita"], cp["phone"], res)
+        except Exception as e:
+            log.exception("Reagendar auto falló id=%s: %s", cp["id_cita"], e)
+
+
 async def _job_abarca_sync():
     """Sync diario de atenciones del Dr. Abarca. Solo trae el día actual (delta).
     Si la tabla está vacía hace seed completo automáticamente."""
