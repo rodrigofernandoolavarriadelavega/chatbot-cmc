@@ -120,6 +120,55 @@ async def enviar_recordatorios(send_text_fn, send_interactive_fn=None,
         log.info("Recordatorios: sin citas para %s", manana)
         return
 
+    # ── PRE-VALIDACIÓN contra Medilink ────────────────────────────────────────
+    # Antes de mandar cada recordatorio, verificar que la cita siga activa
+    # en Medilink. Caso real 2026-05-03: Sebastian recibió recordatorio de
+    # cita 54874 (Quijano lunes 4-may 10:00) que en Medilink figura
+    # estado_anulacion=1 hace 20 días con otro paciente reasignado.
+    # El bot no detectaba la cancelación y mandaba el recordatorio igual.
+    try:
+        from session import mark_cita_cancel_detected
+        citas_validas = []
+        for c in citas:
+            id_cita = c.get("id_cita")
+            if not id_cita:
+                continue
+            try:
+                cita_ml = await get_cita(int(id_cita))
+            except Exception as e:
+                log.warning("Recordatorio pre-validación falló id_cita=%s: %s", id_cita, e)
+                # Ante fallo de Medilink, NO mandamos (fail-safe).
+                continue
+            if cita_ml is None:
+                log.warning("Recordatorio: cita %s no encontrada en Medilink, salto", id_cita)
+                continue
+            if cita_ml.get("id_estado") == 1 or cita_ml.get("estado_anulacion") == 1:
+                log.warning("Recordatorio: cita %s ANULADA en Medilink, no se envía y se marca local",
+                            id_cita)
+                mark_cita_cancel_detected(str(id_cita))
+                continue
+            # Verificar que el paciente siga siendo el mismo (slot reasignado)
+            id_pac_local = c.get("id_paciente_medilink")
+            id_pac_ml = cita_ml.get("id_paciente")
+            if id_pac_local and id_pac_ml and str(id_pac_local) != str(id_pac_ml):
+                log.warning("Recordatorio: cita %s reasignada en Medilink (paciente %s→%s), salto",
+                            id_cita, id_pac_local, id_pac_ml)
+                mark_cita_cancel_detected(str(id_cita))
+                continue
+            citas_validas.append(c)
+        if len(citas_validas) < len(citas):
+            log.info("Recordatorios: %d/%d válidas tras validación Medilink",
+                     len(citas_validas), len(citas))
+        citas = citas_validas
+    except Exception as e:
+        log.exception("Error en pre-validación de recordatorios: %s", e)
+        # Si falla la validación entera, mejor NO mandar nada que mandar falsos positivos
+        return
+
+    if not citas:
+        log.info("Recordatorios: sin citas válidas tras validación Medilink")
+        return
+
     log.info("Recordatorios: enviando %d recordatorio(s) para %s", len(citas), manana)
     for cita in citas:
         try:
@@ -195,6 +244,41 @@ async def enviar_recordatorios_2h(send_text_fn, send_template_fn=None):
     hora_max = hora_max_dt.strftime("%H:%M:%S")
 
     citas = _dedup_citas(get_citas_bot_para_2h_reminder(fecha_hoy, hora_min, hora_max))
+    if not citas:
+        return
+
+    # Pre-validación contra Medilink (igual que recordatorio diario).
+    # Si la cita está anulada o reasignada, no manda y marca local.
+    try:
+        from session import mark_cita_cancel_detected
+        validas = []
+        for c in citas:
+            id_c = c.get("id_cita")
+            if not id_c:
+                continue
+            try:
+                _ml = await get_cita(int(id_c))
+            except (TypeError, ValueError, Exception):
+                continue
+            if _ml is None:
+                continue
+            if _ml.get("id_estado") == 1 or _ml.get("estado_anulacion") == 1:
+                log.warning("Recordatorio 2h: cita %s anulada, marca local", id_c)
+                mark_cita_cancel_detected(str(id_c))
+                continue
+            id_pac_local = c.get("id_paciente_medilink")
+            id_pac_ml = _ml.get("id_paciente")
+            if id_pac_local and id_pac_ml and str(id_pac_local) != str(id_pac_ml):
+                log.warning("Recordatorio 2h: cita %s reasignada (%s→%s), marca local",
+                            id_c, id_pac_local, id_pac_ml)
+                mark_cita_cancel_detected(str(id_c))
+                continue
+            validas.append(c)
+        citas = validas
+    except Exception as e:
+        log.exception("Pre-validación 2h falló: %s", e)
+        return
+
     if not citas:
         return
 

@@ -816,6 +816,7 @@ def save_cita_bot(phone: str, id_cita: str, especialidad: str,
 
 def get_citas_bot_pendientes(fecha: str) -> list[dict]:
     """Devuelve citas del bot para una fecha dada donde aún no se envió recordatorio.
+    Filtra citas con cancel_detected_at NOT NULL (canceladas detectadas previamente).
     Usa paciente_nombre de citas_bot si existe; fallback a contact_profiles.
     Incluye phone_owner (nombre del dueño del celular) para recordatorios de terceros."""
     with _conn() as conn:
@@ -826,7 +827,8 @@ def get_citas_bot_pendientes(fecha: str) -> list[dict]:
                       cp.nombre AS phone_owner
                FROM citas_bot c
                LEFT JOIN contact_profiles cp ON c.phone = cp.phone
-               WHERE c.fecha=? AND c.reminder_sent=0""", (fecha,)
+               WHERE c.fecha=? AND c.reminder_sent=0
+               AND c.cancel_detected_at IS NULL""", (fecha,)
         ).fetchall()
         return [dict(r) for r in rows]
 
