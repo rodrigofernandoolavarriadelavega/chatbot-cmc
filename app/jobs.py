@@ -15,12 +15,14 @@ from fidelizacion import (enviar_seguimiento_postconsulta,
                           enviar_crosssell_orl_fono, enviar_crosssell_odonto_estetica,
                           enviar_crosssell_mg_chequeo)
 from medilink import (buscar_primer_dia, buscar_paciente, sync_citas_dia,
-                      SEGUIMIENTO_ESPECIALIDADES, PROFESIONALES)
+                      SEGUIMIENTO_ESPECIALIDADES, PROFESIONALES, get_slots_libres)
 from session import (get_sesiones_abandonadas, save_session, log_event,
                      get_pending_intent_queue, mark_intent_notified, intent_queue_depth,
                      get_waitlist_pending, mark_waitlist_notified,
                      get_cita_bot_by_id_for_rebook, mark_cita_cancel_detected,
-                     get_profile)
+                     get_profile,
+                     get_candidatos_horas_vacias, log_horas_vacias_envio,
+                     get_horas_vacias_envios_hoy)
 from resilience import (is_medilink_down, mark_medilink_up, medilink_down_since,
                         should_notify_reception, mark_reception_notified,
                         should_notify_recovery, mark_recovery_notified)
@@ -953,3 +955,231 @@ async def _job_enviar_dashboards_semanales(forzar: bool = False):
         log.info("dashboards_semanales: %d links enviados (%s)", enviados, hoy.isoformat())
     except Exception as e:
         log.error("_job_enviar_dashboards_semanales fallo: %s", e)
+
+
+# ── Horas vacías día siguiente ────────────────────────────────────────────────
+
+# Especialidades con demanda suficiente para justificar notificaciones proactivas.
+# Orden de prioridad (mayor demanda histórica primero, según pill de demanda del panel).
+_ESPECIALIDADES_HORAS_VACIAS = [
+    ("Medicina General",     [73, 1, 13]),
+    ("Ginecología",          [61]),
+    ("Otorrinolaringología", [23]),
+    ("Kinesiología",         [77, 21]),
+    ("Cardiología",          [60]),
+    ("Gastroenterología",    [65]),
+    ("Odontología General",  [72, 55]),
+    ("Psicología Adulto",    [74, 49]),
+    ("Nutrición",            [52]),
+    ("Podología",            [56]),
+    ("Ecografía",            [68]),
+    ("Matrona",              [67]),
+    ("Fonoaudiología",       [70]),
+]
+
+_HV_MAX_POR_ESPECIALIDAD = 30   # tope de envíos diarios por especialidad
+_HV_SLOTS_MINIMOS       = 3    # umbral de "agenda holgada"
+
+
+async def _job_horas_vacias_dia_siguiente():
+    """14:00 CLT — detecta slots libres D+1 y notifica proactivamente a candidatos.
+
+    Lógica:
+    1. Para cada especialidad principal, suma slots libres del día siguiente
+       entre todos los profesionales activos de esa especialidad.
+    2. Si la suma >= _HV_SLOTS_MINIMOS → hay holgura.
+    3. Identifica candidatos: phones con opt-in que preguntaron por esa especialidad
+       en los últimos 30 días sin agendar, o recibieron sin_disponibilidad.
+    4. Envía push de texto (sin template Meta) con slots disponibles + instrucción.
+    5. Rate limit: máximo _HV_MAX_POR_ESPECIALIDAD envíos/día por especialidad.
+    6. Cooldown: un phone no recibe más de 1 push cada 14 días para la misma especialidad.
+    7. Excluye: sin consent, HUMAN_TAKEOVER, blacklist (marketing_opt_out).
+    8. NO envía fines de semana después de las 13:00.
+
+    Nota sobre template Meta UTILITY:
+        El template aprobado lleva variables {{1}}=nombre, {{2}}=especialidad,
+        {{3}}=fecha, {{4}}=hora. Mientras el template no esté aprobado, el job
+        envía un mensaje de texto libre dentro de la ventana 24h (si el paciente
+        escribió recientemente) para no bloquearse. Cuando el template esté
+        disponible, reemplazar send_whatsapp() por send_whatsapp_template().
+    """
+    from datetime import datetime as _dt, timedelta as _td
+    from zoneinfo import ZoneInfo as _ZI
+    import asyncio as _asyncio
+
+    _CLT = _ZI("America/Santiago")
+    ahora = _dt.now(_CLT)
+    dow = ahora.weekday()   # 0=Lun … 6=Dom
+
+    # No enviar fines de semana después de las 13:00
+    if dow in (5, 6) and ahora.hour >= 13:
+        log.info("horas_vacias: fuera de ventana (fin de semana ≥13:00) — skipped")
+        return
+
+    # Fecha del día siguiente en CLT
+    manana = (ahora + _td(days=1)).date()
+    manana_str = manana.strftime("%Y-%m-%d")
+    manana_display = manana.strftime("%-d/%-m/%Y")  # ej. "4/5/2026"
+
+    log.info("horas_vacias: revisando slots para %s", manana_str)
+    total_enviados = 0
+
+    for especialidad_label, prof_ids in _ESPECIALIDADES_HORAS_VACIAS:
+        esp_key = especialidad_label.lower()
+
+        # Chequear tope diario
+        ya_enviados = get_horas_vacias_envios_hoy(esp_key)
+        if ya_enviados >= _HV_MAX_POR_ESPECIALIDAD:
+            log.info("horas_vacias: %s → tope diario alcanzado (%d)", especialidad_label, ya_enviados)
+            continue
+
+        # Recolectar slots libres D+1 de todos los profesionales de esta especialidad
+        slots_por_prof: dict[int, list] = {}
+        for pid in prof_ids:
+            try:
+                slots = await get_slots_libres(pid, manana_str)
+                if slots:
+                    slots_por_prof[pid] = slots
+            except Exception as e:
+                log.error("horas_vacias: error slots prof=%d esp=%s: %s", pid, especialidad_label, e)
+            # Pequeña pausa para no saturar rate limit Medilink (20 req/min)
+            await _asyncio.sleep(1.5)
+
+        total_slots = sum(len(v) for v in slots_por_prof.values())
+        if total_slots < _HV_SLOTS_MINIMOS:
+            log.info("horas_vacias: %s → solo %d slots libres D+1 — no notificar",
+                     especialidad_label, total_slots)
+            continue
+
+        # Elegir el primer slot disponible de la mañana para mostrar en el mensaje
+        todos_slots = sorted(
+            [s for sl in slots_por_prof.values() for s in sl],
+            key=lambda x: x["hora_inicio"]
+        )
+        slot_ejemplo = todos_slots[0]
+        hora_ejemplo = slot_ejemplo["hora_inicio"]
+
+        log.info("horas_vacias: %s → %d slots libres D+1 — buscando candidatos",
+                 especialidad_label, total_slots)
+
+        # Obtener candidatos con opt-in y sin cooldown
+        candidatos = get_candidatos_horas_vacias(esp_key, dias=30)
+        if not candidatos:
+            log.info("horas_vacias: %s → 0 candidatos elegibles", especialidad_label)
+            continue
+
+        log.info("horas_vacias: %s → %d candidatos elegibles", especialidad_label, len(candidatos))
+
+        enviados_esp = 0
+        for phone in candidatos:
+            if ya_enviados + enviados_esp >= _HV_MAX_POR_ESPECIALIDAD:
+                log.info("horas_vacias: %s → tope diario alcanzado mid-loop", especialidad_label)
+                break
+            if _canal_de_phone(phone) not in ("wa",):
+                # Solo WhatsApp por ahora (IG/FB no tienen templates UTILITY aprobados)
+                continue
+
+            texto = (
+                f"Hola, te avisamos que se liberaron horas para {especialidad_label} "
+                f"manana {manana_display}. Disponible desde las {hora_ejemplo} hrs.\n\n"
+                f"Si te interesa agendar, responde SI y te ayudo.\n\n"
+                f"Si no quieres recibir mas avisos, responde BAJA."
+            )
+
+            try:
+                await send_whatsapp(phone, texto)
+                # Usar el primer prof con slots como referencia para el registro
+                pid_ref = next(iter(slots_por_prof))
+                log_horas_vacias_envio(phone, esp_key, pid_ref, manana_str, hora_ejemplo)
+                log_event(phone, "horas_vacias_enviado", {
+                    "especialidad": esp_key,
+                    "fecha_slot": manana_str,
+                    "hora_slot": hora_ejemplo,
+                    "total_slots": total_slots,
+                })
+                enviados_esp += 1
+                total_enviados += 1
+                # Pausa mínima entre envíos para no saturar Meta API
+                await _asyncio.sleep(0.3)
+            except Exception as e:
+                log.error("horas_vacias: error enviando a %s: %s", phone[:6] + "***", e)
+
+        log.info("horas_vacias: %s → %d envíos realizados", especialidad_label, enviados_esp)
+
+    log.info("horas_vacias: total_enviados=%d para D+1=%s", total_enviados, manana_str)
+
+
+# ── Telemedicina: recordatorios 24h y 30min antes ─────────────────────────
+async def _job_telemedicina_recordatorios():
+    """Envía recordatorios de telemedicina con el link de videollamada.
+
+    - 24h antes: mensaje con link + instrucciones
+    - 30min antes: mensaje corto con link y hora exacta
+
+    Corre cada 15 minutos entre 7:00 y 22:00 CLT (mismo trigger que recordatorios_2h).
+    """
+    from session import (get_telemedicina_pendientes_24h,
+                         get_telemedicina_pendientes_30min,
+                         mark_telemedicina_recordatorio)
+    import asyncio as _asyncio
+
+    async def _enviar(row: dict, tipo: str):
+        phone = row["phone"]
+        link = row["link_videollamada"] or "(link no disponible)"
+        fecha_hora = row["fecha_hora"] or ""
+        hora = fecha_hora[11:16] if len(fecha_hora) >= 16 else ""
+        fecha = fecha_hora[:10] if len(fecha_hora) >= 10 else ""
+        if tipo == "24h":
+            msg = (
+                f"Recuerda que mañana tienes una consulta por *videollamada* en el CMC.\n\n"
+                f"📅 {fecha} · 🕐 {hora}\n\n"
+                f"*Tu link:* {link}\n\n"
+                "Necesitas:\n"
+                "✓ Internet estable\n"
+                "✓ Cámara y audio funcionando\n"
+                "✓ Lugar tranquilo y privado\n"
+                "✓ Exámenes o recetas a mano\n\n"
+                "Si aún no has pagado, hazlo por transferencia y envía el comprobante a este chat."
+            )
+        else:
+            msg = (
+                f"Tu consulta online comienza en *30 minutos* (🕐 {hora}).\n\n"
+                f"*Ingresa aquí:* {link}\n\n"
+                "Asegúrate de tener buena conexión y cámara activa. ¡Te esperamos!"
+            )
+        try:
+            canal = _canal_de_phone(phone)
+            if canal == "wa":
+                await send_whatsapp(phone, msg)
+            elif canal == "ig":
+                await send_instagram(phone, msg)
+            elif canal == "fb":
+                await send_messenger(phone, msg)
+            else:
+                log.warning("telemedicina_recordatorio: canal desconocido phone=%s", phone[:8])
+                return
+            mark_telemedicina_recordatorio(row["id"], tipo)
+            log_event(phone, f"telemedicina_recordatorio_{tipo}", {
+                "cita_id": row["medilink_cita_id"],
+                "link": link[:60],
+            })
+            log.info("telemedicina_recordatorio_%s enviado a %s", tipo, phone[:8] + "***")
+        except Exception as e:
+            log.error("telemedicina_recordatorio_%s error phone=%s: %s", tipo, phone[:8], e)
+
+    try:
+        pendientes_24h = get_telemedicina_pendientes_24h()
+        for row in pendientes_24h:
+            await _enviar(row, "24h")
+            await _asyncio.sleep(0.3)
+
+        pendientes_30min = get_telemedicina_pendientes_30min()
+        for row in pendientes_30min:
+            await _enviar(row, "30min")
+            await _asyncio.sleep(0.3)
+
+        if pendientes_24h or pendientes_30min:
+            log.info("telemedicina_recordatorios: 24h=%d 30min=%d",
+                     len(pendientes_24h), len(pendientes_30min))
+    except Exception as e:
+        log.error("_job_telemedicina_recordatorios fallo: %s", e)

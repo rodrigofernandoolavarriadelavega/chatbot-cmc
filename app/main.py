@@ -53,7 +53,9 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_cumpleanos, _job_winback,
                   _job_takeover_ttl, _job_takeover_media_ttl,
                   _job_regenerate_heatmap_cache,
-                  _job_enviar_dashboards_semanales)
+                  _job_enviar_dashboards_semanales,
+                  _job_horas_vacias_dia_siguiente,
+                  _job_telemedicina_recordatorios)
 import admin_routes
 import portal_routes
 
@@ -377,6 +379,21 @@ async def lifespan(app: FastAPI):
         id="dashboards_semanales_profesionales",
         replace_existing=True,
     )
+    # Horas vacías D+1: diariamente a las 14:00 CLT
+    # Detecta slots libres del día siguiente y notifica proactivamente a pacientes elegibles.
+    scheduler.add_job(
+        _job_horas_vacias_dia_siguiente,
+        CronTrigger(hour=14, minute=0, timezone=_CLT),
+        id="horas_vacias_dia_siguiente",
+        replace_existing=True,
+    )
+    # Telemedicina recordatorios: cada 15 min entre 7 y 22 CLT
+    scheduler.add_job(
+        _job_telemedicina_recordatorios,
+        CronTrigger(minute="*/15", hour="7-22", timezone=_CLT),
+        id="telemedicina_recordatorios",
+        replace_existing=True,
+    )
     # Primera generación al arrancar (sin await — no bloquear startup)
     import asyncio as _asyncio_startup
     _asyncio_startup.get_event_loop().create_task(_job_regenerate_heatmap_cache())
@@ -432,6 +449,7 @@ _MEULEN_ECOSISTEMA_HTML = (_TEMPLATE_DIR / "meulen_ecosistema.html").read_text(e
 _MEULEN_DASHBOARD_HTML = (_TEMPLATE_DIR / "meulen_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "meulen_dashboard.html").exists() else ""
 _MEULEN_KPIS_HTML = (_TEMPLATE_DIR / "meulen_kpis.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "meulen_kpis.html").exists() else ""
 _MENU_HTML = (_TEMPLATE_DIR / "menu.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "menu.html").exists() else ""
+_CHEQUEOS_HTML = (_TEMPLATE_DIR / "chequeos.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "chequeos.html").exists() else ""
 _PROYECTOS2026_HTML = (_TEMPLATE_DIR / "proyectos2026.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "proyectos2026.html").exists() else ""
 _LANDING_HTML = (_TEMPLATE_DIR / "landing.html").read_text(encoding="utf-8")
 _SITIO_V3_HTML = (_TEMPLATE_DIR / "sitio-v3.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio-v3.html").exists() else ""
@@ -1526,6 +1544,14 @@ def agentes_dashboard_page():
 def menu_page():
     """Landing esquemático con todas las rutas desplegadas en agentecmc.cl."""
     return _MENU_HTML
+
+
+@app.get("/chequeos", response_class=HTMLResponse)
+@app.get("/chequeo", response_class=HTMLResponse)
+@app.get("/chequeos-preventivos", response_class=HTMLResponse)
+def chequeos_page():
+    """Landing pública de paquetes preventivos: Mujer 30+, Hombre 40+, Escolar, Deportivo."""
+    return _CHEQUEOS_HTML
 
 
 def _seo_api_auth(token: str, cmc_session: str | None) -> None:

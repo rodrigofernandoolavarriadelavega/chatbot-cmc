@@ -282,6 +282,30 @@ _INTENT_CACHE: dict[str, dict] = {
     "dar hora":       {"intent": "agendar", "especialidad": None},
     "consulta":       {"intent": "agendar", "especialidad": None},
     "quiero consulta": {"intent": "agendar", "especialidad": None},
+    # Telemedicina
+    "telemedicina":          {"intent": "telemedicina", "especialidad": None},
+    "teleconsulta":          {"intent": "telemedicina", "especialidad": None},
+    "videollamada":          {"intent": "telemedicina", "especialidad": None},
+    "video llamada":         {"intent": "telemedicina", "especialidad": None},
+    "consulta online":       {"intent": "telemedicina", "especialidad": None},
+    "consulta virtual":      {"intent": "telemedicina", "especialidad": None},
+    "consulta por video":    {"intent": "telemedicina", "especialidad": None},
+    "atención online":       {"intent": "telemedicina", "especialidad": None},
+    "atencion online":       {"intent": "telemedicina", "especialidad": None},
+    "atención virtual":      {"intent": "telemedicina", "especialidad": None},
+    "atencion virtual":      {"intent": "telemedicina", "especialidad": None},
+    "atenderse online":      {"intent": "telemedicina", "especialidad": None},
+    "hora online":           {"intent": "telemedicina", "especialidad": None},
+    "cita online":           {"intent": "telemedicina", "especialidad": None},
+    "cita virtual":          {"intent": "telemedicina", "especialidad": None},
+    "consulta a distancia":  {"intent": "telemedicina", "especialidad": None},
+    "consulta remota":       {"intent": "telemedicina", "especialidad": None},
+    "hacen telemedicina":    {"intent": "telemedicina", "especialidad": None},
+    "tienen telemedicina":   {"intent": "telemedicina", "especialidad": None},
+    "quiero telemedicina":   {"intent": "telemedicina", "especialidad": None},
+    "por internet":          {"intent": "telemedicina", "especialidad": None},
+    "sin ir al centro":      {"intent": "telemedicina", "especialidad": None},
+    "desde casa":            {"intent": "telemedicina", "especialidad": None},
     # Cancelar coloquial
     "cancelar mi hora": {"intent": "cancelar", "especialidad": None},
     "anular":         {"intent": "cancelar", "especialidad": None},
@@ -1409,12 +1433,14 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
     (("cuando", "resultado"),
      "⏱ Los resultados de ecografía son el *mismo día*. Para exámenes externos: 2-3 días hábiles.\n\n"
      "Envíame tu RUT si quieres que revise el estado de tu examen."),
-    (("telemedicin",),
-     "No ofrecemos *telemedicina* por el momento 😔 Todas las consultas son "
-     "presenciales en nuestro centro:\n\n"
-     "📍 Monsalve 102, Carampangue\n"
-     "🕐 Lun-Vie 8-21h · Sáb 9-14h\n\n"
-     "_Escribe *agendar* si quieres reservar una hora presencial._"),
+    (("telemedicin", "teleconsult", "videollamada", "video llamada", "online", "virtual", "a distancia"),
+     "Sí, ofrecemos atención por videollamada en algunas especialidades:\n\n"
+     "✅ Medicina General — controles y recetas crónicas\n"
+     "✅ Psicología — sesiones de seguimiento\n"
+     "✅ Nutrición — controles\n"
+     "✅ Cardiología — interpretación de exámenes\n\n"
+     "La primera consulta siempre debe ser presencial (excepto Medicina General).\n\n"
+     "Escribe *telemedicina* para saber cómo agendar tu consulta online."),
     (("servicios", "ofrec"),
      "🏥 *Centro Médico Carampangue*\n\n"
      "🩺 *Medicina:* general, familiar, cardiología, gastroenterología, ginecología, otorrino\n"

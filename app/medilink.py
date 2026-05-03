@@ -1046,8 +1046,14 @@ async def verificar_slot_disponible(id_profesional: int, fecha: str,
 
 
 async def crear_cita(id_paciente: int, id_profesional: int, fecha: str,
-                     hora_inicio: str, hora_fin: str, id_recurso: int = 1) -> Optional[dict]:
-    """Crea una cita en Medilink. Devuelve dict con id de la cita o None si falla."""
+                     hora_inicio: str, hora_fin: str, id_recurso: int = 1,
+                     modalidad: str = "PRESENCIAL") -> Optional[dict]:
+    """Crea una cita en Medilink. Devuelve dict con id de la cita o None si falla.
+
+    modalidad: 'PRESENCIAL' (default) o 'TELEMEDICINA'.
+    Si es TELEMEDICINA, se agrega el prefijo [ONLINE] en el campo observaciones
+    de la cita, visible en la agenda de Medilink.
+    """
     duracion = _h_to_min(hora_fin) - _h_to_min(hora_inicio)
     body = {
         "id_paciente":    id_paciente,
@@ -1059,6 +1065,8 @@ async def crear_cita(id_paciente: int, id_profesional: int, fecha: str,
         "hora_fin":       hora_fin,
         "duracion":       duracion,
     }
+    if modalidad == "TELEMEDICINA":
+        body["observaciones"] = "[ONLINE] Consulta por videollamada"
     async with httpx.AsyncClient(timeout=10) as client:
         try:
             r = await _post(client, f"{MEDILINK_BASE_URL}/citas", json=body, headers=HEADERS)
@@ -1744,3 +1752,46 @@ def especialidades_disponibles() -> str:
             lista.append(f"• {e}")
             vistas.add(e)
     return "\n".join(sorted(lista))
+
+
+async def get_slots_libres(profesional_id: int, fecha: str) -> list[dict]:
+    """Retorna lista de slots libres para el profesional en la fecha dada.
+
+    Args:
+        profesional_id: ID Medilink del profesional.
+        fecha: Fecha en formato YYYY-MM-DD.
+
+    Returns:
+        Lista de dicts con keys: hora_inicio, hora_fin, profesional, especialidad, fecha.
+        Lista vacía si el profesional no tiene horario habilitado o no hay slots.
+
+    Notas:
+        - Respeta el dict PROFESIONALES (intervalo bot, no Medilink).
+        - Respeta breaks según _generar_slots_horario.
+        - Excluye slots que solapan con citas existentes (_slot_libre_vs_ocupadas).
+        - NO aplica buffer de 60 min (para notificaciones D+1, no para "ahora").
+    """
+    if profesional_id not in PROFESIONALES:
+        log.warning("get_slots_libres: profesional_id=%d no en PROFESIONALES", profesional_id)
+        return []
+
+    async with httpx.AsyncClient(timeout=20) as client:
+        try:
+            horarios = {profesional_id: await _get_horario(client, profesional_id)}
+        except Exception as e:
+            log.error("get_slots_libres: error horario prof=%d: %s", profesional_id, e)
+            return []
+        try:
+            # prioridad=False → todos los slots del profesional sin cortar al primero disponible.
+            # _slots_para_fecha ya maneja agendas, breaks, ocupadas y bloqueos.
+            # El buffer de 60 min solo aplica si fecha == hoy — para D+1 no filtra nada.
+            _, todos = await _slots_para_fecha(
+                client, [profesional_id], horarios, fecha, prioridad=False
+            )
+        except Exception as e:
+            log.error("get_slots_libres: error _slots_para_fecha prof=%d fecha=%s: %s",
+                      profesional_id, fecha, e)
+            return []
+
+    log.info("get_slots_libres: prof=%d fecha=%s → %d slots libres", profesional_id, fecha, len(todos))
+    return todos

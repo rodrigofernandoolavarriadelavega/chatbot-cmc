@@ -12,6 +12,7 @@ import logging
 import os
 import re
 import sqlite3
+import time
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from pathlib import Path
@@ -594,6 +595,47 @@ def _conn():
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_gdpr_rut ON gdpr_deletions(rut)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_gdpr_phone ON gdpr_deletions(phone)")
+    # ── Telemedicina MVP ─────────────────────────────────────────────────────
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS telemedicina_citas (
+            id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+            medilink_cita_id      TEXT UNIQUE,
+            phone                 TEXT NOT NULL,
+            profesional_id        INTEGER,
+            fecha_hora            TEXT,
+            modalidad             TEXT DEFAULT 'TELEMEDICINA',
+            link_videollamada     TEXT,
+            pago_status           TEXT DEFAULT 'PENDIENTE',
+            pago_comprobante_url  TEXT,
+            enviado_24h           INTEGER DEFAULT 0,
+            enviado_30min         INTEGER DEFAULT 0,
+            status                TEXT DEFAULT 'AGENDADA',
+            creada_ts             INTEGER,
+            actualizada_ts        INTEGER
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_tele_phone ON telemedicina_citas(phone)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_tele_fecha ON telemedicina_citas(fecha_hora)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_tele_status ON telemedicina_citas(status)")
+    # ── Horas vacías D+1 ─────────────────────────────────────────────────────
+    # Registro de cada push proactivo enviado a pacientes cuando hay slots libres
+    # para el día siguiente. Permite cooldown (14d) y métricas de conversión.
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS horas_vacias_envios (
+            id             INTEGER PRIMARY KEY AUTOINCREMENT,
+            phone          TEXT NOT NULL,
+            especialidad   TEXT NOT NULL,
+            profesional_id INTEGER NOT NULL,
+            fecha_slot     TEXT NOT NULL,
+            hora_slot      TEXT NOT NULL,
+            enviado_ts     INTEGER NOT NULL,
+            respondio      INTEGER DEFAULT 0,
+            agendo         INTEGER DEFAULT 0
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_hv_phone ON horas_vacias_envios(phone)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_hv_esp ON horas_vacias_envios(especialidad)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_hv_ts ON horas_vacias_envios(enviado_ts)")
     conn.commit()
     return conn
 
@@ -880,6 +922,84 @@ def save_cita_bot(phone: str, id_cita: str, especialidad: str,
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (phone, id_cita, especialidad, profesional, fecha, hora, modalidad,
              paciente_nombre or "", 1 if es_tercero else 0)
+        )
+        conn.commit()
+
+
+# ── Telemedicina MVP ──────────────────────────────────────────────────────────
+import hashlib as _hashlib
+import time as _time_mod
+
+
+def generar_link_videollamada(cita_id: str) -> str:
+    """Genera un link determinístico de Jitsi Meet para una cita de telemedicina.
+
+    El token de 8 chars está derivado del cita_id + salt para evitar
+    adivinanza de URLs. El mismo cita_id siempre produce el mismo link.
+    """
+    _salt = "CMC2026TELE"
+    _hash = _hashlib.sha256(f"{cita_id}{_salt}".encode()).hexdigest()[:8].upper()
+    return f"https://meet.jit.si/CMC-{cita_id}-{_hash}"
+
+
+def save_telemedicina_cita(medilink_cita_id: str, phone: str,
+                           profesional_id: int, fecha_hora: str,
+                           link_videollamada: str) -> int:
+    """Registra una cita de telemedicina en la tabla dedicada.
+    Retorna el id de la fila insertada.
+    """
+    ts = int(_time_mod.time())
+    with _conn() as conn:
+        cur = conn.execute(
+            """INSERT OR IGNORE INTO telemedicina_citas
+               (medilink_cita_id, phone, profesional_id, fecha_hora,
+                link_videollamada, creada_ts, actualizada_ts)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (medilink_cita_id, phone, profesional_id, fecha_hora,
+             link_videollamada, ts, ts)
+        )
+        conn.commit()
+        return cur.lastrowid
+
+
+def get_telemedicina_pendientes_24h() -> list[dict]:
+    """Citas AGENDADAS de telemedicina cuyo recordatorio de 24h no se ha enviado
+    y faltan entre 23h y 25h para la cita."""
+    with _conn() as conn:
+        rows = conn.execute(
+            """SELECT * FROM telemedicina_citas
+               WHERE status = 'AGENDADA'
+                 AND enviado_24h = 0
+                 AND fecha_hora BETWEEN
+                     datetime('now', '+23 hours') AND datetime('now', '+25 hours')"""
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_telemedicina_pendientes_30min() -> list[dict]:
+    """Citas AGENDADAS de telemedicina cuyo recordatorio de 30min no se ha enviado
+    y faltan entre 25 y 35 minutos para la cita."""
+    with _conn() as conn:
+        rows = conn.execute(
+            """SELECT * FROM telemedicina_citas
+               WHERE status = 'AGENDADA'
+                 AND enviado_30min = 0
+                 AND fecha_hora BETWEEN
+                     datetime('now', '+25 minutes') AND datetime('now', '+35 minutes')"""
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def mark_telemedicina_recordatorio(row_id: int, tipo: str):
+    """Marca un recordatorio de telemedicina como enviado.
+    tipo: '24h' o '30min'
+    """
+    campo = "enviado_24h" if tipo == "24h" else "enviado_30min"
+    ts = int(_time_mod.time())
+    with _conn() as conn:
+        conn.execute(
+            f"UPDATE telemedicina_citas SET {campo}=1, actualizada_ts=? WHERE id=?",
+            (ts, row_id)
         )
         conn.commit()
 
@@ -4173,3 +4293,132 @@ def snapshot_recepcion_context(phone: str) -> dict:
         "recepcion_resumen": msgs,
         "recepcion_resumen_ts": _dt_snap.now(_ZI_snap("America/Santiago")).isoformat(),
     }
+
+
+# ── Horas vacías D+1 — helpers ───────────────────────────────────────────────
+
+def get_candidatos_horas_vacias(especialidad: str, dias: int = 30) -> list[dict]:
+    """Retorna phones con opt-in que:
+    - En los últimos `dias` días preguntaron por `especialidad` (intent_agendar)
+      pero no crearon cita (no tienen cita_creada posterior).
+    - O recibieron sin_disponibilidad para esa especialidad en ese período.
+    Excluye:
+    - Phones sin privacy_consents aceptado.
+    - Phones en HUMAN_TAKEOVER activo.
+    - Phones en blacklist (tag marketing_opt_out).
+    - Phones con envío horas_vacias en los últimos 14 días para la misma especialidad.
+    """
+    esp = especialidad.lower().strip()
+    since = datetime.now(timezone.utc) - timedelta(days=dias)
+    since_iso = since.isoformat()
+    cooldown_ts = int((datetime.now(timezone.utc) - timedelta(days=14)).timestamp())
+
+    with _conn() as conn:
+        # Candidatos que preguntaron por esta especialidad sin agendar
+        intent_rows = conn.execute("""
+            SELECT DISTINCT e.phone
+            FROM conversation_events e
+            WHERE e.event = 'intent_agendar'
+              AND json_extract(e.meta, '$.especialidad') LIKE ?
+              AND e.ts >= ?
+              AND NOT EXISTS (
+                  SELECT 1 FROM conversation_events cc
+                  WHERE cc.phone = e.phone
+                    AND cc.event = 'cita_creada'
+                    AND json_extract(cc.meta, '$.especialidad') LIKE ?
+                    AND cc.ts > e.ts
+              )
+        """, (f"%{esp}%", since_iso, f"%{esp}%")).fetchall()
+
+        # Candidatos que recibieron sin_disponibilidad para esta especialidad
+        nodispo_rows = conn.execute("""
+            SELECT DISTINCT phone
+            FROM conversation_events
+            WHERE event = 'sin_disponibilidad'
+              AND json_extract(meta, '$.especialidad') LIKE ?
+              AND ts >= ?
+        """, (f"%{esp}%", since_iso)).fetchall()
+
+        candidatos_raw = {r["phone"] for r in intent_rows} | {r["phone"] for r in nodispo_rows}
+
+        resultado = []
+        for phone in candidatos_raw:
+            # Excluir sin consent
+            consent = conn.execute(
+                "SELECT status, revoked_at FROM privacy_consents WHERE phone=?", (phone,)
+            ).fetchone()
+            if not consent or consent["status"] != "accepted" or consent["revoked_at"]:
+                continue
+            # Excluir HUMAN_TAKEOVER activo
+            session_row = conn.execute(
+                "SELECT state FROM sessions WHERE phone=?", (phone,)
+            ).fetchone()
+            if session_row and session_row["state"] == "HUMAN_TAKEOVER":
+                continue
+            # Excluir opt-out (marketing_opt_out tag)
+            optout = conn.execute(
+                "SELECT 1 FROM contact_tags WHERE phone=? AND tag='marketing_opt_out'", (phone,)
+            ).fetchone()
+            if optout:
+                continue
+            # Excluir cooldown 14 días por esta especialidad
+            ultimo_envio = conn.execute(
+                "SELECT enviado_ts FROM horas_vacias_envios WHERE phone=? AND especialidad=? ORDER BY enviado_ts DESC LIMIT 1",
+                (phone, esp)
+            ).fetchone()
+            if ultimo_envio and ultimo_envio["enviado_ts"] > cooldown_ts:
+                continue
+            resultado.append(phone)
+
+    return resultado
+
+
+def log_horas_vacias_envio(phone: str, especialidad: str, profesional_id: int,
+                           fecha_slot: str, hora_slot: str) -> int:
+    """Registra un envío de push horas vacías. Retorna el ID generado."""
+    with _conn() as conn:
+        cur = conn.execute("""
+            INSERT INTO horas_vacias_envios (phone, especialidad, profesional_id, fecha_slot, hora_slot, enviado_ts)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (phone, especialidad.lower(), profesional_id, fecha_slot, hora_slot, int(time.time())))
+        conn.commit()
+        return cur.lastrowid
+
+
+def mark_horas_vacias_respondio(phone: str, especialidad: str):
+    """Marca que el paciente respondió al push de horas vacías."""
+    with _conn() as conn:
+        conn.execute("""
+            UPDATE horas_vacias_envios
+            SET respondio = 1
+            WHERE phone=? AND especialidad=? AND agendo=0
+            ORDER BY enviado_ts DESC
+            LIMIT 1
+        """, (phone, especialidad.lower()))
+        conn.commit()
+
+
+def mark_horas_vacias_agendo(phone: str, especialidad: str):
+    """Marca que el paciente agendó tras recibir un push de horas vacías."""
+    with _conn() as conn:
+        conn.execute("""
+            UPDATE horas_vacias_envios
+            SET respondio = 1, agendo = 1
+            WHERE phone=? AND especialidad=? AND agendo=0
+            ORDER BY enviado_ts DESC
+            LIMIT 1
+        """, (phone, especialidad.lower()))
+        conn.commit()
+
+
+def get_horas_vacias_envios_hoy(especialidad: str) -> int:
+    """Cuenta cuántos push de horas vacías se han enviado hoy para esa especialidad."""
+    inicio_dia = int(datetime.now(timezone.utc).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    ).timestamp())
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM horas_vacias_envios WHERE especialidad=? AND enviado_ts >= ?",
+            (especialidad.lower(), inicio_dia)
+        ).fetchone()
+        return row["cnt"] if row else 0

@@ -29,7 +29,8 @@ from session import (save_session, reset_session, get_session, save_tag, delete_
                      adquirir_slot_lock, liberar_slot_lock,
                      log_cross_sell, puede_cross_sell,
                      marcar_bono_primera_cita, marcar_bono_notificado,
-                     registrar_bono_referral, conteo_referidos_mes)
+                     registrar_bono_referral, conteo_referidos_mes,
+                     mark_horas_vacias_respondio, mark_horas_vacias_agendo)
 from resilience import is_medilink_down
 from triage_ges import triage_sintomas, normalizar_texto_paciente
 from pni import get_vaccine_reminder
@@ -2250,6 +2251,34 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "Mientras tanto hemos pausado el envío de mensajes."
             )
 
+    # ── Hook: respuesta a push de horas vacías ──────────────────────────────
+    # Si el paciente recibió horas_vacias_enviado en las últimas 4h y responde
+    # "SI" / "AGENDAR" en IDLE, lo llevamos al flujo de agendamiento con la
+    # especialidad del push precargada.
+    if state == "IDLE" and tl_norm in ("si", "si", "s", "agendar", "quiero", "si quiero"):
+        try:
+            from session import _conn as _hv_conn
+            import time as _hv_time
+            _hv_cutoff = int(_hv_time.time()) - 4 * 3600
+            with _hv_conn() as _hv_c:
+                _hv_row = _hv_c.execute(
+                    "SELECT especialidad, fecha_slot, hora_slot "
+                    "FROM horas_vacias_envios "
+                    "WHERE phone=? AND enviado_ts >= ? "
+                    "ORDER BY enviado_ts DESC LIMIT 1",
+                    (phone, _hv_cutoff)
+                ).fetchone()
+            if _hv_row:
+                _hv_esp = _hv_row["especialidad"]
+                log_event(phone, "horas_vacias_respondio", {
+                    "especialidad": _hv_esp,
+                    "fecha_slot": _hv_row["fecha_slot"],
+                })
+                mark_horas_vacias_respondio(phone, _hv_esp)
+                return await _iniciar_agendar(phone, data, _hv_esp)
+        except Exception as _hv_err:
+            log.warning("Hook horas_vacias: %s", _hv_err)
+
     # ── Comandos globales ─────────────────────────────────────────────────────
     _COMANDOS_GLOBALES = ("menu", "menú", "inicio", "reiniciar", "volver", "hola", "menu_volver")
     # Si la recepcionista tomó la conversación, NO resetear por saludos/menu —
@@ -2537,6 +2566,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # clickeó "agendar_sugerido" tras un mensaje del bot y recibió 2 saludos
         # genéricos en lugar de retomar el agendamiento.
         if not esp_sug_prev and not data.get("slots"):
+            # Botón de vuelta al flujo presencial desde telemedicina
+            if tl == "agendar_presencial_tele":
+                return await _iniciar_agendar(phone, data, None)
             _BOT_PAYLOADS_HUERFANOS = {
                 "agendar_sugerido": "Esa opción de agendar ya no está activa 😔\n\n¿Qué *especialidad* necesitas? O escribe *menu* para ver las opciones.",
                 "confirmar_sugerido": "La hora que te ofrecí ya no está disponible 😔\n\nEscribe la *especialidad* que necesitas y te busco hora nueva.",
@@ -3442,6 +3474,25 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if intent == "waitlist":
             especialidad = result.get("especialidad")
             return await _iniciar_waitlist(phone, data, especialidad)
+
+        # ── Intent telemedicina ───────────────────────────────────────────────
+        if intent == "telemedicina":
+            save_session(phone, "WAIT_TELEMEDICINA_ESPECIALIDAD", data)
+            return _btn_msg(
+                "Sí, ofrecemos atención por videollamada en algunas especialidades:\n\n"
+                "✅ Medicina General — controles y recetas crónicas\n"
+                "✅ Psicología — sesiones de seguimiento\n"
+                "✅ Nutrición — controles\n"
+                "✅ Cardiología — interpretación de exámenes\n\n"
+                "La primera consulta siempre debe ser presencial (excepto Medicina General).\n\n"
+                "¿Para qué especialidad necesitas la videollamada?",
+                [
+                    {"id": "tele_mg",     "title": "Medicina General"},
+                    {"id": "tele_psico",  "title": "Psicología"},
+                    {"id": "tele_nutri",  "title": "Nutrición"},
+                    {"id": "tele_otro",   "title": "Otra especialidad"},
+                ]
+            )
 
         # ── Intent referido: paciente pide su código para compartir ──────────
         _REFERIDO_KW = ("referir", "referido", "codigo referido", "código referido",
@@ -5640,6 +5691,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 hora_inicio=slot["hora_inicio"],
                 hora_fin=slot["hora_fin"],
                 id_recurso=slot.get("id_recurso", 1),
+                modalidad=data.get("telemedicina_modalidad", "PRESENCIAL"),
             )
             # Liberar lock tentativo — éxito o fallo, ya no lo necesitamos.
             # Si la cita se creó, Medilink ya tiene el slot ocupado real.
@@ -5689,6 +5741,27 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     paciente_nombre=paciente["nombre"],
                     es_tercero=es_tercero,
                 )
+                # ── Telemedicina: guardar link videollamada ─────────────────
+                _link_video = None
+                if data.get("telemedicina_modalidad") == "TELEMEDICINA" and id_cita:
+                    try:
+                        from session import (generar_link_videollamada,
+                                             save_telemedicina_cita)
+                        _link_video = generar_link_videollamada(id_cita)
+                        _fecha_hora_tele = f"{slot['fecha']}T{slot['hora_inicio']}"
+                        save_telemedicina_cita(
+                            medilink_cita_id=id_cita,
+                            phone=phone,
+                            profesional_id=slot["id_profesional"],
+                            fecha_hora=_fecha_hora_tele,
+                            link_videollamada=_link_video,
+                        )
+                        log_event(phone, "telemedicina_cita_guardada", {
+                            "cita_id": id_cita, "link": _link_video})
+                    except Exception as _te:
+                        log.error("Error guardando telemedicina_cita: %s", _te)
+                data["_link_video"] = _link_video
+                # ── fin telemedicina ────────────────────────────────────────
                 log_event(phone, "cita_reagendada" if reagendar else "cita_creada", {
                     "especialidad": esp,
                     "profesional": slot["profesional"],
@@ -5696,6 +5769,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "modalidad": data.get("modalidad", "particular"),
                     "id_cita_old": cita_old.get("id") if reagendar else None,
                 })
+                # ── Métricas horas vacías: marcar que el paciente agendó ──
+                if not reagendar:
+                    try:
+                        mark_horas_vacias_agendo(phone, esp)
+                    except Exception:
+                        pass
                 # ── Meta CAPI: evento Schedule ─────────────────────────────
                 # create_task: no bloquea el flujo si CAPI falla o tarda.
                 try:
@@ -5804,17 +5883,38 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     titulo = f"✅ *¡Listo! La hora de {nombre_corto} quedó reservada.*"
                 else:
                     titulo = f"✅ *¡Listo, {nombre_corto}! Tu hora quedó reservada.*"
-                confirmacion_msg = (
-                    f"{titulo}\n\n"
-                    f"👤 {paciente['nombre']}\n"
-                    f"🏥 {slot['especialidad']} — {slot['profesional']}\n"
-                    f"📅 {slot['fecha_display']}\n"
-                    f"🕐 {slot['hora_inicio'][:5]}\n"
-                    f"💳 {modalidad}\n\n"
-                    "Recuerda llegar *15 minutos antes* con cédula de identidad.\n\n"
-                    "📍 *Monsalve 102 esq. República, Carampangue*\n\n"
-                    f"¡Te esperamos! 😊{cross_ref}"
-                )
+                _link_video = data.pop("_link_video", None)
+                if _link_video:
+                    # Confirmación telemedicina — incluye link + instrucciones de pago
+                    confirmacion_msg = (
+                        f"{titulo}\n\n"
+                        f"👤 {paciente['nombre']}\n"
+                        f"🖥️ {slot['especialidad']} — {slot['profesional']}\n"
+                        f"📅 {slot['fecha_display']}\n"
+                        f"🕐 {slot['hora_inicio'][:5]}\n"
+                        f"📡 *Consulta por videollamada*\n\n"
+                        f"*Tu link de videollamada:*\n{_link_video}\n\n"
+                        "*Pago (solo transferencia):*\n"
+                        "Banco: BancoEstado\n"
+                        "Cuenta RUT: 16.625.671-3\n"
+                        "Nombre: Centro Médico Carampangue SpA\n"
+                        "Monto: según lo indicado por recepción\n"
+                        "Envía el comprobante a este chat.\n\n"
+                        "El link se activa 15 min antes de tu hora.\n\n"
+                        f"¡Te esperamos online! 😊{cross_ref}"
+                    )
+                else:
+                    confirmacion_msg = (
+                        f"{titulo}\n\n"
+                        f"👤 {paciente['nombre']}\n"
+                        f"🏥 {slot['especialidad']} — {slot['profesional']}\n"
+                        f"📅 {slot['fecha_display']}\n"
+                        f"🕐 {slot['hora_inicio'][:5]}\n"
+                        f"💳 {modalidad}\n\n"
+                        "Recuerda llegar *15 minutos antes* con cédula de identidad.\n\n"
+                        "📍 *Monsalve 102 esq. República, Carampangue*\n\n"
+                        f"¡Te esperamos! 😊{cross_ref}"
+                    )
                 # BUG-D: PNI/hitos en segundo mensaje separado para evitar truncamiento
                 # WA trunca con "ver más" ~1000 chars, ocultando dirección y CTA.
                 # ── Tracking referral_source pasivo (sin preguntar al paciente) ──
@@ -6586,6 +6686,119 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         log_event(phone, "registro_skip", {"step": "referral_post", "raw": txt[:60]})
         reset_session(phone)
         return "Perfecto, gracias 🙏\n\n_Escribe *menu* si necesitas algo más._"
+
+    # ── WAIT_TELEMEDICINA_ESPECIALIDAD ────────────────────────────────────
+    # Paciente eligió especialidad; verificar si es primera vez.
+    if state == "WAIT_TELEMEDICINA_ESPECIALIDAD":
+        _TELE_ESP_MAP = {
+            "tele_mg":    "Medicina General",
+            "tele_psico": "Psicología",
+            "tele_nutri": "Nutrición",
+            "tele_cardio": "Cardiología",
+        }
+        # Detección desde botón o texto libre
+        esp_tele = _TELE_ESP_MAP.get(tl)
+        if not esp_tele:
+            tl_low = tl.lower()
+            if any(w in tl_low for w in ("medic", "general", "familiar", "medico")):
+                esp_tele = "Medicina General"
+            elif any(w in tl_low for w in ("psico", "psicolog")):
+                esp_tele = "Psicología"
+            elif any(w in tl_low for w in ("nutri")):
+                esp_tele = "Nutrición"
+            elif any(w in tl_low for w in ("cardio")):
+                esp_tele = "Cardiología"
+        if not esp_tele or tl in ("tele_otro", "otro", "otra"):
+            reset_session(phone)
+            return (
+                "Por ahora ofrecemos videollamada solo para Medicina General, "
+                "Psicología, Nutrición y Cardiología.\n\n"
+                "Para otras especialidades la atención es presencial en "
+                "*Monsalve 102, Carampangue*.\n\n"
+                "Escribe *agendar* si quieres reservar una hora presencial."
+            )
+        # Guardar especialidad elegida y preguntar si es primera vez
+        data["tele_especialidad"] = esp_tele
+        save_session(phone, "WAIT_TELEMEDICINA_PRIMERA_VEZ", data)
+        log_event(phone, "telemedicina_esp_elegida", {"especialidad": esp_tele})
+        return _btn_msg(
+            f"Entendido — *{esp_tele}* por videollamada.\n\n"
+            "¿Es tu primera vez atendiendo esta especialidad en el CMC?",
+            [
+                {"id": "tele_primera_si",  "title": "Sí, primera vez"},
+                {"id": "tele_primera_no",  "title": "No, ya soy paciente"},
+            ]
+        )
+
+    # ── WAIT_TELEMEDICINA_PRIMERA_VEZ ─────────────────────────────────────
+    if state == "WAIT_TELEMEDICINA_PRIMERA_VEZ":
+        esp_tele = data.get("tele_especialidad", "esta especialidad")
+        es_primera = tl in ("tele_primera_si", "si", "sí", "primera", "primera vez", "s", "yes")
+        es_paciente = tl in ("tele_primera_no", "no", "ya", "ya soy", "ya tengo", "recurrente")
+        if not es_primera and not es_paciente:
+            # Heurística texto libre
+            tl_low = tl.lower()
+            if any(w in tl_low for w in ("primera", "nuevo", "nunca", "primera vez")):
+                es_primera = True
+            elif any(w in tl_low for w in ("ya", "antes", "recurrente", "control", "seguimiento")):
+                es_paciente = True
+        if not es_primera and not es_paciente:
+            return _btn_msg(
+                "¿Es tu primera vez con esta especialidad en el CMC?",
+                [
+                    {"id": "tele_primera_si",  "title": "Sí, primera vez"},
+                    {"id": "tele_primera_no",  "title": "No, ya soy paciente"},
+                ]
+            )
+        # MG siempre puede hacer telemedicina (incluso primera vez)
+        primera_bloquea = es_primera and esp_tele != "Medicina General"
+        if primera_bloquea:
+            reset_session(phone)
+            return _btn_msg(
+                f"Para *{esp_tele}* la primera consulta debe ser presencial "
+                "para que el profesional pueda evaluarte bien.\n\n"
+                "Las siguientes consultas de seguimiento sí las podemos hacer "
+                "por videollamada.\n\n"
+                "¿Te agendo una hora presencial para este primer control?",
+                [
+                    {"id": "agendar_presencial_tele", "title": "Sí, agendar presencial"},
+                    {"id": "no_agendar",              "title": "No por ahora"},
+                ]
+            )
+        # Paciente puede hacer telemedicina — mostrar requisitos antes de agendar
+        data["telemedicina_modalidad"] = "TELEMEDICINA"
+        data["especialidad"] = esp_tele.lower()
+        save_session(phone, "WAIT_TELEMEDICINA_REQUISITOS", data)
+        log_event(phone, "telemedicina_flujo_ok", {"especialidad": esp_tele, "primera": es_primera})
+        return _btn_msg(
+            "Perfecto. Antes de agendar, necesitas:\n\n"
+            "✓ Conexión a internet estable\n"
+            "✓ Celular o computador con cámara y audio\n"
+            "✓ Lugar tranquilo y privado\n"
+            "✓ Tener a mano tus exámenes o recetas previas\n"
+            "✓ Pagar antes de la cita por transferencia (te envío los datos al confirmar)\n\n"
+            "¿Continuamos con el agendamiento?",
+            [
+                {"id": "tele_confirma_requisitos", "title": "Sí, continuar"},
+                {"id": "no_agendar",               "title": "No por ahora"},
+            ]
+        )
+
+    # ── WAIT_TELEMEDICINA_REQUISITOS ──────────────────────────────────────
+    if state == "WAIT_TELEMEDICINA_REQUISITOS":
+        esp_tele = data.get("tele_especialidad", "medicina general")
+        acepta = tl in ("tele_confirma_requisitos", "si", "sí", "s", "ok", "claro",
+                        "confirmar", "continuar", "yes")
+        if not acepta:
+            reset_session(phone)
+            return (
+                "Entendido. Cuando quieras agendar tu consulta online, "
+                "escribe *telemedicina*.\n\n"
+                "También puedes agendar presencialmente escribiendo *agendar*."
+            )
+        # Transferir al flujo normal de agendamiento con flag telemedicina activo
+        log_event(phone, "telemedicina_requisitos_aceptados", {"especialidad": esp_tele})
+        return await _iniciar_agendar(phone, data, esp_tele.lower())
 
     # ── WAIT_REFERRAL ─────────────────────────────────────────────────────
     if state == "WAIT_REFERRAL":
