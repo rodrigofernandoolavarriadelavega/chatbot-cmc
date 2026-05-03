@@ -933,7 +933,10 @@ PODOLOGÍA ADICIONAL (Andrea Guevara):
 - Micosis 6-9 uñas: $20.000 — mismo tratamiento para más uñas afectadas.
 - Micosis todas las uñas: $25.000 — tratamiento completo de todas las uñas.
 
-Para otras especialidades no listadas: indicar que el precio se consulta en recepción al momento de agendar."""
+Para otras especialidades no listadas: indicar que el precio se consulta en recepción al momento de agendar.
+
+FORMATO DE TEXTO — OBLIGATORIO:
+WhatsApp NO renderiza Markdown estándar. Para negrita usa UN SOLO asterisco: *texto*. NUNCA uses doble asterisco (**texto**) porque aparece literalmente como asteriscos en la pantalla del paciente. Este error afecta a todos los mensajes con formato."""
 
 
 # Cache determinístico para respuestas comunes de seguimiento post-consulta
@@ -1490,6 +1493,8 @@ async def respuesta_faq(mensaje: str) -> str:
             data = json.loads(text)
         respuesta_claude = data.get("respuesta_directa")
         if respuesta_claude:
+            # BUG-04: colapsar ** → * para WhatsApp (Haiku a veces usa Markdown estándar)
+            respuesta_claude = respuesta_claude.replace("**", "*")
             return _scrub_telefonos(respuesta_claude)
         # Sin respuesta de Claude → intentar fallback local antes de rendirse
         return _local_faq_fallback(mensaje) or "Para más información, comunícate con recepción 😊"
