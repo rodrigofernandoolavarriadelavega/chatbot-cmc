@@ -29,6 +29,7 @@ from session import (get_session, reset_session, save_session, get_metricas,
                      save_profile, get_profile, get_phone_by_rut,
                      delete_patient_data, get_privacy_consent, save_privacy_consent,
                      get_next_cita_bot_by_phone, mark_reminder_sent,
+                     snapshot_recepcion_context,
                      _conn)
 from medilink import (buscar_paciente, crear_paciente, buscar_primer_dia,
                       buscar_slots_dia, crear_cita, listar_citas_paciente,
@@ -660,11 +661,24 @@ async def admin_edit_message(request: Request, _: str = Depends(require_admin)):
 @router.post("/admin/api/resume/{phone}")
 async def admin_resume(phone: str, _: str = Depends(require_admin)):
     """Devuelve el control al bot y notifica al paciente."""
+    # Capturar contexto de la recepcionista ANTES de resetear la sesión,
+    # para que el bot lo tenga disponible en la siguiente interacción.
+    ctx = snapshot_recepcion_context(phone)
+    if ctx:
+        sess = get_session(phone)
+        merged = {**sess.get("data", {}), **ctx}
+        save_session(phone, "HUMAN_TAKEOVER", merged)
+        log_event(phone, "recepcion_ctx_snapshot", {"n_msgs": len(ctx.get("recepcion_resumen", []))})
     reset_session(phone)
     log_event(phone, "bot_reanudado")
-    await send_whatsapp(phone,
-        "Continuamos con el asistente automático 😊\n"
-        "Escribe *menu* cuando quieras.")
+    msg_reanuda = (
+        "Continúo desde donde te dejaste con la recepcionista.\n"
+        "Escribe *menu* si necesitas algo más."
+        if ctx else
+        "Continuamos con el asistente automático.\n"
+        "Escribe *menu* cuando quieras."
+    )
+    await send_whatsapp(phone, msg_reanuda)
     log_message(phone, "out", "[Bot reanudado por recepcionista]", "IDLE")
     return {"ok": True}
 

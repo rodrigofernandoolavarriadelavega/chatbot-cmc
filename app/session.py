@@ -692,6 +692,28 @@ def reanudar_takeovers_expirados(horas_max: int = 24,
         for row in rows:
             phone = row[0]
             phones_reanudados.append(phone)
+            # Capturar contexto recepcionista antes del reset por TTL.
+            # _reset preservará recepcion_resumen si está en el data previo;
+            # aquí lo inyectamos si todavía no estaba (reanudación automática).
+            try:
+                ctx_msgs = get_recepcion_msgs(phone, since_minutes=60, max_n=3)
+                if ctx_msgs:
+                    row_data = conn.execute(
+                        "SELECT data FROM sessions WHERE phone=?", (phone,)
+                    ).fetchone()
+                    if row_data:
+                        import json as _json_ctx
+                        from datetime import datetime as _dt_ctx2
+                        from zoneinfo import ZoneInfo as _ZI_ctx2
+                        old_d = _json_ctx.loads(row_data["data"] or "{}")
+                        old_d["recepcion_resumen"] = ctx_msgs
+                        old_d["recepcion_resumen_ts"] = _dt_ctx2.now(_ZI_ctx2("America/Santiago")).isoformat()
+                        conn.execute(
+                            "UPDATE sessions SET data=? WHERE phone=?",
+                            (_json_ctx.dumps(old_d, ensure_ascii=False), phone),
+                        )
+            except Exception:
+                pass
             _reset(conn, phone)
             try:
                 payload = '{"horas_max": %d, "solo_media": %s}' % (horas_max, "true" if solo_media else "false")
@@ -745,6 +767,15 @@ def _reset(conn, phone: str):
                     "last_especialidad": old.get("last_especialidad"),
                     "last_slots_ts": old.get("last_slots_ts"),
                 }
+        except Exception:
+            pass
+    # Preservar contexto de recepcionista para inject post-takeover
+    if row:
+        try:
+            old_data = json.loads(row["data"] or "{}")
+            if old_data.get("recepcion_resumen") and "recepcion_resumen" not in preserved:
+                preserved["recepcion_resumen"] = old_data["recepcion_resumen"]
+                preserved["recepcion_resumen_ts"] = old_data.get("recepcion_resumen_ts")
         except Exception:
             pass
     conn.execute("""
@@ -3894,3 +3925,50 @@ def delete_patient_data(phone: str | None, rut: str | None,
     log.info("GDPR delete executed: phone=%s rut=%s summary=%s",
              resolved_phone, resolved_rut, deleted)
     return deleted
+
+
+# ── Contexto de recepcionista post-takeover ──────────────────────────────────
+
+def get_recepcion_msgs(phone: str, since_minutes: int = 60, max_n: int = 3) -> list[str]:
+    """Retorna los últimos N mensajes enviados por la recepcionista en esta sesión.
+
+    Criterios:
+    - direction = 'out'
+    - texto empieza con '[Recepcionista]' (prefijo que usa admin_reply)
+    - dentro de las últimas `since_minutes` minutos
+    - excluye mensajes de sistema ('[Recepcionista tomó la conversación]', '[Bot reanudado...]')
+    """
+    phone = normalize_wa_id(phone)
+    with _conn() as conn:
+        rows = conn.execute(
+            """
+            SELECT text FROM messages
+             WHERE phone = ?
+               AND direction = 'out'
+               AND text LIKE '[Recepcionista] %'
+               AND ts >= datetime('now', ?)
+             ORDER BY ts DESC
+             LIMIT ?
+            """,
+            (phone, f"-{int(since_minutes)} minutes", max_n),
+        ).fetchall()
+    # Devuelve en orden cronológico (más antiguo primero) y quita el prefijo
+    msgs = [r["text"][len("[Recepcionista] "):].strip() for r in reversed(rows)]
+    return msgs
+
+
+def snapshot_recepcion_context(phone: str) -> dict:
+    """Captura los mensajes recientes de la recepcionista y los devuelve como
+    dict listo para guardar en session data.
+
+    Retorna {} si no hay mensajes de recepcionista recientes.
+    """
+    msgs = get_recepcion_msgs(phone, since_minutes=60, max_n=3)
+    if not msgs:
+        return {}
+    from datetime import datetime as _dt_snap
+    from zoneinfo import ZoneInfo as _ZI_snap
+    return {
+        "recepcion_resumen": msgs,
+        "recepcion_resumen_ts": _dt_snap.now(_ZI_snap("America/Santiago")).isoformat(),
+    }

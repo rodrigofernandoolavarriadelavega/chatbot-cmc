@@ -5496,7 +5496,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         titulo = f"🔄 *¡Listo! La hora de {nombre_corto} fue reagendada.*"
                     else:
                         titulo = f"🔄 *¡Listo, {nombre_corto}! Tu hora fue reagendada.*"
-                    return (
+                    _msg_rea = (
                         f"{titulo}\n\n"
                         f"👤 {paciente['nombre']}\n"
                         f"🏥 {slot['especialidad']} — {slot['profesional']}\n"
@@ -5506,9 +5506,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         "📍 *Monsalve 102 esq. República, Carampangue*"
                         f"{extra}"
                         f"{cross_ref}"
-                        f"{pni_msg}\n\n"
-                        "_Escribe *menu* si necesitas algo más._"
                     )
+                    # BUG-D: PNI/hitos en segundo mensaje para evitar truncamiento WA
+                    if pni_msg and send_whatsapp:
+                        await send_whatsapp(phone, _msg_rea + "\n\n_Escribe *menu* si necesitas algo más._")
+                        import asyncio as _asyncio_pni
+                        await _asyncio_pni.sleep(2.5)
+                        return pni_msg.strip()
+                    return _msg_rea + "\n\n_Escribe *menu* si necesitas algo más._"
                 if es_tercero:
                     titulo = f"✅ *¡Listo! La hora de {nombre_corto} quedó reservada.*"
                 else:
@@ -5523,8 +5528,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "Recuerda llegar *15 minutos antes* con cédula de identidad.\n\n"
                     "📍 *Monsalve 102 esq. República, Carampangue*\n\n"
                     f"¡Te esperamos! 😊{cross_ref}"
-                    f"{pni_msg}"
                 )
+                # BUG-D: PNI/hitos en segundo mensaje separado para evitar truncamiento
+                # WA trunca con "ver más" ~1000 chars, ocultando dirección y CTA.
                 # ── Tracking referral_source pasivo (sin preguntar al paciente) ──
                 # Si la sesión tiene fbclid → proviene de Meta Ads; taggear antes
                 # de preguntar para no perder la atribución si salta la pregunta.
@@ -5551,12 +5557,24 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     # Python trataba send_whatsapp como local en TODA la función.
                     # Caso real 2026-04-24 (56999988115).
                     await send_whatsapp(phone, confirmacion_msg)
+                    # BUG-D: enviar PNI/hitos como tercer mensaje si aplica
+                    if pni_msg:
+                        import asyncio as _asyncio_pni2
+                        await _asyncio_pni2.sleep(2.5)
+                        await send_whatsapp(phone, pni_msg.strip())
                     return _btn_msg(
                         "Una última cosa rápida 🙏\n\n*¿Cómo nos conociste?*",
                         [{"id": "ref_amigo", "title": "👥 Amigo / familiar"},
                          {"id": "ref_rrss", "title": "📱 Redes / Google"},
                          {"id": "ref_recurrente", "title": "🔄 Ya venía antes"}]
                     )
+                # BUG-D: si hay PNI/hitos, enviar confirmación base primero
+                # y PNI como segundo mensaje (evita truncamiento WA ~1000 chars).
+                if pni_msg:
+                    import asyncio as _asyncio_pni3
+                    await send_whatsapp(phone, confirmacion_msg + "\n\n_Escribe *menu* si necesitas algo más._")
+                    await _asyncio_pni3.sleep(2.5)
+                    return pni_msg.strip()
                 return confirmacion_msg + "\n\n_Escribe *menu* si necesitas algo más._"
             else:
                 return (

@@ -493,6 +493,7 @@ Output: {{"intent": "agendar", "especialidad": "kinesiología", "respuesta_direc
 
 REGLAS:
 - **NUNCA cambies la especialidad por palabras del CONTEXTO familiar/temporal**. Si el paciente dice "para mi hijo/hija/papá/mamá/abuela", "para el viernes", "para mañana", la especialidad NO cambia — solo afecta a quién/cuándo es la cita. "Médico general para mi hijo" = medicina general (NO pediatría, NO implantología).
+- **PEDIATRÍA**: Si el mensaje pregunta por pediatría, médico para niños, médico pediátrico, atención infantil especializada, pediatra o términos equivalentes ("tienen pediatra", "médico que vea niños", "paciente pediátrico", "atención pediátrica", "doctor para bebes") → usa intent "info" y en respuesta_directa incluye: "El CMC no tiene pediatría especializada. Para niños sanos (control, resfrío, fiebre básica) puedes consultar en *Medicina General*. Para temas pediátricos complejos te recomendamos ir al *CESFAM Carampangue* o al *Hospital de Arauco*. ¿Te ayudo a agendar con Medicina General?" NUNCA clasifiques consultas sobre pediatría como Psicología Adulto, Ginecología, Cardiología u otras especialidades adultas.
 - Si menciona explícitamente la especialidad ("medico general", "kinesiología", "ortodoncia"), USA ESA. No deduzcas otra a partir de palabras tangenciales.
 - intent "agendar": quiere pedir/reservar/agendar una hora. También si el mensaje es solo el nombre o abreviación de una especialidad (ej: "gine", "kine", "traumato", "psico", "nutri", "cardio", "otorrino", "fono", "podología", "ginecología", etc.)
 - intent "reagendar": quiere mover/cambiar/reprogramar/reagendar una hora ya existente (ej: "quiero cambiar mi hora", "necesito mover mi cita", "¿puedo reagendar la consulta del viernes?", "cambiar fecha de mi hora")
@@ -1051,8 +1052,12 @@ def _strip_markdown_json(text: str) -> str:
     return text
 
 
-async def detect_intent(mensaje: str) -> dict:
-    """Detecta intención del mensaje. Devuelve dict con intent, especialidad, respuesta_directa."""
+async def detect_intent(mensaje: str, recepcion_resumen: list | None = None) -> dict:
+    """Detecta intención del mensaje. Devuelve dict con intent, especialidad, respuesta_directa.
+
+    recepcion_resumen: mensajes recientes de la recepcionista (post-HUMAN_TAKEOVER);
+    se inyectan como contexto previo para evitar contradicciones.
+    """
     import re as _re_w
     # Normaliza: minúsculas, strip, colapsa espacios internos, quita signos dobles
     clave = _re_w.sub(r'\s+', ' ', mensaje.strip().lower())
@@ -1177,6 +1182,16 @@ async def detect_intent(mensaje: str) -> dict:
             f"{_hoy15.strftime('%H:%M')} hora de Chile. "
             f"Usa este año ({_hoy15.year}) al resolver fechas relativas.\n\n"
         )
+        _recepcion_ctx15 = ""
+        if recepcion_resumen:
+            _lines = "\n".join(f"{i+1}) \"{m}\"" for i, m in enumerate(recepcion_resumen))
+            _recepcion_ctx15 = (
+                "[CONTEXTO PREVIO IMPORTANTE] Una recepcionista del CMC ya intervino "
+                "en esta conversación. Sus últimas respuestas fueron:\n"
+                + _lines
+                + "\nNo la contradigas. Si el paciente hace una pregunta de seguimiento, "
+                "asume ese contexto.\n\n"
+            )
         resp = await client.messages.create(
             model="claude-haiku-4-5-20251001",
             max_tokens=1024,
@@ -1185,7 +1200,7 @@ async def detect_intent(mensaje: str) -> dict:
                 "text": SYSTEM_PROMPT,
                 "cache_control": {"type": "ephemeral"},
             }],
-            messages=[{"role": "user", "content": _ctx_fecha15 + mensaje}],
+            messages=[{"role": "user", "content": _ctx_fecha15 + _recepcion_ctx15 + mensaje}],
         )
         text = _strip_markdown_json(resp.content[0].text)
         if resp.stop_reason == "max_tokens":
@@ -1239,6 +1254,7 @@ async def detect_intent(mensaje: str) -> dict:
             log.warning("post-proceso detect_intent falló: %s", _e_pp)
         rd = _result.get("respuesta_directa")
         if isinstance(rd, str) and rd:
+            rd = rd.replace("**", "*")  # BUG-C: normalize markdown antes de _scrub
             _result["respuesta_directa"] = _scrub_telefonos(rd)
         return _result
     except json.JSONDecodeError as e:
@@ -1447,9 +1463,13 @@ def _local_faq_fallback(mensaje: str) -> str | None:
     return None
 
 
-async def respuesta_faq(mensaje: str) -> str:
+async def respuesta_faq(mensaje: str, recepcion_resumen: list | None = None) -> str:
     """Responde preguntas frecuentes. Primero intenta con el FAQ local
-    (keywords inequívocas — sin llamada a Claude); si no hay match, usa Claude."""
+    (keywords inequívocas — sin llamada a Claude); si no hay match, usa Claude.
+
+    recepcion_resumen: mensajes recientes de la recepcionista (post-HUMAN_TAKEOVER);
+    se inyectan para no contradecir lo que ya dijo.
+    """
     # Fast-path: FAQ local cubre preguntas simples de precio/Fonasa/horarios.
     # Ahorra llamada a Claude (latencia 200-400ms + tokens).
     _fb_fast = _local_faq_fallback(mensaje)
@@ -1474,6 +1494,16 @@ async def respuesta_faq(mensaje: str) -> str:
             f"{_hoy15f.day} de {_MESES15f[_hoy15f.month-1]} de {_hoy15f.year}, "
             f"{_hoy15f.strftime('%H:%M')} hora de Chile.\n\n"
         )
+        _recepcion_ctx15f = ""
+        if recepcion_resumen:
+            _lines_f = "\n".join(f"{i+1}) \"{m}\"" for i, m in enumerate(recepcion_resumen))
+            _recepcion_ctx15f = (
+                "[CONTEXTO PREVIO IMPORTANTE] Una recepcionista del CMC ya intervino "
+                "en esta conversación. Sus últimas respuestas fueron:\n"
+                + _lines_f
+                + "\nNo la contradigas. Si el paciente hace una pregunta de seguimiento, "
+                "asume ese contexto.\n\n"
+            )
         resp = await client.messages.create(
             model="claude-haiku-4-5-20251001",
             max_tokens=1024,
@@ -1482,7 +1512,7 @@ async def respuesta_faq(mensaje: str) -> str:
                 "text": SYSTEM_PROMPT,
                 "cache_control": {"type": "ephemeral"},
             }],
-            messages=[{"role": "user", "content": _ctx_fecha15f + mensaje}],
+            messages=[{"role": "user", "content": _ctx_fecha15f + _recepcion_ctx15f + mensaje}],
         )
         text = _strip_markdown_json(resp.content[0].text)
         if resp.stop_reason == "max_tokens":
