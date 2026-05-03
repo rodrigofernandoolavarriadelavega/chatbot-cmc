@@ -173,6 +173,12 @@ def _conn():
         )
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_fidel_phone ON fidelizacion_msgs(phone, tipo)")
+    # BUG-01: UNIQUE constraint para evitar duplicados si save se llama dos veces.
+    # Usa CREATE UNIQUE INDEX IF NOT EXISTS para no romper bases existentes.
+    conn.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_fidel_unique
+        ON fidelizacion_msgs(phone, tipo, cita_id)
+    """)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS citas_cache (
             id_prof         INTEGER,
@@ -1794,10 +1800,13 @@ def get_pacientes_inactivos(dias_min: int = 30, dias_max: int = 90) -> list[dict
 
 
 def save_fidelizacion_msg(phone: str, tipo: str, cita_id: str = ""):
-    """Registra que se envió un mensaje de fidelización."""
+    """Registra que se envió un mensaje de fidelización.
+    BUG-01: INSERT OR IGNORE evita duplicado si se llama dos veces
+    (ej. retry tras excepción post-send).
+    """
     with _conn() as conn:
         conn.execute(
-            "INSERT INTO fidelizacion_msgs (phone, tipo, cita_id) VALUES (?, ?, ?)",
+            "INSERT OR IGNORE INTO fidelizacion_msgs (phone, tipo, cita_id) VALUES (?, ?, ?)",
             (phone, tipo, cita_id or "")
         )
         conn.commit()

@@ -147,6 +147,11 @@ async def enviar_seguimiento_postconsulta(send_fn, send_template_fn=None,
     for cita in citas:
         try:
             msg = _msg_postconsulta(cita)
+            # BUG-01: guardar ANTES de enviar para que si el send falla o la
+            # tarea CAPI lanza excepción, el registro ya exista y el job no
+            # reintente al día siguiente. INSERT OR IGNORE en save_fidelizacion_msg
+            # garantiza idempotencia si por algún motivo se llama dos veces.
+            save_fidelizacion_msg(cita["phone"], "postconsulta", str(cita.get("id_cita", "")))
             await send_fn(cita["phone"], msg)
             body = msg.get("interactive", {}).get("body", {}).get("text", "[Post-consulta]")
             log_message(cita["phone"], "out", body, "IDLE")
@@ -184,7 +189,6 @@ async def enviar_seguimiento_postconsulta(send_fn, send_template_fn=None,
                 except Exception as _e_tips:
                     log.warning("No se pudo guardar pending_tips: %s", _e_tips)
 
-            save_fidelizacion_msg(cita["phone"], "postconsulta", str(cita.get("id_cita", "")))
             log.info("Seguimiento enviado → %s (%s)", cita["phone"], cita.get("especialidad"))
             # ── Meta CAPI: evento Purchase — cita ocurrida (proxy más confiable) ─
             # El post-consulta se manda solo cuando la cita ya pasó (filtro hora_actual).
@@ -230,6 +234,8 @@ async def enviar_reactivacion_pacientes(send_fn, send_template_fn=None):
     log.info("Reactivación: enviando %d mensaje(s)", len(pacientes))
     for p in pacientes:
         try:
+            # BUG-01: save antes de send para idempotencia
+            save_fidelizacion_msg(p["phone"], "reactivacion")
             if USE_TEMPLATES and send_template_fn:
                 nombre = _nombre_corto(p.get("nombre")) or "paciente"
                 esp = p.get("especialidad", "")
@@ -247,7 +253,6 @@ async def enviar_reactivacion_pacientes(send_fn, send_template_fn=None):
                 await send_fn(p["phone"], msg)
                 body = msg.get("interactive", {}).get("body", {}).get("text", "[Reactivación]")
                 log_message(p["phone"], "out", body, "IDLE")
-            save_fidelizacion_msg(p["phone"], "reactivacion")
             log.info("Reactivación enviada → %s (%s)", p["phone"], p.get("especialidad"))
         except Exception as e:
             log.error("Error reactivación phone=%s: %s", p.get("phone"), e)
@@ -296,6 +301,7 @@ async def enviar_adherencia_kine(send_fn, send_template_fn=None):
     log.info("Adherencia kine: enviando %d mensaje(s)", len(candidatos))
     for p in candidatos:
         try:
+            save_fidelizacion_msg(p["phone"], "adherencia_kine")  # BUG-01
             if USE_TEMPLATES and send_template_fn:
                 nombre = _nombre_corto(p.get("nombre")) or "paciente"
                 await send_template_fn(
@@ -312,7 +318,6 @@ async def enviar_adherencia_kine(send_fn, send_template_fn=None):
                 await send_fn(p["phone"], msg)
                 body = msg.get("interactive", {}).get("body", {}).get("text", "[Adherencia kine]")
                 log_message(p["phone"], "out", body, "IDLE")
-            save_fidelizacion_msg(p["phone"], "adherencia_kine")
             log.info("Adherencia kine enviada → %s", p["phone"])
         except Exception as e:
             log.error("Error adherencia kine phone=%s: %s", p.get("phone"), e)
@@ -369,6 +374,7 @@ async def enviar_recordatorio_control(send_fn, send_template_fn=None):
         log.info("Control %s: enviando %d mensaje(s)", especialidad, len(candidatos))
         for p in candidatos:
             try:
+                save_fidelizacion_msg(p["phone"], tipo_fidel)  # BUG-01
                 if USE_TEMPLATES and send_template_fn:
                     nombre = _nombre_corto(p.get("nombre")) or "paciente"
                     await send_template_fn(
@@ -385,7 +391,6 @@ async def enviar_recordatorio_control(send_fn, send_template_fn=None):
                     await send_fn(p["phone"], msg)
                     body = msg.get("interactive", {}).get("body", {}).get("text", f"[Control {especialidad}]")
                     log_message(p["phone"], "out", body, "IDLE")
-                save_fidelizacion_msg(p["phone"], tipo_fidel)
                 log.info("Control %s enviado → %s", especialidad, p["phone"])
             except Exception as e:
                 log.error("Error control %s phone=%s: %s", especialidad, p.get("phone"), e)
@@ -436,6 +441,7 @@ async def enviar_crosssell_kine(send_fn, send_template_fn=None):
         if not puede_enviar_campana(p.get("phone",""), "crosssell_kine", dias_cooldown=90):
             continue
         try:
+            save_fidelizacion_msg(p["phone"], "crosssell_kine")  # BUG-01
             if USE_TEMPLATES and send_template_fn:
                 nombre = _nombre_corto(p.get("nombre")) or "paciente"
                 await send_template_fn(
@@ -452,7 +458,6 @@ async def enviar_crosssell_kine(send_fn, send_template_fn=None):
                 await send_fn(p["phone"], msg)
                 body = msg.get("interactive", {}).get("body", {}).get("text", "[Cross-sell kine]")
                 log_message(p["phone"], "out", body, "IDLE")
-            save_fidelizacion_msg(p["phone"], "crosssell_kine")
             log.info("Cross-sell kine enviado → %s (%s)", p["phone"], p.get("especialidad"))
         except Exception as e:
             log.error("Error cross-sell kine phone=%s: %s", p.get("phone"), e)
@@ -505,13 +510,13 @@ async def enviar_crosssell_orl_fono(send_fn, send_template_fn=None):
         if not puede_enviar_campana(p.get("phone",""), "crosssell_orl_fono", dias_cooldown=90):
             continue
         try:
+            origen = (p.get("origen") or "").lower()
+            tipo = "crosssell_orl_fono" if "otorrin" in origen else "crosssell_fono_orl"
+            save_fidelizacion_msg(p["phone"], tipo)  # BUG-01
             msg = _msg_crosssell_orl_fono(p)
             await send_fn(p["phone"], msg)
             body = msg.get("interactive", {}).get("body", {}).get("text", "[Cross-sell ORL↔Fono]")
             log_message(p["phone"], "out", body, "IDLE")
-            origen = (p.get("origen") or "").lower()
-            tipo = "crosssell_orl_fono" if "otorrin" in origen else "crosssell_fono_orl"
-            save_fidelizacion_msg(p["phone"], tipo)
         except Exception as e:
             log.error("Error cross-sell ORL↔Fono phone=%s: %s", p.get("phone"), e)
 
@@ -557,11 +562,11 @@ async def enviar_crosssell_odonto_estetica(send_fn, send_template_fn=None):
         if not puede_enviar_campana(p.get("phone",""), "crosssell_odonto_estetica", dias_cooldown=90):
             continue
         try:
+            save_fidelizacion_msg(p["phone"], "crosssell_odonto_estetica")  # BUG-01
             msg = _msg_crosssell_odonto_estetica(p)
             await send_fn(p["phone"], msg)
             body = msg.get("interactive", {}).get("body", {}).get("text", "[Cross-sell Odonto→Estética]")
             log_message(p["phone"], "out", body, "IDLE")
-            save_fidelizacion_msg(p["phone"], "crosssell_odonto_estetica")
         except Exception as e:
             log.error("Error cross-sell odonto-estetica phone=%s: %s", p.get("phone"), e)
 
@@ -620,11 +625,11 @@ async def enviar_crosssell_mg_chequeo(send_fn, send_template_fn=None):
         if not puede_enviar_campana(p.get("phone",""), "crosssell_mg_chequeo", dias_cooldown=180):
             continue
         try:
+            save_fidelizacion_msg(p["phone"], "crosssell_mg_chequeo")  # BUG-01
             msg = _msg_crosssell_mg_chequeo(p)
             await send_fn(p["phone"], msg)
             body = msg.get("interactive", {}).get("body", {}).get("text", "[Cross-sell MG→Chequeo]")
             log_message(p["phone"], "out", body, "IDLE")
-            save_fidelizacion_msg(p["phone"], "crosssell_mg_chequeo")
         except Exception as e:
             log.error("Error cross-sell mg-chequeo phone=%s: %s", p.get("phone"), e)
 
@@ -690,8 +695,8 @@ async def enviar_cumpleanos(send_fn):
                 await send_whatsapp_interactive(p["phone"], _bmf["interactive"])
             except Exception:
                 await send_fn(p["phone"], msg + "\n\n_Escribe *menu* para agendar._")
+            save_fidelizacion_msg(p["phone"], "cumpleanos")  # BUG-01
             log_message(p["phone"], "out", msg, "IDLE")
-            save_fidelizacion_msg(p["phone"], "cumpleanos")
             log.info("Cumpleaños enviado → %s (%s)%s", p["phone"], nombre, edad_txt)
         except Exception as e:
             log.error("Error cumpleaños phone=%s: %s", p.get("phone"), e)
@@ -757,11 +762,11 @@ async def enviar_winback(send_fn):
     log.info("Win-back: enviando %d mensaje(s)", len(pacientes))
     for p in pacientes:
         try:
+            save_fidelizacion_msg(p["phone"], "winback")  # BUG-01
             msg = _msg_winback(p)
             await send_fn(p["phone"], msg)
             body = msg.get("interactive", {}).get("body", {}).get("text", "[Win-back]")
             log_message(p["phone"], "out", body, "IDLE")
-            save_fidelizacion_msg(p["phone"], "winback")
             log.info("Win-back enviado → %s (%s, última: %s)",
                      p["phone"], p.get("especialidad"), p.get("ultima_cita"))
         except Exception as e:
