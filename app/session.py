@@ -426,6 +426,34 @@ def _conn():
         )
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_refuse_code ON referral_uses(code)")
+    # Bonos de referidos: tracking de validación y aplicación de descuentos
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS referral_bonos (
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            code                TEXT NOT NULL,
+            referrer_phone      TEXT NOT NULL,
+            referred_phone      TEXT NOT NULL,
+            tipo_bono           TEXT NOT NULL,   -- 'medica_20' o 'dental_15'
+            fecha_primera_cita  TEXT,            -- cuando el referido completó primera cita
+            bono_notificado_at  TEXT,            -- cuando se notificó al referente
+            bono_aplicado_at    TEXT,            -- cuando se canjeó el bono
+            created_at          TEXT DEFAULT (datetime('now'))
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_rbonos_referrer ON referral_bonos(referrer_phone)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_rbonos_code ON referral_bonos(code)")
+    # Cross-sell: cooldown para no repetir el mismo par esp_origen→esp_destino
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS cross_sell_log (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            phone       TEXT NOT NULL,
+            esp_origen  TEXT NOT NULL,
+            esp_destino TEXT NOT NULL,
+            evento      TEXT NOT NULL,  -- 'ofrecido' | 'aceptado' | 'rechazado'
+            created_at  TEXT DEFAULT (datetime('now'))
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_crosssell_phone ON cross_sell_log(phone, created_at)")
     # Campañas estacionales — registro de envíos
     conn.execute("""
         CREATE TABLE IF NOT EXISTS campanas_envios (
@@ -3526,6 +3554,146 @@ def use_referral_code(code: str, referred_phone: str) -> bool:
         )
         conn.commit()
         return True
+
+
+# ── Cross-sell cooldown ───────────────────────────────────────────────────────
+
+def log_cross_sell(phone: str, esp_origen: str, esp_destino: str, evento: str) -> None:
+    """Registra un evento de cross-sell: 'ofrecido', 'aceptado' o 'rechazado'."""
+    with _conn() as conn:
+        conn.execute(
+            "INSERT INTO cross_sell_log (phone, esp_origen, esp_destino, evento) "
+            "VALUES (?, ?, ?, ?)",
+            (phone, esp_origen.lower(), esp_destino.lower(), evento)
+        )
+        conn.commit()
+
+
+def puede_cross_sell(phone: str, esp_origen: str, esp_destino: str,
+                     dias_cooldown: int = 30) -> bool:
+    """True si no se ofreció este par de cross-sell en los últimos dias_cooldown días
+    Y no se ofreció NINGÚN cross-sell en la sesión del día (1 por sesión)."""
+    with _conn() as conn:
+        # 1) No más de 1 cross-sell cualquiera hoy
+        hoy = conn.execute(
+            "SELECT 1 FROM cross_sell_log WHERE phone=? "
+            "AND evento='ofrecido' AND date(created_at)=date('now')",
+            (phone,)
+        ).fetchone()
+        if hoy:
+            return False
+        # 2) No repetir mismo par en 30 días
+        par = conn.execute(
+            "SELECT 1 FROM cross_sell_log WHERE phone=? AND esp_origen=? "
+            "AND esp_destino=? AND evento='ofrecido' "
+            "AND created_at >= datetime('now', ?)",
+            (phone, esp_origen.lower(), esp_destino.lower(), f"-{dias_cooldown} days")
+        ).fetchone()
+        return par is None
+
+
+# ── Referral bonos ────────────────────────────────────────────────────────────
+
+def registrar_bono_referral(code: str, referrer_phone: str, referred_phone: str,
+                             tipo_bono: str) -> int | None:
+    """Crea un bono pendiente al validarse primera cita del referido.
+    tipo_bono: 'medica_20' o 'dental_15'.
+    Retorna el id del bono creado, o None si ya existe uno para este par."""
+    with _conn() as conn:
+        existing = conn.execute(
+            "SELECT id FROM referral_bonos WHERE code=? AND referred_phone=?",
+            (code, referred_phone)
+        ).fetchone()
+        if existing:
+            return existing["id"]
+        cur = conn.execute(
+            "INSERT INTO referral_bonos "
+            "(code, referrer_phone, referred_phone, tipo_bono) VALUES (?, ?, ?, ?)",
+            (code, referrer_phone, referred_phone, tipo_bono)
+        )
+        conn.commit()
+        return cur.lastrowid
+
+
+def marcar_bono_primera_cita(referred_phone: str) -> list[dict]:
+    """Cuando el referido completa su primera cita, marca los bonos pendientes
+    y retorna la lista de referentes a notificar (pueden ser varios si entró
+    con múltiples códigos, aunque en la práctica es 1)."""
+    with _conn() as conn:
+        ahora = datetime.now(timezone.utc).isoformat()
+        conn.execute(
+            "UPDATE referral_bonos SET fecha_primera_cita=? "
+            "WHERE referred_phone=? AND fecha_primera_cita IS NULL",
+            (ahora, referred_phone)
+        )
+        conn.commit()
+        rows = conn.execute(
+            "SELECT id, code, referrer_phone, tipo_bono FROM referral_bonos "
+            "WHERE referred_phone=? AND fecha_primera_cita IS NOT NULL "
+            "AND bono_notificado_at IS NULL",
+            (referred_phone,)
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def marcar_bono_notificado(bono_id: int) -> None:
+    """Registra que se notificó al referente sobre el bono."""
+    with _conn() as conn:
+        ahora = datetime.now(timezone.utc).isoformat()
+        conn.execute(
+            "UPDATE referral_bonos SET bono_notificado_at=? WHERE id=?",
+            (ahora, bono_id)
+        )
+        conn.commit()
+
+
+def marcar_bono_aplicado(bono_id: int) -> None:
+    """Registra que el bono fue canjeado (uso manual por recepción)."""
+    with _conn() as conn:
+        ahora = datetime.now(timezone.utc).isoformat()
+        conn.execute(
+            "UPDATE referral_bonos SET bono_aplicado_at=? WHERE id=?",
+            (ahora, bono_id)
+        )
+        conn.commit()
+
+
+def get_bonos_referral(estado: str = "todos", dias: int = 90) -> list[dict]:
+    """Lista de bonos filtrados por estado: 'pendiente' | 'notificado' | 'aplicado' | 'todos'."""
+    with _conn() as conn:
+        filtro_estado = ""
+        if estado == "pendiente":
+            filtro_estado = "AND fecha_primera_cita IS NOT NULL AND bono_aplicado_at IS NULL"
+        elif estado == "notificado":
+            filtro_estado = "AND bono_notificado_at IS NOT NULL AND bono_aplicado_at IS NULL"
+        elif estado == "aplicado":
+            filtro_estado = "AND bono_aplicado_at IS NOT NULL"
+        rows = conn.execute(f"""
+            SELECT rb.id, rb.code, rb.referrer_phone, rb.referred_phone,
+                   rb.tipo_bono, rb.fecha_primera_cita,
+                   rb.bono_notificado_at, rb.bono_aplicado_at, rb.created_at,
+                   cp_ref.nombre AS referrer_nombre,
+                   cp_rfd.nombre AS referred_nombre
+            FROM referral_bonos rb
+            LEFT JOIN contact_profiles cp_ref ON cp_ref.phone = rb.referrer_phone
+            LEFT JOIN contact_profiles cp_rfd ON cp_rfd.phone = rb.referred_phone
+            WHERE rb.created_at >= datetime('now', '-{dias} days')
+            {filtro_estado}
+            ORDER BY rb.created_at DESC
+        """).fetchall()
+        return [dict(r) for r in rows]
+
+
+def conteo_referidos_mes(referrer_phone: str) -> int:
+    """Cuántos referidos completaron primera cita este mes (para cap de 3/mes)."""
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT COUNT(*) FROM referral_bonos "
+            "WHERE referrer_phone=? AND fecha_primera_cita IS NOT NULL "
+            "AND strftime('%Y-%m', fecha_primera_cita)=strftime('%Y-%m','now')",
+            (referrer_phone,)
+        ).fetchone()
+        return row[0] if row else 0
 
 
 def get_referral_code_stats(dias: int = 30) -> dict:

@@ -30,6 +30,7 @@ from session import (get_session, reset_session, save_session, get_metricas,
                      delete_patient_data, get_privacy_consent, save_privacy_consent,
                      get_next_cita_bot_by_phone, mark_reminder_sent,
                      snapshot_recepcion_context,
+                     get_bonos_referral, marcar_bono_aplicado,
                      _conn)
 from medilink import (buscar_paciente, crear_paciente, buscar_primer_dia,
                       buscar_slots_dia, crear_cita, listar_citas_paciente,
@@ -1316,6 +1317,25 @@ def admin_referral_code_stats(dias: int = 30, _: str = Depends(require_admin)):
     """Estadísticas del programa de referidos (códigos)."""
     from session import get_referral_code_stats
     return get_referral_code_stats(dias)
+
+
+@router.get("/admin/api/referral-bonos")
+def admin_referral_bonos(
+    estado: str = "todos",
+    dias: int = 90,
+    _: str = Depends(require_admin),
+):
+    """Lista bonos de referidos.
+    estado: 'pendiente' | 'notificado' | 'aplicado' | 'todos'
+    """
+    return {"bonos": get_bonos_referral(estado=estado, dias=dias)}
+
+
+@router.post("/admin/api/referral-bonos/{bono_id}/aplicar")
+def admin_aplicar_bono(bono_id: int, _: str = Depends(require_admin)):
+    """Marca un bono como aplicado (canjeado en recepción)."""
+    marcar_bono_aplicado(bono_id)
+    return {"ok": True, "bono_id": bono_id}
 
 
 # ── Métricas fidelización enhanced ───────────────────────────────────────────

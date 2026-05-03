@@ -26,7 +26,10 @@ from session import (save_session, reset_session, get_session, save_tag, delete_
                      mark_waitlist_notified, get_ultima_cita_paciente,
                      has_privacy_consent, save_privacy_consent, revoke_privacy_consent,
                      get_citas_bot_futuras,
-                     adquirir_slot_lock, liberar_slot_lock)
+                     adquirir_slot_lock, liberar_slot_lock,
+                     log_cross_sell, puede_cross_sell,
+                     marcar_bono_primera_cita, marcar_bono_notificado,
+                     registrar_bono_referral, conteo_referidos_mes)
 from resilience import is_medilink_down
 from triage_ges import triage_sintomas, normalizar_texto_paciente
 from pni import get_vaccine_reminder
@@ -377,6 +380,75 @@ CROSS_REFERENCE: dict[str, str] = {
         "escribe *menu* para agendar con él 😊"
     ),
 }
+
+# ── Cross-sell interactivo post-confirmación ─────────────────────────────────
+# Se dispara UNA VEZ tras confirmar la cita (no en reagendar).
+# Cooldown: 1 cross-sell por sesión + 30 días por par (esp_origen, esp_destino).
+# Clave = especialidad exacta (igual que PROFESIONALES["especialidad"]).
+# Valor = lista de (esp_destino, mensaje_oferta) — se elige el primero disponible.
+_CROSS_SELL_RULES: dict[str, list[tuple[str, str]]] = {
+    "Ginecología": [
+        ("Ecografía",
+         "Muchas consultas ginecológicas se complementan con una ecografía transvaginal.\n\n"
+         "David Pardo realiza ecografías en el CMC. ¿Te agendo una evaluación?"),
+    ],
+    "Traumatología": [
+        ("Kinesiología",
+         "Para complementar tu recuperación traumatológica, la kinesiología es clave.\n\n"
+         "Tenemos kinesiólogos disponibles esta semana. ¿Te interesa agendar?"),
+    ],
+    "Medicina General": [
+        ("Kinesiología",
+         "Si tienes dolor crónico de espalda, cuello u hombros, la kinesiología "
+         "puede darte alivio duradero.\n\n"
+         "¿Te agendo una evaluación con nuestros kinesiólogos?"),
+    ],
+    "Medicina Familiar": [
+        ("Kinesiología",
+         "Si tienes dolor crónico de espalda, cuello u hombros, la kinesiología "
+         "puede darte alivio duradero.\n\n"
+         "¿Te agendo una evaluación con nuestros kinesiólogos?"),
+    ],
+    "Ortodoncia": [
+        ("Estética Facial",
+         "Complementa tu nueva sonrisa con estética facial.\n\n"
+         "La Dra. Valentina Fuentealba realiza blanqueamiento, armonización facial y más. "
+         "¿Te interesa agendar una evaluación?"),
+    ],
+    "Ecografía": [
+        ("Ginecología",
+         "Tras una ecografía ginecológica, es recomendable un control con el ginecólogo.\n\n"
+         "El Dr. Tirso Rejón tiene horas disponibles. ¿Te agendo una consulta?"),
+    ],
+    "Implantología": [
+        ("Odontología General",
+         "Antes de tu implante se recomienda una limpieza profunda.\n\n"
+         "Nuestros odontólogos pueden realizarla. ¿Te interesa agendar?"),
+    ],
+}
+
+
+def _cross_sell_interactive(phone: str, esp_origen: str,
+                            slot_data: dict) -> dict | None:
+    """Genera mensaje interactivo de cross-sell si aplica cooldown y regla.
+    Retorna dict con el payload de botones, o None si no corresponde."""
+    from session import puede_cross_sell, log_cross_sell
+    reglas = _CROSS_SELL_RULES.get(esp_origen.strip())
+    if not reglas:
+        return None
+    for esp_destino, mensaje in reglas:
+        if puede_cross_sell(phone, esp_origen, esp_destino):
+            log_cross_sell(phone, esp_origen, esp_destino, "ofrecido")
+            return {
+                "_cross_sell_esp_destino": esp_destino,
+                "payload": _btn_msg(
+                    mensaje,
+                    [{"id": f"cs_si:{esp_destino}", "title": "Si, me interesa"},
+                     {"id": "cs_no", "title": "No por ahora"}]
+                ),
+            }
+    return None
+
 
 # Cross-sell inteligente post-consulta: cuando el paciente responde "Mejor",
 # le sugerimos un servicio complementario en vez de un control genérico.
@@ -3371,6 +3443,28 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             especialidad = result.get("especialidad")
             return await _iniciar_waitlist(phone, data, especialidad)
 
+        # ── Intent referido: paciente pide su código para compartir ──────────
+        _REFERIDO_KW = ("referir", "referido", "codigo referido", "código referido",
+                        "trae amigo", "traer amigo", "recomendar amigo", "invitar amigo",
+                        "mi codigo", "mi código", "quiero referir")
+        if any(kw in tl_norm for kw in _REFERIDO_KW) or intent == "referido":
+            from session import generate_referral_code, get_referral_code
+            _existing = get_referral_code(phone)
+            _code = _existing or generate_referral_code(phone)
+            _desc_medica = "20% de descuento en tu próxima consulta médica"
+            _desc_dental = "15% de descuento en tu próxima atención dental"
+            reset_session(phone)
+            return (
+                f"Tu *código de referido* es: *{_code}*\n\n"
+                "Compártelo con amigos o familiares. "
+                "Cuando agenden su *primera cita* en el CMC usando tu código, "
+                "tú recibes:\n\n"
+                f"• {_desc_medica}\n"
+                f"• {_desc_dental}\n\n"
+                "Puedes acumular hasta *3 referidos por mes*.\n\n"
+                "_Escribe *menu* si necesitas algo más._"
+            )
+
         if intent == "humano":
             # Override defensivo: Claude Haiku ocasionalmente clasifica
             # frases con carga clínica/vital como "humano" cuando deberían ser
@@ -5628,6 +5722,43 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 except Exception as _capi_err:
                     log.debug("CAPI Schedule create_task falló: %s", _capi_err)
                 # ── fin CAPI ───────────────────────────────────────────────
+
+                # ── Referral bono: notificar referente si es primera cita ───
+                # Solo en citas nuevas (no reagendar). Verificar si el paciente
+                # vino con código de referido y si es su primera cita agendada.
+                if not reagendar:
+                    try:
+                        _bonos_pendientes = marcar_bono_primera_cita(phone)
+                        for _bono in _bonos_pendientes:
+                            _ref_phone = _bono["referrer_phone"]
+                            _tipo = _bono["tipo_bono"]
+                            _bono_desc = (
+                                "20% de descuento en tu próxima consulta médica"
+                                if _tipo == "medica_20"
+                                else "15% de descuento en tu próxima atención dental"
+                            )
+                            _cant_mes = conteo_referidos_mes(_ref_phone)
+                            if _cant_mes <= 3:
+                                _notif = (
+                                    f"¡Tu referido acaba de agendar su primera cita en el CMC!\n\n"
+                                    f"Por referir a alguien, tienes un bono disponible:\n"
+                                    f"*{_bono_desc}*\n\n"
+                                    "Preséntate en recepción y menciona tu código de referido "
+                                    "para canjear el descuento.\n\n"
+                                    f"Este mes llevas *{_cant_mes} referido(s)* validado(s) "
+                                    "(máx. 3/mes)."
+                                )
+                                asyncio.create_task(send_whatsapp(_ref_phone, _notif))
+                                marcar_bono_notificado(_bono["id"])
+                                log_event(_ref_phone, "bono_referral_notificado", {
+                                    "bono_id": _bono["id"],
+                                    "referred_phone": phone,
+                                    "tipo_bono": _tipo,
+                                })
+                    except Exception as _bono_err:
+                        log.warning("Error procesando bono referral phone=%s: %s", phone, _bono_err)
+                # ── fin referral bono ──────────────────────────────────────
+
                 cross_ref = _cross_reference_msg(esp)
                 # Recordatorio PNI para pacientes pediátricos
                 fecha_nac = (data.get("reg_fecha_nacimiento")
@@ -5729,8 +5860,23 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     import asyncio as _asyncio_pni3
                     await send_whatsapp(phone, confirmacion_msg + "\n\n_Escribe *menu* si necesitas algo más._")
                     await _asyncio_pni3.sleep(2.5)
-                    return pni_msg.strip()
-                return confirmacion_msg + "\n\n_Escribe *menu* si necesitas algo más._"
+                    await send_whatsapp(phone, pni_msg.strip())
+                else:
+                    await send_whatsapp(phone, confirmacion_msg + "\n\n_Escribe *menu* si necesitas algo más._")
+                # ── Cross-sell post-confirmación ──────────────────────────────
+                # Solo en citas nuevas (no reagendar), solo si no es tercero.
+                # Cooldown: 1 por sesión + 30 días por par.
+                if not reagendar and not es_tercero:
+                    _cs = _cross_sell_interactive(phone, esp, slot)
+                    if _cs:
+                        _cs_dest = _cs["_cross_sell_esp_destino"]
+                        data_cs = {"cross_sell_esp_origen": esp,
+                                   "cross_sell_esp_destino": _cs_dest}
+                        save_session(phone, "WAIT_CROSS_SELL", data_cs)
+                        import asyncio as _asyncio_cs
+                        await _asyncio_cs.sleep(1.5)
+                        return _cs["payload"]
+                return None  # mensajes ya enviados con send_whatsapp arriba
             else:
                 return (
                     "Hubo un problema al reservar la hora 😕\n"
@@ -6471,6 +6617,16 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     log_event(phone, "registro_referral", {
                         "source": "codigo", "code": _code,
                         "referrer": _ref_data["phone"]})
+                    # Crear bono pendiente (se activa con primera cita del referido)
+                    try:
+                        registrar_bono_referral(
+                            code=_code,
+                            referrer_phone=_ref_data["phone"],
+                            referred_phone=phone,
+                            tipo_bono="medica_20",
+                        )
+                    except Exception as _be:
+                        log.warning("Error registrando bono referral: %s", _be)
                 else:
                     log_event(phone, "registro_skip", {
                         "step": "referral", "raw": txt[:60],
@@ -6605,6 +6761,15 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 log_event(phone, "registro_referral", {
                     "source": "codigo", "code": _code2,
                     "referrer": _ref_data2["phone"]})
+                try:
+                    registrar_bono_referral(
+                        code=_code2,
+                        referrer_phone=_ref_data2["phone"],
+                        referred_phone=phone,
+                        tipo_bono="medica_20",
+                    )
+                except Exception as _be2:
+                    log.warning("Error registrando bono referral WAIT_REFERRAL_CODE: %s", _be2)
             else:
                 log_event(phone, "registro_skip", {
                     "step": "referral_code", "invalid_code": _code2})
@@ -6661,6 +6826,36 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 {"id": "no", "title": "\u274c Cambiar"},
             ]
         )
+
+    # ── WAIT_CROSS_SELL ───────────────────────────────────────────────────────
+    if state == "WAIT_CROSS_SELL":
+        esp_origen  = data.get("cross_sell_esp_origen", "")
+        esp_destino = data.get("cross_sell_esp_destino", "")
+        # Botón "cs_si:<esp>" o texto afirmativo
+        _cs_acepto = (
+            tl.startswith("cs_si:")
+            or tl in AFIRMACIONES
+            or tl_norm in AFIRMACIONES
+        )
+        _cs_rechazo = (
+            tl == "cs_no"
+            or tl in NEGACIONES
+            or tl_norm in NEGACIONES
+        )
+        if _cs_acepto:
+            log_cross_sell(phone, esp_origen, esp_destino, "aceptado")
+            log_event(phone, "cross_sell_aceptado", {
+                "esp_origen": esp_origen, "esp_destino": esp_destino})
+            reset_session(phone)
+            return await _iniciar_agendar(phone, {}, esp_destino)
+        if _cs_rechazo or True:
+            # Cualquier respuesta no afirmativa = rechazo; soltar sesión.
+            if _cs_rechazo:
+                log_cross_sell(phone, esp_origen, esp_destino, "rechazado")
+                log_event(phone, "cross_sell_rechazado", {
+                    "esp_origen": esp_origen, "esp_destino": esp_destino})
+            reset_session(phone)
+            return "_Escribe *menu* si necesitas algo más._"
 
     # ── HUMAN_TAKEOVER ────────────────────────────────────────────────────────
     # Principio: HUMAN_TAKEOVER es inviolable. Solo la recepcionista sale del
