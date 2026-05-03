@@ -63,6 +63,18 @@ _INTENT_CACHE: dict[str, dict] = {
     "quinesiología":  {"intent": "agendar", "especialidad": "kinesiología"},
     "quiniciologo":   {"intent": "agendar", "especialidad": "kinesiología"},
     "kinisiologo":    {"intent": "agendar", "especialidad": "kinesiología"},
+    # P1: typos adicionales kinesiología / fisioterapia
+    "kiné":           {"intent": "agendar", "especialidad": "kinesiología"},
+    "kinesio":        {"intent": "agendar", "especialidad": "kinesiología"},
+    "fisio":          {"intent": "agendar", "especialidad": "kinesiología"},
+    "fisioterapia":   {"intent": "agendar", "especialidad": "kinesiología"},
+    "fisioterapeuta": {"intent": "agendar", "especialidad": "kinesiología"},
+    # P1: ortodoncia con typo
+    "ortodonsista":   {"intent": "info",    "especialidad": "ortodoncia"},
+    "ortodoncista":   {"intent": "info",    "especialidad": "ortodoncia"},
+    # P1: obstetra/obstetricia → matrona (CMC no tiene obstetricia propia)
+    "obstetra":       {"intent": "info",    "especialidad": "matrona"},
+    "obstetricia":    {"intent": "info",    "especialidad": "matrona"},
     "psico":          {"intent": "agendar", "especialidad": "psicología"},
     "psicología":     {"intent": "agendar", "especialidad": "psicología"},
     "psicologia":     {"intent": "agendar", "especialidad": "psicología"},

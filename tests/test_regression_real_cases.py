@@ -802,3 +802,97 @@ def _run():
 
 if __name__ == "__main__":
     sys.exit(_run())
+
+
+class TestBug1OtraPersonaREAmpliadoP2(unittest.TestCase):
+    """BUG-1: _OTRA_PERSONA_RE debe cubrir suegra/cuñado/sobrina/tía/vecino/yerno/pololo."""
+
+    def setUp(self):
+        self.content = (ROOT / "app" / "flows.py").read_text(encoding="utf-8")
+        idx = self.content.find("_OTRA_PERSONA_RE")
+        # Tomar el bloque desde la primera ocurrencia hasta cierre del regex
+        self.bloque = self.content[idx: idx + 1800]
+
+    def _check(self, kw):
+        self.assertIn(kw, self.bloque, f"_OTRA_PERSONA_RE debe cubrir '{kw}'")
+
+    def test_suegra(self):  self._check("suegra")
+    def test_cuñado(self):  self._check("cu\u00f1ado")
+    def test_sobrina(self): self._check("sobrina")
+    def test_tia(self):     self._check("t\u00eda")
+    def test_vecina(self):  self._check("vecina")
+    def test_yerno(self):   self._check("yerno")
+    def test_nuera(self):   self._check("nuera")
+    def test_pololo(self):  self._check("pololo")
+    def test_abuelito(self): self._check("abuelito")
+
+
+class TestBug3MenorEdad18(unittest.TestCase):
+    """BUG-3: _detectar_menor_en_texto debe detectar 14-17 como menores."""
+
+    def setUp(self):
+        import sys
+        sys.path.insert(0, str(ROOT / "app"))
+
+    def test_catorce_anios_es_menor(self):
+        from flows import _detectar_menor_en_texto
+        self.assertTrue(_detectar_menor_en_texto("tiene 14 años"),
+                        "14 años debe ser detectado como menor")
+
+    def test_diecisiete_es_menor(self):
+        from flows import _detectar_menor_en_texto
+        self.assertTrue(_detectar_menor_en_texto("es una chica de 17 años"),
+                        "17 años debe ser detectado como menor")
+
+    def test_dieciocho_no_es_menor(self):
+        from flows import _detectar_menor_en_texto
+        self.assertFalse(_detectar_menor_en_texto("es para un joven de 18 años"),
+                         "18 años NO debe ser detectado como menor")
+
+    def test_adulto_no_es_menor(self):
+        from flows import _detectar_menor_en_texto
+        self.assertFalse(_detectar_menor_en_texto("tengo 45 años"),
+                         "45 años NO debe ser detectado como menor")
+
+    def test_adolescente_helper(self):
+        from flows import _es_adolescente_en_texto
+        self.assertTrue(_es_adolescente_en_texto("paciente de 15 años"),
+                        "_es_adolescente_en_texto debe retornar True para 15 años")
+
+    def test_adolescente_helper_menor_14_false(self):
+        from flows import _es_adolescente_en_texto
+        self.assertFalse(_es_adolescente_en_texto("niño de 8 años"),
+                         "_es_adolescente_en_texto debe ser False para < 14")
+
+
+class TestP1CacheTyposEspecialidad(unittest.TestCase):
+    """P1: _INTENT_CACHE debe cubrir fisio/fisioterapia/kiné/ortodonsista."""
+
+    def setUp(self):
+        self.content = (ROOT / "app" / "claude_helper.py").read_text(encoding="utf-8")
+
+    def _check_cache(self, kw):
+        self.assertIn(f'"{kw}"', self.content,
+                      f'_INTENT_CACHE debe tener entrada para "{kw}"')
+
+    def test_fisio(self):          self._check_cache("fisio")
+    def test_fisioterapia(self):   self._check_cache("fisioterapia")
+    def test_fisioterapeuta(self): self._check_cache("fisioterapeuta")
+    def test_kine_con_tilde(self): self._check_cache("kin\u00e9")
+    def test_ortodonsista(self):   self._check_cache("ortodonsista")
+    def test_obstetra(self):       self._check_cache("obstetra")
+
+
+class TestBug5SessionHelper(unittest.TestCase):
+    """BUG-5: session.py debe tener get_proxima_cita_paciente."""
+
+    def test_funcion_existe(self):
+        content = (ROOT / "app" / "session.py").read_text()
+        self.assertIn("def get_proxima_cita_paciente", content,
+                      "session.py debe tener get_proxima_cita_paciente")
+
+    def test_funcion_importable(self):
+        import sys
+        sys.path.insert(0, str(ROOT / "app"))
+        from session import get_proxima_cita_paciente
+        self.assertTrue(callable(get_proxima_cita_paciente))

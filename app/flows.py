@@ -2411,6 +2411,48 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         except Exception:
             pass
 
+        # ── BUG-5 FIX: detector de preguntas sobre cita activa ──────────────
+        # "A qué hora era mi cita?" / "Qué doctor me toca?" / "Era mañana?"
+        _CITA_INFO_KW = re.compile(
+            r"(qu[eé]\s+hora|a\s+qu[eé]\s+hora|cu[aá]ndo\s+(?:era|es|tengo)|"
+            r"qu[eé]\s+(?:doctor|m[eé]dico|profesional)|d[oó]nde\s+(?:es|atiende|queda)|"
+            r"era\s+(?:ma[ñn]ana|hoy|el\s+\w+)|mi\s+(?:cita|hora)\s+(?:era|es|queda)|"
+            r"mi\s+pr[oó]xima\s+(?:cita|hora)|tengo\s+(?:cita|hora)\s+(?:hoy|ma[ñn]ana))",
+            re.IGNORECASE,
+        )
+        if _CITA_INFO_KW.search(tl):
+            _perfil_cita = get_profile(phone)
+            _cita_info = None
+            # 1) Buscar en citas_bot (futuras o recientes)
+            try:
+                from session import get_proxima_cita_paciente as _get_prox_cita
+                _cita_info = _get_prox_cita(phone)
+            except Exception:
+                pass
+            # 2) Fallback: data["last_confirmed_cita"]
+            if not _cita_info:
+                _cita_info = data.get("last_confirmed_cita")
+            if _cita_info:
+                _ci_prof = _cita_info.get("profesional") or _cita_info.get("nombre_profesional", "")
+                _ci_esp = _cita_info.get("especialidad", "")
+                _ci_fecha = _cita_info.get("fecha_display") or _cita_info.get("fecha", "")
+                _ci_hora = _cita_info.get("hora_inicio") or _cita_info.get("hora", "")
+                log_event(phone, "consulta_info_cita", {"prof": _ci_prof, "fecha": _ci_fecha})
+                return (
+                    f"Tu próxima cita es:\n"
+                    f"📅 *{_ci_fecha}*\n"
+                    f"🕐 *{_ci_hora}*\n"
+                    f"🏥 *{_ci_esp}* — {_ci_prof}\n"
+                    f"📍 Monsalve 102, Carampangue\n\n"
+                    "_¿Necesitas algo más?_"
+                )
+            else:
+                return (
+                    "No tengo registro de una cita próxima tuya por acá.\n\n"
+                    "¿Quieres que te ayude a agendar?\n"
+                    "_Escribe *menu* para ver opciones._"
+                )
+
         # ── Seguimiento de FAQ con sugerencia de agendar ──────────────────────
         # Debe ir ANTES de los atajos numéricos (1..4) porque aquí interpretamos
         # "1"/"sí"/botón como "agendar la especialidad ya sugerida en el FAQ".

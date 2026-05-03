@@ -1723,6 +1723,39 @@ def get_ultima_cita_paciente(phone: str) -> dict | None:
         return dict(row) if row else None
 
 
+def get_proxima_cita_paciente(phone: str) -> dict | None:
+    """Retorna la próxima cita futura del paciente registrada en citas_bot.
+
+    BUG-5 FIX: usada para responder consultas "¿a qué hora era mi cita?".
+    Busca la cita con fecha >= hoy ordenada por fecha/hora ASC.
+    """
+    from datetime import date as _date
+    hoy = _date.today().isoformat()
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT especialidad, profesional, fecha, hora, modalidad, "
+            "       fecha as fecha_display "
+            "FROM citas_bot "
+            "WHERE phone=? AND especialidad IS NOT NULL AND especialidad != '' "
+            "  AND fecha >= ? "
+            "ORDER BY datetime(fecha || ' ' || COALESCE(hora, '00:00')) ASC "
+            "LIMIT 1",
+            (phone, hoy)
+        ).fetchone()
+        if not row:
+            return None
+        d = dict(row)
+        # Formatear fecha_display como "DD/MM/YYYY" para el mensaje
+        try:
+            from datetime import datetime as _dt
+            _fd = _dt.strptime(d["fecha"], "%Y-%m-%d")
+            d["fecha_display"] = _fd.strftime("%d/%m/%Y")
+        except Exception:
+            pass
+        d["hora_inicio"] = d.pop("hora", "")
+        return d
+
+
 def get_conversion_funnel_by_especialidad(dias: int = 30) -> list[dict]:
     """Funnel de conversión por especialidad usando conversation_events.
 
