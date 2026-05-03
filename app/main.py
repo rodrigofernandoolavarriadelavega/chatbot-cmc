@@ -441,6 +441,7 @@ _SEO_DASHBOARD_HTML = (_TEMPLATE_DIR / "seo_dashboard.html").read_text(encoding=
 _CRECIMIENTO_PERSONAL_HTML = (_TEMPLATE_DIR / "crecimiento_personal.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "crecimiento_personal.html").exists() else ""
 _META_DASHBOARD_HTML = (_TEMPLATE_DIR / "meta_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "meta_dashboard.html").exists() else ""
 _HORIZONTE_DASHBOARD_HTML = (_TEMPLATE_DIR / "horizonte_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "horizonte_dashboard.html").exists() else ""
+_CAMINO_50M_HTML = (_TEMPLATE_DIR / "camino_50m.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "camino_50m.html").exists() else ""
 _PRIVACIDAD_HTML = (_TEMPLATE_DIR / "privacidad.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "privacidad.html").exists() else ""
 _PROFESIONALES_CMC_HTML = (_TEMPLATE_DIR / "profesionales_cmc.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "profesionales_cmc.html").exists() else ""
 _TRAUMATOLOGO_CURANILAHUE_HTML = (_TEMPLATE_DIR / "traumatologo-curanilahue.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "traumatologo-curanilahue.html").exists() else ""
@@ -1590,6 +1591,16 @@ def meta_dashboard_page():
     if not _META_DASHBOARD_HTML:
         raise HTTPException(404, "Dashboard Meta no disponible")
     return _META_DASHBOARD_HTML
+
+
+@app.get("/camino-50m", response_class=HTMLResponse)
+@app.get("/camino/50m", response_class=HTMLResponse)
+@app.get("/50m", response_class=HTMLResponse)
+def camino_50m_page():
+    """Dashboard Camino a 50M — 8 palancas de crecimiento CMC hacia 50M/mes."""
+    if not _CAMINO_50M_HTML:
+        raise HTTPException(404, "Dashboard Camino 50M no disponible")
+    return _CAMINO_50M_HTML
 
 
 @app.get("/horizonte", response_class=HTMLResponse)

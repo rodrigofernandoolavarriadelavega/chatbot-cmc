@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Camino a 50M — CMC · OLACORE</title>
+<link rel="icon" type="image/png" href="/static/olacore_sello_simple.png">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fraunces:ital,wght@0,400;0,600;1,300;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --olacore-fiordo: #0E2530;
+    --olacore-fiordo-2: #17323F;
+    --olacore-neblina: #E8E0D0;
+    --olacore-cobre: #B98149;
+    --olacore-lenga: #7C4A2A;
+    --olacore-lacre: #9A3E2F;
+    --olacore-verde-musgo: #4A5D44;
+  }
+  body { font-family: 'Inter', system-ui, sans-serif; background: #faf6ee; color: var(--olacore-fiordo); }
+  h1, h2, h3, h4 { font-family: 'Fraunces', serif; font-weight: 600; color: var(--olacore-fiordo); }
+  code, .mono { font-family: 'IBM Plex Mono', monospace; }
+  .bg-white { background: #fffcf5 !important; }
+  .border-slate-200 { border-color: rgba(14, 37, 48, 0.12) !important; }
+  .bg-slate-50 { background: rgba(232, 224, 208, 0.3) !important; }
+  .tab-btn { border-bottom: 2px solid transparent; color: rgba(14,37,48,0.55); transition: color .15s; }
+  .tab-btn:hover { color: var(--olacore-fiordo); }
+  .tab-btn.active { color: var(--olacore-fiordo) !important; border-bottom-color: var(--olacore-cobre) !important; font-weight: 600; }
+  .tone-fiordo  { background: rgba(14, 37, 48, 0.08); color: var(--olacore-fiordo); border: 1px solid rgba(14, 37, 48, 0.18); }
+  .tone-cobre   { background: rgba(185, 129, 73, 0.12); color: var(--olacore-lenga); border: 1px solid rgba(185, 129, 73, 0.35); }
+  .tone-musgo   { background: rgba(74, 93, 68, 0.1); color: #2f3d2c; border: 1px solid rgba(74, 93, 68, 0.3); }
+  .tone-lacre   { background: rgba(154, 62, 47, 0.1); color: var(--olacore-lacre); border: 1px solid rgba(154, 62, 47, 0.3); }
+  .tone-neblina { background: rgba(232, 224, 208, 0.45); color: var(--olacore-fiordo); border: 1px solid rgba(14,37,48,0.12); }
+  .status-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; font-family: 'IBM Plex Mono', monospace; letter-spacing: .02em; white-space: nowrap; }
+  .status-no_iniciado  { background: rgba(14,37,48,0.07);  color: rgba(14,37,48,0.55); }
+  .status-en_desarrollo{ background: rgba(185,129,73,0.18); color: var(--olacore-lenga); }
+  .status-en_piloto    { background: rgba(74,93,68,0.15);   color: #2f3d2c; }
+  .status-en_produccion{ background: rgba(14,37,48,0.12);   color: var(--olacore-fiordo); }
+  .status-generando    { background: rgba(74,93,68,0.25);   color: #1e2e1b; }
+  .palanca-card { background: #fffcf5; border: 1px solid rgba(14,37,48,0.10); border-radius: 12px; padding: 20px; transition: transform .15s, box-shadow .15s; }
+  .palanca-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(14,37,48,0.09); }
+  .palanca-card.owner-yo { border-left: 3px solid var(--olacore-cobre); }
+  .palanca-card.owner-rodrigo { border-left: 3px solid rgba(74,93,68,0.6); }
+  .palanca-card.owner-mixto { border-left: 3px solid rgba(185,129,73,0.4); }
+  .kpi-num { font-family: 'Fraunces', serif; font-size: 2rem; font-weight: 600; line-height: 1; }
+  .progress-track { background: rgba(14,37,48,0.08); border-radius: 999px; height: 8px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--olacore-cobre), var(--olacore-lenga)); transition: width .6s ease; }
+  .progress-fill.on-track { background: linear-gradient(90deg, var(--olacore-verde-musgo), #2f3d2c); }
+  .meridian { width: 1px; height: 48px; background: var(--olacore-cobre); opacity: 0.6; flex-shrink: 0; margin: 0 16px; position: relative; }
+  .meridian::before, .meridian::after { content: ""; position: absolute; left: -4px; width: 9px; height: 9px; background: var(--olacore-cobre); border-radius: 50%; }
+  .meridian::before { top: 20%; }
+  .meridian::after  { bottom: 20%; }
+  .by-olacore { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .by-olacore-text-block { display: flex; flex-direction: column; gap: 2px; }
+  .by-olacore-by { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: .32em; text-transform: uppercase; color: var(--olacore-cobre); opacity: .85; }
+  .by-olacore-wordmark { height: 14px; display: block; object-fit: contain; object-position: left center; }
+  .by-olacore-tag { font-family: 'Fraunces', serif; font-style: italic; font-weight: 300; font-size: 10px; color: var(--olacore-cobre); opacity: .8; }
+  .by-olacore-sello { width: 32px; height: 32px; flex-shrink: 0; }
+  .by-olacore-sello img { width: 100%; height: 100%; animation: sello-spin 60s linear infinite; }
+  @keyframes sello-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  header { border-bottom: 1px solid rgba(185, 129, 73, 0.2) !important; }
+  #tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-wrap: nowrap !important; }
+  #tabs::-webkit-scrollbar { display: none; }
+  #tabs .tab-btn { flex-shrink: 0; white-space: nowrap; }
+  .cross-nav { position: fixed; top: 14px; right: 14px; z-index: 50; display: flex; gap: 6px; font-size: 11px; }
+  .cross-nav a { padding: 5px 11px; border-radius: 999px; text-decoration: none; font-weight: 600; background: rgba(255,255,255,0.9); color: var(--olacore-fiordo); border: 1px solid rgba(14,37,48,0.15); transition: background .15s; }
+  .cross-nav a:hover { background: #fff; }
+  table { border-collapse: collapse; width: 100%; }
+  th { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: rgba(14,37,48,0.5); font-weight: 500; padding: 10px 12px; text-align: left; border-bottom: 1px solid rgba(14,37,48,0.12); }
+  td { padding: 12px 12px; font-size: 13px; border-bottom: 1px solid rgba(14,37,48,0.07); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(232,224,208,0.2); }
+  .esfuerzo-s { color: var(--olacore-verde-musgo); font-weight: 600; }
+  .esfuerzo-m { color: var(--olacore-lenga); font-weight: 600; }
+  .esfuerzo-l { color: var(--olacore-lacre); font-weight: 600; }
+  @media (max-width: 768px) {
+    header > div:first-child { flex-direction: column; align-items: flex-start !important; gap: 10px !important; padding: 14px 16px !important; }
+    .meridian { display: none; }
+    .by-olacore { padding-left: 0; }
+    main { padding: 16px 12px !important; }
+    .cross-nav { display: none; }
+    .grid-palancas { grid-template-columns: 1fr !important; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="cross-nav">
+  <a href="/horizonte">Horizonte</a>
+  <a href="/seo/dashboard">SEO</a>
+  <a href="/meta/dashboard">Meta</a>
+  <a href="/crecimientopersonal">Personal</a>
+  <a href="/menu">Menu</a>
+</nav>
+
+<header class="bg-white">
+  <div class="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between flex-wrap gap-4">
+    <div class="flex items-center gap-3">
+      <div>
+        <h1 class="text-xl">Camino a 50M</h1>
+        <div class="text-sm" style="color:rgba(14,37,48,0.5); font-family:'IBM Plex Mono',monospace;">Las 8 palancas para duplicar ingresos CMC · mayo 2026</div>
+      </div>
+      <div class="meridian" aria-hidden="true"></div>
+      <a href="/proyectos2026" class="by-olacore" title="OLACORE — Meridiano Sur">
+        <div class="by-olacore-text-block">
+          <span class="by-olacore-by">by</span>
+          <img src="/static/olacore_wordmark.png?v=2" alt="OLACORE" class="by-olacore-wordmark" />
+          <span class="by-olacore-tag">Meridiano Sur</span>
+        </div>
+        <div class="by-olacore-sello"><img src="/static/olacore_sello_simple.png" alt="" /></div>
+      </a>
+    </div>
+    <div class="text-xs mono" style="color:rgba(14,37,48,0.4);">v1.0 · 2026-05-03</div>
+  </div>
+  <div class="max-w-7xl mx-auto px-6">
+    <nav class="flex gap-1 -mb-px" id="tabs">
+      <button class="tab-btn active px-4 py-2.5 text-sm" data-tab="hero">Velocimetro</button>
+      <button class="tab-btn px-4 py-2.5 text-sm" data-tab="palancas">8 Palancas</button>
+      <button class="tab-btn px-4 py-2.5 text-sm" data-tab="timeline">Proyeccion</button>
+      <button class="tab-btn px-4 py-2.5 text-sm" data-tab="tabla">Resumen ejecutivo</button>
+    </nav>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-6 py-8">
+
+<!-- ═══════════════════════════ TAB: VELOCIMETRO ═══════════════════════════ -->
+<section id="tab-hero" class="tab-content">
+
+  <!-- KPIs principales -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+    <div class="tone-fiordo p-5 rounded-xl">
+      <div class="text-xs mono uppercase opacity-60 mb-1">Ingreso actual CMC</div>
+      <div class="kpi-num" id="kpi-actual">$25M</div>
+      <div class="text-xs opacity-50 mt-1">/ mes · abril 2026</div>
+    </div>
+    <div class="tone-cobre p-5 rounded-xl">
+      <div class="text-xs mono uppercase opacity-60 mb-1">Meta objetivo</div>
+      <div class="kpi-num">$50M</div>
+      <div class="text-xs opacity-50 mt-1">/ mes · en 6-12 meses</div>
+    </div>
+    <div class="tone-musgo p-5 rounded-xl">
+      <div class="text-xs mono uppercase opacity-60 mb-1">Gap restante</div>
+      <div class="kpi-num" id="kpi-gap">$25M</div>
+      <div class="text-xs opacity-50 mt-1">por activar</div>
+    </div>
+    <div class="tone-neblina p-5 rounded-xl">
+      <div class="text-xs mono uppercase opacity-60 mb-1">Avance hacia meta</div>
+      <div class="kpi-num" id="kpi-pct">50%</div>
+      <div class="text-xs opacity-50 mt-1">de 50M/mes</div>
+    </div>
+  </div>
+
+  <!-- Barra de progreso principal -->
+  <div class="bg-white rounded-xl p-6 mb-8 border border-slate-200">
+    <div class="flex items-end justify-between mb-3">
+      <h2 class="text-base">Progreso acumulado hacia 50M/mes</h2>
+      <span class="mono text-sm" style="color:var(--olacore-cobre);" id="pct-label">50% alcanzado</span>
+    </div>
+    <div class="progress-track mb-2">
+      <div class="progress-fill" id="main-bar" style="width:50%"></div>
+    </div>
+    <div class="flex justify-between text-xs mono opacity-40 mt-1">
+      <span>$0</span><span>$12.5M</span><span>$25M actual</span><span>$37.5M</span><span>$50M meta</span>
+    </div>
+  </div>
+
+  <!-- Contribucion esperada por palanca -->
+  <div class="bg-white rounded-xl p-6 mb-8 border border-slate-200">
+    <h2 class="text-base mb-4">Contribucion potencial por palanca</h2>
+    <div class="h-64">
+      <canvas id="chartContribucion"></canvas>
+    </div>
+  </div>
+
+  <!-- Desglose owners -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div class="bg-white rounded-xl p-6 border border-slate-200">
+      <h3 class="text-sm mb-4">Palancas por owner</h3>
+      <div class="h-48">
+        <canvas id="chartOwners"></canvas>
+      </div>
+    </div>
+    <div class="bg-white rounded-xl p-6 border border-slate-200">
+      <h3 class="text-sm mb-4">Estado actual de palancas</h3>
+      <div class="h-48">
+        <canvas id="chartEstados"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-6 p-4 rounded-xl" style="background:rgba(185,129,73,0.07); border:1px solid rgba(185,129,73,0.2);">
+    <p class="text-sm" style="color:var(--olacore-lenga);">
+      <span class="mono font-semibold">Nota sobre los datos:</span>
+      Los ingresos actuales y proyecciones de palancas son estimaciones iniciales basadas en analisis estrategico (mayo 2026).
+      Cuando exista el endpoint <span class="mono text-xs bg-white px-1 rounded">/api/palancas/status</span>, este dashboard se conectara automaticamente.
+    </p>
+  </div>
+
+</section>
+
+<!-- ═══════════════════════════ TAB: 8 PALANCAS ═══════════════════════════ -->
+<section id="tab-palancas" class="tab-content hidden">
+
+  <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
+    <h2 class="text-lg">Las 8 palancas de crecimiento</h2>
+    <div class="flex gap-2 flex-wrap text-xs">
+      <span class="status-badge status-no_iniciado">No iniciado</span>
+      <span class="status-badge status-en_desarrollo">En desarrollo</span>
+      <span class="status-badge status-en_piloto">En piloto</span>
+      <span class="status-badge status-en_produccion">En produccion</span>
+      <span class="status-badge status-generando">Generando $</span>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-5 grid-palancas" id="palancas-grid">
+    <!-- Generado por JS -->
+  </div>
+
+  <div class="mt-6 text-xs mono opacity-50">
+    Borde izquierdo cobre = owner Yo (autonomo) · verde = owner Rodrigo · mix = ambos
+  </div>
+
+</section>
+
+<!-- ═══════════════════════════ TAB: PROYECCION ═══════════════════════════ -->
+<section id="tab-timeline" class="tab-content hidden">
+
+  <div class="bg-white rounded-xl p-6 border border-slate-200 mb-6">
+    <h2 class="text-base mb-1">Proyeccion de ingresos mensuales — 12 meses</h2>
+    <p class="text-xs mono opacity-50 mb-4">Escenario completo (todas las palancas) vs escenario autonomo (solo las de owner=Yo)</p>
+    <div class="h-80">
+      <canvas id="chartTimeline"></canvas>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="tone-cobre p-5 rounded-xl">
+      <div class="text-xs mono uppercase opacity-60 mb-1">Si se activan todas</div>
+      <div class="kpi-num">$50M</div>
+      <div class="text-xs opacity-60 mt-1">en ~10 meses (feb 2027)</div>
+    </div>
+    <div class="tone-musgo p-5 rounded-xl">
+      <div class="text-xs mono uppercase opacity-60 mb-1">Si solo las autonomas</div>
+      <div class="kpi-num">$35M</div>
+      <div class="text-xs opacity-60 mt-1">en ~10 meses sin Rodrigo activo</div>
+    </div>
+    <div class="tone-lacre p-5 rounded-xl">
+      <div class="text-xs mono uppercase opacity-60 mb-1">Gap de dependencia</div>
+      <div class="kpi-num">$15M</div>
+      <div class="text-xs opacity-60 mt-1">requieren gestion directa Dr.</div>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-xl p-6 border border-slate-200">
+    <h3 class="text-sm mb-4">Cuando se activa cada palanca</h3>
+    <div class="space-y-3" id="timeline-items">
+      <!-- Generado por JS -->
+    </div>
+  </div>
+
+</section>
+
+<!-- ═══════════════════════════ TAB: TABLA EJECUTIVA ═══════════════════════════ -->
+<section id="tab-tabla" class="tab-content hidden">
+
+  <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="px-6 py-4 border-b" style="border-color:rgba(14,37,48,0.1);">
+      <h2 class="text-base">Resumen ejecutivo — 8 palancas</h2>
+      <p class="text-xs mono opacity-40 mt-1">Ordenadas por potencial de impacto mensual</p>
+    </div>
+    <div class="overflow-x-auto">
+      <table id="tabla-palancas">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Palanca</th>
+            <th>Delta $ esperado</th>
+            <th>Esfuerzo</th>
+            <th>Primer ingreso</th>
+            <th>Owner</th>
+            <th>Estado</th>
+            <th>Dependencias criticas</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-body">
+          <!-- Generado por JS -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Totales -->
+  <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="tone-cobre p-4 rounded-xl text-center">
+      <div class="text-xs mono opacity-60">Potencial total min</div>
+      <div class="kpi-num text-2xl mt-1">$23M</div>
+    </div>
+    <div class="tone-musgo p-4 rounded-xl text-center">
+      <div class="text-xs mono opacity-60">Potencial total max</div>
+      <div class="kpi-num text-2xl mt-1">$40M</div>
+    </div>
+    <div class="tone-fiordo p-4 rounded-xl text-center">
+      <div class="text-xs mono opacity-60">Palancas owner = Yo</div>
+      <div class="kpi-num text-2xl mt-1">3</div>
+    </div>
+    <div class="tone-neblina p-4 rounded-xl text-center">
+      <div class="text-xs mono opacity-60">Palancas owner = Rodrigo</div>
+      <div class="kpi-num text-2xl mt-1">5</div>
+    </div>
+  </div>
+
+</section>
+
+</main>
+
+<script>
+// ─────────────────────────────────────────────
+// DATA — JSON estatico (conectar a /api/palancas/status cuando exista)
+// ─────────────────────────────────────────────
+const PALANCAS = [
+  {
+    id: 1,
+    nombre: "Paquetes preventivos (Chequeos)",
+    meta_min: 3, meta_max: 5,
+    estado: "en_desarrollo",
+    ingreso_actual: 0,
+    owner: "rodrigo",
+    owner_label: "Rodrigo",
+    hito: "Disenar 3 paquetes (basico/completo/premium) con precios claros",
+    hito_fecha: "jun 2026",
+    accion_siguiente: "Definir composicion de examenes por paquete + precio venta",
+    tiempo_primer_ingreso: "2-3 meses",
+    esfuerzo: "M",
+    dependencias: "Laboratorio TME disponible, imagenologia ampliada",
+    activacion_mes: 2
+  },
+  {
+    id: 2,
+    nombre: "Lab marca blanca TME",
+    meta_min: 3, meta_max: 5,
+    estado: "en_desarrollo",
+    ingreso_actual: 0,
+    owner: "rodrigo",
+    owner_label: "Rodrigo",
+    hito: "Contrato con TME firmado + lista de examenes disponibles",
+    hito_fecha: "may 2026",
+    accion_siguiente: "Reunión con TME para definir markup CMC y operativa de toma de muestras",
+    tiempo_primer_ingreso: "1-2 meses",
+    esfuerzo: "M",
+    dependencias: "Contrato TME, espacio fisico para toma de muestras, staff entrenado",
+    activacion_mes: 2
+  },
+  {
+    id: 3,
+    nombre: "Imagenología push (RX + ECO ampliada)",
+    meta_min: 3, meta_max: 5,
+    estado: "en_piloto",
+    ingreso_actual: 0,
+    owner: "mixto",
+    owner_label: "Mixto",
+    hito: "Protocolo de derivacion interna sistematizado",
+    hito_fecha: "jun 2026",
+    accion_siguiente: "Mapear cuantas derivaciones externas de ECO hay actualmente por mes",
+    tiempo_primer_ingreso: "1-2 meses",
+    esfuerzo: "S",
+    dependencias: "David Pardo disponibilidad ampliada, equipo ECO",
+    activacion_mes: 2
+  },
+  {
+    id: 4,
+    nombre: "Convenios empresas (medicina laboral)",
+    meta_min: 5, meta_max: 10,
+    estado: "no_iniciado",
+    ingreso_actual: 0,
+    owner: "rodrigo",
+    owner_label: "Rodrigo",
+    hito: "Primer convenio firmado con empresa de la zona Arauco",
+    hito_fecha: "ago 2026",
+    accion_siguiente: "Identificar 5 empresas target con +50 trabajadores en Arauco/Lebu/Cañete",
+    tiempo_primer_ingreso: "4-6 meses",
+    esfuerzo: "L",
+    dependencias: "Propuesta comercial, capacidad operativa medico laboral, ACHS/Mutual",
+    activacion_mes: 5
+  },
+  {
+    id: 5,
+    nombre: "Procedimientos alto ticket",
+    meta_min: 3, meta_max: 5,
+    estado: "en_piloto",
+    ingreso_actual: 0,
+    owner: "rodrigo",
+    owner_label: "Rodrigo",
+    hito: "Menu de procedimientos con precios publicados + 10 primeros casos",
+    hito_fecha: "jul 2026",
+    accion_siguiente: "Listar procedimientos ya disponibles en CMC que no se comunican activamente",
+    tiempo_primer_ingreso: "2-3 meses",
+    esfuerzo: "M",
+    dependencias: "Capacitacion equipo, insumos, comunicacion activa",
+    activacion_mes: 3
+  },
+  {
+    id: 6,
+    nombre: "Telemedicina",
+    meta_min: 1, meta_max: 3,
+    estado: "en_desarrollo",
+    ingreso_actual: 0,
+    owner: "yo",
+    owner_label: "Yo (bot/sistema)",
+    hito: "Plataforma de consulta remota operativa con primer paciente pagado",
+    hito_fecha: "jul 2026",
+    accion_siguiente: "Definir especialidades tele-aptas (psicologia, nutricion, MG seguimiento)",
+    tiempo_primer_ingreso: "2-3 meses",
+    esfuerzo: "M",
+    dependencias: "Plataforma video, pasarela de pago, flujo en bot WA",
+    activacion_mes: 3
+  },
+  {
+    id: 7,
+    nombre: "Win-back + referidos + horas vacias",
+    meta_min: 2, meta_max: 4,
+    estado: "en_produccion",
+    ingreso_actual: 1,
+    owner: "yo",
+    owner_label: "Yo (bot/sistema)",
+    hito: "Campana win-back >90 dias corriendo + 30% reduccion horas vacias",
+    hito_fecha: "may 2026",
+    accion_siguiente: "Medir conversion de campana win-back actual (ya activa en bot)",
+    tiempo_primer_ingreso: "Activo ya",
+    esfuerzo: "S",
+    dependencias: "Datos segmentados, presupuesto Meta Ads",
+    activacion_mes: 0
+  },
+  {
+    id: 8,
+    nombre: "Convenios ISAPRE / seguros",
+    meta_min: 3, meta_max: 5,
+    estado: "no_iniciado",
+    ingreso_actual: 0,
+    owner: "yo",
+    owner_label: "Yo (tramites/sistema)",
+    hito: "Primer convenio ISAPRE operativo (Colmena / Cruz Blanca)",
+    hito_fecha: "oct 2026",
+    accion_siguiente: "Contactar ejecutivo comercial Colmena zona sur para presentar CMC",
+    tiempo_primer_ingreso: "5-7 meses",
+    esfuerzo: "L",
+    dependencias: "Acreditacion SIS, documentacion legal, habilitacion prestaciones",
+    activacion_mes: 6
+  }
+];
+
+const STATUS_LABELS = {
+  no_iniciado:   "No iniciado",
+  en_desarrollo: "En desarrollo",
+  en_piloto:     "En piloto",
+  en_produccion: "En produccion",
+  generando:     "Generando $"
+};
+
+const MESES = ["May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic", "Ene", "Feb", "Mar", "Abr"];
+
+// ─────────────────────────────────────────────
+// RENDER PALANCAS CARDS
+// ─────────────────────────────────────────────
+function renderPalancas() {
+  const grid = document.getElementById("palancas-grid");
+  grid.innerHTML = PALANCAS.map(p => `
+    <div class="palanca-card owner-${p.owner}">
+      <div class="flex items-start justify-between gap-2 mb-3">
+        <div>
+          <span class="mono text-xs opacity-40">#${p.id}</span>
+          <h3 class="text-sm font-semibold mt-0.5" style="font-family:'Fraunces',serif;">${p.nombre}</h3>
+        </div>
+        <span class="status-badge status-${p.estado}">${STATUS_LABELS[p.estado]}</span>
+      </div>
+      <div class="flex gap-3 mb-3 flex-wrap">
+        <div class="text-xs">
+          <span class="mono opacity-50">Meta:</span>
+          <span class="font-semibold ml-1">$${p.meta_min}M–$${p.meta_max}M/mes</span>
+        </div>
+        <div class="text-xs">
+          <span class="mono opacity-50">Owner:</span>
+          <span class="ml-1">${p.owner_label}</span>
+        </div>
+        ${p.ingreso_actual > 0 ? `<div class="text-xs tone-musgo px-2 py-0.5 rounded">Ingreso actual: ~$${p.ingreso_actual}M</div>` : ''}
+      </div>
+      <div class="space-y-2 text-xs">
+        <div>
+          <span class="mono opacity-40 block">Proximo hito</span>
+          <span>${p.hito} <span class="mono opacity-40">(${p.hito_fecha})</span></span>
+        </div>
+        <div>
+          <span class="mono opacity-40 block">Accion siguiente</span>
+          <span>${p.accion_siguiente}</span>
+        </div>
+        <div>
+          <span class="mono opacity-40">Primer ingreso:</span>
+          <span class="ml-1 font-medium">${p.tiempo_primer_ingreso}</span>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ─────────────────────────────────────────────
+// RENDER TIMELINE ITEMS
+// ─────────────────────────────────────────────
+function renderTimelineItems() {
+  const container = document.getElementById("timeline-items");
+  const sorted = [...PALANCAS].sort((a, b) => a.activacion_mes - b.activacion_mes);
+  container.innerHTML = sorted.map(p => {
+    const mesLabel = p.activacion_mes === 0 ? "Ya activo" : MESES[p.activacion_mes - 1] + " 2026";
+    const dotColor = p.activacion_mes === 0 ? "var(--olacore-verde-musgo)" : p.activacion_mes <= 3 ? "var(--olacore-cobre)" : "rgba(14,37,48,0.3)";
+    return `
+      <div class="flex items-start gap-4">
+        <div class="flex-shrink-0 w-20 text-xs mono text-right opacity-60 pt-0.5">${mesLabel}</div>
+        <div class="flex-shrink-0 w-3 h-3 rounded-full mt-1" style="background:${dotColor}; border:2px solid ${dotColor};"></div>
+        <div class="flex-1 text-xs">
+          <span class="font-semibold">${p.nombre}</span>
+          <span class="mono opacity-40 ml-2">$${p.meta_min}M–$${p.meta_max}M/mes · ${p.owner_label}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────
+// RENDER TABLA EJECUTIVA
+// ─────────────────────────────────────────────
+function renderTabla() {
+  const tbody = document.getElementById("tabla-body");
+  tbody.innerHTML = [...PALANCAS].sort((a,b) => b.meta_max - a.meta_max).map((p, i) => `
+    <tr>
+      <td class="mono opacity-40 text-xs">${i+1}</td>
+      <td class="font-medium">${p.nombre}</td>
+      <td class="mono font-semibold" style="color:var(--olacore-cobre);">$${p.meta_min}M – $${p.meta_max}M</td>
+      <td class="esfuerzo-${p.esfuerzo.toLowerCase()}">${p.esfuerzo}</td>
+      <td class="mono text-xs">${p.tiempo_primer_ingreso}</td>
+      <td>${p.owner_label}</td>
+      <td><span class="status-badge status-${p.estado}">${STATUS_LABELS[p.estado]}</span></td>
+      <td class="text-xs opacity-70">${p.dependencias}</td>
+    </tr>
+  `).join('');
+}
+
+// ─────────────────────────────────────────────
+// CHARTS
+// ─────────────────────────────────────────────
+const FIORDO = '#0E2530';
+const COBRE  = '#B98149';
+const MUSGO  = '#4A5D44';
+const LACRE  = '#9A3E2F';
+const NEBLINA = '#C8BFA8';
+
+function buildCharts() {
+  // Contribucion por palanca (horizontal bar)
+  new Chart(document.getElementById('chartContribucion'), {
+    type: 'bar',
+    data: {
+      labels: PALANCAS.map(p => p.nombre.length > 35 ? p.nombre.slice(0,33)+'…' : p.nombre),
+      datasets: [
+        {
+          label: 'Meta min ($M)',
+          data: PALANCAS.map(p => p.meta_min),
+          backgroundColor: 'rgba(185,129,73,0.3)',
+          borderColor: COBRE,
+          borderWidth: 1,
+          borderRadius: 4
+        },
+        {
+          label: 'Meta max ($M)',
+          data: PALANCAS.map(p => p.meta_max),
+          backgroundColor: 'rgba(185,129,73,0.12)',
+          borderColor: 'rgba(185,129,73,0.4)',
+          borderWidth: 1,
+          borderRadius: 4
+        }
+      ]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: true, position: 'top', labels: { font: { family: 'IBM Plex Mono', size: 10 }, color: FIORDO } } },
+      scales: {
+        x: { ticks: { font: { family: 'IBM Plex Mono', size: 10 }, color: FIORDO, callback: v => '$'+v+'M' }, grid: { color: 'rgba(14,37,48,0.06)' } },
+        y: { ticks: { font: { family: 'Inter', size: 11 }, color: FIORDO }, grid: { display: false } }
+      }
+    }
+  });
+
+  // Owners pie
+  const ownerCounts = { yo: 0, rodrigo: 0, mixto: 0 };
+  PALANCAS.forEach(p => ownerCounts[p.owner]++);
+  new Chart(document.getElementById('chartOwners'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Autonomo (Yo/sistema)', 'Rodrigo activo', 'Mixto'],
+      datasets: [{ data: [ownerCounts.yo, ownerCounts.rodrigo, ownerCounts.mixto], backgroundColor: [MUSGO, COBRE, NEBLINA], borderWidth: 0 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { font: { family: 'IBM Plex Mono', size: 10 }, color: FIORDO, padding: 12 } } }
+    }
+  });
+
+  // Estados pie
+  const estadoCounts = {};
+  PALANCAS.forEach(p => { estadoCounts[p.estado] = (estadoCounts[p.estado] || 0) + 1; });
+  const estadoColors = { no_iniciado: NEBLINA, en_desarrollo: COBRE, en_piloto: MUSGO, en_produccion: FIORDO, generando: '#2f3d2c' };
+  new Chart(document.getElementById('chartEstados'), {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(estadoCounts).map(k => STATUS_LABELS[k]),
+      datasets: [{ data: Object.values(estadoCounts), backgroundColor: Object.keys(estadoCounts).map(k => estadoColors[k] || NEBLINA), borderWidth: 0 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { font: { family: 'IBM Plex Mono', size: 10 }, color: FIORDO, padding: 12 } } }
+    }
+  });
+
+  // Timeline proyeccion
+  // Escenario completo: todas las palancas se activan segun activacion_mes
+  // Escenario autonomo: solo las de owner=yo o mixto
+  const base = 25;
+  const completo = [];
+  const autonomo = [];
+  for (let m = 0; m < 12; m++) {
+    let addCompleto = 0;
+    let addAutonomo = 0;
+    PALANCAS.forEach(p => {
+      if (p.activacion_mes <= m) {
+        const mid = (p.meta_min + p.meta_max) / 2;
+        // Rampa: en el mes de activacion empieza al 30%, sube al 100% en 3 meses
+        const ramp = Math.min(1, (m - p.activacion_mes + 1) / 3);
+        addCompleto += mid * ramp;
+        if (p.owner === 'yo' || p.owner === 'mixto') {
+          addAutonomo += mid * ramp * (p.owner === 'mixto' ? 0.5 : 1);
+        }
+      }
+    });
+    completo.push(Math.round((base + addCompleto) * 10) / 10);
+    autonomo.push(Math.round((base + addAutonomo) * 10) / 10);
+  }
+
+  new Chart(document.getElementById('chartTimeline'), {
+    type: 'line',
+    data: {
+      labels: MESES,
+      datasets: [
+        {
+          label: 'Escenario completo (todas)',
+          data: completo,
+          borderColor: COBRE,
+          backgroundColor: 'rgba(185,129,73,0.08)',
+          fill: true,
+          tension: 0.35,
+          borderWidth: 2.5,
+          pointRadius: 4,
+          pointBackgroundColor: COBRE
+        },
+        {
+          label: 'Escenario autonomo (solo Yo)',
+          data: autonomo,
+          borderColor: MUSGO,
+          backgroundColor: 'rgba(74,93,68,0.07)',
+          fill: true,
+          tension: 0.35,
+          borderWidth: 2,
+          borderDash: [5,4],
+          pointRadius: 3,
+          pointBackgroundColor: MUSGO
+        },
+        {
+          label: 'Meta 50M',
+          data: Array(12).fill(50),
+          borderColor: LACRE,
+          borderWidth: 1.5,
+          borderDash: [8,4],
+          pointRadius: 0,
+          fill: false
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', labels: { font: { family: 'IBM Plex Mono', size: 10 }, color: FIORDO, padding: 16 } },
+        tooltip: { callbacks: { label: ctx => ` $${ctx.raw}M/mes` } }
+      },
+      scales: {
+        x: { ticks: { font: { family: 'IBM Plex Mono', size: 10 }, color: FIORDO }, grid: { color: 'rgba(14,37,48,0.05)' } },
+        y: {
+          min: 20, max: 55,
+          ticks: { font: { family: 'IBM Plex Mono', size: 10 }, color: FIORDO, callback: v => '$'+v+'M' },
+          grid: { color: 'rgba(14,37,48,0.06)' }
+        }
+      }
+    }
+  });
+}
+
+// ─────────────────────────────────────────────
+// TABS
+// ─────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden');
+  });
+});
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  renderPalancas();
+  renderTimelineItems();
+  renderTabla();
+  buildCharts();
+
+  // KPI dinamico: potencial maximo si todas en produccion
+  const potencialMax = PALANCAS.reduce((sum, p) => sum + p.meta_max, 0);
+  const potencialMin = PALANCAS.reduce((sum, p) => sum + p.meta_min, 0);
+  const actualTotal = 25;
+  const pct = Math.round((actualTotal / 50) * 100);
+  document.getElementById('kpi-actual').textContent = '$' + actualTotal + 'M';
+  document.getElementById('kpi-gap').textContent = '$' + (50 - actualTotal) + 'M';
+  document.getElementById('kpi-pct').textContent = pct + '%';
+  document.getElementById('main-bar').style.width = pct + '%';
+  document.getElementById('pct-label').textContent = pct + '% alcanzado · potencial adicional $' + potencialMin + 'M–$' + potencialMax + 'M';
+});
+
+// ─────────────────────────────────────────────
+// FUTURE: conectar a /api/palancas/status
+// fetch('/api/palancas/status').then(r => r.json()).then(data => { /* actualizar PALANCAS */ });
+// ─────────────────────────────────────────────
+</script>
+</body>
+</html>
