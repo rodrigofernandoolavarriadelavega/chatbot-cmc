@@ -118,6 +118,40 @@ def _msg_reactivacion(paciente: dict) -> dict:
     }
 
 
+async def enviar_seguimiento_postconsulta_dia_anterior(send_fn, send_template_fn=None,
+                                                       send_text_fn=None, buscar_paciente_fn=None):
+    """Cubre las citas del día anterior con hora >22:00 que el cron de 22:00
+    no alcanzó a procesar. Corre a las 09:00 CLT.
+
+    Sin esto, una cita a las 22:30 nunca recibe postconsulta porque cuando
+    el cron de 22:00 corre, esa cita aún no ocurrió, y al día siguiente la
+    fecha cambió y la query no la considera.
+    """
+    ahora_clt = datetime.now(_TZ_CHILE)
+    ayer = (ahora_clt.date() - timedelta(days=1)).isoformat()
+    # Buscar citas de ayer entre 22:00 y 23:59
+    citas = get_citas_para_seguimiento(ayer, "23:59")
+    citas = [c for c in citas if (c.get("hora") or "")[:5] > "22:00"]
+
+    if not citas:
+        log.info("Post-consulta morning: sin citas tardías de %s para procesar", ayer)
+        return
+
+    log.info("Post-consulta morning: enviando %d seguimiento(s) tardíos de %s",
+             len(citas), ayer)
+    for cita in citas:
+        try:
+            msg = _msg_postconsulta(cita)
+            save_fidelizacion_msg(cita["phone"], "postconsulta", str(cita.get("id_cita", "")))
+            await send_fn(cita["phone"], msg)
+            body = msg.get("interactive", {}).get("body", {}).get("text", "[Post-consulta]")
+            log_message(cita["phone"], "out", body, "IDLE")
+            log.info("Seguimiento tardío enviado → %s (%s, hora %s)",
+                     cita["phone"], cita.get("especialidad"), cita.get("hora"))
+        except Exception as e:
+            log.error("Error seguimiento tardío phone=%s: %s", cita.get("phone"), e)
+
+
 async def enviar_seguimiento_postconsulta(send_fn, send_template_fn=None,
                                           send_text_fn=None, buscar_paciente_fn=None):
     """

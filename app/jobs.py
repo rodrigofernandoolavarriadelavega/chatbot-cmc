@@ -7,7 +7,9 @@ from config import MEDILINK_BASE_URL, MEDILINK_TOKEN, ADMIN_ALERT_PHONE, USE_TEM
 from messaging import (send_whatsapp, send_whatsapp_interactive, send_instagram, send_messenger,
                        send_whatsapp_template)
 from reminders import enviar_recordatorios, enviar_recordatorios_2h
-from fidelizacion import (enviar_seguimiento_postconsulta, enviar_reactivacion_pacientes,
+from fidelizacion import (enviar_seguimiento_postconsulta,
+                          enviar_seguimiento_postconsulta_dia_anterior,
+                          enviar_reactivacion_pacientes,
                           enviar_adherencia_kine, enviar_recordatorio_control,
                           enviar_crosssell_kine, enviar_cumpleanos, enviar_winback,
                           enviar_crosssell_orl_fono, enviar_crosssell_odonto_estetica,
@@ -233,6 +235,18 @@ async def _job_postconsulta():
         )
     except Exception as e:
         log.error("_job_postconsulta falló (BUG-07): %s", e)
+
+
+async def _job_postconsulta_morning():
+    """Recoge postconsulta de citas tardías (>22:00) del día anterior.
+    Corre 09:00 CLT. Complementa _job_postconsulta de las 22:00."""
+    try:
+        await enviar_seguimiento_postconsulta_dia_anterior(
+            send_whatsapp, send_template_fn=_tpl,
+            send_text_fn=send_whatsapp, buscar_paciente_fn=buscar_paciente,
+        )
+    except Exception as e:
+        log.exception("Postconsulta morning falló: %s", e)
 
 
 async def _job_detectar_cancelaciones():
