@@ -553,6 +553,61 @@ class TestContextoEspecialidadHerencia(unittest.TestCase):
         self.assertIn("300", bloque, "TTL debe ser 300s (5min)")
 
 
+class TestOrdenMedicaRequisito(unittest.TestCase):
+    """'Necesito orden médica?' es pregunta sobre requisito, no solicitud.
+    Caso real fb_27736544599278971 2026-05-03 16:45.
+    """
+
+    def test_pre_filter_orden_requisito_existe(self):
+        contenido = (ROOT / "app" / "claude_helper.py").read_text()
+        self.assertIn("_ORDEN_REQUISITO_RE", contenido,
+                      "claude_helper debe tener pre-filter orden-requisito")
+        self.assertIn("orden-requisito prefilter", contenido,
+                      "Debe loggear cuando matchea")
+
+    def test_necesito_orden_medica_matchea(self):
+        import re
+        rx = re.compile(
+            r"(necesito\s+(?:la\s+)?orden\s+m[eé]dica\s*[?¿]"
+            r"|se\s+necesita\s+(?:la\s+)?orden"
+            r"|hay\s+que\s+(?:llevar|tener|traer)\s+(?:la\s+)?orden"
+            r"|requiere(?:n)?\s+(?:la\s+)?orden\s+m[eé]dica"
+            r"|piden\s+orden\s+m[eé]dica"
+            r"|necesito\s+orden\s+para"
+            r"|sin\s+orden\s+m[eé]dica"
+            r"|la\s+orden\s+es\s+obligatoria)",
+            re.IGNORECASE,
+        )
+        casos_match = [
+            "hola necesito orden médica?",
+            "Necesito orden médica?",
+            "se necesita orden?",
+            "hay que llevar orden?",
+            "requiere orden médica?",
+            "piden orden médica para la eco?",
+            "necesito orden para hacerme la eco",
+        ]
+        for caso in casos_match:
+            self.assertTrue(rx.search(caso),
+                            f"Debe matchear: {caso!r}")
+
+    def test_solicitud_orden_NO_matchea(self):
+        """Afirmación sin '?' NO debe disparar el pre-filter."""
+        import re
+        rx = re.compile(
+            r"(necesito\s+(?:la\s+)?orden\s+m[eé]dica\s*[?¿]"
+            r"|se\s+necesita\s+(?:la\s+)?orden"
+            r"|hay\s+que\s+(?:llevar|tener|traer)\s+(?:la\s+)?orden"
+            r"|requiere(?:n)?\s+(?:la\s+)?orden\s+m[eé]dica"
+            r"|piden\s+orden\s+m[eé]dica"
+            r"|necesito\s+orden\s+para"
+            r"|sin\s+orden\s+m[eé]dica"
+            r"|la\s+orden\s+es\s+obligatoria)",
+            re.IGNORECASE,
+        )
+        self.assertIsNone(rx.search("necesito una orden por favor"))
+
+
 class TestSlotLockOptimista(unittest.TestCase):
     """Lock optimista anti-race condition (5 casos/7d en auditoría)."""
 

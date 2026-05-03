@@ -1133,6 +1133,50 @@ async def detect_intent(mensaje: str, recepcion_resumen: list | None = None) -> 
         r"con (?:efectivo|debito|débito|credito|crédito|transferencia|tarjeta))|"
         r"\bse paga\b|\bhay que pagar\b|\bcomo (?:se )?paga\b|\bcuando (?:se )?paga\b)"
     )
+    # Pre-filter: pregunta sobre REQUISITO de orden médica (no solicitud).
+    # Caso real fb_27736544599278971 2026-05-03 16:45:
+    #   "hola necesito orden médica?" → bot interpretó como SOLICITUD y listó
+    #   tipos de órdenes que se emiten. La paciente PREGUNTABA si necesita
+    #   orden para hacerse un examen (ej. ecografía).
+    # El signo "?" o el patrón "se necesita/hay que llevar/requiere" indica
+    # consulta sobre requisito previo.
+    _ORDEN_REQUISITO_RE = _re_w.compile(
+        r"(necesito\s+(?:la\s+)?orden\s+m[eé]dica\s*[?¿]"
+        r"|se\s+necesita\s+(?:la\s+)?orden"
+        r"|hay\s+que\s+(?:llevar|tener|traer)\s+(?:la\s+)?orden"
+        r"|requiere(?:n)?\s+(?:la\s+)?orden\s+m[eé]dica"
+        r"|piden\s+orden\s+m[eé]dica"
+        r"|necesito\s+orden\s+para"
+        r"|sin\s+orden\s+m[eé]dica"
+        r"|la\s+orden\s+es\s+obligatoria)",
+        _re_w.IGNORECASE,
+    )
+    if _ORDEN_REQUISITO_RE.search(clave_norm) or _ORDEN_REQUISITO_RE.search(clave):
+        log.info("orden-requisito prefilter: %r", clave[:80])
+        try:
+            from session import log_event as _log_event
+            _log_event("", "intent_orden_requisito_prefilter", {"texto": clave[:120]})
+        except Exception:
+            pass
+        return {
+            "intent": "faq",
+            "especialidad": None,
+            "respuesta_directa": (
+                "Buena pregunta 👍 *Depende del examen o atención*:\n\n"
+                "📋 *Sí necesitas orden médica para:*\n"
+                "• Ecografías y radiografías\n"
+                "• Exámenes de laboratorio\n"
+                "• Kinesiología con bono Fonasa\n"
+                "• Atención con especialista derivada\n\n"
+                "✅ *No necesitas orden para:*\n"
+                "• Consulta de Medicina General\n"
+                "• Odontología\n"
+                "• Psicología, Nutrición particular\n"
+                "• Kinesiología particular\n\n"
+                "Si no tienes la orden, puedes agendar *Medicina General* y el "
+                "doctor te la emite según tu caso. ¿Qué necesitas hacerte?"
+            ),
+        }
     if _CANCEL_AS_PAY_RE.search(clave_norm) or _CANCEL_AS_PAY_RE.search(clave):
         log.info("cancel-as-pay prefilter: %r", clave[:80])
         try:
