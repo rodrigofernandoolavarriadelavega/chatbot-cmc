@@ -3746,8 +3746,13 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # "ver todos" / "ver más" → expansión progresiva para med general, o todos del día para el resto
         VER_TODOS = {"ver todos", "todos", "ver todo", "todos los horarios", "mostrar todos",
                      "ver horarios", "quiero ver los horarios", "ver todos los horarios",
-                     "mostrar horarios", "quiero ver horarios", "ver mas", "ver más", "ver_todos"}
-        if tl in VER_TODOS or any(p in tl for p in ["ver todos", "todos los horarios", "ver horarios", "ver mas", "ver más"]):
+                     "mostrar horarios", "quiero ver horarios", "ver mas", "ver más", "ver_todos",
+                     # BUG-03: texto libre equivalente al botón "Otros horarios"
+                     "otros horarios", "otras horas", "ver otros", "otros", "ver otros horarios",
+                     "mas horarios", "más horarios", "otras opciones", "otras alternativas"}
+        if tl in VER_TODOS or any(p in tl for p in ["ver todos", "todos los horarios", "ver horarios",
+                                                      "ver mas", "ver más", "otros horarios",
+                                                      "mas horarios", "más horarios"]):
             if especialidad in _ESPECIALIDADES_EXPANSION:
                 return await _handle_expansion(phone, data, slots_mostrados, todos_slots,
                                                data.get("expansion_stage", 0), fecha_actual)
@@ -3857,7 +3862,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             except (ValueError, Exception) as e:
                 log.warning("salto fecha follow-up falló: %s", e)
         OTRO_DIA = {"otro dia", "otro día", "otro", "no puedo", "no me sirve",
-                    "no me acomoda", "cambiar dia", "cambiar día", "siguiente", "otro_dia"}
+                    "no me acomoda", "cambiar dia", "cambiar día", "siguiente", "otro_dia",
+                    # BUG-03: variantes texto libre
+                    "otro día disponible", "siguiente dia", "siguiente día",
+                    "buscar otro dia", "buscar otro día", "mañana otro dia"}
         if tl in OTRO_DIA or any(p in tl for p in ["otro dia", "otro día", "no puedo"]):
             if especialidad in _ESP_MED_GENERAL:
                 smart_nuevo, todos_nuevo = await buscar_primer_dia(
