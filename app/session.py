@@ -831,6 +831,46 @@ def save_cita_bot(phone: str, id_cita: str, especialidad: str,
 # a crear_cita. Medilink rechaza al segundo, pero el bot ya dijo "agendado".
 # Lock optimista de 30s elimina la race entre verificar y crear.
 
+def get_contactos_con_nombre_sospechoso() -> list[dict]:
+    """Lista contactos cuyo nombre parece ser una respuesta accidental
+    en lugar del nombre real del paciente.
+
+    Casos cubiertos: 'Si Primera Vez', 'No me acuerdo', 'Hola', 'Menú', etc.
+    Útil para corrección masiva desde el panel admin.
+    """
+    import re
+    rx = re.compile(
+        r'^(s[ií]\s*$|s[ií]\s+primera|primera(\s+vez)?\s*$|'
+        r'segunda(\s+vez)?\s*$|control\s*$|seguimiento\s*$|'
+        r'continuaci[oó]n\s*$|no\s*$|no\s+me\s+acuerdo|no\s+s[eé]|'
+        r'hola\s*$|men[uú]\s*$|ok\s*$|gracias\s*$|qu[eé]\s*$|'
+        r'es\s+primera(\s+vez)?\s*$)',
+        re.IGNORECASE
+    )
+    with _conn() as c:
+        rows = c.execute(
+            "SELECT phone, rut, nombre, updated_at FROM contact_profiles "
+            "WHERE nombre IS NOT NULL AND nombre != '' "
+            "ORDER BY updated_at DESC"
+        ).fetchall()
+        return [dict(r) for r in rows if rx.match((r["nombre"] or "").strip())]
+
+
+def update_contact_nombre(phone: str, nuevo_nombre: str) -> bool:
+    """Actualiza el nombre del contacto. Retorna True si actualizó alguna fila."""
+    nuevo = (nuevo_nombre or "").strip()
+    if not nuevo or len(nuevo) < 2:
+        return False
+    with _conn() as c:
+        cur = c.execute(
+            "UPDATE contact_profiles SET nombre = ?, updated_at = datetime('now') "
+            "WHERE phone = ?",
+            (nuevo, phone)
+        )
+        c.commit()
+        return cur.rowcount > 0
+
+
 def _ensure_slot_locks_table():
     with _conn() as c:
         c.execute("""

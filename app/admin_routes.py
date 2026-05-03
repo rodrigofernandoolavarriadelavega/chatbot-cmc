@@ -362,6 +362,35 @@ def admin_staff_phones(_: str = Depends(require_admin)):
     return STAFF_PHONES
 
 
+@router.get("/admin/api/contacts/bad-names")
+def admin_bad_names(_: str = Depends(require_admin)):
+    """Lista contactos con nombres que parecen respuestas accidentales
+    en vez del nombre real del paciente (ej. 'Si Primera Vez').
+    Para corrección masiva desde el panel admin.
+    """
+    from session import get_contactos_con_nombre_sospechoso
+    return {"contactos": get_contactos_con_nombre_sospechoso()}
+
+
+@router.patch("/admin/api/contact/{phone}/name")
+async def admin_update_contact_name(phone: str, request: Request,
+                                     _: str = Depends(require_admin)):
+    """Actualiza el nombre de un contacto. Body: {\"nombre\": \"...\"}.
+    Retorna {\"ok\": bool}."""
+    from session import update_contact_nombre
+    try:
+        body = await request.json()
+    except Exception:
+        return {"ok": False, "error": "JSON inválido"}
+    nuevo = (body.get("nombre") or "").strip()
+    if not nuevo or len(nuevo) < 2:
+        return {"ok": False, "error": "nombre requerido (mín 2 chars)"}
+    if len(nuevo) > 100:
+        return {"ok": False, "error": "nombre demasiado largo (max 100)"}
+    ok = update_contact_nombre(phone, nuevo)
+    return {"ok": ok, "phone": phone, "nombre": nuevo}
+
+
 # ── Permisos del bot profesional por profesional ────────────────────────────
 # Persistencia en JSON plano (solo lo edita el director del CMC desde el
 # dashboard /profesionalescmc; no requiere DB).
