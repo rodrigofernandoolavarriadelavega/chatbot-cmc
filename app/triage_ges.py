@@ -89,6 +89,10 @@ _ABREVIACIONES = {
     "hs": "horas",
     "ayr": "ayer",
     "hoi": "hoy",
+    "hra": "hora",       # typo rural: "una hra con el medico"
+    "kiro": "quiero",    # typo rural: "kiro hora" (distinto de _INTENT_CACHE que maneja "kiero hora")
+    "puwedo": "puedo",   # typo teclado táctil
+    "nesecito": "necesito",  # typo fonético frecuente
     "mnna": "mañana",
     "mana": "mañana",
     "nxe": "noche",

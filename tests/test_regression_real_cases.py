@@ -1148,3 +1148,283 @@ class TestMetaReferralFunctionsExist(unittest.TestCase):
         content = (ROOT / "app" / "admin_routes.py").read_text(encoding="utf-8")
         self.assertIn("/admin/api/referrals/recientes", content,
                       "admin_routes debe tener endpoint de referrals")
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Tests BUG-1..10 sesión ofensiva 2026-05-03
+# ──────────────────────────────────────────────────────────────────────────────
+
+class TestBug1OrdenRequisitoRegex(unittest.TestCase):
+    """BUG-1: _ORDEN_REQUISITO_RE debe capturar variantes sin 'médica'."""
+
+    def _run(self, texto):
+        import asyncio
+        from claude_helper import detect_intent
+        loop = asyncio.new_event_loop()
+        try:
+            return loop.run_until_complete(detect_intent(texto))
+        finally:
+            loop.close()
+
+    def test_necesito_orden_sin_medica(self):
+        r = self._run("necesito orden?")
+        self.assertNotEqual(r.get("intent"), "agendar",
+                            "'necesito orden?' no debe ir a agendar")
+        self.assertIsNotNone(r.get("respuesta_directa"),
+                             "'necesito orden?' debe dar respuesta_directa")
+
+    def test_hay_que_llevar_orden(self):
+        r = self._run("hay que llevar orden?")
+        self.assertIsNotNone(r.get("respuesta_directa"))
+
+    def test_piden_orden(self):
+        r = self._run("piden orden?")
+        self.assertIsNotNone(r.get("respuesta_directa"))
+
+    def test_sin_orden_me_atienden(self):
+        r = self._run("sin orden me atienden?")
+        self.assertIsNotNone(r.get("respuesta_directa"))
+
+    def test_tengo_que_llevar_orden(self):
+        r = self._run("tengo que llevar la orden?")
+        self.assertIsNotNone(r.get("respuesta_directa"))
+
+
+class TestBug2CancelarInfoPrefilter(unittest.TestCase):
+    """BUG-2: preguntas sobre política de cancelación no deben disparar flujo cancelar."""
+
+    def _run(self, texto):
+        import asyncio
+        from claude_helper import detect_intent
+        loop = asyncio.new_event_loop()
+        try:
+            return loop.run_until_complete(detect_intent(texto))
+        finally:
+            loop.close()
+
+    def test_hay_que_avisar_cancelar(self):
+        r = self._run("hay que avisar para cancelar?")
+        self.assertNotEqual(r.get("intent"), "cancelar",
+                            "'hay que avisar para cancelar?' NO debe ir a cancelar")
+        self.assertIsNotNone(r.get("respuesta_directa"))
+
+    def test_como_se_cancela_una_hora(self):
+        r = self._run("cómo se cancela una hora?")
+        self.assertNotEqual(r.get("intent"), "cancelar")
+        self.assertIsNotNone(r.get("respuesta_directa"))
+
+    def test_como_cancelo(self):
+        r = self._run("cómo cancelo?")
+        self.assertNotEqual(r.get("intent"), "cancelar")
+        self.assertIsNotNone(r.get("respuesta_directa"))
+
+    def test_hasta_cuando_puedo_cancelar(self):
+        r = self._run("hasta cuándo puedo cancelar?")
+        self.assertNotEqual(r.get("intent"), "cancelar")
+        self.assertIsNotNone(r.get("respuesta_directa"))
+
+
+class TestBug4DetectarFranjaHoraria(unittest.TestCase):
+    """BUG-4: _detectar_franja_horaria debe parsear franjas correctamente."""
+
+    def setUp(self):
+        import sys, os
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'app'))
+        from flows import _detectar_franja_horaria
+        self._fn = _detectar_franja_horaria
+
+    def test_despues_de_las_5_tarde(self):
+        self.assertEqual(self._fn("después de las 5 de la tarde"), (17, 23))
+
+    def test_despues_de_las_17(self):
+        self.assertEqual(self._fn("después de las 17"), (17, 23))
+
+    def test_antes_de_las_10(self):
+        result = self._fn("antes de las 10")
+        self.assertEqual(result, (8, 10))
+
+    def test_en_la_manana(self):
+        self.assertEqual(self._fn("en la mañana"), (8, 12))
+
+    def test_en_la_tarde(self):
+        self.assertEqual(self._fn("en la tarde"), (12, 18))
+
+    def test_en_la_noche(self):
+        self.assertEqual(self._fn("en la noche"), (18, 22))
+
+    def test_por_la_manana(self):
+        self.assertEqual(self._fn("por la mañana"), (8, 12))
+
+    def test_sin_franja(self):
+        self.assertIsNone(self._fn("quiero hora con kine"))
+
+
+class TestBug5PrecioIntent(unittest.TestCase):
+    """BUG-5: frases de precio deben dar intent=precio, no 'otro'."""
+
+    def _run(self, texto):
+        import asyncio
+        from claude_helper import detect_intent
+        loop = asyncio.new_event_loop()
+        try:
+            return loop.run_until_complete(detect_intent(texto))
+        finally:
+            loop.close()
+
+    def test_es_caro(self):
+        r = self._run("es caro?")
+        self.assertEqual(r.get("intent"), "precio", f"'es caro?' debe ser precio, got {r.get('intent')}")
+
+    def test_es_muy_caro(self):
+        r = self._run("es muy caro?")
+        self.assertEqual(r.get("intent"), "precio")
+
+    def test_cuanto_cobran(self):
+        r = self._run("cuanto cobran")
+        self.assertEqual(r.get("intent"), "precio")
+
+    def test_sale_caro(self):
+        r = self._run("sale caro")
+        self.assertEqual(r.get("intent"), "precio")
+
+
+class TestBug6EmergenciaPecho(unittest.TestCase):
+    """BUG-6: 'me duele el pecho' sin intensificador debe estar en EMERGENCIAS."""
+
+    def test_me_duele_el_pecho_en_set(self):
+        from flows import EMERGENCIAS
+        self.assertIn("me duele el pecho", EMERGENCIAS)
+
+    def test_patron_me_duele_el_pecho(self):
+        from flows import EMERGENCIAS_PATRONES
+        matches = [p for p in EMERGENCIAS_PATRONES if p.search("me duele el pecho")]
+        self.assertTrue(len(matches) > 0, "EMERGENCIAS_PATRONES debe capturar 'me duele el pecho'")
+
+    def test_patron_dolor_en_el_pecho(self):
+        from flows import EMERGENCIAS_PATRONES
+        matches = [p for p in EMERGENCIAS_PATRONES if p.search("dolor en el pecho")]
+        self.assertTrue(len(matches) > 0, "EMERGENCIAS_PATRONES debe capturar 'dolor en el pecho'")
+
+    def test_patron_opresion_pecho(self):
+        from flows import EMERGENCIAS_PATRONES
+        matches = [p for p in EMERGENCIAS_PATRONES if p.search("opresion en el pecho")]
+        self.assertTrue(len(matches) > 0, "EMERGENCIAS_PATRONES debe capturar 'opresion en el pecho'")
+
+
+class TestBug7FaqLocalHorarios(unittest.TestCase):
+    """BUG-7: preguntas de sábado/horarios deben tener FAQ local."""
+
+    def _faq(self, msg):
+        from claude_helper import _local_faq_fallback
+        return _local_faq_fallback(msg)
+
+    def test_atienden_sabado(self):
+        r = self._faq("atienden los sábados?")
+        self.assertIsNotNone(r, "debe tener respuesta para 'atienden los sábados'")
+        self.assertIn("09:00", r or "")
+
+    def test_sabado_solo(self):
+        r = self._faq("y los sabado?")
+        self.assertIsNotNone(r)
+
+    def test_domingo(self):
+        r = self._faq("atienden domingo?")
+        self.assertIsNotNone(r)
+        self.assertIn("domingo", (r or "").lower())
+
+
+class TestBug8FaqLocalEspecialidades(unittest.TestCase):
+    """BUG-8: 'tienen kine?', 'tienen psicólogo?' etc. deben tener FAQ local."""
+
+    def _faq(self, msg):
+        from claude_helper import _local_faq_fallback
+        return _local_faq_fallback(msg)
+
+    def test_tienen_kine(self):
+        r = self._faq("tienen kine?")
+        self.assertIsNotNone(r, "kinesiolog en FAQ local")
+
+    def test_tienen_psicologo(self):
+        r = self._faq("tienen psicólogo?")
+        self.assertIsNotNone(r)
+
+    def test_tienen_nutricion(self):
+        r = self._faq("tienen nutrición?")
+        self.assertIsNotNone(r)
+
+    def test_tienen_matrona(self):
+        r = self._faq("tienen matrona?")
+        self.assertIsNotNone(r)
+
+    def test_tienen_fonoaudiologo(self):
+        r = self._faq("tienen fonoaudiólogo?")
+        self.assertIsNotNone(r)
+
+    def test_tienen_ortodoncista(self):
+        r = self._faq("hacen ortodoncia?")
+        self.assertIsNotNone(r)
+
+    def test_tienen_endodoncia(self):
+        r = self._faq("hacen endodoncia?")
+        self.assertIsNotNone(r)
+
+    def test_tienen_implantes(self):
+        r = self._faq("hacen implantes?")
+        self.assertIsNotNone(r)
+
+
+class TestBug9TyposRurales(unittest.TestCase):
+    """BUG-9: typos rurales fuertes deben normalizarse en triage_ges."""
+
+    def _norm(self, txt):
+        from triage_ges import normalizar_texto_paciente
+        return normalizar_texto_paciente(txt)
+
+    def test_kiro(self):
+        r = self._norm("kiro hora")
+        self.assertIn("quiero", r, f"'kiro' debe → 'quiero', got: {r}")
+
+    def test_hra(self):
+        r = self._norm("una hra con el medico")
+        self.assertIn("hora", r, f"'hra' debe → 'hora', got: {r}")
+
+    def test_puwedo(self):
+        r = self._norm("puwedo agendar")
+        self.assertIn("puedo", r, f"'puwedo' debe → 'puedo', got: {r}")
+
+    def test_nesecito(self):
+        r = self._norm("nesecito una hora")
+        self.assertIn("necesito", r, f"'nesecito' debe → 'necesito', got: {r}")
+
+
+class TestBug10EcografiaIntravaginal(unittest.TestCase):
+    """BUG-10: variantes de ecografía intravaginal/transvajinal → ginecología."""
+
+    def _run(self, texto):
+        import asyncio
+        from claude_helper import detect_intent
+        loop = asyncio.new_event_loop()
+        try:
+            return loop.run_until_complete(detect_intent(texto))
+        finally:
+            loop.close()
+
+    def test_intravaginal(self):
+        r = self._run("ecografia intravaginal")
+        self.assertEqual(r.get("especialidad"), "ginecología")
+
+    def test_intravaginal_con_tilde(self):
+        r = self._run("ecografía intravaginal")
+        self.assertEqual(r.get("especialidad"), "ginecología")
+
+    def test_intravajinal_typo(self):
+        r = self._run("ecografia intravajinal")
+        self.assertEqual(r.get("especialidad"), "ginecología")
+
+    def test_transvajinal_typo(self):
+        r = self._run("ecografia transvajinal")
+        self.assertEqual(r.get("especialidad"), "ginecología")
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -81,6 +81,33 @@ def _first_name(nombre) -> str:
     return parts[0] if parts else "paciente"
 
 
+def _detectar_franja_horaria(txt: str) -> "tuple[int, int] | None":
+    """Retorna (hora_min, hora_max) si detecta franja horaria en el texto, None si no.
+    Ejemplos: "despues de las 5 de la tarde" -> (17, 23), "en la manana" -> (8, 12).
+    Se guarda en data["franja_horaria"] para filtrar slots al presentarlos.
+    """
+    tl = txt.lower()
+    m = re.search(r"despu[e\xe9]s\s+de\s+las\s+(\d{1,2})", tl)
+    if m:
+        h = int(m.group(1))
+        if h <= 12 and any(k in tl for k in ("tarde", "noche", "pm", "p.m")):
+            h += 12
+        return (h, 23)
+    m = re.search(r"antes\s+de\s+las\s+(\d{1,2})", tl)
+    if m:
+        h = int(m.group(1))
+        if h <= 12 and any(k in tl for k in ("tarde", "pm", "p.m")):
+            h += 12
+        return (8, h)
+    if re.search(r"(?:en|por)\s+la\s+ma[\xf1n]ana", tl):
+        return (8, 12)
+    if re.search(r"(?:en|por)\s+la\s+tarde", tl):
+        return (12, 18)
+    if re.search(r"(?:en|por)\s+la\s+noche", tl):
+        return (18, 22)
+    return None
+
+
 def _proxima_fecha_dia(weekday: int) -> str:
     """Retorna la fecha (YYYY-MM-DD) del próximo día de la semana dado (hoy + 1 en adelante)."""
     hoy = datetime.now(_CHILE_TZ).date()
@@ -109,6 +136,7 @@ EMERGENCIAS  = {
     # cardiovascular severo
     "dolor de pecho fuerte", "dolor fuerte en el pecho", "dolor en el pecho fuerte",
     "me duele mucho el pecho", "infarto", "me da un infarto",
+    "me duele el pecho", "dolor en el pecho", "opresion en el pecho", "opresión en el pecho",
     # sangrado
     "sangre en deposiciones", "vómito con sangre", "vomito con sangre",
     "hemorragia", "sangrado abundante", "mucho sangrado",
@@ -136,6 +164,10 @@ EMERGENCIAS_PATRONES = [
     re.compile(r"(fuerte|mucho|harto).{0,10}(me\s+)?duele.{0,20}pecho"),
     re.compile(r"pecho.{0,15}(me\s+)?duele.{0,15}(fuerte|mucho|harto)"),
     re.compile(r"duele.{0,10}(fuerte|mucho|harto|arto).{0,15}pecho"),
+    # BUG-6: pecho sin intensificador → también es potencial emergencia
+    re.compile(r"\bme\s+duele\s+el\s+pecho\b"),
+    re.compile(r"\bdolor\s+(?:fuerte\s+)?en\s+el\s+pecho\b"),
+    re.compile(r"\bopresi[oó]n\s+(?:en\s+)?(?:el\s+)?pecho\b"),
     re.compile(r"mucho.{0,10}sangr"),
     re.compile(r"sangr\w*.{0,15}mucho"),
     re.compile(r"sangr\w*.{0,15}no\s+para"),
@@ -2470,6 +2502,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         _fp_idle_top = _detectar_fecha_pedida_idle(txt)
         if _fp_idle_top:
             data["fecha_pedida_idle"] = _fp_idle_top
+        _fr_idle_top = _detectar_franja_horaria(txt)
+        if _fr_idle_top:
+            data["franja_horaria"] = _fr_idle_top
 
         # ── Botones residuales de WAIT_SLOT que llegaron tarde (sesión expiró,
         # usuario volvió al menú pero el mensaje tardó en llegar). En vez de
@@ -2705,6 +2740,21 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return await _iniciar_agendar(phone, data, esp, saludo_prefix=prefix)
         if tl == "motivo_otra_esp":
             log_event(phone, "motivo_seleccionado", {"motivo": "otra_esp"})
+            return await _iniciar_agendar(phone, data, None)
+
+        # ── BUG-B FIX: handlers de confirmación de pivot last_esp_context ─────
+        if tl == "confirma_pivot_esp":
+            _pivot_esp = data.pop("pivot_esp_pendiente", None)
+            data.pop("last_esp_context", None)
+            data.pop("last_esp_context_ts", None)
+            log_event(phone, "ctx_pivot_confirmado", {"esp": _pivot_esp})
+            return await _iniciar_agendar(phone, data, _pivot_esp)
+
+        if tl == "cambiar_esp":
+            data.pop("pivot_esp_pendiente", None)
+            data.pop("last_esp_context", None)
+            data.pop("last_esp_context_ts", None)
+            log_event(phone, "ctx_pivot_cancelado", {})
             return await _iniciar_agendar(phone, data, None)
 
         # ── Sub-menús de "Otras opciones" ─────────────────────────────────────
@@ -3235,7 +3285,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 )
 
         # ── Context pivot: si preguntó por info de una esp hace <5min y ahora
-        # pregunta por disponibilidad/cupos/hora, re-enrutar a agendar. ──
+        # pregunta por disponibilidad/cupos/hora, mostrar botones de confirmación.
+        # BUG-B FIX: antes el bot redirigía silenciosamente a agendar, lo que
+        # confundía a pacientes que habían cambiado de tema.
         _ctx_esp = data.get("last_esp_context")
         _ctx_ts = data.get("last_esp_context_ts")
         if _ctx_esp and _ctx_ts:
@@ -3251,10 +3303,17 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                                  "hay hora", "para cuando", "para cuándo",
                                  "en que horario", "en qué horario")
                     if any(k in tl for k in _pivot_kw):
-                        data.pop("last_esp_context", None)
-                        data.pop("last_esp_context_ts", None)
-                        log_event(phone, "ctx_pivot_agendar", {"esp": _ctx_esp})
-                        return await _iniciar_agendar(phone, data, _ctx_esp)
+                        log_event(phone, "ctx_pivot_confirmacion", {"esp": _ctx_esp})
+                        data["pivot_esp_pendiente"] = _ctx_esp
+                        save_session(phone, state, data)
+                        _esp_display = _ctx_esp.capitalize()
+                        return _btn_msg(
+                            f"¿Querías agendar *{_esp_display}*?",
+                            [
+                                {"id": "confirma_pivot_esp", "title": "Sí, agendar"},
+                                {"id": "cambiar_esp",        "title": "Otra especialidad"},
+                            ]
+                        )
             except Exception:
                 pass
 
@@ -3331,6 +3390,38 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     f"*{CMC_TELEFONO_FIJO}*."
                 )
 
+        # ── BUG-2: intent=otro post-bot_reanudado → human takeover silencioso ─────
+        # Caso real: "Sergio abonará 55.000", "Al nombre de Thomas pezo peña",
+        # "Buenos sias" → primer mensaje tras bot_reanudado cae en menú genérico.
+        # Fix: si el último evento bot_reanudado fue hace <30 min y intent=otro,
+        # derivar silenciosamente a HUMAN_TAKEOVER (el paciente habla con recepción).
+        if intent == "otro":
+            try:
+                from session import _conn as _conn2
+                _c2 = _conn2()
+                _row2 = _c2.execute(
+                    "SELECT ts FROM conversation_events "
+                    "WHERE phone=? AND event='bot_reanudado' "
+                    "ORDER BY ts DESC LIMIT 1",
+                    (phone,),
+                ).fetchone()
+                _c2.close()
+                if _row2:
+                    from datetime import datetime as _dt2
+                    _ts2 = _dt2.fromisoformat(_row2[0])
+                    if _ts2.tzinfo is None:
+                        _ts2 = _ts2.replace(tzinfo=timezone.utc)
+                    _secs2 = (datetime.now(timezone.utc) - _ts2).total_seconds()
+                    if _secs2 < 1800:  # 30 min
+                        log_event(phone, "otro_post_reanudado", {"txt": txt[:120], "secs": int(_secs2)})
+                        save_session(phone, "HUMAN_TAKEOVER", data)
+                        return (
+                            "Te paso a recepción 🙋\n"
+                            "_(Puedes seguir escribiendo, aquí lo verán.)_"
+                        )
+            except Exception as _e2:
+                log.warning("BUG-2 check falló: %s", _e2)
+
         # ── Defensa sistémica: fallback loop counter ─────────────────────────
         # Si el bot devuelve N veces seguidas intent="otro" / "menu" sin avanzar
         # el flow, escalar a HUMAN_TAKEOVER. Caso real 2026-04-28 (56971038302):
@@ -3357,13 +3448,24 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
         # ── Saludo / menu → devolver menú corto con botones (sin preguntas largas) ──
         if intent == "menu":
-            # BUG-A: si hay last_esp_context fresco (<5min), redirigir al flujo
-            # de esa especialidad en vez de mostrar menú genérico.
-            # Caso real 404707: "Y cuando tiene hrs" tras mencionar cardiología
-            # → Claude clasifica menu, bot perdía contexto.
+            # BUG-C FIX: solo redirigir a last_esp_context si el mensaje es
+            # claramente afirmativo. Antes el bot redirigía con CUALQUIER mensaje
+            # clasificado como "menu" (incluyendo "gracias", "chao", etc.).
             _last_esp_a = data.get("last_esp_context")
             _last_ts_a  = data.get("last_esp_context_ts")
-            if _last_esp_a and _last_ts_a:
+            _CONTINUAR_KW = ("si", "sí", "agendar", "ok", "dale", "claro",
+                             "perfecto", "vamos", "quiero", "queria", "quería")
+            _DESPEDIDA_KW = ("gracias", "chao", "adios", "adiós", "bye",
+                             "nada", "ya está", "ya esta", "listo", "muchas gracias",
+                             "mil gracias", "ok gracias", "perfecto gracias",
+                             "listo gracias", "ya gracias")
+            _tl_rescue = tl.strip().lower()
+            _es_continuar = any(
+                _tl_rescue == k or _tl_rescue.startswith(k + " ")
+                for k in _CONTINUAR_KW
+            )
+            _es_despedida = any(k in _tl_rescue for k in _DESPEDIDA_KW)
+            if _last_esp_a and _last_ts_a and _es_continuar and not _es_despedida:
                 try:
                     from datetime import datetime as _dt_a
                     _t_a = _dt_a.fromisoformat(_last_ts_a)
@@ -3372,6 +3474,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         return await _iniciar_agendar(phone, data, _last_esp_a)
                 except (ValueError, TypeError):
                     pass
+            if _es_despedida:
+                log_event(phone, "despedida_detectada", {"tl": _tl_rescue})
+                return "Listo, fue un gusto ayudarte. Si necesitas algo, escribe *menu*."
             return _menu_msg()
 
         if intent == "agendar":
@@ -3394,6 +3499,30 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                             especialidad = especialidad_fb
                         else:
                             especialidad = None
+            # BUG-E: heredar last_esp_context cuando intent=agendar sin especialidad.
+            # Caso real: paciente preguntó "¿cuánto cuesta la cardiología?" (info),
+            # bot guardó last_esp_context=cardiología. Siguiente msg: "agendar".
+            # Claude no extrae especialidad → bot iba a WAIT_ESPECIALIDAD a pesar de
+            # tener contexto fresco. 56% de los casos con esp=null ignoraban el contexto.
+            if not especialidad:
+                _last_esp_e = data.get("last_esp_context")
+                _last_ts_e = data.get("last_esp_context_ts")
+                if _last_esp_e and _last_ts_e:
+                    try:
+                        from datetime import datetime as _dt_e
+                        _t_e = _dt_e.fromisoformat(_last_ts_e)
+                        if _t_e.tzinfo is None:
+                            _t_e = _t_e.replace(tzinfo=timezone.utc)
+                        if (datetime.now(timezone.utc) - _t_e).total_seconds() < 300:
+                            especialidad = _last_esp_e
+                            data.pop("last_esp_context", None)
+                            data.pop("last_esp_context_ts", None)
+                            log_event(phone, "intent_agendar_esp_heredado",
+                                      {"esp": especialidad, "age_s": int(
+                                          (datetime.now(timezone.utc) - _t_e).total_seconds()
+                                      )})
+                    except (ValueError, TypeError):
+                        pass
             log_event(phone, "intent_agendar", {"especialidad": especialidad})
             # Detectar preferencia de fecha en el mensaje ("mañana", "pasado mañana",
             # "viernes", etc.) y guardar en data para que _iniciar_agendar la use.
@@ -3952,7 +4081,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             # Limpiar flags del quick-book antes de pasar al flujo estándar
             data.pop("quick_esp", None)
             data.pop("quick_prof", None)
-            return await _iniciar_agendar(phone, data, esp or None)
+            log_event(phone, "quick_book_iniciar_agendar", {"esp": esp or None, "data_keys": list(data.keys())})
+            result_qb = await _iniciar_agendar(phone, data, esp or None)
+            log_event(phone, "quick_book_agendar_ok", {"resp_type": type(result_qb).__name__})
+            return result_qb
         if tl in ("quick_other", "otra", "otra especialidad", "2", "cambiar"):
             log_event(phone, "quick_book_other")
             data.pop("quick_esp", None)
@@ -5119,7 +5251,13 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 r"nieto|nieta|suegro|suegra|cuñado|cuñada|"
                 r"sobrino|sobrina|tío|tía|vecino|vecina|"
                 r"yerno|nuera|pololo|polola|"
-                r"beb[eé]|guagua|niñ[oa]|chic[oa]|pequeñ[oa]))\b"
+                r"beb[eé]|guagua|niñ[oa]|chic[oa]|pequeñ[oa])|"
+                # BUG-F: patrones declarativos con nombre completo (27 casos, 0 capturados)
+                # "A nombre de Angela Vásquez", "La cita es para Juan Pérez",
+                # "Reservar para María González López"
+                r"\ba nombre de\s+\w+|"
+                r"\bla cita es para\s+\w+|"
+                r"\b(?:reservar|agendar|hora)\s+para\s+\w+\s+\w+\b"
             )
             if _OTRA_PERSONA_RE.search(tl):
                 data["booking_for_other"] = True
@@ -6068,7 +6206,23 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return await _iniciar_agendar(phone, {}, apellido_esc)
         rut = clean_rut(txt)
         if not valid_rut(rut):
-            return hint_rut_error(txt)
+            # BUG-C: 74% abandono. Contador con escalación tras 2 intentos fallidos.
+            _rut_cancel_intentos = data.get("rut_cancelar_intentos", 0) + 1
+            data["rut_cancelar_intentos"] = _rut_cancel_intentos
+            if _rut_cancel_intentos >= 2:
+                log_event(phone, "rut_cancelar_escalado", {"intentos": _rut_cancel_intentos})
+                save_session(phone, "HUMAN_TAKEOVER",
+                             {"hold_sent": False, "handoff_reason": "rut_cancelar_fallos"})
+                return _btn_msg(
+                    "No pude validar el RUT 😕\n\n"
+                    "Una recepcionista puede cancelar tu cita directamente.",
+                    [
+                        {"id": "accion_recepcion", "title": "Hablar con recepción"},
+                        {"id": "menu_volver", "title": "Volver al menú"},
+                    ]
+                )
+            save_session(phone, "WAIT_RUT_CANCELAR", data)
+            return hint_rut_error(txt) + "\n\n_Escribe *menu* si prefieres volver._"
 
         _ensure_consent(phone)
         paciente, transient = await _buscar_paciente_safe(rut)
@@ -6260,9 +6414,23 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             )
         rut = clean_rut(txt)
         if not valid_rut(rut):
-            return (
-                hint_rut_error(txt) + "\n\n_Si quieres cancelar, escribe *menu*._"
-            )
+            # BUG-C: 80% abandono. Contador con escalación tras 2 intentos fallidos.
+            _rut_reag_intentos = data.get("rut_reagendar_intentos", 0) + 1
+            data["rut_reagendar_intentos"] = _rut_reag_intentos
+            if _rut_reag_intentos >= 2:
+                log_event(phone, "rut_reagendar_escalado", {"intentos": _rut_reag_intentos})
+                save_session(phone, "HUMAN_TAKEOVER",
+                             {"hold_sent": False, "handoff_reason": "rut_reagendar_fallos"})
+                return _btn_msg(
+                    "No pude validar el RUT 😕\n\n"
+                    "Una recepcionista puede ayudarte a reagendar directamente.",
+                    [
+                        {"id": "accion_recepcion", "title": "Hablar con recepción"},
+                        {"id": "menu_volver", "title": "Volver al menú"},
+                    ]
+                )
+            save_session(phone, "WAIT_RUT_REAGENDAR", data)
+            return hint_rut_error(txt) + "\n\n_Escribe *menu* si prefieres volver._" 
 
         _ensure_consent(phone)
         paciente, transient = await _buscar_paciente_safe(rut)
@@ -6394,9 +6562,20 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         )
 
     # ── WAIT_WAITLIST_NOMBRE ──────────────────────────────────────────────────
+    # BUG-C: 100% abandono. Skip silencioso tras 1 intento fallido — la cita
+    # ya no existe (waitlist), el paciente no tiene incentivo de seguir.
     if state == "WAIT_WAITLIST_NOMBRE":
         partes = txt.strip().split()
         if len(partes) < 2:
+            _intentos_wn = data.get("waitlist_nombre_intentos", 0) + 1
+            if _intentos_wn >= 1:
+                # Skip: usar "paciente" genérico y completar la inscripción
+                log_event(phone, "waitlist_nombre_skipped",
+                          {"intentos": _intentos_wn, "txt": txt[:60]})
+                data["paciente_nombre"] = "Paciente"
+                return _inscribir_waitlist_y_responder(phone, data)
+            data["waitlist_nombre_intentos"] = _intentos_wn
+            save_session(phone, "WAIT_WAITLIST_NOMBRE", data)
             return "Escribe tu nombre completo con nombre y apellido (ej: *María González*)."
         nombre = " ".join(p.capitalize() for p in partes)
         data["paciente_nombre"] = nombre
@@ -6430,7 +6609,24 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             )
         rut = clean_rut(txt)
         if not valid_rut(rut):
-            return hint_rut_error(txt)
+            # BUG-C: 96% abandono en WAIT_RUT_VER. Tras 2 intentos fallidos,
+            # ofrecer derivación a recepción en vez de seguir pidiendo RUT.
+            _rut_ver_intentos = data.get("rut_ver_intentos", 0) + 1
+            data["rut_ver_intentos"] = _rut_ver_intentos
+            if _rut_ver_intentos >= 2:
+                log_event(phone, "rut_ver_escalado", {"intentos": _rut_ver_intentos})
+                save_session(phone, "HUMAN_TAKEOVER",
+                             {"hold_sent": False, "handoff_reason": "rut_ver_fallos"})
+                return _btn_msg(
+                    "No pude validar el RUT 😕\n\n"
+                    "¿Quieres que te ayude una recepcionista?",
+                    [
+                        {"id": "accion_recepcion", "title": "Hablar con recepción"},
+                        {"id": "menu_volver",      "title": "Volver al menú"},
+                    ]
+                )
+            save_session(phone, "WAIT_RUT_VER", data)
+            return hint_rut_error(txt) + "\n\n_Escribe *menu* si prefieres volver._"
 
         _ensure_consent(phone)
         paciente, transient = await _buscar_paciente_safe(rut)
@@ -8329,14 +8525,19 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
                 {"id": "menor_es_menor",  "title": "Es para un menor"},
             ]
         )
-    # ── BUG-fix 2026-05-03: solo Dr. Márquez atiende Medicina Familiar ──
-    # Antes "medicina familiar" caía en _ESP_MED_GENERAL → ofrecía Abarca/Olavarría
-    # primero. Forzar id_profesional=13 (Márquez) y guardar nota explicativa.
+    # ── BUG-A: loggear entrada a _iniciar_agendar para diagnóstico ──
+    log_event(phone, "medfam_filtra_marquez_call",
+              {"especialidad": especialidad, "lower": (especialidad or "").lower()})
+    # ── Solo Dr. Márquez atiende Medicina Familiar ──
+    # El guard se ejecuta ANTES del check de especialidad=None para que el
+    # path WAIT_ESPECIALIDAD → _iniciar_agendar("Medicina Familiar") dispare
+    # el evento sin importar capitalización.
     if especialidad and especialidad.lower() in _ESP_MED_FAMILIAR:
         data["esp_pedida_original"] = "Medicina Familiar"
         data["force_prof_ids"] = [13]
         data["medfam_solo_marquez"] = True
-        log_event(phone, "medfam_filtra_marquez", {"phone": phone})
+        log_event(phone, "medfam_filtra_marquez",
+                  {"especialidad_raw": especialidad, "phone": phone})
     if not especialidad:
         save_session(phone, "WAIT_ESPECIALIDAD", data)
         return f"Claro, te ayudo a agendar 😊\n\n¿Qué especialidad necesitas?\n\n{_ESPECIALIDADES_TEXTO}"
@@ -8600,6 +8801,24 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
     prof_sugerido_id = mejor.get("id_profesional")
     slots_sugerido_todos = [s for s in todos if s.get("id_profesional") == prof_sugerido_id]
     smart_sugerido = slots_sugerido_todos[:5] if slots_sugerido_todos else smart
+    # BUG-4 FIX: filtrar por franja horaria si el paciente la indicó
+    _franja = data.pop("franja_horaria", None)
+    if _franja:
+        _h_min, _h_max = _franja
+        def _slot_en_franja(s):
+            try:
+                _h = int(s.get("hora_inicio", "00:00")[:2])
+                return _h_min <= _h <= _h_max
+            except Exception:
+                return True
+        _smart_f = [s for s in smart_sugerido if _slot_en_franja(s)]
+        _todos_f  = [s for s in todos if _slot_en_franja(s)]
+        if _smart_f:
+            smart_sugerido = _smart_f
+        if _todos_f:
+            todos = _todos_f
+            if not mejor or not _slot_en_franja(mejor):
+                mejor = _todos_f[0]
     data.update({"especialidad": especialidad_lower, "slots": smart_sugerido,
                  "todos_slots": todos, "fechas_vistas": [fecha],
                  "expansion_stage": 0, "prof_sugerido_id": prof_sugerido_id})
@@ -8899,9 +9118,22 @@ def _parse_slot_selection(txt: str, slots: list) -> int | None:
     if any(k in tl for k in ("ultim", "último", "ultima", "última", "last")):
         return len(slots) - 1
 
-    # BUG-1 FIX: Antes de usar el número embebido, verificar que el texto
-    # NO sea un contexto de edad o referencia a un menor/tercero.
-    # Caso real 56987840895: "Es para mi bebé 2 años" → el 2 no es slot 2.
+    # BUG-D FIX: endurecer detección de número como slot.
+    # Antes: r'\b([1-9])\b' matcheaba en cualquier frase larga como
+    # "llevo 3 días con fiebre", "RUT termina en 7", "soy nivel 5".
+    # Ahora: primero verificar que el texto no contenga keywords de
+    # cantidad/duración/contexto clínico; luego permitir número solo si
+    # el texto es corto O contiene contexto ordinal explícito.
+    _CANTIDAD_KW = (
+        "días", "dia", "horas", "hora", "veces", "vez", "años", "año",
+        "meses", "mes", "minutos", "kilos", "kilo", "metros", "litros",
+        "fiebre", "dolor", "molestia", "sintoma", "síntoma", "semana",
+        "nivel", "termina en", "termina", "grado", "grados",
+    )
+    _ORDINAL_CTX_KW = ("opcion", "opción", "numero", "número", "horario", "slot",
+                       "el ", "la ", "opcion ", "opción ")
+
+    # BUG-1 FIX original (edad/menor): mantener también
     _EDAD_CTX_RE = re.compile(
         r'\b\d+\s*(?:años?|meses?|añitos?)\b'
         r'|\b(?:beb[eé]|guagua|niñ[oa]|niet[oa]|hij[oa]|menor|lactante|infante|pequeñ[oa]|chic[oa])\b'
@@ -8910,13 +9142,19 @@ def _parse_slot_selection(txt: str, slots: list) -> int | None:
     )
 
     # Número dentro del texto: "el 1", "opción 2", "quiero el 3"
-    m = re.search(r'\b([1-9])\b', tl)
+    m = re.search(r'\b([1-9]\d?)\b', tl)
     if m:
-        # Si el texto tiene contexto de edad/menor Y más de 2 palabras, no
-        # interpretar el número como selección de slot.
         _palabras = [p for p in tl.split() if p.strip()]
+        # Rechazar si hay keywords de cantidad/duración
+        if any(k in tl for k in _CANTIDAD_KW):
+            return None
+        # Rechazar si texto largo sin contexto ordinal explícito
+        if len(_palabras) > 4:
+            if not any(k in tl for k in _ORDINAL_CTX_KW):
+                return None
+        # Rechazar contexto de edad/menor (BUG-1 guard)
         if len(_palabras) > 2 and _EDAD_CTX_RE.search(tl):
-            return None  # caller debe tratar como texto libre (BUG-1 guard)
+            return None
         idx = int(m.group(1)) - 1
         if 0 <= idx < len(slots):
             return idx

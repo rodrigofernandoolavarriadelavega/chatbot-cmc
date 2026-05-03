@@ -130,6 +130,13 @@ _INTENT_CACHE: dict[str, dict] = {
     "ecografia ginecologíca":     {"intent": "agendar", "especialidad": "ginecología"},
     "ecografia pelvica":          {"intent": "agendar", "especialidad": "ginecología"},
     "ecografía pélvica":          {"intent": "agendar", "especialidad": "ginecología"},
+    # BUG-10: typos intravaginal/transvajinal → siempre Rejón (ginecología)
+    "ecografia intravaginal":     {"intent": "agendar", "especialidad": "ginecología"},
+    "ecografía intravaginal":     {"intent": "agendar", "especialidad": "ginecología"},
+    "ecografia intravajinal":     {"intent": "agendar", "especialidad": "ginecología"},
+    "ecografía intravajinal":     {"intent": "agendar", "especialidad": "ginecología"},
+    "ecografia transvajinal":     {"intent": "agendar", "especialidad": "ginecología"},
+    "ecografía transvajinal":     {"intent": "agendar", "especialidad": "ginecología"},
     "gastro":         {"intent": "agendar", "especialidad": "gastroenterología"},
     "gastroenterología": {"intent": "agendar", "especialidad": "gastroenterología"},
     "implantes":      {"intent": "agendar", "especialidad": "implantología"},
@@ -336,6 +343,17 @@ _INTENT_CACHE: dict[str, dict] = {
     "tienes hora":    {"intent": "ver_reservas", "especialidad": None},
     "cuándo es mi hora": {"intent": "ver_reservas", "especialidad": None},
     "cuando es mi hora": {"intent": "ver_reservas", "especialidad": None},
+    # Precio / costo — evita que "es caro?" caiga a intent=otro
+    "es caro":          {"intent": "precio", "especialidad": None},
+    "es caro?":         {"intent": "precio", "especialidad": None},
+    "es muy caro":      {"intent": "precio", "especialidad": None},
+    "es muy caro?":     {"intent": "precio", "especialidad": None},
+    "valen mucho":      {"intent": "precio", "especialidad": None},
+    "sale caro":        {"intent": "precio", "especialidad": None},
+    "cuanto cobran":    {"intent": "precio", "especialidad": None},
+    "cuánto cobran":    {"intent": "precio", "especialidad": None},
+    "son caros":        {"intent": "precio", "especialidad": None},
+    "muy caro":         {"intent": "precio", "especialidad": None},
     # --- Variaciones rurales Arauco (expansion 2026-04-18) ---
     # Agendar con typos/coloquialismos
     "kiero hora":          {"intent": "agendar", "especialidad": None},
@@ -1046,6 +1064,129 @@ async def clasificar_respuesta_seguimiento(mensaje: str) -> str | None:
         return None
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# BUG-A FIX: Validador post-Claude para respuestas FAQ
+# Evita que precios alucinados, profesionales inventados o especialidades que
+# no se atienden lleguen al paciente.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Precios conocidos del CMC (exactamente como aparecen en el SYSTEM_PROMPT).
+_PRECIOS_CONOCIDOS: frozenset[str] = frozenset({
+    "$4.770", "$7.830", "$7.880", "$8.000", "$10.000", "$10.360",
+    "$13.000", "$14.420", "$14.990", "$15.000", "$16.000", "$17.500",
+    "$17.990", "$18.000", "$20.000", "$25.000", "$26.990", "$30.000",
+    "$34.990", "$35.000", "$40.000", "$45.000", "$50.000", "$54.990",
+    "$60.000", "$75.000", "$80.000", "$83.360", "$90.000", "$110.000",
+    "$120.000", "$125.000", "$129.990", "$139.990", "$150.000", "$159.990",
+    "$179.990", "$180.000", "$220.000", "$349.900", "$450.000", "$650.000",
+})
+
+# Especialidades que NO se atienden en el CMC.
+_ESP_NO_ATENDIDAS: tuple[tuple[str, ...], ...] = (
+    ("neurólog", "neurolog"),
+    ("pediatr",),
+    ("oftalmólog", "oftalmolog"),
+    ("dermató", "dermato"),
+    ("oncólog", "oncolog"),
+    ("reumató", "reumatol"),
+    ("nefrólog", "nefrolog"),
+    ("endocrinólog", "endocrinolog"),
+    ("hematólog", "hematolog"),
+    ("infectólog", "infectolog"),
+    ("urolog",),
+    ("cirujano", "cirugía general"),
+    ("ortopedista",),
+    ("alergólog", "alergolog"),
+    ("radiolog",),
+    ("anestesiólog", "anestesiolog"),
+)
+_MSG_ESP_NO_ATENDIDA = (
+    "Esa especialidad no la tenemos en el CMC. "
+    "Te recomendamos el CESFAM Carampangue o el Hospital de Arauco."
+)
+
+# Apellidos de profesionales CONOCIDOS (minúscula, sin tildes).
+_NOMBRES_PROF_CONOCIDOS: frozenset[str] = frozenset({
+    "olavarria", "abarca", "marquez", "borrego", "millan", "barraza",
+    "rejon", "quijano", "burgos", "jimenez", "castillo", "fredes",
+    "valdes", "fuentealba", "acosta", "armijo", "etcheverry", "pinto",
+    "montalba", "rodriguez", "arratia", "gomez", "guevara", "pardo",
+})
+
+_RX_PRECIO_FAQ = re.compile(r"\$\d{1,3}(?:\.\d{3})+(?:\.\d+)?")
+_RX_DR_NOMBRE_FAQ = re.compile(
+    r"\b(?:Dr\.|Dra\.|doctor|doctora|kinesiólogo|kinesiologa|"
+    r"nutricionista|psicólogo|psicologa|matrona|podóloga|podologa|"
+    r"fonoaudiólogo|fonoaudiologa)\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)",
+    re.IGNORECASE,
+)
+
+
+def _validar_respuesta_faq(texto: str, phone: str = "") -> str:
+    """Valida texto generado por Claude antes de enviarlo al paciente.
+
+    1. Precios fuera de whitelist -> "[consultar en recepción]" + log warning.
+    2. Especialidades no atendidas en el CMC -> mensaje estándar de derivación.
+    3. Profesionales desconocidos -> reemplaza por título genérico.
+    """
+    if not texto:
+        return texto
+
+    try:
+        from session import log_event as _log_ev
+    except Exception:
+        _log_ev = None
+
+    import unicodedata as _ud
+
+    def _norm_ap(s: str) -> str:
+        return "".join(
+            c for c in _ud.normalize("NFD", s.lower()) if _ud.category(c) != "Mn"
+        )
+
+    # 1. Precios
+    def _check_precio(m: re.Match) -> str:
+        val = m.group(0)
+        if val in _PRECIOS_CONOCIDOS:
+            return val
+        if _log_ev:
+            try:
+                _log_ev(phone, "faq_price_hallucination", {"precio": val, "texto": texto[:120]})
+            except Exception:
+                pass
+        log.warning("faq_price_hallucination: %s en respuesta FAQ", val)
+        return "[consultar en recepción]"
+
+    texto = _RX_PRECIO_FAQ.sub(_check_precio, texto)
+
+    # 2. Especialidades no atendidas
+    tl = texto.lower()
+    for variantes in _ESP_NO_ATENDIDAS:
+        if any(v in tl for v in variantes):
+            if _log_ev:
+                try:
+                    _log_ev(phone, "faq_esp_no_atendida", {"variante": variantes[0], "texto": texto[:120]})
+                except Exception:
+                    pass
+            log.warning("faq_esp_no_atendida: %s en respuesta FAQ", variantes[0])
+            return _MSG_ESP_NO_ATENDIDA
+
+    # 3. Profesionales desconocidos
+    for m in _RX_DR_NOMBRE_FAQ.finditer(texto):
+        apellido_norm = _norm_ap(m.group(1))
+        if apellido_norm not in _NOMBRES_PROF_CONOCIDOS:
+            if _log_ev:
+                try:
+                    _log_ev(phone, "faq_prof_desconocido", {"apellido": m.group(1), "texto": texto[:120]})
+                except Exception:
+                    pass
+            log.warning("faq_prof_desconocido: %s en respuesta FAQ", m.group(1))
+            titulo = m.group(0).split()[0]
+            texto = texto.replace(m.group(0), f"{titulo} del CMC")
+
+    return texto
+
+
 _TEL_CMC_WA = "+56966610737"
 _TEL_CMC_FIJO = "(41) 296 5226"
 
@@ -1124,6 +1265,36 @@ async def detect_intent(mensaje: str, recepcion_resumen: list | None = None,
         r"|\bno (?:puedo|podré|podre|voy a poder|podría|podria) (?:ir|asistir|llegar|venir|atender[mt]e)"
         r"|\bdar de baja\b|\bquitar (?:la|mi) hora\b|\beliminar (?:la|mi) hora\b)"
     )
+    # TRIPLE-PREFILTER — preguntas sobre POLÍTICA de cancelación.
+    # "hay que avisar para cancelar?", "cómo cancelo una hora", etc.
+    # Son preguntas de información, no intención de anular — deben responderse
+    # con la política sin disparar el flujo de anulación.
+    _CANCELAR_INFO_RE = _re_w.compile(
+        r"(hay\s+que\s+avisar.*cancel"
+        r"|c[oó]mo\s+(?:se\s+)?cancela\s+una\s+hora"
+        r"|c[oó]mo\s+cancelo"
+        r"|qu[eé]\s+pasa\s+si\s+(?:no\s+)?cancel"
+        r"|hasta\s+cu[aá]ndo\s+(?:puedo\s+)?cancelar"
+        r"|hay\s+multa\s+(?:por|si)\s+cancel"
+        r"|pol[ií]tica\s+de\s+cancelaci[oó]n)",
+        _re_w.IGNORECASE,
+    )
+    if _CANCELAR_INFO_RE.search(clave_norm) or _CANCELAR_INFO_RE.search(clave):
+        log.info("cancelar-info prefilter: %r", clave[:80])
+        try:
+            from session import log_event as _log_event
+            _log_event("", "intent_cancelar_info_prefilter", {"texto": clave[:120]})
+        except Exception:
+            pass
+        return {
+            "intent": "faq",
+            "especialidad": None,
+            "respuesta_directa": (
+                "Para cancelar tu hora avísanos con al menos *4 horas de anticipación*. "
+                "No hay multa.\n\n"
+                "Puedes hacerlo respondiendo a este chat o llamando al *(41) 296 5226*."
+            ),
+        }
     # PRE-PREFILTER — chilenismo "cancelar" = PAGAR.
     # "¿hay que cancelar al tiro?", "cuánto hay que cancelar?", "se cancela con
     # tarjeta?" son preguntas sobre PAGO, no intención de anular cita. Debe ir
@@ -1147,14 +1318,16 @@ async def detect_intent(mensaje: str, recepcion_resumen: list | None = None,
     # El signo "?" o el patrón "se necesita/hay que llevar/requiere" indica
     # consulta sobre requisito previo.
     _ORDEN_REQUISITO_RE = _re_w.compile(
-        r"(necesito\s+(?:la\s+)?orden\s+m[eé]dica\s*[?¿]"
-        r"|se\s+necesita\s+(?:la\s+)?orden"
+        r"(necesito\s+(?:la\s+)?orden(?:\s+m[eé]dica)?\s*[?¿]"
+        r"|se\s+(?:necesita|requiere|exige|pide)\s+(?:la\s+)?orden"
         r"|hay\s+que\s+(?:llevar|tener|traer)\s+(?:la\s+)?orden"
-        r"|requiere(?:n)?\s+(?:la\s+)?orden\s+m[eé]dica"
-        r"|piden\s+orden\s+m[eé]dica"
+        r"|(?:hay\s+que|tengo\s+que|debo|debes?)\s+(?:llevar|tener|traer)\s+(?:la\s+)?orden"
+        r"|requiere(?:n)?\s+(?:la\s+)?orden(?:\s+m[eé]dica)?"
+        r"|piden?\s+orden(?:\s+m[eé]dica)?"
         r"|necesito\s+orden\s+para"
-        r"|sin\s+orden\s+m[eé]dica"
-        r"|la\s+orden\s+es\s+obligatoria)",
+        r"|sin\s+orden(?:\s+m[eé]dica)?\s+(?:me\s+)?atienden?"
+        r"|la\s+orden\s+es\s+obligatoria"
+        r"|\b(?:necesito|requiere|pide|piden)\s+derivaci[oó]n\b)",
         _re_w.IGNORECASE,
     )
     if _ORDEN_REQUISITO_RE.search(clave_norm) or _ORDEN_REQUISITO_RE.search(clave):
@@ -1412,7 +1585,7 @@ async def detect_intent(mensaje: str, recepcion_resumen: list | None = None,
             log.warning("post-proceso detect_intent falló: %s", _e_pp)
         rd = _result.get("respuesta_directa")
         if isinstance(rd, str) and rd:
-            rd = rd.replace("**", "*")  # BUG-C: normalize markdown antes de _scrub
+            rd = re.sub(r"\*\*([^*]+)\*\*", r"*\1*", rd)  # BUG-C: normalize ** → * para WhatsApp
             _result["respuesta_directa"] = _scrub_telefonos(rd)
         return _result
     except json.JSONDecodeError as e:
@@ -1582,6 +1755,38 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
     (("estacionamient",),
      "🚗 Sí, contamos con estacionamiento en el mismo centro, en Monsalve 102. "
      "Es gratuito para pacientes del CMC."),
+    # BUG-7: sábados / horarios sin FAQ local
+    (("atienden", "sabad"),
+     "Sí, atendemos los sábados de *09:00 a 14:00* (algunas especialidades). Domingo cerrado."),
+    (("sabado",),
+     "Sábado: *09:00–14:00* (algunas especialidades). Si necesitas hora específica, dime qué especialidad."),
+    (("domingo",),
+     "Los domingos no atendemos. Puedes agendar desde el lunes."),
+    (("horarios?",),
+     "Lunes a viernes: *08:00–21:00*. Sábado: *09:00–14:00*. Domingo cerrado."),
+    # BUG-8: especialidades frecuentes sin FAQ local
+    (("kinesiolog",),
+     "Sí, tenemos kinesiología con *Luis Armijo* y *Leonardo Etcheverry*. ¿Quieres agendar?"),
+    (("tienen kine",),
+     "Sí, tenemos kinesiología con *Luis Armijo* y *Leonardo Etcheverry*. ¿Quieres agendar?"),
+    (("hay kine",),
+     "Sí, tenemos kinesiología con *Luis Armijo* y *Leonardo Etcheverry*. ¿Quieres agendar?"),
+    (("podolog",),
+     "Sí, tenemos podología con *Andrea Guevara*. ¿Quieres agendar?"),
+    (("psicolog",),
+     "Sí, tenemos psicología adulto e infantil. ¿Quieres agendar?"),
+    (("nutric",),
+     "Sí, tenemos nutrición con *Gisela Pinto*. ¿Quieres agendar?"),
+    (("matrona",),
+     "Sí, tenemos matrona con *Sarai Gómez*. ¿Quieres agendar?"),
+    (("fonoaud",),
+     "Sí, tenemos fonoaudiología con *Juana Arratia*. ¿Quieres agendar?"),
+    (("ortodonc",),
+     "Sí, tenemos ortodoncia con *Dra. Daniela Castillo*. ¿Quieres agendar?"),
+    (("endodonc",),
+     "Sí, tenemos endodoncia con *Dr. Fernando Fredes*. ¿Quieres agendar?"),
+    (("implant",),
+     "Sí, tenemos implantología con *Dra. Aurora Valdés*. ¿Quieres agendar?"),
     # FIX-4: boletas/comprobantes — evitar derivaciones repetidas al mismo paciente
     (("boleta", "comprobante", "factura", "reimprimir", "imprimir mi", "duplicado"),
      "Las boletas electrónicas emitidas por *transferencia* o *Fonasa* no se pueden "
@@ -1695,8 +1900,10 @@ async def respuesta_faq(mensaje: str, recepcion_resumen: list | None = None,
         respuesta_claude = data.get("respuesta_directa")
         if respuesta_claude:
             # BUG-04: colapsar ** → * para WhatsApp (Haiku a veces usa Markdown estándar)
-            respuesta_claude = respuesta_claude.replace("**", "*")
-            return _scrub_telefonos(respuesta_claude)
+            respuesta_claude = re.sub(r"\*\*([^*]+)\*\*", r"*\1*", respuesta_claude)
+            # BUG-A FIX: validar precios, profesionales y especialidades
+            respuesta_claude = _validar_respuesta_faq(_scrub_telefonos(respuesta_claude))
+            return respuesta_claude
         # Sin respuesta de Claude → intentar fallback local antes de rendirse
         return _local_faq_fallback(mensaje) or "Para más información, comunícate con recepción 😊"
     except json.JSONDecodeError as e:
