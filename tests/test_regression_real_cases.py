@@ -445,6 +445,31 @@ class TestMedicinaFamiliarNota(unittest.TestCase):
                       "flows.py debe mencionar medicina familiar")
 
 
+class TestContextoEspecialidadHerencia(unittest.TestCase):
+    """Pregunta de seguimiento sin especialidad debe heredar contexto reciente.
+    Caso real fb_36265734933013648 2026-05-03:
+    1) 'hacen ecomamaria' → bot responde info de ecografía (esp=ecografía)
+    2) 2min después: 'Y la hacen por Fonasa?' → esp=null en detect
+    Sin herencia el bot daba respuesta genérica sin contexto.
+    """
+
+    def test_esp_context_heredado_existe(self):
+        """flows.py debe heredar last_esp_context dentro de TTL 5min."""
+        contenido = (ROOT / "app" / "flows.py").read_text()
+        self.assertIn("esp_context_heredado", contenido,
+                      "Debe loggear cuando hereda contexto")
+        self.assertIn("last_esp_context", contenido,
+                      "Debe leer last_esp_context")
+
+    def test_ttl_300s(self):
+        """El TTL debe ser 300s = 5min para herencia útil."""
+        contenido = (ROOT / "app" / "flows.py").read_text()
+        idx = contenido.find("esp_context_heredado")
+        # Buscar 300 cerca (TTL en segundos)
+        bloque = contenido[max(0, idx-500):idx+200]
+        self.assertIn("300", bloque, "TTL debe ser 300s (5min)")
+
+
 class TestSlotLockOptimista(unittest.TestCase):
     """Lock optimista anti-race condition (5 casos/7d en auditoría)."""
 

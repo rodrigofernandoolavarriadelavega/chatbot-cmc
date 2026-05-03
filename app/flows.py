@@ -3295,12 +3295,35 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             # Permite que "¿Y cuando hay cupos?" en el siguiente turno sepa
             # que hablamos de eso. Caso 56937785271 2026-04-23 18:52.
             _esp_ctx = result.get("especialidad")
+
+            # ── Hereda contexto reciente si la pregunta actual NO menciona
+            # especialidad. Caso real fb_36265734933013648 2026-05-03:
+            # 1) "hacen ecomamaria" → bot guarda last_esp_context=ecografía
+            # 2) 2min después "Y la hacen por Fonasa?" → esp=null en detect
+            # Sin este fix, el bot daba respuesta genérica sin contexto.
+            txt_enriquecido = txt
+            if not _esp_ctx:
+                _last_esp = data.get("last_esp_context")
+                _last_ts = data.get("last_esp_context_ts")
+                if _last_esp and _last_ts:
+                    try:
+                        from datetime import datetime as _dt_check
+                        _t = _dt_check.fromisoformat(_last_ts)
+                        _age = (datetime.now(timezone.utc) - _t).total_seconds()
+                        if _age < 300:  # 5 min
+                            _esp_ctx = _last_esp
+                            txt_enriquecido = f"{txt} (sobre {_last_esp})"
+                            log_event(phone, "esp_context_heredado",
+                                      {"esp": _last_esp, "age_s": int(_age)})
+                    except (ValueError, TypeError):
+                        pass
+
             if _esp_ctx:
                 from datetime import datetime as _dt_ctx
                 data["last_esp_context"] = _esp_ctx
                 data["last_esp_context_ts"] = _dt_ctx.now(timezone.utc).isoformat()
                 save_session(phone, "IDLE", data)
-            resp = result.get("respuesta_directa") or await respuesta_faq(txt)
+            resp = result.get("respuesta_directa") or await respuesta_faq(txt_enriquecido)
             esp_sug = (result.get("especialidad") or "").strip()
             # Si Claude infirió una especialidad, intentamos mostrar el próximo slot
             # inline + botón para agendar directo.
