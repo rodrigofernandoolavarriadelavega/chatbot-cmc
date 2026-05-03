@@ -328,6 +328,24 @@ async def _job_detectar_cancelaciones():
             log.exception("Reagendar auto falló id=%s: %s", cp["id_cita"], e)
 
 
+async def _job_monitor_anomalias():
+    """Cada 15 min: escanea anomalías y manda resumen al WhatsApp del dueño.
+
+    Detectores: postconsulta prematuro, RUT rechazado repetido, cancelar
+    con keywords de pago, fallback loop, menú repetido, leak +56987834148,
+    recordatorio a cita anulada, reenganche caído.
+
+    Anti-spam interno: cada alerta tiene hash y TTL 4h en monitor_alerts_seen.
+    """
+    try:
+        from monitor import enviar_resumen_anomalias
+        n = await enviar_resumen_anomalias(send_whatsapp)
+        if n:
+            log.info("Monitor: %d alertas enviadas al admin", n)
+    except Exception as e:
+        log.exception("Monitor anomalías falló: %s", e)
+
+
 async def _job_abarca_sync():
     """Sync diario de atenciones del Dr. Abarca. Solo trae el día actual (delta).
     Si la tabla está vacía hace seed completo automáticamente."""

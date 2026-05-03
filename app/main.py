@@ -38,6 +38,7 @@ from resilience import is_medilink_down
 from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_recordatorios, _job_recordatorios_2h,
                   _job_postconsulta, _job_detectar_cancelaciones,
+                  _job_monitor_anomalias,
                   _job_reactivacion, _job_abarca_sync, _job_olavarria_sync,
                   _job_bi_sync_diario,
                   _job_adherencia_kine, _job_control_especialidad,
@@ -181,6 +182,15 @@ async def lifespan(app: FastAPI):
         _job_detectar_cancelaciones,
         CronTrigger(minute=15, timezone=_CLT),  # cada hora :15
         id="detectar_cancelaciones",
+        replace_existing=True,
+    )
+    # Monitor de anomalías: cada 15 min escanea bugs sospechosos y manda
+    # resumen al WhatsApp del dueño (ADMIN_ALERT_PHONE). El dueño se entera
+    # antes que el paciente lo viva. Anti-spam interno (4h por hash de alerta).
+    scheduler.add_job(
+        _job_monitor_anomalias,
+        "interval", minutes=15,
+        id="monitor_anomalias",
         replace_existing=True,
     )
     # Sync atenciones Dr. Abarca: cierre del día a las 23:55 CLT
