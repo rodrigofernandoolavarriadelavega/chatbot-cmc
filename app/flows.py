@@ -6382,7 +6382,9 @@ _ESPECIALIDADES_EXPANSION = {"medicina general"}
 _MED_GENERAL_IDS = [73, 1, 13]  # Abarca, Olavarría, Márquez
 _MED_AO_IDS      = [73, 1]      # Primarios: Abarca (08-16) + Olavarría (16-21)
 _MED_OVERFLOW_ID = 13            # Márquez: overflow cuando Abarca+Olavarría no tienen cupo
-_ESP_MED_GENERAL = {"medicina general", "medicina familiar"}
+_ESP_MED_GENERAL = {"medicina general"}  # Abarca, Olavarría, Márquez
+_ESP_MED_FAMILIAR = {"medicina familiar", "médico familiar", "medico familiar"}
+_MED_FAMILIAR_IDS = [13]  # Solo Dr. Márquez atiende Medicina Familiar
 
 # Apellidos de profesionales específicos → key de ESPECIALIDADES_MAP (que resuelve a 1 ID).
 # Usado como override cuando Claude clasifica genéricamente pero el texto crudo
@@ -7346,6 +7348,14 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
                             saludo_prefix: str | None = None) -> str:
     if is_medilink_down():
         return _modo_degradado(phone, "agendar", especialidad or "")
+    # ── BUG-fix 2026-05-03: solo Dr. Márquez atiende Medicina Familiar ──
+    # Antes "medicina familiar" caía en _ESP_MED_GENERAL → ofrecía Abarca/Olavarría
+    # primero. Forzar id_profesional=13 (Márquez) y guardar nota explicativa.
+    if especialidad and especialidad.lower() in _ESP_MED_FAMILIAR:
+        data["esp_pedida_original"] = "Medicina Familiar"
+        data["force_prof_ids"] = [13]
+        data["medfam_solo_marquez"] = True
+        log_event(phone, "medfam_filtra_marquez", {"phone": phone})
     if not especialidad:
         save_session(phone, "WAIT_ESPECIALIDAD", data)
         return f"Claro, te ayudo a agendar 😊\n\n¿Qué especialidad necesitas?\n\n{_ESPECIALIDADES_TEXTO}"
