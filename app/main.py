@@ -2551,12 +2551,13 @@ async def api_atribucion_today():
     else:
         out["funnel"]["conversion_pct"] = 0
 
-    # Meta Ads del día
+    # Meta Ads del día — agregado + por campaña
     import os as _os_atr, urllib.request as _ur_atr, urllib.parse as _up_atr
     token = (_os_atr.getenv("META_ACCESS_TOKEN") or "").strip()
     acct = "act_220608142267129"
     if token:
         try:
+            # Aggregate
             params = {
                 "fields": "spend,impressions,reach,clicks,actions",
                 "time_range": _json_atr.dumps({"since": today, "until": today}),
@@ -2581,8 +2582,79 @@ async def api_atribucion_today():
                             out["meta"]["conversaciones_iniciadas"] = int(float(a.get("value", 0)))
                 else:
                     out["meta"] = {"spend_clp": 0, "impresiones": 0, "reach": 0, "clicks": 0}
+
+            # Per-campaign breakdown
+            params_camp = {
+                "fields": "campaign_id,campaign_name,objective,spend,impressions,reach,clicks,frequency,actions",
+                "level": "campaign",
+                "time_range": _json_atr.dumps({"since": today, "until": today}),
+                "limit": 50,
+                "access_token": token,
+            }
+            url_camp = f"https://graph.facebook.com/v19.0/{acct}/insights?" + _up_atr.urlencode(params_camp)
+            with _ur_atr.urlopen(url_camp, timeout=10) as resp:
+                dc = _json_atr.loads(resp.read())
+                campaigns = []
+                for r in dc.get("data", []):
+                    actions = r.get("actions") or []
+                    convs = sum(int(float(a.get("value", 0))) for a in actions
+                                if a.get("action_type") in ("onsite_conversion.messaging_conversation_started_7d",
+                                                              "onsite_conversion.total_messaging_connection"))
+                    link_clicks = next((int(float(a.get("value", 0))) for a in actions if a.get("action_type") == "link_click"), 0)
+                    spend = float(r.get("spend", 0))
+                    impressions = int(r.get("impressions", 0))
+                    reach = int(r.get("reach", 0))
+                    clicks = int(r.get("clicks", 0))
+                    campaigns.append({
+                        "id": r.get("campaign_id"),
+                        "name": r.get("campaign_name"),
+                        "objective": r.get("objective"),
+                        "spend_clp": spend,
+                        "impressions": impressions,
+                        "reach": reach,
+                        "clicks": clicks,
+                        "link_clicks": link_clicks,
+                        "frequency": float(r.get("frequency", 0)),
+                        "conversaciones": convs,
+                        "ctr_pct": round(100.0 * clicks / impressions, 2) if impressions else 0,
+                        "cpm_clp": round(spend * 1000 / impressions, 0) if impressions else 0,
+                        "cpc_clp": round(spend / clicks, 0) if clicks else 0,
+                        "costo_x_conversacion_clp": round(spend / convs, 0) if convs else 0,
+                    })
+                campaigns.sort(key=lambda x: -x["spend_clp"])
+                out["meta"]["campaigns"] = campaigns
         except Exception as e:
-            out["meta"] = {"error": str(e)[:120]}
+            out["meta"]["error"] = str(e)[:200]
+
+    # Google Ads — placeholder hasta que la cuenta esté creada
+    # Cuando esté: pull via Google Ads API con search_term_view + campaign report
+    out["google_ads"] = {"status": "no_configurado", "campaigns": []}
+
+    # Comparación cross-channel
+    meta_spend = (out.get("meta", {}) or {}).get("spend_clp", 0)
+    meta_convs = (out.get("meta", {}) or {}).get("conversaciones_iniciadas", 0)
+    google_spend = sum(c.get("spend_clp", 0) for c in (out.get("google_ads", {}).get("campaigns") or []))
+    google_convs = sum(c.get("conversaciones", 0) for c in (out.get("google_ads", {}).get("campaigns") or []))
+    organic_phones = out["bot"].get("phones_nuevos", 0) - meta_convs - google_convs
+    out["comparacion"] = {
+        "meta": {
+            "spend_clp": meta_spend,
+            "conversaciones": meta_convs,
+            "costo_x_conv_clp": round(meta_spend / meta_convs, 0) if meta_convs else None,
+        },
+        "google_ads": {
+            "spend_clp": google_spend,
+            "conversaciones": google_convs,
+            "costo_x_conv_clp": round(google_spend / google_convs, 0) if google_convs else None,
+        },
+        "organico": {
+            "spend_clp": 0,
+            "phones_atribuibles": max(0, organic_phones),
+        },
+        "total_spend_clp": meta_spend + google_spend,
+        "total_phones_nuevos": out["bot"].get("phones_nuevos", 0),
+        "citas_creadas_total": out["bot"].get("citas_creadas", 0),
+    }
 
     return out
 
