@@ -173,12 +173,17 @@ def _conn():
         )
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_fidel_phone ON fidelizacion_msgs(phone, tipo)")
-    # BUG-01: UNIQUE constraint para evitar duplicados si save se llama dos veces.
-    # Usa CREATE UNIQUE INDEX IF NOT EXISTS para no romper bases existentes.
-    conn.execute("""
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_fidel_unique
-        ON fidelizacion_msgs(phone, tipo, cita_id)
-    """)
+    # BUG-01: intentar crear UNIQUE INDEX para evitar duplicados.
+    # Wrapped en try/except: si la DB existente tiene duplicados previos,
+    # la creacion falla silenciosamente (no bloquea el arranque).
+    # INSERT OR IGNORE sigue funcionando una vez que no haya duplicados.
+    try:
+        conn.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_fidel_unique
+            ON fidelizacion_msgs(phone, tipo, cita_id)
+        """)
+    except Exception:
+        pass  # DB existente con duplicados previos — ignorar
     conn.execute("""
         CREATE TABLE IF NOT EXISTS citas_cache (
             id_prof         INTEGER,
