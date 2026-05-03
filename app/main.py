@@ -450,6 +450,7 @@ _MEULEN_DASHBOARD_HTML = (_TEMPLATE_DIR / "meulen_dashboard.html").read_text(enc
 _MEULEN_KPIS_HTML = (_TEMPLATE_DIR / "meulen_kpis.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "meulen_kpis.html").exists() else ""
 _MENU_HTML = (_TEMPLATE_DIR / "menu.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "menu.html").exists() else ""
 _CHEQUEOS_HTML = (_TEMPLATE_DIR / "chequeos.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "chequeos.html").exists() else ""
+_EMPRESAS_HTML = (_TEMPLATE_DIR / "empresas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "empresas.html").exists() else ""
 _PROYECTOS2026_HTML = (_TEMPLATE_DIR / "proyectos2026.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "proyectos2026.html").exists() else ""
 _LANDING_HTML = (_TEMPLATE_DIR / "landing.html").read_text(encoding="utf-8")
 _SITIO_V3_HTML = (_TEMPLATE_DIR / "sitio-v3.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio-v3.html").exists() else ""
@@ -1552,6 +1553,15 @@ def menu_page():
 def chequeos_page():
     """Landing pública de paquetes preventivos: Mujer 30+, Hombre 40+, Escolar, Deportivo."""
     return _CHEQUEOS_HTML
+
+
+@app.get("/empresas", response_class=HTMLResponse)
+@app.get("/empresa", response_class=HTMLResponse)
+@app.get("/medicina-laboral", response_class=HTMLResponse)
+@app.get("/convenio-empresas", response_class=HTMLResponse)
+def empresas_page():
+    """Landing convenios medicina laboral + tarifario imprimible (impresión print-only)."""
+    return _EMPRESAS_HTML
 
 
 def _seo_api_auth(token: str, cmc_session: str | None) -> None:

@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0F3F68">
+<title>Medicina Laboral para Empresas · Centro Médico Carampangue</title>
+<meta name="description" content="Convenios de medicina laboral en provincia de Arauco. Pre-ocupacionales, ocupacionales, audiometrías, exámenes de altura física, conductor profesional y embarque pesca. Operativos en terreno y facturación mensual.">
+<meta property="og:title" content="Medicina Laboral · Centro Médico Carampangue">
+<meta property="og:description" content="Convenios de medicina laboral con tarifas preferenciales para empresas de la provincia de Arauco.">
+<link rel="icon" type="image/png" href="https://centromedicocarampangue.cl/wp-content/uploads/2025/08/cropped-logo-carampangue.png">
+<link rel="canonical" href="https://centromedicocarampangue.cl/empresas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cmc-aqua:#4FBECE; --cmc-aqua-soft:#e5f5f8; --cmc-aqua-dark:#3ba9ba;
+  --cmc-blue:#1172AB; --cmc-blue-soft:#e3eff7;
+  --cmc-navy:#0F3F68; --cmc-navy-soft:#d7e0ea;
+  --bg:#f3f6f9; --panel:#fff;
+  --border:#e3ebf1;
+  --text:#0F3F68; --text-mute:#546776; --text-dim:#8696a0;
+  --green:#25d366; --green-dark:#128c7e;
+  --shadow-sm:0 1px 3px rgba(15,63,104,.08);
+  --shadow-md:0 4px 12px rgba(15,63,104,.08);
+  --shadow-lg:0 10px 30px rgba(15,63,104,.10);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{font-family:"Montserrat",-apple-system,sans-serif;color:var(--text);background:var(--bg);line-height:1.5;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+.container{max-width:1180px;margin:0 auto;padding:0 24px}
+
+header{background:#fff;border-bottom:1px solid var(--border);padding:14px 0;position:sticky;top:0;z-index:50;box-shadow:var(--shadow-sm)}
+header .container{display:flex;align-items:center;justify-content:space-between}
+.logo{display:flex;align-items:center;gap:12px}
+.logo img{width:40px;height:40px;border-radius:8px}
+.logo .name{font-weight:700;font-size:14px;color:var(--cmc-navy)}
+.logo .sub{font-size:11px;color:var(--text-mute)}
+.btn-print{background:var(--cmc-navy);color:#fff;padding:10px 18px;border-radius:24px;font-weight:600;font-size:13px;border:none;cursor:pointer;transition:background .15s}
+.btn-print:hover{background:var(--cmc-blue)}
+.btn-cta{background:var(--green);color:#fff;padding:10px 18px;border-radius:24px;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:8px}
+.btn-cta:hover{background:var(--green-dark)}
+
+/* HERO */
+.hero{background:linear-gradient(135deg,var(--cmc-navy) 0%,var(--cmc-blue) 100%);color:#fff;padding:80px 0;position:relative;overflow:hidden}
+.hero h1{font-size:clamp(28px,5vw,46px);font-weight:800;letter-spacing:-1px;line-height:1.15;margin-bottom:18px;max-width:880px}
+.hero h1 em{font-style:normal;color:var(--cmc-aqua)}
+.hero p.lead{font-size:clamp(15px,2vw,18px);max-width:720px;color:rgba(255,255,255,.9);margin-bottom:28px}
+.hero .badges{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:32px}
+.hero .badge{background:rgba(255,255,255,.1);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.18);padding:10px 16px;border-radius:24px;font-size:12px;font-weight:600}
+.hero-actions{display:flex;gap:12px;flex-wrap:wrap}
+
+/* SECTION */
+section{padding:64px 0}
+section h2{font-size:clamp(22px,3.5vw,32px);font-weight:800;color:var(--cmc-navy);margin-bottom:14px;letter-spacing:-.5px}
+section p.subtitle{font-size:15px;color:var(--text-mute);max-width:680px;margin-bottom:36px}
+
+/* WHY GRID */
+.why-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px}
+.why-card{background:#fff;border-radius:14px;padding:24px 22px;box-shadow:var(--shadow-sm);border:1px solid var(--border);transition:transform .2s, box-shadow .2s}
+.why-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-md)}
+.why-card .ico{width:44px;height:44px;border-radius:10px;background:var(--cmc-aqua-soft);color:var(--cmc-aqua-dark);display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:14px;font-weight:700}
+.why-card h4{font-size:15px;font-weight:700;color:var(--cmc-navy);margin-bottom:6px}
+.why-card p{font-size:13px;color:var(--text-mute)}
+
+/* TABLE TARIFARIO */
+.tarifario-block{background:#fff;border-radius:18px;padding:36px;box-shadow:var(--shadow-md);border:1px solid var(--border)}
+.tarifario-block h3{font-size:18px;font-weight:700;color:var(--cmc-navy);margin-bottom:6px}
+.tarifario-block .desc{font-size:13px;color:var(--text-mute);margin-bottom:24px}
+table.tarifario{width:100%;border-collapse:collapse;font-size:13.5px}
+table.tarifario thead th{background:var(--cmc-navy-soft);color:var(--cmc-navy);font-weight:700;text-align:left;padding:12px 14px;font-size:12px;text-transform:uppercase;letter-spacing:.4px}
+table.tarifario thead th.right{text-align:right}
+table.tarifario tbody tr{border-bottom:1px solid var(--border)}
+table.tarifario tbody tr:last-child{border:none}
+table.tarifario tbody td{padding:14px;color:var(--text)}
+table.tarifario tbody td.right{text-align:right;font-weight:600;color:var(--cmc-navy);white-space:nowrap}
+table.tarifario tbody td .desc-svc{font-size:11px;color:var(--text-mute);font-weight:400;margin-top:3px;display:block}
+.tarifario-block .note{font-size:11.5px;color:var(--text-dim);margin-top:18px;padding:12px;background:#fffaf0;border-left:3px solid #f5a623;border-radius:6px;line-height:1.5}
+
+/* INDUSTRIES */
+.ind-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}
+.ind-card{background:#fff;border-radius:14px;padding:28px 24px;box-shadow:var(--shadow-sm);border:1px solid var(--border);position:relative;overflow:hidden}
+.ind-card::before{content:"";position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--cmc-aqua),var(--cmc-blue))}
+.ind-card .label{font-size:10px;font-weight:700;color:var(--cmc-aqua-dark);background:var(--cmc-aqua-soft);padding:4px 10px;border-radius:8px;text-transform:uppercase;letter-spacing:.5px;display:inline-block;margin-bottom:14px}
+.ind-card h4{font-size:18px;font-weight:700;color:var(--cmc-navy);margin-bottom:6px}
+.ind-card .summary{font-size:12.5px;color:var(--text-mute);margin-bottom:16px;min-height:36px}
+.ind-card .price-list{font-size:13px}
+.ind-card .price-list div{padding:8px 0;border-bottom:1px dashed var(--border);display:flex;justify-content:space-between}
+.ind-card .price-list div:last-child{border:none}
+.ind-card .price-list strong{color:var(--cmc-navy)}
+
+/* DISCOUNTS */
+.discount-row{background:#f0fdf4;border:1px solid #86efac;border-radius:14px;padding:24px;display:flex;gap:16px;align-items:center;margin-top:24px}
+.discount-row .ic{font-size:28px}
+.discount-row strong{color:var(--green-dark)}
+
+/* VOLUME */
+.volume-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.vol-card{background:linear-gradient(135deg,var(--cmc-navy-soft) 0%,#fff 100%);border:1px solid var(--border);border-radius:14px;padding:28px 22px;text-align:center}
+.vol-card .vol-num{font-size:34px;font-weight:800;color:var(--cmc-blue);line-height:1;margin-bottom:8px}
+.vol-card .vol-label{font-size:12px;font-weight:600;color:var(--cmc-navy);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.vol-card .vol-desc{font-size:12px;color:var(--text-mute)}
+
+/* CTA */
+.cta-final{background:linear-gradient(135deg,var(--cmc-aqua) 0%,var(--cmc-blue) 100%);color:#fff;text-align:center;padding:72px 24px;border-radius:24px;margin:40px 0}
+.cta-final h3{font-size:clamp(22px,3.5vw,30px);font-weight:800;margin-bottom:14px;letter-spacing:-.4px}
+.cta-final p{max-width:640px;margin:0 auto 28px;font-size:15px;color:rgba(255,255,255,.9)}
+.cta-final .actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.cta-final a{padding:14px 26px;border-radius:30px;font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:8px}
+.cta-final a.primary{background:#fff;color:var(--cmc-navy)}
+.cta-final a.primary:hover{background:var(--cmc-aqua-soft)}
+.cta-final a.secondary{background:rgba(0,0,0,.18);color:#fff;border:1px solid rgba(255,255,255,.3)}
+
+/* FOOTER */
+footer{background:var(--cmc-navy);color:rgba(255,255,255,.78);padding:36px 0 22px;font-size:13px}
+footer .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:30px;margin-bottom:22px}
+footer h5{color:#fff;font-size:13px;font-weight:700;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
+footer .legal{padding-top:20px;border-top:1px solid rgba(255,255,255,.1);font-size:11px;color:rgba(255,255,255,.5)}
+
+/* PRINT — tarifario imprimible */
+.print-only{display:none}
+@media print{
+  header, .hero, .why, .industries, footer, .cta-final, .btn-print, .nav-print-only{display:none !important}
+  body{background:#fff;color:#000;font-size:11pt}
+  .print-only{display:block}
+  .print-page{padding:0;page-break-after:always}
+  .print-header{display:flex;align-items:center;gap:18px;border-bottom:2px solid var(--cmc-navy);padding-bottom:14px;margin-bottom:18px}
+  .print-header img{width:50px;height:50px}
+  .print-header h2{font-size:18pt;color:var(--cmc-navy);margin:0}
+  .print-header .sub{font-size:9pt;color:#666}
+  .tarifario-block{box-shadow:none;border:none;padding:0}
+  table.tarifario thead th{background:var(--cmc-navy);color:#fff;font-size:9pt}
+  table.tarifario tbody td{font-size:10pt;padding:8px}
+  .print-footer{margin-top:24px;padding-top:14px;border-top:1px solid var(--border);font-size:9pt;color:#666;text-align:center}
+}
+
+@media (max-width:640px){
+  .volume-grid{grid-template-columns:1fr}
+  .hero{padding:48px 0 64px}
+  section{padding:48px 0}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <a href="/" class="logo">
+      <img src="https://centromedicocarampangue.cl/wp-content/uploads/2025/08/cropped-logo-carampangue.png" alt="CMC">
+      <div>
+        <div class="name">Centro Médico Carampangue</div>
+        <div class="sub">Convenios de Medicina Laboral · Provincia de Arauco</div>
+      </div>
+    </a>
+    <div style="display:flex;gap:10px">
+      <button class="btn-print" onclick="window.print()">Imprimir tarifario</button>
+      <a class="btn-cta" href="https://wa.me/56966610737?text=Hola%2C%20quiero%20info%20de%20convenio%20empresas">WhatsApp</a>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="container">
+    <h1>Medicina laboral <em>cerca</em> de tu operación.</h1>
+    <p class="lead">Pre-ocupacionales, ocupacionales y exámenes específicos para forestales, pesqueras, transporte y construcción de la provincia de Arauco. Operativos en terreno, facturación mensual y tarifas convenio.</p>
+    <div class="badges">
+      <span class="badge">A 30 min de Arauco</span>
+      <span class="badge">A 25 min de Curanilahue</span>
+      <span class="badge">Operativos en terreno desde 30 trabajadores</span>
+    </div>
+    <div class="hero-actions">
+      <a class="btn-cta" href="https://wa.me/56966610737?text=Hola%2C%20quiero%20info%20de%20convenio%20empresas">Coordinar reunión</a>
+      <a class="btn-cta" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3)" href="mailto:contacto@centromedicocarampangue.cl?subject=Convenio Medicina Laboral">Enviar correo</a>
+    </div>
+  </div>
+</section>
+
+<section class="why">
+  <div class="container">
+    <h2>Por qué tu empresa elige CMC</h2>
+    <p class="subtitle">Estamos en el centro de la provincia. Ninguno de tus trabajadores tiene que viajar a Concepción.</p>
+    <div class="why-grid">
+      <div class="why-card">
+        <div class="ico">A</div>
+        <h4>Atención agendada</h4>
+        <p>Sin esperas. Tus trabajadores pasan en orden, en horario coordinado con tu operación.</p>
+      </div>
+      <div class="why-card">
+        <div class="ico">T</div>
+        <h4>Operativos en terreno</h4>
+        <p>Si son más de 30 trabajadores, el equipo médico va a tu empresa. Ahorra día perdido.</p>
+      </div>
+      <div class="why-card">
+        <div class="ico">F</div>
+        <h4>Facturación mensual</h4>
+        <p>Una factura al mes con todo el detalle. Sin 200 boletas individuales.</p>
+      </div>
+      <div class="why-card">
+        <div class="ico">I</div>
+        <h4>Informes en 24-48 h</h4>
+        <p>Entrega digital y firmada. Listos para tu archivo de prevención de riesgos.</p>
+      </div>
+      <div class="why-card">
+        <div class="ico">C</div>
+        <h4>Coordinador único</h4>
+        <p>Un contacto del CMC dedicado a tu empresa. Resuelve dudas y agenda en el día.</p>
+      </div>
+      <div class="why-card">
+        <div class="ico">+</div>
+        <h4>Beneficios para trabajadores</h4>
+        <p>Tus trabajadores y sus familias acceden a 19 especialidades médicas y dentales con descuento.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="background:#fff">
+  <div class="container">
+    <h2>Tarifario convenio</h2>
+    <p class="subtitle">Tarifas preferenciales aplicadas desde el primer trabajador. Cobertura completa con descuentos por volumen.</p>
+
+    <div class="tarifario-block">
+      <h3>Servicios individuales</h3>
+      <p class="desc">Listado de servicios disponibles en convenio. Las tarifas son sugeridas; los acuerdos se cierran caso a caso.</p>
+
+      <table class="tarifario">
+        <thead>
+          <tr>
+            <th>Servicio</th>
+            <th class="right">Tarifa convenio (CLP)</th>
+            <th class="right">Retail referencial</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Pre-ocupacional básico</strong><span class="desc-svc">Anamnesis ocupacional + examen físico + presión + IMC + informe</span></td>
+            <td class="right">$18.000–$22.000</td>
+            <td class="right">$35.000</td>
+          </tr>
+          <tr>
+            <td><strong>Ocupacional periódico</strong><span class="desc-svc">Pre-ocupacional + control patología crónica + ECG si &gt;40 años</span></td>
+            <td class="right">$22.000–$25.000</td>
+            <td class="right">$45.000</td>
+          </tr>
+          <tr>
+            <td><strong>Ocupacional con ECG</strong><span class="desc-svc">Conductores, alturas físicas — MG + ECG + informe</span></td>
+            <td class="right">$35.000–$40.000</td>
+            <td class="right">$55.000</td>
+          </tr>
+          <tr>
+            <td><strong>Audiometría</strong><span class="desc-svc">Obligatoria en industrias con exposición a ruido</span></td>
+            <td class="right">$18.000–$22.000</td>
+            <td class="right">$25.000</td>
+          </tr>
+          <tr>
+            <td><strong>Psicosensométrico (conductor profesional)</strong><span class="desc-svc">Visión + audición + reacción + estabilidad — disponibilidad por confirmar</span></td>
+            <td class="right">$40.000–$45.000</td>
+            <td class="right">$60.000+</td>
+          </tr>
+          <tr>
+            <td><strong>Examen de altura física</strong><span class="desc-svc">MG + ECG + audiometría + control PA + glicemia capilar</span></td>
+            <td class="right">$50.000–$60.000</td>
+            <td class="right">$80.000</td>
+          </tr>
+          <tr>
+            <td><strong>Embarque pesca / Marina mercante</strong><span class="desc-svc">MG + ECG + audiometría + visión + carnet sanitario</span></td>
+            <td class="right">$55.000–$65.000</td>
+            <td class="right">$85.000</td>
+          </tr>
+          <tr>
+            <td><strong>Glicemia capilar</strong></td>
+            <td class="right">$5.000</td>
+            <td class="right">$8.000</td>
+          </tr>
+          <tr>
+            <td><strong>Alcoholemia / drogas (cuando lab esté operativo)</strong></td>
+            <td class="right">$15.000–$25.000</td>
+            <td class="right">$35.000</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="note"><strong>Nota:</strong> Tarifario referencial. Acuerdos finales se firman caso a caso considerando volumen mensual, modalidad (en CMC o en terreno) y vigencia del convenio. La firma de convenio incluye coordinador dedicado y facturación centralizada.</div>
+    </div>
+
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <h2>Paquetes por industria</h2>
+    <p class="subtitle">Combos optimizados para los exámenes obligatorios de cada rubro.</p>
+
+    <div class="ind-grid">
+      <div class="ind-card">
+        <span class="label">Forestal</span>
+        <h4>Forestal Plus</h4>
+        <p class="summary">Para Arauco SA, CMPC/Mininco y contratistas forestales.</p>
+        <div class="price-list">
+          <div><span>Pre-ocupacional + audiometría + altura física</span><strong>$58.000</strong></div>
+          <div><span>Periódico anual con ECG (&gt;40)</span><strong>$42.000</strong></div>
+        </div>
+      </div>
+
+      <div class="ind-card">
+        <span class="label">Pesca</span>
+        <h4>Pesca Mar</h4>
+        <p class="summary">Camanchaca, Blumar, Orizon y contratistas pesqueros.</p>
+        <div class="price-list">
+          <div><span>Pre-embarque completo</span><strong>$65.000</strong></div>
+          <div><span>Periódico (MG + audiometría + carnet)</span><strong>$35.000</strong></div>
+        </div>
+      </div>
+
+      <div class="ind-card">
+        <span class="label">Transporte</span>
+        <h4>Conductor Profesional</h4>
+        <p class="summary">Empresas con flota y choferes profesionales.</p>
+        <div class="price-list">
+          <div><span>Psicosensométrico completo</span><strong>$45.000</strong></div>
+          <div><span>Renovación licencia profesional</span><strong>$35.000</strong></div>
+        </div>
+      </div>
+
+      <div class="ind-card">
+        <span class="label">Construcción</span>
+        <h4>Construcción Segura</h4>
+        <p class="summary">Empresas constructoras y obras de la zona.</p>
+        <div class="price-list">
+          <div><span>Pre-ocupacional + altura física</span><strong>$58.000</strong></div>
+          <div><span>Anual con ECG (&gt;40)</span><strong>$42.000</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="discount-row">
+      <div class="ic" style="color:var(--green-dark);font-weight:800">%</div>
+      <div>Tus trabajadores y sus familias acceden a <strong>19 especialidades médicas y dentales con 10% de descuento</strong> sobre tarifa particular del CMC.</div>
+    </div>
+  </div>
+</section>
+
+<section style="background:#fff">
+  <div class="container">
+    <h2>Descuentos por volumen</h2>
+    <p class="subtitle">Tarifa convenio base aplica desde el primer trabajador. A mayor volumen, mejor tarifa.</p>
+    <div class="volume-grid">
+      <div class="vol-card">
+        <div class="vol-num">10–49</div>
+        <div class="vol-label">exámenes / mes</div>
+        <div class="vol-desc">Tarifa convenio base</div>
+      </div>
+      <div class="vol-card">
+        <div class="vol-num">−5%</div>
+        <div class="vol-label">50–99 / mes</div>
+        <div class="vol-desc">Descuento adicional sobre tarifa base</div>
+      </div>
+      <div class="vol-card">
+        <div class="vol-num">−10%</div>
+        <div class="vol-label">100+ / mes</div>
+        <div class="vol-desc">Descuento adicional sobre tarifa base</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="cta-final">
+      <h3>¿Coordinamos una reunión de 30 minutos?</h3>
+      <p>Te explicamos el modelo, te entregamos tarifario detallado para tu industria y revisamos cuántos exámenes mensuales necesitarías. Sin compromiso.</p>
+      <div class="actions">
+        <a class="primary" href="https://wa.me/56966610737?text=Hola%2C%20me%20interesa%20convenio%20empresas">WhatsApp +56 9 6661 0737</a>
+        <a class="secondary" href="mailto:contacto@centromedicocarampangue.cl?subject=Convenio Medicina Laboral">Enviar correo</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="grid">
+      <div>
+        <h5>Centro Médico Carampangue</h5>
+        <p>Salud cercana en provincia de Arauco</p>
+      </div>
+      <div>
+        <h5>Contacto comercial</h5>
+        <a href="https://wa.me/56966610737">WhatsApp +56 9 6661 0737</a>
+        <a href="tel:+56442965226">Fono (44) 2 96 5226</a>
+      </div>
+      <div>
+        <h5>Horario</h5>
+        <p>Lunes a Viernes 08:00–20:00<br>Sábado 09:00–13:00</p>
+      </div>
+      <div>
+        <h5>Sucursales</h5>
+        <p>Carampangue · Olavarría<br>Provincia de Arauco</p>
+      </div>
+    </div>
+    <div class="legal">© 2026 Centro Médico Carampangue. Todos los derechos reservados.</div>
+  </div>
+</footer>
+
+<!-- TARIFARIO IMPRIMIBLE (solo se ve al imprimir) -->
+<div class="print-only">
+  <div class="print-page">
+    <div class="print-header">
+      <img src="https://centromedicocarampangue.cl/wp-content/uploads/2025/08/cropped-logo-carampangue.png" alt="CMC">
+      <div>
+        <h2>Centro Médico Carampangue</h2>
+        <div class="sub">Tarifario Convenio Medicina Laboral · Provincia de Arauco · 2026</div>
+      </div>
+    </div>
+
+    <h3 style="color:var(--cmc-navy);font-size:14pt;margin-bottom:8px">Servicios individuales</h3>
+    <table class="tarifario">
+      <thead>
+        <tr>
+          <th>Servicio</th>
+          <th class="right">Tarifa convenio</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Pre-ocupacional básico</td><td class="right">$18.000–$22.000</td></tr>
+        <tr><td>Ocupacional periódico</td><td class="right">$22.000–$25.000</td></tr>
+        <tr><td>Ocupacional con ECG</td><td class="right">$35.000–$40.000</td></tr>
+        <tr><td>Audiometría</td><td class="right">$18.000–$22.000</td></tr>
+        <tr><td>Psicosensométrico (conductor)</td><td class="right">$40.000–$45.000</td></tr>
+        <tr><td>Examen de altura física</td><td class="right">$50.000–$60.000</td></tr>
+        <tr><td>Embarque pesca</td><td class="right">$55.000–$65.000</td></tr>
+        <tr><td>Glicemia capilar</td><td class="right">$5.000</td></tr>
+        <tr><td>Alcoholemia / drogas</td><td class="right">$15.000–$25.000</td></tr>
+      </tbody>
+    </table>
+
+    <h3 style="color:var(--cmc-navy);font-size:14pt;margin:24px 0 8px">Paquetes por industria</h3>
+    <table class="tarifario">
+      <thead>
+        <tr>
+          <th>Industria · Paquete</th>
+          <th class="right">Tarifa</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Forestal Plus — pre-ocupacional + audio + altura</td><td class="right">$58.000</td></tr>
+        <tr><td>Forestal — periódico anual con ECG</td><td class="right">$42.000</td></tr>
+        <tr><td>Pesca Mar — pre-embarque completo</td><td class="right">$65.000</td></tr>
+        <tr><td>Pesca — periódico anual</td><td class="right">$35.000</td></tr>
+        <tr><td>Conductor Profesional — psicosensométrico</td><td class="right">$45.000</td></tr>
+        <tr><td>Conductor — renovación licencia</td><td class="right">$35.000</td></tr>
+        <tr><td>Construcción — pre-ocupacional + altura</td><td class="right">$58.000</td></tr>
+        <tr><td>Construcción — anual con ECG</td><td class="right">$42.000</td></tr>
+      </tbody>
+    </table>
+
+    <h3 style="color:var(--cmc-navy);font-size:14pt;margin:24px 0 8px">Descuentos por volumen</h3>
+    <table class="tarifario">
+      <thead>
+        <tr>
+          <th>Volumen mensual</th>
+          <th class="right">Descuento</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>10–49 exámenes / mes</td><td class="right">Tarifa convenio base</td></tr>
+        <tr><td>50–99 exámenes / mes</td><td class="right">−5% adicional</td></tr>
+        <tr><td>100+ exámenes / mes</td><td class="right">−10% adicional</td></tr>
+      </tbody>
+    </table>
+
+    <div class="print-footer">
+      <strong>Centro Médico Carampangue</strong> · Carampangue, Provincia de Arauco · WhatsApp +56 9 6661 0737 · Fono (44) 2 96 5226<br>
+      Tarifario referencial. Acuerdos finales caso a caso. Contacto comercial: contacto@centromedicocarampangue.cl
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
