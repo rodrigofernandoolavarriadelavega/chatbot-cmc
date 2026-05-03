@@ -1538,6 +1538,7 @@ def _seo_api_auth(token: str, cmc_session: str | None) -> None:
     raise HTTPException(401, "unauthorized")
 
 
+@app.get("/seo", response_class=HTMLResponse)
 @app.get("/seo/dashboard", response_class=HTMLResponse)
 @app.get("/seo-dashboard", response_class=HTMLResponse)
 def seo_dashboard_page(request: Request, token: str = "",
@@ -1581,6 +1582,7 @@ def seo_dashboard_page(request: Request, token: str = "",
     return response
 
 
+@app.get("/crecimiento", response_class=HTMLResponse)
 @app.get("/crecimientopersonal", response_class=HTMLResponse)
 @app.get("/crecimiento-personal", response_class=HTMLResponse)
 def crecimiento_personal_page():
@@ -1591,6 +1593,7 @@ def crecimiento_personal_page():
     return _CRECIMIENTO_PERSONAL_HTML
 
 
+@app.get("/meta", response_class=HTMLResponse)
 @app.get("/meta/dashboard", response_class=HTMLResponse)
 @app.get("/meta-dashboard", response_class=HTMLResponse)
 def meta_dashboard_page():
