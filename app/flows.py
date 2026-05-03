@@ -25,7 +25,8 @@ from session import (save_session, reset_session, get_session, save_tag, delete_
                      save_demanda_no_disponible, get_waitlist_by_especialidad,
                      mark_waitlist_notified, get_ultima_cita_paciente,
                      has_privacy_consent, save_privacy_consent, revoke_privacy_consent,
-                     get_citas_bot_futuras)
+                     get_citas_bot_futuras,
+                     adquirir_slot_lock, liberar_slot_lock)
 from resilience import is_medilink_down
 from triage_ges import triage_sintomas, normalizar_texto_paciente
 from pni import get_vaccine_reminder
@@ -5066,11 +5067,24 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                                 [{"id": "si", "title": "✅ Sí, agendar igual"},
                                  {"id": "no", "title": "❌ Cancelar"}]
                             )
+            # ── Lock optimista anti-race (TTL 30s) ──
+            # Evita que dos pacientes confirmen el mismo slot en paralelo.
+            # Si otro lo tiene → fallthrough a la lógica de "slot ocupado".
+            _lock_ok = adquirir_slot_lock(
+                slot["id_profesional"], slot["fecha"],
+                slot["hora_inicio"], phone, ttl_segundos=30,
+            )
             # ── Doble-check: verificar que el slot sigue libre ──
-            slot_libre = await verificar_slot_disponible(
+            slot_libre = (await verificar_slot_disponible(
                 slot["id_profesional"], slot["fecha"],
                 slot["hora_inicio"], slot["hora_fin"],
-            )
+            )) if _lock_ok else False
+            if not _lock_ok:
+                log.warning("Slot lock ocupado por otro paciente: %s %s prof %s",
+                            slot["fecha"], slot["hora_inicio"], slot["id_profesional"])
+                log_event(phone, "slot_lock_perdido", {
+                    "fecha": slot["fecha"], "hora": slot["hora_inicio"],
+                })
             if not slot_libre:
                 log.warning("Slot %s %s ya no está disponible para prof %s",
                             slot["fecha"], slot["hora_inicio"], slot["id_profesional"])
@@ -5105,6 +5119,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 hora_fin=slot["hora_fin"],
                 id_recurso=slot.get("id_recurso", 1),
             )
+            # Liberar lock tentativo — éxito o fallo, ya no lo necesitamos.
+            # Si la cita se creó, Medilink ya tiene el slot ocupado real.
+            # Si falló, otro paciente puede intentar este slot.
+            liberar_slot_lock(slot["id_profesional"], slot["fecha"], slot["hora_inicio"])
             # Si estamos en reagendar, cancelamos la anterior SOLO si la nueva
             # se creó bien. Si falla la nueva, la vieja queda intacta.
             cancel_ok = False

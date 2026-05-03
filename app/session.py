@@ -825,6 +825,74 @@ def save_cita_bot(phone: str, id_cita: str, especialidad: str,
         conn.commit()
 
 
+# ── Lock optimista de slot tentativo (anti-race condition) ─────────────────
+# Caso real: 5 instancias de "slot ya ocupado al confirmar" en 7 días auditoría.
+# Dos pacientes pasan verificar_slot_disponible al mismo tiempo y ambos llegan
+# a crear_cita. Medilink rechaza al segundo, pero el bot ya dijo "agendado".
+# Lock optimista de 30s elimina la race entre verificar y crear.
+
+def _ensure_slot_locks_table():
+    with _conn() as c:
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS slot_locks_tentativos (
+                id_profesional INTEGER NOT NULL,
+                fecha          TEXT    NOT NULL,
+                hora_inicio    TEXT    NOT NULL,
+                phone          TEXT    NOT NULL,
+                ts             TEXT    DEFAULT (datetime('now')),
+                PRIMARY KEY (id_profesional, fecha, hora_inicio)
+            )
+        """)
+        c.execute("""
+            CREATE INDEX IF NOT EXISTS idx_slot_locks_ts
+            ON slot_locks_tentativos(ts)
+        """)
+        c.commit()
+
+
+def adquirir_slot_lock(id_profesional: int, fecha: str, hora_inicio: str,
+                       phone: str, ttl_segundos: int = 30) -> bool:
+    """Intenta adquirir lock tentativo del slot por TTL segundos.
+    Retorna True si lo adquirió (puede crear_cita), False si otro paciente
+    lo tiene tomado (debe ofrecer otro horario).
+
+    Limpia automáticamente locks viejos (> TTL) antes de intentar.
+    """
+    _ensure_slot_locks_table()
+    with _conn() as c:
+        c.execute(
+            "DELETE FROM slot_locks_tentativos WHERE ts < datetime('now', ?)",
+            (f"-{int(ttl_segundos)} seconds",)
+        )
+        cur = c.execute("""
+            INSERT OR IGNORE INTO slot_locks_tentativos
+            (id_profesional, fecha, hora_inicio, phone)
+            VALUES (?, ?, ?, ?)
+        """, (id_profesional, fecha, hora_inicio[:8], phone))
+        c.commit()
+        if cur.rowcount > 0:
+            return True
+        # Verificar si el lock existente es del mismo phone (re-confirmación)
+        row = c.execute("""
+            SELECT phone FROM slot_locks_tentativos
+            WHERE id_profesional=? AND fecha=? AND hora_inicio=?
+        """, (id_profesional, fecha, hora_inicio[:8])).fetchone()
+        return bool(row and row["phone"] == phone)
+
+
+def liberar_slot_lock(id_profesional: int, fecha: str, hora_inicio: str):
+    """Libera el lock tras crear_cita (éxito o fallo). Idempotente."""
+    try:
+        with _conn() as c:
+            c.execute("""
+                DELETE FROM slot_locks_tentativos
+                WHERE id_profesional=? AND fecha=? AND hora_inicio=?
+            """, (id_profesional, fecha, hora_inicio[:8]))
+            c.commit()
+    except Exception as e:
+        log.warning("liberar_slot_lock falló: %s", e)
+
+
 def get_citas_bot_para_validar(dias_adelante: int = 14) -> list[dict]:
     """Citas futuras (hoy hasta hoy+N días) sin cancel_detected_at.
 

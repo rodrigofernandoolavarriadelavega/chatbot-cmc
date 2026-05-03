@@ -445,6 +445,51 @@ class TestMedicinaFamiliarNota(unittest.TestCase):
                       "flows.py debe mencionar medicina familiar")
 
 
+class TestSlotLockOptimista(unittest.TestCase):
+    """Lock optimista anti-race condition (5 casos/7d en auditoría)."""
+
+    def setUp(self):
+        # Usar DB temporal in-memory para no contaminar producción
+        import os
+        os.environ["DATABASE_PATH"] = ":memory:"
+        # Forzar recarga del módulo session si ya estaba cacheado
+        import importlib
+        import session
+        importlib.reload(session)
+        self.session = session
+
+    def test_adquirir_lock_primero_funciona(self):
+        ok = self.session.adquirir_slot_lock(1, "2026-12-31", "10:00:00",
+                                              "56987654321", ttl_segundos=30)
+        self.assertTrue(ok, "Primer paciente debe adquirir el lock")
+
+    def test_segundo_paciente_es_rechazado(self):
+        self.session.adquirir_slot_lock(1, "2026-12-31", "10:30:00",
+                                         "56111111111", ttl_segundos=30)
+        ok2 = self.session.adquirir_slot_lock(1, "2026-12-31", "10:30:00",
+                                               "56222222222", ttl_segundos=30)
+        self.assertFalse(ok2, "Segundo paciente NO debe adquirir mismo slot")
+
+    def test_mismo_paciente_re_adquiere(self):
+        """Re-confirmación del mismo phone debe ser OK (idempotente)."""
+        phone = "56333333333"
+        ok1 = self.session.adquirir_slot_lock(1, "2026-12-31", "11:00:00",
+                                               phone, ttl_segundos=30)
+        ok2 = self.session.adquirir_slot_lock(1, "2026-12-31", "11:00:00",
+                                               phone, ttl_segundos=30)
+        self.assertTrue(ok1)
+        self.assertTrue(ok2, "Mismo paciente puede re-adquirir su lock")
+
+    def test_liberar_libera(self):
+        self.session.adquirir_slot_lock(1, "2026-12-31", "12:00:00",
+                                         "56444444444", ttl_segundos=30)
+        self.session.liberar_slot_lock(1, "2026-12-31", "12:00:00")
+        # Otro phone ahora puede adquirir
+        ok = self.session.adquirir_slot_lock(1, "2026-12-31", "12:00:00",
+                                              "56555555555", ttl_segundos=30)
+        self.assertTrue(ok, "Tras liberar, otro paciente puede adquirir")
+
+
 def _run():
     """Ejecutor con resumen claro."""
     loader = unittest.TestLoader()
