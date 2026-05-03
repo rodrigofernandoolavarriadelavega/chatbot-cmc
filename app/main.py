@@ -766,6 +766,71 @@ async def sitemap_index_xml():
     return Response(content=content, media_type="application/xml")
 
 
+@app.get("/feed.xml")
+@app.get("/rss")
+@app.get("/blog/feed")
+async def blog_rss_feed():
+    """RSS 2.0 feed con los 30 artículos del blog. Habilita lectores RSS y signal SEO."""
+    from fastapi.responses import Response
+    from datetime import datetime
+    base = "https://centromedicocarampangue.cl"
+    now = datetime.now().strftime("%a, %d %b %Y %H:%M:%S %z") or datetime.now().strftime("%a, %d %b %Y %H:%M:%S +0000")
+    items = [
+        ("medicina-general", "Medicina General · Tu médico de cabecera cerca de casa", "Dr. Andrés Abarca y Dr. Rodrigo Olavarría · Bono Fonasa $7.880 · Particular $25.000"),
+        ("cardiologia", "Cardiología · Cuándo consultar y exámenes preventivos", "Dr. Miguel Millán · Evaluación cardiovascular, hipertensión, ECG"),
+        ("ortodoncia", "Ortodoncia · Brackets para niños y adultos", "Dra. Daniela Castillo · Brackets metálicos y estéticos, controles cada 3-4 semanas"),
+        ("kinesiologia", "Kinesiología · Lumbago, contracturas y rehabilitación", "Luis Armijo y Leonardo Etcheverry · Bono Fonasa MLE disponible"),
+        ("odontologia-general", "Odontología General · Limpiezas, restauraciones y urgencia", "Dra. Javiera Burgos y Dr. Carlos Jiménez · Adulto y pediátrico"),
+        ("ecografia", "Ecografía · Abdominal, renal, partes blandas, mamaria", "Dr. David Pardo · Diagnóstico por imagen no invasivo"),
+        ("estetica-facial", "Estética Facial · Botox, hialurónico, hilos, peelings", "Dra. Valentina Fuentealba · Procedimientos no quirúrgicos"),
+        ("ginecologia", "Ginecología · Controles, ecografía y obstetricia", "Dr. Tirso Rejón · PAP, anticoncepción, climaterio"),
+        ("otorrinolaringologia", "Otorrinolaringología · Patología ORL adulta y pediátrica", "Dr. Manuel Borrego · Otitis, sinusitis, vértigo, lavado de oídos"),
+        ("gastroenterologia", "Gastroenterología · Reflujo, colon irritable, dolor abdominal", "Dr. Nicolás Quijano · Helicobacter pylori, hígado graso"),
+        ("nutricion", "Nutrición · Plan personalizado para baja de peso", "Gisela Pinto · Bono Fonasa MLE disponible"),
+        ("psicologia-adulto", "Psicología Adulto · Ansiedad, depresión, duelo", "Jorge Montalba y Juan Pablo Rodríguez · Bono Fonasa $14.420"),
+        ("psicologia-infantil", "Psicología Infantil · Trastornos conductuales y aprendizaje", "Jorge Montalba · Atención a niños y adolescentes"),
+        ("fonoaudiologia", "Fonoaudiología · Lenguaje, voz, audiometría", "Juana Arratia · Pediátrica y adulta"),
+        ("matrona", "Matrona · Control prenatal, PAP, anticoncepción", "Sarai Gómez · Tarifa preferencial Fonasa $16.000"),
+        ("podologia", "Podología · Uña encarnada, callos, podología diabética", "Andrea Guevara"),
+        ("masoterapia", "Masoterapia · Masaje descontracturante 20 o 40 min", "Paola Acosta · Espalda, cuello, lumbar"),
+        ("endodoncia", "Endodoncia · Tratamiento de conducto", "Dr. Fernando Fredes · Rescate de dientes con dolor"),
+        ("implantologia", "Implantología · Implantes dentales y rehabilitación oral", "Dra. Aurora Valdés · Implante + corona desde $650.000"),
+        ("diabetes-tipo-2-control", "Diabetes Tipo 2 · Control y prevención de complicaciones", "Guía completa para diabéticos en Arauco"),
+        ("hipertension-arterial-control", "Hipertensión Arterial · Cómo controlarla", "Dr. Miguel Millán · Antihipertensivos, dieta, controles"),
+        ("cefalea-tipos-tratamiento", "Cefalea: migraña, tensional y cluster", "Tipos, síntomas y cuándo consultar"),
+        ("dolor-lumbar-cuando-consultar", "Dolor lumbar: cuándo consultar al kine", "Lumbago crónico, ciática, hernia discal"),
+        ("embarazo-controles-mensuales", "Embarazo: controles mensuales y ecografías", "Sarai Gómez · Control prenatal completo"),
+        ("nutricion-baja-peso-saludable", "Bajar de peso de forma saludable", "Gisela Pinto · Plan nutricional personalizado"),
+        ("precio-implante-dental-arauco", "Precio implante dental Arauco 2026", "Costo implante + corona, alternativas, financiamiento"),
+        ("precio-ortodoncia-arauco", "Precio ortodoncia Arauco 2026", "Brackets metálicos vs estéticos, controles, duración"),
+        ("psicologia-infantil-cuando-consultar", "Psicología infantil: señales de alerta", "Cuándo necesita un niño apoyo psicológico"),
+        ("rinoplastia-funcional-tabique", "Rinoplastia funcional vs tabique desviado", "Dr. Manuel Borrego · Cuándo se opera"),
+        ("vacunas-pni-calendario-2026", "Calendario PNI 2026 — vacunas pediátricas en Chile", "Programa Nacional de Inmunización completo"),
+    ]
+
+    parts = ['<?xml version="1.0" encoding="UTF-8"?>',
+             '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">',
+             '<channel>',
+             '<title>Blog Centro Médico Carampangue</title>',
+             f'<link>{base}/blog</link>',
+             f'<atom:link href="{base}/feed.xml" rel="self" type="application/rss+xml" />',
+             '<description>Artículos médicos y dentales del Centro Médico Carampangue. 19 especialidades en la Provincia de Arauco.</description>',
+             '<language>es-CL</language>',
+             f'<lastBuildDate>{now}</lastBuildDate>',
+             '<copyright>Centro Médico Carampangue</copyright>',
+             f'<image><url>https://agentecmc.cl/static/og-image.png</url><title>Centro Médico Carampangue</title><link>{base}/blog</link></image>']
+    for slug, title, desc in items:
+        parts.append(f'<item>'
+                     f'<title>{title}</title>'
+                     f'<link>{base}/blog/{slug}</link>'
+                     f'<guid>{base}/blog/{slug}</guid>'
+                     f'<description><![CDATA[{desc}]]></description>'
+                     f'<pubDate>{now}</pubDate>'
+                     f'</item>')
+    parts.append('</channel></rss>')
+    return Response(content="\n".join(parts), media_type="application/rss+xml")
+
+
 @app.get("/sitemap_images.xml")
 async def sitemap_images_xml():
     """Image sitemap — declara imágenes del centro para Google Images."""
