@@ -3961,6 +3961,38 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "_Elige un número del listado, *ver todos* para más horarios, u *otro día*._"
             )
 
+        # ── BUG-05: Pregunta de cobertura/modalidad en WAIT_SLOT ──
+        # "Atiende con fonasa?", "cubre isapre?", "solo particular?" → responder
+        # sin salir del flujo. Antes caía al fallback genérico y respondía la dirección.
+        _COBERTURA_KW = (
+            "fonasa", "isapre", "dipreca", "capredena", "particular",
+            "bono", "cubre", "cobertura", "atiende con", "acepta",
+        )
+        _es_pregunta_cobertura = (
+            any(k in tl_norm_slot for k in _COBERTURA_KW)
+            and not tl_norm_slot.isdigit()
+            and len(tl_norm_slot) >= 4
+        )
+        if _es_pregunta_cobertura and todos_slots:
+            _esp_cob = todos_slots[0].get("especialidad", especialidad) or especialidad
+            _precio_cob = _precio_line(_esp_cob, todos_slots[0]) if _esp_cob else ""
+            # Determinar modalidad disponible para esta especialidad
+            _es_solo_particular = _esp_cob.lower() not in _FONASA_SPECIALTIES if _FONASA_SPECIALTIES else False
+            if _es_solo_particular:
+                _resp_cob = ("{esp} atiende solo *Particular* en el CMC.{precio}\n\n"
+                             "\u00bfTe sirve el horario? Elige un n\u00famero para reservar.").format(
+                                 esp="*" + str(_esp_cob or especialidad) + "*",
+                                 precio=("\n" + _precio_cob) if _precio_cob else "",
+                             )
+            else:
+                _resp_cob = ("{esp} acepta *Fonasa* (bono MLE) y *Particular*.{precio}\n\n"
+                             "\u00bfTe sirve el horario? Elige un n\u00famero para reservar.").format(
+                                 esp="*" + str(_esp_cob or especialidad) + "*",
+                                 precio=("\n" + _precio_cob) if _precio_cob else "",
+                             )
+            save_session(phone, "WAIT_SLOT", data)
+            return _resp_cob
+
         # ── Apellido específico mencionado ("con el dr marquez", "quiero con abarca") ──
         # PRIORIDAD MÁXIMA: si el paciente pide un doctor por nombre, filtramos
         # slots actuales a ese profesional o lanzamos búsqueda fresca con él.
