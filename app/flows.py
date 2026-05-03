@@ -7530,7 +7530,9 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
             _lbl_av = f"{_DIAS_AV[_d_av.weekday()]} {_d_av.day} de {_MESES_AV[_d_av.month - 1]}"
         except Exception:
             _lbl_av = _fecha_avisar
-        header = f"⚠️ No tengo horarios para *{_lbl_av}* 😕\nTe muestro la *próxima disponible*:\n\n" + header
+        # BUG-08: cuando hay aviso de redireccion, omitir saludo "Hola de nuevo"
+        # para no mezclar "No tengo horarios para hoy" + "Hola de nuevo, Jaime! Te encontre hora"
+        header = f"\u26a0\ufe0f No tengo horarios para *{_lbl_av}* \U0001f615\nTe muestro la *proxima disponible*:\n\n"
     # Tercer botón: "Otro profesional" si hay >1 doctor; si no, "Otro día"
     from medilink import _ids_para_especialidad
     ids_esp = _ids_para_especialidad(especialidad_lower)
