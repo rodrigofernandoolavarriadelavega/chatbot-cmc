@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0F3F68">
+<title>{{TITLE}}</title>
+<meta name="description" content="{{DESCRIPTION}}">
+<meta property="og:title" content="{{TITLE}}">
+<meta property="og:description" content="{{DESCRIPTION}}">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://centromedicocarampangue.cl/{{SLUG}}">
+<meta property="og:image" content="https://centromedicocarampangue.cl/og-image.png">
+<link rel="icon" type="image/png" href="https://centromedicocarampangue.cl/wp-content/uploads/2025/08/cropped-logo-carampangue.png">
+<link rel="canonical" href="https://centromedicocarampangue.cl/{{SLUG}}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "MedicalClinic",
+  "name": "Centro Médico Carampangue",
+  "url": "https://centromedicocarampangue.cl",
+  "telephone": "+56-44-2965226",
+  "address": {
+    "@type": "PostalAddress",
+    "addressLocality": "Carampangue",
+    "addressRegion": "Biobío",
+    "addressCountry": "CL"
+  },
+  "areaServed": [
+    { "@type": "City", "name": "{{COMUNA_NAME}}" },
+    { "@type": "City", "name": "Carampangue" },
+    { "@type": "City", "name": "Arauco" }
+  ]
+}
+</script>
+<style>
+:root{
+  --cmc-aqua:#4FBECE; --cmc-aqua-soft:#e5f5f8; --cmc-aqua-dark:#3ba9ba;
+  --cmc-blue:#1172AB; --cmc-blue-soft:#e3eff7;
+  --cmc-navy:#0F3F68; --cmc-navy-soft:#d7e0ea;
+  --bg:#f3f6f9; --panel:#fff;
+  --border:#e3ebf1;
+  --text:#0F3F68; --text-mute:#546776;
+  --green:#25d366; --green-dark:#128c7e;
+  --shadow-sm:0 1px 3px rgba(15,63,104,.08);
+  --shadow-md:0 4px 12px rgba(15,63,104,.08);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{font-family:"Montserrat",-apple-system,sans-serif;color:var(--text);background:var(--bg);line-height:1.55;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+.container{max-width:1100px;margin:0 auto;padding:0 24px}
+
+header{background:#fff;border-bottom:1px solid var(--border);padding:14px 0;position:sticky;top:0;z-index:50}
+header .container{display:flex;align-items:center;justify-content:space-between}
+.logo{display:flex;align-items:center;gap:12px}
+.logo img{width:40px;height:40px;border-radius:8px}
+.logo .name{font-weight:700;font-size:14px;color:var(--cmc-navy)}
+.logo .sub{font-size:11px;color:var(--text-mute)}
+.btn-cta{background:var(--green);color:#fff;padding:10px 18px;border-radius:24px;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:8px}
+.btn-cta:hover{background:var(--green-dark)}
+
+.hero{background:linear-gradient(135deg,var(--cmc-navy) 0%,var(--cmc-blue) 100%);color:#fff;padding:64px 0 80px}
+.hero h1{font-size:clamp(26px,4.5vw,40px);font-weight:800;letter-spacing:-.8px;line-height:1.15;margin-bottom:16px;max-width:780px}
+.hero h1 em{font-style:normal;color:var(--cmc-aqua)}
+.hero p.lead{font-size:clamp(15px,2vw,17px);max-width:680px;color:rgba(255,255,255,.9);margin-bottom:28px}
+.hero .badges{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:28px}
+.hero .badge{background:rgba(255,255,255,.1);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.18);padding:8px 14px;border-radius:24px;font-size:12px;font-weight:600}
+
+section{padding:56px 0}
+section h2{font-size:clamp(22px,3.5vw,30px);font-weight:800;color:var(--cmc-navy);margin-bottom:14px;letter-spacing:-.4px}
+section p.subtitle{font-size:15px;color:var(--text-mute);max-width:680px;margin-bottom:32px}
+
+.esp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+.esp-card{background:#fff;border-radius:14px;padding:22px;box-shadow:var(--shadow-sm);border:1px solid var(--border);transition:transform .15s, box-shadow .15s}
+.esp-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.esp-card .ico{width:42px;height:42px;border-radius:10px;background:var(--cmc-aqua-soft);color:var(--cmc-aqua-dark);display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:14px;font-weight:700}
+.esp-card h4{font-size:15px;font-weight:700;color:var(--cmc-navy);margin-bottom:6px}
+.esp-card p{font-size:12.5px;color:var(--text-mute);margin-bottom:10px;min-height:32px}
+.esp-card .price{font-size:13px;color:var(--cmc-navy);font-weight:600;border-top:1px dashed var(--border);padding-top:10px}
+.esp-card .price small{color:var(--text-mute);font-weight:400}
+
+.distance-block{background:#fff;border-radius:18px;padding:32px;box-shadow:var(--shadow-sm);border:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:center}
+.distance-block .info h3{color:var(--cmc-navy);font-size:20px;font-weight:700;margin-bottom:10px}
+.distance-block .info p{color:var(--text-mute);font-size:14px;margin-bottom:8px}
+.distance-block .info strong{color:var(--cmc-navy)}
+.distance-block .map{background:var(--cmc-navy-soft);border-radius:14px;padding:24px;text-align:center}
+.distance-block .map .km{font-size:42px;font-weight:800;color:var(--cmc-blue);line-height:1}
+.distance-block .map .label{font-size:12px;font-weight:600;color:var(--cmc-navy);text-transform:uppercase;margin-top:6px}
+.distance-block .map .sub{font-size:13px;color:var(--text-mute);margin-top:14px}
+
+.faq{max-width:780px;margin:0 auto}
+.faq details{background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:10px}
+.faq details[open]{border-color:var(--cmc-aqua)}
+.faq summary{font-weight:600;font-size:14px;cursor:pointer;color:var(--cmc-navy);list-style:none;padding-right:24px;position:relative}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";position:absolute;right:0;top:0;font-size:20px;color:var(--cmc-aqua-dark);transition:transform .2s}
+.faq details[open] summary::after{transform:rotate(45deg)}
+.faq p{margin-top:12px;font-size:13.5px;color:var(--text);line-height:1.65}
+
+.cta-final{background:linear-gradient(135deg,var(--cmc-aqua) 0%,var(--cmc-blue) 100%);color:#fff;text-align:center;padding:64px 24px;border-radius:20px;margin:32px 0}
+.cta-final h3{font-size:clamp(20px,3vw,28px);font-weight:800;margin-bottom:12px}
+.cta-final p{max-width:600px;margin:0 auto 24px;font-size:15px;color:rgba(255,255,255,.9)}
+.cta-final a{padding:14px 24px;border-radius:30px;font-weight:700;font-size:14px;background:#fff;color:var(--cmc-navy);display:inline-block}
+
+footer{background:var(--cmc-navy);color:rgba(255,255,255,.78);padding:36px 0 22px;font-size:13px;text-align:center}
+footer p{margin-bottom:6px}
+
+@media (max-width:640px){
+  .distance-block{grid-template-columns:1fr;text-align:center}
+  .hero{padding:44px 0 60px}
+  section{padding:44px 0}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <a href="/" class="logo">
+      <img src="https://centromedicocarampangue.cl/wp-content/uploads/2025/08/cropped-logo-carampangue.png" alt="CMC">
+      <div>
+        <div class="name">Centro Médico Carampangue</div>
+        <div class="sub">Atendiendo a {{COMUNA_NAME}}</div>
+      </div>
+    </a>
+    <a class="btn-cta" href="{{WA_LINK}}">WhatsApp</a>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="container">
+    <h1>Médicos y especialistas <em>cerca de {{COMUNA_NAME}}.</em></h1>
+    <p class="lead">{{HERO_LEAD}}</p>
+    <div class="badges">
+      <span class="badge">A {{KM_DIST}} km de {{COMUNA_NAME}}</span>
+      <span class="badge">Fonasa y particular</span>
+      <span class="badge">19 especialidades médicas y dentales</span>
+    </div>
+    <a class="btn-cta" style="font-size:15px;padding:14px 26px" href="{{WA_LINK}}">Reservar por WhatsApp →</a>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <h2>Especialidades disponibles</h2>
+    <p class="subtitle">Lo que más solicitan pacientes desde {{COMUNA_NAME}}.</p>
+    <div class="esp-grid">
+
+      <div class="esp-card">
+        <div class="ico">M</div>
+        <h4>Medicina General</h4>
+        <p>Consulta de adultos y niños mayores. Bono Fonasa MLE disponible.</p>
+        <div class="price">$7.880 <small>Fonasa</small> · $25.000 <small>particular</small></div>
+      </div>
+
+      <div class="esp-card">
+        <div class="ico">K</div>
+        <h4>Kinesiología</h4>
+        <p>Rehabilitación, lesiones, dolor crónico, postquirúrgico. {{KINE_NOTE}}</p>
+        <div class="price">$7.830 <small>Fonasa</small> · $20.000 <small>particular</small></div>
+      </div>
+
+      <div class="esp-card">
+        <div class="ico">P</div>
+        <h4>Pediatría / Med. Familiar</h4>
+        <p>Controles, vacunas, evaluación escolar.</p>
+        <div class="price">$25.000 <small>particular</small></div>
+      </div>
+
+      <div class="esp-card">
+        <div class="ico">G</div>
+        <h4>Ginecología y Matrona</h4>
+        <p>Control, PAP, ecografía transvaginal, planificación familiar.</p>
+        <div class="price">$16.000 <small>matrona Fonasa</small> · $30.000 <small>gineco</small></div>
+      </div>
+
+      <div class="esp-card">
+        <div class="ico">N</div>
+        <h4>Nutrición</h4>
+        <p>Bajar de peso, control metabólico, alimentación saludable.</p>
+        <div class="price">$4.770 <small>Fonasa</small> · $20.000 <small>particular</small></div>
+      </div>
+
+      <div class="esp-card">
+        <div class="ico">Ψ</div>
+        <h4>Psicología</h4>
+        <p>Adultos, infantil, ansiedad, depresión, terapia de pareja.</p>
+        <div class="price">$14.420 <small>Fonasa</small> · $20.000 <small>particular</small></div>
+      </div>
+
+      <div class="esp-card">
+        <div class="ico">D</div>
+        <h4>Odontología</h4>
+        <p>Limpieza, tapaduras, exodoncias, ortodoncia, implantes, endodoncia, blanqueamiento.</p>
+        <div class="price">Desde $30.000 <small>limpieza</small></div>
+      </div>
+
+      <div class="esp-card">
+        <div class="ico">E</div>
+        <h4>Ecografías y exámenes</h4>
+        <p>Abdominal, pélvica, transvaginal, mamaria, tiroidea, musculoesquelética.</p>
+        <div class="price">Desde $35.000</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section style="background:#fff">
+  <div class="container">
+    <div class="distance-block">
+      <div class="info">
+        <h3>Cómo llegar desde {{COMUNA_NAME}}</h3>
+        <p><strong>{{COMUNA_NAME}} → Carampangue:</strong> {{TRANSPORT_DESC}}</p>
+        <p>Estacionamiento gratuito frente al centro. Si vienes en transporte público, te ayudamos a coordinar el horario para que no esperes.</p>
+        <p><strong>Sucursal Olavarría</strong> — si te queda más cerca, también atendemos en sucursal Olavarría con menos especialidades pero misma calidad.</p>
+      </div>
+      <div class="map">
+        <div class="km">{{KM_DIST}} km</div>
+        <div class="label">{{COMUNA_NAME}} → CMC</div>
+        <div class="sub">{{TIME_DIST}} en auto<br>{{BUS_DIST}}</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <h2>Preguntas frecuentes desde {{COMUNA_NAME}}</h2>
+    <p class="subtitle">Lo que más nos preguntan los pacientes que vienen desde tu comuna.</p>
+    <div class="faq">
+      <details>
+        <summary>¿Atienden con Fonasa?</summary>
+        <p>Sí. Bono Fonasa MLE disponible en Medicina General, Kinesiología, Nutrición y Psicología (se emite en el centro con huella biométrica). Matrona tiene tarifa preferencial Fonasa ($16.000). El resto de especialidades es solo particular.</p>
+      </details>
+      <details>
+        <summary>¿Necesito venir hasta Carampangue para agendar?</summary>
+        <p>No. Agendas todo por WhatsApp +56 9 6661 0737. Te confirmamos día, hora y nombre del profesional. El día de tu cita solo vienes y pasas directo.</p>
+      </details>
+      <details>
+        <summary>¿Qué métodos de pago aceptan?</summary>
+        <p>Para servicios médicos: efectivo o transferencia. Para servicios dentales: además aceptamos tarjetas de crédito y débito.</p>
+      </details>
+      <details>
+        <summary>¿Y si necesito una hora urgente?</summary>
+        <p>Escríbenos por WhatsApp e indica que es urgente. Si tu situación requiere atención inmediata (dolor de pecho, dificultad respiratoria, etc.) llama al 131 (SAMU) — no esperes a agendar.</p>
+      </details>
+      <details>
+        <summary>¿Tienen estacionamiento?</summary>
+        <p>Sí, gratuito frente al centro en Carampangue. Sin pago, sin tickets.</p>
+      </details>
+      <details>
+        <summary>¿Hay descuentos para grupos familiares?</summary>
+        <p>Sí. Si traes a varios miembros de tu familia el mismo día, coordinamos las horas seguidas para que no tengas que volver. Pregunta por nuestros chequeos preventivos en una sola visita: <a href="/chequeos" style="color:var(--cmc-aqua-dark)">centromedicocarampangue.cl/chequeos</a></p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="cta-final">
+      <h3>Agenda en 1 minuto desde {{COMUNA_NAME}}</h3>
+      <p>Escríbenos por WhatsApp y te confirmamos disponibilidad para esta semana. Sin formularios, sin esperas.</p>
+      <a href="{{WA_LINK}}">WhatsApp +56 9 6661 0737</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <p><strong>Centro Médico Carampangue</strong> — Salud cercana en provincia de Arauco</p>
+    <p>Carampangue · Sucursal Olavarría · Atendiendo {{COMUNA_NAME}}</p>
+    <p style="margin-top:14px;font-size:11px;color:rgba(255,255,255,.5)">© 2026 CMC. Todos los derechos reservados.</p>
+  </div>
+</footer>
+
+</body>
+</html>

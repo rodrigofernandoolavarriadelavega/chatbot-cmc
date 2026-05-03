@@ -1564,6 +1564,84 @@ def empresas_page():
     return _EMPRESAS_HTML
 
 
+_COMUNA_TEMPLATE_HTML = (_TEMPLATE_DIR / "comuna_template.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "comuna_template.html").exists() else ""
+
+_COMUNAS_DATA = {
+    "curanilahue": {
+        "name": "Curanilahue",
+        "title": "Médicos en Curanilahue · Centro Médico Carampangue",
+        "description": "Atención médica completa para pacientes de Curanilahue. 19 especialidades médicas y dentales a 25 minutos del centro. Bono Fonasa, agendamiento por WhatsApp.",
+        "hero_lead": "Si vives en Curanilahue, el CMC está a 25 minutos. 19 especialidades médicas y dentales: medicina general, kinesiología, ginecología, pediatría, odontología, psicología, ecografías y más. Bono Fonasa MLE en consultas elegibles.",
+        "km": "25", "time": "25 minutos", "bus": "Buses regulares Curanilahue–Arauco pasan por Carampangue",
+        "transport": "Toma cualquier bus que vaya a Arauco o que pase por la Ruta 160 — todos hacen parada en Carampangue. Tiempo estimado en transporte público: 35-45 minutos.",
+        "kine_note": "Ya atendemos pacientes recurrentes desde Curanilahue.",
+    },
+    "los-alamos": {
+        "name": "Los Álamos",
+        "title": "Médicos cerca de Los Álamos · Centro Médico Carampangue",
+        "description": "Atención médica integral para pacientes de Los Álamos. CMC a 35 km, 19 especialidades, agendamiento por WhatsApp.",
+        "hero_lead": "Si estás en Los Álamos, el Centro Médico Carampangue es la opción más cercana fuera de tu comuna. 19 especialidades médicas y dentales con tarifa Fonasa donde aplica.",
+        "km": "35", "time": "40 minutos", "bus": "Buses Los Álamos–Concepción pasan cerca de Carampangue",
+        "transport": "Buses Los Álamos a Concepción/Talcahuano vía Arauco pasan cerca del centro. También accesible en auto vía Ruta 160.",
+        "kine_note": "Si necesitas sesiones múltiples (10 sesiones bono Fonasa $83.360), coordinamos horarios consecutivos.",
+    },
+    "canete": {
+        "name": "Cañete",
+        "title": "Médicos cerca de Cañete · Centro Médico Carampangue",
+        "description": "Atención médica integral para pacientes de Cañete. 19 especialidades a 45 km, agendamiento por WhatsApp, Fonasa y particular.",
+        "hero_lead": "Atendemos pacientes desde Cañete y comunas cercanas (Tirúa, Contulmo). 19 especialidades médicas y dentales. Bono Fonasa MLE disponible. Si necesitas algo que no encontraste en tu comuna, te esperamos.",
+        "km": "45", "time": "55 minutos", "bus": "Buses Cañete–Concepción pasan por la zona",
+        "transport": "Buses interregionales (Cañete a Concepción) hacen parada en Arauco, desde ahí 10 minutos a Carampangue. En auto, vía Ruta 160.",
+        "kine_note": "Para tratamientos extensos (kinesiología, psicología, ortodoncia), coordinamos para optimizar tus viajes.",
+    },
+    "lebu": {
+        "name": "Lebu",
+        "title": "Médicos cerca de Lebu · Centro Médico Carampangue",
+        "description": "Atención médica integral para pacientes de Lebu. CMC en provincia de Arauco, 19 especialidades, agendamiento por WhatsApp.",
+        "hero_lead": "Si estás en Lebu, capital de la provincia de Arauco, el CMC en Carampangue ofrece 19 especialidades médicas y dentales que pueden no estar disponibles en tu comuna. Bono Fonasa MLE en consultas elegibles.",
+        "km": "55", "time": "1 hora 10 minutos", "bus": "Buses Lebu–Concepción vía Cañete y Arauco",
+        "transport": "Buses Lebu a Concepción pasan por Cañete y Arauco. Desde Arauco son 10 minutos a Carampangue. Coordinamos para que tu viaje valga la pena.",
+        "kine_note": "Coordinamos varias citas el mismo día para que un solo viaje desde Lebu cubra varias necesidades.",
+    },
+}
+
+
+@app.get("/curanilahue", response_class=HTMLResponse)
+@app.get("/los-alamos", response_class=HTMLResponse)
+@app.get("/losalamos", response_class=HTMLResponse)
+@app.get("/canete", response_class=HTMLResponse)
+@app.get("/cañete", response_class=HTMLResponse)
+@app.get("/lebu", response_class=HTMLResponse)
+@app.get("/comuna/{slug}", response_class=HTMLResponse)
+def comuna_page(request: Request, slug: str = ""):
+    """Landing SEO local por comuna. Renderiza comuna_template con datos específicos."""
+    if not slug:
+        path = request.url.path.lstrip("/").lower()
+        slug = path.replace("ñ", "n")
+    slug = slug.lower().replace("ñ", "n")
+    data = _COMUNAS_DATA.get(slug)
+    if not data:
+        return HTMLResponse("<h1>404</h1><p>Comuna no encontrada</p>", status_code=404)
+    wa_text = f"Hola%2C%20vivo%20en%20{data['name'].replace(' ', '%20')}%20y%20quiero%20agendar"
+    html = _COMUNA_TEMPLATE_HTML
+    replacements = {
+        "{{TITLE}}": data["title"],
+        "{{DESCRIPTION}}": data["description"],
+        "{{SLUG}}": slug,
+        "{{COMUNA_NAME}}": data["name"],
+        "{{HERO_LEAD}}": data["hero_lead"],
+        "{{KM_DIST}}": data["km"],
+        "{{TIME_DIST}}": data["time"],
+        "{{BUS_DIST}}": data["bus"],
+        "{{TRANSPORT_DESC}}": data["transport"],
+        "{{KINE_NOTE}}": data["kine_note"],
+        "{{WA_LINK}}": f"https://wa.me/56966610737?text={wa_text}",
+    }
+    for k, v in replacements.items():
+        html = html.replace(k, v)
+    return html
+
+
 def _seo_api_auth(token: str, cmc_session: str | None) -> None:
     """Acepta auth via ?token=... o cookie cmc_session admin. 401 si no."""
     if token == ADMIN_TOKEN:
