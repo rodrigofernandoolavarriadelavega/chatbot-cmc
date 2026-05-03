@@ -226,10 +226,13 @@ async def _job_recordatorios_2h():
     await enviar_recordatorios_2h(send_whatsapp, send_template_fn=_tpl)
 
 async def _job_postconsulta():
-    await enviar_seguimiento_postconsulta(
-        send_whatsapp, send_template_fn=_tpl,
-        send_text_fn=send_whatsapp, buscar_paciente_fn=buscar_paciente,
-    )
+    try:
+        await enviar_seguimiento_postconsulta(
+            send_whatsapp, send_template_fn=_tpl,
+            send_text_fn=send_whatsapp, buscar_paciente_fn=buscar_paciente,
+        )
+    except Exception as e:
+        log.error("_job_postconsulta falló (BUG-07): %s", e)
 
 
 async def _job_detectar_cancelaciones():
@@ -408,31 +411,58 @@ async def _job_bi_sync_diario():
         log.warning("bi_sync_diario re-cross fallo: %s", e)
 
 async def _job_reactivacion():
-    await enviar_reactivacion_pacientes(send_whatsapp, send_template_fn=_tpl)
+    try:
+        await enviar_reactivacion_pacientes(send_whatsapp, send_template_fn=_tpl)
+    except Exception as e:
+        log.error("_job_reactivacion falló (BUG-07): %s", e)
 
 async def _job_adherencia_kine():
-    await enviar_adherencia_kine(send_whatsapp, send_template_fn=_tpl)
+    try:
+        await enviar_adherencia_kine(send_whatsapp, send_template_fn=_tpl)
+    except Exception as e:
+        log.error("_job_adherencia_kine falló (BUG-07): %s", e)
 
 async def _job_control_especialidad():
-    await enviar_recordatorio_control(send_whatsapp, send_template_fn=_tpl)
+    try:
+        await enviar_recordatorio_control(send_whatsapp, send_template_fn=_tpl)
+    except Exception as e:
+        log.error("_job_control_especialidad falló (BUG-07): %s", e)
 
 async def _job_crosssell_kine():
-    await enviar_crosssell_kine(send_whatsapp, send_template_fn=_tpl)
+    try:
+        await enviar_crosssell_kine(send_whatsapp, send_template_fn=_tpl)
+    except Exception as e:
+        log.error("_job_crosssell_kine falló (BUG-07): %s", e)
 
 async def _job_crosssell_orl_fono():
-    await enviar_crosssell_orl_fono(send_whatsapp, send_template_fn=_tpl)
+    try:
+        await enviar_crosssell_orl_fono(send_whatsapp, send_template_fn=_tpl)
+    except Exception as e:
+        log.error("_job_crosssell_orl_fono falló (BUG-07): %s", e)
 
 async def _job_crosssell_odonto_estetica():
-    await enviar_crosssell_odonto_estetica(send_whatsapp, send_template_fn=_tpl)
+    try:
+        await enviar_crosssell_odonto_estetica(send_whatsapp, send_template_fn=_tpl)
+    except Exception as e:
+        log.error("_job_crosssell_odonto_estetica falló (BUG-07): %s", e)
 
 async def _job_crosssell_mg_chequeo():
-    await enviar_crosssell_mg_chequeo(send_whatsapp, send_template_fn=_tpl)
+    try:
+        await enviar_crosssell_mg_chequeo(send_whatsapp, send_template_fn=_tpl)
+    except Exception as e:
+        log.error("_job_crosssell_mg_chequeo falló (BUG-07): %s", e)
 
 async def _job_cumpleanos():
-    await enviar_cumpleanos(send_whatsapp)
+    try:
+        await enviar_cumpleanos(send_whatsapp)
+    except Exception as e:
+        log.error("_job_cumpleanos falló (BUG-07): %s", e)
 
 async def _job_winback():
-    await enviar_winback(send_whatsapp)
+    try:
+        await enviar_winback(send_whatsapp)
+    except Exception as e:
+        log.error("_job_winback falló (BUG-07): %s", e)
 
 # ── Doctor alerts ────────────────────────────────────────────────────────────
 # Usar ADMIN_ALERT_PHONE (celular del Dr. Olavarria), no CMC_TELEFONO (bot).
@@ -464,12 +494,18 @@ _doctor_phone = ADMIN_ALERT_PHONE
 async def _job_doctor_resumen_precita():
     if not _admin_window_open():
         return  # ventana 24h cerrada; evita Meta 400 (#100) Invalid parameter
-    await enviar_resumen_precita(send_whatsapp, _doctor_phone)
+    try:
+        await enviar_resumen_precita(send_whatsapp, _doctor_phone)
+    except Exception as e:
+        log.error("_job_doctor_resumen_precita falló (BUG-07): %s", e)
 
 async def _job_doctor_reporte_progreso():
     if not _admin_window_open():
         return
-    await enviar_reporte_progreso(send_whatsapp, _doctor_phone)
+    try:
+        await enviar_reporte_progreso(send_whatsapp, _doctor_phone)
+    except Exception as e:
+        log.error("_job_doctor_reporte_progreso falló (BUG-07): %s", e)
 
 async def _job_doctor_reset_diario():
     reset_resumenes_diarios()
@@ -512,14 +548,22 @@ async def _job_medilink_watchdog():
     """Cada minuto: si Medilink está marcado como caído, prueba un ping.
     - Si se recuperó: marca up, notifica a los pacientes encolados y avisa a recepción.
     - Si sigue caído: notifica a recepción (como máximo 1 vez cada 30 min).
+    BUG-07: envuelto en try/except amplio para que un crash no SIGKILL al servicio.
     """
+    try:
+        await _job_medilink_watchdog_inner()
+    except Exception as e:
+        log.error("_job_medilink_watchdog falló inesperadamente (BUG-07): %s", e)
+
+
+async def _job_medilink_watchdog_inner():
     if not is_medilink_down():
         return
 
     # Ping rápido a /sucursales (endpoint liviano y estable)
     ok = False
     try:
-        async with httpx.AsyncClient(timeout=4) as client:
+        async with httpx.AsyncClient(timeout=8) as client:
             r = await client.get(f"{MEDILINK_BASE_URL}/sucursales", headers=HEADERS_MEDILINK)
         ok = r.status_code < 500
     except (httpx.TimeoutException, httpx.NetworkError, httpx.RequestError):
