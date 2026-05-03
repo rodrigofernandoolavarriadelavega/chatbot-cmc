@@ -186,6 +186,10 @@ async def send_whatsapp(to: str, body) -> str | None:
     if not body or not str(body).strip():
         return None
     body = _final_phone_guard(body)
+    # BUG-C guard: si después de _final_phone_guard aún queda ** sin normalizar,
+    # loggear warning (regresión detectable) y normalizar como defensa final.
+    if isinstance(body, str) and "**" in body:
+        log.warning("MARKDOWN_GUARD send_whatsapp ** sin normalizar snippet=%r", body[:120])
     body = _normalize_markdown_for_chat(body)
     # FIX-8: WhatsApp rechaza mensajes >4096 chars. Si es largo, dividir en chunks
     # como IG/FB (usando _split_long_msg). Evita error 131009 silencioso de Meta.

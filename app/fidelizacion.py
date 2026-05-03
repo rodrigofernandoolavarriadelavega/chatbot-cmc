@@ -139,8 +139,50 @@ async def enviar_seguimiento_postconsulta_dia_anterior(send_fn, send_template_fn
 
     log.info("Post-consulta morning: enviando %d seguimiento(s) tardíos de %s",
              len(citas), ayer)
-    for cita in citas:
+    # BUG-A: mismo agrupamiento que enviar_seguimiento_postconsulta
+    from collections import defaultdict as _ddict_m
+    _grupos_m: dict[str, list[dict]] = _ddict_m(list)
+    for _c in citas:
+        _grupos_m[_c["phone"]].append(_c)
+    for grupo_m in _grupos_m.values():
         try:
+            if len(grupo_m) > 1:
+                _cita_ref = grupo_m[0]
+                _lista_esp = ", ".join(
+                    f"{c.get('especialidad', '?')} ({c.get('profesional', '?')})"
+                    for c in grupo_m
+                )
+                nombre = _nombre_corto(_cita_ref.get("nombre"))
+                saludo = f"Hola *{nombre}* 😊 " if nombre else "Hola 😊 "
+                body_txt = (
+                    f"{saludo}*¿Cómo te sentiste siendo atendido/a ayer en el Centro Médico Carampangue?*\n\n"
+                    f"Ayer fuiste por: *{_lista_esp}*. Tu opinión es muy importante 🙏\n\n"
+                    "_Califica de 1 a 5._"
+                )
+                msg = {
+                    "type": "interactive",
+                    "interactive": {
+                        "type": "list",
+                        "body": {"text": body_txt},
+                        "action": {
+                            "button": "Calificar",
+                            "sections": [{"title": "Tu calificación", "rows": [
+                                {"id": "seg_5", "title": "5 ⭐⭐⭐⭐⭐", "description": "Excelente"},
+                                {"id": "seg_4", "title": "4 ⭐⭐⭐⭐",   "description": "Muy buena"},
+                                {"id": "seg_3", "title": "3 ⭐⭐⭐",     "description": "Regular"},
+                                {"id": "seg_2", "title": "2 ⭐⭐",       "description": "Mala"},
+                                {"id": "seg_1", "title": "1 ⭐",         "description": "Muy mala"},
+                            ]}],
+                        },
+                    },
+                }
+                _cita_ids = ",".join(str(c.get("id_cita", "")) for c in grupo_m)
+                save_fidelizacion_msg(_cita_ref["phone"], "postconsulta", _cita_ids)
+                await send_fn(_cita_ref["phone"], msg)
+                log_message(_cita_ref["phone"], "out", body_txt, "IDLE")
+                log.info("Seguimiento tardío combinado → %s (%d citas)", _cita_ref["phone"], len(grupo_m))
+                continue
+            cita = grupo_m[0]
             msg = _msg_postconsulta(cita)
             save_fidelizacion_msg(cita["phone"], "postconsulta", str(cita.get("id_cita", "")))
             await send_fn(cita["phone"], msg)
@@ -149,7 +191,7 @@ async def enviar_seguimiento_postconsulta_dia_anterior(send_fn, send_template_fn
             log.info("Seguimiento tardío enviado → %s (%s, hora %s)",
                      cita["phone"], cita.get("especialidad"), cita.get("hora"))
         except Exception as e:
-            log.error("Error seguimiento tardío phone=%s: %s", cita.get("phone"), e)
+            log.error("Error seguimiento tardío phone=%s: %s", (grupo_m[0].get("phone") if grupo_m else "?"), e)
 
 
 async def enviar_seguimiento_postconsulta(send_fn, send_template_fn=None,
@@ -178,8 +220,63 @@ async def enviar_seguimiento_postconsulta(send_fn, send_template_fn=None,
         return
 
     log.info("Post-consulta: enviando %d seguimiento(s) de %s", len(citas), hoy)
-    for cita in citas:
+
+    # BUG-A: agrupar citas por phone — paciente con Kine + MG el mismo día
+    # recibía DOS mensajes "¿cómo te sentiste?" con 2 segundos de diferencia.
+    # Fix: mandar UN solo mensaje combinado y registrar un único fidelizacion_msg
+    # usando el id_cita de la primera cita del grupo (las demás quedan registradas
+    # en el campo cita_id como lista separada por coma).
+    from collections import defaultdict as _ddict
+    _grupos: dict[str, list[dict]] = _ddict(list)
+    for _c in citas:
+        _grupos[_c["phone"]].append(_c)
+    citas_agrupadas = list(_grupos.values())  # lista de listas
+
+    for grupo in citas_agrupadas:
         try:
+            if len(grupo) > 1:
+                # Paciente con múltiples citas el mismo día
+                _cita_ref = grupo[0]
+                _lista_esp = ", ".join(
+                    f"{c.get('especialidad', '?')} ({c.get('profesional', '?')})"
+                    for c in grupo
+                )
+                nombre = _nombre_corto(_cita_ref.get("nombre"))
+                saludo = f"Hola *{nombre}* 😊 " if nombre else "Hola 😊 "
+                body_txt = (
+                    f"{saludo}*¿Cómo te sentiste siendo atendido/a hoy en el Centro Médico Carampangue?*\n\n"
+                    f"Hoy fuiste por: *{_lista_esp}*. Tu opinión es muy importante para mejorar 🙏\n\n"
+                    "_Califica de 1 a 5._"
+                )
+                msg = {
+                    "type": "interactive",
+                    "interactive": {
+                        "type": "list",
+                        "body": {"text": body_txt},
+                        "action": {
+                            "button": "Calificar",
+                            "sections": [{
+                                "title": "Tu calificación",
+                                "rows": [
+                                    {"id": "seg_5", "title": "5 ⭐⭐⭐⭐⭐", "description": "Excelente"},
+                                    {"id": "seg_4", "title": "4 ⭐⭐⭐⭐",   "description": "Muy buena"},
+                                    {"id": "seg_3", "title": "3 ⭐⭐⭐",     "description": "Regular"},
+                                    {"id": "seg_2", "title": "2 ⭐⭐",       "description": "Mala"},
+                                    {"id": "seg_1", "title": "1 ⭐",         "description": "Muy mala"},
+                                ],
+                            }],
+                        },
+                    },
+                }
+                # Registrar UN msg con cita_id = "id1,id2,..." para idempotencia
+                _cita_ids = ",".join(str(c.get("id_cita", "")) for c in grupo)
+                save_fidelizacion_msg(_cita_ref["phone"], "postconsulta", _cita_ids)
+                await send_fn(_cita_ref["phone"], msg)
+                log_message(_cita_ref["phone"], "out", body_txt, "IDLE")
+                log.info("Seguimiento combinado enviado → %s (%d citas)", _cita_ref["phone"], len(grupo))
+                continue
+            # Cita única — flujo normal
+            cita = grupo[0]
             msg = _msg_postconsulta(cita)
             # BUG-01: guardar ANTES de enviar para que si el send falla o la
             # tarea CAPI lanza excepción, el registro ya exista y el job no
@@ -249,7 +346,8 @@ async def enviar_seguimiento_postconsulta(send_fn, send_template_fn=None,
                 log.debug("CAPI Purchase create_task falló: %s", _capi_purch_err)
             # ── fin CAPI Purchase ────────────────────────────────────────────
         except Exception as e:
-            log.error("Error seguimiento phone=%s: %s", cita.get("phone"), e)
+            _phone_err = (grupo[0].get("phone") if grupo else "?")
+            log.error("Error seguimiento phone=%s: %s", _phone_err, e)
 
 
 async def enviar_reactivacion_pacientes(send_fn, send_template_fn=None):

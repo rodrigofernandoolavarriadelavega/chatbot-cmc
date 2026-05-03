@@ -825,6 +825,37 @@ async def _slot_confirmed(phone: str, data: dict, slot: dict) -> str | dict:
     )
 
 
+_RX_CANAL_WA = re.compile(
+    r"(?:puedes?\s+)?(?:escri(?:bir(?:me|nos)?|nos)|cont[aá]ct[aá](?:nos|rnos)?)"
+    r"(?:\s+(?:al?\s+)?)?(?:por\s+)?(?:el\s+)?[Ww]hats[Aa]pp"
+    r"(?:\s+(?:del?\s+)?CMC)?"
+    r"(?:\s+[\(+]?\s*5[Ss6]\s*9\s*\d[\d\s\-]*)?",
+    re.IGNORECASE,
+)
+
+def _strip_canal_circular(text: str, phone: str) -> str:
+    """BUG-F: si el paciente ya está escribiendo por WA, quitar frases como
+    'puedes escribirme por WhatsApp del CMC (+56966610737)' — referencia circular.
+    Solo aplica a phones de WA (no tienen prefijo ig_/fb_)."""
+    if not text or not phone:
+        return text
+    is_wa = not (phone.startswith("ig_") or phone.startswith("fb_"))
+    if not is_wa:
+        return text
+    if not _RX_CANAL_WA.search(text):
+        return text
+    import logging as _log_cc
+    _log_cc.getLogger("bot.flows").info(
+        "CANAL_CIRCULAR_STRIPPED phone=%s snippet=%r", phone, text[:120]
+    )
+    cleaned = _RX_CANAL_WA.sub("", text)
+    # Limpiar conectores sueltos que puedan quedar (", o", "o directamente", etc.)
+    cleaned = re.sub(r"[\s,]*(o|y)\s+directamente[\s,]*", " ", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"[\s,]+(o|y)\s*$", "", cleaned.strip(), flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s{2,}", " ", cleaned).strip()
+    return cleaned
+
+
 def _menu_msg(primer_contacto: bool = False) -> dict:
     """Menú principal. Si primer_contacto=True agrega disclosure Ley 21.719."""
     if primer_contacto:
@@ -1356,7 +1387,13 @@ def _es_respuesta_obvia_al_prompt(txt: str, tl: str, state: str, data: dict) -> 
     if state == "WAIT_SLOT":
         if tl in ("otro dia", "otro día", "ver todos", "todos", "ver mas",
                   "ver más", "mañana", "manana", "hoy", "pasado mañana",
-                  "pasado manana"):
+                  "pasado manana",
+                  # BUG-G: "otros horarios" y variantes deben llegar al VER_TODOS set
+                  # sin pasar por Claude — el pre-router podía interceptarlos y
+                  # causar loop (auditor detectó caso fb_35916275847970645 2026-05-02)
+                  "otros horarios", "otras horas", "otros", "ver otros",
+                  "ver otros horarios", "mas horarios", "más horarios",
+                  "otras opciones", "otras alternativas", "mas opciones", "más opciones"):
             return True
     # Estados con RUT: cualquier cosa con formato numérico larga ya la filtramos arriba
     return False
@@ -3387,6 +3424,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 data["last_esp_context_ts"] = _dt_ctx.now(timezone.utc).isoformat()
                 save_session(phone, "IDLE", data)
             resp = result.get("respuesta_directa") or await respuesta_faq(txt_enriquecido, recepcion_resumen=_recepcion_resumen)
+            resp = _strip_canal_circular(resp, phone)  # BUG-F
             esp_sug = (result.get("especialidad") or "").strip()
             # Si Claude infirió una especialidad, intentamos mostrar el próximo slot
             # inline + botón para agendar directo.
@@ -3535,6 +3573,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 # Si no matchea local, llamar Claude FAQ
                 try:
                     faq_resp = await respuesta_faq(txt, recepcion_resumen=_recepcion_resumen)
+                    faq_resp = _strip_canal_circular(faq_resp, phone)  # BUG-F
                     if faq_resp and len(faq_resp) > 20:
                         log_event(phone, "fallback_faq", {"txt": txt[:120]})
                         return f"{faq_resp}\n\n_Escribe *menu* si prefieres ver las opciones._"
@@ -4097,8 +4136,24 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             reset_session(phone)
             return await handle_message(phone, txt, {"state": "IDLE", "data": {}})
 
-        # ── "No" suelto en WAIT_SLOT → ofrecer alternativas (no confundir con negación real) ──
+        # ── BUG-E: Escape "no gracias / ya tengo / déjalo así" en WAIT_SLOT ──
+        # Frases que indican que el paciente quiere salir SIN elegir nueva hora.
+        # Distinto del "no" suelto (que sigue en el flujo mostrando alternativas).
         _tl_slot = txt.strip().lower()
+        _NO_GRACIAS_ESCAPE = {
+            "no gracias me quedo", "ya tengo", "ya tengo hora", "dejalo asi",
+            "déjalo así", "dejalo así", "déjalo asi", "olvida", "mejor no",
+            "no necesito hora", "no necesito", "ya no necesito", "ya tengo cita",
+        }
+        if (_tl_slot in _NO_GRACIAS_ESCAPE
+                or any(_tl_slot.startswith(kw) for kw in _NO_GRACIAS_ESCAPE)):
+            reset_session(phone)
+            return (
+                "Entendido. Tu cita anterior sigue activa.\n\n"
+                "Escribe *menu* si necesitas algo más."
+            )
+
+        # ── "No" suelto en WAIT_SLOT → ofrecer alternativas (no confundir con negación real) ──
         if _tl_slot in ("no", "no gracias", "nel", "nop", "negativo", "no me sirve", "ninguna"):
             return (
                 "Sin problema 😊 Puedo mostrarte:\n\n"
@@ -4749,17 +4804,27 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             # Regex con word-boundary evita matchear "para otro DÍA" o
             # "para otra CITA". Caso real 2026-04-21 (56982709417): "necesito
             # una hora para otro día" → bot decía "Entendido, es para otra persona".
-            # BUG-2 FIX: ampliado con bebé/guagua/niño/niña/chico/chica/menor/lactante/infante
+            # BUG-1 FIX: ampliado con suegra/cuñado/sobrina/tía/vecino/yerno/pololo
             _OTRA_PERSONA_RE = re.compile(
                 r"\b(otra persona|otr[oa] familiar|mi esposo|mi esposa|"
                 r"mi hijo|mi hija|mi mam[aá]|mi pap[aá]|mi hermano|mi hermana|"
-                r"mi abuelo|mi abuela|mi pololo|mi polola|mi pareja|mi nieto|"
-                r"mi nieta|un familiar|para un amigo|para una amiga|"
+                r"mi abuelo|mi abuela|mi abuelito|mi abuelita|"
+                r"mi pololo|mi polola|mi pareja|mi nieto|mi nieta|"
+                r"mi suegro|mi suegra|mis suegros|"
+                r"mi cuñado|mi cuñada|mis cuñados|mis cuñadas|"
+                r"mi sobrino|mi sobrina|mis sobrinos|mis sobrinas|"
+                r"mi tío|mi tía|mis tíos|mis tías|"
+                r"mi vecino|mi vecina|"
+                r"mi yerno|mi nuera|"
+                r"un familiar|para un amigo|para una amiga|"
                 r"mi beb[eé]|mi guagua|mi niñ[oa]|mi niet[oa]|mi chic[oa]|"
                 r"mi pequeñ[oa]|mi hij[oa] menor|mi hij[oa] de|"
                 r"para mi beb[eé]|para mi guagua|para mi niñ[oa]|"
                 r"para mi (?:hijo|hija|mam[aá]|pap[aá]|hermano|hermana|"
-                r"abuelo|abuela|esposo|esposa|pareja|nieto|nieta|"
+                r"abuelo|abuela|abuelito|abuelita|esposo|esposa|pareja|"
+                r"nieto|nieta|suegro|suegra|cuñado|cuñada|"
+                r"sobrino|sobrina|tío|tía|vecino|vecina|"
+                r"yerno|nuera|pololo|polola|"
                 r"beb[eé]|guagua|niñ[oa]|chic[oa]|pequeñ[oa]))\b"
             )
             if _OTRA_PERSONA_RE.search(tl):
@@ -7623,18 +7688,36 @@ _RE_MENOR_KEYWORDS = re.compile(
 _RE_MENOR_EDAD = re.compile(r"\b([0-9]{1,2})\s*años?\b", re.IGNORECASE)
 
 def _detectar_menor_en_texto(txt: str) -> bool:
-    """Retorna True si el texto menciona a un menor (edad < 14 años o keyword de niño)."""
+    """Retorna True si el texto menciona a un menor (<18 años o keyword de niño/bebé).
+
+    BUG-3 FIX: antes cortaba en < 14, dejando pasar 14-17 (legalmente menores).
+    """
     if not txt:
         return False
     txt_l = txt.lower()
-    # Keywords directas de menor sin edad
+    # Keywords directas de menor sin edad explícita
     _MENOR_KW = {"bebe", "bebé", "bebita", "guagua", "guagüita", "guagüa",
                  "niño", "niña", "nino", "nina", "infante"}
     if any(k in txt_l for k in _MENOR_KW):
         return True
-    # Edad explícita < 14
+    # Edad explícita < 18 (menores de edad legales)
     for m in _RE_MENOR_EDAD.finditer(txt_l):
-        if int(m.group(1)) < 14:
+        if int(m.group(1)) < 18:
+            return True
+    return False
+
+
+def _es_adolescente_en_texto(txt: str) -> bool:
+    """Retorna True si hay edad 14-17 en el texto.
+
+    Distingue: < 14 → derivación fuerte, 14-17 → advertencia con consentimiento tutor.
+    """
+    if not txt:
+        return False
+    txt_l = txt.lower()
+    for m in _RE_MENOR_EDAD.finditer(txt_l):
+        edad = int(m.group(1))
+        if 14 <= edad <= 17:
             return True
     return False
 
@@ -7643,29 +7726,44 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
                             saludo_prefix: str | None = None) -> str:
     if is_medilink_down():
         return _modo_degradado(phone, "agendar", especialidad or "")
-    # ── Detección de menor (bonus 2026-05-03) ──
-    # Si el paciente menciona un niño/bebé/edad < 14 durante el flujo de
-    # Medicina Familiar o Medicina General, pausar y aclarar que el CMC no
-    # atiende pediatría directamente.
-    _esp_para_menor = (especialidad or "").lower()
-    if _esp_para_menor in (_ESP_MED_GENERAL | _ESP_MED_FAMILIAR):
-        _txt_raw = data.pop("_txt_raw", "") or ""
-        if _txt_raw and _detectar_menor_en_texto(_txt_raw) and not data.get("_menor_confirmado_adulto"):
-            log_event(phone, "menor_detectado_mg", {"txt": _txt_raw[:120]})
-            data["_especialidad_pendiente"] = especialidad
-            save_session(phone, "WAIT_CONFIRMAR_ADULTO", data)
-            return _btn_msg(
-                "¿La cita es para un menor?\n\n"
-                "El CMC no atiende pediatría directamente.\n"
-                "Te recomendamos el CESFAM más cercano o un pediatra externo.\n\n"
-                "Si la cita es para un adulto, presiona *Continuar*.",
-                [
-                    {"id": "menor_es_adulto", "title": "Continuar (es adulto)"},
-                    {"id": "menor_es_menor",  "title": "Es para un menor"},
-                ]
+    # ── BUG-2 FIX: Detección de menor para TODAS las especialidades ──────────
+    # Antes solo corría para MG/MF. Ahora aplica a kine, ORL, odonto, fono, etc.
+    # BUG-3 FIX: umbral subido de < 14 a < 18 (menores de edad legales).
+    _txt_raw = data.pop("_txt_raw", "") or ""
+    if _txt_raw and _detectar_menor_en_texto(_txt_raw) and not data.get("_menor_confirmado_adulto"):
+        _es_adol = _es_adolescente_en_texto(_txt_raw)
+        _esp_display = (especialidad or "la especialidad solicitada").capitalize()
+        log_event(phone, "menor_detectado_esp", {
+            "txt": _txt_raw[:120], "esp": especialidad, "adolescente": _es_adol
+        })
+        data["_especialidad_pendiente"] = especialidad
+        if _es_adol:
+            _msg_menor = (
+                "Veo que la cita podría ser para un adolescente.\n\n"
+                f"Nuestros profesionales de *{_esp_display}* atienden principalmente adultos.\n"
+                "Si el paciente tiene entre 14 y 17 años, necesitamos que un tutor "
+                "o apoderado confirme la cita.\n\n"
+                "¿Quieres continuar?"
             )
-    elif "_txt_raw" in data:
-        data.pop("_txt_raw", None)
+        else:
+            _msg_menor = (
+                "Veo que la cita es para un menor de edad.\n\n"
+                f"El CMC no cuenta con atención pediátrica especializada. "
+                f"Para *{_esp_display}*, nuestros profesionales atienden principalmente adultos.\n\n"
+                "Te recomendamos:\n"
+                "• *CESFAM* más cercano (atención pediátrica gratuita)\n"
+                "• Hospital de Curanilahue para urgencias\n\n"
+                "Si de igual forma quieres continuar (cita con profesional adulto), "
+                "presiona *Continuar*."
+            )
+        save_session(phone, "WAIT_CONFIRMAR_ADULTO", data)
+        return _btn_msg(
+            _msg_menor,
+            [
+                {"id": "menor_es_adulto", "title": "Continuar"},
+                {"id": "menor_es_menor",  "title": "Es para un menor"},
+            ]
+        )
     # ── BUG-fix 2026-05-03: solo Dr. Márquez atiende Medicina Familiar ──
     # Antes "medicina familiar" caía en _ESP_MED_GENERAL → ofrecía Abarca/Olavarría
     # primero. Forzar id_profesional=13 (Márquez) y guardar nota explicativa.
