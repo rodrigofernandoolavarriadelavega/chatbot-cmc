@@ -1121,6 +1121,32 @@ async def detect_intent(mensaje: str, recepcion_resumen: list | None = None) -> 
             _log_event("", "intent_cancel_prefilter", {"texto": clave[:120]})
         except Exception:
             pass
+        # BUG-4 FIX: multi-intent cancelar + agendar en el mismo mensaje.
+        # Si el texto también tiene intención de agendar (ej: "cancelar la del
+        # jueves y agendar con kine"), responder con pregunta de confirmación
+        # en vez de procesar solo cancelar.
+        _AGENDAR_MULTI_RE = _re_w.compile(
+            r"(agendar?|pedir?\s+hora|sacar\s+hora|nueva\s+hora|otra\s+hora|"
+            r"reservar?|nueva\s+cita|otra\s+cita)"
+        )
+        _CONJ_RE = _re_w.compile(
+            r"(y\s+(?:luego|despu[eé]s|tambi[eé]n|adem[aá]s)|y\s+agendar?|"
+            r"y\s+pedir?|y\s+sacar|despu[eé]s\s+agendar?|tambi[eé]n\s+agendar?)"
+        )
+        _has_agendar = _AGENDAR_MULTI_RE.search(clave_norm) or _AGENDAR_MULTI_RE.search(clave)
+        _has_conj = _CONJ_RE.search(clave_norm) or _CONJ_RE.search(clave)
+        if _has_agendar and _has_conj:
+            log.info("multi-intent cancelar+agendar detectado: %r", clave[:80])
+            try:
+                _log_event("", "multi_intent_cancelar_agendar", {"texto": clave[:120]})
+            except Exception:
+                pass
+            return {
+                "intent": "cancelar",
+                "especialidad": None,
+                "respuesta_directa": None,
+                "multi_intent_pendiente": "agendar",
+            }
         return {"intent": "cancelar", "especialidad": None, "respuesta_directa": None}
     # Meta auto-greetings: vienen de ads/CTAs. Tratar como menu, no como humano.
     if clave in _META_AUTO_GREETINGS or clave_sin_punto in _META_AUTO_GREETINGS:

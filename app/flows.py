@@ -3284,6 +3284,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return await _iniciar_reagendar(phone, data)
 
         if intent == "cancelar":
+            # BUG-4 FIX: multi-intent cancelar+agendar — guardar intent secundario
+            if isinstance(result, dict) and result.get("multi_intent_pendiente"):
+                data["_intent_pendiente"] = result["multi_intent_pendiente"]
             return await _iniciar_cancelar(phone, data, txt=txt)
 
         if intent == "ver_reservas":
@@ -5780,6 +5783,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 log.warning("CONFIRMING_CANCEL sin cita_cancelar en sesión phone=%s", phone)
                 reset_session(phone)
                 return "No pude recuperar la cita a cancelar. ¿Me das tu RUT para revisar tus reservas?"
+            # BUG-4 FIX: preservar _intent_pendiente antes de reset_session
+            _intent_pendiente_cancel = data.get("_intent_pendiente")
             ok = await cancelar_cita(cita["id"])
             reset_session(phone)
             if ok:
@@ -5807,12 +5812,18 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                             })
                     except Exception as e:
                         log.warning("Error notificando waitlist post-cancel: %s", e)
+                # BUG-4: si venía con multi_intent, el mensaje es más explícito
+                _cancel_suffix = (
+                    "\n\nCancelé tu cita. ¿Quieres ahora agendar una nueva hora?"
+                    if _intent_pendiente_cancel == "agendar"
+                    else "\n\n¿Quieres agendar otra hora?"
+                )
                 return _btn_msg(
                     f"✅ Cita cancelada.\n\n"
-                    f"_{cita['profesional']} · {cita['fecha_display']} · {cita['hora_inicio']}_\n\n"
-                    "¿Quieres agendar otra hora?",
+                    f"_{cita['profesional']} · {cita['fecha_display']} · {cita['hora_inicio']}_"
+                    f"{_cancel_suffix}",
                     [
-                        {"id": "1", "title": "📅 Sí, agendar"},
+                        {"id": "1", "title": "Sí, agendar"},
                         {"id": "menu_volver", "title": "No, gracias"},
                     ]
                 )
