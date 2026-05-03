@@ -910,6 +910,16 @@ async def sitemap_xml():
     urls = [
         (f"{base_url}/", "1.0", "weekly"),
         (f"{base_url}/blog", "0.95", "weekly"),
+        (f"{base_url}/chequeos", "0.9", "monthly"),
+        (f"{base_url}/empresas", "0.9", "monthly"),
+        (f"{base_url}/curanilahue", "0.85", "monthly"),
+        (f"{base_url}/los-alamos", "0.8", "monthly"),
+        (f"{base_url}/canete", "0.8", "monthly"),
+        (f"{base_url}/lebu", "0.8", "monthly"),
+        (f"{base_url}/dentista-curanilahue", "0.85", "monthly"),
+        (f"{base_url}/ginecologo-curanilahue", "0.85", "monthly"),
+        (f"{base_url}/otorrino-curanilahue", "0.85", "monthly"),
+        (f"{base_url}/traumatologo-curanilahue", "0.85", "monthly"),
         (f"{base_url}/comuna/", "0.85", "monthly"),
         (f"{base_url}/privacidad", "0.3", "yearly"),
     ]
