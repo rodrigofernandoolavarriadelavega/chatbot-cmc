@@ -845,7 +845,7 @@ async def sitemap_xml():
         "precio-implante-dental-arauco", "precio-ortodoncia-arauco",
         "psicologia-infantil-cuando-consultar", "rinoplastia-funcional-tabique",
         "vacunas-pni-calendario-2026", "bono-fonasa-mle-arauco",
-        "limpieza-dental-precio-arauco",
+        "limpieza-dental-precio-arauco", "ecografia-precio-arauco",
     ]
     base_url = "https://centromedicocarampangue.cl"
     today = datetime.now().strftime("%Y-%m-%d")
