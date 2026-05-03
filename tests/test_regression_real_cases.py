@@ -598,6 +598,199 @@ class TestSlotLockOptimista(unittest.TestCase):
         self.assertTrue(ok, "Tras liberar, otro paciente puede adquirir")
 
 
+
+
+# ─── Tests bugs pediatría / validación edad 2026-05-03 ───────────────────────
+
+class TestParseSlotSelectionEdadGuard(unittest.TestCase):
+    """BUG-1: _parse_slot_selection no debe matchear número embebido en contexto de edad/menor."""
+
+    def setUp(self):
+        import sys
+        sys.path.insert(0, str(ROOT / "app"))
+        import importlib
+        import flows as _flows
+        importlib.reload(_flows)
+        self._parse = _flows._parse_slot_selection
+
+    def _make_slots(self, n=5):
+        return [{"hora_inicio": f"{8+i:02d}:00", "hora_fin": f"{8+i:02d}:20"} for i in range(n)]
+
+    def test_bebe_2_anos_no_matchea_slot_2(self):
+        """'Es para mi bebé 2 años' NO debe matchear slot 2."""
+        slots = self._make_slots(5)
+        result = self._parse("Es para mi bebé 2 años", slots)
+        self.assertIsNone(result, "El número '2' en 'bebé 2 años' no debe interpretarse como slot 2")
+
+    def test_guagua_3_meses_no_matchea_slot_3(self):
+        """'Es para mi guagua de 3 meses' NO debe matchear slot 3."""
+        slots = self._make_slots(5)
+        result = self._parse("Es para mi guagua de 3 meses", slots)
+        self.assertIsNone(result, "El '3' en '3 meses' no debe ser slot 3")
+
+    def test_nino_4_anos_no_matchea_slot_4(self):
+        """'para mi niño de 4 años' NO debe matchear slot 4."""
+        slots = self._make_slots(5)
+        result = self._parse("para mi niño de 4 años", slots)
+        self.assertIsNone(result, "Contexto de edad en niño no debe matchear slot")
+
+    def test_numero_solo_si_matchea(self):
+        """'2' suelto SÍ debe matchear slot 2 (índice 1)."""
+        slots = self._make_slots(5)
+        result = self._parse("2", slots)
+        self.assertEqual(result, 1, "'2' suelto debe dar índice 1")
+
+    def test_opcion_3_si_matchea(self):
+        """'opción 3' SÍ debe matchear slot 3 (índice 2)."""
+        slots = self._make_slots(5)
+        result = self._parse("opción 3", slots)
+        self.assertEqual(result, 2, "'opción 3' debe dar índice 2")
+
+
+class TestOtraPersonaREAmpliado(unittest.TestCase):
+    """BUG-2: _OTRA_PERSONA_RE en flows.py debe cubrir bebé, guagua, niño, niña, chico, chica."""
+
+    def setUp(self):
+        self.flows_content = (ROOT / "app" / "flows.py").read_text(encoding="utf-8")
+
+    def test_bebe_en_otra_persona_re(self):
+        """flows.py debe tener patrón para bebé/bebe en _OTRA_PERSONA_RE."""
+        self.assertIn("beb", self.flows_content.lower(),
+                      "flows.py debe tener 'beb' en _OTRA_PERSONA_RE")
+        # Verificar específicamente el patrón ampliado
+        self.assertIn("_OTRA_PERSONA_RE", self.flows_content,
+                      "flows.py debe tener _OTRA_PERSONA_RE definido")
+
+    def test_guagua_en_otra_persona_re(self):
+        """flows.py debe tener patrón para guagua."""
+        # Buscar desde el primer _OTRA_PERSONA_RE hasta el final del bloque (1200 chars)
+        idx = self.flows_content.find("_OTRA_PERSONA_RE")
+        bloque = self.flows_content[idx:idx+1200]
+        self.assertIn("guagua", bloque,
+                      "_OTRA_PERSONA_RE debe incluir guagua")
+
+    def test_nino_nina_en_otra_persona_re(self):
+        """flows.py debe tener patrón para niño/niña."""
+        idx = self.flows_content.find("_OTRA_PERSONA_RE")
+        bloque = self.flows_content[idx:idx+600]
+        self.assertIn("ni", bloque,
+                      "_OTRA_PERSONA_RE debe incluir niño/niña")
+
+    def test_chico_chica_en_otra_persona_re(self):
+        """flows.py debe tener patrón para chico/chica."""
+        idx = self.flows_content.find("_OTRA_PERSONA_RE")
+        bloque = self.flows_content[idx:idx+1200]
+        self.assertIn("chic", bloque,
+                      "_OTRA_PERSONA_RE debe incluir chico/chica")
+
+    def test_no_matchea_otro_dia_en_codigo(self):
+        """El comentario del fix debe mencionar el caso 'otro día' evitado."""
+        self.assertIn("para otro", self.flows_content,
+                      "El código debe documentar el caso 'para otro día' que NO debe matchear")
+
+    def test_otra_persona_slot_re_en_wait_slot(self):
+        """WAIT_SLOT también debe tener guard de tercero."""
+        self.assertIn("_OTRA_PERSONA_SLOT_RE", self.flows_content,
+                      "WAIT_SLOT debe tener _OTRA_PERSONA_SLOT_RE definido")
+
+    def test_slot_re_tiene_guagua(self):
+        """_OTRA_PERSONA_SLOT_RE en WAIT_SLOT debe incluir guagua."""
+        idx = self.flows_content.find("_OTRA_PERSONA_SLOT_RE")
+        bloque = self.flows_content[idx:idx+600]
+        self.assertIn("guagua", bloque,
+                      "_OTRA_PERSONA_SLOT_RE en WAIT_SLOT debe incluir guagua")
+
+
+class TestConfigEdadAvisoPediatria(unittest.TestCase):
+    """BUG-3: EDAD_AVISO_PEDIATRIA debe existir en config.py con las especialidades correctas."""
+
+    def setUp(self):
+        import sys
+        sys.path.insert(0, str(ROOT / "app"))
+        import importlib
+        import config as _cfg
+        importlib.reload(_cfg)
+        self.cfg = _cfg
+
+    def test_existe_dict(self):
+        self.assertTrue(hasattr(self.cfg, "EDAD_AVISO_PEDIATRIA"),
+                        "EDAD_AVISO_PEDIATRIA debe existir en config.py")
+
+    def test_medicina_general_14(self):
+        d = self.cfg.EDAD_AVISO_PEDIATRIA
+        self.assertEqual(d.get("medicina general"), 14)
+
+    def test_medicina_familiar_14(self):
+        d = self.cfg.EDAD_AVISO_PEDIATRIA
+        self.assertEqual(d.get("medicina familiar"), 14)
+
+    def test_kinesiologia_14(self):
+        d = self.cfg.EDAD_AVISO_PEDIATRIA
+        self.assertEqual(d.get("kinesiologia"), 14)
+
+    def test_psicologia_adulto_18(self):
+        d = self.cfg.EDAD_AVISO_PEDIATRIA
+        self.assertEqual(d.get("psicologia adulto"), 18)
+
+
+class TestFlowsPediatriaGuards(unittest.TestCase):
+    """BUG-2/BUG-3/BUG-5: guardrails en flows.py presentes en código."""
+
+    def setUp(self):
+        self.contenido = (ROOT / "app" / "flows.py").read_text()
+
+    def test_otra_persona_slot_re_en_wait_slot(self):
+        """_OTRA_PERSONA_SLOT_RE debe estar definido en el handler WAIT_SLOT."""
+        self.assertIn("_OTRA_PERSONA_SLOT_RE", self.contenido,
+                      "Falta guard de tercero/menor en WAIT_SLOT")
+
+    def test_bue1_edad_ctx_re_en_parse_slot(self):
+        """_EDAD_CTX_RE debe estar en _parse_slot_selection."""
+        self.assertIn("_EDAD_CTX_RE", self.contenido,
+                      "Falta guard de contexto de edad en _parse_slot_selection")
+
+    def test_bug3_aviso_pediatria_en_wait_rut(self):
+        """Aviso pediátrico debe verificarse en WAIT_RUT_AGENDAR."""
+        self.assertIn("pediatria_aviso_visto", self.contenido,
+                      "Falta flag pediatria_aviso_visto en WAIT_RUT_AGENDAR")
+        self.assertIn("ped_continuar", self.contenido,
+                      "Falta handler botón ped_continuar")
+        self.assertIn("ped_no", self.contenido,
+                      "Falta handler botón ped_no")
+
+    def test_bug5_menor_kw_rut_guard(self):
+        """Guard de keyword menor en WAIT_RUT_AGENDAR debe existir."""
+        self.assertIn("rut_agendar_reintent_menor", self.contenido,
+                      "Falta guard BUG-5 en WAIT_RUT_AGENDAR (log_event rut_agendar_reintent_menor)")
+        self.assertIn("_MENOR_KW_RUT", self.contenido,
+                      "Falta _MENOR_KW_RUT regex en WAIT_RUT_AGENDAR")
+
+
+class TestClaudeHelperPediatriaRegla(unittest.TestCase):
+    """BUG-4: SYSTEM_PROMPT debe tener regla explícita para consultas de pediatría."""
+
+    def setUp(self):
+        self.contenido = (ROOT / "app" / "claude_helper.py").read_text()
+
+    def test_regla_pediatria_en_system_prompt(self):
+        """SYSTEM_PROMPT debe mencionar que pediatría → intent info + derivar CESFAM."""
+        self.assertIn("PEDIATRÍA", self.contenido,
+                      "Falta regla PEDIATRÍA en SYSTEM_PROMPT de claude_helper.py")
+
+    def test_nunca_psicologia_adulto_para_pediatria(self):
+        """Regla debe prohibir clasificar pediatría como Psicología Adulto."""
+        idx_ped = self.contenido.find("PEDIATRÍA")
+        bloque_ped = self.contenido[idx_ped:idx_ped+800]
+        self.assertIn("Psicología Adulto", bloque_ped,
+                      "Regla debe mencionar que NUNCA clasifique como Psicología Adulto")
+
+    def test_derivacion_cesfam_en_regla(self):
+        """Regla debe mencionar CESFAM como derivación."""
+        idx = self.contenido.find("PEDIATRÍA")
+        bloque = self.contenido[idx:idx+600]
+        self.assertIn("CESFAM", bloque,
+                      "Regla de pediatría debe mencionar derivación a CESFAM")
+
 def _run():
     """Ejecutor con resumen claro."""
     loader = unittest.TestLoader()
