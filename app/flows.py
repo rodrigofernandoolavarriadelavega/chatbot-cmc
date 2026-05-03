@@ -4771,6 +4771,51 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         {"id": "accion_recepcion","title": "💬 Hablar con recepción"},
                     ]
                 )
+            # ── Detector de preferencia temporal antes del fallback ──
+            # Caso real 56961986439 2026-05-03: paciente en WAIT_SLOT escribió
+            # "necesito atención para hoy" y bot respondió genérico "no te entendí".
+            # Hoy es domingo: el bot debe avisar que no atienden hoy y ofrecer
+            # mañana, no quedarse callado.
+            _TEMP_HOY = re.compile(r"\b(hoy|hoy mismo|para hoy|ahora|ya mismo|esta tarde|esta noche|esta mañana)\b", re.IGNORECASE)
+            _TEMP_MAÑANA = re.compile(r"\bma[ñn]ana\b", re.IGNORECASE)
+            _TEMP_URGENTE = re.compile(r"\b(urgente|de urgencia|emergencia|me siento mal|me duele mucho)\b", re.IGNORECASE)
+            if _TEMP_URGENTE.search(tl):
+                log_event(phone, "wait_slot_urgencia_detectada", {"txt": txt[:80]})
+                return (
+                    "⚠️ Si es una *urgencia médica*, llama al *SAMU 131* o ve directamente al *Hospital de Arauco*.\n\n"
+                    "Si quieres agendar una hora regular, escribe el *número* del horario o *otro día*."
+                )
+            if _TEMP_HOY.search(tl):
+                from datetime import datetime as _dt_h
+                _hoy = _dt_h.now(_CHILE_TZ)
+                _dow = _hoy.weekday()  # 0=lunes ... 6=domingo
+                if _dow == 6:  # domingo
+                    log_event(phone, "wait_slot_hoy_domingo", {})
+                    return (
+                        "Hoy es *domingo* y no atendemos 😕\n\n"
+                        "Tenemos horas disponibles desde *mañana lunes*. ¿Te muestro?\n\n"
+                        "Escribe *otro día* para ver opciones o el *número* del horario que ya te ofrecí."
+                    )
+                if _dow == 5:  # sábado
+                    if _hoy.hour >= 14:
+                        log_event(phone, "wait_slot_hoy_sabado_tarde", {})
+                        return (
+                            "Hoy sábado ya cerramos 😕\n\n"
+                            "Te puedo agendar *desde el lunes*. Escribe *otro día* para ver opciones."
+                        )
+                # Día hábil: avisar que vamos a buscar para hoy
+                log_event(phone, "wait_slot_hoy_pedido", {"hora_actual": _hoy.strftime("%H:%M")})
+                return (
+                    "Veo que necesitas hora *para hoy*. Las horas que te mostré arriba son las próximas disponibles.\n\n"
+                    "Si necesitas algo *más tarde hoy*, escribe *ver todos* y revisamos la agenda completa de hoy.\n\n"
+                    "Si es *urgente*, llama al *(41) 296 5226* o escribe *humano* y te conecto con recepción."
+                )
+            if _TEMP_MAÑANA.search(tl):
+                log_event(phone, "wait_slot_manana_pedido", {})
+                return (
+                    "Veo que prefieres mañana 😊\n\n"
+                    "Escribe *otro día* y te muestro horarios para mañana específicamente."
+                )
             return (
                 "No te entendí bien 😅\n\n"
                 "Puedes:\n"
