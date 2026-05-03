@@ -76,7 +76,21 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   "alternateName": ["CMC", "Centro Medico Carampangue"],
   "slogan": "Cuidamos a tu familia, cerca de casa",
   "description": "Centro médico privado en Carampangue, Provincia de Arauco. 23 profesionales y 19 especialidades para pacientes de Arauco, Curanilahue, Cañete, Lebu y zonas aledañas.",
-  "image": "https://centromedicocarampangue.cl/static/logo.png",
+  "image": [
+    "https://agentecmc.cl/static/og-image.png",
+    "https://agentecmc.cl/static/images/centro/fachada.jpg",
+    "https://agentecmc.cl/static/images/centro/recepcion.jpg",
+    "https://agentecmc.cl/static/images/centro/sala-espera.jpg",
+    "https://agentecmc.cl/static/images/centro/box-medico.jpg",
+    "https://agentecmc.cl/static/images/centro/box-luz-natural.jpg"
+  ],
+  "photo": [
+    {"@type":"ImageObject","name":"Fachada del centro","url":"https://agentecmc.cl/static/images/centro/fachada.jpg","caption":"Fachada del Centro Médico Carampangue en República 102"},
+    {"@type":"ImageObject","name":"Recepción","url":"https://agentecmc.cl/static/images/centro/recepcion.jpg","caption":"Recepción con mostrador de madera y zona de espera"},
+    {"@type":"ImageObject","name":"Sala de espera","url":"https://agentecmc.cl/static/images/centro/sala-espera.jpg","caption":"Sala de espera con sillones y ventanal"},
+    {"@type":"ImageObject","name":"Box médico","url":"https://agentecmc.cl/static/images/centro/box-medico.jpg","caption":"Box de atención médica con camilla y escritorio"},
+    {"@type":"ImageObject","name":"Box con luz natural","url":"https://agentecmc.cl/static/images/centro/box-luz-natural.jpg","caption":"Box médico con ventanal y luz natural"}
+  ],
   "logo": {"@id":"https://centromedicocarampangue.cl/#logo"},
   "url": "https://centromedicocarampangue.cl/",
   "telephone": "+56442965226",
@@ -137,7 +151,15 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     "highPrice": "650000",
     "offerCount": "30",
     "description": "Consultas médicas y dentales desde $4.770 (Bono Fonasa Nutrición) hasta $650.000 (implante dental + corona). 30 prestaciones diferentes."
-  }<!--CMC_AGGREGATE_RATING-->,
+  },
+  "amenityFeature": [
+    {"@type":"LocationFeatureSpecification","name":"Estacionamiento libre en la calle","value":true},
+    {"@type":"LocationFeatureSpecification","name":"WiFi gratuito","value":true},
+    {"@type":"LocationFeatureSpecification","name":"Recepción atendida por personal","value":true},
+    {"@type":"LocationFeatureSpecification","name":"Boletas Fonasa MLE en sucursal (huella biométrica)","value":true},
+    {"@type":"LocationFeatureSpecification","name":"Pago con tarjeta (solo dental)","value":true}
+  ],
+  "publicAccess": true<!--CMC_AGGREGATE_RATING-->,
   "sameAs": [
     "https://www.facebook.com/centromedicocarampangue",
     "https://www.instagram.com/centromedicocarampangue"
