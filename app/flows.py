@@ -6238,6 +6238,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     modalidad=data.get("modalidad", "particular"),
                     paciente_nombre=paciente["nombre"],
                     es_tercero=es_tercero,
+                    id_paciente_medilink=paciente.get("id"),
                 )
                 # ── Telemedicina: guardar link videollamada ─────────────────
                 _link_video = None
@@ -9422,7 +9423,16 @@ def _format_citas_reagendar(citas: list, nombre_paciente: str) -> dict:
 
 def _derivar_humano(phone: str = None, contexto: str = "") -> str:
     if phone:
-        save_session(phone, "HUMAN_TAKEOVER", {"hold_sent": True, "handoff_reason": contexto[:200]})
+        # BUG-6 fix: reset msgs_sin_respuesta para que el primer mensaje
+        # post-derivación reciba el ack "Recibido" en el handler HUMAN_TAKEOVER.
+        # Si no reseteamos, un paciente que ya pasó por recepción antes tendría
+        # msgs_sin_respuesta > 1 y quedaría en silencio.
+        save_session(phone, "HUMAN_TAKEOVER", {
+            "hold_sent": True,
+            "handoff_reason": contexto[:200],
+            "msgs_sin_respuesta": 0,
+            "human_replied": False,
+        })
         log_event(phone, "derivado_humano", {"razon": contexto[:200]})
     msg = (
         "Claro, te conecto con recepción 🙋\n\n"

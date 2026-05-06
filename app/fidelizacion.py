@@ -333,13 +333,14 @@ async def enviar_seguimiento_postconsulta(send_fn, send_template_fn=None,
                 _asyncio_fidel.create_task(_mc_purch.send_event(
                     "Purchase",
                     phone=cita["phone"],
+                    value=float(cita.get("precio") or 0) or None,
+                    currency="CLP",
                     rut=_prof_fidel.get("rut") or None,
                     first_name=_nom_fidel[0] if _nom_fidel else None,
                     last_name=_nom_fidel[-1] if len(_nom_fidel) > 1 else None,
                     custom_data={
                         "content_name": cita.get("especialidad") or "",
                         "content_category": "medical_appointment",
-                        "currency": "CLP",
                     },
                 ))
             except Exception as _capi_purch_err:

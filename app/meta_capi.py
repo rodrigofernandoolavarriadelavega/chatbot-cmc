@@ -219,7 +219,7 @@ async def send_event(
     payload = _clean_none(payload)
 
     # Endpoint
-    url = f"https://graph.facebook.com/v21.0/{pixel_id}/events"
+    url = f"https://graph.facebook.com/v22.0/{pixel_id}/events"
 
     backoffs = [0.5, 1.0, 2.0]
     last_error = ""

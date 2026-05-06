@@ -911,34 +911,29 @@ async def _job_regenerate_heatmap_cache():
         import sqlite3 as _sqlite3
         from pathlib import Path as _Path
         from collections import defaultdict as _dd
+        from session import _conn as _sc_heatmap
 
-        _db_sessions = _Path(__file__).parent.parent / "data" / "sessions.db"
         _db_heatmap  = _Path(__file__).parent.parent / "data" / "heatmap_cache.db"
         _out_file    = _Path(__file__).parent.parent / "data" / "heatmap_cache.json"
 
-        # Leer comunas desde contact_profiles (sessions.db)
+        # Leer comunas desde contact_profiles (sessions.db) via _conn (SQLCipher-aware)
         comunas: dict = _dd(lambda: {"pacientes": 0, "citas": 0})
 
-        if _db_sessions.exists():
-            conn = _sqlite3.connect(str(_db_sessions))
-            conn.row_factory = _sqlite3.Row
-            try:
-                # Comunas registradas en perfiles de contacto
-                rows = conn.execute(
-                    "SELECT UPPER(TRIM(comuna)) AS c, COUNT(DISTINCT phone) AS n "
-                    "FROM contact_profiles WHERE comuna IS NOT NULL AND comuna != '' "
-                    "GROUP BY UPPER(TRIM(comuna))"
-                ).fetchall()
-                for r in rows:
-                    comunas[r["c"]]["pacientes"] += r["n"]
-                # Tags de arauco como fallback
-                arauco_phones = conn.execute(
-                    "SELECT COUNT(DISTINCT phone) FROM tags WHERE tag='arauco'"
-                ).fetchone()[0]
-                if arauco_phones and "ARAUCO" not in comunas:
-                    comunas["ARAUCO"]["pacientes"] += arauco_phones
-            finally:
-                conn.close()
+        with _sc_heatmap() as conn:
+            # Comunas registradas en perfiles de contacto
+            rows = conn.execute(
+                "SELECT UPPER(TRIM(comuna)) AS c, COUNT(DISTINCT phone) AS n "
+                "FROM contact_profiles WHERE comuna IS NOT NULL AND comuna != '' "
+                "GROUP BY UPPER(TRIM(comuna))"
+            ).fetchall()
+            for r in rows:
+                comunas[r["c"]]["pacientes"] += r["n"]
+            # Tags de arauco como fallback
+            arauco_phones = conn.execute(
+                "SELECT COUNT(DISTINCT phone) FROM tags WHERE tag='arauco'"
+            ).fetchone()[0]
+            if arauco_phones and "ARAUCO" not in comunas:
+                comunas["ARAUCO"]["pacientes"] += arauco_phones
 
         # Sumar citas desde heatmap_cache.db si existe
         if _db_heatmap.exists():

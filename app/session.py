@@ -566,6 +566,10 @@ def _conn():
         conn.execute("ALTER TABLE citas_bot ADD COLUMN es_tercero INTEGER DEFAULT 0")
     except _OPERATIONAL_ERRORS:
         pass
+    try:
+        conn.execute("ALTER TABLE citas_bot ADD COLUMN id_paciente_medilink INTEGER")
+    except _OPERATIONAL_ERRORS:
+        pass
     # ── Compliance Ley 19.628 (Chile, reforma 2024) ───────────────────────────
     # Registro de consentimiento explícito del paciente para almacenar
     # conversación + datos. Sin un registro 'accepted' aquí NO se almacena
@@ -944,18 +948,22 @@ def get_tags_summary() -> dict:
 
 def save_cita_bot(phone: str, id_cita: str, especialidad: str,
                   profesional: str, fecha: str, hora: str, modalidad: str,
-                  paciente_nombre: str = "", es_tercero: bool = False):
+                  paciente_nombre: str = "", es_tercero: bool = False,
+                  id_paciente_medilink: int | None = None):
     """Registra una cita creada por el bot para tracking y recordatorios.
     paciente_nombre: nombre del paciente real (puede ser distinto del dueño del celular).
     es_tercero: True si quien agenda es un familiar/tercero (el celular no es del paciente).
+    id_paciente_medilink: ID de paciente en Medilink, para validación de cancelaciones.
     """
     with _conn() as conn:
         conn.execute(
             """INSERT INTO citas_bot (phone, id_cita, especialidad, profesional,
-                                       fecha, hora, modalidad, paciente_nombre, es_tercero)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                                       fecha, hora, modalidad, paciente_nombre, es_tercero,
+                                       id_paciente_medilink)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (phone, id_cita, especialidad, profesional, fecha, hora, modalidad,
-             paciente_nombre or "", 1 if es_tercero else 0)
+             paciente_nombre or "", 1 if es_tercero else 0,
+             id_paciente_medilink)
         )
         conn.commit()
 

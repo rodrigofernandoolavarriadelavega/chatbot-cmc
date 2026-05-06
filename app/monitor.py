@@ -384,8 +384,8 @@ async def enviar_resumen_anomalias(send_fn) -> int:
         return 0
 
     # Marcar alertas como vistas solo si el envío fue OK
-    for _, _, ah in nuevas:
-        _mark_alerted(ah, _)
+    for tipo_m, _, ah in nuevas:
+        _mark_alerted(ah, tipo_m)
 
     log.info("Monitor: %d alertas nuevas enviadas a admin", len(nuevas))
     return len(nuevas)
