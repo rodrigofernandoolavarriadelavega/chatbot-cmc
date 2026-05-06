@@ -2067,16 +2067,20 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     txt   = texto.strip()
     tl    = txt.lower().strip("*_~").strip()  # BUG-B: quita marcadores de formato WhatsApp (*menu*, _menu_, ~salir~)
 
-    # ── FIX-3: Staff whitelist — personal del CMC al canal público ──────────
-    # Personal médico/admin escribe al bot como si fuera un paciente (consultas,
-    # confirmaciones, etc.). 14 takeovers/mes atribuidos a esta causa.
-    # Si el phone está en la whitelist, derivar directo a HUMAN_TAKEOVER.
+    # ── BUG-K FIX: Staff whitelist — silencio permanente en IDLE ──────────────
+    # Personal médico/admin (ej: Dra. Javiera Burgos 56938738734) usa el canal
+    # público para coordinar con recepción. El bot los interceptaba en cada
+    # mensaje IDLE generando ~71 mensajes basura/semana y 6 takeovers automáticos.
+    # Fix: si el phone está en la whitelist → loggear, guardar mensaje, NO responder.
+    # Se acepta HUMAN_TAKEOVER activo (recepcionista tomó control) para que la
+    # conversación fluya normalmente cuando recepción quiere responder.
     from staff_whitelist import is_staff, get_staff_name
-    if is_staff(phone) and state != "HUMAN_TAKEOVER":
+    if is_staff(phone):
         nombre_staff = get_staff_name(phone)
-        save_session(phone, "HUMAN_TAKEOVER", data)
-        log_event(phone, "staff_directo", {"nombre": nombre_staff})
-        return f"Hola {nombre_staff.split()[0] if nombre_staff else ''}, te paso a recepción. ✋"
+        log_event(phone, "staff_silenciado", {"nombre": nombre_staff, "state": state})
+        # No responder al staff en ningún estado — el mensaje ya fue guardado
+        # por log_message en el webhook antes de llegar acá.
+        return None
 
     # ── Comando admin: /status (y sinónimos) desde el celular del admin ───
     # Abre la ventana 24h de WhatsApp y devuelve el reporte EN VIVO. Útil
@@ -2254,7 +2258,47 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # IMPORTANTE: emergencias pasan por encima del opt-in de privacidad
     # (Ley 19.628 art. 21 — base legal "interés vital del titular").
     # Solo registramos el evento (no el texto crudo) para minimizar PII.
-    if (any(p in tl_norm for p in EMERGENCIAS)
+    #
+    # BUG-G FIX: "urgencia" como sustantivo de excusa o referida en pasado/tercera
+    # persona NO debe disparar SAMU. Exigir señal de gravedad inmediata presente.
+    # Ejemplos falsos positivos:
+    #   - "se me presentó una urgencia y no voy a poder asistir" → excusa de cancelación
+    #   - "llevé a mi hijo a urgencias y me dijeron..." → relato pasado de tercero
+    # La heurística: si el único match de EMERGENCIAS es "urgencia" o "emergencia"
+    # (sin otros términos graves), y el mensaje contiene patrones de excusa/relato
+    # pasado, se inhibe el trigger.
+    _solo_urgencia_trigger = (
+        all(p not in tl_norm for p in EMERGENCIAS if p not in ("urgencia", "emergencia"))
+        and all(not pat.search(tl_norm) for pat in EMERGENCIAS_PATRONES)
+        and all(not pat.search(tl_norm) for pat in EMERGENCIAS_VITAL_PATRONES)
+        and all(p not in tl for p in EMERGENCIAS if p not in ("urgencia", "emergencia"))
+        and all(not pat.search(tl) for pat in EMERGENCIAS_PATRONES)
+        and all(not pat.search(tl) for pat in EMERGENCIAS_VITAL_PATRONES)
+        and ("urgencia" in tl_norm or "emergencia" in tl_norm)
+    )
+    _URGENCIA_EXCUSA = re.compile(
+        r"(se me (presento|presentó|surgio|surgió)|tuve una|me surgio|me surgió"
+        r"|me (impide|impidio|impidió)|no (voy|puedo|pude) (a )?asistir"
+        r"|no (voy|puedo|pude) (a )?ir|no asisti|no asistí"
+        r"|llev[eé] a|fui a|fue a|fueron a|lo llev|la llev"
+        r"|me dijeron|le dijeron|nos dijeron|me dijo|le dijo"
+        r"|el otro día|el otro dia|ayer|la semana pasada|hace unos días|hace unos dias)",
+        re.IGNORECASE,
+    )
+    _GRAVEDAD_INMEDIATA = re.compile(
+        r"(me duele|no puedo respirar|estoy sangrando|tengo fiebre alta"
+        r"|me siento mal|no aguanto|se está poniendo peor|se esta poniendo peor"
+        r"|ahora mismo|en este momento|ahora|no para de|no me para)",
+        re.IGNORECASE,
+    )
+    _inhibir_emergencia = (
+        _solo_urgencia_trigger
+        and _URGENCIA_EXCUSA.search(tl)
+        and not _GRAVEDAD_INMEDIATA.search(tl)
+    )
+
+    if not _inhibir_emergencia and (
+            any(p in tl_norm for p in EMERGENCIAS)
             or any(pat.search(tl_norm) for pat in EMERGENCIAS_PATRONES)
             or any(pat.search(tl_norm) for pat in EMERGENCIAS_VITAL_PATRONES)
             or any(p in tl for p in EMERGENCIAS)
@@ -2821,6 +2865,27 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             )
             if any(kw in tl_norm for kw in _MAS_OPCIONES_KWS):
                 log_event(phone, "faq_agendar_mas_opciones", {"esp": esp_sug_prev, "txt": txt[:100]})
+                data.pop("especialidad_sugerida", None)
+                perfil = get_profile(phone)
+                if perfil:
+                    data["rut_conocido"] = perfil["rut"]
+                    data["nombre_conocido"] = perfil["nombre"]
+                return await _iniciar_agendar(phone, data, esp_sug_prev)
+            # BUG-J FIX: si el mensaje tiene referencias temporales ("para otro día",
+            # "para mañana", "lunes", "próxima semana", etc.), conservar especialidad
+            # del contexto FAQ y retomar agendamiento en vez de descartar el contexto.
+            # Caso real (7 ocurrencias/7d): paciente responde "Para otro día" a slot
+            # sugerido → bot mostraba "Hola, parece que tu mensaje quedó incompleto".
+            _TEMPORAL_KWS = re.compile(
+                r"\b(otro d[ií]a|otra fecha|otro momento|mas adelante|más adelante"
+                r"|manana|mañana|lunes|martes|miercoles|miércoles|jueves|viernes"
+                r"|sabado|sábado|domingo|próxima semana|proxima semana"
+                r"|la semana que viene|para el [a-z]+|otro rato|despues|después"
+                r"|cuando pueda|en otro momento|en otra fecha)\b",
+                re.IGNORECASE,
+            )
+            if _TEMPORAL_KWS.search(tl_norm):
+                log_event(phone, "faq_esp_otra_fecha", {"esp": esp_sug_prev, "txt": txt[:100]})
                 data.pop("especialidad_sugerida", None)
                 perfil = get_profile(phone)
                 if perfil:
@@ -5665,6 +5730,21 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 return await handle_message(phone, txt, {"state": "IDLE", "data": {}})
 
     if state == "WAIT_RUT_AGENDAR":
+        # BUG-H: si ya hubo 2+ rechazos de RUT y el paciente envía texto sin formato de
+        # RUT (parece un nombre), derivar a recepción con el nombre como contexto.
+        _RUT_LIKE = re.compile(r'\b\d{5,8}[-–][\dkK]\b|\b\d{7,9}\b')
+        if (
+            data.get("intentos_rut_invalido", 0) >= 2
+            and not _RUT_LIKE.search(txt)
+            and len(txt.split()) >= 2
+            and len([c for c in txt if c.isdigit()]) < 4
+        ):
+            log_event(phone, "rut_fallback_nombre", {"texto": txt[:120]})
+            return _derivar_humano(
+                phone=phone,
+                contexto=f"paciente no tiene RUT exacto; nombre indicado: {txt[:120]}"
+            )
+
         # BUG-3 FIX: Respuesta a aviso pediátrico (botones ped_continuar / ped_no)
         if tl == "ped_continuar":
             # Paciente acepta continuar pese al aviso de edad — limpiar flag y pedir RUT
@@ -5756,7 +5836,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     f"{resp_faq}\n\n"
                     "_Cuando quieras continuar con tu reserva, envíame tu RUT 😊_"
                 )
-            # BUG-06: contador específico para RUT inválido (distinto del genérico intentos_fallidos)
+            # BUG-06 / BUG-H: contador específico para RUT inválido (distinto del genérico intentos_fallidos)
+            # Al 2do rechazo: ofrecer escape por nombre o recepción (evita loop infinito).
+            # Al 3er rechazo: derivar a recepción.
             data["intentos_rut_invalido"] = data.get("intentos_rut_invalido", 0) + 1
             data["intentos_fallidos"] = data.get("intentos_fallidos", 0) + 1
             intentos_rut = data["intentos_rut_invalido"]
@@ -5765,7 +5847,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             save_session(phone, "WAIT_RUT_AGENDAR", data)
             hint = hint_rut_error(txt)
             if intentos_rut >= 2:
-                hint += "\n\n_Si el número también es incorrecto, escribe *otra persona* y te ayudo._"
+                # BUG-H: segundo rechazo → ofrecer escape explícito con nombre o recepción
+                hint += (
+                    "\n\nNo logro validar ese RUT. Si no lo tienes exacto, puedes:\n"
+                    "1) Escribirme el *nombre completo* del paciente y te busco\n"
+                    f"2) Llamar a recepción al *(41) 296 5226*"
+                )
             return hint
 
         data.pop("intentos_rut_invalido", None)  # BUG-06: reset al RUT valido

@@ -137,6 +137,21 @@ _INTENT_CACHE: dict[str, dict] = {
     "ecografía intravajinal":     {"intent": "agendar", "especialidad": "ginecología"},
     "ecografia transvajinal":     {"intent": "agendar", "especialidad": "ginecología"},
     "ecografía transvajinal":     {"intent": "agendar", "especialidad": "ginecología"},
+    # BUG-F: ecocardiograma mal ruteado a cardiología vacía → ecografía (David Pardo)
+    # "ecocardiograma" y variantes coloquiales son ecografías cardíacas, NO consultas
+    # de cardiología. David Pardo las realiza a $40.000 y tiene cupos disponibles.
+    "ecocardiograma":             {"intent": "agendar", "especialidad": "ecografía"},
+    "eco cardiograma":            {"intent": "agendar", "especialidad": "ecografía"},
+    "eco cardio":                 {"intent": "agendar", "especialidad": "ecografía"},
+    "eco al corazon":             {"intent": "agendar", "especialidad": "ecografía"},
+    "eco al corazón":             {"intent": "agendar", "especialidad": "ecografía"},
+    "eco corazon":                {"intent": "agendar", "especialidad": "ecografía"},
+    "eco corazón":                {"intent": "agendar", "especialidad": "ecografía"},
+    "eco cardiaca":               {"intent": "agendar", "especialidad": "ecografía"},
+    "eco cardíaca":               {"intent": "agendar", "especialidad": "ecografía"},
+    "ecografia cardiaca":         {"intent": "agendar", "especialidad": "ecografía"},
+    "ecografía cardíaca":         {"intent": "agendar", "especialidad": "ecografía"},
+    "examen ecocardiograma":      {"intent": "agendar", "especialidad": "ecografía"},
     "gastro":         {"intent": "agendar", "especialidad": "gastroenterología"},
     "gastroenterología": {"intent": "agendar", "especialidad": "gastroenterología"},
     "implantes":      {"intent": "agendar", "especialidad": "implantología"},
@@ -676,7 +691,7 @@ CARDIOVASCULAR
 - Palpitaciones / el corazón se me acelera / arritmia → **Cardiología**.
 - Várices / venas hinchadas en las piernas → **Medicina General** para evaluación.
 - Electrocardiograma / ECG / examen del corazón → $20.000 en **Cardiología**.
-- Ecocardiograma / eco al corazón → $110.000 en **Cardiología**.
+- Ecocardiograma / eco al corazón / eco cardíaca → **Ecografía** (David Pardo, $40.000). IMPORTANTE: el ecocardiograma lo realiza el ecografista David Pardo, NO el cardiólogo. Rutar a "ecografía".
 
 RESPIRATORIO (común en zona con humo de chimenea y leña)
 - Gripazo / resfrío fuerte / me agarró un resfrío → **Medicina General**.
@@ -911,6 +926,8 @@ ECOGRAFÍA — David Pardo (solo particular, ecografías generales):
 - Ecotomografía renal bilateral: $40.000 — evalúa ambos riñones y vías urinarias. Detecta cálculos, quistes o dilatación.
 - Ecotomografía doppler: $90.000 — evalúa el flujo sanguíneo en arterias y venas. Se usa para várices, trombosis o insuficiencia venosa.
 NOTA: David Pardo NO realiza ecografías ginecológicas; esas las hace el Dr. Tirso Rejón (Ginecología). La ecografía obstétrica NO se realiza en el CMC.
+NOTA: El ecocardiograma (eco cardíaca, eco al corazón) SÍ lo realiza David Pardo a $40.000. Es una ecografía cardíaca, no una consulta de cardiología. Rutar intent a "ecografía", no a "cardiología".
+NOTA BUG-I: La ecografía transvaginal / intravaginal / ginecológica cuesta $35.000 (NO $40.000). Las que cuestan $40.000 son las ecografías generales (abdominal, tiroidea, etc.). NUNCA citar $40.000 para transvaginal.
 
 ECOGRAFÍA GINECOLÓGICA — Dr. Tirso Rejón (Ginecología, solo particular):
 - Ecografía ginecológica (transvaginal): $35.000 — evalúa útero y ovarios. Detecta quistes, miomas, endometriosis o irregularidades menstruales.
@@ -919,7 +936,7 @@ ECOGRAFÍA GINECOLÓGICA — Dr. Tirso Rejón (Ginecología, solo particular):
 CARDIOLOGÍA (Dr. Miguel Millán — solo particular):
 - Consulta cardiología: $40.000 — evaluación cardiovascular: hipertensión, arritmias, soplos, dolor de pecho, control de factores de riesgo cardíaco.
 - Electrocardiograma informado por cardiólogo: $20.000 — registro eléctrico del corazón. Detecta arritmias, infartos, bloqueos. Rápido (10 min), indoloro, con electrodos adhesivos en el pecho.
-- Ecocardiograma: $110.000 — ecografía del corazón en tiempo real. Evalúa válvulas, tamaño de cavidades, función cardíaca y flujo sanguíneo. Dura ~30 min, indoloro.
+- Ecocardiograma: $40.000 — ecografía del corazón realizada por el ecografista David Pardo (NO el cardiólogo). Evalúa válvulas, tamaño de cavidades, función cardíaca y flujo sanguíneo. Dura ~30 min, indoloro. Rutar a "ecografía".
 
 GINECOLOGÍA (Dr. Tirso Rejón — solo particular):
 - Consulta ginecología: $30.000 — control ginecológico, trastornos menstruales, anticoncepción, menopausia, dolor pélvico, infecciones.

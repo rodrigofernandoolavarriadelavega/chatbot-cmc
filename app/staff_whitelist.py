@@ -22,7 +22,10 @@ log = logging.getLogger("bot.staff")
 #   WHERE event='derivado_humano' AND ts > datetime('now','-30 days')
 #   GROUP BY phone ORDER BY n DESC LIMIT 20;
 _EXTRA_PHONES: dict[str, str] = {
-    "56938738734": "Dr. Tirso Rejón",   # ginecólogo, ~10 takeovers/mes (auditoría abr 2026)
+    # BUG-K: Dra. Javiera Burgos (dentista), 71 msg basura/semana — auditoría may 2026.
+    # Este número fue reportado en el audit como el de Burgos. Si el número de Rejón
+    # es distinto, agregarlo por separado cuando se confirme.
+    "56938738734": "Dra. Javiera Burgos",
 }
 
 # Runtime additions (via endpoint /admin/api/staff/add, volátil — se pierde al reiniciar)
