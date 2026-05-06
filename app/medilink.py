@@ -438,6 +438,15 @@ async def _slots_desde_agendas(client: httpx.AsyncClient, id_prof: int, fecha: s
         for s in libres:
             m = _h_to_min(s["hora_inicio"])
             if last_min is None or (m - last_min) >= intervalo:
+                # Sobrescribir hora_fin con hora_inicio + intervalo del bot.
+                # Medilink carga cupos cada 5 min (flexibilidad de recepción),
+                # pero el bot debe crear citas con la duración real de la
+                # especialidad. Sin esto, crear_cita calcula duracion=5 y Medilink
+                # registra citas de 5 min en lugar de los 15 min (Pardo) o el
+                # intervalo que corresponda.
+                hf_min = m + intervalo
+                s = dict(s)  # copia para no mutar el dict original
+                s["hora_fin"] = f"{hf_min // 60:02d}:{hf_min % 60:02d}"
                 compactados.append(s)
                 last_min = m
         if len(compactados) != len(libres):
