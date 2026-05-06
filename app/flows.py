@@ -424,23 +424,72 @@ _CROSS_SELL_RULES: dict[str, list[tuple[str, str]]] = {
         ("Ecografía",
          "Muchas consultas ginecológicas se complementan con una ecografía transvaginal.\n\n"
          "David Pardo realiza ecografías en el CMC. ¿Te agendo una evaluación?"),
+        ("Matrona",
+         "Aprovecha tu visita ginecológica con un PAP o control con matrona — "
+         "Sarai Gómez atiende en el CMC.\n\n"
+         "¿Te agendo la toma de muestra?"),
     ],
-    "Traumatología": [
-        ("Kinesiología",
-         "Para complementar tu recuperación traumatológica, la kinesiología es clave.\n\n"
-         "Tenemos kinesiólogos disponibles esta semana. ¿Te interesa agendar?"),
+    # Traumatología eliminada: Dr. Barraza no disponible, CMC no ofrece traumatología.
+    "Otorrinolaringología": [
+        ("Fonoaudiología",
+         "Muchas consultas de otorrino se complementan con una audiometría — "
+         "examen indoloro de ~20 min en cabina silente, $25.000.\n\n"
+         "La hace Juana Arratia en el CMC. ¿Te la agendo?"),
+    ],
+    "Endodoncia": [
+        ("Odontología General",
+         "Después de tu endodoncia es clave una limpieza profunda y evaluar si el "
+         "diente necesita corona.\n\n"
+         "¿Te agendo el control con nuestros odontólogos?"),
+    ],
+    "Estética Facial": [
+        ("Odontología General",
+         "Para complementar tu tratamiento estético, un blanqueamiento dental potencia "
+         "el resultado.\n\n"
+         "¿Te agendo una evaluación con odontología?"),
+    ],
+    "Cardiología": [
+        ("Medicina General",
+         "Antes de tu cardiología es útil tener exámenes recientes de chequeo metabólico "
+         "(perfil lipídico, glucosa, función renal).\n\n"
+         "¿Te agendo una consulta de medicina general para solicitarlos?"),
     ],
     "Medicina General": [
         ("Kinesiología",
          "Si tienes dolor crónico de espalda, cuello u hombros, la kinesiología "
          "puede darte alivio duradero.\n\n"
          "¿Te agendo una evaluación con nuestros kinesiólogos?"),
+        ("Nutrición",
+         "Si quieres mejorar tu salud integral, una evaluación nutricional puede "
+         "complementar tu chequeo médico.\n\n"
+         "Gisela Pinto atiende en el CMC. ¿Te interesa agendar?"),
     ],
     "Medicina Familiar": [
         ("Kinesiología",
          "Si tienes dolor crónico de espalda, cuello u hombros, la kinesiología "
          "puede darte alivio duradero.\n\n"
          "¿Te agendo una evaluación con nuestros kinesiólogos?"),
+        ("Nutrición",
+         "Si quieres mejorar tu salud integral, una evaluación nutricional puede "
+         "complementar tu chequeo médico.\n\n"
+         "Gisela Pinto atiende en el CMC. ¿Te interesa agendar?"),
+    ],
+    "Psicología Adulto": [
+        ("Medicina General",
+         "El bienestar mental se complementa con salud física. Un chequeo de medicina "
+         "general puede descartar causas orgánicas (tiroides, anemia, déficits) que "
+         "afectan el ánimo.\n\n"
+         "¿Te agendo una consulta?"),
+        ("Nutrición",
+         "La alimentación impacta directamente el ánimo y la energía. Una evaluación "
+         "con nutricionista puede complementar tu proceso terapéutico.\n\n"
+         "¿Te agendo con Gisela Pinto?"),
+    ],
+    "Nutrición": [
+        ("Kinesiología",
+         "Para potenciar tu plan nutricional, una evaluación kinesiológica puede sumar "
+         "— actividad física guiada acelera resultados.\n\n"
+         "¿Te interesa agendar con nuestros kinesiólogos?"),
     ],
     "Ortodoncia": [
         ("Estética Facial",
@@ -468,6 +517,10 @@ _CROSS_SELL_RULES: dict[str, list[tuple[str, str]]] = {
         ("Odontología General",
          "Antes de tu implante se recomienda una limpieza profunda.\n\n"
          "Nuestros odontólogos pueden realizarla. ¿Te interesa agendar?"),
+        ("Estética Facial",
+         "Ahora que tienes tu implante, podrías evaluar complementar tu sonrisa con "
+         "tratamientos estéticos faciales.\n\n"
+         "¿Te agendo una evaluación con la Dra. Fuentealba?"),
     ],
 }
 
