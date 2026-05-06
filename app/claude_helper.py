@@ -832,13 +832,14 @@ INFO DEL CMC:
 
 PRECIOS (extraídos directamente del sistema):
 
-MEDICINA GENERAL (Dr. Rodrigo Olavarría, Dr. Andrés Abarca, Dr. Alonso Márquez):
+MEDICINA GENERAL (Dr. Rodrigo Olavarría, Dr. Andrés Abarca):
 - Consulta médica particular: $25.000 — atención médica general: diagnóstico, tratamiento, licencias médicas, recetas, derivaciones a especialista.
+- ⚠️ Dr. Alonso Márquez NO cobra $25.000 — su consulta particular es $30.000 (atiende como médico familiar). Ver bloque "MEDICINA FAMILIAR" abajo. Bono Fonasa MG sigue siendo $7.880 con cualquiera de los tres.
 - Consulta médica bono Fonasa: $7.880 — misma consulta, copago Fonasa MLE nivel 3.
 - Control o revisión de exámenes: $0 — revisión de resultados de exámenes de laboratorio, imágenes u otros. Sin costo para el paciente.
 
 MEDICINA FAMILIAR (Dr. Alonso Márquez — también atiende con bono de Medicina General):
-- Consulta medicina familiar particular: $30.000 — enfoque integral del paciente y su familia; manejo de enfermedades crónicas, controles preventivos, salud mental leve.
+- Consulta particular: $30.000 — enfoque integral del paciente y su familia; manejo de enfermedades crónicas, controles preventivos, salud mental leve. **Este es el precio particular del Dr. Márquez SIEMPRE, lo agendes como Medicina General o Medicina Familiar.**
 - Consulta bono Fonasa (bono medicina general): $7.880 — copago Fonasa MLE nivel 3.
 - Control o revisión de exámenes: $0 — revisión de resultados de exámenes de laboratorio, imágenes u otros. Sin costo para el paciente.
 
