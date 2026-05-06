@@ -15,7 +15,8 @@ from fidelizacion import (enviar_seguimiento_postconsulta,
                           enviar_crosssell_orl_fono, enviar_crosssell_odonto_estetica,
                           enviar_crosssell_mg_chequeo)
 from medilink import (buscar_primer_dia, buscar_paciente, sync_citas_dia,
-                      SEGUIMIENTO_ESPECIALIDADES, PROFESIONALES, get_slots_libres)
+                      SEGUIMIENTO_ESPECIALIDADES, PROFESIONALES, get_slots_libres,
+                      listar_citas_paciente)
 from session import (get_sesiones_abandonadas, save_session, log_event,
                      get_pending_intent_queue, mark_intent_notified, intent_queue_depth,
                      get_waitlist_pending, mark_waitlist_notified,
@@ -665,6 +666,43 @@ async def _job_medilink_watchdog_inner():
             pass
 
 
+_WAITLIST_ESP_KEYWORDS = (
+    ("ecograf", "ecografia"),
+    ("cardiolog", "cardiologia"),
+    ("gastroenter", "gastroenterologia"),
+    ("ginecolog", "ginecologia"),
+    ("traumatol", "traumatologia"),
+    ("endodon", "endodoncia"),
+    ("ortodon", "ortodoncia"),
+    ("implantol", "implantologia"),
+    ("estetic", "estetica facial"),
+    ("kinesiolog", "kinesiologia"),
+    ("fonoaud", "fonoaudiologia"),
+    ("otorrin", "otorrinolaringologia"),
+    ("psicolog", "psicologia"),
+    ("nutricion", "nutricion"),
+    ("matron", "matrona"),
+    ("podolog", "podologia"),
+    ("masoterap", "masoterapia"),
+    ("odontolog", "odontologia"),
+    ("medicina familiar", "medicina familiar"),
+    ("medicina general", "medicina general"),
+)
+
+
+def _waitlist_esp_canonical(s: str) -> str:
+    """Normaliza una especialidad (de waitlist o de Medilink) a una raíz comparable.
+    Captura variantes con/sin tildes, texto libre del paciente ("para ecografía
+    intravajinal" → "ecografia") y sinónimos."""
+    import unicodedata
+    s = (s or "").strip().lower()
+    s = unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode()
+    for needle, canon in _WAITLIST_ESP_KEYWORDS:
+        if needle in s:
+            return canon
+    return s
+
+
 async def _job_waitlist_check():
     """Cron diario 07:00 CLT: escanea inscripciones activas en la lista de espera
     y notifica al paciente apenas se libera un cupo en los próximos 14 días.
@@ -686,6 +724,39 @@ async def _job_waitlist_check():
         esp = row["especialidad"]
         id_prof_pref = row.get("id_prof_pref")
         nombre = row.get("nombre") or ""
+        rut_p = (row.get("rut") or "").strip()
+
+        # Skip si el paciente ya tiene una cita futura en esta especialidad
+        # (recepcionista pudo haberla agendado a mano fuera del bot).
+        if rut_p:
+            try:
+                citas_existentes = await listar_citas_paciente(0, rut=rut_p) or []
+                esp_canon = _waitlist_esp_canonical(esp)
+                ya_agendada = next(
+                    (c for c in citas_existentes
+                     if _waitlist_esp_canonical(c.get("especialidad", "")) == esp_canon),
+                    None,
+                )
+                if ya_agendada:
+                    mark_waitlist_notified(wl_id)
+                    log_event(phone_p, "waitlist_skip_ya_tiene_cita", {
+                        "waitlist_id": wl_id,
+                        "especialidad": esp,
+                        "cita_fecha": ya_agendada.get("fecha"),
+                        "cita_hora": ya_agendada.get("hora_inicio"),
+                        "cita_esp": ya_agendada.get("especialidad"),
+                    })
+                    log.info(
+                        "waitlist_check: skip wl_id=%d (ya tiene cita %s %s en %s)",
+                        wl_id, ya_agendada.get("fecha"), ya_agendada.get("hora_inicio"),
+                        ya_agendada.get("especialidad"),
+                    )
+                    continue
+            except Exception as e:
+                log.warning(
+                    "waitlist_check: fallo verificando citas existentes wl_id=%d: %s",
+                    wl_id, e,
+                )
 
         try:
             solo_ids = [int(id_prof_pref)] if id_prof_pref else None
