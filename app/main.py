@@ -813,6 +813,124 @@ COMUNAS_ARAUCO = {
     "contulmo":    {"nombre": "Contulmo",    "km": 90,  "min": 100, "ruta": "Ruta P-72 + P-60"},
 }
 
+# Contenido único por comuna — se inyecta en cada blog comuna-especialidad
+# para que Google los trate como páginas distintas (no template duplicado).
+# Datos verificables (rutas, hospitales públicos, distancias) — sin inventar números.
+COMUNA_LOCAL_DATA = {
+    "carampangue": {
+        "locomocion": "El centro está en República 102, en pleno casco urbano de Carampangue, a 5 minutos a pie desde la plaza y frente a Banco Estado. Hay estacionamiento libre en la calle. Si vienes en colectivo o taxi, cualquier conductor de la zona conoce la ubicación.",
+        "contexto": "Carampangue es la localidad más poblada de la comuna de Arauco fuera del centro urbano de Arauco mismo. Cuenta con CESFAM Carampangue para atención primaria, escuelas y comercio, pero las especialidades médicas y dentales requieren derivación al hospital de Arauco o Concepción.",
+        "razon": "El CMC nació en Carampangue justamente para acercar {esp} sin que tengas que viajar a Arauco o Concepción. Tu hora puede ser el mismo día o al día siguiente, sin las listas de espera del sistema público.",
+    },
+    "laraquete": {
+        "locomocion": "Desde Laraquete son 8 km por la Ruta 160 hacia el sur, 10 minutos en auto. Los buses interurbanos del tramo Concepción–Arauco–Lebu paran en Carampangue durante todo el día. También hay taxis colectivos locales que cubren Laraquete–Carampangue.",
+        "contexto": "Laraquete es la entrada norte a la Provincia de Arauco, balneario y comunidad pesquera. Cuenta con CESFAM y posta rural, pero las especialidades se derivan a Carampangue, Arauco o Concepción.",
+        "razon": "Para vecinos de Laraquete, el CMC es la opción más cercana de {esp} sin tener que cruzar el puente del Bío Bío hasta Concepción (1 hora). Vuelta el mismo día, sin perder la jornada completa.",
+    },
+    "ramadilla": {
+        "locomocion": "Ramadilla está a 6 km de Carampangue por camino rural, 10 minutos en auto. La ruta es directa; sin auto, lo más práctico es taxi compartido o coordinar con un familiar. La señal de celular y datos cubre bien el tramo.",
+        "contexto": "Ramadilla es localidad rural de la comuna de Arauco con población dispersa. La posta rural cubre atención básica pero todo lo especializado se deriva.",
+        "razon": "Por cercanía geográfica, los vecinos de Ramadilla suelen preferir el CMC para {esp} antes que viajar al hospital de Arauco — menos tiempo de viaje y horario más amplio (hasta las 21:00 entre semana).",
+    },
+    "arauco": {
+        "locomocion": "Desde Arauco son 15 km por la Ruta P-22, 20 minutos en auto. Hay buses Estuario Reloncaví y otras líneas que cubren Arauco–Carampangue durante el día. También sirve cualquier bus interurbano que vaya hacia Concepción y para en Carampangue.",
+        "contexto": "Arauco es la cabecera comunal y centro político-administrativo. Cuenta con Hospital Dr. Rafael Avaria, CESFAM Arauco y CECOSF. El CMC es la principal alternativa privada de la comuna para especialidades médicas y dentales.",
+        "razon": "Pacientes de Arauco acuden al CMC para {esp} cuando necesitan acortar listas de espera del sistema público o cuando buscan tratamientos dentales (ortodoncia, implantología, estética) que la red pública no cubre con prontitud.",
+    },
+    "curanilahue": {
+        "locomocion": "Desde Curanilahue son 25 km por la Ruta 160, 30 minutos en auto. Buses Lit Sur, Estuario Reloncaví y otras líneas cubren el tramo Curanilahue–Carampangue varias veces al día. Es viaje de ida y vuelta cómodo en una mañana.",
+        "contexto": "Curanilahue tiene Hospital Comunitario Dr. Rafael Avaria y CESFAM. Históricamente comuna minera del carbón, hoy en transición. Los pacientes locales conocen bien la red Carampangue–Arauco.",
+        "razon": "Curanilahue es, después de Arauco, la comuna fuera de la sede del CMC con más pacientes recurrentes — particularmente en odontología, ortodoncia y kinesiología. Muchas familias vienen mensualmente para controles ortodónticos y aprovechan el viaje para otras especialidades como {esp}.",
+    },
+    "los-alamos": {
+        "locomocion": "Desde Los Álamos son 35 km por la Ruta 160, 40 minutos en auto. Los buses interurbanos que conectan Concepción con Lebu pasan por Los Álamos y Carampangue, lo que facilita la conexión sin transbordos.",
+        "contexto": "Los Álamos cuenta con Hospital Comunitario Los Álamos y CESFAM. Es comuna intermedia entre Curanilahue y Lebu, con economía diversificada (forestal, comercio, servicios).",
+        "razon": "Para pacientes de Los Álamos, el CMC es opción cuando necesitan {esp} y prefieren no viajar a Concepción (1h 30 min) ni esperar la red pública. La distancia hace que el viaje sea razonable de ida y vuelta el mismo día.",
+    },
+    "lebu": {
+        "locomocion": "Desde Lebu son 50 km combinando Ruta P-40 y Ruta 160, alrededor de 1 hora en auto. Hay servicios diarios de buses Lebu–Concepción que paran en Carampangue, lo que evita transbordos. El viaje completo (ida + atención + vuelta) cabe holgadamente en una jornada.",
+        "contexto": "Lebu es la capital de la Provincia de Arauco, con Hospital Provincial Santa Isabel de Lebu. Pero la red pública trabaja con tiempos de espera largos para varias especialidades, especialmente las dentales.",
+        "razon": "Pacientes de Lebu vienen al CMC para {esp} principalmente para acortar tiempos de espera o para tratamientos dentales privados (ortodoncia, implantología). Es habitual programar la cita temprano para volver en la tarde.",
+    },
+    "canete": {
+        "locomocion": "Desde Cañete son 70 km vía Ruta P-72 y luego Ruta 160 hacia el norte, alrededor de 1h 20 min en auto. Hay servicios de buses Cañete–Concepción que paran en Carampangue, sin necesidad de transbordo en Arauco.",
+        "contexto": "Cañete es la comuna mapuche-lafquenche más grande de la Provincia de Arauco. Cuenta con Hospital Intercultural Kallvu Llanka, que combina medicina occidental con medicina mapuche.",
+        "razon": "Pacientes de Cañete vienen al CMC para {esp} cuando necesitan especialidades privadas o quieren agilizar tiempos. Muchos combinan el viaje con compras o trámites en Carampangue/Arauco para optimizar el día.",
+    },
+    "contulmo": {
+        "locomocion": "Desde Contulmo son 90 km vía Ruta P-72 y P-60, alrededor de 1h 40 min en auto. Es trayecto largo pero la única alternativa razonable sin pasar por Concepción (que sería un rodeo de más de 3 horas).",
+        "contexto": "Contulmo es comuna cordillerana pequeña, junto al Lago Lanalhue, con paisajes selváticos y patrimonio arquitectónico colono. Cuenta con CESFAM Contulmo y postas rurales, pero las especialidades se derivan fuera de la comuna.",
+        "razon": "Pacientes de Contulmo eligen el CMC para {esp} cuando necesitan especialidades que en su comuna no existen y prefieren no hacer el viaje a Concepción. Recomendamos agendar varias atenciones en un mismo día para optimizar el viaje.",
+    },
+    "tirua": {
+        "locomocion": "Desde Tirúa son 110 km vía Ruta P-72 sur, alrededor de 2 horas en auto. Es la comuna más distante de la Provincia de Arauco, por lo que recomendamos agendar el viaje con tiempo y combinar varias atenciones en una sola venida.",
+        "contexto": "Tirúa es comuna mapuche-lafquenche del extremo sur de la Provincia, costera. Cuenta con CESFAM Tirúa y postas rurales. La conectividad con la red pública especializada implica viajar a Cañete o a Concepción.",
+        "razon": "Pacientes de Tirúa que viajan al CMC suelen agendar varias atenciones en un mismo día (médica + dental + ecografía cuando aplica). Para {esp} en particular, conviene coordinar con anticipación por WhatsApp para que la cita calce con disponibilidad.",
+    },
+}
+
+
+def _specialty_label(base_slug: str) -> str:
+    """Mapea slug base a label legible para usar en contenido localizado."""
+    return {
+        "cardiologia": "cardiología",
+        "medicina-general": "medicina general",
+        "ortodoncia": "ortodoncia",
+        "ecografia": "ecografía",
+        "estetica-facial": "estética facial",
+        "kinesiologia": "kinesiología",
+        "odontologia-general": "odontología general",
+        "otorrinolaringologia": "otorrinolaringología",
+        "ginecologia": "ginecología",
+        "gastroenterologia": "gastroenterología",
+        "endodoncia": "endodoncia",
+        "implantologia": "implantología",
+        "masoterapia": "masoterapia",
+        "nutricion": "nutrición",
+        "psicologia-adulto": "psicología adulto",
+        "psicologia-infantil": "psicología infantil",
+        "fonoaudiologia": "fonoaudiología",
+        "matrona": "matrona",
+        "podologia": "podología",
+    }.get(base_slug, base_slug.replace("-", " "))
+
+
+def _build_local_info_section(base_slug: str, comuna_slug: str) -> str:
+    """HTML de la sección 'Atención desde {comuna}' con 3 párrafos únicos."""
+    if comuna_slug not in COMUNA_LOCAL_DATA:
+        return ""
+    data = COMUNA_LOCAL_DATA[comuna_slug]
+    nombre = COMUNAS_ARAUCO[comuna_slug]["nombre"]
+    esp = _specialty_label(base_slug)
+    locomocion = data["locomocion"]
+    contexto = data["contexto"]
+    razon = data["razon"].replace("{esp}", esp)
+    if comuna_slug == "carampangue":
+        h2 = f"Atención médica y dental en Carampangue"
+    else:
+        h2 = f"Atención de {esp} desde {nombre}"
+    return f"""
+<section class="local-info" style="padding:56px 0;background:#f9fafb;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;">
+  <div class="container">
+    <h2 style="font-size:28px;line-height:1.2;margin:0 0 28px 0;color:#0f3f68;">{h2}</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:28px;">
+      <article>
+        <h3 style="font-size:17px;margin:0 0 8px 0;color:#1172ab;">Cómo llegar al CMC</h3>
+        <p style="line-height:1.65;color:#374151;margin:0;">{locomocion}</p>
+      </article>
+      <article>
+        <h3 style="font-size:17px;margin:0 0 8px 0;color:#1172ab;">{nombre} en la Provincia de Arauco</h3>
+        <p style="line-height:1.65;color:#374151;margin:0;">{contexto}</p>
+      </article>
+      <article>
+        <h3 style="font-size:17px;margin:0 0 8px 0;color:#1172ab;">¿Por qué venir desde {nombre}?</h3>
+        <p style="line-height:1.65;color:#374151;margin:0;">{razon}</p>
+      </article>
+    </div>
+  </div>
+</section>
+"""
+
 
 def _localize_blog(html: str, base_slug: str, comuna_slug: str) -> str:
     """Genera versión localizada del blog para una comuna de Arauco.
@@ -881,6 +999,17 @@ def _localize_blog(html: str, base_slug: str, comuna_slug: str) -> str:
         r'(<span class="current">)([^<]+)(</span>)',
         rf'\1\2 · {nombre}\3', html, count=1
     )
+
+    # Inyectar sección de contenido local único (locomoción + contexto + razón)
+    # antes del body del blog. Esto diferencia cada página comuna-especialidad
+    # para que Google no la trate como contenido duplicado.
+    local_section = _build_local_info_section(base_slug, comuna_slug)
+    if local_section:
+        html = html.replace(
+            '<section class="blog-body">',
+            local_section + '\n<section class="blog-body">',
+            1,
+        )
 
     return html
 
