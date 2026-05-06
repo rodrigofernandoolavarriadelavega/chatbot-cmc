@@ -6234,33 +6234,44 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
                 # Si es paciente nuevo registrado en este flujo, pedir referido
                 # como segundo mensaje con botones (post-confirmación, baja fricción).
+                # En este caso debemos enviar confirmacion_msg directamente porque
+                # el return es un interactivo (botón referral). Logueamos manualmente
+                # para que recepción vea el mensaje de confirmación en el panel.
                 if data.get("is_paciente_nuevo_post_referral"):
                     save_session(phone, "WAIT_REFERRAL_POST", {})
-                    # send_whatsapp ya está importado globalmente (línea 33).
-                    # El re-import local previo causaba UnboundLocalError porque
-                    # Python trataba send_whatsapp como local en TODA la función.
-                    # Caso real 2026-04-24 (56999988115).
                     await send_whatsapp(phone, confirmacion_msg)
-                    # BUG-D: enviar PNI/hitos como tercer mensaje si aplica
+                    from session import log_message as _log_msg_conf
+                    _log_msg_conf(phone, "out", confirmacion_msg, "CONFIRMING_CITA")
+                    # PNI/hitos: tercer mensaje via spawn_task para no bloquear
                     if pni_msg:
-                        import asyncio as _asyncio_pni2
-                        await _asyncio_pni2.sleep(2.5)
-                        await send_whatsapp(phone, pni_msg.strip())
+                        from resilience import spawn_task as _spawn
+                        async def _send_pni_referral():
+                            import asyncio as _ai
+                            await _ai.sleep(2.5)
+                            await send_whatsapp(phone, pni_msg.strip())
+                            from session import log_message as _lm
+                            _lm(phone, "out", pni_msg.strip(), "WAIT_REFERRAL_POST")
+                        _spawn(_send_pni_referral())
                     return _btn_msg(
                         "Una última cosa rápida 🙏\n\n*¿Cómo nos conociste?*",
                         [{"id": "ref_amigo", "title": "👥 Amigo / familiar"},
                          {"id": "ref_rrss", "title": "📱 Redes / Google"},
                          {"id": "ref_recurrente", "title": "🔄 Ya venía antes"}]
                     )
-                # BUG-D: si hay PNI/hitos, enviar confirmación base primero
-                # y PNI como segundo mensaje (evita truncamiento WA ~1000 chars).
+                # Sufijo estándar para cierres de confirmación
+                _conf_suffix = "\n\n_Escribe *menu* si necesitas algo más._"
+                # Si hay PNI/hitos, enviarlos como segundo mensaje con delay
+                # (evita truncamiento WA ~1000 chars) vía spawn_task para no bloquear.
+                # main.py enviará y logueará confirmacion_msg normalmente (return abajo).
                 if pni_msg:
-                    import asyncio as _asyncio_pni3
-                    await send_whatsapp(phone, confirmacion_msg + "\n\n_Escribe *menu* si necesitas algo más._")
-                    await _asyncio_pni3.sleep(2.5)
-                    await send_whatsapp(phone, pni_msg.strip())
-                else:
-                    await send_whatsapp(phone, confirmacion_msg + "\n\n_Escribe *menu* si necesitas algo más._")
+                    from resilience import spawn_task as _spawn_pni
+                    async def _send_pni_delayed():
+                        import asyncio as _ai2
+                        await _ai2.sleep(2.5)
+                        await send_whatsapp(phone, pni_msg.strip())
+                        from session import log_message as _lm2
+                        _lm2(phone, "out", pni_msg.strip(), get_session(phone).get("state", "IDLE"))
+                    _spawn_pni(_send_pni_delayed())
                 # ── Cross-sell post-confirmación ──────────────────────────────
                 # Solo en citas nuevas (no reagendar), solo si no es tercero.
                 # Cooldown: 1 por sesión + 30 días por par.
@@ -6271,10 +6282,16 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         data_cs = {"cross_sell_esp_origen": esp,
                                    "cross_sell_esp_destino": _cs_dest}
                         save_session(phone, "WAIT_CROSS_SELL", data_cs)
+                        # Antes de retornar el cross-sell, enviar confirmacion_msg
+                        # directamente (main.py enviará el cross-sell como respuesta).
+                        await send_whatsapp(phone, confirmacion_msg + _conf_suffix)
+                        from session import log_message as _log_msg_cs
+                        _log_msg_cs(phone, "out", confirmacion_msg + _conf_suffix, "WAIT_CROSS_SELL")
                         import asyncio as _asyncio_cs
                         await _asyncio_cs.sleep(1.5)
                         return _cs["payload"]
-                return None  # mensajes ya enviados con send_whatsapp arriba
+                # Caso normal: main.py envía y loguea el mensaje de confirmación.
+                return confirmacion_msg + _conf_suffix
             else:
                 return (
                     "Hubo un problema al reservar la hora 😕\n"
