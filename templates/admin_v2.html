@@ -910,6 +910,8 @@ html, body{width:100%; max-width:100%; overflow-x:hidden}
     <div class="kpi" id="kpiTakeover"><span class="dot"></span><b>0</b> en humano</div>
     <div class="kpi" id="kpiPending"><span class="dot"></span><b>0</b> esperando</div>
     <span class="divider"></span>
+    <button class="topbar-btn" id="btnCrossSell" title="Funnel cross-sell">&#x1F501; cross-sell <b id="csPct">—</b></button>
+    <span class="divider"></span>
     <button class="topbar-btn icon-only" id="btnSound" title="Sonido nuevos mensajes">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
     </button>
@@ -2358,6 +2360,99 @@ async function disablePush() {
   } catch(e){ console.warn("[push] disable error", e); }
 }
 
+// ── Cross-sell funnel pill ─────────────────────────────────────────────────
+let _csDias = 7;
+let _csAutoTimer = null;
+
+async function loadCrossSell(dias) {
+  if (dias !== undefined) _csDias = dias;
+  try {
+    const data = await api(`/admin/api/cross-sell-funnel?dias=${_csDias}`);
+    const g = data.global || {};
+
+    // Actualizar pill
+    const pct = g.conv_click_pct != null ? g.conv_click_pct.toFixed(1) + "%" : "—";
+    const pillB = $("#csPct");
+    if (pillB) pillB.textContent = pct;
+
+    // KPI cards
+    document.querySelectorAll(".cs-kpi-card").forEach(card => {
+      const key = card.dataset.key;
+      const label = card.dataset.label;
+      const fmt = card.dataset.fmt;
+      let val = g[key] != null ? g[key] : 0;
+      let display = fmt === "clp"
+        ? "$" + val.toLocaleString("es-CL")
+        : val.toLocaleString("es-CL");
+      card.innerHTML = `<div style="background:#f0f9fb;border-radius:12px;padding:14px 16px;text-align:center">
+        <div style="font-size:22px;font-weight:800;color:#0F3F68">${display}</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:3px">${label}</div>
+      </div>`;
+    });
+
+    // Tabla
+    const tbody = $("#csTableBody");
+    const pares = data.pares || [];
+    if (!pares.length) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:#9ca3af">Sin datos para el periodo seleccionado</td></tr>';
+      return;
+    }
+    tbody.innerHTML = pares.map(p => {
+      const lowConv = p.conv_click_pct < 5;
+      const rowBg = lowConv ? "background:#fff5f5" : "";
+      const convColor = lowConv ? "color:#dc2626;font-weight:700" : "";
+      return `<tr style="border-bottom:1px solid #f0f0f0;${rowBg}">
+        <td style="padding:8px 12px;color:#374151">${esc(p.esp_origen)}</td>
+        <td style="padding:8px 12px;color:#374151">${esc(p.esp_destino)}</td>
+        <td style="padding:8px 8px;text-align:right">${p.ofrecidos}</td>
+        <td style="padding:8px 8px;text-align:right">${p.aceptados}</td>
+        <td style="padding:8px 8px;text-align:right;font-weight:700;color:#0F3F68">${p.reservados}</td>
+        <td style="padding:8px 8px;text-align:right;font-weight:700;color:#059669">$${p.ingresos_clp.toLocaleString("es-CL")}</td>
+        <td style="padding:8px 8px;text-align:right;${convColor}">${p.conv_click_pct.toFixed(1)}%</td>
+        <td style="padding:8px 8px;text-align:right">${p.conv_cita_pct.toFixed(1)}%</td>
+      </tr>`;
+    }).join("");
+  } catch(e) {
+    console.warn("[cross-sell]", e);
+  }
+}
+
+function openCsModal() {
+  const modal = document.getElementById("csModal");
+  modal.hidden = false;
+  loadCrossSell(_csDias);
+  if (_csAutoTimer) clearInterval(_csAutoTimer);
+  _csAutoTimer = setInterval(() => loadCrossSell(), 300000); // 5 min
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const btn = $("#btnCrossSell");
+  if (btn) btn.addEventListener("click", openCsModal);
+
+  // Period filter buttons
+  document.querySelectorAll(".cs-period").forEach(b => {
+    b.addEventListener("click", () => {
+      document.querySelectorAll(".cs-period").forEach(x => {
+        x.style.background = "#fff";
+        x.style.borderColor = "#d0d6de";
+        x.classList.remove("active");
+      });
+      b.style.background = "#e8f8fb";
+      b.style.borderColor = "#4FBECE";
+      b.classList.add("active");
+      loadCrossSell(parseInt(b.dataset.d));
+    });
+  });
+
+  // Close modal on backdrop click
+  document.getElementById("csModal").addEventListener("click", function(e) {
+    if (e.target === this) this.hidden = true;
+  });
+
+  // Initial pill load (silent, no modal)
+  loadCrossSell(7);
+});
+
 function syncAppBadge(count) {
   if ("setAppBadge" in navigator) {
     try { count > 0 ? navigator.setAppBadge(count) : navigator.clearAppBadge(); } catch(_){}
@@ -2367,5 +2462,48 @@ function syncAppBadge(count) {
   }
 }
 </script>
+
+<!-- ===== CROSS-SELL FUNNEL MODAL ======================================== -->
+<div id="csModal" class="mb-modal" hidden role="dialog" aria-modal="true" aria-labelledby="csModalTitle" style="position:fixed;inset:0;z-index:9000;background:rgba(15,63,104,.45);display:flex;align-items:center;justify-content:center;padding:16px">
+  <div style="background:#fff;border-radius:16px;box-shadow:0 24px 64px rgba(15,63,104,.28);width:100%;max-width:860px;max-height:90vh;overflow:auto;padding:28px 32px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:12px">
+      <h2 id="csModalTitle" style="margin:0;font-size:18px;color:#0F3F68;font-weight:800">&#x1F501; Funnel cross-sell</h2>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button class="cs-period active" data-d="7"  style="border:1px solid #4FBECE;background:#e8f8fb;color:#0F3F68;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;cursor:pointer">7d</button>
+        <button class="cs-period"        data-d="30" style="border:1px solid #d0d6de;background:#fff;color:#0F3F68;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;cursor:pointer">30d</button>
+        <button class="cs-period"        data-d="90" style="border:1px solid #d0d6de;background:#fff;color:#0F3F68;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;cursor:pointer">90d</button>
+        <button onclick="document.getElementById('csModal').hidden=true" style="margin-left:8px;background:none;border:none;font-size:22px;cursor:pointer;color:#6b7280;line-height:1" title="Cerrar">&times;</button>
+      </div>
+    </div>
+    <!-- KPI row -->
+    <div id="csKpis" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px">
+      <div class="cs-kpi-card" data-key="ofrecidos"    data-label="Ofrecidos"></div>
+      <div class="cs-kpi-card" data-key="aceptados"    data-label="Aceptados"></div>
+      <div class="cs-kpi-card" data-key="reservados"   data-label="Reservados"></div>
+      <div class="cs-kpi-card" data-key="ingresos_clp" data-label="Ingresos est." data-fmt="clp"></div>
+    </div>
+    <!-- Table -->
+    <div style="overflow-x:auto">
+      <table id="csTable" style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:#f0f9fb;color:#0F3F68;font-weight:700">
+            <th style="padding:9px 12px;text-align:left;border-bottom:2px solid #4FBECE">Origen</th>
+            <th style="padding:9px 12px;text-align:left;border-bottom:2px solid #4FBECE">Destino</th>
+            <th style="padding:9px 8px;text-align:right;border-bottom:2px solid #4FBECE">Ofrecidos</th>
+            <th style="padding:9px 8px;text-align:right;border-bottom:2px solid #4FBECE">Aceptados</th>
+            <th style="padding:9px 8px;text-align:right;border-bottom:2px solid #4FBECE">Reservados</th>
+            <th style="padding:9px 8px;text-align:right;border-bottom:2px solid #4FBECE">$ generado</th>
+            <th style="padding:9px 8px;text-align:right;border-bottom:2px solid #4FBECE">Conv. clic %</th>
+            <th style="padding:9px 8px;text-align:right;border-bottom:2px solid #4FBECE">Conv. cita %</th>
+          </tr>
+        </thead>
+        <tbody id="csTableBody">
+          <tr><td colspan="8" style="text-align:center;padding:24px;color:#9ca3af">Cargando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin:14px 0 0;font-size:11px;color:#9ca3af">Filas en rojo: conv. clic &lt; 5% (candidatas a eliminar del cross-sell). Ingresos son estimados basados en precios promedio particulares.</p>
+  </div>
+</div>
 </body>
 </html>

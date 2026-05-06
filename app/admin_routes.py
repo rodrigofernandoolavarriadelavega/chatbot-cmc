@@ -2553,3 +2553,127 @@ async def admin_meta_referrals_recientes(
         return {"total": len(rows), "referrals": rows}
     except Exception as e:
         return {"error": str(e)}
+
+
+# ── Cross-sell funnel ────────────────────────────────────────────────────────
+
+# Precio promedio por especialidad destino (fuente: PRECIOS_ESPECIALIDAD en main.py)
+_CROSS_SELL_PRECIO: dict[str, int] = {
+    "medicina general":       25000,
+    "medicina familiar":      25000,
+    "otorrinolaringolog\u00eda":   35000,
+    "cardiolog\u00eda":            40000,
+    "ginecolog\u00eda":            30000,
+    "gastroenterolog\u00eda":      40000,
+    "odontolog\u00eda general":    35000,
+    "ortodoncia":             30000,
+    "endodoncia":            150000,
+    "implantolog\u00eda":         650000,
+    "est\u00e9tica facial":        80000,
+    "masoterapia":            20000,
+    "kinesiolog\u00eda":           20000,
+    "nutrici\u00f3n":              20000,
+    "psicolog\u00eda adulto":      20000,
+    "psicolog\u00eda infantil":    20000,
+    "fonoaudiolog\u00eda":         35000,
+    "audiometr\u00eda":            25000,
+    "matrona":                30000,
+    "podolog\u00eda":              25000,
+    "ecograf\u00eda":              40000,
+    "traumatolog\u00eda":          35000,
+}
+
+
+@router.get("/admin/api/cross-sell-funnel")
+def api_cross_sell_funnel(
+    dias: int = Query(7, ge=1, le=365),
+    _=Depends(require_admin),
+):
+    """Funnel de conversi\u00f3n del cross-sell post-cita.
+
+    Retorna m\u00e9tricas globales + detalle por par origen->destino:
+    ofrecidos, aceptados, rechazados, reservados e ingresos estimados.
+    """
+    from session import _conn
+
+    intervalo = f"-{dias} days"
+
+    query = """
+        SELECT
+            cs.esp_origen,
+            cs.esp_destino,
+            SUM(cs.evento = 'ofrecido')   AS ofrecidos,
+            SUM(cs.evento = 'aceptado')   AS aceptados,
+            SUM(cs.evento = 'rechazado')  AS rechazados,
+            COUNT(DISTINCT CASE
+                WHEN cb.id_cita IS NOT NULL
+                THEN cs.phone || '|' || cs.created_at
+            END) AS reservados
+        FROM cross_sell_log cs
+        LEFT JOIN citas_bot cb
+            ON cb.phone = cs.phone
+           AND lower(cb.especialidad) = lower(cs.esp_destino)
+           AND cb.created_at BETWEEN cs.created_at
+               AND datetime(cs.created_at, '+24 hours')
+           AND cs.evento = 'aceptado'
+        WHERE cs.created_at >= datetime('now', ?)
+        GROUP BY cs.esp_origen, cs.esp_destino
+        HAVING ofrecidos > 0
+        ORDER BY ofrecidos DESC
+    """
+
+    with _conn() as conn:
+        rows = conn.execute(query, (intervalo,)).fetchall()
+
+    pares = []
+    g_ofrecidos = g_aceptados = g_rechazados = g_reservados = g_ingresos = 0
+
+    for row in rows:
+        ofrecidos  = row["ofrecidos"]  or 0
+        aceptados  = row["aceptados"]  or 0
+        rechazados = row["rechazados"] or 0
+        reservados = row["reservados"] or 0
+
+        precio = _CROSS_SELL_PRECIO.get(row["esp_destino"].lower(), 0)
+        ingresos = reservados * precio
+
+        conv_click = round(aceptados  / ofrecidos * 100, 1) if ofrecidos else 0.0
+        conv_cita  = round(reservados / ofrecidos * 100, 1) if ofrecidos else 0.0
+
+        pares.append({
+            "esp_origen":     row["esp_origen"],
+            "esp_destino":    row["esp_destino"],
+            "ofrecidos":      ofrecidos,
+            "aceptados":      aceptados,
+            "rechazados":     rechazados,
+            "reservados":     reservados,
+            "ingresos_clp":   ingresos,
+            "conv_click_pct": conv_click,
+            "conv_cita_pct":  conv_cita,
+        })
+
+        g_ofrecidos  += ofrecidos
+        g_aceptados  += aceptados
+        g_rechazados += rechazados
+        g_reservados += reservados
+        g_ingresos   += ingresos
+
+    # Ordenar por ingresos desc para la tabla UI
+    pares.sort(key=lambda x: x["ingresos_clp"], reverse=True)
+
+    g_conv_click = round(g_aceptados  / g_ofrecidos * 100, 1) if g_ofrecidos else 0.0
+    g_conv_cita  = round(g_reservados / g_ofrecidos * 100, 1) if g_ofrecidos else 0.0
+
+    return {
+        "dias": dias,
+        "global": {
+            "ofrecidos":      g_ofrecidos,
+            "aceptados":      g_aceptados,
+            "rechazados":     g_rechazados,
+            "reservados":     g_reservados,
+            "ingresos_clp":   g_ingresos,
+            "conv_click_pct": g_conv_click,
+            "conv_cita_pct":  g_conv_cita,
+        },
+        "pares": pares,
+    }
