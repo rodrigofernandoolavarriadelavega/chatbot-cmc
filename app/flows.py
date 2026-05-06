@@ -30,7 +30,8 @@ from session import (save_session, reset_session, get_session, save_tag, delete_
                      log_cross_sell, puede_cross_sell,
                      marcar_bono_primera_cita, marcar_bono_notificado,
                      registrar_bono_referral, conteo_referidos_mes,
-                     mark_horas_vacias_respondio, mark_horas_vacias_agendo)
+                     mark_horas_vacias_respondio, mark_horas_vacias_agendo,
+                     registrar_slot_rechazado, get_slots_rechazados)
 from resilience import is_medilink_down
 from triage_ges import triage_sintomas, normalizar_texto_paciente
 from pni import get_vaccine_reminder
@@ -2313,16 +2314,32 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     #                           admin para ejecutar DELETE /admin/api/patient.
     if phone != _doctor_phone:
         if tl in ("stop", "detener", "baja") or tl_norm in ("stop", "detener", "baja"):
-            revoke_privacy_consent(phone)
-            save_tag(phone, "marketing_opt_out")
-            log_event(phone, "privacy_consent_revoked")
-            reset_session(phone)
-            return (
-                "Listo 👍 No recibirás más mensajes de seguimiento ni campañas.\n\n"
-                "Si quieres que borremos *todos* tus datos, escribe "
-                "*borrar mis datos*.\n\n"
-                "Para volver a recibir mensajes escribe *aceptar*."
+            # BUG-D: "baja" es opt-out de campañas, NO debe activarse si el
+            # paciente está en flujo activo o con recepcionista. Ejemplos reales:
+            # - recepcionista pregunta algo, paciente responde "Baja" (presión baja)
+            # - paciente en WAIT_* escribe "baja" referido a síntoma
+            # Solo procesar como opt-out desde IDLE cuando no hay flujo activo.
+            _estados_activos = (
+                "HUMAN_TAKEOVER", "WAIT_SLOT", "CONFIRMING_CITA", "WAIT_MODALIDAD",
+                "WAIT_RUT_CANCELAR", "WAIT_CITA_CANCELAR", "WAIT_RUT_REAGENDAR",
+                "WAIT_CITA_REAGENDAR", "WAIT_RUT_VER", "WAIT_DATOS_NUEVO",
+                "WAIT_NOMBRE_NUEVO", "WAIT_FECHA_NAC", "WAIT_SEXO", "WAIT_BOOKING_FOR",
+                "WAIT_WAITLIST_CONFIRM", "WAIT_REFERRAL_POST",
             )
+            if state in _estados_activos:
+                # No interpretar como opt-out — dejar que el handler del estado decida
+                pass
+            else:
+                revoke_privacy_consent(phone)
+                save_tag(phone, "marketing_opt_out")
+                log_event(phone, "privacy_consent_revoked")
+                reset_session(phone)
+                return (
+                    "Listo 👍 No recibirás más mensajes de seguimiento ni campañas.\n\n"
+                    "Si quieres que borremos *todos* tus datos, escribe "
+                    "*borrar mis datos*.\n\n"
+                    "Para volver a recibir mensajes escribe *aceptar*."
+                )
         if ("borrar mis datos" in tl_norm or "borrar mis datos" in tl
                 or "derecho al olvido" in tl_norm):
             log_event(phone, "gdpr_deletion_requested", {"texto": txt[:240]})
@@ -2503,7 +2520,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # Si el paciente vio una lista de horarios hace <60 min y ahora escribe
     # "10:30" (o cualquier variante), restauramos WAIT_SLOT con esos slots
     # para que el bloque de WAIT_SLOT encuentre la hora exacta.
-    if state == "IDLE" and data.get("last_slots") and data.get("last_slots_ts"):
+    # BUG-E: NO restaurar WAIT_SLOT si la recepcionista tiene la conversación.
+    # Caso real: recepcionista mandó "10:20 11:00 11:20 11:40 12:20", paciente
+    # respondió "11:00", bot restauró WAIT_SLOT y respondió "¿En qué te puedo ayudar?".
+    if state == "IDLE" and state != "HUMAN_TAKEOVER" and data.get("last_slots") and data.get("last_slots_ts"):
         try:
             from time_parser import parse_hora as _parse_hora_idle
             _ls = data["last_slots"]
@@ -2565,6 +2585,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if tl in ("ver_otros", "ver_todos", "otro_dia", "otro_día",
                   "otro_prof", "confirmar_sugerido"):
             return await _iniciar_agendar(phone, data, None)
+
+        # ── BUG-B: botones de aclaración nombre inexistente (pedro kine) ────
+        if tl == "prof_armijo":
+            log_event(phone, "nombre_inexistente_resuelto", {"prof": "armijo"})
+            return await _iniciar_agendar(phone, data, "armijo")
+        if tl == "prof_etcheverry":
+            log_event(phone, "nombre_inexistente_resuelto", {"prof": "etcheverry"})
+            return await _iniciar_agendar(phone, data, "etcheverry")
 
         # ── BUG-4: botones de la oferta traumatología → MG ──────────────────
         if tl == "trauma_mg":
@@ -3255,6 +3283,27 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         #      "me equivoqué quiero con el dr Márquez"
         # No dispara si el mensaje parece una pregunta sobre el profesional
         # ("quién es", "dónde atiende", "es bueno", etc.).
+        # BUG-B: nombre de pila inexistente con contexto de especialidad conocida → aclarar.
+        # "pedro kine" / "kine pedro": no existe kine Pedro en el CMC.
+        # Se evalúa ANTES del detector de apellidos para que no caiga silenciosamente
+        # a mostrar ambos kines sin aclarar.
+        _norm_bugb = _normalizar_para_apellido_ws(txt)
+        _tiene_kine_ctx_b = any(k in tl for k in ("kine", "kinesiolog", "kinesio"))
+        _SELF_INTRO_BUGB = ("soy ", "me llamo", "mi nombre es", "yo soy")
+        if (_tiene_kine_ctx_b
+                and re.search(r"\bpedro\b", _norm_bugb)
+                and not any(s in tl for s in _SELF_INTRO_BUGB)):
+            log_event(phone, "nombre_inexistente_kine_pedro", {"txt": txt[:80]})
+            return _btn_msg(
+                "No tenemos ningún kinesiólogo llamado Pedro en el CMC.\n\n"
+                "¿A quién buscas?",
+                [
+                    {"id": "prof_armijo",    "title": "Luis Armijo (Kine)"},
+                    {"id": "prof_etcheverry","title": "Leonardo Etcheverry (Kine)"},
+                    {"id": "menu_volver",    "title": "Ver otras opciones"},
+                ]
+            )
+
         _apellido_idle = _detectar_apellido_profesional(txt)
         if _apellido_idle:
             _PREGUNTAS_INFO_PROF = (
@@ -4577,6 +4626,18 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "otro día disponible", "siguiente dia", "siguiente día",
                     "buscar otro dia", "buscar otro día", "mañana otro dia"}
         if tl in OTRO_DIA or any(p in tl for p in ["otro dia", "otro día", "no puedo"]):
+            # BUG-C: registrar slot sugerido como rechazado para no re-ofrecerlo
+            if especialidad and slots_mostrados:
+                _slot_rej = slots_mostrados[0]
+                try:
+                    registrar_slot_rechazado(
+                        phone, especialidad,
+                        _slot_rej.get("fecha", ""),
+                        _slot_rej.get("hora_inicio", "")[:5],
+                        _slot_rej.get("id_profesional"),
+                    )
+                except Exception:
+                    pass
             if especialidad in _ESP_MED_GENERAL:
                 smart_nuevo, todos_nuevo = await buscar_primer_dia(
                     especialidad, excluir=fechas_vistas, solo_ids=_MED_AO_IDS)
@@ -8943,6 +9004,22 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
     if mejor:
         _normalizar_slot_especialidad([mejor], especialidad_lower)
 
+    # BUG-C: filtrar slots que el paciente ya rechazó en las últimas 48h
+    try:
+        _rechazados = get_slots_rechazados(phone, especialidad_lower)
+        if _rechazados:
+            def _no_rechazado(s):
+                return (s.get("fecha", ""), s.get("hora_inicio", "")[:5]) not in _rechazados
+            _todos_filtrado = [s for s in (todos or []) if _no_rechazado(s)]
+            _smart_filtrado = [s for s in (smart or []) if _no_rechazado(s)]
+            if _todos_filtrado:
+                todos = _todos_filtrado
+                smart = _smart_filtrado or _todos_filtrado[:5]
+                if mejor and not _no_rechazado(mejor):
+                    mejor = _todos_filtrado[0]
+    except Exception:
+        pass
+
     if not todos or not mejor:
         log_event(phone, "sin_disponibilidad", {"especialidad": (especialidad or "").strip().lower()})
         save_tag(phone, "sin-disponibilidad")
@@ -9071,8 +9148,42 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
         escasez = "⚡ _Última hora disponible_\n"
     elif n_slots <= 4:
         escasez = f"⚡ _Quedan solo {n_slots} horas_\n"
+
+    # BUG-A: si el paciente pidió a un profesional específico por nombre y
+    # la primera disponibilidad NO es hoy, agregar aviso explícito.
+    # Evita el caso real: paciente pidió "Dr. Rodrigo", bot mostró martes
+    # sin aclarar que el doctor no atiende hoy.
+    _aviso_no_hoy = ""
+    _prof_pedido_id = data.get("prof_pedido_explicito")
+    if not _prof_pedido_id:
+        # También detectar por especialidad de prof único (olavarría, armijo, etc.)
+        from medilink import _ids_para_especialidad as _ids_check_a
+        _ids_a = _ids_check_a(especialidad_lower)
+        if len(_ids_a) == 1:
+            _prof_pedido_id = _ids_a[0]
+    if _prof_pedido_id and not _fecha_avisar and not saludo_prefix:
+        _hoy_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        _slot_fecha = mejor.get("fecha", "")
+        if _slot_fecha and _slot_fecha != _hoy_str:
+            try:
+                from medilink import PROFESIONALES as _PROFS_A
+                _prof_nombre = _PROFS_A.get(int(_prof_pedido_id), {}).get("nombre", "")
+                if _prof_nombre:
+                    _d_prox = datetime.strptime(_slot_fecha, "%Y-%m-%d")
+                    _DIAS_ES = ["lunes","martes","miércoles","jueves","viernes","sábado","domingo"]
+                    _MESES_ES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"]
+                    _lbl_prox = f"{_DIAS_ES[_d_prox.weekday()]} {_d_prox.day} de {_MESES_ES[_d_prox.month - 1]}"
+                    _aviso_no_hoy = (
+                        f"_{_prof_nombre} no tiene horas disponibles hoy._\n"
+                        f"_Te muestro su próxima disponibilidad para el {_lbl_prox}:_\n\n"
+                    )
+                    # Reemplaza header para no combinar con "¡Hola de nuevo!" duplicado
+                    header = ""
+            except Exception:
+                pass
+
     return _btn_msg(
-        f"{header}Te encontré hora ✨\n\n"
+        f"{_aviso_no_hoy}{header}Te encontré hora ✨\n\n"
         f"🏥 *{mejor['especialidad']}* — {mejor['profesional']}\n"
         f"📅 *{mejor['fecha_display']}*\n"
         f"🕐 *{mejor['hora_inicio'][:5]}* ⭐\n"

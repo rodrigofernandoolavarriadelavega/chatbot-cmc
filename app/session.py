@@ -655,6 +655,21 @@ def _conn():
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_meta_ref_phone ON meta_referrals(phone)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_meta_ref_ts ON meta_referrals(ts)")
+    # ── BUG-C: Slots rechazados por paciente ─────────────────────────────────
+    # Cuando un paciente rechaza un slot (dice "otro día", "no me sirve", etc.),
+    # lo registramos para no volver a ofrecerlo en la misma sesión.
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS slots_rechazados (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            phone       TEXT NOT NULL,
+            especialidad TEXT NOT NULL,
+            fecha       TEXT NOT NULL,
+            hora        TEXT NOT NULL,
+            prof_id     INTEGER,
+            ts          TEXT DEFAULT (datetime('now'))
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_sr_phone_esp ON slots_rechazados(phone, especialidad)")
     conn.commit()
     return conn
 
@@ -3311,6 +3326,40 @@ def system_state_updated_at(key: str) -> str | None:
             "SELECT updated_at FROM system_state WHERE key = ?", (key,)
         ).fetchone()
         return row["updated_at"] if row else None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Slots rechazados (BUG-C)
+# Evita re-ofrecer un slot que el paciente ya rechazó en la sesión actual.
+# TTL: 48 horas (cubre que la paciente vuelva al día siguiente).
+# ─────────────────────────────────────────────────────────────────────────────
+
+def registrar_slot_rechazado(phone: str, especialidad: str, fecha: str,
+                              hora: str, prof_id: int | None = None) -> None:
+    """Registra que el paciente rechazó un slot específico."""
+    with _conn() as conn:
+        conn.execute("""
+            INSERT INTO slots_rechazados (phone, especialidad, fecha, hora, prof_id)
+            VALUES (?, ?, ?, ?, ?)
+        """, (phone, especialidad.lower(), fecha, hora[:5], prof_id))
+        # Limpieza TTL: borrar rechazos > 48h
+        conn.execute("""
+            DELETE FROM slots_rechazados
+            WHERE phone = ? AND ts < datetime('now', '-48 hours')
+        """, (phone,))
+        conn.commit()
+
+
+def get_slots_rechazados(phone: str, especialidad: str) -> set[tuple[str, str]]:
+    """Retorna set de (fecha, hora_HH:MM) que el paciente rechazó para esta
+    especialidad en las últimas 48 horas."""
+    with _conn() as conn:
+        rows = conn.execute("""
+            SELECT fecha, hora FROM slots_rechazados
+            WHERE phone = ? AND especialidad = ?
+              AND ts > datetime('now', '-48 hours')
+        """, (phone, especialidad.lower())).fetchall()
+        return {(r["fecha"], r["hora"][:5]) for r in rows}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
