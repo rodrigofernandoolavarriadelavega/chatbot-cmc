@@ -930,7 +930,7 @@ async def _job_regenerate_heatmap_cache():
                 comunas[r["c"]]["pacientes"] += r["n"]
             # Tags de arauco como fallback
             arauco_phones = conn.execute(
-                "SELECT COUNT(DISTINCT phone) FROM tags WHERE tag='arauco'"
+                "SELECT COUNT(DISTINCT phone) FROM contact_tags WHERE tag='arauco'"
             ).fetchone()[0]
             if arauco_phones and "ARAUCO" not in comunas:
                 comunas["ARAUCO"]["pacientes"] += arauco_phones
