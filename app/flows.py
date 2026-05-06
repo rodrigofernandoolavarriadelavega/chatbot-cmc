@@ -3743,11 +3743,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if not TELEMEDICINA_ENABLED:
                 log_event(phone, "telemedicina_pedida_pausada", {"texto": txt[:120]})
                 return _txt(
-                    "Por ahora atendemos solo de forma presencial en el centro. "
-                    "Estamos preparando atención por videollamada y la habilitaremos "
-                    "muy pronto.\n\n"
-                    "Si tu consulta es urgente, escribe *agendar* y te coordinamos "
-                    "una hora presencial."
+                    "Por ahora atendemos solo de forma *presencial* en el centro 🏥\n\n"
+                    "📍 Monsalve 102, Carampangue\n"
+                    "🕐 Lun-Vie 08:00-21:00 · Sáb 09:00-14:00\n\n"
+                    "Si quieres agendar una hora presencial, escribe *agendar*."
                 )
             save_session(phone, "WAIT_TELEMEDICINA_ESPECIALIDAD", data)
             return _btn_msg(

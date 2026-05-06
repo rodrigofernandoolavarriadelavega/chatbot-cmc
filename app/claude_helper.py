@@ -1704,13 +1704,10 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
      "⏱ Los resultados de ecografía son el *mismo día*. Para exámenes externos: 2-3 días hábiles.\n\n"
      "Envíame tu RUT si quieres que revise el estado de tu examen."),
     (("telemedicin", "teleconsult", "videollamada", "video llamada", "online", "virtual", "a distancia"),
-     "Sí, ofrecemos atención por videollamada en algunas especialidades:\n\n"
-     "✅ Medicina General — controles y recetas crónicas\n"
-     "✅ Psicología — sesiones de seguimiento\n"
-     "✅ Nutrición — controles\n"
-     "✅ Cardiología — interpretación de exámenes\n\n"
-     "La primera consulta siempre debe ser presencial (excepto Medicina General).\n\n"
-     "Escribe *telemedicina* para saber cómo agendar tu consulta online."),
+     "Por ahora atendemos solo de forma *presencial* en el centro 🏥\n\n"
+     "📍 Monsalve 102, Carampangue\n"
+     "🕐 Lun-Vie 08:00-21:00 · Sáb 09:00-14:00\n\n"
+     "Si quieres agendar, escribe *agendar*."),
     (("servicios", "ofrec"),
      "🏥 *Centro Médico Carampangue*\n\n"
      "🩺 *Medicina:* general, familiar, cardiología, gastroenterología, ginecología, otorrino\n"
