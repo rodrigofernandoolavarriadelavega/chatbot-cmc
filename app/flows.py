@@ -8984,13 +8984,14 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
         return await _iniciar_agendar(
             phone, data, "odontología",
             saludo_prefix=(
-                "🦷 *¡Buena decisión!*\n\n"
-                "Para ortodoncia, el primer paso es una evaluación con nuestra "
-                "*dentista general*.\n"
-                "Ella evalúa tu caso, solicita radiografías, toma fotografías "
-                "y gestiona la derivación con la ortodoncista.\n\n"
-                "💰 Presupuesto dental: *$15.000* (gratis si decides empezar "
-                "tratamiento previo ese día).\n\n"
+                "🦷 *Evaluación previa para brackets*\n\n"
+                "Para tratamiento de ortodoncia (brackets), primero necesitamos "
+                "una evaluación con la *odontóloga general*. Ella revisa caries, "
+                "encías y salud bucal, toma radiografías y fotografías, y luego "
+                "te deriva con la ortodoncista para iniciar el tratamiento.\n\n"
+                "💰 Evaluación dental: *$15.000* (se descuenta si decides empezar "
+                "tratamiento ese mismo día).\n\n"
+                "Te muestro horas disponibles para agendar la evaluación 👇\n\n"
             ),
         )
 
