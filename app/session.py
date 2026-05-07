@@ -1788,8 +1788,14 @@ def get_messages(phone: str, limit: int = 300) -> list[dict]:
         return [dict(r) for r in reversed(rows)]
 
 
-def search_messages(query: str, limit: int = 50) -> list[dict]:
-    """Busca mensajes que contengan el texto en todas las conversaciones."""
+def search_messages(query: str, limit: int = 300) -> list[dict]:
+    """Busca mensajes que contengan el texto en todas las conversaciones.
+
+    Agrupa por phone (devuelve solo el match más reciente por contacto) para
+    que el límite no se "consuma" cuando un mismo paciente tiene muchos
+    mensajes con el término — el bot suele repetir la palabra en quotes y
+    confirmaciones, lo que antes hacía que un solo phone llenara el LIMIT.
+    """
     with _conn() as conn:
         rows = conn.execute(
             """SELECT m.id, m.phone, m.direction, m.text, m.ts,
@@ -1797,9 +1803,13 @@ def search_messages(query: str, limit: int = 50) -> list[dict]:
                FROM messages m
                LEFT JOIN contact_profiles p ON p.phone = m.phone
                WHERE m.text LIKE ?
+                 AND m.id = (
+                     SELECT MAX(m2.id) FROM messages m2
+                      WHERE m2.phone = m.phone AND m2.text LIKE ?
+                 )
                ORDER BY m.ts DESC
                LIMIT ?""",
-            (f"%{query}%", limit)
+            (f"%{query}%", f"%{query}%", limit)
         ).fetchall()
         return [dict(r) for r in rows]
 

@@ -780,7 +780,8 @@ REGLA ESTRICTA: Si te preguntan "¿el ginecólogo atiende por Fonasa?" o "¿hay 
 - ¿Atienden Isapre? → Solo Fonasa y particular, no Isapre por ahora.
 - ¿Dan licencia médica? → Sí, en Medicina General cuando corresponde clínicamente.
 - ¿Necesito orden médica para kine con bono Fonasa? → Sí, necesitas derivación médica previa. Si es particular no es obligatoria pero se recomienda.
-- ¿Atienden niños? → Sí en Medicina General, Odontología, Psicología Infantil y Fonoaudiología.
+- ¿Atienden niños? → Sí en Medicina General, Medicina Familiar (Dr. Alonso Márquez), Odontología, Psicología Infantil y Fonoaudiología.
+- ¿Tienen pediatra / médico de familia / médico familiar / médico de cabecera / médico para mi hijo? → El CMC NO tiene pediatra especializado, pero SÍ tenemos Medicina Familiar con el **Dr. Alonso Márquez**, que es exactamente el rol del médico de familia/cabecera: atiende a toda la familia (adultos y niños sanos) con enfoque integral, manejo de crónicos, controles preventivos y salud mental leve. Consulta particular $30.000 o bono Fonasa MLE $7.880. Para urgencias pediátricas o patología pediátrica compleja, derivar al CESFAM Carampangue u Hospital de Arauco. NUNCA ofrezcas solo Medicina General (Olavarría/Abarca) cuando el paciente pide explícitamente "médico de familia/familiar/cabecera" — Márquez es la opción correcta.
 - ¿Puedo hacer PAP con la regla? → No, debes esperar a terminar tu menstruación (idealmente 7–10 días después).
 - ¿Hacen certificado médico (trabajo, colegio, deporte)? → Sí, en Medicina General.
 - ¿Puedo llevar acompañante? → Sí, siempre.
