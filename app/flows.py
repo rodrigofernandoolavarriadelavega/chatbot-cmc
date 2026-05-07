@@ -4351,6 +4351,18 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
     # ── WAIT_ESPECIALIDAD ─────────────────────────────────────────────────────
     if state == "WAIT_ESPECIALIDAD":
+        # Detectar fecha pedida en este mensaje y propagar al flujo de agendar.
+        # Bug histórico (caso María 56968621918): paciente clickea "Agendar" → llega
+        # a WAIT_ESPECIALIDAD → escribe "medicina general para hoy". El branch
+        # IDLE no detecta la fecha porque ya pasamos a otro estado, y el bot
+        # mostraba el siguiente día sin avisar.
+        _fp_we = _detectar_fecha_pedida_idle(txt)
+        if _fp_we:
+            data["fecha_pedida_idle"] = _fp_we
+        _fr_we = _detectar_franja_horaria(txt)
+        if _fr_we:
+            data["franja_horaria"] = _fr_we
+
         # Selección de categoría (paso intermedio)
         if tl == "cat_medico":
             save_session(phone, "WAIT_ESPECIALIDAD", data)
