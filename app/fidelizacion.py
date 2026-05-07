@@ -711,7 +711,6 @@ async def enviar_crosssell_odonto_estetica(send_fn, send_template_fn=None):
 def _msg_crosssell_mg_chequeo(p: dict) -> dict:
     nombre = _nombre_corto(p.get("nombre"))
     saludo = f"Hola *{nombre}* 😊 " if nombre else "Hola 😊 "
-    # Si es >=40 ajustamos el mensaje a chequeo preventivo con EMPAM
     edad = None
     try:
         fn = p.get("fecha_nacimiento")
@@ -722,9 +721,10 @@ def _msg_crosssell_mg_chequeo(p: dict) -> dict:
     if edad and edad >= 40:
         texto = (
             f"{saludo}Pasaron unos meses desde tu consulta. "
-            f"A partir de los 40, se recomienda un *chequeo preventivo anual*: "
-            f"presión, glicemia, colesterol y EMPAM (Fonasa).\n\n"
-            f"¿Te agendo una hora de control?"
+            f"Si quieres, puedes agendar un *control con solicitud de exámenes generales*: "
+            f"el doctor revisa cómo estás y te entrega la orden para tomarte sangre, glicemia, "
+            f"colesterol y lo que considere según tu edad.\n\n"
+            f"¿Te agendo una hora?"
         )
     else:
         texto = (

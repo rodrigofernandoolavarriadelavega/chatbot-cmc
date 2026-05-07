@@ -559,9 +559,9 @@ UPSELL_POSTCONSULTA: dict[str, tuple[str, str]] = {
         "kinesiología",
     ),
     "medicina general": (
-        "Ya que estás bien, ¿qué tal un chequeo preventivo anual? 🩺\n"
-        "Incluye evaluación cardiovascular, metabólica y según tu edad.\n\n"
-        "¿Te gustaría agendarlo?",
+        "Ya que estás bien, ¿te interesa un control con *solicitud de exámenes generales*? 🩺\n"
+        "El doctor te entrega la orden para tomarte sangre, orina y lo que considere según tu edad.\n\n"
+        "¿Te lo agendo?",
         "medicina general",
     ),
     "odontología general": (
