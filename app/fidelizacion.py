@@ -805,18 +805,16 @@ async def enviar_cumpleanos(send_fn):
 
             # Tip preventivo según edad
             tip = ""
-            if edad and edad >= 65:
-                tip = "\n\nRecuerda que a tu edad es importante el EMPAM anual y la vacuna de influenza."
-            elif edad and edad >= 50:
-                tip = "\n\nAproxímate para tu chequeo preventivo anual: exámenes de sangre, presión y más."
+            if edad and edad >= 50:
+                tip = "\n\nA tu edad conviene un control anual con solicitud de exámenes generales (sangre, glicemia, colesterol)."
             elif edad and edad >= 40:
-                tip = "\n\nEs un buen momento para agendar tu chequeo preventivo anual."
+                tip = "\n\nEs un buen momento para agendar un control con solicitud de exámenes generales."
 
             msg = (
                 f"¡Feliz cumpleaños{(", " + saludo) if saludo else ""}! 🎂🎉{edad_txt}\n\n"
                 "Todo el equipo del *Centro Médico Carampangue* te desea un excelente día.\n\n"
                 f"Tu salud es lo más importante.{tip}\n\n"
-                "¿Aprovechas de agendar tu chequeo preventivo?"
+                "¿Aprovechas de agendar un control médico?"
             )
             try:
                 from messaging import send_whatsapp_interactive
