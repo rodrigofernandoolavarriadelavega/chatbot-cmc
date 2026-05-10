@@ -1715,6 +1715,17 @@ def agentes_dashboard_page():
     return html
 
 
+@app.get("/dashboards", response_class=HTMLResponse)
+@app.get("/dashboards/", response_class=HTMLResponse)
+@app.get("/mapa", response_class=HTMLResponse)
+def dashboards_overview_page():
+    """Mapa esquemático de todos los dashboards del ecosistema OLACORE (CMC, Meulen, Farmacia, BI)."""
+    html = _read_template("dashboards_overview.html")
+    if not html:
+        raise HTTPException(404, "Mapa de dashboards no disponible")
+    return html
+
+
 @app.get("/menu", response_class=HTMLResponse)
 def menu_page():
     """Landing esquemático con todas las rutas desplegadas en agentecmc.cl."""
@@ -4270,6 +4281,7 @@ PRECIOS_ESPECIALIDAD = {
 def _periodo_to_fecha_desde(periodo: str) -> str | None:
     """Convierte un periodo label en una fecha mínima YYYY-MM-DD (None = todos)."""
     from datetime import datetime, timedelta
+    from zoneinfo import ZoneInfo
     hoy = datetime.now(ZoneInfo("America/Santiago")).date()
     if periodo == "hoy":
         return hoy.isoformat()
