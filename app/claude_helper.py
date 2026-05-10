@@ -37,7 +37,9 @@ _CIERRES_CORTOS = frozenset({
 })
 
 _META_AUTO_GREETINGS = frozenset({
-    "quiero chatear con alguien", "chatear con alguien",
+    # "quiero chatear con alguien" eliminado 2026-05-10: usuarios reales usan esa frase
+    # para pedir derivación a recepción (fb_26075855928754227 x3). Se mueve a _INTENT_CACHE
+    # como intent:humano. Los CTAs de ads de salud no usan ese texto habitualmente.
     "quiero saber mas informacion", "quiero saber mas información",
     "quiero saber más información", "quiero saber más informacion",
     "quiero más información", "quiero mas informacion",
@@ -177,6 +179,17 @@ _INTENT_CACHE: dict[str, dict] = {
     "secretaria":     {"intent": "humano", "especialidad": None},
     "operador":       {"intent": "humano", "especialidad": None},
     "persona":        {"intent": "humano", "especialidad": None},
+    # Variantes 2026-05-10 (auditoría: fb_26075855928754227 escribió "quiero chatear con alguien" x3)
+    "chatear con alguien":          {"intent": "humano", "especialidad": None},
+    "quiero chatear con alguien.":  {"intent": "humano", "especialidad": None},
+    "hablar con una persona":       {"intent": "humano", "especialidad": None},
+    "con una persona":              {"intent": "humano", "especialidad": None},
+    "persona real":                 {"intent": "humano", "especialidad": None},
+    "no quiero el bot":             {"intent": "humano", "especialidad": None},
+    "atencion humana":              {"intent": "humano", "especialidad": None},
+    "atender por persona":          {"intent": "humano", "especialidad": None},
+    "necesito hablar con alguien":  {"intent": "humano", "especialidad": None},
+    "quiero hablar con alguien":    {"intent": "humano", "especialidad": None},
     # Saludos / menú → ahorra ~30% de calls a Claude
     "hola":           {"intent": "menu", "especialidad": None},
     "holi":           {"intent": "menu", "especialidad": None},

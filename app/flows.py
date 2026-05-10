@@ -1841,7 +1841,12 @@ async def _pre_router_wait(phone: str, txt: str, tl: str, state: str, data: dict
     tl_rescue = tl.strip()
     _HUMANO_KW = {"humano", "agente", "persona", "secretaria", "secretario",
                   "recepcion", "recepción", "atencion humana", "atención humana",
-                  "hablar con alguien", "quiero hablar", "asistente humano"}
+                  "hablar con alguien", "quiero hablar", "asistente humano",
+                  # Variantes 2026-05-10 (auditoría: fb_26075855928754227 x3)
+                  "chatear con alguien", "quiero chatear con alguien",
+                  "con una persona", "persona real",
+                  "no quiero el bot", "atencion humana", "atender por persona",
+                  "quiero hablar con alguien", "necesito hablar con alguien"}
     _MENU_KW = {"menu", "menú", "inicio", "reiniciar", "empezar de nuevo", "volver al inicio"}
     _SALIR_KW = {"salir", "olvida", "olvidalo", "olvídalo", "olvida todo",
                  "cancelar flujo", "no quiero nada", "no importa"}
@@ -2765,6 +2770,56 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "¿Quieres que te ayude a agendar?\n"
                     "_Escribe *menu* para ver opciones._"
                 )
+
+        # ── FIX 5 (2026-05-10): confirmaciones post-cita ─────────────────────
+        # Paciente acaba de agendar y escribe algo como "está reservada la hora",
+        # "ya reserve hora a médico", "Esta Lista". En vez de fallback o menú,
+        # responder con info de la cita confirmada si existe una reciente (≤2h).
+        # Caso real: 56967963365 llegó a fallback_loop_escalado por esto.
+        _POST_CITA_RE = re.compile(
+            r"\b(ya\s+reserv[eé]|ya\s+agend[eé]|est[aá]\s+reservada|"
+            r"qued[oó]\s*(lista|listo|agendad[ao]|reservad[ao])|"
+            r"est[aá]\s+lista|esta\s+lista|"
+            r"ya\s+qued[oó]|listo\s+gracia[s]?|todo\s+bien|"
+            r"me\s+confirm[ao]|hora\s+reservada|cita\s+reservada|"
+            r"ya\s+reserve\s+hora)\b",
+            re.IGNORECASE,
+        )
+        if _POST_CITA_RE.search(tl):
+            # Buscar cita creada en las últimas 2 horas
+            _cita_post = None
+            try:
+                from session import get_proxima_cita_paciente as _get_pc
+                _cita_post = _get_pc(phone)
+            except Exception:
+                pass
+            if not _cita_post:
+                _cita_post = data.get("last_confirmed_cita")
+            if _cita_post:
+                # Verificar que la cita fue creada recientemente si tiene timestamp
+                _cita_ts = _cita_post.get("created_at") or data.get("last_booking_ts")
+                _cita_reciente = True
+                if _cita_ts:
+                    try:
+                        from datetime import datetime as _dt_pc
+                        _ts_pc = _dt_pc.fromisoformat(_cita_ts)
+                        if _ts_pc.tzinfo is None:
+                            _ts_pc = _ts_pc.replace(tzinfo=timezone.utc)
+                        _cita_reciente = (datetime.now(timezone.utc) - _ts_pc).total_seconds() < 7200
+                    except Exception:
+                        _cita_reciente = True  # asumir reciente si no parsea
+                if _cita_reciente:
+                    _pc_prof = _cita_post.get("profesional") or _cita_post.get("nombre_profesional", "")
+                    _pc_esp = _cita_post.get("especialidad", "")
+                    _pc_fecha = _cita_post.get("fecha_display") or _cita_post.get("fecha", "")
+                    _pc_hora = _cita_post.get("hora_inicio") or _cita_post.get("hora", "")
+                    log_event(phone, "confirmacion_post_cita_detectada", {"prof": _pc_prof, "fecha": _pc_fecha})
+                    return (
+                        f"Tu hora con *{_pc_prof}* ({_pc_esp}) el *{_pc_fecha}* a las *{_pc_hora}* "
+                        f"está confirmada.\n\n"
+                        f"Te llegará un recordatorio el día anterior y 2 horas antes.\n\n"
+                        "_Si necesitas algo más, escribe *menu*._"
+                    )
 
         # ── Seguimiento de FAQ con sugerencia de agendar ──────────────────────
         # Debe ir ANTES de los atajos numéricos (1..4) porque aquí interpretamos
@@ -4387,6 +4442,28 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     # 2) último recurso: Claude
                     result = await detect_intent(txt)
                     especialidad_candidata = result.get("especialidad") or especialidad_candidata
+        # Guard 2026-05-10: si después de todos los fallbacks la especialidad
+        # candidata sigue siendo texto libre sospechoso (frase larga, palabras
+        # de no-especialidad, texto con puntuación libre), volver a preguntar.
+        # Evita "no contamos con he llamado a ambos números..." y similares.
+        _ec_lower = (especialidad_candidata or "").lower().strip()
+        _ec_palabras = set(re.sub(r"[^a-záéíóúñü ]", "", _ec_lower).split())
+        _EC_NO_ESP = {
+            "llamado", "llame", "llamo", "numero", "numeros", "telefono", "celular",
+            "particular", "apagado", "ocupado", "comunico", "espera", "esperar",
+            "porque", "cuando", "mientras", "forma", "ambos",
+        }
+        _ec_es_frase_libre = (
+            not especialidad_candidata
+            or len(_ec_lower) > 40
+            or bool(_ec_palabras & _EC_NO_ESP)
+            or ".-" in _ec_lower
+            or _ec_lower.count(" ") >= 5
+        )
+        if _ec_es_frase_libre:
+            log_event(phone, "wait_esp_texto_libre_rechazado", {"txt": txt[:120]})
+            save_session(phone, "WAIT_ESPECIALIDAD", data)
+            return f"No reconocí eso como una especialidad. ¿Qué especialidad necesitas?\n\n{_ESPECIALIDADES_TEXTO}"
         # Si venimos del flujo de lista de espera, redirigir al confirming
         if data.pop("from_waitlist", False):
             return await _iniciar_waitlist(phone, data, especialidad_candidata)
@@ -8545,6 +8622,26 @@ _FRASES_ESPECIALIDAD = [
     ("estética",              "estética facial"),
     ("botox",                 "estética facial"),
     ("traumato",              "traumatología"),
+    # Aliases añadidos 2026-05-10 (auditoría 72h): variantes naturales no cubiertas
+    ("médico infantil",       "medicina general"),   # CMC no tiene pediatra; MG atiende niños
+    ("medico infantil",       "medicina general"),
+    ("doctor infantil",       "medicina general"),
+    ("doctora infantil",      "medicina general"),
+    ("pediatra",              "medicina general"),   # derivar a MG + aclaración
+    ("pediatría",             "medicina general"),
+    ("pediátrico",            "medicina general"),
+    ("pediatrico",            "medicina general"),
+    ("doctor general",        "medicina general"),
+    ("doctora general",       "medicina general"),
+    ("necesito médico",       "medicina general"),
+    ("necesito medico",       "medicina general"),
+    ("quiero médico",         "medicina general"),
+    ("quiero medico",         "medicina general"),
+    ("quiero doctor",         "medicina general"),
+    ("necesito doctor",       "medicina general"),
+    ("necesito una hora",     "medicina general"),   # sin especialidad → MG por defecto
+    ("pedir hora médico",     "medicina general"),
+    ("pedir hora medico",     "medicina general"),
 ]
 
 
@@ -8947,8 +9044,25 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
         _palabras = set(_esp_clean.split())
         _es_saludo_compuesto = bool(_palabras & _SALUDOS_TOKENS)
         _es_intencion_agendar = bool(_palabras & _AGEND_TOKENS) and "hora" in _palabras
+        # Guard extendido 2026-05-10: si el texto que llegó como "especialidad"
+        # parece una frase libre del usuario (>40 chars, o contiene palabras que
+        # no aparecen en nombres de especialidades médicas), volver a preguntar
+        # la especialidad en lugar de imprimir el texto crudo como "no contamos con X".
+        # Casos reales: "de forma particular.-", "he llamado a ambos números y..."
+        _ESP_NO_PALABRAS = {
+            "llamado", "llame", "llamo", "numero", "numeros", "telefono", "celular",
+            "particular", "particular", "apagado", "ocupado", "comunico", "comunique",
+            "espere", "espera", "esperar", "rato", "minutos", "favor",
+            "porque", "cuando", "mientras", "siempre", "tambien",
+        }
+        _es_frase_libre = (
+            len(especialidad_lower) > 40
+            or bool(_palabras & _ESP_NO_PALABRAS)
+            or ".-" in especialidad_lower
+            or especialidad_lower.count(" ") >= 5
+        )
         if (len(_esp_clean) < 4 or _esp_clean in _SALUDOS_GRACIAS or not _esp_clean
-                or _es_saludo_compuesto or _es_intencion_agendar):
+                or _es_saludo_compuesto or _es_intencion_agendar or _es_frase_libre):
             save_session(phone, "WAIT_ESPECIALIDAD", data)
             return f"Claro, te ayudo a agendar 😊\n\n¿Qué especialidad necesitas?\n\n{_ESPECIALIDADES_TEXTO}"
         # Antes de decir no contamos con, probar FAQ local (radiografia/telemed/etc)

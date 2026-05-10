@@ -76,13 +76,13 @@
     <div class="grid md:grid-cols-4 gap-3">
       <div class="kpi-card">
         <div class="kpi-label">Subagentes Claude</div>
-        <div class="kpi-num">12</div>
-        <div class="kpi-sub">5 auditores · 6 constructores · 1 estratega</div>
+        <div class="kpi-num">23</div>
+        <div class="kpi-sub">8 auditores · 10 constructores · 3 verticales · 2 estrategas</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Servicios producción</div>
-        <div class="kpi-num">3</div>
-        <div class="kpi-sub">chatbot-cmc · meulen-chatbot · ges-assistant</div>
+        <div class="kpi-num">4</div>
+        <div class="kpi-sub">chatbot-cmc · meulen-chatbot · ges-assistant · meulen</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Cron jobs in-app</div>
@@ -153,6 +153,22 @@
         <div class="tools">Bash · Read · Glob · Grep · SQLCipher</div>
       </div>
 
+      <div class="agent-card">
+        <span class="badge badge-aud">Auditor</span>
+        <div class="name mt-3">cmc-legal-compliance</div>
+        <div class="role">Compliance legal & datos</div>
+        <div class="desc">Audita Ley 19.628 + 21.719 + WhatsApp Business Policy. Revisa opt-in, retention SQLCipher, derecho al olvido, brechas, solicitudes ARCO.</div>
+        <div class="tools">Bash · Read · Glob · Grep · WebFetch</div>
+      </div>
+
+      <div class="agent-card">
+        <span class="badge badge-aud">Auditor</span>
+        <div class="name mt-3">meta-ads-auditor</div>
+        <div class="role">Supervisor de campañas Meta</div>
+        <div class="desc">Revisa configuración, creative quality, frecuencia, CTR, CPL anómalos antes de activar. NO modifica — reporta hallazgos accionables. Evita gastar plata mal.</div>
+        <div class="tools">Bash · Read · Glob · Grep</div>
+      </div>
+
     </div>
   </section>
 
@@ -210,11 +226,113 @@
       </div>
 
       <div class="agent-card">
+        <span class="badge badge-build">Constructor</span>
+        <span class="badge badge-model ml-1">sonnet</span>
+        <div class="name mt-3">cmc-deploy-manager</div>
+        <div class="role">Release manager</div>
+        <div class="desc">Pipeline obligatorio antes de cada push: validación profunda de imports, suite de tests, deploy via systemd, verify <span class="mono">/health</span> + logs post-deploy. Rollback automático si falla.</div>
+        <div class="tools">Bash · Read · Glob · Grep</div>
+      </div>
+
+      <div class="agent-card">
+        <span class="badge badge-build">Constructor</span>
+        <span class="badge badge-model ml-1">sonnet</span>
+        <div class="name mt-3">cmc-seo-content</div>
+        <div class="role">SEO + content writer</div>
+        <div class="desc">Escribe artículos médicos con schemas Schema.org correctos. Sincroniza al WordPress vía Snippet 5 REST API. Audita JSON-LD (sin HTML comments — bug que tumbó la home).</div>
+        <div class="tools">Bash · Read · Write · Edit · Glob · Grep · WebFetch</div>
+      </div>
+
+      <div class="agent-card">
+        <span class="badge badge-build">Constructor</span>
+        <span class="badge badge-model ml-1">sonnet</span>
+        <div class="name mt-3">cmc-financial-auditor</div>
+        <div class="role">Cierre mensual financiero</div>
+        <div class="desc">Corre <span class="mono">auditor.py</span> y cruza las 6 fuentes (RECEPCION, MEDILINK, TRANSFERENCIA, EFECTIVO, TRANSBANK D/C). Aplica factor 0.85 BI vs Caja. Detecta atenciones no cobradas.</div>
+        <div class="tools">Bash · Read · Write · Glob · Grep</div>
+      </div>
+
+      <div class="agent-card">
+        <span class="badge badge-build">Constructor</span>
+        <span class="badge badge-model ml-1">sonnet</span>
+        <div class="name mt-3">cmc-cac-analyst</div>
+        <div class="role">Analista CAC & atribución</div>
+        <div class="desc">Reporta CAC en 3 capas: por conversación, por cita agendada, por paciente atendido (Purchase event). Cruza Meta Ads × Bot × Medilink (atendidos reales).</div>
+        <div class="tools">Bash · Read · Glob · Grep</div>
+      </div>
+
+      <div class="agent-card">
+        <span class="badge badge-build">Constructor</span>
+        <span class="badge badge-model ml-1">sonnet</span>
+        <div class="name mt-3">meta-ads-builder</div>
+        <div class="role">Constructor de campañas Meta</div>
+        <div class="desc">Crea campaign + adsets + creatives + ads vía Marketing API directamente. Todo en PAUSED para revisión antes de activar. Conoce errores comunes y workarounds.</div>
+        <div class="tools">Bash · Read · Glob · Grep</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- VERTICALES -->
+  <section class="mb-14">
+    <p class="section-head">02b — Equipo de dominio · verticales</p>
+    <h2 class="section-title">Los que <em class="italic" style="color:var(--cobre)">cuidan su vertical</em>.</h2>
+    <p class="text-sm opacity-70 mb-6 max-w-2xl">Cada uno opera en una vertical separada del CMC core. No tocan código fuera de su scope.</p>
+
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+      <div class="agent-card">
+        <span class="badge badge-build">Vertical</span>
+        <span class="badge badge-model ml-1">sonnet</span>
+        <div class="name mt-3">meulen-bot-engineer</div>
+        <div class="role">Ingeniero chatbot Meulen</div>
+        <div class="desc">Bugfixes y features del bot WhatsApp del Supermercado Meulen (paleta verde-cobre-arena, tono cálido de barrio). NO toca código del CMC.</div>
+        <div class="tools">Bash · Read · Write · Edit · Glob · Grep</div>
+      </div>
+
+      <div class="agent-card">
+        <span class="badge badge-build">Vertical</span>
+        <span class="badge badge-model ml-1">sonnet</span>
+        <div class="name mt-3">ges-engineer</div>
+        <div class="role">Ingeniero motor GES</div>
+        <div class="desc">Backend de triage de síntomas en <span class="mono">localhost:8002</span>. Mantiene contrato con chatbot CMC. Conoce las 4 fases de normalización (diccionarios, fuzzy, Haiku, embeddings).</div>
+        <div class="tools">Bash · Read · Write · Edit · Glob · Grep</div>
+      </div>
+
+      <div class="agent-card">
+        <span class="badge badge-build">Vertical</span>
+        <span class="badge badge-model ml-1">sonnet</span>
+        <div class="name mt-3">cmc-patient-research</div>
+        <div class="role">Investigador de pacientes</div>
+        <div class="desc">Demografía Carampangue/Arauco/Curanilahue. Demanda no satisfecha. Segmentos invisibles. Mapas térmicos. Cruza sessions.db + BI Postgres + Marketing API.</div>
+        <div class="tools">Bash · Read · Write · Glob · Grep · WebFetch</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ESTRATEGAS -->
+  <section class="mb-14">
+    <p class="section-head">02c — Equipo de estrategas · piensan, no implementan</p>
+    <h2 class="section-title">Los que <em class="italic" style="color:var(--cobre)">deciden</em>.</h2>
+
+    <div class="grid md:grid-cols-2 gap-4">
+
+      <div class="agent-card">
         <span class="badge badge-strat">Estratega</span>
         <span class="badge badge-model ml-1">opus</span>
         <div class="name mt-3">clinic-strategist</div>
-        <div class="role">Consultor de fondo</div>
-        <div class="desc">Conversaciones estratégicas: escenarios de crecimiento, marca, expansión geográfica, contratación, modelos de negocio. <strong>No implementa</strong> — piensa, compara, recomienda.</div>
+        <div class="role">Consultor estratégico CMC</div>
+        <div class="desc">Conversaciones de fondo: escenarios de crecimiento, marca, expansión geográfica, contratación, modelos de negocio del CMC. <strong>No implementa</strong> — piensa, compara, recomienda.</div>
+        <div class="tools">Read · Bash · Glob · Grep · WebFetch</div>
+      </div>
+
+      <div class="agent-card">
+        <span class="badge badge-strat">Estratega</span>
+        <span class="badge badge-model ml-1">opus</span>
+        <div class="name mt-3">olacore-portfolio-manager</div>
+        <div class="role">Gestor de portafolio holding</div>
+        <div class="desc">Visión cross-marca: cómo asignar capital y atención entre CMC, Meulen, Estación Olavarría (real estate Piedra Azul) y Rincón del Camarón. Identifica sinergias y conflictos.</div>
         <div class="tools">Read · Bash · Glob · Grep · WebFetch</div>
       </div>
 
