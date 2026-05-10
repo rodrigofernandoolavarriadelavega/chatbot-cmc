@@ -760,44 +760,200 @@ async def comuna_hub(slug: str):
 @app.get("/comuna", response_class=HTMLResponse)
 @app.get("/comuna/", response_class=HTMLResponse)
 async def comuna_index():
-    """Índice de comunas — lista todas las localidades atendidas."""
-    items = []
+    """Índice de comunas — landing rica con cards detalladas + JSON-LD."""
+    import json as _json
+    sede_html = ""
+    cercanas = []
+    arauco_g = []
     for slug, c in COMUNAS_ARAUCO.items():
         nombre = c["nombre"]
         km = c.get("km", 0)
         minutos = c.get("min", 0)
+        ruta = c.get("ruta", "")
         if km == 0:
             distancia = "Sede principal"
+            badge = "★ Sede"
+            tipo_grupo = "sede"
+        elif km <= 10:
+            distancia = f"a {km} km · {minutos} min"
+            badge = "Cercana"
+            tipo_grupo = "cercana"
         else:
             distancia = f"a {km} km · {minutos} min"
-        items.append(f'<li><a href="/comuna/{slug}"><strong>{nombre}</strong><br><small>{distancia}</small></a></li>')
-    items_html = "\n      ".join(items)
+            badge = "Provincia de Arauco"
+            tipo_grupo = "provincia"
+        card = f'''<a class="c-card" href="/comuna/{slug}">
+        <span class="c-badge">{badge}</span>
+        <h3>{nombre}</h3>
+        <p class="c-dist">{distancia}</p>
+        <p class="c-ruta">{ruta if ruta != "—" else "Carampangue"}</p>
+        <span class="c-arrow">Ver especialidades →</span>
+      </a>'''
+        if tipo_grupo == "sede":
+            sede_html = card
+        elif tipo_grupo == "cercana":
+            cercanas.append(card)
+        else:
+            arauco_g.append(card)
+
+    itemlist = {
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        "name": "Comunas de la Provincia de Arauco atendidas por el CMC",
+        "numberOfItems": len(COMUNAS_ARAUCO),
+        "itemListElement": [
+            {"@type": "ListItem", "position": i + 1,
+             "url": f"https://centromedicocarampangue.cl/comuna/{s}",
+             "name": COMUNAS_ARAUCO[s]["nombre"]}
+            for i, s in enumerate(COMUNAS_ARAUCO.keys())
+        ],
+    }
+    breadcrumb = {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {"@type":"ListItem","position":1,"name":"Inicio","item":"https://centromedicocarampangue.cl/"},
+            {"@type":"ListItem","position":2,"name":"Servicios por comuna","item":"https://centromedicocarampangue.cl/comuna/"},
+        ],
+    }
+    place = {
+        "@context": "https://schema.org",
+        "@type": "MedicalClinic",
+        "@id": "https://centromedicocarampangue.cl/#clinic",
+        "name": "Centro Médico Carampangue",
+        "url": "https://centromedicocarampangue.cl/",
+        "areaServed": [
+            {"@type": "Place", "name": COMUNAS_ARAUCO[s]["nombre"]} for s in COMUNAS_ARAUCO
+        ],
+    }
+    faq = {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+            {"@type":"Question","name":"¿A qué comunas atiende el Centro Médico Carampangue?","acceptedAnswer":{"@type":"Answer","text":"Atendemos pacientes de toda la Provincia de Arauco: Carampangue (sede), Laraquete, Ramadilla, Arauco, Curanilahue, Los Álamos, Lebu, Cañete, Contulmo y Tirúa. Recibimos también pacientes de Concepción, Coronel y comunas vecinas que prefieren evitar esperas del sistema público."}},
+            {"@type":"Question","name":"¿Necesito ser de la zona para agendar?","acceptedAnswer":{"@type":"Answer","text":"No. Cualquier persona puede agendar una hora con cualquiera de nuestros 23 profesionales. La cercanía geográfica solo influye en el tiempo de viaje, no en la disponibilidad de hora."}},
+            {"@type":"Question","name":"¿Cómo llego desde mi comuna?","acceptedAnswer":{"@type":"Answer","text":"Selecciona tu comuna en la lista para ver rutas exactas, kilómetros, tiempo de viaje y opciones de transporte público desde tu localidad hasta Carampangue."}},
+            {"@type":"Question","name":"¿Aceptan Bono Fonasa para pacientes de otras comunas?","acceptedAnswer":{"@type":"Answer","text":"Sí. El Bono Fonasa MLE se emite en la sucursal con huella biométrica para Medicina General, Medicina Familiar, Kinesiología, Nutrición y Psicología (adulto e infantil), independiente de la comuna del paciente. Matrona tiene tarifa preferencial Fonasa."}},
+        ],
+    }
+
+    cercanas_html = "\n      ".join(cercanas)
+    arauco_html = "\n      ".join(arauco_g)
+    itemlist_j = _json.dumps(itemlist, ensure_ascii=False)
+    breadcrumb_j = _json.dumps(breadcrumb, ensure_ascii=False)
+    place_j = _json.dumps(place, ensure_ascii=False)
+    faq_j = _json.dumps(faq, ensure_ascii=False)
+
     return f"""<!DOCTYPE html>
 <html lang="es-CL">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Servicios médicos por comuna · Provincia de Arauco | CMC</title>
-<meta name="description" content="Centro Médico Carampangue atiende pacientes de toda la Provincia de Arauco: Carampangue, Arauco, Lebu, Cañete, Curanilahue, Los Álamos, Tirúa, Contulmo, Laraquete, Ramadilla.">
+<meta name="description" content="Centro Médico Carampangue atiende pacientes de toda la Provincia de Arauco: Carampangue, Arauco, Lebu, Cañete, Curanilahue, Los Álamos, Tirúa, Contulmo, Laraquete, Ramadilla. 23 profesionales · 19 especialidades · Bono Fonasa MLE.">
+<meta name="keywords" content="centro médico Carampangue, médico Arauco, dentista Provincia Arauco, kinesiología Lebu, ginecología Curanilahue, ortodoncia Cañete, ecografía Los Álamos, agenda WhatsApp">
+<meta name="robots" content="index, follow, max-image-preview:large">
 <link rel="canonical" href="https://centromedicocarampangue.cl/comuna/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Servicios médicos por comuna · Provincia de Arauco | CMC">
+<meta property="og:description" content="23 profesionales y 19 especialidades médicas y dentales para toda la Provincia de Arauco.">
+<meta property="og:url" content="https://centromedicocarampangue.cl/comuna/">
+<meta property="og:image" content="https://agentecmc.cl/static/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:site_name" content="Centro Médico Carampangue">
+<meta property="og:locale" content="es_CL">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Servicios médicos por comuna · Provincia de Arauco">
+<meta name="twitter:description" content="23 profesionales · 19 especialidades · Bono Fonasa MLE · Agenda WhatsApp 24/7">
+<meta name="twitter:image" content="https://agentecmc.cl/static/og-image.png">
+<meta name="twitter:site" content="@CMCarampangue">
+<script type="application/ld+json">
+{itemlist_j}
+</script>
+<script type="application/ld+json">
+{breadcrumb_j}
+</script>
+<script type="application/ld+json">
+{place_j}
+</script>
+<script type="application/ld+json">
+{faq_j}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-body{{font-family:-apple-system,Segoe UI,sans-serif;max-width:780px;margin:40px auto;padding:0 24px;color:#0a1a28;background:#FAF8F5}}
-h1{{font-family:Fraunces,serif;font-weight:800;color:#0F3F68}}
-ul{{list-style:none;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}}
-li{{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:18px;transition:.2s}}
-li:hover{{border-color:#4FBECE;transform:translateY(-2px);box-shadow:0 8px 20px -8px rgba(15,63,104,.2)}}
-li a{{text-decoration:none;color:inherit;display:block}}
-small{{color:#5e7183}}
-nav a{{color:#1F7E8C;font-weight:600}}
+*,*::before,*::after{{box-sizing:border-box}}
+body{{font-family:Inter,-apple-system,Segoe UI,sans-serif;margin:0;color:#0a1a28;background:#FAF8F5;line-height:1.6}}
+header{{padding:18px 24px;border-bottom:1px solid #e5e7eb;background:#fff}}
+header a{{color:#1F7E8C;text-decoration:none;font-weight:600;font-size:14px}}
+.hero{{padding:56px 24px 40px;text-align:center;max-width:840px;margin:0 auto}}
+.hero .eyebrow{{font-size:12px;letter-spacing:1.5px;color:#1172ab;text-transform:uppercase;font-weight:700;margin-bottom:12px;display:block}}
+h1{{font-family:Fraunces,Georgia,serif;font-weight:800;color:#0F3F68;font-size:40px;line-height:1.1;margin:0 0 16px 0}}
+h1 em{{font-style:normal;color:#1F7E8C}}
+.lead{{font-size:18px;color:#374151;max-width:680px;margin:0 auto}}
+.section{{max-width:1080px;margin:0 auto;padding:32px 24px}}
+.section h2{{font-family:Fraunces,Georgia,serif;font-weight:700;color:#0F3F68;font-size:26px;margin:32px 0 18px 0}}
+.section .sub{{color:#5e7183;margin:0 0 22px 0}}
+.c-grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}}
+.c-card{{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:20px;text-decoration:none;color:inherit;display:block;transition:.18s;position:relative}}
+.c-card:hover{{border-color:#4FBECE;transform:translateY(-3px);box-shadow:0 12px 24px -10px rgba(15,63,104,.18)}}
+.c-card h3{{font-family:Fraunces,Georgia,serif;color:#0F3F68;font-size:22px;margin:8px 0 4px 0;font-weight:700}}
+.c-badge{{font-size:11px;letter-spacing:.6px;color:#1172ab;background:#e6f0fa;padding:4px 9px;border-radius:30px;font-weight:600;display:inline-block}}
+.c-dist{{font-size:14px;color:#0F3F68;margin:6px 0;font-weight:600}}
+.c-ruta{{font-size:13px;color:#5e7183;margin:4px 0 12px 0}}
+.c-arrow{{font-size:13px;color:#1F7E8C;font-weight:600}}
+.cta-band{{background:linear-gradient(135deg,#0F3F68,#1172ab);color:#fff;padding:48px 24px;text-align:center;border-radius:18px;margin:40px 0}}
+.cta-band h2{{color:#fff;margin:0 0 14px 0;font-size:26px}}
+.cta-band p{{color:#cfe5f4;margin:0 0 24px 0}}
+.cta-band a{{display:inline-block;background:#25D366;color:#fff;padding:14px 28px;border-radius:30px;font-weight:700;text-decoration:none;font-size:15px}}
+.faq details{{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px 20px;margin:10px 0;cursor:pointer}}
+.faq summary{{font-weight:600;color:#0F3F68;font-size:15px}}
+.faq .ans{{margin-top:12px;color:#374151;font-size:14px;line-height:1.65}}
+footer{{text-align:center;padding:24px;font-size:13px;color:#5e7183;border-top:1px solid #e5e7eb;margin-top:40px;background:#fff}}
+@media (max-width:600px){{h1{{font-size:30px}}.hero{{padding:40px 20px 32px}}}}
 </style>
 </head>
 <body>
-<nav><a href="/">← Inicio</a></nav>
-<h1>Servicios médicos por comuna</h1>
-<p>Centro Médico Carampangue atiende pacientes de toda la Provincia de Arauco. Selecciona tu comuna para ver detalles, distancias y especialidades disponibles.</p>
-<ul>
-      {items_html}
-</ul>
+<header><a href="/">← Volver al inicio</a></header>
+<section class="hero">
+  <span class="eyebrow">Servicios médicos por comuna</span>
+  <h1>Atendemos toda la <em>Provincia de Arauco</em></h1>
+  <p class="lead">23 profesionales y 19 especialidades médicas y dentales para pacientes de Carampangue, Arauco, Curanilahue, Lebu, Cañete, Los Álamos, Tirúa, Contulmo y comunas cercanas. Bono Fonasa MLE en sucursal con huella biométrica.</p>
+</section>
+<section class="section">
+  <h2>Sede principal</h2>
+  <p class="sub">El Centro Médico Carampangue está físicamente en República 102, Carampangue (comuna de Arauco), Región del Biobío.</p>
+  <div class="c-grid">
+      {sede_html}
+  </div>
+  <h2>Localidades cercanas</h2>
+  <p class="sub">A menos de 10 km del centro — viaje de ida y vuelta cómodo en una mañana.</p>
+  <div class="c-grid">
+      {cercanas_html}
+  </div>
+  <h2>Provincia de Arauco</h2>
+  <p class="sub">El resto de la provincia: información de rutas, distancias y especialidades disponibles.</p>
+  <div class="c-grid">
+      {arauco_html}
+  </div>
+
+  <div class="cta-band">
+    <h2>Agenda desde tu comuna en 30 segundos</h2>
+    <p>El asistente automático revisa disponibilidad real al instante, 24/7.</p>
+    <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20una%20hora&utm_source=comuna_index&utm_medium=organic&utm_campaign=cta_general" target="_blank" rel="noopener">Agendar por WhatsApp</a>
+  </div>
+
+  <h2>Preguntas frecuentes</h2>
+  <div class="faq">
+    <details><summary>¿A qué comunas atiende el Centro Médico Carampangue?</summary><p class="ans">Atendemos pacientes de toda la Provincia de Arauco: Carampangue (sede), Laraquete, Ramadilla, Arauco, Curanilahue, Los Álamos, Lebu, Cañete, Contulmo y Tirúa. Recibimos también pacientes de Concepción, Coronel y comunas vecinas que prefieren evitar esperas del sistema público.</p></details>
+    <details><summary>¿Necesito ser de la zona para agendar?</summary><p class="ans">No. Cualquier persona puede agendar una hora con cualquiera de nuestros 23 profesionales. La cercanía geográfica solo influye en el tiempo de viaje, no en la disponibilidad de hora.</p></details>
+    <details><summary>¿Cómo llego desde mi comuna?</summary><p class="ans">Selecciona tu comuna en las cards de arriba para ver rutas exactas, kilómetros, tiempo de viaje y opciones de transporte público desde tu localidad hasta Carampangue.</p></details>
+    <details><summary>¿Aceptan Bono Fonasa para pacientes de otras comunas?</summary><p class="ans">Sí. El Bono Fonasa MLE se emite en la sucursal con huella biométrica para Medicina General, Medicina Familiar, Kinesiología, Nutrición y Psicología (adulto e infantil), independiente de la comuna del paciente. Matrona tiene tarifa preferencial Fonasa ($16.000).</p></details>
+  </div>
+</section>
+<footer>Centro Médico Carampangue · República 102, Carampangue · Provincia de Arauco · (44) 296 5226 · WhatsApp +56 9 6661 0737</footer>
 </body>
 </html>"""
 
