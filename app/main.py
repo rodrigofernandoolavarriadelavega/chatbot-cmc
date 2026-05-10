@@ -2618,6 +2618,16 @@ async def api_olavarria_sync_montos(limite: int = 0):
 
 # ── BI v2: dashboard genérico por profesional ───────────────────────────────
 
+@app.get("/profesional/dashboard", response_class=HTMLResponse)
+def profesional_dashboard_token_page():
+    """Dashboard personal del profesional — auth por token en query string.
+    DEBE declararse antes que /profesional/{id_prof} para que FastAPI no
+    intente parsear 'dashboard' como int."""
+    if not _PROF_DASHBOARD_HTML:
+        raise HTTPException(404, "Dashboard profesional no disponible")
+    return _PROF_DASHBOARD_HTML
+
+
 @app.get("/profesional/{id_prof}", response_class=HTMLResponse)
 def profesional_dashboard_page(id_prof: int):
     """Dashboard genérico por profesional. Reemplaza /abarca y /olavarria."""
@@ -2685,13 +2695,6 @@ def _make_prof_token(id_prof: int) -> str:
     import hashlib as _hl, hmac as _hm
     raw = f"prof:{id_prof}:{ADMIN_TOKEN}"
     return _hm.new(ADMIN_TOKEN.encode(), raw.encode(), _hl.sha256).hexdigest()[:32]
-
-@app.get("/profesional/dashboard", response_class=HTMLResponse)
-def profesional_dashboard_token_page():
-    """Dashboard personal del profesional — auth por token en query string."""
-    if not _PROF_DASHBOARD_HTML:
-        raise HTTPException(404, "Dashboard profesional no disponible")
-    return _PROF_DASHBOARD_HTML
 
 @app.get("/api/profesional/dashboard")
 async def api_profesional_dashboard_data(token: str = ""):
