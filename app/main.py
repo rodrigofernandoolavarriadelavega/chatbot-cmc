@@ -710,6 +710,37 @@ async def comuna_hub(slug: str):
     }
     itemlist_json = _json.dumps(itemlist, ensure_ascii=False, indent=2)
 
+    # Sección de contenido único por comuna (locomocion + contexto + razón hub)
+    local_info = ""
+    if slug in COMUNA_LOCAL_DATA:
+        d = COMUNA_LOCAL_DATA[slug]
+        razon_hub = d["razon"].replace("{esp}", "atención médica y dental")
+        if slug == "carampangue":
+            h2_li = "Atención médica y dental en Carampangue"
+        else:
+            h2_li = f"Atención médica y dental desde {nombre}"
+        local_info = f"""
+<section class="local-info" style="padding:56px 0;background:#f9fafb;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;">
+  <div class="container">
+    <h2 style="font-size:28px;line-height:1.2;margin:0 0 28px 0;color:#0f3f68;">{h2_li}</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:28px;">
+      <article>
+        <h3 style="font-size:17px;margin:0 0 8px 0;color:#1172ab;">Cómo llegar al CMC</h3>
+        <p style="line-height:1.65;color:#374151;margin:0;">{d["locomocion"]}</p>
+      </article>
+      <article>
+        <h3 style="font-size:17px;margin:0 0 8px 0;color:#1172ab;">{nombre} en la Provincia de Arauco</h3>
+        <p style="line-height:1.65;color:#374151;margin:0;">{d["contexto"]}</p>
+      </article>
+      <article>
+        <h3 style="font-size:17px;margin:0 0 8px 0;color:#1172ab;">¿Por qué venir desde {nombre}?</h3>
+        <p style="line-height:1.65;color:#374151;margin:0;">{razon_hub}</p>
+      </article>
+    </div>
+  </div>
+</section>
+"""
+
     html = (_COMUNA_HUB_TPL
             .replace("{{TITLE}}", title)
             .replace("{{DESCRIPTION}}", description)
@@ -721,7 +752,8 @@ async def comuna_hub(slug: str):
             .replace("{{LEAD_TEXT}}", lead)
             .replace("{{WA_TEXT}}", wa_text)
             .replace("{{SPECIALTY_CARDS}}", cards_html)
-            .replace("{{ITEMLIST_JSON}}", itemlist_json))
+            .replace("{{ITEMLIST_JSON}}", itemlist_json)
+            .replace("{{LOCAL_INFO_SECTION}}", local_info))
     return html
 
 
