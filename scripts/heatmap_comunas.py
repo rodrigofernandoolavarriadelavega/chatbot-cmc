@@ -342,16 +342,13 @@ def fase_mapa():
     # para que las calles del casco no caigan en el bucket rural por error.
     LOCALIDAD_KEYWORDS = [
         ("CARAMPANGUE URBANO", [
-            # Calles del casco urbano
-            "VICENTE MILLAN", "VICENTE MILLÁN", "MONSALVE", "PRAT ",
+            # Calles del casco — match estricto con calle
+            "VICENTE MILLAN", "VICENTE MILLÁN",
+            "MONSALVE", "PRAT ",
             "DUARTE", "PATRIA ", "MANUEL LUENGO", "CALLE ESTACION",
-            # Poblaciones del casco
-            "VILLA LA PAZ", "VILLA ESPERANZA", "RENACER LOS PADRES",
-            "LOS BOLDOS", "LOS PERALES", "LOS CILOS", "LOS SILOS",
-            "CHILLANCITO", "CONQUISTA", "EL PARRON",
-            # "CARAMPANGUE" suelto sin calle = casco (los rurales suelen
-            # especificar Conumo/Pichilo/etc.)
-            "CARAMPANGUE",
+            # Poblaciones identificables como urbanas
+            "VILLA LA PAZ", "VILLA ESPERANZA", "CHILLANCITO",
+            "EL PARRON", "CONQUISTA",
         ]),
         ("CARAMPANGUE RURAL", [
             "CONUMO", "LA MESETA", "CRUCE NORTE",
@@ -359,6 +356,9 @@ def fase_mapa():
             "PUNTA CARAMPANGUE",
             "LOS HORCONES", "HORCONES",
             "PICHILO", "CARIPILUN",
+            # Sectores históricamente periurbanos/rurales
+            "RENACER LOS PADRES", "LOS BOLDOS", "LOS PERALES",
+            "LOS CILOS", "LOS SILOS",
         ]),
         ("LARAQUETE", ["LARAQUETE", "EL PINAR", "VILLA EL BOSQUE", "VILLA VISTA HERMOSA",
                        "BOLDO ", "GONZALO ROJAS", "PIEDRA CRUZ", "LOS LINGUES",
