@@ -1780,7 +1780,7 @@ function _setupGeoProfesional(profesionales) {
 // usando el BI Postgres (container Docker local). Si no responde, deja la fila tal cual.
 async function _expandirArauco(geoData) {
   try {
-    const r = await fetch('http://localhost:8000/api/segmentacion/global/arauco-localidades?_=' + Date.now(),
+    const r = await fetch('/api/seo/localidades-arauco?_=' + Date.now(),
                         { signal: AbortSignal.timeout(2500) });
     if (!r.ok) return geoData;
     const data = await r.json();

@@ -3724,6 +3724,32 @@ def _enriquecer_comunas(comunas: list[dict]) -> list[dict]:
     return comunas
 
 
+# Snapshot de localidades de Arauco — fuente: bi.dim_paciente.localidad × Censo INE 2017.
+# Se actualiza manualmente cuando los valores cambian significativamente.
+# Última actualización: 2026-05-10 desde container BI Postgres (health_bi_api).
+_LOCALIDADES_ARAUCO_SNAPSHOT = {
+    "fecha_snapshot": "2026-05-10",
+    "fuente": "bi.dim_paciente.localidad × INE Censo 2017 (zona urbana)",
+    "arauco": [
+        {"localidad": "Arauco urbano", "pacientes": 4950, "atenciones": 15336, "poblacion": 26000, "pct_captura": 19.04},
+        {"localidad": "Carampangue",   "pacientes":  794, "atenciones":  5817, "poblacion":  1700, "pct_captura": 46.71},
+        {"localidad": "Laraquete",     "pacientes":  329, "atenciones":  1457, "poblacion":  2200, "pct_captura": 14.95},
+        {"localidad": "Ramadillas",    "pacientes":  110, "atenciones":   619, "poblacion":   500, "pct_captura": 22.00},
+        {"localidad": "Tubul",         "pacientes":   22, "atenciones":    58, "poblacion":  1100, "pct_captura":  2.00},
+        {"localidad": "Cerro Alto",    "pacientes":   18, "atenciones":    45, "poblacion":   400, "pct_captura":  4.50},
+        {"localidad": "Llico",         "pacientes":    5, "atenciones":    12, "poblacion":   350, "pct_captura":  1.43},
+    ],
+}
+
+
+@app.get("/api/seo/localidades-arauco")
+def seo_localidades_arauco():
+    """Devuelve el snapshot de pacientes únicos por localidad urbana de Arauco
+    cruzado con Censo INE 2017. Servido por HTTPS desde el dominio del bot
+    para evitar mixed-content cuando el dashboard SEO lo consume."""
+    return _LOCALIDADES_ARAUCO_SNAPSHOT
+
+
 @app.get("/api/seo/geo")
 def seo_geo_api(periodo: str = "todos", desde: str | None = None,
                 hasta: str | None = None, profesional: str = "",
