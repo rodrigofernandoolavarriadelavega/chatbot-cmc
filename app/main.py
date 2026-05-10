@@ -1014,6 +1014,19 @@ def _localize_blog(html: str, base_slug: str, comuna_slug: str) -> str:
     return html
 
 
+@app.get("/{key}.txt", include_in_schema=False)
+async def indexnow_key_file(key: str):
+    """IndexNow key verification — sirve {key}.txt desde root si existe en static/."""
+    from fastapi.responses import Response, PlainTextResponse
+    from pathlib import Path as _P
+    if not (len(key) == 32 and all(c in "0123456789abcdef" for c in key)):
+        return Response(status_code=404)
+    f = _P(__file__).parent.parent / "static" / f"{key}.txt"
+    if not f.exists():
+        return Response(status_code=404)
+    return PlainTextResponse(content=f.read_text(encoding="utf-8").strip(), media_type="text/plain")
+
+
 @app.get("/sitemap.xml")
 async def sitemap_xml():
     """Sitemap dinámico con todas las URLs (home + 19 especialidades + localidades + topic blogs + /blog index)."""
