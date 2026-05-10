@@ -3905,8 +3905,13 @@ def seo_localidades_arauco():
     (single source of truth con el resto del dashboard)."""
     import json, glob, os
     from datetime import datetime as _dt
-    files = sorted(glob.glob(str(Path(__file__).parent.parent / "data" / "heatmap_*.json")),
-                   key=os.path.getmtime, reverse=True)
+    # Solo snapshots mensuales (heatmap_<mes>_<año>.json), NO heatmap_cache.json
+    # que tiene otro propósito y no trae localidades_arauco.
+    all_files = glob.glob(str(Path(__file__).parent.parent / "data" / "heatmap_*.json"))
+    files = sorted(
+        [f for f in all_files if not f.endswith("heatmap_cache.json")],
+        key=os.path.getmtime, reverse=True,
+    )
     if not files:
         raise HTTPException(503, "Sin snapshot de heatmap")
     raw = json.loads(Path(files[0]).read_text(encoding="utf-8"))
