@@ -31,11 +31,12 @@ from session import (save_session, reset_session, get_session, save_tag, delete_
                      marcar_bono_primera_cita, marcar_bono_notificado,
                      registrar_bono_referral, conteo_referidos_mes,
                      mark_horas_vacias_respondio, mark_horas_vacias_agendo,
-                     registrar_slot_rechazado, get_slots_rechazados)
+                     registrar_slot_rechazado, get_slots_rechazados,
+                     get_recent_pni_event, log_pni_cita_generada)
 from resilience import is_medilink_down
 from triage_ges import triage_sintomas, normalizar_texto_paciente
-from pni import get_vaccine_reminder
-from hitos_desarrollo import get_milestones_reminder
+from pni import get_vaccine_reminder, get_pni_meta
+from hitos_desarrollo import get_milestones_reminder, get_hitos_meta
 from config import CMC_TELEFONO, CMC_TELEFONO_FIJO, ADMIN_ALERT_PHONE
 from messaging import send_whatsapp
 
@@ -6357,6 +6358,28 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "modalidad": data.get("modalidad", "particular"),
                     "id_cita_old": cita_old.get("id") if reagendar else None,
                 })
+                # ── Telemetria PNI: pni_cita_generada ─────────────────────
+                # Si este phone tenia un pni_enviado en las ultimas 72h,
+                # loggear atribucion. Idempotente por cita_id.
+                if not reagendar and id_cita:
+                    try:
+                        _pni_ev = get_recent_pni_event(phone, horas=72)
+                        if _pni_ev:
+                            from datetime import datetime as _dt, timezone as _tz
+                            _pni_ts = _pni_ev["ts"]
+                            _pni_dt = _dt.fromisoformat(_pni_ts).replace(tzinfo=_tz.utc)
+                            _ahora = _dt.now(_tz.utc)
+                            _horas_diff = (_ahora - _pni_dt).total_seconds() / 3600
+                            log_pni_cita_generada(
+                                phone=phone,
+                                pni_evento_id=_pni_ev["id"],
+                                horas_desde_envio=_horas_diff,
+                                especialidad=esp,
+                                cita_id=id_cita,
+                            )
+                    except Exception as _pni_attr_err:
+                        log.debug("pni_cita_generada tracking error: %s", _pni_attr_err)
+                # ── fin telemetria PNI ─────────────────────────────────────
                 # ── Métricas horas vacías: marcar que el paciente agendó ──
                 if not reagendar:
                     try:
@@ -6431,6 +6454,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 fecha_nac = (data.get("reg_fecha_nacimiento")
                              or paciente.get("fecha_nacimiento", ""))
                 pni_msg = ""
+                _pni_telemetria = None  # metadata para log_event("pni_enviado")
                 if fecha_nac:
                     _pni = get_vaccine_reminder(fecha_nac, paciente["nombre"])
                     if _pni:
@@ -6438,6 +6462,26 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     _hitos = get_milestones_reminder(fecha_nac, paciente["nombre"])
                     if _hitos:
                         pni_msg += f"\n\n{_hitos}"
+                    # Calcular metadata de telemetria solo si hay algo para enviar
+                    if pni_msg:
+                        _pni_meta_raw = get_pni_meta(fecha_nac)
+                        _hitos_meta_raw = get_hitos_meta(fecha_nac)
+                        _tiene_pni = _pni_meta_raw is not None and _pni_meta_raw.get("tiene_pni")
+                        _tiene_hitos = _hitos_meta_raw is not None
+                        if _tiene_pni and _tiene_hitos:
+                            _tipo_pni = "ambos"
+                        elif _tiene_pni:
+                            _tipo_pni = "pni"
+                        else:
+                            _tipo_pni = "hitos"
+                        _meta_ref = _pni_meta_raw or _hitos_meta_raw
+                        _pni_telemetria = {
+                            "tipo": _tipo_pni,
+                            "edad_meses": (_meta_ref or {}).get("edad_meses"),
+                            "edad_etiqueta": (_meta_ref or {}).get("edad_etiqueta"),
+                            "trigger": "post_cita_pediatrica",
+                            "cita_id_previa": id_cita or None,
+                        }
                 if reagendar:
                     extra = ""
                     if not cancel_ok:
@@ -6465,6 +6509,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         await send_whatsapp(phone, _msg_rea + "\n\n_Escribe *menu* si necesitas algo más._")
                         import asyncio as _asyncio_pni
                         await _asyncio_pni.sleep(2.5)
+                        if _pni_telemetria:
+                            log_event(phone, "pni_enviado", _pni_telemetria)
                         return pni_msg.strip()
                     return _msg_rea + "\n\n_Escribe *menu* si necesitas algo más._"
                 if es_tercero:
@@ -6535,12 +6581,15 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     # PNI/hitos: tercer mensaje via spawn_task para no bloquear
                     if pni_msg:
                         from resilience import spawn_task as _spawn
+                        _pni_tel_ref = _pni_telemetria  # captura por closure
                         async def _send_pni_referral():
                             import asyncio as _ai
                             await _ai.sleep(2.5)
                             await send_whatsapp(phone, pni_msg.strip())
                             from session import log_message as _lm
                             _lm(phone, "out", pni_msg.strip(), "WAIT_REFERRAL_POST")
+                            if _pni_tel_ref:
+                                log_event(phone, "pni_enviado", _pni_tel_ref)
                         _spawn(_send_pni_referral())
                     return _btn_msg(
                         "Una última cosa rápida 🙏\n\n*¿Cómo nos conociste?*",
@@ -6555,12 +6604,15 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 # main.py enviará y logueará confirmacion_msg normalmente (return abajo).
                 if pni_msg:
                     from resilience import spawn_task as _spawn_pni
+                    _pni_tel_std = _pni_telemetria  # captura por closure
                     async def _send_pni_delayed():
                         import asyncio as _ai2
                         await _ai2.sleep(2.5)
                         await send_whatsapp(phone, pni_msg.strip())
                         from session import log_message as _lm2
                         _lm2(phone, "out", pni_msg.strip(), get_session(phone).get("state", "IDLE"))
+                        if _pni_tel_std:
+                            log_event(phone, "pni_enviado", _pni_tel_std)
                     _spawn_pni(_send_pni_delayed())
                 # ── Cross-sell post-confirmación ──────────────────────────────
                 # Solo en citas nuevas (no reagendar), solo si no es tercero.

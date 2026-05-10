@@ -143,3 +143,52 @@ def get_vaccine_reminder(fecha_nacimiento: str, nombre: str = "") -> Optional[st
     lineas.append("_Vacunación gratuita en tu consultorio (CESFAM)._")
 
     return "\n".join(lineas)
+
+
+def get_pni_meta(fecha_nacimiento: str) -> Optional[dict]:
+    """
+    Retorna metadata de telemetría PNI sin generar el mensaje completo.
+    Usado por log_event("pni_enviado", ...).
+
+    Returns dict con:
+        edad_meses: int
+        tiene_pni: bool   (tiene vacunas exactas para su edad)
+        tiene_hitos: bool (solo aplica si hitos_desarrollo también dispara)
+    O None si el paciente no aplica para PNI (>= 180 meses).
+    """
+    fecha_nac = _parse_fecha(fecha_nacimiento)
+    if not fecha_nac:
+        return None
+    hoy = date.today()
+    edad_m = _edad_meses(fecha_nac, hoy)
+    if edad_m >= 180:
+        return None
+
+    vacunas_exactas = [
+        v for m_min, m_max, v, _, escolar in _PNI_CALENDARIO
+        if m_min <= edad_m < m_max and not escolar
+    ]
+    vacunas_escolares = [
+        v for m_min, m_max, v, _, escolar in _PNI_CALENDARIO
+        if m_min <= edad_m < m_max and escolar
+    ]
+
+    if not vacunas_exactas and not vacunas_escolares:
+        return None
+
+    if edad_m < 24:
+        etiqueta = f"{edad_m} meses"
+    elif edad_m < 36:
+        anios = edad_m // 12
+        meses_r = edad_m % 12
+        etiqueta = f"{anios} año{'s' if anios > 1 else ''} {meses_r}m"
+    else:
+        anios = edad_m // 12
+        etiqueta = f"{anios} año{'s' if anios > 1 else ''}"
+
+    return {
+        "edad_meses": edad_m,
+        "edad_etiqueta": etiqueta,
+        "tiene_pni": bool(vacunas_exactas),
+        "tiene_escolares": bool(vacunas_escolares),
+    }

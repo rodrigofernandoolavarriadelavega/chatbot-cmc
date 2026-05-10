@@ -216,3 +216,34 @@ def get_milestones_reminder(fecha_nacimiento: str, nombre: str = "") -> Optional
                   "coméntalo con el doctor en la próxima cita._")
 
     return "\n".join(lineas)
+
+
+def get_hitos_meta(fecha_nacimiento: str) -> Optional[dict]:
+    """
+    Retorna metadata de telemetría hitos del desarrollo sin generar mensaje.
+    Usado por log_event("pni_enviado", ...).
+
+    Returns dict con:
+        edad_meses: int
+        edad_etiqueta: str   (ej. "8 meses (evaluación EEDP)")
+    O None si el paciente no aplica (>= 108 meses o sin bucket).
+    """
+    fecha_nac = _parse_fecha(fecha_nacimiento)
+    if not fecha_nac:
+        return None
+    edad_m = _edad_meses(fecha_nac)
+    if edad_m >= 108:
+        return None
+    bucket = next(
+        ((m_min, m_max, etq, hitos, alertas)
+         for m_min, m_max, etq, hitos, alertas in _HITOS_CALENDARIO
+         if m_min <= edad_m < m_max),
+        None,
+    )
+    if not bucket:
+        return None
+    _, _, etiqueta, _, _ = bucket
+    return {
+        "edad_meses": edad_m,
+        "edad_etiqueta": etiqueta,
+    }

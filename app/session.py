@@ -4615,3 +4615,75 @@ def get_meta_referrals_recientes(limit: int = 100) -> list[dict]:
             (limit,),
         ).fetchall()
     return [dict(r) for r in rows]
+
+
+# ── Telemetría PNI ─────────────────────────────────────────────────────────────
+
+def get_recent_pni_event(phone: str, horas: int = 72) -> dict | None:
+    """
+    Retorna el evento pni_enviado mas reciente del phone dentro de las
+    ultimas `horas` horas, o None si no hay.
+
+    Usado para atribuir pni_cita_generada cuando el paciente agenda
+    dentro de la ventana de 72h post-envio.
+    """
+    import json as _json
+    with _conn() as conn:
+        row = conn.execute(
+            """SELECT id, meta, ts
+               FROM conversation_events
+               WHERE phone = ?
+                 AND event = 'pni_enviado'
+                 AND ts >= datetime('now', ?)
+               ORDER BY ts DESC
+               LIMIT 1""",
+            (phone, f"-{int(horas)} hours"),
+        ).fetchone()
+    if not row:
+        return None
+    meta = {}
+    try:
+        meta = _json.loads(row["meta"] or "{}")
+    except Exception:
+        pass
+    return {"id": row["id"], "meta": meta, "ts": row["ts"]}
+
+
+def log_pni_cita_generada(phone: str, pni_evento_id: int,
+                           horas_desde_envio: float,
+                           especialidad: str, cita_id: str) -> bool:
+    """
+    Inserta evento pni_cita_generada de forma idempotente.
+    Usa INSERT OR IGNORE con unique key basada en cita_id para evitar duplicados
+    si el handler de cita_creada se re-procesa por alguna razon.
+
+    Returns True si se inserto, False si ya existia.
+    """
+    import json as _json
+
+    # Verificar si ya existe un evento pni_cita_generada para esta cita_id.
+    # La constraint de unicidad la manejamos por query, no por schema,
+    # para no alterar la tabla existente.
+    with _conn() as conn:
+        exists = conn.execute(
+            """SELECT 1 FROM conversation_events
+               WHERE phone = ?
+                 AND event = 'pni_cita_generada'
+                 AND json_extract(meta, '$.cita_id') = ?
+               LIMIT 1""",
+            (phone, str(cita_id)),
+        ).fetchone()
+        if exists:
+            return False
+        meta = _json.dumps({
+            "pni_evento_id": pni_evento_id,
+            "horas_desde_envio": round(horas_desde_envio, 2),
+            "especialidad_nueva_cita": especialidad,
+            "cita_id": str(cita_id),
+        }, ensure_ascii=False)
+        conn.execute(
+            "INSERT INTO conversation_events (phone, event, meta) VALUES (?, ?, ?)",
+            (phone, "pni_cita_generada", meta),
+        )
+        conn.commit()
+    return True
