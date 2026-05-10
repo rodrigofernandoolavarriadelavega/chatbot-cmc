@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OLACORE — Mapa de Dashboards</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --fiordo:#1F2D3D;
+    --fiordo-2:#2A3B50;
+    --cobre:#B86A3F;
+    --cobre-soft:#D69470;
+    --neblina:#E8E5DD;
+    --hueso:#F5F2EC;
+    --lacre:#7A2B2B;
+    --tinta:#0F1620;
+    --linea:rgba(31,45,61,.12);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--hueso);color:var(--tinta);font-family:'Inter',sans-serif}
+  body{font-feature-settings:"ss01","cv11"}
+  .wrap{max-width:1280px;margin:0 auto;padding:48px 32px 96px}
+  /* Header */
+  header{display:flex;align-items:flex-start;justify-content:space-between;gap:32px;border-bottom:1px solid var(--linea);padding-bottom:32px;margin-bottom:48px}
+  .brand{display:flex;align-items:center;gap:18px}
+  .seal{width:64px;height:64px;border:1.5px solid var(--fiordo);border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--neblina);position:relative}
+  .seal::before{content:"";position:absolute;left:50%;top:8%;bottom:8%;width:1px;background:var(--fiordo)}
+  .seal span{font-family:'Fraunces',serif;font-weight:600;font-size:20px;color:var(--fiordo);letter-spacing:.05em}
+  .title h1{font-family:'Fraunces',serif;font-weight:500;font-size:42px;line-height:1;margin:0;color:var(--fiordo);letter-spacing:-.01em}
+  .title .sub{font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.18em;color:var(--cobre);margin-top:10px}
+  .meta{font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:var(--fiordo);text-align:right;line-height:1.7}
+  .meta .key{color:var(--cobre)}
+
+  /* Index */
+  .index{display:flex;flex-wrap:wrap;gap:8px 18px;margin-bottom:56px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+  .index a{color:var(--fiordo);text-decoration:none;border-bottom:1px dotted var(--cobre);padding-bottom:2px}
+  .index a:hover{color:var(--cobre)}
+
+  /* Section */
+  section{margin-bottom:64px}
+  .sec-head{display:flex;align-items:baseline;gap:18px;margin-bottom:24px;border-bottom:1px solid var(--linea);padding-bottom:14px}
+  .sec-num{font-family:'IBM Plex Mono',monospace;color:var(--cobre);font-size:12px;letter-spacing:.16em}
+  .sec-head h2{font-family:'Fraunces',serif;font-weight:500;font-size:26px;margin:0;color:var(--fiordo);letter-spacing:-.005em}
+  .sec-head .tag{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.18em;color:#6c7a8a}
+
+  /* Grid */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:18px}
+  .card{background:#fff;border:1px solid var(--linea);border-radius:6px;padding:20px 22px;display:flex;flex-direction:column;gap:10px;position:relative;transition:transform .15s ease, box-shadow .15s ease}
+  .card:hover{transform:translateY(-2px);box-shadow:0 12px 30px -18px rgba(31,45,61,.35)}
+  .card .row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .card h3{font-family:'Fraunces',serif;font-weight:600;font-size:18px;margin:0;color:var(--fiordo);letter-spacing:-.005em}
+  .card .path{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--cobre);letter-spacing:.04em;background:var(--neblina);padding:3px 8px;border-radius:3px;display:inline-block}
+  .card p{margin:0;font-size:13.5px;line-height:1.5;color:#314252}
+  .card .stack{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto;padding-top:8px}
+  .pill{font-family:'IBM Plex Mono',monospace;font-size:9.5px;text-transform:uppercase;letter-spacing:.14em;padding:3px 7px;border-radius:2px;background:var(--neblina);color:var(--fiordo);border:1px solid var(--linea)}
+  .pill.cobre{background:rgba(184,106,63,.1);color:var(--cobre);border-color:rgba(184,106,63,.25)}
+  .pill.lacre{background:rgba(122,43,43,.08);color:var(--lacre);border-color:rgba(122,43,43,.2)}
+  .pill.fiordo{background:var(--fiordo);color:#fff;border-color:var(--fiordo)}
+
+  /* Variants per section */
+  section.cobre .card{border-left:3px solid var(--cobre)}
+  section.fiordo .card{border-left:3px solid var(--fiordo)}
+  section.lacre .card{border-left:3px solid var(--lacre)}
+  section.muted .card{border-left:3px solid #8a9aab}
+
+  footer{margin-top:64px;padding-top:24px;border-top:1px solid var(--linea);font-family:'IBM Plex Mono',monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:.16em;color:#6c7a8a;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  footer .meridian{color:var(--cobre)}
+
+  @media (max-width:680px){
+    .wrap{padding:28px 18px 64px}
+    header{flex-direction:column}
+    .meta{text-align:left}
+    .title h1{font-size:32px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="seal"><span>OC</span></div>
+      <div class="title">
+        <h1>Mapa de Dashboards</h1>
+        <div class="sub">OLACORE · Meridiano Sur · 2026-05-10</div>
+      </div>
+    </div>
+    <div class="meta">
+      <div><span class="key">verticales</span> · CMC · Meulen · Farmacia · Vuelos</div>
+      <div><span class="key">stack</span> · FastAPI · Postgres BI · SQLite · Tailwind</div>
+      <div><span class="key">total</span> · 9 secciones · 38 dashboards</div>
+    </div>
+  </header>
+
+  <nav class="index">
+    <a href="#caja">01 Caja & BI</a>
+    <a href="#crecimiento">02 Crecimiento & Atribución</a>
+    <a href="#estrategia">03 Estrategia & Roadmap</a>
+    <a href="#profesionales">04 Profesionales</a>
+    <a href="#geo">05 Geo & Pacientes</a>
+    <a href="#meulen">06 Meulen</a>
+    <a href="#farmacia">07 Farmacia & Suplementos</a>
+    <a href="#operativo">08 Operativo Bot</a>
+    <a href="#extra">09 Extra</a>
+  </nav>
+
+  <!-- 01 CAJA -->
+  <section id="caja" class="cobre">
+    <div class="sec-head">
+      <span class="sec-num">01</span>
+      <h2>Caja & BI clínico</h2>
+      <span class="tag">Health BI · Postgres</span>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <div class="row"><h3>BI Día</h3><span class="path">/bi/dia</span></div>
+        <p>Caja del día con conciliación de pagos: Medilink vs efectivo vs transbank vs transferencia. Lo que cuadras al cierre.</p>
+        <div class="stack"><span class="pill">caja</span><span class="pill cobre">conciliación</span></div>
+      </div>
+      <div class="card">
+        <div class="row"><h3>BI Mensual</h3><span class="path">/bi/mensual</span></div>
+        <p>Facturación mensual por profesional y área, incluye simulador de honorarios. Vista oficial para cierre.</p>
+        <div class="stack"><span class="pill">mensual</span><span class="pill cobre">honorarios</span></div>
+      </div>
+      <div class="card">
+        <div class="row"><h3>CMC Mensual v2</h3><span class="path">/cmc/mensual</span></div>
+        <p>Versión nueva basada en <code>bi_pagos_caja</code> (CSV oficial Medilink). Reemplaza la antigua proyección.</p>
+        <div class="stack"><span class="pill">v2</span><span class="pill">medilink</span></div>
+      </div>
+      <div class="card">
+        <div class="row"><h3>BI Proyecto</h3><span class="path">/bi/proyecto</span></div>
+        <p>Mapa del proyecto Health BI: arquitectura, archivos clave, flujo ETL Medilink → Postgres.</p>
+        <div class="stack"><span class="pill">arquitectura</span><span class="pill">etl</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 CRECIMIENTO -->
+  <section id="crecimiento" class="cobre">
+    <div class="sec-head">
+      <span class="sec-num">02</span>
+      <h2>Crecimiento & Atribución</h2>
+      <span class="tag">Meta Ads × Bot × Medilink</span>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <div class="row"><h3>Atribución</h3><span class="path">/atribucion</span></div>
+        <p>Cruce diario Meta Ads × conversaciones bot × pacientes nuevos atendidos. CAC en 3 capas: lead, cita, atendido.</p>
+        <div class="stack"><span class="pill cobre">CAC</span><span class="pill">CAPI</span></div>
+      </div>
+      <div class="card">
+        <div class="row"><h3>Meta Ads</h3><span class="path">/meta</span></div>
+        <p>Campañas activas, gasto, CTR, frecuencia, alertas anómalas. Vista para decidir qué pausar/escalar.</p>
+        <div class="stack"><span class="pill cobre">meta</span><span class="pill">ads</span></div>
+      </div>
+      <div class="card">
+        <div class="row"><h3>SEO</h3><span class="path">/seo</span></div>
+        <p>Rankings, schemas JSON-LD, sitemap (223 URLs), Core Web Vitals, blog × comuna. Sprint SEO 2026-05-03 vivo.</p>
+        <div class="stack"><span class="pill cobre">seo</span><span class="pill">schemas</span></div>
+      </div>
+      <div class="card">
+        <div class="row"><h3>Horizonte</h3><span class="path">/horizonte</span></div>
+        <p>Roadmap largo plazo: escenarios A/B/C, pipeline contratación, KPIs anuales del CMC.</p>
+        <div class="stack"><span class="pill">roadmap</span><span class="pill cobre">2027+</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 03 ESTRATEGIA -->
+  <section id="estrategia" class="fiordo">
+    <div class="sec-head">
+      <span class="sec-num">03</span>
+      <h2>Estrategia & Roadmap</h2>
+      <span class="tag">Decisiones del dueño</span>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <div class="row"><h3>Camino a 50M</h3><span class="path">/camino-50m</span></div>
+        <p>Plan financiero hacia $50M mensuales: palancas de profesionales, áreas y precios.</p>
+        <div class="stack"><span class="pill fiordo">norte</span></div>
+      </div>
+      <div class="card">
+        <div class="row"><h3>Crecimiento Personal</h3><span class="path">/crecimiento</span></div>
+        <p>Tu propia curva: atenciones, ingresos y carga clínica como profesional 1 (Dr. Olavarría).</p>
+        <div class="stack"><span class="pill">personal</span></div>
+      </div>
+      <div class="card">
+        <div class="row"><h3>Proyectos 2026</h3><span class="path">/proyectos2026</span></div>
+        <p>Tablero de proyectos del año: CMC, Meulen, Estación Olavarría, Rincón del Camarón.</p>
+        <div class="stack"><span class="pill fiordo">portfolio</span></div>
+      </div>
+      <div class="card">
+        <div class="row"><h3>Ideas Revisión</h3><span class="path">/ideas-revision</span></div>
+        <p>Features pausadas detrás de feature flags — el "to-do strategy" del bot y del sitio.</p>
+        <div class="stack"><span class="pill">backlog</span></div>
+      </div>
+      <div class="card">
+        <div class="row"><h3>Ecosistema CMC</h3><span class="path">/ecosistema</span></div>
+        <p>Mapa visual de servicios CMC y cómo se entrelazan: clínico, dental, kine, blog, bot.</p>
+        <div class="stack"><span class="pill">mapa</span></div>
+      </div>
+      <div class="card">
+        <div class="row"><h3>Agentes</h3><span class="path">/agentes</span></div>
+        <p>Mapa de subagentes Claude Code (cmc-bot-engineer, cmc-cac-analyst, etc.) y automatizaciones del ecosistema.</p>
+        <div class="stack"><span class="pill fiordo">claude</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 PROFESIONALES -->
+  <section id="profesionales" class="lacre">
+    <div class="sec-head">
+      <span class="sec-num">04</span>
+      <h2>Profesionales</h2>
+      <span class="tag">Vista por médico</span>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <div class="row"><h3>Olavarría</h3><span class="path">/olavarria</span></div>
+        <p>Tu dashboard como Dr. Olavarría: ingresos Olavarría con factor 0.85 BI vs caja (peak mayo 2024 $7.16M real).</p>
+        <div class="stack"><span class="pill lacre">factor 0.85</span></div>
+      </div>
+      <div class="card">
+        <div class="row"><h3>Abarca</h3><span class="path">/abarca</span></div>
+        <p>Dashboard del Dr. Abarca: producción, especialidad, ingresos.</p>
+        <div class="stack"><span class="pill">cardio</span></div>
+      </div>
+      <div class="card">
+        <div class="row"><h3>Profesional dinámico</h3><span class="path">/profesional/{id}</span></div>
+        <p>Plantilla genérica para cualquier profesional: KPIs históricos, agenda, productividad.</p>
+        <div class="stack"><span class="pill">template</span></div>
+      </div>
+      <div class="card">
+        <div class="row"><h3>Profesionales (admin)</h3><span class="path">/profesional/dashboard</span></div>
+        <p>Vista global desde el lado del centro: ranking, alertas, comparativa.</p>
+        <div class="stack"><span class="pill">global</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 GEO -->
+  <section id="geo" class="cobre">
+    <div class="sec-head">
+      <span class="sec-num">05</span>
+      <h2>Geo & Pacientes</h2>
+      <span class="tag">Heatmaps + segmentación</span>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <div class="row"><h3>Heatmap Comunas</h3><span class="path">/admin/mapa-comunas</span></div>
+        <p>Densidad de pacientes por comuna en provincia de Arauco, con normalización de localidades sucias.</p>
+        <div class="stack"><span class="pill cobre">heatmap</span></div>
+      </div>
+      <div class="card">
+        <div class="row"><h3>Heatmap Direcciones</h3><span class="path">/admin/mapa-direcciones</span></div>
+        <p>Mapa de direcciones individuales (3.537 pacientes) con detección de localidad por keywords de calle.</p>
+        <div class="stack"><span class="pill">word-boundary</span></div>
+      </div>
+      <div class="card">
+        <div class="row"><h3>CMC Global</h3><span class="path">dashboard-cmc-global.html</span></div>
+        <p>Vista global CMC con tab Territorio y desagregación Arauco — chart de localidades con paleta multi-color.</p>
+        <div class="stack"><span class="pill cobre">territorio</span><span class="pill">v1</span></div>
+      </div>
+      <div class="card">
+        <div class="row"><h3>Segmentación Pacientes</h3><span class="path">dashboard-segmentacion.html</span></div>
+        <p>Segmentación por profesional para uso publicitario — filtros de fecha, freshness indicator, data status BI.</p>
+        <div class="stack"><span class="pill">ads</span><span class="pill cobre">filtros</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 06 MEULEN -->
+  <section id="meulen" class="fiordo">
+    <div class="sec-head">
+      <span class="sec-num">06</span>
+      <h2>Meulen — Supermercado</h2>
+      <span class="tag">"Hacemos posible lo imposible"</span>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <div class="row"><h3>Planificación</h3><span class="path">/meulen/dashboardplanificacion</span></div>
+        <p>Dashboard táctico Meulen para planificación de cargas, inventario y compras semanales.</p>
+        <div class="stack"><span class="pill fiordo">verde-cobre</span></div>
+      </div>
+      <div class="card">
+        <div class="row"><h3>KPIs Meulen</h3><span class="path">/meulen/kpis</span></div>
+        <p>Indicadores comerciales: ventas, ticket promedio, márgenes por categoría.</p>
+        <div class="stack"><span class="pill">kpis</span></div>
+      </div>
+      <div class="card">
+        <div class="row"><h3>Ecosistema Meulen</h3><span class="path">/meulen/ecosistemameulen</span></div>
+        <p>Mapa del ecosistema Meulen: bot WhatsApp, ofertas, combos, ubicación.</p>
+        <div class="stack"><span class="pill">mapa</span></div>
+      </div>
+      <div class="card">
+        <div class="row"><h3>Roadmap Meulen</h3><span class="path">/bi/meulen-roadmap</span></div>
+        <p>Roadmap estratégico por fases, módulos e hitos. Vista de dueño.</p>
+        <div class="stack"><span class="pill fiordo">roadmap</span></div>
+      </div>
+      <div class="card">
+        <div class="row"><h3>Operaciones Meulen</h3><span class="path">/bi/meulen-operaciones</span></div>
+        <p>Dashboard operaciones internas: orden interno, procesos, métricas de bodega y caja.</p>
+        <div class="stack"><span class="pill">operaciones</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 07 FARMACIA -->
+  <section id="farmacia" class="cobre">
+    <div class="sec-head">
+      <span class="sec-num">07</span>
+      <h2>Farmacia & Suplementos</h2>
+      <span class="tag">Sub-marca CMC</span>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <div class="row"><h3>Suplementos</h3><span class="path">/suplementos</span></div>
+        <p>Dashboard MVP de inventario, ventas y ganancias para línea Farmacia/Suplementos del CMC.</p>
+        <div class="stack"><span class="pill cobre">MVP</span></div>
+      </div>
+      <div class="card">
+        <div class="row"><h3>Farmacia Ideas</h3><span class="path">/bi/farmacia-ideas</span></div>
+        <p>Brainstorm farmacia: catálogo, márgenes, plan de lanzamiento. Tablero conceptual.</p>
+        <div class="stack"><span class="pill">brainstorm</span></div>
+      </div>
+      <div class="card">
+        <div class="row"><h3>Farmacia (sitio)</h3><span class="path">/farmacia</span></div>
+        <p>Página madre pública de la Farmacia CMC bajo OLACORE — sub-páginas verticales.</p>
+        <div class="stack"><span class="pill cobre">público</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 08 OPERATIVO BOT -->
+  <section id="operativo" class="muted">
+    <div class="sec-head">
+      <span class="sec-num">08</span>
+      <h2>Operativo del Bot</h2>
+      <span class="tag">Día a día del chatbot</span>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <div class="row"><h3>Admin Bot</h3><span class="path">/admin</span></div>
+        <p>Panel principal del chatbot: conversaciones, takeover, NPS, waitlist, agendamiento manual.</p>
+        <div class="stack"><span class="pill">conv</span><span class="pill">takeover</span></div>
+      </div>
+      <div class="card">
+        <div class="row"><h3>Admin v2</h3><span class="path">/admin/v2</span></div>
+        <p>Refresh visual del admin con PWA (service worker, manifest), pensado para mobile staff.</p>
+        <div class="stack"><span class="pill">pwa</span></div>
+      </div>
+      <div class="card">
+        <div class="row"><h3>Admin Dashboard</h3><span class="path">/admin/dashboard</span></div>
+        <p>Vista resumida del bot: métricas en vivo, intents detectados, fricción.</p>
+        <div class="stack"><span class="pill">live</span></div>
+      </div>
+      <div class="card">
+        <div class="row"><h3>Portal Paciente</h3><span class="path">/portal</span></div>
+        <p>Portal donde el paciente entra con su RUT a ver sus citas y datos.</p>
+        <div class="stack"><span class="pill">paciente</span></div>
+      </div>
+      <div class="card">
+        <div class="row"><h3>Portal v2</h3><span class="path">/portal/v2</span></div>
+        <p>Refresh portal paciente con UX más limpia.</p>
+        <div class="stack"><span class="pill">v2</span></div>
+      </div>
+      <div class="card">
+        <div class="row"><h3>Portal Informe</h3><span class="path">/portal/informe</span></div>
+        <p>Vista de informe individual descargable que el paciente recibe del bot.</p>
+        <div class="stack"><span class="pill">informe</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 09 EXTRA -->
+  <section id="extra" class="muted">
+    <div class="sec-head">
+      <span class="sec-num">09</span>
+      <h2>Extra & Verticales menores</h2>
+      <span class="tag">Holding OLACORE</span>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <div class="row"><h3>Vuelos</h3><span class="path">/vuelos · /vuelosv2</span></div>
+        <p>Buscador de vuelos baratos — herramienta interna del holding.</p>
+        <div class="stack"><span class="pill">scraper</span></div>
+      </div>
+      <div class="card">
+        <div class="row"><h3>Empresas</h3><span class="path">/empresas</span></div>
+        <p>Landing convenios medicina laboral con tarifario imprimible (print-only).</p>
+        <div class="stack"><span class="pill">b2b</span></div>
+      </div>
+      <div class="card">
+        <div class="row"><h3>Chequeos</h3><span class="path">/chequeos</span></div>
+        <p>Landing de chequeos preventivos con CTA al bot.</p>
+        <div class="stack"><span class="pill">preventivo</span></div>
+      </div>
+      <div class="card">
+        <div class="row"><h3>Menú</h3><span class="path">/menu</span></div>
+        <p>Menú navegable de servicios CMC — punto de entrada visual desde el sitio.</p>
+        <div class="stack"><span class="pill">nav</span></div>
+      </div>
+      <div class="card">
+        <div class="row"><h3>Snapshots</h3><span class="path">docs/snapshots/*</span></div>
+        <p>Histórico congelado: <code>dashboard_marzo_2026.html</code>, <code>dashboard-flows.html</code> de la máquina de estados del bot.</p>
+        <div class="stack"><span class="pill">históricos</span></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div>OLACORE · Holding · Carampangue · Puerto Montt</div>
+    <div class="meridian">— meridiano sur —</div>
+    <div>Render local · file://dashboards_overview.html</div>
+  </footer>
+
+</div>
+</body>
+</html>
