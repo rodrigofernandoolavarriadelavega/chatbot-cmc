@@ -3894,27 +3894,44 @@ def _enriquecer_comunas(comunas: list[dict]) -> list[dict]:
 # Snapshot de localidades de Arauco — fuente: bi.dim_paciente.localidad × Censo INE 2017.
 # Se actualiza manualmente cuando los valores cambian significativamente.
 # Última actualización: 2026-05-10 desde container BI Postgres (health_bi_api).
-_LOCALIDADES_ARAUCO_SNAPSHOT = {
-    "fecha_snapshot": "2026-05-10",
-    "fuente": "bi.dim_paciente.localidad × INE Censo 2017 (zona urbana)",
-    "arauco": [
-        {"localidad": "Arauco urbano", "pacientes": 4950, "atenciones": 15336, "poblacion": 26000, "pct_captura": 19.04},
-        {"localidad": "Carampangue",   "pacientes":  794, "atenciones":  5817, "poblacion":  1700, "pct_captura": 46.71},
-        {"localidad": "Laraquete",     "pacientes":  329, "atenciones":  1457, "poblacion":  2200, "pct_captura": 14.95},
-        {"localidad": "Ramadillas",    "pacientes":  110, "atenciones":   619, "poblacion":   500, "pct_captura": 22.00},
-        {"localidad": "Tubul",         "pacientes":   22, "atenciones":    58, "poblacion":  1100, "pct_captura":  2.00},
-        {"localidad": "Cerro Alto",    "pacientes":   18, "atenciones":    45, "poblacion":   400, "pct_captura":  4.50},
-        {"localidad": "Llico",         "pacientes":    5, "atenciones":    12, "poblacion":   350, "pct_captura":  1.43},
-    ],
-}
+# Buckets internos del script heatmap_comunas.py que NO son localidades reales
+_LOCALIDAD_DESCARTADA = {"ARAUCO (OTRO)", "ARAUCO (SIN DETALLE)"}
 
 
 @app.get("/api/seo/localidades-arauco")
 def seo_localidades_arauco():
-    """Devuelve el snapshot de pacientes únicos por localidad urbana de Arauco
-    cruzado con Censo INE 2017. Servido por HTTPS desde el dominio del bot
-    para evitar mixed-content cuando el dashboard SEO lo consume."""
-    return _LOCALIDADES_ARAUCO_SNAPSHOT
+    """Pacientes únicos por localidad urbana de Arauco × Censo INE 2017.
+    Lee del último data/heatmap_*.json regenerado por scripts/heatmap_comunas.py
+    (single source of truth con el resto del dashboard)."""
+    import json, glob, os
+    from datetime import datetime as _dt
+    files = sorted(glob.glob(str(Path(__file__).parent.parent / "data" / "heatmap_*.json")),
+                   key=os.path.getmtime, reverse=True)
+    if not files:
+        raise HTTPException(503, "Sin snapshot de heatmap")
+    raw = json.loads(Path(files[0]).read_text(encoding="utf-8"))
+    locs = []
+    for item in raw.get("localidades_arauco", []):
+        nombre_raw = (item.get("localidad") or "").strip().upper()
+        if nombre_raw in _LOCALIDAD_DESCARTADA:
+            continue
+        display = item.get("localidad", "").strip().title()
+        if display == "Arauco Urbano":
+            display = "Arauco urbano"
+        locs.append({
+            "localidad":   display,
+            "pacientes":   item.get("pacientes", 0),
+            "atenciones":  item.get("citas", 0),
+            "poblacion":   item.get("poblacion", 0),
+            "pct_captura": item.get("pct_captura", 0.0) or 0.0,
+        })
+    locs.sort(key=lambda x: x["pacientes"], reverse=True)
+    mtime = os.path.getmtime(files[0])
+    return {
+        "fecha_snapshot": _dt.fromtimestamp(mtime).strftime("%Y-%m-%d"),
+        "fuente":         "scripts/heatmap_comunas.py × INE Censo 2017",
+        "arauco":         locs,
+    }
 
 
 @app.get("/api/seo/geo")
