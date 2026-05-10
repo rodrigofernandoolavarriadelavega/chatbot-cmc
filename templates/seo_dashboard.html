@@ -1776,12 +1776,47 @@ function _setupGeoProfesional(profesionales) {
     sel.dispatchEvent(new Event('change'));
   });
 }
+// Expande la fila "ARAUCO" en sus localidades urbanas (Carampangue, Laraquete, etc.)
+// usando el BI Postgres (container Docker local). Si no responde, deja la fila tal cual.
+async function _expandirArauco(geoData) {
+  try {
+    const r = await fetch('http://localhost:8000/api/segmentacion/global/arauco-localidades?_=' + Date.now(),
+                        { signal: AbortSignal.timeout(2500) });
+    if (!r.ok) return geoData;
+    const data = await r.json();
+    if (!data.arauco || !data.arauco.length) return geoData;
+    const idxArauco = geoData.comunas.findIndex(c => /^arauco/i.test(c.comuna || ''));
+    if (idxArauco < 0) return geoData;
+    const totalAtArauco = geoData.comunas[idxArauco].citas || geoData.comunas[idxArauco].pacientes || 1;
+    const totalPacArauco = geoData.comunas[idxArauco].pacientes || 1;
+    const totalAtenciones = geoData.total_citas || 1;
+    const totalPacientes = geoData.pacientes_unicos || 1;
+    const filas = data.arauco.map(loc => ({
+      comuna: 'ARAUCO · ' + loc.localidad,
+      es_localidad_arauco: true,
+      pacientes: loc.pacientes,
+      citas: loc.atenciones,
+      pct: +(100 * loc.pacientes / totalPacientes).toFixed(2),
+      pct_citas: +(100 * loc.atenciones / totalAtenciones).toFixed(2),
+      poblacion_total: loc.poblacion,
+      pct_captado: loc.pct_captura,
+    }));
+    geoData.comunas.splice(idxArauco, 1, ...filas);
+    geoData._arauco_expandido = true;
+    geoData._fuente_localidad = 'bi.dim_paciente.localidad · INE Censo 2017';
+    return geoData;
+  } catch (e) {
+    return geoData;
+  }
+}
+
 function loadGeo() {
   const filtrado = !!(_geoDesde || _geoHasta || (_geoPeriodo && _geoPeriodo !== 'todos'));
   const nota = document.getElementById('geo-filtrado-nota');
   if (nota) nota.style.display = filtrado ? '' : 'none';
   fetch('/api/seo/geo?' + _withTok(_geoQS()))
   .then(r => r.ok ? r.json() : Promise.reject(r.status))
+  .then(_expandirArauco)
   .then(live => {
     if (live && live.comunas) {
       _setupGeoProfesional(live.profesionales || []);
