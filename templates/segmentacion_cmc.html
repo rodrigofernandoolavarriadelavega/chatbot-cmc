@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Segmentación CMC — Centro Médico Carampangue · OLACORE</title>
+<link rel="icon" type="image/png" href="/static/olacore_sello_simple.png">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..800;1,9..144,300..800&family=Space+Grotesk:wght@300..700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --fiordo: #0E2530;  --fiordo-2: #17323F;
+    --neblina: #E8E0D0; --neblina-2: #D9D0BD; --neblina-3: #C4B9A0;
+    --lenga: #7C4A2A;   --lacre: #9A3E2F;   --cobre: #B98149;
+    --verde-musgo: #4A5D44;
+    --paper: #faf6ee;   --paper-card: #fffcf5;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: 'Space Grotesk', system-ui, sans-serif; background: var(--paper); color: var(--fiordo); margin: 0; }
+  h1, h2, h3, h4 { font-family: 'Fraunces', serif; font-weight: 600; color: var(--fiordo); margin: 0; font-variation-settings: 'SOFT' 50; }
+  em { font-style: italic; font-variation-settings: 'SOFT' 80; }
+
+  @keyframes sello-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  header { background: var(--paper-card); border-bottom: 1px solid rgba(185, 129, 73, 0.2); }
+  .header-inner { max-width: 1400px; margin: 0 auto; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .meridian { width: 1px; height: 56px; background: var(--cobre); position: relative; opacity: 0.7; flex-shrink: 0; margin: 0 16px; }
+  .meridian::before, .meridian::after { content: ""; position: absolute; left: -4px; width: 9px; height: 9px; background: var(--cobre); border-radius: 50%; }
+  .meridian::before { top: 22%; }
+  .meridian::after { bottom: 22%; }
+  .by-olacore { display: flex; align-items: center; gap: 12px; padding-left: 8px; text-decoration: none; }
+  .by-olacore-text-block { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+  .by-olacore-by { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--cobre); opacity: 0.85; line-height: 1; }
+  .by-olacore-wordmark { height: 16px; display: block; margin: 2px 0; object-fit: contain; object-position: left center; }
+  .by-olacore-tag { font-family: 'Fraunces', serif; font-style: italic; font-weight: 300; font-size: 10px; color: var(--cobre); opacity: 0.85; line-height: 1; letter-spacing: 0.04em; }
+  .by-olacore-sello { width: 38px; height: 38px; flex-shrink: 0; }
+  .by-olacore-sello img { width: 100%; height: 100%; display: block; animation: sello-spin 60s linear infinite; }
+  .kicker { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--cobre); }
+
+  main { max-width: 1400px; margin: 0 auto; padding: 28px 24px; }
+  .card { background: var(--paper-card); border: 1px solid rgba(14, 37, 48, 0.12); border-radius: 14px; padding: 18px; }
+  .card-title { font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 600; color: var(--fiordo); margin-bottom: 12px; }
+  .grid { display: grid; gap: 16px; }
+  .grid-5 { grid-template-columns: repeat(5, 1fr); }
+  .grid-2 { grid-template-columns: 1fr 1fr; }
+  .grid-3 { grid-template-columns: repeat(3, 1fr); }
+  .grid-2-1 { grid-template-columns: 2fr 1fr; }
+  @media (max-width: 1100px) { .grid-5 { grid-template-columns: repeat(2, 1fr); } .grid-2, .grid-3, .grid-2-1 { grid-template-columns: 1fr; } }
+
+  .kpi-card { transition: transform .15s ease, box-shadow .15s ease; }
+  .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(14, 37, 48, .12); }
+  .kpi-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.28em; text-transform: uppercase; color: var(--cobre); }
+  .kpi-value { font-family: 'Fraunces', serif; font-size: 1.85rem; font-weight: 600; color: var(--fiordo); margin-top: 6px; line-height: 1.1; }
+  .kpi-sub { font-size: 0.72rem; color: rgba(14,37,48,0.55); margin-top: 4px; }
+
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid rgba(14,37,48,0.12); margin: 24px 0 18px; overflow-x: auto; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab-btn { padding: 10px 18px; cursor: pointer; border: none; background: transparent; color: rgba(14, 37, 48, 0.6); font-family: 'Space Grotesk', sans-serif; font-size: 0.875rem; font-weight: 500; border-bottom: 2px solid transparent; white-space: nowrap; transition: color .15s; }
+  .tab-btn:hover { color: var(--fiordo); }
+  .tab-btn.active { color: var(--fiordo); border-bottom-color: var(--cobre); }
+  .tab-btn.hidden { display: none; }
+
+  .seg-pill { padding: 3px 10px; border-radius: 999px; font-size: 0.7rem; font-weight: 600; border: 1px solid; display: inline-block; }
+  .seg-champion { background: rgba(74,93,68,0.12); color: var(--verde-musgo); border-color: rgba(74,93,68,0.3); }
+  .seg-leal { background: rgba(74,93,68,0.08); color: var(--verde-musgo); border-color: rgba(74,93,68,0.24); }
+  .seg-nuevo { background: rgba(185,129,73,0.12); color: var(--lenga); border-color: rgba(185,129,73,0.3); }
+  .seg-en_riesgo { background: rgba(185,129,73,0.18); color: var(--lenga); border-color: rgba(185,129,73,0.38); }
+  .seg-lapsed { background: rgba(154,62,47,0.12); color: var(--lacre); border-color: rgba(154,62,47,0.3); }
+  .seg-hibernando { background: rgba(124,74,42,0.1); color: var(--lenga); border-color: rgba(124,74,42,0.28); }
+  .seg-perdido_oneshot { background: rgba(232,224,208,0.7); color: var(--fiordo); border-color: rgba(14,37,48,0.18); }
+  .seg-otro { background: rgba(232,224,208,0.45); color: rgba(14,37,48,0.55); border-color: rgba(14,37,48,0.12); }
+
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--cobre); padding: 10px 12px; border-bottom: 1px solid rgba(14,37,48,0.12); font-weight: 500; }
+  td { padding: 10px 12px; border-bottom: 1px solid rgba(14,37,48,0.06); font-size: 0.875rem; color: var(--fiordo); }
+  tr:hover td { background: rgba(232, 224, 208, 0.3); }
+  .text-right { text-align: right; }
+  .mono { font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; }
+
+  select, input { background: var(--paper-card); border: 1px solid rgba(14, 37, 48, 0.18); color: var(--fiordo); padding: 8px 12px; border-radius: 8px; font-family: 'Space Grotesk', sans-serif; font-size: 0.875rem; }
+  select#prof-select { min-width: 320px; max-width: 420px; font-weight: 500; }
+  select:focus, input:focus { outline: none; border-color: var(--cobre); box-shadow: 0 0 0 3px rgba(185,129,73,0.15); }
+  .btn { display: inline-flex; align-items: center; gap: 6px; background: var(--fiordo); color: var(--neblina); padding: 8px 16px; border-radius: 8px; font-size: 0.825rem; font-weight: 500; cursor: pointer; border: 0; font-family: 'Space Grotesk', sans-serif; transition: background .15s; }
+  .btn:hover { background: var(--fiordo-2); }
+  .btn-ghost { background: transparent; border: 1px solid rgba(14,37,48,0.2); color: var(--fiordo); }
+  .btn-ghost:hover { background: rgba(232, 224, 208, 0.5); }
+  .btn-cobre { background: var(--cobre); color: var(--paper-card); }
+  .btn-cobre:hover { background: var(--lenga); }
+
+  .reco { padding: 12px 14px; border-left: 3px solid var(--cobre); background: rgba(185,129,73,0.06); border-radius: 0 8px 8px 0; margin-bottom: 10px; font-size: 0.875rem; line-height: 1.55; }
+  .reco strong { color: var(--lacre); font-weight: 600; }
+  .reco.musgo { border-left-color: var(--verde-musgo); background: rgba(74,93,68,0.06); }
+  .reco.musgo strong { color: var(--verde-musgo); }
+  .reco.lenga { border-left-color: var(--lenga); background: rgba(124,74,42,0.06); }
+  .reco.lenga strong { color: var(--lenga); }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .toolbar { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; margin-bottom: 16px; }
+
+  .infobar { background: var(--paper-card); border: 1px solid rgba(14,37,48,0.12); border-radius: 14px; padding: 12px 18px; margin-bottom: 18px; display: flex; gap: 14px; flex-wrap: wrap; align-items: center; font-size: 0.825rem; color: rgba(14,37,48,0.7); }
+  .infobar .freshness { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(14,37,48,0.55); }
+
+  .icon-btn { width: 28px; height: 28px; border-radius: 6px; border: 1px solid rgba(14,37,48,0.15); background: transparent; color: var(--fiordo); cursor: pointer; font-size: 0.85rem; display: inline-flex; align-items: center; justify-content: center; transition: all .15s; }
+  .icon-btn:hover { background: rgba(232,224,208,0.5); border-color: var(--cobre); color: var(--cobre); }
+  .fs-overlay { position: fixed; inset: 0; background: rgba(14,37,48,0.7); backdrop-filter: blur(4px); z-index: 100; display: none; align-items: center; justify-content: center; padding: 32px; }
+  .fs-overlay.active { display: flex; }
+  .fs-modal { background: var(--paper-card); border: 1px solid rgba(185,129,73,0.25); border-radius: 16px; width: 100%; max-width: 1600px; height: 92vh; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 60px rgba(14,37,48,0.4); }
+  .fs-header { padding: 18px 24px; border-bottom: 1px solid rgba(14,37,48,0.1); display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+  .fs-body { flex: 1; padding: 24px; overflow: hidden; position: relative; min-height: 0; }
+  .fs-body canvas { max-width: 100%; max-height: 100%; }
+
+  .mode-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; }
+  .mode-badge.global { background: rgba(14,37,48,0.08); color: var(--fiordo); border: 1px solid rgba(14,37,48,0.18); }
+  .mode-badge.prof { background: rgba(185,129,73,0.12); color: var(--lenga); border: 1px solid rgba(185,129,73,0.28); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <div>
+        <div class="kicker"><span id="mode-kicker">Centro Médico Carampangue · Vista global</span></div>
+        <h1 style="font-size: 1.5rem; margin-top: 4px;" id="dashboard-title">Pacientes <em>en su conjunto</em></h1>
+        <div style="font-size: 0.825rem; color: rgba(14,37,48,0.65); margin-top: 4px;">Segmentación · territorio · audiencias para campañas Meta</div>
+      </div>
+      <div class="meridian" aria-hidden="true"></div>
+      <a href="#" class="by-olacore" title="OLACORE — Meridiano Sur">
+        <div class="by-olacore-text-block">
+          <span class="by-olacore-by">by</span>
+          <img src="/static/olacore_wordmark.png" alt="OLACORE" class="by-olacore-wordmark" />
+          <span class="by-olacore-tag">Meridiano Sur</span>
+        </div>
+        <div class="by-olacore-sello"><img src="/static/olacore_sello_simple.png" alt="" /></div>
+      </a>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+      <span id="mode-badge" class="mode-badge global">Modo · Global</span>
+      <select id="prof-select"></select>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <div class="infobar">
+    <span class="freshness" id="data-info">Cargando...</span>
+    <span style="opacity: 0.7;">·</span>
+    <span class="freshness">Snapshot estático · refresh manual desde Mac</span>
+    <span style="margin-left: auto; opacity: 0.7;">Histórico completo (sin filtros de fecha en versión publicada)</span>
+  </div>
+
+  <!-- KPIs -->
+  <section class="grid grid-5">
+    <div class="card kpi-card">
+      <div class="kpi-label">Pacientes únicos</div>
+      <div id="kpi-pacientes" class="kpi-value">—</div>
+      <div id="kpi-pacientes-sub" class="kpi-sub">—</div>
+    </div>
+    <div class="card kpi-card">
+      <div class="kpi-label">Atenciones</div>
+      <div id="kpi-atenciones" class="kpi-value">—</div>
+      <div id="kpi-atenciones-sub" class="kpi-sub">—</div>
+    </div>
+    <div class="card kpi-card" id="kpi-card-profs">
+      <div class="kpi-label">Profesionales activos</div>
+      <div id="kpi-profs" class="kpi-value">—</div>
+      <div class="kpi-sub">con atenciones registradas</div>
+    </div>
+    <div class="card kpi-card">
+      <div class="kpi-label">Últimos 30 días</div>
+      <div id="kpi-30d" class="kpi-value">—</div>
+      <div class="kpi-sub">atenciones</div>
+    </div>
+    <div class="card kpi-card">
+      <div class="kpi-label">Última atención</div>
+      <div id="kpi-ultima" class="kpi-value" style="font-size: 1rem;">—</div>
+    </div>
+  </section>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="overview">Overview</button>
+    <button class="tab-btn" data-tab="especialidades" id="tab-especialidades">Especialidades</button>
+    <button class="tab-btn" data-tab="territorio">Territorio</button>
+    <button class="tab-btn" data-tab="segmentos">Segmentación</button>
+    <button class="tab-btn" data-tab="crosssell" id="tab-crosssell">Cross-sell</button>
+    <button class="tab-btn" data-tab="audiencia">Audiencia · export</button>
+  </div>
+
+  <section class="panel active" data-panel="overview">
+    <div class="grid grid-2-1">
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 8px;">
+          <div class="card-title" style="margin-bottom: 0;">Evolución temporal</div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <select id="granularidad" onchange="renderTemporal()" style="padding: 4px 10px; font-size: 0.78rem;">
+              <option value="month" selected>Mensual</option>
+              <option value="year">Anual</option>
+            </select>
+            <button class="icon-btn" onclick="openFullscreen()" title="Pantalla completa">⛶</button>
+          </div>
+        </div>
+        <canvas id="chart-temporal" height="240"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-title">Demografía</div>
+        <canvas id="chart-genero" height="180" style="margin-bottom: 16px;"></canvas>
+        <canvas id="chart-edad" height="180"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" data-panel="especialidades">
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="card-title">Distribución por especialidad</div>
+        <canvas id="chart-especialidades" height="320"></canvas>
+      </div>
+      <div class="card" style="overflow-x: auto;">
+        <div class="card-title">Detalle</div>
+        <table>
+          <thead><tr><th>Especialidad</th><th class="text-right">Pacientes</th><th class="text-right">Atenciones</th><th class="text-right">Profs</th><th>Última</th></tr></thead>
+          <tbody id="tbl-especialidades"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" data-panel="territorio">
+    <div class="card" style="margin-bottom: 16px;">
+      <div class="card-title">Localidades de la comuna de Arauco</div>
+      <p style="font-size: 0.825rem; color: rgba(14,37,48,0.6); margin: 0 0 14px;">Detección por dirección: Carampangue, Laraquete, Ramadillas, Tubul, Llico, Cerro Alto. <em>Arauco urbano</em> agrupa el casco más registros sin localidad detallada.</p>
+      <div class="grid grid-2">
+        <canvas id="chart-arauco" height="220"></canvas>
+        <div style="overflow-x: auto;">
+          <table>
+            <thead><tr><th>Localidad</th><th class="text-right">Pacientes</th><th class="text-right">Atenciones</th><th class="text-right">% Arauco</th></tr></thead>
+            <tbody id="tbl-arauco"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="card-title">Top 15 localidades (toda el área)</div>
+        <canvas id="chart-comunas" height="380"></canvas>
+      </div>
+      <div class="card" style="overflow-x: auto;">
+        <div class="card-title">Tabla completa</div>
+        <table>
+          <thead><tr><th>Localidad</th><th class="text-right">Pacientes</th><th class="text-right">Atenciones</th><th class="text-right">% del base</th></tr></thead>
+          <tbody id="tbl-comunas"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" data-panel="segmentos">
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="card-title">Distribución del base</div>
+        <canvas id="chart-segmentos" height="280"></canvas>
+      </div>
+      <div class="card" style="overflow-x: auto;">
+        <div class="card-title">Detalle por segmento</div>
+        <table>
+          <thead><tr><th>Segmento</th><th>Definición</th><th class="text-right">Pacientes</th><th class="text-right">Atenc avg</th><th class="text-right">Días sin venir</th></tr></thead>
+          <tbody id="tbl-segmentos"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card" style="margin-top: 16px;">
+      <div class="card-title">Recomendaciones publicitarias</div>
+      <div id="recomendaciones"></div>
+    </div>
+  </section>
+
+  <section class="panel" data-panel="crosssell">
+    <div class="card">
+      <div class="card-title">Pacientes que también ven otras especialidades</div>
+      <p style="font-size: 0.825rem; color: rgba(14,37,48,0.6); margin: 0 0 14px;">% sobre pacientes únicos del profesional seleccionado.</p>
+      <table>
+        <thead><tr><th>Especialidad</th><th class="text-right">Pacientes compartidos</th><th class="text-right">% del base</th></tr></thead>
+        <tbody id="tbl-crosssell"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel" data-panel="audiencia">
+    <div class="card">
+      <div class="card-title">Audiencia exportable</div>
+      <p style="font-size: 0.825rem; color: rgba(14,37,48,0.6); margin: 0 0 14px;" id="aud-desc">—</p>
+      <div class="toolbar">
+        <div>
+          <div class="kpi-label" style="margin-bottom: 6px;">Segmento</div>
+          <select id="aud-segmento" onchange="renderAudiencia()" style="min-width: 240px;">
+            <option value="lapsed">Lapsed (12-24m)</option>
+            <option value="hibernando">Hibernando (>24m, recurrente)</option>
+            <option value="perdido_oneshot">Perdido one-shot (>12m, 1 atención)</option>
+            <option value="en_riesgo">En riesgo (6-12m)</option>
+            <option value="champion">Champion</option>
+            <option value="leal">Leal</option>
+            <option value="nuevo">Nuevo</option>
+          </select>
+        </div>
+        <button class="btn btn-cobre" onclick="downloadCSV()">↓ Descargar CSV · Meta Custom Audience</button>
+        <div style="margin-left: auto; font-size: 0.825rem; color: rgba(14,37,48,0.65);">Total: <span id="aud-total" class="mono">—</span></div>
+      </div>
+      <div style="overflow-x: auto; max-height: 60vh;">
+        <table>
+          <thead id="aud-thead"></thead>
+          <tbody id="tbl-audiencia"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div class="fs-overlay" id="fs-overlay" onclick="if(event.target===this)closeFullscreen()">
+  <div class="fs-modal">
+    <div class="fs-header">
+      <div>
+        <div class="kicker" style="font-size: 9px;">Vista expandida</div>
+        <div class="card-title" style="margin-top: 4px; margin-bottom: 0;">Evolución temporal</div>
+      </div>
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <select id="granularidad-fs" onchange="syncGran('fs')" style="padding: 6px 12px; font-size: 0.825rem;">
+          <option value="month">Mensual</option>
+          <option value="year">Anual</option>
+        </select>
+        <button class="btn btn-ghost" onclick="closeFullscreen()">✕ Cerrar</button>
+      </div>
+    </div>
+    <div class="fs-body"><canvas id="chart-temporal-fs"></canvas></div>
+  </div>
+</div>
+
+<script>
+const SNAP_BASE = "/segmentacioncmc-data";
+let charts = {};
+let currentMode = "global";
+let currentProfId = null;
+let currentProfName = "";
+let globalData = null;
+let profsList = null;
+let profCache = {};
+
+const SEGMENT_META = {
+  champion: { label: "Champion", defi: "≥3 atenciones, última ≤6m" },
+  leal: { label: "Leal", defi: "2 atenciones, última ≤6m" },
+  nuevo: { label: "Nuevo", defi: "1 atención, última ≤3m" },
+  en_riesgo: { label: "En riesgo", defi: "≥2 atenc, última 6-12m" },
+  lapsed: { label: "Lapsed", defi: "Última 12-24m" },
+  hibernando: { label: "Hibernando", defi: ">24m, era recurrente" },
+  perdido_oneshot: { label: "Perdido one-shot", defi: "1 atención, última >12m" },
+  otro: { label: "Otro", defi: "No clasificado" }
+};
+const PALETTE = {
+  champion: '#4A5D44', leal: '#6B8662', nuevo: '#B98149', en_riesgo: '#7C4A2A',
+  lapsed: '#9A3E2F', hibernando: '#B05D38', perdido_oneshot: '#C4B9A0', otro: '#D9D0BD'
+};
+const CHART_FONT = { family: 'Space Grotesk', size: 11 };
+
+function fmt(n) { return n == null ? '—' : Number(n).toLocaleString('es-CL'); }
+async function loadJSON(path) {
+  const r = await fetch(SNAP_BASE + path, { cache: 'force-cache' });
+  if (!r.ok) throw new Error("No se pudo cargar " + path);
+  return r.json();
+}
+
+document.querySelectorAll('.tab-btn').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.dataset.panel === b.dataset.tab));
+});
+
+async function init() {
+  // 1. Lista de profesionales + status
+  profsList = (await loadJSON("/profesionales.json")).profesionales;
+  const status = await loadJSON("/data-status.json");
+  const snapAt = (await fetch(SNAP_BASE + '/snapshot_at.txt').then(r => r.text())).trim();
+
+  document.getElementById('data-info').textContent =
+    `Datos al ${status.ultima_atencion} · ${fmt(status.total_atenciones)} atenciones · snapshot ${snapAt.slice(0,10)}`;
+
+  // 2. Selector
+  const sel = document.getElementById('prof-select');
+  const opts = ['<option value="__global__">▦ Global CMC (todos)</option>',
+                '<option disabled>──────────</option>'];
+  for (const p of profsList) {
+    opts.push(`<option value="${p.profesional_id}" data-name="${p.nombre} — ${p.especialidad}">${p.nombre} — ${p.especialidad} (${p.pacientes_unicos})</option>`);
+  }
+  sel.innerHTML = opts.join('');
+  sel.onchange = async () => {
+    if (sel.value === '__global__') {
+      currentMode = 'global'; currentProfId = null; currentProfName = '';
+    } else {
+      currentMode = 'prof'; currentProfId = sel.value;
+      currentProfName = sel.options[sel.selectedIndex].dataset.name;
+    }
+    applyMode();
+    await renderAll();
+  };
+
+  // 3. Cargar global y renderizar
+  globalData = await loadJSON("/global.json");
+  applyMode();
+  await renderAll();
+}
+
+function applyMode() {
+  const isGlobal = currentMode === 'global';
+  document.getElementById('tab-especialidades').classList.toggle('hidden', !isGlobal);
+  document.getElementById('tab-crosssell').classList.toggle('hidden', isGlobal);
+  document.getElementById('kpi-card-profs').style.display = isGlobal ? '' : 'none';
+  const badge = document.getElementById('mode-badge');
+  if (isGlobal) {
+    badge.className = 'mode-badge global';
+    badge.textContent = 'Modo · Global';
+    document.getElementById('mode-kicker').textContent = 'Centro Médico Carampangue · Vista global';
+    document.getElementById('dashboard-title').innerHTML = 'Pacientes <em>en su conjunto</em>';
+    document.getElementById('aud-desc').textContent = 'Audiencia agregada de todo el centro médico.';
+  } else {
+    badge.className = 'mode-badge prof';
+    badge.textContent = 'Modo · Profesional';
+    document.getElementById('mode-kicker').textContent = 'Profesional · ' + currentProfName.split(' — ')[1];
+    document.getElementById('dashboard-title').innerHTML = currentProfName.split(' — ')[0] + ' <em>· su base</em>';
+    document.getElementById('aud-desc').textContent = 'Audiencia del profesional seleccionado.';
+  }
+  const activeTab = document.querySelector('.tab-btn.active');
+  if (activeTab && activeTab.classList.contains('hidden')) document.querySelector('[data-tab="overview"]').click();
+}
+
+async function getProfData() {
+  if (!currentProfId) return null;
+  if (!profCache[currentProfId]) {
+    profCache[currentProfId] = await loadJSON(`/prof/${currentProfId}.json`);
+  }
+  return profCache[currentProfId];
+}
+
+async function renderAll() {
+  if (currentMode === 'global') {
+    renderKPIsGlobal();
+    renderTemporal();
+    renderDemografia(globalData.demografia);
+    renderEspecialidades(globalData.especialidades);
+    renderTerritorioGlobal();
+    renderSegmentos(globalData.segmentos);
+    renderAudiencia();
+  } else {
+    const d = await getProfData();
+    renderKPIsProf(d.info);
+    renderTemporal();
+    renderDemografia(d.demografia);
+    renderTerritorioProf(d.territorio);
+    renderSegmentos(d.segmentos);
+    renderCrossSell(d.cross_sell);
+    renderAudiencia();
+  }
+}
+
+function renderKPIsGlobal() {
+  const k = globalData.kpis;
+  document.getElementById('kpi-pacientes').textContent = fmt(k.pacientes_unicos);
+  document.getElementById('kpi-pacientes-sub').textContent = '';
+  document.getElementById('kpi-atenciones').textContent = fmt(k.atenciones);
+  document.getElementById('kpi-atenciones-sub').textContent = `${fmt(k.atenciones_6m)} en últimos 6m`;
+  document.getElementById('kpi-profs').textContent = fmt(k.profesionales_activos);
+  document.getElementById('kpi-30d').textContent = fmt(k.atenciones_30d);
+  document.getElementById('kpi-ultima').textContent = k.ultima_atencion || '—';
+}
+function renderKPIsProf(p) {
+  document.getElementById('kpi-pacientes').textContent = fmt(p.pacientes_unicos);
+  document.getElementById('kpi-pacientes-sub').textContent = '';
+  document.getElementById('kpi-atenciones').textContent = fmt(p.atenciones);
+  document.getElementById('kpi-atenciones-sub').textContent = `${fmt(p.atenciones_6m)} en últimos 6m`;
+  document.getElementById('kpi-30d').textContent = fmt(p.atenciones_6m);
+  document.getElementById('kpi-ultima').textContent = p.ultima_atencion || '—';
+}
+
+function buildTemporalConfig(data, big = false) {
+  const fontSize = big ? 13 : 11;
+  const font = { family: 'Space Grotesk', size: fontSize };
+  return {
+    type: 'line',
+    data: {
+      labels: data.map(x => x.periodo),
+      datasets: [
+        { label: 'Atenciones', data: data.map(x => x.atenciones), borderColor: '#0E2530', backgroundColor: 'rgba(14,37,48,0.08)', tension: 0.3, fill: true, borderWidth: big ? 3 : 2, pointRadius: big ? 4 : 2 },
+        { label: 'Pacientes únicos', data: data.map(x => x.pacientes), borderColor: '#B98149', backgroundColor: 'rgba(185,129,73,0.06)', tension: 0.3, borderWidth: big ? 3 : 2, pointRadius: big ? 4 : 2 },
+        { label: 'Pacientes nuevos', data: data.map(x => x.pacientes_nuevos), borderColor: '#4A5D44', backgroundColor: 'transparent', tension: 0.3, borderDash: [4,4], borderWidth: big ? 3 : 2, pointRadius: big ? 3 : 1 }
+      ]
+    },
+    options: {
+      maintainAspectRatio: !big, responsive: true,
+      plugins: { legend: { position: 'bottom', labels: { color: '#0E2530', font, boxWidth: big ? 18 : 14, padding: big ? 16 : 8 } }, tooltip: { titleFont: font, bodyFont: font } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: 'rgba(14,37,48,0.6)', font, maxRotation: 0, autoSkip: true, maxTicksLimit: big ? 24 : 12 } },
+        y: { grid: { color: 'rgba(14,37,48,0.06)' }, ticks: { color: 'rgba(14,37,48,0.6)', font } }
+      }
+    }
+  };
+}
+
+async function renderTemporal() {
+  const g = document.getElementById('granularidad').value;
+  let data;
+  if (currentMode === 'global') {
+    data = (g === 'year' ? globalData.temporal_year : globalData.temporal).temporal;
+  } else {
+    const d = await getProfData();
+    data = d.temporal.temporal;
+    if (g === 'year') {
+      const byYear = {};
+      data.forEach(x => {
+        const y = x.periodo.slice(0,4) + '-01-01';
+        if (!byYear[y]) byYear[y] = { periodo: y, pacientes: 0, atenciones: 0, pacientes_nuevos: 0 };
+        byYear[y].atenciones += x.atenciones;
+        byYear[y].pacientes_nuevos += x.pacientes_nuevos;
+      });
+      data = Object.values(byYear).sort((a,b) => a.periodo.localeCompare(b.periodo));
+    }
+  }
+  if (charts.tmp) charts.tmp.destroy();
+  charts.tmp = new Chart(document.getElementById('chart-temporal'), buildTemporalConfig(data, false));
+  if (document.getElementById('fs-overlay').classList.contains('active')) renderFullscreen();
+  window._tmpData = data;
+}
+
+function syncGran(src) {
+  if (src === 'fs') document.getElementById('granularidad').value = document.getElementById('granularidad-fs').value;
+  else document.getElementById('granularidad-fs').value = document.getElementById('granularidad').value;
+  renderTemporal();
+}
+function renderFullscreen() {
+  if (!window._tmpData) return;
+  if (charts.tmpFs) charts.tmpFs.destroy();
+  charts.tmpFs = new Chart(document.getElementById('chart-temporal-fs'), buildTemporalConfig(window._tmpData, true));
+}
+function openFullscreen() {
+  document.getElementById('granularidad-fs').value = document.getElementById('granularidad').value;
+  document.getElementById('fs-overlay').classList.add('active');
+  document.body.style.overflow = 'hidden';
+  setTimeout(renderFullscreen, 50);
+}
+function closeFullscreen() {
+  document.getElementById('fs-overlay').classList.remove('active');
+  document.body.style.overflow = '';
+  if (charts.tmpFs) { charts.tmpFs.destroy(); charts.tmpFs = null; }
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeFullscreen(); });
+
+function renderDemografia(d) {
+  ['gen','ed'].forEach(k => charts[k] && charts[k].destroy());
+  charts.gen = new Chart(document.getElementById('chart-genero'), {
+    type: 'doughnut',
+    data: { labels: d.genero.map(x => x.genero === 'F' ? 'Femenino' : x.genero === 'M' ? 'Masculino' : x.genero),
+            datasets: [{ data: d.genero.map(x => x.n), backgroundColor: ['#9A3E2F','#0E2530','#C4B9A0'], borderColor: '#fffcf5', borderWidth: 3 }] },
+    options: { cutout: '60%', plugins: { legend: { position: 'bottom', labels: { color: '#0E2530', font: CHART_FONT, boxWidth: 10 } } } }
+  });
+  charts.ed = new Chart(document.getElementById('chart-edad'), {
+    type: 'bar',
+    data: { labels: d.edad.map(x => x.bucket), datasets: [{ data: d.edad.map(x => x.n), backgroundColor: '#B98149', borderRadius: 4 }] },
+    options: { plugins: { legend: { display: false } }, scales: {
+      x: { grid: { display: false }, ticks: { color: '#0E2530', font: CHART_FONT } },
+      y: { grid: { color: 'rgba(14,37,48,0.06)' }, ticks: { color: 'rgba(14,37,48,0.6)', font: CHART_FONT } } } }
+  });
+}
+
+function renderEspecialidades(r) {
+  const top = r.especialidades.slice(0, 12);
+  if (charts.esp) charts.esp.destroy();
+  charts.esp = new Chart(document.getElementById('chart-especialidades'), {
+    type: 'bar',
+    data: { labels: top.map(x => x.especialidad), datasets: [{ data: top.map(x => x.pacientes_unicos), backgroundColor: '#0E2530', borderRadius: 4 }] },
+    options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: {
+      x: { grid: { color: 'rgba(14,37,48,0.06)' }, ticks: { color: 'rgba(14,37,48,0.6)', font: CHART_FONT } },
+      y: { grid: { display: false }, ticks: { color: '#0E2530', font: CHART_FONT } } } }
+  });
+  document.getElementById('tbl-especialidades').innerHTML = r.especialidades.map(x =>
+    `<tr><td>${x.especialidad}</td><td class="text-right mono">${fmt(x.pacientes_unicos)}</td><td class="text-right mono">${fmt(x.atenciones)}</td><td class="text-right mono">${x.profesionales}</td><td class="mono" style="font-size: 0.78rem;">${x.ultima || '—'}</td></tr>`
+  ).join('');
+}
+
+function _renderLocalidadesTable(list, total) {
+  return list.map(x =>
+    `<tr><td>${x.localidad}</td><td class="text-right mono">${fmt(x.pacientes)}</td><td class="text-right mono">${fmt(x.atenciones)}</td><td class="text-right mono">${(100*x.pacientes/total).toFixed(1)}%</td></tr>`
+  ).join('');
+}
+function _renderLocalidadesChart(canvasId, list, color) {
+  if (charts[canvasId]) charts[canvasId].destroy();
+  const colors = Array.isArray(color) ? color : [color];
+  charts[canvasId] = new Chart(document.getElementById(canvasId), {
+    type: 'bar',
+    data: { labels: list.map(x => x.localidad), datasets: [{ data: list.map(x => x.pacientes), backgroundColor: colors.length === 1 ? colors[0] : colors, borderRadius: 4 }] },
+    options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: {
+      x: { grid: { color: 'rgba(14,37,48,0.06)' }, ticks: { color: 'rgba(14,37,48,0.6)', font: CHART_FONT } },
+      y: { grid: { display: false }, ticks: { color: '#0E2530', font: CHART_FONT } } } }
+  });
+}
+
+function renderTerritorioGlobal() {
+  const all = globalData.comunas.localidades;
+  const top15 = all.slice(0, 15);
+  const total = all.reduce((a,b) => a + b.pacientes, 0) || 1;
+  _renderLocalidadesChart('chart-comunas', top15, '#B98149');
+  document.getElementById('tbl-comunas').innerHTML = _renderLocalidadesTable(all, total);
+  const arauco = globalData.arauco.arauco;
+  const totalA = arauco.reduce((a,b) => a + b.pacientes, 0) || 1;
+  _renderLocalidadesChart('chart-arauco', arauco, ['#0E2530','#B98149','#9A3E2F','#4A5D44','#7C4A2A','#17323F','#C4B9A0']);
+  document.getElementById('tbl-arauco').innerHTML = _renderLocalidadesTable(arauco, totalA);
+}
+function renderTerritorioProf(t) {
+  const list = t.localidades || [];
+  const top15 = list.slice(0, 15);
+  const total = list.reduce((a,b) => a + b.pacientes, 0) || 1;
+  _renderLocalidadesChart('chart-comunas', top15, '#B98149');
+  document.getElementById('tbl-comunas').innerHTML = _renderLocalidadesTable(list, total);
+  const ARAUCO_LOC = ['Arauco urbano','Carampangue','Laraquete','Ramadillas','Tubul','Llico','Cerro Alto'];
+  const arauco = list.filter(x => ARAUCO_LOC.includes(x.localidad));
+  const totalA = arauco.reduce((a,b) => a + b.pacientes, 0) || 1;
+  _renderLocalidadesChart('chart-arauco', arauco, ['#0E2530','#B98149','#9A3E2F','#4A5D44','#7C4A2A','#17323F','#C4B9A0']);
+  document.getElementById('tbl-arauco').innerHTML = arauco.length ? _renderLocalidadesTable(arauco, totalA) : '<tr><td colspan="4" style="color:rgba(14,37,48,0.5);">Sin pacientes en Arauco.</td></tr>';
+}
+
+function renderSegmentos(r) {
+  if (charts.seg) charts.seg.destroy();
+  charts.seg = new Chart(document.getElementById('chart-segmentos'), {
+    type: 'doughnut',
+    data: { labels: r.segmentos.map(s => SEGMENT_META[s.segmento]?.label || s.segmento),
+            datasets: [{ data: r.segmentos.map(s => s.pacientes), backgroundColor: r.segmentos.map(s => PALETTE[s.segmento] || '#94a3b8'), borderColor: '#fffcf5', borderWidth: 3 }] },
+    options: { cutout: '62%', plugins: { legend: { position: 'bottom', labels: { color: '#0E2530', font: CHART_FONT, padding: 12, boxWidth: 10 } } } }
+  });
+  document.getElementById('tbl-segmentos').innerHTML = r.segmentos.map(s => {
+    const m = SEGMENT_META[s.segmento] || {};
+    return `<tr><td><span class="seg-pill seg-${s.segmento}">${m.label || s.segmento}</span></td><td style="font-size: 0.78rem; color: rgba(14,37,48,0.6);">${m.defi || ''}</td><td class="text-right mono">${fmt(s.pacientes)}</td><td class="text-right mono">${s.atenciones_avg}</td><td class="text-right mono">${fmt(s.dias_desde_avg)}</td></tr>`;
+  }).join('');
+
+  const total = r.segmentos.reduce((a,b) => a + b.pacientes, 0) || 1;
+  const lapsed = r.segmentos.find(s => s.segmento === 'lapsed')?.pacientes || 0;
+  const oneshot = r.segmentos.find(s => s.segmento === 'perdido_oneshot')?.pacientes || 0;
+  const champs = r.segmentos.find(s => s.segmento === 'champion')?.pacientes || 0;
+  const enRiesgo = r.segmentos.find(s => s.segmento === 'en_riesgo')?.pacientes || 0;
+  const recs = [];
+  const scope = currentMode === 'global' ? 'CMC' : currentProfName.split(' — ')[0];
+  if (lapsed > (currentMode === 'global' ? 200 : 100)) recs.push(`<div class="reco"><strong>Win-back ${scope}:</strong> ${fmt(lapsed)} lapsed (${(100*lapsed/total).toFixed(0)}% del base). Custom Audience + WhatsApp con oferta.</div>`);
+  if (oneshot > (currentMode === 'global' ? 300 : 100)) recs.push(`<div class="reco lenga"><strong>Reactivación cold:</strong> ${fmt(oneshot)} one-shot. Recordatorio + descuento primera consulta.</div>`);
+  if (enRiesgo > (currentMode === 'global' ? 50 : 30)) recs.push(`<div class="reco lenga"><strong>En riesgo:</strong> ${fmt(enRiesgo)}. Recordatorio antes de cruzar a lapsed.</div>`);
+  if (champs >= (currentMode === 'global' ? 100 : 30)) recs.push(`<div class="reco musgo"><strong>Lookalike:</strong> ${fmt(champs)} champions. Subir a Meta como semilla.</div>`);
+  if (!recs.length) recs.push('<div class="reco">No hay segmentos con masa suficiente para campañas pagadas.</div>');
+  document.getElementById('recomendaciones').innerHTML = recs.join('');
+}
+
+function renderCrossSell(r) {
+  document.getElementById('tbl-crosssell').innerHTML = (r.cross_sell || []).map(x =>
+    `<tr><td>${x.especialidad}</td><td class="text-right mono">${fmt(x.pacientes_compartidos)}</td><td class="text-right mono">${x.pct}%</td></tr>`
+  ).join('') || '<tr><td colspan="3" style="color:rgba(14,37,48,0.5);">Sin overlap.</td></tr>';
+}
+
+async function renderAudiencia() {
+  const seg = document.getElementById('aud-segmento').value;
+  let data;
+  if (currentMode === 'global') data = globalData.audiencia[seg];
+  else { const d = await getProfData(); data = d.audiencia[seg]; }
+  document.getElementById('aud-total').textContent = fmt(data.total);
+  const thead = document.getElementById('aud-thead');
+  if (currentMode === 'global') {
+    thead.innerHTML = '<tr><th>Nombre</th><th>Comuna</th><th>Teléfono</th><th class="text-right">Atenc</th><th class="text-right">Profs</th><th>Última</th></tr>';
+    document.getElementById('tbl-audiencia').innerHTML = data.audiencia.map(p =>
+      `<tr><td>${(p.nombre||'').trim()} ${(p.apellido||'').trim()}</td><td style="color:rgba(14,37,48,0.65);">${p.comuna||'—'}</td><td class="mono" style="font-size: 0.78rem;">${p.telefono||'—'}</td><td class="text-right mono">${p.atenciones}</td><td class="text-right mono">${p.profesionales||'—'}</td><td class="mono" style="font-size: 0.78rem;">${p.ultima||'—'}</td></tr>`
+    ).join('') || '<tr><td colspan="6" style="color:rgba(14,37,48,0.5);">Sin pacientes.</td></tr>';
+  } else {
+    thead.innerHTML = '<tr><th>Nombre</th><th>Comuna</th><th>Teléfono</th><th>Email</th><th class="text-right">Atenc</th><th>Última</th></tr>';
+    document.getElementById('tbl-audiencia').innerHTML = data.audiencia.map(p =>
+      `<tr><td>${(p.nombre||'').trim()} ${(p.apellido||'').trim()}</td><td style="color:rgba(14,37,48,0.65);">${p.comuna||'—'}</td><td class="mono" style="font-size: 0.78rem;">${p.telefono||'—'}</td><td style="color: rgba(14,37,48,0.55); font-size: 0.78rem;">${p.email||'—'}</td><td class="text-right mono">${p.atenciones}</td><td class="mono" style="font-size: 0.78rem;">${p.ultima||'—'}</td></tr>`
+    ).join('') || '<tr><td colspan="6" style="color:rgba(14,37,48,0.5);">Sin pacientes.</td></tr>';
+  }
+}
+
+async function downloadCSV() {
+  const seg = document.getElementById('aud-segmento').value;
+  let data;
+  if (currentMode === 'global') data = globalData.audiencia[seg];
+  else { const d = await getProfData(); data = d.audiencia[seg]; }
+  const cols = ['paciente_id','nombre','apellido','telefono','email','comuna','fecha_nacimiento','atenciones','profesionales','ultima'];
+  const csv = [cols.join(',')];
+  for (const r of data.audiencia) {
+    csv.push(cols.map(c => {
+      const v = r[c] == null ? '' : String(r[c]);
+      return v.includes(',') || v.includes('"') ? `"${v.replace(/"/g,'""')}"` : v;
+    }).join(','));
+  }
+  const blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const tag = currentMode === 'global' ? 'cmc_global' : `prof${currentProfId}`;
+  a.href = url; a.download = `audiencia_${tag}_${seg}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 100);
+}
+
+init().catch(e => {
+  document.getElementById('data-info').textContent = 'Error cargando snapshot: ' + e.message;
+  console.error(e);
+});
+</script>
+</body>
+</html>

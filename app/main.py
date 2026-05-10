@@ -1923,6 +1923,37 @@ def horizonte_dashboard_page():
     return _HORIZONTE_DASHBOARD_HTML
 
 
+_SEGMENTACION_CMC_HTML = (_TEMPLATE_DIR / "segmentacion_cmc.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "segmentacion_cmc.html").exists() else ""
+
+@app.get("/segmentacioncmc", response_class=HTMLResponse)
+@app.get("/segmentacioncmc/", response_class=HTMLResponse)
+def segmentacioncmc_page():
+    """Dashboard de segmentación de pacientes CMC (snapshot estático del BI local)."""
+    if not _SEGMENTACION_CMC_HTML:
+        raise HTTPException(404, "Dashboard Segmentación CMC no disponible")
+    return _SEGMENTACION_CMC_HTML
+
+
+_CMC_SNAPSHOT_DIR = Path("/opt/chatbot-cmc/data/cmc_snapshot")
+
+@app.get("/segmentacioncmc-data/{path:path}", include_in_schema=False)
+def segmentacioncmc_data(path: str):
+    """Sirve los JSONs del snapshot del BI local. Path traversal protegido."""
+    # Sanitización: rechazar paths con .. o absolutos
+    if ".." in path or path.startswith("/"):
+        raise HTTPException(400, "Path inválido")
+    fpath = (_CMC_SNAPSHOT_DIR / path).resolve()
+    try:
+        fpath.relative_to(_CMC_SNAPSHOT_DIR.resolve())
+    except ValueError:
+        raise HTTPException(400, "Path fuera del directorio permitido")
+    if not fpath.is_file():
+        raise HTTPException(404, "Archivo no encontrado")
+    media = "application/json" if fpath.suffix == ".json" else "text/plain"
+    return FileResponse(fpath, media_type=media,
+                        headers={"Cache-Control": "public, max-age=300"})
+
+
 _ATRIBUCION_DASHBOARD_HTML = (_TEMPLATE_DIR / "atribucion_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "atribucion_dashboard.html").exists() else ""
 _ABARCA_DASHBOARD_HTML = (_TEMPLATE_DIR / "abarca_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "abarca_dashboard.html").exists() else ""
 _OLAVARRIA_DASHBOARD_HTML = (_TEMPLATE_DIR / "olavarria_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "olavarria_dashboard.html").exists() else ""
