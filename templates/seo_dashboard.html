@@ -1777,8 +1777,10 @@ function _setupGeoProfesional(profesionales) {
     sel.dispatchEvent(new Event('change'));
   });
 }
-// Expande la fila "ARAUCO" en sus localidades urbanas (Carampangue, Laraquete, etc.)
-// usando el BI Postgres (container Docker local). Si no responde, deja la fila tal cual.
+// Reemplaza las filas relacionadas con Arauco (comuna sola + localidades duplicadas)
+// con la fuente BI Postgres (bi.dim_paciente.localidad), que desagrega correctamente
+// y trae población urbana INE 2017 + pct_captura. Si el snapshot no responde,
+// deja la tabla del bot intacta.
 async function _expandirArauco(geoData) {
   try {
     const r = await fetch('/api/seo/localidades-arauco?_=' + Date.now(),
@@ -1786,10 +1788,14 @@ async function _expandirArauco(geoData) {
     if (!r.ok) return geoData;
     const data = await r.json();
     if (!data.arauco || !data.arauco.length) return geoData;
-    const idxArauco = geoData.comunas.findIndex(c => /^arauco/i.test(c.comuna || ''));
-    if (idxArauco < 0) return geoData;
-    const totalAtArauco = geoData.comunas[idxArauco].citas || geoData.comunas[idxArauco].pacientes || 1;
-    const totalPacArauco = geoData.comunas[idxArauco].pacientes || 1;
+    const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+    const localidadesBI = new Set(data.arauco.map(l => norm(l.localidad).replace(' urbano','')));
+    localidadesBI.add('arauco');
+    geoData.comunas = geoData.comunas.filter(c => {
+      const cn = norm(c.comuna);
+      if (cn === 'arauco' || cn.startsWith('arauco (')) return false;
+      return !localidadesBI.has(cn);
+    });
     const totalAtenciones = geoData.total_citas || 1;
     const totalPacientes = geoData.pacientes_unicos || 1;
     const filas = data.arauco.map(loc => ({
@@ -1802,7 +1808,7 @@ async function _expandirArauco(geoData) {
       poblacion_total: loc.poblacion,
       pct_captado: loc.pct_captura,
     }));
-    geoData.comunas.splice(idxArauco, 1, ...filas);
+    geoData.comunas = [...filas, ...geoData.comunas].sort((a,b) => (b.pacientes||0) - (a.pacientes||0));
     geoData._arauco_expandido = true;
     geoData._fuente_localidad = 'bi.dim_paciente.localidad · INE Censo 2017';
     return geoData;
