@@ -335,15 +335,31 @@ def fase_mapa():
             return ""
         return COMUNA_NORMALIZE.get(c, c)
 
-    # Keywords para detectar localidad dentro de Arauco a partir de la dirección
+    # Keywords para detectar localidad dentro de Arauco a partir de la dirección.
+    # Carampangue se separa en URBANO (casco, ~1.700 hab Censo 2017) y
+    # RURAL (caseríos del distrito, ~2.300 hab restantes hasta los 4.000 distritales).
+    # El orden importa: el primer match gana, así que URBANO va antes que RURAL
+    # para que las calles del casco no caigan en el bucket rural por error.
     LOCALIDAD_KEYWORDS = [
-        ("CARAMPANGUE", ["CARAMPANGUE", "VICENTE MILLAN", "VICENTE MILLÁN", "MONSALVE",
-                         "CONUMO", "LA MESETA", "PRAT ", "CRUCE NORTE", "LOS MAITENES",
-                         "VILLA LA PAZ", "LOS CILOS", "LOS SILOS", "CHILLANCITO",
-                         "DUARTE", "PATRIA ", "LOS BOLDOS", "CONQUISTA", "CALLE ESTACION",
-                         "MANUEL LUENGO", "MAITEN ", "EL PARRON", "LOS PERALES",
-                         "PUNTA CARAMPANGUE", "VILLA ESPERANZA", "RENACER LOS PADRES",
-                         "LOS HORCONES", "HORCONES", "PICHILO", "CARIPILUN"]),
+        ("CARAMPANGUE URBANO", [
+            # Calles del casco urbano
+            "VICENTE MILLAN", "VICENTE MILLÁN", "MONSALVE", "PRAT ",
+            "DUARTE", "PATRIA ", "MANUEL LUENGO", "CALLE ESTACION",
+            # Poblaciones del casco
+            "VILLA LA PAZ", "VILLA ESPERANZA", "RENACER LOS PADRES",
+            "LOS BOLDOS", "LOS PERALES", "LOS CILOS", "LOS SILOS",
+            "CHILLANCITO", "CONQUISTA", "EL PARRON",
+            # "CARAMPANGUE" suelto sin calle = casco (los rurales suelen
+            # especificar Conumo/Pichilo/etc.)
+            "CARAMPANGUE",
+        ]),
+        ("CARAMPANGUE RURAL", [
+            "CONUMO", "LA MESETA", "CRUCE NORTE",
+            "LOS MAITENES", "MAITEN ",
+            "PUNTA CARAMPANGUE",
+            "LOS HORCONES", "HORCONES",
+            "PICHILO", "CARIPILUN",
+        ]),
         ("LARAQUETE", ["LARAQUETE", "EL PINAR", "VILLA EL BOSQUE", "VILLA VISTA HERMOSA",
                        "BOLDO ", "GONZALO ROJAS", "PIEDRA CRUZ", "LOS LINGUES",
                        "VILLA BOSQUE", "MAÑIO"]),
@@ -581,7 +597,8 @@ def fase_mapa():
 
 # Coordenadas de localidades dentro de la comuna de Arauco
 LOCALIDAD_COORDS = {
-    "CARAMPANGUE": (-37.2650, -73.2800),
+    "CARAMPANGUE URBANO": (-37.2650, -73.2800),  # casco
+    "CARAMPANGUE RURAL":  (-37.2700, -73.2500),  # caseríos al este del casco
     "LARAQUETE": (-37.1700, -73.1833),
     "RAMADILLAS": (-37.2200, -73.2100),
     "ARAUCO URBANO": (-37.2467, -73.3178),
@@ -625,14 +642,18 @@ POBLACION_COMUNA = {
 # (Censo 2017 a nivel de localidad urbana, redondeado).
 POBLACION_LOCALIDAD = {
     "ARAUCO URBANO": 26000,
-    "CARAMPANGUE": 4000,
+    # Carampangue: distrito Censo 2017 = 4.000 hab.
+    # 1.700 son casco urbano (calles del pueblo) y los ~2.300 restantes
+    # son caseríos rurales del distrito (Conumo, Pichilo, Caripilún, etc.).
+    "CARAMPANGUE URBANO": 1700,
+    "CARAMPANGUE RURAL": 2300,
     "LARAQUETE": 2900,
     "TUBUL": 1500,
     "RAMADILLAS": 600,
     "LLICO": 400,
     "COLICO": 700,
-    "ARAUCO (SIN DETALLE)": 0,  # no asignada
-    "ARAUCO (OTRO)": 0,         # no asignada
+    "ARAUCO (SIN DETALLE)": 0,
+    "ARAUCO (OTRO)": 0,
 }
 
 
