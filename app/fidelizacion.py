@@ -333,7 +333,7 @@ async def enviar_seguimiento_postconsulta(send_fn, send_template_fn=None,
                 _asyncio_fidel.create_task(_mc_purch.send_event(
                     "Purchase",
                     phone=cita["phone"],
-                    value=float(cita.get("precio") or 0) or None,
+                    value=float({"Ecografía": 45000, "Ortodoncia": 120000}.get(cita.get("especialidad", ""), 25000)),
                     currency="CLP",
                     rut=_prof_fidel.get("rut") or None,
                     first_name=_nom_fidel[0] if _nom_fidel else None,
