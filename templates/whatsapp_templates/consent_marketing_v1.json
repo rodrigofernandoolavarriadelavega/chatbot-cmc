@@ -1,0 +1,31 @@
+{
+  "name": "consent_marketing_v1",
+  "category": "UTILITY",
+  "language": "es_CL",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}}, te saluda el Centro Médico Carampangue.\n\nQueremos enviarte ocasionalmente recordatorios de salud preventiva y novedades del centro (máximo 1-2 mensajes al mes).\n\n¿Aceptas recibir estos mensajes?\n\nResponde SÍ para aceptar o NO para no recibir más comunicaciones de este tipo. Tu decisión no afecta tu atención médica.\n\nPolítica de privacidad: agentecmc.cl/privacidad",
+      "example": {
+        "body_text": [["Juan"]]
+      }
+    },
+    {
+      "type": "FOOTER",
+      "text": "Si respondes NO, no enviaremos más promociones"
+    },
+    {
+      "type": "BUTTONS",
+      "buttons": [
+        {
+          "type": "QUICK_REPLY",
+          "text": "Sí, acepto"
+        },
+        {
+          "type": "QUICK_REPLY",
+          "text": "No, gracias"
+        }
+      ]
+    }
+  ]
+}

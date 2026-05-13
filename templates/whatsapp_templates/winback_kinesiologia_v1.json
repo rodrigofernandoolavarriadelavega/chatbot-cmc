@@ -1,0 +1,31 @@
+{
+  "name": "winback_kinesiologia_v1",
+  "category": "MARKETING",
+  "language": "es_CL",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}}, te contactamos del Centro Médico Carampangue.\n\nSi tienes controles de kinesiología pendientes o quieres retomar sesiones con {{2}}, podemos ayudarte a agendar.\n\nEscríbenos por este WhatsApp o llama al (41) 296 5226.\n\nPolítica de privacidad: agentecmc.cl/privacidad",
+      "example": {
+        "body_text": [["Carlos", "el Kine Armijo"]]
+      }
+    },
+    {
+      "type": "FOOTER",
+      "text": "Si no quieres recibir más mensajes, responde BAJA"
+    },
+    {
+      "type": "BUTTONS",
+      "buttons": [
+        {
+          "type": "QUICK_REPLY",
+          "text": "Sí, quiero retomar"
+        },
+        {
+          "type": "QUICK_REPLY",
+          "text": "Más información"
+        }
+      ]
+    }
+  ]
+}

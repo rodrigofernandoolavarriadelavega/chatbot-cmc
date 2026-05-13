@@ -3504,6 +3504,92 @@ def get_waitlist_by_especialidad(especialidad: str) -> list[dict]:
         return [dict(r) for r in rows]
 
 
+# ── Recordatorio 48h anti no-show ─────────────────────────────────────────
+
+
+def get_citas_bot_para_48h_reminder(fecha: str) -> list[dict]:
+    """Citas con reminder_48h pendiente para la fecha dada (YYYY-MM-DD).
+
+    Agrega la columna reminder_48h_sent inline si no existe (evita migración
+    manual).
+    """
+    with _conn() as conn:
+        # Agregar columna si no existe
+        try:
+            conn.execute("ALTER TABLE citas_bot ADD COLUMN reminder_48h_sent INTEGER DEFAULT 0")
+            conn.commit()
+        except Exception:
+            pass  # ya existe
+        rows = conn.execute(
+            "SELECT * FROM citas_bot "
+            "WHERE fecha = ? AND (reminder_48h_sent IS NULL OR reminder_48h_sent = 0) "
+            "AND (cancel_detected_at IS NULL) ",
+            (fecha,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def mark_reminder_48h_sent(row_id: int):
+    """Marca reminder_48h_sent=1 para la fila de citas_bot con id=row_id."""
+    with _conn() as conn:
+        conn.execute(
+            "UPDATE citas_bot SET reminder_48h_sent=1 WHERE id=?", (row_id,)
+        )
+        conn.commit()
+
+
+def tiene_historial_noshow(phone: str, minimo: int = 1) -> bool:
+    """True si el phone tiene >= `minimo` citas pasadas con recordatorio
+    enviado pero sin confirmación (proxy de no-show).
+
+    Lógica: reminder_sent=1 AND confirmation_status NOT 'confirmed'
+    AND cancel_detected_at IS NULL (el paciente no avisó con tiempo).
+    """
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT COUNT(*) FROM citas_bot "
+            "WHERE phone=? AND reminder_sent=1 "
+            "AND (confirmation_status IS NULL OR confirmation_status NOT IN ('confirmed')) "
+            "AND cancel_detected_at IS NULL",
+            (phone,),
+        ).fetchone()
+        return int(row[0] if row else 0) >= minimo
+
+
+def get_crosssell_dx_candidatos(
+    dx_tag: str,
+    especialidad_origen: str,
+    dias_post: int = 7,
+    limite: int = 50,
+) -> list[dict]:
+    """Phones con dx_tag activo + cita reciente en especialidad_origen.
+
+    Excluye phones con tag 'marketing_opt_out'.
+    Retorna lista de dicts {phone, nombre} para el periodo dias_post.
+    """
+    from datetime import date, timedelta
+    hoy = date.today()
+    desde = (hoy - timedelta(days=dias_post + 1)).isoformat()
+    hasta = (hoy - timedelta(days=1)).isoformat()
+
+    with _conn() as conn:
+        rows = conn.execute(
+            "SELECT DISTINCT cb.phone, cp.nombre "
+            "FROM citas_bot cb "
+            "LEFT JOIN contact_profiles cp ON cp.phone = cb.phone "
+            "WHERE cb.especialidad LIKE ? AND cb.fecha BETWEEN ? AND ? "
+            "AND cb.phone IN ("
+            "  SELECT phone FROM contact_tags WHERE tag = ?"
+            ") "
+            "AND cb.phone NOT IN ("
+            "  SELECT phone FROM contact_tags WHERE tag = 'marketing_opt_out'"
+            ") "
+            "ORDER BY cb.fecha DESC LIMIT ?",
+            (f"%{especialidad_origen}%", desde, hasta, f"dx:{dx_tag}", limite),
+        ).fetchall()
+        return [{"phone": r[0], "nombre": r[1]} for r in rows]
+
+
 # ── BSUID mapping ─────────────────────────────────────────────────────────
 
 def upsert_bsuid(bsuid: str, phone: str | None = None):

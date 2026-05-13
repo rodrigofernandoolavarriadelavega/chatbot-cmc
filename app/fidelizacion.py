@@ -23,7 +23,8 @@ from session import (get_citas_para_seguimiento, get_pacientes_inactivos,
                      save_campana_envio, puede_enviar_campana_estacional,
                      get_crosssell_orl_fono_candidatos,
                      get_crosssell_odonto_estetica_candidatos,
-                     get_crosssell_mg_chequeo_candidatos)
+                     get_crosssell_mg_chequeo_candidatos,
+                     get_crosssell_dx_candidatos)
 from autocuidado import get_tips_autocuidado
 
 log = logging.getLogger("bot.fidelizacion")
@@ -330,10 +331,11 @@ async def enviar_seguimiento_postconsulta(send_fn, send_template_fn=None,
                 from session import get_profile as _gp_fidel
                 _prof_fidel = _gp_fidel(cita["phone"]) or {}
                 _nom_fidel = (cita.get("nombre") or _prof_fidel.get("nombre") or "").split()
+                from config import get_arancel_cpl as _get_arancel
                 _asyncio_fidel.create_task(_mc_purch.send_event(
                     "Purchase",
                     phone=cita["phone"],
-                    value=float({"Ecografía": 45000, "Ortodoncia": 120000}.get(cita.get("especialidad", ""), 25000)),
+                    value=float(_get_arancel(cita.get("especialidad"))),
                     currency="CLP",
                     rut=_prof_fidel.get("rut") or None,
                     first_name=_nom_fidel[0] if _nom_fidel else None,
@@ -1063,3 +1065,155 @@ async def enviar_campana_estacional(campana_id: str, pacientes: list[dict],
     log.info("Campana %s: enviados=%d, errores=%d, audiencia=%d",
              campana_id, enviados, errores, len(pacientes))
     return enviados, errores
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Cross-sell contextual por diagnóstico (dx tags) — Tarea F win-back
+# ─────────────────────────────────────────────────────────────────────────────
+
+import os as _os_cs
+
+CROSS_SELL_ACTIVE  = _os_cs.getenv("CROSS_SELL_ACTIVE", "false").lower() in ("true", "1", "yes")
+CROSS_SELL_PILOT_N = int(_os_cs.getenv("CROSS_SELL_PILOT_N", "5"))
+
+_CROSSSELL_DX_REGLAS: list[dict] = [
+    {
+        "dx_tag":        "dm2",
+        "esp_origen":    "medicina general",
+        "campana_id":    "crosssell_dx_dm2",
+        "cooldown_dias": 90,
+        "msg": (
+            "por tu historial de *diabetes*, un control periódico con "
+            "*podología* y *nutrición* puede ayudarte a prevenir complicaciones. "
+            "¿Te gustaría agendar? Escribe *agendar* o llámanos al (41) 296 5226."
+        ),
+    },
+    {
+        "dx_tag":        "hta",
+        "esp_origen":    "medicina general",
+        "campana_id":    "crosssell_dx_hta",
+        "cooldown_dias": 90,
+        "msg": (
+            "por tu historial de *presión alta*, un control con *cardiología* "
+            "y apoyo de *nutrición* puede ayudarte a mantener niveles normales. "
+            "¿Te agendo una evaluación? Escribe *agendar* o llámanos al (41) 296 5226."
+        ),
+    },
+]
+
+
+async def enviar_crosssell_dx(send_fn, send_template_fn=None):
+    """Cross-sell contextual por diagnóstico (dx:dm2, dx:hta, gineco mujeres ≥40).
+
+    PILOTO obligatorio N=5: revisar respuestas 24h antes de escalar.
+    Flag CROSS_SELL_ACTIVE=false hasta confirmación de Rodrigo.
+    Respeta marketing_opt_out.
+    """
+    if not CROSS_SELL_ACTIVE:
+        log.debug("enviar_crosssell_dx: CROSS_SELL_ACTIVE=false — skip")
+        return
+
+    total_enviados = 0
+
+    # ── Reglas DX (dm2, hta) ──────────────────────────────────────────────
+    for regla in _CROSSSELL_DX_REGLAS:
+        if total_enviados >= CROSS_SELL_PILOT_N:
+            log.info("crosssell_dx: piloto N=%d alcanzado", CROSS_SELL_PILOT_N)
+            return
+
+        candidatos = get_crosssell_dx_candidatos(
+            dx_tag=regla["dx_tag"],
+            especialidad_origen=regla["esp_origen"],
+            dias_post=7,
+        )
+        if not candidatos:
+            log.info("crosssell_dx %s: sin candidatos", regla["dx_tag"])
+            continue
+
+        log.info("crosssell_dx %s: %d candidatos", regla["dx_tag"], len(candidatos))
+
+        for p in candidatos:
+            if total_enviados >= CROSS_SELL_PILOT_N:
+                log.info("crosssell_dx: piloto N=%d alcanzado", CROSS_SELL_PILOT_N)
+                return
+
+            phone = p["phone"]
+            if not puede_enviar_campana(phone, regla["campana_id"],
+                                        dias_cooldown=regla["cooldown_dias"]):
+                continue
+
+            nombre = _nombre_corto(p.get("nombre"))
+            saludo = f"Hola *{nombre}* " if nombre else "Hola "
+            try:
+                await send_fn(phone, saludo + regla["msg"])
+                save_fidelizacion_msg(phone, regla["campana_id"])
+                log_message(phone, "out",
+                            f"[Cross-sell dx:{regla['dx_tag']}] {regla['msg'][:80]}...",
+                            "IDLE")
+                total_enviados += 1
+                log.info("crosssell_dx %s enviado → %s", regla["dx_tag"], phone)
+            except Exception as e:
+                log.error("crosssell_dx %s error phone=%s: %s", regla["dx_tag"], phone, e)
+
+    # ── Gineco/PAP mujeres ≥40 ─────────────────────────────────────────────
+    if total_enviados >= CROSS_SELL_PILOT_N:
+        return
+
+    from datetime import date as _date, timedelta as _td
+    from session import _conn as _s_conn
+
+    hoy = _date.today()
+    fecha_desde = (hoy - _td(days=8)).isoformat()
+    fecha_hasta  = (hoy - _td(days=6)).isoformat()
+
+    with _s_conn() as _conn_g:
+        _rows_g = _conn_g.execute(
+            "SELECT DISTINCT phone FROM citas_bot "
+            "WHERE especialidad LIKE '%gineco%' AND fecha BETWEEN ? AND ?",
+            (fecha_desde, fecha_hasta),
+        ).fetchall()
+
+    _campana_pap = "crosssell_gineco_pap"
+    for _row_g in _rows_g:
+        if total_enviados >= CROSS_SELL_PILOT_N:
+            return
+
+        _phone_g = _row_g[0]
+        tags_g = get_tags(_phone_g)
+        if "marketing_opt_out" in tags_g:
+            continue
+
+        profile_g = get_profile(_phone_g)
+        if not profile_g:
+            continue
+        sexo_g = (profile_g.get("sexo") or "").upper()
+        if sexo_g != "F":
+            continue
+        fn = profile_g.get("fecha_nacimiento", "")
+        if fn:
+            try:
+                nacimiento = _date.fromisoformat(fn[:10])
+                if (hoy - nacimiento).days / 365 < 40:
+                    continue
+            except ValueError:
+                continue
+
+        if not puede_enviar_campana(_phone_g, _campana_pap, dias_cooldown=365):
+            continue
+
+        nombre_g = _nombre_corto(profile_g.get("nombre"))
+        saludo_g = f"Hola *{nombre_g}* " if nombre_g else "Hola "
+        _msg_pap = (
+            "recuerda que el *Papanicolaou* es un examen preventivo recomendado "
+            "anualmente para mujeres a partir de los 40 años. "
+            "¿Te lo agendamos? Escribe *agendar* o llámanos al (41) 296 5226."
+        )
+        try:
+            await send_fn(_phone_g, saludo_g + _msg_pap)
+            save_fidelizacion_msg(_phone_g, _campana_pap)
+            log_message(_phone_g, "out",
+                        f"[Cross-sell gineco/PAP] {_msg_pap[:80]}...", "IDLE")
+            total_enviados += 1
+            log.info("crosssell_dx gineco/PAP enviado → %s", _phone_g)
+        except Exception as e:
+            log.error("crosssell_dx gineco error phone=%s: %s", _phone_g, e)

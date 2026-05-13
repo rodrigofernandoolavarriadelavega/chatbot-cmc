@@ -126,6 +126,54 @@ ALTERNATIVA_ESPECIALIDAD: dict[str, str] = {
     "psicologia infantil": "psicologia adulto",
 }
 
+# ── Aranceles CMC (CLP) — usados en CAPI Purchase value + winback ────────────
+# Actualizar cuando cambien precios. Clave = especialidad normalizada (lowercase).
+ARANCELES_CLP: dict[str, int] = {
+    "medicina general":             25000,
+    "medicina interna":             25000,
+    "medicina familiar":            30000,
+    "kinesiología":                 20000,
+    "kinesiologia":                 20000,
+    "otorrinolaringología":         35000,
+    "otorrinolaringologia":         35000,
+    "odontología general":          48000,
+    "odontologia general":          48000,
+    "nutrición":                    20000,
+    "nutricion":                    20000,
+    "podología":                    17000,
+    "podologia":                    17000,
+    "fonoaudiología":               26000,
+    "fonoaudiologia":               26000,
+    "cardiología":                  40000,
+    "cardiologia":                  40000,
+    "traumatología y ortopedia":    35000,
+    "traumatologia y ortopedia":    35000,
+    "gastroenterología":            35000,
+    "gastroenterologia":            35000,
+    "psicología":                   35000,
+    "psicologia":                   35000,
+    "ginecología":                  40000,
+    "ginecologia":                  40000,
+    "matrona":                      25000,
+    "ecografía":                    34000,
+    "ecografia":                    34000,
+    "tecnólogo médico ecografista": 34000,
+    "tecnolo medico ecografista":   34000,
+    "ortodoncista":                 30000,
+    "ortodoncia":                   30000,
+    "implantología":                48000,
+    "implantologia":                48000,
+    "estética facial":              60000,
+    "estetica facial":              60000,
+    "endodoncia":                   110000,
+    "masoterapia":                  17990,
+}
+
+def get_arancel_cpl(especialidad: str | None) -> int:
+    """Retorna arancel estimado en CLP para una especialidad (fallback MG=25000)."""
+    return ARANCELES_CLP.get((especialidad or "").lower().strip(), 25000)
+
+
 # Meta Marketing API — cuenta publicitaria del CMC.
 # Override en .env: META_AD_ACCOUNT_ID=act_XXXXXXXXXXXXX
 META_AD_ACCOUNT_ID = os.getenv("META_AD_ACCOUNT_ID", "act_220608142267129")

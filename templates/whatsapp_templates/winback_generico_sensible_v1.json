@@ -1,0 +1,31 @@
+{
+  "name": "winback_generico_sensible_v1",
+  "category": "MARKETING",
+  "language": "es_CL",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}}, te contactamos del Centro Médico Carampangue.\n\nNos dimos cuenta de que llevas un tiempo desde tu último control en CMC. Si tienes algo pendiente de revisar o simplemente quieres retomar un seguimiento, estamos disponibles para orientarte.\n\nPuedes escribirnos por este mismo WhatsApp o llamarnos al (41) 296 5226. Atendemos con discreción y respeto.",
+      "example": {
+        "body_text": [["Ana"]]
+      }
+    },
+    {
+      "type": "FOOTER",
+      "text": "Si no quieres recibir más mensajes, responde BAJA"
+    },
+    {
+      "type": "BUTTONS",
+      "buttons": [
+        {
+          "type": "QUICK_REPLY",
+          "text": "Sí, quiero agendar"
+        },
+        {
+          "type": "QUICK_REPLY",
+          "text": "Más información"
+        }
+      ]
+    }
+  ]
+}

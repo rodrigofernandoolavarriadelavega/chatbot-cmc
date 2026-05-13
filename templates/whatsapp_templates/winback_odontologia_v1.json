@@ -1,0 +1,31 @@
+{
+  "name": "winback_odontologia_v1",
+  "category": "MARKETING",
+  "language": "es_CL",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}}, te saludamos desde el Centro Médico Carampangue.\n\nLos especialistas recomiendan un control dental cada 6 meses para prevenir problemas mayores. Revisamos que llevas un tiempo sin tu chequeo, y quedamos disponibles para ayudarte a agendar con {{2}}.\n\nPuedes escribirnos por este WhatsApp o llamar al (41) 296 5226 para ver los horarios disponibles.",
+      "example": {
+        "body_text": [["María", "la Dra. Burgos"]]
+      }
+    },
+    {
+      "type": "FOOTER",
+      "text": "Si no quieres recibir más mensajes, responde BAJA"
+    },
+    {
+      "type": "BUTTONS",
+      "buttons": [
+        {
+          "type": "QUICK_REPLY",
+          "text": "Sí, quiero agendar"
+        },
+        {
+          "type": "QUICK_REPLY",
+          "text": "Más información"
+        }
+      ]
+    }
+  ]
+}

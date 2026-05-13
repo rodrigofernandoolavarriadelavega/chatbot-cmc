@@ -11,9 +11,14 @@ from config import USE_TEMPLATES
 from session import (
     get_citas_bot_pendientes,
     get_citas_bot_para_2h_reminder,
+    get_citas_bot_para_48h_reminder,
     get_last_inbound_ts,
     mark_reminder_sent,
     mark_reminder_2h_sent,
+    mark_reminder_48h_sent,
+    tiene_historial_noshow,
+    get_waitlist_by_especialidad,
+    mark_waitlist_notified,
     log_message,
     log_event,
 )
@@ -374,6 +379,175 @@ async def enviar_recordatorios_2h(send_text_fn, send_template_fn=None):
                         f"[Recordatorio 2h] {cita['especialidad']} con {cita['profesional']} — hoy a las {hora}",
                         "IDLE")
             mark_reminder_2h_sent(cita["id"])
+
+            # ── Aviso de liberación de slot (anti no-show) ────────────────────
+            # Si la cita es en peak horario (16-19h) o el paciente tiene historial
+            # de no-show Y no ha confirmado todavía → enviar aviso de liberación.
+            _cita_confirmation = cita.get("confirmation_status")
+            _cita_no_confirmada = (
+                _cita_confirmation is None
+                or _cita_confirmation not in ("confirmed",)
+            )
+            if _cita_no_confirmada:
+                try:
+                    _hora_int = int((cita.get("hora") or "00")[:2])
+                    _es_peak = 16 <= _hora_int < 19
+                except (ValueError, TypeError):
+                    _es_peak = False
+                _tiene_noshow = tiene_historial_noshow(cita["phone"])
+                if _es_peak or _tiene_noshow:
+                    try:
+                        await send_text_fn(
+                            cita["phone"],
+                            "Si no puedes asistir, por favor avísanos respondiendo *NO*.\n\n"
+                            "Tu hora queda disponible en *30 minutos* si no recibimos confirmación, "
+                            "para que otro paciente pueda ocuparla."
+                        )
+                        log_event(cita["phone"], "aviso_liberacion_slot", {
+                            "id_cita": cita.get("id_cita"),
+                            "motivo": ("peak" if _es_peak else "")
+                                      + ("+noshow" if _tiene_noshow else ""),
+                        })
+                        # Notificar lista de espera para esta especialidad
+                        try:
+                            _waitlist = get_waitlist_by_especialidad(cita["especialidad"])
+                            if _waitlist:
+                                _primer = _waitlist[0]
+                                _wp = _primer.get("phone", "")
+                                if _wp:
+                                    await send_text_fn(
+                                        _wp,
+                                        f"Hay una posible hora disponible en "
+                                        f"*{cita['especialidad']}* hoy a las *{hora}*.\n\n"
+                                        "Escribe *agendar* si te interesa tomarla."
+                                    )
+                                    mark_waitlist_notified(_primer["id"])
+                                    log_event(_wp, "waitlist_notif_slot_liberado", {
+                                        "especialidad": cita["especialidad"],
+                                        "hora": hora,
+                                    })
+                        except Exception as _ew:
+                            log.warning("Error notificando waitlist slot liberado: %s", _ew)
+                    except Exception as _ea:
+                        log.warning("Error aviso liberación slot cita_id=%s: %s",
+                                    cita.get("id_cita"), _ea)
+
             log.info("Recordatorio 2h enviado → %s cita_id=%s", cita["phone"], cita["id_cita"])
         except Exception as e:
             log.error("Error enviando recordatorio 2h cita_id=%s: %s", cita.get("id"), e)
+
+
+# ── Recordatorio 48h anti no-show ─────────────────────────────────────────────
+
+async def enviar_recordatorios_48h(send_text_fn, send_interactive_fn=None):
+    """Recordatorio 48h antes para pacientes con riesgo de no-show.
+
+    Se envía a:
+    1. Pacientes con >= 1 cita anterior sin confirmación (historial de no-show).
+    2. Cualquier cita en franja 16:00-19:00 (peak no-show).
+
+    Incluye botones de confirmación interactivos.
+    Se ejecuta diariamente a las 10:00 CLT con fecha pasado mañana.
+    """
+    pasado_manana = (
+        datetime.now(ZoneInfo("America/Santiago")).date() + timedelta(days=2)
+    ).isoformat()
+
+    citas = _dedup_citas(get_citas_bot_para_48h_reminder(pasado_manana))
+    if not citas:
+        log.info("Recordatorios 48h: sin citas para %s", pasado_manana)
+        return
+
+    # Validar contra Medilink
+    try:
+        from session import mark_cita_cancel_detected as _mcc
+        validas = []
+        for c in citas:
+            id_c = c.get("id_cita")
+            if not id_c:
+                continue
+            try:
+                cita_ml = await get_cita(int(id_c))
+            except Exception:
+                continue
+            if cita_ml is None:
+                continue
+            if cita_ml.get("id_estado") == 1 or cita_ml.get("estado_anulacion") == 1:
+                _mcc(str(id_c))
+                continue
+            validas.append(c)
+        citas = validas
+    except Exception as e:
+        log.exception("Pre-validación 48h falló: %s", e)
+        return
+
+    if not citas:
+        return
+
+    enviados = 0
+    for cita in citas:
+        phone = cita["phone"]
+        hora  = _fmt_hora(cita["hora"])
+        esp   = cita["especialidad"]
+        prof  = cita["profesional"]
+
+        try:
+            _hora_int = int(hora[:2])
+            _aplica_peak = 16 <= _hora_int < 19
+        except (ValueError, TypeError):
+            _aplica_peak = False
+        _aplica_noshow = tiene_historial_noshow(phone)
+
+        if not (_aplica_noshow or _aplica_peak):
+            continue
+
+        fecha_display = _fmt_fecha_display(cita["fecha"])
+        nombre_pac    = _nombre_corto(cita.get("paciente_nombre")) or "paciente"
+        id_cita       = cita["id_cita"]
+        motivo_log    = ("peak" if _aplica_peak else "") + ("+noshow" if _aplica_noshow else "")
+
+        try:
+            if send_interactive_fn:
+                body_txt = (
+                    f"Hola {nombre_pac} te recordamos tu cita con anticipación:\n\n"
+                    f"*{esp}* — {prof}\n"
+                    f"*{fecha_display}* a las *{hora}*\n"
+                    "Monsalve esquina República, Carampangue\n\n"
+                    "¿Puedes confirmar tu asistencia?"
+                )
+                await send_interactive_fn(phone, {
+                    "type": "button",
+                    "body": {"text": body_txt},
+                    "action": {
+                        "buttons": [
+                            {"type": "reply", "reply": {
+                                "id": f"cita_confirm:{id_cita}", "title": "Confirmo"}},
+                            {"type": "reply", "reply": {
+                                "id": f"cita_reagendar:{id_cita}", "title": "Cambiar hora"}},
+                            {"type": "reply", "reply": {
+                                "id": f"cita_cancelar:{id_cita}", "title": "No podre ir"}},
+                        ]
+                    },
+                })
+            else:
+                await send_text_fn(
+                    phone,
+                    f"Hola {nombre_pac}, te recordamos tu cita:\n\n"
+                    f"*{esp}* — {prof}\n"
+                    f"*{fecha_display}* a las *{hora}*\n"
+                    "Monsalve esquina República, Carampangue\n\n"
+                    "Por favor confirma tu asistencia respondiendo *SÍ* o *NO*."
+                )
+
+            log_message(phone, "out",
+                        f"[Recordatorio 48h] {esp} con {prof} — {fecha_display} a las {hora}",
+                        "IDLE")
+            mark_reminder_48h_sent(cita["id"])
+            log_event(phone, "recordatorio_48h_enviado", {
+                "id_cita": id_cita, "motivo": motivo_log, "hora": hora,
+            })
+            enviados += 1
+            log.info("Recordatorio 48h enviado → %s cita_id=%s motivo=%s",
+                     phone, id_cita, motivo_log)
+        except Exception as e:
+            log.error("Error recordatorio 48h cita_id=%s: %s", cita.get("id"), e)

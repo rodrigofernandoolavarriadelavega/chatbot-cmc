@@ -2118,6 +2118,57 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                                              "reporte", "/reporte", "health",
                                              "/health", "estado", "/estado"):
         return await _admin_status_report_live()
+
+    # ── Activar WhatsApp CMC (opt-in presencial via QR de recepción) ──────────
+    # El paciente atendido offline escanea el QR de recepción → WhatsApp abre
+    # con texto pre-llenado "Activar WhatsApp CMC". Esto captura el opt-in
+    # formal con botones (Ley 19.628).
+    if any(s in tl for s in ("activar whatsapp cmc", "activar whatsapp",
+                             "activar wsp cmc", "activar wsp",
+                             "activar mensajes cmc")):
+        from messaging import send_whatsapp_interactive
+        _msg = _btn_msg(
+            "👋 ¡Hola! Para enviarte recordatorios de citas, resultados de "
+            "exámenes y seguimiento post-consulta del Centro Médico Carampangue "
+            "por WhatsApp, necesitamos tu autorización.\n\n"
+            "_Tus datos se usan solo para tu atención médica · "
+            "Ley 19.628 · agentecmc.cl/privacidad_",
+            [
+                {"id": "optin_si", "title": "✅ Sí, autorizo"},
+                {"id": "optin_no", "title": "❌ No, gracias"},
+            ],
+        )
+        await send_whatsapp_interactive(phone, _msg)
+        save_session(phone, "WAIT_OPTIN_CONFIRM", data)
+        log_event(phone, "optin_qr_iniciado", {})
+        return None
+
+    # ── Respuesta al opt-in (estado WAIT_OPTIN_CONFIRM) ───────────────────────
+    if state == "WAIT_OPTIN_CONFIRM":
+        if tl in ("optin_si", "si, autorizo", "si autorizo", "si", "sí",
+                  "✅ sí, autorizo", "sí, autorizo", "autorizo", "acepto"):
+            save_privacy_consent(phone, status="accepted", method="qr_recepcion")
+            log_event(phone, "optin_qr_aceptado", {"method": "qr_recepcion"})
+            reset_session(phone)
+            return ("✅ ¡Listo! Tu WhatsApp quedó activado para el Centro "
+                    "Médico Carampangue.\n\n"
+                    "Vas a recibir:\n"
+                    "• Recordatorios de tus citas (1 día antes y 2 horas antes)\n"
+                    "• Aviso cuando estén listos tus exámenes\n"
+                    "• Seguimiento post-consulta\n\n"
+                    "Si en cualquier momento querés desactivar, escribe *salir* o "
+                    "*no quiero más mensajes*.\n\n"
+                    "Escribe *menú* para ver lo que puedo hacer por ti.")
+        if tl in ("optin_no", "no", "no, gracias", "no gracias",
+                  "❌ no, gracias", "rechazo", "no quiero"):
+            log_event(phone, "optin_qr_rechazado", {})
+            reset_session(phone)
+            return ("Entendido. No te enviaremos mensajes automáticos. "
+                    "Si cambias de opinión, podés volver a escanear el "
+                    "código en recepción cuando quieras. 🙏")
+        return ("Por favor, responde con uno de los dos botones: "
+                "*✅ Sí, autorizo* o *❌ No, gracias*.")
+
     # tl_norm = texto del paciente normalizado léxicamente (sin tildes,
     # abreviaciones WhatsApp expandidas, typos frecuentes corregidos,
     # participios rurales arreglados). Lo usamos en los matches hard-coded
@@ -2239,6 +2290,69 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             "Sin problema 😊 Cuando quieras retomar, escribe *menu* y te ayudo.\n\n"
             f"_📞 *{CMC_TELEFONO}* si lo prefieres por teléfono._"
         )
+
+    # ── Respuesta al consent_marketing_v1 (Tarea B win-back) ─────────────────
+    # Quick Replies del template UTILITY consent_marketing_v1:
+    #   Botón 1 → "Sí, acepto"   (o texto libre "SI" / "si acepto")
+    #   Botón 2 → "No, gracias"  (o texto libre "NO" / "no gracias")
+    # Si el registro en bi.marketing_consent está en estado 'pending',
+    # se actualiza al estado correspondiente.
+    _es_consent_si = (
+        tl in ("sí, acepto", "si, acepto", "si acepto", "si")
+        or tl_norm in ("si, acepto", "si acepto", "si")
+        or txt in ("Sí, acepto", "Si, acepto")
+    )
+    _es_consent_no = (
+        tl in ("no, gracias", "no gracias", "no")
+        or tl_norm in ("no, gracias", "no gracias", "no")
+        or txt in ("No, gracias", "No gracias")
+    )
+    # Guard: solo interceptar si el paciente está en IDLE o tiene una solicitud
+    # de consent pendiente. "si" en CONFIRMING_CANCEL, WAIT_SLOT, etc. NO debe
+    # interceptarse aquí — pertenece al flujo activo del estado.
+    _FLOW_STATES = {
+        "WAIT_ESPECIALIDAD", "WAIT_SLOT", "WAIT_MODALIDAD", "WAIT_BOOKING_FOR",
+        "WAIT_PHONE_OWNER_NAME", "WAIT_RUT_AGENDAR", "WAIT_NOMBRE_NUEVO",
+        "WAIT_FECHA_NAC", "WAIT_SEXO", "WAIT_COMUNA", "WAIT_EMAIL",
+        "WAIT_REFERRAL", "WAIT_REFERRAL_POST", "CONFIRMING_CITA",
+        "WAIT_RUT_CANCELAR", "WAIT_CITA_CANCELAR", "CONFIRMING_CANCEL",
+        "WAIT_RUT_REAGENDAR", "WAIT_CITA_REAGENDAR",
+        "WAIT_WAITLIST_CONFIRM", "WAIT_WAITLIST_RUT", "WAIT_WAITLIST_NOMBRE",
+        "WAIT_RUT_VER", "WAIT_DATOS_NUEVO",
+        "WAIT_QUICK_BOOK", "WAIT_DURACION_MASOTERAPIA",
+        "WAIT_CONFIRMAR_ADULTO", "WAIT_MEDFAM_FALLBACK",
+    }
+    _consent_in_active_flow = state in _FLOW_STATES
+    if (_es_consent_si or _es_consent_no) and not _consent_in_active_flow:
+        try:
+            from winback import registrar_consent_respuesta
+            _consent_status = "accepted" if _es_consent_si else "declined"
+            registrar_consent_respuesta(phone, _consent_status, method="reply")
+            log_event(phone, "marketing_consent_respuesta", {
+                "status": _consent_status,
+                "raw": txt[:120],
+            })
+            if _es_consent_no:
+                # Insertar en opt_outs_marketing para exclusión permanente
+                try:
+                    from winback import bi_conn as _bi_conn
+                    with _bi_conn() as _pg:
+                        with _pg.cursor() as _cur:
+                            _cur.execute(
+                                "INSERT INTO bi.opt_outs_marketing "
+                                "(phone, source, reason, created_at) "
+                                "VALUES (%s, %s, %s, NOW()) "
+                                "ON CONFLICT (phone) DO NOTHING",
+                                (phone, "consent_marketing_v1", "declined_marketing"),
+                            )
+                            _pg.commit()
+                except Exception as _oe:
+                    log.warning("opt_out insert error phone=%s: %s", phone, _oe)
+            return "Listo, registramos tu preferencia."
+        except Exception as _ce:
+            log.warning("consent handler error phone=%s: %s", phone, _ce)
+            # No escalar a humano; el paciente recibirá respuesta de todas formas
+            return "Listo, registramos tu preferencia."
 
     # ── Comandos del profesional (doctor_mode) ──────────────────────────
     # Gate via dashboard /profesionalescmc → permiso "wa_access".

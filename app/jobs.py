@@ -6,14 +6,14 @@ import httpx
 from config import MEDILINK_BASE_URL, MEDILINK_TOKEN, ADMIN_ALERT_PHONE, USE_TEMPLATES
 from messaging import (send_whatsapp, send_whatsapp_interactive, send_instagram, send_messenger,
                        send_whatsapp_template)
-from reminders import enviar_recordatorios, enviar_recordatorios_2h
+from reminders import enviar_recordatorios, enviar_recordatorios_2h, enviar_recordatorios_48h
 from fidelizacion import (enviar_seguimiento_postconsulta,
                           enviar_seguimiento_postconsulta_dia_anterior,
                           enviar_reactivacion_pacientes,
                           enviar_adherencia_kine, enviar_recordatorio_control,
                           enviar_crosssell_kine, enviar_cumpleanos, enviar_winback,
                           enviar_crosssell_orl_fono, enviar_crosssell_odonto_estetica,
-                          enviar_crosssell_mg_chequeo)
+                          enviar_crosssell_mg_chequeo, enviar_crosssell_dx)
 from medilink import (buscar_primer_dia, buscar_paciente, sync_citas_dia,
                       SEGUIMIENTO_ESPECIALIDADES, PROFESIONALES, get_slots_libres,
                       listar_citas_paciente)
@@ -1650,3 +1650,136 @@ async def _job_no_show_check():
                 ), name=f"prof_notif_no_show_{id_prof}_{id_cita}")
     except Exception as e:
         log.error("_job_no_show_check fallo: %s", e)
+
+
+async def _job_recordatorios_48h():
+    """Recordatorio 48h anti no-show: diario 10:00 CLT.
+    Solo envía a pacientes con historial de no-show o cita en peak 16-19h.
+    """
+    try:
+        await enviar_recordatorios_48h(send_whatsapp, send_interactive_fn=send_whatsapp_interactive)
+    except Exception as e:
+        log.error("_job_recordatorios_48h falló: %s", e)
+
+
+async def _job_crosssell_dx():
+    """Cross-sell contextual por dx tags (dm2, hta, gineco/PAP).
+    CROSS_SELL_ACTIVE=false hasta piloto N=5 confirmado por Rodrigo.
+    """
+    try:
+        await enviar_crosssell_dx(send_whatsapp, send_template_fn=_tpl)
+    except Exception as e:
+        log.error("_job_crosssell_dx falló: %s", e)
+
+
+async def _job_marketing_consent_blast():
+    """Blast diario L-V 10:30 CLT: envía consent_marketing_v1 (UTILITY)
+    a phones en v_winback_cohortes_contactables sin registro en marketing_consent.
+
+    MARKETING_CONSENT_BLAST_ACTIVE=false hasta que Rodrigo confirme
+    que consent_marketing_v1 está APPROVED en Meta.
+    """
+    import os as _osc
+    if not _osc.getenv("MARKETING_CONSENT_BLAST_ACTIVE", "false").lower() in ("true", "1", "yes"):
+        log.debug("_job_marketing_consent_blast: MARKETING_CONSENT_BLAST_ACTIVE=false — skip")
+        return
+    try:
+        from winback import (
+            is_template_approved,
+            registrar_consent_enviado,
+            bi_conn,
+        )
+        import asyncio as _asyncio_mc
+        from datetime import datetime as _dt_mc
+
+        # Verificar template aprobado
+        if not await is_template_approved("consent_marketing_v1"):
+            log.warning("consent_template_not_approved: consent_marketing_v1 no está APPROVED en Meta — skip")
+            return
+
+        # Ventana horaria L-V 10:30-19:00
+        _now_cl = _dt_mc.now(__import__("zoneinfo").ZoneInfo("America/Santiago"))
+        if _now_cl.weekday() >= 5:
+            log.debug("_job_marketing_consent_blast: fin de semana — skip")
+            return
+        if not (10 <= _now_cl.hour < 19):
+            log.debug("_job_marketing_consent_blast: fuera de ventana horaria — skip")
+            return
+
+        LIMITE_DIA = 200
+        SLEEP_ENTRE = 30
+
+        # Contar enviados hoy
+        with bi_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT COUNT(*) FROM bi.marketing_consent "
+                    "WHERE DATE(consent_sent_at AT TIME ZONE 'America/Santiago') = CURRENT_DATE"
+                )
+                enviados_hoy = cur.fetchone()[0]
+
+        if enviados_hoy >= LIMITE_DIA:
+            log.info("consent_blast: límite diario %d alcanzado", LIMITE_DIA)
+            return
+
+        # Candidatos: en cohortes_contactables pero sin registro consent
+        with bi_conn() as conn2:
+            with conn2.cursor() as cur:
+                cur.execute(
+                    "SELECT wc.telefono FROM bi.v_winback_cohortes_contactables wc "
+                    "WHERE wc.telefono NOT IN (SELECT phone FROM bi.marketing_consent) "
+                    f"LIMIT {LIMITE_DIA - enviados_hoy}"
+                )
+                phones = [r[0] for r in cur.fetchall()]
+
+        log.info("consent_blast: %d candidatos a enviar hoy", len(phones))
+        enviados = 0
+        for phone in phones:
+            # Re-verificar ventana en cada iteración
+            _now_loop = _dt_mc.now(__import__("zoneinfo").ZoneInfo("America/Santiago"))
+            if not (10 <= _now_loop.hour < 19) or _now_loop.weekday() >= 5:
+                log.info("consent_blast: ventana cerrada — detenido en %d enviados", enviados)
+                break
+            try:
+                await send_whatsapp_template(
+                    phone,
+                    "consent_marketing_v1",
+                )
+                registrar_consent_enviado(phone)
+                enviados += 1
+                log.info("consent_blast enviado → %s (%d/%d)", phone, enviados, len(phones))
+            except Exception as e:
+                log.error("consent_blast error phone=%s: %s", phone, e)
+            await _asyncio_mc.sleep(SLEEP_ENTRE)
+
+        log.info("consent_blast: sesión completada, enviados=%d", enviados)
+    except Exception as e:
+        log.error("_job_marketing_consent_blast falló: %s", e)
+
+
+# ── Winback BI ────────────────────────────────────────────────────────────────
+
+async def _job_custom_audiences_sync() -> None:
+    """Job diario 04:00 CLT: sincroniza Custom Audiences con Meta Marketing API."""
+    try:
+        from custom_audiences_sync import job_custom_audiences_diario
+        await job_custom_audiences_diario()
+    except Exception as e:
+        log.error("_job_custom_audiences_sync fallo: %s", e)
+
+
+async def _job_winback_bi() -> None:
+    """Job diario L-V 10:05 CLT: campanas winback desde BI Postgres.
+
+    Guarda con WINBACK_ACTIVE=false en .env hasta confirmar aprobación
+    de templates en Meta Business Manager.
+    """
+    try:
+        from winback import job_winback_diario, WINBACK_ACTIVE
+        if not WINBACK_ACTIVE:
+            log.debug("_job_winback_bi: WINBACK_ACTIVE=false — skip")
+            return
+        stats = await job_winback_diario()
+        log.info("_job_winback_bi: %s", stats)
+    except Exception as e:
+        log.error("_job_winback_bi fallo: %s", e)

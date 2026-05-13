@@ -36,7 +36,7 @@ from session import (get_session, is_duplicate, reset_session, save_session,
                      get_profile, save_profile)
 from resilience import is_medilink_down
 from jobs import (_enviar_reenganche, _sync_citas_hoy,
-                  _job_recordatorios, _job_recordatorios_2h,
+                  _job_recordatorios, _job_recordatorios_2h, _job_recordatorios_48h,
                   _job_postconsulta, _job_postconsulta_morning,
                   _job_enrolar_atendidos_dia,
                   _job_detectar_cancelaciones,
@@ -59,7 +59,11 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_telemedicina_recordatorios,
                   _job_resumen_diario_profesionales,
                   _job_resumen_semanal_profesionales,
-                  _job_no_show_check)
+                  _job_no_show_check,
+                  _job_crosssell_dx,
+                  _job_winback_bi,
+                  _job_custom_audiences_sync,
+                  _job_marketing_consent_blast)
 import admin_routes
 import portal_routes
 
@@ -166,6 +170,15 @@ async def lifespan(app: FastAPI):
         _job_recordatorios_2h,
         CronTrigger(hour="7-21", minute="0,15,30,45", timezone=_CLT),
         id="recordatorios_2h",
+        replace_existing=True,
+    )
+    # Recordatorios 48h anti no-show: diario 10:00 CLT.
+    # Solo envía a pacientes con historial de no-show o cita en peak 16-19h.
+    # Columna reminder_48h_sent se agrega inline en session.py si no existe.
+    scheduler.add_job(
+        _job_recordatorios_48h,
+        CronTrigger(hour=10, minute=0, timezone=_CLT),
+        id="recordatorios_48h",
         replace_existing=True,
     )
     # Reenganche: cada 5 minutos revisa sesiones abandonadas
@@ -430,8 +443,41 @@ async def lifespan(app: FastAPI):
         id="telemedicina_recordatorios",
         replace_existing=True,
     )
-    # Cross-sell por dx tags: diario 11:00 CLT. Pendiente de implementación.
-    # scheduler.add_job(_job_crosssell_dx, CronTrigger(hour=11, minute=0, timezone=_CLT), id='crosssell_dx_diario')
+    # Cross-sell por dx tags: diario 11:00 CLT.
+    # INACTIVO por defecto (CROSS_SELL_ACTIVE=false).
+    # Activar solo después de piloto N=5 y confirmación de Rodrigo.
+    scheduler.add_job(
+        _job_crosssell_dx,
+        CronTrigger(hour=11, minute=0, timezone=_CLT),
+        id="crosssell_dx_diario",
+        replace_existing=True,
+    )
+    # Custom Audiences Meta: diario 04:00 CLT
+    scheduler.add_job(
+        _job_custom_audiences_sync,
+        CronTrigger(hour=4, minute=0, timezone=_CLT),
+        id="custom_audiences_sync_diario",
+        replace_existing=True,
+    )
+    # Winback BI: L-V 10:05 CLT — usa bi.v_winback_cohortes_contactables
+    # INACTIVO por defecto (WINBACK_ACTIVE=false en .env).
+    # Activar solo después de confirmar aprobación de templates en Meta.
+    scheduler.add_job(
+        _job_winback_bi,
+        CronTrigger(day_of_week="mon-fri", hour=10, minute=5, timezone=_CLT),
+        id="winback_bi_diario",
+        replace_existing=True,
+    )
+    # Marketing consent blast: L-V 10:30 CLT — envía consent_marketing_v1 (UTILITY)
+    # a phones en v_winback_cohortes_contactables sin registro en marketing_consent.
+    # INACTIVO por defecto (MARKETING_CONSENT_BLAST_ACTIVE=false en .env).
+    # Activar solo cuando Rodrigo confirme que consent_marketing_v1 está APPROVED en Meta.
+    scheduler.add_job(
+        _job_marketing_consent_blast,
+        CronTrigger(day_of_week="mon-fri", hour=10, minute=30, timezone=_CLT),
+        id="marketing_consent_blast",
+        replace_existing=True,
+    )
     # Primera generación al arrancar (sin await — no bloquear startup)
     import asyncio as _asyncio_startup
     _asyncio_startup.get_event_loop().create_task(_job_regenerate_heatmap_cache())
@@ -439,8 +485,9 @@ async def lifespan(app: FastAPI):
     log.info(
         "Scheduler iniciado — recordatorios 09:00 · recordatorios 2h cada 15min · cumpleaños 10:00 · "
         "post-consulta 10:00 · reactivación lun 10:30 · adherencia kine 11:00 · "
-        "control 11:30 · cross-sell kine mié 10:30 · winback 1er lun mes 10:00 · sync caché 23:50 · "
-        "watchdog medilink 1min · doctor alerts cada 5min + reportes 09/12/16/20"
+        "control 11:30 · cross-sell kine mié 10:30 · winback-bi L-V 10:05 (ACTIVE=%s) · "
+        "sync caché 23:50 · watchdog medilink 1min · doctor alerts cada 5min + reportes 09/12/16/20",
+        os.getenv('WINBACK_ACTIVE', 'false'),
     )
     yield
     scheduler.shutdown()
@@ -1281,7 +1328,7 @@ async def sitemap_xml():
         (f"{base_url}/comuna/", "0.85", "monthly"),
         (f"{base_url}/privacidad", "0.3", "yearly"),
     ]
-    # Landings directas servidas vía Snippet 8 (bridge WP) bajo dominio canónico
+    # Landings directas (servidas vía bridge WP Snippet 8 bajo el dominio canónico)
     for direct_slug in ("lebu", "empresas", "los-alamos", "canete", "chequeos", "curanilahue"):
         urls.append((f"{base_url}/{direct_slug}", "0.85", "monthly"))
     # Comuna hubs
@@ -2140,6 +2187,20 @@ def segmentacioncmc_page():
     if not _SEGMENTACION_CMC_HTML:
         raise HTTPException(404, "Dashboard Segmentación CMC no disponible")
     return _SEGMENTACION_CMC_HTML
+
+
+_QR_OPTIN_HTML = (_TEMPLATE_DIR / "qr_optin.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "qr_optin.html").exists() else ""
+
+@app.get("/qr-optin", response_class=HTMLResponse)
+@app.get("/qr-optin/", response_class=HTMLResponse)
+@app.get("/activar-whatsapp", response_class=HTMLResponse)
+def qr_optin_page():
+    """Página pública con QR para activar WhatsApp en recepción. El paciente
+    atendido offline escanea, WhatsApp se abre con texto pre-llenado, el bot
+    captura el opt-in formal con botones (Ley 19.628)."""
+    if not _QR_OPTIN_HTML:
+        raise HTTPException(404, "Página de opt-in no disponible")
+    return _QR_OPTIN_HTML
 
 
 _CMC_SNAPSHOT_DIR = Path("/opt/chatbot-cmc/data/cmc_snapshot")
