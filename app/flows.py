@@ -2080,13 +2080,23 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # Fix: si el phone está en la whitelist → loggear, guardar mensaje, NO responder.
     # Se acepta HUMAN_TAKEOVER activo (recepcionista tomó control) para que la
     # conversación fluya normalmente cuando recepción quiere responder.
+    # EXCEPCIÓN: ADMIN_ALERT_PHONE (dueño) y profesionales con permiso wa_access
+    # opt-in al Modo Asistente y SÍ deben recibir respuesta del bot.
     from staff_whitelist import is_staff, get_staff_name
     if is_staff(phone):
-        nombre_staff = get_staff_name(phone)
-        log_event(phone, "staff_silenciado", {"nombre": nombre_staff, "state": state})
-        # No responder al staff en ningún estado — el mensaje ya fue guardado
-        # por log_message en el webhook antes de llegar acá.
-        return None
+        _tiene_wa_access = False
+        if phone != ADMIN_ALERT_PHONE:
+            try:
+                from admin_routes import get_permiso as _gp
+                _tiene_wa_access = _gp(phone, "wa_access", default=False)
+            except Exception:
+                pass
+        if phone != ADMIN_ALERT_PHONE and not _tiene_wa_access:
+            nombre_staff = get_staff_name(phone)
+            log_event(phone, "staff_silenciado", {"nombre": nombre_staff, "state": state})
+            # No responder al staff en ningún estado — el mensaje ya fue guardado
+            # por log_message en el webhook antes de llegar acá.
+            return None
 
     # ── Comando admin: /status (y sinónimos) desde el celular del admin ───
     # Abre la ventana 24h de WhatsApp y devuelve el reporte EN VIVO. Útil
