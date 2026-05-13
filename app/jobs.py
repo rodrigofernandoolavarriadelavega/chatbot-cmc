@@ -13,7 +13,7 @@ from fidelizacion import (enviar_seguimiento_postconsulta,
                           enviar_adherencia_kine, enviar_recordatorio_control,
                           enviar_crosssell_kine, enviar_cumpleanos, enviar_winback,
                           enviar_crosssell_orl_fono, enviar_crosssell_odonto_estetica,
-                          enviar_crosssell_mg_chequeo)
+                          enviar_crosssell_mg_chequeo, enviar_crosssell_dx)
 from medilink import (buscar_primer_dia, buscar_paciente, sync_citas_dia,
                       SEGUIMIENTO_ESPECIALIDADES, PROFESIONALES, get_slots_libres,
                       listar_citas_paciente)
@@ -255,6 +255,182 @@ async def _job_postconsulta_morning():
         log.exception("Postconsulta morning falló: %s", e)
 
 
+async def _job_enrolar_atendidos_dia():
+    """21:30 CLT — antes del cron postconsulta de las 22:00.
+
+    Tira de Medilink TODAS las atenciones efectivas del día (id_estado 2 o 14)
+    y para cada paciente con perfil ya conocido en el bot, inserta una fila en
+    citas_bot. Así el cron postconsulta de las 22:00 también alcanza a quienes
+    agendaron por recepción/presencial y no pasaron por el bot.
+
+    Pacientes SIN perfil bot (sin opt-in WhatsApp) se loguean a tabla
+    `pacientes_sin_optin` para que recepción los enrole con consentimiento
+    (Ley 19.628). NO se les manda mensaje automático.
+    """
+    import asyncio, sqlite3
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    from medilink import _q, MEDILINK_SUCURSAL
+    from session import _conn
+
+    _TZ_CHILE = ZoneInfo("America/Santiago")
+
+    if is_medilink_down():
+        log.info("enrolar_atendidos: Medilink down, skip")
+        return
+
+    hoy = datetime.now(_TZ_CHILE).date().isoformat()
+
+    # 1) Pull citas atendidas hoy desde Medilink (por profesional, rate-safe)
+    atendidos = []
+    async with httpx.AsyncClient(timeout=30) as client:
+        for id_prof in PROFESIONALES.keys():
+            try:
+                params = {
+                    "id_sucursal":    {"eq": int(MEDILINK_SUCURSAL)},
+                    "id_profesional": {"eq": id_prof},
+                    "fecha":          {"eq": hoy},
+                }
+                r = await client.get(
+                    f"{MEDILINK_BASE_URL}/citas",
+                    params={"q": _q(params)},
+                    headers=HEADERS_MEDILINK,
+                )
+                if r.status_code == 200:
+                    for c in r.json().get("data", []):
+                        if c.get("id_estado") in (2, 14):
+                            atendidos.append(c)
+            except Exception as e:
+                log.warning("enrolar_atendidos prof=%s: %s", id_prof, e)
+            await asyncio.sleep(0.35)
+
+    if not atendidos:
+        log.info("enrolar_atendidos %s: sin atenciones", hoy)
+        return
+
+    log.info("enrolar_atendidos %s: %d atenciones encontradas", hoy, len(atendidos))
+
+    # 2) Asegurar tabla pacientes_sin_optin (para recepción)
+    nuevos_enrolados = 0
+    ya_enrolados = 0
+    sin_optin = 0
+    sin_celular = 0
+
+    # heatmap_cache.db tiene rut + celular por id_paciente Medilink
+    try:
+        heat = sqlite3.connect("/opt/chatbot-cmc/data/heatmap_cache.db")
+    except Exception as e:
+        log.warning("enrolar_atendidos: no se pudo abrir heatmap_cache: %s", e)
+        heat = None
+
+    with _conn() as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS pacientes_sin_optin (
+                id_paciente_medilink INTEGER PRIMARY KEY,
+                rut                  TEXT,
+                nombre               TEXT,
+                celular              TEXT,
+                primera_atencion     TEXT,
+                ultima_atencion      TEXT,
+                profesional          TEXT,
+                contactado_at        TEXT,
+                created_at           TEXT DEFAULT (datetime('now'))
+            )
+        """)
+
+        for cita in atendidos:
+            pid_med = cita.get("id_paciente")
+            cita_id = str(cita.get("id"))
+            if not pid_med or not cita_id:
+                continue
+
+            # Tier A: ¿ya está esta cita en citas_bot?
+            if conn.execute("SELECT 1 FROM citas_bot WHERE id_cita = ? LIMIT 1",
+                            (cita_id,)).fetchone():
+                ya_enrolados += 1
+                continue
+
+            # Buscar phone conocido por id_paciente_medilink en citas_bot previas
+            row = conn.execute(
+                "SELECT phone FROM citas_bot "
+                "WHERE id_paciente_medilink = ? "
+                "ORDER BY created_at DESC LIMIT 1",
+                (pid_med,)).fetchone()
+            phone = row[0] if row else None
+
+            # Si no, buscar en heatmap_cache por RUT/celular y cruzar con contact_profiles
+            rut_clean = None
+            celular_med = None
+            if not phone and heat:
+                try:
+                    h = heat.execute(
+                        "SELECT rut, celular FROM pacientes_heatmap WHERE id = ?",
+                        (pid_med,)).fetchone()
+                except Exception:
+                    h = None
+                if h:
+                    rut_h, cel_h = h
+                    rut_clean = (rut_h or "").replace(".", "").replace("-", "").upper() or None
+                    celular_med = (cel_h or "").strip() or None
+                    if rut_clean:
+                        pr = conn.execute(
+                            "SELECT phone FROM contact_profiles "
+                            "WHERE REPLACE(REPLACE(UPPER(rut),'.',''),'-','') = ?",
+                            (rut_clean,)).fetchone()
+                        if pr:
+                            phone = pr[0]
+
+            if phone:
+                # Tier B: tiene perfil bot → enrolar la cita
+                conn.execute("""
+                    INSERT INTO citas_bot
+                        (phone, id_cita, especialidad, profesional, fecha, hora,
+                         paciente_nombre, id_paciente_medilink, modalidad, created_at)
+                    VALUES (?, ?, '', ?, ?, ?, ?, ?, 'presencial_enrolado',
+                            datetime('now'))
+                """, (
+                    phone, cita_id,
+                    cita.get("nombre_profesional", ""),
+                    cita.get("fecha", hoy),
+                    cita.get("hora_inicio", ""),
+                    cita.get("nombre_paciente", ""),
+                    pid_med,
+                ))
+                nuevos_enrolados += 1
+                log_event(phone, "enrolar_postconsulta_offline",
+                          {"cita_id": cita_id, "fecha": hoy})
+            else:
+                # Tier C: sin opt-in WhatsApp → tabla pacientes_sin_optin
+                if celular_med:
+                    conn.execute("""
+                        INSERT OR REPLACE INTO pacientes_sin_optin
+                            (id_paciente_medilink, rut, nombre, celular,
+                             primera_atencion, ultima_atencion, profesional)
+                        VALUES (?, ?, ?, ?,
+                                COALESCE((SELECT primera_atencion FROM pacientes_sin_optin
+                                          WHERE id_paciente_medilink = ?), ?),
+                                ?, ?)
+                    """, (
+                        pid_med, rut_clean,
+                        cita.get("nombre_paciente", ""),
+                        celular_med,
+                        pid_med, hoy,
+                        hoy,
+                        cita.get("nombre_profesional", ""),
+                    ))
+                    sin_optin += 1
+                else:
+                    sin_celular += 1
+
+    if heat:
+        heat.close()
+
+    log.info(
+        "enrolar_atendidos %s: nuevos=%d ya_en_citas_bot=%d sin_optin=%d sin_celular=%d",
+        hoy, nuevos_enrolados, ya_enrolados, sin_optin, sin_celular,
+    )
+
+
 async def _job_detectar_cancelaciones():
     """Cada hora: barrer citas futuras (hoy + 14 días) y detectar cancelaciones
     hechas directamente en Medilink (cuando un doctor o recepción anula sin pasar
@@ -471,6 +647,15 @@ async def _job_crosssell_mg_chequeo():
         await enviar_crosssell_mg_chequeo(send_whatsapp, send_template_fn=_tpl)
     except Exception as e:
         log.error("_job_crosssell_mg_chequeo falló (BUG-07): %s", e)
+
+async def _job_crosssell_dx():
+    """Cross-sell contextual por dx tags (dm2, hta, gineco/PAP).
+    CROSS_SELL_ACTIVE=false hasta piloto N=5 confirmado por Rodrigo.
+    """
+    try:
+        await enviar_crosssell_dx(send_whatsapp, send_template_fn=_tpl)
+    except Exception as e:
+        log.error("_job_crosssell_dx falló: %s", e)
 
 async def _job_cumpleanos():
     try:

@@ -38,6 +38,7 @@ from resilience import is_medilink_down
 from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_recordatorios, _job_recordatorios_2h,
                   _job_postconsulta, _job_postconsulta_morning,
+                  _job_enrolar_atendidos_dia,
                   _job_detectar_cancelaciones,
                   _job_monitor_anomalias,
                   _job_reactivacion, _job_abarca_sync, _job_olavarria_sync,
@@ -188,6 +189,17 @@ async def lifespan(app: FastAPI):
         _job_postconsulta_morning,
         CronTrigger(hour=9, minute=0, timezone=_CLT),
         id="seguimiento_postconsulta_morning",
+        replace_existing=True,
+    )
+    # Enrolar atendidos offline (recepción/presencial) a citas_bot para que
+    # el cron postconsulta de las 22:00 los alcance. Corre 21:30 CLT, antes.
+    # Pacientes con perfil bot existente (Tier B) se insertan automático;
+    # los sin opt-in WhatsApp (Tier C) van a tabla pacientes_sin_optin para
+    # que recepción los enrole manualmente respetando Ley 19.628.
+    scheduler.add_job(
+        _job_enrolar_atendidos_dia,
+        CronTrigger(hour=21, minute=30, timezone=_CLT),
+        id="enrolar_atendidos_dia",
         replace_existing=True,
     )
     # Detectar cancelaciones hechas en Medilink: cada hora barre citas futuras
