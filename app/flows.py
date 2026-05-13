@@ -1274,7 +1274,7 @@ def _doctor_mode_menu() -> dict:
         "Hola Rodrigo 👋 ¿Qué necesitas?",
         [
             {"id": "doc_modo_agente", "title": "🤖 Agente CMC"},
-            {"id": "doc_modo_asistente", "title": "👨‍⚕️ Asistente"},
+            {"id": "doc_modo_asistente", "title": "🩺 Asistente"},
         ]
     )
 
