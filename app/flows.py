@@ -2179,6 +2179,13 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # nombre) y para pasarle a `detect_intent` el texto original.
     tl_norm = normalizar_texto_paciente(txt)
 
+    # Fecha de hoy en Chile — disponible en todos los handlers del flujo.
+    # IMPORTANTE: NO mover dentro de bloques condicionales — varios handlers
+    # (WAIT_SLOT, etc.) la necesitan independientemente del estado de entrada.
+    # Bug cd7aec1: estaba solo en el bloque `intent == "agendar"` → UnboundLocalError
+    # cuando state == WAIT_SLOT y el paciente llegaba por otra ruta (ej: consent reply).
+    _hoy_cl = datetime.now(_CHILE_TZ).date()
+
     # ── Contexto recepcionista post-HUMAN_TAKEOVER ────────────────────────────
     # Si la sesión viene de un takeover humano, data puede tener recepcion_resumen.
     # Aplicamos TTL de 30 min: si pasó más tiempo, borramos el contexto para
