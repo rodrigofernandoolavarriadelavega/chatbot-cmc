@@ -58,7 +58,9 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_telemedicina_recordatorios,
                   _job_resumen_diario_profesionales,
                   _job_resumen_semanal_profesionales,
-                  _job_no_show_check)
+                  _job_no_show_check,
+                  _job_winback_bi,
+                  _job_custom_audiences_sync)
 import admin_routes
 import portal_routes
 
@@ -418,6 +420,22 @@ async def lifespan(app: FastAPI):
         id="telemedicina_recordatorios",
         replace_existing=True,
     )
+    # Custom Audiences Meta: diario 04:00 CLT
+    scheduler.add_job(
+        _job_custom_audiences_sync,
+        CronTrigger(hour=4, minute=0, timezone=_CLT),
+        id="custom_audiences_sync_diario",
+        replace_existing=True,
+    )
+    # Winback BI: L-V 10:00 CLT — usa bi.v_winback_cohortes_contactables
+    # INACTIVO por defecto (WINBACK_ACTIVE=false en .env).
+    # Activar solo después de confirmar aprobación de templates en Meta.
+    scheduler.add_job(
+        _job_winback_bi,
+        CronTrigger(day_of_week="mon-fri", hour=10, minute=5, timezone=_CLT),
+        id="winback_bi_diario",
+        replace_existing=True,
+    )
     # Primera generación al arrancar (sin await — no bloquear startup)
     import asyncio as _asyncio_startup
     _asyncio_startup.get_event_loop().create_task(_job_regenerate_heatmap_cache())
@@ -425,8 +443,9 @@ async def lifespan(app: FastAPI):
     log.info(
         "Scheduler iniciado — recordatorios 09:00 · recordatorios 2h cada 15min · cumpleaños 10:00 · "
         "post-consulta 10:00 · reactivación lun 10:30 · adherencia kine 11:00 · "
-        "control 11:30 · cross-sell kine mié 10:30 · winback 1er lun mes 10:00 · sync caché 23:50 · "
-        "watchdog medilink 1min · doctor alerts cada 5min + reportes 09/12/16/20"
+        "control 11:30 · cross-sell kine mié 10:30 · winback-bi L-V 10:05 (ACTIVE=%s) · "
+        "sync caché 23:50 · watchdog medilink 1min · doctor alerts cada 5min + reportes 09/12/16/20",
+        os.getenv('WINBACK_ACTIVE', 'false'),
     )
     yield
     scheduler.shutdown()

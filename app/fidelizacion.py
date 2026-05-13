@@ -330,10 +330,11 @@ async def enviar_seguimiento_postconsulta(send_fn, send_template_fn=None,
                 from session import get_profile as _gp_fidel
                 _prof_fidel = _gp_fidel(cita["phone"]) or {}
                 _nom_fidel = (cita.get("nombre") or _prof_fidel.get("nombre") or "").split()
+                from config import get_arancel_cpl as _get_arancel
                 _asyncio_fidel.create_task(_mc_purch.send_event(
                     "Purchase",
                     phone=cita["phone"],
-                    value=float({"Ecografía": 45000, "Ortodoncia": 120000}.get(cita.get("especialidad", ""), 25000)),
+                    value=float(_get_arancel(cita.get("especialidad"))),
                     currency="CLP",
                     rut=_prof_fidel.get("rut") or None,
                     first_name=_nom_fidel[0] if _nom_fidel else None,

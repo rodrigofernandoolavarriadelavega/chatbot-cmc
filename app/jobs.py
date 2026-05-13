@@ -1474,3 +1474,31 @@ async def _job_no_show_check():
                 ), name=f"prof_notif_no_show_{id_prof}_{id_cita}")
     except Exception as e:
         log.error("_job_no_show_check fallo: %s", e)
+
+
+# ── Winback BI ────────────────────────────────────────────────────────────────
+
+async def _job_custom_audiences_sync() -> None:
+    """Job diario 04:00 CLT: sincroniza Custom Audiences con Meta Marketing API."""
+    try:
+        from custom_audiences_sync import job_custom_audiences_diario
+        await job_custom_audiences_diario()
+    except Exception as e:
+        log.error("_job_custom_audiences_sync fallo: %s", e)
+
+
+async def _job_winback_bi() -> None:
+    """Job diario L-V 10:05 CLT: campanas winback desde BI Postgres.
+
+    Guarda con WINBACK_ACTIVE=false en .env hasta confirmar aprobación
+    de templates en Meta Business Manager.
+    """
+    try:
+        from winback import job_winback_diario, WINBACK_ACTIVE
+        if not WINBACK_ACTIVE:
+            log.debug("_job_winback_bi: WINBACK_ACTIVE=false — skip")
+            return
+        stats = await job_winback_diario()
+        log.info("_job_winback_bi: %s", stats)
+    except Exception as e:
+        log.error("_job_winback_bi fallo: %s", e)
