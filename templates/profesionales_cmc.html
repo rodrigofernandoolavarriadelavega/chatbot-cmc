@@ -323,9 +323,13 @@ const FEATURES = [
   { id: "notif_nueva_cita",   label: "Push: nuevo paciente agendado",        desc: "WhatsApp inmediato al profesional cuando el bot agenda un paciente nuevo en su agenda." },
   { id: "notif_cancelacion",  label: "Push: paciente cancela",                desc: "Aviso cuando un paciente cancela su hora con este profesional." },
   { id: "notif_reagenda",     label: "Push: paciente reagenda",               desc: "Aviso cuando un paciente cambia su hora (de fecha X a fecha Y)." },
-  { id: "resumen_diario_07",  label: "Resumen agenda 07:00 AM",               desc: "Lista de pacientes del día con estado de confirmación al iniciar la mañana." },
+  { id: "notif_no_show",      label: "Push: posible no-show",                 desc: "Alerta cuando un paciente no aparece atendido 30 min después de su hora. Cron cada 30 min, 09:00-21:00." },
+  { id: "resumen_diario_07",  label: "Resumen agenda 07:00 AM",               desc: "Lista de pacientes del día (nombre, edad, hora) al iniciar la mañana. Lun-Sáb." },
   { id: "resumen_semanal_dom", label: "Resumen semanal (domingo 19:00)",      desc: "Pacientes confirmados de la semana entrante. Útil para psico/kine que planifican." },
   { id: "dashboard_link",     label: "Link dashboard personal",               desc: "Recibe link /profesional/dashboard?token=… con sus KPIs en el resumen del lunes." },
+
+  { cat: "Alertas clínicas (urgentes · ignoran quiet hours)" },
+  { id: "notif_paciente_peor", label: "Push: paciente reporta 'peor' post-consulta", desc: "Aviso cuando un paciente atendido por este profesional califica 1-2/5 en seguimiento post-consulta. Best practice clínico." },
 
   { cat: "Inteligencia clínica" },
   { id: "asistente_clinico",  label: "Modo asistente clínico",               desc: "Preventivos por edad/sexo, guías GES por patología (DM2, HTA, asma, EPOC…)." },

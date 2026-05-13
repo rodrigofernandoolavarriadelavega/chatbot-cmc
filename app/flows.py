@@ -3096,6 +3096,26 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     spawn_task(send_whatsapp(ADMIN_ALERT_PHONE, alerta))
                 except Exception:
                     log.warning("No se pudo enviar alerta peor a %s", ADMIN_ALERT_PHONE)
+                # ── Notif al profesional tratante (opt-in via dashboard) ───
+                try:
+                    import prof_notifications as _pn_pp
+                    from medilink import PROFESIONALES as _PROFS_PP
+                    _id_prof_pp = next(
+                        (pid for pid, info in _PROFS_PP.items()
+                         if info.get("nombre") == prof),
+                        None
+                    )
+                    if _id_prof_pp:
+                        from resilience import spawn_task as _spawn_pp
+                        _spawn_pp(_pn_pp.notify_paciente_peor(
+                            id_prof=_id_prof_pp,
+                            profesional_nombre=prof,
+                            paciente_nombre=nombre_pac,
+                            paciente_phone=phone,
+                            especialidad=esp,
+                        ), name=f"prof_notif_peor_{_id_prof_pp}")
+                except Exception as _pn_pp_err:
+                    log.warning("prof_notif_paciente_peor falló: %s", _pn_pp_err)
             return _btn_msg(
                 "Lamentamos escuchar eso 😟\n\n"
                 f"¿Quieres reagendar una consulta{' con ' + prof if prof else ''}?",
@@ -6373,6 +6393,38 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "modalidad": data.get("modalidad", "particular"),
                     "id_cita_old": cita_old.get("id") if reagendar else None,
                 })
+                # ── Notificación al profesional (push WA, ventana 24h, $0) ───
+                # Best practice: avisar al profesional cuando bot agenda/reagenda
+                # un paciente en su agenda — para que no le caiga uno sorpresa.
+                try:
+                    import prof_notifications as _pn
+                    _id_prof = slot.get("id_profesional")
+                    if _id_prof:
+                        from resilience import spawn_task as _spawn
+                        if reagendar:
+                            _spawn(_pn.notify_reagenda(
+                                id_prof=_id_prof,
+                                profesional_nombre=slot["profesional"],
+                                paciente_nombre=paciente.get("nombre", ""),
+                                fecha_old=cita_old.get("fecha", ""),
+                                hora_old=cita_old.get("hora_inicio", ""),
+                                fecha_new=slot["fecha"],
+                                hora_new=slot["hora_inicio"],
+                                id_cita_old=str(cita_old.get("id", "")),
+                                id_cita_new=id_cita,
+                            ), name=f"prof_notif_reagenda_{_id_prof}")
+                        else:
+                            _spawn(_pn.notify_nueva_cita(
+                                id_prof=_id_prof,
+                                profesional_nombre=slot["profesional"],
+                                paciente_nombre=paciente.get("nombre", ""),
+                                fecha=slot["fecha"],
+                                hora=slot["hora_inicio"],
+                                modalidad=data.get("modalidad", "particular"),
+                                id_cita=id_cita,
+                            ), name=f"prof_notif_nueva_cita_{_id_prof}")
+                except Exception as _pn_err:
+                    log.warning("prof_notification falló (no bloquea cita): %s", _pn_err)
                 # ── Telemetria PNI: pni_cita_generada ─────────────────────
                 # Si este phone tenia un pni_enviado en las ultimas 72h,
                 # loggear atribucion. Idempotente por cita_id.
@@ -6811,6 +6863,29 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if ok:
                 log_event(phone, "cita_cancelada", {"id_cita": cita["id"], "profesional": cita.get("profesional")})
                 save_tag(phone, "canceló")
+                # ── Notificación al profesional (push WA, ventana 24h, $0) ───
+                try:
+                    import prof_notifications as _pn_c
+                    from medilink import PROFESIONALES as _PROFS_C
+                    _prof_nombre_c = cita.get("profesional", "")
+                    _id_prof_c = next(
+                        (pid for pid, info in _PROFS_C.items()
+                         if info.get("nombre") == _prof_nombre_c),
+                        None
+                    )
+                    if _id_prof_c:
+                        from resilience import spawn_task as _spawn_c
+                        _pac_nombre_c = get_profile(phone).get("nombre", "") if get_profile(phone) else ""
+                        _spawn_c(_pn_c.notify_cancelacion(
+                            id_prof=_id_prof_c,
+                            profesional_nombre=_prof_nombre_c,
+                            paciente_nombre=_pac_nombre_c,
+                            fecha=cita.get("fecha", ""),
+                            hora=cita.get("hora_inicio", ""),
+                            id_cita=str(cita.get("id", "")),
+                        ), name=f"prof_notif_cancel_{_id_prof_c}")
+                except Exception as _pn_c_err:
+                    log.warning("prof_notif_cancelacion falló: %s", _pn_c_err)
                 # ── Event-driven: notificar waitlist al instante ──
                 esp_cancelada = cita.get("especialidad", "")
                 if esp_cancelada:

@@ -1252,3 +1252,225 @@ async def _job_telemedicina_recordatorios():
                      len(pendientes_24h), len(pendientes_30min))
     except Exception as e:
         log.error("_job_telemedicina_recordatorios fallo: %s", e)
+
+
+# ── Notificaciones automáticas a profesionales (best practices 2026-05) ───────
+
+async def _job_resumen_diario_profesionales():
+    """Lun-Sáb 07:00 CLT: para cada profesional con permiso `resumen_diario_07`
+    activo y dentro de ventana 24h, envía el listado de pacientes del día.
+
+    Best practice: el profesional planifica su mañana sabiendo a quién verá,
+    cuál es nuevo vs control, y si hay confirmaciones pendientes. Resuelve
+    el dolor de Jorge Montalba (2026-05-11) — paciente que apareció en agenda
+    de un día para otro sin aviso.
+    """
+    try:
+        import prof_notifications as pn
+        from medilink import obtener_agenda_dia, PROFESIONALES
+        from datetime import date as _date
+        from resilience import spawn_task
+
+        hoy = _date.today().strftime("%Y-%m-%d")
+        dias = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+        hoy_label = dias[_date.today().weekday()]
+
+        for id_prof, wa_phone in pn.PROF_ID_TO_PHONE.items():
+            if not pn._tiene_permiso(wa_phone, "resumen_diario_07"):
+                continue
+            if not pn._dentro_ventana_24h(wa_phone):
+                pn.log_event(wa_phone, "prof_notif_skipped", {
+                    "event_type": "resumen_diario", "razon": "fuera_ventana_24h",
+                    "feature": "resumen_diario_07", "id_prof": id_prof,
+                })
+                continue
+
+            try:
+                agenda = await obtener_agenda_dia(id_prof, hoy)
+            except Exception as e:
+                log.warning("resumen_diario: error agenda prof=%d: %s", id_prof, e)
+                continue
+
+            prof_info = PROFESIONALES.get(id_prof, {})
+            nombre_corto = pn._primer_nombre(prof_info.get("nombre", ""))
+
+            if not agenda:
+                texto = (
+                    f"☀️ *Buenos días, {nombre_corto}*\n\n"
+                    f"Hoy {hoy_label} no tienes pacientes agendados.\n\n"
+                    f"_Día libre — buena oportunidad para revisar tu dashboard "
+                    f"o atender lista de espera._"
+                )
+            else:
+                lineas = [f"☀️ *Buenos días, {nombre_corto}*\n",
+                          f"Tu agenda del {hoy_label}:"]
+                for c in agenda:
+                    hora = c.get("hora", c.get("hora_inicio", ""))[:5]
+                    pac = c.get("paciente", {})
+                    pac_nombre = pac.get("nombre", "—") if isinstance(pac, dict) else str(pac)
+                    edad = pac.get("edad", "") if isinstance(pac, dict) else ""
+                    edad_str = f" ({edad}a)" if edad else ""
+                    lineas.append(f"   🕐 {hora}  ·  {pac_nombre}{edad_str}")
+                lineas.append("")
+                lineas.append(f"Total: *{len(agenda)} pacientes*")
+                lineas.append("\n_Responde *agenda* en cualquier momento para ver tu día actualizado._")
+                texto = "\n".join(lineas)
+
+            try:
+                from messaging import send_whatsapp as _swa
+                await _swa(wa_phone, texto)
+                pn.log_event(wa_phone, "prof_notif_sent", {
+                    "event_type": "resumen_diario",
+                    "feature": "resumen_diario_07",
+                    "id_prof": id_prof,
+                    "n_pacientes": len(agenda),
+                })
+                log.info("resumen_diario enviado a prof=%d (%d pacientes)",
+                         id_prof, len(agenda))
+            except Exception as e:
+                log.error("resumen_diario send error prof=%d: %s", id_prof, e)
+    except Exception as e:
+        log.error("_job_resumen_diario_profesionales fallo: %s", e)
+
+
+async def _job_resumen_semanal_profesionales():
+    """Domingo 19:00 CLT: para cada profesional con permiso `resumen_semanal_dom`
+    activo y dentro de ventana 24h, envía resumen de pacientes confirmados
+    para la semana que empieza al día siguiente (lun-sáb).
+
+    Útil especialmente para psicología/kine/nutrición donde el profesional
+    planifica con visión semanal.
+    """
+    try:
+        import prof_notifications as pn
+        from medilink import obtener_agenda_dia, PROFESIONALES
+        from datetime import date as _date, timedelta as _td
+
+        # Domingo a la noche → lunes próximo
+        lunes = _date.today() + _td(days=1)
+        dias_es = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado"]
+
+        for id_prof, wa_phone in pn.PROF_ID_TO_PHONE.items():
+            if not pn._tiene_permiso(wa_phone, "resumen_semanal_dom"):
+                continue
+            if not pn._dentro_ventana_24h(wa_phone):
+                pn.log_event(wa_phone, "prof_notif_skipped", {
+                    "event_type": "resumen_semanal", "razon": "fuera_ventana_24h",
+                    "feature": "resumen_semanal_dom", "id_prof": id_prof,
+                })
+                continue
+
+            prof_info = PROFESIONALES.get(id_prof, {})
+            nombre_corto = pn._primer_nombre(prof_info.get("nombre", ""))
+
+            lineas_dias = []
+            total_semana = 0
+            for offset in range(6):  # lun..sáb
+                fecha = lunes + _td(days=offset)
+                fecha_str = fecha.strftime("%Y-%m-%d")
+                try:
+                    agenda = await obtener_agenda_dia(id_prof, fecha_str)
+                except Exception as e:
+                    log.warning("resumen_semanal: error agenda prof=%d %s: %s",
+                                id_prof, fecha_str, e)
+                    agenda = []
+                if not agenda:
+                    lineas_dias.append(
+                        f"   *{dias_es[offset].capitalize()} {fecha.day}*  ·  sin pacientes"
+                    )
+                    continue
+                total_semana += len(agenda)
+                lineas_dias.append(
+                    f"   *{dias_es[offset].capitalize()} {fecha.day}*  ·  {len(agenda)} paciente{'s' if len(agenda)!=1 else ''}"
+                )
+                for c in agenda[:8]:  # máx 8 por día en el resumen
+                    hora = c.get("hora", c.get("hora_inicio", ""))[:5]
+                    pac = c.get("paciente", {})
+                    pac_nombre = pac.get("nombre", "—") if isinstance(pac, dict) else str(pac)
+                    lineas_dias.append(f"      🕐 {hora}  ·  {pac_nombre}")
+                if len(agenda) > 8:
+                    lineas_dias.append(f"      _… y {len(agenda)-8} más_")
+
+            texto = (
+                f"📋 *Tu semana, {nombre_corto}*\n\n"
+                f"Semana del {lunes.day}/{lunes.month}:\n"
+                + "\n".join(lineas_dias)
+                + f"\n\nTotal semana: *{total_semana} pacientes*"
+                + "\n\n_Responde *agenda* cualquier día para ver detalle actualizado._"
+            )
+            try:
+                from messaging import send_whatsapp as _swa
+                await _swa(wa_phone, texto)
+                pn.log_event(wa_phone, "prof_notif_sent", {
+                    "event_type": "resumen_semanal",
+                    "feature": "resumen_semanal_dom",
+                    "id_prof": id_prof,
+                    "total_pacientes": total_semana,
+                })
+                log.info("resumen_semanal enviado a prof=%d (%d pacientes)",
+                         id_prof, total_semana)
+            except Exception as e:
+                log.error("resumen_semanal send error prof=%d: %s", id_prof, e)
+    except Exception as e:
+        log.error("_job_resumen_semanal_profesionales fallo: %s", e)
+
+
+async def _job_no_show_check():
+    """Cada 30 min, 09:00-21:00 CLT: detecta citas que ya pasaron hora_inicio + 30 min
+    sin marcar como atendidas → notif_no_show al profesional con permiso activo.
+
+    Best practice: el profesional decide si insistir al paciente o liberar el
+    cupo a lista de espera. Mejor que descubrirlo al día siguiente.
+    """
+    try:
+        import prof_notifications as pn
+        from medilink import obtener_agenda_dia, PROFESIONALES
+        from datetime import datetime as _dt, date as _date
+        from zoneinfo import ZoneInfo as _ZI
+        from resilience import spawn_task
+
+        ahora_cl = _dt.now(_ZI("America/Santiago"))
+        hoy_str = ahora_cl.date().strftime("%Y-%m-%d")
+        ahora_h = ahora_cl.hour
+        ahora_m = ahora_cl.minute
+
+        for id_prof, wa_phone in pn.PROF_ID_TO_PHONE.items():
+            if not pn._tiene_permiso(wa_phone, "notif_no_show"):
+                continue
+            try:
+                agenda = await obtener_agenda_dia(id_prof, hoy_str)
+            except Exception:
+                continue
+            prof_info = PROFESIONALES.get(id_prof, {})
+            prof_nombre = prof_info.get("nombre", "")
+            for c in agenda:
+                hora_str = c.get("hora", c.get("hora_inicio", ""))[:5]
+                if not hora_str or ":" not in hora_str:
+                    continue
+                try:
+                    hh, mm = map(int, hora_str.split(":"))
+                except Exception:
+                    continue
+                # 30 min después de la hora_inicio
+                pasaron_min = (ahora_h - hh) * 60 + (ahora_m - mm)
+                if pasaron_min < 30 or pasaron_min > 90:
+                    # ventana de detección: entre 30 y 90 min después de la hora.
+                    continue
+                # Solo si Medilink NO marca como atendido. Heurística: campo
+                # estado != 'atendido'/'finalizado'. Si Medilink no expone esto
+                # aún, igual notificamos — el profesional sabe si llegó o no.
+                estado = (c.get("estado") or "").lower()
+                if any(k in estado for k in ("atend", "final", "complet")):
+                    continue
+                pac = c.get("paciente", {})
+                pac_nombre = pac.get("nombre", "") if isinstance(pac, dict) else ""
+                id_cita = str(c.get("id", ""))
+                spawn_task(pn.notify_no_show(
+                    id_prof=id_prof,
+                    profesional_nombre=prof_nombre,
+                    paciente_nombre=pac_nombre,
+                    hora=hora_str,
+                    id_cita=id_cita,
+                ), name=f"prof_notif_no_show_{id_prof}_{id_cita}")
+    except Exception as e:
+        log.error("_job_no_show_check fallo: %s", e)

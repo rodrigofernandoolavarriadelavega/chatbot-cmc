@@ -55,7 +55,10 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_regenerate_heatmap_cache,
                   _job_enviar_dashboards_semanales,
                   _job_horas_vacias_dia_siguiente,
-                  _job_telemedicina_recordatorios)
+                  _job_telemedicina_recordatorios,
+                  _job_resumen_diario_profesionales,
+                  _job_resumen_semanal_profesionales,
+                  _job_no_show_check)
 import admin_routes
 import portal_routes
 
@@ -377,6 +380,27 @@ async def lifespan(app: FastAPI):
         _job_enviar_dashboards_semanales,
         CronTrigger(day_of_week="mon", hour=9, minute=0, timezone=_CLT),
         id="dashboards_semanales_profesionales",
+        replace_existing=True,
+    )
+    # Resumen diario a profesionales: lun-sáb 07:00 CLT (permiso resumen_diario_07)
+    scheduler.add_job(
+        _job_resumen_diario_profesionales,
+        CronTrigger(day_of_week="mon-sat", hour=7, minute=0, timezone=_CLT),
+        id="resumen_diario_profesionales",
+        replace_existing=True,
+    )
+    # Resumen semanal a profesionales: domingo 19:00 CLT (permiso resumen_semanal_dom)
+    scheduler.add_job(
+        _job_resumen_semanal_profesionales,
+        CronTrigger(day_of_week="sun", hour=19, minute=0, timezone=_CLT),
+        id="resumen_semanal_profesionales",
+        replace_existing=True,
+    )
+    # No-show check: cada 30 min entre 09:00 y 21:00 CLT (permiso notif_no_show)
+    scheduler.add_job(
+        _job_no_show_check,
+        CronTrigger(hour="9-21", minute="0,30", timezone=_CLT),
+        id="no_show_check_profesionales",
         replace_existing=True,
     )
     # Horas vacías D+1: diariamente a las 14:00 CLT
