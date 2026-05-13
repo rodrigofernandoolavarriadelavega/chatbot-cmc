@@ -431,10 +431,18 @@ def get_candidato_por_phone(phone: str) -> dict | None:
     La vista ya filtra: consent aceptado + sin opt-out.
     Retorna el dict con los campos que espera send_winback, o None si el paciente
     no existe / no es contactable / no tiene cohorte asignada.
+
+    Normalización: compara por últimos 9 dígitos para tolerar formatos mixtos
+    en la vista (+56966373231 vs 56966373231 vs 966373231, etc.).
+    El blast envía usando el telefono de la vista (ej: +56966373231); Meta normaliza
+    y el webhook llega como 56966373231 → sin normalización, get devolvía None.
     """
     tel = phone.lstrip("+").strip()
-    if not tel:
+    # Extraer solo dígitos y tomar sufijo de 9 (ej: 56966373231 → 966373231)
+    tel_digits = "".join(c for c in tel if c.isdigit())
+    if len(tel_digits) < 6:
         return None
+    tel_suffix = tel_digits[-9:]  # últimos 9 dígitos del número
     try:
         with bi_conn() as conn:
             with conn.cursor() as cur:
@@ -445,12 +453,12 @@ def get_candidato_por_phone(phone: str) -> dict | None:
                         genero, ultima_atencion, ultima_especialidad,
                         ultimo_profesional, dias_inactivo, cohorte, edad
                     FROM bi.v_winback_cohortes_contactables
-                    WHERE telefono = %s
+                    WHERE RIGHT(regexp_replace(telefono, '[^0-9]', '', 'g'), 9) = %s
                       AND cohorte IS NOT NULL
                     ORDER BY dias_inactivo ASC
                     LIMIT 1
                     """,
-                    (tel,),
+                    (tel_suffix,),
                 )
                 row = cur.fetchone()
                 if not row:
@@ -571,7 +579,15 @@ async def send_winback(candidato: dict) -> bool:
     1. Consentimiento explícito de marketing (bi.marketing_consent.status='accepted').
     2. Approval del template _v2 en Meta (WARN winback_v2_not_approved si falla).
     """
-    telefono   = (candidato.get("telefono") or "").strip().lstrip("+")
+    # Normalizar telefono: extraer solo dígitos del valor almacenado en BI.
+    # La vista puede tener formatos como '+56966373231', '+5+6961800733', '9 7728 1627',
+    # '+44944364612', etc. — Meta Cloud API necesita solo dígitos, sin '+'.
+    _tel_raw = (candidato.get("telefono") or "").strip()
+    _tel_digits = "".join(c for c in _tel_raw if c.isdigit())
+    # Si el número no tiene prefijo de país (menos de 11 dígitos), agregar 56 (Chile)
+    if len(_tel_digits) <= 9:
+        _tel_digits = "56" + _tel_digits.lstrip("0")
+    telefono   = _tel_digits
     especialidad = candidato.get("ultima_especialidad")
     cohorte    = candidato.get("cohorte", "090d")
     nombre     = candidato.get("nombre") or "paciente"
