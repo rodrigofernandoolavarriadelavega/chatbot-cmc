@@ -21,7 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from config import (META_VERIFY_TOKEN, CMC_TELEFONO, ADMIN_TOKEN,
+from config import (META_VERIFY_TOKEN, CMC_TELEFONO, CMC_TELEFONO_FIJO, ADMIN_TOKEN,
                     MEDILINK_TOKEN, META_AD_ACCOUNT_ID as _CFG_META_ACCOUNT_ID)
 from flows import handle_message
 from messaging import (send_whatsapp, send_whatsapp_interactive,
@@ -5609,17 +5609,41 @@ async def webhook(request: Request):
                 else:
                     extracted = extract_text_from_docx(blob)
                 if extracted:
-                    # Truncar a 2000 chars para no exceder límites
-                    if len(extracted) > 2000:
-                        extracted = extracted[:2000] + "…"
-                    texto = extracted
-                    log.info("📄 Texto extraído from=%s (%d chars): %s", phone, len(extracted), extracted[:120])
+                    # Truncar a 200 chars antes de pasar al pipeline (Bug-3)
+                    if len(extracted) > 200:
+                        extracted = extracted[:200] + "…"
+                    # Detectar documentos clínicos: ficha, consentimiento, formulario, entrevista
+                    _CLINICAL_DOC_KEYS = ("ficha", "entrevista psicol", "formulario", "consentimiento")
+                    _extracted_lower = extracted.lower()
+                    _es_doc_clinico = any(k in _extracted_lower for k in _CLINICAL_DOC_KEYS)
+                    if _es_doc_clinico:
+                        log.info("Documento clínico detectado from=%s, derivando a humano", phone)
+                        state_before = get_session(phone).get("state", "IDLE")
+                        log_text = f"[{msg_type}:{saved_filename}]"
+                        log_message(phone, "in", log_text, state_before, canal="whatsapp")
+                        from session import log_event as _le_doc
+                        _le_doc(phone, "documento_clinico_recibido", {"filename": saved_filename[:120]})
+                        from session import save_session as _ss_doc
+                        _ss_doc(phone, "HUMAN_TAKEOVER", {
+                            "hold_sent": True,
+                            "handoff_reason": "documento_clinico_recibido",
+                        })
+                        _doc_resp = (
+                            "Recibí tu documento. Lo dejé guardado para que una recepcionista "
+                            "lo revise y te contacte. Si es urgente, llama al "
+                            f"*{CMC_TELEFONO_FIJO}*."
+                        )
+                        await send_whatsapp(phone, _doc_resp)
+                        log_message(phone, "out", _doc_resp, "HUMAN_TAKEOVER", canal="whatsapp")
+                        return Response(status_code=200)
+                    texto = "[DOCUMENTO ENVIADO POR PACIENTE]: " + extracted
+                    log.info("Texto extraído from=%s (%d chars): %s", phone, len(extracted), extracted[:120])
                     state_before = get_session(phone).get("state", "IDLE")
                     log_text = f"[{msg_type}:{saved_filename}]"
                     log_message(phone, "in", log_text, state_before, canal="whatsapp")
                     # Feedback al paciente (como con audio)
-                    preview = extracted[:300] + ("…" if len(extracted) > 300 else "")
-                    confirm_msg = f"📄 *Tu documento dice:*\n_{preview}_"
+                    preview = extracted[:200]
+                    confirm_msg = f"Recibí tu documento. Esto es lo que dice:\n_{preview}_"
                     await send_whatsapp(phone, confirm_msg)
                     log_message(phone, "out", confirm_msg, state_before, canal="whatsapp")
                     # Procesar el texto extraído por el pipeline normal.

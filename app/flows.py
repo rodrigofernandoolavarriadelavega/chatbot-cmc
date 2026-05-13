@@ -42,6 +42,9 @@ from messaging import send_whatsapp
 
 log = logging.getLogger("bot.flows")
 
+# Dirección canónica del CMC — usar siempre esta constante, no strings hardcodeados.
+_CMC_DIRECCION = "Monsalve 102 (frente a la antigua estación de trenes), Carampangue"
+
 # Mapa de nombres de día en español → Python weekday (0=Lun..6=Dom)
 _DIAS_SEMANA = {
     "lunes": 0, "martes": 1, "miercoles": 2, "miércoles": 2,
@@ -1036,13 +1039,13 @@ def _menu_msg(primer_contacto: bool = False) -> dict:
             "(no soy una persona).\n\n"
             "_No entrego consejo médico ni evalúo síntomas. "
             "Si es una urgencia, llama al *SAMU 131*._\n\n"
-            "📍 Monsalve 102, Carampangue.\n\n"
+            f"📍 {_CMC_DIRECCION}.\n\n"
             "¿Qué necesitas hoy?"
         )
     else:
         intro = (
             "Hola 👋 Soy el asistente del *Centro Médico Carampangue*.\n\n"
-            "📍 *Monsalve 102, frente a la antigua estación de trenes*, Carampangue.\n\n"
+            f"📍 {_CMC_DIRECCION}.\n\n"
             "¿Qué necesitas hoy?"
         )
     return _list_msg(
@@ -1211,7 +1214,7 @@ async def _handle_doctor_paciente(rut_raw: str) -> str:
     if citas:
         msg += f"\n📅 *Próximas citas ({len(citas)}):*\n"
         for c in citas[:3]:
-            msg += f"  • {c['fecha_display']} {c['hora_inicio']} — {c['profesional']}\n"
+            msg += f"  • {c['fecha_display']} {c['hora_inicio'][:5]} — {c['profesional']}\n"
     else:
         msg += "\n📅 Sin citas futuras"
 
@@ -1431,7 +1434,7 @@ async def _handle_confirmacion_precita(phone: str, tl: str, data: dict) -> str:
             f"🏥 *{esp}* — {prof}\n"
             f"🕐 *{hora}*\n\n"
             "Te esperamos *15 minutos antes* con tu cédula de identidad.\n\n"
-            f"📍 Monsalve 102, Carampangue\n\n"
+            f"📍 {_CMC_DIRECCION}\n\n"
             "_Si cambian tus planes, escríbenos para reagendar._"
         )
 
@@ -1806,7 +1809,7 @@ def _preguntar_pago_respuesta(data: dict | None = None, txt: str = "") -> str:
 
 def _preguntar_info_respuesta() -> str:
     return (
-        f"📍 Monsalve 102, Carampangue\n"
+        f"📍 {_CMC_DIRECCION}\n"
         f"📞 *{CMC_TELEFONO}* · ☎️ *{CMC_TELEFONO_FIJO}*\n"
         f"🕐 Lun-Vie 8-21h · Sáb 9-14h"
     )
@@ -2545,8 +2548,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 if _ref_bienvenida and _ref_bienvenida.get("headline"):
                     _headline_bv = _ref_bienvenida["headline"]
                     log_event(phone, "bienvenida_adaptativa_meta", {"headline": _headline_bv[:80]})
+                    _sx_bv = ((get_profile(phone) or {}).get("sexo") or "").upper()
+                    _bv_word = "bienvenida" if _sx_bv == "F" else "bienvenido"
                     return (
-                        f"Hola, bienvenido/a al *Centro Médico Carampangue*. "
+                        f"Hola, {_bv_word} al *Centro Médico Carampangue*. "
                         f"Vi que llegaste desde nuestro aviso de *{_headline_bv}*.\n\n"
                         f"¿Quieres agendar una hora o tienes alguna pregunta?"
                     )
@@ -2765,14 +2770,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 _ci_prof = _cita_info.get("profesional") or _cita_info.get("nombre_profesional", "")
                 _ci_esp = _cita_info.get("especialidad", "")
                 _ci_fecha = _cita_info.get("fecha_display") or _cita_info.get("fecha", "")
-                _ci_hora = _cita_info.get("hora_inicio") or _cita_info.get("hora", "")
+                _ci_hora = (_cita_info.get("hora_inicio") or _cita_info.get("hora", ""))[:5]
                 log_event(phone, "consulta_info_cita", {"prof": _ci_prof, "fecha": _ci_fecha})
                 return (
                     f"Tu próxima cita es:\n"
                     f"📅 *{_ci_fecha}*\n"
                     f"🕐 *{_ci_hora}*\n"
                     f"🏥 *{_ci_esp}* — {_ci_prof}\n"
-                    f"📍 Monsalve 102, Carampangue\n\n"
+                    f"📍 {_CMC_DIRECCION}\n\n"
                     "_¿Necesitas algo más?_"
                 )
             else:
@@ -2823,7 +2828,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     _pc_prof = _cita_post.get("profesional") or _cita_post.get("nombre_profesional", "")
                     _pc_esp = _cita_post.get("especialidad", "")
                     _pc_fecha = _cita_post.get("fecha_display") or _cita_post.get("fecha", "")
-                    _pc_hora = _cita_post.get("hora_inicio") or _cita_post.get("hora", "")
+                    _pc_hora = (_cita_post.get("hora_inicio") or _cita_post.get("hora", ""))[:5]
                     log_event(phone, "confirmacion_post_cita_detectada", {"prof": _pc_prof, "fecha": _pc_fecha})
                     return (
                         f"Tu hora con *{_pc_prof}* ({_pc_esp}) el *{_pc_fecha}* a las *{_pc_hora}* "
@@ -3905,7 +3910,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                             f"Sí, tu hora de hoy está confirmada ✅\n\n"
                             f"🏥 *{c0.get('especialidad','')}* — {c0.get('profesional','')}\n"
                             f"🕐 *{c0.get('hora_inicio','')[:5]}*\n\n"
-                            f"📍 Monsalve 102, Carampangue.\n"
+                            f"📍 {_CMC_DIRECCION}.\n"
                             f"_Llega 15 min antes con tu cédula._"
                         )
                     return (
@@ -3924,7 +3929,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 log_event(phone, "telemedicina_pedida_pausada", {"texto": txt[:120]})
                 return _txt(
                     "Por ahora atendemos solo de forma *presencial* en el centro 🏥\n\n"
-                    "📍 Monsalve 102, Carampangue\n"
+                    f"📍 {_CMC_DIRECCION}\n"
                     "🕐 Lun-Vie 08:00-21:00 · Sáb 09:00-14:00\n\n"
                     "Si quieres agendar una hora presencial, escribe *agendar*."
                 )
@@ -4911,7 +4916,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             save_session(phone, "WAIT_SLOT", data)
             return (
                 f"📞 *{CMC_TELEFONO}* · ☎️ *{CMC_TELEFONO_FIJO}*\n"
-                f"📍 Monsalve 102, Carampangue\n\n"
+                f"📍 {_CMC_DIRECCION}\n\n"
                 "_Seguimos con tu reserva: elige un número del listado o escribe *otro día*._"
             )
 
@@ -4923,7 +4928,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if any(p in tl_norm_slot for p in _INFO_CONTACTO):
             return (
                 f"📞 *{CMC_TELEFONO}* o ☎️ *(41) 296 5226*\n"
-                f"📍 Monsalve 102, Carampangue (frente a la antigua estación de trenes).\n\n"
+                f"📍 {_CMC_DIRECCION}.\n\n"
                 "_Elige un número del listado, *ver todos* para más horarios, u *otro día*._"
             )
 
@@ -6231,7 +6236,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                                 f"⚠️ *Ya tienes una hora ese día*\n\n"
                                 f"📋 Tienes *{dup.get('especialidad','')}* el "
                                 f"{slot.get('fecha_display','')} a las "
-                                f"*{dup.get('hora_inicio','')}* con "
+                                f"*{dup.get('hora_inicio','')[:5]}* con "
                                 f"{dup.get('profesional','')}.\n\n"
                                 f"¿Igual quieres agendar esta segunda hora a las "
                                 f"*{slot['hora_inicio'][:5]}*?",
@@ -6510,7 +6515,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         f"📅 {slot['fecha_display']}\n"
                         f"🕐 {slot['hora_inicio'][:5]}\n\n"
                         "Recuerda llegar *15 minutos antes* con cédula de identidad.\n\n"
-                        "📍 *Monsalve 102 esq. República, Carampangue*"
+                        f"📍 {_CMC_DIRECCION}"
                         f"{extra}"
                         f"{cross_ref}"
                     )
@@ -6556,7 +6561,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         f"🕐 {slot['hora_inicio'][:5]}\n"
                         f"💳 {modalidad}\n\n"
                         "Recuerda llegar *15 minutos antes* con cédula de identidad.\n\n"
-                        "📍 *Monsalve 102 esq. República, Carampangue*\n\n"
+                        f"📍 {_CMC_DIRECCION}\n\n"
                         f"¡Te esperamos! 😊{cross_ref}"
                     )
                 # BUG-D: PNI/hitos en segundo mensaje separado para evitar truncamiento
@@ -6783,7 +6788,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             f"Vas a cancelar esta hora:\n\n"
             f"🏥 {_prof_label_c}\n"
             f"📅 {cita['fecha_display']}\n"
-            f"🕐 {cita['hora_inicio']}\n\n"
+            f"🕐 {cita['hora_inicio'][:5]}\n\n"
             "¿Confirmas la cancelación?",
             [
                 {"id": "si", "title": "✅ Sí, cancelar"},
@@ -6819,7 +6824,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                                 w_phone,
                                 f"Hola {w_saludo} 👋 ¡Se acaba de liberar una hora de "
                                 f"*{esp_cancelada}* con *{cita.get('profesional', '')}*!\n\n"
-                                f"📅 *{cita.get('fecha_display', '')}* a las *{cita.get('hora_inicio', '')}*\n\n"
+                                f"📅 *{cita.get('fecha_display', '')}* a las *{cita.get('hora_inicio', '')[:5]}*\n\n"
                                 "Escribe *menu* ahora para reservarla antes de que se llene."
                             )
                             mark_waitlist_notified(w["id"])
@@ -6836,7 +6841,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 )
                 return _btn_msg(
                     f"✅ Cita cancelada.\n\n"
-                    f"_{cita['profesional']} · {cita['fecha_display']} · {cita['hora_inicio']}_"
+                    f"_{cita['profesional']} · {cita['fecha_display']} · {cita['hora_inicio'][:5]}_"
                     f"{_cancel_suffix}",
                     [
                         {"id": "1", "title": "Sí, agendar"},
@@ -7121,13 +7126,13 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
         lineas = [f"📋 *Tus próximas citas, {nombre_corto}:*\n"]
         for c in citas:
-            lineas.append(f"• {c['fecha_display']} {c['hora_inicio']} — {c['profesional']}")
+            lineas.append(f"• {c['fecha_display']} {c['hora_inicio'][:5]} — {c['profesional']}")
         body = "\n".join(lineas)
         return _btn_msg(
             body,
             [
                 {"id": "1", "title": "📅 Agendar otra"},
-                {"id": "menu_volver", "title": "Listo"},
+                {"id": "menu_volver", "title": "Volver al menú"},
             ]
         )
 
@@ -7450,8 +7455,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "✅ *Psicología* — sesiones de seguimiento\n"
                 "✅ *Nutrición* — controles\n"
                 "✅ *Cardiología* — interpretación de exámenes\n\n"
-                "Para otras especialidades la atención es presencial en "
-                "*Monsalve 102, Carampangue*.\n\n"
+                f"Para otras especialidades la atención es presencial en "
+                f"*{_CMC_DIRECCION}*.\n\n"
                 "Escribe *agendar* si quieres reservar una hora presencial."
             )
         # Guardar especialidad elegida y preguntar si es primera vez
@@ -7654,7 +7659,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "• Recibir recordatorios automáticos\n\n"
                 "Todo escribiéndonos aquí por WhatsApp, a cualquier hora.\n"
                 "Si necesitas hablar con recepción, escribe *recepción*.\n\n"
-                f"📍 Monsalve 102 esq. República, Carampangue\n"
+                f"📍 {_CMC_DIRECCION}\n"
                 f"📞 {CMC_TELEFONO}"
             )
             await send_whatsapp(phone, bienvenida)
@@ -7798,14 +7803,22 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "esp_origen": esp_origen, "esp_destino": esp_destino})
             reset_session(phone)
             return await _iniciar_agendar(phone, {}, esp_destino)
-        if _cs_rechazo or True:
-            # Cualquier respuesta no afirmativa = rechazo; soltar sesión.
-            if _cs_rechazo:
-                log_cross_sell(phone, esp_origen, esp_destino, "rechazado")
-                log_event(phone, "cross_sell_rechazado", {
-                    "esp_origen": esp_origen, "esp_destino": esp_destino})
+        elif _cs_rechazo:
+            log_cross_sell(phone, esp_origen, esp_destino, "rechazado")
+            log_event(phone, "cross_sell_rechazado", {
+                "esp_origen": esp_origen, "esp_destino": esp_destino})
             reset_session(phone)
             return "_Escribe *menu* si necesitas algo más._"
+        else:
+            # Respuesta ambigua (ej: "¿cuánto cuesta?", "gracias") → recordatorio sin resetear estado
+            save_session(phone, "WAIT_CROSS_SELL", data)
+            return _btn_msg(
+                f"¿Te gustaría agendar una hora de *{esp_destino}*?",
+                [
+                    {"id": f"cs_si:{esp_destino}", "title": "Sí, agendar"},
+                    {"id": "cs_no", "title": "No, gracias"},
+                ]
+            )
 
     # ── HUMAN_TAKEOVER ────────────────────────────────────────────────────────
     # Principio: HUMAN_TAKEOVER es inviolable. Solo la recepcionista sale del
@@ -9816,7 +9829,7 @@ def _format_citas_cancelar(citas: list, nombre_paciente: str):
     # Fallback texto
     lineas = [f"*{nombre}*, estas son tus próximas citas:\n"]
     for i, c in enumerate(citas, 1):
-        lineas.append(f"*{i}.* {c['fecha_display']} · {c['hora_inicio']} · {c['profesional']}")
+        lineas.append(f"*{i}.* {c['fecha_display']} · {c['hora_inicio'][:5]} · {c['profesional']}")
     lineas.append("\n¿Cuál quieres cancelar? Responde con el número.")
     return "\n".join(lineas)
 

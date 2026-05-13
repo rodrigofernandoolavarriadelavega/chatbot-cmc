@@ -61,6 +61,9 @@ async def _enviar_reenganche():
     sesiones = get_sesiones_abandonadas()
     # Sólo phones con canal conocido. TEST_* y otros raros se descartan.
     sesiones = [s for s in sesiones if _canal_de_phone(s.get("phone", "")) != "unknown"]
+    # Excluir ADMIN_ALERT_PHONE: nunca tiene ventana 24h abierta desde el bot → Meta 131047.
+    if ADMIN_ALERT_PHONE:
+        sesiones = [s for s in sesiones if s.get("phone") != ADMIN_ALERT_PHONE]
     for s in sesiones:
         phone = s["phone"]
         state = s["state"]

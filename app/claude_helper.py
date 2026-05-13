@@ -1563,9 +1563,13 @@ async def detect_intent(mensaje: str, recepcion_resumen: list | None = None,
                 "text": SYSTEM_PROMPT,
                 "cache_control": {"type": "ephemeral"},
             }],
-            messages=[{"role": "user", "content": _ctx_fecha15 + _recepcion_ctx15 + _referral_ctx15 + mensaje}],
+            messages=[
+                {"role": "user", "content": _ctx_fecha15 + _recepcion_ctx15 + _referral_ctx15 + mensaje},
+                {"role": "assistant", "content": "{"},
+            ],
         )
-        text = _strip_markdown_json(resp.content[0].text)
+        # Prefill "{" → concatenar antes de parsear
+        text = _strip_markdown_json("{" + resp.content[0].text)
         if resp.stop_reason == "max_tokens":
             log.warning("detect_intent truncado por max_tokens: %r", mensaje[:80])
         # raw_decode tolerante: Claude a veces agrega texto/markdown después

@@ -1162,9 +1162,11 @@ def get_citas_bot_para_validar(dias_adelante: int = 14) -> list[dict]:
     Limita a dias_adelante para no procesar 1000s de citas viejas.
     """
     with _conn() as conn:
+        # Usar SELECT * para tolerar que id_paciente_medilink no exista aún
+        # (primer arranque post-deploy antes de que corra la migración ALTER TABLE).
+        # Los callers acceden a las columnas por nombre usando dict.get().
         rows = conn.execute(
-            """SELECT id, phone, id_cita, especialidad, profesional, fecha, hora, modalidad,
-                      paciente_nombre, id_paciente_medilink, created_at
+            """SELECT *
                FROM citas_bot
                WHERE fecha >= date('now')
                AND fecha <= date('now', ? )

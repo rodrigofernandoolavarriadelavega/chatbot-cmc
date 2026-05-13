@@ -377,6 +377,16 @@ async def enviar_resumen_anomalias(send_fn) -> int:
     if len(msg) > 3500:
         msg = msg[:3490] + "\n…(truncado)"
 
+    # Verificar ventana 24h antes de enviar texto libre (evita Meta 131047).
+    try:
+        from jobs import _admin_window_open as _mw_open
+        if not _mw_open():
+            log.info("Monitor: ventana 24h cerrada para ADMIN_ALERT_PHONE, anomalías sólo en log")
+            for _, _, ah in nuevas:
+                _mark_alerted(ah, "")
+            return 0
+    except Exception:
+        pass
     try:
         await send_fn(ADMIN_ALERT_PHONE, msg)
     except Exception as e:
