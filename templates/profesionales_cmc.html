@@ -3,78 +3,286 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Profesionales CMC — Permisos Bot</title>
+  <title>Profesionales CMC — Permisos Bot · OLACORE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root {
-      --azul: #0f4c81;
-      --azul-suave: #eaf3fb;
-      --verde: #1b9e4b;
-      --rojo: #c62828;
-      --gris: #e5e8ed;
-      --fondo: #f6f8fb;
-      --texto: #1d2330;
+      --fiordo:   #1F3340;
+      --cobre:    #B86D3F;
+      --neblina:  #EFE9DD;
+      --musgo:    #4A5F3A;
+      --lacre:    #8C2A2A;
+      --agua:     #5B8B96;
+      --noche:    #122028;
+      --crema:    #FAF7F0;
+      --linea:    rgba(31, 51, 64, 0.10);
+      --linea-suave: rgba(31, 51, 64, 0.05);
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
-    body { background: var(--fondo); color: var(--texto); padding: 24px; }
-    header { max-width: 1400px; margin: 0 auto 24px; display: flex; justify-content: space-between; align-items: center; }
-    header h1 { color: var(--azul); font-size: 22px; font-weight: 600; }
-    header .subtitle { color: #647084; font-size: 13px; margin-top: 4px; }
-    .status-bar { display: flex; gap: 12px; align-items: center; font-size: 14px; }
-    .status-bar .saved { color: var(--verde); font-weight: 500; }
-    .status-bar .dirty { color: var(--rojo); font-weight: 500; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--neblina);
+      color: var(--fiordo);
+      padding: 32px 24px;
+      -webkit-font-smoothing: antialiased;
+    }
+    .serif    { font-family: 'Fraunces', serif; }
+    .mono     { font-family: 'IBM Plex Mono', monospace; }
+
+    /* ── Header ────────────────────────────────────────────────────────── */
+    header {
+      max-width: 1500px;
+      margin: 0 auto 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .header-left .section-head {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--cobre);
+      margin-bottom: 10px;
+    }
+    .header-left h1 {
+      font-family: 'Fraunces', serif;
+      font-size: 48px;
+      font-weight: 500;
+      line-height: 1;
+      letter-spacing: -0.5px;
+      color: var(--fiordo);
+    }
+    .header-left h1 em {
+      color: var(--cobre);
+      font-style: italic;
+      font-weight: 500;
+    }
+    .header-left .subtitle {
+      font-size: 14px;
+      color: rgba(31, 51, 64, 0.65);
+      margin-top: 10px;
+      max-width: 580px;
+      line-height: 1.5;
+    }
+    .status-bar {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      font-size: 13px;
+    }
+    .status-bar #status {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .status-bar .saved { color: var(--musgo); }
+    .status-bar .dirty { color: var(--lacre); }
     button.primary {
-      background: var(--azul); color: white; border: none; padding: 10px 18px;
-      border-radius: 6px; font-weight: 500; cursor: pointer; font-size: 14px;
+      background: var(--fiordo);
+      color: var(--neblina);
+      border: 1px solid var(--fiordo);
+      padding: 11px 22px;
+      border-radius: 2px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
     }
-    button.primary:hover { background: #0c3d68; }
-    button.primary:disabled { background: #a0b3c4; cursor: not-allowed; }
-    .container { max-width: 1400px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); overflow: hidden; }
+    button.primary:hover { background: var(--cobre); border-color: var(--cobre); }
+    button.primary:disabled {
+      background: var(--neblina);
+      color: rgba(31, 51, 64, 0.4);
+      border-color: var(--linea);
+      cursor: not-allowed;
+    }
+
+    /* ── Container & tabla ─────────────────────────────────────────────── */
+    .container {
+      max-width: 1500px;
+      margin: 0 auto;
+      background: var(--crema);
+      border: 1px solid var(--linea);
+      border-radius: 3px;
+      overflow: hidden;
+    }
     .table-wrap { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; }
     thead th {
-      background: var(--azul-suave); color: var(--azul); font-weight: 600;
-      padding: 14px 12px; text-align: center; font-size: 13px;
-      border-bottom: 2px solid var(--azul); position: sticky; top: 0; z-index: 2;
+      background: var(--neblina);
+      color: var(--fiordo);
+      font-family: 'IBM Plex Mono', monospace;
+      font-weight: 500;
+      padding: 16px 12px;
+      text-align: center;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--fiordo);
+      position: sticky;
+      top: 0;
+      z-index: 2;
     }
-    thead th:first-child { text-align: left; min-width: 280px; }
-    thead th .especialidad { display: block; font-size: 11px; font-weight: 400; color: #5a6e85; margin-top: 2px; }
-    thead th .phone { display: block; font-size: 10px; font-weight: 400; color: #8292a8; font-family: monospace; margin-top: 2px; }
-    tbody td { padding: 10px 12px; border-bottom: 1px solid var(--gris); text-align: center; }
+    thead th:first-child {
+      text-align: left;
+      min-width: 320px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      font-size: 10px;
+      color: var(--cobre);
+    }
+    thead th .nombre-prof {
+      display: block;
+      font-family: 'Fraunces', serif;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 0;
+      text-transform: none;
+      color: var(--fiordo);
+      margin-bottom: 4px;
+    }
+    thead th .especialidad {
+      display: block;
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      font-weight: 400;
+      letter-spacing: 0;
+      text-transform: none;
+      color: rgba(31, 51, 64, 0.55);
+      margin-top: 2px;
+    }
+    thead th .phone {
+      display: block;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      font-weight: 400;
+      letter-spacing: 0.5px;
+      color: var(--cobre);
+      margin-top: 4px;
+      opacity: 0.85;
+    }
+    tbody td {
+      padding: 12px;
+      border-bottom: 1px solid var(--linea-suave);
+      text-align: center;
+    }
     tbody td.feature {
-      text-align: left; font-size: 13px; font-weight: 500;
-      background: #fafbfd; color: var(--texto);
+      text-align: left;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--fiordo);
+      background: rgba(239, 233, 221, 0.4);
+      padding-left: 18px;
     }
-    tbody td.feature .desc { display: block; font-weight: 400; font-size: 11px; color: #7a8a9e; margin-top: 2px; }
-    tbody tr:hover { background: #f3f6fa; }
+    tbody td.feature .desc {
+      display: block;
+      font-weight: 400;
+      font-size: 11px;
+      color: rgba(31, 51, 64, 0.55);
+      margin-top: 3px;
+      line-height: 1.4;
+      max-width: 360px;
+    }
+    tbody tr:hover td { background: rgba(184, 109, 63, 0.04); }
+    tbody tr:hover td.feature { background: rgba(184, 109, 63, 0.08); }
     tbody tr.category-header td {
-      background: #e9eef5; font-weight: 600; color: var(--azul);
-      font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;
-      padding: 8px 12px;
+      background: var(--fiordo);
+      color: var(--neblina);
+      font-family: 'IBM Plex Mono', monospace;
+      font-weight: 500;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 2.5px;
+      padding: 12px 18px;
+      text-align: left;
     }
+    tbody tr.category-header td::before {
+      content: "—  ";
+      color: var(--cobre);
+    }
+
+    /* ── Checkbox custom (estilo OLACORE) ──────────────────────────────── */
     input[type="checkbox"] {
-      width: 22px; height: 22px; cursor: pointer; accent-color: var(--azul);
+      appearance: none;
+      -webkit-appearance: none;
+      width: 22px;
+      height: 22px;
+      border: 1.5px solid rgba(31, 51, 64, 0.25);
+      background: var(--crema);
+      border-radius: 2px;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.12s;
+      vertical-align: middle;
     }
+    input[type="checkbox"]:hover { border-color: var(--cobre); }
+    input[type="checkbox"]:checked {
+      background: var(--fiordo);
+      border-color: var(--fiordo);
+    }
+    input[type="checkbox"]:checked::after {
+      content: "";
+      position: absolute;
+      left: 6px;
+      top: 2px;
+      width: 6px;
+      height: 12px;
+      border: solid var(--neblina);
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+
+    /* ── Legend (footer informativo) ───────────────────────────────────── */
     .legend {
-      max-width: 1400px; margin: 16px auto 0; font-size: 12px; color: #647084;
-      padding: 12px 16px; background: var(--azul-suave); border-radius: 6px;
+      max-width: 1500px;
+      margin: 24px auto 0;
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      color: rgba(31, 51, 64, 0.65);
+      padding: 18px 22px;
+      background: var(--crema);
+      border: 1px solid var(--linea);
+      border-left: 3px solid var(--cobre);
+      border-radius: 3px;
+      line-height: 1.55;
     }
-    .legend strong { color: var(--azul); }
-    @media (max-width: 720px) {
-      thead th:first-child { min-width: 200px; }
-      tbody td.feature { font-size: 12px; }
+    .legend strong {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--cobre);
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    @media (max-width: 760px) {
+      body { padding: 20px 16px; }
+      .header-left h1 { font-size: 32px; }
+      thead th:first-child { min-width: 220px; }
+      tbody td.feature { font-size: 12px; padding-left: 12px; }
+      tbody td.feature .desc { font-size: 10px; max-width: none; }
     }
   </style>
 </head>
 <body>
 
 <header>
-  <div>
-    <h1>Profesionales CMC — Permisos Bot</h1>
-    <div class="subtitle">Qué puede hacer el bot por cada profesional · activar/desactivar toggles y guardar.</div>
+  <div class="header-left">
+    <p class="section-head">OLACORE · CMC · Permisos del bot profesional</p>
+    <h1>Profesionales<em>.</em></h1>
+    <p class="subtitle">Qué puede hacer el bot por cada profesional. Activa los toggles que quieras y los cambios se aplican al siguiente mensaje que el profesional envíe al bot <span class="mono" style="color:var(--cobre)">+56966610737</span>.</p>
   </div>
   <div class="status-bar">
     <span id="status" class="saved">Cargando…</span>
-    <button id="save-btn" class="primary" disabled>Guardar cambios</button>
+    <button id="save-btn" class="primary" disabled>Guardar</button>
   </div>
 </header>
 
@@ -90,9 +298,8 @@
 </div>
 
 <div class="legend">
-  <strong>Cómo funciona:</strong> cada columna es un profesional, cada fila una capacidad del bot profesional CMC.
-  Activa el checkbox para habilitarla. Los cambios se guardan en el servidor al hacer clic en "Guardar cambios"
-  y se aplican al siguiente mensaje que el profesional envíe al bot (+56966610737).
+  <strong>Cómo funciona</strong>
+  Cada columna es un profesional, cada fila una capacidad del bot. Activa el checkbox para habilitarla — el guardado es automático. Las notificaciones automáticas (push, resúmenes) <strong style="display:inline;font-size:12px;letter-spacing:0;text-transform:none;color:var(--fiordo)">se envían solo dentro de la ventana 24h de WhatsApp</strong> para mantener costo $0. Si el profesional no ha conversado con el bot en 24h, el mensaje se omite.
 </div>
 
 <script>
@@ -221,7 +428,7 @@ async function loadPermisos() {
     }
   }
   render();
-  setStatus("✔ Cargado", "saved");
+  setStatus("Cargado", "saved");
 }
 
 function render() {
@@ -230,7 +437,7 @@ function render() {
   head.innerHTML = '<th>Capacidad</th>';
   for (const s of STAFF) {
     const th = document.createElement("th");
-    th.innerHTML = `${s.nombre}<span class="especialidad">${s.especialidad}</span><span class="phone">+${s.phone}</span>`;
+    th.innerHTML = `<span class="nombre-prof">${s.nombre}</span><span class="especialidad">${s.especialidad}</span><span class="phone">+${s.phone}</span>`;
     head.appendChild(th);
   }
   // Body
@@ -285,17 +492,14 @@ async function save() {
     if (!r.ok) throw new Error("HTTP " + r.status);
     dirty = false;
     const t = new Date().toLocaleTimeString("es-CL", {hour: "2-digit", minute: "2-digit", second: "2-digit"});
-    setStatus(`✔ Guardado automáticamente · ${t}`, "saved");
+    setStatus(`Guardado · ${t}`, "saved");
   } catch (e) {
-    setStatus("✖ Error: " + e.message, "dirty");
+    setStatus("Error: " + e.message, "dirty");
     btn.disabled = false;
   }
 }
 
 document.getElementById("save-btn").addEventListener("click", save);
-// Auto-save ya incluye debounce — el botón queda como fallback manual.
-// No advertir al salir: todos los cambios se guardan solos al instante.
-
 loadPermisos();
 </script>
 </body>
