@@ -749,7 +749,9 @@ PEDIÁTRICO / MATERNO
 
 DOLOR / CABEZA
 - Jaqueca / migraña / dolor de cabeza que pulsa → **Medicina General**.
-- Dolor de cabeza fuerte / me parte la cabeza → **Medicina General**; si es con vómitos, rigidez de cuello o pérdida de conocimiento → URGENCIA.
+- Cefalea de inicio súbito que alcanza intensidad máxima en segundos ("el peor dolor de cabeza de mi vida", "me explotó la cabeza de repente") → **URGENCIA 131 inmediata** (posible hemorragia subaracnoidea). NO derivar a Medicina General.
+- Síntomas FAST (cara torcida, brazo débil, habla alterada, boca chueca) → **SAMU 131 inmediato**, NO derivar a Medicina General.
+- Dolor de cabeza fuerte progresivo / recurrente / jaqueca → **Medicina General**; si es con vómitos, rigidez de cuello o pérdida de conocimiento → URGENCIA.
 - Mareos sin vértigo → **Medicina General**.
 - Fatiga / cansancio permanente / decaimiento → **Medicina General**.
 - Insomnio / no duermo bien → **Medicina General** o **Psicología Adulto**.

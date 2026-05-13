@@ -15,15 +15,17 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'app'))
 
 _DB_PATH = None
 _session_module = None
+_ORIG_DB_PATH = None
 
 
 def _setup_test_db():
     """Crea una DB temporal y parchea session.DB_PATH antes de usarla."""
-    global _DB_PATH, _session_module
+    global _DB_PATH, _session_module, _ORIG_DB_PATH
     tmp = tempfile.NamedTemporaryFile(suffix='.db', delete=False)
     _DB_PATH = tmp.name
     tmp.close()
     import session as _session
+    _ORIG_DB_PATH = _session.DB_PATH  # guardar para restaurar en tearDown
     _session.DB_PATH = pathlib.Path(_DB_PATH)
     _session_module = _session
     # Forzar primera conexión para crear tablas
@@ -44,6 +46,8 @@ class TestCrossSellCooldown(unittest.TestCase):
         self.session = session
 
     def tearDown(self):
+        if _ORIG_DB_PATH and _session_module:
+            _session_module.DB_PATH = _ORIG_DB_PATH
         if _DB_PATH and os.path.exists(_DB_PATH):
             os.unlink(_DB_PATH)
 
@@ -114,6 +118,8 @@ class TestReferralBonos(unittest.TestCase):
         self.code = session.generate_referral_code(self.referrer)
 
     def tearDown(self):
+        if _ORIG_DB_PATH and _session_module:
+            _session_module.DB_PATH = _ORIG_DB_PATH
         if _DB_PATH and os.path.exists(_DB_PATH):
             os.unlink(_DB_PATH)
 

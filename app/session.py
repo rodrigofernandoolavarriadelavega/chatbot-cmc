@@ -81,7 +81,12 @@ def normalize_wa_id(raw: str) -> str:
     return raw.lstrip("+")
 
 
+_DDL_DONE = False
+_DDL_DONE_PATH: str | None = None  # path de la DB para la que se ejecutó DDL
+
+
 def _conn():
+    global _DDL_DONE, _DDL_DONE_PATH
     DB_PATH.parent.mkdir(exist_ok=True)
     if _USE_SQLCIPHER:
         # Validar hex antes de interpolar en PRAGMA (no acepta bindings).
@@ -98,6 +103,20 @@ def _conn():
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA busy_timeout=10000")
     conn.execute("PRAGMA synchronous=NORMAL")
+    # P1: DDL guard — las ~100 sentencias CREATE TABLE/ALTER se ejecutan una sola
+    # vez por proceso (primer arranque). Reduce ~66ms de overhead por webhook.
+    # El path se trackea para que tests que cambian DB_PATH a una DB temporal
+    # también reciban el DDL correctamente.
+    _current_path = str(DB_PATH)
+    if not _DDL_DONE or _DDL_DONE_PATH != _current_path:
+        _run_ddl_inline(conn)
+        _DDL_DONE = True
+        _DDL_DONE_PATH = _current_path
+    return conn
+
+
+def _run_ddl_inline(conn) -> None:
+    """DDL completo. Llamado solo una vez por proceso via _DDL_DONE guard."""
     conn.execute("""
         CREATE TABLE IF NOT EXISTS sessions (
             phone       TEXT PRIMARY KEY,
@@ -163,6 +182,8 @@ def _conn():
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_msg_phone ON messages(phone)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_msg_ts    ON messages(ts)")
+    # P3: índice compuesto phone+ts para queries de historial
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_msg_phone_ts ON messages(phone, ts DESC)")
     conn.execute("""
         CREATE TABLE IF NOT EXISTS fidelizacion_msgs (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -495,6 +516,10 @@ def _conn():
     conn.execute("CREATE INDEX IF NOT EXISTS idx_citas_bot_esp ON citas_bot(especialidad)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_citas_bot_phone ON citas_bot(phone)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_events_event_ts ON conversation_events(event, ts)")
+    # P2: índice compuesto phone+ts para queries de historial de eventos
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_events_phone ON conversation_events(phone, ts DESC)")
+    # P5: índice fecha en processed_msgs para purge/cleanup queries
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_processed_created ON processed_msgs(created_at)")
     # Marca "visto por admin" — permite al panel limpiar conversaciones sin
     # cambiar el state del flujo conversacional.
     conn.execute("""
@@ -675,7 +700,6 @@ def _conn():
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_sr_phone_esp ON slots_rechazados(phone, especialidad)")
     conn.commit()
-    return conn
 
 
 def is_duplicate(msg_id: str) -> bool:

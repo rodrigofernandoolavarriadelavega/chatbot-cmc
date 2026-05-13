@@ -20,6 +20,21 @@ from config import MEDILINK_BASE_URL, MEDILINK_TOKEN, MEDILINK_SUCURSAL
 
 log = logging.getLogger("medilink")
 
+# P4: cliente httpx compartido a nivel de módulo — evita crear/destruir el pool
+# TCP en cada request (era ~5ms de overhead + overhead SSL handshake).
+_MEDILINK_CLIENT: httpx.AsyncClient | None = None
+
+
+def _get_shared_client() -> httpx.AsyncClient:
+    """Retorna el cliente httpx compartido, creándolo si está cerrado o no existe."""
+    global _MEDILINK_CLIENT
+    if _MEDILINK_CLIENT is None or _MEDILINK_CLIENT.is_closed:
+        _MEDILINK_CLIENT = httpx.AsyncClient(
+            timeout=15,
+            limits=httpx.Limits(max_keepalive_connections=5, max_connections=10),
+        )
+    return _MEDILINK_CLIENT
+
 
 def _safe_json(r, default=None):
     """Parse response JSON tolerando no-JSON (HTML de error, body vacío).
@@ -845,16 +860,16 @@ async def buscar_slots_dia(especialidad: str, fecha: str,
     if not ids:
         return [], []
     usar_prioridad = especialidad.lower() in _ESPECIALIDADES_PRIORIDAD
-    async with httpx.AsyncClient(timeout=15) as client:
-        # Paralelizar _get_horario (era N+1 secuencial)
-        import asyncio as _aio_h
-        _hl = await _aio_h.gather(*(_get_horario(client, i) for i in ids))
-        horarios = dict(zip(ids, _hl))
-        if intervalo_override:
-            for id_prof, mins in intervalo_override.items():
-                if id_prof in horarios:
-                    horarios[id_prof] = {**horarios[id_prof], "intervalo": mins}
-        return await _slots_para_fecha(client, ids, horarios, fecha, prioridad=usar_prioridad)
+    client = _get_shared_client()
+    # Paralelizar _get_horario (era N+1 secuencial)
+    import asyncio as _aio_h
+    _hl = await _aio_h.gather(*(_get_horario(client, i) for i in ids))
+    horarios = dict(zip(ids, _hl))
+    if intervalo_override:
+        for id_prof, mins in intervalo_override.items():
+            if id_prof in horarios:
+                horarios[id_prof] = {**horarios[id_prof], "intervalo": mins}
+    return await _slots_para_fecha(client, ids, horarios, fecha, prioridad=usar_prioridad)
 
 
 async def buscar_slots_dia_por_ids(ids: list, fecha: str,
@@ -862,16 +877,16 @@ async def buscar_slots_dia_por_ids(ids: list, fecha: str,
     """Retorna (smart_5, todos_libres) para una fecha y lista explícita de IDs de profesional."""
     if not ids:
         return [], []
-    async with httpx.AsyncClient(timeout=15) as client:
-        # Paralelizar _get_horario (era N+1 secuencial)
-        import asyncio as _aio_h
-        _hl = await _aio_h.gather(*(_get_horario(client, i) for i in ids))
-        horarios = dict(zip(ids, _hl))
-        if intervalo_override:
-            for id_prof, mins in intervalo_override.items():
-                if id_prof in horarios:
-                    horarios[id_prof] = {**horarios[id_prof], "intervalo": mins}
-        return await _slots_para_fecha(client, ids, horarios, fecha)
+    client = _get_shared_client()
+    # Paralelizar _get_horario (era N+1 secuencial)
+    import asyncio as _aio_h
+    _hl = await _aio_h.gather(*(_get_horario(client, i) for i in ids))
+    horarios = dict(zip(ids, _hl))
+    if intervalo_override:
+        for id_prof, mins in intervalo_override.items():
+            if id_prof in horarios:
+                horarios[id_prof] = {**horarios[id_prof], "intervalo": mins}
+    return await _slots_para_fecha(client, ids, horarios, fecha)
 
 
 async def crear_paciente(rut: str, nombre: str, apellidos: str, **kwargs) -> Optional[dict]:

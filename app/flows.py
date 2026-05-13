@@ -158,6 +158,16 @@ EMERGENCIAS  = {
     "no despierta", "no reacciona", "perdida de conciencia",
     # ocular urgente
     "perdí la vista", "perdi la vista", "ceguera súbita",
+    # neurológico ACV / stroke (ventana trombolisis 4.5h)
+    "boca torcida", "boca chueca", "se me torció la boca", "se me torcio la boca",
+    "no puedo hablar", "habla trabada", "se trabó la lengua", "se trabo la lengua",
+    "brazo que no levanta", "no siento el brazo", "no puedo mover el brazo",
+    "cara caída", "cara caida", "se le cayó la cara", "se le cayo la cara",
+    "no me sale la palabra", "no me salen las palabras",
+    "acv", "derrame cerebral", "hemiparesia",
+    # cefalea en trueno (hemorragia subaracnoidea)
+    "peor dolor de cabeza de mi vida", "el peor dolor de cabeza",
+    "me exploto la cabeza", "me explotó la cabeza",
 }
 
 # Patrones regex para emergencias con redacción flexible
@@ -2310,10 +2320,26 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         r"|ahora mismo|en este momento|ahora|no para de|no me para)",
         re.IGNORECASE,
     )
-    _inhibir_emergencia = (
+    # C1: "urgencia dental" / "con urgencia para hoy" sin señales vitales → no SAMU
+    _DENTAL_URGENCIA_KEYWORDS = re.compile(
+        r"(dental|diente|muela|muelas|dientes|para hoy|para ma[ñn]ana|horita|tienen para"
+        r"|hora hoy|hora para|hora ma[ñn]ana)",
+        re.IGNORECASE,
+    )
+    _VITAL_SIGNAL = re.compile(
+        r"(no puedo respirar|dolor de pecho|infarto|sangrado|desmayo|convuls"
+        r"|hemiparesi|boca torcida|boca chueca|cara ca[ií]da|acv|derrame cerebral"
+        r"|no siento el brazo|habla trabada|me explot[oó] la cabeza)",
+        re.IGNORECASE,
+    )
+    _urgencia_dental_falso_positivo = (
         _solo_urgencia_trigger
-        and _URGENCIA_EXCUSA.search(tl)
-        and not _GRAVEDAD_INMEDIATA.search(tl)
+        and _DENTAL_URGENCIA_KEYWORDS.search(tl)
+        and not _VITAL_SIGNAL.search(tl)
+    )
+    _inhibir_emergencia = (
+        (_solo_urgencia_trigger and _URGENCIA_EXCUSA.search(tl) and not _GRAVEDAD_INMEDIATA.search(tl))
+        or _urgencia_dental_falso_positivo
     )
 
     if not _inhibir_emergencia and (
@@ -4453,6 +4479,33 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
     # ── WAIT_ESPECIALIDAD ─────────────────────────────────────────────────────
     if state == "WAIT_ESPECIALIDAD":
+        # C2: payloads de botones que no son nombres de especialidad.
+        # Si llegan aquí (ej. quick_yes, quick_no, menu_volver, no_agendar)
+        # deben enrutarse correctamente, no pasarlos al normalizador de especialidad.
+        _BUTTON_IDS_WE = frozenset({
+            "quick_yes", "quick_other", "quick_no", "no_agendar", "menu_volver",
+        })
+        if tl in _BUTTON_IDS_WE:
+            if tl == "quick_yes":
+                # Repetir menú de especialidades
+                save_session(phone, "WAIT_ESPECIALIDAD", data)
+                return f"¿Qué especialidad necesitas?\n\n{_ESPECIALIDADES_TEXTO}"
+            if tl in ("quick_other", "quick_no", "no_agendar"):
+                save_session(phone, "WAIT_ESPECIALIDAD", data)
+                return f"¿Qué especialidad necesitas?\n\n{_ESPECIALIDADES_TEXTO}"
+            if tl == "menu_volver":
+                reset_session(phone)
+                return await handle_message(phone, "menu", {"state": "IDLE", "data": {}})
+        # C2: preguntas genéricas de agendamiento que no son nombres de especialidad
+        # ("¿puedo reservar una cita?", "¿tienen para hoy?", "¿hay hora?")
+        _es_pregunta_agendamiento = (
+            (tl.startswith("¿") or tl.endswith("?"))
+            and any(kw in tl for kw in ("puedo", "tienen", "hay", "agendar", "reservar", "hora"))
+        )
+        if _es_pregunta_agendamiento:
+            save_session(phone, "WAIT_ESPECIALIDAD", data)
+            return f"Sí, claro. ¿Qué especialidad necesitas?\n\n{_ESPECIALIDADES_TEXTO}"
+
         # Detectar fecha pedida en este mensaje y propagar al flujo de agendar.
         # Bug histórico (caso María 56968621918): paciente clickea "Agendar" → llega
         # a WAIT_ESPECIALIDAD → escribe "medicina general para hoy". El branch
@@ -4523,8 +4576,16 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if txt.startswith("motivo_"):
             reset_session(phone)
             return await handle_message(phone, txt, {"state": "IDLE", "data": {}})
-        slots_mostrados = data.get("slots", [])          # los que ve el paciente ahora
-        todos_slots     = data.get("todos_slots", slots_mostrados)  # todos del día
+        # C3: filtrar slots pasados que puedan quedar en cache entre días
+        _hoy_str_ws = _hoy_cl.strftime("%Y-%m-%d")
+        def _filtrar_slots_pasados(lst: list) -> list:
+            return [s for s in lst if (s.get("fecha") or "") >= _hoy_str_ws]
+        slots_mostrados = _filtrar_slots_pasados(data.get("slots", []))
+        todos_slots     = _filtrar_slots_pasados(data.get("todos_slots", slots_mostrados))
+        if slots_mostrados != data.get("slots"):
+            data["slots"] = slots_mostrados
+        if todos_slots != data.get("todos_slots"):
+            data["todos_slots"] = todos_slots
         fechas_vistas   = data.get("fechas_vistas", [])
         especialidad    = data.get("especialidad", "")
         fecha_actual    = todos_slots[0]["fecha"] if todos_slots else None
@@ -8768,6 +8829,9 @@ _FRASES_ESPECIALIDAD = [
     ("nutricion",             "nutrición"),
     ("nutrición",             "nutrición"),
     ("podolog",               "podología"),
+    ("posolog",               "podología"),     # typo posología → podología
+    ("posologia",             "podología"),
+    ("posología",             "podología"),
     ("ecograf",               "ecografía"),
     ("ecotomograf",           "ecografía"),
     ("ecotomo",               "ecografía"),
