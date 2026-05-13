@@ -381,8 +381,46 @@ def stats_profesional(id_profesional: int, desde: str = "2024-01-01") -> dict:
 # /pagos sync — fuente PRIMARIA de ingreso real (módulo Cajas Medilink)
 # ════════════════════════════════════════════════════════════════════════════
 
+def _build_next_cursor_url(current_url: str, last_records: int) -> str | None:
+    """Decodifica cursor= y construye uno con page+1.
+
+    Medilink devuelve links.current pero NO links.next. Hay que construir el
+    next decodificando el cursor base64 → JSON → incrementando "page".
+    Retorna None si la página actual trajo menos del limit (fin del stream).
+    """
+    if not current_url or "cursor=" not in current_url:
+        return None
+    try:
+        import base64
+        from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+        parts = urlparse(current_url)
+        qs = parse_qs(parts.query)
+        cursor_b64 = (qs.get("cursor") or [""])[0]
+        raw = base64.b64decode(cursor_b64).decode("utf-8", errors="ignore")
+        brace = raw.find("{")
+        if brace < 0:
+            return None
+        prefix = raw[:brace]
+        payload = json.loads(raw[brace:])
+        limit = int(payload.get("limit") or last_records or 50)
+        if last_records and last_records < limit:
+            return None  # última página
+        payload["page"] = int(payload.get("page", 0)) + 1
+        new_raw = prefix + json.dumps(payload, separators=(",", ":"))
+        new_cursor = base64.b64encode(new_raw.encode("utf-8")).decode("ascii")
+        qs["cursor"] = [new_cursor]
+        new_query = urlencode({k: v[0] for k, v in qs.items()})
+        return urlunparse(parts._replace(query=new_query))
+    except Exception:
+        return None
+
+
 async def _fetch_pagos_dia(cli: httpx.AsyncClient, fecha: str) -> AsyncIterator[list[dict]]:
-    """Pagina /pagos?q={fecha_recepcion:eq fecha}."""
+    """Pagina /pagos?q={fecha_recepcion:eq fecha}.
+
+    El endpoint NO devuelve links.next — solo links.current. Hay que construir
+    el cursor de la siguiente página decodificando base64 → JSON → page+1.
+    """
     q = {"fecha_recepcion": {"eq": fecha}}
     pq = {"q": json.dumps(q, separators=(",", ":"))}
     next_url: str | None = PAGOS_URL
@@ -400,21 +438,27 @@ async def _fetch_pagos_dia(cli: httpx.AsyncClient, fecha: str) -> AsyncIterator[
                 continue
             if r.status_code == 200:
                 d = r.json()
-                # Algunos días vienen como lista directa (sin envoltorio data/links)
                 if isinstance(d, list):
                     yield d
                     next_url = None
                 else:
-                    yield d.get("data", []) or []
+                    data = d.get("data", []) or []
+                    yield data
                     links = d.get("links")
-                    # /pagos devuelve links como list[{rel,href}]; /atenciones como dict
+                    next_link: str | None = None
                     if isinstance(links, dict):
-                        next_url = links.get("next")
+                        next_link = links.get("next")
+                        current = links.get("current") or ""
                     elif isinstance(links, list):
-                        next_url = next((l.get("href") for l in links
+                        next_link = next((l.get("href") for l in links
                                           if isinstance(l, dict) and l.get("rel") == "next"), None)
+                        current = next((l.get("href") for l in links
+                                         if isinstance(l, dict) and l.get("rel") == "current"), "")
                     else:
-                        next_url = None
+                        current = ""
+                    if not next_link:
+                        next_link = _build_next_cursor_url(current, len(data))
+                    next_url = next_link
                 first = False
                 break
             if r.status_code == 429:

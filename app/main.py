@@ -45,6 +45,7 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_adherencia_kine, _job_control_especialidad,
                   _job_crosssell_kine, _job_crosssell_orl_fono,
                   _job_crosssell_odonto_estetica, _job_crosssell_mg_chequeo,
+                  _job_crosssell_dx,
                   _job_medilink_watchdog, _job_admin_status_report,
                   _job_cleanup_stuck_sessions,
                   _job_waitlist_check,
@@ -416,6 +417,15 @@ async def lifespan(app: FastAPI):
         _job_telemedicina_recordatorios,
         CronTrigger(minute="*/15", hour="7-22", timezone=_CLT),
         id="telemedicina_recordatorios",
+        replace_existing=True,
+    )
+    # Cross-sell por dx tags: diario 11:00 CLT.
+    # INACTIVO por defecto (CROSS_SELL_ACTIVE=false).
+    # Activar solo después de piloto N=5 y confirmación de Rodrigo.
+    scheduler.add_job(
+        _job_crosssell_dx,
+        CronTrigger(hour=11, minute=0, timezone=_CLT),
+        id="crosssell_dx_diario",
         replace_existing=True,
     )
     # Primera generación al arrancar (sin await — no bloquear startup)
@@ -3231,6 +3241,14 @@ def api_cmc_mensual(mes: str | None = None):
             "GROUP BY id_profesional ORDER BY 3 DESC",
             (inicio, fin)
         ).fetchall()
+        # Pagos sin profesional resuelto (huérfanos) — se agrupan como "Sin asignar"
+        huerfanos = c.execute(
+            "SELECT COUNT(*) AS n, SUM(monto) AS total, "
+            "       COUNT(DISTINCT id_paciente) AS pacientes "
+            "FROM bi_pagos_caja WHERE fecha>=? AND fecha<? "
+            "AND id_profesional IS NULL",
+            (inicio, fin)
+        ).fetchone()
         dia_count = c.execute(
             "SELECT COUNT(DISTINCT fecha) FROM bi_pagos_caja "
             "WHERE fecha>=? AND fecha<?", (inicio, fin)
@@ -3249,6 +3267,7 @@ def api_cmc_mensual(mes: str | None = None):
     profs = []
     por_area: dict = {}
     total_mes = 0
+    n_pagos_total = 0
     for r in rows:
         pid = r["id_profesional"]
         info = PROFESIONALES.get(pid, {})
@@ -3265,14 +3284,32 @@ def api_cmc_mensual(mes: str | None = None):
         por_area[area]["total"] += total
         por_area[area]["n_pagos"] += r["n"]
         total_mes += total
+        n_pagos_total += r["n"]
+
+    # Pagos sin profesional cruzado: aparecen como "Sin asignar" para que cuadre el total
+    huer_n = huerfanos["n"] or 0
+    huer_total = int(huerfanos["total"] or 0)
+    if huer_n > 0:
+        profs.append({
+            "id": None, "nombre": "Sin asignar",
+            "especialidad": "(pagos sin cruce a atención)",
+            "area": "sin_asignar", "area_label": "Sin asignar",
+            "total": huer_total, "n_pagos": huer_n,
+            "pacientes": huerfanos["pacientes"] or 0,
+        })
+        por_area["sin_asignar"] = {
+            "label": "Sin asignar", "total": huer_total, "n_pagos": huer_n,
+        }
+        total_mes += huer_total
+        n_pagos_total += huer_n
 
     from datetime import datetime as _dt_cm
     return {
         "mes": mes,
         "fecha_actualizacion": _dt_cm.now().strftime("%Y-%m-%d %H:%M"),
         "total_mes": total_mes,
-        "n_profesionales_activos": len(profs),
-        "n_pagos_total": sum(p["n_pagos"] for p in profs),
+        "n_profesionales_activos": sum(1 for p in profs if p.get("id") is not None),
+        "n_pagos_total": n_pagos_total,
         "dias_con_actividad": dia_count,
         "profesionales": profs,
         "areas": [{"key": k, **v} for k, v in sorted(por_area.items(), key=lambda x: -x[1]["total"])],
