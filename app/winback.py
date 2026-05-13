@@ -423,6 +423,72 @@ def _phones_con_cita_futura() -> set[str]:
         return set()
 
 
+# ── Lookup event-driven (un solo paciente por phone) ─────────────────────────
+
+def get_candidato_por_phone(phone: str) -> dict | None:
+    """Busca los datos de un paciente por teléfono en v_winback_cohortes_contactables.
+
+    La vista ya filtra: consent aceptado + sin opt-out.
+    Retorna el dict con los campos que espera send_winback, o None si el paciente
+    no existe / no es contactable / no tiene cohorte asignada.
+    """
+    tel = phone.lstrip("+").strip()
+    if not tel:
+        return None
+    try:
+        with bi_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT
+                        paciente_id, nombre, apellido, telefono,
+                        genero, ultima_atencion, ultima_especialidad,
+                        ultimo_profesional, dias_inactivo, cohorte, edad
+                    FROM bi.v_winback_cohortes_contactables
+                    WHERE telefono = %s
+                      AND cohorte IS NOT NULL
+                    ORDER BY dias_inactivo ASC
+                    LIMIT 1
+                    """,
+                    (tel,),
+                )
+                row = cur.fetchone()
+                if not row:
+                    return None
+                cols = [
+                    "paciente_id", "nombre", "apellido", "telefono",
+                    "genero", "ultima_atencion", "ultima_especialidad",
+                    "ultimo_profesional", "dias_inactivo", "cohorte", "edad",
+                ]
+                return dict(zip(cols, row))
+    except Exception as e:
+        log.warning("winback: get_candidato_por_phone error phone=...%s: %s", tel[-4:], e)
+        return None
+
+
+def ya_enviado_winback_hoy(phone: str) -> bool:
+    """Retorna True si ya se envió un winback a este phone hoy.
+
+    Rate limit per-phone: máximo 1 winback por día, independiente del batch o
+    del trigger event-driven.
+    """
+    tel = phone.lstrip("+").strip()
+    hoy = date.today().isoformat()
+    try:
+        with bi_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT 1 FROM bi.winback_envios "
+                    "WHERE telefono = %s AND DATE(enviado_at) = %s "
+                    "LIMIT 1",
+                    (tel, hoy),
+                )
+                return cur.fetchone() is not None
+    except Exception as e:
+        log.warning("winback: ya_enviado_winback_hoy error phone=...%s: %s", tel[-4:], e)
+        return False  # fail-open: si no podemos verificar, permitir envío
+
+
 # ── Registro en winback_envios ────────────────────────────────────────────────
 def _registrar_envio(
     paciente_id: int,
