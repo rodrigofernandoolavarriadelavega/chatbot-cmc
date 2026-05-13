@@ -483,6 +483,8 @@ def _resolver_profesional_pago(c, pago: dict) -> tuple[int | None, int | None]:
     3. Ventana ±60 días + monto cercano (delta abs mínimo)
     4. Ventana ±60 días + atención con deuda > 0 (FIFO la más antigua con deuda)
     5. Si paciente tiene un único profesional histórico → ese
+    6. Fallback: atención más cercana en fecha ±14d (cualquier monto, incluso $0)
+       Asigna al profesional que atendió al paciente en la fecha más próxima al pago.
     Retorna (id_profesional, atencion_id) o (None, None).
     """
     from datetime import date, timedelta
@@ -493,82 +495,100 @@ def _resolver_profesional_pago(c, pago: dict) -> tuple[int | None, int | None]:
         return None, None
     fecha_iso = fecha[:10]
 
-    # Atenciones del paciente con total > 0 (descarta controles $0)
+    # Atenciones con total > 0 (preferidas para matching por monto)
     rows = c.execute(
         "SELECT atencion_id, id_profesional, total, abonado, deuda, fecha "
         "FROM bi_atenciones WHERE id_paciente=? AND total>0 "
         "ORDER BY fecha", (pid,)
     ).fetchall()
-    if not rows:
-        return None, None
 
     try:
         f_pago = date.fromisoformat(fecha_iso)
     except ValueError:
         return None, None
 
-    # 1. Mismo día + monto exacto
-    same_day = [r for r in rows if r["fecha"] == fecha_iso and (r["total"] or 0) == monto]
-    if same_day:
-        # Si hay múltiples atenciones mismo día con mismo monto → prioridad por:
-        # (a) atención con deuda > 0 (el pago paga esa deuda)
-        # (b) atención sin abonar todavía (abonado < total)
-        # (c) primera en orden cronológico
-        with_debt = [r for r in same_day if (r["deuda"] or 0) > 0]
-        if with_debt:
-            r = with_debt[0]
+    if rows:
+        # 1. Mismo día + monto exacto
+        same_day = [r for r in rows if r["fecha"] == fecha_iso and (r["total"] or 0) == monto]
+        if same_day:
+            with_debt = [r for r in same_day if (r["deuda"] or 0) > 0]
+            if with_debt:
+                r = with_debt[0]
+                return r["id_profesional"], r["atencion_id"]
+            unpaid = [r for r in same_day if (r["abonado"] or 0) < (r["total"] or 0)]
+            if unpaid:
+                r = unpaid[0]
+                return r["id_profesional"], r["atencion_id"]
+            r = same_day[0]
             return r["id_profesional"], r["atencion_id"]
-        unpaid = [r for r in same_day if (r["abonado"] or 0) < (r["total"] or 0)]
-        if unpaid:
-            r = unpaid[0]
-            return r["id_profesional"], r["atencion_id"]
-        r = same_day[0]
-        return r["id_profesional"], r["atencion_id"]
 
-    # 2. Ventana ±60d + monto exacto, ordenar por proximidad temporal
-    en_ventana = []
-    for r in rows:
+        # 2. Ventana ±60d + monto exacto
+        en_ventana = []
+        for r in rows:
+            try:
+                f_at = date.fromisoformat(r["fecha"])
+            except (ValueError, TypeError):
+                continue
+            delta_d = abs((f_pago - f_at).days)
+            if delta_d <= 60:
+                en_ventana.append((delta_d, r))
+        en_ventana.sort(key=lambda x: x[0])
+
+        monto_exacto = [t for t in en_ventana if (t[1]["total"] or 0) == monto]
+        if monto_exacto:
+            r = monto_exacto[0][1]
+            return r["id_profesional"], r["atencion_id"]
+
+        # 3. Ventana ±60d + monto cercano (delta < 5%)
+        if en_ventana:
+            ranked = sorted(
+                en_ventana,
+                key=lambda t: (abs((t[1]["total"] or 0) - monto), t[0])
+            )
+            best_delta = abs((ranked[0][1]["total"] or 0) - monto)
+            if best_delta <= max(2000, monto * 0.05):
+                r = ranked[0][1]
+                return r["id_profesional"], r["atencion_id"]
+
+        # 4. Atención con deuda > 0 anterior al pago (FIFO)
+        deudoras = [r for r in rows
+                    if (r["deuda"] or 0) > 0 and r["fecha"] and r["fecha"] <= fecha_iso]
+        if deudoras:
+            r = deudoras[-1]
+            return r["id_profesional"], r["atencion_id"]
+
+        # 5. Si todas las atenciones del paciente son de un mismo profesional
+        profs = set(r["id_profesional"] for r in rows if r["id_profesional"])
+        if len(profs) == 1:
+            prof_unico = next(iter(profs))
+            rows_ranked = sorted(rows, key=lambda r: abs(
+                (date.fromisoformat(r["fecha"]) - f_pago).days
+            ) if r["fecha"] else 999999)
+            return prof_unico, rows_ranked[0]["atencion_id"]
+
+    # 6. Fallback: TODAS las atenciones del paciente ±14d (incluyendo total=$0).
+    # Asignar al profesional de la atención más cercana en fecha. Necesario
+    # porque Medilink a veces deja total=$0 en /atenciones hasta que se cobra.
+    all_rows = c.execute(
+        "SELECT atencion_id, id_profesional, total, fecha "
+        "FROM bi_atenciones WHERE id_paciente=? "
+        "ORDER BY fecha", (pid,)
+    ).fetchall()
+    candidatos = []
+    for r in all_rows:
+        if not r["fecha"] or not r["id_profesional"]:
+            continue
         try:
             f_at = date.fromisoformat(r["fecha"])
         except (ValueError, TypeError):
             continue
         delta_d = abs((f_pago - f_at).days)
-        if delta_d <= 60:
-            en_ventana.append((delta_d, r))
-    en_ventana.sort(key=lambda x: x[0])
-
-    monto_exacto = [t for t in en_ventana if (t[1]["total"] or 0) == monto]
-    if monto_exacto:
-        r = monto_exacto[0][1]
+        if delta_d <= 14:
+            candidatos.append((delta_d, r))
+    if candidatos:
+        candidatos.sort(key=lambda x: (x[0], -(x[1]["total"] or 0)))
+        r = candidatos[0][1]
         return r["id_profesional"], r["atencion_id"]
-
-    # 3. Ventana ±60d + monto cercano (delta < 5%)
-    if en_ventana:
-        ranked = sorted(
-            en_ventana,
-            key=lambda t: (abs((t[1]["total"] or 0) - monto), t[0])
-        )
-        best_delta = abs((ranked[0][1]["total"] or 0) - monto)
-        if best_delta <= max(2000, monto * 0.05):
-            r = ranked[0][1]
-            return r["id_profesional"], r["atencion_id"]
-
-    # 4. Atención con deuda > 0 anterior al pago (FIFO)
-    deudoras = [r for r in rows
-                if (r["deuda"] or 0) > 0 and r["fecha"] and r["fecha"] <= fecha_iso]
-    if deudoras:
-        r = deudoras[-1]  # la más reciente con deuda
-        return r["id_profesional"], r["atencion_id"]
-
-    # 5. Si todas las atenciones del paciente son de un mismo profesional
-    profs = set(r["id_profesional"] for r in rows if r["id_profesional"])
-    if len(profs) == 1:
-        prof_unico = next(iter(profs))
-        # Asignar a la atención más cercana en fecha
-        rows_ranked = sorted(rows, key=lambda r: abs(
-            (date.fromisoformat(r["fecha"]) - f_pago).days
-        ) if r["fecha"] else 999999)
-        return prof_unico, rows_ranked[0]["atencion_id"]
 
     return None, None
 

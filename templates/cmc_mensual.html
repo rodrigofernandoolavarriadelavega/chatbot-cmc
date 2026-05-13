@@ -2085,9 +2085,16 @@ async function _cmcLoadMes(mes){
   const r = await fetch(url);
   const d = await r.json();
   _CMC_MES_ACTUAL = d.mes;
-  // Mapa id_profesional → total cobrado
+  // Mapa id_profesional → total cobrado (huérfano con id=null va aparte)
   const totByProf = {};
-  for(const p of d.profesionales){ totByProf[p.id] = p.total; }
+  let totalHuerfanos = 0;
+  for(const p of d.profesionales){
+    if(p.id === null || p.id === undefined){
+      totalHuerfanos += (p.total || 0);
+    } else {
+      totByProf[p.id] = p.total;
+    }
+  }
   // Aplicar al data: actualizar total + recalcular prof + cmc
   const abarcaContratoActivo = d.mes >= _ABARCA_CONTRATO_DESDE;
   for(const row of data){
@@ -2111,6 +2118,26 @@ async function _cmcLoadMes(mes){
       row.prof = Math.round(total * pct);
       row.cmc = total - row.prof;
     }
+  }
+  // Inyectar/actualizar row "Sin asignar" con huérfanos (pagos sin cruce a profesional)
+  const SIN_ASIGNAR_NAME = 'Sin asignar (caja)';
+  let huerfRow = data.find(d => d.name === SIN_ASIGNAR_NAME);
+  if(totalHuerfanos > 0){
+    if(!huerfRow){
+      huerfRow = {
+        name: SIN_ASIGNAR_NAME,
+        area_key: 'sin_asignar', area: 'Sin asignar',
+        subarea_key: 'sin_asignar', subarea: 'Sin asignar',
+        total: 0, prof: 0, cmc: 0,
+        tipo_pago: 'pct', hono_fijo: 0, pct: 0,
+      };
+      data.push(huerfRow);
+    }
+    huerfRow.total = totalHuerfanos;
+    huerfRow.prof = 0;            // sin profesional → 0 honorarios atribuibles
+    huerfRow.cmc = totalHuerfanos;  // todo el monto cuenta como CMC
+  } else if(huerfRow){
+    huerfRow.total = 0; huerfRow.prof = 0; huerfRow.cmc = 0;
   }
   // Render
   document.getElementById('chart-mes-label').textContent = _fmtMes(d.mes);
