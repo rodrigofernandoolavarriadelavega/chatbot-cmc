@@ -112,6 +112,14 @@ const FEATURES = [
   { id: "reporte_16",         label: "Reporte progreso 16:00",               desc: "Resumen a media tarde." },
   { id: "reporte_20",         label: "Reporte progreso 20:00",               desc: "Resumen al cierre del día." },
 
+  { cat: "Notificaciones de su agenda (push WhatsApp · solo dentro de ventana 24h, costo $0)" },
+  { id: "notif_nueva_cita",   label: "Push: nuevo paciente agendado",        desc: "WhatsApp inmediato al profesional cuando el bot agenda un paciente nuevo en su agenda." },
+  { id: "notif_cancelacion",  label: "Push: paciente cancela",                desc: "Aviso cuando un paciente cancela su hora con este profesional." },
+  { id: "notif_reagenda",     label: "Push: paciente reagenda",               desc: "Aviso cuando un paciente cambia su hora (de fecha X a fecha Y)." },
+  { id: "resumen_diario_07",  label: "Resumen agenda 07:00 AM",               desc: "Lista de pacientes del día con estado de confirmación al iniciar la mañana." },
+  { id: "resumen_semanal_dom", label: "Resumen semanal (domingo 19:00)",      desc: "Pacientes confirmados de la semana entrante. Útil para psico/kine que planifican." },
+  { id: "dashboard_link",     label: "Link dashboard personal",               desc: "Recibe link /profesional/dashboard?token=… con sus KPIs en el resumen del lunes." },
+
   { cat: "Inteligencia clínica" },
   { id: "asistente_clinico",  label: "Modo asistente clínico",               desc: "Preventivos por edad/sexo, guías GES por patología (DM2, HTA, asma, EPOC…)." },
   { id: "modo_agente",        label: "Modo agente (bot agenda por el doctor)", desc: "El doctor puede pedir agenda por WhatsApp y el bot gestiona." },
@@ -124,10 +132,20 @@ const FEATURES = [
 ];
 
 // ── Staff (orden — Dr. Olavarría primero) ───────────────────────────────────
+// Sincronizado con STAFF_PHONES en .env del servidor.
 const STAFF = [
   { phone: "56987834148", nombre: "Dr. Olavarría",            especialidad: "Medicina General · Director" },
   { phone: "56974559977", nombre: "Dr. Andrés Abarca",        especialidad: "Medicina General" },
+  { phone: "56941745865", nombre: "Dr. Manuel Borrego",       especialidad: "Otorrinolaringología" },
+  { phone: "56936193005", nombre: "Dr. Miguel Millán",        especialidad: "Cardiología" },
+  { phone: "56967273744", nombre: "Dr. Claudio Barraza",      especialidad: "Traumatología" },
+  { phone: "56978255191", nombre: "Dr. Tirso Rejón",          especialidad: "Ginecología" },
+  { phone: "56975580967", nombre: "Dr. Nicolás Quijano",      especialidad: "Gastroenterología" },
   { phone: "56938738734", nombre: "Dra. Javiera Burgos",      especialidad: "Odontología General" },
+  { phone: "56984378319", nombre: "Dr. Carlos Jiménez",       especialidad: "Odontología General" },
+  { phone: "56969176902", nombre: "Dra. Daniela Castillo",    especialidad: "Ortodoncia" },
+  { phone: "56987384044", nombre: "Dr. Fernando Fredes",      especialidad: "Endodoncia" },
+  { phone: "56993140124", nombre: "Ps. Jorge Montalba",       especialidad: "Psicología Adulto / Infantil" },
   { phone: "56941529674", nombre: "Ps. Juan Pablo Rodríguez", especialidad: "Psicología Adulto" },
   { phone: "56992201931", nombre: "T.M. David Pardo",         especialidad: "Ecografía" },
 ];
