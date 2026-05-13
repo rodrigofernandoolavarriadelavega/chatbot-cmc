@@ -9084,39 +9084,64 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
         # agradecimientos, muy corta) NO decir "no contamos con *X*" — mostrar el
         # menú. Esto evita responses absurdas como "no contamos con *?*" o
         # "no contamos con *muchas gracias*".
-        _esp_clean = re.sub(r"[^a-záéíóúñü ]", "", especialidad_lower).strip()
-        _SALUDOS_GRACIAS = {
-            "hola", "hi", "buenos dias", "buenas tardes", "buenas noches",
-            "gracias", "muchas gracias", "graxias", "grcias", "ok", "oki", "vale",
-            "perfecto", "perfect", "listo", "dale", "si", "no",
-        }
-        # Tokens que indican saludo o intención de pedir hora (no son especialidad)
-        _SALUDOS_TOKENS = {"hola", "buenos", "buenas", "saludos", "hi", "hey", "ola"}
-        _AGEND_TOKENS = {"pedir", "agendar", "reservar", "quiero", "necesito"}
-        _palabras = set(_esp_clean.split())
-        _es_saludo_compuesto = bool(_palabras & _SALUDOS_TOKENS)
-        _es_intencion_agendar = bool(_palabras & _AGEND_TOKENS) and "hora" in _palabras
-        # Guard extendido 2026-05-10: si el texto que llegó como "especialidad"
-        # parece una frase libre del usuario (>40 chars, o contiene palabras que
-        # no aparecen en nombres de especialidades médicas), volver a preguntar
-        # la especialidad en lugar de imprimir el texto crudo como "no contamos con X".
-        # Casos reales: "de forma particular.-", "he llamado a ambos números y..."
-        _ESP_NO_PALABRAS = {
-            "llamado", "llame", "llamo", "numero", "numeros", "telefono", "celular",
-            "particular", "particular", "apagado", "ocupado", "comunico", "comunique",
-            "espere", "espera", "esperar", "rato", "minutos", "favor",
-            "porque", "cuando", "mientras", "siempre", "tambien",
-        }
-        _es_frase_libre = (
-            len(especialidad_lower) > 40
-            or bool(_palabras & _ESP_NO_PALABRAS)
-            or ".-" in especialidad_lower
-            or especialidad_lower.count(" ") >= 5
+        # Validación positiva 2026-05-13: el texto solo pasa al branch "no contamos con X"
+        # si es reconocible como nombre de especialidad médica. Si no matchea ninguna
+        # clave conocida, volvemos a preguntar — evita mensajes absurdos como
+        # "no contamos con *Pero para ponérmelos*" o "no contamos con *Hay mañana le.hablo*".
+        #
+        # Criterio positivo (cualquiera de los dos basta):
+        #   1. _detectar_especialidad_en_texto matchea alguna frase en _FRASES_ESPECIALIDAD
+        #   2. El texto normalizado coincide con alguna clave de ESPECIALIDADES_MAP
+        #
+        # Casos que SÍ deben pasar: "Pediatra", "Traumatología", "reumatología"
+        # (especialidades plausibles aunque el CMC no las tenga).
+        # Casos que NO deben pasar: "Pero para ponérmelos", "Hay mañana le.hablo",
+        # "hola", frases libres del usuario.
+        from medilink import ESPECIALIDADES_MAP as _ESPEC_MAP
+        import unicodedata as _ud
+        def _norm_esp(t: str) -> str:
+            """Minúscula sin acentos (preserva ñ)."""
+            t = t.lower()
+            return "".join(
+                c if c == "ñ" else _ud.normalize("NFD", c)[0]
+                for c in t
+            )
+        _esp_norm = _norm_esp(especialidad_lower)
+        # Check 1: alias en _FRASES_ESPECIALIDAD (via función ya existente)
+        _matchea_alias = _detectar_especialidad_en_texto(especialidad_lower) is not None
+        # Check 2: coincide con alguna clave del catálogo Medilink (normalizada)
+        _matchea_catalogo = any(
+            _esp_norm in _norm_esp(k) or _norm_esp(k) in _esp_norm
+            for k in _ESPEC_MAP
+            if len(k) >= 4  # descartar claves muy cortas como "orl", "eco", "kine"
         )
-        if (len(_esp_clean) < 4 or _esp_clean in _SALUDOS_GRACIAS or not _esp_clean
-                or _es_saludo_compuesto or _es_intencion_agendar or _es_frase_libre):
+        # Check 3: morfología de especialidad médica — sufijos clínicos estándar.
+        # Captura especialidades plausibles no registradas en el CMC
+        # (ej: "reumatología", "neurología", "dermatología", "pediatría").
+        _SUFIJOS_MED = (
+            "logia", "logía", "atria", "atría", "iatria", "iatría",
+            "ologo", "ólogo", "ologa", "óloga",
+            "cista", "ista",  # endocrinista, oncologista
+            "urgia", "urgía",  # neurocirugía
+            "terapia",         # hidroterapia, quimioterapia
+        )
+        _esp_sin_tildes = _norm_esp(especialidad_lower)
+        _matchea_sufijo = (
+            " " not in especialidad_lower.strip()   # palabra única
+            and len(especialidad_lower.strip()) >= 6  # mínimo razonable
+            and any(_esp_sin_tildes.endswith(s) or _esp_sin_tildes.endswith(s + "s") for s in _SUFIJOS_MED)
+        )
+        _es_especialidad_reconocida = _matchea_alias or _matchea_catalogo or _matchea_sufijo
+        if not _es_especialidad_reconocida:
+            log_event(phone, "especialidad_texto_libre_rechazado", {
+                "texto_usuario": especialidad,
+                "estado_previo": "WAIT_ESPECIALIDAD",
+            })
             save_session(phone, "WAIT_ESPECIALIDAD", data)
-            return f"Claro, te ayudo a agendar 😊\n\n¿Qué especialidad necesitas?\n\n{_ESPECIALIDADES_TEXTO}"
+            return (
+                "¿Qué especialidad necesitas? "
+                "Por ejemplo: Medicina General, Kinesiología, Odontología, Ecografía."
+            )
         # Antes de decir no contamos con, probar FAQ local (radiografia/telemed/etc)
         try:
             from claude_helper import _local_faq_fallback as _faq_fb_esp

@@ -242,6 +242,18 @@ async def send_event(
                     score if score else "n/a",
                     test_event_code or "off",
                 )
+                try:
+                    from session import log_event as _le_ok
+                    _le_ok(phone, "capi_send_ok", {
+                        "event_type": event_name,
+                        "value": value,
+                        "currency": currency,
+                        "content_name": (custom_data or {}).get("content_name"),
+                        "events_received": ms,
+                        "event_id": eid[:16],
+                    })
+                except Exception as _e_ok:
+                    log.debug("CAPI: no se pudo loggear capi_send_ok: %s", _e_ok)
                 return resp
 
             # 4xx no-transitorio: no reintentar
