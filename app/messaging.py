@@ -5,9 +5,12 @@ import re
 
 import httpx
 
+import time
+
 from config import (META_ACCESS_TOKEN, META_PHONE_NUMBER_ID,
                     META_PAGE_ACCESS_TOKEN, META_MESSENGER_TOKEN,
                     INSTAGRAM_USER_ID, META_PAGE_ID,
+                    META_WABA_ID,
                     OPENAI_API_KEY)
 
 log = logging.getLogger("bot")
@@ -368,10 +371,73 @@ async def send_whatsapp_image_by_id(to: str, media_id: str,
     })
 
 
+# ── Caché de language code por template (TTL 1 hora) ─────────────────────────
+# Meta devuelve el language real del template aprobado (ej: "es_CL").
+# Nunca hardcodear — el default "es" causaba HTTP 404 en todos los templates
+# aprobados en es_CL (bug detectado 2026-05-13).
+_template_language_cache: dict[str, tuple[str, float]] = {}
+_TEMPLATE_LANGUAGE_TTL = 3600  # segundos
+
+
+async def _get_template_language(template_name: str) -> str:
+    """Retorna el language code del template aprobado en Meta (ej: "es_CL").
+
+    Consulta la Graph API una vez por TTL=1h y cachea el resultado.
+    Fallback: "es_CL" (todos los templates CMC están aprobados en ese locale).
+    """
+    _FALLBACK = "es_CL"
+    now = time.monotonic()
+    cached = _template_language_cache.get(template_name)
+    if cached and (now - cached[1]) < _TEMPLATE_LANGUAGE_TTL:
+        return cached[0]
+
+    waba_id = META_WABA_ID
+    if not waba_id or not META_ACCESS_TOKEN:
+        log.warning("messaging: _get_template_language sin WABA_ID o token — usando %s", _FALLBACK)
+        return _FALLBACK
+
+    try:
+        async with httpx.AsyncClient(timeout=8) as client:
+            r = await client.get(
+                f"https://graph.facebook.com/v22.0/{waba_id}/message_templates",
+                params={
+                    "name": template_name,
+                    "fields": "name,language,status",
+                    "access_token": META_ACCESS_TOKEN,
+                },
+            )
+        if r.status_code == 200:
+            templates = r.json().get("data", [])
+            # Buscar primero APPROVED, luego cualquiera con ese nombre
+            approved = next(
+                (t for t in templates
+                 if t.get("name") == template_name and t.get("status") == "APPROVED"),
+                None,
+            )
+            tpl = approved or next(
+                (t for t in templates if t.get("name") == template_name), None
+            )
+            if tpl and tpl.get("language"):
+                lang = tpl["language"]
+                _template_language_cache[template_name] = (lang, now)
+                log.debug("messaging: template=%s language=%s (from Meta API)", template_name, lang)
+                return lang
+        log.warning(
+            "messaging: no se pudo obtener language para template=%s (status=%s) — usando %s",
+            template_name, r.status_code, _FALLBACK,
+        )
+    except Exception as e:
+        log.warning("messaging: error consultando language de template=%s: %s — usando %s",
+                    template_name, e, _FALLBACK)
+
+    _template_language_cache[template_name] = (_FALLBACK, now)
+    return _FALLBACK
+
+
 async def send_whatsapp_template(to: str, template_name: str,
                                   body_params: list[str] | None = None,
                                   button_payloads: list[str] | None = None,
-                                  language: str = "es"):
+                                  language: str | None = None):
     """Envía un Message Template aprobado por Meta.
 
     Usar para TODOS los mensajes proactivos (fuera de ventana 24h):
@@ -382,8 +448,15 @@ async def send_whatsapp_template(to: str, template_name: str,
         template_name: nombre del template registrado en Meta
         body_params: lista de valores para {{1}}, {{2}}, etc.
         button_payloads: payloads para botones QUICK_REPLY (índice 0, 1, 2)
-        language: código de idioma (default "es")
+        language: código de idioma. Si es None (default), se consulta desde
+                  Meta API con caché TTL 1h. Pasar explícitamente solo en tests.
     """
+    # Resolver language desde Meta API si no se especificó explícitamente.
+    # Root cause del bug: antes era language="es" hardcodeado; todos los templates
+    # CMC están aprobados en "es_CL" → Meta retornaba 404.
+    if language is None:
+        language = await _get_template_language(template_name)
+
     components = []
 
     # Variables del body

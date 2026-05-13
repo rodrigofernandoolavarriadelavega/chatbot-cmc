@@ -21,6 +21,7 @@ META_PAGE_ACCESS_TOKEN = os.getenv("META_PAGE_ACCESS_TOKEN", "") or os.getenv("M
 META_MESSENGER_TOKEN = os.getenv("META_MESSENGER_TOKEN", "")  # Page token para Messenger Send API
 INSTAGRAM_USER_ID    = os.getenv("INSTAGRAM_USER_ID", "")   # ID del usuario de Instagram Business
 META_PAGE_ID         = os.getenv("META_PAGE_ID", "")        # ID de la Página de Facebook
+META_WABA_ID         = os.getenv("META_WABA_ID", "")        # WhatsApp Business Account ID (para consultar templates)
 
 CMC_TELEFONO       = os.getenv("CMC_TELEFONO", "+56966610737")
 CMC_TELEFONO_FIJO  = os.getenv("CMC_TELEFONO_FIJO", "(41) 296 5226")
