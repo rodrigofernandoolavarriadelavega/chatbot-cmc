@@ -13,7 +13,7 @@ from fidelizacion import (enviar_seguimiento_postconsulta,
                           enviar_adherencia_kine, enviar_recordatorio_control,
                           enviar_crosssell_kine, enviar_cumpleanos, enviar_winback,
                           enviar_crosssell_orl_fono, enviar_crosssell_odonto_estetica,
-                          enviar_crosssell_mg_chequeo, enviar_crosssell_dx)
+                          enviar_crosssell_mg_chequeo)
 from medilink import (buscar_primer_dia, buscar_paciente, sync_citas_dia,
                       SEGUIMIENTO_ESPECIALIDADES, PROFESIONALES, get_slots_libres,
                       listar_citas_paciente)
@@ -647,15 +647,6 @@ async def _job_crosssell_mg_chequeo():
         await enviar_crosssell_mg_chequeo(send_whatsapp, send_template_fn=_tpl)
     except Exception as e:
         log.error("_job_crosssell_mg_chequeo falló (BUG-07): %s", e)
-
-async def _job_crosssell_dx():
-    """Cross-sell contextual por dx tags (dm2, hta, gineco/PAP).
-    CROSS_SELL_ACTIVE=false hasta piloto N=5 confirmado por Rodrigo.
-    """
-    try:
-        await enviar_crosssell_dx(send_whatsapp, send_template_fn=_tpl)
-    except Exception as e:
-        log.error("_job_crosssell_dx falló: %s", e)
 
 async def _job_cumpleanos():
     try:
