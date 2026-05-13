@@ -1267,6 +1267,9 @@ async def sitemap_xml():
         (f"{base_url}/comuna/", "0.85", "monthly"),
         (f"{base_url}/privacidad", "0.3", "yearly"),
     ]
+    # Landings directas servidas vía Snippet 8 (bridge WP) bajo dominio canónico
+    for direct_slug in ("lebu", "empresas", "los-alamos", "canete", "chequeos", "curanilahue"):
+        urls.append((f"{base_url}/{direct_slug}", "0.85", "monthly"))
     # Comuna hubs
     for comuna_slug in COMUNAS_ARAUCO:
         urls.append((f"{base_url}/comuna/{comuna_slug}", "0.85", "monthly"))
