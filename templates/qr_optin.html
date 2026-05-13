@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Activar WhatsApp · Centro Médico Carampangue</title>
+<link rel="icon" type="image/png" href="/static/olacore_sello_simple.png">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..800&family=Space+Grotesk:wght@300..700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<style>
+  :root {
+    --fiordo: #0E2530;
+    --neblina: #E8E0D0;
+    --cobre: #B98149;
+    --lenga: #7C4A2A;
+    --verde-musgo: #4A5D44;
+    --paper: #faf6ee;
+    --paper-card: #fffcf5;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: 'Space Grotesk', system-ui, sans-serif;
+    background: var(--paper); color: var(--fiordo);
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .card {
+    background: var(--paper-card);
+    border: 2px solid rgba(185, 129, 73, 0.3);
+    border-radius: 18px;
+    padding: 36px 32px;
+    max-width: 520px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 8px 24px rgba(14, 37, 48, 0.08);
+  }
+  .kicker {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--cobre);
+    margin-bottom: 6px;
+  }
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 1.85rem;
+    margin: 0 0 8px 0;
+    line-height: 1.15;
+    font-variation-settings: 'SOFT' 50;
+  }
+  h1 em { font-style: italic; font-variation-settings: 'SOFT' 80; color: var(--cobre); }
+  .lead {
+    font-size: 1rem;
+    color: rgba(14, 37, 48, 0.75);
+    margin: 8px 0 26px 0;
+    line-height: 1.5;
+  }
+  .qr-box {
+    background: white;
+    padding: 18px;
+    border-radius: 14px;
+    display: inline-block;
+    border: 1px solid rgba(14, 37, 48, 0.08);
+    margin-bottom: 22px;
+  }
+  #qrcode canvas, #qrcode img { display: block; }
+  .pasos {
+    text-align: left;
+    background: rgba(232, 224, 208, 0.4);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin: 0 0 18px 0;
+  }
+  .pasos ol { margin: 0; padding-left: 22px; }
+  .pasos li {
+    font-size: 0.95rem; line-height: 1.55;
+    margin-bottom: 8px; color: var(--fiordo);
+  }
+  .pasos li strong { color: var(--lenga); }
+  .fallback {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: rgba(14, 37, 48, 0.55);
+    word-break: break-all;
+    padding: 12px;
+    background: rgba(232, 224, 208, 0.3);
+    border-radius: 8px;
+  }
+  .fallback strong { color: var(--fiordo); }
+  .footer {
+    margin-top: 24px;
+    font-size: 0.78rem;
+    color: rgba(14, 37, 48, 0.5);
+  }
+  .footer a { color: var(--cobre); text-decoration: none; }
+  @media print {
+    body { background: white; padding: 0; }
+    .card { border: none; box-shadow: none; padding: 20px; }
+    .no-print { display: none; }
+  }
+  .print-btn {
+    margin-top: 16px;
+    background: var(--fiordo);
+    color: var(--neblina);
+    border: 0;
+    padding: 10px 22px;
+    border-radius: 8px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+  .print-btn:hover { background: var(--lenga); }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="kicker">Centro Médico Carampangue</div>
+  <h1>Activá tu <em>WhatsApp</em><br/>con un escaneo</h1>
+  <p class="lead">Recordatorios de citas, resultados de exámenes y seguimiento post-consulta — directo a tu celular.</p>
+
+  <div class="qr-box"><div id="qrcode"></div></div>
+
+  <div class="pasos">
+    <ol>
+      <li>Abrí la cámara de tu celular y <strong>escaneá este código</strong></li>
+      <li>WhatsApp se abrirá con un mensaje listo — solo presioná <strong>enviar</strong></li>
+      <li>El bot te pedirá tu autorización con dos botones</li>
+      <li>Tocá <strong>"✅ Sí, autorizo"</strong> y listo</li>
+    </ol>
+  </div>
+
+  <div class="fallback">
+    ¿No tenés cámara? Agendá el número <strong>+56 9 6661 0737</strong> y enviá el texto:
+    <strong>Activar WhatsApp CMC</strong>
+  </div>
+
+  <div class="footer">
+    Ley 19.628 · Podés desactivar cuando quieras escribiendo "salir"<br/>
+    <a href="https://agentecmc.cl/privacidad" target="_blank">Política de privacidad</a>
+  </div>
+
+  <button class="print-btn no-print" onclick="window.print()">🖨 Imprimir</button>
+</div>
+
+<script>
+  const WA_URL = "https://wa.me/56966610737?text=" + encodeURIComponent("Activar WhatsApp CMC");
+  QRCode.toCanvas(document.getElementById('qrcode'), WA_URL, {
+    width: 260,
+    margin: 1,
+    color: { dark: '#0E2530', light: '#ffffff' },
+    errorCorrectionLevel: 'M',
+  });
+</script>
+
+</body>
+</html>
