@@ -2533,30 +2533,40 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "Escribe *modo* para cambiar."
                 )
             return _doctor_mode_menu()
-        # FIX-17: disclosure en primer contacto (Ley 21.719)
+        # FIX-17 (FIX-1-2026-05-13): disclosure en primer contacto (Ley 21.719)
         _primer_contacto_disclosure = not has_recent_event(phone, "disclosure_enviado", days=3650)
-        if _primer_contacto_disclosure:
-            log_event(phone, "disclosure_enviado", {})
 
         # ── Saludo adaptativo si el paciente llegó desde un anuncio Meta ──────
-        # Si es primer contacto y hay referral fresco, personalizar el saludo
-        # con el nombre del anuncio en lugar del menú genérico.
+        # El disclosure (Ley 21.719) se envía SIEMPRE como primer bloque del
+        # mensaje. Si hay referral Meta, el saludo personalizado va concatenado.
+        # log_event("disclosure_enviado") solo se registra cuando el texto
+        # se incluye efectivamente en la respuesta.
         if _primer_contacto_disclosure:
+            _disclosure_txt = (
+                "Hola 👋 Soy el *asistente automático* del Centro Médico Carampangue "
+                "(no soy una persona).\n\n"
+                "_No entrego consejo médico ni evalúo síntomas. "
+                "Si es una urgencia, llama al *SAMU 131*._\n\n"
+                f"📍 {_CMC_DIRECCION}."
+            )
             try:
                 from session import get_meta_referral_fresh as _get_ref_bienvenida
                 _ref_bienvenida = _get_ref_bienvenida(phone, ttl_horas=24)
                 if _ref_bienvenida and _ref_bienvenida.get("headline"):
                     _headline_bv = _ref_bienvenida["headline"]
+                    log_event(phone, "disclosure_enviado", {})
                     log_event(phone, "bienvenida_adaptativa_meta", {"headline": _headline_bv[:80]})
                     _sx_bv = ((get_profile(phone) or {}).get("sexo") or "").upper()
                     _bv_word = "bienvenida" if _sx_bv == "F" else "bienvenido"
                     return (
-                        f"Hola, {_bv_word} al *Centro Médico Carampangue*. "
-                        f"Vi que llegaste desde nuestro aviso de *{_headline_bv}*.\n\n"
+                        f"{_disclosure_txt}\n\n"
+                        f"Vi que llegaste desde nuestro aviso de *{_headline_bv}*. "
+                        f"{_bv_word.capitalize()} al CMC.\n\n"
                         f"¿Quieres agendar una hora o tienes alguna pregunta?"
                     )
             except Exception:
                 pass
+            log_event(phone, "disclosure_enviado", {})
 
         return _menu_msg(primer_contacto=_primer_contacto_disclosure)
 
@@ -2798,7 +2808,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             r"est[aá]\s+lista|esta\s+lista|"
             r"ya\s+qued[oó]|listo\s+gracia[s]?|todo\s+bien|"
             r"me\s+confirm[ao]|hora\s+reservada|cita\s+reservada|"
-            r"ya\s+reserve\s+hora)\b",
+            r"ya\s+reserve\s+hora|reserv[eé]\s+(la\s+)?hora|"
+            r"\bgr[a]?cia[s]?\b|\blisto\b|\blista\b)\b",
             re.IGNORECASE,
         )
         if _POST_CITA_RE.search(tl):
