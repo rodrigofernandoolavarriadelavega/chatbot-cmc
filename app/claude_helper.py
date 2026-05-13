@@ -888,7 +888,6 @@ FONOAUDIOLOGÍA (Juana Arratia):
 - Evaluación infantil/adulto: $30.000 — evaluación completa de lenguaje, habla, voz o deglución. Determina si necesitas terapia y de qué tipo.
 - Sesión de terapia infantil/adulto: $25.000 — sesión de rehabilitación de lenguaje, habla, voz o deglución según el plan de tratamiento.
 - Terapia Tinnitus: $25.000 — tratamiento para el zumbido en los oídos (tinnitus/acúfenos). Incluye técnicas de habituación y manejo.
-- Lavado de oídos: $10.000 — extracción de cerumen (cera) acumulado mediante irrigación. Mejora la audición cuando hay tapón de cerumen. Este valor es ADEMÁS de la consulta ($35.000), no en lugar de ella.
 - Audiometría: $25.000 — examen auditivo que mide cuánto escuchas en cada oído. Se hace en cabina silente con audífonos; dura ~20 min, no duele.
 - Audiometría + impedanciometría: $45.000 — audiometría combinada con impedanciometría. Evaluación auditiva completa.
 - Impedanciometría: $20.000 — mide la movilidad del tímpano y la función del oído medio. Detecta otitis serosa, disfunción tubárica o perforación. Rápido e indoloro.

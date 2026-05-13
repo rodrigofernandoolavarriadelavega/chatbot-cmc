@@ -46,7 +46,6 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_adherencia_kine, _job_control_especialidad,
                   _job_crosssell_kine, _job_crosssell_orl_fono,
                   _job_crosssell_odonto_estetica, _job_crosssell_mg_chequeo,
-                  _job_crosssell_dx,
                   _job_medilink_watchdog, _job_admin_status_report,
                   _job_cleanup_stuck_sessions,
                   _job_waitlist_check,
@@ -431,15 +430,8 @@ async def lifespan(app: FastAPI):
         id="telemedicina_recordatorios",
         replace_existing=True,
     )
-    # Cross-sell por dx tags: diario 11:00 CLT.
-    # INACTIVO por defecto (CROSS_SELL_ACTIVE=false).
-    # Activar solo después de piloto N=5 y confirmación de Rodrigo.
-    scheduler.add_job(
-        _job_crosssell_dx,
-        CronTrigger(hour=11, minute=0, timezone=_CLT),
-        id="crosssell_dx_diario",
-        replace_existing=True,
-    )
+    # Cross-sell por dx tags: diario 11:00 CLT. Pendiente de implementación.
+    # scheduler.add_job(_job_crosssell_dx, CronTrigger(hour=11, minute=0, timezone=_CLT), id='crosssell_dx_diario')
     # Primera generación al arrancar (sin await — no bloquear startup)
     import asyncio as _asyncio_startup
     _asyncio_startup.get_event_loop().create_task(_job_regenerate_heatmap_cache())
