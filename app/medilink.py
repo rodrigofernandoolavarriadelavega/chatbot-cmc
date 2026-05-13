@@ -1819,3 +1819,177 @@ async def get_slots_libres(profesional_id: int, fecha: str) -> list[dict]:
 
     log.info("get_slots_libres: prof=%d fecha=%s → %d slots libres", profesional_id, fecha, len(todos))
     return todos
+
+
+# ── CTWA (Click-to-WhatsApp) — mapping headline Meta → especialidad ──────────
+# Cubre las especialidades de campañas activas. Claves en minúscula sin tildes
+# para comparación case-insensitive/accent-insensitive. Valor = clave exacta
+# de ESPECIALIDADES_MAP (o ESPECIALIDADES_ID).
+_META_HEADLINE_TO_ESPECIALIDAD: dict[str, str] = {
+    # Medicina General
+    "medicina general": "medicina general",
+    "medico general":   "medicina general",
+    "medico":           "medicina general",
+    "mg":               "medicina general",
+    "medico de familia":"medicina general",
+    "medicina familiar":"medicina familiar",
+    # ORL
+    "otorrinolaringologia": "otorrinolaringología",
+    "otorrinolaringología": "otorrinolaringología",
+    "otorrino":             "otorrinolaringología",
+    "orl":                  "otorrinolaringología",
+    "especialista oidos":   "otorrinolaringología",
+    "oido":                 "otorrinolaringología",
+    "oidos":                "otorrinolaringología",
+    "garganta":             "otorrinolaringología",
+    "nariz":                "otorrinolaringología",
+    # Ecografía
+    "ecografia":      "ecografía",
+    "ecografía":      "ecografía",
+    "eco":            "ecografía",
+    "ecotomografia":  "ecografía",
+    "ecotomografía":  "ecografía",
+    "ecotomo":        "ecografía",
+    "ultrasonido":    "ecografía",
+    # Ortodoncia
+    "ortodoncia":   "ortodoncia",
+    "orto":         "ortodoncia",
+    "frenillos":    "ortodoncia",
+    "brackets":     "ortodoncia",
+    "aparato dental":"ortodoncia",
+    # Odontología
+    "odontologia":  "odontología",
+    "odontología":  "odontología",
+    "dentista":     "odontología",
+    "dental":       "odontología",
+    "diente":       "odontología",
+    "dientes":      "odontología",
+    # Ginecología / Matrona
+    "ginecologia":  "ginecología",
+    "ginecología":  "ginecología",
+    "ginecologo":   "ginecología",
+    "matrona":      "matrona",
+    "control ginecologico": "ginecología",
+    # Kinesiología
+    "kinesiologia": "kinesiología",
+    "kinesiología": "kinesiología",
+    "kine":         "kinesiología",
+    "kinesiologo":  "kinesiología",
+    "rehabilitacion":"kinesiología",
+    # Nutrición
+    "nutricion":    "nutrición",
+    "nutrición":    "nutrición",
+    "nutricionista":"nutrición",
+    "dieta":        "nutrición",
+    # Psicología
+    "psicologia":   "psicología",
+    "psicología":   "psicología",
+    "psicologo":    "psicología",
+    "salud mental": "psicología",
+}
+
+
+def _normalizar_headline(headline: str) -> str:
+    """Normaliza headline: minúscula, sin tildes (preserva ñ), colapsa espacios."""
+    import unicodedata
+    s = headline.lower().strip()
+    resultado = []
+    for c in unicodedata.normalize("NFD", s):
+        cat = unicodedata.category(c)
+        if cat == "Mn":
+            continue
+        resultado.append(c)
+    return " ".join("".join(resultado).split())
+
+
+def headline_to_especialidad(headline: str) -> str | None:
+    """Mapea headline de anuncio Meta → nombre de especialidad.
+    Retorna None si no hay match."""
+    if not headline:
+        return None
+    norm = _normalizar_headline(headline)
+    # Búsqueda exacta primero
+    if norm in _META_HEADLINE_TO_ESPECIALIDAD:
+        return _META_HEADLINE_TO_ESPECIALIDAD[norm]
+    # Búsqueda por substring: si el headline contiene alguna clave
+    for key, esp in _META_HEADLINE_TO_ESPECIALIDAD.items():
+        if key in norm:
+            return esp
+    return None
+
+
+async def top3_slots_especialidad(especialidad: str, dias: int = 7) -> list[dict]:
+    """Retorna hasta 3 slots Medilink más cercanos para la especialidad.
+
+    Usa buscar_primer_dia con ventana de `dias` días. Itera días hasta juntar 3
+    slots o agotar la ventana.
+
+    Cada slot devuelto tiene: fecha, fecha_display, hora_inicio, hora_fin,
+    profesional, especialidad, id_profesional, id_recurso.
+    """
+    from datetime import datetime as _dt_t3
+    from zoneinfo import ZoneInfo as _ZI
+    _hoy = _dt_t3.now(ZoneInfo("America/Santiago")).date()
+
+    collected: list[dict] = []
+    excluir: list[str] = []
+
+    while len(collected) < 3:
+        try:
+            smart, todos = await buscar_primer_dia(
+                especialidad,
+                dias_adelante=dias,
+                excluir=excluir,
+            )
+        except Exception as e:
+            log.warning("top3_slots_especialidad: buscar_primer_dia falló esp=%s: %s", especialidad, e)
+            break
+
+        if not todos:
+            break
+
+        fecha_encontrada = todos[0].get("fecha")
+        if not fecha_encontrada:
+            break
+
+        # Filtro de seguridad: solo fechas dentro de la ventana
+        try:
+            dias_diff = (_dt_t3.strptime(fecha_encontrada, "%Y-%m-%d").date() - _hoy).days
+            if dias_diff > dias:
+                break
+        except Exception:
+            break
+
+        # Tomar slots de este día hasta completar 3
+        needed = 3 - len(collected)
+        # Ordenar por hora para garantizar orden cronológico
+        todos_sorted = sorted(todos, key=lambda s: s.get("hora_inicio", ""))
+        collected.extend(todos_sorted[:needed])
+
+        if len(collected) >= 3:
+            break
+
+        excluir.append(fecha_encontrada)
+        # Seguridad: evitar loop infinito si la misma fecha aparece de nuevo
+        if len(excluir) > dias:
+            break
+
+    return collected[:3]
+
+
+def fmt_slot_ctwa(slot: dict) -> str:
+    """Formatea un slot para el mensaje CTWA.
+    Ejemplo: 'Jueves 14 may · 10:30 — Dr. Andrés Abarca'
+    """
+    try:
+        d = datetime.strptime(slot["fecha"], "%Y-%m-%d")
+        dias = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+        meses = ["ene", "feb", "mar", "abr", "may", "jun",
+                 "jul", "ago", "sep", "oct", "nov", "dic"]
+        dia_str = f"{dias[d.weekday()].capitalize()} {d.day} {meses[d.month - 1]}"
+    except (ValueError, KeyError):
+        dia_str = slot.get("fecha_display", slot.get("fecha", ""))
+
+    hora = slot.get("hora_inicio", "")[:5]
+    prof = slot.get("profesional", "")
+    return f"{dia_str} · {hora} — {prof}"

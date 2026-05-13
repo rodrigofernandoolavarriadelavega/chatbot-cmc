@@ -2414,6 +2414,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "WAIT_CITA_REAGENDAR", "WAIT_RUT_VER", "WAIT_DATOS_NUEVO",
                 "WAIT_NOMBRE_NUEVO", "WAIT_FECHA_NAC", "WAIT_SEXO", "WAIT_BOOKING_FOR",
                 "WAIT_WAITLIST_CONFIRM", "WAIT_REFERRAL_POST",
+                "WAIT_META_SLOT_CHOICE", "WAIT_META_WAITLIST",
             )
             if state in _estados_activos:
                 # No interpretar como opt-out — dejar que el handler del estado decida
@@ -2562,11 +2563,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # FIX-17 (FIX-1-2026-05-13): disclosure en primer contacto (Ley 21.719)
         _primer_contacto_disclosure = not has_recent_event(phone, "disclosure_enviado", days=3650)
 
-        # ── Saludo adaptativo si el paciente llegó desde un anuncio Meta ──────
-        # El disclosure (Ley 21.719) se envía SIEMPRE como primer bloque del
-        # mensaje. Si hay referral Meta, el saludo personalizado va concatenado.
-        # log_event("disclosure_enviado") solo se registra cuando el texto
-        # se incluye efectivamente en la respuesta.
+        # ── Saludo adaptativo CTWA: disclosure + oferta directa de 3 slots ───
+        # Si el paciente llegó desde un anuncio Meta (CTWA con headline),
+        # ofrecemos las 3 horas más cercanas de la especialidad del anuncio
+        # directamente después del disclosure, sin preguntar "¿quieres agendar?".
+        # El disclosure se envía SIEMPRE; los slots son el siguiente bloque.
         if _primer_contacto_disclosure:
             _disclosure_txt = (
                 "Hola 👋 Soy el *asistente automático* del Centro Médico Carampangue "
@@ -2582,6 +2583,61 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     _headline_bv = _ref_bienvenida["headline"]
                     log_event(phone, "disclosure_enviado", {})
                     log_event(phone, "bienvenida_adaptativa_meta", {"headline": _headline_bv[:80]})
+
+                    # Intentar mapear headline → especialidad y buscar 3 slots
+                    from medilink import headline_to_especialidad as _h2esp, top3_slots_especialidad as _top3
+                    _esp_ctwa = _h2esp(_headline_bv)
+                    if _esp_ctwa:
+                        try:
+                            _slots_ctwa = await _top3(_esp_ctwa, dias=7)
+                        except Exception as _e_ctwa:
+                            log.warning("CTWA top3_slots falló esp=%s: %s", _esp_ctwa, _e_ctwa)
+                            _slots_ctwa = []
+
+                        if _slots_ctwa:
+                            from medilink import fmt_slot_ctwa as _fmt_ctwa
+                            _lineas = []
+                            for _i, _s in enumerate(_slots_ctwa, 1):
+                                _lineas.append(f"  *{_i}.* {_fmt_ctwa(_s)}")
+                            _esp_display = _headline_bv  # usar el headline original para el mensaje
+                            _slots_txt = "\n".join(_lineas)
+                            log_event(phone, "ctwa_slots_ofrecidos", {
+                                "especialidad": _esp_ctwa,
+                                "headline": _headline_bv[:80],
+                                "n_slots": len(_slots_ctwa),
+                            })
+                            # Guardar slots en sesión para handler WAIT_META_SLOT_CHOICE
+                            data["meta_offered_slots"] = _slots_ctwa
+                            data["meta_esp"] = _esp_ctwa
+                            save_session(phone, "WAIT_META_SLOT_CHOICE", data)
+                            return (
+                                f"{_disclosure_txt}\n\n"
+                                f"———\n\n"
+                                f"Vi que llegaste desde nuestro aviso de *{_esp_display}*. 👋\n\n"
+                                f"Tengo estas horas disponibles esta semana:\n\n"
+                                f"{_slots_txt}\n\n"
+                                f"¿Te reservo alguna? Responde con el número (*1*, *2* o *3*),\n"
+                                f"o escribe *otra fecha* si prefieres otro horario."
+                            )
+
+                        # Sin disponibilidad en 7 días
+                        log_event(phone, "ctwa_sin_disponibilidad", {
+                            "especialidad": _esp_ctwa,
+                            "headline": _headline_bv[:80],
+                        })
+                        _esp_display = _headline_bv
+                        data["meta_waitlist_esp"] = _esp_ctwa
+                        save_session(phone, "WAIT_META_WAITLIST", data)
+                        return (
+                            f"{_disclosure_txt}\n\n"
+                            f"———\n\n"
+                            f"Vi que llegaste desde nuestro aviso de *{_esp_display}*.\n\n"
+                            f"No hay horas disponibles esta semana para *{_esp_ctwa.capitalize()}* 😕\n\n"
+                            f"¿Quieres que te avisemos cuando se libere una hora?\n"
+                            f"Responde *sí* y te contactamos en cuanto haya disponibilidad."
+                        )
+
+                    # Headline no mapea a ninguna especialidad → saludo genérico
                     _sx_bv = ((get_profile(phone) or {}).get("sexo") or "").upper()
                     _bv_word = "bienvenida" if _sx_bv == "F" else "bienvenido"
                     return (
@@ -2591,7 +2647,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         f"¿Quieres agendar una hora o tienes alguna pregunta?"
                     )
             except Exception:
-                pass
+                log.exception("CTWA disclosure bloque falló para phone=%s", phone)
             log_event(phone, "disclosure_enviado", {})
 
         return _menu_msg(primer_contacto=_primer_contacto_disclosure)
@@ -4475,6 +4531,101 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 {"id": "quick_other", "title": "🔄 Otra especialidad"},
                 {"id": "quick_cancel", "title": "✋ Ahora no"},
             ]
+        )
+
+    # ── WAIT_META_SLOT_CHOICE ─────────────────────────────────────────────────
+    # Paciente llegó desde anuncio Meta (CTWA). Se le ofrecieron 3 slots directo.
+    # Acepta: "1"/"2"/"3" → pre-llenar slot y pasar a flujo estándar.
+    # "otra fecha" / "más" / "no" / "otro día" → flujo completo de agendamiento.
+    # Cualquier otro texto → re-detectar intent (no quedarse atascado).
+    if state == "WAIT_META_SLOT_CHOICE":
+        _offered = data.get("meta_offered_slots", [])
+        _esp_meta = data.get("meta_esp", "")
+        _tl_meta = txt.strip().lower()
+
+        # Selección por número 1/2/3
+        if _tl_meta in ("1", "2", "3") and _offered:
+            _idx = int(_tl_meta) - 1
+            if _idx < len(_offered):
+                _slot_elegido = _offered[_idx]
+                log_event(phone, "ctwa_slot_elegido", {
+                    "idx": _idx,
+                    "especialidad": _esp_meta,
+                    "fecha": _slot_elegido.get("fecha"),
+                    "hora": _slot_elegido.get("hora_inicio"),
+                })
+                data.pop("meta_offered_slots", None)
+                data.pop("meta_esp", None)
+                data["especialidad"] = _esp_meta
+                data["slots"] = [_slot_elegido]
+                data["todos_slots"] = [_slot_elegido]
+                # Pre-cargar perfil si existe (fast-track paciente recurrente)
+                _perfil_meta = get_profile(phone)
+                if _perfil_meta and _perfil_meta.get("rut"):
+                    data["rut_conocido"] = _perfil_meta["rut"]
+                    data["nombre_conocido"] = _perfil_meta["nombre"]
+                return await _slot_confirmed(phone, data, _slot_elegido)
+            # Número fuera de rango (no debería ocurrir, pero)
+            save_session(phone, "WAIT_META_SLOT_CHOICE", data)
+            return f"Elige *1*, *2* o *3* según las horas que te mostré."
+
+        # "otra fecha" / "más" / "otro día" / variantes → flujo completo
+        _OTRA_FECHA_KWS = (
+            "otra fecha", "otro dia", "otro día", "otra hora",
+            "otros horarios", "mas opciones", "más opciones",
+            "otra", "otras", "mas", "más", "ver mas", "ver más",
+            "no me acomoda", "no me sirve",
+        )
+        if any(kw in _tl_meta for kw in _OTRA_FECHA_KWS):
+            log_event(phone, "ctwa_otra_fecha", {"especialidad": _esp_meta})
+            data.pop("meta_offered_slots", None)
+            data.pop("meta_esp", None)
+            _perfil_meta = get_profile(phone)
+            if _perfil_meta and _perfil_meta.get("rut"):
+                data["rut_conocido"] = _perfil_meta["rut"]
+                data["nombre_conocido"] = _perfil_meta["nombre"]
+            return await _iniciar_agendar(phone, data, _esp_meta or None)
+
+        # "no" / "no gracias" → cerrar amable
+        if _tl_meta in NEGACIONES or _tl_meta in ("no", "no gracias", "no por ahora", "ahora no"):
+            log_event(phone, "ctwa_rechazo", {"especialidad": _esp_meta})
+            data.pop("meta_offered_slots", None)
+            data.pop("meta_esp", None)
+            save_session(phone, "IDLE", data)
+            return (
+                "Sin problema 😊 Cuando lo necesites, estamos acá.\n"
+                "_Escribe *menu* para ver todas las opciones._"
+            )
+
+        # Texto libre → detectar intent normalmente (no quedarse atascado)
+        # pero conservar los slots en data por si el intent es "agendar".
+        log_event(phone, "ctwa_texto_libre", {"txt": txt[:80], "especialidad": _esp_meta})
+        data.pop("meta_offered_slots", None)
+        data.pop("meta_esp", None)
+        save_session(phone, "IDLE", data)
+        return await handle_message(phone, txt, {"state": "IDLE", "data": data})
+
+    # ── WAIT_META_WAITLIST ────────────────────────────────────────────────────
+    # Sin disponibilidad en 7 días: paciente puede optar a lista de espera.
+    if state == "WAIT_META_WAITLIST":
+        _esp_wl = data.get("meta_waitlist_esp", "")
+        _tl_wl = txt.strip().lower()
+        if _tl_wl in AFIRMACIONES or _tl_wl in ("si", "sí", "si quiero", "sí quiero", "dale"):
+            log_event(phone, "ctwa_waitlist_acepta", {"especialidad": _esp_wl})
+            save_tag(phone, f"waitlist:{_esp_wl}")
+            data.pop("meta_waitlist_esp", None)
+            save_session(phone, "IDLE", data)
+            return (
+                f"Listo, te dejé anotado en la lista de espera para *{(_esp_wl or '').capitalize()}* 📋\n\n"
+                f"Te avisamos por acá en cuanto haya un cupo disponible.\n\n"
+                f"_Escribe *menu* si necesitas algo más._"
+            )
+        log_event(phone, "ctwa_waitlist_rechaza", {"especialidad": _esp_wl})
+        data.pop("meta_waitlist_esp", None)
+        save_session(phone, "IDLE", data)
+        return (
+            "Sin problema 😊 Estamos acá cuando lo necesites.\n"
+            "_Escribe *menu* para ver las opciones._"
         )
 
     # ── WAIT_ESPECIALIDAD ─────────────────────────────────────────────────────
