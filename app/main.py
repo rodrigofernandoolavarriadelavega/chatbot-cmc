@@ -3205,6 +3205,78 @@ async def api_bi_sync_pagos(desde: str = "2024-01-01", hasta: str | None = None,
     return {"started": True, "desde": desde, "hasta": hasta or "today", "force": bool(force)}
 
 
+# ─── /api/state: dashboard mensual simulación (editor de datos) ───────────────
+# El dashboard /cmc/mensual y /bi/mensual usa este endpoint para persistir
+# profesionales / áreas / sim_params / custom_charts / box_data editados
+# manualmente desde la UI. Se guarda en sessions.db tabla cmc_dashboard_state
+# (singleton, id=1). Antes este endpoint vivía solo en health-bi-project (local
+# Mac, Postgres) → los edits en producción se perdían silenciosamente.
+
+def _ensure_state_table(c):
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS cmc_dashboard_state (
+            id          INTEGER PRIMARY KEY,
+            state_json  TEXT NOT NULL DEFAULT '{}',
+            updated_at  TEXT
+        )
+    """)
+    c.execute(
+        "INSERT OR IGNORE INTO cmc_dashboard_state (id, state_json, updated_at) "
+        "VALUES (1, '{}', datetime('now'))"
+    )
+
+
+@app.get("/api/state")
+def api_state_get():
+    """Carga el state del dashboard mensual (singleton row id=1)."""
+    import json as _json_st
+    from session import _conn as _c_st
+    with _c_st() as c:
+        _ensure_state_table(c)
+        row = c.execute(
+            "SELECT state_json FROM cmc_dashboard_state WHERE id=1"
+        ).fetchone()
+    try:
+        data = _json_st.loads(row[0] if row else "{}")
+    except Exception:
+        data = {}
+    return {
+        "profesionales":     data.get("profesionales", []),
+        "areas":             data.get("areas", []),
+        "sim_params":        data.get("sim_params", []),
+        "global_dias":       int(data.get("global_dias", 22)),
+        "custom_charts":     data.get("custom_charts", []) or [],
+        "sim_custom_charts": data.get("sim_custom_charts", []) or [],
+        "box_data":          data.get("box_data", {}) or {},
+        "sheets_hash":       data.get("sheets_hash", ""),
+        "sheets_pushed_at":  data.get("sheets_pushed_at"),
+    }
+
+
+@app.put("/api/state")
+def api_state_put(body: dict):
+    """Persiste el state. Solo guarda campos conocidos (whitelist)."""
+    import json as _json_st
+    from session import _conn as _c_st
+    payload = {
+        "profesionales":     body.get("profesionales", []),
+        "areas":             body.get("areas", []),
+        "sim_params":        body.get("sim_params", []),
+        "global_dias":       int(body.get("global_dias", 22) or 22),
+        "custom_charts":     body.get("custom_charts", []) or [],
+        "sim_custom_charts": body.get("sim_custom_charts", []) or [],
+        "box_data":          body.get("box_data", {}) or {},
+    }
+    with _c_st() as c:
+        _ensure_state_table(c)
+        c.execute(
+            "REPLACE INTO cmc_dashboard_state (id, state_json, updated_at) "
+            "VALUES (1, ?, datetime('now'))",
+            (_json_st.dumps(payload, ensure_ascii=False),)
+        )
+    return {"ok": True}
+
+
 @app.get("/api/cmc/mensual")
 def api_cmc_mensual(mes: str | None = None):
     """Agrega bi_pagos_caja por profesional y por área para un mes (YYYY-MM).
