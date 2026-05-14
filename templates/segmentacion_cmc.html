@@ -300,52 +300,52 @@
     <div class="grid grid-2">
       <div class="card">
         <div class="card-title">Sexo</div>
-        <canvas id="seg-sexo" height="200"></canvas>
+        <div style="position:relative;height:200px;"><canvas id="seg-sexo"></canvas></div>
       </div>
       <div class="card">
         <div class="card-title">Generación</div>
-        <canvas id="seg-generacion" height="200"></canvas>
+        <div style="position:relative;height:200px;"><canvas id="seg-generacion"></canvas></div>
       </div>
     </div>
     <div class="grid grid-2" style="margin-top: 16px;">
       <div class="card">
         <div class="card-title">Matriz sexo × edad</div>
-        <canvas id="seg-sexo-edad" height="240"></canvas>
+        <div style="position:relative;height:240px;"><canvas id="seg-sexo-edad"></canvas></div>
       </div>
       <div class="card">
         <div class="card-title">Buyer personas inferidas</div>
-        <canvas id="seg-personas" height="240"></canvas>
+        <div style="position:relative;height:240px;"><canvas id="seg-personas"></canvas></div>
       </div>
     </div>
     <div class="grid grid-2" style="margin-top: 16px;">
       <div class="card">
         <div class="card-title">Puerta de entrada al CMC <span style="font-size:0.7rem;color:rgba(14,37,48,0.55);font-weight:400;">(especialidad de la primera atención)</span></div>
-        <canvas id="seg-primera" height="280"></canvas>
+        <div style="position:relative;height:280px;"><canvas id="seg-primera"></canvas></div>
       </div>
       <div class="card">
         <div class="card-title">Mono vs multi-especialidad</div>
-        <canvas id="seg-mono" height="200"></canvas>
+        <div style="position:relative;height:200px;"><canvas id="seg-mono"></canvas></div>
         <p style="font-size:0.78rem;color:rgba(14,37,48,0.6);margin:10px 0 0 0;">Pacientes con 3+ especialidades son el target ideal para campañas de retención y NPS — alta fidelidad demostrada.</p>
       </div>
     </div>
     <div class="grid grid-2" style="margin-top: 16px;">
       <div class="card">
         <div class="card-title">Loyalty · visitas últimos 12 meses</div>
-        <canvas id="seg-loyalty" height="200"></canvas>
+        <div style="position:relative;height:200px;"><canvas id="seg-loyalty"></canvas></div>
       </div>
       <div class="card">
         <div class="card-title">Velocidad de retorno <span style="font-size:0.7rem;color:rgba(14,37,48,0.55);font-weight:400;">(días promedio entre visitas)</span></div>
-        <canvas id="seg-velocidad" height="200"></canvas>
+        <div style="position:relative;height:200px;"><canvas id="seg-velocidad"></canvas></div>
       </div>
     </div>
     <div class="grid grid-2" style="margin-top: 16px;">
       <div class="card">
         <div class="card-title">Convenio · pagador</div>
-        <canvas id="seg-convenio" height="200"></canvas>
+        <div style="position:relative;height:200px;"><canvas id="seg-convenio"></canvas></div>
       </div>
       <div class="card">
         <div class="card-title">Localidad × sexo <span style="font-size:0.7rem;color:rgba(14,37,48,0.55);font-weight:400;">(mín. 5 pacientes)</span></div>
-        <canvas id="seg-loc-sexo" height="240"></canvas>
+        <div style="position:relative;height:240px;"><canvas id="seg-loc-sexo"></canvas></div>
       </div>
     </div>
   </section>
@@ -832,6 +832,16 @@ function renderCrossSell(r) {
   ).join('') || '<tr><td colspan="3" style="color:rgba(14,37,48,0.5);">Sin overlap.</td></tr>';
 }
 
+function _resetCanvas(id) {
+  const c = document.getElementById(id);
+  if (!c) return null;
+  // Limpia inline styles que Chart.js dejó del primer render (cuando el panel
+  // estaba display:none → 0x0). Chart.js volverá a calcular dimensiones.
+  c.style.width = '';
+  c.style.height = '';
+  return c;
+}
+
 function renderSegmentaciones(s) {
   if (!s) return;
   const PAL = ['#0E2530','#B98149','#9A3E2F','#4A5D44','#7C4A2A','#17323F','#C4B9A0','#6B8662','#B05D38','#D9C7A1'];
@@ -839,23 +849,26 @@ function renderSegmentaciones(s) {
 
   function doughnut(id, rows, key='label') {
     if (!rows || !rows.length) return;
-    if (charts[id]) charts[id].destroy();
-    charts[id] = new Chart(document.getElementById(id), {
+    if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+    const canvas = _resetCanvas(id); if (!canvas) return;
+    charts[id] = new Chart(canvas, {
       type: 'doughnut',
       data: {
         labels: rows.map(r => r[key]),
         datasets: [{ data: rows.map(r => r.n), backgroundColor: PAL, borderColor: '#fffcf5', borderWidth: 3 }]
       },
-      options: { cutout: '58%', plugins: { legend: { position: 'bottom', labels: fontOpt } } }
+      options: { responsive: true, maintainAspectRatio: false, cutout: '58%', plugins: { legend: { position: 'bottom', labels: fontOpt } } }
     });
   }
   function bar(id, rows, color, horiz=false) {
     if (!rows || !rows.length) return;
-    if (charts[id]) charts[id].destroy();
-    charts[id] = new Chart(document.getElementById(id), {
+    if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+    const canvas = _resetCanvas(id); if (!canvas) return;
+    charts[id] = new Chart(canvas, {
       type: 'bar',
       data: { labels: rows.map(r => r.label), datasets: [{ data: rows.map(r => r.n), backgroundColor: color, borderRadius: 4 }] },
       options: {
+        responsive: true, maintainAspectRatio: false,
         indexAxis: horiz ? 'y' : 'x',
         plugins: { legend: { display: false } },
         scales: {
@@ -871,7 +884,8 @@ function renderSegmentaciones(s) {
 
   // Matriz sexo × edad: stacked bar
   if (s.sexo_edad && s.sexo_edad.length) {
-    if (charts['seg-sexo-edad']) charts['seg-sexo-edad'].destroy();
+    if (charts['seg-sexo-edad']) { charts['seg-sexo-edad'].destroy(); delete charts['seg-sexo-edad']; }
+    _resetCanvas('seg-sexo-edad');
     const edades = [...new Set(s.sexo_edad.map(x => x.bucket_edad))]
       .sort((a,b) => ['0-17','18-29','30-44','45-59','60+','N/D'].indexOf(a) -
                      ['0-17','18-29','30-44','45-59','60+','N/D'].indexOf(b));
@@ -890,6 +904,7 @@ function renderSegmentaciones(s) {
         }))
       },
       options: {
+        responsive: true, maintainAspectRatio: false,
         plugins: { legend: { position: 'bottom', labels: fontOpt } },
         scales: {
           x: { stacked: true, grid: { display: false }, ticks: fontOpt },
@@ -908,7 +923,8 @@ function renderSegmentaciones(s) {
 
   // Localidad × sexo: stacked
   if (s.localidad_sexo && s.localidad_sexo.length) {
-    if (charts['seg-loc-sexo']) charts['seg-loc-sexo'].destroy();
+    if (charts['seg-loc-sexo']) { charts['seg-loc-sexo'].destroy(); delete charts['seg-loc-sexo']; }
+    _resetCanvas('seg-loc-sexo');
     const locs = [...new Set(s.localidad_sexo.map(x => x.localidad))];
     // ordenar por total
     const total = {};
@@ -930,6 +946,7 @@ function renderSegmentaciones(s) {
         }))
       },
       options: {
+        responsive: true, maintainAspectRatio: false,
         indexAxis: 'y',
         plugins: { legend: { position: 'bottom', labels: fontOpt } },
         scales: {
