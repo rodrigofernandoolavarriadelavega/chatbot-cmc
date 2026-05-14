@@ -182,7 +182,8 @@
     <button class="tab-btn active" data-tab="overview">Overview</button>
     <button class="tab-btn" data-tab="especialidades" id="tab-especialidades">Especialidades</button>
     <button class="tab-btn" data-tab="territorio">Territorio</button>
-    <button class="tab-btn" data-tab="segmentos">Segmentación</button>
+    <button class="tab-btn" data-tab="segmentos">RFM Lifecycle</button>
+    <button class="tab-btn" data-tab="segmentaciones" id="tab-segmentaciones">Segmentaciones</button>
     <button class="tab-btn" data-tab="crosssell" id="tab-crosssell">Cross-sell</button>
     <button class="tab-btn" data-tab="audiencia">Audiencia · export</button>
   </div>
@@ -289,6 +290,63 @@
     <div class="card" style="margin-top: 16px;">
       <div class="card-title">Recomendaciones publicitarias</div>
       <div id="recomendaciones"></div>
+    </div>
+  </section>
+
+  <section class="panel" data-panel="segmentaciones">
+    <p style="font-size: 0.825rem; color: rgba(14,37,48,0.65); margin: 0 0 16px 0;">
+      Segmentaciones avanzadas estilo Mailchimp/HubSpot Healthcare. Útiles para campañas Meta Ads dirigidas, lookalikes y mensajes diferenciados por <em>buyer persona</em>.
+    </p>
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="card-title">Sexo</div>
+        <canvas id="seg-sexo" height="200"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-title">Generación</div>
+        <canvas id="seg-generacion" height="200"></canvas>
+      </div>
+    </div>
+    <div class="grid grid-2" style="margin-top: 16px;">
+      <div class="card">
+        <div class="card-title">Matriz sexo × edad</div>
+        <canvas id="seg-sexo-edad" height="240"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-title">Buyer personas inferidas</div>
+        <canvas id="seg-personas" height="240"></canvas>
+      </div>
+    </div>
+    <div class="grid grid-2" style="margin-top: 16px;">
+      <div class="card">
+        <div class="card-title">Puerta de entrada al CMC <span style="font-size:0.7rem;color:rgba(14,37,48,0.55);font-weight:400;">(especialidad de la primera atención)</span></div>
+        <canvas id="seg-primera" height="280"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-title">Mono vs multi-especialidad</div>
+        <canvas id="seg-mono" height="200"></canvas>
+        <p style="font-size:0.78rem;color:rgba(14,37,48,0.6);margin:10px 0 0 0;">Pacientes con 3+ especialidades son el target ideal para campañas de retención y NPS — alta fidelidad demostrada.</p>
+      </div>
+    </div>
+    <div class="grid grid-2" style="margin-top: 16px;">
+      <div class="card">
+        <div class="card-title">Loyalty · visitas últimos 12 meses</div>
+        <canvas id="seg-loyalty" height="200"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-title">Velocidad de retorno <span style="font-size:0.7rem;color:rgba(14,37,48,0.55);font-weight:400;">(días promedio entre visitas)</span></div>
+        <canvas id="seg-velocidad" height="200"></canvas>
+      </div>
+    </div>
+    <div class="grid grid-2" style="margin-top: 16px;">
+      <div class="card">
+        <div class="card-title">Convenio · pagador</div>
+        <canvas id="seg-convenio" height="200"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-title">Localidad × sexo <span style="font-size:0.7rem;color:rgba(14,37,48,0.55);font-weight:400;">(mín. 5 pacientes)</span></div>
+        <canvas id="seg-loc-sexo" height="240"></canvas>
+      </div>
     </div>
   </section>
 
@@ -429,6 +487,7 @@ async function init() {
 function applyMode() {
   const isGlobal = currentMode === 'global';
   document.getElementById('tab-especialidades').classList.toggle('hidden', !isGlobal);
+  document.getElementById('tab-segmentaciones').classList.toggle('hidden', !isGlobal);
   document.getElementById('tab-crosssell').classList.toggle('hidden', isGlobal);
   document.getElementById('kpi-card-profs').style.display = isGlobal ? '' : 'none';
   const badge = document.getElementById('mode-badge');
@@ -465,6 +524,7 @@ async function renderAll() {
     renderEspecialidades(globalData.especialidades);
     renderTerritorioGlobal();
     renderSegmentos(globalData.segmentos);
+    renderSegmentaciones(globalData.segmentaciones);
     renderAudiencia();
   } else {
     const d = await getProfData();
@@ -756,6 +816,115 @@ function renderCrossSell(r) {
   document.getElementById('tbl-crosssell').innerHTML = (r.cross_sell || []).map(x =>
     `<tr><td>${x.especialidad}</td><td class="text-right mono">${fmt(x.pacientes_compartidos)}</td><td class="text-right mono">${x.pct}%</td></tr>`
   ).join('') || '<tr><td colspan="3" style="color:rgba(14,37,48,0.5);">Sin overlap.</td></tr>';
+}
+
+function renderSegmentaciones(s) {
+  if (!s) return;
+  const PAL = ['#0E2530','#B98149','#9A3E2F','#4A5D44','#7C4A2A','#17323F','#C4B9A0','#6B8662','#B05D38','#D9C7A1'];
+  const fontOpt = { color: '#0E2530', font: CHART_FONT };
+
+  function doughnut(id, rows, key='label') {
+    if (!rows || !rows.length) return;
+    if (charts[id]) charts[id].destroy();
+    charts[id] = new Chart(document.getElementById(id), {
+      type: 'doughnut',
+      data: {
+        labels: rows.map(r => r[key]),
+        datasets: [{ data: rows.map(r => r.n), backgroundColor: PAL, borderColor: '#fffcf5', borderWidth: 3 }]
+      },
+      options: { cutout: '58%', plugins: { legend: { position: 'bottom', labels: fontOpt } } }
+    });
+  }
+  function bar(id, rows, color, horiz=false) {
+    if (!rows || !rows.length) return;
+    if (charts[id]) charts[id].destroy();
+    charts[id] = new Chart(document.getElementById(id), {
+      type: 'bar',
+      data: { labels: rows.map(r => r.label), datasets: [{ data: rows.map(r => r.n), backgroundColor: color, borderRadius: 4 }] },
+      options: {
+        indexAxis: horiz ? 'y' : 'x',
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: !horiz }, ticks: fontOpt },
+          y: { grid: { display: horiz ? false : true, color: 'rgba(14,37,48,0.06)' }, ticks: fontOpt }
+        }
+      }
+    });
+  }
+
+  doughnut('seg-sexo', s.sexo);
+  bar('seg-generacion', s.generacion, '#B98149');
+
+  // Matriz sexo × edad: stacked bar
+  if (s.sexo_edad && s.sexo_edad.length) {
+    if (charts['seg-sexo-edad']) charts['seg-sexo-edad'].destroy();
+    const edades = [...new Set(s.sexo_edad.map(x => x.bucket_edad))]
+      .sort((a,b) => ['0-17','18-29','30-44','45-59','60+','N/D'].indexOf(a) -
+                     ['0-17','18-29','30-44','45-59','60+','N/D'].indexOf(b));
+    const sexos = ['F','M'];
+    const map = {};
+    for (const x of s.sexo_edad) map[`${x.bucket_edad}|${x.sexo}`] = x.n;
+    charts['seg-sexo-edad'] = new Chart(document.getElementById('seg-sexo-edad'), {
+      type: 'bar',
+      data: {
+        labels: edades,
+        datasets: sexos.map((sx, i) => ({
+          label: sx === 'F' ? 'Femenino' : 'Masculino',
+          data: edades.map(e => map[`${e}|${sx}`] || 0),
+          backgroundColor: sx === 'F' ? '#9A3E2F' : '#0E2530',
+          borderRadius: 4,
+        }))
+      },
+      options: {
+        plugins: { legend: { position: 'bottom', labels: fontOpt } },
+        scales: {
+          x: { stacked: true, grid: { display: false }, ticks: fontOpt },
+          y: { stacked: true, grid: { color: 'rgba(14,37,48,0.06)' }, ticks: fontOpt }
+        }
+      }
+    });
+  }
+
+  bar('seg-personas', s.buyer_personas, '#4A5D44', true);
+  bar('seg-primera', s.primera_especialidad?.slice(0,12), '#0E2530', true);
+  doughnut('seg-mono', s.mono_vs_multi);
+  bar('seg-loyalty', s.loyalty_12m, '#B98149');
+  doughnut('seg-velocidad', s.velocidad_retorno);
+  doughnut('seg-convenio', s.convenio);
+
+  // Localidad × sexo: stacked
+  if (s.localidad_sexo && s.localidad_sexo.length) {
+    if (charts['seg-loc-sexo']) charts['seg-loc-sexo'].destroy();
+    const locs = [...new Set(s.localidad_sexo.map(x => x.localidad))];
+    // ordenar por total
+    const total = {};
+    for (const x of s.localidad_sexo) total[x.localidad] = (total[x.localidad] || 0) + x.n;
+    locs.sort((a,b) => (total[b] || 0) - (total[a] || 0));
+    const top = locs.slice(0, 10);
+    const sexos = ['F','M'];
+    const map = {};
+    for (const x of s.localidad_sexo) map[`${x.localidad}|${x.sexo}`] = x.n;
+    charts['seg-loc-sexo'] = new Chart(document.getElementById('seg-loc-sexo'), {
+      type: 'bar',
+      data: {
+        labels: top,
+        datasets: sexos.map(sx => ({
+          label: sx === 'F' ? 'Femenino' : 'Masculino',
+          data: top.map(l => map[`${l}|${sx}`] || 0),
+          backgroundColor: sx === 'F' ? '#9A3E2F' : '#0E2530',
+          borderRadius: 4,
+        }))
+      },
+      options: {
+        indexAxis: 'y',
+        plugins: { legend: { position: 'bottom', labels: fontOpt } },
+        scales: {
+          x: { stacked: true, grid: { color: 'rgba(14,37,48,0.06)' }, ticks: fontOpt },
+          y: { stacked: true, grid: { display: false }, ticks: fontOpt }
+        }
+      }
+    });
+  }
 }
 
 async function renderAudiencia() {
