@@ -142,14 +142,15 @@ import asyncio as _asyncio_bg
 _background_tasks: set = set()
 
 
-def spawn_task(coro):
+def spawn_task(coro, name: str | None = None):
     """Crea una asyncio.Task y guarda la referencia hasta que termina.
 
     Python puede garbage-collectar una Task si no hay referencia viva, cancelando
     la coroutine silenciosamente. Este helper resuelve ese problema.
     Uso: spawn_task(send_whatsapp(...)) en lugar de asyncio.create_task(...).
+    El kwarg name se pasa a create_task para facilitar debugging (visible en asyncio logs).
     """
-    task = _asyncio_bg.create_task(coro)
+    task = _asyncio_bg.create_task(coro, name=name)
     _background_tasks.add(task)
     task.add_done_callback(_background_tasks.discard)
     return task

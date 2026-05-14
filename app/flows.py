@@ -2353,8 +2353,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         with _pg.cursor() as _cur:
                             _cur.execute(
                                 "INSERT INTO bi.opt_outs_marketing "
-                                "(phone, source, reason, created_at) "
-                                "VALUES (%s, %s, %s, NOW()) "
+                                "(phone, source, reason) "
+                                "VALUES (%s, %s, %s) "
                                 "ON CONFLICT (phone) DO NOTHING",
                                 (phone, "consent_marketing_v1", "declined_marketing"),
                             )
