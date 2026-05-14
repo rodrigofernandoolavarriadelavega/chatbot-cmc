@@ -1723,18 +1723,19 @@ async def _job_marketing_consent_blast():
             return
 
         # Candidatos: en cohortes_contactables pero sin registro consent
+        # Seleccionar también nombre para el {{1}} del template consent_marketing_v1
         with bi_conn() as conn2:
             with conn2.cursor() as cur:
                 cur.execute(
-                    "SELECT wc.telefono FROM bi.v_winback_cohortes_contactables wc "
+                    "SELECT wc.telefono, wc.nombre FROM bi.v_winback_cohortes_contactables wc "
                     "WHERE wc.telefono NOT IN (SELECT phone FROM bi.marketing_consent) "
                     f"LIMIT {LIMITE_DIA - enviados_hoy}"
                 )
-                phones = [r[0] for r in cur.fetchall()]
+                candidates = [(r[0], r[1] or "Paciente") for r in cur.fetchall()]
 
-        log.info("consent_blast: %d candidatos a enviar hoy", len(phones))
+        log.info("consent_blast: %d candidatos a enviar hoy", len(candidates))
         enviados = 0
-        for phone in phones:
+        for phone, nombre in candidates:
             # Re-verificar ventana en cada iteración
             _now_loop = _dt_mc.now(__import__("zoneinfo").ZoneInfo("America/Santiago"))
             if not (10 <= _now_loop.hour < 19) or _now_loop.weekday() >= 5:
@@ -1744,10 +1745,11 @@ async def _job_marketing_consent_blast():
                 await send_whatsapp_template(
                     phone,
                     "consent_marketing_v1",
+                    body_params=[nombre],
                 )
                 registrar_consent_enviado(phone)
                 enviados += 1
-                log.info("consent_blast enviado → %s (%d/%d)", phone, enviados, len(phones))
+                log.info("consent_blast enviado → %s (%d/%d)", phone, enviados, len(candidates))
             except Exception as e:
                 log.error("consent_blast error phone=%s: %s", phone, e)
             await _asyncio_mc.sleep(SLEEP_ENTRE)
