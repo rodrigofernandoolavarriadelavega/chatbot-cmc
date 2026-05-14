@@ -190,15 +190,32 @@
   <section class="panel active" data-panel="overview">
     <div class="grid grid-2-1">
       <div class="card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 8px; flex-wrap: wrap;">
           <div class="card-title" style="margin-bottom: 0;">Evolución temporal</div>
-          <div style="display: flex; gap: 8px; align-items: center;">
-            <select id="granularidad" onchange="renderTemporal()" style="padding: 4px 10px; font-size: 0.78rem;">
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <select id="granularidad" onchange="onGranChange()" style="padding: 4px 10px; font-size: 0.78rem;">
+              <option value="day">Diario</option>
+              <option value="week">Semanal</option>
               <option value="month" selected>Mensual</option>
               <option value="year">Anual</option>
+              <option value="custom">📅 Personalizado…</option>
             </select>
             <button class="icon-btn" onclick="openFullscreen()" title="Pantalla completa">⛶</button>
           </div>
+        </div>
+        <div id="custom-range" style="display: none; gap: 8px; align-items: center; padding: 10px 12px; background: rgba(232,224,208,0.4); border-radius: 8px; margin-bottom: 10px; flex-wrap: wrap;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(14,37,48,0.6);">Rango:</span>
+          <input type="date" id="custom-desde" style="padding: 5px 8px; border: 1px solid rgba(14,37,48,0.18); border-radius: 6px; font-size: 0.825rem; background: white;" />
+          <span style="color: rgba(14,37,48,0.4);">→</span>
+          <input type="date" id="custom-hasta" style="padding: 5px 8px; border: 1px solid rgba(14,37,48,0.18); border-radius: 6px; font-size: 0.825rem; background: white;" />
+          <select id="custom-bucket" style="padding: 5px 8px; border: 1px solid rgba(14,37,48,0.18); border-radius: 6px; font-size: 0.78rem; background: white;">
+            <option value="auto" selected>Auto</option>
+            <option value="day">Diario</option>
+            <option value="week">Semanal</option>
+            <option value="month">Mensual</option>
+          </select>
+          <button class="btn" style="padding: 5px 14px; font-size: 0.78rem;" onclick="applyCustomRange()">Aplicar</button>
+          <span id="custom-info" style="font-size: 0.72rem; color: rgba(14,37,48,0.55); margin-left: auto;"></span>
         </div>
         <canvas id="chart-temporal" height="240"></canvas>
       </div>
@@ -504,25 +521,107 @@ function buildTemporalConfig(data, big = false) {
   };
 }
 
-async function renderTemporal() {
+// Agrega series diarias a un bucket (semanal/mensual). startKey: 'YYYY-Www' o 'YYYY-MM'
+function aggregateBucket(rows, bucket) {
+  if (bucket === 'day') return rows.slice();
+  const grouped = {};
+  for (const r of rows) {
+    const d = new Date(r.periodo + 'T00:00:00');
+    let key;
+    if (bucket === 'week') {
+      // ISO week start (Monday)
+      const dt = new Date(d);
+      const day = (dt.getDay() + 6) % 7; // 0=Mon
+      dt.setDate(dt.getDate() - day);
+      key = dt.toISOString().slice(0, 10);
+    } else if (bucket === 'month') {
+      key = r.periodo.slice(0, 7) + '-01';
+    } else if (bucket === 'year') {
+      key = r.periodo.slice(0, 4) + '-01-01';
+    } else key = r.periodo;
+    if (!grouped[key]) grouped[key] = { periodo: key, pacientes: 0, atenciones: 0, pacientes_nuevos: 0 };
+    grouped[key].atenciones += r.atenciones || 0;
+    grouped[key].pacientes_nuevos += r.pacientes_nuevos || 0;
+    // Pacientes únicos: aproximación (suma) — para precisión real necesitaríamos los IDs
+    grouped[key].pacientes += r.pacientes || 0;
+  }
+  return Object.values(grouped).sort((a, b) => a.periodo.localeCompare(b.periodo));
+}
+
+function onGranChange() {
   const g = document.getElementById('granularidad').value;
-  let data;
-  if (currentMode === 'global') {
+  const cr = document.getElementById('custom-range');
+  if (g === 'custom') {
+    cr.style.display = 'flex';
+    // Default desde/hasta a 90 días atrás → última fecha
+    if (!document.getElementById('custom-desde').value) {
+      const daily = (currentMode === 'global' ? globalData.temporal_day?.temporal : null) || [];
+      if (daily.length) {
+        const ultima = daily[daily.length - 1].periodo;
+        const hasta = new Date(ultima);
+        const desde = new Date(ultima);
+        desde.setDate(desde.getDate() - 89);
+        document.getElementById('custom-desde').value = desde.toISOString().slice(0, 10);
+        document.getElementById('custom-hasta').value = hasta.toISOString().slice(0, 10);
+      }
+    }
+    applyCustomRange();
+  } else {
+    cr.style.display = 'none';
+    renderTemporal();
+  }
+}
+
+function applyCustomRange() {
+  const desde = document.getElementById('custom-desde').value;
+  const hasta = document.getElementById('custom-hasta').value;
+  if (!desde || !hasta) return;
+  let bucket = document.getElementById('custom-bucket').value;
+  // Auto: <=90d daily, <=365d weekly, else monthly
+  if (bucket === 'auto') {
+    const dd = (new Date(hasta) - new Date(desde)) / 86400000;
+    bucket = dd <= 90 ? 'day' : (dd <= 365 ? 'week' : 'month');
+  }
+  renderTemporal({ from: desde, to: hasta, bucket });
+}
+
+async function renderTemporal(custom = null) {
+  const g = document.getElementById('granularidad').value;
+  let data, src, bucket;
+
+  if (custom) {
+    // Modo personalizado: tira de daily si está, si no del más fino disponible
+    if (currentMode === 'global') {
+      src = (globalData.temporal_day?.temporal) || globalData.temporal.temporal;
+    } else {
+      const d = await getProfData();
+      src = (d.temporal_day?.temporal) || d.temporal.temporal;
+    }
+    data = src.filter(r => r.periodo >= custom.from && r.periodo <= custom.to);
+    bucket = custom.bucket;
+    data = aggregateBucket(data, bucket);
+    const info = document.getElementById('custom-info');
+    if (info) info.textContent = `${data.length} puntos · ${bucket}`;
+  } else if (g === 'day' || g === 'week') {
+    if (currentMode === 'global') {
+      src = g === 'day' ? globalData.temporal_day?.temporal : globalData.temporal_week?.temporal;
+      if (!src) src = globalData.temporal.temporal;
+    } else {
+      const d = await getProfData();
+      src = g === 'day' ? d.temporal_day?.temporal : null;
+      if (!src) src = d.temporal.temporal;
+    }
+    data = (g === 'week' && src === (globalData.temporal_day?.temporal))
+      ? aggregateBucket(src, 'week')
+      : src;
+  } else if (currentMode === 'global') {
     data = (g === 'year' ? globalData.temporal_year : globalData.temporal).temporal;
   } else {
     const d = await getProfData();
     data = d.temporal.temporal;
-    if (g === 'year') {
-      const byYear = {};
-      data.forEach(x => {
-        const y = x.periodo.slice(0,4) + '-01-01';
-        if (!byYear[y]) byYear[y] = { periodo: y, pacientes: 0, atenciones: 0, pacientes_nuevos: 0 };
-        byYear[y].atenciones += x.atenciones;
-        byYear[y].pacientes_nuevos += x.pacientes_nuevos;
-      });
-      data = Object.values(byYear).sort((a,b) => a.periodo.localeCompare(b.periodo));
-    }
+    if (g === 'year') data = aggregateBucket(data, 'year');
   }
+
   if (charts.tmp) charts.tmp.destroy();
   charts.tmp = new Chart(document.getElementById('chart-temporal'), buildTemporalConfig(data, false));
   if (document.getElementById('fs-overlay').classList.contains('active')) renderFullscreen();
