@@ -448,6 +448,20 @@ document.querySelectorAll('.tab-btn').forEach(b => b.onclick = () => {
   document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
   b.classList.add('active');
   document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.dataset.panel === b.dataset.tab));
+  // Fix: Chart.js pinta canvas a 0x0 cuando el panel estaba display:none.
+  // Re-render al activar la pestaña garantiza dimensiones correctas.
+  const tab = b.dataset.tab;
+  setTimeout(() => {
+    try {
+      if (tab === 'segmentaciones' && currentMode === 'global' && globalData)
+        renderSegmentaciones(globalData.segmentaciones);
+      else if (tab === 'overview')          renderTemporal();
+      else if (tab === 'especialidades' && currentMode === 'global' && globalData)
+        renderEspecialidades(globalData.especialidades);
+      else if (tab === 'territorio')        (currentMode === 'global' ? renderTerritorioGlobal() : (async () => renderTerritorioProf((await getProfData()).territorio))());
+      else if (tab === 'segmentos')         renderSegmentos(currentMode === 'global' ? globalData.segmentos : null);
+    } catch (e) { console.warn('re-render tab', tab, e); }
+  }, 50);
 });
 
 async function init() {
