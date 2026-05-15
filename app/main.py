@@ -2128,12 +2128,18 @@ async def _render_comuna_html(slug: str, *, for_wp: bool = False) -> str | None:
     return html
 
 
-async def comuna_page(request: Request, slug: str = ""):
+async def comuna_page(request: Request):
     """Landing SEO por comuna en agentecmc.cl. Sirve noindex,nofollow para que
-    Google canonice hacia centromedicocarampangue.cl/{slug}."""
-    if not slug:
-        url_path = request.url.path.lstrip("/").lower()
-        slug = url_path.replace("ñ", "n")
+    Google canonice hacia centromedicocarampangue.cl/{slug}.
+    Slug se deriva del path para soportar rutas /curanilahue, /lebu, etc."""
+    url_path = request.url.path.lstrip("/").rstrip("/").lower()
+    # /comuna/{slug} → tomar la parte tras /comuna/
+    if url_path.startswith("comuna/"):
+        slug = url_path.split("/", 1)[1]
+    else:
+        slug = url_path
+    slug = slug.replace("ñ", "n")
+    if slug == "losalamos": slug = "los-alamos"
     html = await _render_comuna_html(slug, for_wp=False)
     if html is None:
         return HTMLResponse("<h1>404</h1><p>Comuna no encontrada</p>", status_code=404)
