@@ -1,0 +1,20 @@
+{
+  "id": "para_hoy_sin_slots",
+  "phone": "56900000011",
+  "fecha_real": "2026-05-15T03:00:00",
+  "context": "Paciente pide 'para hoy' pero no hay slots hoy. Bot debe AVISAR que no hay para hoy y mostrar mañana, NO saltar silenciosamente.",
+  "bug_ref": "silent date jump — no slots today → shows tomorrow without warning",
+  "steps": [
+    {
+      "in": "quiero medicina general para hoy",
+      "expect_state": "WAIT_SLOT",
+      "expect_match": ["no hay|no encontré|no tiene|próximo|mañana|te muestro"],
+      "expect_no_silent_date_jump": true,
+      "comment": "Si no hay slots hoy y se muestran de mañana, DEBE haber disclaimer explícito"
+    }
+  ],
+  "mock_config": {
+    "force_no_slots_on": "today",
+    "buscar_primer_dia_result_date": "2026-05-16"
+  }
+}

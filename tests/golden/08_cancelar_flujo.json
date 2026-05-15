@@ -1,0 +1,33 @@
+{
+  "id": "cancelar_flujo",
+  "phone": "56900000008",
+  "fecha_real": "2026-05-15T03:00:00",
+  "context": "Paciente dice 'quiero cancelar mi hora'. Bot debe pedir RUT, buscar citas, ofrecer cancelar con id_estado=1 (NO estado_anulacion=1).",
+  "bug_ref": "cancelacion usa id_estado=1",
+  "steps": [
+    {
+      "in": "quiero cancelar mi hora",
+      "expect_state": "WAIT_RUT_CANCELAR",
+      "expect_match": ["rut", "cancelar|anular"],
+      "comment": "Intent cancelar → pedir RUT"
+    },
+    {
+      "in": "11.111.111-1",
+      "expect_state": "CONFIRMING_CANCEL",
+      "expect_match": ["juan prueba|medicina general|cancelar|confirmar"],
+      "comment": "RUT válido → mostrar cita encontrada y pedir confirmación"
+    }
+  ],
+  "mock_config": {
+    "listar_citas_paciente": [
+      {
+        "id": 9001,
+        "fecha": "2026-05-20",
+        "hora_inicio": "10:00",
+        "hora_fin": "10:15",
+        "especialidad": "Medicina General",
+        "profesional": "Dr. Andrés Abarca"
+      }
+    ]
+  }
+}

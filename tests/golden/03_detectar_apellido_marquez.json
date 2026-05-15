@@ -1,0 +1,21 @@
+{
+  "id": "detectar_apellido_marquez",
+  "phone": "56940315130",
+  "fecha_real": "2026-05-15T03:00:00",
+  "context": "Paciente escribe 'con Márquez' o 'quiero al Dr. Márquez'. Bot debe detectar apellido y buscar solo ID 13 (Márquez), no ir a Abarca/Olavarría ni pedir elegir especialidad.",
+  "bug_ref": "apellido profesional detection",
+  "steps": [
+    {
+      "in": "quiero hora con el doctor Márquez",
+      "expect_state": "WAIT_SLOT",
+      "expect_match": ["márquez"],
+      "expect_no_match": ["abarca", "olavarría"],
+      "comment": "Apellido Márquez debe resolverse a ID 13 directamente"
+    }
+  ],
+  "mock_config": {
+    "buscar_primer_dia_solo_ids_13": [
+      {"profesional": "Dr. Alonso Márquez", "especialidad": "Medicina General", "fecha": "2026-05-16", "fecha_display": "sáb 16 may", "hora_inicio": "09:00", "hora_fin": "09:20", "id_profesional": 13, "id_recurso": 1, "duracion": 20}
+    ]
+  }
+}

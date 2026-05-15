@@ -1,0 +1,19 @@
+{
+  "id": "necesito_medico_general",
+  "phone": "56900000013",
+  "fecha_real": "2026-05-15T03:00:00",
+  "context": "Paciente dice 'necesito médico general' con acento. Debe detectar la especialidad sin ambigüedades.",
+  "bug_ref": "especialidad detection with accents",
+  "steps": [
+    {
+      "in": "necesito médico general",
+      "expect_state": "WAIT_SLOT",
+      "expect_match": ["medicina general", "abarca|olavarría|márquez"],
+      "comment": "Variante natural con acento debe mapear a medicina general"
+    }
+  ],
+  "mock_config": {
+    "default_esp": "medicina general",
+    "default_prof_id": 73
+  }
+}

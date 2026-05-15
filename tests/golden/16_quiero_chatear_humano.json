@@ -1,0 +1,17 @@
+{
+  "id": "quiero_chatear_humano",
+  "phone": "56900000016",
+  "fecha_real": "2026-05-15T03:00:00",
+  "context": "Paciente dice 'quiero chatear con alguien'. Fix FIX 3: debe derivar a HUMAN_TAKEOVER, no a flujo de agendamiento.",
+  "bug_ref": "FIX 3 humano_solicitado detection",
+  "steps": [
+    {
+      "in": "quiero chatear con alguien",
+      "expect_state": "HUMAN_TAKEOVER",
+      "expect_match": ["recepción|recepcionista|atenderá|humano|persona"],
+      "expect_no_match": ["especialidad", "¿qué necesitas agendar"],
+      "comment": "Solicitud explícita de persona real → HUMAN_TAKEOVER sin pasar por intención de agendar"
+    }
+  ],
+  "mock_config": {}
+}

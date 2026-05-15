@@ -1,0 +1,23 @@
+{
+  "id": "manana_en_la_tarde",
+  "phone": "56900000006",
+  "fecha_real": "2026-05-15T03:00:00",
+  "context": "Paciente dice 'para mañana en la tarde'. Bot debe buscar slots de mañana Y filtrar/priorizar franja horaria 12:00-18:00. No ignorar la franja.",
+  "bug_ref": "franja_horaria + fecha_desde propagation",
+  "steps": [
+    {
+      "in": "quiero medicina general para mañana en la tarde",
+      "expect_state": "WAIT_SLOT",
+      "expect_match": ["medicina general", "tarde|12:|13:|14:|15:|16:|17:"],
+      "comment": "Los slots mostrados deben ser del día siguiente Y franja tarde (12-18hs)"
+    }
+  ],
+  "mock_config": {
+    "fecha_solicitada": "tomorrow",
+    "buscar_slots_dia_tomorrow": [
+      {"profesional": "Dr. Andrés Abarca", "especialidad": "Medicina General", "fecha": "2026-05-16", "fecha_display": "sáb 16 may", "hora_inicio": "09:00", "hora_fin": "09:15", "id_profesional": 73, "id_recurso": 1, "duracion": 15},
+      {"profesional": "Dr. Andrés Abarca", "especialidad": "Medicina General", "fecha": "2026-05-16", "fecha_display": "sáb 16 may", "hora_inicio": "14:00", "hora_fin": "14:15", "id_profesional": 73, "id_recurso": 1, "duracion": 15},
+      {"profesional": "Dr. Andrés Abarca", "especialidad": "Medicina General", "fecha": "2026-05-16", "fecha_display": "sáb 16 may", "hora_inicio": "15:30", "hora_fin": "15:45", "id_profesional": 73, "id_recurso": 1, "duracion": 15}
+    ]
+  }
+}

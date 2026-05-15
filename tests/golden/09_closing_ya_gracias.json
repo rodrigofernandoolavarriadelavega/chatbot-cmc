@@ -1,0 +1,17 @@
+{
+  "id": "closing_ya_gracias",
+  "phone": "56900000009",
+  "fecha_real": "2026-05-15T03:00:00",
+  "context": "Paciente dice 'ya gracias' post-conversación. Bot debe responder con cierre amable sin entrar en flujos de agendamiento ni preguntar por especialidad.",
+  "bug_ref": "closing intent detection",
+  "steps": [
+    {
+      "in": "ya gracias",
+      "expect_state": "IDLE",
+      "expect_match": ["bien|gracias|hasta|disponible|menú|👋"],
+      "expect_no_match": ["especialidad", "rut", "agendar"],
+      "comment": "Closing debe ser reconocido como cierre amable, no como intención de agendar. El bot responde '¡Que estés muy bien! 👋' u similar."
+    }
+  ],
+  "mock_config": {}
+}

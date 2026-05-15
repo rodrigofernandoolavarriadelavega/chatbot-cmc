@@ -1,0 +1,17 @@
+{
+  "id": "medico_infantil_mg",
+  "phone": "56900000020",
+  "fecha_real": "2026-05-15T03:00:00",
+  "context": "Paciente dice 'necesito médico infantil'. No existe pediatría. Bot debe mapear a Medicina General con aviso claro que no hay pediatría especializada.",
+  "bug_ref": "pediatría/médico infantil → MG con aviso",
+  "steps": [
+    {
+      "in": "necesito médico infantil para mi hijo",
+      "expect_state": "WAIT_CONFIRMAR_ADULTO",
+      "expect_match": ["menor|edad|pediatr|medicina general|cesfam"],
+      "expect_no_match": ["pediatría disponible", "especialidad infantil"],
+      "comment": "Sin pediatría → aviso explícito de que se atiende MG adulto + opción CESFAM"
+    }
+  ],
+  "mock_config": {}
+}

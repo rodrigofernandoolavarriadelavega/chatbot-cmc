@@ -1,0 +1,31 @@
+{
+  "id": "mg_manana_otro_prof",
+  "phone": "56934043435",
+  "fecha_real": "2026-05-15T03:00:00",
+  "context": "Paciente pide MG para mañana. Bot ofrece Abarca. Click otro_prof debe mostrar Abarca+Márquez para LA MISMA fecha, no saltar a otro día sin avisar.",
+  "bug_ref": "WAIT_SLOT otro_prof silent date jump",
+  "steps": [
+    {
+      "in": "Hola, quiero agendar medicina general para mañana",
+      "expect_state": "WAIT_SLOT",
+      "expect_match": ["medicina general", "abarca|olavarría|márquez|armijo"],
+      "comment": "Bot debe mostrar slots y entrar en WAIT_SLOT"
+    },
+    {
+      "in": "otro_prof",
+      "expect_state": "WAIT_SLOT",
+      "expect_match": ["olavarría|márquez|abarca"],
+      "expect_no_silent_date_jump": true,
+      "comment": "otro_prof debe mostrar OTROS profesionales MG para LA MISMA fecha (no el mismo Abarca ya mostrado). Basta con que aparezca al menos un profesional diferente."
+    }
+  ],
+  "mock_config": {
+    "fecha_solicitada": "tomorrow",
+    "buscar_slots_dia_tomorrow_mg_ids_73": [
+      {"profesional": "Dr. Andrés Abarca", "especialidad": "Medicina General", "fecha": "2026-05-16", "fecha_display": "sáb 16 may", "hora_inicio": "09:00", "hora_fin": "09:15", "id_profesional": 73, "id_recurso": 1, "duracion": 15}
+    ],
+    "buscar_slots_dia_por_ids_tomorrow_otros": [
+      {"profesional": "Dr. Alonso Márquez", "especialidad": "Medicina General", "fecha": "2026-05-16", "fecha_display": "sáb 16 may", "hora_inicio": "10:00", "hora_fin": "10:20", "id_profesional": 13, "id_recurso": 1, "duracion": 20}
+    ]
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "id": "sintoma_guata_triage",
+  "phone": "56900000007",
+  "fecha_real": "2026-05-15T03:00:00",
+  "context": "Paciente dice 'me duele la guata'. Triage debe sugerir gastroenterología o medicina general, NO cardiología, NOT SAMU.",
+  "bug_ref": "triage_ges symptom routing",
+  "steps": [
+    {
+      "in": "me duele la guata",
+      "expect_state": "WAIT_SLOT",
+      "expect_match": ["gastroenterología|medicina general|quijano|abarca|olavarría"],
+      "expect_no_match": ["samu", "131", "urgencia", "cardiología"],
+      "comment": "Síntoma abdominal debe ir a gastro o MG, no disparar SAMU"
+    }
+  ],
+  "mock_config": {
+    "default_esp": "gastroenterología"
+  }
+}

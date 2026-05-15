@@ -1,0 +1,30 @@
+{
+  "id": "prevision_bono_particular",
+  "phone": "56900000012",
+  "fecha_real": "2026-05-15T03:00:00",
+  "context": "Paciente en WAIT_MODALIDAD dice 'el bono es particular'. Bot debe interpretar 'particular' como modalidad y no pedir aclaración extra.",
+  "bug_ref": "modalidad detection — 'bono particular' ambiguity",
+  "steps": [
+    {
+      "in": "quiero medicina general",
+      "expect_state": "WAIT_SLOT",
+      "expect_match": ["medicina general", "09:00|08:00|10:00"]
+    },
+    {
+      "in": "1",
+      "expect_state": "WAIT_MODALIDAD",
+      "expect_match": ["fonasa|particular|isapre|modalidad|previsión"],
+      "comment": "Seleccionar slot → debe preguntar por modalidad"
+    },
+    {
+      "in": "el bono es particular",
+      "expect_state": "WAIT_RUT_AGENDAR",
+      "expect_match": ["rut", "particular"],
+      "comment": "'el bono es particular' = modalidad particular → avanzar a pedir RUT"
+    }
+  ],
+  "mock_config": {
+    "default_esp": "medicina general",
+    "default_prof_id": 73
+  }
+}

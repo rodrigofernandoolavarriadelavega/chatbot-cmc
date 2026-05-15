@@ -1,0 +1,17 @@
+{
+  "id": "boca_torcida_samu",
+  "phone": "56900000015",
+  "fecha_real": "2026-05-15T03:00:00",
+  "context": "Paciente dice 'se me torció la boca'. Fix M1 ACV: DEBE disparar SAMU inmediatamente. Ventana trombolisis 4.5h.",
+  "bug_ref": "M1 fix — ACV stroke detection must trigger SAMU",
+  "steps": [
+    {
+      "in": "se me torció la boca de repente",
+      "expect_state": "IDLE",
+      "expect_match": ["samu|131|urgencia|emergencia"],
+      "expect_no_match": ["especialidad", "rut", "agendar"],
+      "comment": "Signo ACV = boca torcida DEBE activar SAMU sin importar contexto previo"
+    }
+  ],
+  "mock_config": {}
+}

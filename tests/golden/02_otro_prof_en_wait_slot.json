@@ -1,0 +1,24 @@
+{
+  "id": "otro_prof_en_wait_slot",
+  "phone": "56934363158",
+  "fecha_real": "2026-05-15T03:00:00",
+  "context": "Paciente en WAIT_SLOT escribe texto libre 'otro profesional' (no el payload del botón). Debe resolverse igual que el payload otro_prof.",
+  "bug_ref": "WAIT_SLOT tl normalization",
+  "steps": [
+    {
+      "in": "quiero agendar medicina general",
+      "expect_state": "WAIT_SLOT",
+      "expect_match": ["medicina general", "09:00|08:00|10:00"]
+    },
+    {
+      "in": "otro profesional",
+      "expect_state": "WAIT_SLOT",
+      "expect_match": ["abarca|márquez|olavarría"],
+      "comment": "Texto libre 'otro profesional' debe resolver a otro_prof. Si no mapea, es bug."
+    }
+  ],
+  "mock_config": {
+    "default_esp": "medicina general",
+    "default_prof_id": 73
+  }
+}

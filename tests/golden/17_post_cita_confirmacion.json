@@ -1,0 +1,46 @@
+{
+  "id": "post_cita_confirmacion",
+  "phone": "56900000017",
+  "fecha_real": "2026-05-15T03:00:00",
+  "context": "Paciente que ya reservó hora dice 'ya reservé hora'. Bot debe confirmar la cita existente, no disparar flujo de agendamiento de nuevo (fix FIX 5).",
+  "bug_ref": "FIX 5 post-cita confirmaciones",
+  "steps": [
+    {
+      "in": "quiero una hora de medicina general",
+      "expect_state": "WAIT_SLOT",
+      "expect_match": ["medicina general"]
+    },
+    {
+      "in": "1",
+      "expect_state": "WAIT_MODALIDAD",
+      "expect_match": ["fonasa|particular|modalidad"]
+    },
+    {
+      "in": "fonasa",
+      "expect_state": "WAIT_RUT_AGENDAR",
+      "expect_match": ["rut"]
+    },
+    {
+      "in": "11.111.111-1",
+      "expect_state": "CONFIRMING_CITA",
+      "expect_match": ["confirmar|datos|juan prueba"]
+    },
+    {
+      "in": "sí",
+      "expect_state": "IDLE",
+      "expect_match": ["listo|reservada|confirmada|hora quedó"],
+      "comment": "Cita creada exitosamente"
+    },
+    {
+      "in": "ya reservé hora",
+      "expect_state": "IDLE",
+      "expect_match": ["reservada|tienes|hora|cita|confirmada"],
+      "expect_no_match": ["¿qué especialidad", "agendar", "rut para"],
+      "comment": "Post-cita: 'ya reservé hora' debe reconocer que ya hay cita, no re-iniciar flujo"
+    }
+  ],
+  "mock_config": {
+    "default_esp": "medicina general",
+    "default_prof_id": 73
+  }
+}

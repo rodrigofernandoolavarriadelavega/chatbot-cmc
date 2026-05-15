@@ -1,0 +1,25 @@
+{
+  "id": "rechazo_fecha",
+  "phone": "56963102156",
+  "fecha_real": "2026-05-15T03:00:00",
+  "context": "Paciente en WAIT_SLOT dice 'no me sirve ese día'. Bot debe interpretar como solicitud de otro día, no como error ni fallback.",
+  "bug_ref": "WAIT_SLOT free text rejection",
+  "steps": [
+    {
+      "in": "necesito hora de kinesiología",
+      "expect_state": "WAIT_SLOT",
+      "expect_match": ["kinesiología|armijo|etcheverry"]
+    },
+    {
+      "in": "no me sirve ese día",
+      "expect_state": "WAIT_SLOT",
+      "expect_match": ["lunes|martes|miércoles|jueves|viernes|próximo|otro día"],
+      "expect_no_match": ["no te entendí", "no entendí"],
+      "comment": "Rechazo de fecha debe buscar siguiente disponibilidad, no mostrar error de no-entendido"
+    }
+  ],
+  "mock_config": {
+    "default_esp": "kinesiología",
+    "default_prof_id": 77
+  }
+}

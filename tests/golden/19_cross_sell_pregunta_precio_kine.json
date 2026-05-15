@@ -1,0 +1,55 @@
+{
+  "id": "cross_sell_pregunta_precio_kine",
+  "phone": "56900000019",
+  "fecha_real": "2026-05-15T03:00:00",
+  "context": "Paciente en WAIT_CROSS_SELL pregunta '¿y cuánto cuesta kine?'. Bot NO debe rechazar silenciosamente ni resetear estado. Debe recordar la pregunta y mantener el estado.",
+  "bug_ref": "WAIT_CROSS_SELL ambiguous response → silent rejection bug",
+  "steps": [
+    {
+      "in": "quiero medicina general",
+      "expect_state": "WAIT_SLOT",
+      "expect_match": ["medicina general"]
+    },
+    {
+      "in": "1",
+      "expect_state": "WAIT_MODALIDAD",
+      "expect_match": ["fonasa|particular"]
+    },
+    {
+      "in": "fonasa",
+      "expect_state": "WAIT_RUT_AGENDAR",
+      "expect_match": ["rut"]
+    },
+    {
+      "in": "11.111.111-1",
+      "expect_state": "CONFIRMING_CITA",
+      "expect_match": ["confirmar"]
+    },
+    {
+      "in": "sí",
+      "expect_state": "IDLE",
+      "expect_match": ["listo|reservada"]
+    },
+    {
+      "in": "__INJECT_CROSS_SELL_STATE__",
+      "expect_state": "WAIT_CROSS_SELL",
+      "expect_match": ["kinesiología|kine|agendar"],
+      "comment": "Inyectar estado WAIT_CROSS_SELL con esp_destino=kinesiología"
+    },
+    {
+      "in": "¿y cuánto cuesta kine?",
+      "expect_state": "WAIT_CROSS_SELL",
+      "expect_match": ["kinesiología|kine|agendar|sí"],
+      "expect_no_match": ["escribe *menu*", "en qué te puedo ayudar"],
+      "comment": "Pregunta de precio en WAIT_CROSS_SELL = respuesta ambigua. Bot DEBE mantener WAIT_CROSS_SELL y repreguntar, no resetear silenciosamente."
+    }
+  ],
+  "mock_config": {
+    "default_esp": "medicina general",
+    "default_prof_id": 73,
+    "inject_cross_sell": {
+      "esp_origen": "medicina general",
+      "esp_destino": "kinesiología"
+    }
+  }
+}

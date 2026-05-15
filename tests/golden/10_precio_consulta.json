@@ -1,0 +1,24 @@
+{
+  "id": "precio_consulta",
+  "phone": "56900000010",
+  "fecha_real": "2026-05-15T03:00:00",
+  "context": "Paciente pregunta '¿cuánto vale la consulta?'. Bot debe responder con precio, NO interpretar 'cancelar' en chilenismo (precio ≠ pago/cancelar).",
+  "bug_ref": "BUG-01 cancelar=pagar chilenismo — precio no debe derivar a cancelación",
+  "steps": [
+    {
+      "in": "cuánto vale la consulta de medicina general",
+      "expect_state": "IDLE",
+      "expect_match": ["\\$|precio|valor|consulta|fonasa|particular"],
+      "expect_no_match": ["cancelar", "anular", "rut para cancelar"],
+      "comment": "Precio de consulta → respuesta FAQ con valor, no flujo de cancelación"
+    },
+    {
+      "in": "¿y cuánto cuesta la de kine?",
+      "expect_state": "IDLE",
+      "expect_match": ["\\$|precio|valor|kinesiología|kine"],
+      "expect_no_match": ["cancelar", "anular"],
+      "comment": "Precio kine en contexto → no derivar a cancelación"
+    }
+  ],
+  "mock_config": {}
+}

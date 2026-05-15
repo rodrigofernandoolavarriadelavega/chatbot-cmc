@@ -1,0 +1,19 @@
+{
+  "id": "urgencia_dental_no_samu",
+  "phone": "56900000014",
+  "fecha_real": "2026-05-15T03:00:00",
+  "context": "Paciente dice 'urgencia dental'. Fix C1: NO debe disparar SAMU. Debe buscar turno odontológico urgente o derivar a recepción.",
+  "bug_ref": "C1 fix — urgencia dental no es emergencia vital",
+  "steps": [
+    {
+      "in": "tengo una urgencia dental, me duele una muela",
+      "expect_state": "WAIT_SLOT",
+      "expect_match": ["odontología|dentista|burgos|jiménez|hora"],
+      "expect_no_match": ["samu", "131", "emergencia", "urgencias más cercano"],
+      "comment": "Urgencia dental NO debe activar SAMU. Debe buscar slot odontológico."
+    }
+  ],
+  "mock_config": {
+    "default_esp": "odontología"
+  }
+}

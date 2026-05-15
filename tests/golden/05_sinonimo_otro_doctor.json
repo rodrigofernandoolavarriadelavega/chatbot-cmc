@@ -1,0 +1,24 @@
+{
+  "id": "sinonimo_otro_doctor",
+  "phone": "56967963365",
+  "fecha_real": "2026-05-15T03:00:00",
+  "context": "Paciente en WAIT_SLOT dice 'quiero otro doctor'. Debe mapearse al mismo handler que otro_prof.",
+  "bug_ref": "otro_prof synonym normalization",
+  "steps": [
+    {
+      "in": "quiero una hora de medicina general",
+      "expect_state": "WAIT_SLOT",
+      "expect_match": ["medicina general", "09:00|08:00|10:00"]
+    },
+    {
+      "in": "quiero otro doctor",
+      "expect_state": "WAIT_SLOT",
+      "expect_match": ["abarca|márquez|olavarría"],
+      "comment": "Sinónimo 'otro doctor' debe resolverse igual que otro_prof button"
+    }
+  ],
+  "mock_config": {
+    "default_esp": "medicina general",
+    "default_prof_id": 73
+  }
+}

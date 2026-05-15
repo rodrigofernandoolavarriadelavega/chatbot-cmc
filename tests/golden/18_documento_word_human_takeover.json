@@ -1,0 +1,20 @@
+{
+  "id": "documento_word_human_takeover",
+  "phone": "56900000018",
+  "fecha_real": "2026-05-15T03:00:00",
+  "context": "Paciente envía documento Word (ficha clínica). Bot NO debe llamar detect_intent con el texto extraído. Debe derivar a HUMAN_TAKEOVER.",
+  "bug_ref": "docx file → HUMAN_TAKEOVER not detect_intent",
+  "steps": [
+    {
+      "in": "__DOCX_ATTACHMENT__",
+      "expect_state": "HUMAN_TAKEOVER",
+      "expect_match": ["recepción|recepcionista|documento|archivo|revisará"],
+      "expect_no_match": ["especialidad", "¿qué necesitas"],
+      "comment": "Adjunto Word = documento médico sensible → HUMAN_TAKEOVER directo"
+    }
+  ],
+  "mock_config": {
+    "attachment_type": "docx",
+    "extracted_text": "Paciente Juan Pérez, RUT 12.345.678-9, diagnóstico hipertensión"
+  }
+}
