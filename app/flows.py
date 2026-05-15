@@ -4650,7 +4650,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             "¿Te la reservo?",
             [
                 {"id": "confirmar_sugerido", "title": "✅ Sí, esa hora"},
-                {"id": "ver_otros",          "title": "📋 Otros horarios"},
+                {"id": "ver_otros",          "title": "📋 Mismo médico"},
                 {"id": "otro_dia",           "title": "📅 Otro día"},
             ]
         )
@@ -10027,7 +10027,7 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
 
     botones = [
         {"id": "confirmar_sugerido", "title": "✅ Sí, esa hora"},
-        {"id": "ver_otros",          "title": "📋 Otros horarios"},
+        {"id": "ver_otros",          "title": "📋 Mismo médico"},
     ]
     if hay_otros:
         botones.append({"id": "otro_prof", "title": "👤 Otro profesional"})
