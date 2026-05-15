@@ -449,8 +449,16 @@ def admin_metrics(_: str = Depends(require_admin)):
 
 @router.get("/admin/api/waitlist")
 def admin_waitlist(_: str = Depends(require_admin)):
-    """Lista de espera completa (activas + notificadas + canceladas)."""
-    return get_waitlist_all()
+    """Lista de espera completa (activas + notificadas + canceladas).
+    Agrega campo badge para identificar servicios especiales en el panel."""
+    rows = get_waitlist_all()
+    _BADGES = {
+        "ecocardiograma": "Ecocardiograma · Dr. Millán · $110.000 particular",
+    }
+    for row in rows:
+        esp = (row.get("especialidad") or "").lower()
+        row["badge"] = _BADGES.get(esp, "")
+    return rows
 
 
 @router.post("/admin/api/waitlist/{wl_id}/cancel")

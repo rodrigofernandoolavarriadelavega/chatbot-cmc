@@ -349,11 +349,18 @@ def _run_ddl_inline(conn) -> None:
             nombre          TEXT,
             especialidad    TEXT NOT NULL,
             id_prof_pref    INTEGER,
+            notas           TEXT DEFAULT '',
             created_at      TEXT DEFAULT (datetime('now')),
             notified_at     TEXT,
             canceled_at     TEXT
         )
     """)
+    # Migration: columna notas puede no existir en instancias anteriores
+    try:
+        conn.execute("ALTER TABLE waitlist ADD COLUMN notas TEXT DEFAULT ''")
+        conn.commit()
+    except Exception:
+        pass  # columna ya existe
     conn.execute("CREATE INDEX IF NOT EXISTS idx_waitlist_active ON waitlist(canceled_at, notified_at)")
     # Tracking de estados de entrega de mensajes salientes (sent/delivered/read/failed)
     conn.execute("""
@@ -3411,7 +3418,8 @@ def get_slots_rechazados(phone: str, especialidad: str) -> set[tuple[str, str]]:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def add_to_waitlist(phone: str, rut: str, nombre: str,
-                    especialidad: str, id_prof_pref: int | None = None) -> int:
+                    especialidad: str, id_prof_pref: int | None = None,
+                    notas: str = "") -> int:
     """Inscribe a un paciente en la lista de espera. Si ya existe una inscripción
     activa (no notificada ni cancelada) para el mismo phone+especialidad, la
     actualiza en lugar de duplicar. Retorna el id de la fila."""
@@ -3424,15 +3432,15 @@ def add_to_waitlist(phone: str, rut: str, nombre: str,
         """, (phone, especialidad)).fetchone()
         if existing:
             conn.execute("""
-                UPDATE waitlist SET rut=?, nombre=?, id_prof_pref=?, created_at=datetime('now')
+                UPDATE waitlist SET rut=?, nombre=?, id_prof_pref=?, notas=?, created_at=datetime('now')
                 WHERE id=?
-            """, (rut, nombre, id_prof_pref, existing["id"]))
+            """, (rut, nombre, id_prof_pref, notas, existing["id"]))
             conn.commit()
             return int(existing["id"])
         cur = conn.execute("""
-            INSERT INTO waitlist (phone, rut, nombre, especialidad, id_prof_pref)
-            VALUES (?, ?, ?, ?, ?)
-        """, (phone, rut, nombre, especialidad, id_prof_pref))
+            INSERT INTO waitlist (phone, rut, nombre, especialidad, id_prof_pref, notas)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (phone, rut, nombre, especialidad, id_prof_pref, notas))
         conn.commit()
         return int(cur.lastrowid)
 

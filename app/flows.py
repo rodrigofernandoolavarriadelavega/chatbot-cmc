@@ -1658,6 +1658,8 @@ async def _send_review_request_if_due(phone: str, especialidad: str = "", rating
     )
     try:
         await send_whatsapp(phone, msg)
+        from session import log_message
+        log_message(phone, "out", msg, "IDLE")
         log_event(phone, "review_request_sent", {"especialidad": especialidad, "rating": rating})
         log.info("review_request enviado phone=%s rating=%s esp=%s", phone, rating, especialidad)
     except Exception as e:
@@ -1745,6 +1747,8 @@ async def _responder_pregunta_horario(phone: str, state: str, data: dict, txt: s
                                 _slot_resp = _format_slots((smart or todos)[:5])
                                 if isinstance(_slot_resp, dict):
                                     await send_whatsapp(phone, f"Cambié a *{prof_nombre_sw}* 👨‍⚕️")
+                                    from session import log_message as _lm_sw
+                                    _lm_sw(phone, "out", f"Cambié a *{prof_nombre_sw}* 👨‍⚕️", "WAIT_SLOT")
                                     return _slot_resp
                                 return f"Cambié a *{prof_nombre_sw}* 👨‍⚕️{chr(10)}{chr(10)}" + _slot_resp
                     except Exception as _e_sw:
@@ -2150,6 +2154,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             ],
         )
         await send_whatsapp_interactive(phone, _msg)
+        from session import log_message as _lm_f2
+        _lm_f2(phone, "out", "[opt-in QR — autorización privacidad]", "WAIT_OPTIN_CONFIRM")
         save_session(phone, "WAIT_OPTIN_CONFIRM", data)
         log_event(phone, "optin_qr_iniciado", {})
         return None
@@ -2231,6 +2237,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     if _pending_tips:
         try:
             await send_whatsapp(phone, _pending_tips)
+            from session import log_message as _lm_f3
+            _lm_f3(phone, "out", _pending_tips, state)
             data.pop("pending_tips", None)
             save_session(phone, state, data)
             log_event(phone, "pending_tips_enviados", {"len": len(_pending_tips)})
@@ -2348,6 +2356,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         "WAIT_RUT_CANCELAR", "WAIT_CITA_CANCELAR", "CONFIRMING_CANCEL",
         "WAIT_RUT_REAGENDAR", "WAIT_CITA_REAGENDAR",
         "WAIT_WAITLIST_CONFIRM", "WAIT_WAITLIST_RUT", "WAIT_WAITLIST_NOMBRE",
+        "WAIT_WAITLIST_CONFIRM_ECOCA", "WAIT_WAITLIST_RUT_ECOCA",
         "WAIT_RUT_VER", "WAIT_DATOS_NUEVO",
         "WAIT_QUICK_BOOK", "WAIT_DURACION_MASOTERAPIA",
         "WAIT_CONFIRMAR_ADULTO", "WAIT_MEDFAM_FALLBACK",
@@ -2605,6 +2614,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "WAIT_NOMBRE_NUEVO", "WAIT_FECHA_NAC", "WAIT_SEXO", "WAIT_BOOKING_FOR",
                 "WAIT_WAITLIST_CONFIRM", "WAIT_REFERRAL_POST",
                 "WAIT_META_SLOT_CHOICE", "WAIT_META_WAITLIST",
+                "WAIT_WAITLIST_CONFIRM_ECOCA", "WAIT_WAITLIST_RUT_ECOCA",
             )
             if state in _estados_activos:
                 # No interpretar como opt-out — dejar que el handler del estado decida
@@ -3694,12 +3704,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         data["nombre_conocido"] = perfil["nombre"]
                     data["triage_motivo"] = triage.get("top_pathology")
                     # Mensaje de urgencia empática ANTES de iniciar agendamiento
-                    await send_whatsapp(
-                        phone,
+                    _triage_msg = (
                         f"Por lo que me cuentas, es importante que te evalúe "
                         f"un especialista en *{especialidad_triage}* pronto.\n\n"
                         "Te busco la hora más cercana disponible ahora mismo."
                     )
+                    await send_whatsapp(phone, _triage_msg)
+                    from session import log_message as _lm_f4
+                    _lm_f4(phone, "out", _triage_msg, "IDLE")
                     return await _iniciar_agendar(phone, data, especialidad_triage)
             else:
                 # Log de gaps de recall — sólo si el texto parece clínico. Así
@@ -5749,6 +5761,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     _body["text"] = (_hdr + "\n\n" + _orig)[:1024]
                 except Exception:
                     await send_whatsapp(phone, _hdr)
+                    from session import log_message as _lm_f5
+                    _lm_f5(phone, "out", _hdr, "WAIT_SLOT")
                 return _slot_resp_c
             return _hdr + "\n\n" + _slot_resp_c
 
@@ -7060,6 +7074,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                                     "(máx. 3/mes)."
                                 )
                                 asyncio.create_task(send_whatsapp(_ref_phone, _notif))
+                                from session import log_message as _lm_f6
+                                _lm_f6(_ref_phone, "out", _notif, "IDLE")
                                 marcar_bono_notificado(_bono["id"])
                                 log_event(_ref_phone, "bono_referral_notificado", {
                                     "bono_id": _bono["id"],
@@ -7128,6 +7144,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     # BUG-D: PNI/hitos en segundo mensaje para evitar truncamiento WA
                     if pni_msg and send_whatsapp:
                         await send_whatsapp(phone, _msg_rea + "\n\n_Escribe *menu* si necesitas algo más._")
+                        from session import log_message as _lm_f7
+                        _lm_f7(phone, "out", _msg_rea + "\n\n_Escribe *menu* si necesitas algo más._", "CONFIRMING_CITA")
                         import asyncio as _asyncio_pni
                         await _asyncio_pni.sleep(2.5)
                         if _pni_telemetria:
@@ -7449,13 +7467,15 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                             w_phone = w["phone"]
                             w_nombre = (w.get("nombre") or "").split()
                             w_saludo = f"*{w_nombre[0]}*" if w_nombre else ""
-                            await send_whatsapp(
-                                w_phone,
+                            _wl_msg = (
                                 f"Hola {w_saludo} 👋 ¡Se acaba de liberar una hora de "
                                 f"*{esp_cancelada}* con *{cita.get('profesional', '')}*!\n\n"
                                 f"📅 *{cita.get('fecha_display', '')}* a las *{cita.get('hora_inicio', '')[:5]}*\n\n"
                                 "Escribe *menu* ahora para reservarla antes de que se llene."
                             )
+                            await send_whatsapp(w_phone, _wl_msg)
+                            from session import log_message as _lm_f8
+                            _lm_f8(w_phone, "out", _wl_msg, "IDLE")
                             mark_waitlist_notified(w["id"])
                             log_event(w_phone, "waitlist_notificado_cancelacion", {
                                 "especialidad": esp_cancelada, "cita_cancelada": cita["id"],
@@ -7601,6 +7621,87 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         log_event(phone, "reagendar_elegida_cita",
                   {"id_cita": cita_old["id"], "especialidad": esp_lower})
         return await _iniciar_agendar(phone, data, esp_lower)
+
+    # ── WAIT_WAITLIST_CONFIRM_ECOCA ──────────────────────────────────────────
+    # Estado especial para ecocardiograma: usa la waitlist estándar pero con
+    # mensaje de confirmación propio y sin ofrecer slots de Medilink.
+    if state == "WAIT_WAITLIST_CONFIRM_ECOCA":
+        tl_ec = tl.lower().strip()
+        if tl_ec == "ecoca_waitlist_si" or tl_ec in AFIRMACIONES or tl_norm in AFIRMACIONES:
+            perfil = get_profile(phone)
+            if perfil:
+                data["rut"] = perfil["rut"]
+                data["paciente_nombre"] = perfil["nombre"]
+            if not data.get("rut"):
+                # Sin RUT → pedir antes de inscribir
+                save_session(phone, "WAIT_WAITLIST_RUT_ECOCA", data)
+                return (
+                    "Perfecto, para anotarte necesito tu RUT:\n"
+                    "(ej: *12.345.678-9*)"
+                    + _PRIVACY_NOTE
+                )
+            wid = add_to_waitlist(
+                phone,
+                data.get("rut", ""),
+                data.get("paciente_nombre", ""),
+                "ecocardiograma",
+                60,
+                notas="precio $110.000 particular, espera fecha mensual cardiólogo Dr. Millán",
+            )
+            save_tag(phone, "waitlist-ecocardiograma")
+            log_event(phone, "waitlist_ecocardiograma_inscrito",
+                      {"id": wid, "phone": phone, "rut": data.get("rut", "")})
+            reset_session(phone)
+            nombre_corto = _first_name(data.get("paciente_nombre", ""))
+            saludo = f"*{nombre_corto}*, " if nombre_corto else ""
+            return (
+                f"Listo, {saludo}quedaste anotado en la lista de espera para *ecocardiograma*. "
+                "Cuando el Dr. Millán confirme la próxima fecha (es una vez al mes), "
+                "te avisamos por aquí.\n\n"
+                "_Escribe *menu* si necesitas algo más._"
+            )
+        if tl_ec in ("ecoca_waitlist_no", "ecoca_menu") or tl_ec in NEGACIONES or tl_norm in NEGACIONES:
+            reset_session(phone)
+            return (
+                "Sin problema. Cuando quieras anotarte o necesites otra cosa, escríbenos.\n"
+                f"_Recepción: 📞 *{CMC_TELEFONO}*_"
+            )
+        return (
+            "Responde *Sí* para anotarte en la lista de espera del ecocardiograma "
+            "o *No* si prefieres llamar a recepción."
+        )
+
+    # ── WAIT_WAITLIST_RUT_ECOCA ───────────────────────────────────────────────
+    if state == "WAIT_WAITLIST_RUT_ECOCA":
+        rut = clean_rut(txt)
+        if not valid_rut(rut):
+            return hint_rut_error(txt)
+        _ensure_consent(phone)
+        data["rut"] = rut
+        paciente = await buscar_paciente(rut)
+        if paciente:
+            data["paciente_nombre"] = paciente["nombre"]
+            save_profile(phone, rut, paciente["nombre"])
+        wid = add_to_waitlist(
+            phone,
+            rut,
+            data.get("paciente_nombre", ""),
+            "ecocardiograma",
+            60,
+            notas="precio $110.000 particular, espera fecha mensual cardiólogo Dr. Millán",
+        )
+        save_tag(phone, "waitlist-ecocardiograma")
+        log_event(phone, "waitlist_ecocardiograma_inscrito",
+                  {"id": wid, "phone": phone, "rut": rut})
+        reset_session(phone)
+        nombre_corto = _first_name(data.get("paciente_nombre", ""))
+        saludo = f"*{nombre_corto}*, " if nombre_corto else ""
+        return (
+            f"Listo, {saludo}quedaste anotado en la lista de espera para *ecocardiograma*. "
+            "Cuando el Dr. Millán confirme la próxima fecha (es una vez al mes), "
+            "te avisamos por aquí.\n\n"
+            "_Escribe *menu* si necesitas algo más._"
+        )
 
     # ── WAIT_WAITLIST_CONFIRM ─────────────────────────────────────────────────
     if state == "WAIT_WAITLIST_CONFIRM":
@@ -8308,6 +8409,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "ambos recibirán un beneficio."
             )
             await send_whatsapp(phone, ref_msg)
+            from session import log_message as _lm_f9
+            _lm_f9(phone, "out", ref_msg, "CONFIRMING_CITA")
         except Exception as e:
             log.warning("Error generando código referido phone=%s: %s", phone, e)
         data.update({"paciente": paciente, "rut": rut})
@@ -9322,6 +9425,22 @@ _FRASES_ESPECIALIDAD = [
     ("posolog",               "podología"),     # typo posología → podología
     ("posologia",             "podología"),
     ("posología",             "podología"),
+    # Ecocardiograma — DEBE ir antes que "ecograf" para ganar la prioridad de match
+    ("ecocardiograma",        "ecocardiograma"),
+    ("eco cardiograma",       "ecocardiograma"),
+    ("eco-cardiograma",       "ecocardiograma"),
+    ("ecografia del corazon", "ecocardiograma"),
+    ("ecografía del corazón", "ecocardiograma"),
+    ("ecografia cardiaca",    "ecocardiograma"),
+    ("ecografía cardiaca",    "ecocardiograma"),
+    ("ecografia cardíaca",    "ecocardiograma"),
+    ("eco del corazon",       "ecocardiograma"),
+    ("eco corazon",           "ecocardiograma"),
+    ("eco corazón",           "ecocardiograma"),
+    ("doppler cardiaco",      "ecocardiograma"),
+    ("doppler cardíaco",      "ecocardiograma"),
+    ("ultrasonido del corazon", "ecocardiograma"),
+    ("ultrasonido corazon",   "ecocardiograma"),
     ("ecograf",               "ecografía"),
     ("ecotomograf",           "ecografía"),
     ("ecotomo",               "ecografía"),
@@ -9373,6 +9492,12 @@ def _detectar_especialidad_en_texto(txt: str) -> str | None:
     # "eco" es 3 chars: match substring daría falsos positivos ("económico", "ecología").
     # Usar word-boundary para palabras ≤4 caracteres que son ambiguas.
     import re as _re
+    # _FRASES_ESPECIALIDAD tiene prioridad sobre _SHORT_EXACT para "eco" en contexto
+    # cardíaco ("eco corazón", "eco cardiograma", etc.) — recorremos primero la lista.
+    for frase, key in _FRASES_ESPECIALIDAD:
+        if frase in tl:
+            return key
+    # BUG-04: "eco" solo (o "eco" como palabra) → ecografía (word-boundary).
     _SHORT_EXACT = {
         "eco": "ecografía",
         "orl": "otorrinolaringología",
@@ -9382,9 +9507,6 @@ def _detectar_especialidad_en_texto(txt: str) -> str | None:
     for _word, _esp in _SHORT_EXACT.items():
         if _re.search(r'\b' + _re.escape(_word) + r'\b', tl):
             return _esp
-    for frase, key in _FRASES_ESPECIALIDAD:
-        if frase in tl:
-            return key
     # Fuzzy pass: normalizar typos fonéticos y ortográficos comunes en chile rural
     tl_fuzzy = tl
     _FIXES = [
@@ -9743,6 +9865,28 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
             )
         especialidad = "medicina general"
         especialidad_lower = "medicina general"
+    # ── Ecocardiograma: flujo especial — Dr. Millán, no Pardo, no Medilink ────
+    # Interceptar ANTES del guard _ids_esp_check (ecocardiograma no está en ESPECIALIDADES_MAP
+    # intencionalmente para no dejar que Medilink lo asigne a Pardo ID 68).
+    # Bug producción 2026-05-15 (fb_6026536437403168): bot derivaba a Pardo ($40k).
+    # Ecocardiograma = Dr. Millán (ID 60), $110.000 particular, 1x/mes sin fecha fija.
+    if especialidad_lower == "ecocardiograma":
+        log_event(phone, "ecocardiograma_handler", {"phone": phone})
+        data["waitlist_especialidad"] = "ecocardiograma"
+        data["waitlist_id_prof_pref"] = 60
+        save_session(phone, "WAIT_WAITLIST_CONFIRM_ECOCA", data)
+        return _btn_msg(
+            "El *ecocardiograma* lo realiza el Dr. Miguel Millán (cardiólogo).\n\n"
+            "Valor: *$110.000* (solo particular, no aplica Fonasa)\n"
+            "Disponibilidad: se realiza una vez al mes, aún no tenemos la próxima fecha confirmada.\n\n"
+            "¿Quieres anotarte en la lista de espera? Te avisamos apenas confirmemos la fecha.",
+            [
+                {"id": "ecoca_waitlist_si", "title": "Sí, lista de espera"},
+                {"id": "ecoca_waitlist_no", "title": "No, gracias"},
+                {"id": "ecoca_menu",        "title": "Volver al menú"},
+            ]
+        )
+
     # Medicina Familiar: NO convertir a medicina general — tiene su propio branch de búsqueda
     # (antes este bloque ponía un saludo_prefix engañoso asumiendo que se mapeaba a MG)
     # Detectar si la especialidad no existe en nuestro catálogo
