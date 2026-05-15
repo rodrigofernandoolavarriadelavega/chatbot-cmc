@@ -17,7 +17,7 @@ from fidelizacion import (enviar_seguimiento_postconsulta,
 from medilink import (buscar_primer_dia, buscar_paciente, sync_citas_dia,
                       SEGUIMIENTO_ESPECIALIDADES, PROFESIONALES, get_slots_libres,
                       listar_citas_paciente)
-from session import (get_sesiones_abandonadas, save_session, log_event,
+from session import (get_sesiones_abandonadas, save_session, log_event, log_message,
                      get_pending_intent_queue, mark_intent_notified, intent_queue_depth,
                      get_waitlist_pending, mark_waitlist_notified,
                      get_cita_bot_by_id_for_rebook, mark_cita_cancel_detected,
@@ -120,16 +120,20 @@ async def _enviar_reenganche():
                     {"id": "no_gracias_reeng", "title": "No por ahora"},
                 ])
                 await send_whatsapp_interactive(phone, _bt_msg["interactive"])
+                log_message(phone, "out", msg, state)
             elif canal == "ig":
                 igsid = phone[3:]  # strip "ig_"
                 await send_instagram(igsid, msg + "\n\nEscribe *menu* para continuar o *no* si ya no te interesa.")
+                log_message(phone, "out", msg, state)
             elif canal == "fb":
                 psid = phone[3:]  # strip "fb_"
                 await send_messenger(psid, msg + "\n\nEscribe *menu* para continuar o *no* si ya no te interesa.")
+                log_message(phone, "out", msg, state)
         except Exception:
             if canal == "wa":
                 try:
                     await send_whatsapp(phone, msg + "\n\nEscribe *menu* para continuar.")
+                    log_message(phone, "out", msg, state)
                 except Exception:
                     log.exception("Reenganche fallback wa falló phone=%s", phone)
                     continue
@@ -167,13 +171,14 @@ async def enviar_reagendar_por_cancelacion(id_cita: str, motivo: str = "doctor_c
         log.exception("Error buscando slots alternos id_cita=%s: %s", id_cita, e)
         return {"ok": False, "reason": "error_buscar_slots"}
     if not todos:
-        await send_whatsapp(
-            phone,
+        _cancel_no_slots_msg = (
             f"⚠️ Tu hora del {cita.get('fecha','')} {cita.get('hora','')} con "
             f"{cita.get('profesional','')} fue cancelada por el profesional.\n\n"
             f"Por ahora no tenemos horas disponibles en *{esp}*. "
             f"Llámanos para coordinar: 📞 *{CMC_TELEFONO}*"
         )
+        await send_whatsapp(phone, _cancel_no_slots_msg)
+        log_message(phone, "out", _cancel_no_slots_msg, "IDLE")
         mark_cita_cancel_detected(id_cita)
         log_event(phone, "cancel_doctor_notified", {"id_cita": id_cita, "slots": 0})
         return {"ok": True, "reason": "sin_disponibilidad", "phone": phone, "slots_enviados": 0}
@@ -193,18 +198,21 @@ async def enviar_reagendar_por_cancelacion(id_cita: str, motivo: str = "doctor_c
     }
     save_session(phone, "WAIT_SLOT", data)
 
-    await send_whatsapp(
-        phone,
+    _cancel_hdr = (
         f"⚠️ *Aviso importante*\n\nTu hora del *{cita.get('fecha','')}* a las "
         f"*{cita.get('hora','')}* con *{cita.get('profesional','')}* fue cancelada "
         f"por el profesional 😔\n\nTe dejo 3 alternativas para reagendar en 1 toque:"
     )
+    await send_whatsapp(phone, _cancel_hdr)
+    log_message(phone, "out", _cancel_hdr, "WAIT_SLOT")
     from flows import _format_slots
     body = _format_slots(alt_slots)
     if isinstance(body, dict):
         await send_whatsapp_interactive(phone, body)
+        log_message(phone, "out", "[interactive: slots alternativos cancelación doctor]", "WAIT_SLOT")
     else:
         await send_whatsapp(phone, body)
+        log_message(phone, "out", body, "WAIT_SLOT")
 
     mark_cita_cancel_detected(id_cita)
     log_event(phone, "cancel_doctor_notified", {
@@ -812,13 +820,15 @@ async def _job_medilink_watchdog_inner():
             if USE_TEMPLATES:
                 # Template: sistema_recuperado — no params
                 await send_whatsapp_template(phone_p, "sistema_recuperado")
+                log_message(phone_p, "out", "[template: sistema_recuperado]", "IDLE")
             else:
-                await send_whatsapp(
-                    phone_p,
+                _sr_msg = (
                     "✅ ¡Buenas noticias! Nuestro sistema de citas ya está operativo de nuevo 🎉\n\n"
                     "Si quieres retomar lo que estabas haciendo, escribe *menu* y te ayudo al tiro.\n\n"
                     "_Gracias por tu paciencia._"
                 )
+                await send_whatsapp(phone_p, _sr_msg)
+                log_message(phone_p, "out", _sr_msg, "IDLE")
             mark_intent_notified(row["id"])
         except Exception as e:
             log.error("watchdog: fallo notificando paciente %s: %s", phone_p, e)
@@ -966,11 +976,11 @@ async def _job_waitlist_check():
                     body_params=[nombre_corto or "paciente",
                                  esp.title(), fecha, hora],
                 )
+                log_message(phone_p, "out", "[template: lista_espera_cupo]", "IDLE")
             else:
                 saludo = f"Hola{' ' + nombre_corto if nombre_corto else ''} 👋"
                 prof_txt = f" con *{prof_nombre}*" if prof_nombre else ""
-                await send_whatsapp(
-                    phone_p,
+                _wl_cupo_msg = (
                     f"{saludo}\n\n"
                     f"¡Buenas noticias! Se liberó un cupo para *{esp.title()}*{prof_txt}.\n\n"
                     f"📅 Primera hora disponible: *{fecha} a las {hora}*\n\n"
@@ -979,6 +989,8 @@ async def _job_waitlist_check():
                     "_Te escribimos porque estás en nuestra lista de espera. "
                     "Si ya no la necesitas, ignora este mensaje._"
                 )
+                await send_whatsapp(phone_p, _wl_cupo_msg)
+                log_message(phone_p, "out", _wl_cupo_msg, "IDLE")
             mark_waitlist_notified(wl_id)
             log_event(phone_p, "waitlist_notificado", {
                 "waitlist_id": wl_id, "especialidad": esp,
@@ -1333,6 +1345,7 @@ async def _job_horas_vacias_dia_siguiente():
 
             try:
                 await send_whatsapp(phone, texto)
+                log_message(phone, "out", texto, "IDLE")
                 # Usar el primer prof con slots como referencia para el registro
                 pid_ref = next(iter(slots_por_prof))
                 log_horas_vacias_envio(phone, esp_key, pid_ref, manana_str, hora_ejemplo)
@@ -1396,10 +1409,13 @@ async def _job_telemedicina_recordatorios():
             canal = _canal_de_phone(phone)
             if canal == "wa":
                 await send_whatsapp(phone, msg)
+                log_message(phone, "out", msg, "IDLE")
             elif canal == "ig":
                 await send_instagram(phone, msg)
+                log_message(phone, "out", msg, "IDLE")
             elif canal == "fb":
                 await send_messenger(phone, msg)
+                log_message(phone, "out", msg, "IDLE")
             else:
                 log.warning("telemedicina_recordatorio: canal desconocido phone=%s", phone[:8])
                 return
@@ -1747,6 +1763,7 @@ async def _job_marketing_consent_blast():
                     "consent_marketing_v1",
                     body_params=[nombre],
                 )
+                log_message(phone, "out", f"[template: consent_marketing_v1 / {nombre}]", "IDLE")
                 registrar_consent_enviado(phone)
                 enviados += 1
                 log.info("consent_blast enviado → %s (%d/%d)", phone, enviados, len(candidates))

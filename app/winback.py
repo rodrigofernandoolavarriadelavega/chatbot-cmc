@@ -640,6 +640,8 @@ async def send_winback(candidato: dict) -> bool:
             template_name=template_name,
             body_params=body_params,
         )
+        from session import log_message as _lm_w1
+        _lm_w1(telefono, "out", f"[template: {template_name}]", "IDLE")
         _registrar_envio(
             paciente_id=paciente_id,
             telefono=telefono,

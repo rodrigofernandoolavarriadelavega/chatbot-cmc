@@ -5773,10 +5773,9 @@ async def webhook(request: Request):
             log.info("AUDIO recibido from=%s media_id=%s — transcribiendo...", phone, media_id)
             media = await download_whatsapp_media(media_id)
             if not media:
-                await send_whatsapp(
-                    phone,
-                    "No pude descargar tu audio 😕\nIntenta escribir el mensaje o grabar de nuevo."
-                )
+                _m1_msg = "No pude descargar tu audio 😕\nIntenta escribir el mensaje o grabar de nuevo."
+                await send_whatsapp(phone, _m1_msg)
+                log_message(phone, "out", _m1_msg, get_session(phone).get("state", "IDLE"))
                 return Response(status_code=200)
             audio_bytes, mime = media
             # Skip audios muy cortos (<~2s en opus ~20 kbps) — ruido, "hmm", respiraciones.
@@ -5787,18 +5786,18 @@ async def webhook(request: Request):
                     log_event(phone, "savings:skip_whisper_short_audio", {"bytes": len(audio_bytes)})
                 except Exception:
                     pass
-                await send_whatsapp(
-                    phone,
+                _m2_msg = (
                     "Tu audio es muy cortito y no se entiende bien 😅\n"
                     "¿Puedes escribirlo o grabar uno un poco más largo?"
                 )
+                await send_whatsapp(phone, _m2_msg)
+                log_message(phone, "out", _m2_msg, get_session(phone).get("state", "IDLE"))
                 return Response(status_code=200)
             transcripcion = await transcribe_audio(audio_bytes, mime)
             if not transcripcion:
-                await send_whatsapp(
-                    phone,
-                    "No logré entender el audio 😕\n¿Puedes escribirlo o grabarlo de nuevo un poco más claro?"
-                )
+                _m3_msg = "No logré entender el audio 😕\n¿Puedes escribirlo o grabarlo de nuevo un poco más claro?"
+                await send_whatsapp(phone, _m3_msg)
+                log_message(phone, "out", _m3_msg, get_session(phone).get("state", "IDLE"))
                 return Response(status_code=200)
             texto = transcripcion
             is_audio = True
@@ -6090,6 +6089,7 @@ async def webhook(request: Request):
             # Confirmar al paciente lo que se entendió del audio
             if is_audio:
                 await send_whatsapp(phone, f"🎤 Entendí: _{texto}_")
+                log_message(phone, "out", f"🎤 Entendí: _{texto}_", state_before)
 
             try:
                 respuesta = await handle_message(phone, texto, session)
