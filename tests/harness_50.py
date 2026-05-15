@@ -181,7 +181,7 @@ def _intent_from_text(m: str) -> dict:
         return {"intent": "humano", "especialidad": esp, "respuesta_directa": None}
     return {"intent": "otro", "especialidad": esp, "respuesta_directa": None}
 
-async def fake_detect_intent(mensaje: str):
+async def fake_detect_intent(mensaje: str, **kwargs):
     return _intent_from_text(mensaje)
 
 async def fake_respuesta_faq(mensaje: str):
@@ -1070,6 +1070,46 @@ async def main():
     results.append(("CONSENT-05 'borrar mis datos' inicia proceso", "56999000005", [
         ("borrar mis datos", {"any": ["solicitud de borrado", "validar",
                                        "identidad"], **NO_ERROR}),
+    ], None, True))
+
+    # ── Pediatría / Menores ──────────────────────────────────────────────────
+    # GOLDEN-PED-01: niña 7 años síntomas respiratorios → MG directo, sin CESFAM ni "adultos"
+    results.append(("GOLDEN-PED-01 nina 7 anos respiratorio → MG directo", "56999001001", [
+        (
+            "Hola quiero agendar una hora. Tiene disponible para mañana para niña de 7 años con síntomas respiratorios",
+            {
+                "any": ["RUT", "horario", "slot", "agenda", "Abarca", "Olavarría", "Márquez", "medicina general", "Medicina General"],
+                "none": ["principalmente adultos", "CESFAM", "pediatría especializada", "Curanilahue"],
+                **NO_ERROR,
+            }
+        ),
+    ], None, True))
+
+    # GOLDEN-PED-02: bebé 1 mes con fiebre → NO debe decir "principalmente adultos" ni derivar a CESFAM
+    # El mock clasifica como IDLE→menú (producción usaría Claude para agendar MG directamente).
+    # Este test valida solo que el bot no ahuyente al paciente — el "none" es el assertion clave.
+    results.append(("GOLDEN-PED-02 bebe 1 mes fiebre → sin ahuyentar (none check)", "56999001002", [
+        (
+            "mi bebé tiene 1 mes y tiene fiebre alta",
+            {
+                "any": ["Centro Médico", "asistente", "Carampangue", "menú", "menu",
+                        "agendar", "Medicina", "RUT"],
+                "none": ["principalmente adultos", "pediatría especializada"],
+                **NO_ERROR,
+            }
+        ),
+    ], None, True))
+
+    # GOLDEN-PED-03: niña 5 años control general → MG normal, sin derivación
+    results.append(("GOLDEN-PED-03 nina 5 anos control general → MG sin derivacion", "56999001003", [
+        (
+            "necesito una hora para mi hija de 5 años, es para control general",
+            {
+                "any": ["RUT", "horario", "slot", "agenda", "Abarca", "Olavarría", "Márquez", "medicina general", "Medicina General"],
+                "none": ["principalmente adultos", "pediatría especializada"],
+                **NO_ERROR,
+            }
+        ),
     ], None, True))
 
     # ── Run ─────────────────────────────────────────────────────────────────

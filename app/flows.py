@@ -4579,13 +4579,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             log_event(phone, "menor_confirma_menor", {"phone": phone})
             reset_session(phone)
             return (
-                "Entendido. El CMC no atiende pediatría directamente.\n\n"
-                "Te recomendamos:\n"
-                "- *CESFAM* de tu sector (citas gratuitas con tarjeta de control)\n"
-                "- *Hospital de Curanilahue* para urgencias\n"
-                "- *Pediatras privados en Concepción* (Clínica Universitaria, Sanatorio Alemán)\n\n"
-                f"Si tienes dudas, llama a recepción: {CMC_TELEFONO}\n\n"
-                "_Escribe *menu* para volver al inicio._"
+                "Sin problema. Para el menor puedes agendar con *Medicina General* "
+                "(Dr. Abarca, Dr. Olavarría o Dr. Márquez), que atienden a pacientes de todas las edades.\n\n"
+                "Escribe *agendar* o *menu* para continuar."
             )
         data["_especialidad_pendiente"] = esp_pendiente
         save_session(phone, "WAIT_CONFIRMAR_ADULTO", data)
@@ -9818,11 +9814,29 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
                             saludo_prefix: str | None = None) -> str:
     if is_medilink_down():
         return _modo_degradado(phone, "agendar", especialidad or "")
-    # ── BUG-2 FIX: Detección de menor para TODAS las especialidades ──────────
-    # Antes solo corría para MG/MF. Ahora aplica a kine, ORL, odonto, fono, etc.
-    # BUG-3 FIX: umbral subido de < 14 a < 18 (menores de edad legales).
+    # ── Detección de menor: aplica a especialidades adultas, NO a MG/MF/Odonto/Fono/Psico ──
+    # MG (Abarca, Olavarría, Márquez), MF (Márquez), Odontología, Fonoaudiología y
+    # Psicología Infantil (Montalba) atienden niños y adultos por igual — no interrumpir.
+    # Para el resto de especialidades adultas (ORL, cardio, gineco, gastro, trauma, etc.)
+    # se muestra aviso con confirmación del usuario.
+    _ESP_ATIENDE_MENORES = {
+        "medicina general", "medicina familiar",
+        "odontología general", "odontologia general", "odontología", "odontologia",
+        "ortodoncia", "endodoncia", "implantología", "implantologia",
+        "fonoaudiología", "fonoaudiologia",
+        "psicología infantil", "psicologia infantil",
+        "nutrición", "nutricion",
+        "kinesiología", "kinesiologia",
+        "podología", "podologia",
+    }
     _txt_raw = data.pop("_txt_raw", "") or ""
-    if _txt_raw and _detectar_menor_en_texto(_txt_raw) and not data.get("_menor_confirmado_adulto"):
+    _esp_lower_menor = (especialidad or "").lower().strip()
+    _saltar_aviso_menor = (
+        not _txt_raw
+        or data.get("_menor_confirmado_adulto")
+        or _esp_lower_menor in _ESP_ATIENDE_MENORES
+    )
+    if not _saltar_aviso_menor and _detectar_menor_en_texto(_txt_raw):
         _es_adol = _es_adolescente_en_texto(_txt_raw)
         _esp_display = (especialidad or "la especialidad solicitada").capitalize()
         log_event(phone, "menor_detectado_esp", {
@@ -9832,28 +9846,24 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
         if _es_adol:
             _msg_menor = (
                 "Veo que la cita podría ser para un adolescente.\n\n"
-                f"Nuestros profesionales de *{_esp_display}* atienden principalmente adultos.\n"
-                "Si el paciente tiene entre 14 y 17 años, necesitamos que un tutor "
-                "o apoderado confirme la cita.\n\n"
+                f"*{_esp_display}* generalmente atiende adultos. "
+                "Si el paciente tiene entre 14 y 17 años, un tutor o apoderado "
+                "debe confirmar la cita.\n\n"
                 "¿Quieres continuar?"
             )
         else:
             _msg_menor = (
                 "Veo que la cita es para un menor de edad.\n\n"
-                f"El CMC no cuenta con atención pediátrica especializada. "
-                f"Para *{_esp_display}*, nuestros profesionales atienden principalmente adultos.\n\n"
-                "Te recomendamos:\n"
-                "• *CESFAM* más cercano (atención pediátrica gratuita)\n"
-                "• Hospital de Curanilahue para urgencias\n\n"
-                "Si de igual forma quieres continuar (cita con profesional adulto), "
-                "presiona *Continuar*."
+                f"*{_esp_display}* atiende principalmente adultos. "
+                "Para niños, lo ideal es Medicina General o una especialidad pediátrica.\n\n"
+                "Si igual quieres continuar con esta especialidad, presiona *Continuar*."
             )
         save_session(phone, "WAIT_CONFIRMAR_ADULTO", data)
         return _btn_msg(
             _msg_menor,
             [
                 {"id": "menor_es_adulto", "title": "Continuar"},
-                {"id": "menor_es_menor",  "title": "Es para un menor"},
+                {"id": "menor_es_menor",  "title": "Prefiero otra opción"},
             ]
         )
     # ── BUG-A: loggear entrada a _iniciar_agendar para diagnóstico ──
