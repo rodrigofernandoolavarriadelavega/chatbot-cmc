@@ -291,7 +291,7 @@ async def send_event(
     try:
         from session import log_event as _le
         _le(phone, "capi_send_failed", {
-            "event_name": event_name,
+            "event_type": event_name,
             "event_id": eid[:16],
             "error": last_error,
         })
