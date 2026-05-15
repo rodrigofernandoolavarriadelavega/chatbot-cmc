@@ -382,6 +382,27 @@ _INTENT_CACHE: dict[str, dict] = {
     "cuánto cobran":    {"intent": "precio", "especialidad": None},
     "son caros":        {"intent": "precio", "especialidad": None},
     "muy caro":         {"intent": "precio", "especialidad": None},
+    # Variantes "valor" / "precio" — caso real Vicente Salas 2026-05-15:
+    # "Pero el valor de la consulta cuál es" → se clasificaba como preguntar_pago
+    "valor de la consulta":        {"intent": "precio", "especialidad": None},
+    "el valor de la consulta":     {"intent": "precio", "especialidad": None},
+    "el valor cuál es":            {"intent": "precio", "especialidad": None},
+    "el valor cual es":            {"intent": "precio", "especialidad": None},
+    "qué valor tiene":             {"intent": "precio", "especialidad": None},
+    "que valor tiene":             {"intent": "precio", "especialidad": None},
+    "cuánto vale la consulta":     {"intent": "precio", "especialidad": None},
+    "cuanto vale la consulta":     {"intent": "precio", "especialidad": None},
+    "cuánto vale":                 {"intent": "precio", "especialidad": None},
+    "cuanto vale":                 {"intent": "precio", "especialidad": None},
+    "cuánto sale":                 {"intent": "precio", "especialidad": None},
+    "cuanto sale":                 {"intent": "precio", "especialidad": None},
+    "precio de la consulta":       {"intent": "precio", "especialidad": None},
+    "precio consulta":             {"intent": "precio", "especialidad": None},
+    "valor consulta":              {"intent": "precio", "especialidad": None},
+    "cuánto cuesta la consulta":   {"intent": "precio", "especialidad": None},
+    "cuanto cuesta la consulta":   {"intent": "precio", "especialidad": None},
+    "cuánto cuesta":               {"intent": "precio", "especialidad": None},
+    "cuanto cuesta":               {"intent": "precio", "especialidad": None},
     # --- Variaciones rurales Arauco (expansion 2026-04-18) ---
     # Agendar con typos/coloquialismos
     "kiero hora":          {"intent": "agendar", "especialidad": None},
@@ -2029,24 +2050,31 @@ async def classify_with_context(mensaje: str, state: str, session_data: dict) ->
         "   Ejemplos: 'solo los miércoles?', 'qué días atiende?', 'atiende otros días?',\n"
         "   'el Dr. Márquez aún trabaja ahí?', '¿sigue atendiendo la Dra. X?',\n"
         "   'todavía trabaja el Dr. Y?'.\n"
-        "3. preguntar_pago — pregunta sobre forma/momento/monto de pago\n"
-        "   (ej: 'hay que cancelar al tiro?', 'cuánto sale?', 'aceptan isapre?').\n"
-        "4. preguntar_info — pregunta dirección, teléfono, FONASA, convenios, horarios del centro.\n"
-        "5. buscar_fecha — pide otra fecha o rango\n"
+        "3. preguntar_precio — pregunta por el VALOR monetario de una consulta o tratamiento\n"
+        "   (ej: 'cuánto vale la consulta?', 'el valor cuál es?', 'cuánto cuesta?',\n"
+        "    'qué valor tiene?', 'valor de la consulta', 'cuánto cobran?',\n"
+        "    'precio de la consulta', 'cuánto sale una consulta?').\n"
+        "   IMPORTANTE: 'el valor cuál es', 'pero el valor', 'qué precio tiene' = preguntar_precio, NO preguntar_pago.\n"
+        "4. preguntar_pago — pregunta sobre FORMA o MOMENTO de pago (NO el monto)\n"
+        "   (ej: 'hay que cancelar al tiro?', 'acepta tarjeta?', 'aceptan isapre?',\n"
+        "    'cómo se paga?', 'se cancela en recepción?', 'puedo pagar con débito?').\n"
+        "   CLAVE: si el paciente pregunta por un MONTO o PRECIO → preguntar_precio, no este.\n"
+        "5. preguntar_info — pregunta dirección, teléfono, FONASA, convenios, horarios del centro.\n"
+        "6. buscar_fecha — pide otra fecha o rango\n"
         "   (ej: 'para mayo', 'la primera semana de junio', 'lo más tarde posible',\n"
         "    'en la mañana', 'cualquier día de la próxima semana').\n"
         "   En args: {fecha_desde?, fecha_hasta?, preferencia_horaria?: 'mañana'|'tarde'|'noche'}.\n"
-        "6. cambiar_especialidad — quiere OTRA especialidad/tipo de atención\n"
+        "7. cambiar_especialidad — quiere OTRA especialidad/tipo de atención\n"
         "   (ej: 'mejor kine', 'necesito otorrino', 'no, odontología').\n"
         "   En args: {especialidad}.\n"
-        "7. cambiar_profesional — quiere otro doctor para la misma especialidad\n"
+        "8. cambiar_profesional — quiere otro doctor para la misma especialidad\n"
         "   (ej: 'otro doctor', 'no me gusta ese', 'con otro').\n"
-        "8. pedir_hora_nuevo — quiere agendar desde cero (ej: 'pedir hora', 'quiero agendar').\n"
-        "9. cancelar_cita_real — ANULA cita existente (verbo 'anular', 'no puedo asistir',\n"
+        "9. pedir_hora_nuevo — quiere agendar desde cero (ej: 'pedir hora', 'quiero agendar').\n"
+        "10. cancelar_cita_real — ANULA cita existente (verbo 'anular', 'no puedo asistir',\n"
         "   'dar de baja', 'eliminar mi hora'). NO confundir con 'cancelar=pagar'.\n"
-        "10. llamar_recepcion — prefiere llamar por teléfono (ej: 'llamar', 'prefiero llamar').\n"
-        "11. fuera_de_alcance — queja, reclamo, tema no relacionado, o nada de lo anterior.\n"
-        "12. confirmar_slot — paciente ACEPTA el horario mostrado actualmente\n"
+        "11. llamar_recepcion — prefiere llamar por teléfono (ej: 'llamar', 'prefiero llamar').\n"
+        "12. fuera_de_alcance — queja, reclamo, tema no relacionado, o nada de lo anterior.\n"
+        "13. confirmar_slot — paciente ACEPTA el horario mostrado actualmente\n"
         "    (ej: 'perfecto tomo la hora', 'sí me sirve', 'esa está bien',\n"
         "    'me acomoda', 'quedemos con esa', 'déjala ahí', 'confirmo').\n"
         "    Solo aplica si estado=WAIT_SLOT o CONFIRMING_CITA.\n"
@@ -2086,7 +2114,7 @@ async def classify_with_context(mensaje: str, state: str, session_data: dict) ->
     # Map intent → action
     if intent == "responder_prompt":
         action = "continue"
-    elif intent in ("preguntar_horario", "preguntar_pago", "preguntar_info"):
+    elif intent in ("preguntar_horario", "preguntar_pago", "preguntar_precio", "preguntar_info"):
         action = "answer_and_continue"
     elif intent == "confirmar_slot":
         action = "escape"  # handler especial en pre_router_wait

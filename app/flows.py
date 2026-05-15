@@ -324,6 +324,7 @@ _SENALES_SINTOMA = re.compile(
 # Valor = (modalidad, precio, sufijo_opcional)
 PRECIOS_SLOT = {
     "Medicina General":       ("fonasa",     7880),
+    "Medicina Familiar":      ("particular", 30000),  # Dr. Márquez: $30.000 particular / $7.880 Fonasa
     "Kinesiología":           ("fonasa",     7830),
     "Psicología Adulto":      ("fonasa",    14420),
     "Psicología Infantil":    ("fonasa",    14420),
@@ -1900,6 +1901,11 @@ async def _pre_router_wait(phone: str, txt: str, tl: str, state: str, data: dict
     if action == "answer_and_continue":
         if tag == "preguntar_horario":
             resp = await _responder_pregunta_horario(phone, state, data, txt=txt)
+        elif tag == "preguntar_precio":
+            # Pregunta por VALOR monetario — mostrar precio de la especialidad activa
+            # y luego info de pago. _preguntar_pago_respuesta ya incluye precio_block
+            # cuando hay especialidad en el slot.
+            resp = _preguntar_pago_respuesta(data, txt=txt)
         elif tag == "preguntar_pago":
             resp = _preguntar_pago_respuesta(data, txt=txt)
         elif tag == "preguntar_info":
