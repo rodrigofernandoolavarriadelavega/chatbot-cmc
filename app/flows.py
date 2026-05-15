@@ -2912,7 +2912,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # usuario volvió al menú pero el mensaje tardó en llegar). En vez de
         # devolver el menú genérico, relanzar el flujo de agendar. ──
         if tl in ("ver_otros", "ver_todos", "otro_dia", "otro_día",
-                  "otro_prof", "confirmar_sugerido"):
+                  "otro_prof", "confirmar_sugerido") or tl.startswith("agendar_prof_"):
             return await _iniciar_agendar(phone, data, None)
 
         # ── BUG-B: botones de aclaración nombre inexistente (pedro kine) ────
@@ -3144,10 +3144,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "otro_día": "Tu búsqueda anterior expiró. Dime qué *especialidad* necesitas y te busco horas 😊",
                 "otro_prof": "Tu búsqueda anterior expiró. Dime qué *especialidad* necesitas y te busco horas 😊",
             }
-            if tl in _BOT_PAYLOADS_HUERFANOS:
+            if tl in _BOT_PAYLOADS_HUERFANOS or tl.startswith("agendar_prof_"):
                 log_event(phone, "payload_huerfano", {"payload": tl})
                 save_session(phone, "IDLE", data)
-                return _BOT_PAYLOADS_HUERFANOS[tl]
+                return _BOT_PAYLOADS_HUERFANOS.get(tl, "Tu búsqueda anterior expiró. Dime qué *especialidad* necesitas y te busco horas 😊")
             # "no_agendar" sin contexto: silencio no, mejor cerrar amable
             if tl == "no_agendar":
                 save_session(phone, "IDLE", data)
@@ -5049,6 +5049,25 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             save_session(phone, "WAIT_SLOT", data)
             return _format_slots(todos_slots, mostrar_todos=True)
 
+        # Botón "Agendar con <Prof>" que aparece cuando los otros profs no tienen
+        # slots ese día: el paciente elige quedarse con el prof original.
+        # Formato del id: "agendar_prof_<id_profesional>"
+        if tl.startswith("agendar_prof_"):
+            try:
+                _pid_orig = int(tl.split("_")[-1])
+            except (ValueError, IndexError):
+                _pid_orig = None
+            if _pid_orig and todos_slots:
+                slots_prof_orig = [s for s in todos_slots if s.get("id_profesional") == _pid_orig]
+                if slots_prof_orig:
+                    data["slots"] = slots_prof_orig
+                    data["prof_sugerido_id"] = _pid_orig
+                    save_session(phone, "WAIT_SLOT", data)
+                    return _format_slots(slots_prof_orig, mostrar_todos=True)
+            # Si por alguna razón no hay slots en caché, re-mostrar lo que hay
+            save_session(phone, "WAIT_SLOT", data)
+            return _format_slots(slots_mostrados or todos_slots, mostrar_todos=True)
+
         # "Otro profesional" → muestra slots del/los otro(s) doctor(es) de la especialidad
         if tl == "otro_prof":
             from medilink import _ids_para_especialidad
@@ -5070,81 +5089,79 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if not otros_ids:
                 return "Ya viste a todos los profesionales disponibles para esta especialidad 😊\n\nEscribe *otro día* para cambiar de día o elige un número del listado."
 
-            # 1) Intentar con los slots que ya tenemos del mismo día (todos_slots)
-            slots_otros_mismo_dia = [s for s in todos_slots if s.get("id_profesional") in otros_ids]
-            if slots_otros_mismo_dia:
-                data["slots"] = slots_otros_mismo_dia
-                nuevo_sugerido_id = slots_otros_mismo_dia[0].get("id_profesional")
-                data["prof_sugerido_id"] = nuevo_sugerido_id
-                data["profs_vistos"] = list(profs_vistos)
-                save_session(phone, "WAIT_SLOT", data)
-                return _format_slots(slots_otros_mismo_dia, mostrar_todos=True)
+            # Helper: agrupar lista flat de slots por profesional (orden de aparición)
+            def _agrupar_por_prof(flat: list) -> list:
+                grupos: dict[int, list] = {}
+                for s in flat:
+                    pid = s.get("id_profesional")
+                    if pid not in grupos:
+                        grupos[pid] = []
+                    grupos[pid].append(s)
+                return [{"slots": v} for v in grupos.values()]
 
-            # 2) No hay cupo de los otros en ese día para la MISMA fecha.
-            # Bug A (2026-05-15): antes llamábamos buscar_primer_dia y saltábamos
-            # silenciosamente a otra fecha. Ahora primero consultamos la fecha
-            # activa explícitamente; solo si no hay slots ofrecemos la próxima
-            # fecha disponible con confirmación explícita del paciente.
+            _DIAS_N_OP = ["lunes","martes","miércoles","jueves","viernes","sábado","domingo"]
+            def _fecha_label_corta(iso: str) -> str:
+                try:
+                    _d = date.fromisoformat(iso)
+                    return f"{_DIAS_N_OP[_d.weekday()]} {_d.day:02d}/{_d.month:02d}"
+                except Exception:
+                    return iso
+
             _maso_override = {59: data["maso_duracion"]} if especialidad == "masoterapia" and data.get("maso_duracion") else None
 
-            # 2a) Consultar la fecha activa en sesión para los otros profesionales
+            # 1) Intentar con los slots que ya tenemos del mismo día (todos_slots).
+            # Mostrar TODOS los otros profesionales con disponibilidad ese día,
+            # agrupados por profesional. NO filtrar al primero que aparezca.
+            slots_otros_mismo_dia = [s for s in todos_slots if s.get("id_profesional") in set(otros_ids)]
+            if slots_otros_mismo_dia:
+                grupos = _agrupar_por_prof(slots_otros_mismo_dia)
+                flat_ordered = [s for g in grupos for s in g["slots"]]
+                data["slots"] = flat_ordered
+                data["todos_slots"] = flat_ordered
+                data["prof_sugerido_id"] = flat_ordered[0].get("id_profesional")
+                data["profs_vistos"] = list(profs_vistos)
+                save_session(phone, "WAIT_SLOT", data)
+                return _format_slots_expansion(grupos)
+
+            # 2) No hay cupo de los otros en la caché del mismo día.
+            # Consultar la fecha activa en Medilink directamente para los otros profs.
+            # NUNCA saltar a otra fecha sin que el paciente lo pida.
             if fecha_actual:
                 smart_misma, todos_misma = await buscar_slots_dia_por_ids(
                     otros_ids, fecha_actual, intervalo_override=_maso_override)
                 if todos_misma:
-                    nuevo_sugerido_id = todos_misma[0].get("id_profesional")
-                    smart_filtrado = [s for s in smart_misma if s.get("id_profesional") == nuevo_sugerido_id] or smart_misma
-                    data.update({"slots": smart_filtrado, "todos_slots": todos_misma,
-                                 "prof_sugerido_id": nuevo_sugerido_id,
+                    # Mostrar TODOS los otros profesionales con slots ese día, agrupados.
+                    grupos = _agrupar_por_prof(todos_misma)
+                    flat_ordered = [s for g in grupos for s in g["slots"]]
+                    data.update({"slots": flat_ordered, "todos_slots": todos_misma,
+                                 "prof_sugerido_id": flat_ordered[0].get("id_profesional"),
                                  "profs_vistos": list(profs_vistos)})
                     save_session(phone, "WAIT_SLOT", data)
-                    return _format_slots(smart_filtrado, mostrar_todos=True)
+                    return _format_slots_expansion(grupos)
 
-                # No hay slots de los otros profesionales en esa fecha exacta.
-                # Buscar su próxima fecha disponible para poder AVISAR al paciente.
-                _esp_api = "medicina general" if especialidad in _ESP_MED_FAMILIAR else especialidad
-                smart_prox, todos_prox = await buscar_primer_dia(
-                    _esp_api, excluir=fechas_vistas,
-                    solo_ids=otros_ids, intervalo_override=_maso_override)
-
-                if not todos_prox:
-                    return (
-                        "No encontré disponibilidad con otros profesionales en los próximos días.\n\n"
-                        "Escribe *otro día* para seguir buscando con el mismo doctor, "
-                        f"o llama a recepción: {CMC_TELEFONO}"
-                    )
-
-                # Informar explícitamente el cambio de fecha y pedir confirmación.
+                # Ninguno de los otros tiene slots ese día exacto.
+                # Avisar claramente con opciones explícitas; NO buscar otra fecha solos.
                 from medilink import PROFESIONALES as _PROFS_CAMBIO
-                prox_fecha_str = todos_prox[0]["fecha"]
-                prox_prof_id   = todos_prox[0].get("id_profesional")
-                prox_prof_nombre = _PROFS_CAMBIO.get(int(prox_prof_id), {}).get("nombre", "el siguiente profesional") if prox_prof_id else "el siguiente profesional"
-                _DIAS_N = ["lunes","martes","miércoles","jueves","viernes","sábado","domingo"]
-                def _fecha_label_corta(iso: str) -> str:
-                    try:
-                        _d = date.fromisoformat(iso)
-                        return f"{_DIAS_N[_d.weekday()]} {_d.day:02d}/{_d.month:02d}"
-                    except Exception:
-                        return iso
-                _fecha_orig_fmt = _fecha_label_corta(fecha_actual)   # "viernes 16/05"
-                _fecha_prox_fmt = _fecha_label_corta(prox_fecha_str)  # "lunes 18/05"
-
-                # Guardar la alternativa en sesión para que si el paciente acepta
-                # no tengamos que buscar de nuevo.
-                data["_otro_prof_prox"] = {
-                    "smart": smart_prox,
-                    "todos": todos_prox,
-                    "prof_id": prox_prof_id,
-                    "fecha": prox_fecha_str,
-                }
+                _fecha_orig_fmt = _fecha_label_corta(fecha_actual)
+                # Nombre del profesional actual (el que sí tiene slots ese día)
+                _prof_actual_nombre = (
+                    _PROFS_CAMBIO.get(int(prof_sugerido_id), {}).get("nombre", "el profesional actual")
+                    if prof_sugerido_id else "el profesional actual"
+                )
+                # Botones: ver otras fechas / agendar con el prof actual / menú
+                _btn_agendar_id = f"agendar_prof_{prof_sugerido_id}" if prof_sugerido_id else "menu"
+                _btn_agendar_title = f"Agendar con {_prof_actual_nombre.split()[-1]}"[:20]
                 data["profs_vistos"] = list(profs_vistos)
                 save_session(phone, "WAIT_SLOT", data)
-
-                return (
-                    f"*{prox_prof_nombre}* no tiene horas el {_fecha_orig_fmt}.\n\n"
-                    f"Su próxima disponibilidad es el *{_fecha_prox_fmt}*.\n\n"
-                    "¿Quieres ver esos horarios? Responde *sí*, o escribe "
-                    "*otro profesional* para probar con alguien más."
+                return _btn_msg(
+                    f"Para el {_fecha_orig_fmt} solo {_prof_actual_nombre} tiene horas disponibles. "
+                    f"Los otros profesionales no trabajan ese día.\n\n"
+                    f"¿Qué prefieres hacer?",
+                    [
+                        {"id": "otro_dia",          "title": "Ver otras fechas"},
+                        {"id": _btn_agendar_id,      "title": _btn_agendar_title},
+                        {"id": "menu",               "title": "Volver al menú"},
+                    ]
                 )
 
             # fecha_actual es None (sesión sin slots vigentes): fallback original
@@ -5161,14 +5178,15 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             nueva_fecha = todos_nuevo[0]["fecha"]
             if nueva_fecha not in fechas_vistas:
                 fechas_vistas = fechas_vistas + [nueva_fecha]
-            nuevo_sugerido_id = todos_nuevo[0].get("id_profesional")
-            smart_nuevo_filtrado = [s for s in smart_nuevo if s.get("id_profesional") == nuevo_sugerido_id] or smart_nuevo
-            data.update({"slots": smart_nuevo_filtrado, "todos_slots": todos_nuevo,
+            grupos_nuevo = _agrupar_por_prof(todos_nuevo)
+            flat_nuevo = [s for g in grupos_nuevo for s in g["slots"]]
+            nuevo_sugerido_id = flat_nuevo[0].get("id_profesional")
+            data.update({"slots": flat_nuevo, "todos_slots": todos_nuevo,
                          "fechas_vistas": fechas_vistas, "expansion_stage": 0,
                          "prof_sugerido_id": nuevo_sugerido_id,
                          "profs_vistos": list(profs_vistos)})
             save_session(phone, "WAIT_SLOT", data)
-            return _format_slots(smart_nuevo_filtrado)
+            return _format_slots_expansion(grupos_nuevo)
 
         # "ver todos" / "ver más" → expansión progresiva para med general, o todos del día para el resto
         VER_TODOS = {"ver todos", "todos", "ver todo", "todos los horarios", "mostrar todos",
