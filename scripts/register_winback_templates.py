@@ -58,7 +58,7 @@ TEMPLATES = [
                     "Hace varios meses no te visitamos. Si tienes algún tema de salud "
                     "pendiente, una revisión rutinaria o necesitas renovar recetas, "
                     "te invitamos a agendar una consulta con tu médico.\n\n"
-                    "Atendemos Fonasa y particular en Carampangue y sucursal Olavarría.\n\n"
+                    "Atendemos Fonasa y particular en Carampangue.\n\n"
                     "Para agendar responde *AGENDAR*. Si no quieres recibir más "
                     "mensajes responde *BAJA*."
                 ),
