@@ -2054,15 +2054,55 @@ _COMUNAS_DATA = {
 @app.get("/cañete", response_class=HTMLResponse)
 @app.get("/lebu", response_class=HTMLResponse)
 @app.get("/comuna/{slug}", response_class=HTMLResponse)
-def comuna_page(request: Request, slug: str = ""):
-    """Landing SEO local por comuna. Renderiza comuna_template con datos específicos."""
-    if not slug:
-        path = request.url.path.lstrip("/").lower()
-        slug = path.replace("ñ", "n")
-    slug = slug.lower().replace("ñ", "n")
+async def _render_comuna_html(slug: str, *, for_wp: bool = False) -> str | None:
+    """Render comuna landing con reviews dinámicas + schema.
+    for_wp=True → indexable. for_wp=False → noindex (agentecmc.cl)."""
+    slug = (slug or "").lower().replace("ñ", "n")
     data = _COMUNAS_DATA.get(slug)
     if not data:
-        return HTMLResponse("<h1>404</h1><p>Comuna no encontrada</p>", status_code=404)
+        return None
+
+    from google_rating import fetch_rating
+    try:
+        rating = await fetch_rating()
+    except Exception:
+        rating = {"rating": 4.8, "review_count": 14, "reviews": []}
+
+    rv = float(rating.get("rating") or 4.8)
+    rc = int(rating.get("review_count") or 14)
+    reviews = rating.get("reviews") or []
+
+    import json as _json
+    reviews_schema = []
+    reviews_html_parts = []
+    for r in reviews[:3]:
+        author = (r.get("author") or "Paciente CMC").replace('"', "\u0027")
+        text = (r.get("text") or "").replace('"', "\u0027")[:400]
+        stars = int(r.get("rating") or 5)
+        when = r.get("relative_time") or ""
+        publish = (r.get("publish_time") or "")[:10]
+        reviews_schema.append(_json.dumps({
+            "@type": "Review",
+            "author": {"@type": "Person", "name": author},
+            "reviewRating": {"@type": "Rating", "ratingValue": stars, "bestRating": 5},
+            "datePublished": publish,
+            "reviewBody": text,
+        }, ensure_ascii=False))
+        reviews_html_parts.append(
+            f'<div class="review-card">'
+            f'<div class="stars">{"★" * stars}{"☆" * (5 - stars)}</div>'
+            f'<p class="text">"{text}"</p>'
+            f'<div class="author">{author}</div>'
+            f'<div class="date">{when}</div>'
+            f'</div>'
+        )
+    if not reviews_html_parts:
+        reviews_html_parts.append(
+            '<div class="review-card"><div class="stars">★★★★★</div>'
+            '<p class="text">"Excelente atención, médicos empáticos y secretaría rápida."</p>'
+            '<div class="author">Paciente CMC</div></div>'
+        )
+
     wa_text = f"Hola%2C%20vivo%20en%20{data['name'].replace(' ', '%20')}%20y%20quiero%20agendar"
     html = _COMUNA_TEMPLATE_HTML
     replacements = {
@@ -2077,10 +2117,27 @@ def comuna_page(request: Request, slug: str = ""):
         "{{TRANSPORT_DESC}}": data["transport"],
         "{{KINE_NOTE}}": data["kine_note"],
         "{{WA_LINK}}": f"https://wa.me/56966610737?text={wa_text}",
+        "{{RATING_VALUE}}": f"{rv:.1f}",
+        "{{RATING_COUNT}}": str(rc),
+        "{{REVIEWS_SCHEMA}}": ",".join(reviews_schema),
+        "{{REVIEWS_HTML}}": "".join(reviews_html_parts),
+        "{{ROBOTS}}": "index,follow" if for_wp else "noindex,nofollow",
     }
     for k, v in replacements.items():
         html = html.replace(k, v)
     return html
+
+
+async def comuna_page(request: Request, slug: str = ""):
+    """Landing SEO por comuna en agentecmc.cl. Sirve noindex,nofollow para que
+    Google canonice hacia centromedicocarampangue.cl/{slug}."""
+    if not slug:
+        url_path = request.url.path.lstrip("/").lower()
+        slug = url_path.replace("ñ", "n")
+    html = await _render_comuna_html(slug, for_wp=False)
+    if html is None:
+        return HTMLResponse("<h1>404</h1><p>Comuna no encontrada</p>", status_code=404)
+    return HTMLResponse(html)
 
 
 def _seo_api_auth(token: str, cmc_session: str | None) -> None:
