@@ -30,81 +30,93 @@ os.environ.setdefault("SQLCIPHER_KEY", "")
 
 
 class TestEcocardiogramaDeteccion(unittest.TestCase):
-    """Frases de ecocardiograma deben mapearse a 'ecocardiograma', no a 'ecografia'."""
+    """Frases de ecocardiograma se rutean correctamente vía route_ecografia().
+
+    Arquitectura post-refactor (2026-05-15):
+    El routing específico por órgano se centralizó en ecografias.route_ecografia().
+    _detectar_especialidad_en_texto() retorna "ecografía" para keywords con prefijo
+    "ecograf*" (incluyendo ecocardiograma). Es detect_intent() quien llama a
+    route_ecografia() para resolver el tipo correcto antes del lookup en _INTENT_CACHE.
+    """
+
+    def _route_eco(self, txt: str):
+        """Llama directamente a route_ecografia (fuente de verdad)."""
+        from ecografias import route_ecografia
+        return route_ecografia(txt)
 
     def _detect(self, txt: str):
         from flows import _detectar_especialidad_en_texto
         return _detectar_especialidad_en_texto(txt)
 
-    def _cache(self, txt: str):
-        """Simula la cache local de detect_intent en claude_helper."""
-        from claude_helper import _INTENT_CACHE
-        tl = txt.lower().strip()
-        return _INTENT_CACHE.get(tl)
+    def test_route_eco_ecocardiograma_exacto(self):
+        r = self._route_eco("ecocardiograma")
+        self.assertIsNotNone(r)
+        self.assertEqual(r["especialidad_destino"], "ecocardiograma")
+        self.assertEqual(r["id_profesional"], 60)
 
-    def test_ecocardiograma_exacto(self):
-        result = self._detect("ecocardiograma")
-        self.assertEqual(result, "ecocardiograma",
-                         f"'ecocardiograma' debe mapear a 'ecocardiograma', got: {result}")
+    def test_route_eco_eco_cardiograma_separado(self):
+        r = self._route_eco("eco cardiograma")
+        self.assertIsNotNone(r)
+        self.assertEqual(r["especialidad_destino"], "ecocardiograma")
 
-    def test_eco_cardiograma_separado(self):
-        result = self._detect("eco cardiograma")
-        self.assertEqual(result, "ecocardiograma")
+    def test_route_eco_ecografia_del_corazon(self):
+        r = self._route_eco("ecografia del corazon")
+        self.assertIsNotNone(r)
+        self.assertEqual(r["especialidad_destino"], "ecocardiograma")
 
-    def test_ecografia_del_corazon(self):
-        result = self._detect("ecografia del corazon")
-        self.assertEqual(result, "ecocardiograma")
+    def test_route_eco_eco_corazon(self):
+        r = self._route_eco("eco corazon")
+        self.assertIsNotNone(r)
+        self.assertEqual(r["especialidad_destino"], "ecocardiograma")
 
-    def test_eco_corazon(self):
-        result = self._detect("eco corazon")
-        self.assertEqual(result, "ecocardiograma")
+    def test_route_eco_eco_corazon_tilde(self):
+        r = self._route_eco("eco corazón")
+        self.assertIsNotNone(r)
+        self.assertEqual(r["especialidad_destino"], "ecocardiograma")
 
-    def test_eco_corazon_tilde(self):
-        result = self._detect("eco corazón")
-        self.assertEqual(result, "ecocardiograma")
+    def test_route_eco_ecografia_cardiaca(self):
+        r = self._route_eco("ecografia cardiaca")
+        self.assertIsNotNone(r)
+        self.assertEqual(r["especialidad_destino"], "ecocardiograma")
 
-    def test_ecografia_cardiaca(self):
-        result = self._detect("ecografia cardiaca")
-        self.assertEqual(result, "ecocardiograma")
+    def test_route_eco_doppler_cardiaco(self):
+        r = self._route_eco("doppler cardiaco")
+        self.assertIsNotNone(r)
+        self.assertEqual(r["especialidad_destino"], "ecocardiograma")
 
-    def test_doppler_cardiaco(self):
-        result = self._detect("doppler cardiaco")
-        self.assertEqual(result, "ecocardiograma")
-
-    def test_ultrasonido_corazon(self):
-        result = self._detect("ultrasonido del corazon")
-        self.assertEqual(result, "ecocardiograma")
+    def test_route_eco_ultrasonido_corazon(self):
+        r = self._route_eco("ultrasonido del corazon")
+        self.assertIsNotNone(r)
+        self.assertEqual(r["especialidad_destino"], "ecocardiograma")
 
     def test_ecografia_normal_no_contaminada(self):
         """Ecografia abdominal sigue mapeando a ecografia (no a ecocardiograma)."""
-        result = self._detect("ecografia abdominal")
-        self.assertEqual(result, "ecografía",
-                         "Ecografia abdominal debe seguir siendo ecografia")
+        r = self._route_eco("ecografia abdominal")
+        self.assertIsNotNone(r)
+        self.assertEqual(r["especialidad_destino"], "ecografía",
+                         "Ecografia abdominal debe seguir siendo ecografia (Pardo)")
+        self.assertEqual(r["id_profesional"], 68)
 
     def test_frase_exacta_caso_real(self):
-        """Frase real del paciente fb_6026536437403168."""
-        result = self._detect("realizan eco cardiograma")
-        self.assertEqual(result, "ecocardiograma",
+        """Frase real del paciente fb_6026536437403168 → route_ecografia resuelve a ecocardiograma."""
+        r = self._route_eco("realizan eco cardiograma")
+        self.assertIsNotNone(r)
+        self.assertEqual(r["especialidad_destino"], "ecocardiograma",
                          "Frase exacta del caso real debe mapear a ecocardiograma")
 
-    def test_cache_ecocardiograma(self):
-        """Cache local de claude_helper debe devolver especialidad ecocardiograma."""
-        entry = self._cache("ecocardiograma")
-        self.assertIsNotNone(entry, "ecocardiograma debe estar en _INTENT_CACHE")
-        self.assertEqual(entry.get("especialidad"), "ecocardiograma",
-                         f"Cache debe tener especialidad ecocardiograma, got: {entry}")
-
-    def test_cache_eco_corazon(self):
-        entry = self._cache("eco corazon")
-        self.assertIsNotNone(entry)
-        self.assertEqual(entry.get("especialidad"), "ecocardiograma")
-
-    def test_especialidades_map_no_tiene_ecocardiograma(self):
+    def test_especialidades_map_no_tiene_ecocardiograma_a_pardo(self):
         """ESPECIALIDADES_MAP no debe tener 'ecocardiograma' apuntando a Pardo (ID 68)."""
         from medilink import ESPECIALIDADES_MAP
         ids = ESPECIALIDADES_MAP.get("ecocardiograma", [])
         self.assertNotIn(68, ids,
                          "ESPECIALIDADES_MAP NO debe mapear ecocardiograma a David Pardo (ID 68)")
+
+    def test_detect_especialidad_ecograf_prefix(self):
+        """_detectar_especialidad_en_texto retorna 'ecografía' para keywords con prefijo ecograf.
+        El routing fino (ecocardiograma vs general vs ginecológica) ocurre en detect_intent
+        vía route_ecografia(), no en _detectar_especialidad_en_texto."""
+        result = self._detect("ecografia abdominal")
+        self.assertEqual(result, "ecografía")
 
 
 class TestEcocardiogramaHandler(unittest.IsolatedAsyncioTestCase):

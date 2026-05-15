@@ -101,89 +101,13 @@ _INTENT_CACHE: dict[str, dict] = {
     "odontologia":    {"intent": "agendar", "especialidad": "odontología"},
     "dentista":       {"intent": "agendar", "especialidad": "odontología"},
     "matrona":        {"intent": "agendar", "especialidad": "matrona"},
+    # Ecografías: solo las entradas genéricas quedan aquí.
+    # El routing específico por órgano (transvaginal→Rejón, ecocardiograma→Millán,
+    # abdominal→Pardo, etc.) lo maneja route_ecografia() de ecografias.py.
+    # detect_intent() llama a route_ecografia ANTES del lookup en este cache
+    # cuando texto_menciona_ecografia() es True.
     "ecografía":      {"intent": "agendar", "especialidad": "ecografía"},
     "ecografia":      {"intent": "agendar", "especialidad": "ecografía"},
-    # Ecografías generales (David Pardo) — agregadas 2026-04-28 tras
-    # auditoría: 12 sin_disponibilidad/7d en ecografía porque solo "transvaginal"
-    # se ruteaba a Ginecología; el resto caía a fallback.
-    "ecografia abdominal":        {"intent": "agendar", "especialidad": "ecografía"},
-    "ecografía abdominal":        {"intent": "agendar", "especialidad": "ecografía"},
-    "ecografia renal":            {"intent": "agendar", "especialidad": "ecografía"},
-    "ecografía renal":            {"intent": "agendar", "especialidad": "ecografía"},
-    "ecografia tiroidea":         {"intent": "agendar", "especialidad": "ecografía"},
-    "ecografía tiroidea":         {"intent": "agendar", "especialidad": "ecografía"},
-    # BUG-2026-05-14: ecografía mamaria → Rejón (ginecología), NO Pardo.
-    # El Dr. Tirso Rejón realiza controles de mama. Pardo no hace ginecológicas.
-    "ecografia mamaria":          {"intent": "agendar", "especialidad": "ginecología"},
-    "ecografía mamaria":          {"intent": "agendar", "especialidad": "ginecología"},
-    "eco mamas":                  {"intent": "agendar", "especialidad": "ginecología"},
-    "eco de mamas":               {"intent": "agendar", "especialidad": "ginecología"},
-    "ecografia de mamas":         {"intent": "agendar", "especialidad": "ginecología"},
-    "ecografía de mamas":         {"intent": "agendar", "especialidad": "ginecología"},
-    "ecotomografia mamaria":      {"intent": "agendar", "especialidad": "ginecología"},
-    "ecotomografía mamaria":      {"intent": "agendar", "especialidad": "ginecología"},
-    "ecografia testicular":       {"intent": "agendar", "especialidad": "ecografía"},
-    "ecografía testicular":       {"intent": "agendar", "especialidad": "ecografía"},
-    "ecografia inguinal":         {"intent": "agendar", "especialidad": "ecografía"},
-    "ecografía inguinal":         {"intent": "agendar", "especialidad": "ecografía"},
-    "ecografia partes blandas":   {"intent": "agendar", "especialidad": "ecografía"},
-    "ecografía partes blandas":   {"intent": "agendar", "especialidad": "ecografía"},
-    "ecografia doppler":          {"intent": "agendar", "especialidad": "ecografía"},
-    "ecografía doppler":          {"intent": "agendar", "especialidad": "ecografía"},
-    # Variantes ginecológicas → al Dr. Rejón (ginecología)
-    "ecografia vaginal":          {"intent": "agendar", "especialidad": "ginecología"},
-    "ecografía vaginal":          {"intent": "agendar", "especialidad": "ginecología"},
-    "ecografia transvaginal":     {"intent": "agendar", "especialidad": "ginecología"},
-    "ecografía transvaginal":     {"intent": "agendar", "especialidad": "ginecología"},
-    "ecografia ginecologica":     {"intent": "agendar", "especialidad": "ginecología"},
-    "ecografía ginecológica":     {"intent": "agendar", "especialidad": "ginecología"},
-    "ecografia ginecologíca":     {"intent": "agendar", "especialidad": "ginecología"},
-    "ecografia pelvica":          {"intent": "agendar", "especialidad": "ginecología"},
-    "ecografía pélvica":          {"intent": "agendar", "especialidad": "ginecología"},
-    # BUG-10: typos intravaginal/transvajinal → siempre Rejón (ginecología)
-    "ecografia intravaginal":     {"intent": "agendar", "especialidad": "ginecología"},
-    "ecografía intravaginal":     {"intent": "agendar", "especialidad": "ginecología"},
-    "ecografia intravajinal":     {"intent": "agendar", "especialidad": "ginecología"},
-    "ecografía intravajinal":     {"intent": "agendar", "especialidad": "ginecología"},
-    "ecografia transvajinal":     {"intent": "agendar", "especialidad": "ginecología"},
-    "ecografía transvajinal":     {"intent": "agendar", "especialidad": "ginecología"},
-    # BUG-2026-05-14: frases SIN prefijo "ecografía" → también a Rejón.
-    # Paciente escribió solo "transvaginal" y cayó a fallback → Pardo ($40k).
-    "transvaginal":               {"intent": "agendar", "especialidad": "ginecología"},
-    "eco transvaginal":           {"intent": "agendar", "especialidad": "ginecología"},
-    "eco transvajinal":           {"intent": "agendar", "especialidad": "ginecología"},
-    "eco vaginal":                {"intent": "agendar", "especialidad": "ginecología"},
-    "endovaginal":                {"intent": "agendar", "especialidad": "ginecología"},
-    "ecografia endovaginal":      {"intent": "agendar", "especialidad": "ginecología"},
-    "ecografía endovaginal":      {"intent": "agendar", "especialidad": "ginecología"},
-    "eco endovaginal":            {"intent": "agendar", "especialidad": "ginecología"},
-    "eco pelvica":                {"intent": "agendar", "especialidad": "ginecología"},
-    "eco pélvica":                {"intent": "agendar", "especialidad": "ginecología"},
-    "ecografia de ovarios":       {"intent": "agendar", "especialidad": "ginecología"},
-    "ecografía de ovarios":       {"intent": "agendar", "especialidad": "ginecología"},
-    "ecografia de utero":         {"intent": "agendar", "especialidad": "ginecología"},
-    "ecografía de útero":         {"intent": "agendar", "especialidad": "ginecología"},
-    "eco ginecologica":           {"intent": "agendar", "especialidad": "ginecología"},
-    "eco ginecológica":           {"intent": "agendar", "especialidad": "ginecología"},
-    # FIX 2026-05-15: ecocardiograma → servicio especial Dr. Millán (ID 60), NO David Pardo
-    # Bug producción fb_6026536437403168: bot mandaba a Pardo ($40k) en vez de Millán ($110k + waitlist)
-    "ecocardiograma":             {"intent": "agendar", "especialidad": "ecocardiograma"},
-    "eco cardiograma":            {"intent": "agendar", "especialidad": "ecocardiograma"},
-    "eco cardio":                 {"intent": "agendar", "especialidad": "ecocardiograma"},
-    "eco al corazon":             {"intent": "agendar", "especialidad": "ecocardiograma"},
-    "eco al corazón":             {"intent": "agendar", "especialidad": "ecocardiograma"},
-    "eco corazon":                {"intent": "agendar", "especialidad": "ecocardiograma"},
-    "eco corazón":                {"intent": "agendar", "especialidad": "ecocardiograma"},
-    "eco cardiaca":               {"intent": "agendar", "especialidad": "ecocardiograma"},
-    "eco cardíaca":               {"intent": "agendar", "especialidad": "ecocardiograma"},
-    "ecografia cardiaca":         {"intent": "agendar", "especialidad": "ecocardiograma"},
-    "ecografía cardíaca":         {"intent": "agendar", "especialidad": "ecocardiograma"},
-    "ecografia del corazon":      {"intent": "agendar", "especialidad": "ecocardiograma"},
-    "ecografía del corazón":      {"intent": "agendar", "especialidad": "ecocardiograma"},
-    "doppler cardiaco":           {"intent": "agendar", "especialidad": "ecocardiograma"},
-    "doppler cardíaco":           {"intent": "agendar", "especialidad": "ecocardiograma"},
-    "ultrasonido del corazon":    {"intent": "agendar", "especialidad": "ecocardiograma"},
-    "examen ecocardiograma":      {"intent": "agendar", "especialidad": "ecocardiograma"},
     "gastro":         {"intent": "agendar", "especialidad": "gastroenterología"},
     "gastroenterología": {"intent": "agendar", "especialidad": "gastroenterología"},
     "implantes":      {"intent": "agendar", "especialidad": "implantología"},
@@ -672,9 +596,10 @@ Si mencionan un profesional por nombre, mapea al nombre de la especialidad:
 - Podóloga Andrea / Andrea → "podología"
 - Psicólogo Juan Pablo / Juan Pablo / Rodríguez → "psicología adulto"
 - Psicólogo Jorge / Jorge Montalba / Montalba → "psicología"
-- David Pardo → "ecografía" (ecografías generales: abdominal, tiroidea, renal, partes blandas, doppler, musculo-esquelética, pelviana NO ginecológica, etc.). BUG-2026-05-14: la ecografía mamaria NO es de Pardo, es de Rejón (ginecología).
-- Ecografía ginecológica / transvaginal / vaginal / mamaria / de mamas / pélvica / endovaginal → "ginecología" (Dr. Tirso Rejón, NO David Pardo)
-- Ecografía obstétrica / embarazo / ver al bebé → NO DISPONIBLE en el CMC. Responder que no contamos con esa prestación y sugerir acudir a un centro de imagenología especializado.
+- David Pardo → "ecografía" solo para ecografías generales (abdominal, tiroidea, renal, partes blandas, doppler genérico, musculo-esquelética, testicular, próstata, vesical, hepática, vesícula, cuello). Valor: $40.000.
+- Ecografía ginecológica / transvaginal / intravaginal / transvajinal / endovaginal / vaginal / mamaria / de mamas / ecotomografía mamaria / pélvica / de ovarios / de útero → "ginecología" (Dr. Tirso Rejón, ID 61, $35.000). NUNCA Pardo para estas.
+- Ecografía obstétrica / prenatal / de embarazo / ver al bebé → "ginecología" (Dr. Tirso Rejón, $35.000). Se realiza en el CMC.
+- Ecocardiograma / eco del corazón / eco cardíaca / eco cardiograma / doppler cardíaco / ultrasonido del corazón → "ecocardiograma" (Dr. Miguel Millán, cardiólogo, $110.000 solo particular, lista de espera mensual). NUNCA "ecografía", NUNCA Pardo.
 Si preguntan por un precio que no está en la lista, responde que pueden consultar en recepción.
 IMPORTANTE PRECIOS: Cuando menciones el precio de una consulta, SIEMPRE indica ambos valores: Fonasa y particular. La mayoría de los pacientes del CMC son Fonasa. Ejemplo MG: "consulta $7.880 (Fonasa) / $25.000 (particular)". NUNCA pongas solo el precio particular sin mencionar Fonasa.
 
@@ -733,8 +658,8 @@ GINECOLOGÍA / MATRONA
 - Pap / papanicolau / examen del cuello del útero → $20.000 en **Matrona** (Saraí Gómez) o en **Ginecología**.
 - Control ginecológico / revisión mujer → **Matrona** (Fonasa preferencial $16.000 / particular $30.000) o **Ginecología** (Dr. Tirso Rejón, $30.000).
 - Retraso menstrual / no me llega la regla / test de embarazo → **Matrona** para evaluación.
-- Ecografía del embarazo / ver al bebé → **NO disponible en el CMC**. Responder que no contamos con ecografía obstétrica y sugerir un centro de imagenología especializado.
-- Ecografía vaginal / transvaginal → Ecografía ginecológica $35.000 (solo particular) con **Ginecología** (Dr. Tirso Rejón). Evalúa útero, ovarios y detecta quistes, miomas o irregularidades.
+- Ecografía del embarazo / prenatal / obstétrica / ver al bebé → Ginecología con **Dr. Tirso Rejón**, $35.000 particular.
+- Ecografía vaginal / transvaginal / pélvica / mamaria / de ovarios → Ginecología con **Dr. Tirso Rejón**, $35.000 particular (NO David Pardo).
 
 KINE / TRAUMA / DOLOR
 - Dolor de espalda / lumbago / lumbalgia → **Kinesiología** (Luis Armijo o Leonardo Etcheverry) o **Medicina General** si necesita evaluación médica.
@@ -1560,6 +1485,31 @@ async def detect_intent(mensaje: str, recepcion_resumen: list | None = None,
             "especialidad": None,
             "respuesta_directa": "¡De nada! 😊 Si necesitas algo más, escribe *menú*.",
         }
+    # Routing de ecografías: llamar ANTES del cache lookup.
+    # Si el texto menciona un tipo específico (transvaginal, ecocardiograma, abdominal, etc.),
+    # route_ecografia() retorna el especialista correcto sin consumir tokens de Claude.
+    # Si retorna None con mención de "eco" genérico → dejar caer al cache/Claude
+    # para que pida el tipo al paciente via _iniciar_agendar.
+    try:
+        from ecografias import route_ecografia as _route_eco, texto_menciona_ecografia as _tiene_eco
+        if _tiene_eco(clave):
+            _eco_routing = _route_eco(clave)
+            if _eco_routing is not None:
+                _esp = _eco_routing["especialidad_destino"]
+                log.info("ecografia routing: %r → %s (id_prof=%s)", clave[:60], _esp, _eco_routing["id_profesional"])
+                try:
+                    from session import log_event as _log_event
+                    _log_event("", "savings:ecografia_routing", {"clave": clave[:60], "esp": _esp})
+                except Exception:
+                    pass
+                return {"intent": "agendar", "especialidad": _esp, "respuesta_directa": None}
+            # None: texto menciona eco pero sin tipo → intent agendar con esp "ecografía"
+            # para que _iniciar_agendar dispare MSG_PREGUNTAR_TIPO
+            log.info("ecografia sin tipo: %r → agendar ecografia (preguntará tipo)", clave[:60])
+            return {"intent": "agendar", "especialidad": "ecografía", "respuesta_directa": None}
+    except Exception as _eco_err:
+        log.warning("ecografia routing error: %s", _eco_err)
+
     if clave in _INTENT_CACHE:
         log.info("cache hit: %r → %s", clave, _INTENT_CACHE[clave]["intent"])
         try:

@@ -1843,23 +1843,9 @@ _META_HEADLINE_TO_ESPECIALIDAD: dict[str, str] = {
     "oidos":                "otorrinolaringología",
     "garganta":             "otorrinolaringología",
     "nariz":                "otorrinolaringología",
-    # Ecocardiograma — servicio especial, NO mapear a ecografía/Pardo
-    "ecocardiograma":           "ecocardiograma",
-    "eco cardiograma":          "ecocardiograma",
-    "eco-cardiograma":          "ecocardiograma",
-    "ecografia del corazon":    "ecocardiograma",
-    "ecografía del corazón":    "ecocardiograma",
-    "ecografia cardiaca":       "ecocardiograma",
-    "ecografía cardiaca":       "ecocardiograma",
-    "ecografia cardíaca":       "ecocardiograma",
-    "eco del corazon":          "ecocardiograma",
-    "eco corazon":              "ecocardiograma",
-    "eco corazón":              "ecocardiograma",
-    "doppler cardiaco":         "ecocardiograma",
-    "doppler cardíaco":         "ecocardiograma",
-    "ultrasonido del corazon":  "ecocardiograma",
-    "ultrasonido del corazón":  "ecocardiograma",
-    # Ecografía (David Pardo ID 68) — NO incluir nada cardíaco aquí
+    # Ecografías: routing específico por órgano delegado a ecografias.route_ecografia().
+    # Aquí solo quedan las claves genéricas que mapean al flujo de "preguntar tipo".
+    # Ver ecografias.py para la tabla completa (transvaginal→Rejón, ecocardiograma→Millán, etc.)
     "ecografia":      "ecografía",
     "ecografía":      "ecografía",
     "eco":            "ecografía",
@@ -1867,6 +1853,7 @@ _META_HEADLINE_TO_ESPECIALIDAD: dict[str, str] = {
     "ecotomografía":  "ecografía",
     "ecotomo":        "ecografía",
     "ultrasonido":    "ecografía",
+    "ecocardiograma": "ecocardiograma",
     # Ortodoncia
     "ortodoncia":   "ortodoncia",
     "orto":         "ortodoncia",

@@ -9424,33 +9424,14 @@ _FRASES_ESPECIALIDAD = [
     ("posolog",               "podología"),     # typo posología → podología
     ("posologia",             "podología"),
     ("posología",             "podología"),
-    # Ecocardiograma — DEBE ir antes que "ecograf" para ganar la prioridad de match
-    ("ecocardiograma",        "ecocardiograma"),
-    ("eco cardiograma",       "ecocardiograma"),
-    ("eco-cardiograma",       "ecocardiograma"),
-    ("ecografia del corazon", "ecocardiograma"),
-    ("ecografía del corazón", "ecocardiograma"),
-    ("ecografia cardiaca",    "ecocardiograma"),
-    ("ecografía cardiaca",    "ecocardiograma"),
-    ("ecografia cardíaca",    "ecocardiograma"),
-    ("eco del corazon",       "ecocardiograma"),
-    ("eco corazon",           "ecocardiograma"),
-    ("eco corazón",           "ecocardiograma"),
-    ("doppler cardiaco",      "ecocardiograma"),
-    ("doppler cardíaco",      "ecocardiograma"),
-    ("ultrasonido del corazon", "ecocardiograma"),
-    ("ultrasonido corazon",   "ecocardiograma"),
+    # Ecografías: solo el prefijo genérico. El routing por órgano lo maneja
+    # route_ecografia() de ecografias.py — ver _iniciar_agendar y detect_intent.
+    # Los keywords cardíacos y ginecológicos se removieron de aquí para que
+    # no dupliquen la lógica centralizada.
     ("ecograf",               "ecografía"),
     ("ecotomograf",           "ecografía"),
     ("ecotomo",               "ecografía"),
-    ("eco abdom",             "ecografía"),
-    ("eco tiroid",            "ecografía"),
-    ("eco mama",              "ecografía"),
-    ("eco testi",             "ecografía"),
-    ("testicul",              "ecografía"),
-    ("texticul",              "ecografía"),
-    ("inguino escrotal",      "ecografía"),
-    ("inguinal escrotal",     "ecografía"),
+    ("ultrasonido",           "ecografía"),
     ("estetica",              "estética facial"),
     ("estética",              "estética facial"),
     ("botox",                 "estética facial"),
@@ -9864,11 +9845,43 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
             )
         especialidad = "medicina general"
         especialidad_lower = "medicina general"
+    # ── Ecografías: routing centralizado vía ecografias.route_ecografia() ──────
+    # Razón: en CMC distintos tipos de ecografía los realiza distinto especialista.
+    # Tabla autoritativa en app/ecografias.py — NO agregar alias aquí.
+    #
+    # Caso A — especialidad_lower es un tipo de ecografía específico (ecocardiograma,
+    #           ginecología viene de transvaginal, etc.): route_ecografia ya resolvió
+    #           el tipo antes de llegar aquí (via detect_intent o _detectar_especialidad_en_texto).
+    # Caso B — especialidad_lower == "ecografía" y el texto original del paciente tiene
+    #           un keyword de órgano: route_ecografia lo re-rutea al correcto.
+    # Caso C — especialidad_lower == "ecografía" sin órgano: preguntar tipo.
+    if especialidad_lower in ("ecografía", "ecografia", "eco", "ecotomografía", "ecotomografia", "ecotomo"):
+        _txt_para_eco = data.get("_txt_raw") or _txt_raw or especialidad
+        try:
+            from ecografias import route_ecografia as _route_eco, MSG_PREGUNTAR_TIPO as _MSG_ECO
+            _eco_r = _route_eco(_txt_para_eco)
+        except Exception:
+            _eco_r = None
+            _MSG_ECO = (
+                "¿De qué tipo es la ecografía? Por ejemplo:\n\n"
+                "• Abdominal / renal / tiroides → David Pardo, $40.000\n"
+                "• Transvaginal / mamaria / pélvica → Ginecología (Dr. Rejón), $35.000\n"
+                "• Ecocardiograma (corazón) → Cardiología (Dr. Millán), $110.000\n\n"
+                "Escribe el tipo que necesitas."
+            )
+        if _eco_r is not None:
+            # Hay tipo reconocido — re-invocar con la especialidad destino correcta
+            especialidad = _eco_r["especialidad_destino"]
+            especialidad_lower = especialidad.lower()
+        else:
+            # Sin tipo especificado → preguntar
+            log_event(phone, "ecografia_sin_tipo", {"txt": _txt_para_eco[:120]})
+            save_session(phone, "WAIT_ESPECIALIDAD", data)
+            return _MSG_ECO
+
     # ── Ecocardiograma: flujo especial — Dr. Millán, no Pardo, no Medilink ────
     # Interceptar ANTES del guard _ids_esp_check (ecocardiograma no está en ESPECIALIDADES_MAP
     # intencionalmente para no dejar que Medilink lo asigne a Pardo ID 68).
-    # Bug producción 2026-05-15 (fb_6026536437403168): bot derivaba a Pardo ($40k).
-    # Ecocardiograma = Dr. Millán (ID 60), $110.000 particular, 1x/mes sin fecha fija.
     if especialidad_lower == "ecocardiograma":
         log_event(phone, "ecocardiograma_handler", {"phone": phone})
         data["waitlist_especialidad"] = "ecocardiograma"
