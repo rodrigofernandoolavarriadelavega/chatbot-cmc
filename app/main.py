@@ -2047,13 +2047,6 @@ _COMUNAS_DATA = {
 }
 
 
-@app.get("/curanilahue", response_class=HTMLResponse)
-@app.get("/los-alamos", response_class=HTMLResponse)
-@app.get("/losalamos", response_class=HTMLResponse)
-@app.get("/canete", response_class=HTMLResponse)
-@app.get("/cañete", response_class=HTMLResponse)
-@app.get("/lebu", response_class=HTMLResponse)
-@app.get("/comuna/{slug}", response_class=HTMLResponse)
 async def _render_comuna_html(slug: str, *, for_wp: bool = False) -> str | None:
     """Render comuna landing con reviews dinámicas + schema.
     for_wp=True → indexable. for_wp=False → noindex (agentecmc.cl)."""
@@ -2128,6 +2121,12 @@ async def _render_comuna_html(slug: str, *, for_wp: bool = False) -> str | None:
     return html
 
 
+@app.get("/curanilahue", response_class=HTMLResponse)
+@app.get("/los-alamos", response_class=HTMLResponse)
+@app.get("/losalamos", response_class=HTMLResponse)
+@app.get("/canete", response_class=HTMLResponse)
+@app.get("/cañete", response_class=HTMLResponse)
+@app.get("/lebu", response_class=HTMLResponse)
 async def comuna_page(request: Request):
     """Landing SEO por comuna en agentecmc.cl. Sirve noindex,nofollow para que
     Google canonice hacia centromedicocarampangue.cl/{slug}.
