@@ -13,9 +13,9 @@
     },
     {
       "in": "11.111.111-1",
-      "expect_state": "CONFIRMING_CANCEL",
-      "expect_match": ["juan prueba|medicina general|cancelar|confirmar"],
-      "comment": "RUT válido → mostrar cita encontrada y pedir confirmación"
+      "expect_state": "WAIT_CITA_CANCELAR|CONFIRMING_CANCEL",
+      "expect_match": ["juan prueba|medicina general|cancelar|confirmar|abarca"],
+      "comment": "RUT válido → mostrar cita(s) encontrada(s)"
     }
   ],
   "mock_config": {

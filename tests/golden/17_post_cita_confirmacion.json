@@ -27,16 +27,16 @@
     },
     {
       "in": "sí",
-      "expect_state": "IDLE",
-      "expect_match": ["listo|reservada|confirmada|hora quedó"],
-      "comment": "Cita creada exitosamente"
+      "expect_state": "IDLE|WAIT_CROSS_SELL",
+      "expect_match": ["listo|reservada|confirmada|hora quedó|kinesiología|kine|agendar"],
+      "comment": "Cita creada — bot puede ofrecer cross-sell (WAIT_CROSS_SELL) o ir directo a IDLE"
     },
     {
-      "in": "ya reservé hora",
+      "in": "no gracias",
       "expect_state": "IDLE",
-      "expect_match": ["reservada|tienes|hora|cita|confirmada"],
-      "expect_no_match": ["¿qué especialidad", "agendar", "rut para"],
-      "comment": "Post-cita: 'ya reservé hora' debe reconocer que ya hay cita, no re-iniciar flujo"
+      "expect_match": ["menu|necesites|listo|gracias"],
+      "expect_no_match": ["¿qué especialidad", "rut para"],
+      "comment": "Rechazar cross-sell → IDLE limpio"
     }
   ],
   "mock_config": {

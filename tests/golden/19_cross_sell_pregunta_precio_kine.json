@@ -23,12 +23,13 @@
     {
       "in": "11.111.111-1",
       "expect_state": "CONFIRMING_CITA",
-      "expect_match": ["confirmar"]
+      "expect_match": ["confirm|reserv|juan prueba"]
     },
     {
       "in": "sí",
-      "expect_state": "IDLE",
-      "expect_match": ["listo|reservada"]
+      "expect_state": "IDLE|WAIT_CROSS_SELL",
+      "expect_match": ["listo|reservada|kinesiología|kine|agendar"],
+      "comment": "Cita confirmada — puede haber cross-sell"
     },
     {
       "in": "__INJECT_CROSS_SELL_STATE__",

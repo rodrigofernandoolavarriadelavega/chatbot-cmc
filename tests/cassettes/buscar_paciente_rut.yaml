@@ -1,0 +1,26 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - Bearer MEDILINK_TOKEN_REDACTED
+      Connection:
+      - keep-alive
+      User-Agent:
+      - python-httpx/0.27.0
+    method: GET
+    uri: https://api.medilink2.healthatom.com/api/v5/pacientes?rut=11111111-1&id_sucursal=1
+  response:
+    body:
+      string: '[{"id":12345,"rut":"11111111-1","nombres":"Juan","apellido_paterno":"Prueba","apellido_materno":"Test","fecha_nacimiento":"01/01/1985","sexo":"M","celular":"56900000001","email":"juan.prueba@example.com","id_sucursal":1}]'
+    headers:
+      Content-Type:
+      - application/json; charset=utf-8
+    status:
+      code: 200
+      message: OK
+version: 1

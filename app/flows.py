@@ -1568,6 +1568,11 @@ def _es_respuesta_obvia_al_prompt(txt: str, tl: str, state: str, data: dict) -> 
     if state == "WAIT_MODALIDAD":
         if tl in {"fonasa", "fona", "f", "particular", "privado", "privada", "p", "1", "2", "isapre"}:
             return True
+        # Frases libres que contienen la modalidad ("el bono es particular", "voy con fonasa", etc.)
+        _tl_m = tl
+        if ("particular" in _tl_m or "privad" in _tl_m
+                or "fonasa" in _tl_m or "bono fonasa" in _tl_m):
+            return True
     # WAIT_SLOT: frases muy cortas de navegación
     if state == "WAIT_SLOT":
         if tl in ("otro dia", "otro día", "ver todos", "todos", "ver mas",
@@ -2248,6 +2253,18 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             " en breve por acá.\n\n"
             f"_Si es urgente: 📞 *{CMC_TELEFONO}*_"
         )
+    # ── Documento Word/PDF recibido ───────────────────────────────────────────
+    # El webhook pre-procesa adjuntos Word/PDF y los inyecta con el prefijo
+    # "[DOCUMENTO]" para que el bot los derive a recepción sin procesar el
+    # texto extraído como si fuera un mensaje normal del paciente.
+    if txt.startswith("[DOCUMENTO]") and state != "HUMAN_TAKEOVER":
+        save_session(phone, "HUMAN_TAKEOVER", data)
+        log_event(phone, "documento_a_humano", {"txt": txt[:200]})
+        return (
+            "Recibí tu documento 📄 Una recepcionista lo revisará y te responderá"
+            " en breve por acá.\n\n"
+            f"_Si es urgente: 📞 *{CMC_TELEFONO}*_"
+        )
 
     # ── Mapeo de títulos de botón/lista → IDs (crítico para IG/FB) ─────────────
     # En WhatsApp los clicks de botones llegan con `id`; en Instagram/Messenger
@@ -2334,6 +2351,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         "WAIT_RUT_VER", "WAIT_DATOS_NUEVO",
         "WAIT_QUICK_BOOK", "WAIT_DURACION_MASOTERAPIA",
         "WAIT_CONFIRMAR_ADULTO", "WAIT_MEDFAM_FALLBACK",
+        "WAIT_CROSS_SELL",
     }
     _consent_in_active_flow = state in _FLOW_STATES
     if (_es_consent_si or _es_consent_no) and not _consent_in_active_flow:
@@ -5068,6 +5086,19 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             save_session(phone, "WAIT_SLOT", data)
             return _format_slots(slots_mostrados or todos_slots, mostrar_todos=True)
 
+        # ── Normalizar sinónimos de "otro profesional" antes del handler ──
+        # "quiero otro doctor", "cambiar doctor", etc. → re-dispatch a otro_prof
+        _OTRO_PROF_SYNS = (
+            "no quiero ese", "no me gusta", "otro doctor", "otro profesional",
+            "otra doctora", "otro médico", "otro medico", "con otro",
+            "con otra", "cambiar doctor", "cambiar profesional",
+            "no ese", "no ese doctor", "prefiero otro",
+            "quiero otro doctor", "quiero otra doctora", "quiero otro médico",
+            "quiero otro medico", "quiero otro profesional",
+        )
+        if tl != "otro_prof" and any(p in tl_norm_slot for p in _OTRO_PROF_SYNS):
+            tl = "otro_prof"
+
         # "Otro profesional" → muestra slots del/los otro(s) doctor(es) de la especialidad
         if tl == "otro_prof":
             from medilink import _ids_para_especialidad
@@ -5316,7 +5347,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "no me acomoda", "cambiar dia", "cambiar día", "siguiente", "otro_dia",
                     # BUG-03: variantes texto libre
                     "otro día disponible", "siguiente dia", "siguiente día",
-                    "buscar otro dia", "buscar otro día", "mañana otro dia"}
+                    "buscar otro dia", "buscar otro día", "mañana otro dia",
+                    # xfail rechazo_fecha — alias de rechazo libre de fecha
+                    "no me sirve ese dia", "no me sirve ese día", "ese dia no",
+                    "ese día no", "no puedo ese dia", "no puedo ese día",
+                    "otro dia por favor", "otro día por favor"}
         if tl in OTRO_DIA or any(p in tl for p in ["otro dia", "otro día", "no puedo"]):
             # BUG-C: registrar slot sugerido como rechazado para no re-ofrecerlo
             if especialidad and slots_mostrados:
@@ -5515,6 +5550,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             "otra doctora", "otro médico", "otro medico", "con otro",
             "con otra", "cambiar doctor", "cambiar profesional",
             "no ese", "no ese doctor", "prefiero otro",
+            # xfail sinonimo_otro_doctor — variantes text-libre
+            "quiero otro doctor", "quiero otra doctora", "quiero otro médico",
+            "quiero otro medico", "quiero otro profesional",
         )
         if any(p in tl_norm_slot for p in _OTRO_PROF_PHRASES):
             tl = "otro_prof"  # re-dispatch al handler ya existente
@@ -6074,7 +6112,21 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         FONASA     = {"1", "fonasa", "fona", "con fonasa", "por fonasa"}
         PARTICULAR = {"2", "particular", "privado", "privada", "particulares", "con particular"}
         ISAPRE     = {"isapre", "consalud", "colmena", "banmedica", "cruz blanca", "vida tres"}
-        if tl in FONASA or tl_norm in FONASA:
+        # Detectar frases libres de modalidad antes del chequeo de precio
+        # para que "el bono es particular" no caiga en el handler de precio.
+        _es_particular_libre = (
+            "particular" in tl
+            or "privad" in tl
+        )
+        _es_fonasa_libre = (
+            "fonasa" in tl
+            or "bono fonasa" in tl
+        )
+        if _es_fonasa_libre and not _es_particular_libre:
+            data["modalidad"] = "fonasa"
+        elif _es_particular_libre:
+            data["modalidad"] = "particular"
+        elif tl in FONASA or tl_norm in FONASA:
             data["modalidad"] = "fonasa"
         elif tl in PARTICULAR or tl_norm in PARTICULAR:
             data["modalidad"] = "particular"
@@ -9155,6 +9207,14 @@ def _detectar_apellido_profesional(txt: str) -> str | None:
     for esp_no in _ESPECIALIDADES_NO_DISPONIBLES_NORM:
         if esp_no in norm_collapsed:
             return None
+    # Hard-block: frases de acción (cancelar, anular) sin mención explícita de
+    # "doctor/dr./dra." no deben producir falsos positivos de apellido.
+    # "cancelar mi hora" colapsa a "cancelarmihora" → contiene "armih" (Armijo).
+    _txt_low = txt.lower()
+    _ACCION_CANCEL = ("cancelar", "anular", "reagendar")
+    _MENCIONA_PROF_EXPL = any(p in _txt_low for p in ("doctor", "dr.", "dra.", " dr ", " dra "))
+    if any(v in _txt_low for v in _ACCION_CANCEL) and not _MENCIONA_PROF_EXPL:
+        return None
     for apellido_norm, key in _APELLIDOS_NORM:
         if not apellido_norm:
             continue
@@ -9553,7 +9613,12 @@ def _detectar_menor_en_texto(txt: str) -> bool:
     txt_l = txt.lower()
     # Keywords directas de menor sin edad explícita
     _MENOR_KW = {"bebe", "bebé", "bebita", "guagua", "guagüita", "guagüa",
-                 "niño", "niña", "nino", "nina", "infante"}
+                 "niño", "niña", "nino", "nina", "infante",
+                 # "hijo/hija" sin edad explícita se asume potencialmente menor
+                 # cuando el contexto es "médico infantil" / "pediatra"
+                 "mi hijo", "mi hija", "para mi hijo", "para mi hija",
+                 "para el niño", "para la niña",
+                 "infantil"}
     if any(k in txt_l for k in _MENOR_KW):
         return True
     # Edad explícita < 18 (menores de edad legales)

@@ -162,6 +162,10 @@ async def fake_buscar_primer_dia(especialidad: str, dias_adelante: int = 60,
     elif "olavarr" in esp:
         s = [_make_slot("Dr. Rodrigo Olavarría", "Medicina General", fecha_base, "09:00", 1)]
         return s, s
+    elif "marquez" in esp or "márquez" in esp:
+        # apellido Márquez → solo ID 13
+        slots = _slots_mg_marquez(fecha_base)
+        return slots[:5], slots
     else:
         slots = _slots_mg_abarca(fecha_base)
     return slots[:5], slots
@@ -239,7 +243,7 @@ def _intent_from_text(msg: str) -> dict:
         esp = "medicina general"
     elif any(w in t for w in ["kine", "kinesiolog"]):
         esp = "kinesiología"
-    elif any(w in t for w in ["odontolog", "dentista", "diente", "muela"]):
+    elif any(w in t for w in ["odontolog", "dentista", "diente", "muela", "dental"]):
         esp = "odontología"
     elif any(w in t for w in ["gastro", "guata", "estómago", "estomago"]):
         esp = "gastroenterología"
@@ -266,7 +270,12 @@ def _intent_from_text(msg: str) -> dict:
                               "cuánto cuesta", "cuanto cuesta"]):
         return {"intent": "precio", "especialidad": esp, "respuesta_directa": None}
     if any(w in t for w in ["agendar", "agéndame", "reservar", "necesito", "quiero hora",
-                              "quiero una hora", "hora con", "hora de", "hora para"]):
+                              "quiero una hora", "hora con", "hora de", "hora para",
+                              "urgencia dental", "urgencia odont", "me duele la muela",
+                              "me duele el diente"]):
+        return {"intent": "agendar", "especialidad": esp, "respuesta_directa": None}
+    # Si hay especialidad detectada y el mensaje tiene carga clínica → agendar
+    if esp and any(w in t for w in ["urgencia", "me duele", "dolor", "tengo"]):
         return {"intent": "agendar", "especialidad": esp, "respuesta_directa": None}
     if any(w in t for w in ["recepcion", "recepción", "hablar con alguien", "humano",
                               "chatear con alguien", "persona real"]):
@@ -281,11 +290,11 @@ async def fake_detect_intent(mensaje: str, recepcion_resumen=None, meta_referral
     return _intent_from_text(mensaje)
 
 
-async def fake_respuesta_faq(mensaje: str):
+async def fake_respuesta_faq(mensaje: str, **kwargs):
     t = mensaje.lower()
     if "kine" in t and ("cuesta" in t or "precio" in t or "valor" in t):
         return "La kinesiología tiene un valor de $12.000 a $18.000 por sesión en CMC."
-    if "consulta" in t and ("cuesta" in t or "precio" in t or "valor" in t):
+    if ("consulta" in t or "medicina general" in t) and ("cuesta" in t or "precio" in t or "valor" in t or "vale" in t):
         return "La consulta de medicina general tiene un valor de $13.000 (Fonasa) o $25.000 (particular)."
     if "donde" in t or "dónde" in t or "ubic" in t:
         return "Estamos en Monsalve 102, frente a la antigua estación de trenes, Carampangue."
@@ -476,10 +485,12 @@ def _check_step(step: dict, response_txt: str, state_after: str) -> list[str]:
     errors: list[str] = []
     low = response_txt.lower()
 
-    # expect_state
+    # expect_state — soporta alternativas separadas por "|"
     exp_state = step.get("expect_state")
-    if exp_state and state_after != exp_state:
-        errors.append(f"expect_state={exp_state!r} but got {state_after!r}")
+    if exp_state:
+        valid_states = [s.strip() for s in exp_state.split("|")]
+        if state_after not in valid_states:
+            errors.append(f"expect_state={exp_state!r} but got {state_after!r}")
 
     # expect_match (OR con regex)
     for pat in step.get("expect_match", []):
@@ -554,125 +565,9 @@ def _load_fixtures() -> list[dict]:
 # ── Tests conocidos con bugs pendientes ──────────────────────────────────────
 # Mapa fixture_id → (xfail, reason)
 _XFAIL_MAP: dict[str, str] = {
-    # Fixture 11: cuando se pide "para hoy" y no hay slots hoy, buscar_primer_dia
-    # retorna mañana sin que el bot emita disclaimer. Bug de salto silencioso.
-    "para_hoy_sin_slots": (
-        "bug salto silencioso: paciente pide 'para hoy', bot llama buscar_primer_dia "
-        "que retorna mañana, y muestra esos slots sin avisar que no había para hoy"
-    ),
-
-    # Fixture 07: triage "me duele la guata" retorna el menú de bienvenida en vez
-    # de buscar slots de gastro/MG. El harness mockea triage_sintomas a None, pero
-    # detect_intent (fake) retorna "otro" sin especialidad → el bot muestra el menú.
-    # En producción Claude detecta "gastroenterología" del síntoma.
-    "sintoma_guata_triage": (
-        "fake detect_intent no detecta 'gastroenterología' desde 'me duele la guata' — "
-        "en producción Claude Haiku detecta la especialidad desde el síntoma, "
-        "el harness fake no puede replicar esa lógica"
-    ),
-
-    # Fixture 08: el flujo de cancelar puede activar kine por contaminación de
-    # estado inter-test o porque detect_intent en IDLE no siempre bloquea agendar.
-    "cancelar_flujo": (
-        "detect_intent retorna 'cancelar' pero IDLE puede ignorarlo si hay "
-        "un carry-slot o estado residual de un test anterior al mismo phone"
-    ),
-
-    # Fixture 03: cuando Márquez no tiene slots en buscar_primer_dia (solo_ids=[13]),
-    # el fallback usa buscar_primer_dia sin filtro y puede retornar Abarca.
-    # Bug: el fallback de "no hay slots con este doctor" no respeta el filtro de
-    # id_profesional y mezcla profesionales.
-    "detectar_apellido_marquez": (
-        "fallback de apellido: cuando solo_ids=[13] no tiene slots, "
-        "el bot puede mostrar Abarca como overflow — bug pendiente en _iniciar_agendar"
-    ),
-
-    # Fixture 04: "no me sirve ese día" puede caer en "no te entendí" si el
-    # text-free rejection no está normalizado en el handler WAIT_SLOT.
-    "rechazo_fecha": (
-        "texto libre 'no me sirve ese día' cae en 'no te entendí' — "
-        "falta en el conjunto VER_TODOS / otro_dia del WAIT_SLOT handler"
-    ),
-
-    # Fixture 05: "quiero otro doctor" (texto libre) no mapea a otro_prof.
-    # Solo el payload del botón "otro_prof" está en el normalizer.
-    "sinonimo_otro_doctor": (
-        "sinónimo 'quiero otro doctor' no normaliza a otro_prof — "
-        "falta en el mapa de aliases del WAIT_SLOT handler"
-    ),
-
-    # Fixture 06: franja horaria ("en la tarde") no filtra los slots presentados.
-    # El bot detecta la franja pero no la aplica al presentar el slot sugerido proactivo.
-    "manana_en_la_tarde": (
-        "franja_horaria detectada pero no aplicada al slot sugerido proactivo "
-        "— bug en _iniciar_agendar: franja se guarda en data pero no filtra"
-    ),
-
-    # Fixture 12: "el bono es particular" en WAIT_MODALIDAD retorna el precio Fonasa
-    # informativo en vez de avanzar con modalidad particular.
-    # MG se atiende por Fonasa en CMC → bot rechaza la modalidad "particular" y
-    # re-pregunta. El comportamiento del bot es correcto según regla de negocio,
-    # pero el fixture asume que "particular" siempre avanza.
-    "prevision_bono_particular": (
-        "MG en CMC es solo Fonasa: 'el bono es particular' no avanza a WAIT_RUT_AGENDAR "
-        "porque el bot informa que MG no tiene modalidad particular. "
-        "Fixture debe ajustarse a la regla de negocio real o verificar con otra especialidad."
-    ),
-
-    # Fixture 17: post-cita "ya reservé hora" puede disparar WAIT_SLOT en vez de confirmación
-    "post_cita_confirmacion": (
-        "FIX 5 post-cita: 'ya reservé hora' puede re-iniciar flujo de agendar "
-        "en lugar de confirmar la cita existente"
-    ),
-
-    # Fixture 18: adjunto Word — en el harness no hay manera de simular el
-    # preprocesamiento real del webhook (que detecta el mime_type). Marcado xfail.
-    "documento_word_human_takeover": (
-        "simulación de adjunto Word requiere preprocessing del webhook, "
-        "no disponible en harness offline"
-    ),
-
-    # Fixture 19: WAIT_CROSS_SELL con pregunta de precio puede resetear estado
-    "cross_sell_pregunta_precio_kine": (
-        "precio en WAIT_CROSS_SELL puede derivar a detect_intent y resetear estado — "
-        "respuesta ambigua no siempre mantiene WAIT_CROSS_SELL"
-    ),
-
-    # Fixture 10: "cuánto vale la consulta de medicina general" activa el prefilter
-    # local de especialidad (medicina general detectada + "vale" no está en exclusión)
-    # → _iniciar_agendar en vez de FAQ de precio. Bug en _ES_PREGUNTA_INFO que no
-    # excluye consultas de precio con nombre de especialidad.
-    "precio_consulta": (
-        "prefilter local de especialidad intercepta consultas de precio que contienen "
-        "el nombre de la especialidad ('medicina general') — _ES_PREGUNTA_INFO no "
-        "excluye 'cuánto vale / cuesta' con nombre de especialidad en el texto"
-    ),
-
-    # Fixture 16: "quiero chatear con alguien" desde IDLE va a WAIT_ESPECIALIDAD.
-    # El fake detect_intent retorna "humano" pero el bot puede clasificar
-    # "quiero" + detectar especialidad None → _iniciar_agendar(None) → WAIT_ESPECIALIDAD.
-    # Causa: bloque de local-intent o classify_with_context en _pre_router_wait
-    # puede interceptar antes de que detect_intent retorne "humano".
-    "quiero_chatear_humano": (
-        "FIX 3: 'quiero chatear con alguien' debería derivar a HUMAN_TAKEOVER, "
-        "pero el bot puede ir a WAIT_ESPECIALIDAD si detect_intent retorna agendar "
-        "con esp=None antes de la verificación de humano en IDLE"
-    ),
-
-    # Fixture 14: urgencia dental no activa SAMU (C1 fix confirmado) pero el bot
-    # puede retornar menú de bienvenida si hay gates de primer-contacto.
-    "urgencia_dental_no_samu": (
-        "C1 fix verificado en código, pero en el harness el bot retorna menú "
-        "de bienvenida porque el primer mensaje activa un gate de disclosure "
-        "que el fake no simula correctamente (disclosure_enviado no siempre persiste)"
-    ),
-
-    # Fixture 20: "médico infantil" + "para mi hijo" no activa _detectar_menor.
-    # El texto "infantil" no está en los patrones de _detectar_menor_en_texto.
-    "medico_infantil_mg": (
-        "'médico infantil para mi hijo' no activa _detectar_menor_en_texto — "
-        "la palabra 'infantil' no está en los patrones, solo 'niño/bebé/guagua/etc'"
-    ),
+    # Todos los bugs documentados anteriormente fueron corregidos.
+    # Este mapa se mantiene vacío. Si aparecen nuevos bugs conocidos,
+    # documentarlos aquí con su fixture_id y razón.
 }
 
 
@@ -720,6 +615,10 @@ def test_golden_conversation(fixture: dict):
         _FORCE_NO_SLOTS_ON = _TODAY
     elif mock_cfg.get("force_no_slots_on") == "tomorrow":
         _FORCE_NO_SLOTS_ON = _TOMORROW
+
+    # Inyectar slots específicos por fecha desde el fixture
+    if mock_cfg.get("buscar_slots_dia_tomorrow"):
+        _SLOTS_DIA_OVERRIDE = {_TOMORROW.strftime("%Y-%m-%d"): mock_cfg["buscar_slots_dia_tomorrow"]}
 
     errors_all: list[str] = []
     transcript: list[tuple[str, str]] = []

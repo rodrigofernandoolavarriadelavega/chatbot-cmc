@@ -1,0 +1,30 @@
+interactions:
+- request:
+    body: '{"id_paciente": 12345, "id_profesional": 73, "id_sucursal": 1, "id_especialidad":
+      73, "fecha": "16/05/2026", "hora_inicio": "09:00", "hora_fin": "09:15", "duracion":
+      15, "id_estado": 2}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - Bearer MEDILINK_TOKEN_REDACTED
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-httpx/0.27.0
+    method: POST
+    uri: https://api.medilink2.healthatom.com/api/v5/citas
+  response:
+    body:
+      string: '{"id":9999,"id_paciente":12345,"id_profesional":73,"id_sucursal":1,"id_especialidad":73,"fecha":"16/05/2026","hora_inicio":"09:00","hora_fin":"09:15","duracion":15,"id_estado":2,"estado_anulacion":0}'
+    headers:
+      Content-Type:
+      - application/json; charset=utf-8
+    status:
+      code: 201
+      message: Created
+version: 1

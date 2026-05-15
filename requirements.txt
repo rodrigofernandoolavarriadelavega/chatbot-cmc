@@ -10,3 +10,5 @@ google-analytics-data==0.18.15
 PyMuPDF==1.24.0
 python-docx==1.1.2
 pywebpush==2.0.0
+vcrpy==8.1.1
+pytest-recording==0.13.4
