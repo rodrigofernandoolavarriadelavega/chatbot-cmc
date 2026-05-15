@@ -5098,8 +5098,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                                                       "ver mas", "ver más", "otros horarios",
                                                       "mas horarios", "más horarios"]):
             if especialidad in _ESPECIALIDADES_EXPANSION:
+                # "ver_todos" debe saltar directo al stage 2 (todos los profesionales),
+                # sin importar el stage actual. Si pasamos expansion_stage=0 llegaríamos
+                # a next_stage=1 que solo muestra el doctor sugerido ya en sesión — eso
+                # era el bug: Vicente Salas veía solo Abarca, nunca Márquez ni Olavarría.
+                # Forzamos stage=1 → next_stage=2 → _handle_expansion consulta _MED_GENERAL_IDS.
+                _stage_ver_todos = max(data.get("expansion_stage", 0), 1)
                 return await _handle_expansion(phone, data, slots_mostrados, todos_slots,
-                                               data.get("expansion_stage", 0), fecha_actual)
+                                               _stage_ver_todos, fecha_actual)
             data["slots"] = todos_slots
             save_session(phone, "WAIT_SLOT", data)
             return _format_slots(todos_slots, mostrar_todos=True)
