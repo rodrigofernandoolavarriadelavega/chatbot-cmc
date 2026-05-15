@@ -112,8 +112,16 @@ _INTENT_CACHE: dict[str, dict] = {
     "ecografía renal":            {"intent": "agendar", "especialidad": "ecografía"},
     "ecografia tiroidea":         {"intent": "agendar", "especialidad": "ecografía"},
     "ecografía tiroidea":         {"intent": "agendar", "especialidad": "ecografía"},
-    "ecografia mamaria":          {"intent": "agendar", "especialidad": "ecografía"},
-    "ecografía mamaria":          {"intent": "agendar", "especialidad": "ecografía"},
+    # BUG-2026-05-14: ecografía mamaria → Rejón (ginecología), NO Pardo.
+    # El Dr. Tirso Rejón realiza controles de mama. Pardo no hace ginecológicas.
+    "ecografia mamaria":          {"intent": "agendar", "especialidad": "ginecología"},
+    "ecografía mamaria":          {"intent": "agendar", "especialidad": "ginecología"},
+    "eco mamas":                  {"intent": "agendar", "especialidad": "ginecología"},
+    "eco de mamas":               {"intent": "agendar", "especialidad": "ginecología"},
+    "ecografia de mamas":         {"intent": "agendar", "especialidad": "ginecología"},
+    "ecografía de mamas":         {"intent": "agendar", "especialidad": "ginecología"},
+    "ecotomografia mamaria":      {"intent": "agendar", "especialidad": "ginecología"},
+    "ecotomografía mamaria":      {"intent": "agendar", "especialidad": "ginecología"},
     "ecografia testicular":       {"intent": "agendar", "especialidad": "ecografía"},
     "ecografía testicular":       {"intent": "agendar", "especialidad": "ecografía"},
     "ecografia inguinal":         {"intent": "agendar", "especialidad": "ecografía"},
@@ -139,6 +147,24 @@ _INTENT_CACHE: dict[str, dict] = {
     "ecografía intravajinal":     {"intent": "agendar", "especialidad": "ginecología"},
     "ecografia transvajinal":     {"intent": "agendar", "especialidad": "ginecología"},
     "ecografía transvajinal":     {"intent": "agendar", "especialidad": "ginecología"},
+    # BUG-2026-05-14: frases SIN prefijo "ecografía" → también a Rejón.
+    # Paciente escribió solo "transvaginal" y cayó a fallback → Pardo ($40k).
+    "transvaginal":               {"intent": "agendar", "especialidad": "ginecología"},
+    "eco transvaginal":           {"intent": "agendar", "especialidad": "ginecología"},
+    "eco transvajinal":           {"intent": "agendar", "especialidad": "ginecología"},
+    "eco vaginal":                {"intent": "agendar", "especialidad": "ginecología"},
+    "endovaginal":                {"intent": "agendar", "especialidad": "ginecología"},
+    "ecografia endovaginal":      {"intent": "agendar", "especialidad": "ginecología"},
+    "ecografía endovaginal":      {"intent": "agendar", "especialidad": "ginecología"},
+    "eco endovaginal":            {"intent": "agendar", "especialidad": "ginecología"},
+    "eco pelvica":                {"intent": "agendar", "especialidad": "ginecología"},
+    "eco pélvica":                {"intent": "agendar", "especialidad": "ginecología"},
+    "ecografia de ovarios":       {"intent": "agendar", "especialidad": "ginecología"},
+    "ecografía de ovarios":       {"intent": "agendar", "especialidad": "ginecología"},
+    "ecografia de utero":         {"intent": "agendar", "especialidad": "ginecología"},
+    "ecografía de útero":         {"intent": "agendar", "especialidad": "ginecología"},
+    "eco ginecologica":           {"intent": "agendar", "especialidad": "ginecología"},
+    "eco ginecológica":           {"intent": "agendar", "especialidad": "ginecología"},
     # FIX 2026-05-15: ecocardiograma → servicio especial Dr. Millán (ID 60), NO David Pardo
     # Bug producción fb_6026536437403168: bot mandaba a Pardo ($40k) en vez de Millán ($110k + waitlist)
     "ecocardiograma":             {"intent": "agendar", "especialidad": "ecocardiograma"},
@@ -407,6 +433,19 @@ _INTENT_CACHE: dict[str, dict] = {
     "cuanto cuesta la consulta":   {"intent": "precio", "especialidad": None},
     "cuánto cuesta":               {"intent": "precio", "especialidad": None},
     "cuanto cuesta":               {"intent": "precio", "especialidad": None},
+    # BUG-2026-05-14: "es particular el valor" clasificaba como preguntar_pago en vez de precio.
+    # Caso real phone 56910198515: paciente preguntó precio de eco transvaginal.
+    "es particular el valor":      {"intent": "precio", "especialidad": None},
+    "es particular":               {"intent": "precio", "especialidad": None},
+    "es particular?":              {"intent": "precio", "especialidad": None},
+    "es solo particular":          {"intent": "precio", "especialidad": None},
+    "es solo particular?":         {"intent": "precio", "especialidad": None},
+    "atienden particular":         {"intent": "precio", "especialidad": None},
+    "solo particular":             {"intent": "precio", "especialidad": None},
+    "el valor":                    {"intent": "precio", "especialidad": None},
+    "el precio":                   {"intent": "precio", "especialidad": None},
+    "el valor?":                   {"intent": "precio", "especialidad": None},
+    "el precio?":                  {"intent": "precio", "especialidad": None},
     # --- Variaciones rurales Arauco (expansion 2026-04-18) ---
     # Agendar con typos/coloquialismos
     "kiero hora":          {"intent": "agendar", "especialidad": None},
@@ -633,8 +672,8 @@ Si mencionan un profesional por nombre, mapea al nombre de la especialidad:
 - Podóloga Andrea / Andrea → "podología"
 - Psicólogo Juan Pablo / Juan Pablo / Rodríguez → "psicología adulto"
 - Psicólogo Jorge / Jorge Montalba / Montalba → "psicología"
-- David Pardo → "ecografía" (ecografías generales: abdominal, tiroidea, renal, mamaria, partes blandas, doppler, etc.)
-- Ecografía ginecológica / transvaginal / vaginal → "ginecología" (Dr. Tirso Rejón, NO David Pardo)
+- David Pardo → "ecografía" (ecografías generales: abdominal, tiroidea, renal, partes blandas, doppler, musculo-esquelética, pelviana NO ginecológica, etc.). BUG-2026-05-14: la ecografía mamaria NO es de Pardo, es de Rejón (ginecología).
+- Ecografía ginecológica / transvaginal / vaginal / mamaria / de mamas / pélvica / endovaginal → "ginecología" (Dr. Tirso Rejón, NO David Pardo)
 - Ecografía obstétrica / embarazo / ver al bebé → NO DISPONIBLE en el CMC. Responder que no contamos con esa prestación y sugerir acudir a un centro de imagenología especializado.
 Si preguntan por un precio que no está en la lista, responde que pueden consultar en recepción.
 IMPORTANTE PRECIOS: Cuando menciones el precio de una consulta, SIEMPRE indica ambos valores: Fonasa y particular. La mayoría de los pacientes del CMC son Fonasa. Ejemplo MG: "consulta $7.880 (Fonasa) / $25.000 (particular)". NUNCA pongas solo el precio particular sin mencionar Fonasa.
@@ -955,10 +994,9 @@ GASTROENTEROLOGÍA (Dr. Nicolás Quijano):
 - Consulta: $35.000 — evaluación de problemas digestivos: reflujo, gastritis, colon irritable, hígado graso, dolor abdominal crónico, etc.
 - Revisión de exámenes: $17.500 — revisión de endoscopías, ecografías abdominales u otros exámenes digestivos.
 
-ECOGRAFÍA — David Pardo (solo particular, ecografías generales):
+ECOGRAFÍA — David Pardo (solo particular, ecografías generales NO ginecológicas):
 - Ecotomografía abdominal: $40.000 — evalúa hígado, vesícula, páncreas, bazo y riñones. Se usa para dolor abdominal, cálculos o control general.
 - Ecotomografía de partes blandas: $40.000 — evalúa bultos, ganglios, hernias o lesiones superficiales en cualquier zona del cuerpo.
-- Ecotomografía mamaria: $40.000 — complementa la mamografía, detecta nódulos o quistes mamarios.
 - Ecotomografía musculo-esquelética: $40.000 — evalúa tendones, músculos y articulaciones (hombro, rodilla, codo, etc.). Útil en tendinitis, desgarros o esguinces.
 - Ecotomografía pelviana (masculina y femenina): $40.000 — evalúa vejiga y próstata (hombre) o útero y ovarios por vía abdominal (mujer).
 - Ecotomografía testicular: $40.000 — evalúa testículos y epidídimo. Se usa para dolor, hinchazón o bultos testiculares.
@@ -967,10 +1005,11 @@ ECOGRAFÍA — David Pardo (solo particular, ecografías generales):
 - Ecotomografía doppler: $90.000 — evalúa el flujo sanguíneo en arterias y venas. Se usa para várices, trombosis o insuficiencia venosa.
 NOTA: David Pardo NO realiza ecografías ginecológicas; esas las hace el Dr. Tirso Rejón (Ginecología). La ecografía obstétrica NO se realiza en el CMC.
 NOTA: El ecocardiograma (eco cardíaca, eco al corazón, doppler cardíaco) lo realiza el Dr. Miguel Millán (cardiólogo) a $110.000 solo particular, SIN Fonasa. Se hace 1 vez al mes sin fecha fija agendable — el paciente entra a LISTA DE ESPERA. Rutar intent a "ecocardiograma" (NO "ecografía", NO "cardiología"). David Pardo NO realiza ecocardiogramas.
-NOTA BUG-I: La ecografía transvaginal / intravaginal / ginecológica cuesta $35.000 (NO $40.000). Las que cuestan $40.000 son las ecografías generales (abdominal, tiroidea, etc.). NUNCA citar $40.000 para transvaginal.
+NOTA BUG-I: La ecografía transvaginal / intravaginal / ginecológica / mamaria cuesta $35.000 (NO $40.000). Las que cuestan $40.000 son las ecografías generales de Pardo (abdominal, tiroidea, etc.). NUNCA citar $40.000 para transvaginal ni para eco mamaria.
 
 ECOGRAFÍA GINECOLÓGICA — Dr. Tirso Rejón (Ginecología, solo particular):
-- Ecografía ginecológica (transvaginal): $35.000 — evalúa útero y ovarios. Detecta quistes, miomas, endometriosis o irregularidades menstruales.
+- Ecografía ginecológica (transvaginal / intravaginal / pélvica / endovaginal): $35.000 — evalúa útero y ovarios. Detecta quistes, miomas, endometriosis o irregularidades menstruales.
+- Ecografía mamaria / eco de mamas: $35.000 — evalúa tejido mamario, detecta nódulos, quistes o lesiones. La realiza el Dr. Tirso Rejón (ginecólogo), NO David Pardo.
 - Ecografía obstétrica: NO disponible en el CMC. Derivar a centro de imagenología.
 
 CARDIOLOGÍA (Dr. Miguel Millán — solo particular):
@@ -1693,14 +1732,15 @@ async def consulta_clinica_doctor(pregunta: str) -> str:
 _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
     # (keywords que deben aparecer, respuesta). Solo keywords muy específicas
     # para evitar falsos positivos. Se usa como fallback cuando Claude falla.
+    # BUG-2026-05-14: eco mamaria → Rejón (ginecología), no Pardo.
     (("ecograf", "mamari"),
-     "Sí, realizamos *ecografía mamaria* con el Dr. David Pardo 🩺\n\n"
-     "💰 Particular: desde $40.000\n\n"
-     "Escribe *1* o *agendar* para reservar hora."),
+     "Sí, realizamos *ecografía mamaria* con el *Dr. Tirso Rejón* (Ginecólogo) 🩺\n\n"
+     "💰 Particular: $35.000\n\n"
+     "Escribe *1* o *agendar ginecología* para reservar hora."),
     (("ecotomograf", "mamari"),
-     "Sí, realizamos *ecotomografía mamaria* con el Dr. David Pardo 🩺\n\n"
-     "💰 Particular: desde $40.000\n\n"
-     "Escribe *1* o *agendar* para reservar hora."),
+     "Sí, realizamos *ecotomografía mamaria* con el *Dr. Tirso Rejón* (Ginecólogo) 🩺\n\n"
+     "💰 Particular: $35.000\n\n"
+     "Escribe *1* o *agendar ginecología* para reservar hora."),
     (("ecograf", "testicul"),
      "Sí, realizamos *ecografía testicular / inguino-escrotal* con el Dr. David Pardo 🩺\n\n"
      "💰 Particular: desde $40.000\n\n"

@@ -437,9 +437,8 @@ CROSS_REFERENCE: dict[str, str] = {
 # Valor = lista de (esp_destino, mensaje_oferta) — se elige el primero disponible.
 _CROSS_SELL_RULES: dict[str, list[tuple[str, str]]] = {
     "Ginecología": [
-        ("Ecografía",
-         "Muchas consultas ginecológicas se complementan con una ecografía transvaginal.\n\n"
-         "David Pardo realiza ecografías en el CMC. ¿Te agendo una evaluación?"),
+        # La ecografía ginecológica (transvaginal) la hace el propio Dr. Rejón —
+        # NO cross-sell a David Pardo. Se quita ese par para no confundir.
         ("Matrona",
          "Aprovecha tu visita ginecológica con un PAP o control con matrona — "
          "Sarai Gómez atiende en el CMC.\n\n"
