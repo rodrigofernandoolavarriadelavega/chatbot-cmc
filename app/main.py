@@ -2024,7 +2024,7 @@ _COMUNAS_DATA = {
         "hero_lead": "Si estás en Los Álamos, el Centro Médico Carampangue es la opción más cercana fuera de tu comuna. 19 especialidades médicas y dentales con tarifa Fonasa donde aplica.",
         "km": "35", "time": "40 minutos", "bus": "Buses Los Álamos–Concepción pasan cerca de Carampangue",
         "transport": "Buses Los Álamos a Concepción/Talcahuano vía Arauco pasan cerca del centro. También accesible en auto vía Ruta 160.",
-        "kine_note": "Si necesitas sesiones múltiples (10 sesiones bono Fonasa $83.360), coordinamos horarios consecutivos.",
+        "kine_note": "Bono Fonasa MLE en kinesiología: 10 sesiones por $83.360.",
     },
     "canete": {
         "name": "Cañete",
@@ -2033,7 +2033,7 @@ _COMUNAS_DATA = {
         "hero_lead": "Atendemos pacientes desde Cañete y comunas cercanas (Tirúa, Contulmo). 19 especialidades médicas y dentales. Bono Fonasa MLE disponible. Si necesitas algo que no encontraste en tu comuna, te esperamos.",
         "km": "45", "time": "55 minutos", "bus": "Buses Cañete–Concepción pasan por la zona",
         "transport": "Buses interregionales (Cañete a Concepción) hacen parada en Arauco, desde ahí 10 minutos a Carampangue. En auto, vía Ruta 160.",
-        "kine_note": "Para tratamientos extensos (kinesiología, psicología, ortodoncia), coordinamos para optimizar tus viajes.",
+        "kine_note": "Tratamientos extensos disponibles: kinesiología, psicología, ortodoncia.",
     },
     "lebu": {
         "name": "Lebu",
@@ -2041,8 +2041,8 @@ _COMUNAS_DATA = {
         "description": "Atención médica integral para pacientes de Lebu. CMC en provincia de Arauco, 19 especialidades, agendamiento por WhatsApp.",
         "hero_lead": "Si estás en Lebu, capital de la provincia de Arauco, el CMC en Carampangue ofrece 19 especialidades médicas y dentales que pueden no estar disponibles en tu comuna. Bono Fonasa MLE en consultas elegibles.",
         "km": "55", "time": "1 hora 10 minutos", "bus": "Buses Lebu–Concepción vía Cañete y Arauco",
-        "transport": "Buses Lebu a Concepción pasan por Cañete y Arauco. Desde Arauco son 10 minutos a Carampangue. Coordinamos para que tu viaje valga la pena.",
-        "kine_note": "Coordinamos varias citas el mismo día para que un solo viaje desde Lebu cubra varias necesidades.",
+        "transport": "Buses Lebu a Concepción pasan por Cañete y Arauco. Desde Arauco son 10 minutos a Carampangue.",
+        "kine_note": "19 especialidades disponibles en una sola visita.",
     },
 }
 
