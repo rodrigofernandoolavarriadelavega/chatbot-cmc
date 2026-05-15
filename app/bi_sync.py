@@ -475,18 +475,28 @@ async def _fetch_pagos_dia(cli: httpx.AsyncClient, fecha: str) -> AsyncIterator[
 def _resolver_profesional_pago(c, pago: dict) -> tuple[int | None, int | None]:
     """Cruza un pago contra bi_atenciones para inferir id_profesional.
 
-    Los pagos pueden llegar días o semanas después de la atención (tratamientos
-    dentales, kine, paquetes pagados al final). Estrategia en cascada:
-
+    NIVEL 0 (override manual): si existe en bi_pago_overrides, retornarlo.
+    Cascada heurística:
     1. Mismo día + monto exacto match por atención.total
     2. Ventana ±60 días + monto exacto (atención más cercana en fecha)
-    3. Ventana ±60 días + monto cercano (delta abs mínimo)
-    4. Ventana ±60 días + atención con deuda > 0 (FIFO la más antigua con deuda)
+    3. Ventana ±60 días + monto cercano
+    4. Ventana ±60 días + atención con deuda > 0 (FIFO)
     5. Si paciente tiene un único profesional histórico → ese
-    6. Fallback: atención más cercana en fecha ±14d (cualquier monto, incluso $0)
-       Asigna al profesional que atendió al paciente en la fecha más próxima al pago.
+    6. Fallback: atención más cercana ANTERIOR al pago (±60d antes, ±14d post)
     Retorna (id_profesional, atencion_id) o (None, None).
     """
+    pago_id_for_override = pago.get("id")
+    if pago_id_for_override:
+        try:
+            ov = c.execute(
+                "SELECT id_profesional, atencion_id FROM bi_pago_overrides WHERE pago_id=?",
+                (pago_id_for_override,)
+            ).fetchone()
+            if ov:
+                return ov["id_profesional"], ov["atencion_id"]
+        except Exception:
+            pass
+
     from datetime import date, timedelta
     pid = pago.get("id_paciente")
     fecha = pago.get("fecha_recepcion") or pago.get("fecha")
@@ -550,31 +560,56 @@ def _resolver_profesional_pago(c, pago: dict) -> tuple[int | None, int | None]:
                 r = ranked[0][1]
                 return r["id_profesional"], r["atencion_id"]
 
-        # 4. Atención con deuda > 0 anterior al pago (FIFO)
-        deudoras = [r for r in rows
-                    if (r["deuda"] or 0) > 0 and r["fecha"] and r["fecha"] <= fecha_iso]
+        # 4. Atención con deuda > 0 anterior al pago, ventana ±60 días.
+        # SIN ventana temporal una atención de hace 1 año con deuda residual
+        # absorbe pagos recientes, asignándolos al profesional equivocado.
+        deudoras = []
+        for r in rows:
+            if (r["deuda"] or 0) <= 0 or not r["fecha"] or r["fecha"] > fecha_iso:
+                continue
+            try:
+                f_at = date.fromisoformat(r["fecha"])
+            except (ValueError, TypeError):
+                continue
+            if (f_pago - f_at).days <= 60:
+                deudoras.append(r)
         if deudoras:
-            r = deudoras[-1]
+            r = deudoras[-1]  # la más reciente dentro de la ventana
             return r["id_profesional"], r["atencion_id"]
 
-        # 5. Si todas las atenciones del paciente son de un mismo profesional
-        profs = set(r["id_profesional"] for r in rows if r["id_profesional"])
-        if len(profs) == 1:
+        # 5. Si las atenciones del paciente DENTRO de ventana ±60d son de un
+        # mismo profesional → ese. SIN ventana, atenciones de hace 1 año
+        # absorberían pagos recientes (bug detectado 2026-05-13).
+        rows_ventana = []
+        for r in rows:
+            if not r["fecha"]:
+                continue
+            try:
+                f_at = date.fromisoformat(r["fecha"])
+            except (ValueError, TypeError):
+                continue
+            if abs((f_pago - f_at).days) <= 60:
+                rows_ventana.append(r)
+        profs = set(r["id_profesional"] for r in rows_ventana if r["id_profesional"])
+        if len(profs) == 1 and rows_ventana:
             prof_unico = next(iter(profs))
-            rows_ranked = sorted(rows, key=lambda r: abs(
+            rows_ranked = sorted(rows_ventana, key=lambda r: abs(
                 (date.fromisoformat(r["fecha"]) - f_pago).days
-            ) if r["fecha"] else 999999)
+            ))
             return prof_unico, rows_ranked[0]["atencion_id"]
 
-    # 6. Fallback: TODAS las atenciones del paciente ±14d (incluyendo total=$0).
-    # Asignar al profesional de la atención más cercana en fecha. Necesario
-    # porque Medilink a veces deja total=$0 en /atenciones hasta que se cobra.
+    # 6. Fallback: TODAS las atenciones del paciente (incluyendo total=$0).
+    # Necesario porque Medilink a veces deja total=$0 en /atenciones hasta
+    # que se cobra el pago. Estrategia: priorizar atenciones ANTERIORES al
+    # pago (el flujo natural es atención → pago), dentro de ±60 días. Solo
+    # si no hay anteriores, considerar posteriores ±14d como último recurso.
     all_rows = c.execute(
         "SELECT atencion_id, id_profesional, total, fecha "
         "FROM bi_atenciones WHERE id_paciente=? "
         "ORDER BY fecha", (pid,)
     ).fetchall()
-    candidatos = []
+    prev = []   # atenciones anteriores o iguales al pago (las más probables)
+    post = []   # posteriores (raro, pero posible si Medilink registra después)
     for r in all_rows:
         if not r["fecha"] or not r["id_profesional"]:
             continue
@@ -582,12 +617,19 @@ def _resolver_profesional_pago(c, pago: dict) -> tuple[int | None, int | None]:
             f_at = date.fromisoformat(r["fecha"])
         except (ValueError, TypeError):
             continue
-        delta_d = abs((f_pago - f_at).days)
-        if delta_d <= 14:
-            candidatos.append((delta_d, r))
-    if candidatos:
-        candidatos.sort(key=lambda x: (x[0], -(x[1]["total"] or 0)))
-        r = candidatos[0][1]
+        days = (f_pago - f_at).days  # positivo si atención fue antes
+        if 0 <= days <= 60:
+            prev.append((days, r))
+        elif -14 <= days < 0:
+            post.append((-days, r))
+    if prev:
+        # La más reciente anterior al pago, desempata por mayor total
+        prev.sort(key=lambda x: (x[0], -(x[1]["total"] or 0)))
+        r = prev[0][1]
+        return r["id_profesional"], r["atencion_id"]
+    if post:
+        post.sort(key=lambda x: (x[0], -(x[1]["total"] or 0)))
+        r = post[0][1]
         return r["id_profesional"], r["atencion_id"]
 
     return None, None

@@ -291,6 +291,18 @@ def _run_ddl_inline(conn) -> None:
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_bi_pago_fecha ON bi_pagos_caja(fecha)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_bi_pago_prof ON bi_pagos_caja(id_profesional, fecha)")
+    # Overrides manuales para casos donde el matcher heurístico falla.
+    # Cualquier pago_id presente aquí toma prioridad sobre el resultado del
+    # matcher automático. El sync respeta estos overrides.
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS bi_pago_overrides (
+            pago_id        INTEGER PRIMARY KEY,
+            id_profesional INTEGER NOT NULL,
+            atencion_id    INTEGER,
+            reason         TEXT,
+            created_at     TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS bi_sync_log (
             id             INTEGER PRIMARY KEY AUTOINCREMENT,
