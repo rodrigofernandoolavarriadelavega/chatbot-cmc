@@ -718,6 +718,56 @@ def _run_ddl_inline(conn) -> None:
         )
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_sr_phone_esp ON slots_rechazados(phone, especialidad)")
+
+    # ── FTS5 search index para mensajes (búsqueda estilo WhatsApp) ──────────
+    # contentless-external: la tabla `messages` sigue siendo la fuente de verdad;
+    # `messages_fts` solo guarda el índice invertido. unicode61 + remove_diacritics=2
+    # asegura match insensible a tildes ("diabetico" ≈ "diabético") y case-insensitive.
+    try:
+        conn.execute("""
+            CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(
+                text,
+                content='messages',
+                content_rowid='id',
+                tokenize='unicode61 remove_diacritics 2'
+            )
+        """)
+        # Triggers para mantener el índice sincronizado automáticamente.
+        conn.execute("""
+            CREATE TRIGGER IF NOT EXISTS messages_ai AFTER INSERT ON messages BEGIN
+                INSERT INTO messages_fts(rowid, text) VALUES (new.id, new.text);
+            END
+        """)
+        conn.execute("""
+            CREATE TRIGGER IF NOT EXISTS messages_ad AFTER DELETE ON messages BEGIN
+                INSERT INTO messages_fts(messages_fts, rowid, text) VALUES('delete', old.id, old.text);
+            END
+        """)
+        conn.execute("""
+            CREATE TRIGGER IF NOT EXISTS messages_au AFTER UPDATE ON messages BEGIN
+                INSERT INTO messages_fts(messages_fts, rowid, text) VALUES('delete', old.id, old.text);
+                INSERT INTO messages_fts(rowid, text) VALUES (new.id, new.text);
+            END
+        """)
+        # Backfill / repair: para tablas FTS5 con content externo, `rebuild` es el
+        # único modo documentado de re-sincronizar el índice desde la tabla fuente.
+        # Heurística: si hay mensajes pero el índice está vacío, desfasado o no
+        # responde a un probe básico (índice corrupto/no poblado), hacer rebuild.
+        msg_count = conn.execute("SELECT COUNT(*) FROM messages").fetchone()[0]
+        if msg_count > 0:
+            try:
+                fts_count = conn.execute("SELECT COUNT(*) FROM messages_fts").fetchone()[0]
+                # Probe: una letra muy común — si no aparece en ningún mensaje, el índice está roto.
+                probe = conn.execute("SELECT 1 FROM messages_fts WHERE messages_fts MATCH 'a*' LIMIT 1").fetchone()
+                needs_rebuild = (fts_count == 0) or (fts_count < msg_count) or (probe is None)
+            except _OPERATIONAL_ERRORS:
+                needs_rebuild = True
+            if needs_rebuild:
+                conn.execute("INSERT INTO messages_fts(messages_fts) VALUES('rebuild')")
+    except _OPERATIONAL_ERRORS:
+        # FTS5 no compilado en este SQLite → search_messages caerá a fallback LIKE.
+        pass
+
     conn.commit()
 
 
@@ -1833,29 +1883,83 @@ def get_messages(phone: str, limit: int = 300) -> list[dict]:
         return [dict(r) for r in reversed(rows)]
 
 
-def search_messages(query: str, limit: int = 300) -> list[dict]:
-    """Busca mensajes que contengan el texto en todas las conversaciones.
+_FTS5_PUNCT_RE = re.compile(r'["\(\)\*:\^\-]+')
 
-    Agrupa por phone (devuelve solo el match más reciente por contacto) para
-    que el límite no se "consuma" cuando un mismo paciente tiene muchos
-    mensajes con el término — el bot suele repetir la palabra en quotes y
-    confirmaciones, lo que antes hacía que un solo phone llenara el LIMIT.
+
+def _build_fts5_query(raw: str) -> str:
+    """Convierte input del usuario en una query FTS5 segura.
+
+    - Si el usuario escribe entre comillas → phrase search literal.
+    - Múltiples tokens → AND implícito con prefix-match (`dolor* AND cabeza*`)
+      para que matchee mientras el paciente sigue escribiendo.
+    - Caracteres reservados de FTS5 (`"`, `(`, `)`, `*`, `:`, `^`, `-`) se
+      escapan envolviendo cada token en comillas dobles dobles.
     """
+    raw = (raw or "").strip()
+    if not raw:
+        return ""
+    # Frase literal entre comillas
+    if len(raw) >= 2 and raw.startswith('"') and raw.endswith('"'):
+        inner = raw[1:-1].replace('"', '""')
+        return f'"{inner}"'
+    tokens = [t for t in re.split(r'\s+', raw) if t]
+    safe = []
+    for t in tokens:
+        cleaned = _FTS5_PUNCT_RE.sub('', t)
+        if not cleaned:
+            continue
+        # Prefix-match para los tokens de >=3 caracteres
+        if len(cleaned) >= 3:
+            safe.append(f'"{cleaned}"*')
+        else:
+            safe.append(f'"{cleaned}"')
+    return ' AND '.join(safe)
+
+
+def search_messages(query: str, limit: int = 500) -> list[dict]:
+    """Búsqueda full-text estilo WhatsApp sobre todos los mensajes.
+
+    Devuelve UN registro por mensaje que matchea (no agrupa por phone).
+    Cada resultado trae snippet HTML con `<mark>` rodeando el término,
+    nombre del contacto y direction (in/out) para que el panel renderice
+    como WhatsApp: un sub-resultado por aparición.
+    """
+    q = _build_fts5_query(query)
+    if not q:
+        return []
     with _conn() as conn:
-        rows = conn.execute(
-            """SELECT m.id, m.phone, m.direction, m.text, m.ts,
-                      p.nombre
-               FROM messages m
-               LEFT JOIN contact_profiles p ON p.phone = m.phone
-               WHERE m.text LIKE ?
-                 AND m.id = (
-                     SELECT MAX(m2.id) FROM messages m2
-                      WHERE m2.phone = m.phone AND m2.text LIKE ?
-                 )
-               ORDER BY m.ts DESC
-               LIMIT ?""",
-            (f"%{query}%", f"%{query}%", limit)
-        ).fetchall()
+        try:
+            # snippet(table, col, start, end, ellipsis, max_tokens)
+            # TODO(UX): el último parámetro (max_tokens) controla el ancho del
+            # snippet. 12 ≈ "…texto antes <mark>termino</mark> texto después…"
+            # WhatsApp usa ~10-15. Ajustable según largo típico de mensajes.
+            rows = conn.execute(
+                """
+                SELECT m.id, m.phone, m.direction, m.text, m.ts,
+                       p.nombre,
+                       snippet(messages_fts, 0, '\x01HLB\x01', '\x01HLE\x01', '…', 12) AS snippet
+                  FROM messages_fts
+                  JOIN messages m ON m.id = messages_fts.rowid
+                  LEFT JOIN contact_profiles p ON p.phone = m.phone
+                 WHERE messages_fts MATCH ?
+                 ORDER BY m.ts DESC
+                 LIMIT ?
+                """,
+                (q, limit),
+            ).fetchall()
+        except _OPERATIONAL_ERRORS:
+            # Fallback si FTS5 no está disponible: LIKE básico sin snippet.
+            like = f"%{query.strip()}%"
+            rows = conn.execute(
+                """SELECT m.id, m.phone, m.direction, m.text, m.ts, p.nombre,
+                          NULL AS snippet
+                     FROM messages m
+                     LEFT JOIN contact_profiles p ON p.phone = m.phone
+                    WHERE m.text LIKE ?
+                    ORDER BY m.ts DESC
+                    LIMIT ?""",
+                (like, limit),
+            ).fetchall()
         return [dict(r) for r in rows]
 
 

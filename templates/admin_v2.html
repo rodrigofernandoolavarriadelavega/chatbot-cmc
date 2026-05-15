@@ -255,6 +255,48 @@ input, textarea, select{font-family:inherit; color:inherit}
 .conv-item.takeover.active{border-left-color:var(--amber); background:var(--amber-soft)}
 .conv-item.takeover.active::before{display:none}
 
+/* Búsqueda estilo WhatsApp: encabezados de sección y filas de resultado de mensaje */
+.search-section{
+  padding:8px 14px 4px; font-size:11px; font-weight:700; letter-spacing:.4px;
+  text-transform:uppercase; color:var(--text-muted, #8aa0b3);
+  background:linear-gradient(180deg, transparent, rgba(15,63,104,.04));
+  border-top:1px solid rgba(15,63,104,.06);
+}
+.conv-item.search-hit{ background:transparent; }
+.conv-item.search-hit .conv-preview .text{ font-style:normal; }
+.conv-item.search-hit mark, .conv-preview mark{
+  background:rgba(255,213,79,.55); color:inherit; padding:0 1px; border-radius:2px; font-weight:600;
+}
+
+/* Mensaje destacado al saltar desde un resultado de búsqueda */
+@keyframes msgFlash {
+  0%   { background-color: rgba(79,190,206,.45); box-shadow:0 0 0 4px rgba(79,190,206,.35); }
+  60%  { background-color: rgba(79,190,206,.22); box-shadow:0 0 0 6px rgba(79,190,206,.18); }
+  100% { background-color: inherit; box-shadow:none; }
+}
+.msg.flash{ animation: msgFlash 2.1s ease-out 1; border-radius:10px; }
+
+/* Highlights de búsqueda intra-chat (lupa del header) */
+.msg .text mark.in-chat-hit{ background:rgba(255,213,79,.65); color:inherit; padding:0 1px; border-radius:2px; }
+.msg .text mark.in-chat-hit.current{ background:#ffb300; box-shadow:0 0 0 2px rgba(255,179,0,.45); }
+
+/* Barra de búsqueda dentro del chat */
+.in-chat-search{
+  display:none; align-items:center; gap:8px; padding:8px 12px;
+  background:var(--panel-2); border-bottom:1px solid rgba(15,63,104,.08);
+}
+.in-chat-search.active{ display:flex; }
+.in-chat-search input{
+  flex:1; min-width:0; padding:6px 10px; border-radius:6px; border:1px solid rgba(15,63,104,.15);
+  background:var(--panel); color:var(--text); font-size:13px;
+}
+.in-chat-search .ics-count{ font-size:12px; color:var(--text-muted, #8aa0b3); min-width:54px; text-align:center; }
+.in-chat-search button{
+  background:transparent; border:1px solid rgba(15,63,104,.15); border-radius:6px;
+  padding:4px 8px; cursor:pointer; font-size:14px; color:var(--text);
+}
+.in-chat-search button:hover{ background:rgba(15,63,104,.05); }
+
 .avatar{
   width:42px; height:42px; flex:0 0 42px; border-radius:50%;
   background:linear-gradient(135deg, var(--cmc-aqua), var(--cmc-blue));
@@ -995,7 +1037,15 @@ html, body{width:100%; max-width:100%; overflow-x:hidden}
           <div class="sub" id="chSub"></div>
         </div>
         <div class="chat-actions" id="chActions"></div>
+        <button class="ctx-toggle" onclick="toggleInChatSearch()" aria-label="Buscar en esta conversación" title="Buscar en esta conversación (Ctrl+F)" style="margin-right:6px">🔍</button>
         <button class="ctx-toggle" onclick="toggleContext()" aria-label="Ver datos del paciente">ⓘ</button>
+      </div>
+      <div class="in-chat-search" id="inChatSearch" role="search">
+        <input type="text" id="inChatSearchInput" placeholder="Buscar en esta conversación…" autocomplete="off">
+        <span class="ics-count" id="inChatSearchCount">0 / 0</span>
+        <button onclick="inChatSearchNav(-1)" title="Anterior (Shift+Enter)" aria-label="Match anterior">↑</button>
+        <button onclick="inChatSearchNav(1)" title="Siguiente (Enter)" aria-label="Match siguiente">↓</button>
+        <button onclick="closeInChatSearch()" title="Cerrar (Esc)" aria-label="Cerrar búsqueda">✕</button>
       </div>
       <div class="takeover-banner" id="takeoverBanner" style="display:none">
         🙋 Estás respondiendo como recepcionista — el bot no contestará hasta que devuelvas el control.
@@ -1151,8 +1201,9 @@ let pendingFile   = null;
 let inboxFilter   = "all";
 let profFilter    = "";
 let searchTerm    = "";
-let searchHits    = new Set();   // phones que aparecen en búsqueda full-text del servidor
+let searchHits    = [];          // array de mensajes que matchean (FTS5): {id, phone, nombre, ts, direction, text, snippet}
 let searchHitsQ   = "";          // término que generó searchHits (para invalidar)
+let pendingScrollMsgId = null;   // si está seteado, después de renderMessages se hace scroll+highlight a ese msg.id
 let searchTimer   = null;
 let tagsSummary   = {counts:{}, by_phone:{}};
 const PRESET_TAGS = ["pendiente agendar","pendiente confirmar","moroso","VIP","seguimiento","control mensual"];
@@ -1285,26 +1336,12 @@ function filteredConvs(){
   });
   if (searchTerm){
     const q = searchTerm.toLowerCase();
-    // Asegurar que phones encontrados por full-text estén en la lista aunque no
-    // tengan sesión activa (mismo patrón que unread fallback de arriba).
-    if (searchHitsQ === q){
-      searchHits.forEach(p => {
-        if (!inList.has(p)){
-          list.push({
-            phone: p, state: "", nombre: "", flow_data: {},
-            last_text: "(coincidencia en historial)", last_dir: "in",
-            last_ts: "",
-            canal: p.startsWith("ig_") ? "instagram" : p.startsWith("fb_") ? "messenger" : "whatsapp",
-          });
-          inList.add(p);
-        }
-      });
-    }
+    // Filtro local: matching directo por nombre/phone/rut (sección "Contactos").
+    // Los matches por texto de mensajes se renderizan aparte en renderInbox.
     list = list.filter(c =>
       (c.nombre||"").toLowerCase().includes(q) ||
       (c.phone||"").toLowerCase().includes(q) ||
-      (c.rut||"").toLowerCase().includes(q) ||
-      (searchHitsQ === q && searchHits.has(c.phone)));
+      (c.rut||"").toLowerCase().includes(q));
   }
   if (inboxFilter === "unread")   list = list.filter(c => (unreadMap[c.phone]||0) > 0);
   if (inboxFilter === "takeover") list = list.filter(c => c.state === "HUMAN_TAKEOVER");
@@ -1335,45 +1372,104 @@ function filteredConvs(){
   return list;
 }
 
+// Convierte snippet del backend (con \x01HLB\x01 / \x01HLE\x01 como sentinels) en
+// HTML seguro: escapa todo el texto y luego restaura las marcas como <mark>.
+// Sentinels no son secuencias HTML, así que no hay riesgo de inyección.
+function safeSnippet(snip){
+  if (!snip) return "";
+  return esc(snip)
+    .replace(/\u0001HLB\u0001/g, '<mark>')
+    .replace(/\u0001HLE\u0001/g, '</mark>');
+}
+
+function _renderConvRow(c){
+  const unread = unreadMap[c.phone] || 0;
+  const isTake = c.state === "HUMAN_TAKEOVER";
+  const isActive = c.phone === activePhone;
+  const ch = channelOf(c.phone);
+  const flow = c.flow_data || {};
+  const tags = [];
+  if (c.is_staff) tags.push('<span class="tag-pill staff">🧑‍⚕️ ' + esc(c.staff_role||"Staff") + '</span>');
+  if (isTake) tags.push('<span class="tag-pill takeover">humano</span>');
+  else if (c.state && c.state !== "IDLE") tags.push('<span class="tag-pill state">' + esc(c.state.replace("WAIT_","").toLowerCase()) + '</span>');
+  if (flow.especialidad) tags.push('<span class="tag-pill flow">' + esc(flow.especialidad) + '</span>');
+  const lastDir = c.last_dir === "out" ? "out" : "";
+  const preview = stripWa((c.last_text || "").replace(/\n/g," ")).slice(0,80) || "—";
+  const cls = "conv-item " + (unread?'unread ':'') + (isTake?'takeover ':'') + (isActive?'active':'');
+  return '<div class="' + cls + '" data-phone="' + esc(c.phone) + '" onclick="openChat(\'' + esc(c.phone) + '\')">'
+    + '<div class="avatar">' + esc(initials(c.nombre, c.phone)) + '<span class="channel ' + ch + '">' + ch.toUpperCase()[0] + '</span></div>'
+    + '<div class="conv-body">'
+    +   '<div class="conv-row">'
+    +     '<div class="conv-name">' + esc(c.nombre || c.phone) + '</div>'
+    +     '<div class="conv-time">' + fmtTime(c.last_ts || c.updated_at) + '</div>'
+    +   '</div>'
+    +   '<div class="conv-preview"><div class="text ' + lastDir + '">' + esc(preview) + '</div>'
+    +     (unread ? '<span class="unread-dot">' + unread + '</span>' : '')
+    +   '</div>'
+    +   (tags.length ? '<div class="conv-meta">' + tags.join('') + '</div>' : '')
+    + '</div></div>';
+}
+
+function _renderSearchHitRow(hit){
+  // Hit individual de FTS5: avatar + nombre + snippet con marcas + ts. Click → openChat con msgId.
+  const ch = channelOf(hit.phone);
+  const nombre = hit.nombre || hit.phone;
+  const snip = hit.snippet ? safeSnippet(hit.snippet) : esc((hit.text || "").slice(0,120));
+  const dirCls = hit.direction === "out" ? "out" : "";
+  return '<div class="conv-item search-hit" data-phone="' + esc(hit.phone) + '" data-msg-id="' + hit.id + '"'
+    + ' onclick="openChat(\'' + esc(hit.phone) + '\', ' + hit.id + ')">'
+    + '<div class="avatar">' + esc(initials(nombre, hit.phone)) + '<span class="channel ' + ch + '">' + ch.toUpperCase()[0] + '</span></div>'
+    + '<div class="conv-body">'
+    +   '<div class="conv-row">'
+    +     '<div class="conv-name">' + esc(nombre) + '</div>'
+    +     '<div class="conv-time">' + fmtTime(hit.ts) + '</div>'
+    +   '</div>'
+    +   '<div class="conv-preview"><div class="text ' + dirCls + '">' + snip + '</div></div>'
+    + '</div></div>';
+}
+
 function renderInbox(){
-  const list = filteredConvs();
   const el = $("#inboxList");
-  if (!list.length){
-    el.innerHTML = '<div class="empty">Sin conversaciones</div>';
+  const q = searchTerm.trim().toLowerCase();
+  const inSearchMode = q.length >= 2;
+
+  if (inSearchMode){
+    // WhatsApp-style: dos secciones — Contactos (match local) + Mensajes (match FTS5).
+    const contactList = filteredConvs();
+    const msgHits = (searchHitsQ === q) ? searchHits : [];
+    if (!contactList.length && !msgHits.length){
+      el.textContent = "";
+      const empty = document.createElement("div");
+      empty.className = "empty";
+      empty.textContent = (searchHitsQ !== q) ? "Buscando…" : ('Sin resultados para "' + searchTerm + '"');
+      el.appendChild(empty);
+      return;
+    }
+    let html = "";
+    if (contactList.length){
+      html += '<div class="search-section">Contactos · ' + contactList.length + '</div>';
+      html += contactList.map(_renderConvRow).join("");
+    }
+    if (msgHits.length){
+      html += '<div class="search-section">Mensajes · ' + msgHits.length + '</div>';
+      html += msgHits.map(_renderSearchHitRow).join("");
+    } else if (searchHitsQ !== q){
+      html += '<div class="search-section">Mensajes · …</div>';
+    }
+    el.innerHTML = html;
     return;
   }
-  el.innerHTML = list.map(c => {
-    const unread = unreadMap[c.phone] || 0;
-    const isTake = c.state === "HUMAN_TAKEOVER";
-    const isActive = c.phone === activePhone;
-    const ch = channelOf(c.phone);
-    const flow = c.flow_data || {};
-    const tags = [];
-    if (c.is_staff) tags.push(`<span class="tag-pill staff">🧑‍⚕️ ${esc(c.staff_role||"Staff")}</span>`);
-    if (isTake) tags.push('<span class="tag-pill takeover">humano</span>');
-    else if (c.state && c.state !== "IDLE") tags.push(`<span class="tag-pill state">${esc(c.state.replace("WAIT_","").toLowerCase())}</span>`);
-    if (flow.especialidad) tags.push(`<span class="tag-pill flow">${esc(flow.especialidad)}</span>`);
 
-    const lastDir = c.last_dir === "out" ? "out" : "";
-    const preview = stripWa((c.last_text || "").replace(/\n/g," ")).slice(0,80) || "—";
-
-    return `
-      <div class="conv-item ${unread?'unread':''} ${isTake?'takeover':''} ${isActive?'active':''}"
-           data-phone="${esc(c.phone)}" onclick="openChat('${esc(c.phone)}')">
-        <div class="avatar">${esc(initials(c.nombre, c.phone))}<span class="channel ${ch}">${ch.toUpperCase()[0]}</span></div>
-        <div class="conv-body">
-          <div class="conv-row">
-            <div class="conv-name">${esc(c.nombre || c.phone)}</div>
-            <div class="conv-time">${fmtTime(c.last_ts || c.updated_at)}</div>
-          </div>
-          <div class="conv-preview">
-            <div class="text ${lastDir}">${esc(preview)}</div>
-            ${unread ? `<span class="unread-dot">${unread}</span>` : ''}
-          </div>
-          ${tags.length ? `<div class="conv-meta">${tags.join('')}</div>` : ''}
-        </div>
-      </div>`;
-  }).join("");
+  const list = filteredConvs();
+  if (!list.length){
+    el.textContent = "";
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = "Sin conversaciones";
+    el.appendChild(empty);
+    return;
+  }
+  el.innerHTML = list.map(_renderConvRow).join("");
 }
 
 function updateKpis(){
@@ -1415,7 +1511,7 @@ async function loadEcografiasPhones(){
   try {
     const data = await api("/admin/api/search?q=ecograf");
     const set = new Set();
-    (data.results || []).forEach(r => { if (r.phone) set.add(r.phone); });
+    (data.results || []).forEach(r => { if (r && r.phone) set.add(r.phone); });
     ecografiasPhones = set;
     $("#tabEcografiasN").textContent = ecografiasPhones.size;
     if (inboxFilter === "ecografias") renderInbox();
@@ -1425,18 +1521,180 @@ async function loadEcografiasPhones(){
 /* =========================================================================
  *  CHAT
  * ========================================================================= */
-async function openChat(phone){
+async function openChat(phone, targetMsgId){
   activePhone = phone;
   activeConv = conversations.find(c => c.phone === phone);
   $("#chatEmpty").style.display = "none";
   $("#chatActive").style.display = "flex";
   document.querySelector(".app").classList.add("chat-open");
   renderInbox();
+  pendingScrollMsgId = targetMsgId || null;
   await Promise.all([loadMessages(true), loadContext(), markSeen(phone)]);
-  scrollToBottom(true);
+  if (pendingScrollMsgId){
+    // El scroll a un mensaje específico ya lo hizo renderMessages → scrollToMessage.
+    // No forzamos scrollToBottom para que el target quede visible.
+    pendingScrollMsgId = null;
+  } else {
+    scrollToBottom(true);
+  }
   if (msgsTimer) clearInterval(msgsTimer);
   msgsTimer = setInterval(() => { if (activePhone) loadMessages(false); }, POLL_MSGS_MS);
   $("#replyInput").focus();
+}
+
+function scrollToMessage(msgId){
+  const el = document.querySelector('.msg[data-msg-id="' + msgId + '"]');
+  if (!el) return false;
+  el.scrollIntoView({behavior: "smooth", block: "center"});
+  el.classList.add("flash");
+  setTimeout(() => el.classList.remove("flash"), 2200);
+  return true;
+}
+
+// ── Búsqueda dentro del chat abierto (estilo lupa WhatsApp con ↑/↓) ─────────
+let inChatSearchQ = "";
+let inChatHits = [];      // Array<HTMLElement> de las <mark> .in-chat-hit en orden DOM
+let inChatHitIdx = -1;    // índice del match "current"
+
+function toggleInChatSearch(){
+  if (!activePhone) return;
+  const bar = $("#inChatSearch");
+  if (bar.classList.contains("active")){
+    closeInChatSearch();
+  } else {
+    bar.classList.add("active");
+    $("#inChatSearchInput").focus();
+  }
+}
+
+function closeInChatSearch(){
+  $("#inChatSearch").classList.remove("active");
+  $("#inChatSearchInput").value = "";
+  inChatSearchQ = "";
+  clearInChatHighlights();
+  updateInChatCount();
+}
+
+// Normaliza para match insensible a tildes y mayúsculas (espejo del backend FTS5).
+function normalizeForSearch(s){
+  return (s || "").toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function clearInChatHighlights(){
+  document.querySelectorAll('#messages .msg .text mark.in-chat-hit').forEach(m => {
+    const parent = m.parentNode;
+    while (m.firstChild) parent.insertBefore(m.firstChild, m);
+    parent.removeChild(m);
+    parent.normalize();
+  });
+  inChatHits = [];
+  inChatHitIdx = -1;
+}
+
+function applyInChatHighlights(q){
+  clearInChatHighlights();
+  if (!q) return;
+  const nq = normalizeForSearch(q);
+  if (nq.length < 1) return;
+  const textNodes = [];
+  document.querySelectorAll('#messages .msg .text').forEach(span => {
+    // Recoger text nodes hojas, ignorando <mark> ya existentes (no debería haber).
+    const walker = document.createTreeWalker(span, NodeFilter.SHOW_TEXT, null);
+    let n;
+    while ((n = walker.nextNode())) textNodes.push(n);
+  });
+  textNodes.forEach(node => {
+    const text = node.nodeValue;
+    if (!text) return;
+    const nText = normalizeForSearch(text);
+    const ranges = [];
+    let from = 0;
+    while (from < nText.length){
+      const i = nText.indexOf(nq, from);
+      if (i < 0) break;
+      ranges.push([i, i + nq.length]);
+      from = i + nq.length;
+    }
+    if (!ranges.length) return;
+    // Construir reemplazo conservando offsets originales (los caracteres
+    // normalizados tienen la misma longitud salvo por las tildes que se eliminan;
+    // como NFD descompone y luego filtra combining marks, las posiciones
+    // en `text` no coinciden 1:1 con `nText`. Para evitar bugs, recalculamos
+    // por substring directo en texto original.)
+    const lowerOrig = text.toLowerCase();
+    const fragment = document.createDocumentFragment();
+    let cursor = 0;
+    // Recorremos el texto original token por token con substring search
+    // case-insensitive sobre el texto SIN normalizar tildes — esto cubre
+    // los matches exactos. Para "ó" vs "o" caemos en una segunda pasada
+    // con normalización si no encontramos en la primera.
+    let matchedOrig = false;
+    let from2 = 0;
+    while (from2 < lowerOrig.length){
+      const i = lowerOrig.indexOf(q.toLowerCase(), from2);
+      if (i < 0) break;
+      matchedOrig = true;
+      if (i > cursor) fragment.appendChild(document.createTextNode(text.slice(cursor, i)));
+      const mark = document.createElement("mark");
+      mark.className = "in-chat-hit";
+      mark.textContent = text.slice(i, i + q.length);
+      fragment.appendChild(mark);
+      cursor = i + q.length;
+      from2 = cursor;
+    }
+    if (!matchedOrig){
+      // Fallback con normalización para tildes — usa mapping de longitudes.
+      // (Implementación simple: si NQ matches NT, pero originals no, marcamos
+      // por slice usando los rangos calculados sobre nText asumiendo igual longitud.
+      // En la práctica, "diabetico" buscando "diabético" → NFD strip = misma longitud.)
+      if (nText.length === text.length){
+        ranges.forEach(([a, b]) => {
+          if (a > cursor) fragment.appendChild(document.createTextNode(text.slice(cursor, a)));
+          const mark = document.createElement("mark");
+          mark.className = "in-chat-hit";
+          mark.textContent = text.slice(a, b);
+          fragment.appendChild(mark);
+          cursor = b;
+        });
+      } else {
+        return;
+      }
+    }
+    if (cursor < text.length) fragment.appendChild(document.createTextNode(text.slice(cursor)));
+    node.parentNode.replaceChild(fragment, node);
+  });
+  inChatHits = Array.from(document.querySelectorAll('#messages .msg .text mark.in-chat-hit'));
+  if (inChatHits.length){
+    inChatHitIdx = 0;
+    markCurrentInChatHit();
+  }
+  updateInChatCount();
+}
+
+function markCurrentInChatHit(){
+  inChatHits.forEach(m => m.classList.remove("current"));
+  if (inChatHitIdx >= 0 && inChatHitIdx < inChatHits.length){
+    const m = inChatHits[inChatHitIdx];
+    m.classList.add("current");
+    m.scrollIntoView({behavior: "smooth", block: "center"});
+  }
+}
+
+function inChatSearchNav(delta){
+  if (!inChatHits.length) return;
+  inChatHitIdx = (inChatHitIdx + delta + inChatHits.length) % inChatHits.length;
+  markCurrentInChatHit();
+  updateInChatCount();
+}
+
+function updateInChatCount(){
+  const el = $("#inChatSearchCount");
+  if (!el) return;
+  if (!inChatHits.length){
+    el.textContent = inChatSearchQ ? "0 / 0" : "";
+  } else {
+    el.textContent = (inChatHitIdx + 1) + " / " + inChatHits.length;
+  }
 }
 
 function closeChat(){
@@ -1548,7 +1806,7 @@ function renderMessages(){
     const editBtn = canEdit
       ? `<button class="msg-edit-btn" data-wamid="${esc(m.wamid)}" title="Editar mensaje" aria-label="Editar"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`
       : '';
-    html += `<div class="msg ${cls}${firstCls}"${m.wamid ? ` data-wamid="${esc(m.wamid)}"` : ''}>
+    html += `<div class="msg ${cls}${firstCls}" data-msg-id="${m.id}"${m.wamid ? ` data-wamid="${esc(m.wamid)}"` : ''}>
       ${isRecep && firstCls ? '<span class="prefix">Recepcionista</span>' : ''}
       <span class="text">${formatWa(cleanText)}</span>
       <span class="time">${time}${editedBadge}</span>
@@ -1557,6 +1815,16 @@ function renderMessages(){
     lastKind = kind;
   });
   el.innerHTML = html;
+  // Si llegamos abriendo un resultado de búsqueda, hacer scroll al mensaje target.
+  if (pendingScrollMsgId){
+    // pequeño defer para que el layout se asiente antes del scrollIntoView
+    const tgt = pendingScrollMsgId;
+    setTimeout(() => scrollToMessage(tgt), 30);
+  }
+  // Si la barra de búsqueda dentro del chat está activa, re-aplicar highlights.
+  if (typeof inChatSearchQ === "string" && inChatSearchQ){
+    applyInChatHighlights(inChatSearchQ);
+  }
 }
 
 function openMarkBookedModal(){
@@ -1959,10 +2227,18 @@ function updateSendBtn(){
  *  KEYBOARD
  * ========================================================================= */
 document.addEventListener("keydown", e => {
+  // Ctrl/Cmd+F dentro de un chat abierto → abrir búsqueda intra-chat (estilo WhatsApp Desktop).
+  if ((e.ctrlKey || e.metaKey) && (e.key === "f" || e.key === "F") && activePhone){
+    e.preventDefault();
+    toggleInChatSearch();
+    return;
+  }
   if (e.target.matches("input, textarea") && e.key !== "Escape") return;
   if (e.key === "Escape") {
     if (document.activeElement) document.activeElement.blur();
     document.querySelector(".context")?.classList.remove("open");
+    // Cerrar barra de búsqueda intra-chat si está abierta.
+    if ($("#inChatSearch")?.classList.contains("active")) closeInChatSearch();
     return;
   }
   if (!activePhone){
@@ -2193,19 +2469,35 @@ function setup(){
     renderInbox();
   };
   setupTabDragDrop();
-  // Search (local + server-side full-text en mensajes)
+  // Búsqueda intra-chat (estilo lupa WhatsApp en header del chat abierto).
+  const icsi = $("#inChatSearchInput");
+  if (icsi){
+    icsi.addEventListener("input", e => {
+      inChatSearchQ = e.target.value;
+      applyInChatHighlights(inChatSearchQ);
+    });
+    icsi.addEventListener("keydown", e => {
+      if (e.key === "Enter"){
+        e.preventDefault();
+        inChatSearchNav(e.shiftKey ? -1 : 1);
+      } else if (e.key === "Escape"){
+        e.preventDefault();
+        closeInChatSearch();
+      }
+    });
+  }
+  // Search global (local + server-side full-text en mensajes)
   $("#searchBox").oninput = e => {
     searchTerm = e.target.value;
     renderInbox();
     if (searchTimer) clearTimeout(searchTimer);
     const q = searchTerm.trim().toLowerCase();
-    if (q.length < 2){ searchHits = new Set(); searchHitsQ = ""; return; }
+    if (q.length < 2){ searchHits = []; searchHitsQ = ""; return; }
     searchTimer = setTimeout(async () => {
       try {
         const data = await api(`/admin/api/search?q=${encodeURIComponent(q)}`);
-        const hits = new Set();
-        (data.results || []).forEach(r => { if (r.phone) hits.add(r.phone); });
-        searchHits = hits; searchHitsQ = q;
+        searchHits = (data.results || []).filter(r => r && r.phone);
+        searchHitsQ = q;
         if (searchTerm.trim().toLowerCase() === q) renderInbox();
       } catch (err) { /* silencio: deja filtro local funcionando */ }
     }, 280);
