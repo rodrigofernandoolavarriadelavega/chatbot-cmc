@@ -4296,6 +4296,17 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "_Escribe *menu* si necesitas algo más._"
             )
 
+        if intent == "consulta_farmaco":
+            # Consulta sobre medicación/fármaco — derivar SIEMPRE a humano.
+            # Independiente del contexto: nunca aconsejar sobre dosis, cambios,
+            # interacciones ni efectos adversos.
+            log_event(phone, "consulta_farmaco_derivada", {"texto": txt[:240]})
+            return _derivar_humano(
+                phone=phone,
+                contexto=txt,
+                takeover_reason="farmaco",
+            )
+
         if intent == "humano":
             # Override defensivo: Claude Haiku ocasionalmente clasifica
             # frases con carga clínica/vital como "humano" cuando deberían ser
@@ -8562,37 +8573,95 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # lo contrario). Los supuestos "rescates automáticos" tenían más falsos
     # positivos que beneficios. Ahora el comportamiento es determinístico.
     if state == "HUMAN_TAKEOVER":
-        # Mensaje quedó guardado en el historial — recepcionista responde desde el panel
-        # Solo respondemos si el paciente sigue enviando mensajes para que no sienta silencio
+        # ── HUMAN_TAKEOVER SELECTIVO ──────────────────────────────────────
+        # Principio: la consulta original (médica, fármaco, complaint) queda
+        # pendiente para la recepcionista. Pero intents puramente operativos
+        # (ver_reservas, agendar, cancelar, info, precio, horario, ubicación)
+        # los puede resolver el bot SIN necesidad de que el humano haya
+        # respondido. El flag de takeover se mantiene activo.
+        #
+        # Intents SEGUROS que el bot puede atender durante HUMAN_TAKEOVER:
+        _SAFE_INTENTS_TAKEOVER = frozenset({
+            "ver_reservas", "agendar", "cancelar", "reagendar",
+            "precio", "info", "menu", "disponibilidad", "waitlist",
+        })
+        # Intents MÉDICOS que siempre quedan bloqueados:
+        _MEDICAL_INTENTS_TAKEOVER = frozenset({
+            "consulta_farmaco", "triage", "sintomas", "humano",
+        })
+
+        # Clasificar el intent del nuevo mensaje
+        _takeover_reason = data.get("takeover_reason", "")
         msgs_sin_respuesta = data.get("msgs_sin_respuesta", 0) + 1
         data["msgs_sin_respuesta"] = msgs_sin_respuesta
-        save_session(phone, "HUMAN_TAKEOVER", data)
 
-        # Si el paciente escribe un mensaje con señal clínica (síntoma o
-        # palabra clave de patología) mientras está en HUMAN_TAKEOVER, no
-        # respondamos con "Recibido 🙏" porque se siente desatendido. Le
-        # damos un mensaje más específico que reconoce el contenido clínico
-        # y refuerza el canal de urgencia.
+        # Detectar keywords clínicas (síntomas, medicación, patologías)
         _CLINICAL_KWS = (
             "diabet", "hipert", "presion", "presión", "azucar", "azúcar",
             "colesterol", "tiroid", "asma", "epilep", "cancer", "cáncer",
             "embaraz", "operac", "cirug", "medicament", "pastilla",
-            "remedio", "receta", "examen", "análisis", "analisis",
-            "control", "chequeo", "tratamient", "diagnost", "diagnóstic",
+            "remedio", "receta", "f\xe1rmaco", "farmaco", "dosis",
+            "tratamient", "diagnost", "diagn\xf3stic",
         )
-        texto_clinico = (
+        _texto_es_clinico = (
             _SENALES_SINTOMA.search(tl)
             or any(kw in tl_norm for kw in _CLINICAL_KWS)
             or any(kw in tl for kw in _CLINICAL_KWS)
         )
-        if texto_clinico:
+
+        # Si el texto es claramente operativo (reset commands ya se procesaron arriba),
+        # intentar clasificar con detect_intent para decidir si el bot puede responder.
+        # Solo lo hacemos si el texto NO tiene señal clínica (evitar latencia innecesaria).
+        _can_bot_respond = False
+        _new_intent_result = None
+        if not _texto_es_clinico:
+            try:
+                _new_intent_result = await detect_intent(txt)
+                _new_intent = _new_intent_result.get("intent", "otro")
+                if _new_intent in _SAFE_INTENTS_TAKEOVER:
+                    _can_bot_respond = True
+                    log_event(phone, "takeover_selectivo_bot_responde",
+                              {"intent": _new_intent, "takeover_reason": _takeover_reason})
+            except Exception as _e_ti:
+                log.warning("takeover detect_intent falló: %s", _e_ti)
+
+        # Bot puede responder: procesar normalmente pero mantener HUMAN_TAKEOVER
+        if _can_bot_respond and _new_intent_result:
+            _new_intent = _new_intent_result.get("intent", "otro")
+            # Para ver_reservas y precio/info con respuesta_directa, responder directo
+            if _new_intent in ("precio", "info") and _new_intent_result.get("respuesta_directa"):
+                save_session(phone, "HUMAN_TAKEOVER", data)
+                return _new_intent_result["respuesta_directa"]
+            # Para agendar/cancelar/ver_reservas: salir temporalmente de HUMAN_TAKEOVER,
+            # procesar el intent, y restaurar el takeover al final de ese flujo no es
+            # trivial. En su lugar, reseteamos la sesión a IDLE con un flag que indica
+            # que la consulta médica original sigue pendiente para el humano.
+            if _new_intent in ("ver_reservas", "agendar", "cancelar", "reagendar",
+                               "disponibilidad", "waitlist"):
+                # Guardamos nota de la consulta pendiente antes de resetear
+                _pending_msg = data.get("handoff_reason", "")
+                reset_session(phone)
+                # Guardar en sesión nueva el flag de consulta_pendiente_humano
+                _new_data = get_session(phone).get("data", {})
+                _new_data["consulta_pendiente_humano"] = _pending_msg[:300] if _pending_msg else "consulta previa registrada"
+                save_session(phone, "IDLE", _new_data)
+                log_event(phone, "takeover_selectivo_reset_idle",
+                          {"intent": _new_intent, "takeover_reason": _takeover_reason})
+                # Procesar el intent en IDLE normalmente
+                return await handle_message(phone, txt, {"state": "IDLE", "data": _new_data})
+
+        # Texto clínico dentro de HUMAN_TAKEOVER — ack específico
+        if _texto_es_clinico:
             log_event(phone, "human_takeover_clinico", {"texto": txt[:240]})
+            save_session(phone, "HUMAN_TAKEOVER", data)
             return (
                 "Gracias por contarnos 🙏 Ya registré tu mensaje para que una "
                 "recepcionista te responda en este chat.\n\n"
                 f"*Si es urgente o empeora, llama ahora:*\n📞 *{CMC_TELEFONO}*\n"
                 "🚑 *SAMU*: 131"
             )
+
+        save_session(phone, "HUMAN_TAKEOVER", data)
 
         # Si la recepcionista ya respondió alguna vez, NO repetir el ack —
         # el paciente sabe que está hablando con una persona. Repetir el
@@ -8606,8 +8675,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 f"_Si es urgente puedes llamar: 📞 *{CMC_TELEFONO}*_"
             )
         # Desde msg 2+ el bot queda SILENCIOSO. No spamear al paciente con
-        # Seguimos atentos ni Recibido 🙏 repetidos — la recepcionista ya
-        # esta respondiendo desde el panel y el ruido confunde. Cada 15
+        # "Seguimos atentos" ni "Recibido 🙏" repetidos — la recepcionista ya
+        # está respondiendo desde el panel y el ruido confunde. Cada 15
         # mensajes sin respuesta humana mandamos un recordatorio suave.
         if msgs_sin_respuesta > 0 and msgs_sin_respuesta % 15 == 0:
             return f"Seguimos aquí 🙌 Si es urgente, llama al 📞 *{CMC_TELEFONO}*"
@@ -10449,7 +10518,8 @@ def _format_citas_reagendar(citas: list, nombre_paciente: str) -> dict:
     )
 
 
-def _derivar_humano(phone: str = None, contexto: str = "") -> str:
+def _derivar_humano(phone: str = None, contexto: str = "",
+                    takeover_reason: str = "") -> str:
     if phone:
         # BUG-6 fix: reset msgs_sin_respuesta para que el primer mensaje
         # post-derivación reciba el ack "Recibido" en el handler HUMAN_TAKEOVER.
@@ -10458,16 +10528,35 @@ def _derivar_humano(phone: str = None, contexto: str = "") -> str:
         save_session(phone, "HUMAN_TAKEOVER", {
             "hold_sent": True,
             "handoff_reason": contexto[:200],
+            "takeover_reason": takeover_reason or contexto[:50],
             "msgs_sin_respuesta": 0,
             "human_replied": False,
         })
-        log_event(phone, "derivado_humano", {"razon": contexto[:200]})
-    msg = (
-        "Claro, te conecto con recepción 🙋\n\n"
-        "Una recepcionista te responderá en este mismo chat en breve.\n\n"
-        f"Si prefieres llamar: 📞 *{CMC_TELEFONO}* · ☎️ *{CMC_TELEFONO_FIJO}*\n\n"
-        "_Atendemos de lunes a sábado._"
-    )
+        log_event(phone, "derivado_humano", {
+            "razon": contexto[:200],
+            "takeover_reason": takeover_reason or contexto[:50],
+        })
+
+    # Mensaje diferenciado para consultas médicas/fármacos: avisa que el bot
+    # sigue disponible para trámites mientras la recepcionista responde.
+    _es_consulta_medica = takeover_reason in ("consulta_medica", "farmaco", "sintoma")
+    if _es_consulta_medica:
+        msg = (
+            "Tu consulta fue registrada 🙏 Una recepcionista te responderá en este chat.\n\n"
+            "Mientras tanto, puedes:\n"
+            "• Ver tus citas → escribe *mis horas*\n"
+            "• Agendar una nueva hora → escribe *agendar*\n"
+            "• Consultar precios o ubicación → escribe *precio* o *info*\n\n"
+            f"Si es urgente o empeora: 📞 *{CMC_TELEFONO}* · 🚑 *SAMU 131*\n\n"
+            "_Atendemos de lunes a sábado._"
+        )
+    else:
+        msg = (
+            "Claro, te conecto con recepción 🙋\n\n"
+            "Una recepcionista te responderá en este mismo chat en breve.\n\n"
+            f"Si prefieres llamar: 📞 *{CMC_TELEFONO}* · ☎️ *{CMC_TELEFONO_FIJO}*\n\n"
+            "_Atendemos de lunes a sábado._"
+        )
     return msg
 
 

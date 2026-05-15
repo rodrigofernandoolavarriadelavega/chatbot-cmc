@@ -63,7 +63,8 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_crosssell_dx,
                   _job_winback_bi,
                   _job_custom_audiences_sync,
-                  _job_marketing_consent_blast)
+                  _job_marketing_consent_blast,
+                  _job_takeover_pendiente_alert)
 import admin_routes
 import portal_routes
 
@@ -377,6 +378,14 @@ async def lifespan(app: FastAPI):
         _job_takeover_media_ttl,
         CronTrigger(minute=45, timezone=_CLT),
         id="takeover_media_ttl",
+        replace_existing=True,
+    )
+    # Alerta takeover pendiente: cada 30 min, avisa si hay sesiones sin respuesta humana
+    # >2h (horario hábil) o >12h (fuera de horario).
+    scheduler.add_job(
+        _job_takeover_pendiente_alert,
+        CronTrigger(minute="10,40", timezone=_CLT),
+        id="takeover_pendiente_alert",
         replace_existing=True,
     )
     # Reporte periódico de estado al admin cada 30 min

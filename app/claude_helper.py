@@ -489,6 +489,12 @@ _INTENT_CACHE: dict[str, dict] = {
 
 SYSTEM_PROMPT = f"""Eres el asistente de recepción del Centro Médico Carampangue (CMC), ubicado en Carampangue, Chile.
 
+🚨 REGLA ABSOLUTA #0 — MEDICACIÓN / FÁRMACOS / DOSIS:
+NUNCA aconsejes sobre medicación, dosis, cambios de fármaco, interacciones ni efectos adversos.
+Aunque el paciente insista, solo responde: "Esa consulta requiere un profesional de salud. Te conecto con recepción para que te ayude."
+PROHIBIDO usar frases como "podrías intentar...", "es seguro tomar...", "depende de tu caso", "puedes combinar...".
+Si el mensaje menciona cualquiera de: medicamento, fármaco, pastilla, remedio, dosis, Sertralina, Paracetamol, ibuprofeno, antibiótico, "puedo tomar", "puedo cambiar", "doble dosis", "mezclar con", "efectos secundarios", "me recetaron" junto con pregunta de acción → devuelve intent "consulta_farmaco".
+
 🚨 NÚMEROS DE CONTACTO PERMITIDOS — NO INVENTES OTROS:
 Los ÚNICOS teléfonos del CMC que puedes mencionar en cualquier respuesta son:
   • WhatsApp / móvil: +56966610737
@@ -1276,6 +1282,74 @@ async def detect_intent(mensaje: str, recepcion_resumen: list | None = None,
         clave_norm = _norm_tx(clave).rstrip('.?!¿¡,;:')
     except Exception:
         clave_norm = clave_sin_punto
+    # ── PREFILTER: PROMPT INJECTION ──────────────────────────────────────────
+    # Si el paciente intenta inyectar instrucciones al sistema, bloqueamos
+    # silenciosamente y respondemos con mensaje neutral. NO escalamos a humano
+    # (es spam, no consulta legítima). Se loggea el intento.
+    _INJECT_RE = _re_w.compile(
+        r"(ignora\s+(?:todas?\s+)?(?:tus\s+)?instrucciones"
+        r"|olvida\s+(?:todo|tus\s+instrucciones|lo\s+que\s+sabes)"
+        r"|imprime?\s+(?:tu\s+)?(?:prompt|instrucciones|system\s+prompt|instrucciones\s+iniciales)"
+        r"|act[uú]a\s+(?:como|de)\s+(?:un\s+|una\s+)?"
+        r"|developer\s+prompt|system\s+prompt|prompt\s+del\s+sistema"
+        r"|instrucciones\s+(?:del\s+sistema|iniciales|ocultas|internas)"
+        r"|muestra\s+(?:tus\s+)?instrucciones"
+        r"|revela?\s+(?:tu\s+|el\s+)?(?:prompt|instrucciones|system)"
+        r"|\\\\n\\\\n(?:human|assistant|system)\b"
+        r"|<\s*(?:system|SYSTEM|instruction|INSTRUCTION)\s*>)",
+        _re_w.IGNORECASE,
+    )
+    if _INJECT_RE.search(clave) or _INJECT_RE.search(mensaje):
+        log.warning("prompt_injection_attempt: phone=%s texto=%r", "", mensaje[:120])
+        try:
+            from session import log_event as _log_event
+            _log_event("", "prompt_injection_intento", {"texto": mensaje[:240]})
+        except Exception:
+            pass
+        return {
+            "intent": "info",
+            "especialidad": None,
+            "respuesta_directa": (
+                "Disculpa, no puedo procesar ese mensaje. "
+                "¿Necesitas agendar, cancelar o ver tus citas?"
+            ),
+        }
+
+    # ── PREFILTER: CONSULTA DE FÁRMACO / MEDICACIÓN ───────────────────────
+    # Cualquier mensaje que combine términos de medicación con una acción
+    # (tomar, cambiar, mezclar, dosis doble, efectos, etc.) deriva SIEMPRE
+    # a humano con takeover_reason="farmaco". Sin excepción.
+    _FARMACO_KWS_RE = _re_w.compile(
+        r"\b(medicamento|f[aá]rmaco|pastilla|remedio|c[aá]psula|comprimido|jarabe|"
+        r"sertralina|sertralín|fluoxetina|amoxicilina|ibuprofeno|paracetamol|"
+        r"aspirina|metformina|losart[aá]n|enalapril|atorvastatina|omeprazol|"
+        r"ciprofloxacino|antibiotico|antibi[oó]tico|antiinflamatorio|analg[eé]sico|"
+        r"antidepresivo|ansiolítico|ansiolítico|benzodiacepina|corticoide|"
+        r"me\s+recetaron|me\s+recet[oó]|me\s+dieron\s+(?:la|el|un|una)\s+\w+"
+        r")\b",
+        _re_w.IGNORECASE,
+    )
+    _FARMACO_ACCION_RE = _re_w.compile(
+        r"\b(dosis|doble\s+dosis|puedo\s+tomar|puedo\s+cambiar|puedo\s+mezclar|"
+        r"tomo\s+(?:doble|m[aá]s)|cambiar(?:la|lo)?|mezclar?|combinar?|"
+        r"efectos?\s+(?:secundario|adverso)|interacci[oó]n|hace\s+da[nñ]o|"
+        r"es\s+(?:seguro|peligroso|malo)|puede\s+(?:da[nñ]ar|afectar)|"
+        r"reacci[oó]n|alergia\s+a)\b",
+        _re_w.IGNORECASE,
+    )
+    if _FARMACO_KWS_RE.search(clave) and _FARMACO_ACCION_RE.search(clave):
+        log.info("consulta_farmaco prefilter: %r", clave[:80])
+        try:
+            from session import log_event as _log_event
+            _log_event("", "intent_farmaco_prefilter", {"texto": clave[:120]})
+        except Exception:
+            pass
+        return {
+            "intent": "consulta_farmaco",
+            "especialidad": None,
+            "respuesta_directa": None,
+        }
+
     # Prefilter: verbos de cancelación explícitos. Claude a veces confunde frases como
     # "cancelaré la hora de hoy con la matrona" con intent=agendar por la presencia de
     # "hora/matrona/hoy". El verbo de cancelación siempre gana.

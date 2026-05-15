@@ -748,6 +748,92 @@ async def _job_takeover_media_ttl():
         log.exception("takeover_media_ttl falló: %s", e)
 
 
+async def _job_takeover_pendiente_alert():
+    """Alerta al admin cuando hay sesiones HUMAN_TAKEOVER sin respuesta humana
+    en tiempo excesivo: >2h en horario hábil (09-20 CLT lun-vie) o >12h fuera.
+    Evita que pacientes queden silenciados sin que nadie lo note.
+    Se ejecuta cada 30 min (registrado en main.py).
+    """
+    from zoneinfo import ZoneInfo as _ZI
+    from datetime import datetime as _dt, timezone as _tz
+    import json as _json
+
+    try:
+        from session import _conn as _s_conn
+        conn = _s_conn()
+        rows = conn.execute(
+            "SELECT phone, state_data, updated_at FROM sessions WHERE state='HUMAN_TAKEOVER'",
+        ).fetchall()
+        conn.close()
+    except Exception as e:
+        log.error("takeover_pendiente_alert: error leyendo DB: %s", e)
+        return
+
+    now_utc = _dt.now(_tz.utc)
+    now_clt = now_utc.astimezone(_ZI("America/Santiago"))
+    hora_clt = now_clt.hour
+    dow = now_clt.weekday()  # 0=lunes, 6=domingo
+    horario_habil = (dow <= 4) and (9 <= hora_clt < 20)  # lun-vie 09-20
+    umbral_horas = 2 if horario_habil else 12
+
+    alertas = []
+    for row in rows:
+        try:
+            updated_raw = row["updated_at"] if isinstance(row, dict) else row[2]
+            data_raw = row["state_data"] if isinstance(row, dict) else row[1]
+            phone = row["phone"] if isinstance(row, dict) else row[0]
+            updated = _dt.fromisoformat(updated_raw)
+            if updated.tzinfo is None:
+                updated = updated.replace(tzinfo=_tz.utc)
+            horas_bloqueado = (now_utc - updated).total_seconds() / 3600
+            if horas_bloqueado < umbral_horas:
+                continue
+            try:
+                data = _json.loads(data_raw) if isinstance(data_raw, str) else (data_raw or {})
+            except Exception:
+                data = {}
+            human_replied = data.get("human_replied", False)
+            if human_replied:
+                # Recepcionista ya respondió → no es una sesión abandonada
+                continue
+            takeover_reason = data.get("takeover_reason", data.get("handoff_reason", "?"))[:80]
+            alertas.append({
+                "phone": phone,
+                "horas": round(horas_bloqueado, 1),
+                "razon": takeover_reason,
+            })
+        except Exception:
+            continue
+
+    if not alertas:
+        return
+
+    if not ADMIN_ALERT_PHONE:
+        log.warning("takeover_pendiente_alert: %d sesiones varadas pero ADMIN_ALERT_PHONE no configurado", len(alertas))
+        return
+
+    # Enviar alerta consolidada al admin (máx 5 casos en el mensaje)
+    lineas = [f"• {a['phone'][-4:]}... · {a['horas']}h · {a['razon']}" for a in alertas[:5]]
+    if len(alertas) > 5:
+        lineas.append(f"... y {len(alertas) - 5} más")
+    cuerpo = (
+        f"*Alerta: {len(alertas)} paciente(s) sin respuesta en HUMAN_TAKEOVER "
+        f"(>{umbral_horas}h)*\n\n"
+        + "\n".join(lineas)
+        + "\n\nRevisa el panel para responder."
+    )
+    try:
+        await send_whatsapp(ADMIN_ALERT_PHONE, cuerpo)
+        log.info("takeover_pendiente_alert: alerta enviada para %d sesiones", len(alertas))
+        from session import log_event as _le
+        for a in alertas:
+            _le(a["phone"], "takeover_pendiente_alerta", {
+                "horas": a["horas"], "razon": a["razon"],
+            })
+    except Exception as e:
+        log.error("takeover_pendiente_alert: no se pudo enviar alerta: %s", e)
+
+
 async def _job_medilink_watchdog():
     """Cada minuto: si Medilink está marcado como caído, prueba un ping.
     - Si se recuperó: marca up, notifica a los pacientes encolados y avisa a recepción.
