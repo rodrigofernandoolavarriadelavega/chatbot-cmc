@@ -592,25 +592,36 @@ async def _job_bi_sync_diario():
         log.info("bi_sync_diario pagos: %s", r2)
     except Exception as e:
         log.warning("bi_sync_diario pagos fallo: %s", e)
-    # Re-cross pagos huérfanos (por si la sync de atenciones llenó gaps)
+    # Re-cross COMPLETO últimos 14 días (no solo huérfanos): después del sync
+    # de atenciones, los campos total/abonado de atenciones recientes pueden
+    # haberse actualizado (Medilink las marca como cobradas), y por tanto el
+    # matcher puede reasignar pagos por monto exacto. Respeta overrides
+    # manuales por NIVEL 0 del matcher.
     try:
         with _c_b() as c:
             rows = c.execute(
-                "SELECT pago_id, fecha, id_paciente, monto FROM bi_pagos_caja "
-                "WHERE id_profesional IS NULL AND fecha >= ?",
+                "SELECT pago_id, fecha, id_paciente, monto, id_profesional "
+                "FROM bi_pagos_caja WHERE fecha >= ?",
                 ((date.today() - timedelta(days=14)).isoformat(),)
             ).fetchall()
+            changed = 0
             recovered = 0
             for r in rows:
-                p = {"id_paciente": r["id_paciente"], "fecha_recepcion": r["fecha"],
-                     "monto_pago": r["monto"]}
+                p = {"id": r["pago_id"], "id_paciente": r["id_paciente"],
+                     "fecha_recepcion": r["fecha"], "monto_pago": r["monto"]}
                 id_prof, aid = _resolver_profesional_pago(c, p)
-                if id_prof is not None:
-                    c.execute("UPDATE bi_pagos_caja SET id_profesional=?, atencion_id=? "
-                              "WHERE pago_id=?", (id_prof, aid, r["pago_id"]))
+                if id_prof is None:
+                    continue
+                if r["id_profesional"] is None:
                     recovered += 1
-            log.info("bi_sync_diario re-cross: %d/%d pagos recuperados",
-                     recovered, len(rows))
+                elif id_prof != r["id_profesional"]:
+                    changed += 1
+                else:
+                    continue
+                c.execute("UPDATE bi_pagos_caja SET id_profesional=?, atencion_id=? "
+                          "WHERE pago_id=?", (id_prof, aid, r["pago_id"]))
+            log.info("bi_sync_diario rematch: %d reasignados, %d huérfanos recuperados (de %d pagos 14d)",
+                     changed, recovered, len(rows))
     except Exception as e:
         log.warning("bi_sync_diario re-cross fallo: %s", e)
 

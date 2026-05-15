@@ -3327,6 +3327,51 @@ async def admin_enviar_dashboard_semanal(forzar: int = 0, token: str | None = Qu
 
 
 
+@app.post("/api/bi/sync-atenciones")
+async def api_bi_sync_atenciones(desde: str = "2024-01-01", hasta: str | None = None,
+                                   force: int = 0):
+    """Dispara sync de /atenciones a bi_atenciones (refresca total/abonado/deuda).
+
+    Necesario para que el matcher de pagos cruce por monto exacto: las
+    atenciones recién creadas vienen con total=$0 hasta que se cobran. Re-
+    sincronizar después actualiza los campos.
+    """
+    from bi_sync import sync_rango
+    _spawn_bg(sync_rango(desde=desde, hasta=hasta, force=bool(force)), name="sync_rango")
+    return {"started": True, "desde": desde, "hasta": hasta or "today", "force": bool(force)}
+
+
+@app.post("/api/bi/rematch-pagos")
+def api_bi_rematch_pagos(desde: str = "2026-01-01", hasta: str | None = None):
+    """Re-aplica el matcher heurístico sobre pagos del rango, respetando
+    overrides manuales (nivel 0). Útil después de un sync de atenciones que
+    haya actualizado campos total/abonado."""
+    from session import _conn
+    from bi_sync import _resolver_profesional_pago
+    from datetime import date as _date
+    if not hasta:
+        hasta = _date.today().isoformat()
+    cambios = 0
+    with _conn() as c:
+        cur = c.cursor()
+        cur.execute(
+            "SELECT pago_id, fecha, monto, id_paciente, id_profesional "
+            "FROM bi_pagos_caja WHERE fecha>=? AND fecha<=?",
+            (desde, hasta)
+        )
+        for r in cur.fetchall():
+            pago_dict = {"id": r[0], "fecha_recepcion": r[1],
+                          "monto_pago": r[2], "id_paciente": r[3]}
+            id_prof_nuevo, id_aten_nuevo = _resolver_profesional_pago(c, pago_dict)
+            if id_prof_nuevo and id_prof_nuevo != r[4]:
+                cur.execute(
+                    "UPDATE bi_pagos_caja SET id_profesional=?, atencion_id=? WHERE pago_id=?",
+                    (id_prof_nuevo, id_aten_nuevo, r[0])
+                )
+                cambios += 1
+    return {"ok": True, "desde": desde, "hasta": hasta, "cambios": cambios}
+
+
 @app.post("/api/bi/sync-pagos")
 async def api_bi_sync_pagos(desde: str = "2024-01-01", hasta: str | None = None,
                               force: int = 0):
