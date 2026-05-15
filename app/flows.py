@@ -6,7 +6,7 @@ import asyncio
 import logging
 import re
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date
 from zoneinfo import ZoneInfo
 _CHILE_TZ = ZoneInfo("America/Santiago")
 
@@ -4919,6 +4919,25 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # "20hrs", botón "otro_dia", "6", frases con mes antes de llegar a 3140.
         tl_norm_slot = txt.lower().strip()
 
+        # Bug A fix (2026-05-15): si el paciente acaba de recibir la propuesta
+        # "el Dr. X no tiene horas el viernes, ¿quieres ver el lunes?" y responde
+        # afirmativamente, cargar la alternativa guardada y mostrar esos slots.
+        _otro_prox = data.get("_otro_prof_prox")
+        if _otro_prox and (tl in AFIRMACIONES or tl_norm in AFIRMACIONES or tl_norm_slot in ("si", "sí", "dale", "ya", "ok")):
+            data.pop("_otro_prof_prox", None)
+            smart_prox = _otro_prox.get("smart", [])
+            todos_prox = _otro_prox.get("todos", [])
+            prox_fecha  = _otro_prox.get("fecha")
+            prox_pid    = _otro_prox.get("prof_id")
+            if prox_fecha and prox_fecha not in fechas_vistas:
+                fechas_vistas = fechas_vistas + [prox_fecha]
+            filtrado = [s for s in smart_prox if s.get("id_profesional") == prox_pid] or smart_prox
+            data.update({"slots": filtrado, "todos_slots": todos_prox,
+                         "fechas_vistas": fechas_vistas, "expansion_stage": 0,
+                         "prof_sugerido_id": prox_pid})
+            save_session(phone, "WAIT_SLOT", data)
+            return _format_slots(filtrado)
+
         # Respuesta al sugerido proactivo (botón o texto libre "si"/"sí"/"confirmo"/...)
         # Afirmación libre: "puedo reservar?", "sí reservalo", "reserva esa hora",
         # "agenda esa", "tomo esa hora", etc. Caso real 2026-04-28
@@ -5061,19 +5080,83 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 save_session(phone, "WAIT_SLOT", data)
                 return _format_slots(slots_otros_mismo_dia, mostrar_todos=True)
 
-            # 2) No hay cupo de los otros en ese día → buscar su próximo día disponible
+            # 2) No hay cupo de los otros en ese día para la MISMA fecha.
+            # Bug A (2026-05-15): antes llamábamos buscar_primer_dia y saltábamos
+            # silenciosamente a otra fecha. Ahora primero consultamos la fecha
+            # activa explícitamente; solo si no hay slots ofrecemos la próxima
+            # fecha disponible con confirmación explícita del paciente.
             _maso_override = {59: data["maso_duracion"]} if especialidad == "masoterapia" and data.get("maso_duracion") else None
-            # Medicina Familiar usa key "medicina general" en la API (Medilink no tiene
-            # especialidad "medicina familiar" como entidad separada en la agenda)
+
+            # 2a) Consultar la fecha activa en sesión para los otros profesionales
+            if fecha_actual:
+                smart_misma, todos_misma = await buscar_slots_dia_por_ids(
+                    otros_ids, fecha_actual, intervalo_override=_maso_override)
+                if todos_misma:
+                    nuevo_sugerido_id = todos_misma[0].get("id_profesional")
+                    smart_filtrado = [s for s in smart_misma if s.get("id_profesional") == nuevo_sugerido_id] or smart_misma
+                    data.update({"slots": smart_filtrado, "todos_slots": todos_misma,
+                                 "prof_sugerido_id": nuevo_sugerido_id,
+                                 "profs_vistos": list(profs_vistos)})
+                    save_session(phone, "WAIT_SLOT", data)
+                    return _format_slots(smart_filtrado, mostrar_todos=True)
+
+                # No hay slots de los otros profesionales en esa fecha exacta.
+                # Buscar su próxima fecha disponible para poder AVISAR al paciente.
+                _esp_api = "medicina general" if especialidad in _ESP_MED_FAMILIAR else especialidad
+                smart_prox, todos_prox = await buscar_primer_dia(
+                    _esp_api, excluir=fechas_vistas,
+                    solo_ids=otros_ids, intervalo_override=_maso_override)
+
+                if not todos_prox:
+                    return (
+                        "No encontré disponibilidad con otros profesionales en los próximos días.\n\n"
+                        "Escribe *otro día* para seguir buscando con el mismo doctor, "
+                        f"o llama a recepción: {CMC_TELEFONO}"
+                    )
+
+                # Informar explícitamente el cambio de fecha y pedir confirmación.
+                from medilink import PROFESIONALES as _PROFS_CAMBIO
+                prox_fecha_str = todos_prox[0]["fecha"]
+                prox_prof_id   = todos_prox[0].get("id_profesional")
+                prox_prof_nombre = _PROFS_CAMBIO.get(int(prox_prof_id), {}).get("nombre", "el siguiente profesional") if prox_prof_id else "el siguiente profesional"
+                _DIAS_N = ["lunes","martes","miércoles","jueves","viernes","sábado","domingo"]
+                def _fecha_label_corta(iso: str) -> str:
+                    try:
+                        _d = date.fromisoformat(iso)
+                        return f"{_DIAS_N[_d.weekday()]} {_d.day:02d}/{_d.month:02d}"
+                    except Exception:
+                        return iso
+                _fecha_orig_fmt = _fecha_label_corta(fecha_actual)   # "viernes 16/05"
+                _fecha_prox_fmt = _fecha_label_corta(prox_fecha_str)  # "lunes 18/05"
+
+                # Guardar la alternativa en sesión para que si el paciente acepta
+                # no tengamos que buscar de nuevo.
+                data["_otro_prof_prox"] = {
+                    "smart": smart_prox,
+                    "todos": todos_prox,
+                    "prof_id": prox_prof_id,
+                    "fecha": prox_fecha_str,
+                }
+                data["profs_vistos"] = list(profs_vistos)
+                save_session(phone, "WAIT_SLOT", data)
+
+                return (
+                    f"*{prox_prof_nombre}* no tiene horas el {_fecha_orig_fmt}.\n\n"
+                    f"Su próxima disponibilidad es el *{_fecha_prox_fmt}*.\n\n"
+                    "¿Quieres ver esos horarios? Responde *sí*, o escribe "
+                    "*otro profesional* para probar con alguien más."
+                )
+
+            # fecha_actual es None (sesión sin slots vigentes): fallback original
             _esp_api = "medicina general" if especialidad in _ESP_MED_FAMILIAR else especialidad
             smart_nuevo, todos_nuevo = await buscar_primer_dia(
                 _esp_api, excluir=fechas_vistas,
                 solo_ids=otros_ids, intervalo_override=_maso_override)
             if not todos_nuevo:
                 return (
-                    "No encontré disponibilidad con otros profesionales en los próximos días 😕\n\n"
+                    "No encontré disponibilidad con otros profesionales en los próximos días.\n\n"
                     "Escribe *otro día* para seguir buscando con el mismo doctor, "
-                    f"o llama a recepción: 📞 *{CMC_TELEFONO}*"
+                    f"o llama a recepción: {CMC_TELEFONO}"
                 )
             nueva_fecha = todos_nuevo[0]["fecha"]
             if nueva_fecha not in fechas_vistas:
