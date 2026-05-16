@@ -1,6 +1,7 @@
 """Messaging utilities — WhatsApp, Instagram, Facebook Messenger, Whisper."""
 import asyncio
 import logging
+import os
 import re
 
 import httpx
@@ -167,6 +168,81 @@ def _final_phone_guard(text: str) -> str:
         log.warning("PHONE_LEAK_GUARD codigo_area_44 snippet=%r", text[:160])
         text = _RX_FIJO_44.sub(_FIJO_CMC_CANONICO, text)
     return text
+
+
+# ── Guard centralizado para mensajes proactivos (jobs/crons) ─────────────────
+# Evita enviar mensajes outbound proactivos a teléfonos de staff/admin que nunca
+# tienen ventana 24h abierta desde el bot → genera bucle de errores 131047.
+# Bug confirmado 2026-05-16: 39/43 errores 131047 del día al número personal Dr.
+# Solución sistémica: un único guard en messaging.py, aplicado por send_whatsapp_proactive.
+
+_PROACTIVE_BLOCKLIST: set[str] = set()
+
+
+def _refresh_proactive_blocklist() -> None:
+    global _PROACTIVE_BLOCKLIST
+    admin_raw = os.getenv("ADMIN_ALERT_PHONE", "").strip()
+    admin_phones = {admin_raw} if admin_raw else set()
+    # STAFF_PHONES puede ser JSON {"56912345678": "Nombre"} o CSV "56912345678,56987654321"
+    staff_raw = os.getenv("STAFF_PHONES", "").strip()
+    staff: set[str] = set()
+    if staff_raw:
+        try:
+            import json as _j
+            parsed = _j.loads(staff_raw)
+            if isinstance(parsed, dict):
+                staff = set(parsed.keys())
+            elif isinstance(parsed, list):
+                staff = set(parsed)
+        except Exception:
+            staff = {p.strip() for p in staff_raw.split(",") if p.strip()}
+    _PROACTIVE_BLOCKLIST = (admin_phones | staff) - {""}
+
+
+def _normalize_phone_for_block(phone: str) -> str:
+    """Normaliza a dígitos puros sin leading zeros para comparación."""
+    return phone.replace("+", "").lstrip("0")
+
+
+def is_proactive_blocked(phone: str) -> bool:
+    """True si NO se debe enviar mensajes proactivos (jobs, crons) a este phone.
+
+    Los teléfonos de la blocklist son de staff/admin que nunca tienen ventana
+    24h abierta desde el bot — enviarles texto libre genera error 131047 en bucle.
+
+    Uso: llamar antes de cualquier send en jobs/crons (send_whatsapp_proactive
+    lo hace automáticamente). Para respuestas inbound (dentro de ventana 24h)
+    usar send_whatsapp directamente.
+    """
+    if not _PROACTIVE_BLOCKLIST:
+        _refresh_proactive_blocklist()
+    phone_norm = _normalize_phone_for_block(phone)
+    return phone_norm in {_normalize_phone_for_block(p) for p in _PROACTIVE_BLOCKLIST}
+
+
+async def send_whatsapp_proactive(to: str, body, **kwargs) -> str | None:
+    """Wrapper de send_whatsapp para mensajes proactivos (jobs, crons, fidelizacion).
+
+    Verifica is_proactive_blocked antes de enviar. Si el phone está en la blocklist
+    (ADMIN_ALERT_PHONE o STAFF_PHONES), logea proactive_skip_blocklist y retorna sin enviar.
+
+    Para respuestas a mensajes inbound del paciente (ventana 24h garantizada),
+    usar send_whatsapp directamente.
+    """
+    if is_proactive_blocked(to):
+        log.info(
+            "proactive_skip_blocklist: phone=%s body_snippet=%r",
+            to, (str(body) if not isinstance(body, dict) else "[interactive]")[:80],
+        )
+        try:
+            from session import log_event as _le
+            _le(to, "proactive_skip_blocklist", {
+                "body_snippet": (str(body) if not isinstance(body, dict) else "[interactive]")[:120],
+            })
+        except Exception:
+            pass
+        return None
+    return await send_whatsapp(to, body)
 
 
 async def send_whatsapp(to: str, body) -> str | None:

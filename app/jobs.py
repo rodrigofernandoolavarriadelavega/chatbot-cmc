@@ -5,7 +5,7 @@ import httpx
 
 from config import MEDILINK_BASE_URL, MEDILINK_TOKEN, ADMIN_ALERT_PHONE, USE_TEMPLATES
 from messaging import (send_whatsapp, send_whatsapp_interactive, send_instagram, send_messenger,
-                       send_whatsapp_template)
+                       send_whatsapp_template, send_whatsapp_proactive, is_proactive_blocked)
 from reminders import enviar_recordatorios, enviar_recordatorios_2h, enviar_recordatorios_48h
 from fidelizacion import (enviar_seguimiento_postconsulta,
                           enviar_seguimiento_postconsulta_dia_anterior,
@@ -132,7 +132,7 @@ async def _enviar_reenganche():
         except Exception:
             if canal == "wa":
                 try:
-                    await send_whatsapp(phone, msg + "\n\nEscribe *menu* para continuar.")
+                    await send_whatsapp_proactive(phone, msg + "\n\nEscribe *menu* para continuar.")
                     log_message(phone, "out", msg, state)
                 except Exception:
                     log.exception("Reenganche fallback wa falló phone=%s", phone)
@@ -236,16 +236,16 @@ async def _sync_citas_hoy():
 _tpl = send_whatsapp_template  # alias corto para los wrappers
 
 async def _job_recordatorios():
-    await enviar_recordatorios(send_whatsapp, send_whatsapp_interactive, send_template_fn=_tpl)
+    await enviar_recordatorios(send_whatsapp_proactive, send_whatsapp_interactive, send_template_fn=_tpl)
 
 async def _job_recordatorios_2h():
-    await enviar_recordatorios_2h(send_whatsapp, send_template_fn=_tpl)
+    await enviar_recordatorios_2h(send_whatsapp_proactive, send_template_fn=_tpl)
 
 async def _job_postconsulta():
     try:
         await enviar_seguimiento_postconsulta(
-            send_whatsapp, send_template_fn=_tpl,
-            send_text_fn=send_whatsapp, buscar_paciente_fn=buscar_paciente,
+            send_whatsapp_proactive, send_template_fn=_tpl,
+            send_text_fn=send_whatsapp_proactive, buscar_paciente_fn=buscar_paciente,
         )
     except Exception as e:
         log.error("_job_postconsulta falló (BUG-07): %s", e)
@@ -256,8 +256,8 @@ async def _job_postconsulta_morning():
     Corre 09:00 CLT. Complementa _job_postconsulta de las 22:00."""
     try:
         await enviar_seguimiento_postconsulta_dia_anterior(
-            send_whatsapp, send_template_fn=_tpl,
-            send_text_fn=send_whatsapp, buscar_paciente_fn=buscar_paciente,
+            send_whatsapp_proactive, send_template_fn=_tpl,
+            send_text_fn=send_whatsapp_proactive, buscar_paciente_fn=buscar_paciente,
         )
     except Exception as e:
         log.exception("Postconsulta morning falló: %s", e)
@@ -627,55 +627,55 @@ async def _job_bi_sync_diario():
 
 async def _job_reactivacion():
     try:
-        await enviar_reactivacion_pacientes(send_whatsapp, send_template_fn=_tpl)
+        await enviar_reactivacion_pacientes(send_whatsapp_proactive, send_template_fn=_tpl)
     except Exception as e:
         log.error("_job_reactivacion falló (BUG-07): %s", e)
 
 async def _job_adherencia_kine():
     try:
-        await enviar_adherencia_kine(send_whatsapp, send_template_fn=_tpl)
+        await enviar_adherencia_kine(send_whatsapp_proactive, send_template_fn=_tpl)
     except Exception as e:
         log.error("_job_adherencia_kine falló (BUG-07): %s", e)
 
 async def _job_control_especialidad():
     try:
-        await enviar_recordatorio_control(send_whatsapp, send_template_fn=_tpl)
+        await enviar_recordatorio_control(send_whatsapp_proactive, send_template_fn=_tpl)
     except Exception as e:
         log.error("_job_control_especialidad falló (BUG-07): %s", e)
 
 async def _job_crosssell_kine():
     try:
-        await enviar_crosssell_kine(send_whatsapp, send_template_fn=_tpl)
+        await enviar_crosssell_kine(send_whatsapp_proactive, send_template_fn=_tpl)
     except Exception as e:
         log.error("_job_crosssell_kine falló (BUG-07): %s", e)
 
 async def _job_crosssell_orl_fono():
     try:
-        await enviar_crosssell_orl_fono(send_whatsapp, send_template_fn=_tpl)
+        await enviar_crosssell_orl_fono(send_whatsapp_proactive, send_template_fn=_tpl)
     except Exception as e:
         log.error("_job_crosssell_orl_fono falló (BUG-07): %s", e)
 
 async def _job_crosssell_odonto_estetica():
     try:
-        await enviar_crosssell_odonto_estetica(send_whatsapp, send_template_fn=_tpl)
+        await enviar_crosssell_odonto_estetica(send_whatsapp_proactive, send_template_fn=_tpl)
     except Exception as e:
         log.error("_job_crosssell_odonto_estetica falló (BUG-07): %s", e)
 
 async def _job_crosssell_mg_chequeo():
     try:
-        await enviar_crosssell_mg_chequeo(send_whatsapp, send_template_fn=_tpl)
+        await enviar_crosssell_mg_chequeo(send_whatsapp_proactive, send_template_fn=_tpl)
     except Exception as e:
         log.error("_job_crosssell_mg_chequeo falló (BUG-07): %s", e)
 
 async def _job_cumpleanos():
     try:
-        await enviar_cumpleanos(send_whatsapp)
+        await enviar_cumpleanos(send_whatsapp_proactive)
     except Exception as e:
         log.error("_job_cumpleanos falló (BUG-07): %s", e)
 
 async def _job_winback():
     try:
-        await enviar_winback(send_whatsapp)
+        await enviar_winback(send_whatsapp_proactive)
     except Exception as e:
         log.error("_job_winback falló (BUG-07): %s", e)
 
@@ -821,6 +821,12 @@ async def _job_takeover_pendiente_alert():
 
     if not ADMIN_ALERT_PHONE:
         log.warning("takeover_pendiente_alert: %d sesiones varadas pero ADMIN_ALERT_PHONE no configurado", len(alertas))
+        return
+
+    # Guard ventana 24h: si el Dr. no escribió al bot recientemente, la ventana
+    # está cerrada y texto libre genera 131047 en bucle (causa confirmada 2026-05-16).
+    if not _admin_window_open():
+        log.info("takeover_pendiente_alert: ventana 24h cerrada para ADMIN_ALERT_PHONE — skip envío (%d sesiones varadas)", len(alertas))
         return
 
     # Enviar alerta consolidada al admin (máx 5 casos en el mensaje)
@@ -1441,7 +1447,7 @@ async def _job_horas_vacias_dia_siguiente():
             )
 
             try:
-                await send_whatsapp(phone, texto)
+                await send_whatsapp_proactive(phone, texto)
                 log_message(phone, "out", texto, "IDLE")
                 # Usar el primer prof con slots como referencia para el registro
                 pid_ref = next(iter(slots_por_prof))
@@ -1505,7 +1511,7 @@ async def _job_telemedicina_recordatorios():
         try:
             canal = _canal_de_phone(phone)
             if canal == "wa":
-                await send_whatsapp(phone, msg)
+                await send_whatsapp_proactive(phone, msg)
                 log_message(phone, "out", msg, "IDLE")
             elif canal == "ig":
                 await send_instagram(phone, msg)
@@ -1770,7 +1776,7 @@ async def _job_recordatorios_48h():
     Solo envía a pacientes con historial de no-show o cita en peak 16-19h.
     """
     try:
-        await enviar_recordatorios_48h(send_whatsapp, send_interactive_fn=send_whatsapp_interactive)
+        await enviar_recordatorios_48h(send_whatsapp_proactive, send_interactive_fn=send_whatsapp_interactive)
     except Exception as e:
         log.error("_job_recordatorios_48h falló: %s", e)
 
@@ -1780,7 +1786,7 @@ async def _job_crosssell_dx():
     CROSS_SELL_ACTIVE=false hasta piloto N=5 confirmado por Rodrigo.
     """
     try:
-        await enviar_crosssell_dx(send_whatsapp, send_template_fn=_tpl)
+        await enviar_crosssell_dx(send_whatsapp_proactive, send_template_fn=_tpl)
     except Exception as e:
         log.error("_job_crosssell_dx falló: %s", e)
 

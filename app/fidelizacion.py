@@ -861,64 +861,86 @@ def _calcular_edad(fecha_nacimiento: str) -> int | None:
         return None
 
 
+def _tip_preventivo_por_edad(edad: int | None) -> str:
+    """Retorna tip preventivo según edad para el template cumpleanos {{2}}."""
+    if not edad:
+        return "Recuerda hacerte un control preventivo anual."
+    if edad >= 60:
+        return (
+            "A partir de los 60 años es fundamental el EMPAM anual: examen de medicina "
+            "preventiva que incluye presión, glicemia, colesterol y evaluación funcional."
+        )
+    if edad >= 50:
+        return (
+            "A partir de los 50 conviene un control con exámenes generales: "
+            "sangre, glicemia y colesterol al menos una vez al año."
+        )
+    if edad >= 40:
+        return (
+            "A los 40 es buen momento para un control preventivo con exámenes generales. "
+            "Detectar alteraciones a tiempo hace toda la diferencia."
+        )
+    if edad >= 35:
+        return "Un control médico anual sigue siendo la mejor inversión en tu salud."
+    return "Un chequeo médico preventivo es siempre una buena idea, sin importar la edad."
+
+
 async def enviar_cumpleanos(send_fn):
     """
     Ejecutar diariamente a las 08:00 AM CLT.
     Envía saludo de cumpleaños a pacientes cuya fecha coincide con hoy.
+
+    Usa el template 'cumpleanos' si está APPROVED en Meta.
+    Si no está aprobado, NO envía fallback a texto libre: el cumpleaños es marketing
+    y requiere template fuera de ventana 24h.
     """
+    from winback import is_template_approved as _is_tpl_approved
+
     cumpleaneros = get_cumpleanos_hoy()
 
     if not cumpleaneros:
         log.info("Cumpleaños: nadie cumple años hoy")
         return
 
-    log.info("Cumpleaños: enviando %d saludo(s)", len(cumpleaneros))
+    # Verificar estado del template una sola vez por ejecución del cron
+    template_ok = await _is_tpl_approved("cumpleanos")
+    log.info("Cumpleaños: %d pacientes · template_aprobado=%s", len(cumpleaneros), template_ok)
+
     for p in cumpleaneros:
         phone = p.get("phone", "")
+        if not phone:
+            continue
         if not puede_enviar_campana(phone, "cumpleanos", dias_cooldown=330):
             continue
-        # Marketing → requiere consent + ventana 24h (sin template aprobado)
         if not has_privacy_consent(phone):
             log_event(phone, "template_skip_no_consent", {"template": "cumpleanos"})
             continue
-        if not is_window_open(phone):
-            log_event(phone, "template_skip_no_aprobado",
-                      {"template": "cumpleanos",
-                       "motivo": "sin_template_y_ventana_cerrada"})
-            log.debug("Cumpleaños skip ventana cerrada → %s", phone)
-            continue
+
         try:
-            nombre = _nombre_corto(p.get("nombre"))
-            saludo = f"*{nombre}*" if nombre else ""
+            nombre = _nombre_corto(p.get("nombre")) or "paciente"
             edad = _calcular_edad(p.get("fecha_nacimiento", ""))
-            edad_txt = f" ({edad} años)" if edad else ""
+            tip = _tip_preventivo_por_edad(edad)
 
-            # Tip preventivo según edad
-            tip = ""
-            if edad and edad >= 50:
-                tip = "\n\nA tu edad conviene un control anual con solicitud de exámenes generales (sangre, glicemia, colesterol)."
-            elif edad and edad >= 40:
-                tip = "\n\nEs un buen momento para agendar un control con solicitud de exámenes generales."
-
-            msg = (
-                f"¡Feliz cumpleaños{(", " + saludo) if saludo else ""}! 🎂🎉{edad_txt}\n\n"
-                "Todo el equipo del *Centro Médico Carampangue* te desea un excelente día.\n\n"
-                f"Tu salud es lo más importante.{tip}\n\n"
-                "¿Aprovechas de agendar un control médico?"
-            )
-            try:
-                from messaging import send_whatsapp_interactive
-                from flows import _btn_msg as _btn_msg_f
-                _bmf = _btn_msg_f(msg, [
-                    {"id": "reac_si", "title": "📅 Sí, agendar"},
-                    {"id": "reac_luego", "title": "Más adelante"},
-                ])
-                await send_whatsapp_interactive(p["phone"], _bmf["interactive"])
-            except Exception:
-                await send_fn(p["phone"], msg + "\n\n_Escribe *menu* para agendar._")
-            save_fidelizacion_msg(p["phone"], "cumpleanos")  # BUG-01
-            log_message(p["phone"], "out", msg, "IDLE")
-            log.info("Cumpleaños enviado → %s (%s)%s", p["phone"], nombre, edad_txt)
+            if template_ok:
+                # Template aprobado: enviar fuera de ventana 24h (marketing APPROVED)
+                from messaging import send_whatsapp_template
+                await send_whatsapp_template(
+                    phone,
+                    "cumpleanos",
+                    body_params=[nombre, tip],
+                )
+                save_fidelizacion_msg(phone, "cumpleanos")
+                log_message(phone, "out", f"[template: cumpleanos / {nombre}]", "IDLE")
+                log_event(phone, "template_enviado", {"template": "cumpleanos"})
+                log.info("Cumpleaños (template) enviado → %s (%s)", phone, nombre)
+            else:
+                # Template pendiente de aprobación: NO fallback a texto libre.
+                # El cumpleaños es marketing → requiere template aprobado.
+                log_event(phone, "template_skip_no_aprobado", {
+                    "template": "cumpleanos",
+                    "motivo": "pendiente_aprobacion_meta",
+                })
+                log.debug("Cumpleaños skip template no aprobado → %s", phone)
         except Exception as e:
             log.error("Error cumpleaños phone=%s: %s", p.get("phone"), e)
 
