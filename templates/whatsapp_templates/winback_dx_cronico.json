@@ -1,0 +1,31 @@
+{
+  "name": "winback_dx_cronico",
+  "language": "es_CL",
+  "category": "MARKETING",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}}, del Centro Médico Carampangue.\n\nCon {{2}}, dejar pasar más de 3 meses sin control aumenta el riesgo de complicaciones.\n\nTe recomendamos agendar tu chequeo esta semana. Tenemos horas disponibles.",
+      "example": {
+        "body_text": [["Laura", "diabetes"]]
+      }
+    },
+    {
+      "type": "FOOTER",
+      "text": "Responde BAJA para no recibir más mensajes"
+    },
+    {
+      "type": "BUTTONS",
+      "buttons": [
+        {
+          "type": "QUICK_REPLY",
+          "text": "Sí, agendar"
+        },
+        {
+          "type": "QUICK_REPLY",
+          "text": "Más adelante"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "name": "campana_salud_mental",
+  "language": "es_CL",
+  "category": "MARKETING",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}}, del Centro Médico Carampangue.\n\nOctubre es el Mes de la Salud Mental. Cuidar tu mente es tan importante como cuidar tu cuerpo.\n\nContamos con psicología para adultos e infantil. ¿Te agendamos?",
+      "example": {
+        "body_text": [["Sofía"]]
+      }
+    },
+    {
+      "type": "FOOTER",
+      "text": "Responde BAJA para no recibir más mensajes"
+    },
+    {
+      "type": "BUTTONS",
+      "buttons": [
+        {
+          "type": "QUICK_REPLY",
+          "text": "Sí, agendar"
+        },
+        {
+          "type": "QUICK_REPLY",
+          "text": "No por ahora"
+        }
+      ]
+    }
+  ]
+}

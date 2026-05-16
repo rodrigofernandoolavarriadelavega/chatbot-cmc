@@ -1,0 +1,31 @@
+{
+  "name": "cumpleanos",
+  "language": "es_CL",
+  "category": "MARKETING",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Feliz cumpleaños, {{1}}!\n\nTodo el equipo del Centro Médico Carampangue te desea un excelente día.\n\n{{2}}\n\n¿Aprovechas de agendar un control médico?",
+      "example": {
+        "body_text": [["Ana", "A tu edad conviene un control anual con exámenes generales (sangre, glicemia, colesterol)."]]
+      }
+    },
+    {
+      "type": "FOOTER",
+      "text": "Responde BAJA para no recibir más mensajes"
+    },
+    {
+      "type": "BUTTONS",
+      "buttons": [
+        {
+          "type": "QUICK_REPLY",
+          "text": "Sí, agendar"
+        },
+        {
+          "type": "QUICK_REPLY",
+          "text": "Más adelante"
+        }
+      ]
+    }
+  ]
+}

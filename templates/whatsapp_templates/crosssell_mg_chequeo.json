@@ -1,0 +1,31 @@
+{
+  "name": "crosssell_mg_chequeo",
+  "language": "es_CL",
+  "category": "MARKETING",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}}, del Centro Médico Carampangue.\n\nPasaron unos meses desde tu última consulta. Si quieres, puedes agendar un control médico con solicitud de exámenes generales: el doctor revisa cómo estás y te entrega la orden para sangre, glicemia y colesterol.\n\n¿Te reservamos hora?",
+      "example": {
+        "body_text": [["Juan"]]
+      }
+    },
+    {
+      "type": "FOOTER",
+      "text": "Responde BAJA para no recibir más mensajes"
+    },
+    {
+      "type": "BUTTONS",
+      "buttons": [
+        {
+          "type": "QUICK_REPLY",
+          "text": "Sí, agendar control"
+        },
+        {
+          "type": "QUICK_REPLY",
+          "text": "No por ahora"
+        }
+      ]
+    }
+  ]
+}

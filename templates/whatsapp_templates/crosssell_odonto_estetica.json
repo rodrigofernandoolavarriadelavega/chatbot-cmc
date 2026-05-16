@@ -1,0 +1,35 @@
+{
+  "name": "crosssell_odonto_estetica",
+  "language": "es_CL",
+  "category": "MARKETING",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}}, del Centro Médico Carampangue.\n\nVimos que has venido a tus controles dentales. En el CMC también hacemos estética facial: toxina botulínica, bioestimuladores, hilos y limpiezas faciales con la Dra. Valentina Fuentealba.\n\n¿Te interesa evaluar?",
+      "example": {
+        "body_text": [["María"]]
+      }
+    },
+    {
+      "type": "FOOTER",
+      "text": "Responde BAJA para no recibir más mensajes"
+    },
+    {
+      "type": "BUTTONS",
+      "buttons": [
+        {
+          "type": "QUICK_REPLY",
+          "text": "Ver horas"
+        },
+        {
+          "type": "QUICK_REPLY",
+          "text": "Más información"
+        },
+        {
+          "type": "QUICK_REPLY",
+          "text": "No por ahora"
+        }
+      ]
+    }
+  ]
+}

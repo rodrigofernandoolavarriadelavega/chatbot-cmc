@@ -1,0 +1,31 @@
+{
+  "name": "campana_invierno_influenza",
+  "language": "es_CL",
+  "category": "MARKETING",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}}, del Centro Médico Carampangue.\n\nSe acerca la temporada de invierno y es importante vacunarse contra la influenza.\n\nContamos con stock de vacunas. Escribe al bot o llámanos al (41) 296 5226 para agendar.",
+      "example": {
+        "body_text": [["Rosa"]]
+      }
+    },
+    {
+      "type": "FOOTER",
+      "text": "Responde BAJA para no recibir más mensajes"
+    },
+    {
+      "type": "BUTTONS",
+      "buttons": [
+        {
+          "type": "QUICK_REPLY",
+          "text": "Quiero agendar"
+        },
+        {
+          "type": "QUICK_REPLY",
+          "text": "Más información"
+        }
+      ]
+    }
+  ]
+}

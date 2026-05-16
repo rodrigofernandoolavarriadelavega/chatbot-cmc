@@ -1,0 +1,31 @@
+{
+  "name": "campana_diabetes_noviembre",
+  "language": "es_CL",
+  "category": "MARKETING",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}}, del Centro Médico Carampangue.\n\nNoviembre es el mes de la Diabetes. Si tienes diabetes o factores de riesgo, es importante hacer tu control periódico.\n\n¿Te agendamos una hora con nuestro equipo médico?",
+      "example": {
+        "body_text": [["Patricia"]]
+      }
+    },
+    {
+      "type": "FOOTER",
+      "text": "Responde BAJA para no recibir más mensajes"
+    },
+    {
+      "type": "BUTTONS",
+      "buttons": [
+        {
+          "type": "QUICK_REPLY",
+          "text": "Sí, agendar"
+        },
+        {
+          "type": "QUICK_REPLY",
+          "text": "No por ahora"
+        }
+      ]
+    }
+  ]
+}

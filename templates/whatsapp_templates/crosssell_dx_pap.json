@@ -1,0 +1,31 @@
+{
+  "name": "crosssell_dx_pap",
+  "language": "es_CL",
+  "category": "MARKETING",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}}, del Centro Médico Carampangue.\n\nRecuerda que el Papanicolaou es un examen preventivo recomendado anualmente para mujeres a partir de los 40 años.\n\n¿Te lo agendamos?",
+      "example": {
+        "body_text": [["Carmen"]]
+      }
+    },
+    {
+      "type": "FOOTER",
+      "text": "Responde BAJA para no recibir más mensajes"
+    },
+    {
+      "type": "BUTTONS",
+      "buttons": [
+        {
+          "type": "QUICK_REPLY",
+          "text": "Sí, agendar"
+        },
+        {
+          "type": "QUICK_REPLY",
+          "text": "No por ahora"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "name": "crosssell_dx_hta",
+  "language": "es_CL",
+  "category": "MARKETING",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}}, del Centro Médico Carampangue.\n\nPor tu historial de presión alta, un control con cardiología y apoyo de nutrición puede ayudarte a mantener niveles normales.\n\n¿Te agendamos una evaluación?",
+      "example": {
+        "body_text": [["Isabel"]]
+      }
+    },
+    {
+      "type": "FOOTER",
+      "text": "Responde BAJA para no recibir más mensajes"
+    },
+    {
+      "type": "BUTTONS",
+      "buttons": [
+        {
+          "type": "QUICK_REPLY",
+          "text": "Sí, agendar"
+        },
+        {
+          "type": "QUICK_REPLY",
+          "text": "No por ahora"
+        }
+      ]
+    }
+  ]
+}

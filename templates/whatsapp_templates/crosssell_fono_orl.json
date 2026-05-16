@@ -1,0 +1,31 @@
+{
+  "name": "crosssell_fono_orl",
+  "language": "es_CL",
+  "category": "MARKETING",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}}, del Centro Médico Carampangue.\n\nAdemás de la fonoaudiología, muchos pacientes se benefician de una evaluación con otorrino (oído, nariz, garganta) para un diagnóstico más completo.\n\n¿Te interesa agendar?",
+      "example": {
+        "body_text": [["Carlos"]]
+      }
+    },
+    {
+      "type": "FOOTER",
+      "text": "Responde BAJA para no recibir más mensajes"
+    },
+    {
+      "type": "BUTTONS",
+      "buttons": [
+        {
+          "type": "QUICK_REPLY",
+          "text": "Sí, agendar"
+        },
+        {
+          "type": "QUICK_REPLY",
+          "text": "No por ahora"
+        }
+      ]
+    }
+  ]
+}

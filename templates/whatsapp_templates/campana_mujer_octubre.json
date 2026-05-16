@@ -1,0 +1,31 @@
+{
+  "name": "campana_mujer_octubre",
+  "language": "es_CL",
+  "category": "MARKETING",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}}, del Centro Médico Carampangue.\n\nOctubre es el Mes de la Prevención del Cáncer de Mama. Si tienes más de 40 años, es importante la mamografía anual.\n\n¿Te agendamos tu control ginecológico?",
+      "example": {
+        "body_text": [["Claudia"]]
+      }
+    },
+    {
+      "type": "FOOTER",
+      "text": "Responde BAJA para no recibir más mensajes"
+    },
+    {
+      "type": "BUTTONS",
+      "buttons": [
+        {
+          "type": "QUICK_REPLY",
+          "text": "Sí, agendar"
+        },
+        {
+          "type": "QUICK_REPLY",
+          "text": "No por ahora"
+        }
+      ]
+    }
+  ]
+}
