@@ -24,7 +24,8 @@ from session import (get_citas_para_seguimiento, get_pacientes_inactivos,
                      get_crosssell_orl_fono_candidatos,
                      get_crosssell_odonto_estetica_candidatos,
                      get_crosssell_mg_chequeo_candidatos,
-                     get_crosssell_dx_candidatos)
+                     get_crosssell_dx_candidatos,
+                     has_privacy_consent, is_window_open, log_event)
 from autocuidado import get_tips_autocuidado
 
 log = logging.getLogger("bot.fidelizacion")
@@ -184,11 +185,25 @@ async def enviar_seguimiento_postconsulta_dia_anterior(send_fn, send_template_fn
                 log.info("Seguimiento tardío combinado → %s (%d citas)", _cita_ref["phone"], len(grupo_m))
                 continue
             cita = grupo_m[0]
-            msg = _msg_postconsulta(cita)
             save_fidelizacion_msg(cita["phone"], "postconsulta", str(cita.get("id_cita", "")))
-            await send_fn(cita["phone"], msg)
-            body = msg.get("interactive", {}).get("body", {}).get("text", "[Post-consulta]")
-            log_message(cita["phone"], "out", body, "IDLE")
+            if USE_TEMPLATES and send_template_fn:
+                nombre_pc = _nombre_corto(cita.get("nombre")) or "paciente"
+                await send_template_fn(
+                    cita["phone"],
+                    "postconsulta_seguimiento",
+                    body_params=[nombre_pc, cita.get("especialidad", ""),
+                                 cita.get("profesional", "")],
+                )
+                log_message(cita["phone"], "out",
+                            "[template: postconsulta_seguimiento]", "IDLE")
+                log_event(cita["phone"], "template_enviado",
+                          {"template": "postconsulta_seguimiento",
+                           "id_cita": cita.get("id_cita")})
+            else:
+                msg = _msg_postconsulta(cita)
+                await send_fn(cita["phone"], msg)
+                body = msg.get("interactive", {}).get("body", {}).get("text", "[Post-consulta]")
+                log_message(cita["phone"], "out", body, "IDLE")
             log.info("Seguimiento tardío enviado → %s (%s, hora %s)",
                      cita["phone"], cita.get("especialidad"), cita.get("hora"))
         except Exception as e:
@@ -278,15 +293,33 @@ async def enviar_seguimiento_postconsulta(send_fn, send_template_fn=None,
                 continue
             # Cita única — flujo normal
             cita = grupo[0]
-            msg = _msg_postconsulta(cita)
             # BUG-01: guardar ANTES de enviar para que si el send falla o la
             # tarea CAPI lanza excepción, el registro ya exista y el job no
             # reintente al día siguiente. INSERT OR IGNORE en save_fidelizacion_msg
             # garantiza idempotencia si por algún motivo se llama dos veces.
             save_fidelizacion_msg(cita["phone"], "postconsulta", str(cita.get("id_cita", "")))
-            await send_fn(cita["phone"], msg)
-            body = msg.get("interactive", {}).get("body", {}).get("text", "[Post-consulta]")
-            log_message(cita["phone"], "out", body, "IDLE")
+            if USE_TEMPLATES and send_template_fn:
+                # postconsulta_seguimiento es UTILITY — no requiere consent.
+                # Se envía el mismo día de la consulta (ventana 24h abierta por
+                # definición), pero usamos template por consistencia y robustez.
+                # body_params: [nombre, especialidad, profesional]
+                nombre_pc = _nombre_corto(cita.get("nombre")) or "paciente"
+                await send_template_fn(
+                    cita["phone"],
+                    "postconsulta_seguimiento",
+                    body_params=[nombre_pc, cita.get("especialidad", ""),
+                                 cita.get("profesional", "")],
+                )
+                log_message(cita["phone"], "out",
+                            "[template: postconsulta_seguimiento]", "IDLE")
+                log_event(cita["phone"], "template_enviado",
+                          {"template": "postconsulta_seguimiento",
+                           "id_cita": cita.get("id_cita")})
+            else:
+                msg = _msg_postconsulta(cita)
+                await send_fn(cita["phone"], msg)
+                body = msg.get("interactive", {}).get("body", {}).get("text", "[Post-consulta]")
+                log_message(cita["phone"], "out", body, "IDLE")
 
             # Tips de autocuidado personalizados (segundo mensaje)
             if send_text_fn:
@@ -635,25 +668,41 @@ def _msg_crosssell_orl_fono(p: dict) -> dict:
 
 
 async def enviar_crosssell_orl_fono(send_fn, send_template_fn=None):
-    """Cross-sell bidireccional ORL ↔ Fono. Cron semanal (jueves 11:00)."""
+    """Cross-sell bidireccional ORL ↔ Fono. Cron semanal (jueves 11:00).
+
+    Sin template aprobado → solo envía si la ventana 24h está abierta y hay
+    consent de marketing. Si la ventana está cerrada, loguea skip y no envía
+    (evita 131047).
+    """
     candidatos = get_crosssell_orl_fono_candidatos()
     if not candidatos:
         log.info("Cross-sell ORL↔Fono: sin candidatos")
         return
     log.info("Cross-sell ORL↔Fono: enviando %d mensaje(s)", len(candidatos))
     for p in candidatos:
-        if not puede_enviar_campana(p.get("phone",""), "crosssell_orl_fono", dias_cooldown=90):
+        phone = p.get("phone", "")
+        if not puede_enviar_campana(phone, "crosssell_orl_fono", dias_cooldown=90):
+            continue
+        # Marketing → requiere consent + ventana 24h (sin template aprobado)
+        if not has_privacy_consent(phone):
+            log_event(phone, "template_skip_no_consent", {"template": "crosssell_orl_fono"})
+            continue
+        if not is_window_open(phone):
+            log_event(phone, "template_skip_no_aprobado",
+                      {"template": "crosssell_orl_fono",
+                       "motivo": "sin_template_y_ventana_cerrada"})
+            log.debug("Cross-sell ORL↔Fono skip ventana cerrada → %s", phone)
             continue
         try:
             origen = (p.get("origen") or "").lower()
             tipo = "crosssell_orl_fono" if "otorrin" in origen else "crosssell_fono_orl"
-            save_fidelizacion_msg(p["phone"], tipo)  # BUG-01
+            save_fidelizacion_msg(phone, tipo)  # BUG-01
             msg = _msg_crosssell_orl_fono(p)
-            await send_fn(p["phone"], msg)
+            await send_fn(phone, msg)
             body = msg.get("interactive", {}).get("body", {}).get("text", "[Cross-sell ORL↔Fono]")
-            log_message(p["phone"], "out", body, "IDLE")
+            log_message(phone, "out", body, "IDLE")
         except Exception as e:
-            log.error("Error cross-sell ORL↔Fono phone=%s: %s", p.get("phone"), e)
+            log.error("Error cross-sell ORL↔Fono phone=%s: %s", phone, e)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -687,23 +736,37 @@ def _msg_crosssell_odonto_estetica(p: dict) -> dict:
 
 
 async def enviar_crosssell_odonto_estetica(send_fn, send_template_fn=None):
-    """Cross-sell odontología frecuente → estética facial. Cron bi-semanal."""
+    """Cross-sell odontología frecuente → estética facial. Cron bi-semanal.
+
+    Sin template aprobado → solo envía con ventana 24h abierta + consent.
+    """
     candidatos = get_crosssell_odonto_estetica_candidatos()
     if not candidatos:
         log.info("Cross-sell Odonto→Estética: sin candidatos")
         return
     log.info("Cross-sell Odonto→Estética: enviando %d mensaje(s)", len(candidatos))
     for p in candidatos:
-        if not puede_enviar_campana(p.get("phone",""), "crosssell_odonto_estetica", dias_cooldown=90):
+        phone = p.get("phone", "")
+        if not puede_enviar_campana(phone, "crosssell_odonto_estetica", dias_cooldown=90):
+            continue
+        if not has_privacy_consent(phone):
+            log_event(phone, "template_skip_no_consent",
+                      {"template": "crosssell_odonto_estetica"})
+            continue
+        if not is_window_open(phone):
+            log_event(phone, "template_skip_no_aprobado",
+                      {"template": "crosssell_odonto_estetica",
+                       "motivo": "sin_template_y_ventana_cerrada"})
+            log.debug("Cross-sell Odonto→Estética skip ventana cerrada → %s", phone)
             continue
         try:
-            save_fidelizacion_msg(p["phone"], "crosssell_odonto_estetica")  # BUG-01
+            save_fidelizacion_msg(phone, "crosssell_odonto_estetica")  # BUG-01
             msg = _msg_crosssell_odonto_estetica(p)
-            await send_fn(p["phone"], msg)
+            await send_fn(phone, msg)
             body = msg.get("interactive", {}).get("body", {}).get("text", "[Cross-sell Odonto→Estética]")
-            log_message(p["phone"], "out", body, "IDLE")
+            log_message(phone, "out", body, "IDLE")
         except Exception as e:
-            log.error("Error cross-sell odonto-estetica phone=%s: %s", p.get("phone"), e)
+            log.error("Error cross-sell odonto-estetica phone=%s: %s", phone, e)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -750,23 +813,37 @@ def _msg_crosssell_mg_chequeo(p: dict) -> dict:
 
 
 async def enviar_crosssell_mg_chequeo(send_fn, send_template_fn=None):
-    """Cross-sell paciente MG inactivo 30-180d → chequeo preventivo. Cron mensual."""
+    """Cross-sell paciente MG inactivo 30-180d → chequeo preventivo. Cron mensual.
+
+    Sin template aprobado → solo envía con ventana 24h abierta + consent.
+    """
     candidatos = get_crosssell_mg_chequeo_candidatos()
     if not candidatos:
         log.info("Cross-sell MG→Chequeo: sin candidatos")
         return
     log.info("Cross-sell MG→Chequeo: enviando %d mensaje(s)", len(candidatos))
     for p in candidatos:
-        if not puede_enviar_campana(p.get("phone",""), "crosssell_mg_chequeo", dias_cooldown=180):
+        phone = p.get("phone", "")
+        if not puede_enviar_campana(phone, "crosssell_mg_chequeo", dias_cooldown=180):
+            continue
+        if not has_privacy_consent(phone):
+            log_event(phone, "template_skip_no_consent",
+                      {"template": "crosssell_mg_chequeo"})
+            continue
+        if not is_window_open(phone):
+            log_event(phone, "template_skip_no_aprobado",
+                      {"template": "crosssell_mg_chequeo",
+                       "motivo": "sin_template_y_ventana_cerrada"})
+            log.debug("Cross-sell MG→Chequeo skip ventana cerrada → %s", phone)
             continue
         try:
-            save_fidelizacion_msg(p["phone"], "crosssell_mg_chequeo")  # BUG-01
+            save_fidelizacion_msg(phone, "crosssell_mg_chequeo")  # BUG-01
             msg = _msg_crosssell_mg_chequeo(p)
-            await send_fn(p["phone"], msg)
+            await send_fn(phone, msg)
             body = msg.get("interactive", {}).get("body", {}).get("text", "[Cross-sell MG→Chequeo]")
-            log_message(p["phone"], "out", body, "IDLE")
+            log_message(phone, "out", body, "IDLE")
         except Exception as e:
-            log.error("Error cross-sell mg-chequeo phone=%s: %s", p.get("phone"), e)
+            log.error("Error cross-sell mg-chequeo phone=%s: %s", phone, e)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -797,7 +874,18 @@ async def enviar_cumpleanos(send_fn):
 
     log.info("Cumpleaños: enviando %d saludo(s)", len(cumpleaneros))
     for p in cumpleaneros:
-        if not puede_enviar_campana(p.get("phone",""), "cumpleanos", dias_cooldown=330):
+        phone = p.get("phone", "")
+        if not puede_enviar_campana(phone, "cumpleanos", dias_cooldown=330):
+            continue
+        # Marketing → requiere consent + ventana 24h (sin template aprobado)
+        if not has_privacy_consent(phone):
+            log_event(phone, "template_skip_no_consent", {"template": "cumpleanos"})
+            continue
+        if not is_window_open(phone):
+            log_event(phone, "template_skip_no_aprobado",
+                      {"template": "cumpleanos",
+                       "motivo": "sin_template_y_ventana_cerrada"})
+            log.debug("Cumpleaños skip ventana cerrada → %s", phone)
             continue
         try:
             nombre = _nombre_corto(p.get("nombre"))
@@ -894,16 +982,28 @@ async def enviar_winback(send_fn):
 
     log.info("Win-back: enviando %d mensaje(s)", len(pacientes))
     for p in pacientes:
+        phone = p.get("phone", "")
+        # Marketing → requiere consent + ventana 24h (sin template propio en
+        # fidelizacion.py — el módulo winback.py usa templates BI separados)
+        if not has_privacy_consent(phone):
+            log_event(phone, "template_skip_no_consent", {"template": "winback_fidelizacion"})
+            continue
+        if not is_window_open(phone):
+            log_event(phone, "template_skip_no_aprobado",
+                      {"template": "winback_fidelizacion",
+                       "motivo": "sin_template_y_ventana_cerrada"})
+            log.debug("Win-back skip ventana cerrada → %s", phone)
+            continue
         try:
-            save_fidelizacion_msg(p["phone"], "winback")  # BUG-01
+            save_fidelizacion_msg(phone, "winback")  # BUG-01
             msg = _msg_winback(p)
-            await send_fn(p["phone"], msg)
+            await send_fn(phone, msg)
             body = msg.get("interactive", {}).get("body", {}).get("text", "[Win-back]")
-            log_message(p["phone"], "out", body, "IDLE")
+            log_message(phone, "out", body, "IDLE")
             log.info("Win-back enviado → %s (%s, última: %s)",
-                     p["phone"], p.get("especialidad"), p.get("ultima_cita"))
+                     phone, p.get("especialidad"), p.get("ultima_cita"))
         except Exception as e:
-            log.error("Error win-back phone=%s: %s", p.get("phone"), e)
+            log.error("Error win-back phone=%s: %s", phone, e)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1048,6 +1148,17 @@ async def enviar_campana_estacional(campana_id: str, pacientes: list[dict],
         if not puede_enviar_campana_estacional(phone, campana_id,
                                                dias_cooldown=30):
             continue
+        # Marketing → requiere consent + ventana 24h (campañas estacionales
+        # no tienen templates aprobados dedicados)
+        if not has_privacy_consent(phone):
+            log_event(phone, "template_skip_no_consent",
+                      {"template": f"campana_{campana_id}"})
+            continue
+        if not is_window_open(phone):
+            log_event(phone, "template_skip_no_aprobado",
+                      {"template": f"campana_{campana_id}",
+                       "motivo": "sin_template_y_ventana_cerrada"})
+            continue
         try:
             nombre = _nombre_corto(p.get("nombre"))
             saludo = f"Hola *{nombre}* \U0001f44b " if nombre else "Hola \U0001f44b "
@@ -1141,6 +1252,17 @@ async def enviar_crosssell_dx(send_fn, send_template_fn=None):
             if not puede_enviar_campana(phone, regla["campana_id"],
                                         dias_cooldown=regla["cooldown_dias"]):
                 continue
+            if not has_privacy_consent(phone):
+                log_event(phone, "template_skip_no_consent",
+                          {"template": regla["campana_id"]})
+                continue
+            if not is_window_open(phone):
+                log_event(phone, "template_skip_no_aprobado",
+                          {"template": regla["campana_id"],
+                           "motivo": "sin_template_y_ventana_cerrada"})
+                log.debug("crosssell_dx %s skip ventana cerrada → %s",
+                          regla["dx_tag"], phone)
+                continue
 
             nombre = _nombre_corto(p.get("nombre"))
             saludo = f"Hola *{nombre}* " if nombre else "Hola "
@@ -1181,6 +1303,15 @@ async def enviar_crosssell_dx(send_fn, send_template_fn=None):
         _phone_g = _row_g[0]
         tags_g = get_tags(_phone_g)
         if "marketing_opt_out" in tags_g:
+            continue
+        if not has_privacy_consent(_phone_g):
+            log_event(_phone_g, "template_skip_no_consent",
+                      {"template": "crosssell_gineco_pap"})
+            continue
+        if not is_window_open(_phone_g):
+            log_event(_phone_g, "template_skip_no_aprobado",
+                      {"template": "crosssell_gineco_pap",
+                       "motivo": "sin_template_y_ventana_cerrada"})
             continue
 
         profile_g = get_profile(_phone_g)

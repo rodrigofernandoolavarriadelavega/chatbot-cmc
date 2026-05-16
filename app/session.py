@@ -1868,6 +1868,19 @@ def get_last_inbound_ts(phone: str) -> datetime | None:
         return None
 
 
+def is_window_open(phone: str) -> bool:
+    """True si el último mensaje inbound del paciente fue hace <24h.
+
+    Usar antes de cualquier send_whatsapp proactivo desde job/cron cuando
+    no hay template aprobado disponible. Si la ventana está cerrada y no hay
+    template, NO enviar — evita error 131047 (re-engagement window).
+    """
+    last_inbound = get_last_inbound_ts(phone)
+    if not last_inbound:
+        return False
+    return (datetime.now(timezone.utc) - last_inbound).total_seconds() < 86400
+
+
 def get_messages(phone: str, limit: int = 300) -> list[dict]:
     """Retorna los últimos `limit` mensajes de un número, ordenados cronológicamente
     (más antiguo primero, más reciente al final — lo que espera el panel para mostrar
