@@ -318,21 +318,20 @@ async def _job_enrolar_atendidos_dia():
 
     log.info("enrolar_atendidos %s: %d atenciones encontradas", hoy, len(atendidos))
 
-    # 2) Asegurar tabla pacientes_sin_optin (para recepción)
+    # 2) Procesar en batches de 50 con commit intermedio para evitar
+    # "database is locked" bajo concurrencia (BUG-3 fix 2026-05-18).
+    # La transacción larga previa (1 with _conn() para todo el loop) bloqueaba
+    # writers del webhook por varios segundos durante el cron de las 21:30.
+    _BATCH_SIZE = 50
+    _MAX_RETRIES = 3
     nuevos_enrolados = 0
     ya_enrolados = 0
     sin_optin = 0
     sin_celular = 0
 
-    # heatmap_cache.db tiene rut + celular por id_paciente Medilink
-    try:
-        heat = sqlite3.connect("/opt/chatbot-cmc/data/heatmap_cache.db")
-    except Exception as e:
-        log.warning("enrolar_atendidos: no se pudo abrir heatmap_cache: %s", e)
-        heat = None
-
-    with _conn() as conn:
-        conn.execute("""
+    # DDL: asegurar tabla pacientes_sin_optin antes del loop (transacción corta)
+    with _conn() as _ddl_conn:
+        _ddl_conn.execute("""
             CREATE TABLE IF NOT EXISTS pacientes_sin_optin (
                 id_paciente_medilink INTEGER PRIMARY KEY,
                 rut                  TEXT,
@@ -345,90 +344,124 @@ async def _job_enrolar_atendidos_dia():
                 created_at           TEXT DEFAULT (datetime('now'))
             )
         """)
+        _ddl_conn.commit()
 
-        for cita in atendidos:
-            pid_med = cita.get("id_paciente")
-            cita_id = str(cita.get("id"))
-            if not pid_med or not cita_id:
-                continue
+    # heatmap_cache.db tiene rut + celular por id_paciente Medilink
+    try:
+        heat = sqlite3.connect("/opt/chatbot-cmc/data/heatmap_cache.db")
+    except Exception as e:
+        log.warning("enrolar_atendidos: no se pudo abrir heatmap_cache: %s", e)
+        heat = None
 
-            # Tier A: ¿ya está esta cita en citas_bot?
-            if conn.execute("SELECT 1 FROM citas_bot WHERE id_cita = ? LIMIT 1",
-                            (cita_id,)).fetchone():
-                ya_enrolados += 1
-                continue
+    # Iterar en batches, cada batch abre y cierra su propia conexión
+    for batch_start in range(0, len(atendidos), _BATCH_SIZE):
+        batch = atendidos[batch_start:batch_start + _BATCH_SIZE]
+        for _attempt in range(_MAX_RETRIES):
+            try:
+                with _conn() as conn:
+                    for cita in batch:
+                        pid_med = cita.get("id_paciente")
+                        cita_id = str(cita.get("id"))
+                        if not pid_med or not cita_id:
+                            continue
 
-            # Buscar phone conocido por id_paciente_medilink en citas_bot previas
-            row = conn.execute(
-                "SELECT phone FROM citas_bot "
-                "WHERE id_paciente_medilink = ? "
-                "ORDER BY created_at DESC LIMIT 1",
-                (pid_med,)).fetchone()
-            phone = row[0] if row else None
+                        # Tier A: ¿ya está esta cita en citas_bot?
+                        if conn.execute("SELECT 1 FROM citas_bot WHERE id_cita = ? LIMIT 1",
+                                        (cita_id,)).fetchone():
+                            ya_enrolados += 1
+                            continue
 
-            # Si no, buscar en heatmap_cache por RUT/celular y cruzar con contact_profiles
-            rut_clean = None
-            celular_med = None
-            if not phone and heat:
-                try:
-                    h = heat.execute(
-                        "SELECT rut, celular FROM pacientes_heatmap WHERE id = ?",
-                        (pid_med,)).fetchone()
-                except Exception:
-                    h = None
-                if h:
-                    rut_h, cel_h = h
-                    rut_clean = (rut_h or "").replace(".", "").replace("-", "").upper() or None
-                    celular_med = (cel_h or "").strip() or None
-                    if rut_clean:
-                        pr = conn.execute(
-                            "SELECT phone FROM contact_profiles "
-                            "WHERE REPLACE(REPLACE(UPPER(rut),'.',''),'-','') = ?",
-                            (rut_clean,)).fetchone()
-                        if pr:
-                            phone = pr[0]
+                        # Buscar phone conocido por id_paciente_medilink en citas_bot previas
+                        row = conn.execute(
+                            "SELECT phone FROM citas_bot "
+                            "WHERE id_paciente_medilink = ? "
+                            "ORDER BY created_at DESC LIMIT 1",
+                            (pid_med,)).fetchone()
+                        phone = row[0] if row else None
 
-            if phone:
-                # Tier B: tiene perfil bot → enrolar la cita
-                conn.execute("""
-                    INSERT INTO citas_bot
-                        (phone, id_cita, especialidad, profesional, fecha, hora,
-                         paciente_nombre, id_paciente_medilink, modalidad, created_at)
-                    VALUES (?, ?, '', ?, ?, ?, ?, ?, 'presencial_enrolado',
-                            datetime('now'))
-                """, (
-                    phone, cita_id,
-                    cita.get("nombre_profesional", ""),
-                    cita.get("fecha", hoy),
-                    cita.get("hora_inicio", ""),
-                    cita.get("nombre_paciente", ""),
-                    pid_med,
-                ))
-                nuevos_enrolados += 1
-                log_event(phone, "enrolar_postconsulta_offline",
-                          {"cita_id": cita_id, "fecha": hoy})
-            else:
-                # Tier C: sin opt-in WhatsApp → tabla pacientes_sin_optin
-                if celular_med:
-                    conn.execute("""
-                        INSERT OR REPLACE INTO pacientes_sin_optin
-                            (id_paciente_medilink, rut, nombre, celular,
-                             primera_atencion, ultima_atencion, profesional)
-                        VALUES (?, ?, ?, ?,
-                                COALESCE((SELECT primera_atencion FROM pacientes_sin_optin
-                                          WHERE id_paciente_medilink = ?), ?),
-                                ?, ?)
-                    """, (
-                        pid_med, rut_clean,
-                        cita.get("nombre_paciente", ""),
-                        celular_med,
-                        pid_med, hoy,
-                        hoy,
-                        cita.get("nombre_profesional", ""),
-                    ))
-                    sin_optin += 1
+                        # Si no, buscar en heatmap_cache por RUT/celular y cruzar con contact_profiles
+                        rut_clean = None
+                        celular_med = None
+                        if not phone and heat:
+                            try:
+                                h = heat.execute(
+                                    "SELECT rut, celular FROM pacientes_heatmap WHERE id = ?",
+                                    (pid_med,)).fetchone()
+                            except Exception:
+                                h = None
+                            if h:
+                                rut_h, cel_h = h
+                                rut_clean = (rut_h or "").replace(".", "").replace("-", "").upper() or None
+                                celular_med = (cel_h or "").strip() or None
+                                if rut_clean:
+                                    pr = conn.execute(
+                                        "SELECT phone FROM contact_profiles "
+                                        "WHERE REPLACE(REPLACE(UPPER(rut),'.',''),'-','') = ?",
+                                        (rut_clean,)).fetchone()
+                                    if pr:
+                                        phone = pr[0]
+
+                        if phone:
+                            # Tier B: tiene perfil bot → enrolar la cita
+                            conn.execute("""
+                                INSERT INTO citas_bot
+                                    (phone, id_cita, especialidad, profesional, fecha, hora,
+                                     paciente_nombre, id_paciente_medilink, modalidad, created_at)
+                                VALUES (?, ?, '', ?, ?, ?, ?, ?, 'presencial_enrolado',
+                                        datetime('now'))
+                            """, (
+                                phone, cita_id,
+                                cita.get("nombre_profesional", ""),
+                                cita.get("fecha", hoy),
+                                cita.get("hora_inicio", ""),
+                                cita.get("nombre_paciente", ""),
+                                pid_med,
+                            ))
+                            nuevos_enrolados += 1
+                            log_event(phone, "enrolar_postconsulta_offline",
+                                      {"cita_id": cita_id, "fecha": hoy})
+                        else:
+                            # Tier C: sin opt-in WhatsApp → tabla pacientes_sin_optin
+                            if celular_med:
+                                conn.execute("""
+                                    INSERT OR REPLACE INTO pacientes_sin_optin
+                                        (id_paciente_medilink, rut, nombre, celular,
+                                         primera_atencion, ultima_atencion, profesional)
+                                    VALUES (?, ?, ?, ?,
+                                            COALESCE((SELECT primera_atencion FROM pacientes_sin_optin
+                                                      WHERE id_paciente_medilink = ?), ?),
+                                            ?, ?)
+                                """, (
+                                    pid_med, rut_clean,
+                                    cita.get("nombre_paciente", ""),
+                                    celular_med,
+                                    pid_med, hoy,
+                                    hoy,
+                                    cita.get("nombre_profesional", ""),
+                                ))
+                                sin_optin += 1
+                            else:
+                                sin_celular += 1
+                    conn.commit()
+                break  # batch procesado OK
+            except Exception as _db_err:
+                _is_locked = "database is locked" in str(_db_err).lower()
+                if _is_locked and _attempt < _MAX_RETRIES - 1:
+                    import time as _time
+                    _backoff = 0.5 * (2 ** _attempt)
+                    log.warning(
+                        "enrolar_atendidos: database is locked (intento %d/%d), "
+                        "retry en %.1fs batch=%d-%d",
+                        _attempt + 1, _MAX_RETRIES, _backoff,
+                        batch_start, batch_start + len(batch),
+                    )
+                    _time.sleep(_backoff)
                 else:
-                    sin_celular += 1
+                    log.error(
+                        "enrolar_atendidos: error en batch %d-%d (intento %d): %s",
+                        batch_start, batch_start + len(batch), _attempt + 1, _db_err,
+                    )
+                    break
 
     if heat:
         heat.close()

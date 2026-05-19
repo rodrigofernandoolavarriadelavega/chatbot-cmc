@@ -410,9 +410,12 @@ def _phones_con_cita_futura() -> set[str]:
             conn = sqlite3.connect(str(db_path), timeout=5)
 
         try:
+            # BUG-2 fix 2026-05-18: citas_bot no tiene columna 'estado'.
+            # cancel_detected_at IS NULL excluye citas detectadas como anuladas
+            # (la única señal de cancelación persistida en el schema real).
             rows = conn.execute(
                 "SELECT DISTINCT phone FROM citas_bot "
-                "WHERE fecha >= ? AND estado NOT IN ('cancelada', 'anulada')",
+                "WHERE fecha >= ? AND cancel_detected_at IS NULL",
                 (hoy,)
             ).fetchall()
             return {r[0] for r in rows}

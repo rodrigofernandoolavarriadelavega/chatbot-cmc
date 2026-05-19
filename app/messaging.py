@@ -217,7 +217,12 @@ def is_proactive_blocked(phone: str) -> bool:
     if not _PROACTIVE_BLOCKLIST:
         _refresh_proactive_blocklist()
     phone_norm = _normalize_phone_for_block(phone)
-    return phone_norm in {_normalize_phone_for_block(p) for p in _PROACTIVE_BLOCKLIST}
+    blocklist_norm = {_normalize_phone_for_block(p) for p in _PROACTIVE_BLOCKLIST}
+    result = phone_norm in blocklist_norm
+    if result:
+        log.info("PROACTIVE_BLOCK matched: phone=%s norm=%s blocklist=%s",
+                 phone, phone_norm, blocklist_norm)
+    return result
 
 
 async def send_whatsapp_proactive(to: str, body, **kwargs) -> str | None:
@@ -255,7 +260,37 @@ async def send_whatsapp(to: str, body) -> str | None:
     interactive y los pasan directo a send_fn=send_whatsapp. Antes: 6+ pacientes
     fallidos cada vez que corría el cron.
 
-    Si el mismo body fue enviado a `to` en los últimos 2 min, skip (dedupe)."""
+    Si el mismo body fue enviado a `to` en los últimos 2 min, skip (dedupe).
+
+    Guard defensivo: si el destinatario está en la blocklist proactiva (ADMIN_ALERT_PHONE /
+    STAFF_PHONES) Y el caller es un job/cron (nombre de función empieza con _job_ o es un
+    helper de jobs), bloquear para evitar loop Meta 131047. Bug confirmado 2026-05-18:
+    _job_takeover_pendiente_alert, _job_admin_status_report y _job_medilink_watchdog_inner
+    enviaban a ADMIN_ALERT_PHONE con send_whatsapp directo saltándose send_whatsapp_proactive.
+    """
+    import inspect as _inspect
+    _caller_frames = _inspect.stack()
+    _caller_names = {f.function for f in _caller_frames[1:6]}
+    _JOB_PREFIXES = ("_job_", "enviar_resumen", "enviar_reporte", "_job_medilink",
+                     "enviar_reactivacion", "enviar_seguimiento", "enviar_adherencia",
+                     "enviar_recordatorio", "enviar_crosssell", "enviar_winback",
+                     "enviar_cumpleanos", "_admin_status")
+    _is_from_job = any(
+        any(n.startswith(p) for p in _JOB_PREFIXES)
+        for n in _caller_names
+    )
+    if _is_from_job and is_proactive_blocked(to):
+        log.warning(
+            "PROACTIVE_GUARD_LATE: send_whatsapp bloqueado para phone=%s callers=%s "
+            "(debería usar send_whatsapp_proactive)",
+            to, list(_caller_names)[:5],
+        )
+        try:
+            from session import log_event as _le
+            _le(to, "proactive_skip_blocklist_late", {"callers": list(_caller_names)[:5]})
+        except Exception:
+            pass
+        return None
     if isinstance(body, dict):
         if body.get("type") == "interactive" and "interactive" in body:
             return await send_whatsapp_interactive(to, body["interactive"])
