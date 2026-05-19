@@ -185,11 +185,17 @@ section p.subtitle{font-size:15px;color:var(--text-mute);max-width:680px;margin-
 .card-cta a{align-self:flex-start;font-size:13px;font-weight:600;color:var(--cmc-blue);display:inline-flex;align-items:center;gap:6px}
 .card-cta a:hover{color:var(--cmc-navy)}
 
-/* Especialidades grid */
-.esp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:24px}
-.esp-pill{background:#fff;border:1px solid var(--border);border-radius:14px;padding:16px;text-align:center;font-size:13px;font-weight:600;color:var(--cmc-navy);transition:transform .15s,border-color .15s}
-.esp-pill:hover{transform:translateY(-1px);border-color:var(--cmc-aqua)}
-.esp-pill .ico{font-size:22px;display:block;margin-bottom:6px;color:var(--cmc-aqua-dark)}
+/* Especialidades grid con precios */
+.esp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:24px}
+.esp-card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:22px;box-shadow:var(--shadow-sm);transition:transform .15s,box-shadow .15s,border-color .15s;display:flex;flex-direction:column}
+.esp-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);border-color:var(--cmc-aqua)}
+.esp-card .ico{width:42px;height:42px;border-radius:10px;background:var(--cmc-aqua-soft);color:var(--cmc-aqua-dark);display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:14px}
+.esp-card h4{font-size:15.5px;font-weight:700;color:var(--cmc-navy);margin-bottom:6px}
+.esp-card .desc{font-size:12.5px;color:var(--text-mute);margin-bottom:14px;flex-grow:1;line-height:1.5}
+.esp-card .price{font-size:13px;color:var(--cmc-navy);font-weight:600;border-top:1px dashed var(--border);padding-top:12px;display:flex;flex-direction:column;gap:3px}
+.esp-card .price .fonasa{color:var(--green-dark)}
+.esp-card .price .particular{color:var(--cmc-navy)}
+.esp-card .price small{color:var(--text-mute);font-weight:500;font-size:11px}
 
 /* Distance block */
 .distance-block{background:#fff;border-radius:18px;padding:36px;box-shadow:var(--shadow-sm);border:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:center}
@@ -325,22 +331,150 @@ footer a{color:var(--cmc-aqua)}
     <h2>19 especialidades en una visita</h2>
     <p class="subtitle">Pacientes desde {{COMUNA_NAME}} suelen aprovechar la visita para resolver varios temas. Estas son las especialidades disponibles bajo un mismo techo:</p>
     <div class="esp-grid">
-      <div class="esp-pill"><span class="ico">🩺</span>Medicina General</div>
-      <div class="esp-pill"><span class="ico">💪</span>Kinesiología</div>
-      <div class="esp-pill"><span class="ico">👶</span>Pediatría</div>
-      <div class="esp-pill"><span class="ico">🌸</span>Ginecología</div>
-      <div class="esp-pill"><span class="ico">👂</span>Otorrino</div>
-      <div class="esp-pill"><span class="ico">❤️</span>Cardiología</div>
-      <div class="esp-pill"><span class="ico">🦴</span>Traumatología</div>
-      <div class="esp-pill"><span class="ico">🦷</span>Odontología</div>
-      <div class="esp-pill"><span class="ico">😬</span>Ortodoncia</div>
-      <div class="esp-pill"><span class="ico">🦷</span>Endodoncia</div>
-      <div class="esp-pill"><span class="ico">🧠</span>Psicología</div>
-      <div class="esp-pill"><span class="ico">🥗</span>Nutrición</div>
-      <div class="esp-pill"><span class="ico">🗣️</span>Fonoaudiología</div>
-      <div class="esp-pill"><span class="ico">🤰</span>Matrona</div>
-      <div class="esp-pill"><span class="ico">🦶</span>Podología</div>
-      <div class="esp-pill"><span class="ico">📡</span>Ecografía</div>
+      <div class="esp-card">
+        <div class="ico">🩺</div>
+        <h4>Medicina General</h4>
+        <p class="desc">Diagnóstico, tratamiento, recetas, licencias médicas y derivaciones a especialista.</p>
+        <div class="price">
+          <span class="fonasa">$7.880 <small>Bono Fonasa MLE</small></span>
+          <span class="particular">$25.000 <small>particular</small></span>
+        </div>
+      </div>
+      <div class="esp-card">
+        <div class="ico">👨‍⚕️</div>
+        <h4>Medicina Familiar</h4>
+        <p class="desc">Médico de cabecera con Dr. Márquez: enfoque integral del paciente y su familia, crónicos, preventivo.</p>
+        <div class="price">
+          <span class="fonasa">$7.880 <small>Bono Fonasa MLE</small></span>
+          <span class="particular">$30.000 <small>particular</small></span>
+        </div>
+      </div>
+      <div class="esp-card">
+        <div class="ico">💪</div>
+        <h4>Kinesiología</h4>
+        <p class="desc">Rehabilitación traumatológica, dolor lumbar, post-operatorio, kine respiratoria y a domicilio.</p>
+        <div class="price">
+          <span class="fonasa">$8.350 <small>Bono Fonasa MLE</small></span>
+          <span class="particular">$20.000 <small>particular</small></span>
+        </div>
+      </div>
+      <div class="esp-card">
+        <div class="ico">🌸</div>
+        <h4>Ginecología</h4>
+        <p class="desc">Control ginecológico, PAP, planificación familiar, climaterio, salud reproductiva.</p>
+        <div class="price">
+          <span class="particular">$30.000 <small>particular · no acepta Fonasa</small></span>
+        </div>
+      </div>
+      <div class="esp-card">
+        <div class="ico">🤰</div>
+        <h4>Matrona</h4>
+        <p class="desc">Control prenatal, PAP, planificación familiar, anticoncepción, salud sexual.</p>
+        <div class="price">
+          <span class="fonasa">$16.000 <small>tarifa preferencial Fonasa</small></span>
+          <span class="particular">$30.000 <small>particular</small></span>
+        </div>
+      </div>
+      <div class="esp-card">
+        <div class="ico">👂</div>
+        <h4>Otorrinolaringología</h4>
+        <p class="desc">Dr. Manuel Borrego. Lavado de oídos, vértigo, problemas de voz, sinusitis.</p>
+        <div class="price">
+          <span class="particular">$35.000 <small>particular · no acepta Fonasa</small></span>
+        </div>
+      </div>
+      <div class="esp-card">
+        <div class="ico">❤️</div>
+        <h4>Cardiología</h4>
+        <p class="desc">Dr. Miguel Millán. Hipertensión, arritmias, evaluación cardiovascular, electrocardiograma.</p>
+        <div class="price">
+          <span class="particular">$40.000 <small>particular · no acepta Fonasa</small></span>
+        </div>
+      </div>
+      <div class="esp-card">
+        <div class="ico">🦴</div>
+        <h4>Traumatología</h4>
+        <p class="desc">Dr. Claudio Barraza. Lesiones óseas y articulares, dolor de rodilla/hombro, esguinces.</p>
+        <div class="price">
+          <span class="particular">$35.000 <small>particular · no acepta Fonasa</small></span>
+        </div>
+      </div>
+      <div class="esp-card">
+        <div class="ico">🍔</div>
+        <h4>Gastroenterología</h4>
+        <p class="desc">Dr. Nicolás Quijano. Reflujo, gastritis, colon irritable, dolor abdominal.</p>
+        <div class="price">
+          <span class="particular">$35.000 <small>particular · no acepta Fonasa</small></span>
+        </div>
+      </div>
+      <div class="esp-card">
+        <div class="ico">🦷</div>
+        <h4>Odontología General</h4>
+        <p class="desc">Consulta + tapaduras, limpieza, exodoncia. Acepta tarjeta de débito y crédito.</p>
+        <div class="price">
+          <span class="particular">Tapaduras desde $35.000</span>
+          <span class="particular">Limpieza $30.000 · Exodoncia $40.000</span>
+        </div>
+      </div>
+      <div class="esp-card">
+        <div class="ico">😬</div>
+        <h4>Ortodoncia</h4>
+        <p class="desc">Dra. Daniela Castillo. Brackets, alineación de dientes. Empieza con evaluación dental general.</p>
+        <div class="price">
+          <span class="particular">Instalación $120.000</span>
+          <span class="particular">Control mensual $30.000</span>
+        </div>
+      </div>
+      <div class="esp-card">
+        <div class="ico">🦷</div>
+        <h4>Endodoncia</h4>
+        <p class="desc">Dr. Fernando Fredes. Tratamiento de conducto (cuando duele el diente y no se puede sacar).</p>
+        <div class="price">
+          <span class="particular">Consultar en recepción</span>
+        </div>
+      </div>
+      <div class="esp-card">
+        <div class="ico">🧠</div>
+        <h4>Psicología Adulto</h4>
+        <p class="desc">Ansiedad, depresión, duelo, estrés, problemas de pareja. Sesiones de 45 min.</p>
+        <div class="price">
+          <span class="fonasa">$14.420 <small>Bono Fonasa MLE</small></span>
+          <span class="particular">$20.000 <small>particular</small></span>
+        </div>
+      </div>
+      <div class="esp-card">
+        <div class="ico">🥗</div>
+        <h4>Nutrición</h4>
+        <p class="desc">Gisela Pinto. Plan alimentario, manejo de sobrepeso, diabetes, hipertensión.</p>
+        <div class="price">
+          <span class="fonasa">$14.420 <small>Bono Fonasa MLE</small></span>
+          <span class="particular">$25.000 <small>particular</small></span>
+        </div>
+      </div>
+      <div class="esp-card">
+        <div class="ico">🗣️</div>
+        <h4>Fonoaudiología</h4>
+        <p class="desc">Juana Arratia. Lenguaje infantil, problemas de habla, deglución, voz.</p>
+        <div class="price">
+          <span class="particular">$25.000 – $50.000 <small>según procedimiento</small></span>
+        </div>
+      </div>
+      <div class="esp-card">
+        <div class="ico">🦶</div>
+        <h4>Podología</h4>
+        <p class="desc">Andrea Guevara. Uñas encarnadas, hongos, podología diabética.</p>
+        <div class="price">
+          <span class="particular">Desde $20.000</span>
+        </div>
+      </div>
+      <div class="esp-card">
+        <div class="ico">📡</div>
+        <h4>Ecografía</h4>
+        <p class="desc">David Pardo. Ecografía abdominal, ginecológica, obstétrica y de partes blandas.</p>
+        <div class="price">
+          <span class="particular">$40.000 <small>según tipo</small></span>
+        </div>
+      </div>
     </div>
   </div>
 </section>

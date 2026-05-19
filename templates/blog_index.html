@@ -481,5 +481,28 @@ footer a { color: var(--aqua); text-decoration: none; }
   </div>
 </footer>
 
+<script>
+(function(){
+  window.dataLayer = window.dataLayer || [];
+  document.addEventListener('click', function(e){
+    var a = e.target && e.target.closest ? e.target.closest('a[href*="wa.me/"]') : null;
+    if (!a) return;
+    try {
+      var url = new URL(a.href);
+      var p = url.searchParams;
+      window.dataLayer.push({
+        event: 'click_whatsapp',
+        wa_phone: url.pathname.replace(/\//g,''),
+        wa_source: p.get('utm_source') || 'unknown',
+        wa_medium: p.get('utm_medium') || 'unknown',
+        wa_campaign: p.get('utm_campaign') || 'none',
+        wa_link_text: (a.textContent||'').trim().slice(0,60),
+        wa_page_path: location.pathname
+      });
+    } catch(err) {}
+  }, true);
+})();
+</script>
+
 </body>
 </html>
