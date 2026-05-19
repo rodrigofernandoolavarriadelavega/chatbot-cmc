@@ -64,7 +64,8 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_winback_bi,
                   _job_custom_audiences_sync,
                   _job_marketing_consent_blast,
-                  _job_takeover_pendiente_alert)
+                  _job_takeover_pendiente_alert,
+                  _job_health_report)
 import admin_routes
 import portal_routes
 
@@ -487,6 +488,13 @@ async def lifespan(app: FastAPI):
         id="marketing_consent_blast",
         replace_existing=True,
     )
+    # Reporte semanal de salud del bot: lunes 09:00 CLT
+    scheduler.add_job(
+        _job_health_report,
+        CronTrigger(day_of_week="mon", hour=9, minute=0, timezone=_CLT),
+        id="health_report_semanal",
+        replace_existing=True,
+    )
     # Primera generación al arrancar (sin await — no bloquear startup)
     import asyncio as _asyncio_startup
     _asyncio_startup.get_event_loop().create_task(_job_regenerate_heatmap_cache())
@@ -495,7 +503,8 @@ async def lifespan(app: FastAPI):
         "Scheduler iniciado — recordatorios 09:00 · recordatorios 2h cada 15min · cumpleaños 10:00 · "
         "post-consulta 10:00 · reactivación lun 10:30 · adherencia kine 11:00 · "
         "control 11:30 · cross-sell kine mié 10:30 · winback-bi L-V 10:05 (ACTIVE=%s) · "
-        "sync caché 23:50 · watchdog medilink 1min · doctor alerts cada 5min + reportes 09/12/16/20",
+        "sync caché 23:50 · watchdog medilink 1min · doctor alerts cada 5min + reportes 09/12/16/20 · "
+        "health report lunes 09:00",
         os.getenv('WINBACK_ACTIVE', 'false'),
     )
     yield

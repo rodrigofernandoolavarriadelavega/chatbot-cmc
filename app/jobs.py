@@ -1944,3 +1944,85 @@ async def _job_winback_bi() -> None:
         log.info("_job_winback_bi: %s", stats)
     except Exception as e:
         log.error("_job_winback_bi fallo: %s", e)
+
+
+# ── Reporte semanal de salud del bot ─────────────────────────────────────────
+
+async def _job_health_report() -> None:
+    """Lunes 09:00 CLT: envía al admin el reporte semanal de salud del bot.
+
+    Estrategia de entrega (en orden):
+    1. Template `reporte_semanal_salud_bot` si está aprobado en Meta.
+    2. send_whatsapp directo si la ventana 24h del admin está abierta.
+       (NO se usa send_whatsapp_proactive porque el bloqueo de blocklist
+       aplica exactamente a ADMIN_ALERT_PHONE; la ventana del admin se
+       abre cuando él escribe primero al bot.)
+    3. Fallback: guardar en data/reportes_salud/{fecha}.md y loggear stderr.
+    """
+    import os
+    import sys
+    from pathlib import Path
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    if not ADMIN_ALERT_PHONE:
+        log.warning("_job_health_report: ADMIN_ALERT_PHONE no configurado — skip")
+        return
+
+    try:
+        from health_report import build_weekly_health_report
+        reporte = build_weekly_health_report()
+    except Exception as e:
+        log.error("_job_health_report: error generando reporte: %s", e)
+        return
+
+    admin_phone = ADMIN_ALERT_PHONE.lstrip("+")
+    now_stgo = datetime.now(ZoneInfo("America/Santiago"))
+    fecha_str = now_stgo.strftime("%Y-%m-%d")
+
+    # ── Intento 1: template aprobado ──────────────────────────────────────
+    if USE_TEMPLATES:
+        _tmpl_name = "reporte_semanal_salud_bot"
+        from session import get_approved_templates as _get_tmpl
+        try:
+            aprobados = _get_tmpl() or []
+        except Exception:
+            aprobados = []
+        if _tmpl_name in aprobados:
+            try:
+                wamid = await send_whatsapp_template(
+                    admin_phone,
+                    _tmpl_name,
+                    body_params=[reporte[:1024]],
+                )
+                if wamid:
+                    log.info("_job_health_report: enviado via template → wamid=%s", wamid)
+                    return
+            except Exception as e:
+                log.warning("_job_health_report: template falló: %s", e)
+
+    # ── Intento 2: send_whatsapp directo si ventana 24h abierta ──────────
+    from session import is_window_open as _is_win
+    if _is_win(admin_phone):
+        try:
+            wamid = await send_whatsapp(admin_phone, reporte)
+            if wamid:
+                log.info("_job_health_report: enviado via send_whatsapp (ventana abierta)")
+                return
+        except Exception as e:
+            log.warning("_job_health_report: send_whatsapp falló: %s", e)
+
+    # ── Fallback: archivo + journalctl ────────────────────────────────────
+    try:
+        reports_dir = Path(__file__).parent.parent / "data" / "reportes_salud"
+        reports_dir.mkdir(parents=True, exist_ok=True)
+        dest = reports_dir / f"{fecha_str}.md"
+        dest.write_text(reporte, encoding="utf-8")
+        log.info("_job_health_report: ventana cerrada y sin template aprobado — guardado en %s", dest)
+        print(
+            f"[health_report] {fecha_str} — reporte guardado en {dest} "
+            "(ventana admin cerrada, template no aprobado)",
+            file=sys.stderr,
+        )
+    except Exception as e:
+        log.error("_job_health_report: fallback archivo también falló: %s", e)

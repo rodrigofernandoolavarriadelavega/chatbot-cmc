@@ -348,6 +348,8 @@ async def enviar_seguimiento_postconsulta(send_fn, send_template_fn=None,
                     sexo=sexo,
                     especialidad=cita.get("especialidad"),
                     nombre=cita.get("nombre"),
+                    phone=cita.get("phone"),
+                    rut=(profile or {}).get("rut"),
                 )
                 # Guardar tips en session para enviar cuando paciente
                 # responda algun boton (seg_mejor/igual/peor) — ahi la

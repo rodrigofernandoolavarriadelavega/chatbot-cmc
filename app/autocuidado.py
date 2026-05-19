@@ -157,7 +157,12 @@ def _inferir_sexo_por_nombre(nombre: str | None) -> str | None:
     return None
 
 
-def _resolver_sexo(sexo_medilink: str | None, nombre: str | None) -> str | None:
+def _resolver_sexo(
+    sexo_medilink: str | None,
+    nombre: str | None,
+    phone: str | None = None,
+    rut: str | None = None,
+) -> str | None:
     """
     Determina el sexo efectivo para filtrar tips preventivos.
 
@@ -169,6 +174,7 @@ def _resolver_sexo(sexo_medilink: str | None, nombre: str | None) -> str | None:
     4. Si ninguno → None (no se envían tips sexo-específicos).
 
     Loggea siempre que detecta mismatch entre Medilink y nombre.
+    Emite evento tip_sexo_mismatch en conversation_events (para reporte semanal).
     """
     sexo_ml = (sexo_medilink or "").upper()[:1] or None  # "M", "F", o None
     sexo_nombre = _inferir_sexo_por_nombre(nombre)
@@ -176,12 +182,28 @@ def _resolver_sexo(sexo_medilink: str | None, nombre: str | None) -> str | None:
     if sexo_ml and sexo_nombre:
         if sexo_ml != sexo_nombre:
             # Mismatch: nombre es más confiable que registro manual en Medilink
+            primer_nombre = (nombre or "").split()[0] if nombre else ""
             log.warning(
                 "tip_sexo_mismatch nombre=%r medilink=%s inferido=%s → usando inferido",
-                (nombre or "").split()[0] if nombre else "",
+                primer_nombre,
                 sexo_ml,
                 sexo_nombre,
             )
+            # Emitir a conversation_events para reporte semanal de salud del bot
+            try:
+                from session import log_event as _le
+                _le(
+                    phone or "unknown",
+                    "tip_sexo_mismatch",
+                    {
+                        "nombre": primer_nombre,
+                        "rut": rut or "",
+                        "sexo_medilink": sexo_ml,
+                        "sexo_inferido": sexo_nombre,
+                    },
+                )
+            except Exception:
+                pass
             return sexo_nombre
         return sexo_ml  # coinciden
 
@@ -218,6 +240,8 @@ def get_tips_autocuidado(
     sexo: str | None = None,
     especialidad: str | None = None,
     nombre: str | None = None,
+    phone: str | None = None,
+    rut: str | None = None,
 ) -> str:
     """
     Genera un bloque de texto con tips de autocuidado personalizados.
@@ -237,7 +261,7 @@ def get_tips_autocuidado(
 
     # Resolver sexo efectivo cruzando Medilink con inferencia por nombre.
     # Esto corrige datos incorrectos en Medilink (ej: mujer registrada con sexo='M').
-    sexo_efectivo = _resolver_sexo(sexo, nombre)
+    sexo_efectivo = _resolver_sexo(sexo, nombre, phone=phone, rut=rut)
 
     # 1. Tip genérico aleatorio (siempre 1)
     tip_generico = random.choice(_TIPS_GENERICOS)
