@@ -956,7 +956,8 @@ async def _job_medilink_watchdog_inner():
             if USE_TEMPLATES:
                 # Template: sistema_recuperado — no params
                 await send_whatsapp_template(phone_p, "sistema_recuperado")
-                log_message(phone_p, "out", "[template: sistema_recuperado]", "IDLE")
+                from messaging import render_template_body as _rtb_sr
+                log_message(phone_p, "out", _rtb_sr("sistema_recuperado"), "IDLE")
             else:
                 _sr_msg = (
                     "✅ ¡Buenas noticias! Nuestro sistema de citas ya está operativo de nuevo 🎉\n\n"
@@ -1112,7 +1113,11 @@ async def _job_waitlist_check():
                     body_params=[nombre_corto or "paciente",
                                  esp.title(), fecha, hora],
                 )
-                log_message(phone_p, "out", "[template: lista_espera_cupo]", "IDLE")
+                from messaging import render_template_body as _rtb_le
+                log_message(phone_p, "out",
+                            _rtb_le("lista_espera_cupo",
+                                    [nombre_corto or "paciente", esp.title(), fecha, hora]),
+                            "IDLE")
             else:
                 saludo = f"Hola{' ' + nombre_corto if nombre_corto else ''} 👋"
                 prof_txt = f" con *{prof_nombre}*" if prof_nombre else ""
@@ -1899,7 +1904,8 @@ async def _job_marketing_consent_blast():
                     "consent_marketing_v1",
                     body_params=[nombre],
                 )
-                log_message(phone, "out", f"[template: consent_marketing_v1 / {nombre}]", "IDLE")
+                from messaging import render_template_body as _rtb_cm
+                log_message(phone, "out", _rtb_cm("consent_marketing_v1", [nombre]), "IDLE")
                 registrar_consent_enviado(phone)
                 enviados += 1
                 log.info("consent_blast enviado → %s (%d/%d)", phone, enviados, len(candidates))

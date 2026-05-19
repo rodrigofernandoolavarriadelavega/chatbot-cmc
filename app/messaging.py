@@ -545,6 +545,7 @@ async def _get_template_language(template_name: str) -> str:
     return _FALLBACK
 
 
+
 async def send_whatsapp_template(to: str, template_name: str,
                                   body_params: list[str] | None = None,
                                   button_payloads: list[str] | None = None,
@@ -780,6 +781,102 @@ async def send_instagram(igsid: str, body: str):
                 log.error("Instagram API intento %d → %s: %s", attempt + 1, r.status_code, r.text[:200])
             except (httpx.TimeoutException, httpx.NetworkError) as e:
                 log.error("Instagram API intento %d error: %s", attempt + 1, e)
+
+
+# ─── Render de templates para logging legible ─────────────────────────────────
+# Bodies de los templates aprobados por Meta, con placeholders {{1}}, {{2}}...
+# Se usa SOLO para guardar en messages.body un texto humano legible. El envío
+# real a WhatsApp lo hace send_whatsapp_template con la estructura template.
+_TEMPLATE_BODIES = {
+    "postconsulta_seguimiento": (
+        "Hola {1} 😊 ¿Cómo te sientes después de tu consulta de *{2}* con *{3}*?\n\n"
+        "Tu opinión nos ayuda a mejorar 🙏\n\n"
+        "[Mejor 😊] [Igual 😐] [Peor 😟]"
+    ),
+    "recordatorio_cita": (
+        "Hola {1} 👋 Te recordamos tu cita de *{2}* con *{3}* el *{4}* a las *{5}*.\n\n"
+        "📍 Monsalve 102, Carampangue.\n\n"
+        "[Confirmar ✅] [Cancelar ❌]"
+    ),
+    "recordatorio_cita_2h": (
+        "Hola {1} 👋 Tu cita de *{2}* con *{3}* es en 2 horas (*{4}*).\n\n"
+        "📍 Monsalve 102, Carampangue."
+    ),
+    "lista_espera_cupo": (
+        "Hola {1} 👋 Se liberó un cupo de *{2}* con *{3}* el *{4}* a las *{5}*. "
+        "¿Te interesa agendar?\n\n[Sí, agendar ✅] [No, gracias ❌]"
+    ),
+    "informe_listo": (
+        "Hola {1} 👋 Tu informe de *{2}* ya está listo para retirar.\n\n"
+        "📍 Recepción CMC · Monsalve 102, Carampangue."
+    ),
+    "seguimiento_medico": (
+        "Hola {1} 👋 El Dr/Dra *{2}* quiere hacer seguimiento de tu última consulta. "
+        "¿Cómo te has sentido?\n\n[Mejor 😊] [Igual 😐] [Peor 😟]"
+    ),
+    "reactivacion_paciente": (
+        "Hola {1} 👋 Hace tiempo no te vemos por el Centro Médico Carampangue. "
+        "¿Te gustaría agendar una consulta?"
+    ),
+    "sistema_recuperado": (
+        "Hola 👋 Ya tenemos el sistema de agendamiento funcionando otra vez. "
+        "Disculpa la espera. ¿Te ayudo a agendar?"
+    ),
+    "cumpleanos": (
+        "🎂 ¡Feliz cumpleaños, {1}! 🎉 El equipo del Centro Médico Carampangue "
+        "te desea un excelente año por delante."
+    ),
+    "consent_marketing_v1": (
+        "Hola {1} 👋 ¿Quieres recibir tips de salud, recordatorios y promociones del CMC?\n\n"
+        "[Sí, acepto ✅] [No, gracias ❌]"
+    ),
+}
+
+
+def render_template_body(name: str, params: list | tuple | None = None) -> str:
+    """Renderiza body del template interpolando {1},{2}... (dict) o {{1}},{{2}}... (JSON).
+
+    Busca primero en _TEMPLATE_BODIES (dict local). Si no está, intenta leer el
+    JSON de templates/whatsapp_templates/{name}.json para cubrir winback y templates
+    dinámicos no incluidos en el dict.
+    Retorna "[template: name]\n{body renderizado}" para que el panel admin muestre
+    el contenido real del mensaje junto al badge del nombre del template.
+    """
+    import json as _json
+    from pathlib import Path as _Path
+    params = list(params or [])
+    body = _TEMPLATE_BODIES.get(name)
+    placeholder_fmt = "dict"  # {1}, {2}...
+
+    if not body:
+        # Intentar leer desde JSON en disco
+        try:
+            _tpl_path = (
+                _Path(__file__).parent.parent
+                / "templates" / "whatsapp_templates" / f"{name}.json"
+            )
+            if _tpl_path.exists():
+                _tpl = _json.loads(_tpl_path.read_text())
+                body = next(
+                    (c["text"] for c in _tpl.get("components", []) if c.get("type") == "BODY"),
+                    None,
+                )
+                placeholder_fmt = "json"  # {{1}}, {{2}}...
+        except Exception as _e:
+            log.warning("render_template_body: error leyendo JSON template=%s: %s", name, _e)
+
+    if not body:
+        if params:
+            return f"[template: {name}] {' · '.join(str(p) for p in params)}"
+        return f"[template: {name}]"
+
+    out = body
+    for i, p in enumerate(params, start=1):
+        if placeholder_fmt == "json":
+            out = out.replace("{{" + str(i) + "}}", str(p))
+        else:
+            out = out.replace("{" + str(i) + "}", str(p))
+    return f"[template: {name}]\n{out}"
 
 
 async def send_messenger(psid: str, body: str):

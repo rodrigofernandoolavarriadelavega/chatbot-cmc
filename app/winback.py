@@ -637,14 +637,14 @@ async def send_winback(candidato: dict) -> bool:
         body_params = [nombre.capitalize()]
 
     try:
-        from messaging import send_whatsapp_template
+        from messaging import send_whatsapp_template, render_template_body as _rtb_wb
         await send_whatsapp_template(
             to=telefono,
             template_name=template_name,
             body_params=body_params,
         )
         from session import log_message as _lm_w1
-        _lm_w1(telefono, "out", f"[template: {template_name}]", "IDLE")
+        _lm_w1(telefono, "out", _rtb_wb(template_name, body_params), "IDLE")
         _registrar_envio(
             paciente_id=paciente_id,
             telefono=telefono,

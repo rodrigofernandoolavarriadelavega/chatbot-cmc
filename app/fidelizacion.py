@@ -194,8 +194,12 @@ async def enviar_seguimiento_postconsulta_dia_anterior(send_fn, send_template_fn
                     body_params=[nombre_pc, cita.get("especialidad", ""),
                                  cita.get("profesional", "")],
                 )
+                from messaging import render_template_body as _rtb_pc
                 log_message(cita["phone"], "out",
-                            "[template: postconsulta_seguimiento]", "IDLE")
+                            _rtb_pc("postconsulta_seguimiento",
+                                    [nombre_pc, cita.get("especialidad", ""),
+                                     cita.get("profesional", "")]),
+                            "IDLE")
                 log_event(cita["phone"], "template_enviado",
                           {"template": "postconsulta_seguimiento",
                            "id_cita": cita.get("id_cita")})
@@ -310,8 +314,12 @@ async def enviar_seguimiento_postconsulta(send_fn, send_template_fn=None,
                     body_params=[nombre_pc, cita.get("especialidad", ""),
                                  cita.get("profesional", "")],
                 )
+                from messaging import render_template_body as _rtb_pc
                 log_message(cita["phone"], "out",
-                            "[template: postconsulta_seguimiento]", "IDLE")
+                            _rtb_pc("postconsulta_seguimiento",
+                                    [nombre_pc, cita.get("especialidad", ""),
+                                     cita.get("profesional", "")]),
+                            "IDLE")
                 log_event(cita["phone"], "template_enviado",
                           {"template": "postconsulta_seguimiento",
                            "id_cita": cita.get("id_cita")})
@@ -930,7 +938,8 @@ async def enviar_cumpleanos(send_fn):
                     body_params=[nombre, tip],
                 )
                 save_fidelizacion_msg(phone, "cumpleanos")
-                log_message(phone, "out", f"[template: cumpleanos / {nombre}]", "IDLE")
+                from messaging import render_template_body as _rtb_cu
+                log_message(phone, "out", _rtb_cu("cumpleanos", [nombre]), "IDLE")
                 log_event(phone, "template_enviado", {"template": "cumpleanos"})
                 log.info("Cumpleaños (template) enviado → %s (%s)", phone, nombre)
             else:
