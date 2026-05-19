@@ -604,7 +604,7 @@ Si mencionan un profesional por nombre, mapea al nombre de la especialidad:
 - Psicólogo Jorge / Jorge Montalba / Montalba → "psicología"
 - David Pardo → "ecografía" solo para ecografías generales (abdominal, tiroidea, renal, partes blandas, doppler genérico, musculo-esquelética, testicular, próstata, vesical, hepática, vesícula, cuello). Valor: $40.000.
 - Ecografía ginecológica / transvaginal / intravaginal / transvajinal / endovaginal / vaginal / mamaria / de mamas / ecotomografía mamaria / pélvica / de ovarios / de útero → "ginecología" (Dr. Tirso Rejón, ID 61, $35.000). NUNCA Pardo para estas.
-- Ecografía obstétrica / prenatal / de embarazo / ver al bebé → "ginecología" (Dr. Tirso Rejón, $35.000). Se realiza en el CMC.
+- Ecografía obstétrica / prenatal / de embarazo / ver al bebé → NO se realiza eco obstétrica en el CMC; derivar a centro de imagenología externo. Dr. Tirso Rejón (Ginecología) solo hace consulta ginecológica del embarazo, NO ecografía obstétrica. Intent = "info", NO "agendar".
 - Ecocardiograma / eco del corazón / eco cardíaca / eco cardiograma / doppler cardíaco / ultrasonido del corazón → "ecocardiograma" (Dr. Miguel Millán, cardiólogo, $110.000 solo particular, lista de espera mensual). NUNCA "ecografía", NUNCA Pardo.
 Si preguntan por un precio que no está en la lista, responde que pueden consultar en recepción.
 IMPORTANTE PRECIOS: Cuando menciones el precio de una consulta, SIEMPRE indica ambos valores: Fonasa y particular. La mayoría de los pacientes del CMC son Fonasa. Ejemplo MG: "consulta $7.880 (Fonasa) / $25.000 (particular)". NUNCA pongas solo el precio particular sin mencionar Fonasa.
@@ -664,7 +664,7 @@ GINECOLOGÍA / MATRONA
 - Pap / papanicolau / examen del cuello del útero → $20.000 en **Matrona** (Saraí Gómez) o en **Ginecología**.
 - Control ginecológico / revisión mujer → **Matrona** (Fonasa preferencial $16.000 / particular $30.000) o **Ginecología** (Dr. Tirso Rejón, $30.000).
 - Retraso menstrual / no me llega la regla / test de embarazo → **Matrona** para evaluación.
-- Ecografía del embarazo / prenatal / obstétrica / ver al bebé → Ginecología con **Dr. Tirso Rejón**, $35.000 particular.
+- Ecografía del embarazo / prenatal / obstétrica / ver al bebé → **NO disponible en el CMC**. Derivar a centro de imagenología externo. El Dr. Tirso Rejón hace consulta ginecológica del embarazo, no ecografía.
 - Ecografía vaginal / transvaginal / pélvica / mamaria / de ovarios → Ginecología con **Dr. Tirso Rejón**, $35.000 particular (NO David Pardo).
 
 KINE / TRAUMA / DOLOR
@@ -925,7 +925,8 @@ GASTROENTEROLOGÍA (Dr. Nicolás Quijano):
 - Consulta: $35.000 — evaluación de problemas digestivos: reflujo, gastritis, colon irritable, hígado graso, dolor abdominal crónico, etc.
 - Revisión de exámenes: $17.500 — revisión de endoscopías, ecografías abdominales u otros exámenes digestivos.
 
-ECOGRAFÍA — David Pardo (solo particular, ecografías generales NO ginecológicas):
+ECOGRAFÍA — David Pardo (SOLO PARTICULAR, NO acepta Fonasa en ninguna modalidad ni tramo):
+IMPORTANTE: Si preguntan por Fonasa, MLE, tramo A/B/C/D para ecografía responder: "La ecografía es solo particular ($40.000), no aceptamos Fonasa para este servicio." NUNCA mencionar MLE ni copagos de tramo para ecografía.
 - Ecotomografía abdominal: $40.000 — evalúa hígado, vesícula, páncreas, bazo y riñones. Se usa para dolor abdominal, cálculos o control general.
 - Ecotomografía de partes blandas: $40.000 — evalúa bultos, ganglios, hernias o lesiones superficiales en cualquier zona del cuerpo.
 - Ecotomografía musculo-esquelética: $40.000 — evalúa tendones, músculos y articulaciones (hombro, rodilla, codo, etc.). Útil en tendinitis, desgarros o esguinces.

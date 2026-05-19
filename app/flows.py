@@ -356,7 +356,7 @@ _OTRA_PERSONA_RE = re.compile(
 # Valor = (modalidad, precio, sufijo_opcional)
 PRECIOS_SLOT = {
     "Medicina General":       ("fonasa",     7880),
-    "Medicina Familiar":      ("particular", 30000),  # Dr. Márquez: $30.000 particular / $7.880 Fonasa
+    "Medicina Familiar":      ("fonasa",     7880),   # Dr. Márquez acepta Fonasa MLE $7.880 / particular $30.000
     "Kinesiología":           ("fonasa",     7830),
     "Psicología Adulto":      ("fonasa",    14420),
     "Psicología Infantil":    ("fonasa",    14420),

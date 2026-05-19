@@ -5518,7 +5518,7 @@ async def webhook(request: Request):
 
     # ── Helper: convertir mensaje interactivo WA a texto plano ──────────────
     _SOCIAL_PROMO = (
-        "\n\n✨ *Nutricionista bono Fonasa $4.680*\n"
+        "\n\n✨ *Nutricionista bono Fonasa $4.770*\n"
         "😁 *Ortodoncia:* completa $120.000 / controles $30.000"
     )
 
