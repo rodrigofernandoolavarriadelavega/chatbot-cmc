@@ -1458,7 +1458,10 @@ async def _handle_confirmacion_precita(phone: str, tl: str, data: dict) -> str:
     try:
         accion, id_cita = tl.split(":", 1)
     except ValueError:
-        return "No pude procesar tu respuesta 😕 Escribe *menu* para volver al inicio."
+        return _btn_msg(
+            "No pude procesar tu respuesta 😕",
+            [{"id": "menu", "title": "🏠 Volver al inicio"}]
+        )
 
     cita_bot = get_cita_bot_by_id_cita(id_cita, phone=phone)
     if not cita_bot:
@@ -1553,7 +1556,10 @@ async def _handle_confirmacion_precita(phone: str, tl: str, data: dict) -> str:
             ]
         )
 
-    return "No pude procesar tu respuesta 😕 Escribe *menu* para volver al inicio."
+    return _btn_msg(
+            "No pude procesar tu respuesta 😕",
+            [{"id": "menu", "title": "🏠 Volver al inicio"}]
+        )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1932,7 +1938,10 @@ async def _pre_router_wait(phone: str, txt: str, tl: str, state: str, data: dict
     if tl_rescue in _SALIR_KW:
         log_event(phone, "rescue_salir", {"state": state})
         reset_session(phone)
-        return "Listo, salimos del proceso. Escribe *menu* cuando quieras retomar."
+        return _btn_msg(
+        "Listo, salimos del proceso 😊",
+        [{"id": "menu", "title": "🏠 Volver al inicio"}]
+    )
 
     # Fast path — evita Claude cuando la respuesta es obvia
     if _es_respuesta_obvia_al_prompt(txt, tl, state, data):
@@ -2365,13 +2374,15 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # solo dijo "no por ahora". Cerramos amable sin escalar.
     if tl == "no_gracias_reeng":
         log_event(phone, "reenganche_rechazado", {"state": state})
-        # Limpiar flag para permitir reenganche futuro y conservar la sesión
-        # para que retome cuando quiera (no resetear estado completo).
+        # Marcar opt-out para que el cron no vuelva a insistir en esta
+        # sesion. El flag se limpia en reset_session cuando el paciente
+        # inicia un flujo nuevo (escribe menu u otra intencion valida).
         data.pop("reenganche_sent", None)
+        data["reenganche_optout"] = True
         save_session(phone, state, data)
         return (
-            "Sin problema 😊 Cuando quieras retomar, escribe *menu* y te ayudo.\n\n"
-            f"_📞 *{CMC_TELEFONO}* si lo prefieres por teléfono._"
+            "Sin problema. Cuando quieras retomar, escribe *menu* y te ayudo.\n\n"
+            f"_Tambien nos puedes llamar al {CMC_TELEFONO}._"
         )
 
     # ── Respuesta al consent_marketing_v1 (Tarea B win-back) ─────────────────
@@ -4119,7 +4130,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     pass
             if _es_despedida:
                 log_event(phone, "despedida_detectada", {"tl": _tl_rescue})
-                return "Listo, fue un gusto ayudarte. Si necesitas algo, escribe *menu*."
+                return _btn_msg(
+                "Listo, fue un gusto ayudarte 😊",
+                [{"id": "menu", "title": "🏠 Volver al inicio"}]
+            )
             _pf_idle = get_profile(phone)
             _nm_idle = _first_name((_pf_idle or {}).get("nombre", "")) if _pf_idle else ""
             return _menu_msg(nombre=_nm_idle)
@@ -4769,7 +4783,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if tl in ("quick_cancel", "ahora no", "no", "3", "cancelar", "menu"):
             log_event(phone, "quick_book_declined")
             reset_session(phone)
-            return "Sin problema 😊 Escribe *menu* cuando quieras retomar."
+            return _btn_msg(
+            "Sin problema 😊 Cuando quieras, escríbeme.",
+            [{"id": "menu", "title": "🏠 Volver al inicio"}]
+        )
         # Texto libre → re-detectar intent (permite decir "quiero ver mis reservas")
         result = await detect_intent(txt)
         intent = result.get("intent", "otro")
@@ -7950,7 +7967,13 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return _msg_medilink_transient()
         if not paciente:
             reset_session(phone)
-            return "No encontré ese RUT 🔎\nEscribe *menu* para volver o intenta de nuevo."
+            return _btn_msg(
+            "No encontré ese RUT 🔎\n\n¿Intentamos de nuevo?",
+            [
+                {"id": "menu", "title": "🏠 Volver al inicio"},
+                {"id": "accion_recepcion", "title": "💬 Hablar con recepción"},
+            ]
+        )
 
         citas = await listar_citas_paciente(paciente["id"], rut=paciente.get("rut"))
         reset_session(phone)
