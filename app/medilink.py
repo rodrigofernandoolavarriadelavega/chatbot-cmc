@@ -757,75 +757,75 @@ async def buscar_primer_dia(especialidad: str, dias_adelante: int = 60,
     excluir_set = set(excluir or [])
     id_esp = _id_especialidad(especialidad)
 
-    async with httpx.AsyncClient(timeout=15) as client:
-        # N+1 → paralelizado con asyncio.gather para reducir latencia
-        import asyncio as _asyncio_horarios
-        _horarios_list = await _asyncio_horarios.gather(*(_get_horario(client, i) for i in ids))
-        horarios = dict(zip(ids, _horarios_list))
-        if intervalo_override:
-            for id_prof, mins in intervalo_override.items():
-                if id_prof in horarios:
-                    horarios[id_prof] = {**horarios[id_prof], "intervalo": mins}
+    client = _get_shared_client()
+    # N+1 → paralelizado con asyncio.gather para reducir latencia
+    import asyncio as _asyncio_horarios
+    _horarios_list = await _asyncio_horarios.gather(*(_get_horario(client, i) for i in ids))
+    horarios = dict(zip(ids, _horarios_list))
+    if intervalo_override:
+        for id_prof, mins in intervalo_override.items():
+            if id_prof in horarios:
+                horarios[id_prof] = {**horarios[id_prof], "intervalo": mins}
 
-        # Intentar con /proxima para descubrir la fecha rápidamente
-        # Cacheado 3 min: reduce llamadas repetidas cuando varios pacientes
-        # piden la misma especialidad en rápida sucesión.
-        primera_fecha = None
-        if id_esp:
-            _px_cached = _proxima_cache.get(id_esp)
-            if _px_cached and (time.monotonic() - _px_cached["_ts"]) < _PROXIMA_CACHE_TTL:
-                primera_fecha = _px_cached.get("fecha")
+    # Intentar con /proxima para descubrir la fecha rápidamente
+    # Cacheado 3 min: reduce llamadas repetidas cuando varios pacientes
+    # piden la misma especialidad en rápida sucesión.
+    primera_fecha = None
+    if id_esp:
+        _px_cached = _proxima_cache.get(id_esp)
+        if _px_cached and (time.monotonic() - _px_cached["_ts"]) < _PROXIMA_CACHE_TTL:
+            primera_fecha = _px_cached.get("fecha")
+            r = None
+        else:
+            try:
+                r = await _get(
+                    client, f"{MEDILINK_BASE_URL}/especialidades/{id_esp}/proxima",
+                    params={"q": _q({"id_sucursal": {"eq": int(MEDILINK_SUCURSAL)}})},
+                    headers=HEADERS,
+                )
+            except httpx.RequestError as e:
+                log.warning("No se pudo consultar proxima fecha especialidad %d: %s", id_esp, e)
                 r = None
-            else:
+        if r and r.status_code == 200:
+            for slot in _safe_json(r).get("data", []):
+                # fecha viene en formato DD/MM/YYYY
+                raw = slot.get("fecha", "")
                 try:
-                    r = await _get(
-                        client, f"{MEDILINK_BASE_URL}/especialidades/{id_esp}/proxima",
-                        params={"q": _q({"id_sucursal": {"eq": int(MEDILINK_SUCURSAL)}})},
-                        headers=HEADERS,
-                    )
-                except httpx.RequestError as e:
-                    log.warning("No se pudo consultar proxima fecha especialidad %d: %s", id_esp, e)
-                    r = None
-            if r and r.status_code == 200:
-                for slot in _safe_json(r).get("data", []):
-                    # fecha viene en formato DD/MM/YYYY
-                    raw = slot.get("fecha", "")
-                    try:
-                        fecha_dt = datetime.strptime(raw, "%d/%m/%Y").strftime("%Y-%m-%d")
-                    except ValueError:
-                        continue
-                    if fecha_dt not in excluir_set:
-                        primera_fecha = fecha_dt
-                        break
-                if primera_fecha:
-                    _proxima_cache[id_esp] = {"fecha": primera_fecha, "_ts": time.monotonic()}
+                    fecha_dt = datetime.strptime(raw, "%d/%m/%Y").strftime("%Y-%m-%d")
+                except ValueError:
+                    continue
+                if fecha_dt not in excluir_set:
+                    primera_fecha = fecha_dt
+                    break
+            if primera_fecha:
+                _proxima_cache[id_esp] = {"fecha": primera_fecha, "_ts": time.monotonic()}
 
-        # Siempre escanear desde hoy, usando primera_fecha como límite superior o fallback
-        hoy = datetime.now(_CHILE_TZ).date()
-        limite = datetime.strptime(primera_fecha, "%Y-%m-%d").date() if primera_fecha else (hoy + timedelta(days=dias_adelante))
+    # Siempre escanear desde hoy, usando primera_fecha como límite superior o fallback
+    hoy = datetime.now(_CHILE_TZ).date()
+    limite = datetime.strptime(primera_fecha, "%Y-%m-%d").date() if primera_fecha else (hoy + timedelta(days=dias_adelante))
 
-        for delta in range(0, (limite - hoy).days + 1):
-            fecha = (hoy + timedelta(days=delta)).strftime("%Y-%m-%d")
-            if fecha in excluir_set:
-                continue
-            smart, todos = await _slots_para_fecha(client, ids, horarios, fecha, prioridad=usar_prioridad)
-            if todos:
-                return smart, todos
+    for delta in range(0, (limite - hoy).days + 1):
+        fecha = (hoy + timedelta(days=delta)).strftime("%Y-%m-%d")
+        if fecha in excluir_set:
+            continue
+        smart, todos = await _slots_para_fecha(client, ids, horarios, fecha, prioridad=usar_prioridad)
+        if todos:
+            return smart, todos
 
-        # Si no hubo slots antes de primera_fecha, intentar exactamente esa fecha
-        if primera_fecha and primera_fecha not in excluir_set:
-            smart, todos = await _slots_para_fecha(client, ids, horarios, primera_fecha, prioridad=usar_prioridad)
-            if todos:
-                return smart, todos
+    # Si no hubo slots antes de primera_fecha, intentar exactamente esa fecha
+    if primera_fecha and primera_fecha not in excluir_set:
+        smart, todos = await _slots_para_fecha(client, ids, horarios, primera_fecha, prioridad=usar_prioridad)
+        if todos:
+            return smart, todos
 
-        # Continuar día por día más allá
-        for delta in range((limite - hoy).days + 1, dias_adelante + 1):
-            fecha = (hoy + timedelta(days=delta)).strftime("%Y-%m-%d")
-            if fecha in excluir_set:
-                continue
-            smart, todos = await _slots_para_fecha(client, ids, horarios, fecha, prioridad=usar_prioridad)
-            if todos:
-                return smart, todos
+    # Continuar día por día más allá
+    for delta in range((limite - hoy).days + 1, dias_adelante + 1):
+        fecha = (hoy + timedelta(days=delta)).strftime("%Y-%m-%d")
+        if fecha in excluir_set:
+            continue
+        smart, todos = await _slots_para_fecha(client, ids, horarios, fecha, prioridad=usar_prioridad)
+        if todos:
+            return smart, todos
 
     return [], []
 
@@ -836,20 +836,20 @@ async def consultar_proxima_fecha(especialidad: str) -> str | None:
     id_esp = _id_especialidad(especialidad)
     if not id_esp:
         return None
-    async with httpx.AsyncClient(timeout=10) as client:
-        r = await client.get(
-            f"{MEDILINK_BASE_URL}/especialidades/{id_esp}/proxima",
-            params={"q": _q({"id_sucursal": {"eq": int(MEDILINK_SUCURSAL)}})},
-            headers=HEADERS,
-        )
-        if r.status_code == 200:
-            for slot in _safe_json(r).get("data", []):
-                raw = slot.get("fecha", "")
-                try:
-                    fecha_fmt = datetime.strptime(raw, "%d/%m/%Y").strftime("%Y-%m-%d")
-                    return _fmt_fecha(fecha_fmt)
-                except ValueError:
-                    continue
+    client = _get_shared_client()
+    r = await client.get(
+        f"{MEDILINK_BASE_URL}/especialidades/{id_esp}/proxima",
+        params={"q": _q({"id_sucursal": {"eq": int(MEDILINK_SUCURSAL)}})},
+        headers=HEADERS,
+    )
+    if r.status_code == 200:
+        for slot in _safe_json(r).get("data", []):
+            raw = slot.get("fecha", "")
+            try:
+                fecha_fmt = datetime.strptime(raw, "%d/%m/%Y").strftime("%Y-%m-%d")
+                return _fmt_fecha(fecha_fmt)
+            except ValueError:
+                continue
     return None
 
 
@@ -902,39 +902,39 @@ async def crear_paciente(rut: str, nombre: str, apellidos: str, **kwargs) -> Opt
         val = kwargs.get(campo)
         if val:
             extras[campo] = val
-    async with httpx.AsyncClient(timeout=10) as client:
+    client = _get_shared_client()
+    try:
+        r = await _post(client, f"{MEDILINK_BASE_URL}/pacientes",
+                        json=body, headers=HEADERS)
+    except httpx.RequestError as e:
+        log.error("No se pudo crear paciente rut=%s: %s", _rut_safe(rut), e)
+        return None
+    if r.status_code not in (200, 201):
+        log.error("Error crear paciente rut=%s: %s %s", _rut_safe(rut), r.status_code, r.text[:200])
+        return None
+    p = _safe_json(r).get("data", {})
+    pac_id = p.get("id")
+    if not pac_id:
+        log.error("crear_paciente: Medilink response sin id: %s", str(p)[:200])
+        return None
+    result = {
+        "id":     pac_id,
+        "nombre": _fmt_nombre_apellidos(p.get('nombre'), p.get('apellidos')),
+        "rut":    p.get("rut", ""),
+    }
+    # PUT para guardar campos opcionales (Medilink POST los ignora)
+    if extras:
         try:
-            r = await _post(client, f"{MEDILINK_BASE_URL}/pacientes",
-                            json=body, headers=HEADERS)
+            r2 = await client.put(
+                f"{MEDILINK_BASE_URL}/pacientes/{pac_id}",
+                json=extras, headers=HEADERS, timeout=10,
+            )
+            if r2.status_code not in (200, 201):
+                log.warning("PUT extras paciente %s falló: %s %s",
+                            pac_id, r2.status_code, r2.text[:200])
         except httpx.RequestError as e:
-            log.error("No se pudo crear paciente rut=%s: %s", _rut_safe(rut), e)
-            return None
-        if r.status_code not in (200, 201):
-            log.error("Error crear paciente rut=%s: %s %s", _rut_safe(rut), r.status_code, r.text[:200])
-            return None
-        p = _safe_json(r).get("data", {})
-        pac_id = p.get("id")
-        if not pac_id:
-            log.error("crear_paciente: Medilink response sin id: %s", str(p)[:200])
-            return None
-        result = {
-            "id":     pac_id,
-            "nombre": _fmt_nombre_apellidos(p.get('nombre'), p.get('apellidos')),
-            "rut":    p.get("rut", ""),
-        }
-        # PUT para guardar campos opcionales (Medilink POST los ignora)
-        if extras:
-            try:
-                r2 = await client.put(
-                    f"{MEDILINK_BASE_URL}/pacientes/{pac_id}",
-                    json=extras, headers=HEADERS, timeout=10,
-                )
-                if r2.status_code not in (200, 201):
-                    log.warning("PUT extras paciente %s falló: %s %s",
-                                pac_id, r2.status_code, r2.text[:200])
-            except httpx.RequestError as e:
-                log.warning("PUT extras paciente %s error: %s", pac_id, e)
-        return result
+            log.warning("PUT extras paciente %s error: %s", pac_id, e)
+    return result
 
 
 async def buscar_paciente(rut: str) -> Optional[dict]:
@@ -960,58 +960,58 @@ async def buscar_paciente(rut: str) -> Optional[dict]:
 
     # Timeout reducido a 5s: si Medilink tarda más, caemos a fallback antes
     # de que Meta retire el webhook (límite 20s).
-    async with httpx.AsyncClient(timeout=5) as client:
-        params = {"rut": {"lk": rut_clean[:-1]}}
-        try:
-            r = await _get(client, f"{MEDILINK_BASE_URL}/pacientes",
-                           params={"q": _q(params)}, headers=HEADERS)
-        except httpx.RequestError as e:
-            log.error("No se pudo buscar paciente rut=%s: %s", _rut_safe(rut_clean), e)
-            return None
-        if r.status_code != 200:
-            return None
-        data = _safe_json(r).get("data", [])
-        if not data:
-            return None
-        p = data[0]
-        if not p.get("id"):
-            log.error("buscar_paciente: registro sin id para rut=%s: %s", _rut_safe(rut_clean), p)
-            return None
-        result = {
-            "id":     p["id"],
-            "nombre": _fmt_nombre_apellidos(p.get('nombre'), p.get('apellidos')),
-            "rut":    p.get("rut", ""),
-        }
-        if p.get("fecha_nacimiento"):
-            result["fecha_nacimiento"] = p["fecha_nacimiento"]
-        if p.get("sexo"):
-            result["sexo"] = p["sexo"]
-        _paciente_cache[rut_clean] = {"data": result, "_ts": time.monotonic()}
-        return result
+    client = _get_shared_client()
+    params = {"rut": {"lk": rut_clean[:-1]}}
+    try:
+        r = await _get(client, f"{MEDILINK_BASE_URL}/pacientes",
+                       params={"q": _q(params)}, headers=HEADERS, timeout=5)
+    except httpx.RequestError as e:
+        log.error("No se pudo buscar paciente rut=%s: %s", _rut_safe(rut_clean), e)
+        return None
+    if r.status_code != 200:
+        return None
+    data = _safe_json(r).get("data", [])
+    if not data:
+        return None
+    p = data[0]
+    if not p.get("id"):
+        log.error("buscar_paciente: registro sin id para rut=%s: %s", _rut_safe(rut_clean), p)
+        return None
+    result = {
+        "id":     p["id"],
+        "nombre": _fmt_nombre_apellidos(p.get('nombre'), p.get('apellidos')),
+        "rut":    p.get("rut", ""),
+    }
+    if p.get("fecha_nacimiento"):
+        result["fecha_nacimiento"] = p["fecha_nacimiento"]
+    if p.get("sexo"):
+        result["sexo"] = p["sexo"]
+    _paciente_cache[rut_clean] = {"data": result, "_ts": time.monotonic()}
+    return result
 
 
 async def buscar_paciente_por_nombre(nombre: str) -> list[dict]:
     """Busca pacientes por nombre/apellido en Medilink. Devuelve hasta 10 resultados."""
-    async with httpx.AsyncClient(timeout=10) as client:
-        params = {"nombre": {"lk": nombre}}
-        try:
-            r = await _get(client, f"{MEDILINK_BASE_URL}/pacientes",
-                           params={"q": _q(params)}, headers=HEADERS)
-        except httpx.RequestError as e:
-            log.error("buscar_paciente_por_nombre '%s': %s", nombre, e)
-            return []
-        if r.status_code != 200:
-            return []
-        data = _safe_json(r).get("data", [])
-        results = []
-        for p in data[:10]:
-            nombre_full = _fmt_nombre_apellidos(p.get('nombre'), p.get('apellidos'))
-            results.append({
-                "id": p["id"],
-                "nombre": nombre_full,
-                "rut": p.get("rut", ""),
-            })
-        return results
+    client = _get_shared_client()
+    params = {"nombre": {"lk": nombre}}
+    try:
+        r = await _get(client, f"{MEDILINK_BASE_URL}/pacientes",
+                       params={"q": _q(params)}, headers=HEADERS)
+    except httpx.RequestError as e:
+        log.error("buscar_paciente_por_nombre '%s': %s", nombre, e)
+        return []
+    if r.status_code != 200:
+        return []
+    data = _safe_json(r).get("data", [])
+    results = []
+    for p in data[:10]:
+        nombre_full = _fmt_nombre_apellidos(p.get('nombre'), p.get('apellidos'))
+        results.append({
+            "id": p["id"],
+            "nombre": nombre_full,
+            "rut": p.get("rut", ""),
+        })
+    return results
 
 
 async def verificar_slot_disponible(id_profesional: int, fecha: str,
@@ -1025,46 +1025,46 @@ async def verificar_slot_disponible(id_profesional: int, fecha: str,
 
     Para el resto: cruza /citas + /horariosbloqueados como antes.
     """
-    async with httpx.AsyncClient(timeout=10) as client:
-        # Path para profs de "horas especiales": consultar /agendas directo.
+    client = _get_shared_client()
+    # Path para profs de "horas especiales": consultar /agendas directo.
+    try:
+        h = await _get_horario(client, id_profesional)
+    except Exception:
+        h = {}
+    if h.get("usa_agendas"):
         try:
-            h = await _get_horario(client, id_profesional)
-        except Exception:
-            h = {}
-        if h.get("usa_agendas"):
-            try:
-                libres = await _slots_desde_agendas(client, id_profesional, fecha, compact=False)
-            except Exception as e:
-                log.warning("verificar_slot agendas: error prof %d fecha %s: %s",
-                            id_profesional, fecha, e)
-                return False
-            ok = any(s["hora_inicio"] == hora_inicio[:5] for s in libres)
-            if not ok:
-                log.warning("verificar_slot agendas: %s NO disponible prof %d fecha %s "
-                            "(libres: %s)",
-                            hora_inicio, id_profesional, fecha,
-                            [s["hora_inicio"] for s in libres])
-            return ok
-
-        try:
-            ocupadas = await _get_horas_ocupadas(client, id_profesional, fecha)
-            bloqueos = await _get_bloqueos(client, id_profesional, fecha)
-        except (httpx.RequestError, Exception) as e:
-            log.warning("verificar_slot: error consultando prof %d fecha %s: %s",
+            libres = await _slots_desde_agendas(client, id_profesional, fecha, compact=False)
+        except Exception as e:
+            log.warning("verificar_slot agendas: error prof %d fecha %s: %s",
                         id_profesional, fecha, e)
-            return False  # ante duda, decir que no está disponible
-
-        # Verificar que hora_inicio no esté en el set expandido de horas ocupadas
-        if hora_inicio[:5] in ocupadas:
-            log.warning("verificar_slot: %s ya ocupado para prof %d fecha %s (ocupadas: %s)",
-                        hora_inicio, id_profesional, fecha, sorted(ocupadas))
             return False
+        ok = any(s["hora_inicio"] == hora_inicio[:5] for s in libres)
+        if not ok:
+            log.warning("verificar_slot agendas: %s NO disponible prof %d fecha %s "
+                        "(libres: %s)",
+                        hora_inicio, id_profesional, fecha,
+                        [s["hora_inicio"] for s in libres])
+        return ok
 
-        # Verificar que no esté bloqueado
-        if _slot_bloqueado(hora_inicio, hora_fin, bloqueos):
-            log.warning("verificar_slot: %s bloqueado para prof %d fecha %s",
-                        hora_inicio, id_profesional, fecha)
-            return False
+    try:
+        ocupadas = await _get_horas_ocupadas(client, id_profesional, fecha)
+        bloqueos = await _get_bloqueos(client, id_profesional, fecha)
+    except (httpx.RequestError, Exception) as e:
+        log.warning("verificar_slot: error consultando prof %d fecha %s: %s",
+                    id_profesional, fecha, e)
+        return False  # ante duda, decir que no está disponible
+
+    # Verificar que hora_inicio no esté en el set expandido de horas ocupadas
+    if hora_inicio[:5] in ocupadas:
+        log.warning("verificar_slot: %s ya ocupado para prof %d fecha %s (ocupadas: %s)",
+                    hora_inicio, id_profesional, fecha, sorted(ocupadas))
+        return False
+
+    # Verificar que no esté bloqueado
+    if _slot_bloqueado(hora_inicio, hora_fin, bloqueos):
+        log.warning("verificar_slot: %s bloqueado para prof %d fecha %s",
+                    hora_inicio, id_profesional, fecha)
+        return False
 
     return True
 
@@ -1091,40 +1091,40 @@ async def crear_cita(id_paciente: int, id_profesional: int, fecha: str,
     }
     if modalidad == "TELEMEDICINA":
         body["observaciones"] = "[ONLINE] Consulta por videollamada"
-    async with httpx.AsyncClient(timeout=10) as client:
-        try:
-            r = await _post(client, f"{MEDILINK_BASE_URL}/citas", json=body, headers=HEADERS)
-        except httpx.RequestError as e:
-            log.error("No se pudo crear cita paciente=%d prof=%d fecha=%s: %s",
-                      id_paciente, id_profesional, fecha, e)
-            return None
-        if r.status_code in (200, 201):
-            try:
-                data = _safe_json(r)
-            except Exception as e:
-                log.error("crear_cita: respuesta no-JSON de Medilink (%s): %s",
-                          e, r.text[:300])
-                return None
-            cita = data.get("data", data)
-            if isinstance(cita, list) and cita:
-                cita = cita[0]
-            cita_id = cita.get("id") if isinstance(cita, dict) else None
-            if not cita_id:
-                log.error("crear_cita: respuesta sin id — %s", data)
-                return None
-            # Invalidar cache de próxima fecha tras booking: el slot ya no está
-            # disponible. Sin esto, con TTL 15 min el bot puede ofrecer el mismo
-            # slot a otros pacientes y provocar doble-booking.
-            _proxima_cache.clear()
-            return {"id": cita_id, "confirmado": True}
-        log.error("crear_cita falló: %s %s", r.status_code, r.text[:500])
-        # Invalidar caché de horario si Medilink se queja de horario/duración:
-        # asegura que el siguiente buscar_primer_dia consulte fresco.
-        if r.status_code == 400 and ("horario" in r.text.lower() or "duraci" in r.text.lower()):
-            _horarios_cache.pop(id_profesional, None)
-            _proxima_cache.clear()
-            log.info("crear_cita 400 horario → caché invalidada para prof %s", id_profesional)
+    client = _get_shared_client()
+    try:
+        r = await _post(client, f"{MEDILINK_BASE_URL}/citas", json=body, headers=HEADERS)
+    except httpx.RequestError as e:
+        log.error("No se pudo crear cita paciente=%d prof=%d fecha=%s: %s",
+                  id_paciente, id_profesional, fecha, e)
         return None
+    if r.status_code in (200, 201):
+        try:
+            data = _safe_json(r)
+        except Exception as e:
+            log.error("crear_cita: respuesta no-JSON de Medilink (%s): %s",
+                      e, r.text[:300])
+            return None
+        cita = data.get("data", data)
+        if isinstance(cita, list) and cita:
+            cita = cita[0]
+        cita_id = cita.get("id") if isinstance(cita, dict) else None
+        if not cita_id:
+            log.error("crear_cita: respuesta sin id — %s", data)
+            return None
+        # Invalidar cache de próxima fecha tras booking: el slot ya no está
+        # disponible. Sin esto, con TTL 15 min el bot puede ofrecer el mismo
+        # slot a otros pacientes y provocar doble-booking.
+        _proxima_cache.clear()
+        return {"id": cita_id, "confirmado": True}
+    log.error("crear_cita falló: %s %s", r.status_code, r.text[:500])
+    # Invalidar caché de horario si Medilink se queja de horario/duración:
+    # asegura que el siguiente buscar_primer_dia consulte fresco.
+    if r.status_code == 400 and ("horario" in r.text.lower() or "duraci" in r.text.lower()):
+        _horarios_cache.pop(id_profesional, None)
+        _proxima_cache.clear()
+        log.info("crear_cita 400 horario → caché invalidada para prof %s", id_profesional)
+    return None
 
 
 async def listar_citas_paciente(id_paciente: int, rut: str | None = None) -> list:
@@ -1136,63 +1136,63 @@ async def listar_citas_paciente(id_paciente: int, rut: str | None = None) -> lis
     el camino real es por RUT.
     """
     hoy = datetime.now(_CHILE_TZ).date().strftime("%Y-%m-%d")
-    async with httpx.AsyncClient(timeout=10) as client:
-        data = []
-        # Intento por rut (Medilink no soporta id_paciente en /citas)
-        if rut:
-            params = {
-                "rut": {"eq": rut},
-                "fecha": {"gte": hoy},
-                "estado_anulacion": {"eq": 0},
-            }
-            try:
-                r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
-                               params={"q": _q(params)}, headers=HEADERS)
-                if r.status_code == 200:
-                    data = _safe_json(r).get("data", [])
-            except httpx.RequestError as e:
-                log.error("listar_citas_paciente rut=%s: %s", _rut_safe(rut), e)
-                return []
-        else:
-            # Fallback: sin rut. Intenta id_paciente (fallará 400 hoy, pero
-            # mantenemos por si la API se arregla).
-            params = {
-                "id_paciente": {"eq": id_paciente},
-                "fecha":       {"gte": hoy},
-                "estado_anulacion": {"eq": 0},
-            }
-            try:
-                r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
-                               params={"q": _q(params)}, headers=HEADERS)
-                if r.status_code == 200:
-                    data = _safe_json(r).get("data", [])
-                else:
-                    log.warning("listar_citas_paciente id=%d → HTTP %d (necesita rut)",
-                                id_paciente, r.status_code)
-            except httpx.RequestError as e:
-                log.error("listar_citas_paciente id=%d: %s", id_paciente, e)
-                return []
-        # BUG-01: no filtrar por id_paciente clientside cuando se buscó por RUT.
-        # Medilink puede retornar id_paciente como str o int, y una cita recién
-        # creada puede tener un id_paciente distinto al del perfil buscado por
-        # buscar_paciente() si el paciente tiene dos registros. El RUT ya filtra
-        # correctamente. Eliminar este filtro para que citas recién creadas aparezcan.
-        # (Antes: data = [c for c in data if not c.get("id_paciente") or c.get("id_paciente") == id_paciente])
-        citas = []
-        for c in data:
-            id_prof = c.get("id_profesional")
-            prof_info = PROFESIONALES.get(id_prof, {}) if id_prof else {}
-            citas.append({
-                "id":          c["id"],
-                "id_profesional": id_prof,
-                "profesional": c.get("nombre_profesional", "") or prof_info.get("nombre", ""),
-                "especialidad": prof_info.get("especialidad", ""),
-                "fecha":       c.get("fecha", ""),
-                "fecha_display": _fmt_fecha(c.get("fecha", "")),
-                "hora_inicio": c.get("hora_inicio", "")[:5],
-                "estado":      c.get("estado_cita", ""),
-            })
-        return citas[:5]
+    client = _get_shared_client()
+    data = []
+    # Intento por rut (Medilink no soporta id_paciente en /citas)
+    if rut:
+        params = {
+            "rut": {"eq": rut},
+            "fecha": {"gte": hoy},
+            "estado_anulacion": {"eq": 0},
+        }
+        try:
+            r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
+                           params={"q": _q(params)}, headers=HEADERS)
+            if r.status_code == 200:
+                data = _safe_json(r).get("data", [])
+        except httpx.RequestError as e:
+            log.error("listar_citas_paciente rut=%s: %s", _rut_safe(rut), e)
+            return []
+    else:
+        # Fallback: sin rut. Intenta id_paciente (fallará 400 hoy, pero
+        # mantenemos por si la API se arregla).
+        params = {
+            "id_paciente": {"eq": id_paciente},
+            "fecha":       {"gte": hoy},
+            "estado_anulacion": {"eq": 0},
+        }
+        try:
+            r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
+                           params={"q": _q(params)}, headers=HEADERS)
+            if r.status_code == 200:
+                data = _safe_json(r).get("data", [])
+            else:
+                log.warning("listar_citas_paciente id=%d → HTTP %d (necesita rut)",
+                            id_paciente, r.status_code)
+        except httpx.RequestError as e:
+            log.error("listar_citas_paciente id=%d: %s", id_paciente, e)
+            return []
+    # BUG-01: no filtrar por id_paciente clientside cuando se buscó por RUT.
+    # Medilink puede retornar id_paciente como str o int, y una cita recién
+    # creada puede tener un id_paciente distinto al del perfil buscado por
+    # buscar_paciente() si el paciente tiene dos registros. El RUT ya filtra
+    # correctamente. Eliminar este filtro para que citas recién creadas aparezcan.
+    # (Antes: data = [c for c in data if not c.get("id_paciente") or c.get("id_paciente") == id_paciente])
+    citas = []
+    for c in data:
+        id_prof = c.get("id_profesional")
+        prof_info = PROFESIONALES.get(id_prof, {}) if id_prof else {}
+        citas.append({
+            "id":          c["id"],
+            "id_profesional": id_prof,
+            "profesional": c.get("nombre_profesional", "") or prof_info.get("nombre", ""),
+            "especialidad": prof_info.get("especialidad", ""),
+            "fecha":       c.get("fecha", ""),
+            "fecha_display": _fmt_fecha(c.get("fecha", "")),
+            "hora_inicio": c.get("hora_inicio", "")[:5],
+            "estado":      c.get("estado_cita", ""),
+        })
+    return citas[:5]
 
 
 async def listar_historial_paciente(id_paciente: int, meses: int = 6, rut: str | None = None) -> list:
@@ -1203,46 +1203,46 @@ async def listar_historial_paciente(id_paciente: int, meses: int = 6, rut: str |
     hoy = datetime.now(_CHILE_TZ).date()
     desde = (hoy - timedelta(days=meses * 30)).strftime("%Y-%m-%d")
     hasta = hoy.strftime("%Y-%m-%d")
-    async with httpx.AsyncClient(timeout=10) as client:
-        data = []
-        if rut:
-            params = {
-                "rut": {"eq": rut},
-                "fecha": {"gte": desde, "lte": hasta},
-                "estado_anulacion": {"eq": 0},
-            }
-            try:
-                r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
-                               params={"q": _q(params)}, headers=HEADERS)
-                if r.status_code == 200:
-                    data = _safe_json(r).get("data", [])
-            except httpx.RequestError as e:
-                log.error("listar_historial_paciente rut=%s: %s", _rut_safe(rut), e)
-                return []
-            # Filtrar por id_paciente por si hay otros registros con el mismo RUT
-            data = [c for c in data if not c.get("id_paciente") or c.get("id_paciente") == id_paciente]
-            # Defensa: Medilink a veces ignora `lte` y devuelve citas futuras.
-            # Historial no debe incluir fechas >= hoy.
-            hoy_str = hoy.strftime("%Y-%m-%d")
-            data = [c for c in data if c.get("fecha", "") < hoy_str]
-        else:
-            log.warning("listar_historial_paciente id=%d sin rut — Medilink no soporta id_paciente filter", id_paciente)
+    client = _get_shared_client()
+    data = []
+    if rut:
+        params = {
+            "rut": {"eq": rut},
+            "fecha": {"gte": desde, "lte": hasta},
+            "estado_anulacion": {"eq": 0},
+        }
+        try:
+            r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
+                           params={"q": _q(params)}, headers=HEADERS)
+            if r.status_code == 200:
+                data = _safe_json(r).get("data", [])
+        except httpx.RequestError as e:
+            log.error("listar_historial_paciente rut=%s: %s", _rut_safe(rut), e)
             return []
-        citas = []
-        for c in data:
-            id_prof = c.get("id_profesional")
-            prof_info = PROFESIONALES.get(id_prof, {}) if id_prof else {}
-            citas.append({
-                "id":           c["id"],
-                "profesional":  c.get("nombre_profesional", "") or prof_info.get("nombre", ""),
-                "especialidad": prof_info.get("especialidad", ""),
-                "fecha":        c.get("fecha", ""),
-                "fecha_display": _fmt_fecha(c.get("fecha", "")),
-                "hora_inicio":  c.get("hora_inicio", "")[:5],
-            })
-        # Ordenar por fecha descendente (más reciente primero)
-        citas.sort(key=lambda x: x["fecha"], reverse=True)
-        return citas[:20]
+        # Filtrar por id_paciente por si hay otros registros con el mismo RUT
+        data = [c for c in data if not c.get("id_paciente") or c.get("id_paciente") == id_paciente]
+        # Defensa: Medilink a veces ignora `lte` y devuelve citas futuras.
+        # Historial no debe incluir fechas >= hoy.
+        hoy_str = hoy.strftime("%Y-%m-%d")
+        data = [c for c in data if c.get("fecha", "") < hoy_str]
+    else:
+        log.warning("listar_historial_paciente id=%d sin rut — Medilink no soporta id_paciente filter", id_paciente)
+        return []
+    citas = []
+    for c in data:
+        id_prof = c.get("id_profesional")
+        prof_info = PROFESIONALES.get(id_prof, {}) if id_prof else {}
+        citas.append({
+            "id":           c["id"],
+            "profesional":  c.get("nombre_profesional", "") or prof_info.get("nombre", ""),
+            "especialidad": prof_info.get("especialidad", ""),
+            "fecha":        c.get("fecha", ""),
+            "fecha_display": _fmt_fecha(c.get("fecha", "")),
+            "hora_inicio":  c.get("hora_inicio", "")[:5],
+        })
+    # Ordenar por fecha descendente (más reciente primero)
+    citas.sort(key=lambda x: x["fecha"], reverse=True)
+    return citas[:20]
 
 
 async def obtener_agenda_dia(id_prof: int, fecha: str | None = None) -> list[dict]:
@@ -1256,78 +1256,78 @@ async def obtener_agenda_dia(id_prof: int, fecha: str | None = None) -> list[dic
         "fecha":            {"eq": fecha},
         "estado_anulacion": {"eq": 0},
     }
-    async with httpx.AsyncClient(timeout=15) as client:
-        try:
-            r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
-                           params={"q": _q(params)}, headers=HEADERS)
-        except httpx.RequestError as e:
-            log.error("obtener_agenda_dia prof=%d fecha=%s: %s", id_prof, fecha, e)
-            return []
-        if r.status_code != 200:
-            return []
-        citas_raw = _safe_json(r).get("data", [])
+    client = _get_shared_client()
+    try:
+        r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
+                       params={"q": _q(params)}, headers=HEADERS)
+    except httpx.RequestError as e:
+        log.error("obtener_agenda_dia prof=%d fecha=%s: %s", id_prof, fecha, e)
+        return []
+    if r.status_code != 200:
+        return []
+    citas_raw = _safe_json(r).get("data", [])
 
-        # Obtener datos de pacientes en paralelo (máx 5 concurrentes)
-        import asyncio as _aio
-        _sem = _aio.Semaphore(5)
+    # Obtener datos de pacientes en paralelo (máx 5 concurrentes)
+    import asyncio as _aio
+    _sem = _aio.Semaphore(5)
 
-        async def _fetch_pac(pac_id):
-            if not pac_id:
-                return {}
-            # Cache por ID (10 min) reduce traffic Medilink en jobs repetitivos
-            _cached = _paciente_id_cache.get(pac_id)
-            if _cached and (time.monotonic() - _cached["_ts"]) < _PAC_ID_TTL:
-                return _cached["data"]
-            async with _sem:
-                try:
-                    rp = await _get(client, f"{MEDILINK_BASE_URL}/pacientes/{pac_id}",
-                                    headers=HEADERS)
-                    if rp.status_code == 200:
-                        p = _safe_json(rp).get("data", {})
-                        if isinstance(p, list) and p:
-                            p = p[0]
-                        if p:
-                            _paciente_id_cache[pac_id] = {"data": p, "_ts": time.monotonic()}
-                        return p
-                except httpx.RequestError:
-                    pass
+    async def _fetch_pac(pac_id):
+        if not pac_id:
             return {}
+        # Cache por ID (10 min) reduce traffic Medilink en jobs repetitivos
+        _cached = _paciente_id_cache.get(pac_id)
+        if _cached and (time.monotonic() - _cached["_ts"]) < _PAC_ID_TTL:
+            return _cached["data"]
+        async with _sem:
+            try:
+                rp = await _get(client, f"{MEDILINK_BASE_URL}/pacientes/{pac_id}",
+                                headers=HEADERS)
+                if rp.status_code == 200:
+                    p = _safe_json(rp).get("data", {})
+                    if isinstance(p, list) and p:
+                        p = p[0]
+                    if p:
+                        _paciente_id_cache[pac_id] = {"data": p, "_ts": time.monotonic()}
+                    return p
+            except httpx.RequestError:
+                pass
+        return {}
 
-        pac_tasks = [_fetch_pac(c.get("id_paciente")) for c in citas_raw]
-        pac_results = await _aio.gather(*pac_tasks)
+    pac_tasks = [_fetch_pac(c.get("id_paciente")) for c in citas_raw]
+    pac_results = await _aio.gather(*pac_tasks)
 
-        agenda = []
-        for c, p in zip(citas_raw, pac_results):
-            pac_nombre = c.get("nombre_paciente", "")
-            pac_rut = ""
-            pac_edad = ""
-            pac_sexo = ""
-            if p:
-                pac_nombre = _fmt_nombre_apellidos(p.get('nombre'), p.get('apellidos')) or pac_nombre
-                pac_rut = p.get("rut", "")
-                pac_sexo = p.get("sexo", "")
-                pac_fecha_nac = p.get("fecha_nacimiento", "")
-                if pac_fecha_nac:
-                    try:
-                        fn = datetime.strptime(pac_fecha_nac[:10], "%Y-%m-%d").date()
-                        hoy = datetime.now(_CHILE_TZ).date()
-                        edad = hoy.year - fn.year - ((hoy.month, hoy.day) < (fn.month, fn.day))
-                        pac_edad = f"{edad} años"
-                    except ValueError:
-                        pass
+    agenda = []
+    for c, p in zip(citas_raw, pac_results):
+        pac_nombre = c.get("nombre_paciente", "")
+        pac_rut = ""
+        pac_edad = ""
+        pac_sexo = ""
+        if p:
+            pac_nombre = _fmt_nombre_apellidos(p.get('nombre'), p.get('apellidos')) or pac_nombre
+            pac_rut = p.get("rut", "")
+            pac_sexo = p.get("sexo", "")
+            pac_fecha_nac = p.get("fecha_nacimiento", "")
+            if pac_fecha_nac:
+                try:
+                    fn = datetime.strptime(pac_fecha_nac[:10], "%Y-%m-%d").date()
+                    hoy = datetime.now(_CHILE_TZ).date()
+                    edad = hoy.year - fn.year - ((hoy.month, hoy.day) < (fn.month, fn.day))
+                    pac_edad = f"{edad} años"
+                except ValueError:
+                    pass
 
-            agenda.append({
-                "id_cita":    c["id"],
-                "hora":       c.get("hora_inicio", "")[:5],
-                "hora_fin":   c.get("hora_fin", "")[:5],
-                "paciente":   pac_nombre,
-                "rut":        pac_rut,
-                "edad":       pac_edad,
-                "sexo":       pac_sexo,
-                "estado":     c.get("estado_cita", ""),
-            })
-        agenda.sort(key=lambda x: x["hora"])
-        return agenda
+        agenda.append({
+            "id_cita":    c["id"],
+            "hora":       c.get("hora_inicio", "")[:5],
+            "hora_fin":   c.get("hora_fin", "")[:5],
+            "paciente":   pac_nombre,
+            "rut":        pac_rut,
+            "edad":       pac_edad,
+            "sexo":       pac_sexo,
+            "estado":     c.get("estado_cita", ""),
+        })
+    agenda.sort(key=lambda x: x["hora"])
+    return agenda
 
 
 async def get_cita(id_cita: int) -> dict | None:
@@ -1336,17 +1336,17 @@ async def get_cita(id_cita: int) -> dict | None:
     o None si la cita no existe o la llamada fallo."""
     url = f"{MEDILINK_BASE_URL}/citas/{id_cita}"
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            r = await client.get(url, headers=HEADERS)
-            if r.status_code != 200:
-                return None
-            data = _safe_json(r)
-            if isinstance(data, dict) and "data" in data:
-                payload = data["data"]
-                if isinstance(payload, list):
-                    return payload[0] if payload else None
-                return payload if isinstance(payload, dict) else None
-            return data if isinstance(data, dict) else None
+        client = _get_shared_client()
+        r = await client.get(url, headers=HEADERS)
+        if r.status_code != 200:
+            return None
+        data = _safe_json(r)
+        if isinstance(data, dict) and "data" in data:
+            payload = data["data"]
+            if isinstance(payload, list):
+                return payload[0] if payload else None
+            return payload if isinstance(payload, dict) else None
+        return data if isinstance(data, dict) else None
     except Exception as e:
         log.warning("get_cita %d fallo: %s", id_cita, e)
         return None
@@ -1367,33 +1367,38 @@ def cita_esta_confirmada(cita: dict | None) -> bool:
 async def cancelar_cita(id_cita: int) -> bool:
     """Cancela una cita por su ID, con reintentos ante errores transitorios."""
     url = f"{MEDILINK_BASE_URL}/citas/{id_cita}"
-    async with httpx.AsyncClient(timeout=10) as client:
-        for attempt in range(3):
-            try:
-                r = await client.put(url, json={"id_estado": 1}, headers=HEADERS)
-                if r.status_code == 429:
-                    record_429(url)
-                    wait = 3.0 * (2 ** attempt)
-                    log.warning("Medilink PUT %s → 429 rate limit, esperando %.0fs (intento %d/3)", url, wait, attempt + 1)
-                    await asyncio.sleep(wait)
-                    continue
-                if r.status_code in (200, 201):
-                    _report_up()
-                    # Slot liberado: invalidar cache de próxima fecha para que
-                    # el próximo paciente vea el slot recién disponible.
-                    _proxima_cache.clear()
-                    return True
-                if r.status_code >= 500:
-                    log.warning("Medilink PUT %s → %s (intento %d/3)", url, r.status_code, attempt + 1)
-                else:
-                    log.error("Error cancelar cita %d: %s %s", id_cita, r.status_code, r.text[:200])
-                    return False
-            except (httpx.TimeoutException, httpx.NetworkError) as e:
-                log.warning("Medilink PUT %s error red: %s (intento %d/3)", url, e, attempt + 1)
-            if attempt < 2:
-                await asyncio.sleep(1.5 ** attempt)
-        log.error("No se pudo cancelar cita %d tras 3 intentos", id_cita)
-        return False
+    client = _get_shared_client()
+    for attempt in range(3):
+        try:
+            r = await client.put(url, json={"id_estado": 1}, headers=HEADERS)
+            if r.status_code == 429:
+                record_429(url)
+                wait = 3.0 * (2 ** attempt)
+                log.warning("Medilink PUT %s → 429 rate limit, esperando %.0fs (intento %d/3)", url, wait, attempt + 1)
+                await asyncio.sleep(wait)
+                continue
+            if r.status_code in (200, 201):
+                _report_up()
+                # Slot liberado: invalidar cache de próxima fecha para que
+                # el próximo paciente vea el slot recién disponible.
+                _proxima_cache.clear()
+                return True
+            if r.status_code == 400 and "igual al original" in r.text:
+                # La cita ya estaba en estado anulado — tratar como éxito
+                log.info("Cita %s ya estaba cancelada (400 igual al original)", id_cita)
+                _report_up()
+                return True
+            if r.status_code >= 500:
+                log.warning("Medilink PUT %s → %s (intento %d/3)", url, r.status_code, attempt + 1)
+            else:
+                log.error("Error cancelar cita %s: %s %s", id_cita, r.status_code, r.text[:200])
+                return False
+        except (httpx.TimeoutException, httpx.NetworkError) as e:
+            log.warning("Medilink PUT %s error red: %s (intento %d/3)", url, e, attempt + 1)
+        if attempt < 2:
+            await asyncio.sleep(1.5 ** attempt)
+    log.error("No se pudo cancelar cita %s tras 3 intentos", id_cita)
+    return False
 
 
 # Especialidades con pacientes recurrentes — para el panel de seguimiento
@@ -1415,83 +1420,83 @@ async def sync_ortodoncia_rango(fecha_ini: str, fecha_fin: str, delay: float = 2
     inicio = dt.strptime(fecha_ini, "%Y-%m-%d").date()
     fin    = dt.strptime(fecha_fin,  "%Y-%m-%d").date()
 
-    async with httpx.AsyncClient(timeout=20) as client:
-        d = inicio
-        while d <= fin:
-            fecha = d.isoformat()
-            params = {
-                "id_sucursal":    {"eq": int(MEDILINK_SUCURSAL)},
-                "id_profesional": {"eq": 66},
-                "fecha":          {"eq": fecha},
-                "estado_anulacion": {"eq": 0},
-            }
-            try:
-                r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
-                               params={"q": _q(params)}, headers=HEADERS)
-                if r.status_code == 200:
-                    citas = [c for c in _safe_json(r).get("data", []) if c.get("id_paciente")]
-                    visitas = []
-                    for c in citas:
-                        id_aten = c.get("id_atencion")
-                        total   = 0
-                        if id_aten:
-                            await asyncio.sleep(delay)
-                            ra = await _get(client, f"{MEDILINK_BASE_URL}/atenciones/{id_aten}",
-                                            headers=HEADERS)
-                            if ra.status_code == 200:
-                                total = _safe_json(ra).get("data", {}).get("total", 0)
-                        tipo = "instalacion" if total == 120000 else ("control" if total == 30000 else "pendiente")
-                        visitas.append({
-                            "id_atencion":     id_aten or 0,
-                            "id_paciente":     c["id_paciente"],
-                            "paciente_nombre": (c.get("nombre_paciente") or "").strip(),
-                            "fecha":           fecha,
-                            "hora_inicio":     (c.get("hora_inicio") or "")[:5],
-                            "total":           total,
-                            "tipo":            tipo,
-                        })
-                    if visitas:
-                        upsert_ortodoncia_cache(visitas)
-                        log.info("ortodoncia sync %s → %d visitas", fecha, len(visitas))
-            except Exception as e:
-                log.error("ortodoncia sync %s: %s", fecha, e)
-            await asyncio.sleep(delay)
-            d += timedelta(days=1)
+    client = _get_shared_client()
+    d = inicio
+    while d <= fin:
+        fecha = d.isoformat()
+        params = {
+            "id_sucursal":    {"eq": int(MEDILINK_SUCURSAL)},
+            "id_profesional": {"eq": 66},
+            "fecha":          {"eq": fecha},
+            "estado_anulacion": {"eq": 0},
+        }
+        try:
+            r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
+                           params={"q": _q(params)}, headers=HEADERS)
+            if r.status_code == 200:
+                citas = [c for c in _safe_json(r).get("data", []) if c.get("id_paciente")]
+                visitas = []
+                for c in citas:
+                    id_aten = c.get("id_atencion")
+                    total   = 0
+                    if id_aten:
+                        await asyncio.sleep(delay)
+                        ra = await _get(client, f"{MEDILINK_BASE_URL}/atenciones/{id_aten}",
+                                        headers=HEADERS)
+                        if ra.status_code == 200:
+                            total = _safe_json(ra).get("data", {}).get("total", 0)
+                    tipo = "instalacion" if total == 120000 else ("control" if total == 30000 else "pendiente")
+                    visitas.append({
+                        "id_atencion":     id_aten or 0,
+                        "id_paciente":     c["id_paciente"],
+                        "paciente_nombre": (c.get("nombre_paciente") or "").strip(),
+                        "fecha":           fecha,
+                        "hora_inicio":     (c.get("hora_inicio") or "")[:5],
+                        "total":           total,
+                        "tipo":            tipo,
+                    })
+                if visitas:
+                    upsert_ortodoncia_cache(visitas)
+                    log.info("ortodoncia sync %s → %d visitas", fecha, len(visitas))
+        except Exception as e:
+            log.error("ortodoncia sync %s: %s", fecha, e)
+        await asyncio.sleep(delay)
+        d += timedelta(days=1)
 
 
 async def sync_citas_dia(fecha: str, ids_prof: list[int]):
     """Descarga las citas de una fecha desde Medilink y las guarda en caché.
     Borra primero las existentes para esa fecha/profesional para mantener consistencia."""
     from session import upsert_citas_cache, delete_citas_cache_fecha
-    async with httpx.AsyncClient(timeout=30) as client:
-        for id_prof in ids_prof:
-            delete_citas_cache_fecha(id_prof, fecha)
-            params = {
-                "id_sucursal":      {"eq": int(MEDILINK_SUCURSAL)},
-                "id_profesional":   {"eq": id_prof},
-                "fecha":            {"eq": fecha},
-                "estado_anulacion": {"eq": 0},
-            }
-            try:
-                r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
-                               params={"q": _q(params)}, headers=HEADERS)
-                if r.status_code != 200:
-                    continue
-                citas = [
-                    {
-                        "id_prof":         id_prof,
-                        "id_paciente":     c.get("id_paciente"),
-                        "paciente_nombre": (c.get("nombre_paciente") or "").strip(),
-                        "fecha":           fecha,
-                        "hora_inicio":     (c.get("hora_inicio") or "")[:5],
-                    }
-                    for c in _safe_json(r).get("data", [])
-                    if c.get("id_paciente")
-                ]
-                upsert_citas_cache(citas)
-                log.info("sync_citas_dia: prof=%d fecha=%s → %d citas", id_prof, fecha, len(citas))
-            except Exception as e:
-                log.error("sync_citas_dia prof=%d fecha=%s: %s", id_prof, fecha, e)
+    client = _get_shared_client()
+    for id_prof in ids_prof:
+        delete_citas_cache_fecha(id_prof, fecha)
+        params = {
+            "id_sucursal":      {"eq": int(MEDILINK_SUCURSAL)},
+            "id_profesional":   {"eq": id_prof},
+            "fecha":            {"eq": fecha},
+            "estado_anulacion": {"eq": 0},
+        }
+        try:
+            r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
+                           params={"q": _q(params)}, headers=HEADERS)
+            if r.status_code != 200:
+                continue
+            citas = [
+                {
+                    "id_prof":         id_prof,
+                    "id_paciente":     c.get("id_paciente"),
+                    "paciente_nombre": (c.get("nombre_paciente") or "").strip(),
+                    "fecha":           fecha,
+                    "hora_inicio":     (c.get("hora_inicio") or "")[:5],
+                }
+                for c in _safe_json(r).get("data", [])
+                if c.get("id_paciente")
+            ]
+            upsert_citas_cache(citas)
+            log.info("sync_citas_dia: prof=%d fecha=%s → %d citas", id_prof, fecha, len(citas))
+        except Exception as e:
+            log.error("sync_citas_dia prof=%d fecha=%s: %s", id_prof, fecha, e)
 
 
 async def get_citas_seguimiento_mes(year: int, month: int, especialidad: str = "kinesiologia") -> list:
@@ -1523,44 +1528,44 @@ async def get_citas_seguimiento_mes(year: int, month: int, especialidad: str = "
 
     if dias_a_sync:
         log.info("get_citas_seguimiento_mes: sincronizando %d combos prof/fecha faltantes", len(dias_a_sync))
-        async with httpx.AsyncClient(timeout=30) as client:
-            async def _fetch_y_cache(id_prof: int, fecha: str):
-                from session import upsert_citas_cache, delete_citas_cache_fecha
-                params = {
-                    "id_sucursal":      {"eq": int(MEDILINK_SUCURSAL)},
-                    "id_profesional":   {"eq": id_prof},
-                    "fecha":            {"eq": fecha},
-                    "estado_anulacion": {"eq": 0},
-                }
-                try:
-                    r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
-                                   params={"q": _q(params)}, headers=HEADERS)
-                    if r.status_code != 200:
-                        return
-                    citas = [
-                        {
-                            "id_prof":         id_prof,
-                            "id_paciente":     c.get("id_paciente"),
-                            "paciente_nombre": (c.get("nombre_paciente") or "").strip(),
-                            "fecha":           fecha,
-                            "hora_inicio":     (c.get("hora_inicio") or "")[:5],
-                        }
-                        for c in _safe_json(r).get("data", [])
-                        if c.get("id_paciente")
-                    ]
-                    # Guardar aunque esté vacío (marca el día como sincronizado)
-                    if citas:
-                        upsert_citas_cache(citas)
-                    else:
-                        # Insertar registro centinela para no re-sync días sin citas
-                        upsert_citas_cache([{
-                            "id_prof": id_prof, "id_paciente": 0,
-                            "paciente_nombre": "__empty__", "fecha": fecha, "hora_inicio": "00:00"
-                        }])
-                except Exception as e:
-                    log.error("sync mes esp=%s prof=%d %s: %s", especialidad, id_prof, fecha, e)
+        client = _get_shared_client()
+        async def _fetch_y_cache(id_prof: int, fecha: str):
+            from session import upsert_citas_cache, delete_citas_cache_fecha
+            params = {
+                "id_sucursal":      {"eq": int(MEDILINK_SUCURSAL)},
+                "id_profesional":   {"eq": id_prof},
+                "fecha":            {"eq": fecha},
+                "estado_anulacion": {"eq": 0},
+            }
+            try:
+                r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
+                               params={"q": _q(params)}, headers=HEADERS)
+                if r.status_code != 200:
+                    return
+                citas = [
+                    {
+                        "id_prof":         id_prof,
+                        "id_paciente":     c.get("id_paciente"),
+                        "paciente_nombre": (c.get("nombre_paciente") or "").strip(),
+                        "fecha":           fecha,
+                        "hora_inicio":     (c.get("hora_inicio") or "")[:5],
+                    }
+                    for c in _safe_json(r).get("data", [])
+                    if c.get("id_paciente")
+                ]
+                # Guardar aunque esté vacío (marca el día como sincronizado)
+                if citas:
+                    upsert_citas_cache(citas)
+                else:
+                    # Insertar registro centinela para no re-sync días sin citas
+                    upsert_citas_cache([{
+                        "id_prof": id_prof, "id_paciente": 0,
+                        "paciente_nombre": "__empty__", "fecha": fecha, "hora_inicio": "00:00"
+                    }])
+            except Exception as e:
+                log.error("sync mes esp=%s prof=%d %s: %s", especialidad, id_prof, fecha, e)
 
-            await asyncio.gather(*[_fetch_y_cache(p, f) for p, f in dias_a_sync])
+        await asyncio.gather(*[_fetch_y_cache(p, f) for p, f in dias_a_sync])
 
     # Leer todo desde caché
     citas_raw_cache = get_citas_cache_mes(year, month, ids_prof)
@@ -1799,23 +1804,23 @@ async def get_slots_libres(profesional_id: int, fecha: str) -> list[dict]:
         log.warning("get_slots_libres: profesional_id=%d no en PROFESIONALES", profesional_id)
         return []
 
-    async with httpx.AsyncClient(timeout=20) as client:
-        try:
-            horarios = {profesional_id: await _get_horario(client, profesional_id)}
-        except Exception as e:
-            log.error("get_slots_libres: error horario prof=%d: %s", profesional_id, e)
-            return []
-        try:
-            # prioridad=False → todos los slots del profesional sin cortar al primero disponible.
-            # _slots_para_fecha ya maneja agendas, breaks, ocupadas y bloqueos.
-            # El buffer de 60 min solo aplica si fecha == hoy — para D+1 no filtra nada.
-            _, todos = await _slots_para_fecha(
-                client, [profesional_id], horarios, fecha, prioridad=False
-            )
-        except Exception as e:
-            log.error("get_slots_libres: error _slots_para_fecha prof=%d fecha=%s: %s",
-                      profesional_id, fecha, e)
-            return []
+    client = _get_shared_client()
+    try:
+        horarios = {profesional_id: await _get_horario(client, profesional_id)}
+    except Exception as e:
+        log.error("get_slots_libres: error horario prof=%d: %s", profesional_id, e)
+        return []
+    try:
+        # prioridad=False → todos los slots del profesional sin cortar al primero disponible.
+        # _slots_para_fecha ya maneja agendas, breaks, ocupadas y bloqueos.
+        # El buffer de 60 min solo aplica si fecha == hoy — para D+1 no filtra nada.
+        _, todos = await _slots_para_fecha(
+            client, [profesional_id], horarios, fecha, prioridad=False
+        )
+    except Exception as e:
+        log.error("get_slots_libres: error _slots_para_fecha prof=%d fecha=%s: %s",
+                  profesional_id, fecha, e)
+        return []
 
     log.info("get_slots_libres: prof=%d fecha=%s → %d slots libres", profesional_id, fecha, len(todos))
     return todos
