@@ -1,5 +1,7 @@
 # CLAUDE.md — Chatbot WhatsApp Centro Médico Carampangue (CMC)
 
+> **Sprint activo: Win-back** — leé `docs/WINBACK_SPRINT_2026-05.md` antes de tocar `app/winback.py`, `app/custom_audiences_sync.py`, `app/jobs.py::_job_marketing_consent_blast`, handlers de `consent_marketing_v1`, cohortes BI, o flags `WINBACK_ACTIVE` / `MARKETING_CONSENT_BLAST_ACTIVE` / `CROSS_SELL_ACTIVE`. Dashboard live: `https://agentecmc.cl/winback?token=cmc_admin_2026`
+
 > **Antes de tocar slots, horarios, cupos o citas de Medilink: lee `docs/medilink_gotchas.md`.** Contiene las reglas contraintuitivas (intervalo bot ≠ Medilink, horario base vacío, cancelación con id_estado=1, etc.) que si no recuerdas te hacen re-descubrir bugs ya resueltos.
 
 ## Instrucciones para Claude Code
