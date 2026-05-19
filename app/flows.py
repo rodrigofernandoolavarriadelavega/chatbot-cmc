@@ -5477,12 +5477,30 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         {"id": "waitlist_no", "title": "No, gracias"},
                     ]
                 )
+            # Bug 6 fix: filtrar slots de fecha pasada antes de presentar
+            from datetime import datetime as _dt_b6
+            from zoneinfo import ZoneInfo as _ZI_b6
+            _hoy_b6 = _dt_b6.now(_ZI_b6("America/Santiago")).date().strftime("%Y-%m-%d")
+            todos_nuevo = [s for s in todos_nuevo if (s.get("fecha") or "") >= _hoy_b6]
+            smart_nuevo = [s for s in smart_nuevo if (s.get("fecha") or "") >= _hoy_b6]
+            if not todos_nuevo:
+                data["waitlist_especialidad"] = especialidad
+                data["waitlist_id_prof_pref"] = data.get("prof_sugerido_id")
+                save_session(phone, "WAIT_WAITLIST_CONFIRM", data)
+                return _btn_msg(
+                    f"No encontré más disponibilidad futura para *{especialidad}* 😕\n\n"
+                    "¿Quieres que te avise apenas se libere un cupo?",
+                    [
+                        {"id": "waitlist_si", "title": "📝 Sí, inscribirme"},
+                        {"id": "waitlist_no", "title": "No, gracias"},
+                    ]
+                )
             nueva_fecha = todos_nuevo[0]["fecha"]
             fechas_vistas = fechas_vistas + [nueva_fecha]
-            data.update({"slots": smart_nuevo, "todos_slots": todos_nuevo,
+            data.update({"slots": smart_nuevo or todos_nuevo[:5], "todos_slots": todos_nuevo,
                          "fechas_vistas": fechas_vistas, "expansion_stage": 0})
             save_session(phone, "WAIT_SLOT", data)
-            return _format_slots(smart_nuevo)
+            return _format_slots(smart_nuevo or todos_nuevo[:5])
 
         # ── Motivos del menú que cayeron en WAIT_SLOT (usuario volvió a menú) ──
         # Manejo directo — evita redispatch que puede fallar por preambles (crisis,
