@@ -313,6 +313,39 @@ _SENALES_SINTOMA = re.compile(
     re.IGNORECASE,
 )
 
+# Detecta cuando el paciente quiere agendar para otra persona (WAIT_MODALIDAD).
+# Compilado a nivel de módulo — antes se compilaba en cada mensaje, lo que
+# causaba re.error en runtime por paréntesis desbalanceados (Bug 2026-05-18:
+# el \b( exterior nunca cerraba → 7 pacientes recibieron "problema técnico").
+# Fix: doble )) al final del bloque "para mi (?:...)" para cerrar el (?:...)
+# y el grupo captura exterior. re.IGNORECASE para cubrir "Mi hijo", "MI ESPOSA".
+_OTRA_PERSONA_RE = re.compile(
+    r"\b(otra persona|otr[oa] familiar|mi esposo|mi esposa|"
+    r"mi hijo|mi hija|mi mam[aá]|mi pap[aá]|mi hermano|mi hermana|"
+    r"mi abuelo|mi abuela|mi abuelito|mi abuelita|"
+    r"mi pololo|mi polola|mi pareja|mi nieto|mi nieta|"
+    r"mi suegro|mi suegra|mis suegros|"
+    r"mi cuñado|mi cuñada|mis cuñados|mis cuñadas|"
+    r"mi sobrino|mi sobrina|mis sobrinos|mis sobrinas|"
+    r"mi tío|mi tía|mis tíos|mis tías|"
+    r"mi vecino|mi vecina|"
+    r"mi yerno|mi nuera|"
+    r"un familiar|para un amigo|para una amiga|"
+    r"mi beb[eé]|mi guagua|mi niñ[oa]|mi niet[oa]|mi chic[oa]|"
+    r"mi pequeñ[oa]|mi hij[oa] menor|mi hij[oa] de|"
+    r"para mi beb[eé]|para mi guagua|para mi niñ[oa]|"
+    r"para mi (?:hijo|hija|mam[aá]|pap[aá]|hermano|hermana|"
+    r"abuelo|abuela|abuelito|abuelita|esposo|esposa|pareja|"
+    r"nieto|nieta|suegro|suegra|cuñado|cuñada|"
+    r"sobrino|sobrina|tío|tía|vecino|vecina|"
+    r"yerno|nuera|pololo|polola|"
+    r"beb[eé]|guagua|niñ[oa]|chic[oa]|pequeñ[oa]))|"
+    r"\ba nombre de\s+\w+|"
+    r"\bla cita es para\s+\w+|"
+    r"\b(?:reservar|agendar|hora)\s+para\s+\w+\s+\w+\b",
+    re.IGNORECASE,
+)
+
 
 # ── Precios para mostrar en la oferta de slot ─────────────────────────────────
 # Se muestran en el mismo mensaje donde el bot ofrece horarios, para matar la
@@ -1040,8 +1073,9 @@ def _strip_canal_circular(text: str, phone: str) -> str:
     return cleaned
 
 
-def _menu_msg(primer_contacto: bool = False) -> dict:
-    """Menú principal. Si primer_contacto=True agrega disclosure Ley 21.719."""
+def _menu_msg(primer_contacto: bool = False, nombre: str = "") -> dict:
+    """Menú principal. Si primer_contacto=True agrega disclosure Ley 21.719.
+    Si nombre está presente y no es primer contacto, saluda por nombre."""
     if primer_contacto:
         # FIX-17: Disclosure obligatorio primera vez (Ley 21.719 + best practices)
         intro = (
@@ -1050,6 +1084,12 @@ def _menu_msg(primer_contacto: bool = False) -> dict:
             "_No entrego consejo médico ni evalúo síntomas. "
             "Si es una urgencia, llama al *SAMU 131*._\n\n"
             f"📍 {_CMC_DIRECCION}.\n\n"
+            "¿Qué necesitas hoy?"
+        )
+    elif nombre:
+        # Bug 2 fix: saludo personalizado para pacientes conocidos
+        intro = (
+            f"Hola de nuevo, *{nombre}* 👋\n\n"
             "¿Qué necesitas hoy?"
         )
     else:
@@ -1881,7 +1921,9 @@ async def _pre_router_wait(phone: str, txt: str, tl: str, state: str, data: dict
     if tl_rescue in _MENU_KW:
         log_event(phone, "rescue_menu", {"state": state})
         reset_session(phone)
-        return _menu_msg()
+        _pf_rescue = get_profile(phone)
+        _nm_rescue = _first_name((_pf_rescue or {}).get("nombre", "")) if _pf_rescue else ""
+        return _menu_msg(nombre=_nm_rescue)
 
     if tl_rescue in _SALIR_KW:
         log_event(phone, "rescue_salir", {"state": state})
@@ -2745,14 +2787,18 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     if tl in ("retomar_no", "retomar_menu"):
         log_event(phone, "retomar_rechazado", {"state": state})
         reset_session(phone)
-        return _menu_msg()
+        _pf_retomar = get_profile(phone)
+        _nm_retomar = _first_name((_pf_retomar or {}).get("nombre", "")) if _pf_retomar else ""
+        return _menu_msg(nombre=_nm_retomar)
     if _es_comando_reset and state != "HUMAN_TAKEOVER":
         reset_session(phone)
         if phone == _doctor_phone:
             # El modo se lee del tag, no de la sesión — sobrevive el reset
             doc_mode = _get_doctor_mode(phone)
             if doc_mode == "agente":
-                return _menu_msg()
+                _pf_doc = get_profile(phone)
+                _nm_doc = _first_name((_pf_doc or {}).get("nombre", "")) if _pf_doc else ""
+                return _menu_msg(nombre=_nm_doc)
             if doc_mode == "asistente":
                 return (
                     "👨‍⚕️ *Asistente Clínico* listo.\n"
@@ -4070,7 +4116,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if _es_despedida:
                 log_event(phone, "despedida_detectada", {"tl": _tl_rescue})
                 return "Listo, fue un gusto ayudarte. Si necesitas algo, escribe *menu*."
-            return _menu_msg()
+            _pf_idle = get_profile(phone)
+            _nm_idle = _first_name((_pf_idle or {}).get("nombre", "")) if _pf_idle else ""
+            return _menu_msg(nombre=_nm_idle)
 
         if intent == "agendar":
             especialidad = result.get("especialidad")
@@ -4564,7 +4612,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 except Exception:
                     pass
         # Fallback final (saludo o input muy corto) → mostrar menú
-        return _menu_msg()
+        _pf_fb = get_profile(phone)
+        _nm_fb = _first_name((_pf_fb or {}).get("nombre", "")) if _pf_fb else ""
+        return _menu_msg(nombre=_nm_fb)
 
     # ── WAIT_DURACION_MASOTERAPIA ──────────────────────────────────────────────
     # ── WAIT_CONFIRMAR_ADULTO ────────────────────────────────────────────────
@@ -6209,34 +6259,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             # "para otra CITA". Caso real 2026-04-21 (56982709417): "necesito
             # una hora para otro día" → bot decía "Entendido, es para otra persona".
             # BUG-1 FIX: ampliado con suegra/cuñado/sobrina/tía/vecino/yerno/pololo
-            _OTRA_PERSONA_RE = re.compile(
-                r"\b(otra persona|otr[oa] familiar|mi esposo|mi esposa|"
-                r"mi hijo|mi hija|mi mam[aá]|mi pap[aá]|mi hermano|mi hermana|"
-                r"mi abuelo|mi abuela|mi abuelito|mi abuelita|"
-                r"mi pololo|mi polola|mi pareja|mi nieto|mi nieta|"
-                r"mi suegro|mi suegra|mis suegros|"
-                r"mi cuñado|mi cuñada|mis cuñados|mis cuñadas|"
-                r"mi sobrino|mi sobrina|mis sobrinos|mis sobrinas|"
-                r"mi tío|mi tía|mis tíos|mis tías|"
-                r"mi vecino|mi vecina|"
-                r"mi yerno|mi nuera|"
-                r"un familiar|para un amigo|para una amiga|"
-                r"mi beb[eé]|mi guagua|mi niñ[oa]|mi niet[oa]|mi chic[oa]|"
-                r"mi pequeñ[oa]|mi hij[oa] menor|mi hij[oa] de|"
-                r"para mi beb[eé]|para mi guagua|para mi niñ[oa]|"
-                r"para mi (?:hijo|hija|mam[aá]|pap[aá]|hermano|hermana|"
-                r"abuelo|abuela|abuelito|abuelita|esposo|esposa|pareja|"
-                r"nieto|nieta|suegro|suegra|cuñado|cuñada|"
-                r"sobrino|sobrina|tío|tía|vecino|vecina|"
-                r"yerno|nuera|pololo|polola|"
-                r"beb[eé]|guagua|niñ[oa]|chic[oa]|pequeñ[oa])|"
-                # BUG-F: patrones declarativos con nombre completo (27 casos, 0 capturados)
-                # "A nombre de Angela Vásquez", "La cita es para Juan Pérez",
-                # "Reservar para María González López"
-                r"\ba nombre de\s+\w+|"
-                r"\bla cita es para\s+\w+|"
-                r"\b(?:reservar|agendar|hora)\s+para\s+\w+\s+\w+\b"
-            )
+            # _OTRA_PERSONA_RE definido a nivel de módulo (bug fix 2026-05-18)
             if _OTRA_PERSONA_RE.search(tl):
                 data["booking_for_other"] = True
                 save_session(phone, "WAIT_MODALIDAD", data)
@@ -8724,7 +8747,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
     # Fallback
     reset_session(phone)
-    return _menu_msg()
+    _pf_end = get_profile(phone)
+    _nm_end = _first_name((_pf_end or {}).get("nombre", "")) if _pf_end else ""
+    return _menu_msg(nombre=_nm_end)
 
 
 # ── Helpers de flujo ──────────────────────────────────────────────────────────
