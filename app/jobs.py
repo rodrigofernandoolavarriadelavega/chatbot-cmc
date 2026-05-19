@@ -347,15 +347,19 @@ async def _job_enrolar_atendidos_dia():
         _ddl_conn.commit()
 
     # heatmap_cache.db tiene rut + celular por id_paciente Medilink
+    import contextlib as _contextlib
     try:
         heat = sqlite3.connect("/opt/chatbot-cmc/data/heatmap_cache.db")
     except Exception as e:
         log.warning("enrolar_atendidos: no se pudo abrir heatmap_cache: %s", e)
         heat = None
 
-    # Iterar en batches, cada batch abre y cierra su propia conexión
+    # Iterar en batches, cada batch abre y cierra su propia conexión.
+    # log_event se acumula fuera del with _conn() para evitar "database is locked":
+    # log_event abre su propia conexión y compite con la transacción larga.
     for batch_start in range(0, len(atendidos), _BATCH_SIZE):
         batch = atendidos[batch_start:batch_start + _BATCH_SIZE]
+        _pending_log_events: list[tuple[str, str, dict]] = []  # (phone, event, payload)
         for _attempt in range(_MAX_RETRIES):
             try:
                 with _conn() as conn:
@@ -418,8 +422,11 @@ async def _job_enrolar_atendidos_dia():
                                 pid_med,
                             ))
                             nuevos_enrolados += 1
-                            log_event(phone, "enrolar_postconsulta_offline",
-                                      {"cita_id": cita_id, "fecha": hoy})
+                            # Acumular fuera del with para no abrir segunda conexión concurrente
+                            _pending_log_events.append(
+                                (phone, "enrolar_postconsulta_offline",
+                                 {"cita_id": cita_id, "fecha": hoy})
+                            )
                         else:
                             # Tier C: sin opt-in WhatsApp → tabla pacientes_sin_optin
                             if celular_med:
@@ -443,6 +450,13 @@ async def _job_enrolar_atendidos_dia():
                             else:
                                 sin_celular += 1
                     conn.commit()
+                # Emitir log_events DESPUÉS de cerrar _conn para no competir con la transacción
+                for _le_phone, _le_event, _le_payload in _pending_log_events:
+                    try:
+                        log_event(_le_phone, _le_event, _le_payload)
+                    except Exception as _le_err:
+                        log.warning("enrolar_atendidos: log_event falló phone=%s: %s", _le_phone, _le_err)
+                _pending_log_events.clear()
                 break  # batch procesado OK
             except Exception as _db_err:
                 _is_locked = "database is locked" in str(_db_err).lower()
@@ -464,7 +478,10 @@ async def _job_enrolar_atendidos_dia():
                     break
 
     if heat:
-        heat.close()
+        try:
+            heat.close()
+        except Exception:
+            pass
 
     log.info(
         "enrolar_atendidos %s: nuevos=%d ya_en_citas_bot=%d sin_optin=%d sin_celular=%d",
@@ -806,7 +823,7 @@ async def _job_takeover_pendiente_alert():
         from session import _conn as _s_conn
         conn = _s_conn()
         rows = conn.execute(
-            "SELECT phone, state_data, updated_at FROM sessions WHERE state='HUMAN_TAKEOVER'",
+            "SELECT phone, data, updated_at FROM sessions WHERE state='HUMAN_TAKEOVER'",
         ).fetchall()
         conn.close()
     except Exception as e:
@@ -824,7 +841,7 @@ async def _job_takeover_pendiente_alert():
     for row in rows:
         try:
             updated_raw = row["updated_at"] if isinstance(row, dict) else row[2]
-            data_raw = row["state_data"] if isinstance(row, dict) else row[1]
+            data_raw = row["data"] if isinstance(row, dict) else row[1]
             phone = row["phone"] if isinstance(row, dict) else row[0]
             updated = _dt.fromisoformat(updated_raw)
             if updated.tzinfo is None:

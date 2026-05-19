@@ -194,10 +194,49 @@ ECOGRAFIA_ROUTING: dict[str, dict] = {
             "prostata",
             "eco prostata",
             "ecografia prostata",
-            # Musculoesquelética
+            # Musculoesquelética y articulaciones específicas
             "musculoesqueletica",
             "musculo esqueletica",
             "eco musculo",
+            "musculoesqueletico",
+            "musculo esqueletico",
+            # Articulaciones miembro superior
+            "hombro",
+            "de hombro",
+            "eco hombro",
+            "ecografia hombro",
+            "brazo",
+            "de brazo",
+            "eco brazo",
+            "codo",
+            "de codo",
+            "eco codo",
+            "muneca",
+            "muñeca",
+            "de muneca",
+            "mano",
+            "de mano",
+            "eco mano",
+            "dedo",
+            "de dedo",
+            # Articulaciones miembro inferior
+            "cadera",
+            "de cadera",
+            "eco cadera",
+            "rodilla",
+            "de rodilla",
+            "eco rodilla",
+            "tobillo",
+            "de tobillo",
+            "eco tobillo",
+            "pie",
+            "de pie",
+            "eco pie",
+            # Articulación genérico
+            "articulacion",
+            "articulación",
+            "eco articulacion",
+            "de articulacion",
             # Doppler genérico (no cardíaco)
             "doppler",
             "eco doppler",
@@ -228,7 +267,7 @@ _SOLO_ECO_KEYWORDS = frozenset({
 # Mensaje que el bot envía cuando el paciente solo dice "ecografía"
 MSG_PREGUNTAR_TIPO = (
     "¿De qué tipo es la ecografía? Por ejemplo:\n\n"
-    "• Abdominal / renal / tiroides / vejiga → David Pardo, $40.000\n"
+    "• Abdominal / renal / tiroides / vejiga / articulación / hombro → David Pardo, $40.000\n"
     "• Transvaginal / mamaria / pélvica / obstétrica → Ginecología (Dr. Rejón), $35.000\n"
     "• Ecocardiograma (corazón) → Cardiología (Dr. Millán), $110.000\n\n"
     "Escribe el tipo que necesitas."

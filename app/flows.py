@@ -8634,6 +8634,38 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             # que la consulta médica original sigue pendiente para el humano.
             if _new_intent in ("ver_reservas", "agendar", "cancelar", "reagendar",
                                "disponibilidad", "waitlist"):
+                # Guardia: si la recepcionista respondió hace menos de 30 min,
+                # NO resetear — podría haber una conversación activa y el bot
+                # agendaría en paralelo (caso real 569785******: recep respondió
+                # 11:54, bot agendó solo a las 11:56 tras siguiente mensaje).
+                _human_replied = data.get("human_replied", False)
+                _recep_reciente = False
+                if _human_replied:
+                    try:
+                        from session import _conn as _s_conn_tr
+                        _conn_tr = _s_conn_tr()
+                        _upd_row = _conn_tr.execute(
+                            "SELECT updated_at FROM sessions WHERE phone=?", (phone,)
+                        ).fetchone()
+                        _conn_tr.close()
+                        if _upd_row:
+                            _upd_raw = _upd_row[0]
+                            _upd_dt = datetime.fromisoformat(_upd_raw)
+                            if _upd_dt.tzinfo is None:
+                                _upd_dt = _upd_dt.replace(tzinfo=timezone.utc)
+                            _mins_ago = (datetime.now(timezone.utc) - _upd_dt).total_seconds() / 60
+                            _recep_reciente = _mins_ago < 30
+                    except Exception:
+                        _recep_reciente = False
+                if _recep_reciente:
+                    # Recepcionista activa: registrar el intent pero no desviar
+                    log_event(phone, "takeover_selectivo_bloqueado_recep_activa",
+                              {"intent": _new_intent, "takeover_reason": _takeover_reason})
+                    save_session(phone, "HUMAN_TAKEOVER", data)
+                    return (
+                        "Hay una recepcionista respondiendo tu consulta en este momento 😊 "
+                        "En cuanto termine, puedes continuar con tu solicitud."
+                    )
                 # Guardamos nota de la consulta pendiente antes de resetear
                 _pending_msg = data.get("handoff_reason", "")
                 reset_session(phone)

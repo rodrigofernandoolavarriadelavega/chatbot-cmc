@@ -26,7 +26,7 @@ from session import (get_citas_para_seguimiento, get_pacientes_inactivos,
                      get_crosssell_mg_chequeo_candidatos,
                      get_crosssell_dx_candidatos,
                      has_privacy_consent, is_window_open, log_event)
-from autocuidado import get_tips_autocuidado
+from autocuidado import get_tips_autocuidado, _inferir_sexo_por_nombre
 
 log = logging.getLogger("bot.fidelizacion")
 
@@ -55,6 +55,12 @@ def _nombre_corto(nombre: str | None) -> str:
     return nombre.strip().split()[0].capitalize()
 
 
+def _resolver_atendido(nombre: str | None) -> str:
+    """Devuelve 'atendida' o 'atendido' según nombre inferido. Nunca 'atendido/a'."""
+    sexo = _inferir_sexo_por_nombre(nombre)
+    return "atendida" if sexo == "F" else "atendido"
+
+
 def _msg_postconsulta(cita: dict) -> dict:
     """Mensaje interactivo con escala 1-5 — pide valoración de la experiencia
     siendo atendido en CMC (más amplio que solo 'cómo te sientes').
@@ -64,8 +70,9 @@ def _msg_postconsulta(cita: dict) -> dict:
     saludo = f"Hola *{nombre}* 😊 " if nombre else "Hola 😊 "
     prof = cita.get("profesional", "el profesional")
     esp = cita.get("especialidad", "tu consulta")
+    atendido = _resolver_atendido(nombre or cita.get("nombre"))
     body = (
-        f"{saludo}*¿Cómo te sentiste siendo atendido/a en el Centro Médico Carampangue?*\n\n"
+        f"{saludo}*¿Cómo te sentiste siendo {atendido} en el Centro Médico Carampangue?*\n\n"
         f"Hoy fuiste por *{esp}* con *{prof}*. Tu opinión es muy importante para mejorar 🙏\n\n"
         "_Califica de 1 a 5._"
     )
@@ -150,14 +157,20 @@ async def enviar_seguimiento_postconsulta_dia_anterior(send_fn, send_template_fn
         try:
             if len(grupo_m) > 1:
                 _cita_ref = grupo_m[0]
-                _lista_esp = ", ".join(
-                    f"{c.get('especialidad', '?')} ({c.get('profesional', '?')})"
-                    for c in grupo_m
-                )
+                # Deduplicar por (especialidad, profesional) antes de formatear
+                _seen_m: set[tuple] = set()
+                _items_m = []
+                for c in grupo_m:
+                    _key = (c.get("especialidad", ""), c.get("profesional", ""))
+                    if _key not in _seen_m:
+                        _seen_m.add(_key)
+                        _items_m.append(f"{c.get('especialidad', '?')} ({c.get('profesional', '?')})")
+                _lista_esp = ", ".join(_items_m)
                 nombre = _nombre_corto(_cita_ref.get("nombre"))
                 saludo = f"Hola *{nombre}* 😊 " if nombre else "Hola 😊 "
+                _atd_m = _resolver_atendido(nombre or _cita_ref.get("nombre"))
                 body_txt = (
-                    f"{saludo}*¿Cómo te sentiste siendo atendido/a ayer en el Centro Médico Carampangue?*\n\n"
+                    f"{saludo}*¿Cómo te sentiste siendo {_atd_m} ayer en el Centro Médico Carampangue?*\n\n"
                     f"Ayer fuiste por: *{_lista_esp}*. Tu opinión es muy importante 🙏\n\n"
                     "_Califica de 1 a 5._"
                 )
@@ -257,14 +270,20 @@ async def enviar_seguimiento_postconsulta(send_fn, send_template_fn=None,
             if len(grupo) > 1:
                 # Paciente con múltiples citas el mismo día
                 _cita_ref = grupo[0]
-                _lista_esp = ", ".join(
-                    f"{c.get('especialidad', '?')} ({c.get('profesional', '?')})"
-                    for c in grupo
-                )
+                # Deduplicar por (especialidad, profesional) antes de formatear
+                _seen_g: set[tuple] = set()
+                _items_g = []
+                for c in grupo:
+                    _key = (c.get("especialidad", ""), c.get("profesional", ""))
+                    if _key not in _seen_g:
+                        _seen_g.add(_key)
+                        _items_g.append(f"{c.get('especialidad', '?')} ({c.get('profesional', '?')})")
+                _lista_esp = ", ".join(_items_g)
                 nombre = _nombre_corto(_cita_ref.get("nombre"))
                 saludo = f"Hola *{nombre}* 😊 " if nombre else "Hola 😊 "
+                _atd_g = _resolver_atendido(nombre or _cita_ref.get("nombre"))
                 body_txt = (
-                    f"{saludo}*¿Cómo te sentiste siendo atendido/a hoy en el Centro Médico Carampangue?*\n\n"
+                    f"{saludo}*¿Cómo te sentiste siendo {_atd_g} hoy en el Centro Médico Carampangue?*\n\n"
                     f"Hoy fuiste por: *{_lista_esp}*. Tu opinión es muy importante para mejorar 🙏\n\n"
                     "_Califica de 1 a 5._"
                 )

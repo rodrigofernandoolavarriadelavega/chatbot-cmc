@@ -382,8 +382,8 @@ async def enviar_resumen_anomalias(send_fn) -> int:
         from jobs import _admin_window_open as _mw_open
         if not _mw_open():
             log.info("Monitor: ventana 24h cerrada para ADMIN_ALERT_PHONE, anomalías sólo en log")
-            for _, _, ah in nuevas:
-                _mark_alerted(ah, "")
+            for _t, _, ah in nuevas:
+                _mark_alerted(ah, _t)
             return 0
     except Exception:
         pass

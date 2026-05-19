@@ -5793,9 +5793,11 @@ async def webhook(request: Request):
         # los payloads conocidos del bot. Si el texto coincide exactamente, se
         # procesa como si fuera un button_reply — evita "no te entendí" o Claude.
         _BUTTON_PAYLOADS_KNOWN = {
-            "menu", "menu_volver", "agendar_sugerido", "ver_otros", "otro_dia",
-            "otro_prof", "confirmar_sugerido", "no_gracias_reeng",
-            "accion_recepcion", "quick_other", "quick_book", "quick_yes",
+            "menu", "menu_volver", "agendar_sugerido", "ver_otros", "ver_todos",
+            "otro_dia", "otro_día", "otro_prof", "confirmar_sugerido",
+            "no_gracias_reeng", "accion_recepcion", "accion_cambiar",
+            "accion_agendar", "accion_mis_citas", "accion_otro", "accion_waitlist",
+            "quick_other", "quick_book", "quick_yes", "quick_no",
             "quick_cancel", "waitlist_si", "waitlist_no", "reac_si", "reac_luego",
             "ped_continuar", "ped_no", "no_pediatra", "no_agendar",
             "menor_confirma_menor", "menor_confirma_adulto",
@@ -5810,7 +5812,14 @@ async def webhook(request: Request):
             "medfam_fallback_si", "medfam_fallback_no",
             "waitlist_confirmar", "waitlist_cancelar",
             "cat_medico", "cat_dental",
+            # motivo_ / accion_ / agendar_prof_ son prefijos — chequear abajo
         }
+        # Prefijos de payloads dinámicos (el valor completo varía pero el prefijo es fijo)
+        _BUTTON_PAYLOAD_PREFIXES = (
+            "motivo_", "accion_", "agendar_prof_", "cat_", "menu_",
+            "cita_confirm:", "cita_cancelar:", "cita_reagendar:",
+            "slot_", "ref_",
+        )
 
         # Extraer texto de mensajes de texto, respuestas interactivas o audio
         if msg_type == "text":
@@ -5825,7 +5834,12 @@ async def webhook(request: Request):
                 log.info("noise msg ignored from=%s txt=%r", phone, texto)
                 return Response(status_code=200)
             # BUG-B: payload de botón llegó como texto (algunos dispositivos WA)
-            if texto.strip().lower() in _BUTTON_PAYLOADS_KNOWN:
+            _txt_lower = texto.strip().lower()
+            _is_known_payload = (
+                _txt_lower in _BUTTON_PAYLOADS_KNOWN
+                or any(_txt_lower.startswith(p) for p in _BUTTON_PAYLOAD_PREFIXES)
+            )
+            if _is_known_payload:
                 log.info("button_payload_as_text from=%s payload=%r", phone, texto)
                 try:
                     from session import log_event as _log_ev_bb
@@ -5833,7 +5847,7 @@ async def webhook(request: Request):
                 except Exception:
                     pass
                 # Tratar como si viniera del canal interactivo (ya normalizado)
-                texto = texto.strip().lower()
+                texto = _txt_lower
         elif msg_type == "interactive":
             interactive = msg.get("interactive", {})
             itype = interactive.get("type", "")
