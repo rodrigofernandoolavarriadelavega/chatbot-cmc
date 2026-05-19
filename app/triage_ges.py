@@ -292,6 +292,8 @@ def normalizar_texto_paciente(texto: str) -> str:
         return texto
     t = _strip_tildes(texto.lower())
     t = re.sub(r"\s+", " ", t).strip()
+    # Bug 1 fix: colapsar vocales repetidas 3+ veces (siii→si, nooo→no, siiii....pra→si....pra)
+    t = re.sub(r"([aeiou])\1{2,}", r"\1", t)
     if not t:
         return texto
 

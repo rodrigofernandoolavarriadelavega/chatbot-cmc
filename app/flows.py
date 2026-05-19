@@ -6752,7 +6752,19 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "Sin problema 😊 Mantienes solo la hora original.\n\n"
                 "_Escribe *menu* si necesitas algo más._"
             )
-        if tl in AFIRMACIONES or tl_norm in AFIRMACIONES:
+        # Bug 1 fix: detectar afirmación como prefijo ("si reservar", "si confirma",
+        # "si por favor", "siii" ya normalizado a "si" por triage_ges/flows).
+        # También colapsar vocales repetidas en el propio tl_norm del flujo.
+        import re as _re_b1
+        _tl_norm_c = _re_b1.sub(r"([aeiou])\1{2,}", r"\1", tl_norm)
+        _es_afirmacion_confirming = (
+            tl in AFIRMACIONES
+            or tl_norm in AFIRMACIONES
+            or _tl_norm_c in AFIRMACIONES
+            or any(_tl_norm_c == a or _tl_norm_c.startswith(a + " ")
+                   for a in AFIRMACIONES)
+        )
+        if _es_afirmacion_confirming:
             slot    = data.get("slot_elegido")
             paciente = data.get("paciente")
             if not slot or not paciente:
