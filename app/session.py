@@ -2061,6 +2061,24 @@ def get_cita_bot_by_id_for_rebook(id_cita: str) -> dict | None:
         return dict(row) if row else None
 
 
+def phone_tiene_solo_citas_canceladas(phone: str) -> bool:
+    """True si el phone solo tiene citas canceladas (o ninguna) en citas_bot.
+
+    Usado por el job de reenganche para no insistir a un paciente cuya cita
+    ya no existe — evita el mensaje "tienes una reserva pendiente" cuando
+    cancel_detected_at está poblado en todas sus citas futuras.
+    """
+    with _conn() as conn:
+        # Citas futuras o de hoy no canceladas
+        row = conn.execute(
+            "SELECT COUNT(*) FROM citas_bot "
+            "WHERE phone=? AND cancel_detected_at IS NULL "
+            "AND fecha >= date('now', '-1 day')",
+            (phone,),
+        ).fetchone()
+        return int(row[0] if row else 0) == 0
+
+
 def mark_cita_cancel_detected(id_cita: str):
     """Marca una cita como 'cancelación detectada y notificada' para evitar duplicados."""
     with _conn() as conn:
@@ -2278,8 +2296,31 @@ def get_sesiones_abandonadas() -> list[dict]:
             except json.JSONDecodeError as exc:
                 log.warning("session data corrupta phone=%s: %s", d.get("phone"), exc)
                 d["data"] = {}
-            if not d["data"].get("reenganche_sent"):
-                result.append(d)
+            # Excluir si ya se envió en esta sesión
+            if d["data"].get("reenganche_sent"):
+                continue
+            # Excluir si el paciente rechazó el reenganche (opt-out permanente hasta
+            # que inicie un flujo nuevo — se limpia en reset_session)
+            if d["data"].get("reenganche_optout"):
+                continue
+            # Excluir si recibió reenganche hace menos de 24h (throttle por DB)
+            phone_chk = d.get("phone", "")
+            if phone_chk:
+                last_reeng = conn.execute(
+                    "SELECT MAX(ts) FROM conversation_events "
+                    "WHERE phone=? AND event='reenganche_enviado'",
+                    (phone_chk,),
+                ).fetchone()
+                if last_reeng and last_reeng[0]:
+                    from datetime import datetime as _dt, timezone as _tz
+                    try:
+                        last_ts = _dt.fromisoformat(last_reeng[0]).replace(tzinfo=_tz.utc)
+                        now_utc = _dt.now(_tz.utc)
+                        if (now_utc - last_ts).total_seconds() < 86400:
+                            continue
+                    except Exception:
+                        pass
+            result.append(d)
         return result
 
 
@@ -2304,6 +2345,7 @@ def get_citas_para_seguimiento(fecha_hoy: str, hora_corte: str | None = None) ->
                 LEFT JOIN contact_profiles p ON p.phone = cb.phone
                 WHERE cb.fecha = ?
                 AND substr(cb.hora, 1, 5) <= ?
+                AND cb.cancel_detected_at IS NULL
                 AND NOT EXISTS (
                     SELECT 1 FROM fidelizacion_msgs f
                     WHERE f.phone = cb.phone AND f.tipo = 'postconsulta' AND f.cita_id = cb.id_cita
@@ -2316,6 +2358,7 @@ def get_citas_para_seguimiento(fecha_hoy: str, hora_corte: str | None = None) ->
                 FROM citas_bot cb
                 LEFT JOIN contact_profiles p ON p.phone = cb.phone
                 WHERE cb.fecha = ?
+                AND cb.cancel_detected_at IS NULL
                 AND NOT EXISTS (
                     SELECT 1 FROM fidelizacion_msgs f
                     WHERE f.phone = cb.phone AND f.tipo = 'postconsulta' AND f.cita_id = cb.id_cita

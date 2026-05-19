@@ -23,7 +23,8 @@ from session import (get_sesiones_abandonadas, save_session, log_event, log_mess
                      get_cita_bot_by_id_for_rebook, mark_cita_cancel_detected,
                      get_profile,
                      get_candidatos_horas_vacias, log_horas_vacias_envio,
-                     get_horas_vacias_envios_hoy)
+                     get_horas_vacias_envios_hoy,
+                     phone_tiene_solo_citas_canceladas)
 from resilience import (is_medilink_down, mark_medilink_up, medilink_down_since,
                         should_notify_reception, mark_reception_notified,
                         should_notify_recovery, mark_recovery_notified)
@@ -71,6 +72,13 @@ async def _enviar_reenganche():
         especialidad = data.get("especialidad", "")
         nombre = (data.get("nombre_conocido") or data.get("reg_nombre") or "").split()
         saludo = f"*{nombre[0]}*" if nombre else ""
+
+        # No reengancharse si todas las citas relevantes del paciente están canceladas.
+        # Evita el mensaje "tienes una reserva pendiente" para una cita que ya no existe.
+        if phone_tiene_solo_citas_canceladas(phone):
+            log_event(phone, "reenganche_skip_cita_cancelada", {"state": state})
+            log.info("Reenganche skip (cita cancelada) → %s", phone)
+            continue
 
         # Intentar obtener próximo slot real para la especialidad
         slot_txt = ""
@@ -142,6 +150,7 @@ async def _enviar_reenganche():
                 continue
         data["reenganche_sent"] = True
         save_session(phone, state, data)
+        log_event(phone, "reenganche_enviado", {"state": state, "canal": canal})
         log.info("Reenganche enviado → %s (estado: %s, canal: %s)", phone, state, canal)
 
 
