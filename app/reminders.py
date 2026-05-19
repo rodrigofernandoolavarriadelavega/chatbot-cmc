@@ -7,7 +7,8 @@ import logging
 from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from config import USE_TEMPLATES
+from config import USE_TEMPLATES, ADMIN_ALERT_PHONE
+from messaging import render_template_body
 from session import (
     get_citas_bot_pendientes,
     get_citas_bot_para_2h_reminder,
@@ -174,6 +175,21 @@ async def enviar_recordatorios(send_text_fn, send_interactive_fn=None,
         log.info("Recordatorios: sin citas válidas tras validación Medilink")
         return
 
+    # Filtrar citas cuyo phone es el número personal del admin (ADMIN_ALERT_PHONE).
+    # Ese número nunca tiene ventana 24h abierta desde el bot → 131047 garantizado.
+    # Las citas del Dr. deben registrarse con el número del paciente real, no el suyo.
+    _admin_phone_clean = (ADMIN_ALERT_PHONE or "").lstrip("+")
+    if _admin_phone_clean:
+        before = len(citas)
+        citas = [c for c in citas if (c.get("phone") or "").lstrip("+") != _admin_phone_clean]
+        if len(citas) < before:
+            log.info("Recordatorios: omitidas %d cita(s) con phone=ADMIN (%s)",
+                     before - len(citas), _admin_phone_clean)
+
+    if not citas:
+        log.info("Recordatorios: sin citas tras filtro ADMIN para %s", manana)
+        return
+
     log.info("Recordatorios: enviando %d recordatorio(s) para %s", len(citas), manana)
     for cita in citas:
         try:
@@ -186,15 +202,27 @@ async def enviar_recordatorios(send_text_fn, send_interactive_fn=None,
                 hora = _fmt_hora(cita["hora"])
                 modalidad = (cita.get("modalidad") or "particular").capitalize()
                 id_cita = cita["id_cita"]
+                _tpl_params = [nombre, cita["especialidad"], cita["profesional"],
+                               fecha_display, hora, modalidad]
                 await send_template_fn(
                     cita["phone"],
                     "recordatorio_cita",
-                    body_params=[nombre, cita["especialidad"], cita["profesional"],
-                                 fecha_display, hora, modalidad],
+                    body_params=_tpl_params,
                     button_payloads=[f"cita_confirm:{id_cita}",
                                      f"cita_reagendar:{id_cita}",
                                      f"cita_cancelar:{id_cita}"],
                 )
+                log_event(cita["phone"], "template_enviado", {
+                    "template": "recordatorio_cita",
+                    "id_cita": id_cita,
+                })
+                log_message(cita["phone"], "out",
+                            render_template_body("recordatorio_cita", _tpl_params),
+                            "IDLE")
+                mark_reminder_sent(cita["id"])
+                log.info("Recordatorio (template) enviado → %s cita_id=%s",
+                         cita["phone"], id_cita)
+                continue
             elif send_interactive_fn:
                 await send_interactive_fn(cita["phone"], _interactive_recordatorio(cita))
             else:
@@ -287,6 +315,16 @@ async def enviar_recordatorios_2h(send_text_fn, send_template_fn=None):
     if not citas:
         return
 
+    # Filtrar phone del admin (igual que en enviar_recordatorios)
+    _admin_phone_clean = (ADMIN_ALERT_PHONE or "").lstrip("+")
+    if _admin_phone_clean:
+        before = len(citas)
+        citas = [c for c in citas if (c.get("phone") or "").lstrip("+") != _admin_phone_clean]
+        if len(citas) < before:
+            log.info("Recordatorios 2h: omitidas %d cita(s) con phone=ADMIN", before - len(citas))
+    if not citas:
+        return
+
     log.info("Recordatorios 2h: enviando %d recordatorio(s) ventana [%s-%s]",
              len(citas), hora_min, hora_max)
     for cita in citas:
@@ -349,12 +387,17 @@ async def enviar_recordatorios_2h(send_text_fn, send_template_fn=None):
                 except Exception:
                     pass
             elif USE_TEMPLATES and send_template_fn:
+                _tpl_params_2h = [nombre_pac, cita["especialidad"],
+                                  cita["profesional"], hora]
                 await send_template_fn(
                     cita["phone"],
                     "recordatorio_cita_2h",
-                    body_params=[nombre_pac, cita["especialidad"],
-                                 cita["profesional"], hora],
+                    body_params=_tpl_params_2h,
                 )
+                log_event(cita["phone"], "template_enviado", {
+                    "template": "recordatorio_cita_2h",
+                    "id_cita": id_cita_medilink,
+                })
                 log.info("Recordatorio 2h (template, paid) → %s cita_id=%s",
                          cita["phone"], id_cita_medilink)
             else:
@@ -375,9 +418,19 @@ async def enviar_recordatorios_2h(send_text_fn, send_template_fn=None):
                     "Recuerda llegar *15 minutos antes* con tu cédula de identidad."
                 )
 
-            log_message(cita["phone"], "out",
-                        f"[Recordatorio 2h] {cita['especialidad']} con {cita['profesional']} — hoy a las {hora}",
-                        "IDLE")
+            # log_message: si fue por template usamos el body renderizado;
+            # si fue por service window o fallback, texto genérico.
+            _tpl_was_used = USE_TEMPLATES and send_template_fn and not en_service_window
+            if _tpl_was_used:
+                log_message(cita["phone"], "out",
+                            render_template_body("recordatorio_cita_2h",
+                                                 [nombre_pac, cita["especialidad"],
+                                                  cita["profesional"], hora]),
+                            "IDLE")
+            else:
+                log_message(cita["phone"], "out",
+                            f"[Recordatorio 2h] {cita['especialidad']} con {cita['profesional']} — hoy a las {hora}",
+                            "IDLE")
             mark_reminder_2h_sent(cita["id"])
 
             # ── Aviso de liberación de slot (anti no-show) ────────────────────

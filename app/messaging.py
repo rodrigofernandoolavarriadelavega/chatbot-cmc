@@ -787,33 +787,51 @@ _TEMPLATE_BODIES = {
         "[Mejor 😊] [Igual 😐] [Peor 😟]"
     ),
     "recordatorio_cita": (
-        "Hola {1} 👋 Te recordamos tu cita de *{2}* con *{3}* el *{4}* a las *{5}*.\n\n"
-        "📍 Monsalve 102, Carampangue.\n\n"
-        "[Confirmar ✅] [Cancelar ❌]"
+        "Hola {1} 👋 Te recordamos tu cita en el *Centro Médico Carampangue*:\n\n"
+        "🏥 *{2}* — {3}\n"
+        "📅 *{4}* a las *{5}*\n"
+        "💳 {6}\n"
+        "📍 Monsalve esquina República, Carampangue\n\n"
+        "Recuerda llegar *15 minutos antes* con tu cédula de identidad.\n\n"
+        "¿Nos confirmas tu asistencia?\n\n"
+        "[Confirmo ✅] [Cambiar hora 🔄] [No podre ir ❌]"
     ),
     "recordatorio_cita_2h": (
-        "Hola {1} 👋 Tu cita de *{2}* con *{3}* es en 2 horas (*{4}*).\n\n"
-        "📍 Monsalve 102, Carampangue."
+        "Hola {1} ⏰ *En 2 horas* tienes tu cita en el *Centro Médico Carampangue*:\n\n"
+        "🏥 *{2}* — {3}\n"
+        "🕐 Hoy a las *{4}*\n"
+        "📍 Monsalve esquina República, Carampangue\n\n"
+        "Recuerda llegar *15 minutos antes* con tu cédula de identidad."
     ),
     "lista_espera_cupo": (
-        "Hola {1} 👋 Se liberó un cupo de *{2}* con *{3}* el *{4}* a las *{5}*. "
-        "¿Te interesa agendar?\n\n[Sí, agendar ✅] [No, gracias ❌]"
+        "Hola {1} 👋\n\n"
+        "¡Buenas noticias! Se liberó un cupo para *{2}*.\n\n"
+        "📅 Primera hora disponible: *{3} a las {4}*\n\n"
+        "Si quieres agendarla escribe *menu* y te ayudo al tiro 😊\n\n"
+        "_Te escribimos porque estás en nuestra lista de espera._"
     ),
     "informe_listo": (
-        "Hola {1} 👋 Tu informe de *{2}* ya está listo para retirar.\n\n"
-        "📍 Recepción CMC · Monsalve 102, Carampangue."
+        "Hola {1} 👋 Tu informe de *{2}* ya está disponible.\n\n"
+        "Responde a este mensaje y te lo enviamos por aquí 📄"
     ),
     "seguimiento_medico": (
-        "Hola {1} 👋 El Dr/Dra *{2}* quiere hacer seguimiento de tu última consulta. "
-        "¿Cómo te has sentido?\n\n[Mejor 😊] [Igual 😐] [Peor 😟]"
+        "Hola {1} 👋 El *{2}* del Centro Médico Carampangue quiere saber cómo has evolucionado "
+        "desde tu última consulta.\n\n"
+        "¿Cómo te has sentido? ¿Algún síntoma nuevo o cambio?\n\n"
+        "Responde a este mensaje y te orientamos 🙏"
     ),
     "reactivacion_paciente": (
         "Hola {1} 👋 Hace tiempo no te vemos por el Centro Médico Carampangue. "
         "¿Te gustaría agendar una consulta?"
     ),
     "sistema_recuperado": (
-        "Hola 👋 Ya tenemos el sistema de agendamiento funcionando otra vez. "
-        "Disculpa la espera. ¿Te ayudo a agendar?"
+        "✅ ¡Buenas noticias! Nuestro sistema de citas ya está operativo de nuevo 🎉\n\n"
+        "Si quieres retomar lo que estabas haciendo, escribe *menu* y te ayudo al tiro.\n\n"
+        "_Gracias por tu paciencia._"
+    ),
+    "sistema_recuperado_admin": (
+        "✅ *Medilink recuperado*\n\n"
+        "El bot ya está operativo. Se avisó a {1} paciente(s) que estaban esperando."
     ),
     "cumpleanos": (
         "🎂 ¡Feliz cumpleaños, {1}! 🎉 El equipo del Centro Médico Carampangue "
