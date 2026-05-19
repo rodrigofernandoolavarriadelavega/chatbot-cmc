@@ -1,0 +1,31 @@
+{
+  "name": "crosssell_ortodoncia_post_dental_v1",
+  "category": "MARKETING",
+  "language": "es_CL",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}}, esperamos que te haya ido bien con la Dra. {{2}} esta semana.\n\nSi el odontólogo te recomendó evaluar tratamiento de ortodoncia, podemos agendarte con la Dra. Daniela Castillo, ortodoncista del centro.\n\nLa evaluación inicial cuesta $15.000 e incluye revisión completa y plan de tratamiento.\n\nEscríbenos por este WhatsApp o llama al (41) 296 5226.",
+      "example": {
+        "body_text": [["Carmen", "Burgos"]]
+      }
+    },
+    {
+      "type": "FOOTER",
+      "text": "Si no quieres recibir más mensajes, responde BAJA"
+    },
+    {
+      "type": "BUTTONS",
+      "buttons": [
+        {
+          "type": "QUICK_REPLY",
+          "text": "Sí, agendar evaluación"
+        },
+        {
+          "type": "QUICK_REPLY",
+          "text": "Más información"
+        }
+      ]
+    }
+  ]
+}

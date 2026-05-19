@@ -63,32 +63,32 @@ COMMENT ON TABLE bi.dental_winback_envios IS
 CREATE OR REPLACE VIEW bi.v_dental_cohortes_contactables AS
 WITH ultima_dental AS (
     SELECT
-        p.id                                                        AS paciente_id,
+        p.paciente_id                                                        AS paciente_id,
         p.nombre,
         p.apellido,
-        COALESCE(p.celular, p.telefono)                             AS telefono,
+        p.telefono                             AS telefono,
         MAX(a.fecha)                                                AS ultima_atencion,
         NOW()::DATE - MAX(a.fecha)::DATE                            AS dias_inactivo,
         (ARRAY_AGG(pr.nombre ORDER BY a.fecha DESC))[1]             AS ultimo_profesional,
         (ARRAY_AGG(e.nombre  ORDER BY a.fecha DESC))[1]             AS ultima_especialidad,
-        (ARRAY_AGG(a.id_profesional ORDER BY a.fecha DESC))[1]      AS id_profesional
+        (ARRAY_AGG(a.profesional_id ORDER BY a.fecha DESC))[1]      AS profesional_id_ultimo
     FROM bi.dim_paciente p
-    INNER JOIN bi.fact_atenciones a   ON a.id_paciente   = p.id
-    INNER JOIN bi.dim_profesionales pr ON pr.id           = a.id_profesional
-    LEFT  JOIN bi.dim_especialidades e ON e.id            = a.id_especialidad
-    WHERE a.id_profesional IN (55, 72, 66, 75, 69, 76)
+    INNER JOIN bi.fact_atenciones a   ON a.paciente_id   = p.paciente_id
+    INNER JOIN bi.dim_profesional pr ON pr.profesional_id           = a.profesional_id
+    LEFT  JOIN bi.dim_especialidad e ON e.especialidad_id            = a.prestacion_id
+    WHERE a.profesional_id IN (55, 72, 66, 75, 69, 76)
       AND a.fecha >= CURRENT_DATE - INTERVAL '2 years'
-    GROUP BY p.id, p.nombre, p.apellido, p.celular, p.telefono
+    GROUP BY p.paciente_id, p.nombre, p.apellido, p.celular, p.telefono
 ),
 clasificada AS (
     SELECT
         ud.*,
         CASE
-            WHEN ud.id_profesional = 66 AND ud.dias_inactivo BETWEEN 30  AND 180 THEN 'dental_ortodoncia_180d'
-            WHEN ud.id_profesional IN (75, 69) AND ud.dias_inactivo BETWEEN 90 AND 365 THEN 'dental_endo_implanto_180d'
-            WHEN ud.id_profesional IN (55, 72) AND ud.dias_inactivo BETWEEN 90  AND 180 THEN 'dental_odonto_general_180d'
-            WHEN ud.id_profesional IN (55, 72) AND ud.dias_inactivo BETWEEN 181 AND 365 THEN 'dental_odonto_general_365d'
-            WHEN ud.id_profesional = 76 AND ud.dias_inactivo BETWEEN 90 AND 365 THEN 'dental_estetica_180d'
+            WHEN ud.profesional_id_ultimo = 66 AND ud.dias_inactivo BETWEEN 30  AND 180 THEN 'dental_ortodoncia_180d'
+            WHEN ud.profesional_id_ultimo IN (75, 69) AND ud.dias_inactivo BETWEEN 90 AND 365 THEN 'dental_endo_implanto_180d'
+            WHEN ud.profesional_id_ultimo IN (55, 72) AND ud.dias_inactivo BETWEEN 90  AND 180 THEN 'dental_odonto_general_180d'
+            WHEN ud.profesional_id_ultimo IN (55, 72) AND ud.dias_inactivo BETWEEN 181 AND 365 THEN 'dental_odonto_general_365d'
+            WHEN ud.profesional_id_ultimo = 76 AND ud.dias_inactivo BETWEEN 90 AND 365 THEN 'dental_estetica_180d'
             ELSE NULL
         END AS subcohorte
     FROM ultima_dental ud
