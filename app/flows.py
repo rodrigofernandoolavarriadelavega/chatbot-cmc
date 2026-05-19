@@ -346,7 +346,6 @@ _OTRA_PERSONA_RE = re.compile(
     re.IGNORECASE,
 )
 
-
 # ── Precios para mostrar en la oferta de slot ─────────────────────────────────
 # Se muestran en el mismo mensaje donde el bot ofrece horarios, para matar la
 # pregunta "¿cuánto cuesta?" antes de que el paciente la haga. La mayoría de
@@ -4940,6 +4939,19 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             save_session(phone, "WAIT_ESPECIALIDAD", data)
             return _especialidades_dental_msg()
 
+        # Bug 4 fix: respuesta especial para psiquiatra (no disponible en CMC)
+        if any(k in tl_norm for k in ("psiquiatra", "psiquiatria", "psiquiatría",
+                                       "psiquiatras", "psiquiatra ")):
+            save_session(phone, "WAIT_ESPECIALIDAD", data)
+            return _btn_msg(
+                "No tenemos psiquiatra en el CMC 😊\n\n"
+                "Sí contamos con *psicólogo adulto* e *infantil*. "
+                "¿Te sirve consultar con el psicólogo?",
+                [
+                    {"id": "psicología", "title": "Sí, psicólogo/a"},
+                    {"id": "menu_volver", "title": "Volver al menú"},
+                ]
+            )
         from medilink import _ids_para_especialidad
         # Traducir ID de lista interactiva al nombre real de especialidad
         especialidad_candidata = _ESP_ID_MAP.get(tl, tl)
@@ -7374,19 +7386,6 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if transient:
             save_session(phone, "HUMAN_TAKEOVER", data)
             return _msg_medilink_transient()
-        # Bug 3 fix: si no se encontró el paciente y el input era puramente numérico
-        # (sin guión), intentar también la interpretación alternativa donde el último
-        # dígito es el DV (ej: "92993795" puede ser "9299379-5" si paciente omitió guión).
-        if not paciente:
-            _rut_raw_digits = re.sub(r"[^0-9]", "", txt)
-            if len(_rut_raw_digits) >= 8 and rut.endswith("-" + _rut_raw_digits[-1]):
-                _rut_alt = _rut_raw_digits[:-1] + "-" + _rut_raw_digits[-1]
-                if _rut_alt != rut:
-                    _pac_alt, _trans_alt = await _buscar_paciente_safe(_rut_alt)
-                    if _pac_alt:
-                        paciente = _pac_alt
-                        rut = _rut_alt
-                        log_event(phone, "cancelar_rut_alternativo_ok", {"rut_alt": _rut_alt[:4] + "***"})
         if not paciente:
             reset_session(phone)
             return (
@@ -9608,6 +9607,16 @@ _FRASES_ESPECIALIDAD = [
     ("necesito una hora",     "medicina general"),   # sin especialidad → MG por defecto
     ("pedir hora médico",     "medicina general"),
     ("pedir hora medico",     "medicina general"),
+    # Bug 4 fix: salud mental, fuzzy ortodoncia, ansiedad/depresion
+    ("salud mental",          "psicología"),
+    ("salud emocional",       "psicología"),
+    ("bienestar mental",      "psicología"),
+    ("ansiedad",              "psicología"),
+    ("depresion",             "psicología"),
+    ("depresión",             "psicología"),
+    ("ortodancia",            "ortodoncia"),
+    ("ortodonsia",            "ortodoncia"),
+    ("ortodencias",           "ortodoncia"),
 ]
 
 
@@ -10480,21 +10489,16 @@ async def _iniciar_cancelar(phone: str, data: dict, txt: str = "") -> str:
     if is_medilink_down():
         return _modo_degradado(phone, "cancelar")
     save_session(phone, "WAIT_RUT_CANCELAR", data)
-    # Bug 3 fix: si el perfil ya tiene RUT, saltar directamente a la búsqueda
-    # de citas sin pedirlo otra vez.
-    from medilink import clean_rut as _cr3, valid_rut as _vr3
-    _perfil_cancel = get_profile(phone)
-    if _perfil_cancel and _perfil_cancel.get("rut"):
-        _rut_perfil = _cr3(_perfil_cancel["rut"])
-        if _vr3(_rut_perfil):
-            log_event(phone, "cancelar_rut_desde_perfil", {"rut": _rut_perfil[:4] + "***"})
-            return await handle_message(phone, _rut_perfil, {"state": "WAIT_RUT_CANCELAR", "data": data})
     # Defensa sistémica: si el mensaje original ya contiene un RUT válido,
-    # procesarlo directo sin pedirlo otra vez.
+    # procesarlo directo sin pedirlo otra vez. Caso real 2026-04-28 (Camila
+    # Salas, 56967753900): paciente escribió "Para que me la anulen porfa
+    # 21.234.722-1" y el bot le pidió el RUT 2 veces más.
     if txt:
-        _rut_emb = _cr3(txt)
-        if _vr3(_rut_emb):
+        from medilink import clean_rut as _cr, valid_rut as _vr
+        _rut_emb = _cr(txt)
+        if _vr(_rut_emb):
             log_event(phone, "rut_extraido_de_frase", {"flow": "cancelar"})
+            # FIX-10: sesión ya fue saved con WAIT_RUT_CANCELAR arriba; leer de nuevo es redundante
             return await handle_message(phone, _rut_emb, {"state": "WAIT_RUT_CANCELAR", "data": data})
     return (
         "Claro, te ayudo a cancelar una hora.\n\n"
