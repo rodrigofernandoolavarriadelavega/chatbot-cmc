@@ -67,7 +67,9 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_takeover_pendiente_alert,
                   _job_health_report,
                   _job_watchdog_blast,
-                  _job_winback_daily_report)
+                  _job_winback_daily_report,
+                  _job_dental_consent_blast,
+                  _job_dental_winback)
 import admin_routes
 import portal_routes
 
@@ -497,6 +499,24 @@ async def lifespan(app: FastAPI):
         id="watchdog_blast",
         replace_existing=True,
     )
+    # Dental win-back: L-V 10:35 CLT — campanas dentales focalizadas.
+    # Cohortes por profesional: ortodoncia → endo/implanto → odonto general → estética.
+    # INACTIVO por defecto (DENTAL_WINBACK_ACTIVE=false en .env).
+    scheduler.add_job(
+        _job_dental_winback,
+        CronTrigger(day_of_week="mon-fri", hour=10, minute=35, timezone=_CLT),
+        id="dental_winback_diario",
+        replace_existing=True,
+    )
+    # Dental consent blast: L-V 11:00 CLT — envía consent_dental_v1 (UTILITY).
+    # 1h después del blast general para no saturar rate limit Meta.
+    # INACTIVO por defecto (DENTAL_CONSENT_BLAST_ACTIVE=false en .env).
+    scheduler.add_job(
+        _job_dental_consent_blast,
+        CronTrigger(day_of_week="mon-fri", hour=11, minute=0, timezone=_CLT),
+        id="dental_consent_blast",
+        replace_existing=True,
+    )
     # Reporte diario win-back a Rodrigo: L-V 19:00 CLT
     scheduler.add_job(
         _job_winback_daily_report,
@@ -594,6 +614,7 @@ _TRAUMATOLOGO_CURANILAHUE_HTML = (_TEMPLATE_DIR / "traumatologo-curanilahue.html
 _OTORRINO_CURANILAHUE_HTML = (_TEMPLATE_DIR / "otorrino-curanilahue.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "otorrino-curanilahue.html").exists() else ""
 _GINECOLOGO_CURANILAHUE_HTML = (_TEMPLATE_DIR / "ginecologo-curanilahue.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "ginecologo-curanilahue.html").exists() else ""
 _DENTISTA_CURANILAHUE_HTML = (_TEMPLATE_DIR / "dentista-curanilahue.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "dentista-curanilahue.html").exists() else ""
+_LANDING_ORTODONCIA_HTML = (_TEMPLATE_DIR / "landing_ortodoncia.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "landing_ortodoncia.html").exists() else ""
 
 
 # ── Endpoints ────────────────────────────────────────────────────────────────
@@ -653,6 +674,12 @@ def ginecologo_curanilahue():
 def dentista_curanilahue():
     """Landing SEO — Dentista en Curanilahue."""
     return _DENTISTA_CURANILAHUE_HTML
+
+
+@app.get("/ortodoncia", response_class=HTMLResponse)
+def landing_ortodoncia():
+    """Landing SEO — Ortodoncia en Arauco y Carampangue."""
+    return _LANDING_ORTODONCIA_HTML
 
 
 @app.get("/sitio", response_class=HTMLResponse)
@@ -1375,7 +1402,7 @@ async def sitemap_xml():
         (f"{base_url}/privacidad", "0.3", "yearly"),
     ]
     # Landings directas (servidas vía bridge WP Snippet 8 bajo el dominio canónico)
-    for direct_slug in ("lebu", "empresas", "los-alamos", "canete", "chequeos", "curanilahue"):
+    for direct_slug in ("lebu", "empresas", "los-alamos", "canete", "chequeos", "curanilahue", "ortodoncia"):
         urls.append((f"{base_url}/{direct_slug}", "0.85", "monthly"))
     # Comuna hubs
     for comuna_slug in COMUNAS_ARAUCO:
@@ -2335,6 +2362,7 @@ _ABARCA_DASHBOARD_HTML = (_TEMPLATE_DIR / "abarca_dashboard.html").read_text(enc
 _OLAVARRIA_DASHBOARD_HTML = (_TEMPLATE_DIR / "olavarria_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "olavarria_dashboard.html").exists() else ""
 _PROF_DASHBOARD_HTML = (_TEMPLATE_DIR / "profesional_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "profesional_dashboard.html").exists() else ""
 _WINBACK_DASHBOARD_HTML = (_TEMPLATE_DIR / "winback_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "winback_dashboard.html").exists() else ""
+_WINBACK_DENTAL_DASHBOARD_HTML = (_TEMPLATE_DIR / "winback_dental_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "winback_dental_dashboard.html").exists() else ""
 
 @app.get("/atribucion", response_class=HTMLResponse)
 @app.get("/atribucion/dashboard", response_class=HTMLResponse)
@@ -2354,6 +2382,109 @@ def winback_dashboard_page(token: str | None = Query(None)):
     if not _WINBACK_DASHBOARD_HTML:
         raise HTTPException(404, "Dashboard Winback no disponible")
     return _WINBACK_DASHBOARD_HTML
+
+
+@app.get("/winback-dental", response_class=HTMLResponse)
+@app.get("/winback-dental/dashboard", response_class=HTMLResponse)
+def winback_dental_dashboard_page(token: str | None = Query(None)):
+    """Dashboard winback dental — pool por sub-cohorte, funnel consent, KPIs campana dental."""
+    if token != ADMIN_TOKEN:
+        raise HTTPException(401, "No autorizado")
+    if not _WINBACK_DENTAL_DASHBOARD_HTML:
+        raise HTTPException(404, "Dashboard Winback Dental no disponible")
+    return _WINBACK_DENTAL_DASHBOARD_HTML
+
+
+@app.get("/admin/api/winback-dental-status")
+def api_winback_dental_status(token: str | None = Query(None)):
+    """KPIs winback dental en tiempo real desde BI Postgres."""
+    if token != ADMIN_TOKEN:
+        raise HTTPException(401, "No autorizado")
+
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    import os as _oswd
+
+    now_cl = datetime.now(ZoneInfo("America/Santiago"))
+
+    flags = {
+        "DENTAL_CONSENT_BLAST_ACTIVE": _oswd.getenv("DENTAL_CONSENT_BLAST_ACTIVE", "false"),
+        "DENTAL_WINBACK_ACTIVE": _oswd.getenv("DENTAL_WINBACK_ACTIVE", "false"),
+    }
+
+    kpis: dict = {}
+    try:
+        from winback import bi_conn as _bi_conn_wd
+
+        with _bi_conn_wd() as conn:
+            cur = conn.cursor()
+
+            # Pool total por sub-cohorte
+            cur.execute(
+                "SELECT subcohorte, COUNT(*) FROM bi.v_dental_cohortes_contactables "
+                "GROUP BY subcohorte ORDER BY subcohorte"
+            )
+            kpis["pool_por_subcohorte"] = {r[0]: r[1] for r in cur.fetchall()}
+
+            # Consent dental: totales por estado
+            cur.execute(
+                "SELECT status, COUNT(*) FROM bi.dental_consent GROUP BY status"
+            )
+            kpis["consent_por_estado"] = {r[0]: r[1] for r in cur.fetchall()}
+
+            # Consent blast hoy
+            cur.execute(
+                "SELECT COUNT(*) FROM bi.dental_consent "
+                "WHERE DATE(consent_sent_at AT TIME ZONE 'America/Santiago') = CURRENT_DATE"
+            )
+            kpis["consent_enviados_hoy"] = cur.fetchone()[0]
+
+            # Winback enviados hoy
+            cur.execute(
+                "SELECT COUNT(*) FROM bi.dental_winback_envios "
+                "WHERE DATE(enviado_at) = CURRENT_DATE"
+            )
+            kpis["winback_enviados_hoy"] = cur.fetchone()[0]
+
+            # Winback total + respuestas últimos 30 días
+            cur.execute(
+                "SELECT COUNT(*) FROM bi.dental_winback_envios "
+                "WHERE enviado_at > NOW() - INTERVAL '30 days'"
+            )
+            kpis["winback_30d"] = cur.fetchone()[0]
+
+            cur.execute(
+                "SELECT response_type, COUNT(*) FROM bi.dental_winback_envios "
+                "WHERE enviado_at > NOW() - INTERVAL '30 days' AND response_type IS NOT NULL "
+                "GROUP BY response_type"
+            )
+            kpis["respuestas_30d"] = {r[0]: r[1] for r in cur.fetchall()}
+
+            # Opt-outs dental total
+            cur.execute("SELECT COUNT(*) FROM bi.dental_opt_outs")
+            kpis["opt_outs_total"] = cur.fetchone()[0]
+
+            # Últimos 7 días de envíos (para sparkline)
+            cur.execute(
+                "SELECT DATE(enviado_at) AS dia, COUNT(*) "
+                "FROM bi.dental_winback_envios "
+                "WHERE enviado_at > NOW() - INTERVAL '7 days' "
+                "GROUP BY dia ORDER BY dia"
+            )
+            kpis["ultimos_7_dias"] = [{"dia": str(r[0]), "enviados": r[1]} for r in cur.fetchall()]
+
+            cur.close()
+
+    except Exception as _e:
+        import logging as _lg
+        _lg.getLogger("winback_dental_dashboard").warning("winback-dental-status BI error: %s", _e)
+        kpis = {"error": str(_e)}
+
+    return {
+        "now_cl": now_cl.strftime("%Y-%m-%d %H:%M"),
+        "flags": flags,
+        "kpis": kpis,
+    }
 
 
 @app.get("/admin/api/winback-status")
