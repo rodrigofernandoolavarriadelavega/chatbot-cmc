@@ -2052,3 +2052,369 @@ async def _job_health_report() -> None:
         )
     except Exception as e:
         log.error("_job_health_report: fallback archivo también falló: %s", e)
+
+
+# ── Watchdog auto-pausa/auto-reactivación del blast ──────────────────────────
+
+async def _job_watchdog_blast() -> None:
+    """Cada 4h (minuto 15): evalúa salud del blast y pausa/reactiva automáticamente.
+
+    Criterios de AUTOPAUSAR (cualquiera de estos):
+      - errores Meta (131042 + 132000 + MSG FAILED) > 10 en últimas 24h
+      - quality_rating del número WA != GREEN
+      - tasa de rechazo consent > 40% con muestra >= 30
+
+    Criterios de AUTORREACTIVAR (todos simultáneamente):
+      - errores <= 1 en últimas 24h
+      - quality_rating == GREEN
+      - tasa rechazo <= 40%
+      - flag actualmente en false Y fue seteado por el watchdog (comentario # auto-set)
+
+    Cuando cambia el estado edita /opt/chatbot-cmc/.env y alerta a ADMIN_ALERT_PHONE.
+    Si el flag fue seteado manualmente (sin comentario # auto-set) NO lo toca.
+    """
+    import os as _os_wb
+    import re as _re_wb
+    import subprocess as _sub
+    from datetime import datetime
+    from pathlib import Path
+    from zoneinfo import ZoneInfo
+
+    log.info("_job_watchdog_blast: iniciando evaluación")
+
+    if not ADMIN_ALERT_PHONE:
+        log.warning("_job_watchdog_blast: ADMIN_ALERT_PHONE no configurado — skip")
+        return
+
+    _ENV_PATH = Path("/opt/chatbot-cmc/.env")
+    _ALERT_LOG = Path("/var/log/cmc-watchdog-alerts.log")
+    _NOW_CL = datetime.now(ZoneInfo("America/Santiago"))
+    _ts = _NOW_CL.strftime("%Y-%m-%d %H:%M CLT")
+
+    # ── 1. Leer flag actual y detectar si fue seteado manualmente ────────
+    flag_actual: bool = _os_wb.getenv("MARKETING_CONSENT_BLAST_ACTIVE", "false").lower() in ("true", "1", "yes")
+    fue_auto_set: bool = False
+
+    if _ENV_PATH.exists():
+        env_text = _ENV_PATH.read_text(encoding="utf-8")
+        # Buscar si la línea del flag tiene comentario # auto-set encima o inline
+        for line in env_text.splitlines():
+            if "MARKETING_CONSENT_BLAST_ACTIVE" in line and "# auto-set" in line:
+                fue_auto_set = True
+                break
+        # También buscar comentario en línea previa
+        lines = env_text.splitlines()
+        for i, line in enumerate(lines):
+            if "MARKETING_CONSENT_BLAST_ACTIVE" in line and i > 0:
+                if "# auto-set" in lines[i - 1]:
+                    fue_auto_set = True
+                    break
+    else:
+        log.warning("_job_watchdog_blast: .env no encontrado en %s — modo solo-lectura", _ENV_PATH)
+
+    # ── 2. Contar errores Meta últimas 24h en el log ──────────────────────
+    errores_total = 0
+    try:
+        # grep sobre las últimas 24h. El log tiene timestamp ISO al inicio de cada línea.
+        # Usamos las últimas 5000 líneas como proxy (más rápido que filtrar por fecha en bash).
+        result = _sub.run(
+            ["tail", "-n", "5000", "/var/log/cmc-bot.log"],
+            capture_output=True, text=True, timeout=15
+        )
+        log_tail = result.stdout
+        err_131042 = log_tail.count("131042")
+        err_132000 = log_tail.count("132000")
+        err_4xx     = len(_re_wb.findall(r"MSG FAILED.*code=", log_tail))
+        errores_total = err_131042 + err_132000 + err_4xx
+        log.info("_job_watchdog_blast: errores 24h — 131042=%d 132000=%d 4xx=%d total=%d",
+                 err_131042, err_132000, err_4xx, errores_total)
+    except Exception as e:
+        log.warning("_job_watchdog_blast: no pudo leer log: %s", e)
+        errores_total = 0  # conservador: no pausar por fallo de lectura
+
+    # ── 3. Quality rating del número WhatsApp ────────────────────────────
+    quality_rating = "GREEN"  # default seguro
+    try:
+        from config import META_PHONE_NUMBER_ID, META_ACCESS_TOKEN
+        if META_PHONE_NUMBER_ID and META_ACCESS_TOKEN:
+            async with httpx.AsyncClient(timeout=10) as client:
+                resp = await client.get(
+                    f"https://graph.facebook.com/v19.0/{META_PHONE_NUMBER_ID}",
+                    params={"fields": "quality_rating,name_status", "access_token": META_ACCESS_TOKEN},
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    quality_rating = (data.get("quality_rating") or "GREEN").upper()
+                    log.info("_job_watchdog_blast: quality_rating=%s name_status=%s",
+                             quality_rating, data.get("name_status"))
+                else:
+                    log.warning("_job_watchdog_blast: Meta API quality status=%d", resp.status_code)
+        else:
+            log.warning("_job_watchdog_blast: META_PHONE_NUMBER_ID o META_ACCESS_TOKEN no configurados")
+    except Exception as e:
+        log.warning("_job_watchdog_blast: error consultando quality rating: %s", e)
+
+    # ── 4. Tasa de rechazo consent últimos 7 días ────────────────────────
+    tasa_rechazo: float = 0.0
+    muestra_rechazo: int = 0
+    try:
+        from winback import bi_conn as _bi_conn_wb
+        with _bi_conn_wb() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT
+                        COUNT(*) FILTER (WHERE status = 'declined')  AS declinados,
+                        COUNT(*) FILTER (WHERE status IN ('accepted','declined')) AS respondidos
+                    FROM bi.marketing_consent
+                    WHERE consent_sent_at >= now() - interval '7 days'
+                """)
+                row = cur.fetchone()
+                declinados, respondidos = (row or (0, 0))
+                muestra_rechazo = respondidos or 0
+                tasa_rechazo = round((declinados / respondidos * 100) if respondidos > 0 else 0.0, 1)
+        log.info("_job_watchdog_blast: tasa_rechazo=%.1f%% muestra=%d", tasa_rechazo, muestra_rechazo)
+    except Exception as e:
+        log.warning("_job_watchdog_blast: error consultando tasa rechazo: %s", e)
+
+    # ── 5. Decisión ──────────────────────────────────────────────────────
+    debe_pausar = (
+        errores_total > 10
+        or quality_rating not in ("GREEN",)
+        or (tasa_rechazo > 40.0 and muestra_rechazo >= 30)
+    )
+    debe_reactivar = (
+        not flag_actual
+        and fue_auto_set
+        and errores_total <= 1
+        and quality_rating == "GREEN"
+        and not (tasa_rechazo > 40.0 and muestra_rechazo >= 30)
+    )
+
+    razones: list[str] = []
+    if errores_total > 10:
+        razones.append(f"errores Meta 24h={errores_total}")
+    if quality_rating not in ("GREEN",):
+        razones.append(f"quality_rating={quality_rating}")
+    if tasa_rechazo > 40.0 and muestra_rechazo >= 30:
+        razones.append(f"tasa_rechazo={tasa_rechazo}% (n={muestra_rechazo})")
+
+    log.info(
+        "_job_watchdog_blast: flag_actual=%s fue_auto_set=%s debe_pausar=%s debe_reactivar=%s razones=%s",
+        flag_actual, fue_auto_set, debe_pausar, debe_reactivar, razones,
+    )
+
+    # ── 6. Aplicar cambio si corresponde ─────────────────────────────────
+    cambio_realizado: str | None = None
+
+    def _editar_env(nuevo_valor: str) -> bool:
+        """Edita MARKETING_CONSENT_BLAST_ACTIVE en .env. Retorna True si exitoso."""
+        try:
+            if not _ENV_PATH.exists():
+                return False
+            texto = _ENV_PATH.read_text(encoding="utf-8")
+            lineas = texto.splitlines(keepends=True)
+            nuevas: list[str] = []
+            encontrado = False
+            for linea in lineas:
+                # Saltar comentarios auto-set previos
+                if "# auto-set by watchdog" in linea:
+                    continue
+                if _re_wb.match(r"\s*MARKETING_CONSENT_BLAST_ACTIVE\s*=", linea):
+                    nuevas.append(f"# auto-set by watchdog @ {_ts}\n")
+                    nuevas.append(f"MARKETING_CONSENT_BLAST_ACTIVE={nuevo_valor}  # auto-set\n")
+                    encontrado = True
+                else:
+                    nuevas.append(linea)
+            if not encontrado:
+                nuevas.append(f"\n# auto-set by watchdog @ {_ts}\n")
+                nuevas.append(f"MARKETING_CONSENT_BLAST_ACTIVE={nuevo_valor}  # auto-set\n")
+            _ENV_PATH.write_text("".join(nuevas), encoding="utf-8")
+            return True
+        except Exception as ex:
+            log.error("_job_watchdog_blast: error editando .env: %s", ex)
+            return False
+
+    if flag_actual and debe_pausar:
+        if _editar_env("false"):
+            cambio_realizado = "PAUSADO"
+            log.warning("_job_watchdog_blast: BLAST AUTOPAUSADO — razones: %s", razones)
+    elif debe_reactivar:
+        if _editar_env("true"):
+            cambio_realizado = "REACTIVADO"
+            log.info("_job_watchdog_blast: BLAST AUTOREACTIVADO — todos los indicadores OK")
+
+    # ── 7. Alerta a Rodrigo si hubo cambio ───────────────────────────────
+    if cambio_realizado:
+        estado_txt = "PAUSADO (blast detenido)" if cambio_realizado == "PAUSADO" else "ACTIVO (blast reanudado)"
+        razones_txt = ", ".join(razones) if razones else "todos los indicadores OK"
+        msg = (
+            f"Sistema CMC — Blast {cambio_realizado}\n\n"
+            f"Estado actual: {estado_txt}\n"
+            f"Razon: {razones_txt}\n"
+            f"Errores 24h: {errores_total} | Quality: {quality_rating} | "
+            f"Rechazo 7d: {tasa_rechazo}% (n={muestra_rechazo})\n\n"
+            f"Dashboard: agentecmc.cl/winback?token=cmc_admin_2026\n"
+            f"{_ts}"
+        )
+
+        # Intentar WA (ventana 24h)
+        from session import is_window_open as _is_win_wb
+        admin_phone = ADMIN_ALERT_PHONE.lstrip("+")
+        enviado_wa = False
+        if _is_win_wb(admin_phone):
+            try:
+                wamid = await send_whatsapp(admin_phone, msg)
+                if wamid:
+                    log.info("_job_watchdog_blast: alerta enviada por WA → wamid=%s", wamid)
+                    enviado_wa = True
+            except Exception as e:
+                log.warning("_job_watchdog_blast: send_whatsapp falló: %s", e)
+
+        # Fallback: archivo de log
+        try:
+            _ALERT_LOG.parent.mkdir(parents=True, exist_ok=True)
+            with open(_ALERT_LOG, "a", encoding="utf-8") as f:
+                f.write(f"[{_ts}] BLAST {cambio_realizado}: {razones_txt} | "
+                        f"errores={errores_total} quality={quality_rating} "
+                        f"rechazo={tasa_rechazo}% n={muestra_rechazo} "
+                        f"wa_enviado={enviado_wa}\n")
+        except Exception as e:
+            log.warning("_job_watchdog_blast: no pudo escribir alert log: %s", e)
+
+
+# ── Reporte diario win-back a Rodrigo ─────────────────────────────────────────
+
+async def _job_winback_daily_report() -> None:
+    """L-V 19:00 CLT: envía a ADMIN_ALERT_PHONE el resumen del día del sprint win-back.
+
+    Datos: queries a BI Postgres (mismo patrón que /admin/api/winback-status).
+    Entrega: send_whatsapp si ventana 24h abierta, sino guarda en
+    /var/log/cmc-watchdog-alerts.log para revisión manual.
+    """
+    import os as _os_dr
+    from datetime import datetime
+    from pathlib import Path
+    from zoneinfo import ZoneInfo
+
+    if not ADMIN_ALERT_PHONE:
+        log.warning("_job_winback_daily_report: ADMIN_ALERT_PHONE no configurado — skip")
+        return
+
+    _ALERT_LOG = Path("/var/log/cmc-watchdog-alerts.log")
+    _NOW_CL = datetime.now(ZoneInfo("America/Santiago"))
+    fecha_str = _NOW_CL.strftime("%d/%m/%Y")
+
+    # ── 1. Queries BI ────────────────────────────────────────────────────
+    utility_hoy = 0
+    aceptaron_hoy = 0
+    declinaron_hoy = 0
+    winbacks_hoy = 0
+    citas_hoy = 0
+    costo_hoy = 0
+    errores_24h = 0
+    tasa_acepto_pct: float = 0.0
+
+    try:
+        from winback import bi_conn as _bi_conn_dr
+        with _bi_conn_dr() as conn:
+            with conn.cursor() as cur:
+                # Consent enviados hoy
+                cur.execute("""
+                    SELECT
+                        COUNT(*) FILTER (WHERE DATE(consent_sent_at AT TIME ZONE 'America/Santiago') = CURRENT_DATE) AS enviados_hoy,
+                        COUNT(*) FILTER (WHERE DATE(response_at AT TIME ZONE 'America/Santiago') = CURRENT_DATE AND status = 'accepted') AS aceptaron_hoy,
+                        COUNT(*) FILTER (WHERE DATE(response_at AT TIME ZONE 'America/Santiago') = CURRENT_DATE AND status = 'declined') AS declinaron_hoy
+                    FROM bi.marketing_consent
+                """)
+                row = cur.fetchone()
+                utility_hoy, aceptaron_hoy, declinaron_hoy = (row or (0, 0, 0))
+
+                respondieron_hoy = aceptaron_hoy + declinaron_hoy
+                tasa_acepto_pct = round(
+                    (aceptaron_hoy / respondieron_hoy * 100) if respondieron_hoy > 0 else 0.0, 1
+                )
+
+                # Winbacks enviados hoy
+                cur.execute("""
+                    SELECT
+                        COUNT(*) AS winbacks_hoy,
+                        COUNT(*) FILTER (WHERE cita_creada = true) AS citas_hoy
+                    FROM bi.winback_envios
+                    WHERE DATE(enviado_at AT TIME ZONE 'America/Santiago') = CURRENT_DATE
+                """)
+                row2 = cur.fetchone()
+                winbacks_hoy = row2[0] if row2 else 0
+                citas_hoy = row2[1] if row2 else 0
+
+                # Costo Meta hoy (tabla opcional)
+                try:
+                    cur.execute("""
+                        SELECT COALESCE(SUM(spend_clp), 0)
+                        FROM bi.meta_spend_winback
+                        WHERE fecha = CURRENT_DATE
+                    """)
+                    costo_hoy = int(cur.fetchone()[0])
+                except Exception:
+                    costo_hoy = 0
+
+    except Exception as e:
+        log.warning("_job_winback_daily_report: error queries BI: %s", e)
+
+    # ── 2. Errores Meta últimas 24h (misma lógica que watchdog) ─────────
+    try:
+        import subprocess as _sub_dr
+        result = _sub_dr.run(
+            ["tail", "-n", "5000", "/var/log/cmc-bot.log"],
+            capture_output=True, text=True, timeout=15
+        )
+        log_tail = result.stdout
+        import re as _re_dr
+        errores_24h = (
+            log_tail.count("131042")
+            + log_tail.count("132000")
+            + len(_re_dr.findall(r"MSG FAILED.*code=", log_tail))
+        )
+    except Exception as e:
+        log.warning("_job_winback_daily_report: error leyendo log: %s", e)
+
+    # ── 3. Estado actual del flag ─────────────────────────────────────────
+    flag_blast = _os_dr.getenv("MARKETING_CONSENT_BLAST_ACTIVE", "false").lower() in ("true", "1", "yes")
+    estado_flag = "activo" if flag_blast else "pausado"
+
+    # ── 4. Armar mensaje ──────────────────────────────────────────────────
+    msg = (
+        f"Resumen Win-back CMC — {fecha_str}\n\n"
+        f"UTILITY enviados hoy: {utility_hoy}\n"
+        f"Aceptaron: {aceptaron_hoy} ({tasa_acepto_pct}%)\n"
+        f"Declinaron: {declinaron_hoy}\n"
+        f"Winbacks delivery OK: {winbacks_hoy}\n"
+        f"Citas creadas desde winback: {citas_hoy}\n"
+        f"Costo Meta hoy: ${costo_hoy:,} CLP\n"
+        f"Errores 24h: {errores_24h}\n\n"
+        f"Estado blast: {estado_flag}\n"
+        f"Dashboard: agentecmc.cl/winback?token=cmc_admin_2026"
+    )
+
+    # ── 5. Enviar ─────────────────────────────────────────────────────────
+    from session import is_window_open as _is_win_dr
+    admin_phone = ADMIN_ALERT_PHONE.lstrip("+")
+    enviado_wa = False
+
+    if _is_win_dr(admin_phone):
+        try:
+            wamid = await send_whatsapp(admin_phone, msg)
+            if wamid:
+                log.info("_job_winback_daily_report: enviado WA → wamid=%s", wamid)
+                enviado_wa = True
+        except Exception as e:
+            log.warning("_job_winback_daily_report: send_whatsapp falló: %s", e)
+
+    if not enviado_wa:
+        # Fallback: log de alertas (Rodrigo puede hacer: tail /var/log/cmc-watchdog-alerts.log)
+        try:
+            _ALERT_LOG.parent.mkdir(parents=True, exist_ok=True)
+            with open(_ALERT_LOG, "a", encoding="utf-8") as f:
+                f.write(f"\n--- REPORTE DIARIO {fecha_str} ---\n{msg}\n")
+            log.info("_job_winback_daily_report: ventana cerrada — guardado en %s", _ALERT_LOG)
+        except Exception as e:
+            log.error("_job_winback_daily_report: fallback log también falló: %s", e)

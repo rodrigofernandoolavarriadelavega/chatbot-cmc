@@ -65,7 +65,9 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_custom_audiences_sync,
                   _job_marketing_consent_blast,
                   _job_takeover_pendiente_alert,
-                  _job_health_report)
+                  _job_health_report,
+                  _job_watchdog_blast,
+                  _job_winback_daily_report)
 import admin_routes
 import portal_routes
 
@@ -488,6 +490,20 @@ async def lifespan(app: FastAPI):
         id="marketing_consent_blast",
         replace_existing=True,
     )
+    # Watchdog auto-pausa/reactivación blast: cada 4h a los :15 (03:15, 07:15, 11:15, 15:15, 19:15, 23:15)
+    scheduler.add_job(
+        _job_watchdog_blast,
+        CronTrigger(hour="*/4", minute=15, timezone=_CLT),
+        id="watchdog_blast",
+        replace_existing=True,
+    )
+    # Reporte diario win-back a Rodrigo: L-V 19:00 CLT
+    scheduler.add_job(
+        _job_winback_daily_report,
+        CronTrigger(day_of_week="mon-fri", hour=19, minute=0, timezone=_CLT),
+        id="winback_daily_report",
+        replace_existing=True,
+    )
     # Reporte semanal de salud del bot: lunes 09:00 CLT
     scheduler.add_job(
         _job_health_report,
@@ -504,7 +520,7 @@ async def lifespan(app: FastAPI):
         "post-consulta 10:00 · reactivación lun 10:30 · adherencia kine 11:00 · "
         "control 11:30 · cross-sell kine mié 10:30 · winback-bi L-V 10:05 (ACTIVE=%s) · "
         "sync caché 23:50 · watchdog medilink 1min · doctor alerts cada 5min + reportes 09/12/16/20 · "
-        "health report lunes 09:00",
+        "watchdog blast cada 4h · reporte diario winback L-V 19:00 · health report lunes 09:00",
         os.getenv('WINBACK_ACTIVE', 'false'),
     )
     yield
