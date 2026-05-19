@@ -1247,16 +1247,28 @@ def _localize_blog(html: str, base_slug: str, comuna_slug: str) -> str:
     )
 
     # Canonical apunta a versión localizada en centromedicocarampangue.cl
+    # BUG FIX 2026-05-18: el template tiene canonical en centromedicocarampangue.cl
+    # (no agentecmc.cl), entonces la regex vieja nunca matcheaba y las 190 páginas
+    # comuna-especialidad quedaban con canonical → blog base, indexación 0.
+    local_url = f"https://centromedicocarampangue.cl/blog/{base_slug}-{comuna_slug}"
+    base_url_cmc = f"https://centromedicocarampangue.cl/blog/{base_slug}"
+    base_url_ag = f"https://agentecmc.cl/blog/{base_slug}"
+
+    # Reescribe canonical (tolera ambos hosts y con/sin espacio antes de />)
     html = _re.sub(
-        rf'<link rel="canonical" href="https://agentecmc\.cl/blog/{base_slug}"\s*/>',
-        f'<link rel="canonical" href="https://centromedicocarampangue.cl/blog/{base_slug}-{comuna_slug}" />',
+        rf'<link\s+rel="canonical"\s+href="https://(?:centromedicocarampangue\.cl|agentecmc\.cl)/blog/{base_slug}"\s*/?>',
+        f'<link rel="canonical" href="{local_url}" />',
         html
     )
 
-    # Schema URLs apuntan a versión localizada
+    # Schema URLs y og:url: apuntan a versión localizada
+    html = html.replace(f'"{base_url_cmc}"', f'"{local_url}"')
+    html = html.replace(f'"{base_url_ag}"', f'"{local_url}"')
     html = html.replace(
-        f'"https://agentecmc.cl/blog/{base_slug}"',
-        f'"https://centromedicocarampangue.cl/blog/{base_slug}-{comuna_slug}"'
+        f'content="{base_url_cmc}"', f'content="{local_url}"'
+    )
+    html = html.replace(
+        f'content="{base_url_ag}"', f'content="{local_url}"'
     )
 
     # H1: agregar " · {nombre}" al final
