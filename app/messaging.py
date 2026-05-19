@@ -504,8 +504,8 @@ async def _get_template_language(template_name: str) -> str:
             params={
                 "name": template_name,
                 "fields": "name,language,status",
-                "access_token": META_ACCESS_TOKEN,
             },
+            headers={"Authorization": f"Bearer {META_ACCESS_TOKEN}"},
             timeout=8,
         )
         if r.status_code == 200:

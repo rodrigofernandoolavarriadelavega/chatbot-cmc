@@ -147,14 +147,22 @@ def _get_phones_bi(query: str) -> list[str]:
 # ── Meta Marketing API ────────────────────────────────────────────────────────
 async def _meta_get(url: str, params: dict | None = None) -> dict:
     async with httpx.AsyncClient(timeout=30) as client:
-        r = await client.get(url, params={"access_token": _META_ACCESS_TOKEN, **(params or {})})
+        r = await client.get(
+            url,
+            params=params or {},
+            headers={"Authorization": f"Bearer {_META_ACCESS_TOKEN}"},
+        )
         r.raise_for_status()
         return r.json()
 
 
 async def _meta_post(url: str, data: dict) -> dict:
     async with httpx.AsyncClient(timeout=30) as client:
-        r = await client.post(url, data={"access_token": _META_ACCESS_TOKEN, **data})
+        r = await client.post(
+            url,
+            data=data,
+            headers={"Authorization": f"Bearer {_META_ACCESS_TOKEN}"},
+        )
         if r.status_code not in (200, 201):
             log.error("Meta Marketing API %s: %s", r.status_code, r.text[:500])
             r.raise_for_status()

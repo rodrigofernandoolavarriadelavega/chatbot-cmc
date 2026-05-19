@@ -2192,7 +2192,8 @@ async def _job_watchdog_blast() -> None:
             async with httpx.AsyncClient(timeout=10) as client:
                 resp = await client.get(
                     f"https://graph.facebook.com/v19.0/{META_PHONE_NUMBER_ID}",
-                    params={"fields": "quality_rating,name_status", "access_token": META_ACCESS_TOKEN},
+                    params={"fields": "quality_rating,name_status"},
+                    headers={"Authorization": f"Bearer {META_ACCESS_TOKEN}"},
                 )
                 if resp.status_code == 200:
                     data = resp.json()
@@ -2288,10 +2289,14 @@ async def _job_watchdog_blast() -> None:
 
     if flag_actual and debe_pausar:
         if _editar_env("false"):
+            # Actualizar os.environ en memoria para que el proceso vivo tome efecto inmediato
+            # sin esperar restart (escribir solo .env no modifica el entorno del proceso).
+            _os_wb.environ["MARKETING_CONSENT_BLAST_ACTIVE"] = "false"
             cambio_realizado = "PAUSADO"
             log.warning("_job_watchdog_blast: BLAST AUTOPAUSADO — razones: %s", razones)
     elif debe_reactivar:
         if _editar_env("true"):
+            _os_wb.environ["MARKETING_CONSENT_BLAST_ACTIVE"] = "true"
             cambio_realizado = "REACTIVADO"
             log.info("_job_watchdog_blast: BLAST AUTOREACTIVADO — todos los indicadores OK")
 

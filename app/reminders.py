@@ -528,6 +528,14 @@ async def enviar_recordatorios_48h(send_text_fn, send_interactive_fn=None):
             if cita_ml.get("id_estado") == 1 or cita_ml.get("estado_anulacion") == 1:
                 _mcc(str(id_c))
                 continue
+            # Verificar que el paciente siga siendo el mismo (slot reasignado)
+            id_pac_local = c.get("id_paciente_medilink")
+            id_pac_ml = cita_ml.get("id_paciente")
+            if id_pac_local and id_pac_ml and str(id_pac_local) != str(id_pac_ml):
+                log.warning("Recordatorio 48h: cita %s reasignada en Medilink "
+                            "(paciente %s→%s), salto", id_c, id_pac_local, id_pac_ml)
+                _mcc(str(id_c))
+                continue
             validas.append(c)
         citas = validas
     except Exception as e:

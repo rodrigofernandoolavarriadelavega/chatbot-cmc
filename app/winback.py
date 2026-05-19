@@ -18,6 +18,7 @@ Reglas duras:
 import asyncio
 import logging
 import os
+import re
 import time
 from datetime import datetime, date
 from zoneinfo import ZoneInfo
@@ -744,8 +745,13 @@ async def run_daily_batch(cohorte: str = "090d") -> dict:
     log.info("winback: %d phones con cita futura (excluidos)", len(con_cita))
 
     candidatos = get_candidatos_dia(cohorte=cohorte, limite=restante * 2)  # pedir más por si hay exclusiones
+    # Normalizar a últimos 9 dígitos para comparar: BI puede tener "987654321",
+    # "9 7728 1627" o "56987654321"; con_cita viene de citas_bot con prefijo.
+    def _norm9(p: str) -> str:
+        return re.sub(r"\D", "", p or "")[-9:]
+    con_cita_n = {_norm9(p) for p in con_cita}
     candidatos = [c for c in candidatos
-                  if (c.get("telefono") or "").lstrip("+") not in con_cita]
+                  if _norm9(c.get("telefono") or "") not in con_cita_n]
     candidatos = candidatos[:restante]
 
     log.info("winback: %d candidatos elegibles para cohorte=%s", len(candidatos), cohorte)
