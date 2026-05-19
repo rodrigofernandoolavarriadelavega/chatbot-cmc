@@ -2414,7 +2414,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         "WAIT_WAITLIST_CONFIRM", "WAIT_WAITLIST_RUT", "WAIT_WAITLIST_NOMBRE",
         "WAIT_WAITLIST_CONFIRM_ECOCA", "WAIT_WAITLIST_RUT_ECOCA",
         "WAIT_RUT_VER", "WAIT_DATOS_NUEVO",
-        "WAIT_QUICK_BOOK", "WAIT_DURACION_MASOTERAPIA",
+        "WAIT_QUICK_BOOK", "WAIT_DURACION_MASOTERAPIA", "WAIT_ORTODONCIA_ACTIVO",
         "WAIT_CONFIRMAR_ADULTO", "WAIT_MEDFAM_FALLBACK",
         "WAIT_CROSS_SELL",
     }
@@ -4340,6 +4340,49 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if _fp:
                 data["fecha_pedida_idle"] = _fp
             data["_txt_raw"] = txt
+
+            # Patrón 4 FIX (2026-05-19): paciente activo en tratamiento de
+            # ortodoncia -> ofrecer menú especial en vez de flujo estándar.
+            # Evidencia: 4 phones activos escribieron 1-3 veces sin resultado
+            # (reimpresión boletas, pago control, próxima cita, retiro brackets).
+            _esp_orto_activo = (especialidad or "").lower().strip()
+            _keywords_orto = ("ortodoncia", "bracket", "ortodonc", "control")
+            _txt_orto = tl_norm
+            _es_posible_activo = (
+                _esp_orto_activo in ("ortodoncia", "brackets")
+                or any(k in _txt_orto for k in _keywords_orto)
+            )
+            if _es_posible_activo and perfil and perfil.get("rut"):
+                try:
+                    _sql_orto = (
+                        "SELECT COUNT(*) FROM bi.fact_atenciones "
+                        "WHERE rut = %s "
+                        "  AND id_profesional = 66 "
+                        "  AND fecha_atencion >= NOW() - INTERVAL '6 months'"
+                    )
+                    from winback import bi_conn as _bi_orto_conn
+                    with _bi_orto_conn() as _pg_orto:
+                        with _pg_orto.cursor() as _cur_orto:
+                            _cur_orto.execute(_sql_orto, (perfil["rut"],))
+                            _cnt_orto = (_cur_orto.fetchone() or [0])[0]
+                    if _cnt_orto > 0:
+                        log_event(phone, "ortodoncia_activo_menu_ofrecido",
+                                  {"rut": perfil["rut"], "atenciones_6m": _cnt_orto})
+                        save_session(phone, "WAIT_ORTODONCIA_ACTIVO", data)
+                        nombre_orto = _first_name(perfil.get("nombre", ""))
+                        saludo_orto = f"Hola *{nombre_orto}* " if nombre_orto else "Hola "
+                        return _btn_msg(
+                            f"{saludo_orto}— como paciente de ortodoncia con la Dra. Castillo, "
+                            "¿en qué te podemos ayudar?",
+                            [
+                                {"id": "orto_ver_cita", "title": "Mi próxima cita"},
+                                {"id": "orto_boleta",   "title": "Reimpresión de boleta"},
+                                {"id": "orto_urgencia", "title": "Bracket suelto / urgencia"},
+                            ]
+                        )
+                except Exception as _e_orto4:
+                    log.warning("ortodoncia activo check phone=%s: %s", phone, _e_orto4)
+
             return await _iniciar_agendar(phone, data, especialidad)
 
         if intent == "reagendar":
@@ -4847,6 +4890,44 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 {"id": "otro_dia",           "title": "📅 Otro día"},
             ]
         )
+
+    # ── WAIT_ORTODONCIA_ACTIVO ───────────────────────────────────────────────
+    # Patrón 4 (2026-05-19): paciente activo en tratamiento de ortodoncia.
+    # Botones: ver próxima cita / reimpresión boleta / urgencia bracket suelto.
+    # Opciones 1-2-3 derivan a HUMAN_TAKEOVER (recepción atiende).
+    if state == "WAIT_ORTODONCIA_ACTIVO":
+        tl_oa = txt.strip().lower()
+        if tl_oa in ("orto_ver_cita", "mi próxima cita", "mi proxima cita",
+                     "ver cita", "próxima cita", "1"):
+            reset_session(phone)
+            log_event(phone, "ortodoncia_activo_opcion", {"opcion": "ver_cita"})
+            return (
+                "Te conecto con recepción para que te confirmen tu próxima "
+                "cita con la Dra. Castillo.\n\n"
+                "Llama al *(41) 296 5226* o escribe *humano* y te respondemos "
+                "en cuanto podamos."
+            )
+        if tl_oa in ("orto_boleta", "reimpresión de boleta", "reimpresion de boleta",
+                     "boleta", "comprobante", "2"):
+            reset_session(phone)
+            log_event(phone, "ortodoncia_activo_opcion", {"opcion": "boleta"})
+            return (
+                "La reimpresión de boletas la gestiona recepción directamente.\n\n"
+                "Llama al *(41) 296 5226* en horario de atención "
+                "(lun-vie 08:00-21:00, sáb 09:00-14:00)."
+            )
+        if tl_oa in ("orto_urgencia", "bracket suelto", "urgencia", "3"):
+            reset_session(phone)
+            log_event(phone, "ortodoncia_activo_opcion", {"opcion": "urgencia"})
+            return (
+                "Para urgencias con brackets (bracket suelto, alambre salido, "
+                "dolor agudo), llama de inmediato al *(41) 296 5226*.\n\n"
+                "Si es fuera de horario, puedes escribir aquí y recepción te "
+                "responde al día siguiente."
+            )
+        # Cualquier otro texto → flujo normal IDLE
+        reset_session(phone)
+        return await handle_message(phone, txt)
 
     # ── WAIT_QUICK_BOOK ───────────────────────────────────────────────────────
     # Oferta "agendar otra hora como la última vez" para pacientes conocidos.

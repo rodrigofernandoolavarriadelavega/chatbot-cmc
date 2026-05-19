@@ -69,7 +69,8 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_watchdog_blast,
                   _job_winback_daily_report,
                   _job_dental_consent_blast,
-                  _job_dental_winback)
+                  _job_dental_winback,
+                  _job_crosssell_post_dental_ortodoncia)
 import admin_routes
 import portal_routes
 
@@ -307,6 +308,15 @@ async def lifespan(app: FastAPI):
         _job_crosssell_mg_chequeo,
         CronTrigger(day_of_week="tue", day="1-7", hour=9, minute=30, timezone=_CLT),
         id="crosssell_mg_chequeo",
+        replace_existing=True,
+    )
+    # Cross-sell post-dental -> ortodoncia: L-V 11:00 CLT (Patron 5, 2026-05-19)
+    # Pacientes con cita dental atendida hace 48-72h sin cita futura con Castillo.
+    # Template pendiente de aprobacion Meta: crosssell_ortodoncia_post_dental_v1.
+    scheduler.add_job(
+        _job_crosssell_post_dental_ortodoncia,
+        CronTrigger(day_of_week="mon-fri", hour=11, minute=0, timezone=_CLT),
+        id="crosssell_post_dental_ortodoncia",
         replace_existing=True,
     )
     # Cumpleaños: diario a las 10:00 CLT
