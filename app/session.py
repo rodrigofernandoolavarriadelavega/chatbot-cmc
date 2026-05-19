@@ -184,6 +184,8 @@ def _run_ddl_inline(conn) -> None:
     conn.execute("CREATE INDEX IF NOT EXISTS idx_msg_ts    ON messages(ts)")
     # P3: índice compuesto phone+ts para queries de historial
     conn.execute("CREATE INDEX IF NOT EXISTS idx_msg_phone_ts ON messages(phone, ts DESC)")
+    # P-1: índice phone+id para el CTE de get_conversations (evita N+1 subquery)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_msg_phone_id ON messages(phone, id)")
     conn.execute("""
         CREATE TABLE IF NOT EXISTS fidelizacion_msgs (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -534,6 +536,8 @@ def _run_ddl_inline(conn) -> None:
     conn.execute("CREATE INDEX IF NOT EXISTS idx_dnd_phone ON demanda_no_disponible(phone)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_citas_bot_esp ON citas_bot(especialidad)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_citas_bot_phone ON citas_bot(phone)")
+    # P-2: índice fecha para fidelización, winback y jobs (era full scan)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_citas_bot_fecha ON citas_bot(fecha)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_events_event_ts ON conversation_events(event, ts)")
     # P2: índice compuesto phone+ts para queries de historial de eventos
     conn.execute("CREATE INDEX IF NOT EXISTS idx_events_phone ON conversation_events(phone, ts DESC)")
@@ -2187,6 +2191,10 @@ def get_conversations(limit: int = 2000) -> list[dict]:
     """
     with _conn() as conn:
         rows = conn.execute("""
+            WITH last_msgs AS (
+                SELECT phone, MAX(id) AS last_id, COUNT(*) AS msg_count
+                FROM messages GROUP BY phone
+            )
             SELECT
                 ph.phone,
                 COALESCE(s.state, 'IDLE') AS state,
@@ -2201,16 +2209,15 @@ def get_conversations(limit: int = 2000) -> list[dict]:
                 COALESCE(m.canal, 'whatsapp') AS canal,
                 p.nombre,
                 p.rut,
-                (SELECT COUNT(*) FROM messages WHERE phone = ph.phone) AS msg_count
+                COALESCE(lm.msg_count, 0) AS msg_count
             FROM (
                 SELECT phone FROM sessions
                 UNION
-                SELECT DISTINCT phone FROM messages
+                SELECT phone FROM last_msgs
             ) ph
             LEFT JOIN sessions s ON s.phone = ph.phone
-            LEFT JOIN messages m ON m.id = (
-                SELECT id FROM messages WHERE phone = ph.phone ORDER BY id DESC LIMIT 1
-            )
+            LEFT JOIN last_msgs lm ON lm.phone = ph.phone
+            LEFT JOIN messages m ON m.id = lm.last_id
             LEFT JOIN contact_profiles p ON p.phone = ph.phone
             ORDER BY updated_at DESC
             LIMIT ?
