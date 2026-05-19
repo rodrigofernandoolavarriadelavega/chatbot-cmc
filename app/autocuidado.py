@@ -5,7 +5,11 @@ Basado en las guías preventivas del MINSAL Chile.
 """
 from datetime import date, datetime
 from typing import Optional
+import logging
 import random
+import unicodedata
+
+log = logging.getLogger(__name__)
 
 # ── Tips genéricos (para todos) ─────────────────────────────────────────────
 _TIPS_GENERICOS = [
@@ -89,6 +93,108 @@ _TIPS_POR_ESPECIALIDAD = {
     ],
 }
 
+# ── Inferencia de sexo por primer nombre ────────────────────────────────────
+# Listas de primeros nombres chilenos frecuentes. Solo primer nombre se cruza.
+# Se normalizan a minúscula sin tildes antes de comparar.
+_NOMBRES_FEMENINOS = frozenset({
+    "alejandra", "alejandrina", "alicia", "amanda", "amelia", "ana", "anahi",
+    "andrea", "anita", "antonia", "aurora", "beatriz", "blanca", "camila",
+    "carla", "carmen", "carolina", "catalina", "cecilia", "claudia", "consuelo",
+    "cristina", "daniela", "elena", "elisa", "elizabeth", "elvira", "emily",
+    "emma", "esther", "fabiola", "fernanda", "flor", "francisca", "gabriela",
+    "gloria", "graciela", "guadalupe", "ingrid", "irene", "isabel", "isadora",
+    "jacqueline", "jaqueline", "jessica", "josefa", "josefina", "julia",
+    "julieta", "karen", "katherine", "katia", "laura", "lia", "liliana",
+    "lorena", "lucia", "luisa", "luz", "magdalena", "marcela", "marcia",
+    "margarita", "maria", "mariana", "marisol", "marlene", "macarena",
+    "melissa", "monica", "nadia", "nancy", "natalia", "nicole", "nieves",
+    "noelia", "nora", "norma", "olga", "pamela", "patricia", "paula",
+    "paz", "pilar", "priscila", "raquel", "renata", "rosa", "rosario",
+    "roxana", "ruth", "sandra", "sara", "sarai", "silvana", "silvia",
+    "soledad", "sofia", "susana", "tamara", "teresa", "valentina", "valeria",
+    "vanesa", "vanessa", "veronica", "victoria", "violeta", "virginia",
+    "viviana", "ximena", "yasna", "yessenia", "yolanda",
+})
+
+_NOMBRES_MASCULINOS = frozenset({
+    "aaron", "abel", "abraham", "adolfo", "adrian", "agustin", "alberto",
+    "alejandro", "alex", "alexis", "alfredo", "alonso", "alvaro", "andres",
+    "angel", "antonio", "ariel", "arnaldo", "augusto", "benjamin", "boris",
+    "camilo", "carlos", "christian", "claudio", "cristian", "cristobal",
+    "daniel", "dario", "david", "diego", "domingo", "eduardo", "emilio",
+    "enrique", "ernesto", "esteban", "ezequiel", "fabian", "fabricio",
+    "federico", "felipe", "felix", "fernado", "fernando", "francisco",
+    "gabriel", "gaston", "gerardo", "gonzalo", "guillermo", "gustavo",
+    "hector", "hernan", "hugo", "ignacio", "ivan", "jaime", "javier",
+    "jean", "jorge", "jose", "juan", "julio", "kevin", "leonardo",
+    "leopoldo", "lorenz", "lorenzo", "lucas", "luis", "manuel", "marcelo",
+    "marco", "marcos", "mario", "martin", "matias", "mauricio", "maximo",
+    "miguel", "moises", "nelson", "nicolas", "oscar", "pablo", "patricio",
+    "pedro", "rafael", "raul", "renato", "ricardo", "roberto", "rodrigo",
+    "ruben", "samuel", "sebastian", "sergio", "simon", "tomas", "victor",
+    "vicente", "waldo", "walter", "willson", "wilson", "yerlan",
+})
+
+
+def _normalizar(s: str) -> str:
+    """Minúscula, sin tildes, sin espacios laterales."""
+    nfkd = unicodedata.normalize("NFKD", s.lower().strip())
+    return "".join(c for c in nfkd if not unicodedata.combining(c))
+
+
+def _inferir_sexo_por_nombre(nombre: str | None) -> str | None:
+    """
+    Intenta inferir sexo a partir del primer nombre del paciente.
+    Retorna "M", "F", o None si no se puede determinar con confianza.
+    """
+    if not nombre:
+        return None
+    primer_nombre = _normalizar(nombre.split()[0])
+    if primer_nombre in _NOMBRES_FEMENINOS:
+        return "F"
+    if primer_nombre in _NOMBRES_MASCULINOS:
+        return "M"
+    return None
+
+
+def _resolver_sexo(sexo_medilink: str | None, nombre: str | None) -> str | None:
+    """
+    Determina el sexo efectivo para filtrar tips preventivos.
+
+    Prioridad:
+    1. Si el nombre infiere un sexo con certeza y contradice lo de Medilink → usar nombre.
+       Medilink tiene datos mal cargados (ej: Olga con sexo='M').
+    2. Si nombre y Medilink coinciden → usar ese sexo.
+    3. Si solo uno de los dos tiene valor → usar ese.
+    4. Si ninguno → None (no se envían tips sexo-específicos).
+
+    Loggea siempre que detecta mismatch entre Medilink y nombre.
+    """
+    sexo_ml = (sexo_medilink or "").upper()[:1] or None  # "M", "F", o None
+    sexo_nombre = _inferir_sexo_por_nombre(nombre)
+
+    if sexo_ml and sexo_nombre:
+        if sexo_ml != sexo_nombre:
+            # Mismatch: nombre es más confiable que registro manual en Medilink
+            log.warning(
+                "tip_sexo_mismatch nombre=%r medilink=%s inferido=%s → usando inferido",
+                (nombre or "").split()[0] if nombre else "",
+                sexo_ml,
+                sexo_nombre,
+            )
+            return sexo_nombre
+        return sexo_ml  # coinciden
+
+    if sexo_nombre:
+        return sexo_nombre
+
+    if sexo_ml:
+        return sexo_ml
+
+    # Sin información de sexo — loggear para métricas
+    log.info("tip_skip_no_sexo nombre=%r", (nombre or "").split()[0] if nombre else "")
+    return None
+
 
 def _parse_fecha(fecha_str: str) -> Optional[date]:
     for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y"):
@@ -118,14 +224,20 @@ def get_tips_autocuidado(
 
     Args:
         fecha_nacimiento: YYYY-MM-DD o DD/MM/YYYY (puede ser None)
-        sexo: "M" o "F" (puede ser None)
+        sexo: "M" o "F" según Medilink (puede ser None o tener dato incorrecto)
         especialidad: especialidad de la cita (para tips específicos)
-        nombre: nombre del paciente
+        nombre: nombre del paciente (se usa para corregir sexo incorrecto de Medilink)
 
     Returns:
         Texto con 2-3 tips + exámenes preventivos si aplica.
+        Los tips sexo-específicos solo se incluyen si el sexo se puede determinar
+        con certeza (por nombre o por Medilink cuando ambos coinciden).
     """
     nombre_corto = nombre.split()[0] if nombre else None
+
+    # Resolver sexo efectivo cruzando Medilink con inferencia por nombre.
+    # Esto corrige datos incorrectos en Medilink (ej: mujer registrada con sexo='M').
+    sexo_efectivo = _resolver_sexo(sexo, nombre)
 
     # 1. Tip genérico aleatorio (siempre 1)
     tip_generico = random.choice(_TIPS_GENERICOS)
@@ -143,11 +255,15 @@ def get_tips_autocuidado(
         fecha_nac = _parse_fecha(fecha_nacimiento)
         if fecha_nac:
             edad = _edad_anios(fecha_nac)
-            sexo_upper = (sexo or "").upper()[:1]  # "M", "F", or ""
             for e_min, e_max, e_sexo, msg in _EXAMENES_PREVENTIVOS:
                 if e_min <= edad <= e_max:
-                    if e_sexo is None or e_sexo == sexo_upper:
+                    if e_sexo is None:
+                        # Tip genérico (ambos sexos) — siempre incluir
                         examenes.append(msg)
+                    elif sexo_efectivo and e_sexo == sexo_efectivo:
+                        # Tip sexo-específico — solo si sexo es conocido y coincide
+                        examenes.append(msg)
+                    # Si e_sexo está definido y sexo_efectivo es None → no incluir
             # Máximo 2 exámenes para no saturar
             if len(examenes) > 2:
                 examenes = random.sample(examenes, 2)

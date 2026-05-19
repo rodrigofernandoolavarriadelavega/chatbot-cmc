@@ -1039,7 +1039,10 @@ async def api_send_template(
         raise HTTPException(status_code=400, detail="params debe ser un JSON array")
 
     await send_whatsapp_template(phone, template_name, body_params=body_params)
-    log_message(phone, "out", f"[template: {template_name}] {', '.join(body_params)}", "HUMAN_TAKEOVER", canal="whatsapp")
+    from messaging import render_template_body as _rtb_ar
+    log_message(phone, "out",
+                _rtb_ar(template_name, body_params),
+                "HUMAN_TAKEOVER", canal="whatsapp")
     return {"ok": True}
 
 
