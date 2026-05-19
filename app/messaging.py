@@ -25,6 +25,21 @@ def _normalize_markdown_for_chat(body: str) -> str:
 
 META_API_URL = f"https://graph.facebook.com/v22.0/{META_PHONE_NUMBER_ID}/messages"
 
+# P-3: cliente httpx compartido para Meta Cloud API — evita crear/cerrar el pool
+# TCP+SSL en cada mensaje saliente (~74ms de overhead por envío).
+_META_CLIENT: httpx.AsyncClient | None = None
+
+
+def _get_meta_client() -> httpx.AsyncClient:
+    """Retorna el cliente httpx compartido para Meta, creándolo si está cerrado."""
+    global _META_CLIENT
+    if _META_CLIENT is None or _META_CLIENT.is_closed:
+        _META_CLIENT = httpx.AsyncClient(
+            timeout=10,
+            limits=httpx.Limits(max_keepalive_connections=5, max_connections=10),
+        )
+    return _META_CLIENT
+
 
 async def _post_meta(payload: dict) -> str | None:
     """POST a Meta Cloud API con retry selectivo.
@@ -39,12 +54,12 @@ async def _post_meta(payload: dict) -> str | None:
     backoffs = [2, 4]
     for attempt in range(3):
         try:
-            async with httpx.AsyncClient(timeout=10) as client:
-                r = await client.post(
-                    META_API_URL,
-                    headers={"Authorization": f"Bearer {META_ACCESS_TOKEN}"},
-                    json=payload,
-                )
+            client = _get_meta_client()
+            r = await client.post(
+                META_API_URL,
+                headers={"Authorization": f"Bearer {META_ACCESS_TOKEN}"},
+                json=payload,
+            )
             if r.status_code == 200:
                 try:
                     data = r.json()
@@ -262,35 +277,10 @@ async def send_whatsapp(to: str, body) -> str | None:
 
     Si el mismo body fue enviado a `to` en los últimos 2 min, skip (dedupe).
 
-    Guard defensivo: si el destinatario está en la blocklist proactiva (ADMIN_ALERT_PHONE /
-    STAFF_PHONES) Y el caller es un job/cron (nombre de función empieza con _job_ o es un
-    helper de jobs), bloquear para evitar loop Meta 131047. Bug confirmado 2026-05-18:
-    _job_takeover_pendiente_alert, _job_admin_status_report y _job_medilink_watchdog_inner
-    enviaban a ADMIN_ALERT_PHONE con send_whatsapp directo saltándose send_whatsapp_proactive.
+    Guard defensivo movido a send_whatsapp_proactive (P-4): inspect.stack() eliminado
+    del hot path — era 0.4ms median, 1.6ms P99 por mensaje. Los crons usan
+    send_whatsapp_proactive que ya aplica is_proactive_blocked() sin stack inspection.
     """
-    import inspect as _inspect
-    _caller_frames = _inspect.stack()
-    _caller_names = {f.function for f in _caller_frames[1:6]}
-    _JOB_PREFIXES = ("_job_", "enviar_resumen", "enviar_reporte", "_job_medilink",
-                     "enviar_reactivacion", "enviar_seguimiento", "enviar_adherencia",
-                     "enviar_recordatorio", "enviar_crosssell", "enviar_winback",
-                     "enviar_cumpleanos", "_admin_status")
-    _is_from_job = any(
-        any(n.startswith(p) for p in _JOB_PREFIXES)
-        for n in _caller_names
-    )
-    if _is_from_job and is_proactive_blocked(to):
-        log.warning(
-            "PROACTIVE_GUARD_LATE: send_whatsapp bloqueado para phone=%s callers=%s "
-            "(debería usar send_whatsapp_proactive)",
-            to, list(_caller_names)[:5],
-        )
-        try:
-            from session import log_event as _le
-            _le(to, "proactive_skip_blocklist_late", {"callers": list(_caller_names)[:5]})
-        except Exception:
-            pass
-        return None
     if isinstance(body, dict):
         if body.get("type") == "interactive" and "interactive" in body:
             return await send_whatsapp_interactive(to, body["interactive"])
@@ -351,12 +341,12 @@ async def edit_whatsapp_message(to: str, wamid: str, new_body: str) -> tuple[boo
         "message_id": wamid,
     }
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            r = await client.post(
-                META_API_URL,
-                headers={"Authorization": f"Bearer {META_ACCESS_TOKEN}"},
-                json=payload,
-            )
+        client = _get_meta_client()
+        r = await client.post(
+            META_API_URL,
+            headers={"Authorization": f"Bearer {META_ACCESS_TOKEN}"},
+            json=payload,
+        )
         if r.status_code == 200:
             return True, None
         try:
@@ -508,15 +498,16 @@ async def _get_template_language(template_name: str) -> str:
         return _FALLBACK
 
     try:
-        async with httpx.AsyncClient(timeout=8) as client:
-            r = await client.get(
-                f"https://graph.facebook.com/v22.0/{waba_id}/message_templates",
-                params={
-                    "name": template_name,
-                    "fields": "name,language,status",
-                    "access_token": META_ACCESS_TOKEN,
-                },
-            )
+        client = _get_meta_client()
+        r = await client.get(
+            f"https://graph.facebook.com/v22.0/{waba_id}/message_templates",
+            params={
+                "name": template_name,
+                "fields": "name,language,status",
+                "access_token": META_ACCESS_TOKEN,
+            },
+            timeout=8,
+        )
         if r.status_code == 200:
             templates = r.json().get("data", [])
             # Buscar primero APPROVED, luego cualquiera con ese nombre
@@ -609,29 +600,31 @@ async def download_whatsapp_media(media_id: str) -> tuple[bytes, str] | None:
     if not media_id:
         return None
     try:
-        async with httpx.AsyncClient(timeout=20) as client:
-            # Paso 1: obtener URL firmada del media
-            meta = await client.get(
-                f"https://graph.facebook.com/v22.0/{media_id}",
-                headers={"Authorization": f"Bearer {META_ACCESS_TOKEN}"},
-            )
-            if meta.status_code != 200:
-                log.error("Whisper media meta %s: %s", meta.status_code, meta.text[:200])
-                return None
-            info = meta.json()
-            url = info.get("url", "")
-            mime = info.get("mime_type", "audio/ogg")
-            if not url:
-                return None
-            # Paso 2: descargar el binario (requiere Authorization también)
-            blob = await client.get(
-                url,
-                headers={"Authorization": f"Bearer {META_ACCESS_TOKEN}"},
-            )
-            if blob.status_code != 200:
-                log.error("Whisper media blob %s", blob.status_code)
-                return None
-            return blob.content, mime
+        client = _get_meta_client()
+        # Paso 1: obtener URL firmada del media
+        meta = await client.get(
+            f"https://graph.facebook.com/v22.0/{media_id}",
+            headers={"Authorization": f"Bearer {META_ACCESS_TOKEN}"},
+            timeout=20,
+        )
+        if meta.status_code != 200:
+            log.error("Whisper media meta %s: %s", meta.status_code, meta.text[:200])
+            return None
+        info = meta.json()
+        url = info.get("url", "")
+        mime = info.get("mime_type", "audio/ogg")
+        if not url:
+            return None
+        # Paso 2: descargar el binario (requiere Authorization también)
+        blob = await client.get(
+            url,
+            headers={"Authorization": f"Bearer {META_ACCESS_TOKEN}"},
+            timeout=20,
+        )
+        if blob.status_code != 200:
+            log.error("Whisper media blob %s", blob.status_code)
+            return None
+        return blob.content, mime
     except Exception as e:
         log.error("Error descargando media %s: %s", media_id, e)
         return None
@@ -715,12 +708,12 @@ async def get_whatsapp_quality_rating() -> dict | None:
     if not META_PHONE_NUMBER_ID or not META_ACCESS_TOKEN:
         return None
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            r = await client.get(
-                f"https://graph.facebook.com/v22.0/{META_PHONE_NUMBER_ID}"
-                "?fields=quality_rating,messaging_limit_tier,verified_name,code_verification_status,status",
-                headers={"Authorization": f"Bearer {META_ACCESS_TOKEN}"},
-            )
+        client = _get_meta_client()
+        r = await client.get(
+            f"https://graph.facebook.com/v22.0/{META_PHONE_NUMBER_ID}"
+            "?fields=quality_rating,messaging_limit_tier,verified_name,code_verification_status,status",
+            headers={"Authorization": f"Bearer {META_ACCESS_TOKEN}"},
+        )
         if r.status_code == 200:
             return r.json()
         log.error("Quality rating API %s: %s", r.status_code, r.text[:200])
@@ -770,12 +763,12 @@ async def send_instagram(igsid: str, body: str):
     for chunk in _split_long_msg(body, limit=900):
         for attempt in range(2):
             try:
-                async with httpx.AsyncClient(timeout=10) as client:
-                    r = await client.post(
-                        url,
-                        headers={"Authorization": f"Bearer {META_PAGE_ACCESS_TOKEN}"},
-                        json={"recipient": {"id": igsid}, "message": {"text": chunk}},
-                    )
+                client = _get_meta_client()
+                r = await client.post(
+                    url,
+                    headers={"Authorization": f"Bearer {META_PAGE_ACCESS_TOKEN}"},
+                    json={"recipient": {"id": igsid}, "message": {"text": chunk}},
+                )
                 if r.status_code == 200:
                     break
                 log.error("Instagram API intento %d → %s: %s", attempt + 1, r.status_code, r.text[:200])
@@ -894,12 +887,12 @@ async def send_messenger(psid: str, body: str):
     for chunk in _split_long_msg(body, limit=900):
         for attempt in range(2):
             try:
-                async with httpx.AsyncClient(timeout=10) as client:
-                    r = await client.post(
-                        url,
-                        headers={"Authorization": f"Bearer {token}"},
-                        json={"recipient": {"id": psid}, "message": {"text": chunk}},
-                    )
+                client = _get_meta_client()
+                r = await client.post(
+                    url,
+                    headers={"Authorization": f"Bearer {token}"},
+                    json={"recipient": {"id": psid}, "message": {"text": chunk}},
+                )
                 if r.status_code == 200:
                     break
                 log.error("Messenger API intento %d → %s: %s", attempt + 1, r.status_code, r.text[:200])
