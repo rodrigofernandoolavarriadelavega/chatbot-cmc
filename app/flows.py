@@ -2495,6 +2495,95 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             # No escalar a humano
             return "Listo, queda registrado."
 
+    # ── Respuesta al consent_dental_v1 (Win-back Dental) ─────────────────────
+    # Quick Replies del template UTILITY consent_dental_v1:
+    #   Botón 1 → "Sí, acepto"   (o texto libre "SI")
+    #   Botón 2 → "No, gracias"  (o texto libre "NO")
+    # Solo se intercepta si hay un consent dental 'pending' para este phone
+    # y el paciente no está en un flujo conversacional activo.
+    _es_dental_consent_si = (
+        tl in ("sí, acepto", "si, acepto", "si acepto", "si")
+        or tl_norm in ("si, acepto", "si acepto", "si")
+        or txt in ("Sí, acepto", "Si, acepto")
+    )
+    _es_dental_consent_no = (
+        tl in ("no, gracias", "no gracias", "no")
+        or tl_norm in ("no, gracias", "no gracias", "no")
+        or txt in ("No, gracias", "No gracias")
+    )
+    if (_es_dental_consent_si or _es_dental_consent_no) and not _consent_in_active_flow:
+        # Verificar que hay un dental_consent pending para este phone
+        # antes de interceptar (evitar capturar "si/no" de otros contextos).
+        _tiene_dental_pending = False
+        try:
+            from dental_winback import bi_conn as _bi_dc
+            with _bi_dc() as _pg_dc:
+                with _pg_dc.cursor() as _cur_dc:
+                    _cur_dc.execute(
+                        "SELECT 1 FROM bi.dental_consent "
+                        "WHERE phone = %s AND status = 'pending'",
+                        (phone,),
+                    )
+                    _tiene_dental_pending = _cur_dc.fetchone() is not None
+        except Exception as _dp:
+            log.warning("dental_consent check error phone=%s: %s", phone, _dp)
+
+        if _tiene_dental_pending:
+            try:
+                from dental_winback import (
+                    registrar_dental_consent_respuesta,
+                    registrar_dental_opt_out,
+                    DENTAL_WINBACK_ACTIVE,
+                    get_candidato_dental_por_phone,
+                    ya_enviado_dental_winback_hoy,
+                    send_dental_winback,
+                )
+                _dental_status = "accepted" if _es_dental_consent_si else "declined"
+                registrar_dental_consent_respuesta(phone, _dental_status, method="reply")
+                log_event(phone, "dental_consent_respuesta", {
+                    "status": _dental_status,
+                    "raw": txt[:120],
+                })
+
+                if _es_dental_consent_no:
+                    registrar_dental_opt_out(phone, source="consent_dental_v1")
+                    return "Listo, no recibirás más mensajes del área dental."
+
+                # ── Consent SI dental: enviar winback inmediato si activo ──────
+                if not DENTAL_WINBACK_ACTIVE:
+                    log_event(phone, "dental_winback_event_skip_inactive", {})
+                    return "Listo, queda registrado. Te avisaremos cuando haya disponibilidad dental."
+
+                if ya_enviado_dental_winback_hoy(phone):
+                    log_event(phone, "dental_winback_event_skip_rate_limit", {})
+                    return "Listo, queda registrado. Te avisaremos cuando haya disponibilidad dental."
+
+                _candidato_dental = get_candidato_dental_por_phone(phone)
+                if not _candidato_dental:
+                    log_event(phone, "dental_winback_event_skip_no_candidato", {})
+                    return "Listo, queda registrado. Te avisaremos cuando haya disponibilidad dental."
+
+                import asyncio as _asyncio_dental
+
+                async def _send_dental_now():
+                    try:
+                        ok = await send_dental_winback(_candidato_dental)
+                        log_event(phone, "dental_winback_event_driven", {
+                            "ok": ok,
+                            "subcohorte": _candidato_dental.get("subcohorte"),
+                            "especialidad": _candidato_dental.get("ultima_especialidad"),
+                        })
+                    except Exception as _dwe:
+                        log.warning("dental_winback event-driven error phone=...%s: %s",
+                                    phone[-4:], _dwe)
+
+                _asyncio_dental.get_event_loop().create_task(_send_dental_now())
+                return None  # el winback dental ES la respuesta
+
+            except Exception as _dce:
+                log.warning("dental_consent handler error phone=%s: %s", phone, _dce)
+                return "Listo, queda registrado."
+
     # ── Comandos del profesional (doctor_mode) ──────────────────────────
     # Gate via dashboard /profesionalescmc → permiso "wa_access".
     # Fallback legacy: ADMIN_ALERT_PHONE siempre tiene acceso (primer arranque

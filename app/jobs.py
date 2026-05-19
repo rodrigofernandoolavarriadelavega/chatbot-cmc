@@ -1972,6 +1972,49 @@ async def _job_winback_bi() -> None:
         log.error("_job_winback_bi fallo: %s", e)
 
 
+# ── Win-back DENTAL ───────────────────────────────────────────────────────────
+
+async def _job_dental_consent_blast() -> None:
+    """Blast diario L-V 11:00 CLT: envía consent_dental_v1 (UTILITY) a candidatos
+    dentales sin registro en bi.dental_consent.
+
+    Se programa 1 hora después del blast de consent general para no competir
+    por rate limit Meta. Máx 100/día, 30s entre envíos.
+
+    DENTAL_CONSENT_BLAST_ACTIVE=false hasta que Rodrigo confirme que
+    consent_dental_v1 está APPROVED en Meta Business Manager.
+    """
+    try:
+        from dental_winback import run_dental_consent_blast, DENTAL_CONSENT_BLAST_ACTIVE
+        if not DENTAL_CONSENT_BLAST_ACTIVE:
+            log.debug("_job_dental_consent_blast: DENTAL_CONSENT_BLAST_ACTIVE=false — skip")
+            return
+        stats = await run_dental_consent_blast()
+        log.info("_job_dental_consent_blast: %s", stats)
+    except Exception as e:
+        log.error("_job_dental_consent_blast fallo: %s", e)
+
+
+async def _job_dental_winback() -> None:
+    """Batch diario L-V 10:35 CLT: winback dental desde BI Postgres.
+
+    Se programa 30 min después del winback general (10:05) para no competir
+    por rate limit Meta. Sub-cohortes en orden de prioridad:
+    ortodoncia → endo/implanto → odonto general 180d → 365d → estética.
+
+    DENTAL_WINBACK_ACTIVE=false hasta que Rodrigo confirme y templates
+    estén APPROVED en Meta Business Manager.
+    """
+    try:
+        from dental_winback import job_dental_winback_diario, DENTAL_WINBACK_ACTIVE
+        if not DENTAL_WINBACK_ACTIVE:
+            log.debug("_job_dental_winback: DENTAL_WINBACK_ACTIVE=false — skip")
+            return
+        await job_dental_winback_diario()
+    except Exception as e:
+        log.error("_job_dental_winback fallo: %s", e)
+
+
 # ── Reporte semanal de salud del bot ─────────────────────────────────────────
 
 async def _job_health_report() -> None:
