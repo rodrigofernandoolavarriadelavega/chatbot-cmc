@@ -7314,20 +7314,32 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 # ── Cross-sell post-confirmación ──────────────────────────────
                 # Solo en citas nuevas (no reagendar), solo si no es tercero.
                 # Cooldown: 1 por sesión + 30 días por par.
-                if not reagendar and not es_tercero:
+                # Bug 5 fix: throttle para evitar triple burst.
+                # Si ya hay PNI/autocuidado programado, postergamos el cross-sell
+                # mínimo 12s (después del PNI). También guardamos cross_sell_sent_ts
+                # en data para que cualquier otro disparador (fidelización, etc.)
+                # pueda respetar la ventana de 600s.
+                import time as _time_cs
+                _cs_last_ts = data.get("cross_sell_sent_ts", 0)
+                _cs_throttle_ok = ((_time_cs.time() - _cs_last_ts) >= 600)
+                if not reagendar and not es_tercero and _cs_throttle_ok:
                     _cs = _cross_sell_interactive(phone, esp, slot)
                     if _cs:
                         _cs_dest = _cs["_cross_sell_esp_destino"]
+                        data["cross_sell_sent_ts"] = _time_cs.time()
                         data_cs = {"cross_sell_esp_origen": esp,
-                                   "cross_sell_esp_destino": _cs_dest}
+                                   "cross_sell_esp_destino": _cs_dest,
+                                   "cross_sell_sent_ts": data["cross_sell_sent_ts"]}
                         save_session(phone, "WAIT_CROSS_SELL", data_cs)
-                        # Antes de retornar el cross-sell, enviar confirmacion_msg
-                        # directamente (main.py enviará el cross-sell como respuesta).
+                        # Antes de retornar el cross-sell, enviar confirmacion_msg.
                         await send_whatsapp(phone, confirmacion_msg + _conf_suffix)
                         from session import log_message as _log_msg_cs
                         _log_msg_cs(phone, "out", confirmacion_msg + _conf_suffix, "WAIT_CROSS_SELL")
                         import asyncio as _asyncio_cs
-                        await _asyncio_cs.sleep(1.5)
+                        # Bug 5: si hay PNI spawneado (llega a 2.5s), esperar 5s
+                        # para que el cross-sell llegue mínimo 3s después del PNI.
+                        _cs_delay = 5.5 if pni_msg else 1.5
+                        await _asyncio_cs.sleep(_cs_delay)
                         return _cs["payload"]
                 # Caso normal: main.py envía y loguea el mensaje de confirmación.
                 return confirmacion_msg + _conf_suffix
