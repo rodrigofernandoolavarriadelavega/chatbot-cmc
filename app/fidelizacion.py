@@ -1400,3 +1400,117 @@ async def enviar_crosssell_dx(send_fn, send_template_fn=None):
             log.info("crosssell_dx gineco/PAP enviado → %s", _phone_g)
         except Exception as e:
             log.error("crosssell_dx gineco error phone=%s: %s", _phone_g, e)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Patrón 5 (2026-05-19): Cross-sell post-dental → ortodoncia (48h post-consulta)
+# Evidencia: 15 ofertas cross-sell, 13.3% cierre. Momento equivocado (pre-cita).
+# Esta función corre 48-72h DESPUÉS de una cita dental atendida.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _get_crosssell_post_dental_candidatos() -> list:
+    """Phones con atención dental atendida hace 48-72h y sin cita futura con Castillo (66)."""
+    from session import _get_conn as _s_conn
+    import sqlite3 as _sqlite3
+
+    hoy = date.today()
+    # Ventana: atenciones entre ayer-48h y ayer-72h (para no solapar con otros crons)
+    fecha_hasta = (hoy - timedelta(days=2)).isoformat()
+    fecha_desde = (hoy - timedelta(days=3)).isoformat()
+
+    candidatos = []
+    try:
+        with _s_conn() as conn:
+            rows = conn.execute(
+                """
+                SELECT DISTINCT cb.phone, cb.paciente_nombre
+                FROM citas_bot cb
+                WHERE cb.especialidad IN ('odontología', 'odontologia',
+                                          'odontología general', 'odontologia general')
+                  AND cb.fecha BETWEEN ? AND ?
+                  AND cb.estado NOT IN ('anulado', 'cancelado')
+                """,
+                (fecha_desde, fecha_hasta),
+            ).fetchall()
+    except Exception as e:
+        log.error("_get_crosssell_post_dental_candidatos: %s", e)
+        return []
+
+    for phone, nombre in rows:
+        # Excluir si ya tiene cita futura con Castillo (id_prof=66 en citas_bot)
+        try:
+            with _s_conn() as conn2:
+                ya_castillo = conn2.execute(
+                    """
+                    SELECT 1 FROM citas_bot
+                    WHERE phone = ?
+                      AND id_profesional = 66
+                      AND fecha >= ?
+                    LIMIT 1
+                    """,
+                    (phone, hoy.isoformat()),
+                ).fetchone()
+            if ya_castillo:
+                continue
+        except Exception:
+            pass
+        candidatos.append({"phone": phone, "nombre": nombre})
+
+    return candidatos
+
+
+async def enviar_crosssell_post_dental_ortodoncia(send_fn, send_template_fn=None):
+    """Cross-sell: 48-72h después de cita dental atendida → preguntar si el odontólogo
+    recomendó evaluación de ortodoncia. Cron L-V 11:00 CLT.
+    Template pendiente de aprobación Meta: crosssell_ortodoncia_post_dental_v1.
+    """
+    candidatos = _get_crosssell_post_dental_candidatos()
+    if not candidatos:
+        log.info("Cross-sell post-dental ortodoncia: sin candidatos")
+        return
+    log.info("Cross-sell post-dental ortodoncia: enviando %d mensaje(s)", len(candidatos))
+    for p in candidatos:
+        phone = p.get("phone", "")
+        if not puede_enviar_campana(phone, "crosssell_post_dental_ortodoncia", dias_cooldown=180):
+            continue
+        if not has_privacy_consent(phone):
+            log_event(phone, "template_skip_no_consent",
+                      {"template": "crosssell_post_dental_ortodoncia"})
+            continue
+        # Sin template aprobado aún → solo enviamos si la ventana de 24h está abierta
+        if not is_window_open(phone):
+            log_event(phone, "template_skip_no_aprobado",
+                      {"template": "crosssell_ortodoncia_post_dental_v1",
+                       "motivo": "sin_template_y_ventana_cerrada"})
+            continue
+        try:
+            nombre = _nombre_corto(p.get("nombre"))
+            saludo = f"Hola *{nombre}* " if nombre else "Hola "
+            texto = (
+                f"{saludo}— esperamos que te haya ido bien en tu consulta dental esta semana.\n\n"
+                "Si el odontólogo te recomendó evaluar un tratamiento de ortodoncia, "
+                "puedes agendarte con la Dra. Daniela Castillo (ortodoncista).\n\n"
+                "La evaluación inicial cuesta *$15.000*.\n\n"
+                "Escríbenos aquí o llama al *(41) 296 5226*."
+            )
+            msg = {
+                "type": "interactive",
+                "interactive": {
+                    "type": "button",
+                    "body": {"text": texto},
+                    "action": {
+                        "buttons": [
+                            {"type": "reply", "reply": {
+                                "id": "xpostdental_orto_si", "title": "Sí, me interesa"}},
+                            {"type": "reply", "reply": {
+                                "id": "xpostdental_orto_no", "title": "No por ahora"}},
+                        ]
+                    }
+                }
+            }
+            save_fidelizacion_msg(phone, "crosssell_post_dental_ortodoncia")
+            await send_fn(phone, msg)
+            log_message(phone, "out", f"[Cross-sell post-dental ortodoncia] {texto[:80]}...", "IDLE")
+            log.info("crosssell_post_dental_ortodoncia enviado → %s", phone)
+        except Exception as e:
+            log.error("Error cross-sell post-dental phone=%s: %s", phone, e)

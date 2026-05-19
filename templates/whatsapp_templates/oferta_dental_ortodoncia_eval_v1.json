@@ -1,0 +1,32 @@
+{
+  "name": "oferta_dental_ortodoncia_eval_v1",
+  "category": "MARKETING",
+  "language": "es_CL",
+  "_nota": "BORRADOR — precio y condiciones de evaluación pendientes de confirmación por Rodrigo antes de subir a Meta.",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}}, te saluda el Centro Médico Carampangue.\n\nSi alguna vez has pensado en mejorar tu sonrisa o alinear tus dientes, la Dra. Daniela Castillo realiza evaluaciones de ortodoncia en nuestro centro.\n\nEscríbenos por este WhatsApp o llama al (41) 296 5226 para consultar disponibilidad.",
+      "example": {
+        "body_text": [["Pedro"]]
+      }
+    },
+    {
+      "type": "FOOTER",
+      "text": "Si no quieres recibir más mensajes, responde BAJA"
+    },
+    {
+      "type": "BUTTONS",
+      "buttons": [
+        {
+          "type": "QUICK_REPLY",
+          "text": "Sí, me interesa"
+        },
+        {
+          "type": "QUICK_REPLY",
+          "text": "Más información"
+        }
+      ]
+    }
+  ]
+}

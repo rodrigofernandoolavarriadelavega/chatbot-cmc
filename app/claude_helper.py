@@ -1917,6 +1917,50 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
      "reimprimir desde nuestro sistema.\n\n"
      "Si pagaste con *tarjeta*, el duplicado se gestiona en mesón directamente.\n\n"
      "Para casos especiales escribe *humano* y te conectamos con recepción."),
+    # Patrón 2 FIX (2026-05-19): precios dentales frecuentes con respuesta local
+    # Evidencia: 16 phones preguntaron precio dental, solo 3 convirtieron (18.7%).
+    # Top queries: brackets, endodoncia, limpieza, blanqueamiento, tapadura.
+    (("cuanto", "limpieza"),
+     "La *limpieza dental* (destartraje + profilaxis) cuesta *$30.000*. "
+     "Incluye retiro de sarro con ultrasonido + pulido. Dura ~45 min.\n\n"
+     "¿Quieres agendar? Escribe *agendar odontología* o *1*."),
+    (("cuanto", "blanqueamient"),
+     "El *blanqueamiento dental* cuesta *$75.000*. Se aplica gel blanqueador en consulta, "
+     "dura ~1 hora.\n\n"
+     "¿Quieres agendar? Escribe *agendar odontología* o *1*."),
+    (("cuanto", "endodonc"),
+     "*Endodoncia* con el Dr. Fernando Fredes:\n"
+     "- Diente delantero (1 raíz): desde *$110.000*\n"
+     "- Premolar (1-2 raíces): desde *$150.000*\n"
+     "- Molar (3-4 raíces): desde *$220.000*\n\n"
+     "¿Quieres agendar? Escribe *agendar endodoncia* o *1*."),
+    (("cuanto", "tapadura"),
+     "La *tapadura* (restauración de resina) cuesta desde *$35.000* por pieza. "
+     "Con anestesia local, sin dolor.\n\n"
+     "¿Quieres agendar? Escribe *agendar odontología* o *1*."),
+    (("cuanto", "bracket"),
+     "*Ortodoncia* con la Dra. Daniela Castillo (valores referenciales):\n"
+     "- Evaluación inicial: *$15.000* (con odontólogo general primero)\n"
+     "- Instalación brackets boca completa: desde *$120.000*\n"
+     "- Controles mensuales: *$30.000*\n\n"
+     "El primer paso es una evaluación con nuestro odontólogo general. "
+     "¿Quieres agendar? Escribe *agendar odontología* o *1*."),
+    (("cuanto", "implante"),
+     "El *implante dental* (corona + tornillo) parte desde *$650.000* con la "
+     "Dra. Aurora Valdés (implantóloga). El proceso total toma 3-6 meses.\n\n"
+     "Para una evaluación personalizada, escribe *agendar implantología* o llama al "
+     "*(41) 296 5226*."),
+    (("precio", "consulta", "dental"),
+     "La *consulta odontológica* (evaluación) cuesta *$15.000*. "
+     "Incluye diagnóstico y plan de tratamiento.\n\n"
+     "¿Quieres agendar? Escribe *agendar odontología* o *1*."),
+    (("cuanto", "ortodoncia"),
+     "*Ortodoncia* con la Dra. Daniela Castillo (valores referenciales):\n"
+     "- Evaluación inicial: *$15.000* (con odontólogo general primero)\n"
+     "- Instalación brackets boca completa: desde *$120.000*\n"
+     "- Controles mensuales: *$30.000*\n\n"
+     "El primer paso es una evaluación con nuestro odontólogo general. "
+     "¿Quieres agendar? Escribe *agendar odontología* o *1*."),
 ]
 
 

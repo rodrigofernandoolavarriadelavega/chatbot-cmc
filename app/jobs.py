@@ -13,7 +13,8 @@ from fidelizacion import (enviar_seguimiento_postconsulta,
                           enviar_adherencia_kine, enviar_recordatorio_control,
                           enviar_crosssell_kine, enviar_cumpleanos, enviar_winback,
                           enviar_crosssell_orl_fono, enviar_crosssell_odonto_estetica,
-                          enviar_crosssell_mg_chequeo, enviar_crosssell_dx)
+                          enviar_crosssell_mg_chequeo, enviar_crosssell_dx,
+                          enviar_crosssell_post_dental_ortodoncia)
 from medilink import (buscar_primer_dia, buscar_paciente, sync_citas_dia,
                       SEGUIMIENTO_ESPECIALIDADES, PROFESIONALES, get_slots_libres,
                       listar_citas_paciente)
@@ -725,6 +726,14 @@ async def _job_crosssell_mg_chequeo():
         await enviar_crosssell_mg_chequeo(send_whatsapp_proactive, send_template_fn=_tpl)
     except Exception as e:
         log.error("_job_crosssell_mg_chequeo falló (BUG-07): %s", e)
+
+async def _job_crosssell_post_dental_ortodoncia():
+    # Patron 5 (2026-05-19): cross-sell ortodoncia 48h despues de cita dental.
+    # Cron L-V 11:00 CLT. Template pendiente: crosssell_ortodoncia_post_dental_v1.
+    try:
+        await enviar_crosssell_post_dental_ortodoncia(send_whatsapp_proactive, send_template_fn=_tpl)
+    except Exception as e:
+        log.error("_job_crosssell_post_dental_ortodoncia fallo: %s", e)
 
 async def _job_cumpleanos():
     try:

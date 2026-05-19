@@ -1,0 +1,31 @@
+{
+  "name": "winback_dental_endo_implanto_v1",
+  "category": "MARKETING",
+  "language": "es_CL",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}}, te saluda el Centro Médico Carampangue.\n\nSi tienes un tratamiento dental pendiente o quieres revisar el estado de tu tratamiento con {{2}}, estamos disponibles para coordinar una hora.\n\nEscríbenos por este WhatsApp o llama al (41) 296 5226.",
+      "example": {
+        "body_text": [["Ana", "el Dr. Fredes"]]
+      }
+    },
+    {
+      "type": "FOOTER",
+      "text": "Si no quieres recibir más mensajes, responde BAJA"
+    },
+    {
+      "type": "BUTTONS",
+      "buttons": [
+        {
+          "type": "QUICK_REPLY",
+          "text": "Sí, quiero agendar"
+        },
+        {
+          "type": "QUICK_REPLY",
+          "text": "Más información"
+        }
+      ]
+    }
+  ]
+}
