@@ -2476,7 +2476,7 @@ def api_winback_status(token: str | None = Query(None)):
                     COALESCE(c.accepted, 0) AS accepted,
                     COALESCE(w.winbacks, 0) AS winbacks
                 FROM generate_series(
-                    CURRENT_DATE - INTERVAL '6 days',
+                    CURRENT_DATE - INTERVAL '13 days',
                     CURRENT_DATE,
                     '1 day'::interval
                 ) AS d
@@ -2489,7 +2489,8 @@ def api_winback_status(token: str | None = Query(None)):
                     GROUP BY 1
                 ) c ON c.fecha = d::date
                 LEFT JOIN (
-                    SELECT DATE(enviado_at) AS fecha, COUNT(*) AS winbacks
+                    SELECT DATE(enviado_at) AS fecha, COUNT(*) AS winbacks,
+                           COUNT(*) FILTER (WHERE cita_creada = true) AS citas
                     FROM bi.winback_envios
                     GROUP BY 1
                 ) w ON w.fecha = d::date
@@ -2497,7 +2498,7 @@ def api_winback_status(token: str | None = Query(None)):
             """)
             rows = cur.fetchall()
             ultimos_dias = [
-                {"fecha": str(r[0]), "consent": r[1], "accepted": r[2], "winbacks": r[3]}
+                {"fecha": str(r[0]), "consent": r[1], "accepted": r[2], "winbacks": r[3], "citas": r[4] if len(r) > 4 else 0}
                 for r in rows
             ]
         except Exception:
@@ -2519,6 +2520,141 @@ def api_winback_status(token: str | None = Query(None)):
         "errores_meta_24h": errores_meta_24h,
         "ultimos_dias": ultimos_dias,
     }
+
+
+@app.get("/admin/api/winback-conversations")
+def api_winback_conversations(token: str | None = Query(None), limit: int = 20):
+    """Ultimas N conversaciones winback: consent + winback_envios + dim_paciente, enmascaradas."""
+    if token != ADMIN_TOKEN:
+        raise HTTPException(401, "No autorizado")
+
+    import os as _osw2
+    import psycopg2
+
+    bi_host = _osw2.getenv("BI_DB_HOST", "127.0.0.1")
+    bi_port = int(_osw2.getenv("BI_DB_PORT", "5432"))
+    bi_name = _osw2.getenv("BI_DB_NAME", "health_bi")
+    bi_user = _osw2.getenv("BI_DB_USER", "health_user")
+    bi_pass = _osw2.getenv("BI_DB_PASSWORD", "password123")
+
+    try:
+        conn = psycopg2.connect(
+            host=bi_host, port=bi_port, dbname=bi_name,
+            user=bi_user, password=bi_pass, connect_timeout=5
+        )
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT
+                mc.phone                                  AS phone_full,
+                p.nombre_completo                         AS nombre,
+                mc.cohorte_tag                            AS cohorte,
+                p.especialidad_frecuente                  AS especialidad,
+                (mc.status IS NOT NULL)                   AS consent_enviado,
+                (mc.status IN ('accepted','declined'))    AS respondio,
+                (we.id IS NOT NULL)                       AS winback_enviado,
+                (we.cita_creada = true)                   AS cita_atribuida,
+                COALESCE(we.response_at, mc.consent_sent_at) AS ts_orden
+            FROM bi.marketing_consent mc
+            LEFT JOIN bi.dim_paciente p
+                   ON RIGHT(REGEXP_REPLACE(p.telefono, '[^0-9]', '', 'g'), 9)
+                    = RIGHT(REGEXP_REPLACE(mc.phone,   '[^0-9]', '', 'g'), 9)
+            LEFT JOIN bi.winback_envios we ON we.phone = mc.phone
+            ORDER BY ts_orden DESC NULLS LAST
+            LIMIT %s
+        """, (min(limit, 100),))
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        result = []
+        for r in rows:
+            result.append({
+                "phone_full":      str(r[0]) if r[0] else None,
+                "nombre":          str(r[1]) if r[1] else None,
+                "cohorte":         str(r[2]) if r[2] else None,
+                "especialidad":    str(r[3]) if r[3] else None,
+                "consent_enviado": bool(r[4]),
+                "respondio":       bool(r[5]),
+                "winback_enviado": bool(r[6]),
+                "cita_atribuida":  bool(r[7]),
+            })
+        return result
+    except Exception as _e:
+        import logging as _lg2
+        _lg2.getLogger("winback_conversations").warning("winback-conversations error: %s", _e)
+        return []
+
+
+@app.get("/admin/api/winback-donuts")
+def api_winback_donuts(token: str | None = Query(None)):
+    """Distribucion pool por cohorte y winbacks por template Meta para los donuts del dashboard."""
+    if token != ADMIN_TOKEN:
+        raise HTTPException(401, "No autorizado")
+
+    import os as _osw3
+    import psycopg2
+
+    bi_host = _osw3.getenv("BI_DB_HOST", "127.0.0.1")
+    bi_port = int(_osw3.getenv("BI_DB_PORT", "5432"))
+    bi_name = _osw3.getenv("BI_DB_NAME", "health_bi")
+    bi_user = _osw3.getenv("BI_DB_USER", "health_user")
+    bi_pass = _osw3.getenv("BI_DB_PASSWORD", "password123")
+
+    cohortes: list = []
+    templates: list = []
+
+    try:
+        conn = psycopg2.connect(
+            host=bi_host, port=bi_port, dbname=bi_name,
+            user=bi_user, password=bi_pass, connect_timeout=5
+        )
+        cur = conn.cursor()
+
+        # Donut izquierdo: pool por cohorte (candidatos sin consent aceptado)
+        try:
+            cur.execute("""
+                SELECT
+                    vc.cohorte_tag,
+                    COUNT(*) AS candidatos
+                FROM bi.v_winback_cohortes_contactables vc
+                LEFT JOIN bi.marketing_consent mc
+                    ON RIGHT(REGEXP_REPLACE(mc.phone, '[^0-9]', '', 'g'), 9)
+                     = RIGHT(REGEXP_REPLACE(vc.telefono, '[^0-9]', '', 'g'), 9)
+                   AND mc.status = 'accepted'
+                WHERE mc.phone IS NULL
+                GROUP BY vc.cohorte_tag
+                ORDER BY vc.cohorte_tag
+            """)
+            cohortes = [{"cohorte": str(r[0]), "candidatos": int(r[1])} for r in cur.fetchall()]
+        except Exception as _ec:
+            import logging as _lg3
+            _lg3.getLogger("winback_donuts").warning("cohortes donut error: %s", _ec)
+
+        # Donut derecho: winbacks por template
+        try:
+            cur.execute("""
+                SELECT
+                    COALESCE(template_meta, 'sin_template') AS template,
+                    COUNT(*)                                  AS enviados,
+                    COUNT(*) FILTER (WHERE cita_creada = true) AS citas
+                FROM bi.winback_envios
+                GROUP BY template_meta
+                ORDER BY enviados DESC
+            """)
+            templates = [
+                {"template": str(r[0]), "enviados": int(r[1]), "citas": int(r[2])}
+                for r in cur.fetchall()
+            ]
+        except Exception as _et:
+            import logging as _lg4
+            _lg4.getLogger("winback_donuts").warning("templates donut error: %s", _et)
+
+        cur.close()
+        conn.close()
+    except Exception as _e:
+        import logging as _lg5
+        _lg5.getLogger("winback_donuts").warning("winback-donuts DB error: %s", _e)
+
+    return {"cohortes": cohortes, "templates": templates}
 
 
 @app.get("/abarca", response_class=HTMLResponse)

@@ -5,61 +5,87 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Winback — CMC</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300..600&family=IBM+Plex+Mono&display=swap">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Inter', sans-serif; background: #f0f4f8; }
-    .mono { font-family: 'IBM Plex Mono', monospace; }
     :root {
+      --olacore-fiordo:  #1F3340;
+      --olacore-cobre:   #B86D3F;
+      --olacore-neblina: #EFE9DD;
+      --olacore-musgo:   #4A5F3A;
+      --olacore-lacre:   #8C2A2A;
+      --olacore-lenga:   #D4A87A;
       --cmc-azul:  #1172AB;
       --cmc-aqua:  #4FBECE;
       --cmc-navy:  #0F3F68;
     }
+    body { font-family: 'Inter', sans-serif; background: var(--olacore-neblina); color: var(--olacore-fiordo); }
+    .mono { font-family: 'IBM Plex Mono', monospace; }
+    .serif { font-family: 'Fraunces', serif; }
     .chip-on  { background: #d1fae5; color: #065f46; }
     .chip-off { background: #fee2e2; color: #991b1b; }
-    .kpi-card { background: white; border-radius: 0.75rem; padding: 1.25rem 1.5rem; box-shadow: 0 1px 3px rgba(15,63,104,.08); }
-    .kpi-val  { font-size: 2rem; font-weight: 700; color: var(--cmc-navy); line-height: 1; }
-    .kpi-lbl  { font-size: 0.75rem; color: #64748b; margin-top: 0.25rem; }
-    .funnel-bar-bg { background: #e2e8f0; border-radius: 4px; height: 18px; overflow: hidden; }
+    .kpi-card { background: white; border-radius: 0.75rem; padding: 1.25rem 1.5rem; box-shadow: 0 1px 3px rgba(15,63,104,.08); border: 1px solid rgba(31,51,64,.08); }
+    .kpi-val  { font-family: 'Fraunces', serif; font-size: 2rem; font-weight: 500; color: var(--olacore-fiordo); line-height: 1; }
+    .kpi-lbl  { font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; letter-spacing: .1em; text-transform: uppercase; color: var(--olacore-cobre); margin-bottom: .25rem; }
+    .funnel-bar-bg   { background: #e2e8f0; border-radius: 4px; height: 18px; overflow: hidden; }
     .funnel-bar-fill { height: 100%; background: var(--cmc-aqua); border-radius: 4px; transition: width .4s; }
-    .section-title { font-size: 0.7rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #94a3b8; margin-bottom: .75rem; }
+    .section-title { font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--olacore-cobre); margin-bottom: .75rem; }
     table { width: 100%; border-collapse: collapse; }
-    th { font-size: .7rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: .05em; padding: .5rem .75rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
-    td { font-size: .875rem; padding: .5rem .75rem; border-bottom: 1px solid #f1f5f9; color: #334155; }
+    th { font-family: 'IBM Plex Mono', monospace; font-size: .65rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: .06em; padding: .5rem .75rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    td { font-size: .8rem; padding: .5rem .75rem; border-bottom: 1px solid #f1f5f9; color: #334155; }
     tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f8fafc; }
     #status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; margin-right: 6px; }
-    #status-dot.ok { background: #22c55e; }
+    #status-dot.ok  { background: #22c55e; }
     #status-dot.err { background: #ef4444; }
+    .badge-yes { background: #d1fae5; color: #065f46; font-size: .65rem; padding: 1px 6px; border-radius: 9999px; }
+    .badge-no  { background: #f1f5f9; color: #94a3b8; font-size: .65rem; padding: 1px 6px; border-radius: 9999px; }
+    .badge-cita { background: #fef3c7; color: #92400e; font-size: .65rem; padding: 1px 6px; border-radius: 9999px; }
+    /* Nav cross-nav */
+    .nav-link { font-size: .8rem; color: var(--olacore-fiordo); opacity: .6; transition: opacity .15s; text-decoration: none; white-space: nowrap; }
+    .nav-link:hover { opacity: 1; }
+    .nav-link.active { opacity: 1; font-weight: 600; border-bottom: 2px solid var(--olacore-cobre); padding-bottom: 1px; }
   </style>
 </head>
 <body class="min-h-screen">
 
-<!-- Topbar -->
-<nav style="background:var(--cmc-navy)" class="sticky top-0 z-50 px-4 py-3 flex items-center justify-between">
-  <div class="flex items-center gap-3">
-    <span class="text-white font-semibold text-sm tracking-wide">CMC</span>
-    <span class="text-white/40 text-xs">|</span>
-    <span class="text-white text-sm">Winback Dashboard</span>
-  </div>
-  <div class="flex items-center gap-2 text-xs text-white/60 mono">
-    <span id="status-dot"></span>
-    <span id="last-update">--</span>
-    <span class="ml-3 text-white/30">auto-refresh 60s</span>
+<!-- Feature 1: Topbar cross-nav OLACORE -->
+<nav class="border-b border-stone-300 sticky top-0 bg-white/90 backdrop-blur z-50">
+  <div class="max-w-6xl mx-auto px-4 py-3 flex items-center gap-5 overflow-x-auto">
+    <span class="serif text-lg font-medium shrink-0" style="color:var(--olacore-fiordo)">CMC</span>
+    <span class="mono text-xs opacity-40 shrink-0">|</span>
+    <a href="/seo/dashboard"   class="nav-link shrink-0">SEO</a>
+    <a href="/meta/dashboard"  class="nav-link shrink-0">Meta</a>
+    <a href="/atribucion"      class="nav-link shrink-0">Atribucion</a>
+    <a href="/horizonte"       class="nav-link shrink-0">Horizonte</a>
+    <a href="/crecimientopersonal" class="nav-link shrink-0">Crecimiento</a>
+    <a href="/winback"         class="nav-link active shrink-0">Winback</a>
+    <div class="ml-auto flex items-center gap-2 text-xs shrink-0 mono" style="color:var(--olacore-fiordo); opacity:.5">
+      <span id="status-dot"></span>
+      <span id="last-update">--</span>
+      <span class="opacity-60">· 60s</span>
+    </div>
   </div>
 </nav>
 
-<div class="max-w-5xl mx-auto px-4 py-6 space-y-6">
+<div class="max-w-6xl mx-auto px-4 py-6 space-y-6">
 
-  <!-- a) Header: flags + timestamp -->
-  <div class="bg-white rounded-xl p-4 shadow-sm flex flex-wrap items-center gap-3">
+  <!-- Header -->
+  <header>
+    <p class="section-title mb-1">OLACORE · CMC · Reactivacion de pacientes</p>
+    <h1 class="serif text-4xl font-medium leading-tight" style="color:var(--olacore-fiordo)">Winback<em class="italic" style="color:var(--olacore-cobre)">.</em></h1>
+    <p class="text-sm opacity-60 mt-1" id="now-cl">--</p>
+  </header>
+
+  <!-- a) Flags -->
+  <div class="bg-white rounded-xl p-4 shadow-sm border border-stone-200 flex flex-wrap items-center gap-3">
     <div>
       <p class="section-title mb-1">Estado de flags</p>
       <div class="flex flex-wrap gap-2" id="flags-container">
         <span class="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-400">cargando...</span>
       </div>
-    </div>
-    <div class="ml-auto text-right">
-      <p class="section-title mb-1">Hora Chile</p>
-      <p class="mono text-sm text-slate-700" id="now-cl">--</p>
     </div>
   </div>
 
@@ -68,54 +94,61 @@
     <p class="section-title">KPIs principales</p>
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
       <div class="kpi-card">
-        <div class="kpi-val" id="kpi-pool">--</div>
         <div class="kpi-lbl">Pool pendiente</div>
+        <div class="kpi-val" id="kpi-pool">--</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-val" id="kpi-acceptance">--%</div>
         <div class="kpi-lbl">Tasa aceptacion</div>
+        <div class="kpi-val" id="kpi-acceptance">--%</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-val" id="kpi-winbacks">--</div>
         <div class="kpi-lbl">Winbacks enviados</div>
+        <div class="kpi-val" id="kpi-winbacks">--</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-val" id="kpi-citas">--</div>
         <div class="kpi-lbl">Citas atribuidas</div>
+        <div class="kpi-val" id="kpi-citas">--</div>
       </div>
     </div>
-    <!-- fila 2: metricas financieras y consent -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
       <div class="kpi-card">
-        <div class="kpi-val text-xl" id="kpi-revenue">--</div>
         <div class="kpi-lbl">Revenue atribuido</div>
+        <div class="kpi-val text-xl" id="kpi-revenue">--</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-val text-xl" id="kpi-costo">--</div>
         <div class="kpi-lbl">Costo Meta acum.</div>
+        <div class="kpi-val text-xl" id="kpi-costo">--</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-val text-xl" id="kpi-consent-sent">--</div>
         <div class="kpi-lbl">Consent enviados</div>
+        <div class="kpi-val text-xl" id="kpi-consent-sent">--</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-val text-xl" id="kpi-consent-acc">--</div>
         <div class="kpi-lbl">Consent aceptados</div>
+        <div class="kpi-val text-xl" id="kpi-consent-acc">--</div>
       </div>
     </div>
   </div>
 
   <!-- c) Funnel -->
-  <div class="bg-white rounded-xl p-5 shadow-sm">
+  <div class="bg-white rounded-xl p-5 shadow-sm border border-stone-200">
     <p class="section-title">Funnel de conversion</p>
     <div id="funnel-container" class="space-y-3">
       <p class="text-slate-400 text-sm">cargando...</p>
     </div>
   </div>
 
-  <!-- d) Tabla ultimos 7 dias -->
-  <div class="bg-white rounded-xl p-5 shadow-sm">
-    <p class="section-title">Ultimos dias</p>
+  <!-- Feature 2: Line chart 14 dias -->
+  <div class="bg-white rounded-xl p-5 shadow-sm border border-stone-200">
+    <p class="section-title">Tendencia — ultimos 14 dias</p>
+    <div style="position:relative; height:220px;">
+      <canvas id="tendenciaChart"></canvas>
+    </div>
+  </div>
+
+  <!-- d) Tabla dias (mantener como referencia compacta) -->
+  <div class="bg-white rounded-xl p-5 shadow-sm border border-stone-200">
+    <p class="section-title">Detalle por dia</p>
     <div class="overflow-x-auto">
       <table id="dias-table">
         <thead>
@@ -124,17 +157,65 @@
             <th>Consent env.</th>
             <th>Aceptados</th>
             <th>Winbacks</th>
+            <th>Citas</th>
           </tr>
         </thead>
         <tbody id="dias-tbody">
-          <tr><td colspan="4" class="text-slate-400">cargando...</td></tr>
+          <tr><td colspan="5" class="text-slate-400">cargando...</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 
-  <!-- e) Footer: errores Meta 24h -->
-  <div class="bg-white rounded-xl p-4 shadow-sm">
+  <!-- Feature 4: Donuts lado a lado -->
+  <div class="grid md:grid-cols-2 gap-4">
+    <!-- Donut izquierdo: distribucion por cohorte -->
+    <div class="bg-white rounded-xl p-5 shadow-sm border border-stone-200">
+      <p class="section-title">Pool por cohorte</p>
+      <p class="text-xs opacity-50 mb-3 mono">Candidatos pendientes sin consent</p>
+      <div style="position:relative; height:200px; max-width:280px; margin:0 auto;">
+        <canvas id="cohorteChart"></canvas>
+      </div>
+      <div id="cohorte-legend" class="flex flex-wrap gap-2 mt-3 justify-center text-xs"></div>
+    </div>
+    <!-- Donut derecho: winbacks por template -->
+    <div class="bg-white rounded-xl p-5 shadow-sm border border-stone-200">
+      <p class="section-title">Winbacks por template</p>
+      <p class="text-xs opacity-50 mb-3 mono">Tasa conversion por template Meta</p>
+      <div style="position:relative; height:200px; max-width:280px; margin:0 auto;">
+        <canvas id="templateChart"></canvas>
+      </div>
+      <div id="template-legend" class="flex flex-wrap gap-2 mt-3 justify-center text-xs"></div>
+    </div>
+  </div>
+
+  <!-- Feature 3: Tabla ultimas 20 conversaciones -->
+  <div class="bg-white rounded-xl p-5 shadow-sm border border-stone-200">
+    <p class="section-title">Ultimas 20 conversaciones</p>
+    <div class="overflow-x-auto">
+      <table>
+        <thead>
+          <tr>
+            <th>Telefono</th>
+            <th>Nombre</th>
+            <th>Cohorte</th>
+            <th>Especialidad</th>
+            <th>Consent</th>
+            <th>Respondio</th>
+            <th>Winback</th>
+            <th>Cita</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="conv-tbody">
+          <tr><td colspan="9" class="text-slate-400">cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- e) Errores Meta 24h -->
+  <div class="bg-white rounded-xl p-4 shadow-sm border border-stone-200">
     <p class="section-title">Errores Meta — ultimas 24h</p>
     <div class="flex flex-wrap gap-4" id="errores-container">
       <p class="text-slate-400 text-sm">cargando...</p>
@@ -145,18 +226,38 @@
 
 <script>
   const TOKEN = new URLSearchParams(location.search).get('token') || '';
-  const API   = `/admin/api/winback-status?token=${TOKEN}`;
+  const API        = `/admin/api/winback-status?token=${TOKEN}`;
+  const API_CONV   = `/admin/api/winback-conversations?token=${TOKEN}&limit=20`;
+  const API_DONUTS = `/admin/api/winback-donuts?token=${TOKEN}`;
 
+  let tendenciaChartInstance = null;
+  let cohorteChartInstance   = null;
+  let templateChartInstance  = null;
+
+  // ---- helpers ----
   function fmt_clp(n) {
     if (!n && n !== 0) return '--';
     return '$' + Number(n).toLocaleString('es-CL');
   }
 
+  function maskPhone(p) {
+    if (!p) return '--';
+    const s = String(p).replace(/\D/g, '');
+    return '****' + s.slice(-4);
+  }
+
+  function maskName(n) {
+    if (!n) return '--';
+    const t = n.trim();
+    if (t.length <= 1) return t;
+    return t[0] + '*'.repeat(Math.min(t.length - 1, 5));
+  }
+
+  // ---- render principal ----
   function renderData(d) {
-    // dot
     const dot = document.getElementById('status-dot');
     dot.className = 'ok';
-    document.getElementById('last-update').textContent = 'actualizado ' + new Date().toLocaleTimeString('es-CL', {hour:'2-digit',minute:'2-digit'});
+    document.getElementById('last-update').textContent = 'actualizado ' + new Date().toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit'});
     document.getElementById('now-cl').textContent = d.now_cl || '--';
 
     // flags
@@ -177,14 +278,14 @@
 
     // KPIs
     const k = d.kpis || {};
-    document.getElementById('kpi-pool').textContent       = (k.pool_pendiente ?? '--').toLocaleString('es-CL');
-    document.getElementById('kpi-acceptance').textContent = (k.acceptance_rate_pct != null ? k.acceptance_rate_pct.toFixed(1) + '%' : '--%');
-    document.getElementById('kpi-winbacks').textContent   = (k.winbacks_enviados ?? '--').toLocaleString('es-CL');
-    document.getElementById('kpi-citas').textContent      = (k.citas_atribuidas ?? '--').toLocaleString('es-CL');
-    document.getElementById('kpi-revenue').textContent    = fmt_clp(k.revenue_atribuido_clp);
-    document.getElementById('kpi-costo').textContent      = fmt_clp(k.costo_meta_acumulado_clp);
-    document.getElementById('kpi-consent-sent').textContent = (k.consent_enviados ?? '--').toLocaleString('es-CL');
-    document.getElementById('kpi-consent-acc').textContent  = (k.consent_accepted ?? '--').toLocaleString('es-CL');
+    document.getElementById('kpi-pool').textContent        = (k.pool_pendiente ?? '--').toLocaleString ? Number(k.pool_pendiente).toLocaleString('es-CL') : '--';
+    document.getElementById('kpi-acceptance').textContent  = (k.acceptance_rate_pct != null ? k.acceptance_rate_pct.toFixed(1) + '%' : '--%');
+    document.getElementById('kpi-winbacks').textContent    = (k.winbacks_enviados ?? '--').toLocaleString ? Number(k.winbacks_enviados).toLocaleString('es-CL') : '--';
+    document.getElementById('kpi-citas').textContent       = (k.citas_atribuidas ?? '--').toLocaleString ? Number(k.citas_atribuidas).toLocaleString('es-CL') : '--';
+    document.getElementById('kpi-revenue').textContent     = fmt_clp(k.revenue_atribuido_clp);
+    document.getElementById('kpi-costo').textContent       = fmt_clp(k.costo_meta_acumulado_clp);
+    document.getElementById('kpi-consent-sent').textContent = Number(k.consent_enviados || 0).toLocaleString('es-CL');
+    document.getElementById('kpi-consent-acc').textContent  = Number(k.consent_accepted || 0).toLocaleString('es-CL');
 
     // Funnel
     const fc2 = document.getElementById('funnel-container');
@@ -196,11 +297,11 @@
       const div = document.createElement('div');
       div.innerHTML = `
         <div class="flex items-center gap-3 mb-1">
-          <span class="text-sm text-slate-700 w-40 shrink-0">${step.step}</span>
+          <span class="text-sm w-40 shrink-0" style="color:var(--olacore-fiordo)">${step.step}</span>
           <div class="funnel-bar-bg flex-1">
             <div class="funnel-bar-fill" style="width:${pct}%"></div>
           </div>
-          <span class="mono text-xs text-slate-500 w-20 text-right">${step.n.toLocaleString('es-CL')} <span class="text-slate-400">(${pct}%)</span></span>
+          <span class="mono text-xs text-slate-500 w-24 text-right">${Number(step.n).toLocaleString('es-CL')} <span class="text-slate-400">(${pct}%)</span></span>
         </div>`;
       fc2.appendChild(div);
     });
@@ -210,12 +311,15 @@
     tbody.innerHTML = '';
     (d.ultimos_dias || []).forEach(row => {
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td class="mono">${row.fecha}</td><td>${row.consent.toLocaleString('es-CL')}</td><td>${row.accepted.toLocaleString('es-CL')}</td><td>${row.winbacks.toLocaleString('es-CL')}</td>`;
+      tr.innerHTML = `<td class="mono">${row.fecha}</td><td>${Number(row.consent).toLocaleString('es-CL')}</td><td>${Number(row.accepted).toLocaleString('es-CL')}</td><td>${Number(row.winbacks).toLocaleString('es-CL')}</td><td>${Number(row.citas||0).toLocaleString('es-CL')}</td>`;
       tbody.appendChild(tr);
     });
     if (!d.ultimos_dias || d.ultimos_dias.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="4" class="text-slate-400">Sin datos</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" class="text-slate-400">Sin datos</td></tr>';
     }
+
+    // Feature 2: Chart.js tendencia 14d
+    renderTendenciaChart(d.ultimos_dias || []);
 
     // Errores Meta
     const ec = document.getElementById('errores-container');
@@ -233,12 +337,209 @@
     }
   }
 
+  // ---- Feature 2: Line chart tendencia ----
+  function renderTendenciaChart(dias) {
+    const labels   = [...dias].reverse().map(r => r.fecha.slice(5)); // MM-DD
+    const consent  = [...dias].reverse().map(r => r.consent  || 0);
+    const accepted = [...dias].reverse().map(r => r.accepted || 0);
+    const winbacks = [...dias].reverse().map(r => r.winbacks || 0);
+    const citas    = [...dias].reverse().map(r => r.citas    || 0);
+
+    if (tendenciaChartInstance) tendenciaChartInstance.destroy();
+
+    const ctx = document.getElementById('tendenciaChart').getContext('2d');
+    tendenciaChartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Consent enviados',
+            data: consent,
+            borderColor: '#1172AB',
+            backgroundColor: 'rgba(17,114,171,.1)',
+            tension: 0.3, fill: true, pointRadius: 3,
+          },
+          {
+            label: 'Aceptados',
+            data: accepted,
+            borderColor: '#4A5F3A',
+            backgroundColor: 'rgba(74,95,58,.08)',
+            tension: 0.3, fill: false, pointRadius: 3,
+          },
+          {
+            label: 'Winbacks enviados',
+            data: winbacks,
+            borderColor: '#B86D3F',
+            backgroundColor: 'rgba(184,109,63,.08)',
+            tension: 0.3, fill: false, pointRadius: 3,
+          },
+          {
+            label: 'Citas atribuidas',
+            data: citas,
+            borderColor: '#8C2A2A',
+            backgroundColor: 'rgba(140,42,42,.08)',
+            tension: 0.3, fill: false, pointRadius: 3,
+          },
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: {
+            labels: { font: { family: 'IBM Plex Mono', size: 10 }, color: '#475569', boxWidth: 12 }
+          },
+          tooltip: {
+            backgroundColor: 'white',
+            titleColor: '#1F3340',
+            bodyColor: '#475569',
+            borderColor: '#e2e8f0',
+            borderWidth: 1,
+            padding: 10,
+          }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { family: 'IBM Plex Mono', size: 9 }, color: '#94a3b8' } },
+          y: { beginAtZero: true, ticks: { font: { family: 'IBM Plex Mono', size: 9 }, color: '#94a3b8' }, grid: { color: '#f1f5f9' } }
+        }
+      }
+    });
+  }
+
+  // ---- Feature 3: Tabla conversaciones ----
+  async function fetchConversaciones() {
+    try {
+      const r = await fetch(API_CONV);
+      if (!r.ok) return;
+      const rows = await r.json();
+      const tbody = document.getElementById('conv-tbody');
+      tbody.innerHTML = '';
+      if (!rows || rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-slate-400">Sin datos</td></tr>';
+        return;
+      }
+      rows.forEach(row => {
+        const phoneLink = row.phone_full ? `href="/admin/v2#chat-${row.phone_full}"` : '';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="mono text-xs">${maskPhone(row.phone_full)}</td>
+          <td>${maskName(row.nombre)}</td>
+          <td><span class="mono text-xs bg-slate-100 px-1.5 py-0.5 rounded">${row.cohorte || '--'}</span></td>
+          <td class="text-xs">${row.especialidad || '--'}</td>
+          <td>${row.consent_enviado ? '<span class="badge-yes">Si</span>' : '<span class="badge-no">No</span>'}</td>
+          <td>${row.respondio ? '<span class="badge-yes">Si</span>' : '<span class="badge-no">No</span>'}</td>
+          <td>${row.winback_enviado ? '<span class="badge-yes">Si</span>' : '<span class="badge-no">No</span>'}</td>
+          <td>${row.cita_atribuida ? '<span class="badge-cita">Si</span>' : '<span class="badge-no">No</span>'}</td>
+          <td>${phoneLink ? `<a ${phoneLink} class="text-xs underline opacity-50 hover:opacity-100" style="color:var(--olacore-cobre)">Ver</a>` : ''}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    } catch (e) {
+      document.getElementById('conv-tbody').innerHTML = `<tr><td colspan="9" class="text-red-400 text-xs">${e.message}</td></tr>`;
+    }
+  }
+
+  // ---- Feature 4: Donuts ----
+  async function fetchDonuts() {
+    try {
+      const r = await fetch(API_DONUTS);
+      if (!r.ok) return;
+      const d = await r.json();
+      renderCohorteDonut(d.cohortes || []);
+      renderTemplateDonut(d.templates || []);
+    } catch (e) {
+      // silencioso — los donuts son adicionales
+    }
+  }
+
+  function renderCohorteDonut(cohortes) {
+    // Colores por cohorte: 030d mas caliente, 365d mas suave
+    const colorMap = {
+      '030d': '#B86D3F',
+      '060d': '#C8895E',
+      '090d': '#1172AB',
+      '180d': '#4FBECE',
+      '365d': '#A8C4CC',
+    };
+    const labels  = cohortes.map(c => c.cohorte);
+    const values  = cohortes.map(c => c.candidatos);
+    const colors  = labels.map(l => colorMap[l] || '#cbd5e1');
+
+    if (cohorteChartInstance) cohorteChartInstance.destroy();
+    const ctx = document.getElementById('cohorteChart').getContext('2d');
+    cohorteChartInstance = new Chart(ctx, {
+      type: 'doughnut',
+      data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 1, borderColor: 'white' }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        cutout: '62%',
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` ${ctx.label}: ${Number(ctx.raw).toLocaleString('es-CL')} candidatos`
+            }
+          }
+        }
+      }
+    });
+
+    // Leyenda manual
+    const leg = document.getElementById('cohorte-legend');
+    leg.innerHTML = '';
+    labels.forEach((l, i) => {
+      leg.innerHTML += `<span class="flex items-center gap-1"><span style="width:8px;height:8px;border-radius:50%;background:${colors[i]};display:inline-block"></span><span class="mono" style="font-size:.65rem">${l} (${values[i]})</span></span>`;
+    });
+  }
+
+  function renderTemplateDonut(templates) {
+    const palette = ['#1F3340','#B86D3F','#4A5F3A','#8C2A2A','#1172AB','#4FBECE','#D4A87A'];
+    const labels = templates.map(t => t.template || 'sin_nombre');
+    const values = templates.map(t => t.enviados);
+    const colors = labels.map((_, i) => palette[i % palette.length]);
+
+    if (templateChartInstance) templateChartInstance.destroy();
+    const ctx = document.getElementById('templateChart').getContext('2d');
+    templateChartInstance = new Chart(ctx, {
+      type: 'doughnut',
+      data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 1, borderColor: 'white' }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        cutout: '62%',
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const t = templates[ctx.dataIndex];
+                const conv = t.citas || 0;
+                const tasa = t.enviados > 0 ? ((conv / t.enviados) * 100).toFixed(1) : '0.0';
+                return ` ${ctx.label}: ${ctx.raw} env. · ${conv} citas (${tasa}%)`;
+              }
+            }
+          }
+        }
+      }
+    });
+
+    const leg = document.getElementById('template-legend');
+    leg.innerHTML = '';
+    labels.forEach((l, i) => {
+      const t = templates[i];
+      const tasa = t.enviados > 0 ? ((t.citas / t.enviados) * 100).toFixed(0) : '0';
+      leg.innerHTML += `<span class="flex items-center gap-1"><span style="width:8px;height:8px;border-radius:50%;background:${colors[i]};display:inline-block"></span><span class="mono" style="font-size:.6rem">${l} ${tasa}%</span></span>`;
+    });
+  }
+
+  // ---- error global ----
   function renderError(msg) {
-    const dot = document.getElementById('status-dot');
-    dot.className = 'err';
+    document.getElementById('status-dot').className = 'err';
     document.getElementById('last-update').textContent = 'error: ' + msg;
   }
 
+  // ---- fetch principal ----
   async function fetchData() {
     try {
       const r = await fetch(API);
@@ -250,8 +551,14 @@
     }
   }
 
+  // ---- arranque ----
   fetchData();
+  fetchConversaciones();
+  fetchDonuts();
+
   setInterval(fetchData, 60000);
+  setInterval(fetchConversaciones, 120000);
+  setInterval(fetchDonuts, 300000);
 </script>
 </body>
 </html>
