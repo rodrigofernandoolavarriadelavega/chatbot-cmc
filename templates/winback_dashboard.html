@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Winback — CMC</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300..600&family=IBM+Plex+Mono&display=swap">
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #f0f4f8; }
+    .mono { font-family: 'IBM Plex Mono', monospace; }
+    :root {
+      --cmc-azul:  #1172AB;
+      --cmc-aqua:  #4FBECE;
+      --cmc-navy:  #0F3F68;
+    }
+    .chip-on  { background: #d1fae5; color: #065f46; }
+    .chip-off { background: #fee2e2; color: #991b1b; }
+    .kpi-card { background: white; border-radius: 0.75rem; padding: 1.25rem 1.5rem; box-shadow: 0 1px 3px rgba(15,63,104,.08); }
+    .kpi-val  { font-size: 2rem; font-weight: 700; color: var(--cmc-navy); line-height: 1; }
+    .kpi-lbl  { font-size: 0.75rem; color: #64748b; margin-top: 0.25rem; }
+    .funnel-bar-bg { background: #e2e8f0; border-radius: 4px; height: 18px; overflow: hidden; }
+    .funnel-bar-fill { height: 100%; background: var(--cmc-aqua); border-radius: 4px; transition: width .4s; }
+    .section-title { font-size: 0.7rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #94a3b8; margin-bottom: .75rem; }
+    table { width: 100%; border-collapse: collapse; }
+    th { font-size: .7rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: .05em; padding: .5rem .75rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    td { font-size: .875rem; padding: .5rem .75rem; border-bottom: 1px solid #f1f5f9; color: #334155; }
+    tr:last-child td { border-bottom: none; }
+    #status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; margin-right: 6px; }
+    #status-dot.ok { background: #22c55e; }
+    #status-dot.err { background: #ef4444; }
+  </style>
+</head>
+<body class="min-h-screen">
+
+<!-- Topbar -->
+<nav style="background:var(--cmc-navy)" class="sticky top-0 z-50 px-4 py-3 flex items-center justify-between">
+  <div class="flex items-center gap-3">
+    <span class="text-white font-semibold text-sm tracking-wide">CMC</span>
+    <span class="text-white/40 text-xs">|</span>
+    <span class="text-white text-sm">Winback Dashboard</span>
+  </div>
+  <div class="flex items-center gap-2 text-xs text-white/60 mono">
+    <span id="status-dot"></span>
+    <span id="last-update">--</span>
+    <span class="ml-3 text-white/30">auto-refresh 60s</span>
+  </div>
+</nav>
+
+<div class="max-w-5xl mx-auto px-4 py-6 space-y-6">
+
+  <!-- a) Header: flags + timestamp -->
+  <div class="bg-white rounded-xl p-4 shadow-sm flex flex-wrap items-center gap-3">
+    <div>
+      <p class="section-title mb-1">Estado de flags</p>
+      <div class="flex flex-wrap gap-2" id="flags-container">
+        <span class="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-400">cargando...</span>
+      </div>
+    </div>
+    <div class="ml-auto text-right">
+      <p class="section-title mb-1">Hora Chile</p>
+      <p class="mono text-sm text-slate-700" id="now-cl">--</p>
+    </div>
+  </div>
+
+  <!-- b) KPIs -->
+  <div>
+    <p class="section-title">KPIs principales</p>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="kpi-card">
+        <div class="kpi-val" id="kpi-pool">--</div>
+        <div class="kpi-lbl">Pool pendiente</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-val" id="kpi-acceptance">--%</div>
+        <div class="kpi-lbl">Tasa aceptacion</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-val" id="kpi-winbacks">--</div>
+        <div class="kpi-lbl">Winbacks enviados</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-val" id="kpi-citas">--</div>
+        <div class="kpi-lbl">Citas atribuidas</div>
+      </div>
+    </div>
+    <!-- fila 2: metricas financieras y consent -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+      <div class="kpi-card">
+        <div class="kpi-val text-xl" id="kpi-revenue">--</div>
+        <div class="kpi-lbl">Revenue atribuido</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-val text-xl" id="kpi-costo">--</div>
+        <div class="kpi-lbl">Costo Meta acum.</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-val text-xl" id="kpi-consent-sent">--</div>
+        <div class="kpi-lbl">Consent enviados</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-val text-xl" id="kpi-consent-acc">--</div>
+        <div class="kpi-lbl">Consent aceptados</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- c) Funnel -->
+  <div class="bg-white rounded-xl p-5 shadow-sm">
+    <p class="section-title">Funnel de conversion</p>
+    <div id="funnel-container" class="space-y-3">
+      <p class="text-slate-400 text-sm">cargando...</p>
+    </div>
+  </div>
+
+  <!-- d) Tabla ultimos 7 dias -->
+  <div class="bg-white rounded-xl p-5 shadow-sm">
+    <p class="section-title">Ultimos dias</p>
+    <div class="overflow-x-auto">
+      <table id="dias-table">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Consent env.</th>
+            <th>Aceptados</th>
+            <th>Winbacks</th>
+          </tr>
+        </thead>
+        <tbody id="dias-tbody">
+          <tr><td colspan="4" class="text-slate-400">cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- e) Footer: errores Meta 24h -->
+  <div class="bg-white rounded-xl p-4 shadow-sm">
+    <p class="section-title">Errores Meta — ultimas 24h</p>
+    <div class="flex flex-wrap gap-4" id="errores-container">
+      <p class="text-slate-400 text-sm">cargando...</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const TOKEN = new URLSearchParams(location.search).get('token') || '';
+  const API   = `/admin/api/winback-status?token=${TOKEN}`;
+
+  function fmt_clp(n) {
+    if (!n && n !== 0) return '--';
+    return '$' + Number(n).toLocaleString('es-CL');
+  }
+
+  function renderData(d) {
+    // dot
+    const dot = document.getElementById('status-dot');
+    dot.className = 'ok';
+    document.getElementById('last-update').textContent = 'actualizado ' + new Date().toLocaleTimeString('es-CL', {hour:'2-digit',minute:'2-digit'});
+    document.getElementById('now-cl').textContent = d.now_cl || '--';
+
+    // flags
+    const fc = document.getElementById('flags-container');
+    fc.innerHTML = '';
+    const flagLabels = {
+      MARKETING_CONSENT_BLAST_ACTIVE: 'Consent Blast',
+      WINBACK_ACTIVE: 'Winback',
+      CROSS_SELL_ACTIVE: 'Cross-sell'
+    };
+    Object.entries(d.flags || {}).forEach(([k, v]) => {
+      const lbl = flagLabels[k] || k;
+      const el = document.createElement('span');
+      el.className = `text-xs font-medium px-2.5 py-1 rounded-full ${v ? 'chip-on' : 'chip-off'}`;
+      el.textContent = lbl + ': ' + (v ? 'ON' : 'OFF');
+      fc.appendChild(el);
+    });
+
+    // KPIs
+    const k = d.kpis || {};
+    document.getElementById('kpi-pool').textContent       = (k.pool_pendiente ?? '--').toLocaleString('es-CL');
+    document.getElementById('kpi-acceptance').textContent = (k.acceptance_rate_pct != null ? k.acceptance_rate_pct.toFixed(1) + '%' : '--%');
+    document.getElementById('kpi-winbacks').textContent   = (k.winbacks_enviados ?? '--').toLocaleString('es-CL');
+    document.getElementById('kpi-citas').textContent      = (k.citas_atribuidas ?? '--').toLocaleString('es-CL');
+    document.getElementById('kpi-revenue').textContent    = fmt_clp(k.revenue_atribuido_clp);
+    document.getElementById('kpi-costo').textContent      = fmt_clp(k.costo_meta_acumulado_clp);
+    document.getElementById('kpi-consent-sent').textContent = (k.consent_enviados ?? '--').toLocaleString('es-CL');
+    document.getElementById('kpi-consent-acc').textContent  = (k.consent_accepted ?? '--').toLocaleString('es-CL');
+
+    // Funnel
+    const fc2 = document.getElementById('funnel-container');
+    fc2.innerHTML = '';
+    const funnel = d.funnel || [];
+    const maxN = funnel.length > 0 ? (funnel[0].n || 1) : 1;
+    funnel.forEach(step => {
+      const pct = maxN > 0 ? Math.round((step.n / maxN) * 100) : 0;
+      const div = document.createElement('div');
+      div.innerHTML = `
+        <div class="flex items-center gap-3 mb-1">
+          <span class="text-sm text-slate-700 w-40 shrink-0">${step.step}</span>
+          <div class="funnel-bar-bg flex-1">
+            <div class="funnel-bar-fill" style="width:${pct}%"></div>
+          </div>
+          <span class="mono text-xs text-slate-500 w-20 text-right">${step.n.toLocaleString('es-CL')} <span class="text-slate-400">(${pct}%)</span></span>
+        </div>`;
+      fc2.appendChild(div);
+    });
+
+    // Tabla dias
+    const tbody = document.getElementById('dias-tbody');
+    tbody.innerHTML = '';
+    (d.ultimos_dias || []).forEach(row => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td class="mono">${row.fecha}</td><td>${row.consent.toLocaleString('es-CL')}</td><td>${row.accepted.toLocaleString('es-CL')}</td><td>${row.winbacks.toLocaleString('es-CL')}</td>`;
+      tbody.appendChild(tr);
+    });
+    if (!d.ultimos_dias || d.ultimos_dias.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" class="text-slate-400">Sin datos</td></tr>';
+    }
+
+    // Errores Meta
+    const ec = document.getElementById('errores-container');
+    ec.innerHTML = '';
+    const err = d.errores_meta_24h || {};
+    Object.entries(err).forEach(([code, cnt]) => {
+      const color = cnt > 0 ? 'text-red-600 font-semibold' : 'text-slate-400';
+      const el = document.createElement('div');
+      el.className = 'text-sm';
+      el.innerHTML = `<span class="mono text-xs text-slate-500">${code}</span> <span class="${color}">${cnt}</span>`;
+      ec.appendChild(el);
+    });
+    if (Object.keys(err).length === 0) {
+      ec.innerHTML = '<p class="text-slate-400 text-sm">Sin datos</p>';
+    }
+  }
+
+  function renderError(msg) {
+    const dot = document.getElementById('status-dot');
+    dot.className = 'err';
+    document.getElementById('last-update').textContent = 'error: ' + msg;
+  }
+
+  async function fetchData() {
+    try {
+      const r = await fetch(API);
+      if (!r.ok) { renderError('HTTP ' + r.status); return; }
+      const data = await r.json();
+      renderData(data);
+    } catch (e) {
+      renderError(e.message);
+    }
+  }
+
+  fetchData();
+  setInterval(fetchData, 60000);
+</script>
+</body>
+</html>

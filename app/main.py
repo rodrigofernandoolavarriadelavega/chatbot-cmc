@@ -2318,6 +2318,7 @@ _ATRIBUCION_DASHBOARD_HTML = (_TEMPLATE_DIR / "atribucion_dashboard.html").read_
 _ABARCA_DASHBOARD_HTML = (_TEMPLATE_DIR / "abarca_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "abarca_dashboard.html").exists() else ""
 _OLAVARRIA_DASHBOARD_HTML = (_TEMPLATE_DIR / "olavarria_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "olavarria_dashboard.html").exists() else ""
 _PROF_DASHBOARD_HTML = (_TEMPLATE_DIR / "profesional_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "profesional_dashboard.html").exists() else ""
+_WINBACK_DASHBOARD_HTML = (_TEMPLATE_DIR / "winback_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "winback_dashboard.html").exists() else ""
 
 @app.get("/atribucion", response_class=HTMLResponse)
 @app.get("/atribucion/dashboard", response_class=HTMLResponse)
@@ -2326,6 +2327,198 @@ def atribucion_dashboard_page():
     if not _ATRIBUCION_DASHBOARD_HTML:
         raise HTTPException(404, "Dashboard Atribución no disponible")
     return _ATRIBUCION_DASHBOARD_HTML
+
+
+@app.get("/winback", response_class=HTMLResponse)
+@app.get("/winback/dashboard", response_class=HTMLResponse)
+def winback_dashboard_page(token: str | None = Query(None)):
+    """Dashboard winback — pool, funnel consent, KPIs campana."""
+    if token != ADMIN_TOKEN:
+        raise HTTPException(401, "No autorizado")
+    if not _WINBACK_DASHBOARD_HTML:
+        raise HTTPException(404, "Dashboard Winback no disponible")
+    return _WINBACK_DASHBOARD_HTML
+
+
+@app.get("/admin/api/winback-status")
+def api_winback_status(token: str | None = Query(None)):
+    """KPIs winback en tiempo real desde BI Postgres."""
+    if token != ADMIN_TOKEN:
+        raise HTTPException(401, "No autorizado")
+
+    import os as _osw
+    import psycopg2
+    from datetime import datetime, timedelta
+    import zoneinfo as _zi
+
+    tz_cl = _zi.ZoneInfo("America/Santiago")
+    now_cl = datetime.now(tz_cl)
+
+    # Flags desde env
+    flags = {
+        "MARKETING_CONSENT_BLAST_ACTIVE": _osw.getenv("MARKETING_CONSENT_BLAST_ACTIVE", "false").lower() in ("true", "1", "yes"),
+        "WINBACK_ACTIVE":                 _osw.getenv("WINBACK_ACTIVE", "false").lower() in ("true", "1", "yes"),
+        "CROSS_SELL_ACTIVE":              _osw.getenv("CROSS_SELL_ACTIVE", "false").lower() in ("true", "1", "yes"),
+    }
+
+    # Conexion BI
+    bi_host = _osw.getenv("BI_DB_HOST", "127.0.0.1")
+    bi_port = int(_osw.getenv("BI_DB_PORT", "5432"))
+    bi_name = _osw.getenv("BI_DB_NAME", "health_bi")
+    bi_user = _osw.getenv("BI_DB_USER", "health_user")
+    bi_pass = _osw.getenv("BI_DB_PASSWORD", "password123")
+
+    kpis: dict = {}
+    funnel: list = []
+    ultimos_dias: list = []
+    errores_meta_24h: dict = {"131042": 0, "132000": 0, "otros_4xx": 0}
+
+    try:
+        conn = psycopg2.connect(
+            host=bi_host, port=bi_port, dbname=bi_name,
+            user=bi_user, password=bi_pass, connect_timeout=5
+        )
+        cur = conn.cursor()
+
+        # Pool total y pendiente
+        try:
+            cur.execute("SELECT COUNT(*) FROM bi.v_winback_cohortes_contactables")
+            pool_total = cur.fetchone()[0]
+        except Exception:
+            pool_total = 0
+
+        # Consent stats
+        try:
+            cur.execute("""
+                SELECT
+                    COUNT(*) FILTER (WHERE status = 'pending')   AS pendiente,
+                    COUNT(*) FILTER (WHERE status = 'accepted')  AS accepted,
+                    COUNT(*) FILTER (WHERE status = 'declined')  AS declined,
+                    COUNT(*)                                       AS total_enviados
+                FROM bi.marketing_consent
+            """)
+            row = cur.fetchone()
+            consent_pending, consent_accepted, consent_declined, consent_enviados = (row or (0, 0, 0, 0))
+        except Exception:
+            consent_pending = consent_accepted = consent_declined = consent_enviados = 0
+
+        acceptance_rate = round(
+            (consent_accepted / (consent_accepted + consent_declined) * 100)
+            if (consent_accepted + consent_declined) > 0 else 0.0, 1
+        )
+
+        # Pool pendiente = total - ya tiene consent aceptado
+        try:
+            cur.execute("SELECT COUNT(*) FROM bi.marketing_consent WHERE status = 'accepted'")
+            ya_aceptados = cur.fetchone()[0]
+        except Exception:
+            ya_aceptados = 0
+        pool_pendiente = max(0, pool_total - ya_aceptados)
+
+        # Winbacks enviados
+        try:
+            cur.execute("SELECT COUNT(*) FROM bi.winback_envios")
+            winbacks_enviados = cur.fetchone()[0]
+        except Exception:
+            winbacks_enviados = 0
+
+        # Citas atribuidas y revenue (tabla winback_envios con campos opcionales)
+        try:
+            cur.execute("""
+                SELECT
+                    COUNT(*) FILTER (WHERE cita_creada = true)   AS citas,
+                    COALESCE(SUM(revenue_atribuido_clp), 0)       AS revenue
+                FROM bi.winback_envios
+            """)
+            row2 = cur.fetchone()
+            citas_atribuidas = row2[0] if row2 else 0
+            revenue_atribuido = int(row2[1]) if row2 else 0
+        except Exception:
+            citas_atribuidas = 0
+            revenue_atribuido = 0
+
+        # Costo Meta acumulado (si existe tabla)
+        try:
+            cur.execute("SELECT COALESCE(SUM(spend_clp), 0) FROM bi.meta_spend_winback")
+            costo_meta = int(cur.fetchone()[0])
+        except Exception:
+            costo_meta = 0
+
+        kpis = {
+            "pool_total":              pool_total,
+            "pool_pendiente":          pool_pendiente,
+            "consent_enviados":        consent_enviados,
+            "consent_accepted":        consent_accepted,
+            "consent_declined":        consent_declined,
+            "consent_pending":         consent_pending,
+            "acceptance_rate_pct":     acceptance_rate,
+            "winbacks_enviados":       winbacks_enviados,
+            "citas_atribuidas":        citas_atribuidas,
+            "revenue_atribuido_clp":   revenue_atribuido,
+            "costo_meta_acumulado_clp": costo_meta,
+        }
+
+        funnel = [
+            {"step": "Pool total",      "n": pool_total},
+            {"step": "Consent enviado", "n": consent_enviados},
+            {"step": "Respondieron",    "n": consent_accepted + consent_declined},
+            {"step": "Aceptaron",       "n": consent_accepted},
+            {"step": "Winback enviado", "n": winbacks_enviados},
+            {"step": "Cita creada",     "n": citas_atribuidas},
+        ]
+
+        # Ultimos 7 dias
+        try:
+            cur.execute("""
+                SELECT
+                    d::date AS fecha,
+                    COALESCE(c.consent, 0) AS consent,
+                    COALESCE(c.accepted, 0) AS accepted,
+                    COALESCE(w.winbacks, 0) AS winbacks
+                FROM generate_series(
+                    CURRENT_DATE - INTERVAL '6 days',
+                    CURRENT_DATE,
+                    '1 day'::interval
+                ) AS d
+                LEFT JOIN (
+                    SELECT
+                        DATE(consent_sent_at) AS fecha,
+                        COUNT(*) AS consent,
+                        COUNT(*) FILTER (WHERE status = 'accepted') AS accepted
+                    FROM bi.marketing_consent
+                    GROUP BY 1
+                ) c ON c.fecha = d::date
+                LEFT JOIN (
+                    SELECT DATE(enviado_at) AS fecha, COUNT(*) AS winbacks
+                    FROM bi.winback_envios
+                    GROUP BY 1
+                ) w ON w.fecha = d::date
+                ORDER BY d::date DESC
+            """)
+            rows = cur.fetchall()
+            ultimos_dias = [
+                {"fecha": str(r[0]), "consent": r[1], "accepted": r[2], "winbacks": r[3]}
+                for r in rows
+            ]
+        except Exception:
+            ultimos_dias = []
+
+        cur.close()
+        conn.close()
+
+    except Exception as _e:
+        import logging as _lg
+        _lg.getLogger("winback_dashboard").warning("winback-status BI error: %s", _e)
+        kpis = {"error": str(_e)}
+
+    return {
+        "now_cl": now_cl.strftime("%Y-%m-%d %H:%M"),
+        "flags": flags,
+        "kpis": kpis,
+        "funnel": funnel,
+        "errores_meta_24h": errores_meta_24h,
+        "ultimos_dias": ultimos_dias,
+    }
 
 
 @app.get("/abarca", response_class=HTMLResponse)
