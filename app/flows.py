@@ -5635,6 +5635,23 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if ids_apellido:
                 slots_de_ese = [s for s in todos_slots if s.get("id_profesional") in ids_apellido]
                 if slots_de_ese:
+                    # Bug 7 fix: si el texto también menciona una hora (ej. "Andrés Abarca
+                    # a las 12:45"), buscarla en los slots del profesional y confirmar directo.
+                    import re as _re_b7
+                    _hm_b7 = _re_b7.search(r'\b(\d{1,2})[:\.](\d{2})\b', tl_norm_slot)
+                    if _hm_b7:
+                        _h7 = int(_hm_b7.group(1))
+                        _m7 = int(_hm_b7.group(2))
+                        _hora_buscada_b7 = f"{_h7:02d}:{_m7:02d}"
+                        _slot_b7 = next(
+                            (s for s in slots_de_ese
+                             if s.get("hora_inicio", "")[:5] == _hora_buscada_b7),
+                            None
+                        )
+                        if _slot_b7:
+                            log_event(phone, "slot_hora_apellido_autoconfirm",
+                                      {"hora": _hora_buscada_b7, "apellido": _apellido_slot})
+                            return await _slot_confirmed(phone, data, _slot_b7)
                     data["slots"] = slots_de_ese[:10]
                     data["prof_sugerido_id"] = slots_de_ese[0].get("id_profesional")
                     _pv = set(data.get("profs_vistos", []))
@@ -5818,6 +5835,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if _hora_match_valida:
             best_slot, delta = _slot_hora_close(todos_slots, _h_pedida, _m_pedida)
             if best_slot and delta <= 30:
+                # Bug 7 fix: si el slot coincide exactamente (delta==0) o está en la
+                # lista mostrada, confirmar directamente en vez de re-mostrar.
+                # Cubre "11:45 si me sirve", "a las 12:45", "las 10:00 me sirve".
+                if delta == 0 or best_slot in slots_mostrados:
+                    return await _slot_confirmed(phone, data, best_slot)
                 data["slots"] = [best_slot]
                 save_session(phone, "WAIT_SLOT", data)
                 return _format_slots([best_slot])
