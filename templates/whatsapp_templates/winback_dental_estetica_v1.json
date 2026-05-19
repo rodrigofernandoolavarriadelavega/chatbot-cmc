@@ -1,0 +1,31 @@
+{
+  "name": "winback_dental_estetica_v1",
+  "category": "MARKETING",
+  "language": "es_CL",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}}, te saluda el Centro Médico Carampangue.\n\nSi te interesa retomar o consultar sobre tratamientos de estética facial, la Dra. Fuentealba está disponible esta semana.\n\nEscríbenos por este WhatsApp o llama al (41) 296 5226 para ver los horarios disponibles.",
+      "example": {
+        "body_text": [["Claudia"]]
+      }
+    },
+    {
+      "type": "FOOTER",
+      "text": "Si no quieres recibir más mensajes, responde BAJA"
+    },
+    {
+      "type": "BUTTONS",
+      "buttons": [
+        {
+          "type": "QUICK_REPLY",
+          "text": "Sí, quiero agendar"
+        },
+        {
+          "type": "QUICK_REPLY",
+          "text": "Más información"
+        }
+      ]
+    }
+  ]
+}

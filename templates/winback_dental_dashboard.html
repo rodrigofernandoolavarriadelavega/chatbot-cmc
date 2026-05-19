@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Winback Dental — CMC</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --olacore-fiordo:  #1F3340;
+      --olacore-cobre:   #B86D3F;
+      --olacore-neblina: #EFE9DD;
+      --cmc-aqua:  #4FBECE;
+      --cmc-navy:  #0F3F68;
+      --dental:    #2D5F4E;
+    }
+    body { font-family: 'Inter', sans-serif; background: var(--olacore-neblina); color: var(--olacore-fiordo); }
+    .mono  { font-family: 'IBM Plex Mono', monospace; }
+    .serif { font-family: 'Fraunces', serif; }
+    .chip-on  { background: #d1fae5; color: #065f46; }
+    .chip-off { background: #fee2e2; color: #991b1b; }
+    .kpi-card { background: white; border-radius: 0.75rem; padding: 1.25rem 1.5rem; box-shadow: 0 1px 3px rgba(15,63,104,.08); border: 1px solid rgba(31,51,64,.08); }
+    .kpi-val  { font-family: 'Fraunces', serif; font-size: 2rem; font-weight: 500; color: var(--olacore-fiordo); line-height: 1; }
+    .kpi-lbl  { font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; letter-spacing: .1em; text-transform: uppercase; color: var(--olacore-cobre); margin-bottom: .25rem; }
+    .funnel-bar-bg   { background: #e2e8f0; border-radius: 4px; height: 18px; overflow: hidden; }
+    .funnel-bar-fill { height: 100%; background: var(--dental); border-radius: 4px; transition: width .4s; }
+    .section-title   { font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--olacore-cobre); margin-bottom: .75rem; }
+    table { width: 100%; border-collapse: collapse; }
+    th { font-family: 'IBM Plex Mono', monospace; font-size: .65rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: .06em; padding: .5rem .75rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    td { font-size: .8rem; padding: .5rem .75rem; border-bottom: 1px solid #f1f5f9; color: #334155; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f8fafc; }
+    .nav-link { font-size: .8rem; color: var(--olacore-fiordo); opacity: .6; transition: opacity .15s; text-decoration: none; white-space: nowrap; }
+    .nav-link:hover { opacity: 1; }
+    .nav-link.active { opacity: 1; font-weight: 600; border-bottom: 2px solid var(--dental); padding-bottom: 1px; }
+    .sc-pill { display: inline-block; font-size: .6rem; font-family: 'IBM Plex Mono', monospace; padding: 2px 7px; border-radius: 9999px; font-weight: 600; }
+    .sc-orto  { background: #ede9fe; color: #5b21b6; }
+    .sc-endo  { background: #fef3c7; color: #92400e; }
+    .sc-od180 { background: #d1fae5; color: #065f46; }
+    .sc-od365 { background: #e0f2fe; color: #075985; }
+    .sc-est   { background: #fce7f3; color: #9d174d; }
+  </style>
+</head>
+<body class="min-h-screen">
+
+<nav class="border-b border-stone-300 sticky top-0 bg-white/90 backdrop-blur z-50">
+  <div class="max-w-6xl mx-auto px-4 py-3 flex items-center gap-5 overflow-x-auto">
+    <span class="serif text-lg font-medium shrink-0" style="color:var(--olacore-fiordo)">CMC</span>
+    <span class="mono text-xs opacity-40 shrink-0">|</span>
+    <a href="/winback?token=cmc_admin_2026" class="nav-link shrink-0">Winback General</a>
+    <a href="/winback-dental?token=cmc_admin_2026" class="nav-link active shrink-0">Dental</a>
+    <a href="/admin?token=cmc_admin_2026" class="nav-link shrink-0">Panel</a>
+    <span class="ml-auto mono text-xs opacity-40" id="last-refresh">--</span>
+  </div>
+</nav>
+
+<div class="max-w-6xl mx-auto px-4 py-6 space-y-6">
+
+  <div class="flex items-start justify-between flex-wrap gap-4">
+    <div>
+      <h1 class="serif text-2xl font-medium" style="color:var(--dental)">Win-back Dental</h1>
+      <p class="text-sm opacity-60 mt-1">Pool dental focalizado — ortodoncia, odontología, endo/implanto, estética</p>
+    </div>
+    <div class="flex gap-2 items-center flex-wrap">
+      <span id="chip-consent" class="chip-off text-xs font-mono px-2 py-1 rounded-full">CONSENT: OFF</span>
+      <span id="chip-winback" class="chip-off text-xs font-mono px-2 py-1 rounded-full">WINBACK: OFF</span>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="kpi-card"><div class="kpi-lbl">Pool total dental</div><div class="kpi-val" id="kpi-pool">—</div></div>
+    <div class="kpi-card"><div class="kpi-lbl">Consent aceptados</div><div class="kpi-val" id="kpi-accepted">—</div></div>
+    <div class="kpi-card"><div class="kpi-lbl">Winbacks 30d</div><div class="kpi-val" id="kpi-wb30">—</div></div>
+    <div class="kpi-card"><div class="kpi-lbl">Opt-outs dental</div><div class="kpi-val" id="kpi-optouts">—</div></div>
+  </div>
+
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="kpi-card"><div class="kpi-lbl">Consent enviados hoy</div><div class="kpi-val" id="kpi-consent-hoy">—</div></div>
+    <div class="kpi-card"><div class="kpi-lbl">Winbacks enviados hoy</div><div class="kpi-val" id="kpi-wb-hoy">—</div></div>
+    <div class="kpi-card"><div class="kpi-lbl">Tasa respuesta 30d</div><div class="kpi-val" id="kpi-tasa">—</div></div>
+    <div class="kpi-card"><div class="kpi-lbl">Interesados 30d</div><div class="kpi-val" id="kpi-inter">—</div></div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="section-title">Funnel consent dental</div>
+    <div class="space-y-3">
+      <div>
+        <div class="flex justify-between text-xs mb-1"><span>Enviados</span><span id="f-env">—</span></div>
+        <div class="funnel-bar-bg"><div class="funnel-bar-fill" id="fb-env" style="width:100%"></div></div>
+      </div>
+      <div>
+        <div class="flex justify-between text-xs mb-1"><span>Aceptados</span><span id="f-acc">—</span></div>
+        <div class="funnel-bar-bg"><div class="funnel-bar-fill" id="fb-acc" style="width:0%;background:#22c55e"></div></div>
+      </div>
+      <div>
+        <div class="flex justify-between text-xs mb-1"><span>Declinados</span><span id="f-dec">—</span></div>
+        <div class="funnel-bar-bg"><div class="funnel-bar-fill" id="fb-dec" style="width:0%;background:#ef4444"></div></div>
+      </div>
+      <div>
+        <div class="flex justify-between text-xs mb-1"><span>Sin respuesta</span><span id="f-pend">—</span></div>
+        <div class="funnel-bar-bg"><div class="funnel-bar-fill" id="fb-pend" style="width:0%;background:#94a3b8"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="section-title">Pool por sub-cohorte</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Sub-cohorte</th>
+          <th>Especialidad</th>
+          <th class="text-right">Pacientes</th>
+          <th>LTV estimado</th>
+        </tr>
+      </thead>
+      <tbody id="tabla-sc">
+        <tr><td colspan="4" class="text-center opacity-40 py-4 mono text-xs">Cargando...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="kpi-card">
+      <div class="section-title">Respuestas winback dental (30d)</div>
+      <div style="height:200px"><canvas id="donut-resp"></canvas></div>
+    </div>
+    <div class="kpi-card">
+      <div class="section-title">Envíos winback dental (7d)</div>
+      <canvas id="chart-7d" height="120"></canvas>
+    </div>
+  </div>
+
+  <div class="kpi-card border-l-4" style="border-color:var(--olacore-cobre)">
+    <div class="section-title">Para activar</div>
+    <ol class="text-sm space-y-1 list-decimal list-inside opacity-80">
+      <li>Subir templates a Meta Business Manager (6 archivos en <span class="mono text-xs bg-stone-100 px-1 rounded">templates/whatsapp_templates/</span>).</li>
+      <li>Ejecutar <span class="mono text-xs bg-stone-100 px-1 rounded">scripts/migrate_dental_winback.sql</span> en BI Postgres.</li>
+      <li>Confirmar aprobación de <span class="mono text-xs bg-stone-100 px-1 rounded">consent_dental_v1</span> en Meta.</li>
+      <li>Setear <span class="mono text-xs bg-stone-100 px-1 rounded">DENTAL_CONSENT_BLAST_ACTIVE=true</span> en .env del servidor y reiniciar.</li>
+      <li>Cuando pool tenga consent suficiente: <span class="mono text-xs bg-stone-100 px-1 rounded">DENTAL_WINBACK_ACTIVE=true</span>.</li>
+    </ol>
+  </div>
+
+</div>
+
+<script>
+const TOKEN = new URLSearchParams(location.search).get('token') || '';
+
+const SC_META = {
+  'dental_ortodoncia_180d':     { label: 'Ortodoncia',           esp: 'Castillo (ID 66)',            ltv: '$660K–$1M',   cls: 'sc-orto' },
+  'dental_endo_implanto_180d':  { label: 'Endo / Implanto',      esp: 'Fredes (75) + Valdés (69)',   ltv: '$200K–$500K', cls: 'sc-endo' },
+  'dental_odonto_general_180d': { label: 'Odonto Gral 90-180d',  esp: 'Burgos (55) + Jiménez (72)', ltv: '$25K–$80K',   cls: 'sc-od180' },
+  'dental_odonto_general_365d': { label: 'Odonto Gral 181-365d', esp: 'Burgos (55) + Jiménez (72)', ltv: '$25K–$80K',   cls: 'sc-od365' },
+  'dental_estetica_180d':       { label: 'Estética Facial',      esp: 'Fuentealba (76)',             ltv: '$80K–$300K',  cls: 'sc-est' },
+};
+
+let donutChart = null;
+let barChart = null;
+
+function setBar(valId, fillId, val, total, color) {
+  document.getElementById(valId).textContent = val.toLocaleString('es-CL');
+  const el = document.getElementById(fillId);
+  el.style.width = total > 0 ? Math.round(val / total * 100) + '%' : '0%';
+  if (color) el.style.background = color;
+}
+
+async function loadData() {
+  try {
+    const r = await fetch('/admin/api/winback-dental-status?token=' + TOKEN);
+    if (!r.ok) return;
+    const d = await r.json();
+    document.getElementById('last-refresh').textContent = d.now_cl;
+
+    const cOn = d.flags.DENTAL_CONSENT_BLAST_ACTIVE === 'true';
+    const wOn = d.flags.DENTAL_WINBACK_ACTIVE === 'true';
+    const cc = document.getElementById('chip-consent');
+    cc.textContent = 'CONSENT: ' + (cOn ? 'ON' : 'OFF');
+    cc.className = (cOn ? 'chip-on' : 'chip-off') + ' text-xs font-mono px-2 py-1 rounded-full';
+    const cw = document.getElementById('chip-winback');
+    cw.textContent = 'WINBACK: ' + (wOn ? 'ON' : 'OFF');
+    cw.className = (wOn ? 'chip-on' : 'chip-off') + ' text-xs font-mono px-2 py-1 rounded-full';
+
+    const k = d.kpis || {};
+    const pool = k.pool_por_subcohorte || {};
+    const totalPool = Object.values(pool).reduce((a, b) => a + b, 0);
+    document.getElementById('kpi-pool').textContent = totalPool.toLocaleString('es-CL');
+
+    const consent = k.consent_por_estado || {};
+    const accepted = consent.accepted || 0;
+    const declined = consent.declined || 0;
+    const pending  = consent.pending  || 0;
+    const totalC   = accepted + declined + pending;
+    document.getElementById('kpi-accepted').textContent = accepted.toLocaleString('es-CL');
+    document.getElementById('kpi-consent-hoy').textContent = (k.consent_enviados_hoy || 0).toLocaleString('es-CL');
+
+    const wb30 = k.winback_30d || 0;
+    document.getElementById('kpi-wb30').textContent = wb30.toLocaleString('es-CL');
+    document.getElementById('kpi-wb-hoy').textContent = (k.winback_enviados_hoy || 0).toLocaleString('es-CL');
+    document.getElementById('kpi-optouts').textContent = (k.opt_outs_total || 0).toLocaleString('es-CL');
+
+    const resp = k.respuestas_30d || {};
+    const inter = resp.interesado_no_agenda || 0;
+    const totalR = Object.values(resp).reduce((a, b) => a + b, 0);
+    document.getElementById('kpi-inter').textContent = inter.toLocaleString('es-CL');
+    document.getElementById('kpi-tasa').textContent = wb30 > 0 ? Math.round(totalR / wb30 * 100) + '%' : '—';
+
+    setBar('f-env',  'fb-env',  totalC,   totalC,   null);
+    setBar('f-acc',  'fb-acc',  accepted, totalC,   '#22c55e');
+    setBar('f-dec',  'fb-dec',  declined, totalC,   '#ef4444');
+    setBar('f-pend', 'fb-pend', pending,  totalC,   '#94a3b8');
+
+    const tbody = document.getElementById('tabla-sc');
+    if (!Object.keys(pool).length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="text-center opacity-40 py-4 mono text-xs">Sin datos — ejecutar migrate_dental_winback.sql primero</td></tr>';
+    } else {
+      tbody.innerHTML = Object.entries(SC_META).map(([sc, m]) =>
+        `<tr><td><span class="sc-pill ${m.cls}">${m.label}</span></td><td class="opacity-70">${m.esp}</td><td class="text-right mono font-medium">${(pool[sc]||0).toLocaleString('es-CL')}</td><td class="opacity-60">${m.ltv}</td></tr>`
+      ).join('');
+    }
+
+    const donutData  = [inter, resp.baja || 0, resp.other || 0];
+    const donutColors = ['#2D5F4E', '#ef4444', '#94a3b8'];
+    if (!donutChart) {
+      donutChart = new Chart(document.getElementById('donut-resp'), {
+        type: 'doughnut',
+        data: { labels: ['Interesados','Bajas','Otros'], datasets: [{ data: donutData, backgroundColor: donutColors, borderWidth: 0 }] },
+        options: { plugins: { legend: { position: 'right', labels: { font: { size: 11 }, boxWidth: 12 } } }, cutout: '65%' }
+      });
+    } else {
+      donutChart.data.datasets[0].data = donutData;
+      donutChart.update();
+    }
+
+    const dias7 = k.ultimos_7_dias || [];
+    if (!barChart) {
+      barChart = new Chart(document.getElementById('chart-7d'), {
+        type: 'bar',
+        data: { labels: dias7.map(d => d.dia.slice(5)), datasets: [{ data: dias7.map(d => d.enviados), backgroundColor: '#2D5F4E', borderRadius: 4 }] },
+        options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { font: { size: 10 } } }, x: { ticks: { font: { size: 10 } }, grid: { display: false } } } }
+      });
+    } else {
+      barChart.data.labels = dias7.map(d => d.dia.slice(5));
+      barChart.data.datasets[0].data = dias7.map(d => d.enviados);
+      barChart.update();
+    }
+  } catch (e) {
+    console.error('dental dashboard load error', e);
+  }
+}
+
+loadData();
+setInterval(loadData, 60000);
+</script>
+</body>
+</html>

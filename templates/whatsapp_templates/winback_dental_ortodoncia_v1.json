@@ -1,0 +1,31 @@
+{
+  "name": "winback_dental_ortodoncia_v1",
+  "category": "MARKETING",
+  "language": "es_CL",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}}, te contactamos del Centro Médico Carampangue.\n\nSi quedaste con controles pendientes de ortodoncia con la Dra. Castillo, podemos ayudarte a retomar el seguimiento. Los controles regulares son clave para que el tratamiento avance bien.\n\nEscríbenos por este WhatsApp o llama al (41) 296 5226.",
+      "example": {
+        "body_text": [["Carlos"]]
+      }
+    },
+    {
+      "type": "FOOTER",
+      "text": "Si no quieres recibir más mensajes, responde BAJA"
+    },
+    {
+      "type": "BUTTONS",
+      "buttons": [
+        {
+          "type": "QUICK_REPLY",
+          "text": "Sí, agendar control"
+        },
+        {
+          "type": "QUICK_REPLY",
+          "text": "Más información"
+        }
+      ]
+    }
+  ]
+}
