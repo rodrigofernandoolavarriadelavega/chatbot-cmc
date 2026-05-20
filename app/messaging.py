@@ -838,8 +838,20 @@ _TEMPLATE_BODIES = {
         "te desea un excelente año por delante."
     ),
     "consent_marketing_v1": (
-        "Hola {1} 👋 ¿Quieres recibir tips de salud, recordatorios y promociones del CMC?\n\n"
-        "[Sí, acepto ✅] [No, gracias ❌]"
+        "Hola {1}, te saluda el Centro Médico Carampangue.\n\n"
+        "Queremos enviarte ocasionalmente recordatorios de salud preventiva y novedades del centro (máximo 1-2 mensajes al mes).\n\n"
+        "¿Aceptas recibir estos mensajes?\n\n"
+        "Responde SÍ para aceptar o NO para no recibir más comunicaciones de este tipo. Tu decisión no afecta tu atención médica.\n\n"
+        "Política de privacidad: agentecmc.cl/privacidad\n\n"
+        "[Sí, acepto] [No, gracias]"
+    ),
+    "consent_dental_v1": (
+        "Hola {1}, te saluda el Centro Médico Carampangue.\n\n"
+        "Queremos recordarte controles dentales y novedades del área odontológica del centro (máximo 1-2 mensajes al mes).\n\n"
+        "¿Aceptas recibir estos mensajes?\n\n"
+        "Responde SÍ para aceptar o NO para no recibirlos. Tu decisión no afecta tu atención médica.\n\n"
+        "Política de privacidad: agentecmc.cl/privacidad\n\n"
+        "[Sí, acepto] [No, gracias]"
     ),
 }
 
