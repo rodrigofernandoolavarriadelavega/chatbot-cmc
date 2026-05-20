@@ -545,6 +545,20 @@ async def enviar_recordatorios_48h(send_text_fn, send_interactive_fn=None):
     if not citas:
         return
 
+    # Especialidades con ticket alto que siempre reciben reminder_48h,
+    # independiente de historial de no-show y horario.
+    # $48K odonto, $34K eco, $28K gineco, $24K ORL, estética y dental en gral.
+    _ESPECIALIDADES_TICKET_ALTO = {
+        "odontología general",
+        "ortodoncia",
+        "endodoncia",
+        "implantología",
+        "estética facial",
+        "ecografía",
+        "ginecología",
+        "otorrinolaringología",
+    }
+
     enviados = 0
     for cita in citas:
         phone = cita["phone"]
@@ -558,14 +572,19 @@ async def enviar_recordatorios_48h(send_text_fn, send_interactive_fn=None):
         except (ValueError, TypeError):
             _aplica_peak = False
         _aplica_noshow = tiene_historial_noshow(phone)
+        _aplica_ticket_alto = (esp or "").lower() in _ESPECIALIDADES_TICKET_ALTO
 
-        if not (_aplica_noshow or _aplica_peak):
+        if not (_aplica_noshow or _aplica_peak or _aplica_ticket_alto):
             continue
 
         fecha_display = _fmt_fecha_display(cita["fecha"])
         nombre_pac    = _nombre_corto(cita.get("paciente_nombre")) or "paciente"
         id_cita       = cita["id_cita"]
-        motivo_log    = ("peak" if _aplica_peak else "") + ("+noshow" if _aplica_noshow else "")
+        _motivos = []
+        if _aplica_peak:        _motivos.append("peak")
+        if _aplica_noshow:      _motivos.append("noshow")
+        if _aplica_ticket_alto: _motivos.append("ticket_alto")
+        motivo_log = "+".join(_motivos) if _motivos else "ticket_alto"
 
         try:
             if send_interactive_fn:

@@ -434,15 +434,30 @@ async def _job_enrolar_atendidos_dia():
 
                         if phone:
                             # Tier B: tiene perfil bot → enrolar la cita
+                            # Resolver especialidad: Medilink no siempre devuelve
+                            # nombre_especialidad legible, así que usamos el dict
+                            # PROFESIONALES como fuente de verdad canónica.
+                            _id_prof_enrol = cita.get("id_profesional")
+                            _esp_enrol = (
+                                PROFESIONALES.get(_id_prof_enrol, {}).get("especialidad")
+                                or cita.get("nombre_especialidad", "")
+                                or ""
+                            )
+                            _prof_enrol = (
+                                PROFESIONALES.get(_id_prof_enrol, {}).get("nombre")
+                                or cita.get("nombre_profesional", "")
+                                or ""
+                            )
                             conn.execute("""
                                 INSERT INTO citas_bot
                                     (phone, id_cita, especialidad, profesional, fecha, hora,
                                      paciente_nombre, id_paciente_medilink, modalidad, created_at)
-                                VALUES (?, ?, '', ?, ?, ?, ?, ?, 'presencial_enrolado',
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'presencial_enrolado',
                                         datetime('now'))
                             """, (
                                 phone, cita_id,
-                                cita.get("nombre_profesional", ""),
+                                _esp_enrol,
+                                _prof_enrol,
                                 cita.get("fecha", hoy),
                                 cita.get("hora_inicio", ""),
                                 cita.get("nombre_paciente", ""),
