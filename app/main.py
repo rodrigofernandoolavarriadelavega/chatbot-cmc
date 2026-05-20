@@ -2703,9 +2703,9 @@ def api_winback_conversations(token: str | None = Query(None), limit: int = 20):
         cur.execute("""
             SELECT
                 mc.phone                                  AS phone_full,
-                p.nombre_completo                         AS nombre,
+                COALESCE(NULLIF(TRIM(CONCAT_WS(' ', p.nombre, p.apellido)), ''), NULL) AS nombre,
                 mc.status                                 AS cohorte,
-                p.especialidad_frecuente                  AS especialidad,
+                NULL::text                                AS especialidad,
                 (mc.status IS NOT NULL)                   AS consent_enviado,
                 (mc.status IN ('accepted','declined'))    AS respondio,
                 (we.id IS NOT NULL)                       AS winback_enviado,
@@ -2715,7 +2715,9 @@ def api_winback_conversations(token: str | None = Query(None), limit: int = 20):
             LEFT JOIN bi.dim_paciente p
                    ON RIGHT(REGEXP_REPLACE(p.telefono, '[^0-9]', '', 'g'), 9)
                     = RIGHT(REGEXP_REPLACE(mc.phone,   '[^0-9]', '', 'g'), 9)
-            LEFT JOIN bi.winback_envios we ON we.telefono = mc.phone
+            LEFT JOIN bi.winback_envios we
+                   ON RIGHT(REGEXP_REPLACE(we.telefono, '[^0-9]', '', 'g'), 9)
+                    = RIGHT(REGEXP_REPLACE(mc.phone,    '[^0-9]', '', 'g'), 9)
             ORDER BY ts_orden DESC NULLS LAST
             LIMIT %s
         """, (min(limit, 100),))
