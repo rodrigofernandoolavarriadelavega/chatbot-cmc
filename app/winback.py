@@ -429,24 +429,68 @@ def _phones_con_cita_futura() -> set[str]:
 
 # ── Lookup event-driven (un solo paciente por phone) ─────────────────────────
 
-def get_candidato_por_phone(phone: str) -> dict | None:
-    """Busca los datos de un paciente por teléfono en v_winback_cohortes_contactables.
+# Número personal del Dr. Olavarría — excluido hardcoded por defensa.
+_PERSONAL_PHONE_DR = "56987834148"
 
-    La vista ya filtra: consent aceptado + sin opt-out.
-    Retorna el dict con los campos que espera send_winback, o None si el paciente
-    no existe / no es contactable / no tiene cohorte asignada.
+
+def _is_staff_phone(tel_digits: str) -> bool:
+    """Retorna True si el teléfono normalizado a solo dígitos pertenece a staff o al
+    número personal del médico. Si es staff, se loguea WARN y el llamador retorna None.
+
+    Compara por sufijo de 9 dígitos para tolerar formatos mixtos.
+    """
+    from config import STAFF_PHONES as _STAFF_PHONES
+    suffix9 = tel_digits[-9:]
+    # Chequeo número personal hardcoded
+    if tel_digits == _PERSONAL_PHONE_DR or suffix9 == _PERSONAL_PHONE_DR[-9:]:
+        log.warning(
+            "winback: WARN staff_phone_excluded — phone personal Dr. Olavarría bloqueado de marketing"
+        )
+        return True
+    # Chequeo STAFF_PHONES (dict {"56912345678": "Nombre"})
+    for staff_num in _STAFF_PHONES:
+        staff_digits = "".join(c for c in staff_num if c.isdigit())
+        if not staff_digits:
+            continue
+        if staff_digits == tel_digits or staff_digits[-9:] == suffix9:
+            log.warning(
+                "winback: WARN staff_phone_excluded — phone=...%s (%s) bloqueado de marketing",
+                suffix9[-4:], _STAFF_PHONES[staff_num],
+            )
+            return True
+    return False
+
+
+def get_candidato_por_phone(phone: str) -> dict | None:
+    """Busca datos de un paciente por teléfono usando cascada de 4 fuentes.
+
+    Orden (primer hit gana, nombre real siempre preferido sobre fallback):
+
+    1. bi.v_winback_cohortes_contactables — candidato ideal con cohorte, especialidad.
+    2. bi.dim_paciente directo — para pacientes en BI excluidos de la vista (cohorte fuera
+       de rango, winback reciente, etc.). Retorna cohorte='unknown'.
+    3. contact_profiles (sessions.db SQLCipher) — pacientes conocidos por interacción
+       con el bot que no están en BI.
+    4. bi.marketing_consent — al menos tenemos el phone; retorna nombre='Paciente'
+       como ultimísimo fallback y loguea WARN.
+
+    En todos los casos: si el phone normalizado coincide con STAFF_PHONES o el número
+    personal del médico (+56987834148), retorna None de inmediato (nunca marketing a staff).
 
     Normalización: compara por últimos 9 dígitos para tolerar formatos mixtos
-    en la vista (+56966373231 vs 56966373231 vs 966373231, etc.).
-    El blast envía usando el telefono de la vista (ej: +56966373231); Meta normaliza
-    y el webhook llega como 56966373231 → sin normalización, get devolvía None.
+    (+56966373231 vs 56966373231 vs 966373231, etc.).
     """
     tel = phone.lstrip("+").strip()
-    # Extraer solo dígitos y tomar sufijo de 9 (ej: 56966373231 → 966373231)
     tel_digits = "".join(c for c in tel if c.isdigit())
     if len(tel_digits) < 6:
         return None
-    tel_suffix = tel_digits[-9:]  # últimos 9 dígitos del número
+    tel_suffix = tel_digits[-9:]
+
+    # Gate: nunca marketing a staff ni al número personal
+    if _is_staff_phone(tel_digits):
+        return None
+
+    # ── Fuente 1: v_winback_cohortes_contactables ─────────────────────────────
     try:
         with bi_conn() as conn:
             with conn.cursor() as cur:
@@ -465,17 +509,130 @@ def get_candidato_por_phone(phone: str) -> dict | None:
                     (tel_suffix,),
                 )
                 row = cur.fetchone()
-                if not row:
-                    return None
-                cols = [
-                    "paciente_id", "nombre", "apellido", "telefono",
-                    "genero", "ultima_atencion", "ultima_especialidad",
-                    "ultimo_profesional", "dias_inactivo", "cohorte", "edad",
-                ]
-                return dict(zip(cols, row))
+                if row:
+                    cols = [
+                        "paciente_id", "nombre", "apellido", "telefono",
+                        "genero", "ultima_atencion", "ultima_especialidad",
+                        "ultimo_profesional", "dias_inactivo", "cohorte", "edad",
+                    ]
+                    return dict(zip(cols, row))
     except Exception as e:
-        log.warning("winback: get_candidato_por_phone error phone=...%s: %s", tel[-4:], e)
-        return None
+        log.warning("winback: get_candidato_por_phone fuente1 error phone=...%s: %s", tel_suffix[-4:], e)
+
+    # ── Fuente 2: bi.dim_paciente directo ─────────────────────────────────────
+    try:
+        with bi_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT paciente_id, nombre, apellido, telefono
+                    FROM bi.dim_paciente
+                    WHERE RIGHT(regexp_replace(telefono, '[^0-9]', '', 'g'), 9) = %s
+                    ORDER BY updated_at DESC NULLS LAST
+                    LIMIT 1
+                    """,
+                    (tel_suffix,),
+                )
+                row = cur.fetchone()
+                if row:
+                    log.info(
+                        "winback: get_candidato_por_phone fuente2 (dim_paciente) phone=...%s nombre=%s",
+                        tel_suffix[-4:], (row[1] or "").strip()[:20],
+                    )
+                    return {
+                        "paciente_id": row[0],
+                        "nombre": row[1],
+                        "apellido": row[2],
+                        "telefono": row[3] or phone,
+                        "genero": None,
+                        "ultima_atencion": None,
+                        "ultima_especialidad": None,
+                        "ultimo_profesional": None,
+                        "dias_inactivo": None,
+                        "cohorte": "unknown",
+                        "edad": None,
+                    }
+    except Exception as e:
+        log.warning("winback: get_candidato_por_phone fuente2 error phone=...%s: %s", tel_suffix[-4:], e)
+
+    # ── Fuente 3: contact_profiles (sessions.db) ──────────────────────────────
+    try:
+        from session import _conn as _session_conn
+        phone_variants = (phone, "+" + phone, tel_digits, "56" + tel_suffix, tel_suffix)
+        # Eliminar duplicados manteniendo orden
+        seen: set[str] = set()
+        variants_dedup: list[str] = []
+        for v in phone_variants:
+            if v not in seen:
+                seen.add(v)
+                variants_dedup.append(v)
+        placeholders = ",".join("?" * len(variants_dedup))
+        with _session_conn() as conn:
+            row = conn.execute(
+                f"SELECT phone, nombre, rut FROM contact_profiles "
+                f"WHERE phone IN ({placeholders})",
+                variants_dedup,
+            ).fetchone()
+            if row and row[1]:  # nombre no vacío
+                nombre_cp = row[1]
+                log.info(
+                    "winback: get_candidato_por_phone fuente3 (contact_profiles) phone=...%s nombre=%s",
+                    tel_suffix[-4:], nombre_cp[:20],
+                )
+                return {
+                    "paciente_id": 0,
+                    "nombre": nombre_cp,
+                    "apellido": "",
+                    "telefono": phone,
+                    "genero": None,
+                    "ultima_atencion": None,
+                    "ultima_especialidad": None,
+                    "ultimo_profesional": None,
+                    "dias_inactivo": None,
+                    "cohorte": "unknown",
+                    "edad": None,
+                }
+    except Exception as e:
+        log.warning("winback: get_candidato_por_phone fuente3 error phone=...%s: %s", tel_suffix[-4:], e)
+
+    # ── Fuente 4: bi.marketing_consent — phone conocido, nombre desconocido ───
+    try:
+        with bi_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT phone FROM bi.marketing_consent
+                    WHERE RIGHT(regexp_replace(phone, '[^0-9]', '', 'g'), 9) = %s
+                      AND status = 'accepted'
+                    LIMIT 1
+                    """,
+                    (tel_suffix,),
+                )
+                row = cur.fetchone()
+                if row:
+                    log.warning(
+                        "winback: WARN candidato_sin_nombre phone=...%s — "
+                        "encontrado solo en marketing_consent, sin nombre en BI ni bot. "
+                        "Usando fallback 'Paciente'. Revisar datos de fuente.",
+                        tel_suffix[-4:],
+                    )
+                    return {
+                        "paciente_id": 0,
+                        "nombre": "Paciente",
+                        "apellido": "",
+                        "telefono": phone,
+                        "genero": None,
+                        "ultima_atencion": None,
+                        "ultima_especialidad": None,
+                        "ultimo_profesional": None,
+                        "dias_inactivo": None,
+                        "cohorte": "unknown",
+                        "edad": None,
+                    }
+    except Exception as e:
+        log.warning("winback: get_candidato_por_phone fuente4 error phone=...%s: %s", tel_suffix[-4:], e)
+
+    return None
 
 
 def ya_enviado_winback_hoy(phone: str) -> bool:
@@ -689,10 +846,12 @@ async def send_winback(candidato: dict) -> bool:
         "winback_odontologia_v2",
         "winback_otorrino_v2",
     }
+    # Usar solo el primer nombre limpio (ej: "MARIA JOSE GONZALEZ" → "Maria")
+    first_name = nombre.strip().split()[0][:30].capitalize()
     if template_name in _TWO_PARAM_TEMPLATES and profesional_nombre:
-        body_params = [nombre.capitalize(), profesional_nombre]
+        body_params = [first_name, profesional_nombre]
     else:
-        body_params = [nombre.capitalize()]
+        body_params = [first_name]
 
     try:
         from messaging import send_whatsapp_template, render_template_body as _rtb_wb
