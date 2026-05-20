@@ -2583,8 +2583,8 @@ def api_winback_status(token: str | None = Query(None)):
         try:
             cur.execute("""
                 SELECT
-                    COUNT(*) FILTER (WHERE cita_creada = true)   AS citas,
-                    COALESCE(SUM(revenue_atribuido_clp), 0)       AS revenue
+                    COUNT(*) FILTER (WHERE cita_id IS NOT NULL OR cita_atribuida_id IS NOT NULL) AS citas,
+                    COALESCE(SUM(value_clp), 0)                  AS revenue
                 FROM bi.winback_envios
             """)
             row2 = cur.fetchone()
@@ -2647,7 +2647,7 @@ def api_winback_status(token: str | None = Query(None)):
                 ) c ON c.fecha = d::date
                 LEFT JOIN (
                     SELECT DATE(enviado_at) AS fecha, COUNT(*) AS winbacks,
-                           COUNT(*) FILTER (WHERE cita_creada = true) AS citas
+                           COUNT(*) FILTER (WHERE cita_id IS NOT NULL OR cita_atribuida_id IS NOT NULL) AS citas
                     FROM bi.winback_envios
                     GROUP BY 1
                 ) w ON w.fecha = d::date
@@ -2704,18 +2704,18 @@ def api_winback_conversations(token: str | None = Query(None), limit: int = 20):
             SELECT
                 mc.phone                                  AS phone_full,
                 p.nombre_completo                         AS nombre,
-                mc.cohorte_tag                            AS cohorte,
+                mc.status                                 AS cohorte,
                 p.especialidad_frecuente                  AS especialidad,
                 (mc.status IS NOT NULL)                   AS consent_enviado,
                 (mc.status IN ('accepted','declined'))    AS respondio,
                 (we.id IS NOT NULL)                       AS winback_enviado,
-                (we.cita_creada = true)                   AS cita_atribuida,
-                COALESCE(we.response_at, mc.consent_sent_at) AS ts_orden
+                (we.cita_id IS NOT NULL OR we.cita_atribuida_id IS NOT NULL) AS cita_atribuida,
+                COALESCE(we.respondio_at, mc.consent_sent_at) AS ts_orden
             FROM bi.marketing_consent mc
             LEFT JOIN bi.dim_paciente p
                    ON RIGHT(REGEXP_REPLACE(p.telefono, '[^0-9]', '', 'g'), 9)
                     = RIGHT(REGEXP_REPLACE(mc.phone,   '[^0-9]', '', 'g'), 9)
-            LEFT JOIN bi.winback_envios we ON we.phone = mc.phone
+            LEFT JOIN bi.winback_envios we ON we.telefono = mc.phone
             ORDER BY ts_orden DESC NULLS LAST
             LIMIT %s
         """, (min(limit, 100),))
@@ -2770,7 +2770,7 @@ def api_winback_donuts(token: str | None = Query(None)):
         try:
             cur.execute("""
                 SELECT
-                    vc.cohorte_tag,
+                    vc.cohorte,
                     COUNT(*) AS candidatos
                 FROM bi.v_winback_cohortes_contactables vc
                 LEFT JOIN bi.marketing_consent mc
@@ -2778,8 +2778,8 @@ def api_winback_donuts(token: str | None = Query(None)):
                      = RIGHT(REGEXP_REPLACE(vc.telefono, '[^0-9]', '', 'g'), 9)
                    AND mc.status = 'accepted'
                 WHERE mc.phone IS NULL
-                GROUP BY vc.cohorte_tag
-                ORDER BY vc.cohorte_tag
+                GROUP BY vc.cohorte
+                ORDER BY vc.cohorte
             """)
             cohortes = [{"cohorte": str(r[0]), "candidatos": int(r[1])} for r in cur.fetchall()]
         except Exception as _ec:
@@ -2792,7 +2792,7 @@ def api_winback_donuts(token: str | None = Query(None)):
                 SELECT
                     COALESCE(template_meta, 'sin_template') AS template,
                     COUNT(*)                                  AS enviados,
-                    COUNT(*) FILTER (WHERE cita_creada = true) AS citas
+                    COUNT(*) FILTER (WHERE cita_id IS NOT NULL OR cita_atribuida_id IS NOT NULL) AS citas
                 FROM bi.winback_envios
                 GROUP BY template_meta
                 ORDER BY enviados DESC

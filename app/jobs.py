@@ -35,6 +35,23 @@ from config import CMC_TELEFONO
 
 log = logging.getLogger("bot")
 
+_BOT_LOG_PATH = "/var/log/cmc-bot.log"
+
+
+def _tail_lines(path: str = _BOT_LOG_PATH, n: int = 5000) -> str:
+    """Lee las últimas n líneas del log sin subprocess (PATH seguro en systemd)."""
+    try:
+        with open(path, "rb") as f:
+            f.seek(0, 2)
+            size = f.tell()
+            block = min(size, n * 200)
+            f.seek(-block, 2)
+            return f.read().decode(errors="ignore")
+    except FileNotFoundError:
+        return ""
+    except Exception:
+        return ""
+
 HEADERS_MEDILINK = {"Authorization": f"Token {MEDILINK_TOKEN}"}
 
 
@@ -2127,7 +2144,6 @@ async def _job_watchdog_blast() -> None:
     """
     import os as _os_wb
     import re as _re_wb
-    import subprocess as _sub
     from datetime import datetime
     from pathlib import Path
     from zoneinfo import ZoneInfo
@@ -2169,11 +2185,7 @@ async def _job_watchdog_blast() -> None:
     try:
         # grep sobre las últimas 24h. El log tiene timestamp ISO al inicio de cada línea.
         # Usamos las últimas 5000 líneas como proxy (más rápido que filtrar por fecha en bash).
-        result = _sub.run(
-            ["tail", "-n", "5000", "/var/log/cmc-bot.log"],
-            capture_output=True, text=True, timeout=15
-        )
-        log_tail = result.stdout
+        log_tail = _tail_lines()
         err_131042 = log_tail.count("131042")
         err_132000 = log_tail.count("132000")
         err_4xx     = len(_re_wb.findall(r"MSG FAILED.*code=", log_tail))
@@ -2395,7 +2407,7 @@ async def _job_winback_daily_report() -> None:
                 cur.execute("""
                     SELECT
                         COUNT(*) AS winbacks_hoy,
-                        COUNT(*) FILTER (WHERE cita_creada = true) AS citas_hoy
+                        COUNT(*) FILTER (WHERE cita_id IS NOT NULL OR cita_atribuida_id IS NOT NULL) AS citas_hoy
                     FROM bi.winback_envios
                     WHERE DATE(enviado_at AT TIME ZONE 'America/Santiago') = CURRENT_DATE
                 """)
@@ -2419,13 +2431,8 @@ async def _job_winback_daily_report() -> None:
 
     # ── 2. Errores Meta últimas 24h (misma lógica que watchdog) ─────────
     try:
-        import subprocess as _sub_dr
-        result = _sub_dr.run(
-            ["tail", "-n", "5000", "/var/log/cmc-bot.log"],
-            capture_output=True, text=True, timeout=15
-        )
-        log_tail = result.stdout
         import re as _re_dr
+        log_tail = _tail_lines()
         errores_24h = (
             log_tail.count("131042")
             + log_tail.count("132000")
