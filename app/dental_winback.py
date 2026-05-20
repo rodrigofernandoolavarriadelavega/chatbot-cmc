@@ -686,3 +686,124 @@ async def run_dental_consent_blast() -> dict:
 
     log.info("dental_winback: consent blast finalizado, enviados=%d", enviados)
     return {"status": "ok", "enviados": enviados}
+
+
+# -- Winback dental híbrido: session (gratis) cuando ventana 24h abierta ------
+
+def _ventana_24h_abierta_dental(phone: str) -> bool:
+    """Retorna True si bi.dental_consent.response_at es de las últimas 23h.
+
+    Misma lógica que winback._ventana_24h_abierta pero para la tabla dental_consent.
+    """
+    tel = phone.lstrip("+").strip()
+    try:
+        with bi_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT 1 FROM bi.dental_consent
+                    WHERE RIGHT(regexp_replace(phone, '[^0-9]', '', 'g'), 9)
+                          = RIGHT(regexp_replace(%s,  '[^0-9]', '', 'g'), 9)
+                      AND status = 'accepted'
+                      AND response_at >= NOW() - INTERVAL '23 hours'
+                    """,
+                    (tel,),
+                )
+                return cur.fetchone() is not None
+    except Exception as e:
+        log.warning("dental_winback: _ventana_24h_abierta_dental error phone=...%s: %s", tel[-4:], e)
+        return False
+
+
+async def _send_dental_winback_session(candidato: dict) -> bool:
+    """Envía el winback dental como session message (interactive buttons) — costo $0.
+
+    Solo se llama cuando _ventana_24h_abierta_dental() retornó True.
+    """
+    _tel_raw = (candidato.get("telefono") or "").strip()
+    _tel_digits = "".join(c for c in _tel_raw if c.isdigit())
+    if len(_tel_digits) <= 9:
+        _tel_digits = "56" + _tel_digits.lstrip("0")
+    telefono = _tel_digits
+    paciente_id = candidato.get("paciente_id", 0)
+    nombre = (candidato.get("nombre") or "paciente").capitalize()
+    especialidad = candidato.get("ultima_especialidad")
+    profesional = candidato.get("ultimo_profesional") or ""
+    subcohorte = candidato.get("subcohorte", "dental_odonto_general_180d")
+
+    if not telefono or len(telefono) < 8:
+        log.warning("dental_winback: session: telefono inválido paciente_id=%s", paciente_id)
+        return False
+
+    from config import CMC_TELEFONO_FIJO as _FIJO
+    _fijo = _FIJO or "(41) 296 5226"
+
+    _esp_display = especialidad or "área dental"
+    _prof_part = f" con {profesional}" if profesional else ""
+
+    body_text = (
+        f"Hola {nombre}, te contactamos del Centro Médico Carampangue.\n\n"
+        f"Nos dimos cuenta de que llevas un tiempo sin pasar a {_esp_display}{_prof_part}. "
+        f"Si tienes algún control pendiente o un tratamiento en curso, "
+        f"podemos ayudarte a agendar con facilidad.\n\n"
+        f"Estamos en Carampangue de lunes a viernes. Escríbenos aquí o "
+        f"llámanos al {_fijo}.\n\n"
+        f"Responde BAJA si no deseas recibir más mensajes."
+    )
+
+    interactive = {
+        "type": "button",
+        "body": {"text": body_text},
+        "action": {
+            "buttons": [
+                {
+                    "type": "reply",
+                    "reply": {"id": "wb_agendar", "title": "Quiero agendar"},
+                },
+                {
+                    "type": "reply",
+                    "reply": {"id": "wb_info", "title": "Mas informacion"},
+                },
+            ]
+        },
+    }
+
+    try:
+        from messaging import send_whatsapp_interactive
+        from session import log_message as _lm_dws
+
+        await send_whatsapp_interactive(telefono, interactive)
+        _lm_dws(telefono, "out", body_text, "IDLE")
+
+        _template_meta = f"SESSION_DENTAL_{subcohorte}"
+        _registrar_envio_dental(
+            paciente_id=paciente_id,
+            telefono=telefono,
+            subcohorte=subcohorte,
+            template_name=_template_meta,
+            especialidad=especialidad,
+        )
+        log.info(
+            "dental_winback: sent via session phone=...%s subcohorte=%s value_clp=0",
+            telefono[-4:], subcohorte,
+        )
+        return True
+    except Exception as e:
+        log.error("dental_winback: session send error phone=...%s: %s", telefono[-4:], e)
+        return False
+
+
+async def send_dental_winback_smart(candidato: dict, prefer_session: bool = True) -> bool:
+    """Envía winback dental eligiendo la vía mas económica disponible.
+
+    Si prefer_session=True y la ventana 24h está abierta (el paciente acaba
+    de responder al consent_dental_v1), envía session message — costo $0.
+    Si la ventana está cerrada, usa template MARKETING. El batch diario sigue
+    usando send_dental_winback() directamente (ventana siempre cerrada).
+    """
+    phone = (candidato.get("telefono") or "").strip()
+    if prefer_session and _ventana_24h_abierta_dental(phone):
+        log.info("dental_winback: ventana abierta — session message phone=...%s", phone[-4:])
+        return await _send_dental_winback_session(candidato)
+    log.info("dental_winback: ventana cerrada — template MARKETING phone=...%s", phone[-4:])
+    return await send_dental_winback(candidato)

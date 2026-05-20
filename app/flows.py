@@ -2426,7 +2426,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 WINBACK_ACTIVE,
                 get_candidato_por_phone,
                 ya_enviado_winback_hoy,
-                send_winback,
+                send_winback_smart,
             )
             _consent_status = "accepted" if _es_consent_si else "declined"
             registrar_consent_respuesta(phone, _consent_status, method="reply")
@@ -2475,7 +2475,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
             async def _send_now():
                 try:
-                    ok = await send_winback(_candidato)
+                    ok = await send_winback_smart(_candidato, prefer_session=True)
                     log_event(phone, "winback_event_driven", {
                         "ok": ok,
                         "cohorte": _candidato.get("cohorte"),
@@ -2536,7 +2536,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     DENTAL_WINBACK_ACTIVE,
                     get_candidato_dental_por_phone,
                     ya_enviado_dental_winback_hoy,
-                    send_dental_winback,
+                    send_dental_winback_smart,
                 )
                 _dental_status = "accepted" if _es_dental_consent_si else "declined"
                 registrar_dental_consent_respuesta(phone, _dental_status, method="reply")
@@ -2567,7 +2567,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
                 async def _send_dental_now():
                     try:
-                        ok = await send_dental_winback(_candidato_dental)
+                        ok = await send_dental_winback_smart(_candidato_dental, prefer_session=True)
                         log_event(phone, "dental_winback_event_driven", {
                             "ok": ok,
                             "subcohorte": _candidato_dental.get("subcohorte"),

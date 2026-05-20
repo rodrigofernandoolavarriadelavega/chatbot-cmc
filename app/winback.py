@@ -840,6 +840,160 @@ async def run_daily_batch(cohorte: str = "090d") -> dict:
     return stats
 
 
+# ── Winback híbrido: session (gratis) cuando ventana 24h está abierta ────────
+
+def _ventana_24h_abierta(phone: str) -> bool:
+    """Retorna True si el paciente abrió la ventana de conversación en las últimas 23h.
+
+    Criterio: bi.marketing_consent.response_at >= NOW() - INTERVAL '23 hours'.
+    (23h de margen de seguridad antes del límite estricto de 24h de Meta.)
+
+    No consulta sessions.db para evitar dependencia de SQLCipher desde winback.py;
+    el timestamp de la respuesta al consent UTILITY es suficiente y garantiza que
+    la ventana está abierta (el paciente acaba de responder).
+    """
+    tel = phone.lstrip("+").strip()
+    try:
+        with bi_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT 1 FROM bi.marketing_consent
+                    WHERE RIGHT(regexp_replace(phone, '[^0-9]', '', 'g'), 9)
+                          = RIGHT(regexp_replace(%s,  '[^0-9]', '', 'g'), 9)
+                      AND status = 'accepted'
+                      AND response_at >= NOW() - INTERVAL '23 hours'
+                    """,
+                    (tel,),
+                )
+                return cur.fetchone() is not None
+    except Exception as e:
+        log.warning("winback: _ventana_24h_abierta error phone=...%s: %s", tel[-4:], e)
+        return False  # fail-safe: si no podemos verificar, usar template
+
+
+async def _send_winback_session(candidato: dict) -> bool:
+    """Envía el winback como session message (interactive buttons) — costo $0.
+
+    Usa el mismo copy y lógica de selección de mensaje que send_winback(),
+    pero en lugar de un template MARKETING usa un mensaje interactivo de sesión.
+    Solo se llama cuando _ventana_24h_abierta() retornó True.
+    """
+    _tel_raw = (candidato.get("telefono") or "").strip()
+    _tel_digits = "".join(c for c in _tel_raw if c.isdigit())
+    if len(_tel_digits) <= 9:
+        _tel_digits = "56" + _tel_digits.lstrip("0")
+    telefono = _tel_digits
+    paciente_id = candidato.get("paciente_id", 0)
+    nombre = (candidato.get("nombre") or "paciente").capitalize()
+    especialidad = candidato.get("ultima_especialidad")
+    cohorte = candidato.get("cohorte", "090d")
+    profesional = candidato.get("ultimo_profesional") or ""
+    value_clp = get_arancel(especialidad)
+
+    if not telefono or len(telefono) < 8:
+        log.warning("winback: session: telefono inválido paciente_id=%s", paciente_id)
+        return False
+
+    # Construir el body del mensaje según privacidad y cohorte.
+    # Mismo criterio que get_template() pero en texto plano.
+    from config import CMC_TELEFONO_FIJO as _FIJO
+    _fijo = _FIJO or "(41) 296 5226"
+
+    if cohorte == "365d":
+        # One-shot genérico: sin mencionar especialidad ni profesional
+        body_text = (
+            f"Hola {nombre}, te saluda el Centro Médico Carampangue.\n\n"
+            f"Hace tiempo que no te vemos por aquí. Si necesitas una consulta o tienes "
+            f"alguna duda de salud, estamos disponibles de lunes a viernes.\n\n"
+            f"Puedes escribirnos por este WhatsApp o llamarnos al {_fijo}.\n\n"
+            f"Responde BAJA si no deseas recibir más mensajes."
+        )
+    elif es_sensible(especialidad):
+        # Sin mencionar especialidad
+        body_text = (
+            f"Hola {nombre}, te contactamos del Centro Médico Carampangue.\n\n"
+            f"Nos gustaría saber cómo estás. Si tienes algún control pendiente, "
+            f"podemos ayudarte a agendar con facilidad.\n\n"
+            f"Estamos en Carampangue de lunes a viernes. Escríbenos aquí o "
+            f"llámanos al {_fijo}.\n\n"
+            f"Responde BAJA si no deseas recibir más mensajes."
+        )
+    else:
+        # Mencionar especialidad y profesional cuando aplica
+        _esp_display = especialidad or "consulta médica"
+        _prof_part = f" con {profesional}" if profesional else ""
+        body_text = (
+            f"Hola {nombre}, te contactamos del Centro Médico Carampangue.\n\n"
+            f"Nos dimos cuenta de que llevas un tiempo sin pasar a {_esp_display}{_prof_part}. "
+            f"Si tienes algún control pendiente o un motivo nuevo que te preocupa, "
+            f"podemos ayudarte a agendar con facilidad.\n\n"
+            f"Estamos en Carampangue de lunes a viernes. Escríbenos aquí o "
+            f"llámanos al {_fijo}.\n\n"
+            f"Responde BAJA si no deseas recibir más mensajes."
+        )
+
+    interactive = {
+        "type": "button",
+        "body": {"text": body_text},
+        "action": {
+            "buttons": [
+                {
+                    "type": "reply",
+                    "reply": {"id": "wb_agendar", "title": "Quiero agendar"},
+                },
+                {
+                    "type": "reply",
+                    "reply": {"id": "wb_info", "title": "Mas informacion"},
+                },
+            ]
+        },
+    }
+
+    try:
+        from messaging import send_whatsapp_interactive
+        from session import log_message as _lm_ws
+
+        await send_whatsapp_interactive(telefono, interactive)
+        _lm_ws(telefono, "out", body_text, "IDLE")
+
+        # Registrar con template_meta=SESSION_<cohorte> y value_clp=0
+        _template_meta = f"SESSION_{cohorte}"
+        _registrar_envio(
+            paciente_id=paciente_id,
+            telefono=telefono,
+            cohorte=cohorte,
+            template_name=_template_meta,
+            especialidad=especialidad,
+            value_clp=0,
+        )
+        log.info(
+            "winback: sent via session phone=...%s cohorte=%s especialidad=%s value_clp=0",
+            telefono[-4:], cohorte, especialidad,
+        )
+        return True
+    except Exception as e:
+        log.error("winback: session send error phone=...%s: %s", telefono[-4:], e)
+        return False
+
+
+async def send_winback_smart(candidato: dict, prefer_session: bool = True) -> bool:
+    """Envía winback eligiendo la vía mas económica disponible.
+
+    Si prefer_session=True y la ventana 24h está abierta (el paciente acaba
+    de responder al consent UTILITY), envía session message — costo $0.
+    Si la ventana está cerrada o prefer_session=False, usa template MARKETING
+    ($41). Esto se aplica solo al flujo event-driven (consent SI); el batch
+    diario sigue usando send_winback() directamente (ventana siempre cerrada).
+    """
+    phone = (candidato.get("telefono") or "").strip()
+    if prefer_session and _ventana_24h_abierta(phone):
+        log.info("winback: ventana abierta — usando session message phone=...%s", phone[-4:])
+        return await _send_winback_session(candidato)
+    log.info("winback: ventana cerrada — usando template MARKETING phone=...%s", phone[-4:])
+    return await send_winback(candidato)
+
+
 # ── Función para el scheduler (jobs.py) ──────────────────────────────────────
 async def job_winback_diario() -> None:
     """Entry point para APScheduler — corre cohortes en orden."""
