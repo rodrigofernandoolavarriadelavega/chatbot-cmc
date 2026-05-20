@@ -2530,6 +2530,22 @@ def api_winback_status(token: str | None = Query(None)):
     ultimos_dias: list = []
     errores_meta_24h: dict = {"131042": 0, "132000": 0, "otros_4xx": 0}
 
+    # Leer errores Meta de las últimas 5000 líneas del log
+    try:
+        from jobs import _tail_lines as _tl_winback
+        _log_tail_wb = _tl_winback()
+        for _line in _log_tail_wb.splitlines():
+            if "131042" in _line and ("MSG FAILED" in _line or "error_code" in _line):
+                errores_meta_24h["131042"] += 1
+            elif "132000" in _line and ("MSG FAILED" in _line or "error_code" in _line):
+                errores_meta_24h["132000"] += 1
+            elif ("MSG FAILED" in _line or "error_code" in _line) and any(
+                c in _line for c in ("131", "132", "133", "100", "200")
+            ):
+                errores_meta_24h["otros_4xx"] += 1
+    except Exception:
+        pass
+
     try:
         conn = psycopg2.connect(
             host=bi_host, port=bi_port, dbname=bi_name,
@@ -2631,7 +2647,8 @@ def api_winback_status(token: str | None = Query(None)):
                     d::date AS fecha,
                     COALESCE(c.consent, 0) AS consent,
                     COALESCE(c.accepted, 0) AS accepted,
-                    COALESCE(w.winbacks, 0) AS winbacks
+                    COALESCE(w.winbacks, 0) AS winbacks,
+                    COALESCE(w.citas, 0) AS citas
                 FROM generate_series(
                     CURRENT_DATE - INTERVAL '13 days',
                     CURRENT_DATE,
@@ -2655,7 +2672,7 @@ def api_winback_status(token: str | None = Query(None)):
             """)
             rows = cur.fetchall()
             ultimos_dias = [
-                {"fecha": str(r[0]), "consent": r[1], "accepted": r[2], "winbacks": r[3], "citas": r[4] if len(r) > 4 else 0}
+                {"fecha": str(r[0]), "consent": r[1], "accepted": r[2], "winbacks": r[3], "citas": r[4]}
                 for r in rows
             ]
         except Exception:
@@ -6290,6 +6307,7 @@ async def webhook(request: Request):
             "ped_continuar", "ped_no", "no_pediatra", "no_agendar",
             "menor_confirma_menor", "menor_confirma_adulto",
             "menor_es_adulto", "menor_es_menor",
+            "wb_agendar", "wb_info",
             "ig_recepcion", "fb_recepcion", "humano",
             "seg_1", "seg_2", "seg_3", "seg_4", "seg_5",
             "seg_mejor", "seg_igual", "seg_peor",
@@ -6352,7 +6370,7 @@ async def webhook(request: Request):
             _btn_text = msg.get("button", {}).get("text", "")
             _btn_payload = msg.get("button", {}).get("payload", "")
             texto = _btn_text or _btn_payload or ""
-            log.info("MSG from=%s id=%s type=button text=%r payload=%r", phone, mid, _btn_text, _btn_payload)
+            log.info("MSG from=%s id=%s type=button text=%r payload=%r", phone, msg_id, _btn_text, _btn_payload)
             if not texto:
                 return Response(status_code=200)
         elif msg_type == "audio":

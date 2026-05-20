@@ -115,6 +115,10 @@ def _conn():
     return conn
 
 
+# Alias retrocompatible — algunos módulos importan _get_conn en vez de _conn
+_get_conn = _conn
+
+
 def _run_ddl_inline(conn) -> None:
     """DDL completo. Llamado solo una vez por proceso via _DDL_DONE guard."""
     conn.execute("""
@@ -2346,6 +2350,8 @@ def get_citas_para_seguimiento(fecha_hoy: str, hora_corte: str | None = None) ->
                 WHERE cb.fecha = ?
                 AND substr(cb.hora, 1, 5) <= ?
                 AND cb.cancel_detected_at IS NULL
+                AND cb.phone NOT LIKE 'fb_%'
+                AND cb.phone NOT LIKE 'ig_%'
                 AND NOT EXISTS (
                     SELECT 1 FROM fidelizacion_msgs f
                     WHERE f.phone = cb.phone AND f.tipo = 'postconsulta' AND f.cita_id = cb.id_cita
@@ -2359,6 +2365,8 @@ def get_citas_para_seguimiento(fecha_hoy: str, hora_corte: str | None = None) ->
                 LEFT JOIN contact_profiles p ON p.phone = cb.phone
                 WHERE cb.fecha = ?
                 AND cb.cancel_detected_at IS NULL
+                AND cb.phone NOT LIKE 'fb_%'
+                AND cb.phone NOT LIKE 'ig_%'
                 AND NOT EXISTS (
                     SELECT 1 FROM fidelizacion_msgs f
                     WHERE f.phone = cb.phone AND f.tipo = 'postconsulta' AND f.cita_id = cb.id_cita

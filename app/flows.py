@@ -3578,6 +3578,19 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "Entendido 😊 Cuando lo necesites, estamos acá.\n"
                 "_Escribe *menu* para volver al inicio._"
             )
+        if tl == "wb_agendar":
+            log_event(phone, "winback_btn_agendar", {})
+            perfil = get_profile(phone)
+            if perfil:
+                data["rut_conocido"] = perfil.get("rut", "")
+                data["nombre_conocido"] = perfil.get("nombre", "")
+            # Precargar última especialidad si existe para acelerar flujo
+            ultima = get_ultima_cita_paciente(phone)
+            esp_wb = (ultima or {}).get("especialidad") or None
+            return await _iniciar_agendar(phone, data, esp_wb)
+        if tl == "wb_info":
+            log_event(phone, "winback_btn_info", {})
+            return await handle_message(phone, "menu", {"state": "IDLE", "data": data})
         if tl == "reac_si":
             log_event(phone, "reactivacion_acepto", {})
             return await _iniciar_agendar(phone, data, None)

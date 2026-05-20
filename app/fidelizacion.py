@@ -327,17 +327,17 @@ async def enviar_seguimiento_postconsulta(send_fn, send_template_fn=None,
                 # definición), pero usamos template por consistencia y robustez.
                 # body_params: [nombre, especialidad, profesional]
                 nombre_pc = _nombre_corto(cita.get("nombre")) or "paciente"
+                esp_pc = (cita.get("especialidad") or "").strip() or "la consulta"
+                prof_pc = (cita.get("profesional") or "").strip() or "el profesional"
                 await send_template_fn(
                     cita["phone"],
                     "postconsulta_seguimiento",
-                    body_params=[nombre_pc, cita.get("especialidad", ""),
-                                 cita.get("profesional", "")],
+                    body_params=[nombre_pc, esp_pc, prof_pc],
                 )
                 from messaging import render_template_body as _rtb_pc
                 log_message(cita["phone"], "out",
                             _rtb_pc("postconsulta_seguimiento",
-                                    [nombre_pc, cita.get("especialidad", ""),
-                                     cita.get("profesional", "")]),
+                                    [nombre_pc, esp_pc, prof_pc]),
                             "IDLE")
                 log_event(cita["phone"], "template_enviado",
                           {"template": "postconsulta_seguimiento",
