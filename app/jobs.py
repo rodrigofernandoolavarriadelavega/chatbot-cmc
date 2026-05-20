@@ -454,6 +454,13 @@ async def _job_enrolar_atendidos_dia():
                                 (phone, "enrolar_postconsulta_offline",
                                  {"cita_id": cita_id, "fecha": hoy})
                             )
+                            # Atribución winback: si phone tiene envío reciente sin cita, marcar.
+                            # Se ejecuta fuera del lock SQLite (usa Postgres BI).
+                            try:
+                                from winback import atribuir_cita_a_winback as _wb_attr_job
+                                _wb_attr_job(phone, cita_id)
+                            except Exception as _wb_job_err:
+                                log.debug("enrolar: atribuir_cita_a_winback error: %s", _wb_job_err)
                         else:
                             # Tier C: sin opt-in WhatsApp → tabla pacientes_sin_optin
                             if celular_med:

@@ -574,6 +574,63 @@ def registrar_opt_out(telefono: str, source: str = "whatsapp_reply") -> None:
     log.info("winback: opt-out registrado para %s", telefono[-4:])
 
 
+# ── Atribución de citas a winback_envios ──────────────────────────────────────
+def atribuir_cita_a_winback(phone: str, cita_id: int | str) -> int:
+    """Marca cita_id en bi.winback_envios y bi.dental_winback_envios para este phone.
+
+    Busca por los últimos 9 dígitos del teléfono (patrón consistente con resto
+    del codebase). Solo actualiza filas con cita_id IS NULL y enviadas en los
+    últimos 30 días. Idempotente.
+
+    Retorna total de filas actualizadas (0, 1 o 2 si había envío en ambas tablas).
+    """
+    import re as _re
+    phone_norm = _re.sub(r'\D', '', phone or '')[-9:]
+    if not phone_norm:
+        return 0
+    cita_id_int = int(cita_id) if cita_id else None
+    if not cita_id_int:
+        return 0
+    total = 0
+    try:
+        with bi_conn() as conn:
+            with conn.cursor() as cur:
+                # bi.winback_envios
+                cur.execute(
+                    """
+                    UPDATE bi.winback_envios
+                       SET cita_id   = %s,
+                           agendo_at = NOW()
+                     WHERE RIGHT(regexp_replace(telefono,'[^0-9]','','g'), 9) = %s
+                       AND cita_id   IS NULL
+                       AND enviado_at >= NOW() - INTERVAL '30 days'
+                    """,
+                    (cita_id_int, phone_norm),
+                )
+                total += cur.rowcount
+                # bi.dental_winback_envios
+                cur.execute(
+                    """
+                    UPDATE bi.dental_winback_envios
+                       SET cita_id   = %s,
+                           agendo_at = NOW()
+                     WHERE RIGHT(regexp_replace(telefono,'[^0-9]','','g'), 9) = %s
+                       AND cita_id   IS NULL
+                       AND enviado_at >= NOW() - INTERVAL '30 days'
+                    """,
+                    (cita_id_int, phone_norm),
+                )
+                total += cur.rowcount
+            conn.commit()
+    except Exception as _e:
+        log.warning("atribuir_cita_a_winback error phone=...%s cita=%s: %s",
+                    phone_norm[-4:], cita_id_int, _e)
+    if total:
+        log.info("winback: atribuida cita_id=%s a phone=...%s (%d fila(s))",
+                 cita_id_int, phone_norm[-4:], total)
+    return total
+
+
 # ── Envío individual ──────────────────────────────────────────────────────────
 async def send_winback(candidato: dict) -> bool:
     """Envía mensaje winback a un candidato.

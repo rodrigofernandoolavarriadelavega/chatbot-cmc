@@ -751,6 +751,29 @@ async def admin_agendar(request: Request, _: str = Depends(require_admin)):
         "rut": rut, "id_profesional": id_prof,
         "fecha": fecha, "hora": hora_ini
     })
+
+    # Atribución winback: si el paciente recibió un winback reciente, marcar la cita.
+    # Buscamos el phone en el body (campo celular) o en contact_profiles por RUT.
+    try:
+        _wb_phone = (body.get("celular") or "").strip()
+        if not _wb_phone and rut:
+            from session import _conn as _s_conn
+            with _s_conn() as _sc:
+                _pr = _sc.execute(
+                    "SELECT phone FROM contact_profiles "
+                    "WHERE REPLACE(REPLACE(UPPER(rut),'.',''),'-','') = ? LIMIT 1",
+                    (rut.upper().replace(".", "").replace("-", ""),),
+                ).fetchone()
+                if _pr:
+                    _wb_phone = _pr[0]
+        if _wb_phone:
+            _cita_id_admin = cita.get("id") if isinstance(cita, dict) else None
+            if _cita_id_admin:
+                from winback import atribuir_cita_a_winback as _wb_attr_admin
+                _wb_attr_admin(_wb_phone, _cita_id_admin)
+    except Exception as _wb_admin_err:
+        log.debug("admin_agendar atribuir_cita_a_winback error: %s", _wb_admin_err)
+
     return {"ok": True, "cita": cita}
 
 

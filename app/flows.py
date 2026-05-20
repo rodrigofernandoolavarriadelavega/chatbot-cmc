@@ -7300,6 +7300,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     except Exception as _pni_attr_err:
                         log.debug("pni_cita_generada tracking error: %s", _pni_attr_err)
                 # ── fin telemetria PNI ─────────────────────────────────────
+                # ── Atribución winback: si este phone tiene envío reciente ─
+                if id_cita:
+                    try:
+                        from winback import atribuir_cita_a_winback as _wb_attr
+                        _wb_attr(phone, id_cita)
+                    except Exception as _wb_attr_err:
+                        log.debug("atribuir_cita_a_winback error: %s", _wb_attr_err)
+                # ── fin atribución winback ─────────────────────────────────
                 # ── Métricas horas vacías: marcar que el paciente agendó ──
                 if not reagendar:
                     try:
