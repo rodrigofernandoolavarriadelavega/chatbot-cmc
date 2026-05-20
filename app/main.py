@@ -6343,6 +6343,16 @@ async def webhook(request: Request):
                 texto = interactive["list_reply"]["id"]
             else:
                 return Response(status_code=200)
+        elif msg_type == "button":
+            # Quick Reply de template MARKETING/UTILITY (consent_marketing_v1, winback, etc.)
+            # Meta envia type=button con button.text y button.payload — distinto de
+            # type=interactive (botones de sesion propios del bot).
+            _btn_text = msg.get("button", {}).get("text", "")
+            _btn_payload = msg.get("button", {}).get("payload", "")
+            texto = _btn_text or _btn_payload or ""
+            log.info("MSG from=%s id=%s type=button text=%r payload=%r", phone, mid, _btn_text, _btn_payload)
+            if not texto:
+                return Response(status_code=200)
         elif msg_type == "audio":
             media_id = msg.get("audio", {}).get("id", "")
             log.info("AUDIO recibido from=%s media_id=%s — transcribiendo...", phone, media_id)
