@@ -780,126 +780,114 @@ async def send_instagram(igsid: str, body: str):
 # Bodies de los templates aprobados por Meta, con placeholders {{1}}, {{2}}...
 # Se usa SOLO para guardar en messages.body un texto humano legible. El envío
 # real a WhatsApp lo hace send_whatsapp_template con la estructura template.
-_TEMPLATE_BODIES = {
-    "postconsulta_seguimiento": (
-        "Hola {1} 😊 ¿Cómo te sientes después de tu consulta de *{2}* con *{3}*?\n\n"
-        "Tu opinión nos ayuda a mejorar 🙏\n\n"
-        "[Mejor 😊] [Igual 😐] [Peor 😟]"
-    ),
-    "recordatorio_cita": (
-        "Hola {1} 👋 Te recordamos tu cita en el *Centro Médico Carampangue*:\n\n"
-        "🏥 *{2}* — {3}\n"
-        "📅 *{4}* a las *{5}*\n"
-        "💳 {6}\n"
-        "📍 Monsalve esquina República, Carampangue\n\n"
-        "Recuerda llegar *15 minutos antes* con tu cédula de identidad.\n\n"
-        "¿Nos confirmas tu asistencia?\n\n"
-        "[Confirmo ✅] [Cambiar hora 🔄] [No podre ir ❌]"
-    ),
-    "recordatorio_cita_2h": (
-        "Hola {1} ⏰ *En 2 horas* tienes tu cita en el *Centro Médico Carampangue*:\n\n"
-        "🏥 *{2}* — {3}\n"
-        "🕐 Hoy a las *{4}*\n"
-        "📍 Monsalve esquina República, Carampangue\n\n"
-        "Recuerda llegar *15 minutos antes* con tu cédula de identidad."
-    ),
-    "lista_espera_cupo": (
-        "Hola {1} 👋\n\n"
-        "¡Buenas noticias! Se liberó un cupo para *{2}*.\n\n"
-        "📅 Primera hora disponible: *{3} a las {4}*\n\n"
-        "Si quieres agendarla escribe *menu* y te ayudo al tiro 😊\n\n"
-        "_Te escribimos porque estás en nuestra lista de espera._"
-    ),
-    "informe_listo": (
-        "Hola {1} 👋 Tu informe de *{2}* ya está disponible.\n\n"
-        "Responde a este mensaje y te lo enviamos por aquí 📄"
-    ),
-    "seguimiento_medico": (
-        "Hola {1} 👋 El *{2}* del Centro Médico Carampangue quiere saber cómo has evolucionado "
-        "desde tu última consulta.\n\n"
-        "¿Cómo te has sentido? ¿Algún síntoma nuevo o cambio?\n\n"
-        "Responde a este mensaje y te orientamos 🙏"
-    ),
-    "reactivacion_paciente": (
-        "Hola {1} 👋 Hace tiempo no te vemos por el Centro Médico Carampangue. "
-        "¿Te gustaría agendar una consulta?"
-    ),
-    "sistema_recuperado": (
-        "✅ ¡Buenas noticias! Nuestro sistema de citas ya está operativo de nuevo 🎉\n\n"
-        "Si quieres retomar lo que estabas haciendo, escribe *menu* y te ayudo al tiro.\n\n"
-        "_Gracias por tu paciencia._"
-    ),
-    "sistema_recuperado_admin": (
-        "✅ *Medilink recuperado*\n\n"
-        "El bot ya está operativo. Se avisó a {1} paciente(s) que estaban esperando."
-    ),
-    "cumpleanos": (
-        "🎂 ¡Feliz cumpleaños, {1}! 🎉 El equipo del Centro Médico Carampangue "
-        "te desea un excelente año por delante."
-    ),
-    "consent_marketing_v1": (
-        "Hola {1}, te saluda el Centro Médico Carampangue.\n\n"
-        "Queremos enviarte ocasionalmente recordatorios de salud preventiva y novedades del centro (máximo 1-2 mensajes al mes).\n\n"
-        "¿Aceptas recibir estos mensajes?\n\n"
-        "Responde SÍ para aceptar o NO para no recibir más comunicaciones de este tipo. Tu decisión no afecta tu atención médica.\n\n"
-        "Política de privacidad: agentecmc.cl/privacidad\n\n"
-        "[Sí, acepto] [No, gracias]"
-    ),
-    "consent_dental_v1": (
-        "Hola {1}, te saluda el Centro Médico Carampangue.\n\n"
-        "Queremos recordarte controles dentales y novedades del área odontológica del centro (máximo 1-2 mensajes al mes).\n\n"
-        "¿Aceptas recibir estos mensajes?\n\n"
-        "Responde SÍ para aceptar o NO para no recibirlos. Tu decisión no afecta tu atención médica.\n\n"
-        "Política de privacidad: agentecmc.cl/privacidad\n\n"
-        "[Sí, acepto] [No, gracias]"
-    ),
-}
+# Caché en memoria para bodies de templates leídos desde JSON.
+# Clave: template name. Valor: (body_text, buttons_text, footer_text, loaded_at_epoch).
+# TTL: 3600 segundos — se invalida automáticamente sin reiniciar el proceso.
+_TPL_CACHE: dict[str, tuple[str, str, str, float]] = {}
+_TPL_CACHE_TTL = 3600  # segundos
 
 
-def render_template_body(name: str, params: list | tuple | None = None) -> str:
-    """Renderiza body del template interpolando {1},{2}... (dict) o {{1}},{{2}}... (JSON).
+def _load_template_from_json(name: str) -> tuple[str | None, str, str]:
+    """Carga (body, buttons_str, footer_str) desde templates/whatsapp_templates/{name}.json.
 
-    Busca primero en _TEMPLATE_BODIES (dict local). Si no está, intenta leer el
-    JSON de templates/whatsapp_templates/{name}.json para cubrir winback y templates
-    dinámicos no incluidos en el dict.
-    Retorna "[template: name]\n{body renderizado}" para que el panel admin muestre
-    el contenido real del mensaje junto al badge del nombre del template.
+    Retorna (None, '', '') si el archivo no existe o no tiene componente BODY.
+    No lanza excepciones — los errores se loggean y se retorna fallback vacío.
     """
     import json as _json
     from pathlib import Path as _Path
-    params = list(params or [])
-    body = _TEMPLATE_BODIES.get(name)
-    placeholder_fmt = "dict"  # {1}, {2}...
+    _tpl_path = (
+        _Path(__file__).parent.parent
+        / "templates" / "whatsapp_templates" / f"{name}.json"
+    )
+    if not _tpl_path.exists():
+        return None, "", ""
+    try:
+        _tpl = _json.loads(_tpl_path.read_text(encoding="utf-8"))
+        components = _tpl.get("components", [])
+        body = next((c["text"] for c in components if c.get("type") == "BODY"), None)
+        footer = next((c["text"] for c in components if c.get("type") == "FOOTER"), "")
+        btns_comp = next((c for c in components if c.get("type") == "BUTTONS"), None)
+        if btns_comp:
+            btn_labels = [b.get("text", "") for b in btns_comp.get("buttons", [])]
+            buttons_str = "  ".join(f"[{lbl}]" for lbl in btn_labels if lbl)
+        else:
+            buttons_str = ""
+        return body, buttons_str, footer
+    except Exception as _e:
+        log.warning("_load_template_from_json: error leyendo template=%s: %s", name, _e)
+        return None, "", ""
 
-    if not body:
-        # Intentar leer desde JSON en disco
-        try:
-            _tpl_path = (
-                _Path(__file__).parent.parent
-                / "templates" / "whatsapp_templates" / f"{name}.json"
-            )
-            if _tpl_path.exists():
-                _tpl = _json.loads(_tpl_path.read_text())
-                body = next(
-                    (c["text"] for c in _tpl.get("components", []) if c.get("type") == "BODY"),
-                    None,
-                )
-                placeholder_fmt = "json"  # {{1}}, {{2}}...
-        except Exception as _e:
-            log.warning("render_template_body: error leyendo JSON template=%s: %s", name, _e)
+
+def render_template_body(name: str, params: list | tuple | None = None) -> str:
+    """Renderiza el preview de un template WhatsApp para guardar en sessions.db.
+
+    Fuente unica de verdad: templates/whatsapp_templates/{name}.json
+    Formato de placeholders en los JSON: {{1}}, {{2}}, ...
+    Caché en memoria con TTL 1h para evitar I/O en cada mensaje saliente.
+
+    Retorna "[template: name]\\n{body con params sustituidos}" para que el panel
+    admin muestre el contenido real junto al badge del nombre del template.
+    Si el JSON no existe retorna "[template: name]" como fallback sin crash.
+    """
+    import time as _time
+    params = list(params or [])
+
+    # Revisar caché
+    cached = _TPL_CACHE.get(name)
+    if cached and (_time.monotonic() - cached[3]) < _TPL_CACHE_TTL:
+        body, buttons_str, footer = cached[0], cached[1], cached[2]
+    else:
+        body, buttons_str, footer = _load_template_from_json(name)
+        _TPL_CACHE[name] = (body, buttons_str, footer, _time.monotonic())
 
     if not body:
         if params:
             return f"[template: {name}] {' · '.join(str(p) for p in params)}"
         return f"[template: {name}]"
 
+    # Sustituir {{1}}, {{2}}, ...
     out = body
     for i, p in enumerate(params, start=1):
-        if placeholder_fmt == "json":
-            out = out.replace("{{" + str(i) + "}}", str(p))
-        else:
-            out = out.replace("{" + str(i) + "}", str(p))
+        out = out.replace("{{" + str(i) + "}}", str(p))
+
+    # Agregar footer e indicadores de botones al preview
+    if footer:
+        out = f"{out}\n\n_{footer}_"
+    if buttons_str:
+        out = f"{out}\n\n{buttons_str}"
+
     return f"[template: {name}]\n{out}"
+
+
+def get_template_preview(template_name: str, params: list[str] | None = None) -> str:
+    """Retorna el body del template con los params sustituidos, para el panel admin.
+
+    A diferencia de render_template_body, NO incluye el prefijo "[template: name]".
+    Usa el mismo cache y fuente de verdad (JSON local).
+    Si el template no tiene JSON: retorna "[template:{template_name}]".
+    Si tiene BUTTONS: agrega los labels al final separados por espacio.
+    """
+    import time as _time
+    params = list(params or [])
+
+    cached = _TPL_CACHE.get(template_name)
+    if cached and (_time.monotonic() - cached[3]) < _TPL_CACHE_TTL:
+        body, buttons_str, footer = cached[0], cached[1], cached[2]
+    else:
+        body, buttons_str, footer = _load_template_from_json(template_name)
+        _TPL_CACHE[template_name] = (body, buttons_str, footer, _time.monotonic())
+
+    if not body:
+        return f"[template:{template_name}]"
+
+    out = body
+    for i, p in enumerate(params, start=1):
+        out = out.replace("{{" + str(i) + "}}", str(p))
+
+    if buttons_str:
+        out = f"{out}\n\n{buttons_str}"
+
+    return out
 
 
 async def send_messenger(psid: str, body: str):
