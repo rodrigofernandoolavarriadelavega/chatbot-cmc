@@ -262,7 +262,7 @@ Requiere el campo `duracion` (minutos). Se calcula como `_h_to_min(hora_fin) - _
 - [x] Recordatorio vacunas PNI al confirmar cita pediátrica (calendario completo, vacunas escolares condicionales)
 - [x] Tips de autocuidado post-consulta personalizados por edad/sexo/especialidad
 - [x] Descripciones de cada procedimiento en glosario de precios del SYSTEM_PROMPT
-- [x] Fix ecografías: ginecológica/obstétrica → Ginecología (Dr. Tirso Rejón), no Ecografía (David Pardo)
+- [x] Fix ecografías: ginecológica/obstétrica/transvaginal/pélvica → Ginecología (Dr. Tirso Rejón). **Mamaria → David Pardo** (es partes blandas, no ginecológica) — fix 2026-05-22 commits `676239f`+`4906130`. Antes estaba mal asignada a Rejón.
 - [x] Indicador de pensando (⏳ reacción WhatsApp) mientras el bot procesa
 - [x] Alertas personales Dr. Olavarría: resumen pre-cita 10 min antes + reportes progreso 09/12/16/20
 - [x] Exámenes preventivos por edad/sexo en resumen pre-cita (PAP, mamografía, PSA, EMPAM, PNI específico)
