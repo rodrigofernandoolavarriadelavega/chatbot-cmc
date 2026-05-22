@@ -1428,7 +1428,7 @@ def _get_crosssell_post_dental_candidatos() -> list:
                 WHERE cb.especialidad IN ('odontología', 'odontologia',
                                           'odontología general', 'odontologia general')
                   AND cb.fecha BETWEEN ? AND ?
-                  AND cb.estado NOT IN ('anulado', 'cancelado')
+                  AND cb.cancel_detected_at IS NULL
                 """,
                 (fecha_desde, fecha_hasta),
             ).fetchall()
@@ -1444,7 +1444,7 @@ def _get_crosssell_post_dental_candidatos() -> list:
                     """
                     SELECT 1 FROM citas_bot
                     WHERE phone = ?
-                      AND id_profesional = 66
+                      AND profesional LIKE '%Castillo%'
                       AND fecha >= ?
                     LIMIT 1
                     """,
