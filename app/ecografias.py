@@ -4,7 +4,8 @@ Routing autoritativo de ecografías a especialista correcto.
 Razón: en CMC, varias "ecografías" no las realiza el ecografista general (David Pardo)
 sino el especialista del órgano:
   - Cardiológicas → Cardiólogo (Dr. Millán) vía waitlist mensual
-  - Ginecológicas/obstétricas/mamarias → Ginecólogo (Dr. Rejón)
+  - Ginecológicas/obstétricas → Ginecólogo (Dr. Rejón)
+  - Mamarias → Ecografista (David Pardo) — es partes blandas, no ginecológica
   - Resto (abdominal, renal, tiroides, etc) → Ecografista (Pardo)
 
 Cualquier ecografía nueva agregar AQUÍ, no en alias dispersos.
@@ -38,7 +39,8 @@ def _norm(texto: str) -> str:
 # Cada lista es exhaustiva — incluye variantes con/sin tildes, plural, abreviaciones.
 # Las claves se normalizan en route_ecografia(), no es necesario duplicar con/sin tilde aquí.
 ECOGRAFIA_ROUTING: dict[str, dict] = {
-    # ── Ginecológicas/obstétricas/mamarias → Dr. Tirso Rejón (ID 61) ──────────
+    # ── Ginecológicas/obstétricas → Dr. Tirso Rejón (ID 61) ──────────────────
+    # Mamaria NO va acá — es partes blandas (Pardo).
     "ginecologia_rejon": {
         "id_profesional": 61,
         "especialidad_destino": "ginecología",
@@ -77,14 +79,6 @@ ECOGRAFIA_ROUTING: dict[str, dict] = {
             "ecografia de utero",
             "eco utero",
             "ecografia utero",
-            # Mamaria / mamas
-            "mamaria",
-            "eco mamaria",
-            "eco de mamas",
-            "eco mamas",
-            "ecografia mamaria",
-            "ecografia de mamas",
-            "ecotomografia mamaria",
             # Obstétrica / embarazo / prenatal
             "obstetrica",
             "eco obstetrica",
@@ -137,12 +131,23 @@ ECOGRAFIA_ROUTING: dict[str, dict] = {
     },
 
     # ── Ecografía general → David Pardo (ID 68) ──────────────────────────────
+    # Incluye mamaria (partes blandas, NO ginecológica).
     "ecografia_general_pardo": {
         "id_profesional": 68,
         "especialidad_destino": "ecografía",
         "flujo": "normal",
         "precio_particular": 40000,
         "keywords": [
+            # Mamaria / mamas (partes blandas, NO ginecológica)
+            "mamaria",
+            "eco mamaria",
+            "eco de mamas",
+            "eco mamas",
+            "ecografia mamaria",
+            "ecografia de mamas",
+            "ecotomografia mamaria",
+            "eco de mama",
+            "ecografia de mama",
             # Abdominal
             "abdominal",
             "eco abdominal",
@@ -268,7 +273,8 @@ _SOLO_ECO_KEYWORDS = frozenset({
 MSG_PREGUNTAR_TIPO = (
     "¿De qué tipo es la ecografía? Por ejemplo:\n\n"
     "• Abdominal / renal / tiroides / vejiga / articulación / hombro → David Pardo, $40.000\n"
-    "• Transvaginal / mamaria / pélvica / obstétrica → Ginecología (Dr. Rejón), $35.000\n"
+    "• Transvaginal / pélvica / obstétrica → Ginecología (Dr. Rejón), $35.000\n"
+    "• Mamaria → Ecografía (David Pardo), $40.000 — es partes blandas\n"
     "• Ecocardiograma (corazón) → Cardiología (Dr. Millán), $110.000\n\n"
     "Escribe el tipo que necesitas."
 )

@@ -1759,11 +1759,11 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
     # para evitar falsos positivos. Se usa como fallback cuando Claude falla.
     # BUG-2026-05-14: eco mamaria → Rejón (ginecología), no Pardo.
     (("ecograf", "mamari"),
-     "Sí, realizamos *ecografía mamaria* con el *Dr. Tirso Rejón* (Ginecólogo) 🩺\n\n"
+     "Sí, realizamos *ecografía mamaria* con *David Pardo* (Tecnólogo Médico · Ecografía) 🩺\n\n"
      "💰 Particular: $35.000\n\n"
      "Escribe *1* o *agendar ginecología* para reservar hora."),
     (("ecotomograf", "mamari"),
-     "Sí, realizamos *ecotomografía mamaria* con el *Dr. Tirso Rejón* (Ginecólogo) 🩺\n\n"
+     "Sí, realizamos *ecotomografía mamaria* con *David Pardo* (Tecnólogo Médico · Ecografía) 🩺\n\n"
      "💰 Particular: $35.000\n\n"
      "Escribe *1* o *agendar ginecología* para reservar hora."),
     (("ecograf", "testicul"),
