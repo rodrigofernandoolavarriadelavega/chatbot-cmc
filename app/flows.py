@@ -10306,7 +10306,8 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
             _MSG_ECO = (
                 "¿De qué tipo es la ecografía? Por ejemplo:\n\n"
                 "• Abdominal / renal / tiroides → David Pardo, $40.000\n"
-                "• Transvaginal / mamaria / pélvica → Ginecología (Dr. Rejón), $35.000\n"
+                "• Transvaginal / pélvica / obstétrica → Ginecología (Dr. Rejón), $35.000\n"
+                "• Mamaria → Ecografía (David Pardo), $40.000 — es partes blandas, no ginecológica\n"
                 "• Ecocardiograma (corazón) → Cardiología (Dr. Millán), $110.000\n\n"
                 "Escribe el tipo que necesitas."
             )
