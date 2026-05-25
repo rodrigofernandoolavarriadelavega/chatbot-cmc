@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mis citas — Centro Médico Carampangue</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --verde:    #1B7A4A;
+      --verde-l:  #E8F5EE;
+      --gris-50:  #F8FAFC;
+      --gris-100: #F1F5F9;
+      --gris-300: #CBD5E1;
+      --gris-600: #475569;
+      --gris-900: #0F172A;
+      --rojo:     #DC2626;
+      --rojo-l:   #FEF2F2;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--gris-50);
+      color: var(--gris-900);
+      min-height: 100vh;
+    }
+    header {
+      background: var(--verde);
+      color: #fff;
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    header h1 { font-size: 1.1rem; font-weight: 600; }
+    header p { font-size: 0.78rem; opacity: .8; }
+    .container { max-width: 640px; margin: 0 auto; padding: 1.5rem 1rem; }
+    .greeting { font-size: 1.05rem; font-weight: 600; margin-bottom: 1.25rem; color: var(--gris-900); }
+    .empty {
+      background: #fff;
+      border: 1px solid var(--gris-300);
+      border-radius: 12px;
+      padding: 2rem 1.5rem;
+      text-align: center;
+      color: var(--gris-600);
+    }
+    .empty strong { display: block; font-size: 1rem; margin-bottom: .5rem; }
+    .card {
+      background: #fff;
+      border: 1px solid var(--gris-300);
+      border-radius: 12px;
+      padding: 1.1rem 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: .6rem;
+    }
+    .especialidad {
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--gris-900);
+    }
+    .badge {
+      font-size: 0.72rem;
+      font-weight: 600;
+      background: var(--verde-l);
+      color: var(--verde);
+      padding: .2rem .55rem;
+      border-radius: 999px;
+    }
+    .card-meta {
+      font-size: 0.85rem;
+      color: var(--gris-600);
+      line-height: 1.6;
+    }
+    .card-meta strong { color: var(--gris-900); font-weight: 500; }
+    .actions {
+      display: flex;
+      gap: .6rem;
+      margin-top: .9rem;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      padding: .5rem 1rem;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      transition: opacity .15s;
+    }
+    .btn:hover { opacity: .85; }
+    .btn-primary {
+      background: var(--verde);
+      color: #fff;
+    }
+    .btn-secondary {
+      background: var(--gris-100);
+      color: var(--gris-900);
+      border: 1px solid var(--gris-300);
+    }
+    .btn-danger {
+      background: var(--rojo-l);
+      color: var(--rojo);
+      border: 1px solid #FECACA;
+    }
+    .error-page {
+      max-width: 480px;
+      margin: 4rem auto;
+      padding: 2rem 1.5rem;
+      background: #fff;
+      border: 1px solid var(--gris-300);
+      border-radius: 16px;
+      text-align: center;
+    }
+    .error-page h2 { font-size: 1.2rem; margin-bottom: .75rem; }
+    .error-page p { color: var(--gris-600); font-size: .9rem; margin-bottom: 1.5rem; }
+    footer {
+      text-align: center;
+      color: var(--gris-600);
+      font-size: .75rem;
+      padding: 2rem 1rem 1.5rem;
+    }
+  </style>
+</head>
+<body>
+{% if error %}
+<div style="padding: 2rem;">
+  <div class="error-page">
+    <div style="font-size:2.5rem; margin-bottom:.75rem;">🔗</div>
+    <h2>Link inválido o expirado</h2>
+    <p>El link que usaste ya no es válido. Los links de "Mis citas" son válidos por 24 horas.</p>
+    <a class="btn btn-primary" href="https://wa.me/56966610737?text=Quiero+ver+mis+citas">
+      Pedir nuevo link por WhatsApp
+    </a>
+  </div>
+</div>
+{% else %}
+<header>
+  <div>
+    <h1>Centro Médico Carampangue</h1>
+    <p>Mis próximas citas</p>
+  </div>
+</header>
+<div class="container">
+  <div class="greeting">Hola, {{ nombre }}.</div>
+
+  {% if not citas %}
+  <div class="empty">
+    <strong>No tienes citas próximas</strong>
+    <p>Puedes agendar una hora directamente por WhatsApp.</p>
+    <br>
+    <a class="btn btn-primary" href="https://wa.me/56966610737?text=Quiero+agendar+una+hora">
+      Agendar por WhatsApp
+    </a>
+  </div>
+  {% else %}
+  {% for cita in citas %}
+  <div class="card">
+    <div class="card-header">
+      <span class="especialidad">{{ cita.especialidad }}</span>
+      <span class="badge">{{ cita.estado or "Confirmada" }}</span>
+    </div>
+    <div class="card-meta">
+      <strong>Profesional:</strong> {{ cita.profesional }}<br>
+      <strong>Fecha:</strong> {{ cita.fecha_display }}<br>
+      <strong>Hora:</strong> {{ cita.hora_inicio[:5] if cita.hora_inicio else "—" }}<br>
+      {% if cita.modalidad %}<strong>Modalidad:</strong> {{ cita.modalidad }}<br>{% endif %}
+    </div>
+    <div class="actions">
+      <a class="btn btn-secondary"
+         href="https://wa.me/56966610737?text={{ ('Quiero+reagendar+mi+cita+de+' + cita.especialidad + '+del+' + cita.fecha_display) | urlencode }}"
+         target="_blank">
+        Reagendar
+      </a>
+      <a class="btn btn-danger"
+         href="https://wa.me/56966610737?text={{ ('Quiero+cancelar+mi+cita+de+' + cita.especialidad + '+del+' + cita.fecha_display) | urlencode }}"
+         target="_blank">
+        Cancelar
+      </a>
+    </div>
+  </div>
+  {% endfor %}
+  {% endif %}
+</div>
+<footer>
+  Centro Médico Carampangue · (41) 296 5226 · <a href="https://wa.me/56966610737" style="color:inherit">WhatsApp</a>
+</footer>
+{% endif %}
+</body>
+</html>

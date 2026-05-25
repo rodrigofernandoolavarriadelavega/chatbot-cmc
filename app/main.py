@@ -1934,6 +1934,169 @@ def portal_informe():
     return _PORTAL_INFORME_HTML
 
 
+@app.get("/mis-citas", response_class=HTMLResponse)
+async def mis_citas_page(token: str = ""):
+    """Portal ligero de citas por magic link.
+
+    Token firmado HMAC-SHA256 con payload phone:exp, generado por
+    portal_routes.generar_magic_token y enviado por WhatsApp al paciente.
+    Válido 24h. Sin login: el link es el auth.
+    """
+    from portal_routes import verificar_magic_token
+    from medilink import buscar_paciente, listar_citas_paciente
+    from zoneinfo import ZoneInfo
+    from datetime import datetime as _dt_mc, timedelta as _td_mc
+    from session import get_profile, log_event as _le_mc
+
+    _CHILE_TZ_MC = ZoneInfo("America/Santiago")
+    _DIAS_ES = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+    _MESES_ES_MC = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
+                    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+
+    def _fecha_display(iso: str) -> str:
+        try:
+            d = _dt_mc.strptime(iso, "%Y-%m-%d").date()
+            return f"{_DIAS_ES[d.weekday()]} {d.day} de {_MESES_ES_MC[d.month - 1]}"
+        except Exception:
+            return iso
+
+    def _render_error() -> str:
+        return (
+            """<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">"""
+            """<meta name="viewport" content="width=device-width,initial-scale=1">"""
+            """<title>Link inválido — CMC</title>"""
+            """<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">"""
+            """<style>body{font-family:Inter,sans-serif;background:#F8FAFC;display:flex;"""
+            """align-items:center;justify-content:center;min-height:100vh;padding:1rem}"""
+            """.box{background:#fff;border:1px solid #CBD5E1;border-radius:16px;padding:2.5rem 2rem;"""
+            """max-width:420px;text-align:center}h2{margin-bottom:.75rem;font-size:1.2rem}"""
+            """p{color:#475569;font-size:.9rem;margin-bottom:1.5rem}"""
+            """.btn{display:inline-block;background:#1B7A4A;color:#fff;padding:.65rem 1.5rem;"""
+            """border-radius:8px;text-decoration:none;font-weight:600;font-size:.9rem}</style>"""
+            """</head><body><div class="box"><div style="font-size:2.5rem;margin-bottom:.75rem">🔗</div>"""
+            """<h2>Link inválido o expirado</h2>"""
+            """<p>Los links de "Mis citas" son válidos por 24 horas.</p>"""
+            """<a class="btn" href="https://wa.me/56966610737?text=Quiero+ver+mis+citas">"""
+            """Pedir nuevo link por WhatsApp</a></div></body></html>"""
+        )
+
+    if not token:
+        return HTMLResponse(_render_error(), status_code=401)
+
+    phone = verificar_magic_token(token)
+    if not phone:
+        return HTMLResponse(_render_error(), status_code=401)
+
+    # Obtener datos del paciente
+    nombre = "Paciente"
+    citas = []
+    try:
+        perfil = get_profile(phone)
+        rut = (perfil or {}).get("rut", "")
+        if rut:
+            paciente = await buscar_paciente(rut)
+            if paciente:
+                nombre_raw = paciente.get("nombre", "")
+                nombre = nombre_raw.split()[0].capitalize() if nombre_raw else "Paciente"
+                hoy = _dt_mc.now(_CHILE_TZ_MC).date()
+                hasta_iso = (hoy + _td_mc(days=90)).strftime("%Y-%m-%d")
+                citas_raw = await listar_citas_paciente(
+                    paciente["id"],
+                    rut=rut,
+                )
+                # Filtrar localmente a los próximos 90 días
+                citas_raw = [c for c in (citas_raw or []) if (c.get("fecha") or "") <= hasta_iso]
+                for c in (citas_raw or []):
+                    c["fecha_display"] = _fecha_display(c.get("fecha", ""))
+                citas = citas_raw or []
+        _le_mc(phone, "magic_link_visto", {"citas_count": len(citas)})
+    except Exception as _e_mc:
+        log.warning("mis_citas_page error: %s", _e_mc)
+
+    # Construir HTML de citas
+    def _card(c: dict) -> str:
+        esp = c.get("especialidad", "—")
+        prof = c.get("profesional", "—")
+        fecha = c.get("fecha_display", c.get("fecha", "—"))
+        hora = (c.get("hora_inicio") or "")[:5] or "—"
+        modalidad = c.get("modalidad") or ""
+        estado = c.get("estado") or "Confirmada"
+        import urllib.parse
+        wa_reagendar = f"https://wa.me/56966610737?text={urllib.parse.quote('Quiero reagendar mi cita de ' + esp + ' del ' + fecha)}"
+        wa_cancelar  = f"https://wa.me/56966610737?text={urllib.parse.quote('Quiero cancelar mi cita de ' + esp + ' del ' + fecha)}"
+        modal_row = f"<strong>Modalidad:</strong> {modalidad}<br>" if modalidad else ""
+        return f"""
+        <div style="background:#fff;border:1px solid #CBD5E1;border-radius:12px;padding:1.1rem 1.25rem;margin-bottom:1rem">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.6rem">
+            <span style="font-weight:700;font-size:1rem">{esp}</span>
+            <span style="font-size:.72rem;font-weight:600;background:#E8F5EE;color:#1B7A4A;padding:.2rem .55rem;border-radius:999px">{estado}</span>
+          </div>
+          <div style="font-size:.85rem;color:#475569;line-height:1.6">
+            <strong style="color:#0F172A">Profesional:</strong> {prof}<br>
+            <strong style="color:#0F172A">Fecha:</strong> {fecha}<br>
+            <strong style="color:#0F172A">Hora:</strong> {hora}<br>
+            {modal_row}
+          </div>
+          <div style="display:flex;gap:.6rem;margin-top:.9rem;flex-wrap:wrap">
+            <a href="{wa_reagendar}" target="_blank"
+               style="background:#F1F5F9;color:#0F172A;border:1px solid #CBD5E1;padding:.5rem 1rem;border-radius:8px;font-size:.82rem;font-weight:600;text-decoration:none">
+              Reagendar
+            </a>
+            <a href="{wa_cancelar}" target="_blank"
+               style="background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;padding:.5rem 1rem;border-radius:8px;font-size:.82rem;font-weight:600;text-decoration:none">
+              Cancelar
+            </a>
+          </div>
+        </div>"""
+
+    if citas:
+        cards_html = "".join(_card(c) for c in citas)
+        body_html = f"""<div class="greeting">Hola, {nombre}.</div>{cards_html}"""
+    else:
+        body_html = f"""
+        <div class="greeting">Hola, {nombre}.</div>
+        <div style="background:#fff;border:1px solid #CBD5E1;border-radius:12px;padding:2rem 1.5rem;text-align:center;color:#475569">
+          <strong style="display:block;font-size:1rem;margin-bottom:.5rem">No tienes citas próximas</strong>
+          <p>Puedes agendar una hora directamente por WhatsApp.</p><br>
+          <a style="background:#1B7A4A;color:#fff;padding:.65rem 1.5rem;border-radius:8px;font-weight:600;font-size:.9rem;text-decoration:none"
+             href="https://wa.me/56966610737?text=Quiero+agendar+una+hora">Agendar por WhatsApp</a>
+        </div>"""
+
+    html = f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Mis citas — Centro Médico Carampangue</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{{box-sizing:border-box;margin:0;padding:0}}
+    body{{font-family:'Inter',sans-serif;background:#F8FAFC;color:#0F172A;min-height:100vh}}
+    header{{background:#1B7A4A;color:#fff;padding:1rem 1.5rem}}
+    header h1{{font-size:1.1rem;font-weight:600}}
+    header p{{font-size:.78rem;opacity:.8}}
+    .container{{max-width:640px;margin:0 auto;padding:1.5rem 1rem}}
+    .greeting{{font-size:1.05rem;font-weight:600;margin-bottom:1.25rem}}
+    footer{{text-align:center;color:#475569;font-size:.75rem;padding:2rem 1rem 1.5rem}}
+  </style>
+</head>
+<body>
+<header>
+  <h1>Centro Médico Carampangue</h1>
+  <p>Mis próximas citas</p>
+</header>
+<div class="container">
+  {body_html}
+</div>
+<footer>Centro Médico Carampangue · (41) 296 5226 ·
+  <a href="https://wa.me/56966610737" style="color:inherit">WhatsApp</a>
+</footer>
+</body>
+</html>"""
+
+    return HTMLResponse(html)
+
+
 @app.get("/ecosistema", response_class=HTMLResponse)
 def ecosistema_page():
     """Dashboard visual del ecosistema digital CMC."""

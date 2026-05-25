@@ -687,3 +687,69 @@ async def portal_family_remove(dependent_rut: str,
     log_event(owner_phone, "portal_family_revoke",
               {"owner": owner_rut, "dependent": dep_rut})
     return {"ok": True}
+
+
+# ═══ Magic Link — /mis-citas ══════════════════════════════════════════════════
+# Token firmado con HMAC-SHA256, payload: phone:exp, válido 24h.
+# NO usa JWT para evitar dependencia externa. Mismo patrón que portal cookies.
+
+_MAGIC_LINK_TTL = 86400  # 24h en segundos
+_BOT_WA = "+56966610737"
+
+
+def _magic_key() -> bytes:
+    """Derivar clave dedicada para magic links."""
+    secret = PORTAL_SESSION_SECRET or ADMIN_TOKEN
+    return hashlib.sha256(f"cmc-magic-link:{secret}".encode()).digest()
+
+
+def generar_magic_token(phone: str) -> str:
+    """Genera token HMAC-SHA256 con payload phone:exp."""
+    exp = int(time.time()) + _MAGIC_LINK_TTL
+    payload = f"{phone}:{exp}"
+    sig = hmac.new(_magic_key(), payload.encode(), hashlib.sha256).hexdigest()
+    return f"{payload}:{sig}"
+
+
+def verificar_magic_token(token: str) -> str | None:
+    """Verifica token. Retorna phone si válido, None si no."""
+    try:
+        parts = token.rsplit(":", 1)
+        if len(parts) != 2:
+            return None
+        payload, sig = parts
+        expected = hmac.new(_magic_key(), payload.encode(), hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(sig, expected):
+            return None
+        segs = payload.split(":")
+        if len(segs) != 2:
+            return None
+        phone_tok, exp_str = segs
+        if time.time() > int(exp_str):
+            return None
+        return phone_tok
+    except Exception:
+        return None
+
+
+async def enviar_magic_link(phone: str) -> bool:
+    """Genera token y envía link /mis-citas por WhatsApp al phone dado.
+
+    Retorna True si el envío fue exitoso.
+    """
+    try:
+        token = generar_magic_token(phone)
+        import urllib.parse
+        token_enc = urllib.parse.quote(token, safe="")
+        url = f"https://agentecmc.cl/mis-citas?token={token_enc}"
+        msg = (
+            f"Aquí tienes el link para ver tus citas en el Centro Médico Carampangue:\n\n"
+            f"{url}\n\n"
+            f"El link es válido por 24 horas. Si necesitas ayuda escríbenos aquí."
+        )
+        await send_whatsapp(phone, msg)
+        log_event(phone, "magic_link_enviado", {"url": url[:120]})
+        return True
+    except Exception as e:
+        log.warning("enviar_magic_link falló phone=%s: %s", phone, e)
+        return False
