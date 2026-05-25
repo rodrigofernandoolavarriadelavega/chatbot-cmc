@@ -615,6 +615,10 @@ _HEATMAP_COMUNAS_HTML = (_TEMPLATE_DIR / "heatmap_comunas.html").read_text(encod
 _HEATMAP_DIRECCIONES_HTML = (_TEMPLATE_DIR / "heatmap_direcciones.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "heatmap_direcciones.html").exists() else ""
 _SEO_DASHBOARD_HTML = (_TEMPLATE_DIR / "seo_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "seo_dashboard.html").exists() else ""
 _CRECIMIENTO_PERSONAL_HTML = (_TEMPLATE_DIR / "crecimiento_personal.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "crecimiento_personal.html").exists() else ""
+_RUTA_PERSONAL_HTML = (_TEMPLATE_DIR / "ruta_personal.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "ruta_personal.html").exists() else ""
+_BRUJULA_HTML = (_TEMPLATE_DIR / "brujula_personal.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "brujula_personal.html").exists() else ""
+_CAMINOS_HTML = (_TEMPLATE_DIR / "caminos_personal.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "caminos_personal.html").exists() else ""
+_PERSONAL_HUB_HTML = (_TEMPLATE_DIR / "personal_hub.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "personal_hub.html").exists() else ""
 _META_DASHBOARD_HTML = (_TEMPLATE_DIR / "meta_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "meta_dashboard.html").exists() else ""
 _HORIZONTE_DASHBOARD_HTML = (_TEMPLATE_DIR / "horizonte_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "horizonte_dashboard.html").exists() else ""
 _CAMINO_50M_HTML = (_TEMPLATE_DIR / "camino_50m.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "camino_50m.html").exists() else ""
@@ -1132,11 +1136,13 @@ async def blog_post(slug: str):
                 html = base_path.read_text(encoding="utf-8")
                 return _localize_blog(html, base_slug, comuna_slug)
 
-    # Sin localización: blog base
+    # Sin localización: blog base — inyectar bloque de enlaces a variantes por comuna
     blog_path = _BLOG_DIR / f"{slug}.html"
     if not blog_path.exists():
         return HTMLResponse("<h1>404 — Artículo no encontrado</h1>", status_code=404)
-    return blog_path.read_text(encoding="utf-8")
+    html = blog_path.read_text(encoding="utf-8")
+    html = _inject_comunas_block_in_base(html, slug)
+    return html
 
 
 # ============================================================
@@ -1274,6 +1280,43 @@ def _build_local_info_section(base_slug: str, comuna_slug: str) -> str:
   </div>
 </section>
 """
+
+
+def _build_comunas_footer_block(base_slug: str) -> str:
+    """Bloque 'Disponible también en:' que se inyecta al pie de cada blog base.
+    190 enlaces internos nuevos que conectan blogs base ↔ variantes por comuna.
+    Esto saca a las 190 páginas localizadas de su huerfanidad de PageRank."""
+    esp = _specialty_label(base_slug)
+    esp_cap = esp.capitalize()
+    links_html = "\n".join(
+        f'      <li><a href="https://centromedicocarampangue.cl/blog/{base_slug}-{slug}">'
+        f'{esp_cap} en {c["nombre"]}</a></li>'
+        for slug, c in COMUNAS_ARAUCO.items()
+    )
+    return f"""
+<section class="comunas-disponibles" style="padding:48px 0 40px;background:#f0f4f8;border-top:2px solid #e2e8f0;">
+  <div class="container">
+    <h2 style="font-size:20px;font-weight:700;color:#0f3f68;margin:0 0 16px 0;">
+      {esp_cap} disponible tambi\u00e9n en estas comunas
+    </h2>
+    <p style="font-size:14px;color:#4b5563;margin:0 0 20px 0;">
+      Atendemos pacientes de toda la Provincia de Arauco. Selecciona tu comuna para ver
+      informaci\u00f3n espec\u00edfica de cómo llegar y tiempos de viaje al Centro M\u00e9dico Carampangue.
+    </p>
+    <ul style="list-style:none;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:10px;">
+{links_html}
+    </ul>
+  </div>
+</section>
+"""
+
+
+def _inject_comunas_block_in_base(html: str, base_slug: str) -> str:
+    """Inyecta el bloque de comunas antes de </body> en un blog base."""
+    block = _build_comunas_footer_block(base_slug)
+    if "</body>" in html:
+        return html.replace("</body>", block + "\n</body>", 1)
+    return html + block
 
 
 def _localize_blog(html: str, base_slug: str, comuna_slug: str) -> str:
@@ -2290,6 +2333,40 @@ def crecimiento_personal_page():
     if not _CRECIMIENTO_PERSONAL_HTML:
         raise HTTPException(404, "Dashboard Crecimiento Personal no disponible")
     return _CRECIMIENTO_PERSONAL_HTML
+
+
+
+@app.get("/personal", response_class=HTMLResponse)
+@app.get("/tableros", response_class=HTMLResponse)
+def personal_hub_page():
+    if not _PERSONAL_HUB_HTML:
+        raise HTTPException(404, "Hub no disponible")
+    return _PERSONAL_HUB_HTML
+
+
+@app.get("/ruta", response_class=HTMLResponse)
+@app.get("/rutapersonal", response_class=HTMLResponse)
+@app.get("/ruta-personal", response_class=HTMLResponse)
+@app.get("/maparuta", response_class=HTMLResponse)
+def ruta_personal_page():
+    if not _RUTA_PERSONAL_HTML:
+        raise HTTPException(404, "Dashboard Ruta Personal no disponible")
+    return _RUTA_PERSONAL_HTML
+
+
+@app.get("/brujula", response_class=HTMLResponse)
+def brujula_personal_page():
+    if not _BRUJULA_HTML:
+        raise HTTPException(404, "Dashboard Brújula no disponible")
+    return _BRUJULA_HTML
+
+
+@app.get("/caminos", response_class=HTMLResponse)
+@app.get("/jugadas", response_class=HTMLResponse)
+def caminos_page():
+    if not _CAMINOS_HTML:
+        raise HTTPException(404, "Dashboard Caminos no disponible")
+    return _CAMINOS_HTML
 
 
 @app.get("/meta", response_class=HTMLResponse)
