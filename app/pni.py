@@ -23,6 +23,7 @@ _PNI_CALENDARIO = [
     (4, 6, "Rotavirus (2ª dosis)", "segunda dosis contra rotavirus", False),
     # 6 meses
     (6, 12, "Hexavalente (3ª dosis)", "tercera dosis de hexavalente", False),
+    (6, 24, "Influenza (campaña anual)", "vacuna antigripal — se repite cada año en campaña invernal (abril–mayo). Crítica en menores de 2 años, embarazadas, mayores de 65 y crónicos", False),
     # 12 meses
     (12, 18, "Tres Vírica SRP (1ª dosis)", "protege contra sarampión, rubéola y paperas", False),
     (12, 18, "Meningocócica conjugada (1ª dosis)", "protege contra meningitis meningocócica", False),

@@ -769,7 +769,7 @@ Responde directamente estas dudas sin necesidad de agendar:
 | Especialidad | Fonasa | Particular | Detalle |
 |---|---|---|---|
 | Medicina General | ✅ Bono MLE $7.880 | $25.000 | Se emite bono en CMC con huella |
-| Kinesiología | ✅ Bono MLE $7.830 | $20.000 | Se emite bono en CMC con huella |
+| Kinesiología | ✅ Bono MLE $7.830 (sesión) · $10.360 (1ª/última sesión, incluye evaluación o informe alta) | $20.000 | Se emite bono en CMC con huella |
 | Nutrición | ✅ Bono MLE $4.770 | $20.000 | Se emite bono en CMC con huella |
 | Psicología | ✅ Bono MLE $14.420 | $20.000 | Se emite bono en CMC con huella |
 | Matrona | 🟡 Tarifa preferencial $16.000 | $30.000 | NO es bono, es precio rebajado Fonasa |
@@ -2060,6 +2060,16 @@ async def respuesta_faq(mensaje: str, recepcion_resumen: list | None = None,
                 f"de Meta sobre \"{meta_referral['headline']}\". "
                 f"Responde teniendo en cuenta ese contexto.\n\n"
             )
+        # Fix G: prepend duro de instrucción JSON en el user message para evitar
+        # que Haiku responda en prosa cuando hay contexto adicional (recepcion/referral).
+        # Caso real 56952171610 15:48: "Solo particular" → Haiku devolvió prosa →
+        # parse JSON falló → fallback genérico. El system prompt ya lo pide pero
+        # se ignora cuando el contexto inyectado es predominante.
+        _json_instruct_f = (
+            'IMPORTANTE: responde EXCLUSIVAMENTE en JSON valido con la clave '
+            '"respuesta_directa". Ejemplo: {"respuesta_directa": "texto"}. '
+            'NO escribas prosa fuera del JSON.\n\n'
+        )
         resp = await client.messages.create(
             model="claude-haiku-4-5-20251001",
             max_tokens=1024,
@@ -2068,7 +2078,7 @@ async def respuesta_faq(mensaje: str, recepcion_resumen: list | None = None,
                 "text": SYSTEM_PROMPT,
                 "cache_control": {"type": "ephemeral"},
             }],
-            messages=[{"role": "user", "content": _ctx_fecha15f + _recepcion_ctx15f + _referral_ctx15f + mensaje}],
+            messages=[{"role": "user", "content": _ctx_fecha15f + _recepcion_ctx15f + _referral_ctx15f + _json_instruct_f + mensaje}],
         )
         text = _strip_markdown_json(resp.content[0].text)
         if resp.stop_reason == "max_tokens":

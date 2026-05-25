@@ -3115,7 +3115,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             log_event(phone, "traumato_elige_waitlist", {"phone": phone})
             return _btn_msg(
                 "Te anoto en lista de espera para *Traumatología* 📋\n\n"
-                "Te avisaremos en cuanto el Dr. Barraza esté disponible.",
+                "Te contactaremos cuando volvamos a tener atención de traumatología en el CMC. "
+                "Mientras tanto, *Medicina General* puede hacerte una evaluación inicial.",
                 [
                     {"id": "waitlist_si", "title": "📝 Sí, anotarme"},
                     {"id": "waitlist_no", "title": "No, gracias"},
@@ -4115,6 +4116,73 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     log_event(phone, "horario_consultado", {"esp": _esp_h, "fuente": "medilink"})
                     return _resp_h
 
+        # ── FIX-D: Confirmación asistencia con citas activas ────────────────
+        # Caso real: Florencia (56953867126) escribe "Buenas tardes confirmo
+        # asistencia de Tomas". Tenía 2 citas activas. El bot ignoraba citas_bot
+        # y pedía especialidad+hora como si no supiera nada.
+        # Solución: detectar el patrón ANTES de detect_intent y resolver directo.
+        _CONFIRMA_ASIST_RE = re.compile(
+            r"\b(confirm[oa]\s+(mi\s+|la\s+|su\s+)?asistencia|"
+            r"voy\s+a\s+(ir|asistir|llegar)|"
+            r"s[íi]\s+voy\b|\bvoy\s+a\s+ir\b|"
+            r"confirm[oa]\s+(mi|la)?\s*(cita|hora)|"
+            r"estar[eé]\s+ah[íi]|llegar[eé]\s+a\s+la\s+(hora|cita)|"
+            r"confirmo\s+(asistencia|la\s+cita|la\s+hora|mi\s+hora))",
+            re.IGNORECASE,
+        )
+        if _CONFIRMA_ASIST_RE.search(txt):
+            try:
+                from session import _conn as _ca_conn
+                _hoy_iso = _hoy_cl.isoformat()
+                import datetime as _ca_dt_mod
+                _manana_iso = (_hoy_cl + _ca_dt_mod.timedelta(days=1)).isoformat()
+                with _ca_conn() as _ca_c:
+                    _ca_rows = _ca_c.execute(
+                        "SELECT especialidad, profesional, fecha, hora, paciente_nombre "
+                        "FROM citas_bot "
+                        "WHERE phone=? "
+                        "  AND fecha IN (?, ?) "
+                        "  AND cancel_detected_at IS NULL "
+                        "ORDER BY datetime(fecha || ' ' || COALESCE(hora, '00:00')) ASC ",
+                        (phone, _hoy_iso, _manana_iso)
+                    ).fetchall()
+                _ca_citas = [dict(r) for r in _ca_rows] if _ca_rows else []
+            except Exception as _ca_err:
+                log.warning("Fix-D citas_bot query falló: %s", _ca_err)
+                _ca_citas = []
+            if len(_ca_citas) == 1:
+                _ca = _ca_citas[0]
+                _ca_prof  = _ca.get("profesional") or ""
+                _ca_esp   = _ca.get("especialidad") or ""
+                _ca_fecha = _ca.get("fecha") or ""
+                _ca_hora  = (_ca.get("hora") or "")[:5]
+                try:
+                    from datetime import datetime as _ca_dt
+                    _ca_fecha_disp = _ca_dt.strptime(_ca_fecha, "%Y-%m-%d").strftime("%d/%m/%Y")
+                except Exception:
+                    _ca_fecha_disp = _ca_fecha
+                log_event(phone, "confirmacion_asistencia_directa",
+                          {"especialidad": _ca_esp, "profesional": _ca_prof, "fecha": _ca_fecha})
+                return (
+                    "Confirmado. Tu cita de *" + _ca_esp + "* con *" + _ca_prof + "* "
+                    "el *" + _ca_fecha_disp + "* a las *" + _ca_hora + "* está anotada.\n\n"
+                    "Te esperamos. Si necesitas cancelar o cambiar, escribe *menu*."
+                )
+            elif len(_ca_citas) >= 2:
+                _ca_lista = "\n".join(
+                    str(i + 1) + ". *" + c.get("especialidad", "") + "* — " + c.get("profesional", "") + " "
+                    + ("hoy" if c.get("fecha") == _hoy_iso else "mañana")
+                    + " a las " + (c.get("hora") or "")[:5]
+                    for i, c in enumerate(_ca_citas)
+                )
+                log_event(phone, "confirmacion_asistencia_multiple",
+                          {"n_citas": len(_ca_citas)})
+                return (
+                    "Tienes " + str(len(_ca_citas)) + " citas próximas:\n\n" + _ca_lista + "\n\n"
+                    "¿Cuál confirmas? Escribe el número (1, 2…) o *todas* para confirmar ambas."
+                )
+            # Sin citas en citas_bot → dejar pasar a detect_intent normalmente
+
         # Obtener referral Meta fresco (anuncio Click-to-WA/IG/FB) si existe
         _meta_referral_ctx: dict | None = None
         try:
@@ -5092,6 +5160,40 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
     # ── WAIT_ESPECIALIDAD ─────────────────────────────────────────────────────
     if state == "WAIT_ESPECIALIDAD":
+        # Bug C fix: pronombres referenciales ("ese examen", "eso mismo", "lo que
+        # te dije") → buscar en historial reciente del paciente si hay examen o
+        # especialidad mencionada antes de entrar a este estado. Caso real: Riola
+        # García Vera (56950836674, 2026-05-25) mencionó "bioimpedanciometría"
+        # durante HUMAN_TAKEOVER y luego dijo "quiero agendar ese examen".
+        _PRONOMBRES_REF = (
+            "ese examen", "eso mismo", "lo mismo", "el mismo", "la misma",
+            "eso que te dije", "lo que te dije", "ese", "eso", "lo que mencioné",
+            "lo mencionado", "el examen", "ese tratamiento", "lo que hablamos",
+        )
+        _es_referencial = any(pr in tl_norm for pr in _PRONOMBRES_REF)
+        if _es_referencial:
+            # Buscar en los últimos 15 mensajes entrantes del paciente
+            try:
+                from session import get_messages as _get_msgs
+                _hist = _get_msgs(phone, limit=15)
+                _msgs_in = [m["text"] for m in _hist if m.get("direction") == "in"]
+                if _msgs_in:
+                    _contexto_hist = "\n".join(_msgs_in[-10:])
+                    _esp_ref = await detect_intent(_contexto_hist)
+                    _esp_ref_val = _esp_ref.get("especialidad")
+                    if _esp_ref_val:
+                        log_event(phone, "wait_esp_referencial_resuelto",
+                                  {"txt": txt[:120], "especialidad_resuelta": _esp_ref_val})
+                        return await _iniciar_agendar(phone, data, _esp_ref_val)
+            except Exception as _e_ref:
+                log.warning("pronombre_referencial fallback: %s", _e_ref)
+            # Si no se resuelve, pedir explicitamente con contexto amable
+            save_session(phone, "WAIT_ESPECIALIDAD", data)
+            return (
+                "Disculpa, no pude identificar exactamente qué examen o especialidad necesitas 😊\n\n"
+                f"¿Puedes confirmarme el nombre? Por ejemplo: ecografía, cardiología, kinesiología...\n\n{_ESPECIALIDADES_TEXTO}"
+            )
+
         # C2: payloads de botones que no son nombres de especialidad.
         # Si llegan aquí (ej. quick_yes, quick_no, menu_volver, no_agendar)
         # deben enrutarse correctamente, no pasarlos al normalizador de especialidad.
@@ -5138,6 +5240,24 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if tl == "cat_dental":
             save_session(phone, "WAIT_ESPECIALIDAD", data)
             return _especialidades_dental_msg()
+
+        # Fix E: detectar solicitudes de retiro/entrega de informe → HUMAN_TAKEOVER.
+        # Caso real 56...150063: "necesito gestionar entrega de informe de ecotomografía"
+        # No es agendar — es un trámite administrativo. Derivar a recepción.
+        _INFORME_KW = (
+            "entrega de informe", "retiro de informe", "retirar informe",
+            "buscar resultado", "buscar informe", "recoger informe",
+            "recoger resultado", "resultado de examen", "resultado ecografia",
+            "resultado ecografía", "resultado ecotomografia", "resultado ecotomografía",
+            "gestionar entrega", "entregar informe", "informe de eco",
+        )
+        if any(k in tl for k in _INFORME_KW):
+            log_event(phone, "informe_derivado_humano", {"txt": txt[:120]})
+            save_session(phone, "HUMAN_TAKEOVER", data)
+            return (
+                "Para coordinar la entrega de tu informe, te comunico con recepción.\n\n"
+                "Puedes llamar al *(41) 296 5226* o esperar que te contactemos."
+            )
 
         # Bug 4 fix: respuesta especial para psiquiatra (no disponible en CMC)
         if any(k in tl_norm for k in ("psiquiatra", "psiquiatria", "psiquiatría",
@@ -5190,6 +5310,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             log_event(phone, "wait_esp_texto_libre_rechazado", {"txt": txt[:120]})
             save_session(phone, "WAIT_ESPECIALIDAD", data)
             return f"No reconocí eso como una especialidad. ¿Qué especialidad necesitas?\n\n{_ESPECIALIDADES_TEXTO}"
+        # Fix E (loop ecotomografía): propagar texto crudo para que route_ecografia()
+        # pueda resolver el tipo de eco si el usuario incluyó el órgano en la frase.
+        # Sin esto, _txt_para_eco queda como "ecografía" y siempre muestra sub-menú.
+        data["_txt_raw"] = txt
         # Si venimos del flujo de lista de espera, redirigir al confirming
         if data.pop("from_waitlist", False):
             return await _iniciar_waitlist(phone, data, especialidad_candidata)
@@ -5650,21 +5774,49 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     )
                 except Exception:
                     pass
-            if especialidad in _ESP_MED_GENERAL:
-                smart_nuevo, todos_nuevo = await buscar_primer_dia(
-                    especialidad, excluir=fechas_vistas, solo_ids=_MED_AO_IDS)
-                if not todos_nuevo:  # overflow a Márquez
-                    smart_nuevo, todos_nuevo = await buscar_primer_dia(
-                        especialidad, excluir=fechas_vistas, solo_ids=[_MED_OVERFLOW_ID])
-            elif especialidad in _ESP_MED_FAMILIAR:
-                smart_nuevo, todos_nuevo = await buscar_primer_dia(
-                    "medicina general", excluir=fechas_vistas, solo_ids=_MED_FAMILIAR_IDS)
-                for s in (todos_nuevo or []):
-                    if isinstance(s, dict):
-                        s["especialidad"] = "Medicina Familiar"
-            else:
-                smart_nuevo, todos_nuevo = await buscar_primer_dia(
-                    especialidad, excluir=fechas_vistas, intervalo_override=_maso_override)
+            # Fix F: retry 2 intentos con 1 s de pausa ante timeout de Medilink.
+            # Caso real 56...087006 (20 mayo 20:40): "otro_dia" → timeout →
+            # "Tuve un problema técnico" → paciente canceló por no poder reagendar.
+            import asyncio as _aio_f
+            smart_nuevo, todos_nuevo = [], []
+            _exitoso_f = False
+            for _intento_f in range(2):
+                try:
+                    if especialidad in _ESP_MED_GENERAL:
+                        smart_nuevo, todos_nuevo = await buscar_primer_dia(
+                            especialidad, excluir=fechas_vistas, solo_ids=_MED_AO_IDS)
+                        if not todos_nuevo:  # overflow a Márquez
+                            smart_nuevo, todos_nuevo = await buscar_primer_dia(
+                                especialidad, excluir=fechas_vistas, solo_ids=[_MED_OVERFLOW_ID])
+                    elif especialidad in _ESP_MED_FAMILIAR:
+                        smart_nuevo, todos_nuevo = await buscar_primer_dia(
+                            "medicina general", excluir=fechas_vistas, solo_ids=_MED_FAMILIAR_IDS)
+                        for s in (todos_nuevo or []):
+                            if isinstance(s, dict):
+                                s["especialidad"] = "Medicina Familiar"
+                    else:
+                        smart_nuevo, todos_nuevo = await buscar_primer_dia(
+                            especialidad, excluir=fechas_vistas, intervalo_override=_maso_override)
+                    _exitoso_f = True
+                    break
+                except Exception as _e_f:
+                    log.warning("otro_dia buscar_primer_dia intento %d falló: %s", _intento_f + 1, _e_f)
+                    if _intento_f == 0:
+                        await _aio_f.sleep(1.0)
+            log_event(phone, "medilink_otro_dia_retry", {"intentos": _intento_f + 1, "exitoso": _exitoso_f})
+            if not _exitoso_f:
+                # Medilink no respondió tras 2 intentos → ofrecer lista de espera de cambio.
+                data["waitlist_especialidad"] = especialidad
+                data["waitlist_id_prof_pref"] = data.get("prof_sugerido_id")
+                save_session(phone, "WAIT_WAITLIST_CONFIRM", data)
+                return _btn_msg(
+                    f"El sistema está lento ahora y no pude cargar los horarios de *{especialidad}* 😕\n\n"
+                    "¿Quieres que te avisemos cuando se libere un cupo?",
+                    [
+                        {"id": "waitlist_si", "title": "Sí, avísame"},
+                        {"id": "waitlist_no", "title": "No, gracias"},
+                    ]
+                )
             if not todos_nuevo:
                 data["waitlist_especialidad"] = especialidad
                 data["waitlist_id_prof_pref"] = data.get("prof_sugerido_id")
@@ -5755,7 +5907,17 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             )
 
         # ── "No" suelto en WAIT_SLOT → ofrecer alternativas (no confundir con negación real) ──
+        # Tras 2 rechazos consecutivos → escalar a HUMAN_TAKEOVER.
         if _tl_slot in ("no", "no gracias", "nel", "nop", "negativo", "no me sirve", "ninguna"):
+            rechazos = data.get("rechazos_slot", 0) + 1
+            data["rechazos_slot"] = rechazos
+            if rechazos >= 2:
+                log_event(phone, "slot_rechazos_escalacion", {"rechazos": rechazos, "especialidad": especialidad})
+                return _derivar_humano(
+                    phone=phone,
+                    contexto=f"El paciente rechazó {rechazos} veces los horarios de {especialidad or 'la especialidad solicitada'}. Necesita apoyo para encontrar una hora."
+                )
+            save_session(phone, "WAIT_SLOT", data)
             return (
                 "Sin problema 😊 Puedo mostrarte:\n\n"
                 "• *Otros horarios* del mismo día (escribe *ver todos*)\n"
@@ -8964,6 +9126,24 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # lo contrario). Los supuestos "rescates automáticos" tenían más falsos
     # positivos que beneficios. Ahora el comportamiento es determinístico.
     if state == "HUMAN_TAKEOVER":
+        # ── FIX-C: Guard recepcionista activa ─────────────────────────────
+        # Si la recepcionista ya respondió al menos una vez en esta sesión
+        # (human_replied=True), el bot se silencia completamente — no procesa
+        # intents, no llama detect_intent, no resetea sesión.
+        # Raíz del bug reportado (phone …262850, 18 mayo 23:09):
+        #   recepcionista ofrecía "10:30 10:45 / 11:30", paciente respondía
+        #   "11:30 porfavor", el takeover selectivo clasificaba como intent
+        #   "agendar" → reset_session → llamada recursiva → "¿Qué especialidad?"
+        #   enterraba la respuesta de la recepcionista.
+        # Salida del silencio: solo por comando explícito del paciente
+        # (menu/hola/inicio) — ya manejado arriba como _es_comando_reset —
+        # o por "devolver al bot" desde el panel de recepción.
+        if isinstance(data, dict) and data.get("human_replied"):
+            log_event(phone, "takeover_guard_bloqueo",
+                      {"state": state, "raw_text": txt[:120]})
+            save_session(phone, "HUMAN_TAKEOVER", data)
+            return ""
+
         # ── HUMAN_TAKEOVER SELECTIVO ──────────────────────────────────────
         # Principio: la consulta original (médica, fármaco, complaint) queda
         # pendiente para la recepcionista. Pero intents puramente operativos

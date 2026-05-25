@@ -914,7 +914,10 @@ async def _job_takeover_pendiente_alert():
             if human_replied:
                 # Recepcionista ya respondió → no es una sesión abandonada
                 continue
-            takeover_reason = data.get("takeover_reason", data.get("handoff_reason", "?"))[:80]
+            takeover_reason = data.get("takeover_reason") or data.get("handoff_reason")
+            if not takeover_reason:
+                takeover_reason = f"inactividad >{round(horas_bloqueado, 1)}h"
+            takeover_reason = str(takeover_reason)[:80]
             alertas.append({
                 "phone": phone,
                 "horas": round(horas_bloqueado, 1),

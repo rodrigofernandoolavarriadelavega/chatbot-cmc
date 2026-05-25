@@ -841,6 +841,10 @@ def render_template_body(name: str, params: list | tuple | None = None) -> str:
         _TPL_CACHE[name] = (body, buttons_str, footer, _time.monotonic())
 
     if not body:
+        log.warning("render_template_body: JSON faltante para template '%s' — el preview "
+                    "en el panel admin mostrará '[template: %s]' (no afecta el envío real "
+                    "vía Meta, pero corregir agregando templates/whatsapp_templates/%s.json)",
+                    name, name, name)
         if params:
             return f"[template: {name}] {' · '.join(str(p) for p in params)}"
         return f"[template: {name}]"
