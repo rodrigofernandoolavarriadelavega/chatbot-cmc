@@ -1553,9 +1553,9 @@ async def _job_horas_vacias_dia_siguiente():
 
             texto = (
                 f"Hola, te avisamos que se liberaron horas para {especialidad_label} "
-                f"manana {manana_display}. Disponible desde las {hora_ejemplo} hrs.\n\n"
-                f"Si te interesa agendar, responde SI y te ayudo.\n\n"
-                f"Si no quieres recibir mas avisos, responde BAJA."
+                f"mañana {manana_display}. La primera disponible es a las {hora_ejemplo}.\n\n"
+                f"Si te interesa agendar, responde *Sí* y te ayudo.\n\n"
+                f"Si no quieres recibir más avisos de este tipo, responde *No avisar*."
             )
 
             try:
@@ -2100,10 +2100,10 @@ async def _job_health_report() -> None:
     # ── Intento 1: template aprobado ──────────────────────────────────────
     if USE_TEMPLATES:
         _tmpl_name = "reporte_semanal_salud_bot"
-        from session import get_approved_templates as _get_tmpl
         try:
+            from session import get_approved_templates as _get_tmpl
             aprobados = _get_tmpl() or []
-        except Exception:
+        except (ImportError, AttributeError, Exception):
             aprobados = []
         if _tmpl_name in aprobados:
             try:

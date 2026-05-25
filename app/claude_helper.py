@@ -602,8 +602,9 @@ Si mencionan un profesional por nombre, mapea al nombre de la especialidad:
 - Podóloga Andrea / Andrea → "podología"
 - Psicólogo Juan Pablo / Juan Pablo / Rodríguez → "psicología adulto"
 - Psicólogo Jorge / Jorge Montalba / Montalba → "psicología"
-- David Pardo → "ecografía" solo para ecografías generales (abdominal, tiroidea, renal, partes blandas, doppler genérico, musculo-esquelética, testicular, próstata, vesical, hepática, vesícula, cuello). Valor: $40.000.
-- Ecografía ginecológica / transvaginal / intravaginal / transvajinal / endovaginal / vaginal / mamaria / de mamas / ecotomografía mamaria / pélvica / de ovarios / de útero → "ginecología" (Dr. Tirso Rejón, ID 61, $35.000). NUNCA Pardo para estas.
+- David Pardo → "ecografía" para ecografías generales (abdominal, tiroidea, renal, partes blandas, doppler genérico, musculo-esquelética, mamaria / de mamas / ecotomografía mamaria, testicular, próstata, vesical, hepática, vesícula, cuello). Valor: $40.000.
+- Ecografía ginecológica / transvaginal / intravaginal / transvajinal / endovaginal / vaginal / pélvica / de ovarios / de útero → "ginecología" (Dr. Tirso Rejón, ID 61, $35.000). NUNCA Pardo para estas.
+- Ecografía mamaria / de mamas / ecotomografía mamaria → "ecografía" (David Pardo, ID 68, $40.000). Es partes blandas, NO ginecológica. NUNCA Rejón para mamaria.
 - Ecografía obstétrica / prenatal / de embarazo / ver al bebé → NO se realiza eco obstétrica en el CMC; derivar a centro de imagenología externo. Dr. Tirso Rejón (Ginecología) solo hace consulta ginecológica del embarazo, NO ecografía obstétrica. Intent = "info", NO "agendar".
 - Ecocardiograma / eco del corazón / eco cardíaca / eco cardiograma / doppler cardíaco / ultrasonido del corazón → "ecocardiograma" (Dr. Miguel Millán, cardiólogo, $110.000 solo particular, lista de espera mensual). NUNCA "ecografía", NUNCA Pardo.
 Si preguntan por un precio que no está en la lista, responde que pueden consultar en recepción.
@@ -665,7 +666,8 @@ GINECOLOGÍA / MATRONA
 - Control ginecológico / revisión mujer → **Matrona** (Fonasa preferencial $16.000 / particular $30.000) o **Ginecología** (Dr. Tirso Rejón, $30.000).
 - Retraso menstrual / no me llega la regla / test de embarazo → **Matrona** para evaluación.
 - Ecografía del embarazo / prenatal / obstétrica / ver al bebé → **NO disponible en el CMC**. Derivar a centro de imagenología externo. El Dr. Tirso Rejón hace consulta ginecológica del embarazo, no ecografía.
-- Ecografía vaginal / transvaginal / pélvica / mamaria / de ovarios → Ginecología con **Dr. Tirso Rejón**, $35.000 particular (NO David Pardo).
+- Ecografía vaginal / transvaginal / pélvica / de ovarios → Ginecología con **Dr. Tirso Rejón**, $35.000 particular (NO David Pardo).
+- Ecografía mamaria / de mamas → **David Pardo** (Ecografía), $40.000 particular. Es partes blandas, NO ginecológica (NO Rejón).
 
 KINE / TRAUMA / DOLOR
 - Dolor de espalda / lumbago / lumbalgia → **Kinesiología** (Luis Armijo o Leonardo Etcheverry) o **Medicina General** si necesita evaluación médica.
@@ -937,11 +939,11 @@ IMPORTANTE: Si preguntan por Fonasa, MLE, tramo A/B/C/D para ecografía responde
 - Ecotomografía doppler: $90.000 — evalúa el flujo sanguíneo en arterias y venas. Se usa para várices, trombosis o insuficiencia venosa.
 NOTA: David Pardo NO realiza ecografías ginecológicas; esas las hace el Dr. Tirso Rejón (Ginecología). La ecografía obstétrica NO se realiza en el CMC.
 NOTA: El ecocardiograma (eco cardíaca, eco al corazón, doppler cardíaco) lo realiza el Dr. Miguel Millán (cardiólogo) a $110.000 solo particular, SIN Fonasa. Se hace 1 vez al mes sin fecha fija agendable — el paciente entra a LISTA DE ESPERA. Rutar intent a "ecocardiograma" (NO "ecografía", NO "cardiología"). David Pardo NO realiza ecocardiogramas.
-NOTA BUG-I: La ecografía transvaginal / intravaginal / ginecológica / mamaria cuesta $35.000 (NO $40.000). Las que cuestan $40.000 son las ecografías generales de Pardo (abdominal, tiroidea, etc.). NUNCA citar $40.000 para transvaginal ni para eco mamaria.
+NOTA: La ecografía transvaginal / intravaginal / ginecológica del Dr. Rejón cuesta $35.000. Las ecografías generales de Pardo cuestan $40.000 (incluye mamaria, abdominal, tiroidea, partes blandas, etc.). La eco mamaria es de Pardo a $40.000, NO de Rejón.
 
 ECOGRAFÍA GINECOLÓGICA — Dr. Tirso Rejón (Ginecología, solo particular):
 - Ecografía ginecológica (transvaginal / intravaginal / pélvica / endovaginal): $35.000 — evalúa útero y ovarios. Detecta quistes, miomas, endometriosis o irregularidades menstruales.
-- Ecografía mamaria / eco de mamas: $35.000 — evalúa tejido mamario, detecta nódulos, quistes o lesiones. La realiza el Dr. Tirso Rejón (ginecólogo), NO David Pardo.
+- Ecografía mamaria / eco de mamas: $40.000 — evalúa tejido mamario, detecta nódulos, quistes o lesiones. La realiza David Pardo (Ecografía, partes blandas), NO el Dr. Rejón.
 - Ecografía obstétrica: NO disponible en el CMC. Derivar a centro de imagenología.
 
 CARDIOLOGÍA (Dr. Miguel Millán — solo particular):
@@ -1757,15 +1759,15 @@ async def consulta_clinica_doctor(pregunta: str) -> str:
 _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
     # (keywords que deben aparecer, respuesta). Solo keywords muy específicas
     # para evitar falsos positivos. Se usa como fallback cuando Claude falla.
-    # BUG-2026-05-14: eco mamaria → Rejón (ginecología), no Pardo.
+    # Fix 2026-05-25: eco mamaria → David Pardo (partes blandas), $40.000, agendar ecografía.
     (("ecograf", "mamari"),
      "Sí, realizamos *ecografía mamaria* con *David Pardo* (Tecnólogo Médico · Ecografía) 🩺\n\n"
-     "💰 Particular: $35.000\n\n"
-     "Escribe *1* o *agendar ginecología* para reservar hora."),
+     "💰 Particular: $40.000\n\n"
+     "Escribe *1* o *agendar ecografía* para reservar hora."),
     (("ecotomograf", "mamari"),
      "Sí, realizamos *ecotomografía mamaria* con *David Pardo* (Tecnólogo Médico · Ecografía) 🩺\n\n"
-     "💰 Particular: $35.000\n\n"
-     "Escribe *1* o *agendar ginecología* para reservar hora."),
+     "💰 Particular: $40.000\n\n"
+     "Escribe *1* o *agendar ecografía* para reservar hora."),
     (("ecograf", "testicul"),
      "Sí, realizamos *ecografía testicular / inguino-escrotal* con el Dr. David Pardo 🩺\n\n"
      "💰 Particular: desde $40.000\n\n"

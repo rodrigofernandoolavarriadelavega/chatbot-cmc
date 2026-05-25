@@ -913,7 +913,8 @@ def process_inbound_response(phone: str, msg_text: str) -> str | None:
     # Detectar opt-out
     baja_keywords = {"baja", "no me escribas", "no contactar", "eliminar",
                      "borrar", "stop", "cancelar suscripcion", "no quiero",
-                     "no gracias", "no me molest"}
+                     "no gracias", "no me molest", "no avisar", "no avises",
+                     "no me avise", "no me avises", "dejen de", "dejar de"}
     if any(k in texto for k in baja_keywords):
         registrar_opt_out(phone, source="whatsapp_reply")
         return "opt_out"

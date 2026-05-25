@@ -271,7 +271,7 @@ def get_candidatos_dental(subcohorte: str, limite: int = 100) -> list[dict]:
                         dc.ultima_atencion,
                         dc.ultima_especialidad,
                         dc.ultimo_profesional,
-                        dc.id_profesional,
+                        dc.profesional_id_ultimo AS id_profesional,
                         dc.dias_inactivo,
                         dc.subcohorte
                     FROM bi.v_dental_cohortes_contactables dc
@@ -328,7 +328,7 @@ def get_candidato_dental_por_phone(phone: str) -> dict | None:
                     SELECT
                         paciente_id, nombre, apellido, telefono,
                         ultima_atencion, ultima_especialidad,
-                        ultimo_profesional, id_profesional,
+                        ultimo_profesional, profesional_id_ultimo AS id_profesional,
                         dias_inactivo, subcohorte
                     FROM bi.v_dental_cohortes_contactables
                     WHERE RIGHT(regexp_replace(telefono, '[^0-9]', '', 'g'), 9) = %s

@@ -6207,6 +6207,46 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "_Elige un número para continuar con tu reserva o escribe *menu* para volver._"
             )
 
+        # ── Negativa explícita al slot ofrecido → mostrar otros slots ──
+        # Paciente rechaza el horario con lenguaje libre antes de llegar a Claude.
+        # Sin esto, detect_intent derivaba a WAIT_MODALIDAD mostrando el mismo slot.
+        _NEGATIVAS_SLOT = (
+            "no puedo", "no me sirve", "otra hora", "otro horario",
+            "otro día", "otro dia", "más tarde", "mas tarde",
+            "más temprano", "mas temprano", "no ese", "ese no",
+            "cambiar hora", "cambiar el horario", "no me acomoda",
+            "no me queda", "no me viene", "no tengo tiempo",
+        )
+        if idx is None and any(neg in tl_norm_slot for neg in _NEGATIVAS_SLOT):
+            log_event(phone, "slot_rechazado_texto_libre", {"raw_text": txt[:200]})
+            fechas_vistas_neg = data.get("fechas_vistas", [])
+            if not isinstance(fechas_vistas_neg, list):
+                fechas_vistas_neg = list(fechas_vistas_neg)
+            _maso_ov_neg = {59: data["maso_duracion"]} if especialidad == "masoterapia" and data.get("maso_duracion") else None
+            try:
+                smart_neg, todos_neg = await buscar_primer_dia(
+                    especialidad, excluir=fechas_vistas_neg)
+            except Exception:
+                smart_neg, todos_neg = [], []
+            if todos_neg:
+                nueva_fecha_neg = todos_neg[0].get("fecha")
+                if nueva_fecha_neg and nueva_fecha_neg not in fechas_vistas_neg:
+                    fechas_vistas_neg.append(nueva_fecha_neg)
+                data.update({
+                    "slots": (smart_neg or todos_neg)[:5],
+                    "todos_slots": todos_neg,
+                    "fechas_vistas": fechas_vistas_neg,
+                    "expansion_stage": 0,
+                })
+                save_session(phone, "WAIT_SLOT", data)
+                return _format_slots((smart_neg or todos_neg)[:5], mostrar_todos=False)
+            save_session(phone, "WAIT_SLOT", data)
+            return (
+                "Entendido, no hay más horarios disponibles para esta especialidad en los próximos días 😕\n\n"
+                "Escribe *lista de espera* para que te avisemos cuando se libere un cupo, "
+                "o *llamar recepción* para más opciones."
+            )
+
         if idx is None:
             # Si el texto parece una hora pero no coincide con slots, mostrar opciones
             import re as _re
@@ -6465,6 +6505,43 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if txt.startswith("motivo_") or tl in ("menu", "menú", "inicio", "hola", "volver"):
                 reset_session(phone)
                 return await handle_message(phone, txt, {"state": "IDLE", "data": {}})
+            # Negativa al slot en WAIT_MODALIDAD → volver a mostrar otros slots
+            # Cubre: paciente llegó a WAIT_MODALIDAD pero quiere cambiar la hora.
+            _NEGATIVAS_MODAL = (
+                "no puedo", "no me sirve", "otra hora", "otro horario",
+                "otro día", "otro dia", "más tarde", "mas tarde",
+                "más temprano", "mas temprano", "cambiar hora",
+                "no me acomoda", "no me queda",
+            )
+            if any(neg in tl for neg in _NEGATIVAS_MODAL):
+                log_event(phone, "slot_rechazado_texto_libre", {"raw_text": txt[:200], "from_state": "WAIT_MODALIDAD"})
+                _esp_modal_neg = data.get("especialidad", "")
+                _fv_modal_neg = data.get("fechas_vistas", [])
+                if not isinstance(_fv_modal_neg, list):
+                    _fv_modal_neg = list(_fv_modal_neg)
+                _maso_ov_modal = {59: data["maso_duracion"]} if _esp_modal_neg == "masoterapia" and data.get("maso_duracion") else None
+                try:
+                    smart_mn, todos_mn = await buscar_primer_dia(
+                        _esp_modal_neg, excluir=_fv_modal_neg)
+                except Exception:
+                    smart_mn, todos_mn = [], []
+                if todos_mn:
+                    _nf_mn = todos_mn[0].get("fecha")
+                    if _nf_mn and _nf_mn not in _fv_modal_neg:
+                        _fv_modal_neg.append(_nf_mn)
+                    data.update({
+                        "slots": (smart_mn or todos_mn)[:5],
+                        "todos_slots": todos_mn,
+                        "fechas_vistas": _fv_modal_neg,
+                        "expansion_stage": 0,
+                    })
+                    save_session(phone, "WAIT_SLOT", data)
+                    return _format_slots((smart_mn or todos_mn)[:5], mostrar_todos=False)
+                save_session(phone, "WAIT_SLOT", data)
+                return (
+                    "No encontré más horarios disponibles para esta especialidad 😕\n\n"
+                    "Escribe *lista de espera* o *llamar recepción* para más opciones."
+                )
             # BUG-03: Escape explícito "no quiero" / "cancelar" / "salir" → reset limpio
             _NO_QUIERO_KW = ("no quiero", "no quero", "ya no quiero", "ya no", "no gracias",
                              "cancelar", "cancel", "salir", "no necesito", "dejalo", "déjalo",
@@ -10755,6 +10832,24 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
 async def _iniciar_cancelar(phone: str, data: dict, txt: str = "") -> str:
     if is_medilink_down():
         return _modo_degradado(phone, "cancelar")
+    # Si ya conocemos el perfil, saltamos directo a mostrar sus citas (mismo
+    # patrón que _iniciar_reagendar). Caso real 2026-05-25: Maritza Campos
+    # (56976104434) tenía perfil guardado pero el bot le pedía RUT igual.
+    perfil = get_profile(phone)
+    if perfil and perfil.get("rut"):
+        paciente = await buscar_paciente(perfil["rut"])
+        if paciente:
+            citas = await listar_citas_paciente(paciente["id"], rut=paciente.get("rut"))
+            if not citas:
+                reset_session(phone)
+                return (
+                    f"No encontré citas futuras para *{_first_name(paciente.get('nombre'))}* 📋\n\n"
+                    "¿Quieres agendar una nueva hora? Escribe *1* o *menu*."
+                )
+            data.update({"paciente": paciente, "citas": citas, "rut": perfil["rut"]})
+            save_session(phone, "WAIT_CITA_CANCELAR", data)
+            log_event(phone, "rut_autocompletado_cancelar", {"rut": perfil["rut"]})
+            return _format_citas_cancelar(citas, paciente["nombre"])
     save_session(phone, "WAIT_RUT_CANCELAR", data)
     # Defensa sistémica: si el mensaje original ya contiene un RUT válido,
     # procesarlo directo sin pedirlo otra vez. Caso real 2026-04-28 (Camila
