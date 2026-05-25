@@ -345,7 +345,7 @@ def admin_logout():
 
 @router.get("/admin/api/conversations")
 def admin_conversations(_: str = Depends(require_admin)):
-    convs = get_conversations()
+    convs = get_conversations(limit=10000)
     for c in convs:
         role = STAFF_PHONES.get(c.get("phone", ""), "")
         if role:
