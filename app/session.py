@@ -190,6 +190,8 @@ def _run_ddl_inline(conn) -> None:
     conn.execute("CREATE INDEX IF NOT EXISTS idx_msg_phone_ts ON messages(phone, ts DESC)")
     # P-1: índice phone+id para el CTE de get_conversations (evita N+1 subquery)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_msg_phone_id ON messages(phone, id)")
+    # Perf 2026-05-26: índice para get_unread_counts (filtra por direction)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_msg_direction_ts ON messages(direction, ts, phone)")
     conn.execute("""
         CREATE TABLE IF NOT EXISTS fidelizacion_msgs (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,

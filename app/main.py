@@ -89,6 +89,11 @@ logging.config.dictConfig({
         "medilink": {"level": "INFO"},
         "claude":   {"level": "INFO"},
         "bot":      {"level": "INFO"},
+        # Perf 2026-05-26: APScheduler emite INFO por cada job tick. Eran ~113k
+        # líneas/log con watchdogs cada 1-5 min. Causa I/O contention en sync
+        # writes a /var/log. Quedan WARNING/ERROR para alertas reales.
+        "apscheduler.scheduler":          {"level": "WARNING"},
+        "apscheduler.executors.default": {"level": "WARNING"},
     },
 })
 log = logging.getLogger("bot")
