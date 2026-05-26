@@ -343,15 +343,35 @@ def admin_logout():
 
 # ── Conversations & metrics ──────────────────────────────────────────────────
 
+# Cache en proceso de /admin/api/conversations.
+# Razón: el panel poll este endpoint cada 5s, el query devuelve 2.5k+ rows y
+# 1.5MB. 1.4s server-side por loop Python + json.loads + serialización FastAPI.
+# Cacheamos los bytes ya serializados — los hits subsecuentes evitan tanto el
+# query como el encoding. TTL=2s: hasta 2s de staleness en la lista (aceptable
+# dado que poll cadence es 5s).
+import time as _t_conv_cache
+import json as _json_conv_cache
+from fastapi import Response as _Resp_conv
+_CONV_CACHE: dict = {"ts": 0.0, "body": None}
+_CONV_CACHE_TTL = 2.0
+
+
 @router.get("/admin/api/conversations")
 def admin_conversations(_: str = Depends(require_admin)):
+    now = _t_conv_cache.monotonic()
+    body = _CONV_CACHE.get("body")
+    if body is not None and (now - _CONV_CACHE["ts"]) < _CONV_CACHE_TTL:
+        return _Resp_conv(content=body, media_type="application/json")
     convs = get_conversations(limit=10000)
     for c in convs:
         role = STAFF_PHONES.get(c.get("phone", ""), "")
         if role:
             c["is_staff"] = True
             c["staff_role"] = role
-    return convs
+    body = _json_conv_cache.dumps(convs, ensure_ascii=False).encode("utf-8")
+    _CONV_CACHE["body"] = body
+    _CONV_CACHE["ts"] = now
+    return _Resp_conv(content=body, media_type="application/json")
 
 
 @router.get("/admin/api/conversations/{phone}")
