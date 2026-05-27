@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tableros Personales</title>
+<meta name="robots" content="noindex,nofollow">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --fjord: #1F4248;
+  --fjord-deep: #14333A;
+  --copper: #B87333;
+  --copper-light: #C88A4D;
+  --fog: #E6E3DC;
+  --fog-warm: #DCD8D0;
+  --bg: #F8F4ED;
+  --paper: #FFFFFF;
+  --ink: #1A1A1A;
+  --ink-soft: #4A4A4A;
+  --ink-mute: #7A7568;
+  --line-soft: #E7E2D6;
+  --sealing-wax: #7A1F1F;
+
+  --font-display: 'Fraunces', 'Georgia', serif;
+  --font-ui: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+  --radius: 14px;
+  --shadow: 0 1px 2px rgba(31, 66, 72, 0.04), 0 6px 20px rgba(31, 66, 72, 0.05);
+  --shadow-strong: 0 8px 32px rgba(31, 66, 72, 0.12);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  margin: 0; min-height: 100vh;
+  font-family: var(--font-ui); background: var(--bg); color: var(--ink);
+  line-height: 1.55; -webkit-font-smoothing: antialiased;
+  display: flex; flex-direction: column;
+}
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.2; margin: 0; letter-spacing: -0.01em; font-weight: 600; }
+a { color: inherit; text-decoration: none; }
+
+.app-header { background: var(--paper); border-bottom: 1px solid var(--line-soft); padding: 22px 0; }
+.container { width: min(1240px, 94%); margin: 0 auto; }
+.header-inner { display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 16px; }
+.compass {
+  width: 54px; height: 54px; position: relative;
+  border: 1.5px solid var(--fjord); border-radius: 50%; background: var(--paper);
+  display: grid; place-items: center;
+}
+.compass::before { content: ''; position: absolute; top: 4px; bottom: 4px; left: 50%; width: 1px; background: var(--line-soft); }
+.compass::after { content: ''; position: absolute; left: 4px; right: 4px; top: 50%; height: 1px; background: var(--line-soft); }
+.compass-star { position: relative; width: 18px; height: 18px; }
+.compass-star::before, .compass-star::after { content: ''; position: absolute; }
+.compass-star::before { top: 0; left: 50%; transform: translateX(-50%); width: 2px; height: 9px; background: var(--copper); border-radius: 1px; }
+.compass-star::after { bottom: 0; left: 50%; transform: translateX(-50%); width: 2px; height: 9px; background: var(--fjord); border-radius: 1px; }
+.brand-text { display: flex; flex-direction: column; gap: 2px; }
+.brand-name { font-family: var(--font-display); font-weight: 800; font-size: 1.5rem; color: var(--fjord); line-height: 1; letter-spacing: 0.03em; }
+.brand-sub { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.22em; color: var(--copper); text-transform: uppercase; }
+.header-meta { font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.14em; color: var(--ink-mute); text-transform: uppercase; text-align: right; }
+.meridian { height: 1px; background: var(--copper); width: 0; animation: drawMeridian 1.2s ease-out forwards; }
+@keyframes drawMeridian { to { width: 100%; } }
+
+main { flex: 1; padding: 60px 0; }
+
+.intro { max-width: 760px; margin: 0 auto 56px; text-align: center; }
+.intro-eyebrow { font-family: var(--font-mono); font-size: 0.74rem; font-weight: 500; letter-spacing: 0.22em; text-transform: uppercase; color: var(--copper); margin-bottom: 16px; }
+.intro h1 { font-size: clamp(2.2rem, 5vw, 3.4rem); color: var(--fjord); margin-bottom: 18px; }
+.intro p { font-size: 1.08rem; color: var(--ink-soft); }
+
+.boards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+@media (max-width: 980px) { .boards { grid-template-columns: 1fr; } }
+
+.board-card {
+  background: var(--paper); border: 1px solid var(--line-soft); border-radius: var(--radius);
+  padding: 32px; box-shadow: var(--shadow);
+  display: flex; flex-direction: column; gap: 12px;
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+  position: relative; overflow: hidden;
+}
+.board-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-strong); border-color: var(--copper); }
+.board-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--copper);
+  transform: scaleX(0); transform-origin: left; transition: transform .3s ease;
+}
+.board-card:hover::before { transform: scaleX(1); }
+
+.board-icon { font-size: 2.4rem; line-height: 1; margin-bottom: 6px; }
+.board-name { font-family: var(--font-display); font-weight: 700; font-size: 1.5rem; color: var(--fjord); }
+.board-for { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.16em; color: var(--copper); text-transform: uppercase; }
+.board-desc { font-size: 0.96rem; color: var(--ink-soft); margin: 0; flex: 1; }
+.board-url { font-family: var(--font-mono); font-size: 0.82rem; color: var(--ink-mute); margin-top: auto; padding-top: 14px; border-top: 1px dashed var(--line-soft); }
+.board-url strong { color: var(--fjord); font-weight: 600; }
+.board-cta { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; font-family: var(--font-ui); font-size: 0.88rem; font-weight: 600; color: var(--fjord); }
+.board-cta::after { content: '→'; transition: transform .2s ease; }
+.board-card:hover .board-cta::after { transform: translateX(4px); }
+
+.notes { margin-top: 64px; max-width: 820px; margin-left: auto; margin-right: auto; }
+.note-card {
+  background: var(--paper); border: 1px solid var(--line-soft); border-radius: var(--radius);
+  padding: 24px 28px; box-shadow: var(--shadow); margin-bottom: 16px;
+  border-left: 4px solid var(--copper);
+}
+.note-card h3 { font-family: var(--font-ui); font-size: 1rem; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
+.note-card p { margin: 0; color: var(--ink-soft); font-size: 0.96rem; }
+
+.footer { text-align: center; padding: 32px 0; font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.14em; color: var(--ink-mute); text-transform: uppercase; border-top: 1px solid var(--line-soft); background: var(--paper); }
+
+@media (max-width: 600px) {
+  main { padding: 40px 0; }
+  .intro { margin-bottom: 36px; }
+  .intro h1 { font-size: 1.8rem; }
+  .intro p { font-size: 1rem; }
+  .board-card { padding: 26px 22px; }
+  .header-meta { display: none; }
+}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="container header-inner">
+    <div class="brand">
+      <div class="compass"><div class="compass-star"></div></div>
+      <div class="brand-text">
+        <div class="brand-name">TABLEROS PERSONALES</div>
+        <div class="brand-sub">Brújula · Ruta · Caminos</div>
+      </div>
+    </div>
+    <div class="header-meta">
+      Tres miradas · Tres ritmos
+    </div>
+  </div>
+</header>
+<div class="meridian"></div>
+
+<main>
+  <div class="container">
+
+    <div class="intro">
+      <div class="intro-eyebrow">Punto de entrada</div>
+      <h1>Tres tableros, tres miradas.</h1>
+      <p>No son herramientas para producir más. Son herramientas para mirarte mejor — uno para ella, dos para vos. Cada uno tiene su ritmo de revisión y su propósito. Marcalos en favoritos y volvé cuando haga falta.</p>
+    </div>
+
+    <div class="boards">
+
+      <a href="/ruta" class="board-card">
+        <div class="board-icon">🧭</div>
+        <div class="board-for">Para ella</div>
+        <div class="board-name">Tu Ruta</div>
+        <p class="board-desc">Mapa personal de exploración vocacional. Para alguien que está empezando y quiere mapear caminos antes de comprometerse. 10 carreras posibles, experimentos de 2 semanas, plan de 90 días, bitácora.</p>
+        <div class="board-url">URL · <strong>agentecmc.cl/ruta</strong></div>
+        <span class="board-cta">Abrir tablero</span>
+      </a>
+
+      <a href="/brujula" class="board-card">
+        <div class="board-icon">🪞</div>
+        <div class="board-for">Para vos · el ser</div>
+        <div class="board-name">Brújula</div>
+        <p class="board-desc">El hombre dentro del empresario. Termómetro de energía, espejo de retroalimentación, vínculos críticos, anti-criterios, hábitos no negociables, bitácora semanal. Mirar semanal.</p>
+        <div class="board-url">URL · <strong>agentecmc.cl/brujula</strong></div>
+        <span class="board-cta">Abrir tablero</span>
+      </a>
+
+      <a href="/caminos" class="board-card">
+        <div class="board-icon">🛤</div>
+        <div class="board-for">Para vos · el hacer</div>
+        <div class="board-name">Caminos</div>
+        <p class="board-desc">10 jugadas estratégicas a tu escala con horizonte 5 años. Matriz de evaluación personal, preparación por camino, apuestas de prueba, hipótesis activa. Mirar mensual.</p>
+        <div class="board-url">URL · <strong>agentecmc.cl/caminos</strong></div>
+        <span class="board-cta">Abrir tablero</span>
+      </a>
+
+    </div>
+
+    <div class="notes">
+      <div class="note-card">
+        <h3>Cómo usar los tres juntos</h3>
+        <p>Brújula sin Caminos = introspección sin destino. Caminos sin Brújula = plan sin escuchar al hombre que lo va a ejecutar. Mirá Brújula primero el lunes (10 min). Caminos el primer fin de semana del mes (30 min). Ruta es de ella — vos no entrás ahí salvo que te invite.</p>
+      </div>
+      <div class="note-card">
+        <h3>Sobre la privacidad</h3>
+        <p>Las respuestas que escribís en cada dashboard quedan en localStorage de tu navegador. No se suben a ningún servidor. Si abrís desde otro device, esa instancia es separada. Las URLs son obscuras y no indexables por Google.</p>
+      </div>
+      <div class="note-card">
+        <h3>Cuándo NO mirar esto</h3>
+        <p>Cuando estás en modo ejecución, no abras estos tableros. Son para los momentos lentos — domingo en la mañana, lunes antes de empezar, una tarde sin agenda. Mirarlos en medio de la urgencia los convierte en ruido.</p>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<footer class="footer">
+  Punto fijo · vivir el rumbo
+</footer>
+
+</body>
+</html>

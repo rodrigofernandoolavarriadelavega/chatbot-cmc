@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brújula · Tablero personal</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#1F4248">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --fjord: #1F4248;
+  --fjord-deep: #14333A;
+  --copper: #B87333;
+  --copper-light: #C88A4D;
+  --copper-deep: #95592A;
+  --fog: #E6E3DC;
+  --fog-warm: #DCD8D0;
+  --sealing-wax: #7A1F1F;
+  --bg: #F8F4ED;
+  --paper: #FFFFFF;
+  --ink: #1A1A1A;
+  --ink-soft: #4A4A4A;
+  --ink-mute: #7A7568;
+  --line: #D6D1C7;
+  --line-soft: #E7E2D6;
+  --status-green: #2A7F58;
+  --status-amber: #C88A4D;
+  --status-red: #7A1F1F;
+
+  --font-display: 'Fraunces', 'Georgia', serif;
+  --font-ui: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+  --radius: 10px;
+  --shadow: 0 1px 2px rgba(31, 66, 72, 0.04), 0 6px 20px rgba(31, 66, 72, 0.05);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; font-family: var(--font-ui); background: var(--bg); color: var(--ink); line-height: 1.55; -webkit-font-smoothing: antialiased; }
+h1, h2, h3, h4 { font-family: var(--font-display); line-height: 1.2; margin: 0; letter-spacing: -0.01em; font-weight: 600; }
+a { color: var(--fjord); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+
+.app-header { background: var(--paper); border-bottom: 1px solid var(--line-soft); padding: 22px 0; }
+.container { width: min(1240px, 94%); margin: 0 auto; }
+.header-inner { display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap; }
+
+.brand { display: flex; align-items: center; gap: 16px; }
+.compass {
+  width: 52px; height: 52px; position: relative;
+  border: 1.5px solid var(--fjord); border-radius: 50%;
+  background: var(--paper);
+}
+.compass::before { content: ''; position: absolute; top: 4px; bottom: 4px; left: 50%; width: 1px; background: var(--line); }
+.compass-needle {
+  position: absolute; top: 50%; left: 50%;
+  width: 2px; height: 22px; background: var(--copper);
+  transform-origin: center bottom;
+  transform: translate(-50%, -100%) rotate(18deg);
+  border-radius: 1px;
+}
+.compass-dot { position: absolute; top: 50%; left: 50%; width: 6px; height: 6px; border-radius: 50%; background: var(--fjord); transform: translate(-50%, -50%); }
+
+.brand-text { display: flex; flex-direction: column; gap: 2px; }
+.brand-name { font-family: var(--font-display); font-weight: 800; font-size: 1.45rem; color: var(--fjord); line-height: 1; letter-spacing: 0.04em; }
+.brand-sub { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.22em; color: var(--copper); text-transform: uppercase; }
+
+.header-meta { font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.14em; color: var(--ink-mute); text-transform: uppercase; text-align: right; line-height: 1.7; }
+.header-meta strong { color: var(--fjord); font-weight: 600; }
+
+.meridian { height: 1px; background: var(--copper); width: 0; animation: drawMeridian 1.2s ease-out forwards; }
+@keyframes drawMeridian { to { width: 100%; } }
+
+.tabs { background: var(--paper); border-bottom: 1px solid var(--line-soft); position: sticky; top: 0; z-index: 50; overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tabs-inner { display: flex; gap: 2px; padding: 4px 0; }
+.tab { flex-shrink: 0; padding: 14px 18px; font-size: 0.86rem; font-weight: 500; color: var(--ink-soft); background: transparent; border: none; cursor: pointer; font-family: inherit; display: flex; align-items: center; gap: 8px; transition: color .15s, border-color .15s; white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tab:hover { color: var(--fjord); }
+.tab.active { color: var(--fjord); border-bottom-color: var(--copper); font-weight: 600; }
+
+main { padding: 44px 0 96px; }
+.panel { display: none; }
+.panel.active { display: block; animation: fade .25s ease; }
+@keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+.panel-head { margin-bottom: 32px; max-width: 820px; }
+.panel-eyebrow { font-family: var(--font-mono); font-size: 0.72rem; font-weight: 500; letter-spacing: 0.22em; text-transform: uppercase; color: var(--copper); margin-bottom: 14px; }
+.panel-title { font-size: clamp(2rem, 4vw, 2.8rem); color: var(--fjord); margin-bottom: 12px; font-weight: 600; }
+.panel-lead { font-size: 1.05rem; color: var(--ink-soft); }
+
+.card { background: var(--paper); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); margin-bottom: 20px; }
+.card-title { font-family: var(--font-mono); font-size: 0.72rem; font-weight: 500; letter-spacing: 0.22em; text-transform: uppercase; color: var(--copper); margin-bottom: 16px; }
+.card h3 { font-family: var(--font-display); font-size: 1.4rem; font-weight: 600; color: var(--fjord); margin-bottom: 14px; }
+.card h4 { font-family: var(--font-ui); font-size: 0.95rem; font-weight: 600; color: var(--ink); margin: 12px 0 6px; }
+.card p { margin: 0 0 12px; color: var(--ink-soft); font-size: 0.98rem; }
+.card ul { padding-left: 22px; margin: 0 0 12px; }
+.card ul li { margin-bottom: 8px; color: var(--ink-soft); font-size: 0.96rem; }
+.card strong { color: var(--ink); }
+
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+.kpi-card { background: var(--paper); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 22px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+.kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--copper); }
+.kpi-label { font-family: var(--font-mono); font-size: 0.7rem; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-mute); margin-bottom: 12px; }
+.kpi-value { font-family: var(--font-display); font-size: 2.4rem; font-weight: 800; color: var(--fjord); line-height: 1; letter-spacing: -0.02em; }
+.kpi-value .unit { font-family: var(--font-ui); font-size: 0.9rem; font-weight: 600; color: var(--ink-mute); margin-left: 4px; }
+.kpi-foot { margin-top: 8px; font-size: 0.84rem; color: var(--ink-mute); }
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+@media (max-width: 820px) { .two-col { grid-template-columns: 1fr; } }
+
+/* Editable text fields */
+.field-input {
+  width: 100%; background: var(--bg); border: 1px solid var(--line-soft); border-radius: 8px;
+  padding: 12px 14px; font: inherit; font-size: 0.96rem; color: var(--ink);
+  font-family: var(--font-ui);
+}
+.field-input:focus { outline: 2px solid var(--copper); border-color: var(--copper); }
+.field-textarea { min-height: 90px; resize: vertical; line-height: 1.55; }
+.field-label { display: block; font-family: var(--font-mono); font-size: 0.7rem; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-mute); margin-bottom: 6px; }
+.field-row { margin-bottom: 18px; }
+
+/* Energy gauge */
+.gauge-wrap { display: flex; align-items: center; gap: 14px; margin: 14px 0; flex-wrap: wrap; }
+.gauge-label { font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.14em; color: var(--ink-mute); text-transform: uppercase; min-width: 120px; }
+.gauge { display: flex; gap: 4px; flex: 1; }
+.gauge-dot { width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid var(--line); background: var(--paper); cursor: pointer; transition: all .12s; }
+.gauge-dot:hover { border-color: var(--copper); }
+.gauge-dot.filled { background: var(--copper); border-color: var(--copper); }
+.gauge-num { font-family: var(--font-mono); font-size: 0.84rem; color: var(--copper); font-weight: 600; min-width: 30px; text-align: right; }
+
+/* Status indicators (vínculos) */
+.status-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: middle; margin-right: 8px; }
+.status-green { background: var(--status-green); }
+.status-amber { background: var(--status-amber); }
+.status-red { background: var(--status-red); }
+.status-gray { background: var(--line); }
+
+.status-select {
+  background: var(--bg); border: 1px solid var(--line-soft); border-radius: 6px;
+  padding: 5px 10px; font: inherit; font-size: 0.84rem; color: var(--ink); font-family: var(--font-ui);
+}
+
+/* Tables */
+.table-card { padding: 0; overflow: hidden; }
+.table-card-head { padding: 22px 28px; border-bottom: 1px solid var(--line-soft); display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.table-card-head h3 { margin: 0; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 0.94rem; }
+thead th { background: var(--fog); padding: 14px 18px; text-align: left; font-family: var(--font-mono); font-size: 0.7rem; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-mute); border-bottom: 1px solid var(--line-soft); white-space: nowrap; }
+tbody td { padding: 14px 18px; border-bottom: 1px solid var(--line-soft); vertical-align: top; color: var(--ink-soft); }
+tbody tr:hover td { background: rgba(230, 227, 220, 0.4); }
+tbody tr:last-child td { border-bottom: none; }
+.row-title { font-weight: 600; color: var(--fjord); font-family: var(--font-display); font-size: 1.02rem; }
+
+.callout { padding: 18px 22px; border-radius: 8px; margin: 18px 0; display: flex; gap: 14px; align-items: flex-start; font-size: 0.96rem; }
+.callout-soft { background: var(--fog); border-left: 3px solid var(--fjord); color: var(--ink); }
+.callout-copper { background: rgba(184, 115, 51, 0.08); border-left: 3px solid var(--copper); color: var(--ink); }
+.callout-wax { background: rgba(122, 31, 31, 0.06); border-left: 3px solid var(--sealing-wax); color: var(--ink); }
+.callout strong { display: block; margin-bottom: 4px; font-weight: 600; }
+
+.permission { background: var(--fog); border-radius: var(--radius); padding: 28px 32px; margin: 24px 0; text-align: center; }
+.permission p { font-family: var(--font-display); font-size: 1.25rem; color: var(--fjord); font-style: italic; margin: 0; line-height: 1.5; }
+.permission .sig { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.18em; color: var(--copper); text-transform: uppercase; margin-top: 12px; display: inline-block; }
+
+/* Anti-criterio cards */
+.anti-card { background: var(--paper); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 22px 24px; box-shadow: var(--shadow); margin-bottom: 12px; border-left: 4px solid var(--sealing-wax); }
+.anti-rule { font-family: var(--font-display); font-size: 1.15rem; font-weight: 600; color: var(--ink); margin-bottom: 8px; }
+.anti-why { font-size: 0.92rem; color: var(--ink-soft); margin: 0 0 8px; }
+.anti-tag { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.14em; color: var(--sealing-wax); text-transform: uppercase; }
+
+/* Habit cards */
+.habit-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.habit-card { background: var(--paper); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); border-top: 3px solid var(--copper); }
+.habit-name { font-family: var(--font-display); font-size: 1.15rem; font-weight: 600; color: var(--fjord); margin-bottom: 6px; }
+.habit-why { font-size: 0.88rem; color: var(--ink-mute); margin-bottom: 12px; }
+.habit-status-label { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-mute); margin-bottom: 6px; }
+
+/* Vínculo cards */
+.link-card { background: var(--paper); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 22px; box-shadow: var(--shadow); margin-bottom: 12px; }
+.link-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.link-role { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--copper); margin-bottom: 4px; }
+.link-name { font-family: var(--font-display); font-size: 1.2rem; font-weight: 600; color: var(--fjord); }
+
+/* Journal */
+.journal-prompt { background: var(--paper); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 22px 24px; box-shadow: var(--shadow); margin-bottom: 14px; }
+.journal-prompt .week { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.16em; color: var(--copper); margin-bottom: 6px; }
+.journal-prompt .q { font-family: var(--font-display); font-size: 1.15rem; font-weight: 600; color: var(--fjord); margin-bottom: 12px; }
+
+/* Decision rows */
+.decision-row { display: grid; grid-template-columns: 1fr; gap: 12px; padding: 18px 0; border-bottom: 1px solid var(--line-soft); }
+.decision-row:last-child { border-bottom: none; }
+.decision-row label { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-mute); }
+
+/* ===========================================
+   RESPONSIVE
+   =========================================== */
+@media (max-width: 768px) {
+  .app-header { padding: 16px 0; }
+  .header-inner { gap: 14px; }
+  .compass { width: 44px; height: 44px; }
+  .brand-name { font-size: 1.15rem; }
+  .brand-sub { font-size: 0.65rem; }
+  .header-meta { font-size: 0.68rem; }
+  .tab { padding: 12px 14px; font-size: 0.82rem; min-height: 44px; }
+  main { padding: 28px 0 60px; }
+  .panel-head { margin-bottom: 24px; }
+  .panel-title { font-size: clamp(1.5rem, 5vw, 2rem); }
+  .panel-lead { font-size: 0.98rem; }
+  .card { padding: 22px 20px; margin-bottom: 14px; }
+  .card h3 { font-size: 1.25rem; }
+  .kpi-card { padding: 18px; }
+  .kpi-value { font-size: 2rem; }
+  .anti-card { padding: 20px; }
+  .habit-card { padding: 18px; }
+  .link-card { padding: 18px; }
+  .journal-prompt { padding: 18px 20px; }
+  .permission { padding: 22px 20px; }
+  .permission p { font-size: 1.1rem; }
+  table { font-size: 0.88rem; }
+  thead th { padding: 10px 14px; font-size: 0.66rem; }
+  tbody td { padding: 12px 14px; }
+  .callout { padding: 14px 18px; font-size: 0.94rem; }
+  .gauge-dot { width: 22px; height: 22px; }
+}
+
+@media (max-width: 480px) {
+  .container { width: calc(100% - 28px); }
+  .header-inner { flex-direction: column; align-items: flex-start; }
+  .header-meta { text-align: left; }
+  .tab { padding: 11px 12px; font-size: 0.78rem; }
+  .panel-title { font-size: 1.6rem; }
+  .card { padding: 18px 16px; }
+  .card h3 { font-size: 1.15rem; }
+  .kpi-grid { grid-template-columns: 1fr; gap: 12px; }
+  .kpi-value { font-size: 1.8rem; }
+  .field-input { font-size: 16px; }
+  .gauge-wrap { gap: 10px; }
+  .gauge-label { min-width: 100%; font-size: 0.68rem; }
+  .gauge-dot { width: 20px; height: 20px; }
+  .anti-rule { font-size: 1.05rem; }
+  .habit-name { font-size: 1.05rem; }
+  .link-name { font-size: 1.08rem; }
+  .journal-prompt .q { font-size: 1rem; }
+  .permission p { font-size: 1rem; }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .tab { min-height: 44px; }
+  button, input, textarea, select { font-size: 16px; }
+}
+
+/* Floating save indicator + actions */
+.save-toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--fjord); color: var(--paper);
+  padding: 10px 18px; border-radius: 999px;
+  font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase;
+  box-shadow: 0 8px 24px rgba(31, 66, 72, 0.25);
+  opacity: 0; pointer-events: none;
+  transition: opacity .2s ease, transform .2s ease;
+  z-index: 100;
+}
+.save-toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+.actions-fab {
+  position: fixed; bottom: 24px; right: 24px;
+  display: flex; flex-direction: column; gap: 8px;
+  z-index: 90;
+}
+.actions-fab button {
+  background: var(--paper); border: 1px solid var(--line-soft); color: var(--fjord);
+  padding: 10px 14px; border-radius: 999px;
+  font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.14em; text-transform: uppercase;
+  cursor: pointer; box-shadow: var(--shadow); font-weight: 600;
+  transition: transform .15s ease, background .15s;
+}
+.actions-fab button:hover { background: var(--fjord); color: var(--paper); transform: translateY(-1px); }
+@media (max-width: 600px) {
+  .actions-fab { bottom: 16px; right: 16px; }
+  .actions-fab button { padding: 8px 12px; font-size: 0.68rem; }
+}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="container header-inner">
+    <div class="brand">
+      <div class="compass"><div class="compass-needle"></div><div class="compass-dot"></div></div>
+      <div class="brand-text">
+        <div class="brand-name">BRÚJULA</div>
+        <div class="brand-sub">Tablero personal · Rodrigo</div>
+      </div>
+    </div>
+    <div class="header-meta">
+      <div>Para: <strong>el hombre, no el empresario</strong></div>
+      <div>Mira semanal · Sin exhibir</div>
+    </div>
+  </div>
+</header>
+<div class="meridian"></div>
+
+<nav class="tabs">
+  <div class="container tabs-inner">
+    <button class="tab active" data-tab="hoy">📍 Dónde estoy</button>
+    <button class="tab" data-tab="norte">🧭 Norte</button>
+    <button class="tab" data-tab="espejo">🪞 Espejo</button>
+    <button class="tab" data-tab="decisiones">⚖️ Decisiones</button>
+    <button class="tab" data-tab="antis">🛑 Lo que ya no hago</button>
+    <button class="tab" data-tab="vinculos">🔗 Vínculos críticos</button>
+    <button class="tab" data-tab="habitos">🌱 Hábitos no negociables</button>
+    <button class="tab" data-tab="bitacora">📔 Bitácora</button>
+  </div>
+</nav>
+
+<main class="container">
+
+<!-- ===========================================
+     TAB · DÓNDE ESTOY HOY
+     =========================================== -->
+<section class="panel active" data-panel="hoy">
+  <div class="panel-head">
+    <div class="panel-eyebrow">Estado actual</div>
+    <h1 class="panel-title">Dónde estoy hoy</h1>
+    <p class="panel-lead">Termómetro semanal. No es la productividad del entrepreneur — es el estado del ser humano que vive dentro. Sin diagnóstico, sin juicio: solo registro honesto para mirar el patrón.</p>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Proyectos activos</div>
+      <input class="kpi-value field-input" type="text" data-field="kpi_proyectos" placeholder="8" aria-label="Cantidad de proyectos activos" style="border: none; background: none; font-family: var(--font-display); font-size: 2.4rem; font-weight: 800; padding: 0;">
+      <div class="kpi-foot">CMC, Meulen, OLACORE, Mesa 1551, Estación Olavarría, Rincón, otros</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Horas de sueño promedio</div>
+      <input class="kpi-value field-input" type="text" data-field="kpi_sueno" placeholder="6.5h" aria-label="Horas de sueño promedio" style="border: none; background: none; font-family: var(--font-display); font-size: 2.4rem; font-weight: 800; padding: 0;">
+      <div class="kpi-foot">7-8h es no-negociable bajo la línea</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Días sin tarde libre</div>
+      <input class="kpi-value field-input" type="text" data-field="kpi_diaslibre" placeholder="14" aria-label="Días sin tarde libre" style="border: none; background: none; font-family: var(--font-display); font-size: 2.4rem; font-weight: 800; padding: 0;">
+      <div class="kpi-foot">Más de 10 = revisar agenda</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Última conversación profunda</div>
+      <input class="kpi-value field-input" type="text" data-field="kpi_conv" placeholder="hace 6 días" aria-label="Tiempo desde última conversación profunda" style="border: none; background: none; font-family: var(--font-display); font-size: 1.4rem; font-weight: 600; padding: 0; line-height: 1.2;">
+      <div class="kpi-foot">No reunión de trabajo — conversación de verdad</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Termómetro de energía</div>
+    <h3>Cómo está cada dimensión hoy</h3>
+    <p>Marcar 1 (apagado) a 10 (encendido). Honestidad, no aspiración.</p>
+    <div id="gaugesContainer"></div>
+  </div>
+
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title">Lo que me está llenando</div>
+      <h3>Top 3 de esta semana</h3>
+      <p>Personas, proyectos, momentos que me dejaron con más energía de la que tenían que sacar.</p>
+      <div class="field-row"><textarea class="field-input field-textarea" data-field="llena1" placeholder="1."></textarea></div>
+      <div class="field-row"><textarea class="field-input field-textarea" data-field="llena2" placeholder="2."></textarea></div>
+      <div class="field-row"><textarea class="field-input field-textarea" data-field="llena3" placeholder="3."></textarea></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Lo que me está vaciando</div>
+      <h3>Top 3 de esta semana</h3>
+      <p>Personas, proyectos, momentos que me dejaron sin batería, aunque "deberían" haberme dado.</p>
+      <div class="field-row"><textarea class="field-input field-textarea" data-field="vacia1" placeholder="1."></textarea></div>
+      <div class="field-row"><textarea class="field-input field-textarea" data-field="vacia2" placeholder="2."></textarea></div>
+      <div class="field-row"><textarea class="field-input field-textarea" data-field="vacia3" placeholder="3."></textarea></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Pregunta peligrosa</div>
+    <h3>Si soltara hoy uno de los proyectos, ¿cuál no se caería el mundo?</h3>
+    <p>No "cuál te conviene soltar" — sino "cuál te aterra soltar". La diferencia entre los dos es información.</p>
+    <textarea class="field-input field-textarea" data-field="soltar" placeholder="Escribir el nombre del proyecto y por qué te aterra soltarlo, aunque sepas que podrías…" style="min-height: 120px;"></textarea>
+  </div>
+</section>
+
+<!-- ===========================================
+     TAB · NORTE
+     =========================================== -->
+<section class="panel" data-panel="norte">
+  <div class="panel-head">
+    <div class="panel-eyebrow">Lo que define la dirección</div>
+    <h1 class="panel-title">Norte</h1>
+    <p class="panel-lead">No son las metas — son los criterios. Lo que vas a defender cuando todo lo demás pelea por tu atención. Acá se escribe una vez, se relee cada mes, se actualiza cada año.</p>
+  </div>
+
+  <div class="permission">
+    <p>"Las metas cambian con el contexto. Los criterios deberían cambiar mucho menos. Si tus criterios cambian cada 6 meses, no son criterios — son humores."</p>
+    <span class="sig">— Regla del norte</span>
+  </div>
+
+  <div class="card">
+    <div class="card-title">5 valores rectores</div>
+    <h3>Lo que defendés aunque te cueste</h3>
+    <p>Cinco palabras o frases cortas. Si dudás entre dos, elegí la que te incomoda más.</p>
+    <div class="field-row"><label class="field-label">01</label><input class="field-input" type="text" data-field="valor1" placeholder="Ej: integridad — hago lo que dije que iba a hacer"></div>
+    <div class="field-row"><label class="field-label">02</label><input class="field-input" type="text" data-field="valor2" placeholder="Ej: cuidado — la gente cerca de mí está mejor por estar conmigo"></div>
+    <div class="field-row"><label class="field-label">03</label><input class="field-input" type="text" data-field="valor3" placeholder="Ej: lucidez — prefiero la verdad incómoda a la mentira útil"></div>
+    <div class="field-row"><label class="field-label">04</label><input class="field-input" type="text" data-field="valor4" placeholder="Ej: oficio — hago bien las cosas chicas, no solo las grandes"></div>
+    <div class="field-row"><label class="field-label">05</label><input class="field-input" type="text" data-field="valor5" placeholder="Ej: presencia — cuando estoy, estoy"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">El hombre a los 50</div>
+    <h3>Cómo querés ser visto en 15-20 años por la gente que más importa</h3>
+    <p>No los logros públicos. Las cualidades cotidianas. ¿Qué dirá tu hijo, tu pareja, tu hermana de vos en una sobremesa, cuando ya no estés ahí?</p>
+    <textarea class="field-input field-textarea" data-field="50anos" placeholder="Escribir libremente. Sin editar. Lo que sale al primer impulso suele ser lo más cierto…" style="min-height: 160px;"></textarea>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Propósito a 5 años</div>
+    <h3>Una frase corta. Una.</h3>
+    <p>No es la misión de la empresa. Es la tuya como persona. Tiene que caber en un mensaje de WhatsApp.</p>
+    <textarea class="field-input field-textarea" data-field="proposito5" placeholder="Una frase, dos máximo. Si se vuelve párrafo, todavía no la encontraste." style="min-height: 100px;"></textarea>
+  </div>
+
+  <div class="callout callout-copper">
+    <span>✦</span>
+    <div><strong>Regla de revisión</strong>Releé estos campos el primer lunes de cada mes. Si algo ya no resuena, no lo borres — anotalo abajo y dejá que las dos versiones convivan hasta entender qué cambió.</div>
+  </div>
+</section>
+
+<!-- ===========================================
+     TAB · ESPEJO
+     =========================================== -->
+<section class="panel" data-panel="espejo">
+  <div class="panel-head">
+    <div class="panel-eyebrow">Lo que no ves de vos</div>
+    <h1 class="panel-title">Espejo</h1>
+    <p class="panel-lead">Toda persona tiene puntos ciegos. La diferencia entre los que mejoran y los que repiten ciclos es uno solo: los primeros registran lo que les dicen y miran patrones. Los segundos lo olvidan en 48 horas.</p>
+  </div>
+
+  <div class="permission">
+    <p>"Cuando alguien que te quiere te dice algo difícil de escuchar, está pagando un costo emocional por dártelo. Honrá ese costo anotándolo, aunque te duela."</p>
+    <span class="sig">— Regla del espejo</span>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Retroalimentación recibida</div>
+    <h3>Lo que la gente cercana me ha dicho — anotado literal</h3>
+    <p>Frases textuales. No interpretadas, no suavizadas. Si te lo dijo, va. Después se mira el patrón.</p>
+    <div class="field-row"><label class="field-label">Frase 01 (quién + qué dijo + cuándo)</label><textarea class="field-input field-textarea" data-field="feedback1" placeholder='Ej: "Solo hablas tú" — [mi pareja] — esta semana'></textarea></div>
+    <div class="field-row"><label class="field-label">Frase 02</label><textarea class="field-input field-textarea" data-field="feedback2"></textarea></div>
+    <div class="field-row"><label class="field-label">Frase 03</label><textarea class="field-input field-textarea" data-field="feedback3"></textarea></div>
+    <div class="field-row"><label class="field-label">Frase 04</label><textarea class="field-input field-textarea" data-field="feedback4"></textarea></div>
+    <div class="field-row"><label class="field-label">Frase 05</label><textarea class="field-input field-textarea" data-field="feedback5"></textarea></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Patrón que aparece</div>
+    <h3>Cuando miro las frases juntas, ¿qué se repite?</h3>
+    <p>No te defiendas. No expliques. Solo describí el patrón que ves cuando mirás las frases sin filtro.</p>
+    <textarea class="field-input field-textarea" data-field="patron" placeholder="Lo que veo cuando miro las 5 frases juntas…" style="min-height: 120px;"></textarea>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Pregunta brava</div>
+    <h3>¿Qué te ha dicho más de una persona en el último año que aún no has trabajado?</h3>
+    <p>Cuando una crítica viene de una persona, puede ser ella. Cuando viene de dos o más independientes, es información sobre vos. Anotala. Es la señal más fuerte que vas a tener este año.</p>
+    <textarea class="field-input field-textarea" data-field="multipersona" placeholder="La crítica recurrente que te llega de fuentes distintas…" style="min-height: 100px;"></textarea>
+  </div>
+
+  <div class="callout callout-wax">
+    <span>✦</span>
+    <div><strong>Test de 14 días</strong>Elegí UNA de las frases. Durante 14 días, prestá atención específicamente a eso. Sin compromiso de cambiar — solo de observar cuándo aparece, con quién, en qué contexto. La observación sola ya cambia el comportamiento un 30%.</div>
+  </div>
+</section>
+
+<!-- ===========================================
+     TAB · DECISIONES
+     =========================================== -->
+<section class="panel" data-panel="decisiones">
+  <div class="panel-head">
+    <div class="panel-eyebrow">Auditoría retroactiva</div>
+    <h1 class="panel-title">Decisiones</h1>
+    <p class="panel-lead">Mirar las últimas 10 decisiones grandes con honestidad: qué decidiste, con qué información, qué pasó, qué aprendiste. El objetivo no es lamentar — es identificar tu sesgo personal de decisión.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Bitácora de decisiones</div>
+    <h3>Últimas 10 decisiones grandes</h3>
+    <p>"Grandes" = afectaron a varias personas, costaron dinero significativo, o cambiaron una dirección. Personales o profesionales — ambas cuentan.</p>
+    <div id="decisionsContainer"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Patrón global</div>
+    <h3>Mirando las 10 juntas, ¿qué sesgo aparece?</h3>
+    <p>Ejemplos típicos: "decido rápido con poca info y suelo acertar pero a veces caigo feo", "tiendo a decir sí a oportunidades y arrastrar carga", "evito decisiones que generan conflicto y se pudren solas", "confío en mi intuición más de lo que debería".</p>
+    <textarea class="field-input field-textarea" data-field="sesgo" placeholder="El sesgo que aparece cuando miro las 10 decisiones juntas…" style="min-height: 120px;"></textarea>
+  </div>
+
+  <div class="callout callout-copper">
+    <span>✦</span>
+    <div><strong>Para las próximas 10</strong>Antes de tomar la próxima decisión grande, leé el patrón que escribiste arriba. No para cambiar la decisión — para tomarla con conciencia del sesgo.</div>
+  </div>
+</section>
+
+<!-- ===========================================
+     TAB · ANTI-CRITERIOS
+     =========================================== -->
+<section class="panel" data-panel="antis">
+  <div class="panel-head">
+    <div class="panel-eyebrow">Lo que ya descartaste</div>
+    <h1 class="panel-title">Lo que ya no hago</h1>
+    <p class="panel-lead">Una vida se define tanto por lo que dejaste de hacer como por lo que hacés. Las reglas firmes acá listadas son tuyas — escribí solo las que tienen historia detrás. Sin pose.</p>
+  </div>
+
+  <div class="permission">
+    <p>"Una regla sin un incidente atrás no es regla — es aspiración. Las reglas que sirven nacen de haber pagado el precio."</p>
+    <span class="sig">— Regla de los anti-criterios</span>
+  </div>
+
+  <div class="anti-card">
+    <div class="anti-tag">No-go</div>
+    <div class="anti-rule">No vender alcohol a menores en ningún negocio mío</div>
+    <div class="anti-why">Riesgo legal, riesgo moral, riesgo de marca. No hay rentabilidad que lo justifique.</div>
+  </div>
+
+  <div class="anti-card">
+    <div class="anti-tag">No-go</div>
+    <div class="anti-rule">No usar mi número personal +56987834148 con clientes/pacientes</div>
+    <div class="anti-why">Espacio personal protegido. El bot WA y el fijo CMC son la cara comercial.</div>
+  </div>
+
+  <div class="anti-card">
+    <div class="anti-tag">No-go</div>
+    <div class="anti-rule">No prometer servicios que no podemos cumplir (sucursales que no existen, médicos que no se coordinan)</div>
+    <div class="anti-why">CMC tiene UNA sede. Inventar capacidades para ganar el lead destruye reputación.</div>
+  </div>
+
+  <div class="anti-card">
+    <div class="anti-tag">No-go</div>
+    <div class="anti-rule">No firmar sociedad 50/50 con alguien sin cláusula de salida explícita</div>
+    <div class="anti-why">Patrón estadístico: las 50/50 sin salida terminan mal. La cláusula no es desconfianza — es lucidez compartida.</div>
+  </div>
+
+  <div class="anti-card">
+    <div class="anti-tag">No-go</div>
+    <div class="anti-rule">No tomar decisiones grandes en estado de cansancio o presión emocional</div>
+    <div class="anti-why">Mis peores decisiones llegan cuando cedo a la urgencia. 24 horas de pausa es regla.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Tus anti-criterios propios</div>
+    <h3>Reglas firmes que ya descubriste</h3>
+    <p>Agregá las que conozcas. Tienen que venir de un incidente concreto. Si no podés contar qué pasó, todavía no es regla.</p>
+    <div class="field-row"><label class="field-label">Regla propia 06</label><input class="field-input" type="text" data-field="anti6" placeholder="Lo que ya no hago + por qué (1 línea cada uno)"></div>
+    <div class="field-row"><label class="field-label">Regla propia 07</label><input class="field-input" type="text" data-field="anti7"></div>
+    <div class="field-row"><label class="field-label">Regla propia 08</label><input class="field-input" type="text" data-field="anti8"></div>
+    <div class="field-row"><label class="field-label">Regla propia 09</label><input class="field-input" type="text" data-field="anti9"></div>
+    <div class="field-row"><label class="field-label">Regla propia 10</label><input class="field-input" type="text" data-field="anti10"></div>
+  </div>
+
+  <div class="callout callout-soft">
+    <span>✦</span>
+    <div><strong>Cuándo agregar una nueva</strong>Cuando vivas un fracaso, una pérdida, una traición, o una vergüenza propia. Esos son los momentos donde nacen las reglas verdaderas. No las escribas en frío.</div>
+  </div>
+</section>
+
+<!-- ===========================================
+     TAB · VÍNCULOS CRÍTICOS
+     =========================================== -->
+<section class="panel" data-panel="vinculos">
+  <div class="panel-head">
+    <div class="panel-eyebrow">8 personas que merecen atención consciente</div>
+    <h1 class="panel-title">Vínculos críticos</h1>
+    <p class="panel-lead">Las relaciones se degradan en silencio. Lo que está bien hoy puede estar en problema en 6 meses sin que te enteres, simplemente por falta de atención consciente. Acá las monitoreás como monitorearías cualquier sistema crítico de tus negocios.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Sistema de estado</div>
+    <ul>
+      <li><span class="status-dot status-green"></span><strong>Verde</strong> — sólido, conversaciones honestas, presencia regular</li>
+      <li><span class="status-dot status-amber"></span><strong>Ámbar</strong> — algo se está enfriando, requiere atención esta semana o la próxima</li>
+      <li><span class="status-dot status-red"></span><strong>Rojo</strong> — conflicto, distancia significativa o pendiente serio sin resolver</li>
+      <li><span class="status-dot status-gray"></span><strong>Gris</strong> — no he pensado en esto últimamente — eso ya es señal</li>
+    </ul>
+  </div>
+
+  <div id="linksContainer"></div>
+
+  <div class="callout callout-copper">
+    <span>✦</span>
+    <div><strong>Revisión mensual</strong>Primer domingo de cada mes, 15 minutos: actualizá el estado de cada vínculo y la próxima atención. Las relaciones más importantes de tu vida no merecen menos disciplina que tu pipeline de marketing.</div>
+  </div>
+</section>
+
+<!-- ===========================================
+     TAB · HÁBITOS NO NEGOCIABLES
+     =========================================== -->
+<section class="panel" data-panel="habitos">
+  <div class="panel-head">
+    <div class="panel-eyebrow">Lo que sostiene todo lo demás</div>
+    <h1 class="panel-title">Hábitos no negociables</h1>
+    <p class="panel-lead">No son metas. No son aspiraciones. Son lo que vos definís como suelo: lo que ocurre incluso en tu peor semana. Si caen estos, cae el resto en cascada — solo que con un retraso de 4-8 semanas antes de notarlo.</p>
+  </div>
+
+  <div class="habit-grid" id="habitsContainer"></div>
+
+  <div class="callout callout-soft">
+    <span>✦</span>
+    <div><strong>El test del miércoles</strong>El miércoles a las 6 pm de cualquier semana es el momento más sincero. Si miraste el dashboard ahí y todos los hábitos están verdes, vas bien. Si alguno está rojo, el resto del problema que sentís durante la semana probablemente viene de ahí.</div>
+  </div>
+</section>
+
+<!-- ===========================================
+     TAB · BITÁCORA
+     =========================================== -->
+<section class="panel" data-panel="bitacora">
+  <div class="panel-head">
+    <div class="panel-eyebrow">Una pregunta por semana</div>
+    <h1 class="panel-title">Bitácora</h1>
+    <p class="panel-lead">12 preguntas filosas — una por semana — diseñadas para que las contestés en 10 minutos sin filtro. No son para mostrar. Son para vos. Lo que escribas acá no se sube a ningún servidor — vive en este navegador.</p>
+  </div>
+
+  <div class="permission">
+    <p>"La gente disciplinada en su trabajo y caótica en su vida personal no es disciplinada — es cobarde. Reservar 10 minutos para mirarte cada semana es la prueba más sencilla y más evitada."</p>
+    <span class="sig">— Regla de la bitácora</span>
+  </div>
+
+  <div id="journalContainer"></div>
+</section>
+
+</main>
+
+<script>
+
+const GAUGES = [
+  { key:"g_fisica", label:"Física" },
+  { key:"g_mental", label:"Mental" },
+  { key:"g_emocional", label:"Emocional" },
+  { key:"g_pareja", label:"Pareja" },
+  { key:"g_familia", label:"Familia" },
+  { key:"g_trabajo", label:"Trabajo · CMC" },
+  { key:"g_creativa", label:"Creativa" },
+  { key:"g_espiritual", label:"Sentido / propósito" }
+];
+
+const LINKS = [
+  { role: "Pareja", name: "Mi pareja" },
+  { role: "Madre", name: "Mi madre" },
+  { role: "Padre", name: "Mi padre" },
+  { role: "Hermana/o", name: "Hermana/o" },
+  { role: "Mano derecha CMC", name: "Equipo crítico CMC" },
+  { role: "Socio operador (Rincón / otro)", name: "Socio" },
+  { role: "Mejor amigo", name: "Amigo cercano" },
+  { role: "Mentor / interlocutor de fondo", name: "Mentor" }
+];
+
+const HABITS = [
+  { key:"h_sueno", name:"Dormir 7-8 horas", why:"Sin esto, todo lo demás se desgasta con 30% menos batería. Es el más caro de descuidar." },
+  { key:"h_ejercicio", name:"Mover el cuerpo 4×/semana", why:"No por estética. Por claridad mental, manejo de estrés, y duración de la vida productiva." },
+  { key:"h_lectura", name:"Leer 20 min/día", why:"Renueva ideas, baja el ruido, te conecta con voces fuera de tu cámara de eco diaria." },
+  { key:"h_soledad", name:"1 hora de soledad real cada día", why:"Sin pantalla, sin agenda, sin nadie. Es donde aparecen las ideas y se procesan las emociones." },
+  { key:"h_pareja", name:"Conversación de fondo con tu pareja 2×/semana", why:"No reunión de logística. Conversación de las que cambian cómo te ves al otro." },
+  { key:"h_naturaleza", name:"30 min al aire libre / naturaleza", why:"Sin esto, el cerebro vive en modo urbano permanente. La naturaleza recalibra lo que la ciudad desordena." }
+];
+
+const JOURNAL = [
+  { week: "Semana 1", q: "¿Qué decisión tomé esta semana en automático que merece revisión consciente?" },
+  { week: "Semana 2", q: "¿A quién interrumpí esta semana antes de que terminara su frase? ¿Por qué?" },
+  { week: "Semana 3", q: "¿Qué proyecto sigo manteniendo solo por inercia o por orgullo, no por convicción?" },
+  { week: "Semana 4", q: "¿Quién en mi círculo cercano necesita una conversación que llevo postergando?" },
+  { week: "Semana 5", q: "¿Cuál fue el último \"no\" que dije que se sintió bien? ¿Cuál fue el último \"sí\" que me arrepiento de haber dicho?" },
+  { week: "Semana 6", q: "¿Qué señal débil estoy ignorando porque me incomoda mirarla?" },
+  { week: "Semana 7", q: "¿En qué momento de la semana fui más yo? ¿En qué momento fui una versión cansada o automática de mí?" },
+  { week: "Semana 8", q: "Si mi versión de hace 5 años me viera esta semana, ¿qué le sorprendería? ¿Qué le decepcionaría?" },
+  { week: "Semana 9", q: "¿Qué estoy delegando porque me cuesta soltar, no porque sea ineficiente que lo haga yo?" },
+  { week: "Semana 10", q: "¿Cuál es la mentira útil que me estoy contando sobre algún proyecto, alguna persona o alguna decisión?" },
+  { week: "Semana 11", q: "¿Qué cosa hice por amor o por gusto esta semana que no necesitaba justificación de \"para qué sirve\"?" },
+  { week: "Semana 12", q: "¿Qué versión de mí está apareciendo más seguido — la que quiero o la que no? ¿Por qué?" }
+];
+
+const STORAGE_KEY = 'brujula_rodrigo_v1';
+let state;
+try { state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') || {}; } catch(e) { state = {}; }
+if (!state.fields) state.fields = {};
+if (!state.gauges) state.gauges = {};
+if (!state.links) state.links = {};
+if (!state.habits) state.habits = {};
+if (!state.decisions) state.decisions = {};
+if (!state.journal) state.journal = {};
+
+let _saveTimer;
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  showSaveToast();
+}
+function showSaveToast() {
+  const toast = document.getElementById('saveToast');
+  if (!toast) return;
+  toast.classList.add('visible');
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(() => toast.classList.remove('visible'), 1400);
+}
+
+function exportState() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'brujula-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+function importState() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'application/json';
+  input.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (confirm('Esto va a sobreescribir todo lo que tenés guardado. ¿Continuar?')) {
+          state = data;
+          save();
+          location.reload();
+        }
+      } catch (err) {
+        alert('Archivo inválido');
+      }
+    };
+    reader.readAsText(file);
+  });
+  input.click();
+}
+
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelector('.panel[data-panel="' + btn.dataset.tab + '"]').classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+});
+
+function el(tag, props, children) {
+  const e = document.createElement(tag);
+  if (props) {
+    for (const k in props) {
+      if (k === 'class') e.className = props[k];
+      else if (k === 'text') e.textContent = props[k];
+      else if (k === 'data') for (const d in props.data) e.dataset[d] = props.data[d];
+      else e.setAttribute(k, props[k]);
+    }
+  }
+  if (children) children.forEach(c => { if (c) e.appendChild(c); });
+  return e;
+}
+
+// Bind generic text fields
+document.querySelectorAll('[data-field]').forEach(inp => {
+  const k = inp.dataset.field;
+  if (state.fields[k] !== undefined) inp.value = state.fields[k];
+  inp.addEventListener('input', () => {
+    state.fields[k] = inp.value;
+    save();
+  });
+});
+
+// Render gauges
+function renderGauges() {
+  const c = document.getElementById('gaugesContainer');
+  c.textContent = '';
+  GAUGES.forEach(g => {
+    const wrap = el('div', { class: 'gauge-wrap' });
+    wrap.appendChild(el('div', { class: 'gauge-label', text: g.label }));
+    const gaugeDiv = el('div', { class: 'gauge' });
+    const current = state.gauges[g.key] || 0;
+    for (let i = 1; i <= 10; i++) {
+      const dot = el('div', { class: 'gauge-dot' + (i <= current ? ' filled' : '') });
+      dot.addEventListener('click', () => {
+        const newVal = (state.gauges[g.key] === i) ? i - 1 : i;
+        state.gauges[g.key] = newVal;
+        save();
+        renderGauges();
+      });
+      gaugeDiv.appendChild(dot);
+    }
+    wrap.appendChild(gaugeDiv);
+    wrap.appendChild(el('div', { class: 'gauge-num', text: current + '/10' }));
+    c.appendChild(wrap);
+  });
+}
+
+// Render decisions table
+function renderDecisions() {
+  const c = document.getElementById('decisionsContainer');
+  c.textContent = '';
+  for (let i = 1; i <= 10; i++) {
+    const row = el('div', { class: 'decision-row' });
+    const labelLeft = el('label', { text: 'Decisión ' + i + ' · ¿qué decidiste y con qué información?' });
+    const inputLeft = el('input', { class: 'field-input', type: 'text', placeholder: 'Ej: Salí de la sociedad de la cafetería con info incompleta del traspaso' });
+    inputLeft.value = state.decisions['d' + i + '_what'] || '';
+    inputLeft.addEventListener('input', () => { state.decisions['d' + i + '_what'] = inputLeft.value; save(); });
+
+    const labelMid = el('label', { text: 'Resultado actual / lo que aprendiste' });
+    const inputMid = el('input', { class: 'field-input', type: 'text', placeholder: 'Ej: Mejor decisión. Aprendí a confiar en la incomodidad como señal' });
+    inputMid.value = state.decisions['d' + i + '_result'] || '';
+    inputMid.addEventListener('input', () => { state.decisions['d' + i + '_result'] = inputMid.value; save(); });
+
+    row.appendChild(labelLeft);
+    row.appendChild(inputLeft);
+    row.appendChild(labelMid);
+    row.appendChild(inputMid);
+    c.appendChild(row);
+  }
+}
+
+// Render links (vínculos)
+function renderLinks() {
+  const c = document.getElementById('linksContainer');
+  c.textContent = '';
+  LINKS.forEach((l, i) => {
+    const card = el('div', { class: 'link-card' });
+    const head = el('div', { class: 'link-head' });
+    const headLeft = el('div');
+    headLeft.appendChild(el('div', { class: 'link-role', text: l.role }));
+    headLeft.appendChild(el('div', { class: 'link-name', text: l.name }));
+    head.appendChild(headLeft);
+
+    const statusSel = el('select', { class: 'status-select' });
+    ['Sin definir','Verde','Ámbar','Rojo','Gris'].forEach(opt => {
+      const o = el('option', { value: opt, text: opt });
+      statusSel.appendChild(o);
+    });
+    statusSel.value = state.links['l' + i + '_status'] || 'Sin definir';
+    statusSel.addEventListener('change', () => { state.links['l' + i + '_status'] = statusSel.value; save(); });
+    head.appendChild(statusSel);
+    card.appendChild(head);
+
+    const lastTalk = el('div', { class: 'field-row' });
+    lastTalk.appendChild(el('label', { class: 'field-label', text: 'Última conversación profunda (no logística)' }));
+    const inpLast = el('input', { class: 'field-input', type: 'text', placeholder: 'Ej: Hace 2 semanas, en una caminata' });
+    inpLast.value = state.links['l' + i + '_last'] || '';
+    inpLast.addEventListener('input', () => { state.links['l' + i + '_last'] = inpLast.value; save(); });
+    lastTalk.appendChild(inpLast);
+    card.appendChild(lastTalk);
+
+    const next = el('div', { class: 'field-row' });
+    next.appendChild(el('label', { class: 'field-label', text: 'Próxima atención consciente' }));
+    const inpNext = el('input', { class: 'field-input', type: 'text', placeholder: 'Ej: Llamarla el domingo / Tener la conversación pendiente' });
+    inpNext.value = state.links['l' + i + '_next'] || '';
+    inpNext.addEventListener('input', () => { state.links['l' + i + '_next'] = inpNext.value; save(); });
+    next.appendChild(inpNext);
+    card.appendChild(next);
+
+    c.appendChild(card);
+  });
+}
+
+// Render habits
+function renderHabits() {
+  const c = document.getElementById('habitsContainer');
+  c.textContent = '';
+  HABITS.forEach(h => {
+    const card = el('div', { class: 'habit-card' });
+    card.appendChild(el('div', { class: 'habit-name', text: h.name }));
+    card.appendChild(el('div', { class: 'habit-why', text: h.why }));
+    card.appendChild(el('div', { class: 'habit-status-label', text: 'Estado esta semana' }));
+    const sel = el('select', { class: 'status-select' });
+    ['Sin definir','Cumpliendo','Atención','Abandonado'].forEach(opt => {
+      sel.appendChild(el('option', { value: opt, text: opt }));
+    });
+    sel.value = state.habits[h.key] || 'Sin definir';
+    sel.addEventListener('change', () => { state.habits[h.key] = sel.value; save(); });
+    card.appendChild(sel);
+    c.appendChild(card);
+  });
+}
+
+// Render journal
+function renderJournal() {
+  const c = document.getElementById('journalContainer');
+  c.textContent = '';
+  JOURNAL.forEach((j, i) => {
+    const card = el('div', { class: 'journal-prompt' });
+    card.appendChild(el('div', { class: 'week', text: j.week }));
+    card.appendChild(el('div', { class: 'q', text: j.q }));
+    const ta = el('textarea', { class: 'field-input field-textarea', placeholder: 'Sin filtro. Sin editar mentalmente. Lo primero que venga…' });
+    ta.value = state.journal['j' + i] || '';
+    ta.addEventListener('input', () => { state.journal['j' + i] = ta.value; save(); });
+    card.appendChild(ta);
+    c.appendChild(card);
+  });
+}
+
+renderGauges();
+renderDecisions();
+renderLinks();
+renderHabits();
+renderJournal();
+</script>
+
+<div style="background: var(--paper); border-top: 1px solid var(--line-soft); padding: 28px 0 36px; margin-top: 40px;">
+  <div class="container" style="text-align: center;">
+    <div style="font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.18em; color: var(--ink-mute); text-transform: uppercase; margin-bottom: 16px;">Otros tableros</div>
+    <div style="display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;">
+      <a href="/personal" style="font-family: var(--font-display); font-size: 0.96rem; color: var(--fjord); text-decoration: none; padding: 8px 16px; border: 1px solid var(--line-soft); border-radius: 999px; transition: all .15s;">🏛 Hub</a>
+      <a href="/caminos" style="font-family: var(--font-display); font-size: 0.96rem; color: var(--fjord); text-decoration: none; padding: 8px 16px; border: 1px solid var(--line-soft); border-radius: 999px; transition: all .15s;">🛤 Caminos</a>
+    </div>
+  </div>
+</div>
+
+<div class="save-toast" id="saveToast">✓ Guardado</div>
+<div class="actions-fab">
+  <button type="button" id="btnExport">↓ Exportar</button>
+  <button type="button" id="btnImport">↑ Importar</button>
+</div>
+<script>
+document.getElementById('btnExport').addEventListener('click', exportState);
+document.getElementById('btnImport').addEventListener('click', importState);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="es-PE">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tu Ruta · Mapa personal de exploración</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#1F4248">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --fjord: #1F4248;
+  --fjord-deep: #14333A;
+  --copper: #B87333;
+  --copper-light: #C88A4D;
+  --copper-deep: #95592A;
+  --fog: #E6E3DC;
+  --fog-warm: #DCD8D0;
+  --sealing-wax: #7A1F1F;
+  --bg: #F8F4ED;
+  --paper: #FFFFFF;
+  --ink: #1A1A1A;
+  --ink-soft: #4A4A4A;
+  --ink-mute: #7A7568;
+  --line: #D6D1C7;
+  --line-soft: #E7E2D6;
+
+  --font-display: 'Fraunces', 'Georgia', serif;
+  --font-ui: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+  --radius: 10px;
+  --shadow: 0 1px 2px rgba(31, 66, 72, 0.04), 0 6px 20px rgba(31, 66, 72, 0.05);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; font-family: var(--font-ui); background: var(--bg); color: var(--ink); line-height: 1.55; -webkit-font-smoothing: antialiased; }
+h1, h2, h3, h4 { font-family: var(--font-display); line-height: 1.2; margin: 0; letter-spacing: -0.01em; font-weight: 600; }
+a { color: var(--fjord); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+
+.app-header { background: var(--paper); border-bottom: 1px solid var(--line-soft); padding: 22px 0; }
+.container { width: min(1240px, 94%); margin: 0 auto; }
+.header-inner { display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap; }
+
+.brand { display: flex; align-items: center; gap: 16px; }
+.compass {
+  width: 52px; height: 52px; position: relative;
+  border: 1.5px solid var(--fjord); border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--paper);
+}
+.compass::before {
+  content: ''; position: absolute; top: 50%; left: 8px; right: 8px; height: 1px; background: var(--line);
+}
+.compass::after {
+  content: ''; position: absolute; left: 50%; top: 8px; bottom: 8px; width: 1px; background: var(--line);
+}
+.compass-mark {
+  width: 18px; height: 18px; background: var(--copper); border-radius: 50%; position: relative; z-index: 1;
+}
+.brand-text { display: flex; flex-direction: column; gap: 2px; }
+.brand-name { font-family: var(--font-display); font-weight: 800; font-size: 1.45rem; color: var(--fjord); line-height: 1; letter-spacing: 0.04em; }
+.brand-sub { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.22em; color: var(--copper); text-transform: uppercase; }
+
+.header-meta { font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.14em; color: var(--ink-mute); text-transform: uppercase; text-align: right; line-height: 1.7; }
+.header-meta strong { color: var(--fjord); font-weight: 600; }
+
+/* Meridian line */
+.meridian {
+  height: 1px; background: var(--copper); width: 0;
+  animation: drawMeridian 1.2s ease-out forwards;
+}
+@keyframes drawMeridian { to { width: 100%; } }
+
+.tabs { background: var(--paper); border-bottom: 1px solid var(--line-soft); position: sticky; top: 0; z-index: 50; overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tabs-inner { display: flex; gap: 2px; padding: 4px 0; }
+.tab { flex-shrink: 0; padding: 14px 18px; font-size: 0.86rem; font-weight: 500; color: var(--ink-soft); background: transparent; border: none; cursor: pointer; font-family: inherit; display: flex; align-items: center; gap: 8px; transition: color .15s, border-color .15s; white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tab:hover { color: var(--fjord); }
+.tab.active { color: var(--fjord); border-bottom-color: var(--copper); font-weight: 600; }
+
+main { padding: 44px 0 96px; }
+.panel { display: none; }
+.panel.active { display: block; animation: fade .25s ease; }
+@keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+.panel-head { margin-bottom: 32px; max-width: 820px; }
+.panel-eyebrow { font-family: var(--font-mono); font-size: 0.72rem; font-weight: 500; letter-spacing: 0.22em; text-transform: uppercase; color: var(--copper); margin-bottom: 14px; }
+.panel-title { font-size: clamp(2rem, 4vw, 2.8rem); color: var(--fjord); margin-bottom: 12px; font-weight: 600; }
+.panel-lead { font-size: 1.05rem; color: var(--ink-soft); }
+
+.card { background: var(--paper); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); margin-bottom: 20px; }
+.card-title { font-family: var(--font-mono); font-size: 0.72rem; font-weight: 500; letter-spacing: 0.22em; text-transform: uppercase; color: var(--copper); margin-bottom: 16px; }
+.card h3 { font-family: var(--font-display); font-size: 1.4rem; font-weight: 600; color: var(--fjord); margin-bottom: 14px; }
+.card h4 { font-family: var(--font-ui); font-size: 0.95rem; font-weight: 600; color: var(--ink); margin: 12px 0 6px; }
+.card p { margin: 0 0 12px; color: var(--ink-soft); font-size: 0.98rem; }
+.card ul { padding-left: 22px; margin: 0 0 12px; }
+.card ul li { margin-bottom: 8px; color: var(--ink-soft); font-size: 0.96rem; }
+.card strong { color: var(--ink); }
+
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+.kpi-card { background: var(--paper); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 22px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+.kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--copper); }
+.kpi-label { font-family: var(--font-mono); font-size: 0.7rem; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-mute); margin-bottom: 12px; }
+.kpi-value { font-family: var(--font-display); font-size: 2.4rem; font-weight: 800; color: var(--fjord); line-height: 1; letter-spacing: -0.02em; }
+.kpi-foot { margin-top: 8px; font-size: 0.84rem; color: var(--ink-mute); }
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+@media (max-width: 820px) { .two-col { grid-template-columns: 1fr; } }
+.three-col { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+@media (max-width: 820px) { .three-col { grid-template-columns: 1fr; } }
+
+/* Tags */
+.tag { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; font-size: 0.8rem; font-weight: 500; background: var(--fog); color: var(--fjord); margin: 2px; border: 1px solid var(--line-soft); }
+.tag-copper { background: rgba(184, 115, 51, 0.1); color: var(--copper-deep); border-color: rgba(184, 115, 51, 0.25); }
+.tag-fjord { background: rgba(31, 66, 72, 0.08); color: var(--fjord); border-color: rgba(31, 66, 72, 0.18); }
+.tag-wax { background: rgba(122, 31, 31, 0.06); color: var(--sealing-wax); border-color: rgba(122, 31, 31, 0.18); }
+
+/* Tables */
+.table-card { padding: 0; overflow: hidden; }
+.table-card-head { padding: 22px 28px; border-bottom: 1px solid var(--line-soft); display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.table-card-head h3 { margin: 0; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 0.94rem; }
+thead th { background: var(--fog); padding: 14px 18px; text-align: left; font-family: var(--font-mono); font-size: 0.7rem; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-mute); border-bottom: 1px solid var(--line-soft); white-space: nowrap; }
+tbody td { padding: 16px 18px; border-bottom: 1px solid var(--line-soft); vertical-align: top; color: var(--ink-soft); }
+tbody tr:hover td { background: rgba(230, 227, 220, 0.4); }
+tbody tr:last-child td { border-bottom: none; }
+.row-title { font-weight: 600; color: var(--fjord); font-family: var(--font-display); font-size: 1.04rem; }
+.row-sub { font-size: 0.84rem; color: var(--ink-mute); margin-top: 4px; }
+
+/* Energy lists with toggle */
+.energy-list { list-style: none; padding: 0; margin: 0; }
+.energy-list li { padding: 10px 0; border-bottom: 1px dashed var(--line-soft); display: flex; align-items: center; gap: 12px; cursor: default; }
+.energy-list li:last-child { border-bottom: none; }
+.energy-mark { width: 8px; height: 8px; border-radius: 50%; background: var(--copper); flex-shrink: 0; }
+.energy-mark.drain { background: var(--sealing-wax); }
+.energy-list li input[type="text"] { flex: 1; background: transparent; border: none; font: inherit; color: var(--ink); padding: 4px 0; }
+.energy-list li input[type="text"]:focus { outline: none; border-bottom: 1px solid var(--copper); }
+
+/* Path cards (career paths) */
+.path-card { background: var(--paper); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); margin-bottom: 14px; }
+.path-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
+.path-num { font-family: var(--font-mono); font-size: 0.74rem; color: var(--copper); letter-spacing: 0.18em; }
+.path-title { font-family: var(--font-display); font-size: 1.35rem; font-weight: 600; color: var(--fjord); margin: 4px 0; }
+.path-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.path-body p { font-size: 0.96rem; color: var(--ink-soft); margin: 0 0 10px; }
+.path-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
+@media (max-width: 600px) { .path-grid { grid-template-columns: 1fr; } }
+.path-block { background: var(--bg); border-radius: 8px; padding: 14px 16px; border-left: 3px solid var(--copper); }
+.path-block .label { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-mute); margin-bottom: 4px; }
+.path-block .value { font-size: 0.92rem; color: var(--ink); }
+
+/* Experiment cards */
+.exp-card { background: var(--paper); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 22px 24px; box-shadow: var(--shadow); margin-bottom: 12px; }
+.exp-head { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 10px; }
+.exp-num { font-family: var(--font-display); font-size: 2rem; font-weight: 800; color: var(--copper); line-height: 1; flex-shrink: 0; }
+.exp-title { font-family: var(--font-display); font-size: 1.15rem; font-weight: 600; color: var(--fjord); }
+.exp-time { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.16em; color: var(--ink-mute); margin-top: 2px; }
+.exp-body p { margin: 8px 0; font-size: 0.95rem; color: var(--ink-soft); }
+.exp-steps { list-style: none; padding: 0; margin: 12px 0 0; }
+.exp-steps li { padding: 6px 0; padding-left: 26px; position: relative; font-size: 0.92rem; color: var(--ink-soft); }
+.exp-steps li::before { content: ''; position: absolute; left: 8px; top: 14px; width: 8px; height: 1px; background: var(--copper); }
+
+/* Roadmap (90 days) */
+.phase-card { background: var(--paper); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 26px; box-shadow: var(--shadow); margin-bottom: 14px; display: grid; grid-template-columns: 160px 1fr; gap: 28px; }
+@media (max-width: 700px) { .phase-card { grid-template-columns: 1fr; gap: 12px; } }
+.phase-tag .label { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-mute); }
+.phase-tag .days { font-family: var(--font-display); font-size: 1.6rem; font-weight: 800; color: var(--fjord); margin: 4px 0; }
+.phase-tag .name { font-size: 0.86rem; color: var(--copper); font-weight: 600; }
+.phase-body h3 { font-family: var(--font-display); font-size: 1.2rem; font-weight: 600; color: var(--fjord); margin-bottom: 8px; }
+.phase-body p { margin: 0 0 8px; font-size: 0.94rem; color: var(--ink-soft); }
+.phase-body ul { padding-left: 22px; margin: 0; font-size: 0.92rem; color: var(--ink-soft); }
+.phase-body ul li { margin-bottom: 5px; }
+.phase-rule { font-family: var(--font-mono); display: inline-block; padding: 4px 10px; background: var(--fog); border-radius: 6px; font-size: 0.74rem; letter-spacing: 0.08em; color: var(--fjord); margin-top: 10px; }
+
+/* People to interview */
+.person-card { background: var(--paper); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 22px; box-shadow: var(--shadow); }
+.person-role { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--copper); margin-bottom: 6px; }
+.person-name { font-family: var(--font-display); font-size: 1.15rem; font-weight: 600; color: var(--fjord); margin-bottom: 6px; }
+.person-where { font-size: 0.86rem; color: var(--ink-soft); margin-bottom: 14px; }
+.person-q { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.16em; color: var(--ink-mute); margin-top: 12px; margin-bottom: 6px; }
+.person-card ol { padding-left: 18px; margin: 0; font-size: 0.88rem; color: var(--ink-soft); }
+.person-card ol li { margin-bottom: 6px; }
+
+/* Script card (Mesa 1551 no) */
+.script-card { background: var(--paper); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 32px; box-shadow: var(--shadow); }
+.script-block { background: var(--bg); border-left: 3px solid var(--copper); padding: 18px 22px; margin: 16px 0; border-radius: 6px; font-family: var(--font-display); font-size: 1.05rem; color: var(--ink); line-height: 1.6; font-style: italic; }
+
+/* Journal */
+.journal-prompt { background: var(--paper); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 22px 24px; box-shadow: var(--shadow); margin-bottom: 14px; }
+.journal-prompt .week { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.16em; color: var(--copper); margin-bottom: 6px; }
+.journal-prompt .q { font-family: var(--font-display); font-size: 1.15rem; font-weight: 600; color: var(--fjord); margin-bottom: 12px; }
+.journal-prompt textarea { width: 100%; min-height: 100px; padding: 14px 16px; border: 1px solid var(--line-soft); border-radius: 8px; font: inherit; font-size: 0.96rem; background: var(--bg); color: var(--ink); resize: vertical; }
+.journal-prompt textarea:focus { outline: 2px solid var(--copper); border-color: var(--copper); }
+
+.callout { padding: 18px 22px; border-radius: 8px; margin: 18px 0; display: flex; gap: 14px; align-items: flex-start; font-size: 0.96rem; }
+.callout-soft { background: var(--fog); border-left: 3px solid var(--fjord); color: var(--ink); }
+.callout-copper { background: rgba(184, 115, 51, 0.08); border-left: 3px solid var(--copper); color: var(--ink); }
+.callout strong { display: block; margin-bottom: 4px; font-weight: 600; }
+
+/* Permission notes */
+.permission { background: var(--fog); border-radius: var(--radius); padding: 28px 32px; margin: 24px 0; text-align: center; }
+.permission p { font-family: var(--font-display); font-size: 1.25rem; color: var(--fjord); font-style: italic; margin: 0; line-height: 1.5; }
+.permission .sig { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.18em; color: var(--copper); text-transform: uppercase; margin-top: 12px; display: inline-block; }
+
+/* ===========================================
+   RESPONSIVE · Tablet (≤768px)
+   =========================================== */
+@media (max-width: 768px) {
+  .app-header { padding: 16px 0; }
+  .header-inner { gap: 14px; }
+  .compass { width: 44px; height: 44px; }
+  .compass-mark { width: 14px; height: 14px; }
+  .brand-name { font-size: 1.15rem; }
+  .brand-sub { font-size: 0.65rem; letter-spacing: 0.16em; }
+  .header-meta { font-size: 0.68rem; }
+
+  .tab { padding: 12px 14px; font-size: 0.82rem; min-height: 44px; }
+
+  main { padding: 28px 0 60px; }
+  .panel-head { margin-bottom: 24px; }
+  .panel-title { font-size: clamp(1.5rem, 5vw, 2rem); }
+  .panel-lead { font-size: 0.98rem; }
+
+  .card { padding: 22px 20px; margin-bottom: 14px; }
+  .card h3 { font-size: 1.25rem; }
+
+  .kpi-card { padding: 18px; }
+  .kpi-value { font-size: 2rem; }
+
+  .path-card { padding: 22px 20px; }
+  .path-title { font-size: 1.2rem; }
+  .path-grid { grid-template-columns: 1fr; gap: 10px; }
+  .path-block { padding: 12px 14px; }
+
+  .exp-card { padding: 20px; }
+  .exp-num { font-size: 1.6rem; }
+  .exp-title { font-size: 1.05rem; }
+
+  .phase-card { padding: 22px 20px; grid-template-columns: 1fr; gap: 14px; }
+  .phase-tag { flex-direction: row; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .phase-tag .days { font-size: 1.3rem; }
+
+  .person-card { padding: 18px; }
+
+  .script-card { padding: 24px 20px; }
+  .script-block { padding: 14px 18px; font-size: 0.98rem; }
+
+  .journal-prompt { padding: 18px 20px; }
+  .journal-prompt .q { font-size: 1.05rem; }
+  .journal-prompt textarea { min-height: 90px; padding: 12px 14px; font-size: 0.95rem; }
+
+  .permission { padding: 22px 20px; }
+  .permission p { font-size: 1.1rem; }
+
+  table { font-size: 0.88rem; }
+  thead th { padding: 10px 14px; font-size: 0.66rem; }
+  tbody td { padding: 12px 14px; }
+  .row-title { font-size: 0.98rem; }
+  .table-card-head { padding: 18px 20px; }
+
+  .energy-list li { padding: 12px 0; min-height: 44px; }
+  .energy-list li input[type="text"] { font-size: 0.96rem; }
+
+  .callout { padding: 14px 18px; font-size: 0.94rem; }
+}
+
+/* ===========================================
+   RESPONSIVE · Mobile (≤480px)
+   =========================================== */
+@media (max-width: 480px) {
+  .container { width: calc(100% - 28px); }
+  .header-inner { flex-direction: column; align-items: flex-start; }
+  .header-meta { text-align: left; line-height: 1.6; }
+  .brand { gap: 12px; }
+
+  .tabs-inner { padding: 4px 0; gap: 0; }
+  .tab { padding: 12px 12px; font-size: 0.78rem; }
+
+  .panel-head { margin-bottom: 22px; }
+  .panel-title { font-size: 1.6rem; }
+  .panel-lead { font-size: 0.94rem; }
+  .panel-eyebrow { font-size: 0.66rem; letter-spacing: 0.18em; }
+
+  .card { padding: 18px 16px; }
+  .card h3 { font-size: 1.15rem; }
+  .card p { font-size: 0.94rem; }
+  .card ul { padding-left: 18px; }
+  .card ul li { font-size: 0.92rem; }
+  .card-title { font-size: 0.7rem; letter-spacing: 0.18em; }
+
+  .kpi-grid { grid-template-columns: 1fr; gap: 12px; }
+  .kpi-card { padding: 16px 18px; }
+  .kpi-value { font-size: 1.8rem; }
+
+  .path-card { padding: 18px 16px; }
+  .path-num { font-size: 0.7rem; }
+  .path-title { font-size: 1.1rem; }
+  .path-meta { gap: 4px; margin-top: 6px; }
+  .tag { font-size: 0.74rem; padding: 4px 10px; }
+  .path-block { padding: 10px 12px; }
+  .path-block .label { font-size: 0.64rem; }
+  .path-block .value { font-size: 0.88rem; }
+
+  .exp-card { padding: 18px 16px; }
+  .exp-head { gap: 12px; }
+  .exp-num { font-size: 1.4rem; }
+  .exp-title { font-size: 1rem; }
+  .exp-time { font-size: 0.66rem; }
+
+  .phase-card { padding: 20px 16px; }
+  .phase-tag .days { font-size: 1.2rem; }
+
+  .person-card { padding: 16px; }
+  .person-name { font-size: 1.05rem; }
+  .person-where { font-size: 0.84rem; }
+  .person-card ol { font-size: 0.86rem; padding-left: 16px; }
+
+  .script-card { padding: 22px 18px; }
+  .script-block { padding: 14px 16px; font-size: 0.95rem; }
+
+  .journal-prompt { padding: 16px 18px; }
+  .journal-prompt .q { font-size: 1rem; }
+  .journal-prompt textarea { min-height: 80px; font-size: 0.94rem; }
+
+  .permission { padding: 18px 16px; }
+  .permission p { font-size: 1rem; }
+  .permission .sig { font-size: 0.66rem; }
+
+  table { font-size: 0.82rem; }
+  thead th { padding: 8px 10px; font-size: 0.58rem; letter-spacing: 0.1em; }
+  tbody td { padding: 10px 10px; }
+  .row-title { font-size: 0.92rem; }
+  .row-sub { font-size: 0.78rem; }
+
+  .callout { padding: 12px 14px; font-size: 0.9rem; }
+
+  .two-col, .three-col { gap: 12px; }
+}
+
+/* ===========================================
+   RESPONSIVE · Mejoras táctiles globales
+   =========================================== */
+@media (hover: none) and (pointer: coarse) {
+  .tab { min-height: 44px; }
+  button, input, textarea, select { font-size: 16px; } /* iOS zoom fix */
+  .journal-prompt textarea { font-size: 16px; }
+  .energy-list li input[type="text"] { font-size: 16px; }
+}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="container header-inner">
+    <div class="brand">
+      <div class="compass"><div class="compass-mark"></div></div>
+      <div class="brand-text">
+        <div class="brand-name">TU RUTA</div>
+        <div class="brand-sub">Mapa personal · Exploración</div>
+      </div>
+    </div>
+    <div class="header-meta">
+      <div>Para: <strong>vos</strong></div>
+      <div>Sin apuro · Sin certezas</div>
+    </div>
+  </div>
+</header>
+<div class="meridian"></div>
+
+<nav class="tabs">
+  <div class="container tabs-inner">
+    <button class="tab active" data-tab="mapa">🧭 Mapa de ti misma</button>
+    <button class="tab" data-tab="caminos">💼 Caminos posibles</button>
+    <button class="tab" data-tab="experimentos">🔬 Experimentos</button>
+    <button class="tab" data-tab="noventa">📅 90 días</button>
+    <button class="tab" data-tab="personas">🪞 Personas a entrevistar</button>
+    <button class="tab" data-tab="mesa">✋ Decir no a Mesa 1551</button>
+    <button class="tab" data-tab="carrera">🎓 Terminar la carrera</button>
+    <button class="tab" data-tab="bitacora">📔 Bitácora</button>
+  </div>
+</nav>
+
+<main class="container">
+
+<!-- ===========================================
+     TAB · MAPA DE TI MISMA
+     =========================================== -->
+<section class="panel active" data-panel="mapa">
+  <div class="panel-head">
+    <div class="panel-eyebrow">Punto de partida</div>
+    <h1 class="panel-title">Mapa de ti misma</h1>
+    <p class="panel-lead">No es un test. No hay respuesta correcta. Esto es una libreta privada para mapear qué te energiza, qué te drena, y qué te importa de verdad. Vuelve cada semana: las respuestas cambian, y eso también es información.</p>
+  </div>
+
+  <div class="permission">
+    <p>"No tienes que saber a qué dedicarte para empezar a vivir bien. Lo único que necesitas hoy es honestidad sobre dónde estás."</p>
+    <span class="sig">— Permiso para no decidir todavía</span>
+  </div>
+
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title">Energizadores</div>
+      <h3>Lo que te enciende</h3>
+      <p>Cosas, momentos, lugares, actividades que cuando aparecen te hacen sentir más viva. No tienen que ser "productivas" — solo verdaderas.</p>
+      <ul class="energy-list">
+        <li><span class="energy-mark"></span><input aria-label="Energizador 1: Viajar" type="text" data-energy="e1" placeholder="Viajar"></li>
+        <li><span class="energy-mark"></span><input aria-label="Energizador 2: Hacerme las uñas" type="text" data-energy="e2" placeholder="Hacerme las uñas"></li>
+        <li><span class="energy-mark"></span><input aria-label="Energizador 3: Plancharme el pelo, maquillarme" type="text" data-energy="e3" placeholder="Plancharme el pelo, maquillarme"></li>
+        <li><span class="energy-mark"></span><input aria-label="Energizador 4: Ir a resorts" type="text" data-energy="e4" placeholder="Ir a resorts"></li>
+        <li><span class="energy-mark"></span><input aria-label="Energizador 5: Ir a restaurantes" type="text" data-energy="e5" placeholder="Ir a restaurantes"></li>
+        <li><span class="energy-mark"></span><input aria-label="Energizador 6" type="text" data-energy="e6" placeholder="Agregar más…"></li>
+        <li><span class="energy-mark"></span><input aria-label="Energizador 7" type="text" data-energy="e7" placeholder="Agregar más…"></li>
+        <li><span class="energy-mark"></span><input aria-label="Energizador 8" type="text" data-energy="e8" placeholder="Agregar más…"></li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Drenadores</div>
+      <h3>Lo que te apaga</h3>
+      <p>Cosas que cuando suceden te dejan sin energía aunque "deberías" estar bien. Importante registrarlos — son límites disfrazados.</p>
+      <ul class="energy-list">
+        <li><span class="energy-mark drain"></span><input aria-label="Drenador 1" type="text" data-energy="d1" placeholder="Ej: ambientes ruidosos"></li>
+        <li><span class="energy-mark drain"></span><input aria-label="Drenador 2" type="text" data-energy="d2" placeholder="Ej: jornadas largas de pie"></li>
+        <li><span class="energy-mark drain"></span><input aria-label="Drenador 3" type="text" data-energy="d3" placeholder="Ej: discutir con clientes"></li>
+        <li><span class="energy-mark drain"></span><input aria-label="Drenador 4" type="text" data-energy="d4" placeholder="Ej: tareas repetitivas"></li>
+        <li><span class="energy-mark drain"></span><input aria-label="Drenador 5" type="text" data-energy="d5" placeholder="Agregar más…"></li>
+        <li><span class="energy-mark drain"></span><input aria-label="Drenador 6" type="text" data-energy="d6" placeholder="Agregar más…"></li>
+        <li><span class="energy-mark drain"></span><input aria-label="Drenador 7" type="text" data-energy="d7" placeholder="Agregar más…"></li>
+        <li><span class="energy-mark drain"></span><input aria-label="Drenador 8" type="text" data-energy="d8" placeholder="Agregar más…"></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Lo que ya sabes de ti hasta ahora</div>
+    <p>Mirando tus energizadores, parece haber un patrón claro: te atraen los <strong>ambientes premium y curados</strong> — hospitality, belleza, viajes, lifestyle. Esto no es superficial. Es información valiosísima: muchas carreras reales se construyen alrededor de esos códigos. La pregunta no es "¿está bien que me gusten estas cosas?" sino "¿desde qué rol en este mundo me siento bien?".</p>
+    <p>Hay tres roles posibles dentro de cualquier mundo:</p>
+    <ul>
+      <li><strong>Operadora</strong> — la que ejecuta, está en planta, soluciona problemas, lidia con caos diario. Mesa 1551 te ofrece este rol.</li>
+      <li><strong>Curadora / Comunicadora</strong> — la que diseña la experiencia, comunica la marca, decide qué entra y qué no, atrae al público. Marketing, PR, content, branding.</li>
+      <li><strong>Cliente</strong> — la que disfruta, recomienda, vive el mundo desde el otro lado. Válido si combinás con un trabajo que financie ese consumo.</li>
+    </ul>
+    <p>Tu energía sugiere fuertemente que tu rol natural está en el segundo grupo. No es obligatorio que lo sea — pero vale explorarlo antes de comprometerte con el primero.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Lo que SÍ está claro hoy</div>
+    <ul>
+      <li>Tienes 21 años. Estar perdida es normal y honesto. Lo raro es que alguien a tu edad <em>diga</em> que está perdida — la mayoría finge tener un plan.</li>
+      <li>Estás en 4to año de Administración. Eso es activo, no peso. Termínala — te da libertad, no obligaciones.</li>
+      <li>Hay presión de tus padres y de un socio. Las dos presiones son reales. Pero ninguna define tu camino. Tu camino lo defines tú.</li>
+      <li>No estás obligada a entrar a Mesa 1551. Ni a quedarte. Ni a saber qué hacer ya mismo.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ===========================================
+     TAB · CAMINOS POSIBLES
+     =========================================== -->
+<section class="panel" data-panel="caminos">
+  <div class="panel-head">
+    <div class="panel-eyebrow">10 caminos reales</div>
+    <h1 class="panel-title">Caminos posibles</h1>
+    <p class="panel-lead">Diez carreras concretas alineadas con tu mundo natural (hospitality, belleza, viajes, lifestyle premium). No son los únicos — son una muestra para que veas que existen rutas reales con sueldo digno, en este mundo, sin que tengas que operar un bar.</p>
+  </div>
+
+  <div id="pathsContainer"></div>
+
+  <div class="callout callout-copper">
+    <span>✦</span>
+    <div><strong>Cómo usar esta lista</strong>Marca con honestidad 3 que te llaman la atención. No los "más serios" ni los "mejor pagados" — los que sentís curiosidad por entender más. Esos son tu punto de partida para los experimentos.</div>
+  </div>
+</section>
+
+<!-- ===========================================
+     TAB · EXPERIMENTOS
+     =========================================== -->
+<section class="panel" data-panel="experimentos">
+  <div class="panel-head">
+    <div class="panel-eyebrow">Pruebas de 1-2 semanas</div>
+    <h1 class="panel-title">Experimentos baratos y reversibles</h1>
+    <p class="panel-lead">No tomes decisiones grandes con información chiquita. Estos son experimentos diseñados para que pruebes un mundo en menos de 15 días, sin abandonar la universidad, sin gastar mucho, y con permiso explícito para abandonar el experimento si no fluye.</p>
+  </div>
+
+  <div class="permission">
+    <p>"Hacer un experimento NO es comprometerse con la carrera. Es solo recolectar información sobre cómo te sentís en ese mundo durante un rato."</p>
+    <span class="sig">— Regla #1 de los experimentos</span>
+  </div>
+
+  <div id="expContainer"></div>
+</section>
+
+<!-- ===========================================
+     TAB · 90 DÍAS
+     =========================================== -->
+<section class="panel" data-panel="noventa">
+  <div class="panel-head">
+    <div class="panel-eyebrow">No 12 meses — solo 90 días</div>
+    <h1 class="panel-title">90 días de exploración</h1>
+    <p class="panel-lead">Plan de tres meses para conocerte mejor. Ojo: el objetivo NO es decidir al final de los 90 días. El objetivo es haber probado 3 caminos, descartado al menos 5, y conocer a 6-9 personas que viven en esos mundos. La decisión llega después, sin apuro.</p>
+  </div>
+
+  <div class="phase-card">
+    <div class="phase-tag"><span class="label">Mes 1</span><span class="days">Días 1–30</span><span class="name">Explorar amplio</span></div>
+    <div class="phase-body">
+      <h3>Conocer terrenos sin comprometerte</h3>
+      <p>El objetivo de este mes es <strong>generar opciones</strong>, no descartar. Permítete entusiasmarte con varias cosas. No tienes que elegir nada todavía.</p>
+      <ul>
+        <li>Lee 1 página de los 10 caminos posibles. Marca los 3 que más te llaman.</li>
+        <li>Sigue en Instagram a 5 mujeres entre 25-32 años que trabajen en cada uno de los 3 caminos elegidos (15 cuentas en total).</li>
+        <li>Mira 2 días en la vida de cada una a través de sus stories. Observa: cuándo trabajan, cómo hablan, qué se quejan, qué celebran.</li>
+        <li>Hacé 1 experimento del tab anterior por semana (4 en total).</li>
+        <li>Anotá en la bitácora qué te sorprendió, qué te aburrió, qué te dio curiosidad.</li>
+      </ul>
+      <span class="phase-rule">REGLA · No decidir nada este mes</span>
+    </div>
+  </div>
+
+  <div class="phase-card">
+    <div class="phase-tag"><span class="label">Mes 2</span><span class="days">Días 31–60</span><span class="name">Reducir a 3</span></div>
+    <div class="phase-body">
+      <h3>Profundizar en los caminos que te dejaron curiosidad</h3>
+      <p>Mirando el mes 1, quédate con 3 caminos. No 5, no 1 — 3. Suficientes para comparar, pocos suficientes para profundizar.</p>
+      <ul>
+        <li>Entrevistá a 1 persona viva en cada uno de los 3 caminos (3 entrevistas en total). Ver tab "Personas a entrevistar".</li>
+        <li>Hacé un experimento de 2 semanas en uno de los 3.</li>
+        <li>Lee 1 libro o 5 artículos sobre cada camino.</li>
+        <li>Buscá 3 ofertas laborales junior reales en LinkedIn de cada camino. Mirá qué piden, qué pagan.</li>
+      </ul>
+      <span class="phase-rule">REGLA · Profundidad, no amplitud</span>
+    </div>
+  </div>
+
+  <div class="phase-card">
+    <div class="phase-tag"><span class="label">Mes 3</span><span class="days">Días 61–90</span><span class="name">Apostar pequeño</span></div>
+    <div class="phase-body">
+      <h3>Probar el camino que más vibró, con una apuesta chica</h3>
+      <p>De los 3, quedate con el que te dejó <strong>más ganas de seguir</strong>. No el más prestigioso ni el más rentable — el que cuando lo pensás, no te cansa. Ese es tu candidato.</p>
+      <ul>
+        <li>Apostá 4 semanas a ese camino: pasantía no remunerada, voluntariado, freelance chico, contenido público propio.</li>
+        <li>Al final de las 4 semanas, evaluá honestamente: ¿quiero más o quiero parar?</li>
+        <li>Si querés más: ese es tu siguiente paso. Aplica formalmente, busca trabajo, conecta personas.</li>
+        <li>Si querés parar: volvé al mes 1, sin culpa. Aprendiste algo importante.</li>
+      </ul>
+      <span class="phase-rule">REGLA · Honestidad sobre el resultado</span>
+    </div>
+  </div>
+
+  <div class="callout callout-soft">
+    <span>✦</span>
+    <div><strong>Día 91</strong>Quizás ya sabes qué hacer. Quizás no. Las dos son válidas. Lo que sí vas a tener es: información real sobre vos, una red de 6-9 personas nuevas, experiencias en 3 mundos distintos, y la certeza de que Mesa 1551 (u otra opción) es una decisión tuya, no algo que te empujaron.</div>
+  </div>
+</section>
+
+<!-- ===========================================
+     TAB · PERSONAS A ENTREVISTAR
+     =========================================== -->
+<section class="panel" data-panel="personas">
+  <div class="panel-head">
+    <div class="panel-eyebrow">Conversaciones que cambian todo</div>
+    <h1 class="panel-title">Personas a entrevistar</h1>
+    <p class="panel-lead">Hay un atajo brutal en la exploración vocacional: conversar 30 minutos con alguien que lleve 5-10 años haciendo lo que estás pensando hacer. Te ahorra meses de búsqueda. La mayoría está dispuesta a hablar — solo hay que pedirlo bien.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Cómo encontrarlas</div>
+    <ul>
+      <li><strong>LinkedIn:</strong> buscar por puesto + Lima ("Marketing Manager hotel", "Event Planner Lima", "Brand Manager belleza"). Filtra por años de experiencia 5-10. Enviar invitación con nota corta.</li>
+      <li><strong>Instagram:</strong> ver quién sigue a las marcas que admiras. Los community managers, marketing managers y directoras de marca suelen tener bio explícita.</li>
+      <li><strong>Tu universidad:</strong> alumnae de UTP Administración que trabajen en hospitality/lujo/belleza. Pedir a la oficina de egresados.</li>
+      <li><strong>Conexiones de segundo grado:</strong> preguntar a 5 amigas si conocen a alguien que trabaje en X. Una de cada 5 conoce.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Mensaje tipo (LinkedIn / IG)</div>
+    <div class="script-block">"Hola [nombre]. Tengo 21 años, estoy en 4to de Administración en UTP y estoy explorando carreras en [su mundo]. Tu camino me llama mucho la atención. ¿Tendrías 25 minutos para conversar, en persona o por video, y contarme cómo es realmente tu día a día? Yo no vendo nada — solo quiero aprender de alguien que ya está donde algún día me gustaría estar. Si no podés, lo entiendo."</div>
+    <p>Funciona el 30-40% del tiempo. Si mandas 10 mensajes, agendas 3-4 conversaciones.</p>
+  </div>
+
+  <div class="three-col" id="peopleContainer"></div>
+
+  <div class="callout callout-copper">
+    <span>✦</span>
+    <div><strong>La pregunta que vale oro al final de cada entrevista</strong>"Si pudieras volver a tener mi edad, ¿qué harías distinto?" — La respuesta a esta pregunta es la más honesta y la más útil. Anotala literal.</div>
+  </div>
+</section>
+
+<!-- ===========================================
+     TAB · MESA 1551 NO
+     =========================================== -->
+<section class="panel" data-panel="mesa">
+  <div class="panel-head">
+    <div class="panel-eyebrow">Conversación pendiente</div>
+    <h1 class="panel-title">Cómo decir no a Mesa 1551</h1>
+    <p class="panel-lead">No es romper con el socio ni con nadie. Es cuidarte. Decirlo bien preserva la relación, te libera del peso, y te abre el espacio para los próximos 90 días sin esa decisión pesando. Cuanto antes, mejor — cada semana que pasa la presión crece.</p>
+  </div>
+
+  <div class="permission">
+    <p>"Decir no a algo que no sentís NO te hace ingrata, ni rajada, ni indecisa. Te hace adulta."</p>
+    <span class="sig">— Permiso para decir no</span>
+  </div>
+
+  <div class="script-card">
+    <div class="card-title">Guion sugerido para la conversación</div>
+    <h3>Antes</h3>
+    <p>Elegí un lugar tranquilo, no apurado, sin ruido. No por WhatsApp — en persona o por videollamada. Dura 10-15 minutos.</p>
+
+    <h3>Apertura</h3>
+    <div class="script-block">"Hola [nombre del socio]. Te quería contar algo importante con calma. Agradezco mucho que me hayas considerado para Mesa 1551. He estado pensando bastante este último tiempo y quiero ser honesta con vos antes de que sigamos avanzando."</div>
+
+    <h3>El mensaje central</h3>
+    <div class="script-block">"Llegué a la conclusión de que no es el proyecto correcto para mí en este momento. No es por el proyecto en sí — la idea me parece interesante y veo que tiene potencial. Es por mí: estoy en mitad de mi carrera, no tengo experiencia operativa, y siendo honesta no me veo trabajando en un bar 12 horas al día. No quiero entrar a algo así por compromiso y arrastrar el negocio y la sociedad."</div>
+
+    <h3>Cierre cuidando la relación</h3>
+    <div class="script-block">"Prefiero decirte esto ahora antes de que firmemos cualquier cosa, en vez de aceptar y después fallarte. Te voy a apoyar desde afuera si necesitás opinión o conexiones. Espero que entiendas, y que sigamos en buenos términos."</div>
+
+    <h3>Si insiste o te presiona</h3>
+    <div class="script-block">"Te entiendo y aprecio que confíes en mí, pero esta decisión la pensé y es definitiva. No quiero cambiar de opinión más adelante por presión — quiero ser clara hoy."</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Reglas para la conversación</div>
+    <ul>
+      <li><strong>No te disculpes en exceso.</strong> Un "lo siento" basta. Más allá de eso, suena a culpa, no a decisión.</li>
+      <li><strong>No te justifiques demasiado.</strong> Cuanto más argumentos das, más argumentos él tiene para refutarlos. "No es para mí" es razón suficiente.</li>
+      <li><strong>No abras la puerta a "más adelante".</strong> Si decís "tal vez en el futuro", la decisión queda en el aire. Sé clara: "no es para mí, ahora ni después".</li>
+      <li><strong>No menciones a tu pareja como argumento.</strong> "Mi novio dice que no" te resta autoridad. Esto es tu decisión, comunicala como tuya.</li>
+      <li><strong>No pidas opinión sobre tu decisión.</strong> No es democrática. Es información.</li>
+    </ul>
+  </div>
+
+  <div class="callout callout-soft">
+    <span>✦</span>
+    <div><strong>Después de la conversación</strong>Probablemente vas a sentir alivio y un poco de culpa al mismo tiempo. Las dos son normales. Date 24-48 horas para procesar, sin tomar otras decisiones grandes. La culpa pasa. El alivio se queda.</div>
+  </div>
+</section>
+
+<!-- ===========================================
+     TAB · TERMINAR LA CARRERA
+     =========================================== -->
+<section class="panel" data-panel="carrera">
+  <div class="panel-head">
+    <div class="panel-eyebrow">UTP · Administración</div>
+    <h1 class="panel-title">Terminar la carrera sin morirte</h1>
+    <p class="panel-lead">Tu mamá y tu papá quieren que termines pronto. Eso no es mala intención — es lo que ven desde su lugar. Tu mejor jugada es terminarla, no porque ellos lo pidan sino porque <strong>el título te da libertad real</strong>. Sin él, cada elección la haces desde la culpa de no haberlo terminado. Con él, cada elección la haces desde tu propia voluntad.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Cómo terminar sin destrozarte</div>
+    <h3>Reglas básicas</h3>
+    <ul>
+      <li><strong>Definí fecha clara de egreso.</strong> Si estás en 4to año, tu fecha probable es fin del próximo semestre. Marcalo en un calendario visible. Eso baja la ansiedad difusa.</li>
+      <li><strong>Cargá lo justo, no lo máximo.</strong> Mejor terminar en 8 meses con todo aprobado que en 6 meses con cursos jalados y burnout.</li>
+      <li><strong>Tesis aplicada a tu mundo.</strong> Si UTP te pide tesis, hacela sobre algo que te interese (marketing de hospitality, branding de belleza, modelos de negocio de luxury). Mata dos pájaros: titulación + investigación útil para tu próxima etapa.</li>
+      <li><strong>Habla con tu coordinador.</strong> A veces hay rutas de finalización rápida que no se ofrecen abiertamente — convalidaciones, prácticas que reemplazan cursos, modalidad de tesis vs examen.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Distribución de tu energía mientras terminas</div>
+    <table>
+      <thead><tr><th>Bloque</th><th>Horas/semana</th><th>Para qué</th></tr></thead>
+      <tbody>
+        <tr><td class="row-title">Universidad</td><td>25-30h</td><td>Clases, lectura, trabajos, tesis</td></tr>
+        <tr><td class="row-title">Exploración vocacional</td><td>6-8h</td><td>Experimentos, entrevistas, lectura</td></tr>
+        <tr><td class="row-title">Trabajo / ingresos</td><td>10-15h</td><td>Trabajo part-time o freelance ligero — preferiblemente en uno de los 3 caminos elegidos</td></tr>
+        <tr><td class="row-title">Vida (familia, pareja, amigas)</td><td>15-20h</td><td>No negociable. Es lo que sostiene todo lo demás</td></tr>
+        <tr><td class="row-title">Cuidado propio</td><td>10-15h</td><td>Dormir bien, ejercicio, lo que te recarga</td></tr>
+      </tbody>
+    </table>
+    <p>Total: 70-90 horas activas/semana. Suena mucho. Es menos que lo que muchos hacen mal. La diferencia es que cada bloque está mapeado con propósito, no improvisado.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Si la presión familiar es muy fuerte</div>
+    <p>Tus padres separados aliados en "terminá rápido" es presión real. Te sugiero <strong>una conversación con cada uno, por separado, una vez</strong>:</p>
+    <div class="script-block">"Te entiendo. Quiero terminar la carrera y voy a hacerlo. Mi fecha estimada es [fecha]. En los próximos meses no te voy a contar resultados todas las semanas — voy a estar concentrada. Cuando me reciba, te aviso. Mientras tanto, confía."</div>
+    <p>Esa conversación, hecha una vez con cada uno, te compra meses de silencio para concentrarte. Sin ella, recibís llamadas cada 2 semanas preguntando "y, cuándo te recibes" — y cada llamada te baja la energía.</p>
+  </div>
+
+  <div class="callout callout-copper">
+    <span>✦</span>
+    <div><strong>Sobre la culpa de tomar exploración mientras estudiás</strong>Explorar caminos profesionales mientras terminas la carrera <strong>no es perder tiempo, es prepararte para el día siguiente al título</strong>. La gente que se recibe sin haber explorado pasa los primeros 2 años post-título perdida, aceptando cualquier trabajo. La que exploró durante la carrera ya tiene una hipótesis para probar el día 1.</div>
+  </div>
+</section>
+
+<!-- ===========================================
+     TAB · BITÁCORA
+     =========================================== -->
+<section class="panel" data-panel="bitacora">
+  <div class="panel-head">
+    <div class="panel-eyebrow">Una pregunta por semana</div>
+    <h1 class="panel-title">Bitácora semanal</h1>
+    <p class="panel-lead">Escribir 10 minutos por semana sobre vos cambia más que leer un libro al mes. Las preguntas son simples pero las respuestas honestas requieren coraje. Lo que escribas acá no lo lee nadie — solo lo guarda tu navegador en este equipo.</p>
+  </div>
+
+  <div class="permission">
+    <p>"Escribí lo primero que te venga. No edites mentalmente. Si no sabes qué responder, escribí 'no sé' y avanzá."</p>
+    <span class="sig">— Regla de la bitácora</span>
+  </div>
+
+  <div id="journalContainer"></div>
+
+  <div class="callout callout-soft">
+    <span>✦</span>
+    <div><strong>Una vez al mes</strong>Releé las cuatro respuestas del mes y preguntate: ¿qué cambió en mí? ¿qué se repite? ¿qué evito mencionar? Las respuestas a estas tres preguntas son tu brújula real.</div>
+  </div>
+</section>
+
+</main>
+
+<script>
+
+const PATHS = [
+  { num: "01", title: "Marketing y Brand Management de Hospitality", tags:["Hospitality","Premium","Estable"],
+    desc: "Trabajás dentro de hoteles boutique, hoteles 5 estrellas o cadenas de lujo, en el equipo que define cómo se ve la marca, qué tipo de huésped llega, qué experiencias se ofrecen.",
+    day: "Reuniones de planificación, sesiones de fotos para redes, coordinar con agencia, revisar reseñas y respuestas, planificar lanzamientos, asistir a eventos de la marca.",
+    salary: "S/2,500 (junior) → S/8,000-12,000 (mid)",
+    entry: "Junior en equipo de marketing de hotel · pasantía pagada · trainee programs de cadenas internacionales (Marriott, Hilton, Belmond)",
+    risk: "Estrés de campañas con fecha · trabajos fuera de horario para eventos · jerarquías largas",
+    fit: "Alto. Tus energizadores (resorts, hospitality, estética) son el corazón de este trabajo."
+  },
+  { num: "02", title: "Event Planner de Bodas y Eventos de Lujo", tags:["Wedding","Lifestyle","Freelance posible"],
+    desc: "Diseñás y producís bodas, cumpleaños, eventos corporativos premium. Coordinás proveedores, decoración, catering, fotografía. Sos la cara visible ante el cliente.",
+    day: "Reuniones con clientes, visitas a locaciones, gestión de proveedores, montaje el día del evento (jornadas largas pero discontinuas), post-evento de fotos y redes.",
+    salary: "S/3,000-6,000 en empresa · 10-15% comisión sobre evento si freelance (eventos premium: S/30k-80k)",
+    entry: "Asistente en wedding planner reconocida · cuenta propia chica con 1-2 bodas para arrancar",
+    risk: "Picos de estrés altísimos en el día del evento · clientes muy exigentes · estacionalidad (más bodas en verano)",
+    fit: "Muy alto. Combina estética, hospitality, coordinación y momentos premium."
+  },
+  { num: "03", title: "PR y Comunicaciones de Marcas Premium", tags:["Belleza","Lujo","Estable"],
+    desc: "Trabajás en agencias de PR o internamente en marcas (perfumería, cosmética, moda, hospitality). Construís historias, manejás influencers, gestionás prensa, lanzamientos.",
+    day: "Pitching de notas a medios, coordinar con influencers, planificar lanzamientos, asistir a presentaciones, redactar comunicados, analizar coverage.",
+    salary: "S/2,500 (junior) → S/7,000-10,000 (mid) en agencia · más en marcas in-house",
+    entry: "Junior en agencia (Llorente y Cuenca, BCW, locales) · pasantías en marca · práctica en revistas",
+    risk: "Mucha presión de resultado mediático · trabajo nocturno en eventos · sueldos junior bajos relativos a la imagen del rubro",
+    fit: "Alto. Tu interés en marcas premium calza con esto. Ideal si te gusta escribir y comunicar."
+  },
+  { num: "04", title: "Content Creator / Influencer de Lifestyle", tags:["Independiente","Riesgo","Crecimiento"],
+    desc: "Construís tu propia audiencia en Instagram, TikTok, YouTube alrededor de un nicho (viajes, belleza, hospitality, día a día). Tu ingreso viene de marcas que te pagan por contenido.",
+    day: "Producir contenido (filmar, editar), planificar calendario, responder DMs y mails de marcas, gestionar contratos, reuniones con agencias.",
+    salary: "0 los primeros 6-18 meses · luego depende 100% de la audiencia (S/1,000 a S/50,000+ mensual)",
+    entry: "Empezar a publicar consistente sin esperar a 'estar lista' · 90 días de prueba · análisis de qué contenido prende",
+    risk: "Algoritmos cambian sin aviso · ingreso muy variable · presión de imagen pública · burnout muy frecuente",
+    fit: "Medio-alto. Te puede encantar o saturar. Probarlo 90 días te lo aclara rápido."
+  },
+  { num: "05", title: "Hospitality Management · Guest Experience", tags:["Hospitality","Premium","Estable"],
+    desc: "En hoteles boutique o 5 estrellas, sos la responsable de que cada huésped tenga una experiencia memorable. Diseñás detalles, capacitás staff de contacto, manejás quejas de alto nivel.",
+    day: "Walk-around por el hotel, conversación con huéspedes en lobby, gestión de quejas, reuniones con jefes de departamento, briefings al staff, mejoras continuas.",
+    salary: "S/3,000 (asistente) → S/8,000-15,000 (manager)",
+    entry: "Recepción nocturna en hotel premium → supervisora → assistant manager · cursos de Hotel Management Cornell online",
+    risk: "Disponibilidad 24/7 ocasional · presión emocional · huéspedes difíciles",
+    fit: "Alto. Si te encanta el mundo resort y querés estar adentro sin ser operadora de cocina/bar, este es el rol."
+  },
+  { num: "06", title: "Buyer / Showroom de Moda o Belleza", tags:["Moda","Belleza","Estable"],
+    desc: "Trabajás en cadenas de retail premium (Falabella sección lujo, Saga, marcas exclusivas) seleccionando qué productos compra la empresa para vender en tienda.",
+    day: "Mirar tendencias, viajar a ferias internacionales, negociar con proveedores, analizar ventas, decidir surtido de próxima temporada, coordinar con marketing.",
+    salary: "S/3,500 (asistente) → S/9,000-14,000 (buyer senior)",
+    entry: "Asistente de buyer en cadena · pasantías en marca de belleza/moda · networking en ferias",
+    risk: "Decisiones con impacto financiero alto · presión de meta · viajes frecuentes (puede ser ventaja)",
+    fit: "Alto si te apasiona específicamente moda o belleza. Combina estética + analítica."
+  },
+  { num: "07", title: "Travel Curator / Consultor de Viajes Premium", tags:["Viajes","Lujo","Freelance"],
+    desc: "Diseñás viajes a medida para clientes que pueden gastar bien. Conoces destinos, hoteles, restaurantes, experiencias. Tu valor es la curaduría, no el descuento.",
+    day: "Reuniones con clientes para entender sus gustos, investigación de destinos, armado de itinerarios, reservas, seguimiento durante el viaje, post-viaje de feedback.",
+    salary: "S/3,000 en agencia · 10-15% comisión sobre viajes premium si freelance (un viaje familiar de lujo puede ser USD 30-80k → comisión USD 3-12k)",
+    entry: "Asistente en agencia premium · cuenta propia con red de clientes inicial",
+    risk: "Estacionalidad · clientes muy exigentes · responsabilidad de cuando algo sale mal en el viaje",
+    fit: "Muy alto. Combina viajes (tu energizador principal) con el rol de curadora."
+  },
+  { num: "08", title: "Concierge Ejecutivo / Personal Assistant Premium", tags:["Servicio","Lujo","Discreto"],
+    desc: "Sos la asistente de un ejecutivo, empresario o familia de alto poder adquisitivo. Manejás agenda, viajes, reservas, eventos personales, logística doméstica de alto nivel.",
+    day: "Coordinación de agenda compleja, gestión de viajes, reservas en restaurantes y hoteles top, organizar regalos y eventos, ser puerta de entrada al jefe.",
+    salary: "S/4,000-8,000 con beneficios (a veces auto, viajes pagos, ropa, etc.)",
+    entry: "Asistencia en empresa premium · agencias de placement de personal asistant",
+    risk: "Disponibilidad permanente · alta exigencia · relación intensa con el jefe (depende del jefe)",
+    fit: "Alto si te gusta el mundo premium del lado operativo pero a escala personal."
+  },
+  { num: "09", title: "Marketing de Spa, Centro de Belleza o Clínica Estética", tags:["Belleza","Wellness","Estable"],
+    desc: "En spas premium, clínicas de medicina estética o centros de belleza, manejás todo el marketing: redes, captación, fidelización, ventas, experiencia del cliente.",
+    day: "Producción de contenido para redes, coordinar campañas, atención de leads en WhatsApp, capacitar al staff de atención, analizar ventas por tratamiento.",
+    salary: "S/2,500-5,000 en clínica chica · S/6,000-10,000 en clínica grande o cadena",
+    entry: "Junior de marketing en spa/clínica · freelance gestión de redes para 2-3 negocios chicos",
+    risk: "Negocios chicos a veces caóticos · presión de conversión",
+    fit: "Muy alto. Mundo belleza + marketing + cliente premium."
+  },
+  { num: "10", title: "Brand Partnership Manager en Industria Belleza", tags:["Belleza","Corporate","Estable"],
+    desc: "En marcas de cosmética (L'Oréal, Estée Lauder, locales) coordinás los acuerdos con influencers, salones, retailers. Eres el puente entre la marca y sus aliados externos.",
+    day: "Reuniones con influencers, negociación de campañas, eventos de lanzamiento, análisis de ROI, viajes a activaciones, gestión de presupuestos.",
+    salary: "S/3,500 (junior) → S/8,000-13,000 (mid)",
+    entry: "Trainee de marca multinacional · junior en agencia de influencer marketing",
+    risk: "Trabajos por temporadas intensas · viajes · presión de KPIs comerciales",
+    fit: "Muy alto. Une todos los mundos: belleza, marketing, eventos, influencers."
+  }
+];
+
+const EXPERIMENTS = [
+  { num: "01", title: "5 días observando un hotel boutique", time: "5 días · sin costo · presencial",
+    desc: "Pedí (por LinkedIn o IG) pasar 1 semana acompañando al equipo de marketing o front office de un hotel boutique de Lima. Sin sueldo, sin compromiso, solo observar.",
+    steps:[
+      "Identificar 5 hoteles boutique en Lima (B Hotel, Hotel B, Atemporal, Antigua Miraflores)",
+      "Escribir un mail a recepción@... o al equipo de marketing pidiendo 5 días de observación",
+      "Cuando aceptan, ir todos los días por 5-6 horas, tomar notas",
+      "Al final del 5to día: anotá si quisieras volver al día 6 o ya estás cansada"
+    ]
+  },
+  { num: "02", title: "30 días publicando contenido lifestyle en TikTok", time: "4 semanas · sin costo · desde casa",
+    desc: "Crear una cuenta nueva (no tu personal) y publicar 1 video por día durante 30 días sobre tu mundo (viajes, belleza, café, vida en Lima). Para sentir si el ritmo te queda o te agota.",
+    steps:[
+      "Crear cuenta nueva en TikTok con nombre temático",
+      "Definir 3 tipos de contenido: por ejemplo 'mi mañana', 'lugares que probé', 'producto que me gusta'",
+      "Publicar 1 video diario por 30 días — corto, sin perfección",
+      "Día 30: revisa cuál fue tu mejor video, cuál fue el peor, cuánto te costó cada uno"
+    ]
+  },
+  { num: "03", title: "Acompañar a una event planner por 1 boda", time: "5-10 días alrededor del evento",
+    desc: "Las wedding planners suelen aceptar asistentes ad-honorem para tener manos extra. Te sumás 1 boda completa: desde el último cliente meeting hasta el desmontaje.",
+    steps:[
+      "Buscar 3 wedding planners en Instagram con bodas de buen nivel en Lima",
+      "Mensaje directo: 'Estoy explorando el rubro, ¿podría acompañarte sin pago en una boda completa para aprender?'",
+      "Acompañar el evento completo incluido el día D (jornada larga)",
+      "Al día siguiente: anota nivel de energía, qué te entusiasmó, qué te agotó"
+    ]
+  },
+  { num: "04", title: "Visitar 5 spas premium en 2 semanas", time: "2 semanas · costo variable",
+    desc: "Visita 5 spas o centros de belleza distintos como cliente. Mientras estás ahí, observá todo: cómo te reciben, cómo está montado, cómo se ve el staff, cómo cobran, cómo te despiden.",
+    steps:[
+      "Listar 5 spas/centros premium en Lima (Aqua, Loft Spa, Anbar, Lucia, otros locales)",
+      "Reservar tratamientos económicos (manicura, peeling) en cada uno",
+      "Después de cada visita, anotar 5 cosas que observaste",
+      "Comparar: ¿en cuál te gustaría trabajar en marketing o experiencia?"
+    ]
+  },
+  { num: "05", title: "Entrevistar 3 mujeres en hospitality/lujo", time: "2-3 semanas",
+    desc: "Conseguir 3 conversaciones de 30 min con mujeres entre 25-32 años que trabajan en hospitality, belleza o lujo. Sin agenda comercial — solo entender su día.",
+    steps:[
+      "Identificar 12-15 perfiles en LinkedIn y mandar el mensaje del tab Personas",
+      "Agendar 3 entrevistas confirmadas",
+      "Hacer las preguntas del tab Personas (foco en cómo se sienten, no qué saben)",
+      "Después de las 3: ¿con quién te identificaste más? ¿quién hace algo que vos también querrías?"
+    ]
+  },
+  { num: "06", title: "Freelance de fotos/redes para 1 marca pequeña", time: "4 semanas · pago pequeño",
+    desc: "Ofrecé manejar las redes (3 posts + 7 stories/semana) de una marca pequeña de belleza, café o lifestyle. Cobrá poco (S/500-800/mes). El objetivo no es la plata — es probar si te gusta el rol.",
+    steps:[
+      "Identificar 5 marcas pequeñas con redes flojas o inexistentes",
+      "Ofrecer 1 mes de prueba con paquete chico",
+      "Producir el contenido durante 4 semanas",
+      "Evaluar: ¿quiero seguir? ¿quiero más clientes? ¿quiero dedicarme a esto?"
+    ]
+  }
+];
+
+const PEOPLE = [
+  { role: "Marketing de Hotel Boutique", name: "Mujer 27-32 años, Marketing Manager en hotel premium",
+    where: "LinkedIn + Instagram. Buscar 'Marketing Manager' + 'hotel' en Lima. También IG de Atemporal, Hotel B, Country Club Lima Hotel.",
+    questions:[
+      "¿Cómo es un día tuyo típico?",
+      "¿Qué te llevó a este rubro?",
+      "¿Qué te gusta del trabajo y qué no?",
+      "Si pudieras volver a tener 21, ¿qué harías distinto?"
+    ]
+  },
+  { role: "Event Planner de Bodas Premium", name: "Mujer dueña o senior de una wedding agency",
+    where: "Instagram (las wedding planners están todas ahí). Buscar 'wedding planner Lima' o ver agencias como Casa Boda, Tilda, Sublime.",
+    questions:[
+      "¿Cómo manejás el estrés del día D?",
+      "¿Cuántas bodas haces al año y cuánto gana una buena?",
+      "¿Qué tipo de persona NO debería entrar a este rubro?",
+      "¿Qué harías distinto si arrancaras hoy con 21 años?"
+    ]
+  },
+  { role: "Content Creator de Lifestyle", name: "Mujer con 20k-100k seguidores, no súper top pero estable",
+    where: "Instagram y TikTok. Buscar creators peruanas medianas en lifestyle, viajes o belleza.",
+    questions:[
+      "¿Cuánto tiempo te llevó vivir solo de esto?",
+      "¿Cómo es tu vida real vs lo que se ve?",
+      "¿Qué cambiarías si pudieras volver a empezar?",
+      "¿Vale la pena el costo emocional?"
+    ]
+  },
+  { role: "Guest Experience Manager de Hotel", name: "Mujer 28-35 años, encargada de experiencia en hotel 5★",
+    where: "LinkedIn. Hoteles a buscar: Belmond, Country Club, Westin, Hotel B.",
+    questions:[
+      "¿Cómo escalaste a esta posición?",
+      "¿Qué se necesita para hacerlo bien que no enseñan en ningún libro?",
+      "¿Es estresante o es 'flow'?",
+      "¿Qué le dirías a alguien de 21 que empieza?"
+    ]
+  },
+  { role: "PR de Marca de Belleza", name: "Cuenta manager o account director de agencia o in-house",
+    where: "LinkedIn. Agencias: Llorente y Cuenca, BCW, Maui, locales. In-house: L'Oréal, Estée Lauder, marcas premium.",
+    questions:[
+      "¿Cuál es el día más estresante del año y por qué?",
+      "¿Qué tipo de persona prospera en esto?",
+      "¿Recomendarías agencia o in-house para arrancar?",
+      "¿Qué quisieras haber sabido a los 21?"
+    ]
+  },
+  { role: "Buyer de Marca Premium", name: "Senior buyer o jefa de compras",
+    where: "LinkedIn. Saga Falabella sección premium, Ripley sección Christy Ng, marcas independientes.",
+    questions:[
+      "¿Qué decisión tuya tuvo más impacto el año pasado?",
+      "¿Cómo es la vida fuera de Lima — viajás mucho?",
+      "¿Cuál es el lado feo del trabajo que nadie ve?",
+      "¿Volverías a empezar igual?"
+    ]
+  }
+];
+
+const JOURNAL = [
+  { week: "Semana 1", q: "¿Cuándo fue la última vez que perdí la noción del tiempo haciendo algo? ¿Qué estaba haciendo?" },
+  { week: "Semana 2", q: "¿Qué hace en su trabajo una mujer 5-10 años mayor que admiro? Sin nombrarla — describí qué hace en su día a día." },
+  { week: "Semana 3", q: "¿Qué cosa NO quiero hacer nunca más, después de las experiencias del último año? ¿Por qué?" },
+  { week: "Semana 4", q: "Si tuviera dinero asegurado por 5 años, ¿qué me animaría a probar que hoy no me animo?" },
+  { week: "Semana 5", q: "¿Cuál es el comentario que más me dolió en los últimos 3 meses? ¿Por qué me dolió tanto? ¿Qué dice de mí?" },
+  { week: "Semana 6", q: "¿Qué decisión estoy postergando porque alguien se va a enojar? ¿Quién es esa persona y qué pierdo yo por su enojo?" },
+  { week: "Semana 7", q: "¿Qué cosa hice esta semana que me hizo sentir orgullosa? Aunque sea chiquita." },
+  { week: "Semana 8", q: "¿Qué cosa hice esta semana que me hizo sentir vacía? ¿Qué tenían en común con otras cosas que me vacían?" },
+  { week: "Semana 9", q: "¿Cuándo fue la última vez que dije que NO a algo? ¿Cómo me sentí después?" },
+  { week: "Semana 10", q: "Si en 5 años pudiera mirar atrás y estar orgullosa de una sola decisión que tomé este año, ¿cuál sería?" },
+  { week: "Semana 11", q: "¿Qué parte de mí no muestro en público? ¿Por qué la escondo? ¿Quién la disfrutaría si la mostrara?" },
+  { week: "Semana 12", q: "Después de 90 días explorando: ¿qué cambió en cómo me veo a mí misma?" }
+];
+
+// State
+const STORAGE_KEY = 'tu_ruta_mapa_personal_v1';
+let state;
+try { state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') || {}; } catch(e) { state = {}; }
+if (!state.energy) state.energy = {};
+if (!state.journal) state.journal = {};
+function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+// Tabs
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelector('.panel[data-panel="' + btn.dataset.tab + '"]').classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+});
+
+// Helper
+function el(tag, props, children) {
+  const e = document.createElement(tag);
+  if (props) {
+    for (const k in props) {
+      if (k === 'class') e.className = props[k];
+      else if (k === 'text') e.textContent = props[k];
+      else if (k === 'data') for (const d in props.data) e.dataset[d] = props.data[d];
+      else e.setAttribute(k, props[k]);
+    }
+  }
+  if (children) children.forEach(c => { if (c) e.appendChild(c); });
+  return e;
+}
+
+// Render paths
+function renderPaths() {
+  const c = document.getElementById('pathsContainer');
+  c.textContent = '';
+  PATHS.forEach(p => {
+    const card = el('div', { class: 'path-card' });
+
+    const head = el('div', { class: 'path-head' });
+    const headLeft = el('div');
+    headLeft.appendChild(el('div', { class: 'path-num', text: p.num }));
+    headLeft.appendChild(el('div', { class: 'path-title', text: p.title }));
+    const meta = el('div', { class: 'path-meta' });
+    p.tags.forEach(t => meta.appendChild(el('span', { class: 'tag tag-copper', text: t })));
+    headLeft.appendChild(meta);
+    head.appendChild(headLeft);
+    card.appendChild(head);
+
+    const body = el('div', { class: 'path-body' });
+    body.appendChild(el('p', { text: p.desc }));
+
+    const grid = el('div', { class: 'path-grid' });
+    const blocks = [
+      ['Un día típico', p.day],
+      ['Sueldo en Lima (aprox)', p.salary],
+      ['Cómo entrar', p.entry],
+      ['Lo difícil', p.risk]
+    ];
+    blocks.forEach(([label, value]) => {
+      const b = el('div', { class: 'path-block' });
+      b.appendChild(el('div', { class: 'label', text: label }));
+      b.appendChild(el('div', { class: 'value', text: value }));
+      grid.appendChild(b);
+    });
+    body.appendChild(grid);
+
+    const fitBlock = el('div', { class: 'path-block', style: 'margin-top:12px; border-left-color:var(--fjord);' });
+    fitBlock.appendChild(el('div', { class: 'label', text: 'Fit con tu mundo' }));
+    fitBlock.appendChild(el('div', { class: 'value', text: p.fit }));
+    body.appendChild(fitBlock);
+
+    card.appendChild(body);
+    c.appendChild(card);
+  });
+}
+
+// Render experiments
+function renderExperiments() {
+  const c = document.getElementById('expContainer');
+  c.textContent = '';
+  EXPERIMENTS.forEach(x => {
+    const card = el('div', { class: 'exp-card' });
+    const head = el('div', { class: 'exp-head' });
+    head.appendChild(el('div', { class: 'exp-num', text: x.num }));
+    const headRight = el('div');
+    headRight.appendChild(el('div', { class: 'exp-title', text: x.title }));
+    headRight.appendChild(el('div', { class: 'exp-time', text: x.time }));
+    head.appendChild(headRight);
+    card.appendChild(head);
+
+    const body = el('div', { class: 'exp-body' });
+    body.appendChild(el('p', { text: x.desc }));
+    const steps = el('ul', { class: 'exp-steps' });
+    x.steps.forEach(s => steps.appendChild(el('li', { text: s })));
+    body.appendChild(steps);
+    card.appendChild(body);
+
+    c.appendChild(card);
+  });
+}
+
+// Render people
+function renderPeople() {
+  const c = document.getElementById('peopleContainer');
+  c.textContent = '';
+  PEOPLE.forEach(p => {
+    const card = el('div', { class: 'person-card' });
+    card.appendChild(el('div', { class: 'person-role', text: p.role }));
+    card.appendChild(el('div', { class: 'person-name', text: p.name }));
+    card.appendChild(el('div', { class: 'person-where', text: p.where }));
+    card.appendChild(el('div', { class: 'person-q', text: 'Qué preguntarle' }));
+    const ol = el('ol');
+    p.questions.forEach(q => ol.appendChild(el('li', { text: q })));
+    card.appendChild(ol);
+    c.appendChild(card);
+  });
+}
+
+// Render journal
+function renderJournal() {
+  const c = document.getElementById('journalContainer');
+  c.textContent = '';
+  JOURNAL.forEach((j, i) => {
+    const card = el('div', { class: 'journal-prompt' });
+    card.appendChild(el('div', { class: 'week', text: j.week }));
+    card.appendChild(el('div', { class: 'q', text: j.q }));
+    const ta = el('textarea', { placeholder: 'Escribí lo primero que te venga…' });
+    ta.value = state.journal['j' + i] || '';
+    ta.addEventListener('input', () => {
+      state.journal['j' + i] = ta.value;
+      save();
+    });
+    card.appendChild(ta);
+    c.appendChild(card);
+  });
+}
+
+// Energy inputs
+document.querySelectorAll('input[data-energy]').forEach(inp => {
+  const k = inp.dataset.energy;
+  if (state.energy[k]) inp.value = state.energy[k];
+  inp.addEventListener('input', () => {
+    state.energy[k] = inp.value;
+    save();
+  });
+});
+
+renderPaths();
+renderExperiments();
+renderPeople();
+renderJournal();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Caminos · Jugadas estratégicas a tu escala</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#1F4248">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --fjord: #1F4248;
+  --fjord-deep: #14333A;
+  --copper: #B87333;
+  --copper-light: #C88A4D;
+  --copper-deep: #95592A;
+  --fog: #E6E3DC;
+  --fog-warm: #DCD8D0;
+  --sealing-wax: #7A1F1F;
+  --bg: #F8F4ED;
+  --paper: #FFFFFF;
+  --ink: #1A1A1A;
+  --ink-soft: #4A4A4A;
+  --ink-mute: #7A7568;
+  --line: #D6D1C7;
+  --line-soft: #E7E2D6;
+  --status-green: #2A7F58;
+  --status-amber: #C88A4D;
+  --status-red: #7A1F1F;
+
+  --font-display: 'Fraunces', 'Georgia', serif;
+  --font-ui: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+  --radius: 10px;
+  --shadow: 0 1px 2px rgba(31, 66, 72, 0.04), 0 6px 20px rgba(31, 66, 72, 0.05);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; font-family: var(--font-ui); background: var(--bg); color: var(--ink); line-height: 1.55; -webkit-font-smoothing: antialiased; }
+h1, h2, h3, h4 { font-family: var(--font-display); line-height: 1.2; margin: 0; letter-spacing: -0.01em; font-weight: 600; }
+a { color: var(--fjord); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+
+.app-header { background: var(--paper); border-bottom: 1px solid var(--line-soft); padding: 22px 0; }
+.container { width: min(1240px, 94%); margin: 0 auto; }
+.header-inner { display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 16px; }
+.compass { width: 52px; height: 52px; position: relative; border: 1.5px solid var(--fjord); border-radius: 50%; background: var(--paper); }
+.compass::before { content: ''; position: absolute; top: 4px; bottom: 4px; left: 50%; width: 1px; background: var(--line); }
+.compass::after { content: ''; position: absolute; left: 4px; right: 4px; top: 50%; height: 1px; background: var(--line); }
+.compass-rose { position: absolute; top: 50%; left: 50%; width: 28px; height: 28px; transform: translate(-50%, -50%); }
+.compass-rose::before, .compass-rose::after { content: ''; position: absolute; background: var(--copper); }
+.compass-rose::before { top: 0; left: 50%; width: 2px; height: 14px; transform: translateX(-50%); border-radius: 1px; }
+.compass-rose::after { top: 14px; left: 50%; width: 2px; height: 14px; transform: translateX(-50%); background: var(--fjord); border-radius: 1px; }
+
+.brand-text { display: flex; flex-direction: column; gap: 2px; }
+.brand-name { font-family: var(--font-display); font-weight: 800; font-size: 1.45rem; color: var(--fjord); line-height: 1; letter-spacing: 0.04em; }
+.brand-sub { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.22em; color: var(--copper); text-transform: uppercase; }
+
+.header-meta { font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.14em; color: var(--ink-mute); text-transform: uppercase; text-align: right; line-height: 1.7; }
+.header-meta strong { color: var(--fjord); font-weight: 600; }
+.meridian { height: 1px; background: var(--copper); width: 0; animation: drawMeridian 1.2s ease-out forwards; }
+@keyframes drawMeridian { to { width: 100%; } }
+
+.tabs { background: var(--paper); border-bottom: 1px solid var(--line-soft); position: sticky; top: 0; z-index: 50; overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tabs-inner { display: flex; gap: 2px; padding: 4px 0; }
+.tab { flex-shrink: 0; padding: 14px 18px; font-size: 0.86rem; font-weight: 500; color: var(--ink-soft); background: transparent; border: none; cursor: pointer; font-family: inherit; display: flex; align-items: center; gap: 8px; transition: color .15s, border-color .15s; white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tab:hover { color: var(--fjord); }
+.tab.active { color: var(--fjord); border-bottom-color: var(--copper); font-weight: 600; }
+
+main { padding: 44px 0 96px; }
+.panel { display: none; }
+.panel.active { display: block; animation: fade .25s ease; }
+@keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+.panel-head { margin-bottom: 32px; max-width: 880px; }
+.panel-eyebrow { font-family: var(--font-mono); font-size: 0.72rem; font-weight: 500; letter-spacing: 0.22em; text-transform: uppercase; color: var(--copper); margin-bottom: 14px; }
+.panel-title { font-size: clamp(2rem, 4vw, 2.8rem); color: var(--fjord); margin-bottom: 12px; font-weight: 600; }
+.panel-lead { font-size: 1.05rem; color: var(--ink-soft); }
+
+.card { background: var(--paper); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); margin-bottom: 20px; }
+.card-title { font-family: var(--font-mono); font-size: 0.72rem; font-weight: 500; letter-spacing: 0.22em; text-transform: uppercase; color: var(--copper); margin-bottom: 16px; }
+.card h3 { font-family: var(--font-display); font-size: 1.4rem; font-weight: 600; color: var(--fjord); margin-bottom: 14px; }
+.card p { margin: 0 0 12px; color: var(--ink-soft); font-size: 0.98rem; }
+.card ul { padding-left: 22px; margin: 0 0 12px; }
+.card ul li { margin-bottom: 8px; color: var(--ink-soft); font-size: 0.96rem; }
+.card strong { color: var(--ink); }
+
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+.kpi-card { background: var(--paper); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 22px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+.kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--copper); }
+.kpi-label { font-family: var(--font-mono); font-size: 0.7rem; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-mute); margin-bottom: 12px; }
+.kpi-value { font-family: var(--font-display); font-size: 2.2rem; font-weight: 800; color: var(--fjord); line-height: 1; letter-spacing: -0.02em; }
+.kpi-foot { margin-top: 8px; font-size: 0.84rem; color: var(--ink-mute); }
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+@media (max-width: 820px) { .two-col { grid-template-columns: 1fr; } }
+.three-col { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+@media (max-width: 820px) { .three-col { grid-template-columns: 1fr; } }
+
+/* Path cards */
+.path-card { background: var(--paper); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 32px; box-shadow: var(--shadow); margin-bottom: 18px; }
+.path-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+.path-num { font-family: var(--font-mono); font-size: 0.74rem; color: var(--copper); letter-spacing: 0.22em; font-weight: 500; }
+.path-title { font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; color: var(--fjord); margin: 6px 0 4px; line-height: 1.15; }
+.path-subtitle { font-size: 0.96rem; color: var(--ink-soft); font-style: italic; }
+.path-meta { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.tag { display: inline-flex; align-items: center; padding: 5px 12px; border-radius: 999px; font-size: 0.78rem; font-weight: 500; background: var(--fog); color: var(--fjord); border: 1px solid var(--line-soft); }
+.tag-copper { background: rgba(184, 115, 51, 0.1); color: var(--copper-deep); border-color: rgba(184, 115, 51, 0.25); }
+.tag-fjord { background: rgba(31, 66, 72, 0.08); color: var(--fjord); border-color: rgba(31, 66, 72, 0.18); }
+.tag-wax { background: rgba(122, 31, 31, 0.06); color: var(--sealing-wax); border-color: rgba(122, 31, 31, 0.18); }
+
+.path-section { margin-top: 18px; }
+.path-section h4 { font-family: var(--font-mono); font-size: 0.72rem; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: var(--copper); margin-bottom: 8px; }
+.path-section p { font-size: 0.96rem; color: var(--ink-soft); margin: 0 0 8px; line-height: 1.6; }
+.path-section ul { padding-left: 20px; margin: 0 0 8px; }
+.path-section ul li { font-size: 0.94rem; color: var(--ink-soft); margin-bottom: 5px; }
+
+.path-numbers { background: var(--bg); border-radius: 8px; padding: 18px 20px; margin: 16px 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; }
+.path-number-item .label { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-mute); margin-bottom: 4px; }
+.path-number-item .value { font-family: var(--font-display); font-size: 1.05rem; font-weight: 600; color: var(--fjord); }
+
+.signal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+@media (max-width: 700px) { .signal-grid { grid-template-columns: 1fr; } }
+.signal-card { padding: 14px 16px; border-radius: 8px; font-size: 0.92rem; }
+.signal-pro { background: rgba(42, 127, 88, 0.08); border-left: 3px solid var(--status-green); }
+.signal-anti { background: rgba(122, 31, 31, 0.06); border-left: 3px solid var(--status-red); }
+.signal-card .label { font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-mute); margin-bottom: 4px; }
+
+/* Preparation table */
+.prep-card { background: var(--paper); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); margin-bottom: 16px; }
+.prep-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+.prep-title { font-family: var(--font-display); font-size: 1.2rem; font-weight: 600; color: var(--fjord); }
+.prep-num { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.16em; color: var(--copper); }
+.prep-section { margin-bottom: 12px; }
+.prep-section h5 { font-family: var(--font-mono); font-size: 0.68rem; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-mute); margin: 0 0 6px; }
+.prep-section ul { margin: 0; padding-left: 20px; }
+.prep-section ul li { font-size: 0.9rem; color: var(--ink-soft); margin-bottom: 4px; }
+
+/* Matrix / evaluation */
+.matrix-card { background: var(--paper); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 0; box-shadow: var(--shadow); margin-bottom: 18px; overflow: hidden; }
+.table-card-head { padding: 22px 28px; border-bottom: 1px solid var(--line-soft); display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.table-card-head h3 { margin: 0; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+thead th { background: var(--fog); padding: 14px 16px; text-align: left; font-family: var(--font-mono); font-size: 0.68rem; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-mute); border-bottom: 1px solid var(--line-soft); white-space: nowrap; }
+tbody td { padding: 14px 16px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; color: var(--ink-soft); }
+tbody tr:last-child td { border-bottom: none; }
+.row-title { font-weight: 600; color: var(--fjord); font-family: var(--font-display); font-size: 0.98rem; }
+
+.score-select {
+  background: var(--bg); border: 1px solid var(--line-soft); border-radius: 6px;
+  padding: 4px 8px; font: inherit; font-size: 0.84rem; color: var(--ink); font-family: var(--font-mono); width: 100%; max-width: 80px;
+}
+
+/* Experiments */
+.exp-card { background: var(--paper); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); margin-bottom: 14px; }
+.exp-head { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 12px; }
+.exp-num { font-family: var(--font-display); font-size: 2rem; font-weight: 800; color: var(--copper); line-height: 1; flex-shrink: 0; }
+.exp-title { font-family: var(--font-display); font-size: 1.2rem; font-weight: 600; color: var(--fjord); }
+.exp-time { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.14em; color: var(--ink-mute); margin-top: 4px; }
+.exp-body p { margin: 8px 0; font-size: 0.94rem; color: var(--ink-soft); }
+.exp-steps { list-style: none; padding: 0; margin: 12px 0 0; }
+.exp-steps li { padding: 5px 0 5px 24px; position: relative; font-size: 0.92rem; color: var(--ink-soft); }
+.exp-steps li::before { content: ''; position: absolute; left: 6px; top: 13px; width: 8px; height: 1px; background: var(--copper); }
+
+/* Anti card */
+.anti-card { background: var(--paper); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 22px 24px; box-shadow: var(--shadow); margin-bottom: 12px; border-left: 4px solid var(--sealing-wax); }
+.anti-tag { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.14em; color: var(--sealing-wax); text-transform: uppercase; margin-bottom: 4px; }
+.anti-rule { font-family: var(--font-display); font-size: 1.1rem; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
+.anti-why { font-size: 0.92rem; color: var(--ink-soft); margin: 0; }
+
+/* Field input */
+.field-input { width: 100%; background: var(--bg); border: 1px solid var(--line-soft); border-radius: 8px; padding: 12px 14px; font: inherit; font-size: 0.96rem; color: var(--ink); font-family: var(--font-ui); }
+.field-input:focus { outline: 2px solid var(--copper); border-color: var(--copper); }
+.field-textarea { min-height: 100px; resize: vertical; line-height: 1.55; }
+
+.callout { padding: 18px 22px; border-radius: 8px; margin: 18px 0; display: flex; gap: 14px; align-items: flex-start; font-size: 0.96rem; }
+.callout-soft { background: var(--fog); border-left: 3px solid var(--fjord); color: var(--ink); }
+.callout-copper { background: rgba(184, 115, 51, 0.08); border-left: 3px solid var(--copper); color: var(--ink); }
+.callout-wax { background: rgba(122, 31, 31, 0.06); border-left: 3px solid var(--sealing-wax); color: var(--ink); }
+.callout strong { display: block; margin-bottom: 4px; font-weight: 600; }
+
+.permission { background: var(--fog); border-radius: var(--radius); padding: 28px 32px; margin: 24px 0; text-align: center; }
+.permission p { font-family: var(--font-display); font-size: 1.25rem; color: var(--fjord); font-style: italic; margin: 0; line-height: 1.5; }
+.permission .sig { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.18em; color: var(--copper); text-transform: uppercase; margin-top: 12px; display: inline-block; }
+
+.hipotesis-card { background: linear-gradient(135deg, var(--fjord), var(--fjord-deep)); color: var(--paper); border-radius: var(--radius); padding: 36px; box-shadow: var(--shadow); margin-bottom: 18px; }
+.hipotesis-card h3 { color: var(--paper); margin-bottom: 14px; }
+.hipotesis-card p { color: rgba(255,255,255,0.88); font-size: 1.02rem; }
+.hipotesis-card strong { color: #F2C879; font-weight: 700; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .app-header { padding: 16px 0; }
+  .compass { width: 44px; height: 44px; }
+  .brand-name { font-size: 1.15rem; }
+  .brand-sub { font-size: 0.65rem; }
+  .header-meta { font-size: 0.68rem; }
+  .tab { padding: 12px 14px; font-size: 0.82rem; min-height: 44px; }
+  main { padding: 28px 0 60px; }
+  .panel-title { font-size: clamp(1.5rem, 5vw, 2rem); }
+  .panel-lead { font-size: 0.98rem; }
+  .card { padding: 22px 20px; margin-bottom: 14px; }
+  .card h3 { font-size: 1.25rem; }
+  .path-card { padding: 24px 22px; }
+  .path-title { font-size: 1.4rem; }
+  .kpi-card { padding: 18px; }
+  .kpi-value { font-size: 1.9rem; }
+  .prep-card { padding: 20px; }
+  .exp-card { padding: 20px; }
+  .anti-card { padding: 18px 20px; }
+  .hipotesis-card { padding: 28px 24px; }
+  table { font-size: 0.84rem; }
+  thead th { padding: 10px 12px; font-size: 0.64rem; }
+  tbody td { padding: 10px 12px; }
+}
+@media (max-width: 480px) {
+  .container { width: calc(100% - 28px); }
+  .header-inner { flex-direction: column; align-items: flex-start; }
+  .header-meta { text-align: left; }
+  .tab { padding: 11px 12px; font-size: 0.78rem; }
+  .panel-title { font-size: 1.6rem; }
+  .card { padding: 18px 16px; }
+  .path-card { padding: 20px 16px; }
+  .path-title { font-size: 1.25rem; }
+  .kpi-grid { grid-template-columns: 1fr; gap: 12px; }
+  .kpi-value { font-size: 1.7rem; }
+  .field-input { font-size: 16px; }
+}
+@media (hover: none) and (pointer: coarse) {
+  .tab { min-height: 44px; }
+  button, input, textarea, select { font-size: 16px; }
+}
+
+.save-toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--fjord); color: var(--paper);
+  padding: 10px 18px; border-radius: 999px;
+  font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase;
+  box-shadow: 0 8px 24px rgba(31, 66, 72, 0.25);
+  opacity: 0; pointer-events: none;
+  transition: opacity .2s ease, transform .2s ease;
+  z-index: 100;
+}
+.save-toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+.actions-fab {
+  position: fixed; bottom: 24px; right: 24px;
+  display: flex; flex-direction: column; gap: 8px;
+  z-index: 90;
+}
+.actions-fab button {
+  background: var(--paper); border: 1px solid var(--line-soft); color: var(--fjord);
+  padding: 10px 14px; border-radius: 999px;
+  font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.14em; text-transform: uppercase;
+  cursor: pointer; box-shadow: var(--shadow); font-weight: 600;
+  transition: transform .15s ease, background .15s;
+}
+.actions-fab button:hover { background: var(--fjord); color: var(--paper); transform: translateY(-1px); }
+@media (max-width: 600px) {
+  .actions-fab { bottom: 16px; right: 16px; }
+  .actions-fab button { padding: 8px 12px; font-size: 0.68rem; }
+}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="container header-inner">
+    <div class="brand">
+      <div class="compass"><div class="compass-rose"></div></div>
+      <div class="brand-text">
+        <div class="brand-name">CAMINOS</div>
+        <div class="brand-sub">Jugadas estratégicas · Rodrigo</div>
+      </div>
+    </div>
+    <div class="header-meta">
+      <div>Para: <strong>vos al 2031</strong></div>
+      <div>10 jugadas · 1 elección</div>
+    </div>
+  </div>
+</header>
+<div class="meridian"></div>
+
+<nav class="tabs">
+  <div class="container tabs-inner">
+    <button class="tab active" data-tab="partida">📍 Punto de partida</button>
+    <button class="tab" data-tab="caminos">🛤 10 caminos</button>
+    <button class="tab" data-tab="prep">⚙️ Cómo prepararte</button>
+    <button class="tab" data-tab="matriz">⚖️ Matriz de evaluación</button>
+    <button class="tab" data-tab="apuestas">🔬 Apuestas de prueba</button>
+    <button class="tab" data-tab="antis">🛑 Anti-caminos</button>
+    <button class="tab" data-tab="hipotesis">🎯 Hipótesis activa</button>
+    <button class="tab" data-tab="reflex">📔 Reflexión</button>
+  </div>
+</nav>
+
+<main class="container">
+
+<!-- ===========================================
+     TAB · PUNTO DE PARTIDA
+     =========================================== -->
+<section class="panel active" data-panel="partida">
+  <div class="panel-head">
+    <div class="panel-eyebrow">2026 · Hoy</div>
+    <h1 class="panel-title">Dónde estás parado</h1>
+    <p class="panel-lead">No estás empezando. Tenés activos reales, un track record probado, sistemas funcionando y una marca paraguas armada. La pregunta no es "qué puedo hacer" — es "qué jugada elijo entre las que ya puedo hacer".</p>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Verticales activos</div>
+      <div class="kpi-value">5</div>
+      <div class="kpi-foot">CMC, Meulen, Estación Olavarría, Rincón, Mesa 1551 (advisor)</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Años en healthcare</div>
+      <div class="kpi-value">10+</div>
+      <div class="kpi-foot">Desde dueño-médico a operador-tech</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Stack tecnológico construido</div>
+      <div class="kpi-value">~6</div>
+      <div class="kpi-foot">Chatbot WA, BI Postgres, dashboards, attribution, fidelización, integraciones HIS</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Marca paraguas</div>
+      <div class="kpi-value">OLACORE</div>
+      <div class="kpi-foot">Holding con identidad clara · sub-marcas formadas</div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title">Activos estructurales</div>
+      <h3>Lo que ya tenés a favor</h3>
+      <ul>
+        <li><strong>Reputación médica regional</strong> — apellido + 10 años en Carampangue + base de pacientes leales</li>
+        <li><strong>Stack tecnológico propietario</strong> — chatbot WA con flujos médicos, BI Postgres, dashboards, attribution Meta/CAPI, sistema de fidelización. Esto vale más de lo que reconocés.</li>
+        <li><strong>Marca OLACORE con sistema visual</strong> — paleta, tipografía, arquitectura. Lista para soportar nuevas verticales sin re-diseño.</li>
+        <li><strong>Primer activo inmobiliario</strong> — Estación Olavarría (Piedra Azul) abierto como vertical de real estate.</li>
+        <li><strong>Capacidad de delegar parcial</strong> — sociedad con chef en Rincón demuestra que sabés operar a distancia con socios.</li>
+        <li><strong>Velocidad de ejecución</strong> — implementás dashboards, sprints y campañas en días, no en meses.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-title">Limitaciones estructurales</div>
+      <h3>Lo que aún no tenés</h3>
+      <ul>
+        <li><strong>Capital significativo disponible</strong> — sin línea bancaria estructurada para apuestas de $300-1.000M.</li>
+        <li><strong>Equipo gerencial real</strong> — no hay un C-level por encima de la operación CMC; vos sos el cuello de botella en todo.</li>
+        <li><strong>Track record de M&A</strong> — nunca compraste una empresa; aprender M&A a la primera es caro.</li>
+        <li><strong>Foco</strong> — tu fortaleza (velocidad cross-vertical) es también tu límite (ninguna vertical de clase mundial).</li>
+        <li><strong>Capacidad de escuchar más que hablar</strong> — feedback reciente de pareja. Aplica a socios y equipo también.</li>
+        <li><strong>Marca personal pública</strong> — Twitter / LinkedIn / contenido sin presencia. Esto cierra ciertas opciones (educación, founder, advisory).</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout callout-copper">
+    <span>✦</span>
+    <div><strong>Lectura de fondo</strong>Tu situación no es "elegir entre 10 caminos imposibles". Es "elegir 1-2 de 10 viables, y soltar las otras 8 sin culpa". La elección consciente es la única forma de no terminar con 5 negocios mediocres en lugar de 2 excelentes.</div>
+  </div>
+</section>
+
+<!-- ===========================================
+     TAB · 10 CAMINOS
+     =========================================== -->
+<section class="panel" data-panel="caminos">
+  <div class="panel-head">
+    <div class="panel-eyebrow">Las 10 jugadas reales</div>
+    <h1 class="panel-title">Caminos posibles a tu escala</h1>
+    <p class="panel-lead">Cada uno es ejecutable desde donde estás hoy. Los números son aproximaciones de Chile/Latam para que sean orientativos, no proyecciones. La diferencia entre uno y otro no está en si "podés" — está en qué tipo de vida construye cada camino.</p>
+  </div>
+
+  <div id="pathsContainer"></div>
+
+  <div class="callout callout-copper">
+    <span>✦</span>
+    <div><strong>Próximo paso</strong>Marcá mentalmente (sin escribir todavía) cuáles 3 te dieron más curiosidad al leerlos. NO los más "lógicos" — los que cuando los pensás se aceleran un poco. Esos son tus candidatos para los próximos tabs.</div>
+  </div>
+</section>
+
+<!-- ===========================================
+     TAB · CÓMO PREPARARTE
+     =========================================== -->
+<section class="panel" data-panel="prep">
+  <div class="panel-head">
+    <div class="panel-eyebrow">Plan de capacidades por camino</div>
+    <h1 class="panel-title">Cómo prepararte para cada uno</h1>
+    <p class="panel-lead">Por cada camino: qué aprender, quién contratar, qué capital movilizar, qué hitos a 12-18 meses. Esto NO es ejecutar los 10 — es entender el costo de cada uno antes de elegir.</p>
+  </div>
+
+  <div id="prepContainer"></div>
+</section>
+
+<!-- ===========================================
+     TAB · MATRIZ DE EVALUACIÓN
+     =========================================== -->
+<section class="panel" data-panel="matriz">
+  <div class="panel-head">
+    <div class="panel-eyebrow">Punteo personal</div>
+    <h1 class="panel-title">Matriz de evaluación</h1>
+    <p class="panel-lead">Califica cada camino del 1 al 5 en 6 dimensiones. La matriz no decide por vos — pero ordena tus intuiciones y te muestra patrones que no ves cuando lo pensás suelto.</p>
+  </div>
+
+  <div class="matrix-card">
+    <div class="table-card-head">
+      <h3>Tabla comparativa</h3>
+      <span style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--ink-mute); letter-spacing: 0.1em;">1 = bajo · 5 = alto</span>
+    </div>
+    <div class="table-wrap">
+      <table id="matrixTable">
+        <thead>
+          <tr>
+            <th>Camino</th>
+            <th title="Cuánto te llena pensarlo">Energía</th>
+            <th title="Cuán probable que te encaje">Fit</th>
+            <th title="Capital requerido (5=poco)">Capital fácil</th>
+            <th title="Cuán rápido madura (5=rápido)">Velocidad</th>
+            <th title="Reversibilidad si fallás (5=alta)">Reversible</th>
+            <th title="Alineamiento con valores">Valores</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody id="matrixBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="callout callout-soft">
+    <span>✦</span>
+    <div><strong>Cómo leer el total</strong>El total más alto NO es necesariamente "tu camino" — pero los 3 más altos suelen ser los reales candidatos. Si el total más alto es uno que racionalmente descartabas, vale la pena reconsiderar. Si el más alto coincide con tu intuición, ya tenés alineamiento entre razón y instinto.</div>
+  </div>
+</section>
+
+<!-- ===========================================
+     TAB · APUESTAS DE PRUEBA
+     =========================================== -->
+<section class="panel" data-panel="apuestas">
+  <div class="panel-head">
+    <div class="panel-eyebrow">Pruebas de 3-6 meses · A tu escala</div>
+    <h1 class="panel-title">Apuestas de prueba</h1>
+    <p class="panel-lead">Cada apuesta es una versión chica del camino, ejecutable en 3-6 meses con capital limitado, para ver si la jugada grande tiene sentido. No reemplaza la decisión — la informa con datos reales en lugar de teoría.</p>
+  </div>
+
+  <div id="apuestasContainer"></div>
+
+  <div class="callout callout-copper">
+    <span>✦</span>
+    <div><strong>Regla de las apuestas</strong>Hacer 2 apuestas en paralelo a lo sumo. Más de 2 = ninguna obtiene tu atención real. Estas apuestas son MARGINALES — la operación principal sigue siendo CMC, no las puede comer.</div>
+  </div>
+</section>
+
+<!-- ===========================================
+     TAB · ANTI-CAMINOS
+     =========================================== -->
+<section class="panel" data-panel="antis">
+  <div class="panel-head">
+    <div class="panel-eyebrow">Lo que ya descartaste</div>
+    <h1 class="panel-title">Anti-caminos</h1>
+    <p class="panel-lead">Definir qué NO vas a hacer es tan importante como definir qué sí. Estas reglas vienen de tu experiencia hasta hoy — si las violás, sabés que es decisión consciente y no impulso.</p>
+  </div>
+
+  <div class="anti-card">
+    <div class="anti-tag">No-go</div>
+    <div class="anti-rule">No salir de Chile como operador principal</div>
+    <p class="anti-why">Tu ventaja competitiva es regional, conocida, anclada en cultura local. Internacionalizar como operador hoy diluye el activo más valioso.</p>
+  </div>
+
+  <div class="anti-card">
+    <div class="anti-tag">No-go</div>
+    <div class="anti-rule">No abrir negocios donde tengas que ser barista/cajero/mesero</div>
+    <p class="anti-why">Tu hora vale más en estrategia. Si un proyecto requiere que estés en la caja, no es tu camino — es trabajo de alguien que estás contratando.</p>
+  </div>
+
+  <div class="anti-card">
+    <div class="anti-tag">No-go</div>
+    <div class="anti-rule">No invertir capital propio en negocios donde no controlás el destino</div>
+    <p class="anti-why">Sociedades minoritarias en proyectos de otros = perder dinero y atención. Tu capital escaso va donde podés decidir, no donde te invitan.</p>
+  </div>
+
+  <div class="anti-card">
+    <div class="anti-tag">No-go</div>
+    <div class="anti-rule">No competir directamente con CMC en su territorio</div>
+    <p class="anti-why">Apertura de centro médico en Carampangue o Arauco como competencia directa = canibalización de tu propio activo más valioso.</p>
+  </div>
+
+  <div class="anti-card">
+    <div class="anti-tag">No-go</div>
+    <div class="anti-rule">No tomar capital de inversores estratégicos sin estatuto blindado</div>
+    <p class="anti-why">VC o inversores ángeles cambian la dinámica de gobierno. Si entras a un round, tiene que haber claridad de control y salida.</p>
+  </div>
+
+  <div class="callout callout-copper">
+    <span>✦</span>
+    <div><strong>Agregar nuevas reglas</strong>Cada fracaso o frustración del próximo año puede generar una regla nueva. No las inventes en frío — vienen de incidentes. Anotalas en el dashboard <strong>agentecmc.cl/brujula</strong> (tab "Lo que ya no hago").</div>
+  </div>
+</section>
+
+<!-- ===========================================
+     TAB · HIPÓTESIS ACTIVA
+     =========================================== -->
+<section class="panel" data-panel="hipotesis">
+  <div class="panel-head">
+    <div class="panel-eyebrow">La jugada que parece más fuerte hoy</div>
+    <h1 class="panel-title">Hipótesis activa</h1>
+    <p class="panel-lead">Esto NO es la respuesta — es la hipótesis que mejor explica tu situación actual. Sirve como punto de partida para discutir. La verdad sale del experimento.</p>
+  </div>
+
+  <div class="hipotesis-card">
+    <h3>Hipótesis (Mayo 2026)</h3>
+    <p>Mi lectura, mirando tu portafolio, tus señales recientes y tu velocidad de ejecución actual: <strong>el camino más alineado contigo hoy es híbrido — Healthcare Hub Multi-servicio en Arauco como núcleo + Plataforma Tech como diferenciador</strong>.</p>
+    <p>Es decir: profundizás CMC convirtiéndolo en hub completo (medicina + farmacia + óptica + laboratorio + salud mental) mientras paralelamente productizás tu stack tecnológico para venderlo como SaaS a otros centros médicos rurales — usando el hub como showcase.</p>
+    <p>Esto te permite: <strong>mantener la operación que ya dominás, agregar márgenes complementarios, y construir un activo tech que escala 100x sin requerir 100x de capital</strong>. Es la combinación con mejor relación riesgo/recompensa dado lo que ya tenés.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Por qué esta hipótesis y no otras</div>
+    <h3>El razonamiento detrás</h3>
+    <ul>
+      <li><strong>Cadena de centros rurales:</strong> exige capital y energía cross-territorial que vos no estás en condiciones de poner hoy sin abandonar CMC.</li>
+      <li><strong>Holding multi-vertical puro (estado actual):</strong> ya lo estás haciendo, no es jugada nueva. Mantenelo, pero no es el camino.</li>
+      <li><strong>SaaS puro:</strong> implica abandonar la operación física, perder el showcase, y entrar en un mercado con startups bien capitalizadas.</li>
+      <li><strong>Consolidator M&A:</strong> exige $1.500M+ disponibles y skills de M&A que aún no tenés.</li>
+      <li><strong>Real estate puro:</strong> ingreso pasivo lento — no aprovecha tu velocidad de ejecución.</li>
+      <li><strong>Educación / liderazgo de pensamiento:</strong> exige marca personal pública que no estás construyendo hoy.</li>
+      <li><strong>Estilo de vida puro:</strong> tu energía actual indica que no es el momento — todavía tenés mucha ambición que canalizar.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Próximos 90 días si vas por esta hipótesis</div>
+    <ul>
+      <li><strong>Mes 1:</strong> Validar demanda real de farmacia + óptica + lab en Arauco. Encuesta a últimos 500 pacientes CMC sobre qué buscaron y dónde fueron a comprar/atenderse.</li>
+      <li><strong>Mes 1-2:</strong> Identificar 3 centros médicos rurales en Chile que podrían ser piloto de tu plataforma SaaS. Conversación exploratoria, sin venta.</li>
+      <li><strong>Mes 2-3:</strong> Producir 1 demo "vendible" de tu plataforma — landing simple, video de 3 min, deck de 10 slides.</li>
+      <li><strong>Mes 3:</strong> Decisión: si la demanda hub es real Y al menos 1 centro piloto firma intención, ejecutás. Si no, ajustás hipótesis.</li>
+    </ul>
+  </div>
+
+  <div class="callout callout-wax">
+    <span>✦</span>
+    <div><strong>Aclaración importante</strong>Esta hipótesis tiene 6 meses de vida útil máxima. Si en agosto 2026 cambió tu contexto (salud, pareja, capital, oportunidad inesperada), <strong>relé esta página, no la trates como verdad</strong>. La hipótesis es un punto de partida, no un compromiso.</div>
+  </div>
+</section>
+
+<!-- ===========================================
+     TAB · REFLEXIÓN
+     =========================================== -->
+<section class="panel" data-panel="reflex">
+  <div class="panel-head">
+    <div class="panel-eyebrow">Preguntas mensuales</div>
+    <h1 class="panel-title">Reflexión periódica</h1>
+    <p class="panel-lead">Esto no se contesta una vez. El primer fin de semana de cada mes — bloquéa 30 minutos, abrí esta página, contestá las preguntas. Lo que escribís se guarda local en tu navegador.</p>
+  </div>
+
+  <div class="permission">
+    <p>"La diferencia entre el que llega y el que se desvía no es talento ni capital — es la disciplina de auditar el rumbo cada mes en lugar de cada dos años."</p>
+    <span class="sig">— Regla del rumbo</span>
+  </div>
+
+  <div id="reflexionContainer"></div>
+</section>
+
+</main>
+
+<script>
+
+const PATHS = [
+  {
+    num: "01",
+    title: "Cadena de centros médicos rurales",
+    subtitle: "Replicar el modelo CMC en 6-8 comunas del sur",
+    tags: ["Salud", "Replicable", "Capital intensivo"],
+    summary: "Visitas mensuales a 6-8 sedes en Arauco, Cañete, Curanilahue, Lebu, Tirúa, Los Álamos, Contulmo, Lota. Equipo gerencial regional. Tu rol: estrategia + visión + sistemas. Una marca paraguas conocida en el territorio.",
+    sizeAsset: "6-8 centros médicos",
+    sizeRevenue: "~$1.500-2.500M CLP/año combinado",
+    sizeMargin: "EBITDA 18-25%",
+    sizeYears: "5-7 años para llegar",
+    have: "Modelo CMC probado · stack técnico · marca OLACORE · sistemas operativos · profesional médico líder",
+    need: "Capital para apertura (~$300M por sede) · red de profesionales rotables · sistema de calidad estandarizado · equipo gerencial regional · CFO real",
+    risk: "Cada apertura demanda capital + 12 meses de validación; concentración geográfica en macrozona económicamente deprimida; rotación médica difícil en zona rural",
+    proSignal: "Te excita pensar en Cañete, Lebu, Tirúa con sucursales propias. La idea de 'estar en todos lados' del territorio te da energía.",
+    antiSignal: "Te aburre la idea de hacer 6 veces lo mismo. Querés profundizar, no replicar."
+  },
+  {
+    num: "02",
+    title: "Healthcare Hub multi-servicio en Arauco",
+    subtitle: "CMC + Farmacia + Óptica + Laboratorio + Imagenología + Salud Mental",
+    tags: ["Salud", "Concentrado", "Profundización"],
+    summary: "Tu día está en Carampangue, en un complejo de 800-1.200m² que tiene una marca paraguas: CMC + Farmacia + Óptica + Laboratorio + Imagenología + Salud Mental. Coordinás equipos especializados, ves la operación cada día.",
+    sizeAsset: "Una operación ampliada multi-servicio",
+    sizeRevenue: "~$1.200-1.800M CLP/año",
+    sizeMargin: "Mayor margen por servicios complementarios",
+    sizeYears: "3-4 años para configurar",
+    have: "La marca · el local actual · la base de pacientes · el sistema digital · la reputación regional",
+    need: "Capital para infraestructura ($500-800M) · partners profesionales para óptica/lab/imagen · equipo gerencial intermedio · expansión física del local",
+    risk: "Concentrar toda apuesta en un punto; saturación local; dependencia de un solo mercado pequeño",
+    proSignal: "Disfrutás profundizar más que expandir. Te molesta ver pacientes irse a Lota/Concepción por servicios que podrías ofrecer.",
+    antiSignal: "Te aburre estar todos los días en el mismo lugar. Necesitás variedad geográfica."
+  },
+  {
+    num: "03",
+    title: "OLACORE Holding multi-vertical (maduración del estado actual)",
+    subtitle: "Diversificación cross-rubros anclada geográficamente",
+    tags: ["Holding", "Diversificado", "Alocación de capital"],
+    summary: "Seguís con CMC, Meulen, Rincón, Estación Olavarría, suman 2-3 verticales más. Tu rol pasa de operador a alocador de capital + estratega. Hay directores operativos por vertical, vos miras métricas y reasignás.",
+    sizeAsset: "Portafolio 5-7 verticales",
+    sizeRevenue: "~$2.000-3.000M facturación combinada",
+    sizeMargin: "Margen mixto · depende vertical",
+    sizeYears: "5-7 años para profesionalizar",
+    have: "Estructura del holding ya conceptualizada · sub-marcas formadas · velocidad cross-vertical",
+    need: "Profesionalización del holding (CFO real, board, gobierno corporativo) · capital significativo por vertical · capacidad de delegar mucho más · gerentes por vertical",
+    risk: "Atención dividida → ninguna vertical de clase mundial; complejidad operativa alta; el holding se vuelve más caro que la suma de las partes",
+    proSignal: "Te energiza la diversidad de problemas. La idea de un solo vertical te suena aburrida.",
+    antiSignal: "Cada lunes te sentís disperso, no enfocado. Aprenderías más profundizando uno."
+  },
+  {
+    num: "04",
+    title: "Healthtech SaaS · plataforma para centros médicos rurales",
+    subtitle: "Productizá tu stack y vendelo a 100+ centros en LatAm",
+    tags: ["Tech", "Escalable", "Founder mode"],
+    summary: "Vendiste o mantenés CMC como showcase. Tu empresa principal es Software-as-Service para centros médicos rurales: chatbot WA médico, BI, marketing automation, integración con HIS. 50-200 centros clientes en Latinoamérica.",
+    sizeAsset: "Empresa SaaS B2B",
+    sizeRevenue: "ARR $300-800M en 5 años",
+    sizeMargin: "60-70% margen bruto",
+    sizeYears: "4-6 años para tracción",
+    have: "El producto YA está construido y funcionando en CMC · case study real con datos · relaciones con Medilink y otros HIS · entiendes el cliente porque sos uno",
+    need: "Sistema de ventas B2B · producto multitenant (hoy es single-tenant CMC) · equipo de ingeniería más grande · capital o socio tech · marketing B2B",
+    risk: "Competencia con startups con $5-50M de inversión; cambio de modelo mental (de operador a founder); riesgo de fallar como vendedor B2B",
+    proSignal: "Te excita más arreglar un bug del bot que ver un paciente nuevo. Soñas con que tu stack lo usen otros.",
+    antiSignal: "La interacción con pacientes/clientes en persona es lo que te llena. Sin eso, te aburrís."
+  },
+  {
+    num: "05",
+    title: "Consolidator healthcare regional (compras y profesionalizás)",
+    subtitle: "Private equity de pyme médica en el sur de Chile",
+    tags: ["M&A", "Capital intensivo", "Largo plazo"],
+    summary: "Adquiriste 8-15 centros médicos pequeños con problemas (sucesión, deudas, gestión deficiente) en el sur de Chile. Profesionalizaste cada uno con tu stack. Sos el 'private equity healthcare' del sur. Equipo gerencial profesional, board, financiamiento estructurado.",
+    sizeAsset: "Portafolio 8-15 centros adquiridos",
+    sizeRevenue: "~$3.000-6.000M CLP facturación",
+    sizeMargin: "Variable según adquisición",
+    sizeYears: "7-10 años para construir",
+    have: "Modelo · stack · marca · credibilidad médica · primera experiencia operativa real",
+    need: "Capital sustancial ($1.500M+ disponible o líneas de financiamiento) · equipo de M&A · abogados especializados · due diligence team · gobierno corporativo · paciencia",
+    risk: "Cada adquisición tiene pasivos ocultos; integración cultural; deuda; valuaciones que no cierran; sellers que se arrepienten",
+    proSignal: "Te divierte cerrar deals. Te atrae M&A. Sabés convencer a vendedores que duden.",
+    antiSignal: "Lo financiero te aburre, preferís lo operativo. La burocracia legal te agota."
+  },
+  {
+    num: "06",
+    title: "Real estate especializado en salud",
+    subtitle: "Desarrollador de inmuebles médicos en el sur",
+    tags: ["Real estate", "Ingreso pasivo", "Lento"],
+    summary: "Tu rol principal pasa a ser desarrollador inmobiliario de espacios para centros médicos. Sos dueño de 5-10 propiedades acondicionadas que arrendás a operadores médicos. Ingreso pasivo principalmente. CMC sigue siendo tu primer inquilino histórico.",
+    sizeAsset: "5-10 propiedades médicas",
+    sizeRevenue: "$80-180M/año renta",
+    sizeMargin: "Patrimonio $1.500-3.000M",
+    sizeYears: "8-12 años para construir",
+    have: "Estación Olavarría como primer activo · conocimiento del negocio médico desde adentro · base en Arauco/Puerto Montt",
+    need: "Capital para compras inmobiliarias (mucho) · conocimiento de bienes raíces más profundo · red de constructores/arquitectos · paciencia",
+    risk: "Real estate ilíquido; concentración geográfica; ciclos económicos; vacancia",
+    proSignal: "Te emociona caminar terrenos, tasar inmuebles, ver potencial físico.",
+    antiSignal: "No te interesa lo físico; querés algo más escalable y rápido."
+  },
+  {
+    num: "07",
+    title: "Educación · liderazgo de pensamiento en healthcare digital",
+    subtitle: "Convertir tu experiencia en cursos, libros, consultoría premium",
+    tags: ["Marca personal", "Contenido", "Híbrido"],
+    summary: "Tu marca personal es referente en digitalización de healthcare rural en LatAm. Cursos, libros, conferencias, consultoría premium. CMC sigue como tu laboratorio. Ingresos diversificados: cursos online, consultoría, libros, charlas, advisory.",
+    sizeAsset: "Marca personal + portafolio cursos",
+    sizeRevenue: "$30-100M/año (escala según deseado)",
+    sizeMargin: "70-85% margen",
+    sizeYears: "3-5 años para autoridad reconocida",
+    have: "La historia real · los sistemas reales · capacidad de comunicar · velocidad de producción",
+    need: "Producción de contenido constante · audiencia personal (Twitter/LinkedIn/IG) · red de conferencias · tolerancia a exposición pública",
+    risk: "Esfuerzo constante de creación de contenido; volatilidad de ingreso; exposición pública; el rubro se llena de impostores",
+    proSignal: "Disfrutás explicar lo que sabés más que hacerlo. Te emociona la idea de impactar a otros operadores.",
+    antiSignal: "Detestás la exposición pública. Querés operar tranquilo sin estar performando."
+  },
+  {
+    num: "08",
+    title: "Vertical especializado profundo",
+    subtitle: "Elegí UN servicio (odontología, salud mental, preventiva) y dominalo",
+    tags: ["Foco", "Profundidad", "Especialista"],
+    summary: "Elegís UN servicio (ej. odontología accesible, salud mental telemedicina, medicina preventiva con planes) y lo profundizás hasta dominarlo regionalmente o nacionalmente. Abandonás las verticales no-core.",
+    sizeAsset: "Cadena/marca especializada",
+    sizeRevenue: "$1.500M-5.000M según vertical",
+    sizeMargin: "Variable según servicio",
+    sizeYears: "5-8 años",
+    have: "Conocimiento médico · marca CMC · capacidad operativa · velocidad de ejecución",
+    need: "Foco (vas a abandonar las otras verticales) · conocimiento profundo de UN vertical · equipo especializado · marca dedicada a ese vertical",
+    risk: "Renunciar a OLACORE como holding diversificado; concentración; si el vertical pierde fuerza, caes con él",
+    proSignal: "Hay un tema clínico que te apasiona genuinamente más que otros. Querés ser referente.",
+    antiSignal: "La diversidad te energiza, focalizar te ahoga. No querés ser solo 'el de X'."
+  },
+  {
+    num: "09",
+    title: "Plan de salud propio · membership model",
+    subtitle: "Carampangue Care: cobertura mensual recurrente",
+    tags: ["Recurrente", "Innovador", "Regulado"],
+    summary: "Lanzás un plan de salud 'Carampangue Care' o similar. Pago mensual, cobertura ilimitada en tu red. 5.000-15.000 afiliados. Ingreso recurrente predecible. La operación física es una extensión del plan, no la fuente principal.",
+    sizeAsset: "Plan de salud regional",
+    sizeRevenue: "10.000 afiliados × $25.000 = $250M/mes = $3.000M/año",
+    sizeMargin: "Variable según uso real",
+    sizeYears: "4-6 años",
+    have: "Operación física para sostener cobertura · marca local · base de pacientes inicial · relaciones médicas",
+    need: "Capacidad actuarial · validación regulatoria (Superintendencia de Salud) · sistema de gestión de afiliados · capital de respaldo · abogado especializado en seguros",
+    risk: "Riesgo actuarial (gastos médicos pueden superar ingresos); regulación de seguros; mercado pequeño",
+    proSignal: "Te atrae el modelo recurrente vs el transaccional. Te emociona pensar en flujo predecible.",
+    antiSignal: "La complejidad regulatoria de salud te agota. No tenés paciencia para Superintendencia."
+  },
+  {
+    num: "10",
+    title: "Estilo de vida · libertad sobre escala",
+    subtitle: "Optimizar CMC para demandar poco de ti — priorizar familia, salud, vida",
+    tags: ["Libertad", "Decisión consciente", "Anti-escala"],
+    summary: "CMC sigue siendo tu operación pero optimizada al máximo para que demande poco de tu tiempo. Tenés equipo gerencial sólido. Vivís 3-4 meses al año fuera de Chile. Tu prioridad es familia, salud, intereses personales — no escalar más.",
+    sizeAsset: "CMC eficiente + tiempo + vida personal",
+    sizeRevenue: "CMC mantenido a $1.000-1.500M",
+    sizeMargin: "EBITDA 20-25% con menor reinversión",
+    sizeYears: "2-3 años para configurar",
+    have: "La operación · los sistemas · una vida ya construida · capacidad económica suficiente",
+    need: "Capacidad real de delegar (lo más difícil) · gerentes confiables · sistema de gobierno mínimo · trabajo personal sobre identidad (qué sos sin ambición empresarial)",
+    risk: "Decisiones lentas porque vos no estás; ego: ¿soportás no estar haciendo más? Aburrimiento; arrepentimiento de no haber escalado",
+    proSignal: "Lo que te llena en serio está fuera del trabajo. Sentís que ya construiste suficiente.",
+    antiSignal: "Te aburrís sin desafío empresarial. Tu identidad está fuertemente atada al rol de operador."
+  }
+];
+
+const PREP_DATA = [
+  { num: "01", title: "Cadena de centros médicos rurales",
+    learn:["M&A para pyme médica","Gestión multi-sede (financiero + RRHH + clínico)","Negociación con municipios y prestadores"],
+    team:["CFO real","Director clínico regional","Gerente de operaciones rotante"],
+    capital:["$300-400M por sede inicial","Línea de crédito estructurada $800M+","Reserva de capital de trabajo por 18 meses post-apertura de cada sede"],
+    milestones:["Mes 0-6: estandarizar 100% el manual operativo de CMC","Mes 6-12: abrir 2da sede de prueba (ej. Cañete o Curanilahue)","Mes 12-24: medir, ajustar, decidir si va el modelo"] },
+  { num: "02", title: "Healthcare Hub multi-servicio en Arauco",
+    learn:["Modelo de negocio farmacia · óptica · lab","Regulación específica de cada vertical (ISP, Seremi)","Diseño de espacio clínico multi-servicio"],
+    team:["Químico farmacéutico responsable","Tecnólogo médico para lab","Optómetra","Gerente de operaciones del hub"],
+    capital:["$500-800M en infraestructura","$200M en mobiliario y equipamiento clínico","Capital de trabajo $150M"],
+    milestones:["Mes 0-3: validar demanda con encuesta a 500 pacientes","Mes 3-6: arquitectura + diseño + permisos","Mes 6-12: construcción + apertura escalonada de servicios"] },
+  { num: "03", title: "OLACORE Holding multi-vertical maduro",
+    learn:["Gobierno corporativo · directorio efectivo","Asignación de capital cross-vertical","Sistemas de reportes consolidados"],
+    team:["CEO/COO por vertical","CFO de holding","Asesor de directorio externo","Asistente ejecutiva senior"],
+    capital:["Capitalización de cada vertical con cuentas separadas","Líneas de crédito independientes por marca","Reserva de capital del holding para apuestas nuevas"],
+    milestones:["Mes 0-6: organizar legal y contablemente las 5 verticales","Mes 6-12: reclutar CEOs por vertical","Mes 12-18: instalar reuniones de directorio mensuales"] },
+  { num: "04", title: "Healthtech SaaS · plataforma",
+    learn:["Ventas B2B SaaS","Producto multitenant (arquitectura)","Onboarding y customer success","Pricing y modelo de cobro"],
+    team:["Co-founder técnico o CTO","2 ingenieros senior","1 customer success","1 ventas B2B"],
+    capital:["Capital seed propio o ronda externa ($300-500M)","Salarios técnicos competitivos"],
+    milestones:["Mes 0-3: refactor a multitenant","Mes 3-6: 1er piloto fuera de CMC","Mes 6-12: 5 clientes pagando · validar pricing","Mes 12-24: 20+ clientes · evaluar levantar Series A"] },
+  { num: "05", title: "Consolidator healthcare regional",
+    learn:["M&A formal (LOI, due diligence, SPA)","Valuación de pyme médica","Estructuración de deuda","Integración post-adquisición"],
+    team:["Abogado M&A","Contador forense","Director de M&A","CFO con experiencia en holdings"],
+    capital:["$1.500M+ disponibles para primeras adquisiciones","Línea de crédito puente $1.000M","Reserva para integración"],
+    milestones:["Mes 0-6: pipeline de 20 candidatos identificados","Mes 6-12: 1er deal cerrado","Mes 12-24: 3-4 adquisiciones, refinar tesis"] },
+  { num: "06", title: "Real estate especializado",
+    learn:["Tasación inmobiliaria","Financiamiento hipotecario comercial","Gestión de inquilinos","Arquitectura médica (especificidades)"],
+    team:["Corredor de propiedades de confianza","Arquitecto especialista","Constructor con experiencia clínica","Abogado inmobiliario"],
+    capital:["Propio para 30-40% de cada compra","Hipotecas comerciales para el resto","Reserva para acondicionamiento"],
+    milestones:["Año 1: 1 propiedad nueva además de Estación Olavarría","Año 2: 2-3 propiedades","Año 5: 5-7 propiedades"] },
+  { num: "07", title: "Educación · liderazgo de pensamiento",
+    learn:["Producción de contenido (video, escrito)","Construcción de audiencia (algoritmos, comunidades)","Cursos online (plataformas, pricing)","Speaker training"],
+    team:["Editor de contenido","Manager de comunidad","Diseñador para producción","Asistente personal para agenda de charlas"],
+    capital:["Capital relativamente bajo: $20-50M iniciales","Cámaras, set, software"],
+    milestones:["Mes 0-3: 50 piezas de contenido publicadas (LinkedIn/X/blog)","Mes 3-6: primer curso online lanzado","Mes 6-12: 5.000 seguidores en plataforma principal","Año 2: ingreso de contenido > $30M/año"] },
+  { num: "08", title: "Vertical especializado profundo",
+    learn:["Profundidad clínica del vertical elegido","Modelo de negocio específico","Marketing especializado"],
+    team:["Director clínico del vertical","Especialistas del vertical","Marketing focalizado"],
+    capital:["Variable según vertical: odontología $400-600M, salud mental $200M, preventiva $300M"],
+    milestones:["Mes 0-6: cierre de verticales no-core","Mes 6-12: rebrand y foco operativo","Año 2: presencia regional reconocida en el vertical","Año 5: escala nacional o multi-regional"] },
+  { num: "09", title: "Plan de salud propio · membership",
+    learn:["Modelo actuarial de salud","Regulación de seguros y planes (Superintendencia)","Gestión de riesgo poblacional","Software de gestión de afiliados"],
+    team:["Actuario","Abogado regulatorio","Director comercial de afiliaciones","Gerente de operaciones del plan"],
+    capital:["Capital de respaldo regulatorio (mínimo $500M)","Capital operativo del plan","Marketing inicial fuerte"],
+    milestones:["Mes 0-6: análisis actuarial + diseño del plan","Mes 6-12: registro regulatorio + sistema","Mes 12: lanzamiento con 500 afiliados beta","Año 2: 3.000 afiliados estables"] },
+  { num: "10", title: "Estilo de vida · libertad sobre escala",
+    learn:["Delegar de verdad (la habilidad más difícil)","Gobierno corporativo mínimo","Trabajo sobre identidad personal sin rol empresarial"],
+    team:["Director ejecutivo de CMC capaz de operar sin ti","Asistente personal eficiente","Mentor o coach personal"],
+    capital:["No requiere capital nuevo · re-asignación interna"],
+    milestones:["Mes 0-6: identificar y contratar director CMC","Mes 6-12: transición gradual de decisiones","Mes 12-24: prueba real (mes fuera del país)","Año 2+: vida configurada según deseo"] }
+];
+
+const APUESTAS = [
+  { num: "01", title: "Encuesta de demanda para Healthcare Hub (Camino 02)", time: "30 días · costo bajo · sin riesgo",
+    desc: "Antes de invertir $500M+ en construir un hub, validar con datos reales si tus pacientes actuales quieren los servicios que pensás agregar.",
+    steps:[
+      "Enviar encuesta WhatsApp a últimos 1.000 pacientes CMC",
+      "Preguntar: ¿qué servicios buscaste y no encontraste? ¿dónde fuiste a buscarlos? ¿cuánto pagaste?",
+      "Analizar respuestas: si >25% mencionan 2+ de [farmacia, óptica, lab, imagen, salud mental] → tesis hub validada",
+      "Si <15% → tesis hub débil, reconsiderar"
+    ] },
+  { num: "02", title: "Demo vendible de la plataforma tech (Camino 04)", time: "60 días · costo bajo",
+    desc: "Productizá lo que ya tenés. Crear materiales de venta como si fueras a vender a otros centros médicos rurales — sin venderlos todavía. Ver si el packaging atrae interés.",
+    steps:[
+      "Landing simple en mesa1551.* o nuevo dominio (ej. saludrural.tech)",
+      "Video de 3 minutos mostrando dashboard + chatbot",
+      "Deck de 10 slides con caso CMC en números",
+      "Enviar a 20 contactos de centros médicos rurales pidiendo 'opinión, no venta'",
+      "Si 3+ piden ver más, hay mercado"
+    ] },
+  { num: "03", title: "1 adquisición pequeña de prueba (Camino 05)", time: "6 meses · capital medio",
+    desc: "Antes de armar tesis de consolidator, comprar un solo centro pequeño (consulta dental, óptica chica) por menos de $50M para aprender el proceso completo.",
+    steps:[
+      "Identificar 5 negocios médicos pequeños en venta en la región",
+      "Hacer DD básico, comprar el más barato y simple",
+      "Integrar a sistemas CMC, profesionalizar 6 meses",
+      "Evaluar honestamente: ¿esto escala 10x? ¿me gusta este trabajo?"
+    ] },
+  { num: "04", title: "Cuenta de contenido pública 90 días (Camino 07)", time: "90 días · costo bajo",
+    desc: "Probar si te aguanta el ritmo de creador de contenido. No necesitas comprometerte a la marca personal — solo probar el músculo.",
+    steps:[
+      "Crear cuenta LinkedIn profesional + Twitter",
+      "1 post largo semanal sobre lo que aprendés operando CMC",
+      "90 días sin métricas, solo por consistencia",
+      "Al día 91 evaluá: ¿me costó? ¿me gustó? ¿tuvo respuesta orgánica?"
+    ] },
+  { num: "05", title: "Mes fuera de Chile sin parar la operación (Camino 10)", time: "1 mes · sin costo extra",
+    desc: "La prueba más reveladora de si estás listo para el camino estilo de vida. Si CMC no sobrevive 1 mes sin ti, no estás listo. Si sobrevive, el camino es viable.",
+    steps:[
+      "Planificar 1 mes fuera (puede ser cualquier destino)",
+      "Dejar instrucciones claras y poderes a director designado",
+      "Mantener conexión solo para emergencias críticas",
+      "Volver y evaluar: ¿qué se rompió? ¿qué siguió funcionando? ¿qué decisiones se postergaron mal?"
+    ] },
+  { num: "06", title: "Piloto de plan de salud chico (Camino 09)", time: "6 meses · capital bajo",
+    desc: "Antes de pelear con regulación de Superintendencia, probar un mini-plan no regulado (solo CMC) con 100-300 afiliados para entender el modelo de uso real.",
+    steps:[
+      "Diseñar 'Plan CMC Familiar' básico (3 consultas/mes + descuentos)",
+      "Vender a 100 pacientes existentes leales por $15.000/mes",
+      "Operar 6 meses, medir frecuencia de uso, satisfacción, sustentabilidad",
+      "Decidir: si el modelo cierra, escalar a plan formal regulado"
+    ] }
+];
+
+const REFLEXIONES = [
+  { mes: "Mes 1", q: "Después de mirar las 10 jugadas, ¿cuál es la primera que descartarías sin pensar mucho? ¿Por qué?" },
+  { mes: "Mes 2", q: "¿Cuál camino estoy considerando porque me da prestigio vs cuál estoy considerando porque me da energía real?" },
+  { mes: "Mes 3", q: "Si tuviera que comprometerme HOY con una sola jugada por 5 años, ¿cuál y por qué?" },
+  { mes: "Mes 4", q: "¿Qué señales del entorno (mercado, equipo, salud, pareja) cambiaron mi lectura este mes?" },
+  { mes: "Mes 5", q: "De las 3 jugadas que más me llaman, ¿cuál me cuesta MÁS empezar? ¿Por qué? ¿Es resistencia útil o miedo simple?" },
+  { mes: "Mes 6", q: "Mirando 6 meses para atrás, ¿qué decisión chica tomé que ya me está empujando hacia un camino sin que me diera cuenta?" }
+];
+
+// State
+const STORAGE_KEY = 'caminos_rodrigo_v1';
+let state;
+try { state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') || {}; } catch(e) { state = {}; }
+if (!state.matrix) state.matrix = {};
+if (!state.reflex) state.reflex = {};
+
+let _saveTimer;
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  showSaveToast();
+}
+function showSaveToast() {
+  const toast = document.getElementById('saveToast');
+  if (!toast) return;
+  toast.classList.add('visible');
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(() => toast.classList.remove('visible'), 1400);
+}
+function exportState() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'caminos-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+function importState() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'application/json';
+  input.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (confirm('Esto va a sobreescribir todo lo que tenés guardado. ¿Continuar?')) {
+          state = data;
+          save();
+          location.reload();
+        }
+      } catch (err) {
+        alert('Archivo inválido');
+      }
+    };
+    reader.readAsText(file);
+  });
+  input.click();
+}
+
+// Tabs
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelector('.panel[data-panel="' + btn.dataset.tab + '"]').classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+});
+
+function el(tag, props, children) {
+  const e = document.createElement(tag);
+  if (props) {
+    for (const k in props) {
+      if (k === 'class') e.className = props[k];
+      else if (k === 'text') e.textContent = props[k];
+      else if (k === 'data') for (const d in props.data) e.dataset[d] = props.data[d];
+      else e.setAttribute(k, props[k]);
+    }
+  }
+  if (children) children.forEach(c => { if (c) e.appendChild(c); });
+  return e;
+}
+
+// Render paths
+function renderPaths() {
+  const c = document.getElementById('pathsContainer');
+  c.textContent = '';
+  PATHS.forEach(p => {
+    const card = el('div', { class: 'path-card' });
+    const head = el('div', { class: 'path-head' });
+    const headLeft = el('div');
+    headLeft.appendChild(el('div', { class: 'path-num', text: p.num }));
+    headLeft.appendChild(el('div', { class: 'path-title', text: p.title }));
+    headLeft.appendChild(el('div', { class: 'path-subtitle', text: p.subtitle }));
+    const meta = el('div', { class: 'path-meta' });
+    p.tags.forEach(t => meta.appendChild(el('span', { class: 'tag tag-copper', text: t })));
+    headLeft.appendChild(meta);
+    head.appendChild(headLeft);
+    card.appendChild(head);
+
+    const summary = el('div', { class: 'path-section' });
+    summary.appendChild(el('p', { text: p.summary }));
+    card.appendChild(summary);
+
+    const numbers = el('div', { class: 'path-numbers' });
+    [['Tamaño', p.sizeAsset], ['Facturación', p.sizeRevenue], ['Margen', p.sizeMargin], ['Horizonte', p.sizeYears]].forEach(([l, v]) => {
+      const item = el('div', { class: 'path-number-item' });
+      item.appendChild(el('div', { class: 'label', text: l }));
+      item.appendChild(el('div', { class: 'value', text: v }));
+      numbers.appendChild(item);
+    });
+    card.appendChild(numbers);
+
+    const haveSec = el('div', { class: 'path-section' });
+    haveSec.appendChild(el('h4', { text: 'Lo que ya tenés a favor' }));
+    haveSec.appendChild(el('p', { text: p.have }));
+    card.appendChild(haveSec);
+
+    const needSec = el('div', { class: 'path-section' });
+    needSec.appendChild(el('h4', { text: 'Lo que falta construir' }));
+    needSec.appendChild(el('p', { text: p.need }));
+    card.appendChild(needSec);
+
+    const riskSec = el('div', { class: 'path-section' });
+    riskSec.appendChild(el('h4', { text: 'Riesgo principal' }));
+    riskSec.appendChild(el('p', { text: p.risk }));
+    card.appendChild(riskSec);
+
+    const signals = el('div', { class: 'signal-grid' });
+    const pro = el('div', { class: 'signal-card signal-pro' });
+    pro.appendChild(el('div', { class: 'label', text: 'Señal de que ES tu camino' }));
+    pro.appendChild(el('div', { text: p.proSignal }));
+    signals.appendChild(pro);
+    const anti = el('div', { class: 'signal-card signal-anti' });
+    anti.appendChild(el('div', { class: 'label', text: 'Señal de que NO es tu camino' }));
+    anti.appendChild(el('div', { text: p.antiSignal }));
+    signals.appendChild(anti);
+    card.appendChild(signals);
+
+    c.appendChild(card);
+  });
+}
+
+// Render prep
+function renderPrep() {
+  const c = document.getElementById('prepContainer');
+  c.textContent = '';
+  PREP_DATA.forEach(p => {
+    const card = el('div', { class: 'prep-card' });
+    const head = el('div', { class: 'prep-head' });
+    const left = el('div');
+    left.appendChild(el('div', { class: 'prep-num', text: 'Camino ' + p.num }));
+    left.appendChild(el('div', { class: 'prep-title', text: p.title }));
+    head.appendChild(left);
+    card.appendChild(head);
+
+    [['Lo que tenés que aprender', p.learn], ['Equipo a sumar', p.team], ['Capital a movilizar', p.capital], ['Hitos a 12-18 meses', p.milestones]].forEach(([title, items]) => {
+      const sec = el('div', { class: 'prep-section' });
+      sec.appendChild(el('h5', { text: title }));
+      const ul = el('ul');
+      items.forEach(i => ul.appendChild(el('li', { text: i })));
+      sec.appendChild(ul);
+      card.appendChild(sec);
+    });
+    c.appendChild(card);
+  });
+}
+
+// Render matrix
+function renderMatrix() {
+  const tbody = document.getElementById('matrixBody');
+  tbody.textContent = '';
+  const dims = ['energia', 'fit', 'capital', 'velocidad', 'reversible', 'valores'];
+  PATHS.forEach(p => {
+    const row = el('tr');
+    row.appendChild(el('td', null, [
+      el('div', { class: 'row-title', text: p.num + ' · ' + p.title })
+    ]));
+    let total = 0;
+    dims.forEach(d => {
+      const cell = el('td');
+      const sel = el('select', { class: 'score-select' });
+      ['', '1', '2', '3', '4', '5'].forEach(v => sel.appendChild(el('option', { value: v, text: v || '—' })));
+      const key = p.num + '_' + d;
+      sel.value = state.matrix[key] || '';
+      total += parseInt(sel.value) || 0;
+      sel.addEventListener('change', () => {
+        state.matrix[key] = sel.value;
+        save();
+        renderMatrix();
+      });
+      cell.appendChild(sel);
+      row.appendChild(cell);
+    });
+    const tCell = el('td');
+    tCell.appendChild(el('strong', { text: total > 0 ? String(total) : '—', style: 'color: var(--copper); font-family: var(--font-mono);' }));
+    row.appendChild(tCell);
+    tbody.appendChild(row);
+  });
+}
+
+// Render apuestas
+function renderApuestas() {
+  const c = document.getElementById('apuestasContainer');
+  c.textContent = '';
+  APUESTAS.forEach(a => {
+    const card = el('div', { class: 'exp-card' });
+    const head = el('div', { class: 'exp-head' });
+    head.appendChild(el('div', { class: 'exp-num', text: a.num }));
+    const right = el('div');
+    right.appendChild(el('div', { class: 'exp-title', text: a.title }));
+    right.appendChild(el('div', { class: 'exp-time', text: a.time }));
+    head.appendChild(right);
+    card.appendChild(head);
+
+    const body = el('div', { class: 'exp-body' });
+    body.appendChild(el('p', { text: a.desc }));
+    const steps = el('ul', { class: 'exp-steps' });
+    a.steps.forEach(s => steps.appendChild(el('li', { text: s })));
+    body.appendChild(steps);
+    card.appendChild(body);
+    c.appendChild(card);
+  });
+}
+
+// Render reflexiones
+function renderReflexiones() {
+  const c = document.getElementById('reflexionContainer');
+  c.textContent = '';
+  REFLEXIONES.forEach((r, i) => {
+    const card = el('div', { class: 'card' });
+    card.appendChild(el('div', { class: 'card-title', text: r.mes }));
+    card.appendChild(el('h3', { text: r.q }));
+    const ta = el('textarea', { class: 'field-input field-textarea', placeholder: 'Sin filtro, sin editar. Lo primero que venga…' });
+    ta.value = state.reflex['r' + i] || '';
+    ta.addEventListener('input', () => { state.reflex['r' + i] = ta.value; save(); });
+    card.appendChild(ta);
+    c.appendChild(card);
+  });
+}
+
+renderPaths();
+renderPrep();
+renderMatrix();
+renderApuestas();
+renderReflexiones();
+</script>
+
+<div style="background: var(--paper); border-top: 1px solid var(--line-soft); padding: 28px 0 36px; margin-top: 40px;">
+  <div class="container" style="text-align: center;">
+    <div style="font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.18em; color: var(--ink-mute); text-transform: uppercase; margin-bottom: 16px;">Otros tableros</div>
+    <div style="display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;">
+      <a href="/personal" style="font-family: var(--font-display); font-size: 0.96rem; color: var(--fjord); text-decoration: none; padding: 8px 16px; border: 1px solid var(--line-soft); border-radius: 999px;">🏛 Hub</a>
+      <a href="/brujula" style="font-family: var(--font-display); font-size: 0.96rem; color: var(--fjord); text-decoration: none; padding: 8px 16px; border: 1px solid var(--line-soft); border-radius: 999px;">🪞 Brújula</a>
+    </div>
+  </div>
+</div>
+
+<div class="save-toast" id="saveToast">✓ Guardado</div>
+<div class="actions-fab">
+  <button type="button" id="btnExport">↓ Exportar</button>
+  <button type="button" id="btnImport">↑ Importar</button>
+</div>
+<script>
+document.getElementById('btnExport').addEventListener('click', exportState);
+document.getElementById('btnImport').addEventListener('click', importState);
+</script>
+
+</body>
+</html>
