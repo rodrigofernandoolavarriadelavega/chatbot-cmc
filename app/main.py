@@ -617,6 +617,8 @@ _SITIO_V7_HTML = (_TEMPLATE_DIR / "sitio-v7.html").read_text(encoding="utf-8") i
 _SITIO_HTML = (_TEMPLATE_DIR / "sitio.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio.html").exists() else ""
 _RIOMONTE_HTML = (_TEMPLATE_DIR / "riomonte.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "riomonte.html").exists() else ""
 _RIOMONTE_PROFORMA_HTML = (_TEMPLATE_DIR / "riomonte_proforma.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "riomonte_proforma.html").exists() else ""
+_ARQUETIX_MEMO_HTML = (_TEMPLATE_DIR / "arquetix_memo.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "arquetix_memo.html").exists() else ""
+_ARQUETIX_PITCH_HTML = (_TEMPLATE_DIR / "arquetix_pitch.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "arquetix_pitch.html").exists() else ""
 _BLOG_DIR = _TEMPLATE_DIR / "blog"
 _HEATMAP_COMUNAS_HTML = (_TEMPLATE_DIR / "heatmap_comunas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "heatmap_comunas.html").exists() else ""
 _HEATMAP_DIRECCIONES_HTML = (_TEMPLATE_DIR / "heatmap_direcciones.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "heatmap_direcciones.html").exists() else ""
@@ -719,6 +721,18 @@ def riomonte_landing():
 def riomonte_proforma():
     """Proforma financiera Ríomonte 2.0 — análisis interno (Rodrigo · Sebastián · Juan)."""
     return _RIOMONTE_PROFORMA_HTML
+
+
+@app.get("/arquetix-memo", response_class=HTMLResponse)
+def arquetix_memo():
+    """Deal memo Arquetix Health — co-founder + PO vertical clínicas (Rodrigo)."""
+    return _ARQUETIX_MEMO_HTML
+
+
+@app.get("/arquetix-pitch", response_class=HTMLResponse)
+def arquetix_pitch():
+    """Pitch deck 20 slides Arquetix Health — para reunión con equipo Arquetix."""
+    return _ARQUETIX_PITCH_HTML
 
 
 @app.get("/sitio/v2", response_class=HTMLResponse)

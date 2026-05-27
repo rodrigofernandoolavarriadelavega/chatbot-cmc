@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Arquetix Health · Presentación · Rodrigo Olavarría</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:wght@300..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --fiordo: #0E2530;
+    --fiordo-soft: #1f3a4d;
+    --cobre: #B98149;
+    --cobre-soft: #d4a574;
+    --neblina: #E8E0D0;
+    --neblina-deep: #d4cdb9;
+    --lacre: #9A3E2F;
+    --tinta: #1a1a1a;
+    --gris: #6b6b6b;
+    --linea: #d6cfc0;
+    --verde: #4a6b3a;
+    --bg: #f5f2ea;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--fiordo);
+    color: var(--tinta); line-height: 1.5;
+  }
+
+  .deck {
+    position: relative;
+    width: 100vw; height: 100vh;
+    overflow: hidden;
+  }
+
+  .slide {
+    position: absolute; inset: 0;
+    padding: 60px 80px 80px;
+    background: var(--bg);
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.4s ease;
+    display: flex; flex-direction: column;
+    overflow-y: auto;
+  }
+  .slide.active { opacity: 1; pointer-events: auto; z-index: 10; }
+  @media (max-width: 800px) { .slide { padding: 40px 28px 80px; } }
+
+  .slide.dark { background: var(--fiordo); color: var(--neblina); }
+  .slide.dark h1, .slide.dark h2, .slide.dark h3 { color: var(--neblina); }
+  .slide.dark h1 em, .slide.dark h2 em { color: var(--cobre); }
+  .slide.dark .label { color: var(--cobre-soft); }
+
+  /* Header de cada slide */
+  .slide-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding-bottom: 18px; border-bottom: 1px solid var(--linea);
+    margin-bottom: 32px;
+  }
+  .slide.dark .slide-head { border-bottom-color: rgba(232, 224, 208, 0.2); }
+  .slide-logo {
+    font-family: 'Fraunces', serif; font-weight: 900;
+    font-size: 14px; color: var(--fiordo); letter-spacing: 0.05em;
+  }
+  .slide-logo span { color: var(--cobre); font-style: italic; font-weight: 300; }
+  .slide.dark .slide-logo { color: var(--neblina); }
+  .slide-num {
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+    color: var(--cobre); letter-spacing: 0.15em;
+  }
+
+  .label {
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+    letter-spacing: 0.18em; color: var(--cobre);
+    text-transform: uppercase; margin-bottom: 14px;
+    padding-bottom: 6px; border-bottom: 1px solid var(--cobre);
+    display: inline-block;
+  }
+
+  h1 {
+    font-family: 'Fraunces', serif; font-weight: 400;
+    font-size: clamp(38px, 5vw, 64px); color: var(--fiordo);
+    line-height: 1.05; letter-spacing: -0.02em; margin-bottom: 20px;
+  }
+  h1 em { font-style: italic; color: var(--cobre); }
+
+  h2 {
+    font-family: 'Fraunces', serif; font-weight: 500;
+    font-size: clamp(28px, 3.6vw, 42px); color: var(--fiordo);
+    line-height: 1.15; letter-spacing: -0.01em; margin-bottom: 16px;
+  }
+  h2 em { font-style: italic; color: var(--cobre); }
+
+  h3 {
+    font-family: 'Fraunces', serif; font-weight: 500;
+    font-size: 20px; color: var(--fiordo); margin-bottom: 8px;
+  }
+
+  .lead {
+    font-size: 18px; color: var(--gris); margin-bottom: 28px;
+    max-width: 760px;
+  }
+  .slide.dark .lead { color: var(--cobre-soft); }
+
+  .body-text { font-size: 15px; line-height: 1.65; max-width: 720px; }
+  .slide.dark .body-text { color: var(--neblina); }
+  .body-text strong { color: var(--lacre); }
+  .slide.dark .body-text strong { color: var(--cobre); }
+
+  /* Grid de tarjetas */
+  .cards {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px; margin-top: 16px;
+  }
+  .card {
+    background: white; border: 1px solid var(--linea);
+    padding: 22px; border-radius: 4px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .slide.dark .card { background: rgba(232, 224, 208, 0.08); border-color: rgba(232, 224, 208, 0.2); color: var(--neblina); }
+  .card .num {
+    font-family: 'Fraunces', serif; font-style: italic;
+    font-size: 32px; color: var(--cobre); line-height: 1; font-weight: 400;
+  }
+  .card h4 {
+    font-family: 'Fraunces', serif; font-size: 17px;
+    font-weight: 500; color: var(--fiordo); margin: 2px 0;
+  }
+  .slide.dark .card h4 { color: var(--neblina); }
+  .card p { font-size: 13px; color: var(--gris); }
+  .slide.dark .card p { color: var(--cobre-soft); }
+
+  /* Stats grandes */
+  .stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 24px; margin-top: 20px;
+  }
+  .stat .v {
+    font-family: 'Fraunces', serif; font-weight: 500;
+    font-size: 48px; color: var(--cobre); line-height: 1;
+  }
+  .slide.dark .stat .v { color: var(--cobre); }
+  .stat .l {
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+    letter-spacing: 0.12em; color: var(--gris);
+    text-transform: uppercase; margin-top: 8px;
+  }
+  .slide.dark .stat .l { color: var(--cobre-soft); }
+
+  /* Tabla */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    text-align: left; padding: 10px 12px;
+    background: var(--neblina); color: var(--fiordo);
+    font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+    letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600;
+    border-bottom: 2px solid var(--cobre);
+  }
+  th.num, td.num { text-align: right; font-family: 'IBM Plex Mono', monospace; }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--linea); vertical-align: top; }
+  tr.tot td {
+    border-top: 2px solid var(--fiordo); border-bottom: none;
+    background: var(--bg); font-weight: 600;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  tr.tot td:first-child { font-family: 'Fraunces', serif; }
+
+  /* Bloque destacado */
+  .quote-block {
+    background: var(--neblina); padding: 24px 28px;
+    border-left: 4px solid var(--cobre); border-radius: 0 4px 4px 0;
+    margin-top: 16px;
+  }
+  .slide.dark .quote-block { background: rgba(232, 224, 208, 0.05); }
+  .quote-block p {
+    font-family: 'Fraunces', serif; font-size: 22px;
+    font-style: italic; color: var(--fiordo); line-height: 1.35;
+  }
+  .slide.dark .quote-block p { color: var(--neblina); }
+  .quote-block .src {
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+    color: var(--cobre); letter-spacing: 0.12em; text-transform: uppercase;
+    margin-top: 10px;
+  }
+
+  /* Cover slide */
+  .cover {
+    display: flex; flex-direction: column; justify-content: center;
+    align-items: flex-start; padding: 80px;
+  }
+  @media (max-width: 800px) { .cover { padding: 40px 28px; } }
+  .cover-eyebrow {
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+    letter-spacing: 0.2em; color: var(--cobre); text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+  .cover h1 {
+    font-size: clamp(48px, 7vw, 84px);
+    color: var(--neblina); margin-bottom: 30px; line-height: 1;
+  }
+  .cover h1 em { color: var(--cobre); }
+  .cover-meta {
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+    color: var(--cobre-soft); letter-spacing: 0.15em;
+    margin-top: 40px;
+  }
+  .cover-meta strong { color: var(--neblina); font-weight: 500; }
+
+  /* Navegación */
+  .nav {
+    position: fixed; bottom: 24px; left: 50%;
+    transform: translateX(-50%); z-index: 100;
+    display: flex; gap: 12px; align-items: center;
+    background: rgba(14, 37, 48, 0.85);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    padding: 10px 16px; border-radius: 100px;
+    border: 1px solid rgba(232, 224, 208, 0.2);
+  }
+  .nav button {
+    background: transparent; color: var(--neblina);
+    border: 1px solid rgba(232, 224, 208, 0.3);
+    width: 36px; height: 36px; border-radius: 50%;
+    cursor: pointer; font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .nav button:hover { background: rgba(184, 129, 73, 0.2); border-color: var(--cobre); }
+  .nav button:disabled { opacity: 0.3; cursor: not-allowed; }
+  .nav .indicator {
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+    color: var(--neblina); letter-spacing: 0.1em;
+    min-width: 60px; text-align: center;
+  }
+  .nav .indicator span { color: var(--cobre); }
+
+  /* Listas */
+  ul.clean { list-style: none; padding: 0; }
+  ul.clean li {
+    padding: 10px 0 10px 24px; position: relative;
+    border-bottom: 1px dashed var(--linea); font-size: 14.5px;
+  }
+  .slide.dark ul.clean li { border-bottom-color: rgba(232, 224, 208, 0.15); }
+  ul.clean li::before {
+    content: "→"; position: absolute; left: 0; top: 10px;
+    color: var(--cobre); font-family: 'IBM Plex Mono', monospace;
+  }
+  ul.clean li:last-child { border-bottom: none; }
+  ul.clean strong { color: var(--lacre); }
+  .slide.dark ul.clean strong { color: var(--cobre); }
+
+  /* Footer slide */
+  .slide-footer {
+    margin-top: auto; padding-top: 20px;
+    border-top: 1px solid var(--linea);
+    font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+    color: var(--gris); letter-spacing: 0.08em;
+    display: flex; justify-content: space-between;
+  }
+  .slide.dark .slide-footer { border-top-color: rgba(232, 224, 208, 0.15); color: var(--cobre-soft); }
+
+  /* Two col layout */
+  .two-col {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 32px;
+    margin-top: 16px;
+  }
+  @media (max-width: 800px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* Vertical content showcase cards */
+  .vertical-card {
+    background: white; border: 1px solid var(--linea); border-radius: 6px;
+    overflow: hidden;
+  }
+  .vertical-card-head {
+    padding: 20px 24px; background: var(--fiordo); color: var(--neblina);
+    border-bottom: 2px solid var(--cobre);
+  }
+  .vertical-card-head .id {
+    font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+    color: var(--cobre); letter-spacing: 0.18em; margin-bottom: 4px;
+  }
+  .vertical-card-head h3 {
+    color: var(--neblina); margin: 0; font-size: 22px;
+  }
+  .vertical-card-body {
+    padding: 20px 24px;
+  }
+  .vertical-card-body p {
+    font-size: 13.5px; color: var(--gris); margin-bottom: 12px;
+  }
+  .vertical-card-tech {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;
+  }
+  .vertical-card-tech .pill {
+    font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+    background: var(--neblina); color: var(--fiordo);
+    padding: 4px 10px; border-radius: 100px; letter-spacing: 0.05em;
+  }
+
+  /* Print friendly */
+  @media print {
+    .slide { position: relative; opacity: 1 !important; pointer-events: auto;
+      page-break-after: always; padding: 30px; }
+    .nav { display: none; }
+    body { overflow: visible; background: white; }
+    .deck { height: auto; overflow: visible; }
+  }
+</style>
+</head>
+<body>
+
+<div class="deck" id="deck">
+
+<!-- =================== SLIDE 1: COVER =================== -->
+<section class="slide dark cover active">
+  <div class="cover-eyebrow">OLACORE Group · Deal Pitch · 2026-05-27</div>
+  <h1>Arquetix <em>Health</em><br>Propuesta de co-founder</h1>
+  <div class="body-text" style="font-size: 20px; color: var(--cobre-soft); max-width: 720px;">
+    Rodrigo Olavarría · Médico, founder de Centro Médico Carampangue.<br>
+    PO propuesto para la vertical clínicas de Arquetix.
+  </div>
+  <div class="cover-meta">
+    <strong>Audiencia:</strong> Sebastián · Cuñado · Abogado · Ing UK<br>
+    <strong>Estado:</strong> Pre-DD · No vinculante · Versión 1
+  </div>
+</section>
+
+<!-- =================== SLIDE 2: CONTEXTO =================== -->
+<section class="slide">
+  <div class="slide-head">
+    <div class="slide-logo">OLA<span>core</span></div>
+    <div class="slide-num">02 / 20</div>
+  </div>
+  <div class="label">Contexto</div>
+  <h2>¿Por qué estamos acá?</h2>
+  <div class="body-text">
+    <p style="margin-bottom: 16px;">Sebastián, mi amigo de 30 años, entró hace poco a <strong>Arquetix</strong> como Product Owner de la vertical Salmoneras con 50% del producto. Después de conversar sobre lo que vengo construyendo en <strong>Centro Médico Carampangue</strong> durante los últimos 2 años, propuso que ingresara como PO de una nueva vertical de clínicas con la misma estructura.</p>
+    <p>Vengo a esta reunión con un mensaje claro: <strong>traigo un producto-en-uso, no un proyecto</strong>. Lo que ofrezco no es esfuerzo futuro — es código, BI, clientes pagos, validación real. Este deck explica qué traigo, qué pido a cambio y cómo cierro.</p>
+  </div>
+  <div class="slide-footer"><span>02</span><span>OLACORE · Arquetix Health Pitch</span></div>
+</section>
+
+<!-- =================== SLIDE 3: QUIÉN SOY =================== -->
+<section class="slide">
+  <div class="slide-head"><div class="slide-logo">OLA<span>core</span></div><div class="slide-num">03 / 20</div></div>
+  <div class="label">Quién habla</div>
+  <h2>Rodrigo <em>Olavarría</em></h2>
+  <div class="body-text">
+    <ul class="clean">
+      <li>Médico titulado · primer año Ing UC cursado en 2025 (autosuficiencia técnica real)</li>
+      <li>Founder y operador de <strong>Centro Médico Carampangue</strong> · 17 especialidades · 1.500 atenciones/mes proyectadas</li>
+      <li>Founder de <strong>OLACORE Group</strong> · holding familiar (Olavarría) con 4 verticales operativas</li>
+      <li>2 años desarrollando un stack tecnológico clínico end-to-end con Claude Code (sin contratar devs)</li>
+      <li>Domain expert real: opero, construyo y vivo la operación clínica todos los días</li>
+    </ul>
+  </div>
+  <div class="slide-footer"><span>03</span><span>Quién habla</span></div>
+</section>
+
+<!-- =================== SLIDE 4: OLACORE GROUP =================== -->
+<section class="slide">
+  <div class="slide-head"><div class="slide-logo">OLA<span>core</span></div><div class="slide-num">04 / 20</div></div>
+  <div class="label">Mi holding</div>
+  <h2>OLACORE Group · <em>contexto</em></h2>
+  <p class="lead">Lo que aporto a Arquetix Health viene de un ecosistema operativo real. No es un side project — es un grupo familiar con 4 negocios y un brand system propio.</p>
+  <div class="cards">
+    <div class="card"><div class="num">01</div><h4>CMC Carampangue</h4><p>Centro médico privado · 17 especialidades · 23 profesionales · ~1.500 atenciones/mes · operación viva.</p></div>
+    <div class="card"><div class="num">02</div><h4>Supermercado Meulen</h4><p>Operación retail familiar · landing comercial liviana · plataforma POS en desarrollo.</p></div>
+    <div class="card"><div class="num">03</div><h4>Estación Olavarría</h4><p>Strip comercial Piedra Azul km 17 · primer activo inmobiliario OLACORE · familia.</p></div>
+    <div class="card"><div class="num">04</div><h4>Rincón del Camarón</h4><p>Restaurante Plaza Carampangue · sociedad con chef · referencia local.</p></div>
+  </div>
+  <div class="slide-footer"><span>04</span><span>OLACORE Group</span></div>
+</section>
+
+<!-- =================== SLIDE 5: OVERVIEW APORTE =================== -->
+<section class="slide dark">
+  <div class="slide-head"><div class="slide-logo">OLA<span>core</span></div><div class="slide-num">05 / 20</div></div>
+  <div class="label">Qué traigo a la mesa</div>
+  <h2>5 verticales de contenido <em>ya construidas</em></h2>
+  <p class="lead">No vengo a pedir un trabajo. Vengo a aportar un producto-en-uso valorizado en CLP $160–215M, listo para empaquetarse como SaaS multi-tenant para clínicas.</p>
+  <div class="cards">
+    <div class="card"><div class="num">01</div><h4>Chatbot WhatsApp</h4><p>FastAPI + IA Claude + Meta + Medilink. 14 templates aprobados.</p></div>
+    <div class="card"><div class="num">02</div><h4>BI + Dashboards</h4><p>Postgres + ETL Medilink + RFM + audiencias Meta exportables.</p></div>
+    <div class="card"><div class="num">03</div><h4>SEO + Marketing</h4><p>21 schemas, sitemap 223 URLs, GTM + CAPI, IndexNow, blog suite.</p></div>
+    <div class="card"><div class="num">04</div><h4>Portal + Fidelización</h4><p>Magic-link /mis-citas, post-consulta, cumpleaños, win-back, NPS.</p></div>
+    <div class="card"><div class="num">05</div><h4>Agentes IA Claude</h4><p>11 agentes Code especializados que aceleran dev 5–10×.</p></div>
+  </div>
+  <div class="slide-footer"><span>05</span><span>Overview del aporte</span></div>
+</section>
+
+<!-- =================== SLIDE 6: VERTICAL 1 - CHATBOT =================== -->
+<section class="slide">
+  <div class="slide-head"><div class="slide-logo">OLA<span>core</span></div><div class="slide-num">06 / 20</div></div>
+  <div class="label">Vertical 01</div>
+  <h2>Chatbot WhatsApp <em>con IA</em></h2>
+  <div class="vertical-card" style="margin-top: 16px;">
+    <div class="vertical-card-head">
+      <div class="id">VERTICAL 01 · CONVERSATIONAL</div>
+      <h3>Bot multi-canal con detección de intención IA</h3>
+    </div>
+    <div class="vertical-card-body">
+      <p><strong style="color: var(--lacre);">Estado: producción · 18.000+ líneas de código</strong></p>
+      <ul class="clean">
+        <li>Webhook Meta Cloud API (WhatsApp, Instagram, Messenger) — 3 canales</li>
+        <li>Detección de intención con <strong>Claude Haiku</strong> + glosario médico-dental-chileno con 200+ patrones</li>
+        <li>Máquina de estados conversacional: agendar, cancelar, ver reservas, urgencias, FAQ, derivación humana</li>
+        <li>Integración HIS Medilink (slots, citas, pacientes, agenda del día) con caché incremental</li>
+        <li><strong>14 templates Meta aprobados</strong> (utility + marketing)</li>
+        <li>Whisper para transcripción de audios + reenganche automático + recordatorios</li>
+        <li>Panel admin recepción con FTS5 search, notas, takeover, doctor alerts</li>
+        <li>Sistema multi-tenant ready · sessions SQLite con SQLCipher · rate-limit + opt-in Ley 19.628</li>
+      </ul>
+      <div class="vertical-card-tech">
+        <span class="pill">FastAPI</span><span class="pill">Claude Haiku</span><span class="pill">Meta Cloud API</span>
+        <span class="pill">Medilink API</span><span class="pill">SQLite WAL</span><span class="pill">Whisper</span>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer"><span>06</span><span>Vertical 01 · Chatbot</span></div>
+</section>
+
+<!-- =================== SLIDE 7: VERTICAL 2 - BI =================== -->
+<section class="slide">
+  <div class="slide-head"><div class="slide-logo">OLA<span>core</span></div><div class="slide-num">07 / 20</div></div>
+  <div class="label">Vertical 02</div>
+  <h2>BI + <em>Dashboards clínicos</em></h2>
+  <div class="vertical-card" style="margin-top: 16px;">
+    <div class="vertical-card-head">
+      <div class="id">VERTICAL 02 · DATA &amp; ANALYTICS</div>
+      <h3>Stack analítico multi-tenant con segmentación RFM</h3>
+    </div>
+    <div class="vertical-card-body">
+      <p><strong style="color: var(--lacre);">Estado: producción · 16 tablas BI · 4 dashboards live</strong></p>
+      <ul class="clean">
+        <li>Postgres con schema <strong>bi.*</strong>: dim_paciente, dim_profesional, dim_especialidad, fact_atenciones, fact_pagos, fact_ingresos, fact_citas, fact_inasistencias</li>
+        <li>ETL incremental Medilink → Postgres con dim_fecha precomputada</li>
+        <li>Segmentación RFM completa: champion, leal, nuevo, en_riesgo, hibernando, lapsed, perdido_oneshot</li>
+        <li>Dashboard <strong>/cmc</strong> · KPIs globales, evolución temporal con fullscreen, especialidades, territorio, segmentos</li>
+        <li>Dashboard <strong>/segmentacion</strong> · RFM por profesional + export CSV Custom Audiences Meta</li>
+        <li>Geocoding con bi.dim_paciente.localidad enriquecido desde heatmap</li>
+        <li>Cohortes de win-back · adherencia kine · controles ortodoncia · matrix view Excel-like</li>
+      </ul>
+      <div class="vertical-card-tech">
+        <span class="pill">PostgreSQL</span><span class="pill">FastAPI</span><span class="pill">Chart.js</span>
+        <span class="pill">psycopg2</span><span class="pill">Pandas</span>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer"><span>07</span><span>Vertical 02 · BI</span></div>
+</section>
+
+<!-- =================== SLIDE 8: VERTICAL 3 - SEO =================== -->
+<section class="slide">
+  <div class="slide-head"><div class="slide-logo">OLA<span>core</span></div><div class="slide-num">08 / 20</div></div>
+  <div class="label">Vertical 03</div>
+  <h2>SEO + <em>Marketing técnico</em></h2>
+  <div class="vertical-card" style="margin-top: 16px;">
+    <div class="vertical-card-head">
+      <div class="id">VERTICAL 03 · GROWTH</div>
+      <h3>Stack SEO + Meta Ads + atribución multi-touch</h3>
+    </div>
+    <div class="vertical-card-body">
+      <p><strong style="color: var(--lacre);">Estado: producción · 33 blogs · 223 URLs sitemap</strong></p>
+      <ul class="clean">
+        <li><strong>21 schemas JSON-LD activos</strong> (MedicalClinic, FAQPage, OfferCatalog, MedicalCondition con ICD-10, Course PNI, etc.)</li>
+        <li>Sitemap 223 URLs · 6 redirects 301 estratégicos · robots.txt con AI bots · feed RSS</li>
+        <li>Open Graph + Twitter Card + canonical + hreflang + JSON-LD por blog</li>
+        <li><strong>GTM + GA4 + click tracking</strong> en 33 blogs + WhatsApp link tracker</li>
+        <li><strong>CAPI Meta</strong> con Pixel value numérico (Purchase events) · batch 22:00 CLT</li>
+        <li>IndexNow infra · imágenes WebP · Core Web Vitals optimizado · og-image dedicado por blog</li>
+        <li>3 campañas Google Ads Search listas + 4 posts GBP + 10 backlink targets identificados</li>
+      </ul>
+      <div class="vertical-card-tech">
+        <span class="pill">Schema.org</span><span class="pill">Meta CAPI</span><span class="pill">GTM</span>
+        <span class="pill">IndexNow</span><span class="pill">WebP</span><span class="pill">Google Ads</span>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer"><span>08</span><span>Vertical 03 · SEO</span></div>
+</section>
+
+<!-- =================== SLIDE 9: VERTICAL 4 - PORTAL/FIDELIZACIÓN =================== -->
+<section class="slide">
+  <div class="slide-head"><div class="slide-logo">OLA<span>core</span></div><div class="slide-num">09 / 20</div></div>
+  <div class="label">Vertical 04</div>
+  <h2>Portal pacientes + <em>Fidelización</em></h2>
+  <div class="vertical-card" style="margin-top: 16px;">
+    <div class="vertical-card-head">
+      <div class="id">VERTICAL 04 · ENGAGEMENT</div>
+      <h3>CRM clínico con campañas automáticas</h3>
+    </div>
+    <div class="vertical-card-body">
+      <p><strong style="color: var(--lacre);">Estado: producción · 8 campañas estacionales activas</strong></p>
+      <ul class="clean">
+        <li><strong>Magic link /mis-citas</strong> · HMAC SHA-256 · sin JWT · acceso sin clave para el paciente</li>
+        <li>Recordatorios automáticos 24h + 2h antes de cita</li>
+        <li>Post-consulta: "¿cómo te sentiste?" → clasificación libre con Claude → alerta doctor si "Peor"</li>
+        <li>Cross-sell prescriptivo por especialidad (traumato→kine, MG→chequeo, odonto→estética, etc.)</li>
+        <li>Adherencia kine · control ortodoncia · win-back >90 días segmentado por dx:* tags</li>
+        <li>Cumpleaños con tips preventivos por edad · NPS por profesional</li>
+        <li>8 campañas estacionales: invierno, vuelta a clases, corazón, diabetes, salud mental, dental, mujer</li>
+        <li>Programa de referidos con código auto-generado CMC-XXXX</li>
+      </ul>
+      <div class="vertical-card-tech">
+        <span class="pill">HMAC-SHA256</span><span class="pill">APScheduler</span><span class="pill">Cron jobs</span>
+        <span class="pill">Templates Meta</span><span class="pill">Claude classify</span>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer"><span>09</span><span>Vertical 04 · Engagement</span></div>
+</section>
+
+<!-- =================== SLIDE 10: VERTICAL 5 - AGENTES IA =================== -->
+<section class="slide">
+  <div class="slide-head"><div class="slide-logo">OLA<span>core</span></div><div class="slide-num">10 / 20</div></div>
+  <div class="label">Vertical 05</div>
+  <h2>Agentes IA <em>especializados</em></h2>
+  <div class="vertical-card" style="margin-top: 16px;">
+    <div class="vertical-card-head">
+      <div class="id">VERTICAL 05 · AI WORKFORCE</div>
+      <h3>11 agentes Claude Code para acelerar producto</h3>
+    </div>
+    <div class="vertical-card-body">
+      <p><strong style="color: var(--lacre);">Estado: producción · accelera dev 5–10×</strong></p>
+      <ul class="clean">
+        <li><strong>cmc-bot-engineer</strong> · implementa fixes/features en flows / medilink / jobs</li>
+        <li><strong>cmc-data-analyst</strong> · queries SQL sessions + BI con conocimiento del schema</li>
+        <li><strong>cmc-dashboard-builder</strong> · FastAPI + Tailwind + Chart.js bajo identidad OLACORE</li>
+        <li><strong>cmc-conversation-auditor</strong> · revisa conversaciones reales, detecta bugs producción</li>
+        <li><strong>cmc-deploy-manager</strong> · deploy validado con tests antes de push</li>
+        <li><strong>cmc-financial-auditor</strong> · conciliación mensual cruzando 6 CSVs de pagos</li>
+        <li><strong>cmc-medical / cmc-security / cmc-ux / cmc-performance / cmc-bugs</strong> · auditores read-only</li>
+        <li><strong>olacore-brand-designer</strong> · brand boards completos siguiendo el sistema</li>
+        <li><strong>clinic-strategist</strong> · decisiones estratégicas cross-marca (Opus)</li>
+      </ul>
+      <div class="vertical-card-tech">
+        <span class="pill">Claude Code</span><span class="pill">Sub-agents</span><span class="pill">Domain prompts</span>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer"><span>10</span><span>Vertical 05 · Agentes</span></div>
+</section>
+
+<!-- =================== SLIDE 11: CMC SHOWROOM =================== -->
+<section class="slide dark">
+  <div class="slide-head"><div class="slide-logo">OLA<span>core</span></div><div class="slide-num">11 / 20</div></div>
+  <div class="label">Validación</div>
+  <h2>CMC Carampangue · <em>showroom funcional</em></h2>
+  <p class="lead">No es una demo. Es un negocio operando hoy con el stack que aporto. Estos son los números reales.</p>
+  <div class="stats">
+    <div class="stat"><div class="v">~900</div><div class="l">Pacientes únicos/mes</div></div>
+    <div class="stat"><div class="v">~1.500</div><div class="l">Atenciones mensuales</div></div>
+    <div class="stat"><div class="v">+12K</div><div class="l">Historial 6 años</div></div>
+    <div class="stat"><div class="v">17</div><div class="l">Especialidades activas</div></div>
+    <div class="stat"><div class="v">23</div><div class="l">Profesionales</div></div>
+    <div class="stat"><div class="v">19</div><div class="l">Comunas atendidas</div></div>
+  </div>
+  <div class="quote-block">
+    <p>"Cuando se prueba el chatbot en producción, agendar una hora toma <strong>menos de 30 segundos</strong>. Eso es lo que vendo: stack médico-grade con UX que funciona."</p>
+    <div class="src">— Live en +56 9 6661 0737 · web centromedicocarampangue.cl</div>
+  </div>
+  <div class="slide-footer"><span>11</span><span>CMC · Validación</span></div>
+</section>
+
+<!-- =================== SLIDE 12: VALORACIÓN =================== -->
+<section class="slide">
+  <div class="slide-head"><div class="slide-logo">OLA<span>core</span></div><div class="slide-num">12 / 20</div></div>
+  <div class="label">Cuánto vale lo que aporto</div>
+  <h2>Valoración del aporte <em>fundacional</em></h2>
+  <table>
+    <thead>
+      <tr><th>Activo</th><th class="num">Valor estimado (CLP)</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Chatbot WhatsApp completo (multi-canal + IA)</td><td class="num">$80–100M</td></tr>
+      <tr><td>BI Postgres + ETL Medilink + dashboards</td><td class="num">$25–35M</td></tr>
+      <tr><td>Stack SEO técnico + CAPI + GTM</td><td class="num">$15–25M</td></tr>
+      <tr><td>Sitio + portal pacientes + magic-link</td><td class="num">$15–20M</td></tr>
+      <tr><td>CRM clínico + 8 campañas fidelización</td><td class="num">$15–20M</td></tr>
+      <tr><td>11 agentes Claude Code especializados</td><td class="num">$10–15M</td></tr>
+      <tr><td>CMC como showroom funcional</td><td class="num">Anchor</td></tr>
+      <tr class="tot"><td>TOTAL</td><td class="num">$160–215M</td></tr>
+    </tbody>
+  </table>
+  <div class="body-text" style="margin-top: 16px;">
+    <p>Comparativo: <strong>Sebastián entró a Arquetix sin código previo y obtuvo 50%</strong>. Mi propuesta es 50% PO + reconocimiento por el aporte preexistente vía vesting acelerado, nota convertible o preferencia en utilidades. Ver siguiente slide.</p>
+  </div>
+  <div class="slide-footer"><span>12</span><span>Valoración</span></div>
+</section>
+
+<!-- =================== SLIDE 13: POSICIÓN PROPUESTA =================== -->
+<section class="slide">
+  <div class="slide-head"><div class="slide-logo">OLA<span>core</span></div><div class="slide-num">13 / 20</div></div>
+  <div class="label">Lo que propongo</div>
+  <h2>Posición · <em>Co-founder + PO</em></h2>
+  <div class="cards">
+    <div class="card"><div class="num">01</div><h4>Equity</h4><p><strong>50% PO</strong> de la vertical Clínicas. Alineado con Sebastián en Salmoneras.</p></div>
+    <div class="card"><div class="num">02</div><h4>Vesting</h4><p>4 años con cliff 1 año (estándar). Aceleración propuesta en slide siguiente.</p></div>
+    <div class="card"><div class="num">03</div><h4>Bandwidth</h4><p>20–30 hrs/semana part-time. Sigo operando CMC, Meulen, Estación.</p></div>
+    <div class="card"><div class="num">04</div><h4>Portfolio BD</h4><p>3 clientes propios: CMC, Ríomonte, Victoria.</p></div>
+  </div>
+  <div class="slide-footer"><span>13</span><span>Posición</span></div>
+</section>
+
+<!-- =================== SLIDE 14: CONTRAPRESTACIÓN =================== -->
+<section class="slide">
+  <div class="slide-head"><div class="slide-logo">OLA<span>core</span></div><div class="slide-num">14 / 20</div></div>
+  <div class="label">Contraprestación adicional</div>
+  <h2>Reconocimiento del aporte <em>preexistente</em></h2>
+  <p class="lead">Elegir UNA opción (o combinar). El 50% PO se mantiene. Esto reconoce el IP ya construido.</p>
+  <div class="cards">
+    <div class="card"><div class="num">A</div><h4>Vesting acelerado</h4><p>50% se vesta en <strong>24 meses</strong> en lugar de 48. Cliff de 6 meses.</p></div>
+    <div class="card"><div class="num">B</div><h4>Nota convertible</h4><p>$160M en favor de Rodrigo. Convierte en equity adicional si hay levantamiento.</p></div>
+    <div class="card"><div class="num">C</div><h4>Preferencia en utilidades</h4><p>Primera distribución 100% a Rodrigo hasta recuperar $160M. Después 50/50.</p></div>
+  </div>
+  <div class="slide-footer"><span>14</span><span>Contraprestación</span></div>
+</section>
+
+<!-- =================== SLIDE 15: CLÁUSULAS =================== -->
+<section class="slide">
+  <div class="slide-head"><div class="slide-logo">OLA<span>core</span></div><div class="slide-num">15 / 20</div></div>
+  <div class="label">No-negociables</div>
+  <h2>Cláusulas de <em>protección</em></h2>
+  <div class="cards">
+    <div class="card"><div class="num">01</div><h4>Veto operacional</h4><p>Venta de vertical · dilución bajo 30% · despido del PO · cambio de nombre.</p></div>
+    <div class="card"><div class="num">02</div><h4>Licencia perpetua CMC</h4><p>El IP se cede pero CMC mantiene licencia gratuita irrevocable.</p></div>
+    <div class="card"><div class="num">03</div><h4>Tag-along + drag-along</h4><p>Si venden, vendo en mismos términos. Si vendo, los demás siguen.</p></div>
+    <div class="card"><div class="num">04</div><h4>Salida a 18 meses</h4><p>Si no llega a $3M MRR o se rompe sociedad, salgo con uso de IP para CMC.</p></div>
+    <div class="card"><div class="num">05</div><h4>Non-compete asimétrico</h4><p>Arquetix no compite con CMC en Biobío. Yo no vendo competidor durante vesting.</p></div>
+    <div class="card"><div class="num">06</div><h4>Bandwidth declarado</h4><p>20–30 hrs/sem. PM contratable bajo mi autoridad cuando revenue justifique.</p></div>
+  </div>
+  <div class="slide-footer"><span>15</span><span>Cláusulas</span></div>
+</section>
+
+<!-- =================== SLIDE 16: PIPELINE =================== -->
+<section class="slide dark">
+  <div class="slide-head"><div class="slide-logo">OLA<span>core</span></div><div class="slide-num">16 / 20</div></div>
+  <div class="label">Mi portfolio</div>
+  <h2>Pipeline de clientes <em>en mano</em></h2>
+  <table>
+    <thead>
+      <tr><th>Cliente</th><th>Estado</th><th class="num">ARR estimado (CLP)</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>CMC Carampangue</strong><br><small style="color: var(--gris);">Piloto interno · showroom</small></td><td>Activo</td><td class="num">$0–6M</td></tr>
+      <tr><td><strong>Clínica Ríomonte</strong><br><small style="color: var(--gris);">Puerto Montt · Dr. Juan reactivando</small></td><td>Pre-piloto</td><td class="num">$4.8–8.4M</td></tr>
+      <tr><td><strong>Centro Médico Victoria</strong><br><small style="color: var(--gris);">La Araucanía · reunión esta semana</small></td><td>Lead caliente</td><td class="num">$9.6–18M</td></tr>
+      <tr class="tot"><td>Total portfolio Rodrigo · año 1</td><td>—</td><td class="num">$14.4–32.4M</td></tr>
+    </tbody>
+  </table>
+  <div class="body-text" style="margin-top: 20px;">
+    <p>Target 12 meses combinado (portfolio mío + pipeline del ing comercial): <strong style="color: var(--cobre);">10 clínicas pagando · MRR $8–12M · ARR $96–144M</strong>.</p>
+  </div>
+  <div class="slide-footer"><span>16</span><span>Pipeline</span></div>
+</section>
+
+<!-- =================== SLIDE 17: PLAN 12 MESES =================== -->
+<section class="slide">
+  <div class="slide-head"><div class="slide-logo">OLA<span>core</span></div><div class="slide-num">17 / 20</div></div>
+  <div class="label">Roadmap</div>
+  <h2>Plan a <em>12 meses</em></h2>
+  <ul class="clean">
+    <li><strong>Mes 1–2</strong> · DD final, cierre legal, vesting inicia. Empaquetar stack como ClinicOS multi-tenant.</li>
+    <li><strong>Mes 3</strong> · Onboarding Ríomonte como cliente 2. Validar fee mensual. Demo a Victoria.</li>
+    <li><strong>Mes 4–5</strong> · Cerrar Victoria como cliente 3. Lanzar marketing-product fit (case CMC).</li>
+    <li><strong>Mes 6</strong> · Outreach a 50 clínicas chicas (1-5 box) en zonas no saturadas. Cuñado lidera comercial.</li>
+    <li><strong>Mes 7–9</strong> · Contratar Product Manager bajo mi autoridad. Cerrar 5 clínicas adicionales.</li>
+    <li><strong>Mes 10–12</strong> · 10 clínicas pagando. MRR $8–12M. Evaluar levantamiento ronda seed Latam o bootstrapping.</li>
+  </ul>
+  <div class="slide-footer"><span>17</span><span>Roadmap 12m</span></div>
+</section>
+
+<!-- =================== SLIDE 18: RIESGOS =================== -->
+<section class="slide">
+  <div class="slide-head"><div class="slide-logo">OLA<span>core</span></div><div class="slide-num">18 / 20</div></div>
+  <div class="label">Transparencia</div>
+  <h2>Riesgos que <em>reconozco</em></h2>
+  <div class="cards">
+    <div class="card"><div class="num">01</div><h4>Bandwidth</h4><p>Opero 4 negocios. Mitigación: PM bajo mi autoridad cuando justifique revenue.</p></div>
+    <div class="card"><div class="num">02</div><h4>Dilución futura</h4><p>Levantamiento diluye. Mitigación: anti-dilución bajo 30%.</p></div>
+    <div class="card"><div class="num">03</div><h4>Dinámica cuñado</h4><p>Riesgo de favoritismo. Mitigación: governance clara desde día 1.</p></div>
+    <div class="card"><div class="num">04</div><h4>OLACORE separation</h4><p>Mi holding no entra a Arquetix. Mitigación: estructura contractual nítida.</p></div>
+  </div>
+  <div class="slide-footer"><span>18</span><span>Riesgos</span></div>
+</section>
+
+<!-- =================== SLIDE 19: PRÓXIMOS PASOS =================== -->
+<section class="slide">
+  <div class="slide-head"><div class="slide-logo">OLA<span>core</span></div><div class="slide-num">19 / 20</div></div>
+  <div class="label">Acción</div>
+  <h2>Próximos pasos · <em>14 días</em></h2>
+  <ul class="clean">
+    <li><strong>Días 1–7</strong> · Due diligence cruzada. 3 conversaciones: visión (Sebastián), comercial (cuñado), técnico (ing UK). Demo en vivo del chatbot. Talk al cliente salmonera.</li>
+    <li><strong>Día 7–10</strong> · Reunión grupal con los 4. Presento este deck. Anclamos la conversación de IP en cifras.</li>
+    <li><strong>Día 10–14</strong> · Term sheet redactado por abogado Arquetix · review por abogado independiente mío · 1 ronda de iteración.</li>
+    <li><strong>Día 14–30</strong> · Firma de escritura · aporte de IP formalizado · vesting inicia · CMC como cliente piloto interno con licencia perpetua.</li>
+    <li><strong>Día 30+</strong> · Sprint 1: empaquetar stack como ClinicOS multi-tenant.</li>
+  </ul>
+  <div class="slide-footer"><span>19</span><span>Próximos pasos</span></div>
+</section>
+
+<!-- =================== SLIDE 20: CIERRE =================== -->
+<section class="slide dark cover">
+  <div class="cover-eyebrow">OLACORE · Arquetix Health · Cierre</div>
+  <h1>No vengo a pedir <em>trabajo</em>.<br>Vengo a aportar <em>producto</em>.</h1>
+  <div class="body-text" style="font-size: 20px; color: var(--cobre-soft); max-width: 760px; margin-top: 16px;">
+    Stack tecnológico clínico funcional · validación en CMC · 3 clientes en pipeline · domain expertise médico real.<br><br>
+    Lo que ofrezco vale $160–215M en aporte fundacional. Lo que pido es proporcional al riesgo asumido y al peso del trabajo ya hecho.
+  </div>
+  <div class="cover-meta">
+    <strong>Rodrigo Olavarría</strong> · rodrigo@olacore.cl<br>
+    <strong>OLACORE Group</strong> · 2026-05-27
+  </div>
+</section>
+
+</div>
+
+<nav class="nav">
+  <button id="prev" aria-label="Anterior">‹</button>
+  <div class="indicator"><span id="cur">01</span> / <span id="tot">20</span></div>
+  <button id="next" aria-label="Siguiente">›</button>
+</nav>
+
+<script>
+const slides = document.querySelectorAll('.slide');
+const total = slides.length;
+let cur = 0;
+
+document.getElementById('tot').textContent = String(total).padStart(2, '0');
+
+function show(i) {
+  if (i < 0 || i >= total) return;
+  slides[cur].classList.remove('active');
+  cur = i;
+  slides[cur].classList.add('active');
+  document.getElementById('cur').textContent = String(cur + 1).padStart(2, '0');
+  document.getElementById('prev').disabled = cur === 0;
+  document.getElementById('next').disabled = cur === total - 1;
+  slides[cur].scrollTop = 0;
+}
+
+document.getElementById('prev').addEventListener('click', () => show(cur - 1));
+document.getElementById('next').addEventListener('click', () => show(cur + 1));
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); show(cur + 1); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); show(cur - 1); }
+  else if (e.key === 'Home') show(0);
+  else if (e.key === 'End') show(total - 1);
+});
+
+show(0);
+</script>
+</body>
+</html>

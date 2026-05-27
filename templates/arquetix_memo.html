@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Arquetix Health · Deal Memo · Rodrigo Olavarría</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:wght@300..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --fiordo: #0E2530;
+    --fiordo-soft: #1f3a4d;
+    --cobre: #B98149;
+    --cobre-soft: #d4a574;
+    --neblina: #E8E0D0;
+    --neblina-deep: #d4cdb9;
+    --lacre: #9A3E2F;
+    --tinta: #1a1a1a;
+    --gris: #6b6b6b;
+    --linea: #d6cfc0;
+    --verde: #4a6b3a;
+    --bg: #f5f2ea;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tinta); line-height: 1.55; }
+  .page {
+    max-width: 920px; margin: 0 auto; padding: 50px 48px;
+    background: white; border: 1px solid var(--linea);
+    box-shadow: 0 20px 60px rgba(14, 37, 48, 0.05);
+    margin-top: 40px; margin-bottom: 40px;
+  }
+
+  /* Header */
+  .header { border-bottom: 2px solid var(--cobre); padding-bottom: 24px; margin-bottom: 32px; }
+  .header-top {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .header-logo {
+    font-family: 'Fraunces', serif; font-weight: 900;
+    font-size: 14px; color: var(--fiordo); letter-spacing: 0.05em;
+  }
+  .header-logo span { color: var(--cobre); font-style: italic; font-weight: 300; }
+  .header-meta {
+    font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+    color: var(--gris); letter-spacing: 0.12em; text-transform: uppercase;
+    text-align: right; line-height: 1.5;
+  }
+  .header-title {
+    font-family: 'Fraunces', serif; font-weight: 400;
+    font-size: 38px; color: var(--fiordo); line-height: 1.15;
+    letter-spacing: -0.01em;
+  }
+  .header-title em { font-style: italic; color: var(--cobre); }
+  .header-sub {
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+    color: var(--cobre); letter-spacing: 0.15em; text-transform: uppercase;
+    margin-top: 10px;
+  }
+
+  /* Sections */
+  section { margin-bottom: 32px; }
+  .label {
+    font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+    letter-spacing: 0.18em; color: var(--cobre);
+    text-transform: uppercase; margin-bottom: 8px;
+    padding-bottom: 4px; border-bottom: 1px solid var(--cobre);
+    display: inline-block;
+  }
+  h2 {
+    font-family: 'Fraunces', serif; font-weight: 500;
+    font-size: 22px; color: var(--fiordo); margin-bottom: 14px;
+    line-height: 1.25;
+  }
+  .lead { color: var(--gris); font-size: 14px; margin-bottom: 14px; }
+
+  /* Cards / blocks */
+  .block {
+    background: var(--bg); border-left: 3px solid var(--cobre);
+    padding: 16px 20px; border-radius: 0 4px 4px 0;
+    margin-bottom: 12px;
+  }
+  .block h3 {
+    font-family: 'Fraunces', serif; font-size: 15px; font-weight: 500;
+    color: var(--fiordo); margin-bottom: 6px;
+  }
+  .block p { font-size: 13.5px; color: var(--tinta); }
+  .block strong { color: var(--lacre); }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    text-align: left; padding: 10px 14px;
+    background: var(--neblina); color: var(--fiordo);
+    font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+    letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600;
+    border-bottom: 2px solid var(--cobre);
+  }
+  th.num, td.num { text-align: right; font-family: 'IBM Plex Mono', monospace; }
+  td {
+    padding: 12px 14px; border-bottom: 1px solid var(--linea);
+    vertical-align: top;
+  }
+  td.detail { color: var(--gris); font-size: 12px; }
+  tr.tot td {
+    border-top: 2px solid var(--fiordo); border-bottom: none;
+    background: var(--bg); font-weight: 600;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  tr.tot td:first-child { font-family: 'Fraunces', serif; }
+
+  /* Position grid */
+  .position-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+  }
+  @media (max-width: 700px) { .position-grid { grid-template-columns: 1fr; } }
+  .pos-card {
+    border: 1px solid var(--linea); padding: 14px 18px; border-radius: 4px;
+  }
+  .pos-card .name {
+    font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+    letter-spacing: 0.12em; color: var(--cobre); text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .pos-card .val {
+    font-family: 'Fraunces', serif; font-size: 18px; color: var(--fiordo);
+    font-weight: 500; margin-bottom: 4px;
+  }
+  .pos-card .desc { font-size: 12px; color: var(--gris); }
+
+  /* Steps */
+  .step {
+    display: grid; grid-template-columns: 50px 1fr;
+    gap: 16px; padding: 12px 0;
+    border-bottom: 1px dashed var(--linea);
+  }
+  .step:last-child { border-bottom: none; }
+  .step .num {
+    font-family: 'Fraunces', serif; font-style: italic;
+    font-size: 32px; color: var(--cobre); line-height: 1; font-weight: 400;
+  }
+  .step .body h4 {
+    font-family: 'Fraunces', serif; font-size: 15px; color: var(--fiordo);
+    font-weight: 500; margin-bottom: 4px;
+  }
+  .step .body p { font-size: 13px; color: var(--gris); }
+  .step .body p strong { color: var(--tinta); }
+
+  /* Footer */
+  .footer-page {
+    margin-top: 36px; padding-top: 16px;
+    border-top: 1px solid var(--linea);
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+    color: var(--gris); letter-spacing: 0.08em;
+  }
+  .footer-page .sello {
+    border: 1px solid var(--cobre); padding: 4px 10px; color: var(--cobre);
+    letter-spacing: 0.18em;
+  }
+
+  /* Print */
+  @media print {
+    body { background: white; }
+    .page { box-shadow: none; border: none; margin: 0; padding: 30px; max-width: 100%; }
+  }
+
+  /* Two-col layout for some sections */
+  .two-col-text { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 700px) { .two-col-text { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-top">
+    <div class="header-logo">OLA<span>core</span></div>
+    <div class="header-meta">
+      Confidencial · No circular<br>
+      2026-05-27 · v1
+    </div>
+  </div>
+  <div class="header-title">
+    Deal Memo · <em>Arquetix Health</em>
+  </div>
+  <div class="header-sub">
+    Co-founder + Product Owner · Vertical clínicas
+  </div>
+</div>
+
+<!-- CONTEXTO -->
+<section>
+  <div class="label">Contexto</div>
+  <h2>De qué hablamos</h2>
+  <p style="font-size: 14px; color: var(--tinta);">
+    Sebastián (PO de la vertical Salmoneras en Arquetix, con 50% del producto) propone que <strong style="color: var(--lacre);">Rodrigo Olavarría</strong> ingrese como <strong style="color: var(--lacre);">PO de la vertical Clínicas</strong> con estructura equivalente. Rodrigo aporta un stack tecnológico ya construido (Centro Médico Carampangue, 2 años de desarrollo), cartera de clientes inmediata, domain expertise médico, y agentes IA especializados. Este memo formaliza la posición de Rodrigo previo a reunión con el equipo Arquetix (cuñado · ing comercial PM, abogado PM, ing informático UK, Sebastián).
+  </p>
+</section>
+
+<!-- POSICIÓN PROPUESTA -->
+<section>
+  <div class="label">01 · Posición propuesta</div>
+  <h2>Términos base aceptados</h2>
+  <div class="position-grid">
+    <div class="pos-card">
+      <div class="name">Equity</div>
+      <div class="val">50% PO</div>
+      <div class="desc">De la vertical Clínicas. Alineado con Sebastián en Salmoneras.</div>
+    </div>
+    <div class="pos-card">
+      <div class="name">Vesting</div>
+      <div class="val">4 años · cliff 1</div>
+      <div class="desc">Estándar startup. Aceleración propuesta en sección 02.</div>
+    </div>
+    <div class="pos-card">
+      <div class="name">Bandwidth</div>
+      <div class="val">20–30 hrs/semana</div>
+      <div class="desc">PO part-time. Rodrigo sigue operando CMC, Meulen, Estación Olavarría.</div>
+    </div>
+    <div class="pos-card">
+      <div class="name">Cartera BD</div>
+      <div class="val">3 clientes propios</div>
+      <div class="desc">CMC · Ríomonte · Victoria como portfolio inicial bajo gestión Rodrigo.</div>
+    </div>
+  </div>
+</section>
+
+<!-- APORTE FUNDACIONAL -->
+<section>
+  <div class="label">02 · Aporte fundacional (founders IP)</div>
+  <h2>Lo que Rodrigo aporta al día 1</h2>
+  <p class="lead">A diferencia de Sebastián que entró a construir desde cero, Rodrigo aporta un producto-en-uso con clientes vivos. Esta tabla anclará la conversación sobre contraprestación.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Activo aportado</th>
+        <th>Estado</th>
+        <th class="num">Valor estimado (CLP)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          <strong>Chatbot-cmc completo</strong>
+          <div class="detail">FastAPI + Claude Haiku + Meta Cloud API + Medilink + 14 templates aprobados + flujos multi-canal (WA, IG, FB). 2 años de desarrollo, +18K líneas.</div>
+        </td>
+        <td>Producción</td>
+        <td class="num">$80–100M</td>
+      </tr>
+      <tr>
+        <td>
+          <strong>BI Postgres + ETL Medilink</strong>
+          <div class="detail">Schema fact_atenciones/citas/pagos/ingresos + dim_paciente con segmentación RFM + ETL incremental + 6 dashboards. Multi-tenant ready.</div>
+        </td>
+        <td>Producción</td>
+        <td class="num">$25–35M</td>
+      </tr>
+      <tr>
+        <td>
+          <strong>Stack SEO técnico</strong>
+          <div class="detail">21 schemas JSON-LD, sitemap 223 URLs, IndexNow infra, 6 redirects 301, GTM + CAPI Meta con Pixel value numérico, og-image dedicado, blogs 33+.</div>
+        </td>
+        <td>Producción</td>
+        <td class="num">$15–25M</td>
+      </tr>
+      <tr>
+        <td>
+          <strong>Sitio web institucional + portal pacientes</strong>
+          <div class="detail">Sitio CMC con quick-book, FAQ schema, equipos, ubicaciones. Magic-link /mis-citas (HMAC SHA-256). Panel admin recepción con FTS5 search.</div>
+        </td>
+        <td>Producción</td>
+        <td class="num">$15–20M</td>
+      </tr>
+      <tr>
+        <td>
+          <strong>Sistema fidelización + CRM clínico</strong>
+          <div class="detail">Post-consulta, recordatorios, win-back, cumpleaños, control por especialidad, NPS por profesional, cross-sell automatizado.</div>
+        </td>
+        <td>Producción</td>
+        <td class="num">$15–20M</td>
+      </tr>
+      <tr>
+        <td>
+          <strong>11 agentes Claude Code especializados</strong>
+          <div class="detail">cmc-bot-engineer, cmc-data-analyst, cmc-dashboard-builder, olacore-brand-designer, clinic-strategist, etc. Acelera dev 5–10x.</div>
+        </td>
+        <td>Producción</td>
+        <td class="num">$10–15M</td>
+      </tr>
+      <tr>
+        <td>
+          <strong>CMC como showroom funcional</strong>
+          <div class="detail">~900 pacientes únicos/mes, ~1.500 atenciones/mes (proyección mayo 2026). Validación de producto en cliente real, no demo.</div>
+        </td>
+        <td>Activo intangible</td>
+        <td class="num">Anchor</td>
+      </tr>
+      <tr class="tot">
+        <td>TOTAL aporte fundacional</td>
+        <td>—</td>
+        <td class="num">$160–215 M</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- CONTRAPRESTACIÓN -->
+<section>
+  <div class="label">03 · Contraprestación solicitada</div>
+  <h2>Reconocimiento del aporte preexistente</h2>
+  <p class="lead">El 50% PO es el baseline. Adicional, Rodrigo solicita reconocimiento por el IP que aporta. Opciones (elegir UNA o combinar):</p>
+
+  <div class="block">
+    <h3>Opción A · Vesting acelerado</h3>
+    <p>El 50% se vesta en <strong>24 meses</strong> en lugar de 48. Reconoce que el trabajo ya está hecho. Sin cliff (o cliff de 6 meses).</p>
+  </div>
+  <div class="block">
+    <h3>Opción B · Crédito convertible</h3>
+    <p>El aporte fundacional ($160–215M) se cuenta como <strong>nota convertible</strong> en favor de Rodrigo, que se convierte en equity adicional si la vertical levanta capital, o se paga con utilidades retenidas.</p>
+  </div>
+  <div class="block">
+    <h3>Opción C · Preferencia en utilidades</h3>
+    <p>Primera distribución de utilidades de la vertical va <strong>100% a Rodrigo</strong> hasta recuperar valor del aporte ($160M). Después se reparte 50/50 estándar.</p>
+  </div>
+</section>
+
+<!-- CLÁUSULAS DE PROTECCIÓN -->
+<section>
+  <div class="label">04 · Cláusulas de protección</div>
+  <h2>No-negociables del deal</h2>
+  <div class="two-col-text">
+    <div class="block">
+      <h3>Veto operacional</h3>
+      <p>Veto del PO sobre: venta de la vertical, dilución bajo 30%, despido del PO, cambio de nombre/posicionamiento del producto.</p>
+    </div>
+    <div class="block">
+      <h3>Licencia perpetua CMC</h3>
+      <p>El stack aportado: <strong>propiedad Arquetix</strong>, pero CMC recibe licencia gratuita perpetua e irrevocable. No puede cobrarse a sí mismo.</p>
+    </div>
+    <div class="block">
+      <h3>Tag-along + drag-along</h3>
+      <p>Si los otros socios venden, Rodrigo puede vender en mismos términos. Si Rodrigo vende, los demás pueden seguir.</p>
+    </div>
+    <div class="block">
+      <h3>Cláusula de salida</h3>
+      <p>Si en 18 meses la vertical no llega a <strong>$3M MRR</strong> o se rompe la sociedad, Rodrigo puede salir con derecho de uso del IP para CMC interno.</p>
+    </div>
+    <div class="block">
+      <h3>Non-compete asimétrico</h3>
+      <p>Arquetix NO puede competir con CMC en la zona Arauco/Biobío. Rodrigo NO puede vender producto competidor para clínicas fuera de su portfolio actual durante vesting.</p>
+    </div>
+    <div class="block">
+      <h3>Bandwidth declarado</h3>
+      <p>20–30 hrs/semana es el compromiso. Cuando la vertical justifique revenue, Rodrigo contrata Product Manager bajo su autoridad para operación diaria.</p>
+    </div>
+  </div>
+</section>
+
+<!-- PIPELINE -->
+<section>
+  <div class="label">05 · Pipeline de clientes (portfolio Rodrigo)</div>
+  <h2>Revenue path a 12 meses</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Cliente</th>
+        <th>Estado</th>
+        <th>Fee mensual estimado</th>
+        <th class="num">ARR (CLP)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>CMC Carampangue</strong><div class="detail">Cliente piloto interno. Rodrigo dueño 100%. Showroom funcional.</div></td>
+        <td>Activo (interno)</td>
+        <td>Simbólico / gratuito por co-founder</td>
+        <td class="num">$0–6M</td>
+      </tr>
+      <tr>
+        <td><strong>Clínica Ríomonte</strong><div class="detail">Puerto Montt. Reactivación con Dr. Juan. Piloto 30–60d gratis, luego SaaS.</div></td>
+        <td>Pre-piloto</td>
+        <td>$400k–700k</td>
+        <td class="num">$4.8–8.4M</td>
+      </tr>
+      <tr>
+        <td><strong>Centro Médico Victoria</strong><div class="detail">La Araucanía. Conversación admin remota + ClinicOS. Reunión esta semana.</div></td>
+        <td>Lead caliente</td>
+        <td>$800k–1.5M</td>
+        <td class="num">$9.6–18M</td>
+      </tr>
+      <tr class="tot">
+        <td>Total portfolio inicial Rodrigo</td>
+        <td>—</td>
+        <td>—</td>
+        <td class="num">$14.4–32.4M</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="lead" style="margin-top: 12px;">A esto suma el pipeline del ing comercial de Arquetix (cuñado) + clientes que captes en eventos y referidos. Target 12 meses: <strong style="color: var(--lacre);">10 clínicas pagando, MRR $8–12M, ARR $96–144M</strong>.</p>
+</section>
+
+<!-- PRÓXIMOS PASOS -->
+<section>
+  <div class="label">06 · Próximos pasos</div>
+  <h2>Cronograma de cierre</h2>
+
+  <div class="step">
+    <div class="num">01</div>
+    <div class="body">
+      <h4>Esta semana · Due diligence (5–7 días)</h4>
+      <p>3 conversaciones: (a) <strong>Sebastián</strong> visión y estructura, (b) <strong>Cuñado</strong> lado comercial + cap table, (c) <strong>Ing informático UK</strong> base técnica del stack actual de Arquetix. Hablar con el cliente salmonera (amigo del colegio) sobre UX.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="num">02</div>
+    <div class="body">
+      <h4>Reunión grupal (día 7–10)</h4>
+      <p>Encuentro con los 4 (cuñado + abogado + ing UK + Sebastián). Presentar este memo. Demo en vivo del chatbot-cmc + dashboard BI + portal de pacientes. Anclar la conversación de IP en cifras.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="num">03</div>
+    <div class="body">
+      <h4>Term sheet (día 10–14)</h4>
+      <p>El abogado de Arquetix redacta term sheet. Rodrigo revisa con abogado externo de confianza (independiente). Confirmar las 6 cláusulas de protección. Iterar 1 vez.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="num">04</div>
+    <div class="body">
+      <h4>Cierre legal (día 14–30)</h4>
+      <p>Firma de escritura social actualizada en notaría. Aporte de IP formalizado. Inicio de vesting. CMC firma contrato como cliente piloto interno con licencia perpetua.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="num">05</div>
+    <div class="body">
+      <h4>Día 30 · Operación</h4>
+      <p>Rodrigo arranca como PO. Sprint 1: empaquetar el stack como ClinicOS multi-tenant. Sprint 2: cerrar Ríomonte como segundo cliente. Sprint 3: cerrar Victoria.</p>
+    </div>
+  </div>
+</section>
+
+<!-- RIESGOS RECONOCIDOS -->
+<section>
+  <div class="label">07 · Riesgos reconocidos</div>
+  <h2>Lo que Rodrigo asume</h2>
+  <div class="two-col-text">
+    <div class="block">
+      <h3>Conflicto cuñado-amigo</h3>
+      <p>Si hay disputa Sebastián-cuñado, Rodrigo queda triangulado. Mitigación: <strong>conocer al cuñado en persona antes de firmar</strong>, evaluar dinámica.</p>
+    </div>
+    <div class="block">
+      <h3>Bandwidth tu solo</h3>
+      <p>Rodrigo opera 4 negocios paralelos. Adicionar PO 50% es exigente. Mitigación: <strong>compromiso part-time declarado + PM bajo su autoridad cuando revenue justifique</strong>.</p>
+    </div>
+    <div class="block">
+      <h3>Dilución futura</h3>
+      <p>Si Arquetix levanta capital, el 50% se diluye. Mitigación: <strong>cláusula anti-dilución bajo 30%</strong>.</p>
+    </div>
+    <div class="block">
+      <h3>Pérdida de marca OLACORE</h3>
+      <p>El producto será Arquetix Health, no OLACORE MedTech. Mitigación: <strong>OLACORE sigue siendo holding personal con CMC, Meulen, Estación</strong>. Arquetix es vehículo separado.</p>
+    </div>
+  </div>
+</section>
+
+<div class="footer-page">
+  <div>Rodrigo Olavarría · OLACORE Group · CMC</div>
+  <div class="sello">DEAL MEMO · v1 · 2026-05-27</div>
+  <div>Pre-DD · No vinculante</div>
+</div>
+
+</div>
+</body>
+</html>
