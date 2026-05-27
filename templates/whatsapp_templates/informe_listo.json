@@ -1,0 +1,19 @@
+{
+  "name": "informe_listo",
+  "category": "UTILITY",
+  "language": "es",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}} 👋 Tu informe de *{{2}}* ya está disponible.\n\nResponde a este mensaje y te lo enviamos por aquí 📄",
+      "example": {
+        "body_text": [
+          [
+            "Sergio",
+            "Ecografía"
+          ]
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "name": "winback_mujer_v1",
+  "category": "MARKETING",
+  "language": "es",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}}, te saluda el Centro Médico Carampangue. ¿Hace cuánto que no te haces tu PAP o tu control ginecológico? Si pasaron más de 12 meses, agéndalo ahora — toma 30 minutos.\n\nTambién tenemos el Chequeo Mujer 30+ que incluye control con matrona, PAP y ecografía transvaginal por $59.990 con Fonasa o $69.990 particular.\n\nPara agendar responde *MUJER*. Si no quieres recibir más mensajes responde *BAJA*.",
+      "example": {
+        "body_text": [
+          [
+            "Carolina"
+          ]
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "name": "postconsulta_seguimiento",
+  "category": "UTILITY",
+  "language": "es",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}} 😊 ¿Cómo te sientes después de tu consulta de *{{2}}* con *{{3}}*?\n\nTu opinión nos ayuda a mejorar 🙏",
+      "example": {
+        "body_text": [
+          [
+            "Maria",
+            "Traumatología",
+            "Dr. Claudio Barraza"
+          ]
+        ]
+      }
+    },
+    {
+      "type": "BUTTONS",
+      "buttons": [
+        {
+          "type": "QUICK_REPLY",
+          "text": "Mejor"
+        },
+        {
+          "type": "QUICK_REPLY",
+          "text": "Igual"
+        },
+        {
+          "type": "QUICK_REPLY",
+          "text": "Peor"
+        }
+      ]
+    }
+  ]
+}

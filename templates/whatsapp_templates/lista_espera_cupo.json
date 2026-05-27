@@ -1,0 +1,21 @@
+{
+  "name": "lista_espera_cupo",
+  "category": "UTILITY",
+  "language": "es",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}} 👋\n\n¡Buenas noticias! Se liberó un cupo para *{{2}}*.\n\n📅 Primera hora disponible: *{{3}} a las {{4}}*\n\nSi quieres agendarla escribe *menu* y te ayudo al tiro 😊\n\n_Te escribimos porque estás en nuestra lista de espera._",
+      "example": {
+        "body_text": [
+          [
+            "Pedro",
+            "Traumatología",
+            "2026-04-15",
+            "10:30"
+          ]
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "name": "winback_nutricion_v1",
+  "category": "MARKETING",
+  "language": "es",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}}, te saluda el Centro Médico Carampangue. Si te quedó pendiente tu control con la nutricionista, este es buen momento para retomar. Javiera Burgos abre agenda esta semana.\n\nBono Fonasa $4.770 o particular $20.000.\n\nPara agendar responde *NUTRI*. Si no quieres recibir más mensajes responde *BAJA*.",
+      "example": {
+        "body_text": [
+          [
+            "Patricia"
+          ]
+        ]
+      }
+    }
+  ]
+}

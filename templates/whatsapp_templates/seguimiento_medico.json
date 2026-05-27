@@ -1,0 +1,19 @@
+{
+  "name": "seguimiento_medico",
+  "category": "UTILITY",
+  "language": "es",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}} 👋 El *{{2}}* del Centro Médico Carampangue quiere saber cómo has evolucionado desde tu última consulta.\n\n¿Cómo te has sentido? ¿Algún síntoma nuevo o cambio?\n\nResponde a este mensaje y te orientamos 🙏",
+      "example": {
+        "body_text": [
+          [
+            "Sergio",
+            "Dr. Rodrigo Olavarría"
+          ]
+        ]
+      }
+    }
+  ]
+}

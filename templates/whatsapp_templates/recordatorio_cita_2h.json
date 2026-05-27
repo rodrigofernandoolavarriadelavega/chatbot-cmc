@@ -1,0 +1,21 @@
+{
+  "name": "recordatorio_cita_2h",
+  "category": "UTILITY",
+  "language": "es",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}} ⏰ *En 2 horas* tienes tu cita en el *Centro Médico Carampangue*:\n\n🏥 *{{2}}* — {{3}}\n🕐 Hoy a las *{{4}}*\n📍 Monsalve esquina República, Carampangue\n\nRecuerda llegar *15 minutos antes* con tu cédula de identidad.",
+      "example": {
+        "body_text": [
+          [
+            "Sergio Carrasco",
+            "Kinesiología",
+            "Luis Armijo",
+            "14:00"
+          ]
+        ]
+      }
+    }
+  ]
+}

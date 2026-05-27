@@ -1,0 +1,11 @@
+{
+  "name": "sistema_recuperado",
+  "category": "MARKETING",
+  "language": "es",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "✅ ¡Buenas noticias! Nuestro sistema de citas ya está operativo de nuevo 🎉\n\nSi quieres retomar lo que estabas haciendo, escribe *menu* y te ayudo al tiro.\n\n_Gracias por tu paciencia._"
+    }
+  ]
+}

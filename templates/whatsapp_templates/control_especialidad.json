@@ -1,0 +1,32 @@
+{
+  "name": "control_especialidad",
+  "category": "MARKETING",
+  "language": "es",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}} 😊 Ya va correspondiendo tu control de *{{2}}* 📅\n\nHacer el seguimiento a tiempo hace la diferencia. ¿Quieres ver horarios disponibles?",
+      "example": {
+        "body_text": [
+          [
+            "Ana",
+            "Nutrición"
+          ]
+        ]
+      }
+    },
+    {
+      "type": "BUTTONS",
+      "buttons": [
+        {
+          "type": "QUICK_REPLY",
+          "text": "Sí, ver horarios"
+        },
+        {
+          "type": "QUICK_REPLY",
+          "text": "No por ahora"
+        }
+      ]
+    }
+  ]
+}

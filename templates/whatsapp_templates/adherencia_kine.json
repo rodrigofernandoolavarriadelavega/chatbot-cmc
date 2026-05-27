@@ -1,0 +1,31 @@
+{
+  "name": "adherencia_kine",
+  "category": "MARKETING",
+  "language": "es",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}} 💪 Para que tu tratamiento de kinesiología funcione bien, es importante mantener continuidad en las sesiones.\n\n¿Quieres que te ayude a agendar la próxima?",
+      "example": {
+        "body_text": [
+          [
+            "Juan"
+          ]
+        ]
+      }
+    },
+    {
+      "type": "BUTTONS",
+      "buttons": [
+        {
+          "type": "QUICK_REPLY",
+          "text": "Sí, agendar"
+        },
+        {
+          "type": "QUICK_REPLY",
+          "text": "Más adelante"
+        }
+      ]
+    }
+  ]
+}

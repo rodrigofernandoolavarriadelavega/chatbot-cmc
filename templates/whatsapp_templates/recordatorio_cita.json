@@ -1,0 +1,40 @@
+{
+  "name": "recordatorio_cita",
+  "category": "UTILITY",
+  "language": "es",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}} 👋 Te recordamos tu cita en el *Centro Médico Carampangue*:\n\n🏥 *{{2}}* — {{3}}\n📅 *{{4}}* a las *{{5}}*\n💳 {{6}}\n📍 Monsalve esquina República, Carampangue\n\nRecuerda llegar *15 minutos antes* con tu cédula de identidad.\n\n¿Nos confirmas tu asistencia?",
+      "example": {
+        "body_text": [
+          [
+            "Sergio Carrasco",
+            "Odontología General",
+            "Dra. Javiera Burgos Godoy",
+            "Lunes 13 de abril",
+            "10:00",
+            "Particular"
+          ]
+        ]
+      }
+    },
+    {
+      "type": "BUTTONS",
+      "buttons": [
+        {
+          "type": "QUICK_REPLY",
+          "text": "Confirmo"
+        },
+        {
+          "type": "QUICK_REPLY",
+          "text": "Cambiar hora"
+        },
+        {
+          "type": "QUICK_REPLY",
+          "text": "No podre ir"
+        }
+      ]
+    }
+  ]
+}

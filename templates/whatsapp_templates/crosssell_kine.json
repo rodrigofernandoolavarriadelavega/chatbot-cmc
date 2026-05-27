@@ -1,0 +1,35 @@
+{
+  "name": "crosssell_kine",
+  "category": "MARKETING",
+  "language": "es",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}} 😊 Muchas veces, tras una consulta de medicina o traumatología se recomienda continuar con kinesiología para avanzar mejor.\n\n¿Te gustaría agendar con nuestros kinesiólogos?",
+      "example": {
+        "body_text": [
+          [
+            "Carlos"
+          ]
+        ]
+      }
+    },
+    {
+      "type": "FOOTER",
+      "text": "Responde STOP para no recibir más mensajes"
+    },
+    {
+      "type": "BUTTONS",
+      "buttons": [
+        {
+          "type": "QUICK_REPLY",
+          "text": "Sí, me interesa"
+        },
+        {
+          "type": "QUICK_REPLY",
+          "text": "No por ahora"
+        }
+      ]
+    }
+  ]
+}

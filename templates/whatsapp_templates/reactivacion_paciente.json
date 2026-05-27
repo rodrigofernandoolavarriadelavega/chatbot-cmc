@@ -1,0 +1,36 @@
+{
+  "name": "reactivacion_paciente",
+  "category": "MARKETING",
+  "language": "es",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}} 👋 Hace un tiempo no te vemos en el *Centro Médico Carampangue* 🏥\n\n¿Quieres retomar tu atención de *{{2}}*? Puedo ayudarte a agendar ahora mismo.",
+      "example": {
+        "body_text": [
+          [
+            "Pedro",
+            "Kinesiología"
+          ]
+        ]
+      }
+    },
+    {
+      "type": "FOOTER",
+      "text": "Responde STOP para no recibir más mensajes"
+    },
+    {
+      "type": "BUTTONS",
+      "buttons": [
+        {
+          "type": "QUICK_REPLY",
+          "text": "Sí, agendar"
+        },
+        {
+          "type": "QUICK_REPLY",
+          "text": "No, gracias"
+        }
+      ]
+    }
+  ]
+}

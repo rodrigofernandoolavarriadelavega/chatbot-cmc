@@ -1,0 +1,18 @@
+{
+  "name": "winback_mg_v1",
+  "category": "MARKETING",
+  "language": "es",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}}, te saluda el Centro Médico Carampangue. Hace varios meses no te visitamos. Si tienes algún tema de salud pendiente, una revisión rutinaria o necesitas renovar recetas, te invitamos a agendar una consulta con tu médico.\n\nAtendemos Fonasa y particular en Carampangue y sucursal Olavarría.\n\nPara agendar responde *AGENDAR*. Si no quieres recibir más mensajes responde *BAJA*.",
+      "example": {
+        "body_text": [
+          [
+            "María"
+          ]
+        ]
+      }
+    }
+  ]
+}

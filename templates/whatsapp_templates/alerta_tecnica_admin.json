@@ -1,0 +1,19 @@
+{
+  "name": "alerta_tecnica_admin",
+  "category": "UTILITY",
+  "language": "es",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "⚠️ *Alerta técnica CMC bot*\n\nMedilink no responde desde las {{1}}.\nPacientes esperando: *{{2}}*\n\nEl bot avisó a cada paciente y les pedirá escribir cuando el sistema esté operativo.",
+      "example": {
+        "body_text": [
+          [
+            "14:30 UTC",
+            "3"
+          ]
+        ]
+      }
+    }
+  ]
+}
