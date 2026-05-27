@@ -389,6 +389,7 @@ const CATEGORIES = {
   api:      { label: 'Integraciones', color: '#fb923c' },
   infra:    { label: 'Infraestructura', color: '#f87171' },
   datos:    { label: 'Datos', color: '#4ade80' },
+  portfolio:{ label: 'Portfolio OLACORE', color: '#C88A4D' },
 };
 
 const NODES = [
@@ -674,6 +675,36 @@ const NODES = [
       { icon: '☁️', text: 'Internet solo para backup' },
     ],
   },
+
+  // --------- PORTFOLIO OLACORE (contexto holding) ---------
+  { id: 'olacore-cmc', label: 'CMC\n(salud)', icon: '🏥', cat: 'portfolio', size: 26,
+    badge: 'SIBLING', badgeColor: '#C88A4D',
+    desc: 'Centro Médico Carampangue. Sub-marca OLACORE de salud. Comparte stack tecnológico (chatbot WA, BI Postgres, dashboards FastAPI/Tailwind) y aprendizajes operativos con Meulen.',
+    items: [
+      { icon: '☕', text: 'Sub-marca OLACORE · salud' },
+      { icon: '🔧', text: 'Stack heredado: FastAPI, SQLite, Tailwind' },
+      { icon: '📊', text: 'Aprendizajes en marketing, fidelización, BI' },
+    ],
+    url: 'https://agentecmc.cl/ecosistema', urlLabel: 'agentecmc.cl/ecosistema',
+  },
+  { id: 'olacore-estacion', label: 'Estación\nOlavarría', icon: '🏗️', cat: 'portfolio', size: 22,
+    badge: 'PROYECTO', badgeColor: '#C88A4D',
+    desc: 'Strip comercial con ferretería ancla en Ruta 7 Piedra Azul, Puerto Montt. Primer activo inmobiliario OLACORE. Posible inquilino futuro de Meulen como sub-sede en zona.',
+  },
+  { id: 'olacore-mesa1551', label: 'Mesa 1551\n(Lima)', icon: '☕', cat: 'portfolio', size: 20,
+    badge: 'ADVISOR', badgeColor: '#D49A2E',
+    desc: 'Café+billar frente a UNMSM en Lima. Rodrigo como asesor externo (sin sociedad). NO es sub-marca OLACORE — vertical aparte. Aquí solo aparece como contexto del portafolio personal.',
+    url: 'https://agentecmc.cl/personal', urlLabel: 'Tableros',
+  },
+  { id: 'olacore-rincon', label: 'Rincón del\nCamarón', icon: '🦐', cat: 'portfolio', size: 18,
+    badge: 'SOCIEDAD', badgeColor: '#A8463F',
+    desc: 'Restaurante en Plaza Carampangue, sociedad con chef-operador. NO es sub-marca OLACORE. Posible cliente B2B futuro de Meulen para insumos.',
+  },
+  { id: 'olacore-personal', label: 'Tableros\npersonales', icon: '🧭', cat: 'portfolio', size: 18,
+    badge: 'PROD', badgeColor: '#52B0BC',
+    desc: 'Hub /personal con Ruta + Brújula + Caminos. Tableros de reflexión y estrategia personal de Rodrigo + operadora externa.',
+    url: 'https://agentecmc.cl/personal', urlLabel: 'agentecmc.cl/personal',
+  },
 ];
 
 const EDGES = [
@@ -757,6 +788,13 @@ const EDGES = [
   { from: 'procurement', to: 'catalog', label: 'match producto' },
   { from: 'fastapi', to: 'warehouse' },
   { from: 'fastapi', to: 'procurement' },
+
+  // Portfolio OLACORE (cross-references contextuales)
+  { from: 'olacore-cmc', to: 'fastapi', label: 'mismo stack' },
+  { from: 'olacore-cmc', to: 'sqlite', label: 'mismo motor' },
+  { from: 'olacore-personal', to: 'olacore-cmc', label: 'hosteado en CMC' },
+  { from: 'olacore-personal', to: 'olacore-mesa1551', label: 'Ruta' },
+  { from: 'olacore-estacion', to: 'olacore-cmc', label: 'OLACORE' },
 ];
 
 /* ====================== CANVAS & SIM ====================== */

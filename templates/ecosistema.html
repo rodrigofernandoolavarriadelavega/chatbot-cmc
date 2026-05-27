@@ -291,6 +291,7 @@ const CATEGORIES = {
   api:       { label: 'APIs externas', color: '#fb923c' },
   infra:     { label: 'Infraestructura', color: '#f87171' },
   modulo:    { label: 'Modulos', color: '#38bdf8' },
+  personal:  { label: 'Tableros personales', color: '#52B0BC' },
 };
 
 const NODES = [
@@ -512,6 +513,50 @@ const NODES = [
       { dot: '#fbbf24', text: 'GitHub — 2 repos privados' },
     ],
     size: 20 },
+
+  // ── Tableros personales (deployed sobre infra CMC, contenido íntimo) ──
+  { id: 'personal-hub', label: 'Tableros\npersonales', icon: '\u{1F3DB}', cat: 'personal', badge: 'PROD', badgeColor: '#52B0BC',
+    desc: 'Hub que conecta los 3 tableros personales: Ruta (operadora Mesa 1551), Brújula (Rodrigo · ser), Caminos (Rodrigo · estrategia). Estética OLACORE adaptada. localStorage en cada navegador.',
+    items: [
+      { dot: '#52B0BC', text: '/personal — hub público (URL obscura)' },
+      { dot: '#a78bfa', text: '/ruta — exploración vocacional (para terceros)' },
+      { dot: '#4ade80', text: '/brujula — reflexión personal Rodrigo' },
+      { dot: '#fbbf24', text: '/caminos — 10 jugadas estratégicas' },
+      { dot: '#fb923c', text: 'localStorage · export/import JSON · noindex' },
+    ],
+    url: 'https://agentecmc.cl/personal', urlLabel: 'agentecmc.cl/personal',
+    size: 26 },
+  { id: 'personal-ruta', label: 'Tu Ruta\n(Mesa 1551)', icon: '\u{1F9ED}', cat: 'personal', badge: 'PROD', badgeColor: '#52B0BC',
+    desc: 'Mapa personal vocacional para la operadora Mesa 1551 (novia, 21, Lima). 8 tabs incluyen guion "decir no a Mesa 1551" si decide no entrar a la sociedad.',
+    items: [
+      { dot: '#52B0BC', text: '8 tabs · 10 carreras posibles' },
+      { dot: '#a78bfa', text: '6 experimentos de 1-2 semanas' },
+      { dot: '#4ade80', text: 'Plan 90 días de exploración' },
+      { dot: '#fbbf24', text: 'Bitácora · 12 preguntas semanales' },
+    ],
+    url: 'https://agentecmc.cl/ruta', urlLabel: 'agentecmc.cl/ruta',
+    size: 20 },
+  { id: 'personal-brujula', label: 'Brújula\n(Rodrigo)', icon: '\u{1FA9E}', cat: 'personal', badge: 'PROD', badgeColor: '#52B0BC',
+    desc: 'Reflexión personal del hombre dentro del empresario. Pensado para mira semanal de 10 min. Incluye tab "Espejo" con feedback recibido (anotado literal).',
+    items: [
+      { dot: '#52B0BC', text: 'Termómetro 8 dimensiones de energía' },
+      { dot: '#a78bfa', text: '5 anti-criterios precargados' },
+      { dot: '#4ade80', text: '8 vínculos críticos con status' },
+      { dot: '#fbbf24', text: '6 hábitos no negociables' },
+      { dot: '#fb923c', text: 'Export/import JSON · save toast' },
+    ],
+    url: 'https://agentecmc.cl/brujula', urlLabel: 'agentecmc.cl/brujula',
+    size: 22 },
+  { id: 'personal-caminos', label: 'Caminos\n(Rodrigo)', icon: '\u{1F6E4}', cat: 'personal', badge: 'PROD', badgeColor: '#52B0BC',
+    desc: '10 jugadas estratégicas a tu escala con horizonte 5 años. Hipótesis activa hoy: hub multi-servicio + plataforma tech como diferenciador.',
+    items: [
+      { dot: '#52B0BC', text: '10 caminos detallados' },
+      { dot: '#a78bfa', text: 'Matriz evaluación 6 dimensiones' },
+      { dot: '#4ade80', text: '6 apuestas de prueba a tu escala' },
+      { dot: '#fbbf24', text: 'Anti-caminos (lo que no hacés)' },
+    ],
+    url: 'https://agentecmc.cl/caminos', urlLabel: 'agentecmc.cl/caminos',
+    size: 22 },
 ];
 
 const EDGES = [
@@ -567,6 +612,12 @@ const EDGES = [
   { from: 'marketing', to: 'meta', label: 'Enviar campanas' },
   { from: 'marketing', to: 'sqlite', label: 'Tags, perfiles' },
   { from: 'chatbot', to: 'marketing', label: 'Campanas auto' },
+  // tableros personales
+  { from: 'personal-hub', to: 'personal-ruta' },
+  { from: 'personal-hub', to: 'personal-brujula' },
+  { from: 'personal-hub', to: 'personal-caminos' },
+  { from: 'personal-hub', to: 'vps', label: 'Deploy /personal' },
+  { from: 'personal-brujula', to: 'personal-caminos', label: 'Cross-nav' },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────

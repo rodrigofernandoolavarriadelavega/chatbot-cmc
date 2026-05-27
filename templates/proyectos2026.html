@@ -271,11 +271,15 @@
 
 <script>
 const CATEGORIES = {
-  cmc:      { label: 'CMC Salud',       color: '#38bdf8' },
-  meulen:   { label: 'Meulen Retail',   color: '#a882ff' },
-  buses:    { label: 'Buses Estuario',  color: '#2dd4bf' },
-  shared:   { label: 'Stack común',     color: '#4ade80' },
-  external: { label: 'Integraciones',   color: '#fb923c' },
+  cmc:      { label: 'CMC Salud',          color: '#38bdf8' },
+  meulen:   { label: 'Meulen Retail',      color: '#a882ff' },
+  buses:    { label: 'Buses Estuario',     color: '#2dd4bf' },
+  mesa1551: { label: 'Mesa 1551 (Lima)',   color: '#D49A2E' },
+  estacion: { label: 'Estación Olavarría', color: '#C88A4D' },
+  rincon:   { label: 'El Rincón',          color: '#A8463F' },
+  personal: { label: 'Tableros personales',color: '#52B0BC' },
+  shared:   { label: 'Stack común',        color: '#4ade80' },
+  external: { label: 'Integraciones',      color: '#fb923c' },
 };
 
 const NODES = [
@@ -417,6 +421,57 @@ const NODES = [
   { id: 'transbank', label: 'Transbank\n(Meulen)', icon: '💳', cat: 'external', size: 18,
     desc: 'Máquina standalone en MVP. Integración SDK planificada para Fase 3.',
   },
+
+  // =========== MESA 1551 (Lima, Perú) — vertical aparte de OLACORE ===========
+  { id: 'mesa1551-hub', label: 'Mesa 1551\nLima · Perú', icon: '☕', cat: 'mesa1551', size: 42,
+    badge: 'ADVISOR', badgeColor: '#D49A2E',
+    desc: 'Café de día + billar de noche frente a UNMSM. Operadora: novia de Rodrigo (peruana, 21, estudiante UTP Administración). Rol Rodrigo: asesor externo sin participación en sociedad. Vertical NO-OLACORE, registrada en memoria como proyecto independiente.',
+    url: 'https://agentecmc.cl/personal', urlLabel: 'Tableros relacionados',
+  },
+  { id: 'mesa1551-web', label: 'Web\nMesa 1551', icon: '🌐', cat: 'mesa1551', size: 22,
+    desc: 'Landing comercial café-first (estrategia: amplíar público antes de mostrar billar/bar). Carpeta local proyecto-mesa-1551/web/index.html. Aún no publicada — pendiente decisión de operadora sobre traspaso.',
+  },
+  { id: 'mesa1551-brand', label: 'Brand\nMesa 1551', icon: '🎨', cat: 'mesa1551', size: 20,
+    desc: 'Identidad armada externamente (paleta espresso/crema/verde billar/ámbar). Logo "M" formada por tacos de billar + humo de café + bola 8. Wordmark Montserrat Extra Bold.',
+  },
+  { id: 'mesa1551-aprende', label: 'Camino al\nprimer negocio', icon: '🎓', cat: 'mesa1551', size: 22,
+    desc: '13 módulos en 5 fases sobre cómo operar café+billar+bar en Cercado de Lima: SAC, ITSE, planilla MYPE, manejo de borrachos, Yape/Plin, recetario con costo. localStorage tracking.',
+    url: 'https://agentecmc.cl/aprende-mesa', urlLabel: 'agentecmc.cl/aprende-mesa',
+  },
+
+  // =========== ESTACIÓN OLAVARRÍA (Real estate Piedra Azul) ===========
+  { id: 'estacion-hub', label: 'Estación\nOlavarría', icon: '🏗️', cat: 'estacion', size: 40,
+    badge: 'PROYECTO', badgeColor: '#C88A4D',
+    desc: 'Strip comercial con ferretería ancla en terreno familiar Ruta 7, km 17, Puerto Montt. Primer activo inmobiliario OLACORE. Sub-marca formada.',
+  },
+  { id: 'estacion-anchor', label: 'Ferretería\nancla', icon: '🔧', cat: 'estacion', size: 18,
+    desc: 'Operador independiente como inquilino ancla. Esquema arriendo+%.',
+  },
+
+  // =========== EL RINCÓN DEL CAMARÓN (restaurante con socio chef) ===========
+  { id: 'rincon-hub', label: 'El Rincón\ndel Camarón', icon: '🦐', cat: 'rincon', size: 40,
+    badge: 'SOCIEDAD', badgeColor: '#A8463F',
+    desc: 'Restaurante en Plaza Carampangue, sociedad con chef-operador. Rodrigo aporta capital + infraestructura digital. Nombre referencia Fiesta del Camarón de Vado Carampangue. NO es sub-marca OLACORE.',
+  },
+
+  // =========== TABLEROS PERSONALES (deployed en agentecmc.cl) ===========
+  { id: 'personal-hub', label: 'Tableros\npersonales', icon: '🏛', cat: 'personal', size: 30,
+    badge: 'PROD', badgeColor: '#52B0BC',
+    desc: 'Hub que conecta los tres tableros íntimos: Ruta (operadora Mesa 1551), Brújula (Rodrigo · ser), Caminos (Rodrigo · estrategia). Estética OLACORE adaptada. localStorage en cada navegador, sin servidor.',
+    url: 'https://agentecmc.cl/personal', urlLabel: 'agentecmc.cl/personal',
+  },
+  { id: 'personal-ruta', label: 'Tu Ruta\n(Mesa 1551)', icon: '🧭', cat: 'personal', size: 22,
+    desc: 'Mapa personal de exploración vocacional para la operadora de Mesa 1551. 8 tabs: energizadores, 10 carreras, experimentos 2 semanas, 90 días, personas a entrevistar, guion "decir no a Mesa 1551", terminar la carrera, bitácora.',
+    url: 'https://agentecmc.cl/ruta', urlLabel: 'agentecmc.cl/ruta',
+  },
+  { id: 'personal-brujula', label: 'Brújula\n(Rodrigo)', icon: '🪞', cat: 'personal', size: 24,
+    desc: 'Tablero personal del hombre dentro del empresario. 8 tabs: dónde estoy, norte, espejo (retroalimentación), decisiones, anti-criterios, vínculos críticos, hábitos no negociables, bitácora. Mirar semanal.',
+    url: 'https://agentecmc.cl/brujula', urlLabel: 'agentecmc.cl/brujula',
+  },
+  { id: 'personal-caminos', label: 'Caminos\n(Rodrigo)', icon: '🛤', cat: 'personal', size: 24,
+    desc: '10 jugadas estratégicas a tu escala con horizonte 5 años. Tabs: punto de partida, 10 caminos, cómo prepararte, matriz de evaluación, apuestas de prueba, anti-caminos, hipótesis activa, reflexión mensual.',
+    url: 'https://agentecmc.cl/caminos', urlLabel: 'agentecmc.cl/caminos',
+  },
 ];
 
 const EDGES = [
@@ -463,6 +518,25 @@ const EDGES = [
   { from: 'cmc-medilink', to: 'medilink-ext' },
   { from: 'meulen-pos', to: 'bsale' },
   { from: 'meulen-pos', to: 'transbank' },
+
+  // Mesa 1551 interno
+  { from: 'mesa1551-hub', to: 'mesa1551-web' },
+  { from: 'mesa1551-hub', to: 'mesa1551-brand' },
+  { from: 'mesa1551-hub', to: 'mesa1551-aprende' },
+
+  // Mesa 1551 ↔ Personal ↔ CMC (deployment shared)
+  { from: 'personal-hub', to: 'personal-ruta' },
+  { from: 'personal-hub', to: 'personal-brujula' },
+  { from: 'personal-hub', to: 'personal-caminos' },
+  { from: 'personal-ruta', to: 'mesa1551-hub', label: 'Operadora' },
+  { from: 'personal-hub', to: 'do-vps', label: 'deploy' },
+  { from: 'cmc-hub', to: 'personal-hub', label: 'hostea' },
+
+  // Estación Olavarría
+  { from: 'estacion-hub', to: 'estacion-anchor' },
+
+  // Rincón del Camarón (sin sub-nodos por ahora)
+  // (placeholder visual — proyecto en planificación con socio chef)
 ];
 
 /* ===== CANVAS ===== */
@@ -486,11 +560,15 @@ const nodeMap = new Map();
 NODES.forEach((n, i) => {
   // Posicionar CMC izquierda, Meulen derecha, Buses arriba, shared al medio-abajo
   let bias = { x: 0, y: 0 };
-  if (n.cat === 'cmc') bias = { x: -350, y: 80 };
-  else if (n.cat === 'meulen') bias = { x: 350, y: 80 };
-  else if (n.cat === 'buses') bias = { x: 0, y: -380 };
+  if (n.cat === 'cmc') bias = { x: -420, y: 60 };
+  else if (n.cat === 'meulen') bias = { x: 420, y: 60 };
+  else if (n.cat === 'buses') bias = { x: 0, y: -460 };
+  else if (n.cat === 'mesa1551') bias = { x: -480, y: -340 };
+  else if (n.cat === 'estacion') bias = { x: 540, y: -300 };
+  else if (n.cat === 'rincon') bias = { x: 380, y: 420 };
+  else if (n.cat === 'personal') bias = { x: -260, y: 380 };
   else if (n.cat === 'shared') bias = { x: 0, y: 280 };
-  else if (n.cat === 'external') bias = { x: (Math.random() > 0.5 ? 600 : -600), y: -120 };
+  else if (n.cat === 'external') bias = { x: (Math.random() > 0.5 ? 700 : -700), y: -100 };
   const angle = (i / NODES.length) * Math.PI * 2;
   n.x = bias.x + Math.cos(angle) * 120 + (Math.random() - 0.5) * 60;
   n.y = bias.y + Math.sin(angle) * 120 + (Math.random() - 0.5) * 60;
