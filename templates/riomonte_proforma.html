@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Proforma Ríomonte 2.0 — Análisis de escenarios · OLACORE</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..800;1,9..144,300..800&family=Inter:wght@300..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --fiordo: #1f3a4d; --fiordo-soft: #2c4f66; --cobre: #b8763a; --cobre-soft: #d4a574;
+    --neblina: #f4f0e8; --neblina-deep: #e8e1d2; --lacre: #7a2e35; --tinta: #1a1a1a;
+    --gris: #6b6b6b; --linea: #d6cfc0; --verde: #4a6b3a; --rojo: #9a3c30;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', -apple-system, sans-serif; background: var(--neblina); color: var(--tinta); line-height: 1.5; min-height: 100vh; }
+  .container { max-width: 1280px; margin: 0 auto; padding: 32px 24px 80px; }
+  header { border-bottom: 1px solid var(--linea); padding-bottom: 24px; margin-bottom: 32px; }
+  .crumb { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; color: var(--cobre); text-transform: uppercase; margin-bottom: 8px; }
+  h1 { font-family: 'Fraunces', serif; font-weight: 400; font-size: 36px; color: var(--fiordo); letter-spacing: -0.01em; line-height: 1.15; }
+  h1 em { font-style: italic; color: var(--cobre); }
+  .sub { color: var(--gris); font-size: 14px; margin-top: 8px; max-width: 720px; }
+  h2 { font-family: 'Fraunces', serif; font-weight: 500; font-size: 22px; color: var(--fiordo); margin: 40px 0 16px; letter-spacing: -0.01em; }
+  h2::before { content: "—"; color: var(--cobre); margin-right: 12px; font-weight: 300; }
+  .controls { background: white; border: 1px solid var(--linea); border-radius: 4px; padding: 24px; margin-bottom: 32px; }
+  .control-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+  .control label { display: block; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gris); margin-bottom: 8px; }
+  .control input[type="range"] { width: 100%; accent-color: var(--cobre); }
+  .control .val { font-family: 'Fraunces', serif; font-size: 24px; color: var(--fiordo); font-weight: 500; }
+  .control .val small { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--cobre); margin-left: 6px; }
+  .escenarios { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  @media (max-width: 900px) { .escenarios { grid-template-columns: 1fr; } }
+  .esc { background: white; border: 1px solid var(--linea); border-radius: 4px; overflow: hidden; display: flex; flex-direction: column; }
+  .esc-head { padding: 20px 24px; border-bottom: 2px solid var(--cobre); color: white; }
+  .esc-head .nombre { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 500; }
+  .esc-head .desc { font-size: 12px; color: var(--cobre-soft); margin-top: 4px; font-family: 'IBM Plex Mono', monospace; }
+  .esc.cons .esc-head { background: linear-gradient(180deg, var(--lacre) 0%, #5e2127 100%); }
+  .esc.base .esc-head { background: linear-gradient(180deg, var(--cobre) 0%, #a06430 100%); }
+  .esc.optim .esc-head { background: linear-gradient(180deg, var(--verde) 0%, #3a5a2a 100%); }
+  .pl { padding: 20px 24px; }
+  .pl-row { display: flex; justify-content: space-between; align-items: baseline; padding: 8px 0; font-size: 14px; border-bottom: 1px dashed var(--linea); }
+  .pl-row:last-child { border-bottom: none; }
+  .pl-row.tot { border-top: 2px solid var(--fiordo); border-bottom: none; margin-top: 8px; padding-top: 12px; font-weight: 600; }
+  .pl-row.util { background: var(--neblina); margin: 12px -24px -8px; padding: 14px 24px; font-family: 'Fraunces', serif; font-size: 18px; border-top: 2px solid var(--cobre); border-bottom: none; }
+  .pl-row .num { font-family: 'IBM Plex Mono', monospace; font-weight: 500; color: var(--fiordo); }
+  .pl-row .num.neg { color: var(--rojo); }
+  .pl-row .num.pos { color: var(--verde); font-weight: 600; }
+  .pl-row .label { color: var(--gris); }
+  .pl-row.head { color: var(--cobre); font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; padding-top: 16px; }
+  .socios { margin-top: auto; padding: 20px 24px; background: var(--neblina-deep); border-top: 1px solid var(--linea); }
+  .socio-row { display: flex; justify-content: space-between; align-items: baseline; padding: 6px 0; font-size: 13px; }
+  .socio-row .name { font-family: 'IBM Plex Mono', monospace; color: var(--fiordo); }
+  .socio-row .v { font-family: 'IBM Plex Mono', monospace; color: var(--tinta); font-weight: 500; }
+  .socio-row.dent .v { color: var(--lacre); font-weight: 600; }
+  .socio-row .anual { font-size: 10px; color: var(--gris); margin-left: 6px; }
+  .verdict { margin-top: 12px; padding: 12px; font-size: 12px; border-radius: 3px; font-family: 'IBM Plex Mono', monospace; line-height: 1.5; }
+  .verdict.ok { background: rgba(74, 107, 58, 0.1); color: var(--verde); border-left: 3px solid var(--verde); }
+  .verdict.warn { background: rgba(184, 118, 58, 0.1); color: var(--cobre); border-left: 3px solid var(--cobre); }
+  .verdict.bad { background: rgba(154, 60, 48, 0.1); color: var(--rojo); border-left: 3px solid var(--rojo); }
+  .insight { background: white; border-left: 3px solid var(--cobre); padding: 20px 24px; margin: 24px 0; border-radius: 0 3px 3px 0; }
+  .insight .title { font-family: 'Fraunces', serif; color: var(--fiordo); font-size: 16px; margin-bottom: 8px; font-weight: 500; }
+  .insight p { font-size: 14px; color: var(--tinta); margin-bottom: 6px; }
+  .insight p:last-child { margin-bottom: 0; }
+  .insight strong { color: var(--lacre); }
+  .breakeven { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 16px; }
+  @media (max-width: 700px) { .breakeven { grid-template-columns: 1fr; } }
+  .be { background: white; border: 1px solid var(--linea); padding: 16px 20px; border-radius: 3px; }
+  .be .be-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gris); }
+  .be .be-val { font-family: 'Fraunces', serif; font-size: 28px; color: var(--fiordo); margin-top: 4px; }
+  .be .be-sub { font-size: 12px; color: var(--cobre); margin-top: 4px; font-family: 'IBM Plex Mono', monospace; }
+  footer { margin-top: 60px; padding-top: 24px; border-top: 1px solid var(--linea); font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--gris); letter-spacing: 0.05em; text-align: center; }
+  footer .sello { display: inline-block; border: 1px solid var(--cobre); padding: 4px 10px; color: var(--cobre); letter-spacing: 0.15em; margin: 0 6px; }
+  .preguntas { background: white; border: 1px solid var(--linea); border-radius: 4px; padding: 24px; }
+  .preguntas ol { padding-left: 20px; }
+  .preguntas li { margin-bottom: 12px; font-size: 14px; }
+  .preguntas li strong { color: var(--fiordo); font-family: 'Fraunces', serif; font-size: 16px; font-weight: 500; }
+  .preguntas li em { color: var(--cobre); font-style: normal; font-family: 'IBM Plex Mono', monospace; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <div class="crumb">OLACORE · Análisis estratégico · Rodrigo · Sebastián · Juan</div>
+  <h1>Proforma <em>Ríomonte 2.0</em><br>Tres escenarios para volver a la sociedad</h1>
+  <p class="sub">
+    Modelo financiero para evaluar la entrada como socios en la reactivación de Ríomonte (Puerto Montt).
+    Sociedad 1/3 entre <strong>Juan</strong> (dentista, operador clínico), <strong>Sebastián</strong> (ingeniero, operador local — GM Finalcut) y <strong>Rodrigo</strong> (stack digital + capital).
+    Mueve los controles para simular distintos escenarios. Se actualizan en vivo.
+  </p>
+</header>
+
+<h2>5 datos a pedirle a Juan antes de la reunión</h2>
+<div class="preguntas">
+  <ol>
+    <li><strong>Arriendo exacto de los 2 locales hoy</strong> — confirmar los ~$700k que mencionó Rodrigo, incluyendo gastos comunes, IVA y reajustes UF si aplica. <em>Variable de mayor impacto en el fijo mensual.</em></li>
+    <li><strong>Número de box clínicos habilitados y resolución sanitaria SEREMI</strong> — confirmar que siguen siendo 2 box útiles, con habilitación de la SEREMI Los Lagos al día. <em>Determina techo máximo de producción mensual.</em></li>
+    <li><strong>Modelo de cobro propio de Juan</strong> — ¿sueldo fijo + utilidades, o % de su propia producción como dueño-operador? <em>Define si se repite el error Ríomonte 1.0 (sueldo independiente de producción) o no.</em></li>
+    <li><strong>Facturación actual operando solo</strong> — el dato más importante. Si Juan ya factura $8M solo, no le conviene repartir 1/3. Si está en $3-5M, la propuesta tiene mucho sentido. <em>Define si el deal es viable o si conviene quedar como SaaS provider.</em></li>
+    <li><strong>Deudas heredadas o nuevas</strong> — ¿quedó alguna obligación de Ríomonte 1.0 sin saldar? ¿Pidió crédito para reactivar? <em>Determina si se entra a una empresa limpia o con bola de nieve potencial.</em></li>
+  </ol>
+</div>
+
+<h2>Controles del modelo</h2>
+<div class="controls">
+  <div class="control-grid">
+    <div class="control">
+      <label>Facturación reactivada (sin digital)</label>
+      <div class="val"><span id="v-fact">7,0</span><small>M$/mes</small></div>
+      <input type="range" id="i-fact" min="3" max="10" step="0.5" value="7" />
+    </div>
+    <div class="control">
+      <label>Lift del funnel digital</label>
+      <div class="val"><span id="v-lift">25</span><small>%</small></div>
+      <input type="range" id="i-lift" min="0" max="60" step="5" value="25" />
+    </div>
+    <div class="control">
+      <label>Arriendo (fijo)</label>
+      <div class="val"><span id="v-arr">700</span><small>k$/mes</small></div>
+      <input type="range" id="i-arr" min="500" max="1200" step="50" value="700" />
+    </div>
+    <div class="control">
+      <label>Sueldos asistentes / recepción</label>
+      <div class="val"><span id="v-sld">1,4</span><small>M$/mes</small></div>
+      <input type="range" id="i-sld" min="0.8" max="2.5" step="0.1" value="1.4" />
+    </div>
+    <div class="control">
+      <label>% Producción a Juan (dentista)</label>
+      <div class="val"><span id="v-pdt">30</span><small>%</small></div>
+      <input type="range" id="i-pdt" min="20" max="45" step="1" value="30" />
+    </div>
+    <div class="control">
+      <label>Insumos + var. (% facturación)</label>
+      <div class="val"><span id="v-ins">12</span><small>%</small></div>
+      <input type="range" id="i-ins" min="8" max="20" step="1" value="12" />
+    </div>
+  </div>
+</div>
+
+<h2>Escenarios</h2>
+<div class="escenarios" id="escenarios"></div>
+
+<h2>Break-even mensual del proyecto</h2>
+<div class="breakeven" id="breakeven"></div>
+
+<h2>Lecturas estratégicas</h2>
+
+<div class="insight">
+  <div class="title">El umbral de Sebastián</div>
+  <p>Sebastián gana hoy <strong>$2,5M/mes</strong> como GM de Finalcut (sin equity en esa empresa). Para que tenga sentido económico salirse de Finalcut y dedicarse full a Ríomonte 2.0, su participación 1/3 tiene que llegar al menos a ese número.</p>
+  <p>Si el escenario base no lo alcanza, la regla es clara: <strong>Sebastián NO se sale de Finalcut hasta que Ríomonte demuestre llegar a ese umbral por 3 meses seguidos</strong>. Esto protege la amistad y el proyecto.</p>
+</div>
+
+<div class="insight">
+  <div class="title">El umbral de Juan</div>
+  <p>Juan hoy opera solo y se queda con la utilidad después de sus costos. Para que acepte repartir 1/3 con Sebastián y Rodrigo, los socios tienen que aportar un delta que <strong>supere lo que él gana solo</strong>.</p>
+  <p>Si su facturación actual es alta (~$8M solo), no hay deal posible salvo quedar como SaaS provider con fee. Si su facturación actual es baja (~$3-5M), el lift digital + capital + supervisión justifican entrar como socios.</p>
+</div>
+
+<div class="insight">
+  <div class="title">Por qué el piloto digital de 30-60 días es la primera movida</div>
+  <p>Antes de aceptar 1/3 o el % que sea, hay que medir <strong>cuánto del aumento de facturación es atribuible al funnel digital</strong>, no a la apertura natural de Juan trabajando solo. Eso se separa con UTMs + GTM + tracking de origen en el chatbot, igual que en CMC. Sin esa medición, la negociación de equity es a ciegas.</p>
+</div>
+
+<h2>Reglas anti bola-de-nieve (cláusulas obligatorias en el deal)</h2>
+<div class="insight">
+  <p><strong>1. Veto sobre nuevas deudas o inversiones</strong> sobre $2M sin aprobación unánime de los 3 socios.</p>
+  <p><strong>2. Reportes financieros mensuales</strong> obligatorios — dashboard automático armado con stack CMC.</p>
+  <p><strong>3. Reserva mínima de caja</strong> equivalente a 2 meses de fijos antes de repartir utilidades.</p>
+  <p><strong>4. Cláusula de salida con valuación objetiva</strong> — si EBITDA cae bajo $X por 3 meses seguidos, cualquier socio puede gatillar venta o split.</p>
+  <p><strong>5. Vesting de 4 años</strong> para los 3 socios — equity se gana con presencia, no con firma inicial.</p>
+  <p><strong>6. Piloto digital 30-60 días ANTES de firmar equity</strong> — métrica clara de lift atribuible al funnel digital.</p>
+</div>
+
+<footer>
+  <span class="sello">OLACORE</span> Clínica Ríomonte · Puerto Montt · Análisis interno — no circular
+</footer>
+
+</div>
+
+<script>
+const fmtM = (n) => n.toFixed(2).replace('.', ',') + ' M';
+
+function el(tag, opts) {
+  const e = document.createElement(tag);
+  if (opts) {
+    if (opts.cls) e.className = opts.cls;
+    if (opts.text != null) e.textContent = opts.text;
+  }
+  return e;
+}
+
+function plRow(labelTxt, valTxt, opts) {
+  const o = opts || {};
+  const row = el('div', { cls: 'pl-row' + (o.rowCls ? ' ' + o.rowCls : '') });
+  const lbl = el('span', { cls: 'label', text: labelTxt });
+  const num = el('span', { cls: 'num' + (o.numCls ? ' ' + o.numCls : ''), text: valTxt });
+  row.append(lbl, num);
+  return row;
+}
+
+function headerRow(txt) {
+  const row = el('div', { cls: 'pl-row head' });
+  row.append(el('span', { text: txt }));
+  return row;
+}
+
+function calc(input) {
+  const factBase = input.fact * input.factMult;
+  const factTotal = factBase * (1 + (input.lift * input.liftMult / 100));
+  const arriendo = input.arr / 1000;
+  const sueldos = input.sld;
+  const insumos = factTotal * (input.ins / 100);
+  const software = 0.4;
+  const dentista = factTotal * (input.pdt / 100);
+  const egresos = arriendo + sueldos + insumos + software + dentista;
+  const utilidad = factTotal - egresos;
+  const porSocio = utilidad / 3;
+  const ingreso_dentista = dentista + porSocio;
+  const breakeven = (arriendo + sueldos + software) / (1 - input.ins/100 - input.pdt/100);
+  return { factBase, factTotal, arriendo, sueldos, insumos, software, dentista, egresos, utilidad, porSocio, ingreso_dentista, breakeven };
+}
+
+function verdict(sebastianIngreso, utilidad) {
+  if (utilidad < 0) return { cls: 'bad', txt: 'PÉRDIDA. Mismo desenlace que Ríomonte 1.0. No entrar.' };
+  if (sebastianIngreso >= 2.5) return { cls: 'ok', txt: 'Sebastián puede dejar Finalcut. Deal viable a 1/3.' };
+  if (sebastianIngreso >= 1.5) return { cls: 'warn', txt: 'Sebastián entra part-time. NO se sale de Finalcut aún.' };
+  return { cls: 'warn', txt: 'Equity para Sebastián demasiado bajo. Replantear estructura o fee SaaS.' };
+}
+
+const escenariosDef = [
+  { key: 'cons', nombre: 'Conservador', desc: 'Lift bajo · Costo alto', mult: { fact: 0.7, lift: 0.6 } },
+  { key: 'base', nombre: 'Base', desc: 'Tu input actual', mult: { fact: 1.0, lift: 1.0 } },
+  { key: 'optim', nombre: 'Optimista', desc: 'Lift alto · Mercado responde', mult: { fact: 1.2, lift: 1.5 } }
+];
+
+function buildEsc(def, r, input) {
+  const card = el('div', { cls: 'esc ' + def.key });
+
+  const head = el('div', { cls: 'esc-head' });
+  head.append(el('div', { cls: 'nombre', text: def.nombre }));
+  head.append(el('div', { cls: 'desc', text: def.desc }));
+  card.append(head);
+
+  const pl = el('div', { cls: 'pl' });
+  pl.append(headerRow('Ingresos'));
+  pl.append(plRow('Facturación reactivada', fmtM(r.factBase) + '$'));
+  pl.append(plRow('+ Lift funnel digital', fmtM(r.factTotal - r.factBase) + '$', { numCls: 'pos' }));
+  pl.append(plRow('Facturación total', fmtM(r.factTotal) + '$', { rowCls: 'tot' }));
+
+  pl.append(headerRow('Egresos'));
+  pl.append(plRow('Arriendo', '−' + fmtM(r.arriendo) + '$', { numCls: 'neg' }));
+  pl.append(plRow('Sueldos fijos', '−' + fmtM(r.sueldos) + '$', { numCls: 'neg' }));
+  pl.append(plRow('Insumos + var.', '−' + fmtM(r.insumos) + '$', { numCls: 'neg' }));
+  pl.append(plRow('Software, contable, otros', '−' + fmtM(r.software) + '$', { numCls: 'neg' }));
+  pl.append(plRow('Producción Juan (' + input.pdt + '%)', '−' + fmtM(r.dentista) + '$', { numCls: 'neg' }));
+  pl.append(plRow('Egresos totales', '−' + fmtM(r.egresos) + '$', { rowCls: 'tot', numCls: 'neg' }));
+
+  pl.append(plRow('Utilidad antes socios', fmtM(r.utilidad) + '$', { rowCls: 'util', numCls: r.utilidad >= 0 ? 'pos' : 'neg' }));
+  card.append(pl);
+
+  const soc = el('div', { cls: 'socios' });
+  const sh = el('div', { cls: 'pl-row head' });
+  sh.style.paddingTop = '0';
+  sh.append(el('span', { text: 'Reparto mensual (1/3 cada uno)' }));
+  soc.append(sh);
+
+  const mkSocio = (label, sub, val, anual, dent) => {
+    const row = el('div', { cls: 'socio-row' + (dent ? ' dent' : '') });
+    const n = el('span', { cls: 'name' });
+    n.append(document.createTextNode(label + ' '));
+    n.append(el('span', { cls: 'anual', text: sub }));
+    const v = el('span', { cls: 'v' });
+    v.append(document.createTextNode(fmtM(val) + '$'));
+    v.append(el('span', { cls: 'anual', text: '· ' + fmtM(anual) + '$/año' }));
+    row.append(n, v);
+    return row;
+  };
+  soc.append(mkSocio('Juan (dentista)', 'prod + 1/3 util', r.ingreso_dentista, r.ingreso_dentista * 12, true));
+  soc.append(mkSocio('Sebastián (ingeniero)', '1/3 util', r.porSocio, r.porSocio * 12));
+  soc.append(mkSocio('Rodrigo (tú)', '1/3 util', r.porSocio, r.porSocio * 12));
+
+  const v = verdict(r.porSocio, r.utilidad);
+  const vd = el('div', { cls: 'verdict ' + v.cls, text: v.txt });
+  soc.append(vd);
+
+  card.append(soc);
+  return card;
+}
+
+function buildBE(label, value, sub) {
+  const div = el('div', { cls: 'be' });
+  div.append(el('div', { cls: 'be-label', text: label }));
+  div.append(el('div', { cls: 'be-val', text: value }));
+  div.append(el('div', { cls: 'be-sub', text: sub }));
+  return div;
+}
+
+function clearChildren(node) { while (node.firstChild) node.removeChild(node.firstChild); }
+
+function render() {
+  const input = {
+    fact: parseFloat(document.getElementById('i-fact').value),
+    lift: parseFloat(document.getElementById('i-lift').value),
+    arr: parseFloat(document.getElementById('i-arr').value),
+    sld: parseFloat(document.getElementById('i-sld').value),
+    pdt: parseFloat(document.getElementById('i-pdt').value),
+    ins: parseFloat(document.getElementById('i-ins').value),
+  };
+
+  document.getElementById('v-fact').textContent = input.fact.toFixed(1).replace('.', ',');
+  document.getElementById('v-lift').textContent = input.lift;
+  document.getElementById('v-arr').textContent = input.arr;
+  document.getElementById('v-sld').textContent = input.sld.toFixed(1).replace('.', ',');
+  document.getElementById('v-pdt').textContent = input.pdt;
+  document.getElementById('v-ins').textContent = input.ins;
+
+  const cont = document.getElementById('escenarios');
+  clearChildren(cont);
+  escenariosDef.forEach(def => {
+    const r = calc(Object.assign({}, input, { factMult: def.mult.fact, liftMult: def.mult.lift }));
+    cont.append(buildEsc(def, r, input));
+  });
+
+  const beCont = document.getElementById('breakeven');
+  clearChildren(beCont);
+  const baseR = calc(Object.assign({}, input, { factMult: 1, liftMult: 1 }));
+  const margenPct = ((baseR.factTotal / baseR.breakeven - 1) * 100);
+  const sebastianTarget = baseR.breakeven + (2.5 * 3 / (1 - input.ins/100 - input.pdt/100));
+
+  beCont.append(buildBE('Break-even facturación', fmtM(baseR.breakeven) + '$', '/mes para no perder plata'));
+  beCont.append(buildBE('Margen sobre break-even (base)', margenPct.toFixed(0) + '%', margenPct >= 0 ? 'por encima del umbral' : 'POR DEBAJO del umbral'));
+  beCont.append(buildBE('Facturación para Sebastián $2,5M', fmtM(sebastianTarget) + '$', 'umbral para dejar Finalcut'));
+}
+
+['i-fact','i-lift','i-arr','i-sld','i-pdt','i-ins'].forEach(id => {
+  document.getElementById(id).addEventListener('input', render);
+});
+render();
+</script>
+</body>
+</html>

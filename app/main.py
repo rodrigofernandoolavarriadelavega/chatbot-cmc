@@ -615,6 +615,8 @@ _SITIO_V5_HTML = (_TEMPLATE_DIR / "sitio-v5.html").read_text(encoding="utf-8") i
 _SITIO_V6_HTML = (_TEMPLATE_DIR / "sitio-v6.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio-v6.html").exists() else ""
 _SITIO_V7_HTML = (_TEMPLATE_DIR / "sitio-v7.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio-v7.html").exists() else ""
 _SITIO_HTML = (_TEMPLATE_DIR / "sitio.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio.html").exists() else ""
+_RIOMONTE_HTML = (_TEMPLATE_DIR / "riomonte.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "riomonte.html").exists() else ""
+_RIOMONTE_PROFORMA_HTML = (_TEMPLATE_DIR / "riomonte_proforma.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "riomonte_proforma.html").exists() else ""
 _BLOG_DIR = _TEMPLATE_DIR / "blog"
 _HEATMAP_COMUNAS_HTML = (_TEMPLATE_DIR / "heatmap_comunas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "heatmap_comunas.html").exists() else ""
 _HEATMAP_DIRECCIONES_HTML = (_TEMPLATE_DIR / "heatmap_direcciones.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "heatmap_direcciones.html").exists() else ""
@@ -705,6 +707,18 @@ def landing_ortodoncia():
 def sitio_v3():
     """Prototipo v3 del sitio web — público para revisión."""
     return _SITIO_V3_HTML
+
+
+@app.get("/riomonte", response_class=HTMLResponse)
+def riomonte_landing():
+    """Landing page Ríomonte Clínica Dental — Puerto Montt (vertical en evaluación)."""
+    return _RIOMONTE_HTML
+
+
+@app.get("/riomonte/proforma", response_class=HTMLResponse)
+def riomonte_proforma():
+    """Proforma financiera Ríomonte 2.0 — análisis interno (Rodrigo · Sebastián · Juan)."""
+    return _RIOMONTE_PROFORMA_HTML
 
 
 @app.get("/sitio/v2", response_class=HTMLResponse)
