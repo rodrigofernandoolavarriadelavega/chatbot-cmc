@@ -2840,7 +2840,7 @@ def api_winback_status(token: str | None = Query(None)):
             cur.execute("""
                 SELECT
                     COUNT(*) FILTER (WHERE cita_id IS NOT NULL OR cita_atribuida_id IS NOT NULL) AS citas,
-                    COALESCE(SUM(value_clp), 0)                  AS revenue
+                    COALESCE(SUM(value_clp) FILTER (WHERE cita_id IS NOT NULL OR cita_atribuida_id IS NOT NULL), 0) AS revenue
                 FROM bi.winback_envios
             """)
             row2 = cur.fetchone()
