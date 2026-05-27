@@ -1434,6 +1434,7 @@ function renderInbox(){
   const inSearchMode = q.length >= 2;
 
   if (inSearchMode){
+    _lastInboxKey = "";  // invalidar cache de modo no-search
     // WhatsApp-style: dos secciones — Contactos (match local) + Mensajes (match FTS5).
     const contactList = filteredConvs();
     const msgHits = (searchHitsQ === q) ? searchHits : [];
@@ -1469,8 +1470,24 @@ function renderInbox(){
     el.appendChild(empty);
     return;
   }
+  // Skip rebuild si nada relevante cambió. renderInbox corre cada 5s con los
+  // mismos datos en ~90% de los ticks; pintar 2500 nodos bloquea el main
+  // thread 200-500ms y demora los clicks que caen durante el rebuild. La key
+  // captura lo que afecta el HTML: phone, last_ts, longitud preview, estado,
+  // unread, activePhone y especialidad del flow.
+  let _key = activePhone + "|";
+  for (let i = 0; i < list.length; i++) {
+    const c = list[i];
+    _key += c.phone + ":" + (c.last_ts || c.updated_at || "") + ":" +
+            (c.last_text || "").length + ":" + (c.state || "") + ":" +
+            (unreadMap[c.phone] || 0) + ":" +
+            ((c.flow_data || {}).especialidad || "") + "|";
+  }
+  if (_key === _lastInboxKey) return;
+  _lastInboxKey = _key;
   el.innerHTML = list.map(_renderConvRow).join("");
 }
+let _lastInboxKey = "";
 
 function updateKpis(){
   const unreadConvs = Object.keys(unreadMap).filter(p => (unreadMap[p]||0) > 0).length;
