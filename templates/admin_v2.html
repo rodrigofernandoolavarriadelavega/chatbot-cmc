@@ -1186,8 +1186,8 @@ const TOKEN = "__TOKEN__";
 const HEADERS = TOKEN ? {"Authorization": "Bearer " + TOKEN} : {};
 const QS     = TOKEN ? "?token=" + encodeURIComponent(TOKEN) : "";
 
-const POLL_INBOX_MS = 5000;
-const POLL_MSGS_MS  = 3000;
+const POLL_INBOX_MS = 8000;
+const POLL_MSGS_MS  = 4000;
 
 let conversations = [];
 let unreadMap     = {};
@@ -1546,6 +1546,15 @@ async function openChat(phone, targetMsgId){
   document.querySelector(".app").classList.add("chat-open");
   renderInbox();
   pendingScrollMsgId = targetMsgId || null;
+  // Render instantáneo desde cache si hay; el fetch real corre abajo en
+  // paralelo y rerenderiza si hay mensajes nuevos.
+  const cached = _msgsCache.get(phone);
+  if (cached && cached.length && !targetMsgId) {
+    messages = cached;
+    renderHeader();
+    renderMessages();
+    scrollToBottom(false);
+  }
   await Promise.all([loadMessages(true), loadContext(), markSeen(phone)]);
   if (pendingScrollMsgId){
     // El scroll a un mensaje específico ya lo hizo renderMessages → scrollToMessage.
@@ -1762,6 +1771,9 @@ function renderHeader(){
   $("#takeoverBanner").style.display = isTake ? "flex" : "none";
 }
 
+// Cache cliente: mensajes por teléfono (últimas 50). Mostrar instantáneo al
+// click y refrescar en background. Equivalente al patrón WhatsApp Web.
+const _msgsCache = new Map();
 async function loadMessages(force){
   if (!activePhone) return;
   try {
@@ -1770,6 +1782,7 @@ async function loadMessages(force){
     const newLastId = msgs.length ? msgs[msgs.length-1].id : null;
     const hasNew = newLastId !== prevLastId;
     messages = msgs;
+    _msgsCache.set(activePhone, msgs.slice(-50));
     if (force || hasNew){
       renderHeader();
       renderMessages();
@@ -2591,6 +2604,26 @@ function setup(){
   inboxTimer = setInterval(loadInbox, POLL_INBOX_MS);
   setInterval(loadEcografiasPhones, 60000);
   setInterval(loadWaitlistPhones, 60000);
+
+  // Pausa polling cuando la pestaña está oculta (Cmd+Tab, ventana atrás).
+  // Sin esto el browser sigue gastando red+CPU contra el server inútilmente
+  // y al volver al foco hay backlog de fetches en cola que demoran el primer
+  // click del usuario.
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      if (inboxTimer) { clearInterval(inboxTimer); inboxTimer = null; }
+      if (msgsTimer)  { clearInterval(msgsTimer);  msgsTimer  = null; }
+    } else {
+      if (!inboxTimer) {
+        loadInbox();
+        inboxTimer = setInterval(loadInbox, POLL_INBOX_MS);
+      }
+      if (activePhone && !msgsTimer) {
+        loadMessages(false);
+        msgsTimer = setInterval(() => { if (activePhone) loadMessages(false); }, POLL_MSGS_MS);
+      }
+    }
+  });
 }
 
 document.addEventListener("DOMContentLoaded", setup);
