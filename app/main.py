@@ -497,13 +497,13 @@ async def lifespan(app: FastAPI):
         id="winback_bi_diario",
         replace_existing=True,
     )
-    # Marketing consent blast: L-V 10:30 CLT — envía consent_marketing_v1 (UTILITY)
+    # Marketing consent blast: L-V 11:00 CLT — envía consent_marketing_v1 (UTILITY)
     # a phones en v_winback_cohortes_contactables sin registro en marketing_consent.
-    # INACTIVO por defecto (MARKETING_CONSENT_BLAST_ACTIVE=false en .env).
-    # Activar solo cuando Rodrigo confirme que consent_marketing_v1 está APPROVED en Meta.
+    # Corre DESPUÉS del dental (10:30) porque dental tiene mayor margen — sus
+    # candidatos ya están excluidos del pool general vía v_winback_cohortes_contactables.
     scheduler.add_job(
         _job_marketing_consent_blast,
-        CronTrigger(day_of_week="mon-fri", hour=10, minute=30, timezone=_CLT),
+        CronTrigger(day_of_week="mon-fri", hour=11, minute=0, timezone=_CLT),
         id="marketing_consent_blast",
         replace_existing=True,
     )
@@ -523,12 +523,12 @@ async def lifespan(app: FastAPI):
         id="dental_winback_diario",
         replace_existing=True,
     )
-    # Dental consent blast: L-V 11:00 CLT — envía consent_dental_v1 (UTILITY).
-    # 1h después del blast general para no saturar rate limit Meta.
-    # INACTIVO por defecto (DENTAL_CONSENT_BLAST_ACTIVE=false en .env).
+    # Dental consent blast: L-V 10:30 CLT — envía consent_dental_v1 (UTILITY).
+    # PRIORIDAD sobre el general (corre antes) porque dental tiene mayor margen.
+    # General arranca a las 11:00 sobre pool ya filtrado (sin dental candidatos).
     scheduler.add_job(
         _job_dental_consent_blast,
-        CronTrigger(day_of_week="mon-fri", hour=11, minute=0, timezone=_CLT),
+        CronTrigger(day_of_week="mon-fri", hour=10, minute=30, timezone=_CLT),
         id="dental_consent_blast",
         replace_existing=True,
     )

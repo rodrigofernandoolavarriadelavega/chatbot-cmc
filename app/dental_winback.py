@@ -91,7 +91,8 @@ SUBCOHORTES = {
 }
 
 # -- Límite diario dental -----------------------------------------------------
-_LIMITE_DIARIO_DENTAL = 100
+# 200/día (subido desde 100 el 2026-05-27) — dental es canal primario por mayor margen.
+_LIMITE_DIARIO_DENTAL = 200
 
 
 # -- Dental consent -----------------------------------------------------------
@@ -726,7 +727,7 @@ async def run_dental_consent_blast() -> dict:
     """Envía consent_dental_v1 (UTILITY) a candidatos dentales sin registro consent.
 
     Solo corre si DENTAL_CONSENT_BLAST_ACTIVE=true y template APPROVED.
-    Max 100/día, 30s entre envíos, L-V 10-19 CLT.
+    Max 200/día, 30s entre envíos, L-V 10-19 CLT.
     """
     if not DENTAL_CONSENT_BLAST_ACTIVE:
         log.debug("dental_winback: DENTAL_CONSENT_BLAST_ACTIVE=false -- blast omitido")
@@ -740,7 +741,7 @@ async def run_dental_consent_blast() -> dict:
         log.warning("dental_winback: consent_dental_v1 no esta APPROVED en Meta -- skip")
         return {"status": "template_no_aprobado", "enviados": 0}
 
-    LIMITE_DIA = 100
+    LIMITE_DIA = 200
     SLEEP_ENTRE = 30
 
     try:

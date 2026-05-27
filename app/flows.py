@@ -2419,7 +2419,34 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         "WAIT_CROSS_SELL",
     }
     _consent_in_active_flow = state in _FLOW_STATES
+
+    # Routing de consents: si hay un dental_consent pending para este phone,
+    # dental siempre gana (handler dental ~línea 2514). Si solo hay marketing
+    # pending, gana el general. Si ninguno está pending, la respuesta "si/no"
+    # NO se intercepta acá — pertenece a otro handler (doctor, flujo, etc).
+    _tiene_dental_pending = False
+    _tiene_marketing_pending = False
     if (_es_consent_si or _es_consent_no) and not _consent_in_active_flow:
+        try:
+            from winback import bi_conn as _bi_route
+            with _bi_route() as _pg_route:
+                with _pg_route.cursor() as _cur_route:
+                    _cur_route.execute(
+                        "SELECT 'dental' FROM bi.dental_consent "
+                        "WHERE phone=%s AND status='pending' "
+                        "UNION ALL "
+                        "SELECT 'marketing' FROM bi.marketing_consent "
+                        "WHERE phone=%s AND status='pending'",
+                        (phone, phone),
+                    )
+                    _rows_route = _cur_route.fetchall()
+                    _tiene_dental_pending = any(r[0] == "dental" for r in _rows_route)
+                    _tiene_marketing_pending = any(r[0] == "marketing" for r in _rows_route)
+        except Exception as _re:
+            log.warning("consent routing error phone=%s: %s", phone, _re)
+
+    if (_es_consent_si or _es_consent_no) and not _consent_in_active_flow \
+            and _tiene_marketing_pending and not _tiene_dental_pending:
         try:
             from winback import (
                 registrar_consent_respuesta,
@@ -2511,24 +2538,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         or tl_norm in ("no, gracias", "no gracias", "no")
         or txt in ("No, gracias", "No gracias")
     )
-    if (_es_dental_consent_si or _es_dental_consent_no) and not _consent_in_active_flow:
-        # Verificar que hay un dental_consent pending para este phone
-        # antes de interceptar (evitar capturar "si/no" de otros contextos).
-        _tiene_dental_pending = False
-        try:
-            from dental_winback import bi_conn as _bi_dc
-            with _bi_dc() as _pg_dc:
-                with _pg_dc.cursor() as _cur_dc:
-                    _cur_dc.execute(
-                        "SELECT 1 FROM bi.dental_consent "
-                        "WHERE phone = %s AND status = 'pending'",
-                        (phone,),
-                    )
-                    _tiene_dental_pending = _cur_dc.fetchone() is not None
-        except Exception as _dp:
-            log.warning("dental_consent check error phone=%s: %s", phone, _dp)
-
-        if _tiene_dental_pending:
+    if (_es_dental_consent_si or _es_dental_consent_no) and not _consent_in_active_flow \
+            and _tiene_dental_pending:
+        if True:  # _tiene_dental_pending ya computado arriba en routing
             try:
                 from dental_winback import (
                     registrar_dental_consent_respuesta,
