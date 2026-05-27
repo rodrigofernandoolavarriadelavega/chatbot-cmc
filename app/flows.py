@@ -3819,6 +3819,33 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             "tendrá hora",
         )
         _skip_triage = any(k in tl for k in _TRIAGE_SKIP_KWS)
+        # Fix H: crisis salud mental nunca debe pasar por triage GES bajo ninguna
+        # circunstancia — el triage puede retornar especialidades incoherentes
+        # (ej. "odontología") para textos de ideación suicida. El crisis check
+        # en la línea ~2603 debería haberlo capturado, pero si la sesión fue
+        # reseteada por un webhook duplicado y volvió a IDLE, puede llegar acá.
+        _skip_triage_crisis = (
+            any(p in tl_norm for p in SALUD_MENTAL_CRISIS)
+            or any(pat.search(tl_norm) for pat in SALUD_MENTAL_PATRONES)
+            or any(p in tl for p in SALUD_MENTAL_CRISIS)
+            or any(pat.search(tl) for pat in SALUD_MENTAL_PATRONES)
+        )
+        if _skip_triage_crisis:
+            # Re-ejecutar contención aquí como safety net — el crisis check
+            # arriba ya la emitió en el mismo request pero no en los reenvíos.
+            log_event(phone, "crisis_salud_mental_triage_guard", {"texto": txt[:240]})
+            save_tag(phone, "crisis-salud-mental")
+            reset_session(phone)
+            return (
+                "Lamento mucho lo que estás sintiendo 💙 Lo que me cuentas es muy "
+                "importante y no estás solo/a.\n\n"
+                "Por favor, habla ahora con alguien que pueda ayudarte:\n\n"
+                "🆘 *Salud Responde*: 600 360 7777 (24 h, atención en crisis)\n"
+                "🚑 *SAMU*: 131 (emergencias)\n"
+                f"📞 *CMC*: {CMC_TELEFONO}\n\n"
+                "Si puedes, acércate a un familiar, vecino o persona de confianza "
+                "mientras llamas. Buscar ayuda es un acto de valentía 💙"
+            )
         if len(txt) >= 10 and not txt.isdigit() and not _skip_triage:
             _t0 = time.monotonic()
             triage = await triage_sintomas(txt)
@@ -5092,6 +5119,55 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
     # ── WAIT_ESPECIALIDAD ─────────────────────────────────────────────────────
     if state == "WAIT_ESPECIALIDAD":
+        # Fix I: si el bot preguntó el tipo de ecografía, el próximo mensaje
+        # es la respuesta del paciente. Pasarlo directamente a route_ecografia
+        # para que "abdominal", "renal", "hombro", "rodilla", etc. sean reconocidos.
+        # Sin este guard, el normalizador general no sabe que estamos en contexto
+        # de eco-tipo y llama a Claude que puede retornar cualquier cosa.
+        if data.get("wait_eco_tipo"):
+            data.pop("wait_eco_tipo", None)
+            try:
+                from ecografias import route_ecografia as _reco_fi, MSG_PREGUNTAR_TIPO as _MSG_REFI
+                _eco_fi = _reco_fi(txt)
+            except Exception:
+                _eco_fi = None
+                _MSG_REFI = None
+            if _eco_fi is not None:
+                log_event(phone, "ecografia_tipo_matched", {
+                    "txt": txt[:120],
+                    "destino": _eco_fi.get("especialidad_destino", ""),
+                    "id_prof": _eco_fi.get("id_profesional"),
+                    "flujo": _eco_fi.get("flujo"),
+                })
+                _esp_eco_fi = _eco_fi["especialidad_destino"]
+                if _eco_fi.get("flujo") == "waitlist":
+                    # Ecocardiograma → waitlist
+                    data["waitlist_especialidad"] = _esp_eco_fi
+                    data["waitlist_id_prof_pref"] = _eco_fi["id_profesional"]
+                    save_session(phone, "WAIT_WAITLIST_CONFIRM_ECOCA", data)
+                    return _btn_msg(
+                        _eco_fi["mensaje"].format(tipo=txt),
+                        [
+                            {"id": "ecoca_waitlist_si", "title": "Sí, lista de espera"},
+                            {"id": "ecoca_waitlist_no", "title": "No, gracias"},
+                            {"id": "ecoca_menu", "title": "Volver al menú"},
+                        ]
+                    )
+                # Normal → iniciar agendar con la especialidad resuelta
+                return await _iniciar_agendar(phone, data, _esp_eco_fi)
+            else:
+                # Texto no reconocido como tipo de eco — volver a preguntar
+                log_event(phone, "ecografia_sin_tipo", {"txt": txt[:120], "reintento": True})
+                data["wait_eco_tipo"] = True  # mantener el flag para el próximo intento
+                save_session(phone, "WAIT_ESPECIALIDAD", data)
+                _MSG_REFI_FB = _MSG_REFI or (
+                    "No reconocí ese tipo de ecografía. Por favor escribe uno de los tipos del menú:\n\n"
+                    "• Abdominal · Renal · Tiroides · Hombro · Rodilla → David Pardo\n"
+                    "• Transvaginal · Pélvica · Obstétrica → Dr. Rejón\n"
+                    "• Ecocardiograma → Dr. Millán"
+                )
+                return _MSG_REFI_FB
+
         # Resolución contextual de "ese examen" / "el mismo examen" / "lo que dijiste":
         # el paciente se refiere a algo mencionado por el bot antes del reset. Caso real
         # 56950836674 (2026-05-25): bot explicó bioimpedanciometría → Nutrición durante
@@ -10206,16 +10282,21 @@ _MODO_DEGRADADO_AVISADO: dict[str, float] = {}
 _MODO_DEGRADADO_TTL_SEG = 15 * 60  # 15 min
 
 
-def _modo_degradado(phone: str, intent: str, state_snap: str = "") -> str:
+def _modo_degradado(phone: str, intent: str, state_snap: str = "",
+                    especialidad: str = "") -> str:
     """Respuesta cuando Medilink está caído. Encola la intención y avisa al paciente.
     Devuelve un mensaje graceful que el bot enviará por WhatsApp.
+
+    Fix K: cuando intent=agendar y hay especialidad, ofrece lista de espera para
+    que el paciente no se vaya sin acción — cuando Medilink vuelva, el job de
+    waitlist lo procesa automáticamente.
 
     Si ya se avisó en los últimos 15 min, pasa a HUMAN_TAKEOVER en vez de
     repetir el mismo mensaje (el paciente ya sabe que hay problema técnico).
     """
     import time as _time_deg
     enqueue_intent(phone, intent, state_snap)
-    log_event(phone, "modo_degradado", {"intent": intent})
+    log_event(phone, "modo_degradado", {"intent": intent, "especialidad": especialidad})
 
     ahora = _time_deg.time()
     last_aviso = _MODO_DEGRADADO_AVISADO.get(phone, 0.0)
@@ -10229,6 +10310,25 @@ def _modo_degradado(phone: str, intent: str, state_snap: str = "") -> str:
         )
 
     _MODO_DEGRADADO_AVISADO[phone] = ahora
+
+    # Fix K: si intent=agendar y hay especialidad, ofrecer lista de espera
+    if intent == "agendar" and especialidad:
+        _esp_display = especialidad.capitalize()
+        _data_wl = {"waitlist_especialidad": especialidad, "waitlist_source": "medilink_down"}
+        save_session(phone, "WAIT_WAITLIST_CONFIRM", _data_wl)
+        log_event(phone, "modo_degradado_waitlist_ofrecida", {"especialidad": especialidad})
+        return _btn_msg(
+            f"Nuestro sistema de citas tiene un problema técnico en este momento 😕\n\n"
+            f"¿Quieres que te avise cuando se libere una hora de *{_esp_display}*? "
+            f"Te contactamos en cuanto el sistema vuelva.\n\n"
+            f"También puedes llamarnos:\n"
+            f"📞 *{CMC_TELEFONO}* · ☎️ *{CMC_TELEFONO_FIJO}*",
+            [
+                {"id": "waitlist_si", "title": "Sí, avísame"},
+                {"id": "waitlist_no", "title": "No, gracias"},
+            ]
+        )
+
     reset_session(phone)
     return (
         "Nuestro sistema de citas está con un problema técnico en este momento 😕\n\n"
@@ -10323,7 +10423,8 @@ def _es_adolescente_en_texto(txt: str) -> bool:
 async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
                             saludo_prefix: str | None = None) -> str:
     if is_medilink_down():
-        return _modo_degradado(phone, "agendar", especialidad or "")
+        return _modo_degradado(phone, "agendar", state_snap=especialidad or "",
+                               especialidad=especialidad or "")
     # ── Detección de menor: aplica a especialidades adultas, NO a MG/MF/Odonto/Fono/Psico ──
     # MG (Abarca, Olavarría, Márquez), MF (Márquez), Odontología, Fonoaudiología y
     # Psicología Infantil (Montalba) atienden niños y adultos por igual — no interrumpir.
@@ -10465,7 +10566,11 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
             especialidad_lower = especialidad.lower()
         else:
             # Sin tipo especificado → preguntar
+            # Fix I: guardar contexto para que WAIT_ESPECIALIDAD sepa que el
+            # próximo mensaje es el tipo de ecografía y lo pase a route_ecografia
+            # en vez del normalizador de especialidad general.
             log_event(phone, "ecografia_sin_tipo", {"txt": _txt_para_eco[:120]})
+            data["wait_eco_tipo"] = True
             save_session(phone, "WAIT_ESPECIALIDAD", data)
             return _MSG_ECO
 

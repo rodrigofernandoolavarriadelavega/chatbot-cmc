@@ -25,7 +25,8 @@ from session import (get_sesiones_abandonadas, save_session, log_event, log_mess
                      get_profile,
                      get_candidatos_horas_vacias, log_horas_vacias_envio,
                      get_horas_vacias_envios_hoy,
-                     phone_tiene_solo_citas_canceladas)
+                     phone_tiene_solo_citas_canceladas,
+                     _conn as _session_conn)
 from resilience import (is_medilink_down, mark_medilink_up, medilink_down_since,
                         should_notify_reception, mark_reception_notified,
                         should_notify_recovery, mark_recovery_notified)
@@ -77,6 +78,28 @@ async def _enviar_reenganche():
     eliminó el envío erróneo a Meta API por canal equivocado pero también
     cortó el reenganche a esos pacientes). Ahora se rutea al canal correcto.
     """
+    # Fix J: timeout duro para sesiones WAIT_* sin actividad > 2h.
+    # Estas sesiones no entran a get_sesiones_abandonadas (filtro 10-90 min)
+    # y quedan en loop indefinido acumulando eventos reenganche_skip_cita_cancelada.
+    # Raíz: el skip no resetea, solo loggea — la sesión permanece en WAIT_ESPECIALIDAD
+    # hasta que el paciente vuelve a escribir o expira el timeout de get_session (4h).
+    # Solución: resetear proactivamente a IDLE con log_event para trazabilidad.
+    try:
+        import json as _json_j
+        with _session_conn() as _c_j:
+            _stale = _c_j.execute("""
+                SELECT phone, state FROM sessions
+                WHERE state LIKE 'WAIT_%'
+                AND updated_at < datetime('now', '-2 hours')
+            """).fetchall()
+        for _row_j in (_stale or []):
+            _ph_j, _st_j = _row_j["phone"], _row_j["state"]
+            log_event(_ph_j, "reenganche_force_reset", {"estado_previo": _st_j})
+            save_session(_ph_j, "IDLE", {})
+            log.info("Reenganche force-reset phone=%s estado=%s", _ph_j, _st_j)
+    except Exception as _e_j:
+        log.warning("Reenganche force-reset error: %s", _e_j)
+
     sesiones = get_sesiones_abandonadas()
     # Sólo phones con canal conocido. TEST_* y otros raros se descartan.
     sesiones = [s for s in sesiones if _canal_de_phone(s.get("phone", "")) != "unknown"]

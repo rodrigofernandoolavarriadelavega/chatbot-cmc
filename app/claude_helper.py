@@ -1136,12 +1136,20 @@ _MSG_ESP_NO_ATENDIDA = (
     "Te recomendamos el CESFAM Carampangue o el Hospital de Arauco."
 )
 
-# Apellidos de profesionales CONOCIDOS (minúscula, sin tildes).
+# Nombres + apellidos de profesionales CONOCIDOS (minúscula, sin tildes).
+# Incluye primer nombre porque Haiku a veces escribe "Dr. Alonso" en vez de
+# "Dr. Márquez" y el validador, si solo tuviera apellidos, mutaba a "Dr. del CMC".
 _NOMBRES_PROF_CONOCIDOS: frozenset[str] = frozenset({
+    # Apellidos
     "olavarria", "abarca", "marquez", "borrego", "millan", "barraza",
     "rejon", "quijano", "burgos", "jimenez", "castillo", "fredes",
     "valdes", "fuentealba", "acosta", "armijo", "etcheverry", "pinto",
     "montalba", "rodriguez", "arratia", "gomez", "guevara", "pardo",
+    # Primeros nombres (uso conversacional frecuente)
+    "rodrigo", "andres", "alonso", "manuel", "miguel", "claudio", "tirso",
+    "nicolas", "javiera", "carlos", "daniela", "fernando", "aurora",
+    "valentina", "paola", "luis", "leonardo", "gisela", "jorge",
+    "juan", "juana", "sarai", "andrea", "david",
 })
 
 _RX_PRECIO_FAQ = re.compile(r"\$\d{1,3}(?:\.\d{3})+(?:\.\d+)?")

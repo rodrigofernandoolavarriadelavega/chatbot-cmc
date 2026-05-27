@@ -1891,6 +1891,21 @@ def is_window_open(phone: str) -> bool:
     return (datetime.now(timezone.utc) - last_inbound).total_seconds() < 86400
 
 
+def get_approved_templates() -> list[str]:
+    """Stub: lista de templates Meta aprobados conocidos por el bot.
+
+    Históricamente este nombre era importado desde `jobs._job_health_report`
+    pero la función nunca se implementó, lo que reventaba el job semanal
+    con ImportError. El stub vacío hace que el job caiga al fallback de
+    `send_whatsapp` directo o al archivo en `data/reportes_salud/`.
+
+    Si en el futuro se quiere validar contra Meta antes de enviar template,
+    extender esta función para consultar Meta Business API o cachear desde
+    un archivo `templates/whatsapp_templates/approved_names.txt`.
+    """
+    return []
+
+
 def get_messages(phone: str, limit: int = 300) -> list[dict]:
     """Retorna los últimos `limit` mensajes de un número, ordenados cronológicamente
     (más antiguo primero, más reciente al final — lo que espera el panel para mostrar
