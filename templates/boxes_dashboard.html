@@ -115,9 +115,39 @@
     .brand-bar { padding: 12px; }
     .brand-bar header { flex-direction: column; align-items: flex-start; gap: 8px; }
     .brand-bar .text-right { text-align: left; }
-    .grid.grid-cols-4 { grid-template-columns: 1fr; gap: 12px; }
-    .px-6 { padding-left: 12px; padding-right: 12px; }
-    .kpi-card { padding: 10px 14px; }
+    /* KPIs: 2 cols + compactos */
+    section .grid.grid-cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    /* Box grid: 2 cards por fila */
+    .piso-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 8px !important; }
+    .px-6 { padding-left: 10px; padding-right: 10px; }
+    .kpi-card { padding: 8px 10px; }
+    .kpi-card .text-3xl { font-size: 1.25rem !important; }
+    .kpi-card p:first-child { font-size: 9px; }
+    /* Cards compactas en móvil */
+    .box-card { padding: 10px !important; border-radius: 12px; }
+    .box-card h3 { font-size: 13px !important; }
+    .box-card .pr-12, .box-card .pr-6 { padding-right: 0 !important; }
+    .drag-handle { display: none; } /* simplifica, mejor long-press */
+    .edit-btn { width: 18px; height: 18px; font-size: 9px; top: 6px; right: 6px; }
+    .box-card .min-h-\\[80px\\] { min-height: 28px; }
+    /* Avatar y texto del profesional más chicos */
+    .box-card .w-10 { width: 28px !important; height: 28px !important; font-size: 10px !important; }
+    .box-card .text-sm { font-size: 11px !important; }
+    .box-card .text-\\[11px\\], .box-card .text-\\[10px\\] { font-size: 9px !important; }
+    .box-card .text-lg { font-size: 13px !important; }
+    .box-card .text-base { font-size: 13px !important; }
+    /* Tipo (subtítulo del box) oculto en móvil para no saturar */
+    .box-card .text-\\[10px\\].uppercase.tracking-wider { display: none; }
+    /* Quick-assign button compacto */
+    .quick-assign { padding: 3px 6px; font-size: 9px; margin-top: 4px; }
+    /* Manual bar */
+    .manual-bar { padding: 3px 6px; font-size: 9px; margin-bottom: 4px; }
+    .manual-pill { font-size: 8px; padding: 2px 5px; }
+    /* Footer revenue + citas más chico */
+    .box-card .pt-3 { padding-top: 6px !important; }
+    .box-card .mt-4 { margin-top: 6px !important; }
+    /* Badge ocupado/libre */
+    .box-card .text-\\[10px\\].font-semibold.uppercase { font-size: 8px !important; }
     .modal { width: 96%; padding: 16px; max-height: 92vh; }
     .modal h2 { font-size: 16px; }
     /* Schedule panel siempre debajo en móvil */
@@ -133,6 +163,14 @@
     #modalSchedule select { width: 100%; }
     /* Botones header en móvil */
     #btnEditMode, #btnInstall { font-size: 10px; padding: 4px 8px; }
+    /* Floor labels más chiquitos */
+    .floor-label { font-size: 9px; letter-spacing: 0.1em; margin-bottom: 6px; }
+    section.mb-8 { margin-bottom: 16px; }
+  }
+  /* Ultra-mobile: 1 col solo si <360px */
+  @media (max-width: 360px) {
+    .piso-grid { grid-template-columns: 1fr !important; }
+    section .grid.grid-cols-4 { grid-template-columns: 1fr; }
   }
   @media (hover: none) {
     /* Touch devices: tap para abrir schedule, no hover */
