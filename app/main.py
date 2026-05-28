@@ -3071,23 +3071,29 @@ async def api_boxes_config_put(request: Request, token: str | None = Query(None)
 
 @app.get("/boxes/manifest.webmanifest", include_in_schema=False)
 def boxes_manifest(token: str | None = Query(None)):
-    """PWA manifest para instalación como app."""
+    """PWA manifest para instalación como app. Usa los mismos íconos que /admin/v2."""
     if token != ADMIN_TOKEN:
         raise HTTPException(401, "No autorizado")
-    return {
+    return JSONResponse({
         "name": "Boxes CMC",
-        "short_name": "Boxes",
+        "short_name": "Boxes CMC",
         "description": "Gemelo digital de boxes del Centro Médico Carampangue",
         "start_url": f"/boxes?token={ADMIN_TOKEN}",
         "scope": "/boxes",
         "display": "standalone",
-        "orientation": "landscape-primary",
-        "background_color": "#F7FBFD",
+        "orientation": "any",
+        "background_color": "#FFFFFF",
         "theme_color": "#1172AB",
+        "lang": "es-CL",
+        "dir": "ltr",
+        "categories": ["medical", "productivity", "business"],
         "icons": [
-            {"src": "/static/isotipo.png", "sizes": "150x150", "type": "image/png", "purpose": "any maskable"}
+            {"src": "/static/pwa/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+            {"src": "/static/pwa/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+            {"src": "/static/pwa/icon-192-maskable.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable"},
+            {"src": "/static/pwa/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
         ],
-    }
+    }, media_type="application/manifest+json")
 
 
 @app.get("/boxes/sw.js", include_in_schema=False)
