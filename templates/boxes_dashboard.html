@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boxes CMC — Gemelo Digital</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: -apple-system, 'Inter', sans-serif; background: #F5F1EA; color: #252830; }
+  .box-card { transition: all 0.3s; border: 1px solid #d8d3ca; }
+  .box-card.ocupado { border-color: #E07A3C; background: linear-gradient(135deg, #fff, #fef3e8); box-shadow: 0 4px 20px rgba(224,122,60,0.15); }
+  .box-card.libre   { background: #fff; opacity: 0.85; }
+  .box-card.proximo { border-color: #5A8A6F; background: linear-gradient(135deg, #fff, #effaf2); }
+  .pulse { animation: pulse 2s infinite; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.4; }
+  }
+  .floor-label { letter-spacing: 0.12em; color: #6b6b6b; font-size: 0.7rem; text-transform: uppercase; }
+  .money { font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body class="min-h-screen p-6">
+
+<header class="max-w-7xl mx-auto mb-8 flex items-center justify-between">
+  <div>
+    <h1 class="text-3xl font-bold tracking-tight">Boxes CMC</h1>
+    <p class="text-sm text-gray-500 mt-1">Gemelo digital en tiempo real · Centro Médico Carampangue</p>
+  </div>
+  <div class="text-right">
+    <p class="text-xs text-gray-400">Última actualización</p>
+    <p id="lastUpdate" class="text-sm font-medium">—</p>
+    <p class="text-[10px] mt-1 text-gray-400">Auto-refresh 30s</p>
+  </div>
+</header>
+
+<!-- Totales -->
+<section class="max-w-7xl mx-auto mb-8 grid grid-cols-4 gap-4">
+  <div class="bg-white rounded-xl p-4 border border-gray-200">
+    <p class="text-xs text-gray-500 uppercase tracking-wide">Boxes ocupados</p>
+    <p id="totalOcupados" class="text-3xl font-bold mt-1">—</p>
+    <p class="text-[11px] text-gray-400">de <span id="totalBoxes">8</span></p>
+  </div>
+  <div class="bg-white rounded-xl p-4 border border-gray-200">
+    <p class="text-xs text-gray-500 uppercase tracking-wide">Profesionales activos</p>
+    <p id="totalProfsActivos" class="text-3xl font-bold mt-1">—</p>
+  </div>
+  <div class="bg-white rounded-xl p-4 border border-gray-200">
+    <p class="text-xs text-gray-500 uppercase tracking-wide">Citas hoy</p>
+    <p id="totalCitas" class="text-3xl font-bold mt-1">—</p>
+  </div>
+  <div class="bg-white rounded-xl p-4 border border-orange-200" style="background:linear-gradient(135deg,#fff,#fef3e8)">
+    <p class="text-xs text-orange-700 uppercase tracking-wide">Revenue del día</p>
+    <p id="totalRevenue" class="text-3xl font-bold mt-1 money">$—</p>
+    <p class="text-[11px] text-orange-600 mt-1">Suma todos los boxes</p>
+  </div>
+</section>
+
+<!-- Piso 1 -->
+<section class="max-w-7xl mx-auto mb-6">
+  <p class="floor-label mb-3">Piso 1</p>
+  <div class="grid grid-cols-4 gap-4" id="piso1">
+    <!-- cards inyectadas por JS -->
+  </div>
+</section>
+
+<!-- Piso 2 -->
+<section class="max-w-7xl mx-auto mb-6">
+  <p class="floor-label mb-3">Piso 2</p>
+  <div class="grid grid-cols-4 gap-4" id="piso2">
+    <!-- cards inyectadas por JS -->
+  </div>
+</section>
+
+<!-- Historial -->
+<section class="max-w-7xl mx-auto mt-12">
+  <h2 class="text-lg font-bold mb-4">Historial de uso por box (últimos 30 días)</h2>
+  <div id="historial" class="bg-white rounded-xl border border-gray-200 p-4">
+    <p class="text-gray-400 text-sm">Cargando...</p>
+  </div>
+</section>
+
+<footer class="max-w-7xl mx-auto mt-12 mb-6 text-center text-xs text-gray-400">
+  Boxos · gemelo digital · prototipo MVP · datos desde BI Postgres
+</footer>
+
+<script>
+const TOKEN = new URLSearchParams(location.search).get('token') || 'cmc_admin_2026';
+
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function fmtCLP(n) {
+  if (n == null || n === 0) return '$0';
+  return '$' + n.toLocaleString('es-CL');
+}
+
+function fmtElapsed(mins) {
+  if (mins == null) return '—';
+  if (mins < 60) return mins + ' min';
+  return Math.floor(mins / 60) + 'h ' + (mins % 60) + 'm';
+}
+
+function initials(name) {
+  if (!name) return '?';
+  return name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
+}
+
+function renderCard(box) {
+  const status = box.estado; // 'ocupado', 'libre', 'proximo'
+  const cls = `box-card ${status} rounded-2xl p-5`;
+  let bodyHTML = '';
+
+  if (status === 'ocupado' && box.profesionales_activos?.length) {
+    const profs = box.profesionales_activos.map(p => `
+      <div class="mb-3 pb-3 border-b border-orange-100 last:border-b-0 last:pb-0 last:mb-0">
+        <div class="flex items-start gap-3">
+          <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-700 font-bold text-sm flex-shrink-0">
+            ${esc(initials(p.profesional))}
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold truncate">${esc(p.profesional) || '—'}</p>
+            <p class="text-[11px] text-gray-500">${esc(p.especialidad)}</p>
+            ${p.paciente ? `<p class="text-[11px] text-gray-700 mt-1">↳ ${esc(p.paciente)}</p>` : ''}
+            ${p.elapsed_min != null ? `<p class="text-[10px] text-orange-600 font-mono mt-0.5">${fmtElapsed(p.elapsed_min)} en curso</p>` : ''}
+          </div>
+        </div>
+      </div>`).join('');
+    bodyHTML = profs;
+  } else if (status === 'proximo' && box.proximo) {
+    bodyHTML = `
+      <div class="flex items-start gap-3">
+        <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-sm">
+          ${esc(initials(box.proximo.profesional))}
+        </div>
+        <div class="flex-1">
+          <p class="text-sm font-semibold truncate">${esc(box.proximo.profesional) || '—'}</p>
+          <p class="text-[11px] text-gray-500">${esc(box.proximo.especialidad)}</p>
+          <p class="text-[11px] text-emerald-600 mt-1 font-mono">Comienza en ${Number(box.proximo.starts_in_min)||0}m</p>
+        </div>
+      </div>`;
+  } else {
+    bodyHTML = `<p class="text-sm text-gray-400 italic">Sin actividad ahora</p>`;
+  }
+
+  const badge = status === 'ocupado'
+    ? '<span class="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-orange-700"><span class="w-1.5 h-1.5 bg-orange-500 rounded-full pulse"></span>Ocupado</span>'
+    : status === 'proximo'
+    ? '<span class="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-700"><span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>Próximo</span>'
+    : '<span class="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400"><span class="w-1.5 h-1.5 bg-gray-300 rounded-full"></span>Libre</span>';
+
+  return `
+  <div class="${cls}">
+    <div class="flex justify-between items-start mb-3">
+      <div>
+        <h3 class="font-bold text-lg">${esc(box.nombre)}</h3>
+        <p class="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">${esc(box.tipo)}</p>
+      </div>
+      ${badge}
+    </div>
+    <div class="min-h-[80px]">${bodyHTML}</div>
+    <div class="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center">
+      <div>
+        <p class="text-[10px] text-gray-400 uppercase">Revenue hoy</p>
+        <p class="text-base font-bold money text-gray-900">${fmtCLP(box.revenue_dia)}</p>
+      </div>
+      <div class="text-right">
+        <p class="text-[10px] text-gray-400 uppercase">Citas hoy</p>
+        <p class="text-base font-bold money text-gray-900">${box.citas_dia || 0}</p>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function refresh() {
+  try {
+    const r = await fetch(`/admin/api/boxes-state?token=${TOKEN}`);
+    if (!r.ok) throw new Error(r.status);
+    const d = await r.json();
+
+    // Totales
+    document.getElementById('totalOcupados').textContent = d.totales.boxes_ocupados;
+    document.getElementById('totalBoxes').textContent = d.totales.boxes_totales;
+    document.getElementById('totalProfsActivos').textContent = d.totales.profesionales_activos;
+    document.getElementById('totalCitas').textContent = d.totales.citas_dia;
+    document.getElementById('totalRevenue').textContent = fmtCLP(d.totales.revenue_dia);
+
+    // Pisos
+    const piso1 = d.boxes.filter(b => b.piso === 1).sort((a, b) => a.orden - b.orden);
+    const piso2 = d.boxes.filter(b => b.piso === 2).sort((a, b) => a.orden - b.orden);
+    document.getElementById('piso1').innerHTML = piso1.map(renderCard).join('');
+    document.getElementById('piso2').innerHTML = piso2.map(renderCard).join('');
+
+    // Historial
+    if (d.historial && d.historial.length) {
+      document.getElementById('historial').innerHTML = `
+        <table class="w-full text-sm">
+          <thead class="text-[11px] uppercase tracking-wider text-gray-500 border-b border-gray-200">
+            <tr><th class="text-left py-2">Box</th><th class="text-left py-2">Profesionales más frecuentes</th><th class="text-right py-2">Citas</th><th class="text-right py-2">Revenue 30d</th></tr>
+          </thead>
+          <tbody>${d.historial.map(h => `
+            <tr class="border-b border-gray-50 last:border-0">
+              <td class="py-2 font-semibold">${esc(h.nombre)}</td>
+              <td class="py-2 text-gray-600">${h.profesionales_top.map(esc).join(' · ')}</td>
+              <td class="py-2 text-right money">${Number(h.citas_30d)||0}</td>
+              <td class="py-2 text-right money font-semibold">${fmtCLP(h.revenue_30d)}</td>
+            </tr>`).join('')}</tbody>
+        </table>`;
+    }
+
+    document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString('es-CL');
+  } catch (e) {
+    document.getElementById('lastUpdate').textContent = '⚠️ error: ' + e.message;
+  }
+}
+
+refresh();
+setInterval(refresh, 30000);
+</script>
+</body>
+</html>

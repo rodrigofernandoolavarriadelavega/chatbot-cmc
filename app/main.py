@@ -2646,6 +2646,23 @@ _OLAVARRIA_DASHBOARD_HTML = (_TEMPLATE_DIR / "olavarria_dashboard.html").read_te
 _PROF_DASHBOARD_HTML = (_TEMPLATE_DIR / "profesional_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "profesional_dashboard.html").exists() else ""
 _WINBACK_DASHBOARD_HTML = (_TEMPLATE_DIR / "winback_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "winback_dashboard.html").exists() else ""
 _WINBACK_DENTAL_DASHBOARD_HTML = (_TEMPLATE_DIR / "winback_dental_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "winback_dental_dashboard.html").exists() else ""
+_BOXES_DASHBOARD_HTML = (_TEMPLATE_DIR / "boxes_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "boxes_dashboard.html").exists() else ""
+
+# ── Boxes CMC — gemelo digital ────────────────────────────────────────────────
+# Config inicial: 8 boxes en 2 pisos. Pool dinámico vs profesional fijo.
+# "pool" = cualquier profesional listado en default_profs entra al box; el primero
+# con cita activa ocupa este box, el segundo el siguiente del mismo tipo.
+# "fijo" = solo este profesional ocupa este box (kine 1 = Armijo, kine 2 = Etcheverry).
+BOXES_CONFIG = [
+    {"id": "box1",      "piso": 1, "orden": 1, "nombre": "Box 1",         "tipo": "general",     "modo": "pool", "pool_group": "general",  "default_profs": [1, 73, 13, 23, 60, 64, 61, 65, 70]},
+    {"id": "box2",      "piso": 1, "orden": 2, "nombre": "Box 2",         "tipo": "general",     "modo": "pool", "pool_group": "general",  "default_profs": [1, 73, 13, 23, 60, 64, 61, 65, 70]},
+    {"id": "kine1",     "piso": 1, "orden": 3, "nombre": "Kinesiología 1","tipo": "kinesiología","modo": "fijo", "pool_group": None,       "default_profs": [77]},
+    {"id": "kine2",     "piso": 1, "orden": 4, "nombre": "Kinesiología 2","tipo": "kinesiología","modo": "fijo", "pool_group": None,       "default_profs": [21]},
+    {"id": "boxdental", "piso": 2, "orden": 1, "nombre": "Box Dental",    "tipo": "dental",      "modo": "pool", "pool_group": "dental",   "default_profs": [55, 72, 66, 75, 69, 76]},
+    {"id": "box3",      "piso": 2, "orden": 2, "nombre": "Box 3",         "tipo": "procedimientos","modo":"pool","pool_group": "proced",   "default_profs": [67, 68, 56]},
+    {"id": "box4",      "piso": 2, "orden": 3, "nombre": "Box 4",         "tipo": "psico/nutri", "modo": "pool", "pool_group": "psiconut", "default_profs": [74, 49, 52]},
+    {"id": "box5",      "piso": 2, "orden": 4, "nombre": "Box 5",         "tipo": "masoterapia", "modo": "fijo", "pool_group": None,       "default_profs": [59]},
+]
 
 @app.get("/atribucion", response_class=HTMLResponse)
 @app.get("/atribucion/dashboard", response_class=HTMLResponse)
@@ -2967,6 +2984,306 @@ def api_winback_status(token: str | None = Query(None)):
         "errores_meta_24h": errores_meta_24h,
         "ultimos_dias": ultimos_dias,
     }
+
+
+@app.get("/boxes", response_class=HTMLResponse)
+@app.get("/boxes/dashboard", response_class=HTMLResponse)
+def boxes_dashboard_page(token: str | None = Query(None)):
+    """Gemelo digital de boxes CMC — tiempo casi-real (datos desde BI)."""
+    if token != ADMIN_TOKEN:
+        raise HTTPException(401, "No autorizado")
+    if not _BOXES_DASHBOARD_HTML:
+        raise HTTPException(404, "Dashboard Boxes no disponible")
+    return _BOXES_DASHBOARD_HTML
+
+
+@app.get("/admin/api/boxes-state")
+def api_boxes_state(token: str | None = Query(None)):
+    """Estado actual de los boxes CMC con asignación dinámica de profesionales,
+    revenue del día por box, y proyección del próximo profesional."""
+    if token != ADMIN_TOKEN:
+        raise HTTPException(401, "No autorizado")
+
+    import os as _osb
+    import psycopg2
+    from datetime import datetime, timedelta, time as _dtime
+    import zoneinfo as _zib
+
+    tz = _zib.ZoneInfo("America/Santiago")
+    now_cl = datetime.now(tz)
+    today = now_cl.date()
+    now_t = now_cl.time()
+
+    bi = psycopg2.connect(
+        host=_osb.getenv("BI_DB_HOST", "127.0.0.1"),
+        port=int(_osb.getenv("BI_DB_PORT", "5432")),
+        dbname=_osb.getenv("BI_DB_NAME", "health_bi"),
+        user=_osb.getenv("BI_DB_USER", "health_user"),
+        password=_osb.getenv("BI_DB_PASSWORD", "password123"),
+        connect_timeout=5,
+    )
+    cur = bi.cursor()
+
+    # Citas de hoy: traer profesional, paciente, hora_inicio/fin, estado.
+    cur.execute("""
+        SELECT fc.cita_id, fc.profesional_id, fc.paciente_id, fc.hora_inicio,
+               fc.hora_fin, fc.estado,
+               COALESCE(dp.nombre, '—') AS profesional,
+               COALESCE(de.nombre, '') AS especialidad,
+               TRIM(CONCAT(COALESCE(pa.nombre,''),' ',COALESCE(pa.apellido,''))) AS paciente
+        FROM bi.fact_citas fc
+        LEFT JOIN bi.dim_profesional dp ON dp.profesional_id = fc.profesional_id
+        LEFT JOIN bi.dim_especialidad de ON de.especialidad_id = fc.especialidad_id
+        LEFT JOIN bi.dim_paciente pa ON pa.paciente_id = fc.paciente_id
+        WHERE fc.fecha = %s
+          AND fc.estado IN ('agendada', 'atendida', 'confirmada', 'en_curso')
+        ORDER BY fc.hora_inicio
+    """, (today,))
+    citas_hoy = []
+    for row in cur.fetchall():
+        cita_id, prof_id, pac_id, h_ini, h_fin, estado, prof, esp, pac = row
+        # Parsear horas en formato HH:MM
+        def _parse_h(s):
+            if not s:
+                return None
+            try:
+                hh, mm = str(s).split(":")[:2]
+                return _dtime(int(hh), int(mm))
+            except Exception:
+                return None
+        t_ini = _parse_h(h_ini)
+        t_fin = _parse_h(h_fin)
+        citas_hoy.append({
+            "cita_id": cita_id,
+            "profesional_id": prof_id,
+            "paciente_id": pac_id,
+            "hora_inicio": t_ini,
+            "hora_fin": t_fin,
+            "estado": estado,
+            "profesional": prof,
+            "especialidad": esp,
+            "paciente": (pac or "").strip() or None,
+        })
+
+    # Pagos de hoy: SUM por paciente_id
+    cur.execute("""
+        SELECT paciente_id, SUM(monto)::int AS monto
+        FROM bi.fact_pagos
+        WHERE fecha = %s
+        GROUP BY paciente_id
+    """, (today,))
+    pagos_por_pac = {r[0]: r[1] for r in cur.fetchall()}
+
+    # Atribuir revenue: cada cita del día → suma del pago del paciente ese día,
+    # repartido si el paciente tuvo múltiples citas (proporcional).
+    pac_cita_count = {}
+    for c in citas_hoy:
+        pac_cita_count[c["paciente_id"]] = pac_cita_count.get(c["paciente_id"], 0) + 1
+
+    # Helper para encontrar a qué box va cada profesional con cita activa.
+    # 1) pasada por boxes fijos primero (kine1, kine2, box5) — asignan al prof default.
+    # 2) pasada por pools: dental, general, proced, psiconut → ordenan por hora_inicio.
+    box_assignments = {b["id"]: {"profesionales_activos": [], "proximo": None,
+                                  "citas_hoy_ids": set(), "revenue_dia": 0,
+                                  "citas_dia_count": 0} for b in BOXES_CONFIG}
+
+    # Filter active citas: in progress now
+    def _is_active(c):
+        if not c["hora_inicio"]:
+            return False
+        if c["hora_fin"] and now_t > c["hora_fin"]:
+            return False
+        if now_t < c["hora_inicio"]:
+            return False
+        return c["estado"] in ("agendada", "atendida", "confirmada", "en_curso")
+
+    def _is_proximo(c):
+        if not c["hora_inicio"] or now_t >= c["hora_inicio"]:
+            return False
+        delta = (datetime.combine(today, c["hora_inicio"]) - now_cl.replace(tzinfo=None)).total_seconds() / 60.0
+        return 0 < delta <= 60
+
+    activas = [c for c in citas_hoy if _is_active(c)]
+    proximas = [c for c in citas_hoy if _is_proximo(c)]
+
+    # Asignación: por cada cita activa, encontrar el box que la admita.
+    # Boxes fijos primero (modo='fijo' y prof_id en default_profs)
+    citas_asignadas = set()
+    for box in BOXES_CONFIG:
+        if box["modo"] != "fijo":
+            continue
+        for c in activas:
+            if c["cita_id"] in citas_asignadas:
+                continue
+            if c["profesional_id"] in box["default_profs"]:
+                elapsed = int((datetime.combine(today, now_t) - datetime.combine(today, c["hora_inicio"])).total_seconds() / 60)
+                box_assignments[box["id"]]["profesionales_activos"].append({
+                    "profesional": c["profesional"],
+                    "especialidad": c["especialidad"],
+                    "paciente": _initials_pac(c["paciente"]) if c["paciente"] else None,
+                    "elapsed_min": max(0, elapsed),
+                    "cita_id": c["cita_id"],
+                    "paciente_id": c["paciente_id"],
+                })
+                box_assignments[box["id"]]["citas_hoy_ids"].add(c["cita_id"])
+                citas_asignadas.add(c["cita_id"])
+
+    # Pools: por cada cita activa restante, asignar al primer box libre del pool
+    pool_boxes = {}  # group → [box_ids in order]
+    for box in BOXES_CONFIG:
+        if box["modo"] == "pool":
+            pool_boxes.setdefault(box["pool_group"], []).append(box["id"])
+
+    for c in activas:
+        if c["cita_id"] in citas_asignadas:
+            continue
+        # Encontrar grupo del profesional
+        target_group = None
+        for box in BOXES_CONFIG:
+            if box["modo"] == "pool" and c["profesional_id"] in box["default_profs"]:
+                target_group = box["pool_group"]
+                break
+        if target_group is None:
+            continue
+        # Buscar primer box del grupo con cupo (max 2 profesionales simultáneos por box)
+        for box_id in pool_boxes.get(target_group, []):
+            if len(box_assignments[box_id]["profesionales_activos"]) < 2:
+                elapsed = int((datetime.combine(today, now_t) - datetime.combine(today, c["hora_inicio"])).total_seconds() / 60)
+                box_assignments[box_id]["profesionales_activos"].append({
+                    "profesional": c["profesional"],
+                    "especialidad": c["especialidad"],
+                    "paciente": _initials_pac(c["paciente"]) if c["paciente"] else None,
+                    "elapsed_min": max(0, elapsed),
+                    "cita_id": c["cita_id"],
+                    "paciente_id": c["paciente_id"],
+                })
+                box_assignments[box_id]["citas_hoy_ids"].add(c["cita_id"])
+                citas_asignadas.add(c["cita_id"])
+                break
+
+    # Próximas: el primer prof "próximo" se asigna como preview al box correspondiente
+    for c in proximas:
+        target_box_id = None
+        for box in BOXES_CONFIG:
+            if c["profesional_id"] in box["default_profs"]:
+                target_box_id = box["id"]
+                break
+        if not target_box_id:
+            continue
+        if box_assignments[target_box_id]["proximo"] is None and not box_assignments[target_box_id]["profesionales_activos"]:
+            starts_in = int((datetime.combine(today, c["hora_inicio"]) - datetime.combine(today, now_t)).total_seconds() / 60)
+            box_assignments[target_box_id]["proximo"] = {
+                "profesional": c["profesional"],
+                "especialidad": c["especialidad"],
+                "starts_in_min": starts_in,
+            }
+
+    # Revenue del día por box: sumar todos los pagos del día de los pacientes
+    # cuyas citas (activas o no) hayan caído en este box.
+    # Para esto, primero asignar TODAS las citas del día a su box predeterminado.
+    citas_del_box = {b["id"]: [] for b in BOXES_CONFIG}
+    for c in citas_hoy:
+        # box destino: primer box donde el prof está en default_profs
+        for box in BOXES_CONFIG:
+            if c["profesional_id"] in box["default_profs"]:
+                citas_del_box[box["id"]].append(c)
+                break
+
+    for box_id, ctas in citas_del_box.items():
+        rev = 0
+        for c in ctas:
+            ncitas_pac = pac_cita_count.get(c["paciente_id"], 1)
+            rev += (pagos_por_pac.get(c["paciente_id"], 0) / max(1, ncitas_pac))
+        box_assignments[box_id]["revenue_dia"] = int(rev)
+        box_assignments[box_id]["citas_dia_count"] = len(ctas)
+
+    # Estado del box
+    boxes_out = []
+    for box in BOXES_CONFIG:
+        bid = box["id"]
+        asign = box_assignments[bid]
+        if asign["profesionales_activos"]:
+            estado_box = "ocupado"
+        elif asign["proximo"]:
+            estado_box = "proximo"
+        else:
+            estado_box = "libre"
+        boxes_out.append({
+            "id": bid,
+            "nombre": box["nombre"],
+            "piso": box["piso"],
+            "orden": box["orden"],
+            "tipo": box["tipo"],
+            "estado": estado_box,
+            "profesionales_activos": asign["profesionales_activos"],
+            "proximo": asign["proximo"],
+            "revenue_dia": asign["revenue_dia"],
+            "citas_dia": asign["citas_dia_count"],
+        })
+
+    # Historial últimos 30 días: top 3 profesionales por box + revenue agregado
+    historial = []
+    desde = today - timedelta(days=30)
+    cur.execute("""
+        SELECT fa.profesional_id, COALESCE(dp.nombre,'—') AS prof,
+               COUNT(*) AS n,
+               COALESCE(SUM(monto_pac.monto), 0)::int AS revenue
+        FROM bi.fact_atenciones fa
+        LEFT JOIN bi.dim_profesional dp ON dp.profesional_id = fa.profesional_id
+        LEFT JOIN LATERAL (
+          SELECT SUM(p.monto) AS monto FROM bi.fact_pagos p
+          WHERE p.paciente_id = fa.paciente_id AND p.fecha = fa.fecha
+        ) monto_pac ON true
+        WHERE fa.fecha BETWEEN %s AND %s
+        GROUP BY fa.profesional_id, dp.nombre
+    """, (desde, today))
+    rows_30d = cur.fetchall()
+    prof_stats_30d = {r[0]: {"prof": r[1], "n": r[2], "rev": r[3]} for r in rows_30d}
+
+    for box in BOXES_CONFIG:
+        prof_stats = []
+        for pid in box["default_profs"]:
+            if pid in prof_stats_30d:
+                prof_stats.append(prof_stats_30d[pid])
+        prof_stats.sort(key=lambda x: x["n"], reverse=True)
+        historial.append({
+            "nombre": box["nombre"],
+            "profesionales_top": [p["prof"] for p in prof_stats[:3]],
+            "citas_30d": sum(p["n"] for p in prof_stats),
+            "revenue_30d": sum(p["rev"] for p in prof_stats),
+        })
+
+    # Totales
+    total_revenue = sum(b["revenue_dia"] for b in boxes_out)
+    total_ocupados = sum(1 for b in boxes_out if b["estado"] == "ocupado")
+    total_profs_activos = sum(len(b["profesionales_activos"]) for b in boxes_out)
+    total_citas = len(citas_hoy)
+
+    cur.close()
+    bi.close()
+
+    return {
+        "now_cl": now_cl.strftime("%Y-%m-%d %H:%M:%S"),
+        "totales": {
+            "boxes_totales": len(BOXES_CONFIG),
+            "boxes_ocupados": total_ocupados,
+            "profesionales_activos": total_profs_activos,
+            "citas_dia": total_citas,
+            "revenue_dia": total_revenue,
+        },
+        "boxes": boxes_out,
+        "historial": historial,
+    }
+
+
+def _initials_pac(nombre: str | None) -> str:
+    """Devuelve iniciales del paciente para privacidad (Ej: 'Juan Perez' -> 'J.P.')."""
+    if not nombre:
+        return ""
+    parts = [p for p in nombre.strip().split() if p]
+    if not parts:
+        return ""
+    return ".".join(p[0].upper() for p in parts[:2]) + "."
 
 
 @app.get("/admin/api/winback-conversations")
