@@ -71,6 +71,10 @@
   .editable-name { cursor: text; padding: 2px 4px; border-radius: 4px; }
   .edit-mode .editable-name:hover { background: var(--cmc-aqua-soft); }
   .editable-name input { font-size: 18px; font-weight: 700; color: var(--cmc-navy); border: 1px solid var(--cmc-aqua); border-radius: 4px; padding: 2px 6px; font-family: 'Montserrat'; }
+  .manual-bar { background: linear-gradient(90deg, var(--cmc-aqua-soft), #fff); border: 1px solid var(--cmc-aqua); border-radius: 8px; padding: 6px 10px; font-size: 11px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+  .manual-pill { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; padding: 3px 8px; border-radius: 999px; background: var(--cmc-aqua); color: #fff; font-weight: 700; }
+  .quick-assign { background: transparent; border: 1px dashed var(--cmc-border); border-radius: 6px; padding: 4px 8px; font-size: 11px; color: var(--cmc-text-mute); cursor: pointer; transition: all 0.15s; width: 100%; text-align: left; margin-top: 8px; }
+  .quick-assign:hover { border-color: var(--cmc-aqua); color: var(--cmc-blue); background: var(--cmc-aqua-soft); }
 </style>
 </head>
 <body class="min-h-screen">
@@ -174,6 +178,20 @@
   </div>
 </div>
 
+<!-- Modal asignar profesional ahora -->
+<div class="modal-bg" id="modalManual">
+  <div class="modal" style="max-width:420px">
+    <h2>¿Quién está ahora en este box?</h2>
+    <p class="text-xs mb-4" style="color:var(--cmc-text-mute)">Override manual. Sobrescribe la detección automática. Se limpia al día siguiente.</p>
+    <input type="text" id="mmSearch" placeholder="Buscar profesional…" class="mb-3">
+    <div class="prof-list" id="mmProfs" style="max-height:340px"></div>
+    <div class="mt-4 flex justify-between items-center gap-3">
+      <button id="mmClear" class="text-red-600 text-sm hover:underline">✕ Liberar box (sin profesional)</button>
+      <button class="btn-cmc-secondary" onclick="closeModal('modalManual')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal nuevo piso -->
 <div class="modal-bg" id="modalPiso">
   <div class="modal" style="max-width:380px">
@@ -217,32 +235,73 @@ function resetLayout() {
   localStorage.removeItem('boxes_layout_v2');
 }
 
+// ---------- Override manual de profesional por box ----------
+function getManualOverrides() {
+  try {
+    const raw = localStorage.getItem('boxes_manual_v2');
+    if (!raw) return {};
+    const data = JSON.parse(raw);
+    const today = new Date().toISOString().slice(0,10);
+    // Limpiar overrides de días anteriores
+    for (const k of Object.keys(data)) {
+      if (data[k].date !== today) delete data[k];
+    }
+    return data;
+  } catch { return {}; }
+}
+function setManualOverride(boxId, prof) {
+  const data = getManualOverrides();
+  if (prof === null) delete data[boxId];
+  else data[boxId] = { ...prof, date: new Date().toISOString().slice(0,10), set_at: new Date().toISOString() };
+  localStorage.setItem('boxes_manual_v2', JSON.stringify(data));
+}
+
 // ---------- Asignación citas → box (cliente) ----------
 function computeBoxState(layout) {
   const boxes = JSON.parse(JSON.stringify(layout));
+  const overrides = getManualOverrides();
   for (const b of boxes) {
     b.profesionales_activos = [];
     b.proximo = null;
     b.revenue_dia = 0;
     b.citas_dia = 0;
     b.estado = 'libre';
+    b.manual_override = overrides[b.id] || null;
   }
-  // Activas: asignar al primer box que tenga ese prof + cupo (max 2)
-  const seen = new Set();
+  // Pre-llenar boxes con override manual
+  const overrideProfIds = new Set();
+  for (const b of boxes) {
+    if (b.manual_override && b.manual_override.profesional_id != null) {
+      const pid = b.manual_override.profesional_id;
+      overrideProfIds.add(pid);
+      // Buscar cita activa de ese prof para datos enriquecidos
+      const cita = (STATE.citas_raw || []).find(c => c.is_active && c.profesional_id === pid);
+      b.profesionales_activos.push({
+        profesional: b.manual_override.profesional_nombre || (cita ? cita.profesional : '—'),
+        especialidad: b.manual_override.especialidad || (cita ? cita.especialidad : ''),
+        paciente: cita ? cita.paciente : null,
+        elapsed_min: cita ? cita.elapsed_min : null,
+        is_manual: true,
+      });
+    }
+  }
+  // Auto: asignar citas activas a primer box con cupo. Saltear si el prof ya está
+  // en un override (para no duplicarlo).
   for (const c of (STATE.citas_raw || []).filter(c=>c.is_active)) {
+    if (overrideProfIds.has(c.profesional_id)) continue;
     for (const b of boxes) {
       if ((b.default_profs || []).includes(c.profesional_id) && b.profesionales_activos.length < 2) {
         b.profesionales_activos.push({
           profesional: c.profesional, especialidad: c.especialidad,
           paciente: c.paciente, elapsed_min: c.elapsed_min,
         });
-        seen.add(c.cita_id);
         break;
       }
     }
   }
-  // Próximas: solo si box libre
+  // Próximas: solo si box libre y sin override
   for (const c of (STATE.citas_raw || []).filter(c=>!c.is_active)) {
+    if (overrideProfIds.has(c.profesional_id)) continue;
     for (const b of boxes) {
       if ((b.default_profs || []).includes(c.profesional_id) && !b.proximo && b.profesionales_activos.length === 0) {
         b.proximo = { profesional: c.profesional, especialidad: c.especialidad, starts_in_min: c.starts_in_min };
@@ -309,6 +368,14 @@ function renderCard(box) {
       ${badge}
     </div>
     <div class="min-h-[80px]">${bodyHTML}</div>
+    ${box.manual_override ? `<div class="manual-bar mt-3">
+      <span class="manual-pill">manual</span>
+      <span class="flex-1 truncate" style="color:var(--cmc-navy);font-weight:600">${esc(box.manual_override.profesional_nombre || '—')}</span>
+      <button onclick="setManualOverride('${esc(box.id)}', null); render();" title="Limpiar" style="color:var(--cmc-blue);font-weight:700">✕</button>
+    </div>` : ''}
+    <button class="quick-assign" onclick="openManualAssign('${esc(box.id)}')">
+      <span style="font-weight:600">👤</span> ${box.manual_override ? 'Cambiar profesional' : 'Asignar profesional ahora'}
+    </button>
     <div class="mt-4 pt-3 border-t flex justify-between items-center" style="border-color:var(--cmc-border)">
       <div><p class="text-[10px] uppercase" style="color:var(--cmc-text-mute)">Revenue hoy</p>
         <p class="text-base font-bold money" style="color:var(--cmc-navy)">${fmtCLP(box.revenue_dia)}</p></div>
@@ -317,6 +384,46 @@ function renderCard(box) {
     </div>
   </div>`;
 }
+
+// ---------- Modal asignar manual ----------
+let manualTargetBoxId = null;
+function openManualAssign(boxId) {
+  manualTargetBoxId = boxId;
+  document.getElementById('mmSearch').value = '';
+  renderManualList('');
+  document.getElementById('modalManual').classList.add('open');
+  setTimeout(() => document.getElementById('mmSearch').focus(), 50);
+}
+function renderManualList(query) {
+  const q = (query || '').toLowerCase().trim();
+  const profs = (STATE.profesionales_all || []).filter(p =>
+    !q || (p.nombre + ' ' + p.especialidad).toLowerCase().includes(q));
+  document.getElementById('mmProfs').innerHTML = profs.map(p => `
+    <div class="prof-item" onclick='assignManual(${p.id}, ${JSON.stringify(p.nombre)}, ${JSON.stringify(p.especialidad)})'>
+      <div class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0" style="background:var(--cmc-aqua-soft);color:var(--cmc-blue)">${esc(initials(p.nombre))}</div>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-semibold truncate" style="color:var(--cmc-navy)">${esc(p.nombre)}</p>
+        <p class="text-[11px] truncate" style="color:var(--cmc-text-mute)">${esc(p.especialidad)}</p>
+      </div>
+    </div>`).join('') || '<p class="text-xs text-center py-4" style="color:var(--cmc-text-mute)">Sin resultados</p>';
+}
+function assignManual(profId, profNombre, especialidad) {
+  if (!manualTargetBoxId) return;
+  setManualOverride(manualTargetBoxId, {
+    profesional_id: profId,
+    profesional_nombre: profNombre,
+    especialidad: especialidad,
+  });
+  closeModal('modalManual');
+  render();
+}
+document.getElementById('mmSearch').addEventListener('input', e => renderManualList(e.target.value));
+document.getElementById('mmClear').addEventListener('click', () => {
+  if (!manualTargetBoxId) return;
+  setManualOverride(manualTargetBoxId, null);
+  closeModal('modalManual');
+  render();
+});
 
 function renderPisos(boxes) {
   // Agrupar por piso
