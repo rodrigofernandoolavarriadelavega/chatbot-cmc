@@ -375,6 +375,53 @@ async def _get_horario(client: httpx.AsyncClient, id_prof: int) -> dict:
     return horario
 
 
+# Cache de horarios_especiales (excepciones por fecha cargadas en Medilink web).
+# Endpoint: /profesionales/{id}/horariosespeciales. Devuelve lista de dicts
+# con {id, id_profesional, id_sucursal, fecha (YYYY-MM-DD), hora_inicio, hora_fin,
+# hora_inicio_break, hora_fin_break, intervalo, sillones}. Se aplica como
+# OVERRIDE sobre la jornada base: si para una fecha hay horario_especial,
+# usarlo en vez del horario base. TTL corto para que recepción vea cambios
+# rápido (esperan ofrecer slots al toque tras cargar).
+_horarios_esp_cache: dict = {}
+_HORARIOS_ESP_TTL = 120  # segundos
+
+
+async def _get_horarios_especiales(client: httpx.AsyncClient, id_prof: int) -> list:
+    """Devuelve lista de horarios especiales del profesional (cacheado 2 min)."""
+    cached = _horarios_esp_cache.get(id_prof)
+    if cached and (time.monotonic() - cached["_ts"]) < _HORARIOS_ESP_TTL:
+        return cached["data"]
+    try:
+        r = await _get(client, f"{MEDILINK_BASE_URL}/profesionales/{id_prof}/horariosespeciales",
+                       headers=HEADERS)
+    except httpx.RequestError as e:
+        log.warning("No se pudo obtener horariosespeciales prof=%d: %s", id_prof, e)
+        return cached["data"] if cached else []
+    if r.status_code != 200:
+        return cached["data"] if cached else []
+    data = _safe_json(r).get("data", [])
+    # Filtrar a la sucursal CMC
+    data = [d for d in data if d.get("id_sucursal") == int(MEDILINK_SUCURSAL)]
+    _horarios_esp_cache[id_prof] = {"data": data, "_ts": time.monotonic()}
+    return data
+
+
+def _horario_especial_para_fecha(especiales: list, fecha: str) -> Optional[tuple]:
+    """Si existe horario_especial para la fecha dada, retorna (hi, hf, break_t).
+    fecha en formato YYYY-MM-DD. Retorna None si no hay."""
+    for h in especiales:
+        if h.get("fecha") == fecha:
+            hi = (h.get("hora_inicio") or "")[:5]
+            hf = (h.get("hora_fin") or "")[:5]
+            if not (hi and hf and hi != hf):
+                continue
+            bhi = (h.get("hora_inicio_break") or "")[:5]
+            bhf = (h.get("hora_fin_break") or "")[:5]
+            break_t = (bhi, bhf) if (bhi and bhf and bhi != bhf) else None
+            return (hi, hf, break_t)
+    return None
+
+
 # Cache de respuestas crudas de /agendas (60s TTL) para evitar el burst de
 # requests en buscar_primer_dia: itera 60 días pero /agendas devuelve siempre
 # la misma respuesta (Medilink ignora el filtro fecha eq). Una sola llamada
@@ -664,11 +711,21 @@ async def _slots_para_fecha(client: httpx.AsyncClient, ids: list, horarios: dict
                     todos_libres.append(s)
                 intervalo = h.get("intervalo", intervalo)
             continue
-        # Fallback /agendas: si el prof no atiende este weekday según jornada base
-        # PERO recepción cargó cupos puntuales en /agendas (caso típico: prof que
-        # reemplaza a otro durante la semana), usar esos cupos.
         horario_dia = h.get("horario_dia", {})
-        if weekday not in h["dias"] or weekday not in horario_dia:
+
+        # PRIORIDAD 1: Horarios especiales (override por fecha cargado en Medilink web).
+        # Si recepción/admin cargó un horario especial para esta fecha, usar ese
+        # rango aunque la jornada base diga "No atiende". Ejemplo: Carlos Jiménez
+        # base vie-sáb, pero administrador carga horario especial jueves 28/05
+        # 14:00-20:00 cuando reemplaza a Javi → bot debe ofrecer 14:00-20:00.
+        especiales = await _get_horarios_especiales(client, id_prof)
+        esp_match = _horario_especial_para_fecha(especiales, fecha)
+        if esp_match is not None:
+            hi_dia, hf_dia, break_t = esp_match
+            log.info("Horario especial prof %d fecha %s: %s-%s", id_prof, fecha, hi_dia, hf_dia)
+        elif weekday not in h["dias"] or weekday not in horario_dia:
+            # PRIORIDAD 2: Fallback /agendas (cupos puntuales pre-cargados).
+            # Caso histórico cuando no hay horario especial pero sí cupos en /agendas.
             slots_ag = await _slots_desde_agendas(client, id_prof, fecha)
             if slots_ag:
                 _ahora_cl_a = datetime.now(_CHILE_TZ)
@@ -688,10 +745,12 @@ async def _slots_para_fecha(client: httpx.AsyncClient, ids: list, horarios: dict
                 log.info("Fallback /agendas prof %d fecha %s (weekday %d no en jornada base): %d cupos extra",
                          id_prof, fecha, weekday, libres_ag)
             continue
-        _tup = horario_dia[weekday]
-        # Compat: entradas antiguas (hi, hf) o nuevas (hi, hf, break_t)
-        hi_dia, hf_dia = _tup[0], _tup[1]
-        break_t = _tup[2] if len(_tup) >= 3 else None
+        else:
+            # PRIORIDAD 3: Jornada base recurrente
+            _tup = horario_dia[weekday]
+            # Compat: entradas antiguas (hi, hf) o nuevas (hi, hf, break_t)
+            hi_dia, hf_dia = _tup[0], _tup[1]
+            break_t = _tup[2] if len(_tup) >= 3 else None
 
         intervalo       = h["intervalo"]
         bloqueos        = await _get_bloqueos(client, id_prof, fecha)
