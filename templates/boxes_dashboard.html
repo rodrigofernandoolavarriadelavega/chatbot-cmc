@@ -4,8 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#1172AB">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Boxes CMC">
 <title>Boxes CMC — Gemelo Digital</title>
 <link rel="icon" href="/static/isotipo.png">
+<link rel="apple-touch-icon" href="/static/isotipo.png">
+<link rel="manifest" href="" id="manifestLink">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
@@ -75,6 +80,61 @@
   .manual-pill { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; padding: 3px 8px; border-radius: 999px; background: var(--cmc-aqua); color: #fff; font-weight: 700; }
   .quick-assign { background: transparent; border: 1px dashed var(--cmc-border); border-radius: 6px; padding: 4px 8px; font-size: 11px; color: var(--cmc-text-mute); cursor: pointer; transition: all 0.15s; width: 100%; text-align: left; margin-top: 8px; }
   .quick-assign:hover { border-color: var(--cmc-aqua); color: var(--cmc-blue); background: var(--cmc-aqua-soft); }
+  /* Schedule panel hover */
+  .box-wrap { position: relative; }
+  .schedule-panel { position: absolute; top: 0; left: 100%; margin-left: 8px; width: 240px; max-height: 460px; overflow-y: auto; background: #fff; border: 1px solid var(--cmc-aqua); border-radius: 12px; padding: 12px; box-shadow: 0 12px 40px rgba(15,63,104,0.2); z-index: 20; opacity: 0; pointer-events: none; transform: translateX(-8px); transition: all 0.18s ease; }
+  .box-wrap:hover .schedule-panel { opacity: 1; pointer-events: auto; transform: translateX(0); }
+  .schedule-row { display: flex; align-items: center; gap: 6px; padding: 4px 2px; border-bottom: 1px solid #f0f4f8; font-size: 11px; }
+  .schedule-row:last-child { border-bottom: 0; }
+  .schedule-row .time { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--cmc-blue); font-weight: 600; min-width: 76px; }
+  .schedule-row .prof { flex: 1; color: var(--cmc-navy); font-weight: 500; }
+  .schedule-row .pac  { font-size: 10px; color: var(--cmc-text-mute); }
+  .save-status { font-size: 10px; padding: 3px 8px; border-radius: 999px; }
+  .save-status.saved { background: #effaf2; color: #5A8A6F; }
+  .save-status.saving { background: #fef3e8; color: #E07A3C; }
+  .save-status.error { background: #fee; color: #c33; }
+  .install-btn { background: #fff; color: var(--cmc-navy); border: 0; padding: 6px 12px; border-radius: 999px; font-weight: 700; font-size: 11px; cursor: pointer; }
+
+  /* ─── Responsive ───────────────────────────────────────────── */
+  @media (max-width: 1280px) {
+    .schedule-panel { left: 0; top: 100%; margin-left: 0; margin-top: 8px; width: 100%; max-height: 320px; }
+    .box-wrap:hover .schedule-panel { transform: translateY(0); }
+    .schedule-panel { transform: translateY(-8px); }
+  }
+  @media (max-width: 1024px) {
+    .grid.grid-cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .max-w-7xl { padding-left: 0; padding-right: 0; }
+    header h1 { font-size: 1.25rem; }
+    .kpi-card .text-3xl { font-size: 1.6rem; }
+  }
+  @media (max-width: 700px) {
+    .brand-bar { padding: 12px; }
+    .brand-bar header { flex-direction: column; align-items: flex-start; gap: 8px; }
+    .brand-bar .text-right { text-align: left; }
+    .grid.grid-cols-4 { grid-template-columns: 1fr; gap: 12px; }
+    .px-6 { padding-left: 12px; padding-right: 12px; }
+    .kpi-card { padding: 10px 14px; }
+    .modal { width: 96%; padding: 16px; max-height: 92vh; }
+    .modal h2 { font-size: 16px; }
+    /* Schedule panel siempre debajo en móvil */
+    .schedule-panel { position: static; opacity: 1; pointer-events: auto; transform: none; margin-left: 0; margin-top: 10px; width: 100%; max-height: 220px; box-shadow: none; border-color: var(--cmc-border); }
+    .schedule-panel { display: none; }
+    .box-wrap.open-schedule .schedule-panel { display: block; }
+    /* Schedule editor table → stack */
+    #modalSchedule table thead { display: none; }
+    #modalSchedule table tr { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 8px; border-bottom: 1px solid var(--cmc-border); }
+    #modalSchedule table td { padding: 2px !important; }
+    #modalSchedule table td:first-child { grid-column: 1 / -1; }
+    #modalSchedule input[type="text"] { width: 100% !important; }
+    #modalSchedule select { width: 100%; }
+    /* Botones header en móvil */
+    #btnEditMode, #btnInstall { font-size: 10px; padding: 4px 8px; }
+  }
+  @media (hover: none) {
+    /* Touch devices: tap para abrir schedule, no hover */
+    .box-wrap:hover .schedule-panel { opacity: 0; pointer-events: none; }
+    .box-wrap.open-schedule .schedule-panel { opacity: 1; pointer-events: auto; transform: none; display: block; }
+  }
 </style>
 </head>
 <body class="min-h-screen">
@@ -92,6 +152,8 @@
       <p class="text-[10px] uppercase tracking-wider opacity-70">Última actualización</p>
       <p id="lastUpdate" class="text-sm font-semibold">—</p>
       <div class="text-[10px] mt-1 opacity-80 flex items-center gap-2 justify-end">
+        <span id="saveStatus" class="save-status" style="display:none">●</span>
+        <button id="btnInstall" class="install-btn" style="display:none">📱 Instalar app</button>
         <button id="btnEditMode" class="bg-white/20 hover:bg-white/30 px-3 py-1 rounded-full transition font-medium">⚙️ Modo edición</button>
         <button id="btnResetOrder" class="underline hover:opacity-100 opacity-90 transition">restaurar default</button>
       </div>
@@ -178,6 +240,30 @@
   </div>
 </div>
 
+<!-- Modal editor horarios -->
+<div class="modal-bg" id="modalSchedule">
+  <div class="modal" style="max-width:720px">
+    <h2>Horarios — <span id="seBoxName"></span></h2>
+    <p class="text-xs mb-4" style="color:var(--cmc-text-mute)">Asigna profesionales con horarios custom (ej. 15:05 – 16:45). Si no agregás nada, se muestran las citas de Medilink BI automáticamente.</p>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead><tr style="background:var(--cmc-aqua-soft);color:var(--cmc-navy)">
+          <th class="p-2 text-left">Profesional</th><th class="p-2">Inicio</th><th class="p-2">Fin</th><th class="p-2">Paciente</th><th class="p-2"></th>
+        </tr></thead>
+        <tbody id="seRows"></tbody>
+      </table>
+    </div>
+    <div class="mt-3"><button onclick="seAddRow()" class="btn-cmc-secondary text-xs">+ Agregar fila</button></div>
+    <div class="mt-5 flex justify-between items-center gap-3">
+      <button onclick="seResetToBI()" class="text-xs hover:underline" style="color:var(--cmc-text-mute)">↻ Volver a Medilink BI</button>
+      <div class="flex gap-2">
+        <button class="btn-cmc-secondary" onclick="closeModal('modalSchedule')">Cancelar</button>
+        <button onclick="seSave()" class="btn-cmc">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal asignar profesional ahora -->
 <div class="modal-bg" id="modalManual">
   <div class="modal" style="max-width:420px">
@@ -207,9 +293,33 @@
 
 <script>
 const TOKEN = new URLSearchParams(location.search).get('token') || 'cmc_admin_2026';
-let STATE = { boxes_config_default: [], profesionales_all: [], citas_raw: [], rev_por_prof: {}, citas_por_prof: {}, historial: [] };
+let STATE = { boxes_config_default: [], profesionales_all: [], citas_raw: [], citas_dia_full: [], rev_por_prof: {}, citas_por_prof: {}, historial: [] };
+let CONFIG = { layout: null, pisos: null, manual_overrides: {}, schedules: {} };
 let editMode = false;
 let editingBoxId = null;
+
+// Configurar manifest PWA con token
+document.getElementById('manifestLink').href = `/boxes/manifest.webmanifest?token=${TOKEN}`;
+
+// Service worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/boxes/sw.js').catch(()=>{});
+}
+
+// Install prompt
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('btnInstall').style.display = 'inline-block';
+});
+document.getElementById('btnInstall').addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  document.getElementById('btnInstall').style.display = 'none';
+});
 
 function esc(s) {
   if (s == null) return '';
@@ -219,41 +329,109 @@ function fmtCLP(n) { if (!n) return '$0'; return '$' + Math.round(n).toLocaleStr
 function fmtElapsed(m) { if (m == null) return '—'; if (m < 60) return m + ' min'; return Math.floor(m/60) + 'h ' + (m%60) + 'm'; }
 function initials(name) { if (!name) return '?'; return name.split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('').toUpperCase(); }
 
-// ---------- Config layout (localStorage) ----------
-function getLayout() {
+// ---------- Config persistente (backend) ----------
+async function fetchConfig() {
   try {
-    const raw = localStorage.getItem('boxes_layout_v2');
-    if (raw) return JSON.parse(raw);
+    const r = await fetch(`/admin/api/boxes-config?token=${TOKEN}`);
+    if (!r.ok) throw new Error(r.status);
+    const d = await r.json();
+    CONFIG = {
+      layout: (d.layout && d.layout.length) ? d.layout : null,
+      pisos: (d.pisos && d.pisos.length) ? d.pisos : null,
+      manual_overrides: d.manual_overrides || {},
+      schedules: d.schedules || {},
+    };
   } catch {}
-  // Default desde backend
+}
+let saveTimer = null;
+function setSaveStatus(state, msg) {
+  const el = document.getElementById('saveStatus');
+  el.style.display = state ? 'inline-block' : 'none';
+  el.className = 'save-status ' + state;
+  el.textContent = msg || '●';
+}
+function scheduleSave() {
+  setSaveStatus('saving', 'guardando…');
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    try {
+      const r = await fetch(`/admin/api/boxes-config?token=${TOKEN}`, {
+        method: 'PUT', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          layout: CONFIG.layout || [],
+          pisos: CONFIG.pisos || [],
+          manual_overrides: CONFIG.manual_overrides || {},
+          schedules: CONFIG.schedules || {},
+        }),
+      });
+      if (!r.ok) throw new Error(r.status);
+      setSaveStatus('saved', '✓ guardado');
+      setTimeout(() => setSaveStatus(null), 2000);
+    } catch (e) {
+      setSaveStatus('error', '⚠ error');
+    }
+  }, 600);
+}
+function getLayout() {
+  if (CONFIG.layout && CONFIG.layout.length) return JSON.parse(JSON.stringify(CONFIG.layout));
   return JSON.parse(JSON.stringify(STATE.boxes_config_default || []));
 }
 function saveLayout(layout) {
-  localStorage.setItem('boxes_layout_v2', JSON.stringify(layout));
+  CONFIG.layout = layout;
+  scheduleSave();
 }
 function resetLayout() {
-  localStorage.removeItem('boxes_layout_v2');
+  CONFIG.layout = null;
+  CONFIG.pisos = null;
+  CONFIG.manual_overrides = {};
+  CONFIG.schedules = {};
+  scheduleSave();
 }
 
-// ---------- Override manual de profesional por box ----------
+// ---------- Override manual de profesional por box (backend) ----------
 function getManualOverrides() {
-  try {
-    const raw = localStorage.getItem('boxes_manual_v2');
-    if (!raw) return {};
-    const data = JSON.parse(raw);
-    const today = new Date().toISOString().slice(0,10);
-    // Limpiar overrides de días anteriores
-    for (const k of Object.keys(data)) {
-      if (data[k].date !== today) delete data[k];
-    }
-    return data;
-  } catch { return {}; }
+  const data = CONFIG.manual_overrides || {};
+  const today = new Date().toISOString().slice(0,10);
+  // Filtrar solo overrides de hoy (los viejos quedan en BD pero se ignoran)
+  const out = {};
+  for (const k of Object.keys(data)) {
+    if (data[k] && data[k].date === today) out[k] = data[k];
+  }
+  return out;
 }
 function setManualOverride(boxId, prof) {
-  const data = getManualOverrides();
-  if (prof === null) delete data[boxId];
-  else data[boxId] = { ...prof, date: new Date().toISOString().slice(0,10), set_at: new Date().toISOString() };
-  localStorage.setItem('boxes_manual_v2', JSON.stringify(data));
+  if (!CONFIG.manual_overrides) CONFIG.manual_overrides = {};
+  if (prof === null) delete CONFIG.manual_overrides[boxId];
+  else CONFIG.manual_overrides[boxId] = { ...prof, date: new Date().toISOString().slice(0,10), set_at: new Date().toISOString() };
+  scheduleSave();
+}
+
+// ---------- Schedules custom por box per día (backend) ----------
+function getScheduleForBox(boxId) {
+  const today = new Date().toISOString().slice(0,10);
+  const all = CONFIG.schedules || {};
+  return (all[today] && all[today][boxId]) || null;
+}
+function setScheduleForBox(boxId, entries) {
+  const today = new Date().toISOString().slice(0,10);
+  if (!CONFIG.schedules) CONFIG.schedules = {};
+  if (!CONFIG.schedules[today]) CONFIG.schedules[today] = {};
+  if (!entries || !entries.length) delete CONFIG.schedules[today][boxId];
+  else CONFIG.schedules[today][boxId] = entries;
+  scheduleSave();
+}
+// Combinar schedule custom + citas BI del box
+function getCombinedScheduleForBox(box) {
+  const custom = getScheduleForBox(box.id);
+  if (custom && custom.length) return custom.slice().sort((a,b)=>a.h_ini.localeCompare(b.h_ini));
+  // Default: citas BI del día de los profesionales asignados al box
+  const profIds = new Set(box.default_profs || []);
+  const out = (STATE.citas_dia_full || []).filter(c => profIds.has(c.profesional_id)).map(c => ({
+    prof_id: c.profesional_id, prof_nombre: c.profesional,
+    h_ini: c.hora_inicio, h_fin: c.hora_fin,
+    paciente: c.paciente, estado: c.estado, is_bi: true,
+  }));
+  return out.sort((a,b)=>(a.h_ini||'').localeCompare(b.h_ini||''));
 }
 
 // ---------- Asignación citas → box (cliente) ----------
@@ -356,7 +534,27 @@ function renderCard(box) {
     ? '<span class="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-700"><span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>Próximo</span>'
     : '<span class="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400"><span class="w-1.5 h-1.5 bg-gray-300 rounded-full"></span>Libre</span>';
 
+  const schedule = getCombinedScheduleForBox(box);
+  const scheduleRows = schedule.length
+    ? schedule.map(s => `
+      <div class="schedule-row">
+        <span class="time">${esc(s.h_ini || '—')}–${esc(s.h_fin || '—')}</span>
+        <div class="prof">
+          <div class="truncate" style="max-width:120px">${esc(s.prof_nombre || '—')}</div>
+          ${s.paciente ? `<div class="pac">↳ ${esc(s.paciente)}</div>` : ''}
+        </div>
+      </div>`).join('')
+    : '<p class="text-[11px] italic" style="color:var(--cmc-text-mute)">Sin horarios para hoy</p>';
+  const panelHTML = `
+    <div class="schedule-panel">
+      <div class="flex items-center justify-between mb-2 pb-2 border-b" style="border-color:var(--cmc-border)">
+        <p class="text-[10px] uppercase tracking-wider font-bold" style="color:var(--cmc-navy)">Horarios hoy</p>
+        <button onclick="openScheduleEditor('${esc(box.id)}')" class="text-[10px] font-semibold" style="color:var(--cmc-blue)">✏️ editar</button>
+      </div>
+      ${scheduleRows}
+    </div>`;
   return `
+  <div class="box-wrap">
   <div class="${cls}" data-box-id="${esc(box.id)}">
     <span class="drag-handle" title="Arrastrar">⋮⋮</span>
     <button class="edit-btn" onclick="openBoxEditor('${esc(box.id)}')" title="Configurar">✎</button>
@@ -382,7 +580,92 @@ function renderCard(box) {
       <div class="text-right"><p class="text-[10px] uppercase" style="color:var(--cmc-text-mute)">Citas hoy</p>
         <p class="text-base font-bold money" style="color:var(--cmc-navy)">${box.citas_dia || 0}</p></div>
     </div>
+  </div>
+  ${panelHTML}
   </div>`;
+}
+
+// ---------- Modal editor de horarios ----------
+let scheduleEditingBoxId = null;
+function openScheduleEditor(boxId) {
+  scheduleEditingBoxId = boxId;
+  document.getElementById('seBoxName').textContent = (getLayout().find(b => b.id === boxId) || {}).nombre || 'Box';
+  renderScheduleEditor();
+  document.getElementById('modalSchedule').classList.add('open');
+}
+function renderScheduleEditor() {
+  const sched = (getScheduleForBox(scheduleEditingBoxId) ||
+                 getCombinedScheduleForBox(getLayout().find(b => b.id === scheduleEditingBoxId) || {}))
+                 .map(s => ({
+                   prof_id: s.prof_id, prof_nombre: s.prof_nombre,
+                   h_ini: s.h_ini || '', h_fin: s.h_fin || '',
+                   paciente: s.paciente || '',
+                 }));
+  const profOpts = (STATE.profesionales_all || []).map(p =>
+    `<option value="${p.id}" data-nombre="${esc(p.nombre)}">${esc(p.nombre)} — ${esc(p.especialidad)}</option>`).join('');
+  document.getElementById('seRows').innerHTML = sched.map((s, i) => `
+    <tr data-idx="${i}">
+      <td><select class="se-prof" data-i="${i}">
+        <option value="">— elegir profesional —</option>
+        ${profOpts.replace(`value="${s.prof_id}"`, `value="${s.prof_id}" selected`)}
+      </select></td>
+      <td><input type="text" class="se-h-ini" data-i="${i}" value="${esc(s.h_ini)}" placeholder="HH:MM" style="width:64px;font-family:monospace"></td>
+      <td><input type="text" class="se-h-fin" data-i="${i}" value="${esc(s.h_fin)}" placeholder="HH:MM" style="width:64px;font-family:monospace"></td>
+      <td><input type="text" class="se-pac" data-i="${i}" value="${esc(s.paciente)}" placeholder="Paciente (opc)" style="width:120px"></td>
+      <td><button onclick="seDeleteRow(${i})" class="text-red-500 text-sm">✕</button></td>
+    </tr>`).join('');
+  // Atajos onchange para sincronizar prof_nombre con select
+  document.querySelectorAll('.se-prof').forEach(sel => {
+    sel.addEventListener('change', () => {
+      const opt = sel.options[sel.selectedIndex];
+      sel.dataset.profNombre = opt ? opt.dataset.nombre : '';
+    });
+  });
+}
+function seCollectRows() {
+  const rows = [];
+  document.querySelectorAll('#seRows tr').forEach(tr => {
+    const sel = tr.querySelector('.se-prof');
+    const opt = sel ? sel.options[sel.selectedIndex] : null;
+    const prof_id = sel && sel.value ? parseInt(sel.value) : null;
+    const prof_nombre = opt ? opt.dataset.nombre || opt.textContent.split(' — ')[0] : '';
+    rows.push({
+      prof_id, prof_nombre,
+      h_ini: (tr.querySelector('.se-h-ini') || {}).value || '',
+      h_fin: (tr.querySelector('.se-h-fin') || {}).value || '',
+      paciente: (tr.querySelector('.se-pac') || {}).value || '',
+    });
+  });
+  return rows;
+}
+function seAddRow() {
+  const tbody = document.getElementById('seRows');
+  const idx = tbody.querySelectorAll('tr').length;
+  const profOpts = (STATE.profesionales_all || []).map(p =>
+    `<option value="${p.id}" data-nombre="${esc(p.nombre)}">${esc(p.nombre)} — ${esc(p.especialidad)}</option>`).join('');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><select class="se-prof" data-i="${idx}"><option value="">— elegir —</option>${profOpts}</select></td>
+    <td><input type="text" class="se-h-ini" data-i="${idx}" placeholder="HH:MM" style="width:64px;font-family:monospace"></td>
+    <td><input type="text" class="se-h-fin" data-i="${idx}" placeholder="HH:MM" style="width:64px;font-family:monospace"></td>
+    <td><input type="text" class="se-pac" data-i="${idx}" placeholder="Paciente (opc)" style="width:120px"></td>
+    <td><button onclick="seDeleteRow(${idx})" class="text-red-500 text-sm">✕</button></td>`;
+  tbody.appendChild(tr);
+}
+function seDeleteRow(i) {
+  const tr = document.querySelector(`#seRows tr[data-idx="${i}"]`);
+  if (tr) tr.remove();
+}
+function seSave() {
+  const rows = seCollectRows().filter(r => r.prof_id && r.h_ini && r.h_fin);
+  setScheduleForBox(scheduleEditingBoxId, rows);
+  closeModal('modalSchedule');
+  render();
+}
+function seResetToBI() {
+  setScheduleForBox(scheduleEditingBoxId, null);
+  closeModal('modalSchedule');
+  render();
 }
 
 // ---------- Modal asignar manual ----------
@@ -481,6 +764,18 @@ function renderPisos(boxes) {
         });
         saveLayout(layout);
       },
+    });
+  });
+
+  // Touch: tap en la card toggle el schedule panel
+  container.querySelectorAll('.box-wrap').forEach(w => {
+    w.addEventListener('click', e => {
+      // Solo en touch (sin hover capability)
+      if (window.matchMedia('(hover: none)').matches) {
+        if (e.target.closest('button, input, select, .drag-handle, .quick-assign, .manual-bar')) return;
+        document.querySelectorAll('.box-wrap.open-schedule').forEach(o => { if (o !== w) o.classList.remove('open-schedule'); });
+        w.classList.toggle('open-schedule');
+      }
     });
   });
 
@@ -653,8 +948,13 @@ async function refresh() {
   }
 }
 
-refresh();
-setInterval(refresh, 30000);
+(async () => {
+  await fetchConfig();
+  refresh();
+  setInterval(refresh, 30000);
+  // Refrescar config cada 60s (cross-device sync)
+  setInterval(async () => { await fetchConfig(); render(); }, 60000);
+})();
 </script>
 </body>
 </html>

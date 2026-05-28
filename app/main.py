@@ -2997,6 +2997,130 @@ def boxes_dashboard_page(token: str | None = Query(None)):
     return _BOXES_DASHBOARD_HTML
 
 
+@app.get("/admin/api/boxes-config")
+def api_boxes_config_get(token: str | None = Query(None)):
+    """Devuelve la configuración persistente de boxes (layout, pisos, overrides, schedules)."""
+    if token != ADMIN_TOKEN:
+        raise HTTPException(401, "No autorizado")
+    import psycopg2
+    import os as _osc
+    conn = psycopg2.connect(
+        host=_osc.getenv("BI_DB_HOST", "127.0.0.1"),
+        port=int(_osc.getenv("BI_DB_PORT", "5432")),
+        dbname=_osc.getenv("BI_DB_NAME", "health_bi"),
+        user=_osc.getenv("BI_DB_USER", "health_user"),
+        password=_osc.getenv("BI_DB_PASSWORD", "password123"),
+        connect_timeout=5,
+    )
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT layout, pisos, manual_overrides, schedules, updated_at FROM bi.boxes_state_global WHERE id=1")
+            row = cur.fetchone()
+            if not row:
+                return {"layout": [], "pisos": [], "manual_overrides": {}, "schedules": {}, "updated_at": None}
+            layout, pisos, overrides, schedules, updated = row
+            return {
+                "layout": layout or [],
+                "pisos": pisos or [],
+                "manual_overrides": overrides or {},
+                "schedules": schedules or {},
+                "updated_at": updated.isoformat() if updated else None,
+            }
+    finally:
+        conn.close()
+
+
+@app.put("/admin/api/boxes-config")
+async def api_boxes_config_put(request: Request, token: str | None = Query(None)):
+    """Guarda la configuración persistente de boxes."""
+    if token != ADMIN_TOKEN:
+        raise HTTPException(401, "No autorizado")
+    body = await request.json()
+    layout = body.get("layout", [])
+    pisos = body.get("pisos", [])
+    overrides = body.get("manual_overrides", {})
+    schedules = body.get("schedules", {})
+    import psycopg2
+    import json as _js
+    import os as _osc
+    conn = psycopg2.connect(
+        host=_osc.getenv("BI_DB_HOST", "127.0.0.1"),
+        port=int(_osc.getenv("BI_DB_PORT", "5432")),
+        dbname=_osc.getenv("BI_DB_NAME", "health_bi"),
+        user=_osc.getenv("BI_DB_USER", "health_user"),
+        password=_osc.getenv("BI_DB_PASSWORD", "password123"),
+        connect_timeout=5,
+    )
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO bi.boxes_state_global (id, layout, pisos, manual_overrides, schedules, updated_at)
+                VALUES (1, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, NOW())
+                ON CONFLICT (id) DO UPDATE SET
+                  layout = EXCLUDED.layout,
+                  pisos = EXCLUDED.pisos,
+                  manual_overrides = EXCLUDED.manual_overrides,
+                  schedules = EXCLUDED.schedules,
+                  updated_at = NOW()
+            """, (_js.dumps(layout), _js.dumps(pisos), _js.dumps(overrides), _js.dumps(schedules)))
+            conn.commit()
+        return {"ok": True}
+    finally:
+        conn.close()
+
+
+@app.get("/boxes/manifest.webmanifest", include_in_schema=False)
+def boxes_manifest(token: str | None = Query(None)):
+    """PWA manifest para instalación como app."""
+    if token != ADMIN_TOKEN:
+        raise HTTPException(401, "No autorizado")
+    return {
+        "name": "Boxes CMC",
+        "short_name": "Boxes",
+        "description": "Gemelo digital de boxes del Centro Médico Carampangue",
+        "start_url": f"/boxes?token={ADMIN_TOKEN}",
+        "scope": "/boxes",
+        "display": "standalone",
+        "orientation": "landscape-primary",
+        "background_color": "#F7FBFD",
+        "theme_color": "#1172AB",
+        "icons": [
+            {"src": "/static/isotipo.png", "sizes": "150x150", "type": "image/png", "purpose": "any maskable"}
+        ],
+    }
+
+
+@app.get("/boxes/sw.js", include_in_schema=False)
+def boxes_service_worker():
+    """Service worker mínimo para PWA + offline cache de assets."""
+    sw = """
+const CACHE = 'boxes-cmc-v1';
+const ASSETS = ['/static/isotipo.png', 'https://cdn.tailwindcss.com', 'https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js'];
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS.map(u => new Request(u, {mode:'no-cors'})))));
+  self.skipWaiting();
+});
+self.addEventListener('activate', e => { e.waitUntil(self.clients.claim()); });
+self.addEventListener('fetch', e => {
+  const url = new URL(e.request.url);
+  // No cachear endpoints API (siempre live)
+  if (url.pathname.startsWith('/admin/api/')) return;
+  e.respondWith(
+    caches.match(e.request).then(r => r || fetch(e.request).then(resp => {
+      // Cachear assets estáticos
+      if (e.request.method === 'GET' && (url.pathname.startsWith('/static/') || url.host !== location.host)) {
+        const clone = resp.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
+      }
+      return resp;
+    }).catch(() => caches.match('/boxes')))
+  );
+});
+"""
+    from fastapi.responses import Response
+    return Response(content=sw, media_type="application/javascript")
+
+
 @app.get("/admin/api/boxes-state")
 def api_boxes_state(token: str | None = Query(None)):
     """Estado actual de los boxes CMC con asignación dinámica de profesionales,
@@ -3271,6 +3395,25 @@ def api_boxes_state(token: str | None = Query(None)):
         {"id": r[0], "nombre": r[1], "especialidad": r[2]} for r in cur.fetchall()
     ]
 
+    # Citas del día completas (todas) para el editor de horarios hover
+    def _fmt_t(t):
+        if not t: return None
+        try: return f"{t.hour:02d}:{t.minute:02d}"
+        except Exception: return str(t)[:5]
+
+    citas_dia_full = []
+    for c in citas_hoy:
+        citas_dia_full.append({
+            "cita_id": c["cita_id"],
+            "profesional_id": c["profesional_id"],
+            "profesional": c["profesional"],
+            "especialidad": c["especialidad"],
+            "paciente": _initials_pac(c["paciente"]) if c["paciente"] else None,
+            "hora_inicio": _fmt_t(c["hora_inicio"]),
+            "hora_fin": _fmt_t(c["hora_fin"]),
+            "estado": c["estado"],
+        })
+
     # Citas activas / próximas RAW (sin asignar a box) — para que el frontend
     # con layout custom pueda re-asignar dinámicamente.
     citas_raw = []
@@ -3319,6 +3462,7 @@ def api_boxes_state(token: str | None = Query(None)):
         "boxes_config_default": BOXES_CONFIG,
         "profesionales_all": profesionales_all,
         "citas_raw": citas_raw,
+        "citas_dia_full": citas_dia_full,
         "rev_por_prof": {str(k): int(v) for k, v in rev_por_prof.items()},
         "citas_por_prof": {str(k): int(v) for k, v in citas_por_prof.items()},
         "historial": historial,
