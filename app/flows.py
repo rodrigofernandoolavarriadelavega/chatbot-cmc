@@ -11,6 +11,7 @@ from zoneinfo import ZoneInfo
 _CHILE_TZ = ZoneInfo("America/Santiago")
 
 from claude_helper import (detect_intent, respuesta_faq, clasificar_respuesta_seguimiento,
+                           clasificar_respuesta_crosssell,
                            consulta_clinica_doctor, classify_with_context)
 from medilink import (buscar_primer_dia, buscar_slots_dia, buscar_slots_dia_por_ids,
                       buscar_paciente, buscar_paciente_por_nombre, crear_paciente, crear_cita,
@@ -28,6 +29,7 @@ from session import (save_session, reset_session, get_session, save_tag, delete_
                      get_citas_bot_futuras,
                      adquirir_slot_lock, liberar_slot_lock,
                      log_cross_sell, puede_cross_sell,
+                     get_pending_crosssell, consume_pending_crosssell,
                      marcar_bono_primera_cita, marcar_bono_notificado,
                      registrar_bono_referral, conteo_referidos_mes,
                      mark_horas_vacias_respondio, mark_horas_vacias_agendo,
@@ -3127,6 +3129,42 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         _fr_idle_top = _detectar_franja_horaria(txt)
         if _fr_idle_top:
             data["franja_horaria"] = _fr_idle_top
+
+        # ── Pending cross-sell: el bot envió hace ≤72h un cross-sell con botones
+        # (kine / orl-fono / odonto-estética / mg-chequeo / post-dental-ortodoncia).
+        # Si el paciente responde con texto libre en vez de tocar el botón,
+        # interpretamos su intención y consumimos el pending para no perderlo.
+        # Bug original (Ernesto 2026-05-28): bot ofreció kine, paciente respondió
+        # "Sí, me interesa" y el bot cayó al menú genérico perdiendo el contexto.
+        _pending_cs = get_pending_crosssell(phone, hours=72)
+        if _pending_cs and tl and not tl.startswith(("x", "kine_", "reac_", "ctrl_")):
+            # Skip si ya es un button payload conocido (los handlers de abajo lo manejan).
+            try:
+                _cs_destino = _pending_cs["destino"]
+                _cs_tipo = _pending_cs["tipo"]
+                _cs_decision = await clasificar_respuesta_crosssell(txt, _cs_destino)
+                log_event(phone, "crosssell_pending_consumido", {
+                    "tipo": _cs_tipo,
+                    "destino": _cs_destino,
+                    "decision": _cs_decision,
+                    "txt": txt[:120],
+                })
+                if _cs_decision == "si":
+                    consume_pending_crosssell(phone)
+                    perfil = get_profile(phone)
+                    if perfil:
+                        data["rut_conocido"] = perfil["rut"]
+                        data["nombre_conocido"] = perfil["nombre"]
+                    return await _iniciar_agendar(phone, data, _cs_destino)
+                if _cs_decision == "no":
+                    consume_pending_crosssell(phone)
+                    return (
+                        "Sin problema 😊 Cuando lo necesites, estamos acá.\n"
+                        "_Escribe *menu* para ver todas las opciones._"
+                    )
+                # decision == "ambiguo" → no consumir, dejar al router seguir
+            except Exception as _e_cs:
+                log.warning("pending_crosssell consumer falló: %s", _e_cs)
 
         # ── Botones residuales de WAIT_SLOT que llegaron tarde (sesión expiró,
         # usuario volvió al menú pero el mensaje tardó en llegar). En vez de

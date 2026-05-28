@@ -16,7 +16,7 @@ _TZ_CHILE = ZoneInfo("America/Santiago")
 
 from config import USE_TEMPLATES
 from session import (get_citas_para_seguimiento, get_pacientes_inactivos,
-                     save_fidelizacion_msg, puede_enviar_campana,
+                     save_fidelizacion_msg, puede_enviar_campana, set_pending_crosssell,
                      get_kine_candidatos_adherencia, get_control_candidatos,
                      get_crosssell_kine_candidatos, get_profile, log_message,
                      get_cumpleanos_hoy, get_pacientes_winback, get_tags,
@@ -639,6 +639,7 @@ async def enviar_crosssell_kine(send_fn, send_template_fn=None):
             continue
         try:
             save_fidelizacion_msg(p["phone"], "crosssell_kine")  # BUG-01
+            set_pending_crosssell(p["phone"], "crosssell_kine", "kinesiología")
             if USE_TEMPLATES and send_template_fn:
                 nombre = _nombre_corto(p.get("nombre")) or "paciente"
                 await send_template_fn(
@@ -726,6 +727,8 @@ async def enviar_crosssell_orl_fono(send_fn, send_template_fn=None):
             origen = (p.get("origen") or "").lower()
             tipo = "crosssell_orl_fono" if "otorrin" in origen else "crosssell_fono_orl"
             save_fidelizacion_msg(phone, tipo)  # BUG-01
+            destino_orl_fono = "fonoaudiología" if "otorrin" in origen else "otorrinolaringología"
+            set_pending_crosssell(phone, tipo, destino_orl_fono)
             msg = _msg_crosssell_orl_fono(p)
             await send_fn(phone, msg)
             body = msg.get("interactive", {}).get("body", {}).get("text", "[Cross-sell ORL↔Fono]")
@@ -790,6 +793,7 @@ async def enviar_crosssell_odonto_estetica(send_fn, send_template_fn=None):
             continue
         try:
             save_fidelizacion_msg(phone, "crosssell_odonto_estetica")  # BUG-01
+            set_pending_crosssell(phone, "crosssell_odonto_estetica", "estética facial")
             msg = _msg_crosssell_odonto_estetica(p)
             await send_fn(phone, msg)
             body = msg.get("interactive", {}).get("body", {}).get("text", "[Cross-sell Odonto→Estética]")
@@ -867,6 +871,7 @@ async def enviar_crosssell_mg_chequeo(send_fn, send_template_fn=None):
             continue
         try:
             save_fidelizacion_msg(phone, "crosssell_mg_chequeo")  # BUG-01
+            set_pending_crosssell(phone, "crosssell_mg_chequeo", "medicina general")
             msg = _msg_crosssell_mg_chequeo(p)
             await send_fn(phone, msg)
             body = msg.get("interactive", {}).get("body", {}).get("text", "[Cross-sell MG→Chequeo]")
@@ -1517,6 +1522,7 @@ async def enviar_crosssell_post_dental_ortodoncia(send_fn, send_template_fn=None
                 }
             }
             save_fidelizacion_msg(phone, "crosssell_post_dental_ortodoncia")
+            set_pending_crosssell(phone, "crosssell_post_dental_ortodoncia", "ortodoncia")
             await send_fn(phone, msg)
             log_message(phone, "out", f"[Cross-sell post-dental ortodoncia] {texto[:80]}...", "IDLE")
             log.info("crosssell_post_dental_ortodoncia enviado → %s", phone)

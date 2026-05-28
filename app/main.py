@@ -3259,6 +3259,50 @@ def api_boxes_state(token: str | None = Query(None)):
     total_profs_activos = sum(len(b["profesionales_activos"]) for b in boxes_out)
     total_citas = len(citas_hoy)
 
+    # Lista de TODOS los profesionales activos del CMC (para multi-select del editor)
+    cur.execute("""
+        SELECT dp.profesional_id, dp.nombre, COALESCE(de.nombre, '') AS especialidad
+        FROM bi.dim_profesional dp
+        LEFT JOIN bi.dim_especialidad de ON de.especialidad_id = dp.especialidad_id
+        WHERE dp.es_activo = true
+        ORDER BY dp.nombre
+    """)
+    profesionales_all = [
+        {"id": r[0], "nombre": r[1], "especialidad": r[2]} for r in cur.fetchall()
+    ]
+
+    # Citas activas / próximas RAW (sin asignar a box) — para que el frontend
+    # con layout custom pueda re-asignar dinámicamente.
+    citas_raw = []
+    for c in citas_hoy:
+        if not (_is_active(c) or _is_proximo(c)):
+            continue
+        elapsed = None
+        starts_in = None
+        if _is_active(c):
+            elapsed = int((datetime.combine(today, now_t) - datetime.combine(today, c["hora_inicio"])).total_seconds() / 60)
+        else:
+            starts_in = int((datetime.combine(today, c["hora_inicio"]) - datetime.combine(today, now_t)).total_seconds() / 60)
+        citas_raw.append({
+            "cita_id": c["cita_id"],
+            "profesional_id": c["profesional_id"],
+            "profesional": c["profesional"],
+            "especialidad": c["especialidad"],
+            "paciente": _initials_pac(c["paciente"]) if c["paciente"] else None,
+            "elapsed_min": elapsed,
+            "starts_in_min": starts_in,
+            "is_active": _is_active(c),
+        })
+
+    # Revenue por profesional hoy (para que frontend sume al box custom asignado)
+    rev_por_prof = {}
+    citas_por_prof = {}
+    for c in citas_hoy:
+        pid = c["profesional_id"]
+        ncitas_pac = pac_cita_count.get(c["paciente_id"], 1)
+        rev_por_prof[pid] = rev_por_prof.get(pid, 0) + (pagos_por_pac.get(c["paciente_id"], 0) / max(1, ncitas_pac))
+        citas_por_prof[pid] = citas_por_prof.get(pid, 0) + 1
+
     cur.close()
     bi.close()
 
@@ -3272,6 +3316,11 @@ def api_boxes_state(token: str | None = Query(None)):
             "revenue_dia": total_revenue,
         },
         "boxes": boxes_out,
+        "boxes_config_default": BOXES_CONFIG,
+        "profesionales_all": profesionales_all,
+        "citas_raw": citas_raw,
+        "rev_por_prof": {str(k): int(v) for k, v in rev_por_prof.items()},
+        "citas_por_prof": {str(k): int(v) for k, v in citas_por_prof.items()},
         "historial": historial,
     }
 

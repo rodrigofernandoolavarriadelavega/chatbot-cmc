@@ -214,6 +214,20 @@ def _run_ddl_inline(conn) -> None:
         """)
     except Exception:
         pass  # DB existente con duplicados previos — ignorar
+    # Pending cross-sell: cuando se envía un cross-sell con botones, dejamos un
+    # "contexto implícito" para los próximos 72h. Si el paciente responde con
+    # texto libre afirmativo ("sí me interesa", "buena, agéndame", "dale"),
+    # el router consume este pending y dispara el flujo de agendar a `destino`
+    # sin re-preguntar la especialidad. Una fila por phone (upsert por PK).
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS pending_crosssell (
+            phone        TEXT PRIMARY KEY,
+            tipo         TEXT NOT NULL,       -- crosssell_kine, crosssell_orl_fono, etc.
+            destino      TEXT NOT NULL,       -- especialidad a pasar a _iniciar_agendar
+            created_at   TEXT DEFAULT (datetime('now')),
+            consumed_at  TEXT
+        )
+    """)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS citas_cache (
             id_prof         INTEGER,
@@ -2438,6 +2452,46 @@ def save_fidelizacion_msg(phone: str, tipo: str, cita_id: str = ""):
         conn.execute(
             "INSERT OR IGNORE INTO fidelizacion_msgs (phone, tipo, cita_id) VALUES (?, ?, ?)",
             (phone, tipo, cita_id or "")
+        )
+        conn.commit()
+
+
+# ── Pending cross-sell (contexto implícito post-envío) ─────────────────────
+def set_pending_crosssell(phone: str, tipo: str, destino: str) -> None:
+    """Marca un cross-sell pendiente para este phone. Si responde con texto libre
+    afirmativo en las próximas 72h, el router lo consume y dispara `_iniciar_agendar(destino)`.
+    Sobrescribe cualquier pending previo (último cross-sell gana).
+    """
+    with _conn() as conn:
+        conn.execute(
+            "INSERT OR REPLACE INTO pending_crosssell (phone, tipo, destino, created_at, consumed_at) "
+            "VALUES (?, ?, ?, datetime('now'), NULL)",
+            (phone, tipo, destino),
+        )
+        conn.commit()
+
+
+def get_pending_crosssell(phone: str, hours: int = 72) -> dict | None:
+    """Devuelve el pending cross-sell activo (no consumido, dentro de la ventana)
+    o None. Retorna dict con keys: tipo, destino, created_at."""
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT tipo, destino, created_at FROM pending_crosssell "
+            "WHERE phone=? AND consumed_at IS NULL "
+            "AND created_at > datetime('now', ?) "
+            "LIMIT 1",
+            (phone, f"-{int(hours)} hours"),
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def consume_pending_crosssell(phone: str) -> None:
+    """Marca el pending cross-sell como consumido. No borra para mantener auditoría."""
+    with _conn() as conn:
+        conn.execute(
+            "UPDATE pending_crosssell SET consumed_at=datetime('now') "
+            "WHERE phone=? AND consumed_at IS NULL",
+            (phone,),
         )
         conn.commit()
 

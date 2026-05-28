@@ -41,43 +41,36 @@
   .box-card.proximo { border-color: #5A8A6F; background: linear-gradient(135deg, #fff, #effaf2); }
   .sortable-ghost { opacity: 0.25; transform: scale(0.95); }
   .sortable-drag  { cursor: grabbing !important; box-shadow: 0 12px 40px rgba(15,63,104,0.25) !important; transform: rotate(2deg); }
-  .drag-handle { position: absolute; top: 12px; right: 12px; color: #c0c0c0; font-size: 14px; line-height: 1; }
+  .drag-handle { position: absolute; top: 12px; right: 36px; color: #c0c0c0; font-size: 14px; line-height: 1; cursor: grab; }
+  .edit-btn { position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.9); border: 1px solid var(--cmc-border); width: 22px; height: 22px; border-radius: 50%; font-size: 11px; color: var(--cmc-blue); cursor: pointer; display: none; align-items: center; justify-content: center; }
+  .edit-mode .edit-btn { display: flex; }
+  .edit-mode .box-card { box-shadow: 0 0 0 2px var(--cmc-aqua-soft); }
   .pulse { animation: pulse 2s infinite; }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50%      { opacity: 0.4; }
-  }
-  .floor-label {
-    letter-spacing: 0.16em;
-    color: var(--cmc-blue);
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    font-weight: 700;
-  }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .floor-label { letter-spacing: 0.16em; color: var(--cmc-blue); font-size: 0.7rem; text-transform: uppercase; font-weight: 700; }
   .money { font-variant-numeric: tabular-nums; }
-  .brand-bar {
-    background: linear-gradient(135deg, var(--cmc-navy), var(--cmc-blue));
-    color: #fff;
-  }
-  .brand-logo {
-    width: 44px; height: 44px;
-    background: #fff;
-    border-radius: 50%;
-    padding: 6px;
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-  }
+  .brand-bar { background: linear-gradient(135deg, var(--cmc-navy), var(--cmc-blue)); color: #fff; }
+  .brand-logo { width: 44px; height: 44px; background: #fff; border-radius: 50%; padding: 6px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
   .brand-logo img { width: 100%; height: 100%; object-fit: contain; }
-  .accent-aqua { color: var(--cmc-aqua); }
-  .accent-aqua-bg { background: var(--cmc-aqua-soft); }
   .kpi-card { background: #fff; border: 1px solid var(--cmc-border); border-radius: 12px; padding: 14px 18px; }
-  .kpi-card.featured {
-    background: linear-gradient(135deg, #fff, var(--cmc-aqua-soft));
-    border-color: var(--cmc-aqua);
-  }
-  .badge-ocupado { color: var(--cmc-blue); }
-  .badge-ocupado .dot { background: var(--cmc-aqua); }
-  table th { color: var(--cmc-navy); }
+  .kpi-card.featured { background: linear-gradient(135deg, #fff, var(--cmc-aqua-soft)); border-color: var(--cmc-aqua); }
+  .btn-cmc { background: var(--cmc-blue); color: #fff; border-radius: 8px; padding: 8px 14px; font-weight: 600; font-size: 13px; cursor: pointer; border: none; transition: background 0.15s; }
+  .btn-cmc:hover { background: var(--cmc-navy); }
+  .btn-cmc-secondary { background: #fff; color: var(--cmc-blue); border: 1px solid var(--cmc-blue); }
+  .btn-cmc-secondary:hover { background: var(--cmc-aqua-soft); }
+  .btn-add { border: 2px dashed var(--cmc-border); border-radius: 16px; padding: 16px; text-align: center; color: var(--cmc-text-mute); background: transparent; cursor: pointer; transition: all 0.15s; min-height: 220px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 6px; }
+  .btn-add:hover { border-color: var(--cmc-aqua); color: var(--cmc-blue); background: var(--cmc-aqua-soft); }
+  .modal-bg { position: fixed; inset: 0; background: rgba(15,63,104,0.5); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 100; }
+  .modal-bg.open { display: flex; }
+  .modal { background: #fff; border-radius: 16px; padding: 24px; max-width: 560px; width: 92%; max-height: 88vh; overflow-y: auto; }
+  .modal h2 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+  .modal input[type="text"], .modal select { width: 100%; padding: 8px 10px; border: 1px solid var(--cmc-border); border-radius: 8px; font-family: 'Montserrat'; font-size: 14px; }
+  .prof-list { max-height: 280px; overflow-y: auto; border: 1px solid var(--cmc-border); border-radius: 8px; padding: 8px; }
+  .prof-item { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 4px; cursor: pointer; }
+  .prof-item:hover { background: var(--cmc-aqua-soft); }
+  .editable-name { cursor: text; padding: 2px 4px; border-radius: 4px; }
+  .edit-mode .editable-name:hover { background: var(--cmc-aqua-soft); }
+  .editable-name input { font-size: 18px; font-weight: 700; color: var(--cmc-navy); border: 1px solid var(--cmc-aqua); border-radius: 4px; padding: 2px 6px; font-family: 'Montserrat'; }
 </style>
 </head>
 <body class="min-h-screen">
@@ -95,9 +88,8 @@
       <p class="text-[10px] uppercase tracking-wider opacity-70">Última actualización</p>
       <p id="lastUpdate" class="text-sm font-semibold">—</p>
       <div class="text-[10px] mt-1 opacity-80 flex items-center gap-2 justify-end">
-        <span>Auto-refresh 30s</span>
-        <span>·</span>
-        <button id="btnResetOrder" class="underline hover:opacity-100 opacity-90 transition">restaurar orden</button>
+        <button id="btnEditMode" class="bg-white/20 hover:bg-white/30 px-3 py-1 rounded-full transition font-medium">⚙️ Modo edición</button>
+        <button id="btnResetOrder" class="underline hover:opacity-100 opacity-90 transition">restaurar default</button>
       </div>
     </div>
   </header>
@@ -127,21 +119,13 @@
   </div>
 </section>
 
-<!-- Piso 1 -->
-<section class="max-w-7xl mx-auto mb-6">
-  <p class="floor-label mb-3">Piso 1</p>
-  <div class="grid grid-cols-4 gap-4" id="piso1">
-    <!-- cards inyectadas por JS -->
-  </div>
-</section>
+<div id="pisosContainer" class="max-w-7xl mx-auto">
+  <!-- Pisos inyectados por JS -->
+</div>
 
-<!-- Piso 2 -->
-<section class="max-w-7xl mx-auto mb-6">
-  <p class="floor-label mb-3">Piso 2</p>
-  <div class="grid grid-cols-4 gap-4" id="piso2">
-    <!-- cards inyectadas por JS -->
-  </div>
-</section>
+<div class="max-w-7xl mx-auto mt-4 mb-12 flex justify-center">
+  <button id="btnAddPiso" class="btn-cmc-secondary" style="display:none">+ Agregar piso</button>
+</div>
 
 <!-- Historial -->
 <section class="max-w-7xl mx-auto mt-12">
@@ -156,37 +140,134 @@
 </footer>
 </div>
 
+<!-- Modal config box -->
+<div class="modal-bg" id="modalBox">
+  <div class="modal">
+    <h2>Configurar box</h2>
+    <p class="text-xs mb-4" style="color:var(--cmc-text-mute)">Edita nombre, piso y profesionales asignados.</p>
+    <div class="space-y-3">
+      <div>
+        <label class="text-[11px] uppercase tracking-wide font-semibold" style="color:var(--cmc-text-mute)">Nombre</label>
+        <input type="text" id="mbNombre">
+      </div>
+      <div>
+        <label class="text-[11px] uppercase tracking-wide font-semibold" style="color:var(--cmc-text-mute)">Piso</label>
+        <select id="mbPiso"></select>
+      </div>
+      <div>
+        <label class="text-[11px] uppercase tracking-wide font-semibold" style="color:var(--cmc-text-mute)">Tipo (opcional)</label>
+        <input type="text" id="mbTipo" placeholder="ej: general, dental, kinesiología">
+      </div>
+      <div>
+        <label class="text-[11px] uppercase tracking-wide font-semibold" style="color:var(--cmc-text-mute)">Profesionales asignados</label>
+        <div class="prof-list" id="mbProfs"></div>
+        <p class="text-[10px] mt-1" style="color:var(--cmc-text-mute)">Marca todos los profesionales que pueden atender en este box. El primero con cita activa lo ocupa.</p>
+      </div>
+    </div>
+    <div class="mt-5 flex justify-between items-center gap-3">
+      <button id="mbDelete" class="text-red-600 text-sm hover:underline">🗑️ Eliminar box</button>
+      <div class="flex gap-2">
+        <button class="btn-cmc-secondary" onclick="closeModal('modalBox')">Cancelar</button>
+        <button id="mbSave" class="btn-cmc">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal nuevo piso -->
+<div class="modal-bg" id="modalPiso">
+  <div class="modal" style="max-width:380px">
+    <h2>Nuevo piso</h2>
+    <p class="text-xs mb-4" style="color:var(--cmc-text-mute)">Agrega un piso adicional al gemelo digital.</p>
+    <input type="text" id="mpNombre" placeholder="ej: Piso 3 — Subterráneo">
+    <div class="mt-4 flex justify-end gap-2">
+      <button class="btn-cmc-secondary" onclick="closeModal('modalPiso')">Cancelar</button>
+      <button id="mpSave" class="btn-cmc">Crear piso</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const TOKEN = new URLSearchParams(location.search).get('token') || 'cmc_admin_2026';
+let STATE = { boxes_config_default: [], profesionales_all: [], citas_raw: [], rev_por_prof: {}, citas_por_prof: {}, historial: [] };
+let editMode = false;
+let editingBoxId = null;
 
 function esc(s) {
   if (s == null) return '';
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+function fmtCLP(n) { if (!n) return '$0'; return '$' + Math.round(n).toLocaleString('es-CL'); }
+function fmtElapsed(m) { if (m == null) return '—'; if (m < 60) return m + ' min'; return Math.floor(m/60) + 'h ' + (m%60) + 'm'; }
+function initials(name) { if (!name) return '?'; return name.split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('').toUpperCase(); }
 
-function fmtCLP(n) {
-  if (n == null || n === 0) return '$0';
-  return '$' + n.toLocaleString('es-CL');
+// ---------- Config layout (localStorage) ----------
+function getLayout() {
+  try {
+    const raw = localStorage.getItem('boxes_layout_v2');
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  // Default desde backend
+  return JSON.parse(JSON.stringify(STATE.boxes_config_default || []));
+}
+function saveLayout(layout) {
+  localStorage.setItem('boxes_layout_v2', JSON.stringify(layout));
+}
+function resetLayout() {
+  localStorage.removeItem('boxes_layout_v2');
 }
 
-function fmtElapsed(mins) {
-  if (mins == null) return '—';
-  if (mins < 60) return mins + ' min';
-  return Math.floor(mins / 60) + 'h ' + (mins % 60) + 'm';
+// ---------- Asignación citas → box (cliente) ----------
+function computeBoxState(layout) {
+  const boxes = JSON.parse(JSON.stringify(layout));
+  for (const b of boxes) {
+    b.profesionales_activos = [];
+    b.proximo = null;
+    b.revenue_dia = 0;
+    b.citas_dia = 0;
+    b.estado = 'libre';
+  }
+  // Activas: asignar al primer box que tenga ese prof + cupo (max 2)
+  const seen = new Set();
+  for (const c of (STATE.citas_raw || []).filter(c=>c.is_active)) {
+    for (const b of boxes) {
+      if ((b.default_profs || []).includes(c.profesional_id) && b.profesionales_activos.length < 2) {
+        b.profesionales_activos.push({
+          profesional: c.profesional, especialidad: c.especialidad,
+          paciente: c.paciente, elapsed_min: c.elapsed_min,
+        });
+        seen.add(c.cita_id);
+        break;
+      }
+    }
+  }
+  // Próximas: solo si box libre
+  for (const c of (STATE.citas_raw || []).filter(c=>!c.is_active)) {
+    for (const b of boxes) {
+      if ((b.default_profs || []).includes(c.profesional_id) && !b.proximo && b.profesionales_activos.length === 0) {
+        b.proximo = { profesional: c.profesional, especialidad: c.especialidad, starts_in_min: c.starts_in_min };
+        break;
+      }
+    }
+  }
+  // Revenue / citas por box
+  for (const b of boxes) {
+    for (const pid of (b.default_profs || [])) {
+      b.revenue_dia += (STATE.rev_por_prof[String(pid)] || 0);
+      b.citas_dia   += (STATE.citas_por_prof[String(pid)] || 0);
+    }
+    b.estado = b.profesionales_activos.length ? 'ocupado' : (b.proximo ? 'proximo' : 'libre');
+  }
+  return boxes;
 }
 
-function initials(name) {
-  if (!name) return '?';
-  return name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
-}
-
+// ---------- Render ----------
 function renderCard(box) {
-  const status = box.estado; // 'ocupado', 'libre', 'proximo'
+  const status = box.estado;
   const cls = `box-card ${status} rounded-2xl p-5`;
   let bodyHTML = '';
-
   if (status === 'ocupado' && box.profesionales_activos?.length) {
-    const profs = box.profesionales_activos.map(p => `
+    bodyHTML = box.profesionales_activos.map(p => `
       <div class="mb-3 pb-3 border-b last:border-b-0 last:pb-0 last:mb-0" style="border-color:var(--cmc-aqua-soft)">
         <div class="flex items-start gap-3">
           <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0" style="background:var(--cmc-aqua-soft);color:var(--cmc-blue)">
@@ -200,138 +281,270 @@ function renderCard(box) {
           </div>
         </div>
       </div>`).join('');
-    bodyHTML = profs;
   } else if (status === 'proximo' && box.proximo) {
-    bodyHTML = `
-      <div class="flex items-start gap-3">
-        <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-sm">
-          ${esc(initials(box.proximo.profesional))}
-        </div>
-        <div class="flex-1">
-          <p class="text-sm font-semibold truncate">${esc(box.proximo.profesional) || '—'}</p>
-          <p class="text-[11px] text-gray-500">${esc(box.proximo.especialidad)}</p>
-          <p class="text-[11px] text-emerald-600 mt-1 font-mono">Comienza en ${Number(box.proximo.starts_in_min)||0}m</p>
-        </div>
-      </div>`;
+    bodyHTML = `<div class="flex items-start gap-3">
+      <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-sm">${esc(initials(box.proximo.profesional))}</div>
+      <div class="flex-1"><p class="text-sm font-semibold truncate">${esc(box.proximo.profesional)||'—'}</p>
+      <p class="text-[11px]" style="color:var(--cmc-text-mute)">${esc(box.proximo.especialidad)}</p>
+      <p class="text-[11px] mt-1 font-mono text-emerald-600">Comienza en ${Number(box.proximo.starts_in_min)||0}m</p></div></div>`;
   } else {
-    bodyHTML = `<p class="text-sm text-gray-400 italic">Sin actividad ahora</p>`;
+    bodyHTML = `<p class="text-sm italic" style="color:var(--cmc-text-mute)">Sin actividad ahora</p>`;
   }
 
   const badge = status === 'ocupado'
-    ? '<span class="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-orange-700"><span class="w-1.5 h-1.5 bg-orange-500 rounded-full pulse"></span>Ocupado</span>'
+    ? '<span class="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider" style="color:var(--cmc-blue)"><span class="w-1.5 h-1.5 rounded-full pulse" style="background:var(--cmc-aqua)"></span>Ocupado</span>'
     : status === 'proximo'
     ? '<span class="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-700"><span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>Próximo</span>'
     : '<span class="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400"><span class="w-1.5 h-1.5 bg-gray-300 rounded-full"></span>Libre</span>';
 
   return `
   <div class="${cls}" data-box-id="${esc(box.id)}">
-    <span class="drag-handle" title="Arrastrar para reordenar">⋮⋮</span>
-    <div class="flex justify-between items-start mb-3 pr-6">
+    <span class="drag-handle" title="Arrastrar">⋮⋮</span>
+    <button class="edit-btn" onclick="openBoxEditor('${esc(box.id)}')" title="Configurar">✎</button>
+    <div class="flex justify-between items-start mb-3 pr-12">
       <div>
-        <h3 class="font-bold text-lg">${esc(box.nombre)}</h3>
-        <p class="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">${esc(box.tipo)}</p>
+        <h3 class="font-bold text-lg editable-name">${esc(box.nombre)}</h3>
+        <p class="text-[10px] uppercase tracking-wider mt-0.5" style="color:var(--cmc-text-mute)">${esc(box.tipo || '')}</p>
       </div>
       ${badge}
     </div>
     <div class="min-h-[80px]">${bodyHTML}</div>
-    <div class="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center">
-      <div>
-        <p class="text-[10px] text-gray-400 uppercase">Revenue hoy</p>
-        <p class="text-base font-bold money text-gray-900">${fmtCLP(box.revenue_dia)}</p>
-      </div>
-      <div class="text-right">
-        <p class="text-[10px] text-gray-400 uppercase">Citas hoy</p>
-        <p class="text-base font-bold money text-gray-900">${box.citas_dia || 0}</p>
-      </div>
+    <div class="mt-4 pt-3 border-t flex justify-between items-center" style="border-color:var(--cmc-border)">
+      <div><p class="text-[10px] uppercase" style="color:var(--cmc-text-mute)">Revenue hoy</p>
+        <p class="text-base font-bold money" style="color:var(--cmc-navy)">${fmtCLP(box.revenue_dia)}</p></div>
+      <div class="text-right"><p class="text-[10px] uppercase" style="color:var(--cmc-text-mute)">Citas hoy</p>
+        <p class="text-base font-bold money" style="color:var(--cmc-navy)">${box.citas_dia || 0}</p></div>
     </div>
   </div>`;
 }
 
-function getCustomOrder(piso) {
-  try {
-    const raw = localStorage.getItem(`boxes_order_p${piso}`);
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
-}
+function renderPisos(boxes) {
+  // Agrupar por piso
+  const byPiso = {};
+  for (const b of boxes) {
+    if (!byPiso[b.piso]) byPiso[b.piso] = [];
+    byPiso[b.piso].push(b);
+  }
+  // Pisos custom desde localStorage
+  let pisosList = JSON.parse(localStorage.getItem('boxes_pisos_v2') || 'null');
+  if (!pisosList) {
+    pisosList = Object.keys(byPiso).map(p => ({ num: parseInt(p), nombre: 'Piso ' + p })).sort((a,b)=>a.num-b.num);
+  }
+  // Asegurar que pisos en boxes están en lista
+  for (const p of Object.keys(byPiso)) {
+    if (!pisosList.find(x => x.num === parseInt(p))) {
+      pisosList.push({ num: parseInt(p), nombre: 'Piso ' + p });
+    }
+  }
+  pisosList.sort((a,b)=>a.num-b.num);
 
-function saveCustomOrder(piso, ids) {
-  localStorage.setItem(`boxes_order_p${piso}`, JSON.stringify(ids));
-}
+  const container = document.getElementById('pisosContainer');
+  container.innerHTML = pisosList.map(piso => {
+    const bs = (byPiso[piso.num] || []).sort((a,b)=>(a.orden||0)-(b.orden||0));
+    const cards = bs.map(renderCard).join('');
+    const addBtn = `<button class="btn-add" onclick="newBox(${piso.num})">
+      <span class="text-3xl">+</span><span class="text-xs uppercase tracking-wider">Agregar box</span>
+    </button>`;
+    return `
+    <section class="mb-8">
+      <p class="floor-label mb-3">${esc(piso.nombre)}</p>
+      <div class="grid grid-cols-4 gap-4 piso-grid" data-piso-num="${piso.num}">
+        ${cards}
+        ${editMode ? addBtn : ''}
+      </div>
+    </section>`;
+  }).join('');
 
-function applyOrder(boxes, customIds) {
-  if (!customIds || !customIds.length) return boxes.sort((a, b) => a.orden - b.orden);
-  const map = new Map(boxes.map(b => [b.id, b]));
-  const ordered = customIds.map(id => map.get(id)).filter(Boolean);
-  // Si hay box nuevo no presente en customIds, lo agregamos al final
-  const known = new Set(customIds);
-  const newOnes = boxes.filter(b => !known.has(b.id));
-  return [...ordered, ...newOnes];
-}
-
-function initSortable(containerId, piso) {
-  const el = document.getElementById(containerId);
-  if (!el || el._sortable) return;
-  el._sortable = new Sortable(el, {
-    animation: 180,
-    ghostClass: 'sortable-ghost',
-    dragClass: 'sortable-drag',
-    handle: '.box-card',
-    onEnd: () => {
-      const ids = Array.from(el.children).map(c => c.dataset.boxId).filter(Boolean);
-      saveCustomOrder(piso, ids);
-    },
+  // Init sortable
+  container.querySelectorAll('.piso-grid').forEach(grid => {
+    if (grid._sortable) return;
+    grid._sortable = new Sortable(grid, {
+      animation: 180,
+      ghostClass: 'sortable-ghost',
+      dragClass: 'sortable-drag',
+      filter: '.btn-add',
+      onEnd: () => {
+        const layout = getLayout();
+        const piso = parseInt(grid.dataset.pisoNum);
+        const ids = Array.from(grid.querySelectorAll('[data-box-id]')).map(c => c.dataset.boxId);
+        // Re-asignar orden en layout
+        ids.forEach((id, idx) => {
+          const b = layout.find(x => x.id === id);
+          if (b) { b.piso = piso; b.orden = idx + 1; }
+        });
+        saveLayout(layout);
+      },
+    });
   });
+
+  // Inline edit nombre
+  if (editMode) {
+    container.querySelectorAll('.editable-name').forEach(el => {
+      el.addEventListener('click', e => {
+        const card = el.closest('[data-box-id]');
+        if (!card) return;
+        const boxId = card.dataset.boxId;
+        const current = el.textContent.trim();
+        el.innerHTML = `<input type="text" value="${esc(current)}" style="width:100%">`;
+        const inp = el.querySelector('input');
+        inp.focus(); inp.select();
+        const finish = () => {
+          const nuevo = inp.value.trim() || current;
+          const layout = getLayout();
+          const b = layout.find(x => x.id === boxId);
+          if (b) { b.nombre = nuevo; saveLayout(layout); }
+          render();
+        };
+        inp.addEventListener('blur', finish);
+        inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') finish(); if (ev.key === 'Escape') render(); });
+      });
+    });
+  }
 }
 
+function render() {
+  const layout = getLayout();
+  const boxes = computeBoxState(layout);
+  // Totales
+  const ocup = boxes.filter(b => b.estado === 'ocupado').length;
+  const profsAct = boxes.reduce((s,b)=>s+b.profesionales_activos.length, 0);
+  const totRev = boxes.reduce((s,b)=>s+b.revenue_dia, 0);
+  const totCitas = (STATE.totales||{}).citas_dia || 0;
+  document.getElementById('totalOcupados').textContent = ocup;
+  document.getElementById('totalBoxes').textContent = boxes.length;
+  document.getElementById('totalProfsActivos').textContent = profsAct;
+  document.getElementById('totalCitas').textContent = totCitas;
+  document.getElementById('totalRevenue').textContent = fmtCLP(totRev);
+  renderPisos(boxes);
+}
+
+// ---------- Editor de box ----------
+function openBoxEditor(boxId) {
+  editingBoxId = boxId;
+  const layout = getLayout();
+  const b = layout.find(x => x.id === boxId);
+  if (!b) return;
+  document.getElementById('mbNombre').value = b.nombre || '';
+  document.getElementById('mbTipo').value = b.tipo || '';
+  // Pisos disponibles
+  const pisosList = JSON.parse(localStorage.getItem('boxes_pisos_v2') || 'null') ||
+                    [...new Set(layout.map(x=>x.piso))].sort().map(n => ({num: n, nombre: 'Piso ' + n}));
+  document.getElementById('mbPiso').innerHTML = pisosList.map(p =>
+    `<option value="${p.num}" ${p.num===b.piso?'selected':''}>${esc(p.nombre)}</option>`).join('');
+  // Profesionales
+  const assigned = new Set(b.default_profs || []);
+  document.getElementById('mbProfs').innerHTML = (STATE.profesionales_all || []).map(p => `
+    <label class="prof-item">
+      <input type="checkbox" value="${p.id}" ${assigned.has(p.id)?'checked':''}>
+      <span class="text-sm">${esc(p.nombre)} <span class="text-[11px]" style="color:var(--cmc-text-mute)">${esc(p.especialidad)}</span></span>
+    </label>`).join('');
+  document.getElementById('modalBox').classList.add('open');
+}
+
+document.getElementById('mbSave').addEventListener('click', () => {
+  const layout = getLayout();
+  const b = layout.find(x => x.id === editingBoxId);
+  if (!b) return;
+  b.nombre = document.getElementById('mbNombre').value.trim() || b.nombre;
+  b.tipo = document.getElementById('mbTipo').value.trim();
+  b.piso = parseInt(document.getElementById('mbPiso').value);
+  b.default_profs = Array.from(document.querySelectorAll('#mbProfs input:checked')).map(i => parseInt(i.value));
+  saveLayout(layout);
+  closeModal('modalBox');
+  render();
+});
+
+document.getElementById('mbDelete').addEventListener('click', () => {
+  if (!confirm('¿Eliminar este box?')) return;
+  let layout = getLayout();
+  layout = layout.filter(x => x.id !== editingBoxId);
+  saveLayout(layout);
+  closeModal('modalBox');
+  render();
+});
+
+function newBox(piso) {
+  const layout = getLayout();
+  const nuevoId = 'box_' + Date.now();
+  layout.push({
+    id: nuevoId, piso, orden: (layout.filter(x=>x.piso===piso).length)+1,
+    nombre: 'Nuevo box', tipo: '', default_profs: [], modo: 'pool', pool_group: 'custom',
+  });
+  saveLayout(layout);
+  render();
+  setTimeout(() => openBoxEditor(nuevoId), 100);
+}
+
+// ---------- Pisos ----------
+document.getElementById('btnAddPiso').addEventListener('click', () => {
+  document.getElementById('mpNombre').value = '';
+  document.getElementById('modalPiso').classList.add('open');
+});
+document.getElementById('mpSave').addEventListener('click', () => {
+  const nombre = document.getElementById('mpNombre').value.trim();
+  if (!nombre) return;
+  let pisos = JSON.parse(localStorage.getItem('boxes_pisos_v2') || 'null');
+  if (!pisos) {
+    const layout = getLayout();
+    pisos = [...new Set(layout.map(x=>x.piso))].sort().map(n => ({num: n, nombre: 'Piso ' + n}));
+  }
+  const maxNum = pisos.reduce((m,p)=>Math.max(m,p.num), 0);
+  pisos.push({ num: maxNum + 1, nombre });
+  localStorage.setItem('boxes_pisos_v2', JSON.stringify(pisos));
+  closeModal('modalPiso');
+  render();
+});
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-bg').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) closeModal(m.id); });
+});
+
+// ---------- Edit mode toggle ----------
+document.getElementById('btnEditMode').addEventListener('click', () => {
+  editMode = !editMode;
+  document.body.classList.toggle('edit-mode', editMode);
+  document.getElementById('btnAddPiso').style.display = editMode ? '' : 'none';
+  document.getElementById('btnEditMode').textContent = editMode ? '✓ Salir de edición' : '⚙️ Modo edición';
+  render();
+});
+
+document.getElementById('btnResetOrder').addEventListener('click', () => {
+  if (!confirm('Restaurar configuración por defecto? Se perderán los cambios.')) return;
+  resetLayout();
+  localStorage.removeItem('boxes_pisos_v2');
+  render();
+});
+
+// ---------- Refresh ----------
 async function refresh() {
   try {
     const r = await fetch(`/admin/api/boxes-state?token=${TOKEN}`);
     if (!r.ok) throw new Error(r.status);
     const d = await r.json();
+    STATE = d;
+    render();
 
-    // Totales
-    document.getElementById('totalOcupados').textContent = d.totales.boxes_ocupados;
-    document.getElementById('totalBoxes').textContent = d.totales.boxes_totales;
-    document.getElementById('totalProfsActivos').textContent = d.totales.profesionales_activos;
-    document.getElementById('totalCitas').textContent = d.totales.citas_dia;
-    document.getElementById('totalRevenue').textContent = fmtCLP(d.totales.revenue_dia);
-
-    // Pisos con orden custom de localStorage
-    const piso1 = applyOrder(d.boxes.filter(b => b.piso === 1), getCustomOrder(1));
-    const piso2 = applyOrder(d.boxes.filter(b => b.piso === 2), getCustomOrder(2));
-    document.getElementById('piso1').innerHTML = piso1.map(renderCard).join('');
-    document.getElementById('piso2').innerHTML = piso2.map(renderCard).join('');
-    initSortable('piso1', 1);
-    initSortable('piso2', 2);
-
-    // Historial
     if (d.historial && d.historial.length) {
       document.getElementById('historial').innerHTML = `
         <table class="w-full text-sm">
-          <thead class="text-[11px] uppercase tracking-wider text-gray-500 border-b border-gray-200">
+          <thead class="text-[11px] uppercase tracking-wider border-b" style="border-color:var(--cmc-border);color:var(--cmc-text-mute)">
             <tr><th class="text-left py-2">Box</th><th class="text-left py-2">Profesionales más frecuentes</th><th class="text-right py-2">Citas</th><th class="text-right py-2">Revenue 30d</th></tr>
           </thead>
           <tbody>${d.historial.map(h => `
-            <tr class="border-b border-gray-50 last:border-0">
+            <tr class="border-b last:border-0" style="border-color:#f0f4f8">
               <td class="py-2 font-semibold">${esc(h.nombre)}</td>
-              <td class="py-2 text-gray-600">${h.profesionales_top.map(esc).join(' · ')}</td>
+              <td class="py-2" style="color:var(--cmc-text-mute)">${h.profesionales_top.map(esc).join(' · ')}</td>
               <td class="py-2 text-right money">${Number(h.citas_30d)||0}</td>
               <td class="py-2 text-right money font-semibold">${fmtCLP(h.revenue_30d)}</td>
             </tr>`).join('')}</tbody>
         </table>`;
     }
-
     document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString('es-CL');
   } catch (e) {
-    document.getElementById('lastUpdate').textContent = '⚠️ error: ' + e.message;
+    document.getElementById('lastUpdate').textContent = '⚠️ ' + e.message;
   }
 }
-
-document.getElementById('btnResetOrder').addEventListener('click', () => {
-  localStorage.removeItem('boxes_order_p1');
-  localStorage.removeItem('boxes_order_p2');
-  refresh();
-});
 
 refresh();
 setInterval(refresh, 30000);

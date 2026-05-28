@@ -1062,6 +1062,83 @@ _SEGUIMIENTO_CACHE: dict[str, str] = {
 }
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Clasificador de respuesta a cross-sell con contexto implícito
+# ─────────────────────────────────────────────────────────────────────────────
+# Cuando un cross-sell quedó pendiente (set_pending_crosssell en fidelizacion.py)
+# y el paciente responde con texto libre en vez de tocar el botón, esta función
+# decide si interpretar el mensaje como aceptación, rechazo o respuesta ambigua.
+#
+# Devuelve: "si" (consume pending y agenda) · "no" (consume y responde cordial)
+#           · "ambiguo" (NO consume, deja seguir al router normal — pregunta tangencial,
+#             menciona otra especialidad, audio sin transcripción, etc.)
+#
+# TODO RODRIGO: completar _CROSSSELL_RESP_CACHE y el system prompt.
+# La decisión de qué cuenta como afirmativo en WhatsApp rural Arauco es tuya.
+
+_CROSSSELL_RESP_CACHE: dict[str, str] = {
+    # Llename con frases que veas en producción.
+    # Formato: "texto literal en minúscula sin tildes ni signos" : "si" | "no"
+    # Ejemplos de partida (borrá/editá según tu juicio):
+    "si":                  "si",
+    "si me interesa":      "si",
+    "no":                  "no",
+    "no por ahora":        "no",
+}
+
+
+async def clasificar_respuesta_crosssell(mensaje: str, destino: str) -> str:
+    """Clasifica la respuesta libre del paciente a un cross-sell pendiente.
+
+    Args:
+        mensaje: texto recibido (sin normalizar).
+        destino: especialidad que el cross-sell estaba ofreciendo (ej: "kinesiología").
+                 Se incluye en el prompt para que Claude sepa el contexto.
+
+    Returns: "si" | "no" | "ambiguo"
+    """
+    clave = mensaje.strip().lower()
+    for ch in (".", ",", "!", "¡", "?", "¿"):
+        clave = clave.replace(ch, "")
+    clave = clave.strip()
+    if clave in _CROSSSELL_RESP_CACHE:
+        log.info("crosssell cache hit: %r → %s", clave, _CROSSSELL_RESP_CACHE[clave])
+        return _CROSSSELL_RESP_CACHE[clave]
+
+    # TODO RODRIGO: ajustar el system prompt.
+    # Considera el contexto: el bot acaba de ofrecer agendar `destino`.
+    # ¿Qué cuenta como "si" en chileno rural? ("buena", "ya po", "dale",
+    # "agéndame", "claro", "por supuesto", "obvio", "filo", "bacán")
+    # ¿Qué cuenta como "no" sin ser maleducado? ("después", "más adelante",
+    # "ahora no", "voy a pensarlo", "lo dejo pa luego")
+    # ¿Qué cuenta como "ambiguo"? (pregunta sobre precios, dice otra
+    # especialidad, audio sin transcribir, saludo solo)
+    try:
+        resp = await client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=10,
+            system=(
+                f"El bot acaba de proponerle al paciente agendar *{destino}*. "
+                "Clasifica la respuesta del paciente en UNA sola palabra: "
+                "si | no | ambiguo. "
+                "'si' = acepta o muestra interés positivo claro. "
+                "'no' = rechaza o posterga. "
+                "'ambiguo' = pregunta algo distinto, menciona otra especialidad, "
+                "no tiene sentido en contexto, o no se entiende. "
+                "Devuelve SOLO una de las tres palabras."
+            ),
+            messages=[{"role": "user", "content": mensaje}],
+        )
+        resultado = resp.content[0].text.strip().lower()
+        if resultado in ("si", "no", "ambiguo"):
+            log.info("crosssell Claude: %r (destino=%s) → %s", mensaje[:60], destino, resultado)
+            return resultado
+        return "ambiguo"
+    except Exception as e:
+        log.error("clasificar_respuesta_crosssell falló: %s", e)
+        return "ambiguo"  # falla cerrada: no rompe el flujo, deja al router seguir
+
+
 async def clasificar_respuesta_seguimiento(mensaje: str) -> str | None:
     """
     Detecta si un mensaje libre es respuesta a '¿Cómo te sientes después de tu consulta?'
