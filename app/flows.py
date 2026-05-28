@@ -2454,8 +2454,30 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         except Exception as _re:
             log.warning("consent routing error phone=%s: %s", phone, _re)
 
+    # PRIORIDAD: si hay postconsulta_seguimiento pendiente sin respuesta en últimas
+    # 24h, "no/sí" responde a ESO, no al consent. Caso Daniela 2026-05-26: respondió
+    # "No, gracias" al reenganche dental, postconsulta ya estaba pendiente, bot lo
+    # interpretó erróneamente como decline marketing.
+    _tiene_postconsulta_pending = False
     if (_es_consent_si or _es_consent_no) and not _consent_in_active_flow \
-            and _tiene_marketing_pending and not _tiene_dental_pending:
+            and (_tiene_marketing_pending or _tiene_dental_pending):
+        try:
+            from session import _conn as _pc_conn
+            with _pc_conn() as _c_pc:
+                _row_pc = _c_pc.execute(
+                    "SELECT 1 FROM fidelizacion_msgs "
+                    "WHERE phone=? AND tipo IN ('postconsulta','postconsulta_morning') "
+                    "  AND enviado_en >= datetime('now','-24 hours') "
+                    "  AND (respuesta IS NULL OR respuesta='') LIMIT 1",
+                    (phone,)
+                ).fetchone()
+                _tiene_postconsulta_pending = bool(_row_pc)
+        except Exception:
+            pass
+
+    if (_es_consent_si or _es_consent_no) and not _consent_in_active_flow \
+            and _tiene_marketing_pending and not _tiene_dental_pending \
+            and not _tiene_postconsulta_pending:
         try:
             from winback import (
                 registrar_consent_respuesta,
@@ -3636,6 +3658,45 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "Entendido 😊 Cuando estés listo/a, escríbenos.\n"
                 "_Escribe *menu* para volver al inicio._"
             )
+
+        # ── Normalización texto libre → payload cross-sell ─────────────────
+        # Si el paciente responde "Sí, me interesa" / "No, gracias" en texto libre
+        # a un template de cross-sell, mapear al payload del botón correspondiente.
+        # Caso real: paciente respondió "Sí, me interesa" al cross-sell kine y el
+        # bot cayó al fallback genérico en vez de iniciar flujo de kine.
+        _AFIRMATIVOS_CS = {"sí, me interesa", "si, me interesa", "sí me interesa",
+                           "si me interesa", "me interesa", "sí me interesa.",
+                           "si me interesa.", "si interesa"}
+        _NEGATIVOS_CS = {"no, gracias", "no gracias", "no por ahora",
+                         "no por ahora.", "no, gracias.", "no me interesa",
+                         "no, no me interesa"}
+        if (tl in _AFIRMATIVOS_CS or tl in _NEGATIVOS_CS) and tl not in ("xkine_si","xkine_no","xorlfono_si","xorlfono_no","xestetica_si","xestetica_info","xestetica_no","xmgcheck_si","xmgcheck_no","kine_adh_si","kine_adh_no","reac_si","reac_luego","wb_agendar","wb_info","upsell_si","no_control"):
+            try:
+                from session import _conn as _cs_conn
+                with _cs_conn() as _ccs:
+                    _row_cs = _ccs.execute(
+                        "SELECT tipo FROM fidelizacion_msgs "
+                        "WHERE phone=? AND tipo LIKE 'crosssell%' "
+                        "  AND enviado_en >= datetime('now','-48 hours') "
+                        "  AND (respuesta IS NULL OR respuesta='') "
+                        "ORDER BY enviado_en DESC LIMIT 1",
+                        (phone,)
+                    ).fetchone()
+                if _row_cs:
+                    _tipo_cs = _row_cs[0]
+                    _es_afirm = tl in _AFIRMATIVOS_CS
+                    _MAP_CS = {
+                        "crosssell_kine":           ("xkine_si", "xkine_no"),
+                        "crosssell_orl_fono":       ("xorlfono_si", "xorlfono_no"),
+                        "crosssell_odonto_estetica":("xestetica_si", "xestetica_no"),
+                        "crosssell_mg_chequeo":     ("xmgcheck_si", "xmgcheck_no"),
+                    }
+                    if _tipo_cs in _MAP_CS:
+                        tl = _MAP_CS[_tipo_cs][0 if _es_afirm else 1]
+                        log_event(phone, "crosssell_freetext_normalizado",
+                                  {"tipo": _tipo_cs, "payload": tl, "raw": txt[:80]})
+            except Exception as _cs_err:
+                log.warning("normalize crosssell freetext error: %s", _cs_err)
 
         # ── Cross-sell kinesiología ───────────────────────────────────────────
         if tl == "xkine_si":

@@ -1033,8 +1033,16 @@ async def enviar_winback(send_fn):
         return
 
     log.info("Win-back: enviando %d mensaje(s)", len(pacientes))
+    try:
+        from winback import phone_in_opt_out as _phone_in_opt_out
+    except Exception:
+        _phone_in_opt_out = lambda _p: False
     for p in pacientes:
         phone = p.get("phone", "")
+        # Hard-block: opt-out marketing (bi.opt_outs_marketing)
+        if _phone_in_opt_out(phone):
+            log_event(phone, "template_skip_opt_out", {"template": "winback_fidelizacion"})
+            continue
         # Marketing → requiere consent + ventana 24h (sin template propio en
         # fidelizacion.py — el módulo winback.py usa templates BI separados)
         if not has_privacy_consent(phone):

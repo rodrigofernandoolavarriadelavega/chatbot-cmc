@@ -2302,13 +2302,17 @@ def get_sesiones_abandonadas() -> list[dict]:
     placeholders = ",".join("?" * len(excluidos))
     with _conn() as conn:
         rows = conn.execute(f"""
-            SELECT phone, state, data FROM sessions
+            SELECT phone, state, data, updated_at FROM sessions
             WHERE state NOT IN ({placeholders})
             AND state IS NOT NULL
             AND state != ''
             AND updated_at < datetime('now', '-10 minutes')
             AND updated_at > datetime('now', '-90 minutes')
         """, excluidos).fetchall()
+        # WAIT_SLOT: el paciente recibió lista de horarios y puede estar leyendo.
+        # Threshold 30 min en vez de 10 evita reenganches prematuros (caso Daniela
+        # 2026-05-25: 11 min después de ver opciones, bot insistió).
+        _WAIT_SLOT_MIN_MIN = 30
         result = []
         for r in rows:
             d = dict(r)
@@ -2317,6 +2321,18 @@ def get_sesiones_abandonadas() -> list[dict]:
             except json.JSONDecodeError as exc:
                 log.warning("session data corrupta phone=%s: %s", d.get("phone"), exc)
                 d["data"] = {}
+            # Excluir WAIT_SLOT con menos de 30 min de espera
+            if d.get("state") == "WAIT_SLOT":
+                _upd = d.get("updated_at")
+                if _upd:
+                    try:
+                        from datetime import datetime as _dt2, timezone as _tz2
+                        _u = _dt2.fromisoformat(_upd).replace(tzinfo=_tz2.utc)
+                        _delta_min = (_dt2.now(_tz2.utc) - _u).total_seconds() / 60
+                        if _delta_min < _WAIT_SLOT_MIN_MIN:
+                            continue
+                    except Exception:
+                        pass
             # Excluir si ya se envió en esta sesión
             if d["data"].get("reenganche_sent"):
                 continue
@@ -2586,13 +2602,22 @@ def puede_enviar_campana(phone: str, tipo: str, dias_cooldown: int = 7) -> bool:
     Y el paciente NO hizo opt-out ni revocó privacidad
     (compliance Ley 21.719 + WhatsApp Business Policy marketing)."""
     with _conn() as conn:
-        # Hard-block: opt-out marketing
+        # Hard-block: opt-out marketing (contact_tags legacy)
         opt_out = conn.execute(
             "SELECT 1 FROM contact_tags WHERE phone=? AND tag='marketing_opt_out'",
             (phone,)
         ).fetchone()
         if opt_out:
             return False
+        # Hard-block: opt-out en bi.opt_outs_marketing (post-sprint winback 2026-05).
+        # Sin este check, paciente que respondió 'No' al consent_marketing_v1 seguía
+        # recibiendo cross-sell/cumpleaños/winback (caso Daniela 2026-05-27, Ley 19.628).
+        try:
+            from winback import phone_in_opt_out as _phone_in_opt_out
+            if _phone_in_opt_out(phone):
+                return False
+        except Exception:
+            pass  # winback puede no estar disponible
         # Hard-block: consentimiento revocado
         try:
             revoked = conn.execute(
@@ -4293,6 +4318,19 @@ def puede_enviar_campana_estacional(phone: str, campana_id: str,
                                      dias_cooldown: int = 30) -> bool:
     """True si no se ha enviado esta campaña al teléfono en los últimos N días."""
     with _conn() as conn:
+        # Hard-block: opt-out marketing (contact_tags + bi.opt_outs_marketing)
+        opt_out = conn.execute(
+            "SELECT 1 FROM contact_tags WHERE phone=? AND tag='marketing_opt_out'",
+            (phone,)
+        ).fetchone()
+        if opt_out:
+            return False
+        try:
+            from winback import phone_in_opt_out as _phone_in_opt_out
+            if _phone_in_opt_out(phone):
+                return False
+        except Exception:
+            pass
         row = conn.execute("""
             SELECT 1 FROM campanas_envios
             WHERE phone = ? AND campana_id = ?
