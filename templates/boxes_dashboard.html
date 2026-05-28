@@ -98,6 +98,54 @@
   .save-status.saving { background: #fef3e8; color: #E07A3C; }
   .save-status.error { background: #fee; color: #c33; }
   .install-btn { background: #fff; color: var(--cmc-navy); border: 0; padding: 6px 12px; border-radius: 999px; font-weight: 700; font-size: 11px; cursor: pointer; }
+  /* Heatmap row */
+  .heatmap-bar {
+    background: #fff; border: 1px solid var(--cmc-border); border-radius: 12px;
+    padding: 12px 16px; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    position: sticky; top: 0; z-index: 10;
+    backdrop-filter: blur(8px); background: rgba(255,255,255,0.96);
+  }
+  .heatmap-bar .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--cmc-text-mute); font-weight: 700; flex-shrink: 0; }
+  .heatmap-bar .dots { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
+  .hmap-dot {
+    width: 26px; height: 26px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 700; cursor: pointer; transition: transform 0.15s;
+    background: #e8eef2; color: var(--cmc-text-mute);
+  }
+  .hmap-dot:hover { transform: scale(1.15); }
+  .hmap-dot.ocupado { background: var(--cmc-aqua); color: #fff; box-shadow: 0 0 0 2px rgba(79,190,206,0.25); }
+  .hmap-dot.proximo { background: #5A8A6F; color: #fff; }
+  .filter-bar {
+    display: flex; gap: 8px; align-items: center;
+    background: #fff; border: 1px solid var(--cmc-border); border-radius: 999px;
+    padding: 4px 6px;
+  }
+  .filter-pill {
+    background: transparent; border: 0; padding: 5px 12px; border-radius: 999px;
+    font-size: 11px; font-weight: 600; color: var(--cmc-text-mute); cursor: pointer;
+    transition: all 0.15s;
+  }
+  .filter-pill.active { background: var(--cmc-blue); color: #fff; }
+  /* Mini load-bar dentro del box */
+  .load-bar {
+    display: flex; gap: 1px; margin-top: 8px;
+    height: 6px; border-radius: 3px; overflow: hidden;
+    background: #eef3f6;
+  }
+  .load-bar .seg {
+    flex: 1; background: transparent;
+    border-right: 1px solid rgba(255,255,255,0.6);
+  }
+  .load-bar .seg:last-child { border-right: 0; }
+  .load-bar .seg.filled { background: var(--cmc-aqua); }
+  .load-bar .seg.current { background: var(--cmc-blue); }
+  .load-bar-label { display: flex; justify-content: space-between; font-size: 8px; color: var(--cmc-text-mute); margin-top: 2px; font-family: 'IBM Plex Mono', monospace; }
+  /* Detalle modal */
+  #modalDetail .modal { max-width: 640px; }
+  #modalDetail .detail-section { background: #f7fafc; border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; }
+  #modalDetail .detail-section h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--cmc-text-mute); margin-bottom: 8px; font-weight: 700; }
 
   /* ─── Responsive ───────────────────────────────────────────── */
   @media (max-width: 1280px) {
@@ -270,6 +318,18 @@
   </div>
 </section>
 
+<!-- Heatmap general -->
+<section class="max-w-7xl mx-auto mb-4">
+  <div class="heatmap-bar">
+    <p class="label">Vista general</p>
+    <div class="dots" id="heatmapDots"></div>
+    <div class="filter-bar">
+      <button class="filter-pill active" data-filter="todos">Todos</button>
+      <button class="filter-pill" data-filter="activos">Solo activos</button>
+    </div>
+  </div>
+</section>
+
 <div id="pisosContainer" class="max-w-7xl mx-auto">
   <!-- Pisos inyectados por JS -->
 </div>
@@ -323,6 +383,11 @@
       </div>
     </div>
   </div>
+</div>
+
+<!-- Modal detalle full -->
+<div class="modal-bg" id="modalDetail">
+  <div class="modal" id="modalDetailContent"></div>
 </div>
 
 <!-- Modal editor horarios -->
@@ -382,6 +447,35 @@ let STATE = { boxes_config_default: [], profesionales_all: [], citas_raw: [], ci
 let CONFIG = { layout: null, pisos: null, manual_overrides: {}, schedules: {} };
 let editMode = false;
 let editingBoxId = null;
+let filterMode = 'todos'; // 'todos' | 'activos'
+
+// ---------- Mini load-bar (08:00 a 20:00 → 12 horas) ----------
+const LOAD_HOURS_FROM = 8;
+const LOAD_HOURS_TO = 20;
+function computeLoadBar(box) {
+  const sched = getCombinedScheduleForBox(box);
+  const nowH = new Date().getHours();
+  const segments = [];
+  for (let h = LOAD_HOURS_FROM; h < LOAD_HOURS_TO; h++) {
+    const filled = sched.some(s => {
+      if (!s.h_ini || !s.h_fin) return false;
+      const ini = parseInt(String(s.h_ini).slice(0,2)) || 0;
+      const fin = parseInt(String(s.h_fin).slice(0,2)) || 0;
+      return h >= ini && h < fin;
+    });
+    segments.push({ hour: h, filled, current: h === nowH });
+  }
+  return segments;
+}
+function renderLoadBar(box) {
+  const segs = computeLoadBar(box);
+  const bars = segs.map(s => {
+    const cls = s.filled ? (s.current ? 'seg filled current' : 'seg filled') : (s.current ? 'seg current' : 'seg');
+    return `<span class="${cls}" title="${s.hour}:00"></span>`;
+  }).join('');
+  return `<div class="load-bar">${bars}</div>
+    <div class="load-bar-label"><span>${LOAD_HOURS_FROM}:00</span><span>${LOAD_HOURS_TO}:00</span></div>`;
+}
 
 // Configurar manifest PWA con token
 document.getElementById('manifestLink').href = `/boxes/manifest.webmanifest?token=${TOKEN}`;
@@ -651,6 +745,7 @@ function renderCard(box) {
       ${badge}
     </div>
     <div class="min-h-[80px]">${bodyHTML}</div>
+    ${renderLoadBar(box)}
     ${box.manual_override ? `<div class="manual-bar mt-3">
       <span class="manual-pill">manual</span>
       <span class="flex-1 truncate" style="color:var(--cmc-navy);font-weight:600">${esc(box.manual_override.profesional_nombre || '—')}</span>
@@ -856,14 +951,13 @@ function renderPisos(boxes) {
     });
   });
 
-  // Touch: tap en la card toggle el schedule panel
+  // Touch: tap en la card abre modal detalle (cards son chiquitas en mobile)
   container.querySelectorAll('.box-wrap').forEach(w => {
     w.addEventListener('click', e => {
-      // Solo en touch (sin hover capability)
       if (window.matchMedia('(hover: none)').matches) {
-        if (e.target.closest('button, input, select, .drag-handle, .quick-assign, .manual-bar')) return;
-        document.querySelectorAll('.box-wrap.open-schedule').forEach(o => { if (o !== w) o.classList.remove('open-schedule'); });
-        w.classList.toggle('open-schedule');
+        if (e.target.closest('button, input, select, .drag-handle, .quick-assign, .manual-bar, .editable-name')) return;
+        const card = w.querySelector('[data-box-id]');
+        if (card && card.dataset.boxId) openDetailModal(card.dataset.boxId);
       }
     });
   });
@@ -906,7 +1000,105 @@ function render() {
   document.getElementById('totalProfsActivos').textContent = profsAct;
   document.getElementById('totalCitas').textContent = totCitas;
   document.getElementById('totalRevenue').textContent = fmtCLP(totRev);
-  renderPisos(boxes);
+  renderHeatmap(boxes);
+  // Filtro
+  let visibleBoxes = boxes;
+  if (filterMode === 'activos') {
+    visibleBoxes = boxes.filter(b => b.estado === 'ocupado' || b.estado === 'proximo');
+  }
+  renderPisos(visibleBoxes);
+}
+
+// ---------- Heatmap row ----------
+function renderHeatmap(boxes) {
+  const dots = boxes.map(b => {
+    const initial = (b.nombre || '?').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+    const tip = `${b.nombre}: ${b.estado}${b.profesionales_activos.length ? ' — ' + b.profesionales_activos.map(p=>p.profesional).join(', ') : ''}`;
+    return `<span class="hmap-dot ${esc(b.estado)}" title="${esc(tip)}" onclick="openDetailModal('${esc(b.id)}')">${esc(initial)}</span>`;
+  }).join('');
+  document.getElementById('heatmapDots').innerHTML = dots;
+}
+
+// ---------- Filtro ----------
+document.querySelectorAll('.filter-pill').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    filterMode = btn.dataset.filter;
+    render();
+  });
+});
+
+// ---------- Modal detalle ----------
+function openDetailModal(boxId) {
+  const layout = getLayout();
+  const box = computeBoxState(layout).find(b => b.id === boxId);
+  if (!box) return;
+  const schedule = getCombinedScheduleForBox(box);
+  const profsHTML = box.profesionales_activos.length
+    ? box.profesionales_activos.map(p => `
+      <div class="flex items-start gap-3 py-2 border-b last:border-0" style="border-color:#e0e7eb">
+        <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm" style="background:var(--cmc-aqua-soft);color:var(--cmc-blue)">${esc(initials(p.profesional))}</div>
+        <div class="flex-1"><p class="font-semibold text-sm" style="color:var(--cmc-navy)">${esc(p.profesional)}</p>
+          <p class="text-xs" style="color:var(--cmc-text-mute)">${esc(p.especialidad)}</p>
+          ${p.paciente ? `<p class="text-xs mt-0.5">↳ Paciente: ${esc(p.paciente)}</p>` : ''}
+          ${p.elapsed_min != null ? `<p class="text-xs font-mono mt-0.5" style="color:var(--cmc-blue)">${fmtElapsed(p.elapsed_min)} en curso</p>` : ''}
+        </div>
+      </div>`).join('')
+    : '<p class="text-sm italic" style="color:var(--cmc-text-mute)">Box libre ahora mismo</p>';
+  const scheduleHTML = schedule.length
+    ? schedule.map(s => `
+      <div class="flex items-center gap-3 py-1.5 text-xs border-b last:border-0" style="border-color:#e0e7eb">
+        <span class="font-mono" style="color:var(--cmc-blue);min-width:90px">${esc(s.h_ini || '—')} – ${esc(s.h_fin || '—')}</span>
+        <span class="flex-1 truncate font-semibold" style="color:var(--cmc-navy)">${esc(s.prof_nombre || '—')}</span>
+        ${s.paciente ? `<span style="color:var(--cmc-text-mute)">${esc(s.paciente)}</span>` : ''}
+      </div>`).join('')
+    : '<p class="text-sm italic" style="color:var(--cmc-text-mute)">Sin horarios cargados</p>';
+  const status = box.estado;
+  const statusBadge = status === 'ocupado'
+    ? '<span style="background:var(--cmc-aqua);color:#fff;padding:4px 12px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase">● Ocupado</span>'
+    : status === 'proximo'
+    ? '<span style="background:#5A8A6F;color:#fff;padding:4px 12px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase">Próximo</span>'
+    : '<span style="background:#e8eef2;color:var(--cmc-text-mute);padding:4px 12px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase">Libre</span>';
+
+  document.getElementById('modalDetailContent').innerHTML = `
+    <div class="flex justify-between items-start mb-4">
+      <div>
+        <h2>${esc(box.nombre)}</h2>
+        <p class="text-xs mt-1" style="color:var(--cmc-text-mute)">Piso ${box.piso} · ${esc(box.tipo || '')}</p>
+      </div>
+      <div class="flex items-center gap-2">
+        ${statusBadge}
+        <button onclick="closeModal('modalDetail')" style="border:1px solid var(--cmc-border);width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer">×</button>
+      </div>
+    </div>
+    <div class="detail-section">
+      <h4>Quien atiende ahora</h4>
+      ${profsHTML}
+    </div>
+    <div class="detail-section">
+      <h4>Carga del día</h4>
+      ${renderLoadBar(box)}
+    </div>
+    <div class="detail-section">
+      <h4>Horarios completos del día</h4>
+      ${scheduleHTML}
+    </div>
+    <div class="detail-section">
+      <h4>Revenue + Citas</h4>
+      <div class="flex justify-between">
+        <div><p class="text-[10px] uppercase tracking-wider" style="color:var(--cmc-text-mute)">Revenue hoy</p>
+          <p class="text-2xl font-bold money" style="color:var(--cmc-navy)">${fmtCLP(box.revenue_dia)}</p></div>
+        <div class="text-right"><p class="text-[10px] uppercase tracking-wider" style="color:var(--cmc-text-mute)">Citas hoy</p>
+          <p class="text-2xl font-bold money" style="color:var(--cmc-navy)">${box.citas_dia || 0}</p></div>
+      </div>
+    </div>
+    <div class="flex gap-2 justify-end mt-4">
+      <button class="btn-cmc-secondary" onclick="openManualAssign('${esc(box.id)}'); closeModal('modalDetail');">👤 Asignar profesional</button>
+      <button class="btn-cmc-secondary" onclick="openScheduleEditor('${esc(box.id)}'); closeModal('modalDetail');">✏️ Editar horarios</button>
+      <button class="btn-cmc" onclick="openBoxEditor('${esc(box.id)}'); closeModal('modalDetail');">⚙️ Configurar</button>
+    </div>`;
+  document.getElementById('modalDetail').classList.add('open');
 }
 
 // ---------- Editor de box ----------
