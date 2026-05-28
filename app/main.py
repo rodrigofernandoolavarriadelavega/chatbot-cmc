@@ -3185,7 +3185,7 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
                 "estado_anulacion": {"eq": 0},
             }
             r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
-                           params={"q": _q(params), "limit": 200}, headers=HEADERS)
+                           params={"q": _q(params)}, headers=HEADERS)
             if r.status_code == 200:
                 import json as _j
                 data = r.json().get("data", [])
