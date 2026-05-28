@@ -47,6 +47,10 @@
   .sortable-ghost { opacity: 0.25; transform: scale(0.95); }
   .sortable-drag  { cursor: grabbing !important; box-shadow: 0 12px 40px rgba(15,63,104,0.25) !important; transform: rotate(2deg); }
   .drag-handle { position: absolute; top: 12px; right: 36px; color: #c0c0c0; font-size: 14px; line-height: 1; cursor: grab; }
+  @media (hover: none) {
+    .drag-handle { font-size: 18px; padding: 4px 6px; top: 8px; right: 32px; }
+    .box-card { touch-action: pan-y; } /* permite scroll vertical sin pelear con drag */
+  }
   .edit-btn { position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.9); border: 1px solid var(--cmc-border); width: 22px; height: 22px; border-radius: 50%; font-size: 11px; color: var(--cmc-blue); cursor: pointer; display: none; align-items: center; justify-content: center; }
   .edit-mode .edit-btn { display: flex; }
   .edit-mode .box-card { box-shadow: 0 0 0 2px var(--cmc-aqua-soft); }
@@ -753,6 +757,10 @@ function renderPisos(boxes) {
       ghostClass: 'sortable-ghost',
       dragClass: 'sortable-drag',
       filter: '.btn-add',
+      delay: 350,
+      delayOnTouchOnly: true,
+      touchStartThreshold: 8,
+      forceFallback: false,
       onEnd: () => {
         const layout = getLayout();
         const piso = parseInt(grid.dataset.pisoNum);
