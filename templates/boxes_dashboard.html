@@ -3,56 +3,127 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1172AB">
 <title>Boxes CMC — Gemelo Digital</title>
+<link rel="icon" href="/static/isotipo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <style>
-  body { font-family: -apple-system, 'Inter', sans-serif; background: #F5F1EA; color: #252830; }
-  .box-card { transition: all 0.3s; border: 1px solid #d8d3ca; }
-  .box-card.ocupado { border-color: #E07A3C; background: linear-gradient(135deg, #fff, #fef3e8); box-shadow: 0 4px 20px rgba(224,122,60,0.15); }
-  .box-card.libre   { background: #fff; opacity: 0.85; }
+  :root {
+    --cmc-aqua: #4FBECE;
+    --cmc-aqua-soft: #e8f8fb;
+    --cmc-blue: #1172AB;
+    --cmc-navy: #0F3F68;
+    --cmc-bg: #F7FBFD;
+    --cmc-border: #d6e4ec;
+    --cmc-text: #0F3F68;
+    --cmc-text-mute: #546776;
+  }
+  body { font-family: 'Montserrat', -apple-system, sans-serif; background: var(--cmc-bg); color: var(--cmc-text); }
+  h1, h2, h3 { font-family: 'Montserrat', sans-serif; color: var(--cmc-navy); }
+  .box-card {
+    transition: all 0.2s;
+    border: 1px solid var(--cmc-border);
+    cursor: grab;
+    user-select: none;
+    position: relative;
+    background: #fff;
+  }
+  .box-card:active { cursor: grabbing; }
+  .box-card.ocupado {
+    border-color: var(--cmc-aqua);
+    background: linear-gradient(135deg, #fff, var(--cmc-aqua-soft));
+    box-shadow: 0 4px 20px rgba(79,190,206,0.18);
+  }
+  .box-card.libre   { background: #fff; opacity: 0.92; }
   .box-card.proximo { border-color: #5A8A6F; background: linear-gradient(135deg, #fff, #effaf2); }
+  .sortable-ghost { opacity: 0.25; transform: scale(0.95); }
+  .sortable-drag  { cursor: grabbing !important; box-shadow: 0 12px 40px rgba(15,63,104,0.25) !important; transform: rotate(2deg); }
+  .drag-handle { position: absolute; top: 12px; right: 12px; color: #c0c0c0; font-size: 14px; line-height: 1; }
   .pulse { animation: pulse 2s infinite; }
   @keyframes pulse {
     0%, 100% { opacity: 1; }
     50%      { opacity: 0.4; }
   }
-  .floor-label { letter-spacing: 0.12em; color: #6b6b6b; font-size: 0.7rem; text-transform: uppercase; }
+  .floor-label {
+    letter-spacing: 0.16em;
+    color: var(--cmc-blue);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
   .money { font-variant-numeric: tabular-nums; }
+  .brand-bar {
+    background: linear-gradient(135deg, var(--cmc-navy), var(--cmc-blue));
+    color: #fff;
+  }
+  .brand-logo {
+    width: 44px; height: 44px;
+    background: #fff;
+    border-radius: 50%;
+    padding: 6px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  }
+  .brand-logo img { width: 100%; height: 100%; object-fit: contain; }
+  .accent-aqua { color: var(--cmc-aqua); }
+  .accent-aqua-bg { background: var(--cmc-aqua-soft); }
+  .kpi-card { background: #fff; border: 1px solid var(--cmc-border); border-radius: 12px; padding: 14px 18px; }
+  .kpi-card.featured {
+    background: linear-gradient(135deg, #fff, var(--cmc-aqua-soft));
+    border-color: var(--cmc-aqua);
+  }
+  .badge-ocupado { color: var(--cmc-blue); }
+  .badge-ocupado .dot { background: var(--cmc-aqua); }
+  table th { color: var(--cmc-navy); }
 </style>
 </head>
-<body class="min-h-screen p-6">
+<body class="min-h-screen">
 
-<header class="max-w-7xl mx-auto mb-8 flex items-center justify-between">
-  <div>
-    <h1 class="text-3xl font-bold tracking-tight">Boxes CMC</h1>
-    <p class="text-sm text-gray-500 mt-1">Gemelo digital en tiempo real · Centro Médico Carampangue</p>
-  </div>
-  <div class="text-right">
-    <p class="text-xs text-gray-400">Última actualización</p>
-    <p id="lastUpdate" class="text-sm font-medium">—</p>
-    <p class="text-[10px] mt-1 text-gray-400">Auto-refresh 30s</p>
-  </div>
-</header>
+<div class="brand-bar px-6 py-4 mb-6">
+  <header class="max-w-7xl mx-auto flex items-center justify-between">
+    <div class="flex items-center gap-4">
+      <span class="brand-logo"><img src="/static/isotipo.png" alt="CMC"></span>
+      <div>
+        <h1 class="text-2xl font-extrabold tracking-tight" style="color:#fff">Boxes CMC</h1>
+        <p class="text-xs opacity-80">Gemelo digital · Centro Médico Carampangue</p>
+      </div>
+    </div>
+    <div class="text-right">
+      <p class="text-[10px] uppercase tracking-wider opacity-70">Última actualización</p>
+      <p id="lastUpdate" class="text-sm font-semibold">—</p>
+      <div class="text-[10px] mt-1 opacity-80 flex items-center gap-2 justify-end">
+        <span>Auto-refresh 30s</span>
+        <span>·</span>
+        <button id="btnResetOrder" class="underline hover:opacity-100 opacity-90 transition">restaurar orden</button>
+      </div>
+    </div>
+  </header>
+</div>
+
+<div class="px-6">
 
 <!-- Totales -->
 <section class="max-w-7xl mx-auto mb-8 grid grid-cols-4 gap-4">
-  <div class="bg-white rounded-xl p-4 border border-gray-200">
-    <p class="text-xs text-gray-500 uppercase tracking-wide">Boxes ocupados</p>
-    <p id="totalOcupados" class="text-3xl font-bold mt-1">—</p>
-    <p class="text-[11px] text-gray-400">de <span id="totalBoxes">8</span></p>
+  <div class="kpi-card">
+    <p class="text-[11px] uppercase tracking-wide" style="color:var(--cmc-text-mute)">Boxes ocupados</p>
+    <p id="totalOcupados" class="text-3xl font-extrabold mt-1">—</p>
+    <p class="text-[11px]" style="color:var(--cmc-text-mute)">de <span id="totalBoxes">8</span></p>
   </div>
-  <div class="bg-white rounded-xl p-4 border border-gray-200">
-    <p class="text-xs text-gray-500 uppercase tracking-wide">Profesionales activos</p>
-    <p id="totalProfsActivos" class="text-3xl font-bold mt-1">—</p>
+  <div class="kpi-card">
+    <p class="text-[11px] uppercase tracking-wide" style="color:var(--cmc-text-mute)">Profesionales activos</p>
+    <p id="totalProfsActivos" class="text-3xl font-extrabold mt-1">—</p>
   </div>
-  <div class="bg-white rounded-xl p-4 border border-gray-200">
-    <p class="text-xs text-gray-500 uppercase tracking-wide">Citas hoy</p>
-    <p id="totalCitas" class="text-3xl font-bold mt-1">—</p>
+  <div class="kpi-card">
+    <p class="text-[11px] uppercase tracking-wide" style="color:var(--cmc-text-mute)">Citas hoy</p>
+    <p id="totalCitas" class="text-3xl font-extrabold mt-1">—</p>
   </div>
-  <div class="bg-white rounded-xl p-4 border border-orange-200" style="background:linear-gradient(135deg,#fff,#fef3e8)">
-    <p class="text-xs text-orange-700 uppercase tracking-wide">Revenue del día</p>
-    <p id="totalRevenue" class="text-3xl font-bold mt-1 money">$—</p>
-    <p class="text-[11px] text-orange-600 mt-1">Suma todos los boxes</p>
+  <div class="kpi-card featured">
+    <p class="text-[11px] uppercase tracking-wide" style="color:var(--cmc-blue)">Revenue del día</p>
+    <p id="totalRevenue" class="text-3xl font-extrabold mt-1 money">$—</p>
+    <p class="text-[11px] mt-1" style="color:var(--cmc-blue)">Suma todos los boxes</p>
   </div>
 </section>
 
@@ -75,14 +146,15 @@
 <!-- Historial -->
 <section class="max-w-7xl mx-auto mt-12">
   <h2 class="text-lg font-bold mb-4">Historial de uso por box (últimos 30 días)</h2>
-  <div id="historial" class="bg-white rounded-xl border border-gray-200 p-4">
-    <p class="text-gray-400 text-sm">Cargando...</p>
+  <div id="historial" class="bg-white rounded-xl border p-4" style="border-color:var(--cmc-border)">
+    <p class="text-sm" style="color:var(--cmc-text-mute)">Cargando...</p>
   </div>
 </section>
 
-<footer class="max-w-7xl mx-auto mt-12 mb-6 text-center text-xs text-gray-400">
-  Boxos · gemelo digital · prototipo MVP · datos desde BI Postgres
+<footer class="max-w-7xl mx-auto mt-12 mb-6 text-center text-xs" style="color:var(--cmc-text-mute)">
+  Centro Médico Carampangue · gemelo digital · datos desde BI Postgres
 </footer>
+</div>
 
 <script>
 const TOKEN = new URLSearchParams(location.search).get('token') || 'cmc_admin_2026';
@@ -115,16 +187,16 @@ function renderCard(box) {
 
   if (status === 'ocupado' && box.profesionales_activos?.length) {
     const profs = box.profesionales_activos.map(p => `
-      <div class="mb-3 pb-3 border-b border-orange-100 last:border-b-0 last:pb-0 last:mb-0">
+      <div class="mb-3 pb-3 border-b last:border-b-0 last:pb-0 last:mb-0" style="border-color:var(--cmc-aqua-soft)">
         <div class="flex items-start gap-3">
-          <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-700 font-bold text-sm flex-shrink-0">
+          <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0" style="background:var(--cmc-aqua-soft);color:var(--cmc-blue)">
             ${esc(initials(p.profesional))}
           </div>
           <div class="flex-1 min-w-0">
-            <p class="text-sm font-semibold truncate">${esc(p.profesional) || '—'}</p>
-            <p class="text-[11px] text-gray-500">${esc(p.especialidad)}</p>
-            ${p.paciente ? `<p class="text-[11px] text-gray-700 mt-1">↳ ${esc(p.paciente)}</p>` : ''}
-            ${p.elapsed_min != null ? `<p class="text-[10px] text-orange-600 font-mono mt-0.5">${fmtElapsed(p.elapsed_min)} en curso</p>` : ''}
+            <p class="text-sm font-semibold truncate" style="color:var(--cmc-navy)">${esc(p.profesional) || '—'}</p>
+            <p class="text-[11px]" style="color:var(--cmc-text-mute)">${esc(p.especialidad)}</p>
+            ${p.paciente ? `<p class="text-[11px] mt-1" style="color:var(--cmc-text-mute)">↳ ${esc(p.paciente)}</p>` : ''}
+            ${p.elapsed_min != null ? `<p class="text-[10px] font-mono mt-0.5" style="color:var(--cmc-blue)">${fmtElapsed(p.elapsed_min)} en curso</p>` : ''}
           </div>
         </div>
       </div>`).join('');
@@ -152,8 +224,9 @@ function renderCard(box) {
     : '<span class="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400"><span class="w-1.5 h-1.5 bg-gray-300 rounded-full"></span>Libre</span>';
 
   return `
-  <div class="${cls}">
-    <div class="flex justify-between items-start mb-3">
+  <div class="${cls}" data-box-id="${esc(box.id)}">
+    <span class="drag-handle" title="Arrastrar para reordenar">⋮⋮</span>
+    <div class="flex justify-between items-start mb-3 pr-6">
       <div>
         <h3 class="font-bold text-lg">${esc(box.nombre)}</h3>
         <p class="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">${esc(box.tipo)}</p>
@@ -174,6 +247,42 @@ function renderCard(box) {
   </div>`;
 }
 
+function getCustomOrder(piso) {
+  try {
+    const raw = localStorage.getItem(`boxes_order_p${piso}`);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+function saveCustomOrder(piso, ids) {
+  localStorage.setItem(`boxes_order_p${piso}`, JSON.stringify(ids));
+}
+
+function applyOrder(boxes, customIds) {
+  if (!customIds || !customIds.length) return boxes.sort((a, b) => a.orden - b.orden);
+  const map = new Map(boxes.map(b => [b.id, b]));
+  const ordered = customIds.map(id => map.get(id)).filter(Boolean);
+  // Si hay box nuevo no presente en customIds, lo agregamos al final
+  const known = new Set(customIds);
+  const newOnes = boxes.filter(b => !known.has(b.id));
+  return [...ordered, ...newOnes];
+}
+
+function initSortable(containerId, piso) {
+  const el = document.getElementById(containerId);
+  if (!el || el._sortable) return;
+  el._sortable = new Sortable(el, {
+    animation: 180,
+    ghostClass: 'sortable-ghost',
+    dragClass: 'sortable-drag',
+    handle: '.box-card',
+    onEnd: () => {
+      const ids = Array.from(el.children).map(c => c.dataset.boxId).filter(Boolean);
+      saveCustomOrder(piso, ids);
+    },
+  });
+}
+
 async function refresh() {
   try {
     const r = await fetch(`/admin/api/boxes-state?token=${TOKEN}`);
@@ -187,11 +296,13 @@ async function refresh() {
     document.getElementById('totalCitas').textContent = d.totales.citas_dia;
     document.getElementById('totalRevenue').textContent = fmtCLP(d.totales.revenue_dia);
 
-    // Pisos
-    const piso1 = d.boxes.filter(b => b.piso === 1).sort((a, b) => a.orden - b.orden);
-    const piso2 = d.boxes.filter(b => b.piso === 2).sort((a, b) => a.orden - b.orden);
+    // Pisos con orden custom de localStorage
+    const piso1 = applyOrder(d.boxes.filter(b => b.piso === 1), getCustomOrder(1));
+    const piso2 = applyOrder(d.boxes.filter(b => b.piso === 2), getCustomOrder(2));
     document.getElementById('piso1').innerHTML = piso1.map(renderCard).join('');
     document.getElementById('piso2').innerHTML = piso2.map(renderCard).join('');
+    initSortable('piso1', 1);
+    initSortable('piso2', 2);
 
     // Historial
     if (d.historial && d.historial.length) {
@@ -215,6 +326,12 @@ async function refresh() {
     document.getElementById('lastUpdate').textContent = '⚠️ error: ' + e.message;
   }
 }
+
+document.getElementById('btnResetOrder').addEventListener('click', () => {
+  localStorage.removeItem('boxes_order_p1');
+  localStorage.removeItem('boxes_order_p2');
+  refresh();
+});
 
 refresh();
 setInterval(refresh, 30000);
