@@ -664,19 +664,34 @@ async def _slots_para_fecha(client: httpx.AsyncClient, ids: list, horarios: dict
                     todos_libres.append(s)
                 intervalo = h.get("intervalo", intervalo)
             continue
-        if weekday not in h["dias"]:
-            continue
-        # Obtener hora inicio/fin para este día específico
+        # Fallback /agendas: si el prof no atiende este weekday según jornada base
+        # PERO recepción cargó cupos puntuales en /agendas (caso típico: prof que
+        # reemplaza a otro durante la semana), usar esos cupos.
         horario_dia = h.get("horario_dia", {})
-        if weekday in horario_dia:
-            _tup = horario_dia[weekday]
-            # Compat: entradas antiguas (hi, hf) o nuevas (hi, hf, break_t)
-            hi_dia, hf_dia = _tup[0], _tup[1]
-            break_t = _tup[2] if len(_tup) >= 3 else None
-        else:
-            # Sin info de horas específicas para este día, saltamos
-            log.debug("Sin horario_dia para prof %d weekday %d", id_prof, weekday)
+        if weekday not in h["dias"] or weekday not in horario_dia:
+            slots_ag = await _slots_desde_agendas(client, id_prof, fecha)
+            if slots_ag:
+                _ahora_cl_a = datetime.now(_CHILE_TZ)
+                ahora_min_a = _h_to_min(_ahora_cl_a.strftime("%H:%M")) if fecha == _ahora_cl_a.date().strftime("%Y-%m-%d") else None
+                BUFFER_A = 60
+                horas_vistas_a = {s["hora_inicio"] for s in todos_libres}
+                libres_ag = 0
+                for s in slots_ag:
+                    if ahora_min_a is not None and _h_to_min(s["hora_inicio"]) <= (ahora_min_a + BUFFER_A):
+                        continue
+                    if s["hora_inicio"] in horas_vistas_a:
+                        continue
+                    horas_vistas_a.add(s["hora_inicio"])
+                    todos_libres.append(s)
+                    libres_ag += 1
+                intervalo = h.get("intervalo", intervalo)
+                log.info("Fallback /agendas prof %d fecha %s (weekday %d no en jornada base): %d cupos extra",
+                         id_prof, fecha, weekday, libres_ag)
             continue
+        _tup = horario_dia[weekday]
+        # Compat: entradas antiguas (hi, hf) o nuevas (hi, hf, break_t)
+        hi_dia, hf_dia = _tup[0], _tup[1]
+        break_t = _tup[2] if len(_tup) >= 3 else None
 
         intervalo       = h["intervalo"]
         bloqueos        = await _get_bloqueos(client, id_prof, fecha)
