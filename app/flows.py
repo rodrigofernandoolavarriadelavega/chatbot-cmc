@@ -2431,12 +2431,21 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             from winback import bi_conn as _bi_route
             with _bi_route() as _pg_route:
                 with _pg_route.cursor() as _cur_route:
+                    # Guard estricto: solo considerar pending si efectivamente
+                    # se envió el consent template en los últimos 7 días.
+                    # Sin este guard, un "no, gracias" a un reenganche/cross-sell
+                    # se interpretaba como decline marketing (bug 2026-05-28:
+                    # 258 phones víctimas, 98 dados de baja sin preguntar).
                     _cur_route.execute(
                         "SELECT 'dental' FROM bi.dental_consent "
                         "WHERE phone=%s AND status='pending' "
+                        "  AND consent_sent_at IS NOT NULL "
+                        "  AND consent_sent_at > NOW() - INTERVAL '7 days' "
                         "UNION ALL "
                         "SELECT 'marketing' FROM bi.marketing_consent "
-                        "WHERE phone=%s AND status='pending'",
+                        "WHERE phone=%s AND status='pending' "
+                        "  AND consent_sent_at IS NOT NULL "
+                        "  AND consent_sent_at > NOW() - INTERVAL '7 days'",
                         (phone, phone),
                     )
                     _rows_route = _cur_route.fetchall()
