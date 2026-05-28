@@ -284,9 +284,10 @@
     <div class="text-right">
       <p class="text-[10px] uppercase tracking-wider opacity-70">Última actualización</p>
       <p id="lastUpdate" class="text-sm font-semibold">—</p>
-      <div class="text-[10px] mt-1 opacity-80 flex items-center gap-2 justify-end">
+      <div class="text-[10px] mt-1 opacity-80 flex items-center gap-2 justify-end flex-wrap">
         <span id="saveStatus" class="save-status" style="display:none">●</span>
         <button id="btnInstall" class="install-btn" style="display:none">📱 Instalar app</button>
+        <button id="btnDate" class="bg-white/20 hover:bg-white/30 px-3 py-1 rounded-full transition font-medium flex items-center gap-1">📅 <span id="dateLabel">Hoy</span></button>
         <button id="btnEditMode" class="bg-white/20 hover:bg-white/30 px-3 py-1 rounded-full transition font-medium">⚙️ Modo edición</button>
         <button id="btnResetOrder" class="underline hover:opacity-100 opacity-90 transition">restaurar default</button>
       </div>
@@ -385,6 +386,24 @@
   </div>
 </div>
 
+<!-- Modal selector fecha -->
+<div class="modal-bg" id="modalDate">
+  <div class="modal" style="max-width:380px">
+    <h2>Seleccionar fecha</h2>
+    <p class="text-xs mb-4" style="color:var(--cmc-text-mute)">Ver estado de los boxes en un día específico.</p>
+    <input type="date" id="dateInput" class="mb-3" style="font-family:'Montserrat';font-size:14px">
+    <div class="flex justify-between gap-2 mb-4">
+      <button onclick="setDate(0)" class="filter-pill" style="background:var(--cmc-aqua-soft);color:var(--cmc-blue)">Hoy</button>
+      <button onclick="setDate(-1)" class="filter-pill" style="background:var(--cmc-aqua-soft);color:var(--cmc-blue)">Ayer</button>
+      <button onclick="setDate(-7)" class="filter-pill" style="background:var(--cmc-aqua-soft);color:var(--cmc-blue)">Hace 7 días</button>
+    </div>
+    <div class="flex justify-end gap-2">
+      <button class="btn-cmc-secondary" onclick="closeModal('modalDate')">Cancelar</button>
+      <button id="dateApply" class="btn-cmc">Aplicar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal detalle full -->
 <div class="modal-bg" id="modalDetail">
   <div class="modal" id="modalDetailContent"></div>
@@ -448,6 +467,34 @@ let CONFIG = { layout: null, pisos: null, manual_overrides: {}, schedules: {} };
 let editMode = false;
 let editingBoxId = null;
 let filterMode = 'todos'; // 'todos' | 'activos'
+let selectedDate = null; // null = hoy
+
+function getSelectedDate() {
+  if (!selectedDate) return new Date().toISOString().slice(0,10);
+  return selectedDate;
+}
+function isToday(d) {
+  return d === new Date().toISOString().slice(0,10);
+}
+
+document.getElementById('btnDate').addEventListener('click', () => {
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('dateInput').value = selectedDate || today;
+  document.getElementById('modalDate').classList.add('open');
+});
+function setDate(offsetDays) {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  document.getElementById('dateInput').value = d.toISOString().slice(0,10);
+}
+document.getElementById('dateApply').addEventListener('click', () => {
+  const val = document.getElementById('dateInput').value;
+  const today = new Date().toISOString().slice(0,10);
+  selectedDate = (val === today) ? null : val;
+  document.getElementById('dateLabel').textContent = selectedDate ? selectedDate : 'Hoy';
+  closeModal('modalDate');
+  refresh();
+});
 
 // ---------- Mini load-bar (08:00 a 20:00 → 12 horas) ----------
 const LOAD_HOURS_FROM = 8;
@@ -1202,7 +1249,8 @@ document.getElementById('btnResetOrder').addEventListener('click', () => {
 // ---------- Refresh ----------
 async function refresh() {
   try {
-    const r = await fetch(`/admin/api/boxes-state?token=${TOKEN}`);
+    const fechaParam = selectedDate ? `&fecha=${selectedDate}` : '';
+    const r = await fetch(`/admin/api/boxes-state?token=${TOKEN}${fechaParam}`);
     if (!r.ok) throw new Error(r.status);
     const d = await r.json();
     STATE = d;

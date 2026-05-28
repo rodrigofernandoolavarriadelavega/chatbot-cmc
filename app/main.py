@@ -3128,21 +3128,30 @@ self.addEventListener('fetch', e => {
 
 
 @app.get("/admin/api/boxes-state")
-def api_boxes_state(token: str | None = Query(None)):
-    """Estado actual de los boxes CMC con asignación dinámica de profesionales,
-    revenue del día por box, y proyección del próximo profesional."""
+def api_boxes_state(token: str | None = Query(None), fecha: str | None = Query(None)):
+    """Estado de los boxes CMC para una fecha (default: hoy).
+    Si fecha != hoy → modo histórico, sin "estado en curso", solo agregados."""
     if token != ADMIN_TOKEN:
         raise HTTPException(401, "No autorizado")
 
     import os as _osb
     import psycopg2
-    from datetime import datetime, timedelta, time as _dtime
+    from datetime import datetime, timedelta, time as _dtime, date as _date
     import zoneinfo as _zib
 
     tz = _zib.ZoneInfo("America/Santiago")
     now_cl = datetime.now(tz)
-    today = now_cl.date()
-    now_t = now_cl.time()
+    today_real = now_cl.date()
+    # Fecha solicitada
+    if fecha:
+        try:
+            today = _date.fromisoformat(fecha)
+        except Exception:
+            today = today_real
+    else:
+        today = today_real
+    is_today = (today == today_real)
+    now_t = now_cl.time() if is_today else _dtime(23, 59)  # histórico: ya pasó todo
 
     bi = psycopg2.connect(
         host=_osb.getenv("BI_DB_HOST", "127.0.0.1"),
