@@ -3128,7 +3128,7 @@ self.addEventListener('fetch', e => {
 
 
 @app.get("/admin/api/boxes-state")
-def api_boxes_state(token: str | None = Query(None), fecha: str | None = Query(None)):
+async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Query(None)):
     """Estado de los boxes CMC para una fecha (default: hoy).
     Si fecha != hoy → modo histórico, sin "estado en curso", solo agregados."""
     if token != ADMIN_TOKEN:
@@ -3163,46 +3163,83 @@ def api_boxes_state(token: str | None = Query(None), fecha: str | None = Query(N
     )
     cur = bi.cursor()
 
-    # Citas de hoy: traer profesional, paciente, hora_inicio/fin, estado.
-    cur.execute("""
-        SELECT fc.cita_id, fc.profesional_id, fc.paciente_id, fc.hora_inicio,
-               fc.hora_fin, fc.estado,
-               COALESCE(dp.nombre, '—') AS profesional,
-               COALESCE(de.nombre, '') AS especialidad,
-               TRIM(CONCAT(COALESCE(pa.nombre,''),' ',COALESCE(pa.apellido,''))) AS paciente
-        FROM bi.fact_citas fc
-        LEFT JOIN bi.dim_profesional dp ON dp.profesional_id = fc.profesional_id
-        LEFT JOIN bi.dim_especialidad de ON de.especialidad_id = fc.especialidad_id
-        LEFT JOIN bi.dim_paciente pa ON pa.paciente_id = fc.paciente_id
-        WHERE fc.fecha = %s
-          AND fc.estado IN ('agendada', 'atendida', 'confirmada', 'en_curso')
-        ORDER BY fc.hora_inicio
-    """, (today,))
+    def _parse_h(s):
+        if not s: return None
+        try:
+            hh, mm = str(s).split(":")[:2]
+            return _dtime(int(hh), int(mm))
+        except Exception:
+            return None
+
     citas_hoy = []
-    for row in cur.fetchall():
-        cita_id, prof_id, pac_id, h_ini, h_fin, estado, prof, esp, pac = row
-        # Parsear horas en formato HH:MM
-        def _parse_h(s):
-            if not s:
-                return None
-            try:
-                hh, mm = str(s).split(":")[:2]
-                return _dtime(int(hh), int(mm))
-            except Exception:
-                return None
-        t_ini = _parse_h(h_ini)
-        t_fin = _parse_h(h_fin)
-        citas_hoy.append({
-            "cita_id": cita_id,
-            "profesional_id": prof_id,
-            "paciente_id": pac_id,
-            "hora_inicio": t_ini,
-            "hora_fin": t_fin,
-            "estado": estado,
-            "profesional": prof,
-            "especialidad": esp,
-            "paciente": (pac or "").strip() or None,
-        })
+
+    # Si es HOY: consultar Medilink en vivo (BI no está actualizado en tiempo real)
+    # Si es histórico: usar BI fact_citas como antes.
+    if is_today:
+        try:
+            from medilink import _get_shared_client, _get, _q, MEDILINK_BASE_URL, MEDILINK_SUCURSAL, HEADERS
+            client = _get_shared_client()
+            params = {
+                "id_sucursal": {"eq": MEDILINK_SUCURSAL},
+                "fecha": {"eq": today.isoformat()},
+                "estado_anulacion": {"eq": 0},
+            }
+            r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
+                           params={"q": _q(params), "limit": 200}, headers=HEADERS)
+            if r.status_code == 200:
+                import json as _j
+                data = r.json().get("data", [])
+                # Especialidad por profesional desde BI
+                cur.execute("""
+                    SELECT dp.profesional_id, dp.nombre, COALESCE(de.nombre,'')
+                    FROM bi.dim_profesional dp
+                    LEFT JOIN bi.dim_especialidad de ON de.especialidad_id = dp.especialidad_id
+                """)
+                prof_map = {r[0]: (r[1], r[2]) for r in cur.fetchall()}
+                for cita in data:
+                    pid = cita.get("id_profesional")
+                    prof_info = prof_map.get(pid, ("—", ""))
+                    pac_obj = cita.get("paciente") or {}
+                    pac_nombre = " ".join([pac_obj.get("nombre","") or "", pac_obj.get("apellido","") or ""]).strip()
+                    citas_hoy.append({
+                        "cita_id": cita.get("id"),
+                        "profesional_id": pid,
+                        "paciente_id": cita.get("id_paciente") or pac_obj.get("id"),
+                        "hora_inicio": _parse_h(cita.get("hora") or cita.get("hora_inicio")),
+                        "hora_fin": _parse_h(cita.get("hora_fin")),
+                        "estado": (cita.get("estado") or "agendada").lower(),
+                        "profesional": prof_info[0],
+                        "especialidad": prof_info[1],
+                        "paciente": pac_nombre or None,
+                    })
+        except Exception as _me:
+            import logging
+            logging.getLogger("boxes").warning("Medilink live error, fallback a BI: %s", _me)
+
+    # Fallback (histórico o si Medilink falló): BI fact_citas
+    if not citas_hoy:
+        cur.execute("""
+            SELECT fc.cita_id, fc.profesional_id, fc.paciente_id, fc.hora_inicio,
+                   fc.hora_fin, fc.estado,
+                   COALESCE(dp.nombre, '—') AS profesional,
+                   COALESCE(de.nombre, '') AS especialidad,
+                   TRIM(CONCAT(COALESCE(pa.nombre,''),' ',COALESCE(pa.apellido,''))) AS paciente
+            FROM bi.fact_citas fc
+            LEFT JOIN bi.dim_profesional dp ON dp.profesional_id = fc.profesional_id
+            LEFT JOIN bi.dim_especialidad de ON de.especialidad_id = fc.especialidad_id
+            LEFT JOIN bi.dim_paciente pa ON pa.paciente_id = fc.paciente_id
+            WHERE fc.fecha = %s
+              AND fc.estado IN ('agendada', 'atendida', 'confirmada', 'en_curso')
+            ORDER BY fc.hora_inicio
+        """, (today,))
+        for row in cur.fetchall():
+            cita_id, prof_id, pac_id, h_ini, h_fin, estado, prof, esp, pac = row
+            citas_hoy.append({
+                "cita_id": cita_id, "profesional_id": prof_id, "paciente_id": pac_id,
+                "hora_inicio": _parse_h(h_ini), "hora_fin": _parse_h(h_fin),
+                "estado": estado, "profesional": prof, "especialidad": esp,
+                "paciente": (pac or "").strip() or None,
+            })
 
     # Pagos de hoy: SUM por paciente_id
     cur.execute("""
