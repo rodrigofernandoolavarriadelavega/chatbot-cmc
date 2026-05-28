@@ -1144,6 +1144,12 @@ async def _job_waitlist_check():
 
     log.info("waitlist_check: %d inscripciones activas por revisar", len(pendientes))
     notificados = 0
+    # Bug fix 2026-05-28: antes el job notificaba a TODAS las personas en cola
+    # el mismo primer slot disponible (caso eco lun 1-jun 10:00 → 5 personas
+    # recibieron el mismo aviso). Ahora cada slot único (fecha+hora) se asigna
+    # a UNA sola persona por corrida. Las que no alcancen quedan pendientes
+    # para la próxima ejecución del cron diario.
+    _slots_consumidos_run = {}
     for row in pendientes:
         wl_id = row["id"]
         phone_p = row["phone"]
@@ -1194,8 +1200,21 @@ async def _job_waitlist_check():
         if not todos:
             continue
 
+        # Buscar primer slot que NO haya sido asignado a otra persona en ESTA corrida.
+        # Si todos los slots disponibles ya fueron asignados, esta persona espera
+        # a la próxima ejecución del cron.
+        primero = None
+        for _slot_t in todos:
+            _key_slot = (_slot_t.get("fecha"), _slot_t.get("hora_inicio"))
+            if _key_slot not in _slots_consumidos_run:
+                primero = _slot_t
+                _slots_consumidos_run[_key_slot] = True
+                break
+        if primero is None:
+            log.info("waitlist_check: wl_id=%d sin slots libres en esta corrida (otros ya asignados)", wl_id)
+            continue
+
         # Hay slots disponibles → notificar y marcar
-        primero = todos[0]
         fecha = primero.get("fecha", "")
         hora  = primero.get("hora_inicio", "")
         prof_nombre = primero.get("profesional") or (

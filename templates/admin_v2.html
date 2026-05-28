@@ -1351,6 +1351,19 @@ function filteredConvs(){
   if (inboxFilter === "waitlist")  list = list.filter(c => waitlistPhones.has(c.phone));
   if (inboxFilter.startsWith("tag:")){
     const tag = inboxFilter.slice(4);
+    // Bug fix 2026-05-28: phones con tag pero sin conversación activa reciente
+    // no aparecían (lista vacía al clickear pill waitlist-ecografía). Agregar
+    // como entrada fantasma para que sí se vean.
+    const inListTag = new Set(list.map(c => c.phone));
+    Object.entries(tagsSummary.by_phone || {}).forEach(([ph, tgs]) => {
+      if ((tgs||[]).includes(tag) && !inListTag.has(ph)){
+        list.push({
+          phone: ph, state: "", nombre: "", flow_data: {},
+          last_text: "(sin actividad reciente)", last_dir: "", last_ts: "",
+          canal: ph.startsWith("ig_") ? "instagram" : ph.startsWith("fb_") ? "messenger" : "whatsapp",
+        });
+      }
+    });
     list = list.filter(c => (tagsSummary.by_phone[c.phone]||[]).includes(tag));
   }
   if (profFilter) {
