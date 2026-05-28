@@ -139,6 +139,49 @@
     .box-wrap:hover .schedule-panel { opacity: 0; pointer-events: none; }
     .box-wrap.open-schedule .schedule-panel { opacity: 1; pointer-events: auto; transform: none; display: block; }
   }
+
+  /* Historial responsive: tabla → cards stack en mobile */
+  @media (max-width: 700px) {
+    #historial { padding: 8px !important; background: transparent !important; border: 0 !important; }
+    #historial table thead { display: none; }
+    #historial table, #historial table tbody, #historial table tr, #historial table td { display: block; width: 100%; }
+    #historial table tr {
+      border: 1px solid var(--cmc-border);
+      border-radius: 12px;
+      margin-bottom: 10px;
+      padding: 14px 16px;
+      background: #fff;
+    }
+    #historial table td {
+      padding: 4px 0 !important;
+      text-align: left !important;
+      border: 0 !important;
+      display: flex !important;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+    }
+    #historial table td::before {
+      content: attr(data-label);
+      font-size: 10px;
+      color: var(--cmc-text-mute);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    #historial table td:first-child {
+      border-bottom: 1px solid #f0f4f8 !important;
+      padding-bottom: 8px !important;
+      margin-bottom: 6px;
+    }
+    #historial table td:first-child::before { display: none; }
+    #historial table td:first-child {
+      font-size: 16px;
+      color: var(--cmc-navy);
+    }
+    footer { padding: 0 12px; font-size: 11px; }
+  }
 </style>
 </head>
 <body class="min-h-screen">
@@ -943,10 +986,10 @@ async function refresh() {
           </thead>
           <tbody>${d.historial.map(h => `
             <tr class="border-b last:border-0" style="border-color:#f0f4f8">
-              <td class="py-2 font-semibold">${esc(h.nombre)}</td>
-              <td class="py-2" style="color:var(--cmc-text-mute)">${h.profesionales_top.map(esc).join(' · ')}</td>
-              <td class="py-2 text-right money">${Number(h.citas_30d)||0}</td>
-              <td class="py-2 text-right money font-semibold">${fmtCLP(h.revenue_30d)}</td>
+              <td class="py-2 font-semibold h-value" data-label="Box">${esc(h.nombre)}</td>
+              <td class="py-2 h-label" style="color:var(--cmc-text-mute)" data-label="Profesionales">${h.profesionales_top.map(esc).join(' · ') || '<span class="italic">—</span>'}</td>
+              <td class="py-2 text-right money h-value" data-label="Citas 30d">${Number(h.citas_30d)||0}</td>
+              <td class="py-2 text-right money font-semibold h-value" data-label="Revenue 30d">${fmtCLP(h.revenue_30d)}</td>
             </tr>`).join('')}</tbody>
         </table>`;
     }
