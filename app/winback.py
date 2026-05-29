@@ -398,7 +398,11 @@ def get_candidatos_dia(cohorte: str, limite: int = 200) -> list[dict]:
                 WHERE wc.cohorte = %s
                   AND NOT EXISTS (
                       SELECT 1 FROM bi.winback_envios we
-                      WHERE we.telefono = wc.telefono
+                      -- Match por 9 dígitos: winback_envios guarda '56...' y la
+                      -- vista trae formatos mixtos. Con '=' crudo el filtro no
+                      -- excluía y se re-enviaba winback a quien ya lo recibió.
+                      WHERE RIGHT(regexp_replace(we.telefono, '[^0-9]', '', 'g'), 9)
+                          = RIGHT(regexp_replace(wc.telefono, '[^0-9]', '', 'g'), 9)
                         AND we.enviado_at > NOW() - INTERVAL '90 days'
                   )
                 ORDER BY wc.dias_inactivo ASC
@@ -666,14 +670,17 @@ def ya_enviado_winback_hoy(phone: str) -> bool:
     Rate limit per-phone: máximo 1 winback por día, independiente del batch o
     del trigger event-driven.
     """
-    tel = phone.lstrip("+").strip()
+    from session import normalize_wa_id
+    tel = normalize_wa_id(phone)
     hoy = date.today().isoformat()
     try:
         with bi_conn() as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     "SELECT 1 FROM bi.winback_envios "
-                    "WHERE telefono = %s AND DATE(enviado_at) = %s "
+                    "WHERE RIGHT(regexp_replace(telefono,'[^0-9]','','g'),9) = "
+                    "      RIGHT(regexp_replace(%s,'[^0-9]','','g'),9) "
+                    "  AND DATE(enviado_at) = %s "
                     "LIMIT 1",
                     (tel, hoy),
                 )
@@ -692,6 +699,8 @@ def _registrar_envio(
     especialidad: str | None,
     value_clp: int,
 ) -> None:
+    from session import normalize_wa_id
+    telefono = normalize_wa_id(telefono)  # canónico 56XXXXXXXXX en winback_envios
     with bi_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
