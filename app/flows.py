@@ -357,8 +357,10 @@ _OTRA_PERSONA_RE = re.compile(
 # Clave = valor exacto de PROFESIONALES[id]["especialidad"] en medilink.py
 # Valor = (modalidad, precio, sufijo_opcional)
 PRECIOS_SLOT = {
-    "Medicina General":       ("fonasa",     7880),
-    "Medicina Familiar":      ("fonasa",     7880),   # Dr. Márquez acepta Fonasa MLE $7.880 / particular $30.000
+    # (modalidad, precio_base, sufijo_opcional)
+    # Para "ambas" la tupla es: ("ambas", precio_fonasa, None, precio_particular)
+    "Medicina General":       ("ambas",      7880,  None, 25000),  # Fonasa $7.880 / Particular $25.000
+    "Medicina Familiar":      ("ambas",      7880,  None, 30000),  # Fonasa $7.880 / Particular $30.000 (Dr. Márquez)
     "Kinesiología":           ("fonasa",     7830),
     "Psicología Adulto":      ("fonasa",    14420),
     "Psicología Infantil":    ("fonasa",    14420),
@@ -373,13 +375,27 @@ PRECIOS_SLOT = {
     "Gastroenterología":      ("particular", 35000),
     "Ecografía":              ("particular", 40000),
     "Odontología General":    ("particular", 15000, "evaluación"),
-    "Ortodoncia":             ("particular", 30000, "control"),
+    "Ortodoncia":             ("particular", 30000, "control"),   # control / evaluación $30.000; instalación boca completa $120.000
     "Endodoncia":             ("particular",110000, "desde"),
     "Implantología":          ("particular",650000, "desde"),
     "Estética Facial":        ("particular", 15000, "evaluación"),
     # Masoterapia se resuelve dinámicamente según la duración real del slot.
 }
 
+# ── Mensajes personalizados de sin-disponibilidad por especialidad ────────────
+# Cuando _iniciar_agendar no encuentra slots, consulta esta tabla antes de
+# usar el mensaje genérico. Permite explicar razones específicas (ej: ORL sin
+# fecha de regreso) en vez de un "no hay horas" genérico.
+# Clave = especialidad lowercase exacta. Fácil de revertir: borrar la entrada.
+# Valor = str | None. None → usar mensaje genérico.
+_ESP_SIN_DISPONIBILIDAD_MSG: dict[str, str | None] = {
+    "otorrinolaringología": (
+        "El *otorrinolaringólogo* (Dr. Manuel Borrego) no tiene fecha de atención "
+        "disponible por el momento.\n\n"
+        "¿Quieres que te avisemos apenas tengamos fecha? Te inscribo en la lista "
+        "de espera y te escribo por WhatsApp."
+    ),
+}
 
 # ── Cross-reference entre especialidades complementarias ─────────────────────
 # Tras confirmar una cita, el bot sugiere la especialidad complementaria.
@@ -798,8 +814,23 @@ def _precio_line(especialidad: str, slot: dict | None = None, modalidad_override
     precio = entry[1]
     sufijo = entry[2] if len(entry) > 2 else None
     precio_str = f"${precio:,}".replace(",", ".")
+    # Modalidad "ambas": especialidad tiene precio Fonasa Y precio particular.
+    # Tupla: ("ambas", precio_fonasa, None, precio_particular)
+    if modalidad == "ambas":
+        precio_fonasa = entry[1]
+        precio_particular = entry[3] if len(entry) > 3 else None
+        f_str = f"${precio_fonasa:,}".replace(",", ".")
+        p_str = f"${precio_particular:,}".replace(",", ".") if precio_particular else "—"
+        if modalidad_override == "fonasa":
+            return f"💰 Fonasa: {f_str}"
+        if modalidad_override == "particular":
+            return f"💰 Particular: {p_str}"
+        # Sin override: mostrar ambos
+        if precio_particular:
+            return f"💰 Fonasa: {f_str} · Particular: {p_str}"
+        return f"💰 Fonasa: {f_str}"
     # Si el paciente preguntó por una modalidad distinta a la default, ser
-    # explícito: para MG/Kine/Psico/etc el único precio es Fonasa.
+    # explícito: para Kine/Psico/Nutri/etc el único precio es Fonasa.
     # Bug real 2026-04-25 (56942757630, 17:55): pidió "particular" en MG y
     # bot respondió "Fonasa $7.880" sin advertir que no hay particular.
     if modalidad_override and modalidad_override != modalidad:
@@ -828,7 +859,7 @@ def _precio_line(especialidad: str, slot: dict | None = None, modalidad_override
 # Especialidades con opción Fonasa — las demás son solo particular y se salta
 # la pregunta Fonasa/Particular para reducir un paso en el flujo.
 _FONASA_SPECIALTIES = frozenset({
-    "Medicina General", "Kinesiología", "Psicología Adulto",
+    "Medicina General", "Medicina Familiar", "Kinesiología", "Psicología Adulto",
     "Psicología Infantil", "Nutrición", "Matrona",
 })
 
@@ -1837,7 +1868,16 @@ _ESP_DENTALES = {
     "odontología", "odontologia", "ortodoncia", "endodoncia",
     "implantología", "implantologia", "estética facial", "estetica facial",
     "estética dental", "estetica dental",
+    # Alias de texto libre usados como data["especialidad"] antes de normalizar
+    "dental", "dentista", "brackets", "limpieza dental", "destartraje",
+    "profilaxis", "blanqueamiento", "sarro", "tapadura", "resina",
+    "corona dental", "carilla", "frenillo",
 }
+
+_ECG_KEYWORDS = frozenset({
+    "ecg", "electrocardiograma", "electro cardiograma", "electrocardiografia",
+    "electrocardiografía", "electro", "trazado cardiaco", "trazado cardíaco",
+})
 
 def _preguntar_precio_respuesta(data: dict | None = None, txt: str = "") -> str:
     """Responde a preguntas de PRECIO (valor monetario).
@@ -1849,6 +1889,40 @@ def _preguntar_precio_respuesta(data: dict | None = None, txt: str = "") -> str:
     3. Sin especialidad en contexto → derivar a recepción con oferta de agendar.
     NO inventar precios. Solo mostrar lo que está en PRECIOS_SLOT o ecografias.py.
     """
+    # ECG/electrocardiograma: precio conocido pero NO agendable directo.
+    # Informar valor y ofrecer waitlist — no enviarlo a un flujo de agendamiento.
+    _txt_low_ecg = (txt or "").lower()
+    _esp_low_ecg = ""
+    if data:
+        _slot_ecg = data.get("slot_elegido") or {}
+        _esp_low_ecg = (
+            _slot_ecg.get("especialidad") or data.get("especialidad") or ""
+        ).lower()
+    _menciona_ecg = (
+        any(kw in _txt_low_ecg for kw in _ECG_KEYWORDS)
+        or any(kw in _esp_low_ecg for kw in _ECG_KEYWORDS)
+    )
+    if _menciona_ecg:
+        return (
+            "💰 *ECG (electrocardiograma):* $20.000\n\n"
+            "Lo realiza el cardiólogo Dr. Miguel Millán. Por ahora no tenemos "
+            "fecha disponible para este examen.\n\n"
+            "¿Quieres anotarte en lista de espera? Te avisamos apenas tengamos fecha."
+        )
+    # Ortodoncia boca completa (instalación de brackets): $120.000
+    _menciona_boca_completa = (
+        ("boca completa" in _txt_low_ecg or "brackets completo" in _txt_low_ecg)
+        and any(k in _txt_low_ecg for k in ("bracket", "ortodoncia", "frenillo"))
+    ) or "instalacion de brackets" in _txt_low_ecg or "instalación de brackets" in _txt_low_ecg
+    if _menciona_boca_completa:
+        return (
+            "💰 *Ortodoncia — boca completa (instalación):* $120.000\n\n"
+            "Incluye brackets, arcos y ataches para ambas arcadas.\n"
+            "Los controles posteriores: $30.000 por visita.\n\n"
+            "💳 Pago: efectivo, transferencia, débito o crédito.\n"
+            "Para coordinar el inicio del tratamiento escríbenos o llama "
+            f"al *{CMC_TELEFONO}*."
+        )
     if data:
         slot = data.get("slot_elegido") or {}
         esp = (slot.get("especialidad") or data.get("especialidad") or "").strip()
@@ -4232,12 +4306,25 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             "cuanto", "cuánto", "precio", "valor", "vale", "bono",
             "cuesta", "costo",
         ))
+        # Procedimientos dentales específicos: solo disparar shortcut de agendar
+        # si el texto contiene verbo explícito de cita ("hora", "agendar", "reservar").
+        # "quiero una tapadura" sin "hora/agendar" es intent=info (FAQ de precio/tratamiento),
+        # no intent=agendar. Sin esta exclusión, _detectar_especialidad_en_texto mapea
+        # "tapadura" → odontología y el shortcut bypasea detect_intent.
+        _PROCEDIMIENTOS_DENTALES = (
+            "tapadura", "limpieza dental", "limpieza de dientes", "limpieza bucal",
+            "limpieza de boca", "destartraje", "detartraje", "profilaxis dental",
+            "sarro", "blanqueamiento dental", "blanqueamiento", "blanqueo dental",
+            "resina dental",
+        )
+        _es_proc_dental = any(p in tl for p in _PROCEDIMIENTOS_DENTALES)
+        _tiene_verbo_cita_explicito = any(k in tl for k in ("hora", "agendar", "reservar"))
         if _esp_idle and any(
             k in tl for k in (
                 "hora", "agendar", "reservar", "necesito", "quiero",
                 "tiene alguna", "tendra", "tendrá", "tendrán",
             )
-        ) and not _ES_PREGUNTA_INFO:
+        ) and not _ES_PREGUNTA_INFO and not (_es_proc_dental and not _tiene_verbo_cita_explicito):
             log_event(phone, "intent_detectado_local", {"esp": _esp_idle})
             data["_txt_raw"] = txt
             # Si la especialidad detectada es "medicina general" pero el texto
@@ -9822,6 +9909,72 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "🚑 *SAMU*: 131"
             )
 
+        # ── FIX C: Slot preservado durante takeover ───────────────────────────
+        # Si la recepcionista intervino mientras había una hora concreta ofrecida
+        # (WAIT_SLOT / CONFIRMING_CITA / WAIT_META_SLOT_CHOICE), el takeover
+        # preserva data["slot_elegido"] / data["slots"] en la sesión. Si el
+        # paciente aprieta el BOTÓN de confirmación, completamos la reserva sin
+        # perder el slot.
+        #
+        # Condiciones de seguridad:
+        #   1. Solo dispara con payloads de botón explícitos ("quick_yes" /
+        #      "confirmar_sugerido") — NUNCA con texto libre para no meter al
+        #      bot en una conversación activa de recepcionista.
+        #   2. Suprimido si la recepcionista estuvo activa en los últimos 30 min
+        #      (_recep_reciente ya calculado arriba): que recepción maneje.
+        #   3. Verifica disponibilidad real del slot antes de crear la cita; si
+        #      ya fue tomado por otro paciente, busca nueva disponibilidad.
+        #   4. Solo actúa con slot concreto + rut ya conocido.
+        _TAKEOVER_CONFIRM_PAYLOADS = frozenset({"quick_yes", "confirmar_sugerido"})
+        _ht_slot = data.get("slot_elegido") or (
+            (data.get("slots") or [None])[0] if data.get("slots") else None
+        )
+        _ht_rut = data.get("rut_conocido") or data.get("rut")
+        if (
+            _ht_slot and _ht_rut
+            and not _texto_es_clinico
+            and not _recep_reciente          # guard: recepcionista activa → no actuar
+            and tl in _TAKEOVER_CONFIRM_PAYLOADS  # solo botón, nunca texto libre
+        ):
+            # Verificar disponibilidad real antes de crear la cita —
+            # el slot puede llevar minutos u horas esperando en sesión.
+            _ht_disponible = False
+            try:
+                _ht_disponible = await verificar_slot_disponible(
+                    _ht_slot.get("id_profesional") or data.get("id_profesional"),
+                    _ht_slot.get("fecha", ""),
+                    _ht_slot.get("hora_inicio", ""),
+                    _ht_slot.get("hora_fin", ""),
+                )
+            except Exception:
+                _ht_disponible = False
+            if not _ht_disponible:
+                # Slot ya tomado: avisar y redirigir a nueva búsqueda
+                log_event(phone, "takeover_slot_preservado_expirado", {
+                    "slot": _ht_slot.get("hora_inicio"),
+                    "fecha": _ht_slot.get("fecha"),
+                    "rut": _ht_rut,
+                })
+                _esp_ht = _ht_slot.get("especialidad") or data.get("especialidad", "")
+                reset_session(phone)
+                return await _iniciar_agendar(
+                    phone, {}, _esp_ht or None,
+                    saludo_prefix=(
+                        "Esa hora ya no está disponible (fue reservada por otro "
+                        "paciente mientras esperabas). Te busco la siguiente:\n\n"
+                    ),
+                )
+            # Slot disponible → reservar
+            log_event(phone, "takeover_slot_preservado_confirm", {
+                "slot": _ht_slot.get("hora_inicio"), "rut": _ht_rut,
+            })
+            # Restaurar estado mínimo para _slot_confirmed
+            data["slots"] = [_ht_slot]
+            data["todos_slots"] = [_ht_slot]
+            data["slot_elegido"] = _ht_slot
+            return await _slot_confirmed(phone, data, _ht_slot)
+        # ── fin FIX C ─────────────────────────────────────────────────────────
+
         save_session(phone, "HUMAN_TAKEOVER", data)
 
         # Si la recepcionista ya respondió alguna vez, NO repetir el ack —
@@ -10659,6 +10812,22 @@ _FRASES_ESPECIALIDAD = [
     ("posolog",               "podología"),     # typo posología → podología
     ("posologia",             "podología"),
     ("posología",             "podología"),
+    # Servicios dentales: deben preceder a "ecograf" para evitar colisiones.
+    # "limpieza dental" sin este entry podía caer a ecografía en algunos paths.
+    ("limpieza dental",       "odontología"),
+    ("limpieza de dientes",   "odontología"),
+    ("limpieza de diente",    "odontología"),
+    ("limpieza bucal",        "odontología"),
+    ("limpieza de boca",      "odontología"),
+    ("destartraje",           "odontología"),
+    ("detartraje",            "odontología"),   # typo frecuente
+    ("profilaxis dental",     "odontología"),
+    ("sarro",                 "odontología"),
+    ("blanqueamiento dental", "odontología"),
+    ("blanqueamiento",        "odontología"),
+    ("blanqueo dental",       "odontología"),
+    ("tapadura",              "odontología"),
+    ("resina dental",         "odontología"),
     # Ecografías: solo el prefijo genérico. El routing por órgano lo maneja
     # route_ecografia() de ecografias.py — ver _iniciar_agendar y detect_intent.
     # Los keywords cardíacos y ginecológicos se removieron de aquí para que
@@ -11492,6 +11661,16 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
                 reset_session(phone)
                 nombre_corto = _first_name(perfil["nombre"])
                 saludo = f"*{nombre_corto}*, " if nombre_corto else ""
+                _msg_auto = _ESP_SIN_DISPONIBILIDAD_MSG.get(especialidad_lower)
+                if _msg_auto:
+                    _header_auto = _msg_auto.split("\n\n")[0]  # primera línea: contexto
+                    return (
+                        f"{_header_auto}\n\n"
+                        f"Te inscribí {saludo}en la lista de espera. Apenas tengamos fecha "
+                        "te aviso por este mismo chat 📱\n\n"
+                        "Si prefieres no recibir aviso, responde *BAJA*.\n"
+                        "_Escribe *menu* si necesitas algo más._"
+                    )
                 return (
                     f"No hay horas disponibles para *{especialidad}* en los próximos días 😕\n\n"
                     f"Te inscribí {saludo}en la lista de espera. Apenas se libere un cupo "
@@ -11504,10 +11683,19 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
                 # cae al flujo con pregunta explícita
 
         save_session(phone, "WAIT_WAITLIST_CONFIRM", data)
+        # Mensaje personalizado por especialidad (ej: ORL sin fecha de regreso).
+        _msg_sin_disp = _ESP_SIN_DISPONIBILIDAD_MSG.get(especialidad_lower)
+        _texto_sin_disp = (
+            _msg_sin_disp
+            if _msg_sin_disp
+            else (
+                f"No encontré horas disponibles para *{especialidad}* en los próximos días 😕\n\n"
+                "¿Quieres que te avise apenas se libere un cupo?\n"
+                "Te inscribo en nuestra lista de espera y te escribo por WhatsApp."
+            )
+        )
         return _btn_msg(
-            f"No encontré horas disponibles para *{especialidad}* en los próximos días 😕\n\n"
-            "¿Quieres que te avise apenas se libere un cupo?\n"
-            "Te inscribo en nuestra lista de espera y te escribo por WhatsApp.",
+            _texto_sin_disp,
             [
                 {"id": "waitlist_si", "title": "📝 Sí, inscribirme"},
                 {"id": "waitlist_no", "title": "No, gracias"},

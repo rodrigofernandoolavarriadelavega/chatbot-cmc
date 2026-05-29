@@ -253,6 +253,7 @@ def get_candidatos_dental(subcohorte: str, limite: int = 100) -> list[dict]:
     - Solo phones con dental_consent.status='accepted'.
     - Excluye dental_opt_outs (ya excluidos en la vista).
     - Excluye phones con dental_winback_envios en los últimos 90 días.
+    - Excluye registros con ultima_especialidad NULL o vacía (historial dental no claro).
     """
     cfg = SUBCOHORTES.get(subcohorte)
     if not cfg:
@@ -280,6 +281,8 @@ def get_candidatos_dental(subcohorte: str, limite: int = 100) -> list[dict]:
                         ON mc.phone = dc.telefono
                        AND mc.status = 'accepted'
                     WHERE dc.subcohorte = %s
+                      AND dc.ultima_especialidad IS NOT NULL
+                      AND TRIM(dc.ultima_especialidad) <> ''
                       AND NOT EXISTS (
                           SELECT 1 FROM bi.dental_winback_envios dwe
                           WHERE dwe.telefono = dc.telefono
@@ -549,6 +552,20 @@ async def send_dental_winback(candidato: dict) -> bool:
         )
         return False
 
+    # Excluir candidatos sin historial dental claro (especialidad null/vacía o cohorte unknown)
+    if not especialidad or not str(especialidad).strip():
+        log.info(
+            "dental_winback: skip_especialidad_nula paciente_id=%s phone=...%s subcohorte=%s",
+            paciente_id, telefono[-4:], subcohorte,
+        )
+        return False
+    if subcohorte == "unknown":
+        log.info(
+            "dental_winback: skip_subcohorte_unknown paciente_id=%s phone=...%s",
+            paciente_id, telefono[-4:],
+        )
+        return False
+
     cfg = SUBCOHORTES.get(subcohorte, {})
     template_name = cfg.get("template", "winback_dental_odonto_general_v1")
 
@@ -573,7 +590,7 @@ async def send_dental_winback(candidato: dict) -> bool:
 
     try:
         from messaging import send_whatsapp_template, render_template_body as _rtb
-        from session import log_message as _lm
+        from session import log_message as _lm, save_campana_envio as _save_camp
 
         await send_whatsapp_template(
             to=telefono,
@@ -588,6 +605,11 @@ async def send_dental_winback(candidato: dict) -> bool:
             template_name=template_name,
             especialidad=especialidad,
         )
+        # Registrar también en campanas_envios (SQLite) para medir conversión en panel admin
+        try:
+            _save_camp(telefono, f"dental_winback_{subcohorte}")
+        except Exception as _e_camp:
+            log.warning("dental_winback: save_campana_envio error phone=...%s: %s", telefono[-4:], _e_camp)
         log.info(
             "dental_winback: enviado phone=...%s subcohorte=%s template=%s",
             telefono[-4:], subcohorte, template_name,
@@ -863,16 +885,22 @@ async def _send_dental_winback_session(candidato: dict) -> bool:
     from config import CMC_TELEFONO_FIJO as _FIJO
     _fijo = _FIJO or "(41) 296 5226"
 
-    _esp_display = especialidad or "área dental"
+    # Si no hay especialidad clara, no enviar session winback dental — historial ambiguo.
+    if not especialidad or not especialidad.strip():
+        log.info(
+            "dental_winback: session skip — especialidad nula/vacía paciente_id=%s phone=...%s",
+            paciente_id, telefono[-4:],
+        )
+        return False
+
+    _esp_display = especialidad.strip()
     _prof_part = f" con {profesional}" if profesional else ""
 
     body_text = (
         f"Hola {nombre}, te contactamos del Centro Médico Carampangue.\n\n"
-        f"Nos dimos cuenta de que llevas un tiempo sin pasar a {_esp_display}{_prof_part}. "
-        f"Si tienes algún control pendiente o un tratamiento en curso, "
-        f"podemos ayudarte a agendar con facilidad.\n\n"
-        f"Estamos en Carampangue de lunes a viernes. Escríbenos aquí o "
-        f"llámanos al {_fijo}.\n\n"
+        f"Llevas un tiempo sin tu control de {_esp_display}{_prof_part}. "
+        f"Responde SÍ y te agendamos de inmediato — tenemos horas disponibles esta semana.\n\n"
+        f"Estamos en Carampangue de lunes a viernes. También puedes llamarnos al {_fijo}.\n\n"
         f"Responde BAJA si no deseas recibir más mensajes."
     )
 
@@ -883,11 +911,11 @@ async def _send_dental_winback_session(candidato: dict) -> bool:
             "buttons": [
                 {
                     "type": "reply",
-                    "reply": {"id": "wb_agendar", "title": "Quiero agendar"},
+                    "reply": {"id": "wb_agendar", "title": "Si, agendame"},
                 },
                 {
                     "type": "reply",
-                    "reply": {"id": "wb_info", "title": "Mas informacion"},
+                    "reply": {"id": "wb_info", "title": "Ver horarios"},
                 },
             ]
         },
@@ -895,7 +923,7 @@ async def _send_dental_winback_session(candidato: dict) -> bool:
 
     try:
         from messaging import send_whatsapp_interactive
-        from session import log_message as _lm_dws
+        from session import log_message as _lm_dws, save_campana_envio as _save_camp_s
 
         await send_whatsapp_interactive(telefono, interactive)
         _lm_dws(telefono, "out", body_text, "IDLE")
@@ -908,6 +936,11 @@ async def _send_dental_winback_session(candidato: dict) -> bool:
             template_name=_template_meta,
             especialidad=especialidad,
         )
+        # Registrar en campanas_envios (SQLite) para medir conversión en panel admin
+        try:
+            _save_camp_s(telefono, f"dental_winback_session_{subcohorte}")
+        except Exception as _e_cs:
+            log.warning("dental_winback: save_campana_envio session error phone=...%s: %s", telefono[-4:], _e_cs)
         log.info(
             "dental_winback: sent via session phone=...%s subcohorte=%s value_clp=0",
             telefono[-4:], subcohorte,

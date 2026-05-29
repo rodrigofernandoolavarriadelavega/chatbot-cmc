@@ -412,6 +412,13 @@ _INTENT_CACHE: dict[str, dict] = {
     "sicóloga":            {"intent": "agendar", "especialidad": "psicología"},
     "odonto":              {"intent": "agendar", "especialidad": "odontología"},
     "dental":              {"intent": "agendar", "especialidad": "odontología"},
+    "limpieza dental":     {"intent": "agendar", "especialidad": "odontología"},
+    "limpieza de dientes": {"intent": "agendar", "especialidad": "odontología"},
+    "destartraje":         {"intent": "agendar", "especialidad": "odontología"},
+    "detartraje":          {"intent": "agendar", "especialidad": "odontología"},
+    "sarro":               {"intent": "agendar", "especialidad": "odontología"},
+    "blanqueamiento":      {"intent": "agendar", "especialidad": "odontología"},
+    "tapadura":            {"intent": "agendar", "especialidad": "odontología"},
     "doctor":              {"intent": "agendar", "especialidad": "medicina general"},
     "doctora":             {"intent": "agendar", "especialidad": "medicina general"},
     # Saludos rurales
