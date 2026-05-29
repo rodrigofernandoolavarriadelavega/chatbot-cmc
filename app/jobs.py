@@ -1248,6 +1248,7 @@ async def _job_waitlist_check():
 
     log.info("waitlist_check: %d inscripciones activas por revisar", len(pendientes))
     notificados = 0
+    errores_medilink = 0  # Contador de fallos httpx (429 agotado u otro error de red)
     # Bug fix 2026-05-28: antes el job notificaba a TODAS las personas en cola
     # el mismo primer slot disponible (caso eco lun 1-jun 10:00 → 5 personas
     # recibieron el mismo aviso). Ahora cada slot único (fecha+hora) se asigna
@@ -1297,6 +1298,12 @@ async def _job_waitlist_check():
         try:
             solo_ids = [int(id_prof_pref)] if id_prof_pref else None
             _, todos = await buscar_primer_dia(esp, dias_adelante=14, solo_ids=solo_ids)
+        except httpx.RequestError as e:
+            # httpx.RequestError = 429 agotó reintentos u otro fallo de red.
+            # Contamos para decidir si reprogramar el job completo.
+            errores_medilink += 1
+            log.error("waitlist_check: error Medilink buscando slots para %s (%s): %s", phone_p, esp, e)
+            continue
         except Exception as e:
             log.error("waitlist_check: error buscando slots para %s (%s): %s", phone_p, esp, e)
             continue
@@ -1365,6 +1372,32 @@ async def _job_waitlist_check():
             log.error("waitlist_check: fallo notificando %s: %s", phone_p, e)
 
     log.info("waitlist_check: notificados %d/%d pacientes", notificados, len(pendientes))
+
+    # Si Medilink falló en TODOS los intentos de búsqueda de slots (429 agotado
+    # u otro error de red), reprogramar el job en 30 minutos para no perder
+    # el ciclo diario completo. Solo reintenta una vez (evita loop infinito).
+    if errores_medilink > 0 and errores_medilink >= len(pendientes) and notificados == 0:
+        try:
+            from datetime import datetime as _dt, timedelta as _td
+            import sys as _sys
+            _main_mod = _sys.modules.get("app.main") or _sys.modules.get("main")
+            _sched = getattr(_main_mod, "scheduler", None)
+            if _sched and _sched.running:
+                _retry_at = _dt.now() + _td(minutes=30)
+                _sched.add_job(
+                    _job_waitlist_check,
+                    "date",
+                    run_date=_retry_at,
+                    id="waitlist_check_retry",
+                    replace_existing=True,
+                )
+                log.warning(
+                    "waitlist_check: todos los pendientes fallaron por Medilink 429 "
+                    "(%d/%d) — reprogramando retry en 30 min (%s)",
+                    errores_medilink, len(pendientes), _retry_at.strftime("%H:%M"),
+                )
+        except Exception as _e_retry:
+            log.warning("waitlist_check: no se pudo reprogramar retry: %s", _e_retry)
 
 
 # ── Reporte periódico al admin por WhatsApp ──────────────────────────────────

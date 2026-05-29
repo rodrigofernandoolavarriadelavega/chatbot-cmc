@@ -1733,7 +1733,7 @@ async def _send_review_request_if_due(phone: str, especialidad: str = "", rating
         link = get_review_link()
     except Exception:
         link = "https://search.google.com/local/writereview?placeid=ChIJfwqzraTvaZYRBlt0l4W85JE"
-    estrellas = "⭐" * (rating or 5)
+    estrellas = "⭐" * (rating if rating is not None else 5)
     msg = (
         f"Una última cosa {estrellas}\n\n"
         "Si te tomas 30 segundos, ¿podrías dejarnos una reseña en Google? "
@@ -2748,7 +2748,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         except Exception as _ce:
             log.warning("consent handler error phone=%s: %s", phone, _ce)
             # No escalar a humano
-            return "Listo, queda registrado."
+            return "Listo, queda registrado.\n_Escribe *menu* si necesitas algo más._"
 
     # ── Respuesta al consent_dental_v1 (Win-back Dental) ─────────────────────
     # Quick Replies del template UTILITY consent_dental_v1:
@@ -2822,7 +2822,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
             except Exception as _dce:
                 log.warning("dental_consent handler error phone=%s: %s", phone, _dce)
-                return "Listo, queda registrado."
+                return "Listo, queda registrado.\n_Escribe *menu* si necesitas algo más._"
 
     # ── Comandos del profesional (doctor_mode) ──────────────────────────
     # Gate via dashboard /profesionalescmc → permiso "wa_access".
@@ -3909,7 +3909,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if tl == "kine_adh_no":
             log_event(phone, "adherencia_kine_rechazo", {})
             return (
-                "Entendido 😊 Cuando estés listo/a, escríbenos.\n"
+                "Entendido 😊 Cuando quieras retomar, escríbenos.\n"
                 "_Escribe *menu* para volver al inicio._"
             )
 
@@ -5477,14 +5477,16 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 })
                 return await _slot_confirmed(phone, data, _slot_qb)
             log_event(phone, "quick_book_iniciar_agendar", {"esp": esp or None, "data_keys": list(data.keys())})
-            result_qb = await _iniciar_agendar(phone, data, esp or None)
+            # saludo_prefix="" suprime "¡Hola de nuevo!" — el paciente ya lo
+            # recibió en el mensaje del quick_book que inició este flujo.
+            result_qb = await _iniciar_agendar(phone, data, esp or None, saludo_prefix="")
             log_event(phone, "quick_book_agendar_ok", {"resp_type": type(result_qb).__name__})
             return result_qb
         if tl in ("quick_other", "otra", "otra especialidad", "2", "cambiar"):
             log_event(phone, "quick_book_other")
             data.pop("quick_esp", None)
             data.pop("quick_prof", None)
-            return await _iniciar_agendar(phone, data, None)
+            return await _iniciar_agendar(phone, data, None, saludo_prefix="")
         if tl in ("quick_cancel", "ahora no", "no", "3", "cancelar", "menu"):
             log_event(phone, "quick_book_declined")
             reset_session(phone)
