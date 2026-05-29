@@ -823,13 +823,27 @@ function computeBoxState(layout) {
   }
   // Revenue / citas por box: cada cita del día se atribuye al box donde el prof
   // estaba en su hora de inicio (vía findBoxForCita).
-  for (const cita of (STATE.citas_dia_full || [])) {
-    const targetBoxId = findBoxForCita(cita, layout);
-    if (!targetBoxId) continue;
-    const target = boxById[targetBoxId];
-    if (!target) continue;
-    target.revenue_dia += (cita.monto_atrib || 0);
+  const citasAtribuidas = (STATE.citas_dia_full || []).filter(c => {
+    const bid = findBoxForCita(c, layout);
+    if (!bid) return false;
+    const target = boxById[bid];
+    if (!target) return false;
+    target.revenue_dia += (c.monto_atrib || 0);
     target.citas_dia += 1;
+    return true;
+  });
+  // Fallback: si el revenue por citas fue 0 (típico de histórico donde BI no tiene
+  // todas las citas pero bi_pagos_caja sí tiene los pagos por prof), sumar rev_por_prof
+  // de los default_profs como respaldo.
+  const totalCitasRev = boxes.reduce((s,b)=>s+b.revenue_dia, 0);
+  if (totalCitasRev === 0 && STATE.rev_por_prof) {
+    for (const b of boxes) {
+      for (const pid of (b.default_profs || [])) {
+        const rv = STATE.rev_por_prof[String(pid)] || 0;
+        b.revenue_dia += rv;
+        b.citas_dia += (STATE.citas_por_prof?.[String(pid)] || 0);
+      }
+    }
   }
   for (const b of boxes) {
     b.estado = b.profesionales_activos.length ? 'ocupado' : (b.proximo ? 'proximo' : 'libre');
