@@ -133,7 +133,7 @@
   .filter-pill.active { background: var(--cmc-blue); color: #fff; }
   /* Mini load-bar dentro del box */
   .load-bar {
-    display: flex; gap: 1px; margin-top: 8px;
+    display: flex; gap: 1px; margin-top: 3px;
     height: 6px; border-radius: 3px; overflow: hidden;
     background: #eef3f6;
   }
@@ -147,7 +147,7 @@
   .load-bar-label { display: flex; justify-content: space-between; font-size: 8px; color: var(--cmc-text-mute); margin-top: 2px; font-family: 'IBM Plex Mono', monospace; }
   /* Barra de pacientes (Medilink colors) */
   .patient-bar {
-    display: flex; gap: 1px; margin-top: 3px;
+    display: flex; gap: 1px; margin-top: 8px;
     height: 6px; border-radius: 3px; overflow: hidden;
     background: #f1f5f7;
   }
@@ -479,7 +479,7 @@
     <input type="text" id="mmSearch" placeholder="Buscar profesional…" class="mb-3">
     <div class="prof-list" id="mmProfs" style="max-height:340px"></div>
     <div class="mt-4 flex justify-between items-center gap-3">
-      <button id="mmClear" class="text-red-600 text-sm hover:underline">✕ Liberar box (sin profesional)</button>
+      <button id="mmClear" class="btn-cmc-danger">✕ Liberar box (sin profesional)</button>
       <button class="btn-cmc-secondary" onclick="closeModal('modalManual')">Cancelar</button>
     </div>
   </div>
