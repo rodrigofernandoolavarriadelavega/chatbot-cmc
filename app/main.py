@@ -1512,24 +1512,21 @@ async def sitemap_xml():
 
 @app.get("/sitemap_blogs.xml")
 async def sitemap_blogs_xml():
-    """Sitemap estático para los 7 blogs base (sin localizaciones)."""
+    """Sitemap de blogs — sirve el archivo estático si existe; fallback dinámico leyendo disco."""
     from fastapi.responses import Response
     from pathlib import Path as _P
+    from datetime import datetime as _dt
     _f = _P(__file__).parent.parent / "static" / "sitemap_blogs.xml"
     if _f.exists():
         return Response(content=_f.read_text(encoding="utf-8"), media_type="application/xml")
-    # fallback dinámico
-    BLOGS_BASE = ["cardiologia", "ecografia", "endodoncia", "estetica-facial",
-                  "fonoaudiologia", "gastroenterologia", "ginecologia",
-                  "implantologia", "kinesiologia", "masoterapia", "matrona",
-                  "medicina-general", "nutricion", "odontologia-general",
-                  "ortodoncia", "otorrinolaringologia", "podologia",
-                  "psicologia-adulto", "psicologia-infantil"]
+    # fallback dinámico: enumera todos los archivos reales en templates/blog/
+    _blog_dir = _P(__file__).parent.parent / "templates" / "blog"
+    slugs = sorted(p.stem for p in _blog_dir.glob("*.html")) if _blog_dir.exists() else []
     base_url = "https://centromedicocarampangue.cl"
-    today = "2026-05-02"
+    today = _dt.now().strftime("%Y-%m-%d")
     parts = ['<?xml version="1.0" encoding="UTF-8"?>',
              '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
-    for slug in BLOGS_BASE:
+    for slug in slugs:
         parts.append(
             f'  <url><loc>{base_url}/blog/{slug}</loc>'
             f'<lastmod>{today}</lastmod>'
@@ -1599,6 +1596,9 @@ async def blog_rss_feed():
         ("psicologia-infantil-cuando-consultar", "Psicología infantil: señales de alerta", "Cuándo necesita un niño apoyo psicológico"),
         ("rinoplastia-funcional-tabique", "Rinoplastia funcional vs tabique desviado", "Dr. Manuel Borrego · Cuándo se opera"),
         ("vacunas-pni-calendario-2026", "Calendario PNI 2026 — vacunas pediátricas en Chile", "Programa Nacional de Inmunización completo"),
+        ("bono-fonasa-mle-arauco", "Bono Fonasa MLE en Arauco · Cómo usarlo en el CMC", "Modalidad Libre Elección con huella biométrica · Arauco, Curanilahue, Lebu y alrededores"),
+        ("ecografia-precio-arauco", "Precio ecografía en Arauco 2026 · CMC Carampangue", "Ecografía abdominal, renal, partes blandas y mamaria · Dr. David Pardo"),
+        ("limpieza-dental-precio-arauco", "Precio limpieza dental en Arauco 2026 · CMC Carampangue", "Profilaxis, detartrado y pulido · Dra. Javiera Burgos · Dr. Carlos Jiménez"),
     ]
 
     parts = ['<?xml version="1.0" encoding="UTF-8"?>',
@@ -1661,6 +1661,42 @@ async def robots_txt():
     from fastapi.responses import PlainTextResponse
     body = (
         "User-agent: *\n"
+        "Allow: /\n"
+        "Disallow: /admin\n"
+        "Disallow: /api/\n"
+        "Disallow: /sitio\n"
+        "Disallow: /sitio/\n"
+        "Disallow: /portal\n"
+        "Disallow: /portal/\n"
+        "Disallow: /metrics\n"
+        "Disallow: /mapa\n"
+        "Disallow: /menu\n"
+        "Disallow: /agentes\n"
+        "Disallow: /dashboards\n"
+        "Disallow: /bi/\n"
+        "Disallow: /meulen/\n"
+        "Disallow: /riomonte\n"
+        "Disallow: /riomonte/\n"
+        "Disallow: /arquetix-memo\n"
+        "Disallow: /arquetix-pitch\n"
+        "Disallow: /ecosistema\n"
+        "Disallow: /suplementos\n"
+        "Disallow: /farmacia\n"
+        "Disallow: /farmacia/\n"
+        "Disallow: /ideas\n"
+        "Disallow: /ideas-revision\n"
+        "\n"
+        "User-agent: GPTBot\n"
+        "Allow: /\n"
+        "Disallow: /admin\n"
+        "Disallow: /api/\n"
+        "\n"
+        "User-agent: ClaudeBot\n"
+        "Allow: /\n"
+        "Disallow: /admin\n"
+        "Disallow: /api/\n"
+        "\n"
+        "User-agent: Google-Extended\n"
         "Allow: /\n"
         "Disallow: /admin\n"
         "Disallow: /api/\n"
