@@ -163,7 +163,7 @@ _TEL_CMC_WA_GUARD = "+56966610737"
 
 
 _RX_FIJO_44 = re.compile(r"\(\s*44\s*\)\s*\d{3}[\s\-]*\d{4}")
-_FIJO_CMC_CANONICO = "(41) 296 5226"
+_FIJO_CMC_CANONICO = "(44) 296 5226"
 
 
 def _final_phone_guard(text: str) -> str:

@@ -24,7 +24,7 @@ META_PAGE_ID         = os.getenv("META_PAGE_ID", "")        # ID de la Página d
 META_WABA_ID         = os.getenv("META_WABA_ID", "")        # WhatsApp Business Account ID (para consultar templates)
 
 CMC_TELEFONO       = os.getenv("CMC_TELEFONO", "+56966610737")
-CMC_TELEFONO_FIJO  = os.getenv("CMC_TELEFONO_FIJO", "(41) 296 5226")
+CMC_TELEFONO_FIJO  = os.getenv("CMC_TELEFONO_FIJO", "(44) 296 5226")
 
 # Validación crítica: el número personal del Dr. nunca debe ser CMC_TELEFONO.
 # Bug detectado 2026-04-28 vía simulador adversarial: .env local tenía
@@ -38,15 +38,6 @@ if "987834148" in CMC_TELEFONO.replace(" ", ""):
         CMC_TELEFONO,
     )
     CMC_TELEFONO = "+56966610737"
-# Validación menor: código de área del fijo. Carampangue es VIII región → (41).
-if "(44)" in CMC_TELEFONO_FIJO:
-    import logging as _log_cfg2
-    _log_cfg2.getLogger(__name__).error(
-        "CONFIG_ERROR: CMC_TELEFONO_FIJO=%s tiene código (44) — Carampangue "
-        "es código (41). Forzando default.",
-        CMC_TELEFONO_FIJO,
-    )
-    CMC_TELEFONO_FIJO = "(41) 296 5226"
 
 ADMIN_TOKEN        = os.getenv("ADMIN_TOKEN", "cmc_admin_2026")
 

@@ -883,7 +883,7 @@ async def _send_dental_winback_session(candidato: dict) -> bool:
         return False
 
     from config import CMC_TELEFONO_FIJO as _FIJO
-    _fijo = _FIJO or "(41) 296 5226"
+    _fijo = _FIJO or "(44) 296 5226"
 
     # Si no hay especialidad clara, no enviar session winback dental — historial ambiguo.
     if not especialidad or not especialidad.strip():

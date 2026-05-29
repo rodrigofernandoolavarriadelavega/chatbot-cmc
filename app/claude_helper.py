@@ -505,7 +505,7 @@ Si el mensaje menciona cualquiera de: medicamento, fármaco, pastilla, remedio, 
 🚨 NÚMEROS DE CONTACTO PERMITIDOS — NO INVENTES OTROS:
 Los ÚNICOS teléfonos del CMC que puedes mencionar en cualquier respuesta son:
   • WhatsApp / móvil: +56966610737
-  • Fijo: (41) 296 5226
+  • Fijo: (44) 296 5226
   • Emergencias: SAMU 131
 PROHIBIDO ABSOLUTAMENTE escribir cualquier otro número telefónico chileno (+56 9 XXXX XXXX o (4X) XXX XXXX) aunque parezca plausible. Si no recuerdas el número, escribe literalmente "el WhatsApp del CMC" o "recepción" sin dígitos. Inventar un número equivale a desviar pacientes a un tercero — es un error grave.
 
@@ -738,7 +738,7 @@ PIEL / INFECCIONES
 - Picaduras de insectos / picada de mosquito/zancudo (reacción fuerte) → **Medicina General**.
 
 OJO (NO hay oftalmólogo en el CMC)
-Si el paciente pregunta por tema de ojos, responde: "En el CMC no tenemos oftalmólogo. Para temas de vista o enfermedades del ojo, te sugerimos ir a un oftalmólogo. Igual puedes empezar con **Medicina General** si es una molestia simple. ¿Te agendo o prefieres consultar en recepción al 📞 (41) 296 5226?"
+Si el paciente pregunta por tema de ojos, responde: "En el CMC no tenemos oftalmólogo. Para temas de vista o enfermedades del ojo, te sugerimos ir a un oftalmólogo. Igual puedes empezar con **Medicina General** si es una molestia simple. ¿Te agendo o prefieres consultar en recepción al 📞 (44) 296 5226?"
 - Orzuelo / me salió un ojo / grano en el párpado → **Medicina General** para evaluación.
 - Derrame al ojo / mancha roja en el ojo → **Medicina General**.
 - Se me nubla la vista / veo borroso → recepción / Medicina General (derivación).
@@ -855,7 +855,7 @@ INFO DEL CMC:
   · Tirúa: ~1 h 45 min – 2 h
   · Lota: ~45 min
   · Coronel: ~1 hora
-- Teléfono fijo: (41) 296 5226
+- Teléfono fijo: (44) 296 5226
 - WhatsApp: +56966610737
 - Horario GENERAL del CMC (recepción): lunes a viernes 08:00–21:00, sábado 09:00–14:00 (horario continuo, sin pausa al mediodía)
 - IMPORTANTE: cada PROFESIONAL tiene su propio horario que NO coincide con el horario general del CMC. Ej: el Dr. Borrego (otorrino) atiende lunes a miércoles 16:00–20:00, NO de lunes a viernes. NUNCA inventes el horario de un profesional específico — si te preguntan "qué día atiende el otorrino / kine / ginecólogo / Dr. X", responde EXACTAMENTE: "Te confirmo los días y horarios exactos del [profesional/especialidad] desde el sistema. ¿Te muestro horarios disponibles?". El bot tiene un handler que consulta Medilink directo; NO improvises.
@@ -1313,7 +1313,7 @@ def _validar_respuesta_faq(texto: str, phone: str = "") -> str:
 
 
 _TEL_CMC_WA = "+56966610737"
-_TEL_CMC_FIJO = "(41) 296 5226"
+_TEL_CMC_FIJO = "(44) 296 5226"
 
 # Números canónicos del CMC. Cualquier otro teléfono chileno generado por el
 # LLM se reemplaza por estos para evitar leaks (ej: hallucination del celular
@@ -1485,7 +1485,7 @@ async def detect_intent(mensaje: str, recepcion_resumen: list | None = None,
             "respuesta_directa": (
                 "Para cancelar tu hora avísanos con al menos *4 horas de anticipación*. "
                 "No hay multa.\n\n"
-                "Puedes hacerlo respondiendo a este chat o llamando al *(41) 296 5226*."
+                "Puedes hacerlo respondiendo a este chat o llamando al *(44) 296 5226*."
             ),
         }
     # PRE-PREFILTER — chilenismo "cancelar" = PAGAR.
@@ -1968,14 +1968,14 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
     (("donde", "ubica"),
      "📍 *Centro Médico Carampangue* — Monsalve 102, esquina con República, Carampangue.\n"
      "Frente a la antigua estación de trenes.\n"
-     "📞 *+56966610737* · ☎️ *(41) 296 5226*"),
+     "📞 *+56966610737* · ☎️ *(44) 296 5226*"),
     (("donde estan",),
      "📍 *Monsalve 102*, Carampangue (Región del Biobío). Frente a la antigua estación de trenes.\n"
-     "📞 *+56966610737* · ☎️ *(41) 296 5226*"),
+     "📞 *+56966610737* · ☎️ *(44) 296 5226*"),
     (("de donde son",),
      "📍 Somos el *Centro Médico Carampangue* — Monsalve 102, Carampangue (Región del Biobío). "
      "Frente a la antigua estación de trenes.\n"
-     "📞 *+56966610737* · ☎️ *(41) 296 5226*"),
+     "📞 *+56966610737* · ☎️ *(44) 296 5226*"),
     (("de donde",),
      "📍 Somos de *Carampangue, Región del Biobío*. Dirección: Monsalve 102, frente a la antigua estación de trenes.\n"
      "📞 *+56966610737*"),
@@ -2068,7 +2068,7 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
      "El *implante dental* (corona + tornillo) parte desde *$650.000* con la "
      "Dra. Aurora Valdés (implantóloga). El proceso total toma 3-6 meses.\n\n"
      "Para una evaluación personalizada, escribe *agendar implantología* o llama al "
-     "*(41) 296 5226*."),
+     "*(44) 296 5226*."),
     (("precio", "consulta", "dental"),
      "La *consulta odontológica* (evaluación) cuesta *$15.000*. "
      "Incluye diagnóstico y plan de tratamiento.\n\n"

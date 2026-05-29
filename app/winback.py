@@ -1062,7 +1062,7 @@ async def _send_winback_session(candidato: dict) -> bool:
     # Construir el body del mensaje según privacidad y cohorte.
     # Mismo criterio que get_template() pero en texto plano.
     from config import CMC_TELEFONO_FIJO as _FIJO
-    _fijo = _FIJO or "(41) 296 5226"
+    _fijo = _FIJO or "(44) 296 5226"
 
     if cohorte == "365d":
         # One-shot genérico: sin mencionar especialidad ni profesional

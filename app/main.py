@@ -2168,7 +2168,7 @@ async def mis_citas_page(token: str = ""):
 <div class="container">
   {body_html}
 </div>
-<footer>Centro Médico Carampangue · (41) 296 5226 ·
+<footer>Centro Médico Carampangue · (44) 296 5226 ·
   <a href="https://wa.me/56966610737" style="color:inherit">WhatsApp</a>
 </footer>
 </body>
@@ -2695,6 +2695,36 @@ _WINBACK_DASHBOARD_HTML = (_TEMPLATE_DIR / "winback_dashboard.html").read_text(e
 _WINBACK_DENTAL_DASHBOARD_HTML = (_TEMPLATE_DIR / "winback_dental_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "winback_dental_dashboard.html").exists() else ""
 _BOXES_DASHBOARD_HTML = (_TEMPLATE_DIR / "boxes_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "boxes_dashboard.html").exists() else ""
 
+# ── Pool de conexiones BI para endpoints de boxes ────────────────────────────
+# Máximo 8 conexiones compartidas entre boxes-state, boxes-config y boxes-config-put.
+# Esto acota el peor caso: nunca más de 8 conexiones PG abiertas desde este proceso
+# para este subsistema, independientemente de cuántos clientes polleen el dashboard.
+# Importante: la conexión DEBE retornarse al pool (putconn) en finally.
+import threading as _threading_boxes
+
+_BI_POOL: "psycopg2.pool.ThreadedConnectionPool | None" = None  # type: ignore[name-defined]
+_BI_POOL_LOCK = _threading_boxes.Lock()
+
+def _bi_pool() -> "psycopg2.pool.ThreadedConnectionPool":  # type: ignore[name-defined]
+    """Devuelve el pool compartido (inicialización lazy, thread-safe)."""
+    global _BI_POOL
+    if _BI_POOL is None:
+        with _BI_POOL_LOCK:
+            if _BI_POOL is None:
+                import psycopg2.pool as _pg_pool
+                import os as _osp
+                _BI_POOL = _pg_pool.ThreadedConnectionPool(
+                    minconn=1,
+                    maxconn=8,
+                    host=_osp.getenv("BI_DB_HOST", "127.0.0.1"),
+                    port=int(_osp.getenv("BI_DB_PORT", "5432")),
+                    dbname=_osp.getenv("BI_DB_NAME", "health_bi"),
+                    user=_osp.getenv("BI_DB_USER", "health_user"),
+                    password=_osp.getenv("BI_DB_PASSWORD", "password123"),
+                    connect_timeout=5,
+                )
+    return _BI_POOL
+
 # ── Boxes CMC — gemelo digital ────────────────────────────────────────────────
 # Config inicial: 8 boxes en 2 pisos. Pool dinámico vs profesional fijo.
 # "pool" = cualquier profesional listado en default_profs entra al box; el primero
@@ -3049,18 +3079,13 @@ def api_boxes_config_get(token: str | None = Query(None)):
     """Devuelve la configuración persistente de boxes (layout, pisos, overrides, schedules)."""
     if token != ADMIN_TOKEN:
         raise HTTPException(401, "No autorizado")
-    import psycopg2
-    import os as _osc
+    pool = _bi_pool()
     conn = None
     try:
-        conn = psycopg2.connect(
-            host=_osc.getenv("BI_DB_HOST", "127.0.0.1"),
-            port=int(_osc.getenv("BI_DB_PORT", "5432")),
-            dbname=_osc.getenv("BI_DB_NAME", "health_bi"),
-            user=_osc.getenv("BI_DB_USER", "health_user"),
-            password=_osc.getenv("BI_DB_PASSWORD", "password123"),
-            connect_timeout=5,
-        )
+        try:
+            conn = pool.getconn()
+        except Exception as _pe:
+            raise HTTPException(503, "BI pool ocupado, reintenta en unos segundos")
         with conn.cursor() as cur:
             cur.execute("SELECT layout, pisos, manual_overrides, schedules, weekly_template, updated_at FROM bi.boxes_state_global WHERE id=1")
             row = cur.fetchone()
@@ -3075,9 +3100,18 @@ def api_boxes_config_get(token: str | None = Query(None)):
                 "weekly_template": weekly or {},
                 "updated_at": updated.isoformat() if updated else None,
             }
+    except HTTPException:
+        raise
+    except Exception:
+        if conn is not None:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+        raise
     finally:
         if conn is not None:
-            conn.close()
+            pool.putconn(conn)
 
 
 @app.put("/admin/api/boxes-config")
@@ -3091,19 +3125,14 @@ async def api_boxes_config_put(request: Request, token: str | None = Query(None)
     overrides = body.get("manual_overrides", {})
     schedules = body.get("schedules", {})
     weekly = body.get("weekly_template", {})
-    import psycopg2
     import json as _js
-    import os as _osc
+    pool = _bi_pool()
     conn = None
     try:
-        conn = psycopg2.connect(
-            host=_osc.getenv("BI_DB_HOST", "127.0.0.1"),
-            port=int(_osc.getenv("BI_DB_PORT", "5432")),
-            dbname=_osc.getenv("BI_DB_NAME", "health_bi"),
-            user=_osc.getenv("BI_DB_USER", "health_user"),
-            password=_osc.getenv("BI_DB_PASSWORD", "password123"),
-            connect_timeout=5,
-        )
+        try:
+            conn = pool.getconn()
+        except Exception as _pe:
+            raise HTTPException(503, "BI pool ocupado, reintenta en unos segundos")
         with conn.cursor() as cur:
             cur.execute("""
                 INSERT INTO bi.boxes_state_global (id, layout, pisos, manual_overrides, schedules, weekly_template, updated_at)
@@ -3118,9 +3147,18 @@ async def api_boxes_config_put(request: Request, token: str | None = Query(None)
             """, (_js.dumps(layout), _js.dumps(pisos), _js.dumps(overrides), _js.dumps(schedules), _js.dumps(weekly)))
             conn.commit()
         return {"ok": True}
+    except HTTPException:
+        raise
+    except Exception:
+        if conn is not None:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+        raise
     finally:
         if conn is not None:
-            conn.close()
+            pool.putconn(conn)
 
 
 @app.get("/boxes/manifest.webmanifest", include_in_schema=False)
@@ -3184,19 +3222,26 @@ self.addEventListener('fetch', e => {
 @app.get("/admin/api/boxes-state")
 async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Query(None)):
     """Estado de los boxes CMC para una fecha (default: hoy).
-    Si fecha != hoy → modo histórico, sin "estado en curso", solo agregados."""
+    Si fecha != hoy → modo histórico, sin "estado en curso", solo agregados.
+
+    Diseño de conexiones PG:
+    - La conexión BI se toma del pool, se usa solo para queries rápidas, y se DEVUELVE
+      al pool ANTES de cualquier llamada a Medilink.
+    - Las llamadas a Medilink (potencialmente lentas por backoff 429) ocurren con la
+      conexión PG ya liberada, evitando acumulación de conexiones abiertas bajo carga.
+    - Si el path Medilink requiere datos de BI (prof_map), se obtienen en una primera
+      apertura corta antes de llamar a Medilink. Las queries pesadas (historial 30d,
+      fallback fact_citas, etc.) van en una segunda apertura, también corta.
+    """
     if token != ADMIN_TOKEN:
         raise HTTPException(401, "No autorizado")
 
-    import os as _osb
-    import psycopg2
     from datetime import datetime, timedelta, time as _dtime, date as _date
     import zoneinfo as _zib
 
     tz = _zib.ZoneInfo("America/Santiago")
     now_cl = datetime.now(tz)
     today_real = now_cl.date()
-    # Fecha solicitada
     if fecha:
         try:
             today = _date.fromisoformat(fecha)
@@ -3207,74 +3252,118 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
     is_today = (today == today_real)
     now_t = now_cl.time() if is_today else _dtime(23, 59)  # histórico: ya pasó todo
 
-    bi = None
-    try:
-        bi = psycopg2.connect(
-            host=_osb.getenv("BI_DB_HOST", "127.0.0.1"),
-            port=int(_osb.getenv("BI_DB_PORT", "5432")),
-            dbname=_osb.getenv("BI_DB_NAME", "health_bi"),
-            user=_osb.getenv("BI_DB_USER", "health_user"),
-            password=_osb.getenv("BI_DB_PASSWORD", "password123"),
-            connect_timeout=5,
-        )
-        cur = bi.cursor()
+    def _parse_h(s):
+        if not s: return None
+        try:
+            hh, mm = str(s).split(":")[:2]
+            return _dtime(int(hh), int(mm))
+        except Exception:
+            return None
 
-        def _parse_h(s):
-            if not s: return None
+    pool = _bi_pool()
+
+    # ── FASE 1: obtener prof_map de BI (conexión corta, milisegundos) ─────────
+    # Solo se necesita si vamos al path Medilink live (hoy + circuit breaker ok).
+    # Para el path histórico/fallback la obtendremos en la Fase 2 junto al resto.
+    prof_map: dict = {}
+    if is_today and not is_medilink_down():
+        conn1 = None
+        try:
             try:
-                hh, mm = str(s).split(":")[:2]
-                return _dtime(int(hh), int(mm))
+                conn1 = pool.getconn()
             except Exception:
-                return None
+                raise HTTPException(503, "BI pool ocupado, reintenta en unos segundos")
+            with conn1.cursor() as cur1:
+                cur1.execute("""
+                    SELECT dp.profesional_id, dp.nombre, COALESCE(de.nombre,'')
+                    FROM bi.dim_profesional dp
+                    LEFT JOIN bi.dim_especialidad de ON de.especialidad_id = dp.especialidad_id
+                """)
+                prof_map = {r[0]: (r[1], r[2]) for r in cur1.fetchall()}
+        except HTTPException:
+            raise
+        except Exception:
+            if conn1 is not None:
+                try:
+                    conn1.rollback()
+                except Exception:
+                    pass
+            raise
+        finally:
+            if conn1 is not None:
+                pool.putconn(conn1)  # liberada ANTES de llamar a Medilink
+                conn1 = None
 
-        citas_hoy = []
+    # ── Llamadas a Medilink (fuera del scope PG) ──────────────────────────────
+    citas_hoy = []
+    medilink_live_ok = False
 
-        # Si es HOY y Medilink no está caído: consultar en vivo (BI no está actualizado en tiempo real).
-        # Si el circuit breaker ya está activo, ir directo al fallback BI sin intentar la llamada.
-        # Si es histórico: usar BI fact_citas directamente.
-        if is_today and not is_medilink_down():
-            try:
-                from medilink import _get_shared_client, _get, _q, MEDILINK_BASE_URL, MEDILINK_SUCURSAL, HEADERS
-                client = _get_shared_client()
-                params = {
-                    "id_sucursal": {"eq": MEDILINK_SUCURSAL},
-                    "fecha": {"eq": today.isoformat()},
-                    "estado_anulacion": {"eq": 0},
-                }
-                r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
-                               params={"q": _q(params)}, headers=HEADERS)
-                if r.status_code == 200:
-                    import json as _j
-                    data = r.json().get("data", [])
-                    # Especialidad por profesional desde BI
-                    cur.execute("""
-                        SELECT dp.profesional_id, dp.nombre, COALESCE(de.nombre,'')
-                        FROM bi.dim_profesional dp
-                        LEFT JOIN bi.dim_especialidad de ON de.especialidad_id = dp.especialidad_id
-                    """)
-                    prof_map = {r[0]: (r[1], r[2]) for r in cur.fetchall()}
-                    for cita in data:
-                        pid = cita.get("id_profesional")
-                        prof_info = prof_map.get(pid, ("—", ""))
-                        pac_obj = cita.get("paciente") or {}
-                        pac_nombre = " ".join([pac_obj.get("nombre","") or "", pac_obj.get("apellido","") or ""]).strip()
-                        citas_hoy.append({
-                            "cita_id": cita.get("id"),
-                            "profesional_id": pid,
-                            "paciente_id": cita.get("id_paciente") or pac_obj.get("id"),
-                            "hora_inicio": _parse_h(cita.get("hora") or cita.get("hora_inicio")),
-                            "hora_fin": _parse_h(cita.get("hora_fin")),
-                            "estado": (cita.get("estado") or "agendada").lower(),
-                            "profesional": prof_info[0],
-                            "especialidad": prof_info[1],
-                            "paciente": pac_nombre or None,
-                        })
-            except Exception as _me:
-                import logging
-                logging.getLogger("boxes").warning("Medilink live error, fallback a BI: %s", _me)
+    if is_today and not is_medilink_down():
+        try:
+            from medilink import _get_shared_client, _get, _q, MEDILINK_BASE_URL, MEDILINK_SUCURSAL, HEADERS
+            client = _get_shared_client()
+            params_ml = {
+                "id_sucursal": {"eq": MEDILINK_SUCURSAL},
+                "fecha": {"eq": today.isoformat()},
+                "estado_anulacion": {"eq": 0},
+            }
+            r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
+                           params={"q": _q(params_ml)}, headers=HEADERS)
+            if r.status_code == 200:
+                for cita in r.json().get("data", []):
+                    pid = cita.get("id_profesional")
+                    prof_info = prof_map.get(pid, ("—", ""))
+                    pac_obj = cita.get("paciente") or {}
+                    pac_nombre = " ".join([pac_obj.get("nombre","") or "", pac_obj.get("apellido","") or ""]).strip()
+                    citas_hoy.append({
+                        "cita_id": cita.get("id"),
+                        "profesional_id": pid,
+                        "paciente_id": cita.get("id_paciente") or pac_obj.get("id"),
+                        "hora_inicio": _parse_h(cita.get("hora") or cita.get("hora_inicio")),
+                        "hora_fin": _parse_h(cita.get("hora_fin")),
+                        "estado": (cita.get("estado") or "agendada").lower(),
+                        "profesional": prof_info[0],
+                        "especialidad": prof_info[1],
+                        "paciente": pac_nombre or None,
+                    })
+                medilink_live_ok = True
+        except Exception as _me:
+            logging.getLogger("boxes").warning("Medilink live error, fallback a BI: %s", _me)
 
-        # Fallback (histórico o si Medilink falló o circuit breaker activo): BI fact_citas
+    # Pagos por paciente (también fuera del scope PG):
+    # - Si HOY: Medilink live /pagos
+    # - Si HISTÓRICO o Medilink falló: SQLite/BI en Fase 2
+    pagos_por_pac: dict = {}
+    if is_today and medilink_live_ok:
+        try:
+            from medilink import _get_shared_client as _gsc_p, _get as _get_p, _q as _q_p, MEDILINK_BASE_URL as _MBU_p, HEADERS as _H_p
+            _cli_p = _gsc_p()
+            _pp = {"fecha_recepcion": {"eq": today.isoformat()}}
+            _rp = await _get_p(_cli_p, f"{_MBU_p}/pagos", params={"q": _q_p(_pp)}, headers=_H_p)
+            if _rp.status_code == 200:
+                for _pago in _rp.json().get("data", []):
+                    _pid = _pago.get("id_paciente") or (_pago.get("paciente") or {}).get("id")
+                    _monto = int(_pago.get("monto_pago") or _pago.get("monto") or 0)
+                    if _pid:
+                        pagos_por_pac[_pid] = pagos_por_pac.get(_pid, 0) + _monto
+        except Exception as _pe:
+            logging.getLogger("boxes").warning("Medilink /pagos live error: %s", _pe)
+
+    # ── FASE 2: queries BI pesadas (conexión corta, milisegundos) ────────────
+    # A este punto Medilink ya respondió (o falló). La conexión PG vive solo mientras
+    # ejecutan las queries, no durante el backoff de Medilink.
+    conn2 = None
+    cur = None
+    try:
+        try:
+            conn2 = pool.getconn()
+        except Exception:
+            raise HTTPException(503, "BI pool ocupado, reintenta en unos segundos")
+        cur = conn2.cursor()
+
+        # Fallback fact_citas: histórico o si Medilink falló
         if not citas_hoy:
+            # Si no tenemos prof_map todavía (path histórico), ya viene de fact_citas JOIN
             cur.execute("""
                 SELECT fc.cita_id, fc.profesional_id, fc.paciente_id, fc.hora_inicio,
                        fc.hora_fin, fc.estado,
@@ -3298,27 +3387,8 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
                     "paciente": (pac or "").strip() or None,
                 })
 
-        # Pagos por paciente:
-        # - Si HOY: Medilink live /pagos?fecha=today (BI/SQLite no están al día)
-        # - Si HISTÓRICO: bi_pagos_caja del bot (sync nocturno 23:59, id_profesional resuelto)
-        pagos_por_pac: dict = {}
-        if is_today:
-            try:
-                from medilink import _get_shared_client as _gsc_p, _get as _get_p, _q as _q_p, MEDILINK_BASE_URL as _MBU_p, MEDILINK_SUCURSAL as _MS_p, HEADERS as _H_p
-                _cli_p = _gsc_p()
-                _pp = {"fecha_recepcion": {"eq": today.isoformat()}}
-                _rp = await _get_p(_cli_p, f"{_MBU_p}/pagos", params={"q": _q_p(_pp)}, headers=_H_p)
-                if _rp.status_code == 200:
-                    for _pago in _rp.json().get("data", []):
-                        _pid = _pago.get("id_paciente") or (_pago.get("paciente") or {}).get("id")
-                        _monto = int(_pago.get("monto_pago") or _pago.get("monto") or 0)
-                        if _pid:
-                            pagos_por_pac[_pid] = pagos_por_pac.get(_pid, 0) + _monto
-            except Exception as _pe:
-                import logging
-                logging.getLogger("boxes").warning("Medilink /pagos live error: %s", _pe)
+        # Fallback pagos: SQLite o BI Postgres si Medilink no los trajo
         if not pagos_por_pac:
-            # Fallback histórico o si Medilink falló: usar bi_pagos_caja del bot (SQLite)
             try:
                 from session import _conn as _sqc
                 with _sqc() as _sq:
@@ -3329,7 +3399,7 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
                     ).fetchall()
                     pagos_por_pac = {r["id_paciente"]: int(r["monto"] or 0) for r in _rows_pc}
             except Exception:
-                # Último fallback: fact_pagos BI Postgres
+                # Último fallback: fact_pagos BI Postgres (ya tenemos la conexión abierta)
                 cur.execute("SELECT paciente_id, SUM(monto)::int FROM bi.fact_pagos WHERE fecha = %s GROUP BY paciente_id", (today,))
                 pagos_por_pac = {r[0]: r[1] for r in cur.fetchall()}
 
@@ -3649,6 +3719,7 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
                 citas_por_prof[pid] = citas_por_prof.get(pid, 0) + 1
 
         cur.close()
+        cur = None
         return {
             "now_cl": now_cl.strftime("%Y-%m-%d %H:%M:%S"),
             "totales": {
@@ -3667,9 +3738,23 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
             "citas_por_prof": {str(k): int(v) for k, v in citas_por_prof.items()},
             "historial": historial,
         }
+    except HTTPException:
+        raise
+    except Exception:
+        if conn2 is not None:
+            try:
+                conn2.rollback()
+            except Exception:
+                pass
+        raise
     finally:
-        if bi is not None:
-            bi.close()
+        if conn2 is not None:
+            if cur is not None:
+                try:
+                    cur.close()  # cierra cursor si la excepción ocurrió antes del cur.close() explícito
+                except Exception:
+                    pass
+            pool.putconn(conn2)
 
 
 def _initials_pac(nombre: str | None) -> str:
@@ -7554,7 +7639,7 @@ async def webhook(request: Request):
                 reply = (
                     f"Recibí tu {label}, gracias.\n\n"
                     "Lo guardé en tu ficha y una recepcionista lo va a revisar 🙏\n"
-                    "Si es urgente, puedes llamar al 📞 (41) 296 5226"
+                    "Si es urgente, puedes llamar al 📞 (44) 296 5226"
                 )
                 await send_whatsapp(phone, reply)
                 log_message(phone, "out", reply, "HUMAN_TAKEOVER", canal="whatsapp")

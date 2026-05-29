@@ -5404,7 +5404,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return (
                 "Te conecto con recepción para que te confirmen tu próxima "
                 "cita con la Dra. Castillo.\n\n"
-                "Llama al *(41) 296 5226* o escribe *humano* y te respondemos "
+                "Llama al *(44) 296 5226* o escribe *humano* y te respondemos "
                 "en cuanto podamos."
             )
         if tl_oa in ("orto_boleta", "reimpresión de boleta", "reimpresion de boleta",
@@ -5413,7 +5413,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             log_event(phone, "ortodoncia_activo_opcion", {"opcion": "boleta"})
             return (
                 "La reimpresión de boletas la gestiona recepción directamente.\n\n"
-                "Llama al *(41) 296 5226* en horario de atención "
+                "Llama al *(44) 296 5226* en horario de atención "
                 "(lun-vie 08:00-21:00, sáb 09:00-14:00)."
             )
         if tl_oa in ("orto_urgencia", "bracket suelto", "urgencia", "3"):
@@ -5421,7 +5421,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             log_event(phone, "ortodoncia_activo_opcion", {"opcion": "urgencia"})
             return (
                 "Para urgencias con brackets (bracket suelto, alambre salido, "
-                "dolor agudo), llama de inmediato al *(41) 296 5226*.\n\n"
+                "dolor agudo), llama de inmediato al *(44) 296 5226*.\n\n"
                 "Si es fuera de horario, puedes escribir aquí y recepción te "
                 "responde al día siguiente."
             )
@@ -6469,7 +6469,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                           "donde queda", "dónde queda", "como llego", "cómo llego")
         if any(p in tl_norm_slot for p in _INFO_CONTACTO):
             return (
-                f"📞 *{CMC_TELEFONO}* o ☎️ *(41) 296 5226*\n"
+                f"📞 *{CMC_TELEFONO}* o ☎️ *(44) 296 5226*\n"
                 f"📍 {_CMC_DIRECCION}.\n\n"
                 "_Elige un número del listado, *ver todos* para más horarios, u *otro día*._"
             )
@@ -7180,7 +7180,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 return (
                     "Veo que necesitas hora *para hoy*. Las horas que te mostré arriba son las próximas disponibles.\n\n"
                     "Si necesitas algo *más tarde hoy*, escribe *ver todos* y revisamos la agenda completa de hoy.\n\n"
-                    "Si es *urgente*, llama al *(41) 296 5226* o escribe *humano* y te conecto con recepción."
+                    "Si es *urgente*, llama al *(44) 296 5226* o escribe *humano* y te conecto con recepción."
                 )
             if _TEMP_MAÑANA.search(tl):
                 log_event(phone, "wait_slot_manana_pedido", {})
@@ -7643,7 +7643,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 hint += (
                     "\n\nNo logro validar ese RUT. Si no lo tienes exacto, puedes:\n"
                     "1) Escribirme el *nombre completo* del paciente y te busco\n"
-                    f"2) Llamar a recepción al *(41) 296 5226*"
+                    f"2) Llamar a recepción al *(44) 296 5226*"
                 )
             return hint
 

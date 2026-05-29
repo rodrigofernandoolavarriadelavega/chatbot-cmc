@@ -1274,7 +1274,7 @@ _CROSSSELL_DX_REGLAS: list[dict] = [
         "msg": (
             "por tu historial de *diabetes*, un control periódico con "
             "*podología* y *nutrición* puede ayudarte a prevenir complicaciones. "
-            "¿Te gustaría agendar? Escribe *agendar* o llámanos al (41) 296 5226."
+            "¿Te gustaría agendar? Escribe *agendar* o llámanos al (44) 296 5226."
         ),
     },
     {
@@ -1285,7 +1285,7 @@ _CROSSSELL_DX_REGLAS: list[dict] = [
         "msg": (
             "por tu historial de *presión alta*, un control con *cardiología* "
             "y apoyo de *nutrición* puede ayudarte a mantener niveles normales. "
-            "¿Te agendo una evaluación? Escribe *agendar* o llámanos al (41) 296 5226."
+            "¿Te agendo una evaluación? Escribe *agendar* o llámanos al (44) 296 5226."
         ),
     },
 ]
@@ -1415,7 +1415,7 @@ async def enviar_crosssell_dx(send_fn, send_template_fn=None):
         _msg_pap = (
             "recuerda que el *Papanicolaou* es un examen preventivo recomendado "
             "anualmente para mujeres a partir de los 40 años. "
-            "¿Te lo agendamos? Escribe *agendar* o llámanos al (41) 296 5226."
+            "¿Te lo agendamos? Escribe *agendar* o llámanos al (44) 296 5226."
         )
         try:
             await send_fn(_phone_g, saludo_g + _msg_pap)
@@ -1517,7 +1517,7 @@ async def enviar_crosssell_post_dental_ortodoncia(send_fn, send_template_fn=None
                 "Si el odontólogo te recomendó evaluar un tratamiento de ortodoncia, "
                 "puedes agendarte con la Dra. Daniela Castillo (ortodoncista).\n\n"
                 "La evaluación inicial cuesta *$15.000*.\n\n"
-                "Escríbenos aquí o llama al *(41) 296 5226*."
+                "Escríbenos aquí o llama al *(44) 296 5226*."
             )
             msg = {
                 "type": "interactive",
