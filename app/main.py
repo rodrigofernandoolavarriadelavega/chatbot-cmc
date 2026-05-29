@@ -2688,6 +2688,7 @@ def segmentacioncmc_data(path: str):
 
 
 _ATRIBUCION_DASHBOARD_HTML = (_TEMPLATE_DIR / "atribucion_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "atribucion_dashboard.html").exists() else ""
+_ARQUITECTURA_SAAS_HTML = (_TEMPLATE_DIR / "arquitectura_saas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "arquitectura_saas.html").exists() else ""
 _ABARCA_DASHBOARD_HTML = (_TEMPLATE_DIR / "abarca_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "abarca_dashboard.html").exists() else ""
 _OLAVARRIA_DASHBOARD_HTML = (_TEMPLATE_DIR / "olavarria_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "olavarria_dashboard.html").exists() else ""
 _PROF_DASHBOARD_HTML = (_TEMPLATE_DIR / "profesional_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "profesional_dashboard.html").exists() else ""
@@ -2748,6 +2749,15 @@ def atribucion_dashboard_page():
     if not _ATRIBUCION_DASHBOARD_HTML:
         raise HTTPException(404, "Dashboard Atribución no disponible")
     return _ATRIBUCION_DASHBOARD_HTML
+
+
+@app.get("/arquitectura", response_class=HTMLResponse)
+@app.get("/saas", response_class=HTMLResponse)
+def arquitectura_saas_page():
+    """Esquema estilo n8n de la plataforma CMC, segmentado por packs SaaS (Básico/Avanzado/Pro). Material de presentación."""
+    if not _ARQUITECTURA_SAAS_HTML:
+        raise HTTPException(404, "Esquema de arquitectura no disponible")
+    return _ARQUITECTURA_SAAS_HTML
 
 
 @app.get("/winback", response_class=HTMLResponse)
