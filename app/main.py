@@ -1618,7 +1618,7 @@ async def sitemap_images_xml():
     base = "https://centromedicocarampangue.cl"
     img_base = "https://agentecmc.cl/static/images/centro"
     photos = [
-        ("fachada.jpg", "Fachada del Centro Médico Carampangue en República 102, esquina."),
+        ("fachada-centro-medico-carampangue.jpg", "Fachada del Centro Médico y Dental Carampangue con su letrero, en República 102 esquina Monsalve, Arauco"),
         ("recepcion.jpg", "Recepción del Centro Médico Carampangue con mostrador de madera y zona de espera"),
         ("sala-espera.jpg", "Sala de espera con sillones y vista a la calle desde ventanal grande"),
         ("box-medico.jpg", "Box de atención médica con camilla, escritorio y lavamanos"),
