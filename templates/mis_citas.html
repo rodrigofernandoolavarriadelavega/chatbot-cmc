@@ -136,7 +136,7 @@
     <div style="font-size:2.5rem; margin-bottom:.75rem;">🔗</div>
     <h2>Link inválido o expirado</h2>
     <p>El link que usaste ya no es válido. Los links de "Mis citas" son válidos por 24 horas.</p>
-    <a class="btn btn-primary" href="https://wa.me/56966610737?text=Quiero+ver+mis+citas">
+    <a class="btn btn-primary" href="https://wa.me/56966610737?text=Quiero+ver+mis+citas+(web)">
       Pedir nuevo link por WhatsApp
     </a>
   </div>
@@ -156,7 +156,7 @@
     <strong>No tienes citas próximas</strong>
     <p>Puedes agendar una hora directamente por WhatsApp.</p>
     <br>
-    <a class="btn btn-primary" href="https://wa.me/56966610737?text=Quiero+agendar+una+hora">
+    <a class="btn btn-primary" href="https://wa.me/56966610737?text=Quiero+agendar+una+hora+(web)">
       Agendar por WhatsApp
     </a>
   </div>
@@ -175,12 +175,12 @@
     </div>
     <div class="actions">
       <a class="btn btn-secondary"
-         href="https://wa.me/56966610737?text={{ ('Quiero+reagendar+mi+cita+de+' + cita.especialidad + '+del+' + cita.fecha_display) | urlencode }}"
+         href="https://wa.me/56966610737?text={{%20(web) ('Quiero+reagendar+mi+cita+de+' + cita.especialidad + '+del+' + cita.fecha_display) | urlencode }}"
          target="_blank">
         Reagendar
       </a>
       <a class="btn btn-danger"
-         href="https://wa.me/56966610737?text={{ ('Quiero+cancelar+mi+cita+de+' + cita.especialidad + '+del+' + cita.fecha_display) | urlencode }}"
+         href="https://wa.me/56966610737?text={{%20(web) ('Quiero+cancelar+mi+cita+de+' + cita.especialidad + '+del+' + cita.fecha_display) | urlencode }}"
          target="_blank">
         Cancelar
       </a>

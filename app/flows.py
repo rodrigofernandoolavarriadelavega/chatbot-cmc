@@ -2281,6 +2281,30 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     txt   = texto.strip()
     tl    = txt.lower().strip("*_~").strip()  # BUG-B: quita marcadores de formato WhatsApp (*menu*, _menu_, ~salir~)
 
+    # ── Tracking origen web: marcador "(web)" / "(web: slug)" en texto precargado ──
+    # El CTA del sitio (centromedicocarampangue.cl) y los blogs precargan el
+    # mensaje wa.me con un marcador discreto al final, ej:
+    #   "Hola, quiero agendar una hora. (web)"
+    #   "Hola, quiero agendar cardiología. (web: cardiologia)"
+    # Es lo único que WhatsApp transmite: los UTMs del query string del wa.me se
+    # pierden (WhatsApp solo pasa el campo text=). Detectamos, taggeamos y
+    # LIMPIAMOS el marcador para no contaminar la detección de intención.
+    _web_match = re.search(
+        r"\(\s*web(?:\s*[:：]\s*([\w-]+))?\s*\)\s*$", txt, re.IGNORECASE
+    )
+    if _web_match:
+        _slug = (_web_match.group(1) or "").strip().lower()
+        if "referral_source:web" not in get_tags(phone):
+            save_tag(phone, "referral_source:web")
+            log_event(phone, "referral_source_auto", {"source": "web"})
+            if _slug:
+                save_tag(phone, f"referral_source:web_{_slug}")
+                log_event(phone, "referral_source_auto", {"source": f"web_{_slug}"})
+        # Limpiar el marcador del texto para el resto del pipeline conversacional
+        txt = txt[: _web_match.start()].rstrip(" .,-–—")
+        texto = txt
+        tl = txt.lower().strip("*_~").strip()
+
     # ── BUG-K FIX: Staff whitelist — silencio permanente en IDLE ──────────────
     # Personal médico/admin (ej: Dra. Javiera Burgos 56938738734) usa el canal
     # público para coordinar con recepción. El bot los interceptaba en cada
