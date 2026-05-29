@@ -98,8 +98,8 @@
   </section>
 
   <section class="mb-10">
-    <p class="section-head">03 — Atribución por canal (tags de referido)</p>
-    <h2 class="section-title">¿De dónde nos conocieron?</h2>
+    <p class="section-head">03 — Atribución declarada (tags de referido)</p>
+    <h2 class="section-title">¿De dónde nos conocieron? <span class="text-sm opacity-50 serif">— lo que el paciente dice</span></h2>
     <div class="grid md:grid-cols-2 gap-6">
       <div class="bg-white border border-stone-300 rounded p-6">
         <h3 class="serif text-lg mb-3">Hoy</h3>
@@ -111,6 +111,24 @@
         <canvas id="atrib30Chart" height="180"></canvas>
       </div>
     </div>
+  </section>
+
+  <section class="mb-10">
+    <p class="section-head">03b — Origen web (medido)</p>
+    <h2 class="section-title">¿Llegaron desde el sitio? <span class="text-sm opacity-50 serif">— de dónde tocaron realmente</span></h2>
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="bg-white border border-stone-300 rounded p-6">
+        <h3 class="serif text-lg mb-3">Hoy</h3>
+        <p class="text-xs opacity-60 mb-3" id="webHoyTotal">—</p>
+        <div id="webHoy" class="space-y-2"></div>
+      </div>
+      <div class="bg-white border border-stone-300 rounded p-6">
+        <h3 class="serif text-lg mb-3">Últimos 30 días</h3>
+        <p class="text-xs opacity-60 mb-3" id="web30Total">—</p>
+        <div id="web30" class="space-y-2"></div>
+      </div>
+    </div>
+    <p class="text-xs opacity-60 mt-3 italic">Medido por el marcador del link wa.me del sitio (home/blog). Es de dónde tocó el paciente, no lo que declara. Complementa la atribución declarada de arriba.</p>
   </section>
 
   <section class="mb-10">
@@ -212,6 +230,34 @@ async function load() {
         textContent:'Sin tags de referido en los últimos 30 días — el tracking se acaba de habilitar (post-fix WAIT_REFERRAL_POST).'
       }));
     }
+
+    // Origen web (medido)
+    function renderWeb(elId, totalElId, data, total, label){
+      document.getElementById(totalElId).textContent = `${total} paciente(s) ${label}`;
+      const cont = document.getElementById(elId);
+      if (total === 0) {
+        cont.innerHTML = `<div class="text-stone-500 italic text-sm">Sin pacientes desde el sitio aún. Los marcadores de la home recién quedaron vivos hoy; los de blogs desde esta mañana.</div>`;
+        return;
+      }
+      const entries = Object.entries(data).sort((a,b)=>b[1]-a[1]);
+      const sumSlug = entries.reduce((s,[,v])=>s+v,0);
+      let rows = entries.map(([k,v]) => {
+        const pct = ((v/total)*100).toFixed(0);
+        return `<div class="flex items-center gap-3 text-sm">
+          <span class="w-24 mono uppercase text-xs opacity-70">${k}</span>
+          <div class="flex-1 bg-stone-200 rounded h-3 relative">
+            <div class="absolute left-0 top-0 h-3 rounded" style="width:${pct}%;background:var(--musgo)"></div>
+          </div>
+          <span class="w-12 text-right font-medium">${v}</span>
+          <span class="w-12 text-right text-xs opacity-60">${pct}%</span>
+        </div>`;
+      });
+      const resto = total - sumSlug;
+      if (resto > 0) rows.push(`<div class="text-xs opacity-60 italic pt-1">+ ${resto} sin fuente específica (marcador (web) sin slug)</div>`);
+      cont.innerHTML = rows.join('');
+    }
+    renderWeb('webHoy','webHoyTotal', d.origen_web?.por_fuente_hoy || {}, d.origen_web?.total_hoy || 0, 'desde el sitio hoy');
+    renderWeb('web30','web30Total', d.origen_web?.por_fuente_30d || {}, d.origen_web?.total_30d || 0, 'desde el sitio (30d)');
 
     // Funnel
     new Chart(document.getElementById('funnelChart'), {

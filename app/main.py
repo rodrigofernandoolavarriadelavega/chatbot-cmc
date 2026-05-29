@@ -5250,6 +5250,29 @@ async def api_atribucion_today():
                  GROUP BY tag ORDER BY 2 DESC""")
     out["atribucion"]["por_canal_30d"] = {r[0].split(":", 1)[1]: r[1] for r in c.fetchall()}
 
+    # Origen web (MEDIDO): marcador "(web)" / "(web: slug)" del link wa.me del sitio.
+    # Distinto de los tags referido:* (DECLARADO por el paciente post-cita).
+    # Cada visita web guarda 'referral_source:web' + opcional 'referral_source:web_<slug>'
+    # (home/blog), así que el total se cuenta con DISTINCT phone para no duplicar.
+    def _web_por_fuente(_window_sql):
+        c.execute(f"""SELECT tag, COUNT(DISTINCT phone) FROM contact_tags
+                      WHERE tag LIKE 'referral_source:web_%' AND {_window_sql}
+                      GROUP BY tag ORDER BY 2 DESC""")
+        return {r[0].split("referral_source:web_", 1)[1]: r[1] for r in c.fetchall()}
+
+    c.execute("""SELECT COUNT(DISTINCT phone) FROM contact_tags
+                 WHERE tag LIKE 'referral_source:web%' AND date(ts)=date('now')""")
+    _web_total_hoy = c.fetchone()[0]
+    c.execute("""SELECT COUNT(DISTINCT phone) FROM contact_tags
+                 WHERE tag LIKE 'referral_source:web%' AND ts > datetime('now','-30 days')""")
+    _web_total_30d = c.fetchone()[0]
+    out["origen_web"] = {
+        "total_hoy": _web_total_hoy,
+        "total_30d": _web_total_30d,
+        "por_fuente_hoy": _web_por_fuente("date(ts)=date('now')"),
+        "por_fuente_30d": _web_por_fuente("ts > datetime('now','-30 days')"),
+    }
+
     # Funnel del día: phones nuevos → cita
     c.execute("""SELECT COUNT(DISTINCT ce.phone) FROM conversation_events ce
                  WHERE ce.event='cita_creada' AND date(ce.ts)=date('now')
