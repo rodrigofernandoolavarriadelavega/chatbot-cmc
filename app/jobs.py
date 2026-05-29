@@ -119,10 +119,93 @@ async def _enviar_reenganche():
         # Raíz del bug: el skip anterior solo hacía `continue` sin tocar la sesión, por lo
         # que la sesión permanecía en WAIT_* y volvía en cada ciclo de 5 min indefinidamente
         # (1839 eventos en 7 días, un phone disparado 47 veces). Fix: reset a IDLE inmediato.
+        #
+        # Refinamiento: si la cancelación es reciente (<48h) y el paciente NO tiene otra
+        # cita activa para la misma especialidad, ofrecer UNA re-invitación antes de resetear.
+        # Lógica: cancelación puede haber sido por conflicto de horario, no por desinterés.
+        # Todo en SQLite local (citas_bot) — sin consulta a Medilink para no añadir latencia.
         if phone_tiene_solo_citas_canceladas(phone):
-            log_event(phone, "reenganche_skip_cita_cancelada", {"state": state})
-            log.info("Reenganche skip (cita cancelada) → reset IDLE phone=%s", phone)
-            save_session(phone, "IDLE", {})
+            # Verificar si aplica re-invitación o skip silencioso.
+            _reinvitar = False
+            if not data.get("reenganche_optout") and not data.get("reenganche_cancelada_sent"):
+                try:
+                    with _session_conn() as _cc:
+                        # ¿Cancelación reciente (<48h) en citas_bot para este phone?
+                        _fila_reciente = _cc.execute(
+                            "SELECT especialidad FROM citas_bot "
+                            "WHERE phone=? AND cancel_detected_at IS NOT NULL "
+                            "AND cancel_detected_at >= datetime('now', '-48 hours') "
+                            "ORDER BY cancel_detected_at DESC LIMIT 1",
+                            (phone,),
+                        ).fetchone()
+                        if _fila_reciente:
+                            _esp_cancelada = _fila_reciente[0] or especialidad or ""
+                            # ¿Ya tiene otra cita activa para la misma especialidad?
+                            _otra_activa = _cc.execute(
+                                "SELECT 1 FROM citas_bot "
+                                "WHERE phone=? AND especialidad=? "
+                                "AND cancel_detected_at IS NULL "
+                                "AND fecha >= date('now', '-1 day') "
+                                "LIMIT 1",
+                                (phone, _esp_cancelada),
+                            ).fetchone()
+                            if not _otra_activa:
+                                _reinvitar = True
+                except Exception as _e_reinv:
+                    log.warning("Reenganche reinvitar check error phone=%s: %s", phone, _e_reinv)
+
+            if _reinvitar:
+                # Enviar re-invitación: slot real si está disponible, sino solo el CTA.
+                _slot_txt_reinv = ""
+                if especialidad and not is_medilink_down():
+                    try:
+                        _, _todos_reinv = await buscar_primer_dia(especialidad, dias_adelante=7)
+                        if _todos_reinv:
+                            _s0r = _todos_reinv[0]
+                            _slot_txt_reinv = (
+                                f"\n\n📅 *{_s0r.get('fecha_display', '')}* a las "
+                                f"*{_s0r.get('hora_inicio', '')[:5]}* con "
+                                f"*{_s0r.get('profesional', '')}*"
+                            )
+                    except Exception:
+                        pass
+                _nombre_reinv = (data.get("nombre_conocido") or data.get("reg_nombre") or "").split()
+                _saludo_reinv = f"*{_nombre_reinv[0]}*" if _nombre_reinv else ""
+                _msg_reinv = (
+                    f"Hola {_saludo_reinv} — vimos que tu hora"
+                    f"{' de *' + especialidad + '*' if especialidad else ''} fue cancelada."
+                    f"{_slot_txt_reinv}\n\n"
+                    "Si quieres reagendar, escribe *menu* y te ayudamos en un momento."
+                )
+                canal = _canal_de_phone(phone)
+                try:
+                    if canal == "wa":
+                        from flows import _btn_msg as _btn_msg_reinv
+                        _bt_reinv = _btn_msg_reinv(_msg_reinv, [
+                            {"id": "menu",          "title": "Reagendar"},
+                            {"id": "no_gracias_reeng", "title": "No por ahora"},
+                        ])
+                        await send_whatsapp_interactive(phone, _bt_reinv["interactive"])
+                        log_message(phone, "out", _msg_reinv, state)
+                    elif canal == "ig":
+                        await send_instagram(phone[3:], _msg_reinv)
+                        log_message(phone, "out", _msg_reinv, state)
+                    elif canal == "fb":
+                        await send_messenger(phone[3:], _msg_reinv)
+                        log_message(phone, "out", _msg_reinv, state)
+                    data["reenganche_cancelada_sent"] = True
+                    save_session(phone, "IDLE", data)
+                    log_event(phone, "reenganche_reinvitar_enviado", {"state": state, "canal": canal})
+                    log.info("Reenganche reinvitar enviado phone=%s", phone)
+                except Exception as _e_send_reinv:
+                    log.warning("Reenganche reinvitar send error phone=%s: %s", phone, _e_send_reinv)
+                    # Fallback: reset silencioso si el envío falla
+                    log_event(phone, "reenganche_skip_cita_cancelada", {"state": state, "reinvitar_error": True})
+                    save_session(phone, "IDLE", {})
+            else:
+                log_event(phone, "reenganche_skip_cita_cancelada", {"state": state})
+                log.info("Reenganche skip (cita cancelada) → reset IDLE phone=%s", phone)
+                save_session(phone, "IDLE", {})
             continue
 
         # Límite de reintentos genérico: máximo 3 skips o TTL 2h desde el primer skip.

@@ -1575,6 +1575,7 @@ _FAST_PATH_BUTTONS = {
     "si", "sí", "no", "confirmar", "cancelar", "rechazar",
     "confirmar_sugerido", "ver_otros", "ver_todos", "otro_dia", "otro_día",
     "otro_prof", "otro_profesional", "menu", "menu_volver", "cambiar_datos",
+    "cd_horario", "cd_persona", "cd_datos",
     "accion_recepcion", "accion_cambiar", "accion_agendar",
     "accion_mis_citas", "accion_otro", "accion_waitlist",
     # afirmaciones frecuentes
@@ -1838,10 +1839,59 @@ _ESP_DENTALES = {
     "estética dental", "estetica dental",
 }
 
+def _preguntar_precio_respuesta(data: dict | None = None, txt: str = "") -> str:
+    """Responde a preguntas de PRECIO (valor monetario).
+    Diferente de métodos de pago — el paciente quiere saber CUÁNTO cuesta.
+
+    Lógica:
+    1. Si hay especialidad activa con precio en PRECIOS_SLOT → mostrar precio + métodos.
+    2. Si hay especialidad activa SIN precio en PRECIOS_SLOT → derivar a recepción.
+    3. Sin especialidad en contexto → derivar a recepción con oferta de agendar.
+    NO inventar precios. Solo mostrar lo que está en PRECIOS_SLOT o ecografias.py.
+    """
+    if data:
+        slot = data.get("slot_elegido") or {}
+        esp = (slot.get("especialidad") or data.get("especialidad") or "").strip()
+        if esp:
+            _txt_low = (txt or "").lower()
+            _modalidad_pedida = None
+            if "particular" in _txt_low or "privado" in _txt_low:
+                _modalidad_pedida = "particular"
+            elif "fonasa" in _txt_low:
+                _modalidad_pedida = "fonasa"
+            linea = _precio_line(esp, slot if slot else None, modalidad_override=_modalidad_pedida)
+            if linea:
+                # Precio conocido → mostrarlo + métodos de pago aplicables
+                esp_low = esp.lower()
+                if esp_low and any(d in esp_low for d in _ESP_DENTALES):
+                    metodos = "• Efectivo, transferencia, débito o crédito\n"
+                else:
+                    metodos = "• Efectivo o transferencia\n"
+                return (
+                    f"{linea}\n\n"
+                    "💳 *Pago:* se cancela al momento de la atención.\n"
+                    f"{metodos}"
+                    "No se cobra al agendar la hora."
+                )
+            # Especialidad activa pero sin precio en tabla → derivar sin inventar
+            return (
+                f"Para confirmarte el valor exacto de *{esp}*, "
+                f"te paso con recepción 😊\n\n"
+                f"📞 *{CMC_TELEFONO}* · ☎️ *{CMC_TELEFONO_FIJO}*\n\n"
+                "_¿Seguimos con la reserva o prefieres llamar primero?_"
+            )
+    # Sin especialidad en contexto → derivar a recepción
+    return (
+        "Para confirmarte el valor exacto, consúltanos directamente:\n\n"
+        f"📞 *{CMC_TELEFONO}* · ☎️ *{CMC_TELEFONO_FIJO}*\n\n"
+        "_¿Qué especialidad necesitas? Te busco disponibilidad._"
+    )
+
+
 def _preguntar_pago_respuesta(data: dict | None = None, txt: str = "") -> str:
-    """Responde sobre pago. Si hay especialidad activa, muestra SOLO los métodos
-    aplicables (médica vs dental) para no confundir al paciente. Sin contexto,
-    muestra ambos.
+    """Responde sobre MÉTODOS DE PAGO (forma/momento de pago, NO el monto).
+    Si hay especialidad activa, muestra los métodos aplicables (médica vs dental).
+    Sin contexto, muestra ambos.
     """
     precio_block = ""
     esp_low = ""
@@ -1967,10 +2017,10 @@ async def _pre_router_wait(phone: str, txt: str, tl: str, state: str, data: dict
         if tag == "preguntar_horario":
             resp = await _responder_pregunta_horario(phone, state, data, txt=txt)
         elif tag == "preguntar_precio":
-            # Pregunta por VALOR monetario — mostrar precio de la especialidad activa
-            # y luego info de pago. _preguntar_pago_respuesta ya incluye precio_block
-            # cuando hay especialidad en el slot.
-            resp = _preguntar_pago_respuesta(data, txt=txt)
+            # Pregunta por VALOR monetario → función dedicada que distingue
+            # precio conocido / precio desconocido / sin especialidad.
+            # NUNCA devolver solo el bloque de métodos de pago como respuesta de precio.
+            resp = _preguntar_precio_respuesta(data, txt=txt)
         elif tag == "preguntar_pago":
             resp = _preguntar_pago_respuesta(data, txt=txt)
         elif tag == "preguntar_info":
@@ -3393,19 +3443,32 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             # Botón de vuelta al flujo presencial desde telemedicina
             if tl == "agendar_presencial_tele":
                 return await _iniciar_agendar(phone, data, None)
-            _BOT_PAYLOADS_HUERFANOS = {
-                "agendar_sugerido": "Esa opción de agendar ya no está activa 😔\n\n¿Qué *especialidad* necesitas? O escribe *menu* para ver las opciones.",
-                "confirmar_sugerido": "La hora que te ofrecí ya no está disponible 😔\n\nEscribe la *especialidad* que necesitas y te busco hora nueva.",
-                "ver_otros": "Las opciones que mostré ya no están activas. Escribe la *especialidad* que necesitas para empezar de nuevo 😊",
-                "ver_todos": "Las opciones que mostré ya no están activas. Escribe la *especialidad* que necesitas para empezar de nuevo 😊",
-                "otro_dia": "Tu búsqueda anterior expiró. Dime qué *especialidad* necesitas y te busco horas 😊",
-                "otro_día": "Tu búsqueda anterior expiró. Dime qué *especialidad* necesitas y te busco horas 😊",
-                "otro_prof": "Tu búsqueda anterior expiró. Dime qué *especialidad* necesitas y te busco horas 😊",
+            # FIX 5: payloads huérfanos de botones viejos de WhatsApp.
+            # En vez de texto de error, lanzar flujo activo de agendar.
+            # agendar_sugerido / confirmar_sugerido: ir directo a selección de esp.
+            # agendar_prof_<id>: pre-seleccionar esa especialidad si el ID es conocido.
+            # ver_otros / ver_todos / otro_dia / otro_prof: misma lógica.
+            _HUERFANOS_AGENDAR = {
+                "agendar_sugerido", "confirmar_sugerido",
+                "ver_otros", "ver_todos", "otro_dia", "otro_día", "otro_prof",
             }
-            if tl in _BOT_PAYLOADS_HUERFANOS or tl.startswith("agendar_prof_"):
+            if tl in _HUERFANOS_AGENDAR or tl.startswith("agendar_prof_"):
                 log_event(phone, "payload_huerfano", {"payload": tl})
-                save_session(phone, "IDLE", data)
-                return _BOT_PAYLOADS_HUERFANOS.get(tl, "Tu búsqueda anterior expiró. Dime qué *especialidad* necesitas y te busco horas 😊")
+                # Intentar extraer especialidad de agendar_prof_<id>
+                _esp_hub: str | None = None
+                if tl.startswith("agendar_prof_"):
+                    try:
+                        from medilink import PROFESIONALES as _PROFS_HUB
+                        _id_hub = int(tl.replace("agendar_prof_", ""))
+                        _esp_hub = _PROFS_HUB.get(_id_hub, {}).get("especialidad")
+                    except Exception:
+                        _esp_hub = None
+                # Preservar perfil para fast-track
+                _perfil_hub = get_profile(phone)
+                if _perfil_hub and _perfil_hub.get("rut"):
+                    data["rut_conocido"] = _perfil_hub["rut"]
+                    data["nombre_conocido"] = _perfil_hub.get("nombre", "")
+                return await _iniciar_agendar(phone, data, _esp_hub)
             # "no_agendar" sin contexto: silencio no, mejor cerrar amable
             if tl == "no_agendar":
                 save_session(phone, "IDLE", data)
@@ -5258,8 +5321,34 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "_Escribe *menu* para ver todas las opciones._"
             )
 
-        # Texto libre → detectar intent normalmente (no quedarse atascado)
-        # pero conservar los slots en data por si el intent es "agendar".
+        # Texto libre en CTWA: intentar detectar especialidad/intención distinta
+        # antes de caer en el dispatch genérico. Si el paciente escribe "ginecología",
+        # "necesito una eco de muslo", "piso pélvico", pivotamos directamente a
+        # _iniciar_agendar con esa especialidad en vez de mostrar el menú genérico.
+        _esp_pivot = _detectar_especialidad_en_texto(txt)
+        if not _esp_pivot:
+            # Intentar también detección de ecografía específica
+            try:
+                from ecografias import route_ecografia as _reco_ctwa, texto_menciona_ecografia as _tme_ctwa
+                if _tme_ctwa(txt):
+                    _eco_ctwa = _reco_ctwa(txt)
+                    if _eco_ctwa:
+                        _esp_pivot = _eco_ctwa["especialidad_destino"]
+            except Exception:
+                pass
+        if _esp_pivot and _esp_pivot.lower() != (_esp_meta or "").lower():
+            log_event(phone, "ctwa_pivot_especialidad", {
+                "esp_original": _esp_meta, "esp_nueva": _esp_pivot, "txt": txt[:80]
+            })
+            data.pop("meta_offered_slots", None)
+            data.pop("meta_esp", None)
+            data["_txt_raw"] = txt
+            _perfil_pivot = get_profile(phone)
+            if _perfil_pivot and _perfil_pivot.get("rut"):
+                data["rut_conocido"] = _perfil_pivot["rut"]
+                data["nombre_conocido"] = _perfil_pivot.get("nombre", "")
+            return await _iniciar_agendar(phone, data, _esp_pivot)
+        # Sin especialidad reconocible → re-dispatch a IDLE para intent normal
         log_event(phone, "ctwa_texto_libre", {"txt": txt[:80], "especialidad": _esp_meta})
         data.pop("meta_offered_slots", None)
         data.pop("meta_esp", None)
@@ -5359,6 +5448,35 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "• Ecocardiograma → Dr. Millán"
                 )
                 return _MSG_REFI_FB
+
+        # FIX 4: Mapeo de entrada numérica (1-8) en WAIT_ESPECIALIDAD.
+        # Tras takeover de recepción, el paciente escribe "1" creyendo que es menú
+        # numerado. Sin este handler el bot lo rechazaba con "no reconocí eso".
+        # Lógica: si hay lista de especialidades en data["esp_lista"], mapear al ítem.
+        # Si no hay lista, usar fallback: 1→medicina general (la más frecuente).
+        import re as _re_num4
+        if _re_num4.fullmatch(r"[1-8]", tl.strip()):
+            _num4 = int(tl.strip())
+            _esp_lista4 = data.get("esp_lista")  # lista guardada si el bot mostró un menú numerado
+            if _esp_lista4 and isinstance(_esp_lista4, list) and _num4 <= len(_esp_lista4):
+                _esp_elegida4 = _esp_lista4[_num4 - 1]
+                log_event(phone, "wait_esp_num_lista", {"num": _num4, "esp": _esp_elegida4})
+                return await _iniciar_agendar(phone, data, _esp_elegida4)
+            # Sin lista en contexto: fallback seguro 1→medicina general
+            _FALLBACK_NUM4 = {
+                1: "medicina general",
+                2: "medicina familiar",
+                3: "kinesiología",
+                4: "psicología",
+                5: "nutrición",
+                6: "odontología",
+                7: "matrona",
+                8: "fonoaudiología",
+            }
+            _esp_fallback4 = _FALLBACK_NUM4.get(_num4)
+            if _esp_fallback4:
+                log_event(phone, "wait_esp_num_fallback", {"num": _num4, "esp": _esp_fallback4})
+                return await _iniciar_agendar(phone, data, _esp_fallback4)
 
         # Resolución contextual de "ese examen" / "el mismo examen" / "lo que dijiste":
         # el paciente se refiere a algo mencionado por el bot antes del reset. Caso real
@@ -7003,8 +7121,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             )
 
         modalidad_str = data["modalidad"].capitalize()
-        # Saltar WAIT_BOOKING_FOR → ir directo al RUT (si quiere para otro, escribe "otra persona")
-        data["booking_for_other"] = False
+        # Saltar WAIT_BOOKING_FOR → ir directo al RUT (si quiere para otro, escribe "otra persona").
+        # Excepción: si booking_for_other ya era True (viene de cd_persona sin modalidad previa),
+        # preservar el flag en vez de pisarlo — de lo contrario el paciente nuevo quedaba como propio.
+        if not data.get("booking_for_other"):
+            data["booking_for_other"] = False
 
         # Atajo para pacientes conocidos
         rut_c = data.get("rut_conocido")
@@ -7462,11 +7583,76 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "¿Tu atención será Fonasa o Particular?",
                 [{"id": "1", "title": "Fonasa"}, {"id": "2", "title": "Particular"}]
             )
-        # Paciente fast-track quiere cambiar datos → flujo completo desde WAIT_MODALIDAD
+        # Paciente quiere cambiar algo → mostrar sub-menú de opciones
+        # (FIX 3: 21% abandona porque antes se saltaba directo a WAIT_MODALIDAD
+        # sin preguntar QUÉ quería cambiar)
         if tl == "cambiar_datos":
+            slot = data.get("slot_elegido", {})
+            log_event(phone, "cambiar_datos_submenu", {
+                "especialidad": slot.get("especialidad", ""),
+                "fecha": slot.get("fecha_display", ""),
+            })
+            save_session(phone, "CONFIRMING_CITA", data)  # mantener estado y slot
+            return _btn_msg(
+                f"Sin problema 😊 Tu hora sigue apartada:\n\n"
+                f"🏥 *{slot.get('especialidad', '')}* — {slot.get('profesional', '')}\n"
+                f"📅 *{slot.get('fecha_display', '')}*\n"
+                f"🕐 *{slot.get('hora_inicio', '')[:5]}*\n\n"
+                "¿Qué quieres cambiar?",
+                [
+                    {"id": "cd_horario",  "title": "📅 Horario u otro día"},
+                    {"id": "cd_persona",  "title": "👤 Es para otra persona"},
+                    {"id": "cd_datos",    "title": "✏️ Mis datos (RUT/nombre)"},
+                ]
+            )
+        # Sub-opciones del cambiar_datos
+        if tl == "cd_horario":
+            # Buscar nueva disponibilidad para la misma especialidad
+            _slot_cd = data.get("slot_elegido", {})
+            _esp_cd = _slot_cd.get("especialidad") or data.get("especialidad", "")
+            log_event(phone, "cambiar_datos_horario", {"esp": _esp_cd})
+            # Limpiar slot elegido pero preservar especialidad y datos del paciente
+            data.pop("slot_elegido", None)
+            data.pop("slots", None)
+            data.pop("todos_slots", None)
+            return await _iniciar_agendar(phone, data, _esp_cd or None)
+        if tl == "cd_persona":
+            # Redirigir a flujo de "otra persona" — preservar slot
+            _slot_cd = data.get("slot_elegido", {})
+            log_event(phone, "cambiar_datos_otra_persona", {})
+            data["booking_for_other"] = True
             data.pop("paciente", None)
             data.pop("rut", None)
-            # Preservar rut_conocido del perfil para el atajo en WAIT_RUT_AGENDAR
+            perfil = get_profile(phone)
+            if perfil and perfil.get("rut"):
+                data["rut_conocido"] = perfil["rut"]
+                data["nombre_conocido"] = perfil.get("nombre", "")
+            # Si la modalidad ya fue elegida (Fonasa/Particular), la preservamos
+            # y vamos directo al RUT del paciente nuevo.
+            # Si NO existe modalidad, no podemos asumir "particular": preguntamos primero.
+            if data.get("modalidad"):
+                save_session(phone, "WAIT_RUT_AGENDAR", data)
+                return (
+                    f"Perfecto 😊 La hora sigue reservada:\n\n"
+                    f"🏥 *{_slot_cd.get('especialidad', '')}* — {_slot_cd.get('profesional', '')}\n"
+                    f"📅 *{_slot_cd.get('fecha_display', '')}*\n"
+                    f"🕐 *{_slot_cd.get('hora_inicio', '')[:5]}*\n\n"
+                    "Escríbeme el *RUT* de la persona que va a atenderse."
+                )
+            # Sin modalidad: preguntar antes de seguir (booking_for_other queda True en data)
+            save_session(phone, "WAIT_MODALIDAD", data)
+            return _btn_msg(
+                f"La hora sigue reservada:\n\n"
+                f"🏥 *{_slot_cd.get('especialidad', '')}* — {_slot_cd.get('profesional', '')}\n"
+                f"📅 *{_slot_cd.get('fecha_display', '')}*\n"
+                f"🕐 *{_slot_cd.get('hora_inicio', '')[:5]}*\n\n"
+                "¿La atención de la otra persona será *Fonasa* o *Particular*?",
+                [{"id": "1", "title": "Fonasa"}, {"id": "2", "title": "Particular"}]
+            )
+        if tl == "cd_datos":
+            # Cambiar RUT/nombre → flujo completo desde WAIT_MODALIDAD
+            data.pop("paciente", None)
+            data.pop("rut", None)
             perfil = get_profile(phone)
             if perfil and perfil.get("rut"):
                 data["rut_conocido"] = perfil["rut"]
