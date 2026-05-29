@@ -337,7 +337,7 @@ def _intent_from_text(m: str) -> dict:
 
     return {"intent": "otro", "especialidad": esp, "respuesta_directa": None}
 
-async def fake_detect_intent(mensaje: str):
+async def fake_detect_intent(mensaje: str, **kwargs):
     return _intent_from_text(mensaje)
 
 async def fake_respuesta_faq(mensaje: str):
