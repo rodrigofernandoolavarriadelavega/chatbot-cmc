@@ -3251,14 +3251,40 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
                     "paciente": (pac or "").strip() or None,
                 })
 
-        # Pagos de hoy: SUM por paciente_id
-        cur.execute("""
-            SELECT paciente_id, SUM(monto)::int AS monto
-            FROM bi.fact_pagos
-            WHERE fecha = %s
-            GROUP BY paciente_id
-        """, (today,))
-        pagos_por_pac = {r[0]: r[1] for r in cur.fetchall()}
+        # Pagos por paciente:
+        # - Si HOY: Medilink live /pagos?fecha=today (BI/SQLite no están al día)
+        # - Si HISTÓRICO: bi_pagos_caja del bot (sync nocturno 23:59, id_profesional resuelto)
+        pagos_por_pac: dict = {}
+        if is_today:
+            try:
+                from medilink import _get_shared_client as _gsc_p, _get as _get_p, _q as _q_p, MEDILINK_BASE_URL as _MBU_p, MEDILINK_SUCURSAL as _MS_p, HEADERS as _H_p
+                _cli_p = _gsc_p()
+                _pp = {"id_sucursal": {"eq": _MS_p}, "fecha_recepcion": {"eq": today.isoformat()}}
+                _rp = await _get_p(_cli_p, f"{_MBU_p}/pagos", params={"q": _q_p(_pp)}, headers=_H_p)
+                if _rp.status_code == 200:
+                    for _pago in _rp.json().get("data", []):
+                        _pid = _pago.get("id_paciente") or (_pago.get("paciente") or {}).get("id")
+                        _monto = int(_pago.get("monto_pago") or _pago.get("monto") or 0)
+                        if _pid:
+                            pagos_por_pac[_pid] = pagos_por_pac.get(_pid, 0) + _monto
+            except Exception as _pe:
+                import logging
+                logging.getLogger("boxes").warning("Medilink /pagos live error: %s", _pe)
+        if not pagos_por_pac:
+            # Fallback histórico o si Medilink falló: usar bi_pagos_caja del bot (SQLite)
+            try:
+                from session import _conn as _sqc
+                with _sqc() as _sq:
+                    _rows_pc = _sq.execute(
+                        "SELECT id_paciente, SUM(monto) AS monto FROM bi_pagos_caja "
+                        "WHERE fecha = ? AND id_paciente IS NOT NULL GROUP BY id_paciente",
+                        (today.isoformat(),)
+                    ).fetchall()
+                    pagos_por_pac = {r["id_paciente"]: int(r["monto"] or 0) for r in _rows_pc}
+            except Exception:
+                # Último fallback: fact_pagos BI Postgres
+                cur.execute("SELECT paciente_id, SUM(monto)::int FROM bi.fact_pagos WHERE fecha = %s GROUP BY paciente_id", (today,))
+                pagos_por_pac = {r[0]: r[1] for r in cur.fetchall()}
 
         # Atribuir revenue: cada cita del día → suma del pago del paciente ese día,
         # repartido si el paciente tuvo múltiples citas (proporcional).
