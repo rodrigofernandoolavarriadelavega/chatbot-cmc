@@ -63,10 +63,13 @@
   .brand-logo img { width: 100%; height: 100%; object-fit: contain; }
   .kpi-card { background: #fff; border: 1px solid var(--cmc-border); border-radius: 12px; padding: 14px 18px; }
   .kpi-card.featured { background: linear-gradient(135deg, #fff, var(--cmc-aqua-soft)); border-color: var(--cmc-aqua); }
-  .btn-cmc { background: var(--cmc-blue); color: #fff; border-radius: 8px; padding: 8px 14px; font-weight: 600; font-size: 13px; cursor: pointer; border: none; transition: background 0.15s; }
+  .btn-cmc, .btn-cmc-secondary, .btn-cmc-danger { border-radius: 8px; padding: 8px 14px; font-weight: 600; font-size: 13px; cursor: pointer; border: 1px solid transparent; transition: all 0.15s; line-height: 1.2; }
+  .btn-cmc { background: var(--cmc-blue); color: #fff; }
   .btn-cmc:hover { background: var(--cmc-navy); }
-  .btn-cmc-secondary { background: #fff; color: var(--cmc-blue); border: 1px solid var(--cmc-blue); }
+  .btn-cmc-secondary { background: #fff; color: var(--cmc-blue); border-color: var(--cmc-blue); }
   .btn-cmc-secondary:hover { background: var(--cmc-aqua-soft); }
+  .btn-cmc-danger { background: #fff; color: #dc2626; border-color: #f3c5c5; }
+  .btn-cmc-danger:hover { background: #fef2f2; border-color: #dc2626; }
   .btn-add { border: 2px dashed var(--cmc-border); border-radius: 16px; padding: 16px; text-align: center; color: var(--cmc-text-mute); background: transparent; cursor: pointer; transition: all 0.15s; min-height: 220px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 6px; }
   .btn-add:hover { border-color: var(--cmc-aqua); color: var(--cmc-blue); background: var(--cmc-aqua-soft); }
   .modal-bg { position: fixed; inset: 0; background: rgba(15,63,104,0.5); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 100; }
@@ -591,8 +594,8 @@ function renderLoadBar(box) {
     const title = `${s.hour}:00 — ${s.estado || 'sin pacientes'}`;
     return `<span class="${cls}" title="${title}"></span>`;
   }).join('');
-  return `<div class="load-bar" title="Uso del box por horario">${bars}</div>
-    <div class="patient-bar" title="Estado de pacientes">${pBars}</div>
+  return `<div class="patient-bar" title="Estado de pacientes (dinámico)">${pBars}</div>
+    <div class="load-bar" title="Uso del box por horario (estable)">${bars}</div>
     <div class="load-bar-label"><span>${LOAD_HOURS_FROM}:00</span><span>${LOAD_HOURS_TO}:00</span></div>`;
 }
 
