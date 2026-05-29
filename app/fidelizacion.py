@@ -201,17 +201,19 @@ async def enviar_seguimiento_postconsulta_dia_anterior(send_fn, send_template_fn
             save_fidelizacion_msg(cita["phone"], "postconsulta", str(cita.get("id_cita", "")))
             if USE_TEMPLATES and send_template_fn:
                 nombre_pc = _nombre_corto(cita.get("nombre")) or "paciente"
+                # A1: guard — especialidad vacía → "la consulta" para no dejar
+                # asteriscos huérfanos (*​* con Dr. X) en el template.
+                esp_pc = (cita.get("especialidad") or "").strip() or "la consulta"
+                prof_pc = (cita.get("profesional") or "").strip() or "el profesional"
                 await send_template_fn(
                     cita["phone"],
                     "postconsulta_seguimiento",
-                    body_params=[nombre_pc, cita.get("especialidad", ""),
-                                 cita.get("profesional", "")],
+                    body_params=[nombre_pc, esp_pc, prof_pc],
                 )
                 from messaging import render_template_body as _rtb_pc
                 log_message(cita["phone"], "out",
                             _rtb_pc("postconsulta_seguimiento",
-                                    [nombre_pc, cita.get("especialidad", ""),
-                                     cita.get("profesional", "")]),
+                                    [nombre_pc, esp_pc, prof_pc]),
                             "IDLE")
                 log_event(cita["phone"], "template_enviado",
                           {"template": "postconsulta_seguimiento",

@@ -605,7 +605,7 @@ def _cross_sell_interactive(phone: str, esp_origen: str,
                 "_cross_sell_esp_destino": esp_destino,
                 "payload": _btn_msg(
                     mensaje,
-                    [{"id": f"cs_si:{esp_destino}", "title": "Si, me interesa"},
+                    [{"id": f"cs_si:{esp_destino}", "title": "Sí, me interesa"},
                      {"id": "cs_no", "title": "No por ahora"}]
                 ),
             }
@@ -1720,8 +1720,10 @@ async def _send_review_request_if_due(phone: str, especialidad: str = "", rating
     Se dispara con spawn_task tras la respuesta de upsell/control para no
     competir con el cross-sell ni bloquear la conversación."""
     import asyncio
-    if has_recent_event(phone, "review_request_sent", days=90):
-        log.info("review_request omitido (anti-spam 90d) phone=%s rating=%s", phone, rating)
+    # A6: cooldown alineado con el copy "una vez al año" (antes 90d → 4x/año
+    # con promesa falsa). 365d cumple exactamente lo que se le dice al paciente.
+    if has_recent_event(phone, "review_request_sent", days=365):
+        log.info("review_request omitido (anti-spam 365d) phone=%s rating=%s", phone, rating)
         return
     # Sleep corto: solo respiro tras el msg de upsell. Antes 4s, reducido a 2s
     # para minimizar ventana de cancelación si el paciente responde rápido.
@@ -2377,7 +2379,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "• Recordatorios de tus citas (1 día antes y 2 horas antes)\n"
                     "• Aviso cuando estén listos tus exámenes\n"
                     "• Seguimiento post-consulta\n\n"
-                    "Si en cualquier momento querés desactivar, escribe *salir* o "
+                    "Si en cualquier momento quieres desactivar, escribe *salir* o "
                     "*no quiero más mensajes*.\n\n"
                     "Escribe *menú* para ver lo que puedo hacer por ti.")
         if tl in ("optin_no", "no", "no, gracias", "no gracias",
@@ -2385,7 +2387,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             log_event(phone, "optin_qr_rechazado", {})
             reset_session(phone)
             return ("Entendido. No te enviaremos mensajes automáticos. "
-                    "Si cambias de opinión, podés volver a escanear el "
+                    "Si cambias de opinión, puedes volver a escanear el "
                     "código en recepción cuando quieras. 🙏")
         return ("Por favor, responde con uno de los dos botones: "
                 "*✅ Sí, autorizo* o *❌ No, gracias*.")
@@ -6253,8 +6255,38 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # ── Salto directo a fecha específica ("para mayo", "el 15/05", "próxima semana") ──
         # Antes el paciente debía spamear "otro día" 6+ veces para llegar a mayo.
         _fecha_objetivo: str | None = None
-        # 1) Mes mencionado: "para mayo", "en mayo", "mayo", "para junio"
-        for _mes_nombre, _mes_num in _MESES_ES.items():
+        # 1a) Fecha "DD de MMMM" o "el DD de MMMM" — va primero para capturar
+        #     el día exacto antes de caer al parser de solo-mes.
+        #     A3: sin este paso, "para hoy 19 de mayo" caía al parser de mes
+        #     que generaba 2026-05-01 (pasado) o 2027-05-01 (año siguiente).
+        _m_dia_mes = re.search(
+            r"\b(\d{1,2})\s+de\s+(" + "|".join(
+                k for k in _MESES_ES if len(k) >= 3
+            ) + r")\b",
+            tl_norm_slot,
+        )
+        if _m_dia_mes:
+            try:
+                _dia_dm = int(_m_dia_mes.group(1))
+                _mes_dm = _MESES_ES[_m_dia_mes.group(2)]
+                _hoy_dt = datetime.now(_CHILE_TZ).date()
+                _anio_dm = _hoy_dt.year
+                _candidato_dm = _hoy_dt.replace(year=_anio_dm, month=_mes_dm, day=1)
+                # Si la fecha ya pasó, avanzar al año siguiente
+                import datetime as _dt_mod
+                try:
+                    _candidato_dm = _dt_mod.date(_anio_dm, _mes_dm, _dia_dm)
+                except ValueError:
+                    _candidato_dm = None
+                if _candidato_dm and _candidato_dm < _hoy_dt:
+                    _candidato_dm = _dt_mod.date(_anio_dm + 1, _mes_dm, _dia_dm)
+                if _candidato_dm:
+                    _fecha_objetivo = _candidato_dm.strftime("%Y-%m-%d")
+            except (KeyError, ValueError, Exception):
+                pass
+        # 1b) Solo mes mencionado: "para mayo", "en mayo", "mayo", "para junio"
+        if not _fecha_objetivo:
+          for _mes_nombre, _mes_num in _MESES_ES.items():
             if len(_mes_nombre) < 3:
                 continue
             if (f" {_mes_nombre}" in f" {tl_norm_slot}"
@@ -6262,7 +6294,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     or tl_norm_slot.endswith(_mes_nombre)):
                 _hoy_dt = datetime.now(_CHILE_TZ).date()
                 _anio = _hoy_dt.year
-                if _mes_num < _hoy_dt.month or (_mes_num == _hoy_dt.month and _hoy_dt.day > 25):
+                # A3: comparar desde el primer día del mes mencionado.
+                # Antes comparaba solo mes+dia > 25, fallando cuando
+                # el día actual era < 25 pero el mes ya pasó este año.
+                import datetime as _dt_mod2
+                _primer_dia_mes = _dt_mod2.date(_anio, _mes_num, 1)
+                if _primer_dia_mes < _hoy_dt:
                     _anio += 1
                 _fecha_objetivo = f"{_anio:04d}-{_mes_num:02d}-01"
                 break
@@ -9253,8 +9290,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             reset_session(phone)
             return f"Hubo un problema al registrarte 😕\nLlama a recepción: 📞 *{CMC_TELEFONO}*"
 
-        save_profile(phone, rut, paciente["nombre"],
-                     fecha_nacimiento=data.get("reg_fecha_nacimiento"))
+        # A2: guardar perfil solo si es el dueño del celular, no un tercero.
+        # Si booking_for_other=True, el RUT/nombre del paciente recién creado
+        # pertenece al tercero y NO debe pisar el perfil del dueño del teléfono.
+        if not data.get("booking_for_other"):
+            save_profile(phone, rut, paciente["nombre"],
+                         fecha_nacimiento=data.get("reg_fecha_nacimiento"))
         # Código de referido (silencioso)
         try:
             from session import generate_referral_code
@@ -9645,9 +9686,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "Hubo un problema al registrarte 😕\n"
                 f"Llama a recepción: 📞 *{CMC_TELEFONO}*"
             )
-        # Guardar perfil con fecha_nacimiento para campaña de cumpleaños
-        save_profile(phone, rut, paciente["nombre"],
-                     fecha_nacimiento=data.get("reg_fecha_nacimiento"))
+        # Guardar perfil con fecha_nacimiento para campaña de cumpleaños.
+        # A2: guard — no pisar perfil del dueño si es registro de tercero.
+        if not data.get("booking_for_other"):
+            save_profile(phone, rut, paciente["nombre"],
+                         fecha_nacimiento=data.get("reg_fecha_nacimiento"))
         # ── Meta CAPI: evento CompleteRegistration ─────────────────────────
         try:
             import meta_capi as _mc_reg
@@ -9749,8 +9792,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "Hubo un problema al registrarte \U0001f615\n"
                 f"Llama a recepción: \U0001f4de *{CMC_TELEFONO}*"
             )
-        save_profile(phone, rut, paciente["nombre"],
-                     fecha_nacimiento=data.get("reg_fecha_nacimiento"))
+        # A2: guard — no pisar perfil del dueño si es registro de tercero.
+        if not data.get("booking_for_other"):
+            save_profile(phone, rut, paciente["nombre"],
+                         fecha_nacimiento=data.get("reg_fecha_nacimiento"))
         data.update({"paciente": paciente, "rut": rut})
         save_session(phone, "CONFIRMING_CITA", data)
         slot = data["slot_elegido"]
