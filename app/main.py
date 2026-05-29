@@ -496,6 +496,7 @@ async def lifespan(app: FastAPI):
         CronTrigger(day_of_week="mon-fri", hour=10, minute=5, timezone=_CLT),
         id="winback_bi_diario",
         replace_existing=True,
+        misfire_grace_time=600,
     )
     # Marketing consent blast: L-V 11:00 CLT — envía consent_marketing_v1 (UTILITY)
     # a phones en v_winback_cohortes_contactables sin registro en marketing_consent.
@@ -506,6 +507,7 @@ async def lifespan(app: FastAPI):
         CronTrigger(day_of_week="mon-fri", hour=11, minute=0, timezone=_CLT),
         id="marketing_consent_blast",
         replace_existing=True,
+        misfire_grace_time=600,
     )
     # Watchdog auto-pausa/reactivación blast: cada 4h a los :15 (03:15, 07:15, 11:15, 15:15, 19:15, 23:15)
     scheduler.add_job(
@@ -522,6 +524,7 @@ async def lifespan(app: FastAPI):
         CronTrigger(day_of_week="mon-fri", hour=10, minute=35, timezone=_CLT),
         id="dental_winback_diario",
         replace_existing=True,
+        misfire_grace_time=600,
     )
     # Dental consent blast: L-V 10:30 CLT — envía consent_dental_v1 (UTILITY).
     # PRIORIDAD sobre el general (corre antes) porque dental tiene mayor margen.
@@ -531,6 +534,7 @@ async def lifespan(app: FastAPI):
         CronTrigger(day_of_week="mon-fri", hour=10, minute=30, timezone=_CLT),
         id="dental_consent_blast",
         replace_existing=True,
+        misfire_grace_time=600,
     )
     # Reporte diario win-back a Rodrigo: L-V 19:00 CLT
     scheduler.add_job(

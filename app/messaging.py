@@ -219,6 +219,28 @@ def _normalize_phone_for_block(phone: str) -> str:
     return phone.replace("+", "").lstrip("0")
 
 
+def _normalize_phone_outbound(phone: str) -> str | None:
+    """Normaliza un teléfono al formato E.164 sin `+` que Meta espera.
+
+    Acepta:
+    - 11 dígitos `569XXXXXXXX` → devuelve igual
+    - 9 dígitos `9XXXXXXXX` (móvil chileno sin código país) → prefija `56`
+    - Strings con `+`, espacios, paréntesis, guiones → los limpia primero
+
+    Devuelve None si el formato no es reconocible (8 dig, 10 dig, 12+ dig, etc.).
+    Esto previene errores 4xx Meta code=131026 por números corruptos.
+    """
+    if not phone:
+        return None
+    import re as _re
+    digits = _re.sub(r"\D", "", phone)
+    if len(digits) == 11 and digits.startswith("569"):
+        return digits
+    if len(digits) == 9 and digits.startswith("9"):
+        return "56" + digits
+    return None
+
+
 def is_proactive_blocked(phone: str) -> bool:
     """True si NO se debe enviar mensajes proactivos (jobs, crons) a este phone.
 
@@ -579,9 +601,16 @@ async def send_whatsapp_template(to: str, template_name: str,
                 "parameters": [{"type": "payload", "payload": payload}],
             })
 
+    to_norm = _normalize_phone_outbound(to)
+    if to_norm is None:
+        log.warning(
+            "send_whatsapp_template: telefono formato invalido, skip — to=%r template=%s",
+            to, template_name,
+        )
+        return None
     await _post_meta({
         "messaging_product": "whatsapp",
-        "to": to,
+        "to": to_norm,
         "type": "template",
         "template": {
             "name": template_name,
