@@ -5130,7 +5130,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             )
         # Cualquier otro texto → flujo normal IDLE
         reset_session(phone)
-        return await handle_message(phone, txt)
+        return await handle_message(phone, txt, {"state": "IDLE", "data": {}})
 
     # ── WAIT_QUICK_BOOK ───────────────────────────────────────────────────────
     # Oferta "agendar otra hora como la última vez" para pacientes conocidos.
@@ -5502,6 +5502,24 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             log_event(phone, "wait_esp_texto_libre_rechazado", {"txt": txt[:120]})
             save_session(phone, "WAIT_ESPECIALIDAD", data)
             return f"No reconocí eso como una especialidad. ¿Qué especialidad necesitas?\n\n{_ESPECIALIDADES_TEXTO}"
+        # Si venimos de _modo_degradado sin especialidad: Medilink sigue caído,
+        # saltar directo a waitlist sin re-entrar a _iniciar_agendar.
+        if data.pop("_modo_degradado_esp_pending", False) and especialidad_candidata:
+            _esp_dg = especialidad_candidata
+            _esp_dg_display = _esp_dg.title()
+            data["waitlist_especialidad"] = _esp_dg
+            save_session(phone, "WAIT_WAITLIST_CONFIRM", data)
+            log_event(phone, "modo_degradado_esp_resuelta_waitlist", {"especialidad": _esp_dg})
+            return _btn_msg(
+                f"Gracias. Te anoto en la lista de espera para *{_esp_dg_display}*.\n\n"
+                f"En cuanto el sistema vuelva, te contactamos con una hora disponible.\n\n"
+                f"También puedes llamarnos:\n"
+                f"📞 *{CMC_TELEFONO}* · ☎️ *{CMC_TELEFONO_FIJO}*",
+                [
+                    {"id": "waitlist_si", "title": "Sí, avísame"},
+                    {"id": "waitlist_no", "title": "No, gracias"},
+                ]
+            )
         # Si venimos del flujo de lista de espera, redirigir al confirming
         if data.pop("from_waitlist", False):
             return await _iniciar_waitlist(phone, data, especialidad_candidata)

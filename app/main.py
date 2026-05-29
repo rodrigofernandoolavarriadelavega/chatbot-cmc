@@ -3004,15 +3004,16 @@ def api_boxes_config_get(token: str | None = Query(None)):
         raise HTTPException(401, "No autorizado")
     import psycopg2
     import os as _osc
-    conn = psycopg2.connect(
-        host=_osc.getenv("BI_DB_HOST", "127.0.0.1"),
-        port=int(_osc.getenv("BI_DB_PORT", "5432")),
-        dbname=_osc.getenv("BI_DB_NAME", "health_bi"),
-        user=_osc.getenv("BI_DB_USER", "health_user"),
-        password=_osc.getenv("BI_DB_PASSWORD", "password123"),
-        connect_timeout=5,
-    )
+    conn = None
     try:
+        conn = psycopg2.connect(
+            host=_osc.getenv("BI_DB_HOST", "127.0.0.1"),
+            port=int(_osc.getenv("BI_DB_PORT", "5432")),
+            dbname=_osc.getenv("BI_DB_NAME", "health_bi"),
+            user=_osc.getenv("BI_DB_USER", "health_user"),
+            password=_osc.getenv("BI_DB_PASSWORD", "password123"),
+            connect_timeout=5,
+        )
         with conn.cursor() as cur:
             cur.execute("SELECT layout, pisos, manual_overrides, schedules, weekly_template, updated_at FROM bi.boxes_state_global WHERE id=1")
             row = cur.fetchone()
@@ -3028,7 +3029,8 @@ def api_boxes_config_get(token: str | None = Query(None)):
                 "updated_at": updated.isoformat() if updated else None,
             }
     finally:
-        conn.close()
+        if conn is not None:
+            conn.close()
 
 
 @app.put("/admin/api/boxes-config")
@@ -3045,15 +3047,16 @@ async def api_boxes_config_put(request: Request, token: str | None = Query(None)
     import psycopg2
     import json as _js
     import os as _osc
-    conn = psycopg2.connect(
-        host=_osc.getenv("BI_DB_HOST", "127.0.0.1"),
-        port=int(_osc.getenv("BI_DB_PORT", "5432")),
-        dbname=_osc.getenv("BI_DB_NAME", "health_bi"),
-        user=_osc.getenv("BI_DB_USER", "health_user"),
-        password=_osc.getenv("BI_DB_PASSWORD", "password123"),
-        connect_timeout=5,
-    )
+    conn = None
     try:
+        conn = psycopg2.connect(
+            host=_osc.getenv("BI_DB_HOST", "127.0.0.1"),
+            port=int(_osc.getenv("BI_DB_PORT", "5432")),
+            dbname=_osc.getenv("BI_DB_NAME", "health_bi"),
+            user=_osc.getenv("BI_DB_USER", "health_user"),
+            password=_osc.getenv("BI_DB_PASSWORD", "password123"),
+            connect_timeout=5,
+        )
         with conn.cursor() as cur:
             cur.execute("""
                 INSERT INTO bi.boxes_state_global (id, layout, pisos, manual_overrides, schedules, weekly_template, updated_at)
@@ -3069,7 +3072,8 @@ async def api_boxes_config_put(request: Request, token: str | None = Query(None)
             conn.commit()
         return {"ok": True}
     finally:
-        conn.close()
+        if conn is not None:
+            conn.close()
 
 
 @app.get("/boxes/manifest.webmanifest", include_in_schema=False)
@@ -3156,15 +3160,16 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
     is_today = (today == today_real)
     now_t = now_cl.time() if is_today else _dtime(23, 59)  # histórico: ya pasó todo
 
-    bi = psycopg2.connect(
-        host=_osb.getenv("BI_DB_HOST", "127.0.0.1"),
-        port=int(_osb.getenv("BI_DB_PORT", "5432")),
-        dbname=_osb.getenv("BI_DB_NAME", "health_bi"),
-        user=_osb.getenv("BI_DB_USER", "health_user"),
-        password=_osb.getenv("BI_DB_PASSWORD", "password123"),
-        connect_timeout=5,
-    )
+    bi = None
     try:
+        bi = psycopg2.connect(
+            host=_osb.getenv("BI_DB_HOST", "127.0.0.1"),
+            port=int(_osb.getenv("BI_DB_PORT", "5432")),
+            dbname=_osb.getenv("BI_DB_NAME", "health_bi"),
+            user=_osb.getenv("BI_DB_USER", "health_user"),
+            password=_osb.getenv("BI_DB_PASSWORD", "password123"),
+            connect_timeout=5,
+        )
         cur = bi.cursor()
 
         def _parse_h(s):
@@ -3527,7 +3532,8 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
             "historial": historial,
         }
     finally:
-        bi.close()
+        if bi is not None:
+            bi.close()
 
 
 def _initials_pac(nombre: str | None) -> str:
