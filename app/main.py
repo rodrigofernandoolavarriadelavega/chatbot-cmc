@@ -3259,7 +3259,7 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
             try:
                 from medilink import _get_shared_client as _gsc_p, _get as _get_p, _q as _q_p, MEDILINK_BASE_URL as _MBU_p, MEDILINK_SUCURSAL as _MS_p, HEADERS as _H_p
                 _cli_p = _gsc_p()
-                _pp = {"id_sucursal": {"eq": _MS_p}, "fecha_recepcion": {"eq": today.isoformat()}}
+                _pp = {"fecha_recepcion": {"eq": today.isoformat()}}
                 _rp = await _get_p(_cli_p, f"{_MBU_p}/pagos", params={"q": _q_p(_pp)}, headers=_H_p)
                 if _rp.status_code == 200:
                     for _pago in _rp.json().get("data", []):
