@@ -11461,23 +11461,89 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
             f"📞 Recepción: *{CMC_TELEFONO}*\n\n"
             "_Escribe *menu* para ver opciones._"
         )
-    # Ortodoncia requiere evaluación previa con odontología general.
-    # La dentista evalúa, pide radiografías y gestiona la derivación.
+    # ── Ortodoncia, Endodoncia e Implantología: requieren evaluación previa ──────
+    # Regla de negocio: estos tres servicios NO se agendan directo con el
+    # especialista. Primero va odontología general ($15.000 evaluación), que
+    # revisa salud bucal, toma registros y deriva al especialista si corresponde.
+    # EXCEPCIÓN ortodoncia: si el paciente pide "control" (ya está en tratamiento),
+    # no necesita re-evaluación — va directo a odontología general como control.
     if especialidad_lower in ("ortodoncia", "ortodoncista", "brackets", "frenillos"):
-        log_event(phone, "ortodoncia_redirigida_odonto", {"especialidad_original": especialidad})
-        # Redirigir a odontología general con el mensaje del flujo real
+        _txt_raw_orto = (_txt_raw or "").lower()
+        _es_control_orto = any(
+            k in _txt_raw_orto
+            for k in ("control", "seguimiento", "mantención", "mantencion",
+                      "ajuste", "cita de control", "mi control")
+        )
+        log_event(phone, "ortodoncia_redirigida_odonto", {
+            "especialidad_original": especialidad,
+            "es_control": _es_control_orto,
+        })
+        # Persistir origen dental para que otro_dia/otro_prof no pierdan contexto
+        data["_dental_origen"] = "ortodoncia"
         data["ortodoncia_redirigida"] = True
+        if _es_control_orto:
+            # Paciente ya en tratamiento — control de ortodoncia, sin re-evaluación
+            return await _iniciar_agendar(
+                phone, data, "odontología",
+                saludo_prefix=(
+                    "Para tu control de ortodoncia, agenda con *odontología general*. "
+                    "La dentista coordina los controles con la Dra. Castillo "
+                    "(ortodoncista).\n\n"
+                    "💰 Control: *$30.000*\n\n"
+                    "Te muestro horas disponibles 👇\n\n"
+                ),
+            )
+        # Paciente nuevo — requiere evaluación previa
         return await _iniciar_agendar(
             phone, data, "odontología",
             saludo_prefix=(
-                "🦷 *Evaluación previa para brackets*\n\n"
                 "Para tratamiento de ortodoncia (brackets), primero necesitamos "
-                "una evaluación con la *odontóloga general*. Ella revisa caries, "
-                "encías y salud bucal, toma radiografías y fotografías, y luego "
-                "te deriva con la ortodoncista para iniciar el tratamiento.\n\n"
-                "💰 Evaluación dental: *$15.000* (se descuenta si decides empezar "
-                "tratamiento ese mismo día).\n\n"
-                "Te muestro horas disponibles para agendar la evaluación 👇\n\n"
+                "una *evaluación con odontología general*. La dentista revisa "
+                "caries, encías y salud bucal, toma registros y luego coordina "
+                "la derivación a la Dra. Castillo (ortodoncista) si corresponde.\n\n"
+                "💰 Evaluación: *$15.000*\n\n"
+                "Te muestro horas disponibles para la evaluación 👇\n\n"
+            ),
+        )
+
+    # Endodoncia (tratamiento de conducto): requiere evaluación previa con
+    # odontología general. La dentista evalúa, toma radiografías y confirma
+    # si corresponde tratamiento de conducto con el Dr. Fredes (endodoncista).
+    if especialidad_lower in ("endodoncia", "conducto", "tratamiento de conducto",
+                               "endodoncista", "canal"):
+        log_event(phone, "endodoncia_redirigida_odonto", {"especialidad_original": especialidad})
+        data["_dental_origen"] = "endodoncia"
+        data["endodoncia_redirigida"] = True
+        return await _iniciar_agendar(
+            phone, data, "odontología",
+            saludo_prefix=(
+                "El tratamiento de conducto (endodoncia) con el Dr. Fredes requiere "
+                "primero una *evaluación con odontología general*. La dentista revisa "
+                "el diente, toma una radiografía y confirma si necesitas endodoncia "
+                "antes de derivarte al especialista.\n\n"
+                "💰 Evaluación: *$15.000*\n\n"
+                "Te muestro horas disponibles para la evaluación 👇\n\n"
+            ),
+        )
+
+    # Implantología (implantes dentales): requiere evaluación previa con
+    # odontología general. La dentista evalúa el hueso, la encía y el estado
+    # general antes de derivar a la especialista si corresponde.
+    if especialidad_lower in ("implantología", "implantologia", "implante",
+                               "implantes", "implantólogo", "implantologa",
+                               "implantóloga", "implantologo"):
+        log_event(phone, "implantologia_redirigida_odonto", {"especialidad_original": especialidad})
+        data["_dental_origen"] = "implantología"
+        data["implantologia_redirigida"] = True
+        return await _iniciar_agendar(
+            phone, data, "odontología",
+            saludo_prefix=(
+                "Los implantes dentales requieren primero una *evaluación con "
+                "odontología general*. La dentista evalúa el hueso, la encía y "
+                "el estado bucal general, y coordina la derivación a la especialista "
+                "si eres candidato.\n\n"
+                "💰 Evaluación: *$15.000*\n\n"
+                "Te muestro horas disponibles para la evaluación 👇\n\n"
             ),
         )
 
