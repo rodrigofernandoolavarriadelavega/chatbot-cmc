@@ -3433,36 +3433,81 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
                 "citas_dia": asign["citas_dia_count"],
             })
 
-        # Historial últimos 30 días: top 3 profesionales por box + revenue agregado
+        # Historial por box en 4 períodos (hoy / semana / mes / 30d corridos)
+        # + ventanas de comparación para variación %:
+        #   - hoy   vs mismo día de la semana anterior (today - 7)
+        #   - semana vs misma cantidad de días de la semana pasada
+        #   - mes   vs mes anterior a la misma fecha (month-to-date)
         historial = []
-        desde = today - timedelta(days=30)
+        desde_30 = today - timedelta(days=30)
+        week_start = today - timedelta(days=today.weekday())          # lunes de esta semana
+        month_start = today.replace(day=1)
+        days_into_month = (today - month_start).days
+        # comparación
+        hoy_prev = today - timedelta(days=7)
+        week_prev_start = week_start - timedelta(days=7)
+        week_prev_end = today - timedelta(days=7)
+        if month_start.month == 1:
+            prev_month_start = month_start.replace(year=month_start.year - 1, month=12)
+        else:
+            prev_month_start = month_start.replace(month=month_start.month - 1)
+        prev_month_mtd_end = prev_month_start + timedelta(days=days_into_month)
+        lower = min(desde_30, week_prev_start, prev_month_start)
+
+        params = {
+            "lower": lower, "today": today,
+            "hoy_prev": hoy_prev,
+            "week_start": week_start,
+            "week_prev_start": week_prev_start, "week_prev_end": week_prev_end,
+            "month_start": month_start,
+            "prev_month_start": prev_month_start, "prev_month_mtd_end": prev_month_mtd_end,
+            "desde_30": desde_30,
+        }
         cur.execute("""
             SELECT fa.profesional_id, COALESCE(dp.nombre,'—') AS prof,
-                   COUNT(*) AS n,
-                   COALESCE(SUM(monto_pac.monto), 0)::int AS revenue
+              SUM(CASE WHEN fa.fecha = %(today)s THEN 1 ELSE 0 END) AS n_hoy,
+              COALESCE(SUM(CASE WHEN fa.fecha = %(today)s THEN monto_pac.monto ELSE 0 END),0)::int AS rev_hoy,
+              COALESCE(SUM(CASE WHEN fa.fecha = %(hoy_prev)s THEN monto_pac.monto ELSE 0 END),0)::int AS rev_hoy_prev,
+              SUM(CASE WHEN fa.fecha BETWEEN %(week_start)s AND %(today)s THEN 1 ELSE 0 END) AS n_sem,
+              COALESCE(SUM(CASE WHEN fa.fecha BETWEEN %(week_start)s AND %(today)s THEN monto_pac.monto ELSE 0 END),0)::int AS rev_sem,
+              COALESCE(SUM(CASE WHEN fa.fecha BETWEEN %(week_prev_start)s AND %(week_prev_end)s THEN monto_pac.monto ELSE 0 END),0)::int AS rev_sem_prev,
+              SUM(CASE WHEN fa.fecha BETWEEN %(month_start)s AND %(today)s THEN 1 ELSE 0 END) AS n_mes,
+              COALESCE(SUM(CASE WHEN fa.fecha BETWEEN %(month_start)s AND %(today)s THEN monto_pac.monto ELSE 0 END),0)::int AS rev_mes,
+              COALESCE(SUM(CASE WHEN fa.fecha BETWEEN %(prev_month_start)s AND %(prev_month_mtd_end)s THEN monto_pac.monto ELSE 0 END),0)::int AS rev_mes_prev,
+              SUM(CASE WHEN fa.fecha BETWEEN %(desde_30)s AND %(today)s THEN 1 ELSE 0 END) AS n_30,
+              COALESCE(SUM(CASE WHEN fa.fecha BETWEEN %(desde_30)s AND %(today)s THEN monto_pac.monto ELSE 0 END),0)::int AS rev_30
             FROM bi.fact_atenciones fa
             LEFT JOIN bi.dim_profesional dp ON dp.profesional_id = fa.profesional_id
             LEFT JOIN LATERAL (
               SELECT SUM(p.monto) AS monto FROM bi.fact_pagos p
               WHERE p.paciente_id = fa.paciente_id AND p.fecha = fa.fecha
             ) monto_pac ON true
-            WHERE fa.fecha BETWEEN %s AND %s
+            WHERE fa.fecha BETWEEN %(lower)s AND %(today)s
             GROUP BY fa.profesional_id, dp.nombre
-        """, (desde, today))
-        rows_30d = cur.fetchall()
-        prof_stats_30d = {r[0]: {"prof": r[1], "n": r[2], "rev": r[3]} for r in rows_30d}
+        """, params)
+        cols = ["prof", "n_hoy", "rev_hoy", "rev_hoy_prev", "n_sem", "rev_sem",
+                "rev_sem_prev", "n_mes", "rev_mes", "rev_mes_prev", "n_30", "rev_30"]
+        prof_stats_30d = {r[0]: dict(zip(cols, r[1:])) for r in cur.fetchall()}
+
+        def _pct(cur_v, prev_v):
+            # variación %; None si no hay base de comparación
+            if prev_v and prev_v > 0:
+                return round((cur_v - prev_v) / prev_v * 100)
+            return None
 
         for box in BOXES_CONFIG:
-            prof_stats = []
-            for pid in box["default_profs"]:
-                if pid in prof_stats_30d:
-                    prof_stats.append(prof_stats_30d[pid])
-            prof_stats.sort(key=lambda x: x["n"], reverse=True)
+            stats = [prof_stats_30d[pid] for pid in box["default_profs"] if pid in prof_stats_30d]
+            stats.sort(key=lambda x: x["n_30"], reverse=True)
+            def _sum(k): return sum(s[k] for s in stats)
+            rev_hoy, rev_sem, rev_mes = _sum("rev_hoy"), _sum("rev_sem"), _sum("rev_mes")
             historial.append({
                 "nombre": box["nombre"],
-                "profesionales_top": [p["prof"] for p in prof_stats[:3]],
-                "citas_30d": sum(p["n"] for p in prof_stats),
-                "revenue_30d": sum(p["rev"] for p in prof_stats),
+                "profesionales_top": [s["prof"] for s in stats[:3]],
+                "revenue_hoy": rev_hoy, "delta_hoy": _pct(rev_hoy, _sum("rev_hoy_prev")),
+                "revenue_sem": rev_sem, "delta_sem": _pct(rev_sem, _sum("rev_sem_prev")),
+                "revenue_mes": rev_mes, "delta_mes": _pct(rev_mes, _sum("rev_mes_prev")),
+                "revenue_30d": _sum("rev_30"),
+                "citas_30d": _sum("n_30"),
             })
 
         # Totales

@@ -378,7 +378,8 @@
 
 <!-- Historial -->
 <section class="max-w-7xl mx-auto mt-12">
-  <h2 class="text-lg font-bold mb-4">Historial de uso por box (últimos 30 días)</h2>
+  <h2 class="text-lg font-bold mb-1">Revenue por box</h2>
+  <p class="text-xs mb-4" style="color:var(--cmc-text-mute)">Hoy vs. mismo día semana pasada · semana vs. semana anterior · mes vs. mes anterior a la misma fecha · 30 días corridos</p>
   <div id="historial" class="bg-white rounded-xl border p-4" style="border-color:var(--cmc-border)">
     <p class="text-sm" style="color:var(--cmc-text-mute)">Cargando...</p>
   </div>
@@ -1426,17 +1427,37 @@ async function refresh() {
     render();
 
     if (d.historial && d.historial.length) {
+      const delta = (p) => {
+        if (p === null || p === undefined) return '';
+        const up = p >= 0;
+        const col = up ? '#16a34a' : '#dc2626';
+        const arr = up ? '▲' : '▼';
+        return ` <span style="color:${col};font-size:11px;font-weight:600;white-space:nowrap">(${arr}${Math.abs(p)}%)</span>`;
+      };
+      const cell = (rev, p, label) => `
+        <td class="py-2 text-right h-value" data-label="${label}">
+          <span class="money font-semibold" style="color:var(--cmc-navy)">${fmtCLP(rev)}</span>${delta(p)}
+        </td>`;
       document.getElementById('historial').innerHTML = `
         <table class="w-full text-sm">
           <thead class="text-[11px] uppercase tracking-wider border-b" style="border-color:var(--cmc-border);color:var(--cmc-text-mute)">
-            <tr><th class="text-left py-2">Box</th><th class="text-left py-2">Profesionales más frecuentes</th><th class="text-right py-2">Citas</th><th class="text-right py-2">Revenue 30d</th></tr>
+            <tr>
+              <th class="text-left py-2">Box</th>
+              <th class="text-left py-2">Profesionales más frecuentes</th>
+              <th class="text-right py-2">Hoy</th>
+              <th class="text-right py-2">Semana</th>
+              <th class="text-right py-2">Mes</th>
+              <th class="text-right py-2">30 días corridos</th>
+            </tr>
           </thead>
           <tbody>${d.historial.map(h => `
             <tr class="border-b last:border-0" style="border-color:#f0f4f8">
               <td class="py-2 font-semibold h-value" data-label="Box">${esc(h.nombre)}</td>
               <td class="py-2 h-label" style="color:var(--cmc-text-mute)" data-label="Profesionales">${h.profesionales_top.map(esc).join(' · ') || '<span class="italic">—</span>'}</td>
-              <td class="py-2 text-right money h-value" data-label="Citas 30d">${Number(h.citas_30d)||0}</td>
-              <td class="py-2 text-right money font-semibold h-value" data-label="Revenue 30d">${fmtCLP(h.revenue_30d)}</td>
+              ${cell(h.revenue_hoy, h.delta_hoy, 'Hoy')}
+              ${cell(h.revenue_sem, h.delta_sem, 'Semana')}
+              ${cell(h.revenue_mes, h.delta_mes, 'Mes')}
+              <td class="py-2 text-right money font-semibold h-value" data-label="30 días corridos" style="color:var(--cmc-navy)">${fmtCLP(h.revenue_30d)}</td>
             </tr>`).join('')}</tbody>
         </table>`;
     }
