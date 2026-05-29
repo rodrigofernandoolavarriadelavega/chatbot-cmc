@@ -450,6 +450,11 @@ async def enviar_reactivacion_pacientes(send_fn, send_template_fn=None):
                 await send_fn(p["phone"], msg)
                 body = msg.get("interactive", {}).get("body", {}).get("text", "[Reactivación]")
                 log_message(p["phone"], "out", body, "IDLE")
+            # Persistir intención para capturar respuesta de texto libre (TTL 48h).
+            # El consumer en flows.py IDLE la consume si el paciente responde "sí"
+            # sin tocar el botón (144/153 casos auditados en 14 días).
+            esp_reac = p.get("especialidad") or ""
+            set_pending_crosssell(p["phone"], "reactivacion", esp_reac)
             log.info("Reactivación enviada → %s (%s)", p["phone"], p.get("especialidad"))
         except Exception as e:
             log.error("Error reactivación phone=%s: %s", p.get("phone"), e)
@@ -515,6 +520,8 @@ async def enviar_adherencia_kine(send_fn, send_template_fn=None):
                 await send_fn(p["phone"], msg)
                 body = msg.get("interactive", {}).get("body", {}).get("text", "[Adherencia kine]")
                 log_message(p["phone"], "out", body, "IDLE")
+            # Persistir intención para capturar texto libre afirmativo (TTL 48h).
+            set_pending_crosssell(p["phone"], "adherencia_kine", "kinesiología")
             log.info("Adherencia kine enviada → %s", p["phone"])
         except Exception as e:
             log.error("Error adherencia kine phone=%s: %s", p.get("phone"), e)
@@ -588,6 +595,9 @@ async def enviar_recordatorio_control(send_fn, send_template_fn=None):
                     await send_fn(p["phone"], msg)
                     body = msg.get("interactive", {}).get("body", {}).get("text", f"[Control {especialidad}]")
                     log_message(p["phone"], "out", body, "IDLE")
+                # Persistir intención para capturar texto libre afirmativo (TTL 48h).
+                set_pending_crosssell(p["phone"], f"control_{especialidad.lower().replace(' ', '_')}",
+                                      especialidad.lower())
                 log.info("Control %s enviado → %s", especialidad, p["phone"])
             except Exception as e:
                 log.error("Error control %s phone=%s: %s", especialidad, p.get("phone"), e)
@@ -1065,6 +1075,9 @@ async def enviar_winback(send_fn):
             await send_fn(phone, msg)
             body = msg.get("interactive", {}).get("body", {}).get("text", "[Win-back]")
             log_message(phone, "out", body, "IDLE")
+            # Persistir intención para capturar texto libre afirmativo (TTL 48h).
+            esp_wb = p.get("especialidad") or ""
+            set_pending_crosssell(phone, "winback_fidelizacion", esp_wb)
             log.info("Win-back enviado → %s (%s, última: %s)",
                      phone, p.get("especialidad"), p.get("ultima_cita"))
         except Exception as e:

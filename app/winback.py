@@ -860,8 +860,12 @@ async def send_winback(candidato: dict) -> bool:
             template_name=template_name,
             body_params=body_params,
         )
-        from session import log_message as _lm_w1
+        from session import log_message as _lm_w1, set_pending_crosssell as _spc_wb
         _lm_w1(telefono, "out", _rtb_wb(template_name, body_params), "IDLE")
+        # Persistir intención para capturar respuesta de texto libre (TTL 48h).
+        # Cuando el paciente responde "sí" sin pulsar botón, flows.py IDLE
+        # consume el pending y ruta a _iniciar_agendar con la especialidad guardada.
+        _spc_wb(telefono, "winback_bi", especialidad or "")
         _registrar_envio(
             paciente_id=paciente_id,
             telefono=telefono,
@@ -1112,10 +1116,12 @@ async def _send_winback_session(candidato: dict) -> bool:
 
     try:
         from messaging import send_whatsapp_interactive
-        from session import log_message as _lm_ws
+        from session import log_message as _lm_ws, set_pending_crosssell as _spc_wbs
 
         await send_whatsapp_interactive(telefono, interactive)
         _lm_ws(telefono, "out", body_text, "IDLE")
+        # Persistir intención para capturar texto libre afirmativo (TTL 48h).
+        _spc_wbs(telefono, "winback_bi_session", especialidad or "")
 
         # Registrar con template_meta=SESSION_<cohorte> y value_clp=0
         _template_meta = f"SESSION_{cohorte}"

@@ -3231,14 +3231,22 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # interpretamos su intención y consumimos el pending para no perderlo.
         # Bug original (Ernesto 2026-05-28): bot ofreció kine, paciente respondió
         # "Sí, me interesa" y el bot cayó al menú genérico perdiendo el contexto.
-        _pending_cs = get_pending_crosssell(phone, hours=72)
-        if _pending_cs and tl and not tl.startswith(("x", "kine_", "reac_", "ctrl_")):
-            # Skip si ya es un button payload conocido (los handlers de abajo lo manejan).
+        _pending_cs = get_pending_crosssell(phone, hours=48)
+        # Guard: no interceptar si el texto ya es un button payload conocido;
+        # esos tienen handler dedicado más abajo y no necesitan clasificación.
+        # Se excluyen: cross-sell (x*), adherencia (kine_*), reactivación (reac_*),
+        # control (ctrl_*), winback interactivo (wb_*), confirmación citas (cita_*).
+        _PROACTIVE_BUTTON_PREFIXES = ("x", "kine_", "reac_", "ctrl_", "wb_", "cita_")
+        if _pending_cs and tl and not tl.startswith(_PROACTIVE_BUTTON_PREFIXES):
+            # Consumer unificado: cubre cross-sells originales + campañas proactivas
+            # (reactivacion, adherencia_kine, control_*, winback_bi, winback_bi_session,
+            # winback_fidelizacion). Todos comparten el mismo flujo: si el paciente
+            # responde afirmativamente en texto libre → _iniciar_agendar(destino).
             try:
                 _cs_destino = _pending_cs["destino"]
                 _cs_tipo = _pending_cs["tipo"]
                 _cs_decision = await clasificar_respuesta_crosssell(txt, _cs_destino)
-                log_event(phone, "crosssell_pending_consumido", {
+                log_event(phone, "proactive_pending_consumido", {
                     "tipo": _cs_tipo,
                     "destino": _cs_destino,
                     "decision": _cs_decision,
@@ -3250,7 +3258,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     if perfil:
                         data["rut_conocido"] = perfil["rut"]
                         data["nombre_conocido"] = perfil["nombre"]
-                    return await _iniciar_agendar(phone, data, _cs_destino)
+                    return await _iniciar_agendar(phone, data, _cs_destino or None)
                 if _cs_decision == "no":
                     consume_pending_crosssell(phone)
                     return (
