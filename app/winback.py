@@ -411,7 +411,23 @@ def get_candidatos_dia(cohorte: str, limite: int = 200) -> list[dict]:
                 (cohorte, limite),
             )
             cols = [d[0] for d in cur.description]
-            return [dict(zip(cols, row)) for row in cur.fetchall()]
+            filas = [dict(zip(cols, row)) for row in cur.fetchall()]
+
+    # Dedup por teléfono: la vista trae UNA FILA POR ATENCIÓN/ESPECIALIDAD, así
+    # que un mismo paciente aparece varias veces. Sin esto el batch envía un
+    # winback por cada fila → el 2026-05-29 nueve pacientes recibieron 2-4
+    # mensajes en 20 min. Conservamos la primera (orden dias_inactivo ASC =
+    # la atención más reciente, que da la mejor especialidad para el template).
+    vistos: set[str] = set()
+    unicos: list[dict] = []
+    for f in filas:
+        digits = "".join(c for c in str(f.get("telefono") or "") if c.isdigit())
+        clave = digits[-9:] if len(digits) >= 9 else digits
+        if not clave or clave in vistos:
+            continue
+        vistos.add(clave)
+        unicos.append(f)
+    return unicos
 
 
 # ── Excluir phones con cita futura en sessions.db ────────────────────────────
