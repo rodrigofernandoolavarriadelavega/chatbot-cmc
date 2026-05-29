@@ -4474,14 +4474,50 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     prof_ultima = (ultima or {}).get("profesional", "") or ""
                     data["quick_esp"] = esp_ultima
                     data["quick_prof"] = prof_ultima
+                    # FIX 5: buscar el próximo slot disponible y mostrarlo directamente.
+                    # Regla Meta-referral: ofrecer la hora concreta, no preguntar vago.
+                    _qb_smart, _qb_todos = [], []
+                    _qb_slot = None
+                    try:
+                        _prof_id_qb = (ultima or {}).get("id_profesional")
+                        if _prof_id_qb:
+                            _qb_smart, _qb_todos = await buscar_primer_dia(
+                                esp_ultima.lower(), solo_ids=[int(_prof_id_qb)]
+                            )
+                        if not _qb_todos:
+                            _qb_smart, _qb_todos = await buscar_primer_dia(esp_ultima.lower())
+                        _qb_slot = (_qb_smart[0] if _qb_smart else (_qb_todos[0] if _qb_todos else None))
+                    except Exception as _e_qb:
+                        log.debug("quick_book buscar_primer_dia falló: %s", _e_qb)
+
                     save_session(phone, "WAIT_QUICK_BOOK", data)
                     log_event(phone, "quick_book_offered", {
                         "especialidad": esp_ultima,
                         "esp_claude": especialidad or None,
+                        "slot_encontrado": bool(_qb_slot),
                     })
                     nombre_corto = _first_name(perfil.get("nombre"))
                     saludo = f"¡Hola de nuevo, *{nombre_corto}*! ⚡\n\n" if nombre_corto else "⚡ "
                     con_prof = f" con *{prof_ultima}*" if prof_ultima else ""
+                    if _qb_slot:
+                        # Mostrar hora concreta
+                        _qb_fecha = _qb_slot.get("fecha_display") or _qb_slot.get("fecha", "")
+                        _qb_hora = (_qb_slot.get("hora_inicio") or "")[:5]
+                        _qb_prof_display = _qb_slot.get("profesional") or prof_ultima
+                        _con_prof_display = f" con *{_qb_prof_display}*" if _qb_prof_display else con_prof
+                        data["slot_quick_book"] = _qb_slot
+                        save_session(phone, "WAIT_QUICK_BOOK", data)
+                        return _btn_msg(
+                            f"{saludo}Encontré una hora disponible de *{esp_ultima}*{_con_prof_display}:\n\n"
+                            f"📅 *{_qb_fecha}*  🕐 *{_qb_hora}*\n\n"
+                            f"¿Te la reservo?",
+                            [
+                                {"id": "quick_yes", "title": "✅ Sí, reservar"},
+                                {"id": "quick_other", "title": "🔄 Otra especialidad"},
+                                {"id": "quick_cancel", "title": "✋ Ahora no"},
+                            ]
+                        )
+                    # Sin slot disponible → fallback al flujo vago original
                     return _btn_msg(
                         f"{saludo}Vi que tu última visita fue de *{esp_ultima}*{con_prof}.\n\n"
                         f"¿Te agendo otra hora de lo mismo?",
@@ -5020,13 +5056,20 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         data["maso_duracion"] = duracion_maso
         smart, todos = await buscar_primer_dia("masoterapia", intervalo_override={59: duracion_maso})
         if not todos:
-            reset_session(phone)
             log_event(phone, "sin_disponibilidad", {"especialidad": "masoterapia"})
             save_tag(phone, "sin-disponibilidad")
-            return (
+            # FIX 2: ofrecer waitlist como en todas las demás especialidades
+            data["waitlist_especialidad"] = "masoterapia"
+            data["waitlist_id_prof_pref"] = 59
+            save_session(phone, "WAIT_WAITLIST_CONFIRM", data)
+            return _btn_msg(
                 f"No encontré disponibilidad para masoterapia en los próximos días 😕\n\n"
-                f"Llama a recepción:\n📞 *{CMC_TELEFONO}*\n\n"
-                "_Escribe *menu* para volver._"
+                "¿Quieres que te avise apenas se libere un cupo?\n\n"
+                f"También puedes llamarnos: 📞 *{CMC_TELEFONO}*",
+                [
+                    {"id": "waitlist_si", "title": "📝 Sí, inscribirme"},
+                    {"id": "waitlist_no", "title": "No, gracias"},
+                ]
             )
         fecha = todos[0]["fecha"]
         mejor = smart[0]
@@ -5098,9 +5141,18 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if tl in ("quick_yes", "si", "sí", "1", "agendar", "ok", "dale"):
             esp = data.get("quick_esp", "")
             log_event(phone, "quick_book_accepted", {"especialidad": esp})
-            # Limpiar flags del quick-book antes de pasar al flujo estándar
+            # FIX 5: si hay slot pre-buscado, ir directo a _slot_confirmed
+            # sin segunda búsqueda — reduce latencia y paso extra.
+            _slot_qb = data.pop("slot_quick_book", None)
             data.pop("quick_esp", None)
             data.pop("quick_prof", None)
+            if _slot_qb:
+                data["especialidad"] = esp
+                log_event(phone, "quick_book_slot_directo", {
+                    "esp": esp, "fecha": _slot_qb.get("fecha"),
+                    "hora": (_slot_qb.get("hora_inicio") or "")[:5],
+                })
+                return await _slot_confirmed(phone, data, _slot_qb)
             log_event(phone, "quick_book_iniciar_agendar", {"esp": esp or None, "data_keys": list(data.keys())})
             result_qb = await _iniciar_agendar(phone, data, esp or None)
             log_event(phone, "quick_book_agendar_ok", {"resp_type": type(result_qb).__name__})
@@ -5273,12 +5325,32 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                             {"id": "ecoca_menu", "title": "Volver al menú"},
                         ]
                     )
-                # Normal → iniciar agendar con la especialidad resuelta
+                # Normal → iniciar agendar con la especialidad resuelta.
+                # FIX 1a: guardar el texto original en _txt_raw para que
+                # _iniciar_agendar pueda llamar route_ecografia con el órgano
+                # ("abdominal", "renal", etc.) en vez de solo "ecografía", evitando
+                # el loop donde route_ecografia("ecografía") retorna None y vuelve
+                # a preguntar el tipo indefinidamente.
+                data["_txt_raw"] = txt
                 return await _iniciar_agendar(phone, data, _esp_eco_fi)
             else:
-                # Texto no reconocido como tipo de eco — volver a preguntar
-                log_event(phone, "ecografia_sin_tipo", {"txt": txt[:120], "reintento": True})
+                # Texto no reconocido como tipo de eco — volver a preguntar.
+                # FIX 1b: max 2 reintentos antes de escalar a recepcionista.
+                _eco_reintentos = data.get("eco_tipo_reintentos", 0) + 1
+                log_event(phone, "ecografia_sin_tipo", {
+                    "txt": txt[:120], "reintento": True, "intento": _eco_reintentos
+                })
+                if _eco_reintentos >= 2:
+                    # Escalar a recepción — el paciente no logra escribir el tipo
+                    log_event(phone, "ecografia_escalada_recepcion", {"txt": txt[:120]})
+                    save_session(phone, "HUMAN_TAKEOVER", {})
+                    return (
+                        "No logré identificar el tipo de ecografía que necesitas 😕\n\n"
+                        "Una recepcionista va a ayudarte directamente.\n\n"
+                        f"También puedes llamarnos: 📞 *{CMC_TELEFONO}*"
+                    )
                 data["wait_eco_tipo"] = True  # mantener el flag para el próximo intento
+                data["eco_tipo_reintentos"] = _eco_reintentos
                 save_session(phone, "WAIT_ESPECIALIDAD", data)
                 _MSG_REFI_FB = _MSG_REFI or (
                     "No reconocí ese tipo de ecografía. Por favor escribe uno de los tipos del menú:\n\n"
@@ -6420,6 +6492,42 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 return await _iniciar_agendar(phone, {}, apellido_key)
 
         # BUG-05: Bypass determinístico de precio en WAIT_SLOT con especialidad activa.
+        # FIX 7: pregunta sobre el procedimiento con slot activo de ginecología/eco.
+        # Si el paciente pregunta por transvaginal/pélvica/mamaria/etc. y ya hay
+        # un slot de ginecología o ecografía activo, responder contextualmente
+        # y re-ofrecer confirmar sin perder el slot.
+        _PROC_KW = (
+            "transvaginal", "transvajinal", "pelvica", "pélvica",
+            "mamaria", "mamas", "mama", "obstetrica", "obstétrica",
+            "realiza", "hacen", "hace ", "tienen", "ofrece",
+        )
+        _esp_slot_activo = (todos_slots[0].get("especialidad") if todos_slots else especialidad or "").lower()
+        _es_slot_gineco_eco = any(k in _esp_slot_activo for k in ("ginec", "ecograf", "matr"))
+        if (
+            idx is None
+            and _es_slot_gineco_eco
+            and any(k in tl_norm_slot for k in _PROC_KW)
+            and len(tl_norm_slot) >= 5
+        ):
+            # Construir respuesta contextual
+            _proc_slot = todos_slots[0] if todos_slots else {}
+            _prof_slot = _proc_slot.get("profesional", "el profesional")
+            _esp_slot_disp = _proc_slot.get("especialidad", "").capitalize() or especialidad.capitalize()
+            _precio_proc = _precio_line(_esp_slot_activo) or ""
+            _resp_proc = (
+                f"*{_prof_slot}* atiende {_esp_slot_disp} en el CMC, "
+                f"incluyendo ecografías transvaginales, pélvicas y obstétricas."
+                + (f"\n{_precio_proc}" if _precio_proc else "")
+            )
+            save_session(phone, "WAIT_SLOT", data)
+            return _btn_msg(
+                f"{_resp_proc}\n\n¿Continuamos con tu reserva?",
+                [
+                    {"id": "confirmar_sugerido", "title": "✅ Sí, reservar"},
+                    {"id": "otro_dia", "title": "📅 Otro horario"},
+                ]
+            )
+
         # Sin esto, inputs cortos como "precio" o "cuánto" pasan a detect_intent que
         # puede retornar intent != "precio" y la respuesta es inconsistente (FAQ genérica
         # o "comunícate con recepción"). Con especialidad activa: siempre precio directo.
@@ -6480,11 +6588,18 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 })
                 save_session(phone, "WAIT_SLOT", data)
                 return _format_slots((smart_neg or todos_neg)[:5], mostrar_todos=False)
-            save_session(phone, "WAIT_SLOT", data)
-            return (
-                "Entendido, no hay más horarios disponibles para esta especialidad en los próximos días 😕\n\n"
-                "Escribe *lista de espera* para que te avisemos cuando se libere un cupo, "
-                "o *llamar recepción* para más opciones."
+            # FIX 2: ofrecer waitlist con botones, no instrucción de texto libre
+            _wl_esp_neg = especialidad or data.get("especialidad", "")
+            data["waitlist_especialidad"] = _wl_esp_neg
+            data["waitlist_id_prof_pref"] = data.get("prof_sugerido_id")
+            save_session(phone, "WAIT_WAITLIST_CONFIRM", data)
+            return _btn_msg(
+                f"No hay más horarios disponibles para *{_wl_esp_neg or 'esta especialidad'}* en los próximos días 😕\n\n"
+                "¿Quieres que te avise apenas se libere un cupo?",
+                [
+                    {"id": "waitlist_si", "title": "📝 Sí, inscribirme"},
+                    {"id": "waitlist_no", "title": "No, gracias"},
+                ]
             )
 
         if idx is None:
@@ -6777,10 +6892,18 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     })
                     save_session(phone, "WAIT_SLOT", data)
                     return _format_slots((smart_mn or todos_mn)[:5], mostrar_todos=False)
-                save_session(phone, "WAIT_SLOT", data)
-                return (
-                    "No encontré más horarios disponibles para esta especialidad 😕\n\n"
-                    "Escribe *lista de espera* o *llamar recepción* para más opciones."
+                # FIX 2: ofrecer waitlist con botones, no instrucción de texto libre
+                _wl_esp_mn = _esp_modal_neg or especialidad or data.get("especialidad", "")
+                data["waitlist_especialidad"] = _wl_esp_mn
+                data["waitlist_id_prof_pref"] = data.get("prof_sugerido_id")
+                save_session(phone, "WAIT_WAITLIST_CONFIRM", data)
+                return _btn_msg(
+                    f"No encontré más horarios disponibles para *{_wl_esp_mn or 'esta especialidad'}* 😕\n\n"
+                    "¿Quieres que te avise apenas se libere un cupo?",
+                    [
+                        {"id": "waitlist_si", "title": "📝 Sí, inscribirme"},
+                        {"id": "waitlist_no", "title": "No, gracias"},
+                    ]
                 )
             # BUG-03: Escape explícito "no quiero" / "cancelar" / "salir" → reset limpio
             _NO_QUIERO_KW = ("no quiero", "no quero", "ya no quiero", "ya no", "no gracias",
@@ -7488,8 +7611,20 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                          {"id": "no", "title": "❌ No"}]
                     )
                 else:
-                    reset_session(phone)
-                    return "😔 Lo siento, esa hora fue tomada y no encontré otra disponible. Escribe *hola* para intentar de nuevo."
+                    # FIX 2: ofrecer waitlist cuando no hay alternativa
+                    _esp_tomada = data.get("especialidad", slot.get("especialidad", ""))
+                    _id_prof_tomado = slot.get("id_profesional")
+                    data["waitlist_especialidad"] = (_esp_tomada or "").lower()
+                    data["waitlist_id_prof_pref"] = _id_prof_tomado
+                    save_session(phone, "WAIT_WAITLIST_CONFIRM", data)
+                    return _btn_msg(
+                        "😔 Esa hora fue tomada y no encontré otra disponible.\n\n"
+                        "¿Quieres que te avise apenas se libere un cupo?",
+                        [
+                            {"id": "waitlist_si", "title": "📝 Sí, inscribirme"},
+                            {"id": "waitlist_no", "title": "No, gracias"},
+                        ]
+                    )
             resultado = await crear_cita(
                 id_paciente=paciente["id"],
                 id_profesional=slot["id_profesional"],
@@ -8638,8 +8773,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         save_session(phone, "CONFIRMING_CITA", data)
         slot = data["slot_elegido"]
         modalidad = data.get("modalidad", "particular").capitalize()
+        # FIX 6b: usar sexo para evitar la barra genérica
+        _sx_datos = (sexo or (paciente.get("sexo") or "")).upper()
+        _flex_datos = "Registrada" if _sx_datos == "F" else "Registrado"
         return _btn_msg(
-            f"¡Registrado/a, *{nombre}*! 🙌\n\n"
+            f"¡{_flex_datos}, *{nombre}*! 🙌\n\n"
             f"¿Confirmas esta hora?\n\n"
             f"👤 *{paciente['nombre']}*\n"
             f"🏥 *{slot['especialidad']}* — {slot['profesional']}\n"
@@ -8760,6 +8898,21 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
     # ── WAIT_REFERRAL_POST (1 mensaje post-confirmación, baja fricción) ──
     if state == "WAIT_REFERRAL_POST":
+        # FIX 4: si el paciente escribe una pregunta operativa, no descartarla
+        # con "Perfecto, gracias". Re-despachar a IDLE para respuesta real.
+        _tl_rp = tl.lower()
+        _OPERATIVAS_KW = (
+            "hora", "horario", "cambiar", "reagendar", "cancelar",
+            "precio", "valor", "cuesta", "cuánto", "cuanto",
+            "bono", "fonasa", "particular",
+            "dónde", "donde", "dirección", "direccion",
+            "transvaginal", "procedimiento",
+        )
+        if any(k in _tl_rp for k in _OPERATIVAS_KW) and len(tl.strip()) >= 4:
+            log_event(phone, "referral_post_pregunta_operativa", {"raw": txt[:120]})
+            reset_session(phone)
+            return await handle_message(phone, txt, {"state": "IDLE", "data": {}})
+
         _POST_MAP = {
             "ref_amigo": "amigo",
             "ref_rrss": "rrss",
@@ -9020,40 +9173,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         except Exception as _capi_reg_err:
             log.debug("CAPI CompleteRegistration create_task falló: %s", _capi_reg_err)
         # ── fin CAPI ───────────────────────────────────────────────────────
-        # Enviar mensaje de bienvenida (no-blocking)
-        try:
-            bienvenida = (
-                f"¡Bienvenido/a al *Centro Médico Carampangue*, *{nombre}*! 🏥\n\n"
-                "Desde ahora puedes:\n"
-                "• Agendar, cancelar o reagendar citas\n"
-                "• Consultar horarios y precios\n"
-                "• Recibir recordatorios automáticos\n\n"
-                "Todo escribiéndonos aquí por WhatsApp, a cualquier hora.\n"
-                "Si necesitas hablar con recepción, escribe *recepción*.\n\n"
-                f"📍 {_CMC_DIRECCION}\n"
-                f"📞 {CMC_TELEFONO}"
-            )
-            await send_whatsapp(phone, bienvenida)
-            from session import log_message as _log_msg
-            _log_msg(phone, "out", bienvenida, "CONFIRMING_CITA")
-            log_event(phone, "bienvenida_enviada", {})
-        except Exception as e:
-            log.warning("Error enviando bienvenida phone=%s: %s", phone, e)
-        # Generar código de referido para el nuevo paciente
-        try:
-            from session import generate_referral_code
-            ref_code = generate_referral_code(phone)
-            ref_msg = (
-                f"🎁 *Tu código de referido: {ref_code}*\n\n"
-                "Compártelo con amigos y familiares. "
-                "Cuando alguien se registre con tu código, "
-                "ambos recibirán un beneficio."
-            )
-            await send_whatsapp(phone, ref_msg)
-            from session import log_message as _lm_f9
-            _lm_f9(phone, "out", ref_msg, "CONFIRMING_CITA")
-        except Exception as e:
-            log.warning("Error generando código referido phone=%s: %s", phone, e)
+        # FIX 6a: la bienvenida y el código de referido inline interrumpían
+        # WAIT_REFERRAL_POST. Se eliminan — el mensaje de confirmación de cita
+        # ya cumple la función de bienvenida ("¡Listo, X! Ya estás registrado/a").
+        # El código de referido se generó silenciosamente arriba (generate_referral_code).
         data.update({"paciente": paciente, "rut": rut})
         save_session(phone, "CONFIRMING_CITA", data)
         slot = data["slot_elegido"]
@@ -10447,6 +10570,19 @@ def _modo_degradado(phone: str, intent: str, state_snap: str = "",
                 {"id": "waitlist_si", "title": "Sí, avísame"},
                 {"id": "waitlist_no", "title": "No, gracias"},
             ]
+        )
+
+    # FIX 3: si especialidad está vacía, preguntar antes de inscribir en waitlist;
+    # si hay especialidad pero intent != agendar, igualmente ofrecer waitlist.
+    if intent == "agendar" and not especialidad:
+        # No sabemos aún qué especialidad necesita → preguntar para poder inscribirlo
+        _data_ask = {"_modo_degradado_esp_pending": True, "intent_encolado": intent}
+        save_session(phone, "WAIT_ESPECIALIDAD", _data_ask)
+        return (
+            "Nuestro sistema de citas tiene un problema técnico en este momento 😕\n\n"
+            "¿Qué especialidad necesitas? "
+            "Cuando vuelva el sistema te agendo o te anoto en lista de espera.\n\n"
+            "_Ejemplo: Medicina General, Kinesiología, Ecografía…_"
         )
 
     reset_session(phone)

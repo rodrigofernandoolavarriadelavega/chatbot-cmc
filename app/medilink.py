@@ -258,52 +258,67 @@ async def _get(client: httpx.AsyncClient, url: str, **kwargs) -> httpx.Response:
     Serializado por _MEDILINK_SEM para evitar saturar Medilink con fan-out
     concurrente (Medilink rate-limita agresivamente cuando llegan >5 requests
     simultáneas, lo que tumbaba el circuit breaker).
+
+    El semáforo cubre SOLO la request HTTP. El sleep del backoff 429 ocurre
+    FUERA del async with para no bloquear los otros slots del semáforo durante
+    los 3-12s de espera (cascada 429 → semáforo bloqueado → todos los pacientes
+    esperando → crash total).
     """
-    async with _MEDILINK_SEM:
-        for attempt in range(3):
+    for attempt in range(3):
+        async with _MEDILINK_SEM:
             try:
                 r = await client.get(url, **kwargs)
                 if r.status_code == 429:
                     record_429(url)
                     wait = 3.0 * (2 ** attempt)  # 3s, 6s, 12s
                     log.warning("Medilink GET %s → 429 rate limit, esperando %.0fs (intento %d/3)", url, wait, attempt + 1)
-                    await asyncio.sleep(wait)
-                    continue
-                if r.status_code < 500:
+                    # sleep FUERA del semáforo — ver docstring
+                elif r.status_code < 500:
                     _report_up()
                     return r
-                log.warning("Medilink GET %s → %s (intento %d/3)", url, r.status_code, attempt + 1)
+                else:
+                    log.warning("Medilink GET %s → %s (intento %d/3)", url, r.status_code, attempt + 1)
             except (httpx.TimeoutException, httpx.NetworkError) as e:
                 log.warning("Medilink GET %s error red: %s (intento %d/3)", url, e, attempt + 1)
-            if attempt < 2:
+                r = None
+        # Backoff fuera del semáforo
+        if attempt < 2:
+            if r is not None and r.status_code == 429:
+                await asyncio.sleep(3.0 * (2 ** attempt))
+            else:
                 await asyncio.sleep(1.5 ** attempt)
-        _report_down(f"GET {url} sin respuesta tras 3 intentos")
-        raise httpx.RequestError(f"Medilink no respondió tras 3 intentos: {url}")
+    _report_down(f"GET {url} sin respuesta tras 3 intentos")
+    raise httpx.RequestError(f"Medilink no respondió tras 3 intentos: {url}")
 
 
 async def _post(client: httpx.AsyncClient, url: str, **kwargs) -> httpx.Response:
     """POST con 1 reintento ante errores de red, 5xx o 429 (rate limit).
-    Serializado por _MEDILINK_SEM (ver _get)."""
-    async with _MEDILINK_SEM:
-        for attempt in range(2):
+    Serializado por _MEDILINK_SEM (ver _get). El sleep ocurre FUERA del semáforo."""
+    for attempt in range(2):
+        async with _MEDILINK_SEM:
             try:
                 r = await client.post(url, **kwargs)
                 if r.status_code == 429:
                     record_429(url)
                     wait = 3.0 * (2 ** attempt)  # 3s, 6s
                     log.warning("Medilink POST %s → 429 rate limit, esperando %.0fs (intento %d/2)", url, wait, attempt + 1)
-                    await asyncio.sleep(wait)
-                    continue
-                if r.status_code < 500:
+                    # sleep FUERA del semáforo — ver _get docstring
+                elif r.status_code < 500:
                     _report_up()
                     return r
-                log.warning("Medilink POST %s → %s (intento %d/2)", url, r.status_code, attempt + 1)
+                else:
+                    log.warning("Medilink POST %s → %s (intento %d/2)", url, r.status_code, attempt + 1)
             except (httpx.TimeoutException, httpx.NetworkError) as e:
                 log.warning("Medilink POST %s error red: %s (intento %d/2)", url, e, attempt + 1)
-            if attempt < 1:
+                r = None
+        # Backoff fuera del semáforo
+        if attempt < 1:
+            if r is not None and r.status_code == 429:
+                await asyncio.sleep(3.0 * (2 ** attempt))
+            else:
                 await asyncio.sleep(1.5)
-        _report_down(f"POST {url} sin respuesta tras 2 intentos")
-        raise httpx.RequestError(f"Medilink no respondió tras 2 intentos: {url}")
+    _report_down(f"POST {url} sin respuesta tras 2 intentos")
+    raise httpx.RequestError(f"Medilink no respondió tras 2 intentos: {url}")
 
 
 async def _get_horario(client: httpx.AsyncClient, id_prof: int) -> dict:

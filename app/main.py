@@ -3014,16 +3014,17 @@ def api_boxes_config_get(token: str | None = Query(None)):
     )
     try:
         with conn.cursor() as cur:
-            cur.execute("SELECT layout, pisos, manual_overrides, schedules, updated_at FROM bi.boxes_state_global WHERE id=1")
+            cur.execute("SELECT layout, pisos, manual_overrides, schedules, weekly_template, updated_at FROM bi.boxes_state_global WHERE id=1")
             row = cur.fetchone()
             if not row:
-                return {"layout": [], "pisos": [], "manual_overrides": {}, "schedules": {}, "updated_at": None}
-            layout, pisos, overrides, schedules, updated = row
+                return {"layout": [], "pisos": [], "manual_overrides": {}, "schedules": {}, "weekly_template": {}, "updated_at": None}
+            layout, pisos, overrides, schedules, weekly, updated = row
             return {
                 "layout": layout or [],
                 "pisos": pisos or [],
                 "manual_overrides": overrides or {},
                 "schedules": schedules or {},
+                "weekly_template": weekly or {},
                 "updated_at": updated.isoformat() if updated else None,
             }
     finally:
@@ -3040,6 +3041,7 @@ async def api_boxes_config_put(request: Request, token: str | None = Query(None)
     pisos = body.get("pisos", [])
     overrides = body.get("manual_overrides", {})
     schedules = body.get("schedules", {})
+    weekly = body.get("weekly_template", {})
     import psycopg2
     import json as _js
     import os as _osc
@@ -3054,15 +3056,16 @@ async def api_boxes_config_put(request: Request, token: str | None = Query(None)
     try:
         with conn.cursor() as cur:
             cur.execute("""
-                INSERT INTO bi.boxes_state_global (id, layout, pisos, manual_overrides, schedules, updated_at)
-                VALUES (1, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, NOW())
+                INSERT INTO bi.boxes_state_global (id, layout, pisos, manual_overrides, schedules, weekly_template, updated_at)
+                VALUES (1, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, NOW())
                 ON CONFLICT (id) DO UPDATE SET
                   layout = EXCLUDED.layout,
                   pisos = EXCLUDED.pisos,
                   manual_overrides = EXCLUDED.manual_overrides,
                   schedules = EXCLUDED.schedules,
+                  weekly_template = EXCLUDED.weekly_template,
                   updated_at = NOW()
-            """, (_js.dumps(layout), _js.dumps(pisos), _js.dumps(overrides), _js.dumps(schedules)))
+            """, (_js.dumps(layout), _js.dumps(pisos), _js.dumps(overrides), _js.dumps(schedules), _js.dumps(weekly)))
             conn.commit()
         return {"ok": True}
     finally:
@@ -3161,364 +3164,370 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
         password=_osb.getenv("BI_DB_PASSWORD", "password123"),
         connect_timeout=5,
     )
-    cur = bi.cursor()
+    try:
+        cur = bi.cursor()
 
-    def _parse_h(s):
-        if not s: return None
-        try:
-            hh, mm = str(s).split(":")[:2]
-            return _dtime(int(hh), int(mm))
-        except Exception:
-            return None
+        def _parse_h(s):
+            if not s: return None
+            try:
+                hh, mm = str(s).split(":")[:2]
+                return _dtime(int(hh), int(mm))
+            except Exception:
+                return None
 
-    citas_hoy = []
+        citas_hoy = []
 
-    # Si es HOY: consultar Medilink en vivo (BI no está actualizado en tiempo real)
-    # Si es histórico: usar BI fact_citas como antes.
-    if is_today:
-        try:
-            from medilink import _get_shared_client, _get, _q, MEDILINK_BASE_URL, MEDILINK_SUCURSAL, HEADERS
-            client = _get_shared_client()
-            params = {
-                "id_sucursal": {"eq": MEDILINK_SUCURSAL},
-                "fecha": {"eq": today.isoformat()},
-                "estado_anulacion": {"eq": 0},
-            }
-            r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
-                           params={"q": _q(params)}, headers=HEADERS)
-            if r.status_code == 200:
-                import json as _j
-                data = r.json().get("data", [])
-                # Especialidad por profesional desde BI
-                cur.execute("""
-                    SELECT dp.profesional_id, dp.nombre, COALESCE(de.nombre,'')
-                    FROM bi.dim_profesional dp
-                    LEFT JOIN bi.dim_especialidad de ON de.especialidad_id = dp.especialidad_id
-                """)
-                prof_map = {r[0]: (r[1], r[2]) for r in cur.fetchall()}
-                for cita in data:
-                    pid = cita.get("id_profesional")
-                    prof_info = prof_map.get(pid, ("—", ""))
-                    pac_obj = cita.get("paciente") or {}
-                    pac_nombre = " ".join([pac_obj.get("nombre","") or "", pac_obj.get("apellido","") or ""]).strip()
-                    citas_hoy.append({
-                        "cita_id": cita.get("id"),
-                        "profesional_id": pid,
-                        "paciente_id": cita.get("id_paciente") or pac_obj.get("id"),
-                        "hora_inicio": _parse_h(cita.get("hora") or cita.get("hora_inicio")),
-                        "hora_fin": _parse_h(cita.get("hora_fin")),
-                        "estado": (cita.get("estado") or "agendada").lower(),
-                        "profesional": prof_info[0],
-                        "especialidad": prof_info[1],
-                        "paciente": pac_nombre or None,
-                    })
-        except Exception as _me:
-            import logging
-            logging.getLogger("boxes").warning("Medilink live error, fallback a BI: %s", _me)
+        # Si es HOY y Medilink no está caído: consultar en vivo (BI no está actualizado en tiempo real).
+        # Si el circuit breaker ya está activo, ir directo al fallback BI sin intentar la llamada.
+        # Si es histórico: usar BI fact_citas directamente.
+        if is_today and not is_medilink_down():
+            try:
+                from medilink import _get_shared_client, _get, _q, MEDILINK_BASE_URL, MEDILINK_SUCURSAL, HEADERS
+                client = _get_shared_client()
+                params = {
+                    "id_sucursal": {"eq": MEDILINK_SUCURSAL},
+                    "fecha": {"eq": today.isoformat()},
+                    "estado_anulacion": {"eq": 0},
+                }
+                r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
+                               params={"q": _q(params)}, headers=HEADERS)
+                if r.status_code == 200:
+                    import json as _j
+                    data = r.json().get("data", [])
+                    # Especialidad por profesional desde BI
+                    cur.execute("""
+                        SELECT dp.profesional_id, dp.nombre, COALESCE(de.nombre,'')
+                        FROM bi.dim_profesional dp
+                        LEFT JOIN bi.dim_especialidad de ON de.especialidad_id = dp.especialidad_id
+                    """)
+                    prof_map = {r[0]: (r[1], r[2]) for r in cur.fetchall()}
+                    for cita in data:
+                        pid = cita.get("id_profesional")
+                        prof_info = prof_map.get(pid, ("—", ""))
+                        pac_obj = cita.get("paciente") or {}
+                        pac_nombre = " ".join([pac_obj.get("nombre","") or "", pac_obj.get("apellido","") or ""]).strip()
+                        citas_hoy.append({
+                            "cita_id": cita.get("id"),
+                            "profesional_id": pid,
+                            "paciente_id": cita.get("id_paciente") or pac_obj.get("id"),
+                            "hora_inicio": _parse_h(cita.get("hora") or cita.get("hora_inicio")),
+                            "hora_fin": _parse_h(cita.get("hora_fin")),
+                            "estado": (cita.get("estado") or "agendada").lower(),
+                            "profesional": prof_info[0],
+                            "especialidad": prof_info[1],
+                            "paciente": pac_nombre or None,
+                        })
+            except Exception as _me:
+                import logging
+                logging.getLogger("boxes").warning("Medilink live error, fallback a BI: %s", _me)
 
-    # Fallback (histórico o si Medilink falló): BI fact_citas
-    if not citas_hoy:
+        # Fallback (histórico o si Medilink falló o circuit breaker activo): BI fact_citas
+        if not citas_hoy:
+            cur.execute("""
+                SELECT fc.cita_id, fc.profesional_id, fc.paciente_id, fc.hora_inicio,
+                       fc.hora_fin, fc.estado,
+                       COALESCE(dp.nombre, '—') AS profesional,
+                       COALESCE(de.nombre, '') AS especialidad,
+                       TRIM(CONCAT(COALESCE(pa.nombre,''),' ',COALESCE(pa.apellido,''))) AS paciente
+                FROM bi.fact_citas fc
+                LEFT JOIN bi.dim_profesional dp ON dp.profesional_id = fc.profesional_id
+                LEFT JOIN bi.dim_especialidad de ON de.especialidad_id = fc.especialidad_id
+                LEFT JOIN bi.dim_paciente pa ON pa.paciente_id = fc.paciente_id
+                WHERE fc.fecha = %s
+                  AND fc.estado IN ('agendada', 'atendida', 'confirmada', 'en_curso')
+                ORDER BY fc.hora_inicio
+            """, (today,))
+            for row in cur.fetchall():
+                cita_id, prof_id, pac_id, h_ini, h_fin, estado, prof, esp, pac = row
+                citas_hoy.append({
+                    "cita_id": cita_id, "profesional_id": prof_id, "paciente_id": pac_id,
+                    "hora_inicio": _parse_h(h_ini), "hora_fin": _parse_h(h_fin),
+                    "estado": estado, "profesional": prof, "especialidad": esp,
+                    "paciente": (pac or "").strip() or None,
+                })
+
+        # Pagos de hoy: SUM por paciente_id
         cur.execute("""
-            SELECT fc.cita_id, fc.profesional_id, fc.paciente_id, fc.hora_inicio,
-                   fc.hora_fin, fc.estado,
-                   COALESCE(dp.nombre, '—') AS profesional,
-                   COALESCE(de.nombre, '') AS especialidad,
-                   TRIM(CONCAT(COALESCE(pa.nombre,''),' ',COALESCE(pa.apellido,''))) AS paciente
-            FROM bi.fact_citas fc
-            LEFT JOIN bi.dim_profesional dp ON dp.profesional_id = fc.profesional_id
-            LEFT JOIN bi.dim_especialidad de ON de.especialidad_id = fc.especialidad_id
-            LEFT JOIN bi.dim_paciente pa ON pa.paciente_id = fc.paciente_id
-            WHERE fc.fecha = %s
-              AND fc.estado IN ('agendada', 'atendida', 'confirmada', 'en_curso')
-            ORDER BY fc.hora_inicio
+            SELECT paciente_id, SUM(monto)::int AS monto
+            FROM bi.fact_pagos
+            WHERE fecha = %s
+            GROUP BY paciente_id
         """, (today,))
-        for row in cur.fetchall():
-            cita_id, prof_id, pac_id, h_ini, h_fin, estado, prof, esp, pac = row
-            citas_hoy.append({
-                "cita_id": cita_id, "profesional_id": prof_id, "paciente_id": pac_id,
-                "hora_inicio": _parse_h(h_ini), "hora_fin": _parse_h(h_fin),
-                "estado": estado, "profesional": prof, "especialidad": esp,
-                "paciente": (pac or "").strip() or None,
-            })
+        pagos_por_pac = {r[0]: r[1] for r in cur.fetchall()}
 
-    # Pagos de hoy: SUM por paciente_id
-    cur.execute("""
-        SELECT paciente_id, SUM(monto)::int AS monto
-        FROM bi.fact_pagos
-        WHERE fecha = %s
-        GROUP BY paciente_id
-    """, (today,))
-    pagos_por_pac = {r[0]: r[1] for r in cur.fetchall()}
+        # Atribuir revenue: cada cita del día → suma del pago del paciente ese día,
+        # repartido si el paciente tuvo múltiples citas (proporcional).
+        pac_cita_count = {}
+        for c in citas_hoy:
+            pac_cita_count[c["paciente_id"]] = pac_cita_count.get(c["paciente_id"], 0) + 1
 
-    # Atribuir revenue: cada cita del día → suma del pago del paciente ese día,
-    # repartido si el paciente tuvo múltiples citas (proporcional).
-    pac_cita_count = {}
-    for c in citas_hoy:
-        pac_cita_count[c["paciente_id"]] = pac_cita_count.get(c["paciente_id"], 0) + 1
+        # Helper para encontrar a qué box va cada profesional con cita activa.
+        # 1) pasada por boxes fijos primero (kine1, kine2, box5) — asignan al prof default.
+        # 2) pasada por pools: dental, general, proced, psiconut → ordenan por hora_inicio.
+        box_assignments = {b["id"]: {"profesionales_activos": [], "proximo": None,
+                                      "citas_hoy_ids": set(), "revenue_dia": 0,
+                                      "citas_dia_count": 0} for b in BOXES_CONFIG}
 
-    # Helper para encontrar a qué box va cada profesional con cita activa.
-    # 1) pasada por boxes fijos primero (kine1, kine2, box5) — asignan al prof default.
-    # 2) pasada por pools: dental, general, proced, psiconut → ordenan por hora_inicio.
-    box_assignments = {b["id"]: {"profesionales_activos": [], "proximo": None,
-                                  "citas_hoy_ids": set(), "revenue_dia": 0,
-                                  "citas_dia_count": 0} for b in BOXES_CONFIG}
+        # Filter active citas: in progress now
+        def _is_active(c):
+            if not c["hora_inicio"]:
+                return False
+            if c["hora_fin"] and now_t > c["hora_fin"]:
+                return False
+            if now_t < c["hora_inicio"]:
+                return False
+            return c["estado"] in ("agendada", "atendida", "confirmada", "en_curso")
 
-    # Filter active citas: in progress now
-    def _is_active(c):
-        if not c["hora_inicio"]:
-            return False
-        if c["hora_fin"] and now_t > c["hora_fin"]:
-            return False
-        if now_t < c["hora_inicio"]:
-            return False
-        return c["estado"] in ("agendada", "atendida", "confirmada", "en_curso")
+        def _is_proximo(c):
+            if not c["hora_inicio"] or now_t >= c["hora_inicio"]:
+                return False
+            delta = (datetime.combine(today, c["hora_inicio"]) - now_cl.replace(tzinfo=None)).total_seconds() / 60.0
+            return 0 < delta <= 60
 
-    def _is_proximo(c):
-        if not c["hora_inicio"] or now_t >= c["hora_inicio"]:
-            return False
-        delta = (datetime.combine(today, c["hora_inicio"]) - now_cl.replace(tzinfo=None)).total_seconds() / 60.0
-        return 0 < delta <= 60
+        activas = [c for c in citas_hoy if _is_active(c)]
+        proximas = [c for c in citas_hoy if _is_proximo(c)]
 
-    activas = [c for c in citas_hoy if _is_active(c)]
-    proximas = [c for c in citas_hoy if _is_proximo(c)]
+        # Asignación: por cada cita activa, encontrar el box que la admita.
+        # Boxes fijos primero (modo='fijo' y prof_id en default_profs)
+        citas_asignadas = set()
+        for box in BOXES_CONFIG:
+            if box["modo"] != "fijo":
+                continue
+            for c in activas:
+                if c["cita_id"] in citas_asignadas:
+                    continue
+                if c["profesional_id"] in box["default_profs"]:
+                    elapsed = int((datetime.combine(today, now_t) - datetime.combine(today, c["hora_inicio"])).total_seconds() / 60)
+                    box_assignments[box["id"]]["profesionales_activos"].append({
+                        "profesional": c["profesional"],
+                        "especialidad": c["especialidad"],
+                        "paciente": _initials_pac(c["paciente"]) if c["paciente"] else None,
+                        "elapsed_min": max(0, elapsed),
+                        "cita_id": c["cita_id"],
+                        "paciente_id": c["paciente_id"],
+                    })
+                    box_assignments[box["id"]]["citas_hoy_ids"].add(c["cita_id"])
+                    citas_asignadas.add(c["cita_id"])
 
-    # Asignación: por cada cita activa, encontrar el box que la admita.
-    # Boxes fijos primero (modo='fijo' y prof_id en default_profs)
-    citas_asignadas = set()
-    for box in BOXES_CONFIG:
-        if box["modo"] != "fijo":
-            continue
+        # Pools: por cada cita activa restante, asignar al primer box libre del pool
+        pool_boxes = {}  # group → [box_ids in order]
+        for box in BOXES_CONFIG:
+            if box["modo"] == "pool":
+                pool_boxes.setdefault(box["pool_group"], []).append(box["id"])
+
         for c in activas:
             if c["cita_id"] in citas_asignadas:
                 continue
-            if c["profesional_id"] in box["default_profs"]:
-                elapsed = int((datetime.combine(today, now_t) - datetime.combine(today, c["hora_inicio"])).total_seconds() / 60)
-                box_assignments[box["id"]]["profesionales_activos"].append({
+            # Encontrar grupo del profesional
+            target_group = None
+            for box in BOXES_CONFIG:
+                if box["modo"] == "pool" and c["profesional_id"] in box["default_profs"]:
+                    target_group = box["pool_group"]
+                    break
+            if target_group is None:
+                continue
+            # Buscar primer box del grupo con cupo (max 2 profesionales simultáneos por box)
+            for box_id in pool_boxes.get(target_group, []):
+                if len(box_assignments[box_id]["profesionales_activos"]) < 2:
+                    elapsed = int((datetime.combine(today, now_t) - datetime.combine(today, c["hora_inicio"])).total_seconds() / 60)
+                    box_assignments[box_id]["profesionales_activos"].append({
+                        "profesional": c["profesional"],
+                        "especialidad": c["especialidad"],
+                        "paciente": _initials_pac(c["paciente"]) if c["paciente"] else None,
+                        "elapsed_min": max(0, elapsed),
+                        "cita_id": c["cita_id"],
+                        "paciente_id": c["paciente_id"],
+                    })
+                    box_assignments[box_id]["citas_hoy_ids"].add(c["cita_id"])
+                    citas_asignadas.add(c["cita_id"])
+                    break
+
+        # Próximas: el primer prof "próximo" se asigna como preview al box correspondiente
+        for c in proximas:
+            target_box_id = None
+            for box in BOXES_CONFIG:
+                if c["profesional_id"] in box["default_profs"]:
+                    target_box_id = box["id"]
+                    break
+            if not target_box_id:
+                continue
+            if box_assignments[target_box_id]["proximo"] is None and not box_assignments[target_box_id]["profesionales_activos"]:
+                starts_in = int((datetime.combine(today, c["hora_inicio"]) - datetime.combine(today, now_t)).total_seconds() / 60)
+                box_assignments[target_box_id]["proximo"] = {
                     "profesional": c["profesional"],
                     "especialidad": c["especialidad"],
-                    "paciente": _initials_pac(c["paciente"]) if c["paciente"] else None,
-                    "elapsed_min": max(0, elapsed),
-                    "cita_id": c["cita_id"],
-                    "paciente_id": c["paciente_id"],
-                })
-                box_assignments[box["id"]]["citas_hoy_ids"].add(c["cita_id"])
-                citas_asignadas.add(c["cita_id"])
+                    "starts_in_min": starts_in,
+                }
 
-    # Pools: por cada cita activa restante, asignar al primer box libre del pool
-    pool_boxes = {}  # group → [box_ids in order]
-    for box in BOXES_CONFIG:
-        if box["modo"] == "pool":
-            pool_boxes.setdefault(box["pool_group"], []).append(box["id"])
+        # Revenue del día por box: sumar todos los pagos del día de los pacientes
+        # cuyas citas (activas o no) hayan caído en este box.
+        # Para esto, primero asignar TODAS las citas del día a su box predeterminado.
+        citas_del_box = {b["id"]: [] for b in BOXES_CONFIG}
+        for c in citas_hoy:
+            # box destino: primer box donde el prof está en default_profs
+            for box in BOXES_CONFIG:
+                if c["profesional_id"] in box["default_profs"]:
+                    citas_del_box[box["id"]].append(c)
+                    break
 
-    for c in activas:
-        if c["cita_id"] in citas_asignadas:
-            continue
-        # Encontrar grupo del profesional
-        target_group = None
+        for box_id, ctas in citas_del_box.items():
+            rev = 0
+            for c in ctas:
+                ncitas_pac = pac_cita_count.get(c["paciente_id"], 1)
+                rev += (pagos_por_pac.get(c["paciente_id"], 0) / max(1, ncitas_pac))
+            box_assignments[box_id]["revenue_dia"] = int(rev)
+            box_assignments[box_id]["citas_dia_count"] = len(ctas)
+
+        # Estado del box
+        boxes_out = []
         for box in BOXES_CONFIG:
-            if box["modo"] == "pool" and c["profesional_id"] in box["default_profs"]:
-                target_group = box["pool_group"]
-                break
-        if target_group is None:
-            continue
-        # Buscar primer box del grupo con cupo (max 2 profesionales simultáneos por box)
-        for box_id in pool_boxes.get(target_group, []):
-            if len(box_assignments[box_id]["profesionales_activos"]) < 2:
-                elapsed = int((datetime.combine(today, now_t) - datetime.combine(today, c["hora_inicio"])).total_seconds() / 60)
-                box_assignments[box_id]["profesionales_activos"].append({
-                    "profesional": c["profesional"],
-                    "especialidad": c["especialidad"],
-                    "paciente": _initials_pac(c["paciente"]) if c["paciente"] else None,
-                    "elapsed_min": max(0, elapsed),
-                    "cita_id": c["cita_id"],
-                    "paciente_id": c["paciente_id"],
-                })
-                box_assignments[box_id]["citas_hoy_ids"].add(c["cita_id"])
-                citas_asignadas.add(c["cita_id"])
-                break
+            bid = box["id"]
+            asign = box_assignments[bid]
+            if asign["profesionales_activos"]:
+                estado_box = "ocupado"
+            elif asign["proximo"]:
+                estado_box = "proximo"
+            else:
+                estado_box = "libre"
+            boxes_out.append({
+                "id": bid,
+                "nombre": box["nombre"],
+                "piso": box["piso"],
+                "orden": box["orden"],
+                "tipo": box["tipo"],
+                "estado": estado_box,
+                "profesionales_activos": asign["profesionales_activos"],
+                "proximo": asign["proximo"],
+                "revenue_dia": asign["revenue_dia"],
+                "citas_dia": asign["citas_dia_count"],
+            })
 
-    # Próximas: el primer prof "próximo" se asigna como preview al box correspondiente
-    for c in proximas:
-        target_box_id = None
+        # Historial últimos 30 días: top 3 profesionales por box + revenue agregado
+        historial = []
+        desde = today - timedelta(days=30)
+        cur.execute("""
+            SELECT fa.profesional_id, COALESCE(dp.nombre,'—') AS prof,
+                   COUNT(*) AS n,
+                   COALESCE(SUM(monto_pac.monto), 0)::int AS revenue
+            FROM bi.fact_atenciones fa
+            LEFT JOIN bi.dim_profesional dp ON dp.profesional_id = fa.profesional_id
+            LEFT JOIN LATERAL (
+              SELECT SUM(p.monto) AS monto FROM bi.fact_pagos p
+              WHERE p.paciente_id = fa.paciente_id AND p.fecha = fa.fecha
+            ) monto_pac ON true
+            WHERE fa.fecha BETWEEN %s AND %s
+            GROUP BY fa.profesional_id, dp.nombre
+        """, (desde, today))
+        rows_30d = cur.fetchall()
+        prof_stats_30d = {r[0]: {"prof": r[1], "n": r[2], "rev": r[3]} for r in rows_30d}
+
         for box in BOXES_CONFIG:
-            if c["profesional_id"] in box["default_profs"]:
-                target_box_id = box["id"]
-                break
-        if not target_box_id:
-            continue
-        if box_assignments[target_box_id]["proximo"] is None and not box_assignments[target_box_id]["profesionales_activos"]:
-            starts_in = int((datetime.combine(today, c["hora_inicio"]) - datetime.combine(today, now_t)).total_seconds() / 60)
-            box_assignments[target_box_id]["proximo"] = {
+            prof_stats = []
+            for pid in box["default_profs"]:
+                if pid in prof_stats_30d:
+                    prof_stats.append(prof_stats_30d[pid])
+            prof_stats.sort(key=lambda x: x["n"], reverse=True)
+            historial.append({
+                "nombre": box["nombre"],
+                "profesionales_top": [p["prof"] for p in prof_stats[:3]],
+                "citas_30d": sum(p["n"] for p in prof_stats),
+                "revenue_30d": sum(p["rev"] for p in prof_stats),
+            })
+
+        # Totales
+        total_revenue = sum(b["revenue_dia"] for b in boxes_out)
+        total_ocupados = sum(1 for b in boxes_out if b["estado"] == "ocupado")
+        total_profs_activos = sum(len(b["profesionales_activos"]) for b in boxes_out)
+        total_citas = len(citas_hoy)
+
+        # Lista de TODOS los profesionales activos del CMC (para multi-select del editor)
+        cur.execute("""
+            SELECT dp.profesional_id, dp.nombre, COALESCE(de.nombre, '') AS especialidad
+            FROM bi.dim_profesional dp
+            LEFT JOIN bi.dim_especialidad de ON de.especialidad_id = dp.especialidad_id
+            WHERE dp.es_activo = true
+            ORDER BY dp.nombre
+        """)
+        profesionales_all = [
+            {"id": r[0], "nombre": r[1], "especialidad": r[2]} for r in cur.fetchall()
+        ]
+
+        # Citas del día completas (todas) para el editor de horarios hover
+        def _fmt_t(t):
+            if not t: return None
+            try: return f"{t.hour:02d}:{t.minute:02d}"
+            except Exception: return str(t)[:5]
+
+        citas_dia_full = []
+        for c in citas_hoy:
+            ncitas_pac = pac_cita_count.get(c["paciente_id"], 1)
+            monto_atrib = int(pagos_por_pac.get(c["paciente_id"], 0) / max(1, ncitas_pac))
+            citas_dia_full.append({
+                "cita_id": c["cita_id"],
+                "profesional_id": c["profesional_id"],
                 "profesional": c["profesional"],
                 "especialidad": c["especialidad"],
+                "paciente": _initials_pac(c["paciente"]) if c["paciente"] else None,
+                "hora_inicio": _fmt_t(c["hora_inicio"]),
+                "hora_fin": _fmt_t(c["hora_fin"]),
+                "estado": c["estado"],
+                "monto_atrib": monto_atrib,
+                "day_of_week": today.weekday(),
+            })
+
+        # Citas activas / próximas RAW (sin asignar a box) — para que el frontend
+        # con layout custom pueda re-asignar dinámicamente.
+        citas_raw = []
+        for c in citas_hoy:
+            if not (_is_active(c) or _is_proximo(c)):
+                continue
+            elapsed = None
+            starts_in = None
+            if _is_active(c):
+                elapsed = int((datetime.combine(today, now_t) - datetime.combine(today, c["hora_inicio"])).total_seconds() / 60)
+            else:
+                starts_in = int((datetime.combine(today, c["hora_inicio"]) - datetime.combine(today, now_t)).total_seconds() / 60)
+            citas_raw.append({
+                "cita_id": c["cita_id"],
+                "profesional_id": c["profesional_id"],
+                "profesional": c["profesional"],
+                "especialidad": c["especialidad"],
+                "paciente": _initials_pac(c["paciente"]) if c["paciente"] else None,
+                "elapsed_min": elapsed,
                 "starts_in_min": starts_in,
-            }
+                "is_active": _is_active(c),
+            })
 
-    # Revenue del día por box: sumar todos los pagos del día de los pacientes
-    # cuyas citas (activas o no) hayan caído en este box.
-    # Para esto, primero asignar TODAS las citas del día a su box predeterminado.
-    citas_del_box = {b["id"]: [] for b in BOXES_CONFIG}
-    for c in citas_hoy:
-        # box destino: primer box donde el prof está en default_profs
-        for box in BOXES_CONFIG:
-            if c["profesional_id"] in box["default_profs"]:
-                citas_del_box[box["id"]].append(c)
-                break
-
-    for box_id, ctas in citas_del_box.items():
-        rev = 0
-        for c in ctas:
+        # Revenue por profesional hoy (para que frontend sume al box custom asignado)
+        rev_por_prof = {}
+        citas_por_prof = {}
+        for c in citas_hoy:
+            pid = c["profesional_id"]
             ncitas_pac = pac_cita_count.get(c["paciente_id"], 1)
-            rev += (pagos_por_pac.get(c["paciente_id"], 0) / max(1, ncitas_pac))
-        box_assignments[box_id]["revenue_dia"] = int(rev)
-        box_assignments[box_id]["citas_dia_count"] = len(ctas)
+            rev_por_prof[pid] = rev_por_prof.get(pid, 0) + (pagos_por_pac.get(c["paciente_id"], 0) / max(1, ncitas_pac))
+            citas_por_prof[pid] = citas_por_prof.get(pid, 0) + 1
 
-    # Estado del box
-    boxes_out = []
-    for box in BOXES_CONFIG:
-        bid = box["id"]
-        asign = box_assignments[bid]
-        if asign["profesionales_activos"]:
-            estado_box = "ocupado"
-        elif asign["proximo"]:
-            estado_box = "proximo"
-        else:
-            estado_box = "libre"
-        boxes_out.append({
-            "id": bid,
-            "nombre": box["nombre"],
-            "piso": box["piso"],
-            "orden": box["orden"],
-            "tipo": box["tipo"],
-            "estado": estado_box,
-            "profesionales_activos": asign["profesionales_activos"],
-            "proximo": asign["proximo"],
-            "revenue_dia": asign["revenue_dia"],
-            "citas_dia": asign["citas_dia_count"],
-        })
-
-    # Historial últimos 30 días: top 3 profesionales por box + revenue agregado
-    historial = []
-    desde = today - timedelta(days=30)
-    cur.execute("""
-        SELECT fa.profesional_id, COALESCE(dp.nombre,'—') AS prof,
-               COUNT(*) AS n,
-               COALESCE(SUM(monto_pac.monto), 0)::int AS revenue
-        FROM bi.fact_atenciones fa
-        LEFT JOIN bi.dim_profesional dp ON dp.profesional_id = fa.profesional_id
-        LEFT JOIN LATERAL (
-          SELECT SUM(p.monto) AS monto FROM bi.fact_pagos p
-          WHERE p.paciente_id = fa.paciente_id AND p.fecha = fa.fecha
-        ) monto_pac ON true
-        WHERE fa.fecha BETWEEN %s AND %s
-        GROUP BY fa.profesional_id, dp.nombre
-    """, (desde, today))
-    rows_30d = cur.fetchall()
-    prof_stats_30d = {r[0]: {"prof": r[1], "n": r[2], "rev": r[3]} for r in rows_30d}
-
-    for box in BOXES_CONFIG:
-        prof_stats = []
-        for pid in box["default_profs"]:
-            if pid in prof_stats_30d:
-                prof_stats.append(prof_stats_30d[pid])
-        prof_stats.sort(key=lambda x: x["n"], reverse=True)
-        historial.append({
-            "nombre": box["nombre"],
-            "profesionales_top": [p["prof"] for p in prof_stats[:3]],
-            "citas_30d": sum(p["n"] for p in prof_stats),
-            "revenue_30d": sum(p["rev"] for p in prof_stats),
-        })
-
-    # Totales
-    total_revenue = sum(b["revenue_dia"] for b in boxes_out)
-    total_ocupados = sum(1 for b in boxes_out if b["estado"] == "ocupado")
-    total_profs_activos = sum(len(b["profesionales_activos"]) for b in boxes_out)
-    total_citas = len(citas_hoy)
-
-    # Lista de TODOS los profesionales activos del CMC (para multi-select del editor)
-    cur.execute("""
-        SELECT dp.profesional_id, dp.nombre, COALESCE(de.nombre, '') AS especialidad
-        FROM bi.dim_profesional dp
-        LEFT JOIN bi.dim_especialidad de ON de.especialidad_id = dp.especialidad_id
-        WHERE dp.es_activo = true
-        ORDER BY dp.nombre
-    """)
-    profesionales_all = [
-        {"id": r[0], "nombre": r[1], "especialidad": r[2]} for r in cur.fetchall()
-    ]
-
-    # Citas del día completas (todas) para el editor de horarios hover
-    def _fmt_t(t):
-        if not t: return None
-        try: return f"{t.hour:02d}:{t.minute:02d}"
-        except Exception: return str(t)[:5]
-
-    citas_dia_full = []
-    for c in citas_hoy:
-        citas_dia_full.append({
-            "cita_id": c["cita_id"],
-            "profesional_id": c["profesional_id"],
-            "profesional": c["profesional"],
-            "especialidad": c["especialidad"],
-            "paciente": _initials_pac(c["paciente"]) if c["paciente"] else None,
-            "hora_inicio": _fmt_t(c["hora_inicio"]),
-            "hora_fin": _fmt_t(c["hora_fin"]),
-            "estado": c["estado"],
-        })
-
-    # Citas activas / próximas RAW (sin asignar a box) — para que el frontend
-    # con layout custom pueda re-asignar dinámicamente.
-    citas_raw = []
-    for c in citas_hoy:
-        if not (_is_active(c) or _is_proximo(c)):
-            continue
-        elapsed = None
-        starts_in = None
-        if _is_active(c):
-            elapsed = int((datetime.combine(today, now_t) - datetime.combine(today, c["hora_inicio"])).total_seconds() / 60)
-        else:
-            starts_in = int((datetime.combine(today, c["hora_inicio"]) - datetime.combine(today, now_t)).total_seconds() / 60)
-        citas_raw.append({
-            "cita_id": c["cita_id"],
-            "profesional_id": c["profesional_id"],
-            "profesional": c["profesional"],
-            "especialidad": c["especialidad"],
-            "paciente": _initials_pac(c["paciente"]) if c["paciente"] else None,
-            "elapsed_min": elapsed,
-            "starts_in_min": starts_in,
-            "is_active": _is_active(c),
-        })
-
-    # Revenue por profesional hoy (para que frontend sume al box custom asignado)
-    rev_por_prof = {}
-    citas_por_prof = {}
-    for c in citas_hoy:
-        pid = c["profesional_id"]
-        ncitas_pac = pac_cita_count.get(c["paciente_id"], 1)
-        rev_por_prof[pid] = rev_por_prof.get(pid, 0) + (pagos_por_pac.get(c["paciente_id"], 0) / max(1, ncitas_pac))
-        citas_por_prof[pid] = citas_por_prof.get(pid, 0) + 1
-
-    cur.close()
-    bi.close()
-
-    return {
-        "now_cl": now_cl.strftime("%Y-%m-%d %H:%M:%S"),
-        "totales": {
-            "boxes_totales": len(BOXES_CONFIG),
-            "boxes_ocupados": total_ocupados,
-            "profesionales_activos": total_profs_activos,
-            "citas_dia": total_citas,
-            "revenue_dia": total_revenue,
-        },
-        "boxes": boxes_out,
-        "boxes_config_default": BOXES_CONFIG,
-        "profesionales_all": profesionales_all,
-        "citas_raw": citas_raw,
-        "citas_dia_full": citas_dia_full,
-        "rev_por_prof": {str(k): int(v) for k, v in rev_por_prof.items()},
-        "citas_por_prof": {str(k): int(v) for k, v in citas_por_prof.items()},
-        "historial": historial,
-    }
+        cur.close()
+        return {
+            "now_cl": now_cl.strftime("%Y-%m-%d %H:%M:%S"),
+            "totales": {
+                "boxes_totales": len(BOXES_CONFIG),
+                "boxes_ocupados": total_ocupados,
+                "profesionales_activos": total_profs_activos,
+                "citas_dia": total_citas,
+                "revenue_dia": total_revenue,
+            },
+            "boxes": boxes_out,
+            "boxes_config_default": BOXES_CONFIG,
+            "profesionales_all": profesionales_all,
+            "citas_raw": citas_raw,
+            "citas_dia_full": citas_dia_full,
+            "rev_por_prof": {str(k): int(v) for k, v in rev_por_prof.items()},
+            "citas_por_prof": {str(k): int(v) for k, v in citas_por_prof.items()},
+            "historial": historial,
+        }
+    finally:
+        bi.close()
 
 
 def _initials_pac(nombre: str | None) -> str:

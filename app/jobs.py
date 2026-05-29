@@ -116,9 +116,30 @@ async def _enviar_reenganche():
 
         # No reengancharse si todas las citas relevantes del paciente están canceladas.
         # Evita el mensaje "tienes una reserva pendiente" para una cita que ya no existe.
+        # Raíz del bug: el skip anterior solo hacía `continue` sin tocar la sesión, por lo
+        # que la sesión permanecía en WAIT_* y volvía en cada ciclo de 5 min indefinidamente
+        # (1839 eventos en 7 días, un phone disparado 47 veces). Fix: reset a IDLE inmediato.
         if phone_tiene_solo_citas_canceladas(phone):
             log_event(phone, "reenganche_skip_cita_cancelada", {"state": state})
-            log.info("Reenganche skip (cita cancelada) → %s", phone)
+            log.info("Reenganche skip (cita cancelada) → reset IDLE phone=%s", phone)
+            save_session(phone, "IDLE", {})
+            continue
+
+        # Límite de reintentos genérico: máximo 3 skips o TTL 2h desde el primer skip.
+        # Cubre condiciones de skip presentes o futuras que no sean cita cancelada.
+        # Persistencia: session.data["reenganche_skip_count"] y ["reenganche_first_skip_ts"].
+        import time as _time_reeng
+        _skip_count = data.get("reenganche_skip_count", 0)
+        _first_skip_ts = data.get("reenganche_first_skip_ts")
+        _now_ts = _time_reeng.time()
+        _ttl_exceeded = _first_skip_ts and (_now_ts - _first_skip_ts) > 7200  # 2h
+        if _skip_count >= 3 or _ttl_exceeded:
+            log_event(phone, "reenganche_exhausted", {
+                "state": state, "skip_count": _skip_count,
+                "ttl_exceeded": bool(_ttl_exceeded),
+            })
+            log.info("Reenganche exhausted → reset IDLE phone=%s skips=%d", phone, _skip_count)
+            save_session(phone, "IDLE", {})
             continue
 
         # Intentar obtener próximo slot real para la especialidad

@@ -513,6 +513,8 @@ Tu tarea es analizar el mensaje del paciente y devolver SOLO un JSON válido (si
   "respuesta_directa": "texto de respuesta si intent es precio/info/otro, o null"
 }}
 
+FORMATO JSON ESTRICTO: dentro del valor de cualquier campo string (especialmente respuesta_directa) las comillas dobles DEBEN escaparse como \" — NUNCA incluyas comillas dobles literales sin escapar dentro de un string JSON. Ejemplo correcto: "respuesta_directa": "El servicio se llama \"destartraje\"." — Ejemplo INCORRECTO: "respuesta_directa": "El servicio se llama "destartraje"."
+
 🚨 REGLA ABSOLUTA #1 — EMERGENCIAS / AMENAZA VITAL / CRISIS:
 Si el mensaje contiene CUALQUIER señal de:
 - Amenaza vital ("me muero", "me voy a morir", "creo que me muero", "no puedo respirar", "me ahogo")
@@ -1762,6 +1764,29 @@ async def detect_intent(mensaje: str, recepcion_resumen: list | None = None,
                 getattr(usage, "cache_creation_input_tokens", 0),
                 getattr(usage, "output_tokens", "?"),
             )
+        # Sanitización defensiva: repara comillas dobles no escapadas dentro del
+        # valor de respuesta_directa. Claude ocasionalmente emite JSON como:
+        #   "respuesta_directa": "El servicio se llama "destartraje"."
+        # lo que rompe el parser. La regex localiza el valor del campo y escapa
+        # las comillas internas (las del delimitador del campo quedan intactas).
+        # Si la regex falla por cualquier razón, text queda sin modificar.
+        try:
+            def _fix_inner_quotes(m: "re.Match") -> str:
+                prefix, content, suffix = m.group(1), m.group(2), m.group(3)
+                # Escapa comillas dobles que no estén ya precedidas por backslash
+                fixed = re.sub(r'(?<!\\)"', r'\\"', content)
+                return prefix + fixed + suffix
+            _sanitized = re.sub(
+                r'("respuesta_directa"\s*:\s*")(.*?)("(?:\s*[,}]))',
+                _fix_inner_quotes,
+                text,
+                flags=re.DOTALL,
+            )
+            if _sanitized != text:
+                log.info("detect_intent: sanitizadas comillas en respuesta_directa")
+                text = _sanitized
+        except Exception as _san_err:
+            log.warning("detect_intent: sanitización de comillas falló (ignorada): %s", _san_err)
         try:
             _result, _ = json.JSONDecoder().raw_decode(text.lstrip())
         except (json.JSONDecodeError, ValueError):

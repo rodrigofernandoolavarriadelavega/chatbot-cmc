@@ -142,6 +142,32 @@
   .load-bar .seg.filled { background: var(--cmc-aqua); }
   .load-bar .seg.current { background: var(--cmc-blue); }
   .load-bar-label { display: flex; justify-content: space-between; font-size: 8px; color: var(--cmc-text-mute); margin-top: 2px; font-family: 'IBM Plex Mono', monospace; }
+  /* Barra de pacientes (Medilink colors) */
+  .patient-bar {
+    display: flex; gap: 1px; margin-top: 3px;
+    height: 6px; border-radius: 3px; overflow: hidden;
+    background: #f1f5f7;
+  }
+  .patient-bar .pseg { flex: 1; background: #e8eef2; border-right: 1px solid rgba(255,255,255,0.6); }
+  .patient-bar .pseg:last-child { border-right: 0; }
+  .patient-bar .pseg.agendada { background: #d4dde2; }  /* gris claro */
+  .patient-bar .pseg.esperando { background: #F5C842; } /* amarillo Medilink */
+  .patient-bar .pseg.atendida { background: #5A8A6F; }  /* verde Medilink */
+  .patient-bar .pseg.current { box-shadow: inset 0 0 0 1px var(--cmc-navy); }
+  /* Leyenda */
+  .legend {
+    display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
+    font-size: 10px; color: var(--cmc-text-mute);
+    padding: 6px 12px; background: #fff; border: 1px solid var(--cmc-border);
+    border-radius: 999px;
+  }
+  .legend-item { display: inline-flex; align-items: center; gap: 5px; }
+  .legend-swatch { width: 12px; height: 6px; border-radius: 3px; display: inline-block; }
+  .ls-uso { background: var(--cmc-aqua); }
+  .ls-now { background: var(--cmc-blue); }
+  .ls-ag { background: #d4dde2; }
+  .ls-esp { background: #F5C842; }
+  .ls-at { background: #5A8A6F; }
   /* Detalle modal */
   #modalDetail .modal { max-width: 640px; }
   #modalDetail .detail-section { background: #f7fafc; border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; }
@@ -329,6 +355,14 @@
       <button class="filter-pill" data-filter="activos">Solo activos</button>
     </div>
   </div>
+  <div class="legend mt-2">
+    <span class="legend-item"><span class="legend-swatch ls-uso"></span> Uso del box (prof. asignado)</span>
+    <span class="legend-item"><span class="legend-swatch ls-now"></span> Hora actual</span>
+    <span style="opacity:0.4">·</span>
+    <span class="legend-item"><span class="legend-swatch ls-ag"></span> Paciente agendado</span>
+    <span class="legend-item"><span class="legend-swatch ls-esp"></span> En sala de espera</span>
+    <span class="legend-item"><span class="legend-swatch ls-at"></span> Atendido</span>
+  </div>
 </section>
 
 <div id="pisosContainer" class="max-w-7xl mx-auto">
@@ -413,7 +447,8 @@
 <div class="modal-bg" id="modalSchedule">
   <div class="modal" style="max-width:720px">
     <h2>Horarios — <span id="seBoxName"></span></h2>
-    <p class="text-xs mb-4" style="color:var(--cmc-text-mute)">Asigna profesionales con horarios custom (ej. 15:05 – 16:45). Si no agregás nada, se muestran las citas de Medilink BI automáticamente.</p>
+    <p class="text-xs mb-3" style="color:var(--cmc-text-mute)">Asigna profesionales con horarios custom (ej. 15:05 – 16:45). El "patrón semanal" se aplica todos los lunes / martes / etc. automáticamente.</p>
+    <div id="seModeSelector" class="mb-3 grid grid-cols-1 gap-1" style="border:1px solid var(--cmc-border);border-radius:8px;padding:4px"></div>
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead><tr style="background:var(--cmc-aqua-soft);color:var(--cmc-navy)">
@@ -514,13 +549,50 @@ function computeLoadBar(box) {
   }
   return segments;
 }
+// Barra de estado de pacientes (Medilink colors)
+function computePatientBar(box) {
+  // Filtrar citas del día cuyo prof_id pertenece al schedule de este box
+  // (vía findBoxForCita - usa schedule y default_profs)
+  const layout = getLayout();
+  const citas = (STATE.citas_dia_full || []).filter(c => findBoxForCita(c, layout) === box.id);
+  const nowH = new Date().getHours();
+  const segments = [];
+  for (let h = LOAD_HOURS_FROM; h < LOAD_HOURS_TO; h++) {
+    // Buscar cita cuya hora_inicio caiga en esta hora
+    const citasH = citas.filter(c => {
+      const t = parseInt(String(c.hora_inicio || '').slice(0,2));
+      return t === h;
+    });
+    // Prioridad de color: en_curso > atendida > esperando (presente) > agendada
+    let estado = null;
+    for (const c of citasH) {
+      const e = (c.estado || '').toLowerCase();
+      if (e.includes('atend')) { estado = 'atendida'; break; }
+      if (e.includes('present') || e.includes('espera')) { estado = 'esperando'; break; }
+      if (e.includes('agend') || e.includes('confirm')) estado = estado || 'agendada';
+    }
+    segments.push({ hour: h, estado, current: h === nowH });
+  }
+  return segments;
+}
 function renderLoadBar(box) {
   const segs = computeLoadBar(box);
   const bars = segs.map(s => {
     const cls = s.filled ? (s.current ? 'seg filled current' : 'seg filled') : (s.current ? 'seg current' : 'seg');
-    return `<span class="${cls}" title="${s.hour}:00"></span>`;
+    return `<span class="${cls}" title="${s.hour}:00 — uso del box"></span>`;
   }).join('');
-  return `<div class="load-bar">${bars}</div>
+  const pSegs = computePatientBar(box);
+  const pBars = pSegs.map(s => {
+    let cls = 'pseg';
+    if (s.estado === 'atendida') cls += ' atendida';
+    else if (s.estado === 'esperando') cls += ' esperando';
+    else if (s.estado === 'agendada') cls += ' agendada';
+    if (s.current) cls += ' current';
+    const title = `${s.hour}:00 — ${s.estado || 'sin pacientes'}`;
+    return `<span class="${cls}" title="${title}"></span>`;
+  }).join('');
+  return `<div class="load-bar" title="Uso del box por horario">${bars}</div>
+    <div class="patient-bar" title="Estado de pacientes">${pBars}</div>
     <div class="load-bar-label"><span>${LOAD_HOURS_FROM}:00</span><span>${LOAD_HOURS_TO}:00</span></div>`;
 }
 
@@ -632,32 +704,64 @@ function setManualOverride(boxId, prof) {
   scheduleSave();
 }
 
-// ---------- Schedules custom por box per día (backend) ----------
+// ---------- Schedules: override per-date > weekly template > BI fallback ----------
+function getActiveDate() { return selectedDate || new Date().toISOString().slice(0,10); }
+function getDayOfWeek(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  return (d.getDay() + 6) % 7; // 0=lunes
+}
+const DOW_NAMES = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+const DOW_NAMES_FULL = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+
 function getScheduleForBox(boxId) {
-  const today = new Date().toISOString().slice(0,10);
+  const date = getActiveDate();
   const all = CONFIG.schedules || {};
-  return (all[today] && all[today][boxId]) || null;
+  if (all[date] && all[date][boxId]) return all[date][boxId];
+  const dow = String(getDayOfWeek(date));
+  const wk = CONFIG.weekly_template || {};
+  if (wk[dow] && wk[dow][boxId]) return wk[dow][boxId];
+  return null;
 }
 function setScheduleForBox(boxId, entries) {
-  const today = new Date().toISOString().slice(0,10);
+  const date = getActiveDate();
   if (!CONFIG.schedules) CONFIG.schedules = {};
-  if (!CONFIG.schedules[today]) CONFIG.schedules[today] = {};
-  if (!entries || !entries.length) delete CONFIG.schedules[today][boxId];
-  else CONFIG.schedules[today][boxId] = entries;
+  if (!CONFIG.schedules[date]) CONFIG.schedules[date] = {};
+  if (!entries || !entries.length) delete CONFIG.schedules[date][boxId];
+  else CONFIG.schedules[date][boxId] = entries;
   scheduleSave();
 }
-// Combinar schedule custom + citas BI del box
+function getWeeklyForBox(boxId, dow) {
+  const wk = CONFIG.weekly_template || {};
+  return (wk[String(dow)] && wk[String(dow)][boxId]) || [];
+}
+function setWeeklyForBox(boxId, dow, entries) {
+  if (!CONFIG.weekly_template) CONFIG.weekly_template = {};
+  if (!CONFIG.weekly_template[String(dow)]) CONFIG.weekly_template[String(dow)] = {};
+  if (!entries || !entries.length) delete CONFIG.weekly_template[String(dow)][boxId];
+  else CONFIG.weekly_template[String(dow)][boxId] = entries;
+  scheduleSave();
+}
 function getCombinedScheduleForBox(box) {
-  const custom = getScheduleForBox(box.id);
-  if (custom && custom.length) return custom.slice().sort((a,b)=>a.h_ini.localeCompare(b.h_ini));
-  // Default: citas BI del día de los profesionales asignados al box
+  const explicit = getScheduleForBox(box.id);
+  if (explicit && explicit.length) return explicit.slice().sort((a,b)=>(a.h_ini||'').localeCompare(b.h_ini||''));
   const profIds = new Set(box.default_profs || []);
   const out = (STATE.citas_dia_full || []).filter(c => profIds.has(c.profesional_id)).map(c => ({
     prof_id: c.profesional_id, prof_nombre: c.profesional,
     h_ini: c.hora_inicio, h_fin: c.hora_fin,
-    paciente: c.paciente, estado: c.estado, is_bi: true,
+    paciente: c.paciente, estado: c.estado, monto: c.monto_atrib || 0, is_bi: true,
   }));
   return out.sort((a,b)=>(a.h_ini||'').localeCompare(b.h_ini||''));
+}
+function _hhmmInt(s) { if (!s || typeof s !== 'string') return null; const [h,m]=s.split(':'); return parseInt(h)*60+(parseInt(m)||0); }
+function _slotIncludes(entry, t) { const ini=_hhmmInt(entry.h_ini), fin=_hhmmInt(entry.h_fin); if (ini==null||fin==null||t==null) return false; return t>=ini && t<fin; }
+function findBoxForCita(cita, layout) {
+  const date = getActiveDate(); const dow = String(getDayOfWeek(date)); const t = _hhmmInt(cita.hora_inicio);
+  const overrides = (CONFIG.schedules || {})[date] || {};
+  for (const boxId in overrides) for (const e of (overrides[boxId] || [])) if (e.prof_id === cita.profesional_id && _slotIncludes(e, t)) return boxId;
+  const wk = (CONFIG.weekly_template || {})[dow] || {};
+  for (const boxId in wk) for (const e of (wk[boxId] || [])) if (e.prof_id === cita.profesional_id && _slotIncludes(e, t)) return boxId;
+  for (const b of layout) if ((b.default_profs || []).includes(cita.profesional_id)) return b.id;
+  return null;
 }
 
 // ---------- Asignación citas → box (cliente) ----------
@@ -689,36 +793,42 @@ function computeBoxState(layout) {
       });
     }
   }
-  // Auto: asignar citas activas a primer box con cupo. Saltear si el prof ya está
-  // en un override (para no duplicarlo).
+  // Auto-asignación: citas activas → box vía schedule (time-sliced)
+  const boxById = Object.fromEntries(boxes.map(b => [b.id, b]));
   for (const c of (STATE.citas_raw || []).filter(c=>c.is_active)) {
     if (overrideProfIds.has(c.profesional_id)) continue;
-    for (const b of boxes) {
-      if ((b.default_profs || []).includes(c.profesional_id) && b.profesionales_activos.length < 2) {
-        b.profesionales_activos.push({
-          profesional: c.profesional, especialidad: c.especialidad,
-          paciente: c.paciente, elapsed_min: c.elapsed_min,
-        });
-        break;
-      }
+    // Buscar la cita completa para tener hora_inicio
+    const full = (STATE.citas_dia_full || []).find(x => x.cita_id === c.cita_id) || c;
+    const targetBoxId = findBoxForCita(full, layout);
+    const target = targetBoxId && boxById[targetBoxId];
+    if (target && target.profesionales_activos.length < 3) {
+      target.profesionales_activos.push({
+        profesional: c.profesional, especialidad: c.especialidad,
+        paciente: c.paciente, elapsed_min: c.elapsed_min,
+      });
     }
   }
-  // Próximas: solo si box libre y sin override
+  // Próximas: solo si box libre
   for (const c of (STATE.citas_raw || []).filter(c=>!c.is_active)) {
     if (overrideProfIds.has(c.profesional_id)) continue;
-    for (const b of boxes) {
-      if ((b.default_profs || []).includes(c.profesional_id) && !b.proximo && b.profesionales_activos.length === 0) {
-        b.proximo = { profesional: c.profesional, especialidad: c.especialidad, starts_in_min: c.starts_in_min };
-        break;
-      }
+    const full = (STATE.citas_dia_full || []).find(x => x.cita_id === c.cita_id) || c;
+    const targetBoxId = findBoxForCita(full, layout);
+    const target = targetBoxId && boxById[targetBoxId];
+    if (target && !target.proximo && target.profesionales_activos.length === 0) {
+      target.proximo = { profesional: c.profesional, especialidad: c.especialidad, starts_in_min: c.starts_in_min };
     }
   }
-  // Revenue / citas por box
+  // Revenue / citas por box: cada cita del día se atribuye al box donde el prof
+  // estaba en su hora de inicio (vía findBoxForCita).
+  for (const cita of (STATE.citas_dia_full || [])) {
+    const targetBoxId = findBoxForCita(cita, layout);
+    if (!targetBoxId) continue;
+    const target = boxById[targetBoxId];
+    if (!target) continue;
+    target.revenue_dia += (cita.monto_atrib || 0);
+    target.citas_dia += 1;
+  }
   for (const b of boxes) {
-    for (const pid of (b.default_profs || [])) {
-      b.revenue_dia += (STATE.rev_por_prof[String(pid)] || 0);
-      b.citas_dia   += (STATE.citas_por_prof[String(pid)] || 0);
-    }
     b.estado = b.profesionales_activos.length ? 'ocupado' : (b.proximo ? 'proximo' : 'libre');
   }
   return boxes;
@@ -820,17 +930,15 @@ function openScheduleEditor(boxId) {
   renderScheduleEditor();
   document.getElementById('modalSchedule').classList.add('open');
 }
-function renderScheduleEditor() {
-  const sched = (getScheduleForBox(scheduleEditingBoxId) ||
-                 getCombinedScheduleForBox(getLayout().find(b => b.id === scheduleEditingBoxId) || {}))
-                 .map(s => ({
-                   prof_id: s.prof_id, prof_nombre: s.prof_nombre,
-                   h_ini: s.h_ini || '', h_fin: s.h_fin || '',
-                   paciente: s.paciente || '',
-                 }));
+function renderScheduleEditorRows(entries) {
+  entries = (entries || []).map(s => ({
+    prof_id: s.prof_id, prof_nombre: s.prof_nombre,
+    h_ini: s.h_ini || '', h_fin: s.h_fin || '',
+    paciente: s.paciente || '',
+  }));
   const profOpts = (STATE.profesionales_all || []).map(p =>
     `<option value="${p.id}" data-nombre="${esc(p.nombre)}">${esc(p.nombre)} — ${esc(p.especialidad)}</option>`).join('');
-  document.getElementById('seRows').innerHTML = sched.map((s, i) => `
+  document.getElementById('seRows').innerHTML = entries.map((s, i) => `
     <tr data-idx="${i}">
       <td><select class="se-prof" data-i="${i}">
         <option value="">— elegir profesional —</option>
@@ -841,13 +949,35 @@ function renderScheduleEditor() {
       <td><input type="text" class="se-pac" data-i="${i}" value="${esc(s.paciente)}" placeholder="Paciente (opc)" style="width:120px"></td>
       <td><button onclick="seDeleteRow(${i})" class="text-red-500 text-sm">✕</button></td>
     </tr>`).join('');
-  // Atajos onchange para sincronizar prof_nombre con select
   document.querySelectorAll('.se-prof').forEach(sel => {
     sel.addEventListener('change', () => {
       const opt = sel.options[sel.selectedIndex];
       sel.dataset.profNombre = opt ? opt.dataset.nombre : '';
     });
   });
+}
+function renderScheduleEditor() {
+  const dow = getDayOfWeek(getActiveDate());
+  const dowName = DOW_NAMES_FULL[dow];
+  const dateStr = getActiveDate();
+  // UI del selector de modo
+  const modeUI = document.getElementById('seModeSelector');
+  if (modeUI) {
+    modeUI.innerHTML = `
+      <label class="flex items-center gap-2 cursor-pointer p-2 rounded" style="background:var(--cmc-aqua-soft)">
+        <input type="radio" name="seMode" value="date" checked onchange="seSwitchMode('date')">
+        <span class="text-sm">Solo este día (<b>${dateStr}</b>)</span>
+      </label>
+      <label class="flex items-center gap-2 cursor-pointer p-2 rounded">
+        <input type="radio" name="seMode" value="weekly" onchange="seSwitchMode('weekly')">
+        <span class="text-sm">Todos los <b>${dowName}</b> (patrón semanal)</span>
+      </label>
+    `;
+  }
+  // Cargar entries iniciales: prioridad override > weekly > BI
+  const sched = getScheduleForBox(scheduleEditingBoxId) ||
+                getCombinedScheduleForBox(getLayout().find(b => b.id === scheduleEditingBoxId) || {});
+  renderScheduleEditorRows(sched);
 }
 function seCollectRows() {
   const rows = [];
@@ -885,14 +1015,36 @@ function seDeleteRow(i) {
 }
 function seSave() {
   const rows = seCollectRows().filter(r => r.prof_id && r.h_ini && r.h_fin);
-  setScheduleForBox(scheduleEditingBoxId, rows);
+  const mode = document.querySelector('input[name="seMode"]:checked')?.value || 'date';
+  if (mode === 'weekly') {
+    const dow = getDayOfWeek(getActiveDate());
+    setWeeklyForBox(scheduleEditingBoxId, dow, rows);
+  } else {
+    setScheduleForBox(scheduleEditingBoxId, rows);
+  }
   closeModal('modalSchedule');
   render();
 }
 function seResetToBI() {
-  setScheduleForBox(scheduleEditingBoxId, null);
+  const mode = document.querySelector('input[name="seMode"]:checked')?.value || 'date';
+  if (mode === 'weekly') {
+    setWeeklyForBox(scheduleEditingBoxId, getDayOfWeek(getActiveDate()), null);
+  } else {
+    setScheduleForBox(scheduleEditingBoxId, null);
+  }
   closeModal('modalSchedule');
   render();
+}
+function seSwitchMode(mode) {
+  // Cargar entries del modo seleccionado
+  const dow = getDayOfWeek(getActiveDate());
+  let entries = [];
+  if (mode === 'weekly') {
+    entries = getWeeklyForBox(scheduleEditingBoxId, dow);
+  } else {
+    entries = (CONFIG.schedules?.[getActiveDate()]?.[scheduleEditingBoxId]) || [];
+  }
+  renderScheduleEditorRows(entries);
 }
 
 // ---------- Modal asignar manual ----------
@@ -1280,9 +1432,18 @@ async function refresh() {
 (async () => {
   await fetchConfig();
   refresh();
-  setInterval(refresh, 30000);
+  let refreshTimer = setInterval(refresh, 30000);
   // Refrescar config cada 60s (cross-device sync)
   setInterval(async () => { await fetchConfig(); render(); }, 60000);
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+    } else {
+      refresh();
+      refreshTimer = setInterval(refresh, 30000);
+    }
+  });
 })();
 </script>
 </body>
