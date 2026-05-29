@@ -2419,6 +2419,51 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     if tl.startswith(("cita_confirm:", "cita_reagendar:", "cita_cancelar:")):
         return await _handle_confirmacion_precita(phone, tl, data)
 
+    # ── Texto libre de confirmación de recordatorio ───────────────────────────
+    # Caso real: bot envió recordatorio con botones, paciente responde texto libre
+    # ("Confirmo", "Sí asistiré", "ahí estaré", "ok") en vez de tocar el botón.
+    # Si el phone tiene una cita futura con reminder_sent=1 y sin confirmation_status,
+    # interpretar afirmaciones como confirmación y acusar recibo SIN abrir flujo
+    # de agendamiento. Solo aplica si la sesión está en IDLE (el recordatorio
+    # llega cuando el paciente no está en ningún flujo activo).
+    _TOKENS_CONFIRM_RECOD = {
+        "confirmo", "confirmar", "confirmado", "confirmada",
+        "asistire", "asistiré", "ahi estare", "ahí estaré",
+        "alli estare", "allí estaré", "voy a asistir", "voy a ir",
+        "si asistire", "sí asistiré", "si voy", "sí voy",
+        "si confirmo", "sí confirmo", "si, confirmo", "sí, confirmo",
+        "ahí estoy", "ahi estoy",
+        "confirmo mi hora", "confirmo asistencia",
+    }
+    if state == "IDLE" and tl_norm in _TOKENS_CONFIRM_RECOD:
+        try:
+            from session import _conn as _conn_rc
+            import time as _time_rc
+            # Buscar cita futura con recordatorio enviado y sin respuesta aún
+            _hoy_rc = datetime.now(_CHILE_TZ).strftime("%Y-%m-%d")
+            with _conn_rc() as _c_rc:
+                _fila_rc = _c_rc.execute(
+                    "SELECT id_cita, especialidad, profesional, fecha, hora "
+                    "FROM citas_bot "
+                    "WHERE phone=? AND fecha >= ? AND reminder_sent=1 "
+                    "AND (confirmation_status IS NULL OR confirmation_status='') "
+                    "AND (cancel_detected_at IS NULL) "
+                    "ORDER BY fecha ASC, hora ASC LIMIT 1",
+                    (phone, _hoy_rc),
+                ).fetchone()
+            if _fila_rc:
+                _id_cita_rc = str(_fila_rc["id_cita"])
+                mark_cita_confirmation(_id_cita_rc, phone, "confirmed")
+                log_event(phone, "cita_confirmada_texto_libre", {
+                    "id_cita": _id_cita_rc,
+                    "especialidad": _fila_rc["especialidad"],
+                    "txt": txt[:80],
+                })
+                return "Perfecto, te esperamos. Hasta pronto."
+        except Exception as _e_rc:
+            log.warning("confirm_recordatorio_texto_libre falló: %s", _e_rc)
+        # Si no hay cita con recordatorio pendiente, dejar caer al flujo normal
+
     # ── Respuesta al reenganche "No por ahora" ────────────────────────────────
     # Bug 2026-04-25 (56933748605, 15:32): el botón de jobs.py mandaba
     # "no_gracias_reeng" pero no había handler → caía en HUMAN_TAKEOVER y el
@@ -4187,6 +4232,17 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         ) and not _ES_PREGUNTA_INFO:
             log_event(phone, "intent_detectado_local", {"esp": _esp_idle})
             data["_txt_raw"] = txt
+            # Si la especialidad detectada es "medicina general" pero el texto
+            # original mencionaba "pediatra/pediatría", marcar para que
+            # _iniciar_agendar muestre el saludo_prefix explicativo.
+            _PEDIATRIA_ALIAS = (
+                "pediatra", "pediatría", "pediatria", "pediátrico",
+                "pediatrico", "medico infantil", "médico infantil",
+                "doctor infantil", "medico para niños", "médico para niños",
+                "doctor para niños", "medico para ninos",
+            )
+            if _esp_idle == "medicina general" and any(k in tl_norm for k in _PEDIATRIA_ALIAS):
+                data["_pediatra_a_mg"] = True
             return await _iniciar_agendar(phone, data, _esp_idle)
         # Pregunta "¿realizan X?" (existencia del servicio) con especialidad →
         # FAQ local antes de Claude. Robusto ante outages.
@@ -4332,6 +4388,81 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             _meta_referral_ctx = _get_ref(phone, ttl_horas=24)
         except Exception:
             pass
+
+        # ── Pre-check: retiro de informe, preparación de examen, laboratorio ──
+        # Estas intenciones no tienen especialidad que agendar — no deben llegar
+        # a detect_intent ni caer en el loop "¿qué especialidad necesitas?".
+        # Datos usados: solo teléfono de recepción (CMC_TELEFONO, CMC_TELEFONO_FIJO)
+        # que ya existen en el módulo. NO se inventan plazos ni instrucciones
+        # de preparación (no están en el código) — se deriva a recepción.
+        _tl_pre = tl_norm
+        _es_retiro = any(k in _tl_pre for k in (
+            "retiro informe", "retirar informe", "buscar informe",
+            "retirar resultado", "retiro resultado", "buscar resultado",
+            "retirar mi informe", "buscar mi informe",
+            "retiro de informe", "retiro de resultado", "retirar mi resultado",
+            "informe listo", "resultado listo", "ya esta mi informe",
+            "ya esta mi resultado", "cuando puedo retirar", "cuando retiro",
+            "cuando busco mi informe", "cuando busco el informe",
+            "pasaron los dias", "pasaron los dias y no", "ya paso",
+        ))
+        _es_prep_examen = any(k in _tl_pre for k in (
+            "preparacion para", "preparacion de", "como prepararme",
+            "que debo hacer antes", "ayuno", "en ayunas", "vejiga llena",
+            "preparacion ecografi", "como es la preparacion",
+            "como vengo para", "debo venir en ayunas", "tengo que venir en ayunas",
+        ))
+        _es_laboratorio = any(k in _tl_pre for k in (
+            "toma de muestra", "toma de sangre", "examen de sangre",
+            "examen de orina", "hemograma", "glucosa en ayuno",
+            "perfil lipidico", "perfil bioquimico", "hacer examenes",
+            "hacerme examenes", "examenes de laboratorio", "pedir examenes",
+            "solicitar examenes",
+        ))
+        # Guard: si el mensaje TAMBIÉN contiene intención de agendar/ver especialidad,
+        # no interrumpir con el mensaje de derivación — dejar que detect_intent lo maneje.
+        _tiene_intent_agendar = any(k in _tl_pre for k in (
+            "hora", "agendar", "cita", "reservar", "quiero ver", "necesito ver",
+            "consulta", "medico", "médico", "doctor", "ecografia", "ecografía",
+            "eco", "cardiolog", "ginecolog", "traumatol", "nutrici", "psicolog",
+            "kinesi", "odontol", "otorrinol", "gastroenterol", "fonoaudiolog",
+            "matrona", "podolog", "masoterapia", "endodoncia", "ortodoncia",
+            "implantol", "estetica", "estética",
+        ))
+        if _es_retiro and not _tiene_intent_agendar:
+            log_event(phone, "intent_retiro_informe", {"txt": txt[:120]})
+            reset_session(phone)
+            return (
+                "Para el retiro de informes o resultados, comunícate con recepción:\n\n"
+                f"📞 *{CMC_TELEFONO}*\n"
+                f"☎️ *{CMC_TELEFONO_FIJO}*\n\n"
+                "Horario de atención: lun-vie 08:00-21:00 · sáb 09:00-14:00."
+            )
+        if _es_prep_examen and not _tiene_intent_agendar:
+            log_event(phone, "intent_preparacion_examen", {"txt": txt[:120]})
+            reset_session(phone)
+            return (
+                "Las indicaciones de preparación varían según el tipo de examen.\n\n"
+                "Para confirmarlo, consulta con recepción:\n\n"
+                f"📞 *{CMC_TELEFONO}*\n"
+                f"☎️ *{CMC_TELEFONO_FIJO}*\n\n"
+                "Horario: lun-vie 08:00-21:00 · sáb 09:00-14:00."
+            )
+        if _es_laboratorio and not _tiene_intent_agendar:
+            # El CMC no realiza toma de muestras de laboratorio. El médico
+            # puede dar la orden para hacerlos en un laboratorio externo.
+            log_event(phone, "intent_laboratorio_externo", {"txt": txt[:120]})
+            save_demanda_no_disponible(phone, "laboratorio/toma de muestras", "servicio")
+            reset_session(phone)
+            return (
+                "El CMC no realiza toma de muestras de laboratorio directamente.\n\n"
+                "Nuestros médicos pueden darte la *orden médica* para que te los hagas "
+                "en un laboratorio cercano.\n\n"
+                "Si necesitas una consulta para solicitar exámenes, escribe *agendar* "
+                "o llama a recepción:\n\n"
+                f"📞 *{CMC_TELEFONO}*\n"
+                f"☎️ *{CMC_TELEFONO_FIJO}*"
+            )
 
         result = await detect_intent(txt, recepcion_resumen=_recepcion_resumen,
                                      meta_referral=_meta_referral_ctx)
@@ -4642,6 +4773,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 except Exception as _e_orto4:
                     log.warning("ortodoncia activo check phone=%s: %s", phone, _e_orto4)
 
+            # Si Claude detectó pediatría y el normalizador la mapeó a MG,
+            # marcar para que _iniciar_agendar muestre aclaración.
+            if (especialidad or "").lower().strip() in (
+                "pediatría", "pediatria", "pediatra",
+                "médico infantil", "medico infantil",
+            ):
+                data["_pediatra_a_mg"] = True
+                especialidad = "medicina general"
             return await _iniciar_agendar(phone, data, especialidad)
 
         if intent == "reagendar":
@@ -11181,6 +11320,18 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
     if data.get("fecha_pedida_idle") and not data.get("fecha_preferida"):
         data["fecha_preferida"] = data.pop("fecha_pedida_idle")
 
+    # Pediatría solicitada → Medicine General con aclaración explícita.
+    # El flag _pediatra_a_mg lo setea IDLE cuando detecta alias pediátrico.
+    if data.pop("_pediatra_a_mg", False) and not saludo_prefix:
+        saludo_prefix = (
+            "Nuestros médicos generales atienden pacientes de todas las edades, "
+            "incluidos niños.\n\n"
+            "Para atención pediátrica especializada, lo más adecuado es el CESFAM "
+            "o el Hospital de Arauco, pero para consultas generales o de morbilidad "
+            "en niños, nuestros médicos pueden ayudarte.\n\n"
+            "Te muestro la disponibilidad 👇\n\n"
+        )
+
     # Medicina general: stage 0 = slot más próximo entre Abarca (08-16) y Olavarría (16-21).
     # Márquez (15-20) solo aparece como overflow si Abarca+Olavarría no tienen cupo.
     if especialidad_lower in _ESP_MED_GENERAL:
@@ -11263,10 +11414,23 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
             else:
                 # Sin cupo ese día específico — marcar para disclaimer y caer al siguiente
                 data["_aviso_sin_fecha_pedida"] = _fecha_pref
-                smart, todos = await buscar_primer_dia(especialidad_lower)
+                try:
+                    smart, todos = await buscar_primer_dia(especialidad_lower)
+                except Exception as _e_bp:
+                    log.warning("buscar_primer_dia excepción esp=%s: %s", especialidad_lower, _e_bp)
+                    smart, todos = [], []
             data.pop("fecha_preferida", None)
         else:
-            smart, todos = await buscar_primer_dia(especialidad_lower)
+            # FIX 4: capturar excepción de Medilink (ej: ORL sin agenda abierta)
+            # y tratar como 0 slots — así ofrece waitlist en vez de "error técnico".
+            # "0 slots sin error" ya llega aquí con ([], []) y fluye a waitlist.
+            # Solo con excepción real (timeout, HTTP 5xx) el código llegaba al
+            # except del webhook y mostraba "Tuve un problema técnico".
+            try:
+                smart, todos = await buscar_primer_dia(especialidad_lower)
+            except Exception as _e_bp:
+                log.warning("buscar_primer_dia excepción esp=%s: %s", especialidad_lower, _e_bp)
+                smart, todos = [], []
         mejor = smart[0] if smart else (todos[0] if todos else None)
 
     # Normaliza display de especialidad (ej: Psicologia Infantil vs Adulto)
