@@ -742,6 +742,45 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <main id="main">
 
 <!-- ========== HERO ========== -->
+<style>
+  /* Variante A: foto real de fachada en el panel del hero (en vez del logo).
+     Scoped a .hero-visual--photo para no afectar otras páginas que comparten sitio.css. */
+  .hero-visual.hero-visual--photo { aspect-ratio: 4/3; overflow: visible; }
+  .hero-visual--photo picture { display: block; width: 100%; height: 100%; }
+  .hero-visual--photo .hero-fachada-img {
+    width: 100%; height: 100%;
+    object-fit: cover; object-position: center;
+    border-radius: var(--radius-xl);
+    border: 6px solid #fff;
+    box-shadow: 0 30px 70px -20px rgba(15,63,104,0.45);
+    display: block;
+  }
+  /* Re-mostrar el overlay inferior (sede + rating) sobre la foto */
+  .hero-visual.hero-visual--photo .overlay-team { display: flex; }
+  /* Chip "Disponible por WhatsApp" flotando a la DERECHA (sobre el edificio,
+     para no tapar el letrero que queda a la izquierda de la foto) */
+  /* clip horizontal para que el chip pueda sobresalir sin generar scroll lateral */
+  .hero { overflow-x: clip; }
+  .hero-visual.hero-visual--photo .floating-chip {
+    display: flex;
+    top: 20px; right: -32px; left: auto;
+    padding: 8px 12px; gap: 9px; border-radius: 12px;
+  }
+  .hero-visual.hero-visual--photo .floating-chip .chip-icon { width: 30px; height: 30px; border-radius: 8px; }
+  .hero-visual.hero-visual--photo .floating-chip .chip-icon svg { width: 17px; height: 17px; }
+  .hero-visual.hero-visual--photo .floating-chip .chip-label { font-size: 9.5px; }
+  .hero-visual.hero-visual--photo .floating-chip .chip-value { font-size: 12px; }
+  /* Al apilarse el hero (≤960px) el panel se centra: el chip vuelve adentro
+     para no cortarse contra el borde de pantalla */
+  @media (max-width: 960px) {
+    .hero-visual.hero-visual--photo .floating-chip { right: 10px; }
+  }
+  @media (max-width: 540px) {
+    .hero-visual.hero-visual--photo .floating-chip { top: 12px; right: 8px; }
+    .hero-visual.hero-visual--photo .floating-chip .chip-value { font-size: 11.5px; }
+    .hero-visual.hero-visual--photo .overlay-team { padding: 12px 14px; }
+  }
+</style>
 <section class="hero">
   <div class="container">
     <div class="hero-grid">
@@ -799,16 +838,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </div>
 
       <div class="hero-visual-wrap">
-        <div class="hero-visual">
-          <!-- Decoración de fondo (círculos suaves) -->
-          <svg class="illustration" viewBox="0 0 400 500" aria-hidden="true">
-            <circle cx="340" cy="80" r="140" fill="rgba(255,255,255,0.10)"/>
-            <circle cx="60" cy="420" r="180" fill="rgba(255,255,255,0.08)"/>
-            <circle cx="320" cy="380" r="100" fill="rgba(255,255,255,0.06)"/>
-          </svg>
-          <!-- Logo institucional del CMC centrado -->
-          <img class="hero-logo-mark" src="https://centromedicocarampangue.cl/wp-content/uploads/2025/08/cropped-logo-carampangue.png" alt="Logo Centro Médico Carampangue" width="200" height="200" />
-          <div class="hero-logo-caption">Centro Médico Carampangue</div>
+        <div class="hero-visual hero-visual--photo">
+          <!-- Foto real de la fachada con el letrero del centro -->
+          <picture>
+            <source srcset="https://agentecmc.cl/static/images/centro/fachada-centro-medico-carampangue.webp" type="image/webp">
+            <img class="hero-fachada-img" src="https://agentecmc.cl/static/images/centro/fachada-centro-medico-carampangue.jpg" alt="Fachada del Centro Médico y Dental Carampangue con su nuevo letrero, en República 102 esquina Monsalve, Arauco" width="1448" height="1086" fetchpriority="high">
+          </picture>
           <div class="floating-chip">
             <div class="chip-icon" aria-hidden="true">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
@@ -820,8 +855,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           </div>
           <div class="overlay-team">
             <div>
-              <div class="label">Equipo profesional</div>
-              <div class="value">Médicos y dentistas</div>
+              <div class="label">Nuestra sede</div>
+              <div class="value">República 102, Carampangue</div>
             </div>
             <a class="hero-rating-mini" href="#opiniones" aria-label="Ver opiniones reales en Google">
               <div class="hero-rating-stars" aria-hidden="true">
