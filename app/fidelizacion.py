@@ -1503,41 +1503,62 @@ async def enviar_crosssell_post_dental_ortodoncia(send_fn, send_template_fn=None
             log_event(phone, "template_skip_no_consent",
                       {"template": "crosssell_post_dental_ortodoncia"})
             continue
-        # Sin template aprobado aún → solo enviamos si la ventana de 24h está abierta
-        if not is_window_open(phone):
+        # C2 fix: la cita dental ocurrió hace 48-72h → la ventana de 24h casi
+        # siempre está cerrada. El gate anterior descartaba TODOS los candidatos
+        # cuando la ventana estaba cerrada y no había template aprobado, produciendo
+        # cero envíos desde que se escribió la función (2026-05-19).
+        # Orden correcto: si hay template aprobado + USE_TEMPLATES, enviar por
+        # template (no necesita ventana abierta); si no, fallback a ventana libre.
+        _tiene_template = USE_TEMPLATES and send_template_fn is not None
+        if not _tiene_template and not is_window_open(phone):
             log_event(phone, "template_skip_no_aprobado",
                       {"template": "crosssell_ortodoncia_post_dental_v1",
                        "motivo": "sin_template_y_ventana_cerrada"})
             continue
         try:
             nombre = _nombre_corto(p.get("nombre"))
-            saludo = f"Hola *{nombre}* " if nombre else "Hola "
-            texto = (
-                f"{saludo}— esperamos que te haya ido bien en tu consulta dental esta semana.\n\n"
-                "Si el odontólogo te recomendó evaluar un tratamiento de ortodoncia, "
-                "puedes agendarte con la Dra. Daniela Castillo (ortodoncista).\n\n"
-                "La evaluación inicial cuesta *$15.000*.\n\n"
-                "Escríbenos aquí o llama al *(44) 296 5226*."
-            )
-            msg = {
-                "type": "interactive",
-                "interactive": {
-                    "type": "button",
-                    "body": {"text": texto},
-                    "action": {
-                        "buttons": [
-                            {"type": "reply", "reply": {
-                                "id": "xpostdental_orto_si", "title": "Sí, me interesa"}},
-                            {"type": "reply", "reply": {
-                                "id": "xpostdental_orto_no", "title": "No por ahora"}},
-                        ]
-                    }
-                }
-            }
             save_fidelizacion_msg(phone, "crosssell_post_dental_ortodoncia")
             set_pending_crosssell(phone, "crosssell_post_dental_ortodoncia", "ortodoncia")
-            await send_fn(phone, msg)
-            log_message(phone, "out", f"[Cross-sell post-dental ortodoncia] {texto[:80]}...", "IDLE")
+            if _tiene_template:
+                # Template aprobado disponible: enviar fuera de ventana de 24h.
+                nombre_param = nombre or "paciente"
+                await send_template_fn(
+                    phone,
+                    "crosssell_ortodoncia_post_dental_v1",
+                    body_params=[nombre_param],
+                    button_payloads=["xpostdental_orto_si", "xpostdental_orto_no"],
+                )
+                log_message(phone, "out",
+                            "[Cross-sell post-dental ortodoncia — template]", "IDLE")
+            else:
+                # Sin template: enviamos mensaje libre (ventana ya validada arriba).
+                saludo = f"Hola *{nombre}* " if nombre else "Hola "
+                texto = (
+                    f"{saludo}— esperamos que te haya ido bien en tu consulta dental "
+                    "esta semana.\n\n"
+                    "Si el odontólogo te recomendó evaluar un tratamiento de ortodoncia, "
+                    "puedes agendarte con la Dra. Daniela Castillo (ortodoncista).\n\n"
+                    "La evaluación inicial cuesta *$15.000*.\n\n"
+                    "Escríbenos aquí o llama al *(44) 296 5226*."
+                )
+                msg = {
+                    "type": "interactive",
+                    "interactive": {
+                        "type": "button",
+                        "body": {"text": texto},
+                        "action": {
+                            "buttons": [
+                                {"type": "reply", "reply": {
+                                    "id": "xpostdental_orto_si", "title": "Sí, me interesa"}},
+                                {"type": "reply", "reply": {
+                                    "id": "xpostdental_orto_no", "title": "No por ahora"}},
+                            ]
+                        }
+                    }
+                }
+                await send_fn(phone, msg)
+                log_message(phone, "out",
+                            f"[Cross-sell post-dental ortodoncia] {texto[:80]}...", "IDLE")
             log.info("crosssell_post_dental_ortodoncia enviado → %s", phone)
         except Exception as e:
             log.error("Error cross-sell post-dental phone=%s: %s", phone, e)

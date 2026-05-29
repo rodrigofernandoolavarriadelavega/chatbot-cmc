@@ -7759,6 +7759,18 @@ async def webhook(request: Request):
                 log.debug("meta_referral WA error: %s", _wa_ref_err)
             # ── fin captura referral ────────────────────────────────────────
 
+            # ── Guard HUMAN_TAKEOVER centralizado ──────────────────────────
+            # Aplica a TODOS los tipos de mensaje (texto, audio transcrito,
+            # documento, botón interactivo). Antes este guard solo existía en
+            # el path de texto (comentario "silencio intencional" al final), lo
+            # que permitía que audios y documentos igual llamaran handle_message
+            # y generaran respuestas mientras un operador humano atendía.
+            # Bug confirmado: 39 interrupciones en 48h por audios de pacientes.
+            if state_before == "HUMAN_TAKEOVER":
+                log.info("HUMAN_TAKEOVER activo from=%s type=%s — silenciado", phone, msg_type)
+                return Response(status_code=200)
+            # ── fin guard HUMAN_TAKEOVER ────────────────────────────────────
+
             # Indicador de "pensando" — reacción ⏳ al mensaje del paciente
             await react_whatsapp(phone, msg_id)
 

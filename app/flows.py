@@ -8087,15 +8087,46 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                             {"id": "waitlist_no", "title": "No, gracias"},
                         ]
                     )
-            resultado = await crear_cita(
-                id_paciente=paciente["id"],
-                id_profesional=slot["id_profesional"],
-                fecha=slot["fecha"],
-                hora_inicio=slot["hora_inicio"],
-                hora_fin=slot["hora_fin"],
-                id_recurso=slot.get("id_recurso", 1),
-                modalidad=data.get("telemedicina_modalidad", "PRESENCIAL"),
-            )
+            try:
+                resultado = await crear_cita(
+                    id_paciente=paciente["id"],
+                    id_profesional=slot["id_profesional"],
+                    fecha=slot["fecha"],
+                    hora_inicio=slot["hora_inicio"],
+                    hora_fin=slot["hora_fin"],
+                    id_recurso=slot.get("id_recurso", 1),
+                    modalidad=data.get("telemedicina_modalidad", "PRESENCIAL"),
+                )
+            except Exception as _crear_err:
+                # C3 fix: httpx.RequestError se lanza cuando Medilink persiste en
+                # 429 tras todos los reintentos de medilink._post. Antes este error
+                # subía al except genérico de main.py que llamaba reset_session(),
+                # destruyendo todo el progreso del agendamiento.
+                # Un 429 es transitorio — preservar sesión en CONFIRMING_CITA para
+                # que el paciente pueda reintentar sin perder slot ni datos.
+                import httpx as _httpx
+                if isinstance(_crear_err, _httpx.RequestError):
+                    log.warning(
+                        "CONFIRMING_CITA: crear_cita falló por error de red/429 "
+                        "phone=%s slot=%s/%s — preservando sesión",
+                        phone, slot.get("fecha"), slot.get("hora_inicio"),
+                    )
+                    log_event(phone, "crear_cita_429_preservado", {
+                        "fecha": slot.get("fecha"),
+                        "hora": slot.get("hora_inicio"),
+                        "profesional": slot.get("profesional", ""),
+                    })
+                    save_session(phone, "CONFIRMING_CITA", data)
+                    return (
+                        "Estamos con alta demanda en este momento y no pude confirmar "
+                        "la reserva.\n\n"
+                        "Tu selección sigue guardada. Escribe *si* en unos segundos "
+                        "para reintentar, o llama a recepción:\n"
+                        f"📞 *{CMC_TELEFONO}*"
+                    )
+                # Otros errores (4xx, errores de datos, etc.): dejar subir para que
+                # el except genérico de main.py los maneje normalmente.
+                raise
             # Liberar lock tentativo — éxito o fallo, ya no lo necesitamos.
             # Si la cita se creó, Medilink ya tiene el slot ocupado real.
             # Si falló, otro paciente puede intentar este slot.
