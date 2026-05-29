@@ -131,6 +131,40 @@ def load_truth(env: dict, db_path: str) -> dict:
     return truth
 
 
+# Texto EXACTO de los quick-reply del template consent_marketing_v1. Recuperamos
+# respuestas que el bot NO logueó como evento (bug del 28-may: el guard de lectura
+# comparaba teléfono entrante sin '+' vs fila '+56...' → la rama de consent se
+# saltaba y el "Sí, acepto"/"No, gracias" se perdía sin generar evento).
+_ACC_BTN = ("sí, acepto", "si, acepto", "sí acepto", "si acepto")
+_DEC_BTN = ("no, gracias", "no gracias")
+
+
+def load_msg_recovery(env: dict, db_path: str, exclude_canon: set) -> dict:
+    """Recupera consent desde el log crudo de mensajes (messages) para teléfonos
+    que respondieron textualmente el botón pero NO tienen evento. Devuelve
+    {canon: {'status':.., 'ts':.., 'source':'message_log'}} con el ÚLTIMO botón.
+    El gate marketing-vs-dental se aplica en main() (acá no hay PG)."""
+    conn = _open_sessions_db(env, db_path)
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT phone, text, ts FROM messages "
+        "WHERE direction='in' AND ts >= '2026-05-13' ORDER BY ts ASC"
+    )
+    rec: dict[str, dict] = {}
+    for phone, text, ts in cur.fetchall():
+        canon = _canon(phone)
+        if not canon or canon in exclude_canon:
+            continue
+        t = (text or "").strip().lower()
+        if t in _ACC_BTN:
+            rec[canon] = {"status": "accepted", "ts": ts, "source": "message_log"}
+        elif t in _DEC_BTN:
+            rec[canon] = {"status": "declined", "ts": ts, "source": "message_log"}
+    conn.close()
+    print(f"  candidatos a recuperar desde messages (sin evento): {len(rec)}")
+    return rec
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--apply", action="store_true", help="ejecutar (default: dry-run)")
@@ -190,6 +224,34 @@ def main():
         groups[canon].append(r)
     print(f"  grupos canónicos: {len(groups)}  (filas sin parsear: {unparseable})")
 
+    # ── Recuperar respuestas perdidas desde el log de mensajes (bug 28-may) ──
+    # Gate de seguridad: solo recuperar si el teléfono tiene fila en
+    # marketing_consent y NO tiene un dental_consent pending (evita cruzar el
+    # "Sí, acepto" del consent dental con el de marketing).
+    dental_pending: set[str] = set()
+    try:
+        cur.execute("SELECT phone FROM bi.dental_consent WHERE status='pending'")
+        for (ph,) in cur.fetchall():
+            c = _canon(ph)
+            if c:
+                dental_pending.add(c)
+    except Exception as e:
+        print(f"  (sin dental_consent o error: {e})")
+    msg_rec = load_msg_recovery(env, sessions_db, exclude_canon=set(truth.keys()))
+    rec_aplicados = rec_skip_sin_fila = rec_skip_dental = 0
+    for canon, info in msg_rec.items():
+        if canon not in groups:
+            rec_skip_sin_fila += 1
+            continue
+        if canon in dental_pending:
+            rec_skip_dental += 1
+            print(f"    ⚠ skip ambiguo (dental+marketing): ...{canon[-4:]} dijo {info['status']}")
+            continue
+        truth[canon] = info  # tratado como verdad (mismo peso que un evento)
+        rec_aplicados += 1
+    print(f"  recuperados del log: {rec_aplicados}  "
+          f"(skip sin fila marketing: {rec_skip_sin_fila}, skip ambiguo dental: {rec_skip_dental})")
+
     STATUS_RANK = {"accepted": 3, "declined": 3, "no_response": 2, "pending": 1}
 
     plan = []  # (canon, final_status, n_filas_colapsadas, tiene_evento)
@@ -199,7 +261,7 @@ def main():
         if t:
             final_status = t["status"]
             response_at = t["ts"]
-            response_method = "reply"
+            response_method = t.get("source") or "reply"
         else:
             best = max(grp, key=lambda x: STATUS_RANK.get(x.get("status"), 0))
             final_status = best.get("status") or "pending"
