@@ -2079,5 +2079,77 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 })();
 </script>
 
+<!-- Reseñas Google en vivo: la home en WordPress sirve HTML estático y no
+     recibe la inyección server-side de agentecmc.cl, así que las traemos del
+     lado cliente desde /api/google-rating. Idempotente: si el servidor ya
+     inyectó tarjetas reales, no duplica. -->
+<script>
+(function () {
+  var API = "https://agentecmc.cl/api/google-rating";
+  var STAR = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
+  var CHECK = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+
+  function esc(s) { var d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
+  function initials(name) {
+    var parts = (name || "").trim().split(/\s+/).filter(Boolean);
+    return ((parts[0] || "").charAt(0) + (parts[1] || "").charAt(0)).toUpperCase() || "·";
+  }
+
+  function fill(data) {
+    if (!data) return;
+    var rating = data.rating, count = data.review_count, reviews = data.reviews || [];
+
+    // 1) Rating-card: número grande + descripción
+    if (rating && count) {
+      var big = document.querySelector(".testimonials .rating-card .big");
+      if (big) big.textContent = String(rating).replace(".", ",");
+      var desc = document.querySelector(".testimonials .rating-card .desc");
+      if (desc) desc.textContent = count + " reseñas en Google";
+    }
+
+    // 2) Tarjetas de reseñas — solo si el servidor no las inyectó ya (caso WP)
+    var grid = document.querySelector(".testimonials .test-grid");
+    if (!grid) return;
+    var ctaSel = ".test-cta-card, .test-card-cta-google, .test-card-cta-wa";
+    var real = Array.prototype.filter.call(
+      grid.querySelectorAll(".test-card"),
+      function (c) { return !c.matches(ctaSel); }
+    );
+    if (real.length > 0) return; // ya hay reseñas reales (agentecmc.cl)
+
+    var withText = reviews.filter(function (r) { return (r.text || "").trim().length >= 25; });
+    withText.sort(function (a, b) { return (b.publish_time || "").localeCompare(a.publish_time || ""); });
+    var firstCta = grid.querySelector(ctaSel);
+    withText.slice(0, 6).forEach(function (rv) {
+      var txt = rv.text.trim();
+      if (txt.length > 240) txt = txt.slice(0, 240) + "…";
+      var n = Math.max(1, Math.min(5, parseInt(rv.rating, 10) || 5));
+      var card = document.createElement("div");
+      card.className = "test-card";
+      card.setAttribute("data-cmc-review", "");
+      card.innerHTML =
+        '<div class="test-stars">' + STAR.repeat(n) + '</div>' +
+        '<p class="test-quote">"' + esc(txt) + '"</p>' +
+        '<div class="test-author">' +
+          '<div class="avatar">' + esc(initials(rv.author)) + '</div>' +
+          '<div><div class="name">' + esc(rv.author || "Anónimo") + '</div>' +
+          '<div class="loc">Reseña Google · ' + esc(rv.relative_time || "") + '</div></div>' +
+          '<div class="verif">' + CHECK + ' Verificado</div>' +
+        '</div>';
+      grid.insertBefore(card, firstCta);
+    });
+  }
+
+  function load() {
+    fetch(API, { credentials: "omit" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(fill)
+      .catch(function () {});
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", load);
+  else load();
+})();
+</script>
+
 </body>
 </html>

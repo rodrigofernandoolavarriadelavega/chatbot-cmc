@@ -575,6 +575,10 @@ app.mount("/static", StaticFiles(directory=str(Path(__file__).parent.parent / "s
 _ALLOWED_ORIGINS = [
     "https://agentecmc.cl",
     "http://agentecmc.cl",
+    # La home pública vive en WordPress (centromedicocarampangue.cl) y consume
+    # /api/google-rating del lado cliente para mostrar reseñas reales de Google.
+    "https://centromedicocarampangue.cl",
+    "https://www.centromedicocarampangue.cl",
     "http://157.245.13.107:8001",
     "http://localhost:8001",
     "http://127.0.0.1:8001",
