@@ -3529,14 +3529,32 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
                 "is_active": _is_active(c),
             })
 
-        # Revenue por profesional hoy (para que frontend sume al box custom asignado)
+        # Revenue por profesional:
+        # - HISTÓRICO: tomar directo desde bi_pagos_caja (id_profesional ya resuelto via cruce)
+        # - HOY: cruzar pagos Medilink × citas_hoy por paciente_id (fallback)
         rev_por_prof = {}
         citas_por_prof = {}
-        for c in citas_hoy:
-            pid = c["profesional_id"]
-            ncitas_pac = pac_cita_count.get(c["paciente_id"], 1)
-            rev_por_prof[pid] = rev_por_prof.get(pid, 0) + (pagos_por_pac.get(c["paciente_id"], 0) / max(1, ncitas_pac))
-            citas_por_prof[pid] = citas_por_prof.get(pid, 0) + 1
+        if not is_today:
+            try:
+                from session import _conn as _sqr
+                with _sqr() as _sq2:
+                    _rows_r = _sq2.execute(
+                        "SELECT id_profesional, SUM(monto) AS m, COUNT(*) AS n FROM bi_pagos_caja "
+                        "WHERE fecha = ? AND id_profesional IS NOT NULL GROUP BY id_profesional",
+                        (today.isoformat(),)
+                    ).fetchall()
+                    for r in _rows_r:
+                        rev_por_prof[r["id_profesional"]] = int(r["m"] or 0)
+                        citas_por_prof[r["id_profesional"]] = int(r["n"] or 0)
+            except Exception:
+                pass
+        if not rev_por_prof:
+            # Cruce paciente → profesional vía citas del día
+            for c in citas_hoy:
+                pid = c["profesional_id"]
+                ncitas_pac = pac_cita_count.get(c["paciente_id"], 1)
+                rev_por_prof[pid] = rev_por_prof.get(pid, 0) + (pagos_por_pac.get(c["paciente_id"], 0) / max(1, ncitas_pac))
+                citas_por_prof[pid] = citas_por_prof.get(pid, 0) + 1
 
         cur.close()
         return {
