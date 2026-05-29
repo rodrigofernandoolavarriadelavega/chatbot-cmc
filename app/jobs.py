@@ -2135,16 +2135,29 @@ async def _job_marketing_consent_blast():
             log.info("consent_blast: límite diario %d alcanzado", LIMITE_DIA)
             return
 
-        # Candidatos: en cohortes_contactables pero sin registro consent
-        # Seleccionar también nombre para el {{1}} del template consent_marketing_v1
+        # Candidatos: en cohortes_contactables pero sin registro consent.
+        # La dedup se hace en Python sobre el teléfono NORMALIZADO, no con
+        # NOT IN en SQL: el formato guardado varía ('+56...', '56...', '9...')
+        # y un NOT IN crudo re-enviaría a quien ya recibió el consent (y antes
+        # tampoco matcheaba la respuesta). Comparar canónico vs canónico es
+        # robusto incluso a las filas históricas sin backfill.
+        from session import normalize_wa_id as _norm_ph
         with bi_conn() as conn2:
             with conn2.cursor() as cur:
+                cur.execute("SELECT phone FROM bi.marketing_consent")
+                ya_enviados = {_norm_ph(r[0]) for r in cur.fetchall()}
                 cur.execute(
-                    "SELECT wc.telefono, wc.nombre FROM bi.v_winback_cohortes_contactables wc "
-                    "WHERE wc.telefono NOT IN (SELECT phone FROM bi.marketing_consent) "
-                    f"LIMIT {LIMITE_DIA - enviados_hoy}"
+                    "SELECT wc.telefono, wc.nombre FROM bi.v_winback_cohortes_contactables wc"
                 )
-                candidates = [(r[0], r[1] or "Paciente") for r in cur.fetchall()]
+                candidates = []
+                cupo = LIMITE_DIA - enviados_hoy
+                for _tel, _nombre in cur.fetchall():
+                    _tel_norm = _norm_ph(_tel)
+                    if _tel_norm in ya_enviados:
+                        continue
+                    candidates.append((_tel_norm, _nombre or "Paciente"))
+                    if len(candidates) >= cupo:
+                        break
 
         log.info("consent_blast: %d candidatos a enviar hoy", len(candidates))
         enviados = 0

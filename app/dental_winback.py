@@ -115,6 +115,8 @@ def has_dental_consent(phone: str) -> bool:
 
 def registrar_dental_consent_enviado(phone: str) -> None:
     """Marca dental_consent como 'pending' al enviar el template de consent."""
+    from session import normalize_wa_id
+    phone = normalize_wa_id(phone)  # canónico 56XXXXXXXXX para matchear el wa_id entrante
     try:
         with bi_conn() as conn:
             with conn.cursor() as cur:
@@ -142,6 +144,8 @@ def registrar_dental_consent_respuesta(phone: str, status: str, method: str) -> 
     """
     if status not in ("accepted", "declined"):
         return
+    from session import normalize_wa_id
+    phone = normalize_wa_id(phone)  # canónico, debe coincidir con la fila pending
     try:
         with bi_conn() as conn:
             with conn.cursor() as cur:

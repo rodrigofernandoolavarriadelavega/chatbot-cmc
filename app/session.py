@@ -71,14 +71,31 @@ def normalize_wa_id(raw: str) -> str:
     """BUG-09: Normaliza un número de teléfono al formato canónico sin '+'.
     Aplica en webhook, admin_routes, jobs y fidelización para que nunca
     existan filas duplicadas '56XXX' y '+56XXX' en sessions/citas_bot.
-    Ejemplos: '+56978737250' → '56978737250', '56978737250' → '56978737250'.
+    Ejemplos: '+56978737250' → '56978737250', '56978737250' → '56978737250',
+    '978737250' → '56978737250' (celular CL de 9 dígitos sin código país).
     No-WA IDs (fb_*, ig_*, TEST_*) se devuelven sin modificar."""
     if not raw:
         return raw
-    # Preservar prefijos de redes sociales y otros canales
-    if not raw.lstrip("+").isdigit():
+    # Quitar separadores comunes de teléfono (espacios, guiones, paréntesis,
+    # puntos) y el '+' de E.164 ANTES de decidir si es teléfono. Sin esto,
+    # '9 6100 6968' fallaba el isdigit() y se guardaba con espacios como una
+    # fila duplicada más en marketing_consent (causa raíz del zoológico de
+    # formatos: '+56...', '56...', '977281627', '9 6100 6968').
+    cleaned = re.sub(r"[\s\-().]", "", raw.strip()).lstrip("+")
+    # Preservar prefijos de redes sociales y otros canales (fb_*, ig_*, TEST_*)
+    if not cleaned.isdigit():
         return raw
-    return raw.lstrip("+")
+    digits = cleaned
+    # Canonicalizar a E.164 sin '+', prefijo Chile 56 (11 dígitos). Misma
+    # salida que meta_capi._normalize_phone y custom_audiences_sync._normalize_phone
+    # → un único formato canónico en todo borde (sesiones, BI, Meta hashing).
+    if len(digits) == 9 and digits.startswith("9"):
+        digits = "56" + digits
+    elif len(digits) == 8:
+        digits = "569" + digits
+    elif digits.startswith("56") and len(digits) > 11:
+        digits = digits[:11]
+    return digits
 
 
 _DDL_DONE = False

@@ -2633,6 +2633,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     # Sin este guard, un "no, gracias" a un reenganche/cross-sell
                     # se interpretaba como decline marketing (bug 2026-05-28:
                     # 258 phones víctimas, 98 dados de baja sin preguntar).
+                    # Match con el teléfono canónico (56XXXXXXXXX). Las filas
+                    # de consent ahora se guardan normalizadas; igualar formatos
+                    # es lo que destraba el 0/798 (entrante sin '+' vs guardado).
+                    from session import normalize_wa_id as _norm_match
+                    _phone_match = _norm_match(phone)
                     _cur_route.execute(
                         "SELECT 'dental' FROM bi.dental_consent "
                         "WHERE phone=%s AND status='pending' "
@@ -2643,7 +2648,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         "WHERE phone=%s AND status='pending' "
                         "  AND consent_sent_at IS NOT NULL "
                         "  AND consent_sent_at > NOW() - INTERVAL '7 days'",
-                        (phone, phone),
+                        (_phone_match, _phone_match),
                     )
                     _rows_route = _cur_route.fetchall()
                     _tiene_dental_pending = any(r[0] == "dental" for r in _rows_route)
@@ -2700,7 +2705,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                                 "(phone, source, reason) "
                                 "VALUES (%s, %s, %s) "
                                 "ON CONFLICT (phone) DO NOTHING",
-                                (phone, "consent_marketing_v1", "declined_marketing"),
+                                (_phone_match, "consent_marketing_v1", "declined_marketing"),
                             )
                             _pg.commit()
                 except Exception as _oe:

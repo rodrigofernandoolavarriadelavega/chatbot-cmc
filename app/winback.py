@@ -152,6 +152,18 @@ def bi_conn():
         try:
             yield conn
         finally:
+            # ROOT-FIX 2026-05-29: rollback antes de devolver al pool.
+            # Sin esto, una query que falla deja la conexión en estado
+            # "current transaction is aborted"; el siguiente que la reusa
+            # ve fallar TODO comando hasta un rollback. Ese era el mecanismo
+            # que tumbaba los INSERT de registrar_consent_respuesta (el
+            # except los tragaba) → 0 accepted en marketing_consent pese a
+            # 279 respuestas reales. También causa los 93× "transaction is
+            # aborted" en el dashboard de winback.
+            try:
+                conn.rollback()
+            except Exception:
+                pass
             pool.putconn(conn)
 
     return _cm()
@@ -233,6 +245,8 @@ def get_arancel(especialidad: str | None) -> int:
 
 def has_marketing_consent(phone: str) -> bool:
     """Retorna True si phone tiene status='accepted' en bi.marketing_consent."""
+    from session import normalize_wa_id
+    phone = normalize_wa_id(phone)  # canónico — debe matchear la fila guardada
     try:
         with bi_conn() as conn:
             with conn.cursor() as cur:
@@ -249,6 +263,8 @@ def has_marketing_consent(phone: str) -> bool:
 
 def registrar_consent_enviado(phone: str) -> None:
     """Inserta o actualiza bi.marketing_consent con status='pending' al enviar el consent template."""
+    from session import normalize_wa_id
+    phone = normalize_wa_id(phone)  # canónico 56XXXXXXXXX para matchear el wa_id entrante
     try:
         with bi_conn() as conn:
             with conn.cursor() as cur:
@@ -276,6 +292,8 @@ def registrar_consent_respuesta(phone: str, status: str, method: str) -> None:
     """
     if status not in ("accepted", "declined"):
         return
+    from session import normalize_wa_id
+    phone = normalize_wa_id(phone)  # canónico, debe coincidir con la fila pending
     try:
         with bi_conn() as conn:
             with conn.cursor() as cur:
@@ -300,6 +318,8 @@ def registrar_consent_respuesta(phone: str, status: str, method: str) -> None:
 
 def phone_in_opt_out(phone: str) -> bool:
     """Retorna True si el phone está en bi.opt_outs_marketing."""
+    from session import normalize_wa_id
+    phone = normalize_wa_id(phone)  # canónico — debe matchear la fila guardada
     try:
         with bi_conn() as conn:
             with conn.cursor() as cur:
@@ -366,9 +386,14 @@ def get_candidatos_dia(cohorte: str, limite: int = 200) -> list[dict]:
                     wc.cohorte,
                     wc.edad
                 FROM bi.v_winback_cohortes_contactables wc
-                -- Solo phones con consentimiento explícito de marketing
+                -- Solo phones con consentimiento explícito de marketing.
+                -- Match por últimos 9 dígitos: la vista contactables trae
+                -- formatos mixtos ('+56...', '56...', pelado) y marketing_consent
+                -- ya quedó canónico tras la migración. Comparar 9 dígitos es
+                -- inmune al formato de cualquiera de los dos lados.
                 INNER JOIN bi.marketing_consent mc
-                    ON mc.phone = wc.telefono
+                    ON RIGHT(regexp_replace(mc.phone, '[^0-9]', '', 'g'), 9)
+                     = RIGHT(regexp_replace(wc.telefono, '[^0-9]', '', 'g'), 9)
                    AND mc.status = 'accepted'
                 WHERE wc.cohorte = %s
                   AND NOT EXISTS (
