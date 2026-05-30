@@ -1,0 +1,271 @@
+"""Fase 1 — Motor de reglas con límites duros.
+
+Convierte un WorldState en una lista de ProposedAction. NO ejecuta nada;
+solo decide qué se *debería* hacer. La ejecución (Fase 2) tomará estas
+acciones y las aplicará respetando los mismos límites duros.
+
+Filosofía: reglas explícitas y auditables primero. Cada acción lleva su
+`reason` legible. Los casos que las reglas no resuelven con confianza se
+marcan `ambiguous=True` y el advisor (Claude) opina sobre ellos.
+"""
+import logging
+from dataclasses import dataclass, field
+from enum import Enum
+
+from .world_state import WorldState, CampaignState
+
+log = logging.getLogger("bot")
+
+
+class ActionType(str, Enum):
+    INCREASE = "increase_budget"
+    DECREASE = "decrease_budget"
+    PAUSE = "pause"
+    KEEP = "keep"
+    ALERT = "alert"          # requiere ojo humano, sin acción automática clara
+
+
+@dataclass
+class HardLimits:
+    """Barandas que NINGUNA decisión puede cruzar, ni siquiera la IA.
+
+    Estos topes son el contrato de seguridad del 'autónomo con límites duros'.
+    Se leen de env para poder ajustarlos sin redeploy.
+    """
+    max_step_pct: float = 0.20          # máximo ±20% de cambio de presupuesto por corrida
+    min_daily_budget_clp: int = 2000    # piso de presupuesto por ad set
+    max_daily_budget_clp: int = 30000   # techo por ad set
+    max_total_daily_clp: int = 80000    # techo de gasto diario sumado de toda la cuenta
+    min_spend_to_judge_clp: float = 5000  # no juzgar campañas con muy poco gasto (ruido)
+    min_purchases_to_trust: float = 2.0   # nº mínimo de Purchases para confiar en el CAC
+    approval_threshold_pct: float = 0.20  # cambios > este % piden aprobación humana
+
+    @classmethod
+    def from_env(cls) -> "HardLimits":
+        import os
+        def _f(k, d): return float(os.getenv(k, d))
+        def _i(k, d): return int(float(os.getenv(k, d)))
+        return cls(
+            max_step_pct=_f("AUTOPILOT_MAX_STEP_PCT", 0.20),
+            min_daily_budget_clp=_i("AUTOPILOT_MIN_BUDGET", 2000),
+            max_daily_budget_clp=_i("AUTOPILOT_MAX_BUDGET", 30000),
+            max_total_daily_clp=_i("AUTOPILOT_MAX_TOTAL", 80000),
+            min_spend_to_judge_clp=_f("AUTOPILOT_MIN_SPEND", 5000),
+            min_purchases_to_trust=_f("AUTOPILOT_MIN_PURCHASES", 2.0),
+            approval_threshold_pct=_f("AUTOPILOT_APPROVAL_PCT", 0.20),
+        )
+
+
+@dataclass
+class ProposedAction:
+    campaign_id: str
+    campaign_name: str
+    action: ActionType
+    reason: str
+    current_budget_clp: int | None = None
+    proposed_budget_clp: int | None = None
+    confidence: float = 0.0        # 0..1
+    needs_approval: bool = False
+    ambiguous: bool = False        # las reglas no concluyeron → pasa al advisor
+    metrics: dict = field(default_factory=dict)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  POLÍTICA ECONÓMICA — esto lo define Rodrigo (conocimiento de negocio)
+#
+#  El motor necesita saber: ¿cuándo un CAC es "bueno", "tolerable" o "malo"?
+#  Eso depende del margen por paciente atendido, que varía por especialidad y
+#  que SOLO tú conoces. La función `evaluate_economics` traduce las métricas de
+#  una campaña en un veredicto económico. Es el corazón de toda decisión.
+#
+#  → Implementa la lógica en evaluate_economics() más abajo (marcada con TODO).
+# ─────────────────────────────────────────────────────────────────────────────
+
+class EconVerdict(str, Enum):
+    WINNER = "winner"       # rentable → candidata a subir presupuesto
+    OK = "ok"              # aceptable → mantener
+    MARGINAL = "marginal"   # dudosa → bajar o vigilar
+    LOSER = "loser"        # quema plata → bajar fuerte o pausar
+    UNKNOWN = "unknown"     # sin datos suficientes para juzgar
+
+
+# ── Umbrales económicos (AJUSTAR según tu negocio) ───────────────────────────
+# TODO(Rodrigo): estos valores definen qué es "rentable". Ajústalos a tu realidad:
+#   Nivel 1 (Purchase): ¿cuál es el CAC máximo tolerable por paciente atendido?
+#   Nivel 2 (Mensaje):  ¿cuánto estás dispuesto a pagar por una conversación WhatsApp?
+#     Pista: si ~1 de cada N mensajes se vuelve paciente, costo/mensaje tolerable ≈ CAC/N.
+CAC_BUENO = 12000        # CAC/paciente por debajo de esto = excelente → escalar
+CAC_TOLERABLE = 22000    # aceptable
+ROAS_GANADORA = 2.5      # ROAS Meta para considerar escalar
+MSG_BUENO = 1500         # costo por mensaje WhatsApp iniciado: barato
+MSG_TOLERABLE = 3500     # aceptable
+MSG_MIN_TO_TRUST = 5     # nº mínimo de mensajes para confiar en el costo/mensaje
+CLICK_TOLERABLE = 400    # costo por clic al enlace tolerable
+CLICK_MIN_TO_TRUST = 30  # nº mínimo de clics para confiar en el costo/clic
+
+
+def evaluate_economics(c: CampaignState, limits: HardLimits) -> tuple[EconVerdict, float, str]:
+    """Traduce las métricas de una campaña en un veredicto económico.
+
+    Retorna (veredicto, confianza 0..1, explicación legible).
+
+    TODO(Rodrigo): define los umbrales según TU economía. Preguntas a responder:
+      - ¿Cuál es el CAC máximo tolerable por paciente atendido? (¿$15.000? ¿$25.000?)
+        Pista: debe ser < margen de contribución promedio de una primera consulta.
+      - ¿A partir de qué ROAS consideras una campaña "ganadora" para escalar? (¿2x? ¿3x?)
+      - ¿Querés umbrales distintos por especialidad/objetivo? (ej: dental tolera CAC más alto)
+
+    Abajo hay una implementación de referencia con valores conservadores. Ajústalos.
+    """
+    # Guard: muy poco gasto → no juzgar (evita decidir sobre ruido).
+    if c.spend < limits.min_spend_to_judge_clp:
+        return EconVerdict.UNKNOWN, 0.0, f"gasto ${c.spend:.0f} < mínimo para juzgar"
+
+    # Jerarquía de señal: usamos el evento medible más cercano a la conversión.
+    #   1. Purchase (paciente atendido, vía CAPI)  → la señal de oro: ROAS/CAC real.
+    #   2. Mensaje WhatsApp iniciado               → proxy fuerte (intención de agendar).
+    #   3. Clic al enlace                          → proxy débil (solo interés).
+    # Cuando vincules el CAPI Purchase a las campañas, el motor sube solo al nivel 1.
+
+    # ── Nivel 1: Purchase (paciente atendido) ──
+    if c.purchases >= limits.min_purchases_to_trust and c.cac_purchase is not None:
+        cac, roas = c.cac_purchase, c.roas_meta
+        if cac <= CAC_BUENO and roas >= ROAS_GANADORA:
+            return EconVerdict.WINNER, 0.85, f"CAC/paciente ${cac:,.0f} y ROAS {roas:.1f}×"
+        if cac <= CAC_TOLERABLE:
+            return EconVerdict.OK, 0.75, f"CAC/paciente ${cac:,.0f} tolerable"
+        if cac <= CAC_TOLERABLE * 1.5:
+            return EconVerdict.MARGINAL, 0.65, f"CAC/paciente ${cac:,.0f} sobre lo tolerable"
+        return EconVerdict.LOSER, 0.75, f"CAC/paciente ${cac:,.0f} muy alto"
+
+    # ── Nivel 2: Mensajes de WhatsApp iniciados ──
+    if c.messages >= MSG_MIN_TO_TRUST and c.cost_per_message is not None:
+        cpm = c.cost_per_message
+        # Confianza algo menor: un mensaje no es un paciente atendido todavía.
+        if cpm <= MSG_BUENO:
+            return EconVerdict.WINNER, 0.7, f"{c.messages:.0f} mensajes a ${cpm:,.0f} c/u (barato)"
+        if cpm <= MSG_TOLERABLE:
+            return EconVerdict.OK, 0.65, f"costo/mensaje ${cpm:,.0f} tolerable"
+        if cpm <= MSG_TOLERABLE * 1.6:
+            return EconVerdict.MARGINAL, 0.6, f"costo/mensaje ${cpm:,.0f} alto"
+        return EconVerdict.LOSER, 0.65, f"costo/mensaje ${cpm:,.0f} muy alto"
+
+    # ── Nivel 3: Clics al enlace (señal débil — no escalamos solo por clics) ──
+    if c.link_clicks >= CLICK_MIN_TO_TRUST and c.cost_per_link_click is not None:
+        cpc = c.cost_per_link_click
+        if cpc <= CLICK_TOLERABLE:
+            return EconVerdict.OK, 0.5, f"costo/clic ${cpc:,.0f} (solo clics, sin conversión medida)"
+        return EconVerdict.MARGINAL, 0.5, f"costo/clic ${cpc:,.0f} alto y sin conversión medida"
+
+    # Sin ninguna señal medible: gasta pero no sabemos si convierte.
+    return EconVerdict.UNKNOWN, 0.3, (
+        f"${c.spend:,.0f} gastados sin conversión ni mensaje atribuido — "
+        "falta vincular evento de conversión")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _step_budget(current: int | None, factor: float, limits: HardLimits) -> int | None:
+    """Aplica un factor de cambio respetando piso/techo y el paso máximo."""
+    if current is None:
+        return None
+    factor = max(1 - limits.max_step_pct, min(1 + limits.max_step_pct, factor))
+    proposed = int(round(current * factor))
+    proposed = max(limits.min_daily_budget_clp, min(limits.max_daily_budget_clp, proposed))
+    return proposed
+
+
+def _campaign_budget(c: CampaignState) -> int | None:
+    """Presupuesto diario efectivo: CBO en campaña, o suma de ad sets."""
+    if c.daily_budget_clp:
+        return c.daily_budget_clp
+    total = 0
+    for a in c.adsets:
+        if a.get("daily_budget"):
+            total += int(a["daily_budget"])
+    return total or None
+
+
+def decide(ws: WorldState, limits: HardLimits | None = None) -> list[ProposedAction]:
+    """Genera acciones propuestas para todas las campañas del snapshot."""
+    limits = limits or HardLimits.from_env()
+    actions: list[ProposedAction] = []
+
+    # Señal de desconfianza global: si Meta atribuye mucho más ingreso que la caja real,
+    # bajamos la confianza de todas las decisiones basadas en ROAS Meta.
+    trust = 1.0
+    if ws.attribution_ratio is not None and ws.attribution_ratio < 0.5:
+        trust = 0.6
+        log.warning("autopilot: ratio atribución %.2f < 0.5 → Meta posiblemente inflado, "
+                    "bajo confianza global", ws.attribution_ratio)
+
+    for c in ws.campaigns:
+        verdict, conf, expl = evaluate_economics(c, limits)
+        conf *= trust
+        budget = _campaign_budget(c)
+
+        if verdict == EconVerdict.WINNER:
+            proposed = _step_budget(budget, 1 + limits.max_step_pct, limits)
+            act = ProposedAction(
+                campaign_id=c.id, campaign_name=c.name, action=ActionType.INCREASE,
+                reason=f"Ganadora: {expl}. Subir presupuesto.",
+                current_budget_clp=budget, proposed_budget_clp=proposed,
+                confidence=conf,
+            )
+        elif verdict == EconVerdict.OK:
+            act = ProposedAction(
+                campaign_id=c.id, campaign_name=c.name, action=ActionType.KEEP,
+                reason=f"Estable: {expl}. Mantener.",
+                current_budget_clp=budget, proposed_budget_clp=budget, confidence=conf,
+            )
+        elif verdict == EconVerdict.MARGINAL:
+            proposed = _step_budget(budget, 1 - limits.max_step_pct, limits)
+            act = ProposedAction(
+                campaign_id=c.id, campaign_name=c.name, action=ActionType.DECREASE,
+                reason=f"Marginal: {expl}. Bajar y vigilar.",
+                current_budget_clp=budget, proposed_budget_clp=proposed, confidence=conf,
+            )
+        elif verdict == EconVerdict.LOSER:
+            proposed = _step_budget(budget, 1 - limits.max_step_pct, limits)
+            act = ProposedAction(
+                campaign_id=c.id, campaign_name=c.name, action=ActionType.DECREASE,
+                reason=f"Perdedora: {expl}. Recortar al máximo permitido por paso.",
+                current_budget_clp=budget, proposed_budget_clp=proposed, confidence=conf,
+            )
+        else:  # UNKNOWN → ambiguo, lo verá el advisor
+            act = ProposedAction(
+                campaign_id=c.id, campaign_name=c.name, action=ActionType.ALERT,
+                reason=f"Sin juicio por reglas: {expl}.",
+                current_budget_clp=budget, proposed_budget_clp=budget,
+                confidence=conf, ambiguous=True,
+            )
+
+        # ¿Necesita aprobación humana? Cambios grandes o baja confianza.
+        if act.action in (ActionType.INCREASE, ActionType.DECREASE) and budget:
+            change = abs((act.proposed_budget_clp or budget) - budget) / budget
+            if change >= limits.approval_threshold_pct or act.confidence < 0.6:
+                act.needs_approval = True
+        if act.confidence < 0.6:
+            act.ambiguous = True
+
+        act.metrics = {
+            "spend": c.spend, "purchases": c.purchases, "cac_purchase": c.cac_purchase,
+            "roas_meta": c.roas_meta, "ctr": c.ctr, "verdict": verdict.value,
+            "messages": c.messages, "cost_per_message": c.cost_per_message,
+            "link_clicks": c.link_clicks, "cost_per_link_click": c.cost_per_link_click,
+        }
+        actions.append(act)
+
+    # Baranda global: si la suma de presupuestos propuestos excede el techo total,
+    # no escalamos (recortamos los INCREASE a KEEP).
+    proposed_total = sum((a.proposed_budget_clp or 0) for a in actions)
+    if proposed_total > limits.max_total_daily_clp:
+        log.warning("autopilot: total propuesto $%.0f > techo $%.0f → cancelo escaladas",
+                    proposed_total, limits.max_total_daily_clp)
+        for a in actions:
+            if a.action == ActionType.INCREASE:
+                a.action = ActionType.KEEP
+                a.proposed_budget_clp = a.current_budget_clp
+                a.reason += " [bloqueado: techo de gasto total alcanzado]"
+
+    return actions
