@@ -63,6 +63,9 @@
     box-shadow: var(--shadow-sm);
     z-index: 30;
   }
+  .topbar-brand { display: inline-flex; align-items: center; flex-shrink: 0; text-decoration: none; }
+  .topbar-brand img { height: 34px; width: auto; display: block; }
+  .topbar-div { width: 1px; height: 26px; background: var(--cmc-border); flex-shrink: 0; }
   .topbar .crumb { display: flex; align-items: center; gap: 10px; min-width: 0; }
   .topbar .crumb-ico {
     width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0;
@@ -343,6 +346,10 @@
     <button class="hamburger" id="hamburger" aria-label="Menú">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18M3 12h18M3 18h18" stroke-width="2" stroke-linecap="round"/></svg>
     </button>
+    <a class="topbar-brand" href="#" title="Ánima · Centro Médico Carampangue">
+      <img src="/static/anima-lockup.png" alt="Ánima Carampangue">
+    </a>
+    <div class="topbar-div"></div>
     <div class="crumb">
       <div class="crumb-ico" id="crumbIco"></div>
       <div class="crumb-txt">
