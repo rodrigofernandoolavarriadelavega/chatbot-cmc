@@ -923,19 +923,24 @@ async def send_winback(candidato: dict) -> bool:
         )
         return False
 
-    # Parámetros del body template
-    # Templates _v2 con {{1}} = nombre paciente
-    # Templates _v2 con {{1}} + {{2}} = nombre paciente + nombre profesional
+    # Parámetros del body template (conteo verificado contra Meta 2026-05-30):
+    #   2 params {{1}}=nombre {{2}}=profesional → medicina_general, kinesiologia,
+    #     odontologia. EXIGEN 2 siempre: si falta el profesional el template se
+    #     rompe con (#132000) Number of parameters does not match.
+    #   1 param {{1}}=nombre → otorrino (lleva "Dr. Millán" hardcodeado en el
+    #     texto), generico_sensible, one_shot. NO van en _TWO_PARAM_TEMPLATES.
+    # Bug previo: otorrino estaba acá (mandaba 2 a un template de 1 → #132000) y
+    # los de 2 caían a 1 param cuando no había profesional → mismo #132000.
     _TWO_PARAM_TEMPLATES = {
         "winback_medicina_general_v2",
         "winback_kinesiologia_v2",
         "winback_odontologia_v2",
-        "winback_otorrino_v2",
     }
     # Usar solo el primer nombre limpio (ej: "MARIA JOSE GONZALEZ" → "Maria")
     first_name = nombre.strip().split()[0][:30].capitalize()
-    if template_name in _TWO_PARAM_TEMPLATES and profesional_nombre:
-        body_params = [first_name, profesional_nombre]
+    if template_name in _TWO_PARAM_TEMPLATES:
+        # SIEMPRE 2 params; genérico si no conocemos al profesional.
+        body_params = [first_name, profesional_nombre or "nuestro equipo"]
     else:
         body_params = [first_name]
 
