@@ -609,6 +609,23 @@ collapseBtn.addEventListener('click', () => {
 document.getElementById('hamburger').addEventListener('click', () => app.classList.toggle('drawer-open'));
 document.getElementById('scrim').addEventListener('click', () => app.classList.remove('drawer-open'));
 
+// Volver al inicio (pantalla de bienvenida limpia) al hacer clic en el logo
+function goHome(){
+  current = null;
+  document.querySelectorAll('.frame-wrap').forEach(w => w.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.prof-leaf').forEach(l => l.classList.remove('active'));
+  welcome.classList.add('show');
+  loader.classList.add('hide');
+  document.getElementById('crumbIco').innerHTML = '<img src="/static/isotipo.png" alt="CMC">';
+  document.getElementById('crumbTitle').textContent = 'Ánima';
+  document.getElementById('crumbSub').textContent = 'Plataforma interna CMC';
+  document.title = 'Ánima — Centro Médico Carampangue';
+  if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+  app.classList.remove('drawer-open');
+}
+document.getElementById('railHome').addEventListener('click', goHome);
+
 // Hash routing (deep-link + refresh keeps module)
 function fromHash(){
   const id = location.hash.replace('#','');
