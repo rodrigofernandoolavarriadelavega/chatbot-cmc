@@ -7177,6 +7177,12 @@ async def webhook(request: Request):
             session = get_session(phone)
             state_before = session.get("state", "IDLE")
             log_message(phone, "in", texto, state_before, canal=canal)
+            # Guard HUMAN_TAKEOVER para IG/FB: silenciar respuesta automática
+            # y no ejecutar autocapture con texto del operador.
+            if state_before == "HUMAN_TAKEOVER":
+                log.info("HUMAN_TAKEOVER activo from=%s canal=%s — silenciado", phone, canal)
+                return
+            # autocapture_profile: solo fuera de HUMAN_TAKEOVER
             try:
                 from session import try_autocapture_rut_name
                 try_autocapture_rut_name(phone, texto)
@@ -7650,7 +7656,20 @@ async def webhook(request: Request):
             if saved_filename:
                 log_text = f"[{msg_type}:{saved_filename}]" + (f" {caption}" if caption and caption != saved_filename else "")
             state_before = get_session(phone).get("state", "IDLE")
+            # Logging de entrada SIEMPRE: la recepcionista debe ver que llegó
+            # una imagen/documento independiente del estado de la sesión.
             log_message(phone, "in", log_text, state_before, canal="whatsapp")
+
+            # ── Guard HUMAN_TAKEOVER para media ────────────────────────────
+            # Si ya hay un operador humano atendiendo, NO enviar respuesta
+            # automática ni sobrescribir el estado de sesión. El log de entrada
+            # ya se registró arriba para que la recepcionista lo vea en el panel.
+            if state_before == "HUMAN_TAKEOVER":
+                log.info("HUMAN_TAKEOVER activo from=%s type=%s (media) — respuesta automática suprimida",
+                         phone, msg_type)
+                return Response(status_code=200)
+            # ── fin guard media HUMAN_TAKEOVER ─────────────────────────────
+
             save_session(phone, "HUMAN_TAKEOVER", {
                 "hold_sent": True,
                 "handoff_reason": f"media:{msg_type}",
@@ -7757,11 +7776,6 @@ async def webhook(request: Request):
             state_before = session.get("state", "IDLE")
             log_text = f"🎤 {texto}" if is_audio else texto
             log_message(phone, "in", log_text, state_before, canal="whatsapp")
-            try:
-                from session import try_autocapture_rut_name
-                try_autocapture_rut_name(phone, log_text)
-            except Exception:
-                pass
 
             # ── Captura fbclid desde primer mensaje (una sola vez por sesión) ──
             # Meta puede precargar mensajes de ad con "Hola [fbclid:XXX]".
@@ -7813,6 +7827,14 @@ async def webhook(request: Request):
                 log.info("HUMAN_TAKEOVER activo from=%s type=%s — silenciado", phone, msg_type)
                 return Response(status_code=200)
             # ── fin guard HUMAN_TAKEOVER ────────────────────────────────────
+
+            # autocapture_profile: solo corre fuera de HUMAN_TAKEOVER para evitar
+            # capturar texto dictado por el operador como si fuera datos del paciente.
+            try:
+                from session import try_autocapture_rut_name
+                try_autocapture_rut_name(phone, log_text)
+            except Exception:
+                pass
 
             # Indicador de "pensando" — reacción ⏳ al mensaje del paciente
             await react_whatsapp(phone, msg_id)
