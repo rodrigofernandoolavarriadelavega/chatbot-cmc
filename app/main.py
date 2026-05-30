@@ -2689,6 +2689,7 @@ def segmentacioncmc_data(path: str):
 
 _ATRIBUCION_DASHBOARD_HTML = (_TEMPLATE_DIR / "atribucion_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "atribucion_dashboard.html").exists() else ""
 _ARQUITECTURA_SAAS_HTML = (_TEMPLATE_DIR / "arquitectura_saas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "arquitectura_saas.html").exists() else ""
+_PORTADA_OLACORE_HTML = (_TEMPLATE_DIR / "portada_olacore.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "portada_olacore.html").exists() else ""
 _ABARCA_DASHBOARD_HTML = (_TEMPLATE_DIR / "abarca_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "abarca_dashboard.html").exists() else ""
 _OLAVARRIA_DASHBOARD_HTML = (_TEMPLATE_DIR / "olavarria_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "olavarria_dashboard.html").exists() else ""
 _PROF_DASHBOARD_HTML = (_TEMPLATE_DIR / "profesional_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "profesional_dashboard.html").exists() else ""
@@ -2758,6 +2759,15 @@ def arquitectura_saas_page():
     if not _ARQUITECTURA_SAAS_HTML:
         raise HTTPException(404, "Esquema de arquitectura no disponible")
     return _ARQUITECTURA_SAAS_HTML
+
+
+@app.get("/portada", response_class=HTMLResponse)
+@app.get("/inicio", response_class=HTMLResponse)
+def portada_olacore_page():
+    """Portada/cover de la presentación OLACORE Tech con la fachada del CMC. Lleva a /arquitectura."""
+    if not _PORTADA_OLACORE_HTML:
+        raise HTTPException(404, "Portada no disponible")
+    return _PORTADA_OLACORE_HTML
 
 
 @app.get("/winback", response_class=HTMLResponse)
