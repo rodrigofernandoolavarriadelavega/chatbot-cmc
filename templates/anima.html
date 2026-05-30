@@ -5,9 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0F3F68">
 <meta name="robots" content="noindex, nofollow">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ánima">
 <title>Ánima — Centro Médico Carampangue</title>
+<link rel="manifest" href="" id="animaManifest">
 <link rel="icon" href="/static/isotipo.png">
-<link rel="apple-touch-icon" href="/static/isotipo.png">
+<link rel="apple-touch-icon" href="/static/pwa/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -132,6 +137,64 @@
     content: ""; position: absolute; left: 0; top: 9px; bottom: 9px; width: 3px;
     background: var(--cmc-aqua); border-radius: 0 3px 3px 0;
   }
+
+  /* ---------- Collapsible tree: Panel del Profesional ---------- */
+  .nav-group { margin-bottom: 3px; }
+  .nav-toggle {
+    display: flex; align-items: center; gap: 12px;
+    width: 100%; border: 0; background: none; cursor: pointer;
+    color: #cfe2f0; font-family: inherit; font-size: 13.5px; font-weight: 600;
+    padding: 11px 12px; border-radius: 11px; text-align: left;
+    position: relative; transition: background .14s, color .14s;
+  }
+  .nav-toggle:hover { background: rgba(255,255,255,.08); color: #fff; }
+  .nav-toggle .ico { width: 20px; height: 20px; flex-shrink: 0; display: grid; place-items: center; }
+  .nav-toggle .ico svg { width: 19px; height: 19px; stroke-width: 1.9; }
+  .nav-toggle .label { flex: 1; white-space: nowrap; overflow: hidden; transition: opacity .15s; }
+  .nav-toggle .chev { width: 15px; height: 15px; flex-shrink: 0; transition: transform .2s; opacity: .7; }
+  .nav-toggle .chev svg { width: 15px; height: 15px; }
+  .nav-group.open > .nav-toggle .chev { transform: rotate(90deg); }
+  .nav-group.open > .nav-toggle { color: #fff; }
+
+  .nav-children { display: none; margin: 2px 0 4px; padding-left: 8px; border-left: 1px solid rgba(255,255,255,.1); margin-left: 18px; }
+  .nav-group.open > .nav-children { display: block; }
+
+  /* especialidad = sub-toggle (nivel 2) */
+  .esp-toggle {
+    display: flex; align-items: center; gap: 9px;
+    width: 100%; border: 0; background: none; cursor: pointer;
+    color: #a9c7dd; font-family: inherit; font-size: 12.5px; font-weight: 600;
+    padding: 9px 10px; border-radius: 9px; text-align: left; transition: background .14s, color .14s;
+  }
+  .esp-toggle:hover { background: rgba(255,255,255,.07); color: #fff; }
+  .esp-toggle .label { flex: 1; white-space: nowrap; overflow: hidden; }
+  .esp-toggle .count { font-size: 9.5px; font-weight: 700; color: #6f93ad; background: rgba(255,255,255,.08); padding: 1px 6px; border-radius: 999px; }
+  .esp-toggle .chev { width: 13px; height: 13px; flex-shrink: 0; transition: transform .2s; opacity: .6; }
+  .esp-group.open > .esp-toggle .chev { transform: rotate(90deg); }
+  .esp-group.open > .esp-toggle { color: #fff; }
+  .esp-children { display: none; padding-left: 8px; border-left: 1px solid rgba(255,255,255,.08); margin: 1px 0 3px 14px; }
+  .esp-group.open > .esp-children { display: block; }
+
+  /* profesional = hoja (nivel 3) */
+  .prof-leaf {
+    display: flex; align-items: center; gap: 9px;
+    width: 100%; border: 0; background: none; cursor: pointer;
+    color: #bcd6e8; font-family: inherit; font-size: 12.5px; font-weight: 500;
+    padding: 8px 10px; border-radius: 8px; text-align: left; position: relative;
+    transition: background .14s, color .14s; margin-bottom: 1px;
+  }
+  .prof-leaf:hover { background: rgba(255,255,255,.08); color: #fff; }
+  .prof-leaf.active { background: rgba(79,190,206,.18); color: #fff; }
+  .prof-leaf.active::before {
+    content: ""; position: absolute; left: -9px; top: 7px; bottom: 7px; width: 3px;
+    background: var(--cmc-aqua); border-radius: 0 3px 3px 0;
+  }
+  .prof-leaf .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--cmc-aqua); flex-shrink: 0; opacity: .8; }
+  .nav-loading { font-size: 11px; color: #6f93ad; padding: 8px 12px; }
+  /* Collapsed rail: hide tree text */
+  .app.collapsed .nav-toggle .label, .app.collapsed .nav-toggle .chev,
+  .app.collapsed .nav-children { opacity: 0; pointer-events: none; }
+  .app.collapsed .nav-toggle { justify-content: center; }
   .nav-item.disabled { opacity: .42; cursor: not-allowed; }
   .nav-item .soon {
     font-size: 8.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
@@ -279,13 +342,37 @@
 const TOKEN = "__TOKEN__";
 const qp = TOKEN ? ("?token=" + encodeURIComponent(TOKEN)) : "";
 
+// PWA: manifest con token (para que el launcher abra autenticado) + service worker
+(function(){
+  const mEl = document.getElementById('animaManifest');
+  if (mEl) mEl.setAttribute('href', '/anima/manifest.webmanifest' + qp);
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/anima/sw.js', { scope: '/anima' }).catch(()=>{});
+    });
+  }
+})();
+
+// PWA: manifest con token (para que el launcher abra autenticado) + service worker
+(function(){
+  const mEl = document.getElementById('animaManifest');
+  if (mEl) mEl.setAttribute('href', '/anima/manifest.webmanifest' + qp);
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/anima/sw.js', { scope: '/anima' }).catch(()=>{});
+    });
+  }
+})();
+
 // ---- SVG icon set (lucide-style) ----
 const ICONS = {
   inbox: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 12h-6l-2 3h-4l-2-3H2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg>',
   chart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 3v18h18" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 14l3-3 3 3 5-6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   target: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4"/></svg>',
-  search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3" stroke-linecap="round"/></svg>'
+  search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3" stroke-linecap="round"/></svg>',
+  steth: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4.8 2.3A.3.3 0 005 2H4a2 2 0 00-2 2v5a4 4 0 008 0V4a2 2 0 00-2-2H7a.3.3 0 00.2.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 15a6 6 0 006 6 6 6 0 006-6v-4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="20" cy="10" r="2"/></svg>',
+  chevron: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 18l6-6-6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
 };
 
 // ---- Module registry. Para agregar un módulo nuevo: una línea aquí. ----
@@ -320,6 +407,66 @@ MODULES.forEach(m => {
   b.addEventListener('click', () => select(m.id, true));
   nav.appendChild(b);
 });
+
+// ---- Panel del Profesional: toggle desplegable (especialidad → profesional) ----
+const profGroup = document.createElement('div');
+profGroup.className = 'nav-group';
+profGroup.id = 'profGroup';
+profGroup.innerHTML =
+  `<button class="nav-toggle" id="profGroupToggle">
+     <span class="ico">${ICONS.steth}</span>
+     <span class="label">Panel del Profesional</span>
+     <span class="chev">${ICONS.chevron}</span>
+   </button>
+   <div class="nav-children" id="profChildren">
+     <div class="nav-loading">Cargando profesionales…</div>
+   </div>`;
+nav.appendChild(profGroup);
+
+document.getElementById('profGroupToggle').addEventListener('click', () => {
+  profGroup.classList.toggle('open');
+  if (profGroup.classList.contains('open')) loadProfesionales();
+});
+
+let _profLoaded = false;
+async function loadProfesionales(){
+  if (_profLoaded) return;
+  _profLoaded = true;
+  const cont = document.getElementById('profChildren');
+  try {
+    const r = await fetch('/api/anima/profesionales' + qp);
+    if (!r.ok) throw new Error('http ' + r.status);
+    const data = await r.json();
+    cont.innerHTML = '';
+    (data.grupos || []).forEach(g => {
+      const eg = document.createElement('div');
+      eg.className = 'esp-group';
+      const profsHtml = g.profesionales.map(p =>
+        `<button class="prof-leaf" data-key="prof:${p.id}"
+                 data-title="${p.nombre}" data-sub="${g.especialidad}"
+                 data-src="${p.url}">
+           <span class="dot"></span><span class="label">${p.nombre}</span>
+         </button>`).join('');
+      eg.innerHTML =
+        `<button class="esp-toggle">
+           <span class="label">${g.especialidad}</span>
+           <span class="count">${g.profesionales.length}</span>
+           <span class="chev">${ICONS.chevron}</span>
+         </button>
+         <div class="esp-children">${profsHtml}</div>`;
+      eg.querySelector('.esp-toggle').addEventListener('click', () => eg.classList.toggle('open'));
+      eg.querySelectorAll('.prof-leaf').forEach(leaf => {
+        leaf.addEventListener('click', () => openProf(leaf.dataset));
+      });
+      cont.appendChild(eg);
+    });
+    if (!cont.children.length) cont.innerHTML = '<div class="nav-loading">Sin profesionales.</div>';
+  } catch(e) {
+    _profLoaded = false;
+    cont.innerHTML = '<div class="nav-loading">No se pudo cargar. Reintenta.</div>';
+  }
+}
+
 // Future section
 const soonHdr = document.createElement('div');
 soonHdr.className = 'nav-section';
@@ -332,6 +479,37 @@ SOON.forEach(s => {
   d.innerHTML = `<span class="ico">${ICONS[s.icon]}</span><span class="label">${s.label}</span><span class="soon">Pronto</span>`;
   nav.appendChild(d);
 });
+
+// Abrir el dashboard de un profesional como frame embebido (igual mecánica que los módulos)
+function openProf(ds){
+  const key = ds.key;            // "prof:77"
+  current = key;
+  welcome.classList.remove('show');
+  if (!loaded[key]) {
+    const wrap = document.createElement('div');
+    wrap.className = 'frame-wrap';
+    wrap.dataset.id = key;
+    const ifr = document.createElement('iframe');
+    ifr.title = ds.title;
+    ifr.src = ds.src;
+    ifr.addEventListener('load', () => { if (current === key) loader.classList.add('hide'); });
+    wrap.appendChild(ifr);
+    stage.appendChild(wrap);
+    loaded[key] = true;
+    loader.classList.remove('hide');
+  } else {
+    loader.classList.add('hide');
+  }
+  document.querySelectorAll('.frame-wrap').forEach(w => w.classList.toggle('active', w.dataset.id === key));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.prof-leaf').forEach(l => l.classList.toggle('active', l.dataset.key === key));
+  document.getElementById('crumbIco').innerHTML = ICONS.steth;
+  document.getElementById('crumbTitle').textContent = ds.title;
+  document.getElementById('crumbSub').textContent = 'Panel del Profesional · ' + ds.sub;
+  document.getElementById('newTabBtn').href = ds.src;
+  document.title = ds.title + " · Ánima CMC";
+  app.classList.remove('drawer-open');
+}
 
 function moduleById(id){ return MODULES.find(m => m.id === id); }
 

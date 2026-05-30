@@ -3289,6 +3289,46 @@ self.addEventListener('fetch', e => {
     return Response(content=sw, media_type="application/javascript")
 
 
+@app.get("/anima/manifest.webmanifest", include_in_schema=False)
+def anima_manifest(token: str | None = Query(None)):
+    """PWA manifest de Ánima para instalación como app. Identidad CMC."""
+    start = f"/anima?token={token}" if token else "/anima"
+    return JSONResponse({
+        "name": "Ánima — Centro Médico Carampangue",
+        "short_name": "Ánima",
+        "description": "Plataforma interna unificada del Centro Médico Carampangue",
+        "start_url": start,
+        "scope": "/",
+        "display": "standalone",
+        "orientation": "any",
+        "background_color": "#0F3F68",
+        "theme_color": "#0F3F68",
+        "lang": "es-CL",
+        "dir": "ltr",
+        "categories": ["medical", "productivity", "business"],
+        "icons": [
+            {"src": "/static/pwa/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+            {"src": "/static/pwa/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+            {"src": "/static/pwa/icon-192-maskable.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable"},
+            {"src": "/static/pwa/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+        ],
+    }, media_type="application/manifest+json")
+
+
+@app.get("/anima/sw.js", include_in_schema=False)
+def anima_service_worker():
+    """Service worker mínimo para habilitar instalación PWA de Ánima."""
+    sw = (
+        "self.addEventListener('install', e => self.skipWaiting());\n"
+        "self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));\n"
+        "self.addEventListener('fetch', e => {\n"
+        "  e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));\n"
+        "});\n"
+    )
+    from fastapi.responses import Response
+    return Response(content=sw, media_type="application/javascript")
+
+
 @app.get("/admin/api/boxes-state")
 async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Query(None)):
     """Estado de los boxes CMC para una fecha (default: hoy).
