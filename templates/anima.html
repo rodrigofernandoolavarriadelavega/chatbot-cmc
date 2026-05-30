@@ -97,26 +97,26 @@
     overflow: hidden;
   }
   .rail-brand {
-    display: flex; align-items: center; justify-content: center;
-    height: var(--topbar-h); flex-shrink: 0;
-    padding: 8px 14px;
+    display: flex; align-items: center; gap: 13px;
+    height: auto; min-height: var(--topbar-h); flex-shrink: 0;
+    padding: 14px 16px;
     border-bottom: 1px solid rgba(255,255,255,.08);
   }
   /* tile cuadrado con la cruz adentro — mismo estilo que los íconos del resto */
   .rail-logo {
-    width: 42px; height: 42px; flex-shrink: 0; border-radius: 12px; padding: 7px;
+    width: 52px; height: 52px; flex-shrink: 0; border-radius: 15px; padding: 9px;
     display: grid; place-items: center;
     background: linear-gradient(135deg, var(--cmc-aqua-soft), #fff);
     border: 1px solid var(--cmc-border);
-    box-shadow: 0 2px 8px rgba(15,63,104,.10), inset 0 1px 0 rgba(255,255,255,.7);
+    box-shadow: 0 3px 10px rgba(15,63,104,.14), inset 0 1px 0 rgba(255,255,255,.7);
   }
   .rail-logo svg { width: 100%; height: 100%; display: block; }
   .rail-word { min-width: 0; transition: opacity .15s; }
   .rail-word .name {
-    font-size: 21px; font-weight: 800; color: #fff; letter-spacing: .5px; line-height: 1;
+    font-size: 27px; font-weight: 800; color: #fff; letter-spacing: .3px; line-height: 1;
   }
   .rail-word .name .accent { color: var(--cmc-aqua); }
-  .rail-word .sub { font-size: 8.5px; color: #8fb4cf; letter-spacing: .2em; text-transform: uppercase; margin-top: 5px; font-weight: 700; line-height: 1.3; }
+  .rail-word .sub { font-size: 10px; color: #a9c7dd; letter-spacing: .16em; text-transform: uppercase; margin-top: 6px; font-weight: 700; line-height: 1.35; }
 
   .rail-nav { flex: 1; overflow-y: auto; padding: 14px 12px; }
   .rail-nav::-webkit-scrollbar { width: 6px; }
