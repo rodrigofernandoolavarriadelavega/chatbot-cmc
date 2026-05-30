@@ -257,17 +257,18 @@
 
   /* Historial responsive: tabla → cards stack en mobile */
   @media (max-width: 700px) {
-    #historial { padding: 8px !important; background: transparent !important; border: 0 !important; }
-    #historial table thead { display: none; }
-    #historial table, #historial table tbody, #historial table tr, #historial table td { display: block; width: 100%; }
-    #historial table tr {
+    #historial, #eficiencia { padding: 8px !important; background: transparent !important; border: 0 !important; }
+    #historial table thead, #eficiencia table thead { display: none; }
+    #historial table, #historial table tbody, #historial table tr, #historial table td,
+    #eficiencia table, #eficiencia table tbody, #eficiencia table tr, #eficiencia table td { display: block; width: 100%; }
+    #historial table tr, #eficiencia table tr {
       border: 1px solid var(--cmc-border);
       border-radius: 12px;
       margin-bottom: 10px;
       padding: 14px 16px;
       background: #fff;
     }
-    #historial table td {
+    #historial table td, #eficiencia table td {
       padding: 4px 0 !important;
       text-align: left !important;
       border: 0 !important;
@@ -276,7 +277,7 @@
       align-items: baseline;
       gap: 12px;
     }
-    #historial table td::before {
+    #historial table td::before, #eficiencia table td::before {
       content: attr(data-label);
       font-size: 10px;
       color: var(--cmc-text-mute);
@@ -285,13 +286,13 @@
       font-weight: 600;
       flex-shrink: 0;
     }
-    #historial table td:first-child {
+    #historial table td:first-child, #eficiencia table td:first-child {
       border-bottom: 1px solid #f0f4f8 !important;
       padding-bottom: 8px !important;
       margin-bottom: 6px;
     }
-    #historial table td:first-child::before { display: none; }
-    #historial table td:first-child {
+    #historial table td:first-child::before, #eficiencia table td:first-child::before { display: none; }
+    #historial table td:first-child, #eficiencia table td:first-child {
       font-size: 16px;
       color: var(--cmc-navy);
     }
@@ -348,6 +349,27 @@
   </div>
 </section>
 
+<!-- Forecast del día -->
+<section class="max-w-7xl mx-auto mb-8" id="forecastStrip" style="display:none">
+  <div class="rounded-xl p-4 flex flex-wrap items-center gap-x-8 gap-y-3" style="background:#f3f8fb;border:1px solid var(--cmc-border)">
+    <div>
+      <p class="text-[11px] uppercase tracking-wide" style="color:var(--cmc-text-mute)">Proyección de cierre · hoy</p>
+      <p class="text-2xl font-extrabold money" id="fcProyectado" style="color:var(--cmc-navy)">$—</p>
+    </div>
+    <div class="text-sm" style="color:var(--cmc-text)">
+      <span>Cobrado <b id="fcRealizado" class="money" style="color:#16a34a">$—</b></span>
+      <span class="mx-2" style="opacity:.4">+</span>
+      <span><b id="fcPendN">—</b> citas por cerrar</span>
+    </div>
+    <div class="flex-1" style="min-width:140px">
+      <div style="height:8px;background:#e1e9f0;border-radius:4px;overflow:hidden">
+        <div id="fcBar" style="height:100%;width:0%;background:var(--cmc-blue);transition:width .5s"></div>
+      </div>
+      <p class="text-[10px] mt-1" style="color:var(--cmc-text-mute)"><span id="fcPct">0</span>% del proyectado ya cobrado · estimación según realizado-por-cita de cada box</p>
+    </div>
+  </div>
+</section>
+
 <!-- Heatmap general -->
 <section class="max-w-7xl mx-auto mb-4">
   <div class="heatmap-bar">
@@ -381,6 +403,15 @@
   <h2 class="text-lg font-bold mb-1">Revenue por box</h2>
   <p class="text-xs mb-4" style="color:var(--cmc-text-mute)">Hoy vs. mismo día semana pasada · semana vs. semana anterior · mes vs. mes anterior a la misma fecha · 30 días corridos</p>
   <div id="historial" class="bg-white rounded-xl border p-4" style="border-color:var(--cmc-border)">
+    <p class="text-sm" style="color:var(--cmc-text-mute)">Cargando...</p>
+  </div>
+</section>
+
+<!-- Eficiencia operativa -->
+<section class="max-w-7xl mx-auto mt-10">
+  <h2 class="text-lg font-bold mb-1">Eficiencia por box · 30 días</h2>
+  <p class="text-xs mb-4" style="color:var(--cmc-text-mute)">Utilización = horas ocupadas vs. franja 08–20h · yield = $ por hora ocupada · ociosidad = días desde la última cita · sin pago = citas pasadas sin registro de pago (incluye bonos y controles gratis, no es solo inasistencia)</p>
+  <div id="eficiencia" class="bg-white rounded-xl border p-4" style="border-color:var(--cmc-border)">
     <p class="text-sm" style="color:var(--cmc-text-mute)">Cargando...</p>
   </div>
 </section>
@@ -1461,6 +1492,68 @@ async function refresh() {
             </tr>`).join('')}</tbody>
         </table>`;
     }
+
+    // ── Forecast del día ──
+    const tot = d.totales || {};
+    const fcEl = document.getElementById('forecastStrip');
+    if ((tot.fc_proyectado || 0) > 0 || (tot.fc_pendiente_n || 0) > 0) {
+      fcEl.style.display = '';
+      document.getElementById('fcProyectado').textContent = fmtCLP(tot.fc_proyectado || 0);
+      document.getElementById('fcRealizado').textContent = fmtCLP(tot.fc_realizado || 0);
+      document.getElementById('fcPendN').textContent = tot.fc_pendiente_n || 0;
+      const pct = tot.fc_proyectado ? Math.round((tot.fc_realizado / tot.fc_proyectado) * 100) : 0;
+      document.getElementById('fcBar').style.width = Math.min(100, pct) + '%';
+      document.getElementById('fcPct').textContent = pct;
+    } else {
+      fcEl.style.display = 'none';
+    }
+
+    // ── Eficiencia por box ──
+    if (d.historial && d.historial.length) {
+      const utilBar = (u) => {
+        if (u === null || u === undefined) return '<span class="italic" style="color:var(--cmc-text-mute)">sin datos</span>';
+        let col = '#16a34a';
+        if (u < 35) col = '#dc2626'; else if (u > 85) col = '#d97706';
+        return `<div style="display:flex;align-items:center;gap:8px;justify-content:flex-end">
+          <div style="flex:1;max-width:90px;min-width:50px;height:8px;background:#eef2f6;border-radius:4px;overflow:hidden">
+            <div style="height:100%;width:${Math.min(100,u)}%;background:${col};border-radius:4px"></div>
+          </div><b style="color:${col};font-size:12px;white-space:nowrap">${u}%</b></div>`;
+      };
+      const ocioBadge = (dias) => {
+        if (dias === null || dias === undefined) return '—';
+        if (dias === 0) return '<span style="color:#16a34a;font-weight:600">hoy</span>';
+        const col = dias > 7 ? '#dc2626' : (dias > 3 ? '#d97706' : 'var(--cmc-text-mute)');
+        return `<span style="color:${col};font-weight:${dias>7?'700':'400'}">${dias} d</span>`;
+      };
+      const sinPagoBadge = (n, pct) => {
+        if (pct === null || pct === undefined) return '—';
+        const col = pct >= 60 ? '#dc2626' : (pct >= 40 ? '#d97706' : 'var(--cmc-text-mute)');
+        return `<span style="color:${col}">${n} <span style="font-size:11px">(${pct}%)</span></span>`;
+      };
+      document.getElementById('eficiencia').innerHTML = `
+        <table class="w-full text-sm">
+          <thead class="text-[11px] uppercase tracking-wider border-b" style="border-color:var(--cmc-border);color:var(--cmc-text-mute)">
+            <tr>
+              <th class="text-left py-2">Box</th>
+              <th class="text-right py-2">Utilización</th>
+              <th class="text-right py-2">Yield $/h</th>
+              <th class="text-right py-2">Horas ocup.</th>
+              <th class="text-right py-2">Ociosidad</th>
+              <th class="text-right py-2">Sin pago</th>
+            </tr>
+          </thead>
+          <tbody>${d.historial.map(h => `
+            <tr class="border-b last:border-0" style="border-color:#f0f4f8">
+              <td class="py-2 font-semibold h-value" data-label="Box">${esc(h.nombre)}</td>
+              <td class="py-2 text-right h-value" data-label="Utilización">${utilBar(h.utilizacion_30d)}</td>
+              <td class="py-2 text-right money font-semibold h-value" data-label="Yield $/h" style="color:var(--cmc-navy)">${h.yield_hora ? fmtCLP(h.yield_hora) : '—'}</td>
+              <td class="py-2 text-right h-value" data-label="Horas ocup." style="color:var(--cmc-text-mute)">${(h.horas_ocup_30d||0).toFixed(1)} h<span style="font-size:11px"> · ${h.dias_activos_30d}d</span></td>
+              <td class="py-2 text-right h-value" data-label="Ociosidad">${ocioBadge(h.dias_sin_citas)}</td>
+              <td class="py-2 text-right h-value" data-label="Sin pago">${sinPagoBadge(h.sin_pago_30d, h.sin_pago_pct)}</td>
+            </tr>`).join('')}</tbody>
+        </table>`;
+    }
+
     document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString('es-CL');
   } catch (e) {
     document.getElementById('lastUpdate').textContent = '⚠️ ' + e.message;
