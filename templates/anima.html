@@ -247,7 +247,7 @@
   /* Welcome (no module selected yet) */
   .welcome { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px; }
   .welcome.show { display: flex; }
-  .welcome .iso { width: 88px; height: 88px; margin-bottom: 18px; }
+  .welcome .iso { width: 84px; height: 84px; opacity: .9; margin-bottom: 18px; }
   .welcome h2 { font-size: 22px; color: var(--cmc-navy); margin: 0 0 8px; font-weight: 800; }
   .welcome .alma { font-size: 14px; color: var(--cmc-blue); font-weight: 700; max-width: 420px; margin: 0 0 14px; line-height: 1.45; }
   .welcome p { font-size: 13.5px; color: var(--cmc-text-mute); max-width: 380px; margin: 0; line-height: 1.5; }
@@ -317,14 +317,7 @@
   <!-- ===== Rail / Sidebar ===== -->
   <aside class="rail" id="rail">
     <div class="rail-brand">
-      <div class="rail-logo"><svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Ánima">
-        <defs>
-          <linearGradient id="anima-aq" x1="28" y1="28" x2="84" y2="92" gradientUnits="userSpaceOnUse"><stop stop-color="#5fc6d6"/><stop offset="1" stop-color="#3ba9ba"/></linearGradient>
-          <linearGradient id="anima-bl" x1="40" y1="30" x2="96" y2="98" gradientUnits="userSpaceOnUse"><stop stop-color="#1f86c0"/><stop offset="1" stop-color="#0F3F68"/></linearGradient>
-        </defs>
-        <path d="M46 26 h12 a8 8 0 0 1 8 8 v8 h8 a8 8 0 0 1 8 8 v12 a8 8 0 0 1 -8 8 h-8 v8 a8 8 0 0 1 -8 8 H46 a8 8 0 0 1 -8 -8 v-8 h-8 a8 8 0 0 1 -8 -8 V58 a8 8 0 0 1 8 -8 h8 v-8 a8 8 0 0 1 8 -8 Z" fill="none" stroke="url(#anima-aq)" stroke-width="9" transform="translate(-7 -7)"/>
-        <path d="M46 26 h12 a8 8 0 0 1 8 8 v8 h8 a8 8 0 0 1 8 8 v12 a8 8 0 0 1 -8 8 h-8 v8 a8 8 0 0 1 -8 8 H46 a8 8 0 0 1 -8 -8 v-8 h-8 a8 8 0 0 1 -8 -8 V58 a8 8 0 0 1 8 -8 h8 v-8 a8 8 0 0 1 8 -8 Z" fill="none" stroke="url(#anima-bl)" stroke-width="9" transform="translate(7 7)"/>
-      </svg></div>
+      <div class="rail-logo"><img src="/static/isotipo.png" alt="CMC"></div>
       <div class="rail-word">
         <div class="name">Á<span class="accent">nima</span></div>
         <div class="sub">Centro Médico<br>Carampangue</div>
@@ -371,14 +364,7 @@
   <!-- ===== Stage / iframes ===== -->
   <main class="stage" id="stage">
     <div class="welcome show" id="welcome">
-      <svg class="iso" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Ánima">
-        <defs>
-          <linearGradient id="welcome-aq" x1="28" y1="28" x2="84" y2="92" gradientUnits="userSpaceOnUse"><stop stop-color="#5fc6d6"/><stop offset="1" stop-color="#3ba9ba"/></linearGradient>
-          <linearGradient id="welcome-bl" x1="40" y1="30" x2="96" y2="98" gradientUnits="userSpaceOnUse"><stop stop-color="#1f86c0"/><stop offset="1" stop-color="#0F3F68"/></linearGradient>
-        </defs>
-        <path d="M46 26 h12 a8 8 0 0 1 8 8 v8 h8 a8 8 0 0 1 8 8 v12 a8 8 0 0 1 -8 8 h-8 v8 a8 8 0 0 1 -8 8 H46 a8 8 0 0 1 -8 -8 v-8 h-8 a8 8 0 0 1 -8 -8 V58 a8 8 0 0 1 8 -8 h8 v-8 a8 8 0 0 1 8 -8 Z" fill="none" stroke="url(#welcome-aq)" stroke-width="9" transform="translate(-7 -7)"/>
-        <path d="M46 26 h12 a8 8 0 0 1 8 8 v8 h8 a8 8 0 0 1 8 8 v12 a8 8 0 0 1 -8 8 h-8 v8 a8 8 0 0 1 -8 8 H46 a8 8 0 0 1 -8 -8 v-8 h-8 a8 8 0 0 1 -8 -8 V58 a8 8 0 0 1 8 -8 h8 v-8 a8 8 0 0 1 8 -8 Z" fill="none" stroke="url(#welcome-bl)" stroke-width="9" transform="translate(7 7)"/>
-      </svg>
+      <img class="iso" src="/static/isotipo.png" alt="">
       <h2>Bienvenido a Ánima</h2>
       <p class="alma">El alma operativa de Centro Médico Carampangue</p>
       <p>Elige un módulo en la columna izquierda. Todo se abre aquí mismo, sin salir de la plataforma.</p>
