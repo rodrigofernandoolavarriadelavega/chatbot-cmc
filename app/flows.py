@@ -34,7 +34,8 @@ from session import (save_session, reset_session, get_session, save_tag, delete_
                      registrar_bono_referral, conteo_referidos_mes,
                      mark_horas_vacias_respondio, mark_horas_vacias_agendo,
                      registrar_slot_rechazado, get_slots_rechazados,
-                     get_recent_pni_event, log_pni_cita_generada)
+                     get_recent_pni_event, log_pni_cita_generada,
+                     add_family_link, list_family_links)
 from resilience import is_medilink_down
 from triage_ges import triage_sintomas, normalizar_texto_paciente
 from pni import get_vaccine_reminder, get_pni_meta
@@ -2603,7 +2604,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # interceptarse aquí — pertenece al flujo activo del estado.
     _FLOW_STATES = {
         "WAIT_ESPECIALIDAD", "WAIT_SLOT", "WAIT_MODALIDAD", "WAIT_BOOKING_FOR",
-        "WAIT_PHONE_OWNER_NAME", "WAIT_RUT_AGENDAR", "WAIT_NOMBRE_NUEVO",
+        "WAIT_BOOKING_WHO", "WAIT_PHONE_OWNER_NAME", "WAIT_RUT_AGENDAR", "WAIT_NOMBRE_NUEVO",
         "WAIT_FECHA_NAC", "WAIT_SEXO", "WAIT_COMUNA", "WAIT_EMAIL",
         "WAIT_REFERRAL", "WAIT_REFERRAL_POST", "CONFIRMING_CITA",
         "WAIT_RUT_CANCELAR", "WAIT_CITA_CANCELAR", "CONFIRMING_CANCEL",
@@ -3002,7 +3003,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "WAIT_RUT_CANCELAR", "WAIT_CITA_CANCELAR", "WAIT_RUT_REAGENDAR",
                 "WAIT_CITA_REAGENDAR", "WAIT_RUT_VER", "WAIT_DATOS_NUEVO",
                 "WAIT_NOMBRE_NUEVO", "WAIT_FECHA_NAC", "WAIT_SEXO", "WAIT_BOOKING_FOR",
-                "WAIT_WAITLIST_CONFIRM", "WAIT_REFERRAL_POST",
+                "WAIT_BOOKING_WHO", "WAIT_WAITLIST_CONFIRM", "WAIT_REFERRAL_POST",
                 "WAIT_META_SLOT_CHOICE", "WAIT_META_WAITLIST",
                 "WAIT_WAITLIST_CONFIRM_ECOCA", "WAIT_WAITLIST_RUT_ECOCA",
             )
@@ -3101,7 +3102,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         "menu", "menú", "inicio", "reiniciar", "volver", "menu_volver"
     )
     _FLUJO_RETOMABLE = {
-        "WAIT_SLOT", "WAIT_MODALIDAD", "WAIT_BOOKING_FOR",
+        "WAIT_SLOT", "WAIT_MODALIDAD", "WAIT_BOOKING_FOR", "WAIT_BOOKING_WHO",
         "WAIT_RUT_AGENDAR", "CONFIRMING_CITA",
         "WAIT_RUT_CANCELAR", "WAIT_CITA_CANCELAR", "CONFIRMING_CANCEL",
         "WAIT_RUT_REAGENDAR", "WAIT_CITA_REAGENDAR",
@@ -7446,10 +7447,69 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if not data.get("booking_for_other"):
             data["booking_for_other"] = False
 
+        # ── Roster de dependientes ──────────────────────────────────────────
+        # Si el dueño del cel tiene familiares registrados, ofrecer lista en vez
+        # de pedir RUT directo. Aplica tanto para "booking_for_other" True como False.
+        _owner_profile = get_profile(phone)
+        _owner_rut = (_owner_profile or {}).get("rut") or ""
+        _deps: list[dict] = []
+        if _owner_rut:
+            try:
+                _deps = list_family_links(_owner_rut)
+            except Exception as _deps_err:
+                log.debug("list_family_links error (ignorado): %s", _deps_err)
+
+        if data.get("booking_for_other"):
+            # Tercero explícito: limpiar datos propios y ofrecer roster (si existe)
+            data.pop("rut_conocido", None)
+            data.pop("nombre_conocido", None)
+            if _deps:
+                _deps_mostrar = _deps[:8]  # máx 8 + "Otra persona"
+                _rows_deps = [
+                    {
+                        "id": f"dep_{d['dependent_rut']}",
+                        "title": _first_name(d["dependent_nombre"])[:24],
+                        "description": (d.get("relation") or "familiar")[:72],
+                    }
+                    for d in _deps_mostrar
+                ]
+                _rows_deps.append({"id": "dep_nuevo", "title": "Otra persona"})
+                data["_deps_roster"] = [d["dependent_rut"] for d in _deps_mostrar]
+                save_session(phone, "WAIT_BOOKING_WHO", data)
+                return _list_msg(
+                    body_text=f"Perfecto, atención *{modalidad_str}*. ¿Para quién es la hora?",
+                    button_label="Seleccionar",
+                    sections=[{"title": "Familiares registrados", "rows": _rows_deps}],
+                )
+            # Sin dependientes: comportamiento original (pedir RUT del paciente real)
+        else:
+            # Para sí mismo: si tiene dependientes, ofrecer también la opción
+            if _deps and _owner_rut:
+                _deps_mostrar = _deps[:8]
+                _rows_deps = [{"id": "dep_self", "title": "Para mí"}]
+                _rows_deps += [
+                    {
+                        "id": f"dep_{d['dependent_rut']}",
+                        "title": _first_name(d["dependent_nombre"])[:24],
+                        "description": (d.get("relation") or "familiar")[:72],
+                    }
+                    for d in _deps_mostrar
+                ]
+                _rows_deps.append({"id": "dep_nuevo", "title": "Otra persona"})
+                data["_deps_roster"] = [d["dependent_rut"] for d in _deps_mostrar]
+                save_session(phone, "WAIT_BOOKING_WHO", data)
+                return _list_msg(
+                    body_text=f"Perfecto, atención *{modalidad_str}*. ¿Para quién es la hora?",
+                    button_label="Seleccionar",
+                    sections=[{"title": "¿Para quién?", "rows": _rows_deps}],
+                )
+            # Sin dependientes: comportamiento original (atajo con datos propios)
+        # ── fin roster dependientes ─────────────────────────────────────────
+
         # Atajo para pacientes conocidos
         rut_c = data.get("rut_conocido")
         nombre_c = data.get("nombre_conocido")
-        if rut_c and nombre_c:
+        if rut_c and nombre_c and not data.get("booking_for_other"):
             save_session(phone, "WAIT_RUT_AGENDAR", data)
             return _btn_msg(
                 f"Perfecto, atención *{modalidad_str}* 😊\n\n"
@@ -7483,6 +7543,115 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             "Para reservar necesito tu *RUT*:\n"
             "(ej: *12.345.678-9*)\n\n"
             "_Si es para otra persona, escribe *otra persona*._"
+            + _PRIVACY_NOTE
+        )
+
+    # ── WAIT_BOOKING_WHO ──────────────────────────────────────────────────────
+    # Handler para el roster de dependientes. Muestra lista de familiares conocidos
+    # y permite seleccionar para quién es la cita sin pedir RUT manualmente.
+    if state == "WAIT_BOOKING_WHO":
+        _deps_roster = data.get("_deps_roster", [])
+        if tl == "dep_self":
+            # Para el dueño del cel
+            data["booking_for_other"] = False
+            data.pop("_deps_roster", None)
+            save_session(phone, "WAIT_RUT_AGENDAR", data)
+            rut_conocido = data.get("rut_conocido")
+            nombre_conocido = data.get("nombre_conocido")
+            if rut_conocido and nombre_conocido:
+                return _btn_msg(
+                    f"¿Agendo con tus datos anteriores, *{_first_name(nombre_conocido)}*?",
+                    [{"id": "si", "title": "Sí, continuar"},
+                     {"id": "rut_nuevo", "title": "Ingresar otro RUT"}],
+                )
+            return (
+                "Para confirmar necesito tu RUT:\n"
+                "(ej: *12.345.678-9*)"
+                + _PRIVACY_NOTE
+            )
+        if tl == "dep_nuevo":
+            # Otra persona no registrada — flujo normal
+            data["booking_for_other"] = True
+            data.pop("rut_conocido", None)
+            data.pop("nombre_conocido", None)
+            data.pop("_deps_roster", None)
+            save_session(phone, "WAIT_RUT_AGENDAR", data)
+            return (
+                "Sin problema. Necesito el *RUT* de la persona que se va a atender:\n"
+                "(ej: *12.345.678-9*)"
+                + _PRIVACY_NOTE
+            )
+        # Selección de dependiente registrado. Match case-insensitive: los IDs
+        # de lista de WhatsApp vuelven en minúscula → un RUT terminado en K (≈1
+        # de cada 11) no matchearía contra el roster que guarda la K en mayúscula.
+        if tl.startswith("dep_"):
+            _dep_sel_lower = tl[4:]
+            _dep_rut_sel = next(
+                (r for r in _deps_roster if str(r).lower() == _dep_sel_lower), None
+            )
+            if _dep_rut_sel:
+                data["rut"] = _dep_rut_sel
+                data["rut_conocido"] = _dep_rut_sel
+                data["booking_for_other"] = True
+                data["dep_preselected"] = True
+                data.pop("_deps_roster", None)
+                data.pop("nombre_conocido", None)  # buscar nombre real en Medilink
+                save_session(phone, "WAIT_RUT_AGENDAR", data)
+                log_event(phone, "dep_preselected", {"rut": _dep_rut_sel})
+                # Mostrar el nombre del familiar para que el paciente confirme a
+                # QUIÉN va dirigida la hora; la confirmación final con datos de
+                # Medilink ocurre luego en CONFIRMING_CITA.
+                _dep_nom = ""
+                try:
+                    _own_rut = (get_profile(phone) or {}).get("rut") or ""
+                    if _own_rut:
+                        for _d in list_family_links(_own_rut):
+                            if str(_d.get("dependent_rut")).lower() == _dep_sel_lower:
+                                _dep_nom = _first_name(_d.get("dependent_nombre") or "")
+                                break
+                except Exception:
+                    pass
+                _quien = f"para *{_dep_nom}*" if _dep_nom else "para este familiar"
+                return _btn_msg(
+                    f"Perfecto, la hora es {_quien}. ¿Confirmo?",
+                    [{"id": "si", "title": "Sí, continuar"},
+                     {"id": "rut_nuevo", "title": "Ingresar otro RUT"}],
+                )
+        # Input no reconocido: re-mostrar la lista
+        _owner_profile_who = get_profile(phone)
+        _owner_rut_who = (_owner_profile_who or {}).get("rut") or ""
+        _deps_who: list[dict] = []
+        if _owner_rut_who:
+            try:
+                _deps_who = list_family_links(_owner_rut_who)
+            except Exception:
+                pass
+        if _deps_who:
+            _deps_mostrar_who = _deps_who[:8]
+            _rows_who: list[dict] = []
+            if not data.get("booking_for_other"):
+                _rows_who.append({"id": "dep_self", "title": "Para mí"})
+            _rows_who += [
+                {
+                    "id": f"dep_{d['dependent_rut']}",
+                    "title": _first_name(d["dependent_nombre"])[:24],
+                    "description": (d.get("relation") or "familiar")[:72],
+                }
+                for d in _deps_mostrar_who
+            ]
+            _rows_who.append({"id": "dep_nuevo", "title": "Otra persona"})
+            data["_deps_roster"] = [d["dependent_rut"] for d in _deps_mostrar_who]
+            save_session(phone, "WAIT_BOOKING_WHO", data)
+            return _list_msg(
+                body_text="¿Para quién es la hora?",
+                button_label="Seleccionar",
+                sections=[{"title": "Selecciona una opción", "rows": _rows_who}],
+            )
+        # Fallback si perdemos la lista: pedir RUT
+        save_session(phone, "WAIT_RUT_AGENDAR", data)
+        return (
+            "Necesito el *RUT* de la persona que se va a atender:\n"
+            "(ej: *12.345.678-9*)"
             + _PRIVACY_NOTE
         )
 
@@ -8265,6 +8434,61 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "modalidad": data.get("modalidad", "particular"),
                     "id_cita_old": cita_old.get("id") if reagendar else None,
                 })
+                # ── Guardar vínculo familiar si la cita fue para tercero ─────
+                # Solo en citas nuevas (no reagendar). Secundario: un fallo aquí
+                # nunca debe interrumpir la confirmación de la cita.
+                if not reagendar and data.get("booking_for_other"):
+                    try:
+                        _dep_owner_profile = get_profile(phone)
+                        _dep_owner_rut = (_dep_owner_profile or {}).get("rut") or ""
+                        _dep_rut_pac = data.get("rut") or ""
+                        if _dep_owner_rut and _dep_rut_pac and _dep_owner_rut != _dep_rut_pac:
+                            # Determinar relación desde texto original si está disponible
+                            _dep_txt_raw = data.get("_txt_raw", "").lower()
+                            _dep_relation = "familiar"
+                            for _kw, _rel in (
+                                ("hijo", "hijo"), ("hija", "hija"),
+                                ("madre", "madre"), ("mama", "madre"), ("mamá", "madre"),
+                                ("padre", "padre"), ("papa", "padre"), ("papá", "padre"),
+                                ("hermano", "hermano"), ("hermana", "hermana"),
+                                ("abuelo", "abuelo"), ("abuela", "abuela"),
+                                ("esposo", "esposo"), ("esposa", "esposa"),
+                                ("cónyuge", "cónyuge"), ("conyugue", "cónyuge"),
+                                ("nieto", "nieto"), ("nieta", "nieta"),
+                                ("suegro", "suegro"), ("suegra", "suegra"),
+                            ):
+                                if _kw in _dep_txt_raw:
+                                    _dep_relation = _rel
+                                    break
+                            # Determinar verification_method por edad del paciente
+                            _dep_verif = "declared"
+                            _dep_fn = (paciente.get("fecha_nacimiento") or "")
+                            if _dep_fn:
+                                try:
+                                    from datetime import datetime as _dt_dep
+                                    _dep_parsed = _dt_dep.strptime(_dep_fn, "%d/%m/%Y").date()
+                                    _dep_age = (datetime.now(_CHILE_TZ).date() - _dep_parsed).days // 365
+                                    if _dep_age < 18:
+                                        _dep_verif = "tutor_declaration"
+                                except Exception:
+                                    pass
+                            _dep_nombre_pac = paciente.get("nombre") or _dep_rut_pac
+                            add_family_link(
+                                owner_rut=_dep_owner_rut,
+                                dependent_rut=_dep_rut_pac,
+                                dependent_nombre=_dep_nombre_pac,
+                                relation=_dep_relation,
+                                verification_method=_dep_verif,
+                            )
+                            log_event(phone, "dependiente_guardado", {
+                                "owner_rut": _dep_owner_rut,
+                                "dep_rut": _dep_rut_pac,
+                                "relation": _dep_relation,
+                                "verification_method": _dep_verif,
+                            })
+                    except Exception as _dep_save_err:
+                        log.warning("guardar dependiente falló (no bloquea cita): %s", _dep_save_err)
+                # ── fin guardar vínculo familiar ───────────────────────────
                 # ── Notificación al profesional (push WA, ventana 24h, $0) ───
                 # Best practice: avisar al profesional cuando bot agenda/reagenda
                 # un paciente en su agenda — para que no le caiga uno sorpresa.
@@ -11341,6 +11565,21 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
         "podología", "podologia",
     }
     _txt_raw = data.pop("_txt_raw", "") or ""
+    # ── Detección SISTÉMICA de tercero (fix 2026-05-29) ──────────────────────
+    # Antes _OTRA_PERSONA_RE solo se evaluaba en WAIT_MODALIDAD, así que
+    # "quiero agendar para mi hijo" desde el primer mensaje (o por audio
+    # transcrito) NO marcaba el flag y el paciente tenía que repetir 2-3 veces
+    # "es para mi hijo / no, para mí". _iniciar_agendar es el chokepoint único
+    # de TODAS las rutas de agendamiento y ya lee _txt_raw para el aviso de
+    # menores → marcamos aquí el flag para que cubra texto y audio por igual.
+    # Casos reales 2026-05: 56927011946 (3 intentos), 56971590564, 56951169548.
+    if (
+        _txt_raw
+        and not data.get("booking_for_other")
+        and _OTRA_PERSONA_RE.search(_txt_raw.lower())
+    ):
+        data["booking_for_other"] = True
+        log_event(phone, "tercero_detectado_iniciar", {"txt": _txt_raw[:120]})
     _esp_lower_menor = (especialidad or "").lower().strip()
     _saltar_aviso_menor = (
         not _txt_raw
