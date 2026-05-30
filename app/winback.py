@@ -316,6 +316,42 @@ def registrar_consent_respuesta(phone: str, status: str, method: str) -> None:
         log.warning("winback: registrar_consent_respuesta error %s: %s", phone[-4:], e)
 
 
+def registrar_opt_out_marketing(phone: str, source: str = "baja", reason: str = "opt_out") -> None:
+    """Opt-out de marketing en BI: inserta en bi.opt_outs_marketing y marca
+    bi.marketing_consent como 'declined'. Idempotente, teléfono canónico.
+
+    Cierra el gap detectado 2026-05-30 (caso Hada): el path "Baja" revocaba el
+    privacy_consent en sessions.db pero NO tocaba las tablas BI que gatean el
+    winback → un paciente que pidió baja seguía 'accepted' y reaparecía en el
+    pool a los 90 días. Esta función es la fuente única de verdad del opt-out BI.
+    """
+    from session import normalize_wa_id
+    phone = normalize_wa_id(phone)
+    try:
+        with bi_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "INSERT INTO bi.opt_outs_marketing (phone, source, reason) "
+                    "VALUES (%s, %s, %s) ON CONFLICT (phone) DO NOTHING",
+                    (phone, source, reason),
+                )
+                # Match por 9 dígitos: la fila de consent pudo guardarse en otro
+                # formato histórico; igual la marcamos declined.
+                cur.execute(
+                    "UPDATE bi.marketing_consent "
+                    "SET status='declined', response_at=NOW(), response_method=%s "
+                    "WHERE RIGHT(regexp_replace(phone,'[^0-9]','','g'),9) "
+                    "    = RIGHT(regexp_replace(%s,'[^0-9]','','g'),9) "
+                    "  AND status <> 'declined'",
+                    (source, phone),
+                )
+            conn.commit()
+        log.info("winback: opt-out marketing BI registrado phone=...%s source=%s",
+                 phone[-4:], source)
+    except Exception as e:
+        log.warning("winback: registrar_opt_out_marketing error %s: %s", phone[-4:], e)
+
+
 def phone_in_opt_out(phone: str) -> bool:
     """Retorna True si el phone está en bi.opt_outs_marketing."""
     from session import normalize_wa_id

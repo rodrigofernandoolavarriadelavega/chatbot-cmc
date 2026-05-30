@@ -3013,6 +3013,15 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 revoke_privacy_consent(phone)
                 save_tag(phone, "marketing_opt_out")
                 log_event(phone, "privacy_consent_revoked")
+                # Propagar el opt-out a BI (gap caso Hada 2026-05-30): sin esto
+                # el "Baja" no excluía del pool winback y el paciente reaparecía
+                # a los 90 días pese a haber pedido baja.
+                try:
+                    from winback import registrar_opt_out_marketing
+                    registrar_opt_out_marketing(phone, source="baja_keyword",
+                                                 reason="opt_out_baja")
+                except Exception as _ob_err:
+                    log.debug("opt-out marketing BI falló (no bloquea): %s", _ob_err)
                 reset_session(phone)
                 return (
                     "Listo 👍 No recibirás más mensajes de seguimiento ni campañas.\n\n"
@@ -3023,6 +3032,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if ("borrar mis datos" in tl_norm or "borrar mis datos" in tl
                 or "derecho al olvido" in tl_norm):
             log_event(phone, "gdpr_deletion_requested", {"texto": txt[:240]})
+            # Quien pide borrado queda excluido de marketing de inmediato en BI
+            # (no esperar a la ejecución manual del borrado).
+            try:
+                from winback import registrar_opt_out_marketing
+                registrar_opt_out_marketing(phone, source="gdpr_deletion",
+                                             reason="deletion_requested")
+            except Exception as _gd_err:
+                log.debug("opt-out marketing BI (borrado) falló: %s", _gd_err)
             # Alerta al admin/doctor para ejecución manual (validación identidad)
             try:
                 from resilience import spawn_task
