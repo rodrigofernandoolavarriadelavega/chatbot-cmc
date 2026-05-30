@@ -2695,7 +2695,8 @@ _OLAVARRIA_DASHBOARD_HTML = (_TEMPLATE_DIR / "olavarria_dashboard.html").read_te
 _PROF_DASHBOARD_HTML = (_TEMPLATE_DIR / "profesional_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "profesional_dashboard.html").exists() else ""
 _WINBACK_DASHBOARD_HTML = (_TEMPLATE_DIR / "winback_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "winback_dashboard.html").exists() else ""
 _WINBACK_DENTAL_DASHBOARD_HTML = (_TEMPLATE_DIR / "winback_dental_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "winback_dental_dashboard.html").exists() else ""
-_BOXES_DASHBOARD_HTML = (_TEMPLATE_DIR / "boxes_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "boxes_dashboard.html").exists() else ""
+_BOXES_DASHBOARD_HTML = (_TEMPLATE_DIR / "boxes_dashboard.html").read_text(encoding="utf-8")
+_ANIMA_HTML = (_TEMPLATE_DIR / "anima.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "anima.html").exists() else "" if (_TEMPLATE_DIR / "boxes_dashboard.html").exists() else ""
 
 # ── Pool de conexiones BI para endpoints de boxes ────────────────────────────
 # Máximo 8 conexiones compartidas entre boxes-state, boxes-config y boxes-config-put.
@@ -3096,6 +3097,30 @@ def boxes_dashboard_page(token: str | None = Query(None)):
     if not _BOXES_DASHBOARD_HTML:
         raise HTTPException(404, "Dashboard Boxes no disponible")
     return _BOXES_DASHBOARD_HTML
+
+
+@app.get("/anima", response_class=HTMLResponse)
+@app.get("/anima/dashboard", response_class=HTMLResponse)
+def anima_shell(token: str | None = Query(None),
+                cmc_session: str | None = Cookie(None)):
+    """Ánima — plataforma interna unificada. Embebe Panel Recepción v2 y Boxes
+    en una sola página con navegación lateral. Misma auth que /admin.
+
+    Los módulos embebidos (en especial /boxes) sólo aceptan el token por query,
+    por eso, cuando la sesión entra por cookie, inyectamos el ADMIN_TOKEN real
+    para que los iframes carguen. El token queda en el DOM de los iframes — es
+    el mismo modelo que ya usa /boxes hoy.
+    """
+    from admin_routes import _verify_cookie
+    if not _ANIMA_HTML:
+        raise HTTPException(404, "Ánima no disponible")
+    if token and token == ADMIN_TOKEN:
+        return _ANIMA_HTML.replace("__TOKEN__", token)
+    if cmc_session:
+        role = _verify_cookie(cmc_session)
+        if role in ("admin", "ortodoncia"):
+            return _ANIMA_HTML.replace("__TOKEN__", ADMIN_TOKEN)
+    return RedirectResponse(url="/admin/login", status_code=302)
 
 
 @app.get("/admin/api/boxes-config")
@@ -3594,6 +3619,8 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
         else:
             prev_month_start = month_start.replace(month=month_start.month - 1)
         prev_month_mtd_end = prev_month_start + timedelta(days=days_into_month)
+        desde_90 = today - timedelta(days=90)          # ventana para ticket promedio
+        ayer = today - timedelta(days=1)               # no-show proxy: solo días ya cerrados
         lower = min(desde_30, week_prev_start, prev_month_start)
 
         params = {
@@ -3603,7 +3630,7 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
             "week_prev_start": week_prev_start, "week_prev_end": week_prev_end,
             "month_start": month_start,
             "prev_month_start": prev_month_start, "prev_month_mtd_end": prev_month_mtd_end,
-            "desde_30": desde_30,
+            "desde_30": desde_30, "desde_90": desde_90, "ayer": ayer,
         }
         cur.execute("""
             SELECT fa.profesional_id, COALESCE(dp.nombre,'—') AS prof,
@@ -3631,6 +3658,63 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
                 "rev_sem_prev", "n_mes", "rev_mes", "rev_mes_prev", "n_30", "rev_30"]
         prof_stats_30d = {r[0]: dict(zip(cols, r[1:])) for r in cur.fetchall()}
 
+        # ── Capa de decisión: horas ocupadas, ociosidad, ticket, no-show proxy ──
+        # Intervalo nominal del slot por profesional (min). Horas ocupadas = nº
+        # atenciones × intervalo → modela "ocupación agendada" (la sala se bloquea
+        # el slot completo), coherente con el conteo que genera el revenue.
+        try:
+            from medilink import PROFESIONALES as _PROFS
+        except Exception:
+            _PROFS = {}
+        def _intervalo(pid):
+            return int((_PROFS.get(pid) or {}).get("intervalo", 20) or 20)
+
+        # ►► VENTANA OPERATIVA DIARIA del box, en minutos. Define el denominador de
+        #    utilización: un box "ocioso" lo está respecto de esta franja. 720 = 12h
+        #    (08:00–20:00), igual que el load-bar del dashboard. AJUSTA si tus boxes
+        #    operan otra franja real (ej. 600 = 10h, 540 = 9h).
+        VENTANA_DIA_MIN = 720
+
+        # Días activos por profesional (distinct fechas con atención, 30d) → para
+        # agregar a nivel box (un día cuenta una vez aunque varios profs atiendan).
+        cur.execute("""
+            SELECT DISTINCT fecha, profesional_id
+            FROM bi.fact_atenciones
+            WHERE fecha BETWEEN %(desde_30)s AND %(today)s
+        """, params)
+        dias_por_prof: dict = {}
+        for f, pid in cur.fetchall():
+            dias_por_prof.setdefault(pid, set()).add(f)
+
+        # Última atención (ociosidad) + ticket promedio 90d (forecast), por prof.
+        cur.execute("""
+            SELECT fa.profesional_id, MAX(fa.fecha) AS ultima,
+              ROUND(AVG(NULLIF(mp.monto,0)))::int AS ticket
+            FROM bi.fact_atenciones fa
+            LEFT JOIN LATERAL (
+              SELECT SUM(p.monto) AS monto FROM bi.fact_pagos p
+              WHERE p.paciente_id = fa.paciente_id AND p.fecha = fa.fecha
+            ) mp ON true
+            WHERE fa.fecha BETWEEN %(desde_90)s AND %(today)s
+            GROUP BY fa.profesional_id
+        """, params)
+        prof_extra = {r[0]: {"ultima": r[1], "ticket": r[2] or 0} for r in cur.fetchall()}
+
+        # No-show proxy (30d, solo días ya cerrados ≤ ayer): citas cuyo paciente NO
+        # registró pago ese día. Incluye falsos positivos legítimos (bonos/controles
+        # gratis), por eso el front lo rotula "sin registro de pago", no "no-show".
+        cur.execute("""
+            SELECT fc.profesional_id,
+              COUNT(*) AS total_pasadas,
+              COUNT(*) FILTER (WHERE pg.paciente_id IS NULL) AS sin_pago
+            FROM bi.fact_citas fc
+            LEFT JOIN (SELECT DISTINCT paciente_id, fecha FROM bi.fact_pagos) pg
+              ON pg.paciente_id = fc.paciente_id AND pg.fecha = fc.fecha
+            WHERE fc.fecha BETWEEN %(desde_30)s AND %(ayer)s
+            GROUP BY fc.profesional_id
+        """, params)
+        prof_nopago = {r[0]: {"total": r[1], "sin_pago": r[2]} for r in cur.fetchall()}
+
         def _pct(cur_v, prev_v):
             # variación %; None si no hay base de comparación
             if prev_v and prev_v > 0:
@@ -3643,14 +3727,64 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
             stats.sort(key=lambda x: x["n_30"], reverse=True)
             def _sum(k): return sum(s[k] for s in stats)
             rev_hoy, rev_sem, rev_mes = _sum("rev_hoy"), _sum("rev_sem"), _sum("rev_mes")
+            rev_30 = _sum("rev_30")
+
+            # Horas ocupadas 30d = Σ atenciones_prof × intervalo_prof.
+            occ_min = sum(prof_stats_30d[pid]["n_30"] * _intervalo(pid)
+                          for pid in acct_profs if pid in prof_stats_30d)
+            occ_h = occ_min / 60.0
+            # Días activos del box: distinct fechas entre sus profs (sin doble conteo).
+            dias_set = set()
+            for pid in acct_profs:
+                dias_set |= dias_por_prof.get(pid, set())
+            dias_activos = len(dias_set)
+            avail_min = dias_activos * VENTANA_DIA_MIN
+            utilizacion = round(occ_min / avail_min * 100) if avail_min else None
+            yield_hora = round(rev_30 / occ_h) if occ_h else None
+            # Ociosidad: días desde la última atención de cualquier prof del box.
+            ultimas = [prof_extra[pid]["ultima"] for pid in acct_profs
+                       if pid in prof_extra and prof_extra[pid]["ultima"]]
+            dias_sin_citas = (today - max(ultimas)).days if ultimas else None
+            # No-show proxy (sin registro de pago).
+            np_total = sum(prof_nopago.get(pid, {}).get("total", 0) for pid in acct_profs)
+            np_sin = sum(prof_nopago.get(pid, {}).get("sin_pago", 0) for pid in acct_profs)
+            np_pct = round(np_sin / np_total * 100) if np_total else None
+
+            # Forecast del día (solo hoy): realizado (pacientes que ya pagaron) +
+            # pendiente (citas sin pago aún × ticket promedio del prof).
+            fc_real = fc_pend_n = fc_pend_monto = 0
+            if is_today:
+                pac_pagados = set()
+                for c in citas_del_box.get(box["id"], []):
+                    pac = c.get("paciente_id")
+                    if pac and pagos_por_pac.get(pac, 0) > 0:
+                        pac_pagados.add(pac)
+                    else:
+                        fc_pend_n += 1
+                        fc_pend_monto += (prof_extra.get(c.get("profesional_id"), {}).get("ticket", 0) or 0)
+                fc_real = sum(pagos_por_pac.get(p, 0) for p in pac_pagados)
+            fc_proy = fc_real + fc_pend_monto
+
             historial.append({
                 "nombre": box["nombre"],
                 "profesionales_top": [s["prof"] for s in stats[:3]],
                 "revenue_hoy": rev_hoy, "delta_hoy": _pct(rev_hoy, _sum("rev_hoy_prev")),
                 "revenue_sem": rev_sem, "delta_sem": _pct(rev_sem, _sum("rev_sem_prev")),
                 "revenue_mes": rev_mes, "delta_mes": _pct(rev_mes, _sum("rev_mes_prev")),
-                "revenue_30d": _sum("rev_30"),
+                "revenue_30d": rev_30,
                 "citas_30d": _sum("n_30"),
+                # Capa de decisión:
+                "horas_ocup_30d": round(occ_h, 1),
+                "dias_activos_30d": dias_activos,
+                "utilizacion_30d": utilizacion,      # % horas ocupadas vs franja disponible
+                "yield_hora": yield_hora,            # $ por hora ocupada
+                "dias_sin_citas": dias_sin_citas,    # ociosidad
+                "sin_pago_30d": np_sin,              # nº citas sin registro de pago
+                "sin_pago_pct": np_pct,              # % sobre citas pasadas del box
+                # Forecast del día:
+                "fc_realizado": fc_real,             # $ ya cobrado hoy
+                "fc_pendiente_n": fc_pend_n,         # citas sin pago aún
+                "fc_proyectado": fc_proy,            # realizado + pendiente estimado
             })
 
         # Totales
@@ -3754,6 +3888,9 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
                 "profesionales_activos": total_profs_activos,
                 "citas_dia": total_citas,
                 "revenue_dia": total_revenue,
+                "fc_realizado": sum(h["fc_realizado"] for h in historial),
+                "fc_pendiente_n": sum(h["fc_pendiente_n"] for h in historial),
+                "fc_proyectado": sum(h["fc_proyectado"] for h in historial),
             },
             "boxes": boxes_out,
             "boxes_config_default": BOXES_CONFIG,
