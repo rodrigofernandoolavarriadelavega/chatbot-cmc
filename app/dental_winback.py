@@ -587,8 +587,10 @@ async def send_dental_winback(candidato: dict) -> bool:
     }
     # Usar solo el primer nombre limpio (ej: "CARLOS ANDRES ROJAS" → "Carlos")
     first_name = nombre.strip().split()[0][:30].capitalize()
-    if template_name in _TWO_PARAM and profesional:
-        body_params = [first_name, profesional]
+    if template_name in _TWO_PARAM:
+        # Los de 2 params EXIGEN {{2}}; genérico si no hay profesional para no
+        # romper con (#132000). Conteo verificado contra Meta 2026-05-30.
+        body_params = [first_name, profesional or "nuestro equipo"]
     else:
         body_params = [first_name]
 

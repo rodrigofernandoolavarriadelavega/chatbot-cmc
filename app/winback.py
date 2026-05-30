@@ -316,6 +316,42 @@ def registrar_consent_respuesta(phone: str, status: str, method: str) -> None:
         log.warning("winback: registrar_consent_respuesta error %s: %s", phone[-4:], e)
 
 
+def registrar_opt_out_marketing(phone: str, source: str = "baja", reason: str = "opt_out") -> None:
+    """Opt-out de marketing en BI: inserta en bi.opt_outs_marketing y marca
+    bi.marketing_consent como 'declined'. Idempotente, teléfono canónico.
+
+    Cierra el gap detectado 2026-05-30 (caso Hada): el path "Baja" revocaba el
+    privacy_consent en sessions.db pero NO tocaba las tablas BI que gatean el
+    winback → un paciente que pidió baja seguía 'accepted' y reaparecía en el
+    pool a los 90 días. Esta función es la fuente única de verdad del opt-out BI.
+    """
+    from session import normalize_wa_id
+    phone = normalize_wa_id(phone)
+    try:
+        with bi_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "INSERT INTO bi.opt_outs_marketing (phone, source, reason) "
+                    "VALUES (%s, %s, %s) ON CONFLICT (phone) DO NOTHING",
+                    (phone, source, reason),
+                )
+                # Match por 9 dígitos: la fila de consent pudo guardarse en otro
+                # formato histórico; igual la marcamos declined.
+                cur.execute(
+                    "UPDATE bi.marketing_consent "
+                    "SET status='declined', response_at=NOW(), response_method=%s "
+                    "WHERE RIGHT(regexp_replace(phone,'[^0-9]','','g'),9) "
+                    "    = RIGHT(regexp_replace(%s,'[^0-9]','','g'),9) "
+                    "  AND status <> 'declined'",
+                    (source, phone),
+                )
+            conn.commit()
+        log.info("winback: opt-out marketing BI registrado phone=...%s source=%s",
+                 phone[-4:], source)
+    except Exception as e:
+        log.warning("winback: registrar_opt_out_marketing error %s: %s", phone[-4:], e)
+
+
 def phone_in_opt_out(phone: str) -> bool:
     """Retorna True si el phone está en bi.opt_outs_marketing."""
     from session import normalize_wa_id
@@ -411,7 +447,23 @@ def get_candidatos_dia(cohorte: str, limite: int = 200) -> list[dict]:
                 (cohorte, limite),
             )
             cols = [d[0] for d in cur.description]
-            return [dict(zip(cols, row)) for row in cur.fetchall()]
+            filas = [dict(zip(cols, row)) for row in cur.fetchall()]
+
+    # Dedup por teléfono: la vista trae UNA FILA POR ATENCIÓN/ESPECIALIDAD, así
+    # que un mismo paciente aparece varias veces. Sin esto el batch envía un
+    # winback por cada fila → el 2026-05-29 nueve pacientes recibieron 2-4
+    # mensajes en 20 min. Conservamos la primera (orden dias_inactivo ASC =
+    # la atención más reciente, que da la mejor especialidad para el template).
+    vistos: set[str] = set()
+    unicos: list[dict] = []
+    for f in filas:
+        digits = "".join(c for c in str(f.get("telefono") or "") if c.isdigit())
+        clave = digits[-9:] if len(digits) >= 9 else digits
+        if not clave or clave in vistos:
+            continue
+        vistos.add(clave)
+        unicos.append(f)
+    return unicos
 
 
 # ── Excluir phones con cita futura en sessions.db ────────────────────────────
@@ -871,19 +923,24 @@ async def send_winback(candidato: dict) -> bool:
         )
         return False
 
-    # Parámetros del body template
-    # Templates _v2 con {{1}} = nombre paciente
-    # Templates _v2 con {{1}} + {{2}} = nombre paciente + nombre profesional
+    # Parámetros del body template (conteo verificado contra Meta 2026-05-30):
+    #   2 params {{1}}=nombre {{2}}=profesional → medicina_general, kinesiologia,
+    #     odontologia. EXIGEN 2 siempre: si falta el profesional el template se
+    #     rompe con (#132000) Number of parameters does not match.
+    #   1 param {{1}}=nombre → otorrino (lleva "Dr. Millán" hardcodeado en el
+    #     texto), generico_sensible, one_shot. NO van en _TWO_PARAM_TEMPLATES.
+    # Bug previo: otorrino estaba acá (mandaba 2 a un template de 1 → #132000) y
+    # los de 2 caían a 1 param cuando no había profesional → mismo #132000.
     _TWO_PARAM_TEMPLATES = {
         "winback_medicina_general_v2",
         "winback_kinesiologia_v2",
         "winback_odontologia_v2",
-        "winback_otorrino_v2",
     }
     # Usar solo el primer nombre limpio (ej: "MARIA JOSE GONZALEZ" → "Maria")
     first_name = nombre.strip().split()[0][:30].capitalize()
-    if template_name in _TWO_PARAM_TEMPLATES and profesional_nombre:
-        body_params = [first_name, profesional_nombre]
+    if template_name in _TWO_PARAM_TEMPLATES:
+        # SIEMPRE 2 params; genérico si no conocemos al profesional.
+        body_params = [first_name, profesional_nombre or "nuestro equipo"]
     else:
         body_params = [first_name]
 
