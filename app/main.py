@@ -3751,8 +3751,13 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
             np_pct = round(np_sin / np_total * 100) if np_total else None
 
             # Forecast del día (solo hoy): realizado (pacientes que ya pagaron) +
-            # pendiente (citas sin pago aún × ticket promedio del prof).
-            fc_real = fc_pend_n = fc_pend_monto = 0
+            # pendiente estimado. Valor esperado por cita pendiente = revenue
+            # realizado por atención del box (rev_30/citas_30), que YA incorpora la
+            # tasa de no-pago del box. Proyectar al ticket-de-pagadores sobreestima
+            # porque ignora que ~50% de las citas no registran pago.
+            fc_real = fc_pend_n = 0
+            n30 = _sum("n_30")
+            rev_x_cita = (rev_30 / n30) if n30 else 0
             if is_today:
                 pac_pagados = set()
                 for c in citas_del_box.get(box["id"], []):
@@ -3761,8 +3766,8 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
                         pac_pagados.add(pac)
                     else:
                         fc_pend_n += 1
-                        fc_pend_monto += (prof_extra.get(c.get("profesional_id"), {}).get("ticket", 0) or 0)
                 fc_real = sum(pagos_por_pac.get(p, 0) for p in pac_pagados)
+            fc_pend_monto = round(fc_pend_n * rev_x_cita)
             fc_proy = fc_real + fc_pend_monto
 
             historial.append({
