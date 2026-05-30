@@ -2733,8 +2733,12 @@ def _bi_pool() -> "psycopg2.pool.ThreadedConnectionPool":  # type: ignore[name-d
 # con cita activa ocupa este box, el segundo el siguiente del mismo tipo.
 # "fijo" = solo este profesional ocupa este box (kine 1 = Armijo, kine 2 = Etcheverry).
 BOXES_CONFIG = [
-    {"id": "box1",      "piso": 1, "orden": 1, "nombre": "Box 1",         "tipo": "general",     "modo": "pool", "pool_group": "general",  "default_profs": [1, 73, 13, 23, 60, 64, 61, 65, 70]},
-    {"id": "box2",      "piso": 1, "orden": 2, "nombre": "Box 2",         "tipo": "general",     "modo": "pool", "pool_group": "general",  "default_profs": [1, 73, 13, 23, 60, 64, 61, 65, 70]},
+    # default_profs = pool de OCUPACIÓN física (quién puede estar en la sala; box1/box2 son
+    #   intercambiables, el spreading en vivo reparte hasta 2 médicos por box).
+    # revenue_profs = atribución CONTABLE (de quién es la plata). box1=MG, box2=especialistas.
+    #   Particiona el pool general sin solape ni hueco → cada cita cuenta una sola vez.
+    {"id": "box1",      "piso": 1, "orden": 1, "nombre": "Box 1",         "tipo": "general",     "modo": "pool", "pool_group": "general",  "default_profs": [1, 73, 13, 23, 60, 64, 61, 65, 70], "revenue_profs": [1, 73, 13]},
+    {"id": "box2",      "piso": 1, "orden": 2, "nombre": "Box 2",         "tipo": "general",     "modo": "pool", "pool_group": "general",  "default_profs": [1, 73, 13, 23, 60, 64, 61, 65, 70], "revenue_profs": [23, 60, 64, 61, 65, 70]},
     {"id": "kine1",     "piso": 1, "orden": 3, "nombre": "Kinesiología 1","tipo": "kinesiología","modo": "fijo", "pool_group": None,       "default_profs": [77]},
     {"id": "kine2",     "piso": 1, "orden": 4, "nombre": "Kinesiología 2","tipo": "kinesiología","modo": "fijo", "pool_group": None,       "default_profs": [21]},
     {"id": "boxdental", "piso": 2, "orden": 1, "nombre": "Box Dental",    "tipo": "dental",      "modo": "pool", "pool_group": "dental",   "default_profs": [55, 72, 66, 75, 69, 76]},
@@ -3532,9 +3536,10 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
         # Para esto, primero asignar TODAS las citas del día a su box predeterminado.
         citas_del_box = {b["id"]: [] for b in BOXES_CONFIG}
         for c in citas_hoy:
-            # box destino: primer box donde el prof está en default_profs
+            # box destino contable: primer box donde el prof está en revenue_profs
+            # (o default_profs si el box no reparte el pool). Evita doble conteo box1/box2.
             for box in BOXES_CONFIG:
-                if c["profesional_id"] in box["default_profs"]:
+                if c["profesional_id"] in box.get("revenue_profs", box["default_profs"]):
                     citas_del_box[box["id"]].append(c)
                     break
 
@@ -3633,7 +3638,8 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
             return None
 
         for box in BOXES_CONFIG:
-            stats = [prof_stats_30d[pid] for pid in box["default_profs"] if pid in prof_stats_30d]
+            acct_profs = box.get("revenue_profs", box["default_profs"])
+            stats = [prof_stats_30d[pid] for pid in acct_profs if pid in prof_stats_30d]
             stats.sort(key=lambda x: x["n_30"], reverse=True)
             def _sum(k): return sum(s[k] for s in stats)
             rev_hoy, rev_sem, rev_mes = _sum("rev_hoy"), _sum("rev_sem"), _sum("rev_mes")
