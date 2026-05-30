@@ -102,20 +102,15 @@
     padding: 8px 14px;
     border-bottom: 1px solid rgba(255,255,255,.08);
   }
-  /* lockup completo (cruz + ÁNIMA CARAMPANGUE) sobre tarjeta blanca */
-  .rail-lockup {
-    width: 100%; max-height: 42px; object-fit: contain;
-    background: #fff; border-radius: 12px; padding: 6px 12px;
-    box-shadow: 0 4px 14px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.7);
+  /* tile cuadrado con la cruz adentro — mismo estilo que los íconos del resto */
+  .rail-logo {
+    width: 42px; height: 42px; flex-shrink: 0; border-radius: 12px; padding: 7px;
+    display: grid; place-items: center;
+    background: linear-gradient(135deg, var(--cmc-aqua-soft), #fff);
+    border: 1px solid var(--cmc-border);
+    box-shadow: 0 2px 8px rgba(15,63,104,.10), inset 0 1px 0 rgba(255,255,255,.7);
   }
-  /* iso mini: solo se muestra cuando la sidebar está contraída */
-  .rail-mini { display: none; width: 40px; height: 40px; border-radius: 12px;
-    background: linear-gradient(180deg,#fff,#eef6fa); padding: 5px; place-items: center;
-    box-shadow: 0 4px 14px rgba(0,0,0,.28); }
-  .rail-mini svg { width: 100%; height: 100%; display: block; }
-  /* Sidebar contraída (desktop): lockup → mini iso */
-  .app.collapsed .rail-lockup { display: none; }
-  .app.collapsed .rail-mini { display: grid; }
+  .rail-logo svg { width: 100%; height: 100%; display: block; }
   .rail-word { min-width: 0; transition: opacity .15s; }
   .rail-word .name {
     font-size: 21px; font-weight: 800; color: #fff; letter-spacing: .5px; line-height: 1;
@@ -325,17 +320,16 @@
   <!-- ===== Rail / Sidebar ===== -->
   <aside class="rail" id="rail">
     <div class="rail-brand">
-      <img class="rail-lockup" src="/static/anima-lockup.png" alt="Ánima Carampangue">
-      <span class="rail-mini" aria-hidden="true">
-        <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="rail-aq" x1="28" y1="28" x2="84" y2="92" gradientUnits="userSpaceOnUse"><stop stop-color="#5fc6d6"/><stop offset="1" stop-color="#3ba9ba"/></linearGradient>
-            <linearGradient id="rail-bl" x1="40" y1="30" x2="96" y2="98" gradientUnits="userSpaceOnUse"><stop stop-color="#1f86c0"/><stop offset="1" stop-color="#0F3F68"/></linearGradient>
-          </defs>
-          <path d="M46 26 h12 a8 8 0 0 1 8 8 v8 h8 a8 8 0 0 1 8 8 v12 a8 8 0 0 1 -8 8 h-8 v8 a8 8 0 0 1 -8 8 H46 a8 8 0 0 1 -8 -8 v-8 h-8 a8 8 0 0 1 -8 -8 V58 a8 8 0 0 1 8 -8 h8 v-8 a8 8 0 0 1 8 -8 Z" fill="none" stroke="url(#rail-aq)" stroke-width="9" transform="translate(-7 -7)"/>
-          <path d="M46 26 h12 a8 8 0 0 1 8 8 v8 h8 a8 8 0 0 1 8 8 v12 a8 8 0 0 1 -8 8 h-8 v8 a8 8 0 0 1 -8 8 H46 a8 8 0 0 1 -8 -8 v-8 h-8 a8 8 0 0 1 -8 -8 V58 a8 8 0 0 1 8 -8 h8 v-8 a8 8 0 0 1 8 -8 Z" fill="none" stroke="url(#rail-bl)" stroke-width="9" transform="translate(7 7)"/>
+      <div class="rail-logo">
+        <svg viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Ánima">
+          <defs><linearGradient id="rail-cross" x1="0" y1="0" x2="96" y2="96" gradientUnits="userSpaceOnUse"><stop stop-color="#4FBECE"/><stop offset="1" stop-color="#1172AB"/></linearGradient></defs>
+          <path d="M40 16 h16 a4 4 0 0 1 4 4 v16 h16 a4 4 0 0 1 4 4 v16 a4 4 0 0 1 -4 4 H60 v16 a4 4 0 0 1 -4 4 H40 a4 4 0 0 1 -4 -4 V60 H20 a4 4 0 0 1 -4 -4 V40 a4 4 0 0 1 4 -4 h16 V20 a4 4 0 0 1 4 -4 Z" fill="url(#rail-cross)"/>
         </svg>
-      </span>
+      </div>
+      <div class="rail-word">
+        <div class="name">Á<span class="accent">nima</span></div>
+        <div class="sub">Centro Médico<br>Carampangue</div>
+      </div>
     </div>
 
     <nav class="rail-nav" id="nav">
