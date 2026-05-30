@@ -100,13 +100,13 @@
   .rail-brand {
     display: flex; align-items: center; justify-content: center;
     height: auto; flex-shrink: 0;
-    padding: 16px 14px;
+    padding: 12px 14px;
     border-bottom: 1px solid rgba(255,255,255,.08);
   }
-  /* lockup completo grande sobre tarjeta blanca */
+  /* lockup completo grande sobre tarjeta blanca — recorte vertical para quitar aire del PNG */
   .rail-lockup {
-    width: 100%; display: block; object-fit: contain;
-    background: #fff; border-radius: 16px; padding: 12px 14px;
+    width: 100%; height: 56px; display: block; object-fit: cover; object-position: center;
+    background: #fff; border-radius: 14px; padding: 0 14px;
     box-shadow: 0 6px 18px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.7);
   }
   /* iso mini: solo cuando la sidebar está contraída */
