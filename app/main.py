@@ -4924,6 +4924,30 @@ def _make_prof_token(id_prof: int) -> str:
     raw = f"prof:{id_prof}:{ADMIN_TOKEN}"
     return _hm.new(ADMIN_TOKEN.encode(), raw.encode(), _hl.sha256).hexdigest()[:32]
 
+
+@app.get("/api/anima/profesionales")
+def api_anima_profesionales(token: str | None = Query(None),
+                            cmc_session: str | None = Cookie(None)):
+    """Roster de profesionales agrupado por especialidad, con el token de cada uno,
+    para construir el navegador desplegable del módulo 'Panel del Profesional' en Ánima.
+    Auth admin (token query o cookie de sesión)."""
+    from admin_routes import _verify_cookie
+    ok = (token and token == ADMIN_TOKEN) or (
+        cmc_session and _verify_cookie(cmc_session) in ("admin", "ortodoncia"))
+    if not ok:
+        raise HTTPException(401, "No autorizado")
+    from medilink import PROFESIONALES
+    grupos: dict[str, list] = {}
+    for pid, info in sorted(PROFESIONALES.items(), key=lambda kv: (kv[1].get("especialidad", ""), kv[1].get("nombre", ""))):
+        esp = (info.get("especialidad") or "Otros").split(" / ")[0].strip()
+        grupos.setdefault(esp, []).append({
+            "id": pid,
+            "nombre": info.get("nombre", f"Prof {pid}"),
+            "url": f"/profesional/dashboard?token={_make_prof_token(pid)}",
+        })
+    return {"grupos": [{"especialidad": esp, "profesionales": profs}
+                       for esp, profs in sorted(grupos.items())]}
+
 @app.get("/api/profesional/dashboard")
 async def api_profesional_dashboard_data(token: str = ""):
     """KPIs del mes actual + tendencia + NPS + ranking + acciones sugeridas.
