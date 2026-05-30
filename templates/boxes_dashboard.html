@@ -58,8 +58,16 @@
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
   .floor-label { letter-spacing: 0.16em; color: var(--cmc-blue); font-size: 0.7rem; text-transform: uppercase; font-weight: 700; }
   .money { font-variant-numeric: tabular-nums; }
-  .brand-bar { background: linear-gradient(135deg, var(--cmc-navy), var(--cmc-blue)); color: #fff; }
-  .brand-logo { width: 44px; height: 44px; background: #fff; border-radius: 50%; padding: 6px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+  .brand-bar { background:rgba(255,255,255,.94); backdrop-filter:saturate(160%) blur(10px); color:var(--cmc-navy); border-bottom:1px solid var(--cmc-border); box-shadow:0 1px 3px rgba(15,63,104,.07); }
+  .brand { display:flex; align-items:center; gap:11px; text-decoration:none; color:var(--cmc-navy); }
+  .brand-text { display:flex; flex-direction:column; line-height:1.12; gap:3px; }
+  .brand-text .top { font-size:9.5px; color:#3ba9ba; letter-spacing:2.6px; text-transform:uppercase; font-weight:700; }
+  .brand-text .bot { font-size:16px; font-weight:800; color:var(--cmc-navy); letter-spacing:1.1px; display:flex; align-items:center; gap:8px; text-transform:uppercase; }
+  .brand .v2 { font-size:9px; padding:2px 7px; background:linear-gradient(135deg,var(--cmc-aqua),var(--cmc-blue)); color:#fff; border-radius:5px; font-weight:800; letter-spacing:1.2px; box-shadow:0 1px 2px rgba(17,114,171,.28), inset 0 1px 0 rgba(255,255,255,.22); }
+  .brand:hover .brand-logo { box-shadow:0 6px 18px rgba(15,63,104,.12), 0 0 0 3px rgba(79,190,206,.14); transform:translateY(-1px); border-color:var(--cmc-aqua); }
+  .hdr-pill { background:#eef5f9; color:var(--cmc-navy); border:1px solid var(--cmc-border); }
+  .hdr-pill:hover { background:var(--cmc-aqua-soft); border-color:var(--cmc-aqua); }
+  .brand-logo { width:44px; height:44px; border-radius:13px; flex:0 0 44px; background:linear-gradient(180deg,#fff,#f7fbfd); border:1px solid var(--cmc-border); box-shadow:0 1px 2px rgba(15,63,104,.06), inset 0 1px 0 rgba(255,255,255,.6); display:flex; align-items:center; justify-content:center; padding:4px; transition:.2s; }
   .brand-logo img { width: 100%; height: 100%; object-fit: contain; }
   .kpi-card { background: #fff; border: 1px solid var(--cmc-border); border-radius: 12px; padding: 14px 18px; }
   .kpi-card.featured { background: linear-gradient(135deg, #fff, var(--cmc-aqua-soft)); border-color: var(--cmc-aqua); }
@@ -304,22 +312,22 @@
 
 <div class="brand-bar px-6 py-4 mb-6">
   <header class="max-w-7xl mx-auto flex items-center justify-between">
-    <div class="flex items-center gap-4">
+    <a class="brand" href="#" title="Centro Médico Carampangue">
       <span class="brand-logo"><img src="/static/isotipo.png" alt="CMC"></span>
-      <div>
-        <h1 class="text-2xl font-extrabold tracking-tight" style="color:#fff">Boxes CMC</h1>
-        <p class="text-xs opacity-80">Gemelo digital · Centro Médico Carampangue</p>
-      </div>
-    </div>
+      <span class="brand-text">
+        <span class="top">Centro Médico</span>
+        <span class="bot">Carampangue</span>
+      </span>
+    </a>
     <div class="text-right">
-      <p class="text-[10px] uppercase tracking-wider opacity-70">Última actualización</p>
-      <p id="lastUpdate" class="text-sm font-semibold">—</p>
-      <div class="text-[10px] mt-1 opacity-80 flex items-center gap-2 justify-end flex-wrap">
+      <p class="text-[10px] uppercase tracking-wider" style="color:var(--cmc-text-mute)">Boxes · última actualización</p>
+      <p id="lastUpdate" class="text-sm font-semibold" style="color:var(--cmc-navy)">—</p>
+      <div class="text-[10px] mt-1 flex items-center gap-2 justify-end flex-wrap">
         <span id="saveStatus" class="save-status" style="display:none">●</span>
         <button id="btnInstall" class="install-btn" style="display:none">📱 Instalar app</button>
-        <button id="btnDate" class="bg-white/20 hover:bg-white/30 px-3 py-1 rounded-full transition font-medium flex items-center gap-1">📅 <span id="dateLabel">Hoy</span></button>
-        <button id="btnEditMode" class="bg-white/20 hover:bg-white/30 px-3 py-1 rounded-full transition font-medium">⚙️ Modo edición</button>
-        <button id="btnResetOrder" class="underline hover:opacity-100 opacity-90 transition">restaurar default</button>
+        <button id="btnDate" class="hdr-pill px-3 py-1 rounded-full transition font-medium flex items-center gap-1">📅 <span id="dateLabel">Hoy</span></button>
+        <button id="btnEditMode" class="hdr-pill px-3 py-1 rounded-full transition font-medium">⚙️ Modo edición</button>
+        <button id="btnResetOrder" class="underline transition" style="color:var(--cmc-text-mute)">restaurar default</button>
       </div>
     </div>
   </header>

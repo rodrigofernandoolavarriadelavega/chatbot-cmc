@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0F3F68">
+<meta name="robots" content="noindex, nofollow">
+<title>Ánima — Centro Médico Carampangue</title>
+<link rel="icon" href="/static/isotipo.png">
+<link rel="apple-touch-icon" href="/static/isotipo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cmc-aqua: #4FBECE;
+    --cmc-aqua-soft: #e8f8fb;
+    --cmc-blue: #1172AB;
+    --cmc-navy: #0F3F68;
+    --cmc-navy-2: #0c3556;
+    --cmc-bg: #F7FBFD;
+    --cmc-border: #d6e4ec;
+    --cmc-text: #0F3F68;
+    --cmc-text-mute: #62788a;
+    --rail-w: 256px;
+    --rail-w-collapsed: 72px;
+    --topbar-h: 56px;
+    --shadow-sm: 0 1px 3px rgba(15,63,104,.08);
+    --shadow-md: 0 8px 30px rgba(15,63,104,.14);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--cmc-bg);
+    color: var(--cmc-text);
+    overflow: hidden;
+  }
+
+  /* ---------- App shell grid ---------- */
+  .app {
+    display: grid;
+    grid-template-columns: var(--rail-w) 1fr;
+    grid-template-rows: var(--topbar-h) 1fr;
+    grid-template-areas: "rail topbar" "rail main";
+    height: 100dvh;
+    transition: grid-template-columns .22s cubic-bezier(.4,0,.2,1);
+  }
+  .app.collapsed { grid-template-columns: var(--rail-w-collapsed) 1fr; }
+
+  /* ---------- Topbar ---------- */
+  .topbar {
+    grid-area: topbar;
+    display: flex; align-items: center; gap: 14px;
+    padding: 0 18px;
+    background: #fff;
+    border-bottom: 1px solid var(--cmc-border);
+    box-shadow: var(--shadow-sm);
+    z-index: 30;
+  }
+  .topbar .crumb { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .topbar .crumb-ico {
+    width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0;
+    display: grid; place-items: center;
+    background: linear-gradient(135deg, var(--cmc-aqua-soft), #fff);
+    border: 1px solid var(--cmc-border); color: var(--cmc-blue);
+  }
+  .topbar .crumb-ico svg { width: 17px; height: 17px; }
+  .topbar .crumb-txt h1 { font-size: 15px; font-weight: 700; margin: 0; color: var(--cmc-navy); line-height: 1.1; white-space: nowrap; }
+  .topbar .crumb-txt p { font-size: 11px; margin: 1px 0 0; color: var(--cmc-text-mute); white-space: nowrap; }
+  .topbar .spacer { flex: 1; }
+  .topbar-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: #fff; border: 1px solid var(--cmc-border); color: var(--cmc-blue);
+    border-radius: 9px; padding: 7px 12px; font-size: 12px; font-weight: 600;
+    font-family: inherit; cursor: pointer; transition: all .15s; text-decoration: none;
+  }
+  .topbar-btn:hover { background: var(--cmc-aqua-soft); border-color: var(--cmc-aqua); }
+  .topbar-btn svg { width: 15px; height: 15px; }
+  .hamburger { display: none; background: none; border: 0; cursor: pointer; color: var(--cmc-navy); padding: 6px; border-radius: 8px; }
+  .hamburger svg { width: 22px; height: 22px; }
+
+  /* ---------- Rail / sidebar ---------- */
+  .rail {
+    grid-area: rail;
+    background: linear-gradient(180deg, var(--cmc-navy), var(--cmc-navy-2));
+    color: #cfe2f0;
+    display: flex; flex-direction: column;
+    z-index: 40;
+    overflow: hidden;
+  }
+  .rail-brand {
+    display: flex; align-items: center; gap: 11px;
+    height: var(--topbar-h); flex-shrink: 0;
+    padding: 0 16px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  .rail-logo {
+    width: 42px; height: 42px; flex-shrink: 0;
+    background: linear-gradient(180deg, #fff, #eef6fa); border-radius: 13px; padding: 5px;
+    display: grid; place-items: center;
+    border: 1px solid rgba(255,255,255,.5);
+    box-shadow: 0 4px 14px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.7);
+  }
+  .rail-logo img { width: 100%; height: 100%; object-fit: contain; }
+  .rail-word { min-width: 0; transition: opacity .15s; }
+  .rail-word .name {
+    font-size: 21px; font-weight: 800; color: #fff; letter-spacing: .5px; line-height: 1;
+  }
+  .rail-word .name .accent { color: var(--cmc-aqua); }
+  .rail-word .sub { font-size: 8.5px; color: #8fb4cf; letter-spacing: .2em; text-transform: uppercase; margin-top: 5px; font-weight: 700; line-height: 1.3; }
+
+  .rail-nav { flex: 1; overflow-y: auto; padding: 14px 12px; }
+  .rail-nav::-webkit-scrollbar { width: 6px; }
+  .rail-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,.14); border-radius: 6px; }
+
+  .nav-section { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #6f93ad; font-weight: 700; padding: 6px 12px; margin-top: 6px; white-space: nowrap; }
+
+  .nav-item {
+    display: flex; align-items: center; gap: 12px;
+    width: 100%; border: 0; background: none; cursor: pointer;
+    color: #cfe2f0; font-family: inherit; font-size: 13.5px; font-weight: 600;
+    padding: 11px 12px; border-radius: 11px; margin-bottom: 3px;
+    text-align: left; position: relative; transition: background .14s, color .14s;
+  }
+  .nav-item .ico { width: 20px; height: 20px; flex-shrink: 0; display: grid; place-items: center; }
+  .nav-item .ico svg { width: 19px; height: 19px; stroke-width: 1.9; }
+  .nav-item .label { white-space: nowrap; overflow: hidden; transition: opacity .15s; flex: 1; }
+  .nav-item:hover:not(.disabled) { background: rgba(255,255,255,.08); color: #fff; }
+  .nav-item.active { background: rgba(79,190,206,.16); color: #fff; }
+  .nav-item.active::before {
+    content: ""; position: absolute; left: 0; top: 9px; bottom: 9px; width: 3px;
+    background: var(--cmc-aqua); border-radius: 0 3px 3px 0;
+  }
+  .nav-item.disabled { opacity: .42; cursor: not-allowed; }
+  .nav-item .soon {
+    font-size: 8.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+    background: rgba(255,255,255,.12); color: #a9c7dd; padding: 2px 6px; border-radius: 999px; white-space: nowrap;
+  }
+
+  .rail-foot { flex-shrink: 0; padding: 10px 12px; border-top: 1px solid rgba(255,255,255,.08); }
+  .collapse-btn {
+    display: flex; align-items: center; gap: 12px; width: 100%;
+    border: 0; background: none; cursor: pointer; color: #8fb4cf;
+    font-family: inherit; font-size: 12px; font-weight: 600;
+    padding: 9px 12px; border-radius: 10px; transition: all .14s;
+  }
+  .collapse-btn:hover { background: rgba(255,255,255,.08); color: #fff; }
+  .collapse-btn .ico { width: 20px; display: grid; place-items: center; flex-shrink: 0; }
+  .collapse-btn svg { width: 18px; height: 18px; transition: transform .22s; }
+  .collapse-btn .label { white-space: nowrap; transition: opacity .15s; }
+
+  /* Collapsed state: hide text labels */
+  .app.collapsed .rail-word,
+  .app.collapsed .nav-item .label,
+  .app.collapsed .nav-item .soon,
+  .app.collapsed .nav-section,
+  .app.collapsed .collapse-btn .label { opacity: 0; pointer-events: none; }
+  .app.collapsed .nav-item { justify-content: center; }
+  .app.collapsed .collapse-btn svg { transform: rotate(180deg); }
+  .app.collapsed .nav-section { height: 8px; padding: 0; margin: 8px 0; overflow: hidden; }
+
+  /* Tooltip when collapsed */
+  .app.collapsed .nav-item[data-tip]:hover::after {
+    content: attr(data-tip);
+    position: absolute; left: calc(100% + 10px); top: 50%; transform: translateY(-50%);
+    background: var(--cmc-navy); color: #fff; font-size: 12px; font-weight: 600;
+    padding: 6px 11px; border-radius: 8px; white-space: nowrap; z-index: 60;
+    box-shadow: var(--shadow-md);
+  }
+
+  /* ---------- Main / iframe stage ---------- */
+  .stage { grid-area: main; position: relative; background: var(--cmc-bg); overflow: hidden; }
+  .frame-wrap { position: absolute; inset: 0; opacity: 0; visibility: hidden; transition: opacity .2s; }
+  .frame-wrap.active { opacity: 1; visibility: visible; }
+  .frame-wrap iframe { width: 100%; height: 100%; border: 0; display: block; background: #fff; }
+
+  .loader { position: absolute; inset: 0; display: grid; place-items: center; background: var(--cmc-bg); z-index: 5; transition: opacity .25s; }
+  .loader.hide { opacity: 0; pointer-events: none; }
+  .spinner { width: 38px; height: 38px; border: 3px solid var(--cmc-border); border-top-color: var(--cmc-aqua); border-radius: 50%; animation: spin .8s linear infinite; }
+  .loader .lt { margin-top: 14px; font-size: 12px; color: var(--cmc-text-mute); font-weight: 600; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Welcome (no module selected yet) */
+  .welcome { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px; }
+  .welcome.show { display: flex; }
+  .welcome .iso { width: 84px; height: 84px; opacity: .9; margin-bottom: 18px; }
+  .welcome h2 { font-size: 22px; color: var(--cmc-navy); margin: 0 0 6px; }
+  .welcome p { font-size: 13.5px; color: var(--cmc-text-mute); max-width: 380px; margin: 0; line-height: 1.5; }
+
+  /* ---------- Mobile ---------- */
+  .scrim { display: none; position: fixed; inset: 0; background: rgba(15,63,104,.45); z-index: 35; }
+  @media (max-width: 860px) {
+    .app { grid-template-columns: 1fr; grid-template-areas: "topbar" "main"; }
+    .app.collapsed { grid-template-columns: 1fr; }
+    .hamburger { display: inline-flex; }
+    .rail {
+      position: fixed; top: 0; bottom: 0; left: 0; width: var(--rail-w);
+      transform: translateX(-100%); transition: transform .24s cubic-bezier(.4,0,.2,1);
+    }
+    .app.drawer-open .rail { transform: translateX(0); box-shadow: var(--shadow-md); }
+    .app.drawer-open .scrim { display: block; }
+    .rail-foot { display: none; }
+    /* on mobile never collapse-hide labels */
+    .app.collapsed .rail-word, .app.collapsed .nav-item .label,
+    .app.collapsed .nav-item .soon, .app.collapsed .nav-section { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- ===== Rail / Sidebar ===== -->
+  <aside class="rail" id="rail">
+    <div class="rail-brand">
+      <div class="rail-logo"><img src="/static/isotipo.png" alt="CMC"></div>
+      <div class="rail-word">
+        <div class="name">Á<span class="accent">nima</span></div>
+        <div class="sub">Centro Médico<br>Carampangue</div>
+      </div>
+    </div>
+
+    <nav class="rail-nav" id="nav">
+      <div class="nav-section">Operación</div>
+      <!-- items injected by JS -->
+    </nav>
+
+    <div class="rail-foot">
+      <button class="collapse-btn" id="collapseBtn" title="Contraer">
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15 18l-6-6 6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span class="label">Contraer</span>
+      </button>
+    </div>
+  </aside>
+  <div class="scrim" id="scrim"></div>
+
+  <!-- ===== Topbar ===== -->
+  <header class="topbar">
+    <button class="hamburger" id="hamburger" aria-label="Menú">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18M3 12h18M3 18h18" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <div class="crumb">
+      <div class="crumb-ico" id="crumbIco"></div>
+      <div class="crumb-txt">
+        <h1 id="crumbTitle">Ánima</h1>
+        <p id="crumbSub">Plataforma interna CMC</p>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <button class="topbar-btn" id="reloadBtn" title="Recargar módulo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M23 4v6h-6M1 20v-6h6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="t-label">Recargar</span>
+    </button>
+    <a class="topbar-btn" id="newTabBtn" target="_blank" rel="noopener" title="Abrir en pestaña nueva">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 3h6v6M10 14L21 3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="t-label">Abrir</span>
+    </a>
+  </header>
+
+  <!-- ===== Stage / iframes ===== -->
+  <main class="stage" id="stage">
+    <div class="welcome show" id="welcome">
+      <img class="iso" src="/static/isotipo.png" alt="">
+      <h2>Bienvenido a Ánima</h2>
+      <p>Elige un módulo en la columna izquierda. Todo se abre aquí mismo, sin salir de la plataforma.</p>
+    </div>
+    <div class="loader hide" id="loader">
+      <div style="display:flex;flex-direction:column;align-items:center">
+        <div class="spinner"></div>
+        <div class="lt">Cargando módulo…</div>
+      </div>
+    </div>
+    <!-- frame-wrap elements injected by JS -->
+  </main>
+</div>
+
+<script>
+// __TOKEN__ es reemplazado por el backend (vacío si la sesión usa cookie).
+const TOKEN = "__TOKEN__";
+const qp = TOKEN ? ("?token=" + encodeURIComponent(TOKEN)) : "";
+
+// ---- SVG icon set (lucide-style) ----
+const ICONS = {
+  inbox: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 12h-6l-2 3h-4l-2-3H2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg>',
+  chart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 3v18h18" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 14l3-3 3 3 5-6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  target: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4"/></svg>',
+  search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3" stroke-linecap="round"/></svg>'
+};
+
+// ---- Module registry. Para agregar un módulo nuevo: una línea aquí. ----
+const MODULES = [
+  { id: "panel",  label: "Panel Recepción", icon: "inbox", title: "Panel de Recepción v2", sub: "Conversaciones · WhatsApp · Agenda", src: "/admin/v2" + qp },
+  { id: "boxes",  label: "Boxes",           icon: "grid",  title: "Boxes — Gemelo Digital", sub: "Ocupación y recaudación por box", src: "/boxes" + qp },
+  { id: "mensual", label: "DB Mensual",   icon: "chart", title: "Dashboard Mensual", sub: "Ingresos y honorarios por profesional", src: "/cmc/mensual" + qp },
+];
+
+// Futuros (deshabilitados, comunican la visión de consolidación)
+const SOON = [
+  { label: "Atribución", icon: "target" },
+  { label: "Demanda",    icon: "search" },
+];
+
+const app = document.getElementById('app');
+const nav = document.getElementById('nav');
+const stage = document.getElementById('stage');
+const loader = document.getElementById('loader');
+const welcome = document.getElementById('welcome');
+const loaded = {};   // id -> true once iframe injected
+let current = null;
+
+// Build nav items
+MODULES.forEach(m => {
+  const b = document.createElement('button');
+  b.className = 'nav-item';
+  b.dataset.id = m.id;
+  b.dataset.tip = m.label;
+  b.innerHTML = `<span class="ico">${ICONS[m.icon]}</span><span class="label">${m.label}</span>`;
+  b.addEventListener('click', () => select(m.id, true));
+  nav.appendChild(b);
+});
+// Future section
+const soonHdr = document.createElement('div');
+soonHdr.className = 'nav-section';
+soonHdr.textContent = 'Próximamente';
+nav.appendChild(soonHdr);
+SOON.forEach(s => {
+  const d = document.createElement('button');
+  d.className = 'nav-item disabled';
+  d.disabled = true;
+  d.innerHTML = `<span class="ico">${ICONS[s.icon]}</span><span class="label">${s.label}</span><span class="soon">Pronto</span>`;
+  nav.appendChild(d);
+});
+
+function moduleById(id){ return MODULES.find(m => m.id === id); }
+
+function select(id, push){
+  const m = moduleById(id);
+  if (!m) return;
+  current = id;
+  welcome.classList.remove('show');
+
+  // Lazy-create the iframe the first time
+  if (!loaded[id]) {
+    const wrap = document.createElement('div');
+    wrap.className = 'frame-wrap';
+    wrap.dataset.id = id;
+    const ifr = document.createElement('iframe');
+    ifr.title = m.title;
+    ifr.src = m.src;
+    ifr.addEventListener('load', () => { if (current === id) loader.classList.add('hide'); });
+    wrap.appendChild(ifr);
+    stage.appendChild(wrap);
+    loaded[id] = true;
+    loader.classList.remove('hide');   // show until this frame loads
+  } else {
+    loader.classList.add('hide');      // already loaded → instant
+  }
+
+  // Toggle visible frame (keeps the others alive = preserva su estado)
+  document.querySelectorAll('.frame-wrap').forEach(w => {
+    w.classList.toggle('active', w.dataset.id === id);
+  });
+  // Active nav state
+  document.querySelectorAll('.nav-item').forEach(n => {
+    n.classList.toggle('active', n.dataset.id === id);
+  });
+  // Topbar crumb
+  document.getElementById('crumbIco').innerHTML = ICONS[m.icon];
+  document.getElementById('crumbTitle').textContent = m.title;
+  document.getElementById('crumbSub').textContent = m.sub;
+  document.getElementById('newTabBtn').href = m.src;
+  document.title = m.label + " · Ánima CMC";
+
+  if (push) location.hash = id;
+  // close mobile drawer after pick
+  app.classList.remove('drawer-open');
+}
+
+// Topbar actions
+document.getElementById('reloadBtn').addEventListener('click', () => {
+  if (!current) return;
+  const ifr = document.querySelector(`.frame-wrap[data-id="${current}"] iframe`);
+  if (ifr) { loader.classList.remove('hide'); ifr.src = ifr.src; }
+});
+
+// Collapse (desktop) / drawer (mobile)
+const collapseBtn = document.getElementById('collapseBtn');
+const COLLAPSE_KEY = 'anima_rail_collapsed';
+if (localStorage.getItem(COLLAPSE_KEY) === '1') app.classList.add('collapsed');
+collapseBtn.addEventListener('click', () => {
+  app.classList.toggle('collapsed');
+  localStorage.setItem(COLLAPSE_KEY, app.classList.contains('collapsed') ? '1' : '0');
+});
+document.getElementById('hamburger').addEventListener('click', () => app.classList.toggle('drawer-open'));
+document.getElementById('scrim').addEventListener('click', () => app.classList.remove('drawer-open'));
+
+// Hash routing (deep-link + refresh keeps module)
+function fromHash(){
+  const id = location.hash.replace('#','');
+  if (moduleById(id)) select(id, false);
+}
+window.addEventListener('hashchange', fromHash);
+if (location.hash && moduleById(location.hash.replace('#',''))) {
+  fromHash();
+} // else: welcome screen stays until user picks
+</script>
+</body>
+</html>

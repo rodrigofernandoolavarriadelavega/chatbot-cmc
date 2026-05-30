@@ -177,6 +177,25 @@ async def lifespan(app: FastAPI):
         id="recordatorios_diarios",
         replace_existing=True,
     )
+    # Autopilot marketing (Fase 1, dry-run diario 08:30 CLT).
+    # Inerte salvo AUTOPILOT_ENABLED=true. NO ejecuta cambios en Meta (solo reporta).
+    async def _job_autopilot_dryrun():
+        import os, logging
+        if os.getenv("AUTOPILOT_ENABLED", "false").lower() != "true":
+            return
+        try:
+            from autopilot.engine import run_dry_run
+            run = await run_dry_run(window_days=7)
+            logging.getLogger("bot").info(
+                "[autopilot] dry-run OK — %d acciones propuestas", len(run.actions))
+        except Exception as e:  # noqa: BLE001 — nunca tumbar el scheduler por el autopilot
+            logging.getLogger("bot").error("[autopilot] dry-run falló: %s", e)
+    scheduler.add_job(
+        _job_autopilot_dryrun,
+        CronTrigger(hour=8, minute=30, timezone=_CLT),
+        id="autopilot_dryrun",
+        replace_existing=True,
+    )
     # Recordatorios 2h: cada 15 min entre 7:30 y 21:30 CLT
     scheduler.add_job(
         _job_recordatorios_2h,
@@ -593,6 +612,8 @@ app.add_middleware(
 
 # Registrar rutas admin + portal
 app.include_router(admin_routes.router)
+from autopilot.routes import router as autopilot_router  # noqa: E402
+app.include_router(autopilot_router)
 app.include_router(portal_routes.router)
 
 import vuelos_routes
