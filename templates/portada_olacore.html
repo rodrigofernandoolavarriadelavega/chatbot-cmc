@@ -33,17 +33,11 @@
       linear-gradient(0deg, rgba(6,16,22,.90) 0%, rgba(6,16,22,.20) 28%, transparent 52%);}
   .vign{position:absolute; inset:0; box-shadow:inset 0 0 220px 60px rgba(0,0,0,.6);}
 
-  /* sello watermark */
-  .seal-bg{position:absolute; right:-110px; top:50%; transform:translateY(-50%);
-     width:580px; height:580px; opacity:.5; mix-blend-mode:screen;
-     background:url('/static/olacore_sello.svg') center/contain no-repeat; animation:spin 90s linear infinite;}
-  @keyframes spin{to{transform:translateY(-50%) rotate(360deg)}}
-
   /* contenido */
   .wrap{position:absolute; inset:0; display:flex; flex-direction:column; justify-content:space-between;
      padding:46px 60px 40px;}
   .top{display:flex; align-items:center; gap:14px; opacity:0; animation:fadeDown .9s .15s ease forwards;}
-  .top img{width:46px; height:46px; mix-blend-mode:screen; border-radius:8px;}
+  .top img{width:48px; height:48px;}
   .top .wm{font-family:var(--serif); font-weight:600; font-size:21px; letter-spacing:.02em; color:#fff;}
   .top .wm small{font-family:var(--mono); font-weight:400; font-size:11px; letter-spacing:.34em;
      text-transform:uppercase; color:var(--cobre-claro); display:block; margin-top:2px;}
@@ -86,12 +80,11 @@
     <div class="photo-blur"></div>
     <div class="photo"></div>
     <div class="scrim"></div>
-    <div class="seal-bg"></div>
     <div class="vign"></div>
 
     <div class="wrap">
       <div class="top">
-        <img src="/static/olacore_sello.svg" alt="OLACORE">
+        <img src="/static/olacore_sello_nobg.svg" alt="OLACORE">
         <div class="wm">OLACORE<small>Health Tech</small></div>
       </div>
 
