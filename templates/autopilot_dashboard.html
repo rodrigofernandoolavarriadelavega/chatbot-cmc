@@ -191,12 +191,30 @@
   .gal-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:20px}
   .gal-title{font-size:18px;font-weight:800;letter-spacing:-.3px;color:var(--ink)}
   .gal-sub{font-size:12.5px;color:var(--muted);font-weight:500;margin-top:3px;max-width:520px}
-  .gal-filters{display:flex;gap:7px;flex-wrap:wrap}
-  .gfilter{border:1px solid var(--line);background:var(--card);color:var(--muted);font-family:inherit;
-       font-weight:700;font-size:12px;padding:7px 13px;border-radius:999px;cursor:pointer;transition:.15s}
-  .gfilter:hover{border-color:#cfe0ec;color:var(--navy)}
-  .gfilter.on{background:var(--navy);color:#fff;border-color:var(--navy)}
-  .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:18px;margin-top:18px}
+  /* Toolbar facetada (DAM) */
+  .gal-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:18px}
+  .gsearch{position:relative;flex:1;min-width:220px}
+  .gsearch svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:16px;height:16px;stroke:var(--muted)}
+  .gsearch input{width:100%;font-family:inherit;font-size:13.5px;color:var(--ink);border:1px solid var(--line);
+       border-radius:11px;padding:11px 14px 11px 38px;background:#fff;outline:none;transition:.15s}
+  .gsearch input:focus{border-color:var(--aqua);box-shadow:0 0 0 3px rgba(79,190,206,.18)}
+  .gsel{font-family:inherit;font-size:12.5px;font-weight:600;color:var(--navy);border:1px solid var(--line);
+       border-radius:10px;padding:10px 12px;background:#fff;cursor:pointer;outline:none;transition:.15s}
+  .gsel:focus{border-color:var(--aqua);box-shadow:0 0 0 3px rgba(79,190,206,.18)}
+  .gal-meta{display:flex;align-items:center;gap:12px;margin-top:13px;min-height:20px}
+  #galCount{font-size:12px;font-weight:600;color:var(--muted)}
+  .gclear{border:0;background:transparent;color:var(--blue);font-family:inherit;font-weight:700;font-size:12px;cursor:pointer}
+  .gclear:hover{text-decoration:underline}
+  /* Grupos por canal */
+  .gal-group{margin-top:18px}
+  .gal-group-h{display:flex;align-items:center;gap:9px;margin-bottom:13px}
+  .gal-group-h .gg-ico{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;
+       background:linear-gradient(135deg,#e3f5f8,#cfeef3)}
+  .gal-group-h .gg-ico svg{width:15px;height:15px;stroke:var(--blue)}
+  .gal-group-h h3{font-size:14px;font-weight:800;letter-spacing:-.2px;color:var(--ink)}
+  .gal-group-h .gg-n{font-size:11px;font-weight:700;color:var(--muted);background:var(--bg);padding:3px 9px;border-radius:999px}
+  .gal-group-h .gg-line{flex:1;height:1px;background:var(--line)}
+  .gallery-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:18px}
   .dcard{background:var(--card);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh-sm);
        border:1px solid var(--line);transition:.2s;cursor:pointer;display:flex;flex-direction:column}
   .dcard:hover{box-shadow:var(--sh-lg);transform:translateY(-3px);border-color:#cfe0ec}
@@ -275,7 +293,7 @@
   @media(max-width:560px){.gfield-row{grid-template-columns:1fr}}
 
   @media(max-width:1080px){.kpis{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}}
-  @media(max-width:560px){.wrap{padding:14px}.kpis{grid-template-columns:1fr}.top{padding:18px}.gallery{grid-template-columns:repeat(2,1fr);gap:12px}}
+  @media(max-width:560px){.wrap{padding:14px}.kpis{grid-template-columns:1fr}.top{padding:18px}.gallery-grid{grid-template-columns:repeat(2,1fr);gap:12px}.gsel{flex:1}}
 </style>
 </head>
 <body>
@@ -373,19 +391,37 @@
   <div id="viewDisenos" style="display:none">
     <div class="gal-head">
       <div>
-        <h2 class="gal-title">Diseños de campaña</h2>
-        <p class="gal-sub">Generados con IA (gpt-image-2) sobre la marca CMC · Instagram, Facebook, WhatsApp, historias y email</p>
+        <h2 class="gal-title">Biblioteca de diseños</h2>
+        <p class="gal-sub">Activos de marketing CMC · imágenes (gpt-image-2) y video (anima-studio) · organizados por canal, tipo y estado</p>
       </div>
       <button class="btn-gen" id="btnGen">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v4M3 5h4M6 17v4M4 19h4M13 3l2.5 6.5L22 12l-6.5 2.5L13 21l-2.5-6.5L4 12l6.5-2.5L13 3z"/></svg>
         Generar diseño
       </button>
     </div>
-    <div class="gal-filters" id="galFilters"></div>
-    <div class="gallery" id="gallery">
-      <div class="skel" style="height:300px"></div>
-      <div class="skel" style="height:300px"></div>
-      <div class="skel" style="height:300px"></div>
+    <div class="gal-toolbar">
+      <div class="gsearch">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="galSearch" placeholder="Buscar por título o tema…">
+      </div>
+      <select class="gsel" id="fType">
+        <option value="">Tipo: todos</option><option value="image">Imágenes</option><option value="video">Videos</option>
+      </select>
+      <select class="gsel" id="fChannel"><option value="">Canal: todos</option></select>
+      <select class="gsel" id="fStatus">
+        <option value="">Estado: todos</option><option value="borrador">Borrador</option><option value="aprobado">Aprobado</option><option value="publicado">Publicado</option>
+      </select>
+      <select class="gsel" id="fTopic"><option value="">Tema: todos</option></select>
+      <select class="gsel" id="fSort">
+        <option value="new">Más recientes</option><option value="old">Más antiguos</option><option value="az">A–Z</option>
+      </select>
+    </div>
+    <div class="gal-meta">
+      <span id="galCount">—</span>
+      <button class="gclear" id="galClear" style="display:none">✕ Limpiar filtros</button>
+    </div>
+    <div id="gallery">
+      <div class="gallery-grid"><div class="skel" style="height:300px"></div><div class="skel" style="height:300px"></div><div class="skel" style="height:300px"></div></div>
     </div>
   </div>
 
@@ -658,23 +694,39 @@ document.getElementById('tabs').addEventListener('click',e=>{
   if(v==='disenos' && !DESIGNS_LOADED) loadDesigns();
 });
 
-/* ── Galería de diseños ───────────────────────────────── */
-let DESIGNS=[], DESIGNS_LOADED=false, GFILTER='__all__', FORMATS=[];
+/* ── Biblioteca de diseños (DAM facetado) ─────────────── */
+let DESIGNS=[], DESIGNS_LOADED=false, FORMATS=[], FBYKEY={};
 let FMT_LABEL={instagram_post:'Instagram',facebook_post:'Facebook',your_story:'Historia',
-  poster:'Afiche',flyer:'Flyer',whatsapp:'WhatsApp'};
+  poster:'Afiche',flyer:'Flyer',whatsapp:'WhatsApp',video:'Video'};
+// Orden e íconos de los grupos por canal
+const GROUP_ORDER=['Video','Instagram','Facebook','WhatsApp','Email','Impreso','Otros'];
+const GROUP_ICON={
+  Video:'<circle cx="12" cy="12" r="10"/><path d="M10 8l6 4-6 4z" fill="currentColor"/>',
+  Instagram:'<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1.2"/>',
+  Facebook:'<path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>',
+  WhatsApp:'<path d="M21 11.5a8.5 8.5 0 0 1-12.6 7.4L3 21l2.1-5.4A8.5 8.5 0 1 1 21 11.5z"/>',
+  Email:'<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 6-10 7L2 6"/>',
+  Impreso:'<rect x="6" y="14" width="12" height="7"/><path d="M6 18H4a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2"/><rect x="6" y="3" width="12" height="6"/>',
+  Otros:'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>',
+};
+const isVideo=d=>(d.kind==='video')||!!d.video_url;
+const channelOf=d=> isVideo(d) ? 'Video' : ((FBYKEY[d.format]||{}).channel || 'Otros');
 
 async function loadFormats(){
   if(FORMATS.length) return;
   try{
     const r=await (await fetch(`/autopilot/api/formats?token=${TOKEN}`)).json();
     FORMATS=r.formats||[];
-    FORMATS.forEach(f=>{FMT_LABEL[f.key]=f.label;});
-    const sel=document.getElementById('gFormat');
-    sel.innerHTML=(r.channels||[]).map(ch=>{
+    FORMATS.forEach(f=>{FMT_LABEL[f.key]=f.label; FBYKEY[f.key]=f;});
+    // select del modal generar (agrupado por canal)
+    document.getElementById('gFormat').innerHTML=(r.channels||[]).map(ch=>{
       const opts=FORMATS.filter(f=>f.channel===ch)
         .map(f=>`<option value="${esc(f.key)}">${esc(f.label)} · ${esc(f.ratio)}</option>`).join('');
       return `<optgroup label="${esc(ch)}">${opts}</optgroup>`;
     }).join('');
+    // facet de canal
+    document.getElementById('fChannel').innerHTML='<option value="">Canal: todos</option>'+
+      ['Video',...(r.channels||[])].map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
     updateFmtHint();
   }catch(e){}
 }
@@ -684,67 +736,113 @@ async function loadDesigns(){
   await loadFormats();
   let r;
   try{ r=await (await fetch(`/autopilot/api/designs?token=${TOKEN}`)).json(); }
-  catch(e){ return galEmpty('No pude cargar la galería.'); }
+  catch(e){ return galEmpty('No pude cargar la biblioteca.'); }
   DESIGNS=r.designs||[];
   document.getElementById('tabDesignCount').textContent=DESIGNS.length||'';
-  renderFilters(); renderGallery();
+  // facet de tema (especialidades presentes)
+  const specs=[...new Set(DESIGNS.map(d=>d.specialty).filter(Boolean))].sort();
+  document.getElementById('fTopic').innerHTML='<option value="">Tema: todos</option>'+
+    specs.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
+  renderGallery();
 }
 
-function renderFilters(){
-  const specs=[...new Set(DESIGNS.map(d=>d.specialty).filter(Boolean))].sort();
-  const mk=(key,lbl)=>`<button class="gfilter${GFILTER===key?' on':''}" data-f="${esc(key)}">${esc(lbl)}</button>`;
-  document.getElementById('galFilters').innerHTML =
-    mk('__all__','Todas')+specs.map(s=>mk(s,s)).join('');
+function getFilters(){
+  return {
+    q:(document.getElementById('galSearch').value||'').trim().toLowerCase(),
+    type:document.getElementById('fType').value,
+    channel:document.getElementById('fChannel').value,
+    status:document.getElementById('fStatus').value,
+    topic:document.getElementById('fTopic').value,
+    sort:document.getElementById('fSort').value,
+  };
 }
-document.getElementById('galFilters').addEventListener('click',e=>{
-  const b=e.target.closest('.gfilter'); if(!b)return;
-  GFILTER=b.dataset.f; renderFilters(); renderGallery();
-});
+function anyActive(f){return f.q||f.type||f.channel||f.status||f.topic;}
 
 function galEmpty(msg){
   document.getElementById('gallery').innerHTML=
-    `<div class="empty" style="grid-column:1/-1"><div class="ei">${svg('<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>')}</div>
-     <h3>Aún no hay diseños</h3><p>${msg||'Pídele a tu asistente que genere piezas con Canva sobre la marca CMC y aparecerán aquí, listas para publicar.'}</p></div>`;
+    `<div class="empty"><div class="ei">${svg(GROUP_ICON.Otros)}</div>
+     <h3>Sin resultados</h3><p>${msg||'Ningún activo coincide con los filtros. Ajusta la búsqueda o genera un diseño nuevo.'}</p></div>`;
+}
+
+function dcardHTML(d){
+  const img=d.image_url||d.thumbnail_url||d.poster;
+  const st=(d.status||'borrador').toLowerCase();
+  const fmt=FMT_LABEL[d.format]||d.format||'';
+  let visual;
+  if(isVideo(d)){
+    const vsrc=d.video_url||d.image_url;
+    visual=`<video src="${esc(vsrc)}" muted preload="metadata" playsinline ${d.poster?`poster="${esc(d.poster)}"`:''}></video>
+      <span class="dcard-play">${svg('<circle cx="12" cy="12" r="10"/><path d="M10 8l6 4-6 4z" fill="currentColor"/>')}</span>`;
+  } else {
+    visual = img ? `<img src="${esc(img)}" alt="${esc(d.title)}" loading="lazy">`
+      : `<div class="ph">${svg(GROUP_ICON.Otros)}</div>`;
+  }
+  return `<div class="dcard" data-id="${esc(d.id)}">
+    <div class="dcard-img">${visual}
+      <span class="dcard-st st-${st}">${esc(st)}</span>
+      <span class="dcard-zoom">${svg('<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3M11 8v6M8 11h6"/>')}</span>
+    </div>
+    <div class="dcard-b">
+      <div class="dcard-t">${esc(d.title)}</div>
+      <div class="dcard-meta">
+        ${d.specialty?`<span class="dcard-tag">${esc(d.specialty)}</span>`:''}
+        ${fmt?`<span class="dcard-fmt">${esc(fmt)}</span>`:''}
+      </div>
+    </div>
+  </div>`;
 }
 
 function renderGallery(){
-  const list = GFILTER==='__all__'?DESIGNS:DESIGNS.filter(d=>d.specialty===GFILTER);
+  const f=getFilters();
+  let list=DESIGNS.filter(d=>{
+    if(f.type==='video' && !isVideo(d)) return false;
+    if(f.type==='image' && isVideo(d)) return false;
+    if(f.channel && channelOf(d)!==f.channel) return false;
+    if(f.status && (d.status||'borrador').toLowerCase()!==f.status) return false;
+    if(f.topic && d.specialty!==f.topic) return false;
+    if(f.q){ const hay=((d.title||'')+' '+(d.specialty||'')).toLowerCase(); if(!hay.includes(f.q)) return false; }
+    return true;
+  });
+  // orden
+  const ts=d=>Date.parse(d.created_at||0)||0;
+  if(f.sort==='old') list.sort((a,b)=>ts(a)-ts(b));
+  else if(f.sort==='az') list.sort((a,b)=>(a.title||'').localeCompare(b.title||'','es'));
+  else list.sort((a,b)=>ts(b)-ts(a));
+
+  // conteo + limpiar
+  document.getElementById('galCount').textContent=
+    anyActive(f) ? `Mostrando ${list.length} de ${DESIGNS.length} activos` : `${DESIGNS.length} activos`;
+  document.getElementById('galClear').style.display=anyActive(f)?'inline':'none';
+
   if(!list.length) return galEmpty();
-  document.getElementById('gallery').innerHTML = list.map((d,i)=>{
-    const isVid = (d.kind==='video') || !!d.video_url;
-    const img = d.image_url || d.thumbnail_url || d.poster;
-    const st = (d.status||'borrador').toLowerCase();
-    const fmt = FMT_LABEL[d.format]||d.format||'';
-    let visual;
-    if (isVid){
-      const vsrc = d.video_url || d.image_url;
-      visual = `<video src="${esc(vsrc)}" muted preload="metadata" playsinline ${d.poster?`poster="${esc(d.poster)}"`:''}></video>
-        <span class="dcard-play">${svg('<circle cx="12" cy="12" r="10"/><path d="M10 8l6 4-6 4z" fill="currentColor"/>')}</span>`;
-    } else {
-      visual = img
-        ? `<img src="${esc(img)}" alt="${esc(d.title)}" loading="lazy">`
-        : `<div class="ph">${svg('<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>')}</div>`;
-    }
-    return `<div class="dcard" data-i="${i}">
-      <div class="dcard-img">
-        ${visual}
-        <span class="dcard-st st-${st}">${esc(st)}</span>
-        <span class="dcard-zoom">${svg('<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3M11 8v6M8 11h6"/>')}</span>
+
+  // agrupar por canal
+  const groups={};
+  list.forEach(d=>{(groups[channelOf(d)] ||= []).push(d);});
+  const order=GROUP_ORDER.filter(g=>groups[g]).concat(Object.keys(groups).filter(g=>!GROUP_ORDER.includes(g)));
+  document.getElementById('gallery').innerHTML=order.map(g=>`
+    <div class="gal-group">
+      <div class="gal-group-h">
+        <span class="gg-ico">${svg(GROUP_ICON[g]||GROUP_ICON.Otros)}</span>
+        <h3>${esc(g)}</h3><span class="gg-n">${groups[g].length}</span><span class="gg-line"></span>
       </div>
-      <div class="dcard-b">
-        <div class="dcard-t">${esc(d.title)}</div>
-        <div class="dcard-meta">
-          ${d.specialty?`<span class="dcard-tag">${esc(d.specialty)}</span>`:''}
-          ${fmt?`<span class="dcard-fmt">${esc(fmt)}</span>`:''}
-        </div>
-      </div>
-    </div>`;
-  }).join('');
-  // delegación: abrir modal
+      <div class="gallery-grid">${groups[g].map(dcardHTML).join('')}</div>
+    </div>`).join('');
+  // delegación: abrir modal por id
   document.getElementById('gallery').querySelectorAll('.dcard').forEach(c=>{
-    c.addEventListener('click',()=>openDModal(list[+c.dataset.i]));
+    c.addEventListener('click',()=>{const d=DESIGNS.find(x=>String(x.id)===c.dataset.id); if(d) openDModal(d);});
   });
 }
+
+// listeners de la toolbar
+['fType','fChannel','fStatus','fTopic','fSort'].forEach(id=>
+  document.getElementById(id).addEventListener('change',renderGallery));
+let _galT; document.getElementById('galSearch').addEventListener('input',()=>{clearTimeout(_galT);_galT=setTimeout(renderGallery,180);});
+document.getElementById('galClear').addEventListener('click',()=>{
+  ['fType','fChannel','fStatus','fTopic'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('galSearch').value=''; document.getElementById('fSort').value='new';
+  renderGallery();
+});
 
 /* ── Modal ────────────────────────────────────────────── */
 function openDModal(d){
@@ -818,7 +916,7 @@ document.getElementById('gSubmit').addEventListener('click',async()=>{
       const design=await pollGen(d.job_id);
       if(design){
         closeGModal();
-        DESIGNS_LOADED=false; GFILTER='__all__';
+        DESIGNS_LOADED=false;
         await loadDesigns();
         const fresh=DESIGNS.find(x=>x.id===design.id);
         if(fresh) openDModal(fresh);
