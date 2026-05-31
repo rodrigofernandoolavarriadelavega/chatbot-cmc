@@ -320,9 +320,31 @@
     .nav-item:hover:not(.disabled), .nav-toggle:hover, .esp-toggle:hover, .prof-leaf:hover { background: none; color: #cfe2f0; }
     .nav-item:active, .nav-toggle:active, .esp-toggle:active, .prof-leaf:active { background: rgba(255,255,255,.1); }
   }
+
+  /* ---------- Intro video ---------- */
+  .anima-intro {
+    position: fixed; inset: 0; z-index: 100;
+    background: #0F3F68; display: flex; align-items: center; justify-content: center;
+    transition: opacity .5s ease;
+  }
+  .anima-intro.hide { opacity: 0; pointer-events: none; }
+  .anima-intro video { width: 100%; height: 100%; object-fit: cover; }
+  .intro-skip {
+    position: absolute; bottom: max(28px, env(safe-area-inset-bottom)); right: 24px;
+    background: rgba(255,255,255,.16); color: #fff; border: 1px solid rgba(255,255,255,.35);
+    border-radius: 999px; padding: 9px 18px; font-family: inherit; font-size: 13px; font-weight: 600;
+    cursor: pointer; backdrop-filter: blur(6px); transition: background .15s;
+  }
+  .intro-skip:hover { background: rgba(255,255,255,.28); }
 </style>
 </head>
 <body>
+<div class="anima-intro" id="animaIntro">
+  <video id="animaIntroVid" playsinline muted autoplay preload="auto">
+    <source src="/static/cmc-intro.mp4" type="video/mp4">
+  </video>
+  <button class="intro-skip" id="introSkip">Saltar ›</button>
+</div>
 <div class="app" id="app">
 
   <!-- ===== Rail / Sidebar ===== -->
@@ -423,12 +445,12 @@ const MODULES = [
   { id: "boxes",  label: "Boxes",           icon: "grid",  title: "Boxes — Gemelo Digital", sub: "Ocupación y recaudación por box", src: "/boxes" + qp },
   { id: "mensual", label: "DB Mensual",   icon: "chart", title: "Dashboard Mensual", sub: "Ingresos y honorarios por profesional", src: "/cmc/mensual" + qp },
   { id: "autopilot", label: "Autopilot Ads", icon: "target", title: "Autopilot de Marketing", sub: "Meta Ads · decisiones por rentabilidad real", src: "/autopilot" + qp },
+  { id: "demanda", label: "Demanda", icon: "search", title: "Demanda capturada", sub: "Qué piden los pacientes que no capturamos", src: "/demanda" + qp },
+  { id: "atribucion", label: "Atribución", icon: "target", title: "Atribución diaria", sub: "Meta × Bot × Pacientes nuevos × Referidos", src: "/atribucion" + qp },
 ];
 
 // Futuros (deshabilitados, comunican la visión de consolidación)
 const SOON = [
-  { label: "Atribución", icon: "target" },
-  { label: "Demanda",    icon: "search" },
 ];
 
 const app = document.getElementById('app');
@@ -509,7 +531,8 @@ async function loadProfesionales(){
   }
 }
 
-// Future section
+// Future section (solo si quedan items pendientes — evita header huérfano)
+if (SOON.length) {
 const soonHdr = document.createElement('div');
 soonHdr.className = 'nav-section';
 soonHdr.textContent = 'Próximamente';
@@ -521,6 +544,7 @@ SOON.forEach(s => {
   d.innerHTML = `<span class="ico">${ICONS[s.icon]}</span><span class="label">${s.label}</span><span class="soon">Pronto</span>`;
   nav.appendChild(d);
 });
+}
 
 // Abrir el dashboard de un profesional como frame embebido (igual mecánica que los módulos)
 function openProf(ds){
