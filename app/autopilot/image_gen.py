@@ -21,6 +21,10 @@ import httpx
 log = logging.getLogger("bot")
 
 OPENAI_IMAGES_URL = "https://api.openai.com/v1/images/generations"
+# Modelo de imagen. gpt-image-2 es el más nuevo (mejor render de texto y composición).
+# Override por env si OpenAI saca uno superior. Disponibles en la org: gpt-image-1,
+# gpt-image-1-mini, gpt-image-1.5, gpt-image-2, chatgpt-image-latest.
+OPENAI_IMAGE_MODEL = os.getenv("OPENAI_IMAGE_MODEL", "gpt-image-2")
 
 # ── Perfil de marca CMC (reglas que se inyectan en cada prompt) ──────────────
 # Equivalente al carampangue.json que sugería el flujo de diseño: una sola fuente
