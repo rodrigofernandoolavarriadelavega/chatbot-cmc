@@ -244,6 +244,33 @@
   .dmodal-x svg{width:18px;height:18px;stroke:var(--navy)}
   @media(max-width:680px){.dmodal-card{flex-direction:column;max-height:92vh;overflow:auto}.dmodal-side{width:100%}}
 
+  /* Botón generar + modal de generación */
+  .btn-gen{display:inline-flex;align-items:center;gap:8px;border:0;cursor:pointer;
+       background:linear-gradient(135deg,var(--navy),var(--blue));color:#fff;font-family:inherit;
+       font-weight:700;font-size:13px;padding:11px 18px;border-radius:12px;
+       box-shadow:0 4px 14px rgba(17,114,171,.35);transition:.18s;flex-shrink:0}
+  .btn-gen:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(17,114,171,.45)}
+  .btn-gen svg{width:16px;height:16px;stroke:#fff}
+  .gmodal-card{position:relative;z-index:1;background:var(--card);border-radius:20px;padding:26px 26px 24px;
+       box-shadow:var(--sh-lg);width:100%;max-width:480px;max-height:90vh;overflow:auto}
+  .gmodal-title{font-size:18px;font-weight:800;letter-spacing:-.3px}
+  .gmodal-sub{font-size:12.5px;color:var(--muted);font-weight:500;margin-top:4px}
+  .gform{display:flex;flex-direction:column;gap:13px;margin-top:18px}
+  .gfield{display:flex;flex-direction:column;gap:6px}
+  .gfield>span{font-size:11.5px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.3px}
+  .gfield>span em{font-weight:500;color:var(--muted);text-transform:none;letter-spacing:0;font-style:normal}
+  .gfield input,.gfield select,.gfield textarea{font-family:inherit;font-size:13.5px;color:var(--ink);
+       border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff;outline:none;transition:.15s;width:100%}
+  .gfield input:focus,.gfield select:focus,.gfield textarea:focus{border-color:var(--aqua);box-shadow:0 0 0 3px rgba(79,190,206,.18)}
+  .gfield textarea{resize:vertical;min-height:48px}
+  .gfield-row{display:grid;grid-template-columns:1fr 150px;gap:11px}
+  .gform-hint{font-size:11.5px;color:var(--muted);line-height:1.45;background:var(--bg);padding:10px 12px;border-radius:10px}
+  .gform-btn{margin-top:4px;padding:13px;font-size:14px}
+  .gform-btn.spin svg{animation:rot 1s linear infinite}
+  .gform-btn:disabled{opacity:.65;cursor:wait}
+  .gform-err{font-size:12.5px;color:var(--red);font-weight:600;min-height:1px}
+  @media(max-width:560px){.gfield-row{grid-template-columns:1fr}}
+
   @media(max-width:1080px){.kpis{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}}
   @media(max-width:560px){.wrap{padding:14px}.kpis{grid-template-columns:1fr}.top{padding:18px}.gallery{grid-template-columns:repeat(2,1fr);gap:12px}}
 </style>
@@ -344,10 +371,14 @@
     <div class="gal-head">
       <div>
         <h2 class="gal-title">Diseños de campaña</h2>
-        <p class="gal-sub">Piezas generadas con Canva sobre la marca CMC · listas para WhatsApp, Instagram y Facebook</p>
+        <p class="gal-sub">Generados con IA (gpt-image-1) sobre la marca CMC · Instagram, Facebook, WhatsApp, historias y email</p>
       </div>
-      <div class="gal-filters" id="galFilters"></div>
+      <button class="btn-gen" id="btnGen">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v4M3 5h4M6 17v4M4 19h4M13 3l2.5 6.5L22 12l-6.5 2.5L13 21l-2.5-6.5L4 12l6.5-2.5L13 3z"/></svg>
+        Generar diseño
+      </button>
     </div>
+    <div class="gal-filters" id="galFilters"></div>
     <div class="gallery" id="gallery">
       <div class="skel" style="height:300px"></div>
       <div class="skel" style="height:300px"></div>
@@ -382,6 +413,50 @@
           Descargar PNG
         </a>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal generar diseño -->
+<div class="dmodal" id="gmodal">
+  <div class="dmodal-bg" id="gmodalBg"></div>
+  <div class="gmodal-card">
+    <button class="dmodal-x" id="gmodalX" aria-label="Cerrar">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+    <h3 class="gmodal-title">Generar diseño con IA</h3>
+    <p class="gmodal-sub">Describe la pieza. La IA la crea sobre la marca CMC y aparece en la galería.</p>
+    <div class="gform">
+      <label class="gfield"><span>Canal y formato</span>
+        <select id="gFormat"></select>
+      </label>
+      <div class="gfield-row">
+        <label class="gfield"><span>Especialidad / tema</span>
+          <input id="gSpecialty" placeholder="Ej: Ecografía, Ginecología, Dental…">
+        </label>
+        <label class="gfield"><span>Calidad</span>
+          <select id="gQuality">
+            <option value="high">Alta (mejor, ~30s)</option>
+            <option value="medium">Media (más rápida)</option>
+            <option value="low">Baja (borrador veloz)</option>
+          </select>
+        </label>
+      </div>
+      <label class="gfield"><span>Título principal</span>
+        <input id="gTitle" placeholder="Ej: Ecografía en Carampangue">
+      </label>
+      <label class="gfield"><span>Subtítulo <em>(opcional)</em></span>
+        <input id="gSubtitle" placeholder="Ej: Imágenes diagnósticas con profesionales de confianza">
+      </label>
+      <label class="gfield"><span>Contexto / brief <em>(opcional)</em></span>
+        <textarea id="gBrief" rows="2" placeholder="Detalles: promo, precio, profesional, tono…"></textarea>
+      </label>
+      <p class="gform-hint" id="gFormatHint"></p>
+      <button class="dbtn dbtn-primary gform-btn" id="gSubmit">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3l2.5 6.5L22 12l-6.5 2.5L13 21l-2.5-6.5L4 12l6.5-2.5L13 3z"/></svg>
+        <span>Generar</span>
+      </button>
+      <p class="gform-err" id="gErr"></p>
     </div>
   </div>
 </div>
@@ -581,12 +656,29 @@ document.getElementById('tabs').addEventListener('click',e=>{
 });
 
 /* ── Galería de diseños ───────────────────────────────── */
-let DESIGNS=[], DESIGNS_LOADED=false, GFILTER='__all__';
-const FMT_LABEL={instagram_post:'Instagram',facebook_post:'Facebook',your_story:'Historia',
+let DESIGNS=[], DESIGNS_LOADED=false, GFILTER='__all__', FORMATS=[];
+let FMT_LABEL={instagram_post:'Instagram',facebook_post:'Facebook',your_story:'Historia',
   poster:'Afiche',flyer:'Flyer',whatsapp:'WhatsApp'};
+
+async function loadFormats(){
+  if(FORMATS.length) return;
+  try{
+    const r=await (await fetch(`/autopilot/api/formats?token=${TOKEN}`)).json();
+    FORMATS=r.formats||[];
+    FORMATS.forEach(f=>{FMT_LABEL[f.key]=f.label;});
+    const sel=document.getElementById('gFormat');
+    sel.innerHTML=(r.channels||[]).map(ch=>{
+      const opts=FORMATS.filter(f=>f.channel===ch)
+        .map(f=>`<option value="${esc(f.key)}">${esc(f.label)} · ${esc(f.ratio)}</option>`).join('');
+      return `<optgroup label="${esc(ch)}">${opts}</optgroup>`;
+    }).join('');
+    updateFmtHint();
+  }catch(e){}
+}
 
 async function loadDesigns(){
   DESIGNS_LOADED=true;
+  await loadFormats();
   let r;
   try{ r=await (await fetch(`/autopilot/api/designs?token=${TOKEN}`)).json(); }
   catch(e){ return galEmpty('No pude cargar la galería.'); }
@@ -663,7 +755,52 @@ function openDModal(d){
 function closeDModal(){document.getElementById('dmodal').classList.remove('open');}
 document.getElementById('dmodalBg').addEventListener('click',closeDModal);
 document.getElementById('dmodalX').addEventListener('click',closeDModal);
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDModal();});
+
+/* ── Generar diseño (gpt-image-1) ─────────────────────── */
+function updateFmtHint(){
+  const f=FORMATS.find(x=>x.key===document.getElementById('gFormat').value);
+  if(!f) return;
+  document.getElementById('gFormatHint').innerHTML=
+    `<b>${esc(f.label)}</b> · ${f.width}×${f.height}px (${esc(f.ratio)})`+
+    (f.safe_zone?` · zona segura ${esc(f.safe_zone)}`:'')+`<br>${esc(f.note)}`;
+}
+document.getElementById('gFormat').addEventListener('change',updateFmtHint);
+function openGModal(){document.getElementById('gErr').textContent='';document.getElementById('gmodal').classList.add('open');}
+function closeGModal(){document.getElementById('gmodal').classList.remove('open');}
+document.getElementById('btnGen').addEventListener('click',openGModal);
+document.getElementById('gmodalBg').addEventListener('click',closeGModal);
+document.getElementById('gmodalX').addEventListener('click',closeGModal);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeDModal();closeGModal();}});
+
+document.getElementById('gSubmit').addEventListener('click',async()=>{
+  const title=document.getElementById('gTitle').value.trim();
+  const err=document.getElementById('gErr');
+  if(!title){err.textContent='Falta el título principal.';return;}
+  const btn=document.getElementById('gSubmit');
+  btn.disabled=true;btn.classList.add('spin');btn.querySelector('span').textContent='Generando…';err.textContent='';
+  const body={
+    title,
+    subtitle:document.getElementById('gSubtitle').value.trim(),
+    specialty:document.getElementById('gSpecialty').value.trim(),
+    format:document.getElementById('gFormat').value,
+    brief:document.getElementById('gBrief').value.trim(),
+    quality:document.getElementById('gQuality').value,
+  };
+  try{
+    const res=await fetch(`/autopilot/api/designs/generate?token=${TOKEN}`,
+      {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d=await res.json();
+    if(!d.ok){err.textContent='No se pudo generar: '+(d.error||'error');}
+    else{
+      closeGModal();
+      DESIGNS_LOADED=false; GFILTER='__all__';
+      await loadDesigns();
+      const fresh=DESIGNS.find(x=>x.id===d.design.id);
+      if(fresh) openDModal(fresh);
+    }
+  }catch(e){err.textContent='Error de red al generar.';}
+  btn.disabled=false;btn.classList.remove('spin');btn.querySelector('span').textContent='Generar';
+});
 
 load();
 </script>

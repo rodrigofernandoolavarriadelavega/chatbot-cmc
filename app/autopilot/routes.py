@@ -10,6 +10,9 @@
 Auth: mismo token admin que el resto del panel (?token= o cookie).
 """
 import logging
+import re
+import time
+import unicodedata
 from pathlib import Path
 
 from fastapi import APIRouter, Query, Request, HTTPException
@@ -18,6 +21,17 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from config import ADMIN_TOKEN
 from .world_state import load_snapshot
 from .designs import load_designs, add_design, delete_design
+from .ad_formats import AD_FORMATS, FORMAT_BY_KEY, channels
+from .image_gen import build_prompt, generate_png, gpt_size_for
+
+_STATIC_DESIGNS = Path(__file__).parent.parent.parent / "static" / "ad_designs"
+
+
+def _slug(text: str) -> str:
+    """Slug ascii para nombre de archivo/id."""
+    text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode()
+    text = re.sub(r"[^a-zA-Z0-9]+", "-", text).strip("-").lower()
+    return text[:40] or "diseno"
 
 log = logging.getLogger("bot")
 router = APIRouter()
@@ -93,3 +107,60 @@ def autopilot_designs_del(rid: str, token: str | None = Query(None), request: Re
     """Elimina un diseño por id."""
     _check_token(token, request)
     return JSONResponse({"ok": delete_design(rid)})
+
+
+@router.get("/autopilot/api/formats")
+def autopilot_formats(token: str | None = Query(None), request: Request = None):
+    """Catálogo de formatos publicitarios disponibles (para el dashboard y el asistente)."""
+    _check_token(token, request)
+    return JSONResponse({"channels": channels(), "formats": AD_FORMATS})
+
+
+@router.post("/autopilot/api/designs/generate")
+async def autopilot_designs_generate(request: Request, token: str | None = Query(None)):
+    """Genera una pieza con gpt-image-1, la guarda en /static y la suma a la galería.
+
+    Body: {title, subtitle?, specialty?, format?, brief?, cta?, quality?}
+    """
+    _check_token(token, request)
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        raise HTTPException(400, "JSON inválido")
+    title = (body.get("title") or "").strip()
+    if not title:
+        raise HTTPException(400, "Falta 'title'")
+
+    fmt = FORMAT_BY_KEY.get(body.get("format") or "instagram_post")
+    if not fmt:
+        raise HTTPException(400, f"Formato desconocido: {body.get('format')}")
+
+    prompt = build_prompt(
+        fmt,
+        title=title,
+        subtitle=(body.get("subtitle") or "").strip(),
+        specialty=(body.get("specialty") or "").strip(),
+        brief=(body.get("brief") or "").strip(),
+        cta=(body.get("cta") or "").strip(),
+    )
+    quality = body.get("quality") or "high"
+    try:
+        png = await generate_png(prompt, size=gpt_size_for(fmt), quality=quality)
+    except Exception as e:  # noqa: BLE001
+        log.error("generación falló: %s", e)
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=502)
+
+    rid = f"{_slug(body.get('specialty') or title)}-{int(time.time())}"
+    _STATIC_DESIGNS.mkdir(parents=True, exist_ok=True)
+    (_STATIC_DESIGNS / f"{rid}.png").write_bytes(png)
+
+    rec = add_design({
+        "id": rid,
+        "title": title,
+        "specialty": body.get("specialty") or "",
+        "format": fmt["key"],
+        "image_url": f"/static/ad_designs/{rid}.png",
+        "status": "borrador",
+        "source": "gpt-image-1",
+    })
+    return JSONResponse({"ok": True, "design": rec})
