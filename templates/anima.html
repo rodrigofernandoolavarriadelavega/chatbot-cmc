@@ -328,7 +328,7 @@
     transition: opacity .5s ease;
   }
   .anima-intro.hide { opacity: 0; pointer-events: none; }
-  .anima-intro video { width: 100%; height: 100%; object-fit: cover; }
+  .anima-intro video { width: 100%; height: 100%; object-fit: contain; }
   .intro-skip {
     position: absolute; bottom: max(28px, env(safe-area-inset-bottom)); right: 24px;
     background: rgba(255,255,255,.16); color: #fff; border: 1px solid rgba(255,255,255,.35);
@@ -413,6 +413,26 @@
 </div>
 
 <script>
+// ---- Intro video: una sola vez (persistente) ----
+(function(){
+  const intro = document.getElementById('animaIntro');
+  if (!intro) return;
+  const vid = document.getElementById('animaIntroVid');
+  if (localStorage.getItem('anima_intro_seen')) { intro.remove(); return; }
+  function dismiss(){
+    if (!intro.parentNode) return;
+    localStorage.setItem('anima_intro_seen', '1');
+    intro.classList.add('hide');
+    setTimeout(() => { if (intro.parentNode) intro.remove(); }, 600);
+  }
+  vid.addEventListener('ended', dismiss);
+  vid.addEventListener('error', dismiss);            // si el video falla, no bloquea
+  document.getElementById('introSkip').addEventListener('click', dismiss);
+  setTimeout(() => { if (vid.readyState < 2) dismiss(); }, 9000); // failsafe
+  const p = vid.play && vid.play();
+  if (p && p.catch) p.catch(() => dismiss());        // autoplay bloqueado → saltar
+})();
+
 // __TOKEN__ es reemplazado por el backend (vacío si la sesión usa cookie).
 const TOKEN = "__TOKEN__";
 const qp = TOKEN ? ("?token=" + encodeURIComponent(TOKEN)) : "";
