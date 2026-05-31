@@ -9,10 +9,12 @@
 
 Auth: mismo token admin que el resto del panel (?token= o cookie).
 """
+import asyncio
 import logging
 import re
 import time
 import unicodedata
+import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, Query, Request, HTTPException
@@ -22,7 +24,12 @@ from config import ADMIN_TOKEN
 from .world_state import load_snapshot
 from .designs import load_designs, add_design, delete_design
 from .ad_formats import AD_FORMATS, FORMAT_BY_KEY, channels
-from .image_gen import build_prompt, generate_png, gpt_size_for
+from .image_gen import build_prompt, generate_png, gpt_size_for, OPENAI_IMAGE_MODEL
+
+# Jobs de generación en memoria. La generación (gpt-image-2) tarda 60-120s — más
+# que cualquier timeout de proxy razonable, así que corre en background y el
+# dashboard consulta el estado por job_id en vez de bloquear la conexión HTTP.
+_GEN_JOBS: dict[str, dict] = {}
 
 _STATIC_DESIGNS = Path(__file__).parent.parent.parent / "static" / "ad_designs"
 
@@ -116,9 +123,30 @@ def autopilot_formats(token: str | None = Query(None), request: Request = None):
     return JSONResponse({"channels": channels(), "formats": AD_FORMATS})
 
 
+async def _run_generation(job_id: str, *, fmt: dict, title: str, subtitle: str,
+                          specialty: str, brief: str, cta: str, quality: str) -> None:
+    """Corre la generación en background y deja el resultado en _GEN_JOBS[job_id]."""
+    try:
+        prompt = build_prompt(fmt, title=title, subtitle=subtitle, specialty=specialty,
+                              brief=brief, cta=cta)
+        png = await generate_png(prompt, size=gpt_size_for(fmt), quality=quality)
+        rid = f"{_slug(specialty or title)}-{int(time.time())}"
+        _STATIC_DESIGNS.mkdir(parents=True, exist_ok=True)
+        (_STATIC_DESIGNS / f"{rid}.png").write_bytes(png)
+        rec = add_design({
+            "id": rid, "title": title, "specialty": specialty, "format": fmt["key"],
+            "image_url": f"/static/ad_designs/{rid}.png", "status": "borrador",
+            "source": OPENAI_IMAGE_MODEL,
+        })
+        _GEN_JOBS[job_id] = {"status": "done", "design": rec}
+    except Exception as e:  # noqa: BLE001
+        log.error("generación falló (%s): %s", job_id, e)
+        _GEN_JOBS[job_id] = {"status": "error", "error": str(e)}
+
+
 @router.post("/autopilot/api/designs/generate")
 async def autopilot_designs_generate(request: Request, token: str | None = Query(None)):
-    """Genera una pieza con gpt-image-1, la guarda en /static y la suma a la galería.
+    """Inicia la generación de una pieza (async). Devuelve un job_id para consultar.
 
     Body: {title, subtitle?, specialty?, format?, brief?, cta?, quality?}
     """
@@ -130,37 +158,26 @@ async def autopilot_designs_generate(request: Request, token: str | None = Query
     title = (body.get("title") or "").strip()
     if not title:
         raise HTTPException(400, "Falta 'title'")
-
     fmt = FORMAT_BY_KEY.get(body.get("format") or "instagram_post")
     if not fmt:
         raise HTTPException(400, f"Formato desconocido: {body.get('format')}")
 
-    prompt = build_prompt(
-        fmt,
-        title=title,
+    job_id = uuid.uuid4().hex[:12]
+    _GEN_JOBS[job_id] = {"status": "running"}
+    asyncio.create_task(_run_generation(
+        job_id, fmt=fmt, title=title,
         subtitle=(body.get("subtitle") or "").strip(),
         specialty=(body.get("specialty") or "").strip(),
         brief=(body.get("brief") or "").strip(),
         cta=(body.get("cta") or "").strip(),
-    )
-    quality = body.get("quality") or "high"
-    try:
-        png = await generate_png(prompt, size=gpt_size_for(fmt), quality=quality)
-    except Exception as e:  # noqa: BLE001
-        log.error("generación falló: %s", e)
-        return JSONResponse({"ok": False, "error": str(e)}, status_code=502)
+        quality=body.get("quality") or "high",
+    ))
+    return JSONResponse({"ok": True, "job_id": job_id, "status": "running"})
 
-    rid = f"{_slug(body.get('specialty') or title)}-{int(time.time())}"
-    _STATIC_DESIGNS.mkdir(parents=True, exist_ok=True)
-    (_STATIC_DESIGNS / f"{rid}.png").write_bytes(png)
 
-    rec = add_design({
-        "id": rid,
-        "title": title,
-        "specialty": body.get("specialty") or "",
-        "format": fmt["key"],
-        "image_url": f"/static/ad_designs/{rid}.png",
-        "status": "borrador",
-        "source": "gpt-image-1",
-    })
-    return JSONResponse({"ok": True, "design": rec})
+@router.get("/autopilot/api/designs/generate/status/{job_id}")
+def autopilot_designs_generate_status(job_id: str, token: str | None = Query(None),
+                                      request: Request = None):
+    """Estado de un job de generación: running | done (+design) | error (+error)."""
+    _check_token(token, request)
+    return JSONResponse(_GEN_JOBS.get(job_id, {"status": "unknown"}))

@@ -790,17 +790,35 @@ document.getElementById('gSubmit').addEventListener('click',async()=>{
     const res=await fetch(`/autopilot/api/designs/generate?token=${TOKEN}`,
       {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const d=await res.json();
-    if(!d.ok){err.textContent='No se pudo generar: '+(d.error||'error');}
+    if(!d.ok||!d.job_id){err.textContent='No se pudo iniciar: '+(d.error||'error');}
     else{
-      closeGModal();
-      DESIGNS_LOADED=false; GFILTER='__all__';
-      await loadDesigns();
-      const fresh=DESIGNS.find(x=>x.id===d.design.id);
-      if(fresh) openDModal(fresh);
+      const design=await pollGen(d.job_id);
+      if(design){
+        closeGModal();
+        DESIGNS_LOADED=false; GFILTER='__all__';
+        await loadDesigns();
+        const fresh=DESIGNS.find(x=>x.id===design.id);
+        if(fresh) openDModal(fresh);
+      }else{err.textContent=GEN_ERR||'La generación falló o expiró. Intenta de nuevo.';}
     }
   }catch(e){err.textContent='Error de red al generar.';}
   btn.disabled=false;btn.classList.remove('spin');btn.querySelector('span').textContent='Generar';
 });
+
+let GEN_ERR='';
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function pollGen(jobId){
+  GEN_ERR='';
+  for(let i=0;i<120;i++){            // hasta ~6 min (120 × 3s)
+    await sleep(3000);
+    try{
+      const s=await (await fetch(`/autopilot/api/designs/generate/status/${jobId}?token=${TOKEN}`)).json();
+      if(s.status==='done') return s.design;
+      if(s.status==='error'){GEN_ERR=s.error||'error';return null;}
+    }catch(e){}
+  }
+  return null;
+}
 
 load();
 </script>
