@@ -174,8 +174,78 @@
   @keyframes shimmer{to{background-position:-200% 0}}
 
   .foot{text-align:center;font-size:11px;color:var(--muted);margin-top:26px;font-weight:500}
+
+  /* Tabs */
+  .tabs{display:flex;gap:6px;margin-top:18px;background:var(--card);padding:6px;border-radius:14px;
+       box-shadow:var(--sh-sm);border:1px solid var(--line);width:fit-content}
+  .tab{display:inline-flex;align-items:center;gap:8px;border:0;cursor:pointer;background:transparent;
+       font-family:inherit;font-weight:700;font-size:13px;color:var(--muted);padding:9px 16px;border-radius:10px;transition:.15s}
+  .tab svg{width:16px;height:16px;stroke:currentColor}
+  .tab:hover{color:var(--navy);background:var(--bg)}
+  .tab.on{background:linear-gradient(135deg,var(--navy),var(--blue));color:#fff}
+  .tab.on svg{stroke:#fff}
+  .tab-count{font-size:11px;font-weight:800;background:rgba(255,255,255,.22);padding:1px 7px;border-radius:999px;min-width:18px;text-align:center}
+  .tab:not(.on) .tab-count{background:var(--bg);color:var(--muted)}
+
+  /* Galería */
+  .gal-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:20px}
+  .gal-title{font-size:18px;font-weight:800;letter-spacing:-.3px;color:var(--ink)}
+  .gal-sub{font-size:12.5px;color:var(--muted);font-weight:500;margin-top:3px;max-width:520px}
+  .gal-filters{display:flex;gap:7px;flex-wrap:wrap}
+  .gfilter{border:1px solid var(--line);background:var(--card);color:var(--muted);font-family:inherit;
+       font-weight:700;font-size:12px;padding:7px 13px;border-radius:999px;cursor:pointer;transition:.15s}
+  .gfilter:hover{border-color:#cfe0ec;color:var(--navy)}
+  .gfilter.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:18px;margin-top:18px}
+  .dcard{background:var(--card);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh-sm);
+       border:1px solid var(--line);transition:.2s;cursor:pointer;display:flex;flex-direction:column}
+  .dcard:hover{box-shadow:var(--sh-lg);transform:translateY(-3px);border-color:#cfe0ec}
+  .dcard-img{position:relative;aspect-ratio:4/5;background:linear-gradient(135deg,#eef5f9,#dcebf4 0%,#e3f5f8);overflow:hidden}
+  .dcard-img img{width:100%;height:100%;object-fit:cover;display:block}
+  .dcard-img .ph{position:absolute;inset:0;display:grid;place-items:center;color:var(--blue);opacity:.4}
+  .dcard-img .ph svg{width:42px;height:42px;stroke:currentColor}
+  .dcard-st{position:absolute;top:10px;left:10px;font-size:10px;font-weight:800;text-transform:uppercase;
+       letter-spacing:.4px;padding:4px 9px;border-radius:999px;backdrop-filter:blur(6px)}
+  .st-borrador{background:rgba(91,113,134,.92);color:#fff}
+  .st-aprobado{background:rgba(31,157,107,.94);color:#fff}
+  .st-publicado{background:rgba(17,114,171,.94);color:#fff}
+  .dcard-zoom{position:absolute;top:10px;right:10px;width:30px;height:30px;border-radius:9px;display:grid;
+       place-items:center;background:rgba(15,63,104,.55);backdrop-filter:blur(6px);opacity:0;transition:.18s}
+  .dcard:hover .dcard-zoom{opacity:1}
+  .dcard-zoom svg{width:15px;height:15px;stroke:#fff}
+  .dcard-b{padding:13px 14px;display:flex;flex-direction:column;gap:8px;flex:1}
+  .dcard-t{font-size:13.5px;font-weight:700;line-height:1.3;color:var(--ink)}
+  .dcard-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:auto}
+  .dcard-tag{font-size:10.5px;font-weight:700;color:var(--blue);background:#eef9fb;padding:3px 9px;border-radius:7px}
+  .dcard-fmt{font-size:10.5px;font-weight:600;color:var(--muted)}
+
+  /* Modal diseño */
+  .dmodal{display:none;position:fixed;inset:0;z-index:50;align-items:center;justify-content:center;padding:24px}
+  .dmodal.open{display:flex}
+  .dmodal-bg{position:absolute;inset:0;background:rgba(10,46,77,.62);backdrop-filter:blur(4px)}
+  .dmodal-card{position:relative;z-index:1;background:var(--card);border-radius:20px;overflow:hidden;
+       box-shadow:var(--sh-lg);display:flex;max-width:880px;width:100%;max-height:88vh}
+  .dmodal-img{flex:1;background:#0a2e4d;display:grid;place-items:center;min-width:0}
+  .dmodal-img img{max-width:100%;max-height:88vh;object-fit:contain;display:block}
+  .dmodal-side{width:280px;flex-shrink:0;padding:24px 22px;display:flex;flex-direction:column;justify-content:space-between;gap:20px}
+  .dmodal-side h3{font-size:17px;font-weight:800;letter-spacing:-.3px;line-height:1.25}
+  .dmodal-chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+  .dmodal-date{font-size:11.5px;color:var(--muted);margin-top:12px;font-weight:500}
+  .dmodal-actions{display:flex;flex-direction:column;gap:9px}
+  .dbtn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);
+       background:var(--card);color:var(--navy);font-family:inherit;font-weight:700;font-size:13px;
+       padding:11px 16px;border-radius:11px;cursor:pointer;text-decoration:none;transition:.15s}
+  .dbtn svg{width:16px;height:16px;stroke:currentColor}
+  .dbtn:hover{border-color:#cfe0ec;background:var(--bg)}
+  .dbtn-primary{background:linear-gradient(135deg,var(--navy),var(--blue));color:#fff;border:0}
+  .dbtn-primary:hover{filter:brightness(1.08);background:linear-gradient(135deg,var(--navy),var(--blue))}
+  .dmodal-x{position:absolute;top:14px;right:14px;z-index:2;width:34px;height:34px;border:0;border-radius:10px;
+       background:rgba(255,255,255,.9);display:grid;place-items:center;cursor:pointer;box-shadow:var(--sh-sm)}
+  .dmodal-x svg{width:18px;height:18px;stroke:var(--navy)}
+  @media(max-width:680px){.dmodal-card{flex-direction:column;max-height:92vh;overflow:auto}.dmodal-side{width:100%}}
+
   @media(max-width:1080px){.kpis{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}}
-  @media(max-width:560px){.wrap{padding:14px}.kpis{grid-template-columns:1fr}.top{padding:18px}}
+  @media(max-width:560px){.wrap{padding:14px}.kpis{grid-template-columns:1fr}.top{padding:18px}.gallery{grid-template-columns:repeat(2,1fr);gap:12px}}
 </style>
 </head>
 <body>
@@ -207,6 +277,18 @@
     </div>
   </div>
 
+  <div class="tabs" id="tabs">
+    <button class="tab on" data-view="decisiones">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l3-4 4 3 5-7"/></svg>
+      Decisiones
+    </button>
+    <button class="tab" data-view="disenos">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+      Diseños <span class="tab-count" id="tabDesignCount"></span>
+    </button>
+  </div>
+
+  <div id="viewDecisiones">
   <div class="kpis" id="kpis"></div>
 
   <div class="alert-banner" id="alertBanner">
@@ -256,8 +338,52 @@
       </div>
     </div>
   </div>
+  </div><!-- /viewDecisiones -->
+
+  <div id="viewDisenos" style="display:none">
+    <div class="gal-head">
+      <div>
+        <h2 class="gal-title">Diseños de campaña</h2>
+        <p class="gal-sub">Piezas generadas con Canva sobre la marca CMC · listas para WhatsApp, Instagram y Facebook</p>
+      </div>
+      <div class="gal-filters" id="galFilters"></div>
+    </div>
+    <div class="gallery" id="gallery">
+      <div class="skel" style="height:300px"></div>
+      <div class="skel" style="height:300px"></div>
+      <div class="skel" style="height:300px"></div>
+    </div>
+  </div>
 
   <div class="foot" id="foot"></div>
+</div>
+
+<!-- Modal visor de diseño -->
+<div class="dmodal" id="dmodal">
+  <div class="dmodal-bg" id="dmodalBg"></div>
+  <div class="dmodal-card">
+    <button class="dmodal-x" id="dmodalX" aria-label="Cerrar">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+    <div class="dmodal-img"><img id="dmodalImg" alt=""></div>
+    <div class="dmodal-side">
+      <div>
+        <h3 id="dmodalTitle">—</h3>
+        <div class="dmodal-chips" id="dmodalChips"></div>
+        <p class="dmodal-date" id="dmodalDate"></p>
+      </div>
+      <div class="dmodal-actions">
+        <a id="dmodalEdit" class="dbtn dbtn-primary" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
+          Editar en Canva
+        </a>
+        <a id="dmodalDl" class="dbtn" download>
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>
+          Descargar PNG
+        </a>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -442,6 +568,103 @@ async function refresh(){
   catch(e){}
   btn.disabled=false; btn.classList.remove('spin'); btn.querySelector('span').textContent='Actualizar';
 }
+
+/* ── Tabs ─────────────────────────────────────────────── */
+document.getElementById('tabs').addEventListener('click',e=>{
+  const b=e.target.closest('.tab'); if(!b)return;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  b.classList.add('on');
+  const v=b.dataset.view;
+  document.getElementById('viewDecisiones').style.display = v==='decisiones'?'block':'none';
+  document.getElementById('viewDisenos').style.display    = v==='disenos'?'block':'none';
+  if(v==='disenos' && !DESIGNS_LOADED) loadDesigns();
+});
+
+/* ── Galería de diseños ───────────────────────────────── */
+let DESIGNS=[], DESIGNS_LOADED=false, GFILTER='__all__';
+const FMT_LABEL={instagram_post:'Instagram',facebook_post:'Facebook',your_story:'Historia',
+  poster:'Afiche',flyer:'Flyer',whatsapp:'WhatsApp'};
+
+async function loadDesigns(){
+  DESIGNS_LOADED=true;
+  let r;
+  try{ r=await (await fetch(`/autopilot/api/designs?token=${TOKEN}`)).json(); }
+  catch(e){ return galEmpty('No pude cargar la galería.'); }
+  DESIGNS=r.designs||[];
+  document.getElementById('tabDesignCount').textContent=DESIGNS.length||'';
+  renderFilters(); renderGallery();
+}
+
+function renderFilters(){
+  const specs=[...new Set(DESIGNS.map(d=>d.specialty).filter(Boolean))].sort();
+  const mk=(key,lbl)=>`<button class="gfilter${GFILTER===key?' on':''}" data-f="${esc(key)}">${esc(lbl)}</button>`;
+  document.getElementById('galFilters').innerHTML =
+    mk('__all__','Todas')+specs.map(s=>mk(s,s)).join('');
+}
+document.getElementById('galFilters').addEventListener('click',e=>{
+  const b=e.target.closest('.gfilter'); if(!b)return;
+  GFILTER=b.dataset.f; renderFilters(); renderGallery();
+});
+
+function galEmpty(msg){
+  document.getElementById('gallery').innerHTML=
+    `<div class="empty" style="grid-column:1/-1"><div class="ei">${svg('<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>')}</div>
+     <h3>Aún no hay diseños</h3><p>${msg||'Pídele a tu asistente que genere piezas con Canva sobre la marca CMC y aparecerán aquí, listas para publicar.'}</p></div>`;
+}
+
+function renderGallery(){
+  const list = GFILTER==='__all__'?DESIGNS:DESIGNS.filter(d=>d.specialty===GFILTER);
+  if(!list.length) return galEmpty();
+  document.getElementById('gallery').innerHTML = list.map((d,i)=>{
+    const img = d.image_url || d.thumbnail_url;
+    const st = (d.status||'borrador').toLowerCase();
+    const fmt = FMT_LABEL[d.format]||d.format||'';
+    const visual = img
+      ? `<img src="${esc(img)}" alt="${esc(d.title)}" loading="lazy">`
+      : `<div class="ph">${svg('<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>')}</div>`;
+    return `<div class="dcard" data-i="${i}">
+      <div class="dcard-img">
+        ${visual}
+        <span class="dcard-st st-${st}">${esc(st)}</span>
+        <span class="dcard-zoom">${svg('<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3M11 8v6M8 11h6"/>')}</span>
+      </div>
+      <div class="dcard-b">
+        <div class="dcard-t">${esc(d.title)}</div>
+        <div class="dcard-meta">
+          ${d.specialty?`<span class="dcard-tag">${esc(d.specialty)}</span>`:''}
+          ${fmt?`<span class="dcard-fmt">${esc(fmt)}</span>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  // delegación: abrir modal
+  document.getElementById('gallery').querySelectorAll('.dcard').forEach(c=>{
+    c.addEventListener('click',()=>openDModal(list[+c.dataset.i]));
+  });
+}
+
+/* ── Modal ────────────────────────────────────────────── */
+function openDModal(d){
+  const img=d.image_url||d.thumbnail_url||'';
+  document.getElementById('dmodalImg').src=img;
+  document.getElementById('dmodalTitle').textContent=d.title||'Diseño';
+  const st=(d.status||'borrador').toLowerCase(), fmt=FMT_LABEL[d.format]||d.format||'';
+  document.getElementById('dmodalChips').innerHTML=
+    (d.specialty?`<span class="dcard-tag">${esc(d.specialty)}</span>`:'')+
+    (fmt?`<span class="chip">${esc(fmt)}</span>`:'')+
+    `<span class="dcard-st st-${st}" style="position:static">${esc(st)}</span>`;
+  document.getElementById('dmodalDate').textContent=d.created_at?('Creado '+new Date(d.created_at).toLocaleDateString('es-CL',{day:'numeric',month:'long',year:'numeric'})):'';
+  const edit=document.getElementById('dmodalEdit');
+  if(d.edit_url){edit.href=d.edit_url;edit.style.display='inline-flex';}else edit.style.display='none';
+  const dl=document.getElementById('dmodalDl');
+  if(img){dl.href=img;dl.style.display='inline-flex';}else dl.style.display='none';
+  document.getElementById('dmodal').classList.add('open');
+}
+function closeDModal(){document.getElementById('dmodal').classList.remove('open');}
+document.getElementById('dmodalBg').addEventListener('click',closeDModal);
+document.getElementById('dmodalX').addEventListener('click',closeDModal);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDModal();});
+
 load();
 </script>
 </body>

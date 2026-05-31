@@ -1,0 +1,45 @@
+{
+  "designs": [
+    {
+      "id": "ecografia-1",
+      "title": "Ecografía en Carampangue · diagnóstico cercano",
+      "specialty": "Ecografía",
+      "format": "instagram_post",
+      "image_url": "/static/ad_designs/ecografia-1.png",
+      "edit_url": "https://www.canva.com/d/EUidEcgAv3ZNq9v",
+      "status": "borrador",
+      "created_at": "2026-05-31T00:05:00Z"
+    },
+    {
+      "id": "ecografia-4",
+      "title": "Ecografía en Carampangue · en tu comunidad",
+      "specialty": "Ecografía",
+      "format": "instagram_post",
+      "image_url": "/static/ad_designs/ecografia-4.png",
+      "edit_url": "https://www.canva.com/d/26MF7aeaFkR4E2y",
+      "status": "borrador",
+      "created_at": "2026-05-31T00:05:00Z"
+    },
+    {
+      "id": "ecografia-3",
+      "title": "Ecografía Carampangue · agenda tu hora",
+      "specialty": "Ecografía",
+      "format": "instagram_post",
+      "image_url": "/static/ad_designs/ecografia-3.png",
+      "edit_url": "https://www.canva.com/d/DgTWuERTgYmxoyL",
+      "status": "borrador",
+      "created_at": "2026-05-31T00:05:00Z"
+    },
+    {
+      "id": "ecografia-2",
+      "title": "Ecografía en Carampangue · profesionales de confianza",
+      "specialty": "Ecografía",
+      "format": "instagram_post",
+      "image_url": "/static/ad_designs/ecografia-2.png",
+      "edit_url": "https://www.canva.com/d/Z-sFo8o6uNo0lNA",
+      "status": "borrador",
+      "created_at": "2026-05-31T00:05:00Z"
+    }
+  ],
+  "updated_at": "2026-05-31T00:05:00Z"
+}
