@@ -72,6 +72,20 @@ def add_design(record: dict) -> dict:
     return record
 
 
+VALID_STATUS = ("borrador", "aprobado", "publicado")
+
+
+def set_status(rid: str, status: str) -> bool:
+    """Cambia el estado de un diseño (flujo de aprobación). True si existía."""
+    designs = load_designs()
+    for d in designs:
+        if str(d.get("id")) == str(rid):
+            d["status"] = status
+            _save_all(designs)
+            return True
+    return False
+
+
 def delete_design(rid: str) -> bool:
     """Elimina por id. Devuelve True si había algo que borrar."""
     designs = load_designs()

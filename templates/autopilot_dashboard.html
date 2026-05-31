@@ -252,6 +252,16 @@
   .dmodal-side h3{font-size:17px;font-weight:800;letter-spacing:-.3px;line-height:1.25}
   .dmodal-chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
   .dmodal-date{font-size:11.5px;color:var(--muted);margin-top:12px;font-weight:500}
+  .dstatus-wrap{margin-top:18px}
+  .dstatus-lbl{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .dstatus{display:flex;gap:6px;margin-top:8px}
+  .dstatus button{flex:1;border:1px solid var(--line);background:#fff;font-family:inherit;font-weight:700;
+       font-size:11px;padding:8px 4px;border-radius:9px;cursor:pointer;color:var(--muted);transition:.15s}
+  .dstatus button:hover{border-color:#cfe0ec;color:var(--navy)}
+  .dstatus button.on.s-borrador{background:var(--slate-bg);color:var(--slate);border-color:var(--slate)}
+  .dstatus button.on.s-aprobado{background:var(--green-bg);color:var(--green);border-color:var(--green)}
+  .dstatus button.on.s-publicado{background:#e3f5f8;color:var(--blue);border-color:var(--blue)}
+  .dstatus button:disabled{opacity:.6;cursor:wait}
   .dmodal-actions{display:flex;flex-direction:column;gap:9px}
   .dbtn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);
        background:var(--card);color:var(--navy);font-family:inherit;font-weight:700;font-size:13px;
@@ -441,6 +451,10 @@
         <h3 id="dmodalTitle">—</h3>
         <div class="dmodal-chips" id="dmodalChips"></div>
         <p class="dmodal-date" id="dmodalDate"></p>
+        <div class="dstatus-wrap">
+          <span class="dstatus-lbl">Estado</span>
+          <div class="dstatus" id="dmodalStatus"></div>
+        </div>
       </div>
       <div class="dmodal-actions">
         <a id="dmodalEdit" class="dbtn dbtn-primary" target="_blank" rel="noopener">
@@ -871,7 +885,42 @@ function openDModal(d){
   if(dlUrl){dl.href=dlUrl;dl.style.display='inline-flex';
     const lbl=dl.childNodes[dl.childNodes.length-1]; if(lbl) lbl.textContent=isVid?' Descargar video':' Descargar PNG';
   }else dl.style.display='none';
+  DMODAL_D=d; renderStatusControl(d);
   document.getElementById('dmodal').classList.add('open');
+}
+
+// Flujo de aprobación: cambiar estado desde el modal
+let DMODAL_D=null;
+const STATUSES=[['borrador','Borrador'],['aprobado','Aprobado'],['publicado','Publicado']];
+function renderStatusControl(d){
+  const cur=(d.status||'borrador').toLowerCase();
+  document.getElementById('dmodalStatus').innerHTML=STATUSES.map(([k,lbl])=>
+    `<button data-s="${k}" class="${k===cur?'on s-'+k:''}">${lbl}</button>`).join('');
+  document.getElementById('dmodalStatus').querySelectorAll('button').forEach(b=>
+    b.addEventListener('click',()=>setDesignStatus(b.dataset.s)));
+}
+async function setDesignStatus(status){
+  if(!DMODAL_D || (DMODAL_D.status||'borrador')===status) return;
+  const wrap=document.getElementById('dmodalStatus');
+  wrap.querySelectorAll('button').forEach(b=>b.disabled=true);
+  try{
+    const r=await (await fetch(`/autopilot/api/designs/${encodeURIComponent(DMODAL_D.id)}/status?token=${TOKEN}`,
+      {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})})).json();
+    if(r.ok){
+      DMODAL_D.status=status;
+      const ix=DESIGNS.findIndex(x=>String(x.id)===String(DMODAL_D.id));
+      if(ix>=0) DESIGNS[ix].status=status;
+      renderStatusControl(DMODAL_D);
+      // refresca chip de estado del modal
+      const fmt=FMT_LABEL[DMODAL_D.format]||DMODAL_D.format||'';
+      document.getElementById('dmodalChips').innerHTML=
+        (DMODAL_D.specialty?`<span class="dcard-tag">${esc(DMODAL_D.specialty)}</span>`:'')+
+        (fmt?`<span class="chip">${esc(fmt)}</span>`:'')+
+        `<span class="dcard-st st-${status}" style="position:static">${esc(status)}</span>`;
+      renderGallery();
+    }
+  }catch(e){}
+  wrap.querySelectorAll('button').forEach(b=>b.disabled=false);
 }
 function closeDModal(){document.getElementById('dmodal').classList.remove('open');}
 document.getElementById('dmodalBg').addEventListener('click',closeDModal);

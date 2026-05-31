@@ -22,7 +22,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 
 from config import ADMIN_TOKEN
 from .world_state import load_snapshot
-from .designs import load_designs, add_design, delete_design
+from .designs import load_designs, add_design, delete_design, set_status, VALID_STATUS
 from .ad_formats import AD_FORMATS, FORMAT_BY_KEY, channels
 from .image_gen import build_prompt, generate_png, gpt_size_for, OPENAI_IMAGE_MODEL
 
@@ -114,6 +114,20 @@ def autopilot_designs_del(rid: str, token: str | None = Query(None), request: Re
     """Elimina un diseño por id."""
     _check_token(token, request)
     return JSONResponse({"ok": delete_design(rid)})
+
+
+@router.post("/autopilot/api/designs/{rid}/status")
+async def autopilot_designs_status(rid: str, request: Request, token: str | None = Query(None)):
+    """Cambia el estado de un diseño (borrador → aprobado → publicado)."""
+    _check_token(token, request)
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        raise HTTPException(400, "JSON inválido")
+    status = (body.get("status") or "").strip().lower()
+    if status not in VALID_STATUS:
+        raise HTTPException(400, f"Estado inválido (usa: {', '.join(VALID_STATUS)})")
+    return JSONResponse({"ok": set_status(rid, status), "status": status})
 
 
 @router.get("/autopilot/api/formats")
