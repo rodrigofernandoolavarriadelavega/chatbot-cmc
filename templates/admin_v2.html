@@ -217,6 +217,26 @@ input, textarea, select{font-family:inherit; color:inherit}
 .chat-tool:hover{background:var(--cmc-aqua-soft); border-color:var(--cmc-aqua); color:var(--cmc-blue)}
 .chat-tool.active{background:var(--cmc-aqua-soft); border-color:var(--cmc-aqua); color:var(--cmc-blue)}
 
+/* ===== Densidad: letra y espaciado más compactos para más info (jun 2026) */
+/* Lista de conversaciones */
+.conv-item{ padding:9px 14px; gap:10px }
+.conv-name{ font-size:12px }
+.conv-time{ font-size:10px }
+.conv-preview{ font-size:11px; margin-top:2px }
+.conv-meta{ margin-top:3px }
+.avatar{ width:36px; height:36px; flex:0 0 36px; font-size:12px }
+/* Mensajes del chat */
+.msg{ font-size:12px; padding:6px 10px 5px; line-height:1.42 }
+/* Cabecera del chat más baja */
+.chat-header{ min-height:54px; gap:12px }
+.chat-header .name{ font-size:13.5px }
+/* KPIs del topbar */
+.kpi{ font-size:10.5px; padding:4px 10px; gap:5px }
+/* Panel de contexto (datos del paciente) */
+.ctx-section{ padding:11px 16px }
+.ctx-section h3{ margin-bottom:8px; font-size:10px }
+.ctx-row{ font-size:11.5px; padding:4px 0 }
+
 /* ===== INBOX ============================================================== */
 .inbox-search{padding:14px 14px 10px}
 .inbox-search input{
