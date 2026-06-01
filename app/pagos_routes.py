@@ -217,11 +217,15 @@ async def _buscar_cita_paciente_fecha(rut: str, fecha: str) -> dict | None:
     """
     Busca en Medilink la(s) cita(s) del paciente (por RUT) para una fecha exacta.
     Retorna la primera cita encontrada como dict con id, id_profesional, profesional, area,
-    o None si no hay citas ese día.
-    Una sola consulta HTTP — 429-safe.
+    prestacion, o None si no hay citas ese día.
+
+    Consultas HTTP: 1 (citas) + 1 opcional (atenciones/detalles si hay id_atencion) — 429-safe.
+
+    La prestación viene de /atenciones/{id_atencion}/detalles → nombre_prestacion.
+    Este endpoint solo tiene datos cuando la atención ya fue cerrada en Medilink;
+    si aún no está cerrada, prestacion queda vacía (editable en el formulario).
     """
     try:
-        import json as _json
         from medilink import (
             _get_shared_client, _q, _safe_json, HEADERS,
             PROFESIONALES, _rut_safe,
@@ -241,7 +245,6 @@ async def _buscar_cita_paciente_fecha(rut: str, fecha: str) -> dict | None:
             "estado_anulacion": {"eq": 0},
         }
         client = _get_shared_client()
-        import httpx as _httpx
         r = await client.get(
             f"{MEDILINK_BASE_URL}/citas",
             params={"q": _q(params)},
@@ -259,18 +262,46 @@ async def _buscar_cita_paciente_fecha(rut: str, fecha: str) -> dict | None:
             return None
         # Ordenar por hora_inicio y tomar la primera
         data.sort(key=lambda c: c.get("hora_inicio", ""))
-        c = data[0]
-        id_prof = c.get("id_profesional")
+        cita = data[0]
+        id_prof = cita.get("id_profesional")
         prof_info = PROFESIONALES.get(id_prof, {}) if id_prof else {}
-        # nombre_atencion es el campo de prestación en Medilink (/citas);
-        # viene vacío la mayoría de las veces en CMC, pero se devuelve cuando existe.
-        nombre_atencion = (c.get("nombre_atencion") or "").strip()
+
+        # ── Prestación desde /atenciones/{id_atencion}/detalles ──────────────
+        # La cita lleva id_atencion cuando la atención fue creada en Medilink.
+        # El detalle tiene nombre_prestacion cuando la atención está cerrada.
+        # Si no está cerrada aún, devolvemos prestacion vacía (editable).
+        prestacion = ""
+        id_aten = cita.get("id_atencion")
+        if id_aten:
+            try:
+                rd = await client.get(
+                    f"{MEDILINK_BASE_URL}/atenciones/{id_aten}/detalles",
+                    headers=HEADERS,
+                    timeout=8,
+                )
+                if rd.status_code == 200:
+                    detalles = _safe_json(rd).get("data", [])
+                    # Recopilar nombres únicos de prestaciones realizadas
+                    nombres = []
+                    for det in detalles:
+                        n = (det.get("nombre_prestacion") or "").strip()
+                        if n and n not in nombres:
+                            nombres.append(n)
+                    prestacion = " / ".join(nombres)
+                    if prestacion:
+                        log.info(
+                            "_buscar_cita_paciente_fecha: prestacion desde detalles "
+                            "id_aten=%s → %r", id_aten, prestacion
+                        )
+            except Exception as e_det:
+                log.debug("_buscar_cita_paciente_fecha detalles error id_aten=%s: %s", id_aten, e_det)
+
         return {
-            "id_cita":        str(c["id"]),
+            "id_cita":        str(cita["id"]),
             "id_profesional": id_prof,
-            "profesional":    c.get("nombre_profesional", "") or prof_info.get("nombre", ""),
+            "profesional":    cita.get("nombre_profesional", "") or prof_info.get("nombre", ""),
             "area":           prof_info.get("especialidad", ""),
-            "prestacion":     nombre_atencion,
+            "prestacion":     prestacion,
         }
     except Exception as e:
         log.warning("_buscar_cita_paciente_fecha error: %s", e)
