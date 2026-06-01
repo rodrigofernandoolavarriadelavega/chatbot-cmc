@@ -68,6 +68,16 @@
   .btn-primary:hover { background: var(--blue); box-shadow: 0 4px 14px rgba(17,114,171,.35); }
   .btn-primary:disabled { opacity: .55; cursor: not-allowed; }
   .btn-primary svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .btn-prefill {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #fff; color: var(--navy); border: 1.5px solid var(--aqua);
+    border-radius: 9px; padding: 8px 14px;
+    font-family: inherit; font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: all .15s;
+  }
+  .btn-prefill:hover { background: var(--aqua-s); }
+  .btn-prefill:disabled { opacity: .55; cursor: not-allowed; }
+  .btn-prefill svg { width: 16px; height: 16px; flex-shrink: 0; }
   .btn-secondary {
     display: inline-flex; align-items: center; gap: 6px;
     background: #fff; color: var(--blue); border: 1px solid var(--border);
@@ -78,6 +88,25 @@
   .btn-secondary:hover { background: var(--aqua-s); border-color: var(--aqua); }
   .btn-secondary:disabled { opacity: .55; cursor: not-allowed; }
   .btn-secondary svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+  /* ── Edición inline spreadsheet ── */
+  tbody tr.row-saved td.editable {
+    cursor: pointer;
+    position: relative;
+  }
+  tbody tr.row-saved td.editable:hover::after {
+    content: '';
+    position: absolute; inset: 1px;
+    border: 1px dashed var(--aqua);
+    border-radius: 4px;
+    pointer-events: none;
+  }
+  tbody tr.row-editing {
+    background: #f0fbfd;
+    outline: 2px solid var(--aqua);
+    outline-offset: -1px;
+  }
+  tbody tr.row-editing td { padding: 5px 4px; }
 
   /* ── Tabla de pagos ── */
   .table-wrap {
@@ -305,6 +334,8 @@
 
   .loading { text-align: center; padding: 28px; color: var(--mute); font-size: 13px; font-weight: 600; }
 
+  @keyframes spin { to { transform: rotate(360deg); } }
+
   @media (max-width: 900px) {
     .table-wrap { overflow-x: auto; }
     table { table-layout: auto; min-width: 900px; }
@@ -329,6 +360,10 @@
     <button id="btnHoy">Hoy</button>
   </div>
   <div class="spacer"></div>
+  <button class="btn-prefill" id="btnPrellenar" title="Traer pacientes agendados del dia desde Medilink">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h10M4 18h7"/><circle cx="18" cy="18" r="3"/><path d="M18 15v3l2 1"/></svg>
+    Prellenar
+  </button>
   <button class="btn-secondary" id="btnExportXlsx" title="Descargar pagos del dia como Excel">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
     Descargar Excel
@@ -583,43 +618,61 @@ async function cargarPagos() {
 }
 
 // ── Render tabla con filas guardadas ─────────────────────────────────────────
+let _pagosCache = [];   // copia en memoria de las filas cargadas
+let _editingRowId = null; // id de la fila en modo edicion
+
 function renderTabla(pagos) {
   const tbody = document.getElementById('tablaPagosBody');
+  _pagosCache = pagos;
   if (!pagos.length) {
     tbody.innerHTML = '<tr><td colspan="13" class="empty">Sin pagos registrados para este dia.</td></tr>';
     _newRow = null;
+    _editingRowId = null;
     return;
   }
   tbody.innerHTML = pagos.map((p, i) => buildSavedRow(p, i)).join('');
   _newRow = null;
+  _editingRowId = null;
+  attachSavedRowHandlers();
 }
 
 function buildSavedRow(p, i) {
+  const draft = (!p.metodo_pago || p.metodo_pago === '') && p.copago === 0 && p.creado_por === 'prellenar';
+  const draftMark = draft ? ' <span style="font-size:9px;color:var(--aqua);font-weight:700;vertical-align:middle">DRAFT</span>' : '';
   return `
-    <tr data-id="${p.id}">
+    <tr class="row-saved" data-id="${p.id}">
       <td style="color:var(--mute);font-size:11px">${i+1}</td>
-      <td>${fmtHora(p.hora)}</td>
-      <td style="font-weight:600">${esc(p.paciente_nombre)}</td>
-      <td style="color:var(--mute)">${esc(p.rut || '—')}</td>
-      <td>${esc(p.profesional || '—')}</td>
-      <td>${esc(p.area || '—')}</td>
-      <td><span class="pill ${p.prevision}">${p.prevision === 'fonasa' ? 'Fonasa' : 'Particular'}</span></td>
-      <td style="font-weight:700;color:var(--navy)">${fmt$(p.copago)}</td>
-      <td><span class="pill metodo">${capitalize(p.metodo_pago)}</span></td>
-      <td style="color:var(--mute);font-size:11px">${esc(p.folio || '—')}</td>
-      <td style="color:var(--mute);font-size:11px">${esc(p.procedimiento || '—')}</td>
+      <td class="editable" data-col="hora">${fmtHora(p.hora)}</td>
+      <td class="editable" data-col="paciente_nombre" style="font-weight:600">${esc(p.paciente_nombre)}${draftMark}</td>
+      <td class="editable" data-col="rut" style="color:var(--mute)">${esc(p.rut || '—')}</td>
+      <td class="editable" data-col="profesional">${esc(p.profesional || '—')}</td>
+      <td class="editable" data-col="area">${esc(p.area || '—')}</td>
+      <td class="editable" data-col="prevision"><span class="pill ${p.prevision}">${p.prevision === 'fonasa' ? 'Fonasa' : 'Particular'}</span></td>
+      <td class="editable" data-col="copago" style="font-weight:700;color:var(--navy)">${fmt$(p.copago)}</td>
+      <td class="editable" data-col="metodo_pago"><span class="pill metodo">${capitalize(p.metodo_pago || 'efectivo')}</span></td>
+      <td class="editable" data-col="folio" style="color:var(--mute);font-size:11px">${esc(p.folio || '—')}</td>
+      <td class="editable" data-col="procedimiento" style="color:var(--mute);font-size:11px">${esc(p.procedimiento || '—')}</td>
       <td style="color:var(--mute);font-size:11px">${capitalize(p.origen)}</td>
       <td>
         <div class="td-actions">
-          <button class="btn-icon" title="Editar" onclick="editarFilaInline(${p.id})">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          </button>
           <button class="btn-icon del" title="Eliminar" onclick="eliminarPago(${p.id})">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
           </button>
         </div>
       </td>
     </tr>`;
+}
+
+// ── Adjuntar handlers de edicion spreadsheet ─────────────────────────────────
+function attachSavedRowHandlers() {
+  document.querySelectorAll('#tablaPagosBody tr.row-saved').forEach(tr => {
+    tr.querySelectorAll('td.editable').forEach(td => {
+      td.addEventListener('click', () => {
+        const id = parseInt(tr.dataset.id);
+        activarEdicionFila(id, td.dataset.col);
+      });
+    });
+  });
 }
 
 // ── Fila nueva inline ─────────────────────────────────────────────────────────
@@ -941,151 +994,206 @@ async function guardarFilaNueva() {
   }
 }
 
-// ── Edición inline de filas guardadas ────────────────────────────────────────
+// ── Edición inline spreadsheet de filas guardadas ───────────────────────────
+// Click en celda → activa modo edición en toda la fila.
+// Auto-save al salir de la fila (focusout detecta si relatedTarget está fuera).
+// Escape → cancela sin guardar. Enter en campo de texto → guarda.
 
-function editarFilaInline(id) {
+function activarEdicionFila(id, colFocus) {
   if (_newRow) { showToast('Guarda o cancela la fila nueva primero', 'error'); return; }
+  if (_editingRowId === id) return; // ya está en edición
+
+  // Si hay otra fila en edición, guardarla primero
+  if (_editingRowId !== null) {
+    guardarFilaEditada(_editingRowId, /*silent=*/true);
+  }
 
   const tr = document.querySelector(`tr[data-id="${id}"]`);
   if (!tr) return;
 
-  fetch('/alma/api/pagos' + qp + '&fecha=' + _fecha)
-    .then(r => r.json())
-    .then(d => {
-      const p = (d.pagos || []).find(x => x.id === id);
-      if (!p) { showToast('Registro no encontrado', 'error'); return; }
+  const p = _pagosCache.find(x => x.id === id);
+  if (!p) { showToast('Datos no disponibles; recarga la tabla', 'error'); return; }
 
-      const ePrev   = p.prevision || 'particular';
-      const eMetodo = p.metodo_pago || 'efectivo';
+  _editingRowId = id;
 
-      tr.innerHTML = `
-        <td style="color:var(--mute);font-size:11px">&bull;</td>
-        <td><input class="ci" id="er_hora" type="time" value="${(p.hora||'').slice(0,5)}" tabindex="1"></td>
-        <td><input class="ci" id="er_nombre" type="text" value="${esc(p.paciente_nombre||'')}" tabindex="2"></td>
-        <td><input class="ci" id="er_rut" type="text" value="${esc(p.rut||'')}" tabindex="3"></td>
-        <td>${buildProfSelect('er_prof', p.id_profesional||'')}</td>
-        <td><input class="ci" id="er_area" type="text" value="${esc(p.area||'')}" tabindex="5"></td>
-        <td>${buildPrevToggle('er_prev_toggle', ePrev)}</td>
-        <td><input class="ci" id="er_copago" type="number" min="0" step="1" value="${p.copago||0}" tabindex="7"></td>
-        <td>${buildMetodoBtns('er_met_btns', eMetodo)}</td>
-        <td class="td-codtransf" style="${['transferencia','debito','credito'].includes(eMetodo)?'':'display:none'}">
-          <input class="ci" id="er_codtransf" type="text"
-                 placeholder="${eMetodo==='transferencia'?'Cod.transf.':'N°comprobante'}"
-                 value="${esc(p.codigo_transferencia||'')}">
-        </td>
-        <td class="td-folio" style="${ePrev==='fonasa'?'':'display:none'}">
-          <input class="ci" id="er_folio" type="text" placeholder="Folio" value="${esc(p.folio||'')}">
-        </td>
-        <td class="td-tipobono" style="${ePrev==='fonasa'?'':'display:none'}">
-          <select class="ci" id="er_tipobono">
-            <option value="Bono imed"${(p.tipo_bono||'Bono imed')==='Bono imed'?' selected':''}>Bono imed</option>
-            <option value="Bono web"${p.tipo_bono==='Bono web'?' selected':''}>Bono web</option>
-            <option value="Otro"${p.tipo_bono==='Otro'?' selected':''}>Otro</option>
-          </select>
-        </td>
-        <td>${buildProcSelect('er_proc', p.procedimiento||'')}</td>
-        <td>
-          <select class="ci" id="er_origen" tabindex="10">
-            <option value="presencial"${(p.origen||'')==='presencial'?' selected':''}>Presencial</option>
-            <option value="telefono"${p.origen==='telefono'?' selected':''}>Telefono</option>
-            <option value="chat"${p.origen==='chat'?' selected':''}>Chat</option>
-          </select>
-        </td>
-        <td>
-          <div class="td-actions">
-            <button class="btn-save-row" id="er_guardar" tabindex="11">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
-              Guardar
-            </button>
-            <button class="btn-cancel-row" id="er_cancelar">&#x2715;</button>
-          </div>
-        </td>`;
+  const ePrev   = p.prevision   || 'particular';
+  const eMetodo = p.metodo_pago || 'efectivo';
 
-      tr.className = 'row-new';
+  tr.className = 'row-editing';
+  tr.innerHTML = `
+    <td style="color:var(--mute);font-size:11px">&bull;</td>
+    <td><input class="ci" id="er_hora" type="time" value="${(p.hora||'').slice(0,5)}" tabindex="1"></td>
+    <td><input class="ci" id="er_nombre" type="text" value="${esc(p.paciente_nombre||'')}" tabindex="2"></td>
+    <td><input class="ci" id="er_rut" type="text" value="${esc(p.rut||'')}" tabindex="3"></td>
+    <td>${buildProfSelect('er_prof', p.id_profesional||'')}</td>
+    <td><input class="ci" id="er_area" type="text" value="${esc(p.area||'')}" tabindex="5"></td>
+    <td>${buildPrevToggle('er_prev_toggle', ePrev)}</td>
+    <td><input class="ci" id="er_copago" type="number" min="0" step="1" value="${p.copago||0}" tabindex="7"></td>
+    <td>${buildMetodoBtns('er_met_btns', eMetodo)}</td>
+    <td class="td-codtransf" style="${['transferencia','debito','credito'].includes(eMetodo)?'':'display:none'}">
+      <input class="ci" id="er_codtransf" type="text"
+             placeholder="${eMetodo==='transferencia'?'Cod.transf.':'N°comprobante'}"
+             value="${esc(p.codigo_transferencia||'')}">
+    </td>
+    <td class="td-folio" style="${ePrev==='fonasa'?'':'display:none'}">
+      <input class="ci" id="er_folio" type="text" placeholder="Folio" value="${esc(p.folio||'')}">
+    </td>
+    <td class="td-tipobono" style="${ePrev==='fonasa'?'':'display:none'}">
+      <select class="ci" id="er_tipobono">
+        <option value="Bono imed"${(p.tipo_bono||'Bono imed')==='Bono imed'?' selected':''}>Bono imed</option>
+        <option value="Bono web"${p.tipo_bono==='Bono web'?' selected':''}>Bono web</option>
+        <option value="Otro"${p.tipo_bono==='Otro'?' selected':''}>Otro</option>
+      </select>
+    </td>
+    <td>${buildProcSelect('er_proc', p.procedimiento||'')}</td>
+    <td>
+      <select class="ci" id="er_origen" tabindex="10">
+        <option value="presencial"${(p.origen||'presencial')==='presencial'?' selected':''}>Presencial</option>
+        <option value="telefono"${p.origen==='telefono'?' selected':''}>Telefono</option>
+        <option value="chat"${p.origen==='chat'?' selected':''}>Chat</option>
+      </select>
+    </td>
+    <td>
+      <div class="td-actions">
+        <button class="btn-save-row" id="er_guardar" tabindex="11" title="Guardar (Enter)">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+          OK
+        </button>
+        <button class="btn-cancel-row" id="er_cancelar" tabindex="12" title="Cancelar (Esc)">&#x2715;</button>
+      </div>
+    </td>`;
 
-      let ePrevLocal   = ePrev;
-      let eMetodoLocal = eMetodo;
+  // Estado local de prevision/metodo dentro de esta fila
+  let ePrevLocal   = ePrev;
+  let eMetodoLocal = eMetodo;
 
-      tr.querySelector('#er_prev_toggle').addEventListener('click', e => {
-        const btn = e.target.closest('button[data-v]');
-        if (!btn) return;
-        ePrevLocal = btn.dataset.v;
-        tr.querySelectorAll('#er_prev_toggle button').forEach(b =>
-          b.classList.toggle('active', b.dataset.v === ePrevLocal)
-        );
-        _actualizarFilaFonasa(tr, ePrevLocal);
+  tr.querySelector('#er_prev_toggle').addEventListener('click', e => {
+    const btn = e.target.closest('button[data-v]');
+    if (!btn) return;
+    ePrevLocal = btn.dataset.v;
+    tr.querySelectorAll('#er_prev_toggle button').forEach(b =>
+      b.classList.toggle('active', b.dataset.v === ePrevLocal)
+    );
+    _actualizarFilaFonasa(tr, ePrevLocal);
+  });
+
+  tr.querySelector('#er_met_btns').addEventListener('click', e => {
+    const btn = e.target.closest('button[data-v]');
+    if (!btn) return;
+    eMetodoLocal = btn.dataset.v;
+    tr.querySelectorAll('#er_met_btns button').forEach(b =>
+      b.classList.toggle('active', b.dataset.v === eMetodoLocal)
+    );
+    _actualizarFilaMetodo(tr, eMetodoLocal);
+  });
+
+  tr.querySelector('#er_prof').addEventListener('change', function() {
+    const opt = this.options[this.selectedIndex];
+    if (opt && opt.dataset.esp) tr.querySelector('#er_area').value = opt.dataset.esp;
+  });
+
+  // ── Recolectar body desde la fila en edición ─────────────────────────────
+  function recolectarBody() {
+    const nombre    = (tr.querySelector('#er_nombre').value || '').trim();
+    const profSel   = tr.querySelector('#er_prof');
+    const profOpt   = profSel.options[profSel.selectedIndex];
+    const idProfRaw = profSel.value;
+    return {
+      hora:                (tr.querySelector('#er_hora').value || '').trim(),
+      paciente_nombre:     nombre,
+      rut:                 (tr.querySelector('#er_rut').value  || '').trim(),
+      id_profesional:      idProfRaw ? parseInt(idProfRaw) : null,
+      profesional:         profOpt && idProfRaw ? profOpt.textContent.trim() : '',
+      area:                (tr.querySelector('#er_area').value || '').trim(),
+      prevision:           ePrevLocal,
+      copago:              parseInt(tr.querySelector('#er_copago').value) || 0,
+      bonificacion:        0,
+      metodo_pago:         eMetodoLocal,
+      folio:               (ePrevLocal === 'fonasa' ? (tr.querySelector('#er_folio')?.value || '').trim() : ''),
+      tipo_bono:           (ePrevLocal === 'fonasa' ? (tr.querySelector('#er_tipobono')?.value || 'Bono imed') : ''),
+      codigo_transferencia: (['transferencia','debito','credito'].includes(eMetodoLocal) ? (tr.querySelector('#er_codtransf')?.value || '').trim() : ''),
+      procedimiento:       (tr.querySelector('#er_proc')?.value || '').trim(),
+      origen:              tr.querySelector('#er_origen').value,
+    };
+  }
+
+  // Función de guardado, usable también desde auto-save
+  tr._guardarEdicion = async function(silent = false) {
+    if (tr._saving) return;
+    const body = recolectarBody();
+    if (!body.paciente_nombre) {
+      if (!silent) showToast('Ingresa el nombre del paciente', 'error');
+      return;
+    }
+    tr._saving = true;
+    const btnG = tr.querySelector('#er_guardar');
+    if (btnG) { btnG.disabled = true; btnG.textContent = '...'; }
+    try {
+      const resp = await fetch('/alma/api/pagos/' + id + qp, {
+        method: 'PATCH',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body),
       });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.detail || 'Error ' + resp.status);
+      }
+      if (!silent) showToast('Guardado', 'success');
+      _editingRowId = null;
+      cargarPagos();
+    } catch(e) {
+      if (!silent) showToast('Error: ' + e.message, 'error');
+      tr._saving = false;
+      if (btnG) {
+        btnG.disabled = false;
+        btnG.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> OK';
+      }
+    }
+  };
 
-      tr.querySelector('#er_met_btns').addEventListener('click', e => {
-        const btn = e.target.closest('button[data-v]');
-        if (!btn) return;
-        eMetodoLocal = btn.dataset.v;
-        tr.querySelectorAll('#er_met_btns button').forEach(b =>
-          b.classList.toggle('active', b.dataset.v === eMetodoLocal)
-        );
-        _actualizarFilaMetodo(tr, eMetodoLocal);
-      });
+  tr.querySelector('#er_guardar').addEventListener('click', () => tr._guardarEdicion(false));
 
-      tr.querySelector('#er_prof').addEventListener('change', function() {
-        const opt = this.options[this.selectedIndex];
-        if (opt && opt.dataset.esp) tr.querySelector('#er_area').value = opt.dataset.esp;
-      });
+  tr.querySelector('#er_cancelar').addEventListener('click', () => {
+    _editingRowId = null;
+    cargarPagos();
+  });
 
-      tr.querySelector('#er_guardar').addEventListener('click', async () => {
-        const nombre = (tr.querySelector('#er_nombre').value || '').trim();
-        if (!nombre) { showToast('Ingresa el nombre del paciente', 'error'); return; }
-        const profSel   = tr.querySelector('#er_prof');
-        const profOpt   = profSel.options[profSel.selectedIndex];
-        const idProfRaw = profSel.value;
-        const body = {
-          hora:                tr.querySelector('#er_hora').value || '',
-          paciente_nombre:     nombre,
-          rut:                 (tr.querySelector('#er_rut').value  || '').trim(),
-          id_profesional:      idProfRaw ? parseInt(idProfRaw) : null,
-          profesional:         profOpt && idProfRaw ? profOpt.textContent.trim() : '',
-          area:                (tr.querySelector('#er_area').value || '').trim(),
-          prevision:           ePrevLocal,
-          copago:              parseInt(tr.querySelector('#er_copago').value) || 0,
-          bonificacion:        0,
-          metodo_pago:         eMetodoLocal,
-          folio:               (ePrevLocal === 'fonasa' ? (tr.querySelector('#er_folio')?.value || '').trim() : ''),
-          tipo_bono:           (ePrevLocal === 'fonasa' ? (tr.querySelector('#er_tipobono')?.value || 'Bono imed') : ''),
-          codigo_transferencia: (['transferencia','debito','credito'].includes(eMetodoLocal) ? (tr.querySelector('#er_codtransf')?.value || '').trim() : ''),
-          procedimiento:       (tr.querySelector('#er_proc')?.value || '').trim(),
-          origen:              tr.querySelector('#er_origen').value,
-        };
-        const btnG = tr.querySelector('#er_guardar');
-        btnG.disabled = true; btnG.textContent = 'Guardando…';
-        try {
-          const resp = await fetch('/alma/api/pagos/' + id + qp, {
-            method: 'PATCH',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(body),
-          });
-          if (!resp.ok) {
-            const err = await resp.json().catch(() => ({}));
-            throw new Error(err.detail || 'Error ' + resp.status);
-          }
-          showToast('Pago actualizado', 'success');
-          cargarPagos();
-        } catch(e) {
-          showToast('Error: ' + e.message, 'error');
-          btnG.disabled = false;
-          btnG.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Guardar';
-        }
-      });
+  // Enter guarda, Escape cancela
+  tr.querySelectorAll('input.ci, select.ci').forEach(inp => {
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter')  { e.preventDefault(); tr._guardarEdicion(false); }
+      if (e.key === 'Escape') { _editingRowId = null; cargarPagos(); }
+    });
+  });
 
-      tr.querySelector('#er_cancelar').addEventListener('click', () => cargarPagos());
+  // Auto-save al salir de la fila (focusout de cualquier elemento interno)
+  tr.addEventListener('focusout', e => {
+    // relatedTarget = elemento que recibe el foco; si está dentro de la fila, no guardar aún
+    setTimeout(() => {
+      if (tr._saving) return;
+      if (!document.activeElement) return;
+      if (tr.contains(document.activeElement)) return;
+      if (_editingRowId !== id) return;
+      tr._guardarEdicion(/*silent=*/false);
+    }, 80);
+  });
 
-      tr.querySelectorAll('input.ci').forEach(inp => {
-        inp.addEventListener('keydown', e => {
-          if (e.key === 'Escape') cargarPagos();
-        });
-      });
+  // Foco en la columna clickeada (o nombre por defecto)
+  const focusMap = {
+    hora: '#er_hora', paciente_nombre: '#er_nombre', rut: '#er_rut',
+    profesional: '#er_prof', area: '#er_area', prevision: null,
+    copago: '#er_copago', metodo_pago: null, folio: '#er_folio',
+    procedimiento: '#er_proc',
+  };
+  const focusSel = focusMap[colFocus] || '#er_nombre';
+  setTimeout(() => {
+    if (focusSel) { const el = tr.querySelector(focusSel); if (el) el.focus(); }
+  }, 40);
+}
 
-      setTimeout(() => tr.querySelector('#er_nombre').focus(), 60);
-    })
-    .catch(e => { showToast('Error al cargar datos', 'error'); console.error(e); });
+function guardarFilaEditada(id, silent = false) {
+  const tr = document.querySelector(`tr[data-id="${id}"]`);
+  if (tr && tr._guardarEdicion) tr._guardarEdicion(silent);
 }
 
 // ── Eliminar ──────────────────────────────────────────────────────────────────
@@ -1333,6 +1441,33 @@ async function guardarModal() {
     btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Guardar';
   }
 }
+
+// ── Prellenar desde Medilink ──────────────────────────────────────────────────
+document.getElementById('btnPrellenar').addEventListener('click', async () => {
+  const btn = document.getElementById('btnPrellenar');
+  btn.disabled = true;
+  btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:16px;height:16px;animation:spin .8s linear infinite"><path d="M21 12a9 9 0 11-6.22-8.56"/></svg> Cargando...`;
+  try {
+    const r = await fetch('/alma/api/pagos/prellenar' + qp + '&fecha=' + encodeURIComponent(_fecha), {
+      method: 'POST',
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      throw new Error(err.detail || 'HTTP ' + r.status);
+    }
+    const d = await r.json();
+    const msg = d.creadas > 0
+      ? `${d.creadas} fila${d.creadas>1?'s':''} cargada${d.creadas>1?'s':''} desde Medilink`
+      : (d.saltadas > 0 ? 'Ya estaban todas cargadas' : (d.mensaje || 'Sin citas ese dia en Medilink'));
+    showToast(msg, d.creadas > 0 ? 'success' : '');
+    if (d.creadas > 0) cargarPagos();
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:16px;height:16px"><path d="M4 6h16M4 12h10M4 18h7"/><circle cx="18" cy="18" r="3"/><path d="M18 15v3l2 1"/></svg> Prellenar`;
+  }
+});
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 initData().then(() => cargarPagos());

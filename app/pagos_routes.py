@@ -846,6 +846,173 @@ async def export_pagos_xlsx(
     )
 
 
+@router.post("/prellenar")
+async def prellenar_pagos(
+    fecha: str | None = Query(None, description="YYYY-MM-DD; por defecto hoy"),
+    token: str | None = Query(None),
+    cmc_session: str | None = Cookie(None),
+    request: Request = None,
+):
+    """
+    Trae las citas del día desde Medilink y crea filas draft en pagos_cmc
+    (pago=0, metodo vacío) para que recepción las complete.
+
+    Estrategia de requests:
+    - 1 sola query GET /citas?fecha=DD/MM/YYYY&estado_anulacion=0 para todos los profesionales.
+    - Por cada cita con id_atencion: GET /atenciones/{id}/detalles para la prestación,
+      throttleado con 0.15s entre requests (evita 429). Best-effort: si falla, prestación queda vacía.
+    - Idempotente: se saltea citas que ya tienen fila en pagos_cmc para esa fecha
+      (chequeo por id_cita o por rut+fecha).
+
+    Retorna: { creadas: N, saltadas: N, errores: N }
+    """
+    _require_admin_dep(request, token=token, cmc_session=cmc_session)
+    ensure_pagos_table()
+
+    import asyncio
+    from medilink import (
+        _get_shared_client, _q, _safe_json, HEADERS,
+        PROFESIONALES,
+    )
+    from config import MEDILINK_BASE_URL
+
+    now_cl = datetime.now(_CHILE_TZ)
+    if fecha:
+        try:
+            datetime.strptime(fecha, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(400, "fecha debe ser YYYY-MM-DD")
+        fecha_iso = fecha
+    else:
+        fecha_iso = now_cl.strftime("%Y-%m-%d")
+
+    # Medilink usa DD/MM/YYYY en sus filtros de fecha
+    dt_fecha = datetime.strptime(fecha_iso, "%Y-%m-%d")
+    fecha_ml = dt_fecha.strftime("%d/%m/%Y")
+
+    # ── 1 request: todas las citas del día ───────────────────────────────────
+    client = _get_shared_client()
+    try:
+        r = await client.get(
+            f"{MEDILINK_BASE_URL}/citas",
+            params={"q": _q({
+                "fecha":            {"eq": fecha_ml},
+                "estado_anulacion": {"eq": 0},
+            })},
+            headers=HEADERS,
+            timeout=15,
+        )
+    except Exception as e:
+        log.error("prellenar_pagos: error GET /citas fecha=%s: %s", fecha_iso, e)
+        raise HTTPException(502, "Error al contactar Medilink")
+
+    if r.status_code != 200:
+        log.warning("prellenar_pagos: GET /citas HTTP %d fecha=%s", r.status_code, fecha_iso)
+        raise HTTPException(502, f"Medilink devolvió HTTP {r.status_code}")
+
+    citas = _safe_json(r).get("data", [])
+    if not citas:
+        return {"creadas": 0, "saltadas": 0, "errores": 0, "mensaje": "Sin citas para esa fecha en Medilink"}
+
+    # Ordenar por hora_inicio para que las filas queden ordenadas
+    citas.sort(key=lambda c: c.get("hora_inicio", ""))
+
+    # ── Cargar IDs/ruts ya existentes en pagos_cmc para esa fecha (idempotencia) ──
+    from session import _conn
+    with _conn() as conn:
+        rows_exist = conn.execute(
+            "SELECT id_cita, rut FROM pagos_cmc WHERE fecha = ?", (fecha_iso,)
+        ).fetchall()
+
+    existing_id_citas = {r["id_cita"] for r in rows_exist if r["id_cita"]}
+    existing_ruts     = {r["rut"]     for r in rows_exist if r["rut"]}
+
+    creadas = saltadas = errores = 0
+
+    for cita in citas:
+        id_cita_str = str(cita.get("id", ""))
+        rut_cita    = (cita.get("rut_paciente") or "").strip()
+
+        # Idempotencia: saltar si ya existe por id_cita o por rut+fecha
+        if id_cita_str and id_cita_str in existing_id_citas:
+            saltadas += 1
+            continue
+        if rut_cita and rut_cita in existing_ruts:
+            saltadas += 1
+            continue
+
+        id_prof  = cita.get("id_profesional")
+        prof_info = PROFESIONALES.get(id_prof, {}) if id_prof else {}
+
+        nombre_pac  = (cita.get("nombre_paciente") or "").strip()
+        profesional = (cita.get("nombre_profesional") or prof_info.get("nombre", "")).strip()
+        area        = prof_info.get("especialidad", "")
+        hora_inicio = (cita.get("hora_inicio") or "")[:5]
+
+        # ── Prestación: 1 request por cita con id_atencion, throttleado ─────
+        prestacion = ""
+        id_aten = cita.get("id_atencion")
+        if id_aten:
+            try:
+                await asyncio.sleep(0.15)
+                rd = await client.get(
+                    f"{MEDILINK_BASE_URL}/atenciones/{id_aten}/detalles",
+                    headers=HEADERS,
+                    timeout=8,
+                )
+                if rd.status_code == 200:
+                    detalles = _safe_json(rd).get("data", [])
+                    nombres = []
+                    for det in detalles:
+                        n = (det.get("nombre_prestacion") or "").strip()
+                        if n and n not in nombres:
+                            nombres.append(n)
+                    prestacion = " / ".join(nombres)
+            except Exception as e_det:
+                log.debug("prellenar_pagos: detalles id_aten=%s error: %s", id_aten, e_det)
+
+        try:
+            with _conn() as conn:
+                conn.execute(
+                    """INSERT INTO pagos_cmc
+                       (fecha, hora, paciente_nombre, rut, id_profesional, profesional,
+                        area, prevision, copago, bonificacion, metodo_pago, folio,
+                        codigo_transferencia, tipo_bono, procedimiento, origen, id_cita,
+                        creado_por, created_at, updated_at)
+                       VALUES (?,?,?,?,?,?,?,?,0,0,'','','','',?,?,?,
+                               'prellenar', datetime('now'), datetime('now'))""",
+                    (
+                        fecha_iso,
+                        hora_inicio,
+                        nombre_pac,
+                        rut_cita,
+                        id_prof,
+                        profesional,
+                        area,
+                        "particular",   # default; recepción corrige si es fonasa
+                        prestacion,
+                        "presencial",
+                        id_cita_str,
+                    )
+                )
+                conn.commit()
+            # Registrar para idempotencia en este mismo batch
+            if id_cita_str:
+                existing_id_citas.add(id_cita_str)
+            if rut_cita:
+                existing_ruts.add(rut_cita)
+            creadas += 1
+        except Exception as e_ins:
+            log.warning("prellenar_pagos: error INSERT cita %s: %s", id_cita_str, e_ins)
+            errores += 1
+
+    log.info(
+        "prellenar_pagos: fecha=%s creadas=%d saltadas=%d errores=%d",
+        fecha_iso, creadas, saltadas, errores,
+    )
+    return {"creadas": creadas, "saltadas": saltadas, "errores": errores}
+
+
 @router.delete("/{pago_id}")
 async def delete_pago(
     pago_id: int,
