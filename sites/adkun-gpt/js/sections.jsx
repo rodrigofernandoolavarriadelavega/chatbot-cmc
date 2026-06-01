@@ -89,7 +89,7 @@ function Hero({ visual = "fjord" }) {
 
       {/* fjord bleed (desktop) — sangra al borde derecho y se funde con el fondo */}
       {blended && (
-        <div aria-hidden="true" className="hidden lg:block absolute top-1/2 right-0 -translate-y-1/2 w-[58vw] max-w-[1000px] aspect-[1672/941]">
+        <div aria-hidden="true" className="hidden lg:block absolute top-1/2 right-0 -translate-y-1/2 w-[66vw] max-w-[1220px] aspect-[1672/941]">
           <FjordScene className="absolute inset-0 h-full w-full" />
           <div className="absolute inset-0" style={{ background: "linear-gradient(90deg, #F2F3F5 0%, rgba(242,243,245,0.7) 18%, rgba(242,243,245,0) 52%)" }}></div>
           <div className="absolute inset-0" style={{ background: "linear-gradient(0deg, #F2F3F5 0%, rgba(242,243,245,0) 14%)" }}></div>

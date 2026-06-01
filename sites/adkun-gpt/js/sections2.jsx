@@ -101,8 +101,9 @@ function Nosotros() {
         <div className="reveal reveal-d2 relative">
           <div className="relative h-[300px] sm:h-[380px] lg:h-[440px] w-full overflow-hidden rounded-[20px] border border-navy/10 shadow-[0_40px_90px_-45px_rgba(11,29,45,.6)]">
             <FjordWide className="absolute inset-0 h-full w-full" />
+            <div className="absolute inset-0" style={{ background: "linear-gradient(0deg, rgba(11,29,45,.65) 0%, rgba(11,29,45,0) 38%)" }}></div>
             <CornerTicks className="absolute left-5 top-5 h-6 w-6" color="#B45A2A" />
-            <div className="absolute left-5 bottom-5 font-sans text-[11px] tracking-[0.22em] text-white/55 uppercase">Sur de Chile · Internacional</div>
+            <div className="absolute left-5 bottom-5 font-sans text-[11px] tracking-[0.22em] text-white/75 uppercase">Sur de Chile · Internacional</div>
           </div>
         </div>
       </div>
