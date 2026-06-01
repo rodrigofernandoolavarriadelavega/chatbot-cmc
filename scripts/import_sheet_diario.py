@@ -23,7 +23,10 @@ XLSX_PATH = os.environ.get(
     "/opt/chatbot-cmc/scripts/pacientes_diarios_import.xlsx"
 )
 DB_PATH   = "/opt/chatbot-cmc/data/sessions.db"
-SQLCIPHER_KEY = "02e6daf83188f678aa40fc79bc45c88fecc231a604fcddf41192011f93ddb17a"
+# Llave de cifrado SQLCipher: SOLO desde el entorno (igual que app/session.py).
+# Nunca hardcodear — es la llave de la DB con datos clínicos (Ley 21.719).
+# En el VPS: `set -a; source /opt/chatbot-cmc/.env; set +a` antes de ejecutar.
+SQLCIPHER_KEY = (os.environ.get("SQLCIPHER_KEY") or "").strip()
 
 # Dict PROFESIONALES copiado de medilink.py para resolución de id_profesional
 PROFESIONALES = {
@@ -224,15 +227,20 @@ def insert_rows(rows: list, dry_run: bool = False):
             print(f"  {r['hora']} | {r['paciente_nombre'][:30]:<30} | {r['profesional'][:25]:<25} | {r['prevision']:<10} | {r['copago']:>7} | {r['metodo_pago']:<15} | folio={r['folio']}")
         return
 
-    # Conectar con SQLCipher
+    # Conectar con SQLCipher — cifrado OBLIGATORIO (fail-closed).
+    # Nunca caer a sqlite3 plano: escribiría PII clínica sin cifrar.
+    if not SQLCIPHER_KEY:
+        sys.exit("ERROR: SQLCIPHER_KEY no está en el entorno. Corre "
+                 "`set -a; source /opt/chatbot-cmc/.env; set +a` antes de ejecutar con --execute.")
+    if not re.fullmatch(r"[0-9a-fA-F]+", SQLCIPHER_KEY):
+        sys.exit("ERROR: SQLCIPHER_KEY debe ser hexadecimal (0-9, a-f).")
     try:
         from sqlcipher3 import dbapi2 as sc
-        conn = sc.connect(DB_PATH, timeout=10)
-        conn.execute(f"PRAGMA key = \"x'{SQLCIPHER_KEY}'\"")
     except ImportError:
-        import sqlite3
-        conn = sqlite3.connect(DB_PATH, timeout=10)
-        print("ADVERTENCIA: sqlcipher3 no disponible, usando sqlite3 plano")
+        sys.exit("ERROR: sqlcipher3 no disponible — abortando para no escribir PII en claro. "
+                 "Instala sqlcipher3 en el VPS, o usa --dry-run para validar sin tocar la DB.")
+    conn = sc.connect(DB_PATH, timeout=10)
+    conn.execute(f"PRAGMA key = \"x'{SQLCIPHER_KEY}'\"")
 
     conn.execute("PRAGMA journal_mode=WAL")
 
