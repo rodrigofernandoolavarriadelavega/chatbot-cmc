@@ -175,17 +175,26 @@
 
   .foot{text-align:center;font-size:11px;color:var(--muted);margin-top:26px;font-weight:500}
 
-  /* Tabs */
-  .tabs{display:flex;gap:6px;margin-top:18px;background:var(--card);padding:6px;border-radius:14px;
-       box-shadow:var(--sh-sm);border:1px solid var(--line);width:fit-content}
-  .tab{display:inline-flex;align-items:center;gap:8px;border:0;cursor:pointer;background:transparent;
-       font-family:inherit;font-weight:700;font-size:13px;color:var(--muted);padding:9px 16px;border-radius:10px;transition:.15s}
-  .tab svg{width:16px;height:16px;stroke:currentColor}
+  /* Tabs → rail vertical colapsable (overlay, no empuja el contenido) */
+  .ap-row{position:relative;margin-top:18px}
+  .ap-main{margin-left:68px;min-width:0}
+  .tabs{position:absolute;left:0;top:0;z-index:30;width:52px;
+       display:flex;flex-direction:column;gap:6px;background:var(--card);padding:8px;border-radius:14px;
+       box-shadow:var(--sh-sm);border:1px solid var(--line);overflow:hidden;transition:width .2s,box-shadow .2s}
+  .tabs:hover{width:204px;box-shadow:var(--sh-lg)}
+  .tab{display:flex;align-items:center;gap:12px;width:100%;white-space:nowrap;border:0;cursor:pointer;background:transparent;
+       font-family:inherit;font-weight:700;font-size:13px;color:var(--muted);padding:10px;border-radius:10px;transition:background .15s,color .15s}
+  .tab svg{width:20px;height:20px;stroke:currentColor;flex-shrink:0}
   .tab:hover{color:var(--navy);background:var(--bg)}
   .tab.on{background:linear-gradient(135deg,var(--navy),var(--blue));color:#fff}
   .tab.on svg{stroke:#fff}
-  .tab-count{font-size:11px;font-weight:800;background:rgba(255,255,255,.22);padding:1px 7px;border-radius:999px;min-width:18px;text-align:center}
+  .tab-count{font-size:11px;font-weight:800;background:rgba(255,255,255,.22);padding:1px 7px;border-radius:999px;min-width:18px;text-align:center;flex-shrink:0}
   .tab:not(.on) .tab-count{background:var(--bg);color:var(--muted)}
+  @media(max-width:760px){
+    .tabs{position:static;width:auto;flex-direction:row;flex-wrap:wrap}
+    .tabs:hover{width:auto;box-shadow:var(--sh-sm)}
+    .ap-main{margin-left:0}
+  }
 
   /* Galería */
   .gal-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:20px}
@@ -559,6 +568,7 @@
     </div>
   </div>
 
+  <div class="ap-row">
   <div class="tabs" id="tabs">
     <button class="tab on" data-view="decisiones">
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l3-4 4 3 5-7"/></svg>
@@ -586,6 +596,7 @@
     </button>
   </div>
 
+  <div class="ap-main">
   <div id="viewDecisiones">
   <div class="kpis" id="kpis"></div>
 
@@ -842,6 +853,8 @@
   </div>
 
   <div class="foot" id="foot"></div>
+  </div><!-- /ap-main -->
+  </div><!-- /ap-row -->
 </div>
 
 <!-- Modal visor de diseño -->

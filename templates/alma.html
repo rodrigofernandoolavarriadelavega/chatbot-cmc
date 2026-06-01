@@ -201,11 +201,28 @@
     background: var(--cmc-aqua); border-radius: 0 3px 3px 0;
   }
   .prof-leaf .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--cmc-aqua); flex-shrink: 0; opacity: .8; }
+  /* Iniciales-logo del profesional: misma gráfica (Montserrat, aqua, uppercase) que el lockup */
+  .prof-leaf .prof-badge {
+    flex-shrink: 0; min-width: 40px; text-align: center;
+    font-size: 9px; font-weight: 800; letter-spacing: .06em; line-height: 1;
+    color: var(--cmc-aqua); background: rgba(79,190,206,.13);
+    border: 1px solid rgba(79,190,206,.32); border-radius: 6px;
+    padding: 3px 5px; font-variant-numeric: tabular-nums;
+  }
+  .prof-leaf.active .prof-badge { background: rgba(79,190,206,.28); border-color: rgba(79,190,206,.55); color: #fff; }
   .nav-loading { font-size: 11px; color: #6f93ad; padding: 8px 12px; }
-  /* Collapsed rail: hide tree text */
-  .app.collapsed .nav-toggle .label, .app.collapsed .nav-toggle .chev,
-  .app.collapsed .nav-children { opacity: 0; pointer-events: none; }
+  /* Collapsed rail: oculta el texto del árbol pero deja los badges esquemáticos */
+  .app.collapsed .nav-toggle .label, .app.collapsed .nav-toggle .chev { opacity: 0; pointer-events: none; }
   .app.collapsed .nav-toggle { justify-content: center; }
+  /* Panel del Profesional colapsado → solo badges centrados (sin nombres ni headers) */
+  .app.collapsed .esp-toggle .label, .app.collapsed .esp-toggle .count, .app.collapsed .esp-toggle .chev,
+  .app.collapsed .prof-leaf .label { display: none; }
+  .app.collapsed .esp-toggle { justify-content: center; padding: 4px; }
+  .app.collapsed .prof-leaf { justify-content: center; padding: 6px 4px; }
+  .app.collapsed .prof-leaf .prof-badge { min-width: 0; }
+  .app.collapsed .nav-children { margin-left: 0; padding-left: 4px; border-left: 0; }
+  .app.collapsed .esp-children { margin-left: 0; padding-left: 0; border-left: 0; }
+  .app.collapsed .prof-leaf.active::before { left: 0; }
   .nav-item.disabled { opacity: .42; cursor: not-allowed; }
   .nav-item .soon {
     font-size: 8.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
@@ -495,6 +512,21 @@ MODULES.forEach(m => {
   nav.appendChild(b);
 });
 
+// ---- Iniciales-logo del profesional: "C-MM" (esp 1-2 letras + iniciales nombre) ----
+// Ignora títulos (Dr/Dra) y conectores (de/del/la). Una palabra de especialidad → 1
+// letra (Cardiología→C); dos+ → 2 (Medicina General→MG). Nombre → iniciales 1er+2do.
+function profBadge(esp, nombre){
+  const stop = new Set(['de','del','la','las','el','los','y','e','dr','dra','sr','sra','don','dona','doña']);
+  const palabras = s => String(s||'')
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .split(/[\s.]+/).map(w=>w.trim()).filter(w=>w && !stop.has(w.toLowerCase()));
+  const e = palabras(esp);
+  const eCode = (e.length>=2 ? e[0][0]+e[1][0] : (e[0]||'?').slice(0,1)).toUpperCase();
+  const n = palabras(nombre);
+  const nCode = (n.slice(0,2).map(w=>w[0]).join('') || '?').toUpperCase();
+  return eCode + '-' + nCode;
+}
+
 // ---- Panel del Profesional: toggle desplegable (especialidad → profesional) ----
 const _showPanelProfesional = __PANEL_PROFESIONAL__;
 if (_showPanelProfesional) {
@@ -534,7 +566,7 @@ const loadProfesionales = async function(){
         `<button class="prof-leaf" data-key="prof:${p.id}"
                  data-title="${p.nombre}" data-sub="${g.especialidad}"
                  data-src="${p.url}">
-           <span class="dot"></span><span class="label">${p.nombre}</span>
+           <span class="prof-badge">${profBadge(g.especialidad, p.nombre)}</span><span class="label">${p.nombre}</span>
          </button>`).join('');
       eg.innerHTML =
         `<button class="esp-toggle">
