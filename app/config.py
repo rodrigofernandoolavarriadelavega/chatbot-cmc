@@ -42,13 +42,39 @@ if "987834148" in CMC_TELEFONO.replace(" ", ""):
 ADMIN_TOKEN        = os.getenv("ADMIN_TOKEN", "cmc_admin_2026")
 OLACORE_TOKEN      = os.getenv("OLACORE_TOKEN", "cmc_admin_olacore")
 
-# ── Mapa de perfiles Alma: token → {variante, modulos} ─────────────────────────
-# `modulos=None` significa acceso total (todos los módulos que Alma registra).
-# Para agregar una variante nueva: añadir una entrada aquí.
+# ── Registro de módulos Alma ────────────────────────────────────────────────────
+# Fuente de verdad de todos los módulos disponibles en el shell Alma.
+# key → {label, icon, title, sub, src}.
+# Los perfiles abajo referencian keys de este dict.
+ALMA_MODULE_REGISTRY: dict[str, dict] = {
+    "panel":       {"label": "Panel Recepción",  "icon": "inbox",     "title": "Panel de Recepción v2",          "sub": "Conversaciones · WhatsApp · Agenda",              "src": "/admin/v2"},
+    "panel2":      {"label": "Panel Recepción 2","icon": "inbox",     "title": "Panel de Recepción v3 (beta)",   "sub": "Nuevo · cola de atención priorizada · en pruebas","src": "/admin/v3"},
+    "agenda":      {"label": "Agenda",           "icon": "calendar",  "title": "Agenda",                         "sub": "Ver citas del dia · Agendar nueva hora",           "src": "/alma/agenda"},
+    "pagos":       {"label": "Pagos",            "icon": "banknote",  "title": "Pagos del dia",                  "sub": "Registro de cobros · copagos · bonif. Imed",       "src": "/alma/pagos"},
+    "conciliacion":{"label": "Conciliacion",     "icon": "layers",    "title": "Conciliacion Financiera",        "sub": "Cruce multi-fuente · Imed · hallazgos · cuadre",   "src": "/alma/conciliacion"},
+    "boxes":       {"label": "Boxes",            "icon": "grid",      "title": "Boxes — Gemelo Digital",         "sub": "Ocupación y recaudación por box",                  "src": "/boxes"},
+    "mensual":     {"label": "DB Mensual",       "icon": "chart",     "title": "Dashboard Mensual",              "sub": "Ingresos y honorarios por profesional",            "src": "/cmc/mensual"},
+    "autopilot":   {"label": "Autopilot Ads",    "icon": "target",    "title": "Autopilot de Marketing",         "sub": "Meta Ads · decisiones por rentabilidad real",      "src": "/autopilot"},
+    "demanda":     {"label": "Demanda",          "icon": "search",    "title": "Demanda capturada",              "sub": "Qué piden los pacientes que no capturamos",        "src": "/demanda"},
+}
+
+# ── Mapa de perfiles Alma: token → {variante, modulos, boxes_financiero} ────────
+# `modulos=None` significa acceso total (todos los módulos del registry).
+# `modulos=[...]` lista de keys que el perfil puede ver (sidebar filtra el resto).
+# `boxes_financiero=True` habilita datos monetarios en /admin/api/boxes-state.
+# Para agregar un perfil nuevo: añadir una entrada aquí.
 # "variante" es la 3ª línea del lockup (debajo de "CARAMPANGUE" fija). "" = no muestra 3ª línea.
 ALMA_PROFILES: dict[str, dict] = {
-    "cmc_admin_olacore": {"variante": "OLACORE",  "modulos": None},  # acceso total — dueño
-    "cmc_admin_2026":    {"variante": "",          "modulos": None},  # acceso total — recepción (segmentar módulos aquí cuando se decida)
+    "cmc_admin_olacore": {
+        "variante": "OLACORE",
+        "modulos": None,           # acceso total — dueño
+        "boxes_financiero": True,
+    },
+    "cmc_admin_2026": {
+        "variante": "",
+        "modulos": ["panel", "panel2", "agenda", "pagos", "boxes"],  # recepción
+        "boxes_financiero": False,  # sin valores monetarios en Boxes
+    },
 }
 
 # Feature flags — se activan cuando Rodrigo apruebe condiciones comerciales

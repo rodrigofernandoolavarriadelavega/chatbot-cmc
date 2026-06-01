@@ -22,7 +22,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, JSON
 from fastapi.staticfiles import StaticFiles
 
 from config import (META_VERIFY_TOKEN, CMC_TELEFONO, CMC_TELEFONO_FIJO, ADMIN_TOKEN,
-                    OLACORE_TOKEN, ALMA_PROFILES,
+                    OLACORE_TOKEN, ALMA_PROFILES, ALMA_MODULE_REGISTRY,
                     MEDILINK_TOKEN, META_AD_ACCOUNT_ID as _CFG_META_ACCOUNT_ID)
 from flows import handle_message
 from messaging import (send_whatsapp, send_whatsapp_interactive,
@@ -3348,15 +3348,29 @@ def alma_shell(token: str | None = Query(None),
         raise HTTPException(404, "Alma no disponible")
 
     def _render(active_token: str) -> str:
+        import json as _json_alma
         profile = ALMA_PROFILES.get(active_token, {})
         variante = profile.get("variante", "") or ""
         variante_line = (
             f'<div class="alma-variante">{variante}</div>'
             if variante else ""
         )
+        # Construir lista de módulos visibles para este perfil.
+        # modulos=None → todos los del registry (acceso total).
+        allowed_keys = profile.get("modulos")
+        if allowed_keys is None:
+            modules_list = [dict(id=k, **v) for k, v in ALMA_MODULE_REGISTRY.items()]
+        else:
+            modules_list = [
+                dict(id=k, **ALMA_MODULE_REGISTRY[k])
+                for k in allowed_keys
+                if k in ALMA_MODULE_REGISTRY
+            ]
+        profile_modules_json = _json_alma.dumps(modules_list, ensure_ascii=False)
         return (_ALMA_HTML
                 .replace("__TOKEN__", active_token)
-                .replace("__ALMA_VARIANTE_LINE__", variante_line))
+                .replace("__ALMA_VARIANTE_LINE__", variante_line)
+                .replace("__PROFILE_MODULES__", profile_modules_json))
 
     if token and _is_admin_token(token):
         return _render(token)
@@ -3624,8 +3638,10 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
       apertura corta antes de llamar a Medilink. Las queries pesadas (historial 30d,
       fallback fact_citas, etc.) van en una segunda apertura, también corta.
     """
-    if token != ADMIN_TOKEN:
+    from admin_routes import _is_admin_token
+    if not (token and _is_admin_token(token)):
         raise HTTPException(401, "No autorizado")
+    _boxes_financiero = ALMA_PROFILES.get(token, {}).get("boxes_financiero", True)
 
     from datetime import datetime, timedelta, time as _dtime, date as _date
     import zoneinfo as _zib
@@ -4227,6 +4243,21 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
 
         cur.close()
         cur = None
+
+        # ── Gateo financiero: omitir campos monetarios para tokens sin acceso financiero ──
+        if not _boxes_financiero:
+            _OMIT = {"revenue_dia", "revenue_hoy", "revenue_sem", "revenue_mes",
+                     "revenue_30d", "delta_hoy", "delta_sem", "delta_mes",
+                     "yield_hora", "fc_realizado", "fc_pendiente_n", "fc_proyectado",
+                     "monto_atrib"}
+            for _b in boxes_out:
+                _b.pop("revenue_dia", None)
+            historial = [{k: v for k, v in h.items() if k not in _OMIT}
+                         for h in historial]
+            citas_dia_full = [{k: v for k, v in c.items() if k not in _OMIT}
+                              for c in citas_dia_full]
+            rev_por_prof = {}
+
         return {
             "now_cl": now_cl.strftime("%Y-%m-%d %H:%M:%S"),
             "totales": {
@@ -4234,10 +4265,12 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
                 "boxes_ocupados": total_ocupados,
                 "profesionales_activos": total_profs_activos,
                 "citas_dia": total_citas,
-                "revenue_dia": total_revenue,
-                "fc_realizado": sum(h["fc_realizado"] for h in historial),
-                "fc_pendiente_n": sum(h["fc_pendiente_n"] for h in historial),
-                "fc_proyectado": sum(h["fc_proyectado"] for h in historial),
+                **({} if not _boxes_financiero else {
+                    "revenue_dia": total_revenue,
+                    "fc_realizado": sum(h["fc_realizado"] for h in historial),
+                    "fc_pendiente_n": sum(h["fc_pendiente_n"] for h in historial),
+                    "fc_proyectado": sum(h["fc_proyectado"] for h in historial),
+                }),
             },
             "boxes": boxes_out,
             "boxes_config_default": BOXES_CONFIG,
