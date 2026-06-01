@@ -3718,6 +3718,7 @@ function _pgResetForm(){
       const el = document.getElementById(id);
       if(el){ el.value = ""; el._edited = false; el.classList.remove("pg-suggested","pg-loading"); }
     });
+  const fTB = document.getElementById("pgTipoBono"); if(fTB) fTB.value = "Bono imed";
   // Hora actual
   const horaEl = document.getElementById("pgHora");
   if(horaEl){
@@ -3750,8 +3751,20 @@ function _pgSetPrevision(p){
   const btnF = document.getElementById("pgBtnFonasa");
   if(btnP) btnP.classList.toggle("active", p === "particular");
   if(btnF) btnF.classList.toggle("active", p === "fonasa");
+  // Folio y Tipo de bono solo para Fonasa
+  const show = (p === "fonasa");
+  const disp = show ? "" : "none";
+  ["pgCellFolio","pgThFolio","pgColFolio"].forEach(id => {
+    const el = document.getElementById(id); if(el) el.style.display = disp;
+  });
+  ["pgCellTipoBono","pgThTipoBono","pgColTipoBono"].forEach(id => {
+    const el = document.getElementById(id); if(el) el.style.display = disp;
+  });
+  if(!show){
+    const fF = document.getElementById("pgFolio"); if(fF) fF.value = "";
+    const fT = document.getElementById("pgTipoBono"); if(fT) fT.value = "Bono imed";
+  }
   _pgUpdateMetodoHint();
-  _pgSugerirProcedimiento();
 }
 
 function _pgSetMetodo(m){
@@ -3770,22 +3783,6 @@ function _pgUpdateMetodoHint(){
   h.textContent = (_pg.metodo === "credito" || _pg.metodo === "debito")
     ? "Tarjetas solo disponibles en area dental."
     : "";
-}
-
-function _pgSugerirProcedimiento(){
-  const sel = document.getElementById("pgProcedimiento");
-  if (!sel || sel._edited) return;
-  const copago = parseInt(document.getElementById("pgCopago")?.value) || -1;
-  const prev   = _pg.prevision;
-  if (prev === "fonasa") {
-    sel.value = "Bono imed";
-  } else if (copago === 0) {
-    sel.value = "Control";
-  } else {
-    // no sobreescribir si ya tiene valor
-    if (!sel.value) sel.value = "Consulta";
-  }
-  sel.classList.add("pg-suggested");
 }
 
 async function _pgCargarSugerencia(rut, idCita){
@@ -3821,8 +3818,6 @@ async function _pgCargarSugerencia(rut, idCita){
       hC.textContent = s.copago_sugerido ? "Precio particular" : "";
       if (fi) fi.textContent = s.paciente_nombre ? "Paciente: " + s.paciente_nombre : "";
     }
-    // Auto-sugerir procedimiento con datos ya actualizados
-    _pgSugerirProcedimiento();
   } catch(e) {
     console.warn("_pgCargarSugerencia error:", e);
   } finally {
@@ -3850,8 +3845,9 @@ async function _pgGuardar(){
     copago:              parseInt(document.getElementById("pgCopago")?.value) || 0,
     bonificacion:        0,
     metodo_pago:         _pg.metodo,
-    folio:               (document.getElementById("pgFolio")?.value || "").trim(),
-    codigo_transferencia:(document.getElementById("pgCodTransf")?.value || "").trim(),
+    folio:               (_pg.prevision === "fonasa" ? (document.getElementById("pgFolio")?.value || "").trim() : ""),
+    tipo_bono:           (_pg.prevision === "fonasa" ? (document.getElementById("pgTipoBono")?.value || "Bono imed") : ""),
+    codigo_transferencia:(_pg.metodo === "transferencia" ? (document.getElementById("pgCodTransf")?.value || "").trim() : ""),
     procedimiento:       (document.getElementById("pgProcedimiento")?.value || "").trim(),
     origen:              document.getElementById("pgOrigen")?.value || "chat",
     id_cita:             (document.getElementById("pgIdCita")?.value || "").trim(),
@@ -3952,13 +3948,6 @@ function _pgSetupModal(){
   document.getElementById("pgCopago")?.addEventListener("input", function(){
     this._edited = true;
     this.classList.remove("pg-suggested");
-    _pgSugerirProcedimiento();
-  });
-
-  // Marcar procedimiento como editado manualmente cuando el usuario elige
-  document.getElementById("pgProcedimiento")?.addEventListener("change", function(){
-    this._edited = true;
-    this.classList.remove("pg-suggested");
   });
 }
 
@@ -4034,7 +4023,8 @@ function syncAppBadge(count) {
             <col class="pg-col-prev">
             <col class="pg-col-valor">
             <col class="pg-col-metodo">
-            <col class="pg-col-folio">
+            <col id="pgColFolio" style="display:none" class="pg-col-folio">
+            <col id="pgColTipoBono" style="display:none" class="pg-col-folio">
             <col class="pg-col-proc">
             <col class="pg-col-orig">
           </colgroup>
@@ -4048,7 +4038,8 @@ function syncAppBadge(count) {
               <th>Prevision</th>
               <th>Pago ($)</th>
               <th>Metodo de Pago</th>
-              <th>N&#176; Folio</th>
+              <th id="pgThFolio" style="display:none">N&#176; Folio</th>
+              <th id="pgThTipoBono" style="display:none">Tipo de bono</th>
               <th>Procedimiento</th>
               <th>Origen</th>
             </tr>
@@ -4103,18 +4094,21 @@ function syncAppBadge(count) {
                   <input type="text" id="pgCodTransf" class="pg-cell-input" placeholder="Cod. transferencia">
                 </div>
               </td>
-              <!-- Folio -->
-              <td>
+              <!-- Folio — solo Fonasa -->
+              <td id="pgCellFolio" style="display:none">
                 <input type="text" id="pgFolio" class="pg-cell-input" placeholder="N° folio">
               </td>
-              <!-- Procedimiento -->
-              <td>
-                <select id="pgProcedimiento" class="pg-cell-input pg-proc-select">
-                  <option value="">— Procedimiento —</option>
+              <!-- Tipo de bono — solo Fonasa -->
+              <td id="pgCellTipoBono" style="display:none">
+                <select id="pgTipoBono" class="pg-cell-input">
                   <option value="Bono imed">Bono imed</option>
-                  <option value="Control">Control</option>
-                  <option value="Consulta">Consulta</option>
+                  <option value="Bono web">Bono web</option>
+                  <option value="Otro">Otro</option>
                 </select>
+              </td>
+              <!-- Procedimiento — texto libre -->
+              <td>
+                <input type="text" id="pgProcedimiento" class="pg-cell-input" placeholder="Ej: consulta, audiometria, control kine…">
               </td>
               <!-- Origen -->
               <td>

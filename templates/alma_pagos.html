@@ -466,22 +466,25 @@
         </div>
         <div class="hint" id="hintMetodo"></div>
       </div>
-      <div class="field">
+      <div class="field" id="rowFolio" style="display:none">
         <label>Folio</label>
-        <input type="text" id="fFolio" placeholder="N° folio (opcional)">
+        <input type="text" id="fFolio" placeholder="N° folio">
+      </div>
+      <div class="field" id="rowTipoBono" style="display:none">
+        <label>Tipo de bono</label>
+        <select id="fTipoBono">
+          <option value="Bono imed">Bono imed</option>
+          <option value="Bono web">Bono web</option>
+          <option value="Otro">Otro</option>
+        </select>
       </div>
       <div class="field" id="rowCodTransf" style="display:none">
         <label>Codigo transferencia</label>
-        <input type="text" id="fCodTransf" placeholder="Opcional">
+        <input type="text" id="fCodTransf" placeholder="Codigo">
       </div>
       <div class="field full">
         <label>Procedimiento</label>
-        <select id="fProcedimiento">
-          <option value="">— Procedimiento —</option>
-          <option value="Bono imed">Bono imed</option>
-          <option value="Control">Control</option>
-          <option value="Consulta">Consulta</option>
-        </select>
+        <input type="text" id="fProcedimiento" placeholder="Ej: consulta, audiometria, control kine…">
       </div>
       <div class="field">
         <label>Origen</label>
@@ -693,10 +696,34 @@ function buildMetodoBtns(containerId, val) {
 }
 
 function buildProcSelect(rowId, val) {
-  const ops = [['','— Proc —'],['Bono imed','Bono imed'],['Control','Control'],['Consulta','Consulta']];
-  return `<select class="ci ci-proc" id="${rowId}">${ops.map(([v,t])=>
-    `<option value="${v}"${v===val?' selected':''}>${t}</option>`
-  ).join('')}</select>`;
+  return `<input class="ci ci-proc" id="${rowId}" type="text" placeholder="Ej: consulta, control…" value="${esc(val||'')}">`;
+}
+
+// Actualiza visibilidad folio/tipo_bono en una fila inline según previsión
+function _actualizarFilaFonasa(tr, prevVal) {
+  const isFonasa = (prevVal === 'fonasa');
+  const disp = isFonasa ? '' : 'none';
+  const fTD = tr ? tr.querySelector('.td-folio') : null;
+  const tTD = tr ? tr.querySelector('.td-tipobono') : null;
+  if (fTD) fTD.style.display = disp;
+  if (tTD) tTD.style.display = disp;
+  if (!isFonasa) {
+    const fI = tr ? tr.querySelector('#nr_folio, #er_folio') : null;
+    const tI = tr ? tr.querySelector('#nr_tipobono, #er_tipobono') : null;
+    if (fI) fI.value = '';
+    if (tI) tI.value = 'Bono imed';
+  }
+}
+
+// Actualiza visibilidad código transferencia en una fila inline según método
+function _actualizarFilaMetodo(tr, metodoVal) {
+  const isTransf = (metodoVal === 'transferencia');
+  const fTD = tr ? tr.querySelector('.td-codtransf') : null;
+  if (fTD) fTD.style.display = isTransf ? '' : 'none';
+  if (!isTransf) {
+    const fI = tr ? tr.querySelector('#nr_codtransf, #er_codtransf') : null;
+    if (fI) fI.value = '';
+  }
 }
 
 function insertarFilaNueva(preData = {}) {
@@ -727,8 +754,21 @@ function insertarFilaNueva(preData = {}) {
     <td><input class="ci" id="nr_copago" type="number" min="0" step="1" placeholder="0"
                value="${preData.copago_sugerido||preData.copago||''}" tabindex="7"></td>
     <td>${buildMetodoBtns('nr_met_btns', _newMetodo)}</td>
-    <td><input class="ci" id="nr_folio" type="text" placeholder="Folio" tabindex="9"
-               value="${esc(preData.folio||'')}"></td>
+    <td class="td-codtransf" style="${_newMetodo==='transferencia'?'':'display:none'}">
+      <input class="ci" id="nr_codtransf" type="text" placeholder="Cod.transf." tabindex="8"
+             value="${esc(preData.codigo_transferencia||'')}">
+    </td>
+    <td class="td-folio" style="${_newPrev==='fonasa'?'':'display:none'}">
+      <input class="ci" id="nr_folio" type="text" placeholder="Folio" tabindex="9"
+             value="${esc(preData.folio||'')}">
+    </td>
+    <td class="td-tipobono" style="${_newPrev==='fonasa'?'':'display:none'}">
+      <select class="ci" id="nr_tipobono" tabindex="9">
+        <option value="Bono imed"${(preData.tipo_bono||'Bono imed')==='Bono imed'?' selected':''}>Bono imed</option>
+        <option value="Bono web"${preData.tipo_bono==='Bono web'?' selected':''}>Bono web</option>
+        <option value="Otro"${preData.tipo_bono==='Otro'?' selected':''}>Otro</option>
+      </select>
+    </td>
     <td>${buildProcSelect('nr_proc', preData.procedimiento||'')}</td>
     <td>
       <select class="ci" id="nr_origen" tabindex="10">
@@ -764,8 +804,9 @@ function insertarFilaNueva(preData = {}) {
     tr.querySelectorAll('#nr_prev_toggle button').forEach(b =>
       b.classList.toggle('active', b.dataset.v === _newPrev)
     );
+    // actualizar visibilidad folio/tipo_bono en fila nueva
+    _actualizarFilaFonasa(tr, _newPrev);
     recalcFilaNueva();
-    sugerirProcedimientoRow(tr, _newPrev, tr.querySelector('#nr_copago').value);
   });
 
   // Eventos método
@@ -776,6 +817,7 @@ function insertarFilaNueva(preData = {}) {
     tr.querySelectorAll('#nr_met_btns button').forEach(b =>
       b.classList.toggle('active', b.dataset.v === _newMetodo)
     );
+    _actualizarFilaMetodo(tr, _newMetodo);
   });
 
   // Cuando cambia profesional → sugerir area
@@ -794,14 +836,7 @@ function insertarFilaNueva(preData = {}) {
 
   // Marcar pago como editado manualmente
   const nrCopago = tr.querySelector('#nr_copago');
-  if (nrCopago) nrCopago.addEventListener('input', function() {
-    this._edited = true;
-    sugerirProcedimientoRow(tr, _newPrev, this.value);
-  });
-
-  // Marcar procedimiento de la fila como editado manualmente
-  const nrProc = tr.querySelector('#nr_proc');
-  if (nrProc) nrProc.addEventListener('change', function() { this._edited = true; });
+  if (nrCopago) nrCopago.addEventListener('input', function() { this._edited = true; });
 
   // Navegacion Tab desde folio → origen
   tr.querySelector('#nr_folio').addEventListener('keydown', e => {
@@ -867,7 +902,7 @@ async function cargarSugerenciaRow(rut, id_cita) {
         b.classList.toggle('active', b.dataset.v === _newPrev)
       );
     }
-    aplicarSugerenciaMontosRow(s);
+      aplicarSugerenciaMontosRow(s);
   } catch(e) {
     console.warn('cargarSugerenciaRow error:', e);
   } finally {
@@ -885,8 +920,6 @@ function aplicarSugerenciaMontosRow(s) {
     fC.value = s.copago_sugerido || '';
     if (s.copago_sugerido) fC.classList.add('suggested');
   }
-  // Auto-sugerir procedimiento con datos ya actualizados
-  sugerirProcedimientoRow(_newRow, _newPrev, fC.value);
 }
 
 function recalcFilaNueva() {
@@ -922,7 +955,9 @@ async function guardarFilaNueva() {
     copago:              parseInt(_newRow.querySelector('#nr_copago').value) || 0,
     bonificacion:        0,
     metodo_pago:         _newMetodo,
-    folio:               (_newRow.querySelector('#nr_folio').value || '').trim(),
+    folio:               (_newPrev === 'fonasa' ? (_newRow.querySelector('#nr_folio')?.value || '').trim() : ''),
+    tipo_bono:           (_newPrev === 'fonasa' ? (_newRow.querySelector('#nr_tipobono')?.value || 'Bono imed') : ''),
+    codigo_transferencia: (_newMetodo === 'transferencia' ? (_newRow.querySelector('#nr_codtransf')?.value || '').trim() : ''),
     procedimiento:       (_newRow.querySelector('#nr_proc')?.value || '').trim(),
     origen:              _newRow.querySelector('#nr_origen').value,
     creado_por:          'recepcion',
@@ -981,7 +1016,19 @@ function editarFilaInline(id) {
         <td>${buildPrevToggle('er_prev_toggle', ePrev)}</td>
         <td><input class="ci" id="er_copago" type="number" min="0" step="1" value="${p.copago||0}" tabindex="7"></td>
         <td>${buildMetodoBtns('er_met_btns', eMetodo)}</td>
-        <td><input class="ci" id="er_folio" type="text" value="${esc(p.folio||'')}" tabindex="9"></td>
+        <td class="td-codtransf" style="${eMetodo==='transferencia'?'':'display:none'}">
+          <input class="ci" id="er_codtransf" type="text" placeholder="Cod.transf." value="${esc(p.codigo_transferencia||'')}">
+        </td>
+        <td class="td-folio" style="${ePrev==='fonasa'?'':'display:none'}">
+          <input class="ci" id="er_folio" type="text" placeholder="Folio" value="${esc(p.folio||'')}">
+        </td>
+        <td class="td-tipobono" style="${ePrev==='fonasa'?'':'display:none'}">
+          <select class="ci" id="er_tipobono">
+            <option value="Bono imed"${(p.tipo_bono||'Bono imed')==='Bono imed'?' selected':''}>Bono imed</option>
+            <option value="Bono web"${p.tipo_bono==='Bono web'?' selected':''}>Bono web</option>
+            <option value="Otro"${p.tipo_bono==='Otro'?' selected':''}>Otro</option>
+          </select>
+        </td>
         <td>${buildProcSelect('er_proc', p.procedimiento||'')}</td>
         <td>
           <select class="ci" id="er_origen" tabindex="10">
@@ -1013,7 +1060,7 @@ function editarFilaInline(id) {
         tr.querySelectorAll('#er_prev_toggle button').forEach(b =>
           b.classList.toggle('active', b.dataset.v === ePrevLocal)
         );
-        sugerirProcedimientoRow(tr, ePrevLocal, tr.querySelector('#er_copago').value);
+        _actualizarFilaFonasa(tr, ePrevLocal);
       });
 
       tr.querySelector('#er_met_btns').addEventListener('click', e => {
@@ -1023,14 +1070,8 @@ function editarFilaInline(id) {
         tr.querySelectorAll('#er_met_btns button').forEach(b =>
           b.classList.toggle('active', b.dataset.v === eMetodoLocal)
         );
+        _actualizarFilaMetodo(tr, eMetodoLocal);
       });
-
-      tr.querySelector('#er_copago').addEventListener('input', function() {
-        sugerirProcedimientoRow(tr, ePrevLocal, this.value);
-      });
-
-      const erProc = tr.querySelector('#er_proc');
-      if (erProc) erProc.addEventListener('change', function() { this._edited = true; });
 
       tr.querySelector('#er_prof').addEventListener('change', function() {
         const opt = this.options[this.selectedIndex];
@@ -1054,7 +1095,9 @@ function editarFilaInline(id) {
           copago:              parseInt(tr.querySelector('#er_copago').value) || 0,
           bonificacion:        0,
           metodo_pago:         eMetodoLocal,
-          folio:               (tr.querySelector('#er_folio').value || '').trim(),
+          folio:               (ePrevLocal === 'fonasa' ? (tr.querySelector('#er_folio')?.value || '').trim() : ''),
+          tipo_bono:           (ePrevLocal === 'fonasa' ? (tr.querySelector('#er_tipobono')?.value || 'Bono imed') : ''),
+          codigo_transferencia: (eMetodoLocal === 'transferencia' ? (tr.querySelector('#er_codtransf')?.value || '').trim() : ''),
           procedimiento:       (tr.querySelector('#er_proc')?.value || '').trim(),
           origen:              tr.querySelector('#er_origen').value,
         };
@@ -1168,6 +1211,7 @@ document.getElementById('modalBg').addEventListener('click', e => {
 function resetForm() {
   ['fNombre','fRut','fArea','fCopago','fFolio','fCodTransf','fProcedimiento','fIdCita']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const fTB = document.getElementById('fTipoBono'); if(fTB) fTB.value = 'Bono imed';
   document.getElementById('fFecha').value = _fecha;
   document.getElementById('fProf').value  = '';
   document.getElementById('fOrigen').value = 'presencial';
@@ -1181,9 +1225,16 @@ function setPrevision(p) {
   _prevision = p;
   document.getElementById('btnParticular').classList.toggle('active', p === 'particular');
   document.getElementById('btnFonasa').classList.toggle('active',     p === 'fonasa');
-  // rowBonif se mantiene oculto siempre (bonificacion se calcula en conciliacion)
+  // Folio y Tipo de bono solo para Fonasa
+  const show = (p === 'fonasa');
+  const disp = show ? '' : 'none';
+  const rowFolio   = document.getElementById('rowFolio');   if(rowFolio)   rowFolio.style.display   = disp;
+  const rowTipoBono= document.getElementById('rowTipoBono');if(rowTipoBono) rowTipoBono.style.display = disp;
+  if (!show) {
+    const fF = document.getElementById('fFolio');   if(fF) fF.value = '';
+    const fT = document.getElementById('fTipoBono'); if(fT) fT.value = 'Bono imed';
+  }
   updateMetodoHint();
-  sugerirProcedimientoModal();
 }
 
 function setMetodo(m) {
@@ -1201,31 +1252,6 @@ function updateMetodoHint() {
     ? 'Tarjetas solo disponibles en area dental.' : '';
 }
 
-function sugerirProcedimientoModal() {
-  const sel = document.getElementById('fProcedimiento');
-  if (!sel || sel._edited) return;
-  const copago = parseInt(document.getElementById('fCopago').value) || -1;
-  if (_prevision === 'fonasa') {
-    sel.value = 'Bono imed';
-  } else if (copago === 0) {
-    sel.value = 'Control';
-  } else {
-    if (!sel.value) sel.value = 'Consulta';
-  }
-}
-
-function sugerirProcedimientoRow(tr, prevVal, copagoVal) {
-  const sel = tr ? tr.querySelector('.ci-proc') : null;
-  if (!sel || sel._edited) return;
-  const copago = parseInt(copagoVal) || -1;
-  if (prevVal === 'fonasa') {
-    sel.value = 'Bono imed';
-  } else if (copago === 0) {
-    sel.value = 'Control';
-  } else {
-    if (!sel.value) sel.value = 'Consulta';
-  }
-}
 
 document.getElementById('btnParticular').addEventListener('click', () => {
   _previsionManual = true; setPrevision('particular'); recalcSugerenciaModal();
@@ -1262,8 +1288,6 @@ async function cargarSugerenciaModal(rut, id_cita) {
     if (s.prevision && !_previsionManual) setPrevision(s.prevision);
     if (s.id_cita) document.getElementById('fIdCita').value = s.id_cita;
     aplicarSugerenciaMontosModal(s);
-    // Auto-sugerir procedimiento con datos ya actualizados
-    sugerirProcedimientoModal();
   } catch(e) { console.warn('cargarSugerenciaModal error:', e); }
 }
 
@@ -1290,11 +1314,6 @@ function aplicarSugerenciaMontosModal(s) {
 
 document.getElementById('fCopago').addEventListener('input', function() {
   this._edited = true; this.classList.remove('suggested');
-  sugerirProcedimientoModal();
-});
-
-document.getElementById('fProcedimiento').addEventListener('change', function() {
-  this._edited = true;
 });
 
 document.getElementById('btnGuardarPago').addEventListener('click', guardarModal);
@@ -1316,8 +1335,9 @@ async function guardarModal() {
     copago:              parseInt(document.getElementById('fCopago').value) || 0,
     bonificacion:        0,
     metodo_pago:         _metodo,
-    folio:               document.getElementById('fFolio').value.trim(),
-    codigo_transferencia: document.getElementById('fCodTransf').value.trim(),
+    folio:               (_prevision === 'fonasa' ? document.getElementById('fFolio').value.trim() : ''),
+    tipo_bono:           (_prevision === 'fonasa' ? (document.getElementById('fTipoBono').value || 'Bono imed') : ''),
+    codigo_transferencia: (_metodo === 'transferencia' ? document.getElementById('fCodTransf').value.trim() : ''),
     procedimiento:       document.getElementById('fProcedimiento').value.trim(),
     origen:              document.getElementById('fOrigen').value,
     id_cita:             document.getElementById('fIdCita').value.trim(),

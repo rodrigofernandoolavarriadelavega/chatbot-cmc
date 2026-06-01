@@ -155,6 +155,14 @@ def ensure_pagos_table() -> None:
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_pagos_prof ON pagos_cmc(id_profesional)"
         )
+        # Columnas añadidas post-creación (idempotente)
+        for col_ddl in [
+            "ALTER TABLE pagos_cmc ADD COLUMN tipo_bono TEXT DEFAULT ''",
+        ]:
+            try:
+                conn.execute(col_ddl)
+            except Exception:
+                pass  # columna ya existe
         conn.commit()
 
 
@@ -374,9 +382,9 @@ async def post_pago(
             """INSERT INTO pagos_cmc
                (fecha, hora, paciente_nombre, rut, id_profesional, profesional,
                 area, prevision, copago, bonificacion, metodo_pago, folio,
-                codigo_transferencia, procedimiento, origen, id_cita,
+                codigo_transferencia, tipo_bono, procedimiento, origen, id_cita,
                 creado_por, created_at, updated_at)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'),datetime('now'))""",
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'),datetime('now'))""",
             (
                 fecha,
                 hora,
@@ -391,6 +399,7 @@ async def post_pago(
                 metodo_pago,
                 (body.get("folio") or "").strip(),
                 (body.get("codigo_transferencia") or "").strip(),
+                (body.get("tipo_bono") or "").strip(),
                 (body.get("procedimiento") or "").strip(),
                 origen,
                 (body.get("id_cita") or "").strip(),
@@ -452,7 +461,7 @@ async def get_pagos(
             """SELECT id, fecha, hora, paciente_nombre, rut,
                       id_profesional, profesional, area, prevision,
                       copago, bonificacion, metodo_pago, folio,
-                      codigo_transferencia, procedimiento, origen,
+                      codigo_transferencia, tipo_bono, procedimiento, origen,
                       id_cita, creado_por, created_at, updated_at
                FROM pagos_cmc
                WHERE fecha BETWEEN ? AND ?
@@ -513,7 +522,7 @@ async def patch_pago(
     _EDITABLE = {
         "fecha", "hora", "paciente_nombre", "rut", "id_profesional",
         "profesional", "area", "prevision", "copago", "bonificacion",
-        "metodo_pago", "folio", "codigo_transferencia", "procedimiento",
+        "metodo_pago", "folio", "codigo_transferencia", "tipo_bono", "procedimiento",
         "origen", "id_cita", "creado_por",
     }
     campos = {k: v for k, v in body.items() if k in _EDITABLE}
@@ -593,7 +602,8 @@ async def export_pagos_xlsx(
     with _conn() as conn:
         rows = conn.execute(
             """SELECT hora, paciente_nombre, profesional, area, prevision,
-                      copago, bonificacion, metodo_pago, folio, procedimiento
+                      copago, bonificacion, metodo_pago, folio,
+                      codigo_transferencia, tipo_bono, procedimiento
                FROM pagos_cmc
                WHERE fecha BETWEEN ? AND ?
                ORDER BY fecha ASC, hora ASC""",
@@ -612,7 +622,7 @@ async def export_pagos_xlsx(
 
     # Fila de título con fecha del período
     periodo = d_desde if d_desde == d_hasta else f"{d_desde} — {d_hasta}"
-    ws.merge_cells("A1:I1")
+    ws.merge_cells("A1:L1")
     titulo_cell = ws["A1"]
     titulo_cell.value = f"Pagos CMC — {periodo}"
     titulo_cell.font = Font(name="Calibri", bold=True, size=12, color="FFFFFF")
@@ -623,7 +633,8 @@ async def export_pagos_xlsx(
     # Encabezados (fila 2)
     headers = [
         "HORA", "PACIENTE", "NOMBRE PROFESIONAL", "AREA",
-        "PREVISION", "PAGO", "METODO DE PAGO", "N° FOLIO", "PROCEDIMIENTO"
+        "PREVISION", "PAGO", "METODO DE PAGO", "N° FOLIO",
+        "COD. TRANSFERENCIA", "TIPO DE BONO", "PROCEDIMIENTO",
     ]
     header_fill  = PatternFill("solid", fgColor="1172AB")
     header_font  = Font(name="Calibri", bold=True, size=10, color="FFFFFF")
@@ -658,6 +669,8 @@ async def export_pagos_xlsx(
             valor,
             metodo_label,
             row["folio"] or "",
+            row["codigo_transferencia"] or "",
+            row["tipo_bono"] or "",
             row["procedimiento"] or "",
         ]
         fill = alt_fill if row_idx % 2 == 0 else None
@@ -674,7 +687,7 @@ async def export_pagos_xlsx(
                 cell.alignment = Alignment(horizontal="right", vertical="center")
 
     # Anchos de columna (aproximados)
-    col_widths = [8, 24, 22, 18, 12, 12, 14, 12, 28]
+    col_widths = [8, 24, 22, 18, 12, 12, 14, 12, 18, 14, 28]
     for col_idx, w in enumerate(col_widths, start=1):
         ws.column_dimensions[ws.cell(row=2, column=col_idx).column_letter].width = w
 
