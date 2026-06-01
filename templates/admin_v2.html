@@ -890,7 +890,7 @@ input[type="time"].pg-cell-input{
   min-width:84px; padding-right:6px; box-sizing:border-box;
   -webkit-appearance:none; appearance:none;
 }
-/* Select procedimiento en fila modal pago */
+/* Input prestacion en fila modal pago */
 select#pgProcedimiento.pg-cell-input,
 select.pg-proc-select.pg-cell-input{
   cursor:pointer;
@@ -3814,6 +3814,12 @@ async function _pgCargarSugerencia(rut, idCita){
     if (s.prevision && !_pg.previsionManual) _pgSetPrevision(s.prevision);
     const fIC = document.getElementById("pgIdCita");
     if (fIC && s.id_cita && !fIC.value) fIC.value = s.id_cita;
+    // Prestacion — pre-llenada desde Medilink (campo nombre_atencion de la cita)
+    const fProc = document.getElementById("pgProcedimiento");
+    if (fProc && s.prestacion && !fProc._edited && !fProc.value) {
+      fProc.value = s.prestacion;
+      fProc.classList.add("pg-suggested");
+    }
     // Montos sugeridos — solo PAGO (copago), bonif se calcula en conciliacion
     const fC = document.getElementById("pgCopago");
     if (fC && s.copago_sugerido != null && !fC._edited) {
@@ -4051,7 +4057,7 @@ function syncAppBadge(count) {
               <th>Metodo de Pago</th>
               <th id="pgThFolio" style="display:none">N&#176; Folio</th>
               <th id="pgThTipoBono" style="display:none">Tipo de bono</th>
-              <th>Procedimiento</th>
+              <th>Prestacion</th>
               <th>Origen</th>
             </tr>
           </thead>
@@ -4117,7 +4123,7 @@ function syncAppBadge(count) {
                   <option value="Otro">Otro</option>
                 </select>
               </td>
-              <!-- Procedimiento — texto libre -->
+              <!-- Prestacion — texto libre, pre-llenado desde Medilink si disponible -->
               <td>
                 <input type="text" id="pgProcedimiento" class="pg-cell-input" placeholder="Ej: consulta, audiometria, control kine…">
               </td>

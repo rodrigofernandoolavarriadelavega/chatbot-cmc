@@ -262,11 +262,15 @@ async def _buscar_cita_paciente_fecha(rut: str, fecha: str) -> dict | None:
         c = data[0]
         id_prof = c.get("id_profesional")
         prof_info = PROFESIONALES.get(id_prof, {}) if id_prof else {}
+        # nombre_atencion es el campo de prestación en Medilink (/citas);
+        # viene vacío la mayoría de las veces en CMC, pero se devuelve cuando existe.
+        nombre_atencion = (c.get("nombre_atencion") or "").strip()
         return {
-            "id_cita":       str(c["id"]),
+            "id_cita":        str(c["id"]),
             "id_profesional": id_prof,
-            "profesional":   c.get("nombre_profesional", "") or prof_info.get("nombre", ""),
-            "area":          prof_info.get("especialidad", ""),
+            "profesional":    c.get("nombre_profesional", "") or prof_info.get("nombre", ""),
+            "area":           prof_info.get("especialidad", ""),
+            "prestacion":     nombre_atencion,
         }
     except Exception as e:
         log.warning("_buscar_cita_paciente_fecha error: %s", e)
@@ -312,6 +316,7 @@ async def get_sugerencia(
         "id_profesional":  None,
         "profesional":     "",
         "area":            "",
+        "prestacion":      "",
         "prevision":       "particular",
         "copago_sugerido": 0,
         "bonif_sugerida":  0,
@@ -388,6 +393,7 @@ async def get_sugerencia(
                     "id_profesional": cita_dia["id_profesional"],
                     "profesional":    cita_dia["profesional"],
                     "area":           cita_dia["area"],
+                    "prestacion":     cita_dia.get("prestacion", ""),
                 })
                 log.info(
                     "get_sugerencia: cita auto-rellenada id=%s prof=%s fecha=%s",
@@ -721,7 +727,7 @@ async def export_pagos_xlsx(
     headers = [
         "HORA", "PACIENTE", "NOMBRE PROFESIONAL", "AREA",
         "PREVISION", "PAGO", "METODO DE PAGO", "N° FOLIO",
-        "COD. TRANSFERENCIA", "TIPO DE BONO", "PROCEDIMIENTO",
+        "COD. TRANSFERENCIA", "TIPO DE BONO", "PRESTACION",
     ]
     header_fill  = PatternFill("solid", fgColor="1172AB")
     header_font  = Font(name="Calibri", bold=True, size=10, color="FFFFFF")
