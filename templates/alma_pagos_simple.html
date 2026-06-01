@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Pagos — Alma CMC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --aqua:   #4FBECE;
+    --aqua-s: #e8f8fb;
+    --blue:   #1172AB;
+    --navy:   #0F3F68;
+    --navy2:  #0c3556;
+    --bg:     #F7FBFD;
+    --border: #d6e4ec;
+    --text:   #0F3F68;
+    --mute:   #62788a;
+    --red:    #e84545;
+    --green:  #23c25e;
+    --sh-sm:  0 1px 3px rgba(15,63,104,.08);
+    --sh-md:  0 8px 30px rgba(15,63,104,.14);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: 'Montserrat', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+  }
+
+  /* ── Topbar ── */
+  .pg-topbar {
+    display: flex; align-items: center; gap: 12px;
+    background: #fff; border-bottom: 1px solid var(--border);
+    padding: 0 20px; height: 54px;
+    box-shadow: var(--sh-sm); position: sticky; top: 0; z-index: 20;
+  }
+  .pg-topbar h1 {
+    font-size: 15px; font-weight: 700; margin: 0; color: var(--navy);
+  }
+  .pg-topbar .spacer { flex: 1; }
+  .pg-topbar .date-nav {
+    display: flex; align-items: center; gap: 6px;
+  }
+  .pg-topbar .date-nav button {
+    background: none; border: 1px solid var(--border); color: var(--blue);
+    border-radius: 7px; padding: 5px 9px; font-family: inherit;
+    font-size: 12px; font-weight: 600; cursor: pointer; transition: all .14s;
+  }
+  .pg-topbar .date-nav button:hover { background: var(--aqua-s); border-color: var(--aqua); }
+  .pg-topbar .date-nav input[type=date] {
+    font-family: inherit; font-size: 12px; font-weight: 600;
+    border: 1px solid var(--border); border-radius: 7px;
+    padding: 5px 9px; color: var(--navy); background: #fff; cursor: pointer;
+  }
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--aqua); color: #fff; border: 0;
+    border-radius: 9px; padding: 8px 16px;
+    font-family: inherit; font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: all .15s; box-shadow: 0 2px 8px rgba(79,190,206,.3);
+  }
+  .btn-primary:hover { background: var(--blue); box-shadow: 0 4px 14px rgba(17,114,171,.35); }
+  .btn-primary:disabled { opacity: .55; cursor: not-allowed; }
+  .btn-primary svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .btn-secondary {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #fff; color: var(--blue); border: 1px solid var(--border);
+    border-radius: 9px; padding: 8px 14px;
+    font-family: inherit; font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: all .15s;
+  }
+  .btn-secondary:hover { background: var(--aqua-s); border-color: var(--aqua); }
+  .btn-secondary:disabled { opacity: .55; cursor: not-allowed; }
+  .btn-secondary svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+  /* ── KPI strip ── */
+  .kpi-strip {
+    display: flex; gap: 12px; padding: 14px 20px;
+    flex-wrap: wrap;
+  }
+  .kpi {
+    background: #fff; border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 18px;
+    min-width: 140px; box-shadow: var(--sh-sm);
+    flex: 1;
+  }
+  .kpi .label { font-size: 10px; font-weight: 700; text-transform: uppercase;
+                 letter-spacing: .1em; color: var(--mute); margin-bottom: 4px; }
+  .kpi .value { font-size: 22px; font-weight: 800; color: var(--navy); }
+  .kpi .value.green { color: var(--green); }
+
+  /* ── Tabla de pagos ── */
+  .table-wrap {
+    margin: 0 20px 24px;
+    background: #fff; border-radius: 14px; border: 1px solid var(--border);
+    box-shadow: var(--sh-sm); overflow: hidden;
+  }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+
+  col.c-num   { width: 28px; }
+  col.c-hora  { width: 90px; }
+  col.c-pac   { width: 185px; }
+  col.c-rut   { width: 105px; }
+  col.c-prof  { width: 175px; }
+  col.c-area  { width: 130px; }
+  col.c-prev  { width: 88px; }
+  col.c-cop   { width: 90px; }
+  col.c-met   { width: 100px; }
+  col.c-folio { width: 75px; }
+  col.c-proc  { width: 100px; }
+  col.c-orig  { width: 82px; }
+  col.c-act   { width: 64px; }
+
+  thead th {
+    background: linear-gradient(180deg, var(--navy), var(--navy2));
+    color: #b8d4e8; font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .08em;
+    padding: 9px 8px; text-align: left; white-space: nowrap;
+  }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+  tbody tr:last-child { border-bottom: 0; }
+  tbody tr:not(.row-new):hover { background: var(--aqua-s); }
+  tbody td { padding: 7px 8px; vertical-align: middle; }
+
+  /* ── Fila nueva inline ── */
+  .row-new {
+    background: #f0fbfd;
+    border-bottom: 2px solid var(--aqua) !important;
+  }
+  .row-new td { padding: 5px 4px; }
+
+  td input.ci, td select.ci {
+    width: 100%; font-family: inherit; font-size: 12px; font-weight: 500;
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 5px 6px; color: var(--navy); background: #fff;
+    transition: border-color .12s; outline: none;
+    min-width: 0;
+  }
+  td input.ci:focus, td select.ci:focus {
+    border-color: var(--aqua);
+    box-shadow: 0 0 0 2px rgba(79,190,206,.18);
+  }
+  td input.ci.suggested, td select.ci.suggested {
+    background: #f4feff;
+    border-color: var(--aqua);
+  }
+  td input.ci.loading {
+    background: #f7fbfd url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='10' stroke='%234FBECE' stroke-width='2' fill='none' stroke-dasharray='31.4' stroke-dashoffset='10'%3E%3CanimateTransform attributeName='transform' type='rotate' from='0 12 12' to='360 12 12' dur='.8s' repeatCount='indefinite'/%3E%3C/circle%3E%3C/svg%3E") no-repeat right 6px center / 14px 14px;
+  }
+  td input[type="time"].ci {
+    min-width: 82px; padding-right: 4px; box-sizing: border-box;
+    -webkit-appearance: none; appearance: none;
+  }
+  select#fProcedimiento, select.ci.ci-proc {
+    cursor: pointer;
+  }
+
+  .seg-mini {
+    display: flex; border: 1px solid var(--border); border-radius: 6px;
+    overflow: hidden; height: 28px; width: 100%;
+  }
+  .seg-mini button {
+    flex: 1; border: 0; background: none; font-family: inherit;
+    font-size: 10px; font-weight: 700; cursor: pointer;
+    transition: all .12s; color: var(--mute); padding: 0;
+  }
+  .seg-mini button.active { background: var(--aqua); color: #fff; }
+
+  .met-mini {
+    display: flex; gap: 3px; flex-wrap: wrap;
+  }
+  .met-btn {
+    border: 1px solid var(--border); border-radius: 5px;
+    background: #fff; font-family: inherit; font-size: 9.5px; font-weight: 700;
+    padding: 3px 5px; cursor: pointer; transition: all .12s; color: var(--mute);
+    line-height: 1;
+  }
+  .met-btn.active {
+    background: var(--navy); color: #fff; border-color: var(--navy);
+  }
+
+  .btn-save-row {
+    background: var(--aqua); color: #fff; border: 0;
+    border-radius: 7px; padding: 5px 8px; font-family: inherit;
+    font-size: 11px; font-weight: 700; cursor: pointer;
+    transition: all .13s; display: inline-flex; align-items: center; gap: 4px;
+    white-space: nowrap;
+  }
+  .btn-save-row:hover { background: var(--blue); }
+  .btn-save-row:disabled { opacity: .55; cursor: not-allowed; }
+  .btn-cancel-row {
+    background: none; border: 1px solid var(--border); color: var(--mute);
+    border-radius: 7px; padding: 5px 7px; font-family: inherit;
+    font-size: 11px; font-weight: 600; cursor: pointer; transition: all .13s;
+  }
+  .btn-cancel-row:hover { background: #f5f8fa; }
+
+  .td-actions { display: flex; gap: 4px; }
+  .btn-icon {
+    background: none; border: 1px solid var(--border); border-radius: 7px;
+    padding: 5px 7px; cursor: pointer; color: var(--mute);
+    transition: all .13s; display: grid; place-items: center;
+  }
+  .btn-icon:hover { background: var(--aqua-s); border-color: var(--aqua); color: var(--blue); }
+  .btn-icon.del:hover { background: #fff0f0; border-color: var(--red); color: var(--red); }
+  .btn-icon svg { width: 14px; height: 14px; }
+
+  .pill {
+    display: inline-block; padding: 2px 8px; border-radius: 999px;
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+  }
+  .pill.fonasa   { background: #dff5ea; color: #1a7a42; }
+  .pill.particular { background: #e8f2fb; color: var(--blue); }
+  .pill.metodo { background: var(--aqua-s); color: var(--blue); }
+
+  .empty {
+    text-align: center; padding: 40px 20px; color: var(--mute);
+    font-size: 13px; font-weight: 600;
+  }
+
+  /* ── Modal (solo para ALMA_ABRIR_PAGO externo desde /admin/v2) ── */
+  .modal-bg {
+    display: none; position: fixed; inset: 0;
+    background: rgba(15,63,104,.45); z-index: 100;
+    align-items: flex-start; justify-content: center;
+    padding: 30px 16px; overflow-y: auto;
+  }
+  .modal-bg.open { display: flex; }
+  .modal {
+    background: #fff; border-radius: 18px;
+    box-shadow: var(--sh-md); width: 100%; max-width: 620px;
+    padding: 28px; position: relative;
+  }
+  .modal h2 {
+    font-size: 17px; font-weight: 800; color: var(--navy);
+    margin: 0 0 20px;
+  }
+  .modal-close {
+    position: absolute; top: 18px; right: 18px;
+    background: none; border: 1px solid var(--border); border-radius: 8px;
+    width: 32px; height: 32px; display: grid; place-items: center;
+    cursor: pointer; color: var(--mute); transition: all .13s;
+  }
+  .modal-close:hover { background: #fff0f0; border-color: var(--red); color: var(--red); }
+  .modal-close svg { width: 16px; height: 16px; }
+
+  .form-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 14px 16px;
+  }
+  .form-grid .full { grid-column: 1 / -1; }
+  .field label {
+    display: block; font-size: 10.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .08em;
+    color: var(--mute); margin-bottom: 5px;
+  }
+  .field input, .field select, .field textarea {
+    width: 100%; font-family: inherit; font-size: 13px; font-weight: 500;
+    border: 1px solid var(--border); border-radius: 9px;
+    padding: 9px 12px; color: var(--navy); background: #fff;
+    transition: border-color .13s; outline: none;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    border-color: var(--aqua);
+    box-shadow: 0 0 0 3px rgba(79,190,206,.15);
+  }
+  .field .hint { font-size: 10px; color: var(--mute); margin-top: 3px; }
+  .field input.suggested, .field select.suggested {
+    background: #fafeff; border-color: var(--aqua);
+  }
+  .seg-toggle {
+    display: flex; gap: 0; border: 1px solid var(--border);
+    border-radius: 9px; overflow: hidden; width: 100%;
+  }
+  .seg-toggle button {
+    flex: 1; border: 0; background: none; font-family: inherit;
+    font-size: 12px; font-weight: 700; padding: 9px 8px;
+    cursor: pointer; transition: all .13s; color: var(--mute);
+  }
+  .seg-toggle button.active { background: var(--aqua); color: #fff; }
+  .metodo-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; }
+  .metodo-btn {
+    border: 1px solid var(--border); border-radius: 9px;
+    background: #fff; font-family: inherit; font-size: 11px; font-weight: 700;
+    padding: 9px 4px; cursor: pointer; transition: all .13s; color: var(--mute);
+    text-align: center;
+  }
+  .metodo-btn.active { background: var(--navy); color: #fff; border-color: var(--navy); }
+  .bonif-row { display: none !important; }
+  .form-actions {
+    display: flex; gap: 10px; justify-content: flex-end;
+    margin-top: 22px;
+  }
+  .btn-cancel {
+    background: none; border: 1px solid var(--border); color: var(--mute);
+    border-radius: 9px; padding: 9px 18px;
+    font-family: inherit; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all .13s;
+  }
+  .btn-cancel:hover { background: #f5f8fa; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; z-index: 200;
+    background: var(--navy); color: #fff; border-radius: 12px;
+    padding: 12px 20px; font-size: 13px; font-weight: 600;
+    box-shadow: var(--sh-md);
+    transform: translateY(80px); opacity: 0;
+    transition: transform .25s cubic-bezier(.4,0,.2,1), opacity .25s;
+    pointer-events: none;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { background: #1a7a42; }
+  .toast.error   { background: var(--red); }
+
+  .loading { text-align: center; padding: 28px; color: var(--mute); font-size: 13px; font-weight: 600; }
+
+  @media (max-width: 900px) {
+    .table-wrap { overflow-x: auto; }
+    table { table-layout: auto; min-width: 900px; }
+  }
+  @media (max-width: 640px) {
+    .kpi-strip { gap: 8px; padding: 12px; }
+    .kpi { min-width: 120px; }
+    .pg-topbar { padding: 0 12px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .form-grid .full { grid-column: 1; }
+    .metodo-grid { grid-template-columns: repeat(2,1fr); }
+  }
+</style>
+</head>
+<body>
+
+<!-- Topbar -->
+<div class="pg-topbar">
+  <h1>Pagos</h1>
+  <div class="date-nav">
+    <button id="btnPrevDay" title="Dia anterior">&#8592;</button>
+    <input type="date" id="pickerFecha">
+    <button id="btnNextDay" title="Dia siguiente">&#8594;</button>
+    <button id="btnHoy">Hoy</button>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn-secondary" id="btnExportXlsx" title="Descargar pagos del dia como Excel">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+    Descargar Excel
+  </button>
+  <button class="btn-primary" id="btnNuevoPago">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+    Nueva fila
+  </button>
+</div>
+
+<!-- KPI strip (3 KPIs: sin bonif. Imed) -->
+<div class="kpi-strip" id="kpiStrip">
+  <div class="kpi"><div class="label">Pagos del dia</div><div class="value" id="kpiN">—</div></div>
+  <div class="kpi"><div class="label">Total pagos</div><div class="value" id="kpiCopago">—</div></div>
+  <div class="kpi"><div class="label">Total recaudado</div><div class="value green" id="kpiTotal">—</div></div>
+</div>
+
+<!-- Tabla planilla -->
+<div class="table-wrap">
+  <table id="tablaPagos">
+    <colgroup>
+      <col class="c-num"><col class="c-hora"><col class="c-pac"><col class="c-rut">
+      <col class="c-prof"><col class="c-area"><col class="c-prev">
+      <col class="c-cop"><col class="c-met">
+      <col class="c-folio"><col class="c-proc"><col class="c-orig"><col class="c-act">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Hora</th>
+        <th>Paciente</th>
+        <th>RUT</th>
+        <th>Profesional</th>
+        <th>Area</th>
+        <th>Prevision</th>
+        <th>Pago</th>
+        <th>Metodo</th>
+        <th>Folio</th>
+        <th>Prestacion</th>
+        <th>Origen</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="tablaPagosBody">
+      <tr><td colspan="13" class="loading">Cargando...</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ── Modal (solo para llamadas externas desde /admin/v2 via postMessage) ── -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <button class="modal-close" id="modalClose">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+    <h2 id="modalTitle">Registrar pago</h2>
+    <div class="form-grid" id="formGrid">
+      <div class="field full">
+        <label>Paciente</label>
+        <input type="text" id="fNombre" placeholder="Nombre completo" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>RUT</label>
+        <input type="text" id="fRut" placeholder="12.345.678-9" autocomplete="off">
+        <div class="hint">Al ingresar RUT se pre-llena el paciente.</div>
+      </div>
+      <div class="field">
+        <label>Fecha</label>
+        <input type="date" id="fFecha">
+      </div>
+      <div class="field">
+        <label>Profesional</label>
+        <select id="fProf"><option value="">— Seleccionar —</option></select>
+      </div>
+      <div class="field">
+        <label>Area</label>
+        <input type="text" id="fArea" placeholder="Ej: Medicina General">
+        <div class="hint">Se sugiere segun profesional.</div>
+      </div>
+      <div class="field full">
+        <label>Prevision</label>
+        <div class="seg-toggle">
+          <button class="active" data-prev="particular" id="btnParticular">Particular</button>
+          <button data-prev="fonasa" id="btnFonasa">Fonasa MLE</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Pago ($)</label>
+        <input type="number" id="fCopago" min="0" step="1" placeholder="0">
+        <div class="hint" id="hintCopago"></div>
+      </div>
+      <!-- bonif-row oculta permanentemente -->
+      <div class="field bonif-row" id="rowBonif">
+        <label>Bonif. Imed ($)</label>
+        <input type="number" id="fBonif" min="0" step="1" placeholder="0">
+        <div class="hint" id="hintBonif"></div>
+      </div>
+      <div class="field full">
+        <label>Metodo de pago</label>
+        <div class="metodo-grid">
+          <button class="metodo-btn active" data-metodo="efectivo">Efectivo</button>
+          <button class="metodo-btn" data-metodo="transferencia">Transferencia</button>
+          <button class="metodo-btn" data-metodo="debito">Debito</button>
+          <button class="metodo-btn" data-metodo="credito">Credito</button>
+        </div>
+        <div class="hint" id="hintMetodo"></div>
+      </div>
+      <div class="field" id="rowFolio" style="display:none">
+        <label>Folio</label>
+        <input type="text" id="fFolio" placeholder="N° folio">
+      </div>
+      <div class="field" id="rowTipoBono" style="display:none">
+        <label>Tipo de bono</label>
+        <select id="fTipoBono">
+          <option value="Bono imed">Bono imed</option>
+          <option value="Bono web">Bono web</option>
+          <option value="Otro">Otro</option>
+        </select>
+      </div>
+      <div class="field" id="rowCodTransf" style="display:none">
+        <label>Codigo transferencia</label>
+        <input type="text" id="fCodTransf" placeholder="Codigo">
+      </div>
+      <div class="field full">
+        <label>Prestacion</label>
+        <input type="text" id="fProcedimiento" placeholder="Ej: consulta, audiometria, control kine…">
+      </div>
+      <div class="field">
+        <label>Origen</label>
+        <select id="fOrigen">
+          <option value="presencial">Presencial</option>
+          <option value="telefono">Telefono</option>
+          <option value="chat">Chat WhatsApp</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>ID Cita Medilink</label>
+        <input type="text" id="fIdCita" placeholder="Opcional">
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-cancel" id="btnCancelarModal">Cancelar</button>
+      <button class="btn-primary" id="btnGuardarPago">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+        Guardar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Config ──────────────────────────────────────────────────────────────────
+const TOKEN = "__TOKEN__";
+const qp = TOKEN ? ("?token=" + encodeURIComponent(TOKEN)) : "";
+
+// ── Estado global ────────────────────────────────────────────────────────────
+let PROFESIONALES = [];
+let AREAS_FONASA  = [];
+let _editingId        = null;
+let _prevision        = "particular";
+let _previsionManual  = false;
+let _metodo           = "efectivo";
+let _newRow           = null;
+let _newPrev          = "particular";
+let _newPrevManual    = false;
+let _newMetodo        = "efectivo";
+
+// ── Fecha activa ─────────────────────────────────────────────────────────────
+function todayStr() {
+  return new Date().toLocaleDateString('en-CA');
+}
+let _fecha = todayStr();
+document.getElementById('pickerFecha').value = _fecha;
+
+function setFecha(f) {
+  _fecha = f;
+  document.getElementById('pickerFecha').value = f;
+  cancelarFilaNueva();
+  cargarPagos();
+}
+
+document.getElementById('pickerFecha').addEventListener('change', e => setFecha(e.target.value));
+document.getElementById('btnPrevDay').addEventListener('click', () => {
+  const d = new Date(_fecha + 'T12:00:00');
+  d.setDate(d.getDate() - 1);
+  setFecha(d.toLocaleDateString('en-CA'));
+});
+document.getElementById('btnNextDay').addEventListener('click', () => {
+  const d = new Date(_fecha + 'T12:00:00');
+  d.setDate(d.getDate() + 1);
+  setFecha(d.toLocaleDateString('en-CA'));
+});
+document.getElementById('btnHoy').addEventListener('click', () => setFecha(todayStr()));
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+const fmt$ = n => n == null ? '—' : '$' + Number(n).toLocaleString('es-CL');
+const fmtHora = s => s ? s.slice(0,5) : '—';
+
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(t._tmr);
+  t._tmr = setTimeout(() => t.className = 'toast', 2800);
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function capitalize(s) {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+}
+function nowHora() {
+  return new Date().toLocaleTimeString('es-CL', {hour:'2-digit',minute:'2-digit'});
+}
+
+// ── Cargar profesionales ──────────────────────────────────────────────────────
+async function initData() {
+  try {
+    const [rProfs, rArancel] = await Promise.all([
+      fetch('/alma/api/agenda/profesionales' + qp),
+      fetch('/alma/api/pagos/arancel' + qp),
+    ]);
+    if (rProfs.ok) {
+      const d = await rProfs.json();
+      PROFESIONALES = d.profesionales || [];
+      const sel = document.getElementById('fProf');
+      PROFESIONALES.forEach(p => {
+        const o = document.createElement('option');
+        o.value = p.id; o.textContent = p.nombre + ' — ' + p.especialidad;
+        o.dataset.esp = p.especialidad;
+        sel.appendChild(o);
+      });
+    }
+    if (rArancel.ok) {
+      const d = await rArancel.json();
+      AREAS_FONASA = d.areas_fonasa || [];
+    }
+  } catch(e) { console.warn('initData error:', e); }
+}
+
+// ── Cargar pagos del día ──────────────────────────────────────────────────────
+async function cargarPagos() {
+  const tbody = document.getElementById('tablaPagosBody');
+  tbody.innerHTML = '<tr><td colspan="13" class="loading">Cargando...</td></tr>';
+  try {
+    const r = await fetch('/alma/api/pagos' + qp + '&fecha=' + _fecha);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    renderKPIs(d);
+    renderTabla(d.pagos || []);
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="13" class="empty">Error al cargar pagos.</td></tr>';
+    console.error(e);
+  }
+}
+
+function renderKPIs(d) {
+  document.getElementById('kpiN').textContent = d.total || 0;
+  document.getElementById('kpiCopago').textContent = fmt$(d.total_copago);
+  document.getElementById('kpiTotal').textContent  = fmt$(d.total_recaudado);
+}
+
+// ── Render tabla con filas guardadas ─────────────────────────────────────────
+function renderTabla(pagos) {
+  const tbody = document.getElementById('tablaPagosBody');
+  if (!pagos.length) {
+    tbody.innerHTML = '<tr><td colspan="13" class="empty">Sin pagos registrados para este dia.</td></tr>';
+    _newRow = null;
+    return;
+  }
+  tbody.innerHTML = pagos.map((p, i) => buildSavedRow(p, i)).join('');
+  _newRow = null;
+}
+
+function buildSavedRow(p, i) {
+  return `
+    <tr data-id="${p.id}">
+      <td style="color:var(--mute);font-size:11px">${i+1}</td>
+      <td>${fmtHora(p.hora)}</td>
+      <td style="font-weight:600">${esc(p.paciente_nombre)}</td>
+      <td style="color:var(--mute)">${esc(p.rut || '—')}</td>
+      <td>${esc(p.profesional || '—')}</td>
+      <td>${esc(p.area || '—')}</td>
+      <td><span class="pill ${p.prevision}">${p.prevision === 'fonasa' ? 'Fonasa' : 'Particular'}</span></td>
+      <td style="font-weight:700;color:var(--navy)">${fmt$(p.copago)}</td>
+      <td><span class="pill metodo">${capitalize(p.metodo_pago)}</span></td>
+      <td style="color:var(--mute);font-size:11px">${esc(p.folio || '—')}</td>
+      <td style="color:var(--mute);font-size:11px">${esc(p.procedimiento || '—')}</td>
+      <td style="color:var(--mute);font-size:11px">${capitalize(p.origen)}</td>
+      <td>
+        <div class="td-actions">
+          <button class="btn-icon" title="Editar" onclick="editarFilaInline(${p.id})">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="btn-icon del" title="Eliminar" onclick="eliminarPago(${p.id})">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+          </button>
+        </div>
+      </td>
+    </tr>`;
+}
+
+// ── Fila nueva inline ─────────────────────────────────────────────────────────
+
+function buildProfSelect(selId, selectedId) {
+  let opts = `<option value="">— Prof —</option>`;
+  PROFESIONALES.forEach(p => {
+    const sel = (p.id == selectedId) ? ' selected' : '';
+    opts += `<option value="${p.id}" data-esp="${esc(p.especialidad)}"${sel}>${esc(p.nombre)}</option>`;
+  });
+  return `<select class="ci" id="${selId}">${opts}</select>`;
+}
+
+function buildPrevToggle(containerId, val) {
+  return `<div class="seg-mini" id="${containerId}">
+    <button type="button" data-v="particular" class="${val==='particular'?'active':''}">Part.</button>
+    <button type="button" data-v="fonasa" class="${val==='fonasa'?'active':''}">Fonasa</button>
+  </div>`;
+}
+
+function buildMetodoBtns(containerId, val) {
+  const opts = ['efectivo','transf.','debito','credito'];
+  const vals = ['efectivo','transferencia','debito','credito'];
+  return `<div class="met-mini" id="${containerId}">${vals.map((v,i)=>
+    `<button type="button" class="met-btn${v===val?' active':''}" data-v="${v}">${opts[i]}</button>`
+  ).join('')}</div>`;
+}
+
+function buildProcSelect(rowId, val) {
+  return `<input class="ci ci-proc" id="${rowId}" type="text" placeholder="Ej: consulta, control…" value="${esc(val||'')}">`;
+}
+
+function _actualizarFilaFonasa(tr, prevVal) {
+  const isFonasa = (prevVal === 'fonasa');
+  const disp = isFonasa ? '' : 'none';
+  const fTD = tr ? tr.querySelector('.td-folio') : null;
+  const tTD = tr ? tr.querySelector('.td-tipobono') : null;
+  if (fTD) fTD.style.display = disp;
+  if (tTD) tTD.style.display = disp;
+  if (!isFonasa) {
+    const fI = tr ? tr.querySelector('#nr_folio, #er_folio') : null;
+    const tI = tr ? tr.querySelector('#nr_tipobono, #er_tipobono') : null;
+    if (fI) fI.value = '';
+    if (tI) tI.value = 'Bono imed';
+  }
+}
+
+function _actualizarFilaMetodo(tr, metodoVal) {
+  const showRef = (metodoVal === 'transferencia' || metodoVal === 'debito' || metodoVal === 'credito');
+  const fTD = tr ? tr.querySelector('.td-codtransf') : null;
+  if (fTD) {
+    fTD.style.display = showRef ? '' : 'none';
+    const lbl = fTD.querySelector('label');
+    if (lbl) lbl.textContent = (metodoVal === 'transferencia') ? 'Cod.transf.' : 'N°comprobante';
+    const inp = fTD.querySelector('input');
+    if (inp) {
+      inp.placeholder = (metodoVal === 'transferencia') ? 'Cod.transf.' : 'N°comprobante';
+      if (!showRef) inp.value = '';
+    }
+  }
+}
+
+function insertarFilaNueva(preData = {}) {
+  cancelarFilaNueva();
+
+  const tbody = document.getElementById('tablaPagosBody');
+  const emptyCell = tbody.querySelector('.empty');
+  if (emptyCell) tbody.innerHTML = '';
+
+  _newPrev       = preData.prevision  || 'particular';
+  _newPrevManual = false;
+  _newMetodo     = preData.metodo_pago || 'efectivo';
+
+  const tr = document.createElement('tr');
+  tr.className = 'row-new';
+  tr.innerHTML = `
+    <td style="color:var(--mute);font-size:11px">+</td>
+    <td><input class="ci" id="nr_hora" type="time" value="${nowHora()}" tabindex="1"></td>
+    <td><input class="ci" id="nr_nombre" type="text" placeholder="Nombre paciente" tabindex="2"
+               value="${esc(preData.paciente_nombre||'')}"></td>
+    <td><input class="ci" id="nr_rut" type="text" placeholder="12.345.678-9" tabindex="3"
+               value="${esc(preData.rut||'')}"></td>
+    <td>${buildProfSelect('nr_prof', preData.id_profesional||'')}</td>
+    <td><input class="ci" id="nr_area" type="text" placeholder="Area" tabindex="5"
+               value="${esc(preData.area||'')}"></td>
+    <td>${buildPrevToggle('nr_prev_toggle', _newPrev)}</td>
+    <td><input class="ci" id="nr_copago" type="number" min="0" step="1" placeholder="0"
+               value="${preData.copago_sugerido||preData.copago||''}" tabindex="7"></td>
+    <td>${buildMetodoBtns('nr_met_btns', _newMetodo)}</td>
+    <td class="td-codtransf" style="${['transferencia','debito','credito'].includes(_newMetodo)?'':'display:none'}">
+      <input class="ci" id="nr_codtransf" type="text"
+             placeholder="${_newMetodo==='transferencia'?'Cod.transf.':'N°comprobante'}" tabindex="8"
+             value="${esc(preData.codigo_transferencia||'')}">
+    </td>
+    <td class="td-folio" style="${_newPrev==='fonasa'?'':'display:none'}">
+      <input class="ci" id="nr_folio" type="text" placeholder="Folio" tabindex="9"
+             value="${esc(preData.folio||'')}">
+    </td>
+    <td class="td-tipobono" style="${_newPrev==='fonasa'?'':'display:none'}">
+      <select class="ci" id="nr_tipobono" tabindex="9">
+        <option value="Bono imed"${(preData.tipo_bono||'Bono imed')==='Bono imed'?' selected':''}>Bono imed</option>
+        <option value="Bono web"${preData.tipo_bono==='Bono web'?' selected':''}>Bono web</option>
+        <option value="Otro"${preData.tipo_bono==='Otro'?' selected':''}>Otro</option>
+      </select>
+    </td>
+    <td>${buildProcSelect('nr_proc', preData.procedimiento||'')}</td>
+    <td>
+      <select class="ci" id="nr_origen" tabindex="10">
+        <option value="presencial"${(preData.origen||'presencial')==='presencial'?' selected':''}>Presencial</option>
+        <option value="telefono"${preData.origen==='telefono'?' selected':''}>Telefono</option>
+        <option value="chat"${preData.origen==='chat'?' selected':''}>Chat</option>
+      </select>
+    </td>
+    <td>
+      <div class="td-actions">
+        <button class="btn-save-row" id="nr_guardar" tabindex="11">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+          Guardar
+        </button>
+        <button class="btn-cancel-row" id="nr_cancelar" tabindex="12">&#x2715;</button>
+      </div>
+    </td>`;
+
+  tbody.insertBefore(tr, tbody.firstChild);
+  _newRow = tr;
+
+  const focusId = preData.rut ? 'nr_nombre' : 'nr_rut';
+  setTimeout(() => { const el = tr.querySelector('#' + focusId); if (el) el.focus(); }, 60);
+
+  tr.querySelector('#nr_prev_toggle').addEventListener('click', e => {
+    const btn = e.target.closest('button[data-v]');
+    if (!btn) return;
+    _newPrevManual = true;
+    _newPrev = btn.dataset.v;
+    tr.querySelectorAll('#nr_prev_toggle button').forEach(b =>
+      b.classList.toggle('active', b.dataset.v === _newPrev)
+    );
+    _actualizarFilaFonasa(tr, _newPrev);
+    recalcFilaNueva();
+  });
+
+  tr.querySelector('#nr_met_btns').addEventListener('click', e => {
+    const btn = e.target.closest('button[data-v]');
+    if (!btn) return;
+    _newMetodo = btn.dataset.v;
+    tr.querySelectorAll('#nr_met_btns button').forEach(b =>
+      b.classList.toggle('active', b.dataset.v === _newMetodo)
+    );
+    _actualizarFilaMetodo(tr, _newMetodo);
+  });
+
+  tr.querySelector('#nr_prof').addEventListener('change', function() {
+    const opt = this.options[this.selectedIndex];
+    if (opt && opt.dataset.esp) {
+      tr.querySelector('#nr_area').value = opt.dataset.esp;
+    }
+    recalcFilaNueva();
+  });
+
+  tr.querySelector('#nr_rut').addEventListener('blur', function() {
+    if (this.value.trim()) cargarSugerenciaRow(this.value.trim(), null);
+  });
+
+  const nrCopago = tr.querySelector('#nr_copago');
+  if (nrCopago) nrCopago.addEventListener('input', function() { this._edited = true; });
+
+  tr.querySelector('#nr_folio').addEventListener('keydown', e => {
+    if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); tr.querySelector('#nr_origen').focus(); }
+  });
+
+  tr.querySelector('#nr_guardar').addEventListener('click', () => guardarFilaNueva());
+  tr.querySelector('#nr_cancelar').addEventListener('click', () => cancelarFilaNueva());
+
+  tr.querySelectorAll('input.ci').forEach(inp => {
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); guardarFilaNueva(); }
+      if (e.key === 'Escape') cancelarFilaNueva();
+    });
+  });
+
+  if (preData.rut) cargarSugerenciaRow(preData.rut, preData.id_cita || null);
+}
+
+function cancelarFilaNueva() {
+  if (_newRow && _newRow.parentNode) _newRow.parentNode.removeChild(_newRow);
+  _newRow = null;
+  _newPrevManual = false;
+}
+
+// ── Sugerencia para fila nueva ────────────────────────────────────────────────
+
+async function cargarSugerenciaRow(rut, id_cita) {
+  if (!_newRow) return;
+  const rutInput = _newRow.querySelector('#nr_rut');
+  const nomInput = _newRow.querySelector('#nr_nombre');
+  rutInput && rutInput.classList.add('loading');
+  let url = '/alma/api/pagos/sugerencia' + qp;
+  if (rut)     url += '&rut=' + encodeURIComponent(rut);
+  if (id_cita) url += '&id_cita=' + encodeURIComponent(id_cita);
+  if (_fecha) url += '&fecha=' + encodeURIComponent(_fecha);
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return;
+    const s = await r.json();
+    if (!_newRow) return;
+    if (!nomInput.value && s.paciente_nombre) {
+      nomInput.value = s.paciente_nombre;
+      nomInput.classList.add('suggested');
+    }
+    if (s.id_profesional) {
+      const profSel = _newRow.querySelector('#nr_prof');
+      profSel.value = s.id_profesional;
+      profSel.classList.add('suggested');
+    }
+    if (s.area) {
+      const areaInp = _newRow.querySelector('#nr_area');
+      areaInp.value = s.area;
+      areaInp.classList.add('suggested');
+    }
+    if (s.prevision && !_newPrevManual) {
+      _newPrev = s.prevision;
+      _newRow.querySelectorAll('#nr_prev_toggle button').forEach(b =>
+        b.classList.toggle('active', b.dataset.v === _newPrev)
+      );
+    }
+    if (s.id_cita && !_newRow._suggestedCitaId) {
+      _newRow._suggestedCitaId = s.id_cita;
+    }
+    if (s.prestacion) {
+      const procInp = _newRow.querySelector('#nr_proc');
+      if (procInp && !procInp._edited && !procInp.value) {
+        procInp.value = s.prestacion;
+        procInp.classList.add('suggested');
+      }
+    }
+    aplicarSugerenciaMontosRow(s);
+  } catch(e) {
+    console.warn('cargarSugerenciaRow error:', e);
+  } finally {
+    if (_newRow) {
+      const ri = _newRow.querySelector('#nr_rut');
+      if (ri) ri.classList.remove('loading');
+    }
+  }
+}
+
+function aplicarSugerenciaMontosRow(s) {
+  if (!_newRow) return;
+  const fC = _newRow.querySelector('#nr_copago');
+  if (s.copago_sugerido != null && !fC._edited) {
+    fC.value = s.copago_sugerido || '';
+    if (s.copago_sugerido) fC.classList.add('suggested');
+  }
+}
+
+function recalcFilaNueva() {
+  if (!_newRow) return;
+  const rut = (_newRow.querySelector('#nr_rut').value || '').trim();
+  if (rut) cargarSugerenciaRow(rut, null);
+}
+
+// ── Guardar fila nueva ────────────────────────────────────────────────────────
+
+async function guardarFilaNueva() {
+  if (!_newRow) return;
+  const nombre = (_newRow.querySelector('#nr_nombre').value || '').trim();
+  if (!nombre) {
+    showToast('Ingresa el nombre del paciente', 'error');
+    _newRow.querySelector('#nr_nombre').focus();
+    return;
+  }
+  const profSel   = _newRow.querySelector('#nr_prof');
+  const profOpt   = profSel.options[profSel.selectedIndex];
+  const idProfRaw = profSel.value;
+  const horaVal   = _newRow.querySelector('#nr_hora').value || nowHora();
+
+  const body = {
+    fecha:               _fecha,
+    hora:                horaVal,
+    paciente_nombre:     nombre,
+    rut:                 (_newRow.querySelector('#nr_rut').value || '').trim(),
+    id_profesional:      idProfRaw ? parseInt(idProfRaw) : null,
+    profesional:         profOpt && idProfRaw ? profOpt.textContent.trim() : '',
+    area:                (_newRow.querySelector('#nr_area').value || '').trim(),
+    prevision:           _newPrev,
+    copago:              parseInt(_newRow.querySelector('#nr_copago').value) || 0,
+    bonificacion:        0,
+    metodo_pago:         _newMetodo,
+    folio:               (_newPrev === 'fonasa' ? (_newRow.querySelector('#nr_folio')?.value || '').trim() : ''),
+    tipo_bono:           (_newPrev === 'fonasa' ? (_newRow.querySelector('#nr_tipobono')?.value || 'Bono imed') : ''),
+    codigo_transferencia: (['transferencia','debito','credito'].includes(_newMetodo) ? (_newRow.querySelector('#nr_codtransf')?.value || '').trim() : ''),
+    procedimiento:       (_newRow.querySelector('#nr_proc')?.value || '').trim(),
+    origen:              _newRow.querySelector('#nr_origen').value,
+    id_cita:             _newRow._suggestedCitaId || '',
+    creado_por:          'recepcion',
+  };
+
+  const btnG = _newRow.querySelector('#nr_guardar');
+  btnG.disabled = true;
+  btnG.textContent = 'Guardando…';
+
+  try {
+    const r = await fetch('/alma/api/pagos' + qp, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error ' + r.status);
+    }
+    _newRow = null;
+    showToast('Pago registrado', 'success');
+    cargarPagos();
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+    btnG.disabled = false;
+    btnG.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Guardar';
+  }
+}
+
+// ── Edición inline de filas guardadas ────────────────────────────────────────
+
+function editarFilaInline(id) {
+  if (_newRow) { showToast('Guarda o cancela la fila nueva primero', 'error'); return; }
+
+  const tr = document.querySelector(`tr[data-id="${id}"]`);
+  if (!tr) return;
+
+  fetch('/alma/api/pagos' + qp + '&fecha=' + _fecha)
+    .then(r => r.json())
+    .then(d => {
+      const p = (d.pagos || []).find(x => x.id === id);
+      if (!p) { showToast('Registro no encontrado', 'error'); return; }
+
+      const ePrev   = p.prevision || 'particular';
+      const eMetodo = p.metodo_pago || 'efectivo';
+
+      tr.innerHTML = `
+        <td style="color:var(--mute);font-size:11px">&bull;</td>
+        <td><input class="ci" id="er_hora" type="time" value="${(p.hora||'').slice(0,5)}" tabindex="1"></td>
+        <td><input class="ci" id="er_nombre" type="text" value="${esc(p.paciente_nombre||'')}" tabindex="2"></td>
+        <td><input class="ci" id="er_rut" type="text" value="${esc(p.rut||'')}" tabindex="3"></td>
+        <td>${buildProfSelect('er_prof', p.id_profesional||'')}</td>
+        <td><input class="ci" id="er_area" type="text" value="${esc(p.area||'')}" tabindex="5"></td>
+        <td>${buildPrevToggle('er_prev_toggle', ePrev)}</td>
+        <td><input class="ci" id="er_copago" type="number" min="0" step="1" value="${p.copago||0}" tabindex="7"></td>
+        <td>${buildMetodoBtns('er_met_btns', eMetodo)}</td>
+        <td class="td-codtransf" style="${['transferencia','debito','credito'].includes(eMetodo)?'':'display:none'}">
+          <input class="ci" id="er_codtransf" type="text"
+                 placeholder="${eMetodo==='transferencia'?'Cod.transf.':'N°comprobante'}"
+                 value="${esc(p.codigo_transferencia||'')}">
+        </td>
+        <td class="td-folio" style="${ePrev==='fonasa'?'':'display:none'}">
+          <input class="ci" id="er_folio" type="text" placeholder="Folio" value="${esc(p.folio||'')}">
+        </td>
+        <td class="td-tipobono" style="${ePrev==='fonasa'?'':'display:none'}">
+          <select class="ci" id="er_tipobono">
+            <option value="Bono imed"${(p.tipo_bono||'Bono imed')==='Bono imed'?' selected':''}>Bono imed</option>
+            <option value="Bono web"${p.tipo_bono==='Bono web'?' selected':''}>Bono web</option>
+            <option value="Otro"${p.tipo_bono==='Otro'?' selected':''}>Otro</option>
+          </select>
+        </td>
+        <td>${buildProcSelect('er_proc', p.procedimiento||'')}</td>
+        <td>
+          <select class="ci" id="er_origen" tabindex="10">
+            <option value="presencial"${(p.origen||'')==='presencial'?' selected':''}>Presencial</option>
+            <option value="telefono"${p.origen==='telefono'?' selected':''}>Telefono</option>
+            <option value="chat"${p.origen==='chat'?' selected':''}>Chat</option>
+          </select>
+        </td>
+        <td>
+          <div class="td-actions">
+            <button class="btn-save-row" id="er_guardar" tabindex="11">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+              Guardar
+            </button>
+            <button class="btn-cancel-row" id="er_cancelar">&#x2715;</button>
+          </div>
+        </td>`;
+
+      tr.className = 'row-new';
+
+      let ePrevLocal   = ePrev;
+      let eMetodoLocal = eMetodo;
+
+      tr.querySelector('#er_prev_toggle').addEventListener('click', e => {
+        const btn = e.target.closest('button[data-v]');
+        if (!btn) return;
+        ePrevLocal = btn.dataset.v;
+        tr.querySelectorAll('#er_prev_toggle button').forEach(b =>
+          b.classList.toggle('active', b.dataset.v === ePrevLocal)
+        );
+        _actualizarFilaFonasa(tr, ePrevLocal);
+      });
+
+      tr.querySelector('#er_met_btns').addEventListener('click', e => {
+        const btn = e.target.closest('button[data-v]');
+        if (!btn) return;
+        eMetodoLocal = btn.dataset.v;
+        tr.querySelectorAll('#er_met_btns button').forEach(b =>
+          b.classList.toggle('active', b.dataset.v === eMetodoLocal)
+        );
+        _actualizarFilaMetodo(tr, eMetodoLocal);
+      });
+
+      tr.querySelector('#er_prof').addEventListener('change', function() {
+        const opt = this.options[this.selectedIndex];
+        if (opt && opt.dataset.esp) tr.querySelector('#er_area').value = opt.dataset.esp;
+      });
+
+      tr.querySelector('#er_guardar').addEventListener('click', async () => {
+        const nombre = (tr.querySelector('#er_nombre').value || '').trim();
+        if (!nombre) { showToast('Ingresa el nombre del paciente', 'error'); return; }
+        const profSel   = tr.querySelector('#er_prof');
+        const profOpt   = profSel.options[profSel.selectedIndex];
+        const idProfRaw = profSel.value;
+        const body = {
+          hora:                tr.querySelector('#er_hora').value || '',
+          paciente_nombre:     nombre,
+          rut:                 (tr.querySelector('#er_rut').value  || '').trim(),
+          id_profesional:      idProfRaw ? parseInt(idProfRaw) : null,
+          profesional:         profOpt && idProfRaw ? profOpt.textContent.trim() : '',
+          area:                (tr.querySelector('#er_area').value || '').trim(),
+          prevision:           ePrevLocal,
+          copago:              parseInt(tr.querySelector('#er_copago').value) || 0,
+          bonificacion:        0,
+          metodo_pago:         eMetodoLocal,
+          folio:               (ePrevLocal === 'fonasa' ? (tr.querySelector('#er_folio')?.value || '').trim() : ''),
+          tipo_bono:           (ePrevLocal === 'fonasa' ? (tr.querySelector('#er_tipobono')?.value || 'Bono imed') : ''),
+          codigo_transferencia: (['transferencia','debito','credito'].includes(eMetodoLocal) ? (tr.querySelector('#er_codtransf')?.value || '').trim() : ''),
+          procedimiento:       (tr.querySelector('#er_proc')?.value || '').trim(),
+          origen:              tr.querySelector('#er_origen').value,
+        };
+        const btnG = tr.querySelector('#er_guardar');
+        btnG.disabled = true; btnG.textContent = 'Guardando…';
+        try {
+          const resp = await fetch('/alma/api/pagos/' + id + qp, {
+            method: 'PATCH',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(body),
+          });
+          if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            throw new Error(err.detail || 'Error ' + resp.status);
+          }
+          showToast('Pago actualizado', 'success');
+          cargarPagos();
+        } catch(e) {
+          showToast('Error: ' + e.message, 'error');
+          btnG.disabled = false;
+          btnG.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Guardar';
+        }
+      });
+
+      tr.querySelector('#er_cancelar').addEventListener('click', () => cargarPagos());
+
+      tr.querySelectorAll('input.ci').forEach(inp => {
+        inp.addEventListener('keydown', e => {
+          if (e.key === 'Escape') cargarPagos();
+        });
+      });
+
+      setTimeout(() => tr.querySelector('#er_nombre').focus(), 60);
+    })
+    .catch(e => { showToast('Error al cargar datos', 'error'); console.error(e); });
+}
+
+// ── Eliminar ──────────────────────────────────────────────────────────────────
+async function eliminarPago(id) {
+  if (!confirm('¿Eliminar este registro de pago?')) return;
+  try {
+    const r = await fetch('/alma/api/pagos/' + id + qp, { method: 'DELETE' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    showToast('Registro eliminado', 'success');
+    cargarPagos();
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+// ── Botón Nueva fila ──────────────────────────────────────────────────────────
+document.getElementById('btnNuevoPago').addEventListener('click', () => insertarFilaNueva());
+
+// ── Descargar Excel ───────────────────────────────────────────────────────────
+document.getElementById('btnExportXlsx').addEventListener('click', () => {
+  const btn = document.getElementById('btnExportXlsx');
+  btn.disabled = true;
+  const sep = qp ? '&' : '?';
+  const url = '/alma/api/pagos/export' + qp + sep + 'fecha=' + _fecha;
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'pagos_' + _fecha + '.xlsx';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => { btn.disabled = false; }, 1500);
+});
+
+// ── Modal (solo para postMessage de /admin/v2) ────────────────────────────────
+
+window.addEventListener('message', e => {
+  if (e.data && e.data.type === 'ALMA_ABRIR_PAGO') {
+    const pd = e.data.payload || {};
+    if (pd._forceModal) {
+      abrirNuevo(pd);
+    } else {
+      insertarFilaNueva(pd);
+    }
+  }
+});
+
+function abrirNuevo(preData = {}) {
+  _editingId = null;
+  document.getElementById('modalTitle').textContent = 'Registrar pago';
+  resetForm();
+  if (preData.paciente_nombre) document.getElementById('fNombre').value = preData.paciente_nombre;
+  if (preData.rut) {
+    document.getElementById('fRut').value = preData.rut;
+    cargarSugerenciaModal(preData.rut, preData.id_cita || null);
+  }
+  if (preData.id_cita) {
+    document.getElementById('fIdCita').value = preData.id_cita;
+    if (!preData.rut) cargarSugerenciaModal(null, preData.id_cita);
+  }
+  document.getElementById('fFecha').value = _fecha;
+  document.getElementById('modalBg').classList.add('open');
+}
+
+function cerrarModal() {
+  document.getElementById('modalBg').classList.remove('open');
+  _editingId = null;
+}
+document.getElementById('modalClose').addEventListener('click', cerrarModal);
+document.getElementById('btnCancelarModal').addEventListener('click', cerrarModal);
+document.getElementById('modalBg').addEventListener('click', e => {
+  if (e.target === document.getElementById('modalBg')) cerrarModal();
+});
+
+function resetForm() {
+  ['fNombre','fRut','fArea','fCopago','fFolio','fCodTransf','fProcedimiento','fIdCita']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const fTB = document.getElementById('fTipoBono'); if(fTB) fTB.value = 'Bono imed';
+  document.getElementById('fFecha').value = _fecha;
+  document.getElementById('fProf').value  = '';
+  document.getElementById('fOrigen').value = 'presencial';
+  _previsionManual = false;
+  setPrevision('particular');
+  setMetodo('efectivo');
+  document.getElementById('hintCopago').textContent = '';
+}
+
+function setPrevision(p) {
+  _prevision = p;
+  document.getElementById('btnParticular').classList.toggle('active', p === 'particular');
+  document.getElementById('btnFonasa').classList.toggle('active',     p === 'fonasa');
+  const show = (p === 'fonasa');
+  const disp = show ? '' : 'none';
+  const rowFolio   = document.getElementById('rowFolio');   if(rowFolio)   rowFolio.style.display   = disp;
+  const rowTipoBono= document.getElementById('rowTipoBono');if(rowTipoBono) rowTipoBono.style.display = disp;
+  if (!show) {
+    const fF = document.getElementById('fFolio');   if(fF) fF.value = '';
+    const fT = document.getElementById('fTipoBono'); if(fT) fT.value = 'Bono imed';
+  }
+  updateMetodoHint();
+}
+
+function setMetodo(m) {
+  _metodo = m;
+  document.querySelectorAll('.metodo-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.metodo === m);
+  });
+  const showRef = (m === 'transferencia' || m === 'debito' || m === 'credito');
+  const rowCT = document.getElementById('rowCodTransf');
+  if (rowCT) {
+    rowCT.style.display = showRef ? '' : 'none';
+    rowCT.querySelector('label').textContent = (m === 'transferencia') ? 'Codigo transferencia' : 'N° comprobante';
+    if (!showRef) { const f = document.getElementById('fCodTransf'); if(f) f.value = ''; }
+  }
+  updateMetodoHint();
+}
+
+function updateMetodoHint() {
+  const hint = document.getElementById('hintMetodo');
+  hint.textContent = (_metodo === 'credito' || _metodo === 'debito')
+    ? 'Tarjetas solo disponibles en area dental.' : '';
+}
+
+document.getElementById('btnParticular').addEventListener('click', () => {
+  _previsionManual = true; setPrevision('particular'); recalcSugerenciaModal();
+});
+document.getElementById('btnFonasa').addEventListener('click', () => {
+  _previsionManual = true; setPrevision('fonasa'); recalcSugerenciaModal();
+});
+document.querySelectorAll('.metodo-btn').forEach(b => {
+  b.addEventListener('click', () => setMetodo(b.dataset.metodo));
+});
+document.getElementById('fProf').addEventListener('change', function() {
+  const opt = this.options[this.selectedIndex];
+  if (opt && opt.dataset.esp) {
+    document.getElementById('fArea').value = opt.dataset.esp;
+    recalcSugerenciaModal();
+  }
+});
+document.getElementById('fRut').addEventListener('blur', function() {
+  if (this.value.trim()) cargarSugerenciaModal(this.value.trim(), null);
+});
+
+async function cargarSugerenciaModal(rut, id_cita) {
+  let url = '/alma/api/pagos/sugerencia' + qp;
+  if (rut)     url += '&rut=' + encodeURIComponent(rut);
+  if (id_cita) url += '&id_cita=' + encodeURIComponent(id_cita);
+  const fechaReg = document.getElementById('fFecha')?.value;
+  if (fechaReg) url += '&fecha=' + encodeURIComponent(fechaReg);
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return;
+    const s = await r.json();
+    const fNombre = document.getElementById('fNombre');
+    if (!fNombre.value && s.paciente_nombre) fNombre.value = s.paciente_nombre;
+    if (s.id_profesional) document.getElementById('fProf').value = s.id_profesional;
+    if (s.area) document.getElementById('fArea').value = s.area;
+    if (s.prevision && !_previsionManual) setPrevision(s.prevision);
+    const fIC = document.getElementById('fIdCita');
+    if (fIC && s.id_cita && !fIC.value) fIC.value = s.id_cita;
+    if (s.prestacion) {
+      const fProc = document.getElementById('fProcedimiento');
+      if (fProc && !fProc._edited && !fProc.value) {
+        fProc.value = s.prestacion;
+        fProc.classList.add('suggested');
+      }
+    }
+    aplicarSugerenciaMontosModal(s);
+  } catch(e) { console.warn('cargarSugerenciaModal error:', e); }
+}
+
+function recalcSugerenciaModal() {
+  const rut = document.getElementById('fRut').value.trim();
+  const area = document.getElementById('fArea').value.trim();
+  const idProf = parseInt(document.getElementById('fProf').value) || null;
+  if (!area && !idProf) return;
+  cargarSugerenciaModal(rut || null, null);
+}
+
+function aplicarSugerenciaMontosModal(s) {
+  const fC = document.getElementById('fCopago');
+  if (s.copago_sugerido != null && !fC._edited) {
+    fC.value = s.copago_sugerido; fC.classList.add('suggested');
+  }
+  if (s.fuente === 'fonasa_n3') {
+    document.getElementById('hintCopago').textContent =
+      'Copago Fonasa N3 · Cod. ' + (s.codigo_fonasa || '');
+  } else if (s.fuente === 'particular') {
+    document.getElementById('hintCopago').textContent = s.copago_sugerido ? 'Precio particular' : '';
+  }
+}
+
+document.getElementById('fCopago').addEventListener('input', function() {
+  this._edited = true; this.classList.remove('suggested');
+});
+
+document.getElementById('btnGuardarPago').addEventListener('click', guardarModal);
+
+async function guardarModal() {
+  const nombre = document.getElementById('fNombre').value.trim();
+  if (!nombre) { showToast('Ingresa el nombre del paciente', 'error'); return; }
+  const idProfRaw = document.getElementById('fProf').value;
+  const profOpt   = document.querySelector(`#fProf option[value="${idProfRaw}"]`);
+  const body = {
+    fecha:               document.getElementById('fFecha').value,
+    hora:                new Date().toLocaleTimeString('es-CL', {hour:'2-digit',minute:'2-digit'}),
+    paciente_nombre:     nombre,
+    rut:                 document.getElementById('fRut').value.trim(),
+    id_profesional:      idProfRaw ? parseInt(idProfRaw) : null,
+    profesional:         profOpt ? profOpt.textContent.split(' — ')[0].trim() : '',
+    area:                document.getElementById('fArea').value.trim(),
+    prevision:           _prevision,
+    copago:              parseInt(document.getElementById('fCopago').value) || 0,
+    bonificacion:        0,
+    metodo_pago:         _metodo,
+    folio:               (_prevision === 'fonasa' ? document.getElementById('fFolio').value.trim() : ''),
+    tipo_bono:           (_prevision === 'fonasa' ? (document.getElementById('fTipoBono').value || 'Bono imed') : ''),
+    codigo_transferencia: (['transferencia','debito','credito'].includes(_metodo) ? document.getElementById('fCodTransf').value.trim() : ''),
+    procedimiento:       document.getElementById('fProcedimiento').value.trim(),
+    origen:              document.getElementById('fOrigen').value,
+    id_cita:             document.getElementById('fIdCita').value.trim(),
+    creado_por:          'recepcion',
+  };
+  const btn = document.getElementById('btnGuardarPago');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  try {
+    let url, method;
+    if (_editingId) {
+      url = '/alma/api/pagos/' + _editingId + qp; method = 'PATCH';
+    } else {
+      url = '/alma/api/pagos' + qp; method = 'POST';
+    }
+    const r = await fetch(url, {
+      method, headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error ' + r.status);
+    }
+    cerrarModal();
+    showToast(_editingId ? 'Pago actualizado' : 'Pago registrado', 'success');
+    cargarPagos();
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Guardar';
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+initData().then(() => cargarPagos());
+</script>
+</body>
+</html>

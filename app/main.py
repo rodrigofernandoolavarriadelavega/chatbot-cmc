@@ -2804,6 +2804,7 @@ _BOXES_DASHBOARD_HTML = (_TEMPLATE_DIR / "boxes_dashboard.html").read_text(encod
 _ALMA_HTML = (_TEMPLATE_DIR / "alma.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma.html").exists() else ""
 _ALMA_AGENDA_HTML = (_TEMPLATE_DIR / "alma_agenda.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_agenda.html").exists() else ""
 _ALMA_PAGOS_HTML  = (_TEMPLATE_DIR / "alma_pagos.html").read_text(encoding="utf-8")  if (_TEMPLATE_DIR / "alma_pagos.html").exists()  else ""
+_ALMA_PAGOS_SIMPLE_HTML = (_TEMPLATE_DIR / "alma_pagos_simple.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_pagos_simple.html").exists() else ""
 _ALMA_CONCILIACION_HTML = (_TEMPLATE_DIR / "alma_conciliacion.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_conciliacion.html").exists() else ""
 
 # ── Pool de conexiones BI para endpoints de boxes ────────────────────────────
@@ -3399,7 +3400,7 @@ def alma_agenda_page(token: str | None = Query(None),
 @app.get("/alma/pagos", response_class=HTMLResponse)
 def alma_pagos_page(token: str | None = Query(None),
                     cmc_session: str | None = Cookie(None)):
-    """Modulo nativo Pagos — registro editable de pagos del dia."""
+    """Modulo nativo Pagos OLACORE — registro completo con Caja/Cierre del dia."""
     from admin_routes import _verify_cookie, _is_admin_token
     if not _ALMA_PAGOS_HTML:
         raise HTTPException(404, "Pagos no disponible")
@@ -3409,6 +3410,22 @@ def alma_pagos_page(token: str | None = Query(None),
         role = _verify_cookie(cmc_session)
         if role in ("admin", "ortodoncia"):
             return _ALMA_PAGOS_HTML.replace("__TOKEN__", ADMIN_TOKEN)
+    return RedirectResponse(url="/admin/login", status_code=302)
+
+
+@app.get("/alma/pagos-simple", response_class=HTMLResponse)
+def alma_pagos_simple_page(token: str | None = Query(None),
+                            cmc_session: str | None = Cookie(None)):
+    """Modulo Pagos simple — version liviana sin Caja/Cierre. Misma tabla pagos_cmc."""
+    from admin_routes import _verify_cookie, _is_admin_token
+    if not _ALMA_PAGOS_SIMPLE_HTML:
+        raise HTTPException(404, "Pagos simple no disponible")
+    if token and _is_admin_token(token):
+        return _ALMA_PAGOS_SIMPLE_HTML.replace("__TOKEN__", token)
+    if cmc_session:
+        role = _verify_cookie(cmc_session)
+        if role in ("admin", "ortodoncia"):
+            return _ALMA_PAGOS_SIMPLE_HTML.replace("__TOKEN__", ADMIN_TOKEN)
     return RedirectResponse(url="/admin/login", status_code=302)
 
 
