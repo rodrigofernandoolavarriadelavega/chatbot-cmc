@@ -683,6 +683,7 @@ _GINECOLOGO_CURANILAHUE_HTML = (_TEMPLATE_DIR / "ginecologo-curanilahue.html").r
 _DENTISTA_CURANILAHUE_HTML = (_TEMPLATE_DIR / "dentista-curanilahue.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "dentista-curanilahue.html").exists() else ""
 _LANDING_ORTODONCIA_HTML = (_TEMPLATE_DIR / "landing_ortodoncia.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "landing_ortodoncia.html").exists() else ""
 _ADKUN_COMPANY_HTML = (_TEMPLATE_DIR / "adkun_company_board.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "adkun_company_board.html").exists() else ""
+_ADKUN_LANDING_HTML = (_TEMPLATE_DIR / "adkun_landing.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "adkun_landing.html").exists() else ""
 _ALMA_PRODUCT_HTML = (_TEMPLATE_DIR / "alma_product_board.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_product_board.html").exists() else ""
 
 
@@ -2651,6 +2652,14 @@ def caminos_page():
 
 
 @app.get("/adkun", response_class=HTMLResponse)
+def adkun_landing():
+    """Landing pública Adkun — empresa de software."""
+    if not _ADKUN_LANDING_HTML:
+        raise HTTPException(404, "Landing Adkun no disponible")
+    return _ADKUN_LANDING_HTML
+
+
+@app.get("/adkun/brand", response_class=HTMLResponse)
 def adkun_company_board():
     """Brand board Adkun — empresa."""
     if not _ADKUN_COMPANY_HTML:

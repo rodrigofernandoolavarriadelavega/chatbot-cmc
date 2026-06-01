@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Adkun — Software de Orden</title>
+<meta name="description" content="Adkun construye software que pone tu operación en orden. Agnóstico de vertical, preciso en ejecución.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --fiordo:    #1F3340;
+  --cobre:     #B86D3F;
+  --neblina:   #EFE9DD;
+  --noche:     #122028;
+  --lenga:     #D4A87A;
+  --adkun:     #3D6B72;
+  --adkun-lt:  #5A8E96;
+  --adkun-bg:  #E4EEF0;
+  --bg:        #E8ECF0;
+  --ff-d:      'Fraunces', Georgia, serif;
+  --ff-t:      'Inter', system-ui, sans-serif;
+  --ff-m:      'IBM Plex Mono', 'Courier New', monospace;
+}
+
+html { font-size: 16px; scroll-behavior: smooth; }
+
+body {
+  font-family: var(--ff-t);
+  background: var(--bg);
+  color: var(--fiordo);
+  line-height: 1.6;
+}
+
+a { color: inherit; text-decoration: none; }
+
+/* ── Nav ── */
+nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(18,32,40,0.96);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(61,107,114,0.2);
+  padding: 0 40px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nav-brand {
+  font-family: var(--ff-d);
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: 4px;
+  color: var(--neblina);
+}
+
+.nav-brand span {
+  color: var(--adkun-lt);
+}
+
+.nav-links {
+  display: flex;
+  gap: 32px;
+  align-items: center;
+  list-style: none;
+}
+
+.nav-links a {
+  font-family: var(--ff-m);
+  font-size: 10px;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  color: rgba(239,233,221,0.55);
+  transition: color 0.2s;
+}
+
+.nav-links a:hover { color: var(--neblina); }
+
+/* ── Hero ── */
+.hero {
+  background: var(--noche);
+  min-height: 92vh;
+  display: flex;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+  padding: 80px 40px;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0; left: 80px;
+  width: 1px;
+  background: linear-gradient(to bottom, transparent, var(--cobre) 20%, var(--cobre) 80%, transparent);
+  opacity: 0.3;
+}
+
+.hero-bg-ring {
+  position: absolute;
+  top: -160px; right: -120px;
+  width: 560px; height: 560px;
+  border-radius: 50%;
+  border: 1px solid rgba(61,107,114,0.07);
+  pointer-events: none;
+}
+
+.hero-bg-ring-2 {
+  position: absolute;
+  bottom: -200px; right: -60px;
+  width: 400px; height: 400px;
+  border-radius: 50%;
+  border: 1px solid rgba(184,109,63,0.06);
+  pointer-events: none;
+}
+
+.hero-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 64px;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+  padding-left: 48px;
+}
+
+.hero-eyebrow {
+  font-family: var(--ff-m);
+  font-size: 9px;
+  letter-spacing: 8px;
+  text-transform: uppercase;
+  color: var(--adkun-lt);
+  opacity: 0.7;
+  margin-bottom: 20px;
+}
+
+.hero-title {
+  font-family: var(--ff-d);
+  font-size: clamp(36px, 5.5vw, 68px);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -1px;
+  color: var(--neblina);
+  margin-bottom: 20px;
+}
+
+.hero-title em {
+  font-style: italic;
+  color: var(--lenga);
+}
+
+.hero-sub {
+  font-family: var(--ff-t);
+  font-size: 16px;
+  font-weight: 300;
+  color: rgba(239,233,221,0.65);
+  max-width: 480px;
+  line-height: 1.7;
+  margin-bottom: 40px;
+}
+
+.hero-ctas {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.btn-primary {
+  background: var(--adkun);
+  color: var(--neblina);
+  font-family: var(--ff-t);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 12px 28px;
+  border-radius: 3px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+  letter-spacing: 0.5px;
+}
+
+.btn-primary:hover { background: var(--adkun-lt); transform: translateY(-1px); }
+
+.btn-outline {
+  background: transparent;
+  color: rgba(239,233,221,0.75);
+  font-family: var(--ff-m);
+  font-size: 10px;
+  font-weight: 500;
+  padding: 12px 28px;
+  border-radius: 3px;
+  border: 1px solid rgba(239,233,221,0.2);
+  cursor: pointer;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.btn-outline:hover { border-color: rgba(239,233,221,0.5); color: var(--neblina); }
+
+/* ── Secciones comunes ── */
+section {
+  padding: 88px 40px;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.section-eyebrow {
+  font-family: var(--ff-m);
+  font-size: 9px;
+  letter-spacing: 8px;
+  text-transform: uppercase;
+  color: var(--adkun);
+  opacity: 0.75;
+  display: block;
+  margin-bottom: 12px;
+}
+
+.section-title {
+  font-family: var(--ff-d);
+  font-size: clamp(28px, 3.5vw, 42px);
+  font-weight: 500;
+  line-height: 1.15;
+  color: var(--fiordo);
+  margin-bottom: 48px;
+}
+
+/* ── Qué hacemos ── */
+.que-hacemos {
+  background: var(--neblina);
+}
+
+.que-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+}
+
+.que-block {
+  background: #fff;
+  padding: 36px 32px;
+  position: relative;
+}
+
+.que-block::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--adkun);
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+
+.que-block:hover::before { opacity: 1; }
+
+.que-block:first-child { border-radius: 4px 0 0 4px; }
+.que-block:last-child  { border-radius: 0 4px 4px 0; }
+
+.que-num {
+  font-family: var(--ff-m);
+  font-size: 9px;
+  letter-spacing: 4px;
+  color: var(--cobre);
+  margin-bottom: 16px;
+  display: block;
+}
+
+.que-heading {
+  font-family: var(--ff-d);
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--fiordo);
+  margin-bottom: 12px;
+  line-height: 1.2;
+}
+
+.que-body {
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--fiordo);
+  opacity: 0.72;
+  line-height: 1.72;
+}
+
+/* ── Productos ── */
+.productos {
+  background: var(--bg);
+}
+
+.prod-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 16px;
+}
+
+.prod-card {
+  background: var(--neblina);
+  border-radius: 4px;
+  padding: 36px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border: 1px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.prod-card:hover { border-color: var(--adkun); }
+
+.prod-card.flagship {
+  background: var(--fiordo);
+  color: var(--neblina);
+}
+
+.prod-badge {
+  font-family: var(--ff-m);
+  font-size: 8px;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  color: var(--adkun-lt);
+  display: inline-block;
+  border: 1px solid currentColor;
+  padding: 3px 8px;
+  border-radius: 2px;
+  width: fit-content;
+  opacity: 0.75;
+}
+
+.prod-card.flagship .prod-badge {
+  color: var(--adkun-lt);
+}
+
+.prod-name {
+  font-family: var(--ff-d);
+  font-size: 34px;
+  font-weight: 500;
+  letter-spacing: 2px;
+  color: var(--neblina);
+  line-height: 1;
+}
+
+.prod-card:not(.flagship) .prod-name {
+  font-size: 24px;
+  color: var(--fiordo);
+  opacity: 0.35;
+}
+
+.prod-desc {
+  font-size: 13px;
+  font-weight: 300;
+  color: rgba(239,233,221,0.7);
+  line-height: 1.68;
+}
+
+.prod-card:not(.flagship) .prod-desc {
+  color: var(--fiordo);
+  opacity: 0.5;
+}
+
+.prod-link {
+  font-family: var(--ff-m);
+  font-size: 9px;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  color: var(--adkun-lt);
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: gap 0.2s;
+}
+
+.prod-link::after { content: '→'; }
+.prod-card:hover .prod-link { gap: 10px; }
+
+.prod-card.soon {
+  background: #E8ECF0;
+  border: 1px dashed rgba(31,51,64,0.2);
+}
+
+.prod-card.soon .prod-link { color: var(--fiordo); opacity: 0.3; }
+
+/* ── Origen ── */
+.origen {
+  background: var(--noche);
+  padding: 72px 40px;
+}
+
+.origen .section-eyebrow { color: var(--adkun-lt); }
+
+.origen .section-title { color: var(--neblina); }
+
+.origen-body {
+  font-family: var(--ff-d);
+  font-size: clamp(16px, 2vw, 20px);
+  font-style: italic;
+  font-weight: 400;
+  color: rgba(239,233,221,0.72);
+  max-width: 640px;
+  line-height: 1.75;
+}
+
+.origen-body strong {
+  color: var(--lenga);
+  font-style: normal;
+}
+
+.origen-line {
+  width: 48px;
+  height: 1px;
+  background: var(--cobre);
+  opacity: 0.4;
+  margin: 28px 0;
+}
+
+.origen-meta {
+  font-family: var(--ff-m);
+  font-size: 9px;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  color: var(--adkun-lt);
+  opacity: 0.5;
+}
+
+/* ── Footer ── */
+footer {
+  background: #0D1B22;
+  padding: 40px;
+  border-top: 1px solid rgba(61,107,114,0.15);
+}
+
+.footer-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.footer-brand {
+  font-family: var(--ff-d);
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: 3px;
+  color: var(--neblina);
+  opacity: 0.6;
+}
+
+.footer-sub {
+  font-family: var(--ff-m);
+  font-size: 8px;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  color: var(--adkun-lt);
+  opacity: 0.45;
+  margin-top: 4px;
+}
+
+.footer-right {
+  text-align: right;
+}
+
+.footer-domain {
+  font-family: var(--ff-m);
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: rgba(239,233,221,0.3);
+}
+
+.footer-holding {
+  font-family: var(--ff-m);
+  font-size: 8px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--cobre);
+  opacity: 0.45;
+  margin-top: 4px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .hero-inner { grid-template-columns: 1fr; padding-left: 24px; }
+  .hero-seal  { display: none; }
+  .que-grid   { grid-template-columns: 1fr; }
+  .que-block  { border-radius: 0 !important; }
+  .que-block:first-child { border-radius: 4px 4px 0 0 !important; }
+  .que-block:last-child  { border-radius: 0 0 4px 4px !important; }
+  .prod-grid  { grid-template-columns: 1fr; }
+  nav { padding: 0 20px; }
+  .nav-links  { display: none; }
+  section     { padding: 64px 24px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <span class="nav-brand">Adkun<span>.</span></span>
+  <ul class="nav-links">
+    <li><a href="#que-hacemos">Enfoque</a></li>
+    <li><a href="#productos">Productos</a></li>
+    <li><a href="#origen">Origen</a></li>
+    <li><a href="/alma" class="btn-primary" style="padding:8px 20px;font-size:10px;letter-spacing:3px;text-transform:uppercase;font-family:var(--ff-m)">Conoce Alma</a></li>
+  </ul>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-bg-ring"></div>
+  <div class="hero-bg-ring-2"></div>
+  <div class="hero-inner">
+    <div class="hero-content">
+      <span class="hero-eyebrow">Adkun · Software de Orden</span>
+      <h1 class="hero-title">
+        Software que pone<br>
+        tu operación <em>en orden.</em>
+      </h1>
+      <p class="hero-sub">
+        Construimos herramientas de gestión precisas y durables. Sin capas innecesarias, sin promesas vagas — solo sistemas que funcionan.
+      </p>
+      <div class="hero-ctas">
+        <a href="/alma" class="btn-primary">Conoce Alma</a>
+        <a href="mailto:contacto@adkun.com" class="btn-outline">Contacto</a>
+      </div>
+    </div>
+
+    <!-- Sello nodo de convergencia -->
+    <div class="hero-seal">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="180" height="180">
+        <defs>
+          <path id="arc-hero" d="M 18,100 A 82,82 0 0,1 182,100"/>
+        </defs>
+        <circle cx="100" cy="100" r="92" fill="none" stroke="#EFE9DD" stroke-width="2" opacity="0.18"/>
+        <circle cx="100" cy="100" r="86" fill="none" stroke="#B86D3F" stroke-width="1.2" opacity="0.35"/>
+        <text font-family="Fraunces, Georgia, serif" font-size="10" font-weight="500" fill="#EFE9DD" letter-spacing="5" opacity="0.5">
+          <textPath href="#arc-hero" startOffset="50%" text-anchor="middle">ADKUN &middot; SOFTWARE DE ORDEN</textPath>
+        </text>
+        <line x1="100" y1="28" x2="100" y2="172" stroke="#B86D3F" stroke-width="0.8" opacity="0.25"/>
+        <line x1="56"  y1="70"  x2="100" y2="100" stroke="#EFE9DD" stroke-width="1.5" stroke-linecap="round" opacity="0.25"/>
+        <line x1="54"  y1="118" x2="100" y2="100" stroke="#EFE9DD" stroke-width="1.5" stroke-linecap="round" opacity="0.32"/>
+        <line x1="100" y1="50"  x2="100" y2="100" stroke="#EFE9DD" stroke-width="1.5" stroke-linecap="round" opacity="0.28"/>
+        <line x1="144" y1="70"  x2="100" y2="100" stroke="#EFE9DD" stroke-width="1.5" stroke-linecap="round" opacity="0.32"/>
+        <line x1="146" y1="118" x2="100" y2="100" stroke="#EFE9DD" stroke-width="1.5" stroke-linecap="round" opacity="0.25"/>
+        <line x1="100" y1="150" x2="100" y2="100" stroke="#EFE9DD" stroke-width="1.5" stroke-linecap="round" opacity="0.28"/>
+        <circle cx="100" cy="100" r="5.5" fill="#5A8E96"/>
+        <circle cx="100" cy="100" r="2.2" fill="#B86D3F"/>
+        <circle cx="56"  cy="70"  r="2.5" fill="none" stroke="#EFE9DD" stroke-width="1" opacity="0.35"/>
+        <circle cx="54"  cy="118" r="2.5" fill="none" stroke="#EFE9DD" stroke-width="1" opacity="0.35"/>
+        <circle cx="100" cy="50"  r="2.5" fill="none" stroke="#EFE9DD" stroke-width="1" opacity="0.35"/>
+        <circle cx="144" cy="70"  r="2.5" fill="none" stroke="#EFE9DD" stroke-width="1" opacity="0.35"/>
+        <circle cx="146" cy="118" r="2.5" fill="none" stroke="#EFE9DD" stroke-width="1" opacity="0.35"/>
+        <circle cx="100" cy="150" r="2.5" fill="none" stroke="#EFE9DD" stroke-width="1" opacity="0.35"/>
+        <text x="100" y="169" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="6.5" fill="#EFE9DD" letter-spacing="5" opacity="0.3">OLACORE</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- Qué hacemos -->
+<section class="que-hacemos" id="que-hacemos">
+  <div class="container">
+    <span class="section-eyebrow">Enfoque</span>
+    <h2 class="section-title">Software de orden.<br>Sin importar el rubro.</h2>
+    <div class="que-grid">
+      <div class="que-block">
+        <span class="que-num">01</span>
+        <h3 class="que-heading">Estructura antes que funciones</h3>
+        <p class="que-body">Antes de agregar herramientas, mapeamos cómo fluye realmente tu operación. El software que construimos se adapta a ese mapa, no al revés.</p>
+      </div>
+      <div class="que-block">
+        <span class="que-num">02</span>
+        <h3 class="que-heading">Vertical agnóstico, preciso en ejecución</h3>
+        <p class="que-body">Nuestros productos sirven a distintas industrias porque la necesidad de orden es universal. La precisión viene de entender el contexto particular de cada equipo.</p>
+      </div>
+      <div class="que-block">
+        <span class="que-num">03</span>
+        <h3 class="que-heading">Sistemas que duran</h3>
+        <p class="que-body">Priorizamos la solidez sobre la velocidad de lanzamiento. Una herramienta que resiste el uso diario durante años vale más que diez que se reemplazan en meses.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Productos -->
+<section class="productos" id="productos">
+  <div class="container">
+    <span class="section-eyebrow">Productos</span>
+    <h2 class="section-title">Lo que construimos.</h2>
+    <div class="prod-grid">
+
+      <!-- Alma (flagship) -->
+      <div class="prod-card flagship">
+        <span class="prod-badge">Disponible</span>
+        <div class="prod-name">Alma</div>
+        <p class="prod-desc">El espíritu operativo de tu centro de salud. Alma integra agenda, pacientes, caja y comunicaciones en un solo sistema — sin fricciones, sin datos duplicados.</p>
+        <a href="/alma" class="prod-link">Ver Alma</a>
+      </div>
+
+      <!-- Próximamente 1 -->
+      <div class="prod-card soon">
+        <span class="prod-badge" style="color:var(--fiordo);opacity:0.3;border-color:var(--fiordo)">Próximamente</span>
+        <div class="prod-name">TBA</div>
+        <p class="prod-desc">Producto en desarrollo. Vertical por confirmar.</p>
+        <span class="prod-link" style="pointer-events:none">En construccion</span>
+      </div>
+
+      <!-- Próximamente 2 -->
+      <div class="prod-card soon">
+        <span class="prod-badge" style="color:var(--fiordo);opacity:0.3;border-color:var(--fiordo)">Próximamente</span>
+        <div class="prod-name">TBA</div>
+        <p class="prod-desc">Producto en desarrollo. Vertical por confirmar.</p>
+        <span class="prod-link" style="pointer-events:none">En construccion</span>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- Origen -->
+<section class="origen" id="origen">
+  <div class="container">
+    <span class="section-eyebrow">Origen</span>
+    <h2 class="section-title">Del sur de Chile.</h2>
+    <p class="origen-body">
+      <strong>Adkun</strong> toma su nombre de <em>adkunun</em>, voz mapuche que significa ordenar, poner en su lugar. Nacimos en el sur de Chile desarrollando software para operaciones reales, con recursos reales. Esa raíz condiciona cómo construimos: sin exceso, con rigor, pensando en el largo plazo.
+    </p>
+    <div class="origen-line"></div>
+    <span class="origen-meta">Adkun · OLACORE Tech · Sur de Chile</span>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-inner">
+    <div>
+      <div class="footer-brand">Adkun</div>
+      <div class="footer-sub">Una empresa OLACORE Tech</div>
+    </div>
+    <div class="footer-right">
+      <div class="footer-domain">adkun.com</div>
+      <div class="footer-holding">OLACORE &middot; Meridiano Sur</div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
