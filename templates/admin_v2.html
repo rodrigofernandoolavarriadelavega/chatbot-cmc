@@ -842,7 +842,7 @@ input, textarea, select{font-family:inherit; color:inherit}
   width:100%; border-collapse:collapse; table-layout:fixed;
 }
 /* Anchos por columna — suma ~1419px; el dialog se estira a min(96vw, 1480px) */
-.pg-col-hora    { width: 68px  }
+.pg-col-hora    { width: 96px  }
 .pg-col-pac     { width: 170px }
 .pg-col-prof    { width: 175px }
 .pg-col-area    { width: 120px }
@@ -884,6 +884,16 @@ input, textarea, select{font-family:inherit; color:inherit}
 .pg-cell-input.pg-suggested{background:#fafeff !important; border-color:var(--cmc-aqua) !important}
 .pg-cell-input.pg-loading{
   background:var(--panel) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='10' stroke='%234FBECE' stroke-width='2' fill='none' stroke-dasharray='31.4' stroke-dashoffset='10'%3E%3CanimateTransform attributeName='transform' type='rotate' from='0 12 12' to='360 12 12' dur='.8s' repeatCount='indefinite'/%3E%3C/circle%3E%3C/svg%3E") no-repeat right 6px center / 14px 14px;
+}
+/* Input time — ancho explícito para que el icono del navegador no tape el valor */
+input[type="time"].pg-cell-input{
+  min-width:84px; padding-right:6px; box-sizing:border-box;
+  -webkit-appearance:none; appearance:none;
+}
+/* Select procedimiento en fila modal pago */
+select#pgProcedimiento.pg-cell-input,
+select.pg-proc-select.pg-cell-input{
+  cursor:pointer;
 }
 /* Toggle previsión compacto */
 .pg-seg{display:flex; border:1px solid var(--border); border-radius:7px; overflow:hidden; height:32px}
@@ -3639,6 +3649,7 @@ function closeAgendarModal(){
 // Estado del modal pago
 const _pg = {
   prevision: "particular",
+  previsionManual: false,   // true cuando el usuario elige manualmente; evita que la sugerencia sobreescriba
   metodo: "efectivo",
   sugerenciaAplicada: false,
 };
@@ -3719,6 +3730,7 @@ function _pgResetForm(){
   if(sel) sel.value = "";
   const sor = document.getElementById("pgOrigen");
   if(sor) sor.value = "presencial";
+  _pg.previsionManual = false;
   _pgSetPrevision("particular");
   _pgSetMetodo("efectivo");
   const hC = document.getElementById("pgHintCopago"); if(hC) hC.textContent = "";
@@ -3738,8 +3750,8 @@ function _pgSetPrevision(p){
   const btnF = document.getElementById("pgBtnFonasa");
   if(btnP) btnP.classList.toggle("active", p === "particular");
   if(btnF) btnF.classList.toggle("active", p === "fonasa");
-  // pgRowBonif ya no se muestra — bonificacion se calcula en conciliacion
   _pgUpdateMetodoHint();
+  _pgSugerirProcedimiento();
 }
 
 function _pgSetMetodo(m){
@@ -3760,6 +3772,22 @@ function _pgUpdateMetodoHint(){
     : "";
 }
 
+function _pgSugerirProcedimiento(){
+  const sel = document.getElementById("pgProcedimiento");
+  if (!sel || sel._edited) return;
+  const copago = parseInt(document.getElementById("pgCopago")?.value) || -1;
+  const prev   = _pg.prevision;
+  if (prev === "fonasa") {
+    sel.value = "Bono imed";
+  } else if (copago === 0) {
+    sel.value = "Control";
+  } else {
+    // no sobreescribir si ya tiene valor
+    if (!sel.value) sel.value = "Consulta";
+  }
+  sel.classList.add("pg-suggested");
+}
+
 async function _pgCargarSugerencia(rut, idCita){
   const qpLocal = TOKEN ? ("?token=" + encodeURIComponent(TOKEN)) : "?";
   let url = "/alma/api/pagos/sugerencia" + qpLocal;
@@ -3775,7 +3803,7 @@ async function _pgCargarSugerencia(rut, idCita){
     if (fP && s.id_profesional) { fP.value = s.id_profesional; fP.classList.add("pg-suggested"); }
     const fA = document.getElementById("pgArea");
     if (fA && s.area) { fA.value = s.area; fA.classList.add("pg-suggested"); }
-    if (s.prevision) _pgSetPrevision(s.prevision);
+    if (s.prevision && !_pg.previsionManual) _pgSetPrevision(s.prevision);
     const fIC = document.getElementById("pgIdCita");
     if (fIC && s.id_cita && !fIC.value) fIC.value = s.id_cita;
     // Montos sugeridos — solo PAGO (copago), bonif se calcula en conciliacion
@@ -3793,6 +3821,8 @@ async function _pgCargarSugerencia(rut, idCita){
       hC.textContent = s.copago_sugerido ? "Precio particular" : "";
       if (fi) fi.textContent = s.paciente_nombre ? "Paciente: " + s.paciente_nombre : "";
     }
+    // Auto-sugerir procedimiento con datos ya actualizados
+    _pgSugerirProcedimiento();
   } catch(e) {
     console.warn("_pgCargarSugerencia error:", e);
   } finally {
@@ -3879,12 +3909,14 @@ function _pgSetupModal(){
 
   // Toggle previsión
   document.getElementById("pgBtnParticular").addEventListener("click", () => {
+    _pg.previsionManual = true;
     _pgSetPrevision("particular");
     const rut = document.getElementById("pgRut")?.value.trim();
     const ic  = document.getElementById("pgIdCita")?.value.trim();
     if (rut || ic) _pgCargarSugerencia(rut || null, ic || null);
   });
   document.getElementById("pgBtnFonasa").addEventListener("click", () => {
+    _pg.previsionManual = true;
     _pgSetPrevision("fonasa");
     const rut = document.getElementById("pgRut")?.value.trim();
     const ic  = document.getElementById("pgIdCita")?.value.trim();
@@ -3918,6 +3950,13 @@ function _pgSetupModal(){
 
   // Marcar editado manualmente
   document.getElementById("pgCopago")?.addEventListener("input", function(){
+    this._edited = true;
+    this.classList.remove("pg-suggested");
+    _pgSugerirProcedimiento();
+  });
+
+  // Marcar procedimiento como editado manualmente cuando el usuario elige
+  document.getElementById("pgProcedimiento")?.addEventListener("change", function(){
     this._edited = true;
     this.classList.remove("pg-suggested");
   });
@@ -4045,10 +4084,6 @@ function syncAppBadge(count) {
                   <button id="pgBtnParticular" class="active" type="button">Part.</button>
                   <button id="pgBtnFonasa" type="button">Fonasa</button>
                 </div>
-                <!-- pgRowBonif y pgBonif conservados como nodos ocultos para no romper JS existente -->
-                <div id="pgRowBonif" style="display:none">
-                  <input type="number" id="pgBonif" class="pg-cell-input" min="0" step="1" tabindex="-1">
-                </div>
               </td>
               <!-- Pago -->
               <td>
@@ -4074,7 +4109,12 @@ function syncAppBadge(count) {
               </td>
               <!-- Procedimiento -->
               <td>
-                <input type="text" id="pgProcedimiento" class="pg-cell-input" placeholder="Ej: Consulta medica, Sesion kine…">
+                <select id="pgProcedimiento" class="pg-cell-input pg-proc-select">
+                  <option value="">— Procedimiento —</option>
+                  <option value="Bono imed">Bono imed</option>
+                  <option value="Control">Control</option>
+                  <option value="Consulta">Consulta</option>
+                </select>
               </td>
               <!-- Origen -->
               <td>

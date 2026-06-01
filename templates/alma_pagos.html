@@ -105,7 +105,7 @@
 
   /* Anchos de columna — matches column order */
   col.c-num   { width: 28px; }
-  col.c-hora  { width: 60px; }
+  col.c-hora  { width: 90px; }
   col.c-pac   { width: 185px; }
   col.c-rut   { width: 105px; }
   col.c-prof  { width: 175px; }
@@ -114,6 +114,7 @@
   col.c-cop   { width: 90px; }
   col.c-met   { width: 100px; }
   col.c-folio { width: 75px; }
+  col.c-proc  { width: 100px; }
   col.c-orig  { width: 82px; }
   col.c-act   { width: 64px; }
 
@@ -153,6 +154,15 @@
   }
   td input.ci.loading {
     background: #f7fbfd url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='10' stroke='%234FBECE' stroke-width='2' fill='none' stroke-dasharray='31.4' stroke-dashoffset='10'%3E%3CanimateTransform attributeName='transform' type='rotate' from='0 12 12' to='360 12 12' dur='.8s' repeatCount='indefinite'/%3E%3C/circle%3E%3C/svg%3E") no-repeat right 6px center / 14px 14px;
+  }
+  /* Input time — tamaño mínimo para que el icono del navegador no tape el valor */
+  td input[type="time"].ci {
+    min-width: 82px; padding-right: 4px; box-sizing: border-box;
+    -webkit-appearance: none; appearance: none;
+  }
+  /* Select procedimiento en modal y fila nueva */
+  select#fProcedimiento, select.ci.ci-proc {
+    cursor: pointer;
   }
 
   /* Toggle previsión compacto en celda */
@@ -373,7 +383,7 @@
       <col class="c-num"><col class="c-hora"><col class="c-pac"><col class="c-rut">
       <col class="c-prof"><col class="c-area"><col class="c-prev">
       <col class="c-cop"><col class="c-met">
-      <col class="c-folio"><col class="c-orig"><col class="c-act">
+      <col class="c-folio"><col class="c-proc"><col class="c-orig"><col class="c-act">
     </colgroup>
     <thead>
       <tr>
@@ -387,12 +397,13 @@
         <th>Pago</th>
         <th>Metodo</th>
         <th>Folio</th>
+        <th>Procedimiento</th>
         <th>Origen</th>
         <th></th>
       </tr>
     </thead>
     <tbody id="tablaPagosBody">
-      <tr><td colspan="12" class="loading">Cargando...</td></tr>
+      <tr><td colspan="13" class="loading">Cargando...</td></tr>
     </tbody>
   </table>
 </div>
@@ -465,7 +476,12 @@
       </div>
       <div class="field full">
         <label>Procedimiento</label>
-        <input type="text" id="fProcedimiento" placeholder="Ej: Consulta medica, Control kine sesion 3...">
+        <select id="fProcedimiento">
+          <option value="">— Procedimiento —</option>
+          <option value="Bono imed">Bono imed</option>
+          <option value="Control">Control</option>
+          <option value="Consulta">Consulta</option>
+        </select>
       </div>
       <div class="field">
         <label>Origen</label>
@@ -502,13 +518,15 @@ const qp = TOKEN ? ("?token=" + encodeURIComponent(TOKEN)) : "";
 let PROFESIONALES = [];
 let AREAS_FONASA  = [];
 // Modal (solo para mensajes externos /admin/v2)
-let _editingId  = null;
-let _prevision  = "particular";
-let _metodo     = "efectivo";
+let _editingId        = null;
+let _prevision        = "particular";
+let _previsionManual  = false;  // true cuando el usuario elige manualmente; evita que la sugerencia sobreescriba
+let _metodo           = "efectivo";
 // Fila nueva inline
-let _newRow     = null;  // referencia al <tr> de nueva fila
-let _newPrev    = "particular";
-let _newMetodo  = "efectivo";
+let _newRow           = null;   // referencia al <tr> de nueva fila
+let _newPrev          = "particular";
+let _newPrevManual    = false;  // igual que _previsionManual pero para la fila nueva
+let _newMetodo        = "efectivo";
 
 // ── Fecha activa ─────────────────────────────────────────────────────────────
 function todayStr() {
@@ -633,6 +651,7 @@ function buildSavedRow(p, i) {
       <td style="font-weight:700;color:var(--navy)">${fmt$(p.copago)}</td>
       <td><span class="pill metodo">${capitalize(p.metodo_pago)}</span></td>
       <td style="color:var(--mute);font-size:11px">${esc(p.folio || '—')}</td>
+      <td style="color:var(--mute);font-size:11px">${esc(p.procedimiento || '—')}</td>
       <td style="color:var(--mute);font-size:11px">${capitalize(p.origen)}</td>
       <td>
         <div class="td-actions">
@@ -673,6 +692,13 @@ function buildMetodoBtns(containerId, val) {
   ).join('')}</div>`;
 }
 
+function buildProcSelect(rowId, val) {
+  const ops = [['','— Proc —'],['Bono imed','Bono imed'],['Control','Control'],['Consulta','Consulta']];
+  return `<select class="ci ci-proc" id="${rowId}">${ops.map(([v,t])=>
+    `<option value="${v}"${v===val?' selected':''}>${t}</option>`
+  ).join('')}</select>`;
+}
+
 function insertarFilaNueva(preData = {}) {
   cancelarFilaNueva(); // solo una fila a la vez
 
@@ -681,8 +707,9 @@ function insertarFilaNueva(preData = {}) {
   const emptyCell = tbody.querySelector('.empty');
   if (emptyCell) tbody.innerHTML = '';
 
-  _newPrev   = preData.prevision  || 'particular';
-  _newMetodo = preData.metodo_pago || 'efectivo';
+  _newPrev       = preData.prevision  || 'particular';
+  _newPrevManual = false;
+  _newMetodo     = preData.metodo_pago || 'efectivo';
 
   const tr = document.createElement('tr');
   tr.className = 'row-new';
@@ -702,6 +729,7 @@ function insertarFilaNueva(preData = {}) {
     <td>${buildMetodoBtns('nr_met_btns', _newMetodo)}</td>
     <td><input class="ci" id="nr_folio" type="text" placeholder="Folio" tabindex="9"
                value="${esc(preData.folio||'')}"></td>
+    <td>${buildProcSelect('nr_proc', preData.procedimiento||'')}</td>
     <td>
       <select class="ci" id="nr_origen" tabindex="10">
         <option value="presencial"${(preData.origen||'presencial')==='presencial'?' selected':''}>Presencial</option>
@@ -731,11 +759,13 @@ function insertarFilaNueva(preData = {}) {
   tr.querySelector('#nr_prev_toggle').addEventListener('click', e => {
     const btn = e.target.closest('button[data-v]');
     if (!btn) return;
+    _newPrevManual = true;
     _newPrev = btn.dataset.v;
     tr.querySelectorAll('#nr_prev_toggle button').forEach(b =>
       b.classList.toggle('active', b.dataset.v === _newPrev)
     );
     recalcFilaNueva();
+    sugerirProcedimientoRow(tr, _newPrev, tr.querySelector('#nr_copago').value);
   });
 
   // Eventos método
@@ -764,7 +794,14 @@ function insertarFilaNueva(preData = {}) {
 
   // Marcar pago como editado manualmente
   const nrCopago = tr.querySelector('#nr_copago');
-  if (nrCopago) nrCopago.addEventListener('input', function() { this._edited = true; });
+  if (nrCopago) nrCopago.addEventListener('input', function() {
+    this._edited = true;
+    sugerirProcedimientoRow(tr, _newPrev, this.value);
+  });
+
+  // Marcar procedimiento de la fila como editado manualmente
+  const nrProc = tr.querySelector('#nr_proc');
+  if (nrProc) nrProc.addEventListener('change', function() { this._edited = true; });
 
   // Navegacion Tab desde folio → origen
   tr.querySelector('#nr_folio').addEventListener('keydown', e => {
@@ -792,6 +829,7 @@ function insertarFilaNueva(preData = {}) {
 function cancelarFilaNueva() {
   if (_newRow && _newRow.parentNode) _newRow.parentNode.removeChild(_newRow);
   _newRow = null;
+  _newPrevManual = false;
 }
 
 // ── Sugerencia para fila nueva ────────────────────────────────────────────────
@@ -823,7 +861,7 @@ async function cargarSugerenciaRow(rut, id_cita) {
       areaInp.value = s.area;
       areaInp.classList.add('suggested');
     }
-    if (s.prevision) {
+    if (s.prevision && !_newPrevManual) {
       _newPrev = s.prevision;
       _newRow.querySelectorAll('#nr_prev_toggle button').forEach(b =>
         b.classList.toggle('active', b.dataset.v === _newPrev)
@@ -847,6 +885,8 @@ function aplicarSugerenciaMontosRow(s) {
     fC.value = s.copago_sugerido || '';
     if (s.copago_sugerido) fC.classList.add('suggested');
   }
+  // Auto-sugerir procedimiento con datos ya actualizados
+  sugerirProcedimientoRow(_newRow, _newPrev, fC.value);
 }
 
 function recalcFilaNueva() {
@@ -883,6 +923,7 @@ async function guardarFilaNueva() {
     bonificacion:        0,
     metodo_pago:         _newMetodo,
     folio:               (_newRow.querySelector('#nr_folio').value || '').trim(),
+    procedimiento:       (_newRow.querySelector('#nr_proc')?.value || '').trim(),
     origen:              _newRow.querySelector('#nr_origen').value,
     creado_por:          'recepcion',
   };
@@ -941,6 +982,7 @@ function editarFilaInline(id) {
         <td><input class="ci" id="er_copago" type="number" min="0" step="1" value="${p.copago||0}" tabindex="7"></td>
         <td>${buildMetodoBtns('er_met_btns', eMetodo)}</td>
         <td><input class="ci" id="er_folio" type="text" value="${esc(p.folio||'')}" tabindex="9"></td>
+        <td>${buildProcSelect('er_proc', p.procedimiento||'')}</td>
         <td>
           <select class="ci" id="er_origen" tabindex="10">
             <option value="presencial"${(p.origen||'')==='presencial'?' selected':''}>Presencial</option>
@@ -971,6 +1013,7 @@ function editarFilaInline(id) {
         tr.querySelectorAll('#er_prev_toggle button').forEach(b =>
           b.classList.toggle('active', b.dataset.v === ePrevLocal)
         );
+        sugerirProcedimientoRow(tr, ePrevLocal, tr.querySelector('#er_copago').value);
       });
 
       tr.querySelector('#er_met_btns').addEventListener('click', e => {
@@ -981,6 +1024,13 @@ function editarFilaInline(id) {
           b.classList.toggle('active', b.dataset.v === eMetodoLocal)
         );
       });
+
+      tr.querySelector('#er_copago').addEventListener('input', function() {
+        sugerirProcedimientoRow(tr, ePrevLocal, this.value);
+      });
+
+      const erProc = tr.querySelector('#er_proc');
+      if (erProc) erProc.addEventListener('change', function() { this._edited = true; });
 
       tr.querySelector('#er_prof').addEventListener('change', function() {
         const opt = this.options[this.selectedIndex];
@@ -1005,6 +1055,7 @@ function editarFilaInline(id) {
           bonificacion:        0,
           metodo_pago:         eMetodoLocal,
           folio:               (tr.querySelector('#er_folio').value || '').trim(),
+          procedimiento:       (tr.querySelector('#er_proc')?.value || '').trim(),
           origen:              tr.querySelector('#er_origen').value,
         };
         const btnG = tr.querySelector('#er_guardar');
@@ -1120,6 +1171,7 @@ function resetForm() {
   document.getElementById('fFecha').value = _fecha;
   document.getElementById('fProf').value  = '';
   document.getElementById('fOrigen').value = 'presencial';
+  _previsionManual = false;
   setPrevision('particular');
   setMetodo('efectivo');
   document.getElementById('hintCopago').textContent = '';
@@ -1131,6 +1183,7 @@ function setPrevision(p) {
   document.getElementById('btnFonasa').classList.toggle('active',     p === 'fonasa');
   // rowBonif se mantiene oculto siempre (bonificacion se calcula en conciliacion)
   updateMetodoHint();
+  sugerirProcedimientoModal();
 }
 
 function setMetodo(m) {
@@ -1148,11 +1201,37 @@ function updateMetodoHint() {
     ? 'Tarjetas solo disponibles en area dental.' : '';
 }
 
+function sugerirProcedimientoModal() {
+  const sel = document.getElementById('fProcedimiento');
+  if (!sel || sel._edited) return;
+  const copago = parseInt(document.getElementById('fCopago').value) || -1;
+  if (_prevision === 'fonasa') {
+    sel.value = 'Bono imed';
+  } else if (copago === 0) {
+    sel.value = 'Control';
+  } else {
+    if (!sel.value) sel.value = 'Consulta';
+  }
+}
+
+function sugerirProcedimientoRow(tr, prevVal, copagoVal) {
+  const sel = tr ? tr.querySelector('.ci-proc') : null;
+  if (!sel || sel._edited) return;
+  const copago = parseInt(copagoVal) || -1;
+  if (prevVal === 'fonasa') {
+    sel.value = 'Bono imed';
+  } else if (copago === 0) {
+    sel.value = 'Control';
+  } else {
+    if (!sel.value) sel.value = 'Consulta';
+  }
+}
+
 document.getElementById('btnParticular').addEventListener('click', () => {
-  setPrevision('particular'); recalcSugerenciaModal();
+  _previsionManual = true; setPrevision('particular'); recalcSugerenciaModal();
 });
 document.getElementById('btnFonasa').addEventListener('click', () => {
-  setPrevision('fonasa'); recalcSugerenciaModal();
+  _previsionManual = true; setPrevision('fonasa'); recalcSugerenciaModal();
 });
 document.querySelectorAll('.metodo-btn').forEach(b => {
   b.addEventListener('click', () => setMetodo(b.dataset.metodo));
@@ -1180,9 +1259,11 @@ async function cargarSugerenciaModal(rut, id_cita) {
     if (!fNombre.value && s.paciente_nombre) fNombre.value = s.paciente_nombre;
     if (s.id_profesional) document.getElementById('fProf').value = s.id_profesional;
     if (s.area) document.getElementById('fArea').value = s.area;
-    if (s.prevision) setPrevision(s.prevision);
+    if (s.prevision && !_previsionManual) setPrevision(s.prevision);
     if (s.id_cita) document.getElementById('fIdCita').value = s.id_cita;
     aplicarSugerenciaMontosModal(s);
+    // Auto-sugerir procedimiento con datos ya actualizados
+    sugerirProcedimientoModal();
   } catch(e) { console.warn('cargarSugerenciaModal error:', e); }
 }
 
@@ -1209,6 +1290,11 @@ function aplicarSugerenciaMontosModal(s) {
 
 document.getElementById('fCopago').addEventListener('input', function() {
   this._edited = true; this.classList.remove('suggested');
+  sugerirProcedimientoModal();
+});
+
+document.getElementById('fProcedimiento').addEventListener('change', function() {
+  this._edited = true;
 });
 
 document.getElementById('btnGuardarPago').addEventListener('click', guardarModal);
