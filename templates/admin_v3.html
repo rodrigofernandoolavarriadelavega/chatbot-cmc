@@ -283,6 +283,52 @@ input,textarea{font-family:inherit;color:inherit}
 .btn-primary{background:linear-gradient(135deg,var(--navy),var(--blue));color:#fff;box-shadow:0 3px 10px rgba(17,114,171,.28)}
 .btn-primary:hover{transform:translateY(-1px)}
 
+/* Search results (FTS en mensajes) */
+.search-group{margin:8px 4px 4px;padding:0 8px}
+.search-group .sg-h{display:flex;align-items:center;gap:8px;font-size:10px;font-weight:800;text-transform:uppercase;
+  letter-spacing:.6px;color:var(--muted);padding:8px 4px 6px}
+.search-group .sg-h .sg-line{flex:1;height:1px;background:var(--line)}
+.sr{display:flex;gap:11px;padding:10px 10px;border-radius:12px;cursor:pointer;transition:.13s}
+.sr:hover{background:var(--panel-2)}
+.sr .avatar{width:38px;height:38px;border-radius:11px;font-size:13px}
+.sr-body{flex:1;min-width:0}
+.sr-name{font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:7px}
+.sr-name .t{font-size:10px;color:var(--dim);font-weight:600;margin-left:auto}
+.sr-snip{font-size:12px;color:var(--muted);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sr-snip mark{background:rgba(79,190,206,.32);color:var(--navy);font-weight:700;border-radius:3px;padding:0 2px}
+
+/* Lista de espera badge en topbar */
+.tbtn .nbadge{position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;padding:0 4px;border-radius:999px;
+  background:var(--red);color:#fff;font-size:10px;font-weight:800;display:grid;place-items:center;border:2px solid var(--navy)}
+
+/* Modal waitlist (más ancho) */
+.modal.wide{max-width:600px}
+.wl-empty{text-align:center;color:var(--muted);font-size:13px;padding:30px 0}
+.wl-group{margin-bottom:16px}
+.wl-group-h{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+.wl-group-h .ge{font-size:13.5px;font-weight:800;color:var(--navy);text-transform:capitalize}
+.wl-group-h .gc{font-size:10.5px;font-weight:800;color:var(--blue);background:var(--aqua-soft);padding:2px 9px;border-radius:999px}
+.wl-group-h .gl{flex:1;height:1px;background:var(--line)}
+.wl-badge{font-size:10.5px;font-weight:700;color:#9a6a0f;background:var(--amber-bg);border:1px solid #f0dca8;
+  padding:4px 10px;border-radius:8px;margin-bottom:9px;display:inline-block}
+.wl-row{display:flex;align-items:center;gap:11px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;margin-bottom:7px}
+.wl-row.done{opacity:.55}
+.wl-pos{width:24px;height:24px;border-radius:8px;background:var(--navy);color:#fff;font-size:11px;font-weight:800;display:grid;place-items:center;flex-shrink:0}
+.wl-info{flex:1;min-width:0}
+.wl-nm{font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wl-meta{font-size:11px;color:var(--muted);font-weight:600;margin-top:2px}
+.wl-st{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;padding:2px 8px;border-radius:999px;flex-shrink:0}
+.wl-st.act{background:var(--green-bg);color:var(--green)}
+.wl-st.notif{background:var(--aqua-soft);color:var(--blue)}
+.wl-st.canc{background:var(--slate-bg);color:var(--slate)}
+.wl-act{display:flex;gap:6px;flex-shrink:0}
+.wl-act button{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;border:1px solid var(--line);background:#fff;transition:.15s}
+.wl-act button svg{width:15px;height:15px;stroke:var(--muted)}
+.wl-act button:hover{border-color:var(--aqua);background:var(--aqua-soft)}
+.wl-act button:hover svg{stroke:var(--blue)}
+.wl-act button.danger:hover{border-color:var(--red);background:var(--red-bg)}
+.wl-act button.danger:hover svg{stroke:var(--red)}
+
 /* Toast */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--navy);color:#fff;
   padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;box-shadow:var(--sh-lg);opacity:0;pointer-events:none;
@@ -311,6 +357,10 @@ input,textarea{font-family:inherit;color:inherit}
       <button class="kpi k-stall" data-seg="stall"><span class="dot"></span><b id="kStall">0</b> sin responder</button>
     </div>
     <div class="spacer"></div>
+    <button class="tbtn" id="wlBtn" title="Lista de espera">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+      <span class="nbadge" id="wlBadge" style="display:none">0</span>
+    </button>
     <button class="tbtn" id="soundBtn" title="Sonido mensajes nuevos">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
     </button>
@@ -411,6 +461,16 @@ input,textarea{font-family:inherit;color:inherit}
   </div>
 </div>
 
+<!-- Modal lista de espera -->
+<div class="modal-bg" id="wlModal">
+  <div class="modal wide">
+    <h3>Lista de espera</h3>
+    <p class="sub">Pacientes esperando cupo por especialidad. Cuando se libera una hora, el bot avisa al primero de la fila.</p>
+    <div id="wlContent"><div class="wl-empty">Cargando…</div></div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeWl()">Cerrar</button></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -427,6 +487,7 @@ const esc = s => String(s??"").replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>
 
 // ===== State =====
 let CONV=[], UNREAD={}, CUR=null, CURMETA=null, FILTER="priority", SEARCH="";
+let SEARCHRES=[], searchT=null, WL=[];   // resultados FTS + lista de espera
 let lastSeenMax={};   // phone -> max msg id seen (para detectar nuevos)
 let SOUND = localStorage.getItem("v3_sound")!=="0";
 let NOTIF = false;
@@ -516,12 +577,66 @@ function beep(){if(!SOUND)return;try{actx=actx||new (window.AudioContext||window
 // ===== Inbox load + render =====
 async function loadInbox(silent){
   try{
-    const [conv,unread]=await Promise.all([J("/admin/api/conversations"),J("/admin/api/unread-counts")]);
+    const [conv,unread,wl]=await Promise.all([
+      J("/admin/api/conversations"),J("/admin/api/unread-counts"),
+      J("/admin/api/waitlist").catch(()=>[])]);
     UNREAD=unread||{};
+    WL=Array.isArray(wl)?wl:[];
     // solo conversaciones reales (con mensajes)
     CONV=(conv||[]).filter(c=>c.msg_count>0||c.last_ts||c.state!=="IDLE");
-    renderCounts(); renderList();
+    renderCounts(); renderList(); renderWlBadge();
   }catch(e){ if(!silent) document.getElementById("inboxList").innerHTML='<div class="empty"><h3>Sin conexión</h3><p>'+esc(e.message)+'</p></div>'; }
+}
+// ===== Lista de espera =====
+const wlActive=r=>!r.notified_at&&!r.canceled_at;
+function renderWlBadge(){
+  const n=WL.filter(wlActive).length, b=document.getElementById("wlBadge");
+  b.textContent=n; b.style.display=n>0?"grid":"none";
+}
+function openWl(){document.getElementById("wlModal").classList.add("open");renderWl();}
+function closeWl(){document.getElementById("wlModal").classList.remove("open");}
+function renderWl(){
+  const box=document.getElementById("wlContent");
+  const active=WL.filter(wlActive), rest=WL.filter(r=>!wlActive(r));
+  if(!WL.length){box.innerHTML='<div class="wl-empty">No hay nadie en lista de espera. 🎉</div>';return;}
+  // agrupar activos por especialidad
+  const groups={};
+  active.forEach(r=>{const k=(r.especialidad||"otros");(groups[k]=groups[k]||[]).push(r);});
+  let html="";
+  Object.keys(groups).sort().forEach(esp=>{
+    const rows=groups[esp], badge=rows.find(r=>r.badge)?.badge||"";
+    html+=`<div class="wl-group"><div class="wl-group-h"><span class="ge">${esc(esp)}</span><span class="gc">${rows.length} esperando</span><span class="gl"></span></div>`;
+    if(badge)html+=`<div class="wl-badge">${esc(badge)}</div>`;
+    rows.forEach((r,i)=>{html+=wlRow(r,i+1,"act");});
+    html+=`</div>`;
+  });
+  if(rest.length){
+    html+=`<div class="wl-group"><div class="wl-group-h"><span class="ge" style="color:var(--muted);text-transform:none">Notificados / cerrados</span><span class="gl"></span></div>`;
+    rest.slice(0,15).forEach(r=>{html+=wlRow(r,"·",r.canceled_at?"canc":"notif");});
+    html+=`</div>`;
+  }
+  box.innerHTML=html;
+  box.querySelectorAll("[data-open]").forEach(b=>b.addEventListener("click",()=>{closeWl();openChat(b.dataset.open);}));
+  box.querySelectorAll("[data-cancel]").forEach(b=>b.addEventListener("click",async()=>{
+    if(!confirm("¿Sacar a esta persona de la lista de espera?"))return;
+    await api("/admin/api/waitlist/"+b.dataset.cancel+"/cancel",{method:"POST"});
+    WL=WL.map(x=>x.id==b.dataset.cancel?{...x,canceled_at:"now"}:x);
+    renderWl();renderWlBadge();toast("Quitado de la lista");
+  }));
+}
+function wlRow(r,pos,st){
+  const nm=r.nombre||r.perfil_nombre||formatPhone(r.phone);
+  const stTxt={act:"Espera",notif:"Avisado",canc:"Cerrado"}[st];
+  const when=r.created_at?fmtAgo(r.created_at):"";
+  return `<div class="wl-row ${st!=="act"?"done":""}">
+    <span class="wl-pos">${pos}</span>
+    <div class="wl-info"><div class="wl-nm">${esc(nm)}</div>
+      <div class="wl-meta">${esc(formatPhone(r.phone))}${r.notas?" · "+esc(r.notas):""}${when?" · hace "+when:""}</div></div>
+    <span class="wl-st ${st}">${stTxt}</span>
+    <div class="wl-act">
+      <button data-open="${esc(r.phone)}" title="Abrir conversación"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
+      ${st==="act"?`<button class="danger" data-cancel="${r.id}" title="Quitar de la lista"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>`:""}
+    </div></div>`;
 }
 function renderCounts(){
   const cnt={human:0,wait:0,unread:0,stall:0};
@@ -555,12 +670,29 @@ function filteredConv(){
   }
   return list;
 }
+function searchGroupHTML(){
+  if(!SEARCH||SEARCH.length<2||!SEARCHRES.length)return "";
+  const rows=SEARCHRES.slice(0,20).map(r=>{
+    const ch=CH(r.phone),col=avatarColor(r.nombre||r.phone);
+    const snip=esc(r.snippet||r.text||"").replace(/HLB/g,"<mark>").replace(/HLE/g,"</mark>");
+    const who=r.direction==="out"?"Bot/Recepción":(r.nombre||formatPhone(r.phone));
+    return `<div class="sr" data-phone="${esc(r.phone)}">
+      <div class="avatar" style="background:${col}">${esc(initials(r.nombre,r.phone))}<span class="ch ${ch}">${chSvg(ch)}</span></div>
+      <div class="sr-body"><div class="sr-name">${esc(r.nombre||formatPhone(r.phone))}<span class="t">${fmtAgo(r.ts)}</span></div>
+      <div class="sr-snip">${snip}</div></div></div>`;
+  }).join("");
+  return `<div class="search-group"><div class="sg-h">Coincidencias en mensajes (${SEARCHRES.length})<span class="sg-line"></span></div>${rows}</div>`;
+}
 function renderList(){
   const list=filteredConv();
   document.getElementById("listCount").textContent=list.length;
   const el=document.getElementById("inboxList");
+  const sg=searchGroupHTML();
   if(!list.length){
-    el.innerHTML='<div class="empty"><img src="/static/isotipo.png"><h3>Todo al día</h3><p>No hay conversaciones en este filtro. El bot tiene el resto bajo control.</p></div>';
+    el.innerHTML=(SEARCH&&SEARCH.length>=2
+      ? '<div class="empty" style="padding:30px 24px;height:auto"><h3>Sin conversaciones</h3><p>Ninguna coincide por nombre/teléfono/RUT.</p></div>'+sg
+      : '<div class="empty"><img src="/static/isotipo.png"><h3>Todo al día</h3><p>No hay conversaciones en este filtro. El bot tiene el resto bajo control.</p></div>');
+    el.querySelectorAll(".sr").forEach(n=>n.addEventListener("click",()=>openChat(n.dataset.phone)));
     return;
   }
   el.innerHTML=list.map(c=>{
@@ -577,8 +709,9 @@ function renderList(){
         <div class="conv-prev">${me}${esc((c.last_text||"").replace(/\n/g," ").slice(0,60))||'<i style="opacity:.5">sin mensajes</i>'}</div>
         <div class="conv-row3"><span class="badge ${sb.cls}">${sb.txt}</span>${u>0?`<span class="unread">${u}</span>`:""}</div>
       </div></div>`;
-  }).join("");
+  }).join("")+sg;
   el.querySelectorAll(".conv").forEach(n=>n.addEventListener("click",()=>openChat(n.dataset.phone)));
+  el.querySelectorAll(".sr").forEach(n=>n.addEventListener("click",()=>openChat(n.dataset.phone)));
 }
 function formatPhone(p){
   if(p.startsWith("ig_"))return "Instagram "+p.slice(3,9);
@@ -796,7 +929,16 @@ document.getElementById("segs").addEventListener("click",e=>{const b=e.target.cl
 document.querySelector(".kpis").addEventListener("click",e=>{const b=e.target.closest(".kpi");if(!b)return;
   FILTER=b.dataset.seg;document.querySelectorAll(".seg").forEach(s=>s.classList.toggle("on",s.dataset.seg===FILTER));renderCounts();renderList();
   document.getElementById("app").classList.add("inbox-open");});
-document.getElementById("searchInput").addEventListener("input",e=>{SEARCH=e.target.value.trim();renderList();});
+document.getElementById("searchInput").addEventListener("input",e=>{
+  SEARCH=e.target.value.trim();renderList();
+  clearTimeout(searchT);
+  if(SEARCH.length<2){SEARCHRES=[];return;}
+  searchT=setTimeout(async()=>{
+    const q=SEARCH;
+    try{const r=await J("/admin/api/search?q="+encodeURIComponent(q));
+      if(SEARCH===q){SEARCHRES=r.results||[];renderList();}}catch(e){SEARCHRES=[];}
+  },350);
+});
 document.getElementById("btnTakeover").addEventListener("click",doTakeover);
 document.getElementById("btnResume").addEventListener("click",doResume);
 document.getElementById("btnConfirm").addEventListener("click",sendConfirmation);
@@ -811,6 +953,7 @@ document.getElementById("qreplies").innerHTML=QREPLIES.map((q,i)=>`<button class
 document.getElementById("qreplies").addEventListener("click",e=>{const b=e.target.closest(".qr");if(!b)return;
   msgInput.value=QREPLIES[+b.dataset.i];autoGrow(msgInput);msgInput.focus();document.getElementById("sendBtn").disabled=false;});
 // context drawer
+document.getElementById("wlBtn").addEventListener("click",openWl);
 document.getElementById("ctxToggleBtn").addEventListener("click",()=>document.getElementById("app").classList.toggle("ctx-open"));
 document.getElementById("ctxCloseBtn").addEventListener("click",()=>document.getElementById("app").classList.remove("ctx-open"));
 // mobile drawer
