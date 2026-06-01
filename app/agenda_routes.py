@@ -27,7 +27,7 @@ _CAPI_VALUE_BY_PROF: dict[int, float] = {
     13: 30_000.0,   # Dr. Márquez — Medicina Familiar
     23: 35_000.0,   # Dr. Borrego — Otorrinolaringología
     60: 40_000.0,   # Dr. Millán — Cardiología
-    64: 25_000.0,   # Dr. Barraza — Traumatología (proxy MG; atiende derivado)
+    64: 35_000.0,   # Dr. Barraza — Traumatología
     61: 30_000.0,   # Dr. Rejón — Ginecología
     65: 35_000.0,   # Dr. Quijano — Gastroenterología
     55: 15_000.0,   # Dra. Burgos — Odontología General (evaluación dental)
@@ -35,7 +35,7 @@ _CAPI_VALUE_BY_PROF: dict[int, float] = {
     66: 15_000.0,   # Dra. Castillo — Ortodoncia (evaluación dental previa)
     75: 110_000.0,  # Dr. Fredes — Endodoncia (primera sesión)
     69: 650_000.0,  # Dra. Valdés — Implantología (referencial primer servicio)
-    76: 15_000.0,   # Dra. Fuentealba — Estética Facial (evaluación)
+    76: 160_000.0,  # Dra. Fuentealba — Estética Facial (ticket representativo)
     59: 17_990.0,   # Paola Acosta — Masoterapia (sesión espalda 20 min)
     77: 20_000.0,   # Luis Armijo — Kinesiología particular
     21: 20_000.0,   # Leonardo Etcheverry — Kinesiología particular
