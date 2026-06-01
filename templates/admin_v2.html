@@ -468,8 +468,10 @@ input, textarea, select{font-family:inherit; color:inherit}
 .chat-header .name:hover .edit{opacity:1}
 .chat-header .sub{
   font-size:11.5px; color:var(--text-mute); margin-top:3px;
-  display:flex; gap:10px; flex-wrap:wrap; font-weight:500; letter-spacing:.1px;
+  display:flex; gap:10px; flex-wrap:nowrap; overflow:hidden; min-width:0;
+  font-weight:500; letter-spacing:.1px;
 }
+.chat-header .sub > span{flex:none; white-space:nowrap}
 .chat-header .sub > span{display:inline-flex; align-items:center; gap:4px}
 .chat-header .sub b{color:var(--cmc-blue); font-weight:700; font-feature-settings:"tnum"}
 
