@@ -21,13 +21,44 @@
     --cmc-aqua-soft: #e8f8fb;
     --cmc-blue: #1172AB;
     --cmc-navy: #0F3F68;
-    --cmc-bg: #F7FBFD;
-    --cmc-border: #d6e4ec;
-    --cmc-text: #0F3F68;
-    --cmc-text-mute: #546776;
+    --cmc-navy-deep: #0a2e4d;
+    --cmc-bg: #f4f7fa;
+    --cmc-border: #e6edf3;
+    --cmc-text: #13202e;
+    --cmc-text-mute: #64798c;
+    --sh-sm: 0 1px 2px rgba(15,63,104,.06), 0 1px 3px rgba(15,63,104,.08);
+    --sh-md: 0 4px 12px rgba(15,63,104,.08), 0 2px 4px rgba(15,63,104,.06);
+    --sh-lg: 0 12px 32px rgba(15,63,104,.12), 0 4px 8px rgba(15,63,104,.06);
+    --r: 16px;
   }
-  body { font-family: 'Montserrat', -apple-system, sans-serif; background: var(--cmc-bg); color: var(--cmc-text); }
+  body { font-family: 'Montserrat', -apple-system, sans-serif; background: var(--cmc-bg); color: var(--cmc-text); -webkit-font-smoothing: antialiased; }
   h1, h2, h3 { font-family: 'Montserrat', sans-serif; color: var(--cmc-navy); }
+
+  /* ===== Header premium Alma (gradiente navy→azul + glow aqua) ===== */
+  .top { display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+         background:linear-gradient(135deg,var(--cmc-navy) 0%,var(--cmc-blue) 100%);
+         border-radius:var(--r); padding:20px 24px; color:#fff; box-shadow:var(--sh-lg);
+         position:relative; overflow:hidden; }
+  .top::after { content:""; position:absolute; right:-60px; top:-60px; width:240px; height:240px;
+         background:radial-gradient(circle,rgba(79,190,206,.35),transparent 70%); pointer-events:none; }
+  .top .badge-ico { width:46px; height:46px; border-radius:13px; display:grid; place-items:center;
+         background:linear-gradient(135deg,#fff,#eaf4f8); flex-shrink:0; padding:7px;
+         box-shadow:0 4px 12px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.6); }
+  .top .badge-ico img { width:100%; height:100%; object-fit:contain; }
+  .top .htxt .over { font-size:10px; color:var(--cmc-aqua); letter-spacing:.28em; text-transform:uppercase; font-weight:700; line-height:1; }
+  .top .htxt h1 { font-size:20px; font-weight:800; letter-spacing:-.4px; line-height:1.1; color:#fff; margin-top:3px; }
+  .top .htxt h1 .v2 { font-size:10px; vertical-align:middle; margin-left:7px; padding:3px 8px; background:rgba(79,190,206,.28);
+         color:#fff; border-radius:6px; font-weight:800; letter-spacing:1px; }
+  .top .spacer { flex:1; }
+  .top .hmeta { text-align:right; }
+  .top .hmeta .ml { font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:rgba(255,255,255,.7); font-weight:600; }
+  .top .hmeta .mv { font-size:14px; font-weight:800; color:#fff; }
+  .top .hactions { display:flex; align-items:center; gap:7px; flex-wrap:wrap; justify-content:flex-end; margin-top:7px; }
+  .hdr-pill { display:inline-flex; align-items:center; gap:5px; background:rgba(255,255,255,.14); backdrop-filter:blur(6px);
+         color:#fff; border:1px solid rgba(255,255,255,.18); border-radius:999px; padding:6px 13px; font-size:11.5px;
+         font-weight:700; cursor:pointer; transition:.15s; font-family:inherit; }
+  .hdr-pill:hover { background:rgba(79,190,206,.32); border-color:var(--cmc-aqua); }
+  .install-btn { background:var(--cmc-aqua); color:var(--cmc-navy-deep); border:0; padding:6px 13px; border-radius:999px; font-weight:800; font-size:11px; cursor:pointer; }
   .box-card {
     transition: all 0.2s;
     border: 1px solid var(--cmc-border);
@@ -65,11 +96,10 @@
   .brand-text .bot { font-size:16px; font-weight:800; color:var(--cmc-navy); letter-spacing:1.1px; display:flex; align-items:center; gap:8px; text-transform:uppercase; }
   .brand .v2 { font-size:9px; padding:2px 7px; background:linear-gradient(135deg,var(--cmc-aqua),var(--cmc-blue)); color:#fff; border-radius:5px; font-weight:800; letter-spacing:1.2px; box-shadow:0 1px 2px rgba(17,114,171,.28), inset 0 1px 0 rgba(255,255,255,.22); }
   .brand:hover .brand-logo { box-shadow:0 6px 18px rgba(15,63,104,.12), 0 0 0 3px rgba(79,190,206,.14); transform:translateY(-1px); border-color:var(--cmc-aqua); }
-  .hdr-pill { background:#eef5f9; color:var(--cmc-navy); border:1px solid var(--cmc-border); }
-  .hdr-pill:hover { background:var(--cmc-aqua-soft); border-color:var(--cmc-aqua); }
   .brand-logo { width:44px; height:44px; border-radius:13px; flex:0 0 44px; background:linear-gradient(180deg,#fff,#f7fbfd); border:1px solid var(--cmc-border); box-shadow:0 1px 2px rgba(15,63,104,.06), inset 0 1px 0 rgba(255,255,255,.6); display:flex; align-items:center; justify-content:center; padding:4px; transition:.2s; }
   .brand-logo img { width: 100%; height: 100%; object-fit: contain; }
-  .kpi-card { background: #fff; border: 1px solid var(--cmc-border); border-radius: 12px; padding: 14px 18px; }
+  .kpi-card { background: #fff; border: 1px solid var(--cmc-border); border-radius: var(--r); padding: 17px 19px; box-shadow: var(--sh-sm); transition: .2s; }
+  .kpi-card:hover { box-shadow: var(--sh-md); transform: translateY(-2px); }
   .kpi-card.featured { background: linear-gradient(135deg, #fff, var(--cmc-aqua-soft)); border-color: var(--cmc-aqua); }
   .btn-cmc, .btn-cmc-secondary, .btn-cmc-danger { border-radius: 8px; padding: 8px 14px; font-weight: 600; font-size: 13px; cursor: pointer; border: 1px solid transparent; transition: all 0.15s; line-height: 1.2; }
   .btn-cmc { background: var(--cmc-blue); color: #fff; }
@@ -108,7 +138,6 @@
   .save-status.saved { background: #effaf2; color: #5A8A6F; }
   .save-status.saving { background: #fef3e8; color: #E07A3C; }
   .save-status.error { background: #fee; color: #c33; }
-  .install-btn { background: #fff; color: var(--cmc-navy); border: 0; padding: 6px 12px; border-radius: 999px; font-weight: 700; font-size: 11px; cursor: pointer; }
   /* Heatmap row */
   .heatmap-bar {
     background: #fff; border: 1px solid var(--cmc-border); border-radius: 12px;
@@ -310,30 +339,29 @@
 </head>
 <body class="min-h-screen">
 
-<div class="brand-bar px-6 py-4 mb-6">
-  <header class="max-w-7xl mx-auto flex items-center justify-between">
-    <a class="brand" href="#" title="Centro Médico Carampangue">
-      <span class="brand-logo"><img src="/static/isotipo.png" alt="CMC"></span>
-      <span class="brand-text">
-        <span class="top">Centro Médico</span>
-        <span class="bot">Carampangue</span>
-      </span>
-    </a>
-    <div class="text-right">
-      <p class="text-[10px] uppercase tracking-wider" style="color:var(--cmc-text-mute)">Boxes · última actualización</p>
-      <p id="lastUpdate" class="text-sm font-semibold" style="color:var(--cmc-navy)">—</p>
-      <div class="text-[10px] mt-1 flex items-center gap-2 justify-end flex-wrap">
+<div class="px-6 pt-5">
+  <header class="top max-w-7xl mx-auto">
+    <span class="badge-ico"><img src="/static/isotipo.png" alt="CMC"></span>
+    <div class="htxt">
+      <div class="over">Boxes</div>
+      <h1>Gemelo Digital<span class="v2">CMC</span></h1>
+    </div>
+    <div class="spacer"></div>
+    <div class="hmeta">
+      <p class="ml">Última actualización</p>
+      <p class="mv" id="lastUpdate">—</p>
+      <div class="hactions">
         <span id="saveStatus" class="save-status" style="display:none">●</span>
-        <button id="btnInstall" class="install-btn" style="display:none">📱 Instalar app</button>
-        <button id="btnDate" class="hdr-pill px-3 py-1 rounded-full transition font-medium flex items-center gap-1">📅 <span id="dateLabel">Hoy</span></button>
-        <button id="btnEditMode" class="hdr-pill px-3 py-1 rounded-full transition font-medium">⚙️ Modo edición</button>
-        <button id="btnResetOrder" class="underline transition" style="color:var(--cmc-text-mute)">restaurar default</button>
+        <button id="btnInstall" class="install-btn" style="display:none">Instalar app</button>
+        <button id="btnDate" class="hdr-pill"><span id="dateLabel">Hoy</span></button>
+        <button id="btnEditMode" class="hdr-pill">Modo edición</button>
+        <button id="btnResetOrder" class="hdr-pill" style="background:transparent;border-color:transparent;opacity:.75;font-weight:600">restaurar default</button>
       </div>
     </div>
   </header>
 </div>
 
-<div class="px-6">
+<div class="px-6 pt-6">
 
 <!-- Totales -->
 <section class="max-w-7xl mx-auto mb-8 grid grid-cols-4 gap-4">

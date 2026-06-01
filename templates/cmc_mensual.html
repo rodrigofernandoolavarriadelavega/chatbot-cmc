@@ -48,26 +48,29 @@ body{font-family:'Montserrat',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-s
   -webkit-font-smoothing:antialiased}
 .money,td.r,.kpi-value{font-variant-numeric:tabular-nums}
 
-/* ── HEADER ── */
-header{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.94);backdrop-filter:saturate(160%) blur(10px);color:var(--navy);
-  padding:13px 26px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
-  box-shadow:var(--sh-sm);border-bottom:1px solid var(--border)}
-header::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;background:linear-gradient(90deg,transparent,var(--aqua),transparent);opacity:.65}
+/* ── HEADER (premium Alma: gradiente navy→azul + glow aqua) ── */
+header{position:sticky;top:0;z-index:50;color:#fff;overflow:hidden;
+  background:linear-gradient(135deg,var(--navy) 0%,var(--blue) 100%);
+  padding:18px 26px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
+  box-shadow:var(--sh-lg)}
+header::after{content:"";position:absolute;right:-60px;top:-60px;width:240px;height:240px;
+  background:radial-gradient(circle,rgba(79,190,206,.35),transparent 70%);pointer-events:none}
 .header-left{display:flex;align-items:center;gap:14px;min-width:0}
-.brand{display:flex;align-items:center;gap:11px;text-decoration:none;color:var(--navy)}
-.brand-logo{width:44px;height:44px;border-radius:13px;flex:0 0 44px;background:linear-gradient(180deg,#fff,#f7fbfd);border:1px solid var(--border);box-shadow:var(--sh-sm),inset 0 1px 0 rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;padding:4px;transition:.2s}
-.brand:hover .brand-logo{box-shadow:var(--sh-md),0 0 0 3px rgba(79,190,206,.14);transform:translateY(-1px);border-color:var(--aqua)}
+.brand{display:flex;align-items:center;gap:13px;text-decoration:none;color:#fff;position:relative;z-index:1}
+.brand-logo{width:46px;height:46px;border-radius:13px;flex:0 0 46px;background:linear-gradient(135deg,#fff,#eaf4f8);border:0;box-shadow:0 4px 12px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;padding:7px;transition:.2s}
+.brand:hover .brand-logo{box-shadow:0 6px 18px rgba(0,0,0,.24);transform:translateY(-1px)}
 .brand-logo img{width:100%;height:100%;object-fit:contain;display:block}
 .brand-text{display:flex;flex-direction:column;line-height:1.12;gap:3px}
-.brand-text .top{font-size:9.5px;color:var(--aqua-d);letter-spacing:2.6px;text-transform:uppercase;font-weight:700}
-.brand-text .bot{font-size:16px;font-weight:800;color:var(--navy);letter-spacing:1.1px;display:flex;align-items:center;gap:8px;text-transform:uppercase}
+.brand-text .top{font-size:10px;color:var(--aqua);letter-spacing:.28em;text-transform:uppercase;font-weight:700}
+.brand-text .bot{font-size:18px;font-weight:800;color:#fff;letter-spacing:-.3px;display:flex;align-items:center;gap:8px;text-transform:none}
 .brand .v2{font-size:9px;padding:2px 7px;background:linear-gradient(135deg,var(--aqua),var(--blue));color:#fff;border-radius:5px;font-weight:800;letter-spacing:1.2px;box-shadow:0 1px 2px rgba(17,114,171,.28),inset 0 1px 0 rgba(255,255,255,.22)}
 .logo{font-size:26px}
 header h1{font-size:1.1rem;font-weight:800;letter-spacing:.2px;line-height:1.08}
 header p{font-size:.73rem;opacity:.82;margin-top:2px;font-weight:500;letter-spacing:.02em}
 .header-right{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
-#mesLabel{background:#f1f7fa;border:1px solid var(--border);color:var(--navy);font-family:inherit;font-size:.82rem;font-weight:600;padding:7px 12px;border-radius:10px;outline:none;cursor:pointer}
-#mesLabel:hover{background:var(--aqua-soft);border-color:var(--aqua)}
+.header-right{position:relative;z-index:1}
+#mesLabel{background:rgba(255,255,255,.16);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.22);color:#fff;font-family:inherit;font-size:.82rem;font-weight:700;padding:8px 13px;border-radius:10px;outline:none;cursor:pointer}
+#mesLabel:hover{background:rgba(79,190,206,.32);border-color:var(--aqua)}
 #mesLabel option{color:#0F3F68;background:#fff}
 
 /* ── BUTTONS ── */
@@ -82,7 +85,7 @@ header p{font-size:.73rem;opacity:.82;margin-top:2px;font-weight:500;letter-spac
 .btn-sm{padding:5px 10px;font-size:.74rem}
 
 /* ── TABS ── */
-.tabs{display:flex;flex-wrap:wrap;padding:0 18px;background:rgba(255,255,255,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);gap:2px;position:sticky;top:70px;z-index:40;box-shadow:var(--sh-sm)}
+.tabs{display:flex;flex-wrap:wrap;padding:0 18px;background:rgba(255,255,255,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);gap:2px;position:sticky;top:82px;z-index:40;box-shadow:var(--sh-sm)}
 .tab{display:inline-flex;align-items:center;gap:7px;padding:13px 16px;font-size:.8rem;font-weight:600;cursor:pointer;color:var(--mute);border-bottom:2.5px solid transparent;transition:.16s;white-space:nowrap}
 .tab svg{width:16px;height:16px;opacity:.7;transition:.16s}
 .tab:hover:not(.active){color:var(--navy);background:linear-gradient(var(--aqua-soft),transparent)}

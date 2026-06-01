@@ -649,6 +649,7 @@ app.include_router(agenda_routes.router)
 _TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
 _ADMIN_HTML = (_TEMPLATE_DIR / "admin.html").read_text(encoding="utf-8")
 _ADMIN_V2_HTML = (_TEMPLATE_DIR / "admin_v2.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "admin_v2.html").exists() else ""
+_ADMIN_V3_HTML = (_TEMPLATE_DIR / "admin_v3.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "admin_v3.html").exists() else ""
 _PORTAL_HTML = (_TEMPLATE_DIR / "portal.html").read_text(encoding="utf-8")
 _PORTAL_V2_HTML = (_TEMPLATE_DIR / "portal_v2.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "portal_v2.html").exists() else ""
 _PORTAL_INFORME_HTML = (_TEMPLATE_DIR / "portal_informe.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "portal_informe.html").exists() else ""
@@ -1965,6 +1966,22 @@ def admin_panel_v2(token: str | None = Query(None),
         role = _verify_cookie(cmc_session)
         if role in ("admin", "ortodoncia"):
             return _ADMIN_V2_HTML.replace("__TOKEN__", "")
+    return RedirectResponse(url="/admin/login", status_code=302)
+
+
+@app.get("/admin/v3", response_class=HTMLResponse)
+def admin_panel_v3(token: str | None = Query(None),
+                   cmc_session: str | None = Cookie(None)):
+    """Panel de recepción v3 (beta, rediseño premium Alma). Misma auth que /admin."""
+    from admin_routes import _verify_cookie
+    if not _ADMIN_V3_HTML:
+        raise HTTPException(404, "Panel v3 no disponible")
+    if token and token == ADMIN_TOKEN:
+        return _ADMIN_V3_HTML.replace("__TOKEN__", token)
+    if cmc_session:
+        role = _verify_cookie(cmc_session)
+        if role in ("admin", "ortodoncia"):
+            return _ADMIN_V3_HTML.replace("__TOKEN__", "")
     return RedirectResponse(url="/admin/login", status_code=302)
 
 
