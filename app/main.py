@@ -22,6 +22,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, JSON
 from fastapi.staticfiles import StaticFiles
 
 from config import (META_VERIFY_TOKEN, CMC_TELEFONO, CMC_TELEFONO_FIJO, ADMIN_TOKEN,
+                    OLACORE_TOKEN, ALMA_PROFILES,
                     MEDILINK_TOKEN, META_AD_ACCOUNT_ID as _CFG_META_ACCOUNT_ID)
 from flows import handle_message
 from messaging import (send_whatsapp, send_whatsapp_interactive,
@@ -1966,8 +1967,8 @@ def admin_panel(token: str | None = Query(None),
 def admin_panel_v2(token: str | None = Query(None),
                    cmc_session: str | None = Cookie(None)):
     """Panel de recepción v2 (chat-first). Misma auth que /admin."""
-    from admin_routes import _verify_cookie
-    if token and token == ADMIN_TOKEN:
+    from admin_routes import _verify_cookie, _is_admin_token
+    if token and _is_admin_token(token):
         return _ADMIN_V2_HTML.replace("__TOKEN__", token)
     if cmc_session:
         role = _verify_cookie(cmc_session)
@@ -3309,7 +3310,8 @@ def api_winback_status(token: str | None = Query(None)):
 @app.get("/boxes/dashboard", response_class=HTMLResponse)
 def boxes_dashboard_page(token: str | None = Query(None)):
     """Gemelo digital de boxes CMC — tiempo casi-real (datos desde BI)."""
-    if token != ADMIN_TOKEN:
+    from admin_routes import _is_admin_token
+    if not (token and _is_admin_token(token)):
         raise HTTPException(401, "No autorizado")
     if not _BOXES_DASHBOARD_HTML:
         raise HTTPException(404, "Dashboard Boxes no disponible")
@@ -3327,16 +3329,27 @@ def alma_shell(token: str | None = Query(None),
     por eso, cuando la sesión entra por cookie, inyectamos el ADMIN_TOKEN real
     para que los iframes carguen. El token queda en el DOM de los iframes — es
     el mismo modelo que ya usa /boxes hoy.
+
+    El perfil ALMA_PROFILES resuelve el label de la 2ª línea del lockup según
+    el token activo (olacore → "OLACORE", default → "CARAMPANGUE").
     """
-    from admin_routes import _verify_cookie
+    from admin_routes import _verify_cookie, _is_admin_token
     if not _ALMA_HTML:
         raise HTTPException(404, "Alma no disponible")
-    if token and token == ADMIN_TOKEN:
-        return _ALMA_HTML.replace("__TOKEN__", token)
+
+    def _render(active_token: str) -> str:
+        profile = ALMA_PROFILES.get(active_token, {})
+        label = profile.get("label", "CARAMPANGUE")
+        return (_ALMA_HTML
+                .replace("__TOKEN__", active_token)
+                .replace("__ALMA_LABEL__", label))
+
+    if token and _is_admin_token(token):
+        return _render(token)
     if cmc_session:
         role = _verify_cookie(cmc_session)
         if role in ("admin", "ortodoncia"):
-            return _ALMA_HTML.replace("__TOKEN__", ADMIN_TOKEN)
+            return _render(ADMIN_TOKEN)
     return RedirectResponse(url="/admin/login", status_code=302)
 
 
@@ -3344,10 +3357,10 @@ def alma_shell(token: str | None = Query(None),
 def alma_agenda_page(token: str | None = Query(None),
                      cmc_session: str | None = Cookie(None)):
     """Modulo nativo Agenda — ver citas del dia y agendar desde Alma."""
-    from admin_routes import _verify_cookie
+    from admin_routes import _verify_cookie, _is_admin_token
     if not _ALMA_AGENDA_HTML:
         raise HTTPException(404, "Agenda no disponible")
-    if token and token == ADMIN_TOKEN:
+    if token and _is_admin_token(token):
         return _ALMA_AGENDA_HTML.replace("__TOKEN__", token)
     if cmc_session:
         role = _verify_cookie(cmc_session)
@@ -3360,10 +3373,10 @@ def alma_agenda_page(token: str | None = Query(None),
 def alma_pagos_page(token: str | None = Query(None),
                     cmc_session: str | None = Cookie(None)):
     """Modulo nativo Pagos — registro editable de pagos del dia."""
-    from admin_routes import _verify_cookie
+    from admin_routes import _verify_cookie, _is_admin_token
     if not _ALMA_PAGOS_HTML:
         raise HTTPException(404, "Pagos no disponible")
-    if token and token == ADMIN_TOKEN:
+    if token and _is_admin_token(token):
         return _ALMA_PAGOS_HTML.replace("__TOKEN__", token)
     if cmc_session:
         role = _verify_cookie(cmc_session)
@@ -3376,10 +3389,10 @@ def alma_pagos_page(token: str | None = Query(None),
 def alma_conciliacion_page(token: str | None = Query(None),
                            cmc_session: str | None = Cookie(None)):
     """Modulo nativo Conciliacion — cruce financiero multi-fuente con capa Imed."""
-    from admin_routes import _verify_cookie
+    from admin_routes import _verify_cookie, _is_admin_token
     if not _ALMA_CONCILIACION_HTML:
         raise HTTPException(404, "Conciliacion no disponible")
-    if token and token == ADMIN_TOKEN:
+    if token and _is_admin_token(token):
         return _ALMA_CONCILIACION_HTML.replace("__TOKEN__", token)
     if cmc_session:
         role = _verify_cookie(cmc_session)
@@ -5186,8 +5199,8 @@ def api_alma_profesionales(token: str | None = Query(None),
     """Roster de profesionales agrupado por especialidad, con el token de cada uno,
     para construir el navegador desplegable del módulo 'Panel del Profesional' en Alma.
     Auth admin (token query o cookie de sesión)."""
-    from admin_routes import _verify_cookie
-    ok = (token and token == ADMIN_TOKEN) or (
+    from admin_routes import _verify_cookie, _is_admin_token
+    ok = (token and _is_admin_token(token)) or (
         cmc_session and _verify_cookie(cmc_session) in ("admin", "ortodoncia"))
     if not ok:
         raise HTTPException(401, "No autorizado")

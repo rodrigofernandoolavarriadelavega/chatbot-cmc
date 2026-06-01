@@ -40,6 +40,16 @@ if "987834148" in CMC_TELEFONO.replace(" ", ""):
     CMC_TELEFONO = "+56966610737"
 
 ADMIN_TOKEN        = os.getenv("ADMIN_TOKEN", "cmc_admin_2026")
+OLACORE_TOKEN      = os.getenv("OLACORE_TOKEN", "cmc_admin_olacore")
+
+# ── Mapa de perfiles Alma: token → {label, modulos} ─────────────────────────
+# `modulos=None` significa acceso total (todos los módulos que Alma registra).
+# Para agregar una variante nueva: añadir una entrada aquí.
+# "label" es la 2ª línea del lockup "ALMA / <label>".
+ALMA_PROFILES: dict[str, dict] = {
+    "cmc_admin_olacore": {"label": "OLACORE",     "modulos": None},  # acceso total — dueño
+    "cmc_admin_2026":    {"label": "CARAMPANGUE",  "modulos": None},  # acceso total — recepción (segmentar módulos aquí cuando se decida)
+}
 
 # Feature flags — se activan cuando Rodrigo apruebe condiciones comerciales
 # (precios, % descuento, cuenta bancaria, templates Meta).

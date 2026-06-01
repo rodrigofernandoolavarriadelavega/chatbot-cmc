@@ -10,7 +10,16 @@ from collections import defaultdict, deque
 from fastapi import APIRouter, Request, Query, HTTPException, Header, Depends, Cookie, Form, File, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, Response, JSONResponse
 
-from config import ADMIN_TOKEN, ORTODONCIA_TOKEN, COOKIE_SECRET, STAFF_PHONES
+from config import ADMIN_TOKEN, OLACORE_TOKEN, ORTODONCIA_TOKEN, COOKIE_SECRET, STAFF_PHONES
+
+# Conjunto de tokens que tienen acceso de admin completo.
+# Agregar aquí cualquier token nuevo que deba tener los mismos permisos que ADMIN_TOKEN.
+_ADMIN_TOKENS: tuple[str, ...] = (ADMIN_TOKEN, OLACORE_TOKEN)
+
+
+def _is_admin_token(tk: str) -> bool:
+    """True si el token pertenece al conjunto de tokens con acceso admin completo."""
+    return any(hmac.compare_digest(tk, t) for t in _ADMIN_TOKENS)
 from messaging import send_whatsapp, send_instagram, send_messenger, edit_whatsapp_message
 from session import (get_session, reset_session, save_session, get_metricas,
                      log_message, get_messages, get_conversations, log_event,
@@ -121,11 +130,12 @@ def require_admin(request: Request,
                   cmc_session: str | None = Cookie(None)) -> str:
     """Dependency FastAPI que valida token admin.
     Prioridad: Bearer header > cookie > query param.
+    Acepta cualquier token del conjunto _ADMIN_TOKENS (ADMIN_TOKEN + OLACORE_TOKEN).
     Retorna el token validado."""
     # 1. Bearer header
     if authorization and authorization.lower().startswith("bearer "):
         tk = authorization.split(None, 1)[1].strip()
-        if hmac.compare_digest(tk or '', ADMIN_TOKEN):
+        if _is_admin_token(tk):
             return tk
     # 2. Cookie
     if cmc_session:
@@ -133,7 +143,7 @@ def require_admin(request: Request,
         if role == "admin":
             return ADMIN_TOKEN
     # 3. Query param (backwards compat)
-    if token and hmac.compare_digest(token or '', ADMIN_TOKEN):
+    if token and _is_admin_token(token):
         return token
     raise HTTPException(status_code=401, detail="Token inválido")
 
@@ -147,7 +157,7 @@ def require_ortodoncia(request: Request,
     # 1. Bearer header
     if authorization and authorization.lower().startswith("bearer "):
         tk = authorization.split(None, 1)[1].strip()
-        if hmac.compare_digest(tk, ADMIN_TOKEN) or hmac.compare_digest(tk, ORTODONCIA_TOKEN):
+        if _is_admin_token(tk) or hmac.compare_digest(tk, ORTODONCIA_TOKEN):
             return tk
     # 2. Cookie
     if cmc_session:
@@ -155,7 +165,7 @@ def require_ortodoncia(request: Request,
         if role in ("admin", "ortodoncia"):
             return ORTODONCIA_TOKEN if role == "ortodoncia" else ADMIN_TOKEN
     # 3. Query param (backwards compat)
-    if token and (hmac.compare_digest(token, ADMIN_TOKEN) or hmac.compare_digest(token, ORTODONCIA_TOKEN)):
+    if token and (_is_admin_token(token) or hmac.compare_digest(token, ORTODONCIA_TOKEN)):
         return token
     raise HTTPException(status_code=403, detail="Acceso denegado")
 
@@ -317,7 +327,7 @@ def admin_login(request: Request, password: str = Form(...)):
     is_https = (request.url.scheme == "https"
                 or request.headers.get("x-forwarded-proto") == "https")
 
-    if hmac.compare_digest(password, ADMIN_TOKEN):
+    if _is_admin_token(password):
         response = RedirectResponse(url="/admin", status_code=302)
         _set_session_cookie(response, "admin", is_https)
         log.info("Admin login OK (cookie set) ip=%s", ip)

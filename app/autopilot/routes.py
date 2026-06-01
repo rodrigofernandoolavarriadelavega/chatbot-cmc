@@ -21,7 +21,9 @@ from pathlib import Path
 from fastapi import APIRouter, Query, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 
-from config import ADMIN_TOKEN
+from config import ADMIN_TOKEN, OLACORE_TOKEN
+
+_ADMIN_TOKENS_AP: tuple[str, ...] = (ADMIN_TOKEN, OLACORE_TOKEN)
 from .world_state import load_snapshot
 from .designs import load_designs, add_design, delete_design, set_status, VALID_STATUS
 from .ad_formats import AD_FORMATS, FORMAT_BY_KEY, channels
@@ -54,10 +56,10 @@ _TEMPLATE = Path(__file__).parent.parent.parent / "templates" / "autopilot_dashb
 
 def _check_token(token: str | None, request: Request | None) -> None:
     """Valida el token admin (query o cookie). Coherente con el resto del panel."""
-    if token and token == ADMIN_TOKEN:
+    if token and token in _ADMIN_TOKENS_AP:
         return
     cookie = request.cookies.get("admin_token") if request else None
-    if cookie and cookie == ADMIN_TOKEN:
+    if cookie and cookie in _ADMIN_TOKENS_AP:
         return
     raise HTTPException(status_code=403, detail="Token inválido")
 
