@@ -236,6 +236,10 @@ input, textarea, select{font-family:inherit; color:inherit}
 .ctx-section{ padding:11px 16px }
 .ctx-section h3{ margin-bottom:8px; font-size:10px }
 .ctx-row{ font-size:11.5px; padding:4px 0 }
+/* Colapsar la cabecera del chat (ocultar botones + subtítulo) */
+.chat-header.hdr-collapsed{ min-height:42px; padding-top:6px; padding-bottom:6px }
+.chat-header.hdr-collapsed .chat-actions{ display:none }
+.chat-header.hdr-collapsed .sub{ display:none }
 
 /* ===== INBOX ============================================================== */
 .inbox-search{padding:14px 14px 10px}
@@ -451,12 +455,14 @@ input, textarea, select{font-family:inherit; color:inherit}
   background:linear-gradient(90deg, transparent, rgba(79,190,206,.25), transparent);
   pointer-events:none;
 }
-.chat-header .info{flex:1; min-width:0; padding-right:8px}
+.chat-header .info{flex:1 1 0; min-width:0; padding-right:8px; overflow:hidden}
 .chat-header .name{
   font-weight:800; font-size:15px; color:var(--cmc-navy);
-  display:flex; align-items:center; gap:8px; cursor:pointer;
-  letter-spacing:-.3px;
+  cursor:pointer; letter-spacing:-.3px;
+  /* NUNCA partir el nombre en vertical: una línea con ellipsis */
+  display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
+.chat-header .name .edit{margin-left:6px}
 .chat-header .name .edit{opacity:0; font-size:11px; color:var(--text-dim); transition:opacity var(--dur) var(--ease)}
 .chat-header .name:hover{color:var(--cmc-blue)}
 .chat-header .name:hover .edit{opacity:1}
@@ -467,13 +473,13 @@ input, textarea, select{font-family:inherit; color:inherit}
 .chat-header .sub > span{display:inline-flex; align-items:center; gap:4px}
 .chat-header .sub b{color:var(--cmc-blue); font-weight:700; font-feature-settings:"tnum"}
 
-.chat-actions{display:flex; gap:8px; flex-shrink:0; flex-wrap:wrap; justify-content:flex-end}
+.chat-actions{display:flex; gap:6px; flex-shrink:1; flex-wrap:wrap; justify-content:flex-end; min-width:0}
 .chat-btn{
-  padding:8px 14px;
+  padding:5px 10px;
   background:linear-gradient(180deg, #fff, #f8fbfc);
   border:1px solid var(--border);
-  border-radius:9px; font-size:12px; color:var(--cmc-navy); display:inline-flex;
-  align-items:center; gap:6px; white-space:nowrap; font-weight:600; line-height:1;
+  border-radius:8px; font-size:11px; color:var(--cmc-navy); display:inline-flex;
+  align-items:center; gap:5px; white-space:nowrap; font-weight:600; line-height:1;
   box-shadow:var(--shadow-xs);
 }
 .chat-btn:hover{background:#fff; border-color:var(--cmc-aqua); box-shadow:var(--shadow-sm); transform:translateY(-1px)}
@@ -1355,6 +1361,7 @@ html, body{width:100%; max-width:100%; overflow-x:hidden}
         <div class="chat-actions" id="chActions"></div>
         <button class="ctx-toggle" onclick="toggleInChatSearch()" aria-label="Buscar en esta conversación" title="Buscar en esta conversación (Ctrl+F)" style="margin-right:6px">🔍</button>
         <button class="ctx-toggle" onclick="toggleContext()" aria-label="Ver datos del paciente">ⓘ</button>
+        <button class="chat-tool" id="btnHdrCollapse" onclick="toggleChatHeader()" title="Ocultar los botones de arriba" aria-label="Colapsar cabecera del chat">▾</button>
         <button class="chat-tool" id="btnChatMax" onclick="toggleChatMax()" title="Pantalla completa del chat" aria-label="Pantalla completa del chat">⛶</button>
       </div>
       <div class="in-chat-search" id="inChatSearch" role="search">
@@ -4331,6 +4338,14 @@ function toggleChatMax(){
   if(b){ b.classList.toggle('active', on);
          b.title = on ? 'Salir de pantalla completa' : 'Pantalla completa del chat'; }
 }
+function toggleChatHeader(){
+  var h=document.querySelector('.chat-header'); if(!h) return;
+  var on=h.classList.toggle('hdr-collapsed');
+  try{ localStorage.setItem('v2_hdr_collapsed', on?'1':'0'); }catch(e){}
+  var b=document.getElementById('btnHdrCollapse');
+  if(b){ b.classList.toggle('active', on); b.textContent = on ? '▸' : '▾';
+         b.title = on ? 'Mostrar los botones de arriba' : 'Ocultar los botones de arriba'; }
+}
 /* ESC sale de pantalla completa del chat */
 document.addEventListener('keydown', function(e){
   if(e.key==='Escape'){
@@ -4346,6 +4361,12 @@ document.addEventListener('keydown', function(e){
       if(app){ app.classList.add('tb-collapsed');
                var b=document.getElementById('btnCollapseTop');
                if(b){ b.classList.add('active'); b.title='Mostrar barra superior'; } }
+    }
+    if(localStorage.getItem('v2_hdr_collapsed')==='1'){
+      var h=document.querySelector('.chat-header');
+      if(h){ h.classList.add('hdr-collapsed');
+             var hb=document.getElementById('btnHdrCollapse');
+             if(hb){ hb.classList.add('active'); hb.textContent='▸'; hb.title='Mostrar los botones de arriba'; } }
     }
   }catch(e){}
 })();
