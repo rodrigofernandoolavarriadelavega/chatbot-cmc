@@ -238,6 +238,16 @@
   .btn-icon:hover { background: var(--aqua-s); border-color: var(--aqua); color: var(--blue); }
   .btn-icon.del:hover { background: #fff0f0; border-color: var(--red); color: var(--red); }
   .btn-icon svg { width: 14px; height: 14px; }
+  .btn-icon.lock-on { background: #edf7f0; border-color: var(--green); color: #1a7a42; }
+  .btn-icon.lock-on:hover { background: #d4f0de; border-color: #1a7a42; }
+
+  /* Fila bloqueada: atenuada + no editable */
+  tbody tr.row-locked td.editable {
+    cursor: default !important;
+    color: var(--mute);
+  }
+  tbody tr.row-locked td.editable:hover::after { display: none; }
+  tbody tr.row-locked { background: #f5faf5 !important; opacity: .82; }
 
   /* Pill previsión */
   .pill {
@@ -487,9 +497,9 @@
     <button id="btnHoy">Hoy</button>
   </div>
   <div class="spacer"></div>
-  <button class="btn-prefill" id="btnPrellenar" title="Traer pacientes agendados del dia desde Medilink">
+  <button class="btn-prefill" id="btnPrellenar" title="Agrega citas nuevas y rellena prestaciones pendientes desde Medilink">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h10M4 18h7"/><circle cx="18" cy="18" r="3"/><path d="M18 15v3l2 1"/></svg>
-    Prellenar
+    Actualizar desde Medilink
   </button>
   <button class="btn-secondary" id="btnExportXlsx" title="Descargar pagos del dia como Excel">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
@@ -852,10 +862,17 @@ function renderTabla(pagos) {
 }
 
 function buildSavedRow(p, i) {
-  const draft = (!p.metodo_pago || p.metodo_pago === '') && p.copago === 0 && p.creado_por === 'prellenar';
+  const locked = !!p.bloqueado;
+  const draft = !locked && (!p.metodo_pago || p.metodo_pago === '') && p.copago === 0 && p.creado_por === 'prellenar';
   const draftMark = draft ? ' <span style="font-size:9px;color:var(--aqua);font-weight:700;vertical-align:middle">Pendiente</span>' : '';
+  const lockTitle = locked ? 'Desbloquear fila' : 'Marcar como listo y bloquear';
+  const lockClass = locked ? 'btn-icon lock-on' : 'btn-icon';
+  const lockSvg = locked
+    ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>`
+    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 019.9-1"/></svg>`;
+  const trClass = locked ? 'row-saved row-locked' : 'row-saved';
   return `
-    <tr class="row-saved" data-id="${p.id}">
+    <tr class="${trClass}" data-id="${p.id}" data-locked="${locked?1:0}">
       <td style="color:var(--mute);font-size:11px">${i+1}</td>
       <td class="editable" data-col="hora">${fmtHora(p.hora)}</td>
       <td class="editable" data-col="paciente_nombre" style="font-weight:600">${esc(p.paciente_nombre)}${draftMark}</td>
@@ -870,6 +887,9 @@ function buildSavedRow(p, i) {
       <td style="color:var(--mute);font-size:11px">${capitalize(p.origen)}</td>
       <td>
         <div class="td-actions">
+          <button class="${lockClass}" title="${lockTitle}" onclick="toggleLockPago(${p.id}, this)">
+            ${lockSvg}
+          </button>
           <button class="btn-icon del" title="Eliminar" onclick="eliminarPago(${p.id})">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
           </button>
@@ -886,6 +906,7 @@ function setupTbodyDelegate() {
     if (!td) return;
     const tr = td.closest('tr.row-saved');
     if (!tr) return;
+    if (tr.dataset.locked === '1') return; // fila bloqueada — no editar
     const id = parseInt(tr.dataset.id);
     if (!id) return;
     activarEdicionFila(id, td.dataset.col);
@@ -1393,6 +1414,17 @@ function guardarFilaEditada(id, silent = false) {
   if (tr && tr._guardarEdicion) tr._guardarEdicion(silent);
 }
 
+// ── Lock / Unlock fila ───────────────────────────────────────────────────────
+async function toggleLockPago(id, btn) {
+  try {
+    const r = await fetch('/alma/api/pagos/' + id + '/lock' + qp, { method: 'PATCH' });
+    if (!r.ok) { const e2 = await r.json().catch(() => ({})); throw new Error(e2.detail || 'HTTP ' + r.status); }
+    const d = await r.json();
+    showToast(d.bloqueado ? 'Fila bloqueada' : 'Fila desbloqueada', d.bloqueado ? 'success' : '');
+    cargarPagos();
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+
 // ── Eliminar ──────────────────────────────────────────────────────────────────
 async function eliminarPago(id) {
   if (!confirm('¿Eliminar este registro de pago?')) return;
@@ -1726,24 +1758,25 @@ document.getElementById('cajaFondoInput').addEventListener('input', function() {
 
 document.getElementById('cajaContadoInput').addEventListener('input', actualizarArqueo);
 
-// ── Prellenar desde Medilink ──────────────────────────────────────────────────
+// ── Actualizar desde Medilink (incremental) ───────────────────────────────────
 document.getElementById('btnPrellenar').addEventListener('click', async () => {
   const btn = document.getElementById('btnPrellenar');
   btn.disabled = true;
-  btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:16px;height:16px;animation:spin .8s linear infinite"><path d="M21 12a9 9 0 11-6.22-8.56"/></svg> Cargando...`;
+  btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:16px;height:16px;animation:spin .8s linear infinite"><path d="M21 12a9 9 0 11-6.22-8.56"/></svg> Actualizando...`;
   try {
     const r = await fetch('/alma/api/pagos/prellenar' + qp + '&fecha=' + encodeURIComponent(_fecha), { method: 'POST' });
     if (!r.ok) { const err = await r.json().catch(() => ({})); throw new Error(err.detail || 'HTTP ' + r.status); }
     const d = await r.json();
-    const msg = d.creadas > 0
-      ? `${d.creadas} fila${d.creadas>1?'s':''} cargada${d.creadas>1?'s':''} desde Medilink`
-      : (d.saltadas > 0 ? 'Ya estaban todas cargadas' : (d.mensaje || 'Sin citas ese dia en Medilink'));
-    showToast(msg, d.creadas > 0 ? 'success' : '');
-    if (d.creadas > 0) cargarPagos();
+    const partes = [];
+    if (d.creadas  > 0) partes.push(`${d.creadas} nueva${d.creadas>1?'s':''}`);
+    if (d.actualizadas > 0) partes.push(`${d.actualizadas} prestacion${d.actualizadas>1?'es':''} completada${d.actualizadas>1?'s':''}`);
+    const msg = partes.length > 0 ? partes.join(' · ') : (d.mensaje || 'Todo al dia');
+    showToast(msg, (d.creadas > 0 || d.actualizadas > 0) ? 'success' : '');
+    if (d.creadas > 0 || d.actualizadas > 0) cargarPagos();
   } catch(e) { showToast('Error: ' + e.message, 'error'); }
   finally {
     btn.disabled = false;
-    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:16px;height:16px"><path d="M4 6h16M4 12h10M4 18h7"/><circle cx="18" cy="18" r="3"/><path d="M18 15v3l2 1"/></svg> Prellenar`;
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:16px;height:16px"><path d="M4 6h16M4 12h10M4 18h7"/><circle cx="18" cy="18" r="3"/><path d="M18 15v3l2 1"/></svg> Actualizar desde Medilink`;
   }
 });
 

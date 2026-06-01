@@ -158,6 +158,7 @@ def ensure_pagos_table() -> None:
         # Columnas añadidas post-creación (idempotente)
         for col_ddl in [
             "ALTER TABLE pagos_cmc ADD COLUMN tipo_bono TEXT DEFAULT ''",
+            "ALTER TABLE pagos_cmc ADD COLUMN bloqueado INTEGER NOT NULL DEFAULT 0",
         ]:
             try:
                 conn.execute(col_ddl)
@@ -586,7 +587,8 @@ async def get_pagos(
                       id_profesional, profesional, area, prevision,
                       copago, bonificacion, metodo_pago, folio,
                       codigo_transferencia, tipo_bono, procedimiento, origen,
-                      id_cita, creado_por, created_at, updated_at
+                      id_cita, creado_por, created_at, updated_at,
+                      COALESCE(bloqueado, 0) as bloqueado
                FROM pagos_cmc
                WHERE fecha BETWEEN ? AND ?
                ORDER BY fecha DESC, hora DESC""",
@@ -660,7 +662,7 @@ async def patch_pago(
         "fecha", "hora", "paciente_nombre", "rut", "id_profesional",
         "profesional", "area", "prevision", "copago", "bonificacion",
         "metodo_pago", "folio", "codigo_transferencia", "tipo_bono", "procedimiento",
-        "origen", "id_cita", "creado_por",
+        "origen", "id_cita", "creado_por", "bloqueado",
     }
     campos = {k: v for k, v in body.items() if k in _EDITABLE}
     if not campos:
@@ -854,17 +856,18 @@ async def prellenar_pagos(
     request: Request = None,
 ):
     """
-    Trae las citas del día desde Medilink y crea filas draft en pagos_cmc
-    (pago=0, metodo vacío) para que recepción las complete.
+    Actualiza incrementalmente las filas de pagos_cmc desde Medilink.
 
-    Estrategia de requests:
-    - 1 sola query GET /citas?fecha=DD/MM/YYYY&estado_anulacion=0 para todos los profesionales.
-    - Por cada cita con id_atencion: GET /atenciones/{id}/detalles para la prestación,
-      throttleado con 0.15s entre requests (evita 429). Best-effort: si falla, prestación queda vacía.
-    - Idempotente: se saltea citas que ya tienen fila en pagos_cmc para esa fecha
-      (chequeo por id_cita o por rut+fecha).
+    Estrategia (idempotente, 429-safe):
+    - 1 sola query GET /citas?fecha=... para todas las citas del día.
+    - Para citas NUEVAS (no existen en pagos_cmc): INSERT draft.
+    - Para citas YA EXISTENTES con procedimiento vacío y fila NO bloqueada:
+      busca /atenciones/{id}/detalles y rellena el hueco. Throttled 0.15s.
+    - NUNCA sobrescribe filas bloqueadas (bloqueado=1) ni campos ya editados
+      (copago, metodo_pago, folio, procedimiento no vacíos).
+    - Solo escribe procedimiento en filas cuya prestación sigue vacía.
 
-    Retorna: { creadas: N, saltadas: N, errores: N }
+    Retorna: { creadas: N, actualizadas: N, saltadas: N, errores: N }
     """
     _require_admin_dep(request, token=token, cmc_session=cmc_session)
     ensure_pagos_table()
@@ -887,7 +890,6 @@ async def prellenar_pagos(
         fecha_iso = now_cl.strftime("%Y-%m-%d")
 
     # ── 1 request: todas las citas del día ───────────────────────────────────
-    # Medilink acepta fecha en YYYY-MM-DD en el filtro {"eq": ...}
     client = _get_shared_client()
     try:
         r = await client.get(
@@ -909,36 +911,111 @@ async def prellenar_pagos(
 
     citas = _safe_json(r).get("data", [])
     if not citas:
-        return {"creadas": 0, "saltadas": 0, "errores": 0, "mensaje": "Sin citas para esa fecha en Medilink"}
+        return {"creadas": 0, "actualizadas": 0, "saltadas": 0, "errores": 0, "mensaje": "Sin citas para esa fecha en Medilink"}
 
-    # Ordenar por hora_inicio para que las filas queden ordenadas
     citas.sort(key=lambda c: c.get("hora_inicio", ""))
 
-    # ── Cargar IDs/ruts ya existentes en pagos_cmc para esa fecha (idempotencia) ──
+    # ── Cargar filas existentes en pagos_cmc para esa fecha ──────────────────
+    # Necesitamos: id_cita, rut, procedimiento actual, bloqueado, y el id de la fila
     from session import _conn
     with _conn() as conn:
         rows_exist = conn.execute(
-            "SELECT id_cita, rut FROM pagos_cmc WHERE fecha = ?", (fecha_iso,)
+            """SELECT id, id_cita, rut,
+                      COALESCE(procedimiento, '') as procedimiento,
+                      COALESCE(bloqueado, 0) as bloqueado
+               FROM pagos_cmc WHERE fecha = ?""",
+            (fecha_iso,)
         ).fetchall()
 
-    existing_id_citas = {r["id_cita"] for r in rows_exist if r["id_cita"]}
-    existing_ruts     = {r["rut"]     for r in rows_exist if r["rut"]}
+    # Mapas para búsqueda rápida
+    # id_cita → {id, procedimiento, bloqueado}
+    existing_by_id_cita: dict[str, dict] = {}
+    # rut → {id, procedimiento, bloqueado}
+    existing_by_rut: dict[str, dict] = {}
+    for row in rows_exist:
+        meta = {
+            "db_id":       row["id"],
+            "procedimiento": row["procedimiento"],
+            "bloqueado":   row["bloqueado"],
+        }
+        if row["id_cita"]:
+            existing_by_id_cita[row["id_cita"]] = meta
+        if row["rut"]:
+            existing_by_rut[row["rut"]] = meta
 
-    creadas = saltadas = errores = 0
+    creadas = actualizadas = saltadas = errores = 0
+
+    async def _fetch_prestacion(id_aten) -> str:
+        """Obtiene prestaciones desde /atenciones/{id}/detalles. Throttleado."""
+        try:
+            await asyncio.sleep(0.15)
+            rd = await client.get(
+                f"{MEDILINK_BASE_URL}/atenciones/{id_aten}/detalles",
+                headers=HEADERS,
+                timeout=8,
+            )
+            if rd.status_code == 200:
+                detalles = _safe_json(rd).get("data", [])
+                nombres = []
+                for det in detalles:
+                    n = (det.get("nombre_prestacion") or "").strip()
+                    if n and n not in nombres:
+                        nombres.append(n)
+                return " / ".join(nombres)
+        except Exception as e_det:
+            log.debug("prellenar_pagos: detalles id_aten=%s error: %s", id_aten, e_det)
+        return ""
 
     for cita in citas:
         id_cita_str = str(cita.get("id", ""))
         rut_cita    = (cita.get("rut_paciente") or "").strip()
+        id_aten     = cita.get("id_atencion")
 
-        # Idempotencia: saltar si ya existe por id_cita o por rut+fecha
-        if id_cita_str and id_cita_str in existing_id_citas:
-            saltadas += 1
-            continue
-        if rut_cita and rut_cita in existing_ruts:
-            saltadas += 1
+        # Buscar si ya existe una fila para esta cita
+        existing = (
+            existing_by_id_cita.get(id_cita_str) if id_cita_str
+            else existing_by_rut.get(rut_cita)
+        )
+
+        if existing:
+            # Fila ya existe — solo rellenar hueco de prestación si corresponde
+            if existing["bloqueado"]:
+                saltadas += 1
+                continue
+            if existing["procedimiento"]:
+                # Ya tiene prestación registrada, no tocar
+                saltadas += 1
+                continue
+            if not id_aten:
+                saltadas += 1
+                continue
+            # Buscar prestación en Medilink para completar el hueco
+            prestacion = await _fetch_prestacion(id_aten)
+            if not prestacion:
+                saltadas += 1
+                continue
+            try:
+                with _conn() as conn:
+                    conn.execute(
+                        """UPDATE pagos_cmc
+                           SET procedimiento = ?, updated_at = datetime('now')
+                           WHERE id = ? AND COALESCE(bloqueado, 0) = 0
+                             AND COALESCE(procedimiento, '') = ''""",
+                        (prestacion, existing["db_id"])
+                    )
+                    conn.commit()
+                actualizadas += 1
+                log.info(
+                    "prellenar_pagos: hueco prestacion rellenado id=%d prestacion=%r",
+                    existing["db_id"], prestacion,
+                )
+            except Exception as e_upd:
+                log.warning("prellenar_pagos: error UPDATE id=%s: %s", existing["db_id"], e_upd)
+                errores += 1
             continue
 
-        id_prof  = cita.get("id_profesional")
+        # Fila nueva: INSERT draft
+        id_prof   = cita.get("id_profesional")
         prof_info = PROFESIONALES.get(id_prof, {}) if id_prof else {}
 
         nombre_pac  = (cita.get("nombre_paciente") or "").strip()
@@ -946,27 +1023,9 @@ async def prellenar_pagos(
         area        = prof_info.get("especialidad", "")
         hora_inicio = (cita.get("hora_inicio") or "")[:5]
 
-        # ── Prestación: 1 request por cita con id_atencion, throttleado ─────
         prestacion = ""
-        id_aten = cita.get("id_atencion")
         if id_aten:
-            try:
-                await asyncio.sleep(0.15)
-                rd = await client.get(
-                    f"{MEDILINK_BASE_URL}/atenciones/{id_aten}/detalles",
-                    headers=HEADERS,
-                    timeout=8,
-                )
-                if rd.status_code == 200:
-                    detalles = _safe_json(rd).get("data", [])
-                    nombres = []
-                    for det in detalles:
-                        n = (det.get("nombre_prestacion") or "").strip()
-                        if n and n not in nombres:
-                            nombres.append(n)
-                    prestacion = " / ".join(nombres)
-            except Exception as e_det:
-                log.debug("prellenar_pagos: detalles id_aten=%s error: %s", id_aten, e_det)
+            prestacion = await _fetch_prestacion(id_aten)
 
         try:
             with _conn() as conn:
@@ -975,9 +1034,9 @@ async def prellenar_pagos(
                        (fecha, hora, paciente_nombre, rut, id_profesional, profesional,
                         area, prevision, copago, bonificacion, metodo_pago, folio,
                         codigo_transferencia, tipo_bono, procedimiento, origen, id_cita,
-                        creado_por, created_at, updated_at)
+                        creado_por, bloqueado, created_at, updated_at)
                        VALUES (?,?,?,?,?,?,?,?,0,0,'','','','',?,?,?,
-                               'prellenar', datetime('now'), datetime('now'))""",
+                               'prellenar', 0, datetime('now'), datetime('now'))""",
                     (
                         fecha_iso,
                         hora_inicio,
@@ -986,28 +1045,62 @@ async def prellenar_pagos(
                         id_prof,
                         profesional,
                         area,
-                        "particular",   # default; recepción corrige si es fonasa
+                        "particular",
                         prestacion,
                         "presencial",
                         id_cita_str,
                     )
                 )
                 conn.commit()
-            # Registrar para idempotencia en este mismo batch
+            # Registrar en mapas para idempotencia dentro del mismo batch
+            meta_new = {"db_id": None, "procedimiento": prestacion, "bloqueado": 0}
             if id_cita_str:
-                existing_id_citas.add(id_cita_str)
+                existing_by_id_cita[id_cita_str] = meta_new
             if rut_cita:
-                existing_ruts.add(rut_cita)
+                existing_by_rut[rut_cita] = meta_new
             creadas += 1
         except Exception as e_ins:
             log.warning("prellenar_pagos: error INSERT cita %s: %s", id_cita_str, e_ins)
             errores += 1
 
     log.info(
-        "prellenar_pagos: fecha=%s creadas=%d saltadas=%d errores=%d",
-        fecha_iso, creadas, saltadas, errores,
+        "prellenar_pagos: fecha=%s creadas=%d actualizadas=%d saltadas=%d errores=%d",
+        fecha_iso, creadas, actualizadas, saltadas, errores,
     )
-    return {"creadas": creadas, "saltadas": saltadas, "errores": errores}
+    return {"creadas": creadas, "actualizadas": actualizadas, "saltadas": saltadas, "errores": errores}
+
+
+@router.patch("/{pago_id}/lock")
+async def toggle_lock_pago(
+    pago_id: int,
+    request: Request,
+    token: str | None = Query(None),
+    cmc_session: str | None = Cookie(None),
+):
+    """
+    Alterna el campo bloqueado de una fila (0→1 o 1→0).
+    Una fila bloqueada queda excluida de 'Actualizar desde Medilink'.
+    """
+    _require_admin_dep(request, token=token, cmc_session=cmc_session)
+    ensure_pagos_table()
+
+    from session import _conn
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT id, COALESCE(bloqueado, 0) as bloqueado FROM pagos_cmc WHERE id = ?",
+            (pago_id,)
+        ).fetchone()
+        if not row:
+            raise HTTPException(404, f"Pago {pago_id} no encontrado")
+        nuevo_estado = 0 if row["bloqueado"] else 1
+        conn.execute(
+            "UPDATE pagos_cmc SET bloqueado = ?, updated_at = datetime('now') WHERE id = ?",
+            (nuevo_estado, pago_id)
+        )
+        conn.commit()
+
+    log.info("pagos_routes.toggle_lock_pago: id=%d bloqueado=%d", pago_id, nuevo_estado)
+    return {"ok": True, "id": pago_id, "bloqueado": nuevo_estado}
 
 
 @router.delete("/{pago_id}")
