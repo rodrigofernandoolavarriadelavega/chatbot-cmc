@@ -95,12 +95,14 @@ async def get_agenda_dia(
     request: Request = None,
 ):
     """
-    Retorna las citas del dia para un profesional desde citas_cache (SQLite local).
-    NO consulta Medilink — evita 429. Solo un profesional por request.
+    Retorna las citas del dia para un profesional.
+    Siempre consulta Medilink en vivo (1 request por prof+fecha → seguro contra 429)
+    y actualiza el caché como efecto secundario.
+    Cubre fechas pasadas, hoy y futuras.
     """
     _require_admin_dep(request, token=token, cmc_session=cmc_session)
 
-    from medilink import PROFESIONALES
+    from medilink import PROFESIONALES, sync_citas_dia
     if id_prof not in PROFESIONALES:
         raise HTTPException(400, f"Profesional {id_prof} no reconocido")
 
@@ -109,6 +111,13 @@ async def get_agenda_dia(
         datetime.strptime(fecha, "%Y-%m-%d")
     except ValueError:
         raise HTTPException(400, "Fecha debe ser YYYY-MM-DD")
+
+    # Consultar Medilink en vivo (1 request) y actualizar caché
+    try:
+        await sync_citas_dia(fecha, [id_prof])
+    except Exception as e:
+        log.error("get_agenda_dia sync prof=%d fecha=%s: %s", id_prof, fecha, e)
+        raise HTTPException(503, "Error al consultar Medilink")
 
     from session import get_citas_cache_dia
     citas = get_citas_cache_dia(id_prof, fecha)
@@ -124,7 +133,7 @@ async def get_agenda_dia(
         "fecha": fecha,
         "citas": citas,
         "total": len(citas),
-        "fuente": "cache",
+        "fuente": "live",
     }
 
 
