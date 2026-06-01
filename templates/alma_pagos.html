@@ -66,6 +66,7 @@
     cursor: pointer; transition: all .15s; box-shadow: 0 2px 8px rgba(79,190,206,.3);
   }
   .btn-primary:hover { background: var(--blue); box-shadow: 0 4px 14px rgba(17,114,171,.35); }
+  .btn-primary:disabled { opacity: .55; cursor: not-allowed; }
   .btn-primary svg { width: 16px; height: 16px; flex-shrink: 0; }
 
   /* ── KPI strip ── */
@@ -90,18 +91,106 @@
     background: #fff; border-radius: 14px; border: 1px solid var(--border);
     box-shadow: var(--sh-sm); overflow: hidden;
   }
-  table { width: 100%; border-collapse: collapse; }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+
+  /* Anchos de columna — matches column order */
+  col.c-num   { width: 28px; }
+  col.c-hora  { width: 60px; }
+  col.c-pac   { width: 170px; }
+  col.c-rut   { width: 100px; }
+  col.c-prof  { width: 160px; }
+  col.c-area  { width: 120px; }
+  col.c-prev  { width: 88px; }
+  col.c-cop   { width: 72px; }
+  col.c-bonif { width: 72px; }
+  col.c-met   { width: 90px; }
+  col.c-folio { width: 72px; }
+  col.c-orig  { width: 80px; }
+  col.c-act   { width: 64px; }
+
   thead th {
     background: linear-gradient(180deg, var(--navy), var(--navy2));
     color: #b8d4e8; font-size: 11px; font-weight: 700;
     text-transform: uppercase; letter-spacing: .08em;
-    padding: 10px 12px; text-align: left; white-space: nowrap;
+    padding: 9px 8px; text-align: left; white-space: nowrap;
   }
   tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
   tbody tr:last-child { border-bottom: 0; }
-  tbody tr:hover { background: var(--aqua-s); }
-  tbody td { padding: 10px 12px; vertical-align: middle; }
-  .td-actions { display: flex; gap: 5px; }
+  tbody tr:not(.row-new):hover { background: var(--aqua-s); }
+  tbody td { padding: 7px 8px; vertical-align: middle; }
+
+  /* ── Fila nueva inline ── */
+  .row-new {
+    background: #f0fbfd;
+    border-bottom: 2px solid var(--aqua) !important;
+  }
+  .row-new td { padding: 5px 4px; }
+
+  /* Inputs dentro de la tabla (fila nueva + edición inline) */
+  td input.ci, td select.ci {
+    width: 100%; font-family: inherit; font-size: 12px; font-weight: 500;
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 5px 6px; color: var(--navy); background: #fff;
+    transition: border-color .12s; outline: none;
+    min-width: 0;
+  }
+  td input.ci:focus, td select.ci:focus {
+    border-color: var(--aqua);
+    box-shadow: 0 0 0 2px rgba(79,190,206,.18);
+  }
+  td input.ci.suggested, td select.ci.suggested {
+    background: #f4feff;
+    border-color: var(--aqua);
+  }
+  td input.ci.loading {
+    background: #f7fbfd url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='10' stroke='%234FBECE' stroke-width='2' fill='none' stroke-dasharray='31.4' stroke-dashoffset='10'%3E%3CanimateTransform attributeName='transform' type='rotate' from='0 12 12' to='360 12 12' dur='.8s' repeatCount='indefinite'/%3E%3C/circle%3E%3C/svg%3E") no-repeat right 6px center / 14px 14px;
+  }
+
+  /* Toggle previsión compacto en celda */
+  .seg-mini {
+    display: flex; border: 1px solid var(--border); border-radius: 6px;
+    overflow: hidden; height: 28px; width: 100%;
+  }
+  .seg-mini button {
+    flex: 1; border: 0; background: none; font-family: inherit;
+    font-size: 10px; font-weight: 700; cursor: pointer;
+    transition: all .12s; color: var(--mute); padding: 0;
+  }
+  .seg-mini button.active { background: var(--aqua); color: #fff; }
+
+  /* Método compacto en celda */
+  .met-mini {
+    display: flex; gap: 3px; flex-wrap: wrap;
+  }
+  .met-btn {
+    border: 1px solid var(--border); border-radius: 5px;
+    background: #fff; font-family: inherit; font-size: 9.5px; font-weight: 700;
+    padding: 3px 5px; cursor: pointer; transition: all .12s; color: var(--mute);
+    line-height: 1;
+  }
+  .met-btn.active {
+    background: var(--navy); color: #fff; border-color: var(--navy);
+  }
+
+  /* Botón guardar fila */
+  .btn-save-row {
+    background: var(--aqua); color: #fff; border: 0;
+    border-radius: 7px; padding: 5px 8px; font-family: inherit;
+    font-size: 11px; font-weight: 700; cursor: pointer;
+    transition: all .13s; display: inline-flex; align-items: center; gap: 4px;
+    white-space: nowrap;
+  }
+  .btn-save-row:hover { background: var(--blue); }
+  .btn-save-row:disabled { opacity: .55; cursor: not-allowed; }
+  .btn-cancel-row {
+    background: none; border: 1px solid var(--border); color: var(--mute);
+    border-radius: 7px; padding: 5px 7px; font-family: inherit;
+    font-size: 11px; font-weight: 600; cursor: pointer; transition: all .13s;
+  }
+  .btn-cancel-row:hover { background: #f5f8fa; }
+
+  /* Acciones en filas guardadas */
+  .td-actions { display: flex; gap: 4px; }
   .btn-icon {
     background: none; border: 1px solid var(--border); border-radius: 7px;
     padding: 5px 7px; cursor: pointer; color: var(--mute);
@@ -118,8 +207,6 @@
   }
   .pill.fonasa   { background: #dff5ea; color: #1a7a42; }
   .pill.particular { background: #e8f2fb; color: var(--blue); }
-
-  /* Pill método */
   .pill.metodo { background: var(--aqua-s); color: var(--blue); }
 
   /* Empty state */
@@ -128,7 +215,7 @@
     font-size: 13px; font-weight: 600;
   }
 
-  /* ── Modal ── */
+  /* ── Modal (solo para ALMA_ABRIR_PAGO externo desde /admin/v2) ── */
   .modal-bg {
     display: none; position: fixed; inset: 0;
     background: rgba(15,63,104,.45); z-index: 100;
@@ -154,7 +241,6 @@
   .modal-close:hover { background: #fff0f0; border-color: var(--red); color: var(--red); }
   .modal-close svg { width: 16px; height: 16px; }
 
-  /* Form grid */
   .form-grid {
     display: grid; grid-template-columns: 1fr 1fr;
     gap: 14px 16px;
@@ -169,23 +255,16 @@
     width: 100%; font-family: inherit; font-size: 13px; font-weight: 500;
     border: 1px solid var(--border); border-radius: 9px;
     padding: 9px 12px; color: var(--navy); background: #fff;
-    transition: border-color .13s;
-    outline: none;
+    transition: border-color .13s; outline: none;
   }
   .field input:focus, .field select:focus, .field textarea:focus {
     border-color: var(--aqua);
     box-shadow: 0 0 0 3px rgba(79,190,206,.15);
   }
-  .field .hint {
-    font-size: 10px; color: var(--mute); margin-top: 3px;
-  }
-  /* Suggested value indicator */
+  .field .hint { font-size: 10px; color: var(--mute); margin-top: 3px; }
   .field input.suggested, .field select.suggested {
-    background: #fafeff;
-    border-color: var(--aqua);
+    background: #fafeff; border-color: var(--aqua);
   }
-
-  /* Toggle previsión */
   .seg-toggle {
     display: flex; gap: 0; border: 1px solid var(--border);
     border-radius: 9px; overflow: hidden; width: 100%;
@@ -195,30 +274,17 @@
     font-size: 12px; font-weight: 700; padding: 9px 8px;
     cursor: pointer; transition: all .13s; color: var(--mute);
   }
-  .seg-toggle button.active {
-    background: var(--aqua); color: #fff;
-    box-shadow: inset 0 0 0 1px rgba(0,0,0,.05);
-  }
-
-  /* Método de pago — 4 botones */
-  .metodo-grid {
-    display: grid; grid-template-columns: repeat(4,1fr); gap: 6px;
-  }
+  .seg-toggle button.active { background: var(--aqua); color: #fff; }
+  .metodo-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; }
   .metodo-btn {
     border: 1px solid var(--border); border-radius: 9px;
     background: #fff; font-family: inherit; font-size: 11px; font-weight: 700;
     padding: 9px 4px; cursor: pointer; transition: all .13s; color: var(--mute);
     text-align: center;
   }
-  .metodo-btn.active {
-    background: var(--navy); color: #fff; border-color: var(--navy);
-  }
-
-  /* Bonif row (solo si fonasa) */
+  .metodo-btn.active { background: var(--navy); color: #fff; border-color: var(--navy); }
   .bonif-row { display: none; }
   .bonif-row.show { display: contents; }
-
-  /* Form actions */
   .form-actions {
     display: flex; gap: 10px; justify-content: flex-end;
     margin-top: 22px;
@@ -245,17 +311,19 @@
   .toast.success { background: #1a7a42; }
   .toast.error   { background: var(--red); }
 
-  /* Loading */
   .loading { text-align: center; padding: 28px; color: var(--mute); font-size: 13px; font-weight: 600; }
 
+  @media (max-width: 900px) {
+    .table-wrap { overflow-x: auto; }
+    table { table-layout: auto; min-width: 900px; }
+  }
   @media (max-width: 640px) {
+    .kpi-strip { gap: 8px; padding: 12px; }
+    .kpi { min-width: 120px; }
+    .pg-topbar { padding: 0 12px; }
     .form-grid { grid-template-columns: 1fr; }
     .form-grid .full { grid-column: 1; }
     .metodo-grid { grid-template-columns: repeat(2,1fr); }
-    .kpi-strip { gap: 8px; padding: 12px; }
-    .kpi { min-width: 120px; }
-    .table-wrap { margin: 0 12px 20px; font-size: 12px; }
-    .pg-topbar { padding: 0 12px; }
   }
 </style>
 </head>
@@ -273,7 +341,7 @@
   <div class="spacer"></div>
   <button class="btn-primary" id="btnNuevoPago">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-    Registrar pago
+    Nueva fila
   </button>
 </div>
 
@@ -285,9 +353,15 @@
   <div class="kpi"><div class="label">Total recaudado</div><div class="value green" id="kpiTotal">—</div></div>
 </div>
 
-<!-- Tabla -->
+<!-- Tabla planilla -->
 <div class="table-wrap">
   <table id="tablaPagos">
+    <colgroup>
+      <col class="c-num"><col class="c-hora"><col class="c-pac"><col class="c-rut">
+      <col class="c-prof"><col class="c-area"><col class="c-prev">
+      <col class="c-cop"><col class="c-bonif"><col class="c-met">
+      <col class="c-folio"><col class="c-orig"><col class="c-act">
+    </colgroup>
     <thead>
       <tr>
         <th>#</th>
@@ -311,17 +385,14 @@
   </table>
 </div>
 
-<!-- ── Modal formulario ── -->
+<!-- ── Modal (solo para llamadas externas desde /admin/v2 via postMessage) ── -->
 <div class="modal-bg" id="modalBg">
   <div class="modal">
     <button class="modal-close" id="modalClose">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
     </button>
     <h2 id="modalTitle">Registrar pago</h2>
-
     <div class="form-grid" id="formGrid">
-
-      <!-- Paciente / RUT -->
       <div class="field full">
         <label>Paciente</label>
         <input type="text" id="fNombre" placeholder="Nombre completo" autocomplete="off">
@@ -335,21 +406,15 @@
         <label>Fecha</label>
         <input type="date" id="fFecha">
       </div>
-
-      <!-- Profesional / Area -->
       <div class="field">
         <label>Profesional</label>
-        <select id="fProf">
-          <option value="">— Seleccionar —</option>
-        </select>
+        <select id="fProf"><option value="">— Seleccionar —</option></select>
       </div>
       <div class="field">
         <label>Area</label>
         <input type="text" id="fArea" placeholder="Ej: Medicina General">
         <div class="hint">Se sugiere segun profesional.</div>
       </div>
-
-      <!-- Previsión -->
       <div class="field full">
         <label>Prevision</label>
         <div class="seg-toggle">
@@ -357,8 +422,6 @@
           <button data-prev="fonasa" id="btnFonasa">Fonasa MLE</button>
         </div>
       </div>
-
-      <!-- Copago + Bonif -->
       <div class="field">
         <label>Copago paciente ($)</label>
         <input type="number" id="fCopago" min="0" step="1" placeholder="0">
@@ -369,8 +432,6 @@
         <input type="number" id="fBonif" min="0" step="1" placeholder="0">
         <div class="hint" id="hintBonif"></div>
       </div>
-
-      <!-- Método de pago -->
       <div class="field full">
         <label>Metodo de pago</label>
         <div class="metodo-grid">
@@ -381,8 +442,6 @@
         </div>
         <div class="hint" id="hintMetodo"></div>
       </div>
-
-      <!-- Folio / codigo transferencia -->
       <div class="field">
         <label>Folio</label>
         <input type="text" id="fFolio" placeholder="N° folio (opcional)">
@@ -391,8 +450,6 @@
         <label>Codigo transferencia</label>
         <input type="text" id="fCodTransf" placeholder="Opcional">
       </div>
-
-      <!-- Procedimiento / Origen -->
       <div class="field full">
         <label>Procedimiento</label>
         <input type="text" id="fProcedimiento" placeholder="Ej: Consulta medica, Control kine sesion 3...">
@@ -409,9 +466,7 @@
         <label>ID Cita Medilink</label>
         <input type="text" id="fIdCita" placeholder="Opcional">
       </div>
-
-    </div><!-- /form-grid -->
-
+    </div>
     <div class="form-actions">
       <button class="btn-cancel" id="btnCancelarModal">Cancelar</button>
       <button class="btn-primary" id="btnGuardarPago">
@@ -430,17 +485,21 @@
 const TOKEN = "__TOKEN__";
 const qp = TOKEN ? ("?token=" + encodeURIComponent(TOKEN)) : "";
 
-// ── Profesionales (cargados al inicio) ──────────────────────────────────────
+// ── Estado global ────────────────────────────────────────────────────────────
 let PROFESIONALES = [];
 let AREAS_FONASA  = [];
-let _editingId    = null;
-let _prevision    = "particular";
-let _metodo       = "efectivo";
+// Modal (solo para mensajes externos /admin/v2)
+let _editingId  = null;
+let _prevision  = "particular";
+let _metodo     = "efectivo";
+// Fila nueva inline
+let _newRow     = null;  // referencia al <tr> de nueva fila
+let _newPrev    = "particular";
+let _newMetodo  = "efectivo";
 
 // ── Fecha activa ─────────────────────────────────────────────────────────────
 function todayStr() {
-  const d = new Date();
-  return d.toLocaleDateString('en-CA'); // YYYY-MM-DD en locale neutro
+  return new Date().toLocaleDateString('en-CA');
 }
 let _fecha = todayStr();
 document.getElementById('pickerFecha').value = _fecha;
@@ -448,6 +507,7 @@ document.getElementById('pickerFecha').value = _fecha;
 function setFecha(f) {
   _fecha = f;
   document.getElementById('pickerFecha').value = f;
+  cancelarFilaNueva();
   cargarPagos();
 }
 
@@ -476,7 +536,17 @@ function showToast(msg, type = '') {
   t._tmr = setTimeout(() => t.className = 'toast', 2800);
 }
 
-// ── Cargar profesionales + arancel ──────────────────────────────────────────
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function capitalize(s) {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+}
+function nowHora() {
+  return new Date().toLocaleTimeString('es-CL', {hour:'2-digit',minute:'2-digit'});
+}
+
+// ── Cargar profesionales ──────────────────────────────────────────────────────
 async function initData() {
   try {
     const [rProfs, rArancel] = await Promise.all([
@@ -486,11 +556,11 @@ async function initData() {
     if (rProfs.ok) {
       const d = await rProfs.json();
       PROFESIONALES = d.profesionales || [];
+      // Popular select del modal
       const sel = document.getElementById('fProf');
       PROFESIONALES.forEach(p => {
         const o = document.createElement('option');
-        o.value = p.id;
-        o.textContent = p.nombre + ' — ' + p.especialidad;
+        o.value = p.id; o.textContent = p.nombre + ' — ' + p.especialidad;
         o.dataset.esp = p.especialidad;
         sel.appendChild(o);
       });
@@ -499,12 +569,10 @@ async function initData() {
       const d = await rArancel.json();
       AREAS_FONASA = d.areas_fonasa || [];
     }
-  } catch(e) {
-    console.warn('initData error:', e);
-  }
+  } catch(e) { console.warn('initData error:', e); }
 }
 
-// ── Cargar pagos del día ──────────────────────────────────────────────────
+// ── Cargar pagos del día ──────────────────────────────────────────────────────
 async function cargarPagos() {
   const tbody = document.getElementById('tablaPagosBody');
   tbody.innerHTML = '<tr><td colspan="13" class="loading">Cargando...</td></tr>';
@@ -527,14 +595,21 @@ function renderKPIs(d) {
   document.getElementById('kpiTotal').textContent  = fmt$(d.total_recaudado);
 }
 
+// ── Render tabla con filas guardadas ─────────────────────────────────────────
 function renderTabla(pagos) {
   const tbody = document.getElementById('tablaPagosBody');
   if (!pagos.length) {
     tbody.innerHTML = '<tr><td colspan="13" class="empty">Sin pagos registrados para este dia.</td></tr>';
+    _newRow = null;
     return;
   }
-  tbody.innerHTML = pagos.map((p, i) => `
-    <tr>
+  tbody.innerHTML = pagos.map((p, i) => buildSavedRow(p, i)).join('');
+  _newRow = null;
+}
+
+function buildSavedRow(p, i) {
+  return `
+    <tr data-id="${p.id}">
       <td style="color:var(--mute);font-size:11px">${i+1}</td>
       <td>${fmtHora(p.hora)}</td>
       <td style="font-weight:600">${esc(p.paciente_nombre)}</td>
@@ -549,7 +624,7 @@ function renderTabla(pagos) {
       <td style="color:var(--mute);font-size:11px">${capitalize(p.origen)}</td>
       <td>
         <div class="td-actions">
-          <button class="btn-icon" title="Editar" onclick="abrirEditar(${p.id})">
+          <button class="btn-icon" title="Editar" onclick="editarFilaInline(${p.id})">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </button>
           <button class="btn-icon del" title="Eliminar" onclick="eliminarPago(${p.id})">
@@ -557,75 +632,459 @@ function renderTabla(pagos) {
           </button>
         </div>
       </td>
-    </tr>
-  `).join('');
+    </tr>`;
 }
 
-function esc(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-function capitalize(s) {
-  return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+// ── Fila nueva inline ─────────────────────────────────────────────────────────
+
+function buildProfSelect(selId, selectedId) {
+  let opts = `<option value="">— Prof —</option>`;
+  PROFESIONALES.forEach(p => {
+    const sel = (p.id == selectedId) ? ' selected' : '';
+    opts += `<option value="${p.id}" data-esp="${esc(p.especialidad)}"${sel}>${esc(p.nombre)}</option>`;
+  });
+  return `<select class="ci" id="${selId}">${opts}</select>`;
 }
 
-// ── Modal — abrir nuevo ───────────────────────────────────────────────────────
-document.getElementById('btnNuevoPago').addEventListener('click', () => abrirNuevo());
+function buildPrevToggle(containerId, val) {
+  return `<div class="seg-mini" id="${containerId}">
+    <button type="button" data-v="particular" class="${val==='particular'?'active':''}">Part.</button>
+    <button type="button" data-v="fonasa" class="${val==='fonasa'?'active':''}">Fonasa</button>
+  </div>`;
+}
 
-function abrirNuevo(preData = {}) {
-  _editingId = null;
-  document.getElementById('modalTitle').textContent = 'Registrar pago';
-  resetForm();
-  // Pre-fill con datos externos (ej: botón "Pago" del chat)
-  if (preData.paciente_nombre) document.getElementById('fNombre').value = preData.paciente_nombre;
-  if (preData.rut) {
-    document.getElementById('fRut').value = preData.rut;
-    cargarSugerencia(preData.rut, preData.id_cita || null);
+function buildMetodoBtns(containerId, val) {
+  const opts = ['efectivo','transf.','debito','credito'];
+  const vals = ['efectivo','transferencia','debito','credito'];
+  return `<div class="met-mini" id="${containerId}">${vals.map((v,i)=>
+    `<button type="button" class="met-btn${v===val?' active':''}" data-v="${v}">${opts[i]}</button>`
+  ).join('')}</div>`;
+}
+
+function insertarFilaNueva(preData = {}) {
+  cancelarFilaNueva(); // solo una fila a la vez
+
+  const tbody = document.getElementById('tablaPagosBody');
+  // Limpiar mensaje de vacío si existe
+  const emptyCell = tbody.querySelector('.empty');
+  if (emptyCell) tbody.innerHTML = '';
+
+  _newPrev   = preData.prevision  || 'particular';
+  _newMetodo = preData.metodo_pago || 'efectivo';
+
+  const tr = document.createElement('tr');
+  tr.className = 'row-new';
+  tr.innerHTML = `
+    <td style="color:var(--mute);font-size:11px">+</td>
+    <td><input class="ci" id="nr_hora" type="time" value="${nowHora()}" tabindex="1"></td>
+    <td><input class="ci" id="nr_nombre" type="text" placeholder="Nombre paciente" tabindex="2"
+               value="${esc(preData.paciente_nombre||'')}"></td>
+    <td><input class="ci" id="nr_rut" type="text" placeholder="12.345.678-9" tabindex="3"
+               value="${esc(preData.rut||'')}"></td>
+    <td>${buildProfSelect('nr_prof', preData.id_profesional||'')}</td>
+    <td><input class="ci" id="nr_area" type="text" placeholder="Area" tabindex="5"
+               value="${esc(preData.area||'')}"></td>
+    <td>${buildPrevToggle('nr_prev_toggle', _newPrev)}</td>
+    <td><input class="ci" id="nr_copago" type="number" min="0" step="1" placeholder="0"
+               value="${preData.copago_sugerido||preData.copago||''}" tabindex="7"></td>
+    <td><input class="ci" id="nr_bonif"  type="number" min="0" step="1" placeholder="0"
+               value="${preData.bonif_sugerida||preData.bonificacion||''}" tabindex="8"></td>
+    <td>${buildMetodoBtns('nr_met_btns', _newMetodo)}</td>
+    <td><input class="ci" id="nr_folio" type="text" placeholder="Folio" tabindex="10"
+               value="${esc(preData.folio||'')}"></td>
+    <td>
+      <select class="ci" id="nr_origen" tabindex="11">
+        <option value="presencial"${(preData.origen||'presencial')==='presencial'?' selected':''}>Presencial</option>
+        <option value="telefono"${preData.origen==='telefono'?' selected':''}>Telefono</option>
+        <option value="chat"${preData.origen==='chat'?' selected':''}>Chat</option>
+      </select>
+    </td>
+    <td>
+      <div class="td-actions">
+        <button class="btn-save-row" id="nr_guardar" tabindex="12">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+          Guardar
+        </button>
+        <button class="btn-cancel-row" id="nr_cancelar" tabindex="13">✕</button>
+      </div>
+    </td>`;
+
+  // Insertar al tope del tbody
+  tbody.insertBefore(tr, tbody.firstChild);
+  _newRow = tr;
+
+  // Enfocar primer campo relevante
+  const focusId = preData.rut ? 'nr_nombre' : 'nr_rut';
+  setTimeout(() => { const el = tr.querySelector('#' + focusId); if (el) el.focus(); }, 60);
+
+  // Eventos toggle previsión
+  tr.querySelector('#nr_prev_toggle').addEventListener('click', e => {
+    const btn = e.target.closest('button[data-v]');
+    if (!btn) return;
+    _newPrev = btn.dataset.v;
+    tr.querySelectorAll('#nr_prev_toggle button').forEach(b =>
+      b.classList.toggle('active', b.dataset.v === _newPrev)
+    );
+    recalcFilaNueva();
+  });
+
+  // Eventos método
+  tr.querySelector('#nr_met_btns').addEventListener('click', e => {
+    const btn = e.target.closest('button[data-v]');
+    if (!btn) return;
+    _newMetodo = btn.dataset.v;
+    tr.querySelectorAll('#nr_met_btns button').forEach(b =>
+      b.classList.toggle('active', b.dataset.v === _newMetodo)
+    );
+  });
+
+  // Cuando cambia profesional → sugerir area
+  tr.querySelector('#nr_prof').addEventListener('change', function() {
+    const opt = this.options[this.selectedIndex];
+    if (opt && opt.dataset.esp) {
+      tr.querySelector('#nr_area').value = opt.dataset.esp;
+    }
+    recalcFilaNueva();
+  });
+
+  // Blur en RUT → buscar sugerencia
+  tr.querySelector('#nr_rut').addEventListener('blur', function() {
+    if (this.value.trim()) cargarSugerenciaRow(this.value.trim(), null);
+  });
+
+  // Marcar copago/bonif como editado manualmente
+  ['nr_copago','nr_bonif'].forEach(id => {
+    tr.querySelector('#' + id).addEventListener('input', function() {
+      this._edited = true;
+    });
+  });
+
+  // Navegación Tab incluye los selects de toggle
+  tr.querySelector('#nr_folio').addEventListener('keydown', e => {
+    if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); tr.querySelector('#nr_origen').focus(); }
+  });
+
+  // Guardar
+  tr.querySelector('#nr_guardar').addEventListener('click', () => guardarFilaNueva());
+
+  // Cancelar
+  tr.querySelector('#nr_cancelar').addEventListener('click', () => cancelarFilaNueva());
+
+  // Enter en cualquier input de la fila
+  tr.querySelectorAll('input.ci').forEach(inp => {
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); guardarFilaNueva(); }
+      if (e.key === 'Escape') cancelarFilaNueva();
+    });
+  });
+
+  // Si vino con RUT, lanzar sugerencia
+  if (preData.rut) cargarSugerenciaRow(preData.rut, preData.id_cita || null);
+}
+
+function cancelarFilaNueva() {
+  if (_newRow && _newRow.parentNode) _newRow.parentNode.removeChild(_newRow);
+  _newRow = null;
+}
+
+// ── Sugerencia para fila nueva ────────────────────────────────────────────────
+
+async function cargarSugerenciaRow(rut, id_cita) {
+  if (!_newRow) return;
+  const rutInput = _newRow.querySelector('#nr_rut');
+  const nomInput = _newRow.querySelector('#nr_nombre');
+  rutInput && rutInput.classList.add('loading');
+  let url = '/alma/api/pagos/sugerencia' + qp;
+  if (rut)     url += '&rut=' + encodeURIComponent(rut);
+  if (id_cita) url += '&id_cita=' + encodeURIComponent(id_cita);
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return;
+    const s = await r.json();
+    if (!_newRow) return;
+    if (!nomInput.value && s.paciente_nombre) {
+      nomInput.value = s.paciente_nombre;
+      nomInput.classList.add('suggested');
+    }
+    if (s.id_profesional) {
+      const profSel = _newRow.querySelector('#nr_prof');
+      profSel.value = s.id_profesional;
+      profSel.classList.add('suggested');
+    }
+    if (s.area) {
+      const areaInp = _newRow.querySelector('#nr_area');
+      areaInp.value = s.area;
+      areaInp.classList.add('suggested');
+    }
+    if (s.prevision) {
+      _newPrev = s.prevision;
+      _newRow.querySelectorAll('#nr_prev_toggle button').forEach(b =>
+        b.classList.toggle('active', b.dataset.v === _newPrev)
+      );
+    }
+    aplicarSugerenciaMontosRow(s);
+  } catch(e) {
+    console.warn('cargarSugerenciaRow error:', e);
+  } finally {
+    if (_newRow) {
+      const ri = _newRow.querySelector('#nr_rut');
+      if (ri) ri.classList.remove('loading');
+    }
   }
-  if (preData.id_cita) {
-    document.getElementById('fIdCita').value = preData.id_cita;
-    if (!preData.rut) cargarSugerencia(null, preData.id_cita);
-  }
-  document.getElementById('fFecha').value = _fecha;
-  document.getElementById('modalBg').classList.add('open');
 }
 
-// Escuchar mensajes del panel admin_v2 (botón Pago en conversación)
-window.addEventListener('message', e => {
-  if (e.data && e.data.type === 'ALMA_ABRIR_PAGO') {
-    abrirNuevo(e.data.payload || {});
+function aplicarSugerenciaMontosRow(s) {
+  if (!_newRow) return;
+  const fC = _newRow.querySelector('#nr_copago');
+  const fB = _newRow.querySelector('#nr_bonif');
+  if (s.copago_sugerido != null && !fC._edited) {
+    fC.value = s.copago_sugerido || '';
+    if (s.copago_sugerido) fC.classList.add('suggested');
   }
-});
+  if (s.bonif_sugerida != null && s.bonif_sugerida > 0 && !fB._edited) {
+    fB.value = s.bonif_sugerida;
+    fB.classList.add('suggested');
+  }
+}
 
-function abrirEditar(id) {
-  _editingId = id;
-  document.getElementById('modalTitle').textContent = 'Editar pago';
-  // Buscar fila en la tabla actual
+function recalcFilaNueva() {
+  if (!_newRow) return;
+  const rut = (_newRow.querySelector('#nr_rut').value || '').trim();
+  if (rut) cargarSugerenciaRow(rut, null);
+}
+
+// ── Guardar fila nueva ────────────────────────────────────────────────────────
+
+async function guardarFilaNueva() {
+  if (!_newRow) return;
+  const nombre = (_newRow.querySelector('#nr_nombre').value || '').trim();
+  if (!nombre) {
+    showToast('Ingresa el nombre del paciente', 'error');
+    _newRow.querySelector('#nr_nombre').focus();
+    return;
+  }
+  const profSel   = _newRow.querySelector('#nr_prof');
+  const profOpt   = profSel.options[profSel.selectedIndex];
+  const idProfRaw = profSel.value;
+  const horaVal   = _newRow.querySelector('#nr_hora').value || nowHora();
+
+  const body = {
+    fecha:               _fecha,
+    hora:                horaVal,
+    paciente_nombre:     nombre,
+    rut:                 (_newRow.querySelector('#nr_rut').value || '').trim(),
+    id_profesional:      idProfRaw ? parseInt(idProfRaw) : null,
+    profesional:         profOpt && idProfRaw ? profOpt.textContent.trim() : '',
+    area:                (_newRow.querySelector('#nr_area').value || '').trim(),
+    prevision:           _newPrev,
+    copago:              parseInt(_newRow.querySelector('#nr_copago').value) || 0,
+    bonificacion:        parseInt(_newRow.querySelector('#nr_bonif').value)  || 0,
+    metodo_pago:         _newMetodo,
+    folio:               (_newRow.querySelector('#nr_folio').value || '').trim(),
+    origen:              _newRow.querySelector('#nr_origen').value,
+    creado_por:          'recepcion',
+  };
+
+  const btnG = _newRow.querySelector('#nr_guardar');
+  btnG.disabled = true;
+  btnG.textContent = 'Guardando…';
+
+  try {
+    const r = await fetch('/alma/api/pagos' + qp, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error ' + r.status);
+    }
+    _newRow = null;
+    showToast('Pago registrado', 'success');
+    cargarPagos();
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+    btnG.disabled = false;
+    btnG.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Guardar';
+  }
+}
+
+// ── Edición inline de filas guardadas ────────────────────────────────────────
+
+function editarFilaInline(id) {
+  // Si hay fila nueva abierta, no abrir edición simultánea
+  if (_newRow) { showToast('Guarda o cancela la fila nueva primero', 'error'); return; }
+
+  const tr = document.querySelector(`tr[data-id="${id}"]`);
+  if (!tr) return;
+
+  // Buscar datos del registro en el fetch reciente
   fetch('/alma/api/pagos' + qp + '&fecha=' + _fecha)
     .then(r => r.json())
     .then(d => {
       const p = (d.pagos || []).find(x => x.id === id);
-      if (!p) { showToast('No se encontró el registro', 'error'); return; }
-      resetForm();
-      document.getElementById('fNombre').value      = p.paciente_nombre || '';
-      document.getElementById('fRut').value         = p.rut || '';
-      document.getElementById('fFecha').value       = p.fecha || '';
-      document.getElementById('fArea').value        = p.area || '';
-      document.getElementById('fCopago').value      = p.copago || 0;
-      document.getElementById('fBonif').value       = p.bonificacion || 0;
-      document.getElementById('fFolio').value       = p.folio || '';
-      document.getElementById('fCodTransf').value   = p.codigo_transferencia || '';
-      document.getElementById('fProcedimiento').value = p.procedimiento || '';
-      document.getElementById('fIdCita').value      = p.id_cita || '';
-      setPrevision(p.prevision || 'particular');
-      setMetodo(p.metodo_pago || 'efectivo');
-      // Profesional
-      if (p.id_profesional) {
-        document.getElementById('fProf').value = p.id_profesional;
-      }
-      // Origen
-      document.getElementById('fOrigen').value = p.origen || 'presencial';
-      document.getElementById('modalBg').classList.add('open');
-    });
+      if (!p) { showToast('Registro no encontrado', 'error'); return; }
+
+      const ePrev   = p.prevision || 'particular';
+      const eMetodo = p.metodo_pago || 'efectivo';
+
+      tr.innerHTML = `
+        <td style="color:var(--mute);font-size:11px">&bull;</td>
+        <td><input class="ci" id="er_hora" type="time" value="${(p.hora||'').slice(0,5)}" tabindex="1"></td>
+        <td><input class="ci" id="er_nombre" type="text" value="${esc(p.paciente_nombre||'')}" tabindex="2"></td>
+        <td><input class="ci" id="er_rut" type="text" value="${esc(p.rut||'')}" tabindex="3"></td>
+        <td>${buildProfSelect('er_prof', p.id_profesional||'')}</td>
+        <td><input class="ci" id="er_area" type="text" value="${esc(p.area||'')}" tabindex="5"></td>
+        <td>${buildPrevToggle('er_prev_toggle', ePrev)}</td>
+        <td><input class="ci" id="er_copago" type="number" min="0" step="1" value="${p.copago||0}" tabindex="7"></td>
+        <td><input class="ci" id="er_bonif"  type="number" min="0" step="1" value="${p.bonificacion||0}" tabindex="8"></td>
+        <td>${buildMetodoBtns('er_met_btns', eMetodo)}</td>
+        <td><input class="ci" id="er_folio" type="text" value="${esc(p.folio||'')}" tabindex="10"></td>
+        <td>
+          <select class="ci" id="er_origen" tabindex="11">
+            <option value="presencial"${(p.origen||'')==='presencial'?' selected':''}>Presencial</option>
+            <option value="telefono"${p.origen==='telefono'?' selected':''}>Telefono</option>
+            <option value="chat"${p.origen==='chat'?' selected':''}>Chat</option>
+          </select>
+        </td>
+        <td>
+          <div class="td-actions">
+            <button class="btn-save-row" id="er_guardar" tabindex="12">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+              Guardar
+            </button>
+            <button class="btn-cancel-row" id="er_cancelar">✕</button>
+          </div>
+        </td>`;
+
+      tr.className = 'row-new'; // mismo estilo que la fila nueva
+
+      // Estado local del toggle
+      let ePrevLocal   = ePrev;
+      let eMetodoLocal = eMetodo;
+
+      tr.querySelector('#er_prev_toggle').addEventListener('click', e => {
+        const btn = e.target.closest('button[data-v]');
+        if (!btn) return;
+        ePrevLocal = btn.dataset.v;
+        tr.querySelectorAll('#er_prev_toggle button').forEach(b =>
+          b.classList.toggle('active', b.dataset.v === ePrevLocal)
+        );
+      });
+
+      tr.querySelector('#er_met_btns').addEventListener('click', e => {
+        const btn = e.target.closest('button[data-v]');
+        if (!btn) return;
+        eMetodoLocal = btn.dataset.v;
+        tr.querySelectorAll('#er_met_btns button').forEach(b =>
+          b.classList.toggle('active', b.dataset.v === eMetodoLocal)
+        );
+      });
+
+      tr.querySelector('#er_prof').addEventListener('change', function() {
+        const opt = this.options[this.selectedIndex];
+        if (opt && opt.dataset.esp) tr.querySelector('#er_area').value = opt.dataset.esp;
+      });
+
+      tr.querySelector('#er_guardar').addEventListener('click', async () => {
+        const nombre = (tr.querySelector('#er_nombre').value || '').trim();
+        if (!nombre) { showToast('Ingresa el nombre del paciente', 'error'); return; }
+        const profSel   = tr.querySelector('#er_prof');
+        const profOpt   = profSel.options[profSel.selectedIndex];
+        const idProfRaw = profSel.value;
+        const body = {
+          hora:                tr.querySelector('#er_hora').value || '',
+          paciente_nombre:     nombre,
+          rut:                 (tr.querySelector('#er_rut').value  || '').trim(),
+          id_profesional:      idProfRaw ? parseInt(idProfRaw) : null,
+          profesional:         profOpt && idProfRaw ? profOpt.textContent.trim() : '',
+          area:                (tr.querySelector('#er_area').value || '').trim(),
+          prevision:           ePrevLocal,
+          copago:              parseInt(tr.querySelector('#er_copago').value) || 0,
+          bonificacion:        parseInt(tr.querySelector('#er_bonif').value)  || 0,
+          metodo_pago:         eMetodoLocal,
+          folio:               (tr.querySelector('#er_folio').value || '').trim(),
+          origen:              tr.querySelector('#er_origen').value,
+        };
+        const btnG = tr.querySelector('#er_guardar');
+        btnG.disabled = true; btnG.textContent = 'Guardando…';
+        try {
+          const resp = await fetch('/alma/api/pagos/' + id + qp, {
+            method: 'PATCH',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(body),
+          });
+          if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            throw new Error(err.detail || 'Error ' + resp.status);
+          }
+          showToast('Pago actualizado', 'success');
+          cargarPagos();
+        } catch(e) {
+          showToast('Error: ' + e.message, 'error');
+          btnG.disabled = false;
+          btnG.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Guardar';
+        }
+      });
+
+      tr.querySelector('#er_cancelar').addEventListener('click', () => cargarPagos());
+
+      tr.querySelectorAll('input.ci').forEach(inp => {
+        inp.addEventListener('keydown', e => {
+          if (e.key === 'Escape') cargarPagos();
+        });
+      });
+
+      setTimeout(() => tr.querySelector('#er_nombre').focus(), 60);
+    })
+    .catch(e => { showToast('Error al cargar datos', 'error'); console.error(e); });
+}
+
+// ── Eliminar ──────────────────────────────────────────────────────────────────
+async function eliminarPago(id) {
+  if (!confirm('¿Eliminar este registro de pago?')) return;
+  try {
+    const r = await fetch('/alma/api/pagos/' + id + qp, { method: 'DELETE' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    showToast('Registro eliminado', 'success');
+    cargarPagos();
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+// ── Botón Nueva fila ──────────────────────────────────────────────────────────
+document.getElementById('btnNuevoPago').addEventListener('click', () => insertarFilaNueva());
+
+// ── Modal (solo para postMessage de /admin/v2) ────────────────────────────────
+
+window.addEventListener('message', e => {
+  if (e.data && e.data.type === 'ALMA_ABRIR_PAGO') {
+    const pd = e.data.payload || {};
+    // Si estamos en el módulo pagos embebido, preferimos fila inline
+    // Si el viewport es muy angosto o hay señal expresa de modal, usamos modal
+    if (pd._forceModal) {
+      abrirNuevo(pd);
+    } else {
+      insertarFilaNueva(pd);
+    }
+  }
+});
+
+// Modal helpers (conservados para _forceModal y para mantener compatibilidad)
+function abrirNuevo(preData = {}) {
+  _editingId = null;
+  document.getElementById('modalTitle').textContent = 'Registrar pago';
+  resetForm();
+  if (preData.paciente_nombre) document.getElementById('fNombre').value = preData.paciente_nombre;
+  if (preData.rut) {
+    document.getElementById('fRut').value = preData.rut;
+    cargarSugerenciaModal(preData.rut, preData.id_cita || null);
+  }
+  if (preData.id_cita) {
+    document.getElementById('fIdCita').value = preData.id_cita;
+    if (!preData.rut) cargarSugerenciaModal(null, preData.id_cita);
+  }
+  document.getElementById('fFecha').value = _fecha;
+  document.getElementById('modalBg').classList.add('open');
 }
 
 function cerrarModal() {
@@ -638,7 +1097,6 @@ document.getElementById('modalBg').addEventListener('click', e => {
   if (e.target === document.getElementById('modalBg')) cerrarModal();
 });
 
-// ── Formulario helpers ────────────────────────────────────────────────────────
 function resetForm() {
   ['fNombre','fRut','fArea','fCopago','fBonif','fFolio','fCodTransf','fProcedimiento','fIdCita']
     .forEach(id => document.getElementById(id).value = '');
@@ -655,9 +1113,7 @@ function setPrevision(p) {
   _prevision = p;
   document.getElementById('btnParticular').classList.toggle('active', p === 'particular');
   document.getElementById('btnFonasa').classList.toggle('active',     p === 'fonasa');
-  const rowB = document.getElementById('rowBonif');
-  rowB.classList.toggle('show', p === 'fonasa');
-  // Mostrar/ocultar campo metodo credito hint (dental-only)
+  document.getElementById('rowBonif').classList.toggle('show', p === 'fonasa');
   updateMetodoHint();
 }
 
@@ -666,127 +1122,94 @@ function setMetodo(m) {
   document.querySelectorAll('.metodo-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.metodo === m);
   });
-  const rowCT = document.getElementById('rowCodTransf');
-  rowCT.style.display = (m === 'transferencia') ? '' : 'none';
+  document.getElementById('rowCodTransf').style.display = (m === 'transferencia') ? '' : 'none';
   updateMetodoHint();
 }
 
 function updateMetodoHint() {
   const hint = document.getElementById('hintMetodo');
-  if (_metodo === 'credito' || _metodo === 'debito') {
-    hint.textContent = 'Tarjetas solo disponibles en area dental.';
-  } else {
-    hint.textContent = '';
-  }
+  hint.textContent = (_metodo === 'credito' || _metodo === 'debito')
+    ? 'Tarjetas solo disponibles en area dental.' : '';
 }
 
-// Eventos toggle previsión
 document.getElementById('btnParticular').addEventListener('click', () => {
-  setPrevision('particular');
-  recalcSugerencia();
+  setPrevision('particular'); recalcSugerenciaModal();
 });
 document.getElementById('btnFonasa').addEventListener('click', () => {
-  setPrevision('fonasa');
-  recalcSugerencia();
+  setPrevision('fonasa'); recalcSugerenciaModal();
 });
-
-// Eventos botones método
 document.querySelectorAll('.metodo-btn').forEach(b => {
   b.addEventListener('click', () => setMetodo(b.dataset.metodo));
 });
-
-// Cuando cambia profesional → sugerir area + copago
 document.getElementById('fProf').addEventListener('change', function() {
   const opt = this.options[this.selectedIndex];
   if (opt && opt.dataset.esp) {
     document.getElementById('fArea').value = opt.dataset.esp;
-    recalcSugerencia();
+    recalcSugerenciaModal();
   }
 });
-
-// Cuando pierde foco el RUT → buscar sugerencia
 document.getElementById('fRut').addEventListener('blur', function() {
-  if (this.value.trim()) cargarSugerencia(this.value.trim(), null);
+  if (this.value.trim()) cargarSugerenciaModal(this.value.trim(), null);
 });
 
-// ── Cargar sugerencia desde API ───────────────────────────────────────────────
-async function cargarSugerencia(rut, id_cita) {
+async function cargarSugerenciaModal(rut, id_cita) {
   let url = '/alma/api/pagos/sugerencia' + qp;
-  if (rut)     url += '&rut='     + encodeURIComponent(rut);
+  if (rut)     url += '&rut=' + encodeURIComponent(rut);
   if (id_cita) url += '&id_cita=' + encodeURIComponent(id_cita);
   try {
     const r = await fetch(url);
     if (!r.ok) return;
     const s = await r.json();
-    // Solo rellenar si los campos están vacíos (no pisar edición manual)
     const fNombre = document.getElementById('fNombre');
     if (!fNombre.value && s.paciente_nombre) fNombre.value = s.paciente_nombre;
     if (s.id_profesional) document.getElementById('fProf').value = s.id_profesional;
     if (s.area) document.getElementById('fArea').value = s.area;
     if (s.prevision) setPrevision(s.prevision);
     if (s.id_cita) document.getElementById('fIdCita').value = s.id_cita;
-    // Sugerir montos
-    aplicarSugerenciaMontos(s);
-  } catch(e) {
-    console.warn('cargarSugerencia error:', e);
-  }
+    aplicarSugerenciaMontosModal(s);
+  } catch(e) { console.warn('cargarSugerenciaModal error:', e); }
 }
 
-function recalcSugerencia() {
-  // Recalcula montos localmente con la tabla N3 que ya conocemos del init
-  const area  = document.getElementById('fArea').value.trim();
-  const idProf = parseInt(document.getElementById('fProf').value) || null;
-  // Pedir nueva sugerencia al server con los datos actuales
+function recalcSugerenciaModal() {
   const rut = document.getElementById('fRut').value.trim();
-  // Uso ligero: solo si tenemos area o prof
+  const area = document.getElementById('fArea').value.trim();
+  const idProf = parseInt(document.getElementById('fProf').value) || null;
   if (!area && !idProf) return;
-  cargarSugerencia(rut || null, null);
+  cargarSugerenciaModal(rut || null, null);
 }
 
-function aplicarSugerenciaMontos(s) {
+function aplicarSugerenciaMontosModal(s) {
   const fC = document.getElementById('fCopago');
   const fB = document.getElementById('fBonif');
-  // Marcar como sugerido visualmente
   if (s.copago_sugerido != null && !fC._edited) {
-    fC.value = s.copago_sugerido;
-    fC.classList.add('suggested');
+    fC.value = s.copago_sugerido; fC.classList.add('suggested');
   }
   if (s.bonif_sugerida != null && s.bonif_sugerida > 0 && !fB._edited) {
-    fB.value = s.bonif_sugerida;
-    fB.classList.add('suggested');
+    fB.value = s.bonif_sugerida; fB.classList.add('suggested');
   }
-  // Hints
   if (s.fuente === 'fonasa_n3') {
     document.getElementById('hintCopago').textContent =
-      'Arancel N3: total $' + s.total_arancel?.toLocaleString('es-CL') +
-      ' · Cod. ' + (s.codigo_fonasa || '');
-    document.getElementById('hintBonif').textContent =
-      'Bonificacion Imed sugerida';
+      'Arancel N3: total $' + s.total_arancel?.toLocaleString('es-CL') + ' · Cod. ' + (s.codigo_fonasa || '');
+    document.getElementById('hintBonif').textContent = 'Bonificacion Imed sugerida';
   } else if (s.fuente === 'particular') {
-    document.getElementById('hintCopago').textContent =
-      s.copago_sugerido ? 'Precio particular' : '';
+    document.getElementById('hintCopago').textContent = s.copago_sugerido ? 'Precio particular' : '';
     document.getElementById('hintBonif').textContent = '';
   }
 }
 
-// Marcar como editado manualmente (para no pisar con sugerencia posterior)
 ['fCopago','fBonif'].forEach(id => {
   document.getElementById(id).addEventListener('input', function() {
-    this._edited = true;
-    this.classList.remove('suggested');
+    this._edited = true; this.classList.remove('suggested');
   });
 });
 
-// ── Guardar ───────────────────────────────────────────────────────────────────
-document.getElementById('btnGuardarPago').addEventListener('click', guardarPago);
+document.getElementById('btnGuardarPago').addEventListener('click', guardarModal);
 
-async function guardarPago() {
+async function guardarModal() {
   const nombre = document.getElementById('fNombre').value.trim();
   if (!nombre) { showToast('Ingresa el nombre del paciente', 'error'); return; }
-
   const idProfRaw = document.getElementById('fProf').value;
   const profOpt   = document.querySelector(`#fProf option[value="${idProfRaw}"]`);
-
   const body = {
     fecha:               document.getElementById('fFecha').value,
     hora:                new Date().toLocaleTimeString('es-CL', {hour:'2-digit',minute:'2-digit'}),
@@ -806,23 +1229,17 @@ async function guardarPago() {
     id_cita:             document.getElementById('fIdCita').value.trim(),
     creado_por:          'recepcion',
   };
-
   const btn = document.getElementById('btnGuardarPago');
-  btn.disabled = true;
-  btn.textContent = 'Guardando...';
-
+  btn.disabled = true; btn.textContent = 'Guardando...';
   try {
     let url, method;
     if (_editingId) {
-      url    = '/alma/api/pagos/' + _editingId + qp;
-      method = 'PATCH';
+      url = '/alma/api/pagos/' + _editingId + qp; method = 'PATCH';
     } else {
-      url    = '/alma/api/pagos' + qp;
-      method = 'POST';
+      url = '/alma/api/pagos' + qp; method = 'POST';
     }
     const r = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
+      method, headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(body),
     });
     if (!r.ok) {
@@ -837,19 +1254,6 @@ async function guardarPago() {
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Guardar';
-  }
-}
-
-// ── Eliminar ──────────────────────────────────────────────────────────────────
-async function eliminarPago(id) {
-  if (!confirm('¿Eliminar este registro de pago?')) return;
-  try {
-    const r = await fetch('/alma/api/pagos/' + id + qp, { method: 'DELETE' });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    showToast('Registro eliminado', 'success');
-    cargarPagos();
-  } catch(e) {
-    showToast('Error: ' + e.message, 'error');
   }
 }
 
