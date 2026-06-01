@@ -89,12 +89,11 @@ function Hero({ visual = "fjord" }) {
 
       {/* fjord bleed (desktop) — sangra al borde derecho y se funde con el fondo */}
       {blended && (
-        <div aria-hidden="true" className="hidden lg:block absolute inset-y-0 right-[5vw] w-[54vw] max-w-[900px]">
-          <FjordScene className="absolute inset-0 h-full w-full object-[58%_45%]" />
-          <div className="absolute inset-0" style={{ background: "linear-gradient(90deg, #F2F3F5 0%, rgba(242,243,245,0.72) 16%, rgba(242,243,245,0) 48%)" }}></div>
-          <div className="absolute inset-0" style={{ background: "linear-gradient(270deg, #F2F3F5 0%, rgba(242,243,245,0) 13%)" }}></div>
-          <div className="absolute inset-0" style={{ background: "linear-gradient(0deg, #F2F3F5 0%, rgba(242,243,245,0) 24%)" }}></div>
-          <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, #F2F3F5 0%, rgba(242,243,245,0) 16%)" }}></div>
+        <div aria-hidden="true" className="hidden lg:block absolute top-1/2 right-0 -translate-y-1/2 w-[58vw] max-w-[1000px] aspect-[1672/941]">
+          <FjordScene className="absolute inset-0 h-full w-full" />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(90deg, #F2F3F5 0%, rgba(242,243,245,0.7) 18%, rgba(242,243,245,0) 52%)" }}></div>
+          <div className="absolute inset-0" style={{ background: "linear-gradient(0deg, #F2F3F5 0%, rgba(242,243,245,0) 14%)" }}></div>
+          <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, #F2F3F5 0%, rgba(242,243,245,0) 12%)" }}></div>
         </div>
       )}
 
@@ -134,9 +133,9 @@ function Hero({ visual = "fjord" }) {
         {blended ? (
           // mobile/tablet: el fiordo se muestra apilado y difuminado hacia el fondo
           <div className="reveal reveal-d2 relative lg:hidden">
-            <div className="relative h-[300px] sm:h-[400px] w-full overflow-hidden rounded-[18px]">
+            <div className="relative w-full aspect-[1672/941] overflow-hidden rounded-[18px]">
               <FjordScene className="absolute inset-0 h-full w-full" />
-              <div className="absolute inset-0" style={{ background: "linear-gradient(0deg, #F2F3F5 0%, rgba(242,243,245,0) 30%)" }}></div>
+              <div className="absolute inset-0" style={{ background: "linear-gradient(0deg, #F2F3F5 0%, rgba(242,243,245,0) 22%)" }}></div>
             </div>
           </div>
         ) : (
