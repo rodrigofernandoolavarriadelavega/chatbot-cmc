@@ -886,17 +886,14 @@ async def prellenar_pagos(
     else:
         fecha_iso = now_cl.strftime("%Y-%m-%d")
 
-    # Medilink usa DD/MM/YYYY en sus filtros de fecha
-    dt_fecha = datetime.strptime(fecha_iso, "%Y-%m-%d")
-    fecha_ml = dt_fecha.strftime("%d/%m/%Y")
-
     # ── 1 request: todas las citas del día ───────────────────────────────────
+    # Medilink acepta fecha en YYYY-MM-DD en el filtro {"eq": ...}
     client = _get_shared_client()
     try:
         r = await client.get(
             f"{MEDILINK_BASE_URL}/citas",
             params={"q": _q({
-                "fecha":            {"eq": fecha_ml},
+                "fecha":            {"eq": fecha_iso},
                 "estado_anulacion": {"eq": 0},
             })},
             headers=HEADERS,
