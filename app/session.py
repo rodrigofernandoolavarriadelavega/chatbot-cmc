@@ -869,6 +869,17 @@ def get_session(phone: str) -> dict:
 def save_session(phone: str, state: str, data: dict):
     """Guarda o actualiza la sesión."""
     phone = normalize_wa_id(phone)  # BUG-09: formato canónico sin '+'
+    # ── Guard: el dueño NUNCA entra en HUMAN_TAKEOVER ─────────────────────
+    # "Tomar control" del propio canal del dueño no tiene sentido y lo
+    # silencia a sí mismo: el guard de takeover en el webhook (main.py) corta
+    # la respuesta ANTES de evaluar los comandos de doctor (modo/agenda/...),
+    # dejando muerto "modo". Punto único que cubre los ~30 call sites que
+    # setean HUMAN_TAKEOVER. Caso real: 2026-06-01, "Modo" silenciado.
+    if state == "HUMAN_TAKEOVER":
+        _owner = normalize_wa_id(os.getenv("ADMIN_ALERT_PHONE", "") or "")
+        if _owner and phone == _owner:
+            log.info("save_session: HUMAN_TAKEOVER bloqueado para dueño %s — forzado IDLE", phone)
+            state = "IDLE"
     with _conn() as conn:
         conn.execute("""
             INSERT INTO sessions (phone, state, data, updated_at)
