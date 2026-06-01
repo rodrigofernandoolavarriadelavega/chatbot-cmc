@@ -3654,8 +3654,9 @@ function openPagoModal(opts){
     document.getElementById("pgOrigen").value = "presencial";
     setTimeout(() => document.getElementById("pgRut")?.focus(), 60);
   } else {
+    // Bug 1: usar conv.nombre (campo real de activeConv), no display_name que no existe
     const conv   = activeConv || {};
-    const nombre = conv.display_name || conv.phone || "";
+    const nombre = conv.nombre || conv.phone || "";
     const rut    = conv.rut || "";
     const idCita = conv.last_cita_id || "";
 
@@ -3677,6 +3678,7 @@ function openPagoModal(opts){
   }
 
   document.getElementById("pgModal").hidden = false;
+  // pgBody y pgSuccess ya fueron restaurados en _pgResetForm(); estas lineas son defensa adicional
   document.getElementById("pgBody").hidden  = false;
   document.getElementById("pgSuccess").hidden = true;
   const fi = document.getElementById("pgFooterInfo");
@@ -3689,6 +3691,12 @@ function closePagoModal(){
 }
 
 function _pgResetForm(){
+  // Restaurar visibilidad body/success antes de limpiar campos (Bug 2: evita flash de exito al reabrir)
+  const pgBodyEl    = document.getElementById("pgBody");
+  const pgSuccessEl = document.getElementById("pgSuccess");
+  if(pgBodyEl)    pgBodyEl.hidden    = false;
+  if(pgSuccessEl) pgSuccessEl.hidden = true;
+
   ["pgNombre","pgRut","pgArea","pgCopago","pgBonif","pgFolio","pgCodTransf","pgProcedimiento","pgIdCita"]
     .forEach(id => {
       const el = document.getElementById(id);
