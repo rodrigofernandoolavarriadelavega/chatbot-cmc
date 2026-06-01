@@ -505,11 +505,22 @@
         <input type="text" id="fProcedimiento" placeholder="Ej: consulta, audiometria, control kine…">
       </div>
       <div class="field">
-        <label>Origen</label>
-        <select id="fOrigen">
+        <label>Canal</label>
+        <select id="fCanal" onchange="syncFuenteVisibility(this, document.getElementById('fFuente'))">
           <option value="presencial">Presencial</option>
           <option value="telefono">Telefono</option>
-          <option value="chat">Chat WhatsApp</option>
+          <option value="bot">Bot WhatsApp</option>
+          <option value="chat_humano">Chat humano</option>
+        </select>
+      </div>
+      <div class="field" id="fFieldFuente" style="display:none">
+        <label>Fuente</label>
+        <select id="fFuente">
+          <option value="whatsapp">WhatsApp</option>
+          <option value="meta">Meta / Facebook</option>
+          <option value="web">Web</option>
+          <option value="instagram">Instagram</option>
+          <option value="">— sin fuente —</option>
         </select>
       </div>
       <div class="field">
@@ -689,7 +700,7 @@ function buildSavedRow(p, i) {
       <td class="editable" data-col="metodo_pago" style="overflow:visible;max-width:none"><span class="pill metodo">${capitalize(p.metodo_pago || 'efectivo')}</span></td>
       <td class="editable" data-col="folio" style="color:var(--mute)" title="${esc(p.folio || '')}">${esc(p.folio || '—')}</td>
       <td class="editable" data-col="procedimiento" style="color:var(--mute)" title="${esc(p.procedimiento || '')}">${esc(p.procedimiento || '—')}</td>
-      <td style="color:var(--mute)">${capitalize(p.origen)}</td>
+      <td style="color:var(--mute)" title="${esc(p.canal||'presencial')} ${p.fuente ? '· '+esc(p.fuente) : ''}">${renderCanalFuente(p.canal, p.fuente)}</td>
       <td>
         <div class="td-actions">
           <button class="${lockClass}" title="${lockTitle}" onclick="toggleLockPago(${p.id}, this)">
@@ -826,10 +837,18 @@ function insertarFilaNueva(preData = {}) {
     </td>
     <td>${buildProcSelect('nr_proc', preData.procedimiento||'')}</td>
     <td>
-      <select class="ci" id="nr_origen" tabindex="10">
-        <option value="presencial"${(preData.origen||'presencial')==='presencial'?' selected':''}>Presencial</option>
-        <option value="telefono"${preData.origen==='telefono'?' selected':''}>Telefono</option>
-        <option value="chat"${preData.origen==='chat'?' selected':''}>Chat</option>
+      <select class="ci" id="nr_canal" tabindex="10" onchange="syncNrFuente(this)">
+        <option value="presencial"${(preData.canal||'presencial')==='presencial'?' selected':''}>Presencial</option>
+        <option value="telefono"${preData.canal==='telefono'?' selected':''}>Telefono</option>
+        <option value="bot"${preData.canal==='bot'?' selected':''}>Bot</option>
+        <option value="chat_humano"${preData.canal==='chat_humano'?' selected':''}>Chat humano</option>
+      </select>
+      <select class="ci" id="nr_fuente" tabindex="11" style="margin-top:3px;font-size:10.5px;${(preData.canal==='presencial'||preData.canal==='telefono'||!preData.canal)?'display:none':''}">
+        <option value="whatsapp"${(preData.fuente||'whatsapp')==='whatsapp'?' selected':''}>WhatsApp</option>
+        <option value="meta"${preData.fuente==='meta'?' selected':''}>Meta/Facebook</option>
+        <option value="web"${preData.fuente==='web'?' selected':''}>Web</option>
+        <option value="instagram"${preData.fuente==='instagram'?' selected':''}>Instagram</option>
+        <option value=""${!preData.fuente?' selected':''}>— sin fuente —</option>
       </select>
     </td>
     <td>
@@ -886,7 +905,7 @@ function insertarFilaNueva(preData = {}) {
   if (nrCopago) nrCopago.addEventListener('input', function() { this._edited = true; });
 
   tr.querySelector('#nr_folio').addEventListener('keydown', e => {
-    if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); tr.querySelector('#nr_origen').focus(); }
+    if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); tr.querySelector('#nr_canal').focus(); }
   });
 
   tr.querySelector('#nr_guardar').addEventListener('click', () => guardarFilaNueva());
@@ -1011,7 +1030,9 @@ async function guardarFilaNueva() {
     tipo_bono:           (_newPrev === 'fonasa' ? (_newRow.querySelector('#nr_tipobono')?.value || 'Bono imed') : ''),
     codigo_transferencia: (['transferencia','debito','credito'].includes(_newMetodo) ? (_newRow.querySelector('#nr_codtransf')?.value || '').trim() : ''),
     procedimiento:       (_newRow.querySelector('#nr_proc')?.value || '').trim(),
-    origen:              _newRow.querySelector('#nr_origen').value,
+    canal:               _newRow.querySelector('#nr_canal')?.value || 'presencial',
+    fuente:              _newRow.querySelector('#nr_fuente')?.value || '',
+    origen:              canalAOrigen(_newRow.querySelector('#nr_canal')?.value || 'presencial'),
     id_cita:             _newRow._suggestedCitaId || '',
     creado_por:          'recepcion',
   };
@@ -1093,10 +1114,18 @@ function activarEdicionFila(id, colFocus) {
     </td>
     <td>${buildProcSelect('er_proc', p.procedimiento||'')}</td>
     <td>
-      <select class="ci" id="er_origen" tabindex="10">
-        <option value="presencial"${(p.origen||'presencial')==='presencial'?' selected':''}>Presencial</option>
-        <option value="telefono"${p.origen==='telefono'?' selected':''}>Telefono</option>
-        <option value="chat"${p.origen==='chat'?' selected':''}>Chat</option>
+      <select class="ci" id="er_canal" tabindex="10" onchange="syncErFuente(this)">
+        <option value="presencial"${(p.canal||'presencial')==='presencial'?' selected':''}>Presencial</option>
+        <option value="telefono"${p.canal==='telefono'?' selected':''}>Telefono</option>
+        <option value="bot"${p.canal==='bot'?' selected':''}>Bot</option>
+        <option value="chat_humano"${p.canal==='chat_humano'?' selected':''}>Chat humano</option>
+      </select>
+      <select class="ci" id="er_fuente" tabindex="11" style="margin-top:3px;font-size:10.5px;${(p.canal==='presencial'||p.canal==='telefono'||!p.canal)?'display:none':''}">
+        <option value="whatsapp"${(p.fuente||'whatsapp')==='whatsapp'?' selected':''}>WhatsApp</option>
+        <option value="meta"${p.fuente==='meta'?' selected':''}>Meta/Facebook</option>
+        <option value="web"${p.fuente==='web'?' selected':''}>Web</option>
+        <option value="instagram"${p.fuente==='instagram'?' selected':''}>Instagram</option>
+        <option value=""${!p.fuente?' selected':''}>— sin fuente —</option>
       </select>
     </td>
     <td>
@@ -1159,7 +1188,9 @@ function activarEdicionFila(id, colFocus) {
       tipo_bono:           (ePrevLocal === 'fonasa' ? (tr.querySelector('#er_tipobono')?.value || 'Bono imed') : ''),
       codigo_transferencia: (['transferencia','debito','credito'].includes(eMetodoLocal) ? (tr.querySelector('#er_codtransf')?.value || '').trim() : ''),
       procedimiento:       (tr.querySelector('#er_proc')?.value || '').trim(),
-      origen:              tr.querySelector('#er_origen').value,
+      canal:               tr.querySelector('#er_canal')?.value || 'presencial',
+      fuente:              tr.querySelector('#er_fuente')?.value || '',
+      origen:              canalAOrigen(tr.querySelector('#er_canal')?.value || 'presencial'),
     };
   }
 
@@ -1328,7 +1359,10 @@ function resetForm() {
   const fTB = document.getElementById('fTipoBono'); if(fTB) fTB.value = 'Bono imed';
   document.getElementById('fFecha').value = _fecha;
   document.getElementById('fProf').value  = '';
-  document.getElementById('fOrigen').value = 'presencial';
+  const _fCanalEl = document.getElementById('fCanal');
+  if (_fCanalEl) { _fCanalEl.value = 'presencial'; syncFuenteVisibility(_fCanalEl, document.getElementById('fFuente')); }
+  const _fFuenteEl = document.getElementById('fFuente');
+  if (_fFuenteEl) _fFuenteEl.value = '';
   _previsionManual = false;
   setPrevision('particular');
   setMetodo('efectivo');
@@ -1428,16 +1462,21 @@ function recalcSugerenciaModal() {
 }
 
 function aplicarSugerenciaMontosModal(s) {
-  const fC = document.getElementById('fCopago');
-  if (s.copago_sugerido != null && !fC._edited) {
-    fC.value = s.copago_sugerido; fC.classList.add('suggested');
+  const fCopago = document.getElementById('fCopago');
+  if (s.copago_sugerido != null && !fCopago._edited) {
+    fCopago.value = s.copago_sugerido; fCopago.classList.add('suggested');
   }
-  if (s.fuente === 'fonasa_n3') {
+  if (s.fuente_arancel === 'fonasa_n3') {
     document.getElementById('hintCopago').textContent =
       'Copago Fonasa N3 · Cod. ' + (s.codigo_fonasa || '');
-  } else if (s.fuente === 'particular') {
+  } else if (s.fuente_arancel === 'particular') {
     document.getElementById('hintCopago').textContent = s.copago_sugerido ? 'Precio particular' : '';
   }
+  // Pre-llenar canal y fuente de atribución en modal si existen
+  const fCanalEl = document.getElementById('fCanal');
+  const fFuenteEl = document.getElementById('fFuente');
+  if (fCanalEl && s.canal) { fCanalEl.value = s.canal; syncFuenteVisibility(fCanalEl, fFuenteEl); }
+  if (fFuenteEl && s.fuente) fFuenteEl.value = s.fuente;
 }
 
 document.getElementById('fCopago').addEventListener('input', function() {
@@ -1467,7 +1506,9 @@ async function guardarModal() {
     tipo_bono:           (_prevision === 'fonasa' ? (document.getElementById('fTipoBono').value || 'Bono imed') : ''),
     codigo_transferencia: (['transferencia','debito','credito'].includes(_metodo) ? document.getElementById('fCodTransf').value.trim() : ''),
     procedimiento:       document.getElementById('fProcedimiento').value.trim(),
-    origen:              document.getElementById('fOrigen').value,
+    canal:               document.getElementById('fCanal')?.value || 'presencial',
+    fuente:              document.getElementById('fFuente')?.value || '',
+    origen:              canalAOrigen(document.getElementById('fCanal')?.value || 'presencial'),
     id_cita:             document.getElementById('fIdCita').value.trim(),
     creado_por:          'recepcion',
   };
@@ -1528,6 +1569,52 @@ document.getElementById('btnPrellenar').addEventListener('click', async () => {
     btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:16px;height:16px"><path d="M4 6h16M4 12h10M4 18h7"/><circle cx="18" cy="18" r="3"/><path d="M18 15v3l2 1"/></svg> Actualizar desde Medilink`;
   }
 });
+
+// ── Atribución canal + fuente ─────────────────────────────────────────────────
+
+/** Mapea canal nuevo → origen legacy */
+function canalAOrigen(canal) {
+  return { bot: 'chat', chat_humano: 'chat', telefono: 'telefono', presencial: 'presencial' }[canal] || 'presencial';
+}
+
+/** Renderiza badge compacto canal + fuente para columna de tabla */
+function renderCanalFuente(canal, fuente) {
+  const c = canal || 'presencial';
+  const f = fuente || '';
+  const labels = { presencial: 'Presencial', telefono: 'Telefono', bot: 'Bot', chat_humano: 'Chat' };
+  const fuentes = { meta: 'Meta', web: 'Web', instagram: 'IG', whatsapp: 'WA', '': '' };
+  const cl = capitalize(labels[c] || c);
+  const fl = fuentes[f] !== undefined ? fuentes[f] : capitalize(f);
+  return fl ? `${cl} <span style="color:var(--navy);opacity:.7;font-size:.85em">· ${fl}</span>` : cl;
+}
+
+/** Muestra/oculta select de fuente según canal seleccionado */
+function syncFuenteVisibility(canalSel, fuenteSel) {
+  if (!fuenteSel) return;
+  const showFuente = (canalSel.value === 'bot' || canalSel.value === 'chat_humano');
+  fuenteSel.style.display = showFuente ? '' : 'none';
+  const fieldFuente = document.getElementById('fFieldFuente');
+  if (fieldFuente) fieldFuente.style.display = showFuente ? '' : 'none';
+  if (!showFuente) fuenteSel.value = '';
+}
+
+/** Sync fuente inline nueva fila */
+function syncNrFuente(canalSel) {
+  const fuenteSel = canalSel.closest('td')?.querySelector('#nr_fuente');
+  if (!fuenteSel) return;
+  const show = (canalSel.value === 'bot' || canalSel.value === 'chat_humano');
+  fuenteSel.style.display = show ? '' : 'none';
+  if (!show) fuenteSel.value = '';
+}
+
+/** Sync fuente inline fila edición */
+function syncErFuente(canalSel) {
+  const fuenteSel = canalSel.closest('td')?.querySelector('#er_fuente');
+  if (!fuenteSel) return;
+  const show = (canalSel.value === 'bot' || canalSel.value === 'chat_humano');
+  fuenteSel.style.display = show ? '' : 'none';
+  if (!show) fuenteSel.value = '';
+}
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 setupTbodyDelegate();

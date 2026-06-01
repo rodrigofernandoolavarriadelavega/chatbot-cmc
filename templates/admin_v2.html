@@ -3667,7 +3667,7 @@ function openPagoModal(opts){
 
   if (globalMode) {
     if (badge) badge.textContent = "Registro global";
-    document.getElementById("pgOrigen").value = "presencial";
+    _pgSetCanal("presencial");
     setTimeout(() => document.getElementById("pgRut")?.focus(), 60);
   } else {
     // Bug 1: usar conv.nombre (campo real de activeConv), no display_name que no existe
@@ -3682,7 +3682,7 @@ function openPagoModal(opts){
     if (rut)    { document.getElementById("pgRut").value = rut; }
     if (idCita) document.getElementById("pgIdCita").value = idCita;
 
-    document.getElementById("pgOrigen").value = "chat";
+    _pgSetCanal("bot");
 
     if (rut || idCita) {
       const rutInput = document.getElementById("pgRut");
@@ -3729,8 +3729,7 @@ function _pgResetForm(){
   if(fd){ fd.value = new Date().toLocaleDateString("en-CA"); }
   const sel = document.getElementById("pgProf");
   if(sel) sel.value = "";
-  const sor = document.getElementById("pgOrigen");
-  if(sor) sor.value = "presencial";
+  _pgSetCanal("presencial");
   _pg.previsionManual = false;
   _pgSetPrevision("particular");
   _pgSetMetodo("efectivo");
@@ -3828,13 +3827,17 @@ async function _pgCargarSugerencia(rut, idCita){
     }
     const hC = document.getElementById("pgHintCopago");
     const fi = document.getElementById("pgFooterInfo");
-    if (hC && s.fuente === "fonasa_n3") {
+    if (hC && s.fuente_arancel === "fonasa_n3") {
       hC.textContent = "Copago Fonasa N3 · Cod. " + (s.codigo_fonasa || "");
       if (fi) fi.textContent = "Fonasa MLE Nivel 3";
-    } else if (hC && s.fuente === "particular") {
+    } else if (hC && s.fuente_arancel === "particular") {
       hC.textContent = s.copago_sugerido ? "Precio particular" : "";
       if (fi) fi.textContent = s.paciente_nombre ? "Paciente: " + s.paciente_nombre : "";
     }
+    // Pre-llenar canal y fuente de atribución desde sugerencia
+    if (s.canal) _pgSetCanal(s.canal);
+    const pgF = document.getElementById("pgFuente");
+    if (pgF && s.fuente) pgF.value = s.fuente;
   } catch(e) {
     console.warn("_pgCargarSugerencia error:", e);
   } finally {
@@ -3866,7 +3869,9 @@ async function _pgGuardar(){
     tipo_bono:           (_pg.prevision === "fonasa" ? (document.getElementById("pgTipoBono")?.value || "Bono imed") : ""),
     codigo_transferencia:(["transferencia","debito","credito"].includes(_pg.metodo) ? (document.getElementById("pgCodTransf")?.value || "").trim() : ""),
     procedimiento:       (document.getElementById("pgProcedimiento")?.value || "").trim(),
-    origen:              document.getElementById("pgOrigen")?.value || "chat",
+    canal:               document.getElementById("pgCanal")?.value || "bot",
+    fuente:              document.getElementById("pgFuente")?.value || "",
+    origen:              _pgCanalAOrigen(document.getElementById("pgCanal")?.value || "bot"),
     id_cita:             (document.getElementById("pgIdCita")?.value || "").trim(),
     creado_por:          "recepcion",
   };
@@ -3966,6 +3971,26 @@ function _pgSetupModal(){
     this._edited = true;
     this.classList.remove("pg-suggested");
   });
+}
+
+// ── Atribución canal + fuente (modal pago) ────────────────────────────────────
+
+function _pgCanalAOrigen(canal) {
+  return { bot: "chat", chat_humano: "chat", telefono: "telefono", presencial: "presencial" }[canal] || "presencial";
+}
+
+function _pgSetCanal(canal) {
+  const sel = document.getElementById("pgCanal");
+  if (sel) sel.value = canal;
+  _pgSyncFuente(sel);
+}
+
+function _pgSyncFuente(canalSel) {
+  const fuenteSel = document.getElementById("pgFuente");
+  if (!fuenteSel || !canalSel) return;
+  const showFuente = (canalSel.value === "bot" || canalSel.value === "chat_humano");
+  fuenteSel.style.display = showFuente ? "" : "none";
+  if (!showFuente) fuenteSel.value = "";
 }
 
 // Cargar profesionales en el select del modal pago
@@ -4127,12 +4152,20 @@ function syncAppBadge(count) {
               <td>
                 <input type="text" id="pgProcedimiento" class="pg-cell-input" placeholder="Ej: consulta, audiometria, control kine…">
               </td>
-              <!-- Origen -->
+              <!-- Canal + Fuente -->
               <td>
-                <select id="pgOrigen" class="pg-cell-input">
-                  <option value="chat">Chat WA</option>
+                <select id="pgCanal" class="pg-cell-input" onchange="_pgSyncFuente(this)">
+                  <option value="bot">Bot WA</option>
+                  <option value="chat_humano">Chat humano</option>
                   <option value="presencial">Presencial</option>
                   <option value="telefono">Telefono</option>
+                </select>
+                <select id="pgFuente" class="pg-cell-input" style="margin-top:3px;font-size:10.5px">
+                  <option value="whatsapp">WhatsApp</option>
+                  <option value="meta">Meta/Facebook</option>
+                  <option value="web">Web</option>
+                  <option value="instagram">Instagram</option>
+                  <option value="">— sin fuente —</option>
                 </select>
                 <input type="text" id="pgIdCita" class="pg-cell-input" placeholder="ID cita" style="margin-top:4px;font-size:10.5px;color:var(--text-mute)">
               </td>

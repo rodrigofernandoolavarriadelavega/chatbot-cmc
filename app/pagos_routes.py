@@ -159,6 +159,11 @@ def ensure_pagos_table() -> None:
         for col_ddl in [
             "ALTER TABLE pagos_cmc ADD COLUMN tipo_bono TEXT DEFAULT ''",
             "ALTER TABLE pagos_cmc ADD COLUMN bloqueado INTEGER NOT NULL DEFAULT 0",
+            # Canal + Fuente (2026-06-01): modelo de dos niveles para atribución real
+            # canal: presencial | telefono | bot | chat_humano
+            # fuente: web | meta | instagram | whatsapp | '' (vacío para presencial/telefono)
+            "ALTER TABLE pagos_cmc ADD COLUMN canal TEXT DEFAULT 'presencial'",
+            "ALTER TABLE pagos_cmc ADD COLUMN fuente TEXT DEFAULT ''",
         ]:
             try:
                 conn.execute(col_ddl)
@@ -181,7 +186,7 @@ def _sugerir_copago(area: str, prevision: str, id_profesional: int | None) -> di
             "bonif_sugerida":   arancel["bonif"],
             "total_arancel":    arancel["total"],
             "codigo_fonasa":    arancel.get("codigo", ""),
-            "fuente":           "fonasa_n3",
+            "fuente_arancel":   "fonasa_n3",
         }
     # Particular: copago = precio del profesional, sin bonificación
     precio = _precio_particular(id_profesional) if id_profesional else None
@@ -190,8 +195,136 @@ def _sugerir_copago(area: str, prevision: str, id_profesional: int | None) -> di
         "bonif_sugerida":   0,
         "total_arancel":    precio or 0,
         "codigo_fonasa":    "",
-        "fuente":           "particular",
+        "fuente_arancel":   "particular",
     }
+
+
+# ── Derivación canal + fuente desde sessions.db ──────────────────────────────
+
+def _derivar_canal_fuente(telefono_medilink: str) -> tuple[str, str]:
+    """
+    Dado el teléfono del paciente tal como viene de Medilink, cruza contra
+    sessions.db LOCAL (cero requests Medilink extra) y devuelve:
+        (canal, fuente)
+
+    Modelo de dos niveles:
+      canal: 'presencial' | 'telefono' | 'bot' | 'chat_humano'
+      fuente: 'web' | 'meta' | 'instagram' | 'whatsapp' | ''
+
+    Lógica:
+    - Sin conversación en sessions.db → presencial / ''
+    - Con conversación:
+        * canal: HUMAN_TAKEOVER activo en la sesión → 'chat_humano'; sino 'bot'
+          (también se detecta si hay evento 'derivado_humano' en conversation_events)
+        * fuente: meta_referral presente → 'meta'
+                  tag 'referral_source:web_*' → 'web'
+                  phone con prefijo 'ig_' → 'instagram'
+                  phone con prefijo 'fb_' → 'meta'
+                  WhatsApp sin referral → 'whatsapp'
+
+    Si el teléfono es vacío o None, retorna ('presencial', '').
+    """
+    if not telefono_medilink:
+        return ("presencial", "")
+
+    try:
+        from session import _conn, normalize_wa_id
+        # Normalizar al formato canónico del bot (569XXXXXXXX o ig_*/fb_*)
+        phone = normalize_wa_id(str(telefono_medilink).strip())
+
+        with _conn() as conn:
+            # 1. Verificar si existe sesión (cualquier estado, incluso IDLE)
+            sess_row = conn.execute(
+                "SELECT state FROM sessions WHERE phone = ? LIMIT 1",
+                (phone,)
+            ).fetchone()
+
+        if not sess_row:
+            return ("presencial", "")
+
+        state = sess_row["state"] or ""
+
+        # 2. Determinar canal
+        # HUMAN_TAKEOVER en estado actual → chat_humano
+        # También verifica si hubo un evento 'derivado_humano' reciente (30 días)
+        canal = "bot"
+        if state == "HUMAN_TAKEOVER":
+            canal = "chat_humano"
+        else:
+            with _conn() as conn:
+                ev_row = conn.execute(
+                    """SELECT 1 FROM conversation_events
+                       WHERE phone = ? AND event = 'derivado_humano'
+                       ORDER BY ts DESC LIMIT 1""",
+                    (phone,)
+                ).fetchone()
+            if ev_row:
+                canal = "chat_humano"
+
+        # 3. Determinar fuente
+        # 3a. Prefijo del phone (IG/FB)
+        if phone.startswith("ig_"):
+            return (canal, "instagram")
+        if phone.startswith("fb_"):
+            return (canal, "meta")
+
+        # 3b. meta_referral en la tabla (TTL 168h pero para pagos usamos todo el historial)
+        with _conn() as conn:
+            mr_row = conn.execute(
+                "SELECT 1 FROM meta_referrals WHERE phone = ? LIMIT 1",
+                (phone,)
+            ).fetchone()
+        if mr_row:
+            return (canal, "meta")
+
+        # 3c. Tags referral_source:web_*
+        with _conn() as conn:
+            tag_row = conn.execute(
+                "SELECT 1 FROM contact_tags WHERE phone = ? AND tag LIKE 'referral_source:web%' LIMIT 1",
+                (phone,)
+            ).fetchone()
+        if tag_row:
+            return (canal, "web")
+
+        # 3d. WhatsApp estándar sin referral
+        return (canal, "whatsapp")
+
+    except Exception as e:
+        log.debug("_derivar_canal_fuente phone=%s error=%s", telefono_medilink, e)
+        return ("presencial", "")
+
+
+def _buscar_telefono_por_rut(rut: str) -> str:
+    """
+    Dado un RUT, busca el teléfono del paciente en contact_profiles (sessions.db).
+    contact_profiles indexa phone↔rut cada vez que el bot captura el perfil.
+    Retorna el primer teléfono encontrado, o '' si no hay.
+    """
+    if not rut:
+        return ""
+    try:
+        from session import _conn
+        rut_clean = rut.strip()
+        with _conn() as conn:
+            row = conn.execute(
+                "SELECT phone FROM contact_profiles WHERE rut = ? LIMIT 1",
+                (rut_clean,)
+            ).fetchone()
+            if row and row["phone"]:
+                return row["phone"]
+    except Exception as e:
+        log.debug("_buscar_telefono_por_rut rut=%s error=%s", rut, e)
+    return ""
+
+
+def _canal_a_origen(canal: str) -> str:
+    """Mapea canal nuevo → origen legacy para mantener compatibilidad con campos existentes."""
+    return {
+        "bot":         "chat",
+        "chat_humano": "chat",
+        "telefono":    "telefono",
+        "presencial":  "presencial",
+    }.get(canal, "presencial")
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -354,9 +487,11 @@ async def get_sugerencia(
         "bonif_sugerida":  0,
         "total_arancel":   0,
         "codigo_fonasa":   "",
-        "fuente":          "sin_datos",
+        "fuente_arancel":  "sin_datos",   # renombrado para no colisionar con fuente atribución
         "id_cita":         id_cita or "",
         "origen":          "presencial",
+        "canal":           "presencial",
+        "fuente":          "",
         "metodo_pago":     "efectivo",
     }
 
@@ -445,6 +580,15 @@ async def get_sugerencia(
         pinfo = PROFESIONALES.get(sugerencia["id_profesional"], {})
         sugerencia["area"] = pinfo.get("especialidad", "")
 
+    # Derivar canal + fuente desde sessions.db (cero requests Medilink extra)
+    # Buscamos el teléfono del paciente en citas_bot (tiene phone ↔ rut) o contact_profiles
+    telefono_paciente = _buscar_telefono_por_rut(sugerencia.get("rut", ""))
+    canal_sugerido, fuente_sugerida = _derivar_canal_fuente(telefono_paciente)
+    sugerencia["canal"]  = canal_sugerido
+    sugerencia["fuente"] = fuente_sugerida
+    # Mapear canal → origen legacy para compatibilidad
+    sugerencia["origen"] = _canal_a_origen(canal_sugerido)
+
     return sugerencia
 
 
@@ -495,6 +639,14 @@ async def post_pago(
     if origen not in ("chat", "telefono", "presencial"):
         origen = "presencial"
 
+    canal = (body.get("canal") or "presencial").lower()
+    if canal not in ("presencial", "telefono", "bot", "chat_humano"):
+        canal = "presencial"
+
+    fuente = (body.get("fuente") or "").lower()
+    if fuente not in ("web", "meta", "instagram", "whatsapp", ""):
+        fuente = ""
+
     id_prof_raw = body.get("id_profesional")
     id_profesional = int(id_prof_raw) if id_prof_raw is not None else None
 
@@ -508,8 +660,8 @@ async def post_pago(
                (fecha, hora, paciente_nombre, rut, id_profesional, profesional,
                 area, prevision, copago, bonificacion, metodo_pago, folio,
                 codigo_transferencia, tipo_bono, procedimiento, origen, id_cita,
-                creado_por, created_at, updated_at)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'),datetime('now'))""",
+                creado_por, canal, fuente, created_at, updated_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'),datetime('now'))""",
             (
                 fecha,
                 hora,
@@ -529,6 +681,8 @@ async def post_pago(
                 origen,
                 (body.get("id_cita") or "").strip(),
                 (body.get("creado_por") or "recepcion").strip(),
+                canal,
+                fuente,
             )
         )
         new_id = cur.lastrowid
@@ -588,7 +742,9 @@ async def get_pagos(
                       copago, bonificacion, metodo_pago, folio,
                       codigo_transferencia, tipo_bono, procedimiento, origen,
                       id_cita, creado_por, created_at, updated_at,
-                      COALESCE(bloqueado, 0) as bloqueado
+                      COALESCE(bloqueado, 0) as bloqueado,
+                      COALESCE(canal, 'presencial') as canal,
+                      COALESCE(fuente, '') as fuente
                FROM pagos_cmc
                WHERE fecha BETWEEN ? AND ?
                ORDER BY fecha DESC, hora DESC""",
@@ -662,7 +818,7 @@ async def patch_pago(
         "fecha", "hora", "paciente_nombre", "rut", "id_profesional",
         "profesional", "area", "prevision", "copago", "bonificacion",
         "metodo_pago", "folio", "codigo_transferencia", "tipo_bono", "procedimiento",
-        "origen", "id_cita", "creado_por", "bloqueado",
+        "origen", "id_cita", "creado_por", "bloqueado", "canal", "fuente",
     }
     campos = {k: v for k, v in body.items() if k in _EDITABLE}
     if not campos:
@@ -675,6 +831,14 @@ async def patch_pago(
         "efectivo", "transferencia", "debito", "credito"
     ):
         raise HTTPException(400, "metodo_pago inválido")
+    if "canal" in campos and campos["canal"] not in (
+        "presencial", "telefono", "bot", "chat_humano"
+    ):
+        raise HTTPException(400, "canal inválido")
+    if "fuente" in campos and campos["fuente"] not in (
+        "web", "meta", "instagram", "whatsapp", ""
+    ):
+        raise HTTPException(400, "fuente inválida")
     if "fecha" in campos:
         try:
             datetime.strptime(campos["fecha"], "%Y-%m-%d")
@@ -742,7 +906,9 @@ async def export_pagos_xlsx(
         rows = conn.execute(
             """SELECT hora, paciente_nombre, profesional, area, prevision,
                       copago, bonificacion, metodo_pago, folio,
-                      codigo_transferencia, tipo_bono, procedimiento
+                      codigo_transferencia, tipo_bono, procedimiento,
+                      COALESCE(canal, 'presencial') as canal,
+                      COALESCE(fuente, '') as fuente
                FROM pagos_cmc
                WHERE fecha BETWEEN ? AND ?
                ORDER BY fecha ASC, hora ASC""",
@@ -774,6 +940,7 @@ async def export_pagos_xlsx(
         "HORA", "PACIENTE", "NOMBRE PROFESIONAL", "AREA",
         "PREVISION", "PAGO", "METODO DE PAGO", "N° FOLIO",
         "COD. TRANSFERENCIA", "TIPO DE BONO", "PRESTACION",
+        "CANAL", "FUENTE",
     ]
     header_fill  = PatternFill("solid", fgColor="1172AB")
     header_font  = Font(name="Calibri", bold=True, size=10, color="FFFFFF")
@@ -811,6 +978,8 @@ async def export_pagos_xlsx(
             row["codigo_transferencia"] or "",
             row["tipo_bono"] or "",
             row["procedimiento"] or "",
+            (row["canal"] or "presencial").capitalize(),
+            row["fuente"] or "",
         ]
         fill = alt_fill if row_idx % 2 == 0 else None
         for col_idx, v in enumerate(values, start=1):
@@ -826,7 +995,7 @@ async def export_pagos_xlsx(
                 cell.alignment = Alignment(horizontal="right", vertical="center")
 
     # Anchos de columna (aproximados)
-    col_widths = [8, 24, 22, 18, 12, 12, 14, 12, 18, 14, 28]
+    col_widths = [8, 24, 22, 18, 12, 12, 14, 12, 18, 14, 28, 12, 12]
     for col_idx, w in enumerate(col_widths, start=1):
         ws.column_dimensions[ws.cell(row=2, column=col_idx).column_letter].width = w
 
@@ -1027,6 +1196,17 @@ async def prellenar_pagos(
         if id_aten:
             prestacion = await _fetch_prestacion(id_aten)
 
+        # Derivar canal + fuente desde sessions.db (sin requests Medilink extra)
+        # Primero intentar con el teléfono/celular que trae la cita (campo celular o telefono)
+        telefono_cita = (
+            cita.get("celular") or cita.get("telefono") or ""
+        ).strip()
+        # Si no viene en la cita, buscar por RUT en sessions.db
+        if not telefono_cita and rut_cita:
+            telefono_cita = _buscar_telefono_por_rut(rut_cita)
+        canal_cita, fuente_cita = _derivar_canal_fuente(telefono_cita)
+        origen_cita = _canal_a_origen(canal_cita)
+
         try:
             with _conn() as conn:
                 conn.execute(
@@ -1034,9 +1214,9 @@ async def prellenar_pagos(
                        (fecha, hora, paciente_nombre, rut, id_profesional, profesional,
                         area, prevision, copago, bonificacion, metodo_pago, folio,
                         codigo_transferencia, tipo_bono, procedimiento, origen, id_cita,
-                        creado_por, bloqueado, created_at, updated_at)
+                        creado_por, bloqueado, canal, fuente, created_at, updated_at)
                        VALUES (?,?,?,?,?,?,?,?,0,0,'','','','',?,?,?,
-                               'prellenar', 0, datetime('now'), datetime('now'))""",
+                               'prellenar', 0, ?, ?, datetime('now'), datetime('now'))""",
                     (
                         fecha_iso,
                         hora_inicio,
@@ -1047,8 +1227,10 @@ async def prellenar_pagos(
                         area,
                         "particular",
                         prestacion,
-                        "presencial",
+                        origen_cita,
                         id_cita_str,
+                        canal_cita,
+                        fuente_cita,
                     )
                 )
                 conn.commit()
