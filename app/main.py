@@ -1976,12 +1976,15 @@ def admin_panel_v2(token: str | None = Query(None),
                    cmc_session: str | None = Cookie(None)):
     """Panel de recepción v2 (chat-first). Misma auth que /admin."""
     from admin_routes import _verify_cookie, _is_admin_token
+    # no-store: el panel se itera seguido; sin esto el navegador (y el iframe del
+    # shell Alma) sirve una versión vieja en caché y los cambios de UI no se ven.
+    _NOCACHE = {"Cache-Control": "no-store, no-cache, must-revalidate", "Pragma": "no-cache"}
     if token and _is_admin_token(token):
-        return _ADMIN_V2_HTML.replace("__TOKEN__", token)
+        return HTMLResponse(_ADMIN_V2_HTML.replace("__TOKEN__", token), headers=_NOCACHE)
     if cmc_session:
         role = _verify_cookie(cmc_session)
         if role in ("admin", "ortodoncia"):
-            return _ADMIN_V2_HTML.replace("__TOKEN__", "")
+            return HTMLResponse(_ADMIN_V2_HTML.replace("__TOKEN__", ""), headers=_NOCACHE)
     return RedirectResponse(url="/admin/login", status_code=302)
 
 
