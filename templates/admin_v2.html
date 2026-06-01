@@ -815,16 +815,18 @@ input, textarea, select{font-family:inherit; color:inherit}
 }
 .pg-modal[hidden]{display:none !important}
 .pg-dialog{
-  background:var(--panel); border-radius:16px; width:100%; max-width:1180px;
-  box-shadow:var(--shadow-lg); border:1px solid var(--border);
+  background:var(--panel); border-radius:18px; width:100%; max-width:1340px;
+  box-shadow:0 24px 60px rgba(15,63,104,.22); border:1px solid var(--border);
   animation:mbIn 150ms var(--ease-spring);
   display:flex; flex-direction:column;
 }
 .pg-header{
-  display:flex; align-items:center; gap:10px;
-  padding:12px 18px; border-bottom:1px solid var(--border-soft); flex-shrink:0;
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:14px 20px; border-bottom:2px solid var(--cmc-aqua); flex-shrink:0;
+  background:linear-gradient(135deg, rgba(79,190,206,.06) 0%, transparent 60%);
+  border-radius:18px 18px 0 0;
 }
-.pg-header h3{margin:0; font-size:14px; color:var(--cmc-navy); font-weight:700; flex:1}
+.pg-header h3{margin:0; font-size:15px; color:var(--cmc-navy); font-weight:800; flex:1; letter-spacing:-.02em}
 /* Subtítulo de modo: paciente activo o global */
 .pg-mode-badge{
   font-size:11px; font-weight:600; color:var(--text-mute);
@@ -833,48 +835,50 @@ input, textarea, select{font-family:inherit; color:inherit}
 }
 /* Tabla-fila de columnas */
 .pg-row-wrap{
-  overflow-x:auto; padding:0;
+  overflow-x:auto; padding:0 2px;
 }
 .pg-row-table{
   width:100%; border-collapse:collapse; table-layout:fixed;
-  min-width:960px;
+  min-width:1060px;
 }
-/* Anchos por columna (total ~1100px) */
-.pg-col-hora    { width: 74px  }
-.pg-col-pac     { width: 160px }
-.pg-col-prof    { width: 150px }
-.pg-col-area    { width: 120px }
-.pg-col-prev    { width: 110px }
-.pg-col-valor   { width: 90px  }
-.pg-col-metodo  { width: 130px }
-.pg-col-folio   { width: 80px  }
-.pg-col-proc    { width: 192px }
-/* Extra discretos en fila de datos */
-.pg-col-rut     { width: 108px }
-.pg-col-orig    { width: 92px  }
+/* Anchos por columna sin bonif — total ~1240px en max-width:1340px dialog */
+.pg-col-hora    { width: 76px  }
+.pg-col-pac     { width: 185px }
+.pg-col-prof    { width: 190px }
+.pg-col-area    { width: 135px }
+.pg-col-prev    { width: 100px }
+.pg-col-valor   { width: 100px }
+.pg-col-metodo  { width: 140px }
+.pg-col-folio   { width: 84px  }
+.pg-col-proc    { width: 200px }
+/* Extra discretos */
+.pg-col-rut     { width: 114px }
+.pg-col-orig    { width: 95px  }
 
 .pg-row-table thead th{
-  background:linear-gradient(180deg, var(--cmc-navy), #0c3556);
-  color:#b8d4e8; font-size:10px; font-weight:700;
-  text-transform:uppercase; letter-spacing:.09em;
-  padding:8px 8px 7px; text-align:left; white-space:nowrap;
+  background:linear-gradient(180deg, #0d375e, #0c3055);
+  color:#9ec8e4; font-size:10.5px; font-weight:700;
+  text-transform:uppercase; letter-spacing:.1em;
+  padding:10px 9px 9px; text-align:left; white-space:nowrap;
   border-right:1px solid rgba(255,255,255,.07);
+  user-select:none;
 }
 .pg-row-table thead th:last-child{border-right:none}
 .pg-row-table tbody td{
-  padding:8px 6px; vertical-align:top;
+  padding:10px 8px; vertical-align:top;
   border-right:1px solid var(--border-soft);
 }
 .pg-row-table tbody td:last-child{border-right:none}
 /* Fila datos con fondo suave */
-.pg-data-row{ background:var(--cmc-aqua-soft); }
+.pg-data-row{ background:rgba(79,190,206,.04); }
 
 /* Inputs / selects dentro de la fila */
 .pg-cell-input{
   width:100%; font-family:var(--font); font-size:12.5px; font-weight:500;
-  border:1px solid var(--border); border-radius:7px;
-  padding:6px 8px; color:var(--cmc-navy); background:var(--panel);
-  transition:border-color .12s; outline:none; display:block;
+  border:1px solid var(--border); border-radius:8px;
+  padding:7px 9px; color:var(--cmc-navy); background:var(--panel);
+  transition:border-color .12s, box-shadow .12s; outline:none; display:block;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 .pg-cell-input:focus{border-color:var(--cmc-aqua); box-shadow:0 0 0 2px rgba(79,190,206,.16)}
 .pg-cell-input.pg-suggested{background:#fafeff !important; border-color:var(--cmc-aqua) !important}
@@ -3697,7 +3701,7 @@ function _pgResetForm(){
   if(pgBodyEl)    pgBodyEl.hidden    = false;
   if(pgSuccessEl) pgSuccessEl.hidden = true;
 
-  ["pgNombre","pgRut","pgArea","pgCopago","pgBonif","pgFolio","pgCodTransf","pgProcedimiento","pgIdCita"]
+  ["pgNombre","pgRut","pgArea","pgCopago","pgFolio","pgCodTransf","pgProcedimiento","pgIdCita"]
     .forEach(id => {
       const el = document.getElementById(id);
       if(el){ el.value = ""; el._edited = false; el.classList.remove("pg-suggested","pg-loading"); }
@@ -3717,7 +3721,6 @@ function _pgResetForm(){
   _pgSetPrevision("particular");
   _pgSetMetodo("efectivo");
   const hC = document.getElementById("pgHintCopago"); if(hC) hC.textContent = "";
-  const hB = document.getElementById("pgHintBonif");  if(hB) hB.textContent = "";
   const hM = document.getElementById("pgHintMetodo"); if(hM) hM.textContent = "";
   // Restaurar botones footer
   const btnCancel  = document.getElementById("pgBtnCancel");
@@ -3734,8 +3737,7 @@ function _pgSetPrevision(p){
   const btnF = document.getElementById("pgBtnFonasa");
   if(btnP) btnP.classList.toggle("active", p === "particular");
   if(btnF) btnF.classList.toggle("active", p === "fonasa");
-  const rowB = document.getElementById("pgRowBonif");
-  if(rowB) rowB.style.display = (p === "fonasa") ? "" : "none";
+  // pgRowBonif ya no se muestra — bonificacion se calcula en conciliacion
   _pgUpdateMetodoHint();
 }
 
@@ -3775,29 +3777,21 @@ async function _pgCargarSugerencia(rut, idCita){
     if (s.prevision) _pgSetPrevision(s.prevision);
     const fIC = document.getElementById("pgIdCita");
     if (fIC && s.id_cita && !fIC.value) fIC.value = s.id_cita;
-    // Montos sugeridos
+    // Montos sugeridos — solo PAGO (copago), bonif se calcula en conciliacion
     const fC = document.getElementById("pgCopago");
-    const fB = document.getElementById("pgBonif");
     if (fC && s.copago_sugerido != null && !fC._edited) {
       fC.value = s.copago_sugerido;
       fC.classList.add("pg-suggested");
     }
-    if (fB && s.bonif_sugerida != null && s.bonif_sugerida > 0 && !fB._edited) {
-      fB.value = s.bonif_sugerida;
-      fB.classList.add("pg-suggested");
-    }
     const hC = document.getElementById("pgHintCopago");
-    const hB = document.getElementById("pgHintBonif");
     const fi = document.getElementById("pgFooterInfo");
     if (hC && s.fuente === "fonasa_n3") {
-      hC.textContent = "Arancel N3: total $" + (s.total_arancel || 0).toLocaleString("es-CL") +
-                       " · Cod. " + (s.codigo_fonasa || "");
-      if (fi) fi.textContent = "Sugerencia: Fonasa MLE Nivel 3";
+      hC.textContent = "Copago Fonasa N3 · Cod. " + (s.codigo_fonasa || "");
+      if (fi) fi.textContent = "Fonasa MLE Nivel 3";
     } else if (hC && s.fuente === "particular") {
       hC.textContent = s.copago_sugerido ? "Precio particular" : "";
       if (fi) fi.textContent = s.paciente_nombre ? "Paciente: " + s.paciente_nombre : "";
     }
-    if (hB && s.fuente === "fonasa_n3") hB.textContent = "Bonificacion Imed sugerida";
   } catch(e) {
     console.warn("_pgCargarSugerencia error:", e);
   } finally {
@@ -3823,7 +3817,7 @@ async function _pgGuardar(){
     area:                (document.getElementById("pgArea")?.value || "").trim(),
     prevision:           _pg.prevision,
     copago:              parseInt(document.getElementById("pgCopago")?.value) || 0,
-    bonificacion:        parseInt(document.getElementById("pgBonif")?.value) || 0,
+    bonificacion:        0,
     metodo_pago:         _pg.metodo,
     folio:               (document.getElementById("pgFolio")?.value || "").trim(),
     codigo_transferencia:(document.getElementById("pgCodTransf")?.value || "").trim(),
@@ -3853,8 +3847,7 @@ async function _pgGuardar(){
     document.getElementById("pgSuccess").hidden = false;
     document.getElementById("pgSuccessNombre").textContent = nombre;
     document.getElementById("pgSuccessMonto").textContent =
-      "$" + body.copago.toLocaleString("es-CL") +
-      (body.bonificacion ? " + $" + body.bonificacion.toLocaleString("es-CL") + " bonif." : "");
+      "Pago: $" + body.copago.toLocaleString("es-CL");
     // Alternar botones footer
     const btnCancel = document.getElementById("pgBtnCancel");
     const btnCerrar = document.getElementById("pgBtnCerrar");
@@ -3923,11 +3916,9 @@ function _pgSetupModal(){
   });
 
   // Marcar editado manualmente
-  ["pgCopago","pgBonif"].forEach(id => {
-    document.getElementById(id)?.addEventListener("input", function(){
-      this._edited = true;
-      this.classList.remove("pg-suggested");
-    });
+  document.getElementById("pgCopago")?.addEventListener("input", function(){
+    this._edited = true;
+    this.classList.remove("pg-suggested");
   });
 }
 
@@ -4012,10 +4003,10 @@ function syncAppBadge(count) {
               <th>Hora</th>
               <th>Paciente</th>
               <th>RUT</th>
-              <th>Nombre Profesional</th>
+              <th>Profesional</th>
               <th>Area</th>
               <th>Prevision</th>
-              <th>Valor ($)</th>
+              <th>Pago ($)</th>
               <th>Metodo de Pago</th>
               <th>N&#176; Folio</th>
               <th>Procedimiento</th>
@@ -4035,7 +4026,7 @@ function syncAppBadge(count) {
               <!-- RUT -->
               <td>
                 <input type="text" id="pgRut" class="pg-cell-input" placeholder="12.345.678-9" autocomplete="off">
-                <div class="pg-hint" style="font-size:9px;margin-top:2px;color:var(--text-dim)">blur → auto-sugerencia</div>
+                <div class="pg-hint">blur → sugerencia</div>
               </td>
               <!-- Profesional -->
               <td>
@@ -4047,19 +4038,18 @@ function syncAppBadge(count) {
               <td>
                 <input type="text" id="pgArea" class="pg-cell-input" placeholder="Ej: Med. General">
               </td>
-              <!-- Prevision -->
+              <!-- Prevision — toggle sin bonificacion -->
               <td>
                 <div class="pg-seg">
                   <button id="pgBtnParticular" class="active" type="button">Part.</button>
                   <button id="pgBtnFonasa" type="button">Fonasa</button>
                 </div>
-                <!-- Bonif. (visible solo Fonasa) -->
-                <div id="pgRowBonif" style="display:none;margin-top:4px">
-                  <input type="number" id="pgBonif" class="pg-cell-input" min="0" step="1" placeholder="Bonif. $">
-                  <div class="pg-hint" id="pgHintBonif"></div>
+                <!-- pgRowBonif y pgBonif conservados como nodos ocultos para no romper JS existente -->
+                <div id="pgRowBonif" style="display:none">
+                  <input type="number" id="pgBonif" class="pg-cell-input" min="0" step="1" tabindex="-1">
                 </div>
               </td>
-              <!-- Valor / Copago -->
+              <!-- Pago -->
               <td>
                 <input type="number" id="pgCopago" class="pg-cell-input" min="0" step="1" placeholder="0">
                 <div class="pg-hint" id="pgHintCopago"></div>
@@ -4073,7 +4063,6 @@ function syncAppBadge(count) {
                   <button class="pg-metodo-btn" type="button" data-metodo="credito">Credito</button>
                 </div>
                 <div class="pg-hint" id="pgHintMetodo"></div>
-                <!-- Cod. transferencia: aparece al seleccionar transferencia -->
                 <div id="pgRowCodTransf" style="display:none;margin-top:4px">
                   <input type="text" id="pgCodTransf" class="pg-cell-input" placeholder="Cod. transferencia">
                 </div>
@@ -4093,7 +4082,6 @@ function syncAppBadge(count) {
                   <option value="presencial">Presencial</option>
                   <option value="telefono">Telefono</option>
                 </select>
-                <!-- ID cita discreto -->
                 <input type="text" id="pgIdCita" class="pg-cell-input" placeholder="ID cita" style="margin-top:4px;font-size:10.5px;color:var(--text-mute)">
               </td>
             </tr>

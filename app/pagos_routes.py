@@ -461,15 +461,26 @@ async def get_pagos(
         ).fetchall()
 
     pagos = [dict(r) for r in rows]
-    total_copago     = sum(p["copago"]       for p in pagos)
-    total_bonif      = sum(p["bonificacion"] for p in pagos)
-    total_recaudado  = total_copago + total_bonif
+    total_copago = sum(p["copago"] for p in pagos)
+
+    # Bonif calculada desde arancel N3 por area (ya no se guarda en caja)
+    def _bonif_para(area: str, prevision: str) -> int:
+        if prevision == "fonasa" and area in _ARANCEL_N3:
+            return _ARANCEL_N3[area].get("bonif", 0)
+        return 0
+
+    total_bonif = sum(
+        _bonif_para(p.get("area", ""), p.get("prevision", ""))
+        for p in pagos
+    )
+    # Total recaudado = solo lo que entro a caja (copago)
+    total_recaudado = total_copago
 
     return {
         "pagos":            pagos,
         "total":            len(pagos),
         "total_copago":     total_copago,
-        "total_bonif":      total_bonif,
+        "total_bonif":      total_bonif,       # informativo, calculado desde arancel
         "total_recaudado":  total_recaudado,
         "fecha_desde":      d_desde,
         "fecha_hasta":      d_hasta,
@@ -612,7 +623,7 @@ async def export_pagos_xlsx(
     # Encabezados (fila 2)
     headers = [
         "HORA", "PACIENTE", "NOMBRE PROFESIONAL", "AREA",
-        "PREVISION", "VALOR", "METODO DE PAGO", "N° FOLIO", "PROCEDIMIENTO"
+        "PREVISION", "PAGO", "METODO DE PAGO", "N° FOLIO", "PROCEDIMIENTO"
     ]
     header_fill  = PatternFill("solid", fgColor="1172AB")
     header_font  = Font(name="Calibri", bold=True, size=10, color="FFFFFF")
@@ -634,8 +645,8 @@ async def export_pagos_xlsx(
     alt_fill = PatternFill("solid", fgColor="EBF5FB")
     data_font = Font(name="Calibri", size=10)
     for row_idx, row in enumerate(rows, start=3):
-        # VALOR = copago + bonificacion
-        valor = (row["copago"] or 0) + (row["bonificacion"] or 0)
+        # PAGO = lo que entro a caja (copago solamente)
+        valor = row["copago"] or 0
         prevision_label = "Fonasa MLE" if (row["prevision"] or "").lower() == "fonasa" else "Particular"
         metodo_label    = (row["metodo_pago"] or "efectivo").capitalize()
         values = [

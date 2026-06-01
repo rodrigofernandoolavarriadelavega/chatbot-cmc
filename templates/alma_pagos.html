@@ -106,16 +106,15 @@
   /* Anchos de columna — matches column order */
   col.c-num   { width: 28px; }
   col.c-hora  { width: 60px; }
-  col.c-pac   { width: 170px; }
-  col.c-rut   { width: 100px; }
-  col.c-prof  { width: 160px; }
-  col.c-area  { width: 120px; }
+  col.c-pac   { width: 185px; }
+  col.c-rut   { width: 105px; }
+  col.c-prof  { width: 175px; }
+  col.c-area  { width: 130px; }
   col.c-prev  { width: 88px; }
-  col.c-cop   { width: 72px; }
-  col.c-bonif { width: 72px; }
-  col.c-met   { width: 90px; }
-  col.c-folio { width: 72px; }
-  col.c-orig  { width: 80px; }
+  col.c-cop   { width: 90px; }
+  col.c-met   { width: 100px; }
+  col.c-folio { width: 75px; }
+  col.c-orig  { width: 82px; }
   col.c-act   { width: 64px; }
 
   thead th {
@@ -293,8 +292,8 @@
     text-align: center;
   }
   .metodo-btn.active { background: var(--navy); color: #fff; border-color: var(--navy); }
-  .bonif-row { display: none; }
-  .bonif-row.show { display: contents; }
+  /* bonif-row oculta: la bonificacion ya no se ingresa en el formulario */
+  .bonif-row { display: none !important; }
   .form-actions {
     display: flex; gap: 10px; justify-content: flex-end;
     margin-top: 22px;
@@ -362,8 +361,8 @@
 <!-- KPI strip -->
 <div class="kpi-strip" id="kpiStrip">
   <div class="kpi"><div class="label">Pagos del dia</div><div class="value" id="kpiN">—</div></div>
-  <div class="kpi"><div class="label">Copagos</div><div class="value" id="kpiCopago">—</div></div>
-  <div class="kpi"><div class="label">Bonif. Imed</div><div class="value" id="kpiBonif">—</div></div>
+  <div class="kpi"><div class="label">Total pagos</div><div class="value" id="kpiCopago">—</div></div>
+  <div class="kpi"><div class="label">Bonif. Imed esperada</div><div class="value" id="kpiBonif" title="Calculada desde arancel N3; no se ingresa en caja">—</div></div>
   <div class="kpi"><div class="label">Total recaudado</div><div class="value green" id="kpiTotal">—</div></div>
 </div>
 
@@ -373,7 +372,7 @@
     <colgroup>
       <col class="c-num"><col class="c-hora"><col class="c-pac"><col class="c-rut">
       <col class="c-prof"><col class="c-area"><col class="c-prev">
-      <col class="c-cop"><col class="c-bonif"><col class="c-met">
+      <col class="c-cop"><col class="c-met">
       <col class="c-folio"><col class="c-orig"><col class="c-act">
     </colgroup>
     <thead>
@@ -385,8 +384,7 @@
         <th>Profesional</th>
         <th>Area</th>
         <th>Prevision</th>
-        <th>Copago</th>
-        <th>Bonif.</th>
+        <th>Pago</th>
         <th>Metodo</th>
         <th>Folio</th>
         <th>Origen</th>
@@ -394,7 +392,7 @@
       </tr>
     </thead>
     <tbody id="tablaPagosBody">
-      <tr><td colspan="13" class="loading">Cargando...</td></tr>
+      <tr><td colspan="12" class="loading">Cargando...</td></tr>
     </tbody>
   </table>
 </div>
@@ -437,10 +435,11 @@
         </div>
       </div>
       <div class="field">
-        <label>Copago paciente ($)</label>
+        <label>Pago ($)</label>
         <input type="number" id="fCopago" min="0" step="1" placeholder="0">
         <div class="hint" id="hintCopago"></div>
       </div>
+      <!-- bonif-row oculta permanentemente: bonificacion se calcula en conciliacion -->
       <div class="field bonif-row" id="rowBonif">
         <label>Bonif. Imed ($)</label>
         <input type="number" id="fBonif" min="0" step="1" placeholder="0">
@@ -632,7 +631,6 @@ function buildSavedRow(p, i) {
       <td>${esc(p.area || '—')}</td>
       <td><span class="pill ${p.prevision}">${p.prevision === 'fonasa' ? 'Fonasa' : 'Particular'}</span></td>
       <td style="font-weight:700;color:var(--navy)">${fmt$(p.copago)}</td>
-      <td style="color:var(--mute)">${p.bonificacion ? fmt$(p.bonificacion) : '—'}</td>
       <td><span class="pill metodo">${capitalize(p.metodo_pago)}</span></td>
       <td style="color:var(--mute);font-size:11px">${esc(p.folio || '—')}</td>
       <td style="color:var(--mute);font-size:11px">${capitalize(p.origen)}</td>
@@ -701,13 +699,11 @@ function insertarFilaNueva(preData = {}) {
     <td>${buildPrevToggle('nr_prev_toggle', _newPrev)}</td>
     <td><input class="ci" id="nr_copago" type="number" min="0" step="1" placeholder="0"
                value="${preData.copago_sugerido||preData.copago||''}" tabindex="7"></td>
-    <td><input class="ci" id="nr_bonif"  type="number" min="0" step="1" placeholder="0"
-               value="${preData.bonif_sugerida||preData.bonificacion||''}" tabindex="8"></td>
     <td>${buildMetodoBtns('nr_met_btns', _newMetodo)}</td>
-    <td><input class="ci" id="nr_folio" type="text" placeholder="Folio" tabindex="10"
+    <td><input class="ci" id="nr_folio" type="text" placeholder="Folio" tabindex="9"
                value="${esc(preData.folio||'')}"></td>
     <td>
-      <select class="ci" id="nr_origen" tabindex="11">
+      <select class="ci" id="nr_origen" tabindex="10">
         <option value="presencial"${(preData.origen||'presencial')==='presencial'?' selected':''}>Presencial</option>
         <option value="telefono"${preData.origen==='telefono'?' selected':''}>Telefono</option>
         <option value="chat"${preData.origen==='chat'?' selected':''}>Chat</option>
@@ -715,11 +711,11 @@ function insertarFilaNueva(preData = {}) {
     </td>
     <td>
       <div class="td-actions">
-        <button class="btn-save-row" id="nr_guardar" tabindex="12">
+        <button class="btn-save-row" id="nr_guardar" tabindex="11">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
           Guardar
         </button>
-        <button class="btn-cancel-row" id="nr_cancelar" tabindex="13">✕</button>
+        <button class="btn-cancel-row" id="nr_cancelar" tabindex="12">✕</button>
       </div>
     </td>`;
 
@@ -766,14 +762,11 @@ function insertarFilaNueva(preData = {}) {
     if (this.value.trim()) cargarSugerenciaRow(this.value.trim(), null);
   });
 
-  // Marcar copago/bonif como editado manualmente
-  ['nr_copago','nr_bonif'].forEach(id => {
-    tr.querySelector('#' + id).addEventListener('input', function() {
-      this._edited = true;
-    });
-  });
+  // Marcar pago como editado manualmente
+  const nrCopago = tr.querySelector('#nr_copago');
+  if (nrCopago) nrCopago.addEventListener('input', function() { this._edited = true; });
 
-  // Navegación Tab incluye los selects de toggle
+  // Navegacion Tab desde folio → origen
   tr.querySelector('#nr_folio').addEventListener('keydown', e => {
     if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); tr.querySelector('#nr_origen').focus(); }
   });
@@ -850,14 +843,9 @@ async function cargarSugerenciaRow(rut, id_cita) {
 function aplicarSugerenciaMontosRow(s) {
   if (!_newRow) return;
   const fC = _newRow.querySelector('#nr_copago');
-  const fB = _newRow.querySelector('#nr_bonif');
   if (s.copago_sugerido != null && !fC._edited) {
     fC.value = s.copago_sugerido || '';
     if (s.copago_sugerido) fC.classList.add('suggested');
-  }
-  if (s.bonif_sugerida != null && s.bonif_sugerida > 0 && !fB._edited) {
-    fB.value = s.bonif_sugerida;
-    fB.classList.add('suggested');
   }
 }
 
@@ -892,7 +880,7 @@ async function guardarFilaNueva() {
     area:                (_newRow.querySelector('#nr_area').value || '').trim(),
     prevision:           _newPrev,
     copago:              parseInt(_newRow.querySelector('#nr_copago').value) || 0,
-    bonificacion:        parseInt(_newRow.querySelector('#nr_bonif').value)  || 0,
+    bonificacion:        0,
     metodo_pago:         _newMetodo,
     folio:               (_newRow.querySelector('#nr_folio').value || '').trim(),
     origen:              _newRow.querySelector('#nr_origen').value,
@@ -951,11 +939,10 @@ function editarFilaInline(id) {
         <td><input class="ci" id="er_area" type="text" value="${esc(p.area||'')}" tabindex="5"></td>
         <td>${buildPrevToggle('er_prev_toggle', ePrev)}</td>
         <td><input class="ci" id="er_copago" type="number" min="0" step="1" value="${p.copago||0}" tabindex="7"></td>
-        <td><input class="ci" id="er_bonif"  type="number" min="0" step="1" value="${p.bonificacion||0}" tabindex="8"></td>
         <td>${buildMetodoBtns('er_met_btns', eMetodo)}</td>
-        <td><input class="ci" id="er_folio" type="text" value="${esc(p.folio||'')}" tabindex="10"></td>
+        <td><input class="ci" id="er_folio" type="text" value="${esc(p.folio||'')}" tabindex="9"></td>
         <td>
-          <select class="ci" id="er_origen" tabindex="11">
+          <select class="ci" id="er_origen" tabindex="10">
             <option value="presencial"${(p.origen||'')==='presencial'?' selected':''}>Presencial</option>
             <option value="telefono"${p.origen==='telefono'?' selected':''}>Telefono</option>
             <option value="chat"${p.origen==='chat'?' selected':''}>Chat</option>
@@ -963,7 +950,7 @@ function editarFilaInline(id) {
         </td>
         <td>
           <div class="td-actions">
-            <button class="btn-save-row" id="er_guardar" tabindex="12">
+            <button class="btn-save-row" id="er_guardar" tabindex="11">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
               Guardar
             </button>
@@ -1015,7 +1002,7 @@ function editarFilaInline(id) {
           area:                (tr.querySelector('#er_area').value || '').trim(),
           prevision:           ePrevLocal,
           copago:              parseInt(tr.querySelector('#er_copago').value) || 0,
-          bonificacion:        parseInt(tr.querySelector('#er_bonif').value)  || 0,
+          bonificacion:        0,
           metodo_pago:         eMetodoLocal,
           folio:               (tr.querySelector('#er_folio').value || '').trim(),
           origen:              tr.querySelector('#er_origen').value,
@@ -1128,22 +1115,21 @@ document.getElementById('modalBg').addEventListener('click', e => {
 });
 
 function resetForm() {
-  ['fNombre','fRut','fArea','fCopago','fBonif','fFolio','fCodTransf','fProcedimiento','fIdCita']
-    .forEach(id => document.getElementById(id).value = '');
+  ['fNombre','fRut','fArea','fCopago','fFolio','fCodTransf','fProcedimiento','fIdCita']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   document.getElementById('fFecha').value = _fecha;
   document.getElementById('fProf').value  = '';
   document.getElementById('fOrigen').value = 'presencial';
   setPrevision('particular');
   setMetodo('efectivo');
   document.getElementById('hintCopago').textContent = '';
-  document.getElementById('hintBonif').textContent  = '';
 }
 
 function setPrevision(p) {
   _prevision = p;
   document.getElementById('btnParticular').classList.toggle('active', p === 'particular');
   document.getElementById('btnFonasa').classList.toggle('active',     p === 'fonasa');
-  document.getElementById('rowBonif').classList.toggle('show', p === 'fonasa');
+  // rowBonif se mantiene oculto siempre (bonificacion se calcula en conciliacion)
   updateMetodoHint();
 }
 
@@ -1210,27 +1196,19 @@ function recalcSugerenciaModal() {
 
 function aplicarSugerenciaMontosModal(s) {
   const fC = document.getElementById('fCopago');
-  const fB = document.getElementById('fBonif');
   if (s.copago_sugerido != null && !fC._edited) {
     fC.value = s.copago_sugerido; fC.classList.add('suggested');
   }
-  if (s.bonif_sugerida != null && s.bonif_sugerida > 0 && !fB._edited) {
-    fB.value = s.bonif_sugerida; fB.classList.add('suggested');
-  }
   if (s.fuente === 'fonasa_n3') {
     document.getElementById('hintCopago').textContent =
-      'Arancel N3: total $' + s.total_arancel?.toLocaleString('es-CL') + ' · Cod. ' + (s.codigo_fonasa || '');
-    document.getElementById('hintBonif').textContent = 'Bonificacion Imed sugerida';
+      'Copago Fonasa N3 · Cod. ' + (s.codigo_fonasa || '');
   } else if (s.fuente === 'particular') {
     document.getElementById('hintCopago').textContent = s.copago_sugerido ? 'Precio particular' : '';
-    document.getElementById('hintBonif').textContent = '';
   }
 }
 
-['fCopago','fBonif'].forEach(id => {
-  document.getElementById(id).addEventListener('input', function() {
-    this._edited = true; this.classList.remove('suggested');
-  });
+document.getElementById('fCopago').addEventListener('input', function() {
+  this._edited = true; this.classList.remove('suggested');
 });
 
 document.getElementById('btnGuardarPago').addEventListener('click', guardarModal);
@@ -1250,7 +1228,7 @@ async function guardarModal() {
     area:                document.getElementById('fArea').value.trim(),
     prevision:           _prevision,
     copago:              parseInt(document.getElementById('fCopago').value) || 0,
-    bonificacion:        parseInt(document.getElementById('fBonif').value)  || 0,
+    bonificacion:        0,
     metodo_pago:         _metodo,
     folio:               document.getElementById('fFolio').value.trim(),
     codigo_transferencia: document.getElementById('fCodTransf').value.trim(),

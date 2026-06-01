@@ -241,6 +241,22 @@ def _medilink_pagos_a_pagos(d_desde: date, d_hasta: date) -> list[Pago]:
 
 # ── Capa Imed (nueva — no existe en auditor.py) ───────────────────────────────
 
+def _bonif_desde_arancel(area: str) -> float:
+    """
+    Retorna la bonificacion Imed esperada para un area Fonasa, tomada del
+    arancel N3. Si el area no está en el arancel retorna 0.
+    Importa _ARANCEL_N3 desde pagos_routes para no duplicar la constante.
+    """
+    try:
+        from pagos_routes import _ARANCEL_N3
+        a = _ARANCEL_N3.get(area)
+        if a:
+            return float(a.get("bonif", 0))
+    except Exception as e:
+        log.warning("_bonif_desde_arancel: %s", e)
+    return 0.0
+
+
 def _cruzar_imed(
     pagos_recepcion: list[Pago],
     movs_imed: list[MovimientoBancario],
@@ -252,27 +268,24 @@ def _cruzar_imed(
     semanal de Imed (CSV subido).
 
     Lógica:
-    1. Esperado = Σ bonificaciones (campo observacion) de pagos Fonasa del período.
-       Solo registros de pagos_cmc con prevision='fonasa' y bonificacion > 0.
+    1. Esperado = Σ bonif_arancel_N3(area) de cada registro Fonasa del período.
+       La bonificacion NO se lee del campo guardado (ya no se ingresa en caja).
+       Se calcula desde _ARANCEL_N3 por area, igual que lo hacía _sugerir_copago.
     2. Recibido  = Σ de los movimientos del CSV Imed (todos son CREDITO).
     3. Hallazgo FALTANTE si recibido < esperado - tolerancia.
     4. Hallazgo SOBRANTE si recibido > esperado + tolerancia.
-
-    Los pagos_recepcion ya tienen la bonificacion en el campo observacion
-    (puesta por _pagos_cmc_a_pagos cuando convierte desde pagos_cmc).
     """
     hallazgos: list[Hallazgo] = []
 
-    # Leer bonificaciones directamente de pagos_cmc (más fiable)
+    # Leer registros Fonasa del período y calcular bonif desde arancel N3
     from session import _conn
     try:
         with _conn() as conn:
             rows = conn.execute(
-                """SELECT id, fecha, paciente_nombre, bonificacion, copago
+                """SELECT id, fecha, paciente_nombre, area, copago
                    FROM pagos_cmc
                    WHERE fecha BETWEEN ? AND ?
                      AND prevision = 'fonasa'
-                     AND bonificacion > 0
                    ORDER BY fecha""",
                 (d_desde.isoformat(), d_hasta.isoformat())
             ).fetchall()
@@ -280,9 +293,12 @@ def _cruzar_imed(
         log.error("_cruzar_imed: error leyendo pagos_cmc: %s", e)
         rows = []
 
-    esperado_total = sum(float(r["bonificacion"] or 0) for r in rows)
+    # Calcular bonif esperada para cada registro desde arancel N3
+    bonifs = [_bonif_desde_arancel(r["area"] or "") for r in rows]
+    rows_con_bonif = [(r, b) for r, b in zip(rows, bonifs) if b > 0]
+    esperado_total = sum(b for _, b in rows_con_bonif)
     recibido_total = sum(m.monto for m in movs_imed if m.tipo == "CREDITO")
-    n_bonif = len(rows)
+    n_bonif = len(rows_con_bonif)
     n_depositos = len([m for m in movs_imed if m.tipo == "CREDITO"])
 
     if esperado_total <= 0 and recibido_total <= 0:
