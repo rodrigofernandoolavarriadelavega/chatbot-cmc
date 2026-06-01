@@ -39,12 +39,40 @@ input,textarea{font-family:inherit;color:inherit}
   grid-template-rows:auto minmax(0,1fr);grid-template-areas:"top top top" "inbox chat ctx";
   height:100dvh;width:100vw;max-width:100vw;overflow:hidden}
 .app.ctx-collapsed{grid-template-columns:368px minmax(0,1fr) 0}
-@media(max-width:1180px){.app{grid-template-columns:330px minmax(0,1fr)}.app .ctx{position:fixed;top:0;right:0;bottom:0;width:340px;
-  transform:translateX(100%);transition:transform .25s cubic-bezier(.4,0,.2,1);z-index:60;box-shadow:var(--sh-lg)}
-  .app.ctx-open .ctx{transform:translateX(0)}}
-@media(max-width:760px){.app{grid-template-columns:1fr;grid-template-areas:"top" "chat"}
-  .inbox{position:fixed;top:0;bottom:0;left:0;width:min(86vw,360px);transform:translateX(-100%);
-    transition:transform .25s;z-index:65;box-shadow:var(--sh-lg)}.app.inbox-open .inbox{transform:translateX(0)}}
+/* Scrim para cajones (drawers) en tablet/móvil */
+.scrim{position:fixed;inset:0;background:rgba(15,63,104,.45);z-index:68;opacity:0;pointer-events:none;transition:opacity .22s}
+/* Tablet: la ficha pasa a cajón lateral derecho */
+@media(max-width:1180px){
+  .app{grid-template-columns:330px minmax(0,1fr)}
+  .app .ctx{position:fixed;top:0;right:0;bottom:0;width:min(360px,92vw);transform:translateX(100%);
+    transition:transform .25s cubic-bezier(.4,0,.2,1);z-index:70;box-shadow:var(--sh-lg)}
+  .app.ctx-open .ctx{transform:translateX(0)}
+  .app.ctx-open .scrim{opacity:1;pointer-events:auto}
+}
+/* Espacio justo: ocultar KPIs del topbar (los segmentos del inbox cubren lo mismo) */
+@media(max-width:1080px){ .kpis{display:none} }
+/* Móvil: una sola columna, inbox como cajón izquierdo */
+@media(max-width:760px){
+  .app{grid-template-columns:1fr;grid-template-areas:"top" "chat"}
+  .inbox{position:fixed;top:0;bottom:0;left:0;width:min(88vw,360px);transform:translateX(-100%);
+    transition:transform .25s;z-index:70;box-shadow:var(--sh-lg)}
+  .app.inbox-open .inbox{transform:translateX(0)}
+  .app.inbox-open .scrim{opacity:1;pointer-events:auto}
+  .top .ham{display:inline-flex}
+  .chat-h .back{display:flex}
+  .top{gap:7px;padding:0 12px;min-height:54px}
+  .brand .bt .ov{display:none}
+  .chat-welcome{padding:24px}
+}
+@media(max-width:560px){
+  .cf-sum{grid-template-columns:repeat(2,1fr)}
+  .modal,.modal.wide{padding:18px}
+  .thread{padding:14px 14px 8px}
+  .bub{max-width:86%}
+  .composer{padding:10px 12px}
+  .chat-h{padding:10px 12px;gap:9px}
+  .chat-h .cn{font-size:14px}
+}
 
 /* ===== Topbar (header premium gradiente) ===== */
 .top{grid-area:top;display:flex;align-items:center;gap:14px;color:#fff;position:relative;overflow:hidden;
@@ -329,6 +357,36 @@ input,textarea{font-family:inherit;color:inherit}
 .wl-act button.danger:hover{border-color:var(--red);background:var(--red-bg)}
 .wl-act button.danger:hover svg{stroke:var(--red)}
 
+/* Confirmaciones de mañana */
+.cf-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:16px}
+.cf-sum .b{border:1px solid var(--line);border-radius:12px;padding:11px 6px;text-align:center}
+.cf-sum .b .n{font-size:21px;font-weight:800;letter-spacing:-.5px}
+.cf-sum .b .l{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);margin-top:2px}
+.cf-sum .b.ok{background:var(--green-bg);border-color:#bfe6d4}.cf-sum .b.ok .n{color:var(--green)}
+.cf-sum .b.re{background:var(--amber-bg);border-color:#f0dca8}.cf-sum .b.re .n{color:var(--amber)}
+.cf-sum .b.ca{background:var(--red-bg);border-color:#f3c9c9}.cf-sum .b.ca .n{color:var(--red)}
+.cf-sum .b.pe .n{color:var(--slate)}
+.cf-row{display:flex;align-items:center;gap:11px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;margin-bottom:7px}
+.cf-time{font-size:13px;font-weight:800;color:var(--navy);width:48px;flex-shrink:0;font-variant-numeric:tabular-nums}
+.cf-info{flex:1;min-width:0}
+.cf-nm{font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cf-meta{font-size:11px;color:var(--muted);font-weight:600;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cf-st{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;padding:3px 9px;border-radius:999px;flex-shrink:0}
+.cf-st.confirmed{background:var(--green-bg);color:var(--green)}
+.cf-st.reagendar{background:var(--amber-bg);color:#9a6a0f}
+.cf-st.cancelar{background:var(--red-bg);color:var(--red)}
+.cf-st.pendiente{background:var(--slate-bg);color:var(--slate)}
+.cf-open{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;border:1px solid var(--line);background:#fff;flex-shrink:0}
+.cf-open svg{width:15px;height:15px;stroke:var(--muted)}
+.cf-open:hover{border-color:var(--aqua);background:var(--aqua-soft)}.cf-open:hover svg{stroke:var(--blue)}
+
+/* Composer attach */
+.attach{width:46px;height:46px;border-radius:14px;background:var(--panel-2);border:1px solid var(--line);
+  display:grid;place-items:center;flex-shrink:0;transition:.15s}
+.attach:hover{border-color:var(--aqua);background:var(--aqua-soft)}
+.attach svg{width:19px;height:19px;stroke:var(--muted)}
+.attach:hover svg{stroke:var(--blue)}
+
 /* Toast */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--navy);color:#fff;
   padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;box-shadow:var(--sh-lg);opacity:0;pointer-events:none;
@@ -339,6 +397,7 @@ input,textarea{font-family:inherit;color:inherit}
 </head>
 <body>
 <div class="app" id="app">
+  <div class="scrim" id="scrim"></div>
 
   <!-- ===== Topbar ===== -->
   <header class="top">
@@ -357,6 +416,13 @@ input,textarea{font-family:inherit;color:inherit}
       <button class="kpi k-stall" data-seg="stall"><span class="dot"></span><b id="kStall">0</b> sin responder</button>
     </div>
     <div class="spacer"></div>
+    <button class="tbtn" id="confBtn" title="Confirmaciones de mañana">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 16l2 2 4-4"/></svg>
+      <span class="nbadge" id="confBadge" style="display:none;background:var(--amber)">0</span>
+    </button>
+    <button class="tbtn" id="profsBtn" title="Profesionales · dashboards">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 2.3A.3.3 0 005 2H4a2 2 0 00-2 2v5a4 4 0 008 0V4a2 2 0 00-2-2H7"/><path d="M8 15a6 6 0 006 6 6 6 0 006-6v-4"/><circle cx="20" cy="10" r="2"/></svg>
+    </button>
     <button class="tbtn" id="wlBtn" title="Lista de espera">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
       <span class="nbadge" id="wlBadge" style="display:none">0</span>
@@ -423,6 +489,8 @@ input,textarea{font-family:inherit;color:inherit}
       <div class="composer">
         <div class="qreplies" id="qreplies"></div>
         <div class="composer-row">
+          <button class="attach" id="attachBtn" title="Enviar documento o imagen"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button>
+          <input type="file" id="fileInput" style="display:none" accept="image/*,application/pdf,.doc,.docx">
           <textarea id="msgInput" placeholder="Escribe un mensaje… (Enter envía, Shift+Enter salto de línea)" rows="1"></textarea>
           <button class="send" id="sendBtn" disabled><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/></svg></button>
         </div>
@@ -458,6 +526,26 @@ input,textarea{font-family:inherit;color:inherit}
       <button class="btn btn-ghost" onclick="closeBooked()">Cancelar</button>
       <button class="btn btn-primary" id="bkSave">Guardar cita</button>
     </div>
+  </div>
+</div>
+
+<!-- Modal confirmaciones de mañana -->
+<div class="modal-bg" id="confModal">
+  <div class="modal wide">
+    <h3>Confirmaciones — <span id="confFecha">mañana</span></h3>
+    <p class="sub">Citas agendadas por el bot para esa fecha y su estado de confirmación por WhatsApp.</p>
+    <div id="confContent"><div class="wl-empty">Cargando…</div></div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeConf()">Cerrar</button></div>
+  </div>
+</div>
+
+<!-- Modal profesionales -->
+<div class="modal-bg" id="profsModal">
+  <div class="modal wide">
+    <h3>Profesionales</h3>
+    <p class="sub">Cada profesional con acceso a su dashboard personal (KPIs, NPS, ingresos). Abre en una pestaña nueva.</p>
+    <div id="profsContent"><div class="wl-empty">Cargando…</div></div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeProfs()">Cerrar</button></div>
   </div>
 </div>
 
@@ -584,7 +672,7 @@ async function loadInbox(silent){
     WL=Array.isArray(wl)?wl:[];
     // solo conversaciones reales (con mensajes)
     CONV=(conv||[]).filter(c=>c.msg_count>0||c.last_ts||c.state!=="IDLE");
-    renderCounts(); renderList(); renderWlBadge();
+    renderCounts(); renderList(); renderWlBadge(); loadConfBadge();
   }catch(e){ if(!silent) document.getElementById("inboxList").innerHTML='<div class="empty"><h3>Sin conexión</h3><p>'+esc(e.message)+'</p></div>'; }
 }
 // ===== Lista de espera =====
@@ -924,6 +1012,81 @@ async function refreshThread(){
 
 function autoGrow(el){el.style.height="auto";el.style.height=Math.min(el.scrollHeight,140)+"px";}
 
+// ===== Confirmaciones de mañana =====
+function closeConf(){document.getElementById("confModal").classList.remove("open");}
+async function openConf(){
+  document.getElementById("confModal").classList.add("open");
+  const box=document.getElementById("confContent");
+  box.innerHTML='<div class="wl-empty">Cargando…</div>';
+  try{
+    const d=await J("/admin/api/confirmaciones");
+    document.getElementById("confFecha").textContent=fmtConfFecha(d.fecha);
+    const r=d.resumen||{};
+    let html=`<div class="cf-sum">
+      <div class="b ok"><div class="n">${r.confirmed||0}</div><div class="l">Confirmadas</div></div>
+      <div class="b re"><div class="n">${r.reagendar||0}</div><div class="l">Reagendar</div></div>
+      <div class="b ca"><div class="n">${r.cancelar||0}</div><div class="l">Cancelar</div></div>
+      <div class="b pe"><div class="n">${r.pendiente||0}</div><div class="l">Pendientes</div></div></div>`;
+    if(!d.citas||!d.citas.length){html+='<div class="wl-empty">No hay citas del bot para esa fecha.</div>';}
+    else{
+      const ord={pendiente:0,reagendar:1,cancelar:2,confirmed:3};
+      d.citas.slice().sort((a,b)=>(ord[a.confirmation_status||"pendiente"]-ord[b.confirmation_status||"pendiente"])||String(a.hora).localeCompare(String(b.hora)))
+      .forEach(c=>{
+        const st=c.confirmation_status||"pendiente";
+        const stTxt={confirmed:"Confirmada",reagendar:"Reagendar",cancelar:"Cancelar",pendiente:"Pendiente"}[st];
+        html+=`<div class="cf-row"><span class="cf-time">${esc((c.hora||"").slice(0,5))}</span>
+          <div class="cf-info"><div class="cf-nm">${esc(c.especialidad||"—")}</div>
+            <div class="cf-meta">${esc(c.profesional||"")}${c.modalidad?" · "+esc(c.modalidad):""}</div></div>
+          <span class="cf-st ${st}">${stTxt}</span>
+          <button class="cf-open" data-open="${esc(c.phone)}" title="Abrir conversación"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button></div>`;
+      });
+    }
+    box.innerHTML=html;
+    box.querySelectorAll("[data-open]").forEach(b=>b.addEventListener("click",()=>{closeConf();openChat(b.dataset.open);}));
+  }catch(e){box.innerHTML='<div class="wl-empty">No se pudo cargar: '+esc(e.message)+'</div>';}
+}
+function fmtConfFecha(f){if(!f)return"mañana";const d=new Date(f+"T12:00:00");return d.toLocaleDateString("es-CL",{weekday:"long",day:"numeric",month:"long"});}
+async function loadConfBadge(){
+  try{const d=await J("/admin/api/confirmaciones");const pend=(d.resumen?.pendiente||0)+(d.resumen?.reagendar||0)+(d.resumen?.cancelar||0);
+    const b=document.getElementById("confBadge");b.textContent=pend;b.style.display=pend>0?"grid":"none";}catch(e){}
+}
+
+// ===== Profesionales (dashboards) =====
+function closeProfs(){document.getElementById("profsModal").classList.remove("open");}
+async function openProfs(){
+  document.getElementById("profsModal").classList.add("open");
+  const box=document.getElementById("profsContent");
+  box.innerHTML='<div class="wl-empty">Cargando…</div>';
+  try{
+    const d=await J("/api/anima/profesionales");
+    const grupos=d.grupos||[];
+    if(!grupos.length){box.innerHTML='<div class="wl-empty">Sin profesionales.</div>';return;}
+    box.innerHTML=grupos.map(g=>`<div class="wl-group">
+      <div class="wl-group-h"><span class="ge">${esc(g.especialidad)}</span><span class="gc">${g.profesionales.length}</span><span class="gl"></span></div>
+      ${g.profesionales.map(p=>`<div class="wl-row">
+        <span class="wl-pos" style="background:${avatarColor(p.nombre)}">${esc(initials(p.nombre,""))}</span>
+        <div class="wl-info"><div class="wl-nm">${esc(p.nombre)}</div><div class="wl-meta">Dashboard personal</div></div>
+        <a class="cf-open" href="${esc(p.url)}" target="_blank" title="Abrir dashboard"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6M10 14 21 3"/></svg></a>
+      </div>`).join("")}</div>`).join("");
+  }catch(e){box.innerHTML='<div class="wl-empty">No se pudo cargar: '+esc(e.message)+'</div>';}
+}
+
+// ===== Enviar documento / imagen =====
+async function sendDocument(file){
+  if(!CUR||!file)return;
+  if(file.size>16*1024*1024){toast("El archivo supera 16 MB",true);return;}
+  const cap=prompt("Texto que acompaña el archivo (opcional):","")||"";
+  toast("Enviando "+file.name+"…");
+  const fd=new FormData();fd.append("phone",CUR);fd.append("caption",cap);fd.append("file",file);
+  try{
+    const url="/admin/api/send-document"+(TOKEN?"?token="+encodeURIComponent(TOKEN):"");
+    const r=await fetch(url,{method:"POST",body:fd,credentials:"include",headers:HEADERS});
+    if(!r.ok)throw new Error("HTTP "+r.status);
+    CURMETA.state="HUMAN_TAKEOVER";const c=CONV.find(x=>x.phone===CUR);if(c)c.state="HUMAN_TAKEOVER";
+    renderChatHeader();toast("Archivo enviado");setTimeout(refreshThread,600);
+  }catch(e){toast("No se pudo enviar: "+e.message,true);}
+}
+
 // ===== Wire UI =====
 document.getElementById("segs").addEventListener("click",e=>{const b=e.target.closest(".seg");if(!b)return;
   FILTER=b.dataset.seg;document.querySelectorAll(".seg").forEach(s=>s.classList.toggle("on",s===b));renderCounts();renderList();});
@@ -955,11 +1118,16 @@ document.getElementById("qreplies").addEventListener("click",e=>{const b=e.targe
   msgInput.value=QREPLIES[+b.dataset.i];autoGrow(msgInput);msgInput.focus();document.getElementById("sendBtn").disabled=false;});
 // context drawer
 document.getElementById("wlBtn").addEventListener("click",openWl);
+document.getElementById("confBtn").addEventListener("click",openConf);
+document.getElementById("profsBtn").addEventListener("click",openProfs);
+document.getElementById("attachBtn").addEventListener("click",()=>{if(!CUR){toast("Abre una conversación primero",true);return;}document.getElementById("fileInput").click();});
+document.getElementById("fileInput").addEventListener("change",e=>{const f=e.target.files[0];if(f)sendDocument(f);e.target.value="";});
 document.getElementById("ctxToggleBtn").addEventListener("click",()=>document.getElementById("app").classList.toggle("ctx-open"));
 document.getElementById("ctxCloseBtn").addEventListener("click",()=>document.getElementById("app").classList.remove("ctx-open"));
 // mobile drawer
 document.getElementById("hamBtn").addEventListener("click",()=>document.getElementById("app").classList.toggle("inbox-open"));
 document.getElementById("backBtn").addEventListener("click",()=>document.getElementById("app").classList.add("inbox-open"));
+document.getElementById("scrim").addEventListener("click",()=>document.getElementById("app").classList.remove("inbox-open","ctx-open"));
 // sound toggle
 const soundBtn=document.getElementById("soundBtn");
 function renderSound(){soundBtn.classList.toggle("muted",!SOUND);soundBtn.classList.toggle("active",SOUND);}
