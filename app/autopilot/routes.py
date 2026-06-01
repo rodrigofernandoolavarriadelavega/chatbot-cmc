@@ -319,6 +319,21 @@ async def publish_approve(rid: str, request: Request, token: str | None = Query(
     return JSONResponse({"ok": True, "item": item})
 
 
+@router.post("/autopilot/api/publish/queue/{rid}/schedule")
+async def publish_reschedule(rid: str, request: Request, token: str | None = Query(None)):
+    """Cambia/limpia la hora programada de una pieza sin alterar su estado.
+    Body: {scheduled_at} (ISO) o {scheduled_at:null} para volver a ASAP."""
+    _check_token(token, request)
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        raise HTTPException(400, "JSON inválido")
+    item = publishing.reschedule(rid, (body or {}).get("scheduled_at"))
+    if not item:
+        raise HTTPException(404, "Pieza no encontrada en la cola")
+    return JSONResponse({"ok": True, "item": item})
+
+
 @router.post("/autopilot/api/publish/queue/{rid}/publish-now")
 async def publish_now(rid: str, token: str | None = Query(None), request: Request = None):
     """Publica una pieza inmediatamente (sigue gateada por ORGANIC_PUBLISH_EXECUTE)."""

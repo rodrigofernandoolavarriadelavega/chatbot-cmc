@@ -254,6 +254,18 @@ def approve(rid: str, scheduled_at: str | None = None) -> dict | None:
     return None
 
 
+def reschedule(rid: str, scheduled_at: str | None) -> dict | None:
+    """Cambia (o limpia) la hora programada de una pieza SIN tocar su estado.
+    `scheduled_at=None` → vuelve a 'apenas se apruebe / próxima corrida'."""
+    items = load_queue()
+    for i in items:
+        if str(i.get("id")) == str(rid):
+            i["scheduled_at"] = scheduled_at or None
+            _save_all(items)
+            return i
+    return None
+
+
 def delete(rid: str) -> bool:
     items = load_queue()
     kept = [i for i in items if str(i.get("id")) != str(rid)]

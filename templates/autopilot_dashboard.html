@@ -442,6 +442,29 @@
   .pc-ch-opt .pc-ch-lbl em{display:block;font-weight:500;font-size:10.5px;color:var(--muted);font-style:normal;margin-top:1px}
   .pc-pick{display:flex;gap:11px;align-items:center}
   .pc-pick img{width:52px;height:66px;border-radius:9px;object-fit:cover;background:var(--bg);flex-shrink:0}
+  /* Presets de horario */
+  .sched-presets{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:9px}
+  .sched-presets button{border:1px solid var(--line);background:#fff;color:var(--navy);font-family:inherit;font-weight:700;
+       font-size:11.5px;padding:6px 11px;border-radius:999px;cursor:pointer;transition:.15s}
+  .sched-presets button:hover{border-color:var(--aqua);background:#eef9fb}
+  .sched-presets button.on{background:linear-gradient(135deg,var(--navy),var(--blue));color:#fff;border-color:transparent}
+  /* Agenda de próximas programadas */
+  .agenda{margin-top:18px;background:var(--card);border-radius:var(--r);border:1px solid var(--line);box-shadow:var(--sh-sm);overflow:hidden}
+  .agenda-h{display:flex;align-items:center;gap:9px;padding:13px 16px;border-bottom:1px solid var(--line)}
+  .agenda-h svg{width:17px;height:17px;stroke:var(--blue)}
+  .agenda-h h3{font-size:13.5px;font-weight:800;letter-spacing:-.2px}
+  .agenda-list{display:flex;flex-direction:column}
+  .agenda-row{display:flex;align-items:center;gap:13px;padding:11px 16px;border-bottom:1px solid var(--line)}
+  .agenda-row:last-child{border-bottom:0}
+  .agenda-time{display:flex;flex-direction:column;align-items:center;min-width:62px;flex-shrink:0;
+       background:linear-gradient(135deg,#eef9fb,#e3f5f8);border-radius:10px;padding:7px 6px}
+  .agenda-time .at-h{font-size:15px;font-weight:800;color:var(--navy);letter-spacing:-.3px}
+  .agenda-time .at-d{font-size:10px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.3px}
+  .agenda-thumb{width:34px;height:43px;border-radius:7px;object-fit:cover;background:var(--bg);flex-shrink:0}
+  .agenda-info{min-width:0;flex:1}
+  .agenda-info .ag-t{font-size:12.5px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .agenda-info .ag-ch{font-size:10.5px;color:var(--muted);font-weight:600;margin-top:2px}
+  .agenda-row .pub-btn{flex:0 0 auto;min-width:0;padding:7px 11px}
   @media(max-width:760px){.pub-board{grid-template-columns:1fr}.pc-channels{grid-template-columns:1fr}}
 
   /* ── SEO (auditoría) ──────────────────────────────────── */
@@ -682,6 +705,15 @@
       <!-- Estado de conexión por canal -->
       <div class="conn-strip" id="connStrip"><div class="skel" style="height:64px"></div></div>
 
+      <!-- Agenda de próximas programadas -->
+      <div class="agenda" id="agenda" style="display:none">
+        <div class="agenda-h">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          <h3>Agenda · próximas programadas</h3>
+        </div>
+        <div class="agenda-list" id="agendaList"></div>
+      </div>
+
       <!-- Tablero de cola -->
       <div class="pub-board" id="pubBoard">
         <div class="skel" style="height:200px"></div>
@@ -815,14 +847,49 @@
         <textarea id="pCaption" rows="3" placeholder="Texto que acompaña la publicación. Las Historias lo ignoran."></textarea>
       </label>
       <label class="gfield"><span>Programar para <em>(vacío = apenas la apruebes)</em></span>
+        <div class="sched-presets" id="pPresets">
+          <button type="button" data-preset="clear">Apenas se apruebe</button>
+          <button type="button" data-preset="1h">En 1 hora</button>
+          <button type="button" data-preset="today18">Hoy 18:00</button>
+          <button type="button" data-preset="tom9">Mañana 09:00</button>
+          <button type="button" data-preset="tom18">Mañana 18:00</button>
+        </div>
         <input id="pSchedule" type="datetime-local">
       </label>
-      <p class="gform-hint">Esto solo deja la pieza <b>en cola</b>. Nada se publica hasta que la apruebes en el tablero, y la escritura a Meta exige el kill-switch del server activo.</p>
+      <p class="gform-hint">Programa la hora exacta (historia de IG o lo que sea). La pieza queda <b>en cola</b>: al aprobarla, el sistema la publica solo cuando llegue esa hora. La escritura a Meta exige el kill-switch del server activo.</p>
       <button class="dbtn dbtn-primary gform-btn" id="pSubmit">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
         <span>Agregar a la cola</span>
       </button>
       <p class="gform-err" id="pErr"></p>
+    </div>
+  </div>
+</div>
+
+<!-- Modal reprogramar pieza -->
+<div class="dmodal" id="rmodal">
+  <div class="dmodal-bg" id="rmodalBg"></div>
+  <div class="gmodal-card" style="max-width:420px">
+    <button class="dmodal-x" id="rmodalX" aria-label="Cerrar">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+    <h3 class="gmodal-title">Reprogramar</h3>
+    <p class="gmodal-sub" id="rTitle">—</p>
+    <div class="gform">
+      <div class="sched-presets" id="rPresets">
+        <button type="button" data-preset="clear">Apenas se apruebe</button>
+        <button type="button" data-preset="1h">En 1 hora</button>
+        <button type="button" data-preset="today18">Hoy 18:00</button>
+        <button type="button" data-preset="tom9">Mañana 09:00</button>
+        <button type="button" data-preset="tom18">Mañana 18:00</button>
+      </div>
+      <label class="gfield"><span>Nueva hora</span>
+        <input id="rSchedule" type="datetime-local">
+      </label>
+      <button class="dbtn dbtn-primary gform-btn" id="rSubmit">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="9"/></svg>
+        <span>Guardar hora</span>
+      </button>
     </div>
   </div>
 </div>
@@ -1350,7 +1417,8 @@ function closeGModal(){document.getElementById('gmodal').classList.remove('open'
 document.getElementById('btnGen').addEventListener('click',openGModal);
 document.getElementById('gmodalBg').addEventListener('click',closeGModal);
 document.getElementById('gmodalX').addEventListener('click',closeGModal);
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeDModal();closeGModal();}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeDModal();closeGModal();
+  if(window.closePModal)closePModal(); if(window.closeRModal)closeRModal();}});
 
 document.getElementById('gSubmit').addEventListener('click',async()=>{
   const title=document.getElementById('gTitle').value.trim();
@@ -1455,6 +1523,38 @@ function renderPubBoard(){
   document.getElementById('pubBoard').querySelectorAll('[data-act]').forEach(b=>{
     b.addEventListener('click',()=>pubAction(b.dataset.act,b.dataset.id));
   });
+  renderAgenda();
+}
+
+/* Agenda: piezas con hora futura, ordenadas cronológicamente (incluye las en cola
+   que ya tienen hora, para que veas todo lo que está calendarizado). */
+function renderAgenda(){
+  const now=Date.now();
+  const sched=PUB_QUEUE
+    .filter(i=>i.scheduled_at && ['cola','aprobado'].includes((i.status||'').toLowerCase()))
+    .map(i=>({i,t:Date.parse(i.scheduled_at)}))
+    .filter(x=>!isNaN(x.t) && x.t>=now-60000)
+    .sort((a,b)=>a.t-b.t);
+  const wrap=document.getElementById('agenda');
+  if(!sched.length){ wrap.style.display='none'; return; }
+  wrap.style.display='block';
+  document.getElementById('agendaList').innerHTML = sched.map(({i})=>{
+    const d=new Date(i.scheduled_at);
+    const hh=d.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+    const dd=d.toLocaleDateString('es-CL',{day:'numeric',month:'short'});
+    const pend=(i.status||'').toLowerCase()==='cola';
+    const chs=(i.channels||[]).map(chLabel).join(' · ');
+    return `<div class="agenda-row">
+      <div class="agenda-time"><span class="at-h">${esc(hh)}</span><span class="at-d">${esc(dd)}</span></div>
+      ${i.image_url?`<img class="agenda-thumb" src="${esc(i.image_url)}" alt="">`:'<div class="agenda-thumb"></div>'}
+      <div class="agenda-info"><div class="ag-t">${esc(i.title||'Sin título')}</div>
+        <div class="ag-ch">${esc(chs)}${pend?' · <b style="color:var(--amber)">falta aprobar</b>':''}</div></div>
+      <button class="pub-btn" data-act="resched" data-id="${esc(i.id)}">${svg('<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>')}Cambiar</button>
+    </div>`;
+  }).join('');
+  document.getElementById('agendaList').querySelectorAll('[data-act]').forEach(b=>{
+    b.addEventListener('click',()=>pubAction(b.dataset.act,b.dataset.id));
+  });
 }
 function pubCard(i){
   const st=(i.status||'cola').toLowerCase();
@@ -1467,12 +1567,15 @@ function pubCard(i){
   const when = st==='aprobado'
     ? (i.scheduled_at?`programado ${fmtWhen(i.scheduled_at)}`:'apenas se apruebe → próxima corrida')
     : (i.published_at?`publicado ${fmtWhen(i.published_at)}`:`creado ${fmtWhen(i.created_at)}`);
+  const schedBtn=`<button class="pub-btn" data-act="resched" data-id="${esc(i.id)}">${svg('<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>')}Programar</button>`;
   let acts='';
   if(st==='cola'){
     acts=`<button class="pub-btn primary" data-act="approve" data-id="${esc(i.id)}">${svg('<path d="M20 6 9 17l-5-5"/>')}Aprobar</button>
+          ${schedBtn}
           <button class="pub-btn danger" data-act="del" data-id="${esc(i.id)}">${svg('<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>')}Quitar</button>`;
   } else if(st==='aprobado'){
     acts=`<button class="pub-btn primary" data-act="now" data-id="${esc(i.id)}">${svg('<path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/>')}Publicar ahora</button>
+          ${schedBtn}
           <button class="pub-btn danger" data-act="del" data-id="${esc(i.id)}">${svg('<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>')}Quitar</button>`;
   } else if(st==='error'||st==='parcial'){
     acts=`<button class="pub-btn" data-act="now" data-id="${esc(i.id)}">${svg('<path d="M21 2v6h-6M3 22v-6h6"/><path d="M3.5 9a9 9 0 0 1 14.8-3.4L21 8M21 15a9 9 0 0 1-14.8 3.4L3 16"/>')}Reintentar</button>
@@ -1495,6 +1598,7 @@ function pubCard(i){
 }
 
 async function pubAction(act,id){
+  if(act==='resched'){ openRModal(id); return; }
   try{
     if(act==='approve'){
       await fetch(`/autopilot/api/publish/queue/${id}/approve?token=${TOKEN}`,
@@ -1508,6 +1612,58 @@ async function pubAction(act,id){
   }catch(e){}
   await loadPublish();
 }
+
+/* ── Horarios: presets → valor de <input datetime-local> ── */
+function pad2(n){return String(n).padStart(2,'0');}
+function toLocalInput(d){return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;}
+function presetToValue(key){
+  const d=new Date();
+  if(key==='clear') return '';
+  if(key==='1h'){ d.setHours(d.getHours()+1); return toLocalInput(d); }
+  if(key==='today18'){ d.setHours(18,0,0,0); return toLocalInput(d); }
+  if(key==='tom9'){ d.setDate(d.getDate()+1); d.setHours(9,0,0,0); return toLocalInput(d); }
+  if(key==='tom18'){ d.setDate(d.getDate()+1); d.setHours(18,0,0,0); return toLocalInput(d); }
+  return '';
+}
+// Cablea un grupo de presets a su input: marca el activo y rellena el valor.
+function wirePresets(presetsId,inputId){
+  document.getElementById(presetsId).addEventListener('click',e=>{
+    const b=e.target.closest('button'); if(!b)return;
+    document.querySelectorAll(`#${presetsId} button`).forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    document.getElementById(inputId).value=presetToValue(b.dataset.preset);
+  });
+  // Si el usuario edita el input a mano, ningún preset queda marcado.
+  document.getElementById(inputId).addEventListener('input',()=>{
+    document.querySelectorAll(`#${presetsId} button`).forEach(x=>x.classList.remove('on'));
+  });
+}
+wirePresets('pPresets','pSchedule');
+wirePresets('rPresets','rSchedule');
+
+/* ── Reprogramar (mini-modal) ─────────────────────────── */
+let R_ID=null;
+function openRModal(id){
+  const it=PUB_QUEUE.find(x=>String(x.id)===String(id)); if(!it)return;
+  R_ID=id;
+  document.getElementById('rTitle').textContent=it.title||'Pieza';
+  document.getElementById('rSchedule').value=it.scheduled_at?toLocalInput(new Date(it.scheduled_at)):'';
+  document.querySelectorAll('#rPresets button').forEach(x=>x.classList.remove('on'));
+  document.getElementById('rmodal').classList.add('open');
+}
+function closeRModal(){document.getElementById('rmodal').classList.remove('open');}
+document.getElementById('rmodalBg').addEventListener('click',closeRModal);
+document.getElementById('rmodalX').addEventListener('click',closeRModal);
+document.getElementById('rSubmit').addEventListener('click',async()=>{
+  let scheduled_at=null;
+  const sv=document.getElementById('rSchedule').value;
+  if(sv){ try{ scheduled_at=new Date(sv).toISOString(); }catch(e){} }
+  try{
+    await fetch(`/autopilot/api/publish/queue/${R_ID}/schedule?token=${TOKEN}`,
+      {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({scheduled_at})});
+  }catch(e){}
+  closeRModal(); await loadPublish();
+});
 
 /* ── Composer ─────────────────────────────────────────── */
 function openPModal(){
