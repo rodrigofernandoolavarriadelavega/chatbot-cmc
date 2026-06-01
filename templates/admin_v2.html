@@ -486,13 +486,13 @@ input, textarea, select{font-family:inherit; color:inherit}
 .chat-header .sub > span{display:inline-flex; align-items:center; gap:4px}
 .chat-header .sub b{color:var(--cmc-blue); font-weight:700; font-feature-settings:"tnum"}
 
-/* Barra de acciones reubicada al fondo del chat (franja entre mensajes e input).
-   Va FUERA de .reply para que sea siempre clickeable (Tomar control, Agendar,
-   Pago) aunque el input esté deshabilitado sin takeover. */
-.chat-actions{display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-start;
-  padding:8px 16px; border-top:1px solid var(--border-soft);
-  background:linear-gradient(180deg, #fff 0%, var(--panel-2) 100%)}
+/* Acciones reubicadas al panel derecho (sección "Acciones"), no en el chat.
+   El panel de contexto está siempre visible en desktop → siempre accesibles. */
+.chat-actions{display:flex; gap:6px; flex-wrap:wrap}
 .chat-actions:empty{display:none}
+.ctx-acciones .chat-btn{ font-size:12px; padding:7px 11px }
+/* Ocultar la sección "Acciones" del panel cuando no hay chat abierto */
+.ctx-acciones:has(#chActions:empty){ display:none }
 .chat-btn{
   padding:5px 10px;
   background:linear-gradient(180deg, #fff, #f8fbfc);
@@ -1397,7 +1397,6 @@ html, body{width:100%; max-width:100%; overflow-x:hidden}
         🙋 Estás respondiendo como recepcionista — el bot no contestará hasta que devuelvas el control.
       </div>
       <div class="messages" id="messages"></div>
-      <div class="chat-actions" id="chActions"></div>
       <div class="reply" id="replyArea">
         <div class="quick-replies" id="quickReplies">
           <button class="qr" data-text="Hola 👋 ¿En qué te puedo ayudar?">👋 Saludo</button>
@@ -1464,6 +1463,10 @@ html, body{width:100%; max-width:100%; overflow-x:hidden}
     <div class="ctx-section" id="cxFilesSection" style="display:none">
       <h3>📎 Archivos del paciente <span id="cxFilesCount" style="color:var(--text-dim); font-weight:400; font-size:10px"></span></h3>
       <div id="cxFiles" class="ctx-files"></div>
+    </div>
+    <div class="ctx-section ctx-acciones">
+      <h3>Acciones</h3>
+      <div class="chat-actions" id="chActions"></div>
     </div>
   </aside>
 
