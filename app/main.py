@@ -2658,7 +2658,7 @@ def adkun_company_board():
     return _ADKUN_COMPANY_HTML
 
 
-@app.get("/alma", response_class=HTMLResponse)
+@app.get("/alma/branding", response_class=HTMLResponse)
 def alma_product_board():
     """Brand board Alma — producto."""
     if not _ALMA_PRODUCT_HTML:
@@ -3269,10 +3269,10 @@ def boxes_dashboard_page(token: str | None = Query(None)):
     return _BOXES_DASHBOARD_HTML
 
 
-@app.get("/anima", response_class=HTMLResponse)
-@app.get("/anima/dashboard", response_class=HTMLResponse)
-def anima_shell(token: str | None = Query(None),
-                cmc_session: str | None = Cookie(None)):
+@app.get("/alma", response_class=HTMLResponse)
+@app.get("/alma/dashboard", response_class=HTMLResponse)
+def alma_shell(token: str | None = Query(None),
+               cmc_session: str | None = Cookie(None)):
     """Ánima — plataforma interna unificada. Embebe Panel Recepción v2 y Boxes
     en una sola página con navegación lateral. Misma auth que /admin.
 
@@ -3291,6 +3291,14 @@ def anima_shell(token: str | None = Query(None),
         if role in ("admin", "ortodoncia"):
             return _ANIMA_HTML.replace("__TOKEN__", ADMIN_TOKEN)
     return RedirectResponse(url="/admin/login", status_code=302)
+
+
+@app.get("/anima", include_in_schema=False)
+@app.get("/anima/dashboard", include_in_schema=False)
+def anima_redirect(token: str | None = Query(None)):
+    """Redirect 301 de /anima → /alma (ruta canónica de la plataforma)."""
+    target = f"/alma?token={token}" if token else "/alma"
+    return RedirectResponse(url=target, status_code=301)
 
 
 @app.get("/admin/api/boxes-config")
