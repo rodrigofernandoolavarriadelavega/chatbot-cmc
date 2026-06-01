@@ -586,6 +586,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M11 8v6M8 11h6"/></svg>
       SEO <span class="tab-count" id="tabSeoCount"></span>
     </button>
+    <button class="tab" data-view="atribucion">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".6" fill="currentColor"/></svg>
+      Atribución
+    </button>
   </div>
 
   <div id="viewDecisiones">
@@ -657,7 +661,7 @@
     <div class="gal-head">
       <div>
         <h2 class="gal-title">Biblioteca de diseños</h2>
-        <p class="gal-sub">Activos de marketing CMC · imágenes (gpt-image-2) y video (anima-studio) · organizados por canal, tipo y estado</p>
+        <p class="gal-sub">Activos de marketing CMC · imágenes (gpt-image-2) y video (motion por código) · organizados por canal, tipo y estado</p>
       </div>
       <button class="btn-gen" id="btnGen">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v4M3 5h4M6 17v4M4 19h4M13 3l2.5 6.5L22 12l-6.5 2.5L13 21l-2.5-6.5L4 12l6.5-2.5L13 3z"/></svg>
@@ -742,6 +746,114 @@
 
     <h3 class="seg-sub-h">Plantillas best-practice <span>· clónalas y ajústalas a tu campaña</span></h3>
     <div class="seg-grid" id="tplList"></div>
+  </div>
+
+  <div id="viewSeo" style="display:none">
+    <div class="gal-head">
+      <div>
+        <h2 class="gal-title">Salud SEO del sitio</h2>
+        <p class="gal-sub">Auditoría on-page · técnica · local sobre las URLs canónicas en vivo. Mide las best-practices y los bugs históricos del CMC (JSON-LD, canonical, teléfono personal, claims engañosos).</p>
+      </div>
+      <button class="btn-gen" id="btnSeoAudit">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6M3 22v-6h6"/><path d="M3.5 9a9 9 0 0 1 14.8-3.4L21 8M21 15a9 9 0 0 1-14.8 3.4L3 16"/></svg>
+        <span>Auditar ahora</span>
+      </button>
+    </div>
+
+    <div class="kpis" id="seoKpis" style="margin-top:18px"></div>
+
+    <div class="grid" style="margin-top:18px">
+      <div class="col">
+        <div class="panel">
+          <div class="panel-h">
+            <span class="ph-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+            <h2>Páginas auditadas</h2>
+            <span class="count" id="seoPageCount">—</span>
+          </div>
+          <div class="panel-b" id="seoPages">
+            <div class="skel" style="height:96px;margin-bottom:12px"></div>
+            <div class="skel" style="height:96px"></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-h">
+            <span class="ph-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></span>
+            <h2>Mapa de oportunidad · especialidad × comuna</h2>
+          </div>
+          <div class="panel-b"><div class="seo-heat" id="seoCoverage"></div></div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="panel">
+          <div class="panel-h">
+            <span class="ph-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
+            <h2>SEO local (Google)</h2>
+          </div>
+          <div class="panel-b" id="seoLocal"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-h">
+            <span class="ph-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></span>
+            <h2>Oportunidades</h2>
+          </div>
+          <div class="panel-b" id="seoOpps"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="viewAtribucion" style="display:none">
+    <style>
+      .atrib-tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+      .atrib-tbl th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;padding:6px 8px;border-bottom:1px solid var(--line)}
+      .atrib-tbl td{padding:9px 8px;border-bottom:1px solid var(--line);color:var(--ink)}
+      .atrib-tbl tbody tr:last-child td{border-bottom:none}
+      .atrib-tbl td.num{font-variant-numeric:tabular-nums}
+      .roas-pill{display:inline-block;font-weight:800;font-size:12px;padding:2px 9px;border-radius:999px}
+      .ad-card{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin-bottom:11px}
+      .ad-card-h{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px}
+      .ad-esp{font-weight:700;font-size:12.5px;text-transform:capitalize;color:var(--navy)}
+      .ad-name{font-size:11.5px;color:var(--muted);margin-bottom:8px;line-height:1.3}
+      .ad-metrics{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:11px;color:var(--slate);margin-bottom:8px}
+      .ad-verdict{font-size:11.5px;line-height:1.35;color:var(--ink);background:var(--card);border-left:3px solid var(--aqua);padding:7px 9px;border-radius:6px}
+    </style>
+    <div class="gal-head">
+      <div>
+        <h2 class="gal-title">Atribución · CAC real</h2>
+        <p class="gal-sub">Cruce ad → conversación → cita → <b>pago real</b> (caja Medilink). ROAS por especialidad y veredicto por anuncio. Mes corriente vs el mismo tramo del mes anterior.</p>
+      </div>
+      <button class="btn-gen" id="btnAtribRefresh">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6M3 22v-6h6"/><path d="M3.5 9a9 9 0 0 1 14.8-3.4L21 8M21 15a9 9 0 0 1-14.8 3.4L3 16"/></svg>
+        <span>Actualizar</span>
+      </button>
+    </div>
+    <p id="atribMeta" style="font-size:12px;color:var(--muted);margin-top:10px"></p>
+    <div class="kpis" id="atribKpis" style="margin-top:16px"></div>
+    <div class="grid" style="margin-top:18px">
+      <div class="col">
+        <div class="panel">
+          <div class="panel-h">
+            <span class="ph-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l3-4 4 3 5-7"/></svg></span>
+            <h2>ROAS por especialidad</h2>
+            <span class="count" id="atribRoasCount">—</span>
+          </div>
+          <div class="panel-b" id="atribRoas">
+            <div class="skel" style="height:80px;margin-bottom:12px"></div>
+            <div class="skel" style="height:80px"></div>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="panel">
+          <div class="panel-h">
+            <span class="ph-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/></svg></span>
+            <h2>Veredicto por anuncio</h2>
+            <span class="count" id="atribAdsCount">—</span>
+          </div>
+          <div class="panel-b" id="atribAds"></div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="foot" id="foot"></div>
@@ -1923,6 +2035,265 @@ document.getElementById('segSend').addEventListener('click',()=>{
   if(!confirm('¿Enviar esta campaña a la audiencia contactable?'))return;
   err.textContent='Envío real pendiente de configurar el proveedor.';
 });
+
+
+/* ── SEO (auditoría on-page + técnica + local) ────────── */
+let SEO_LOADED=false, SEO_SNAP=null;
+const SEO_CAT_LABEL={on_page:'On-page',tecnico:'Técnico',local:'Local',confianza:'Confianza'};
+
+// Listener adicional (compone con el handler base de tabs).
+document.getElementById('tabs').addEventListener('click',e=>{
+  const b=e.target.closest('.tab'); if(!b)return;
+  const v=b.dataset.view;
+  const vs=document.getElementById('viewSeo'); if(!vs)return;
+  vs.style.display = v==='seo'?'block':'none';
+  if(v==='seo' && !SEO_LOADED) loadSeo();
+});
+
+async function loadSeo(){
+  SEO_LOADED=true;
+  let d;
+  try{ d=await (await fetch(`/autopilot/api/seo/snapshot?token=${TOKEN}`)).json(); }
+  catch(e){ document.getElementById('seoPages').innerHTML='<div class="empty" style="padding:40px"><p>No pude cargar la auditoría.</p></div>'; return; }
+  SEO_SNAP=d;
+  renderSeo(d);
+}
+
+function gradeClass(g){return 'g-'+(g||'D');}
+
+function renderSeo(d){
+  const empty=!!d.empty, k=d.kpis||{};
+  // KPIs
+  document.getElementById('seoKpis').innerHTML=[
+    ['b3','<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>','Salud promedio',empty?'—':(k.avg_score+'/100'),empty?'sin auditar':gradeWord(k.avg_score)],
+    ['b1','<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>','Páginas auditadas',empty?'0':(k.audited||0),empty?'pulsa Auditar':((k.errored||0)?`${k.errored} con error`:'todas OK')],
+    ['b4','<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>','Problemas críticos',empty?'—':(k.critical_issues||0),'bugs que hunden ranking'],
+    ['b2','<polygon points="12 2 2 7 12 12 22 7 12 2"/>','Páginas grado A',empty?'—':(k.grade_a||0),'90+/100'],
+    ['b5','<path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>','Necesitan trabajo',empty?'—':(k.needs_work||0),'grado C o D']
+  ].map(([b,ic,l,v,h])=>`<div class="kpi"><div class="ki ${b}">${svg(ic)}</div>
+     <div class="kl">${l}</div><div class="kv">${v}</div><div class="kh">${h}</div></div>`).join('');
+
+  // Páginas
+  const pages=(d.pages||[]).slice().sort((a,b)=>(a.score||0)-(b.score||0)); // peores primero (accionables)
+  document.getElementById('tabSeoCount').textContent=empty?'':(k.audited||'');
+  document.getElementById('seoPageCount').textContent=empty?'—':`${pages.length} URLs`;
+  document.getElementById('seoPages').innerHTML = empty
+    ? `<div class="empty" style="padding:46px 20px"><div class="ei">${svg('<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3M11 8v6M8 11h6"/>')}</div>
+        <h3>Sin auditorías todavía</h3><p>${esc(d.message||'')} Solo lee las páginas públicas — no toca el sitio.</p></div>`
+    : pages.map(seoPageCard).join('');
+
+  renderHeatmap(d.coverage||{});
+  renderLocal(d.local_checklist||[]);
+  renderOpps(d.opportunities||[]);
+}
+function gradeWord(s){ if(s==null)return''; if(s>=90)return 'excelente (A)'; if(s>=75)return 'bien (B)'; if(s>=60)return 'regular (C)'; return 'crítico (D)'; }
+
+function seoPageCard(p){
+  if(p.error){
+    return `<div class="seo-card err"><div class="seo-top">
+      <div class="seo-grade g-D">!</div>
+      <div style="flex:1;min-width:0"><div class="seo-pl">${esc(p.label||p.url)}</div>
+      <div class="seo-url">${esc(p.url)}</div></div>
+      <span class="seo-fail">${esc(p.error)}</span></div></div>`;
+  }
+  const g=p.grade||'D', cats=p.by_category||{};
+  const catPills=Object.keys(SEO_CAT_LABEL).filter(c=>cats[c]).map(c=>{
+    const x=cats[c], dot=x.fail?'fail':x.warn?'warn':'ok';
+    return `<span class="seo-cat"><span class="d ${dot}"></span>${SEO_CAT_LABEL[c]} <b>${x.ok}/${x.ok+x.warn+x.fail}</b></span>`;
+  }).join('');
+  const fails=(p.fails||[]).slice(0,4).map(f=>
+    `<span class="seo-fail${f.critical?' crit':''}">${f.critical?'⚠ ':''}${esc(f.label)}</span>`).join('');
+  const allChecks=(p.checks||[]).map(c=>{
+    const ic=c.level==='ok'?'✓':c.level==='warn'?'!':'✕';
+    return `<div class="seo-check"><span class="seo-ck ${c.level}">${ic}</span>
+      <div><div class="seo-ck-l">${esc(c.label)}${c.critical?'<span class="crit-tag">crítico</span>':''}</div>
+      <div class="seo-ck-m">${esc(c.msg)}</div></div></div>`;
+  }).join('');
+  return `<div class="seo-card ${p.has_critical_fail?'crit':''}">
+    <div class="seo-top">
+      <div class="seo-grade ${gradeClass(g)}">${g}</div>
+      <div style="flex:1;min-width:0">
+        <div class="seo-pl">${esc(p.label||'')}${p.role?`<span class="seo-role">${esc(p.role)}</span>`:''}</div>
+        <div class="seo-url">${esc(p.url)}</div>
+        <div class="seo-score-track"><div class="seo-score-fill seo-sf-${g}" style="width:${p.score||0}%"></div></div>
+      </div>
+      <div class="seo-sn">${p.score||0}<span>/100</span></div>
+    </div>
+    ${catPills?`<div class="seo-cats">${catPills}</div>`:''}
+    ${fails?`<div class="seo-fail-chips">${fails}</div>`:''}
+    ${allChecks?`<details class="seo-checks"><summary>Ver los ${(p.checks||[]).length} checks</summary>${allChecks}</details>`:''}
+  </div>`;
+}
+
+function renderHeatmap(cov){
+  const esp=cov.especialidades||[], com=cov.comunas||[];
+  if(!esp.length||!com.length){ document.getElementById('seoCoverage').innerHTML='<p style="color:var(--muted);font-size:12px">Sin datos de cobertura.</p>'; return; }
+  const color=p=>{ // prioridad 1-25 → escala aqua→navy
+    if(p>=20)return '#0F3F68'; if(p>=15)return '#1172AB'; if(p>=10)return '#4FBECE'; if(p>=6)return '#9bd4de'; return '#d7eaef';
+  };
+  let html='<table><thead><tr><th class="rowh">Especialidad ╲ Comuna</th>'+
+    com.map(c=>`<th title="${esc(c.nombre)} · concentración ${c.concentracion}">${esc(c.nombre.slice(0,9))}</th>`).join('')+'</tr></thead><tbody>';
+  esp.forEach(e=>{
+    html+=`<tr><td class="rowlbl" title="demanda ${e.demanda}">${esc(e.nombre)}</td>`;
+    com.forEach(c=>{
+      const pr=e.demanda*c.concentracion;
+      html+=`<td><div class="cell" style="background:${color(pr)}" title="${esc(e.nombre)} en ${esc(c.nombre)} · prioridad ${pr}/25">${pr}</div></td>`;
+    });
+    html+='</tr>';
+  });
+  html+='</tbody></table>';
+  document.getElementById('seoCoverage').innerHTML=html;
+}
+
+function renderLocal(items){
+  if(!items.length){ document.getElementById('seoLocal').innerHTML=''; return; }
+  document.getElementById('seoLocal').innerHTML=items.map(it=>{
+    const done=it.status==='done';
+    return `<div class="seo-li">
+      <div class="seo-li-box ${done?'done':''}">${done?svg('<path d="M20 6 9 17l-5-5"/>'):''}</div>
+      <div><div class="seo-li-t">${esc(it.label)}${it.manual?'<span class="seo-li-tag">manual</span>':''}</div>
+      <div class="seo-li-w">${esc(it.why||'')}</div></div></div>`;
+  }).join('');
+}
+
+function renderOpps(opps){
+  if(!opps.length){ document.getElementById('seoOpps').innerHTML=''; return; }
+  document.getElementById('seoOpps').innerHTML=opps.map(o=>
+    `<div class="seo-opp"><div class="seo-opp-n">${esc(o.name)}<span class="seo-opp-i">${esc(o.intent||'')}</span></div>
+     <div class="seo-opp-w">${esc(o.why||'')}</div></div>`).join('');
+}
+
+// Botón Auditar — dispara el fetch en vivo (background) y hace polling.
+document.getElementById('btnSeoAudit').addEventListener('click',async()=>{
+  const btn=document.getElementById('btnSeoAudit'); btn.disabled=true; btn.classList.add('spin');
+  btn.querySelector('span').textContent='Auditando…';
+  try{
+    const r=await (await fetch(`/autopilot/api/seo/audit?token=${TOKEN}`,{method:'POST'})).json();
+    if(r.job_id){
+      for(let i=0;i<40;i++){ // hasta ~80s
+        await new Promise(s=>setTimeout(s,2000));
+        const st=await (await fetch(`/autopilot/api/seo/audit/status/${r.job_id}?token=${TOKEN}`)).json();
+        if(st.status==='done'){ await loadSeo(); break; }
+        if(st.status==='error'){ alert('La auditoría falló: '+(st.error||'')); break; }
+      }
+    }
+  }catch(e){}
+  btn.disabled=false; btn.classList.remove('spin'); btn.querySelector('span').textContent='Auditar ahora';
+});
+
+
+/* ── Atribución / CAC (pestaña) ───────────────────────── */
+let ATRIB_LOADED=false;
+document.getElementById('tabs').addEventListener('click',e=>{
+  const b=e.target.closest('.tab'); if(!b)return;
+  const v=b.dataset.view;
+  const va=document.getElementById('viewAtribucion'); if(!va)return;
+  va.style.display = v==='atribucion'?'block':'none';
+  if(v==='atribucion' && !ATRIB_LOADED) loadAtribucion();
+});
+
+function aClp(n){return '$'+Math.round(n||0).toLocaleString('es-CL');}
+function aEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function aRoasColor(r){
+  if(r==null) return ['var(--slate)','var(--slate-bg)'];
+  if(r>=2) return ['var(--green)','var(--green-bg)'];
+  if(r>=1) return ['var(--amber)','var(--amber-bg)'];
+  return ['var(--red)','var(--red-bg)'];
+}
+const A_ICONS={
+  users:'<svg viewBox="0 0 24 24" fill="none" stroke="#5b7186" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>',
+  chat:'<svg viewBox="0 0 24 24" fill="none" stroke="#5b7186" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="#1f9d6b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/></svg>',
+  cash:'<svg viewBox="0 0 24 24" fill="none" stroke="#1f9d6b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 12h.01M18 12h.01"/></svg>',
+  target:'<svg viewBox="0 0 24 24" fill="none" stroke="#1172AB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>',
+};
+
+async function loadAtribucion(){
+  ATRIB_LOADED=true;
+  let d;
+  try{ d=await (await fetch(`/autopilot/api/atribucion?token=${TOKEN}`)).json(); }
+  catch(e){ document.getElementById('atribRoas').innerHTML='<div class="empty" style="padding:30px">No pude cargar la atribución.</div>'; return; }
+  if(d.empty){
+    document.getElementById('atribMeta').textContent=d.message||'Sin snapshot todavía.';
+    document.getElementById('atribKpis').innerHTML='';
+    document.getElementById('atribRoas').innerHTML='<div class="empty" style="padding:30px"><p>'+aEsc(d.message||'Genera el snapshot con Actualizar.')+'</p></div>';
+    document.getElementById('atribAds').innerHTML='';
+    return;
+  }
+  renderAtribucion(d);
+}
+
+function renderAtribucion(d){
+  const f=d.funnel||{};
+  const roasG = f.spend_total ? f.ingreso/f.spend_total : null;
+  document.getElementById('atribMeta').textContent=
+    `Período ${d.periodo.desde} → ${d.periodo.hasta} · baseline ${d.baseline.desde} → ${d.baseline.hasta} · generado ${(d.generado||'').replace('T',' ').slice(0,16)}`;
+
+  const kpi=(ic,bg,lbl,val,hint)=>`<div class="kpi"><div class="ki" style="background:${bg}">${ic}</div><div class="kl">${lbl}</div><div class="kv">${val}</div><div class="kh">${hint}</div></div>`;
+  document.getElementById('atribKpis').innerHTML=[
+    kpi(A_ICONS.users,'var(--slate-bg)','Llegaron por ad', f.phones||0, 'click-to-WhatsApp'),
+    kpi(A_ICONS.chat,'var(--slate-bg)','Conversaron', f.conversaron||0, `${f.agendaron||0} agendaron`),
+    kpi(A_ICONS.check,'var(--green-bg)','Atendidos', f.atendidos||0, 'pacientes que vinieron'),
+    kpi(A_ICONS.cash,'var(--green-bg)','Caja atribuida', aClp(f.ingreso), 'pago real Medilink'),
+    kpi(A_ICONS.target, roasG!=null&&roasG>=1?'var(--green-bg)':'var(--amber-bg)','ROAS bot', roasG!=null?roasG.toFixed(2)+'x':'—', `spend ${aClp(f.spend_total)}`),
+  ].join('');
+
+  const rows=d.roas_por_especialidad||[];
+  document.getElementById('atribRoasCount').textContent=rows.length;
+  if(!rows.length){
+    document.getElementById('atribRoas').innerHTML='<div class="empty" style="padding:24px">Sin movimiento de caja en el período.</div>';
+  } else {
+    document.getElementById('atribRoas').innerHTML=`
+      <table class="atrib-tbl">
+        <thead><tr><th>Especialidad</th><th>Δ Caja</th><th>Pac. nuevos</th><th>Spend</th><th>ROAS</th></tr></thead>
+        <tbody>${rows.map(r=>{
+          const [c,bg]=aRoasColor(r.roas_bruto);
+          return `<tr>
+            <td style="text-transform:capitalize;font-weight:600">${aEsc(r.esp)}</td>
+            <td class="num">${aClp(r.delta)}</td>
+            <td class="num">${r.pac_nuevos}</td>
+            <td class="num">${r.spend?aClp(r.spend):'—'}</td>
+            <td><span class="roas-pill" style="color:${c};background:${bg}">${r.roas_bruto!=null?r.roas_bruto.toFixed(2)+'x':'—'}</span></td>
+          </tr>`;}).join('')}</tbody>
+      </table>`;
+  }
+
+  const ads=d.ads||[];
+  document.getElementById('atribAdsCount').textContent=ads.length;
+  if(!ads.length){
+    document.getElementById('atribAds').innerHTML='<div class="empty" style="padding:24px">Sin anuncios con gasto en el período.</div>';
+  } else {
+    document.getElementById('atribAds').innerHTML=ads.map(a=>{
+      const r = a.roas_trend!=null?a.roas_trend:a.roas_bot;
+      const [c,bg]=aRoasColor(r);
+      return `<div class="ad-card">
+        <div class="ad-card-h">
+          <span class="ad-esp">${aEsc(a.esp)}</span>
+          <span class="roas-pill" style="color:${c};background:${bg}">${r!=null?r.toFixed(2)+'x':'—'}</span>
+        </div>
+        <div class="ad-name">${aEsc(a.ad_name)}</div>
+        <div class="ad-metrics">
+          <span>spend ${aClp(a.spend)}</span><span>CTR ${a.ctr}%</span>
+          <span>${a.bot_atendidos} atend.</span><span>caja ${aClp(a.bot_ingreso)}</span>
+        </div>
+        <div class="ad-verdict">${aEsc(a.veredicto)}</div>
+      </div>`;}).join('');
+  }
+}
+
+async function refreshAtribucion(){
+  const btn=document.getElementById('btnAtribRefresh');
+  btn.disabled=true; btn.classList.add('spin'); btn.querySelector('span').textContent='Generando…';
+  try{ await fetch(`/autopilot/api/atribucion/refresh?token=${TOKEN}`,{method:'POST'}); }catch(e){}
+  setTimeout(async()=>{
+    ATRIB_LOADED=false; await loadAtribucion();
+    btn.disabled=false; btn.classList.remove('spin'); btn.querySelector('span').textContent='Actualizar';
+  }, 65000);
+}
+document.getElementById('btnAtribRefresh').addEventListener('click',refreshAtribucion);
+
+// Deep-link: /autopilot#atribucion abre la pestaña directo (redirect de /atribucion).
+if(location.hash==='#atribucion'){ const _t=document.querySelector('.tab[data-view="atribucion"]'); if(_t) _t.click(); }
 
 
 load();

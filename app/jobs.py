@@ -851,6 +851,40 @@ async def _job_bi_sync_diario():
     except Exception as e:
         log.warning("bi_sync_diario re-cross fallo: %s", e)
 
+
+async def _job_cac_snapshot():
+    """Genera el snapshot JSON de atribución/CAC (data/cac_snapshot.json) que
+    consume la pestaña Atribución de Autopilot. Reusa scripts/cac_report.py via
+    subprocess (aislado del event loop). Llama a Meta Marketing API (~60s), por
+    eso es cron y no se calcula en vivo por request. Corre post bi_sync (pagos
+    frescos del día)."""
+    import asyncio
+    import sys as _sys
+    from pathlib import Path as _P
+    root = _P(__file__).resolve().parent.parent
+    out = root / "data" / "cac_snapshot.json"
+    script = root / "scripts" / "cac_report.py"
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            _sys.executable, str(script), "--mode", "fixed", "--json", str(out),
+            cwd=str(root),
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
+        )
+        try:
+            stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=240)
+        except asyncio.TimeoutError:
+            proc.kill()
+            log.warning("cac_snapshot: timeout (>240s), cancelado")
+            return
+        if proc.returncode == 0:
+            log.info("cac_snapshot: generado en %s", out)
+        else:
+            tail = (stdout or b"")[-300:].decode("utf-8", "replace")
+            log.warning("cac_snapshot: rc=%s out=%s", proc.returncode, tail)
+    except Exception as e:
+        log.warning("cac_snapshot: fallo %s", e)
+
+
 async def _job_reactivacion():
     try:
         await enviar_reactivacion_pacientes(send_whatsapp_proactive, send_template_fn=_tpl)

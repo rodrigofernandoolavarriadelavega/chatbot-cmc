@@ -38,6 +38,7 @@ try:
 except ImportError:
     pass
 
+import json  # noqa: E402
 import httpx  # noqa: E402
 
 from app.session import _conn  # noqa: E402
@@ -89,6 +90,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--baseline-since", help="Inicio del baseline (YYYY-MM-DD).")
     p.add_argument("--baseline-until", help="Fin del baseline (YYYY-MM-DD).")
     p.add_argument("--html", help="Ruta del archivo HTML de salida (opcional).")
+    p.add_argument("--json", dest="json_out",
+                   help="Ruta del JSON de salida (snapshot para el dashboard de Atribución).")
     p.add_argument("--no-meta", action="store_true",
                    help="Saltarse llamada a Meta Marketing API (modo offline).")
     return p.parse_args()
@@ -314,7 +317,8 @@ def fmt_clp(n: float | int) -> str:
     return f"${int(n):,}".replace(",", ".")
 
 
-def render(cur_period, base_period, bot_data, ads, args) -> tuple[str, str]:
+def compute_rows(cur, cur_period, base_period, ads) -> list[dict]:
+    """Trendline de caja por especialidad. Reusado por render() y build_snapshot()."""
     cur_since, cur_until = cur_period
     base_since, base_until = base_period
 
@@ -357,6 +361,13 @@ def render(cur_period, base_period, bot_data, ads, args) -> tuple[str, str]:
             "ing_por_dia_cur": ing_por_dia_cur, "ing_por_dia_base": ing_por_dia_base,
             "delta_norm": delta_norm,
         })
+    return rows
+
+
+def render(cur_period, base_period, bot_data, ads, args) -> tuple[str, str]:
+    cur_since, cur_until = cur_period
+    base_since, base_until = base_period
+    rows = compute_rows(cur, cur_period, base_period, ads)
 
     # ── Terminal ──
     lines: list[str] = []
@@ -456,6 +467,65 @@ def _veredicto(roas_bot: float, roas_tl: float | None, esp_row, spend: float) ->
     if roas_bot >= 1 and roas_tl < 1:
         return "Bot rinde pero la especialidad total cae. Posible canibalización o estacionalidad."
     return "Marginal. Monitorear 7 días más antes de decidir."
+
+
+def build_snapshot(cur, cur_period, base_period, bot_data, ads) -> dict:
+    """Estructura JSON del CAC para el dashboard (pestaña Atribución en Autopilot).
+
+    Reusa compute_rows() + _veredicto() — misma lógica que el reporte de texto/HTML.
+    """
+    rows = compute_rows(cur, cur_period, base_period, ads)
+
+    ads_out = []
+    for ad_id, ad in sorted(ads.items(), key=lambda kv: -kv[1]["spend"]):
+        if ad["spend"] <= 0:
+            continue
+        esp = ad_to_esp(ad["ad_name"], ad["campaign_name"]) or "?"
+        match_bot = [a for a in bot_data.get("atendidos", []) if a["source_id"] == ad_id]
+        ing_bot = sum(a["cobrado"] for a in match_bot)
+        roas_bot = (ing_bot / ad["spend"]) if ad["spend"] else 0
+        esp_row = next((r for r in rows if r["esp"] == esp), None)
+        roas_tl = esp_row["roas_bruto"] if (esp_row and esp_row["roas_bruto"] is not None) else None
+        ads_out.append({
+            "ad_id": ad_id,
+            "ad_name": ad["ad_name"] or ad_id,
+            "esp": esp,
+            "spend": round(ad["spend"]),
+            "clicks": ad["clicks"],
+            "ctr": round(ad["ctr"], 2),
+            "bot_atendidos": len(match_bot),
+            "bot_ingreso": round(ing_bot),
+            "roas_bot": round(roas_bot, 2),
+            "roas_trend": round(roas_tl, 2) if roas_tl is not None else None,
+            "roas_norm": round(esp_row["roas_norm"], 2) if (esp_row and esp_row["roas_norm"] is not None) else None,
+            "delta_caja": round(esp_row["delta"]) if esp_row else None,
+            "pac_nuevos": esp_row["pac_nuevos"] if esp_row else None,
+            "veredicto": _veredicto(roas_bot, roas_tl, esp_row, ad["spend"]),
+        })
+
+    rows_out = [{
+        "esp": r["esp"], "base_ing": r["base_ing"], "cur_ing": r["cur_ing"],
+        "delta": r["delta"], "spend": round(r["spend"]),
+        "roas_bruto": round(r["roas_bruto"], 2) if r["roas_bruto"] is not None else None,
+        "roas_norm": round(r["roas_norm"], 2) if r["roas_norm"] is not None else None,
+        "pac_nuevos": r["pac_nuevos"], "cur_dias": r["cur_dias"], "base_dias": r["base_dias"],
+    } for r in rows if not (r["cur_ing"] == 0 and r["base_ing"] == 0 and r["spend"] == 0)]
+
+    return {
+        "generado": dt.datetime.now().isoformat(timespec="seconds"),
+        "periodo": {"desde": cur_period[0], "hasta": cur_period[1]},
+        "baseline": {"desde": base_period[0], "hasta": base_period[1]},
+        "funnel": {
+            "phones": bot_data.get("phones", 0),
+            "conversaron": bot_data.get("conversaron", 0),
+            "agendaron": bot_data.get("agendaron", 0),
+            "atendidos": len(bot_data.get("atendidos", [])),
+            "ingreso": bot_data.get("ingreso", 0),
+            "spend_total": round(sum(a["spend"] for a in ads.values())),
+        },
+        "roas_por_especialidad": rows_out,
+        "ads": ads_out,
+    }
 
 
 def _html(cur_period, base_period, bot_data, rows, ads) -> str:
@@ -584,3 +654,10 @@ if __name__ == "__main__":
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(html, encoding="utf-8")
         print(f"\n[✓] HTML escrito en {out}")
+
+    if args.json_out:
+        snap = build_snapshot(cur, cur_period, base_period, bot_data, ads)
+        outj = Path(args.json_out).expanduser()
+        outj.parent.mkdir(parents=True, exist_ok=True)
+        outj.write_text(json.dumps(snap, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(f"\n[✓] JSON escrito en {outj}")

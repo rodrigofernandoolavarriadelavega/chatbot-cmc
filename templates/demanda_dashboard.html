@@ -133,9 +133,10 @@ const qp = location.search || "";
 let chSinCupo = null, chInteres = null;
 
 function goAtribucion(){
-  // En Alma ambos son iframes hermanos: navegamos el shell por hash.
-  if (window.parent && window.parent !== window) { try { window.parent.location.hash = 'atribucion'; return; } catch(e){} }
-  window.location.href = '/atribucion' + qp;
+  // Atribución vive como pestaña dentro de Autopilot. En Alma navegamos el shell
+  // al módulo Autopilot; fuera de Alma abrimos /autopilot con la pestaña activa.
+  if (window.parent && window.parent !== window) { try { window.parent.location.hash = 'autopilot'; return; } catch(e){} }
+  window.location.href = '/autopilot' + qp + '#atribucion';
 }
 
 function barData(items, labelKey, valKey, max){

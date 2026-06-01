@@ -42,7 +42,7 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_detectar_cancelaciones,
                   _job_monitor_anomalias,
                   _job_reactivacion, _job_abarca_sync, _job_olavarria_sync,
-                  _job_bi_sync_diario,
+                  _job_bi_sync_diario, _job_cac_snapshot,
                   _job_adherencia_kine, _job_control_especialidad,
                   _job_crosssell_kine, _job_crosssell_orl_fono,
                   _job_crosssell_odonto_estetica, _job_crosssell_mg_chequeo,
@@ -298,6 +298,14 @@ async def lifespan(app: FastAPI):
         _job_bi_sync_diario,
         CronTrigger(hour=23, minute=59, timezone=_CLT),
         id="bi_sync_v2_diario",
+        replace_existing=True,
+    )
+    # CAC snapshot: 00:20 CLT (post bi_sync → usa pagos frescos). Alimenta la
+    # pestaña Atribución de Autopilot (data/cac_snapshot.json).
+    scheduler.add_job(
+        _job_cac_snapshot,
+        CronTrigger(hour=0, minute=20, timezone=_CLT),
+        id="cac_snapshot_diario",
         replace_existing=True,
     )
     # Reactivación: todos los lunes a las 10:30 AM CLT
@@ -2811,13 +2819,13 @@ BOXES_CONFIG = [
     {"id": "box5",      "piso": 2, "orden": 4, "nombre": "Box 5",         "tipo": "masoterapia", "modo": "fijo", "pool_group": None,       "default_profs": [59]},
 ]
 
-@app.get("/atribucion", response_class=HTMLResponse)
-@app.get("/atribucion/dashboard", response_class=HTMLResponse)
-def atribucion_dashboard_page():
-    """Cruce diario Meta Ads × Bot × Pacientes nuevos × Referidos."""
-    if not _ATRIBUCION_DASHBOARD_HTML:
-        raise HTTPException(404, "Dashboard Atribución no disponible")
-    return _ATRIBUCION_DASHBOARD_HTML
+@app.get("/atribucion")
+@app.get("/atribucion/dashboard")
+def atribucion_dashboard_page(token: str | None = Query(None)):
+    """Atribución se rediseñó como pestaña dentro de Autopilot Ads (2026-05-31).
+    Mantenemos la ruta como redirect para links/bookmarks viejos."""
+    dest = "/autopilot" + (f"?token={token}" if token else "") + "#atribucion"
+    return RedirectResponse(url=dest, status_code=307)
 
 
 @app.get("/demanda", response_class=HTMLResponse)

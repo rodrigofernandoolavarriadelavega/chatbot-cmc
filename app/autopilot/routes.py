@@ -10,6 +10,7 @@
 Auth: mismo token admin que el resto del panel (?token= o cookie).
 """
 import asyncio
+import json
 import logging
 import re
 import time
@@ -33,6 +34,10 @@ from . import publishing
 _GEN_JOBS: dict[str, dict] = {}
 
 _STATIC_DESIGNS = Path(__file__).parent.parent.parent / "static" / "ad_designs"
+
+# Snapshot de atribución/CAC (generado por el cron _job_cac_snapshot vía cac_report.py).
+_CAC_SNAPSHOT = Path(__file__).parent.parent.parent / "data" / "cac_snapshot.json"
+_CAC_SCRIPT = Path(__file__).parent.parent.parent / "scripts" / "cac_report.py"
 
 
 def _slug(text: str) -> str:
@@ -86,6 +91,48 @@ async def autopilot_refresh(window: int = Query(7), token: str | None = Query(No
     except Exception as e:  # noqa: BLE001
         log.error("autopilot refresh falló: %s", e)
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+
+# ── Atribución / CAC (pestaña embebida) ─────────────────────────────────────
+
+@router.get("/autopilot/api/atribucion")
+def autopilot_atribucion(token: str | None = Query(None), request: Request = None):
+    """Snapshot de atribución/CAC cacheado (cruce ad → cita → pago real).
+
+    Lo genera el cron diario (`_job_cac_snapshot`) porque calcularlo golpea la
+    Meta Marketing API (~60s). Acá solo se lee el JSON — instantáneo.
+    """
+    _check_token(token, request)
+    if not _CAC_SNAPSHOT.exists():
+        return JSONResponse({"empty": True,
+                             "message": "Aún no hay snapshot de CAC. Genéralo con el botón Actualizar."})
+    try:
+        return JSONResponse(json.loads(_CAC_SNAPSHOT.read_text(encoding="utf-8")))
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse({"empty": True, "message": f"Snapshot inválido: {e}"})
+
+
+@router.post("/autopilot/api/atribucion/refresh")
+async def autopilot_atribucion_refresh(token: str | None = Query(None), request: Request = None):
+    """Regenera el snapshot CAC en background (tarda ~60s por la Meta API).
+    Devuelve de inmediato; el dashboard recarga el GET en ~1 min."""
+    _check_token(token, request)
+
+    async def _run():
+        try:
+            import sys as _sys
+            root = _CAC_SCRIPT.parent.parent
+            proc = await asyncio.create_subprocess_exec(
+                _sys.executable, str(_CAC_SCRIPT), "--mode", "fixed",
+                "--json", str(_CAC_SNAPSHOT), cwd=str(root),
+                stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL,
+            )
+            await asyncio.wait_for(proc.communicate(), timeout=240)
+        except Exception as e:  # noqa: BLE001
+            log.warning("atribucion refresh background falló: %s", e)
+
+    asyncio.create_task(_run())
+    return JSONResponse({"ok": True, "message": "Generando snapshot… recarga en ~1 min."})
 
 
 # ── Galería de diseños (Canva) ──────────────────────────────────────────────
