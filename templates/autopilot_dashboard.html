@@ -373,16 +373,6 @@
   .seg-send-gated{opacity:.55;cursor:not-allowed}
   @media(max-width:900px){.seg-editor{grid-template-columns:1fr}.seg-live{max-height:none}}
 
-  /* Sub-switch del módulo Diseños (Biblioteca / Publicar) */
-  .dseg-switch{display:flex;gap:6px;margin:20px 0 4px;background:var(--card);padding:6px;border-radius:14px;
-       box-shadow:var(--sh-sm);border:1px solid var(--line);width:fit-content;max-width:100%;flex-wrap:wrap}
-  .dseg{display:inline-flex;align-items:center;gap:8px;border:0;cursor:pointer;background:transparent;
-       font-family:inherit;font-weight:700;font-size:13px;color:var(--muted);padding:9px 16px;border-radius:10px;transition:.15s}
-  .dseg svg{width:16px;height:16px;stroke:currentColor}
-  .dseg:hover{color:var(--navy);background:var(--bg)}
-  .dseg.on{background:linear-gradient(135deg,var(--navy),var(--blue));color:#fff}
-  .dseg.on svg{stroke:#fff}
-
   /* Estado de conexión por canal */
   .conn-strip{display:flex;flex-wrap:wrap;gap:11px;align-items:center;margin-top:18px}
   .conn-chip{display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border-radius:12px;
@@ -578,6 +568,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
       Diseños <span class="tab-count" id="tabDesignCount"></span>
     </button>
+    <button class="tab" data-view="publicar">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+      Publicar <span class="tab-count" id="tabPubCount"></span>
+    </button>
     <button class="tab" data-view="email">
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>
       Email <span class="tab-count" id="tabEmailCount"></span>
@@ -646,22 +640,11 @@
 
   <div id="viewDisenos" style="display:none">
 
-    <div class="dseg-switch" id="segSwitch">
-      <button class="dseg on" data-seg="library">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-        Biblioteca
-      </button>
-      <button class="dseg" data-seg="publish">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-        Publicar · Instagram · Facebook · WhatsApp
-      </button>
-    </div>
-
     <div id="segLibrary">
     <div class="gal-head">
       <div>
-        <h2 class="gal-title">Biblioteca de diseños</h2>
-        <p class="gal-sub">Activos de marketing CMC · imágenes (gpt-image-2) y video (motion por código) · organizados por canal, tipo y estado</p>
+        <h2 class="gal-title">Diseños</h2>
+        <p class="gal-sub">Todos los activos de marketing CMC · imágenes (gpt-image-2) y video (motion por código) · organizados por canal, tipo y estado</p>
       </div>
       <button class="btn-gen" id="btnGen">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v4M3 5h4M6 17v4M4 19h4M13 3l2.5 6.5L22 12l-6.5 2.5L13 21l-2.5-6.5L4 12l6.5-2.5L13 3z"/></svg>
@@ -693,8 +676,10 @@
       <div class="gallery-grid"><div class="skel" style="height:300px"></div><div class="skel" style="height:300px"></div><div class="skel" style="height:300px"></div></div>
     </div>
     </div><!-- /segLibrary -->
+  </div><!-- /viewDisenos -->
 
-    <div id="segPublish" style="display:none">
+  <div id="viewPublicar" style="display:none">
+    <div id="segPublish">
       <div class="gal-head">
         <div>
           <h2 class="gal-title">Publicar en redes</h2>
@@ -722,9 +707,9 @@
       <div class="pub-board" id="pubBoard">
         <div class="skel" style="height:200px"></div>
       </div>
-    </div>
+    </div><!-- /segPublish -->
 
-  </div>
+  </div><!-- /viewPublicar -->
 
   <div id="viewEmail" style="display:none">
     <div class="email-gate" id="emailGate">
@@ -1286,15 +1271,13 @@ document.getElementById('tabs').addEventListener('click',e=>{
   if(v==='disenos' && !DESIGNS_LOADED) loadDesigns();
 });
 
-/* ── Sub-switch del módulo Diseños: Biblioteca / Publicar ─ */
-document.getElementById('segSwitch').addEventListener('click',e=>{
-  const b=e.target.closest('.dseg'); if(!b)return;
-  document.querySelectorAll('#segSwitch .dseg').forEach(t=>t.classList.remove('on'));
-  b.classList.add('on');
-  const s=b.dataset.seg;
-  document.getElementById('segLibrary').style.display = s==='library'?'block':'none';
-  document.getElementById('segPublish').style.display = s==='publish'?'block':'none';
-  if(s==='publish') loadPublish();
+/* ── Pestaña Publicar (Instagram · Facebook · WhatsApp) ── */
+document.getElementById('tabs').addEventListener('click',e=>{
+  const b=e.target.closest('.tab'); if(!b)return;
+  const v=b.dataset.view;
+  const vp=document.getElementById('viewPublicar'); if(!vp)return;
+  vp.style.display = v==='publicar'?'block':'none';
+  if(v==='publicar' && !PUB_LOADED) loadPublish();
 });
 
 /* ── Biblioteca de diseños (DAM facetado) ─────────────── */
