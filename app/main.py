@@ -3339,8 +3339,9 @@ def alma_shell(token: str | None = Query(None),
     para que los iframes carguen. El token queda en el DOM de los iframes — es
     el mismo modelo que ya usa /boxes hoy.
 
-    El perfil ALMA_PROFILES resuelve el label de la 2ª línea del lockup según
-    el token activo (olacore → "OLACORE", default → "CARAMPANGUE").
+    El perfil ALMA_PROFILES resuelve la variante (3ª línea del lockup) según
+    el token activo. La 2ª línea "CARAMPANGUE" es fija en alma.html.
+    Si variante es "" o None, la 3ª línea no se renderiza.
     """
     from admin_routes import _verify_cookie, _is_admin_token
     if not _ALMA_HTML:
@@ -3348,10 +3349,14 @@ def alma_shell(token: str | None = Query(None),
 
     def _render(active_token: str) -> str:
         profile = ALMA_PROFILES.get(active_token, {})
-        label = profile.get("label", "CARAMPANGUE")
+        variante = profile.get("variante", "") or ""
+        variante_line = (
+            f'<div class="alma-variante">{variante}</div>'
+            if variante else ""
+        )
         return (_ALMA_HTML
                 .replace("__TOKEN__", active_token)
-                .replace("__ALMA_LABEL__", label))
+                .replace("__ALMA_VARIANTE_LINE__", variante_line))
 
     if token and _is_admin_token(token):
         return _render(token)
