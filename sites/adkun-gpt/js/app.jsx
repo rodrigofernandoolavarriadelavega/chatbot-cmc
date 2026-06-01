@@ -7,29 +7,21 @@ function useScrollReveal(motion) {
       if (el.classList.contains("reveal-line")) el.style.width = "78%";
       else el.style.opacity = "1";
     };
-    if (motion === "reduced") {
-      document.querySelectorAll(".reveal, .reveal-line").forEach(reveal);
+    const els = document.querySelectorAll(".reveal, .reveal-line");
+    // reduced motion o sin IntersectionObserver → mostrar todo de inmediato
+    if (motion === "reduced" || typeof IntersectionObserver === "undefined") {
+      els.forEach(reveal);
       return;
     }
-    const check = () => {
-      const vh = window.innerHeight || document.documentElement.clientHeight;
-      document.querySelectorAll(".reveal:not(.in), .reveal-line:not(.in)").forEach((el) => {
-        const r = el.getBoundingClientRect();
-        if (r.top < vh * 0.9 && r.bottom > -40) reveal(el);
+    // IntersectionObserver es fiable en móvil (incl. scroll con inercia en iOS),
+    // donde la matemática de posición de scroll puede dejar secciones invisibles.
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) { reveal(e.target); io.unobserve(e.target); }
       });
-    };
-    check();
-    window.addEventListener("scroll", check, { passive: true });
-    window.addEventListener("resize", check);
-    // catch late layout shifts (web-font load, image decode)
-    const id = setInterval(check, 350);
-    const stop = setTimeout(() => clearInterval(id), 4000);
-    return () => {
-      window.removeEventListener("scroll", check);
-      window.removeEventListener("resize", check);
-      clearInterval(id);
-      clearTimeout(stop);
-    };
+    }, { rootMargin: "0px 0px -8% 0px", threshold: 0.01 });
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
   }, [motion]);
 }
 
