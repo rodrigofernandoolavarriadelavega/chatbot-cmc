@@ -883,6 +883,8 @@ async function cargarSugerenciaRow(rut, id_cita) {
   let url = '/alma/api/pagos/sugerencia' + qp;
   if (rut)     url += '&rut=' + encodeURIComponent(rut);
   if (id_cita) url += '&id_cita=' + encodeURIComponent(id_cita);
+  // Pasar fecha activa del registro para auto-rellenar cita del día
+  if (_fecha) url += '&fecha=' + encodeURIComponent(_fecha);
   try {
     const r = await fetch(url);
     if (!r.ok) return;
@@ -892,6 +894,7 @@ async function cargarSugerenciaRow(rut, id_cita) {
       nomInput.value = s.paciente_nombre;
       nomInput.classList.add('suggested');
     }
+    // Profesional y área de la cita tienen prioridad
     if (s.id_profesional) {
       const profSel = _newRow.querySelector('#nr_prof');
       profSel.value = s.id_profesional;
@@ -908,7 +911,11 @@ async function cargarSugerenciaRow(rut, id_cita) {
         b.classList.toggle('active', b.dataset.v === _newPrev)
       );
     }
-      aplicarSugerenciaMontosRow(s);
+    // id_cita: guardar en el row para enviar al guardar
+    if (s.id_cita && !_newRow._suggestedCitaId) {
+      _newRow._suggestedCitaId = s.id_cita;
+    }
+    aplicarSugerenciaMontosRow(s);
   } catch(e) {
     console.warn('cargarSugerenciaRow error:', e);
   } finally {
@@ -966,6 +973,7 @@ async function guardarFilaNueva() {
     codigo_transferencia: (['transferencia','debito','credito'].includes(_newMetodo) ? (_newRow.querySelector('#nr_codtransf')?.value || '').trim() : ''),
     procedimiento:       (_newRow.querySelector('#nr_proc')?.value || '').trim(),
     origen:              _newRow.querySelector('#nr_origen').value,
+    id_cita:             _newRow._suggestedCitaId || '',
     creado_por:          'recepcion',
   };
 
@@ -1291,16 +1299,22 @@ async function cargarSugerenciaModal(rut, id_cita) {
   let url = '/alma/api/pagos/sugerencia' + qp;
   if (rut)     url += '&rut=' + encodeURIComponent(rut);
   if (id_cita) url += '&id_cita=' + encodeURIComponent(id_cita);
+  // Pasar fecha del registro para auto-rellenar cita del día
+  const fechaReg = document.getElementById('fFecha')?.value;
+  if (fechaReg) url += '&fecha=' + encodeURIComponent(fechaReg);
   try {
     const r = await fetch(url);
     if (!r.ok) return;
     const s = await r.json();
     const fNombre = document.getElementById('fNombre');
     if (!fNombre.value && s.paciente_nombre) fNombre.value = s.paciente_nombre;
+    // Profesional y área de la cita tienen prioridad
     if (s.id_profesional) document.getElementById('fProf').value = s.id_profesional;
     if (s.area) document.getElementById('fArea').value = s.area;
     if (s.prevision && !_previsionManual) setPrevision(s.prevision);
-    if (s.id_cita) document.getElementById('fIdCita').value = s.id_cita;
+    // id_cita: rellenar si vacío (auto-lookup por fecha)
+    const fIC = document.getElementById('fIdCita');
+    if (fIC && s.id_cita && !fIC.value) fIC.value = s.id_cita;
     aplicarSugerenciaMontosModal(s);
   } catch(e) { console.warn('cargarSugerenciaModal error:', e); }
 }

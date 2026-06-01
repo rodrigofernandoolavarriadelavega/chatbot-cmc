@@ -3796,6 +3796,9 @@ async function _pgCargarSugerencia(rut, idCita){
   let url = "/alma/api/pagos/sugerencia" + qpLocal;
   if (rut)    url += "&rut="     + encodeURIComponent(rut);
   if (idCita) url += "&id_cita=" + encodeURIComponent(idCita);
+  // Pasar la fecha del registro para que el backend busque la cita de ese día
+  const fechaReg = document.getElementById("pgFecha")?.value;
+  if (fechaReg) url += "&fecha=" + encodeURIComponent(fechaReg);
   try {
     const r = await fetch(url, { credentials: "include" });
     if (!r.ok) return;
@@ -3803,8 +3806,10 @@ async function _pgCargarSugerencia(rut, idCita){
     const fN = document.getElementById("pgNombre");
     if (fN && !fN.value && s.paciente_nombre) { fN.value = s.paciente_nombre; fN.classList.add("pg-suggested"); }
     const fP = document.getElementById("pgProf");
+    // Profesional de la cita tiene prioridad sobre perfil
     if (fP && s.id_profesional) { fP.value = s.id_profesional; fP.classList.add("pg-suggested"); }
     const fA = document.getElementById("pgArea");
+    // Área de la cita tiene prioridad
     if (fA && s.area) { fA.value = s.area; fA.classList.add("pg-suggested"); }
     if (s.prevision && !_pg.previsionManual) _pgSetPrevision(s.prevision);
     const fIC = document.getElementById("pgIdCita");

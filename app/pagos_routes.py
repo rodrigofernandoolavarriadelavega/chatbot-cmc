@@ -213,10 +213,71 @@ async def get_arancel(
     }
 
 
+async def _buscar_cita_paciente_fecha(rut: str, fecha: str) -> dict | None:
+    """
+    Busca en Medilink la(s) cita(s) del paciente (por RUT) para una fecha exacta.
+    Retorna la primera cita encontrada como dict con id, id_profesional, profesional, area,
+    o None si no hay citas ese día.
+    Una sola consulta HTTP — 429-safe.
+    """
+    try:
+        import json as _json
+        from medilink import (
+            _get_shared_client, _q, _safe_json, HEADERS,
+            PROFESIONALES, _rut_safe,
+        )
+        from config import MEDILINK_BASE_URL
+
+        # RUT canónico: sin puntos, con guión, mayúsculas
+        rut_clean = "".join(c for c in rut.upper() if c.isalnum())
+        if len(rut_clean) > 1:
+            rut_fmt = rut_clean[:-1] + "-" + rut_clean[-1]
+        else:
+            rut_fmt = rut_clean
+
+        params = {
+            "rut":              {"eq": rut_fmt},
+            "fecha":            {"eq": fecha},
+            "estado_anulacion": {"eq": 0},
+        }
+        client = _get_shared_client()
+        import httpx as _httpx
+        r = await client.get(
+            f"{MEDILINK_BASE_URL}/citas",
+            params={"q": _q(params)},
+            headers=HEADERS,
+            timeout=10,
+        )
+        if r.status_code != 200:
+            log.warning(
+                "_buscar_cita_paciente_fecha rut=%s fecha=%s → HTTP %d",
+                _rut_safe(rut), fecha, r.status_code,
+            )
+            return None
+        data = _safe_json(r).get("data", [])
+        if not data:
+            return None
+        # Ordenar por hora_inicio y tomar la primera
+        data.sort(key=lambda c: c.get("hora_inicio", ""))
+        c = data[0]
+        id_prof = c.get("id_profesional")
+        prof_info = PROFESIONALES.get(id_prof, {}) if id_prof else {}
+        return {
+            "id_cita":       str(c["id"]),
+            "id_profesional": id_prof,
+            "profesional":   c.get("nombre_profesional", "") or prof_info.get("nombre", ""),
+            "area":          prof_info.get("especialidad", ""),
+        }
+    except Exception as e:
+        log.warning("_buscar_cita_paciente_fecha error: %s", e)
+        return None
+
+
 @router.get("/sugerencia")
 async def get_sugerencia(
     rut: str | None = Query(None),
     id_cita: str | None = Query(None),
+    fecha: str | None = Query(None, description="YYYY-MM-DD; por defecto hoy"),
     token: str | None = Query(None),
     cmc_session: str | None = Cookie(None),
     request: Request = None,
@@ -224,7 +285,9 @@ async def get_sugerencia(
     """
     Devuelve sugerencias pre-llenadas para el formulario de pago.
     Busca en Medilink con rut o id_cita para obtener paciente y cita.
-    TODO es sugerencia — el frontend lo muestra editable.
+    Si no viene id_cita pero sí rut+fecha, consulta Medilink para auto-rellenar
+    id_cita, profesional y área a partir de la cita del paciente ese día.
+    Todo es sugerencia — el frontend lo muestra editable.
     """
     _require_admin_dep(request, token=token, cmc_session=cmc_session)
     ensure_pagos_table()
@@ -232,23 +295,32 @@ async def get_sugerencia(
     from medilink import PROFESIONALES
     now_cl = datetime.now(_CHILE_TZ)
 
+    # Fecha del registro (normalizada a YYYY-MM-DD)
+    fecha_registro = now_cl.strftime("%Y-%m-%d")
+    if fecha:
+        try:
+            datetime.strptime(fecha, "%Y-%m-%d")
+            fecha_registro = fecha
+        except ValueError:
+            pass  # si viene malformada, usar hoy
+
     sugerencia: dict = {
-        "fecha":         now_cl.strftime("%Y-%m-%d"),
-        "hora":          now_cl.strftime("%H:%M"),
+        "fecha":           fecha_registro,
+        "hora":            now_cl.strftime("%H:%M"),
         "paciente_nombre": "",
-        "rut":           rut or "",
-        "id_profesional": None,
-        "profesional":   "",
-        "area":          "",
-        "prevision":     "particular",
+        "rut":             rut or "",
+        "id_profesional":  None,
+        "profesional":     "",
+        "area":            "",
+        "prevision":       "particular",
         "copago_sugerido": 0,
         "bonif_sugerida":  0,
         "total_arancel":   0,
         "codigo_fonasa":   "",
         "fuente":          "sin_datos",
-        "id_cita":        id_cita or "",
-        "origen":         "presencial",
-        "metodo_pago":    "efectivo",
+        "id_cita":         id_cita or "",
+        "origen":          "presencial",
+        "metodo_pago":     "efectivo",
     }
 
     # Si viene id_cita: buscar datos de la cita en cache local
@@ -272,10 +344,10 @@ async def get_sugerencia(
                         id_prof_match = pid
                         break
                 sugerencia.update({
-                    "id_profesional": id_prof_match,
-                    "profesional":    prof_nombre,
-                    "area":           row["especialidad"] or "",
-                    "id_cita":        id_cita,
+                    "id_profesional":  id_prof_match,
+                    "profesional":     prof_nombre,
+                    "area":            row["especialidad"] or "",
+                    "id_cita":         id_cita,
                     "paciente_nombre": row["paciente_nombre"] or "",
                 })
         except Exception as e:
@@ -306,6 +378,21 @@ async def get_sugerencia(
                     pass
         except Exception as e:
             log.warning("get_sugerencia: error buscando paciente Medilink: %s", e)
+
+        # Si no hay id_cita todavía, buscar cita del paciente en esa fecha
+        if not sugerencia["id_cita"] and rut:
+            cita_dia = await _buscar_cita_paciente_fecha(rut.strip(), fecha_registro)
+            if cita_dia:
+                sugerencia.update({
+                    "id_cita":        cita_dia["id_cita"],
+                    "id_profesional": cita_dia["id_profesional"],
+                    "profesional":    cita_dia["profesional"],
+                    "area":           cita_dia["area"],
+                })
+                log.info(
+                    "get_sugerencia: cita auto-rellenada id=%s prof=%s fecha=%s",
+                    cita_dia["id_cita"], cita_dia["profesional"], fecha_registro,
+                )
 
     # Calcular copago/bonif sugeridos con los datos que tenemos
     area = sugerencia["area"]
