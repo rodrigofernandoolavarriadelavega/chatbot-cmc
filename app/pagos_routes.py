@@ -519,6 +519,21 @@ def _canal_a_origen(canal: str) -> str:
     }.get(canal, "presencial")
 
 
+# Nombre canónico del profesional SOLO para el módulo de Pagos (no afecta los
+# mensajes del bot al paciente). Unifica variantes de Medilink en una sola etiqueta.
+_NOMBRE_PROF_PAGOS: dict[int, str] = {
+    68: "David Pardo M. Servicio Ecotomografía",
+}
+
+
+def _nombre_profesional_pagos(id_prof, nombre_medilink: str) -> str:
+    """Etiqueta única del profesional para Pagos: override por id si existe,
+    si no el nombre que vino de Medilink."""
+    if id_prof in _NOMBRE_PROF_PAGOS:
+        return _NOMBRE_PROF_PAGOS[id_prof]
+    return (nombre_medilink or "").strip()
+
+
 def _convenio_a_prevision(nombre_convenio: str) -> str:
     """Mapea el convenio de la atención Medilink → previsión del módulo de Pagos.
     Convenio con 'fonasa' → fonasa; vacío o cualquier otro → particular.
@@ -1394,6 +1409,7 @@ async def prellenar_pagos(
                       COALESCE(creado_por, '') as creado_por,
                       COALESCE(area, '') as area,
                       COALESCE(prevision, 'particular') as prevision,
+                      COALESCE(profesional, '') as profesional,
                       id_profesional
                FROM pagos_cmc WHERE fecha = ?""",
             (fecha_iso,)
@@ -1418,6 +1434,7 @@ async def prellenar_pagos(
             "creado_por":    row["creado_por"],
             "area":          row["area"],
             "prevision":     row["prevision"],
+            "profesional":   row["profesional"],
             "id_profesional": row["id_profesional"],
         }
         if row["id_cita"]:
@@ -1591,12 +1608,17 @@ async def prellenar_pagos(
                     if prev_update is None:  # si cambia el copago, fijar también la previsión coherente
                         prev_update = prev_calc
 
+            # Normalizar nombre del profesional (etiqueta única en Pagos)
+            id_prof_cita = cita.get("id_profesional")
+            prof_norm = _nombre_profesional_pagos(id_prof_cita, cita.get("nombre_profesional") or existing.get("profesional") or "")
+            prof_update = prof_norm if (prof_norm and prof_norm != (existing.get("profesional") or "")) else None
+
             # Solo actualizar si hubo cambio real (diff) para que el contador sea honesto
             canal_cambio     = canal_nuevo     != existing["canal"]
             fuente_cambio    = fuente_nueva    != existing["fuente"]
             confianza_cambio = confianza_nueva != (existing.get("match_confianza") or "")
             hay_cambio       = (canal_cambio or fuente_cambio or confianza_cambio or bool(prestacion_update)
-                                or bool(rut_relleno) or bool(prev_update) or bool(copago_update))
+                                or bool(rut_relleno) or bool(prev_update) or bool(copago_update) or bool(prof_update))
 
             if not hay_cambio:
                 saltadas += 1
@@ -1609,6 +1631,10 @@ async def prellenar_pagos(
             if rut_relleno:
                 set_parts.insert(0, "rut = ?")
                 set_vals.insert(0, rut_relleno)
+
+            if prof_update is not None:
+                set_parts.insert(len(set_parts)-1, "profesional = ?")
+                set_vals.append(prof_update)
 
             if prev_update is not None:
                 set_parts.insert(len(set_parts)-1, "prevision = ?")
@@ -1644,7 +1670,9 @@ async def prellenar_pagos(
         prof_info = PROFESIONALES.get(id_prof, {}) if id_prof else {}
 
         nombre_pac  = (cita.get("nombre_paciente") or "").strip()
-        profesional = (cita.get("nombre_profesional") or prof_info.get("nombre", "")).strip()
+        profesional = _nombre_profesional_pagos(
+            id_prof, cita.get("nombre_profesional") or prof_info.get("nombre", "")
+        )
         area        = prof_info.get("especialidad", "")
         hora_inicio = (cita.get("hora_inicio") or "")[:5]
 
