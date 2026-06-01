@@ -14,6 +14,7 @@ Flujo 4: Crear cita → confirmación explícita en el frontend; backend solo
 
 Auth: require_admin de admin_routes (Bearer / cookie / query token).
 """
+import asyncio
 import logging
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -189,6 +190,7 @@ async def post_crear_cita(
       hora_inicio: str  (HH:MM)
       hora_fin: str  (HH:MM)
       confirmado: bool  (debe ser true — campo de seguridad anti-accidental)
+      origen: str  (opcional) "telefono" | "presencial" | "chat" — canal de llegada del paciente
     """
     _require_admin_dep(request, token=token, cmc_session=cmc_session)
 
@@ -206,6 +208,13 @@ async def post_crear_cita(
     fecha = body.get("fecha")
     hora_inicio = body.get("hora_inicio")
     hora_fin = body.get("hora_fin")
+    origen = (body.get("origen") or "chat").strip().lower()
+    # Normalizar valores aceptados
+    if origen not in ("telefono", "presencial", "chat"):
+        origen = "chat"
+    # Teléfono del paciente para CAPI matching (el frontend lo conoce del paso 1)
+    paciente_telefono = (body.get("paciente_telefono") or "").strip()
+    paciente_rut = (body.get("paciente_rut") or "").strip()
 
     # Validaciones mínimas
     if not all([id_paciente, id_profesional, fecha, hora_inicio, hora_fin]):
@@ -238,20 +247,81 @@ async def post_crear_cita(
         raise HTTPException(502, "Medilink rechazó la cita — verifica horario y disponibilidad")
 
     prof_info = PROFESIONALES[id_profesional]
+    id_cita_nueva = resultado.get("id")
     log.info(
-        "agenda_routes.crear_cita: prof=%d (%s) fecha=%s %s-%s paciente=%d → id=%s",
+        "agenda_routes.crear_cita: prof=%d (%s) fecha=%s %s-%s paciente=%d → id=%s origen=%s",
         id_profesional, prof_info["nombre"], fecha, hora_inicio, hora_fin,
-        id_paciente, resultado.get("id"),
+        id_paciente, id_cita_nueva, origen,
     )
+
+    # ── CAPI Schedule (fire-and-forget) ──────────────────────────────────────
+    asyncio.create_task(_capi_schedule(
+        phone=paciente_telefono,
+        rut=paciente_rut,
+        id_profesional=id_profesional,
+        prof_info=prof_info,
+        fecha=fecha,
+        hora_inicio=hora_inicio,
+        id_cita=id_cita_nueva,
+        origen=origen,
+    ))
 
     return {
         "ok": True,
-        "id_cita": resultado.get("id"),
+        "id_cita": id_cita_nueva,
         "profesional": prof_info["nombre"],
         "fecha": fecha,
         "hora_inicio": hora_inicio,
         "hora_fin": hora_fin,
+        "origen": origen,
     }
+
+
+async def _capi_schedule(
+    phone: str,
+    rut: str,
+    id_profesional: int,
+    prof_info: dict,
+    fecha: str,
+    hora_inicio: str,
+    id_cita,
+    origen: str,
+) -> None:
+    """Envía evento Schedule a Meta CAPI. Fire-and-forget, nunca lanza al caller."""
+    try:
+        from meta_capi import send_event, _normalize_phone
+
+        phone_norm = _normalize_phone(phone) if phone else None
+
+        # Sin teléfono normalizable no podemos enviar (ph es requerido por send_event)
+        if not phone_norm:
+            log.debug("_capi_schedule: sin teléfono normalizable para paciente — CAPI omitido")
+            return
+
+        # value nominal: Schedule es etapa de embudo, no transacción.
+        # Usamos el intervalo (minutos) como valor de señal — cumple el requisito
+        # de value numérico sin inventar precios reales.
+        value: float = max(1.0, float(prof_info.get("intervalo", 15)))
+
+        await send_event(
+            "Schedule",
+            phone_norm,
+            rut=rut or None,
+            value=value,
+            currency="CLP",
+            custom_data={
+                "origen": origen,
+                "especialidad": prof_info.get("especialidad", ""),
+                "profesional": prof_info.get("nombre", ""),
+                "fecha_cita": fecha,
+                "hora_cita": hora_inicio,
+                "id_cita": str(id_cita) if id_cita else "",
+                "id_profesional": id_profesional,
+                "content_name": prof_info.get("especialidad", ""),
+            },
+        )
+    except Exception as e:
+        log.warning("_capi_schedule: error inesperado: %s", e)
 
 
 # ── Utilidades: lista de profesionales para el selector ──────────────────────
