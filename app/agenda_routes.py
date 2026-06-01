@@ -14,6 +14,39 @@ Flujo 4: Crear cita → confirmación explícita en el frontend; backend solo
 
 Auth: require_admin de admin_routes (Bearer / cookie / query token).
 """
+# ── Mapa de valor económico por profesional para CAPI Schedule ───────────────
+# Precio PARTICULAR de la consulta/primera sesión en CLP.
+# Fuente: SYSTEM_PROMPT de claude_helper.py (precios reales del CMC).
+# Actualizar aquí cuando cambien los aranceles.
+# DEFAULT_CAPI_VALUE se usa cuando el id_profesional no está en el mapa.
+DEFAULT_CAPI_VALUE: float = 25_000.0   # Consulta MG particular
+
+_CAPI_VALUE_BY_PROF: dict[int, float] = {
+    1:  25_000.0,   # Dr. Olavarría — Medicina General
+    73: 25_000.0,   # Dr. Abarca — Medicina General
+    13: 30_000.0,   # Dr. Márquez — Medicina Familiar
+    23: 35_000.0,   # Dr. Borrego — Otorrinolaringología
+    60: 40_000.0,   # Dr. Millán — Cardiología
+    64: 25_000.0,   # Dr. Barraza — Traumatología (proxy MG; atiende derivado)
+    61: 30_000.0,   # Dr. Rejón — Ginecología
+    65: 35_000.0,   # Dr. Quijano — Gastroenterología
+    55: 15_000.0,   # Dra. Burgos — Odontología General (evaluación dental)
+    72: 15_000.0,   # Dr. Jiménez — Odontología General (evaluación dental)
+    66: 15_000.0,   # Dra. Castillo — Ortodoncia (evaluación dental previa)
+    75: 110_000.0,  # Dr. Fredes — Endodoncia (primera sesión)
+    69: 650_000.0,  # Dra. Valdés — Implantología (referencial primer servicio)
+    76: 15_000.0,   # Dra. Fuentealba — Estética Facial (evaluación)
+    59: 17_990.0,   # Paola Acosta — Masoterapia (sesión espalda 20 min)
+    77: 20_000.0,   # Luis Armijo — Kinesiología particular
+    21: 20_000.0,   # Leonardo Etcheverry — Kinesiología particular
+    52: 20_000.0,   # Gisela Pinto — Nutrición particular
+    74: 20_000.0,   # Jorge Montalba — Psicología particular
+    49: 20_000.0,   # Juan Pablo Rodríguez — Psicología particular
+    70: 30_000.0,   # Juana Arratia — Fonoaudiología (evaluación)
+    67: 30_000.0,   # Saraí Gómez — Matrona particular
+    56: 25_000.0,   # Andrea Guevara — Podología (piso del rango)
+    68: 40_000.0,   # David Pardo — Ecografía
+}
 import asyncio
 import logging
 from datetime import datetime
@@ -298,10 +331,15 @@ async def _capi_schedule(
             log.debug("_capi_schedule: sin teléfono normalizable para paciente — CAPI omitido")
             return
 
-        # value nominal: Schedule es etapa de embudo, no transacción.
-        # Usamos el intervalo (minutos) como valor de señal — cumple el requisito
-        # de value numérico sin inventar precios reales.
-        value: float = max(1.0, float(prof_info.get("intervalo", 15)))
+        # value = precio particular de la consulta/primera sesión en CLP.
+        # Fuente canónica: _CAPI_VALUE_BY_PROF (arriba de este módulo).
+        value: float = _CAPI_VALUE_BY_PROF.get(id_profesional, DEFAULT_CAPI_VALUE)
+        if id_profesional not in _CAPI_VALUE_BY_PROF:
+            log.info(
+                "_capi_schedule: id_profesional=%d no está en _CAPI_VALUE_BY_PROF "
+                "— usando default $%.0f CLP",
+                id_profesional, DEFAULT_CAPI_VALUE,
+            )
 
         await send_event(
             "Schedule",
