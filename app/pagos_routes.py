@@ -175,7 +175,55 @@ def ensure_pagos_table() -> None:
                 conn.execute(col_ddl)
             except Exception:
                 pass  # columna ya existe
+        # Origen de primera mano de cada cita (lo que la recepción marca al agendar
+        # desde la Agenda de Alma). Dato directo > inferencia: el cruce de Pagos lo
+        # lee PRIMERO. NO alimenta recordatorios (no es citas_bot).
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS cita_origen (
+                id_cita     TEXT PRIMARY KEY,
+                canal       TEXT DEFAULT 'presencial',
+                fuente      TEXT DEFAULT '',
+                created_at  TEXT DEFAULT (datetime('now'))
+            )
+        """)
         conn.commit()
+
+
+def registrar_origen_cita(id_cita: str, canal: str, fuente: str = "") -> None:
+    """Persiste el origen de primera mano de una cita agendada desde el panel.
+    Idempotente (REPLACE). Llamado por agenda_routes al crear la cita."""
+    if not id_cita:
+        return
+    try:
+        ensure_pagos_table()
+        from session import _conn
+        with _conn() as conn:
+            conn.execute(
+                """INSERT OR REPLACE INTO cita_origen (id_cita, canal, fuente, created_at)
+                   VALUES (?, ?, ?, datetime('now'))""",
+                (str(id_cita).strip(), canal or "presencial", fuente or "")
+            )
+            conn.commit()
+    except Exception as e:
+        log.warning("registrar_origen_cita id_cita=%s error=%s", id_cita, e)
+
+
+def _buscar_origen_cita(id_cita: str) -> dict | None:
+    """Origen de primera mano de una cita (tabla cita_origen). None si no hay."""
+    if not id_cita:
+        return None
+    try:
+        from session import _conn
+        with _conn() as conn:
+            row = conn.execute(
+                "SELECT canal, fuente FROM cita_origen WHERE id_cita = ? LIMIT 1",
+                (str(id_cita).strip(),)
+            ).fetchone()
+            if row:
+                return {"canal": row["canal"] or "presencial", "fuente": row["fuente"] or ""}
+    except Exception as e:
+        log.debug("_buscar_origen_cita id_cita=%s error=%s", id_cita, e)
+    return None
 
 
 # ── Lógica de sugerencia ──────────────────────────────────────────────────────
@@ -408,6 +456,7 @@ def _resolver_atribucion(
 ) -> dict:
     """
     Cascada de identificación cita→paciente del bot, con nivel de confianza:
+      0. origen de primera mano (cita_origen, marcado al agendar en el panel) → exacto
       1. teléfono explícito en la cita      → exacto
       2. id_cita en citas_bot (bot agendó)  → exacto
       3. RUT en contact_profiles            → exacto
@@ -415,9 +464,22 @@ def _resolver_atribucion(
     Luego deriva canal/fuente con _derivar_canal_fuente sobre el teléfono hallado.
     Devuelve: {canal, fuente, confianza, telefono, rut} (rut posiblemente rellenado).
     """
+    rut_out = (rut or "").strip()
+
+    # 0. Origen de primera mano: lo que la recepción marcó al agendar en el panel.
+    #    Es dato directo, no inferencia → gana a todo lo demás.
+    origen_directo = _buscar_origen_cita(id_cita)
+    if origen_directo:
+        return {
+            "canal": origen_directo["canal"],
+            "fuente": origen_directo["fuente"],
+            "confianza": "exacto",
+            "telefono": "",
+            "rut": rut_out,
+        }
+
     telefono = (telefono_cita or "").strip()
     confianza = "exacto" if telefono else ""
-    rut_out = (rut or "").strip()
 
     if not telefono and id_cita:
         telefono = _buscar_telefono_por_id_cita(id_cita)

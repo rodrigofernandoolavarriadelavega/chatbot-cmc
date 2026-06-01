@@ -296,6 +296,25 @@ async def post_crear_cita(
         id_paciente, id_cita_nueva, origen,
     )
 
+    # ── Persistir origen de primera mano para el módulo de Pagos ─────────────
+    # La recepción marcó el origen al agendar — dato directo que el cruce de Pagos
+    # usa primero (queda 'exacto', sin inferir por RUT/nombre). No toca citas_bot
+    # → no gatilla recordatorios automáticos.
+    try:
+        from pagos_routes import registrar_origen_cita
+        if origen == "telefono":
+            _canal, _fuente = "telefono", ""
+        elif origen == "presencial":
+            _canal, _fuente = "presencial", ""
+        else:  # "chat" → llegó por WhatsApp/redes; derivar canal+fuente reales
+            from pagos_routes import _derivar_canal_fuente
+            _canal, _fuente = _derivar_canal_fuente(paciente_telefono)
+            if _canal == "presencial":  # sin sesión rastreable, pero sí fue chat
+                _canal, _fuente = "chat_humano", "whatsapp"
+        registrar_origen_cita(str(id_cita_nueva), _canal, _fuente)
+    except Exception as e:
+        log.warning("post_crear_cita: no se pudo registrar origen cita=%s: %s", id_cita_nueva, e)
+
     # ── CAPI Schedule (fire-and-forget) ──────────────────────────────────────
     asyncio.create_task(_capi_schedule(
         phone=paciente_telefono,

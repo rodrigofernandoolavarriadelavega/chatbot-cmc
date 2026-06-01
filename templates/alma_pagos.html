@@ -511,6 +511,10 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h10M4 18h7"/><circle cx="18" cy="18" r="3"/><path d="M18 15v3l2 1"/></svg>
     Actualizar desde Medilink
   </button>
+  <button class="btn-secondary" id="btnCruzarOrigen" title="Cruza con el bot para detectar el origen (WhatsApp/web/Meta) y rellenar RUTs faltantes. No consulta Medilink.">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M16 3h5v5M21 3l-7 7M8 21H3v-5M3 21l7-7"/><circle cx="12" cy="12" r="2"/></svg>
+    Actualizar origen
+  </button>
   <button class="btn-secondary" id="btnExportXlsx" title="Descargar pagos del dia como Excel">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
     Descargar Excel
@@ -905,7 +909,7 @@ function buildSavedRow(p, i) {
       <td class="editable" data-col="metodo_pago" style="overflow:visible;max-width:none"><span class="pill metodo">${capitalize(p.metodo_pago || 'efectivo')}</span></td>
       <td class="editable" data-col="folio" style="color:var(--mute)" title="${esc(p.folio || '')}">${esc(p.folio || '—')}</td>
       <td class="editable" data-col="procedimiento" style="color:var(--mute)" title="${esc(p.procedimiento || '')}">${esc(p.procedimiento || '—')}</td>
-      <td style="color:var(--mute)" title="${esc(p.canal||'presencial')} ${p.fuente ? '· '+esc(p.fuente) : ''}">${renderCanalFuente(p.canal, p.fuente)}</td>
+      <td style="color:var(--mute)" title="${esc(p.canal||'presencial')} ${p.fuente ? '· '+esc(p.fuente) : ''}${p.match_confianza==='probable' ? ' (probable, por nombre)' : ''}">${renderCanalFuente(p.canal, p.fuente, p.match_confianza)}</td>
       <td>
         <div class="td-actions">
           <button class="${lockClass}" title="${lockTitle}" onclick="toggleLockPago(${p.id}, this)">
@@ -1831,6 +1835,29 @@ document.getElementById('btnPrellenar').addEventListener('click', async () => {
   }
 });
 
+// ── Actualizar origen (cruce con el bot, sin Medilink) ────────────────────────
+document.getElementById('btnCruzarOrigen').addEventListener('click', async () => {
+  const btn = document.getElementById('btnCruzarOrigen');
+  btn.disabled = true;
+  btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:16px;height:16px;animation:spin .8s linear infinite"><path d="M21 12a9 9 0 11-6.22-8.56"/></svg> Cruzando...`;
+  try {
+    const r = await fetch('/alma/api/pagos/cruzar-origen' + qp + '&fecha=' + encodeURIComponent(_fecha), { method: 'POST' });
+    if (!r.ok) { const err = await r.json().catch(() => ({})); throw new Error(err.detail || 'HTTP ' + r.status); }
+    const d = await r.json();
+    const partes = [];
+    if (d.exacto   > 0) partes.push(`${d.exacto} por bot`);
+    if (d.probable > 0) partes.push(`${d.probable} probable${d.probable>1?'s':''}`);
+    if (d.rut_rellenados > 0) partes.push(`${d.rut_rellenados} RUT rellenado${d.rut_rellenados>1?'s':''}`);
+    const msg = partes.length > 0 ? partes.join(' · ') : `Sin coincidencias (${d.presencial||0} presenciales)`;
+    showToast(msg, (d.exacto > 0 || d.probable > 0) ? 'success' : '');
+    cargarPagos();
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+  finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:16px;height:16px"><path d="M16 3h5v5M21 3l-7 7M8 21H3v-5M3 21l7-7"/><circle cx="12" cy="12" r="2"/></svg> Actualizar origen`;
+  }
+});
+
 // ── Atribución canal + fuente ─────────────────────────────────────────────────
 
 /** Mapea canal nuevo → origen legacy */
@@ -1838,15 +1865,20 @@ function canalAOrigen(canal) {
   return { bot: 'chat', chat_humano: 'chat', telefono: 'telefono', presencial: 'presencial' }[canal] || 'presencial';
 }
 
-/** Renderiza badge compacto canal + fuente para columna de tabla */
-function renderCanalFuente(canal, fuente) {
+/** Renderiza badge compacto canal + fuente para columna de tabla.
+ *  confianza='probable' (match por nombre) se marca con un "?" tenue. */
+function renderCanalFuente(canal, fuente, confianza) {
   const c = canal || 'presencial';
   const f = fuente || '';
   const labels = { presencial: 'Presencial', telefono: 'Telefono', bot: 'Bot', chat_humano: 'Chat' };
   const fuentes = { meta: 'Meta', web: 'Web', instagram: 'IG', whatsapp: 'WA', '': '' };
   const cl = capitalize(labels[c] || c);
   const fl = fuentes[f] !== undefined ? fuentes[f] : capitalize(f);
-  return fl ? `${cl} <span style="color:var(--navy);opacity:.7;font-size:.85em">· ${fl}</span>` : cl;
+  let out = fl ? `${cl} <span style="color:var(--navy);opacity:.7;font-size:.85em">· ${fl}</span>` : cl;
+  if (confianza === 'probable' && c !== 'presencial') {
+    out += ` <span title="Inferido por nombre — puede no ser exacto" style="color:#b8860b;font-size:.85em;font-weight:600">probable</span>`;
+  }
+  return out;
 }
 
 /** Muestra/oculta select de fuente según canal seleccionado */
