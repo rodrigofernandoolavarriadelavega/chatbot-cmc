@@ -1451,7 +1451,7 @@ async def _job_admin_status_report():
         from datetime import datetime
         from zoneinfo import ZoneInfo
         from medilink import get_stats_429, _proxima_cache
-        from resilience import is_medilink_down
+        from resilience import is_medilink_down, is_claude_down, claude_down_reason
         from session import _conn
 
         ahora = datetime.now(ZoneInfo("America/Santiago")).strftime("%H:%M")
@@ -1461,6 +1461,7 @@ async def _job_admin_status_report():
         _admin_report_state["last_429_total"] = total_429
 
         medilink_down = is_medilink_down()
+        claude_down = is_claude_down()
         cache_n = len(_proxima_cache)
 
         # Jobs del scheduler
@@ -1485,14 +1486,20 @@ async def _job_admin_status_report():
         except Exception:
             msgs_in = msgs_out = "?"
 
-        # Semáforo
-        ok = not medilink_down and sched_running and sched_jobs > 0 and delta_429 < 5
-        icono = "🟢" if ok else ("🟡" if not medilink_down else "🔴")
+        # Semáforo — Claude caído es 🔴: la IA es dependencia crítica por mensaje.
+        ok = (not medilink_down and not claude_down and sched_running
+              and sched_jobs > 0 and delta_429 < 5)
+        icono = "🟢" if ok else ("🔴" if (medilink_down or claude_down) else "🟡")
         med_line = "DOWN" if medilink_down else "ok"
+        if claude_down:
+            ia_line = f"🔴 *DOWN — {claude_down_reason()}*"
+        else:
+            ia_line = "ok"
         alert = "" if ok else "\n⚠️ *Revisar*"
 
         body = (
             f"{icono} *CMC bot · {ahora}*\n\n"
+            f"IA (Claude): {ia_line}\n"
             f"Medilink: {med_line}\n"
             f"429 totales: {total_429} (últ 30min: {delta_429})\n"
             f"Cache próxima: {cache_n} entradas\n"

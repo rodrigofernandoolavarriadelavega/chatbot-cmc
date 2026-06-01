@@ -6,12 +6,31 @@ import json
 import logging
 import re
 import anthropic
-from config import ANTHROPIC_API_KEY
+from config import ANTHROPIC_API_KEY, CMC_TELEFONO, CMC_TELEFONO_FIJO
 from medilink import especialidades_disponibles
 
 log = logging.getLogger("claude")
 
 client = anthropic.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
+
+
+async def _claude_create(**kwargs):
+    """Wrapper único de client.messages.create que registra la salud de Claude.
+
+    Toda llamada a la API pasa por aquí: un éxito marca Claude 'up', una excepción
+    la marca 'down' con la causa clasificada y re-lanza para que el caller mantenga
+    su propio fallback. Esto le da a Claude la misma observabilidad que Medilink
+    (ver resilience.py) — sin esto, el apagón de saldo de 3 días (29-may a 1-jun)
+    corrió en silencio. El estado lo consume el reporte de estado al admin (jobs.py)
+    y el camino degradado del paciente (is_claude_down)."""
+    from resilience import note_claude_ok, note_claude_failure, _classify_claude_error
+    try:
+        resp = await client.messages.create(**kwargs)
+        note_claude_ok()
+        return resp
+    except Exception as e:
+        note_claude_failure(_classify_claude_error(str(e)))
+        raise
 
 # Cache de intents determinísticos — evita llamar a Claude para casos obvios.
 # Clave: texto normalizado (lower + strip). Valor: dict con intent y especialidad.
@@ -1141,7 +1160,7 @@ async def clasificar_respuesta_crosssell(mensaje: str, destino: str) -> str:
     # ¿Qué cuenta como "ambiguo"? (pregunta sobre precios, dice otra
     # especialidad, audio sin transcribir, saludo solo)
     try:
-        resp = await client.messages.create(
+        resp = await _claude_create(
             model="claude-haiku-4-5-20251001",
             max_tokens=10,
             system=(
@@ -1178,7 +1197,7 @@ async def clasificar_respuesta_seguimiento(mensaje: str) -> str | None:
         return _SEGUIMIENTO_CACHE[clave]
 
     try:
-        resp = await client.messages.create(
+        resp = await _claude_create(
             model="claude-haiku-4-5-20251001",
             max_tokens=10,
             system=(
@@ -1819,7 +1838,7 @@ async def detect_intent(mensaje: str, recepcion_resumen: list | None = None,
                 f"pregunta si necesita orden para ese servicio/examen, no que quiere "
                 f"emitir una orden.\n\n"
             )
-        resp = await client.messages.create(
+        resp = await _claude_create(
             model="claude-haiku-4-5-20251001",
             max_tokens=1024,
             system=[{
@@ -1925,6 +1944,22 @@ async def detect_intent(mensaje: str, recepcion_resumen: list | None = None,
         _fb = _local_faq_fallback(mensaje)
         if _fb:
             return {"intent": "info", "especialidad": None, "respuesta_directa": _fb}
+        # Degradación elegante: si Claude está caído (saldo, API down), el paciente
+        # recibía un menú genérico que ignoraba su mensaje. En su lugar, pedir disculpa
+        # y ofrecer las rutas que SÍ funcionan sin IA (agendar por número / recepción).
+        try:
+            from resilience import is_claude_down
+            if is_claude_down():
+                return {"intent": "info", "especialidad": None, "respuesta_directa": (
+                    "Disculpa, justo estoy con un problema técnico para entender tu mensaje. "
+                    "Un momento y te ayudo.\n\n"
+                    "Mientras tanto puedes:\n"
+                    "• Escribir *agendar* para reservar una hora\n"
+                    "• Escribir *recepción* para hablar con una persona\n"
+                    f"☎️ *{CMC_TELEFONO_FIJO}*"
+                )}
+        except Exception:
+            pass
         return {"intent": "menu", "especialidad": None, "respuesta_directa": None}
 
 
@@ -1939,7 +1974,7 @@ async def consulta_clinica_doctor(pregunta: str) -> str:
         "Si la pregunta no es clínica, responde brevemente que solo puedes ayudar con consultas médicas."
     )
     try:
-        resp = await client.messages.create(
+        resp = await _claude_create(
             model="claude-haiku-4-5-20251001",
             max_tokens=1024,
             system=system,
@@ -1948,7 +1983,11 @@ async def consulta_clinica_doctor(pregunta: str) -> str:
         return _scrub_telefonos(resp.content[0].text)
     except Exception as e:
         log.error("consulta_clinica_doctor falló: %s", e)
-        return "⚠️ Error al procesar tu consulta. Intenta de nuevo."
+        from resilience import is_claude_down, claude_down_reason
+        if is_claude_down():
+            return ("⚠️ Asistente clínico no disponible: la IA (Anthropic) está fallando "
+                    f"— {claude_down_reason()}.")
+        return "⚠️ No pude procesar la consulta clínica ahora. Intenta de nuevo en un momento."
 
 
 _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
@@ -2265,7 +2304,7 @@ async def respuesta_faq(mensaje: str, recepcion_resumen: list | None = None,
             '"respuesta_directa". Ejemplo: {"respuesta_directa": "texto"}. '
             'NO escribas prosa fuera del JSON.\n\n'
         )
-        resp = await client.messages.create(
+        resp = await _claude_create(
             model="claude-haiku-4-5-20251001",
             max_tokens=1024,
             system=[{
@@ -2411,7 +2450,7 @@ async def classify_with_context(mensaje: str, state: str, session_data: dict) ->
     )
 
     try:
-        resp = await client.messages.create(
+        resp = await _claude_create(
             model="claude-haiku-4-5",
             max_tokens=120,
             system=sys_prompt,

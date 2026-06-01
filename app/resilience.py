@@ -137,6 +137,66 @@ def mark_recovery_notified():
     system_state_set(_KEY_RECOVERY_NOTIFIED, datetime.now(timezone.utc).isoformat())
 
 
+# ── Estado de salud de Claude (Anthropic API) ──────────────────────────────
+# Mismo tratamiento que Medilink: la IA del bot es una dependencia crítica por
+# mensaje (detect_intent). Si se cae (saldo agotado, API down, timeout), sin
+# observabilidad el apagón corre en silencio. Caso real: 2026-05-29 a 2026-06-01
+# el saldo Anthropic se agotó y el bot degradó a menú genérico 3 días sin alerta.
+_KEY_CLAUDE = "claude_status"              # "up" | "down"
+_KEY_CLAUDE_REASON = "claude_reason"       # última razón de falla (ej. "saldo agotado")
+_KEY_CLAUDE_DOWN_AT = "claude_down_since_at"  # timestamp ISO de la primera falla de la racha
+
+
+def note_claude_failure(reason: str = ""):
+    """Marca Claude como caído. Idempotente: solo fija down_at la primera vez
+    de la racha (flap protection idéntico a Medilink)."""
+    already_down = system_state_get(_KEY_CLAUDE) == "down"
+    system_state_set(_KEY_CLAUDE, "down")
+    if not already_down:
+        system_state_set(_KEY_CLAUDE_DOWN_AT, datetime.now(timezone.utc).isoformat())
+    if reason:
+        system_state_set(_KEY_CLAUDE_REASON, reason[:300])
+
+
+def note_claude_ok():
+    """Marca Claude como operativo. Se llama tras cada llamada exitosa."""
+    if system_state_get(_KEY_CLAUDE) != "up":
+        system_state_set(_KEY_CLAUDE, "up")
+
+
+def is_claude_down() -> bool:
+    """True si la última llamada a Claude falló y no ha habido éxito desde."""
+    return system_state_get(_KEY_CLAUDE) == "down"
+
+
+def claude_down_reason() -> str:
+    """Última razón registrada de la caída de Claude (o cadena vacía)."""
+    return system_state_get(_KEY_CLAUDE_REASON) or ""
+
+
+def claude_down_since() -> str | None:
+    """Timestamp ISO de cuándo empezó la racha de fallas (si está caído)."""
+    if not is_claude_down():
+        return None
+    return system_state_get(_KEY_CLAUDE_DOWN_AT)
+
+
+def _classify_claude_error(err: str) -> str:
+    """Traduce el error crudo de Anthropic a una causa legible para el admin."""
+    e = (err or "").lower()
+    if "credit balance is too low" in e or "billing" in e:
+        return "saldo agotado (recargar en console.anthropic.com)"
+    if "rate" in e and "limit" in e:
+        return "rate limit Anthropic"
+    if "overloaded" in e or "529" in e:
+        return "API Anthropic sobrecargada"
+    if "timeout" in e or "timed out" in e:
+        return "timeout"
+    if "authentication" in e or "401" in e or "api key" in e:
+        return "API key inválida"
+    return (err or "desconocido")[:120]
+
+
 # ── Tasks en background con tracking (evita GC de fire-and-forget) ──────────
 import asyncio as _asyncio_bg
 _background_tasks: set = set()

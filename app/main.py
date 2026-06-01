@@ -35,7 +35,7 @@ from session import (get_session, is_duplicate, reset_session, save_session,
                      intent_queue_depth, waitlist_depth, purge_old_data,
                      upsert_message_status, upsert_bsuid,
                      get_profile, save_profile)
-from resilience import is_medilink_down
+from resilience import is_medilink_down, is_claude_down, claude_down_reason
 from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_recordatorios, _job_recordatorios_2h, _job_recordatorios_48h,
                   _job_postconsulta, _job_postconsulta_morning,
@@ -736,6 +736,8 @@ async def health():
         "medilink":    "ok" if medilink_ok else "degraded",
         "medilink_ms": medilink_ms,
         "medilink_state":   "down" if is_medilink_down() else "up",
+        "claude_state":     "down" if is_claude_down() else "up",
+        "claude_reason":    claude_down_reason() if is_claude_down() else None,
         "intent_queue_depth": intent_queue_depth(),
         "waitlist_depth":     waitlist_depth(),
         "bsuid_mapped": bsuid["total"],
