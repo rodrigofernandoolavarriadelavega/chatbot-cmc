@@ -63,6 +63,9 @@ ALMA_MODULE_REGISTRY: dict[str, dict] = {
 # ── Mapa de perfiles Alma: token → {variante, modulos, boxes_financiero} ────────
 # `modulos=None` significa acceso total (todos los módulos del registry).
 # `modulos=[...]` lista de keys que el perfil puede ver (sidebar filtra el resto).
+# `secciones={modulo: [tabs]}` limita las sub-secciones VISIBLES dentro de un
+#   módulo (un nivel más adentro que `modulos`). Ausente o módulo no listado =
+#   acceso total a sus secciones. Ej: {"autopilot": ["disenos"]} → solo Diseños.
 # `boxes_financiero=True` habilita datos monetarios en /admin/api/boxes-state.
 # Para agregar un perfil nuevo: añadir una entrada aquí.
 # "variante" es la 3ª línea del lockup (debajo de "CARAMPANGUE" fija). "" = no muestra 3ª línea.
@@ -75,7 +78,8 @@ ALMA_PROFILES: dict[str, dict] = {
     },
     "cmc_admin_2026": {
         "variante": "Recepción",
-        "modulos": ["panel", "panel2", "agenda", "pagos", "boxes"],  # recepción
+        "modulos": ["panel", "panel2", "agenda", "pagos", "boxes", "autopilot"],  # recepción
+        "secciones": {"autopilot": ["disenos"]},  # de Autopilot solo ve Diseños
         "boxes_financiero": False,  # sin valores monetarios en Boxes
         "panel_profesional": False,
     },

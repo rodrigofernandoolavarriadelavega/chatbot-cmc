@@ -21,7 +21,7 @@ from pathlib import Path
 from fastapi import APIRouter, Query, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 
-from config import ADMIN_TOKEN, OLACORE_TOKEN
+from config import ADMIN_TOKEN, OLACORE_TOKEN, ALMA_PROFILES
 
 _ADMIN_TOKENS_AP: tuple[str, ...] = (ADMIN_TOKEN, OLACORE_TOKEN)
 from .world_state import load_snapshot
@@ -69,7 +69,14 @@ def autopilot_dashboard(token: str | None = Query(None), request: Request = None
     _check_token(token, request)
     if not _TEMPLATE.exists():
         raise HTTPException(404, "Dashboard no disponible")
-    return HTMLResponse(_TEMPLATE.read_text(encoding="utf-8"))
+    # Secciones (tabs) visibles según el perfil del token. El perfil resuelve
+    # `secciones["autopilot"]` = lista de tabs permitidos; None/ausente = todos.
+    eff_token = token if (token in _ADMIN_TOKENS_AP) else (request.cookies.get("admin_token") if request else None)
+    secciones = (ALMA_PROFILES.get(eff_token, {}) or {}).get("secciones", {}) or {}
+    allowed = secciones.get("autopilot")  # lista o None (acceso total)
+    html = _TEMPLATE.read_text(encoding="utf-8")
+    html = html.replace("__ALLOWED_SECTIONS__", json.dumps(allowed) if allowed is not None else "null")
+    return HTMLResponse(html)
 
 
 @router.get("/autopilot/api/snapshot")

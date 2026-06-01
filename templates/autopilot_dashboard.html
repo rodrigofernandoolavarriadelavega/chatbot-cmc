@@ -1100,6 +1100,9 @@ const ACT = {
 };
 const qs = new URLSearchParams(location.search);
 const TOKEN = qs.get('token') || '';
+// Secciones (tabs) permitidas según el perfil del token (inyectado por el server).
+// null = acceso total; lista de data-view = solo esos tabs visibles.
+const ALLOWED_SECTIONS = __ALLOWED_SECTIONS__;
 let WIN = 7;
 const clp = n => n==null ? 'n/d' : '$'+Math.round(n).toLocaleString('es-CL');
 const svg = p => `<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
@@ -2278,6 +2281,15 @@ document.getElementById('btnAtribRefresh').addEventListener('click',refreshAtrib
 // Deep-link: /autopilot#atribucion abre la pestaña directo (redirect de /atribucion).
 if(location.hash==='#atribucion'){ const _t=document.querySelector('.tab[data-view="atribucion"]'); if(_t) _t.click(); }
 
+// Gating de secciones por perfil: ocultar tabs no permitidos y activar el primero
+// permitido. ALLOWED_SECTIONS=null → acceso total (no se oculta nada).
+if(Array.isArray(ALLOWED_SECTIONS)){
+  document.querySelectorAll('#tabs .tab').forEach(t=>{
+    if(!ALLOWED_SECTIONS.includes(t.dataset.view)) t.style.display='none';
+  });
+  const _first=document.querySelector('#tabs .tab[data-view="'+ALLOWED_SECTIONS[0]+'"]');
+  if(_first) _first.click();
+}
 
 load();
 </script>
