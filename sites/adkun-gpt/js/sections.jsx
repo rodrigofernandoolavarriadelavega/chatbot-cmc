@@ -133,9 +133,11 @@ function Hero({ visual = "fjord" }) {
         {/* visual */}
         {blended ? (
           // mobile/tablet: el fiordo se muestra apilado y difuminado hacia el fondo
-          <div className="reveal reveal-d2 relative lg:hidden">
-            <div className="relative w-full aspect-[1672/941] overflow-hidden rounded-[18px]">
+          <div className="reveal reveal-d2 relative lg:hidden -mx-6 -mt-2">
+            <div className="relative w-full aspect-[1672/941] overflow-hidden">
               <FjordScene className="absolute inset-0 h-full w-full" />
+              {/* se funde con el fondo arriba y abajo, sangra a los bordes (integrada, no tarjeta) */}
+              <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, #F2F3F5 0%, rgba(242,243,245,0) 26%)" }}></div>
               <div className="absolute inset-0" style={{ background: "linear-gradient(0deg, #F2F3F5 0%, rgba(242,243,245,0) 22%)" }}></div>
             </div>
           </div>
