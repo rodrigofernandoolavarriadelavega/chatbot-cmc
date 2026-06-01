@@ -1144,6 +1144,10 @@ html, body{width:100%; max-width:100%; overflow-x:hidden}
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M12 14v4M10 16h4"/></svg>
       Agendar
     </button>
+    <button class="topbar-btn" id="btnPagoGlobal" title="Registrar pago (sin chat abierto)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+      Pago
+    </button>
     <span class="divider"></span>
     <button class="topbar-btn icon-only" id="btnSound" title="Sonido nuevos mensajes">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
@@ -2880,6 +2884,10 @@ function setup(){
   const btnAgGlobal = document.getElementById("btnAgendarGlobal");
   if (btnAgGlobal) btnAgGlobal.addEventListener("click", () => openAgendarModal({ global: true }));
 
+  // Botón Pago global (topbar, sin chat activo)
+  const btnPgGlobal = document.getElementById("btnPagoGlobal");
+  if (btnPgGlobal) btnPgGlobal.addEventListener("click", () => openPagoModal({ global: true }));
+
   setupAttach();
   loadInbox();
   loadEcografiasPhones();
@@ -3575,32 +3583,45 @@ const _pg = {
   sugerenciaAplicada: false,
 };
 
-function openPagoModal(){
-  if (!activePhone){
+function openPagoModal(opts){
+  const globalMode = !!(opts && opts.global);
+
+  if (!globalMode && !activePhone){
     toast("Selecciona un chat primero", "error"); return;
   }
-  const conv   = activeConv || {};
-  const nombre = conv.display_name || conv.phone || "";
-  const rut    = conv.rut || "";
-  const idCita = conv.last_cita_id || "";
 
   _pgResetForm();
 
-  // Pre-cargar datos del paciente activo
-  if (nombre) document.getElementById("pgNombre").value = nombre;
-  if (rut)    document.getElementById("pgRut").value    = rut;
-  if (idCita) document.getElementById("pgIdCita").value = idCita;
+  if (globalMode) {
+    // Modo global: sin paciente pre-cargado. Origen = presencial.
+    document.getElementById("pgOrigen").value = "presencial";
+  } else {
+    const conv   = activeConv || {};
+    const nombre = conv.display_name || conv.phone || "";
+    const rut    = conv.rut || "";
+    const idCita = conv.last_cita_id || "";
 
-  // Origen = chat (viene del panel)
-  document.getElementById("pgOrigen").value = "chat";
+    // Pre-cargar datos del paciente activo
+    if (nombre) document.getElementById("pgNombre").value = nombre;
+    if (rut)    document.getElementById("pgRut").value    = rut;
+    if (idCita) document.getElementById("pgIdCita").value = idCita;
+
+    // Origen = chat (viene del panel)
+    document.getElementById("pgOrigen").value = "chat";
+
+    // Cargar sugerencia desde API si tenemos rut o id_cita
+    if (rut || idCita) _pgCargarSugerencia(rut || null, idCita || null);
+  }
 
   // Mostrar modal
   document.getElementById("pgModal").hidden = false;
   document.getElementById("pgBody").hidden  = false;
   document.getElementById("pgSuccess").hidden = true;
 
-  // Cargar sugerencia desde API si tenemos rut o id_cita
-  if (rut || idCita) _pgCargarSugerencia(rut || null, idCita || null);
+  // En modo global, poner foco en RUT para que la recepcionista empiece ahí
+  if (globalMode) {
+    setTimeout(() => document.getElementById("pgRut")?.focus(), 60);
+  }
 }
 
 function closePagoModal(){
