@@ -134,11 +134,11 @@ function Hero({ visual = "fjord" }) {
         {blended ? (
           // mobile/tablet: el fiordo se muestra apilado y difuminado hacia el fondo
           <div className="reveal reveal-d2 relative lg:hidden -mx-6 -mt-2">
-            <div className="relative w-full h-[62vh] min-h-[460px] overflow-hidden">
-              <FjordScene className="absolute inset-0 h-full w-full" />
-              {/* alta e inmersiva: sangra a los bordes y se funde con el fondo arriba y abajo */}
-              <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, #F2F3F5 0%, rgba(242,243,245,0) 20%)" }}></div>
-              <div className="absolute inset-0" style={{ background: "linear-gradient(0deg, #F2F3F5 0%, rgba(242,243,245,0) 18%)" }}></div>
+            <div className="relative w-full h-[78vh] min-h-[560px] overflow-hidden">
+              <FjordScene className="absolute inset-0 h-full w-full object-[50%_30%]" />
+              {/* alta e inmersiva, encuadre hacia el cielo/cumbres; se funde con el fondo arriba y abajo */}
+              <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, #F2F3F5 0%, rgba(242,243,245,0) 16%)" }}></div>
+              <div className="absolute inset-0" style={{ background: "linear-gradient(0deg, #F2F3F5 0%, rgba(242,243,245,0) 14%)" }}></div>
             </div>
           </div>
         ) : (
