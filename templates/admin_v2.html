@@ -696,6 +696,93 @@ input, textarea, select{font-family:inherit; color:inherit}
 .mb-btn.save{background:var(--cmc-blue); color:#fff; border-color:var(--cmc-blue)}
 .mb-btn.save:hover{background:var(--cmc-navy)}
 .mb-btn:disabled{opacity:.6; cursor:not-allowed}
+/* ===== MODAL AGENDAR (wizard contextual) ==================================== */
+.ag-modal{
+  position:fixed; inset:0; z-index:300;
+  background:rgba(15,63,104,.4); backdrop-filter:blur(4px);
+  display:flex; align-items:center; justify-content:center; padding:16px;
+}
+.ag-modal[hidden]{display:none !important}
+.ag-dialog{
+  background:var(--panel); border-radius:16px; width:100%; max-width:480px;
+  max-height:90vh; overflow:hidden; display:flex; flex-direction:column;
+  box-shadow:var(--shadow-lg); border:1px solid var(--border);
+  animation:mbIn 150ms var(--ease-spring);
+}
+.ag-header{
+  display:flex; align-items:center; gap:10px;
+  padding:14px 18px; border-bottom:1px solid var(--border-soft); flex-shrink:0;
+}
+.ag-header h3{margin:0; font-size:14.5px; color:var(--cmc-navy); font-weight:700; flex:1}
+.ag-steps{
+  display:flex; gap:4px; align-items:center; font-size:10px; font-weight:700;
+  color:var(--text-dim); letter-spacing:.2px;
+}
+.ag-steps .ag-step{
+  padding:2px 8px; border-radius:10px; transition:background-color .15s, color .15s;
+}
+.ag-steps .ag-step.active{background:var(--cmc-aqua-soft); color:var(--cmc-aqua-dark)}
+.ag-steps .ag-step.done{background:var(--green-soft); color:var(--green-dark)}
+.ag-body{padding:16px 18px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:12px}
+.ag-footer{
+  display:flex; gap:8px; justify-content:flex-end; padding:12px 18px 14px;
+  border-top:1px solid var(--border-soft); flex-shrink:0;
+}
+/* Comparte mb-row / mb-btn / mb-grid2 del modal existente */
+.ag-patient-card{
+  background:var(--cmc-aqua-soft); border:1px solid var(--border);
+  border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:2px;
+}
+.ag-patient-card .ag-pname{font-weight:700; font-size:13px; color:var(--cmc-navy)}
+.ag-patient-card .ag-prut{font-size:12px; color:var(--text-mute)}
+.ag-patient-card .ag-pstatus{font-size:11px; color:var(--text-dim); margin-top:2px}
+.ag-rut-row{display:flex; gap:8px; align-items:flex-end}
+.ag-rut-row input{flex:1}
+.ag-rut-row button{padding:8px 12px; font-size:12px; font-weight:600;
+  background:var(--cmc-blue); color:#fff; border:none; border-radius:8px; cursor:pointer; white-space:nowrap}
+.ag-rut-row button:hover{background:var(--cmc-navy)}
+.ag-slot-grid{
+  display:grid; grid-template-columns:repeat(3,1fr); gap:8px;
+}
+.ag-slot{
+  padding:7px 4px; text-align:center; border-radius:8px; cursor:pointer;
+  border:2px solid var(--border); font-size:12.5px; font-weight:600; color:var(--text);
+  transition:border-color .12s, background-color .12s, color .12s;
+}
+.ag-slot:hover{border-color:var(--cmc-aqua); background:var(--cmc-aqua-soft)}
+.ag-slot.selected{border-color:var(--cmc-blue); background:var(--cmc-blue-soft); color:var(--cmc-navy)}
+.ag-confirm-block{
+  background:var(--panel-2); border-radius:10px; padding:14px 16px;
+  border:1px solid var(--border); display:flex; flex-direction:column; gap:6px;
+}
+.ag-confirm-row{display:flex; justify-content:space-between; font-size:12.5px}
+.ag-confirm-row .k{color:var(--text-mute); font-weight:600}
+.ag-confirm-row .v{color:var(--cmc-navy); font-weight:700; text-align:right}
+.ag-warn{
+  background:var(--amber-soft); border:1px solid #f3d06e; border-radius:8px;
+  padding:8px 12px; font-size:11.5px; color:var(--amber); font-weight:600;
+}
+.ag-success{
+  text-align:center; padding:20px 8px; display:flex; flex-direction:column;
+  align-items:center; gap:8px;
+}
+.ag-success .ag-check{
+  width:48px; height:48px; border-radius:50%; background:var(--green-soft);
+  display:flex; align-items:center; justify-content:center;
+  font-size:24px; margin-bottom:4px;
+}
+.ag-success h4{margin:0; color:var(--cmc-navy); font-size:15px; font-weight:800}
+.ag-success p{margin:0; color:var(--text-mute); font-size:12.5px; text-align:center}
+.ag-spinner{
+  border:3px solid var(--border); border-top-color:var(--cmc-aqua);
+  border-radius:50%; width:22px; height:22px;
+  animation:ag-spin .7s linear infinite; margin:16px auto;
+}
+@keyframes ag-spin{to{transform:rotate(360deg)}}
+/* Botón Agendar en chat-actions */
+.chat-btn.ag-cta{background:var(--cmc-aqua); color:#fff; border-color:var(--cmc-aqua)}
+.chat-btn.ag-cta:hover{background:var(--cmc-aqua-dark)}
+
 @keyframes emojiIn{from{opacity:0; transform:translateY(4px)} to{opacity:1; transform:none}}
 .emoji-picker .emoji-cat{
   grid-column:1 / -1; font-size:10.5px; font-weight:700; color:var(--text-mute);
@@ -1847,7 +1934,9 @@ function renderHeader(){
     acts.push(`<button class="chat-btn warn pulse" onclick="takeover()">${iconHand}Tomar control</button>`);
   }
   const iconBook = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="10" y1="16" x2="14" y2="16"/></svg>`;
-  acts.push(`<button class="chat-btn" onclick="openMarkBookedModal()" title="Marcar cita agendada manualmente">${iconBook}Agendar manual</button>`);
+  const iconAgenda = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M12 14v4M10 16h4"/></svg>`;
+  acts.push(`<button class="chat-btn ag-cta" onclick="openAgendarModal()" title="Agendar cita en Medilink desde este chat">${iconAgenda}Agendar</button>`);
+  acts.push(`<button class="chat-btn" onclick="openMarkBookedModal()" title="Marcar cita agendada manualmente">${iconBook}Manual</button>`);
   acts.push(`<a class="chat-btn" href="${MEDILINK_AGENDA_URL}" target="_blank" rel="noopener" title="Abrir la agenda en Medilink">🗓️ Medilink</a>`);
   acts.push(`<button class="chat-btn icon-only" onclick="copyRut()" title="Copiar RUT del paciente">🆔</button>`);
   acts.push(`<button class="chat-btn icon-only" onclick="copyPhone()" title="Copiar teléfono">${iconCopy}</button>`);
@@ -2656,6 +2745,8 @@ function setup(){
   setupEmojiPicker(ri);
   // Modal agendar manual
   setupMarkBookedModal();
+  // Modal agendar contextual (wizard Medilink)
+  setupAgendarModal();
   // Delegación: click en botón editar mensaje
   $("#messages").addEventListener("click", (e) => {
     const btn = e.target.closest(".msg-edit-btn");
@@ -2890,6 +2981,397 @@ document.addEventListener("DOMContentLoaded", () => {
   loadCrossSell(7);
 });
 
+/* =========================================================================
+ *  WIZARD: AGENDAR CITA (contextual desde el chat)
+ *
+ *  Pasos:
+ *   1 — Identificar paciente (RUT pre-llenado si está en perfil)
+ *   2 — Elegir profesional + fecha
+ *   3 — Elegir slot del día (consulta live a Medilink vía /alma/api/agenda/slots)
+ *   4 — Confirmar + crear cita (POST /alma/api/agenda/citas con confirmado:true)
+ * ========================================================================= */
+const AG = {
+  step: 1,
+  paciente: null,   // {id, nombre_completo, rut, email, telefono}
+  profesionales: [],
+  id_prof: null,
+  fecha: null,
+  slot: null,       // {hora_inicio, hora_fin}
+  loading: false,
+};
+
+function agStep(n){ AG.step = n; _agRenderStep(); }
+
+function _agSetStepClasses(){
+  [1,2,3,4].forEach(n => {
+    const el = document.getElementById("agStep" + n);
+    if (!el) return;
+    el.className = "ag-step" + (n === AG.step ? " active" : (n < AG.step ? " done" : ""));
+  });
+}
+
+function _agRenderStep(){
+  _agSetStepClasses();
+  const body   = document.getElementById("agBody");
+  const btnBk  = document.getElementById("agBtnBack");
+  const btnCx  = document.getElementById("agBtnCancel");
+  const btnNx  = document.getElementById("agBtnNext");
+  if (!body) return;
+
+  btnBk.style.display  = AG.step > 1 && AG.step < 5 ? "" : "none";
+  btnCx.style.display  = AG.step < 5 ? "" : "none";
+  btnNx.style.display  = AG.step < 5 ? "" : "none";
+  btnNx.disabled       = false;
+
+  if (AG.step === 1) _agRenderStep1(body, btnNx);
+  else if (AG.step === 2) _agRenderStep2(body, btnNx);
+  else if (AG.step === 3) _agRenderStep3(body, btnNx);
+  else if (AG.step === 4) _agRenderStep4(body, btnNx);
+  else if (AG.step === 5) _agRenderSuccess(body);
+}
+
+/* ----- Paso 1: Identificar paciente ------------------------------------- */
+function _agRenderStep1(body, btnNx){
+  const c = activeConv || {};
+  const rutConocido = !!(c.rut);
+  body.innerHTML = "";
+  btnNx.textContent = "Siguiente →";
+
+  const hint = document.createElement("div");
+  hint.style.cssText = "font-size:12px;color:var(--text-mute);margin-bottom:2px";
+  hint.textContent = "Identifica al paciente antes de buscar un horario.";
+  body.appendChild(hint);
+
+  if (AG.paciente){
+    const card = document.createElement("div");
+    card.className = "ag-patient-card";
+    const nameEl = document.createElement("div"); nameEl.className = "ag-pname"; nameEl.textContent = AG.paciente.nombre_completo;
+    const rutEl  = document.createElement("div"); rutEl.className  = "ag-prut";  rutEl.textContent = "RUT: " + AG.paciente.rut;
+    const stEl   = document.createElement("div"); stEl.className   = "ag-pstatus"; stEl.textContent = "Paciente encontrado en Medilink";
+    card.appendChild(nameEl); card.appendChild(rutEl); card.appendChild(stEl);
+    const chgBtn = document.createElement("button");
+    chgBtn.type = "button"; chgBtn.className = "mb-btn cancel";
+    chgBtn.style.cssText = "align-self:flex-start;margin-top:2px";
+    chgBtn.textContent = "Cambiar paciente";
+    chgBtn.addEventListener("click", () => { AG.paciente = null; _agRenderStep(); });
+    body.appendChild(card);
+    body.appendChild(chgBtn);
+  } else {
+    const row = document.createElement("div"); row.className = "mb-row";
+    const lbl = document.createElement("label"); lbl.textContent = "RUT del paciente";
+    const rutRow = document.createElement("div"); rutRow.className = "ag-rut-row";
+    const inp = document.createElement("input");
+    inp.type = "text"; inp.id = "agRutInput"; inp.placeholder = "12.345.678-9";
+    inp.value = c.rut || ""; inp.autocomplete = "off";
+    const buscarBtn = document.createElement("button");
+    buscarBtn.type = "button"; buscarBtn.textContent = "Buscar";
+    buscarBtn.addEventListener("click", agBuscarPaciente);
+    inp.addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); agBuscarPaciente(); } });
+    rutRow.appendChild(inp); rutRow.appendChild(buscarBtn);
+    row.appendChild(lbl); row.appendChild(rutRow);
+
+    const resultDiv = document.createElement("div");
+    resultDiv.id = "agPacienteResult";
+    resultDiv.style.cssText = "font-size:12px;color:var(--text-mute)";
+    if (!rutConocido) resultDiv.textContent = "Ingresa el RUT y presiona Buscar.";
+
+    body.appendChild(row);
+    body.appendChild(resultDiv);
+    btnNx.disabled = true;
+    inp.focus();
+    if (rutConocido && c.rut) setTimeout(agBuscarPaciente, 50);
+  }
+}
+
+async function agBuscarPaciente(){
+  const inp = document.getElementById("agRutInput");
+  if (!inp) return;
+  const rut = inp.value.trim();
+  if (!rut){ toast("Ingresa el RUT", "error"); return; }
+  const res = document.getElementById("agPacienteResult");
+  if (res){
+    res.textContent = "";
+    const sp = document.createElement("div"); sp.className = "ag-spinner";
+    res.appendChild(sp);
+  }
+  try {
+    const data = await api(`/alma/api/agenda/paciente?rut=${encodeURIComponent(rut)}`);
+    AG.paciente = data;
+    _agRenderStep();
+  } catch(e){
+    const msg = e.message.includes("404") ? "Paciente no encontrado en Medilink para ese RUT." : "Error al buscar: " + e.message;
+    if (res){
+      res.textContent = "";
+      const errDiv = document.createElement("div");
+      errDiv.style.cssText = "color:var(--red);font-size:12px;font-weight:600";
+      errDiv.textContent = msg;
+      res.appendChild(errDiv);
+    }
+  }
+}
+
+/* ----- Paso 2: Elegir profesional + fecha -------------------------------- */
+async function _agRenderStep2(body, btnNx){
+  btnNx.disabled = true;
+  body.innerHTML = "";
+  const sp2 = document.createElement("div"); sp2.className = "ag-spinner";
+  body.appendChild(sp2);
+  try {
+    if (!AG.profesionales.length){
+      const d = await api("/alma/api/agenda/profesionales");
+      AG.profesionales = d.profesionales || [];
+    }
+  } catch(e){
+    body.innerHTML = "";
+    const errDiv = document.createElement("div");
+    errDiv.style.cssText = "color:var(--red);font-size:12px";
+    errDiv.textContent = "Error al cargar profesionales: " + e.message;
+    body.appendChild(errDiv);
+    return;
+  }
+
+  const today = new Date().toLocaleDateString("sv", {timeZone:"America/Santiago"}).slice(0,10);
+
+  body.innerHTML = "";
+
+  // Row profesional
+  const rowProf = document.createElement("div"); rowProf.className = "mb-row";
+  const lblProf = document.createElement("label"); lblProf.textContent = "Profesional *";
+  const sel = document.createElement("select"); sel.id = "agProfSelect";
+  const optDefault = document.createElement("option"); optDefault.value = ""; optDefault.textContent = "Selecciona un profesional…";
+  sel.appendChild(optDefault);
+  AG.profesionales.forEach(p => {
+    const o = document.createElement("option");
+    o.value = p.id;
+    o.textContent = `${p.nombre} — ${p.especialidad}`;
+    if (AG.id_prof === p.id) o.selected = true;
+    sel.appendChild(o);
+  });
+  rowProf.appendChild(lblProf); rowProf.appendChild(sel);
+
+  // Row fecha
+  const rowFecha = document.createElement("div"); rowFecha.className = "mb-row";
+  const lblFecha = document.createElement("label"); lblFecha.textContent = "Fecha *";
+  const dateInp = document.createElement("input");
+  dateInp.type = "date"; dateInp.id = "agFechaInput";
+  dateInp.value = AG.fecha || today; dateInp.min = today;
+  rowFecha.appendChild(lblFecha); rowFecha.appendChild(dateInp);
+
+  body.appendChild(rowProf); body.appendChild(rowFecha);
+
+  const check = () => {
+    const p = document.getElementById("agProfSelect")?.value;
+    const f = document.getElementById("agFechaInput")?.value;
+    AG.id_prof = p ? parseInt(p) : null;
+    AG.fecha   = f || null;
+    btnNx.disabled = !(AG.id_prof && AG.fecha);
+  };
+  sel.addEventListener("change", check);
+  dateInp.addEventListener("change", check);
+  check();
+}
+
+/* ----- Paso 3: Elegir slot ----------------------------------------------- */
+async function _agRenderStep3(body, btnNx){
+  btnNx.disabled = true;
+  AG.slot = null;
+  body.innerHTML = "";
+  const loadingMsg = document.createElement("div");
+  loadingMsg.style.cssText = "font-size:12px;color:var(--text-mute)";
+  loadingMsg.textContent = "Consultando disponibilidad…";
+  const sp = document.createElement("div"); sp.className = "ag-spinner";
+  body.appendChild(loadingMsg); body.appendChild(sp);
+  try {
+    const data = await api(`/alma/api/agenda/slots?id_prof=${AG.id_prof}&fecha=${AG.fecha}`);
+    const slots = data.slots || [];
+    if (!slots.length){
+      body.innerHTML = "";
+      const noSlots = document.createElement("div");
+      noSlots.style.cssText = "font-size:12.5px;color:var(--text-mute);text-align:center;padding:16px 0";
+      noSlots.textContent = "No hay horarios disponibles para esa fecha. Vuelve y elige otra fecha.";
+      body.appendChild(noSlots);
+      return;
+    }
+    const prof = AG.profesionales.find(p => p.id === AG.id_prof);
+
+    // Construir contenedor seguro con DOM (sin onclick inline)
+    const infoDiv = document.createElement("div");
+    infoDiv.style.cssText = "font-size:12px;color:var(--text-mute)";
+    infoDiv.textContent = `${prof?.nombre||''} — ${AG.fecha||''} — ${slots.length} hora${slots.length!==1?'s':''} disponible${slots.length!==1?'s':''}`;
+    const grid = document.createElement("div");
+    grid.className = "ag-slot-grid";
+    grid.id = "agSlotGrid";
+    slots.forEach(s => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "ag-slot";
+      btn.textContent = s.hora_inicio;
+      btn.dataset.hi = s.hora_inicio;
+      btn.dataset.hf = s.hora_fin;
+      btn.addEventListener("click", () => agSelectSlot(btn, s.hora_inicio, s.hora_fin));
+      grid.appendChild(btn);
+    });
+    body.innerHTML = "";
+    body.appendChild(infoDiv);
+    body.appendChild(grid);
+  } catch(e){
+    body.innerHTML = "";
+    const errDiv = document.createElement("div");
+    errDiv.style.cssText = "color:var(--red);font-size:12px";
+    errDiv.textContent = "Error al consultar horarios: " + e.message;
+    body.appendChild(errDiv);
+  }
+}
+
+function agSelectSlot(el, hi, hf){
+  AG.slot = {hora_inicio: hi, hora_fin: hf};
+  document.querySelectorAll("#agSlotGrid .ag-slot").forEach(b => b.classList.remove("selected"));
+  el.classList.add("selected");
+  document.getElementById("agBtnNext").disabled = false;
+}
+
+/* ----- Paso 4: Confirmar ------------------------------------------------- */
+function _agRenderStep4(body, btnNx){
+  const prof = AG.profesionales.find(p => p.id === AG.id_prof);
+  body.innerHTML = "";
+
+  const warn = document.createElement("div"); warn.className = "ag-warn";
+  warn.textContent = "Revisa los datos antes de confirmar. Esta acción crea una cita real en Medilink.";
+
+  const block = document.createElement("div"); block.className = "ag-confirm-block";
+  const rows = [
+    ["Paciente",    AG.paciente?.nombre_completo || ""],
+    ["RUT",         AG.paciente?.rut || ""],
+    ["Profesional", `${prof?.nombre||""} — ${prof?.especialidad||""}`],
+    ["Fecha",       AG.fecha || ""],
+    ["Horario",     `${AG.slot?.hora_inicio||""} – ${AG.slot?.hora_fin||""}`],
+  ];
+  rows.forEach(([k, v]) => {
+    const row = document.createElement("div"); row.className = "ag-confirm-row";
+    const kEl = document.createElement("span"); kEl.className = "k"; kEl.textContent = k;
+    const vEl = document.createElement("span"); vEl.className = "v"; vEl.textContent = v;
+    row.appendChild(kEl); row.appendChild(vEl);
+    block.appendChild(row);
+  });
+
+  body.appendChild(warn);
+  body.appendChild(block);
+
+  btnNx.textContent = "Confirmar y agendar";
+  btnNx.style.background = "var(--green-dark)";
+  btnNx.style.borderColor = "var(--green-dark)";
+}
+
+/* ----- Paso 5: Éxito ----------------------------------------------------- */
+function _agRenderSuccess(body){
+  const prof = AG.profesionales.find(p => p.id === AG.id_prof);
+  document.getElementById("agBtnNext").style.display = "none";
+  document.getElementById("agBtnBack").style.display = "none";
+  document.getElementById("agBtnCancel").textContent = "Cerrar";
+
+  body.innerHTML = "";
+  const wrap = document.createElement("div"); wrap.className = "ag-success";
+  const check = document.createElement("div"); check.className = "ag-check"; check.textContent = "✓";
+  const h4 = document.createElement("h4"); h4.textContent = "Cita agendada";
+  const p1 = document.createElement("p"); p1.textContent = AG.paciente?.nombre_completo || "";
+  const p2 = document.createElement("p"); p2.textContent = `${prof?.nombre||""} · ${AG.fecha||""} ${AG.slot?.hora_inicio||""}`;
+  wrap.appendChild(check); wrap.appendChild(h4); wrap.appendChild(p1); wrap.appendChild(p2);
+  body.appendChild(wrap);
+
+  // Refrescar panel contexto con nuevas citas
+  if (activePhone) setTimeout(loadCitas, 800);
+}
+
+/* ----- Control del wizard ----------------------------------------------- */
+async function agNext(){
+  if (AG.step === 1){
+    if (!AG.paciente){ toast("Busca el paciente primero", "error"); return; }
+    agStep(2);
+  } else if (AG.step === 2){
+    const profEl  = document.getElementById("agProfSelect");
+    const fechaEl = document.getElementById("agFechaInput");
+    if (profEl)  AG.id_prof = parseInt(profEl.value) || null;
+    if (fechaEl) AG.fecha   = fechaEl.value || null;
+    if (!AG.id_prof || !AG.fecha){ toast("Elige profesional y fecha", "error"); return; }
+    agStep(3);
+  } else if (AG.step === 3){
+    if (!AG.slot){ toast("Selecciona un horario", "error"); return; }
+    agStep(4);
+  } else if (AG.step === 4){
+    await agCrearCita();
+  }
+}
+
+function agBack(){
+  if (AG.step > 1) agStep(AG.step - 1);
+}
+
+async function agCrearCita(){
+  const btnNx = document.getElementById("agBtnNext");
+  btnNx.disabled = true;
+  btnNx.textContent = "Creando…";
+  try {
+    await api("/alma/api/agenda/citas", {
+      method: "POST",
+      body: JSON.stringify({
+        id_paciente:    AG.paciente.id,
+        id_profesional: AG.id_prof,
+        fecha:          AG.fecha,
+        hora_inicio:    AG.slot.hora_inicio,
+        hora_fin:       AG.slot.hora_fin,
+        confirmado:     true,
+      }),
+    });
+    agStep(5);
+    toast("Cita creada correctamente", "success");
+  } catch(e){
+    btnNx.disabled = false;
+    btnNx.textContent = "Confirmar y agendar";
+    const msg = e.message.includes("502") ? "Medilink rechazó el horario. Puede que ya esté ocupado." : "Error: " + e.message;
+    toast(msg, "error");
+  }
+}
+
+/* ----- Apertura / cierre ------------------------------------------------ */
+function openAgendarModal(){
+  if (!activePhone){ toast("Selecciona un chat primero", "error"); return; }
+  // Resetear estado conservando datos del paciente si ya se buscó
+  AG.step       = 1;
+  AG.paciente   = null;
+  AG.profesionales = [];
+  AG.id_prof    = null;
+  AG.fecha      = null;
+  AG.slot       = null;
+
+  // Pre-cargar RUT desde la conversación activa
+  const c = activeConv || {};
+  if (c.rut) AG._preRut = c.rut; // usado en _agRenderStep1 para auto-buscar
+
+  // Resetear botón Next
+  const btnNx = document.getElementById("agBtnNext");
+  if (btnNx){ btnNx.textContent = "Siguiente →"; btnNx.style.background = ""; btnNx.style.borderColor = ""; }
+
+  document.getElementById("agModal").hidden = false;
+  _agRenderStep();
+}
+
+function closeAgendarModal(){
+  document.getElementById("agModal").hidden = true;
+}
+
+function setupAgendarModal(){
+  const modal = document.getElementById("agModal");
+  if (!modal) return;
+  document.getElementById("agClose").onclick  = closeAgendarModal;
+  document.getElementById("agBtnCancel").onclick = closeAgendarModal;
+  document.getElementById("agBtnNext").onclick   = agNext;
+  document.getElementById("agBtnBack").onclick   = agBack;
+  modal.addEventListener("click", e => { if (e.target === modal) closeAgendarModal(); });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && !modal.hidden) closeAgendarModal();
+  });
+}
+
 function syncAppBadge(count) {
   if ("setAppBadge" in navigator) {
     try { count > 0 ? navigator.setAppBadge(count) : navigator.clearAppBadge(); } catch(_){}
@@ -2899,6 +3381,33 @@ function syncAppBadge(count) {
   }
 }
 </script>
+
+<!-- ===== MODAL AGENDAR (wizard contextual) ================================= -->
+<div id="agModal" class="ag-modal" hidden role="dialog" aria-modal="true" aria-labelledby="agModalTitle">
+  <div class="ag-dialog">
+    <div class="ag-header">
+      <h3 id="agModalTitle">Agendar cita</h3>
+      <div class="ag-steps">
+        <span class="ag-step" id="agStep1">1 Paciente</span>
+        <span style="color:var(--border)">›</span>
+        <span class="ag-step" id="agStep2">2 Profesional</span>
+        <span style="color:var(--border)">›</span>
+        <span class="ag-step" id="agStep3">3 Horario</span>
+        <span style="color:var(--border)">›</span>
+        <span class="ag-step" id="agStep4">4 Confirmar</span>
+      </div>
+      <button class="mb-close" id="agClose" type="button" aria-label="Cerrar">&times;</button>
+    </div>
+    <div class="ag-body" id="agBody">
+      <!-- contenido inyectado por el wizard JS -->
+    </div>
+    <div class="ag-footer" id="agFooter">
+      <button class="mb-btn cancel" id="agBtnBack" type="button" style="display:none">← Volver</button>
+      <button class="mb-btn cancel" id="agBtnCancel" type="button">Cancelar</button>
+      <button class="mb-btn save"   id="agBtnNext"   type="button">Siguiente →</button>
+    </div>
+  </div>
+</div>
 
 <!-- ===== CROSS-SELL FUNNEL MODAL ======================================== -->
 <div id="csModal" class="mb-modal" hidden role="dialog" aria-modal="true" aria-labelledby="csModalTitle" style="position:fixed;inset:0;z-index:9000;background:rgba(15,63,104,.45);display:flex;align-items:center;justify-content:center;padding:16px">
