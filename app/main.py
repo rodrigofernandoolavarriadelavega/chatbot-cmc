@@ -3367,10 +3367,12 @@ def alma_shell(token: str | None = Query(None),
                 if k in ALMA_MODULE_REGISTRY
             ]
         profile_modules_json = _json_alma.dumps(modules_list, ensure_ascii=False)
+        panel_profesional = "true" if profile.get("panel_profesional", True) else "false"
         return (_ALMA_HTML
                 .replace("__TOKEN__", active_token)
                 .replace("__ALMA_VARIANTE_LINE__", variante_line)
-                .replace("__PROFILE_MODULES__", profile_modules_json))
+                .replace("__PROFILE_MODULES__", profile_modules_json)
+                .replace("__PANEL_PROFESIONAL__", panel_profesional))
 
     if token and _is_admin_token(token):
         return _render(token)
