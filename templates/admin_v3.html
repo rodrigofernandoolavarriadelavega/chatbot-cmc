@@ -92,6 +92,13 @@ input,textarea{font-family:inherit;color:inherit}
 .top .ham{display:none;position:relative;z-index:1;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);
   width:38px;height:38px;border-radius:10px;align-items:center;justify-content:center}
 .top .ham svg{width:20px;height:20px;stroke:#fff}
+.health{display:inline-flex;align-items:center;gap:7px;position:relative;z-index:1;margin-left:6px;
+  padding:6px 12px;border-radius:999px;font-size:11.5px;font-weight:700;background:rgba(255,255,255,.1);
+  border:1px solid rgba(255,255,255,.16);color:#fff;backdrop-filter:blur(6px);white-space:nowrap}
+.health .hdot{width:8px;height:8px;border-radius:50%;background:#7CFFB2;box-shadow:0 0 0 3px rgba(124,255,178,.3)}
+.health.warn .hdot{background:#ffd479;box-shadow:0 0 0 3px rgba(201,138,20,.35)}
+.health.down{background:rgba(217,76,76,.85);border-color:#ff8a8a}
+.health.down .hdot{background:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.3);animation:blink 1s infinite}
 .kpis{display:flex;gap:8px;margin-left:8px;position:relative;z-index:1}
 .kpi{display:inline-flex;align-items:center;gap:7px;padding:6px 13px;border-radius:999px;font-size:11.5px;
   font-weight:600;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);color:rgba(255,255,255,.85);
@@ -380,12 +387,29 @@ input,textarea{font-family:inherit;color:inherit}
 .cf-open svg{width:15px;height:15px;stroke:var(--muted)}
 .cf-open:hover{border-color:var(--aqua);background:var(--aqua-soft)}.cf-open:hover svg{stroke:var(--blue)}
 
-/* Composer attach */
+/* Composer attach + plantilla */
 .attach{width:46px;height:46px;border-radius:14px;background:var(--panel-2);border:1px solid var(--line);
   display:grid;place-items:center;flex-shrink:0;transition:.15s}
 .attach:hover{border-color:var(--aqua);background:var(--aqua-soft)}
 .attach svg{width:19px;height:19px;stroke:var(--muted)}
 .attach:hover svg{stroke:var(--blue)}
+
+/* Selector de plantillas */
+.tpl-group{margin-bottom:14px}
+.tpl-group-h{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px}
+.tpl-item{display:flex;align-items:center;gap:11px;padding:11px 13px;border:1px solid var(--line);border-radius:12px;
+  margin-bottom:7px;cursor:pointer;transition:.13s}
+.tpl-item:hover{border-color:var(--aqua);background:var(--aqua-soft)}
+.tpl-item .tl{flex:1;min-width:0}
+.tpl-item .tl .nm{font-size:13px;font-weight:700}
+.tpl-item .tl .pv{font-size:11.5px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tpl-item .go{width:26px;height:26px;border-radius:8px;background:var(--panel-2);display:grid;place-items:center;flex-shrink:0}
+.tpl-item .go svg{width:14px;height:14px;stroke:var(--muted)}
+.tpl-back{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--blue);margin-bottom:14px;background:none}
+.tpl-back svg{width:14px;height:14px;stroke:var(--blue)}
+.tpl-preview{background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:13px 15px;font-size:13px;
+  line-height:1.5;white-space:pre-wrap;margin:6px 0 16px;color:var(--ink)}
+.tpl-preview b{color:var(--navy)}
 
 /* Toast */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--navy);color:#fff;
@@ -409,6 +433,7 @@ input,textarea{font-family:inherit;color:inherit}
         <span class="nm">Carampangue <span class="v3">v3</span><span class="beta">beta</span></span>
       </span>
     </div>
+    <button class="health" id="healthPill" title="Estado del bot"><span class="hdot"></span><span id="healthTxt">…</span></button>
     <div class="kpis">
       <button class="kpi k-human" data-seg="human"><span class="dot"></span><b id="kHuman">0</b> humano</button>
       <button class="kpi k-wait" data-seg="wait"><span class="dot"></span><b id="kWait">0</b> esperando</button>
@@ -489,6 +514,7 @@ input,textarea{font-family:inherit;color:inherit}
       <div class="composer">
         <div class="qreplies" id="qreplies"></div>
         <div class="composer-row">
+          <button class="attach" id="tplBtn" title="Enviar plantilla"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></button>
           <button class="attach" id="attachBtn" title="Enviar documento o imagen"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button>
           <input type="file" id="fileInput" style="display:none" accept="image/*,application/pdf,.doc,.docx">
           <textarea id="msgInput" placeholder="Escribe un mensaje… (Enter envía, Shift+Enter salto de línea)" rows="1"></textarea>
@@ -526,6 +552,16 @@ input,textarea{font-family:inherit;color:inherit}
       <button class="btn btn-ghost" onclick="closeBooked()">Cancelar</button>
       <button class="btn btn-primary" id="bkSave">Guardar cita</button>
     </div>
+  </div>
+</div>
+
+<!-- Modal plantillas -->
+<div class="modal-bg" id="tplModal">
+  <div class="modal wide">
+    <h3 id="tplTitle">Plantillas de WhatsApp</h3>
+    <p class="sub" id="tplSub">Mensajes aprobados por Meta (sirven fuera de la ventana de 24h). Elige uno; los datos del paciente se completan solos.</p>
+    <div id="tplContent"></div>
+    <div class="modal-actions" id="tplActions"><button class="btn btn-ghost" onclick="closeTpl()">Cerrar</button></div>
   </div>
 </div>
 
@@ -629,6 +665,22 @@ function stateBadge(s){
   if(s==="COMPLETED")return {cls:"b-done",txt:"Agendado"};
   return {cls:"b-idle",txt:"Inactivo"};
 }
+// Diccionario estado técnico → español legible para recepción (#4)
+const STATE_ES={
+  IDLE:"Inactivo", COMPLETED:"Cita agendada", HUMAN_TAKEOVER:"Atendido por ti",
+  WAIT_ESPECIALIDAD:"Eligiendo especialidad", WAIT_SLOT:"Eligiendo hora", WAIT_MODALIDAD:"Eligiendo modalidad",
+  WAIT_QUICK_BOOK:"Reservando 1-clic", WAIT_BOOKING_FOR:"¿Para quién es la hora?",
+  WAIT_PHONE_OWNER_NAME:"Nombre del titular", WAIT_RUT_AGENDAR:"Esperando RUT (agendar)",
+  WAIT_RUT_CANCELAR:"Esperando RUT (cancelar)", WAIT_RUT_VER:"Esperando RUT (ver citas)",
+  WAIT_RUT_REAGENDAR:"Esperando RUT (reagendar)", WAIT_NOMBRE_NUEVO:"Registrando nombre",
+  WAIT_DATOS_NUEVO:"Registrando datos", WAIT_FECHA_NAC:"Registrando fecha nac.", WAIT_SEXO:"Registrando sexo",
+  WAIT_COMUNA:"Registrando comuna", WAIT_EMAIL:"Registrando email", WAIT_REFERRAL:"¿Cómo nos conoció?",
+  WAIT_REFERRAL_POST:"¿Cómo nos conoció?", WAIT_REFERRAL_CODE:"Código de referido",
+  CONFIRMING_CITA:"Confirmando cita", CONFIRMING_CANCEL:"Confirmando cancelación",
+  CONFIRMING_REAGENDAR:"Confirmando reagenda", WAIT_CITA_CANCELAR:"Eligiendo cita a cancelar",
+  WAIT_CITA_REAGENDAR:"Eligiendo cita a reagendar",
+};
+function stateLabelFriendly(s){return STATE_ES[s]||(isWait(s)?"En proceso":(s||"—"));}
 // clasificación de prioridad/segmento
 function segOf(c){
   const segs=[];
@@ -840,7 +892,7 @@ function renderChatHeader(){
   const m=CURMETA, ch=CH(m.phone), col=avatarColor(m.nombre||m.phone), sb=stateBadge(m.state);
   document.getElementById("chAvatar").outerHTML=`<div class="avatar" id="chAvatar" style="background:${col}">${esc(initials(m.nombre,m.phone))}<span class="ch ${ch}">${chSvg(ch)}</span></div>`;
   document.getElementById("chName").textContent=m.nombre||formatPhone(m.phone);
-  let sub=`<span class="badge ${sb.cls}">${sb.txt}</span><span class="meta">${esc(formatPhone(m.phone))}</span>`;
+  let sub=`<span class="badge ${sb.cls}">${esc(stateLabelFriendly(m.state))}</span><span class="meta">${esc(formatPhone(m.phone))}</span>`;
   if(m.rut)sub+=`<span class="meta">· ${esc(m.rut)}</span>`;
   document.getElementById("chSub").innerHTML=sub;
   const isHuman=m.state==="HUMAN_TAKEOVER";
@@ -1087,6 +1139,92 @@ async function sendDocument(file){
   }catch(e){toast("No se pudo enviar: "+e.message,true);}
 }
 
+// ===== Plantillas WhatsApp (botones rápidos) =====
+// d: fuente del default → nombre | esp | prof | "" (manual)
+const TEMPLATES=[
+  {g:"Recordatorio / informe",items:[
+    {n:"informe_listo",l:"Informe listo",b:"Hola {1} 👋 Tu informe de *{2}* ya está disponible.\n\nResponde a este mensaje y te lo enviamos por aquí 📄",p:[{k:"Nombre",d:"nombre"},{k:"Examen / estudio",d:""}]},
+    {n:"seguimiento_medico",l:"Seguimiento médico",b:"Hola {1} 👋 El *{2}* del Centro Médico Carampangue quiere saber cómo has evolucionado desde tu última consulta.",p:[{k:"Nombre",d:"nombre"},{k:"Profesional",d:"prof"}]},
+    {n:"postconsulta_seguimiento",l:"Post-consulta",b:"Hola {1} 😊 ¿Cómo te sientes después de tu consulta de *{2}* con *{3}*?\n\nTu opinión nos ayuda a mejorar 🙏",p:[{k:"Nombre",d:"nombre"},{k:"Especialidad",d:"esp"},{k:"Profesional",d:"prof"}]},
+    {n:"control_especialidad",l:"Toca control",b:"Hola {1} 😊 Ya va correspondiendo tu control de *{2}* 📅\n\n¿Quieres ver horarios disponibles?",p:[{k:"Nombre",d:"nombre"},{k:"Especialidad",d:"esp"}]},
+    {n:"adherencia_kine",l:"Adherencia kinesiología",b:"Hola {1} 💪 Para que tu tratamiento de kinesiología funcione bien, es importante mantener continuidad.\n\n¿Quieres que te ayude a agendar la próxima?",p:[{k:"Nombre",d:"nombre"}]},
+  ]},
+  {g:"Reactivación / win-back",items:[
+    {n:"reactivacion_paciente",l:"Reactivación",b:"Hola {1} 👋 Hace un tiempo no te vemos en el *Centro Médico Carampangue* 🏥\n\n¿Quieres retomar tu atención de *{2}*?",p:[{k:"Nombre",d:"nombre"},{k:"Especialidad",d:"esp"}]},
+    {n:"winback_fidelizacion",l:"Chequeo preventivo",b:"Hola {1}, del Centro Médico Carampangue.\n\nTu última visita fue hace más de 3 meses. Un chequeo preventivo puede detectar problemas a tiempo.",p:[{k:"Nombre",d:"nombre"}]},
+    {n:"winback_mg_v1",l:"Win-back medicina",b:"Hola {1}, te saluda el Centro Médico Carampangue. Hace varios meses no te visitamos. Si tienes algún tema de salud pendiente, agéndalo.",p:[{k:"Nombre",d:"nombre"}]},
+    {n:"winback_odontologia_v1",l:"Win-back dental",b:"Hola {1}, te saludamos desde el Centro Médico Carampangue.\n\nLos especialistas recomiendan un control dental cada 6 meses.",p:[{k:"Nombre",d:"nombre"},{k:"Profesional",d:"prof"}]},
+  ]},
+  {g:"Campañas de salud",items:[
+    {n:"campana_mes_corazon",l:"Mes del corazón",b:"Hola {1}, del Centro Médico Carampangue.\n\nAgosto es el Mes del Corazón. Un control cardiológico puede prevenir enfermedades silenciosas.",p:[{k:"Nombre",d:"nombre"}]},
+    {n:"campana_invierno_influenza",l:"Vacuna influenza",b:"Hola {1}, del Centro Médico Carampangue.\n\nSe acerca el invierno y es importante vacunarse contra la influenza.",p:[{k:"Nombre",d:"nombre"}]},
+    {n:"campana_mujer_octubre",l:"Prevención mama",b:"Hola {1}, del Centro Médico Carampangue.\n\nOctubre es el Mes de la Prevención del Cáncer de Mama. Si tienes más de 40 años, la mamografía anual es clave.",p:[{k:"Nombre",d:"nombre"}]},
+    {n:"campana_salud_mental",l:"Salud mental",b:"Hola {1}, del Centro Médico Carampangue.\n\nOctubre es el Mes de la Salud Mental. Cuidar tu mente es tan importante como tu cuerpo.",p:[{k:"Nombre",d:"nombre"}]},
+  ]},
+  {g:"Sugerencias (cross-sell)",items:[
+    {n:"crosssell_kine",l:"Sugerir kinesiología",b:"Hola {1} 😊 Muchas veces, tras una consulta de medicina o traumatología se recomienda continuar con kinesiología.\n\n¿Te gustaría agendar?",p:[{k:"Nombre",d:"nombre"}]},
+    {n:"crosssell_mg_chequeo",l:"Sugerir chequeo",b:"Hola {1}, del Centro Médico Carampangue.\n\nPasaron unos meses desde tu última consulta. Puedes agendar un control médico con solicitud de exámenes.",p:[{k:"Nombre",d:"nombre"}]},
+    {n:"crosssell_odonto_estetica",l:"Sugerir estética facial",b:"Hola {1}, del Centro Médico Carampangue.\n\nEn el CMC también hacemos estética facial: toxina botulínica, bioestimuladores y más.",p:[{k:"Nombre",d:"nombre"}]},
+  ]},
+];
+function firstName(n){return (n||"").trim().split(/\s+/)[0]||"";}
+function tplDefault(d){
+  if(d==="nombre")return firstName(CURMETA&&CURMETA.nombre);
+  if(d==="esp")return (CURMETA&&CURMETA._lc&&CURMETA._lc.especialidad)||"";
+  if(d==="prof")return (CURMETA&&CURMETA._lc&&CURMETA._lc.profesional)||"";
+  return "";
+}
+function tplRender(b,vals){
+  let out=esc(b);
+  vals.forEach((v,i)=>{out=out.replace(new RegExp("\\{"+(i+1)+"\\}","g"),"<b>"+esc(v||"…")+"</b>");});
+  return out.replace(/\*(.+?)\*/g,"$1");
+}
+function closeTpl(){document.getElementById("tplModal").classList.remove("open");}
+function openTpl(){
+  if(!CUR){toast("Abre una conversación primero",true);return;}
+  document.getElementById("tplModal").classList.add("open");
+  renderTplList();
+}
+function renderTplList(){
+  document.getElementById("tplTitle").textContent="Plantillas de WhatsApp";
+  document.getElementById("tplSub").textContent="Mensajes aprobados por Meta. Elige uno; los datos del paciente se completan solos.";
+  const box=document.getElementById("tplContent");
+  box.innerHTML=TEMPLATES.map(g=>`<div class="tpl-group"><div class="tpl-group-h">${esc(g.g)}</div>
+    ${g.items.map(t=>`<div class="tpl-item" data-n="${esc(t.n)}"><div class="tl"><div class="nm">${esc(t.l)}</div>
+      <div class="pv">${esc(t.b.replace(/\*/g,"").replace(/\{1\}/g,firstName(CURMETA.nombre)||"paciente").split("\n")[0])}</div></div>
+      <span class="go"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span></div>`).join("")}</div>`).join("");
+  box.querySelectorAll(".tpl-item").forEach(el=>el.addEventListener("click",()=>renderTplForm(el.dataset.n)));
+}
+function renderTplForm(name){
+  let tpl;TEMPLATES.forEach(g=>g.items.forEach(t=>{if(t.n===name)tpl=t;}));
+  if(!tpl)return;
+  document.getElementById("tplTitle").textContent=tpl.l;
+  document.getElementById("tplSub").textContent="Revisa los datos y envía. El paciente recibe el mensaje al instante.";
+  const box=document.getElementById("tplContent");
+  box.innerHTML=`<button class="tpl-back" id="tplBack"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Volver a la lista</button>
+    ${tpl.p.map((pp,i)=>`<div class="field"><label>${esc(pp.k)}</label><input class="tplp" data-i="${i}" value="${esc(tplDefault(pp.d))}"></div>`).join("")}
+    <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin:4px 0 6px">Vista previa</label>
+    <div class="tpl-preview" id="tplPrev"></div>`;
+  const inputs=[...box.querySelectorAll(".tplp")];
+  const upd=()=>{document.getElementById("tplPrev").innerHTML=tplRender(tpl.b,inputs.map(x=>x.value));};
+  inputs.forEach(x=>x.addEventListener("input",upd));upd();
+  box.querySelector("#tplBack").addEventListener("click",renderTplList);
+  document.getElementById("tplActions").innerHTML=`<button class="btn btn-ghost" onclick="closeTpl()">Cancelar</button><button class="btn btn-primary" id="tplSend">Enviar plantilla</button>`;
+  document.getElementById("tplSend").addEventListener("click",()=>sendTemplate(tpl,inputs.map(x=>x.value)));
+}
+async function sendTemplate(tpl,vals){
+  if(vals.some(v=>!String(v).trim())){toast("Completa todos los campos",true);return;}
+  const fd=new FormData();fd.append("phone",CUR);fd.append("template_name",tpl.n);fd.append("params",JSON.stringify(vals));
+  try{
+    const url="/admin/api/send-template"+(TOKEN?"?token="+encodeURIComponent(TOKEN):"");
+    const r=await fetch(url,{method:"POST",body:fd,credentials:"include",headers:HEADERS});
+    if(!r.ok)throw new Error("HTTP "+r.status);
+    closeTpl();toast("Plantilla enviada: "+tpl.l);
+    CURMETA.state="HUMAN_TAKEOVER";const c=CONV.find(x=>x.phone===CUR);if(c)c.state="HUMAN_TAKEOVER";
+    renderChatHeader();setTimeout(refreshThread,600);
+  }catch(e){toast("No se pudo enviar: "+e.message,true);}
+}
+
 // ===== Wire UI =====
 document.getElementById("segs").addEventListener("click",e=>{const b=e.target.closest(".seg");if(!b)return;
   FILTER=b.dataset.seg;document.querySelectorAll(".seg").forEach(s=>s.classList.toggle("on",s===b));renderCounts();renderList();});
@@ -1120,6 +1258,7 @@ document.getElementById("qreplies").addEventListener("click",e=>{const b=e.targe
 document.getElementById("wlBtn").addEventListener("click",openWl);
 document.getElementById("confBtn").addEventListener("click",openConf);
 document.getElementById("profsBtn").addEventListener("click",openProfs);
+document.getElementById("tplBtn").addEventListener("click",openTpl);
 document.getElementById("attachBtn").addEventListener("click",()=>{if(!CUR){toast("Abre una conversación primero",true);return;}document.getElementById("fileInput").click();});
 document.getElementById("fileInput").addEventListener("change",e=>{const f=e.target.files[0];if(f)sendDocument(f);e.target.value="";});
 document.getElementById("ctxToggleBtn").addEventListener("click",()=>document.getElementById("app").classList.toggle("ctx-open"));
@@ -1156,7 +1295,23 @@ async function poll(){
   prevHuman=human;
   if(CUR)refreshThread();
 }
+// ===== Semáforo de salud del bot (#2) =====
+async function pollHealth(){
+  const pill=document.getElementById("healthPill"),txt=document.getElementById("healthTxt");
+  try{
+    const r=await api("/health");
+    if(!r.ok)throw new Error("http "+r.status);
+    const h=await r.json();
+    if(h.status==="ok"&&(h.medilink==="ok"||h.medilink_state==="up")){
+      pill.className="health";txt.textContent="Bot activo";pill.title="Bot operativo · Medilink "+(h.medilink_ms||"?")+"ms";
+    }else{
+      pill.className="health warn";txt.textContent="Medilink lento";pill.title="Bot activo, pero Medilink "+(h.medilink_state||h.medilink||"?");
+    }
+  }catch(e){ pill.className="health down";txt.textContent="Bot caído";pill.title="El bot no responde ("+e.message+"). Avisa a soporte."; }
+}
+
 loadInbox().then(()=>{ if(location.hash){const p=location.hash.slice(1);if(p)openChat(p);} });
+pollHealth(); setInterval(pollHealth,30000);
 setInterval(poll,10000);
 </script>
 </body>
