@@ -715,14 +715,19 @@ function _actualizarFilaFonasa(tr, prevVal) {
   }
 }
 
-// Actualiza visibilidad código transferencia en una fila inline según método
+// Actualiza visibilidad y label de referencia de pago en una fila inline según método
 function _actualizarFilaMetodo(tr, metodoVal) {
-  const isTransf = (metodoVal === 'transferencia');
+  const showRef = (metodoVal === 'transferencia' || metodoVal === 'debito' || metodoVal === 'credito');
   const fTD = tr ? tr.querySelector('.td-codtransf') : null;
-  if (fTD) fTD.style.display = isTransf ? '' : 'none';
-  if (!isTransf) {
-    const fI = tr ? tr.querySelector('#nr_codtransf, #er_codtransf') : null;
-    if (fI) fI.value = '';
+  if (fTD) {
+    fTD.style.display = showRef ? '' : 'none';
+    const lbl = fTD.querySelector('label');
+    if (lbl) lbl.textContent = (metodoVal === 'transferencia') ? 'Cod.transf.' : 'N°comprobante';
+    const inp = fTD.querySelector('input');
+    if (inp) {
+      inp.placeholder = (metodoVal === 'transferencia') ? 'Cod.transf.' : 'N°comprobante';
+      if (!showRef) inp.value = '';
+    }
   }
 }
 
@@ -754,8 +759,9 @@ function insertarFilaNueva(preData = {}) {
     <td><input class="ci" id="nr_copago" type="number" min="0" step="1" placeholder="0"
                value="${preData.copago_sugerido||preData.copago||''}" tabindex="7"></td>
     <td>${buildMetodoBtns('nr_met_btns', _newMetodo)}</td>
-    <td class="td-codtransf" style="${_newMetodo==='transferencia'?'':'display:none'}">
-      <input class="ci" id="nr_codtransf" type="text" placeholder="Cod.transf." tabindex="8"
+    <td class="td-codtransf" style="${['transferencia','debito','credito'].includes(_newMetodo)?'':'display:none'}">
+      <input class="ci" id="nr_codtransf" type="text"
+             placeholder="${_newMetodo==='transferencia'?'Cod.transf.':'N°comprobante'}" tabindex="8"
              value="${esc(preData.codigo_transferencia||'')}">
     </td>
     <td class="td-folio" style="${_newPrev==='fonasa'?'':'display:none'}">
@@ -957,7 +963,7 @@ async function guardarFilaNueva() {
     metodo_pago:         _newMetodo,
     folio:               (_newPrev === 'fonasa' ? (_newRow.querySelector('#nr_folio')?.value || '').trim() : ''),
     tipo_bono:           (_newPrev === 'fonasa' ? (_newRow.querySelector('#nr_tipobono')?.value || 'Bono imed') : ''),
-    codigo_transferencia: (_newMetodo === 'transferencia' ? (_newRow.querySelector('#nr_codtransf')?.value || '').trim() : ''),
+    codigo_transferencia: (['transferencia','debito','credito'].includes(_newMetodo) ? (_newRow.querySelector('#nr_codtransf')?.value || '').trim() : ''),
     procedimiento:       (_newRow.querySelector('#nr_proc')?.value || '').trim(),
     origen:              _newRow.querySelector('#nr_origen').value,
     creado_por:          'recepcion',
@@ -1016,8 +1022,10 @@ function editarFilaInline(id) {
         <td>${buildPrevToggle('er_prev_toggle', ePrev)}</td>
         <td><input class="ci" id="er_copago" type="number" min="0" step="1" value="${p.copago||0}" tabindex="7"></td>
         <td>${buildMetodoBtns('er_met_btns', eMetodo)}</td>
-        <td class="td-codtransf" style="${eMetodo==='transferencia'?'':'display:none'}">
-          <input class="ci" id="er_codtransf" type="text" placeholder="Cod.transf." value="${esc(p.codigo_transferencia||'')}">
+        <td class="td-codtransf" style="${['transferencia','debito','credito'].includes(eMetodo)?'':'display:none'}">
+          <input class="ci" id="er_codtransf" type="text"
+                 placeholder="${eMetodo==='transferencia'?'Cod.transf.':'N°comprobante'}"
+                 value="${esc(p.codigo_transferencia||'')}">
         </td>
         <td class="td-folio" style="${ePrev==='fonasa'?'':'display:none'}">
           <input class="ci" id="er_folio" type="text" placeholder="Folio" value="${esc(p.folio||'')}">
@@ -1097,7 +1105,7 @@ function editarFilaInline(id) {
           metodo_pago:         eMetodoLocal,
           folio:               (ePrevLocal === 'fonasa' ? (tr.querySelector('#er_folio')?.value || '').trim() : ''),
           tipo_bono:           (ePrevLocal === 'fonasa' ? (tr.querySelector('#er_tipobono')?.value || 'Bono imed') : ''),
-          codigo_transferencia: (eMetodoLocal === 'transferencia' ? (tr.querySelector('#er_codtransf')?.value || '').trim() : ''),
+          codigo_transferencia: (['transferencia','debito','credito'].includes(eMetodoLocal) ? (tr.querySelector('#er_codtransf')?.value || '').trim() : ''),
           procedimiento:       (tr.querySelector('#er_proc')?.value || '').trim(),
           origen:              tr.querySelector('#er_origen').value,
         };
@@ -1242,7 +1250,13 @@ function setMetodo(m) {
   document.querySelectorAll('.metodo-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.metodo === m);
   });
-  document.getElementById('rowCodTransf').style.display = (m === 'transferencia') ? '' : 'none';
+  const showRef = (m === 'transferencia' || m === 'debito' || m === 'credito');
+  const rowCT = document.getElementById('rowCodTransf');
+  if (rowCT) {
+    rowCT.style.display = showRef ? '' : 'none';
+    rowCT.querySelector('label').textContent = (m === 'transferencia') ? 'Codigo transferencia' : 'N° comprobante';
+    if (!showRef) { const f = document.getElementById('fCodTransf'); if(f) f.value = ''; }
+  }
   updateMetodoHint();
 }
 
@@ -1337,7 +1351,7 @@ async function guardarModal() {
     metodo_pago:         _metodo,
     folio:               (_prevision === 'fonasa' ? document.getElementById('fFolio').value.trim() : ''),
     tipo_bono:           (_prevision === 'fonasa' ? (document.getElementById('fTipoBono').value || 'Bono imed') : ''),
-    codigo_transferencia: (_metodo === 'transferencia' ? document.getElementById('fCodTransf').value.trim() : ''),
+    codigo_transferencia: (['transferencia','debito','credito'].includes(_metodo) ? document.getElementById('fCodTransf').value.trim() : ''),
     procedimiento:       document.getElementById('fProcedimiento').value.trim(),
     origen:              document.getElementById('fOrigen').value,
     id_cita:             document.getElementById('fIdCita').value.trim(),

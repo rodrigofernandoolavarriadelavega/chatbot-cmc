@@ -3773,7 +3773,13 @@ function _pgSetMetodo(m){
     b.classList.toggle("active", b.dataset.metodo === m)
   );
   const rowCT = document.getElementById("pgRowCodTransf");
-  if(rowCT) rowCT.style.display = (m === "transferencia") ? "" : "none";
+  if(rowCT){
+    const showRef = (m === "transferencia" || m === "debito" || m === "credito");
+    rowCT.style.display = showRef ? "" : "none";
+    const inp = document.getElementById("pgCodTransf");
+    if(inp) inp.placeholder = (m === "transferencia") ? "Cod. transferencia" : "N° comprobante";
+    if(!showRef && inp) inp.value = "";
+  }
   _pgUpdateMetodoHint();
 }
 
@@ -3847,7 +3853,7 @@ async function _pgGuardar(){
     metodo_pago:         _pg.metodo,
     folio:               (_pg.prevision === "fonasa" ? (document.getElementById("pgFolio")?.value || "").trim() : ""),
     tipo_bono:           (_pg.prevision === "fonasa" ? (document.getElementById("pgTipoBono")?.value || "Bono imed") : ""),
-    codigo_transferencia:(_pg.metodo === "transferencia" ? (document.getElementById("pgCodTransf")?.value || "").trim() : ""),
+    codigo_transferencia:(["transferencia","debito","credito"].includes(_pg.metodo) ? (document.getElementById("pgCodTransf")?.value || "").trim() : ""),
     procedimiento:       (document.getElementById("pgProcedimiento")?.value || "").trim(),
     origen:              document.getElementById("pgOrigen")?.value || "chat",
     id_cita:             (document.getElementById("pgIdCita")?.value || "").trim(),
