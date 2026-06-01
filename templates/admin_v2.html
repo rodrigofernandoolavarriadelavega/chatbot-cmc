@@ -805,6 +805,66 @@ input, textarea, select{font-family:inherit; color:inherit}
 .chat-btn.pago-cta{background:var(--cmc-navy); color:#fff; border-color:var(--cmc-navy)}
 .chat-btn.pago-cta:hover{background:#0a2f50}
 
+/* ===== MODAL PAGO (registro rápido in-panel) ================================ */
+.pg-modal{
+  position:fixed; inset:0; z-index:400;
+  background:rgba(15,63,104,.4); backdrop-filter:blur(4px);
+  display:flex; align-items:center; justify-content:center; padding:16px;
+}
+.pg-modal[hidden]{display:none !important}
+.pg-dialog{
+  background:var(--panel); border-radius:16px; width:100%; max-width:520px;
+  max-height:92vh; overflow:hidden; display:flex; flex-direction:column;
+  box-shadow:var(--shadow-lg); border:1px solid var(--border);
+  animation:mbIn 150ms var(--ease-spring);
+}
+.pg-header{
+  display:flex; align-items:center; gap:10px;
+  padding:14px 18px; border-bottom:1px solid var(--border-soft); flex-shrink:0;
+}
+.pg-header h3{margin:0; font-size:14.5px; color:var(--cmc-navy); font-weight:700; flex:1}
+.pg-body{padding:16px 18px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:12px}
+.pg-footer{
+  display:flex; gap:8px; justify-content:flex-end; padding:12px 18px 14px;
+  border-top:1px solid var(--border-soft); flex-shrink:0;
+}
+.pg-patient-card{
+  background:var(--cmc-aqua-soft); border:1px solid var(--border);
+  border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:2px;
+}
+.pg-patient-card .pg-pname{font-weight:700; font-size:13px; color:var(--cmc-navy)}
+.pg-patient-card .pg-prut{font-size:12px; color:var(--text-mute)}
+/* Toggle previsión */
+.pg-seg{display:flex; border:1px solid var(--border); border-radius:9px; overflow:hidden}
+.pg-seg button{
+  flex:1; border:0; background:none; font-family:var(--font);
+  font-size:12px; font-weight:700; padding:8px 6px; cursor:pointer;
+  transition:background-color .13s, color .13s; color:var(--text-mute);
+}
+.pg-seg button.active{background:var(--cmc-aqua); color:#fff}
+/* Método pago */
+.pg-metodo-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:6px}
+.pg-metodo-btn{
+  border:1px solid var(--border); border-radius:9px; background:var(--panel);
+  font-family:var(--font); font-size:11px; font-weight:700; padding:8px 4px;
+  cursor:pointer; transition:all .13s; color:var(--text-mute); text-align:center;
+}
+.pg-metodo-btn.active{background:var(--cmc-navy); color:#fff; border-color:var(--cmc-navy)}
+/* Suggested highlight */
+.pg-suggested{background:#fafeff !important; border-color:var(--cmc-aqua) !important}
+.pg-hint{font-size:10px; color:var(--text-dim); margin-top:3px}
+/* Success state */
+.pg-success{
+  text-align:center; padding:24px 8px; display:flex; flex-direction:column;
+  align-items:center; gap:8px;
+}
+.pg-success .pg-check{
+  width:48px; height:48px; border-radius:50%; background:var(--green-soft);
+  display:flex; align-items:center; justify-content:center; font-size:22px; margin-bottom:4px;
+}
+.pg-success h4{margin:0; color:var(--cmc-navy); font-size:15px; font-weight:800}
+.pg-success p{margin:0; color:var(--text-mute); font-size:12.5px}
+
 @keyframes emojiIn{from{opacity:0; transform:translateY(4px)} to{opacity:1; transform:none}}
 .emoji-picker .emoji-cat{
   grid-column:1 / -1; font-size:10.5px; font-weight:700; color:var(--text-mute);
@@ -2776,6 +2836,9 @@ function setup(){
   setupMarkBookedModal();
   // Modal agendar contextual (wizard Medilink)
   setupAgendarModal();
+  // Modal pago in-panel
+  _pgSetupModal();
+  _pgLoadProfesionales();
   // Delegación: click en botón editar mensaje
   $("#messages").addEventListener("click", (e) => {
     const btn = e.target.closest(".msg-edit-btn");
@@ -3499,38 +3562,285 @@ function closeAgendarModal(){
 
 /**
  * openPagoModal()
- * Abre el modulo Pagos de Alma con los datos del paciente activo pre-llenados.
- * Si Alma esta cargado en el padre (window.parent), le envia un postMessage.
- * Si no, abre /alma/pagos en una nueva pestana.
+ * Abre el formulario de pago como modal in-panel, igual que el wizard Agendar.
+ * No redirige ni manda postMessage al shell — la recepcionista registra el pago
+ * sin salir de la conversacion activa.
  */
+
+// Estado del modal pago
+const _pg = {
+  prevision: "particular",
+  metodo: "efectivo",
+  sugerenciaAplicada: false,
+};
+
 function openPagoModal(){
   if (!activePhone){
     toast("Selecciona un chat primero", "error"); return;
   }
-  // Recopilar datos del paciente activo desde activeConv
   const conv   = activeConv || {};
   const nombre = conv.display_name || conv.phone || "";
   const rut    = conv.rut || "";
   const idCita = conv.last_cita_id || "";
 
-  const payload = { paciente_nombre: nombre, rut, id_cita: idCita };
+  _pgResetForm();
 
-  // Intentar comunicar con el shell de Alma via postMessage
-  try {
-    if (window.parent && window.parent !== window) {
-      window.parent.postMessage({ type: "ALMA_ABRIR_PAGO", payload }, "*");
-      // Pedir al shell que active el modulo pagos
-      window.parent.postMessage({ type: "ALMA_ACTIVATE_MODULE", id: "pagos" }, "*");
-      return;
-    }
-  } catch(e) { /* cross-origin — fallback a nueva pestana */ }
+  // Pre-cargar datos del paciente activo
+  if (nombre) document.getElementById("pgNombre").value = nombre;
+  if (rut)    document.getElementById("pgRut").value    = rut;
+  if (idCita) document.getElementById("pgIdCita").value = idCita;
 
-  // Fallback: abrir en nueva pestana con params
-  const qpLocal = TOKEN ? ("?token=" + encodeURIComponent(TOKEN)) : "";
-  let url = "/alma/pagos" + qpLocal;
+  // Origen = chat (viene del panel)
+  document.getElementById("pgOrigen").value = "chat";
+
+  // Mostrar modal
+  document.getElementById("pgModal").hidden = false;
+  document.getElementById("pgBody").hidden  = false;
+  document.getElementById("pgSuccess").hidden = true;
+
+  // Cargar sugerencia desde API si tenemos rut o id_cita
+  if (rut || idCita) _pgCargarSugerencia(rut || null, idCita || null);
+}
+
+function closePagoModal(){
+  document.getElementById("pgModal").hidden = true;
+  _pgResetForm();
+}
+
+function _pgResetForm(){
+  ["pgNombre","pgRut","pgArea","pgCopago","pgBonif","pgFolio","pgCodTransf","pgProcedimiento","pgIdCita"]
+    .forEach(id => { const el = document.getElementById(id); if(el){ el.value = ""; el._edited = false; el.classList.remove("pg-suggested"); } });
+  const fd = document.getElementById("pgFecha");
+  if(fd){ fd.value = new Date().toLocaleDateString("en-CA"); }
+  const sel = document.getElementById("pgProf");
+  if(sel) sel.value = "";
+  const sor = document.getElementById("pgOrigen");
+  if(sor) sor.value = "presencial";
+  _pgSetPrevision("particular");
+  _pgSetMetodo("efectivo");
+  const hC = document.getElementById("pgHintCopago"); if(hC) hC.textContent = "";
+  const hB = document.getElementById("pgHintBonif");  if(hB) hB.textContent = "";
+  const hM = document.getElementById("pgHintMetodo"); if(hM) hM.textContent = "";
+  // Restaurar botones footer
+  const btnCancel  = document.getElementById("pgBtnCancel");
+  const btnCerrar  = document.getElementById("pgBtnCerrar");
+  const btnGuardar = document.getElementById("pgBtnGuardar");
+  if(btnCancel)  btnCancel.style.display  = "";
+  if(btnGuardar) btnGuardar.style.display = "";
+  if(btnCerrar)  btnCerrar.style.display  = "none";
+}
+
+function _pgSetPrevision(p){
+  _pg.prevision = p;
+  const btnP = document.getElementById("pgBtnParticular");
+  const btnF = document.getElementById("pgBtnFonasa");
+  if(btnP) btnP.classList.toggle("active", p === "particular");
+  if(btnF) btnF.classList.toggle("active", p === "fonasa");
+  const rowB = document.getElementById("pgRowBonif");
+  if(rowB) rowB.style.display = (p === "fonasa") ? "" : "none";
+  _pgUpdateMetodoHint();
+}
+
+function _pgSetMetodo(m){
+  _pg.metodo = m;
+  document.querySelectorAll(".pg-metodo-btn").forEach(b =>
+    b.classList.toggle("active", b.dataset.metodo === m)
+  );
+  const rowCT = document.getElementById("pgRowCodTransf");
+  if(rowCT) rowCT.style.display = (m === "transferencia") ? "" : "none";
+  _pgUpdateMetodoHint();
+}
+
+function _pgUpdateMetodoHint(){
+  const h = document.getElementById("pgHintMetodo");
+  if(!h) return;
+  h.textContent = (_pg.metodo === "credito" || _pg.metodo === "debito")
+    ? "Tarjetas solo disponibles en area dental."
+    : "";
+}
+
+async function _pgCargarSugerencia(rut, idCita){
+  const qpLocal = TOKEN ? ("?token=" + encodeURIComponent(TOKEN)) : "?";
+  let url = "/alma/api/pagos/sugerencia" + qpLocal;
   if (rut)    url += "&rut="     + encodeURIComponent(rut);
   if (idCita) url += "&id_cita=" + encodeURIComponent(idCita);
-  window.open(url, "_blank", "noopener");
+  try {
+    const r = await fetch(url, { credentials: "include" });
+    if (!r.ok) return;
+    const s = await r.json();
+    const fN = document.getElementById("pgNombre");
+    if (fN && !fN.value && s.paciente_nombre) fN.value = s.paciente_nombre;
+    const fP = document.getElementById("pgProf");
+    if (fP && s.id_profesional) fP.value = s.id_profesional;
+    const fA = document.getElementById("pgArea");
+    if (fA && s.area) fA.value = s.area;
+    if (s.prevision) _pgSetPrevision(s.prevision);
+    const fIC = document.getElementById("pgIdCita");
+    if (fIC && s.id_cita && !fIC.value) fIC.value = s.id_cita;
+    // Montos sugeridos
+    const fC = document.getElementById("pgCopago");
+    const fB = document.getElementById("pgBonif");
+    if (fC && s.copago_sugerido != null && !fC._edited) {
+      fC.value = s.copago_sugerido;
+      fC.classList.add("pg-suggested");
+    }
+    if (fB && s.bonif_sugerida != null && s.bonif_sugerida > 0 && !fB._edited) {
+      fB.value = s.bonif_sugerida;
+      fB.classList.add("pg-suggested");
+    }
+    const hC = document.getElementById("pgHintCopago");
+    const hB = document.getElementById("pgHintBonif");
+    if (hC && s.fuente === "fonasa_n3") {
+      hC.textContent = "Arancel N3: total $" + (s.total_arancel || 0).toLocaleString("es-CL") +
+                       " · Cod. " + (s.codigo_fonasa || "");
+    } else if (hC && s.fuente === "particular") {
+      hC.textContent = s.copago_sugerido ? "Precio particular" : "";
+    }
+    if (hB && s.fuente === "fonasa_n3") hB.textContent = "Bonificacion Imed sugerida";
+  } catch(e) {
+    console.warn("_pgCargarSugerencia error:", e);
+  }
+}
+
+async function _pgGuardar(){
+  const nombre = (document.getElementById("pgNombre")?.value || "").trim();
+  if (!nombre) { toast("Ingresa el nombre del paciente", "error"); return; }
+
+  const idProfRaw = document.getElementById("pgProf")?.value || "";
+  const profOpt   = document.querySelector(`#pgProf option[value="${idProfRaw}"]`);
+
+  const body = {
+    fecha:               document.getElementById("pgFecha")?.value || new Date().toLocaleDateString("en-CA"),
+    hora:                new Date().toLocaleTimeString("es-CL", {hour:"2-digit", minute:"2-digit"}),
+    paciente_nombre:     nombre,
+    rut:                 (document.getElementById("pgRut")?.value || "").trim(),
+    id_profesional:      idProfRaw ? parseInt(idProfRaw) : null,
+    profesional:         profOpt ? profOpt.textContent.split(" — ")[0].trim() : "",
+    area:                (document.getElementById("pgArea")?.value || "").trim(),
+    prevision:           _pg.prevision,
+    copago:              parseInt(document.getElementById("pgCopago")?.value) || 0,
+    bonificacion:        parseInt(document.getElementById("pgBonif")?.value) || 0,
+    metodo_pago:         _pg.metodo,
+    folio:               (document.getElementById("pgFolio")?.value || "").trim(),
+    codigo_transferencia:(document.getElementById("pgCodTransf")?.value || "").trim(),
+    procedimiento:       (document.getElementById("pgProcedimiento")?.value || "").trim(),
+    origen:              document.getElementById("pgOrigen")?.value || "chat",
+    id_cita:             (document.getElementById("pgIdCita")?.value || "").trim(),
+    creado_por:          "recepcion",
+  };
+
+  const btn = document.getElementById("pgBtnGuardar");
+  if (btn) { btn.disabled = true; btn.textContent = "Guardando…"; }
+
+  try {
+    const qpLocal = TOKEN ? ("?token=" + encodeURIComponent(TOKEN)) : "";
+    const r = await fetch("/alma/api/pagos" + qpLocal, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      throw new Error(err.detail || "HTTP " + r.status);
+    }
+    // Mostrar estado de exito dentro del mismo modal
+    document.getElementById("pgBody").hidden = true;
+    document.getElementById("pgSuccess").hidden = false;
+    document.getElementById("pgSuccessNombre").textContent = nombre;
+    document.getElementById("pgSuccessMonto").textContent =
+      "$" + body.copago.toLocaleString("es-CL") +
+      (body.bonificacion ? " + $" + body.bonificacion.toLocaleString("es-CL") + " bonif." : "");
+    // Alternar botones footer
+    const btnCancel = document.getElementById("pgBtnCancel");
+    const btnCerrar = document.getElementById("pgBtnCerrar");
+    const btnGuardar = document.getElementById("pgBtnGuardar");
+    if(btnCancel)  btnCancel.style.display  = "none";
+    if(btnGuardar) btnGuardar.style.display = "none";
+    if(btnCerrar)  btnCerrar.style.display  = "";
+  } catch(e) {
+    toast("Error al guardar: " + e.message, "error");
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "Guardar pago"; }
+  }
+}
+
+function _pgSetupModal(){
+  const modal = document.getElementById("pgModal");
+  if (!modal) return;
+
+  document.getElementById("pgClose").onclick  = closePagoModal;
+  document.getElementById("pgBtnCancel").onclick = closePagoModal;
+  document.getElementById("pgBtnGuardar").onclick = _pgGuardar;
+  document.getElementById("pgBtnCerrar").onclick  = closePagoModal;
+
+  modal.addEventListener("click", e => { if (e.target === modal) closePagoModal(); });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && !modal.hidden) closePagoModal();
+  });
+
+  // Toggle previsión
+  document.getElementById("pgBtnParticular").addEventListener("click", () => {
+    _pgSetPrevision("particular");
+    const rut = document.getElementById("pgRut")?.value.trim();
+    const ic  = document.getElementById("pgIdCita")?.value.trim();
+    if (rut || ic) _pgCargarSugerencia(rut || null, ic || null);
+  });
+  document.getElementById("pgBtnFonasa").addEventListener("click", () => {
+    _pgSetPrevision("fonasa");
+    const rut = document.getElementById("pgRut")?.value.trim();
+    const ic  = document.getElementById("pgIdCita")?.value.trim();
+    if (rut || ic) _pgCargarSugerencia(rut || null, ic || null);
+  });
+
+  // Botones método
+  document.querySelectorAll(".pg-metodo-btn").forEach(b =>
+    b.addEventListener("click", () => _pgSetMetodo(b.dataset.metodo))
+  );
+
+  // Cambio profesional → sugerir area
+  document.getElementById("pgProf")?.addEventListener("change", function(){
+    const opt = this.options[this.selectedIndex];
+    if (opt?.dataset?.esp) {
+      const fA = document.getElementById("pgArea");
+      if (fA) fA.value = opt.dataset.esp;
+    }
+    const rut = document.getElementById("pgRut")?.value.trim();
+    const ic  = document.getElementById("pgIdCita")?.value.trim();
+    if (rut || ic) _pgCargarSugerencia(rut || null, ic || null);
+  });
+
+  // RUT blur → sugerencia
+  document.getElementById("pgRut")?.addEventListener("blur", function(){
+    if (this.value.trim()) _pgCargarSugerencia(this.value.trim(), null);
+  });
+
+  // Marcar editado manualmente
+  ["pgCopago","pgBonif"].forEach(id => {
+    document.getElementById(id)?.addEventListener("input", function(){
+      this._edited = true;
+      this.classList.remove("pg-suggested");
+    });
+  });
+}
+
+// Cargar profesionales en el select del modal pago
+async function _pgLoadProfesionales(){
+  const sel = document.getElementById("pgProf");
+  if (!sel || sel.options.length > 1) return; // ya cargado
+  try {
+    const qpLocal = TOKEN ? ("?token=" + encodeURIComponent(TOKEN)) : "";
+    const r = await fetch("/alma/api/agenda/profesionales" + qpLocal, { credentials: "include" });
+    if (!r.ok) return;
+    const d = await r.json();
+    (d.profesionales || []).forEach(p => {
+      const o = document.createElement("option");
+      o.value = p.id;
+      o.textContent = p.nombre + " — " + p.especialidad;
+      o.dataset.esp = p.especialidad;
+      sel.appendChild(o);
+    });
+  } catch(e) { console.warn("_pgLoadProfesionales:", e); }
 }
 
 function setupAgendarModal(){
@@ -3555,6 +3865,135 @@ function syncAppBadge(count) {
   }
 }
 </script>
+
+<!-- ===== MODAL PAGO (registro rápido in-panel) ============================= -->
+<div id="pgModal" class="pg-modal" hidden role="dialog" aria-modal="true" aria-labelledby="pgModalTitle">
+  <div class="pg-dialog">
+    <div class="pg-header">
+      <h3 id="pgModalTitle">Registrar pago</h3>
+      <button class="mb-close" id="pgClose" type="button" aria-label="Cerrar">&times;</button>
+    </div>
+
+    <!-- Cuerpo del formulario -->
+    <div class="pg-body" id="pgBody">
+
+      <!-- Tarjeta paciente -->
+      <div class="pg-patient-card">
+        <div class="mb-row" style="gap:2px">
+          <label style="font-size:10px;color:var(--text-mute);font-weight:700;text-transform:uppercase;letter-spacing:.3px">Paciente</label>
+          <input type="text" id="pgNombre" class="mb-row input" placeholder="Nombre completo" autocomplete="off"
+                 style="border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:13px;font-family:var(--font);color:var(--cmc-navy);outline:none;width:100%">
+        </div>
+        <div class="mb-grid2" style="margin-top:8px">
+          <div class="mb-row">
+            <label>RUT</label>
+            <input type="text" id="pgRut" placeholder="12.345.678-9" autocomplete="off">
+          </div>
+          <div class="mb-row">
+            <label>Fecha</label>
+            <input type="date" id="pgFecha">
+          </div>
+        </div>
+      </div>
+
+      <!-- Profesional / Área -->
+      <div class="mb-grid2">
+        <div class="mb-row">
+          <label>Profesional</label>
+          <select id="pgProf">
+            <option value="">— Seleccionar —</option>
+          </select>
+        </div>
+        <div class="mb-row">
+          <label>Area</label>
+          <input type="text" id="pgArea" placeholder="Ej: Medicina General">
+        </div>
+      </div>
+
+      <!-- Previsión -->
+      <div class="mb-row">
+        <label>Prevision</label>
+        <div class="pg-seg">
+          <button id="pgBtnParticular" class="active" type="button">Particular</button>
+          <button id="pgBtnFonasa" type="button">Fonasa MLE</button>
+        </div>
+      </div>
+
+      <!-- Copago + Bonificación -->
+      <div class="mb-grid2">
+        <div class="mb-row">
+          <label>Copago paciente ($)</label>
+          <input type="number" id="pgCopago" min="0" step="1" placeholder="0">
+          <div class="pg-hint" id="pgHintCopago"></div>
+        </div>
+        <div class="mb-row" id="pgRowBonif" style="display:none">
+          <label>Bonif. Imed ($)</label>
+          <input type="number" id="pgBonif" min="0" step="1" placeholder="0">
+          <div class="pg-hint" id="pgHintBonif"></div>
+        </div>
+      </div>
+
+      <!-- Método de pago -->
+      <div class="mb-row">
+        <label>Metodo de pago</label>
+        <div class="pg-metodo-grid">
+          <button class="pg-metodo-btn active" type="button" data-metodo="efectivo">Efectivo</button>
+          <button class="pg-metodo-btn" type="button" data-metodo="transferencia">Transferencia</button>
+          <button class="pg-metodo-btn" type="button" data-metodo="debito">Debito</button>
+          <button class="pg-metodo-btn" type="button" data-metodo="credito">Credito</button>
+        </div>
+        <div class="pg-hint" id="pgHintMetodo"></div>
+      </div>
+
+      <!-- Folio / Codigo transferencia -->
+      <div class="mb-grid2">
+        <div class="mb-row">
+          <label>Folio</label>
+          <input type="text" id="pgFolio" placeholder="N° folio (opcional)">
+        </div>
+        <div class="mb-row" id="pgRowCodTransf" style="display:none">
+          <label>Cod. transferencia</label>
+          <input type="text" id="pgCodTransf" placeholder="Opcional">
+        </div>
+      </div>
+
+      <!-- Procedimiento / Origen -->
+      <div class="mb-row">
+        <label>Procedimiento</label>
+        <input type="text" id="pgProcedimiento" placeholder="Ej: Consulta medica, Control kine sesion 3…">
+      </div>
+      <div class="mb-grid2">
+        <div class="mb-row">
+          <label>Origen</label>
+          <select id="pgOrigen">
+            <option value="chat">Chat WhatsApp</option>
+            <option value="presencial">Presencial</option>
+            <option value="telefono">Telefono</option>
+          </select>
+        </div>
+        <div class="mb-row">
+          <label>ID Cita Medilink</label>
+          <input type="text" id="pgIdCita" placeholder="Opcional">
+        </div>
+      </div>
+
+    </div><!-- /pg-body -->
+
+    <!-- Estado de exito -->
+    <div class="pg-success" id="pgSuccess" hidden>
+      <div class="pg-check">&#10003;</div>
+      <h4>Pago registrado</h4>
+      <p id="pgSuccessNombre" style="font-weight:700;color:var(--cmc-navy)"></p>
+      <p id="pgSuccessMonto" style="color:var(--text-mute)"></p>
+    </div>
+
+    <div class="pg-footer" id="pgFooter">
+      <button class="mb-btn cancel" id="pgBtnCancel" type="button">Cancelar</button>
+      <button class="mb-btn cancel" id="pgBtnCerrar"  type="button" style="display:none">Cerrar</button>
+      <button class="mb-btn save"   id="pgBtnGuardar" type="button">Guardar pago</button>
+    </div>
+  </div>
+</div>
 
 <!-- ===== MODAL AGENDAR (wizard contextual) ================================= -->
 <div id="agModal" class="ag-modal" hidden role="dialog" aria-modal="true" aria-labelledby="agModalTitle">
