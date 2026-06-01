@@ -704,6 +704,7 @@ _DENTISTA_CURANILAHUE_HTML = (_TEMPLATE_DIR / "dentista-curanilahue.html").read_
 _LANDING_ORTODONCIA_HTML = (_TEMPLATE_DIR / "landing_ortodoncia.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "landing_ortodoncia.html").exists() else ""
 _ADKUN_COMPANY_HTML = (_TEMPLATE_DIR / "adkun_company_board.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "adkun_company_board.html").exists() else ""
 _ADKUN_LANDING_HTML = (_TEMPLATE_DIR / "adkun_landing.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "adkun_landing.html").exists() else ""
+_ADKUN_GPT_HTML = (_TEMPLATE_DIR / "adkun_gpt.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "adkun_gpt.html").exists() else ""
 _ALMA_PRODUCT_HTML = (_TEMPLATE_DIR / "alma_product_board.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_product_board.html").exists() else ""
 
 
@@ -2701,6 +2702,14 @@ def adkun_company_board():
     if not _ADKUN_COMPANY_HTML:
         raise HTTPException(404, "Brand board Adkun no disponible")
     return _ADKUN_COMPANY_HTML
+
+
+@app.get("/adkun/gpt", response_class=HTMLResponse)
+def adkun_gpt_landing():
+    """Landing Adkun — identidad 'Digital Products' (Satoshi/Inter, Fiord Navy + Burnt Copper)."""
+    if not _ADKUN_GPT_HTML:
+        raise HTTPException(404, "Landing Adkun GPT no disponible")
+    return _ADKUN_GPT_HTML
 
 
 @app.get("/alma/branding", response_class=HTMLResponse)
