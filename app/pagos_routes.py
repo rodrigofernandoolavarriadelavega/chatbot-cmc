@@ -972,6 +972,11 @@ async def get_pagos(
         ).fetchall()
 
     pagos = [dict(r) for r in rows]
+    # Etiqueta única de profesional en la vista (unifica variantes residuales en DB)
+    for p in pagos:
+        ov = _NOMBRE_PROF_PAGOS.get(p.get("id_profesional"))
+        if ov:
+            p["profesional"] = ov
     total_copago = sum(p["copago"] for p in pagos)
 
     # Bonif calculada desde arancel N3 por area (ya no se guarda en caja)
