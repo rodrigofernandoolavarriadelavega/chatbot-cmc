@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Ánima">
-<title>Ánima — Centro Médico Carampangue</title>
+<meta name="apple-mobile-web-app-title" content="Alma">
+<title>Alma — Centro Médico Carampangue</title>
 <link rel="manifest" href="" id="animaManifest">
 <link rel="icon" href="/static/isotipo.png">
 <link rel="apple-touch-icon" href="/static/pwa/icon-192.png">
@@ -331,7 +331,7 @@
     <button class="rail-brand" id="railHome" title="Ir al inicio">
       <div class="rail-logo"><img src="/static/isotipo.png" alt="CMC"></div>
       <div class="rail-word">
-        <div class="over">Ánima</div>
+        <div class="over">Alma</div>
         <div class="name">Carampangue</div>
       </div>
     </button>
@@ -358,8 +358,8 @@
     <div class="crumb">
       <div class="crumb-ico" id="crumbIco"><img src="/static/isotipo.png" alt="CMC"></div>
       <div class="crumb-txt">
-        <h1 id="crumbTitle">Ánima</h1>
-        <p id="crumbSub">Plataforma interna CMC</p>
+        <h1 id="crumbTitle">Alma</h1>
+        <p id="crumbSub">El espíritu operativo de tu centro médico</p>
       </div>
     </div>
     <div class="spacer"></div>
@@ -377,8 +377,8 @@
   <main class="stage" id="stage">
     <div class="welcome show" id="welcome">
       <img class="iso" src="/static/isotipo.png" alt="">
-      <h2>Bienvenido a Ánima</h2>
-      <p class="alma">El alma operativa de Centro Médico Carampangue</p>
+      <h2>Bienvenido a Alma</h2>
+      <p class="alma">El espíritu operativo de tu centro médico</p>
       <p>Elige un módulo en la columna izquierda. Todo se abre aquí mismo, sin salir de la plataforma.</p>
     </div>
     <div class="loader hide" id="loader">
@@ -552,7 +552,7 @@ function openProf(ds){
   document.getElementById('crumbTitle').textContent = ds.title;
   document.getElementById('crumbSub').textContent = 'Panel del Profesional · ' + ds.sub;
   document.getElementById('newTabBtn').href = ds.src;
-  document.title = ds.title + " · Ánima CMC";
+  document.title = ds.title + " · Alma CMC";
   app.classList.remove('drawer-open');
 }
 
@@ -594,7 +594,7 @@ function select(id, push){
   document.getElementById('crumbTitle').textContent = m.title;
   document.getElementById('crumbSub').textContent = m.sub;
   document.getElementById('newTabBtn').href = m.src;
-  document.title = m.label + " · Ánima CMC";
+  document.title = m.label + " · Alma CMC";
 
   if (push) location.hash = id;
   // close mobile drawer after pick
@@ -628,9 +628,9 @@ function goHome(){
   welcome.classList.add('show');
   loader.classList.add('hide');
   document.getElementById('crumbIco').innerHTML = '<img src="/static/isotipo.png" alt="CMC">';
-  document.getElementById('crumbTitle').textContent = 'Ánima';
-  document.getElementById('crumbSub').textContent = 'Plataforma interna CMC';
-  document.title = 'Ánima — Centro Médico Carampangue';
+  document.getElementById('crumbTitle').textContent = 'Alma';
+  document.getElementById('crumbSub').textContent = 'El espíritu operativo de tu centro médico';
+  document.title = 'Alma — Centro Médico Carampangue';
   if (location.hash) history.replaceState(null, '', location.pathname + location.search);
   app.classList.remove('drawer-open');
 }

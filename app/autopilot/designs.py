@@ -2,7 +2,7 @@
 
 Storage simple en JSON — mismo patrón que `world_state.save_snapshot`. Cada
 registro es una pieza de marketing generada con Canva que se renderiza
-**embebida** en el dashboard `/autopilot` (pestaña "Diseños"), visible desde Ánima.
+**embebida** en el dashboard `/autopilot` (pestaña "Diseños"), visible desde Alma.
 
 Flujo de datos: la generación con Canva ocurre vía MCP (lado asistente), no en
 este backend. Los diseños entran por `POST /autopilot/api/designs` (o sembrando

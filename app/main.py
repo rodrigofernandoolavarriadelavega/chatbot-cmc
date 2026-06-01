@@ -2846,7 +2846,7 @@ def api_demanda_data(dias: int = 90):
     - `intent_agendar`: intención de agendar por especialidad (volumen de interés)
     - `demanda_no_disponible` (+ eventos): lo que el CMC no ofrece (gap de catálogo)
 
-    Aporta el lado "qué promover" del loop de Ánima; /atribucion mide "qué llegó".
+    Aporta el lado "qué promover" del loop de Alma; /atribucion mide "qué llegó".
     """
     import sys as _sys_dem
     from pathlib import Path as _P_dem
@@ -3273,7 +3273,7 @@ def boxes_dashboard_page(token: str | None = Query(None)):
 @app.get("/alma/dashboard", response_class=HTMLResponse)
 def alma_shell(token: str | None = Query(None),
                cmc_session: str | None = Cookie(None)):
-    """Ánima — plataforma interna unificada. Embebe Panel Recepción v2 y Boxes
+    """Alma — plataforma interna unificada. Embebe Panel Recepción v2 y Boxes
     en una sola página con navegación lateral. Misma auth que /admin.
 
     Los módulos embebidos (en especial /boxes) sólo aceptan el token por query,
@@ -3283,7 +3283,7 @@ def alma_shell(token: str | None = Query(None),
     """
     from admin_routes import _verify_cookie
     if not _ANIMA_HTML:
-        raise HTTPException(404, "Ánima no disponible")
+        raise HTTPException(404, "Alma no disponible")
     if token and token == ADMIN_TOKEN:
         return _ANIMA_HTML.replace("__TOKEN__", token)
     if cmc_session:
@@ -3448,11 +3448,11 @@ self.addEventListener('fetch', e => {
 
 @app.get("/anima/manifest.webmanifest", include_in_schema=False)
 def anima_manifest(token: str | None = Query(None)):
-    """PWA manifest de Ánima para instalación como app. Identidad CMC."""
+    """PWA manifest de Alma para instalación como app. Identidad CMC."""
     start = f"/anima?token={token}" if token else "/anima"
     return JSONResponse({
-        "name": "Ánima — Centro Médico Carampangue",
-        "short_name": "Ánima",
+        "name": "Alma — Centro Médico Carampangue",
+        "short_name": "Alma",
         "description": "Plataforma interna unificada del Centro Médico Carampangue",
         "start_url": start,
         "scope": "/",
@@ -3474,7 +3474,7 @@ def anima_manifest(token: str | None = Query(None)):
 
 @app.get("/anima/sw.js", include_in_schema=False)
 def anima_service_worker():
-    """Service worker mínimo para habilitar instalación PWA de Ánima."""
+    """Service worker mínimo para habilitar instalación PWA de Alma."""
     sw = (
         "self.addEventListener('install', e => self.skipWaiting());\n"
         "self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));\n"
@@ -5086,7 +5086,7 @@ def _make_prof_token(id_prof: int) -> str:
 def api_anima_profesionales(token: str | None = Query(None),
                             cmc_session: str | None = Cookie(None)):
     """Roster de profesionales agrupado por especialidad, con el token de cada uno,
-    para construir el navegador desplegable del módulo 'Panel del Profesional' en Ánima.
+    para construir el navegador desplegable del módulo 'Panel del Profesional' en Alma.
     Auth admin (token query o cookie de sesión)."""
     from admin_routes import _verify_cookie
     ok = (token and token == ADMIN_TOKEN) or (

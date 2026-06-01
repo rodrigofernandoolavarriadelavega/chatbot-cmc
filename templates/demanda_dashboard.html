@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CMC — Demanda capturada · qué piden los pacientes</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{ --fiordo:#1F3340; --cobre:#B86D3F; --neblina:#EFE9DD; --musgo:#4A5F3A; --lacre:#8C2A2A; --agua:#5B8B96; --noche:#122028; }
+  body{ font-family:'Inter',sans-serif; background:var(--neblina); color:var(--fiordo); }
+  h1,h2,h3,.serif{ font-family:'Fraunces',serif; }
+  .mono{ font-family:'IBM Plex Mono',monospace; }
+  .kpi-card{ background:white; border:1px solid rgba(31,51,64,.1); border-radius:6px; padding:18px 22px; }
+  .kpi-num{ font-family:'Fraunces',serif; font-size:34px; font-weight:500; line-height:1; color:var(--fiordo); }
+  .kpi-label{ font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--cobre); margin-bottom:8px; }
+  .kpi-sub{ font-size:11px; color:rgba(31,51,64,.6); margin-top:4px; }
+  .section-head{ font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:3px; text-transform:uppercase; color:var(--cobre); margin-bottom:8px; }
+  .card{ background:white; border:1px solid rgba(31,51,64,.1); border-radius:6px; padding:20px 22px; }
+  .row{ display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid rgba(31,51,64,.07); }
+  .row:last-child{ border-bottom:none; }
+  .rank{ font-family:'IBM Plex Mono',monospace; font-size:11px; color:rgba(31,51,64,.4); width:22px; }
+  .pill{ font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:1px; padding:2px 8px; border-radius:99px; }
+  .sel{ font-family:'IBM Plex Mono',monospace; font-size:11px; border:1px solid rgba(31,51,64,.2); background:white; border-radius:5px; padding:4px 8px; color:var(--fiordo); }
+  .crosslink{ display:inline-flex; align-items:center; gap:8px; background:var(--fiordo); color:var(--neblina); padding:12px 20px; border-radius:6px; font-size:13px; cursor:pointer; border:none; transition:opacity .15s; }
+  .crosslink:hover{ opacity:.88; }
+</style>
+</head>
+<body>
+
+<nav class="border-b border-stone-300 sticky top-0 bg-white/90 backdrop-blur z-50">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4 text-sm">
+    <span class="serif text-lg font-medium" style="color:var(--fiordo)">CMC</span>
+    <span class="mono text-xs opacity-50">Demanda</span>
+    <a href="#" onclick="goAtribucion();return false" class="ml-auto opacity-70 hover:opacity-100">Atribución →</a>
+    <a href="/autopilot" class="opacity-70 hover:opacity-100">Autopilot</a>
+    <a href="/menu" class="opacity-50 hover:opacity-100">← Menú</a>
+  </div>
+</nav>
+
+<main class="max-w-7xl mx-auto px-4 py-8">
+  <header class="mb-8 flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <p class="section-head" style="color:var(--cobre)">OLACORE · CMC · Demanda capturada</p>
+      <h1 class="text-5xl md:text-6xl font-medium leading-none mb-2" style="color:var(--fiordo)">Demanda<em class="italic" style="color:var(--cobre)">.</em></h1>
+      <p class="serif italic text-xl opacity-75">Qué piden los pacientes que hoy no capturamos.</p>
+      <p class="mono text-xs opacity-60 mt-3" id="metaFooter">cargando…</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="mono text-[10px] uppercase tracking-widest opacity-50">Ventana</span>
+      <select id="selDias" class="sel" onchange="cargar()">
+        <option value="30">30 días</option>
+        <option value="90" selected>90 días</option>
+        <option value="180">180 días</option>
+      </select>
+    </div>
+  </header>
+
+  <!-- KPIs -->
+  <section class="mb-10">
+    <div class="grid md:grid-cols-4 gap-3">
+      <div class="kpi-card">
+        <div class="kpi-label">Pedidos sin cupo</div>
+        <div class="kpi-num" id="kpiSinCupo">—</div>
+        <div class="kpi-sub">servicio existente, sin hora</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Doctores pedidos sin cupo</div>
+        <div class="kpi-num" id="kpiProf">—</div>
+        <div class="kpi-sub">profesional saturado</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Intención de agendar</div>
+        <div class="kpi-num" id="kpiInteres">—</div>
+        <div class="kpi-sub">personas con intent</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Gaps de catálogo</div>
+        <div class="kpi-num" id="kpiGaps">—</div>
+        <div class="kpi-sub">no lo ofrecemos</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Servicios sin cupo + Interés -->
+  <section class="grid lg:grid-cols-2 gap-5 mb-10">
+    <div class="card">
+      <p class="section-head">Servicios pedidos sin cupo</p>
+      <p class="text-xs opacity-60 mb-3">Especialidad/examen que sí ofrecemos, pero el paciente no encontró hora. Demanda perdida por capacidad.</p>
+      <div style="height:260px"><canvas id="chartSinCupo"></canvas></div>
+    </div>
+    <div class="card">
+      <p class="section-head">Intención de agendar por especialidad</p>
+      <p class="text-xs opacity-60 mb-3">Volumen de interés (intent_agendar). Lo que el motor de Alma debería promover primero.</p>
+      <div style="height:260px"><canvas id="chartInteres"></canvas></div>
+    </div>
+  </section>
+
+  <!-- Profesionales + No ofrecemos -->
+  <section class="grid lg:grid-cols-2 gap-5 mb-10">
+    <div class="card">
+      <p class="section-head">Doctores más pedidos sin cupo</p>
+      <p class="text-xs opacity-60 mb-3">Pacientes pidieron un profesional puntual y no había hora. Señal de agenda saturada / contratar refuerzo.</p>
+      <div id="listProf"><div class="text-sm opacity-50 py-4">—</div></div>
+    </div>
+    <div class="card">
+      <p class="section-head">Gaps de catálogo · no lo ofrecemos</p>
+      <p class="text-xs opacity-60 mb-3">Pidieron algo que el CMC hoy no atiende. Oportunidades de expansión o convenio.</p>
+      <div id="listGaps"><div class="text-sm opacity-50 py-4">—</div></div>
+    </div>
+  </section>
+
+  <!-- El loop: Demanda → Atribución -->
+  <section class="mb-12">
+    <div class="card" style="background:var(--fiordo); color:var(--neblina); border:none;">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p class="section-head" style="color:var(--cobre)">El loop de Alma</p>
+          <p class="serif text-2xl">La demanda decide qué promover. La atribución mide qué llegó.</p>
+          <p class="text-sm opacity-70 mt-1">Toma la especialidad con más intención y poca captura → arma campaña en Autopilot → mide el retorno real en Atribución.</p>
+        </div>
+        <button class="crosslink" onclick="goAtribucion()">Ver Atribución →</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const qp = location.search || "";
+let chSinCupo = null, chInteres = null;
+
+function goAtribucion(){
+  // En Alma ambos son iframes hermanos: navegamos el shell por hash.
+  if (window.parent && window.parent !== window) { try { window.parent.location.hash = 'atribucion'; return; } catch(e){} }
+  window.location.href = '/atribucion' + qp;
+}
+
+function barData(items, labelKey, valKey, max){
+  const top = items.slice(0, max);
+  return {
+    labels: top.map(x => x[labelKey]),
+    values: top.map(x => x[valKey]),
+  };
+}
+
+function renderBar(canvasId, prev, data, color){
+  if (prev) prev.destroy();
+  const ctx = document.getElementById(canvasId);
+  return new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: data.labels,
+      datasets: [{ data: data.values, backgroundColor: color, borderRadius: 4, barThickness: 16 }]
+    },
+    options: {
+      indexAxis: 'y',
+      plugins: { legend: { display:false } },
+      scales: {
+        x: { grid: { color:'rgba(31,51,64,.06)' }, ticks: { font:{family:'IBM Plex Mono', size:10} } },
+        y: { grid: { display:false }, ticks: { font:{family:'Inter', size:11}, color:'#1F3340' } }
+      },
+      maintainAspectRatio: false
+    }
+  });
+}
+
+function esc(s){ return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+function renderList(elId, items, opts){
+  const el = document.getElementById(elId);
+  if (!items || !items.length){ el.innerHTML = '<div class="text-sm opacity-50 py-4">Sin datos en esta ventana.</div>'; return; }
+  el.innerHTML = items.slice(0, 12).map((x, i) => `
+    <div class="row">
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="rank">${String(i+1).padStart(2,'0')}</span>
+        <span class="truncate" style="text-transform:capitalize">${esc(x.nombre) || '—'}</span>
+        ${x.tipo && opts.showTipo ? `<span class="pill" style="background:rgba(184,109,63,.12); color:var(--cobre)">${esc(x.tipo)}</span>` : ''}
+      </div>
+      <div class="flex items-center gap-3 mono text-xs">
+        <span title="solicitudes" style="color:var(--fiordo)">${x.solicitudes ?? x.personas ?? 0}×</span>
+        ${x.ultimo ? `<span class="opacity-40">${x.ultimo}</span>` : ''}
+      </div>
+    </div>`).join('');
+}
+
+async function cargar(){
+  const dias = document.getElementById('selDias').value;
+  try {
+    const r = await fetch(`/api/demanda/data?dias=${dias}`);
+    if (!r.ok) throw new Error('http ' + r.status);
+    const d = await r.json();
+
+    document.getElementById('kpiSinCupo').textContent = (d.kpis.servicios_sin_cupo ?? 0).toLocaleString('es-CL');
+    document.getElementById('kpiProf').textContent = (d.kpis.profesionales_pedidos ?? 0).toLocaleString('es-CL');
+    document.getElementById('kpiInteres').textContent = (d.kpis.intencion_total ?? 0).toLocaleString('es-CL');
+    document.getElementById('kpiGaps').textContent = (d.kpis.gaps_catalogo ?? 0).toLocaleString('es-CL');
+
+    chSinCupo = renderBar('chartSinCupo', chSinCupo, barData(d.servicios_sin_cupo, 'nombre', 'solicitudes', 8), 'rgba(140,42,42,.85)');
+    chInteres = renderBar('chartInteres', chInteres, barData(d.interes_por_especialidad, 'nombre', 'personas', 8), 'rgba(91,139,150,.9)');
+
+    renderList('listProf', d.profesionales_sin_cupo, { showTipo:false });
+    renderList('listGaps', d.no_ofrecemos, { showTipo:true });
+
+    document.getElementById('metaFooter').textContent =
+      `ventana ${d.dias} días · fuente: conversaciones del bot (sessions.db) · actualizado ${new Date().toLocaleString('es-CL')}`;
+  } catch(e) {
+    document.getElementById('metaFooter').textContent = 'No se pudo cargar la demanda: ' + e.message;
+  }
+}
+
+cargar();
+setInterval(cargar, 5 * 60 * 1000);
+</script>
+</body>
+</html>
