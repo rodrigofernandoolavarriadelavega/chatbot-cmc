@@ -160,7 +160,7 @@
 const fmt = n => (n||0).toLocaleString('es-CL');
 const fmtClp = n => 'CLP $' + (n||0).toLocaleString('es-CL', {maximumFractionDigits:0});
 
-// Loop de Ánima: ambos dashboards son iframes hermanos → navegamos el shell por hash.
+// Loop de Alma: ambos dashboards son iframes hermanos → navegamos el shell por hash.
 function goDemanda(){
   if (window.parent && window.parent !== window) { try { window.parent.location.hash = 'demanda'; return; } catch(e){} }
   window.location.href = '/demanda' + (location.search || '');

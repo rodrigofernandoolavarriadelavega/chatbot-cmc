@@ -1,6 +1,6 @@
 """Rutas del dashboard del autopilot. APIRouter para incluir en main.py con 1 línea.
 
-- GET    /autopilot                 → dashboard HTML (estética panel v2, embebible en Ánima)
+- GET    /autopilot                 → dashboard HTML (estética panel v2, embebible en Alma)
 - GET    /autopilot/api/snapshot    → JSON del último run (lee snapshot, no golpea Meta)
 - POST   /autopilot/api/refresh     → fuerza un dry-run nuevo (read-only sobre Meta)
 - GET    /autopilot/api/designs     → galería de diseños Canva (visor embebido)
