@@ -2770,7 +2770,7 @@ _PROF_DASHBOARD_HTML = (_TEMPLATE_DIR / "profesional_dashboard.html").read_text(
 _WINBACK_DASHBOARD_HTML = (_TEMPLATE_DIR / "winback_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "winback_dashboard.html").exists() else ""
 _WINBACK_DENTAL_DASHBOARD_HTML = (_TEMPLATE_DIR / "winback_dental_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "winback_dental_dashboard.html").exists() else ""
 _BOXES_DASHBOARD_HTML = (_TEMPLATE_DIR / "boxes_dashboard.html").read_text(encoding="utf-8")
-_ANIMA_HTML = (_TEMPLATE_DIR / "anima.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "anima.html").exists() else "" if (_TEMPLATE_DIR / "boxes_dashboard.html").exists() else ""
+_ALMA_HTML = (_TEMPLATE_DIR / "alma.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma.html").exists() else ""
 _ALMA_AGENDA_HTML = (_TEMPLATE_DIR / "alma_agenda.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_agenda.html").exists() else ""
 
 # ── Pool de conexiones BI para endpoints de boxes ────────────────────────────
@@ -3303,14 +3303,14 @@ def alma_shell(token: str | None = Query(None),
     el mismo modelo que ya usa /boxes hoy.
     """
     from admin_routes import _verify_cookie
-    if not _ANIMA_HTML:
+    if not _ALMA_HTML:
         raise HTTPException(404, "Alma no disponible")
     if token and token == ADMIN_TOKEN:
-        return _ANIMA_HTML.replace("__TOKEN__", token)
+        return _ALMA_HTML.replace("__TOKEN__", token)
     if cmc_session:
         role = _verify_cookie(cmc_session)
         if role in ("admin", "ortodoncia"):
-            return _ANIMA_HTML.replace("__TOKEN__", ADMIN_TOKEN)
+            return _ALMA_HTML.replace("__TOKEN__", ADMIN_TOKEN)
     return RedirectResponse(url="/admin/login", status_code=302)
 
 
@@ -3483,10 +3483,11 @@ self.addEventListener('fetch', e => {
     return Response(content=sw, media_type="application/javascript")
 
 
-@app.get("/anima/manifest.webmanifest", include_in_schema=False)
-def anima_manifest(token: str | None = Query(None)):
+@app.get("/alma/manifest.webmanifest", include_in_schema=False)
+@app.get("/anima/manifest.webmanifest", include_in_schema=False)  # alias legacy (PWAs instaladas) — borrar tras ventana de gracia
+def alma_manifest(token: str | None = Query(None)):
     """PWA manifest de Alma para instalación como app. Identidad CMC."""
-    start = f"/anima?token={token}" if token else "/anima"
+    start = f"/alma?token={token}" if token else "/alma"
     return JSONResponse({
         "name": "Alma — Centro Médico Carampangue",
         "short_name": "Alma",
@@ -3509,8 +3510,9 @@ def anima_manifest(token: str | None = Query(None)):
     }, media_type="application/manifest+json")
 
 
-@app.get("/anima/sw.js", include_in_schema=False)
-def anima_service_worker():
+@app.get("/alma/sw.js", include_in_schema=False)
+@app.get("/anima/sw.js", include_in_schema=False)  # alias legacy (PWAs instaladas) — borrar tras ventana de gracia
+def alma_service_worker():
     """Service worker mínimo para habilitar instalación PWA de Alma."""
     sw = (
         "self.addEventListener('install', e => self.skipWaiting());\n"
@@ -5119,8 +5121,9 @@ def _make_prof_token(id_prof: int) -> str:
     return _hm.new(ADMIN_TOKEN.encode(), raw.encode(), _hl.sha256).hexdigest()[:32]
 
 
-@app.get("/api/anima/profesionales")
-def api_anima_profesionales(token: str | None = Query(None),
+@app.get("/api/alma/profesionales")
+@app.get("/api/anima/profesionales")  # alias legacy — borrar tras ventana de gracia
+def api_alma_profesionales(token: str | None = Query(None),
                             cmc_session: str | None = Cookie(None)):
     """Roster de profesionales agrupado por especialidad, con el token de cada uno,
     para construir el navegador desplegable del módulo 'Panel del Profesional' en Alma.

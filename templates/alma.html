@@ -423,10 +423,10 @@ const qp = TOKEN ? ("?token=" + encodeURIComponent(TOKEN)) : "";
 // PWA: manifest con token (para que el launcher abra autenticado) + service worker
 (function(){
   const mEl = document.getElementById('animaManifest');
-  if (mEl) mEl.setAttribute('href', '/anima/manifest.webmanifest' + qp);
+  if (mEl) mEl.setAttribute('href', '/alma/manifest.webmanifest' + qp);
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/anima/sw.js', { scope: '/anima' }).catch(()=>{});
+      navigator.serviceWorker.register('/alma/sw.js', { scope: '/alma' }).catch(()=>{});
     });
   }
 })();
@@ -503,7 +503,7 @@ async function loadProfesionales(){
   _profLoaded = true;
   const cont = document.getElementById('profChildren');
   try {
-    const r = await fetch('/api/anima/profesionales' + qp);
+    const r = await fetch('/api/alma/profesionales' + qp);
     if (!r.ok) throw new Error('http ' + r.status);
     const data = await r.json();
     cont.innerHTML = '';
