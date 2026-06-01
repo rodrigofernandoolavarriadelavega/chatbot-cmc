@@ -15,8 +15,9 @@ import logging
 from datetime import datetime, date
 from zoneinfo import ZoneInfo
 
+import io
 from fastapi import APIRouter, Depends, HTTPException, Request, Query, Cookie
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
 log = logging.getLogger("pagos_routes")
 _CHILE_TZ = ZoneInfo("America/Santiago")
@@ -541,6 +542,147 @@ async def patch_pago(
 
     log.info("pagos_routes.patch_pago: id=%d campos=%s", pago_id, list(campos.keys()))
     return {"ok": True, "id": pago_id, "updated": list(campos.keys())}
+
+
+@router.get("/export")
+async def export_pagos_xlsx(
+    fecha: str | None = Query(None, description="YYYY-MM-DD (omitir = hoy)"),
+    fecha_desde: str | None = Query(None),
+    fecha_hasta: str | None = Query(None),
+    token: str | None = Query(None),
+    cmc_session: str | None = Cookie(None),
+    request: Request = None,
+):
+    """
+    Exporta los pagos del período como .xlsx.
+    Columnas: HORA, PACIENTE, NOMBRE PROFESIONAL, AREA, PREVISION,
+              VALOR, METODO DE PAGO, N° FOLIO, PROCEDIMIENTO
+    """
+    _require_admin_dep(request, token=token, cmc_session=cmc_session)
+    ensure_pagos_table()
+
+    now_cl = datetime.now(_CHILE_TZ)
+
+    if fecha_desde and fecha_hasta:
+        try:
+            datetime.strptime(fecha_desde, "%Y-%m-%d")
+            datetime.strptime(fecha_hasta, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(400, "Fechas deben ser YYYY-MM-DD")
+        d_desde, d_hasta = fecha_desde, fecha_hasta
+    else:
+        d = fecha or now_cl.strftime("%Y-%m-%d")
+        try:
+            datetime.strptime(d, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(400, "fecha debe ser YYYY-MM-DD")
+        d_desde = d_hasta = d
+
+    from session import _conn
+    with _conn() as conn:
+        rows = conn.execute(
+            """SELECT hora, paciente_nombre, profesional, area, prevision,
+                      copago, bonificacion, metodo_pago, folio, procedimiento
+               FROM pagos_cmc
+               WHERE fecha BETWEEN ? AND ?
+               ORDER BY fecha ASC, hora ASC""",
+            (d_desde, d_hasta)
+        ).fetchall()
+
+    try:
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    except ImportError:
+        raise HTTPException(500, "openpyxl no disponible")
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Pagos"
+
+    # Fila de título con fecha del período
+    periodo = d_desde if d_desde == d_hasta else f"{d_desde} — {d_hasta}"
+    ws.merge_cells("A1:I1")
+    titulo_cell = ws["A1"]
+    titulo_cell.value = f"Pagos CMC — {periodo}"
+    titulo_cell.font = Font(name="Calibri", bold=True, size=12, color="FFFFFF")
+    titulo_cell.fill = PatternFill("solid", fgColor="0F3F68")
+    titulo_cell.alignment = Alignment(horizontal="center", vertical="center")
+    ws.row_dimensions[1].height = 20
+
+    # Encabezados (fila 2)
+    headers = [
+        "HORA", "PACIENTE", "NOMBRE PROFESIONAL", "AREA",
+        "PREVISION", "VALOR", "METODO DE PAGO", "N° FOLIO", "PROCEDIMIENTO"
+    ]
+    header_fill  = PatternFill("solid", fgColor="1172AB")
+    header_font  = Font(name="Calibri", bold=True, size=10, color="FFFFFF")
+    thin_border  = Border(
+        left=Side(style="thin", color="CCCCCC"),
+        right=Side(style="thin", color="CCCCCC"),
+        top=Side(style="thin", color="CCCCCC"),
+        bottom=Side(style="thin", color="CCCCCC"),
+    )
+    for col_idx, h in enumerate(headers, start=1):
+        cell = ws.cell(row=2, column=col_idx, value=h)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.border = thin_border
+    ws.row_dimensions[2].height = 16
+
+    # Datos (desde fila 3)
+    alt_fill = PatternFill("solid", fgColor="EBF5FB")
+    data_font = Font(name="Calibri", size=10)
+    for row_idx, row in enumerate(rows, start=3):
+        # VALOR = copago + bonificacion
+        valor = (row["copago"] or 0) + (row["bonificacion"] or 0)
+        prevision_label = "Fonasa MLE" if (row["prevision"] or "").lower() == "fonasa" else "Particular"
+        metodo_label    = (row["metodo_pago"] or "efectivo").capitalize()
+        values = [
+            (row["hora"] or "")[:5],
+            row["paciente_nombre"] or "",
+            row["profesional"] or "",
+            row["area"] or "",
+            prevision_label,
+            valor,
+            metodo_label,
+            row["folio"] or "",
+            row["procedimiento"] or "",
+        ]
+        fill = alt_fill if row_idx % 2 == 0 else None
+        for col_idx, v in enumerate(values, start=1):
+            cell = ws.cell(row=row_idx, column=col_idx, value=v)
+            cell.font = data_font
+            cell.border = thin_border
+            cell.alignment = Alignment(vertical="center")
+            if fill:
+                cell.fill = fill
+            # Columna VALOR → formato moneda CLP
+            if col_idx == 6 and isinstance(v, int):
+                cell.number_format = '"$"#,##0'
+                cell.alignment = Alignment(horizontal="right", vertical="center")
+
+    # Anchos de columna (aproximados)
+    col_widths = [8, 24, 22, 18, 12, 12, 14, 12, 28]
+    for col_idx, w in enumerate(col_widths, start=1):
+        ws.column_dimensions[ws.cell(row=2, column=col_idx).column_letter].width = w
+
+    # Congelar fila de encabezados
+    ws.freeze_panes = "A3"
+
+    # Serializar a bytes
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    label = d_desde if d_desde == d_hasta else f"{d_desde}_{d_hasta}"
+    filename = f"pagos_{label}.xlsx"
+
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.delete("/{pago_id}")
