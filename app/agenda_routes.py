@@ -362,6 +362,58 @@ async def _capi_schedule(
         log.warning("_capi_schedule: error inesperado: %s", e)
 
 
+# ── Utilidad: teléfono de un paciente por id_paciente (para botón Confirmar WA) ──
+
+@router.get("/paciente-tel")
+async def get_paciente_telefono(
+    id_paciente: int = Query(..., description="ID del paciente en Medilink"),
+    token: str | None = Query(None),
+    cmc_session: str | None = Cookie(None),
+    request: Request = None,
+):
+    """
+    Devuelve el teléfono de un paciente por su id_paciente.
+    Consulta GET /pacientes/{id} en Medilink.
+    Usado por el botón 'Confirmar WA' en la agenda del día.
+    Responde {telefono: "56912345678"} o {telefono: null} si no hay teléfono.
+    """
+    _require_admin_dep(request, token=token, cmc_session=cmc_session)
+
+    from medilink import MEDILINK_BASE_URL, HEADERS, _get_shared_client, _safe_json
+    import httpx
+
+    client = _get_shared_client()
+    telefono = None
+    try:
+        r = await client.get(
+            f"{MEDILINK_BASE_URL}/pacientes/{id_paciente}",
+            headers=HEADERS,
+            timeout=5,
+        )
+        if r.status_code == 200:
+            p = _safe_json(r)
+            # Medilink devuelve el objeto directo (no envuelto en data[])
+            # para GET /pacientes/{id}
+            raw_tel = (p.get("celular") or p.get("telefono") or "").strip()
+            if raw_tel:
+                # Normalizar a formato internacional sin + ni espacios: 56XXXXXXXXX
+                digits = "".join(c for c in raw_tel if c.isdigit())
+                if digits.startswith("0"):
+                    digits = digits[1:]
+                if len(digits) == 9:
+                    digits = "56" + digits
+                elif len(digits) == 11 and digits.startswith("56"):
+                    pass  # ya bien formateado
+                elif len(digits) == 10 and digits.startswith("9"):
+                    digits = "56" + digits
+                if len(digits) >= 11:
+                    telefono = digits
+    except httpx.RequestError as e:
+        log.warning("get_paciente_telefono id=%d: %s", id_paciente, e)
+
+    return {"id_paciente": id_paciente, "telefono": telefono}
+
+
 # ── Utilidades: lista de profesionales para el selector ──────────────────────
 
 @router.get("/profesionales")

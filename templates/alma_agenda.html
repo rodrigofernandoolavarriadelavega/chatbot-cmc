@@ -143,6 +143,17 @@ body{font-family:'Montserrat',system-ui,sans-serif;background:var(--bg);color:va
 /* Divider */
 .divider{height:1px;background:var(--line);margin:20px 0}
 
+/* Botón Confirmar WA */
+.btn-wa{display:inline-flex;align-items:center;gap:6px;border:0;cursor:pointer;
+        font-family:inherit;font-weight:700;font-size:11.5px;padding:6px 11px;
+        border-radius:8px;transition:.15s;white-space:nowrap;text-decoration:none;
+        background:#e9faf2;border:1px solid #a8dfc0;color:#1a7a4a;flex-shrink:0}
+.btn-wa:hover{background:#25d366;border-color:#25d366;color:#fff;transform:translateY(-1px)}
+.btn-wa svg{width:13px;height:13px;stroke-width:2;flex-shrink:0}
+.btn-wa:disabled,.btn-wa[disabled]{opacity:.42;cursor:not-allowed;transform:none!important;
+        background:#f0f3f6;border-color:#d8e2eb;color:#8a9ab0}
+.btn-wa.loading{opacity:.7;cursor:wait}
+
 @media(max-width:640px){
   .controls{flex-direction:column;align-items:stretch}
   .field select,.field input{min-width:100%}
@@ -472,16 +483,29 @@ function renderAgenda(data) {
         <p>Sin citas registradas en cache para esta fecha.<br>Si es una fecha futura sin sincronizar, usa Medilink directamente.</p>
       </div>`;
   } else {
+    // Info de la vista actual: profesional y especialidad
+    const profNombre = data.profesional ? data.profesional.nombre : "";
+    const profEsp    = data.profesional ? (data.profesional.especialidad || "") : "";
+
     data.citas.forEach(c => {
       const div = document.createElement('div');
       div.className = 'cita-row';
+
+      // Botón Confirmar WA — lazy: resuelve teléfono al primer click
+      const btnWa = document.createElement('button');
+      btnWa.className = 'btn-wa';
+      btnWa.title = 'Confirmar por WhatsApp';
+      btnWa.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" stroke-linecap="round" stroke-linejoin="round"/></svg> Confirmar WA';
+      btnWa.addEventListener('click', () => confirmarWA(btnWa, c, profNombre, profEsp, data.fecha));
+
       div.innerHTML = `
-        <div class="cita-hora">${c.hora_inicio || "?"}</div>
+        <div class="cita-hora">${escHtml(c.hora_inicio || "?")}</div>
         <div class="cita-sep"></div>
         <div class="cita-info">
           <div class="cita-nombre">${escHtml(c.paciente_nombre || "Paciente sin nombre")}</div>
         </div>
         <div class="cita-badge">Agendado</div>`;
+      div.appendChild(btnWa);
       lista.appendChild(div);
     });
   }
@@ -711,6 +735,70 @@ async function crearCita() {
     btn.disabled = false;
     btn.classList.remove('spin');
   }
+}
+
+// ── Confirmar por WhatsApp ────────────────────────────────────────────────────
+// Caché en memoria para no repetir la consulta de teléfono en la misma sesión
+const _telCache = {};
+
+async function confirmarWA(btn, cita, profNombre, profEsp, fecha) {
+  const idPaciente = cita.id_paciente;
+  if (!idPaciente) {
+    btn.disabled = true;
+    btn.title = 'Sin datos de paciente';
+    return;
+  }
+
+  // Si ya resolvimos el teléfono para este paciente, abrir directo
+  if (_telCache[idPaciente] !== undefined) {
+    _abrirWA(btn, _telCache[idPaciente], cita, profNombre, profEsp, fecha);
+    return;
+  }
+
+  // Lazy: consultar teléfono
+  btn.classList.add('loading');
+  btn.disabled = true;
+
+  try {
+    const url = BASE + "/paciente-tel" + qp + "&id_paciente=" + idPaciente;
+    const r = await fetch(url);
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const data = await r.json();
+    _telCache[idPaciente] = data.telefono || null;
+  } catch(e) {
+    _telCache[idPaciente] = null;
+    console.warn("confirmarWA: no se pudo obtener teléfono para id_paciente=" + idPaciente, e);
+  }
+
+  btn.classList.remove('loading');
+  btn.disabled = false;
+
+  _abrirWA(btn, _telCache[idPaciente], cita, profNombre, profEsp, fecha);
+}
+
+function _abrirWA(btn, telefono, cita, profNombre, profEsp, fecha) {
+  if (!telefono) {
+    // Sin teléfono: deshabilitar el botón con tooltip
+    btn.disabled = true;
+    btn.title = 'Sin teléfono registrado para este paciente';
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" stroke-linecap="round" stroke-linejoin="round"/></svg> Sin tel.';
+    return;
+  }
+
+  // Construir mensaje de confirmación pre-armado
+  const nombre = cita.paciente_nombre || "paciente";
+  const nombreCorto = nombre.split(' ')[0]; // primer nombre
+  const esp    = profEsp || "su especialidad";
+  const hora   = cita.hora_inicio || "";
+  const fechaDisplay = formatFecha(fecha);
+
+  const mensaje =
+    "Hola " + nombreCorto + ", le recordamos su cita en el Centro Médico Carampangue: " +
+    esp + " con " + profNombre + ", el " + fechaDisplay + " a las " + hora + ". " +
+    "Por favor confirme respondiendo SI. Si necesita reagendar, avisar con anticipacion. Gracias.";
+
+  const url = "https://wa.me/" + telefono + "?text=" + encodeURIComponent(mensaje);
+  window.open(url, "_blank", "noopener");
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
