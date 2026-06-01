@@ -191,6 +191,32 @@ input, textarea, select{font-family:inherit; color:inherit}
 .topbar-btn.active{background:var(--cmc-aqua-soft); color:var(--cmc-blue)}
 .topbar-btn.icon-only{padding:7px; width:32px; height:32px; justify-content:center}
 
+/* ===== Colapsar barra superior + maximizar chat (jun 2026) =============== */
+.app.tb-collapsed{ grid-template-rows: 0 1fr }
+.app.tb-collapsed > .topbar{ display:none }
+.app.chat-max{ grid-template-columns: 0 1fr 0 !important; grid-template-rows: 0 1fr !important }
+.app.chat-max > .topbar, .app.chat-max > .inbox, .app.chat-max > .context{ display:none !important }
+/* Pill flotante para volver a mostrar la barra cuando está colapsada */
+.tb-show{
+  display:none; position:fixed; top:calc(env(safe-area-inset-top,0) + 6px); left:50%;
+  transform:translateX(-50%); z-index:60; align-items:center; gap:6px;
+  padding:5px 12px; border-radius:999px; cursor:pointer; font-size:12px; font-weight:600;
+  color:var(--cmc-blue); background:rgba(255,255,255,.96); border:1px solid var(--border);
+  box-shadow:var(--shadow-sm); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+}
+.tb-show:hover{border-color:var(--cmc-aqua); color:var(--cmc-blue)}
+.app.tb-collapsed .tb-show{ display:inline-flex }
+.app.chat-max .tb-show{ display:none !important }
+/* Botones de herramienta en el chat-header (siempre visibles en desktop) */
+.chat-tool{
+  width:32px; height:32px; flex:none; display:inline-flex; align-items:center;
+  justify-content:center; border-radius:9px; border:1px solid var(--border);
+  background:var(--panel); color:var(--text-dim); cursor:pointer; font-size:15px;
+  line-height:1; transition:all var(--dur) var(--ease); margin-left:4px;
+}
+.chat-tool:hover{background:var(--cmc-aqua-soft); border-color:var(--cmc-aqua); color:var(--cmc-blue)}
+.chat-tool.active{background:var(--cmc-aqua-soft); border-color:var(--cmc-aqua); color:var(--cmc-blue)}
+
 /* ===== INBOX ============================================================== */
 .inbox-search{padding:14px 14px 10px}
 .inbox-search input{
@@ -1192,6 +1218,7 @@ html, body{width:100%; max-width:100%; overflow-x:hidden}
 <body>
 
 <div class="app" id="app">
+  <button class="tb-show" onclick="toggleTopbar()" title="Mostrar barra superior" aria-label="Mostrar barra superior">▾ barra</button>
 
   <!-- ===== TOPBAR ========================================================= -->
   <header class="topbar">
@@ -1224,6 +1251,9 @@ html, body{width:100%; max-width:100%; overflow-x:hidden}
     </button>
     <button class="topbar-btn icon-only" id="btnNotif" title="Notificaciones del navegador">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><polyline points="3 7 12 13 21 7"/></svg>
+    </button>
+    <button class="topbar-btn icon-only" id="btnCollapseTop" onclick="toggleTopbar()" title="Ocultar barra superior (más espacio para el chat)" aria-label="Ocultar barra superior">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
     </button>
     <a class="topbar-btn" href="/admin" title="Volver al panel completo v1">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
@@ -1305,6 +1335,7 @@ html, body{width:100%; max-width:100%; overflow-x:hidden}
         <div class="chat-actions" id="chActions"></div>
         <button class="ctx-toggle" onclick="toggleInChatSearch()" aria-label="Buscar en esta conversación" title="Buscar en esta conversación (Ctrl+F)" style="margin-right:6px">🔍</button>
         <button class="ctx-toggle" onclick="toggleContext()" aria-label="Ver datos del paciente">ⓘ</button>
+        <button class="chat-tool" id="btnChatMax" onclick="toggleChatMax()" title="Pantalla completa del chat" aria-label="Pantalla completa del chat">⛶</button>
       </div>
       <div class="in-chat-search" id="inChatSearch" role="search">
         <input type="text" id="inChatSearchInput" placeholder="Buscar en esta conversación…" autocomplete="off">
@@ -4263,5 +4294,41 @@ function syncAppBadge(count) {
     <p style="margin:14px 0 0;font-size:11px;color:#9ca3af">Filas en rojo: conv. clic &lt; 5% (candidatas a eliminar del cross-sell). Ingresos son estimados basados en precios promedio particulares.</p>
   </div>
 </div>
+<script>
+/* Colapsar barra superior / maximizar chat (jun 2026) ---------------------- */
+function toggleTopbar(){
+  var app=document.getElementById('app'); if(!app) return;
+  var on=app.classList.toggle('tb-collapsed');
+  try{ localStorage.setItem('v2_tb_collapsed', on?'1':'0'); }catch(e){}
+  var b=document.getElementById('btnCollapseTop');
+  if(b){ b.classList.toggle('active', on);
+         b.title = on ? 'Mostrar barra superior' : 'Ocultar barra superior (más espacio para el chat)'; }
+}
+function toggleChatMax(){
+  var app=document.getElementById('app'); if(!app) return;
+  var on=app.classList.toggle('chat-max');
+  var b=document.getElementById('btnChatMax');
+  if(b){ b.classList.toggle('active', on);
+         b.title = on ? 'Salir de pantalla completa' : 'Pantalla completa del chat'; }
+}
+/* ESC sale de pantalla completa del chat */
+document.addEventListener('keydown', function(e){
+  if(e.key==='Escape'){
+    var app=document.getElementById('app');
+    if(app && app.classList.contains('chat-max')) toggleChatMax();
+  }
+});
+/* Restaurar preferencia de barra colapsada (chat-max NO se persiste: es foco momentáneo) */
+(function(){
+  try{
+    if(localStorage.getItem('v2_tb_collapsed')==='1'){
+      var app=document.getElementById('app');
+      if(app){ app.classList.add('tb-collapsed');
+               var b=document.getElementById('btnCollapseTop');
+               if(b){ b.classList.add('active'); b.title='Mostrar barra superior'; } }
+    }
+  }catch(e){}
+})();
+</script>
 </body>
 </html>
