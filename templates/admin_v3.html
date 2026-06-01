@@ -599,12 +599,13 @@ function renderWl(){
   const box=document.getElementById("wlContent");
   const active=WL.filter(wlActive), rest=WL.filter(r=>!wlActive(r));
   if(!WL.length){box.innerHTML='<div class="wl-empty">No hay nadie en lista de espera. 🎉</div>';return;}
-  // agrupar activos por especialidad
+  // agrupar activos por especialidad (normalizando tildes/mayúsculas para no duplicar grupos)
+  const norm=s=>(s||"otros").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();
   const groups={};
-  active.forEach(r=>{const k=(r.especialidad||"otros");(groups[k]=groups[k]||[]).push(r);});
+  active.forEach(r=>{const k=norm(r.especialidad);(groups[k]=groups[k]||{label:(r.especialidad||"otros"),rows:[]}).rows.push(r);});
   let html="";
-  Object.keys(groups).sort().forEach(esp=>{
-    const rows=groups[esp], badge=rows.find(r=>r.badge)?.badge||"";
+  Object.keys(groups).sort().forEach(k=>{
+    const rows=groups[k].rows, esp=groups[k].label, badge=rows.find(r=>r.badge)?.badge||"";
     html+=`<div class="wl-group"><div class="wl-group-h"><span class="ge">${esc(esp)}</span><span class="gc">${rows.length} esperando</span><span class="gl"></span></div>`;
     if(badge)html+=`<div class="wl-badge">${esc(badge)}</div>`;
     rows.forEach((r,i)=>{html+=wlRow(r,i+1,"act");});
