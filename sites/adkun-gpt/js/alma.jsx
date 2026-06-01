@@ -51,7 +51,7 @@ function AlmaDashboard() {
       </div>
 
       {/* app body */}
-      <div className="flex min-h-[460px]">
+      <div className="flex min-h-[380px] sm:min-h-[460px]">
         {/* sidebar */}
         <aside className="w-[208px] shrink-0 bg-navy text-white/70 px-3.5 py-5 hidden sm:flex flex-col">
           <div className="flex items-center gap-2 px-2 pb-5 mb-2 border-b border-white/10">
@@ -79,13 +79,13 @@ function AlmaDashboard() {
         </aside>
 
         {/* main */}
-        <div className="flex-1 bg-[#FAFBFC] p-5 lg:p-6">
+        <div className="flex-1 min-w-0 bg-[#FAFBFC] p-4 sm:p-5 lg:p-6">
           <div className="flex items-center justify-between gap-3 mb-5">
             <div className="min-w-0">
               <div className="font-display text-[19px] font-bold text-navy whitespace-nowrap">Resumen del día</div>
               <div className="font-sans text-[12px] text-slate/60 whitespace-nowrap">Lunes 1 de junio · 2026</div>
             </div>
-            <div className="flex items-center gap-2 rounded-full border border-mist bg-white px-3 py-1.5 shrink-0">
+            <div className="hidden sm:flex items-center gap-2 rounded-full border border-mist bg-white px-3 py-1.5 shrink-0">
               <span className="h-6 w-6 rounded-full bg-navy flex items-center justify-center text-[10px] font-bold text-white">DR</span>
               <span className="font-sans text-[12.5px] font-medium text-navy">Dr. Daniel R.</span>
               <span className="text-slate/40 text-[11px]">▾</span>
@@ -93,14 +93,14 @@ function AlmaDashboard() {
           </div>
 
           {/* KPI cards */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
             {ALMA_KPIS.map((k, i) => (
-              <div key={k.label} className="rounded-xl border border-mist bg-white p-3.5">
-                <div className="font-sans text-[11px] text-slate/60 mb-1.5">{k.label}</div>
-                <div className="flex items-end justify-between">
-                  <span className="font-display text-[26px] font-bold text-navy leading-none whitespace-nowrap">{k.value}</span>
+              <div key={k.label} className="rounded-xl border border-mist bg-white p-3 sm:p-3.5">
+                <div className="font-sans text-[10.5px] sm:text-[11px] text-slate/60 mb-1.5 leading-tight">{k.label}</div>
+                <div className="flex items-end justify-between gap-1">
+                  <span className="font-display text-[22px] sm:text-[26px] font-bold text-navy leading-none whitespace-nowrap">{k.value}</span>
                   {i === 0 && (
-                    <svg className="h-7 w-14" viewBox="0 0 56 28" fill="none" aria-hidden="true">
+                    <svg className="hidden sm:block h-7 w-14" viewBox="0 0 56 28" fill="none" aria-hidden="true">
                       <path d="M0 22 L10 18 L20 21 L30 10 L40 14 L56 4" stroke="#B45A2A" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                   )}
@@ -118,11 +118,11 @@ function AlmaDashboard() {
             </div>
             <div>
               {ALMA_AGENDA.map((a) => (
-                <div key={a.time} className="flex items-center gap-4 px-4 py-[11px] border-b border-stone last:border-0 hover:bg-stone/60 transition-colors">
-                  <span className={"w-1 self-stretch rounded-full " + (a.tone === "active" ? "bg-copper" : a.tone === "done" ? "bg-[#5BB97E]" : "bg-mist")}></span>
-                  <span className="font-sans text-[12.5px] font-semibold text-navy w-[44px]">{a.time}</span>
-                  <span className="font-sans text-[12.5px] text-slate w-[78px]">{a.type}</span>
-                  <span className="font-sans text-[12.5px] text-navy flex-1">{a.name}</span>
+                <div key={a.time} className="flex items-center gap-2.5 sm:gap-4 px-3 sm:px-4 py-[11px] border-b border-stone last:border-0 hover:bg-stone/60 transition-colors">
+                  <span className={"w-1 self-stretch shrink-0 rounded-full " + (a.tone === "active" ? "bg-copper" : a.tone === "done" ? "bg-[#5BB97E]" : "bg-mist")}></span>
+                  <span className="font-sans text-[12.5px] font-semibold text-navy w-[44px] shrink-0">{a.time}</span>
+                  <span className="hidden sm:block font-sans text-[12.5px] text-slate w-[78px] shrink-0">{a.type}</span>
+                  <span className="font-sans text-[12.5px] text-navy flex-1 min-w-0 truncate">{a.name}</span>
                   <StatusBadge tone={a.tone}>{a.status}</StatusBadge>
                 </div>
               ))}
