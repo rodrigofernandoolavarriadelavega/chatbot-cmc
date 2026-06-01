@@ -326,7 +326,7 @@ MSG_PREGUNTAR_TIPO = (
 )
 
 
-def route_ecografia(texto: str) -> dict | None:
+def route_ecografia(texto: str, assume_context: bool = False) -> dict | None:
     """Dado texto del paciente que menciona ecografía, retorna el routing correcto.
 
     Retorna uno de los dicts en ECOGRAFIA_ROUTING si el tipo de ecografía es
@@ -345,7 +345,13 @@ def route_ecografia(texto: str) -> dict | None:
 
     # GATE: sin contexto ecográfico real, las partes del cuerpo NO enrutan.
     # "me duele la rodilla" / "podóloga, los pies" / "limpieza de dientes" → None.
-    if not _tiene_contexto_eco(txt_norm):
+    #
+    # assume_context=True saltea el gate: lo usan los call sites que YA saben que
+    # estamos resolviendo el TIPO de una ecografía (el bot acaba de preguntar
+    # "¿de qué tipo es la ecografía?" y el paciente responde "abdominal",
+    # "de rodilla", "mamaria", etc.). Sin esto, el gate rompería la selección de
+    # tipo de eco legítima. Ver flows.py wait_eco_tipo y _iniciar_agendar.
+    if not assume_context and not _tiene_contexto_eco(txt_norm):
         return None
 
     # Prioridad fija: ginecología primero, luego cardiología, luego general

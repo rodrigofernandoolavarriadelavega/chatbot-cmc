@@ -5674,7 +5674,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             data.pop("wait_eco_tipo", None)
             try:
                 from ecografias import route_ecografia as _reco_fi, MSG_PREGUNTAR_TIPO as _MSG_REFI
-                _eco_fi = _reco_fi(txt)
+                # assume_context=True: ya estamos en selección de tipo de eco
+                # (el bot acaba de preguntar el tipo), así "abdominal"/"de rodilla"
+                # deben resolver aunque no repitan la palabra "ecografía".
+                _eco_fi = _reco_fi(txt, assume_context=True)
             except Exception:
                 _eco_fi = None
                 _MSG_REFI = None
@@ -11688,7 +11691,10 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
         _txt_para_eco = data.get("_txt_raw") or _txt_raw or especialidad
         try:
             from ecografias import route_ecografia as _route_eco, MSG_PREGUNTAR_TIPO as _MSG_ECO
-            _eco_r = _route_eco(_txt_para_eco)
+            # assume_context=True: ya decidimos especialidad=ecografía, este texto
+            # es el órgano/tipo ("abdominal","renal","hombro"...). El gate de
+            # contexto eco no debe bloquearlo. Ver ecografias.route_ecografia.
+            _eco_r = _route_eco(_txt_para_eco, assume_context=True)
         except Exception:
             _eco_r = None
             _MSG_ECO = (
