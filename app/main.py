@@ -645,6 +645,10 @@ app.include_router(vuelos_routes.router)
 import agenda_routes
 app.include_router(agenda_routes.router)
 
+import pagos_routes
+app.include_router(pagos_routes.router)
+pagos_routes.ensure_pagos_table()  # DDL idempotente al arrancar
+
 # Cargar HTML del panel admin y portal paciente
 _TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
 _ADMIN_HTML = (_TEMPLATE_DIR / "admin.html").read_text(encoding="utf-8")
@@ -2789,6 +2793,7 @@ _WINBACK_DENTAL_DASHBOARD_HTML = (_TEMPLATE_DIR / "winback_dental_dashboard.html
 _BOXES_DASHBOARD_HTML = (_TEMPLATE_DIR / "boxes_dashboard.html").read_text(encoding="utf-8")
 _ALMA_HTML = (_TEMPLATE_DIR / "alma.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma.html").exists() else ""
 _ALMA_AGENDA_HTML = (_TEMPLATE_DIR / "alma_agenda.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_agenda.html").exists() else ""
+_ALMA_PAGOS_HTML  = (_TEMPLATE_DIR / "alma_pagos.html").read_text(encoding="utf-8")  if (_TEMPLATE_DIR / "alma_pagos.html").exists()  else ""
 
 # ── Pool de conexiones BI para endpoints de boxes ────────────────────────────
 # Máximo 8 conexiones compartidas entre boxes-state, boxes-config y boxes-config-put.
@@ -3344,6 +3349,22 @@ def alma_agenda_page(token: str | None = Query(None),
         role = _verify_cookie(cmc_session)
         if role in ("admin", "ortodoncia"):
             return _ALMA_AGENDA_HTML.replace("__TOKEN__", ADMIN_TOKEN)
+    return RedirectResponse(url="/admin/login", status_code=302)
+
+
+@app.get("/alma/pagos", response_class=HTMLResponse)
+def alma_pagos_page(token: str | None = Query(None),
+                    cmc_session: str | None = Cookie(None)):
+    """Modulo nativo Pagos — registro editable de pagos del dia."""
+    from admin_routes import _verify_cookie
+    if not _ALMA_PAGOS_HTML:
+        raise HTTPException(404, "Pagos no disponible")
+    if token and token == ADMIN_TOKEN:
+        return _ALMA_PAGOS_HTML.replace("__TOKEN__", token)
+    if cmc_session:
+        role = _verify_cookie(cmc_session)
+        if role in ("admin", "ortodoncia"):
+            return _ALMA_PAGOS_HTML.replace("__TOKEN__", ADMIN_TOKEN)
     return RedirectResponse(url="/admin/login", status_code=302)
 
 

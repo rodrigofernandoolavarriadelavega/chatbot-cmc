@@ -441,18 +441,20 @@ const ICONS = {
   steth: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4.8 2.3A.3.3 0 005 2H4a2 2 0 00-2 2v5a4 4 0 008 0V4a2 2 0 00-2-2H7a.3.3 0 00.2.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 15a6 6 0 006 6 6 6 0 006-6v-4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="20" cy="10" r="2"/></svg>',
   chevron: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 18l6-6-6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 2v4M8 2v4M3 10h18" stroke-linecap="round"/></svg>',
-  externallink: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 3h6v6M10 14L21 3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+  externallink: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 3h6v6M10 14L21 3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  banknote: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="6" width="20" height="13" rx="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3"/><path d="M6 12h.01M18 12h.01" stroke-linecap="round"/></svg>'
 };
 
 // ---- Module registry. Para agregar un módulo nuevo: una línea aquí. ----
 const MODULES = [
-  { id: "panel",   label: "Panel Recepción", icon: "inbox",    title: "Panel de Recepción v2",   sub: "Conversaciones · WhatsApp · Agenda",        src: "/admin/v2" + qp },
-  { id: "panel2",  label: "Panel Recepción 2", icon: "inbox",  title: "Panel de Recepción v3 (beta)", sub: "Nuevo · cola de atención priorizada · en pruebas", src: "/admin/v3" + qp },
-  { id: "agenda",  label: "Agenda",          icon: "calendar", title: "Agenda",                   sub: "Ver citas del dia · Agendar nueva hora",     src: "/alma/agenda" + qp },
-  { id: "boxes",   label: "Boxes",           icon: "grid",     title: "Boxes — Gemelo Digital",  sub: "Ocupación y recaudación por box",            src: "/boxes" + qp },
-  { id: "mensual", label: "DB Mensual",      icon: "chart",    title: "Dashboard Mensual",       sub: "Ingresos y honorarios por profesional",      src: "/cmc/mensual" + qp },
-  { id: "autopilot", label: "Autopilot Ads", icon: "target",   title: "Autopilot de Marketing",  sub: "Meta Ads · decisiones por rentabilidad real", src: "/autopilot" + qp },
-  { id: "demanda", label: "Demanda",         icon: "search",   title: "Demanda capturada",       sub: "Qué piden los pacientes que no capturamos",  src: "/demanda" + qp },
+  { id: "panel",   label: "Panel Recepción", icon: "inbox",      title: "Panel de Recepción v2",   sub: "Conversaciones · WhatsApp · Agenda",          src: "/admin/v2" + qp },
+  { id: "panel2",  label: "Panel Recepción 2", icon: "inbox",    title: "Panel de Recepción v3 (beta)", sub: "Nuevo · cola de atención priorizada · en pruebas", src: "/admin/v3" + qp },
+  { id: "agenda",  label: "Agenda",          icon: "calendar",   title: "Agenda",                   sub: "Ver citas del dia · Agendar nueva hora",       src: "/alma/agenda" + qp },
+  { id: "pagos",   label: "Pagos",           icon: "banknote",   title: "Pagos del dia",            sub: "Registro de cobros · copagos · bonif. Imed",   src: "/alma/pagos" + qp },
+  { id: "boxes",   label: "Boxes",           icon: "grid",       title: "Boxes — Gemelo Digital",  sub: "Ocupación y recaudación por box",              src: "/boxes" + qp },
+  { id: "mensual", label: "DB Mensual",      icon: "chart",      title: "Dashboard Mensual",       sub: "Ingresos y honorarios por profesional",        src: "/cmc/mensual" + qp },
+  { id: "autopilot", label: "Autopilot Ads", icon: "target",     title: "Autopilot de Marketing",  sub: "Meta Ads · decisiones por rentabilidad real",  src: "/autopilot" + qp },
+  { id: "demanda", label: "Demanda",         icon: "search",     title: "Demanda capturada",       sub: "Qué piden los pacientes que no capturamos",    src: "/demanda" + qp },
 ];
 
 // Futuros (deshabilitados, comunican la visión de consolidación)
@@ -675,6 +677,31 @@ window.addEventListener('hashchange', fromHash);
 if (location.hash && moduleById(location.hash.replace('#',''))) {
   fromHash();
 } // else: welcome screen stays until user picks
+
+// ── postMessage bridge: iframes hijos pueden activar modulos y enviar datos ──
+window.addEventListener('message', function(e) {
+  if (!e.data || typeof e.data !== 'object') return;
+
+  // ALMA_ACTIVATE_MODULE: activa un modulo por id (ej: el chat activa "pagos")
+  if (e.data.type === 'ALMA_ACTIVATE_MODULE') {
+    const id = e.data.id;
+    if (id && moduleById(id)) {
+      select(id, true);
+    }
+    return;
+  }
+
+  // ALMA_ABRIR_PAGO: reenviar al iframe de pagos si ya esta cargado
+  if (e.data.type === 'ALMA_ABRIR_PAGO') {
+    const pagosWrap = document.querySelector('.frame-wrap[data-id="pagos"] iframe');
+    if (pagosWrap) {
+      pagosWrap.contentWindow.postMessage(e.data, '*');
+    }
+    // Si el modulo pagos no estaba cargado, se cargara y luego el
+    // listener interno en alma_pagos.html tomara el mensaje del iframe padre.
+    return;
+  }
+});
 </script>
 </body>
 </html>

@@ -801,6 +801,9 @@ input, textarea, select{font-family:inherit; color:inherit}
 /* Botón Agendar en chat-actions */
 .chat-btn.ag-cta{background:var(--cmc-aqua); color:#fff; border-color:var(--cmc-aqua)}
 .chat-btn.ag-cta:hover{background:var(--cmc-aqua-dark)}
+/* Botón Pago en chat-actions */
+.chat-btn.pago-cta{background:var(--cmc-navy); color:#fff; border-color:var(--cmc-navy)}
+.chat-btn.pago-cta:hover{background:#0a2f50}
 
 @keyframes emojiIn{from{opacity:0; transform:translateY(4px)} to{opacity:1; transform:none}}
 .emoji-picker .emoji-cat{
@@ -1960,6 +1963,8 @@ function renderHeader(){
   const iconBook = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="10" y1="16" x2="14" y2="16"/></svg>`;
   const iconAgenda = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M12 14v4M10 16h4"/></svg>`;
   acts.push(`<button class="chat-btn ag-cta" onclick="openAgendarModal()" title="Agendar cita en Medilink desde este chat">${iconAgenda}Agendar</button>`);
+  const iconPago = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 12h.01M18 12h.01"/></svg>`;
+  acts.push(`<button class="chat-btn pago-cta" onclick="openPagoModal()" title="Registrar pago de este paciente">${iconPago}Pago</button>`);
   acts.push(`<button class="chat-btn" onclick="openMarkBookedModal()" title="Marcar cita agendada manualmente">${iconBook}Manual</button>`);
   acts.push(`<a class="chat-btn" href="${MEDILINK_AGENDA_URL}" target="_blank" rel="noopener" title="Abrir la agenda en Medilink">🗓️ Medilink</a>`);
   acts.push(`<button class="chat-btn icon-only" onclick="copyRut()" title="Copiar RUT del paciente">🆔</button>`);
@@ -3490,6 +3495,42 @@ function openAgendarModal(opts){
 
 function closeAgendarModal(){
   document.getElementById("agModal").hidden = true;
+}
+
+/**
+ * openPagoModal()
+ * Abre el modulo Pagos de Alma con los datos del paciente activo pre-llenados.
+ * Si Alma esta cargado en el padre (window.parent), le envia un postMessage.
+ * Si no, abre /alma/pagos en una nueva pestana.
+ */
+function openPagoModal(){
+  if (!activePhone){
+    toast("Selecciona un chat primero", "error"); return;
+  }
+  // Recopilar datos del paciente activo desde activeConv
+  const conv   = activeConv || {};
+  const nombre = conv.display_name || conv.phone || "";
+  const rut    = conv.rut || "";
+  const idCita = conv.last_cita_id || "";
+
+  const payload = { paciente_nombre: nombre, rut, id_cita: idCita };
+
+  // Intentar comunicar con el shell de Alma via postMessage
+  try {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: "ALMA_ABRIR_PAGO", payload }, "*");
+      // Pedir al shell que active el modulo pagos
+      window.parent.postMessage({ type: "ALMA_ACTIVATE_MODULE", id: "pagos" }, "*");
+      return;
+    }
+  } catch(e) { /* cross-origin — fallback a nueva pestana */ }
+
+  // Fallback: abrir en nueva pestana con params
+  const qpLocal = TOKEN ? ("?token=" + encodeURIComponent(TOKEN)) : "";
+  let url = "/alma/pagos" + qpLocal;
+  if (rut)    url += "&rut="     + encodeURIComponent(rut);
+  if (idCita) url += "&id_cita=" + encodeURIComponent(idCita);
+  window.open(url, "_blank", "noopener");
 }
 
 function setupAgendarModal(){
