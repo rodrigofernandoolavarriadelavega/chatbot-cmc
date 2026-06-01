@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Conciliación — Alma CMC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --aqua:   #4FBECE;
+    --aqua-s: #e8f8fb;
+    --blue:   #1172AB;
+    --navy:   #0F3F68;
+    --navy2:  #0c3556;
+    --bg:     #F7FBFD;
+    --border: #d6e4ec;
+    --text:   #0F3F68;
+    --mute:   #62788a;
+    --red:    #e84545;
+    --green:  #23c25e;
+    --orange: #f59e0b;
+    --sh-sm:  0 1px 3px rgba(15,63,104,.08);
+    --sh-md:  0 8px 30px rgba(15,63,104,.14);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: 'Montserrat', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+  }
+
+  /* ── Topbar ── */
+  .pg-topbar {
+    display: flex; align-items: center; gap: 12px;
+    background: #fff; border-bottom: 1px solid var(--border);
+    padding: 0 20px; height: 54px;
+    box-shadow: var(--sh-sm); position: sticky; top: 0; z-index: 20;
+  }
+  .pg-topbar h1 { font-size: 15px; font-weight: 700; margin: 0; color: var(--navy); }
+  .pg-topbar .spacer { flex: 1; }
+  .pg-topbar .period-nav {
+    display: flex; align-items: center; gap: 6px;
+  }
+  .pg-topbar .period-nav label { font-size: 11px; font-weight: 600; color: var(--mute); }
+  .pg-topbar .period-nav input[type=date] {
+    font-family: inherit; font-size: 12px; font-weight: 600;
+    border: 1px solid var(--border); border-radius: 7px;
+    padding: 5px 9px; color: var(--navy); background: #fff; cursor: pointer;
+  }
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--aqua); color: #fff; border: 0;
+    border-radius: 9px; padding: 8px 16px;
+    font-family: inherit; font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: all .15s; box-shadow: 0 2px 8px rgba(79,190,206,.3);
+  }
+  .btn-primary:hover { background: var(--blue); box-shadow: 0 4px 14px rgba(17,114,171,.35); }
+  .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-primary svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .btn-ghost {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #fff; color: var(--blue); border: 1px solid var(--border);
+    border-radius: 9px; padding: 7px 13px;
+    font-family: inherit; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all .15s;
+  }
+  .btn-ghost:hover { background: var(--aqua-s); border-color: var(--aqua); }
+  .btn-ghost svg { width: 14px; height: 14px; }
+
+  /* ── Layout dos columnas ── */
+  .layout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 0;
+    height: calc(100dvh - 54px);
+    overflow: hidden;
+  }
+
+  /* ── Panel izquierdo: configuración ── */
+  .panel-config {
+    background: #fff;
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 0 0 24px;
+  }
+  .config-section {
+    border-bottom: 1px solid var(--border);
+    padding: 16px 18px;
+  }
+  .config-section:last-child { border-bottom: 0; }
+  .config-section h3 {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .08em; color: var(--mute); margin: 0 0 12px;
+  }
+  .period-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;
+  }
+  .period-grid label { font-size: 11px; font-weight: 600; color: var(--mute); display: block; margin-bottom: 4px; }
+  .period-grid input {
+    width: 100%; font-family: inherit; font-size: 12px; font-weight: 600;
+    border: 1px solid var(--border); border-radius: 7px;
+    padding: 7px 9px; color: var(--navy); background: #fff;
+  }
+  .quick-periods {
+    display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 4px;
+  }
+  .quick-btn {
+    font-family: inherit; font-size: 11px; font-weight: 600;
+    border: 1px solid var(--border); background: var(--bg);
+    color: var(--blue); border-radius: 999px; padding: 4px 10px;
+    cursor: pointer; transition: all .14s;
+  }
+  .quick-btn:hover, .quick-btn.active { background: var(--aqua-s); border-color: var(--aqua); color: var(--navy); }
+
+  /* Upload zone */
+  .upload-list { display: flex; flex-direction: column; gap: 8px; }
+  .upload-item {
+    border: 1.5px dashed var(--border);
+    border-radius: 10px; padding: 11px 13px;
+    cursor: pointer; transition: all .15s; position: relative;
+    background: var(--bg);
+  }
+  .upload-item:hover { border-color: var(--aqua); background: var(--aqua-s); }
+  .upload-item.has-file { border-style: solid; border-color: var(--aqua); background: var(--aqua-s); }
+  .upload-item.has-file .upload-badge { background: var(--aqua); color: #fff; }
+  .upload-label { font-size: 12px; font-weight: 700; color: var(--navy); display: flex; align-items: center; gap: 7px; }
+  .upload-label svg { width: 14px; height: 14px; flex-shrink: 0; color: var(--blue); }
+  .upload-sub { font-size: 11px; color: var(--mute); margin-top: 3px; }
+  .upload-badge {
+    font-size: 10px; font-weight: 700; background: var(--border); color: var(--mute);
+    padding: 2px 7px; border-radius: 999px; margin-left: auto; white-space: nowrap;
+  }
+  .upload-item input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; z-index: 2;
+  }
+  .upload-note { font-size: 10.5px; color: var(--mute); margin-top: 8px; line-height: 1.4; }
+
+  /* ── Panel derecho: resultados ── */
+  .panel-results {
+    overflow-y: auto;
+    padding: 20px;
+  }
+
+  /* Estado vacío / loading */
+  .empty-state {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; min-height: 400px; text-align: center;
+  }
+  .empty-state .icon { width: 64px; height: 64px; opacity: .18; margin-bottom: 16px; }
+  .empty-state h2 { font-size: 17px; font-weight: 700; color: var(--navy); margin: 0 0 6px; }
+  .empty-state p { font-size: 13px; color: var(--mute); max-width: 340px; margin: 0; line-height: 1.5; }
+
+  .loading-state {
+    display: none; flex-direction: column; align-items: center;
+    justify-content: center; min-height: 400px;
+  }
+  .loading-state.show { display: flex; }
+  .spinner {
+    width: 40px; height: 40px; border: 3px solid var(--border);
+    border-top-color: var(--aqua); border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+  .loading-state p { margin-top: 14px; font-size: 13px; color: var(--mute); font-weight: 600; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* KPI strip */
+  .kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px; margin-bottom: 20px;
+  }
+  .kpi {
+    background: #fff; border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px;
+    box-shadow: var(--sh-sm);
+  }
+  .kpi-label { font-size: 11px; font-weight: 600; color: var(--mute); text-transform: uppercase; letter-spacing: .06em; }
+  .kpi-value { font-size: 22px; font-weight: 800; color: var(--navy); margin: 4px 0 2px; line-height: 1; }
+  .kpi-sub { font-size: 11px; color: var(--mute); font-weight: 500; }
+  .kpi.risk-alto { border-color: var(--red); background: #fff8f8; }
+  .kpi.risk-alto .kpi-value { color: var(--red); }
+  .kpi.risk-medio { border-color: var(--orange); background: #fffbf0; }
+  .kpi.risk-medio .kpi-value { color: var(--orange); }
+  .kpi.risk-ok { border-color: var(--green); }
+  .kpi.risk-ok .kpi-value { color: var(--green); }
+
+  /* Fuentes strip */
+  .fuentes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px; margin-bottom: 20px;
+  }
+  .fuente-card {
+    background: #fff; border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 14px;
+    box-shadow: var(--sh-sm);
+  }
+  .fuente-card.ok { border-left: 3px solid var(--green); }
+  .fuente-card.diff { border-left: 3px solid var(--red); }
+  .fuente-card.no-data { border-left: 3px solid var(--border); opacity: .7; }
+  .fuente-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .fuente-name { font-size: 12px; font-weight: 700; color: var(--navy); }
+  .fuente-badge {
+    font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+  }
+  .fuente-badge.ok { background: #e8faf0; color: #1a9956; }
+  .fuente-badge.diff { background: #fef2f2; color: var(--red); }
+  .fuente-badge.nd { background: var(--bg); color: var(--mute); }
+  .fuente-row { display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 3px; }
+  .fuente-row span:first-child { color: var(--mute); }
+  .fuente-row span:last-child { font-weight: 700; color: var(--navy); }
+  .fuente-diff { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border); }
+  .fuente-diff.pos { color: var(--red); }
+  .fuente-diff.neg { color: var(--orange); }
+  .fuente-diff.zero { color: var(--green); }
+
+  /* Sección hallazgos */
+  .section-header {
+    display: flex; align-items: center; gap: 10px;
+    margin: 20px 0 12px;
+  }
+  .section-header h2 { font-size: 14px; font-weight: 700; color: var(--navy); margin: 0; }
+  .section-header .spacer { flex: 1; }
+  .filter-bar {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;
+  }
+  .filter-btn {
+    font-family: inherit; font-size: 11px; font-weight: 600;
+    border: 1px solid var(--border); background: var(--bg);
+    color: var(--blue); border-radius: 999px; padding: 4px 11px;
+    cursor: pointer; transition: all .14s; white-space: nowrap;
+  }
+  .filter-btn:hover, .filter-btn.active { background: var(--aqua-s); border-color: var(--aqua); color: var(--navy); }
+  .filter-btn.f-alta.active { background: #fef2f2; border-color: var(--red); color: var(--red); }
+  .filter-btn.f-media.active { background: #fffbf0; border-color: var(--orange); color: var(--orange); }
+
+  /* Tabla hallazgos */
+  .table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); box-shadow: var(--sh-sm); }
+  table {
+    width: 100%; border-collapse: collapse; font-size: 12px; background: #fff;
+  }
+  thead th {
+    background: var(--navy); color: #c8def0; font-size: 10.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .06em;
+    padding: 10px 12px; text-align: left; white-space: nowrap;
+  }
+  thead th:first-child { border-radius: 12px 0 0 0; }
+  thead th:last-child  { border-radius: 0 12px 0 0; }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+  tbody tr:hover { background: var(--aqua-s); }
+  tbody tr:last-child { border-bottom: 0; }
+  td { padding: 9px 12px; vertical-align: top; }
+  .prio-alta  { color: var(--red);    font-weight: 700; }
+  .prio-media { color: var(--orange); font-weight: 700; }
+  .prio-baja  { color: var(--green);  font-weight: 600; }
+  .tipo-pill {
+    display: inline-block; font-size: 10px; font-weight: 700;
+    padding: 2px 8px; border-radius: 999px;
+    background: var(--bg); color: var(--blue); white-space: nowrap;
+  }
+  .tipo-FALTANTE { background: #fef2f2; color: var(--red); }
+  .tipo-SOBRANTE { background: #fffbf0; color: var(--orange); }
+  .tipo-DIFERENCIA_MONTO { background: #fef9e7; color: #b45309; }
+  .tipo-SIN_RESPALDO_BANCARIO { background: #fef2f2; color: var(--red); }
+  .tipo-SIN_RESPALDO_INTERNO { background: #f0fdf4; color: #15803d; }
+  .tipo-MEDIO_PAGO_INCORRECTO { background: #fef2f2; color: var(--red); }
+  .tipo-DUPLICADO { background: #faf5ff; color: #7c3aed; }
+  .tipo-REQUIERE_REVISION_MANUAL { background: #fffbf0; color: var(--orange); }
+  .coment { max-width: 320px; color: var(--mute); font-size: 11px; line-height: 1.4; }
+  .no-data-row td { text-align: center; padding: 24px; color: var(--mute); font-size: 13px; font-weight: 600; }
+
+  /* Cuadre diario */
+  .cuadre-table thead th { background: var(--navy2); }
+  .est-cuadra   { color: var(--green); font-weight: 700; }
+  .est-obs      { color: var(--orange); font-weight: 700; }
+  .est-nocuadra { color: var(--red);   font-weight: 700; }
+
+  /* Responsive */
+  @media (max-width: 860px) {
+    .layout { grid-template-columns: 1fr; height: auto; overflow: visible; }
+    .panel-config { border-right: 0; border-bottom: 1px solid var(--border); }
+    .kpi-strip { grid-template-columns: repeat(2, 1fr); }
+    .fuentes-grid { grid-template-columns: repeat(2, 1fr); }
+    .pg-topbar .period-nav { display: none; }
+  }
+  @media (max-width: 480px) {
+    .kpi-strip { grid-template-columns: 1fr 1fr; }
+    .fuentes-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Topbar ── -->
+<div class="pg-topbar">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1172AB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+  </svg>
+  <h1>Conciliacion Financiera</h1>
+  <div class="spacer"></div>
+  <div class="period-nav" id="topPeriodNav">
+    <label>Desde</label>
+    <input type="date" id="topDesde">
+    <label>Hasta</label>
+    <input type="date" id="topHasta">
+  </div>
+</div>
+
+<!-- ── Layout principal ── -->
+<div class="layout">
+
+  <!-- Panel config / inputs -->
+  <aside class="panel-config">
+
+    <!-- Período -->
+    <div class="config-section">
+      <h3>Periodo</h3>
+      <div class="quick-periods">
+        <button class="quick-btn" data-quick="mes_actual">Este mes</button>
+        <button class="quick-btn" data-quick="mes_anterior">Mes anterior</button>
+        <button class="quick-btn" data-quick="semana">Esta semana</button>
+        <button class="quick-btn" data-quick="hoy">Hoy</button>
+      </div>
+      <div class="period-grid" style="margin-top:10px">
+        <div>
+          <label>Desde</label>
+          <input type="date" id="fDesde">
+        </div>
+        <div>
+          <label>Hasta</label>
+          <input type="date" id="fHasta">
+        </div>
+      </div>
+    </div>
+
+    <!-- Fuentes automáticas -->
+    <div class="config-section">
+      <h3>Fuentes automaticas</h3>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--aqua-s);border:1px solid var(--aqua);border-radius:8px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2.2"><polyline points="20 6 9 17 4 12"/></svg>
+          <span style="font-size:12px;font-weight:600;color:var(--navy)">Recepcion (pagos_cmc)</span>
+          <span style="margin-left:auto;font-size:10px;color:var(--mute);font-weight:600">SQLite</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--aqua-s);border:1px solid var(--aqua);border-radius:8px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2.2"><polyline points="20 6 9 17 4 12"/></svg>
+          <span style="font-size:12px;font-weight:600;color:var(--navy)">Medilink (API Cajas)</span>
+          <span style="margin-left:auto;font-size:10px;color:var(--mute);font-weight:600">API</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Extractos externos -->
+    <div class="config-section">
+      <h3>Extractos externos</h3>
+      <div class="upload-list">
+
+        <label class="upload-item" id="zone-itau">
+          <input type="file" accept=".csv" id="file-itau" data-fuente="itau">
+          <div class="upload-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+            Transferencias (Itau)
+            <span class="upload-badge" id="badge-itau">CSV</span>
+          </div>
+          <div class="upload-sub">Extracto Itau — abonos por transferencia</div>
+        </label>
+
+        <label class="upload-item" id="zone-banco_estado">
+          <input type="file" accept=".csv" id="file-banco_estado" data-fuente="banco_estado">
+          <div class="upload-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+            Efectivo (BancoEstado)
+            <span class="upload-badge" id="badge-banco_estado">CSV</span>
+          </div>
+          <div class="upload-sub">Depositos en efectivo</div>
+        </label>
+
+        <label class="upload-item" id="zone-transbank_debito">
+          <input type="file" accept=".csv" id="file-transbank_debito" data-fuente="transbank_debito">
+          <div class="upload-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="16" cy="15" r="2"/></svg>
+            Transbank Debito
+            <span class="upload-badge" id="badge-transbank_debito">CSV</span>
+          </div>
+          <div class="upload-sub">Reporte transacciones debito</div>
+        </label>
+
+        <label class="upload-item" id="zone-transbank_credito">
+          <input type="file" accept=".csv" id="file-transbank_credito" data-fuente="transbank_credito">
+          <div class="upload-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="16" cy="15" r="2"/></svg>
+            Transbank Credito
+            <span class="upload-badge" id="badge-transbank_credito">CSV</span>
+          </div>
+          <div class="upload-sub">Reporte transacciones credito</div>
+        </label>
+
+        <label class="upload-item" id="zone-imed" style="border-color:var(--aqua);background:#f0fdfe">
+          <input type="file" accept=".csv" id="file-imed" data-fuente="imed">
+          <div class="upload-label" style="color:var(--blue)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Imed (deposito semanal)
+            <span class="upload-badge" id="badge-imed" style="background:var(--aqua-s);color:var(--blue)">CSV</span>
+          </div>
+          <div class="upload-sub">Reporte/deposito semanal de bonificaciones Fonasa</div>
+        </label>
+
+      </div>
+      <div class="upload-note">Los extractos externos son opcionales. Sin ellos, solo se cruzaran recepcion vs Medilink.</div>
+    </div>
+
+    <!-- Boton conciliar -->
+    <div class="config-section">
+      <button class="btn-primary" id="btnConciliar" style="width:100%;justify-content:center">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+        Conciliar
+      </button>
+      <div id="lastRun" style="text-align:center;font-size:11px;color:var(--mute);margin-top:8px"></div>
+    </div>
+
+  </aside>
+
+  <!-- Panel resultados -->
+  <section class="panel-results" id="panelResults">
+
+    <!-- Estado vacío inicial -->
+    <div class="empty-state" id="emptyState">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#0F3F68" stroke-width="1.5">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+      </svg>
+      <h2>Conciliacion lista</h2>
+      <p>Selecciona el periodo, sube los extractos externos (opcional) y presiona "Conciliar" para cruzar todas las fuentes.</p>
+    </div>
+
+    <!-- Loading -->
+    <div class="loading-state" id="loadingState">
+      <div class="spinner"></div>
+      <p>Conciliando fuentes de pago...</p>
+    </div>
+
+    <!-- Resultados (oculto hasta que lleguen datos) -->
+    <div id="resultsContent" style="display:none">
+
+      <!-- KPIs principales -->
+      <div class="kpi-strip" id="kpiStrip"></div>
+
+      <!-- Fuentes por medio de pago -->
+      <div class="section-header" style="margin-top:0">
+        <h2>Resumen por fuente de pago</h2>
+      </div>
+      <div class="fuentes-grid" id="fuentesGrid"></div>
+
+      <!-- Hallazgos -->
+      <div class="section-header">
+        <h2>Hallazgos <span id="nHallazgos" style="font-size:12px;font-weight:600;color:var(--mute)"></span></h2>
+        <div class="spacer"></div>
+        <button class="btn-ghost" id="btnExport" style="display:none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke-linecap="round" stroke-linejoin="round"/><polyline points="7 10 12 15 17 10" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="15" x2="12" y2="3" stroke-linecap="round"/></svg>
+          Exportar CSV
+        </button>
+      </div>
+      <div class="filter-bar" id="filterBar"></div>
+      <div class="table-wrap">
+        <table id="hallazgosTable">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Paciente</th>
+              <th>Interno</th>
+              <th>Externo</th>
+              <th>Fuente</th>
+              <th>Medio</th>
+              <th>Tipo</th>
+              <th>Comentario</th>
+              <th>Prioridad</th>
+            </tr>
+          </thead>
+          <tbody id="hallazgosTbody"></tbody>
+        </table>
+      </div>
+
+      <!-- Cuadre diario -->
+      <div class="section-header" style="margin-top:24px">
+        <h2>Cuadre diario</h2>
+      </div>
+      <div class="table-wrap">
+        <table class="cuadre-table" id="cuadreTable">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Recepcion</th>
+              <th>Medilink</th>
+              <th>Itau</th>
+              <th>BancoEstado</th>
+              <th>Transbank</th>
+              <th>Diferencia</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="cuadreTbody"></tbody>
+        </table>
+      </div>
+
+    </div><!-- /resultsContent -->
+
+  </section>
+</div><!-- /layout -->
+
+<script>
+// __TOKEN__ reemplazado por el backend
+const TOKEN = "__TOKEN__";
+const QP = TOKEN ? "?token=" + encodeURIComponent(TOKEN) : "";
+
+// ── Estado de los uploads ──────────────────────────────────────────────────
+const uploadedFiles = {};
+
+document.querySelectorAll('input[type=file]').forEach(inp => {
+  inp.addEventListener('change', e => {
+    const fuente = inp.dataset.fuente;
+    if (inp.files[0]) {
+      uploadedFiles[fuente] = inp.files[0];
+      const zone = document.getElementById('zone-' + fuente);
+      const badge = document.getElementById('badge-' + fuente);
+      if (zone) zone.classList.add('has-file');
+      if (badge) badge.textContent = inp.files[0].name.split('.')[0].slice(0, 14) + '.csv';
+    }
+  });
+});
+
+// ── Período por defecto: mes actual ─────────────────────────────────────────
+function mesActual() {
+  const now = new Date();
+  const y = now.getFullYear(), m = String(now.getMonth()+1).padStart(2,'0');
+  const d = String(now.getDate()).padStart(2,'0');
+  const lastDay = new Date(y, now.getMonth()+1, 0).getDate();
+  return {
+    desde: `${y}-${m}-01`,
+    hasta: `${y}-${m}-${String(lastDay).padStart(2,'0')}`
+  };
+}
+
+function mesAnterior() {
+  const now = new Date();
+  const d = new Date(now.getFullYear(), now.getMonth(), 0);
+  const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0');
+  const lastDay = d.getDate();
+  return {
+    desde: `${y}-${m}-01`,
+    hasta: `${y}-${m}-${String(lastDay).padStart(2,'0')}`
+  };
+}
+
+function semanaActual() {
+  const now = new Date();
+  const dow = now.getDay() === 0 ? 6 : now.getDay() - 1;
+  const lunes = new Date(now); lunes.setDate(now.getDate() - dow);
+  const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  return { desde: fmt(lunes), hasta: fmt(now) };
+}
+
+function hoy() {
+  const now = new Date();
+  const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const s = fmt(now);
+  return { desde: s, hasta: s };
+}
+
+const QUICK_MAP = {
+  mes_actual: mesActual,
+  mes_anterior: mesAnterior,
+  semana: semanaActual,
+  hoy: hoy,
+};
+
+function setPeriod(desde, hasta) {
+  document.getElementById('fDesde').value = desde;
+  document.getElementById('fHasta').value = hasta;
+  document.getElementById('topDesde').value = desde;
+  document.getElementById('topHasta').value = hasta;
+}
+
+// Init con mes actual
+const _init = mesActual();
+setPeriod(_init.desde, _init.hasta);
+document.querySelector('[data-quick="mes_actual"]').classList.add('active');
+
+document.querySelectorAll('.quick-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.quick-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const p = QUICK_MAP[btn.dataset.quick]();
+    setPeriod(p.desde, p.hasta);
+  });
+});
+
+// Sync topbar ↔ panel
+['fDesde','fHasta','topDesde','topHasta'].forEach(id => {
+  document.getElementById(id).addEventListener('change', e => {
+    const isTop = id.startsWith('top');
+    const isDesde = id.endsWith('Desde');
+    const peer = isTop ? (isDesde ? 'fDesde' : 'fHasta') : (isDesde ? 'topDesde' : 'topHasta');
+    document.getElementById(peer).value = e.target.value;
+    document.querySelectorAll('.quick-btn').forEach(b => b.classList.remove('active'));
+  });
+});
+
+// ── Filtros activos ──────────────────────────────────────────────────────────
+let _allHallazgos = [];
+let _activePrio = null;
+let _activeTipo = null;
+
+function buildFilters(hallazgos) {
+  const prioridades = [...new Set(hallazgos.map(h => h.prioridad))];
+  const tipos = [...new Set(hallazgos.map(h => h.tipo))];
+  const bar = document.getElementById('filterBar');
+  bar.innerHTML = '';
+
+  const allBtn = document.createElement('button');
+  allBtn.className = 'filter-btn active';
+  allBtn.textContent = 'Todos (' + hallazgos.length + ')';
+  allBtn.addEventListener('click', () => {
+    _activePrio = null; _activeTipo = null;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    allBtn.classList.add('active');
+    renderHallazgos(_allHallazgos);
+  });
+  bar.appendChild(allBtn);
+
+  const prioLabels = { ALTA: 'Alta', MEDIA: 'Media', BAJA: 'Baja' };
+  prioridades.forEach(p => {
+    const n = hallazgos.filter(h => h.prioridad === p).length;
+    const btn = document.createElement('button');
+    btn.className = `filter-btn f-${p.toLowerCase()}`;
+    btn.textContent = `${prioLabels[p] || p} (${n})`;
+    btn.addEventListener('click', () => {
+      _activePrio = p; _activeTipo = null;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderHallazgos(_allHallazgos.filter(h => h.prioridad === p));
+    });
+    bar.appendChild(btn);
+  });
+
+  tipos.forEach(t => {
+    const n = hallazgos.filter(h => h.tipo === t).length;
+    const btn = document.createElement('button');
+    btn.className = 'filter-btn';
+    btn.textContent = `${t.replace(/_/g, ' ')} (${n})`;
+    btn.addEventListener('click', () => {
+      _activePrio = null; _activeTipo = t;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderHallazgos(_allHallazgos.filter(h => h.tipo === t));
+    });
+    bar.appendChild(btn);
+  });
+}
+
+function renderHallazgos(list) {
+  const tbody = document.getElementById('hallazgosTbody');
+  if (!list.length) {
+    tbody.innerHTML = '<tr class="no-data-row"><td colspan="9">Sin hallazgos en este filtro.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(h => {
+    const fec = h.fecha || '—';
+    const mi = h.monto_interno != null ? '$' + fmt(h.monto_interno) : '—';
+    const me = h.monto_externo != null ? '$' + fmt(h.monto_externo) : '—';
+    const fext = `${h.fuente_interna}→${h.fuente_externa}`;
+    return `<tr>
+      <td>${fec}</td>
+      <td style="font-weight:600;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(h.paciente)}</td>
+      <td style="font-weight:700">${mi}</td>
+      <td style="font-weight:700">${me}</td>
+      <td style="font-size:11px;color:var(--mute)">${esc(fext)}</td>
+      <td style="font-size:11px">${esc(h.medio)}</td>
+      <td><span class="tipo-pill tipo-${h.tipo}">${h.tipo.replace(/_/g,' ')}</span></td>
+      <td class="coment">${esc(h.comentario)}</td>
+      <td class="prio-${h.prioridad.toLowerCase()}">${h.prioridad}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderCuadre(cuadre) {
+  const tbody = document.getElementById('cuadreTbody');
+  if (!cuadre.length) {
+    tbody.innerHTML = '<tr class="no-data-row"><td colspan="8">Sin datos para cuadre diario.</td></tr>';
+    return;
+  }
+  const estCls = { 'CUADRA': 'est-cuadra', 'CUADRA CON OBSERVACIONES': 'est-obs', 'NO CUADRA': 'est-nocuadra' };
+  tbody.innerHTML = cuadre.map(c => `<tr>
+    <td>${c.fecha}</td>
+    <td>$${fmt(c.recepcion)}</td>
+    <td>$${fmt(c.medilink)}</td>
+    <td>$${fmt(c.itau)}</td>
+    <td>$${fmt(c.banco_estado)}</td>
+    <td>$${fmt(c.transbank)}</td>
+    <td style="font-weight:700;${c.diferencia > 0 ? 'color:var(--red)' : c.diferencia < 0 ? 'color:var(--orange)' : 'color:var(--green)'}">$${fmt(c.diferencia)}</td>
+    <td class="${estCls[c.estado] || ''}">${c.estado}</td>
+  </tr>`).join('');
+}
+
+function renderKPIs(kpis) {
+  const strip = document.getElementById('kpiStrip');
+
+  const riskCls = { ALTO: 'risk-alto', MEDIO: 'risk-medio', BAJO: 'risk-ok' };
+
+  const cards = [
+    { label: 'Total registrado', value: '$' + fmt(kpis.total_registrado), sub: 'Recepcion + copagos', cls: '' },
+    { label: 'Total respaldado', value: '$' + fmt(kpis.total_respaldado), sub: 'Suma extractos externos', cls: '' },
+    { label: 'Diferencia neta', value: '$' + fmt(Math.abs(kpis.diferencia_neta)), sub: kpis.diferencia_neta > 0 ? 'Sin respaldo bancario' : kpis.diferencia_neta < 0 ? 'Exceso externo' : 'Todo cuadra', cls: Math.abs(kpis.diferencia_neta) > 1 ? 'risk-alto' : 'risk-ok' },
+    { label: 'Conciliado', value: kpis.pct_conciliado + '%', sub: 'Con respaldo externo', cls: kpis.pct_conciliado >= 95 ? 'risk-ok' : kpis.pct_conciliado >= 70 ? 'risk-medio' : 'risk-alto' },
+    { label: 'Hallazgos', value: kpis.n_hallazgos, sub: kpis.n_alta + ' alta prioridad', cls: kpis.n_alta > 0 ? 'risk-alto' : kpis.n_hallazgos > 0 ? 'risk-medio' : 'risk-ok' },
+    { label: 'Nivel de riesgo', value: kpis.nivel_riesgo, sub: kpis.dias_no_cuadran + ' dias no cuadran', cls: riskCls[kpis.nivel_riesgo] || '' },
+  ];
+  strip.innerHTML = cards.map(c =>
+    `<div class="kpi ${c.cls}">
+       <div class="kpi-label">${c.label}</div>
+       <div class="kpi-value">${c.value}</div>
+       <div class="kpi-sub">${c.sub}</div>
+     </div>`
+  ).join('');
+}
+
+function renderFuentes(kpis) {
+  const grid = document.getElementById('fuentesGrid');
+  const labels = {
+    TRANSFERENCIA: 'Transferencias (Itau)',
+    EFECTIVO: 'Efectivo (BancoEstado)',
+    TRANSBANK_DEBITO: 'Transbank Debito',
+    TRANSBANK_CREDITO: 'Transbank Credito',
+    IMED: 'Imed (Fonasa)',
+  };
+  grid.innerHTML = kpis.fuentes.map(f => {
+    const registrado = f.medio === 'IMED' ? kpis.imed_esperado : f.registrado;
+    const noData = registrado === 0 && f.respaldado === 0;
+    const cls = noData ? 'no-data' : f.ok ? 'ok' : 'diff';
+    const badgeCls = noData ? 'nd' : f.ok ? 'ok' : 'diff';
+    const badgeTxt = noData ? 'Sin datos' : f.ok ? 'Cuadra' : 'Diferencia';
+    const difCls = f.diferencia > 0.5 ? 'pos' : f.diferencia < -0.5 ? 'neg' : 'zero';
+    const imedLbl = f.medio === 'IMED' ? 'Bonif. esperadas' : 'Registrado';
+    return `<div class="fuente-card ${cls}">
+      <div class="fuente-header">
+        <span class="fuente-name">${labels[f.medio] || f.medio}</span>
+        <span class="fuente-badge ${badgeCls}">${badgeTxt}</span>
+      </div>
+      <div class="fuente-row"><span>${imedLbl}</span><span>$${fmt(registrado)}</span></div>
+      <div class="fuente-row"><span>Recibido</span><span>$${fmt(f.respaldado)}</span></div>
+      <div class="fuente-diff ${difCls}">
+        <span>Diferencia</span>
+        <span>$${fmt(Math.abs(f.diferencia))}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Export CSV ───────────────────────────────────────────────────────────────
+document.getElementById('btnExport').addEventListener('click', () => {
+  if (!_allHallazgos.length) return;
+  const header = ['Fecha','Paciente','Monto interno','Monto externo','Fuente interna','Fuente externa','Medio','Tipo','Comentario','Prioridad'];
+  const rows = [header, ..._allHallazgos.map(h => [
+    h.fecha || '', h.paciente, h.monto_interno ?? '', h.monto_externo ?? '',
+    h.fuente_interna, h.fuente_externa, h.medio, h.tipo, h.comentario, h.prioridad
+  ])];
+  const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const d = document.getElementById('fDesde').value;
+  const h = document.getElementById('fHasta').value;
+  a.download = `conciliacion_${d}_${h}.csv`;
+  a.click();
+});
+
+// ── Conciliar ────────────────────────────────────────────────────────────────
+document.getElementById('btnConciliar').addEventListener('click', conciliar);
+
+async function conciliar() {
+  const desde = document.getElementById('fDesde').value;
+  const hasta = document.getElementById('fHasta').value;
+  if (!desde || !hasta) { alert('Selecciona un periodo'); return; }
+
+  // Mostrar loading
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('resultsContent').style.display = 'none';
+  document.getElementById('loadingState').classList.add('show');
+  document.getElementById('btnConciliar').disabled = true;
+
+  try {
+    const fd = new FormData();
+    fd.append('fecha_desde', desde);
+    fd.append('fecha_hasta', hasta);
+
+    const fuentes = ['itau', 'banco_estado', 'transbank_debito', 'transbank_credito', 'imed'];
+    fuentes.forEach(f => {
+      if (uploadedFiles[f]) fd.append(f, uploadedFiles[f], uploadedFiles[f].name);
+    });
+
+    const url = '/alma/api/conciliacion/run' + QP;
+    const resp = await fetch(url, { method: 'POST', body: fd });
+    if (!resp.ok) {
+      const err = await resp.text();
+      throw new Error('HTTP ' + resp.status + ': ' + err);
+    }
+    const data = await resp.json();
+
+    _allHallazgos = data.hallazgos || [];
+    renderKPIs(data.kpis);
+    renderFuentes(data.kpis);
+    buildFilters(_allHallazgos);
+    renderHallazgos(_allHallazgos);
+    renderCuadre(data.cuadre_diario || []);
+    document.getElementById('nHallazgos').textContent = '(' + _allHallazgos.length + ')';
+    document.getElementById('btnExport').style.display = _allHallazgos.length ? 'inline-flex' : 'none';
+
+    const now = new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('lastRun').textContent = 'Ultima conciliacion: ' + now;
+
+    document.getElementById('resultsContent').style.display = '';
+  } catch(e) {
+    alert('Error al conciliar: ' + e.message);
+    document.getElementById('emptyState').style.display = '';
+  } finally {
+    document.getElementById('loadingState').classList.remove('show');
+    document.getElementById('btnConciliar').disabled = false;
+  }
+}
+
+// ── Utilidades ──────────────────────────────────────────────────────────────
+function fmt(n) {
+  if (n == null || n === '') return '0';
+  return Math.round(Number(n)).toLocaleString('es-CL');
+}
+function esc(s) {
+  if (!s) return '';
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
