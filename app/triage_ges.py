@@ -93,6 +93,10 @@ _ABREVIACIONES = {
     "kiro": "quiero",    # typo rural: "kiro hora" (distinto de _INTENT_CACHE que maneja "kiero hora")
     "puwedo": "puedo",   # typo teclado táctil
     "nesecito": "necesito",  # typo fonético frecuente
+    "nesesito": "necesito",  # variante con doble s
+    "neces": "necesito",     # truncado frecuente
+    "kuanto": "cuanto",      # k fonética
+    "kuesta": "cuesta",
     "mnna": "mañana",
     "mana": "mañana",
     "nxe": "noche",

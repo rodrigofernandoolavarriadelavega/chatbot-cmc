@@ -96,6 +96,19 @@ _INTENT_CACHE: dict[str, dict] = {
     "fonoaudiología": {"intent": "agendar", "especialidad": "fonoaudiología"},
     "podología":      {"intent": "agendar", "especialidad": "podología"},
     "podologia":      {"intent": "agendar", "especialidad": "podología"},
+    "podologa":       {"intent": "agendar", "especialidad": "podología"},
+    "podologo":       {"intent": "agendar", "especialidad": "podología"},
+    # Typos de nombre de especialidad (token aislado → agendar; auditoría 2026-05-31)
+    "nutrisionista":  {"intent": "agendar", "especialidad": "nutrición"},
+    "nutricionista":  {"intent": "agendar", "especialidad": "nutrición"},
+    "jinecologa":     {"intent": "agendar", "especialidad": "ginecología"},
+    "jinecologo":     {"intent": "agendar", "especialidad": "ginecología"},
+    "jinecologia":    {"intent": "agendar", "especialidad": "ginecología"},
+    "dentita":        {"intent": "agendar", "especialidad": "odontología"},
+    "odontolgo":      {"intent": "agendar", "especialidad": "odontología"},
+    "odontologo":     {"intent": "agendar", "especialidad": "odontología"},
+    "kineciologo":    {"intent": "agendar", "especialidad": "kinesiología"},
+    "kineciologa":    {"intent": "agendar", "especialidad": "kinesiología"},
     # "ortodoncia" removido del caché — pasa por Claude para explicar flujo especial
     "odontología":    {"intent": "agendar", "especialidad": "odontología"},
     "odontologia":    {"intent": "agendar", "especialidad": "odontología"},
@@ -1474,9 +1487,47 @@ async def detect_intent(mensaje: str, recepcion_resumen: list | None = None,
         r"|qu[eé]\s+pasa\s+si\s+(?:no\s+)?cancel"
         r"|hasta\s+cu[aá]ndo\s+(?:puedo\s+)?cancelar"
         r"|hay\s+multa\s+(?:por|si)\s+cancel"
-        r"|pol[ií]tica\s+de\s+cancelaci[oó]n)",
+        r"|pol[ií]tica\s+de\s+cancelaci[oó]n"
+        # ── Preguntas de logística/política de cancelación (2026-05-31) ──
+        # El paciente PREGUNTA por el proceso/consecuencias de cancelar; NO
+        # quiere anular ahora. Antes caían en _CANCEL_VERB_RE → flujo de
+        # anulación por error (auditoría corpus adversarial).
+        r"|\bse\s+puede\s+cancel"                 # "se puede cancelar por aquí o hay q llamar?"
+        r"|\bpuedo\s+cancel"                       # "puedo cancelar y volver a agendar?"
+        r"|\bpodr[ií]a\s+cancel"
+        r"|\bsaber\s+si\b.*cancel|cancel\w*.*\bsaber\s+si\b"
+        r"|(?:y\s+)?si\s+cancel\w*\b.*(?:plata|devuel|debuel|reembols|pagar|pago|cobr|multa|cuesta|sale)"
+        r"|\bavisar\b.*cancel|cancel\w*.*\bavisar\b"   # "cuánto antes hay q avisar pa cancelar"
+        r"|n[uú]mero\b.*cancel|cancel\w*.*\bn[uú]mero\b"  # "a q número llamo si quiero cancelar"
+        r"|me\s+toca\s+pagar\b.*cancel|cancel\w*.*me\s+toca\s+pagar"
+        r")",
         _re_w.IGNORECASE,
     )
+    # Guard de NEGACIÓN: "ya no quiero cancelar", "no la cancelo", "no es pa
+    # cancelar", "no la mueva ni la cancele". El paciente dice que NO quiere
+    # anular — el verbo "cancelar" aparece negado. Si matchea, NO disparamos el
+    # prefilter de cancelación: dejamos caer a Claude, que resuelve la negación.
+    _CANCEL_NEGADO_RE = _re_w.compile(
+        r"\b(?:ya\s+)?no\s+(?:la\s+|lo\s+|las\s+|los\s+|me\s+)?"
+        r"(?:kiero|quiero|voy\s+a|voi\s+a|vo\s+a|deseo|necesito|nesesito|es\s+pa|es\s+para)?"
+        r"\s*(?:cancel|anul)"
+        r"|\bno\b[^?]*\bni\s+(?:la\s+|lo\s+)?(?:cancel|anul)",
+        _re_w.IGNORECASE,
+    )
+    # Guard de AMBIGÜEDAD/REAGENDAR: el paciente quiere MOVER la cita (no
+    # anularla) o el "no puedo ir" se refiere a un trámite, no a la cita
+    # ("no puedo ir a buscar la orden"). Si NO hay un verbo explícito de
+    # anulación, dejamos caer a Claude para que resuelva la multi-intención.
+    _CANCEL_AMBIGUO_RE = _re_w.compile(
+        r"\bpasar\s+(?:la\s+|mi\s+)?(?:cita|hora)"
+        r"|\bcambiar\s+(?:la\s+|mi\s+|de\s+)?(?:hora|cita|fecha|dia)"
+        r"|\bcorrer\s+(?:la\s+|mi\s+)?(?:hora|cita)"
+        r"|\bmover\s+(?:la\s+|mi\s+)?(?:hora|cita)"
+        r"|\breagendar|\breprogramar"
+        r"|no\s+puedo\s+ir\s+a\s+(?:buscar|retirar|comprar|sacar|la\s+farmacia)",
+        _re_w.IGNORECASE,
+    )
+    _CANCEL_EXPLICITO_RE = _re_w.compile(r"\bcancel\w*|\banul\w*", _re_w.IGNORECASE)
     if _CANCELAR_INFO_RE.search(clave_norm) or _CANCELAR_INFO_RE.search(clave):
         log.info("cancelar-info prefilter: %r", clave[:80])
         try:
@@ -1606,7 +1657,13 @@ async def detect_intent(mensaje: str, recepcion_resumen: list | None = None,
                 "No se cobra al agendar la hora."
             ),
         }
-    if _CANCEL_VERB_RE.search(clave_norm) or _CANCEL_VERB_RE.search(clave):
+    _cancel_ambiguo = (
+        (_CANCEL_AMBIGUO_RE.search(clave_norm) or _CANCEL_AMBIGUO_RE.search(clave))
+        and not (_CANCEL_EXPLICITO_RE.search(clave_norm) or _CANCEL_EXPLICITO_RE.search(clave))
+    )
+    if (_CANCEL_VERB_RE.search(clave_norm) or _CANCEL_VERB_RE.search(clave)) \
+            and not (_CANCEL_NEGADO_RE.search(clave_norm) or _CANCEL_NEGADO_RE.search(clave)) \
+            and not _cancel_ambiguo:
         log.info("cancel-verb prefilter: %r", clave[:80])
         try:
             from session import log_event as _log_event
@@ -1666,23 +1723,39 @@ async def detect_intent(mensaje: str, recepcion_resumen: list | None = None,
     # route_ecografia() retorna el especialista correcto sin consumir tokens de Claude.
     # Si retorna None con mención de "eco" genérico → dejar caer al cache/Claude
     # para que pida el tipo al paciente via _iniciar_agendar.
+    # Marcador de PREGUNTA informativa sobre ecografía: "¿hacen X?", "¿atienden
+    # X?", "¿cuánto sale/cuesta/vale X?", "¿qué precio?", "necesito orden para".
+    # En estos casos el paciente PREGUNTA, no pide agendar — el routing debe
+    # devolver intent=info (manteniendo especialidad), no arrancar el flujo de
+    # agenda. (auditoría corpus adversarial 2026-05-31)
+    _ECO_INFO_Q_RE = _re_w.compile(
+        r"\b(?:asen|acen|hacen|atienden|atiende|tienen)\b"
+        r"|\bcu[aá]nto\s+(?:sale|cuesta|vale|val|cobran|es)\b"
+        r"|\bqu[eé]\s+(?:precio|valor)\b|\bvalor\b|\bprecio\b"
+        r"|\bsaber\s+si\b|\bsaber\s+el\s+resultado\b"
+        r"|\bresultados?\b|\bya\s+me\s+(?:la|lo)\s+hice\b"   # piden resultado, no agendar
+        r"|\bnes[ec]esito\s+orden\b|\bnecesito\s+orden\b|\bse\s+necesita\s+orden\b",
+        _re_w.IGNORECASE,
+    )
     try:
         from ecografias import route_ecografia as _route_eco, texto_menciona_ecografia as _tiene_eco
         if _tiene_eco(clave):
+            _eco_es_info = bool(_ECO_INFO_Q_RE.search(clave_norm) or _ECO_INFO_Q_RE.search(clave))
+            _eco_intent = "info" if _eco_es_info else "agendar"
             _eco_routing = _route_eco(clave)
             if _eco_routing is not None:
                 _esp = _eco_routing["especialidad_destino"]
-                log.info("ecografia routing: %r → %s (id_prof=%s)", clave[:60], _esp, _eco_routing["id_profesional"])
+                log.info("ecografia routing: %r → %s (id_prof=%s, intent=%s)", clave[:60], _esp, _eco_routing["id_profesional"], _eco_intent)
                 try:
                     from session import log_event as _log_event
                     _log_event("", "savings:ecografia_routing", {"clave": clave[:60], "esp": _esp})
                 except Exception:
                     pass
-                return {"intent": "agendar", "especialidad": _esp, "respuesta_directa": None}
+                return {"intent": _eco_intent, "especialidad": _esp, "respuesta_directa": None}
             # None: texto menciona eco pero sin tipo → intent agendar con esp "ecografía"
-            # para que _iniciar_agendar dispare MSG_PREGUNTAR_TIPO
-            log.info("ecografia sin tipo: %r → agendar ecografia (preguntará tipo)", clave[:60])
-            return {"intent": "agendar", "especialidad": "ecografía", "respuesta_directa": None}
+            # para que _iniciar_agendar dispare MSG_PREGUNTAR_TIPO (o info si pregunta)
+            log.info("ecografia sin tipo: %r → %s ecografia (preguntará tipo)", clave[:60], _eco_intent)
+            return {"intent": _eco_intent, "especialidad": "ecografía", "respuesta_directa": None}
     except Exception as _eco_err:
         log.warning("ecografia routing error: %s", _eco_err)
 

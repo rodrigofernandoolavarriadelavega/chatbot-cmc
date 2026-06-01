@@ -302,6 +302,217 @@
   .gform-err{font-size:12.5px;color:var(--red);font-weight:600;min-height:1px}
   @media(max-width:560px){.gfield-row{grid-template-columns:1fr}}
 
+  /* ── Email marketing ─────────────────────────────────── */
+  .email-gate{display:flex;align-items:flex-start;gap:13px;margin-top:20px;padding:16px 20px;border-radius:var(--r);
+       box-shadow:var(--sh-sm);border:1px solid var(--line);background:var(--card)}
+  .email-gate svg{width:22px;height:22px;flex-shrink:0;margin-top:1px}
+  .email-gate.gated{background:linear-gradient(135deg,#fdf4e3,#fcedd0);border-color:#f0dca8}
+  .email-gate.gated svg{stroke:var(--amber)}
+  .email-gate.live{background:var(--green-bg);border-color:#bfe8d4}.email-gate.live svg{stroke:var(--green)}
+  .email-gate .eg-t{font-size:13px;font-weight:600;line-height:1.5;color:var(--ink)}
+  .email-gate .eg-t b{color:var(--navy)}
+  .email-gate .eg-sub{font-size:12px;color:var(--muted);margin-top:3px;font-weight:500}
+  .seg-sub-h{font-size:14px;font-weight:800;color:var(--ink);margin:26px 0 14px;letter-spacing:-.2px}
+  .seg-sub-h span{font-weight:500;color:var(--muted);font-size:12.5px}
+  .seg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+  .segc{background:var(--card);border-radius:var(--r);border:1px solid var(--line);box-shadow:var(--sh-sm);
+       padding:16px 17px;transition:.18s;cursor:pointer;display:flex;flex-direction:column;gap:9px;position:relative}
+  .segc:hover{box-shadow:var(--sh-md);transform:translateY(-2px);border-color:#cfe0ec}
+  .segc-top{display:flex;align-items:center;gap:9px}
+  .segc-obj{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;padding:4px 9px;border-radius:999px}
+  .obj-venta{background:var(--green-bg);color:var(--green)}.obj-reactivacion{background:var(--amber-bg);color:var(--amber)}
+  .obj-fidelizacion{background:#eef0fb;color:#5b62c9}.obj-cross_sell{background:#e3f5f8;color:var(--blue)}
+  .obj-bienvenida{background:var(--slate-bg);color:var(--slate)}
+  .segc-name{font-size:14.5px;font-weight:700;line-height:1.3;color:var(--ink)}
+  .segc-why{font-size:12px;color:var(--muted);line-height:1.45}
+  .segc-foot{display:flex;align-items:center;gap:8px;margin-top:auto;padding-top:10px;border-top:1px dashed var(--line)}
+  .segc-grade{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-size:13px;font-weight:800;color:#fff}
+  .gr-A{background:var(--green)}.gr-B{background:var(--blue)}.gr-C{background:var(--amber)}.gr-D{background:var(--red)}
+  .segc-aud{font-size:12px;font-weight:700;color:var(--navy)}.segc-aud span{color:var(--muted);font-weight:500}
+  .segc-del{position:absolute;top:12px;right:12px;width:26px;height:26px;border:0;border-radius:8px;background:var(--bg);
+       display:grid;place-items:center;cursor:pointer;opacity:0;transition:.15s}
+  .segc:hover .segc-del{opacity:1}.segc-del svg{width:14px;height:14px;stroke:var(--red)}
+  .segc.tpl{border-style:dashed;background:#fbfdfe}
+
+  /* Editor modal */
+  .seg-card{position:relative;z-index:1;background:var(--card);border-radius:20px;overflow:hidden;
+       box-shadow:var(--sh-lg);width:100%;max-width:1080px;max-height:92vh;display:flex;flex-direction:column}
+  .seg-editor{display:grid;grid-template-columns:1fr 380px;overflow:hidden;flex:1;min-height:0}
+  .seg-form{padding:24px 26px;overflow:auto}
+  .seg-form h3{font-size:18px;font-weight:800;letter-spacing:-.3px;margin-bottom:4px}
+  .seg-sec{margin-top:20px}
+  .seg-sec-t{font-size:11.5px;font-weight:800;color:var(--navy);text-transform:uppercase;letter-spacing:.5px;
+       display:flex;align-items:center;gap:7px;margin-bottom:12px}
+  .seg-sec-t svg{width:15px;height:15px;stroke:var(--blue)}
+  .chips{display:flex;flex-wrap:wrap;gap:7px}
+  .chip-tog{border:1px solid var(--line);background:#fff;color:var(--muted);font-family:inherit;font-weight:700;
+       font-size:12px;padding:7px 12px;border-radius:999px;cursor:pointer;transition:.12s}
+  .chip-tog:hover{border-color:#cfe0ec}.chip-tog.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .seg-live{background:#0a2e4d;padding:20px;overflow:auto;display:flex;flex-direction:column;gap:16px}
+  .seg-funnel{background:rgba(255,255,255,.06);border-radius:14px;padding:15px 16px}
+  .seg-funnel h4{color:#cfeef3;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+  .fnl-row{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+  .fnl-bar{flex:1;height:24px;border-radius:7px;background:rgba(255,255,255,.08);position:relative;overflow:hidden}
+  .fnl-fill{height:100%;border-radius:7px;background:linear-gradient(90deg,var(--aqua),var(--blue));transition:width .5s}
+  .fnl-lbl{position:absolute;left:9px;top:0;line-height:24px;font-size:11px;font-weight:700;color:#fff;white-space:nowrap}
+  .fnl-n{font-size:14px;font-weight:800;color:#fff;min-width:46px;text-align:right}
+  .fnl-deliver .fnl-fill{background:linear-gradient(90deg,#7CFFB2,#1f9d6b)}
+  .seg-score{background:rgba(255,255,255,.06);border-radius:14px;padding:15px 16px}
+  .seg-score-top{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+  .seg-score-grade{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;font-size:22px;font-weight:800;color:#fff}
+  .seg-score-meta .v{font-size:20px;font-weight:800;color:#fff}.seg-score-meta .l{font-size:11px;color:#9fc4dc}
+  .chk{display:flex;align-items:flex-start;gap:9px;padding:6px 0;font-size:12px;color:#cfe0ec;line-height:1.4}
+  .chk-ico{width:16px;height:16px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;margin-top:1px;font-size:10px;font-weight:800;color:#fff}
+  .chk-ok .chk-ico{background:#1f9d6b}.chk-warn .chk-ico{background:#c98a14}.chk-fail .chk-ico{background:#d94c4c}
+  .chk b{color:#fff;font-weight:700}
+  .seg-preview-wrap{background:rgba(255,255,255,.06);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px}
+  .seg-preview-wrap h4{color:#cfeef3;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px}
+  .seg-preview-wrap .subj{font-size:12.5px;color:#fff;font-weight:600;background:rgba(255,255,255,.08);padding:8px 11px;border-radius:8px}
+  .seg-iframe{width:100%;height:420px;border:0;border-radius:10px;background:#fff}
+  .seg-actions{display:flex;gap:9px}.seg-actions .dbtn{flex:1}
+  .seg-send-gated{opacity:.55;cursor:not-allowed}
+  @media(max-width:900px){.seg-editor{grid-template-columns:1fr}.seg-live{max-height:none}}
+
+  /* Sub-switch del módulo Diseños (Biblioteca / Publicar) */
+  .dseg-switch{display:flex;gap:6px;margin:20px 0 4px;background:var(--card);padding:6px;border-radius:14px;
+       box-shadow:var(--sh-sm);border:1px solid var(--line);width:fit-content;max-width:100%;flex-wrap:wrap}
+  .dseg{display:inline-flex;align-items:center;gap:8px;border:0;cursor:pointer;background:transparent;
+       font-family:inherit;font-weight:700;font-size:13px;color:var(--muted);padding:9px 16px;border-radius:10px;transition:.15s}
+  .dseg svg{width:16px;height:16px;stroke:currentColor}
+  .dseg:hover{color:var(--navy);background:var(--bg)}
+  .dseg.on{background:linear-gradient(135deg,var(--navy),var(--blue));color:#fff}
+  .dseg.on svg{stroke:#fff}
+
+  /* Estado de conexión por canal */
+  .conn-strip{display:flex;flex-wrap:wrap;gap:11px;align-items:center;margin-top:18px}
+  .conn-chip{display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border-radius:12px;
+       border:1px solid var(--line);background:#fff;font-size:12.5px;font-weight:700;box-shadow:var(--sh-sm)}
+  .conn-chip .cdot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+  .conn-chip.ok .cdot{background:var(--green);box-shadow:0 0 0 3px var(--green-bg)}
+  .conn-chip.off .cdot{background:var(--slate);box-shadow:0 0 0 3px var(--slate-bg)}
+  .conn-chip.ok{color:var(--ink)}.conn-chip.off{color:var(--muted)}
+  .conn-chip .clbl em{font-weight:500;font-style:normal;color:var(--muted);font-size:11px;display:block;margin-top:1px}
+  .kill-banner{display:flex;align-items:flex-start;gap:13px;width:100%;padding:14px 18px;border-radius:14px;
+       background:linear-gradient(135deg,#fdf4e3,#fcedd0);border:1px solid #f0dca8;box-shadow:var(--sh-sm)}
+  .kill-banner.live{background:linear-gradient(135deg,#e7f7f0,#d7f0e4);border-color:#bce3cf}
+  .kill-banner svg{width:20px;height:20px;flex-shrink:0;margin-top:1px;stroke:var(--amber)}
+  .kill-banner.live svg{stroke:var(--green)}
+  .kill-banner .kb-t{font-size:12.5px;font-weight:600;line-height:1.5;color:#7a5510}
+  .kill-banner.live .kb-t{color:#176b48}
+  .kill-banner b{font-weight:800}
+
+  /* Tablero de cola de publicación */
+  .pub-board{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:20px;align-items:start}
+  .pub-col{background:var(--card);border-radius:var(--r);border:1px solid var(--line);box-shadow:var(--sh-sm);overflow:hidden}
+  .pub-col-h{display:flex;align-items:center;gap:9px;padding:13px 16px;border-bottom:1px solid var(--line);font-size:13px;font-weight:800}
+  .pub-col-h .pc-dot{width:8px;height:8px;border-radius:50%}
+  .pub-col-h .pc-n{margin-left:auto;font-size:11px;font-weight:700;color:var(--muted);background:var(--bg);padding:3px 9px;border-radius:999px}
+  .pc-cola .pc-dot{background:var(--slate)}.pc-aprob .pc-dot{background:var(--amber)}.pc-pub .pc-dot{background:var(--green)}
+  .pub-col-b{padding:13px;display:flex;flex-direction:column;gap:11px;min-height:60px}
+  .pub-card{border:1px solid var(--line);border-radius:13px;overflow:hidden;background:#fff;transition:.15s}
+  .pub-card:hover{box-shadow:var(--sh-md)}
+  .pub-card-top{display:flex;gap:11px;padding:11px}
+  .pub-thumb{width:54px;height:68px;border-radius:9px;object-fit:cover;flex-shrink:0;background:var(--bg)}
+  .pub-card-info{min-width:0;flex:1}
+  .pub-card-t{font-size:12.5px;font-weight:700;line-height:1.3;color:var(--ink)}
+  .pub-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+  .pub-ch{font-size:10px;font-weight:700;padding:3px 8px;border-radius:7px;background:#eef9fb;color:var(--blue)}
+  .pub-ch.skip{background:var(--slate-bg);color:var(--slate)}
+  .pub-ch.err{background:var(--red-bg);color:var(--red)}
+  .pub-ch.done{background:var(--green-bg);color:var(--green)}
+  .pub-when{font-size:11px;color:var(--muted);font-weight:600;margin-top:7px;display:flex;align-items:center;gap:5px}
+  .pub-when svg{width:12px;height:12px;stroke:currentColor}
+  .pub-acts{display:flex;gap:7px;padding:0 11px 11px;flex-wrap:wrap}
+  .pub-btn{flex:1;min-width:84px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);
+       background:#fff;color:var(--navy);font-family:inherit;font-weight:700;font-size:11.5px;padding:8px 10px;border-radius:9px;cursor:pointer;transition:.15s}
+  .pub-btn svg{width:13px;height:13px;stroke:currentColor}
+  .pub-btn:hover{background:var(--bg);border-color:#cfe0ec}
+  .pub-btn.primary{background:linear-gradient(135deg,var(--navy),var(--blue));color:#fff;border:0}
+  .pub-btn.danger{color:var(--red)}.pub-btn.danger:hover{background:var(--red-bg);border-color:#f3c9c9}
+  .pub-empty{font-size:12px;color:var(--muted);text-align:center;padding:22px 8px;font-weight:500}
+
+  /* Composer (modal) */
+  .pc-channels{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .pc-ch-opt{display:flex;align-items:center;gap:9px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;cursor:pointer;
+       font-size:12.5px;font-weight:600;transition:.15s;user-select:none}
+  .pc-ch-opt:hover{border-color:#cfe0ec;background:var(--bg)}
+  .pc-ch-opt.sel{border-color:var(--aqua);background:#eef9fb}
+  .pc-ch-opt.disabled{opacity:.5;cursor:not-allowed}
+  .pc-ch-opt input{accent-color:var(--blue);width:16px;height:16px}
+  .pc-ch-opt .pc-ch-lbl em{display:block;font-weight:500;font-size:10.5px;color:var(--muted);font-style:normal;margin-top:1px}
+  .pc-pick{display:flex;gap:11px;align-items:center}
+  .pc-pick img{width:52px;height:66px;border-radius:9px;object-fit:cover;background:var(--bg);flex-shrink:0}
+  @media(max-width:760px){.pub-board{grid-template-columns:1fr}.pc-channels{grid-template-columns:1fr}}
+
+  /* ── SEO (auditoría) ──────────────────────────────────── */
+  .seo-card{border:1px solid var(--line);border-radius:14px;padding:15px 16px;margin-bottom:12px;background:#fff;transition:.18s}
+  .seo-card:hover{box-shadow:var(--sh-md);border-color:#d4e0ea}
+  .seo-card:last-child{margin-bottom:0}
+  .seo-card.crit{border-left:3px solid var(--red)}
+  .seo-card.err{opacity:.7;border-left:3px solid var(--slate)}
+  .seo-top{display:flex;align-items:center;gap:13px}
+  .seo-grade{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:20px;
+       font-weight:800;flex-shrink:0;letter-spacing:-1px}
+  .seo-grade.g-A{background:var(--green-bg);color:var(--green)}
+  .seo-grade.g-B{background:#e3f5f8;color:var(--blue)}
+  .seo-grade.g-C{background:var(--amber-bg);color:var(--amber)}
+  .seo-grade.g-D{background:var(--red-bg);color:var(--red)}
+  .seo-pl{font-size:13.5px;font-weight:700;letter-spacing:-.2px;line-height:1.2;display:flex;align-items:center;gap:7px}
+  .seo-role{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);
+       background:var(--bg);padding:2px 7px;border-radius:6px}
+  .seo-url{font-size:11px;color:var(--muted);font-weight:500;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+  .seo-score-track{height:7px;border-radius:999px;background:var(--line);overflow:hidden;margin-top:8px}
+  .seo-score-fill{height:100%;border-radius:999px;transition:width .8s cubic-bezier(.2,.8,.2,1)}
+  .seo-sf-A,.seo-sf-B{background:linear-gradient(90deg,var(--aqua),var(--blue))}
+  .seo-sf-C{background:linear-gradient(90deg,#f0c45a,var(--amber))}
+  .seo-sf-D{background:linear-gradient(90deg,#e88,var(--red))}
+  .seo-sn{font-size:21px;font-weight:800;letter-spacing:-.6px;flex-shrink:0}
+  .seo-sn span{font-size:11px;color:var(--muted);font-weight:600}
+  .seo-cats{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+  .seo-cat{font-size:10.5px;font-weight:700;color:var(--muted);background:var(--bg);padding:4px 9px;border-radius:8px;display:inline-flex;gap:6px;align-items:center}
+  .seo-cat b{color:var(--ink)}
+  .seo-cat .d{width:6px;height:6px;border-radius:50%}
+  .seo-cat .d.ok{background:var(--green)}.seo-cat .d.warn{background:var(--amber)}.seo-cat .d.fail{background:var(--red)}
+  .seo-fail-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+  .seo-fail{font-size:11px;font-weight:600;padding:5px 9px;border-radius:8px;background:var(--red-bg);color:#b13030;display:inline-flex;gap:5px;align-items:center}
+  .seo-fail.warn{background:var(--amber-bg);color:#9a6a0f}
+  .seo-fail.crit{background:#fbe3e3;color:#a31f1f;font-weight:700}
+  .seo-checks{margin-top:11px}
+  .seo-checks summary{cursor:pointer;font-size:11.5px;font-weight:700;color:var(--blue);list-style:none;user-select:none}
+  .seo-checks summary::-webkit-details-marker{display:none}
+  .seo-checks summary:hover{text-decoration:underline}
+  .seo-check{display:flex;gap:9px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line);font-size:12px}
+  .seo-check:last-child{border-bottom:0}
+  .seo-ck{width:17px;height:17px;border-radius:5px;display:grid;place-items:center;flex-shrink:0;margin-top:1px;font-size:11px;font-weight:800}
+  .seo-ck.ok{background:var(--green-bg);color:var(--green)}.seo-ck.warn{background:var(--amber-bg);color:var(--amber)}.seo-ck.fail{background:var(--red-bg);color:var(--red)}
+  .seo-ck-l{font-weight:700;color:var(--ink)}
+  .seo-ck-l .crit-tag{font-size:9px;font-weight:800;color:#a31f1f;background:#fbe3e3;padding:1px 5px;border-radius:5px;margin-left:6px;text-transform:uppercase;letter-spacing:.3px}
+  .seo-ck-m{color:var(--muted);font-weight:500;margin-top:1px;line-height:1.4}
+  /* checklist local */
+  .seo-li{display:flex;gap:11px;align-items:flex-start;padding:11px 0;border-bottom:1px solid var(--line)}
+  .seo-li:last-child{border-bottom:0}
+  .seo-li-box{width:18px;height:18px;border-radius:6px;border:2px solid var(--line);flex-shrink:0;margin-top:1px;display:grid;place-items:center}
+  .seo-li-box.done{background:var(--green);border-color:var(--green)}
+  .seo-li-box svg{width:11px;height:11px;stroke:#fff;stroke-width:3}
+  .seo-li-t{font-size:12.5px;font-weight:700;color:var(--ink);line-height:1.3}
+  .seo-li-w{font-size:11px;color:var(--muted);font-weight:500;margin-top:2px;line-height:1.4}
+  .seo-li-tag{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--blue);background:#eef9fb;padding:2px 6px;border-radius:5px;margin-left:6px}
+  /* oportunidades */
+  .seo-opp{border:1px solid var(--line);border-radius:11px;padding:12px 13px;margin-bottom:10px}
+  .seo-opp:last-child{margin-bottom:0}
+  .seo-opp-n{font-size:12.5px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:7px}
+  .seo-opp-i{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;padding:2px 7px;border-radius:6px;background:#eef0fb;color:#5b62c9}
+  .seo-opp-w{font-size:11.5px;color:var(--muted);font-weight:500;margin-top:5px;line-height:1.45}
+  /* heatmap especialidad × comuna */
+  .seo-heat{overflow-x:auto}
+  .seo-heat table{border-collapse:collapse;font-size:11px;min-width:100%}
+  .seo-heat th{font-weight:700;color:var(--muted);padding:6px 7px;text-align:center;white-space:nowrap;font-size:10px}
+  .seo-heat th.rowh{text-align:left;position:sticky;left:0;background:#fff;z-index:1}
+  .seo-heat td{padding:0;text-align:center}
+  .seo-heat td .cell{width:30px;height:24px;margin:2px auto;border-radius:5px;display:grid;place-items:center;
+       font-size:9.5px;font-weight:800;color:#fff;cursor:default}
+  .seo-heat .rowlbl{font-weight:700;color:var(--ink);padding:6px 9px 6px 0;white-space:nowrap;position:sticky;left:0;background:#fff;font-size:11px}
+
   @media(max-width:1080px){.kpis{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}}
   @media(max-width:560px){.wrap{padding:14px}.kpis{grid-template-columns:1fr}.top{padding:18px}.gallery-grid{grid-template-columns:repeat(2,1fr);gap:12px}.gsel{flex:1}}
 </style>
@@ -343,6 +554,14 @@
     <button class="tab" data-view="disenos">
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
       Diseños <span class="tab-count" id="tabDesignCount"></span>
+    </button>
+    <button class="tab" data-view="email">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>
+      Email <span class="tab-count" id="tabEmailCount"></span>
+    </button>
+    <button class="tab" data-view="seo">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M11 8v6M8 11h6"/></svg>
+      SEO <span class="tab-count" id="tabSeoCount"></span>
     </button>
   </div>
 
@@ -399,6 +618,19 @@
   </div><!-- /viewDecisiones -->
 
   <div id="viewDisenos" style="display:none">
+
+    <div class="dseg-switch" id="segSwitch">
+      <button class="dseg on" data-seg="library">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+        Biblioteca
+      </button>
+      <button class="dseg" data-seg="publish">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+        Publicar · Instagram · Facebook · WhatsApp
+      </button>
+    </div>
+
+    <div id="segLibrary">
     <div class="gal-head">
       <div>
         <h2 class="gal-title">Biblioteca de diseños</h2>
@@ -433,6 +665,51 @@
     <div id="gallery">
       <div class="gallery-grid"><div class="skel" style="height:300px"></div><div class="skel" style="height:300px"></div><div class="skel" style="height:300px"></div></div>
     </div>
+    </div><!-- /segLibrary -->
+
+    <div id="segPublish" style="display:none">
+      <div class="gal-head">
+        <div>
+          <h2 class="gal-title">Publicar en redes</h2>
+          <p class="gal-sub">Lleva una pieza de la biblioteca a Instagram, Facebook y WhatsApp. Cola con aprobación: vos apruebas, el sistema publica solo a la hora fijada.</p>
+        </div>
+        <button class="btn-gen" id="btnNewPub">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+          Nueva publicación
+        </button>
+      </div>
+
+      <!-- Estado de conexión por canal -->
+      <div class="conn-strip" id="connStrip"><div class="skel" style="height:64px"></div></div>
+
+      <!-- Tablero de cola -->
+      <div class="pub-board" id="pubBoard">
+        <div class="skel" style="height:200px"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="viewEmail" style="display:none">
+    <div class="email-gate" id="emailGate">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div><div class="eg-t" id="egText">Cargando estado del canal de email…</div></div>
+    </div>
+
+    <div class="gal-head">
+      <div>
+        <h2 class="gal-title">Segmentos de email</h2>
+        <p class="gal-sub">Audiencia RFM (recencia · frecuencia · gasto) + contenido + consentimiento. Best-practices aplicadas y medidas en tiempo real.</p>
+      </div>
+      <button class="btn-gen" id="btnNewSeg">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        Nuevo segmento
+      </button>
+    </div>
+    <div class="seg-grid" id="segList" style="margin-top:18px"></div>
+
+    <h3 class="seg-sub-h">Plantillas best-practice <span>· clónalas y ajústalas a tu campaña</span></h3>
+    <div class="seg-grid" id="tplList"></div>
   </div>
 
   <div class="foot" id="foot"></div>
@@ -513,6 +790,128 @@
     </div>
   </div>
 </div>
+
+<!-- Modal composer: programar publicación -->
+<div class="dmodal" id="pmodal">
+  <div class="dmodal-bg" id="pmodalBg"></div>
+  <div class="gmodal-card">
+    <button class="dmodal-x" id="pmodalX" aria-label="Cerrar">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+    <h3 class="gmodal-title">Nueva publicación</h3>
+    <p class="gmodal-sub">Elige una pieza de la biblioteca, los canales y cuándo publicarla. Entra a la cola para que la apruebes.</p>
+    <div class="gform">
+      <label class="gfield"><span>Pieza de la biblioteca</span>
+        <select id="pDesign"></select>
+      </label>
+      <div class="pc-pick" id="pPick" style="display:none">
+        <img id="pPickImg" alt="">
+        <div style="font-size:12px;color:var(--muted);font-weight:600" id="pPickMeta"></div>
+      </div>
+      <div class="gfield"><span>Canales</span>
+        <div class="pc-channels" id="pChannels"></div>
+      </div>
+      <label class="gfield"><span>Texto / caption <em>(opcional)</em></span>
+        <textarea id="pCaption" rows="3" placeholder="Texto que acompaña la publicación. Las Historias lo ignoran."></textarea>
+      </label>
+      <label class="gfield"><span>Programar para <em>(vacío = apenas la apruebes)</em></span>
+        <input id="pSchedule" type="datetime-local">
+      </label>
+      <p class="gform-hint">Esto solo deja la pieza <b>en cola</b>. Nada se publica hasta que la apruebes en el tablero, y la escritura a Meta exige el kill-switch del server activo.</p>
+      <button class="dbtn dbtn-primary gform-btn" id="pSubmit">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        <span>Agregar a la cola</span>
+      </button>
+      <p class="gform-err" id="pErr"></p>
+    </div>
+  </div>
+</div>
+
+<!-- Modal editor de segmento de email -->
+<div class="dmodal" id="segModal">
+  <div class="dmodal-bg" id="segModalBg"></div>
+  <div class="seg-card">
+    <button class="dmodal-x" id="segModalX" aria-label="Cerrar">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+    <div class="seg-editor">
+      <div class="seg-form">
+        <h3 id="segTitle">Nuevo segmento</h3>
+        <p class="gmodal-sub">Define a quién, qué le dices y cuándo. La columna derecha mide la audiencia y la calidad en vivo.</p>
+
+        <div class="seg-sec">
+          <div class="seg-sec-t"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> Audiencia</div>
+          <label class="gfield"><span>Nombre del segmento</span>
+            <input id="segName" placeholder="Ej: Reactivar dormidos de kinesiología"></label>
+          <label class="gfield" style="margin-top:11px"><span>Objetivo</span>
+            <select id="segObjetivo">
+              <option value="venta">Venta</option><option value="reactivacion">Reactivación</option>
+              <option value="fidelizacion">Fidelización</option><option value="cross_sell">Cross-sell</option>
+              <option value="bienvenida">Bienvenida</option>
+            </select></label>
+          <div class="gfield" style="margin-top:13px"><span>Ciclo de vida del paciente <em style="font-weight:500;color:var(--muted)">(RFM)</em></span>
+            <div class="chips" id="segLifecycles" style="margin-top:7px"></div></div>
+          <div class="gfield" style="margin-top:13px"><span>Especialidad de la última atención <em style="font-weight:500;color:var(--muted)">(opcional)</em></span>
+            <div class="chips" id="segEspecialidades" style="margin-top:7px"></div></div>
+          <div class="gfield-row" style="margin-top:13px">
+            <label class="gfield"><span>Edad mínima</span><input id="segEdadMin" type="number" min="0" max="120" placeholder="—"></label>
+            <label class="gfield"><span>Edad máxima</span><input id="segEdadMax" type="number" min="0" max="120" placeholder="—"></label>
+          </div>
+          <label class="gfield" style="margin-top:11px"><span>Género <em style="font-weight:500;color:var(--muted)">(opcional)</em></span>
+            <select id="segGenero"><option value="">Todos</option><option value="F">Femenino</option><option value="M">Masculino</option></select></label>
+        </div>
+
+        <div class="seg-sec">
+          <div class="seg-sec-t"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="m4 6 8 6 8-6"/></svg> Contenido</div>
+          <label class="gfield"><span>Remitente (from)</span><input id="emFrom" placeholder="Centro Médico Carampangue"></label>
+          <label class="gfield" style="margin-top:11px"><span>Asunto <em style="font-weight:500;color:var(--muted)">· usa {nombre}</em></span><input id="emSubject" placeholder="{nombre}, ¿hace cuánto no te chequeas?"></label>
+          <label class="gfield" style="margin-top:11px"><span>Preheader / preview <em style="font-weight:500;color:var(--muted)">· texto bajo el asunto</em></span><input id="emPreheader" placeholder="Tu salud no puede esperar. Reserva con tu equipo de siempre."></label>
+          <label class="gfield" style="margin-top:11px"><span>Titular</span><input id="emHeadline" placeholder="Te echamos de menos, {nombre}"></label>
+          <label class="gfield" style="margin-top:11px"><span>Cuerpo</span><textarea id="emBody" rows="4" placeholder="Mensaje. Una idea por párrafo, directo al beneficio."></textarea></label>
+          <div class="gfield-row" style="margin-top:11px">
+            <label class="gfield"><span>Texto del botón (CTA)</span><input id="emCtaLabel" placeholder="Reservar un control"></label>
+            <label class="gfield"><span>Enlace del CTA</span><input id="emCtaUrl" placeholder="https://wa.me/56966610737"></label>
+          </div>
+        </div>
+
+        <div class="seg-sec">
+          <div class="seg-sec-t"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Estrategia de envío</div>
+          <div class="gfield-row">
+            <label class="gfield"><span>Mejor día</span>
+              <select id="emDay"><option>lunes</option><option>martes</option><option>miércoles</option><option>jueves</option><option>viernes</option></select></label>
+            <label class="gfield"><span>Hora</span><input id="emHour" type="number" min="6" max="21" placeholder="10"></label>
+          </div>
+          <label class="gfield" style="margin-top:11px"><span>Cooldown / frequency cap (días)</span><input id="emCooldown" type="number" min="0" max="365" placeholder="30"></label>
+        </div>
+      </div>
+
+      <div class="seg-live">
+        <div class="seg-funnel">
+          <h4>Embudo de entregabilidad</h4>
+          <div id="segFunnel"><div class="skel" style="height:120px;background:rgba(255,255,255,.08)"></div></div>
+        </div>
+        <div class="seg-score" id="segScore"></div>
+        <div class="seg-preview-wrap">
+          <h4>Vista previa del email</h4>
+          <div class="subj" id="segSubjPrev">—</div>
+          <iframe class="seg-iframe" id="segIframe"></iframe>
+        </div>
+        <div class="seg-actions">
+          <button class="dbtn" id="segSave" style="background:#fff">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+            Guardar
+          </button>
+          <button class="dbtn dbtn-primary" id="segSend">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/></svg>
+            Enviar campaña
+          </button>
+        </div>
+        <p class="gform-err" id="segErr" style="color:#ffd0d0"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 <script>
 const ICON = {
@@ -706,6 +1105,17 @@ document.getElementById('tabs').addEventListener('click',e=>{
   document.getElementById('viewDecisiones').style.display = v==='decisiones'?'block':'none';
   document.getElementById('viewDisenos').style.display    = v==='disenos'?'block':'none';
   if(v==='disenos' && !DESIGNS_LOADED) loadDesigns();
+});
+
+/* ── Sub-switch del módulo Diseños: Biblioteca / Publicar ─ */
+document.getElementById('segSwitch').addEventListener('click',e=>{
+  const b=e.target.closest('.dseg'); if(!b)return;
+  document.querySelectorAll('#segSwitch .dseg').forEach(t=>t.classList.remove('on'));
+  b.classList.add('on');
+  const s=b.dataset.seg;
+  document.getElementById('segLibrary').style.display = s==='library'?'block':'none';
+  document.getElementById('segPublish').style.display = s==='publish'?'block':'none';
+  if(s==='publish') loadPublish();
 });
 
 /* ── Biblioteca de diseños (DAM facetado) ─────────────── */
@@ -989,6 +1399,375 @@ async function pollGen(jobId){
   }
   return null;
 }
+
+/* ── Consola de publicación (segmento IG · FB · WhatsApp) ── */
+let PUB_STATUS=null, PUB_QUEUE=[], PUB_LOADED=false;
+const PUB_AUTO=['instagram_feed','instagram_story','facebook_feed','facebook_story'];
+const chLabel = k => (PUB_STATUS && PUB_STATUS.labels && PUB_STATUS.labels[k]) || k;
+
+async function loadPublish(){
+  // La biblioteca debe estar cargada para poder elegir una pieza en el composer.
+  if(!DESIGNS_LOADED) await loadDesigns();
+  let st,q;
+  try{
+    [st,q]=await Promise.all([
+      (await fetch(`/autopilot/api/publish/status?token=${TOKEN}`)).json(),
+      (await fetch(`/autopilot/api/publish/queue?token=${TOKEN}`)).json(),
+    ]);
+  }catch(e){ document.getElementById('pubBoard').innerHTML='<div class="pub-empty">No pude cargar la cola.</div>'; return; }
+  PUB_STATUS=st; PUB_QUEUE=q.items||[]; PUB_LOADED=true;
+  renderConnStrip(); renderPubBoard();
+}
+
+function renderConnStrip(){
+  const ch=PUB_STATUS.channels||{}, ex=PUB_STATUS.execute_enabled;
+  const chips=PUB_AUTO.concat(['whatsapp_status','whatsapp_broadcast']).map(k=>{
+    const on=!!ch[k];
+    return `<span class="conn-chip ${on?'ok':'off'}"><span class="cdot"></span>
+      <span class="clbl">${esc(chLabel(k))}<em>${on?'conectado':(k==='whatsapp_broadcast'?'gateado (consent)':k==='whatsapp_status'?'manual':'conecta tu cuenta')}</em></span></span>`;
+  }).join('');
+  const banner = ex
+    ? `<div class="kill-banner live">${svg('<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/>')}
+        <div class="kb-t"><b>Publicación activa.</b> El kill-switch del server está encendido: las piezas aprobadas se publican solas a su hora.</div></div>`
+    : `<div class="kill-banner">${svg('<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>')}
+        <div class="kb-t"><b>Escritura bloqueada.</b> Podés armar y aprobar la cola, pero nada se publica hasta activar <b>ORGANIC_PUBLISH_EXECUTE=true</b> en el server. Seguro por defecto.</div></div>`;
+  document.getElementById('connStrip').innerHTML = chips + banner;
+}
+
+const PUB_COLS=[
+  {key:'cola',  cls:'pc-cola', label:'En cola', match:s=>s==='cola'},
+  {key:'aprob', cls:'pc-aprob',label:'Aprobado · programado', match:s=>s==='aprobado'},
+  {key:'pub',   cls:'pc-pub',  label:'Publicado / resultado', match:s=>['publicado','parcial','error'].includes(s)},
+];
+function fmtWhen(iso){
+  if(!iso) return '';
+  try{ return new Date(iso).toLocaleString('es-CL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}); }catch(e){ return iso; }
+}
+function renderPubBoard(){
+  document.getElementById('pubBoard').innerHTML = PUB_COLS.map(col=>{
+    const items=PUB_QUEUE.filter(i=>col.match((i.status||'cola').toLowerCase()));
+    const cards=items.length? items.map(pubCard).join('')
+      : '<div class="pub-empty">Sin piezas aquí.</div>';
+    return `<div class="pub-col">
+      <div class="pub-col-h ${col.cls}"><span class="pc-dot"></span>${esc(col.label)}<span class="pc-n">${items.length}</span></div>
+      <div class="pub-col-b">${cards}</div></div>`;
+  }).join('');
+  document.getElementById('pubBoard').querySelectorAll('[data-act]').forEach(b=>{
+    b.addEventListener('click',()=>pubAction(b.dataset.act,b.dataset.id));
+  });
+}
+function pubCard(i){
+  const st=(i.status||'cola').toLowerCase();
+  const chchips=(i.channels||[]).map(c=>{
+    const r=(i.results||{})[c];
+    let cls='pub-ch';
+    if(r){ if(r.ok)cls='pub-ch done'; else if(r.skipped)cls='pub-ch skip'; else cls='pub-ch err'; }
+    return `<span class="${cls}" title="${r?esc(r.error||(r.ok?'publicado':'')):''}">${esc(chLabel(c))}</span>`;
+  }).join('');
+  const when = st==='aprobado'
+    ? (i.scheduled_at?`programado ${fmtWhen(i.scheduled_at)}`:'apenas se apruebe → próxima corrida')
+    : (i.published_at?`publicado ${fmtWhen(i.published_at)}`:`creado ${fmtWhen(i.created_at)}`);
+  let acts='';
+  if(st==='cola'){
+    acts=`<button class="pub-btn primary" data-act="approve" data-id="${esc(i.id)}">${svg('<path d="M20 6 9 17l-5-5"/>')}Aprobar</button>
+          <button class="pub-btn danger" data-act="del" data-id="${esc(i.id)}">${svg('<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>')}Quitar</button>`;
+  } else if(st==='aprobado'){
+    acts=`<button class="pub-btn primary" data-act="now" data-id="${esc(i.id)}">${svg('<path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/>')}Publicar ahora</button>
+          <button class="pub-btn danger" data-act="del" data-id="${esc(i.id)}">${svg('<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>')}Quitar</button>`;
+  } else if(st==='error'||st==='parcial'){
+    acts=`<button class="pub-btn" data-act="now" data-id="${esc(i.id)}">${svg('<path d="M21 2v6h-6M3 22v-6h6"/><path d="M3.5 9a9 9 0 0 1 14.8-3.4L21 8M21 15a9 9 0 0 1-14.8 3.4L3 16"/>')}Reintentar</button>
+          <button class="pub-btn danger" data-act="del" data-id="${esc(i.id)}">${svg('<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>')}Quitar</button>`;
+  } else {
+    acts=`<button class="pub-btn danger" data-act="del" data-id="${esc(i.id)}">${svg('<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>')}Quitar</button>`;
+  }
+  const img=i.image_url||'';
+  return `<div class="pub-card">
+    <div class="pub-card-top">
+      ${img?`<img class="pub-thumb" src="${esc(img)}" alt="">`:'<div class="pub-thumb"></div>'}
+      <div class="pub-card-info">
+        <div class="pub-card-t">${esc(i.title||'Sin título')}</div>
+        <div class="pub-chips">${chchips}</div>
+        <div class="pub-when">${svg('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>')}<span>${esc(when)}</span></div>
+      </div>
+    </div>
+    <div class="pub-acts">${acts}</div>
+  </div>`;
+}
+
+async function pubAction(act,id){
+  try{
+    if(act==='approve'){
+      await fetch(`/autopilot/api/publish/queue/${id}/approve?token=${TOKEN}`,
+        {method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    } else if(act==='now'){
+      await fetch(`/autopilot/api/publish/queue/${id}/publish-now?token=${TOKEN}`,{method:'POST'});
+    } else if(act==='del'){
+      if(!confirm('¿Quitar esta pieza de la cola?')) return;
+      await fetch(`/autopilot/api/publish/queue/${id}?token=${TOKEN}`,{method:'DELETE'});
+    }
+  }catch(e){}
+  await loadPublish();
+}
+
+/* ── Composer ─────────────────────────────────────────── */
+function openPModal(){
+  const imgs=DESIGNS.filter(d=>!((d.kind==='video')||d.video_url));
+  const sel=document.getElementById('pDesign');
+  sel.innerHTML = imgs.length
+    ? imgs.map(d=>`<option value="${esc(d.id)}">${esc(d.title||d.id)}${d.specialty?' · '+esc(d.specialty):''}</option>`).join('')
+    : '<option value="">No hay piezas de imagen en la biblioteca</option>';
+  // Canales: marca disponibilidad según conexión.
+  const ch=(PUB_STATUS&&PUB_STATUS.channels)||{};
+  const opts=PUB_AUTO.concat(['whatsapp_status','whatsapp_broadcast']);
+  document.getElementById('pChannels').innerHTML = opts.map(k=>{
+    const on=!!ch[k], dis=!on && k!=='whatsapp_status';
+    const note = on?'':(k==='whatsapp_broadcast'?'requiere consent':k==='whatsapp_status'?'descarga y sube a mano':'conecta la cuenta');
+    return `<label class="pc-ch-opt${dis?' disabled':''}">
+      <input type="checkbox" value="${esc(k)}" ${dis?'disabled':''}>
+      <span class="pc-ch-lbl">${esc(chLabel(k))}<em>${esc(note||'listo')}</em></span></label>`;
+  }).join('');
+  document.getElementById('pChannels').querySelectorAll('.pc-ch-opt').forEach(l=>{
+    const cb=l.querySelector('input');
+    cb.addEventListener('change',()=>l.classList.toggle('sel',cb.checked));
+  });
+  updatePPick();
+  document.getElementById('pErr').textContent='';
+  document.getElementById('pmodal').classList.add('open');
+}
+function updatePPick(){
+  const d=DESIGNS.find(x=>String(x.id)===document.getElementById('pDesign').value);
+  const wrap=document.getElementById('pPick');
+  if(!d){wrap.style.display='none';return;}
+  wrap.style.display='flex';
+  document.getElementById('pPickImg').src=d.image_url||d.thumbnail_url||'';
+  document.getElementById('pPickMeta').textContent=(FMT_LABEL[d.format]||d.format||'')+(d.status?(' · '+d.status):'');
+}
+function closePModal(){document.getElementById('pmodal').classList.remove('open');}
+document.getElementById('btnNewPub').addEventListener('click',openPModal);
+document.getElementById('pmodalBg').addEventListener('click',closePModal);
+document.getElementById('pmodalX').addEventListener('click',closePModal);
+document.getElementById('pDesign').addEventListener('change',updatePPick);
+
+document.getElementById('pSubmit').addEventListener('click',async()=>{
+  const err=document.getElementById('pErr');
+  const d=DESIGNS.find(x=>String(x.id)===document.getElementById('pDesign').value);
+  if(!d){err.textContent='Elige una pieza.';return;}
+  const channels=[...document.querySelectorAll('#pChannels input:checked')].map(c=>c.value);
+  if(!channels.length){err.textContent='Marca al menos un canal.';return;}
+  let scheduled_at=null;
+  const sv=document.getElementById('pSchedule').value;
+  if(sv){ try{ scheduled_at=new Date(sv).toISOString(); }catch(e){} }
+  const body={design_id:d.id,title:d.title,image_url:d.image_url,
+    caption:document.getElementById('pCaption').value.trim(),channels,scheduled_at};
+  const btn=document.getElementById('pSubmit');
+  btn.disabled=true;err.textContent='';
+  try{
+    const r=await (await fetch(`/autopilot/api/publish/queue?token=${TOKEN}`,
+      {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
+    if(r.ok){ closePModal(); document.getElementById('pCaption').value=''; document.getElementById('pSchedule').value=''; await loadPublish(); }
+    else err.textContent=r.detail||'No se pudo agregar.';
+  }catch(e){ err.textContent='Error de red.'; }
+  btn.disabled=false;
+});
+
+
+/* ── Email marketing (segmentos) ──────────────────────── */
+let EMAIL_LOADED=false, EM_TEMPLATES=[], EM_SEGMENTS=[], EM_SENDING={}, EM_OPTS={lifecycles:[],especialidades:[]};
+let EM_LIFE=new Set(), EM_ESP=new Set(), EM_EDIT_ID=null, EM_PREV_TIMER=null;
+
+// Listener adicional (compone con el handler de tabs existente, que ya oculta
+// las otras vistas cuando v!==su valor).
+document.getElementById('tabs').addEventListener('click',e=>{
+  const b=e.target.closest('.tab'); if(!b)return;
+  const v=b.dataset.view;
+  const ve=document.getElementById('viewEmail'); if(!ve)return;
+  ve.style.display = v==='email'?'block':'none';
+  if(v==='email' && !EMAIL_LOADED) loadEmail();
+});
+
+async function loadEmail(){
+  EMAIL_LOADED=true;
+  try{
+    const [segs,opts]=await Promise.all([
+      fetch(`/autopilot/api/email/segments?token=${TOKEN}`).then(r=>r.json()),
+      fetch(`/autopilot/api/email/options?token=${TOKEN}`).then(r=>r.json()),
+    ]);
+    EM_SEGMENTS=segs.segments||[]; EM_TEMPLATES=segs.templates||[]; EM_SENDING=segs.sending||{};
+    EM_OPTS=opts||EM_OPTS;
+    renderEmailGate(); renderSegList(); renderTplList();
+    document.getElementById('tabEmailCount').textContent=EM_SEGMENTS.length||'';
+  }catch(e){ document.getElementById('segList').innerHTML='<p style="color:var(--muted)">No pude cargar los segmentos.</p>'; }
+}
+
+function renderEmailGate(){
+  const g=document.getElementById('emailGate'), t=document.getElementById('egText'); const s=EM_SENDING;
+  if(s.enabled){
+    g.className='email-gate live';
+    t.innerHTML=`<b>Canal de email activo</b> · proveedor ${esc(s.provider)} · ${esc(s.from_address)}. Solo se envía a pacientes con opt-in de email vigente.`;
+  } else {
+    g.className='email-gate gated';
+    const reasons=(s.reasons||[]).map(esc).join(' · ')||'canal no habilitado';
+    t.innerHTML=`<b>Envío en modo seguro (gated).</b> Construye segmentos, mide audiencia y previsualiza; ningún correo sale hasta habilitar el canal.<div class="eg-sub">Motivo: ${reasons}. Email a pacientes = dato sensible (Ley 21.719): exige doble opt-in de email antes de activar.</div>`;
+  }
+}
+
+const objClass=o=>'obj-'+(o||'venta');
+
+function renderSegList(){
+  const el=document.getElementById('segList'); if(!el)return;
+  if(!EM_SEGMENTS.length){ el.innerHTML=`<div class="empty" style="grid-column:1/-1;padding:30px"><p>Aún no tienes segmentos guardados. Crea uno nuevo o clona una plantilla best-practice.</p></div>`; return; }
+  el.innerHTML=EM_SEGMENTS.map((s,i)=>`
+    <div class="segc" data-i="${i}">
+      <button class="segc-del" data-del="${esc(s.id)}" title="Eliminar">${svg('<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>')}</button>
+      <div class="segc-top"><span class="segc-obj ${objClass(s.objetivo)}">${esc(s.objetivo||'venta')}</span></div>
+      <div class="segc-name">${esc(s.name)}</div>
+      <div class="segc-why">${esc((s.email&&s.email.subject)||'Sin asunto')}</div>
+      <div class="segc-foot"><span class="segc-aud"><span>toca para editar y medir audiencia</span></span></div>
+    </div>`).join('');
+  el.querySelectorAll('.segc').forEach(c=>c.addEventListener('click',ev=>{
+    if(ev.target.closest('.segc-del'))return; openSegEditor(EM_SEGMENTS[+c.dataset.i]);
+  }));
+  el.querySelectorAll('.segc-del').forEach(b=>b.addEventListener('click',async()=>{
+    if(!confirm('¿Eliminar este segmento?'))return;
+    await fetch(`/autopilot/api/email/segments/${b.dataset.del}?token=${TOKEN}`,{method:'DELETE'}); loadEmail();
+  }));
+}
+
+function renderTplList(){
+  const el=document.getElementById('tplList'); if(!el)return;
+  el.innerHTML=EM_TEMPLATES.map((t,i)=>`
+    <div class="segc tpl" data-i="${i}">
+      <div class="segc-top"><span class="segc-obj ${objClass(t.objetivo)}">${esc(t.objetivo)}</span></div>
+      <div class="segc-name">${esc(t.name)}</div>
+      <div class="segc-why">${esc(t.why||'')}</div>
+      <div class="segc-foot"><span class="segc-aud"><span>clonar y ajustar →</span></span></div>
+    </div>`).join('');
+  el.querySelectorAll('.segc').forEach(c=>c.addEventListener('click',()=>{
+    const t=JSON.parse(JSON.stringify(EM_TEMPLATES[+c.dataset.i])); delete t.id; openSegEditor(t,true);
+  }));
+}
+
+function openSegEditor(seg,isClone){
+  seg=seg||{}; const crit=seg.criteria||{}, em=seg.email||{}, sch=seg.schedule||{};
+  EM_EDIT_ID = isClone ? null : (seg.id||null);
+  document.getElementById('segTitle').textContent = EM_EDIT_ID?'Editar segmento':(isClone?'Nuevo segmento (desde plantilla)':'Nuevo segmento');
+  const V=(id,v)=>{const el=document.getElementById(id); if(el)el.value=(v==null?'':v);};
+  V('segName',seg.name); V('segObjetivo',seg.objetivo||'venta');
+  V('segEdadMin',crit.edad_min); V('segEdadMax',crit.edad_max); V('segGenero',crit.genero||'');
+  V('emFrom',em.from_name||'Centro Médico Carampangue'); V('emSubject',em.subject); V('emPreheader',em.preheader);
+  V('emHeadline',em.headline); V('emBody',em.body); V('emCtaLabel',em.cta_label); V('emCtaUrl',em.cta_url);
+  V('emDay',sch.best_day||'martes'); V('emHour',sch.best_hour==null?10:sch.best_hour);
+  V('emCooldown',sch.cooldown_days==null?30:sch.cooldown_days);
+  EM_LIFE=new Set(crit.lifecycle||[]); EM_ESP=new Set(crit.especialidades||[]);
+  renderLifeChips(); renderEspChips();
+  document.getElementById('segErr').textContent='';
+  document.getElementById('segModal').classList.add('open');
+  refreshPreview();
+}
+
+function renderLifeChips(){
+  document.getElementById('segLifecycles').innerHTML=(EM_OPTS.lifecycles||[]).map(l=>
+    `<button type="button" class="chip-tog${EM_LIFE.has(l.key)?' on':''}" data-k="${esc(l.key)}">${esc(l.label)}</button>`).join('');
+}
+function renderEspChips(){
+  const esp=EM_OPTS.especialidades||[], el=document.getElementById('segEspecialidades');
+  if(!esp.length){ el.innerHTML='<span style="font-size:12px;color:var(--muted)">Sin datos de BI ahora (especialidades no disponibles)</span>'; return; }
+  el.innerHTML=esp.map(e=>`<button type="button" class="chip-tog${EM_ESP.has(e)?' on':''}" data-e="${esc(e)}">${esc(e)}</button>`).join('');
+}
+
+function collectSeg(){
+  const num=id=>{const v=document.getElementById(id).value; return v===''?null:+v;};
+  const seg={
+    name: document.getElementById('segName').value.trim(),
+    objetivo: document.getElementById('segObjetivo').value,
+    criteria:{ lifecycle:[...EM_LIFE], especialidades:[...EM_ESP],
+      edad_min:num('segEdadMin'), edad_max:num('segEdadMax'),
+      genero:document.getElementById('segGenero').value||null },
+    email:{ from_name:document.getElementById('emFrom').value.trim(),
+      subject:document.getElementById('emSubject').value, preheader:document.getElementById('emPreheader').value,
+      headline:document.getElementById('emHeadline').value, body:document.getElementById('emBody').value,
+      cta_label:document.getElementById('emCtaLabel').value.trim(), cta_url:document.getElementById('emCtaUrl').value.trim() },
+    schedule:{ best_day:document.getElementById('emDay').value, best_hour:num('emHour'), cooldown_days:num('emCooldown') },
+  };
+  if(EM_EDIT_ID) seg.id=EM_EDIT_ID;
+  return seg;
+}
+
+function schedulePreview(){ clearTimeout(EM_PREV_TIMER); EM_PREV_TIMER=setTimeout(refreshPreview,450); }
+
+async function refreshPreview(){
+  const seg=collectSeg();
+  try{
+    const d=await (await fetch(`/autopilot/api/email/preview?token=${TOKEN}`,
+      {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(seg)})).json();
+    renderFunnel(d.audience); renderScore(d.score);
+    document.getElementById('segSubjPrev').textContent=d.subject_preview||'—';
+    document.getElementById('segIframe').srcdoc=d.html_preview||'';
+  }catch(e){}
+}
+
+function renderFunnel(a){
+  if(!a)return;
+  const max=Math.max(a.matched||1,1);
+  const row=(lbl,n,cls)=>{ const w=Math.max(3,Math.round(100*(n||0)/max));
+    return `<div class="fnl-row ${cls||''}"><div class="fnl-bar"><div class="fnl-fill" style="width:${w}%"></div><div class="fnl-lbl">${lbl}</div></div><div class="fnl-n">${(n||0).toLocaleString('es-CL')}</div></div>`; };
+  const warns=(a.warnings||[]).map(w=>`<div style="font-size:11px;color:#ffd9a0;margin-top:6px">⚠ ${esc(w)}</div>`).join('');
+  document.getElementById('segFunnel').innerHTML=
+    row('Cumplen criterios',a.matched)+row('Con email',a.with_email)+
+    row('Contactables (consent)',a.deliverable,'fnl-deliver')+warns;
+}
+
+function renderScore(sc){
+  if(!sc)return;
+  const checks=sc.checks.map(c=>{ const ic=c.level==='ok'?'✓':c.level==='warn'?'!':'×';
+    return `<div class="chk chk-${c.level}"><span class="chk-ico">${ic}</span><div><b>${esc(c.label)}</b> — ${esc(c.msg)}</div></div>`; }).join('');
+  document.getElementById('segScore').innerHTML=
+    `<div class="seg-score-top"><div class="seg-score-grade gr-${sc.grade}">${sc.grade}</div>
+     <div class="seg-score-meta"><div class="v">${sc.score}/100</div><div class="l">salud del segmento (best-practices)</div></div></div>${checks}`;
+}
+
+function closeSeg(){document.getElementById('segModal').classList.remove('open');}
+
+document.getElementById('segModalBg').addEventListener('click',closeSeg);
+document.getElementById('segModalX').addEventListener('click',closeSeg);
+document.getElementById('btnNewSeg').addEventListener('click',()=>openSegEditor({},false));
+document.getElementById('segLifecycles').addEventListener('click',e=>{
+  const b=e.target.closest('.chip-tog'); if(!b)return; const k=b.dataset.k;
+  EM_LIFE.has(k)?EM_LIFE.delete(k):EM_LIFE.add(k); b.classList.toggle('on'); schedulePreview();
+});
+document.getElementById('segEspecialidades').addEventListener('click',e=>{
+  const b=e.target.closest('.chip-tog'); if(!b)return; const k=b.dataset.e;
+  EM_ESP.has(k)?EM_ESP.delete(k):EM_ESP.add(k); b.classList.toggle('on'); schedulePreview();
+});
+['segName','emFrom','emSubject','emPreheader','emHeadline','emBody','emCtaLabel','emCtaUrl','segEdadMin','segEdadMax','emHour','emCooldown'].forEach(id=>{
+  const el=document.getElementById(id); if(el) el.addEventListener('input',schedulePreview);
+});
+['segObjetivo','segGenero','emDay'].forEach(id=>{
+  const el=document.getElementById(id); if(el) el.addEventListener('change',schedulePreview);
+});
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeSeg(); });
+
+document.getElementById('segSave').addEventListener('click',async()=>{
+  const seg=collectSeg(), err=document.getElementById('segErr');
+  if(!seg.name){err.textContent='Ponle un nombre al segmento.';return;}
+  try{
+    const d=await (await fetch(`/autopilot/api/email/segments?token=${TOKEN}`,
+      {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(seg)})).json();
+    if(d.ok){ closeSeg(); loadEmail(); } else err.textContent='No se pudo guardar.';
+  }catch(e){err.textContent='Error de red al guardar.';}
+});
+
+document.getElementById('segSend').addEventListener('click',()=>{
+  const err=document.getElementById('segErr');
+  if(!EM_SENDING.enabled){
+    err.innerHTML='Envío en modo seguro (gated): '+((EM_SENDING.reasons||[]).map(esc).join(' · ')||'canal no habilitado')+
+      '. Guarda el segmento — quedará listo para cuando actives el canal con doble opt-in de email.';
+    return;
+  }
+  if(!confirm('¿Enviar esta campaña a la audiencia contactable?'))return;
+  err.textContent='Envío real pendiente de configurar el proveedor.';
+});
+
 
 load();
 </script>

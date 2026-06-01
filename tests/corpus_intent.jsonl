@@ -1,0 +1,886 @@
+{"input": "kiero hora pa la kine", "intent": "agendar", "especialidad": "kinesiología", "axis": "abreviacion", "group": "agendar-grupo1"}
+{"input": "nesecito kinesio pa mi rodilla q me duele al caminar", "intent": "agendar", "especialidad": "kinesiología", "axis": "rural", "group": "agendar-grupo1"}
+{"input": "se puede agendar con el kinesiologo", "intent": "agendar", "especialidad": "kinesiología", "axis": "typo", "group": "agendar-grupo1"}
+{"input": "KINECIOLOGIA POR FAVOR TENGO LA ESPALDA MALA", "intent": "agendar", "especialidad": "kinesiología", "axis": "fonetico", "group": "agendar-grupo1"}
+{"input": "hola kiero q me vean la pierna con kine", "intent": "agendar", "especialidad": "kinesiología", "axis": "abreviacion", "group": "agendar-grupo1"}
+{"input": "atienden de kinesiologia los lunes", "intent": "agendar", "especialidad": "kinesiología", "axis": "typo", "group": "agendar-grupo1"}
+{"input": "buenos dias nesesito una sita pa rehabilitacion kine despues de la operacion", "intent": "agendar", "especialidad": "kinesiología", "axis": "rural", "group": "agendar-grupo1"}
+{"input": "kinesio", "intent": "agendar", "especialidad": "kinesiología", "axis": "incompleta", "group": "agendar-grupo1"}
+{"input": "quiero pedir ora pa kinesiolojia tengo el ombro tieso", "intent": "agendar", "especialidad": "kinesiología", "axis": "fonetico", "group": "agendar-grupo1"}
+{"input": "kineciologo pa mi mama q se cayo y kedo coja", "intent": "agendar", "especialidad": "kinesiología", "axis": "rural", "group": "agendar-grupo1"}
+{"input": "hay cupo en kineciologiaa", "intent": "agendar", "especialidad": "kinesiología", "axis": "typo", "group": "agendar-grupo1"}
+{"input": "me pueden dar hora con el kinesilogo lo antes posible", "intent": "agendar", "especialidad": "kinesiología", "axis": "typo", "group": "agendar-grupo1"}
+{"input": "kine pa el cuello q lo tengo trabado", "intent": "agendar", "especialidad": "kinesiología", "axis": "abreviacion", "group": "agendar-grupo1"}
+{"input": "necesito sesiones de kinesio respiratoria pa mi marido q kedo con tos", "intent": "agendar", "especialidad": "kinesiología", "axis": "rural", "group": "agendar-grupo1"}
+{"input": "kicieran darme hora con kinesiologia", "intent": "agendar", "especialidad": "kinesiología", "axis": "fonetico", "group": "agendar-grupo1"}
+{"input": "qiero ora kine me duele la sintura hace dias", "intent": "agendar", "especialidad": "kinesiología", "axis": "fonetico", "group": "agendar-grupo1"}
+{"input": "kinesiologiaaa tengo q recuperar la mano", "intent": "agendar", "especialidad": "kinesiología", "axis": "typo", "group": "agendar-grupo1"}
+{"input": "se puede pedir kine pa rehabilitar el tobillo esguinsado", "intent": "agendar", "especialidad": "kinesiología", "axis": "rural", "group": "agendar-grupo1"}
+{"input": "kiero hora pal dentista", "intent": "agendar", "especialidad": "odontología", "axis": "abreviacion", "group": "agendar-grupo1"}
+{"input": "nesecito una sita con la dentita me duele una muela", "intent": "agendar", "especialidad": "odontología", "axis": "typo", "group": "agendar-grupo1"}
+{"input": "atienden odontolojia tengo un diente picado", "intent": "agendar", "especialidad": "odontología", "axis": "fonetico", "group": "agendar-grupo1"}
+{"input": "ODONTOLOGIA POR FA SE ME SALIO UNA TAPADURA", "intent": "agendar", "especialidad": "odontología", "axis": "rural", "group": "agendar-grupo1"}
+{"input": "dentista", "intent": "agendar", "especialidad": "odontología", "axis": "incompleta", "group": "agendar-grupo1"}
+{"input": "kiero q me vean los dientes estan amarillos", "intent": "agendar", "especialidad": "odontología", "axis": "rural", "group": "agendar-grupo1"}
+{"input": "se puede agendar odontologo pa una limpiesa", "intent": "agendar", "especialidad": "odontología", "axis": "fonetico", "group": "agendar-grupo1"}
+{"input": "hola buenas nesesito hora con el dentista pa mi hijo q le salio caries", "intent": "agendar", "especialidad": "odontología", "axis": "rural", "group": "agendar-grupo1"}
+{"input": "odonto", "intent": "agendar", "especialidad": "odontología", "axis": "incompleta", "group": "agendar-grupo1"}
+{"input": "qiero ora pal dentista urjente me late la muela toa la noche", "intent": "agendar", "especialidad": "odontología", "axis": "fonetico", "group": "agendar-grupo1"}
+{"input": "tienen odontologiaaa kiero q me saken una muela", "intent": "agendar", "especialidad": "odontología", "axis": "typo", "group": "agendar-grupo1"}
+{"input": "dentita pa mi señora se le quebro un diente comiendo", "intent": "agendar", "especialidad": "odontología", "axis": "rural", "group": "agendar-grupo1"}
+{"input": "nesecito ir al dentista tengo la encia inchada", "intent": "agendar", "especialidad": "odontología", "axis": "fonetico", "group": "agendar-grupo1"}
+{"input": "me dan hora dental kiero arreglar una calsa vieja", "intent": "agendar", "especialidad": "odontología", "axis": "fonetico", "group": "agendar-grupo1"}
+{"input": "hay cupo odontologo esta semana", "intent": "agendar", "especialidad": "odontología", "axis": "typo", "group": "agendar-grupo1"}
+{"input": "kiero pedir ora pal odontolgo me kuesta masticar", "intent": "agendar", "especialidad": "odontología", "axis": "typo", "group": "agendar-grupo1"}
+{"input": "se puede ber al dentista pa rebision de los dientes nomas", "intent": "agendar", "especialidad": "odontología", "axis": "fonetico", "group": "agendar-grupo1"}
+{"input": "dentistaa pa sacarme una muela del juicio q me molesta", "intent": "agendar", "especialidad": "odontología", "axis": "rural", "group": "agendar-grupo1"}
+{"input": "buenas kiero hora odontologia se me kayo un pedaso de diente", "intent": "agendar", "especialidad": "odontología", "axis": "rural", "group": "agendar-grupo1"}
+{"input": "kiero hora con el doctor general", "intent": "agendar", "especialidad": "medicina general", "axis": "abreviacion", "group": "agendar-grupo1"}
+{"input": "nesecito medico general me siento mal hace dias", "intent": "agendar", "especialidad": "medicina general", "axis": "rural", "group": "agendar-grupo1"}
+{"input": "se puede agendar con un medico pa un control", "intent": "agendar", "especialidad": "medicina general", "axis": "typo", "group": "agendar-grupo1"}
+{"input": "MEDICINA JENERAL POR FAVOR ANDO RESFRIADO", "intent": "agendar", "especialidad": "medicina general", "axis": "fonetico", "group": "agendar-grupo1"}
+{"input": "kiero q me vea un doctor tengo fiebre", "intent": "agendar", "especialidad": "medicina general", "axis": "rural", "group": "agendar-grupo1"}
+{"input": "atienden medico general los sabados", "intent": "agendar", "especialidad": "medicina general", "axis": "typo", "group": "agendar-grupo1"}
+{"input": "doctor", "intent": "agendar", "especialidad": "medicina general", "axis": "incompleta", "group": "agendar-grupo1"}
+{"input": "qiero ora con el medico me duele la guata hace rato", "intent": "agendar", "especialidad": "medicina general", "axis": "rural", "group": "agendar-grupo1"}
+{"input": "nesecito una sita medico jeneral pa mis examenes", "intent": "agendar", "especialidad": "medicina general", "axis": "fonetico", "group": "agendar-grupo1"}
+{"input": "medico pa mi rodilla q se me hincho de repente", "intent": "agendar", "especialidad": "medicina general", "axis": "rural", "group": "agendar-grupo1"}
+{"input": "kiero hora consulta jeneral ando con dolor de cabesa", "intent": "agendar", "especialidad": "medicina general", "axis": "fonetico", "group": "agendar-grupo1"}
+{"input": "me dan hora con un dotor pa la presion", "intent": "agendar", "especialidad": "medicina general", "axis": "typo", "group": "agendar-grupo1"}
+{"input": "medicina general", "intent": "agendar", "especialidad": "medicina general", "axis": "incompleta", "group": "agendar-grupo1"}
+{"input": "hay cupo con medico esta semana pa una licencia", "intent": "agendar", "especialidad": "medicina general", "axis": "typo", "group": "agendar-grupo1"}
+{"input": "se puede ber a un dotor me torsi el pie y me duele caleta", "intent": "agendar", "especialidad": "medicina general", "axis": "rural", "group": "agendar-grupo1"}
+{"input": "kiero ke me vea el medico jeneral tengo la tos pegada", "intent": "agendar", "especialidad": "medicina general", "axis": "fonetico", "group": "agendar-grupo1"}
+{"input": "medico general urjente me siento debil y mareao", "intent": "agendar", "especialidad": "medicina general", "axis": "rural", "group": "agendar-grupo1"}
+{"input": "nesecito dotor pa control de la diabetis", "intent": "agendar", "especialidad": "medicina general", "axis": "fonetico", "group": "agendar-grupo1"}
+{"input": "buenas kiero pedir hora pal medico me cai trabajando y me duele la espalda", "intent": "agendar", "especialidad": "medicina general", "axis": "rural", "group": "agendar-grupo1"}
+{"input": "kiero hora con el cardiologo", "intent": "agendar", "especialidad": "cardiología", "axis": "typo", "group": "agendar-grupo1"}
+{"input": "nesecito cardiolojia me late fuerte el corason", "intent": "agendar", "especialidad": "cardiología", "axis": "fonetico", "group": "agendar-grupo1"}
+{"input": "se puede agendar con cardiologia pa mi papa", "intent": "agendar", "especialidad": "cardiología", "axis": "typo", "group": "agendar-grupo1"}
+{"input": "CARDIOLOGO POR FA ME DUELE EL PECHO", "intent": "agendar", "especialidad": "cardiología", "axis": "rural", "group": "agendar-grupo1"}
+{"input": "kiero q me vea el cardiologo me agito al caminar", "intent": "agendar", "especialidad": "cardiología", "axis": "rural", "group": "agendar-grupo1"}
+{"input": "atienden cardiolojia kiero un electro", "intent": "agendar", "especialidad": "cardiología", "axis": "fonetico", "group": "agendar-grupo1"}
+{"input": "cardio", "intent": "agendar", "especialidad": "cardiología", "axis": "incompleta", "group": "agendar-grupo1"}
+{"input": "qiero ora cardiologo el dotor me mando por la presion alta", "intent": "agendar", "especialidad": "cardiología", "axis": "rural", "group": "agendar-grupo1"}
+{"input": "nesecito una sita con kardiologia pa control del corazon", "intent": "agendar", "especialidad": "cardiología", "axis": "fonetico", "group": "agendar-grupo1"}
+{"input": "cardiologo pa mi señora q tiene el corason malo", "intent": "agendar", "especialidad": "cardiología", "axis": "rural", "group": "agendar-grupo1"}
+{"input": "hay cupo cardiolojia esta semana", "intent": "agendar", "especialidad": "cardiología", "axis": "typo", "group": "agendar-grupo1"}
+{"input": "me dan hora con el cardiologo me dan palpitasiones en la noche", "intent": "agendar", "especialidad": "cardiología", "axis": "rural", "group": "agendar-grupo1"}
+{"input": "cardiologiaaa kiero q me revisen el corazon", "intent": "agendar", "especialidad": "cardiología", "axis": "typo", "group": "agendar-grupo1"}
+{"input": "se puede ber al kardiologo me canso mucho subiendo el cerro", "intent": "agendar", "especialidad": "cardiología", "axis": "rural", "group": "agendar-grupo1"}
+{"input": "kiero pedir ora pal cardiolgo ando con falta de aire", "intent": "agendar", "especialidad": "cardiología", "axis": "typo", "group": "agendar-grupo1"}
+{"input": "nesecito cardilogo pa un ecocardiograma q me pidieron", "intent": "agendar", "especialidad": "ecocardiograma", "axis": "typo", "group": "agendar-grupo1"}
+{"input": "buenas kiero hora cardiologia mi marido tiene marcapaso y nesecita control", "intent": "agendar", "especialidad": "cardiología", "axis": "rural", "group": "agendar-grupo1"}
+{"input": "kardiologaa pa mi mama q anda con el corason acelerao", "intent": "agendar", "especialidad": "cardiología", "axis": "rural", "group": "agendar-grupo1"}
+{"input": "kiero hora con la matrona o la jinecologa", "intent": "agendar", "especialidad": "ginecología", "axis": "fonetico", "group": "agendar-grupo1"}
+{"input": "nesecito jinecologa pa un control", "intent": "agendar", "especialidad": "ginecología", "axis": "fonetico", "group": "agendar-grupo1"}
+{"input": "se puede agendar con ginecologia pa el papanicolau", "intent": "agendar", "especialidad": "ginecología", "axis": "typo", "group": "agendar-grupo1"}
+{"input": "JINECOLOGA POR FA TENGO UN PROBLEMA DE MUJER", "intent": "agendar", "especialidad": "ginecología", "axis": "rural", "group": "agendar-grupo1"}
+{"input": "kiero q me vea la ginecologa", "intent": "agendar", "especialidad": "ginecología", "axis": "typo", "group": "agendar-grupo1"}
+{"input": "atienden jinecolojia los miercoles", "intent": "agendar", "especialidad": "ginecología", "axis": "fonetico", "group": "agendar-grupo1"}
+{"input": "gine", "intent": "agendar", "especialidad": "ginecología", "axis": "incompleta", "group": "agendar-grupo1"}
+{"input": "qiero ora con la jinecologa ando con molestias abajo", "intent": "agendar", "especialidad": "ginecología", "axis": "rural", "group": "agendar-grupo1"}
+{"input": "nesecito una sita jinecologia pa mi hija q le faya la regla", "intent": "agendar", "especialidad": "ginecología", "axis": "rural", "group": "agendar-grupo1"}
+{"input": "ginecologa pa control del embaraso porfa", "intent": "agendar", "especialidad": "ginecología", "axis": "fonetico", "group": "agendar-grupo1"}
+{"input": "hay cupo jinecolojia esta semana", "intent": "agendar", "especialidad": "ginecología", "axis": "fonetico", "group": "agendar-grupo1"}
+{"input": "me dan hora con la ginecologa kiero ponerme el dispositibo", "intent": "agendar", "especialidad": "ginecología", "axis": "fonetico", "group": "agendar-grupo1"}
+{"input": "ginecologiaaa pa una rebision", "intent": "agendar", "especialidad": "ginecología", "axis": "typo", "group": "agendar-grupo1"}
+{"input": "se puede ber a la jinecologa tengo dolor en la guata abajo", "intent": "agendar", "especialidad": "ginecología", "axis": "rural", "group": "agendar-grupo1"}
+{"input": "kiero pedir ora pa la jinecologa kiero el examen de la mujer ese", "intent": "agendar", "especialidad": "ginecología", "axis": "rural", "group": "agendar-grupo1"}
+{"input": "nesecito jenecologa pa control despues del parto", "intent": "agendar", "especialidad": "ginecología", "axis": "typo", "group": "agendar-grupo1"}
+{"input": "buenas kiero hora ginecologia hace meses q no me veo y kiero chekearme", "intent": "agendar", "especialidad": "ginecología", "axis": "rural", "group": "agendar-grupo1"}
+{"input": "jinecologa urjente ando con un flujo raro hace dias", "intent": "agendar", "especialidad": "ginecología", "axis": "rural", "group": "agendar-grupo1"}
+{"input": "hola kiero hora con la nutri", "intent": "agendar", "especialidad": "nutrición", "axis": "abreviacion", "group": "agendar-grupo2"}
+{"input": "NESESITO VER A LA NUTRICIONISTA ESTOY MUY GORDO", "intent": "agendar", "especialidad": "nutrición", "axis": "fonetico", "group": "agendar-grupo2"}
+{"input": "buenas dias para cuando ay hora con nutrision", "intent": "agendar", "especialidad": "nutrición", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "keria saver si atiende la dotora de las dietas", "intent": "agendar", "especialidad": "nutrición", "axis": "rural", "group": "agendar-grupo2"}
+{"input": "nutri", "intent": "agendar", "especialidad": "nutrición", "axis": "incompleta", "group": "agendar-grupo2"}
+{"input": "me gustaria tomar ora con nutricionistaa pa bajar de peso", "intent": "agendar", "especialidad": "nutrición", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "quiero pedi ora pal control de mi azucar con la nutri xfa", "intent": "agendar", "especialidad": "nutrición", "axis": "abreviacion", "group": "agendar-grupo2"}
+{"input": "ola necesito q me den ora con nutrisionista mi marido esta diabetico", "intent": "agendar", "especialidad": "nutrición", "axis": "fonetico", "group": "agendar-grupo2"}
+{"input": "agendeme con la nutricionista porfa", "intent": "agendar", "especialidad": "nutrición", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "SE PUEDE SACAR ORA CON NUTRI PARA MI HIJA Q ESTA CON SOBREPESO", "intent": "agendar", "especialidad": "nutrición", "axis": "abreviacion", "group": "agendar-grupo2"}
+{"input": "tendran ora pa nutricion esta semana", "intent": "agendar", "especialidad": "nutrición", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "kiero q me vea la sra de las comidas la nutri", "intent": "agendar", "especialidad": "nutrición", "axis": "rural", "group": "agendar-grupo2"}
+{"input": "nesecito una ora urgente con nutrisionista", "intent": "agendar", "especialidad": "nutrición", "axis": "fonetico", "group": "agendar-grupo2"}
+{"input": "buenas reservar hora nutricion control peso gracias", "intent": "agendar", "especialidad": "nutrición", "axis": "runon", "group": "agendar-grupo2"}
+{"input": "oga puedo pedir ora con la nutri pa la dieta", "intent": "agendar", "especialidad": "nutrición", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "hola sicologo", "intent": "agendar", "especialidad": "psicología", "axis": "incompleta", "group": "agendar-grupo2"}
+{"input": "kiero hora con el sicologo pa mi hijo q anda muy triste", "intent": "agendar", "especialidad": "psicología", "axis": "fonetico", "group": "agendar-grupo2"}
+{"input": "NECESITO UNA SICOLOGA URGENTE ANDO MAL DE LOS NERVIOS", "intent": "agendar", "especialidad": "psicología", "axis": "fonetico", "group": "agendar-grupo2"}
+{"input": "sicologa pa mi hijo", "intent": "agendar", "especialidad": "psicología", "axis": "incompleta", "group": "agendar-grupo2"}
+{"input": "buenas keria saber si atienden sicologo pa la depresion", "intent": "agendar", "especialidad": "psicología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "me pueden dar ora con sicologa porfaa ando con mucha angustiaa", "intent": "agendar", "especialidad": "psicología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "quiero agendar con el psicologo mi señora no duerme", "intent": "agendar", "especialidad": "psicología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "ola para sacar ora con sikologo", "intent": "agendar", "especialidad": "psicología", "axis": "fonetico", "group": "agendar-grupo2"}
+{"input": "hay ora con la sicologa esta semana pa mi nieta", "intent": "agendar", "especialidad": "psicología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "nesesito hablar con un sicologo me siento muy solo", "intent": "agendar", "especialidad": "psicología", "axis": "fonetico", "group": "agendar-grupo2"}
+{"input": "keria pedir ora sicologica pa mi hija adolesente", "intent": "agendar", "especialidad": "psicología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "AGENDEME CON SICOLOGA POR FAVOR ESTOY CON MUCHA PENA", "intent": "agendar", "especialidad": "psicología", "axis": "fonetico", "group": "agendar-grupo2"}
+{"input": "buenas tarde el sikologo atiende niños chicos", "intent": "agendar", "especialidad": "psicología", "axis": "fonetico", "group": "agendar-grupo2"}
+{"input": "quiero ora con sicologo pa mi marido toma mucho", "intent": "agendar", "especialidad": "psicología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "podria reservar con la psicologa pa mi", "intent": "agendar", "especialidad": "psicología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "hola fono", "intent": "agendar", "especialidad": "fonoaudiología", "axis": "incompleta", "group": "agendar-grupo2"}
+{"input": "kiero hora con la fono mi hijo no abla bien", "intent": "agendar", "especialidad": "fonoaudiología", "axis": "abreviacion", "group": "agendar-grupo2"}
+{"input": "NECESITO FONOAUDIOLOGA PA MI NIETO Q NO PRONUNCIA LA ERRE", "intent": "agendar", "especialidad": "fonoaudiología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "fono pa mi guagua q no abla", "intent": "agendar", "especialidad": "fonoaudiología", "axis": "rural", "group": "agendar-grupo2"}
+{"input": "buenas atienden fonoaudilogo aca", "intent": "agendar", "especialidad": "fonoaudiología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "keria saber si ay ora con la fonoaudiologa pa mi hijo tartamudea", "intent": "agendar", "especialidad": "fonoaudiología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "quiero agendar fono mi señora kedo mal de la voz despues del derrame", "intent": "agendar", "especialidad": "fonoaudiología", "axis": "fonetico", "group": "agendar-grupo2"}
+{"input": "me dan ora con fonoudiologa pa mi nene de 4 años", "intent": "agendar", "especialidad": "fonoaudiología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "ola la fono atiende problemas pa tragar mi papa se atora", "intent": "agendar", "especialidad": "fonoaudiología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "nesesito una hora con fono mi hija no escucha bien y no abla", "intent": "agendar", "especialidad": "fonoaudiología", "axis": "fonetico", "group": "agendar-grupo2"}
+{"input": "reservar fonoaudiologia para mi hijo terapia del lenguaje", "intent": "agendar", "especialidad": "fonoaudiología", "axis": "runon", "group": "agendar-grupo2"}
+{"input": "keria pedir hora pa la fono", "intent": "agendar", "especialidad": "fonoaudiología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "SE PUEDE AGENDAR FONO MI NIETO TIENE 3 AÑOS Y NO DICE NADA", "intent": "agendar", "especialidad": "fonoaudiología", "axis": "abreviacion", "group": "agendar-grupo2"}
+{"input": "buenas tarde quiero ora con fonoudiologa", "intent": "agendar", "especialidad": "fonoaudiología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "atienden fono pa adulto mayor mi mama kedo mal pa hablar", "intent": "agendar", "especialidad": "fonoaudiología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "hola podologa", "intent": "agendar", "especialidad": "podología", "axis": "incompleta", "group": "agendar-grupo2"}
+{"input": "kiero hora con la podologa tengo los pies muy mal", "intent": "agendar", "especialidad": "podología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "NECESITO PODOLOGO PA CORTARME LAS UÑAS SOY DIABETICO", "intent": "agendar", "especialidad": "podología", "axis": "abreviacion", "group": "agendar-grupo2"}
+{"input": "podologa pa mi mama", "intent": "agendar", "especialidad": "podología", "axis": "incompleta", "group": "agendar-grupo2"}
+{"input": "buenas atienden podologia tengo un uñero", "intent": "agendar", "especialidad": "podología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "keria saber si ay hora con la podologa pa los callos", "intent": "agendar", "especialidad": "podología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "quiero agendar con la podologa me duelen mucho los pie", "intent": "agendar", "especialidad": "podología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "me dan ora con podolga pa mi papa esta diabetico se le infectan los pies", "intent": "agendar", "especialidad": "podología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "ola la podologa atiende hongos en las uñas", "intent": "agendar", "especialidad": "podología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "nesesito hora con la sra de los pies la podologa", "intent": "agendar", "especialidad": "podología", "axis": "rural", "group": "agendar-grupo2"}
+{"input": "reservar podologia pie diabetico mi marido urgente", "intent": "agendar", "especialidad": "podología", "axis": "runon", "group": "agendar-grupo2"}
+{"input": "keria pedir hora pa la podologa porfaa", "intent": "agendar", "especialidad": "podología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "SE PUEDE SACAR ORA CON PODOLOGA TENGO UN UÑERO Q ME DUELE HARTO", "intent": "agendar", "especialidad": "podología", "axis": "abreviacion", "group": "agendar-grupo2"}
+{"input": "buenas atienden los pies aca pa cortar las uñas a mi abuelita", "intent": "agendar", "especialidad": "podología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "podria agendar con podologa pa mi suegra ke camina mal", "intent": "agendar", "especialidad": "podología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "hola otorrino", "intent": "agendar", "especialidad": "otorrinolaringología", "axis": "incompleta", "group": "agendar-grupo2"}
+{"input": "kiero hora con el otorrino me duele el oido", "intent": "agendar", "especialidad": "otorrinolaringología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "NECESITO EL DOCTOR DE OIDOS NO ESCUCHO BIEN", "intent": "agendar", "especialidad": "otorrinolaringología", "axis": "abreviacion", "group": "agendar-grupo2"}
+{"input": "doctor de oidos pa mi hijo", "intent": "agendar", "especialidad": "otorrinolaringología", "axis": "incompleta", "group": "agendar-grupo2"}
+{"input": "buenas atienden otorrinolaringologo aca", "intent": "agendar", "especialidad": "otorrinolaringología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "keria saber si ay ora con otorrino ando con un pito en el oido", "intent": "agendar", "especialidad": "otorrinolaringología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "quiero agendar con el otorino mi nariz siempre tapada", "intent": "agendar", "especialidad": "otorrinolaringología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "me dan ora con el dotor de los oidos pa mi nieta tiene tapon de cera", "intent": "agendar", "especialidad": "otorrinolaringología", "axis": "rural", "group": "agendar-grupo2"}
+{"input": "ola el otorrino atiende la garganta tengo amigdalas malas", "intent": "agendar", "especialidad": "otorrinolaringología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "nesesito hora con el medico de oidos nariz y garganta", "intent": "agendar", "especialidad": "otorrinolaringología", "axis": "fonetico", "group": "agendar-grupo2"}
+{"input": "reservar otorrino mi hijo ronca mucho y no respira de noche", "intent": "agendar", "especialidad": "otorrinolaringología", "axis": "runon", "group": "agendar-grupo2"}
+{"input": "keria pedir hora pal otorrino me zumban los oidos", "intent": "agendar", "especialidad": "otorrinolaringología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "SE PUEDE AGENDAR EL DOTOR DE OIDOS PA MI ABUELO Q QUEDO SORDO", "intent": "agendar", "especialidad": "otorrinolaringología", "axis": "abreviacion", "group": "agendar-grupo2"}
+{"input": "buenas el otorrinolaringolo atiende mareos", "intent": "agendar", "especialidad": "otorrinolaringología", "axis": "incompleta", "group": "agendar-grupo2"}
+{"input": "podria sacar ora con otorino pa mi guagua le supuran los oiditos", "intent": "agendar", "especialidad": "otorrinolaringología", "axis": "rural", "group": "agendar-grupo2"}
+{"input": "hola gastro", "intent": "agendar", "especialidad": "gastroenterología", "axis": "incompleta", "group": "agendar-grupo2"}
+{"input": "kiero hora con el gastro me duele mucho el estomago", "intent": "agendar", "especialidad": "gastroenterología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "NECESITO EL DOCTOR DEL ESTOMAGO ANDO CON ASEDIA TODOS LOS DIAS", "intent": "agendar", "especialidad": "gastroenterología", "axis": "fonetico", "group": "agendar-grupo2"}
+{"input": "doctor del estomago pa mi marido", "intent": "agendar", "especialidad": "gastroenterología", "axis": "incompleta", "group": "agendar-grupo2"}
+{"input": "buenas atienden gastroenterologo aca", "intent": "agendar", "especialidad": "gastroenterología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "keria saber si ay ora con gastro ando con colon irritable", "intent": "agendar", "especialidad": "gastroenterología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "quiero agendar con el gastroenterologo tengo reflujo hace meses", "intent": "agendar", "especialidad": "gastroenterología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "me dan ora con el medico del estomago pa mi mama vomita harto", "intent": "agendar", "especialidad": "gastroenterología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "ola el gastro atiende la gastritis me arde el estomago", "intent": "agendar", "especialidad": "gastroenterología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "nesesito hora con el dotor del estomago e intestino", "intent": "agendar", "especialidad": "gastroenterología", "axis": "rural", "group": "agendar-grupo2"}
+{"input": "reservar gastroenterologia mi papa anda con diarrea hace una semana", "intent": "agendar", "especialidad": "gastroenterología", "axis": "runon", "group": "agendar-grupo2"}
+{"input": "keria pedir hora pal gastro pa una colonoscopia", "intent": "agendar", "especialidad": "gastroenterología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "SE PUEDE AGENDAR EL DOTOR DEL ESTOMAGO PA MI SUEGRA Q ESTA AMARILLA", "intent": "agendar", "especialidad": "gastroenterología", "axis": "abreviacion", "group": "agendar-grupo2"}
+{"input": "buenas el gastroenterolgo ve problemas del igado", "intent": "agendar", "especialidad": "gastroenterología", "axis": "incompleta", "group": "agendar-grupo2"}
+{"input": "podria sacar ora con gastro me da mucho ardor despues de comer", "intent": "agendar", "especialidad": "gastroenterología", "axis": "typo", "group": "agendar-grupo2"}
+{"input": "qiero una eco de guata", "intent": "agendar", "especialidad": "ecografía", "axis": "fonetico", "group": "agendar-grupo3"}
+{"input": "hola nesesito agendar una ecografia abdominal", "intent": "agendar", "especialidad": "ecografía", "axis": "typo", "group": "agendar-grupo3"}
+{"input": "BUENAS QIERO HACERME UNA ECO", "intent": "agendar", "especialidad": "ecografía", "axis": "fonetico", "group": "agendar-grupo3"}
+{"input": "eco", "intent": "agendar", "especialidad": "ecografía", "axis": "incompleta", "group": "agendar-grupo3"}
+{"input": "me mandaron a aser una ecografia de la guatita", "intent": "agendar", "especialidad": "ecografía", "axis": "rural", "group": "agendar-grupo3"}
+{"input": "buenos dias kisiera tomar ora pa una ecografia", "intent": "agendar", "especialidad": "ecografía", "axis": "fonetico", "group": "agendar-grupo3"}
+{"input": "nesesito eko pelvica porfa", "intent": "agendar", "especialidad": "ecografía", "axis": "fonetico", "group": "agendar-grupo3"}
+{"input": "qieroo aserme una ecografiaaa", "intent": "agendar", "especialidad": "ecografía", "axis": "typo", "group": "agendar-grupo3"}
+{"input": "hola se puede aser una eco de la barriga", "intent": "agendar", "especialidad": "ecografía", "axis": "rural", "group": "agendar-grupo3"}
+{"input": "para una ecogr", "intent": "agendar", "especialidad": "ecografía", "axis": "incompleta", "group": "agendar-grupo3"}
+{"input": "el doctor me pidio una ecotomografia abdominal qiero agendar", "intent": "agendar", "especialidad": "ecografía", "axis": "typo", "group": "agendar-grupo3"}
+{"input": "necesito una eco mamaria cuando ay", "intent": "agendar", "especialidad": "ecografía", "axis": "fonetico", "group": "agendar-grupo3"}
+{"input": "qiero saver si asen ecografia de riñon", "intent": "info", "especialidad": "ecografía", "axis": "fonetico", "group": "agendar-grupo3"}
+{"input": "ECOGRAFIA PARA MI SEÑORA SE PUEDE", "intent": "agendar", "especialidad": "ecografía", "axis": "runon", "group": "agendar-grupo3"}
+{"input": "oiga nesecito una eco doppler", "intent": "agendar", "especialidad": "ecografía", "axis": "typo", "group": "agendar-grupo3"}
+{"input": "tomar ora eco tiroides", "intent": "agendar", "especialidad": "ecografía", "axis": "abreviacion", "group": "agendar-grupo3"}
+{"input": "buenas tardes deceo agendar ecografia de vesicula", "intent": "agendar", "especialidad": "ecografía", "axis": "fonetico", "group": "agendar-grupo3"}
+{"input": "qiero una limpieza de dientes", "intent": "agendar", "especialidad": "odontología", "axis": "fonetico", "group": "agendar-grupo3"}
+{"input": "tengo una muela picada nesesito ora con el dentista", "intent": "agendar", "especialidad": "odontología", "axis": "rural", "group": "agendar-grupo3"}
+{"input": "hola atienden al dentista", "intent": "agendar", "especialidad": "odontología", "axis": "fonetico", "group": "agendar-grupo3"}
+{"input": "qiero aserme una limpiesa dental", "intent": "agendar", "especialidad": "odontología", "axis": "fonetico", "group": "agendar-grupo3"}
+{"input": "me duele una muela qiero ir al dentista", "intent": "agendar", "especialidad": "odontología", "axis": "typo", "group": "agendar-grupo3"}
+{"input": "nesecito sacarme una muela", "intent": "agendar", "especialidad": "odontología", "axis": "typo", "group": "agendar-grupo3"}
+{"input": "DENTISTA PARA UNA TAPADURA", "intent": "agendar", "especialidad": "odontología", "axis": "rural", "group": "agendar-grupo3"}
+{"input": "qiero ora pal odontologo", "intent": "agendar", "especialidad": "odontología", "axis": "abreviacion", "group": "agendar-grupo3"}
+{"input": "se puede aser una estraccion de muela", "intent": "agendar", "especialidad": "odontología", "axis": "fonetico", "group": "agendar-grupo3"}
+{"input": "tengo un diente picado qiero atenderme", "intent": "agendar", "especialidad": "odontología", "axis": "typo", "group": "agendar-grupo3"}
+{"input": "odont", "intent": "agendar", "especialidad": "odontología", "axis": "incompleta", "group": "agendar-grupo3"}
+{"input": "nesesito ir al dentista se me callo un tapado", "intent": "agendar", "especialidad": "odontología", "axis": "fonetico", "group": "agendar-grupo3"}
+{"input": "qiero agendar una limpiesa y revicion de muelas", "intent": "agendar", "especialidad": "odontología", "axis": "fonetico", "group": "agendar-grupo3"}
+{"input": "buenos dias kiero ora pa una caries", "intent": "agendar", "especialidad": "odontología", "axis": "fonetico", "group": "agendar-grupo3"}
+{"input": "tengo la muela toa picada nesecito qe me la vean", "intent": "agendar", "especialidad": "odontología", "axis": "rural", "group": "agendar-grupo3"}
+{"input": "mi hija nesesita limpieza de dientes", "intent": "agendar", "especialidad": "odontología", "axis": "typo", "group": "agendar-grupo3"}
+{"input": "DENTISTAAA TENGO DOLOR DE MUELA QIERO ORA", "intent": "agendar", "especialidad": "odontología", "axis": "runon", "group": "agendar-grupo3"}
+{"input": "se puede tapar una muela picada", "intent": "agendar", "especialidad": "odontología", "axis": "rural", "group": "agendar-grupo3"}
+{"input": "hola qiero aser una rebision dental", "intent": "agendar", "especialidad": "odontología", "axis": "fonetico", "group": "agendar-grupo3"}
+{"input": "qiero ponerme fierros en los dientes", "intent": "agendar", "especialidad": "ortodoncia", "axis": "rural", "group": "agendar-grupo3"}
+{"input": "hola asen ortodoncia", "intent": "agendar", "especialidad": "ortodoncia", "axis": "fonetico", "group": "agendar-grupo3"}
+{"input": "nesesito ora para los fierros de mi hijo", "intent": "agendar", "especialidad": "ortodoncia", "axis": "rural", "group": "agendar-grupo3"}
+{"input": "qiero arreglarme los dientes con frenillos", "intent": "agendar", "especialidad": "ortodoncia", "axis": "typo", "group": "agendar-grupo3"}
+{"input": "cuanto sale ponerse fierros qiero agendar", "intent": "agendar", "especialidad": "ortodoncia", "axis": "rural", "group": "agendar-grupo3"}
+{"input": "ortodonsia para mi nina", "intent": "agendar", "especialidad": "ortodoncia", "axis": "fonetico", "group": "agendar-grupo3"}
+{"input": "qiero ora con la ortodontista", "intent": "agendar", "especialidad": "ortodoncia", "axis": "typo", "group": "agendar-grupo3"}
+{"input": "tengo los dientes chuecos qiero los fierros", "intent": "agendar", "especialidad": "ortodoncia", "axis": "rural", "group": "agendar-grupo3"}
+{"input": "FIERROS PARA LOS DIENTES SE PUEDE", "intent": "agendar", "especialidad": "ortodoncia", "axis": "rural", "group": "agendar-grupo3"}
+{"input": "nesecito agendar ortodonsia", "intent": "agendar", "especialidad": "ortodoncia", "axis": "fonetico", "group": "agendar-grupo3"}
+{"input": "ortod", "intent": "agendar", "especialidad": "ortodoncia", "axis": "incompleta", "group": "agendar-grupo3"}
+{"input": "qiero ponerle frenillos a mi hijo cuando ay ora", "intent": "agendar", "especialidad": "ortodoncia", "axis": "runon", "group": "agendar-grupo3"}
+{"input": "hola se puede ver lo de los fierros pa enderesar los dientes", "intent": "agendar", "especialidad": "ortodoncia", "axis": "rural", "group": "agendar-grupo3"}
+{"input": "deceo agendar para brackets", "intent": "agendar", "especialidad": "ortodoncia", "axis": "typo", "group": "agendar-grupo3"}
+{"input": "qiero ora pa control de fierros", "intent": "agendar", "especialidad": "ortodoncia", "axis": "abreviacion", "group": "agendar-grupo3"}
+{"input": "mi hija nesesita ortodonsista urjente", "intent": "agendar", "especialidad": "ortodoncia", "axis": "fonetico", "group": "agendar-grupo3"}
+{"input": "qiero un tratamiento de conducto", "intent": "agendar", "especialidad": "endodoncia", "axis": "typo", "group": "agendar-grupo3"}
+{"input": "me dijieron qe nesesito tratamiento de conducto", "intent": "agendar", "especialidad": "endodoncia", "axis": "fonetico", "group": "agendar-grupo3"}
+{"input": "hola asen endodoncia", "intent": "agendar", "especialidad": "endodoncia", "axis": "fonetico", "group": "agendar-grupo3"}
+{"input": "nesecito ora para un conducto en la muela", "intent": "agendar", "especialidad": "endodoncia", "axis": "rural", "group": "agendar-grupo3"}
+{"input": "qiero agendar tratamiento de conducto urjente", "intent": "agendar", "especialidad": "endodoncia", "axis": "typo", "group": "agendar-grupo3"}
+{"input": "el dentista me mando a aser un conducto", "intent": "agendar", "especialidad": "endodoncia", "axis": "rural", "group": "agendar-grupo3"}
+{"input": "endodonsia se puede", "intent": "agendar", "especialidad": "endodoncia", "axis": "fonetico", "group": "agendar-grupo3"}
+{"input": "TRATAMIENTO DE CONDUCTO NESESITO ORA", "intent": "agendar", "especialidad": "endodoncia", "axis": "runon", "group": "agendar-grupo3"}
+{"input": "endod", "intent": "agendar", "especialidad": "endodoncia", "axis": "incompleta", "group": "agendar-grupo3"}
+{"input": "qiero matar el nervio de la muela", "intent": "agendar", "especialidad": "endodoncia", "axis": "rural", "group": "agendar-grupo3"}
+{"input": "nesesito un trat de conducto", "intent": "agendar", "especialidad": "endodoncia", "axis": "abreviacion", "group": "agendar-grupo3"}
+{"input": "hola deceo agendar una endodoncia me duele harto la muela", "intent": "agendar", "especialidad": "endodoncia", "axis": "fonetico", "group": "agendar-grupo3"}
+{"input": "qiero aserme el tratamiento del nervio del diente", "intent": "agendar", "especialidad": "endodoncia", "axis": "rural", "group": "agendar-grupo3"}
+{"input": "qiero control de embarazo", "intent": "agendar", "especialidad": "matrona", "axis": "typo", "group": "agendar-grupo3"}
+{"input": "nesesito aserme el pap", "intent": "agendar", "especialidad": "matrona", "axis": "abreviacion", "group": "agendar-grupo3"}
+{"input": "hola atiende la matrona", "intent": "agendar", "especialidad": "matrona", "axis": "typo", "group": "agendar-grupo3"}
+{"input": "qiero ora con la matrona estoy embarasada", "intent": "agendar", "especialidad": "matrona", "axis": "fonetico", "group": "agendar-grupo3"}
+{"input": "nesecito control del embaraso", "intent": "agendar", "especialidad": "matrona", "axis": "fonetico", "group": "agendar-grupo3"}
+{"input": "qiero aserme un papanicolau", "intent": "agendar", "especialidad": "matrona", "axis": "typo", "group": "agendar-grupo3"}
+{"input": "MATRONA PARA CONTROL DE GUAGUA", "intent": "agendar", "especialidad": "matrona", "axis": "rural", "group": "agendar-grupo3"}
+{"input": "se puede tomar ora pal pap", "intent": "agendar", "especialidad": "matrona", "axis": "abreviacion", "group": "agendar-grupo3"}
+{"input": "matr", "intent": "agendar", "especialidad": "matrona", "axis": "incompleta", "group": "agendar-grupo3"}
+{"input": "qiero ponerme el dispositibo nesesito matrona", "intent": "agendar", "especialidad": "matrona", "axis": "fonetico", "group": "agendar-grupo3"}
+{"input": "hola nesecito control de mi embaraso cuando ay ora", "intent": "agendar", "especialidad": "matrona", "axis": "runon", "group": "agendar-grupo3"}
+{"input": "qiero agendar examen pap y control", "intent": "agendar", "especialidad": "matrona", "axis": "typo", "group": "agendar-grupo3"}
+{"input": "deceo ora con matrona pa planificar", "intent": "agendar", "especialidad": "matrona", "axis": "fonetico", "group": "agendar-grupo3"}
+{"input": "estoy esperando guagua qiero control de embaraso", "intent": "agendar", "especialidad": "matrona", "axis": "rural", "group": "agendar-grupo3"}
+{"input": "kiero cancelar mi ora", "intent": "cancelar", "especialidad": null, "axis": "fonetico", "group": "cancelar"}
+{"input": "necesito anular la cita porfa", "intent": "cancelar", "especialidad": null, "axis": "abreviacion", "group": "cancelar"}
+{"input": "no voy a poder ir mañana", "intent": "cancelar", "especialidad": null, "axis": "incompleta", "group": "cancelar"}
+{"input": "buenas dias kisiera anular la ora ke tengo no podre asistir", "intent": "cancelar", "especialidad": null, "axis": "runon", "group": "cancelar"}
+{"input": "cnclar", "intent": "cancelar", "especialidad": null, "axis": "typo", "group": "cancelar"}
+{"input": "señorita no puedo ir el juves a la hora disculpe", "intent": "cancelar", "especialidad": null, "axis": "fonetico", "group": "cancelar"}
+{"input": "kancelar la hora", "intent": "cancelar", "especialidad": null, "axis": "fonetico", "group": "cancelar"}
+{"input": "dar de baja mi hora", "intent": "cancelar", "especialidad": null, "axis": "info", "group": "cancelar"}
+{"input": "ya no kiero la ora", "intent": "cancelar", "especialidad": null, "axis": "fonetico", "group": "cancelar"}
+{"input": "NO PUEDO ASISTIR A LA CITA", "intent": "cancelar", "especialidad": null, "axis": "colision", "group": "cancelar"}
+{"input": "anular porfis", "intent": "cancelar", "especialidad": null, "axis": "abreviacion", "group": "cancelar"}
+{"input": "oiga no boy a poder llegar a mi ora me surgio un problema", "intent": "cancelar", "especialidad": null, "axis": "fonetico", "group": "cancelar"}
+{"input": "kiero anular", "intent": "cancelar", "especialidad": null, "axis": "fonetico", "group": "cancelar"}
+{"input": "deseo cancelar mi atencion de mañana gracias", "intent": "cancelar", "especialidad": null, "axis": "rural", "group": "cancelar"}
+{"input": "no podre ir", "intent": "cancelar", "especialidad": null, "axis": "incompleta", "group": "cancelar"}
+{"input": "quiero cancelar la hora que tenia agendada para el lunes", "intent": "cancelar", "especialidad": null, "axis": "rural", "group": "cancelar"}
+{"input": "anula la ora pofa", "intent": "cancelar", "especialidad": null, "axis": "typo", "group": "cancelar"}
+{"input": "me puede anular la hora no voy a poder", "intent": "cancelar", "especialidad": null, "axis": "rural", "group": "cancelar"}
+{"input": "hola quiero suspender mi hora", "intent": "cancelar", "especialidad": null, "axis": "info", "group": "cancelar"}
+{"input": "señorita disculpe no boy a poder asistir cancele mi ora porfabor", "intent": "cancelar", "especialidad": null, "axis": "fonetico", "group": "cancelar"}
+{"input": "no asistire mañana", "intent": "cancelar", "especialidad": null, "axis": "incompleta", "group": "cancelar"}
+{"input": "kancelarrr", "intent": "cancelar", "especialidad": null, "axis": "colision", "group": "cancelar"}
+{"input": "quiciera anular mi cita por fabor no puedo ir", "intent": "cancelar", "especialidad": null, "axis": "fonetico", "group": "cancelar"}
+{"input": "borre mi hora ya no la nesecito", "intent": "cancelar", "especialidad": null, "axis": "fonetico", "group": "cancelar"}
+{"input": "no puedo ir hoi cancele", "intent": "cancelar", "especialidad": null, "axis": "fonetico", "group": "cancelar"}
+{"input": "q tengo q hacer pa cancelar mi ora", "intent": "cancelar", "especialidad": null, "axis": "abreviacion", "group": "cancelar"}
+{"input": "cancelar", "intent": "cancelar", "especialidad": null, "axis": "incompleta", "group": "cancelar"}
+{"input": "anular cita", "intent": "cancelar", "especialidad": null, "axis": "incompleta", "group": "cancelar"}
+{"input": "hola buenas no podre asistir a la consulta del miercoles", "intent": "cancelar", "especialidad": null, "axis": "rural", "group": "cancelar"}
+{"input": "kiero suspender la ora ke tengo", "intent": "cancelar", "especialidad": null, "axis": "fonetico", "group": "cancelar"}
+{"input": "necesito cancelar urgente no puedo ir", "intent": "cancelar", "especialidad": null, "axis": "rural", "group": "cancelar"}
+{"input": "oiga me surgio algo no puedo asistir anule porfa", "intent": "cancelar", "especialidad": null, "axis": "rural", "group": "cancelar"}
+{"input": "deje sin efecto mi hora porfavor", "intent": "cancelar", "especialidad": null, "axis": "info", "group": "cancelar"}
+{"input": "no voy air", "intent": "cancelar", "especialidad": null, "axis": "runon", "group": "cancelar"}
+{"input": "cancelarme la ora del sabado", "intent": "cancelar", "especialidad": null, "axis": "fonetico", "group": "cancelar"}
+{"input": "kisiera anular la cita ya no puedo", "intent": "cancelar", "especialidad": null, "axis": "fonetico", "group": "cancelar"}
+{"input": "anuleeen mi ora porfa", "intent": "cancelar", "especialidad": null, "axis": "colision", "group": "cancelar"}
+{"input": "se me complico no boy a poder ir", "intent": "cancelar", "especialidad": null, "axis": "fonetico", "group": "cancelar"}
+{"input": "kiero cancelar mi reserva no podre llegar", "intent": "cancelar", "especialidad": null, "axis": "fonetico", "group": "cancelar"}
+{"input": "hola necesito dar de baja la hora gracias", "intent": "cancelar", "especialidad": null, "axis": "rural", "group": "cancelar"}
+{"input": "no podre asistir manana a mi atencion", "intent": "cancelar", "especialidad": null, "axis": "typo", "group": "cancelar"}
+{"input": "quiero anular la hora de hoy disculpe las molestias", "intent": "cancelar", "especialidad": null, "axis": "rural", "group": "cancelar"}
+{"input": "oiga señorita no puedo ir cancele mi ora pliz", "intent": "cancelar", "especialidad": null, "axis": "abreviacion", "group": "cancelar"}
+{"input": "cancelarrr la ora ya no kiero", "intent": "cancelar", "especialidad": null, "axis": "colision", "group": "cancelar"}
+{"input": "me gustaria anular mi cita medica", "intent": "cancelar", "especialidad": null, "axis": "info", "group": "cancelar"}
+{"input": "no puedo asistir esta semana cancelen", "intent": "cancelar", "especialidad": null, "axis": "rural", "group": "cancelar"}
+{"input": "kancelar mi ora porke me enferme", "intent": "cancelar", "especialidad": null, "axis": "fonetico", "group": "cancelar"}
+{"input": "buenas no podre ir a la hora ke saque", "intent": "cancelar", "especialidad": null, "axis": "fonetico", "group": "cancelar"}
+{"input": "anuleme la cita porfis no podre", "intent": "cancelar", "especialidad": null, "axis": "abreviacion", "group": "cancelar"}
+{"input": "quiero cancelar", "intent": "cancelar", "especialidad": null, "axis": "incompleta", "group": "cancelar"}
+{"input": "no voy a poder llegar a mi hora del viernes", "intent": "cancelar", "especialidad": null, "axis": "rural", "group": "cancelar"}
+{"input": "cancele la ora pf", "intent": "cancelar", "especialidad": null, "axis": "abreviacion", "group": "cancelar"}
+{"input": "disculpe quisiera anular la hora ya no la necesito gracias", "intent": "cancelar", "especialidad": null, "axis": "rural", "group": "cancelar"}
+{"input": "no asistirequiero cancelar", "intent": "cancelar", "especialidad": null, "axis": "runon", "group": "cancelar"}
+{"input": "kiero kancelar mi sita", "intent": "cancelar", "especialidad": null, "axis": "fonetico", "group": "cancelar"}
+{"input": "hola no podre asistir mañana anule porfavor", "intent": "cancelar", "especialidad": null, "axis": "rural", "group": "cancelar"}
+{"input": "NECESITO ANULAR MI HORA NO PUEDO IR", "intent": "cancelar", "especialidad": null, "axis": "colision", "group": "cancelar"}
+{"input": "señorita kiero cancelar la hora ke tenia se me cruzo otra cosa", "intent": "cancelar", "especialidad": null, "axis": "fonetico", "group": "cancelar"}
+{"input": "anlar mi ora", "intent": "cancelar", "especialidad": null, "axis": "typo", "group": "cancelar"}
+{"input": "no puedo ir mañna cancele", "intent": "cancelar", "especialidad": null, "axis": "typo", "group": "cancelar"}
+{"input": "deseo suspender la cita del dia lunes porfavor", "intent": "cancelar", "especialidad": null, "axis": "info", "group": "cancelar"}
+{"input": "oiga ya no boy a poder asistir saque la ora pa otro dia mejor", "intent": "cancelar", "especialidad": null, "axis": "rural", "group": "cancelar"}
+{"input": "cancelaaar", "intent": "cancelar", "especialidad": null, "axis": "colision", "group": "cancelar"}
+{"input": "kisiera anularla ora no podre ir", "intent": "cancelar", "especialidad": null, "axis": "runon", "group": "cancelar"}
+{"input": "necesito anular mi atencion gracias", "intent": "cancelar", "especialidad": null, "axis": "info", "group": "cancelar"}
+{"input": "no podre asistir a mi control cancele porfa", "intent": "cancelar", "especialidad": null, "axis": "rural", "group": "cancelar"}
+{"input": "hola kiero anular la hora ke tengo el jueves", "intent": "cancelar", "especialidad": null, "axis": "fonetico", "group": "cancelar"}
+{"input": "borrar mi ora porfavor ya no puedo", "intent": "cancelar", "especialidad": null, "axis": "fonetico", "group": "cancelar"}
+{"input": "no puedo ir cancele mi sita", "intent": "cancelar", "especialidad": null, "axis": "fonetico", "group": "cancelar"}
+{"input": "quiero dejar sin efecto la hora del miercoles disculpe", "intent": "cancelar", "especialidad": null, "axis": "rural", "group": "cancelar"}
+{"input": "anula porfa", "intent": "cancelar", "especialidad": null, "axis": "abreviacion", "group": "cancelar"}
+{"input": "señorita disculpe no podre ir a mi hora me surgio un imprevisto", "intent": "cancelar", "especialidad": null, "axis": "rural", "group": "cancelar"}
+{"input": "kncelar la ora ya no la quiero", "intent": "cancelar", "especialidad": null, "axis": "typo", "group": "cancelar"}
+{"input": "hola necesito anular ya no podre asistir", "intent": "cancelar", "especialidad": null, "axis": "rural", "group": "cancelar"}
+{"input": "no boi a poder ir mañana porfabor cancelenme", "intent": "cancelar", "especialidad": null, "axis": "fonetico", "group": "cancelar"}
+{"input": "kiero cancelar la atencion ke tenia agendada", "intent": "cancelar", "especialidad": null, "axis": "fonetico", "group": "cancelar"}
+{"input": "anular mi reserva no asistire", "intent": "cancelar", "especialidad": null, "axis": "info", "group": "cancelar"}
+{"input": "oiga cancele la ora porfa ke me kede sin movilizacion", "intent": "cancelar", "especialidad": null, "axis": "rural", "group": "cancelar"}
+{"input": "no puedo asisitr mañana anule", "intent": "cancelar", "especialidad": null, "axis": "typo", "group": "cancelar"}
+{"input": "quiero cancelar mi hora del dia de hoy por favor muchas gracias", "intent": "cancelar", "especialidad": null, "axis": "rural", "group": "cancelar"}
+{"input": "ver mis horas", "intent": "ver_reservas", "especialidad": null, "axis": "abreviacion", "group": "ver-reservas"}
+{"input": "kiero ver mis citas", "intent": "ver_reservas", "especialidad": null, "axis": "fonetico", "group": "ver-reservas"}
+{"input": "q horas tengo", "intent": "ver_reservas", "especialidad": null, "axis": "abreviacion", "group": "ver-reservas"}
+{"input": "cuando es mi cita", "intent": "ver_reservas", "especialidad": null, "axis": "typo", "group": "ver-reservas"}
+{"input": "mis reservas", "intent": "ver_reservas", "especialidad": null, "axis": "incompleta", "group": "ver-reservas"}
+{"input": "tengo hora?", "intent": "ver_reservas", "especialidad": null, "axis": "abreviacion", "group": "ver-reservas"}
+{"input": "a q hora era lo mio", "intent": "ver_reservas", "especialidad": null, "axis": "abreviacion", "group": "ver-reservas"}
+{"input": "buenas kisiera saber cuando tengo mi ora", "intent": "ver_reservas", "especialidad": null, "axis": "fonetico", "group": "ver-reservas"}
+{"input": "oiga tengo alguna ora reserbada", "intent": "ver_reservas", "especialidad": null, "axis": "fonetico", "group": "ver-reservas"}
+{"input": "me puede desir q dia tengo la cita porfa", "intent": "ver_reservas", "especialidad": null, "axis": "fonetico", "group": "ver-reservas"}
+{"input": "q dia tengo q ir", "intent": "ver_reservas", "especialidad": null, "axis": "abreviacion", "group": "ver-reservas"}
+{"input": "kiero saber mi ora", "intent": "ver_reservas", "especialidad": null, "axis": "fonetico", "group": "ver-reservas"}
+{"input": "tengo hora pa esta semana", "intent": "ver_reservas", "especialidad": null, "axis": "incompleta", "group": "ver-reservas"}
+{"input": "señorita me recuerda cuando es mi atencion", "intent": "ver_reservas", "especialidad": null, "axis": "typo", "group": "ver-reservas"}
+{"input": "MIS HORAS POR FAVOR", "intent": "ver_reservas", "especialidad": null, "axis": "typo", "group": "ver-reservas"}
+{"input": "komo veo mis citas", "intent": "ver_reservas", "especialidad": null, "axis": "fonetico", "group": "ver-reservas"}
+{"input": "tengo agendada alguna ora", "intent": "ver_reservas", "especialidad": null, "axis": "fonetico", "group": "ver-reservas"}
+{"input": "cuando me toka", "intent": "ver_reservas", "especialidad": null, "axis": "fonetico", "group": "ver-reservas"}
+{"input": "a q ora tengo q ir el lunes", "intent": "ver_reservas", "especialidad": null, "axis": "abreviacion", "group": "ver-reservas"}
+{"input": "q tengo agendado", "intent": "ver_reservas", "especialidad": null, "axis": "incompleta", "group": "ver-reservas"}
+{"input": "buenas tardes kiero saber si tengo ora reservada porfa", "intent": "ver_reservas", "especialidad": null, "axis": "fonetico", "group": "ver-reservas"}
+{"input": "olaa keria ver mis oras", "intent": "ver_reservas", "especialidad": null, "axis": "fonetico", "group": "ver-reservas"}
+{"input": "me dise cuando es", "intent": "ver_reservas", "especialidad": null, "axis": "incompleta", "group": "ver-reservas"}
+{"input": "tengo hora hoy?", "intent": "ver_reservas", "especialidad": null, "axis": "abreviacion", "group": "ver-reservas"}
+{"input": "keria saber la fecha de mi control", "intent": "ver_reservas", "especialidad": null, "axis": "fonetico", "group": "ver-reservas"}
+{"input": "cual era mi ora", "intent": "ver_reservas", "especialidad": null, "axis": "fonetico", "group": "ver-reservas"}
+{"input": "a ke ora era", "intent": "ver_reservas", "especialidad": null, "axis": "fonetico", "group": "ver-reservas"}
+{"input": "ber citas", "intent": "ver_reservas", "especialidad": null, "axis": "fonetico", "group": "ver-reservas"}
+{"input": "tengo q ir esta semana o no me acuerdo", "intent": "ver_reservas", "especialidad": null, "axis": "typo", "group": "ver-reservas"}
+{"input": "mis ora reserbadas", "intent": "ver_reservas", "especialidad": null, "axis": "fonetico", "group": "ver-reservas"}
+{"input": "cuando tengo q venir al medico", "intent": "ver_reservas", "especialidad": null, "axis": "typo", "group": "ver-reservas"}
+{"input": "q hora me dieron", "intent": "ver_reservas", "especialidad": null, "axis": "abreviacion", "group": "ver-reservas"}
+{"input": "señor disculpe puedo saber cuando es mi hora", "intent": "ver_reservas", "especialidad": null, "axis": "rural", "group": "ver-reservas"}
+{"input": "vengo a ver mi cita", "intent": "ver_reservas", "especialidad": null, "axis": "typo", "group": "ver-reservas"}
+{"input": "qieru ver q oras tngo", "intent": "ver_reservas", "especialidad": null, "axis": "typo", "group": "ver-reservas"}
+{"input": "a q dia y ora kede", "intent": "ver_reservas", "especialidad": null, "axis": "fonetico", "group": "ver-reservas"}
+{"input": "se me olvido cuando tenia la hora me puede ayudar", "intent": "ver_reservas", "especialidad": null, "axis": "rural", "group": "ver-reservas"}
+{"input": "tngo hora?", "intent": "ver_reservas", "especialidad": null, "axis": "typo", "group": "ver-reservas"}
+{"input": "cuando es lo mio", "intent": "ver_reservas", "especialidad": null, "axis": "incompleta", "group": "ver-reservas"}
+{"input": "ver", "intent": "ver_reservas", "especialidad": null, "axis": "incompleta", "group": "ver-reservas"}
+{"input": "citas mias", "intent": "ver_reservas", "especialidad": null, "axis": "incompleta", "group": "ver-reservas"}
+{"input": "kiero saber si kede con ora", "intent": "ver_reservas", "especialidad": null, "axis": "fonetico", "group": "ver-reservas"}
+{"input": "hola buenas tngo una hora reservada cuando es", "intent": "ver_reservas", "especialidad": null, "axis": "runon", "group": "ver-reservas"}
+{"input": "me puede recordar la fecha", "intent": "ver_reservas", "especialidad": null, "axis": "typo", "group": "ver-reservas"}
+{"input": "q oras tngo agendadas pa el dr", "intent": "ver_reservas", "especialidad": null, "axis": "abreviacion", "group": "ver-reservas"}
+{"input": "cuandoo es mii horaa", "intent": "ver_reservas", "especialidad": null, "axis": "typo", "group": "ver-reservas"}
+{"input": "tngo ora hoi dia", "intent": "ver_reservas", "especialidad": null, "axis": "fonetico", "group": "ver-reservas"}
+{"input": "keria consultar por mi reserba", "intent": "ver_reservas", "especialidad": null, "axis": "fonetico", "group": "ver-reservas"}
+{"input": "oga puedo saber a ke ora me toca mañana", "intent": "ver_reservas", "especialidad": null, "axis": "fonetico", "group": "ver-reservas"}
+{"input": "mostrarme mis horas porfa", "intent": "ver_reservas", "especialidad": null, "axis": "typo", "group": "ver-reservas"}
+{"input": "tengohora reservada esta semana", "intent": "ver_reservas", "especialidad": null, "axis": "runon", "group": "ver-reservas"}
+{"input": "a q ora kede yo", "intent": "ver_reservas", "especialidad": null, "axis": "fonetico", "group": "ver-reservas"}
+{"input": "disculpe cuando es mi prosima atencion", "intent": "ver_reservas", "especialidad": null, "axis": "fonetico", "group": "ver-reservas"}
+{"input": "tngo q ir el miercoles vdd", "intent": "ver_reservas", "especialidad": null, "axis": "abreviacion", "group": "ver-reservas"}
+{"input": "kiero ber mis horas reserbadas porfis", "intent": "ver_reservas", "especialidad": null, "axis": "fonetico", "group": "ver-reservas"}
+{"input": "q dia me dieron la ora", "intent": "ver_reservas", "especialidad": null, "axis": "fonetico", "group": "ver-reservas"}
+{"input": "hola tengo hora agendada me dice cuando", "intent": "ver_reservas", "especialidad": null, "axis": "runon", "group": "ver-reservas"}
+{"input": "cuanto falta pa mi hora", "intent": "ver_reservas", "especialidad": null, "axis": "typo", "group": "ver-reservas"}
+{"input": "keria saber si tengo control esta semana", "intent": "ver_reservas", "especialidad": null, "axis": "fonetico", "group": "ver-reservas"}
+{"input": "VER MIS CITAS POR FA", "intent": "ver_reservas", "especialidad": null, "axis": "abreviacion", "group": "ver-reservas"}
+{"input": "señorita y cuando era mi ora q ya no me acuerdo", "intent": "ver_reservas", "especialidad": null, "axis": "rural", "group": "ver-reservas"}
+{"input": "a q hra tngo", "intent": "ver_reservas", "especialidad": null, "axis": "typo", "group": "ver-reservas"}
+{"input": "kede con hora o no", "intent": "ver_reservas", "especialidad": null, "axis": "incompleta", "group": "ver-reservas"}
+{"input": "mis horass", "intent": "ver_reservas", "especialidad": null, "axis": "typo", "group": "ver-reservas"}
+{"input": "buenas necesito saber cuando es mi cita ke ando perdio", "intent": "ver_reservas", "especialidad": null, "axis": "rural", "group": "ver-reservas"}
+{"input": "tengo hora con el doctor cuando es", "intent": "ver_reservas", "especialidad": null, "axis": "runon", "group": "ver-reservas"}
+{"input": "verr reservas", "intent": "ver_reservas", "especialidad": null, "axis": "typo", "group": "ver-reservas"}
+{"input": "a q dia quede pa la consulta", "intent": "ver_reservas", "especialidad": null, "axis": "typo", "group": "ver-reservas"}
+{"input": "me recuerda mi ora plis", "intent": "ver_reservas", "especialidad": null, "axis": "abreviacion", "group": "ver-reservas"}
+{"input": "oiga joben tngo alguna ora pendiente", "intent": "ver_reservas", "especialidad": null, "axis": "fonetico", "group": "ver-reservas"}
+{"input": "kiero hablar con alguien", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "recepcion porfa", "intent": "humano", "especialidad": null, "axis": "abreviacion", "group": "humano"}
+{"input": "una persona porfis", "intent": "humano", "especialidad": null, "axis": "abreviacion", "group": "humano"}
+{"input": "secretaria", "intent": "humano", "especialidad": null, "axis": "typo", "group": "humano"}
+{"input": "me pueden atender uds", "intent": "humano", "especialidad": null, "axis": "abreviacion", "group": "humano"}
+{"input": "hay alguien ai??", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "no kiero el bot", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "operador", "intent": "humano", "especialidad": null, "axis": "typo", "group": "humano"}
+{"input": "kiero ablar con una persona", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "necesito hablar con la srta de recepcion", "intent": "humano", "especialidad": null, "axis": "abreviacion", "group": "humano"}
+{"input": "ola hay alguien ke me atienda", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "ablar con la secretaria porfavor", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "kiero q me atienda una persona dverdad", "intent": "humano", "especialidad": null, "axis": "runon", "group": "humano"}
+{"input": "esto es una maquina o k", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "puedo ablar con alguien dlclinica", "intent": "humano", "especialidad": null, "axis": "runon", "group": "humano"}
+{"input": "ATIENDAME UNA PERSONA POR FABOR", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "no entiendo nada pasenme a alguien", "intent": "humano", "especialidad": null, "axis": "incompleta", "group": "humano"}
+{"input": "señorita esta", "intent": "humano", "especialidad": null, "axis": "incompleta", "group": "humano"}
+{"input": "kien me responde", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "quiero hablar con la recepsion", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "alguien humano porfa no el robot", "intent": "humano", "especialidad": null, "axis": "abreviacion", "group": "humano"}
+{"input": "me comunican con la secre", "intent": "humano", "especialidad": null, "axis": "abreviacion", "group": "humano"}
+{"input": "ai una persona", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "necesito q me atienda jente de verda", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "kiero hablar cn la dueña o alguien", "intent": "humano", "especialidad": null, "axis": "abreviacion", "group": "humano"}
+{"input": "pasame con recepcion porfis no se nada de esto", "intent": "humano", "especialidad": null, "axis": "abreviacion", "group": "humano"}
+{"input": "abla conmigo una persona", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "no me sirve el bot kiero a alguien", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "secretariaaa", "intent": "humano", "especialidad": null, "axis": "typo", "group": "humano"}
+{"input": "esto lo contesta alguien o no", "intent": "humano", "especialidad": null, "axis": "incompleta", "group": "humano"}
+{"input": "kisiera ablar cn una persona dla recepcion", "intent": "humano", "especialidad": null, "axis": "runon", "group": "humano"}
+{"input": "me atiende alguien dverda porfa", "intent": "humano", "especialidad": null, "axis": "runon", "group": "humano"}
+{"input": "hola ay alguien q me pueda ayudar", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "necesito una persona real no esto", "intent": "humano", "especialidad": null, "axis": "incompleta", "group": "humano"}
+{"input": "kiero llamar y q me conteste alguien", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "DEME CON LA SECRETARIA", "intent": "humano", "especialidad": null, "axis": "typo", "group": "humano"}
+{"input": "alo alo ay alguien", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "kien atiende aki", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "porfa una persona ke me esplike", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "me pasan con la srta", "intent": "humano", "especialidad": null, "axis": "abreviacion", "group": "humano"}
+{"input": "no kiero seguir con la maquinita quiero a alguien", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "ablo con una persona dla clinica si o no", "intent": "humano", "especialidad": null, "axis": "runon", "group": "humano"}
+{"input": "necesito ayuda dalguien d verda", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "kiero recepciooon", "intent": "humano", "especialidad": null, "axis": "typo", "group": "humano"}
+{"input": "pasame cn alguien q sepa porfa", "intent": "humano", "especialidad": null, "axis": "abreviacion", "group": "humano"}
+{"input": "ola necesito ablar cn una secretaria del centro", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "kien escrive aki es persona o robot", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "me atienden ustedes mismos", "intent": "humano", "especialidad": null, "axis": "incompleta", "group": "humano"}
+{"input": "deme con un encargado porfa", "intent": "humano", "especialidad": null, "axis": "typo", "group": "humano"}
+{"input": "kiero ablar cn la persona ke agenda", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "no entiendo esto pasenme a una secre porfis", "intent": "humano", "especialidad": null, "axis": "abreviacion", "group": "humano"}
+{"input": "ai jente atendiendo ahora", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "necesito ablar urjente cn una persona", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "kien me puede atende d frente", "intent": "humano", "especialidad": null, "axis": "incompleta", "group": "humano"}
+{"input": "ola con kien ablo", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "porfavor una señorita ke me ayude", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "kiero ablar con la recep", "intent": "humano", "especialidad": null, "axis": "incompleta", "group": "humano"}
+{"input": "me comunica cn alguien d la clinica", "intent": "humano", "especialidad": null, "axis": "abreviacion", "group": "humano"}
+{"input": "no kiero contestar preguntas kiero a una persona", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "ATIENDANME PERSONAS POR FAVOR", "intent": "humano", "especialidad": null, "axis": "incompleta", "group": "humano"}
+{"input": "ablar cn alguien", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "ai alguien d carne y ueso aya", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "kiero ablar cn la nyña de recepcion", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "deme con jente porfa esto no me ayuda", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "necesito una persona q me esplique bien", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "kiero ke me llame una secretaria", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "ola buenas ay alguien dl centro medico", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "me pasa cn una persona porfa soy mayor no entiendo", "intent": "humano", "especialidad": null, "axis": "abreviacion", "group": "humano"}
+{"input": "kien atiende kiero ablar no scribir", "intent": "humano", "especialidad": null, "axis": "fonetico", "group": "humano"}
+{"input": "recepcionnn alguien ai", "intent": "humano", "especialidad": null, "axis": "typo", "group": "humano"}
+{"input": "hola", "intent": "menu", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "holaa", "intent": "menu", "especialidad": null, "axis": "runon", "group": "menu-saludo"}
+{"input": "holaaa", "intent": "menu", "especialidad": null, "axis": "runon", "group": "menu-saludo"}
+{"input": "ola", "intent": "menu", "especialidad": null, "axis": "fonetico", "group": "menu-saludo"}
+{"input": "olaa", "intent": "menu", "especialidad": null, "axis": "fonetico", "group": "menu-saludo"}
+{"input": "buenas", "intent": "menu", "especialidad": null, "axis": "abreviacion", "group": "menu-saludo"}
+{"input": "wenas", "intent": "menu", "especialidad": null, "axis": "fonetico", "group": "menu-saludo"}
+{"input": "buenas tarde", "intent": "menu", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "buenas tardess", "intent": "menu", "especialidad": null, "axis": "runon", "group": "menu-saludo"}
+{"input": "buen dia", "intent": "info", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "wenos dias", "intent": "menu", "especialidad": null, "axis": "fonetico", "group": "menu-saludo"}
+{"input": "buenos dia", "intent": "menu", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "BUENAS", "intent": "menu", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "HOLA", "intent": "menu", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "hola buenas", "intent": "menu", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "buenas noche", "intent": "menu", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "wenas tarde", "intent": "menu", "especialidad": null, "axis": "fonetico", "group": "menu-saludo"}
+{"input": "hola hola", "intent": "menu", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "ola buen dia", "intent": "menu", "especialidad": null, "axis": "fonetico", "group": "menu-saludo"}
+{"input": "olaaa wenas", "intent": "menu", "especialidad": null, "axis": "fonetico", "group": "menu-saludo"}
+{"input": "buenas como esta", "intent": "menu", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "hola q tal", "intent": "menu", "especialidad": null, "axis": "abreviacion", "group": "menu-saludo"}
+{"input": "wena", "intent": "menu", "especialidad": null, "axis": "fonetico", "group": "menu-saludo"}
+{"input": "alo", "intent": "menu", "especialidad": null, "axis": "fonetico", "group": "menu-saludo"}
+{"input": "aloo", "intent": "menu", "especialidad": null, "axis": "fonetico", "group": "menu-saludo"}
+{"input": "buenas dia tenga", "intent": "menu", "especialidad": null, "axis": "rural", "group": "menu-saludo"}
+{"input": "menu", "intent": "menu", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "memu", "intent": "menu", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "meno", "intent": "menu", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "menuu", "intent": "menu", "especialidad": null, "axis": "runon", "group": "menu-saludo"}
+{"input": "el menu", "intent": "menu", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "volver al menu", "intent": "menu", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "volver", "intent": "menu", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "bolver", "intent": "menu", "especialidad": null, "axis": "fonetico", "group": "menu-saludo"}
+{"input": "atras", "intent": "menu", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "inicio", "intent": "menu", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "inisio", "intent": "menu", "especialidad": null, "axis": "fonetico", "group": "menu-saludo"}
+{"input": "al inicio", "intent": "menu", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "empezar", "intent": "menu", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "enpezar", "intent": "menu", "especialidad": null, "axis": "fonetico", "group": "menu-saludo"}
+{"input": "kiero empezar", "intent": "menu", "especialidad": null, "axis": "fonetico", "group": "menu-saludo"}
+{"input": "kiero enpesar", "intent": "menu", "especialidad": null, "axis": "fonetico", "group": "menu-saludo"}
+{"input": "empesar denuevo", "intent": "menu", "especialidad": null, "axis": "fonetico", "group": "menu-saludo"}
+{"input": "comenzar", "intent": "menu", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "si", "intent": "menu", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "sii", "intent": "menu", "especialidad": null, "axis": "runon", "group": "menu-saludo"}
+{"input": "siii", "intent": "menu", "especialidad": null, "axis": "runon", "group": "menu-saludo"}
+{"input": "sip", "intent": "menu", "especialidad": null, "axis": "abreviacion", "group": "menu-saludo"}
+{"input": "ya", "intent": "info", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "yaa", "intent": "menu", "especialidad": null, "axis": "runon", "group": "menu-saludo"}
+{"input": "ya po", "intent": "menu", "especialidad": null, "axis": "rural", "group": "menu-saludo"}
+{"input": "ya pue", "intent": "menu", "especialidad": null, "axis": "rural", "group": "menu-saludo"}
+{"input": "ok", "intent": "info", "especialidad": null, "axis": "abreviacion", "group": "menu-saludo"}
+{"input": "okok", "intent": "menu", "especialidad": null, "axis": "runon", "group": "menu-saludo"}
+{"input": "oka", "intent": "menu", "especialidad": null, "axis": "abreviacion", "group": "menu-saludo"}
+{"input": "okey", "intent": "info", "especialidad": null, "axis": "fonetico", "group": "menu-saludo"}
+{"input": "dale", "intent": "info", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "bueno ya", "intent": "menu", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "ta bien", "intent": "menu", "especialidad": null, "axis": "abreviacion", "group": "menu-saludo"}
+{"input": "esta bien", "intent": "menu", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "perfecto", "intent": "info", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "perfeto", "intent": "menu", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "ya gracias", "intent": "info", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "no", "intent": "menu", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "noo", "intent": "menu", "especialidad": null, "axis": "runon", "group": "menu-saludo"}
+{"input": "nop", "intent": "menu", "especialidad": null, "axis": "abreviacion", "group": "menu-saludo"}
+{"input": "no grasias", "intent": "menu", "especialidad": null, "axis": "fonetico", "group": "menu-saludo"}
+{"input": "no por ahora", "intent": "menu", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "asi no mas", "intent": "menu", "especialidad": null, "axis": "rural", "group": "menu-saludo"}
+{"input": "gracias", "intent": "info", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "grasias", "intent": "menu", "especialidad": null, "axis": "fonetico", "group": "menu-saludo"}
+{"input": "graxias", "intent": "info", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "muchas gracias", "intent": "info", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "muxas grasias", "intent": "menu", "especialidad": null, "axis": "fonetico", "group": "menu-saludo"}
+{"input": "se le agradese", "intent": "menu", "especialidad": null, "axis": "rural", "group": "menu-saludo"}
+{"input": "gracia", "intent": "menu", "especialidad": null, "axis": "typo", "group": "menu-saludo"}
+{"input": "ola q tal komo estan", "intent": "menu", "especialidad": null, "axis": "fonetico", "group": "menu-saludo"}
+{"input": "holaaa buenas tarde", "intent": "menu", "especialidad": null, "axis": "runon", "group": "menu-saludo"}
+{"input": "wenas tenga ud", "intent": "menu", "especialidad": null, "axis": "rural", "group": "menu-saludo"}
+{"input": "ya ya ok", "intent": "menu", "especialidad": null, "axis": "runon", "group": "menu-saludo"}
+{"input": "si po ya", "intent": "menu", "especialidad": null, "axis": "rural", "group": "menu-saludo"}
+{"input": "menu porfa", "intent": "menu", "especialidad": null, "axis": "abreviacion", "group": "menu-saludo"}
+{"input": "komo empieso", "intent": "menu", "especialidad": null, "axis": "fonetico", "group": "menu-saludo"}
+{"input": "cuanto sale la consulta", "intent": "info", "especialidad": null, "axis": "abreviacion", "group": "info-precio"}
+{"input": "kuanto cuesta ver al dentista", "intent": "info", "especialidad": "odontología", "axis": "fonetico", "group": "info-precio"}
+{"input": "atienden los sabados?", "intent": "info", "especialidad": null, "axis": "typo", "group": "info-precio"}
+{"input": "donde kedan ustedes", "intent": "info", "especialidad": null, "axis": "fonetico", "group": "info-precio"}
+{"input": "nesesito orden para la ecografia", "intent": "info", "especialidad": null, "axis": "fonetico", "group": "info-precio"}
+{"input": "aceptan fonasa", "intent": "info", "especialidad": null, "axis": "incompleta", "group": "info-precio"}
+{"input": "a q hora abren", "intent": "info", "especialidad": null, "axis": "abreviacion", "group": "info-precio"}
+{"input": "cuanto bale el dentista", "intent": "info", "especialidad": "odontología", "axis": "fonetico", "group": "info-precio"}
+{"input": "hola buenas atienden cardiologo", "intent": "info", "especialidad": "cardiología", "axis": "incompleta", "group": "info-precio"}
+{"input": "kuanto sale la consulta del medico jeneral", "intent": "info", "especialidad": "medicina general", "axis": "fonetico", "group": "info-precio"}
+{"input": "tienen jinecologo", "intent": "info", "especialidad": "ginecología", "axis": "fonetico", "group": "info-precio"}
+{"input": "asen ecocardiograma", "intent": "info", "especialidad": "ecocardiograma", "axis": "fonetico", "group": "info-precio"}
+{"input": "cuanto cobran x sacar una muela", "intent": "info", "especialidad": "odontología", "axis": "abreviacion", "group": "info-precio"}
+{"input": "BUENAS ATIENDEN PSICOLOGO PARA NIÑOS", "intent": "info", "especialidad": "psicología", "axis": "runon", "group": "info-precio"}
+{"input": "vale la consulta nutricionista", "intent": "info", "especialidad": "nutrición", "axis": "incompleta", "group": "info-precio"}
+{"input": "se nesesita orden pa la kinesiologia", "intent": "info", "especialidad": "kinesiología", "axis": "fonetico", "group": "info-precio"}
+{"input": "asta q hora atienden el viernes", "intent": "info", "especialidad": null, "axis": "fonetico", "group": "info-precio"}
+{"input": "cuanto cuesta el control con la matrona", "intent": "info", "especialidad": "matrona", "axis": "typo", "group": "info-precio"}
+{"input": "atienden particular o solo fonasa", "intent": "info", "especialidad": null, "axis": "incompleta", "group": "info-precio"}
+{"input": "kuanto sale arreglarse una muela picada", "intent": "info", "especialidad": "odontología", "axis": "fonetico", "group": "info-precio"}
+{"input": "tienen dr de oido", "intent": "info", "especialidad": "otorrinolaringología", "axis": "abreviacion", "group": "info-precio"}
+{"input": "hacen examen de la guata", "intent": "info", "especialidad": "gastroenterología", "axis": "rural", "group": "info-precio"}
+{"input": "cuanto sale la limpiesa dental", "intent": "info", "especialidad": "odontología", "axis": "fonetico", "group": "info-precio"}
+{"input": "atienden niños chicos", "intent": "info", "especialidad": "medicina general", "axis": "rural", "group": "info-precio"}
+{"input": "donde quedan ubicados", "intent": "info", "especialidad": null, "axis": "typo", "group": "info-precio"}
+{"input": "se puede pagar con tarjeta", "intent": "info", "especialidad": null, "axis": "typo", "group": "info-precio"}
+{"input": "kuanto bale sacar radiografia", "intent": "info", "especialidad": "odontología", "axis": "fonetico", "group": "info-precio"}
+{"input": "asen ecografia de embarazo", "intent": "info", "especialidad": "ginecología", "axis": "fonetico", "group": "info-precio"}
+{"input": "cuanto sale aregla los pies", "intent": "info", "especialidad": "podología", "axis": "incompleta", "group": "info-precio"}
+{"input": "atienden ortodoncia los frenillos", "intent": "info", "especialidad": "ortodoncia", "axis": "rural", "group": "info-precio"}
+{"input": "q precio tiene la consulta de garganta", "intent": "info", "especialidad": "otorrinolaringología", "axis": "abreviacion", "group": "info-precio"}
+{"input": "cuanto sale el tratamiento de conducto", "intent": "info", "especialidad": "endodoncia", "axis": "typo", "group": "info-precio"}
+{"input": "ai fonoaudiologa pa mi nieto q no abla bien", "intent": "info", "especialidad": "fonoaudiología", "axis": "rural", "group": "info-precio"}
+{"input": "se atiende sin hora", "intent": "info", "especialidad": null, "axis": "typo", "group": "info-precio"}
+{"input": "KUANTO ES LA CONSULTA", "intent": "info", "especialidad": null, "axis": "fonetico", "group": "info-precio"}
+{"input": "tienen doctora mujer pa ginecologia", "intent": "info", "especialidad": "ginecología", "axis": "rural", "group": "info-precio"}
+{"input": "cuanto cobra el cardiologo", "intent": "info", "especialidad": "cardiología", "axis": "typo", "group": "info-precio"}
+{"input": "hola atienden el domingo", "intent": "info", "especialidad": null, "axis": "typo", "group": "info-precio"}
+{"input": "kuanto bale una consulta jeneral", "intent": "info", "especialidad": "medicina general", "axis": "fonetico", "group": "info-precio"}
+{"input": "nesecito eco abdominal cuanto sale", "intent": "info", "especialidad": "ecografía", "axis": "fonetico", "group": "info-precio"}
+{"input": "asen control de presion", "intent": "info", "especialidad": "medicina general", "axis": "fonetico", "group": "info-precio"}
+{"input": "q vale poner un parche en la muela", "intent": "info", "especialidad": "odontología", "axis": "rural", "group": "info-precio"}
+{"input": "atienden con bono", "intent": "info", "especialidad": null, "axis": "incompleta", "group": "info-precio"}
+{"input": "a que hora cierran hoy", "intent": "info", "especialidad": null, "axis": "typo", "group": "info-precio"}
+{"input": "cuanto saleee la consulta del sicologo", "intent": "info", "especialidad": "psicología", "axis": "fonetico", "group": "info-precio"}
+{"input": "asen examenes de sangre", "intent": "info", "especialidad": "medicina general", "axis": "fonetico", "group": "info-precio"}
+{"input": "tienen kinesiologo a domisilio", "intent": "info", "especialidad": "kinesiología", "axis": "fonetico", "group": "info-precio"}
+{"input": "cuanto sale la corona dental", "intent": "info", "especialidad": "odontología", "axis": "typo", "group": "info-precio"}
+{"input": "se atiende isapre", "intent": "info", "especialidad": null, "axis": "typo", "group": "info-precio"}
+{"input": "kuanto bale ekografia mamaria", "intent": "info", "especialidad": "ecografía", "axis": "fonetico", "group": "info-precio"}
+{"input": "asta donde quedan x carampangue", "intent": "info", "especialidad": null, "axis": "fonetico", "group": "info-precio"}
+{"input": "precio consulta otorrino", "intent": "info", "especialidad": "otorrinolaringología", "axis": "abreviacion", "group": "info-precio"}
+{"input": "nesesito hora pero primero cuanto cuesta nutri", "intent": "info", "especialidad": "nutrición", "axis": "abreviacion", "group": "info-precio"}
+{"input": "asen control de niño sano", "intent": "info", "especialidad": "medicina general", "axis": "fonetico", "group": "info-precio"}
+{"input": "cuanto sale el implante de diente", "intent": "info", "especialidad": "odontología", "axis": "typo", "group": "info-precio"}
+{"input": "BUENAS TARDES KUANTO ES VER ESPECIALISTA DEL CORAZON", "intent": "info", "especialidad": "cardiología", "axis": "fonetico", "group": "info-precio"}
+{"input": "atienden matrona pa el pap", "intent": "info", "especialidad": "matrona", "axis": "rural", "group": "info-precio"}
+{"input": "q dias atiende el dentista", "intent": "info", "especialidad": "odontología", "axis": "abreviacion", "group": "info-precio"}
+{"input": "cuanto vale destapar el oido", "intent": "info", "especialidad": "otorrinolaringología", "axis": "rural", "group": "info-precio"}
+{"input": "se nesesita pase pal especialista", "intent": "info", "especialidad": null, "axis": "fonetico", "group": "info-precio"}
+{"input": "ai estacionamiento", "intent": "info", "especialidad": null, "axis": "fonetico", "group": "info-precio"}
+{"input": "cuanto sale la consul", "intent": "info", "especialidad": null, "axis": "incompleta", "group": "info-precio"}
+{"input": "asen papanicolau", "intent": "info", "especialidad": "matrona", "axis": "fonetico", "group": "info-precio"}
+{"input": "kuanto cuesta una tapadura", "intent": "info", "especialidad": "odontología", "axis": "fonetico", "group": "info-precio"}
+{"input": "tienen jastroenterologo", "intent": "info", "especialidad": "gastroenterología", "axis": "fonetico", "group": "info-precio"}
+{"input": "cuanto sale q me saquen un callo del pie", "intent": "info", "especialidad": "podología", "axis": "rural", "group": "info-precio"}
+{"input": "ATIENDEN AHORA EN LA TARDE", "intent": "info", "especialidad": null, "axis": "typo", "group": "info-precio"}
+{"input": "q precio la endodoncia", "intent": "info", "especialidad": "endodoncia", "axis": "abreviacion", "group": "info-precio"}
+{"input": "asen eco al corazon", "intent": "info", "especialidad": "ecocardiograma", "axis": "rural", "group": "info-precio"}
+{"input": "cuantooo sale la rsadiografia panoramica", "intent": "info", "especialidad": "odontología", "axis": "typo", "group": "info-precio"}
+{"input": "hola atienden personas mayores con fonasa a", "intent": "info", "especialidad": null, "axis": "incompleta", "group": "info-precio"}
+{"input": "kuanto bale la consulta de la guagua", "intent": "info", "especialidad": "medicina general", "axis": "rural", "group": "info-precio"}
+{"input": "asen frenillos pa adultos cuanto sale", "intent": "info", "especialidad": "ortodoncia", "axis": "rural", "group": "info-precio"}
+{"input": "tienen sicologa pa terapia de pareja", "intent": "info", "especialidad": "psicología", "axis": "fonetico", "group": "info-precio"}
+{"input": "a q hora abren en la mañana", "intent": "info", "especialidad": null, "axis": "abreviacion", "group": "info-precio"}
+{"input": "cuanto sale q me bean la rodilla", "intent": "info", "especialidad": "kinesiología", "axis": "fonetico", "group": "info-precio"}
+{"input": "nesecito saber si asen ecotomografia", "intent": "info", "especialidad": "ecografía", "axis": "fonetico", "group": "info-precio"}
+{"input": "kuanto vale ver al medico", "intent": "info", "especialidad": "medicina general", "axis": "fonetico", "group": "info-precio"}
+{"input": "atienden el lunes feriado", "intent": "info", "especialidad": null, "axis": "typo", "group": "info-precio"}
+{"input": "cuanto cobran x una limpieza con la matrona digo dentista", "intent": "info", "especialidad": "odontología", "axis": "colision", "group": "info-precio"}
+{"input": "puedo tomar doble dosis de losartan si tengo la presion alta toabia", "intent": "consulta_farmaco", "especialidad": null, "axis": "rural", "group": "farmaco"}
+{"input": "DON ME RECETARON AMOXICILINA PUEDO TOMAR CON EL REMEDIO DE LA PRESION", "intent": "consulta_farmaco", "especialidad": null, "axis": "rural", "group": "farmaco"}
+{"input": "es malo mezclar paracetamol con ivuprofeno", "intent": "consulta_farmaco", "especialidad": null, "axis": "fonetico", "group": "farmaco"}
+{"input": "me kambio el remedio o sigo con el mismo", "intent": "consulta_farmaco", "especialidad": null, "axis": "fonetico", "group": "farmaco"}
+{"input": "efectos de la sertralina pq ando con sueño todo el dia", "intent": "consulta_farmaco", "especialidad": null, "axis": "typo", "group": "farmaco"}
+{"input": "puedo tomar omeprasol en ayunas o despues", "intent": "consulta_farmaco", "especialidad": null, "axis": "fonetico", "group": "farmaco"}
+{"input": "se me olvido la pastilla de la presion la tomo doble ahora?", "intent": "consulta_farmaco", "especialidad": null, "axis": "runon", "group": "farmaco"}
+{"input": "metformina puedo tomar con el desayuno o sin comer", "intent": "consulta_farmaco", "especialidad": null, "axis": "incompleta", "group": "farmaco"}
+{"input": "me dieron amoxsilina cuantos dias la tomo", "intent": "consulta_farmaco", "especialidad": null, "axis": "fonetico", "group": "farmaco"}
+{"input": "puedo tomar trago si ando con los antibioticos", "intent": "consulta_farmaco", "especialidad": null, "axis": "rural", "group": "farmaco"}
+{"input": "la enalaprilo me da tos es normal sigo tomandola", "intent": "consulta_farmaco", "especialidad": null, "axis": "typo", "group": "farmaco"}
+{"input": "clonasepan me lo puedo tomar pa dormir todas las noches", "intent": "consulta_farmaco", "especialidad": null, "axis": "fonetico", "group": "farmaco"}
+{"input": "puedo subir la dosis del aspirina pa el corazon", "intent": "consulta_farmaco", "especialidad": null, "axis": "rural", "group": "farmaco"}
+{"input": "me pico una avispa puedo tomar clorfenamina cuanta", "intent": "consulta_farmaco", "especialidad": null, "axis": "rural", "group": "farmaco"}
+{"input": "el remedio de la diabetes con el de la presion se puede juntar", "intent": "consulta_farmaco", "especialidad": null, "axis": "rural", "group": "farmaco"}
+{"input": "DOCTOR PUEDO TOMAR VIAGRA CON EL REMEDIO DEL CORAZON", "intent": "consulta_farmaco", "especialidad": null, "axis": "rural", "group": "farmaco"}
+{"input": "floxetina cuanto me demoro en sentir el efecto", "intent": "consulta_farmaco", "especialidad": null, "axis": "typo", "group": "farmaco"}
+{"input": "puedo darle paracetamol a mi nieta de 3 años cuanto", "intent": "consulta_farmaco", "especialidad": null, "axis": "rural", "group": "farmaco"}
+{"input": "me cambio la dosis del levotiroxina pq baje de peso", "intent": "consulta_farmaco", "especialidad": null, "axis": "typo", "group": "farmaco"}
+{"input": "tomo el ibupro con estomago vacio o lleno", "intent": "consulta_farmaco", "especialidad": null, "axis": "abreviacion", "group": "farmaco"}
+{"input": "puedo dejar de tomar la presion si ya me siento bien", "intent": "consulta_farmaco", "especialidad": null, "axis": "rural", "group": "farmaco"}
+{"input": "el losartán y el ivuprofeno juntos hace mal?", "intent": "consulta_farmaco", "especialidad": null, "axis": "fonetico", "group": "farmaco"}
+{"input": "ke pasa si tomo dos pastillas de dormir juntas", "intent": "consulta_farmaco", "especialidad": null, "axis": "fonetico", "group": "farmaco"}
+{"input": "me recetaron predni puedo tomar con la diabetes", "intent": "consulta_farmaco", "especialidad": null, "axis": "incompleta", "group": "farmaco"}
+{"input": "pue", "intent": "consulta_farmaco", "especialidad": null, "axis": "incompleta", "group": "farmaco"}
+{"input": "puedo tomar el remedio de la tia esta vencido", "intent": "consulta_farmaco", "especialidad": null, "axis": "rural", "group": "farmaco"}
+{"input": "la metformina me da diarrea la sigo tomando o la paro", "intent": "consulta_farmaco", "especialidad": null, "axis": "runon", "group": "farmaco"}
+{"input": "DON ESTOY EMBARASADA PUEDO TOMAR PARACETAMOL", "intent": "consulta_farmaco", "especialidad": null, "axis": "rural", "group": "farmaco"}
+{"input": "omeprasol cuanto tiempo seguido se puede tomar no mas", "intent": "consulta_farmaco", "especialidad": null, "axis": "fonetico", "group": "farmaco"}
+{"input": "puedo mezclar el jarabe de la tos con el antibiotico", "intent": "consulta_farmaco", "especialidad": null, "axis": "rural", "group": "farmaco"}
+{"input": "me tome 4 paracetamoles me va a hacer mal??", "intent": "consulta_farmaco", "especialidad": null, "axis": "runon", "group": "farmaco"}
+{"input": "la atorvastatina pa que sirve la sigo tomando", "intent": "consulta_farmaco", "especialidad": null, "axis": "typo", "group": "farmaco"}
+{"input": "puedo tomar el sintrom con el ibuprofeno", "intent": "consulta_farmaco", "especialidad": null, "axis": "typo", "group": "farmaco"}
+{"input": "me suben la dosis del litio porq ando mal", "intent": "consulta_farmaco", "especialidad": null, "axis": "runon", "group": "farmaco"}
+{"input": "keria saber si la amoxi se toma cada 8 o cada 12", "intent": "consulta_farmaco", "especialidad": null, "axis": "abreviacion", "group": "farmaco"}
+{"input": "tomo el remedio de la presion en la mañana o en la noche mejor", "intent": "consulta_farmaco", "especialidad": null, "axis": "runon", "group": "farmaco"}
+{"input": "puedo darle ibuprofeno a la guagua de 6 meses", "intent": "consulta_farmaco", "especialidad": null, "axis": "rural", "group": "farmaco"}
+{"input": "diazepan y trago se pueden??", "intent": "consulta_farmaco", "especialidad": null, "axis": "fonetico", "group": "farmaco"}
+{"input": "la dosis del aciclovir me la tomo igual aunke ya no tengo herpes", "intent": "consulta_farmaco", "especialidad": null, "axis": "typo", "group": "farmaco"}
+{"input": "puedo tomar te de hierbas con las pastillas de la tiroides", "intent": "consulta_farmaco", "especialidad": null, "axis": "rural", "group": "farmaco"}
+{"input": "se puede tomar amoxisilina si soy aleregico a la penisilina", "intent": "consulta_farmaco", "especialidad": null, "axis": "fonetico", "group": "farmaco"}
+{"input": "el remedio rojo y el blanco juntos o separados", "intent": "consulta_farmaco", "especialidad": null, "axis": "rural", "group": "farmaco"}
+{"input": "PUEDO PARTIR LA PASTILLA EN DOS PA TOMAR MENOS", "intent": "consulta_farmaco", "especialidad": null, "axis": "rural", "group": "farmaco"}
+{"input": "la sertralina la puedo dejar de golpe", "intent": "consulta_farmaco", "especialidad": null, "axis": "typo", "group": "farmaco"}
+{"input": "cuantas gotas de tramadol me tomo pal dolor de espalda", "intent": "consulta_farmaco", "especialidad": null, "axis": "rural", "group": "farmaco"}
+{"input": "el paracetamol con el resfrio que venden se puede juntar", "intent": "consulta_farmaco", "especialidad": null, "axis": "rural", "group": "farmaco"}
+{"input": "me cambio el omeprasol por otro pq no me hace nada", "intent": "consulta_farmaco", "especialidad": null, "axis": "fonetico", "group": "farmaco"}
+{"input": "puedo tomar la pastilla anticoseptiva si estoy amamantando", "intent": "consulta_farmaco", "especialidad": null, "axis": "fonetico", "group": "farmaco"}
+{"input": "qe efecto tiene la quetiapina me da mucho sueño", "intent": "consulta_farmaco", "especialidad": null, "axis": "fonetico", "group": "farmaco"}
+{"input": "tomo la metformina y la insulina juntas o cmo", "intent": "consulta_farmaco", "especialidad": null, "axis": "abreviacion", "group": "farmaco"}
+{"input": "puedo tomar mas ivu si no se me kita el dolor", "intent": "consulta_farmaco", "especialidad": null, "axis": "abreviacion", "group": "farmaco"}
+{"input": "me dieron unas pastillas pa la presion puedo tomar con cafe", "intent": "consulta_farmaco", "especialidad": null, "axis": "rural", "group": "farmaco"}
+{"input": "el clonazepan me lo puedo tomar de dia tambien", "intent": "consulta_farmaco", "especialidad": null, "axis": "fonetico", "group": "farmaco"}
+{"input": "la warfarina con vitamina k se puede comer ensalada", "intent": "consulta_farmaco", "especialidad": null, "axis": "rural", "group": "farmaco"}
+{"input": "keria saber si puedo tomar dos remedios de la presion distintos", "intent": "consulta_farmaco", "especialidad": null, "axis": "abreviacion", "group": "farmaco"}
+{"input": "me recetaron corticoides cuanto los tomo y los puedo cortar antes", "intent": "consulta_farmaco", "especialidad": null, "axis": "runon", "group": "farmaco"}
+{"input": "puedo darle a mi marido el remedio mio de la presion", "intent": "consulta_farmaco", "especialidad": null, "axis": "rural", "group": "farmaco"}
+{"input": "la pastilla pal colesterol me da dolor de pierna la dejo?", "intent": "consulta_farmaco", "especialidad": null, "axis": "rural", "group": "farmaco"}
+{"input": "tomo el antibiotico aunke ya me siento bien o lo dejo", "intent": "consulta_farmaco", "especialidad": null, "axis": "runon", "group": "farmaco"}
+{"input": "puedo tomar melatonina con el clonazepam pa dormir mejor", "intent": "consulta_farmaco", "especialidad": null, "axis": "typo", "group": "farmaco"}
+{"input": "me duele la guata dsde ayer", "intent": "sintoma", "especialidad": "medicina general", "axis": "abreviacion", "group": "sintomas"}
+{"input": "tengo la precion alta otra ves", "intent": "sintoma", "especialidad": "cardiología", "axis": "fonetico", "group": "sintomas"}
+{"input": "se me incha el tobillo en las tardes", "intent": "sintoma", "especialidad": "medicina general", "axis": "fonetico", "group": "sintomas"}
+{"input": "doctor no escucho bien del oido derecho", "intent": "sintoma", "especialidad": "otorrinolaringología", "axis": "typo", "group": "sintomas"}
+{"input": "mi guagua no abla bien tiene 4 año", "intent": "sintoma", "especialidad": "fonoaudiología", "axis": "fonetico", "group": "sintomas"}
+{"input": "DOLOR EN EL PECHO Y ME FALTA EL AIRE", "intent": "sintoma", "especialidad": "cardiología", "axis": "colision", "group": "sintomas"}
+{"input": "me pica too el cuerpo y tengo ronchas", "intent": "sintoma", "especialidad": "medicina general", "axis": "rural", "group": "sintomas"}
+{"input": "ando con harto dolor de cabesa hace dias", "intent": "sintoma", "especialidad": "medicina general", "axis": "fonetico", "group": "sintomas"}
+{"input": "se me duerme la mano isquierda", "intent": "sintoma", "especialidad": "medicina general", "axis": "fonetico", "group": "sintomas"}
+{"input": "tengo el asucar alta soy diabetico", "intent": "sintoma", "especialidad": "medicina general", "axis": "fonetico", "group": "sintomas"}
+{"input": "me arde al orinar y voy harto al baño", "intent": "sintoma", "especialidad": "medicina general", "axis": "rural", "group": "sintomas"}
+{"input": "dolor en la espalda baja no me puedo agachar", "intent": "sintoma", "especialidad": "kinesiología", "axis": "runon", "group": "sintomas"}
+{"input": "tengo tos con flema hace como 2 semana", "intent": "sintoma", "especialidad": "medicina general", "axis": "rural", "group": "sintomas"}
+{"input": "mareada ando too el dia se me da vuelta la cabeza", "intent": "sintoma", "especialidad": "medicina general", "axis": "rural", "group": "sintomas"}
+{"input": "me duelen las rodillas pa caminar", "intent": "sintoma", "especialidad": "kinesiología", "axis": "rural", "group": "sintomas"}
+{"input": "tengo un dolor aki en el pecho cuando camino arto", "intent": "sintoma", "especialidad": "cardiología", "axis": "fonetico", "group": "sintomas"}
+{"input": "se me ace nudo pa tragar la comida", "intent": "sintoma", "especialidad": "gastroenterología", "axis": "fonetico", "group": "sintomas"}
+{"input": "tengo asedia y reflujo despues de comer", "intent": "sintoma", "especialidad": "gastroenterología", "axis": "fonetico", "group": "sintomas"}
+{"input": "ando con la regla muy abundante este mes", "intent": "sintoma", "especialidad": "ginecología", "axis": "rural", "group": "sintomas"}
+{"input": "tengo un atraso y creo q estoy embarasada", "intent": "sintoma", "especialidad": "matrona", "axis": "fonetico", "group": "sintomas"}
+{"input": "me duele el oido y me sale como liquido", "intent": "sintoma", "especialidad": "otorrinolaringología", "axis": "runon", "group": "sintomas"}
+{"input": "ando muy triste lloro too el dia no qiero nada", "intent": "sintoma", "especialidad": "psicología", "axis": "rural", "group": "sintomas"}
+{"input": "no puedo dormir en las noche ando angustiada", "intent": "sintoma", "especialidad": "psicología", "axis": "rural", "group": "sintomas"}
+{"input": "se me hinchan los pie y me duelen pa caminar", "intent": "sintoma", "especialidad": "podología", "axis": "runon", "group": "sintomas"}
+{"input": "tengo una uña encarnada en el dedo gordo", "intent": "sintoma", "especialidad": "podología", "axis": "typo", "group": "sintomas"}
+{"input": "me duele una muela hace dias no aguanto", "intent": "sintoma", "especialidad": "odontología", "axis": "rural", "group": "sintomas"}
+{"input": "se me kebro un diente comiendo", "intent": "sintoma", "especialidad": "odontología", "axis": "fonetico", "group": "sintomas"}
+{"input": "tengo la encia sangrando cuando me lavo los dientes", "intent": "sintoma", "especialidad": "odontología", "axis": "runon", "group": "sintomas"}
+{"input": "mi hijo tartamudea harto pa hablar", "intent": "sintoma", "especialidad": "fonoaudiología", "axis": "rural", "group": "sintomas"}
+{"input": "me sube y baja la presion me siento mal", "intent": "sintoma", "especialidad": "cardiología", "axis": "runon", "group": "sintomas"}
+{"input": "tengo palpitasiones el corason me late fuerte", "intent": "sintoma", "especialidad": "cardiología", "axis": "fonetico", "group": "sintomas"}
+{"input": "ando con diarrea hace 3 dia y nauseas", "intent": "sintoma", "especialidad": "gastroenterología", "axis": "rural", "group": "sintomas"}
+{"input": "me duele la barriga del lado derecho abajo", "intent": "sintoma", "especialidad": "medicina general", "axis": "rural", "group": "sintomas"}
+{"input": "toi muy gorda nesesito bajar de peso ayuda", "intent": "sintoma", "especialidad": "nutrición", "axis": "fonetico", "group": "sintomas"}
+{"input": "tengo colesterol alto y trigliseridos", "intent": "sintoma", "especialidad": "nutrición", "axis": "fonetico", "group": "sintomas"}
+{"input": "se me caen arto el pelo y ando sin fuersa", "intent": "sintoma", "especialidad": "medicina general", "axis": "fonetico", "group": "sintomas"}
+{"input": "me duele el cuello no puedo girar la cabeza", "intent": "sintoma", "especialidad": "kinesiología", "axis": "runon", "group": "sintomas"}
+{"input": "tengo un hormigeo en el braso hace rato", "intent": "sintoma", "especialidad": "medicina general", "axis": "fonetico", "group": "sintomas"}
+{"input": "ando con fiebre y dolor de cuerpo too", "intent": "sintoma", "especialidad": "medicina general", "axis": "rural", "group": "sintomas"}
+{"input": "me salio un bulto en el cuello no se ke es", "intent": "sintoma", "especialidad": "medicina general", "axis": "fonetico", "group": "sintomas"}
+{"input": "tengo flujo raro abajo con mal olor", "intent": "sintoma", "especialidad": "ginecología", "axis": "rural", "group": "sintomas"}
+{"input": "sangro despues de estar con mi marido", "intent": "sintoma", "especialidad": "ginecología", "axis": "rural", "group": "sintomas"}
+{"input": "ando con bochornos y no me llega la regla hace meses", "intent": "sintoma", "especialidad": "ginecología", "axis": "runon", "group": "sintomas"}
+{"input": "siento q el bb no se mueve toi de 7 meses", "intent": "sintoma", "especialidad": "matrona", "axis": "abreviacion", "group": "sintomas"}
+{"input": "me arden los ojos y veo borroso", "intent": "sintoma", "especialidad": "medicina general", "axis": "rural", "group": "sintomas"}
+{"input": "tengo la garganta inflamada no puedo tragar", "intent": "sintoma", "especialidad": "otorrinolaringología", "axis": "runon", "group": "sintomas"}
+{"input": "ronco mucho en la noche y dejo de respirar dice mi señora", "intent": "sintoma", "especialidad": "otorrinolaringología", "axis": "rural", "group": "sintomas"}
+{"input": "se me tapa la nariz too el tiempo y estornudo", "intent": "sintoma", "especialidad": "otorrinolaringología", "axis": "rural", "group": "sintomas"}
+{"input": "me duele la planta del pie al pisar en la mañana", "intent": "sintoma", "especialidad": "podología", "axis": "runon", "group": "sintomas"}
+{"input": "tengo callos y juanetes me molestan caleta", "intent": "sintoma", "especialidad": "podología", "axis": "rural", "group": "sintomas"}
+{"input": "ando con vomitos y no retengo ni el agua", "intent": "sintoma", "especialidad": "gastroenterología", "axis": "rural", "group": "sintomas"}
+{"input": "me da puntada en el costado al respirar ondo", "intent": "sintoma", "especialidad": "medicina general", "axis": "fonetico", "group": "sintomas"}
+{"input": "toi muy nervioso ando con crisis de angustia", "intent": "sintoma", "especialidad": "psicología", "axis": "rural", "group": "sintomas"}
+{"input": "mi hija no qiere comer y baja de peso me preocupa", "intent": "sintoma", "especialidad": "nutrición", "axis": "runon", "group": "sintomas"}
+{"input": "me duele la espalda entera ando encorvao", "intent": "sintoma", "especialidad": "kinesiología", "axis": "rural", "group": "sintomas"}
+{"input": "se me hinchan las manos en la mañana y duelen", "intent": "sintoma", "especialidad": "medicina general", "axis": "runon", "group": "sintomas"}
+{"input": "tengo varices en las piernas me arden harto", "intent": "sintoma", "especialidad": "medicina general", "axis": "rural", "group": "sintomas"}
+{"input": "me late fuerte el corazon cuando me acuesto", "intent": "sintoma", "especialidad": "cardiología", "axis": "runon", "group": "sintomas"}
+{"input": "ando cansada too el dia sin animo de nada", "intent": "sintoma", "especialidad": "medicina general", "axis": "rural", "group": "sintomas"}
+{"input": "me duele el estomago como ardor en ayunas", "intent": "sintoma", "especialidad": "gastroenterología", "axis": "rural", "group": "sintomas"}
+{"input": "el viejo no escucha la tele tengo q gritarle", "intent": "sintoma", "especialidad": "otorrinolaringología", "axis": "rural", "group": "sintomas"}
+{"input": "se me cae la baba y hablo enredao despues del derrame", "intent": "sintoma", "especialidad": "fonoaudiología", "axis": "rural", "group": "sintomas"}
+{"input": "mi nieta de 5 no pronuncia bien las palabras", "intent": "sintoma", "especialidad": "fonoaudiología", "axis": "runon", "group": "sintomas"}
+{"input": "me duele al hacer pipi y orino seguido", "intent": "sintoma", "especialidad": "medicina general", "axis": "rural", "group": "sintomas"}
+{"input": "tengo manchas en la piel q me pican", "intent": "sintoma", "especialidad": "medicina general", "axis": "typo", "group": "sintomas"}
+{"input": "ando con dolor de muela y me incho la cara", "intent": "sintoma", "especialidad": "odontología", "axis": "fonetico", "group": "sintomas"}
+{"input": "se me mueve un diente y me sangra la encia", "intent": "sintoma", "especialidad": "odontología", "axis": "runon", "group": "sintomas"}
+{"input": "qiero enderesarme los dientes los tengo chuecos", "intent": "sintoma", "especialidad": "ortodoncia", "axis": "fonetico", "group": "sintomas"}
+{"input": "me duele un diente q me hisieron tratamiento de conducto", "intent": "sintoma", "especialidad": "endodoncia", "axis": "runon", "group": "sintomas"}
+{"input": "ando con acidez y eructos toa la noche", "intent": "sintoma", "especialidad": "gastroenterología", "axis": "rural", "group": "sintomas"}
+{"input": "me sale sangre cuando voy al baño a obrar", "intent": "sintoma", "especialidad": "gastroenterología", "axis": "rural", "group": "sintomas"}
+{"input": "tengo dolor de cintura q baja a la pierna", "intent": "sintoma", "especialidad": "kinesiología", "axis": "runon", "group": "sintomas"}
+{"input": "se me duermen los pies en la noche y hormiguean", "intent": "sintoma", "especialidad": "medicina general", "axis": "runon", "group": "sintomas"}
+{"input": "ando bajoneada hace meses no le encuentro sentido", "intent": "sintoma", "especialidad": "psicología", "axis": "rural", "group": "sintomas"}
+{"input": "tengo un dolor raro en el pecho cuando me enojo", "intent": "sintoma", "especialidad": "cardiología", "axis": "runon", "group": "sintomas"}
+{"input": "me da tos seca en la noche y no me deja dormir", "intent": "sintoma", "especialidad": "medicina general", "axis": "runon", "group": "sintomas"}
+{"input": "qiero un eco pa ver el bebe toi embarasada", "intent": "agendar", "especialidad": "ginecología", "axis": "fonetico", "group": "sintomas"}
+{"input": "nesesito una ecografia de la guata me duele", "intent": "sintoma", "especialidad": "ecografía", "axis": "fonetico", "group": "sintomas"}
+{"input": "me duele aca abajo del lado izqierdo de la pelvis", "intent": "sintoma", "especialidad": "ginecología", "axis": "typo", "group": "sintomas"}
+{"input": "ando con jaqueca q me dan ganas de vomitar", "intent": "sintoma", "especialidad": "medicina general", "axis": "rural", "group": "sintomas"}
+{"input": "se me hincho una pierna sola y esta caliente", "intent": "sintoma", "especialidad": "medicina general", "axis": "runon", "group": "sintomas"}
+{"input": "me cuesta respirar en las noches me ahogo", "intent": "sintoma", "especialidad": "cardiología", "axis": "rural", "group": "sintomas"}
+{"input": "tengo un zumbido en el oido q no se me kita", "intent": "sintoma", "especialidad": "otorrinolaringología", "axis": "fonetico", "group": "sintomas"}
+{"input": "mi señora anda con dolor en los huesos toa", "intent": "sintoma", "especialidad": "medicina general", "axis": "rural", "group": "sintomas"}
+{"input": "me caigo seguido se me doblan las piernas", "intent": "sintoma", "especialidad": "kinesiología", "axis": "rural", "group": "sintomas"}
+{"input": "toi pasada de peso y con la presion al palo", "intent": "sintoma", "especialidad": "nutrición", "axis": "rural", "group": "sintomas"}
+{"input": "me duele la guata arriba como ardor fuerte", "intent": "sintoma", "especialidad": "gastroenterología", "axis": "rural", "group": "sintomas"}
+{"input": "ando con mucha angustia y ataques de panico", "intent": "sintoma", "especialidad": "psicología", "axis": "typo", "group": "sintomas"}
+{"input": "me sangra la naris seguido sin motivo", "intent": "sintoma", "especialidad": "otorrinolaringología", "axis": "fonetico", "group": "sintomas"}
+{"input": "tengo hongos en las uñas de los pies estan amarillas", "intent": "sintoma", "especialidad": "podología", "axis": "runon", "group": "sintomas"}
+{"input": "me duele la mandibula al masticar y suena", "intent": "sintoma", "especialidad": "odontología", "axis": "runon", "group": "sintomas"}
+{"input": "ando con flujo y comezon abajo hace dias", "intent": "sintoma", "especialidad": "ginecología", "axis": "rural", "group": "sintomas"}
+{"input": "no mejor agendame con el kine porfa", "intent": "agendar", "especialidad": "kinesiología", "axis": "colision", "group": "colision-bait"}
+{"input": "ya no kiero cancelar dejala nomas la hora", "intent": "agendar", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "ok pero kiero ver mis horas primero antes de decidir", "intent": "ver_reservas", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "hay multa si cancelo la hora?", "intent": "info", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "kuanto antes ay q avisar pa cancelar", "intent": "info", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "kiero cancelar la ora del dentista", "intent": "cancelar", "especialidad": "odontología", "axis": "colision", "group": "colision-bait"}
+{"input": "cuanto sale el kine", "intent": "info", "especialidad": "kinesiología", "axis": "colision", "group": "colision-bait"}
+{"input": "buenas a q ora habren", "intent": "info", "especialidad": null, "axis": "fonetico", "group": "colision-bait"}
+{"input": "ola kiero ora con cardiologo", "intent": "agendar", "especialidad": "cardiología", "axis": "colision", "group": "colision-bait"}
+{"input": "si po kiero agendar con la matrona", "intent": "agendar", "especialidad": "matrona", "axis": "colision", "group": "colision-bait"}
+{"input": "no gracias eso era todo ya tengo mi hora", "intent": "ver_reservas", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "grasias pero todabia kiero anular la del lunes", "intent": "cancelar", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "oiga si se puede cambiar la ora mejor cancelela", "intent": "cancelar", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "ok ya entendi pero igual kiero hora con nutrisionista", "intent": "agendar", "especialidad": "nutrición", "axis": "colision", "group": "colision-bait"}
+{"input": "ase falta pagar pa agendar o se paga aya?", "intent": "info", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "menu no espere kiero hablar con una persona", "intent": "humano", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "hola buenas tarde donde kedan ustede", "intent": "info", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "no es eso kiero saber si atiende el sicologo", "intent": "info", "especialidad": "psicología", "axis": "colision", "group": "colision-bait"}
+{"input": "si si pero a q ora atiende el dotor de corazon", "intent": "info", "especialidad": "cardiología", "axis": "colision", "group": "colision-bait"}
+{"input": "ya bueno entonse cancele toda mis ora porfa", "intent": "cancelar", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "kiero ber kuando tengo la ora ke saque", "intent": "ver_reservas", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "ola necesito saber el balor de la consulta del oido", "intent": "info", "especialidad": "otorrinolaringología", "axis": "colision", "group": "colision-bait"}
+{"input": "no anule nada solo keria preguntar el precio", "intent": "info", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "gracias pero mejor agendeme pal jueve con el guata", "intent": "agendar", "especialidad": "gastroenterología", "axis": "colision", "group": "colision-bait"}
+{"input": "ok entonse no boy a ir cancele la del miercole", "intent": "cancelar", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "hola tienen hora pa la guagua con fonoaudiologa", "intent": "agendar", "especialidad": "fonoaudiología", "axis": "colision", "group": "colision-bait"}
+{"input": "si po pero antes muestreme las ora ke tengo", "intent": "ver_reservas", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "kiero menu no mejor agendeme nutricion al tiro", "intent": "agendar", "especialidad": "nutrición", "axis": "colision", "group": "colision-bait"}
+{"input": "se puede cancelar por aki o ay q llamar?", "intent": "info", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "ola atiende ginecologa los sabado?", "intent": "info", "especialidad": "ginecología", "axis": "colision", "group": "colision-bait"}
+{"input": "no kiero cancelar kiero CAMBIAR la ora a otro dia", "intent": "agendar", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "ya ya pero el podologo cuanto cobra", "intent": "info", "especialidad": "podología", "axis": "colision", "group": "colision-bait"}
+{"input": "buenos dia kiero una hora con el traumatologo de la rodilla", "intent": "agendar", "especialidad": "medicina general", "axis": "colision", "group": "colision-bait"}
+{"input": "grasias igual borreme la ora ke no boy a poder", "intent": "cancelar", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "ola kisiera saber si me toca pagar si cancelo tarde", "intent": "info", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "si claro pero primero deme con alguien ke me atienda", "intent": "humano", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "no no era eso a q hora cierran hoi", "intent": "info", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "ok agendame la endodoncia ke me duele la muela", "intent": "agendar", "especialidad": "endodoncia", "axis": "colision", "group": "colision-bait"}
+{"input": "kiero anular pero tengo dos ora cual saco?", "intent": "cancelar", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "ola se puede agendar ecografia abdominal", "intent": "agendar", "especialidad": "ecografía", "axis": "colision", "group": "colision-bait"}
+{"input": "gracia por la info pero aun asi kiero la ora del kine", "intent": "agendar", "especialidad": "kinesiología", "axis": "colision", "group": "colision-bait"}
+{"input": "si pero ke precio tiene poner los frenillos", "intent": "info", "especialidad": "ortodoncia", "axis": "colision", "group": "colision-bait"}
+{"input": "no mejor no agende nada lo boy a pensar grasias", "intent": "info", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "oye y si cancelo me debuelven la plata?", "intent": "info", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "ola buenas kiero hora con medico general", "intent": "agendar", "especialidad": "medicina general", "axis": "colision", "group": "colision-bait"}
+{"input": "ya po dejemos la ora asi no la cancele", "intent": "agendar", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "menu menu kiero saber que especialidade tienen", "intent": "info", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "no espera kiero ablar con una secretaria de berda", "intent": "humano", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "si gracias ahora muestrame mis citas pendiente", "intent": "ver_reservas", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "kiero cancelar la del cardiologo pero dejar la del kine", "intent": "cancelar", "especialidad": "cardiología", "axis": "colision", "group": "colision-bait"}
+{"input": "ola atienden niño la pediatra digo el medico general", "intent": "info", "especialidad": "medicina general", "axis": "colision", "group": "colision-bait"}
+{"input": "ok pero cuanto cuesta una hora con la matrona", "intent": "info", "especialidad": "matrona", "axis": "colision", "group": "colision-bait"}
+{"input": "no kiero menu kiero ke me atienda una persona", "intent": "humano", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "si po agendeme con el dotor de los pulmone pa la tos", "intent": "agendar", "especialidad": "medicina general", "axis": "colision", "group": "colision-bait"}
+{"input": "gracias pero cancele igual la ora del sabado", "intent": "cancelar", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "hola asta q hora atienden el dia sabado", "intent": "info", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "ya ke kiero ber si todabia tengo la ora del dentista", "intent": "ver_reservas", "especialidad": "odontología", "axis": "colision", "group": "colision-bait"}
+{"input": "no es pa cancelar es pa preguntar si atiende fonsa", "intent": "info", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "ola kiero saber el balor de la limpiesa dental", "intent": "info", "especialidad": "odontología", "axis": "colision", "group": "colision-bait"}
+{"input": "si si dejela ya no la cancelo perdon", "intent": "agendar", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "kiero ora urgente con el sicologo me siento mal", "intent": "agendar", "especialidad": "psicología", "axis": "colision", "group": "colision-bait"}
+{"input": "ola se cobra si uno no llega a la ora?", "intent": "info", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "ya ok entonse cancelame todas la ora ke tengo grasias", "intent": "cancelar", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "no kiero info kiero agendar de una con podologia", "intent": "agendar", "especialidad": "podología", "axis": "colision", "group": "colision-bait"}
+{"input": "buenas necesito ber kuando me toca el control con matrona", "intent": "ver_reservas", "especialidad": "matrona", "axis": "colision", "group": "colision-bait"}
+{"input": "gracia igual a q numero llamo si kiero cancelar despue", "intent": "info", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "si claro pero el otorrino tiene ora esta semana?", "intent": "agendar", "especialidad": "otorrinolaringología", "axis": "colision", "group": "colision-bait"}
+{"input": "ola no me cancelaron la ora? la sigo teniendo?", "intent": "ver_reservas", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "ok ya pero kiero ke me tome una ecografia de la guata", "intent": "agendar", "especialidad": "ecografía", "axis": "colision", "group": "colision-bait"}
+{"input": "no gracias solo era saber si atienden gastro", "intent": "info", "especialidad": "gastroenterología", "axis": "colision", "group": "colision-bait"}
+{"input": "ya po agendeme la muela ke me tienen ke sacar el nervio", "intent": "agendar", "especialidad": "endodoncia", "axis": "colision", "group": "colision-bait"}
+{"input": "hola buenas q dia atiende el nutrisionista", "intent": "info", "especialidad": "nutrición", "axis": "colision", "group": "colision-bait"}
+{"input": "si kiero pero antes deme con una persona porfabor", "intent": "humano", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "no anules nada solo dime el horario de atencion", "intent": "info", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "kiero kancelar la ora kon la kine de la espalda", "intent": "cancelar", "especialidad": "kinesiología", "axis": "fonetico", "group": "colision-bait"}
+{"input": "ola y cuanto sale ponerse los brakets", "intent": "info", "especialidad": "ortodoncia", "axis": "colision", "group": "colision-bait"}
+{"input": "ya gracias pero todabia kiero mi hora pal control", "intent": "agendar", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "oiga el doctor del corazon cuanto cobra la consulta", "intent": "info", "especialidad": "cardiología", "axis": "colision", "group": "colision-bait"}
+{"input": "no es agendar es ke kiero ber mis ora ya echas", "intent": "ver_reservas", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "ok entiendo igual cancele la ora del otorrino grasia", "intent": "cancelar", "especialidad": "otorrinolaringología", "axis": "colision", "group": "colision-bait"}
+{"input": "hola atienden por fonasa pa la consulta general?", "intent": "info", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "si po dejela asi no la mueva ni la cancele", "intent": "agendar", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "kiero saber si puedo cancelar y bolber a agendar otro dia", "intent": "info", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "ola necesito una persona ke me ayude no el robot", "intent": "humano", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "ya kiero agendar kon la dotora de mujere", "intent": "agendar", "especialidad": "ginecología", "axis": "colision", "group": "colision-bait"}
+{"input": "no gracias mejor muestrame el menu de opcione", "intent": "menu", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "si si la del jueve cancelela ke no boi a poder ir", "intent": "cancelar", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "buenas tarde a q ora puedo ir a tomarme los exsamene", "intent": "info", "especialidad": null, "axis": "colision", "group": "colision-bait"}
+{"input": "ok pero el kine ase a domisilio o ay ke ir aya", "intent": "info", "especialidad": "kinesiología", "axis": "colision", "group": "colision-bait"}
+{"input": "ya gracias solo confirmo q tengo la ora el biernes cierto", "intent": "ver_reservas", "especialidad": null, "axis": "colision", "group": "colision-bait"}

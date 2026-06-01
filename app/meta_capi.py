@@ -131,10 +131,13 @@ async def send_event(
     last_name: str | None = None,
     fbclid: str | None = None,
     fbclid_ts: int | None = None,
+    ctwa_clid: str | None = None,
+    ctwa_clid_ts: int | None = None,
     fbp: str | None = None,
     value: float | None = None,
     currency: str = "CLP",
     event_id: str | None = None,
+    event_time: int | None = None,
     custom_data: dict | None = None,
 ) -> dict[str, Any]:
     """Envía un evento server-side a Meta CAPI. Async, retry 3x con backoff.
@@ -184,6 +187,15 @@ async def send_event(
         if h:
             user_data["external_id"] = [h]
     fbc = _build_fbc(fbclid, fbclid_ts)
+    if not fbc and ctwa_clid:
+        # ctwa_clid es el ID nativo de Click-to-WhatsApp ads.
+        # Meta lo acepta como fbc con el mismo formato que fbclid.
+        # Solo se usa si no viene fbclid (no pisar atribución más precisa).
+        # ctwa_clid_ts debe estar en ms (epoch*1000); si no viene, cae a now.
+        # En backfill es el ts real del clic → evita que el fbc quede con
+        # timestamp posterior al event_time (Meta descarta esa atribución).
+        _fbc_ts_ms = ctwa_clid_ts if ctwa_clid_ts is not None else int(time.time() * 1000)
+        fbc = f"fb.1.{_fbc_ts_ms}.{ctwa_clid}"
     if fbc:
         user_data["fbc"] = fbc
     if fbp:
@@ -192,7 +204,7 @@ async def send_event(
     # Construir evento
     event: dict[str, Any] = {
         "event_name": event_name,
-        "event_time": int(time.time()),
+        "event_time": event_time if event_time is not None else int(time.time()),
         "event_id": eid,
         "action_source": "business_messaging",
         "messaging_channel": "whatsapp",

@@ -4444,6 +4444,64 @@ def get_segmented_phones(tags: list[str] | None = None,
         return [{"phone": p, "nombre": n} for p, n in phones_map.items()]
 
 
+def _normalize_phone_e164(phone: str) -> str | None:
+    """Normaliza un teléfono al formato canónico 569XXXXXXXX (sin +).
+
+    Idéntico al normalizador de custom_audiences_sync para que los sets de
+    consent crucen 1:1 con los teléfonos que vienen de BI (bi.dim_paciente).
+    """
+    if not phone:
+        return None
+    digits = "".join(c for c in str(phone) if c.isdigit())
+    if not digits:
+        return None
+    if digits.startswith("56") and len(digits) >= 11:
+        return digits[:11]
+    if digits.startswith("9") and len(digits) == 9:
+        return "56" + digits
+    if len(digits) == 8:
+        return "569" + digits
+    return digits if len(digits) >= 8 else None
+
+
+def get_email_consent_sets() -> dict:
+    """Sets normalizados (569XXXXXXXX) para gating de email marketing.
+
+    Devuelve {'consented': set, 'opted_out': set} cruzables con BI por teléfono.
+
+    Capas de consentimiento (Ley 21.719 — dato sensible de salud):
+      - opted_out: NUNCA contactables. Tag 'marketing_opt_out', consent revocado
+        o declinado, o presencia en la lista dura de winback (bi.opt_outs_marketing
+        replicada vía winback.phone_in_opt_out).
+      - consented: opt-in de marketing vigente (privacy_consents.status='accepted'
+        sin revocar). Es el universo legalmente contactable; el opt-in específico
+        de canal email se confirma con doble opt-in antes de cualquier envío.
+    """
+    consented: set[str] = set()
+    opted_out: set[str] = set()
+    with _conn() as conn:
+        for r in conn.execute(
+            "SELECT phone FROM contact_tags WHERE tag='marketing_opt_out'"
+        ).fetchall():
+            n = _normalize_phone_e164(r["phone"])
+            if n:
+                opted_out.add(n)
+        for r in conn.execute(
+            "SELECT phone, status, revoked_at FROM privacy_consents"
+        ).fetchall():
+            n = _normalize_phone_e164(r["phone"])
+            if not n:
+                continue
+            if r["revoked_at"] or r["status"] == "declined":
+                opted_out.add(n)
+            elif r["status"] == "accepted":
+                consented.add(n)
+    # Nota: la lista dura bi.opt_outs_marketing se excluye en el propio SQL de BI
+    # (email_segments._resolve_bi), donde el cruce es server-side y eficiente.
+    consented -= opted_out  # opt-out siempre gana
+    return {"consented": consented, "opted_out": opted_out}
+
+
 def get_fidelizacion_trends(semanas: int = 4) -> list[dict]:
     """Retorna tendencias semanales de fidelización."""
     with _conn() as conn:
@@ -4993,7 +5051,7 @@ def save_meta_referral(phone: str, referral_obj: dict, canal: str = "whatsapp") 
     })
 
 
-def get_meta_referral_fresh(phone: str, ttl_horas: int = 24) -> dict | None:
+def get_meta_referral_fresh(phone: str, ttl_horas: int = 168) -> dict | None:
     """Retorna el referral si tiene menos de `ttl_horas` de antigüedad.
 
     Primero intenta desde session data (fast path, sin DB).

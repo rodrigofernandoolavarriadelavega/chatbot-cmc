@@ -90,6 +90,17 @@ ECOGRAFIA_ROUTING: dict[str, dict] = {
             "prenatal",
             "eco prenatal",
             "ecografia prenatal",
+            # Embarazo coloquial — solo enrutan porque el GATE ya exigió contexto
+            # ecográfico (_tiene_contexto_eco), así "eco pa ver el bebe" → Rejón
+            # pero "control de embarazo" (sin eco) sigue yendo a matrona.
+            "embaraz",        # embarazo, embarazada, embarasada(_norm sin tilde no aplica aquí)
+            "embaras",        # variante fonética "embarasada"
+            "ver el bebe",
+            "ver al bebe",
+            "ver el bb",
+            "la guagua",
+            "mi guagua",
+            "la wawa",
         ],
         "mensaje": (
             "La ecografía {tipo} la realiza el Dr. Tirso Rejón (Ginecólogo) en el CMC, "
@@ -269,6 +280,41 @@ _SOLO_ECO_KEYWORDS = frozenset({
     "ecografista",
 })
 
+# ── GATE de contexto ecográfico ──────────────────────────────────────────────
+# Los keywords de ECOGRAFIA_ROUTING incluyen partes del cuerpo desnudas
+# ("rodilla", "pie", "mano", "hombro", "tiroides", "prostata", "embarazo", ...)
+# que sirven para elegir EL TIPO una vez que ya sabemos que es una ecografía.
+# Usados como gatillo por sí solos, secuestran cualquier mensaje que nombre una
+# parte del cuerpo ("me duele la rodilla" → ecografía). Bug sistémico.
+#
+# Este gate exige que el texto contenga una raíz ecográfica REAL antes de dejar
+# que las partes del cuerpo enruten. Evita falsos positivos como "kine pa mi
+# rodilla", "podóloga, me duelen los pies", "limpieza de dientes".
+#
+# Nota sobre "eco": solo la palabra suelta cuenta (\beco\b), para no matchear
+# "economico"/"ecologia". Las formas "eco abdominal", "eco de rodilla",
+# "eco al corazon" escriben "eco" como token separado, así que entran igual.
+import re as _re_eco
+_ECO_CONTEXT_RE = _re_eco.compile(
+    r"\b(?:"
+    r"eco|"                         # token suelto: "eco abdominal", "eco de rodilla"
+    r"ecograf\w*|"                  # ecografia, ecografias, ecografista, ecografico
+    r"ecocardio\w*|"                # ecocardiograma, ecocardiografia
+    r"ecotomograf\w*|ecotomo\w*|"   # ecotomografia, ecotomografo, ecotomo
+    r"ecodoppler|"
+    r"ultrasonido\w*|"
+    r"doppler|"
+    r"transvaginal|transvajinal|intravaginal|intravajinal|endovaginal"
+    r")\b"
+)
+
+
+def _tiene_contexto_eco(txt_norm: str) -> bool:
+    """True si el texto contiene una raíz ecográfica real (no solo una parte
+    del cuerpo). Es la precondición para que route_ecografia enrute por órgano."""
+    return bool(_ECO_CONTEXT_RE.search(txt_norm))
+
+
 # Mensaje que el bot envía cuando el paciente solo dice "ecografía"
 MSG_PREGUNTAR_TIPO = (
     "¿De qué tipo es la ecografía? Por ejemplo:\n\n"
@@ -297,6 +343,11 @@ def route_ecografia(texto: str) -> dict | None:
 
     txt_norm = _norm(texto.strip())
 
+    # GATE: sin contexto ecográfico real, las partes del cuerpo NO enrutan.
+    # "me duele la rodilla" / "podóloga, los pies" / "limpieza de dientes" → None.
+    if not _tiene_contexto_eco(txt_norm):
+        return None
+
     # Prioridad fija: ginecología primero, luego cardiología, luego general
     for key in ("ginecologia_rejon", "cardiologia_millan_waitlist", "ecografia_general_pardo"):
         routing = ECOGRAFIA_ROUTING[key]
@@ -321,18 +372,7 @@ def texto_menciona_ecografia(texto: str) -> bool:
     if not texto:
         return False
     txt_norm = _norm(texto.strip())
-    # Palabras cortas con word-boundary para no contaminar "económico", "ecología"
-    import re
-    _SHORT = {"eco", "orl"}
-    for kw in _SOLO_ECO_KEYWORDS:
-        if len(kw) <= 4:
-            if re.search(r"\b" + re.escape(kw) + r"\b", txt_norm):
-                return True
-        elif kw in txt_norm:
-            return True
-    # Verificar keywords específicos de todos los grupos
-    for routing in ECOGRAFIA_ROUTING.values():
-        for kw in routing["keywords"]:
-            if _norm(kw) in txt_norm:
-                return True
-    return False
+    # Solo cuenta como "menciona ecografía" si hay una raíz ecográfica real.
+    # Las partes del cuerpo desnudas (rodilla, pie, tiroides, embarazo...) NO
+    # bastan: son qualifiers de tipo, no gatillos. Ver _ECO_CONTEXT_RE.
+    return _tiene_contexto_eco(txt_norm)

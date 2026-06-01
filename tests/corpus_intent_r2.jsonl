@@ -1,0 +1,573 @@
+{"input": "HOLA!!! 😡 kiero hora dentista YA", "intent": "agendar", "especialidad": "odontología", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "necesito al kine 🙏🙏", "intent": "agendar", "especialidad": "kinesiología", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "cancelar?? 😭 no puedo ir", "intent": "cancelar", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "mis horas 📅???", "intent": "ver_reservas", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "BUENAS!!! quiero hora con el cardiologo ❤️‍🩹 me late raro el corazon", "intent": "agendar", "especialidad": "cardiología", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "oeee 😤 nesecito doctor para mi guata duele harto", "intent": "sintoma", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "hola 🤰 kiero ver a la matrona porfa", "intent": "agendar", "especialidad": "matrona", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "QUIERO HABLAR CON ALGUIEN DE VERDAD 😠😠 no un robot", "intent": "humano", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "hora pal sicologo 🧠 ando muy bajoneao", "intent": "agendar", "especialidad": "psicología", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "cuanto sale la consulta del nutri?? 🥗💰", "intent": "info", "especialidad": "nutrición", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "😷😷 me duele la garganta nesecito otorrino", "intent": "agendar", "especialidad": "otorrinolaringología", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "hola tengo hora hoy?? 🤔 no me acuerdo", "intent": "ver_reservas", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "AYUDAAA 🆘 mi mama esta con presion alta q hago", "intent": "sintoma", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "kiero anular mi hora del lunes 🙅‍♀️", "intent": "cancelar", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "el ginecologo atiende los sabados?? 🗓️", "intent": "info", "especialidad": "ginecología", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "necesito hora urgenteee 🚨🚨🚨 el guagua tiene fiebre", "intent": "agendar", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "hola 👋 menu porfa", "intent": "menu", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "kiero pastilla pal dolor de cabeza 💊 sirve el paracetamol??", "intent": "consulta_farmaco", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "ME PUEDEN AYUDAR CON UNA HORA PAL DOCTOR GENERAL 🙏🏼", "intent": "agendar", "especialidad": "medicina general", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "podologo 🦶 tengo las uñas malas", "intent": "agendar", "especialidad": "podología", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "😩 me cai y me duele la rodilla nesecito traumatologo", "intent": "agendar", "especialidad": "medicina general", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "quiero ver q horas tengo agendadas 📋✨", "intent": "ver_reservas", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "BUENAS TARDES!! 😊 atienden ecografia??", "intent": "info", "especialidad": "ecografía", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "no voy a poder ir mañana 😔 cancelen porfa", "intent": "cancelar", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "hola kiero hora fonoaudiologo 🗣️ mi hijo no habla bien", "intent": "agendar", "especialidad": "fonoaudiología", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "😡😡😡 LLEVO RATO ESPERANDO QUIERO PERSONA", "intent": "humano", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "tienen ortodoncia?? 🦷 los frenillos pa mi hija", "intent": "info", "especialidad": "ortodoncia", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "me arde al hacer pipi 😖 q sera nesecito doctor", "intent": "sintoma", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "hola 🤧 estoy resfria kiero algo pa la tos", "intent": "consulta_farmaco", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "agenda con la matrona 🤱 control de embarazo", "intent": "agendar", "especialidad": "matrona", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "DONDE QUEDAN USTEDES?? 📍🚗", "intent": "info", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "kiero saber si tengo hora pa el doctor 🩺❓", "intent": "ver_reservas", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "😴 no duermo hace dias kiero ver al sicologo", "intent": "agendar", "especialidad": "psicología", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "hola!!! 🥺 me podrian cambiar la hora pa otro dia", "intent": "agendar", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "el endodoncista hace tratamiento de conducto?? 🦷⚡", "intent": "info", "especialidad": "endodoncia", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "NESECITO HORA GASTRO 🤢 vomito todo lo q como", "intent": "agendar", "especialidad": "gastroenterología", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "buenas 😃 quiero el menu de opciones", "intent": "menu", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "me duele el oido 👂😣 nesecito al otorrino", "intent": "agendar", "especialidad": "otorrinolaringología", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "hola kiero pa control de presion 🫀 con el cardiologo", "intent": "agendar", "especialidad": "cardiología", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "😭😭 cancelen TODAS mis horas no puedo seguir", "intent": "cancelar", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "kiero bajar de peso 🏃‍♀️🥦 hora con nutricionista", "intent": "agendar", "especialidad": "nutrición", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "ATIENDEN HOY?? ⏰ a q hora cierran", "intent": "info", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "hola 💆‍♀️ kiero hora kinesiologia me duele la espalda", "intent": "agendar", "especialidad": "kinesiología", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "puedo tomar ibuprofeno con el remedio de la presion?? 💊🫀", "intent": "consulta_farmaco", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "oiga 😤 kiero hablar con una recepcionista de verdad", "intent": "humano", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "hola kiero limpieza dental 🪥😁", "intent": "agendar", "especialidad": "odontología", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "q horas me quedan?? 📆 las del dentista", "intent": "ver_reservas", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "😰 me sale sangre al toser q hago doctor", "intent": "sintoma", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "hola 🤰💕 control con ginecologo porfaaa", "intent": "agendar", "especialidad": "ginecología", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "NO VOY A IR MAÑANA 🚫 borren la hora", "intent": "cancelar", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "cuanto cuesta sacar una muela?? 🦷💸", "intent": "info", "especialidad": "odontología", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "hola 🙋‍♂️ kiero hora medico general resfrio fuerte", "intent": "agendar", "especialidad": "medicina general", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "me duele mucho la guata 😫 nesecito gastro urgente", "intent": "agendar", "especialidad": "gastroenterología", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "hola atienden niños?? 👶❓ mi guagua tiene tos", "intent": "info", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "kiero ver mis citas 👀📲", "intent": "ver_reservas", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "😖 se me durmio el brazo y no se me pasa q sera", "intent": "sintoma", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "hola necesito ecografia abdominal 🤰🔍", "intent": "agendar", "especialidad": "ecografía", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "OPERADORA POR FAVOR 📞😠 no entiendo el robot", "intent": "humano", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "hola 🦶😣 me duelen los pies al caminar kiero podologo", "intent": "agendar", "especialidad": "podología", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "kiero anular y reagendar pa la otra semana 🔄", "intent": "cancelar", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "el sicologo atiende online?? 💻🧠", "intent": "info", "especialidad": "psicología", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "hola 😬 mi niño no pronuncia la R hora fono", "intent": "agendar", "especialidad": "fonoaudiología", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "puedo darle amoxicilina al niño?? 💊👦", "intent": "consulta_farmaco", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "menuuu 📋😅 me perdi", "intent": "menu", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "hola kiero ortodoncista pa ver brackets 🦷😬", "intent": "agendar", "especialidad": "ortodoncia", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "😭 se me rompio un diente kiero hora urgente dentista", "intent": "agendar", "especialidad": "odontología", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "a q hora es mi control de mañana?? ⏰📅", "intent": "ver_reservas", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "hola 🫀😟 mi papa tiene el corazon acelerado q hacemos", "intent": "sintoma", "especialidad": null, "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "BUENAS 🙏🙏 kiero saber valores de la matrona", "intent": "info", "especialidad": "matrona", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "hola kiero hora pal tratamiento de conducto 🦷⚡😖", "intent": "agendar", "especialidad": "endodoncia", "axis": "emoji", "group": "r2-emoji-puntuacion"}
+{"input": "este eh queria saber si tienen hora con el doctor para el lunes si es que se puede", "intent": "agendar", "especialidad": "medicina general", "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "ya po mira lo que pasa es que no voy a poder ir a mi hora de mañana asi que la quiero cancelar", "intent": "cancelar", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "oiga señorita disculpe usted me puede dar hora con la matrona porfa", "intent": "agendar", "especialidad": "matrona", "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "aloo si mire eh es que necesito saber cuando tengo mi hora que no me acuerdo bien", "intent": "ver_reservas", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "buenos dias eh queria consultar cuanto sale la consulta con el cardiologo", "intent": "info", "especialidad": "cardiología", "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "si hola eh es que mi guagua tiene como una tos que no se le quita y queria una hora", "intent": "agendar", "especialidad": "medicina general", "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "oiga y ustedes atienden los sabados o no porque yo trabajo entre semana", "intent": "info", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "ya mire necesito hablar con una persona de verdad no con la maquina porfavor", "intent": "humano", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "este como era eh queria una hora pal dentista que me duele una muela hace dias", "intent": "agendar", "especialidad": "odontología", "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "hola si eh lo que pasa es que ando con la presion alta y queria ver al doctor del corazon", "intent": "agendar", "especialidad": "cardiología", "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "disculpe queria saber que especialidades tienen ahi en el centro medico", "intent": "menu", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "eh si po la cosa es que me llego un remedio que se llama losartan y no se pa que es", "intent": "consulta_farmaco", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "ya mire ando con un dolor de cabeza que no se me pasa con nada hace como tres dias", "intent": "sintoma", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "oiga señorita es que no voy a poder llegar a la hora del jueves la puedo correr", "intent": "cancelar", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "buenas eh queria hora con la matrona pa control de embarazo porfa", "intent": "agendar", "especialidad": "matrona", "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "si hola es que mi mama necesita ver al doctor pero ella no escucha bien por telefono", "intent": "agendar", "especialidad": "medicina general", "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "eh queria saber si ustedes hacen ecografias ahi en el centro", "intent": "info", "especialidad": "ecografía", "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "ya po necesito una hora con el nutricionista que tengo que bajar de peso", "intent": "agendar", "especialidad": "nutrición", "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "oiga y donde quedan ustedes que no se bien la direccion", "intent": "info", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "este eh me puede comunicar con alguien de la recepcion porfavor", "intent": "humano", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "hola si queria una hora pa la guagua con el doctor de niños", "intent": "agendar", "especialidad": "medicina general", "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "eh disculpe es que ando con la garganta mala y me duele el oido tambien", "intent": "sintoma", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "ya mire necesito ver al especialista de los oidos como se llama el otorrino ese", "intent": "agendar", "especialidad": "otorrinolaringología", "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "oiga señorita queria preguntar cuanto cuesta la hora con la psicologa", "intent": "info", "especialidad": "psicología", "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "si hola eh me duele mucho la espalda y no puedo ni agacharme bien", "intent": "sintoma", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "este como era queria hora con el kinesiologo pa la rodilla", "intent": "agendar", "especialidad": "kinesiología", "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "ya po la cosa es que quiero cancelar todas mis horas que me voy del pueblo", "intent": "cancelar", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "eh disculpe usted me podria decir que horas tengo agendadas que se me olvido", "intent": "ver_reservas", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "hola si necesito hora con la doctora de mujeres la ginecologa porfa", "intent": "agendar", "especialidad": "ginecología", "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "oiga es que mi hijo se cayo y le quedo el tobillo medio hinchado queria una hora", "intent": "agendar", "especialidad": "medicina general", "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "eh queria saber si el remedio este de la presion lo puedo tomar en la mañana", "intent": "consulta_farmaco", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "ya mire necesito hablar con una persona que esto de la maquina no me sirve", "intent": "humano", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "este eh queria una hora pa los dientes de mi hija que tiene chuecos los dientes", "intent": "agendar", "especialidad": "ortodoncia", "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "hola si es que ando con mucha pena ultimamente y no se me pasa queria ver alguien", "intent": "agendar", "especialidad": "psicología", "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "oiga señorita y atienden fonasa ustedes o solo particular", "intent": "info", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "eh disculpe queria saber a que hora abren en la mañana ustedes", "intent": "info", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "ya po necesito una hora pa que me saquen una muela que ya no aguanto el dolor", "intent": "agendar", "especialidad": "odontología", "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "si hola es que tengo una herida en el pie que no me cierra soy diabetico", "intent": "sintoma", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "este eh queria hora con el de los pies el podologo que tengo las uñas malas", "intent": "agendar", "especialidad": "podología", "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "oiga y cuanto sale sacarse una eco la ecografia esa del abdomen", "intent": "info", "especialidad": "ecografía", "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "hola si necesito cambiar mi hora del martes pa otro dia si se puede", "intent": "agendar", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "eh mire es que mi señora tiene mucha tos y le cuesta respirar en las noches", "intent": "sintoma", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "ya po queria una hora con el doctor que me derivo el de la posta el traumatologo", "intent": "agendar", "especialidad": "medicina general", "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "este eh me puede pasar con una persona de carne y hueso porfavor", "intent": "humano", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "oiga señorita queria saber que doctores tienen disponibles esta semana", "intent": "menu", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "si hola es que ando con acidez y me arde la guata despues de comer", "intent": "sintoma", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "eh queria hora con el especialista del estomago el gastro como se llama", "intent": "agendar", "especialidad": "gastroenterología", "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "ya mire necesito anular la hora de mi mama que no va a poder ir el viernes", "intent": "cancelar", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "este como era queria saber si me toca control con la matrona esta semana", "intent": "ver_reservas", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "hola si eh queria una hora pa mi niño que no habla bien todavia tiene cuatro años", "intent": "agendar", "especialidad": "fonoaudiología", "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "oiga y ustedes tienen estacionamiento ahi pa dejar el auto", "intent": "info", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "eh disculpe es que me dieron unas pastillas amoxicilina y queria saber cada cuanto", "intent": "consulta_farmaco", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "ya po necesito hora pa que me revisen un lunar que me salio raro en la espalda", "intent": "agendar", "especialidad": "medicina general", "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "si hola queria preguntar si todavia tienen mi hora pal dia veinte que reserve", "intent": "ver_reservas", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "este eh es que mi guagua no se ha hecho los controles y queria saber con quien", "intent": "agendar", "especialidad": "medicina general", "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "oiga señorita y cuanto demora en salir la hora con el cardiologo", "intent": "info", "especialidad": "cardiología", "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "eh mire ando con un mareo que me da cuando me paro de repente hace una semana", "intent": "sintoma", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "ya po queria una hora pa arreglarme un diente que se me partio comiendo", "intent": "agendar", "especialidad": "odontología", "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "este como era me puede comunicar con un funcionario porfavor no con el bot", "intent": "humano", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "hola si necesito hora con la ginecologa pa el papanicolau ese que toca todos los años", "intent": "agendar", "especialidad": "ginecología", "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "oiga y ustedes hacen tratamiento de conducto pa la muela esa que tengo mala", "intent": "info", "especialidad": "endodoncia", "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "eh disculpe queria saber cuales son las formas de pago que tienen ustedes", "intent": "info", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "ya mire es que el doctor me dijo que me hiciera la dieta y queria ver al nutri", "intent": "agendar", "especialidad": "nutrición", "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "si hola eh queria saber que horas hay disponibles pa cualquier dia esta semana", "intent": "agendar", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "este eh tengo una duda con un remedio que se llama metformina pa que es ese", "intent": "consulta_farmaco", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "oiga señorita es que me opere la rodilla y necesito las terapias esas de kine", "intent": "agendar", "especialidad": "kinesiología", "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "ya po queria cancelar no mejor mantener la hora dejela nomas no importa", "intent": "cancelar", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "hola si eh me gustaria saber todo lo que ofrecen ahi pa ver que me sirve", "intent": "menu", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "eh disculpe ando con un zumbido en el oido que no se me quita queria una hora", "intent": "agendar", "especialidad": "otorrinolaringología", "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "este como era queria saber si la hora de mi marido sigue pa el miercoles", "intent": "ver_reservas", "especialidad": null, "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "oiga y queria preguntar si atienden niños chicos pa el control de los dos años", "intent": "info", "especialidad": "medicina general", "axis": "voz", "group": "r2-voz-transcripcion"}
+{"input": "1", "intent": "agendar", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "2", "intent": "cancelar", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "3", "intent": "ver_reservas", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "4", "intent": "humano", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "opcion 1", "intent": "agendar", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "opcion 2", "intent": "cancelar", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "la opcion 3 porfa", "intent": "ver_reservas", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "quiero la 4", "intent": "humano", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "la numero 1", "intent": "agendar", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "marco el 2", "intent": "cancelar", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "quiero la 3 pa ver mis horas", "intent": "ver_reservas", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "tengo 2 horas cuál cancelo", "intent": "cancelar", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "tengo 3 reservas quiero verlas", "intent": "ver_reservas", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "hora pa el 15", "intent": "agendar", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "quiero hora pal 20 de este mes con el doctor", "intent": "agendar", "especialidad": "medicina general", "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "mi hijo de 8 años necesita doctor", "intent": "agendar", "especialidad": "medicina general", "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "tengo 65 años y me duele la rodilla quiero hora", "intent": "agendar", "especialidad": "medicina general", "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "necesito kine pa mi mama de 80 años", "intent": "agendar", "especialidad": "kinesiología", "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "mi guagua de 2 años tiene que ir al dentista", "intent": "agendar", "especialidad": "odontología", "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "hora cardiologo dia 10", "intent": "agendar", "especialidad": "cardiología", "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "quiero anular la hora del 5", "intent": "cancelar", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "cancelar mi hora del viernes 12", "intent": "cancelar", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "mi rut es 12345 nesecito hora", "intent": "agendar", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "soy el rut 9876543 quiero ver mis citas", "intent": "ver_reservas", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "rut 15.678 borrar la hora", "intent": "cancelar", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "necesito 2 horas una pa mi y otra pa mi señora", "intent": "agendar", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "agendar pal 3 de junio con la matrona", "intent": "agendar", "especialidad": "matrona", "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "hora con sicologo el 22", "intent": "agendar", "especialidad": "psicología", "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "quiero la 1 pero con nutricionista", "intent": "agendar", "especialidad": "nutrición", "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "5", "intent": "menu", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "0", "intent": "menu", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "opcion 9", "intent": "menu", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "ke significa la opcion 4", "intent": "info", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "cuanto sale la consulta tengo 70 años", "intent": "info", "especialidad": "medicina general", "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "1 hora con la fono pa mi nieto de 5", "intent": "agendar", "especialidad": "fonoaudiología", "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "tengo hora el 18 quiero confirmar si sigue", "intent": "ver_reservas", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "me duele el oido hace 3 dias", "intent": "sintoma", "especialidad": "otorrinolaringología", "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "llevo 4 dias con dolor de guata", "intent": "sintoma", "especialidad": "gastroenterología", "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "mi presion esta en 180 quiero ver doctor del corazon", "intent": "agendar", "especialidad": "cardiología", "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "necesito eco pal embarazo voy en la semana 12", "intent": "agendar", "especialidad": "ginecología", "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "hora podologa pa mis 2 pies que me duelen", "intent": "agendar", "especialidad": "podología", "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "quiero arreglar 1 muela con el dentista", "intent": "agendar", "especialidad": "odontología", "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "necesito endodoncia en la muela numero 6", "intent": "agendar", "especialidad": "endodoncia", "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "frenillos pa mi hija de 13", "intent": "agendar", "especialidad": "ortodoncia", "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "tengo cita el 25 con ginecologa quiero cancelar", "intent": "cancelar", "especialidad": "ginecología", "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "operame me cai y tengo el brazo malo hace 1 hora", "intent": "agendar", "especialidad": "medicina general", "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "ablar con alguien la opcion 4", "intent": "humano", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "kiero la 3", "intent": "ver_reservas", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "deme la 2 pa cancelar la del 8", "intent": "cancelar", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "mi telefono es 9 8 7 6 quiero hora", "intent": "agendar", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "horas disponibles pal 30", "intent": "agendar", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "tengo 2 dias con tos quiero hora pal doctor", "intent": "agendar", "especialidad": "medicina general", "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "cuantas horas tengo reservadas", "intent": "ver_reservas", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "borra las 2 horas que tengo", "intent": "cancelar", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "1 consulta nomas con el corazon dia 14", "intent": "agendar", "especialidad": "cardiología", "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "mi pastilla la tomo 2 veces al dia esta bien?", "intent": "consulta_farmaco", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "puedo tomar 3 paracetamol juntos", "intent": "consulta_farmaco", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "atencion humana opcion4", "intent": "humano", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "quiero la opcion uno", "intent": "agendar", "especialidad": null, "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "deme hora con sicologa, tengo 45 años y harta pena", "intent": "agendar", "especialidad": "psicología", "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "si quiero hora pal cardiologo porfa", "intent": "agendar", "especialidad": "cardiología", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "ya po deme hora con la matrona", "intent": "agendar", "especialidad": "matrona", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "ok agendame con el doctor de corazon", "intent": "agendar", "especialidad": "cardiología", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "dale quiero pedir hora pa nutricion", "intent": "agendar", "especialidad": "nutrición", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "listo necesito hora con la sicologa", "intent": "agendar", "especialidad": "psicología", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "si si agendar pal dentista mejor", "intent": "agendar", "especialidad": "odontología", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "ya deme una horita pa kinesiologia", "intent": "agendar", "especialidad": "kinesiología", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "si po quiero ver al medico jeneral", "intent": "agendar", "especialidad": "medicina general", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "ok pa cuando hay hora con la jinecologa", "intent": "agendar", "especialidad": "ginecología", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "dale agendame ecografia porfa", "intent": "agendar", "especialidad": "ecografía", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "no quiero cancelar la hora del lunes", "intent": "cancelar", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "si me puede cancelar la hora pofa", "intent": "cancelar", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "ya no voy a poder ir cancele mi hora", "intent": "cancelar", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "ok cancelame la del cardiologo nomas", "intent": "cancelar", "especialidad": "cardiología", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "dale anula mi hora con la matrona", "intent": "cancelar", "especialidad": "matrona", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "listo elimina mi reserva del dentista", "intent": "cancelar", "especialidad": "odontología", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "si quiero borrar la hora de kine", "intent": "cancelar", "especialidad": "kinesiología", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "no podre asistir cancele la de nutricion", "intent": "cancelar", "especialidad": "nutrición", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "ya cancelame todo lo del jueves", "intent": "cancelar", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "ok no voy anula la hora porfa", "intent": "cancelar", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "si que horas tengo agendadas", "intent": "ver_reservas", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "ya muestrame mis horas pofavor", "intent": "ver_reservas", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "ok cuales son mis reservas que tengo", "intent": "ver_reservas", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "dale a que hora era mi cita del cardiologo", "intent": "ver_reservas", "especialidad": "cardiología", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "si quiero saber si tengo hora con la matrona", "intent": "ver_reservas", "especialidad": "matrona", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "listo dime cuando es mi hora del dentista", "intent": "ver_reservas", "especialidad": "odontología", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "no me acuerdo a que hora tengo la kine", "intent": "ver_reservas", "especialidad": "kinesiología", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "ya revise si tengo alguna hora agendada", "intent": "ver_reservas", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "ok cuando tengo hora con sicologia", "intent": "ver_reservas", "especialidad": "psicología", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "si me dice mis citas pendientes", "intent": "ver_reservas", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "si a que hora abren ustedes", "intent": "info", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "ya hasta que hora atienden el sabado", "intent": "info", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "ok cuanto sale la hora del cardiologo", "intent": "info", "especialidad": "cardiología", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "dale cuanto cobran por la consulta de nutricion", "intent": "info", "especialidad": "nutrición", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "si tienen matrona ahi en el centro", "intent": "info", "especialidad": "matrona", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "ya donde quedan ustedes pa ir", "intent": "info", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "ok aceptan fonasa pa la jinecologa", "intent": "info", "especialidad": "ginecología", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "si atienden los domingo a que hora", "intent": "info", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "dale el dentista atiende niños igual", "intent": "info", "especialidad": "odontología", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "listo cuanto vale ver al sicologo", "intent": "info", "especialidad": "psicología", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "ya buenas a que hora atienden hoy", "intent": "info", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "si hola necesito hablar con una persona", "intent": "humano", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "ok me pasa con alguien de recepcion", "intent": "humano", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "dale quiero hablar con un funcionario", "intent": "humano", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "no me sirve el bot pasame a una secretaria", "intent": "humano", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "si pero quiero que me atienda una persona real", "intent": "humano", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "ya estas son puras maquinas pasame humano", "intent": "humano", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "ok llamenme ustedes mejor por telefono", "intent": "humano", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "dale necesito hablar con la doctora directamente", "intent": "humano", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "si me muestra el menu de opciones", "intent": "menu", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "ya que cosas puedo hacer aca", "intent": "menu", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "ok volver al inicio porfa", "intent": "menu", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "dale que mas puedo preguntarte", "intent": "menu", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "si me ardia el pecho cuando camino apurao", "intent": "sintoma", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "ya me duele harto la guata desde ayer", "intent": "sintoma", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "ok tengo la presion alta y me marea", "intent": "sintoma", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "dale ando con tos y fiebre hace dias", "intent": "sintoma", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "si tengo hora pero me duele la muela igual", "intent": "sintoma", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "listo me pica y arde al hacer pichi", "intent": "sintoma", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "si me tomo la pastilla pa la presion con el cafe", "intent": "consulta_farmaco", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "ya el paracetamol cada cuanto me lo tomo", "intent": "consulta_farmaco", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "ok puedo tomar ibuprofeno con el remedio del corazon", "intent": "consulta_farmaco", "especialidad": "cardiología", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "dale el losartan lo tomo en ayuna o no", "intent": "consulta_farmaco", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "si el antibiotico que me dio la matrona como se toma", "intent": "consulta_farmaco", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "si gracias agendame igual la hora pal traumatologo", "intent": "agendar", "especialidad": "medicina general", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "ya cancele la hora del traumatologo pofa", "intent": "cancelar", "especialidad": "medicina general", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "ok cuanto sale el traumatologo la consulta", "intent": "info", "especialidad": "medicina general", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "dale quiero hora pal otorrino me tapa el oido", "intent": "agendar", "especialidad": "otorrinolaringología", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "si cuanto cobran por la endodoncia ustedes", "intent": "info", "especialidad": "endodoncia", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "ya agendame la ortodoncia pa los fierros", "intent": "agendar", "especialidad": "ortodoncia", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "ok cancela la hora de la fono porfa", "intent": "cancelar", "especialidad": "fonoaudiología", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "si tengo hora con el podologo cuando era", "intent": "ver_reservas", "especialidad": "podología", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "dale cuanto vale la gastro la consulta", "intent": "info", "especialidad": "gastroenterología", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "si hola si gracias deme hora cardiologo nomas", "intent": "agendar", "especialidad": "cardiología", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "no no esa no cancele la otra hora mejor", "intent": "cancelar", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "ya listo ok me muestra que horas tengo", "intent": "ver_reservas", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "si ya po a que hora cierran el viernes", "intent": "info", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "ok dale agendar matrona pal papanicolau", "intent": "agendar", "especialidad": "matrona", "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "si necesito hablar con humano no con el robot", "intent": "humano", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "ya me duele el oido y bota como pus", "intent": "sintoma", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "ok el remedio rosado pa la tos me sirve igual", "intent": "consulta_farmaco", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-1"}
+{"input": "hola kiero la hora con el cardiologo y tb saber cuanto sale", "intent": "agendar", "especialidad": "cardiología", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "necesito cambiar la hora q tengo con la matrona pa otro dia", "intent": "agendar", "especialidad": "matrona", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "puede correr mi cita del dentista pal jueves porfa", "intent": "agendar", "especialidad": "odontología", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "quiero cancelar la hora del lunes y agendar pa la otra semana", "intent": "cancelar", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "vengo a control con el doctor, el de siempre", "intent": "agendar", "especialidad": "medicina general", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "tengo control de embarazo esta semana? con quien me toca", "intent": "ver_reservas", "especialidad": "matrona", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "necesito control de mis frenillos con el ortodoncista", "intent": "agendar", "especialidad": "ortodoncia", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "me pueden dar la orden medica pa el examen de sangre", "intent": "info", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "ya tengo los resultados del examen, los reviso con el doctor o como", "intent": "info", "especialidad": "medicina general", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "necesito una licencia medica, me siento muy mal del cuerpo", "intent": "agendar", "especialidad": "medicina general", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "kiero un certificado pa el trabajo que diga q estoy sano", "intent": "info", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "hola quiero pasar mi hora del miercoles pa la tarde mejor", "intent": "agendar", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "me dijeron q viniera a control despues de la operacion de rodilla", "intent": "agendar", "especialidad": "medicina general", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "necesito hablar con alguien y de paso saber si atienden los sabados", "intent": "humano", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "cuanto sale la consulta y tmb kiero reservar pa el viernes", "intent": "agendar", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "tengo q reagendar lo de la guagua, control de niño sano", "intent": "agendar", "especialidad": "medicina general", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "quiero anular la del jueves no mas, ya no la voy a usar", "intent": "cancelar", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "me da las horas disponibles del nutricionista y los precios", "intent": "agendar", "especialidad": "nutrición", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "voy a control de presion con el cardiologo, ya estoy en tratamiento", "intent": "agendar", "especialidad": "cardiología", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "necesito mover mi cita de kine pq me sale trabajo ese dia", "intent": "agendar", "especialidad": "kinesiología", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "hola tengo una orden pa una ecografia abdominal donde la hago", "intent": "agendar", "especialidad": "ecografía", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "quiero saber el resultado de mi ecografia ya me la hice", "intent": "info", "especialidad": "ecografía", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "me podrian atender un señorita ya q el bot no me entiende nada", "intent": "humano", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "control con la matrona pa retirar el dispositivo, el diu", "intent": "agendar", "especialidad": "matrona", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "necesito el certificado de las atenciones q me hice pa la isapre", "intent": "info", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "oiga quiero ver q horas tengo agendadas y cancelar una", "intent": "cancelar", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "vengo por control del tratamiento de conducto q me hicieron", "intent": "agendar", "especialidad": "endodoncia", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "me duele la guata hace dias kiero ver al especialista del estomago", "intent": "agendar", "especialidad": "gastroenterología", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "tengo q renovar la receta de mis remedios de la presion", "intent": "agendar", "especialidad": "medicina general", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "quiero adelantar mi hora si hay algo antes me avisa", "intent": "agendar", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "hola necesito una hora con traumatologo me torci el tobillo", "intent": "agendar", "especialidad": "medicina general", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "me dijeron en el ad de facebook q habia hora pa nutricion", "intent": "agendar", "especialidad": "nutrición", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "kiero la hora del psicologo y si atiende mi seguro complementario", "intent": "agendar", "especialidad": "psicología", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "necesito control de mi audicion fui pq escucho mal del oido", "intent": "agendar", "especialidad": "otorrinolaringología", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "la fono me pidio q volviera a control con el niño", "intent": "agendar", "especialidad": "fonoaudiología", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "quiero saber si llego mi orden pal examen de la matrona pap", "intent": "info", "especialidad": "matrona", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "me cancelaron la hora ustedes? no me llego nada quiero saber", "intent": "ver_reservas", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "tengo q ver al podologo por mis uñas y cuanto cobran", "intent": "agendar", "especialidad": "podología", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "hola buenas, la hora del jueves la quiero dejar pal lunes", "intent": "agendar", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "necesito orden pa examenes de sangre y agendar el control despues", "intent": "info", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "quiero el resultado de mis examenes y de ahi una hora pal doctor", "intent": "info", "especialidad": "medicina general", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "me podis comunicar con una persona real no kiero robot", "intent": "humano", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "control mensual de mi embarazo, ya voy en el sexto mes", "intent": "agendar", "especialidad": "matrona", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "voy a control con la ginecologa por unos quistes q me salieron", "intent": "agendar", "especialidad": "ginecología", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "quiero ver mis horas y si una se puede correr pa mas tarde", "intent": "ver_reservas", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "necesito un papel q diga q vine a la consulta hoy pal trabajo", "intent": "info", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "me da hora con el doc gral y tmb la lista de precios porfa", "intent": "agendar", "especialidad": "medicina general", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "kiero pasar la cita de ortodoncia pq ese dia no puedo ir", "intent": "agendar", "especialidad": "ortodoncia", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "hola tengo dolor de muela y kiero saber cuanto cuesta sacarla", "intent": "agendar", "especialidad": "odontología", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "el medico me mando a control en 15 dias kiero agendarlo", "intent": "agendar", "especialidad": "medicina general", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "necesito ver al cardiologo pa q me firme la orden del ecocardiograma", "intent": "agendar", "especialidad": "ecocardiograma", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "quiero anular todo lo q tengo agendado este mes", "intent": "cancelar", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "me llego la orden del kine pa terapia respiratoria de mi mama", "intent": "agendar", "especialidad": "kinesiología", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "hola quiero saber resultados del examen de tiroides y agendar control", "intent": "info", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "necesito control post parto con la matrona ya nacio la guagua", "intent": "agendar", "especialidad": "matrona", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "kiero cambiar el horario de mi sesion de psicologia pa la tarde", "intent": "agendar", "especialidad": "psicología", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "me pueden mandar la orden medica al correo no puedo ir a buscarla", "intent": "info", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "voy al control de mis dientes con el de los frenos", "intent": "agendar", "especialidad": "ortodoncia", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "tengo q hacerme una ecografia de embarazo donde la pido", "intent": "agendar", "especialidad": "ginecología", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "oiga quiero hablar con la recepcionista pa coordinar algo especial", "intent": "humano", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "necesito la licencia, el doctor me la iba a dejar lista", "intent": "info", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "kiero reservar nutricion y de paso si dan plan pa bajar de peso", "intent": "agendar", "especialidad": "nutrición", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "control de mi presion arterial, el doc me dijo q volviera", "intent": "agendar", "especialidad": "medicina general", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "me podis decir q dias atiende el otorrino y dame hora", "intent": "agendar", "especialidad": "otorrinolaringología", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "quiero correr mi hora del gastro pa la prox semana porfa", "intent": "agendar", "especialidad": "gastroenterología", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "necesito saber si mi examen de sangre esta listo pa retirarlo", "intent": "info", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "hola tengo q agendar y mi señora tb pa el mismo dia los dos", "intent": "agendar", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "me quiero cambiar de hora la de la fono del viernes", "intent": "agendar", "especialidad": "fonoaudiología", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "vengo a control con la podologa por el pie diabetico", "intent": "agendar", "especialidad": "podología", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "kiero una hora urgente y q me atienda alguien hoy mismo persona", "intent": "agendar", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "necesito certificado medico pa la licencia de conducir", "intent": "info", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "el dentista me dijo q viniera a control de la limpieza", "intent": "agendar", "especialidad": "odontología", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "quiero ver q especialista me toca y a q hora era", "intent": "ver_reservas", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "me da hora pal control de la endodoncia q me dejaron a medias", "intent": "agendar", "especialidad": "endodoncia", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "hola kiero la orden de la mamografia y agendar la ecografia mamaria", "intent": "agendar", "especialidad": "ecografía", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "necesito mover la hora de mi hijo con la fono pa otro horario", "intent": "agendar", "especialidad": "fonoaudiología", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "quiero cancelar pero igual saber cuando hay otra hora disponible", "intent": "cancelar", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "voy a control con la gine pa retirar resultados del pap", "intent": "agendar", "especialidad": "ginecología", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "me dijeron q el resultado lo veo con el mismo doctor q me atendio", "intent": "info", "especialidad": "medicina general", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "kiero ver el menu de servicios y de ahi decido q agendo", "intent": "menu", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "necesito atencion psicologica urgente me siento muy mal animo", "intent": "agendar", "especialidad": "psicología", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "kiero hora con el kinesi", "intent": "agendar", "especialidad": "kinesiología", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "nece", "intent": "info", "especialidad": null, "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "doc", "intent": "info", "especialidad": "medicina general", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "agend", "intent": "agendar", "especialidad": null, "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "cardio pa el", "intent": "agendar", "especialidad": "cardiología", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "quiero canc", "intent": "cancelar", "especialidad": null, "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "ver mis ho", "intent": "ver_reservas", "especialidad": null, "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "matro", "intent": "agendar", "especialidad": "matrona", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "nesesito hora pa el ode", "intent": "agendar", "especialidad": "odontología", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "keria saber si hay nutri", "intent": "agendar", "especialidad": "nutrición", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "hora gine", "intent": "agendar", "especialidad": "ginecología", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "tengo hora con la psico", "intent": "ver_reservas", "especialidad": "psicología", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "keria una hra con el otorrino p", "intent": "agendar", "especialidad": "otorrinolaringología", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "reser", "intent": "agendar", "especialidad": null, "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "podo", "intent": "agendar", "especialidad": "podología", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "fono pa mi hij", "intent": "agendar", "especialidad": "fonoaudiología", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "kiero anular mi h", "intent": "cancelar", "especialidad": null, "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "cuanto sale la consu", "intent": "info", "especialidad": null, "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "horario de aten", "intent": "info", "especialidad": null, "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "kisiera hablar con alg", "intent": "humano", "especialidad": null, "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "gastro", "intent": "agendar", "especialidad": "gastroenterología", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "hora pa ecogr", "intent": "agendar", "especialidad": "ecografía", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "keria sacar hra trauma", "intent": "agendar", "especialidad": "medicina general", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "orto pa mi niño", "intent": "agendar", "especialidad": "ortodoncia", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "endo pq me duele la mue", "intent": "agendar", "especialidad": "endodoncia", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "me duele la gar", "intent": "sintoma", "especialidad": null, "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "nesecito remed pa la pre", "intent": "consulta_farmaco", "especialidad": null, "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "kiero el men", "intent": "menu", "especialidad": null, "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "cardi", "intent": "agendar", "especialidad": "cardiología", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "keria ver q hor", "intent": "ver_reservas", "especialidad": null, "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "nesesito un dent", "intent": "agendar", "especialidad": "odontología", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "hora con el ki", "intent": "agendar", "especialidad": "kinesiología", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "keria cancel pq no pue", "intent": "cancelar", "especialidad": null, "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "me sien", "intent": "sintoma", "especialidad": null, "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "hbla con perso", "intent": "humano", "especialidad": null, "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "ginec urge", "intent": "agendar", "especialidad": "ginecología", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "hra medic gene", "intent": "agendar", "especialidad": "medicina general", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "tomar la pasti", "intent": "consulta_farmaco", "especialidad": null, "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "keria info de la cl", "intent": "info", "especialidad": null, "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "hra pa control con matr", "intent": "agendar", "especialidad": "matrona", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "nutricio pa baj", "intent": "agendar", "especialidad": "nutrición", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "reservar otorr", "intent": "agendar", "especialidad": "otorrinolaringología", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "kiero saber mis cit", "intent": "ver_reservas", "especialidad": null, "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "hra psicolo", "intent": "agendar", "especialidad": "psicología", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "me arde al ori", "intent": "sintoma", "especialidad": null, "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "anular la del jue", "intent": "cancelar", "especialidad": null, "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "hra pdolog pies", "intent": "agendar", "especialidad": "podología", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "el ibupr sirve pa", "intent": "consulta_farmaco", "especialidad": null, "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "kiero una eco abdo", "intent": "agendar", "especialidad": "ecografía", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "keria atend con el cardiol", "intent": "agendar", "especialidad": "cardiología", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "fonoa pa la voz", "intent": "agendar", "especialidad": "fonoaudiología", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "opciones", "intent": "menu", "especialidad": null, "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "nesesito habl con la seño", "intent": "humano", "especialidad": null, "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "keria sak hra gastroente", "intent": "agendar", "especialidad": "gastroenterología", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "hra dent pa limpie", "intent": "agendar", "especialidad": "odontología", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "tengo fie", "intent": "sintoma", "especialidad": null, "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "kiero cambi mi h", "intent": "agendar", "especialidad": null, "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "end pa endodon", "intent": "agendar", "especialidad": "endodoncia", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "keria saber dond q", "intent": "info", "especialidad": null, "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "hra con la gine pa pap", "intent": "agendar", "especialidad": "ginecología", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "medi gral pa licen", "intent": "agendar", "especialidad": "medicina general", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "keria ver lo q ten agen", "intent": "ver_reservas", "especialidad": null, "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "me due la cabe", "intent": "sintoma", "especialidad": null, "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "el parace cada cuant", "intent": "consulta_farmaco", "especialidad": null, "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "hra pa el oido otor", "intent": "agendar", "especialidad": "otorrinolaringología", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "kiero borr mi reser", "intent": "cancelar", "especialidad": null, "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "ortodon pa los frenill", "intent": "agendar", "especialidad": "ortodoncia", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "hra kine pa la espal", "intent": "agendar", "especialidad": "kinesiología", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "keria preg cuanto val la eco", "intent": "info", "especialidad": "ecografía", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "nutr pa diab", "intent": "agendar", "especialidad": "nutrición", "axis": "incompleta", "group": "r2-incompletas-truncadas"}
+{"input": "hola necesito hora con el dotor de los huesos pa mi rodilla", "intent": "agendar", "especialidad": "medicina general", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "buenas el doctor que ve los pies atiende?", "intent": "info", "especialidad": "podología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "kiero una hora con la dotora de las guaguas", "intent": "agendar", "especialidad": "matrona", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "atienden el doctor de la piel ahi?", "intent": "info", "especialidad": "medicina general", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "necesito al doctor de los nervios pa mi hijo q anda mal de la cabeza", "intent": "agendar", "especialidad": "psicología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "hay doctor pa la tos y los pulmones", "intent": "info", "especialidad": "medicina general", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "kiero hora pal q arregla las muelas", "intent": "agendar", "especialidad": "odontología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "buenas el dotor del corazon cuanto cobra", "intent": "info", "especialidad": "cardiología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "necesito la matrona pa control de mi señora q esta embarazada", "intent": "agendar", "especialidad": "matrona", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "el q ve los oidos atiende mañana?", "intent": "info", "especialidad": "otorrinolaringología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "kiero hora con el doctor de la guata me duele harto", "intent": "agendar", "especialidad": "gastroenterología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "hay alguien q vea los dientes torcidos pa ponerle fierritos a mi hija", "intent": "info", "especialidad": "ortodoncia", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "necesito el doctor q hace las dietas estoy muy gordo", "intent": "agendar", "especialidad": "nutrición", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "el dotor pa la garganta cuando atiende", "intent": "info", "especialidad": "otorrinolaringología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "kiero hora con la señora q ayuda a hablar a los niños", "intent": "agendar", "especialidad": "fonoaudiología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "atienden pa hacer la ecografia de la guagua?", "intent": "info", "especialidad": "ginecología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "necesito el doctor q soba y hace ejercicios pa la espalda", "intent": "agendar", "especialidad": "kinesiología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "hay dotora pa cosas de mujer abajo", "intent": "info", "especialidad": "ginecología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "kiero al q saca el nervio de la muela me duele harto", "intent": "agendar", "especialidad": "endodoncia", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "el doctor de cabecera el q ve de todo atiende hoy?", "intent": "info", "especialidad": "medicina general", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "necesito hora pal podologo el q corta las uñas malas del pie", "intent": "agendar", "especialidad": "podología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "buenas hay doctor pa la presion alta", "intent": "info", "especialidad": "cardiología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "kiero hora con la persona q escucha los problemas de uno", "intent": "agendar", "especialidad": "psicología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "el q ve los huesos quebrados atiende los sabados?", "intent": "info", "especialidad": "medicina general", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "necesito limpieza de dientes con la dentista", "intent": "agendar", "especialidad": "odontología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "hay dotor q vea la sordera de mi mama no escucha na", "intent": "info", "especialidad": "otorrinolaringología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "kiero hora con el doctor q ve el estomago y la acidez", "intent": "agendar", "especialidad": "gastroenterología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "el q hace masajes pa la lesion del futbol atiende?", "intent": "info", "especialidad": "kinesiología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "necesito la matrona pa sacarme el papanicolau", "intent": "agendar", "especialidad": "matrona", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "hay doctor q vea mi tobillo torcido", "intent": "info", "especialidad": "medicina general", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "kiero hora con la nutricionista pa bajar de peso", "intent": "agendar", "especialidad": "nutrición", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "el dotor q toma el ecocardiograma del corazon atiende?", "intent": "info", "especialidad": "ecocardiograma", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "necesito al q pone los aparatos en los dientes a mi cabro", "intent": "agendar", "especialidad": "ortodoncia", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "hay alguien q vea cosas de la cabeza la depresion", "intent": "info", "especialidad": "psicología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "kiero hora pa una eco de la guata", "intent": "agendar", "especialidad": "ecografía", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "el doctor general el q da las pastillas pa todo atiende?", "intent": "info", "especialidad": "medicina general", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "necesito hora con la dotora de las partes de mujer", "intent": "agendar", "especialidad": "ginecología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "hay dentista q saque la muela picada", "intent": "info", "especialidad": "odontología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "kiero al q ve los niños q no hablan bien tartamudean", "intent": "agendar", "especialidad": "fonoaudiología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "el doctor pa la tos seca q no se me kita atiende mañana", "intent": "info", "especialidad": "medicina general", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "necesito hora pal q ve los callos y juanetes del pie", "intent": "agendar", "especialidad": "podología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "hay doctor del corazon q escuche el pecho", "intent": "info", "especialidad": "cardiología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "kiero hora pa rehabilitar la pierna despues de la operacion", "intent": "agendar", "especialidad": "kinesiología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "el q ve los problemas pa hacer pipi seguido atiende?", "intent": "info", "especialidad": "medicina general", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "necesito la matrona pa ponerme la inyeccion anticonceptiva", "intent": "agendar", "especialidad": "matrona", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "hay doctor q vea la sinusitis y la nariz tapa", "intent": "info", "especialidad": "otorrinolaringología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "kiero hora con el q saca la raiz del diente pa salvarlo", "intent": "agendar", "especialidad": "endodoncia", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "el doctor q da licencia y ve de todo atiende hoy dia?", "intent": "info", "especialidad": "medicina general", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "necesito hora con el q hace dieta pa la diabetes", "intent": "agendar", "especialidad": "nutrición", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "hay dotora q vea los problemas de la regla", "intent": "info", "especialidad": "ginecología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "kiero hora pal q endereza los dientes chuecos", "intent": "agendar", "especialidad": "ortodoncia", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "el q ayuda con los nervios y la pena atiende?", "intent": "info", "especialidad": "psicología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "necesito hora pa eco al riñon", "intent": "agendar", "especialidad": "ecografía", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "hay doctor q vea la guagua cuando esta enferma de fiebre", "intent": "info", "especialidad": "medicina general", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "kiero hora con el q soba la cervical del cuello", "intent": "agendar", "especialidad": "kinesiología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "el q ve los oidos tapaos con cera atiende?", "intent": "info", "especialidad": "otorrinolaringología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "necesito hora pa control de embarazo con la matrona", "intent": "agendar", "especialidad": "matrona", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "hay doctor pal dolor de pecho y palpitaciones", "intent": "info", "especialidad": "cardiología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "kiero al dentista pa ponerme un tapado en la muela", "intent": "agendar", "especialidad": "odontología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "el q ve la hinchazon y los gases de la guata atiende?", "intent": "info", "especialidad": "gastroenterología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "necesito hora pal q ve los pies de mi abuelita diabetica", "intent": "agendar", "especialidad": "podología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "hay dotor q ve el reumatismo y los huesos viejos", "intent": "info", "especialidad": "medicina general", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "kiero hora con la q ayuda a tragar a mi papa q se atora", "intent": "agendar", "especialidad": "fonoaudiología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "el doctor del corazon q hace el examen electrico del pecho atiende?", "intent": "info", "especialidad": "cardiología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "necesito hora con la dotora de mujeres pa un control", "intent": "agendar", "especialidad": "ginecología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "hay alguien q vea pa adelgazar con un plan de comida", "intent": "info", "especialidad": "nutrición", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "kiero hora pal q mata el nervio del diente", "intent": "agendar", "especialidad": "endodoncia", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "el doctor pa la angustia y los ataques de panico atiende?", "intent": "info", "especialidad": "psicología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "necesito hora pa una radiografia digo una eco de la barriga", "intent": "agendar", "especialidad": "ecografía", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "hay doctor pa la gripe fuerte q me da en el pecho", "intent": "info", "especialidad": "medicina general", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "kiero hora con el q hace terapia pal hombro lesionao", "intent": "agendar", "especialidad": "kinesiología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "el q ve la afonia q kede sin voz atiende?", "intent": "info", "especialidad": "otorrinolaringología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "necesito hora con la matrona pa los espermios digo el papanicolau", "intent": "agendar", "especialidad": "matrona", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "hay dentista q haga limpieza y saque el sarro", "intent": "info", "especialidad": "odontología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "kiero hora con el q endereza los dientes a mi señora con plaquita", "intent": "agendar", "especialidad": "ortodoncia", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "el doctor q ve el colon irritable atiende mañana?", "intent": "info", "especialidad": "gastroenterología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "necesito hora pal q ve los hongos y las uñas malas del pie", "intent": "agendar", "especialidad": "podología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "hay doctor q ve a los niños pa control sano", "intent": "info", "especialidad": "medicina general", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "kiero hora con la q ayuda a hablar a mi cabro chico q no pronuncia", "intent": "agendar", "especialidad": "fonoaudiología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "el doctor pa la pena y el insomnio q no duermo atiende?", "intent": "info", "especialidad": "psicología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "me tomo la loseta pa la presion ?", "intent": "consulta_farmaco", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "puedo tomar enalaprin con la otra pastilla del corazon", "intent": "consulta_farmaco", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "dotor cuantas paracetamol me tomo pal dia", "intent": "consulta_farmaco", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "me suspendo la metformina si no e comido", "intent": "consulta_farmaco", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "el ibuprofen me lo tomo antes o despues de comer", "intent": "consulta_farmaco", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "se me olbido tomar la losartan ayer me la tomo doble hoy", "intent": "consulta_farmaco", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "puedo darle amoxicilina a mi nieto pa la tos", "intent": "consulta_farmaco", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "me tomo la aspirina junto con el acenocumarol", "intent": "consulta_farmaco", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "cuanto omeprazol pa la guata me puedo tomar", "intent": "consulta_farmaco", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "el clonasepam me hace dormir cuantas gotas tomo", "intent": "consulta_farmaco", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "puedo mesclar el remedio de la presion con alcol", "intent": "consulta_farmaco", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "me dieron sertralina cuando la dejo de tomar", "intent": "consulta_farmaco", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "la atorbastatina me la tomo en la noche o la mañana", "intent": "consulta_farmaco", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "puedo tomar diclofenaco si estoy embarasada", "intent": "consulta_farmaco", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "que pasa si me tomo dos viagra juntas", "intent": "consulta_farmaco", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "el tramadol me da sueño puedo manejar", "intent": "consulta_farmaco", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "me tomo la furosemina todos los dias o cuando me hincho", "intent": "consulta_farmaco", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "puedo darle ibuprofeno a la guagua de 1 año", "intent": "consulta_farmaco", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "la insulina me la pongo si tengo el asucar baja", "intent": "consulta_farmaco", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "el remedio levotirosina lo tomo con el desayuno", "intent": "consulta_farmaco", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "me puedo tomar la amitriptilina con el clonasepam juntos", "intent": "consulta_farmaco", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "cuantas gotas de tapsin le doy a mi hijo", "intent": "consulta_farmaco", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "se me bajo mucho la presion dejo la pastilla", "intent": "consulta_farmaco", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "puedo tomar antibiotico vencido del año pasao", "intent": "consulta_farmaco", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "el dotor me dio prednisona la corto altiro o de a poco", "intent": "consulta_farmaco", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "me tomo el sintrom y me salieron moretones sigo tomandolo", "intent": "consulta_farmaco", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "puedo tomar loratadina y clorfenamina juntas pa la alergia", "intent": "consulta_farmaco", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "cuanto warfarina me toca esta semana se me perdio el papel", "intent": "consulta_farmaco", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "el espironolactona me da nauseas lo dejo", "intent": "consulta_farmaco", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "mesclar nitroglicerina con la pastilla asul es malo", "intent": "consulta_farmaco", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "me duele el pecho fuerte y se me va pal braso isquierdo", "intent": "sintoma", "especialidad": "cardiología", "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "no puedo respirar bien me falta el aire", "intent": "sintoma", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "mi marido se desmayo y no responde", "intent": "sintoma", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "estoy sangrando harto abajo no para", "intent": "sintoma", "especialidad": "ginecología", "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "se me adormecio la mitad de la cara y no puedo ablar bien", "intent": "sintoma", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "tengo un dolor en el pecho q me aprieta y sudo frio", "intent": "sintoma", "especialidad": "cardiología", "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "vomito con sangre desde anoche", "intent": "sintoma", "especialidad": "gastroenterología", "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "mi guagua esta morada y no respira bien", "intent": "sintoma", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "me cai y no puedo mover la pierna me duele mucho", "intent": "sintoma", "especialidad": "medicina general", "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "tengo la presion en 200 y me duele la cabesa fuerte", "intent": "sintoma", "especialidad": "cardiología", "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "se me hincho la garganta y me cuesta tragar despues de comer", "intent": "sintoma", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "estoy con convulsiones mi hijo esta temblando", "intent": "sintoma", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "me duele mucho la guata abajo a la derecha no aguanto", "intent": "sintoma", "especialidad": "medicina general", "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "boto sangre cuando toso desde la mañana", "intent": "sintoma", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "estoy embarasada y me sale sangre y dolor de panza", "intent": "sintoma", "especialidad": "matrona", "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "no veo bien de un ojo se me nublo de repente", "intent": "sintoma", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "me corte profundo y no para de sangrar la mano", "intent": "sintoma", "especialidad": "medicina general", "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "siento q me voy a desmayar todo me da vueltas", "intent": "sintoma", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "mi mama esta confundida no sabe donde esta", "intent": "sintoma", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "tengo fiebre alta y manchas moradas en el cuerpo", "intent": "sintoma", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "me pica todo y se me esta serrando la garganta", "intent": "sintoma", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "dolor en el pecho q no se me kita ase una hora", "intent": "sintoma", "especialidad": "cardiología", "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "se me durmio el braso y la pierna del mismo lao", "intent": "sintoma", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "mi papa se puso amarillo y vomita harto", "intent": "sintoma", "especialidad": "gastroenterología", "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "estoy orinando puro sangre y me duele", "intent": "sintoma", "especialidad": "medicina general", "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "me tome muchas pastillas y me siento mal mareada", "intent": "sintoma", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "la guagua tiene 40 de fiebre y esta muy decaida no despierta", "intent": "sintoma", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "se me paro el corazon como rapido y me falta el aire", "intent": "sintoma", "especialidad": "cardiología", "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "me quemé harto con agua hirviendo el brazo entero", "intent": "sintoma", "especialidad": "medicina general", "axis": "seguridad", "group": "r2-farmaco-urgencia"}
+{"input": "tengo un dolor de cabesa el peor de mi vida de repente", "intent": "sintoma", "especialidad": null, "axis": "seguridad", "group": "r2-farmaco-urgencia"}

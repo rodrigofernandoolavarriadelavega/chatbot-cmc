@@ -29,6 +29,7 @@
   <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4 text-sm">
     <span class="serif text-lg font-medium" style="color:var(--fiordo)">CMC</span>
     <span class="mono text-xs opacity-50">Atribución</span>
+    <a href="#" onclick="goDemanda();return false" class="opacity-70 hover:opacity-100" style="color:var(--cobre)">← Demanda</a>
     <a href="/seo/dashboard" class="ml-auto opacity-70 hover:opacity-100">SEO</a>
     <a href="/meta/dashboard" class="opacity-70 hover:opacity-100">Meta</a>
     <a href="/horizonte" class="opacity-70 hover:opacity-100">Horizonte</a>
@@ -158,6 +159,12 @@
 <script>
 const fmt = n => (n||0).toLocaleString('es-CL');
 const fmtClp = n => 'CLP $' + (n||0).toLocaleString('es-CL', {maximumFractionDigits:0});
+
+// Loop de Ánima: ambos dashboards son iframes hermanos → navegamos el shell por hash.
+function goDemanda(){
+  if (window.parent && window.parent !== window) { try { window.parent.location.hash = 'demanda'; return; } catch(e){} }
+  window.location.href = '/demanda' + (location.search || '');
+}
 
 async function load() {
   try {

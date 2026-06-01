@@ -392,10 +392,17 @@ async def enviar_seguimiento_postconsulta(send_fn, send_template_fn=None,
             try:
                 import asyncio as _asyncio_fidel
                 import meta_capi as _mc_purch
-                from session import get_profile as _gp_fidel
+                from session import get_profile as _gp_fidel, get_meta_referral_fresh as _gmrf
                 _prof_fidel = _gp_fidel(cita["phone"]) or {}
                 _nom_fidel = (cita.get("nombre") or _prof_fidel.get("nombre") or "").split()
                 from config import get_arancel_cpl as _get_arancel
+                # Recuperar atribución Meta Ads: ttl_horas=168 cubre ciclo agendar→asistir (7d)
+                _ref_fidel = None
+                try:
+                    _ref_fidel = _gmrf(cita["phone"])
+                except Exception as _ref_err:
+                    log.debug("CAPI: no se pudo leer meta_referral para %s: %s", cita["phone"], _ref_err)
+                _ctwa = (_ref_fidel or {}).get("ctwa_clid") or None
                 _asyncio_fidel.create_task(_mc_purch.send_event(
                     "Purchase",
                     phone=cita["phone"],
@@ -404,6 +411,7 @@ async def enviar_seguimiento_postconsulta(send_fn, send_template_fn=None,
                     rut=_prof_fidel.get("rut") or None,
                     first_name=_nom_fidel[0] if _nom_fidel else None,
                     last_name=_nom_fidel[-1] if len(_nom_fidel) > 1 else None,
+                    ctwa_clid=_ctwa,
                     custom_data={
                         "content_name": cita.get("especialidad") or "",
                         "content_category": "medical_appointment",
