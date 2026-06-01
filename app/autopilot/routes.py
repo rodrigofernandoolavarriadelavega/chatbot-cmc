@@ -123,7 +123,7 @@ async def autopilot_atribucion_refresh(token: str | None = Query(None), request:
             import sys as _sys
             root = _CAC_SCRIPT.parent.parent
             proc = await asyncio.create_subprocess_exec(
-                _sys.executable, str(_CAC_SCRIPT), "--mode", "fixed",
+                _sys.executable, str(_CAC_SCRIPT), "--mode", "rolling",
                 "--json", str(_CAC_SNAPSHOT), cwd=str(root),
                 stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL,
             )

@@ -82,8 +82,9 @@ for pid, (_n, esp) in PROFS.items():
 # ─────────────────────────────────────────────────────────────────────────────
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Reporte CAC dual del CMC.")
-    p.add_argument("--mode", choices=("fixed", "custom"), default="fixed",
+    p.add_argument("--mode", choices=("fixed", "custom", "rolling"), default="fixed",
                    help="fixed: mes-corriente vs mes-anterior (mismos días). "
+                        "rolling: últimos 30 días vs los 30 previos (siempre poblado). "
                         "custom: período definido por flags.")
     p.add_argument("--since", help="Inicio del período actual (YYYY-MM-DD).")
     p.add_argument("--until", help="Fin del período actual (YYYY-MM-DD).")
@@ -104,6 +105,13 @@ def resolve_periods(args: argparse.Namespace) -> tuple[tuple[str, str], tuple[st
             if not getattr(args, f):
                 sys.exit(f"--mode custom requiere --{f.replace('_','-')}")
         return (args.since, args.until), (args.baseline_since, args.baseline_until)
+
+    if args.mode == "rolling":
+        today = dt.date.today()
+        cur_since = today - dt.timedelta(days=29)
+        base_until = cur_since - dt.timedelta(days=1)
+        base_since = base_until - dt.timedelta(days=29)
+        return (cur_since.isoformat(), today.isoformat()), (base_since.isoformat(), base_until.isoformat())
 
     today = dt.date.today()
     first_of_month = today.replace(day=1)

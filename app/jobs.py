@@ -866,7 +866,7 @@ async def _job_cac_snapshot():
     script = root / "scripts" / "cac_report.py"
     try:
         proc = await asyncio.create_subprocess_exec(
-            _sys.executable, str(script), "--mode", "fixed", "--json", str(out),
+            _sys.executable, str(script), "--mode", "rolling", "--json", str(out),
             cwd=str(root),
             stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
         )
