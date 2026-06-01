@@ -9,8 +9,8 @@ Storage de segmentos: JSON atómico (mismo patrón que designs.py) en
 de solo lectura — el usuario las clona a un segmento editable.
 
 Fuente de audiencia:
-  1. BI Postgres (bi.dim_paciente + bi.fact_atenciones + bi.fact_pagos) — Medilink,
-     trae el email del paciente y los ejes RFM. Es la fuente primaria.
+  1. BI Postgres (bi.dim_paciente + bi.fact_atenciones) — Medilink, trae el email
+     del paciente y los ejes Recencia/Frecuencia. Es la fuente primaria.
   2. Fallback sessions.db (contact_profiles.email) si BI no responde.
 
 Gating legal (Ley 21.719 — dato sensible de salud):
@@ -263,7 +263,9 @@ def _bi_universe() -> list[dict] | None:
 
     Devuelve None si BI no está disponible (el caller degrada a sessions.db).
     Cada fila: paciente_id, nombre, email, telefono, comuna, edad, genero,
-    freq, dias_inactivo, especialidad, gasto_total.
+    freq (frecuencia), dias_inactivo (recencia), especialidad.
+    Nota: el eje Monetary (gasto) se omite a propósito — no se usa en filtros ni
+    scoring, y la columna de pagos no es estable entre entornos BI.
     """
     try:
         from winback import bi_conn
@@ -291,10 +293,6 @@ def _bi_universe() -> list[dict] | None:
                         LEFT JOIN bi.dim_profesional pr ON pr.profesional_id = a.profesional_id
                         LEFT JOIN bi.dim_especialidad e ON e.especialidad_id = pr.especialidad_id
                         ORDER BY a.paciente_id, a.fecha DESC, a.atencion_id DESC
-                    ),
-                    mon AS (
-                        SELECT paciente_id, COALESCE(SUM(monto_neto), 0) AS gasto
-                        FROM bi.fact_pagos GROUP BY paciente_id
                     )
                     SELECT p.paciente_id,
                            COALESCE(p.nombre, '')        AS nombre,
@@ -304,12 +302,10 @@ def _bi_universe() -> list[dict] | None:
                            COALESCE(p.genero, '')         AS genero,
                            a.freq,
                            (CURRENT_DATE - a.ultima)::int AS dias_inactivo,
-                           ue.especialidad,
-                           COALESCE(m.gasto, 0)::float    AS gasto_total
+                           ue.especialidad
                     FROM bi.dim_paciente p
                     JOIN agg a       ON a.paciente_id = p.paciente_id
                     LEFT JOIN ult_esp ue ON ue.paciente_id = p.paciente_id
-                    LEFT JOIN mon m   ON m.paciente_id = p.paciente_id
                     WHERE COALESCE(p.es_activo, true) = true
                     {optout_clause}
                 """)
