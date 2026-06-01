@@ -79,22 +79,6 @@
   .btn-secondary:disabled { opacity: .55; cursor: not-allowed; }
   .btn-secondary svg { width: 16px; height: 16px; flex-shrink: 0; }
 
-  /* ── KPI strip ── */
-  .kpi-strip {
-    display: flex; gap: 12px; padding: 14px 20px;
-    flex-wrap: wrap;
-  }
-  .kpi {
-    background: #fff; border: 1px solid var(--border);
-    border-radius: 12px; padding: 12px 18px;
-    min-width: 140px; box-shadow: var(--sh-sm);
-    flex: 1;
-  }
-  .kpi .label { font-size: 10px; font-weight: 700; text-transform: uppercase;
-                 letter-spacing: .1em; color: var(--mute); margin-bottom: 4px; }
-  .kpi .value { font-size: 22px; font-weight: 800; color: var(--navy); }
-  .kpi .value.green { color: var(--green); }
-
   /* ── Tabla de pagos ── */
   .table-wrap {
     margin: 0 20px 24px;
@@ -326,8 +310,6 @@
     table { table-layout: auto; min-width: 900px; }
   }
   @media (max-width: 640px) {
-    .kpi-strip { gap: 8px; padding: 12px; }
-    .kpi { min-width: 120px; }
     .pg-topbar { padding: 0 12px; }
     .form-grid { grid-template-columns: 1fr; }
     .form-grid .full { grid-column: 1; }
@@ -355,13 +337,6 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
     Nueva fila
   </button>
-</div>
-
-<!-- KPI strip (3 KPIs: sin bonif. Imed) -->
-<div class="kpi-strip" id="kpiStrip">
-  <div class="kpi"><div class="label">Pagos del dia</div><div class="value" id="kpiN">—</div></div>
-  <div class="kpi"><div class="label">Total pagos</div><div class="value" id="kpiCopago">—</div></div>
-  <div class="kpi"><div class="label">Total recaudado</div><div class="value green" id="kpiTotal">—</div></div>
 </div>
 
 <!-- Tabla planilla -->
@@ -599,18 +574,12 @@ async function cargarPagos() {
     const r = await fetch('/alma/api/pagos' + qp + '&fecha=' + _fecha);
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const d = await r.json();
-    renderKPIs(d);
+
     renderTabla(d.pagos || []);
   } catch(e) {
     tbody.innerHTML = '<tr><td colspan="13" class="empty">Error al cargar pagos.</td></tr>';
     console.error(e);
   }
-}
-
-function renderKPIs(d) {
-  document.getElementById('kpiN').textContent = d.total || 0;
-  document.getElementById('kpiCopago').textContent = fmt$(d.total_copago);
-  document.getElementById('kpiTotal').textContent  = fmt$(d.total_recaudado);
 }
 
 // ── Render tabla con filas guardadas ─────────────────────────────────────────
