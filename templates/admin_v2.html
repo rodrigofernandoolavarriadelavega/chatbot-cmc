@@ -679,10 +679,11 @@ input, textarea, select{font-family:inherit; color:inherit}
 .mb-row input, .mb-row select{
   padding:8px 10px; border:1px solid var(--border); border-radius:8px;
   font-size:13px; background:var(--panel); color:var(--text);
-  font-family:var(--font); outline:none;
+  font-family:var(--font); outline:none; width:100%; min-width:0; box-sizing:border-box;
 }
 .mb-row input:focus, .mb-row select:focus{border-color:var(--cmc-aqua); box-shadow:var(--ring)}
-.mb-grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.mb-grid2{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px}
+.pg-body[hidden]{display:none !important}
 .mb-footer{
   display:flex; gap:8px; justify-content:flex-end; padding:12px 18px 16px;
   border-top:1px solid var(--border-soft);
