@@ -82,10 +82,22 @@ function Nav() {
 
 /* ---------------- HERO ---------------- */
 function Hero({ visual = "fjord" }) {
+  const blended = visual !== "minimal";
   return (
     <section id="top" data-anchor className="relative overflow-hidden bg-stone">
       <div className="absolute inset-0 grid-faint opacity-70"></div>
-      <div className="relative mx-auto max-w-[1240px] px-6 lg:px-10 grid lg:grid-cols-[1.05fr_.95fr] gap-10 lg:gap-16 items-center pt-32 pb-20 lg:pt-40 lg:pb-28">
+
+      {/* fjord bleed (desktop) — sangra al borde derecho y se funde con el fondo */}
+      {blended && (
+        <div aria-hidden="true" className="hidden lg:block absolute inset-y-0 right-0 w-[56vw] max-w-[940px]">
+          <FjordScene className="absolute inset-0 h-full w-full" />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(90deg, #F2F3F5 0%, rgba(242,243,245,0.72) 15%, rgba(242,243,245,0) 46%)" }}></div>
+          <div className="absolute inset-0" style={{ background: "linear-gradient(0deg, #F2F3F5 0%, rgba(242,243,245,0) 24%)" }}></div>
+          <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, #F2F3F5 0%, rgba(242,243,245,0) 16%)" }}></div>
+        </div>
+      )}
+
+      <div className="relative z-10 mx-auto max-w-[1240px] px-6 lg:px-10 grid lg:grid-cols-[1.05fr_.95fr] gap-10 lg:gap-16 items-center pt-32 pb-20 lg:pt-40 lg:pb-28">
         {/* text */}
         <div>
           <div className="reveal flex items-center gap-3 mb-7">
@@ -118,26 +130,25 @@ function Hero({ visual = "fjord" }) {
         </div>
 
         {/* visual */}
-        <div className="reveal reveal-d2 relative">
-          <div className="relative h-[360px] sm:h-[440px] lg:h-[560px] w-full overflow-hidden rounded-[20px] border border-white shadow-[0_40px_80px_-40px_rgba(11,29,45,.55)]">
-            {visual === "minimal" ? (
-              <div className="absolute inset-0 bg-navy">
-                <div className="absolute inset-0 opacity-[0.10]" style={{ backgroundImage: "linear-gradient(to right, #fff 1px, transparent 1px), linear-gradient(to bottom, #fff 1px, transparent 1px)", backgroundSize: "56px 56px" }}></div>
-                <img src="assets/adkun-mark.svg" alt="" aria-hidden="true" className="logo-light absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[58%] w-auto opacity-90" />
-                <span className="absolute left-1/2 top-1/2 h-px w-[70%] -translate-x-1/2 -translate-y-1/2 bg-copper/40"></span>
-                <span className="absolute left-1/2 top-1/2 h-[70%] w-px -translate-x-1/2 -translate-y-1/2 bg-copper/40"></span>
-              </div>
-            ) : (
-              <React.Fragment>
-                <FjordScene className="absolute inset-0 h-full w-full" />
-                <div className="absolute inset-0 grid-faint mix-blend-multiply opacity-40"></div>
-              </React.Fragment>
-            )}
-            <CornerTicks className={"absolute left-5 top-5 h-6 w-6"} color={visual === "minimal" ? "#B45A2A" : "#B45A2A"} />
-            <div className="absolute right-5 bottom-5 rotate-180"><CornerTicks className="h-6 w-6" /></div>
-            <div className={"absolute left-5 bottom-5 font-sans text-[11px] tracking-[0.22em] uppercase " + (visual === "minimal" ? "text-white/55" : "text-navy/55")}>41°S · Fiordo</div>
+        {blended ? (
+          // mobile/tablet: el fiordo se muestra apilado y difuminado hacia el fondo
+          <div className="reveal reveal-d2 relative lg:hidden">
+            <div className="relative h-[300px] sm:h-[400px] w-full overflow-hidden rounded-[18px]">
+              <FjordScene className="absolute inset-0 h-full w-full" />
+              <div className="absolute inset-0" style={{ background: "linear-gradient(0deg, #F2F3F5 0%, rgba(242,243,245,0) 30%)" }}></div>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="reveal reveal-d2 relative">
+            <div className="relative h-[360px] sm:h-[440px] lg:h-[560px] w-full overflow-hidden rounded-[20px] border border-white shadow-[0_40px_80px_-40px_rgba(11,29,45,.55)] bg-navy">
+              <div className="absolute inset-0 opacity-[0.10]" style={{ backgroundImage: "linear-gradient(to right, #fff 1px, transparent 1px), linear-gradient(to bottom, #fff 1px, transparent 1px)", backgroundSize: "56px 56px" }}></div>
+              <img src="assets/adkun-mark.svg" alt="" aria-hidden="true" className="logo-light absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[58%] w-auto opacity-90" />
+              <span className="absolute left-1/2 top-1/2 h-px w-[70%] -translate-x-1/2 -translate-y-1/2 bg-copper/40"></span>
+              <span className="absolute left-1/2 top-1/2 h-[70%] w-px -translate-x-1/2 -translate-y-1/2 bg-copper/40"></span>
+              <CornerTicks className="absolute left-5 top-5 h-6 w-6" />
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );
