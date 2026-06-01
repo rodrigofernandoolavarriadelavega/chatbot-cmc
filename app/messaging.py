@@ -163,6 +163,7 @@ _TEL_CMC_WA_GUARD = "+56966610737"
 
 
 _RX_FIJO_44 = re.compile(r"\(\s*44\s*\)\s*\d{3}[\s\-]*\d{4}")
+_RX_FIJO_41_CMC = re.compile(r"\(\s*41\s*\)\s*296[\s\-]*5226")
 _FIJO_CMC_CANONICO = "(44) 296 5226"
 
 
@@ -172,15 +173,19 @@ def _final_phone_guard(text: str) -> str:
     _scrub_telefonos, los capturamos acá y loggeamos warning para detectar
     regresiones. Auditoría 2026-04-28: 74 casos en 7d con código (44) en
     respuestas — Claude Haiku alucinaba o el sitio web v3 (que tiene "(44)"
-    hardcoded) lo metía en contexto."""
+    hardcoded) lo metía en contexto.
+    _RX_FIJO_41_CMC captura la regresión específica de código (41) asignado
+    erróneamente por agente nocturno (Bug O, 2026-06-01) — reemplaza por (44)."""
     if not text:
         return text
     if _RX_PERSONAL_LEAK.search(text):
         log.warning("PHONE_LEAK_GUARD personal_number_caught snippet=%r",
                     text[:160])
         text = _RX_PERSONAL_LEAK.sub(_TEL_CMC_WA_GUARD, text)
+    if _RX_FIJO_41_CMC.search(text):
+        log.warning("PHONE_LEAK_GUARD codigo_area_41_regresion snippet=%r", text[:160])
+        text = _RX_FIJO_41_CMC.sub(_FIJO_CMC_CANONICO, text)
     if _RX_FIJO_44.search(text):
-        log.warning("PHONE_LEAK_GUARD codigo_area_44 snippet=%r", text[:160])
         text = _RX_FIJO_44.sub(_FIJO_CMC_CANONICO, text)
     return text
 
