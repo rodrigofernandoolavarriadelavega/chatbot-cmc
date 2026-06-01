@@ -196,6 +196,21 @@ async def lifespan(app: FastAPI):
         id="autopilot_dryrun",
         replace_existing=True,
     )
+    # Cola de publicación orgánica (segmento IG·FB·WhatsApp): publica las piezas
+    # aprobadas que ya vencieron su hora. La escritura real a Meta está bloqueada
+    # salvo ORGANIC_PUBLISH_EXECUTE=true (kill-switch). Cada 5 min.
+    async def _job_organic_publish_queue():
+        try:
+            from autopilot.publishing import run_due_queue
+            await run_due_queue()
+        except Exception as e:  # noqa: BLE001 — nunca tumbar el scheduler
+            logging.getLogger("bot").error("[publish] cola falló: %s", e)
+    scheduler.add_job(
+        _job_organic_publish_queue,
+        CronTrigger(minute="*/5", timezone=_CLT),
+        id="organic_publish_queue",
+        replace_existing=True,
+    )
     # Recordatorios 2h: cada 15 min entre 7:30 y 21:30 CLT
     scheduler.add_job(
         _job_recordatorios_2h,
@@ -667,6 +682,8 @@ _OTORRINO_CURANILAHUE_HTML = (_TEMPLATE_DIR / "otorrino-curanilahue.html").read_
 _GINECOLOGO_CURANILAHUE_HTML = (_TEMPLATE_DIR / "ginecologo-curanilahue.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "ginecologo-curanilahue.html").exists() else ""
 _DENTISTA_CURANILAHUE_HTML = (_TEMPLATE_DIR / "dentista-curanilahue.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "dentista-curanilahue.html").exists() else ""
 _LANDING_ORTODONCIA_HTML = (_TEMPLATE_DIR / "landing_ortodoncia.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "landing_ortodoncia.html").exists() else ""
+_ADKUN_COMPANY_HTML = (_TEMPLATE_DIR / "adkun_company_board.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "adkun_company_board.html").exists() else ""
+_ALMA_PRODUCT_HTML = (_TEMPLATE_DIR / "alma_product_board.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_product_board.html").exists() else ""
 
 
 # ── Endpoints ────────────────────────────────────────────────────────────────
@@ -2633,6 +2650,22 @@ def caminos_page():
     return _CAMINOS_HTML
 
 
+@app.get("/adkun", response_class=HTMLResponse)
+def adkun_company_board():
+    """Brand board Adkun — empresa."""
+    if not _ADKUN_COMPANY_HTML:
+        raise HTTPException(404, "Brand board Adkun no disponible")
+    return _ADKUN_COMPANY_HTML
+
+
+@app.get("/alma", response_class=HTMLResponse)
+def alma_product_board():
+    """Brand board Alma — producto."""
+    if not _ALMA_PRODUCT_HTML:
+        raise HTTPException(404, "Brand board Alma no disponible")
+    return _ALMA_PRODUCT_HTML
+
+
 @app.get("/meta", response_class=HTMLResponse)
 @app.get("/meta/dashboard", response_class=HTMLResponse)
 @app.get("/meta-dashboard", response_class=HTMLResponse)
@@ -2776,6 +2809,122 @@ def atribucion_dashboard_page():
     if not _ATRIBUCION_DASHBOARD_HTML:
         raise HTTPException(404, "Dashboard Atribución no disponible")
     return _ATRIBUCION_DASHBOARD_HTML
+
+
+@app.get("/demanda", response_class=HTMLResponse)
+@app.get("/demanda/dashboard", response_class=HTMLResponse)
+def demanda_dashboard_page():
+    """Demanda capturada por el bot: qué piden los pacientes que no resolvimos.
+
+    Se lee fresco del disco en cada request (igual que /cmc/mensual) para poder
+    iterar el HTML sin reiniciar el servicio.
+    """
+    p = _TEMPLATE_DIR / "demanda_dashboard.html"
+    if not p.exists():
+        raise HTTPException(404, "Dashboard Demanda no disponible")
+    return p.read_text(encoding="utf-8")
+
+
+# Apellidos de profesionales del CMC — para separar dentro de los eventos
+# `sin_disponibilidad` "pidieron un servicio que no tenía cupo" de "pidieron a
+# un doctor puntual" (agenda saturada). Son decisiones distintas.
+_PROF_SURNAMES = {
+    "olavarría", "olavarria", "abarca", "márquez", "marquez", "borrego",
+    "millán", "millan", "barraza", "rejón", "rejon", "quijano", "burgos",
+    "jiménez", "jimenez", "castillo", "fredes", "valdés", "valdes",
+    "fuentealba", "acosta", "armijo", "etcheverry", "pinto", "montalba",
+    "rodríguez", "rodriguez", "arratia", "gómez", "gomez", "guevara", "pardo",
+}
+
+
+@app.get("/api/demanda/data")
+def api_demanda_data(dias: int = 90):
+    """Señales de demanda capturadas en conversación, para decidir qué ofrecer/promover.
+
+    Fuentes (sessions.db):
+    - `sin_disponibilidad`: pidió algo sin cupo → separado en servicio vs profesional
+    - `intent_agendar`: intención de agendar por especialidad (volumen de interés)
+    - `demanda_no_disponible` (+ eventos): lo que el CMC no ofrece (gap de catálogo)
+
+    Aporta el lado "qué promover" del loop de Ánima; /atribucion mide "qué llegó".
+    """
+    import sys as _sys_dem
+    from pathlib import Path as _P_dem
+    _sys_dem.path.insert(0, str(_P_dem(__file__).parent))
+    from session import _conn as _conn_dem
+
+    dias = max(1, min(int(dias or 90), 365))
+    win = f"-{dias} days"
+    conn = _conn_dem()
+    c = conn.cursor()
+
+    def _is_prof(term: str) -> bool:
+        t = (term or "").lower()
+        return any(s in t for s in _PROF_SURNAMES)
+
+    # 1) sin_disponibilidad → ranking (lower() para no duplicar por capitalización)
+    c.execute("""SELECT lower(json_extract(meta,'$.especialidad')) esp, COUNT(*) n,
+                        COUNT(DISTINCT phone) personas, MAX(date(ts)) ultimo
+                 FROM conversation_events
+                 WHERE event='sin_disponibilidad'
+                   AND json_extract(meta,'$.especialidad') IS NOT NULL
+                   AND ts >= datetime('now', ?)
+                 GROUP BY esp ORDER BY n DESC""", (win,))
+    servicios: list[dict] = []
+    profesionales: list[dict] = []
+    for r in c.fetchall():
+        item = {"nombre": r["esp"], "solicitudes": r["n"],
+                "personas": r["personas"], "ultimo": r["ultimo"]}
+        (profesionales if _is_prof(r["esp"]) else servicios).append(item)
+
+    # 2) intent_agendar → interés por especialidad (volumen de demanda).
+    #    Excluimos intents sin especialidad: son ruido para "qué promover".
+    c.execute("""SELECT lower(json_extract(meta,'$.especialidad')) esp,
+                        COUNT(DISTINCT phone) personas, COUNT(*) n
+                 FROM conversation_events
+                 WHERE event='intent_agendar'
+                   AND json_extract(meta,'$.especialidad') IS NOT NULL
+                   AND ts >= datetime('now', ?)
+                 GROUP BY esp ORDER BY personas DESC""", (win,))
+    interes = [{"nombre": r["esp"], "personas": r["personas"], "solicitudes": r["n"]}
+               for r in c.fetchall()]
+
+    # 3) demanda_no_disponible → gap de catálogo (lo que NO ofrecemos)
+    c.execute("""SELECT lower(solicitud) sol, tipo, COUNT(*) n, MAX(date(created_at)) ultimo
+                 FROM demanda_no_disponible
+                 WHERE created_at >= datetime('now', ?)
+                 GROUP BY sol, tipo ORDER BY n DESC""", (win,))
+    no_ofrecemos = [{"nombre": r["sol"], "tipo": r["tipo"], "solicitudes": r["n"], "ultimo": r["ultimo"]}
+                    for r in c.fetchall()]
+    _seen = {x["nombre"] for x in no_ofrecemos}
+    c.execute("""SELECT lower(COALESCE(json_extract(meta,'$.solicitud'),
+                                       json_extract(meta,'$.especialidad'))) sol,
+                        COUNT(*) n, MAX(date(ts)) ultimo
+                 FROM conversation_events
+                 WHERE event IN ('demanda_no_disponible','demanda_no_disponible_faq')
+                   AND ts >= datetime('now', ?)
+                 GROUP BY sol ORDER BY n DESC""", (win,))
+    for r in c.fetchall():
+        if r["sol"] and r["sol"] not in _seen:
+            no_ofrecemos.append({"nombre": r["sol"], "tipo": "consulta",
+                                 "solicitudes": r["n"], "ultimo": r["ultimo"]})
+    no_ofrecemos.sort(key=lambda x: x["solicitudes"], reverse=True)
+
+    conn.close()
+
+    return {
+        "dias": dias,
+        "kpis": {
+            "servicios_sin_cupo": sum(s["solicitudes"] for s in servicios),
+            "profesionales_pedidos": sum(p["solicitudes"] for p in profesionales),
+            "intencion_total": sum(i["personas"] for i in interes),
+            "gaps_catalogo": len(no_ofrecemos),
+        },
+        "servicios_sin_cupo": servicios,
+        "profesionales_sin_cupo": profesionales,
+        "interes_por_especialidad": interes,
+        "no_ofrecemos": no_ofrecemos,
+    }
 
 
 @app.get("/arquitectura", response_class=HTMLResponse)

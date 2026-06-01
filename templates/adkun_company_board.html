@@ -1,0 +1,1745 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Adkun — Brand Board Empresa · OLACORE Tech</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ─── Reset & base ─── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    /* Paleta OLACORE Meridiano Sur */
+    --fiordo:   #1F3340;
+    --cobre:    #B86D3F;
+    --neblina:  #EFE9DD;
+    --lacre:    #8C2A2A;
+    --musgo:    #4A5F3A;
+    --lenga:    #D4A87A;
+    --noche:    #122028;
+
+    /* Acento propio Adkun — Rio Maullin */
+    --adkun:    #3D6B72;
+    --adkun-lt: #5A8E96;
+    --adkun-bg: #E4EEF0;
+
+    /* Fondos */
+    --bg-warm:  #EFE9DD;
+    --bg-cold:  #E8ECF0;
+    --bg-deep:  #122028;
+
+    /* Tipografia */
+    --ff-display: 'Fraunces', Georgia, serif;
+    --ff-text:    'Inter', system-ui, sans-serif;
+    --ff-mono:    'IBM Plex Mono', 'Courier New', monospace;
+  }
+
+  html { font-size: 16px; }
+
+  body {
+    font-family: var(--ff-text);
+    background: var(--bg-cold);
+    color: var(--fiordo);
+    line-height: 1.6;
+  }
+
+  .board {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 32px 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 64px;
+  }
+
+  /* ─── Eyebrow ─── */
+  .eyebrow {
+    font-family: var(--ff-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 10px;
+    text-transform: uppercase;
+    color: var(--cobre);
+    display: block;
+    margin-bottom: 12px;
+  }
+
+  /* ─── Section label ─── */
+  .section-label {
+    font-family: var(--ff-mono);
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 8px;
+    text-transform: uppercase;
+    color: var(--adkun);
+    display: block;
+    margin-bottom: 24px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--adkun);
+    opacity: 0.7;
+  }
+
+  /* ─── Grids ─── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; }
+  .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; }
+
+  /* ─── Cards ─── */
+  .card {
+    background: var(--neblina);
+    border-radius: 4px;
+    padding: 28px;
+  }
+  .card-dark {
+    background: var(--fiordo);
+    border-radius: 4px;
+    padding: 28px;
+    color: var(--neblina);
+  }
+  .card-deep {
+    background: var(--noche);
+    border-radius: 4px;
+    padding: 28px;
+    color: var(--neblina);
+  }
+
+  /* ─── Section divider ─── */
+  .section-divider {
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--adkun), transparent);
+    opacity: 0.2;
+  }
+
+  /* ─── App label ─── */
+  .app-label {
+    font-family: var(--ff-mono);
+    font-size: 8px;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    color: var(--adkun);
+    opacity: 0.7;
+    text-align: center;
+    margin-top: 12px;
+  }
+
+
+  /* ══════════════════════════════════════════
+     SECCION 1 — HERO
+  ══════════════════════════════════════════ */
+  .hero {
+    background: var(--noche);
+    border-radius: 6px;
+    padding: 72px 64px;
+    position: relative;
+    overflow: hidden;
+    color: var(--neblina);
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 64px;
+    width: 1px;
+    background: linear-gradient(to bottom, transparent, var(--cobre) 20%, var(--cobre) 80%, transparent);
+    opacity: 0.35;
+  }
+
+  /* Nodos de convergencia decorativos — fondo hero */
+  .hero::after {
+    content: '';
+    position: absolute;
+    top: -120px;
+    right: -80px;
+    width: 480px;
+    height: 480px;
+    border-radius: 50%;
+    border: 1px solid rgba(61,107,114,0.08);
+    pointer-events: none;
+  }
+
+  .hero-inner {
+    padding-left: 32px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .hero-title {
+    font-family: var(--ff-display);
+    font-size: clamp(80px, 11vw, 136px);
+    font-weight: 700;
+    line-height: 0.88;
+    letter-spacing: -3px;
+    color: var(--neblina);
+    margin-bottom: 20px;
+  }
+
+  .hero-tagline {
+    font-family: var(--ff-display);
+    font-size: clamp(18px, 2.5vw, 26px);
+    font-weight: 400;
+    font-style: italic;
+    color: var(--lenga);
+    margin-bottom: 6px;
+  }
+
+  .hero-positioning {
+    font-family: var(--ff-display);
+    font-size: 15px;
+    font-weight: 400;
+    font-style: italic;
+    color: var(--adkun-lt);
+    margin-bottom: 28px;
+    opacity: 0.8;
+  }
+
+  .hero-etymology {
+    font-family: var(--ff-mono);
+    font-size: 10px;
+    letter-spacing: 2.5px;
+    color: var(--adkun-lt);
+    margin-bottom: 32px;
+    line-height: 1.9;
+    max-width: 680px;
+  }
+
+  .hero-meta {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 20px;
+    padding-top: 32px;
+    border-top: 1px solid rgba(239,233,221,0.1);
+    margin-top: 16px;
+  }
+
+  .hero-meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .meta-key {
+    font-family: var(--ff-mono);
+    font-size: 8px;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    color: var(--adkun-lt);
+    opacity: 0.55;
+  }
+
+  .meta-val {
+    font-family: var(--ff-text);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--neblina);
+  }
+
+
+  /* ══════════════════════════════════════════
+     SECCION 2 — MANIFIESTO
+  ══════════════════════════════════════════ */
+  .manif-card {
+    background: var(--neblina);
+    border-radius: 4px;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .manif-label {
+    font-family: var(--ff-mono);
+    font-size: 8px;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    color: var(--cobre);
+  }
+
+  .manif-heading {
+    font-family: var(--ff-display);
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--fiordo);
+    line-height: 1.2;
+  }
+
+  .manif-body {
+    font-family: var(--ff-text);
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--fiordo);
+    line-height: 1.72;
+    opacity: 0.82;
+  }
+
+  .manif-card-dark {
+    background: var(--fiordo);
+    border-radius: 4px;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .manif-card-dark .manif-label { color: var(--adkun-lt); }
+  .manif-card-dark .manif-heading { color: var(--neblina); }
+  .manif-card-dark .manif-body { color: var(--neblina); }
+
+
+  /* ══════════════════════════════════════════
+     SECCION 3 — IDENTIDAD
+  ══════════════════════════════════════════ */
+  .identity-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 2fr;
+    gap: 24px;
+    align-items: stretch;
+  }
+
+  .seal-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    border-radius: 4px;
+  }
+
+  .wordmark-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 36px 32px;
+    border-radius: 4px;
+  }
+
+  .lockup-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 36px 48px;
+    border-radius: 4px;
+    flex-direction: column;
+    gap: 28px;
+  }
+
+
+  /* ══════════════════════════════════════════
+     SECCION 4 — PALETA
+  ══════════════════════════════════════════ */
+  .swatch-main {
+    border-radius: 4px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .swatch-color { height: 136px; width: 100%; }
+
+  .swatch-info {
+    padding: 16px;
+    background: var(--neblina);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .swatch-name {
+    font-family: var(--ff-display);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--fiordo);
+  }
+
+  .swatch-hex {
+    font-family: var(--ff-mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--cobre);
+  }
+
+  .swatch-role {
+    font-family: var(--ff-text);
+    font-size: 11px;
+    color: var(--fiordo);
+    opacity: 0.6;
+    line-height: 1.5;
+  }
+
+  .swatches-mini {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  .swatch-mini { border-radius: 3px; overflow: hidden; }
+  .swatch-mini-color { height: 44px; }
+
+  .swatch-mini-info {
+    padding: 8px;
+    background: var(--neblina);
+  }
+
+  .swatch-mini-name {
+    font-family: var(--ff-mono);
+    font-size: 8px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--fiordo);
+  }
+
+  .swatch-mini-hex {
+    font-family: var(--ff-mono);
+    font-size: 8px;
+    color: var(--cobre);
+    letter-spacing: 1px;
+  }
+
+
+  /* ══════════════════════════════════════════
+     SECCION 5 — TIPOGRAFIA
+  ══════════════════════════════════════════ */
+  .type-card {
+    background: var(--neblina);
+    border-radius: 4px;
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .type-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(31,51,64,0.12);
+  }
+
+  .type-family {
+    font-family: var(--ff-mono);
+    font-size: 9px;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    color: var(--adkun);
+  }
+
+  .type-name {
+    font-family: var(--ff-text);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--fiordo);
+  }
+
+  .type-use {
+    font-family: var(--ff-text);
+    font-size: 11px;
+    color: var(--fiordo);
+    opacity: 0.6;
+  }
+
+  .type-weights { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  .type-weight-tag {
+    font-family: var(--ff-mono);
+    font-size: 9px;
+    letter-spacing: 2px;
+    padding: 3px 8px;
+    background: var(--adkun-bg);
+    border: 1px solid var(--adkun);
+    border-radius: 2px;
+    color: var(--adkun);
+  }
+
+
+  /* ══════════════════════════════════════════
+     SECCION 6 — VOZ Y TONO
+  ══════════════════════════════════════════ */
+  .voice-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .voice-col {
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .voice-col-yes { background: var(--fiordo); }
+  .voice-col-no  { background: var(--neblina); }
+
+  .voice-col-header {
+    font-family: var(--ff-mono);
+    font-size: 10px;
+    letter-spacing: 8px;
+    text-transform: uppercase;
+    padding-bottom: 16px;
+    margin-bottom: 4px;
+    border-bottom-width: 1px;
+    border-bottom-style: solid;
+  }
+
+  .voice-col-yes .voice-col-header {
+    color: var(--adkun-lt);
+    border-bottom-color: rgba(90,142,150,0.4);
+    opacity: 0.85;
+  }
+
+  .voice-col-no .voice-col-header {
+    color: var(--lacre);
+    border-bottom-color: rgba(140,42,42,0.35);
+    opacity: 0.85;
+  }
+
+  .voice-item { display: flex; flex-direction: column; gap: 4px; }
+
+  .voice-example {
+    font-family: var(--ff-display);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  .voice-col-yes .voice-example { color: var(--neblina); }
+  .voice-col-no  .voice-example { color: var(--fiordo); text-decoration: line-through; opacity: 0.45; }
+
+  .voice-why {
+    font-family: var(--ff-text);
+    font-size: 11px;
+    line-height: 1.55;
+  }
+
+  .voice-col-yes .voice-why { color: var(--neblina); opacity: 0.55; }
+  .voice-col-no  .voice-why { color: var(--lacre); font-weight: 500; }
+
+
+  /* ══════════════════════════════════════════
+     SECCION 7 — APLICACIONES
+  ══════════════════════════════════════════ */
+
+  /* Hero sitio web adkun.com */
+  .site-hero {
+    background: var(--noche);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .site-topbar {
+    background: var(--fiordo);
+    padding: 14px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(61,107,114,0.2);
+  }
+
+  .site-nav {
+    display: flex;
+    gap: 28px;
+  }
+
+  .site-nav-item {
+    font-family: var(--ff-text);
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--neblina);
+    opacity: 0.55;
+    letter-spacing: 0.3px;
+  }
+
+  .site-nav-item.active {
+    opacity: 1;
+    color: var(--adkun-lt);
+  }
+
+  .site-hero-body {
+    padding: 56px 64px 48px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+    align-items: center;
+  }
+
+  .site-hero-cta {
+    background: var(--adkun);
+    color: var(--neblina);
+    font-family: var(--ff-text);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 10px 22px;
+    border-radius: 3px;
+    display: inline-block;
+    letter-spacing: 0.5px;
+    margin-top: 24px;
+  }
+
+  .site-hero-cta-ghost {
+    color: var(--adkun-lt);
+    font-family: var(--ff-text);
+    font-size: 12px;
+    font-weight: 400;
+    padding: 10px 22px;
+    border: 1px solid rgba(90,142,150,0.35);
+    border-radius: 3px;
+    display: inline-block;
+    letter-spacing: 0.5px;
+    margin-top: 24px;
+    margin-left: 12px;
+  }
+
+  /* Tarjeta de presentacion */
+  .biz-card {
+    width: 340px;
+    height: 196px;
+    border-radius: 5px;
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .biz-card-front {
+    background: var(--noche);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 24px 28px;
+    height: 100%;
+    position: relative;
+  }
+
+  .biz-card-front::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 20px;
+    width: 1px;
+    background: linear-gradient(to bottom, transparent, var(--cobre) 30%, var(--cobre) 70%, transparent);
+    opacity: 0.3;
+  }
+
+  .biz-card-back {
+    background: var(--adkun);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    gap: 8px;
+  }
+
+  .biz-card-back-text {
+    font-family: var(--ff-mono);
+    font-size: 8px;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    color: rgba(239,233,221,0.6);
+  }
+
+  .biz-card-name {
+    font-family: var(--ff-display);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--neblina);
+    letter-spacing: 1px;
+  }
+
+  .biz-card-role {
+    font-family: var(--ff-text);
+    font-size: 10px;
+    color: var(--adkun-lt);
+    letter-spacing: 0.5px;
+  }
+
+  .biz-card-contact {
+    font-family: var(--ff-mono);
+    font-size: 9px;
+    color: var(--neblina);
+    opacity: 0.5;
+    letter-spacing: 0.5px;
+    line-height: 1.7;
+  }
+
+  /* Portfolio de productos */
+  .product-card {
+    border-radius: 4px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .product-card-top {
+    padding: 28px 28px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+  }
+
+  .product-card-bottom {
+    padding: 14px 28px;
+    border-top-width: 1px;
+    border-top-style: solid;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .product-status-tag {
+    font-family: var(--ff-mono);
+    font-size: 8px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 2px;
+  }
+
+
+  /* ══════════════════════════════════════════
+     SECCION 8 — ARQUITECTURA DE MARCA
+  ══════════════════════════════════════════ */
+  .arch-tree {
+    background: var(--neblina);
+    border-radius: 4px;
+    padding: 40px 48px;
+  }
+
+  .tree-root-label {
+    font-family: var(--ff-display);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--fiordo);
+    letter-spacing: 5px;
+    margin-bottom: 6px;
+  }
+
+  .tree-root-sub {
+    font-family: var(--ff-mono);
+    font-size: 8px;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    color: var(--cobre);
+    opacity: 0.7;
+    margin-bottom: 28px;
+  }
+
+  /* Diagrama de arquitectura visual */
+  .arch-diagram {
+    display: grid;
+    grid-template-columns: 180px 180px 220px auto;
+    gap: 0;
+    align-items: start;
+    overflow-x: auto;
+  }
+
+  .arch-col {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-right: 0;
+  }
+
+  .arch-col-label {
+    font-family: var(--ff-mono);
+    font-size: 7px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--fiordo);
+    opacity: 0.35;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(31,51,64,0.1);
+  }
+
+  .arch-node {
+    border-radius: 3px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    position: relative;
+  }
+
+  .arch-node-name {
+    font-family: var(--ff-display);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.1;
+  }
+
+  .arch-node-desc {
+    font-family: var(--ff-text);
+    font-size: 10px;
+    line-height: 1.4;
+    opacity: 0.65;
+  }
+
+  .arch-node-tag {
+    font-family: var(--ff-mono);
+    font-size: 7px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  /* Conectores SVG entre columnas */
+  .arch-connector {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 8px;
+    opacity: 0.25;
+  }
+
+  /* Domain rules */
+  .domain-note {
+    background: var(--fiordo);
+    border-radius: 4px;
+    padding: 28px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .domain-note-head {
+    font-family: var(--ff-mono);
+    font-size: 9px;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    color: var(--cobre);
+  }
+
+  .domain-rule {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+  }
+
+  .domain-mark {
+    font-family: var(--ff-display);
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--neblina);
+    min-width: 88px;
+    line-height: 1;
+    padding-top: 4px;
+  }
+
+  .domain-desc {
+    font-family: var(--ff-text);
+    font-size: 12px;
+    color: var(--neblina);
+    opacity: 0.75;
+    line-height: 1.65;
+  }
+
+  .domain-divider {
+    height: 1px;
+    background: rgba(239,233,221,0.1);
+    margin: 2px 0;
+  }
+
+  /* Roadmap */
+  .roadmap-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border-left-width: 2px;
+    border-left-style: solid;
+    padding-left: 16px;
+  }
+
+  .roadmap-phase {
+    font-family: var(--ff-mono);
+    font-size: 8px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+  }
+
+  .roadmap-title {
+    font-family: var(--ff-display);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--fiordo);
+    line-height: 1.2;
+  }
+
+  .roadmap-desc {
+    font-family: var(--ff-text);
+    font-size: 11px;
+    color: var(--fiordo);
+    opacity: 0.6;
+    line-height: 1.5;
+  }
+
+</style>
+</head>
+<body>
+<div class="board">
+
+
+  <!-- ═══════════════════════════════════════════
+       SECCION 1 — HERO
+  ═══════════════════════════════════════════ -->
+  <section class="hero">
+    <div class="hero-inner">
+      <span class="eyebrow">OLACORE &nbsp;&middot;&nbsp; OLACORE TECH &nbsp;&middot;&nbsp; SOFTWARE DE ORDEN &nbsp;&middot;&nbsp; INTERNACIONAL</span>
+
+      <h1 class="hero-title">Adkun</h1>
+
+      <p class="hero-tagline">Software que pone tu operacion en orden.</p>
+      <p class="hero-positioning">La empresa que construye orden de operacion para negocios que lo necesitan.</p>
+
+      <div class="hero-etymology">
+        <span>ADKUN &nbsp;&mdash;&nbsp; raiz mapuche <em>adkunun</em></span><br>
+        <span style="opacity:0.65;">Ordenar, organizar, dejar arreglado &mdash; la raiz <em>ad</em> nombra la forma y el orden natural de las cosas.</span><br>
+        <span style="opacity:0.45;">En mapudungun se escribe con u-dieresis; la marca adopta la grafia simplificada <strong style="color: var(--adkun-lt);">Adkun</strong>, una sola ortografia para todos los contextos. Es un verbo: el acto de poner el negocio en orden.</span><br>
+        <span style="opacity:0.35; font-size: 9px;">Nota panmapuche: la raiz adkunun es mapudungun general, no tsesungun williche estricto. El ancla geografica es el sur de Chile. Se recomienda validar con hablante o academico antes del lanzamiento publico.</span>
+      </div>
+
+      <div class="hero-meta">
+        <div class="hero-meta-item">
+          <span class="meta-key">TIPO</span>
+          <span class="meta-val">Empresa de software</span>
+        </div>
+        <div class="hero-meta-item">
+          <span class="meta-key">VERTICAL</span>
+          <span class="meta-val">Software de orden</span>
+        </div>
+        <div class="hero-meta-item">
+          <span class="meta-key">HOLDING</span>
+          <span class="meta-val">OLACORE Tech</span>
+        </div>
+        <div class="hero-meta-item">
+          <span class="meta-key">DOMINIO</span>
+          <span class="meta-val">adkun.com</span>
+        </div>
+        <div class="hero-meta-item">
+          <span class="meta-key">VERSION</span>
+          <span class="meta-val">Brand v2 &nbsp;&middot;&nbsp; 2026</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════
+       SECCION 2 — MANIFIESTO
+  ═══════════════════════════════════════════ -->
+  <section>
+    <span class="section-label">02 &nbsp;&mdash;&nbsp; MANIFIESTO</span>
+    <div class="grid-2">
+
+      <div class="manif-card">
+        <span class="manif-label">PROPOSITO</span>
+        <h3 class="manif-heading">Construir el orden que hace funcionar las operaciones</h3>
+        <p class="manif-body">Adkun no hace aplicaciones bonitas. Hace software que pone una operacion en orden: el flujo de trabajo, la informacion, los registros y los indicadores que un negocio necesita para funcionar bien. Si el negocio tiene un proceso que hoy depende de planillas, WhatsApps o cabezas humanas sobrecargadas, Adkun puede ordenarlo.</p>
+      </div>
+
+      <div class="manif-card-dark">
+        <span class="manif-label">POSICIONAMIENTO</span>
+        <h3 class="manif-heading">Una empresa, no un producto. Una categoria, no un rubro.</h3>
+        <p class="manif-body">Adkun no es software de salud, ni de retail, ni de logistica. Es software de orden: la categoria transversal que atraviesa cualquier negocio que opera con personas, procesos y datos. Cada producto de Adkun es una respuesta especifica a un tipo de desorden concreto.</p>
+      </div>
+
+      <div class="manif-card-dark" style="background: var(--adkun);">
+        <span class="manif-label" style="color: rgba(239,233,221,0.55);">AUDIENCIA</span>
+        <h3 class="manif-heading" style="color: var(--neblina);">Negocios que crecen y no tienen un sistema que los aguante</h3>
+        <p class="manif-body" style="color: var(--neblina);">Directores, duenos y administradores de operaciones medianas que trabajan con herramientas parcheadas. No son startups ni grandes corporaciones. Son negocios reales con procesos reales que necesitan orden, no innovacion.</p>
+      </div>
+
+      <div class="manif-card">
+        <span class="manif-label">DIFERENCIADOR</span>
+        <h3 class="manif-heading">Cada producto nace en produccion real, no en una pizarra</h3>
+        <p class="manif-body">El primer producto de Adkun (Alma) fue validado durante mas de un ano en produccion en el Centro Medico Carampangue antes de convertirse en producto vendible. El patron es sistematico: validar internamente, luego productizar. No es teoría de startup; es ingenieria aplicada al desorden real.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+
+  <!-- ═══════════════════════════════════════════
+       SECCION 3 — IDENTIDAD
+  ═══════════════════════════════════════════ -->
+  <section>
+    <span class="section-label">03 &nbsp;&mdash;&nbsp; IDENTIDAD</span>
+    <div class="identity-grid">
+
+      <!-- Sello claro -->
+      <div>
+        <div class="seal-container" style="background: var(--neblina);">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="164" height="164">
+            <defs>
+              <path id="arc-c" d="M 18,100 A 82,82 0 0,1 182,100"/>
+            </defs>
+            <circle cx="100" cy="100" r="92" fill="none" stroke="#1F3340" stroke-width="2"/>
+            <circle cx="100" cy="100" r="86" fill="none" stroke="#B86D3F" stroke-width="1.2"/>
+            <text font-family="Fraunces, Georgia, serif" font-size="10" font-weight="500" fill="#1F3340" letter-spacing="5">
+              <textPath href="#arc-c" startOffset="50%" text-anchor="middle">ADKUN &middot; SOFTWARE DE ORDEN</textPath>
+            </text>
+            <!-- Meridiano vertical heredado OLACORE -->
+            <line x1="100" y1="28" x2="100" y2="172" stroke="#B86D3F" stroke-width="0.8" opacity="0.25"/>
+            <!-- Nodo de convergencia: 6 lineas hacia el centro -->
+            <line x1="56"  y1="70"  x2="100" y2="100" stroke="#1F3340" stroke-width="1.5" stroke-linecap="round" opacity="0.3"/>
+            <line x1="54"  y1="118" x2="100" y2="100" stroke="#1F3340" stroke-width="1.5" stroke-linecap="round" opacity="0.38"/>
+            <line x1="100" y1="50"  x2="100" y2="100" stroke="#1F3340" stroke-width="1.5" stroke-linecap="round" opacity="0.35"/>
+            <line x1="144" y1="70"  x2="100" y2="100" stroke="#1F3340" stroke-width="1.5" stroke-linecap="round" opacity="0.38"/>
+            <line x1="146" y1="118" x2="100" y2="100" stroke="#1F3340" stroke-width="1.5" stroke-linecap="round" opacity="0.3"/>
+            <line x1="100" y1="150" x2="100" y2="100" stroke="#1F3340" stroke-width="1.5" stroke-linecap="round" opacity="0.35"/>
+            <!-- Nodo central -->
+            <circle cx="100" cy="100" r="5.5" fill="#3D6B72"/>
+            <circle cx="100" cy="100" r="2.2" fill="#B86D3F"/>
+            <!-- Puntos de origen -->
+            <circle cx="56"  cy="70"  r="2.5" fill="none" stroke="#1F3340" stroke-width="1" opacity="0.45"/>
+            <circle cx="54"  cy="118" r="2.5" fill="none" stroke="#1F3340" stroke-width="1" opacity="0.45"/>
+            <circle cx="100" cy="50"  r="2.5" fill="none" stroke="#1F3340" stroke-width="1" opacity="0.45"/>
+            <circle cx="144" cy="70"  r="2.5" fill="none" stroke="#1F3340" stroke-width="1" opacity="0.45"/>
+            <circle cx="146" cy="118" r="2.5" fill="none" stroke="#1F3340" stroke-width="1" opacity="0.45"/>
+            <circle cx="100" cy="150" r="2.5" fill="none" stroke="#1F3340" stroke-width="1" opacity="0.45"/>
+            <!-- Label inferior -->
+            <text x="100" y="169" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="6.5" fill="#1F3340" letter-spacing="5" opacity="0.38">OLACORE</text>
+          </svg>
+        </div>
+        <p class="app-label">SELLO CLARO</p>
+      </div>
+
+      <!-- Sello oscuro -->
+      <div>
+        <div class="seal-container" style="background: var(--noche);">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="164" height="164">
+            <defs>
+              <path id="arc-d" d="M 18,100 A 82,82 0 0,1 182,100"/>
+            </defs>
+            <circle cx="100" cy="100" r="92" fill="none" stroke="#EFE9DD" stroke-width="2"/>
+            <circle cx="100" cy="100" r="86" fill="none" stroke="#B86D3F" stroke-width="1.2"/>
+            <text font-family="Fraunces, Georgia, serif" font-size="10" font-weight="500" fill="#EFE9DD" letter-spacing="5">
+              <textPath href="#arc-d" startOffset="50%" text-anchor="middle">ADKUN &middot; SOFTWARE DE ORDEN</textPath>
+            </text>
+            <line x1="100" y1="28" x2="100" y2="172" stroke="#B86D3F" stroke-width="0.8" opacity="0.3"/>
+            <line x1="56"  y1="70"  x2="100" y2="100" stroke="#EFE9DD" stroke-width="1.5" stroke-linecap="round" opacity="0.3"/>
+            <line x1="54"  cy="118" x2="100" y2="100" stroke="#EFE9DD" stroke-width="1.5" stroke-linecap="round" opacity="0.38"/>
+            <line x1="100" y1="50"  x2="100" y2="100" stroke="#EFE9DD" stroke-width="1.5" stroke-linecap="round" opacity="0.35"/>
+            <line x1="144" y1="70"  x2="100" y2="100" stroke="#EFE9DD" stroke-width="1.5" stroke-linecap="round" opacity="0.38"/>
+            <line x1="146" y1="118" x2="100" y2="100" stroke="#EFE9DD" stroke-width="1.5" stroke-linecap="round" opacity="0.3"/>
+            <line x1="100" y1="150" x2="100" y2="100" stroke="#EFE9DD" stroke-width="1.5" stroke-linecap="round" opacity="0.35"/>
+            <circle cx="100" cy="100" r="5.5" fill="#5A8E96"/>
+            <circle cx="100" cy="100" r="2.2" fill="#B86D3F"/>
+            <circle cx="56"  cy="70"  r="2.5" fill="none" stroke="#EFE9DD" stroke-width="1" opacity="0.45"/>
+            <circle cx="54"  cy="118" r="2.5" fill="none" stroke="#EFE9DD" stroke-width="1" opacity="0.45"/>
+            <circle cx="100" cy="50"  r="2.5" fill="none" stroke="#EFE9DD" stroke-width="1" opacity="0.45"/>
+            <circle cx="144" cy="70"  r="2.5" fill="none" stroke="#EFE9DD" stroke-width="1" opacity="0.45"/>
+            <circle cx="146" cy="118" r="2.5" fill="none" stroke="#EFE9DD" stroke-width="1" opacity="0.45"/>
+            <circle cx="100" cy="150" r="2.5" fill="none" stroke="#EFE9DD" stroke-width="1" opacity="0.45"/>
+            <text x="100" y="169" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="6.5" fill="#EFE9DD" letter-spacing="5" opacity="0.35">OLACORE</text>
+          </svg>
+        </div>
+        <p class="app-label">SELLO OSCURO</p>
+      </div>
+
+      <!-- Wordmarks y lockup -->
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+
+        <!-- Wordmark claro -->
+        <div class="wordmark-container" style="background: var(--neblina); flex: 1;">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 90" width="100%" style="max-width: 460px;">
+            <text x="0" y="62" font-family="Fraunces, Georgia, serif" font-size="76" font-weight="500" fill="#1F3340" letter-spacing="8">Adkun</text>
+            <line x1="0" y1="72" x2="520" y2="72" stroke="#B86D3F" stroke-width="1"/>
+            <text x="2" y="86" font-family="IBM Plex Mono, monospace" font-size="11" fill="#3D6B72" letter-spacing="13" font-weight="500">SOFTWARE DE ORDEN</text>
+          </svg>
+        </div>
+
+        <!-- Wordmark oscuro -->
+        <div class="wordmark-container" style="background: var(--fiordo); flex: 1;">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 90" width="100%" style="max-width: 460px;">
+            <text x="0" y="62" font-family="Fraunces, Georgia, serif" font-size="76" font-weight="500" fill="#EFE9DD" letter-spacing="8">Adkun</text>
+            <line x1="0" y1="72" x2="520" y2="72" stroke="#B86D3F" stroke-width="1"/>
+            <text x="2" y="86" font-family="IBM Plex Mono, monospace" font-size="11" fill="#5A8E96" letter-spacing="13" font-weight="500">SOFTWARE DE ORDEN</text>
+          </svg>
+        </div>
+
+        <!-- Lockup "Adkun by OLACORE Tech" -->
+        <div class="wordmark-container" style="background: var(--noche); flex: 1;">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 60" width="100%" style="max-width: 560px;">
+            <!-- Sello mini -->
+            <circle cx="28" cy="30" r="22" fill="none" stroke="#EFE9DD" stroke-width="1.5"/>
+            <circle cx="28" cy="30" r="17" fill="none" stroke="#B86D3F" stroke-width="0.8"/>
+            <line x1="28" y1="10" x2="28" y2="50" stroke="#B86D3F" stroke-width="0.6" opacity="0.35"/>
+            <line x1="16" y1="22" x2="28" y2="30" stroke="#EFE9DD" stroke-width="1" stroke-linecap="round" opacity="0.4"/>
+            <line x1="16" y1="38" x2="28" y2="30" stroke="#EFE9DD" stroke-width="1" stroke-linecap="round" opacity="0.4"/>
+            <line x1="40" y1="22" x2="28" y2="30" stroke="#EFE9DD" stroke-width="1" stroke-linecap="round" opacity="0.4"/>
+            <line x1="40" y1="38" x2="28" y2="30" stroke="#EFE9DD" stroke-width="1" stroke-linecap="round" opacity="0.4"/>
+            <circle cx="28" cy="30" r="2.8" fill="#5A8E96"/>
+            <circle cx="28" cy="30" r="1.1" fill="#B86D3F"/>
+            <!-- Wordmark -->
+            <text x="64" y="41" font-family="Fraunces, Georgia, serif" font-size="44" font-weight="500" fill="#EFE9DD" letter-spacing="4">Adkun</text>
+            <!-- Separador -->
+            <line x1="256" y1="10" x2="256" y2="50" stroke="#B86D3F" stroke-width="1" opacity="0.4"/>
+            <!-- Endorsement OLACORE Tech -->
+            <text x="268" y="23" font-family="IBM Plex Mono, monospace" font-size="8" fill="#EFE9DD" letter-spacing="3" opacity="0.4">by</text>
+            <text x="268" y="37" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="#EFE9DD" letter-spacing="5" font-weight="500">OLACORE</text>
+            <text x="268" y="50" font-family="IBM Plex Mono, monospace" font-size="8.5" fill="#5A8E96" letter-spacing="6" opacity="0.85">TECH</text>
+          </svg>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Regla de uso: wordmark empresa vs producto -->
+    <div style="margin-top: 20px; background: var(--fiordo); border-radius: 4px; padding: 24px 32px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px;">
+      <div>
+        <span style="font-family: var(--ff-mono); font-size: 8px; letter-spacing: 5px; text-transform: uppercase; color: var(--adkun-lt); opacity: 0.6; display: block; margin-bottom: 8px;">NIVEL EMPRESA</span>
+        <p style="font-family: var(--ff-display); font-size: 14px; font-weight: 500; color: var(--neblina);">Adkun &mdash; Software de Orden</p>
+        <p style="font-family: var(--ff-text); font-size: 11px; color: var(--neblina); opacity: 0.5; margin-top: 4px; line-height: 1.5;">Sitio corporativo, tarjetas, presentaciones a inversores, relaciones con medios, comunicados del holding.</p>
+      </div>
+      <div>
+        <span style="font-family: var(--ff-mono); font-size: 8px; letter-spacing: 5px; text-transform: uppercase; color: var(--adkun-lt); opacity: 0.6; display: block; margin-bottom: 8px;">NIVEL PRODUCTO</span>
+        <p style="font-family: var(--ff-display); font-size: 14px; font-weight: 500; color: var(--neblina);">Alma by Adkun</p>
+        <p style="font-family: var(--ff-text); font-size: 11px; color: var(--neblina); opacity: 0.5; margin-top: 4px; line-height: 1.5;">Landing del producto, UI de la app, onboarding, soporte. El cliente compra Alma; el inversor conoce Adkun.</p>
+      </div>
+      <div>
+        <span style="font-family: var(--ff-mono); font-size: 8px; letter-spacing: 5px; text-transform: uppercase; color: var(--adkun-lt); opacity: 0.6; display: block; margin-bottom: 8px;">NIVEL HOLDING</span>
+        <p style="font-family: var(--ff-display); font-size: 14px; font-weight: 500; color: var(--neblina);">Adkun &middot; OLACORE Tech</p>
+        <p style="font-family: var(--ff-text); font-size: 11px; color: var(--neblina); opacity: 0.5; margin-top: 4px; line-height: 1.5;">Documentos legales, acuerdos comerciales entre empresas del grupo, reporting interno del holding.</p>
+      </div>
+    </div>
+
+  </section>
+
+  <div class="section-divider"></div>
+
+
+  <!-- ═══════════════════════════════════════════
+       SECCION 4 — PALETA
+  ═══════════════════════════════════════════ -->
+  <section>
+    <span class="section-label">04 &nbsp;&mdash;&nbsp; PALETA DE COLOR</span>
+
+    <div class="grid-4">
+      <div class="swatch-main">
+        <div class="swatch-color" style="background: #1F3340;"></div>
+        <div class="swatch-info">
+          <span class="swatch-name">Fiordo</span>
+          <span class="swatch-hex">#1F3340</span>
+          <span class="swatch-role">Estructura, texto primario, fondos institucionales — heredado OLACORE</span>
+        </div>
+      </div>
+      <div class="swatch-main">
+        <div class="swatch-color" style="background: #B86D3F;"></div>
+        <div class="swatch-info">
+          <span class="swatch-name">Cobre</span>
+          <span class="swatch-hex">#B86D3F</span>
+          <span class="swatch-role">Sello, divisores, acento de oficio, firma del holding — heredado OLACORE</span>
+        </div>
+      </div>
+      <div class="swatch-main">
+        <div class="swatch-color" style="background: #3D6B72;"></div>
+        <div class="swatch-info">
+          <span class="swatch-name" style="color: #3D6B72;">Rio Maullin</span>
+          <span class="swatch-hex" style="color: #3D6B72;">#3D6B72</span>
+          <span class="swatch-role" style="color: #3D6B72; font-weight: 500; opacity: 1;">Acento propio Adkun. Agua profunda del sur. Diferencia de las sub-marcas operativas sin romper la familia OLACORE.</span>
+        </div>
+      </div>
+      <div class="swatch-main">
+        <div class="swatch-color" style="background: #EFE9DD; border: 1px solid #D8D1C5;"></div>
+        <div class="swatch-info">
+          <span class="swatch-name">Neblina</span>
+          <span class="swatch-hex">#EFE9DD</span>
+          <span class="swatch-role">Fondo claro, superficies, fondos de tarjeta — heredado OLACORE</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top: 12px;">
+      <p style="font-family: var(--ff-mono); font-size: 8px; letter-spacing: 5px; text-transform: uppercase; color: var(--fiordo); opacity: 0.35; margin-bottom: 8px;">ACENTOS OLACORE HEREDADOS &mdash; USO RESTRINGIDO</p>
+      <div class="swatches-mini">
+        <div class="swatch-mini">
+          <div class="swatch-mini-color" style="background: #5A8E96;"></div>
+          <div class="swatch-mini-info">
+            <div class="swatch-mini-name">Maullin Lt</div>
+            <div class="swatch-mini-hex">#5A8E96</div>
+          </div>
+        </div>
+        <div class="swatch-mini">
+          <div class="swatch-mini-color" style="background: #4A5F3A;"></div>
+          <div class="swatch-mini-info">
+            <div class="swatch-mini-name">Musgo</div>
+            <div class="swatch-mini-hex">#4A5F3A</div>
+          </div>
+        </div>
+        <div class="swatch-mini">
+          <div class="swatch-mini-color" style="background: #8C2A2A;"></div>
+          <div class="swatch-mini-info">
+            <div class="swatch-mini-name">Lacre</div>
+            <div class="swatch-mini-hex">#8C2A2A</div>
+          </div>
+        </div>
+        <div class="swatch-mini">
+          <div class="swatch-mini-color" style="background: #D4A87A;"></div>
+          <div class="swatch-mini-info">
+            <div class="swatch-mini-name">Lenga</div>
+            <div class="swatch-mini-hex">#D4A87A</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+
+  <!-- ═══════════════════════════════════════════
+       SECCION 5 — TIPOGRAFIA
+  ═══════════════════════════════════════════ -->
+  <section>
+    <span class="section-label">05 &nbsp;&mdash;&nbsp; TIPOGRAFIA</span>
+    <div class="grid-3">
+
+      <div class="type-card">
+        <div class="type-meta">
+          <span class="type-family">DISPLAY</span>
+          <span class="type-name">Fraunces</span>
+          <span class="type-use">Wordmark empresa, titulos, taglines, manifiesto, datos destacados</span>
+        </div>
+        <div class="type-weights">
+          <span class="type-weight-tag">400 Regular</span>
+          <span class="type-weight-tag">500 Medium</span>
+          <span class="type-weight-tag">600 SemiBold</span>
+          <span class="type-weight-tag">700 Bold</span>
+        </div>
+        <div style="margin-top: 16px;">
+          <p style="font-family: var(--ff-display); font-size: 36px; font-weight: 600; color: var(--fiordo); line-height: 1.05; letter-spacing: -0.5px;">Orden en la operacion</p>
+          <p style="font-family: var(--ff-display); font-size: 15px; font-weight: 400; font-style: italic; color: var(--cobre); margin-top: 8px;">Software que hace funcionar lo que ya tienes.</p>
+        </div>
+      </div>
+
+      <div class="type-card">
+        <div class="type-meta">
+          <span class="type-family">TEXTO</span>
+          <span class="type-name">Inter</span>
+          <span class="type-use">Cuerpo de texto, UI, labels de interfaz, parrafos, documentos</span>
+        </div>
+        <div class="type-weights">
+          <span class="type-weight-tag">300 Light</span>
+          <span class="type-weight-tag">400 Regular</span>
+          <span class="type-weight-tag">500 Medium</span>
+          <span class="type-weight-tag">600 SemiBold</span>
+        </div>
+        <div style="margin-top: 16px;">
+          <p style="font-family: var(--ff-text); font-size: 13px; font-weight: 400; color: var(--fiordo); line-height: 1.72;">Adkun construye software que ordena la operacion de un negocio. Agnóstico de vertical: hoy clinicas, mañana cualquier negocio que tenga un proceso que necesite orden.</p>
+          <p style="font-family: var(--ff-text); font-size: 11px; font-weight: 300; color: var(--adkun); margin-top: 8px; letter-spacing: 0.3px;">Light &mdash; texto auxiliar, descriptores</p>
+        </div>
+      </div>
+
+      <div class="type-card">
+        <div class="type-meta">
+          <span class="type-family">MONO</span>
+          <span class="type-name">IBM Plex Mono</span>
+          <span class="type-use">Eyebrows, labels tecnicos, metadatos, categorias, coordenadas</span>
+        </div>
+        <div class="type-weights">
+          <span class="type-weight-tag">400 Regular</span>
+          <span class="type-weight-tag">500 Medium</span>
+        </div>
+        <div style="margin-top: 16px;">
+          <p style="font-family: var(--ff-mono); font-size: 10px; letter-spacing: 8px; text-transform: uppercase; color: var(--adkun); line-height: 2.3;">ADKUN &middot; OLACORE TECH<br>SOFTWARE DE ORDEN<br>adkun.com &nbsp;&middot;&nbsp; Brand v2</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+
+  <!-- ═══════════════════════════════════════════
+       SECCION 6 — VOZ Y TONO
+  ═══════════════════════════════════════════ -->
+  <section>
+    <span class="section-label">06 &nbsp;&mdash;&nbsp; VOZ Y TONO</span>
+    <div class="voice-grid">
+      <div class="voice-col voice-col-yes">
+        <div class="voice-col-header">SI &nbsp;&mdash;&nbsp; ADKUN HABLA ASI</div>
+        <div class="voice-item">
+          <p class="voice-example">"Software que pone tu operacion en orden."</p>
+          <p class="voice-why">Directo. Describe lo que hace, no lo que aspira a ser.</p>
+        </div>
+        <div class="voice-item">
+          <p class="voice-example">"Tu proceso funciona con planillas y WhatsApps. Nosotros lo ordenamos."</p>
+          <p class="voice-why">Habla del problema real del cliente, no de nuestra tecnologia.</p>
+        </div>
+        <div class="voice-item">
+          <p class="voice-example">"Probado en produccion durante un ano antes de venderse."</p>
+          <p class="voice-why">La historia de origen como credencial. Sin laboratorios de innovacion.</p>
+        </div>
+        <div class="voice-item">
+          <p class="voice-example">"Cada producto de Adkun responde a un tipo de desorden concreto."</p>
+          <p class="voice-why">Posiciona la empresa como casa de productos, no producto unico.</p>
+        </div>
+        <div class="voice-item">
+          <p class="voice-example">"Agnóstico de vertical. Cualquier negocio que opere puede necesitar orden."</p>
+          <p class="voice-why">Apertura de mercado sin prometer lo que no se puede cumplir hoy.</p>
+        </div>
+      </div>
+      <div class="voice-col voice-col-no">
+        <div class="voice-col-header">NO &nbsp;&mdash;&nbsp; FUERA DE VOZ</div>
+        <div class="voice-item">
+          <p class="voice-example">"La plataforma de gestion clinica mas innovadora de Chile."</p>
+          <p class="voice-why">Superlativo vacio. Adkun no es solo clinico. No usar rubros especificos como paraguas.</p>
+        </div>
+        <div class="voice-item">
+          <p class="voice-example">"Transformamos digitalmente tu negocio con IA de ultima generacion."</p>
+          <p class="voice-why">Copy de startup 2015. Adkun no vende transformacion ni IA; vende orden.</p>
+        </div>
+        <div class="voice-item">
+          <p class="voice-example">"El sistema todo-en-uno para la salud 4.0."</p>
+          <p class="voice-why">Adkun no es sistema de salud. El rubro es del producto (Alma), no de la empresa.</p>
+        </div>
+        <div class="voice-item">
+          <p class="voice-example">"Escalamos tu clinica con tecnologia de clase mundial."</p>
+          <p class="voice-why">Generico, vacio y no corresponde al posicionamiento de empresa de software de orden.</p>
+        </div>
+        <div class="voice-item">
+          <p class="voice-example">"Certificados y habilitados por organismos reguladores de toda la region."</p>
+          <p class="voice-why">No prometer certificaciones que no existen. Nunca publicidad engañosa.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+
+  <!-- ═══════════════════════════════════════════
+       SECCION 7 — APLICACIONES
+  ═══════════════════════════════════════════ -->
+  <section>
+    <span class="section-label">07 &nbsp;&mdash;&nbsp; APLICACIONES</span>
+
+    <!-- Hero sitio adkun.com -->
+    <div style="margin-bottom: 48px;">
+      <p style="font-family: var(--ff-mono); font-size: 9px; letter-spacing: 5px; color: var(--fiordo); opacity: 0.4; margin-bottom: 16px; text-transform: uppercase;">Hero sitio adkun.com</p>
+      <div class="site-hero">
+        <div class="site-topbar">
+          <div style="display: flex; align-items: center; gap: 16px;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="26" height="26">
+              <circle cx="16" cy="16" r="14" fill="none" stroke="#EFE9DD" stroke-width="1.2"/>
+              <circle cx="16" cy="16" r="11" fill="none" stroke="#B86D3F" stroke-width="0.7"/>
+              <line x1="16" y1="3" x2="16" y2="29" stroke="#B86D3F" stroke-width="0.5" opacity="0.35"/>
+              <line x1="9" y1="11" x2="16" y2="16" stroke="#EFE9DD" stroke-width="0.8" stroke-linecap="round" opacity="0.45"/>
+              <line x1="9" y1="21" x2="16" y2="16" stroke="#EFE9DD" stroke-width="0.8" stroke-linecap="round" opacity="0.4"/>
+              <line x1="23" y1="11" x2="16" y2="16" stroke="#EFE9DD" stroke-width="0.8" stroke-linecap="round" opacity="0.45"/>
+              <line x1="23" y1="21" x2="16" y2="16" stroke="#EFE9DD" stroke-width="0.8" stroke-linecap="round" opacity="0.4"/>
+              <circle cx="16" cy="16" r="2.5" fill="#5A8E96"/>
+              <circle cx="16" cy="16" r="1" fill="#B86D3F"/>
+            </svg>
+            <span style="font-family: var(--ff-display); font-size: 20px; font-weight: 600; color: var(--neblina); letter-spacing: 1px;">Adkun</span>
+          </div>
+          <nav class="site-nav">
+            <span class="site-nav-item active">Empresa</span>
+            <span class="site-nav-item">Productos</span>
+            <span class="site-nav-item">Alma</span>
+            <span class="site-nav-item">Sobre Adkun</span>
+            <span class="site-nav-item">Contacto</span>
+          </nav>
+          <div style="font-family: var(--ff-mono); font-size: 9px; letter-spacing: 4px; color: var(--adkun-lt); opacity: 0.5;">adkun.com</div>
+        </div>
+        <div class="site-hero-body">
+          <div>
+            <span style="font-family: var(--ff-mono); font-size: 9px; letter-spacing: 6px; text-transform: uppercase; color: var(--adkun-lt); opacity: 0.7; display: block; margin-bottom: 16px;">SOFTWARE DE ORDEN &nbsp;&middot;&nbsp; OLACORE TECH</span>
+            <h2 style="font-family: var(--ff-display); font-size: clamp(28px, 4vw, 52px); font-weight: 700; color: var(--neblina); line-height: 1.05; letter-spacing: -1px; margin-bottom: 16px;">Tu operacion tiene desorden.<br>Nosotros lo ordenamos.</h2>
+            <p style="font-family: var(--ff-text); font-size: 14px; font-weight: 300; color: var(--neblina); opacity: 0.65; line-height: 1.75; max-width: 440px; margin-bottom: 4px;">Adkun construye software que pone en orden la operacion de negocios reales. Hoy gestion de clinicas. Manana cualquier negocio que opere con procesos, personas y datos.</p>
+            <div style="margin-top: 20px; display: flex; gap: 12px; align-items: center;">
+              <span class="site-hero-cta" style="margin-top: 0;">Conoce Alma</span>
+              <span class="site-hero-cta-ghost" style="margin-top: 0; margin-left: 0;">Sobre Adkun</span>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <!-- Mini nodo visual decorativo -->
+            <div style="background: var(--fiordo); border-radius: 4px; padding: 20px 24px; border-left: 2px solid var(--adkun);">
+              <span style="font-family: var(--ff-mono); font-size: 8px; letter-spacing: 4px; text-transform: uppercase; color: var(--adkun-lt); opacity: 0.65; display: block; margin-bottom: 6px;">PRODUCTO FLAGSHIP</span>
+              <span style="font-family: var(--ff-display); font-size: 20px; font-weight: 600; color: var(--neblina);">Alma</span>
+              <p style="font-family: var(--ff-text); font-size: 11px; color: var(--neblina); opacity: 0.55; margin-top: 4px; line-height: 1.5;">Gestion de clinicas. Agenda, recepcion WhatsApp, caja e indicadores en un solo sistema.</p>
+            </div>
+            <div style="background: rgba(31,51,64,0.5); border-radius: 4px; padding: 20px 24px; border-left: 2px solid rgba(61,107,114,0.25);">
+              <span style="font-family: var(--ff-mono); font-size: 8px; letter-spacing: 4px; text-transform: uppercase; color: var(--adkun-lt); opacity: 0.4; display: block; margin-bottom: 6px;">EN DESARROLLO</span>
+              <span style="font-family: var(--ff-display); font-size: 16px; font-weight: 500; color: rgba(239,233,221,0.4);">Proximo producto</span>
+              <p style="font-family: var(--ff-text); font-size: 11px; color: rgba(239,233,221,0.3); margin-top: 4px; line-height: 1.5;">Nueva vertical en evaluacion. Por anunciar.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="app-label">HERO SITIO &mdash; adkun.com</p>
+    </div>
+
+    <!-- Tarjetas de presentacion -->
+    <div style="margin-bottom: 48px;">
+      <p style="font-family: var(--ff-mono); font-size: 9px; letter-spacing: 5px; color: var(--fiordo); opacity: 0.4; margin-bottom: 16px; text-transform: uppercase;">Tarjeta de Presentacion &mdash; nivel empresa</p>
+      <div style="display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start;">
+
+        <!-- Frente oscuro -->
+        <div>
+          <div class="biz-card">
+            <div class="biz-card-front">
+              <div style="display: flex; align-items: center; gap: 12px; position: relative; z-index: 1;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="34" height="34">
+                  <circle cx="25" cy="25" r="23" fill="none" stroke="#EFE9DD" stroke-width="1.5"/>
+                  <circle cx="25" cy="25" r="18" fill="none" stroke="#B86D3F" stroke-width="0.8"/>
+                  <line x1="25" y1="4" x2="25" y2="46" stroke="#B86D3F" stroke-width="0.6" opacity="0.35"/>
+                  <line x1="14" y1="17" x2="25" y2="25" stroke="#EFE9DD" stroke-width="1" stroke-linecap="round" opacity="0.4"/>
+                  <line x1="14" y1="33" x2="25" y2="25" stroke="#EFE9DD" stroke-width="1" stroke-linecap="round" opacity="0.4"/>
+                  <line x1="36" y1="17" x2="25" y2="25" stroke="#EFE9DD" stroke-width="1" stroke-linecap="round" opacity="0.4"/>
+                  <line x1="36" y1="33" x2="25" y2="25" stroke="#EFE9DD" stroke-width="1" stroke-linecap="round" opacity="0.4"/>
+                  <circle cx="25" cy="25" r="3.2" fill="#5A8E96"/>
+                  <circle cx="25" cy="25" r="1.3" fill="#B86D3F"/>
+                </svg>
+                <div style="position: relative; z-index: 1;">
+                  <p style="font-family: var(--ff-display); font-size: 21px; font-weight: 600; color: var(--neblina); letter-spacing: 1px; line-height: 1;">Adkun</p>
+                  <p style="font-family: var(--ff-mono); font-size: 7px; letter-spacing: 3px; color: var(--adkun-lt); opacity: 0.65;">Software de Orden</p>
+                </div>
+              </div>
+              <div style="position: relative; z-index: 1;">
+                <p class="biz-card-name">Rodrigo Olavarria</p>
+                <p class="biz-card-role">Fundador &nbsp;&middot;&nbsp; Director</p>
+                <p class="biz-card-contact">adkun.com &nbsp;&nbsp;|&nbsp;&nbsp; rodrigo@adkun.com</p>
+              </div>
+            </div>
+          </div>
+          <p class="app-label">FRENTE &mdash; OSCURO</p>
+        </div>
+
+        <!-- Reverso -->
+        <div>
+          <div class="biz-card">
+            <div class="biz-card-back">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="54" height="54">
+                <circle cx="40" cy="40" r="36" fill="none" stroke="rgba(239,233,221,0.2)" stroke-width="1.5"/>
+                <circle cx="40" cy="40" r="28" fill="none" stroke="rgba(184,109,63,0.35)" stroke-width="1"/>
+                <line x1="40" y1="6" x2="40" y2="74" stroke="rgba(184,109,63,0.3)" stroke-width="0.8"/>
+                <line x1="22" y1="27" x2="40" y2="40" stroke="rgba(239,233,221,0.5)" stroke-width="1.5" stroke-linecap="round"/>
+                <line x1="22" y1="53" x2="40" y2="40" stroke="rgba(239,233,221,0.5)" stroke-width="1.5" stroke-linecap="round"/>
+                <line x1="40" y1="16" x2="40" y2="40" stroke="rgba(239,233,221,0.5)" stroke-width="1.5" stroke-linecap="round"/>
+                <line x1="58" y1="27" x2="40" y2="40" stroke="rgba(239,233,221,0.5)" stroke-width="1.5" stroke-linecap="round"/>
+                <line x1="58" y1="53" x2="40" y2="40" stroke="rgba(239,233,221,0.5)" stroke-width="1.5" stroke-linecap="round"/>
+                <line x1="40" y1="64" x2="40" y2="40" stroke="rgba(239,233,221,0.5)" stroke-width="1.5" stroke-linecap="round"/>
+                <circle cx="40" cy="40" r="5" fill="rgba(239,233,221,0.65)"/>
+                <circle cx="40" cy="40" r="2" fill="rgba(184,109,63,0.9)"/>
+              </svg>
+              <p class="biz-card-back-text">ADKUN &nbsp;&middot;&nbsp; OLACORE TECH</p>
+              <p style="font-family: var(--ff-mono); font-size: 7px; letter-spacing: 3px; color: rgba(239,233,221,0.38);">adkun.com</p>
+            </div>
+          </div>
+          <p class="app-label">REVERSO &mdash; ACENTO</p>
+        </div>
+
+        <!-- Frente claro -->
+        <div>
+          <div class="biz-card">
+            <div style="background: var(--neblina); display: flex; flex-direction: column; justify-content: space-between; padding: 24px 28px; height: 100%; border-radius: 5px; position: relative; overflow: hidden;">
+              <div style="position: absolute; top: 0; bottom: 0; left: 20px; width: 1px; background: linear-gradient(to bottom, transparent, var(--cobre) 30%, var(--cobre) 70%, transparent); opacity: 0.18;"></div>
+              <div style="display: flex; align-items: center; gap: 12px; position: relative; z-index: 1;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="30" height="30">
+                  <circle cx="25" cy="25" r="23" fill="none" stroke="#1F3340" stroke-width="1.5"/>
+                  <circle cx="25" cy="25" r="18" fill="none" stroke="#B86D3F" stroke-width="0.8"/>
+                  <line x1="25" y1="4" x2="25" y2="46" stroke="#B86D3F" stroke-width="0.6" opacity="0.28"/>
+                  <line x1="14" y1="17" x2="25" y2="25" stroke="#1F3340" stroke-width="1" stroke-linecap="round" opacity="0.38"/>
+                  <line x1="14" y1="33" x2="25" y2="25" stroke="#1F3340" stroke-width="1" stroke-linecap="round" opacity="0.38"/>
+                  <line x1="36" y1="17" x2="25" y2="25" stroke="#1F3340" stroke-width="1" stroke-linecap="round" opacity="0.38"/>
+                  <line x1="36" y1="33" x2="25" y2="25" stroke="#1F3340" stroke-width="1" stroke-linecap="round" opacity="0.38"/>
+                  <circle cx="25" cy="25" r="3" fill="#3D6B72"/>
+                  <circle cx="25" cy="25" r="1.2" fill="#B86D3F"/>
+                </svg>
+                <div>
+                  <p style="font-family: var(--ff-display); font-size: 20px; font-weight: 600; color: var(--fiordo); letter-spacing: 1px; line-height: 1;">Adkun</p>
+                  <p style="font-family: var(--ff-mono); font-size: 7px; letter-spacing: 3px; color: var(--adkun); opacity: 0.65;">Software de Orden</p>
+                </div>
+              </div>
+              <div>
+                <p style="font-family: var(--ff-display); font-size: 14px; font-weight: 600; color: var(--fiordo);">Rodrigo Olavarria</p>
+                <p style="font-family: var(--ff-text); font-size: 10px; color: var(--adkun); letter-spacing: 0.5px; margin-top: 2px;">Fundador &nbsp;&middot;&nbsp; Director</p>
+                <p style="font-family: var(--ff-mono); font-size: 9px; color: var(--fiordo); opacity: 0.45; letter-spacing: 0.5px; line-height: 1.7; margin-top: 4px;">adkun.com &nbsp;&nbsp;|&nbsp;&nbsp; rodrigo@adkun.com</p>
+              </div>
+            </div>
+          </div>
+          <p class="app-label">FRENTE &mdash; CLARO</p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Portfolio de productos -->
+    <div>
+      <p style="font-family: var(--ff-mono); font-size: 9px; letter-spacing: 5px; color: var(--fiordo); opacity: 0.4; margin-bottom: 16px; text-transform: uppercase;">Portfolio de Productos &mdash; casa de productos Adkun</p>
+      <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 16px;">
+
+        <!-- Alma — flagship -->
+        <div class="product-card" style="background: var(--fiordo); border: 1px solid rgba(61,107,114,0.3);">
+          <div class="product-card-top">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-family: var(--ff-mono); font-size: 8px; letter-spacing: 5px; text-transform: uppercase; color: var(--adkun-lt); opacity: 0.7;">PRODUCTO FLAGSHIP</span>
+              <span style="font-family: var(--ff-mono); font-size: 8px; letter-spacing: 3px; text-transform: uppercase; color: var(--musgo); background: rgba(74,95,58,0.15); padding: 3px 8px; border-radius: 2px; border: 1px solid rgba(74,95,58,0.3);">PRODUCCION</span>
+            </div>
+            <div style="margin-top: 4px;">
+              <p style="font-family: var(--ff-display); font-size: 36px; font-weight: 600; color: var(--neblina); letter-spacing: -0.5px; line-height: 1;">Alma</p>
+              <p style="font-family: var(--ff-mono); font-size: 8px; letter-spacing: 4px; color: var(--adkun-lt); opacity: 0.6; margin-top: 4px;">by Adkun</p>
+            </div>
+            <p style="font-family: var(--ff-text); font-size: 13px; color: var(--neblina); opacity: 0.65; line-height: 1.65; margin-top: 8px;">Gestion operativa de clinicas. Recepcion por WhatsApp, agenda, caja e indicadores de desempeno en un solo sistema. Agnóstico de HIS; integra con Medilink y otros.</p>
+            <div style="margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap;">
+              <span style="font-family: var(--ff-mono); font-size: 8px; letter-spacing: 3px; color: var(--adkun-lt); background: rgba(61,107,114,0.15); padding: 4px 10px; border-radius: 2px;">CLINICAS</span>
+              <span style="font-family: var(--ff-mono); font-size: 8px; letter-spacing: 3px; color: var(--adkun-lt); background: rgba(61,107,114,0.15); padding: 4px 10px; border-radius: 2px;">WHATSAPP</span>
+              <span style="font-family: var(--ff-mono); font-size: 8px; letter-spacing: 3px; color: var(--adkun-lt); background: rgba(61,107,114,0.15); padding: 4px 10px; border-radius: 2px;">AGENDA</span>
+              <span style="font-family: var(--ff-mono); font-size: 8px; letter-spacing: 3px; color: var(--adkun-lt); background: rgba(61,107,114,0.15); padding: 4px 10px; border-radius: 2px;">CAJA + BI</span>
+            </div>
+          </div>
+          <div class="product-card-bottom" style="border-top-color: rgba(61,107,114,0.2);">
+            <span style="font-family: var(--ff-mono); font-size: 9px; letter-spacing: 3px; color: var(--neblina); opacity: 0.35;">alma.adkun.com</span>
+            <span style="font-family: var(--ff-text); font-size: 10px; color: var(--adkun-lt); opacity: 0.7;">Vertical: salud</span>
+          </div>
+        </div>
+
+        <!-- Proximo producto 1 -->
+        <div class="product-card" style="background: var(--neblina); border: 1px solid rgba(31,51,64,0.1); opacity: 0.55;">
+          <div class="product-card-top">
+            <span style="font-family: var(--ff-mono); font-size: 8px; letter-spacing: 5px; text-transform: uppercase; color: var(--fiordo); opacity: 0.4;">PROXIMO</span>
+            <div style="margin-top: 8px;">
+              <p style="font-family: var(--ff-display); font-size: 28px; font-weight: 600; color: var(--fiordo); opacity: 0.35; line-height: 1;">TBD</p>
+            </div>
+            <p style="font-family: var(--ff-text); font-size: 12px; color: var(--fiordo); opacity: 0.4; line-height: 1.6; margin-top: 10px;">Segundo producto de la casa. Vertical en evaluacion. El patron es el mismo: validar internamente, luego productizar.</p>
+            <div style="margin-top: 16px;">
+              <span style="font-family: var(--ff-mono); font-size: 8px; letter-spacing: 3px; color: var(--fiordo); opacity: 0.3; background: rgba(31,51,64,0.07); padding: 4px 10px; border-radius: 2px;">POR DEFINIR</span>
+            </div>
+          </div>
+          <div class="product-card-bottom" style="border-top-color: rgba(31,51,64,0.1);">
+            <span style="font-family: var(--ff-mono); font-size: 9px; letter-spacing: 3px; color: var(--fiordo); opacity: 0.25;">?.adkun.com</span>
+          </div>
+        </div>
+
+        <!-- Proximo producto 2 -->
+        <div class="product-card" style="background: var(--neblina); border: 1px dashed rgba(31,51,64,0.15); opacity: 0.35;">
+          <div class="product-card-top">
+            <span style="font-family: var(--ff-mono); font-size: 8px; letter-spacing: 5px; text-transform: uppercase; color: var(--fiordo); opacity: 0.4;">FUTURO</span>
+            <div style="margin-top: 8px;">
+              <p style="font-family: var(--ff-display); font-size: 28px; font-weight: 600; color: var(--fiordo); opacity: 0.2; line-height: 1;">TBD</p>
+            </div>
+            <p style="font-family: var(--ff-text); font-size: 12px; color: var(--fiordo); opacity: 0.35; line-height: 1.6; margin-top: 10px;">Tercer producto. Cada producto de Adkun ordenara un tipo distinto de operacion.</p>
+          </div>
+          <div class="product-card-bottom" style="border-top-color: rgba(31,51,64,0.06);">
+            <span style="font-family: var(--ff-mono); font-size: 9px; letter-spacing: 3px; color: var(--fiordo); opacity: 0.2;">?.adkun.com</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </section>
+
+  <div class="section-divider"></div>
+
+
+  <!-- ═══════════════════════════════════════════
+       SECCION 8 — ARQUITECTURA DE MARCA
+  ═══════════════════════════════════════════ -->
+  <section>
+    <span class="section-label">08 &nbsp;&mdash;&nbsp; ARQUITECTURA DE MARCA Y ESTRUCTURA</span>
+
+    <!-- Diagrama holding completo -->
+    <div class="arch-tree" style="margin-bottom: 24px;">
+      <div class="tree-root-label">OLACORE</div>
+      <div class="tree-root-sub">HOLDING EMPRESARIAL &nbsp;&middot;&nbsp; SUR DE CHILE &nbsp;&middot;&nbsp; CARAMPANGUE &nbsp;&middot;&nbsp; PUERTO MONTT</div>
+
+      <!-- Diagrama visual en columnas -->
+      <div style="display: grid; grid-template-columns: 200px 28px 200px 28px 220px 28px auto; gap: 0; align-items: start; overflow-x: auto;">
+
+        <!-- Columna 1: OLACORE -->
+        <div>
+          <div style="font-family: var(--ff-mono); font-size: 7px; letter-spacing: 4px; text-transform: uppercase; color: var(--fiordo); opacity: 0.35; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid rgba(31,51,64,0.1);">HOLDING</div>
+          <div style="background: var(--fiordo); border-radius: 3px; padding: 14px 16px;">
+            <p style="font-family: var(--ff-display); font-size: 18px; font-weight: 700; color: var(--neblina); letter-spacing: 2px;">OLACORE</p>
+            <p style="font-family: var(--ff-text); font-size: 10px; color: var(--neblina); opacity: 0.5; margin-top: 3px;">Holding empresarial</p>
+            <p style="font-family: var(--ff-mono); font-size: 7px; letter-spacing: 2px; color: var(--cobre); margin-top: 6px;">SUR DE CHILE</p>
+          </div>
+        </div>
+
+        <!-- Conector -->
+        <div style="display: flex; align-items: center; justify-content: center; padding-top: 40px;">
+          <svg width="28" height="2"><line x1="0" y1="1" x2="28" y2="1" stroke="#B86D3F" stroke-width="1" stroke-dasharray="3,2" opacity="0.4"/></svg>
+        </div>
+
+        <!-- Columna 2: Verticales operativas -->
+        <div>
+          <div style="font-family: var(--ff-mono); font-size: 7px; letter-spacing: 4px; text-transform: uppercase; color: var(--fiordo); opacity: 0.35; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid rgba(31,51,64,0.1);">VERTICALES OPERATIVAS</div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <div style="background: rgba(31,51,64,0.07); border-radius: 3px; padding: 10px 14px; opacity: 0.65;">
+              <p style="font-family: var(--ff-display); font-size: 13px; font-weight: 600; color: var(--fiordo);">CMC</p>
+              <p style="font-family: var(--ff-mono); font-size: 7px; letter-spacing: 2px; color: var(--fiordo); opacity: 0.5;">Salud &middot; Carampangue</p>
+            </div>
+            <div style="background: rgba(31,51,64,0.07); border-radius: 3px; padding: 10px 14px; opacity: 0.65;">
+              <p style="font-family: var(--ff-display); font-size: 13px; font-weight: 600; color: var(--fiordo);">Meulen</p>
+              <p style="font-family: var(--ff-mono); font-size: 7px; letter-spacing: 2px; color: var(--fiordo); opacity: 0.5;">Retail &middot; Tirua</p>
+            </div>
+            <div style="background: rgba(31,51,64,0.07); border-radius: 3px; padding: 10px 14px; opacity: 0.65;">
+              <p style="font-family: var(--ff-display); font-size: 13px; font-weight: 600; color: var(--fiordo);">Olavega</p>
+              <p style="font-family: var(--ff-mono); font-size: 7px; letter-spacing: 2px; color: var(--fiordo); opacity: 0.5;">Marca personal &middot; Dr. Olavarria</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Conector -->
+        <div style="display: flex; align-items: center; justify-content: center; padding-top: 40px;">
+          <svg width="28" height="2"><line x1="0" y1="1" x2="28" y2="1" stroke="#B86D3F" stroke-width="1" stroke-dasharray="3,2" opacity="0.4"/></svg>
+        </div>
+
+        <!-- Columna 3: OLACORE Tech -->
+        <div>
+          <div style="font-family: var(--ff-mono); font-size: 7px; letter-spacing: 4px; text-transform: uppercase; color: var(--fiordo); opacity: 0.35; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid rgba(31,51,64,0.1);">VERTICAL TECH</div>
+          <div style="background: rgba(184,109,63,0.08); border: 1px solid rgba(184,109,63,0.25); border-radius: 3px; padding: 14px 16px;">
+            <p style="font-family: var(--ff-display); font-size: 15px; font-weight: 600; color: var(--fiordo);">OLACORE Tech</p>
+            <p style="font-family: var(--ff-text); font-size: 10px; color: var(--fiordo); opacity: 0.5; margin-top: 3px; line-height: 1.4;">Vertical horizontal. Software + infraestructura digital del grupo.</p>
+            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(184,109,63,0.2);">
+              <p style="font-family: var(--ff-mono); font-size: 7px; letter-spacing: 2px; color: var(--cobre); opacity: 0.7;">A: Interno &nbsp;&middot;&nbsp; costo</p>
+              <p style="font-family: var(--ff-mono); font-size: 7px; letter-spacing: 2px; color: var(--cobre); opacity: 0.7; margin-top: 3px;">B: Externo &nbsp;&middot;&nbsp; revenue</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Conector -->
+        <div style="display: flex; align-items: center; justify-content: center; padding-top: 40px;">
+          <svg width="28" height="2"><line x1="0" y1="1" x2="28" y2="1" stroke="#3D6B72" stroke-width="1.5" opacity="0.6"/></svg>
+        </div>
+
+        <!-- Columna 4: Adkun y productos -->
+        <div style="min-width: 260px;">
+          <div style="font-family: var(--ff-mono); font-size: 7px; letter-spacing: 4px; text-transform: uppercase; color: var(--adkun); opacity: 0.7; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid rgba(61,107,114,0.2);">ADKUN &nbsp;&mdash;&nbsp; SOFTWARE DE ORDEN</div>
+
+          <!-- Nodo Adkun empresa -->
+          <div style="background: var(--adkun); border-radius: 3px; padding: 14px 16px; margin-bottom: 8px;">
+            <p style="font-family: var(--ff-display); font-size: 20px; font-weight: 600; color: var(--neblina); letter-spacing: 1px;">Adkun</p>
+            <p style="font-family: var(--ff-mono); font-size: 7px; letter-spacing: 3px; color: rgba(239,233,221,0.6); margin-top: 3px;">EMPRESA &nbsp;&middot;&nbsp; adkun.com</p>
+            <p style="font-family: var(--ff-text); font-size: 10px; color: var(--neblina); opacity: 0.6; margin-top: 5px; line-height: 1.4;">Vehiculo de escala internacional. Casa de productos de orden.</p>
+          </div>
+
+          <!-- Sub-nodos: productos -->
+          <div style="padding-left: 16px; border-left: 1px solid rgba(61,107,114,0.3); display: flex; flex-direction: column; gap: 6px;">
+            <div style="background: var(--neblina); border-radius: 3px; padding: 10px 14px; border-left: 2px solid var(--adkun);">
+              <p style="font-family: var(--ff-display); font-size: 15px; font-weight: 600; color: var(--fiordo);">Alma</p>
+              <p style="font-family: var(--ff-mono); font-size: 7px; letter-spacing: 2px; color: var(--adkun); margin-top: 2px;">PRODUCCION &nbsp;&middot;&nbsp; Salud</p>
+              <p style="font-family: var(--ff-text); font-size: 10px; color: var(--fiordo); opacity: 0.55; margin-top: 4px; line-height: 1.35;">Gestion de clinicas. Producto flagship.</p>
+            </div>
+            <div style="background: rgba(239,233,221,0.6); border-radius: 3px; padding: 10px 14px; border-left: 2px dashed rgba(61,107,114,0.3); opacity: 0.6;">
+              <p style="font-family: var(--ff-display); font-size: 13px; font-weight: 500; color: var(--fiordo); opacity: 0.5;">Proximo producto</p>
+              <p style="font-family: var(--ff-mono); font-size: 7px; letter-spacing: 2px; color: var(--fiordo); opacity: 0.3; margin-top: 2px;">EN EVALUACION</p>
+            </div>
+            <div style="background: rgba(239,233,221,0.4); border-radius: 3px; padding: 10px 14px; border-left: 2px dashed rgba(61,107,114,0.15); opacity: 0.4;">
+              <p style="font-family: var(--ff-display); font-size: 13px; font-weight: 500; color: var(--fiordo); opacity: 0.35;">Futuro producto</p>
+              <p style="font-family: var(--ff-mono); font-size: 7px; letter-spacing: 2px; color: var(--fiordo); opacity: 0.2; margin-top: 2px;">FUTURO</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Nota explicativa -->
+      <div style="margin-top: 28px; padding-top: 20px; border-top: 1px solid rgba(31,51,64,0.1); display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px;">
+        <div>
+          <p style="font-family: var(--ff-mono); font-size: 8px; letter-spacing: 4px; text-transform: uppercase; color: var(--adkun); opacity: 0.7; margin-bottom: 6px;">SEPARACION MARCA-PRODUCTO</p>
+          <p style="font-family: var(--ff-text); font-size: 11px; color: var(--fiordo); opacity: 0.65; line-height: 1.6;">El cliente final compra Alma, no Adkun. Adkun es visible para inversores, socios y el mercado B2B. El separacion es deliberada: permite spin-off o venta del producto sin tocar la empresa.</p>
+        </div>
+        <div>
+          <p style="font-family: var(--ff-mono); font-size: 8px; letter-spacing: 4px; text-transform: uppercase; color: var(--adkun); opacity: 0.7; margin-bottom: 6px;">PATRON DE LANZAMIENTO</p>
+          <p style="font-family: var(--ff-text); font-size: 11px; color: var(--fiordo); opacity: 0.65; line-height: 1.6;">Cada producto se valida internamente en una operacion propia del holding durante un ano antes de productizarse. Patrón Basecamp/GitHub: el producto interno se convierte en producto vendible.</p>
+        </div>
+        <div>
+          <p style="font-family: var(--ff-mono); font-size: 8px; letter-spacing: 4px; text-transform: uppercase; color: var(--adkun); opacity: 0.7; margin-bottom: 6px;">ESCALA INTERNACIONAL</p>
+          <p style="font-family: var(--ff-text); font-size: 11px; color: var(--fiordo); opacity: 0.65; line-height: 1.6;">Adkun opera con dominio .com (internacional) y .cl (Chile). Las verticales operativas del holding usan dominios nacionales. Adkun es el vehiculo pensado para crecer fuera de Chile.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dominios y handles -->
+    <div class="grid-2">
+      <div class="domain-note">
+        <span class="domain-note-head">DOMINIOS Y HANDLES</span>
+        <div class="domain-rule">
+          <span class="domain-mark">adkun.com</span>
+          <p class="domain-desc">Dominio principal internacional. Sitio corporativo de la empresa. Todas las comunicaciones externas de Adkun apuntan a .com. La empresa piensa en escala internacional desde el inicio.</p>
+        </div>
+        <div class="domain-divider"></div>
+        <div class="domain-rule">
+          <span class="domain-mark" style="font-size: 22px; color: var(--adkun-lt);">adkun.cl</span>
+          <p class="domain-desc">Dominio nacional de respaldo. Redirige a adkun.com. Util para registros legales en Chile, INAPI y comunicaciones formales con organismos nacionales.</p>
+        </div>
+        <div class="domain-divider"></div>
+        <div style="padding-top: 6px;">
+          <p style="font-family: var(--ff-mono); font-size: 9px; letter-spacing: 2px; color: rgba(239,233,221,0.45); line-height: 1.85;">HANDLES REDES SOCIALES:<br>@adkunhq &nbsp;&mdash;&nbsp; recomendado (hq = headquarters)<br>@adkun.cl &nbsp;&mdash;&nbsp; alternativa nacional<br>@adkun &nbsp;&mdash;&nbsp; tomado, no disponible<br><br>EMAIL EMPRESA: rodrigo@adkun.com</p>
+        </div>
+      </div>
+
+      <!-- Roadmap -->
+      <div style="background: var(--neblina); border-radius: 4px; padding: 32px 36px; display: flex; flex-direction: column; gap: 20px;">
+        <span style="font-family: var(--ff-mono); font-size: 9px; letter-spacing: 6px; text-transform: uppercase; color: var(--adkun); opacity: 0.7; display: block; margin-bottom: 4px;">PROXIMOS PASOS</span>
+
+        <div class="roadmap-item" style="border-left-color: var(--adkun);">
+          <span class="roadmap-phase" style="color: var(--adkun);">AHORA &nbsp;&middot;&nbsp; Semana 1</span>
+          <span class="roadmap-title">Registrar adkun.com y adkun.cl</span>
+          <span class="roadmap-desc">Verificar disponibilidad. Registrar handle @adkunhq. Configurar DNS. Email rodrigo@adkun.com.</span>
+        </div>
+
+        <div class="roadmap-item" style="border-left-color: var(--cobre);">
+          <span class="roadmap-phase" style="color: var(--cobre);">30 DIAS</span>
+          <span class="roadmap-title">Landing adkun.com nivel empresa</span>
+          <span class="roadmap-desc">Pagina corporativa de Adkun: empresa, productos, Alma como flagship. Sin precio todavia. Formulario de contacto para socios y clientes potenciales.</span>
+        </div>
+
+        <div class="roadmap-item" style="border-left-color: var(--fiordo);">
+          <span class="roadmap-phase" style="color: var(--fiordo);">90 DIAS</span>
+          <span class="roadmap-title">Primer cliente externo de Alma</span>
+          <span class="roadmap-desc">Onboarding del primer cliente de Alma fuera del grupo OLACORE. Validar multi-tenant y billing. Precio piloto.</span>
+        </div>
+
+        <div class="roadmap-item" style="border-left-color: var(--musgo);">
+          <span class="roadmap-phase" style="color: var(--musgo);">6 MESES</span>
+          <span class="roadmap-title">INAPI + validacion mapuche</span>
+          <span class="roadmap-desc">Registrar marca Adkun en INAPI. Validar raiz adkunun con hablante o academico de mapudungun antes de campana publica masiva.</span>
+        </div>
+
+      </div>
+    </div>
+
+  </section>
+
+
+  <!-- Footer -->
+  <footer style="padding-top: 24px; border-top: 1px solid rgba(61,107,114,0.18); display: flex; justify-content: space-between; align-items: center;">
+    <div style="display: flex; align-items: center; gap: 16px;">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="22" height="22">
+        <circle cx="16" cy="16" r="14" fill="none" stroke="#1F3340" stroke-width="1.2"/>
+        <circle cx="16" cy="16" r="10" fill="none" stroke="#B86D3F" stroke-width="0.7"/>
+        <line x1="16" y1="3" x2="16" y2="29" stroke="#B86D3F" stroke-width="0.5" opacity="0.3"/>
+        <line x1="9" y1="11" x2="16" y2="16" stroke="#1F3340" stroke-width="0.8" stroke-linecap="round" opacity="0.38"/>
+        <line x1="9" y1="21" x2="16" y2="16" stroke="#1F3340" stroke-width="0.8" stroke-linecap="round" opacity="0.38"/>
+        <line x1="23" y1="11" x2="16" y2="16" stroke="#1F3340" stroke-width="0.8" stroke-linecap="round" opacity="0.38"/>
+        <line x1="23" y1="21" x2="16" y2="16" stroke="#1F3340" stroke-width="0.8" stroke-linecap="round" opacity="0.38"/>
+        <circle cx="16" cy="16" r="2.2" fill="#3D6B72"/>
+        <circle cx="16" cy="16" r="0.9" fill="#B86D3F"/>
+      </svg>
+      <span style="font-family: var(--ff-mono); font-size: 9px; letter-spacing: 4px; color: var(--fiordo); opacity: 0.45;">ADKUN &nbsp;&middot;&nbsp; BRAND BOARD EMPRESA v2 &nbsp;&middot;&nbsp; 2026 &nbsp;&middot;&nbsp; OLACORE TECH</span>
+    </div>
+    <div style="display: flex; gap: 20px; align-items: center;">
+      <span style="font-family: var(--ff-mono); font-size: 8px; letter-spacing: 3px; color: var(--adkun); opacity: 0.55;">adkun.com</span>
+      <span style="font-family: var(--ff-mono); font-size: 8px; letter-spacing: 3px; color: var(--fiordo); opacity: 0.3;">&middot;</span>
+      <span style="font-family: var(--ff-mono); font-size: 8px; letter-spacing: 3px; color: var(--fiordo); opacity: 0.35;">OLACORE TECH</span>
+    </div>
+  </footer>
+
+
+</div>
+</body>
+</html>
