@@ -1555,13 +1555,13 @@ document.getElementById('btnPrellenar').addEventListener('click', async () => {
     }
     const d = await r.json();
     const partes = [];
-    if (d.creadas  > 0) partes.push(`${d.creadas} nueva${d.creadas>1?'s':''}`);
-    if (d.actualizadas > 0) partes.push(`${d.actualizadas} prestacion${d.actualizadas>1?'es':''} completada${d.actualizadas>1?'s':''}`);
+    if (d.creadas      > 0) partes.push(`${d.creadas} nueva${d.creadas>1?'s':''}`);
+    if (d.actualizadas > 0) partes.push(`${d.actualizadas} actualizada${d.actualizadas>1?'s':''}`);
     const msg = partes.length > 0
       ? partes.join(' · ')
       : (d.mensaje || 'Todo al dia');
     showToast(msg, (d.creadas > 0 || d.actualizadas > 0) ? 'success' : '');
-    if (d.creadas > 0 || d.actualizadas > 0) cargarPagos();
+    cargarPagos(); // siempre recargar para reflejar canal/fuente actualizados
   } catch(e) {
     showToast('Error: ' + e.message, 'error');
   } finally {

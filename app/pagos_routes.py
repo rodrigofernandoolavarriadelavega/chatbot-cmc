@@ -12,6 +12,7 @@ Auth: misma que agenda_routes (_require_admin_dep).
 DB: sessions.db (tabla pagos_cmc), misma que todo el stack.
 """
 import logging
+import re
 from datetime import datetime, date
 from zoneinfo import ZoneInfo
 
@@ -164,6 +165,11 @@ def ensure_pagos_table() -> None:
             # fuente: web | meta | instagram | whatsapp | '' (vacío para presencial/telefono)
             "ALTER TABLE pagos_cmc ADD COLUMN canal TEXT DEFAULT 'presencial'",
             "ALTER TABLE pagos_cmc ADD COLUMN fuente TEXT DEFAULT ''",
+            # Confianza del cruce con el bot (2026-06-01):
+            #   'exacto'   → match por RUT o teléfono (identidad segura)
+            #   'probable' → match solo por nombre completo (puede haber homónimo)
+            #   ''         → presencial / sin cruce
+            "ALTER TABLE pagos_cmc ADD COLUMN match_confianza TEXT DEFAULT ''",
         ]:
             try:
                 conn.execute(col_ddl)
@@ -318,27 +324,127 @@ def _buscar_telefono_por_id_cita(id_cita: str) -> str:
     return ""
 
 
-def _buscar_telefono_por_rut(rut: str) -> str:
-    """
-    Dado un RUT, busca el teléfono del paciente en contact_profiles (sessions.db).
-    contact_profiles indexa phone↔rut cada vez que el bot captura el perfil.
-    Retorna el primer teléfono encontrado, o '' si no hay.
+def _rut_solo_digitos(rut: str) -> str:
+    """Cuerpo+DV de un RUT, sin puntos ni guión, en mayúscula.
+    Tolera los formatos mezclados de Medilink ('18.543.529-6') y el canónico
+    del bot ('18543529-6') → ambos colapsan a '185435296' para comparar.
     """
     if not rut:
         return ""
     try:
+        from medilink import clean_rut
+        canon = clean_rut(rut) or rut
+    except Exception:
+        canon = rut
+    return re.sub(r"[^0-9K]", "", canon.upper())
+
+
+def _normalizar_nombre(nombre: str) -> str:
+    """Nombre canónico para comparar: minúscula, sin tildes, espacios colapsados,
+    tokens ordenados (tolera 'Silva Mora Luis' vs 'Luis Silva Mora')."""
+    if not nombre:
+        return ""
+    try:
+        import unicodedata as _ud
+        n = _ud.normalize("NFKD", nombre)
+        n = "".join(c for c in n if not _ud.combining(c))
+    except Exception:
+        n = nombre
+    n = re.sub(r"[^a-zA-Z\s]", " ", n).lower()
+    tokens = [t for t in n.split() if len(t) > 1]
+    return " ".join(sorted(tokens))
+
+
+def _buscar_telefono_por_rut(rut: str) -> str:
+    """Teléfono del paciente por RUT en contact_profiles, normalizando ambos lados
+    (sin puntos/guión) para no fallar por el formato de Medilink. '' si no hay."""
+    rut_norm = _rut_solo_digitos(rut)
+    if not rut_norm:
+        return ""
+    try:
         from session import _conn
-        rut_clean = rut.strip()
         with _conn() as conn:
             row = conn.execute(
-                "SELECT phone FROM contact_profiles WHERE rut = ? LIMIT 1",
-                (rut_clean,)
+                """SELECT phone FROM contact_profiles
+                   WHERE REPLACE(REPLACE(UPPER(COALESCE(rut,'')),'.',''),'-','') = ?
+                     AND COALESCE(phone,'') != ''
+                   LIMIT 1""",
+                (rut_norm,)
             ).fetchone()
             if row and row["phone"]:
                 return row["phone"]
     except Exception as e:
         log.debug("_buscar_telefono_por_rut rut=%s error=%s", rut, e)
     return ""
+
+
+def _buscar_profile_por_nombre(nombre: str) -> tuple[str, str]:
+    """Cruce por NOMBRE completo (fallback 'probable'): retorna (telefono, rut)
+    del perfil del bot cuyo nombre normalizado calce exacto. Permite además
+    rellenar el RUT que Medilink no capturó. ('','') si no hay match único."""
+    nombre_norm = _normalizar_nombre(nombre)
+    if not nombre_norm or len(nombre_norm) < 6:  # evita matches por nombres muy cortos
+        return ("", "")
+    try:
+        from session import _conn
+        with _conn() as conn:
+            rows = conn.execute(
+                """SELECT phone, rut, nombre FROM contact_profiles
+                   WHERE COALESCE(phone,'') != '' AND COALESCE(nombre,'') != ''"""
+            ).fetchall()
+        matches = [
+            r for r in rows if _normalizar_nombre(r["nombre"]) == nombre_norm
+        ]
+        # Solo si hay UN único perfil con ese nombre (evita ambigüedad de homónimos)
+        if len(matches) == 1:
+            return (matches[0]["phone"] or "", matches[0]["rut"] or "")
+    except Exception as e:
+        log.debug("_buscar_profile_por_nombre nombre=%s error=%s", nombre, e)
+    return ("", "")
+
+
+def _resolver_atribucion(
+    id_cita: str, rut: str, nombre: str, telefono_cita: str = ""
+) -> dict:
+    """
+    Cascada de identificación cita→paciente del bot, con nivel de confianza:
+      1. teléfono explícito en la cita      → exacto
+      2. id_cita en citas_bot (bot agendó)  → exacto
+      3. RUT en contact_profiles            → exacto
+      4. nombre completo único              → probable (+ rellena RUT si falta)
+    Luego deriva canal/fuente con _derivar_canal_fuente sobre el teléfono hallado.
+    Devuelve: {canal, fuente, confianza, telefono, rut} (rut posiblemente rellenado).
+    """
+    telefono = (telefono_cita or "").strip()
+    confianza = "exacto" if telefono else ""
+    rut_out = (rut or "").strip()
+
+    if not telefono and id_cita:
+        telefono = _buscar_telefono_por_id_cita(id_cita)
+        if telefono:
+            confianza = "exacto"
+    if not telefono and rut_out:
+        telefono = _buscar_telefono_por_rut(rut_out)
+        if telefono:
+            confianza = "exacto"
+    if not telefono and nombre:
+        tel_nom, rut_nom = _buscar_profile_por_nombre(nombre)
+        if tel_nom:
+            telefono = tel_nom
+            confianza = "probable"
+            if not rut_out and rut_nom:  # rellenar RUT que Medilink no capturó
+                rut_out = rut_nom
+
+    canal, fuente = _derivar_canal_fuente(telefono)
+    if canal == "presencial":
+        confianza = ""  # sin conversación con el bot → no es atribuible
+    return {
+        "canal": canal,
+        "fuente": fuente,
+        "confianza": confianza,
+        "telefono": telefono,
+        "rut": rut_out,
+    }
 
 
 def _canal_a_origen(canal: str) -> str:
@@ -768,7 +874,8 @@ async def get_pagos(
                       id_cita, creado_por, created_at, updated_at,
                       COALESCE(bloqueado, 0) as bloqueado,
                       COALESCE(canal, 'presencial') as canal,
-                      COALESCE(fuente, '') as fuente
+                      COALESCE(fuente, '') as fuente,
+                      COALESCE(match_confianza, '') as match_confianza
                FROM pagos_cmc
                WHERE fecha BETWEEN ? AND ?
                ORDER BY fecha DESC, hora DESC""",
@@ -1041,6 +1148,95 @@ async def export_pagos_xlsx(
     )
 
 
+@router.post("/cruzar-origen")
+async def cruzar_origen(
+    fecha: str | None = Query(None, description="YYYY-MM-DD; por defecto hoy"),
+    token: str | None = Query(None),
+    cmc_session: str | None = Cookie(None),
+    request: Request = None,
+):
+    """
+    Recalcula el ORIGEN (canal/fuente) de las filas de pagos_cmc cruzando contra
+    el bot (sessions.db). NO consulta Medilink → instantáneo, idempotente, 429-safe.
+
+    Para cada fila NO bloqueada de la fecha:
+      - resuelve atribución por id_cita → teléfono → RUT (exacto) o nombre (probable)
+      - actualiza canal, fuente, origen (legacy) y match_confianza
+      - rellena el RUT si estaba vacío y el bot lo conoce
+
+    Respeta filas bloqueadas y NO toca copago/método/folio/prestación.
+    Retorna: { revisadas, exacto, probable, presencial, rut_rellenados }
+    """
+    _require_admin_dep(request, token=token, cmc_session=cmc_session)
+    ensure_pagos_table()
+
+    now_cl = datetime.now(_CHILE_TZ)
+    if fecha:
+        try:
+            datetime.strptime(fecha, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(400, "fecha debe ser YYYY-MM-DD")
+        fecha_iso = fecha
+    else:
+        fecha_iso = now_cl.strftime("%Y-%m-%d")
+
+    from session import _conn
+    with _conn() as conn:
+        rows = conn.execute(
+            """SELECT id, id_cita, rut, paciente_nombre,
+                      COALESCE(bloqueado, 0) AS bloqueado
+               FROM pagos_cmc WHERE fecha = ?""",
+            (fecha_iso,)
+        ).fetchall()
+
+    revisadas = exacto = probable = presencial = rut_rellenados = 0
+    for row in rows:
+        if row["bloqueado"]:
+            continue
+        revisadas += 1
+        att = _resolver_atribucion(
+            id_cita=row["id_cita"] or "",
+            rut=row["rut"] or "",
+            nombre=row["paciente_nombre"] or "",
+        )
+        origen_legacy = _canal_a_origen(att["canal"])
+        nuevo_rut = att["rut"]
+        relleno = bool(nuevo_rut and not (row["rut"] or "").strip())
+
+        if att["confianza"] == "exacto":
+            exacto += 1
+        elif att["confianza"] == "probable":
+            probable += 1
+        else:
+            presencial += 1
+        if relleno:
+            rut_rellenados += 1
+
+        try:
+            with _conn() as conn:
+                conn.execute(
+                    """UPDATE pagos_cmc
+                       SET canal = ?, fuente = ?, origen = ?, match_confianza = ?,
+                           rut = CASE WHEN COALESCE(rut,'') = '' THEN ? ELSE rut END,
+                           updated_at = datetime('now')
+                       WHERE id = ? AND COALESCE(bloqueado, 0) = 0""",
+                    (att["canal"], att["fuente"], origen_legacy, att["confianza"],
+                     nuevo_rut, row["id"])
+                )
+                conn.commit()
+        except Exception as e_upd:
+            log.warning("cruzar_origen: error UPDATE id=%s: %s", row["id"], e_upd)
+
+    log.info(
+        "cruzar_origen: fecha=%s revisadas=%d exacto=%d probable=%d presencial=%d rut_rellenados=%d",
+        fecha_iso, revisadas, exacto, probable, presencial, rut_rellenados,
+    )
+    return {
+        "revisadas": revisadas, "exacto": exacto, "probable": probable,
+        "presencial": presencial, "rut_rellenados": rut_rellenados,
+    }
+
+
 @router.post("/prellenar")
 async def prellenar_pagos(
     fecha: str | None = Query(None, description="YYYY-MM-DD; por defecto hoy"),
@@ -1109,22 +1305,24 @@ async def prellenar_pagos(
     citas.sort(key=lambda c: c.get("hora_inicio", ""))
 
     # ── Cargar filas existentes en pagos_cmc para esa fecha ──────────────────
-    # Necesitamos: id_cita, rut, procedimiento actual, bloqueado, canal y el id de la fila
+    # Necesitamos: id_cita, rut, procedimiento actual, bloqueado, canal, fuente y el id de la fila
     from session import _conn
     with _conn() as conn:
         rows_exist = conn.execute(
             """SELECT id, id_cita, rut,
                       COALESCE(procedimiento, '') as procedimiento,
                       COALESCE(bloqueado, 0) as bloqueado,
-                      COALESCE(canal, 'presencial') as canal
+                      COALESCE(canal, 'presencial') as canal,
+                      COALESCE(fuente, '') as fuente,
+                      COALESCE(match_confianza, '') as match_confianza
                FROM pagos_cmc WHERE fecha = ?""",
             (fecha_iso,)
         ).fetchall()
 
     # Mapas para búsqueda rápida
-    # id_cita → {db_id, procedimiento, bloqueado, canal}
+    # id_cita → {db_id, procedimiento, bloqueado, canal, fuente}
     existing_by_id_cita: dict[str, dict] = {}
-    # rut → {db_id, procedimiento, bloqueado, canal}
+    # rut → {db_id, procedimiento, bloqueado, canal, fuente}
     existing_by_rut: dict[str, dict] = {}
     for row in rows_exist:
         meta = {
@@ -1132,6 +1330,7 @@ async def prellenar_pagos(
             "procedimiento": row["procedimiento"],
             "bloqueado":     row["bloqueado"],
             "canal":         row["canal"],
+            "fuente":        row["fuente"],
         }
         if row["id_cita"]:
             existing_by_id_cita[row["id_cita"]] = meta
@@ -1207,6 +1406,15 @@ async def prellenar_pagos(
             if not existing["procedimiento"] and id_aten:
                 prestacion_update = await _fetch_prestacion(id_aten)
 
+            # Solo actualizar si hubo cambio real (diff) para que el contador sea honesto
+            canal_cambio   = canal_nuevo  != existing["canal"]
+            fuente_cambio  = fuente_nueva != existing["fuente"]
+            hay_cambio     = canal_cambio or fuente_cambio or bool(prestacion_update)
+
+            if not hay_cambio:
+                saltadas += 1
+                continue
+
             # Decidir qué actualizar
             set_parts = ["canal = ?", "fuente = ?", "origen = ?", "updated_at = datetime('now')"]
             set_vals: list = [canal_nuevo, fuente_nueva, origen_nuevo]
@@ -1246,11 +1454,15 @@ async def prellenar_pagos(
         if id_aten:
             prestacion = await _fetch_prestacion(id_aten)
 
-        # Derivar canal + fuente: cruzar id_cita → citas_bot.phone (fuente directa)
-        # GET /citas no trae celular/telefono/rut_paciente, así que no intentarlos.
-        telefono_cita = _telefono_para_cita(id_cita_str, rut_cita)
-        canal_cita, fuente_cita = _derivar_canal_fuente(telefono_cita)
+        # Derivar atribución (canal/fuente/confianza) cruzando con el bot.
+        # Cascada: id_cita → teléfono → RUT (exacto) o nombre completo (probable).
+        # Si el bot conoce el RUT y Medilink no lo trajo, se rellena.
+        att = _resolver_atribucion(
+            id_cita=id_cita_str, rut=rut_cita, nombre=nombre_pac,
+        )
+        canal_cita, fuente_cita = att["canal"], att["fuente"]
         origen_cita = _canal_a_origen(canal_cita)
+        rut_final = att["rut"]
 
         try:
             with _conn() as conn:
@@ -1259,14 +1471,15 @@ async def prellenar_pagos(
                        (fecha, hora, paciente_nombre, rut, id_profesional, profesional,
                         area, prevision, copago, bonificacion, metodo_pago, folio,
                         codigo_transferencia, tipo_bono, procedimiento, origen, id_cita,
-                        creado_por, bloqueado, canal, fuente, created_at, updated_at)
+                        creado_por, bloqueado, canal, fuente, match_confianza,
+                        created_at, updated_at)
                        VALUES (?,?,?,?,?,?,?,?,0,0,'','','','',?,?,?,
-                               'prellenar', 0, ?, ?, datetime('now'), datetime('now'))""",
+                               'prellenar', 0, ?, ?, ?, datetime('now'), datetime('now'))""",
                     (
                         fecha_iso,
                         hora_inicio,
                         nombre_pac,
-                        rut_cita,
+                        rut_final,
                         id_prof,
                         profesional,
                         area,
@@ -1276,6 +1489,7 @@ async def prellenar_pagos(
                         id_cita_str,
                         canal_cita,
                         fuente_cita,
+                        att["confianza"],
                     )
                 )
                 conn.commit()
