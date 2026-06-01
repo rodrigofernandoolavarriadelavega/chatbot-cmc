@@ -815,7 +815,7 @@ input, textarea, select{font-family:inherit; color:inherit}
 }
 .pg-modal[hidden]{display:none !important}
 .pg-dialog{
-  background:var(--panel); border-radius:18px; width:100%; max-width:1340px;
+  background:var(--panel); border-radius:18px; width:min(96vw, 1480px);
   box-shadow:0 24px 60px rgba(15,63,104,.22); border:1px solid var(--border);
   animation:mbIn 150ms var(--ease-spring);
   display:flex; flex-direction:column;
@@ -835,25 +835,25 @@ input, textarea, select{font-family:inherit; color:inherit}
 }
 /* Tabla-fila de columnas */
 .pg-row-wrap{
-  overflow-x:auto; padding:0 2px;
+  padding:0 2px;
+  /* sin overflow-x: el dialog crece para contener la tabla */
 }
 .pg-row-table{
   width:100%; border-collapse:collapse; table-layout:fixed;
-  min-width:1060px;
 }
-/* Anchos por columna sin bonif — total ~1240px en max-width:1340px dialog */
-.pg-col-hora    { width: 76px  }
-.pg-col-pac     { width: 185px }
-.pg-col-prof    { width: 190px }
-.pg-col-area    { width: 135px }
-.pg-col-prev    { width: 100px }
-.pg-col-valor   { width: 100px }
-.pg-col-metodo  { width: 140px }
-.pg-col-folio   { width: 84px  }
-.pg-col-proc    { width: 200px }
+/* Anchos por columna — suma ~1419px; el dialog se estira a min(96vw, 1480px) */
+.pg-col-hora    { width: 68px  }
+.pg-col-pac     { width: 170px }
+.pg-col-prof    { width: 175px }
+.pg-col-area    { width: 120px }
+.pg-col-prev    { width: 90px  }
+.pg-col-valor   { width: 90px  }
+.pg-col-metodo  { width: 130px }
+.pg-col-folio   { width: 74px  }
+.pg-col-proc    { width: 185px }
 /* Extra discretos */
-.pg-col-rut     { width: 114px }
-.pg-col-orig    { width: 95px  }
+.pg-col-rut     { width: 104px }
+.pg-col-orig    { width: 88px  }
 
 .pg-row-table thead th{
   background:linear-gradient(180deg, #0d375e, #0c3055);
@@ -911,17 +911,18 @@ input, textarea, select{font-family:inherit; color:inherit}
 .pg-footer .pg-footer-info{
   flex:1; font-size:11.5px; color:var(--text-mute); font-weight:500;
 }
-/* Success state */
+/* Success state — compacto, reemplaza la fila sin ocupar espacio de bloque gigante */
 .pg-success{
-  text-align:center; padding:28px 8px; display:flex; flex-direction:column;
-  align-items:center; gap:8px;
+  display:flex; align-items:center; gap:10px;
+  padding:12px 20px; background:rgba(79,190,206,.07);
+  border-bottom:1px solid var(--border-soft);
 }
 .pg-success .pg-check{
-  width:48px; height:48px; border-radius:50%; background:var(--green-soft);
-  display:flex; align-items:center; justify-content:center; font-size:22px; margin-bottom:4px;
+  width:30px; height:30px; border-radius:50%; background:var(--green-soft);
+  display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0;
 }
-.pg-success h4{margin:0; color:var(--cmc-navy); font-size:15px; font-weight:800}
-.pg-success p{margin:0; color:var(--text-mute); font-size:12.5px}
+.pg-success h4{margin:0; color:var(--cmc-navy); font-size:13px; font-weight:800}
+.pg-success p{margin:0; color:var(--text-mute); font-size:12px}
 /* Suggested highlight (standalone, para inputs fuera de .pg-row-table) */
 .pg-suggested{background:#fafeff !important; border-color:var(--cmc-aqua) !important}
 
@@ -4090,12 +4091,13 @@ function syncAppBadge(count) {
       </div>
     </div><!-- /pgBody -->
 
-    <!-- Estado de exito -->
+    <!-- Estado de exito — compacto, inline -->
     <div class="pg-success" id="pgSuccess" hidden>
       <div class="pg-check">&#10003;</div>
-      <h4>Pago registrado</h4>
-      <p id="pgSuccessNombre" style="font-weight:700;color:var(--cmc-navy)"></p>
-      <p id="pgSuccessMonto" style="color:var(--text-mute)"></p>
+      <div style="flex:1;min-width:0">
+        <h4>Pago registrado &mdash; <span id="pgSuccessNombre" style="font-weight:700"></span></h4>
+        <p id="pgSuccessMonto"></p>
+      </div>
     </div>
 
     <div class="pg-footer" id="pgFooter">
