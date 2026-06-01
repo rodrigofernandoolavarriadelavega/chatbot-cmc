@@ -211,7 +211,27 @@
     background: rgba(255,255,255,.12); color: #a9c7dd; padding: 2px 6px; border-radius: 999px; white-space: nowrap;
   }
 
-  .rail-foot { flex-shrink: 0; padding: 10px 12px; border-top: 1px solid rgba(255,255,255,.08); }
+  .rail-foot { flex-shrink: 0; padding: 10px 12px; border-top: 1px solid rgba(255,255,255,.08); display: flex; flex-direction: column; gap: 4px; }
+  .medilink-link {
+    display: flex; align-items: center; gap: 12px; width: 100%;
+    color: #8fb4cf; font-family: inherit; font-size: 12px; font-weight: 600;
+    padding: 9px 12px; border-radius: 10px; transition: all .14s;
+    text-decoration: none;
+  }
+  .medilink-link:hover { background: rgba(255,255,255,.08); color: #fff; }
+  .medilink-link .ico { width: 20px; display: grid; place-items: center; flex-shrink: 0; }
+  .medilink-link .ico svg { width: 16px; height: 16px; }
+  .medilink-link .label { white-space: nowrap; transition: opacity .15s; }
+  .app.collapsed .medilink-link .label { opacity: 0; pointer-events: none; }
+  .app.collapsed .medilink-link { justify-content: center; }
+  /* Tooltip cuando collapsed */
+  .app.collapsed .medilink-link:hover::after {
+    content: "Abrir Medilink";
+    position: absolute; left: calc(100% + 10px); top: 50%; transform: translateY(-50%);
+    background: var(--cmc-navy); color: #fff; font-size: 12px; font-weight: 600;
+    padding: 6px 11px; border-radius: 8px; white-space: nowrap; z-index: 60;
+    box-shadow: var(--shadow-md);
+  }
   .collapse-btn {
     display: flex; align-items: center; gap: 12px; width: 100%;
     border: 0; background: none; cursor: pointer; color: #8fb4cf;
@@ -342,6 +362,10 @@
     </nav>
 
     <div class="rail-foot">
+      <a class="medilink-link" href="https://centromedicocarampangue.app.softwaremedilink.com/medilink/" target="_blank" rel="noopener" title="Abrir Medilink en nueva pestaña">
+        <span class="ico" id="medilinkIco"></span>
+        <span class="label">Abrir Medilink</span>
+      </a>
       <button class="collapse-btn" id="collapseBtn" title="Contraer">
         <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15 18l-6-6 6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         <span class="label">Contraer</span>
@@ -415,16 +439,19 @@ const ICONS = {
   target: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4"/></svg>',
   search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3" stroke-linecap="round"/></svg>',
   steth: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4.8 2.3A.3.3 0 005 2H4a2 2 0 00-2 2v5a4 4 0 008 0V4a2 2 0 00-2-2H7a.3.3 0 00.2.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 15a6 6 0 006 6 6 6 0 006-6v-4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="20" cy="10" r="2"/></svg>',
-  chevron: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 18l6-6-6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+  chevron: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 18l6-6-6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 2v4M8 2v4M3 10h18" stroke-linecap="round"/></svg>',
+  externallink: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 3h6v6M10 14L21 3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
 };
 
 // ---- Module registry. Para agregar un módulo nuevo: una línea aquí. ----
 const MODULES = [
-  { id: "panel",  label: "Panel Recepción", icon: "inbox", title: "Panel de Recepción v2", sub: "Conversaciones · WhatsApp · Agenda", src: "/admin/v2" + qp },
-  { id: "boxes",  label: "Boxes",           icon: "grid",  title: "Boxes — Gemelo Digital", sub: "Ocupación y recaudación por box", src: "/boxes" + qp },
-  { id: "mensual", label: "DB Mensual",   icon: "chart", title: "Dashboard Mensual", sub: "Ingresos y honorarios por profesional", src: "/cmc/mensual" + qp },
-  { id: "autopilot", label: "Autopilot Ads", icon: "target", title: "Autopilot de Marketing", sub: "Meta Ads · decisiones por rentabilidad real", src: "/autopilot" + qp },
-  { id: "demanda", label: "Demanda", icon: "search", title: "Demanda capturada", sub: "Qué piden los pacientes que no capturamos", src: "/demanda" + qp },
+  { id: "panel",   label: "Panel Recepción", icon: "inbox",    title: "Panel de Recepción v2",   sub: "Conversaciones · WhatsApp · Agenda",        src: "/admin/v2" + qp },
+  { id: "agenda",  label: "Agenda",          icon: "calendar", title: "Agenda",                   sub: "Ver citas del dia · Agendar nueva hora",     src: "/alma/agenda" + qp },
+  { id: "boxes",   label: "Boxes",           icon: "grid",     title: "Boxes — Gemelo Digital",  sub: "Ocupación y recaudación por box",            src: "/boxes" + qp },
+  { id: "mensual", label: "DB Mensual",      icon: "chart",    title: "Dashboard Mensual",       sub: "Ingresos y honorarios por profesional",      src: "/cmc/mensual" + qp },
+  { id: "autopilot", label: "Autopilot Ads", icon: "target",   title: "Autopilot de Marketing",  sub: "Meta Ads · decisiones por rentabilidad real", src: "/autopilot" + qp },
+  { id: "demanda", label: "Demanda",         icon: "search",   title: "Demanda capturada",       sub: "Qué piden los pacientes que no capturamos",  src: "/demanda" + qp },
 ];
 
 // Futuros (deshabilitados, comunican la visión de consolidación)
@@ -617,6 +644,9 @@ collapseBtn.addEventListener('click', () => {
 });
 document.getElementById('hamburger').addEventListener('click', () => app.classList.toggle('drawer-open'));
 document.getElementById('scrim').addEventListener('click', () => app.classList.remove('drawer-open'));
+
+// Inyectar ícono Medilink (no disponible como HTML literal en el anchor por seguridad)
+document.getElementById('medilinkIco').innerHTML = ICONS.externallink;
 
 // Volver al inicio (pantalla de bienvenida limpia) al hacer clic en el logo
 function goHome(){

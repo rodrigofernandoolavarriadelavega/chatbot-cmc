@@ -3325,6 +3325,18 @@ def get_ortodoncia_sync_max_fecha() -> str | None:
         return row[0] if row else None
 
 
+def get_citas_cache_dia(id_prof: int, fecha: str) -> list[dict]:
+    """Retorna citas cacheadas para un profesional en una fecha específica.
+    Filtra el centinela __empty__ (id_paciente=0). Usado por agenda_routes."""
+    with _conn() as conn:
+        rows = conn.execute(
+            "SELECT * FROM citas_cache WHERE id_prof=? AND fecha=? AND id_paciente != 0 "
+            "ORDER BY hora_inicio",
+            (id_prof, fecha)
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
 def get_citas_cache_todos(ids_prof: list[int]) -> list[dict]:
     """Retorna todas las citas cacheadas (sin filtro de mes) para los profesionales dados."""
     placeholders = ",".join("?" * len(ids_prof))

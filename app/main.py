@@ -642,6 +642,9 @@ app.include_router(portal_routes.router)
 import vuelos_routes
 app.include_router(vuelos_routes.router)
 
+import agenda_routes
+app.include_router(agenda_routes.router)
+
 # Cargar HTML del panel admin y portal paciente
 _TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
 _ADMIN_HTML = (_TEMPLATE_DIR / "admin.html").read_text(encoding="utf-8")
@@ -2768,6 +2771,7 @@ _WINBACK_DASHBOARD_HTML = (_TEMPLATE_DIR / "winback_dashboard.html").read_text(e
 _WINBACK_DENTAL_DASHBOARD_HTML = (_TEMPLATE_DIR / "winback_dental_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "winback_dental_dashboard.html").exists() else ""
 _BOXES_DASHBOARD_HTML = (_TEMPLATE_DIR / "boxes_dashboard.html").read_text(encoding="utf-8")
 _ANIMA_HTML = (_TEMPLATE_DIR / "anima.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "anima.html").exists() else "" if (_TEMPLATE_DIR / "boxes_dashboard.html").exists() else ""
+_ALMA_AGENDA_HTML = (_TEMPLATE_DIR / "alma_agenda.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_agenda.html").exists() else ""
 
 # ── Pool de conexiones BI para endpoints de boxes ────────────────────────────
 # Máximo 8 conexiones compartidas entre boxes-state, boxes-config y boxes-config-put.
@@ -3307,6 +3311,22 @@ def alma_shell(token: str | None = Query(None),
         role = _verify_cookie(cmc_session)
         if role in ("admin", "ortodoncia"):
             return _ANIMA_HTML.replace("__TOKEN__", ADMIN_TOKEN)
+    return RedirectResponse(url="/admin/login", status_code=302)
+
+
+@app.get("/alma/agenda", response_class=HTMLResponse)
+def alma_agenda_page(token: str | None = Query(None),
+                     cmc_session: str | None = Cookie(None)):
+    """Modulo nativo Agenda — ver citas del dia y agendar desde Alma."""
+    from admin_routes import _verify_cookie
+    if not _ALMA_AGENDA_HTML:
+        raise HTTPException(404, "Agenda no disponible")
+    if token and token == ADMIN_TOKEN:
+        return _ALMA_AGENDA_HTML.replace("__TOKEN__", token)
+    if cmc_session:
+        role = _verify_cookie(cmc_session)
+        if role in ("admin", "ortodoncia"):
+            return _ALMA_AGENDA_HTML.replace("__TOKEN__", ADMIN_TOKEN)
     return RedirectResponse(url="/admin/login", status_code=302)
 
 

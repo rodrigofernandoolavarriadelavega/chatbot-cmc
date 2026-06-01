@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Agenda · Alma CMC</title>
+<link rel="icon" href="/static/isotipo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --aqua:#4FBECE;--blue:#1172AB;--navy:#0F3F68;--navy-deep:#0a2e4d;
+  --ink:#13202e;--muted:#64798c;--line:#e6edf3;--bg:#f4f7fa;--card:#ffffff;
+  --green:#1f9d6b;--green-bg:#e7f7f0;--amber:#c98a14;--amber-bg:#fdf4e3;
+  --red:#d94c4c;--red-bg:#fdecec;--slate:#5b7186;--slate-bg:#eef2f6;
+  --sh-sm:0 1px 2px rgba(15,63,104,.06),0 1px 3px rgba(15,63,104,.08);
+  --sh-md:0 4px 12px rgba(15,63,104,.08),0 2px 4px rgba(15,63,104,.06);
+  --sh-lg:0 12px 32px rgba(15,63,104,.12),0 4px 8px rgba(15,63,104,.06);
+  --r:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Montserrat',system-ui,sans-serif;background:var(--bg);color:var(--ink);
+     -webkit-font-smoothing:antialiased;line-height:1.45;min-height:100vh}
+.wrap{max-width:1100px;margin:0 auto;padding:22px 20px 60px}
+
+/* Header */
+.top{display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+     background:linear-gradient(135deg,var(--navy) 0%,var(--blue) 100%);
+     border-radius:var(--r);padding:22px 26px;color:#fff;box-shadow:var(--sh-lg);
+     position:relative;overflow:hidden}
+.top::after{content:"";position:absolute;right:-60px;top:-60px;width:240px;height:240px;
+     background:radial-gradient(circle,rgba(79,190,206,.35),transparent 70%);pointer-events:none}
+.top .badge-ico{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;
+     background:rgba(255,255,255,.14);backdrop-filter:blur(6px);flex-shrink:0}
+.top .badge-ico svg{width:26px;height:26px;stroke:#fff;stroke-width:1.8}
+.top h1{font-size:20px;font-weight:800;letter-spacing:-.4px;line-height:1.1}
+.top .sub{font-size:12px;opacity:.82;font-weight:500;margin-top:3px}
+.top-right{margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.mode-pill{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:999px;
+     font-size:11.5px;font-weight:700;background:rgba(255,255,255,.16);backdrop-filter:blur(6px);cursor:pointer;border:0;color:#fff;font-family:inherit;transition:.15s}
+.mode-pill:hover{background:rgba(255,255,255,.22)}
+.mode-pill.active{background:rgba(79,190,206,.28)}
+.mode-pill .dot{width:7px;height:7px;border-radius:50%;background:var(--aqua);flex-shrink:0}
+
+/* Controls */
+.controls{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-top:20px}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.field select,.field input{
+  background:var(--card);border:1px solid var(--line);border-radius:10px;
+  padding:9px 13px;font-family:inherit;font-size:13.5px;font-weight:500;color:var(--ink);
+  box-shadow:var(--sh-sm);min-width:200px;cursor:pointer;outline:none;transition:.15s}
+.field select:focus,.field input:focus{border-color:var(--aqua);box-shadow:0 0 0 3px rgba(79,190,206,.18)}
+.btn{display:inline-flex;align-items:center;gap:8px;border:0;cursor:pointer;font-family:inherit;
+     font-weight:700;font-size:13px;padding:11px 18px;border-radius:11px;transition:.18s}
+.btn-primary{background:var(--aqua);color:var(--navy-deep);box-shadow:0 4px 14px rgba(79,190,206,.4)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(79,190,206,.5)}
+.btn-secondary{background:var(--card);border:1px solid var(--line);color:var(--navy);box-shadow:var(--sh-sm)}
+.btn-secondary:hover{background:var(--bg);border-color:var(--aqua)}
+.btn svg{width:16px;height:16px;stroke-width:2}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
+@keyframes rot{to{transform:rotate(360deg)}}
+.spin svg{animation:rot .9s linear infinite}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;background:var(--card);border:1px solid var(--line);
+      border-radius:12px;padding:4px;width:fit-content;margin-top:18px;box-shadow:var(--sh-sm)}
+.tab{padding:8px 18px;border-radius:9px;font-size:12.5px;font-weight:700;cursor:pointer;
+     border:0;background:none;color:var(--muted);font-family:inherit;transition:.14s}
+.tab.active{background:var(--navy);color:#fff;box-shadow:var(--sh-sm)}
+.tab:hover:not(.active){background:var(--bg)}
+
+/* Panel card */
+.panel{background:var(--card);border-radius:var(--r);box-shadow:var(--sh-sm);border:1px solid var(--line);overflow:hidden;margin-top:18px}
+.panel-h{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--line)}
+.panel-h .ph-ico{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#e3f5f8,#cfeef3);display:grid;place-items:center;flex-shrink:0}
+.panel-h .ph-ico svg{width:17px;height:17px;stroke:var(--aqua);stroke-width:2}
+.panel-h h2{font-size:14.5px;font-weight:700;letter-spacing:-.2px}
+.panel-h .count{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--muted);background:var(--bg);padding:4px 10px;border-radius:999px}
+.panel-b{padding:16px 18px}
+
+/* Cita card */
+.cita-row{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:11px;
+          border:1px solid var(--line);background:var(--card);margin-bottom:8px;transition:.15s}
+.cita-row:hover{box-shadow:var(--sh-sm);transform:translateY(-1px)}
+.cita-hora{font-size:18px;font-weight:800;letter-spacing:-.4px;color:var(--navy);width:52px;flex-shrink:0}
+.cita-sep{width:3px;height:36px;border-radius:2px;background:var(--aqua);flex-shrink:0}
+.cita-info{flex:1;min-width:0}
+.cita-nombre{font-size:13.5px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cita-rut{font-size:11.5px;color:var(--muted);font-weight:500;margin-top:2px}
+.cita-badge{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--green-bg);color:var(--green)}
+
+/* Slot grid */
+.slots-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-top:4px}
+.slot-btn{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 8px;
+          font-family:inherit;font-size:13px;font-weight:700;color:var(--navy);cursor:pointer;
+          transition:.15s;text-align:center}
+.slot-btn:hover{background:var(--aqua);border-color:var(--aqua);color:#fff;transform:translateY(-1px);box-shadow:0 4px 10px rgba(79,190,206,.3)}
+.slot-btn.selected{background:var(--navy);border-color:var(--navy);color:#fff}
+
+/* Wizard steps */
+.step{display:none}
+.step.active{display:block}
+.step-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.step-num{width:28px;height:28px;border-radius:50%;background:var(--aqua);color:var(--navy-deep);
+          font-size:13px;font-weight:800;display:grid;place-items:center;flex-shrink:0}
+.step-title{font-size:15px;font-weight:700;color:var(--navy)}
+.step-back{font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;border:0;background:none;font-family:inherit;text-decoration:underline;margin-top:10px;padding:0}
+.step-back:hover{color:var(--navy)}
+
+/* Confirm box */
+.confirm-box{background:linear-gradient(135deg,#e3f5f8,#f0f8fb);border:1px solid #b8e0ea;
+             border-radius:14px;padding:20px;margin-bottom:16px}
+.confirm-row{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px}
+.confirm-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;min-width:90px;padding-top:1px}
+.confirm-val{font-size:13.5px;font-weight:600;color:var(--ink)}
+.confirm-warn{background:var(--amber-bg);border:1px solid #e6c56c;border-radius:10px;
+              padding:12px 14px;font-size:12.5px;font-weight:600;color:var(--amber);margin-top:10px}
+
+/* Alerts */
+.alert{border-radius:11px;padding:13px 16px;font-size:13px;font-weight:600;margin-bottom:12px}
+.alert-ok{background:var(--green-bg);border:1px solid #a8e0c9;color:var(--green)}
+.alert-err{background:var(--red-bg);border:1px solid #f0b8b8;color:var(--red)}
+.alert-info{background:var(--slate-bg);border:1px solid #c8d6e0;color:var(--slate)}
+.hidden{display:none!important}
+
+/* Empty state */
+.empty{display:flex;flex-direction:column;align-items:center;padding:40px 20px;text-align:center;color:var(--muted)}
+.empty svg{width:44px;height:44px;margin-bottom:12px;opacity:.35;stroke:var(--muted)}
+.empty p{font-size:13.5px;font-weight:500}
+
+/* Paciente found card */
+.pac-card{background:var(--green-bg);border:1px solid #a8e0c9;border-radius:12px;padding:14px 16px;margin-top:10px}
+.pac-nombre{font-size:14px;font-weight:700;color:var(--green)}
+.pac-rut{font-size:12px;font-weight:500;color:var(--muted);margin-top:3px}
+
+/* RUT input helper */
+.rut-row{display:flex;gap:8px;align-items:flex-end}
+.rut-row .field{flex:1}
+
+/* Divider */
+.divider{height:1px;background:var(--line);margin:20px 0}
+
+@media(max-width:640px){
+  .controls{flex-direction:column;align-items:stretch}
+  .field select,.field input{min-width:100%}
+  .slots-grid{grid-template-columns:repeat(auto-fill,minmax(90px,1fr))}
+  .top{flex-direction:column;align-items:flex-start}
+  .top-right{width:100%}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="top">
+    <div class="badge-ico">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <rect x="3" y="4" width="18" height="18" rx="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M16 2v4M8 2v4M3 10h18" stroke-linecap="round"/>
+        <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div>
+      <h1>Agenda</h1>
+      <div class="sub">Ver ocupacion del dia · Agendar nueva cita</div>
+    </div>
+    <div class="top-right">
+      <button class="mode-pill active" id="tabVerBtn" onclick="switchTab('ver')">
+        <span class="dot"></span> Ver agenda
+      </button>
+      <button class="mode-pill" id="tabAgenBtn" onclick="switchTab('agendar')">
+        <span class="dot" style="background:#fff;opacity:.5"></span> Agendar cita
+      </button>
+    </div>
+  </div>
+
+  <!-- TAB: Ver agenda -->
+  <div id="tabVer">
+    <div class="controls">
+      <div class="field">
+        <label>Profesional</label>
+        <select id="verProf" onchange="resetVerResultado()">
+          <option value="">— Seleccionar —</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Fecha</label>
+        <input type="date" id="verFecha" onchange="resetVerResultado()">
+      </div>
+      <button class="btn btn-primary" id="verBtn" onclick="cargarAgenda()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3" stroke-linecap="round"/></svg>
+        Ver agenda
+      </button>
+    </div>
+
+    <div id="verResultado" class="hidden">
+      <div class="panel">
+        <div class="panel-h">
+          <div class="ph-ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="9" cy="7" r="4" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h2 id="verTitulo">Citas del dia</h2>
+          <div class="count" id="verCount">0 citas</div>
+        </div>
+        <div class="panel-b" id="verLista"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: Agendar cita -->
+  <div id="tabAgen" class="hidden">
+
+    <!-- Paso 1: Seleccionar profesional + fecha + slot -->
+    <div id="step1" class="step active">
+      <div class="panel" style="margin-top:20px">
+        <div class="panel-h">
+          <div class="ph-ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h2>Paso 1 — Profesional, fecha y hora</h2>
+        </div>
+        <div class="panel-b">
+          <div class="controls" style="margin-top:0">
+            <div class="field">
+              <label>Profesional</label>
+              <select id="agenProf" onchange="resetSlots()">
+                <option value="">— Seleccionar —</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Fecha</label>
+              <input type="date" id="agenFecha" onchange="resetSlots()">
+            </div>
+            <button class="btn btn-primary" id="buscarSlotsBtn" onclick="buscarSlots()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" stroke-linecap="round"/></svg>
+              Ver horarios
+            </button>
+          </div>
+
+          <div id="slotsArea" class="hidden" style="margin-top:18px">
+            <div class="divider"></div>
+            <div class="step-header">
+              <div class="step-num">A</div>
+              <div class="step-title">Selecciona un horario disponible</div>
+            </div>
+            <div class="alert alert-info" id="slotsInfo" style="margin-bottom:12px"></div>
+            <div class="slots-grid" id="slotsGrid"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Paso 2: Buscar paciente -->
+    <div id="step2" class="step">
+      <div class="panel" style="margin-top:20px">
+        <div class="panel-h">
+          <div class="ph-ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="12" cy="7" r="4" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h2>Paso 2 — Datos del paciente</h2>
+        </div>
+        <div class="panel-b">
+          <div id="slotSeleccionado" class="alert alert-info" style="margin-bottom:14px"></div>
+
+          <div class="rut-row">
+            <div class="field">
+              <label>RUT del paciente (sin puntos, con guion)</label>
+              <input type="text" id="rutInput" placeholder="12345678-9" autocomplete="off">
+            </div>
+            <button class="btn btn-primary" onclick="buscarPaciente()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3" stroke-linecap="round"/></svg>
+              Buscar
+            </button>
+          </div>
+
+          <div id="pacAlert" class="hidden"></div>
+          <div id="pacCard" class="pac-card hidden">
+            <div class="pac-nombre" id="pacNombre"></div>
+            <div class="pac-rut" id="pacRut"></div>
+          </div>
+
+          <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-secondary" id="step2Back" onclick="volverPaso1()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 12H5M12 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Volver
+            </button>
+            <button class="btn btn-primary" id="irPaso3Btn" onclick="irPaso3()" disabled>
+              Continuar
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14M12 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Paso 3: Confirmacion y crear -->
+    <div id="step3" class="step">
+      <div class="panel" style="margin-top:20px">
+        <div class="panel-h">
+          <div class="ph-ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M9 11l3 3L22 4" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <h2>Paso 3 — Confirmar y crear cita</h2>
+        </div>
+        <div class="panel-b">
+          <div class="confirm-box" id="confirmBox">
+            <div class="confirm-row">
+              <div class="confirm-label">Profesional</div>
+              <div class="confirm-val" id="cProfNombre">—</div>
+            </div>
+            <div class="confirm-row">
+              <div class="confirm-label">Paciente</div>
+              <div class="confirm-val" id="cPacNombre">—</div>
+            </div>
+            <div class="confirm-row">
+              <div class="confirm-label">Fecha</div>
+              <div class="confirm-val" id="cFecha">—</div>
+            </div>
+            <div class="confirm-row">
+              <div class="confirm-label">Hora</div>
+              <div class="confirm-val" id="cHora">—</div>
+            </div>
+            <div class="confirm-warn">
+              Esta cita se creara en Medilink de forma permanente. Revisa los datos antes de confirmar.
+            </div>
+          </div>
+
+          <div id="crearAlert" class="hidden"></div>
+
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-secondary" onclick="volverPaso2()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 12H5M12 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Volver
+            </button>
+            <button class="btn btn-primary" id="crearBtn" onclick="crearCita()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M9 11l3 3L22 4" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Confirmar y crear cita
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /tabAgen -->
+
+</div><!-- /wrap -->
+
+<script>
+// __TOKEN__ reemplazado por el backend
+const TOKEN = "__TOKEN__";
+const qp = TOKEN ? "?token=" + encodeURIComponent(TOKEN) : "";
+const BASE = "/alma/api/agenda";
+
+// Estado del wizard de agendar
+let state = {
+  profId: null, profNombre: null, profIntervalo: 15,
+  fecha: null,
+  horaInicio: null, horaFin: null,
+  pacienteId: null, pacienteNombre: null, pacienteRut: null,
+};
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+async function init() {
+  const today = new Date().toISOString().slice(0, 10);
+  document.getElementById('verFecha').value = today;
+  document.getElementById('agenFecha').value = today;
+  document.getElementById('agenFecha').min = today;
+
+  try {
+    const r = await fetch(BASE + "/profesionales" + qp);
+    if (!r.ok) throw new Error("http " + r.status);
+    const data = await r.json();
+    const profs = data.profesionales || [];
+
+    [document.getElementById('verProf'), document.getElementById('agenProf')].forEach(sel => {
+      profs.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.dataset.nombre = p.nombre;
+        opt.dataset.intervalo = p.intervalo;
+        opt.dataset.esp = p.especialidad;
+        opt.textContent = p.nombre + " — " + p.especialidad;
+        sel.appendChild(opt);
+      });
+    });
+  } catch(e) {
+    console.error("No se pudo cargar profesionales:", e);
+  }
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.getElementById('tabVer').classList.toggle('hidden', tab !== 'ver');
+  document.getElementById('tabAgen').classList.toggle('hidden', tab !== 'agendar');
+  document.getElementById('tabVerBtn').classList.toggle('active', tab === 'ver');
+  document.getElementById('tabAgenBtn').classList.toggle('active', tab === 'agendar');
+  if (tab === 'agendar') {
+    document.getElementById('tabVerBtn').querySelector('.dot').style.background = '#fff';
+    document.getElementById('tabVerBtn').querySelector('.dot').style.opacity = '.5';
+    document.getElementById('tabAgenBtn').querySelector('.dot').style.background = 'var(--aqua)';
+    document.getElementById('tabAgenBtn').querySelector('.dot').style.opacity = '1';
+  } else {
+    document.getElementById('tabAgenBtn').querySelector('.dot').style.background = '#fff';
+    document.getElementById('tabAgenBtn').querySelector('.dot').style.opacity = '.5';
+    document.getElementById('tabVerBtn').querySelector('.dot').style.background = 'var(--aqua)';
+    document.getElementById('tabVerBtn').querySelector('.dot').style.opacity = '1';
+  }
+}
+
+// ── Flujo 1: Ver agenda ───────────────────────────────────────────────────────
+function resetVerResultado() {
+  document.getElementById('verResultado').classList.add('hidden');
+}
+
+async function cargarAgenda() {
+  const profId = document.getElementById('verProf').value;
+  const fecha = document.getElementById('verFecha').value;
+  if (!profId || !fecha) {
+    alert("Selecciona un profesional y una fecha.");
+    return;
+  }
+  const btn = document.getElementById('verBtn');
+  btn.disabled = true;
+  btn.classList.add('spin');
+
+  try {
+    const url = BASE + "/dia" + qp + "&id_prof=" + profId + "&fecha=" + fecha;
+    const r = await fetch(url);
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const data = await r.json();
+    renderAgenda(data);
+  } catch(e) {
+    alert("Error cargando agenda: " + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('spin');
+  }
+}
+
+function renderAgenda(data) {
+  const lista = document.getElementById('verLista');
+  const titulo = document.getElementById('verTitulo');
+  const count = document.getElementById('verCount');
+
+  const fechaDisplay = formatFecha(data.fecha);
+  titulo.textContent = data.profesional.nombre + " — " + fechaDisplay;
+  count.textContent = data.total + (data.total === 1 ? " cita" : " citas");
+
+  lista.innerHTML = '';
+  if (data.citas.length === 0) {
+    lista.innerHTML = `
+      <div class="empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18" stroke-linecap="round"/></svg>
+        <p>Sin citas registradas en cache para esta fecha.<br>Si es una fecha futura sin sincronizar, usa Medilink directamente.</p>
+      </div>`;
+  } else {
+    data.citas.forEach(c => {
+      const div = document.createElement('div');
+      div.className = 'cita-row';
+      div.innerHTML = `
+        <div class="cita-hora">${c.hora_inicio || "?"}</div>
+        <div class="cita-sep"></div>
+        <div class="cita-info">
+          <div class="cita-nombre">${escHtml(c.paciente_nombre || "Paciente sin nombre")}</div>
+        </div>
+        <div class="cita-badge">Agendado</div>`;
+      lista.appendChild(div);
+    });
+  }
+
+  document.getElementById('verResultado').classList.remove('hidden');
+}
+
+// ── Flujo 2: Agendar ─────────────────────────────────────────────────────────
+function resetSlots() {
+  document.getElementById('slotsArea').classList.add('hidden');
+  document.getElementById('slotsGrid').innerHTML = '';
+  state.horaInicio = null;
+  state.horaFin = null;
+}
+
+async function buscarSlots() {
+  const sel = document.getElementById('agenProf');
+  const profId = sel.value;
+  const fecha = document.getElementById('agenFecha').value;
+  if (!profId || !fecha) {
+    alert("Selecciona un profesional y una fecha.");
+    return;
+  }
+
+  const opt = sel.options[sel.selectedIndex];
+  state.profId = parseInt(profId);
+  state.profNombre = opt.dataset.nombre;
+  state.profIntervalo = parseInt(opt.dataset.intervalo) || 15;
+  state.fecha = fecha;
+
+  const btn = document.getElementById('buscarSlotsBtn');
+  btn.disabled = true;
+  btn.classList.add('spin');
+  resetSlots();
+
+  try {
+    const url = BASE + "/slots" + qp + "&id_prof=" + profId + "&fecha=" + fecha;
+    const r = await fetch(url);
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      throw new Error(err.detail || "HTTP " + r.status);
+    }
+    const data = await r.json();
+    renderSlots(data, fecha);
+  } catch(e) {
+    alert("Error buscando slots: " + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('spin');
+  }
+}
+
+function renderSlots(data, fecha) {
+  const area = document.getElementById('slotsArea');
+  const grid = document.getElementById('slotsGrid');
+  const info = document.getElementById('slotsInfo');
+
+  area.classList.remove('hidden');
+  grid.innerHTML = '';
+
+  const slots = data.slots || [];
+  if (slots.length === 0) {
+    info.textContent = "Sin horarios disponibles para " + formatFecha(fecha) + ". Prueba con otra fecha.";
+    info.className = 'alert alert-err';
+    return;
+  }
+
+  info.textContent = slots.length + " horario" + (slots.length !== 1 ? "s" : "") + " disponible" + (slots.length !== 1 ? "s" : "") + " para " + formatFecha(fecha);
+  info.className = 'alert alert-info';
+
+  // Marcamos los smart (recomendados) con borde sutil
+  const smartSet = new Set((data.smart || []).map(s => s.hora_inicio));
+
+  slots.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'slot-btn';
+    btn.textContent = s.hora_inicio;
+    if (smartSet.has(s.hora_inicio)) {
+      btn.title = "Recomendado";
+      btn.style.borderColor = "var(--aqua)";
+    }
+    btn.dataset.inicio = s.hora_inicio;
+    btn.dataset.fin = s.hora_fin;
+    btn.onclick = () => seleccionarSlot(s, btn);
+    grid.appendChild(btn);
+  });
+}
+
+function seleccionarSlot(slot, btnEl) {
+  // Deseleccionar todos
+  document.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('selected'));
+  btnEl.classList.add('selected');
+  state.horaInicio = slot.hora_inicio;
+  state.horaFin = slot.hora_fin;
+
+  // Avanzar a paso 2 con pequeño delay visual
+  setTimeout(() => irPaso2(), 300);
+}
+
+function irPaso2() {
+  if (!state.horaInicio) return;
+  showStep('step2');
+  document.getElementById('slotSeleccionado').textContent =
+    state.profNombre + " · " + formatFecha(state.fecha) + " a las " + state.horaInicio;
+  document.getElementById('rutInput').value = '';
+  resetPaciente();
+}
+
+function irPaso3() {
+  if (!state.pacienteId) return;
+  showStep('step3');
+  document.getElementById('cProfNombre').textContent = state.profNombre;
+  document.getElementById('cPacNombre').textContent = state.pacienteNombre + " — " + state.pacienteRut;
+  document.getElementById('cFecha').textContent = formatFecha(state.fecha);
+  document.getElementById('cHora').textContent = state.horaInicio + " – " + state.horaFin;
+  document.getElementById('crearAlert').className = 'hidden';
+}
+
+function volverPaso1() { showStep('step1'); }
+function volverPaso2() { showStep('step2'); }
+
+function showStep(id) {
+  ['step1','step2','step3'].forEach(s => {
+    document.getElementById(s).classList.toggle('active', s === id);
+    document.getElementById(s).style.display = s === id ? 'block' : 'none';
+  });
+}
+
+async function buscarPaciente() {
+  const rut = document.getElementById('rutInput').value.trim();
+  if (!rut) { alert("Ingresa el RUT del paciente."); return; }
+
+  const alertEl = document.getElementById('pacAlert');
+  const cardEl = document.getElementById('pacCard');
+  alertEl.className = 'alert alert-info';
+  alertEl.textContent = 'Buscando paciente…';
+  alertEl.classList.remove('hidden');
+  cardEl.classList.add('hidden');
+  document.getElementById('irPaso3Btn').disabled = true;
+
+  try {
+    const url = BASE + "/paciente" + qp + "&rut=" + encodeURIComponent(rut);
+    const r = await fetch(url);
+    if (r.status === 404) {
+      alertEl.className = 'alert alert-err';
+      alertEl.textContent = 'Paciente no encontrado en Medilink. Verifica el RUT o regista el paciente primero.';
+      resetPaciente();
+      return;
+    }
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const pac = await r.json();
+    state.pacienteId = pac.id;
+    state.pacienteNombre = pac.nombre_completo;
+    state.pacienteRut = pac.rut;
+
+    alertEl.classList.add('hidden');
+    document.getElementById('pacNombre').textContent = pac.nombre_completo;
+    document.getElementById('pacRut').textContent = pac.rut;
+    cardEl.classList.remove('hidden');
+    document.getElementById('irPaso3Btn').disabled = false;
+  } catch(e) {
+    alertEl.className = 'alert alert-err';
+    alertEl.textContent = 'Error buscando paciente: ' + e.message;
+    resetPaciente();
+  }
+}
+
+function resetPaciente() {
+  state.pacienteId = null;
+  state.pacienteNombre = null;
+  state.pacienteRut = null;
+  document.getElementById('pacCard').classList.add('hidden');
+  document.getElementById('irPaso3Btn').disabled = true;
+}
+
+async function crearCita() {
+  if (!state.pacienteId || !state.profId || !state.fecha || !state.horaInicio) {
+    alert("Faltan datos. Vuelve al inicio y completa todos los pasos.");
+    return;
+  }
+
+  const btn = document.getElementById('crearBtn');
+  btn.disabled = true;
+  btn.classList.add('spin');
+  const alertEl = document.getElementById('crearAlert');
+  alertEl.className = 'alert alert-info';
+  alertEl.textContent = 'Creando cita en Medilink…';
+  alertEl.classList.remove('hidden');
+
+  const payload = {
+    id_paciente: state.pacienteId,
+    id_profesional: state.profId,
+    fecha: state.fecha,
+    hora_inicio: state.horaInicio,
+    hora_fin: state.horaFin,
+    confirmado: true,
+  };
+
+  try {
+    const url = BASE + "/citas" + qp;
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await r.json();
+    if (!r.ok) {
+      alertEl.className = 'alert alert-err';
+      alertEl.textContent = 'Error: ' + (data.detail || "No se pudo crear la cita. Intenta en Medilink directamente.");
+      btn.disabled = false;
+      btn.classList.remove('spin');
+      return;
+    }
+    alertEl.className = 'alert alert-ok';
+    alertEl.textContent = 'Cita creada correctamente (ID Medilink: ' + data.id_cita + '). Puedes agendar otra o cerrar.';
+    btn.disabled = true;  // Deshabilitar para evitar doble clic
+    btn.classList.remove('spin');
+    // Limpiar estado para siguiente cita
+    state.horaInicio = null;
+    state.horaFin = null;
+    state.pacienteId = null;
+    state.pacienteNombre = null;
+    state.pacienteRut = null;
+  } catch(e) {
+    alertEl.className = 'alert alert-err';
+    alertEl.textContent = 'Error de red: ' + e.message;
+    btn.disabled = false;
+    btn.classList.remove('spin');
+  }
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function formatFecha(iso) {
+  if (!iso) return "—";
+  try {
+    const [y, m, d] = iso.split('-');
+    const dias = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];
+    const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    const dt = new Date(iso + "T12:00:00");
+    return dias[dt.getDay()] + " " + parseInt(d) + " de " + meses[parseInt(m) - 1] + " " + y;
+  } catch { return iso; }
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Init correcto de display steps
+function initSteps() {
+  document.getElementById('step1').style.display = 'block';
+  document.getElementById('step2').style.display = 'none';
+  document.getElementById('step3').style.display = 'none';
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  init();
+  initSteps();
+});
+</script>
+</body>
+</html>
