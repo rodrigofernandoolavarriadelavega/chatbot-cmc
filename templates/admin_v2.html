@@ -231,6 +231,16 @@ input, textarea, select{font-family:inherit; color:inherit}
 .chat-header{ min-height:auto; gap:10px; padding:7px 16px }
 .chat-header .name{ font-size:13.5px }
 .chat-header .avatar{ width:30px; height:30px; flex:0 0 30px; font-size:11px }
+/* Desktop: quitar la barra de identidad del chat (esos datos ya están en el
+   panel derecho). Queda solo una franja transparente con las herramientas
+   arriba a la derecha → el chat ocupa hasta el tope. En mobile se conserva
+   el header completo porque ahí el contexto no está siempre visible. */
+@media (min-width:761px){
+  .chat-header{ min-height:0; padding:2px 8px; gap:4px; justify-content:flex-end;
+    background:transparent; border-bottom:none; box-shadow:none }
+  .chat-header::after{ display:none }
+  .chat-header .avatar, .chat-header .info{ display:none }
+}
 /* KPIs del topbar */
 .kpi{ font-size:10.5px; padding:4px 10px; gap:5px }
 /* Panel de contexto (datos del paciente) */
