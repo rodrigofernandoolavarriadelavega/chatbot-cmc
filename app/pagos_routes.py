@@ -294,6 +294,30 @@ def _derivar_canal_fuente(telefono_medilink: str) -> tuple[str, str]:
         return ("presencial", "")
 
 
+def _buscar_telefono_por_id_cita(id_cita: str) -> str:
+    """
+    Dado un id_cita, busca el teléfono del paciente en citas_bot (sessions.db).
+    citas_bot indexa phone↔id_cita cada vez que el bot confirma un agendamiento.
+    Es la fuente más directa: no depende de que Medilink devuelva RUT ni celular
+    (GET /citas solo trae id_paciente + nombre_paciente, sin teléfono).
+    Retorna el primer teléfono encontrado, o '' si no hay.
+    """
+    if not id_cita:
+        return ""
+    try:
+        from session import _conn
+        with _conn() as conn:
+            row = conn.execute(
+                "SELECT phone FROM citas_bot WHERE id_cita = ? LIMIT 1",
+                (str(id_cita).strip(),)
+            ).fetchone()
+            if row and row["phone"]:
+                return row["phone"]
+    except Exception as e:
+        log.debug("_buscar_telefono_por_id_cita id_cita=%s error=%s", id_cita, e)
+    return ""
+
+
 def _buscar_telefono_por_rut(rut: str) -> str:
     """
     Dado un RUT, busca el teléfono del paciente en contact_profiles (sessions.db).
@@ -1085,27 +1109,29 @@ async def prellenar_pagos(
     citas.sort(key=lambda c: c.get("hora_inicio", ""))
 
     # ── Cargar filas existentes en pagos_cmc para esa fecha ──────────────────
-    # Necesitamos: id_cita, rut, procedimiento actual, bloqueado, y el id de la fila
+    # Necesitamos: id_cita, rut, procedimiento actual, bloqueado, canal y el id de la fila
     from session import _conn
     with _conn() as conn:
         rows_exist = conn.execute(
             """SELECT id, id_cita, rut,
                       COALESCE(procedimiento, '') as procedimiento,
-                      COALESCE(bloqueado, 0) as bloqueado
+                      COALESCE(bloqueado, 0) as bloqueado,
+                      COALESCE(canal, 'presencial') as canal
                FROM pagos_cmc WHERE fecha = ?""",
             (fecha_iso,)
         ).fetchall()
 
     # Mapas para búsqueda rápida
-    # id_cita → {id, procedimiento, bloqueado}
+    # id_cita → {db_id, procedimiento, bloqueado, canal}
     existing_by_id_cita: dict[str, dict] = {}
-    # rut → {id, procedimiento, bloqueado}
+    # rut → {db_id, procedimiento, bloqueado, canal}
     existing_by_rut: dict[str, dict] = {}
     for row in rows_exist:
         meta = {
-            "db_id":       row["id"],
+            "db_id":         row["id"],
             "procedimiento": row["procedimiento"],
-            "bloqueado":   row["bloqueado"],
+            "bloqueado":     row["bloqueado"],
+            "canal":         row["canal"],
         }
         if row["id_cita"]:
             existing_by_id_cita[row["id_cita"]] = meta
@@ -1135,9 +1161,25 @@ async def prellenar_pagos(
             log.debug("prellenar_pagos: detalles id_aten=%s error: %s", id_aten, e_det)
         return ""
 
+    def _telefono_para_cita(id_cita_str: str, rut_cita: str) -> str:
+        """
+        Retorna el teléfono del paciente para derivar canal/fuente.
+        Orden de prioridad (de más a menos confiable):
+          1. citas_bot.phone por id_cita   ← el puente correcto
+                GET /citas NO devuelve celular/rut_paciente; solo id_paciente + nombre_paciente.
+                citas_bot tiene id_cita ↔ phone para todas las citas agendadas por el bot.
+          2. contact_profiles.phone por rut ← fallback si el bot no agendó la cita
+        """
+        phone = _buscar_telefono_por_id_cita(id_cita_str)
+        if not phone and rut_cita:
+            phone = _buscar_telefono_por_rut(rut_cita)
+        return phone
+
     for cita in citas:
         id_cita_str = str(cita.get("id", ""))
-        rut_cita    = (cita.get("rut_paciente") or "").strip()
+        # NOTA: GET /citas no devuelve rut_paciente, celular ni telefono.
+        # Solo trae id_paciente y nombre_paciente. No depender de esos campos.
+        rut_cita    = (cita.get("rut_paciente") or "").strip()  # siempre '' en la práctica
         id_aten     = cita.get("id_atencion")
 
         # Buscar si ya existe una fila para esta cita
@@ -1147,36 +1189,44 @@ async def prellenar_pagos(
         )
 
         if existing:
-            # Fila ya existe — solo rellenar hueco de prestación si corresponde
+            # Fila ya existe y no está bloqueada → re-derivar canal/fuente + rellenar
+            # hueco de prestación si corresponde.
             if existing["bloqueado"]:
                 saltadas += 1
                 continue
-            if existing["procedimiento"]:
-                # Ya tiene prestación registrada, no tocar
-                saltadas += 1
-                continue
-            if not id_aten:
-                saltadas += 1
-                continue
-            # Buscar prestación en Medilink para completar el hueco
-            prestacion = await _fetch_prestacion(id_aten)
-            if not prestacion:
-                saltadas += 1
-                continue
+
+            # Re-derivar canal/fuente (siempre en filas no bloqueadas)
+            # "presencial" es el default que se graba cuando la derivación falla,
+            # así que no es un indicador de edición manual: siempre re-derivar.
+            telefono_exist = _telefono_para_cita(id_cita_str, rut_cita)
+            canal_nuevo, fuente_nueva = _derivar_canal_fuente(telefono_exist)
+            origen_nuevo = _canal_a_origen(canal_nuevo)
+
+            # Rellenar hueco de prestación si corresponde
+            prestacion_update = None
+            if not existing["procedimiento"] and id_aten:
+                prestacion_update = await _fetch_prestacion(id_aten)
+
+            # Decidir qué actualizar
+            set_parts = ["canal = ?", "fuente = ?", "origen = ?", "updated_at = datetime('now')"]
+            set_vals: list = [canal_nuevo, fuente_nueva, origen_nuevo]
+
+            if prestacion_update:
+                set_parts.insert(3, "procedimiento = ?")
+                set_vals.insert(3, prestacion_update)
+
             try:
                 with _conn() as conn:
                     conn.execute(
-                        """UPDATE pagos_cmc
-                           SET procedimiento = ?, updated_at = datetime('now')
-                           WHERE id = ? AND COALESCE(bloqueado, 0) = 0
-                             AND COALESCE(procedimiento, '') = ''""",
-                        (prestacion, existing["db_id"])
+                        "UPDATE pagos_cmc SET " + ", ".join(set_parts) +
+                        " WHERE id = ? AND COALESCE(bloqueado, 0) = 0",
+                        set_vals + [existing["db_id"]]
                     )
                     conn.commit()
                 actualizadas += 1
                 log.info(
-                    "prellenar_pagos: hueco prestacion rellenado id=%d prestacion=%r",
-                    existing["db_id"], prestacion,
+                    "prellenar_pagos: actualizado id=%d canal=%s fuente=%s prestacion=%r",
+                    existing["db_id"], canal_nuevo, fuente_nueva, prestacion_update,
                 )
             except Exception as e_upd:
                 log.warning("prellenar_pagos: error UPDATE id=%s: %s", existing["db_id"], e_upd)
@@ -1196,14 +1246,9 @@ async def prellenar_pagos(
         if id_aten:
             prestacion = await _fetch_prestacion(id_aten)
 
-        # Derivar canal + fuente desde sessions.db (sin requests Medilink extra)
-        # Primero intentar con el teléfono/celular que trae la cita (campo celular o telefono)
-        telefono_cita = (
-            cita.get("celular") or cita.get("telefono") or ""
-        ).strip()
-        # Si no viene en la cita, buscar por RUT en sessions.db
-        if not telefono_cita and rut_cita:
-            telefono_cita = _buscar_telefono_por_rut(rut_cita)
+        # Derivar canal + fuente: cruzar id_cita → citas_bot.phone (fuente directa)
+        # GET /citas no trae celular/telefono/rut_paciente, así que no intentarlos.
+        telefono_cita = _telefono_para_cita(id_cita_str, rut_cita)
         canal_cita, fuente_cita = _derivar_canal_fuente(telefono_cita)
         origen_cita = _canal_a_origen(canal_cita)
 
@@ -1235,7 +1280,7 @@ async def prellenar_pagos(
                 )
                 conn.commit()
             # Registrar en mapas para idempotencia dentro del mismo batch
-            meta_new = {"db_id": None, "procedimiento": prestacion, "bloqueado": 0}
+            meta_new = {"db_id": None, "procedimiento": prestacion, "bloqueado": 0, "canal": canal_cita}
             if id_cita_str:
                 existing_by_id_cita[id_cita_str] = meta_new
             if rut_cita:
