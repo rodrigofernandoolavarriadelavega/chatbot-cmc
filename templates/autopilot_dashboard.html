@@ -190,10 +190,14 @@
   .tab.on svg{stroke:#fff}
   .tab-count{font-size:11px;font-weight:800;background:rgba(255,255,255,.22);padding:1px 7px;border-radius:999px;min-width:18px;text-align:center;flex-shrink:0}
   .tab:not(.on) .tab-count{background:var(--bg);color:var(--muted)}
+  /* Cuando solo hay un tab visible el rail es ~56px de alto; sin padding el header
+     del módulo queda solapado verticalmente con el rail (position:absolute). */
+  .tabs.single-tab ~ .ap-main{padding-top:70px}
   @media(max-width:760px){
     .tabs{position:static;width:auto;flex-direction:row;flex-wrap:wrap}
     .tabs:hover{width:auto;box-shadow:var(--sh-sm)}
     .ap-main{margin-left:0}
+    .tabs.single-tab ~ .ap-main{padding-top:0}
   }
 
   /* Galería */
@@ -2300,6 +2304,11 @@ if(Array.isArray(ALLOWED_SECTIONS)){
   document.querySelectorAll('#tabs .tab').forEach(t=>{
     if(!ALLOWED_SECTIONS.includes(t.dataset.view)) t.style.display='none';
   });
+  // Un solo tab visible: el rail queda corto y el header del módulo queda solapado.
+  // La clase single-tab añade padding-top al ap-main para bajar el contenido.
+  if(ALLOWED_SECTIONS.length===1){
+    document.getElementById('tabs').classList.add('single-tab');
+  }
   const _first=document.querySelector('#tabs .tab[data-view="'+ALLOWED_SECTIONS[0]+'"]');
   if(_first) _first.click();
 }
