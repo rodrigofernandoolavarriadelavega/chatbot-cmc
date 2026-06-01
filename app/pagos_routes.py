@@ -609,14 +609,27 @@ async def get_pagos(
     # Total recaudado = solo lo que entro a caja (copago)
     total_recaudado = total_copago
 
+    # Totales por metodo de pago (para sección Caja)
+    totales_por_metodo: dict[str, int] = {
+        "efectivo":      0,
+        "transferencia": 0,
+        "debito":        0,
+        "credito":       0,
+    }
+    for p in pagos:
+        metodo = (p.get("metodo_pago") or "efectivo").lower()
+        if metodo in totales_por_metodo:
+            totales_por_metodo[metodo] += p.get("copago", 0) or 0
+
     return {
-        "pagos":            pagos,
-        "total":            len(pagos),
-        "total_copago":     total_copago,
-        "total_bonif":      total_bonif,       # informativo, calculado desde arancel
-        "total_recaudado":  total_recaudado,
-        "fecha_desde":      d_desde,
-        "fecha_hasta":      d_hasta,
+        "pagos":               pagos,
+        "total":               len(pagos),
+        "total_copago":        total_copago,
+        "total_bonif":         total_bonif,       # informativo, calculado desde arancel
+        "total_recaudado":     total_recaudado,
+        "totales_por_metodo":  totales_por_metodo,
+        "fecha_desde":         d_desde,
+        "fecha_hasta":         d_hasta,
     }
 
 

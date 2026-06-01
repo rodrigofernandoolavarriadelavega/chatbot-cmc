@@ -332,6 +332,113 @@
 
   .loading { text-align: center; padding: 28px; color: var(--mute); font-size: 13px; font-weight: 600; }
 
+  /* ── Sección Caja ── */
+  .caja-section {
+    margin: 0 20px 20px;
+    background: #fff; border: 1px solid var(--border);
+    border-radius: 14px; box-shadow: var(--sh-sm);
+    overflow: hidden;
+  }
+  .caja-header {
+    display: flex; align-items: center; gap: 10px;
+    background: linear-gradient(135deg, var(--navy), var(--navy2));
+    padding: 12px 20px; cursor: pointer; user-select: none;
+  }
+  .caja-header h3 {
+    font-size: 13px; font-weight: 800; color: #fff;
+    margin: 0; letter-spacing: .04em; text-transform: uppercase;
+  }
+  .caja-header .caja-toggle-icon {
+    margin-left: auto; color: #b8d4e8; font-size: 11px; font-weight: 700;
+    transition: transform .2s;
+  }
+  .caja-header .caja-toggle-icon.open { transform: rotate(180deg); }
+  .caja-body {
+    padding: 18px 20px; display: none;
+  }
+  .caja-body.open { display: block; }
+
+  /* Grid de métodos */
+  .caja-metodos {
+    display: grid; grid-template-columns: repeat(4,1fr);
+    gap: 10px; margin-bottom: 16px;
+  }
+  .caja-met {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 14px;
+  }
+  .caja-met .label { font-size: 10px; font-weight: 700; text-transform: uppercase;
+                      letter-spacing: .1em; color: var(--mute); margin-bottom: 4px; }
+  .caja-met .value { font-size: 17px; font-weight: 800; color: var(--navy); }
+  .caja-met.efectivo { border-color: var(--aqua); background: var(--aqua-s); }
+  .caja-met.efectivo .label { color: #1a7a7a; }
+  .caja-met.efectivo .value { color: var(--navy); }
+
+  /* Fila de totales + efectivo esperado */
+  .caja-totales {
+    display: flex; align-items: flex-start; gap: 16px;
+    flex-wrap: wrap; margin-bottom: 20px;
+  }
+  .caja-total-recaudado {
+    background: linear-gradient(135deg, var(--navy), var(--blue));
+    border-radius: 10px; padding: 12px 20px; color: #fff;
+    flex: 1; min-width: 200px;
+  }
+  .caja-total-recaudado .label { font-size: 10px; font-weight: 700; text-transform: uppercase;
+                                   letter-spacing: .1em; opacity: .75; margin-bottom: 4px; }
+  .caja-total-recaudado .value { font-size: 22px; font-weight: 800; }
+
+  .caja-efectivo-esperado {
+    background: #f0fbfd; border: 2px solid var(--aqua);
+    border-radius: 10px; padding: 12px 20px; flex: 1; min-width: 250px;
+  }
+  .caja-efectivo-esperado .label { font-size: 10px; font-weight: 700; text-transform: uppercase;
+                                    letter-spacing: .1em; color: var(--mute); margin-bottom: 4px; }
+  .caja-efectivo-esperado .value { font-size: 22px; font-weight: 800; color: var(--navy); }
+  .caja-efectivo-esperado .subtext { font-size: 10px; color: var(--mute); margin-top: 2px; }
+
+  /* Fondo de caja input */
+  .caja-fondo-row {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .caja-fondo-row label { font-size: 11px; font-weight: 700; color: var(--mute);
+                           text-transform: uppercase; letter-spacing: .08em; white-space: nowrap; }
+  .caja-fondo-row input {
+    font-family: inherit; font-size: 14px; font-weight: 700;
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 7px 12px; color: var(--navy); background: #fff;
+    width: 160px; outline: none; transition: border-color .12s;
+  }
+  .caja-fondo-row input:focus { border-color: var(--aqua); box-shadow: 0 0 0 2px rgba(79,190,206,.18); }
+
+  /* Arqueo */
+  .caja-arqueo {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 16px;
+  }
+  .caja-arqueo h4 { font-size: 11px; font-weight: 800; text-transform: uppercase;
+                     letter-spacing: .1em; color: var(--mute); margin: 0 0 12px; }
+  .caja-arqueo-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .caja-arqueo-row label { font-size: 11px; font-weight: 700; color: var(--mute);
+                            text-transform: uppercase; letter-spacing: .08em; white-space: nowrap; }
+  .caja-arqueo-row input {
+    font-family: inherit; font-size: 14px; font-weight: 700;
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 7px 12px; color: var(--navy); background: #fff;
+    width: 180px; outline: none; transition: border-color .12s;
+  }
+  .caja-arqueo-row input:focus { border-color: var(--aqua); box-shadow: 0 0 0 2px rgba(79,190,206,.18); }
+  .caja-diferencia {
+    display: inline-flex; align-items: center; gap: 6px;
+    border-radius: 8px; padding: 7px 14px;
+    font-size: 14px; font-weight: 800;
+  }
+  .caja-diferencia.cuadrado { background: #dff5ea; color: #1a7a42; }
+  .caja-diferencia.sobrante { background: #e8f5fd; color: var(--blue); }
+  .caja-diferencia.faltante  { background: #fff0f0; color: var(--red); }
+  .caja-diferencia.vacio     { background: var(--bg); color: var(--mute); }
+
   @media (max-width: 900px) {
     .table-wrap { overflow-x: auto; }
     table { table-layout: auto; min-width: 900px; }
@@ -343,6 +450,8 @@
     .form-grid { grid-template-columns: 1fr; }
     .form-grid .full { grid-column: 1; }
     .metodo-grid { grid-template-columns: repeat(2,1fr); }
+    .caja-metodos { grid-template-columns: repeat(2,1fr); }
+    .caja-section { margin: 0 12px 16px; }
   }
 </style>
 </head>
@@ -374,6 +483,67 @@
   <div class="kpi"><div class="label">Total pagos</div><div class="value" id="kpiCopago">—</div></div>
   <div class="kpi"><div class="label">Bonif. Imed esperada</div><div class="value" id="kpiBonif" title="Calculada desde arancel N3; no se ingresa en caja">—</div></div>
   <div class="kpi"><div class="label">Total recaudado</div><div class="value green" id="kpiTotal">—</div></div>
+</div>
+
+<!-- Sección Caja -->
+<div class="caja-section" id="cajaSection">
+  <div class="caja-header" id="cajaHeader">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4FBECE" stroke-width="2.2" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2M12 12v4M10 14h4"/></svg>
+    <h3>Caja / Cierre del dia</h3>
+    <span class="caja-toggle-icon" id="cajaToggleIcon">&#9660;</span>
+  </div>
+  <div class="caja-body open" id="cajaBody">
+
+    <!-- Métodos de pago -->
+    <div class="caja-metodos" id="cajaMetodos">
+      <div class="caja-met efectivo">
+        <div class="label">Efectivo</div>
+        <div class="value" id="cajaMEfectivo">—</div>
+      </div>
+      <div class="caja-met">
+        <div class="label">Transferencia</div>
+        <div class="value" id="cajaMTransferencia">—</div>
+      </div>
+      <div class="caja-met">
+        <div class="label">Debito</div>
+        <div class="value" id="cajaMDebito">—</div>
+      </div>
+      <div class="caja-met">
+        <div class="label">Credito</div>
+        <div class="value" id="cajaMCredito">—</div>
+      </div>
+    </div>
+
+    <!-- Total recaudado + Efectivo esperado -->
+    <div class="caja-totales">
+      <div class="caja-total-recaudado">
+        <div class="label">Total recaudado del dia</div>
+        <div class="value" id="cajaTotalRecaudado">—</div>
+      </div>
+      <div class="caja-efectivo-esperado">
+        <div class="label">La caja deberia tener en efectivo</div>
+        <div class="value" id="cajaEfectivoEsperado">—</div>
+        <div class="subtext" id="cajaEfectivoSubtext">Fondo inicial + efectivo del dia</div>
+      </div>
+    </div>
+
+    <!-- Fondo inicial -->
+    <div class="caja-fondo-row">
+      <label for="cajaFondoInput">Fondo de caja inicial ($):</label>
+      <input type="number" id="cajaFondoInput" min="0" step="1000" placeholder="0" value="0">
+    </div>
+
+    <!-- Arqueo -->
+    <div class="caja-arqueo">
+      <h4>Arqueo (opcional)</h4>
+      <div class="caja-arqueo-row">
+        <label for="cajaContadoInput">Efectivo contado ($):</label>
+        <input type="number" id="cajaContadoInput" min="0" step="1" placeholder="Ingresa lo que contaste">
+        <div class="caja-diferencia vacio" id="cajaDiferencia">—</div>
+      </div>
+    </div>
+
+  </div>
 </div>
 
 <!-- Tabla planilla -->
@@ -615,6 +785,7 @@ async function cargarPagos() {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const d = await r.json();
     renderKPIs(d);
+    renderCaja(d);
     renderTabla(d.pagos || []);
   } catch(e) {
     tbody.innerHTML = '<tr><td colspan="13" class="empty">Error al cargar pagos.</td></tr>';
@@ -1414,6 +1585,83 @@ async function guardarModal() {
     btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Guardar';
   }
 }
+
+// ── Sección Caja ──────────────────────────────────────────────────────────────
+
+let _cajaTotalesPorMetodo = { efectivo: 0, transferencia: 0, debito: 0, credito: 0 };
+
+// Toggle colapsar/expandir caja
+document.getElementById('cajaHeader').addEventListener('click', () => {
+  const body = document.getElementById('cajaBody');
+  const icon = document.getElementById('cajaToggleIcon');
+  const isOpen = body.classList.toggle('open');
+  icon.classList.toggle('open', isOpen);
+});
+
+function renderCaja(d) {
+  const tpm = d.totales_por_metodo || { efectivo: 0, transferencia: 0, debito: 0, credito: 0 };
+  _cajaTotalesPorMetodo = tpm;
+
+  document.getElementById('cajaMEfectivo').textContent      = fmt$(tpm.efectivo      || 0);
+  document.getElementById('cajaMTransferencia').textContent = fmt$(tpm.transferencia || 0);
+  document.getElementById('cajaMDebito').textContent        = fmt$(tpm.debito        || 0);
+  document.getElementById('cajaMCredito').textContent       = fmt$(tpm.credito       || 0);
+  document.getElementById('cajaTotalRecaudado').textContent = fmt$(d.total_recaudado || 0);
+
+  actualizarEfectivoEsperado();
+  actualizarArqueo();
+}
+
+function actualizarEfectivoEsperado() {
+  const fondo     = parseInt(document.getElementById('cajaFondoInput').value) || 0;
+  const efectivo  = _cajaTotalesPorMetodo.efectivo || 0;
+  const esperado  = fondo + efectivo;
+  document.getElementById('cajaEfectivoEsperado').textContent = fmt$(esperado);
+  document.getElementById('cajaEfectivoSubtext').textContent =
+    fondo > 0
+      ? `Fondo $${fondo.toLocaleString('es-CL')} + efectivo $${efectivo.toLocaleString('es-CL')}`
+      : `Efectivo del dia (fondo = $0)`;
+  // Recalcular arqueo si hay valor ingresado
+  actualizarArqueo();
+}
+
+function actualizarArqueo() {
+  const contadoRaw = document.getElementById('cajaContadoInput').value.trim();
+  const difDiv = document.getElementById('cajaDiferencia');
+  if (contadoRaw === '') {
+    difDiv.textContent = '—';
+    difDiv.className = 'caja-diferencia vacio';
+    return;
+  }
+  const contado  = parseInt(contadoRaw) || 0;
+  const fondo    = parseInt(document.getElementById('cajaFondoInput').value) || 0;
+  const efectivo = _cajaTotalesPorMetodo.efectivo || 0;
+  const esperado = fondo + efectivo;
+  const diff     = contado - esperado;
+  if (diff === 0) {
+    difDiv.textContent = 'Cuadrado';
+    difDiv.className = 'caja-diferencia cuadrado';
+  } else if (diff > 0) {
+    difDiv.textContent = `Sobrante $${diff.toLocaleString('es-CL')}`;
+    difDiv.className = 'caja-diferencia sobrante';
+  } else {
+    difDiv.textContent = `Faltante $${Math.abs(diff).toLocaleString('es-CL')}`;
+    difDiv.className = 'caja-diferencia faltante';
+  }
+}
+
+// Persistir fondo en localStorage
+(function initFondo() {
+  const saved = localStorage.getItem('cmc_caja_fondo');
+  if (saved !== null) document.getElementById('cajaFondoInput').value = saved;
+})();
+
+document.getElementById('cajaFondoInput').addEventListener('input', function() {
+  localStorage.setItem('cmc_caja_fondo', this.value);
+  actualizarEfectivoEsperado();
+});
+
+document.getElementById('cajaContadoInput').addEventListener('input', actualizarArqueo);
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 initData().then(() => cargarPagos());
