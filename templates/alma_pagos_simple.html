@@ -623,6 +623,17 @@ let _editingRowId = null; // id de la fila en modo edicion
 
 function renderTabla(pagos) {
   const tbody = document.getElementById('tablaPagosBody');
+
+  // Ordenar por hora ascendente; filas sin hora van al final
+  pagos = pagos.slice().sort((a, b) => {
+    const ha = (a.hora || '').slice(0, 5);
+    const hb = (b.hora || '').slice(0, 5);
+    if (!ha && !hb) return 0;
+    if (!ha) return 1;
+    if (!hb) return -1;
+    return ha < hb ? -1 : ha > hb ? 1 : 0;
+  });
+
   _pagosCache = pagos;
   if (!pagos.length) {
     tbody.innerHTML = '<tr><td colspan="13" class="empty">Sin pagos registrados para este dia.</td></tr>';
@@ -633,12 +644,11 @@ function renderTabla(pagos) {
   tbody.innerHTML = pagos.map((p, i) => buildSavedRow(p, i)).join('');
   _newRow = null;
   _editingRowId = null;
-  attachSavedRowHandlers();
 }
 
 function buildSavedRow(p, i) {
   const draft = (!p.metodo_pago || p.metodo_pago === '') && p.copago === 0 && p.creado_por === 'prellenar';
-  const draftMark = draft ? ' <span style="font-size:9px;color:var(--aqua);font-weight:700;vertical-align:middle">DRAFT</span>' : '';
+  const draftMark = draft ? ' <span style="font-size:9px;color:var(--aqua);font-weight:700;vertical-align:middle">Pendiente</span>' : '';
   return `
     <tr class="row-saved" data-id="${p.id}">
       <td style="color:var(--mute);font-size:11px">${i+1}</td>
@@ -663,15 +673,20 @@ function buildSavedRow(p, i) {
     </tr>`;
 }
 
-// ── Adjuntar handlers de edicion spreadsheet ─────────────────────────────────
-function attachSavedRowHandlers() {
-  document.querySelectorAll('#tablaPagosBody tr.row-saved').forEach(tr => {
-    tr.querySelectorAll('td.editable').forEach(td => {
-      td.addEventListener('click', () => {
-        const id = parseInt(tr.dataset.id);
-        activarEdicionFila(id, td.dataset.col);
-      });
-    });
+// ── Delegación de clicks en tbody (se registra UNA vez, sobrevive re-renders) ─
+// Reemplaza attachSavedRowHandlers: en vez de adjuntar listeners a cada td
+// después de cada renderTabla, escuchamos el tbody directamente.
+// Esto es inmune a innerHTML que destruye los elementos hijos.
+function setupTbodyDelegate() {
+  const tbody = document.getElementById('tablaPagosBody');
+  tbody.addEventListener('click', e => {
+    const td = e.target.closest('td.editable');
+    if (!td) return;
+    const tr = td.closest('tr.row-saved');
+    if (!tr) return;
+    const id = parseInt(tr.dataset.id);
+    if (!id) return;
+    activarEdicionFila(id, td.dataset.col);
   });
 }
 
@@ -1470,6 +1485,7 @@ document.getElementById('btnPrellenar').addEventListener('click', async () => {
 });
 
 // ── Init ──────────────────────────────────────────────────────────────────────
+setupTbodyDelegate();
 initData().then(() => cargarPagos());
 </script>
 </body>
