@@ -89,9 +89,10 @@ function Hero({ visual = "fjord" }) {
 
       {/* fjord bleed (desktop) — sangra al borde derecho y se funde con el fondo */}
       {blended && (
-        <div aria-hidden="true" className="hidden lg:block absolute inset-y-0 right-0 w-[56vw] max-w-[940px]">
-          <FjordScene className="absolute inset-0 h-full w-full" />
-          <div className="absolute inset-0" style={{ background: "linear-gradient(90deg, #F2F3F5 0%, rgba(242,243,245,0.72) 15%, rgba(242,243,245,0) 46%)" }}></div>
+        <div aria-hidden="true" className="hidden lg:block absolute inset-y-0 right-[5vw] w-[54vw] max-w-[900px]">
+          <FjordScene className="absolute inset-0 h-full w-full object-[58%_45%]" />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(90deg, #F2F3F5 0%, rgba(242,243,245,0.72) 16%, rgba(242,243,245,0) 48%)" }}></div>
+          <div className="absolute inset-0" style={{ background: "linear-gradient(270deg, #F2F3F5 0%, rgba(242,243,245,0) 13%)" }}></div>
           <div className="absolute inset-0" style={{ background: "linear-gradient(0deg, #F2F3F5 0%, rgba(242,243,245,0) 24%)" }}></div>
           <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, #F2F3F5 0%, rgba(242,243,245,0) 16%)" }}></div>
         </div>
