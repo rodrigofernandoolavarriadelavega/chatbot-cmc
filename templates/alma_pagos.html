@@ -96,7 +96,6 @@
     border: 1px dashed var(--aqua); border-radius: 4px; pointer-events: none;
   }
   tbody tr.row-editing { background: #f0fbfd; outline: 2px solid var(--aqua); outline-offset: -1px; }
-  tbody tr.row-editing td { padding: 5px 4px; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
   /* ── KPI strip ── */
@@ -124,37 +123,48 @@
   table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 
   /* Anchos de columna — matches column order */
-  col.c-num   { width: 28px; }
-  col.c-hora  { width: 90px; }
-  col.c-pac   { width: 185px; }
-  col.c-rut   { width: 105px; }
-  col.c-prof  { width: 175px; }
-  col.c-area  { width: 130px; }
-  col.c-prev  { width: 88px; }
-  col.c-cop   { width: 90px; }
-  col.c-met   { width: 100px; }
-  col.c-folio { width: 75px; }
-  col.c-proc  { width: 100px; }
-  col.c-orig  { width: 82px; }
-  col.c-act   { width: 64px; }
+  col.c-num   { width: 24px; }
+  col.c-hora  { width: 58px; }
+  col.c-pac   { width: 160px; }
+  col.c-rut   { width: 96px; }
+  col.c-prof  { width: 150px; }
+  col.c-area  { width: 110px; }
+  col.c-prev  { width: 76px; }
+  col.c-cop   { width: 82px; }
+  col.c-met   { width: 90px; }
+  col.c-folio { width: 60px; }
+  col.c-proc  { width: 130px; }
+  col.c-orig  { width: 72px; }
+  col.c-act   { width: 60px; }
 
   thead th {
     background: linear-gradient(180deg, var(--navy), var(--navy2));
-    color: #b8d4e8; font-size: 11px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: .08em;
-    padding: 9px 8px; text-align: left; white-space: nowrap;
+    color: #b8d4e8; font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .07em;
+    padding: 7px 6px; text-align: left; white-space: nowrap;
   }
   tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
   tbody tr:last-child { border-bottom: 0; }
   tbody tr:not(.row-new):hover { background: var(--aqua-s); }
-  tbody td { padding: 7px 8px; vertical-align: middle; }
+  tbody td {
+    padding: 5px 6px; vertical-align: middle;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 0; /* con table-layout:fixed, max-width:0 activa el truncado */
+    font-size: 11.5px;
+  }
+  /* La columna de acciones no debe truncar */
+  tbody td:last-child { overflow: visible; white-space: nowrap; max-width: none; }
+  /* Filas en edición o nuevas: celdas con input no truncan */
+  tbody tr.row-new td,
+  tbody tr.row-editing td {
+    overflow: visible; white-space: normal; max-width: none; padding: 4px 4px;
+  }
 
   /* ── Fila nueva inline ── */
   .row-new {
     background: #f0fbfd;
     border-bottom: 2px solid var(--aqua) !important;
   }
-  .row-new td { padding: 5px 4px; }
 
   /* Inputs dentro de la tabla (fila nueva + edición inline) */
   td input.ci, td select.ci {
@@ -873,18 +883,18 @@ function buildSavedRow(p, i) {
   const trClass = locked ? 'row-saved row-locked' : 'row-saved';
   return `
     <tr class="${trClass}" data-id="${p.id}" data-locked="${locked?1:0}">
-      <td style="color:var(--mute);font-size:11px">${i+1}</td>
+      <td style="color:var(--mute)">${i+1}</td>
       <td class="editable" data-col="hora">${fmtHora(p.hora)}</td>
-      <td class="editable" data-col="paciente_nombre" style="font-weight:600">${esc(p.paciente_nombre)}${draftMark}</td>
-      <td class="editable" data-col="rut" style="color:var(--mute)">${esc(p.rut || '—')}</td>
-      <td class="editable" data-col="profesional">${esc(p.profesional || '—')}</td>
-      <td class="editable" data-col="area">${esc(p.area || '—')}</td>
-      <td class="editable" data-col="prevision"><span class="pill ${p.prevision}">${p.prevision === 'fonasa' ? 'Fonasa' : 'Particular'}</span></td>
+      <td class="editable" data-col="paciente_nombre" style="font-weight:700;color:var(--navy)" title="${esc(p.paciente_nombre)}">${esc(p.paciente_nombre)}${draftMark}</td>
+      <td class="editable" data-col="rut" style="color:var(--mute)" title="${esc(p.rut || '')}">${esc(p.rut || '—')}</td>
+      <td class="editable" data-col="profesional" style="color:var(--mute)" title="${esc(p.profesional || '')}">${esc(p.profesional || '—')}</td>
+      <td class="editable" data-col="area" style="color:var(--mute)" title="${esc(p.area || '')}">${esc(p.area || '—')}</td>
+      <td class="editable" data-col="prevision" style="overflow:visible;max-width:none"><span class="pill ${p.prevision}">${p.prevision === 'fonasa' ? 'Fonasa' : 'Partic.'}</span></td>
       <td class="editable" data-col="copago" style="font-weight:700;color:var(--navy)">${fmt$(p.copago)}</td>
-      <td class="editable" data-col="metodo_pago"><span class="pill metodo">${capitalize(p.metodo_pago || 'efectivo')}</span></td>
-      <td class="editable" data-col="folio" style="color:var(--mute);font-size:11px">${esc(p.folio || '—')}</td>
-      <td class="editable" data-col="procedimiento" style="color:var(--mute);font-size:11px">${esc(p.procedimiento || '—')}</td>
-      <td style="color:var(--mute);font-size:11px">${capitalize(p.origen)}</td>
+      <td class="editable" data-col="metodo_pago" style="overflow:visible;max-width:none"><span class="pill metodo">${capitalize(p.metodo_pago || 'efectivo')}</span></td>
+      <td class="editable" data-col="folio" style="color:var(--mute)" title="${esc(p.folio || '')}">${esc(p.folio || '—')}</td>
+      <td class="editable" data-col="procedimiento" style="color:var(--mute)" title="${esc(p.procedimiento || '')}">${esc(p.procedimiento || '—')}</td>
+      <td style="color:var(--mute)">${capitalize(p.origen)}</td>
       <td>
         <div class="td-actions">
           <button class="${lockClass}" title="${lockTitle}" onclick="toggleLockPago(${p.id}, this)">
