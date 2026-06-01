@@ -773,6 +773,25 @@ input, textarea, select{font-family:inherit; color:inherit}
 }
 .ag-success h4{margin:0; color:var(--cmc-navy); font-size:15px; font-weight:800}
 .ag-success p{margin:0; color:var(--text-mute); font-size:12.5px; text-align:center}
+.ag-canal-grid{
+  display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:8px;
+}
+.ag-canal-btn{
+  display:flex; flex-direction:column; align-items:center; gap:8px;
+  padding:18px 12px; border-radius:12px; cursor:pointer;
+  border:2px solid var(--border); background:var(--panel);
+  font-size:12.5px; font-weight:700; color:var(--text);
+  transition:border-color .15s, background-color .15s, color .15s;
+}
+.ag-canal-btn:hover{border-color:var(--cmc-aqua); background:var(--cmc-aqua-soft); color:var(--cmc-navy)}
+.ag-canal-btn.selected{border-color:var(--cmc-blue); background:var(--cmc-blue-soft); color:var(--cmc-navy)}
+.ag-canal-btn svg{opacity:.65}
+.ag-canal-btn.selected svg{opacity:1}
+.ag-origen-badge{
+  display:inline-block; font-size:10px; font-weight:700; padding:2px 7px;
+  border-radius:8px; background:var(--cmc-aqua-soft); color:var(--cmc-blue);
+  margin-left:4px; vertical-align:middle; letter-spacing:.2px;
+}
 .ag-spinner{
   border:3px solid var(--border); border-top-color:var(--cmc-aqua);
   border-radius:50%; width:22px; height:22px;
@@ -1056,6 +1075,11 @@ html, body{width:100%; max-width:100%; overflow-x:hidden}
     <div class="kpi" id="kpiStalled"><span class="dot"></span><b>0</b> sin responder</div>
     <span class="divider"></span>
     <button class="topbar-btn" id="btnCrossSell" title="Funnel cross-sell">&#x1F501; cross-sell <b id="csPct">—</b></button>
+    <span class="divider"></span>
+    <button class="topbar-btn" id="btnAgendarGlobal" title="Agendar cita (sin chat abierto)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M12 14v4M10 16h4"/></svg>
+      Agendar
+    </button>
     <span class="divider"></span>
     <button class="topbar-btn icon-only" id="btnSound" title="Sonido nuevos mensajes">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
@@ -2783,6 +2807,10 @@ function setup(){
     updateBtns();
   };
 
+  // Botón Agendar global (topbar, sin chat activo)
+  const btnAgGlobal = document.getElementById("btnAgendarGlobal");
+  if (btnAgGlobal) btnAgGlobal.addEventListener("click", () => openAgendarModal({ global: true }));
+
   setupAttach();
   loadInbox();
   loadEcografiasPhones();
@@ -2998,6 +3026,9 @@ const AG = {
   fecha: null,
   slot: null,       // {hora_inicio, hora_fin}
   loading: false,
+  origen: "whatsapp",  // "whatsapp" | "presencial" | "telefono"
+  _globalMode: false,  // true cuando se abre desde el top (sin chat activo)
+  _phone: null,        // phone efectivo para mark-booked (activePhone o null)
 };
 
 function agStep(n){ AG.step = n; _agRenderStep(); }
@@ -3018,16 +3049,62 @@ function _agRenderStep(){
   const btnNx  = document.getElementById("agBtnNext");
   if (!body) return;
 
-  btnBk.style.display  = AG.step > 1 && AG.step < 5 ? "" : "none";
+  // En modo global: paso 0 es el primero, no hay "volver" desde él
+  const firstStep = AG._globalMode ? 0 : 1;
+  btnBk.style.display  = AG.step > firstStep && AG.step < 5 ? "" : "none";
   btnCx.style.display  = AG.step < 5 ? "" : "none";
   btnNx.style.display  = AG.step < 5 ? "" : "none";
   btnNx.disabled       = false;
 
-  if (AG.step === 1) _agRenderStep1(body, btnNx);
+  if (AG.step === 0) _agRenderStep0(body, btnNx);
+  else if (AG.step === 1) _agRenderStep1(body, btnNx);
   else if (AG.step === 2) _agRenderStep2(body, btnNx);
   else if (AG.step === 3) _agRenderStep3(body, btnNx);
   else if (AG.step === 4) _agRenderStep4(body, btnNx);
   else if (AG.step === 5) _agRenderSuccess(body);
+}
+
+/* ----- Paso 0: Elegir canal (solo modo global) -------------------------- */
+function _agRenderStep0(body, btnNx){
+  body.innerHTML = "";
+  btnNx.textContent = "Siguiente →";
+  btnNx.disabled = !AG.origen || AG.origen === "whatsapp"; // espera selección
+
+  const hint = document.createElement("div");
+  hint.style.cssText = "font-size:12px;color:var(--text-mute);margin-bottom:4px";
+  hint.textContent = "¿Por qué canal llega el paciente?";
+  body.appendChild(hint);
+
+  const grid = document.createElement("div"); grid.className = "ag-canal-grid";
+
+  const opciones = [
+    {
+      val: "presencial",
+      label: "Presencial",
+      icon: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
+    },
+    {
+      val: "telefono",
+      label: "Por teléfono",
+      icon: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`,
+    },
+  ];
+
+  opciones.forEach(op => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "ag-canal-btn" + (AG.origen === op.val ? " selected" : "");
+    btn.innerHTML = op.icon + `<span>${op.label}</span>`;
+    btn.addEventListener("click", () => {
+      AG.origen = op.val;
+      grid.querySelectorAll(".ag-canal-btn").forEach(b => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      btnNx.disabled = false;
+    });
+    grid.appendChild(btn);
+  });
+
+  body.appendChild(grid);
 }
 
 /* ----- Paso 1: Identificar paciente ------------------------------------- */
@@ -3239,12 +3316,14 @@ function _agRenderStep4(body, btnNx){
   warn.textContent = "Revisa los datos antes de confirmar. Esta acción crea una cita real en Medilink.";
 
   const block = document.createElement("div"); block.className = "ag-confirm-block";
+  const origenLabel = { whatsapp: "WhatsApp", presencial: "Presencial", telefono: "Teléfono" };
   const rows = [
     ["Paciente",    AG.paciente?.nombre_completo || ""],
     ["RUT",         AG.paciente?.rut || ""],
     ["Profesional", `${prof?.nombre||""} — ${prof?.especialidad||""}`],
     ["Fecha",       AG.fecha || ""],
     ["Horario",     `${AG.slot?.hora_inicio||""} – ${AG.slot?.hora_fin||""}`],
+    ["Origen",      origenLabel[AG.origen] || AG.origen || ""],
   ];
   rows.forEach(([k, v]) => {
     const row = document.createElement("div"); row.className = "ag-confirm-row";
@@ -3284,7 +3363,10 @@ function _agRenderSuccess(body){
 
 /* ----- Control del wizard ----------------------------------------------- */
 async function agNext(){
-  if (AG.step === 1){
+  if (AG.step === 0){
+    if (!AG.origen || AG.origen === "whatsapp"){ toast("Elige el canal", "error"); return; }
+    agStep(1);
+  } else if (AG.step === 1){
     if (!AG.paciente){ toast("Busca el paciente primero", "error"); return; }
     agStep(2);
   } else if (AG.step === 2){
@@ -3311,7 +3393,7 @@ async function agCrearCita(){
   btnNx.disabled = true;
   btnNx.textContent = "Creando…";
   try {
-    await api("/alma/api/agenda/citas", {
+    const result = await api("/alma/api/agenda/citas", {
       method: "POST",
       body: JSON.stringify({
         id_paciente:    AG.paciente.id,
@@ -3324,6 +3406,28 @@ async function agCrearCita(){
     });
     agStep(5);
     toast("Cita creada correctamente", "success");
+
+    // Registrar conversión en citas_bot + state=COMPLETED para atribución
+    // Usar el phone efectivo: viene del chat activo o es null (modo global sin chat)
+    const phoneForConv = AG._phone;
+    if (phoneForConv) {
+      const prof = AG.profesionales.find(p => p.id === AG.id_prof);
+      const markPayload = {
+        rut:          AG.paciente.rut || "",
+        nombre:       AG.paciente.nombre_completo || "",
+        especialidad: prof?.especialidad || "",
+        profesional:  prof?.nombre || "",
+        fecha:        AG.fecha || "",
+        hora:         AG.slot?.hora_inicio || "",
+        modalidad:    AG.origen || "whatsapp",
+        id_cita:      result?.id_cita || "",
+      };
+      // Fire-and-forget — no bloquear el wizard ante fallos de atribución
+      api(`/admin/api/patient/${encodeURIComponent(phoneForConv)}/mark-booked`, {
+        method: "POST",
+        body: JSON.stringify(markPayload),
+      }).catch(err => console.warn("[ag] mark-booked falló (no crítico):", err));
+    }
   } catch(e){
     btnNx.disabled = false;
     btnNx.textContent = "Confirmar y agendar";
@@ -3333,23 +3437,44 @@ async function agCrearCita(){
 }
 
 /* ----- Apertura / cierre ------------------------------------------------ */
-function openAgendarModal(){
-  if (!activePhone){ toast("Selecciona un chat primero", "error"); return; }
-  // Resetear estado conservando datos del paciente si ya se buscó
-  AG.step       = 1;
-  AG.paciente   = null;
-  AG.profesionales = [];
-  AG.id_prof    = null;
-  AG.fecha      = null;
-  AG.slot       = null;
+/**
+ * openAgendarModal(opts?)
+ *   Sin opts / desde el chat: origen="whatsapp", paciente pre-cargado desde chat, paso inicial = 1.
+ *   Con opts.global=true (desde topbar): pregunta canal (paso 0) primero, sin paciente pre-cargado.
+ */
+function openAgendarModal(opts){
+  const globalMode = !!(opts && opts.global);
 
-  // Pre-cargar RUT desde la conversación activa
-  const c = activeConv || {};
-  if (c.rut) AG._preRut = c.rut; // usado en _agRenderStep1 para auto-buscar
+  if (!globalMode && !activePhone){
+    toast("Selecciona un chat primero", "error"); return;
+  }
+
+  // Resetear estado
+  AG.step          = globalMode ? 0 : 1;
+  AG.paciente      = null;
+  AG.profesionales = [];
+  AG.id_prof       = null;
+  AG.fecha         = null;
+  AG.slot          = null;
+  AG._globalMode   = globalMode;
+  AG.origen        = globalMode ? null : "whatsapp";
+  AG._phone        = globalMode ? null : (activePhone || null);
+
+  // Pre-cargar RUT desde la conversación activa (solo modo chat)
+  if (!globalMode) {
+    const c = activeConv || {};
+    if (c.rut) AG._preRut = c.rut;
+  } else {
+    AG._preRut = null;
+  }
 
   // Resetear botón Next
   const btnNx = document.getElementById("agBtnNext");
   if (btnNx){ btnNx.textContent = "Siguiente →"; btnNx.style.background = ""; btnNx.style.borderColor = ""; }
+
+  // Actualizar título del modal para indicar modo
+  const title = document.getElementById("agModalTitle");
+  if (title) title.textContent = globalMode ? "Agendar cita" : "Agendar cita";
 
   document.getElementById("agModal").hidden = false;
   _agRenderStep();
