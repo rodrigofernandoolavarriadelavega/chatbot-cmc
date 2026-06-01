@@ -519,6 +519,18 @@ def _canal_a_origen(canal: str) -> str:
     }.get(canal, "presencial")
 
 
+def _convenio_a_prevision(nombre_convenio: str) -> str:
+    """Mapea el convenio de la atención Medilink → previsión del módulo de Pagos.
+    Convenio con 'fonasa' → fonasa; vacío o cualquier otro → particular.
+    (CMC opera Fonasa MLE + particular; no hay isapres en convenio.)"""
+    n = (nombre_convenio or "").strip().lower()
+    if not n:
+        return "particular"
+    if "fonasa" in n or "mle" in n or "bono" in n:
+        return "fonasa"
+    return "particular"
+
+
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.get("/arancel")
@@ -1376,7 +1388,13 @@ async def prellenar_pagos(
                       COALESCE(bloqueado, 0) as bloqueado,
                       COALESCE(canal, 'presencial') as canal,
                       COALESCE(fuente, '') as fuente,
-                      COALESCE(match_confianza, '') as match_confianza
+                      COALESCE(match_confianza, '') as match_confianza,
+                      COALESCE(copago, 0) as copago,
+                      COALESCE(metodo_pago, '') as metodo_pago,
+                      COALESCE(creado_por, '') as creado_por,
+                      COALESCE(area, '') as area,
+                      COALESCE(prevision, 'particular') as prevision,
+                      id_profesional
                FROM pagos_cmc WHERE fecha = ?""",
             (fecha_iso,)
         ).fetchall()
@@ -1393,6 +1411,14 @@ async def prellenar_pagos(
             "bloqueado":     row["bloqueado"],
             "canal":         row["canal"],
             "fuente":        row["fuente"],
+            "match_confianza": row["match_confianza"],
+            "rut":           row["rut"] or "",
+            "copago":        row["copago"],
+            "metodo_pago":   row["metodo_pago"],
+            "creado_por":    row["creado_por"],
+            "area":          row["area"],
+            "prevision":     row["prevision"],
+            "id_profesional": row["id_profesional"],
         }
         if row["id_cita"]:
             existing_by_id_cita[row["id_cita"]] = meta
@@ -1422,6 +1448,57 @@ async def prellenar_pagos(
             log.debug("prellenar_pagos: detalles id_aten=%s error: %s", id_aten, e_det)
         return ""
 
+    _aten_meta_cache: dict = {}
+
+    async def _fetch_atencion_meta(id_aten) -> tuple[str, int]:
+        """Trae (nombre_convenio, total) desde /atenciones/{id}. El convenio define
+        la previsión (Fonasa vs particular); total es el arancel. Cacheado + throttled."""
+        if not id_aten:
+            return ("", 0)
+        if id_aten in _aten_meta_cache:
+            return _aten_meta_cache[id_aten]
+        res = ("", 0)
+        try:
+            await asyncio.sleep(0.15)
+            ra = await client.get(
+                f"{MEDILINK_BASE_URL}/atenciones/{id_aten}",
+                headers=HEADERS, timeout=8,
+            )
+            if ra.status_code == 200:
+                at = _safe_json(ra).get("data", {}) or {}
+                res = ((at.get("nombre_convenio") or "").strip(), int(at.get("total") or 0))
+        except Exception as e_at:
+            log.debug("prellenar_pagos: atencion id=%s error: %s", id_aten, e_at)
+        _aten_meta_cache[id_aten] = res
+        return res
+
+    _ficha_cache: dict = {}
+
+    async def _fetch_ficha(id_paciente) -> tuple[str, str]:
+        """Trae (rut, telefono) desde la ficha /pacientes/{id} de Medilink.
+        GET /citas no incluye rut/celular, pero la ficha sí. Cacheado + throttled.
+        Esta es la fuente autoritativa del RUT y el puente para atribución exacta."""
+        if not id_paciente:
+            return ("", "")
+        if id_paciente in _ficha_cache:
+            return _ficha_cache[id_paciente]
+        rut_tel = ("", "")
+        try:
+            await asyncio.sleep(0.18)
+            rp = await client.get(
+                f"{MEDILINK_BASE_URL}/pacientes/{id_paciente}",
+                headers=HEADERS, timeout=8,
+            )
+            if rp.status_code == 200:
+                ficha = _safe_json(rp).get("data", {}) or {}
+                rut = (ficha.get("rut") or "").strip()
+                tel = (ficha.get("celular") or ficha.get("telefono") or "").strip()
+                rut_tel = (rut, tel)
+        except Exception as e_fic:
+            log.debug("prellenar_pagos: ficha id_paciente=%s error: %s", id_paciente, e_fic)
+        _ficha_cache[id_paciente] = rut_tel
+        return rut_tel
+
     def _telefono_para_cita(id_cita_str: str, rut_cita: str) -> str:
         """
         Retorna el teléfono del paciente para derivar canal/fuente.
@@ -1438,16 +1515,31 @@ async def prellenar_pagos(
 
     for cita in citas:
         id_cita_str = str(cita.get("id", ""))
-        # NOTA: GET /citas no devuelve rut_paciente, celular ni telefono.
-        # Solo trae id_paciente y nombre_paciente. No depender de esos campos.
-        rut_cita    = (cita.get("rut_paciente") or "").strip()  # siempre '' en la práctica
+        # GET /citas no devuelve rut/celular: solo id_paciente + nombre_paciente.
+        # La ficha /pacientes/{id} SÍ los trae → fuente autoritativa del RUT y
+        # puente para atribución EXACTA por teléfono.
+        rut_cita    = (cita.get("rut_paciente") or "").strip()
         id_aten     = cita.get("id_atencion")
+        id_paciente = cita.get("id_paciente")
 
-        # Buscar si ya existe una fila para esta cita
-        existing = (
-            existing_by_id_cita.get(id_cita_str) if id_cita_str
-            else existing_by_rut.get(rut_cita)
+        # Buscar si ya existe una fila para esta cita (por id_cita; rut viene vacío de /citas)
+        existing = existing_by_id_cita.get(id_cita_str) if id_cita_str else None
+
+        # Pedir la ficha (rut+tel) SOLO si hace falta — evita 504 por timeout en
+        # re-ejecuciones: si la fila ya tiene RUT y canal resuelto, no se consulta.
+        need_ficha = (
+            existing is None
+            or not (existing.get("rut") or "").strip()
+            or (existing.get("canal") or "presencial") == "presencial"
         )
+        if need_ficha:
+            rut_ficha, tel_ficha = await _fetch_ficha(id_paciente)
+        else:
+            rut_ficha, tel_ficha = "", ""
+        if rut_ficha and not rut_cita:
+            rut_cita = rut_ficha
+        if existing is None and rut_cita:
+            existing = existing_by_rut.get(rut_cita)
 
         if existing:
             # Fila ya existe y no está bloqueada → re-derivar canal/fuente + rellenar
@@ -1456,34 +1548,78 @@ async def prellenar_pagos(
                 saltadas += 1
                 continue
 
-            # Re-derivar canal/fuente (siempre en filas no bloqueadas)
-            # "presencial" es el default que se graba cuando la derivación falla,
-            # así que no es un indicador de edición manual: siempre re-derivar.
-            telefono_exist = _telefono_para_cita(id_cita_str, rut_cita)
-            canal_nuevo, fuente_nueva = _derivar_canal_fuente(telefono_exist)
+            # Re-derivar atribución con el teléfono de la ficha (cruce EXACTO).
+            # Si no se pidió ficha (fila ya resuelta), mantener su canal/fuente para
+            # NO degradar a presencial en re-ejecuciones.
+            if need_ficha:
+                att = _resolver_atribucion(
+                    id_cita=id_cita_str, rut=rut_cita,
+                    nombre=cita.get("nombre_paciente") or "", telefono_cita=tel_ficha,
+                )
+                canal_nuevo, fuente_nueva = att["canal"], att["fuente"]
+                confianza_nueva = att["confianza"]
+            else:
+                canal_nuevo, fuente_nueva = existing["canal"], existing["fuente"]
+                confianza_nueva = existing.get("match_confianza") or ""
             origen_nuevo = _canal_a_origen(canal_nuevo)
+            # Rellenar RUT desde la ficha si la fila no lo tenía
+            rut_relleno = rut_ficha if (rut_ficha and not (existing.get("rut") or "").strip()) else None
 
             # Rellenar hueco de prestación si corresponde
             prestacion_update = None
             if not existing["procedimiento"] and id_aten:
                 prestacion_update = await _fetch_prestacion(id_aten)
 
+            # Previsión + precio desde la atención SOLO si la fila sigue draft
+            # (copago 0, sin método, creada por prellenar) → no pisa ediciones de recepción.
+            prev_update = None
+            copago_update = None
+            es_draft = (
+                existing.get("copago", 0) == 0
+                and not (existing.get("metodo_pago") or "").strip()
+                and existing.get("creado_por") == "prellenar"
+            )
+            if es_draft and id_aten:
+                convenio, _total = await _fetch_atencion_meta(id_aten)
+                prev_calc = _convenio_a_prevision(convenio)
+                sug = _sugerir_copago(existing.get("area") or "", prev_calc, existing.get("id_profesional"))
+                copago_calc = int(sug.get("copago_sugerido") or 0)
+                if prev_calc != (existing.get("prevision") or "particular"):
+                    prev_update = prev_calc
+                if copago_calc and copago_calc != existing.get("copago", 0):
+                    copago_update = copago_calc
+                    if prev_update is None:  # si cambia el copago, fijar también la previsión coherente
+                        prev_update = prev_calc
+
             # Solo actualizar si hubo cambio real (diff) para que el contador sea honesto
-            canal_cambio   = canal_nuevo  != existing["canal"]
-            fuente_cambio  = fuente_nueva != existing["fuente"]
-            hay_cambio     = canal_cambio or fuente_cambio or bool(prestacion_update)
+            canal_cambio     = canal_nuevo     != existing["canal"]
+            fuente_cambio    = fuente_nueva    != existing["fuente"]
+            confianza_cambio = confianza_nueva != (existing.get("match_confianza") or "")
+            hay_cambio       = (canal_cambio or fuente_cambio or confianza_cambio or bool(prestacion_update)
+                                or bool(rut_relleno) or bool(prev_update) or bool(copago_update))
 
             if not hay_cambio:
                 saltadas += 1
                 continue
 
             # Decidir qué actualizar
-            set_parts = ["canal = ?", "fuente = ?", "origen = ?", "updated_at = datetime('now')"]
-            set_vals: list = [canal_nuevo, fuente_nueva, origen_nuevo]
+            set_parts = ["canal = ?", "fuente = ?", "origen = ?", "match_confianza = ?", "updated_at = datetime('now')"]
+            set_vals: list = [canal_nuevo, fuente_nueva, origen_nuevo, confianza_nueva]
+
+            if rut_relleno:
+                set_parts.insert(0, "rut = ?")
+                set_vals.insert(0, rut_relleno)
+
+            if prev_update is not None:
+                set_parts.insert(len(set_parts)-1, "prevision = ?")
+                set_vals.append(prev_update)
+            if copago_update is not None:
+                set_parts.insert(len(set_parts)-1, "copago = ?")
+                set_vals.append(copago_update)
 
             if prestacion_update:
-                set_parts.insert(3, "procedimiento = ?")
-                set_vals.insert(3, prestacion_update)
+                set_parts.insert(len(set_parts)-1, "procedimiento = ?")
+                set_vals.insert(len(set_vals), prestacion_update)
 
             try:
                 with _conn() as conn:
@@ -1516,11 +1652,17 @@ async def prellenar_pagos(
         if id_aten:
             prestacion = await _fetch_prestacion(id_aten)
 
-        # Derivar atribución (canal/fuente/confianza) cruzando con el bot.
-        # Cascada: id_cita → teléfono → RUT (exacto) o nombre completo (probable).
-        # Si el bot conoce el RUT y Medilink no lo trajo, se rellena.
+        # Previsión + precio desde la atención de Medilink (convenio → fonasa/particular).
+        convenio, _total = await _fetch_atencion_meta(id_aten)
+        prevision_cita = _convenio_a_prevision(convenio)
+        sug = _sugerir_copago(area, prevision_cita, id_prof)
+        copago_sug = int(sug.get("copago_sugerido") or 0)
+
+        # Derivar atribución (canal/fuente/confianza). El teléfono de la ficha de
+        # Medilink hace el cruce EXACTO; rut_cita ya viene relleno desde la ficha.
         att = _resolver_atribucion(
             id_cita=id_cita_str, rut=rut_cita, nombre=nombre_pac,
+            telefono_cita=tel_ficha,
         )
         canal_cita, fuente_cita = att["canal"], att["fuente"]
         origen_cita = _canal_a_origen(canal_cita)
@@ -1535,7 +1677,7 @@ async def prellenar_pagos(
                         codigo_transferencia, tipo_bono, procedimiento, origen, id_cita,
                         creado_por, bloqueado, canal, fuente, match_confianza,
                         created_at, updated_at)
-                       VALUES (?,?,?,?,?,?,?,?,0,0,'','','','',?,?,?,
+                       VALUES (?,?,?,?,?,?,?,?,?,0,'','','','',?,?,?,
                                'prellenar', 0, ?, ?, ?, datetime('now'), datetime('now'))""",
                     (
                         fecha_iso,
@@ -1545,7 +1687,8 @@ async def prellenar_pagos(
                         id_prof,
                         profesional,
                         area,
-                        "particular",
+                        prevision_cita,
+                        copago_sug,
                         prestacion,
                         origen_cita,
                         id_cita_str,
