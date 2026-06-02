@@ -671,6 +671,10 @@ import finanzas_routes; app.include_router(finanzas_routes.router)
 import equipo_routes; app.include_router(equipo_routes.router); equipo_routes.seed_if_empty()
 import documentos_routes; app.include_router(documentos_routes.router); documentos_routes.seed_if_empty()
 import habilitacion_routes; app.include_router(habilitacion_routes.router); habilitacion_routes.seed_if_empty()
+import mantencion_routes; app.include_router(mantencion_routes.router); mantencion_routes.seed_if_empty()
+import calidad_routes; app.include_router(calidad_routes.router)
+import examenes_routes; app.include_router(examenes_routes.router)
+import tareas_routes; app.include_router(tareas_routes.router)
 
 import audit_routes  # vista /admin/auditoria — hallazgos del enjambre horario
 app.include_router(audit_routes.router)
@@ -2835,6 +2839,10 @@ _ALMA_FINANZAS_HTML = (_TEMPLATE_DIR / "alma_finanzas.html").read_text(encoding=
 _ALMA_EQUIPO_HTML = (_TEMPLATE_DIR / "alma_equipo.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_equipo.html").exists() else ""
 _ALMA_DOCUMENTOS_HTML = (_TEMPLATE_DIR / "alma_documentos.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_documentos.html").exists() else ""
 _ALMA_HABILITACION_HTML = (_TEMPLATE_DIR / "alma_habilitacion.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_habilitacion.html").exists() else ""
+_ALMA_MANTENCION_HTML = (_TEMPLATE_DIR / "alma_mantencion.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_mantencion.html").exists() else ""
+_ALMA_CALIDAD_HTML = (_TEMPLATE_DIR / "alma_calidad.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_calidad.html").exists() else ""
+_ALMA_EXAMENES_HTML = (_TEMPLATE_DIR / "alma_examenes.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_examenes.html").exists() else ""
+_ALMA_TAREAS_HTML = (_TEMPLATE_DIR / "alma_tareas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_tareas.html").exists() else ""
 
 def _make_alma_page(_html, _label):
     """Factory de páginas Alma simples (template con __TOKEN__, misma auth que el shell)."""
@@ -2859,6 +2867,10 @@ for _ap, _ah, _al in [
     ("/alma/equipo", _ALMA_EQUIPO_HTML, "Equipo"),
     ("/alma/documentos", _ALMA_DOCUMENTOS_HTML, "Documentos"),
     ("/alma/habilitacion", _ALMA_HABILITACION_HTML, "Habilitacion"),
+    ("/alma/mantencion", _ALMA_MANTENCION_HTML, "Mantencion"),
+    ("/alma/calidad", _ALMA_CALIDAD_HTML, "Calidad"),
+    ("/alma/examenes", _ALMA_EXAMENES_HTML, "Examenes"),
+    ("/alma/tareas", _ALMA_TAREAS_HTML, "Tareas"),
 ]:
     app.add_api_route(_ap, _make_alma_page(_ah, _al), methods=["GET"], response_class=HTMLResponse, include_in_schema=False)
 

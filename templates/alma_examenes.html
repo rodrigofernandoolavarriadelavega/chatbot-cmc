@@ -1,0 +1,77 @@
+<!DOCTYPE html><html lang="es"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex,nofollow">
+<title>Exámenes — Alma CMC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/alma_kit.css">
+</head><body>
+<div class="pg-topbar">
+  <h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 2v6l-5 9a2 2 0 002 3h12a2 2 0 002-3l-5-9V2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 2h8M7 14h10" stroke-linecap="round"/></svg> Exámenes y resultados</h1>
+  <div class="spacer"></div>
+  <button class="btn-primary" onclick="openNew()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg> Orden</button>
+</div>
+<div class="wrap">
+  <div class="kpis" id="kpis"></div>
+  <div class="chips" id="chips"></div>
+  <div class="card"><table><thead><tr>
+    <th>Paciente / Examen</th><th class="hide-sm">Tipo</th><th class="hide-sm">Solicitado</th><th>Estado</th><th class="num"></th>
+  </tr></thead><tbody id="tbody"></tbody></table>
+  <div id="empty" class="empty" style="display:none">Sin exámenes</div></div>
+  <div class="note">Sigue cada examen hasta su entrega para que ningún resultado quede sin avisar al paciente. Se enlaza con la toma de muestras (convenio lab) y ecografía.</div>
+</div>
+
+<div class="modal-bg" id="m-x"><div class="modal">
+  <div class="modal-head"><h2 id="x-title">Nueva orden de examen</h2><div class="x" onclick="AlmaKit.closeModal('m-x')">✕</div></div>
+  <div class="modal-body"><input type="hidden" id="x-id">
+    <div class="field"><label>Paciente</label><input id="x-pac"></div>
+    <div class="field-row"><div class="field"><label>RUT</label><input id="x-rut"></div><div class="field"><label>Tipo</label><select id="x-tipo"></select></div></div>
+    <div class="field"><label>Examen</label><input id="x-ex" placeholder="Ej: Hemograma, Eco abdominal…"></div>
+    <div class="field-row"><div class="field"><label>Solicitante</label><input id="x-sol"></div><div class="field"><label>Estado</label><select id="x-estado"><option value="solicitado">Solicitado</option><option value="tomado">Tomado</option><option value="resultado_listo">Resultado listo</option><option value="entregado">Entregado</option></select></div></div>
+    <div class="field-row"><div class="field"><label>Fecha solicitud</label><input id="x-fs" type="date"></div><div class="field"><label>Lab externo</label><input id="x-lab"></div></div>
+    <div class="field"><label>Notas</label><input id="x-notas"></div>
+  </div>
+  <div class="modal-foot"><button class="btn-ghost" onclick="AlmaKit.closeModal('m-x')">Cancelar</button><button class="btn-primary" onclick="save()">Guardar</button></div>
+</div></div>
+
+<script>window.ALMA_TOKEN="__TOKEN__"; window.ALMA_API="/alma/api/examenes";</script>
+<script src="/static/alma_kit.js"></script>
+<script>
+const {api,esc,toast,openModal,closeModal,fdate}=AlmaKit;
+const TIPOS=["Laboratorio","Imagen","Ecografía","Otro"];
+const EB={solicitado:'mute',tomado:'aqua',resultado_listo:'orange',entregado:'green'};
+const EL={solicitado:'Solicitado',tomado:'Tomado',resultado_listo:'Resultado listo',entregado:'Entregado'};
+let FILT="todos",ITEMS=[];
+async function loadKpis(){ const r=await api("/resumen");
+  document.getElementById('kpis').innerHTML=`
+   <div class="kpi alert"><div class="k-label">Pendientes</div><div class="k-val">${r.pendientes}</div><div class="k-sub">sin entregar</div></div>
+   <div class="kpi bad"><div class="k-label">Resultados listos</div><div class="k-val">${r.resultados_sin_entregar}</div><div class="k-sub">avisar al paciente</div></div>
+   <div class="kpi"><div class="k-label">Total</div><div class="k-val">${r.total}</div><div class="k-sub">órdenes</div></div>
+   <div class="kpi good"><div class="k-label">Entregados</div><div class="k-val">${r.por_estado.entregado||0}</div><div class="k-sub">cerrados</div></div>`; }
+async function load(){ const r=await api(FILT==='todos'?'':("?estado="+FILT)); ITEMS=r.examenes;
+  document.getElementById('chips').innerHTML=['todos','solicitado','tomado','resultado_listo','entregado'].map(e=>`<div class="chip ${FILT===e?'active':''}" onclick="setF('${e}')">${e==='todos'?'Todos':EL[e]||e}</div>`).join('');
+  const tb=document.getElementById('tbody'),em=document.getElementById('empty');
+  if(!ITEMS.length){tb.innerHTML='';em.style.display='block';return;} em.style.display='none';
+  tb.innerHTML=ITEMS.map(x=>`<tr>
+    <td><div class="t-strong">${esc(x.paciente_nombre)}</div><div class="t-meta">${esc(x.examen||'—')} ${x.lab_externo?'· '+esc(x.lab_externo):''}</div></td>
+    <td class="hide-sm"><span class="badge aqua">${esc(x.tipo)}</span></td>
+    <td class="hide-sm">${fdate(x.fecha_solicitud)}</td>
+    <td><span class="badge ${EB[x.estado]||'mute'}">${EL[x.estado]||x.estado}</span></td>
+    <td class="num"><div class="row-actions">
+      <button class="icon-btn" onclick='edit(${x.id})' title="Editar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke-linecap="round"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke-linecap="round"/></svg></button>
+      <button class="icon-btn danger" onclick='del(${x.id})' title="Eliminar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" stroke-linecap="round"/></svg></button>
+    </div></td></tr>`).join(''); }
+function setF(e){FILT=e;load();}
+const F=id=>document.getElementById(id);
+function fillTipos(){F('x-tipo').innerHTML=TIPOS.map(t=>`<option>${t}</option>`).join('');}
+function openNew(){ F('x-title').textContent='Nueva orden de examen'; F('x-id').value=''; fillTipos();
+  ['x-pac','x-rut','x-ex','x-sol','x-lab','x-notas'].forEach(i=>F(i).value=''); F('x-estado').value='solicitado'; F('x-fs').value=new Date().toISOString().slice(0,10); openModal('m-x'); }
+function edit(id){ const x=ITEMS.find(i=>i.id===id); if(!x)return; F('x-title').textContent='Editar examen'; F('x-id').value=id; fillTipos();
+  F('x-pac').value=x.paciente_nombre; F('x-rut').value=x.rut||''; F('x-tipo').value=x.tipo; F('x-ex').value=x.examen||''; F('x-sol').value=x.solicitante||''; F('x-estado').value=x.estado;
+  F('x-fs').value=(x.fecha_solicitud||'').slice(0,10); F('x-lab').value=x.lab_externo||''; F('x-notas').value=x.notas||''; openModal('m-x'); }
+async function save(){ const id=F('x-id').value; const body={paciente_nombre:F('x-pac').value.trim(),rut:F('x-rut').value.trim(),tipo:F('x-tipo').value,examen:F('x-ex').value.trim(),
+  solicitante:F('x-sol').value.trim(),estado:F('x-estado').value,fecha_solicitud:F('x-fs').value,lab_externo:F('x-lab').value.trim(),notas:F('x-notas').value.trim()};
+  if(!body.paciente_nombre){toast('El paciente es obligatorio',true);return;}
+  try{ if(id) await api("/"+id,{method:"PATCH",body:JSON.stringify(body)}); else await api("",{method:"POST",body:JSON.stringify(body)}); closeModal('m-x'); toast('Guardado'); loadKpis(); load(); }catch(e){toast(e.message,true);} }
+async function del(id){ if(!confirm('¿Eliminar examen?'))return; try{ await api("/"+id,{method:"DELETE"}); toast('Eliminado'); loadKpis(); load(); }catch(e){toast(e.message,true);} }
+loadKpis(); load();
+</script></body></html>

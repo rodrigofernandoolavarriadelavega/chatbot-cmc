@@ -1,0 +1,97 @@
+<!DOCTYPE html><html lang="es"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex,nofollow">
+<title>Mantención — Alma CMC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/alma_kit.css">
+</head><body>
+<div class="pg-topbar">
+  <h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a4 4 0 00-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 005.4-5.4l-2.6 2.6-2.1-2.1 2.6-2.6z" stroke-linecap="round" stroke-linejoin="round"/></svg> Mantención de equipos</h1>
+  <div class="spacer"></div>
+  <button class="btn-primary" onclick="openNew()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg> Equipo</button>
+</div>
+<div class="wrap">
+  <div class="kpis" id="kpis"></div>
+  <div class="chips" id="chips"></div>
+  <div class="card"><table><thead><tr>
+    <th>Equipo</th><th class="hide-sm">Ubicación</th><th class="hide-sm">Última</th><th>Próxima</th><th>Estado</th><th class="num"></th>
+  </tr></thead><tbody id="tbody"></tbody></table>
+  <div id="empty" class="empty" style="display:none">Sin equipos</div></div>
+  <div class="note">Programa de mantención preventiva (ítem exigido por SEREMI). Registrar una mantención preventiva o validación recalcula la próxima fecha según la frecuencia del equipo.</div>
+</div>
+
+<div class="modal-bg" id="m-eq"><div class="modal">
+  <div class="modal-head"><h2 id="eq-title">Nuevo equipo</h2><div class="x" onclick="AlmaKit.closeModal('m-eq')">✕</div></div>
+  <div class="modal-body"><input type="hidden" id="eq-id">
+    <div class="field"><label>Nombre</label><input id="eq-nombre"></div>
+    <div class="field-row"><div class="field"><label>Tipo</label><select id="eq-tipo"></select></div><div class="field"><label>Ubicación</label><input id="eq-ubic"></div></div>
+    <div class="field-row-3"><div class="field"><label>Marca</label><input id="eq-marca"></div><div class="field"><label>Modelo</label><input id="eq-modelo"></div><div class="field"><label>Serie</label><input id="eq-serie"></div></div>
+    <div class="field-row-3"><div class="field"><label>Estado</label><select id="eq-estado"><option value="operativo">Operativo</option><option value="mantencion">En mantención</option><option value="baja">De baja</option></select></div><div class="field"><label>Frecuencia (meses)</label><input id="eq-freq" type="number" value="12"></div><div class="field"><label>Próxima mant.</label><input id="eq-prox" type="date"></div></div>
+    <div class="field"><label>Responsable</label><input id="eq-resp"></div>
+  </div>
+  <div class="modal-foot"><button class="btn-ghost" onclick="AlmaKit.closeModal('m-eq')">Cancelar</button><button class="btn-primary" onclick="save()">Guardar</button></div>
+</div></div>
+
+<div class="modal-bg" id="m-mant"><div class="modal">
+  <div class="modal-head"><h2 id="mant-title">Registrar mantención</h2><div class="x" onclick="AlmaKit.closeModal('m-mant')">✕</div></div>
+  <div class="modal-body"><input type="hidden" id="mant-eqid">
+    <div class="field-row"><div class="field"><label>Fecha</label><input id="mant-fecha" type="date"></div><div class="field"><label>Tipo</label><select id="mant-tipo"><option value="preventiva">Preventiva</option><option value="correctiva">Correctiva</option><option value="validacion">Validación</option></select></div></div>
+    <div class="field"><label>Descripción</label><input id="mant-desc"></div>
+    <div class="field-row"><div class="field"><label>Realizado por</label><input id="mant-por"></div><div class="field"><label>Costo (CLP)</label><input id="mant-costo" type="number" value="0"></div></div>
+    <div style="font-size:11px;font-weight:700;color:var(--mute);text-transform:uppercase;letter-spacing:.05em;margin:14px 0 4px">Historial</div>
+    <div id="mant-hist" style="max-height:180px;overflow-y:auto"></div>
+  </div>
+  <div class="modal-foot"><button class="btn-ghost" onclick="AlmaKit.closeModal('m-mant')">Cerrar</button><button class="btn-primary" onclick="saveMant()">Registrar</button></div>
+</div></div>
+
+<script>window.ALMA_TOKEN="__TOKEN__"; window.ALMA_API="/alma/api/mantencion";</script>
+<script src="/static/alma_kit.js"></script>
+<script>
+const {api,clp,esc,toast,openModal,closeModal,fdate}=AlmaKit;
+const TIPOS=["Autoclave","Sillón dental","Ecógrafo","Rayos dental","Compresor","Refrigerador vacunas","Esterilizador","Otro"];
+const MB={ok:'green',proxima:'orange',vencida:'red',sin_plan:'mute'};
+const ML={ok:'Al día',proxima:'Próxima',vencida:'Vencida',sin_plan:'Sin plan'};
+const EB={operativo:'green',mantencion:'orange',baja:'mute'};
+let FILT="todos",ITEMS=[];
+async function loadKpis(){ const r=await api("/resumen");
+  document.getElementById('kpis').innerHTML=`
+   <div class="kpi"><div class="k-label">Equipos</div><div class="k-val">${r.total}</div><div class="k-sub">registrados</div></div>
+   <div class="kpi good"><div class="k-label">Operativos</div><div class="k-val">${r.operativos}</div><div class="k-sub">en servicio</div></div>
+   <div class="kpi bad"><div class="k-label">Mant. vencida</div><div class="k-val">${r.mant_vencida}</div><div class="k-sub">requieren acción</div></div>
+   <div class="kpi alert"><div class="k-label">Próximas (30d)</div><div class="k-val">${r.mant_proxima}</div><div class="k-sub">a programar</div></div>`; }
+async function load(){ const r=await api(FILT==='todos'?'':("?estado="+FILT)); ITEMS=r.equipos;
+  document.getElementById('chips').innerHTML=['todos','operativo','mantencion','baja'].map(e=>`<div class="chip ${FILT===e?'active':''}" onclick="setF('${e}')">${e==='todos'?'Todos':e}</div>`).join('');
+  const tb=document.getElementById('tbody'),em=document.getElementById('empty');
+  if(!ITEMS.length){tb.innerHTML='';em.style.display='block';return;} em.style.display='none';
+  tb.innerHTML=ITEMS.map(x=>`<tr>
+    <td><div class="t-strong">${esc(x.nombre)}</div><div class="t-meta">${esc(x.tipo)} ${x.marca?'· '+esc(x.marca):''}</div></td>
+    <td class="hide-sm t-meta">${esc(x.ubicacion||'—')}</td>
+    <td class="hide-sm">${x.ultima_mantencion?fdate(x.ultima_mantencion):'—'}</td>
+    <td>${x.proxima_mantencion?fdate(x.proxima_mantencion):'—'}</td>
+    <td><span class="badge ${MB[x.estado_mant]||'mute'}">${ML[x.estado_mant]||x.estado_mant}</span></td>
+    <td class="num"><div class="row-actions">
+      <button class="icon-btn" title="Registrar mantención" onclick='openMant(${x.id})'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v8M8 12h8" stroke-linecap="round"/><circle cx="12" cy="12" r="9"/></svg></button>
+      <button class="icon-btn" title="Editar" onclick='edit(${x.id})'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke-linecap="round"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke-linecap="round"/></svg></button>
+      <button class="icon-btn danger" title="Eliminar" onclick='del(${x.id})'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" stroke-linecap="round"/></svg></button>
+    </div></td></tr>`).join(''); }
+function setF(e){FILT=e;load();}
+const F=id=>document.getElementById(id);
+function fillTipos(){F('eq-tipo').innerHTML=TIPOS.map(t=>`<option>${t}</option>`).join('');}
+function openNew(){ F('eq-title').textContent='Nuevo equipo'; F('eq-id').value=''; fillTipos();
+  ['eq-nombre','eq-ubic','eq-marca','eq-modelo','eq-serie','eq-prox','eq-resp'].forEach(i=>F(i).value=''); F('eq-estado').value='operativo'; F('eq-freq').value=12; openModal('m-eq'); }
+function edit(id){ const x=ITEMS.find(i=>i.id===id); if(!x)return; F('eq-title').textContent='Editar equipo'; F('eq-id').value=id; fillTipos();
+  F('eq-nombre').value=x.nombre; F('eq-tipo').value=x.tipo; F('eq-ubic').value=x.ubicacion||''; F('eq-marca').value=x.marca||''; F('eq-modelo').value=x.modelo||''; F('eq-serie').value=x.serie||'';
+  F('eq-estado').value=x.estado; F('eq-freq').value=x.frecuencia_meses||12; F('eq-prox').value=(x.proxima_mantencion||'').slice(0,10); F('eq-resp').value=x.responsable||''; openModal('m-eq'); }
+async function save(){ const id=F('eq-id').value; const body={nombre:F('eq-nombre').value.trim(),tipo:F('eq-tipo').value,ubicacion:F('eq-ubic').value.trim(),marca:F('eq-marca').value.trim(),
+  modelo:F('eq-modelo').value.trim(),serie:F('eq-serie').value.trim(),estado:F('eq-estado').value,frecuencia_meses:+F('eq-freq').value||12,proxima_mantencion:F('eq-prox').value,responsable:F('eq-resp').value.trim()};
+  if(!body.nombre){toast('Nombre obligatorio',true);return;}
+  try{ if(id) await api("/"+id,{method:"PATCH",body:JSON.stringify(body)}); else await api("",{method:"POST",body:JSON.stringify(body)}); closeModal('m-eq'); toast('Guardado'); loadKpis(); load(); }catch(e){toast(e.message,true);} }
+async function del(id){ if(!confirm('¿Eliminar equipo?'))return; try{ await api("/"+id,{method:"DELETE"}); toast('Eliminado'); loadKpis(); load(); }catch(e){toast(e.message,true);} }
+async function openMant(id){ const x=ITEMS.find(i=>i.id===id); F('mant-title').textContent='Mantención — '+(x?x.nombre:''); F('mant-eqid').value=id;
+  F('mant-fecha').value=new Date().toISOString().slice(0,10); F('mant-tipo').value='preventiva'; F('mant-desc').value=''; F('mant-por').value=''; F('mant-costo').value=0;
+  openModal('m-mant'); const h=F('mant-hist'); h.innerHTML='<div class="t-meta">Cargando…</div>';
+  try{ const r=await api("/"+id+"/historial"); h.innerHTML=r.mantenciones.length?r.mantenciones.map(m=>`<div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid #eef4f8;font-size:12px"><span class="badge ${m.tipo==='correctiva'?'orange':'aqua'}">${esc(m.tipo)}</span><span>${esc(m.descripcion||'')}</span><span class="t-meta" style="margin-left:auto">${fdate(m.fecha)}</span></div>`).join(''):'<div class="t-meta">Sin mantenciones</div>'; }catch(e){h.innerHTML='<div class="t-meta">Error</div>';} }
+async function saveMant(){ const id=F('mant-eqid').value; const body={fecha:F('mant-fecha').value,tipo:F('mant-tipo').value,descripcion:F('mant-desc').value.trim(),realizado_por:F('mant-por').value.trim(),costo:+F('mant-costo').value||0};
+  try{ await api("/"+id+"/mantencion",{method:"POST",body:JSON.stringify(body)}); closeModal('m-mant'); toast('Mantención registrada'); loadKpis(); load(); }catch(e){toast(e.message,true);} }
+loadKpis(); load();
+</script></body></html>

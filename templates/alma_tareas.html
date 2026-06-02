@@ -1,0 +1,70 @@
+<!DOCTYPE html><html lang="es"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex,nofollow">
+<title>Tareas — Alma CMC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/alma_kit.css">
+<style>.chk{width:22px;height:22px;border-radius:7px;border:2px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#fff}.chk.on{background:var(--green);border-color:var(--green);color:#fff}.chk svg{width:13px;height:13px;opacity:0}.chk.on svg{opacity:1}.done td{opacity:.55}.done .t-strong{text-decoration:line-through}</style>
+</head><body>
+<div class="pg-topbar">
+  <h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" stroke-linecap="round" stroke-linejoin="round"/></svg> Tareas del equipo</h1>
+  <div class="spacer"></div>
+  <button class="btn-primary" onclick="openNew()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg> Tarea</button>
+</div>
+<div class="wrap">
+  <div class="kpis" id="kpis"></div>
+  <div class="chips" id="chips"></div>
+  <div class="card"><table><thead><tr>
+    <th style="width:30px"></th><th>Tarea</th><th class="hide-sm">Asignado</th><th>Prioridad</th><th class="hide-sm">Vence</th><th class="num"></th>
+  </tr></thead><tbody id="tbody"></tbody></table>
+  <div id="empty" class="empty" style="display:none">Sin tareas</div></div>
+</div>
+
+<div class="modal-bg" id="m-t"><div class="modal">
+  <div class="modal-head"><h2 id="t-title">Nueva tarea</h2><div class="x" onclick="AlmaKit.closeModal('m-t')">✕</div></div>
+  <div class="modal-body"><input type="hidden" id="t-id">
+    <div class="field"><label>Título</label><input id="t-titulo"></div>
+    <div class="field"><label>Descripción</label><textarea id="t-desc" rows="2"></textarea></div>
+    <div class="field-row-3"><div class="field"><label>Asignado</label><input id="t-asig"></div><div class="field"><label>Prioridad</label><select id="t-prio"><option value="baja">Baja</option><option value="media">Media</option><option value="alta">Alta</option></select></div><div class="field"><label>Vence</label><input id="t-vence" type="date"></div></div>
+  </div>
+  <div class="modal-foot"><button class="btn-ghost" onclick="AlmaKit.closeModal('m-t')">Cancelar</button><button class="btn-primary" onclick="save()">Guardar</button></div>
+</div></div>
+
+<script>window.ALMA_TOKEN="__TOKEN__"; window.ALMA_API="/alma/api/tareas";</script>
+<script src="/static/alma_kit.js"></script>
+<script>
+const {api,esc,toast,openModal,closeModal,fdate}=AlmaKit;
+const CHK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const PB={alta:'red',media:'orange',baja:'mute'};
+let FILT="todas",ITEMS=[];
+async function loadKpis(){ const r=await api("/resumen");
+  document.getElementById('kpis').innerHTML=`
+   <div class="kpi alert"><div class="k-label">Pendientes</div><div class="k-val">${r.pendientes}</div><div class="k-sub">por hacer</div></div>
+   <div class="kpi bad"><div class="k-label">Vencidas</div><div class="k-val">${r.vencidas}</div><div class="k-sub">pasaron su fecha</div></div>
+   <div class="kpi"><div class="k-label">En curso</div><div class="k-val">${r.en_curso}</div><div class="k-sub">trabajándose</div></div>
+   <div class="kpi"><div class="k-label">Total</div><div class="k-val">${r.total}</div><div class="k-sub">en el tablero</div></div>`; }
+async function load(){ const r=await api(FILT==='todas'?'':("?estado="+FILT)); ITEMS=r.tareas;
+  document.getElementById('chips').innerHTML=['todas','pendiente','en_curso','hecha'].map(e=>`<div class="chip ${FILT===e?'active':''}" onclick="setF('${e}')">${e==='todas'?'Todas':e.replace('_',' ')}</div>`).join('');
+  const tb=document.getElementById('tbody'),em=document.getElementById('empty');
+  if(!ITEMS.length){tb.innerHTML='';em.style.display='block';return;} em.style.display='none';
+  tb.innerHTML=ITEMS.map(x=>`<tr class="${x.estado==='hecha'?'done':''}">
+    <td><div class="chk ${x.estado==='hecha'?'on':''}" onclick='toggle(${x.id},"${x.estado}")'>${CHK}</div></td>
+    <td><div class="t-strong">${esc(x.titulo)}</div><div class="t-meta">${esc((x.descripcion||'').slice(0,60))}${x.estado==='en_curso'?' · <span style="color:var(--blue)">en curso</span>':''}</div></td>
+    <td class="hide-sm t-meta">${esc(x.asignado||'—')}</td>
+    <td><span class="badge ${PB[x.prioridad]||'mute'}">${esc(x.prioridad)}</span></td>
+    <td class="hide-sm">${x.vence?`<span style="${x.vencida?'color:var(--red);font-weight:700':''}">${fdate(x.vence)}</span>`:'—'}</td>
+    <td class="num"><div class="row-actions">
+      <button class="icon-btn" onclick='edit(${x.id})' title="Editar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke-linecap="round"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke-linecap="round"/></svg></button>
+      <button class="icon-btn danger" onclick='del(${x.id})' title="Eliminar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" stroke-linecap="round"/></svg></button>
+    </div></td></tr>`).join(''); }
+function setF(e){FILT=e;load();}
+const F=id=>document.getElementById(id);
+async function toggle(id,estado){ const next=estado==='hecha'?'pendiente':'hecha'; try{ await api("/"+id,{method:"PATCH",body:JSON.stringify({estado:next})}); loadKpis(); load(); }catch(e){toast(e.message,true);} }
+function openNew(){ F('t-title').textContent='Nueva tarea'; F('t-id').value=''; ['t-titulo','t-desc','t-asig','t-vence'].forEach(i=>F(i).value=''); F('t-prio').value='media'; openModal('m-t'); }
+function edit(id){ const x=ITEMS.find(i=>i.id===id); if(!x)return; F('t-title').textContent='Editar tarea'; F('t-id').value=id; F('t-titulo').value=x.titulo; F('t-desc').value=x.descripcion||''; F('t-asig').value=x.asignado||''; F('t-prio').value=x.prioridad; F('t-vence').value=(x.vence||'').slice(0,10); openModal('m-t'); }
+async function save(){ const id=F('t-id').value; const body={titulo:F('t-titulo').value.trim(),descripcion:F('t-desc').value.trim(),asignado:F('t-asig').value.trim(),prioridad:F('t-prio').value,vence:F('t-vence').value};
+  if(!body.titulo){toast('El título es obligatorio',true);return;}
+  try{ if(id) await api("/"+id,{method:"PATCH",body:JSON.stringify(body)}); else await api("",{method:"POST",body:JSON.stringify(body)}); closeModal('m-t'); toast('Guardado'); loadKpis(); load(); }catch(e){toast(e.message,true);} }
+async function del(id){ if(!confirm('¿Eliminar tarea?'))return; try{ await api("/"+id,{method:"DELETE"}); toast('Eliminada'); loadKpis(); load(); }catch(e){toast(e.message,true);} }
+loadKpis(); load();
+</script></body></html>

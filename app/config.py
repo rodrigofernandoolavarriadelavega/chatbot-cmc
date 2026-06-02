@@ -65,6 +65,10 @@ ALMA_MODULE_REGISTRY: dict[str, dict] = {
     "equipo":      {"label": "Equipo",           "icon": "badge",     "title": "Equipo / RRHH",                  "sub": "Staff · contratos · honorarios · licencias",       "src": "/alma/equipo"},
     "documentos":  {"label": "Documentos",       "icon": "file",      "title": "Documentos y cumplimiento",      "sub": "Consentimientos · protocolos · vencimientos",      "src": "/alma/documentos"},
     "habilitacion":{"label": "Habilitación SEREMI","icon":"clipcheck","title": "Habilitación Sanitaria SEREMI",  "sub": "Expediente · salas · checklist · avance",          "src": "/alma/habilitacion"},
+    "mantencion":  {"label": "Mantención",       "icon": "wrench",    "title": "Mantención de equipos",          "sub": "Equipos · preventiva · validación · SEREMI",       "src": "/alma/mantencion"},
+    "calidad":     {"label": "Calidad",          "icon": "star",      "title": "Calidad e incidentes",           "sub": "Incidentes · reclamos · seguridad del paciente",   "src": "/alma/calidad"},
+    "examenes":    {"label": "Exámenes",         "icon": "beaker",    "title": "Exámenes y resultados",          "sub": "Órdenes · seguimiento · entrega de resultados",    "src": "/alma/examenes"},
+    "tareas":      {"label": "Tareas",           "icon": "listcheck", "title": "Tareas del equipo",              "sub": "Pendientes · asignación · vencimientos",           "src": "/alma/tareas"},
     "branding":    {"label": "Brand Board",      "icon": "palette",   "title": "Brand Board — Alma",             "sub": "Identidad visual · sistema de diseño Alma",        "src": "/alma/branding"},
 }
 
@@ -86,7 +90,7 @@ ALMA_PROFILES: dict[str, dict] = {
     },
     "cmc_admin_2026": {
         "variante": "Recepción",
-        "modulos": ["panel", "panel2", "agenda", "pagos", "inventario", "pacientes", "interconsultas", "esterilizacion", "documentos", "boxes", "autopilot"],  # recepción
+        "modulos": ["panel", "panel2", "agenda", "pagos", "inventario", "pacientes", "interconsultas", "esterilizacion", "documentos", "examenes", "tareas", "calidad", "boxes", "autopilot"],  # recepción
         "secciones": {"autopilot": ["disenos"]},  # de Autopilot solo ve Diseños
         "boxes_financiero": False,  # sin valores monetarios en Boxes
         "panel_profesional": False,
