@@ -256,6 +256,13 @@ async def _enviar_reenganche():
                 f"{slot_txt}\n\n"
                 "Solo falta un dato para reservarla. ¿Seguimos?"
             )
+        elif state == "WAIT_DURACION_MASOTERAPIA":
+            # Aún elige duración (20/40 min): NO hay reserva. No mostrar slot ni
+            # decir "reserva pendiente" — confunde al paciente (hallazgo auditoría).
+            msg = (
+                f"Hola {saludo} 👋 Te quedaste eligiendo la duración de tu "
+                "*masoterapia* (20 o 40 min). ¿Seguimos para reservar tu hora?"
+            )
         else:
             msg = (
                 f"Hola {saludo} 👋 Tienes una reserva pendiente"
