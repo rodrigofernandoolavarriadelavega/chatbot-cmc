@@ -47,6 +47,7 @@ OLACORE_TOKEN      = os.getenv("OLACORE_TOKEN", "cmc_admin_olacore")
 # key → {label, icon, title, sub, src}.
 # Los perfiles abajo referencian keys de este dict.
 ALMA_MODULE_REGISTRY: dict[str, dict] = {
+    "inicio":      {"label": "Inicio",           "icon": "home",      "title": "Inicio — Resumen del día",       "sub": "Alertas y KPIs de todos los módulos",              "src": "/alma/inicio"},
     "panel":       {"label": "Panel Recepción",  "icon": "inbox",     "title": "Panel de Recepción v2",          "sub": "Conversaciones · WhatsApp · Agenda",              "src": "/admin/v2"},
     "panel2":      {"label": "Panel Recepción 2","icon": "inbox",     "title": "Panel de Recepción v3 (beta)",   "sub": "Nuevo · cola de atención priorizada · en pruebas","src": "/admin/v3"},
     "agenda":      {"label": "Agenda",           "icon": "calendar",  "title": "Agenda",                         "sub": "Ver citas del dia · Agendar nueva hora",           "src": "/alma/agenda"},
@@ -91,7 +92,7 @@ ALMA_PROFILES: dict[str, dict] = {
     },
     "cmc_admin_2026": {
         "variante": "Recepción",
-        "modulos": ["panel", "panel2", "agenda", "pagos", "inventario", "pacientes", "interconsultas", "esterilizacion", "documentos", "examenes", "tareas", "calidad", "boxes", "autopilot"],  # recepción
+        "modulos": ["inicio", "panel", "panel2", "agenda", "pagos", "inventario", "pacientes", "interconsultas", "esterilizacion", "documentos", "examenes", "tareas", "calidad", "boxes", "autopilot"],  # recepción
         "secciones": {"autopilot": ["disenos"]},  # de Autopilot solo ve Diseños
         "boxes_financiero": False,  # sin valores monetarios en Boxes
         "panel_profesional": False,

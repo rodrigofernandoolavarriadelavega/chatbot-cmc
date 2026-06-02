@@ -676,6 +676,7 @@ import calidad_routes; app.include_router(calidad_routes.router)
 import examenes_routes; app.include_router(examenes_routes.router)
 import tareas_routes; app.include_router(tareas_routes.router)
 import liquidaciones_routes; app.include_router(liquidaciones_routes.router)
+import tablero_routes; app.include_router(tablero_routes.router)
 
 import audit_routes  # vista /admin/auditoria — hallazgos del enjambre horario
 app.include_router(audit_routes.router)
@@ -2845,6 +2846,7 @@ _ALMA_CALIDAD_HTML = (_TEMPLATE_DIR / "alma_calidad.html").read_text(encoding="u
 _ALMA_EXAMENES_HTML = (_TEMPLATE_DIR / "alma_examenes.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_examenes.html").exists() else ""
 _ALMA_TAREAS_HTML = (_TEMPLATE_DIR / "alma_tareas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_tareas.html").exists() else ""
 _ALMA_LIQUIDACIONES_HTML = (_TEMPLATE_DIR / "alma_liquidaciones.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_liquidaciones.html").exists() else ""
+_ALMA_INICIO_HTML = (_TEMPLATE_DIR / "alma_inicio.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_inicio.html").exists() else ""
 
 def _make_alma_page(_html, _label):
     """Factory de páginas Alma simples (template con __TOKEN__, misma auth que el shell)."""
@@ -2874,6 +2876,7 @@ for _ap, _ah, _al in [
     ("/alma/examenes", _ALMA_EXAMENES_HTML, "Examenes"),
     ("/alma/tareas", _ALMA_TAREAS_HTML, "Tareas"),
     ("/alma/liquidaciones", _ALMA_LIQUIDACIONES_HTML, "Liquidaciones"),
+    ("/alma/inicio", _ALMA_INICIO_HTML, "Inicio"),
 ]:
     app.add_api_route(_ap, _make_alma_page(_ah, _al), methods=["GET"], response_class=HTMLResponse, include_in_schema=False)
 
