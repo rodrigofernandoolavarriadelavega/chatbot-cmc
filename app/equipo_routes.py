@@ -84,6 +84,29 @@ def seed_if_empty() -> int:
     return len(PROFESIONALES)
 
 
+def profesionales_en_licencia(fecha: str | None = None) -> set[int]:
+    """Set de id_medilink en licencia para la fecha dada (default hoy, hora Chile).
+
+    Fuente de verdad para que el bot NO ofrezca horas de profesionales de licencia.
+    FAIL-SAFE: ante cualquier error retorna set vacío (no filtra) — nunca debe
+    romper el agendamiento por un problema en este módulo.
+    """
+    try:
+        f = fecha or datetime.now(_CHILE_TZ).date().isoformat()
+        ensure_table()
+        from session import _conn
+        with _conn() as conn:
+            rows = conn.execute(
+                "SELECT id_medilink FROM equipo_cmc "
+                "WHERE estado='licencia' AND id_medilink IS NOT NULL "
+                "AND (licencia_desde IS NULL OR licencia_desde='' OR licencia_desde<=?) "
+                "AND (licencia_hasta IS NULL OR licencia_hasta='' OR licencia_hasta>=?)",
+                (f, f)).fetchall()
+        return {int(r["id_medilink"]) for r in rows if r["id_medilink"] is not None}
+    except Exception:
+        return set()
+
+
 @router.get("/resumen")
 async def resumen(token: str | None = Query(None), cmc_session: str | None = Cookie(None), request: Request = None):
     require_admin(request, token=token, cmc_session=cmc_session)
