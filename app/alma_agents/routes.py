@@ -16,7 +16,7 @@ from fastapi import APIRouter, Query, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from config import ADMIN_TOKEN, OLACORE_TOKEN, ALMA_PROFILES
-from . import guardrails, registry, store, ledger, simulator, capstone, learning, events, goals, runtime
+from . import guardrails, registry, store, ledger, simulator, capstone, learning, events, goals, runtime, control_plane
 
 log = logging.getLogger("bot")
 router = APIRouter()
@@ -190,3 +190,21 @@ def agents_runtime(token: str | None = Query(None), request: Request = None):
     """Estado del dial de prioridades (foco, pesos por agente)."""
     _check_owner(token, request)
     return JSONResponse(runtime.get_state())
+
+
+@router.post("/alma/agents/api/control")
+def agents_control(instruction: str = Query(...), apply: int = Query(1),
+                   token: str | None = Query(None), request: Request = None):
+    """Plano de control en lenguaje natural: traduce una instrucción en español a
+    overrides de prioridad/foco. apply=1 los escribe; apply=0 solo previsualiza."""
+    _check_owner(token, request)
+    if apply:
+        return JSONResponse(control_plane.apply(instruction))
+    return JSONResponse({"overrides": control_plane.interpret(instruction)})
+
+
+@router.post("/alma/agents/api/control/reset")
+def agents_control_reset(token: str | None = Query(None), request: Request = None):
+    """Vuelve el dial de prioridades a neutro (sin foco, peso 1.0 para todos)."""
+    _check_owner(token, request)
+    return JSONResponse(runtime.reset())
