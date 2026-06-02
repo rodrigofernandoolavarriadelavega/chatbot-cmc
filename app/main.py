@@ -662,6 +662,7 @@ app.include_router(conciliacion_routes.router)
 import inventario_routes
 app.include_router(inventario_routes.router)
 inventario_routes.seed_if_empty()  # DDL + siembra catálogo MayorDent al arrancar
+import proveedores_routes; app.include_router(proveedores_routes.router); proveedores_routes.seed_if_empty()
 
 # ── Módulos clínicos integrales (pacientes, interconsultas, esterilización, finanzas, equipo, documentos, habilitación) ──
 import pacientes_routes; app.include_router(pacientes_routes.router)
@@ -2847,6 +2848,7 @@ _ALMA_EXAMENES_HTML = (_TEMPLATE_DIR / "alma_examenes.html").read_text(encoding=
 _ALMA_TAREAS_HTML = (_TEMPLATE_DIR / "alma_tareas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_tareas.html").exists() else ""
 _ALMA_LIQUIDACIONES_HTML = (_TEMPLATE_DIR / "alma_liquidaciones.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_liquidaciones.html").exists() else ""
 _ALMA_INICIO_HTML = (_TEMPLATE_DIR / "alma_inicio.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_inicio.html").exists() else ""
+_ALMA_PROVEEDORES_HTML = (_TEMPLATE_DIR / "alma_proveedores.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_proveedores.html").exists() else ""
 
 def _make_alma_page(_html, _label):
     """Factory de páginas Alma simples (template con __TOKEN__, misma auth que el shell)."""
@@ -2877,6 +2879,7 @@ for _ap, _ah, _al in [
     ("/alma/tareas", _ALMA_TAREAS_HTML, "Tareas"),
     ("/alma/liquidaciones", _ALMA_LIQUIDACIONES_HTML, "Liquidaciones"),
     ("/alma/inicio", _ALMA_INICIO_HTML, "Inicio"),
+    ("/alma/proveedores", _ALMA_PROVEEDORES_HTML, "Proveedores"),
 ]:
     app.add_api_route(_ap, _make_alma_page(_ah, _al), methods=["GET"], response_class=HTMLResponse, include_in_schema=False)
 
