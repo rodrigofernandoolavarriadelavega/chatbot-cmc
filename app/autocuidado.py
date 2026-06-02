@@ -273,9 +273,19 @@ def get_tips_autocuidado(
         if tips_esp:
             tip_esp = random.choice(tips_esp)
 
-    # 3. Exámenes preventivos según edad y sexo (máximo 2)
+    # 3. Exámenes preventivos según edad y sexo (máximo 2).
+    # Solo en especialidades de cuidado integral. Tras una atención focalizada
+    # (Podología, Kine, Fono, Odontología, Estética…) un tip de PAP/mamografía
+    # queda fuera de contexto y confunde (hallazgo auditoría 2026-06-02).
+    _ESP_PREVENTIVOS_OK = {
+        "medicina general", "medicina familiar", "medicina interna",
+        "ginecología", "ginecologia", "matrona",
+        "nutrición", "nutricion", "cardiología", "cardiologia",
+    }
+    esp_l = (especialidad or "").lower().strip()
+    incluir_examenes = (not esp_l) or (esp_l in _ESP_PREVENTIVOS_OK)
     examenes = []
-    if fecha_nacimiento:
+    if fecha_nacimiento and incluir_examenes:
         fecha_nac = _parse_fecha(fecha_nacimiento)
         if fecha_nac:
             edad = _edad_anios(fecha_nac)
@@ -292,9 +302,11 @@ def get_tips_autocuidado(
             if len(examenes) > 2:
                 examenes = random.sample(examenes, 2)
 
-    # Armar mensaje
-    titulo = f"*{nombre_corto}*" if nombre_corto else "Paciente"
-    lineas = [f"🌿 *Tips de autocuidado para {titulo}:*\n"]
+    # Armar mensaje. El nombre va DENTRO del bold del encabezado (sin asteriscos
+    # anidados, que rompían el markdown: "*...para *Isabella*:*"). Si no hay
+    # nombre, "para ti" — nunca "Paciente" como si fuera un nombre propio.
+    quien = nombre_corto if nombre_corto else "ti"
+    lineas = [f"🌿 *Tips de autocuidado para {quien}:*\n"]
     lineas.append(tip_generico)
     if tip_esp:
         lineas.append(tip_esp)
