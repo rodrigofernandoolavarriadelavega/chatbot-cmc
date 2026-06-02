@@ -19,7 +19,8 @@
   <h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12V7H5a2 2 0 010-4h14v4M3 5v14a2 2 0 002 2h16v-5" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 12a2 2 0 000 4h4v-4z" stroke-linecap="round" stroke-linejoin="round"/></svg> Finanzas</h1>
   <div class="spacer"></div>
   <input id="mes" type="month" class="topbar-month" style="font-family:inherit;font-size:12px;font-weight:600;border:1px solid var(--border);border-radius:9px;padding:7px 10px;color:var(--navy)">
-  <button class="btn-primary" onclick="openNew()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg> Egreso</button>
+<button class="btn-ghost" onclick="exportCSV()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 10l5 5 5-5M12 15V3" stroke-linecap="round" stroke-linejoin="round"/></svg> CSV</button>
+    <button class="btn-primary" onclick="openNew()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg> Egreso</button>
 </div>
 <div class="wrap">
   <div class="kpis" id="kpis"></div>
@@ -90,5 +91,6 @@ async function save(){ const id=F('e-id').value; const body={fecha:F('e-fecha').
   try{ if(id) await api("/egresos/"+id,{method:"PATCH",body:JSON.stringify(body)}); else await api("/egresos",{method:"POST",body:JSON.stringify(body)});
     closeModal('m-e'); toast('Guardado'); loadAll(); }catch(e){toast(e.message,true);} }
 async function del(id){ if(!confirm('¿Eliminar este egreso?'))return; try{ await api("/egresos/"+id,{method:"DELETE"}); toast('Eliminado'); loadAll(); }catch(e){toast(e.message,true);} }
+function exportCSV(){ window.open(window.ALMA_API+"/export?mes="+MES+"&token="+encodeURIComponent(AlmaKit.TOKEN),"_blank"); }
 loadAll();
 </script></body></html>

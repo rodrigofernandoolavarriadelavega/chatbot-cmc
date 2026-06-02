@@ -10,10 +10,12 @@ Tabla self-contained: egresos_cmc. Ingresos: lee pagos_cmc (copago = caja real).
 Auth: alma_common.require_admin.
 """
 import logging
+import csv, io
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, HTTPException, Request, Query, Cookie
+from fastapi.responses import StreamingResponse
 
 from alma_common import require_admin
 
@@ -168,3 +170,20 @@ async def eliminar(eg_id: int, token: str | None = Query(None), cmc_session: str
     if cur.rowcount == 0:
         raise HTTPException(404, "No encontrado")
     return {"ok": True}
+
+
+@router.get("/export")
+async def export_csv(mes: str | None = Query(None), token: str | None = Query(None), cmc_session: str | None = Cookie(None), request: Request = None):
+    require_admin(request, token=token, cmc_session=cmc_session)
+    ensure_table()
+    mes = mes or datetime.now(_CHILE_TZ).strftime("%Y-%m")
+    from session import _conn
+    with _conn() as conn:
+        rows = [dict(r) for r in conn.execute("SELECT * FROM egresos_cmc WHERE substr(fecha,1,7)=? ORDER BY fecha", (mes,)).fetchall()]
+    buf = io.StringIO(); w = csv.writer(buf, delimiter=";")
+    w.writerow(["Fecha", "Categoria", "Descripcion", "Monto", "Metodo", "Proveedor", "Recurrente", "Notas"])
+    for r in rows:
+        w.writerow([r["fecha"], r["categoria"], r["descripcion"], r["monto"], r["metodo_pago"], r["proveedor"], "si" if r["recurrente"] else "no", r["notas"]])
+    buf.seek(0)
+    return StreamingResponse(iter([buf.getvalue()]), media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="egresos_{mes}.csv"'})

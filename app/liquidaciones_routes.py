@@ -13,10 +13,12 @@ honorarios sobre arancel total, usar el campo Ajuste. El cuadre fino de Imed lo
 hace Conciliación.
 """
 import logging
+import csv, io
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, HTTPException, Request, Query, Cookie
+from fastapi.responses import StreamingResponse
 
 from alma_common import require_admin
 
@@ -150,3 +152,21 @@ async def editar(liq_id: int, request: Request, token: str | None = Query(None),
     if cur.rowcount == 0:
         raise HTTPException(404, "No encontrada")
     return {"ok": True}
+
+
+@router.get("/export")
+async def export_csv(periodo: str | None = Query(None), token: str | None = Query(None), cmc_session: str | None = Cookie(None), request: Request = None):
+    require_admin(request, token=token, cmc_session=cmc_session)
+    ensure_table()
+    periodo = periodo or datetime.now(_CHILE_TZ).strftime("%Y-%m")
+    from session import _conn
+    with _conn() as conn:
+        rows = [dict(r) for r in conn.execute("SELECT * FROM liquidaciones WHERE periodo=? ORDER BY (monto_calculado+ajuste) DESC", (periodo,)).fetchall()]
+    buf = io.StringIO(); w = csv.writer(buf, delimiter=";")
+    w.writerow(["Periodo", "Profesional", "Produccion", "%", "Calculado", "Ajuste", "A pagar", "Estado", "Pagado fecha"])
+    for r in rows:
+        final = (r["monto_calculado"] or 0) + (r["ajuste"] or 0)
+        w.writerow([r["periodo"], r["nombre"], r["produccion"], r["pct"], r["monto_calculado"], r["ajuste"], final, r["estado"], r["pagado_fecha"]])
+    buf.seek(0)
+    return StreamingResponse(iter([buf.getvalue()]), media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="liquidaciones_{periodo}.csv"'})
