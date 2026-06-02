@@ -69,6 +69,7 @@ ALMA_MODULE_REGISTRY: dict[str, dict] = {
     "calidad":     {"label": "Calidad",          "icon": "star",      "title": "Calidad e incidentes",           "sub": "Incidentes · reclamos · seguridad del paciente",   "src": "/alma/calidad"},
     "examenes":    {"label": "Exámenes",         "icon": "beaker",    "title": "Exámenes y resultados",          "sub": "Órdenes · seguimiento · entrega de resultados",    "src": "/alma/examenes"},
     "tareas":      {"label": "Tareas",           "icon": "listcheck", "title": "Tareas del equipo",              "sub": "Pendientes · asignación · vencimientos",           "src": "/alma/tareas"},
+    "liquidaciones":{"label": "Liquidaciones",  "icon": "coins",     "title": "Liquidaciones de honorarios",    "sub": "Producción × % · pagado/pendiente por profesional","src": "/alma/liquidaciones"},
     "branding":    {"label": "Brand Board",      "icon": "palette",   "title": "Brand Board — Alma",             "sub": "Identidad visual · sistema de diseño Alma",        "src": "/alma/branding"},
 }
 
