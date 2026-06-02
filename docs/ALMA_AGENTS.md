@@ -114,3 +114,42 @@ google_rating, conciliacion, alma_brain) — no reinventa lógica de negocio.
 ```bash
 python3 tests/test_alma_agents.py   # guardrails + registry + dry-run, sin red
 ```
+
+---
+
+## Capa de medición y orquestación (2026-06-02, post-rescate)
+
+Tres piezas que cierran el círculo "percibir → actuar → medir → coordinar".
+Todo read-only salvo la tabla del ledger; la flota sigue OFF por defecto.
+
+### 1. Effectiveness Ledger (`ledger.py`)
+Mide si cada agente realmente funciona. `base.run()` registra cada contacto a
+paciente en `agent_action_ledger` (en sessions.db → SQLCipher + respaldo). El
+cron diario `alma_agents_ledger` (05:30 CLT) cruza cada contacto, dentro de su
+ventana (7d), contra señales reales: cita (`conversation_events` cita_*/agendado
+o fila en `citas_bot`) o, mínimo, respuesta (mensaje entrante). Atribución
+honesta: solo acredita señales POSTERIORES al contacto y dentro de ventana.
+- `GET /alma/agents/api/effectiveness` → conversión + ingreso recuperable por agente.
+- `POST /alma/agents/api/effectiveness/measure` → resuelve pendientes (idempotente).
+- Panel: sección "Efectividad".
+
+### 2. Simulador de flota (`simulator.py`)
+El vuelo de prueba del AGREGADO. `simulate_fleet()` corre perceive+decide de los
+18 agentes sin ejecutar, y agrega el riesgo del conjunto que ningún dry-run por
+agente ve: acciones por riesgo, escrituras Medilink totales, y sobre todo qué
+pacientes contactarían DOS O MÁS agentes en la misma corrida (spam agregado vs
+presupuesto de contacto). Teléfonos enmascarados.
+- `GET /alma/agents/api/simulate`.
+- Panel: botón "Simular flota" → modal con KPIs agregados + riesgo agregado.
+
+### 3. Capstone (`capstone.py`)
+El latido diario que une todo: sense (cerebro: alertas/estado) → intent (flota:
+simulación) → measure (ledger) → un digest unificado con headline. No re-ejecuta
+agentes (corren en su propio cron); orquesta sensado/medición/reporte.
+- `GET /alma/agents/api/cycle` (?live=1 recalcula).
+- Cron diario `alma_agents_capstone` (06:30 CLT).
+- Panel: banner "Ciclo autónomo".
+
+Tests: `test_alma_agents_ledger` (14), `test_alma_agents_simulator` (12),
+`test_alma_agents_capstone` (11). Crons nuevos solo sensan/miden/reportan — NO
+contactan a nadie → corren independientes del maestro.
