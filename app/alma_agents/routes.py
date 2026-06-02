@@ -16,7 +16,7 @@ from fastapi import APIRouter, Query, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from config import ADMIN_TOKEN, OLACORE_TOKEN, ALMA_PROFILES
-from . import guardrails, registry, store, ledger, simulator, capstone, learning, events
+from . import guardrails, registry, store, ledger, simulator, capstone, learning, events, goals, runtime
 
 log = logging.getLogger("bot")
 router = APIRouter()
@@ -158,3 +158,35 @@ async def agents_emit(event_type: str = Query(...), token: str | None = Query(No
     propondría, sin ejecutar nada. Para probar el bus desde el panel."""
     _check_owner(token, request)
     return JSONResponse(await events.emit(event_type, {}, dry=True))
+
+
+@router.get("/alma/agents/api/goals")
+def agents_goals(token: str | None = Query(None), request: Request = None):
+    """Metas activas (con progreso) + metas que el cerebro propondría hoy."""
+    _check_owner(token, request)
+    world = capstone.load_last()
+    cerebro = None
+    if world and world.get("cerebro"):
+        # reconstituir alerts mínimas desde el último digest
+        cerebro = {"alerts": world["cerebro"].get("alertas_top", [])}
+    return JSONResponse({"activas": goals.list_goals(),
+                         "propuestas": goals.propose_goals(cerebro)})
+
+
+@router.post("/alma/agents/api/goals/create")
+def agents_goals_create(titulo: str = Query(...), metric: str = Query("citas"),
+                        target: int = Query(10), agents: str = Query(""),
+                        budget_contacts: int = Query(0),
+                        token: str | None = Query(None), request: Request = None):
+    """Crea (activa) una meta. `agents` = csv de agent_id."""
+    _check_owner(token, request)
+    gid = goals.create_goal(titulo, metric, target,
+                            [a for a in agents.split(",") if a], budget_contacts=budget_contacts)
+    return JSONResponse({"created_id": gid})
+
+
+@router.get("/alma/agents/api/runtime")
+def agents_runtime(token: str | None = Query(None), request: Request = None):
+    """Estado del dial de prioridades (foco, pesos por agente)."""
+    _check_owner(token, request)
+    return JSONResponse(runtime.get_state())

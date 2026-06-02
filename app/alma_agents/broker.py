@@ -12,7 +12,7 @@ escrituras, etc.) pasan sin tocar. Read-only; no ejecuta nada.
 """
 import logging
 
-from . import learning, ledger
+from . import learning, ledger, runtime
 
 log = logging.getLogger("bot")
 
@@ -36,9 +36,13 @@ def _value(action) -> float:
 
 
 def expected_value(agent_id: str, action) -> float:
-    """EV = P(conversión|agente,variante) × valor. La moneda de la subasta."""
+    """EV = P(conversión|agente,variante) × valor × prioridad del dueño.
+
+    La prioridad (runtime.agent_weight) deja que el plano de control incline la
+    subasta: 'esta semana enfócate en kine' sube el peso del agente de kine."""
     p = learning.expected_conversion(agent_id, getattr(action, "variant", None))
-    return round(p * _value(action), 2)
+    w = runtime.agent_weight(agent_id)
+    return round(p * _value(action) * w, 2)
 
 
 def resolve(proposals: list) -> dict:
