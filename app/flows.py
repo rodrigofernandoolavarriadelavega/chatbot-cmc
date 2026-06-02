@@ -26,7 +26,7 @@ from session import (save_session, reset_session, get_session, save_tag, delete_
                      save_demanda_no_disponible, get_waitlist_by_especialidad,
                      mark_waitlist_notified, get_ultima_cita_paciente,
                      has_privacy_consent, save_privacy_consent, revoke_privacy_consent,
-                     get_citas_bot_futuras,
+                     get_citas_bot_futuras, contar_citas_bot_phone_prof_dia,
                      adquirir_slot_lock, liberar_slot_lock,
                      log_cross_sell, puede_cross_sell,
                      get_pending_crosssell, consume_pending_crosssell,
@@ -1008,6 +1008,49 @@ async def _slot_confirmed(phone: str, data: dict, slot: dict) -> str | dict:
     # Fast track: paciente recurrente con perfil completo
     perfil = get_profile(phone)
     if perfil and perfil.get("rut"):
+        # ── Roster familiar (arreglo de raíz 2026-06-02) ─────────────────────
+        # Si el dueño del celular tiene familiares registrados, NO auto-reservar
+        # con su propio RUT: saludarlo por su nombre y preguntar para quién es la
+        # hora. El fast-track ciego reservaba siempre al dueño y, al intentar
+        # agendar a un hijo con el mismo doctor, chocaba con el límite por
+        # profesional (caso real: dos mamás bloqueadas al agendar a sus hijos).
+        _owner_rut_ft = perfil.get("rut") or ""
+        _deps_ft = []
+        try:
+            _deps_ft = list_family_links(_owner_rut_ft) if _owner_rut_ft else []
+        except Exception as _e_ft:
+            log.debug("list_family_links (fast-track) error: %s", _e_ft)
+        if _deps_ft:
+            tags = get_tags(phone)
+            last_modalidad = "fonasa"
+            for t in tags:
+                if t.startswith("modalidad-"):
+                    last_modalidad = t.replace("modalidad-", "")
+                    break
+            data.update({
+                "rut_conocido": _owner_rut_ft,
+                "nombre_conocido": perfil.get("nombre") or "",
+                "modalidad": last_modalidad,
+                "booking_for_other": False,
+            })
+            _deps_mostrar_ft = _deps_ft[:8]
+            _rows_ft = [{"id": "dep_self", "title": "Para mí"}]
+            _rows_ft += [
+                {"id": f"dep_{d['dependent_rut']}",
+                 "title": _first_name(d["dependent_nombre"])[:24],
+                 "description": (d.get("relation") or "familiar")[:72]}
+                for d in _deps_mostrar_ft
+            ]
+            _rows_ft.append({"id": "dep_nuevo", "title": "Otra persona"})
+            data["_deps_roster"] = [d["dependent_rut"] for d in _deps_mostrar_ft]
+            save_session(phone, "WAIT_BOOKING_WHO", data)
+            _saludo_ft = _first_name(perfil.get("nombre") or "")
+            _hola_ft = f"Hola *{_saludo_ft}* 👋 " if _saludo_ft else ""
+            return _list_msg(
+                body_text=f"{_hola_ft}¿Para quién es la hora?",
+                button_label="Seleccionar",
+                sections=[{"title": "¿Para quién?", "rows": _rows_ft}],
+            )
         paciente = await buscar_paciente(perfil["rut"])
         if paciente:
             _ensure_consent(phone)
@@ -2661,7 +2704,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # interceptarse aquí — pertenece al flujo activo del estado.
     _FLOW_STATES = {
         "WAIT_ESPECIALIDAD", "WAIT_SLOT", "WAIT_MODALIDAD", "WAIT_BOOKING_FOR",
-        "WAIT_BOOKING_WHO", "WAIT_PHONE_OWNER_NAME", "WAIT_RUT_AGENDAR", "WAIT_NOMBRE_NUEVO",
+        "WAIT_BOOKING_WHO", "WAIT_AGENDAR_OTRO", "WAIT_SLOT_OTRO", "WAIT_PARENTESCO",
+        "WAIT_PHONE_OWNER_NAME", "WAIT_RUT_AGENDAR", "WAIT_NOMBRE_NUEVO",
         "WAIT_FECHA_NAC", "WAIT_SEXO", "WAIT_COMUNA", "WAIT_EMAIL",
         "WAIT_REFERRAL", "WAIT_REFERRAL_POST", "CONFIRMING_CITA",
         "WAIT_RUT_CANCELAR", "WAIT_CITA_CANCELAR", "CONFIRMING_CANCEL",
@@ -3060,7 +3104,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "WAIT_RUT_CANCELAR", "WAIT_CITA_CANCELAR", "WAIT_RUT_REAGENDAR",
                 "WAIT_CITA_REAGENDAR", "WAIT_RUT_VER", "WAIT_DATOS_NUEVO",
                 "WAIT_NOMBRE_NUEVO", "WAIT_FECHA_NAC", "WAIT_SEXO", "WAIT_BOOKING_FOR",
-                "WAIT_BOOKING_WHO", "WAIT_WAITLIST_CONFIRM", "WAIT_REFERRAL_POST",
+                "WAIT_BOOKING_WHO", "WAIT_AGENDAR_OTRO", "WAIT_SLOT_OTRO",
+                "WAIT_WAITLIST_CONFIRM", "WAIT_REFERRAL_POST",
                 "WAIT_META_SLOT_CHOICE", "WAIT_META_WAITLIST",
                 "WAIT_WAITLIST_CONFIRM_ECOCA", "WAIT_WAITLIST_RUT_ECOCA",
             )
@@ -3160,6 +3205,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     )
     _FLUJO_RETOMABLE = {
         "WAIT_SLOT", "WAIT_MODALIDAD", "WAIT_BOOKING_FOR", "WAIT_BOOKING_WHO",
+        "WAIT_SLOT_OTRO",
         "WAIT_RUT_AGENDAR", "CONFIRMING_CITA",
         "WAIT_RUT_CANCELAR", "WAIT_CITA_CANCELAR", "CONFIRMING_CANCEL",
         "WAIT_RUT_REAGENDAR", "WAIT_CITA_REAGENDAR",
@@ -7732,6 +7778,172 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             + _PRIVACY_NOTE
         )
 
+    # ── WAIT_AGENDAR_OTRO ───────────────────────────────────────────────────────
+    # Tras confirmar una cita propia ofrecemos agendar a otra persona (familiar).
+    # Si acepta, mostramos los 2 cupos más cercanos (antes/después de la hora
+    # recién agendada) con el mismo profesional para encadenar sin fricción.
+    if state == "WAIT_AGENDAR_OTRO":
+        _AFIRM_OTRO = AFIRMACIONES | {"otro_si"}
+        _NEG_OTRO = NEGACIONES | {"otro_no"}
+        if tl in _NEG_OTRO or tl_norm in _NEG_OTRO:
+            reset_session(phone)
+            return "Perfecto 😊\n\n_Escribe *menu* si necesitas algo más._"
+        if tl in _AFIRM_OTRO or tl_norm in _AFIRM_OTRO:
+            lb = data.get("last_booked") or {}
+            _esp_lb = lb.get("especialidad", "")
+            _idprof_lb = lb.get("id_profesional")
+            _fecha_lb = lb.get("fecha", "")
+            _hora_lb = (lb.get("hora_inicio") or "")[:5]
+            _contig: list = []
+            try:
+                _, _todos_lb = await buscar_slots_dia(_esp_lb, _fecha_lb)
+
+                def _to_min_otro(h):
+                    try:
+                        return int(h[:2]) * 60 + int(h[3:5])
+                    except Exception:
+                        return -1
+                _ref_otro = _to_min_otro(_hora_lb)
+                _mismos = [s for s in (_todos_lb or [])
+                           if str(s.get("id_profesional", "")) == str(_idprof_lb)
+                           and s.get("hora_inicio")]
+                _despues = sorted(
+                    [s for s in _mismos if _to_min_otro(s["hora_inicio"][:5]) > _ref_otro],
+                    key=lambda s: _to_min_otro(s["hora_inicio"][:5]) - _ref_otro)
+                _antes = sorted(
+                    [s for s in _mismos if 0 <= _to_min_otro(s["hora_inicio"][:5]) < _ref_otro],
+                    key=lambda s: _ref_otro - _to_min_otro(s["hora_inicio"][:5]))
+                if _despues:
+                    _contig.append(_despues[0])
+                if _antes:
+                    _contig.append(_antes[0])
+            except Exception as _e_contig:
+                log.warning("búsqueda slots contiguos falló: %s", _e_contig)
+            # Preparar flujo de tercero con el mismo profesional/especialidad
+            data["booking_for_other"] = True
+            data["modalidad"] = lb.get("modalidad", "particular")
+            data["especialidad"] = _esp_lb
+            for _k in ("rut_conocido", "nombre_conocido", "paciente", "slot_elegido", "rut"):
+                data.pop(_k, None)
+            if _contig:
+                data["_slots_otro"] = _contig[:2]
+                _rows_c = [
+                    {"id": f"slot_otro_{i}", "title": f"{s['hora_inicio'][:5]} hrs",
+                     "description": (s.get("profesional", "") or "")[:72]}
+                    for i, s in enumerate(_contig[:2])
+                ]
+                _rows_c.append({"id": "slot_otro_dia", "title": "Ver otro horario"})
+                save_session(phone, "WAIT_SLOT_OTRO", data)
+                return _list_msg(
+                    body_text=(
+                        f"Genial 🙌 Agendemos a tu familiar con "
+                        f"{_contig[0].get('profesional','el mismo profesional')} "
+                        f"el {lb.get('fecha_display','mismo día')}.\n\n"
+                        "Estos son los cupos más cercanos:"),
+                    button_label="Elegir hora",
+                    sections=[{"title": "Horas contiguas", "rows": _rows_c}],
+                )
+            # Sin cupos contiguos: caer al flujo normal de tercero
+            reset_session(phone)
+            return await _iniciar_agendar(
+                phone,
+                {"booking_for_other": True, "modalidad": lb.get("modalidad", "particular")},
+                _esp_lb or None,
+            )
+        # Input ambiguo → re-preguntar
+        save_session(phone, "WAIT_AGENDAR_OTRO", data)
+        return _btn_msg(
+            "¿Deseas agendar una hora para otra persona (un familiar)?",
+            [{"id": "otro_si", "title": "✅ Sí"},
+             {"id": "otro_no", "title": "No, gracias"}]
+        )
+
+    # ── WAIT_SLOT_OTRO ────────────────────────────────────────────────────────
+    # Selección de una de las 2 horas contiguas para el familiar.
+    if state == "WAIT_SLOT_OTRO":
+        _slots_otro = data.get("_slots_otro") or []
+        if tl == "slot_otro_dia":
+            _esp_so = data.get("especialidad", "")
+            reset_session(phone)
+            return await _iniciar_agendar(
+                phone,
+                {"booking_for_other": True, "modalidad": data.get("modalidad", "particular")},
+                _esp_so or None,
+            )
+        _idx_so = None
+        if tl in ("slot_otro_0", "slot_otro_1"):
+            _idx_so = int(tl.rsplit("_", 1)[-1])
+        if _idx_so is not None and _idx_so < len(_slots_otro):
+            data["slot_elegido"] = _slots_otro[_idx_so]
+            data["booking_for_other"] = True
+            data.pop("_slots_otro", None)
+            save_session(phone, "WAIT_RUT_AGENDAR", data)
+            return (
+                "Perfecto 😊 Ahora necesito el *RUT* de la persona que se va a "
+                "atender:\n(ej: *12.345.678-9*)"
+                + _PRIVACY_NOTE
+            )
+        # Input no reconocido: re-mostrar
+        save_session(phone, "WAIT_SLOT_OTRO", data)
+        _rows_c = [
+            {"id": f"slot_otro_{i}", "title": f"{s['hora_inicio'][:5]} hrs",
+             "description": (s.get("profesional", "") or "")[:72]}
+            for i, s in enumerate(_slots_otro[:2])
+        ]
+        _rows_c.append({"id": "slot_otro_dia", "title": "Ver otro horario"})
+        return _list_msg(
+            body_text="Elige una hora para tu familiar:",
+            button_label="Elegir hora",
+            sections=[{"title": "Horas contiguas", "rows": _rows_c}],
+        )
+
+    # ── WAIT_PARENTESCO ─────────────────────────────────────────────────────────
+    # Tras agendar a un familiar, preguntamos el parentesco (opcional) para
+    # saludar por nombre la próxima vez y construir el árbol familiar del portal.
+    if state == "WAIT_PARENTESCO":
+        _PAR_MAP = {
+            "par_hijo":   ("hijo/a",     "tutor_declaration"),
+            "par_padre":  ("padre/madre", "declared"),
+            "par_pareja": ("pareja",     "declared"),
+            "par_hermano": ("hermano/a", "declared"),
+            "par_otro":   ("familiar",   "declared"),
+        }
+        _sel_par = _PAR_MAP.get(tl)
+        if _sel_par:
+            _rel_par, _verif_par = _sel_par
+            try:
+                _po_par = data.get("par_owner_rut") or ""
+                _dr_par = data.get("par_dep_rut") or ""
+                _dn_par = data.get("par_dep_nombre") or _dr_par
+                if _po_par and _dr_par and _po_par != _dr_par:
+                    add_family_link(owner_rut=_po_par, dependent_rut=_dr_par,
+                                    dependent_nombre=_dn_par, relation=_rel_par,
+                                    verification_method=_verif_par)
+                    log_event(phone, "parentesco_guardado", {"relation": _rel_par})
+            except Exception as _e_par:
+                log.warning("guardar parentesco falló (no bloquea): %s", _e_par)
+            reset_session(phone)
+            return ("¡Gracias! Lo dejé registrado 😊\n\n"
+                    "_Escribe *menu* si necesitas algo más._")
+        if tl in ("par_skip", "menu", "menú") or tl in NEGACIONES:
+            reset_session(phone)
+            return "Listo 😊\n\n_Escribe *menu* si necesitas algo más._"
+        # Re-preguntar
+        save_session(phone, "WAIT_PARENTESCO", data)
+        _dn_re = _first_name(data.get("par_dep_nombre") or "") or "tu familiar"
+        return _list_msg(
+            body_text=f"¿Qué es *{_dn_re}* tuyo/a? (opcional)",
+            button_label="Responder",
+            sections=[{"title": "Parentesco", "rows": [
+                {"id": "par_hijo", "title": "Hijo/a"},
+                {"id": "par_padre", "title": "Padre/Madre"},
+                {"id": "par_pareja", "title": "Pareja"},
+                {"id": "par_hermano", "title": "Hermano/a"},
+                {"id": "par_otro", "title": "Otro"},
+                {"id": "par_skip", "title": "Prefiero no decir"},
+            ]}],
+        )
+
     # ── WAIT_BOOKING_FOR ───────────────────────────────────────────────────────
     if state == "WAIT_BOOKING_FOR":
         _SELF = {"booking_self", "para mi", "para mí", "yo", "mio", "mía", "mia"}
@@ -8283,27 +8495,39 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     log.warning("dup-check listar_citas falló: %s", e)
                     existing_citas = []
 
-                # 1) Bloqueo duro: misma profesional ya reservada
-                same_prof = next(
-                    (c for c in (existing_citas or [])
-                     if str(c.get("id_profesional", "")) == str(slot.get("id_profesional", ""))),
-                    None,
-                )
-                if same_prof:
-                    log_event(phone, "cita_bloqueada_mismo_profesional", {
+                # 1) Límite anti-cascada: máx 2 horas activas con el MISMO
+                #    profesional el MISMO día por número de teléfono.
+                #    Cambio 2026-06-02: antes era bloqueo duro de UNA sola hora,
+                #    lo que impedía que un apoderado agendara para sí mismo y para
+                #    un hijo con el mismo doctor (dos mamás reportaron el bloqueo).
+                #    Ahora permitimos hasta 2 desde el mismo número y, al 3°,
+                #    ofrecemos cambiar la hora en vez de un mensaje sin salida.
+                _prof_nombre = slot.get("profesional", "")
+                _fecha_slot = slot.get("fecha", "")
+                try:
+                    _n_mismo_prof_dia = contar_citas_bot_phone_prof_dia(
+                        phone, _prof_nombre, _fecha_slot
+                    )
+                except Exception as _e_cnt:
+                    log.warning("conteo citas mismo prof/día falló: %s", _e_cnt)
+                    _n_mismo_prof_dia = 0
+                if _n_mismo_prof_dia >= 2:
+                    log_event(phone, "cita_bloqueada_max_dos_mismo_prof", {
                         "id_profesional": slot.get("id_profesional"),
-                        "fecha_existente": same_prof.get("fecha"),
-                        "hora_existente": same_prof.get("hora_inicio", "")[:5],
+                        "profesional": _prof_nombre,
+                        "fecha": _fecha_slot,
+                        "n_existentes": _n_mismo_prof_dia,
                     })
                     reset_session(phone)
-                    return (
-                        f"📋 *Ya tienes una hora reservada con {same_prof.get('profesional','este profesional')}.*\n\n"
-                        f"📅 {same_prof.get('fecha','')} a las "
-                        f"*{(same_prof.get('hora_inicio','') or '')[:5]}*\n\n"
-                        f"Solo permitimos *una hora activa por profesional*. "
-                        f"Si quieres cambiar el horario, escribe *reagendar*. "
-                        f"Si necesitas una segunda atención, escribe *recepción* "
-                        f"para hablar con una secretaria."
+                    return _btn_msg(
+                        f"📋 Ya tienes *2 horas reservadas* con "
+                        f"{_prof_nombre or 'este profesional'} para el "
+                        f"{slot.get('fecha_display','ese día')}.\n\n"
+                        "Para evitar reservas repetidas no agendamos una tercera "
+                        "con el mismo profesional el mismo día.\n\n"
+                        "¿Quieres *cambiar* una de tus horas?",
+                        [{"id": "reagendar", "title": "🔄 Cambiar mi hora"},
+                         {"id": "accion_recepcion", "title": "📞 Recepción"}]
                     )
 
                 # 2) Soft-warn: misma fecha + especialidad (puede ser válido en algunos casos)
@@ -8866,6 +9090,37 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         if _pni_tel_std:
                             log_event(phone, "pni_enviado", _pni_tel_std)
                     _spawn_pni(_send_pni_delayed())
+                # ── Tercero: preguntar parentesco (opcional) ───────────────────
+                # Si la cita fue para un familiar, el vínculo ya quedó guardado
+                # (heurístico, arriba). Preguntamos el parentesco explícito para
+                # saludar por nombre la próxima vez y armar el árbol del portal.
+                if es_tercero and not reagendar:
+                    _po_par = (get_profile(phone) or {}).get("rut") or ""
+                    _dr_par = data.get("rut") or ""
+                    if _po_par and _dr_par and _po_par != _dr_par:
+                        await send_whatsapp(phone, confirmacion_msg + _conf_suffix)
+                        from session import log_message as _lm_par_c
+                        _lm_par_c(phone, "out", confirmacion_msg + _conf_suffix, "WAIT_PARENTESCO")
+                        _dn_par_c = paciente.get("nombre") or _dr_par
+                        save_session(phone, "WAIT_PARENTESCO", {
+                            "par_owner_rut": _po_par,
+                            "par_dep_rut": _dr_par,
+                            "par_dep_nombre": _dn_par_c,
+                        })
+                        return _list_msg(
+                            body_text=(
+                                f"Para tenerlo a mano la próxima vez: "
+                                f"¿qué es *{_first_name(_dn_par_c)}* tuyo/a? (opcional)"),
+                            button_label="Responder",
+                            sections=[{"title": "Parentesco", "rows": [
+                                {"id": "par_hijo", "title": "Hijo/a"},
+                                {"id": "par_padre", "title": "Padre/Madre"},
+                                {"id": "par_pareja", "title": "Pareja"},
+                                {"id": "par_hermano", "title": "Hermano/a"},
+                                {"id": "par_otro", "title": "Otro"},
+                                {"id": "par_skip", "title": "Prefiero no decir"},
+                            ]}],
+                        )
                 # ── Cross-sell post-confirmación ──────────────────────────────
                 # Solo en citas nuevas (no reagendar), solo si no es tercero.
                 # Cooldown: 1 por sesión + 30 días por par.
@@ -8896,6 +9151,30 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         _cs_delay = 5.5 if pni_msg else 1.5
                         await _asyncio_cs.sleep(_cs_delay)
                         return _cs["payload"]
+                # ── Self: ofrecer agendar a otra persona (familiar) ────────────
+                # Cierre estándar post-reserva propia: tras "tu hora quedó
+                # reservada", preguntamos si quiere agendar a un familiar. Si
+                # acepta, le ofrecemos cupos contiguos con el mismo profesional.
+                if not reagendar and not es_tercero:
+                    await send_whatsapp(phone, confirmacion_msg + _conf_suffix)
+                    from session import log_message as _lm_otro_c
+                    _lm_otro_c(phone, "out", confirmacion_msg + _conf_suffix, "WAIT_AGENDAR_OTRO")
+                    save_session(phone, "WAIT_AGENDAR_OTRO", {
+                        "last_booked": {
+                            "especialidad": esp,
+                            "id_profesional": slot.get("id_profesional"),
+                            "profesional": slot.get("profesional"),
+                            "fecha": slot.get("fecha"),
+                            "fecha_display": slot.get("fecha_display"),
+                            "hora_inicio": slot.get("hora_inicio"),
+                            "modalidad": data.get("modalidad", "particular"),
+                        }
+                    })
+                    return _btn_msg(
+                        "¿Deseas agendar una hora para otra persona (un familiar)?",
+                        [{"id": "otro_si", "title": "✅ Sí"},
+                         {"id": "otro_no", "title": "No, gracias"}]
+                    )
                 # Caso normal: main.py envía y loguea el mensaje de confirmación.
                 return confirmacion_msg + _conf_suffix
             else:
