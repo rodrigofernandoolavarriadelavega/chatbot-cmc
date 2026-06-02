@@ -47,7 +47,10 @@ from app.session import _conn  # noqa: E402
 
 LOG_DIR = Path(os.getenv("CMC_AUDIT_LOG_DIR", "/var/log/cmc-audit"))
 DEFAULT_MODEL = os.getenv("CMC_AUDIT_MODEL", "claude-sonnet-4-6")
-MAX_CONVERSATIONS = int(os.getenv("CMC_AUDIT_MAX_CONV", "40"))
+MAX_CONVERSATIONS = int(os.getenv("CMC_AUDIT_MAX_CONV", "60"))
+# Conversaciones por llamada a Claude. Bajo para que el JSON de hallazgos no
+# trunque por max_tokens (bug real: 40 convos → 6KB+ de findings → truncado).
+CHUNK_SIZE = int(os.getenv("CMC_AUDIT_CHUNK", "12"))
 
 # ── Conocimiento de dominio que el auditor DEBE tener presente ────────────────
 # (Espejo del agente cmc-conversation-auditor; los gotchas que más bugs causan.)
@@ -154,7 +157,7 @@ def _call_auditor(transcripts: str, model: str) -> dict:
     client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
     resp = client.messages.create(
         model=model,
-        max_tokens=4000,
+        max_tokens=8000,
         system=AUDITOR_SYSTEM,
         messages=[{
             "role": "user",
@@ -290,11 +293,18 @@ def main() -> int:
 
     # Limitar volumen por corrida (coste/latencia acotados)
     items = list(convos.items())[:MAX_CONVERSATIONS]
-    transcripts = "\n\n".join(_render_transcript(ph, msgs) for ph, msgs in items)
 
-    result = _call_auditor(transcripts, args.model)
-    findings = result.get("findings", []) or []
-    summary = result.get("summary", "")
+    # Procesar en lotes para que el JSON de hallazgos no trunque por max_tokens.
+    findings: list[dict] = []
+    summaries: list[str] = []
+    for i in range(0, len(items), CHUNK_SIZE):
+        chunk = items[i:i + CHUNK_SIZE]
+        transcripts = "\n\n".join(_render_transcript(ph, msgs) for ph, msgs in chunk)
+        result = _call_auditor(transcripts, args.model)
+        findings.extend(result.get("findings", []) or [])
+        if result.get("summary"):
+            summaries.append(result["summary"])
+    summary = " · ".join(summaries)
 
     print(f"[audit] {len(items)} conversaciones · {len(findings)} hallazgos · {summary}")
     for f in findings:
