@@ -659,6 +659,10 @@ pagos_routes.ensure_pagos_table()  # DDL idempotente al arrancar
 import conciliacion_routes
 app.include_router(conciliacion_routes.router)
 
+import inventario_routes
+app.include_router(inventario_routes.router)
+inventario_routes.seed_if_empty()  # DDL + siembra catálogo MayorDent al arrancar
+
 # Cargar HTML del panel admin y portal paciente
 _TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
 _ADMIN_HTML = (_TEMPLATE_DIR / "admin.html").read_text(encoding="utf-8")
@@ -2811,6 +2815,7 @@ _ALMA_AGENDA_HTML = (_TEMPLATE_DIR / "alma_agenda.html").read_text(encoding="utf
 _ALMA_PAGOS_HTML  = (_TEMPLATE_DIR / "alma_pagos.html").read_text(encoding="utf-8")  if (_TEMPLATE_DIR / "alma_pagos.html").exists()  else ""
 _ALMA_PAGOS_SIMPLE_HTML = (_TEMPLATE_DIR / "alma_pagos_simple.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_pagos_simple.html").exists() else ""
 _ALMA_CONCILIACION_HTML = (_TEMPLATE_DIR / "alma_conciliacion.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_conciliacion.html").exists() else ""
+_ALMA_INVENTARIO_HTML = (_TEMPLATE_DIR / "alma_inventario.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_inventario.html").exists() else ""
 
 # ── Pool de conexiones BI para endpoints de boxes ────────────────────────────
 # Máximo 8 conexiones compartidas entre boxes-state, boxes-config y boxes-config-put.
@@ -3447,6 +3452,22 @@ def alma_conciliacion_page(token: str | None = Query(None),
         role = _verify_cookie(cmc_session)
         if role in ("admin", "ortodoncia"):
             return _ALMA_CONCILIACION_HTML.replace("__TOKEN__", ADMIN_TOKEN)
+    return RedirectResponse(url="/admin/login", status_code=302)
+
+
+@app.get("/alma/inventario", response_class=HTMLResponse)
+def alma_inventario_page(token: str | None = Query(None),
+                         cmc_session: str | None = Cookie(None)):
+    """Modulo nativo Inventario Dental — catalogo MayorDent + stock + orden de compra."""
+    from admin_routes import _verify_cookie, _is_admin_token
+    if not _ALMA_INVENTARIO_HTML:
+        raise HTTPException(404, "Inventario no disponible")
+    if token and _is_admin_token(token):
+        return _ALMA_INVENTARIO_HTML.replace("__TOKEN__", token)
+    if cmc_session:
+        role = _verify_cookie(cmc_session)
+        if role in ("admin", "ortodoncia"):
+            return _ALMA_INVENTARIO_HTML.replace("__TOKEN__", ADMIN_TOKEN)
     return RedirectResponse(url="/admin/login", status_code=302)
 
 
