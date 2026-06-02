@@ -316,10 +316,10 @@ def main() -> int:
         return 0
 
     if findings:
-        _ensure_table()
-        _store_findings(findings)
+        from app.audit_store import store_findings
+        new = store_findings("conversacion", findings)
         report = _write_report(findings, summary, len(items))
-        print(f"[audit] reporte: {report}")
+        print(f"[audit] reporte: {report} · {new} nuevos en tabla")
 
     return 0
 
