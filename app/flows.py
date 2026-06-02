@@ -795,6 +795,13 @@ def _precio_line(especialidad: str, slot: dict | None = None, modalidad_override
     if not especialidad:
         return ""
     esp = especialidad.strip()
+    # Override por-profesional: Dr. Alonso Márquez (id 13) está en el pool de
+    # "Medicina General" para el ruteo (ver bypass en medilink.py), pero su
+    # consulta particular es $30.000, NO $25.000. Forzamos la tarifa
+    # "Medicina Familiar" cuando el slot es suyo, sin tocar su especialidad de
+    # ruteo. Cubre cualquier camino (lo agenden como MG o como Med. Familiar).
+    if slot and slot.get("id_profesional") == 13 and esp.lower() in ("medicina general", "medicina familiar"):
+        esp = "Medicina Familiar"
     # Masoterapia: el precio depende de la duración real del slot (20 o 40 min)
     if esp.lower() == "masoterapia":
         if not slot:
@@ -2031,6 +2038,50 @@ def _recordatorio_prompt(state: str, data: dict) -> str:
     return ""
 
 
+def _es_pedido_humano_explicito(txt: str, tl: str) -> bool:
+    """¿El paciente pide CLARAMENTE hablar con una persona?
+
+    Decide qué pasa cuando un mensaje matchea `_HUMANO_KW`:
+      • True  → escalar directo a recepción (no insistir). El paciente fue
+                explícito ("quiero hablar con una persona", "pásame con alguien").
+      • False → el mensaje solo MENCIONA recepción/secretaria pero parece una
+                pregunta resoluble por el bot (ej: "a qué hora abre recepción",
+                "dónde queda la recepción"). Dejamos que el clasificador intente
+                resolverla antes de molestar a una recepcionista.
+
+    Por decisión de negocio (2026-06-02): solo deflectamos los pedidos
+    IMPLÍCITOS/ambiguos; los explícitos siempre escalan.
+
+    `tl` = texto en minúsculas, sin tildes, ya normalizado.
+    """
+    # Frases que son una orden inequívoca de hablar con un humano. Si el mensaje
+    # contiene alguna, es explícito → escalar. (No exhaustivo; reusa _HUMANO_KW
+    # para verbos de intención.)
+    _PEDIDO_DIRECTO = (
+        "quiero hablar", "necesito hablar", "puedo hablar", "hablar con alguien",
+        "hablar con una persona", "con una persona", "persona real", "agente humano",
+        "asistente humano", "atencion humana", "no quiero el bot", "no me sirve el bot",
+        "pasame con", "comuniqueme con", "comunicame con", "atiendame una persona",
+    )
+    if any(frase in tl for frase in _PEDIDO_DIRECTO):
+        return True
+
+    # TODO(Rodrigo): afinar el caso AMBIGUO con tu conocimiento de cómo escriben
+    # los pacientes de Arauco. Aquí decides cuándo una mención de "recepción" /
+    # "secretaria" NO es un pedido de humano sino una pregunta resoluble.
+    # Pista: si el mensaje trae un interrogativo (que/cuando/donde/cuanto/a que
+    # hora/cuanto cuesta) junto a la keyword, casi siempre es FAQ, no handoff.
+    # Devuelve False en esos casos para que el bot intente responder solo.
+    _INTERROGATIVOS = ("?", "a que hora", "cuando", "donde", "cuanto", "que precio",
+                       "que valor", "horario", "abren", "abre", "cierran", "queda")
+    if any(w in tl for w in _INTERROGATIVOS):
+        return False  # parece pregunta → no es pedido explícito de humano
+
+    # Default conservador: ante la duda, tratar como explícito y escalar.
+    # (Más seguro para un centro médico que dejar a un paciente sin respuesta.)
+    return True
+
+
 async def _pre_router_wait(phone: str, txt: str, tl: str, state: str, data: dict):
     """
     Pre-router universal para estados WAIT_*.
@@ -2054,8 +2105,14 @@ async def _pre_router_wait(phone: str, txt: str, tl: str, state: str, data: dict
                  "cancelar flujo", "no quiero nada", "no importa"}
 
     if tl_rescue in _HUMANO_KW or any(k in tl_rescue for k in _HUMANO_KW if len(k) > 7):
-        log_event(phone, "rescue_humano", {"state": state, "txt": txt[:80]})
-        return _derivar_humano(phone=phone, contexto=f"rescue desde {state}")
+        # Solo escalar si el pedido es EXPLÍCITO. Los ambiguos (ej: "a qué hora
+        # abre recepción") caen al clasificador de abajo, que ya sabe responder
+        # horario/precio/ubicación, en vez de molestar a una recepcionista.
+        if _es_pedido_humano_explicito(txt, tl_rescue):
+            log_event(phone, "rescue_humano", {"state": state, "txt": txt[:80]})
+            return _derivar_humano(phone=phone, contexto=f"rescue desde {state}")
+        log_event(phone, "deflect_recepcion", {"state": state, "txt": txt[:80]})
+        # cae al pipeline normal (classify_with_context más abajo)
 
     if tl_rescue in _MENU_KW:
         log_event(phone, "rescue_menu", {"state": state})
