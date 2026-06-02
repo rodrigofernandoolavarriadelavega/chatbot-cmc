@@ -46,12 +46,20 @@ class Agent:
     # Spec de schedule para el scheduler (lo lee scheduler_hook). Ej:
     # {"hour": 7, "minute": 0} o {"minute": "*/30"}.
     schedule: dict = field(default_factory=dict)
+    # Eventos a los que el agente REACCIONA en tiempo real (ver events.py). Ej:
+    # ["cita_cancelada", "slot_liberado"]. Vacío = solo corre por schedule.
+    triggers: list = field(default_factory=list)
 
     # ── A implementar por cada agente ────────────────────────────────────────
     async def perceive(self) -> dict:
         return {}
 
     async def decide(self, ctx: dict) -> list[AgentAction]:
+        return []
+
+    async def react(self, event_type: str, payload: dict) -> list[AgentAction]:
+        """Reacción a un evento en tiempo real. Devuelve acciones (mismo contrato
+        que decide). Por defecto, los agentes no reaccionan."""
         return []
 
     async def execute_one(self, action: AgentAction) -> dict:
@@ -90,6 +98,41 @@ class Agent:
             store.record_run(result)
             return result
 
+        await self._apply_and_record(actions, dry, result)
+        return result
+
+    async def run_reactive(self, event_type: str, payload: dict,
+                           force_dry_run: bool = False) -> dict:
+        """Igual que run() pero disparado por un EVENTO (ver events.py): en vez de
+        perceive/decide, llama react(event). Mismo gating y mismo piso de guardrails."""
+        result = {
+            "agent_id": self.id, "name": self.name, "risk": self.risk,
+            "ran_at": datetime.now(timezone.utc).isoformat(), "dry_run": True,
+            "trigger": event_type, "perceived": {"event": event_type, "payload": payload},
+            "actions_proposed": [], "actions_executed": [], "actions_blocked": [], "notes": "",
+        }
+        if not guardrails.master_enabled():
+            result["notes"] = "flota apagada (ALMA_AGENTS_ENABLED=false)"
+            return result
+        if not guardrails.agent_enabled(self.flag):
+            result["notes"] = f"agente apagado ({self.flag}=false)"
+            return result
+        dry = force_dry_run or not guardrails.execute_enabled()
+        result["dry_run"] = dry
+        try:
+            actions = await self.react(event_type, payload)
+        except Exception as e:  # noqa: BLE001
+            log.error("alma_agents[%s]: react(%s) falló: %s", self.id, event_type, e)
+            result["notes"] = f"error reaccionando: {e}"
+            store.record_run(result)
+            return result
+        await self._apply_and_record(actions, dry, result, log_prefix=f"react:{event_type}")
+        return result
+
+    async def _apply_and_record(self, actions: list, dry: bool, result: dict,
+                                log_prefix: str = "") -> None:
+        """Aplica el piso de guardrails a cada acción, ejecuta las permitidas (si no
+        es dry), y persiste run + ledger. Compartido por run() y run_reactive()."""
         for a in actions:
             result["actions_proposed"].append(_action_dict(a))
             allow, reason = guardrails.authorize(a)
@@ -103,17 +146,14 @@ class Agent:
             except Exception as e:  # noqa: BLE001
                 log.error("alma_agents[%s]: execute_one falló: %s", self.id, e)
                 result["actions_blocked"].append({**_action_dict(a), "reason": f"error: {e}"})
-
         result["notes"] = (f"{len(result['actions_proposed'])} propuestas · "
                            f"{len(result['actions_executed'])} ejecutadas · "
                            f"{len(result['actions_blocked'])} bloqueadas")
         store.record_run(result)
-        # Effectiveness Ledger: registra los contactos a pacientes para medir
-        # después si convirtieron (nunca lanza; no afecta el run).
         if result["actions_executed"]:
             ledger.record_result(result)
-        log.info("alma_agents[%s]: %s", self.id, result["notes"])
-        return result
+        log.info("alma_agents[%s]%s: %s", self.id,
+                 f" [{log_prefix}]" if log_prefix else "", result["notes"])
 
 
 def _action_dict(a: AgentAction) -> dict:

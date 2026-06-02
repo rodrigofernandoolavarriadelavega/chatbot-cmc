@@ -771,6 +771,17 @@ async def _job_detectar_cancelaciones():
                 })
             except Exception as e:
                 log.warning("operativa: fill_freed_slot falló id=%s: %s", id_cita, e)
+            # Bus de eventos (Alma Agents): notifica la cancelación a los agentes
+            # reactivos (ej. yield_agenda contacta demanda reprimida de esa esp).
+            # No-op seguro si la flota está apagada. Nunca frena la detección.
+            try:
+                from alma_agents import events
+                await events.emit("cita_cancelada", {
+                    "especialidad": c.get("especialidad", ""),
+                    "fecha": c.get("fecha", ""), "hora": c.get("hora", ""),
+                })
+            except Exception as e:  # noqa: BLE001
+                log.warning("alma_agents: emit cita_cancelada falló id=%s: %s", id_cita, e)
 
         # ¿Cita próxima? — calcular delta horas
         try:

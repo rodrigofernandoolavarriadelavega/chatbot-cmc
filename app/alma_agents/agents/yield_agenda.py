@@ -35,6 +35,17 @@ class YieldAgendaAgent(Agent):
             ))
         return out
 
+    async def react(self, event_type: str, payload: dict) -> list[AgentAction]:
+        """Reacción en tiempo real: al liberarse un cupo / cancelarse una cita,
+        contacta YA a la demanda reprimida de esa especialidad (no espera al cron)."""
+        esp_libre = ((payload or {}).get("especialidad") or "").strip().lower()
+        cand = _candidatos_demanda_reprimida(
+            dias=int(os.getenv("ALMA_AGENT_YIELD_DIAS", "30")),
+            limite=int(os.getenv("ALMA_AGENT_YIELD_MAX", "10")))
+        if esp_libre:
+            cand = [c for c in cand if esp_libre in (c.get("especialidad", "") or "").lower()]
+        return await self.decide({"candidatos": cand})
+
     async def execute_one(self, action: AgentAction) -> dict:
         from messaging import send_whatsapp_proactive
         wamid = await send_whatsapp_proactive(action.target, action.params["texto"])
@@ -80,4 +91,5 @@ AGENT = YieldAgendaAgent(
     flag="ALMA_AGENT_YIELD",
     category="ingresos",
     schedule={"hour": 14, "minute": 0},
+    triggers=["cita_cancelada", "slot_liberado"],
 )

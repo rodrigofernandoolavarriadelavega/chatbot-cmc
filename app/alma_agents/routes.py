@@ -16,7 +16,7 @@ from fastapi import APIRouter, Query, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from config import ADMIN_TOKEN, OLACORE_TOKEN, ALMA_PROFILES
-from . import guardrails, registry, store, ledger, simulator, capstone, learning
+from . import guardrails, registry, store, ledger, simulator, capstone, learning, events
 
 log = logging.getLogger("bot")
 router = APIRouter()
@@ -140,3 +140,21 @@ def agents_learning(token: str | None = Query(None), request: Request = None):
     (bandit UCB sobre el Ledger). Read-only."""
     _check_owner(token, request)
     return JSONResponse(learning.learning_summary())
+
+
+@router.get("/alma/agents/api/events")
+def agents_events(token: str | None = Query(None), request: Request = None):
+    """Catálogo de eventos + qué agente reacciona a cada uno."""
+    _check_owner(token, request)
+    cat = {k: {"descripcion": v, "suscritos": [a.id for a in events.subscribers(k)]}
+           for k, v in events.EVENTS.items()}
+    return JSONResponse({"eventos": cat})
+
+
+@router.post("/alma/agents/api/emit")
+async def agents_emit(event_type: str = Query(...), token: str | None = Query(None),
+                      request: Request = None):
+    """Emite un evento en modo PREVIEW (dry): muestra quién reaccionaría y qué
+    propondría, sin ejecutar nada. Para probar el bus desde el panel."""
+    _check_owner(token, request)
+    return JSONResponse(await events.emit(event_type, {}, dry=True))
