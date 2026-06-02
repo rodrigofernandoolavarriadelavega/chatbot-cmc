@@ -62,6 +62,17 @@ def ensure_table() -> None:
         conn.commit()
 
 
+# % de honorario por profesional, DERIVADO de DB Mensual (ratio real prof/total).
+# Fuente: templates/bi_dashboard_mensual.html (cifras reales del mes base).
+# Es solo el DEFAULT — editable desde el módulo Equipo. id_medilink → % entero.
+# 73 (Abarca) es contrato a monto FIJO, no %: queda en 0 (usar Ajuste en Liquidaciones).
+HONORARIO_PCT_DEFAULT: dict[int, int] = {
+    1: 71, 13: 75, 21: 52, 23: 75, 49: 70, 52: 70, 55: 51, 56: 70,
+    60: 69, 61: 70, 64: 71, 65: 71, 66: 60, 67: 67, 68: 70, 70: 70,
+    72: 45, 74: 70, 75: 68, 76: 40, 77: 41,
+}
+
+
 def seed_if_empty() -> int:
     ensure_table()
     from session import _conn
@@ -69,19 +80,25 @@ def seed_if_empty() -> int:
         from medilink import PROFESIONALES
     except Exception:
         PROFESIONALES = {}
+    inserted = 0
     with _conn() as conn:
         n = conn.execute("SELECT COUNT(*) c FROM equipo_cmc").fetchone()["c"]
-        if n > 0:
-            return 0
-        for pid, info in PROFESIONALES.items():
-            esp = info.get("especialidad", "")
-            conn.execute(
-                """INSERT INTO equipo_cmc (id_medilink, nombre, especialidad, rol, tipo_contrato, estado)
-                   VALUES (?,?,?,?, 'honorarios', 'activo')""",
-                (pid, info.get("nombre", ""), esp, _rol_de(esp)))
+        if n == 0:
+            for pid, info in PROFESIONALES.items():
+                esp = info.get("especialidad", "")
+                pct = HONORARIO_PCT_DEFAULT.get(pid, 0 if pid == 73 else 70)
+                conn.execute(
+                    """INSERT INTO equipo_cmc (id_medilink, nombre, especialidad, rol, tipo_contrato, pct_honorario, estado)
+                       VALUES (?,?,?,?, 'honorarios', ?, 'activo')""",
+                    (pid, info.get("nombre", ""), esp, _rol_de(esp), pct))
+            inserted = len(PROFESIONALES)
+            log.info("equipo: sembrado desde PROFESIONALES (%d) con %% honorario de DB Mensual", inserted)
+        # Backfill idempotente: aplica el % por defecto SOLO a filas en 0
+        # (no pisa ediciones manuales >0). Corrige instalaciones ya sembradas con 0.
+        for pid, pct in HONORARIO_PCT_DEFAULT.items():
+            conn.execute("UPDATE equipo_cmc SET pct_honorario=? WHERE id_medilink=? AND pct_honorario=0", (pct, pid))
         conn.commit()
-    log.info("equipo: sembrado desde PROFESIONALES (%d)", len(PROFESIONALES))
-    return len(PROFESIONALES)
+    return inserted
 
 
 def profesionales_en_licencia(fecha: str | None = None) -> set[int]:
