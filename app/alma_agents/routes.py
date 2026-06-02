@@ -16,7 +16,7 @@ from fastapi import APIRouter, Query, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from config import ADMIN_TOKEN, OLACORE_TOKEN, ALMA_PROFILES
-from . import guardrails, registry, store, ledger
+from . import guardrails, registry, store, ledger, simulator
 
 log = logging.getLogger("bot")
 router = APIRouter()
@@ -112,3 +112,12 @@ def agents_effectiveness_measure(token: str | None = Query(None), request: Reque
     _check_owner(token, request)
     resolved = ledger.measure_outcomes()
     return JSONResponse({"resolved": resolved, "summary": ledger.effectiveness_summary()})
+
+
+@router.get("/alma/agents/api/simulate")
+async def agents_simulate(token: str | None = Query(None), request: Request = None):
+    """Vuelo de prueba del AGREGADO: qué haría la flota entera ahora mismo, sin
+    ejecutar nada. Muestra el riesgo del conjunto (solapamiento de contactos,
+    escrituras Medilink, qué se ejecutaría vs bloquearía). Read-only."""
+    _check_owner(token, request)
+    return JSONResponse(await simulator.simulate_fleet())

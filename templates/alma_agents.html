@@ -637,6 +637,17 @@ function renderPage(data){
   refreshBtn.appendChild(document.createTextNode('Actualizar'));
   refreshBtn.addEventListener('click', loadData);
   metaDiv.appendChild(refreshBtn);
+
+  const simBtn = el('button','btn-refresh');
+  simBtn.style.background = '#0f3f68';
+  simBtn.style.color = '#fff';
+  const simSvg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  simSvg.setAttribute('viewBox','0 0 24 24');
+  simSvg.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"/>';
+  simBtn.appendChild(simSvg);
+  simBtn.appendChild(document.createTextNode('Simular flota'));
+  simBtn.addEventListener('click', simulateFleet);
+  metaDiv.appendChild(simBtn);
   top.appendChild(metaDiv);
 
   wrap.appendChild(top);
@@ -763,6 +774,85 @@ function openDryRun(agent){
 function closeModal(){
   $('drModal').classList.remove('open');
   _currentModal = null;
+}
+
+/* ---- SIMULAR FLOTA COMPLETA (agregado) ---- */
+function simulateFleet(){
+  const modal = $('drModal');
+  $('drTitle').textContent = 'Vuelo de prueba — flota completa';
+  $('drSub').textContent = 'Qué haría la flota ENTERA ahora mismo, sin ejecutar nada';
+  const body = $('drBody');
+  body.innerHTML = '';
+  body.appendChild(buildLoading('Simulando los ' + '18' + ' agentes…'));
+  modal.classList.add('open');
+  _currentModal = '__sim__';
+  fetch(API_BASE + '/alma/agents/api/simulate?token=' + encodeURIComponent(TOKEN))
+    .then(r => { if(!r.ok) throw {status:r.status, msg:'Error '+r.status}; return r.json(); })
+    .then(renderSimulation)
+    .catch(err => { body.innerHTML=''; body.appendChild(buildError('Error en simulación', err.msg || String(err))); });
+}
+
+function renderSimulation(d){
+  const body = $('drBody');
+  body.innerHTML = '';
+  const t = d.totales || {};
+  const r = t.por_riesgo || {};
+  // KPIs
+  const kpis = el('div','sim-kpis');
+  kpis.style.display='grid'; kpis.style.gridTemplateColumns='repeat(auto-fit,minmax(120px,1fr))';
+  kpis.style.gap='10px'; kpis.style.marginBottom='14px';
+  const card = (label,val,color) => {
+    const c=el('div'); c.style.cssText='background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px';
+    const v=el('div',null,String(val)); v.style.cssText='font-size:22px;font-weight:700;color:'+(color||'#0f3f68');
+    const l=el('div',null,label); l.style.cssText='font-size:11px;color:#64748b;margin-top:2px';
+    c.appendChild(v); c.appendChild(l); return c;
+  };
+  kpis.appendChild(card('Acciones', t.acciones||0));
+  kpis.appendChild(card('Contactos a pacientes', t.contactos_pacientes||0, '#0d9488'));
+  kpis.appendChild(card('Escrituras Medilink', t.escrituras_medilink||0, (t.escrituras_medilink? '#b45309':'#0f3f68')));
+  kpis.appendChild(card('Se ejecutaría', t.se_ejecutaria||0, (t.se_ejecutaria? '#b45309':'#16a34a')));
+  kpis.appendChild(card('Se bloquearía', t.se_bloquearia||0, '#64748b'));
+  body.appendChild(kpis);
+  // riesgo
+  const rk = el('p','sub'); rk.style.marginBottom='12px';
+  rk.innerHTML = 'Por riesgo: bajo <strong>'+(r.bajo||0)+'</strong> · medio <strong>'+(r.medio||0)+'</strong> · alto <strong>'+(r.alto||0)+'</strong> · extremo <strong style="color:'+((r.extremo||0)?'#dc2626':'#64748b')+'">'+(r.extremo||0)+'</strong>';
+  body.appendChild(rk);
+  // riesgo agregado (lo importante)
+  const agg = d.riesgo_agregado || {};
+  const box = el('div'); box.style.cssText='background:'+((agg.pacientes_sobre_presupuesto||[]).length?'#fef2f2':'#f0fdf4')+';border:1px solid '+((agg.pacientes_sobre_presupuesto||[]).length?'#fecaca':'#bbf7d0')+';border-radius:12px;padding:12px;margin-bottom:14px';
+  const bt = el('div',null,'Riesgo agregado (anti-spam)'); bt.style.cssText='font-weight:700;font-size:13px;margin-bottom:4px';
+  box.appendChild(bt);
+  const ba = el('div',null, agg.alerta||''); ba.style.cssText='font-size:12px;color:#334155';
+  box.appendChild(ba);
+  const multi = agg.pacientes_multi_agente || [];
+  if(multi.length){
+    const ul = el('div'); ul.style.cssText='margin-top:8px;font-size:12px';
+    multi.slice(0,8).forEach(o => {
+      const li=el('div',null,'Paciente '+o.paciente+': '+o.n_agentes+' agentes ('+o.agentes.join(', ')+')');
+      li.style.cssText='padding:3px 0;color:#475569'; ul.appendChild(li);
+    });
+    box.appendChild(ul);
+  }
+  body.appendChild(box);
+  // motivos de bloqueo
+  const mb = d.motivos_bloqueo || {};
+  const keys = Object.keys(mb);
+  if(keys.length){
+    const mh = el('div',null,'Por qué se bloquearía (flags actuales)'); mh.style.cssText='font-weight:600;font-size:12px;color:#64748b;margin-bottom:4px';
+    body.appendChild(mh);
+    keys.sort((a,b)=>mb[b]-mb[a]).forEach(k => {
+      const li=el('div',null,'• '+k+' — '+mb[k]); li.style.cssText='font-size:12px;color:#475569;padding:2px 0';
+      body.appendChild(li);
+    });
+  }
+  // por agente
+  const ah = el('div',null,'Por agente'); ah.style.cssText='font-weight:600;font-size:12px;color:#64748b;margin:14px 0 4px';
+  body.appendChild(ah);
+  (d.por_agente||[]).filter(a=>a.n_actions>0).forEach(a => {
+    const li=el('div'); li.style.cssText='font-size:12px;color:#334155;padding:3px 0;border-bottom:1px solid #f1f5f9';
+    li.innerHTML = '<strong>'+a.agent_id+'</strong> ('+a.risk+') — '+a.n_actions+' acciones'+(a.n_contactos?' · '+a.n_contactos+' contactos':'')+(a.n_medilink?' · '+a.n_medilink+' Medilink':'')+(a.error?' · <span style="color:#dc2626">error</span>':'');
+    body.appendChild(li);
+  });
 }
 
 $('drModal').addEventListener('click', e => {
