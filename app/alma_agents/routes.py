@@ -16,7 +16,7 @@ from fastapi import APIRouter, Query, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from config import ADMIN_TOKEN, OLACORE_TOKEN, ALMA_PROFILES
-from . import guardrails, registry, store, ledger, simulator, capstone
+from . import guardrails, registry, store, ledger, simulator, capstone, learning
 
 log = logging.getLogger("bot")
 router = APIRouter()
@@ -132,3 +132,11 @@ async def agents_cycle(token: str | None = Query(None), request: Request = None,
     if live:
         return JSONResponse(await capstone.run_cycle())
     return JSONResponse(capstone.load_last() or await capstone.run_cycle())
+
+
+@router.get("/alma/agents/api/learning")
+def agents_learning(token: str | None = Query(None), request: Request = None):
+    """Loop de aprendizaje: por agente, conversión por variante + la recomendada
+    (bandit UCB sobre el Ledger). Read-only."""
+    _check_owner(token, request)
+    return JSONResponse(learning.learning_summary())

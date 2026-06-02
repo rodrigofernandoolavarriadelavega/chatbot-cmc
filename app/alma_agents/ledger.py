@@ -106,6 +106,10 @@ def ensure_table() -> None:
             conn.execute("CREATE INDEX IF NOT EXISTS idx_ledger_agent ON agent_action_ledger(agent_id)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_ledger_outcome ON agent_action_ledger(outcome)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_ledger_acted ON agent_action_ledger(acted_at)")
+            # Migración: columna variant (approach usado) para el loop de aprendizaje.
+            cols = [r[1] for r in conn.execute("PRAGMA table_info(agent_action_ledger)").fetchall()]
+            if "variant" not in cols:
+                conn.execute("ALTER TABLE agent_action_ledger ADD COLUMN variant TEXT")
         conn.close()
     except Exception as e:  # noqa: BLE001 — el ledger nunca debe tumbar nada
         log.warning("ledger.ensure_table falló: %s", e)
@@ -150,7 +154,7 @@ def record_result(run: dict, window_days: int = DEFAULT_WINDOW_DAYS) -> int:
         rows.append((
             run.get("agent_id", "?"), a.get("kind"), a.get("summary"),
             a.get("risk"), phone, str(a.get("target") or ""),
-            acted_at, window_days,
+            acted_at, window_days, a.get("variant"),
         ))
     if not rows:
         return 0
@@ -161,8 +165,8 @@ def record_result(run: dict, window_days: int = DEFAULT_WINDOW_DAYS) -> int:
             conn.executemany(
                 """INSERT INTO agent_action_ledger
                    (agent_id, action_kind, summary, risk, target_phone, target_raw,
-                    acted_at, window_days, outcome)
-                   VALUES (?,?,?,?,?,?,?,?, 'pendiente')""",
+                    acted_at, window_days, variant, outcome)
+                   VALUES (?,?,?,?,?,?,?,?,?, 'pendiente')""",
                 rows)
         conn.close()
         return len(rows)

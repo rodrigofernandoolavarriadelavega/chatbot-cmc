@@ -31,6 +31,8 @@ class AgentAction:
     requires_contact: bool = False       # ¿manda WhatsApp a alguien?
     requires_medilink_write: bool = False
     is_staff: bool = False               # el contacto es a Rodrigo/recepción, no paciente
+    variant: str | None = None           # "approach" usado (msg A/B, hora, segmento) → learning
+    expected_value: float | None = None  # EV estimado (lo llena el broker, opcional)
 
 
 @dataclass
@@ -121,4 +123,5 @@ def _action_dict(a: AgentAction) -> dict:
         "requires_contact": a.requires_contact,
         "requires_medilink_write": a.requires_medilink_write,
         "is_staff": a.is_staff,
+        "variant": a.variant, "expected_value": a.expected_value,
     }
