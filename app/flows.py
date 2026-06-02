@@ -8519,8 +8519,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     })
                     reset_session(phone)
                     _nom_blk = _first_name(paciente.get("nombre"))
+                    # OJO: `es_tercero` se asigna recién más abajo en esta misma
+                    # función (~L8691) → referenciarlo aquí daría UnboundLocalError.
+                    # Derivamos el flag directo de `data`, igual que esa línea.
+                    _es_tercero_blk = bool(data.get("booking_for_other"))
                     _quien_blk = (
-                        f"{_nom_blk} ya tiene" if (es_tercero and _nom_blk) else "Ya tienes"
+                        f"{_nom_blk} ya tiene" if (_es_tercero_blk and _nom_blk) else "Ya tienes"
                     )
                     return _btn_msg(
                         f"📋 {_quien_blk} una hora con "
