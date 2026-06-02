@@ -663,6 +663,15 @@ import inventario_routes
 app.include_router(inventario_routes.router)
 inventario_routes.seed_if_empty()  # DDL + siembra catálogo MayorDent al arrancar
 
+# ── Módulos clínicos integrales (pacientes, interconsultas, esterilización, finanzas, equipo, documentos, habilitación) ──
+import pacientes_routes; app.include_router(pacientes_routes.router)
+import interconsultas_routes; app.include_router(interconsultas_routes.router)
+import esterilizacion_routes; app.include_router(esterilizacion_routes.router)
+import finanzas_routes; app.include_router(finanzas_routes.router)
+import equipo_routes; app.include_router(equipo_routes.router); equipo_routes.seed_if_empty()
+import documentos_routes; app.include_router(documentos_routes.router); documentos_routes.seed_if_empty()
+import habilitacion_routes; app.include_router(habilitacion_routes.router); habilitacion_routes.seed_if_empty()
+
 import audit_routes  # vista /admin/auditoria — hallazgos del enjambre horario
 app.include_router(audit_routes.router)
 
@@ -2819,6 +2828,39 @@ _ALMA_PAGOS_HTML  = (_TEMPLATE_DIR / "alma_pagos.html").read_text(encoding="utf-
 _ALMA_PAGOS_SIMPLE_HTML = (_TEMPLATE_DIR / "alma_pagos_simple.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_pagos_simple.html").exists() else ""
 _ALMA_CONCILIACION_HTML = (_TEMPLATE_DIR / "alma_conciliacion.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_conciliacion.html").exists() else ""
 _ALMA_INVENTARIO_HTML = (_TEMPLATE_DIR / "alma_inventario.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_inventario.html").exists() else ""
+_ALMA_PACIENTES_HTML = (_TEMPLATE_DIR / "alma_pacientes.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_pacientes.html").exists() else ""
+_ALMA_INTERCONSULTAS_HTML = (_TEMPLATE_DIR / "alma_interconsultas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_interconsultas.html").exists() else ""
+_ALMA_ESTERILIZACION_HTML = (_TEMPLATE_DIR / "alma_esterilizacion.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_esterilizacion.html").exists() else ""
+_ALMA_FINANZAS_HTML = (_TEMPLATE_DIR / "alma_finanzas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_finanzas.html").exists() else ""
+_ALMA_EQUIPO_HTML = (_TEMPLATE_DIR / "alma_equipo.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_equipo.html").exists() else ""
+_ALMA_DOCUMENTOS_HTML = (_TEMPLATE_DIR / "alma_documentos.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_documentos.html").exists() else ""
+_ALMA_HABILITACION_HTML = (_TEMPLATE_DIR / "alma_habilitacion.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_habilitacion.html").exists() else ""
+
+def _make_alma_page(_html, _label):
+    """Factory de páginas Alma simples (template con __TOKEN__, misma auth que el shell)."""
+    def _page(token: str | None = Query(None), cmc_session: str | None = Cookie(None)):
+        from admin_routes import _verify_cookie, _is_admin_token
+        if not _html:
+            raise HTTPException(404, f"{_label} no disponible")
+        if token and _is_admin_token(token):
+            return HTMLResponse(_html.replace("__TOKEN__", token))
+        if cmc_session:
+            role = _verify_cookie(cmc_session)
+            if role in ("admin", "ortodoncia"):
+                return HTMLResponse(_html.replace("__TOKEN__", ADMIN_TOKEN))
+        return RedirectResponse(url="/admin/login", status_code=302)
+    return _page
+
+for _ap, _ah, _al in [
+    ("/alma/pacientes", _ALMA_PACIENTES_HTML, "Pacientes"),
+    ("/alma/interconsultas", _ALMA_INTERCONSULTAS_HTML, "Interconsultas"),
+    ("/alma/esterilizacion", _ALMA_ESTERILIZACION_HTML, "Esterilizacion"),
+    ("/alma/finanzas", _ALMA_FINANZAS_HTML, "Finanzas"),
+    ("/alma/equipo", _ALMA_EQUIPO_HTML, "Equipo"),
+    ("/alma/documentos", _ALMA_DOCUMENTOS_HTML, "Documentos"),
+    ("/alma/habilitacion", _ALMA_HABILITACION_HTML, "Habilitacion"),
+]:
+    app.add_api_route(_ap, _make_alma_page(_ah, _al), methods=["GET"], response_class=HTMLResponse, include_in_schema=False)
 
 # ── Pool de conexiones BI para endpoints de boxes ────────────────────────────
 # Máximo 8 conexiones compartidas entre boxes-state, boxes-config y boxes-config-put.

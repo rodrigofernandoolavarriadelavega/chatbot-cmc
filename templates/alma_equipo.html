@@ -1,0 +1,80 @@
+<!DOCTYPE html><html lang="es"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex,nofollow">
+<title>Equipo — Alma CMC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/alma_kit.css">
+</head><body>
+<div class="pg-topbar">
+  <h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M5 18a3 3 0 016 0M14 9h4M14 13h4" stroke-linecap="round"/></svg> Equipo</h1>
+  <div class="spacer"></div>
+  <button class="btn-primary" onclick="openNew()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg> Integrante</button>
+</div>
+<div class="wrap">
+  <div class="kpis" id="kpis"></div>
+  <div class="chips" id="chips"></div>
+  <div class="card"><table><thead><tr>
+    <th>Profesional</th><th class="hide-sm">Rol</th><th class="hide-sm">Contrato</th><th class="num hide-sm">% Hon.</th><th>Estado</th><th class="num"></th>
+  </tr></thead><tbody id="tbody"></tbody></table>
+  <div id="empty" class="empty" style="display:none">Sin resultados</div></div>
+</div>
+
+<div class="modal-bg" id="m-p"><div class="modal">
+  <div class="modal-head"><h2 id="p-title">Nuevo integrante</h2><div class="x" onclick="AlmaKit.closeModal('m-p')">✕</div></div>
+  <div class="modal-body"><input type="hidden" id="p-id">
+    <div class="field"><label>Nombre</label><input id="p-nombre"></div>
+    <div class="field-row"><div class="field"><label>Especialidad</label><input id="p-esp"></div><div class="field"><label>Rol</label><select id="p-rol"><option>Médico</option><option>Dental</option><option>Kinesiología</option><option>Salud mental</option><option>Profesional</option><option>Administrativo</option></select></div></div>
+    <div class="field-row-3"><div class="field"><label>Contrato</label><select id="p-contrato"><option value="honorarios">Honorarios</option><option value="planta">Planta</option><option value="reemplazo">Reemplazo</option></select></div><div class="field"><label>% Honorario</label><input id="p-pct" type="number" value="0"></div><div class="field"><label>ID Medilink</label><input id="p-mid" type="number"></div></div>
+    <div class="field-row"><div class="field"><label>Teléfono</label><input id="p-tel"></div><div class="field"><label>Email</label><input id="p-email"></div></div>
+    <div class="field-row"><div class="field"><label>Estado</label><select id="p-estado" onchange="toggleLic()"><option value="activo">Activo</option><option value="licencia">Licencia</option><option value="inactivo">Inactivo</option></select></div></div>
+    <div class="field-row" id="p-lic" style="display:none"><div class="field"><label>Licencia desde</label><input id="p-ld" type="date"></div><div class="field"><label>Licencia hasta</label><input id="p-lh" type="date"></div></div>
+    <div class="field"><label>Notas</label><textarea id="p-notas" rows="2"></textarea></div>
+  </div>
+  <div class="modal-foot"><button class="btn-ghost" onclick="AlmaKit.closeModal('m-p')">Cancelar</button><button class="btn-primary" onclick="save()">Guardar</button></div>
+</div></div>
+
+<script>window.ALMA_TOKEN="__TOKEN__"; window.ALMA_API="/alma/api/equipo";</script>
+<script src="/static/alma_kit.js"></script>
+<script>
+const {api,esc,toast,openModal,closeModal,fdate}=AlmaKit;
+let FILT="todos", ITEMS=[];
+const EST_BADGE={activo:'green',licencia:'orange',inactivo:'mute'};
+async function loadKpis(){ const r=await api("/resumen");
+  const roles=Object.entries(r.por_rol).map(([k,v])=>`${k}: ${v}`).slice(0,2).join(' · ');
+  document.getElementById('kpis').innerHTML=`
+   <div class="kpi"><div class="k-label">Equipo</div><div class="k-val">${r.total}</div><div class="k-sub">integrantes</div></div>
+   <div class="kpi good"><div class="k-label">Activos</div><div class="k-val">${r.activos}</div><div class="k-sub">disponibles</div></div>
+   <div class="kpi alert"><div class="k-label">En licencia</div><div class="k-val">${r.licencia}</div><div class="k-sub">no agendar sus horas</div></div>
+   <div class="kpi"><div class="k-label">Por rol</div><div class="k-val" style="font-size:14px;line-height:1.3">${esc(roles)||'—'}</div></div>`; }
+async function load(){ const r=await api(FILT==='todos'?'':("?estado="+FILT)); ITEMS=r.equipo;
+  document.getElementById('chips').innerHTML=['todos','activo','licencia','inactivo'].map(e=>`<div class="chip ${FILT===e?'active':''}" onclick="setF('${e}')">${e==='todos'?'Todos':e[0].toUpperCase()+e.slice(1)}</div>`).join('');
+  const tb=document.getElementById('tbody'),em=document.getElementById('empty');
+  if(!ITEMS.length){tb.innerHTML='';em.style.display='block';return;} em.style.display='none';
+  tb.innerHTML=ITEMS.map(x=>`<tr>
+    <td><div class="t-strong">${esc(x.nombre)}</div><div class="t-meta">${esc(x.especialidad||'')}</div></td>
+    <td class="hide-sm"><span class="badge aqua">${esc(x.rol||'—')}</span></td>
+    <td class="hide-sm t-meta">${esc(x.tipo_contrato||'')}</td>
+    <td class="num hide-sm">${x.pct_honorario?x.pct_honorario+'%':'—'}</td>
+    <td><span class="badge ${EST_BADGE[x.estado]||'mute'}">${esc(x.estado)}</span>${x.estado==='licencia'&&x.licencia_hasta?`<div class="t-meta">hasta ${fdate(x.licencia_hasta)}</div>`:''}</td>
+    <td class="num"><div class="row-actions">
+      <button class="icon-btn" onclick='edit(${x.id})' title="Editar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke-linecap="round"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke-linecap="round"/></svg></button>
+      <button class="icon-btn danger" onclick='del(${x.id})' title="Eliminar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" stroke-linecap="round"/></svg></button>
+    </div></td></tr>`).join(''); }
+function setF(e){FILT=e;load();}
+const F=id=>document.getElementById(id);
+function toggleLic(){ F('p-lic').style.display=F('p-estado').value==='licencia'?'grid':'none'; }
+function openNew(){ F('p-title').textContent='Nuevo integrante'; F('p-id').value='';
+  ['p-nombre','p-esp','p-tel','p-email','p-notas','p-mid','p-ld','p-lh'].forEach(i=>F(i).value=''); F('p-rol').value='Médico'; F('p-contrato').value='honorarios'; F('p-pct').value=0; F('p-estado').value='activo'; toggleLic(); openModal('m-p'); }
+function edit(id){ const x=ITEMS.find(i=>i.id===id); if(!x)return; F('p-title').textContent='Editar integrante'; F('p-id').value=id;
+  F('p-nombre').value=x.nombre; F('p-esp').value=x.especialidad||''; F('p-rol').value=x.rol||'Médico'; F('p-contrato').value=x.tipo_contrato||'honorarios';
+  F('p-pct').value=x.pct_honorario||0; F('p-mid').value=x.id_medilink||''; F('p-tel').value=x.telefono||''; F('p-email').value=x.email||'';
+  F('p-estado').value=x.estado; F('p-ld').value=(x.licencia_desde||'').slice(0,10); F('p-lh').value=(x.licencia_hasta||'').slice(0,10); F('p-notas').value=x.notas||''; toggleLic(); openModal('m-p'); }
+async function save(){ const id=F('p-id').value; const body={nombre:F('p-nombre').value.trim(),especialidad:F('p-esp').value.trim(),rol:F('p-rol').value,
+  tipo_contrato:F('p-contrato').value,pct_honorario:+F('p-pct').value||0,id_medilink:F('p-mid').value?+F('p-mid').value:null,telefono:F('p-tel').value.trim(),email:F('p-email').value.trim(),
+  estado:F('p-estado').value,licencia_desde:F('p-ld').value,licencia_hasta:F('p-lh').value,notas:F('p-notas').value.trim()};
+  if(!body.nombre){toast('El nombre es obligatorio',true);return;}
+  try{ if(id) await api("/"+id,{method:"PATCH",body:JSON.stringify(body)}); else await api("",{method:"POST",body:JSON.stringify(body)});
+    closeModal('m-p'); toast('Guardado'); loadKpis(); load(); }catch(e){toast(e.message,true);} }
+async function del(id){ if(!confirm('¿Eliminar integrante?'))return; try{ await api("/"+id,{method:"DELETE"}); toast('Eliminado'); loadKpis(); load(); }catch(e){toast(e.message,true);} }
+loadKpis(); load();
+</script></body></html>

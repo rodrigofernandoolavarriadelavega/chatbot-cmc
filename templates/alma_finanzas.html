@@ -1,0 +1,94 @@
+<!DOCTYPE html><html lang="es"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex,nofollow">
+<title>Finanzas — Alma CMC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/alma_kit.css">
+<style>
+ .bars{display:flex;gap:14px;align-items:flex-end;height:160px;padding:10px 4px 0}
+ .bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end}
+ .bar-pair{display:flex;gap:3px;align-items:flex-end;width:100%;justify-content:center;height:100%}
+ .bar{width:14px;border-radius:4px 4px 0 0;min-height:2px}
+ .bar.ing{background:var(--aqua)} .bar.egr{background:var(--orange)}
+ .bar-lbl{font-size:10px;color:var(--mute);font-weight:600}
+ .cat-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #eef4f8;font-size:12.5px}
+ .cat-bar{height:8px;border-radius:4px;background:var(--orange);min-width:3px}
+</style>
+</head><body>
+<div class="pg-topbar">
+  <h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12V7H5a2 2 0 010-4h14v4M3 5v14a2 2 0 002 2h16v-5" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 12a2 2 0 000 4h4v-4z" stroke-linecap="round" stroke-linejoin="round"/></svg> Finanzas</h1>
+  <div class="spacer"></div>
+  <input id="mes" type="month" class="topbar-month" style="font-family:inherit;font-size:12px;font-weight:600;border:1px solid var(--border);border-radius:9px;padding:7px 10px;color:var(--navy)">
+  <button class="btn-primary" onclick="openNew()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg> Egreso</button>
+</div>
+<div class="wrap">
+  <div class="kpis" id="kpis"></div>
+  <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px" id="grid">
+    <div class="card"><div class="card-head">Ingresos vs Egresos — últimos 6 meses</div><div class="bars" id="bars"></div></div>
+    <div class="card"><div class="card-head">Egresos por categoría (mes)</div><div style="padding:14px 18px" id="cats"></div></div>
+  </div>
+  <div class="card"><div class="card-head">Egresos del mes <span id="suma" class="badge mute"></span></div>
+    <table><thead><tr><th>Fecha</th><th>Categoría</th><th class="hide-sm">Descripción</th><th class="hide-sm">Proveedor</th><th class="num">Monto</th><th class="num"></th></tr></thead><tbody id="tbody"></tbody></table>
+    <div id="empty" class="empty" style="display:none">Sin egresos este mes</div></div>
+</div>
+
+<div class="modal-bg" id="m-e"><div class="modal">
+  <div class="modal-head"><h2 id="e-title">Nuevo egreso</h2><div class="x" onclick="AlmaKit.closeModal('m-e')">✕</div></div>
+  <div class="modal-body"><input type="hidden" id="e-id">
+    <div class="field-row"><div class="field"><label>Fecha</label><input id="e-fecha" type="date"></div><div class="field"><label>Categoría</label><select id="e-cat"></select></div></div>
+    <div class="field"><label>Descripción</label><input id="e-desc" placeholder="Ej: Arriendo local mayo"></div>
+    <div class="field-row-3"><div class="field"><label>Monto (CLP)</label><input id="e-monto" type="number" value="0"></div><div class="field"><label>Método</label><select id="e-met"><option value="transferencia">Transferencia</option><option value="efectivo">Efectivo</option><option value="debito">Débito</option><option value="credito">Crédito</option><option value="automatico">Automático</option></select></div><div class="field"><label>Proveedor</label><input id="e-prov"></div></div>
+    <div class="field"><label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:12.5px;font-weight:600"><input id="e-rec" type="checkbox" style="width:auto"> Gasto recurrente (mensual)</label></div>
+  </div>
+  <div class="modal-foot"><button class="btn-ghost" onclick="AlmaKit.closeModal('m-e')">Cancelar</button><button class="btn-primary" onclick="save()">Guardar</button></div>
+</div></div>
+
+<script>window.ALMA_TOKEN="__TOKEN__"; window.ALMA_API="/alma/api/finanzas";</script>
+<script src="/static/alma_kit.js"></script>
+<script>
+const {api,clp,esc,toast,openModal,closeModal,fdate}=AlmaKit;
+const CATS=["Arriendo","Sueldos","Honorarios","Insumos","Servicios básicos","Marketing","Equipamiento","Impuestos","Mantención","Otros"];
+let MES=new Date().toISOString().slice(0,7), ITEMS=[];
+document.getElementById('mes').value=MES;
+document.getElementById('mes').addEventListener('change',e=>{MES=e.target.value;loadAll();});
+async function loadAll(){ await Promise.all([loadFlujo(),loadEgresos()]); }
+async function loadFlujo(){ const r=await api("/flujo?mes="+MES);
+  document.getElementById('kpis').innerHTML=`
+   <div class="kpi money"><div class="k-label">Ingresos</div><div class="k-val">${clp(r.ingresos)}</div><div class="k-sub">caja del mes</div></div>
+   <div class="kpi alert"><div class="k-label">Egresos</div><div class="k-val">${clp(r.egresos)}</div><div class="k-sub">gastos del mes</div></div>
+   <div class="kpi ${r.neto>=0?'good':'bad'}"><div class="k-label">Resultado</div><div class="k-val">${clp(r.neto)}</div><div class="k-sub">ingresos − egresos</div></div>
+   <div class="kpi"><div class="k-label">Margen</div><div class="k-val">${r.margen_pct}%</div><div class="k-sub">sobre ingresos</div></div>`;
+  const max=Math.max(1,...r.serie.flatMap(s=>[s.ingresos,s.egresos]));
+  document.getElementById('bars').innerHTML=r.serie.map(s=>`<div class="bar-col"><div class="bar-pair">
+    <div class="bar ing" style="height:${Math.round(s.ingresos/max*130)}px" title="Ingresos ${clp(s.ingresos)}"></div>
+    <div class="bar egr" style="height:${Math.round(s.egresos/max*130)}px" title="Egresos ${clp(s.egresos)}"></div>
+   </div><div class="bar-lbl">${s.mes.slice(5)}/${s.mes.slice(2,4)}</div></div>`).join('');
+  const cats=Object.entries(r.por_categoria).sort((a,b)=>b[1]-a[1]);
+  const cmax=Math.max(1,...cats.map(c=>c[1]));
+  document.getElementById('cats').innerHTML=cats.length?cats.map(([k,v])=>`<div class="cat-row"><div style="width:120px">${esc(k)}</div><div class="cat-bar" style="width:${Math.round(v/cmax*100)}px;flex:none"></div><div class="t-strong" style="margin-left:auto">${clp(v)}</div></div>`).join(''):'<div class="t-meta">Sin egresos este mes</div>'; }
+async function loadEgresos(){ const r=await api("/egresos?mes="+MES); ITEMS=r.egresos;
+  document.getElementById('suma').textContent=clp(r.suma);
+  const tb=document.getElementById('tbody'),em=document.getElementById('empty');
+  if(!ITEMS.length){tb.innerHTML='';em.style.display='block';return;} em.style.display='none';
+  tb.innerHTML=ITEMS.map(x=>`<tr>
+    <td>${fdate(x.fecha)}</td><td><span class="badge aqua">${esc(x.categoria)}</span>${x.recurrente?' <span class="badge mute">↻</span>':''}</td>
+    <td class="hide-sm">${esc(x.descripcion||'—')}</td><td class="hide-sm t-meta">${esc(x.proveedor||'')}</td>
+    <td class="num t-strong">${clp(x.monto)}</td>
+    <td class="num"><div class="row-actions">
+      <button class="icon-btn" onclick='edit(${x.id})' title="Editar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke-linecap="round"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke-linecap="round"/></svg></button>
+      <button class="icon-btn danger" onclick='del(${x.id})' title="Eliminar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" stroke-linecap="round"/></svg></button>
+    </div></td></tr>`).join(''); }
+const F=id=>document.getElementById(id);
+function fillCats(){ F('e-cat').innerHTML=CATS.map(c=>`<option>${c}</option>`).join(''); }
+function openNew(){ F('e-title').textContent='Nuevo egreso'; F('e-id').value=''; fillCats();
+  F('e-fecha').value=new Date().toISOString().slice(0,10); F('e-desc').value=''; F('e-monto').value=0; F('e-met').value='transferencia'; F('e-prov').value=''; F('e-rec').checked=false; openModal('m-e'); }
+function edit(id){ const x=ITEMS.find(i=>i.id===id); if(!x)return; F('e-title').textContent='Editar egreso'; F('e-id').value=id; fillCats();
+  F('e-fecha').value=(x.fecha||'').slice(0,10); F('e-cat').value=x.categoria; F('e-desc').value=x.descripcion||''; F('e-monto').value=x.monto; F('e-met').value=x.metodo_pago; F('e-prov').value=x.proveedor||''; F('e-rec').checked=!!x.recurrente; openModal('m-e'); }
+async function save(){ const id=F('e-id').value; const body={fecha:F('e-fecha').value,categoria:F('e-cat').value,descripcion:F('e-desc').value.trim(),
+  monto:+F('e-monto').value||0,metodo_pago:F('e-met').value,proveedor:F('e-prov').value.trim(),recurrente:F('e-rec').checked};
+  if(body.monto<=0){toast('El monto debe ser mayor a 0',true);return;}
+  try{ if(id) await api("/egresos/"+id,{method:"PATCH",body:JSON.stringify(body)}); else await api("/egresos",{method:"POST",body:JSON.stringify(body)});
+    closeModal('m-e'); toast('Guardado'); loadAll(); }catch(e){toast(e.message,true);} }
+async function del(id){ if(!confirm('¿Eliminar este egreso?'))return; try{ await api("/egresos/"+id,{method:"DELETE"}); toast('Eliminado'); loadAll(); }catch(e){toast(e.message,true);} }
+loadAll();
+</script></body></html>

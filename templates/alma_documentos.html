@@ -1,0 +1,75 @@
+<!DOCTYPE html><html lang="es"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex,nofollow">
+<title>Documentos — Alma CMC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/alma_kit.css">
+</head><body>
+<div class="pg-topbar">
+  <h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 2v6h6M9 13h6M9 17h6" stroke-linecap="round"/></svg> Documentos</h1>
+  <div class="spacer"></div>
+  <button class="btn-primary" onclick="openNew()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg> Documento</button>
+</div>
+<div class="wrap">
+  <div class="kpis" id="kpis"></div>
+  <div class="chips" id="chips"></div>
+  <div class="card"><table><thead><tr>
+    <th>Documento</th><th class="hide-sm">Responsable</th><th class="hide-sm">Vence</th><th>Estado</th><th class="num"></th>
+  </tr></thead><tbody id="tbody"></tbody></table>
+  <div id="empty" class="empty" style="display:none">Sin documentos</div></div>
+</div>
+
+<div class="modal-bg" id="m-d"><div class="modal">
+  <div class="modal-head"><h2 id="d-title">Nuevo documento</h2><div class="x" onclick="AlmaKit.closeModal('m-d')">✕</div></div>
+  <div class="modal-body"><input type="hidden" id="d-id">
+    <div class="field"><label>Título</label><input id="d-titulo"></div>
+    <div class="field-row"><div class="field"><label>Categoría</label><select id="d-cat"></select></div><div class="field"><label>Responsable</label><input id="d-resp"></div></div>
+    <div class="field"><label>Enlace o ubicación (opcional)</label><input id="d-url" placeholder="Drive, carpeta física, etc."></div>
+    <div class="field-row"><div class="field"><label>Vence (opcional)</label><input id="d-vence" type="date"></div><div class="field"><label>Estado</label><select id="d-estado"><option value="vigente">Vigente</option><option value="archivado">Archivado</option></select></div></div>
+    <div class="field"><label>Descripción</label><textarea id="d-desc" rows="2"></textarea></div>
+  </div>
+  <div class="modal-foot"><button class="btn-ghost" onclick="AlmaKit.closeModal('m-d')">Cancelar</button><button class="btn-primary" onclick="save()">Guardar</button></div>
+</div></div>
+
+<script>window.ALMA_TOKEN="__TOKEN__"; window.ALMA_API="/alma/api/documentos";</script>
+<script src="/static/alma_kit.js"></script>
+<script>
+const {api,esc,toast,openModal,closeModal,fdate}=AlmaKit;
+const CATS=["Consentimiento informado","Protocolo clínico","Contrato","Certificado","Manual","Otro"];
+let FILT="Todas", ITEMS=[];
+const EST_BADGE={vigente:'green',por_vencer:'orange',vencido:'red',archivado:'mute'};
+const EST_LBL={vigente:'Vigente',por_vencer:'Por vencer',vencido:'Vencido',archivado:'Archivado'};
+async function loadKpis(){ const r=await api("/resumen");
+  document.getElementById('kpis').innerHTML=`
+   <div class="kpi"><div class="k-label">Documentos</div><div class="k-val">${r.total}</div><div class="k-sub">en la bóveda</div></div>
+   <div class="kpi alert"><div class="k-label">Por vencer</div><div class="k-val">${r.por_vencer}</div><div class="k-sub">próximos 30 días</div></div>
+   <div class="kpi bad"><div class="k-label">Vencidos</div><div class="k-val">${r.vencidos}</div><div class="k-sub">requieren acción</div></div>
+   <div class="kpi"><div class="k-label">Categorías</div><div class="k-val">${Object.keys(r.por_categoria).length}</div><div class="k-sub">tipos</div></div>`; }
+async function load(){ const r=await api(FILT==='Todas'?'':("?categoria="+encodeURIComponent(FILT))); ITEMS=r.documentos;
+  document.getElementById('chips').innerHTML=['Todas',...CATS].map(c=>`<div class="chip ${FILT===c?'active':''}" onclick="setF('${c.replace(/'/g,"\\'")}')">${c}</div>`).join('');
+  const tb=document.getElementById('tbody'),em=document.getElementById('empty');
+  if(!ITEMS.length){tb.innerHTML='';em.style.display='block';return;} em.style.display='none';
+  tb.innerHTML=ITEMS.map(x=>`<tr>
+    <td><div class="t-strong">${esc(x.titulo)}</div><div class="t-meta">${esc(x.categoria)}${x.url?' · '+esc(x.url.slice(0,40)):''}</div></td>
+    <td class="hide-sm t-meta">${esc(x.responsable||'—')}</td>
+    <td class="hide-sm">${x.vence?fdate(x.vence):'—'}</td>
+    <td><span class="badge ${EST_BADGE[x.estado_calc]||'mute'}">${EST_LBL[x.estado_calc]||x.estado_calc}</span></td>
+    <td class="num"><div class="row-actions">
+      <button class="icon-btn" onclick='edit(${x.id})' title="Editar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke-linecap="round"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke-linecap="round"/></svg></button>
+      <button class="icon-btn danger" onclick='del(${x.id})' title="Eliminar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" stroke-linecap="round"/></svg></button>
+    </div></td></tr>`).join(''); }
+function setF(c){FILT=c;load();}
+const F=id=>document.getElementById(id);
+function fillCats(){ F('d-cat').innerHTML=CATS.map(c=>`<option>${c}</option>`).join(''); }
+function openNew(){ F('d-title').textContent='Nuevo documento'; F('d-id').value=''; fillCats();
+  ['d-titulo','d-resp','d-url','d-vence','d-desc'].forEach(i=>F(i).value=''); F('d-estado').value='vigente'; openModal('m-d'); }
+function edit(id){ const x=ITEMS.find(i=>i.id===id); if(!x)return; F('d-title').textContent='Editar documento'; F('d-id').value=id; fillCats();
+  F('d-titulo').value=x.titulo; F('d-cat').value=x.categoria; F('d-resp').value=x.responsable||''; F('d-url').value=x.url||''; F('d-vence').value=(x.vence||'').slice(0,10); F('d-estado').value=x.estado||'vigente'; F('d-desc').value=x.descripcion||''; openModal('m-d'); }
+async function save(){ const id=F('d-id').value; const body={titulo:F('d-titulo').value.trim(),categoria:F('d-cat').value,responsable:F('d-resp').value.trim(),
+  url:F('d-url').value.trim(),vence:F('d-vence').value,estado:F('d-estado').value,descripcion:F('d-desc').value.trim()};
+  if(!body.titulo){toast('El título es obligatorio',true);return;}
+  try{ if(id) await api("/"+id,{method:"PATCH",body:JSON.stringify(body)}); else await api("",{method:"POST",body:JSON.stringify(body)});
+    closeModal('m-d'); toast('Guardado'); loadKpis(); load(); }catch(e){toast(e.message,true);} }
+async function del(id){ if(!confirm('¿Eliminar documento?'))return; try{ await api("/"+id,{method:"DELETE"}); toast('Eliminado'); loadKpis(); load(); }catch(e){toast(e.message,true);} }
+loadKpis(); load();
+</script></body></html>

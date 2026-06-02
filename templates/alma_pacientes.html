@@ -1,0 +1,68 @@
+<!DOCTYPE html><html lang="es"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex,nofollow">
+<title>Pacientes — Alma CMC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/alma_kit.css">
+</head><body>
+<div class="pg-topbar">
+  <h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke-linecap="round"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke-linecap="round"/></svg> Pacientes</h1>
+  <div class="spacer"></div>
+  <div class="search-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3" stroke-linecap="round"/></svg>
+    <input id="search" type="text" placeholder="Buscar por nombre, RUT o teléfono…" autocomplete="off"></div>
+</div>
+<div class="wrap">
+  <div class="kpis" id="kpis"></div>
+  <div class="card"><table><thead><tr>
+    <th>Paciente</th><th class="hide-sm">RUT</th><th class="hide-sm">Última cita</th><th class="num">Pagos</th><th class="num">Total</th><th class="num"></th>
+  </tr></thead><tbody id="tbody"></tbody></table>
+  <div id="empty" class="empty" style="display:none">Sin pacientes para esa búsqueda</div></div>
+</div>
+
+<div class="modal-bg" id="m-ficha"><div class="modal wide">
+  <div class="modal-head"><h2 id="f-nombre">Ficha</h2><div class="x" onclick="AlmaKit.closeModal('m-ficha')">✕</div></div>
+  <div class="modal-body" id="f-body"></div>
+</div></div>
+
+<script>
+window.ALMA_TOKEN="__TOKEN__"; window.ALMA_API="/alma/api/pacientes";
+</script>
+<script src="/static/alma_kit.js"></script>
+<script>
+const {api,clp,esc,toast,openModal,closeModal,debounce,fdate}=AlmaKit;
+async function loadKpis(){ try{ const r=await api("/resumen");
+  document.getElementById('kpis').innerHTML=`
+   <div class="kpi"><div class="k-label">Pacientes</div><div class="k-val">${r.total.toLocaleString('es-CL')}</div><div class="k-sub">en la base</div></div>
+   <div class="kpi"><div class="k-label">Con RUT</div><div class="k-val">${r.con_rut.toLocaleString('es-CL')}</div><div class="k-sub">identificados</div></div>
+   <div class="kpi good"><div class="k-label">Nuevos del mes</div><div class="k-val">${r.nuevos_mes}</div><div class="k-sub">perfiles creados</div></div>
+   <div class="kpi money"><div class="k-label">Activos del mes</div><div class="k-val">${r.activos_mes}</div><div class="k-sub">pagaron este mes</div></div>`;
+ }catch(e){toast(e.message,true);} }
+async function loadList(q){ try{ const r=await api("/buscar?q="+encodeURIComponent(q||""));
+  const tb=document.getElementById('tbody'), em=document.getElementById('empty');
+  if(!r.pacientes.length){ tb.innerHTML=''; em.style.display='block'; return; } em.style.display='none';
+  tb.innerHTML=r.pacientes.map(p=>`<tr>
+    <td><div class="t-strong">${esc(p.nombre||'—')}</div><div class="t-meta">${esc(p.phone||'')}</div></td>
+    <td class="hide-sm">${esc(p.rut||'—')}</td>
+    <td class="hide-sm">${p.ultima_cita_esp?esc(p.ultima_cita_esp)+' · '+fdate(p.ultima_cita_fecha):'—'}</td>
+    <td class="num">${p.n_pagos||0}</td>
+    <td class="num"><span class="t-strong">${clp(p.total_pagado)}</span></td>
+    <td class="num"><button class="btn-ghost" onclick='ficha("${encodeURIComponent(p.phone)}")'>Ver ficha</button></td></tr>`).join('');
+ }catch(e){toast(e.message,true);} }
+async function ficha(ph){ try{ const r=await api("/ficha?phone="+ph);
+  document.getElementById('f-nombre').textContent=r.perfil.nombre||'Paciente';
+  const tags=r.tags.map(t=>`<span class="badge aqua">${esc(t)}</span>`).join(' ')||'<span class="t-meta">sin etiquetas</span>';
+  const citas=r.citas.length?r.citas.map(c=>`<div class="oc-row" style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #eef4f8;font-size:12.5px"><div style="flex:1"><b>${esc(c.especialidad||'')}</b> ${esc(c.profesional||'')}</div><div class="t-meta">${fdate(c.fecha)} ${esc(c.hora||'')}</div></div>`).join(''):'<div class="t-meta" style="padding:8px 0">Sin citas registradas</div>';
+  const pagos=r.pagos.length?r.pagos.map(p=>`<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #eef4f8;font-size:12.5px"><div style="flex:1">${esc(p.area||p.profesional||'')} <span class="t-meta">${esc(p.prevision||'')}</span></div><div class="t-meta">${fdate(p.fecha)}</div><div class="t-strong">${clp(p.copago)}</div></div>`).join(''):'<div class="t-meta" style="padding:8px 0">Sin pagos registrados</div>';
+  document.getElementById('f-body').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">
+      <div class="kpi" style="border-radius:12px"><div class="k-label">RUT</div><div class="k-val" style="font-size:18px">${esc(r.perfil.rut||'—')}</div></div>
+      <div class="kpi money" style="border-radius:12px"><div class="k-label">Total pagado</div><div class="k-val" style="font-size:18px">${clp(r.total_pagado)}</div></div>
+      <div class="kpi" style="border-radius:12px"><div class="k-label">Mensajes</div><div class="k-val" style="font-size:18px">${r.n_mensajes}</div></div></div>
+    <div style="margin-bottom:14px">${tags}</div>
+    <div class="card-head" style="padding:10px 0;border:0">Citas recientes</div>${citas}
+    <div class="card-head" style="padding:14px 0 10px;border:0">Pagos recientes</div>${pagos}`;
+  openModal('m-ficha');
+ }catch(e){toast(e.message,true);} }
+document.getElementById('search').addEventListener('input', debounce(e=>loadList(e.target.value.trim()),250));
+loadKpis(); loadList("");
+</script></body></html>

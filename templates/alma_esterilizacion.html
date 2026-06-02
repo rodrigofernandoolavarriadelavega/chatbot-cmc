@@ -1,0 +1,82 @@
+<!DOCTYPE html><html lang="es"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex,nofollow">
+<title>Esterilización — Alma CMC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/alma_kit.css">
+</head><body>
+<div class="pg-topbar">
+  <h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg> Esterilización</h1>
+  <div class="spacer"></div>
+  <button class="btn-primary" onclick="openNew()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg> Registrar ciclo</button>
+</div>
+<div class="wrap">
+  <div class="kpis" id="kpis"></div>
+  <div class="chips" id="chips"></div>
+  <div class="card"><table><thead><tr>
+    <th>Fecha / Equipo</th><th class="hide-sm">Operador</th><th class="hide-sm">Carga</th><th>Quím.</th><th>Biol.</th><th>Resultado</th><th class="num"></th>
+  </tr></thead><tbody id="tbody"></tbody></table>
+  <div id="empty" class="empty" style="display:none">Sin ciclos registrados</div></div>
+  <div class="note">Registro exigido por SEREMI para la habilitación del área de esterilización: cada ciclo de autoclave con su indicador químico (clase 5/6) y biológico (esporas, ≥semanal).</div>
+</div>
+
+<div class="modal-bg" id="m-c"><div class="modal">
+  <div class="modal-head"><h2 id="c-title">Registrar ciclo</h2><div class="x" onclick="AlmaKit.closeModal('m-c')">✕</div></div>
+  <div class="modal-body"><input type="hidden" id="c-id">
+    <div class="field-row"><div class="field"><label>Fecha</label><input id="c-fecha" type="date"></div><div class="field"><label>Hora</label><input id="c-hora" type="time"></div></div>
+    <div class="field-row"><div class="field"><label>Equipo</label><input id="c-equipo" value="Autoclave 1"></div><div class="field"><label>Operador</label><input id="c-op"></div></div>
+    <div class="field-row-3"><div class="field"><label>Programa</label><input id="c-prog" placeholder="134°C 4min"></div><div class="field"><label>Temp.</label><input id="c-temp" placeholder="134°C"></div><div class="field"><label>Duración (min)</label><input id="c-dur" type="number" value="0"></div></div>
+    <div class="field-row"><div class="field"><label>Lote</label><input id="c-lote"></div><div class="field"><label>Resultado</label><select id="c-res"><option value="en_proceso">En proceso</option><option value="aprobado">Aprobado</option><option value="rechazado">Rechazado</option></select></div></div>
+    <div class="field"><label>Carga (contenido)</label><input id="c-carga" placeholder="Cajas instrumental, fresas…"></div>
+    <div class="field-row"><div class="field"><label>Indicador químico</label><select id="c-iq"><option value="pendiente">Pendiente</option><option value="ok">OK</option><option value="falla">Falla</option><option value="na">N/A</option></select></div>
+      <div class="field"><label>Indicador biológico</label><select id="c-ib"><option value="na">N/A</option><option value="pendiente">Pendiente</option><option value="ok">OK</option><option value="falla">Falla</option></select></div></div>
+  </div>
+  <div class="modal-foot"><button class="btn-ghost" onclick="AlmaKit.closeModal('m-c')">Cancelar</button><button class="btn-primary" onclick="save()">Guardar</button></div>
+</div></div>
+
+<script>window.ALMA_TOKEN="__TOKEN__"; window.ALMA_API="/alma/api/esterilizacion";</script>
+<script src="/static/alma_kit.js"></script>
+<script>
+const {api,esc,toast,openModal,closeModal,fdate}=AlmaKit;
+let FILT="todos", ITEMS=[];
+const RES_BADGE={aprobado:'green',rechazado:'red',en_proceso:'orange'};
+const IND_BADGE={ok:'green',falla:'red',pendiente:'orange',na:'mute'};
+async function loadKpis(){ const r=await api("/resumen");
+  document.getElementById('kpis').innerHTML=`
+   <div class="kpi"><div class="k-label">Ciclos del mes</div><div class="k-val">${r.ciclos_mes}</div><div class="k-sub">${r.total_historico} histórico</div></div>
+   <div class="kpi good"><div class="k-label">% Aprobado</div><div class="k-val">${r.pct_aprobado}%</div><div class="k-sub">${r.aprobados_mes} aprobados</div></div>
+   <div class="kpi bad"><div class="k-label">Rechazados</div><div class="k-val">${r.rechazados_mes}</div><div class="k-sub">este mes</div></div>
+   <div class="kpi alert"><div class="k-label">Biológico pendiente</div><div class="k-val">${r.biologico_pendiente}</div><div class="k-sub">esperan lectura</div></div>`; }
+async function load(){ const r=await api(FILT==='todos'?'':("?resultado="+FILT)); ITEMS=r.ciclos;
+  document.getElementById('chips').innerHTML=['todos','aprobado','en_proceso','rechazado'].map(e=>`<div class="chip ${FILT===e?'active':''}" onclick="setF('${e}')">${e==='todos'?'Todos':e.replace('_',' ')}</div>`).join('');
+  const tb=document.getElementById('tbody'),em=document.getElementById('empty');
+  if(!ITEMS.length){tb.innerHTML='';em.style.display='block';return;} em.style.display='none';
+  tb.innerHTML=ITEMS.map(x=>`<tr>
+    <td><div class="t-strong">${fdate(x.fecha)} ${esc(x.hora||'')}</div><div class="t-meta">${esc(x.equipo)} ${x.lote?'· lote '+esc(x.lote):''}</div></td>
+    <td class="hide-sm">${esc(x.operador||'—')}</td>
+    <td class="hide-sm t-meta">${esc((x.carga||'').slice(0,40))}</td>
+    <td><span class="badge ${IND_BADGE[x.ind_quimico]||'mute'}">${esc(x.ind_quimico)}</span></td>
+    <td><span class="badge ${IND_BADGE[x.ind_biologico]||'mute'}">${esc(x.ind_biologico)}</span></td>
+    <td><span class="badge ${RES_BADGE[x.resultado]||'mute'}">${esc(x.resultado.replace('_',' '))}</span></td>
+    <td class="num"><div class="row-actions">
+      <button class="icon-btn" onclick='edit(${x.id})' title="Editar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke-linecap="round"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke-linecap="round"/></svg></button>
+      <button class="icon-btn danger" onclick='del(${x.id})' title="Eliminar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" stroke-linecap="round"/></svg></button>
+    </div></td></tr>`).join(''); }
+function setF(e){FILT=e;load();}
+const F=id=>document.getElementById(id);
+function openNew(){ F('c-title').textContent='Registrar ciclo'; F('c-id').value=''; const n=new Date();
+  F('c-fecha').value=n.toISOString().slice(0,10); F('c-hora').value=n.toTimeString().slice(0,5);
+  F('c-equipo').value='Autoclave 1'; ['c-op','c-prog','c-temp','c-lote','c-carga'].forEach(i=>F(i).value=''); F('c-dur').value=0;
+  F('c-res').value='en_proceso'; F('c-iq').value='pendiente'; F('c-ib').value='na'; openModal('m-c'); }
+function edit(id){ const x=ITEMS.find(i=>i.id===id); if(!x)return; F('c-title').textContent='Editar ciclo'; F('c-id').value=id;
+  F('c-fecha').value=(x.fecha||'').slice(0,10); F('c-hora').value=x.hora||''; F('c-equipo').value=x.equipo; F('c-op').value=x.operador||'';
+  F('c-prog').value=x.programa||''; F('c-temp').value=x.temperatura||''; F('c-dur').value=x.duracion_min||0; F('c-lote').value=x.lote||'';
+  F('c-carga').value=x.carga||''; F('c-res').value=x.resultado; F('c-iq').value=x.ind_quimico; F('c-ib').value=x.ind_biologico; openModal('m-c'); }
+async function save(){ const id=F('c-id').value; const body={fecha:F('c-fecha').value,hora:F('c-hora').value,equipo:F('c-equipo').value.trim(),operador:F('c-op').value.trim(),
+  programa:F('c-prog').value.trim(),temperatura:F('c-temp').value.trim(),duracion_min:+F('c-dur').value||0,lote:F('c-lote').value.trim(),carga:F('c-carga').value.trim(),
+  resultado:F('c-res').value,ind_quimico:F('c-iq').value,ind_biologico:F('c-ib').value};
+  try{ if(id) await api("/"+id,{method:"PATCH",body:JSON.stringify(body)}); else await api("",{method:"POST",body:JSON.stringify(body)});
+    closeModal('m-c'); toast('Guardado'); loadKpis(); load(); }catch(e){toast(e.message,true);} }
+async function del(id){ if(!confirm('¿Eliminar este ciclo?'))return; try{ await api("/"+id,{method:"DELETE"}); toast('Eliminado'); loadKpis(); load(); }catch(e){toast(e.message,true);} }
+loadKpis(); load();
+</script></body></html>

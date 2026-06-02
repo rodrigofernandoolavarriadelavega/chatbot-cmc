@@ -1,0 +1,110 @@
+<!DOCTYPE html><html lang="es"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex,nofollow">
+<title>Habilitación SEREMI — Alma CMC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/alma_kit.css">
+<style>
+ .prog{height:14px;background:var(--bg);border-radius:999px;overflow:hidden;border:1px solid var(--border)}
+ .prog > div{height:100%;background:linear-gradient(90deg,var(--aqua),var(--blue));border-radius:999px;transition:width .4s}
+ .meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+ .meta-c{background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px 14px;box-shadow:var(--sh-sm)}
+ .meta-c .ml{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mute)}
+ .meta-c .mv{font-size:12.5px;font-weight:600;color:var(--navy);margin-top:4px;line-height:1.35}
+ .sala-card{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid #eef4f8}
+ .sala-card:last-child{border-bottom:0}
+ .check{width:22px;height:22px;border-radius:7px;border:2px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .14s;background:#fff}
+ .check.on{background:var(--green);border-color:var(--green);color:#fff}
+ .check svg{width:14px;height:14px;opacity:0} .check.on svg{opacity:1}
+ .it{display:flex;align-items:flex-start;gap:11px;padding:9px 0;border-bottom:1px solid #eef4f8}
+ .it:last-child{border-bottom:0}
+ .it .txt{flex:1;font-size:12.5px} .it.done .txt{text-decoration:line-through;color:var(--mute)}
+ .cat-h{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--blue);margin:18px 0 6px;display:flex;align-items:center;gap:8px}
+ .cat-h .cnt{font-weight:600;color:var(--mute);font-size:10.5px}
+ .sel{font-family:inherit;font-size:12px;border:1px solid var(--border);border-radius:7px;padding:3px 7px;color:var(--navy);background:#fff}
+</style>
+</head><body>
+<div class="pg-topbar">
+  <h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" stroke-linecap="round" stroke-linejoin="round"/></svg> Habilitación SEREMI</h1>
+  <div class="spacer"></div>
+  <button class="btn-ghost" onclick="openAdd()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg> Ítem</button>
+</div>
+<div class="wrap">
+  <div class="kpis" id="kpis"></div>
+  <div class="card" style="margin-bottom:16px"><div style="padding:16px 18px">
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px"><b style="color:var(--navy)">Avance del expediente</b><b id="pct-lbl" style="color:var(--blue)">0%</b></div>
+    <div class="prog"><div id="prog" style="width:0%"></div></div>
+  </div></div>
+
+  <div class="meta-grid" id="meta"></div>
+
+  <div class="card"><div class="card-head">Salas a habilitar</div><div style="padding:6px 18px 12px" id="salas"></div></div>
+
+  <div class="card" style="margin-top:16px"><div class="card-head">Checklist documental
+    <select class="sel" id="catf" onchange="loadItems()"><option value="Todas">Todas las categorías</option></select></div>
+    <div style="padding:6px 18px 14px" id="items"></div></div>
+  <div class="note">Tracker del expediente de ampliación ante SEREMI Biobío. Trámite PYME (Ley 20.416): arancel total $1.000. Esterilización: central propia (autoclave ya registrado).</div>
+</div>
+
+<div class="modal-bg" id="m-add"><div class="modal">
+  <div class="modal-head"><h2>Nuevo ítem del checklist</h2><div class="x" onclick="AlmaKit.closeModal('m-add')">✕</div></div>
+  <div class="modal-body">
+    <div class="field"><label>Ítem</label><input id="a-item" placeholder="Ej: Certificado de fumigación"></div>
+    <div class="field"><label>Categoría</label><select id="a-cat"></select></div>
+  </div>
+  <div class="modal-foot"><button class="btn-ghost" onclick="AlmaKit.closeModal('m-add')">Cancelar</button><button class="btn-primary" onclick="addItem()">Agregar</button></div>
+</div></div>
+
+<script>window.ALMA_TOKEN="__TOKEN__"; window.ALMA_API="/alma/api/habilitacion";</script>
+<script src="/static/alma_kit.js"></script>
+<script>
+const {api,esc,toast,openModal,closeModal}=AlmaKit;
+const CHK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const SALA_BADGE={pendiente:'orange',en_revision:'aqua',aprobada:'green'};
+let CATS=[];
+const META_LBL={seremi:'SEREMI',tipo_tramite:'Tipo de trámite',resolucion_vigente:'Resolución vigente',pyme_ley_20416:'PYME Ley 20.416',esterilizacion:'Esterilización',inicio:'Inicio'};
+async function loadAll(){ await Promise.all([loadResumen(),loadSalas(),loadItems()]); }
+async function loadResumen(){ const r=await api("/resumen");
+  document.getElementById('pct-lbl').textContent=r.pct_avance+'%';
+  document.getElementById('prog').style.width=r.pct_avance+'%';
+  document.getElementById('kpis').innerHTML=`
+   <div class="kpi"><div class="k-label">Avance</div><div class="k-val">${r.pct_avance}%</div><div class="k-sub">${r.items_hechos}/${r.items_total} ítems</div></div>
+   <div class="kpi"><div class="k-label">Salas</div><div class="k-val">${r.salas_aprobadas}/${r.salas_total}</div><div class="k-sub">aprobadas</div></div>
+   <div class="kpi alert"><div class="k-label">Pendiente</div><div class="k-val">${r.items_total-r.items_hechos}</div><div class="k-sub">ítems por completar</div></div>
+   <div class="kpi good"><div class="k-label">PYME</div><div class="k-val" style="font-size:18px">$1.000</div><div class="k-sub">arancel total</div></div>`;
+  document.getElementById('meta').innerHTML=Object.entries(r.meta).map(([k,v])=>`<div class="meta-c"><div class="ml">${esc(META_LBL[k]||k)}</div><div class="mv">${esc(v)}</div></div>`).join('');
+  // llenar filtro de categorías
+  const catf=document.getElementById('catf');
+  if(catf.options.length<=1){ Object.keys(r.por_categoria).forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=`${c} (${r.por_categoria[c].hechos}/${r.por_categoria[c].total})`; catf.appendChild(o); }); }
+}
+async function loadSalas(){ const r=await api("/salas");
+  document.getElementById('salas').innerHTML=r.salas.map(s=>`<div class="sala-card">
+    <div style="flex:1"><div class="t-strong">${esc(s.sala)}</div><div class="t-meta">${esc(s.responsable||'')} ${s.notas?'· '+esc(s.notas):''}</div></div>
+    <select class="sel" onchange='setSala(${s.id},this.value)'>
+      ${['pendiente','en_revision','aprobada'].map(e=>`<option value="${e}" ${s.estado===e?'selected':''}>${e.replace('_',' ')}</option>`).join('')}
+    </select>
+    <span class="badge ${SALA_BADGE[s.estado]||'mute'}" style="min-width:70px;justify-content:center">${esc(s.estado.replace('_',' '))}</span>
+  </div>`).join(''); }
+async function loadItems(){ const cat=document.getElementById('catf').value;
+  const r=await api("/items"+(cat&&cat!=='Todas'?("?categoria="+encodeURIComponent(cat)):"")); CATS=r.categorias;
+  // agrupar por categoria
+  const groups={}; r.items.forEach(i=>{(groups[i.categoria]=groups[i.categoria]||[]).push(i);});
+  let html='';
+  Object.entries(groups).forEach(([c,arr])=>{
+    const done=arr.filter(i=>i.hecho).length;
+    html+=`<div class="cat-h">${esc(c)} <span class="cnt">${done}/${arr.length}</span></div>`;
+    html+=arr.map(i=>`<div class="it ${i.hecho?'done':''}">
+      <div class="check ${i.hecho?'on':''}" onclick='toggle(${i.id},${i.hecho?0:1})'>${CHK}</div>
+      <div class="txt">${esc(i.item)}${i.sala?` <span class="badge mute">${esc(i.sala)}</span>`:''}</div>
+      <button class="icon-btn danger" onclick='delItem(${i.id})' title="Eliminar" style="width:26px;height:26px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2" stroke-linecap="round"/></svg></button>
+    </div>`).join('');
+  });
+  document.getElementById('items').innerHTML=html||'<div class="empty">Sin ítems</div>'; }
+async function toggle(id,val){ try{ await api("/items/"+id,{method:"PATCH",body:JSON.stringify({hecho:val})}); loadResumen(); loadItems(); }catch(e){toast(e.message,true);} }
+async function setSala(id,estado){ try{ await api("/salas/"+id,{method:"PATCH",body:JSON.stringify({estado})}); toast('Sala actualizada'); loadResumen(); loadSalas(); }catch(e){toast(e.message,true);} }
+function openAdd(){ const sel=document.getElementById('a-cat'); sel.innerHTML=(CATS.length?CATS:['Transversal','Por sala','Esterilización','Toma de muestras','Decisiones','Hitos']).map(c=>`<option>${c}</option>`).join(''); document.getElementById('a-item').value=''; openModal('m-add'); }
+async function addItem(){ const item=document.getElementById('a-item').value.trim(); if(!item){toast('Escribe el ítem',true);return;}
+  try{ await api("/items",{method:"POST",body:JSON.stringify({item,categoria:document.getElementById('a-cat').value})}); closeModal('m-add'); toast('Agregado'); loadResumen(); loadItems(); }catch(e){toast(e.message,true);} }
+async function delItem(id){ if(!confirm('¿Eliminar ítem?'))return; try{ await api("/items/"+id,{method:"DELETE"}); loadResumen(); loadItems(); }catch(e){toast(e.message,true);} }
+loadAll();
+</script></body></html>
