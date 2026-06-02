@@ -3867,6 +3867,21 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             prof = seg.get("profesional", "") if seg else ""
 
             if categoria == "mejor":
+                # Anti-loop: si el paciente repite "Mejor" (escribe en vez de
+                # tocar el botón), NO re-ofrecer el mismo upsell. Acusa recibo y
+                # da salida (hallazgo auditoría: bot repetía el upsell de masoterapia).
+                _ups_ts = data.get("upsell_postconsulta_ts")
+                if _ups_ts:
+                    try:
+                        _prev = datetime.fromisoformat(_ups_ts)
+                        if (datetime.now(timezone.utc) - _prev).total_seconds() < 1800:
+                            return _btn_msg(
+                                "¡Genial que te sientas bien! 😊 Cuando quieras "
+                                "agendar tu control, escríbeme *agendar*.",
+                                [{"id": "menu", "title": "🏠 Menú"}],
+                            )
+                    except Exception:
+                        pass
                 log_event(phone, "seguimiento_mejor",
                           {"especialidad": esp, "rating": rating})
                 # Pide reseña Google solo a promotores (rating ≥ 4)
@@ -3877,6 +3892,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     pass
                 # Cross-sell inteligente según especialidad
                 upsell = UPSELL_POSTCONSULTA.get(esp.lower()) if esp else None
+                data["upsell_postconsulta_ts"] = datetime.now(timezone.utc).isoformat()
                 if upsell:
                     upsell_msg, upsell_esp = upsell
                     data["upsell_especialidad"] = upsell_esp
@@ -3888,6 +3904,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         [{"id": "upsell_si", "title": "Sí, me interesa"},
                          {"id": "no_control", "title": "No por ahora"}]
                     )
+                save_session(phone, "IDLE", data)  # persistir upsell_postconsulta_ts (anti-loop)
                 return _btn_msg(
                     "Qué bueno saberlo 😊 Nos alegra que te sientas bien.\n\n"
                     "¿Quieres agendar tu control de seguimiento?",
