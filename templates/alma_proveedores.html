@@ -1,0 +1,117 @@
+<!DOCTYPE html><html lang="es"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex,nofollow">
+<title>Proveedores — Alma CMC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/alma_kit.css">
+</head><body>
+<div class="pg-topbar">
+  <h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l1-5h16l1 5M3 9v10a1 1 0 001 1h16a1 1 0 001-1V9M3 9h18M9 13h6" stroke-linecap="round" stroke-linejoin="round"/></svg> Proveedores</h1>
+  <div class="spacer"></div>
+  <button class="btn-ghost" id="btn-add-prov" onclick="openProv()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg> Proveedor</button>
+  <button class="btn-primary" id="btn-add-oc" onclick="openOC()" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg> Orden de compra</button>
+</div>
+<div class="wrap">
+  <div class="kpis" id="kpis"></div>
+  <div class="chips">
+    <div class="chip active" id="tab-prov" onclick="setTab('prov')">Proveedores</div>
+    <div class="chip" id="tab-oc" onclick="setTab('oc')">Órdenes de compra</div>
+  </div>
+  <div class="card" id="card-prov"><table><thead><tr>
+    <th>Proveedor</th><th class="hide-sm">Rubro</th><th class="hide-sm">Contacto</th><th>Condiciones</th><th class="num"></th>
+  </tr></thead><tbody id="tb-prov"></tbody></table><div id="empty-prov" class="empty" style="display:none">Sin proveedores</div></div>
+  <div class="card" id="card-oc" style="display:none"><table><thead><tr>
+    <th>Fecha / Proveedor</th><th class="hide-sm">Descripción</th><th class="num">Monto</th><th>Estado</th><th class="num"></th>
+  </tr></thead><tbody id="tb-oc"></tbody></table><div id="empty-oc" class="empty" style="display:none">Sin órdenes de compra</div></div>
+</div>
+
+<div class="modal-bg" id="m-prov"><div class="modal">
+  <div class="modal-head"><h2 id="prov-title">Nuevo proveedor</h2><div class="x" onclick="AlmaKit.closeModal('m-prov')">✕</div></div>
+  <div class="modal-body"><input type="hidden" id="pv-id">
+    <div class="field-row"><div class="field"><label>Nombre</label><input id="pv-nombre"></div><div class="field"><label>Rubro</label><select id="pv-rubro"></select></div></div>
+    <div class="field-row"><div class="field"><label>Contacto</label><input id="pv-contacto"></div><div class="field"><label>Teléfono</label><input id="pv-tel"></div></div>
+    <div class="field-row"><div class="field"><label>Email</label><input id="pv-email"></div><div class="field"><label>Sitio web</label><input id="pv-web"></div></div>
+    <div class="field"><label>Dirección</label><input id="pv-dir"></div>
+    <div class="field"><label>Condiciones de pago</label><input id="pv-cond" placeholder="Contado, 30 días…"></div>
+    <div class="field"><label>Notas</label><input id="pv-notas"></div>
+  </div>
+  <div class="modal-foot"><button class="btn-ghost" onclick="AlmaKit.closeModal('m-prov')">Cancelar</button><button class="btn-primary" onclick="saveProv()">Guardar</button></div>
+</div></div>
+
+<div class="modal-bg" id="m-oc"><div class="modal">
+  <div class="modal-head"><h2 id="oc-title">Nueva orden de compra</h2><div class="x" onclick="AlmaKit.closeModal('m-oc')">✕</div></div>
+  <div class="modal-body"><input type="hidden" id="oc-id">
+    <div class="field-row"><div class="field"><label>Proveedor</label><select id="oc-prov"></select></div><div class="field"><label>Fecha</label><input id="oc-fecha" type="date"></div></div>
+    <div class="field"><label>Descripción</label><input id="oc-desc" placeholder="Insumos, equipos…"></div>
+    <div class="field-row"><div class="field"><label>Monto (CLP)</label><input id="oc-monto" type="number" value="0"></div><div class="field"><label>Estado</label><select id="oc-estado"><option value="borrador">Borrador</option><option value="enviada">Enviada</option><option value="recibida">Recibida</option><option value="pagada">Pagada</option></select></div></div>
+    <div class="field"><label>Notas</label><input id="oc-notas"></div>
+  </div>
+  <div class="modal-foot"><button class="btn-ghost" onclick="AlmaKit.closeModal('m-oc')">Cancelar</button><button class="btn-primary" onclick="saveOC()">Guardar</button></div>
+</div></div>
+
+<script>window.ALMA_TOKEN="__TOKEN__"; window.ALMA_API="/alma/api/proveedores";</script>
+<script src="/static/alma_kit.js"></script>
+<script>
+const {api,clp,esc,toast,openModal,closeModal,fdate}=AlmaKit;
+const RUBROS=["Insumos dental","Insumos médico","Laboratorio","Aseo","Servicios","Equipamiento","Farmacia","Otro"];
+const OCB={borrador:'mute',enviada:'aqua',recibida:'orange',pagada:'green'};
+let TAB='prov', PROV=[], OC=[];
+async function loadKpis(){ const r=await api("/resumen");
+  document.getElementById('kpis').innerHTML=`
+   <div class="kpi"><div class="k-label">Proveedores</div><div class="k-val">${r.proveedores_activos}</div><div class="k-sub">activos</div></div>
+   <div class="kpi alert"><div class="k-label">OC abiertas</div><div class="k-val">${r.oc_abiertas}</div><div class="k-sub">sin pagar</div></div>
+   <div class="kpi money"><div class="k-label">Compras del mes</div><div class="k-val">${clp(r.gasto_compras_mes)}</div><div class="k-sub">recibidas/pagadas</div></div>
+   <div class="kpi"><div class="k-label">Inventario</div><div class="k-val" style="font-size:15px">Ver módulo</div><div class="k-sub">orden sugerida</div></div>`; }
+function setTab(t){ TAB=t;
+  document.getElementById('tab-prov').classList.toggle('active',t==='prov');
+  document.getElementById('tab-oc').classList.toggle('active',t==='oc');
+  document.getElementById('card-prov').style.display=t==='prov'?'block':'none';
+  document.getElementById('card-oc').style.display=t==='oc'?'block':'none';
+  document.getElementById('btn-add-prov').style.display=t==='prov'?'inline-flex':'none';
+  document.getElementById('btn-add-oc').style.display=t==='oc'?'inline-flex':'none';
+  if(t==='oc') loadOC(); else loadProv();
+}
+async function loadProv(){ const r=await api(""); PROV=r.proveedores;
+  const tb=document.getElementById('tb-prov'),em=document.getElementById('empty-prov');
+  if(!PROV.length){tb.innerHTML='';em.style.display='block';return;} em.style.display='none';
+  tb.innerHTML=PROV.map(x=>`<tr>
+    <td><div class="t-strong">${esc(x.nombre)}</div><div class="t-meta">${esc(x.sitio_web||'')} ${x.telefono?'· '+esc(x.telefono):''}</div></td>
+    <td class="hide-sm"><span class="badge aqua">${esc(x.rubro)}</span></td>
+    <td class="hide-sm t-meta">${esc(x.contacto||'—')}</td>
+    <td class="t-meta">${esc(x.condiciones_pago||'—')}</td>
+    <td class="num"><div class="row-actions">
+      <button class="icon-btn" onclick='editProv(${x.id})' title="Editar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke-linecap="round"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke-linecap="round"/></svg></button>
+      <button class="icon-btn danger" onclick='delProv(${x.id})' title="Eliminar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" stroke-linecap="round"/></svg></button>
+    </div></td></tr>`).join(''); }
+async function loadOC(){ const r=await api("/ordenes"); OC=r.ordenes;
+  const tb=document.getElementById('tb-oc'),em=document.getElementById('empty-oc');
+  if(!OC.length){tb.innerHTML='';em.style.display='block';return;} em.style.display='none';
+  tb.innerHTML=OC.map(x=>`<tr>
+    <td><div class="t-strong">${esc(x.proveedor_nombre||'—')}</div><div class="t-meta">${fdate(x.fecha)}</div></td>
+    <td class="hide-sm t-meta">${esc((x.descripcion||'').slice(0,50))}</td>
+    <td class="num t-strong">${clp(x.monto)}</td>
+    <td><span class="badge ${OCB[x.estado]||'mute'}">${esc(x.estado)}</span></td>
+    <td class="num"><div class="row-actions">
+      <button class="icon-btn" onclick='editOC(${x.id})' title="Editar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke-linecap="round"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke-linecap="round"/></svg></button>
+      <button class="icon-btn danger" onclick='delOC(${x.id})' title="Eliminar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" stroke-linecap="round"/></svg></button>
+    </div></td></tr>`).join(''); }
+const F=id=>document.getElementById(id);
+function openProv(){ F('prov-title').textContent='Nuevo proveedor'; F('pv-id').value=''; F('pv-rubro').innerHTML=RUBROS.map(r=>`<option>${r}</option>`).join('');
+  ['pv-nombre','pv-contacto','pv-tel','pv-email','pv-web','pv-dir','pv-cond','pv-notas'].forEach(i=>F(i).value=''); openModal('m-prov'); }
+function editProv(id){ const x=PROV.find(i=>i.id===id); if(!x)return; F('prov-title').textContent='Editar proveedor'; F('pv-id').value=id; F('pv-rubro').innerHTML=RUBROS.map(r=>`<option>${r}</option>`).join('');
+  F('pv-nombre').value=x.nombre; F('pv-rubro').value=x.rubro; F('pv-contacto').value=x.contacto||''; F('pv-tel').value=x.telefono||''; F('pv-email').value=x.email||''; F('pv-web').value=x.sitio_web||''; F('pv-dir').value=x.direccion||''; F('pv-cond').value=x.condiciones_pago||''; F('pv-notas').value=x.notas||''; openModal('m-prov'); }
+async function saveProv(){ const id=F('pv-id').value; const body={nombre:F('pv-nombre').value.trim(),rubro:F('pv-rubro').value,contacto:F('pv-contacto').value.trim(),telefono:F('pv-tel').value.trim(),email:F('pv-email').value.trim(),sitio_web:F('pv-web').value.trim(),direccion:F('pv-dir').value.trim(),condiciones_pago:F('pv-cond').value.trim(),notas:F('pv-notas').value.trim()};
+  if(!body.nombre){toast('Nombre obligatorio',true);return;}
+  try{ if(id) await api("/"+id,{method:"PATCH",body:JSON.stringify(body)}); else await api("",{method:"POST",body:JSON.stringify(body)}); closeModal('m-prov'); toast('Guardado'); loadKpis(); loadProv(); }catch(e){toast(e.message,true);} }
+async function delProv(id){ if(!confirm('¿Eliminar proveedor?'))return; try{ await api("/"+id,{method:"DELETE"}); toast('Eliminado'); loadKpis(); loadProv(); }catch(e){toast(e.message,true);} }
+function fillProvSelect(){ F('oc-prov').innerHTML='<option value="">— Sin proveedor —</option>'+PROV.map(p=>`<option value="${p.id}">${esc(p.nombre)}</option>`).join(''); }
+function openOC(){ if(!PROV.length){ api("").then(r=>{PROV=r.proveedores;_openOC();}); } else _openOC(); }
+function _openOC(){ F('oc-title').textContent='Nueva orden de compra'; F('oc-id').value=''; fillProvSelect();
+  F('oc-fecha').value=new Date().toISOString().slice(0,10); F('oc-desc').value=''; F('oc-monto').value=0; F('oc-estado').value='borrador'; F('oc-notas').value=''; openModal('m-oc'); }
+function editOC(id){ const x=OC.find(i=>i.id===id); if(!x)return; if(!PROV.length){api("").then(r=>{PROV=r.proveedores;_editOC(x);});} else _editOC(x); }
+function _editOC(x){ F('oc-title').textContent='Editar orden'; F('oc-id').value=x.id; fillProvSelect(); F('oc-prov').value=x.proveedor_id||''; F('oc-fecha').value=(x.fecha||'').slice(0,10); F('oc-desc').value=x.descripcion||''; F('oc-monto').value=x.monto; F('oc-estado').value=x.estado; F('oc-notas').value=x.notas||''; openModal('m-oc'); }
+async function saveOC(){ const id=F('oc-id').value; const pv=F('oc-prov').value; const body={proveedor_id:pv?+pv:null,proveedor_nombre:pv?(PROV.find(p=>p.id==pv)||{}).nombre||'':'',fecha:F('oc-fecha').value,descripcion:F('oc-desc').value.trim(),monto:+F('oc-monto').value||0,estado:F('oc-estado').value,notas:F('oc-notas').value.trim()};
+  try{ if(id) await api("/ordenes/"+id,{method:"PATCH",body:JSON.stringify(body)}); else await api("/ordenes",{method:"POST",body:JSON.stringify(body)}); closeModal('m-oc'); toast('Guardado'); loadKpis(); loadOC(); }catch(e){toast(e.message,true);} }
+async function delOC(id){ if(!confirm('¿Eliminar orden?'))return; try{ await api("/ordenes/"+id,{method:"DELETE"}); toast('Eliminada'); loadKpis(); loadOC(); }catch(e){toast(e.message,true);} }
+loadKpis(); loadProv();
+</script></body></html>

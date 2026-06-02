@@ -1,0 +1,82 @@
+<!DOCTYPE html><html lang="es"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex,nofollow">
+<title>Interconsultas — Alma CMC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/alma_kit.css">
+</head><body>
+<div class="pg-topbar">
+  <h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5M21 3l-7 7M8 21H3v-5M3 21l7-7" stroke-linecap="round" stroke-linejoin="round"/></svg> Interconsultas</h1>
+  <div class="spacer"></div>
+  <button class="btn-primary" onclick="openNew()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg> Derivar paciente</button>
+</div>
+<div class="wrap">
+  <div class="kpis" id="kpis"></div>
+  <div class="chips" id="chips"></div>
+  <div class="card"><table><thead><tr>
+    <th>Paciente</th><th>Origen → Destino</th><th class="hide-sm">Motivo</th><th>Prioridad</th><th>Estado</th><th class="num"></th>
+  </tr></thead><tbody id="tbody"></tbody></table>
+  <div id="empty" class="empty" style="display:none">No hay interconsultas con ese filtro</div></div>
+</div>
+
+<div class="modal-bg" id="m-ic"><div class="modal">
+  <div class="modal-head"><h2 id="ic-title">Nueva interconsulta</h2><div class="x" onclick="AlmaKit.closeModal('m-ic')">✕</div></div>
+  <div class="modal-body"><input type="hidden" id="ic-id">
+    <div class="field"><label>Paciente</label><input id="ic-nombre" placeholder="Nombre del paciente"></div>
+    <div class="field-row"><div class="field"><label>RUT</label><input id="ic-rut"></div><div class="field"><label>Teléfono</label><input id="ic-tel"></div></div>
+    <div class="field-row"><div class="field"><label>Especialidad origen</label><input id="ic-oe" placeholder="Ej: Traumatología"></div><div class="field"><label>Profesional origen</label><input id="ic-op"></div></div>
+    <div class="field-row"><div class="field"><label>Especialidad destino *</label><input id="ic-de" placeholder="Ej: Kinesiología"></div><div class="field"><label>Profesional destino</label><input id="ic-dp"></div></div>
+    <div class="field-row"><div class="field"><label>Prioridad</label><select id="ic-prio"><option value="rutina">Rutina</option><option value="preferente">Preferente</option><option value="urgente">Urgente</option></select></div>
+      <div class="field" id="ic-estado-row" style="display:none"><label>Estado</label><select id="ic-estado"><option value="pendiente">Pendiente</option><option value="agendada">Agendada</option><option value="completada">Completada</option><option value="rechazada">Rechazada</option></select></div></div>
+    <div class="field"><label>Motivo</label><textarea id="ic-motivo" rows="2" placeholder="Motivo de la derivación"></textarea></div>
+  </div>
+  <div class="modal-foot"><button class="btn-ghost" onclick="AlmaKit.closeModal('m-ic')">Cancelar</button><button class="btn-primary" onclick="save()">Guardar</button></div>
+</div></div>
+
+<script>window.ALMA_TOKEN="__TOKEN__"; window.ALMA_API="/alma/api/interconsultas";</script>
+<script src="/static/alma_kit.js"></script>
+<script>
+const {api,esc,toast,openModal,closeModal,fdate}=AlmaKit;
+let FILT="todas", ITEMS=[];
+const PRIO_BADGE={urgente:'red',preferente:'orange',rutina:'mute'};
+const EST_BADGE={pendiente:'orange',agendada:'aqua',completada:'green',rechazada:'mute'};
+async function loadKpis(){ const r=await api("/resumen");
+  document.getElementById('kpis').innerHTML=`
+   <div class="kpi"><div class="k-label">Total</div><div class="k-val">${r.total}</div><div class="k-sub">derivaciones</div></div>
+   <div class="kpi alert"><div class="k-label">Pendientes</div><div class="k-val">${r.pendientes}</div><div class="k-sub">por gestionar</div></div>
+   <div class="kpi bad"><div class="k-label">Urgentes activas</div><div class="k-val">${r.urgentes}</div><div class="k-sub">prioridad alta</div></div>
+   <div class="kpi good"><div class="k-label">Completadas</div><div class="k-val">${r.completadas}</div><div class="k-sub">cerradas</div></div>`; }
+async function load(){ const r=await api(FILT==='todas'?'':("?estado="+FILT)); ITEMS=r.interconsultas;
+  const chips=['todas','pendiente','agendada','completada','rechazada'].map(e=>`<div class="chip ${FILT===e?'active':''}" onclick="setF('${e}')">${e==='todas'?'Todas':e[0].toUpperCase()+e.slice(1)}</div>`).join('');
+  document.getElementById('chips').innerHTML=chips;
+  const tb=document.getElementById('tbody'),em=document.getElementById('empty');
+  if(!ITEMS.length){tb.innerHTML='';em.style.display='block';return;} em.style.display='none';
+  tb.innerHTML=ITEMS.map(x=>`<tr>
+    <td><div class="t-strong">${esc(x.paciente_nombre)}</div><div class="t-meta">${esc(x.rut||'')} ${fdate(x.fecha)}</div></td>
+    <td><span class="t-meta">${esc(x.origen_especialidad||'—')}</span> → <span class="t-strong">${esc(x.destino_especialidad)}</span></td>
+    <td class="hide-sm t-meta">${esc((x.motivo||'').slice(0,60))}</td>
+    <td><span class="badge ${PRIO_BADGE[x.prioridad]||'mute'}">${esc(x.prioridad)}</span></td>
+    <td><span class="badge ${EST_BADGE[x.estado]||'mute'}">${esc(x.estado)}</span></td>
+    <td class="num"><div class="row-actions">
+      <button class="icon-btn" title="Editar" onclick='edit(${x.id})'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke-linecap="round"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke-linecap="round"/></svg></button>
+      <button class="icon-btn danger" title="Eliminar" onclick='del(${x.id})'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" stroke-linecap="round"/></svg></button>
+    </div></td></tr>`).join(''); }
+function setF(e){FILT=e;load();}
+const F=id=>document.getElementById(id);
+function openNew(){ F('ic-title').textContent='Nueva interconsulta'; F('ic-id').value='';
+  ['ic-nombre','ic-rut','ic-tel','ic-oe','ic-op','ic-de','ic-dp','ic-motivo'].forEach(i=>F(i).value=''); F('ic-prio').value='rutina';
+  F('ic-estado-row').style.display='none'; openModal('m-ic'); }
+function edit(id){ const x=ITEMS.find(i=>i.id===id); if(!x)return; F('ic-title').textContent='Editar interconsulta'; F('ic-id').value=id;
+  F('ic-nombre').value=x.paciente_nombre; F('ic-rut').value=x.rut||''; F('ic-tel').value=x.telefono||'';
+  F('ic-oe').value=x.origen_especialidad||''; F('ic-op').value=x.origen_profesional||''; F('ic-de').value=x.destino_especialidad||''; F('ic-dp').value=x.destino_profesional||'';
+  F('ic-prio').value=x.prioridad; F('ic-motivo').value=x.motivo||''; F('ic-estado-row').style.display='block'; F('ic-estado').value=x.estado; openModal('m-ic'); }
+async function save(){ const id=F('ic-id').value; const body={paciente_nombre:F('ic-nombre').value.trim(),rut:F('ic-rut').value.trim(),telefono:F('ic-tel').value.trim(),
+  origen_especialidad:F('ic-oe').value.trim(),origen_profesional:F('ic-op').value.trim(),destino_especialidad:F('ic-de').value.trim(),destino_profesional:F('ic-dp').value.trim(),
+  prioridad:F('ic-prio').value,motivo:F('ic-motivo').value.trim()};
+  if(id) body.estado=F('ic-estado').value;
+  if(!body.paciente_nombre||!body.destino_especialidad){toast('Paciente y especialidad destino son obligatorios',true);return;}
+  try{ if(id) await api("/"+id,{method:"PATCH",body:JSON.stringify(body)}); else await api("",{method:"POST",body:JSON.stringify(body)});
+    closeModal('m-ic'); toast('Guardado'); loadKpis(); load(); }catch(e){toast(e.message,true);} }
+async function del(id){ if(!confirm('¿Eliminar esta interconsulta?'))return; try{ await api("/"+id,{method:"DELETE"}); toast('Eliminada'); loadKpis(); load(); }catch(e){toast(e.message,true);} }
+loadKpis(); load();
+</script></body></html>

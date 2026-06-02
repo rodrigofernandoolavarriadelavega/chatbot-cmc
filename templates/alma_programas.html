@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Programas Clínicos — Alma CMC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --aqua:#4FBECE; --aqua-s:#e8f8fb; --blue:#1172AB; --navy:#0F3F68; --navy2:#0c3556;
+    --bg:#F7FBFD; --border:#d6e4ec; --text:#0F3F68; --mute:#62788a;
+    --red:#e84545; --red-s:#fdecec; --green:#23c25e; --green-s:#e7f9ee;
+    --orange:#f59e0b; --orange-s:#fef5e6; --violet:#7c6cf0; --violet-s:#efedfd;
+    --sh-sm:0 1px 3px rgba(15,63,104,.08); --sh-md:0 8px 30px rgba(15,63,104,.14);
+  }
+  * { box-sizing:border-box; }
+  html,body { height:100%; margin:0; }
+  body { font-family:'Montserrat',-apple-system,sans-serif; background:var(--bg); color:var(--text); font-size:13px; }
+  .pg-topbar { display:flex; align-items:center; gap:12px; background:#fff; border-bottom:1px solid var(--border);
+    padding:0 18px; height:56px; box-shadow:var(--sh-sm); position:sticky; top:0; z-index:20; }
+  .pg-topbar h1 { font-size:15px; font-weight:800; margin:0; color:var(--navy); display:flex; align-items:center; gap:9px; }
+  .pg-topbar h1 svg { width:21px; height:21px; color:var(--aqua); }
+  .pg-topbar .spacer { flex:1; }
+  .search-box { position:relative; }
+  .search-box input { font-family:inherit; font-size:12px; font-weight:500; border:1px solid var(--border);
+    border-radius:9px; padding:8px 12px 8px 32px; width:200px; color:var(--navy); background:var(--bg); }
+  .search-box input:focus { outline:none; border-color:var(--aqua); background:#fff; }
+  .search-box svg { position:absolute; left:10px; top:50%; transform:translateY(-50%); width:15px; height:15px; color:var(--mute); }
+  .btn-ghost { display:inline-flex; align-items:center; gap:6px; background:#fff; color:var(--blue);
+    border:1px solid var(--border); border-radius:9px; padding:8px 13px; font-size:12px; font-weight:600;
+    font-family:inherit; cursor:pointer; transition:all .15s; text-decoration:none; }
+  .btn-ghost:hover { background:var(--aqua-s); border-color:var(--aqua); }
+  .btn-ghost.on { background:var(--navy); border-color:var(--navy); color:#fff; }
+  .btn-ghost svg { width:14px; height:14px; }
+
+  .wrap { padding:18px; max-width:1320px; margin:0 auto; }
+
+  /* Program selector */
+  .prog-pills { display:flex; flex-wrap:wrap; gap:7px; margin-bottom:16px; }
+  .prog-pill { font-family:inherit; font-size:12px; font-weight:600; border:1px solid var(--border); background:#fff;
+    color:var(--blue); border-radius:10px; padding:8px 14px; cursor:pointer; transition:all .14s; }
+  .prog-pill:hover { background:var(--aqua-s); border-color:var(--aqua); }
+  .prog-pill.active { background:linear-gradient(135deg,var(--aqua),var(--blue)); border-color:transparent; color:#fff; box-shadow:0 3px 10px rgba(17,114,171,.25); }
+  .prog-pill .badge { display:inline-block; min-width:16px; text-align:center; font-size:10px; font-weight:800;
+    background:var(--red); color:#fff; border-radius:999px; padding:1px 5px; margin-left:6px; }
+  .prog-pill.active .badge { background:rgba(255,255,255,.28); }
+
+  .kpis { display:grid; grid-template-columns:repeat(5,1fr); gap:13px; margin-bottom:16px; }
+  .kpi { background:#fff; border:1px solid var(--border); border-radius:16px; padding:15px 17px; box-shadow:var(--sh-sm); position:relative; overflow:hidden; }
+  .kpi::after { content:''; position:absolute; right:-18px; top:-18px; width:64px; height:64px; border-radius:50%; background:var(--aqua-s); opacity:.6; }
+  .kpi .k-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--mute); }
+  .kpi .k-val { font-size:25px; font-weight:800; color:var(--navy); margin-top:6px; line-height:1; position:relative; z-index:1; }
+  .kpi .k-sub { font-size:10.5px; font-weight:600; color:var(--mute); margin-top:5px; }
+  .kpi.alert .k-val { color:var(--red); } .kpi.alert::after { background:var(--red-s); }
+  .kpi.warn .k-val { color:var(--orange); } .kpi.warn::after { background:var(--orange-s); }
+  .kpi.money .k-val { color:var(--blue); font-size:20px; }
+
+  .banner { display:flex; align-items:flex-start; gap:11px; background:linear-gradient(100deg,#fff,var(--aqua-s));
+    border:1px solid var(--border); border-left:4px solid var(--aqua); border-radius:13px; padding:13px 16px; margin-bottom:16px; box-shadow:var(--sh-sm); }
+  .banner svg { width:20px; height:20px; color:var(--aqua); flex-shrink:0; margin-top:1px; }
+  .banner .bt { font-size:12px; color:var(--mute); line-height:1.5; }
+
+  .toolbar { display:flex; align-items:center; gap:10px; margin-bottom:13px; flex-wrap:wrap; }
+  .chips { display:flex; flex-wrap:wrap; gap:7px; flex:1; }
+  .chip { font-family:inherit; font-size:11.5px; font-weight:600; border:1px solid var(--border); background:#fff; color:var(--blue); border-radius:999px; padding:6px 13px; cursor:pointer; transition:all .14s; }
+  .chip:hover { background:var(--aqua-s); border-color:var(--aqua); }
+  .chip.active { background:var(--navy); border-color:var(--navy); color:#fff; }
+  .chip .cnt { opacity:.6; margin-left:4px; font-weight:700; }
+  .chip.urgent.active { background:var(--red); border-color:var(--red); }
+
+  .card { background:#fff; border:1px solid var(--border); border-radius:16px; box-shadow:var(--sh-sm); overflow:hidden; }
+  table { width:100%; border-collapse:collapse; }
+  thead th { text-align:left; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--mute); padding:12px 14px; background:var(--bg); border-bottom:1px solid var(--border); white-space:nowrap; }
+  thead th.num, td.num { text-align:right; } thead th.ctr, td.ctr { text-align:center; }
+  tbody td { padding:11px 14px; border-bottom:1px solid #eef4f8; font-size:12.5px; vertical-align:middle; }
+  tbody tr:last-child td { border-bottom:0; } tbody tr:hover { background:#fafdfe; }
+  .pac-name { font-weight:700; color:var(--navy); } .pac-meta { font-size:11px; color:var(--mute); font-weight:500; margin-top:2px; }
+  .estado { display:inline-flex; align-items:center; gap:6px; font-weight:700; font-size:11.5px; padding:4px 11px; border-radius:999px; white-space:nowrap; }
+  .estado .dot { width:7px; height:7px; border-radius:50%; }
+  .estado.en_curso,.estado.al_dia { color:var(--green); background:var(--green-s); } .estado.en_curso .dot,.estado.al_dia .dot{ background:var(--green); }
+  .estado.riesgo,.estado.vencido { color:var(--red); background:var(--red-s); } .estado.riesgo .dot,.estado.vencido .dot{ background:var(--red); }
+  .estado.abandono,.estado.pronto { color:var(--orange); background:var(--orange-s); } .estado.abandono .dot,.estado.pronto .dot{ background:var(--orange); }
+  .estado.completado { color:var(--blue); background:var(--aqua-s); } .estado.completado .dot{ background:var(--blue); }
+  .estado.alta,.estado.no_contactar { color:var(--violet); background:var(--violet-s); } .estado.alta .dot,.estado.no_contactar .dot{ background:var(--violet); }
+  .estado.cerrado { color:var(--mute); background:var(--bg); } .estado.cerrado .dot{ background:var(--mute); }
+  .estado.lapsed { color:var(--red); background:var(--red-s); } .estado.lapsed .dot{ background:var(--red); }
+  .estado.nunca { color:var(--orange); background:var(--orange-s); } .estado.nunca .dot{ background:var(--orange); }
+  .prog-pill.tam.active { background:linear-gradient(135deg,var(--violet),var(--blue)); }
+  .prog-sep { width:100%; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; color:var(--mute); margin:4px 0 -2px; }
+  .ses { font-weight:800; color:var(--navy); font-size:14px; }
+  .dias-pill { font-weight:700; } .dias-pill.hot { color:var(--red); } .dias-pill.warm { color:var(--orange); }
+  .row-actions { display:flex; gap:5px; justify-content:flex-end; }
+  .icon-btn { width:30px; height:30px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; border:1px solid var(--border); background:#fff; color:var(--blue); cursor:pointer; transition:all .14s; text-decoration:none; }
+  .icon-btn:hover { background:var(--aqua-s); border-color:var(--aqua); }
+  .icon-btn.wa { color:#25d366; } .icon-btn.wa:hover { background:#e7faef; border-color:#25d366; }
+  .icon-btn svg { width:15px; height:15px; }
+  .empty { text-align:center; padding:54px 20px; color:var(--mute); } .empty svg { width:44px; height:44px; opacity:.4; margin-bottom:12px; }
+  .pgtag { display:inline-block; font-size:10px; font-weight:700; color:var(--blue); background:var(--aqua-s); border-radius:6px; padding:3px 8px; }
+
+  .modal-bg { position:fixed; inset:0; background:rgba(15,63,104,.45); backdrop-filter:blur(3px); display:none; align-items:center; justify-content:center; z-index:100; padding:20px; }
+  .modal-bg.show { display:flex; }
+  .modal { background:#fff; border-radius:18px; box-shadow:var(--sh-md); width:100%; max-width:480px; max-height:90vh; overflow-y:auto; }
+  .modal-head { display:flex; align-items:center; justify-content:space-between; padding:18px 22px; border-bottom:1px solid var(--border); }
+  .modal-head h2 { margin:0; font-size:16px; font-weight:800; color:var(--navy); }
+  .modal-head .x { cursor:pointer; color:var(--mute); width:26px; height:26px; display:flex; align-items:center; justify-content:center; border-radius:7px; }
+  .modal-body { padding:20px 22px; } .modal-foot { padding:16px 22px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:flex-end; }
+  .field { margin-bottom:14px; } .field label { display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--mute); margin-bottom:6px; }
+  .field input, .field select, .field textarea { width:100%; font-family:inherit; font-size:13px; font-weight:500; border:1px solid var(--border); border-radius:9px; padding:9px 11px; color:var(--navy); background:var(--bg); }
+  .field input:focus, .field select:focus, .field textarea:focus { outline:none; border-color:var(--aqua); background:#fff; }
+  .field-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .msg-box { background:var(--bg); border:1px solid var(--border); border-radius:11px; padding:13px 15px; font-size:13px; line-height:1.5; color:var(--navy); }
+  .btn-primary { display:inline-flex; align-items:center; gap:6px; background:var(--aqua); color:#fff; border:0; border-radius:9px; padding:9px 16px; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer; text-decoration:none; }
+  .btn-primary:hover { background:var(--blue); }
+
+  .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--navy); color:#fff; padding:12px 22px; border-radius:11px; font-weight:600; font-size:13px; box-shadow:var(--sh-md); opacity:0; transition:all .25s; z-index:200; pointer-events:none; }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); } .toast.err { background:var(--red); }
+  @media (max-width:980px){ .kpis { grid-template-columns:repeat(2,1fr); } .hide-sm { display:none; } }
+</style>
+</head>
+<body>
+  <div class="pg-topbar">
+    <h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2" stroke-linecap="round" stroke-linejoin="round"/></svg>Programas Clínicos</h1>
+    <div class="spacer"></div>
+    <button class="btn-ghost" id="overviewBtn" onclick="toggleOverview()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18" stroke-linecap="round" stroke-linejoin="round"/><rect x="7" y="11" width="3" height="6" rx="1"/><rect x="12" y="7" width="3" height="10" rx="1"/><rect x="17" y="13" width="3" height="4" rx="1"/></svg>Resumen</button>
+    <button class="btn-ghost" id="digestBtn" onclick="toggleDigest()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" stroke-linecap="round" stroke-linejoin="round"/></svg>Lista de hoy</button>
+    <div class="search-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3" stroke-linecap="round"/></svg><input id="search" type="text" placeholder="Buscar paciente…"></div>
+    <button class="btn-ghost hide-sm" onclick="exportCSV()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 10l5 5 5-5M12 15V3" stroke-linecap="round" stroke-linejoin="round"/></svg>CSV</button>
+  </div>
+
+  <div class="wrap">
+    <div class="prog-pills" id="progPills"></div>
+
+    <!-- VISTA PROGRAMA -->
+    <div id="view-prog">
+      <div class="kpis" id="kpis"></div>
+      <div class="banner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/><path d="M12 8v4M12 16h.01" stroke-linecap="round"/></svg><div class="bt" id="banner-txt"></div></div>
+      <div class="toolbar"><div class="chips" id="chips"></div></div>
+      <div class="card">
+        <table>
+          <thead><tr>
+            <th>Paciente</th><th class="hide-sm">Profesional</th>
+            <th class="num" id="th-ses">Sesiones</th><th class="num">Sin venir</th>
+            <th class="ctr">Estado</th><th class="num">Acciones</th>
+          </tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+        <div id="empty" class="empty" style="display:none"><div>No hay pacientes con ese filtro</div></div>
+      </div>
+    </div>
+
+    <!-- VISTA RESUMEN (overview portfolio) -->
+    <div id="view-overview" style="display:none">
+      <div class="kpis" id="ov-kpis" style="grid-template-columns:repeat(3,1fr)"></div>
+      <div class="banner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="bt"><b>Todos los programas de un vistazo, ranqueados por ingreso recuperable.</b> Dónde está la mayor oportunidad de reenganche hoy. El tamizaje preventivo no entra acá (es población, no recurrencia de ingreso) — se ve en su propio selector.</div></div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Programa</th><th class="ctr">Tipo</th><th class="num">Activos</th><th class="num">Urgentes</th><th class="num">Worklist</th><th class="num">Ingreso recuperable</th><th></th></tr></thead>
+          <tbody id="ov-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- VISTA LISTA DE HOY (digest) -->
+    <div id="view-digest" style="display:none">
+      <div class="banner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/><path d="M12 8v4M12 16h.01" stroke-linecap="round"/></svg>
+        <div class="bt"><b>Lista de hoy — a quién contactar para no perder ingreso recurrente.</b> Cruza todos los programas y prioriza: urgentes primero (riesgo de abandono / control vencido), luego por días sin venir. Cada uno con su mensaje listo para WhatsApp.</div></div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Paciente</th><th>Programa</th><th class="num">Sin venir</th><th class="ctr">Estado</th><th class="num">Acción</th></tr></thead>
+          <tbody id="digest-tbody"></tbody>
+        </table>
+        <div id="digest-empty" class="empty" style="display:none"><div>Sin pendientes hoy. Todo al día.</div></div>
+      </div>
+    </div>
+
+    <div style="font-size:11px;color:var(--mute);margin-top:14px;line-height:1.5">
+      Datos del historial real de atenciones (Medilink → BI). Los programas de <b>adherencia</b> (Nutrición, Psicología, Fono, Odontología) miran tratamientos multi-sesión y riesgo de abandono;
+      los de <b>control</b> (Cardio, Gastro, Gineco, Matrona, Podología, Traumato, Medicina General) miran el recall periódico. El plan/estado por paciente es editable.
+    </div>
+  </div>
+
+  <!-- Modal Plan / Acción -->
+  <div class="modal-bg" id="m-plan">
+    <div class="modal">
+      <div class="modal-head"><h2 id="plan-title">Paciente</h2><div class="x" onclick="closeM('m-plan')">✕</div></div>
+      <div class="modal-body">
+        <input type="hidden" id="pl-id">
+        <div style="font-size:12px;color:var(--mute);margin-bottom:8px" id="pl-sub"></div>
+        <div style="font-size:11px;font-weight:700;color:var(--mute);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 6px">Mensaje sugerido</div>
+        <div class="msg-box" id="pl-msg" style="margin-bottom:14px"></div>
+        <div class="field-row">
+          <div class="field" id="pl-ses-wrap"><label>Sesiones prescritas</label><input id="pl-ses" type="number" min="0" value="0"></div>
+          <div class="field"><label>Estado</label><select id="pl-estado">
+            <option value="">Activo</option><option value="alta">Dado de alta</option>
+            <option value="pausa">En pausa</option><option value="no_contactar">No contactar</option>
+          </select></div>
+        </div>
+        <div class="field"><label>Notas</label><textarea id="pl-notas" rows="2"></textarea></div>
+      </div>
+      <div class="modal-foot">
+        <a class="btn-ghost" id="pl-wa" target="_blank" href="#"><svg viewBox="0 0 24 24" fill="currentColor" style="color:#25d366"><path d="M12 2a10 10 0 00-8.6 15l-1.3 4.7 4.8-1.3A10 10 0 1012 2z"/></svg>WhatsApp</a>
+        <div style="flex:1"></div>
+        <button class="btn-ghost" onclick="closeM('m-plan')">Cerrar</button>
+        <button class="btn-primary" onclick="savePlan()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+<script>
+const TOKEN="__TOKEN__"; const API="/alma/api/programas";
+const H={ "Authorization":"Bearer "+TOKEN, "Content-Type":"application/json" };
+let STATE={ prog:null, tipo:"adherencia", estado:"todos", q:"", pacientes:[], conteos:{}, programas:[], digest:false, overview:false };
+
+const clp=n=>"$"+(n||0).toLocaleString("es-CL");
+function toast(m,e){ const t=document.getElementById('toast'); t.textContent=m; t.className='toast show'+(e?' err':''); setTimeout(()=>t.className='toast',2200); }
+function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+async function api(path,opts){ const r=await fetch(API+path,{headers:H,...opts}); if(!r.ok) throw new Error((await r.json().catch(()=>({}))).detail||r.status); return r.json(); }
+
+const EST_LABEL={ en_curso:"En tratamiento",riesgo:"Riesgo",abandono:"Abandono",completado:"Completado",alta:"Alta",cerrado:"Cerrado",no_contactar:"No contactar",al_dia:"Al día",pronto:"Por vencer",vencido:"Vencido",lapsed:"Atrasado",nunca:"Sin registro" };
+const ORDER_ADH=["todos","riesgo","abandono","en_curso","completado","alta","cerrado","no_contactar"];
+const ORDER_CTL=["todos","vencido","pronto","al_dia","no_contactar"];
+const ORDER_TAM=["todos","lapsed","nunca"];
+
+async function init(){
+  try {
+    const r=await api(""); STATE.programas=r.programas;
+    renderPills();
+    if(r.programas.length){ selectProg(r.programas[0].key); }
+  } catch(e){ toast("Error: "+e.message,true); }
+}
+
+function renderPills(){
+  const trat = STATE.programas.filter(p=>p.categoria!=="tamizaje");
+  const tam  = STATE.programas.filter(p=>p.categoria==="tamizaje");
+  const pill = p => `<div class="prog-pill ${p.categoria==="tamizaje"?'tam':''} ${STATE.prog===p.key&&!STATE.digest?'active':''}" onclick="selectProg('${p.key}')">${esc(p.label)}<span class="badge" id="badge-${p.key}" style="display:none"></span></div>`;
+  let html = trat.map(pill).join('');
+  if(tam.length){ html += `<div class="prog-sep">Tamizaje preventivo (por edad/sexo)</div>` + tam.map(pill).join(''); }
+  document.getElementById('progPills').innerHTML = html;
+}
+
+function selectProg(key){
+  STATE.prog=key; STATE.digest=false; STATE.overview=false; STATE.estado="todos"; STATE.q="";
+  document.getElementById('view-prog').style.display='block';
+  document.getElementById('view-digest').style.display='none';
+  document.getElementById('view-overview').style.display='none';
+  document.getElementById('digestBtn').classList.remove('on');
+  document.getElementById('overviewBtn').classList.remove('on');
+  document.getElementById('search').value='';
+  renderPills();
+  loadProg();
+}
+
+async function toggleOverview(){
+  STATE.overview=!STATE.overview;
+  if(STATE.overview){ STATE.digest=false; document.getElementById('digestBtn').classList.remove('on'); }
+  document.getElementById('overviewBtn').classList.toggle('on', STATE.overview);
+  document.getElementById('view-prog').style.display = STATE.overview?'none':'block';
+  document.getElementById('view-digest').style.display='none';
+  document.getElementById('view-overview').style.display = STATE.overview?'block':'none';
+  renderPills();
+  if(STATE.overview){ await loadOverview(); }
+}
+async function loadOverview(){
+  try {
+    const r=await api("/_/overview"); const t=r.totales;
+    document.getElementById('ov-kpis').innerHTML=`
+      <div class="kpi money"><div class="k-label">Ingreso recuperable total</div><div class="k-val">${clp(t.valor_recuperable)}</div><div class="k-sub">si trabajas todas las worklists</div></div>
+      <div class="kpi alert"><div class="k-label">Urgentes (todos los programas)</div><div class="k-val">${t.urgentes}</div><div class="k-sub">contactar hoy</div></div>
+      <div class="kpi warn"><div class="k-label">Worklist total</div><div class="k-val">${t.accionables}</div><div class="k-sub">${t.n_programas} programas</div></div>`;
+    const tb=document.getElementById('ov-tbody');
+    tb.innerHTML=r.filas.map(f=>`<tr style="cursor:pointer" onclick="selectProg('${f.programa}')">
+      <td><div class="pac-name">${esc(f.label)}</div></td>
+      <td class="ctr"><span class="pgtag">${f.tipo==='adherencia'?'Adherencia':'Control'}</span></td>
+      <td class="num" style="font-weight:700">${f.activos}</td>
+      <td class="num"><span class="dias-pill ${f.urgentes?'hot':''}">${f.urgentes}</span></td>
+      <td class="num" style="font-weight:700">${f.accionables}</td>
+      <td class="num"><div class="ses" style="color:var(--blue)">${clp(f.valor_recuperable)}</div></td>
+      <td class="num" style="color:var(--mute)">›</td>
+    </tr>`).join('');
+    if(r.source_status!=="ok") toast("BI no disponible — se ve en producción",true);
+  } catch(e){ toast("Error: "+e.message,true); }
+}
+
+async function loadProg(){ await Promise.all([loadResumen(), loadPacientes()]); }
+
+async function loadResumen(){
+  try {
+    const r=await api("/"+STATE.prog+"/resumen"); const k=r.kpis; STATE.tipo=k.tipo;
+    document.getElementById('banner-txt').innerHTML='<b>'+esc(r.cfg.label)+':</b> '+esc(r.cfg.objetivo);
+    if(k.tipo==="tamizaje"){
+      document.getElementById('kpis').innerHTML=`
+        <div class="kpi"><div class="k-label">Cohorte total</div><div class="k-val">${k.n_pacientes}</div><div class="k-sub">les corresponde control</div></div>
+        <div class="kpi alert"><div class="k-label">Atrasados</div><div class="k-val">${k.n_lapsed}</div><div class="k-sub">tuvieron control · alta confianza</div></div>
+        <div class="kpi warn"><div class="k-label">Sin registro</div><div class="k-val">${k.n_nunca}</div><div class="k-sub">validar antes de contactar</div></div>
+        <div class="kpi"><div class="k-label">Con teléfono</div><div class="k-val">${k.metric_val}</div><div class="k-sub">contactables por WhatsApp</div></div>
+        <div class="kpi money"><div class="k-label">Cubierto Fonasa/GES</div><div class="k-val" style="font-size:15px;padding-top:6px">Preventivo</div><div class="k-sub">recall de salud poblacional</div></div>`;
+    } else {
+    const urgenteLbl = k.tipo==="adherencia"?"Riesgo abandono":"Control vencido";
+    const accLbl = k.tipo==="adherencia"?"Por reenganchar":"Por citar";
+    document.getElementById('kpis').innerHTML=`
+      <div class="kpi"><div class="k-label">Activos</div><div class="k-val">${k.activos}</div><div class="k-sub">en seguimiento</div></div>
+      <div class="kpi alert"><div class="k-label">${urgenteLbl}</div><div class="k-val">${k.urgentes}</div><div class="k-sub">contactar hoy</div></div>
+      <div class="kpi warn"><div class="k-label">${accLbl}</div><div class="k-val">${k.accionables}</div><div class="k-sub">worklist total</div></div>
+      <div class="kpi money"><div class="k-label">Ingreso recuperable</div><div class="k-val">${clp(k.valor_recuperable)}</div><div class="k-sub">si contactas la worklist</div></div>
+      <div class="kpi"><div class="k-label">${esc(k.metric_label)}</div><div class="k-val">${k.metric_val}</div><div class="k-sub">ticket prom ${clp(k.ticket_prom)}</div></div>`;
+    }
+    if(r.source_status!=="ok") toast("BI no disponible — se ve en producción",true);
+  } catch(e){ toast("Error KPIs: "+e.message,true); }
+}
+
+async function loadPacientes(){
+  try {
+    const r=await api("/"+STATE.prog+"/pacientes?estado="+encodeURIComponent(STATE.estado));
+    STATE.pacientes=r.pacientes; STATE.conteos=r.conteos; STATE.tipo=r.tipo;
+    document.getElementById('th-ses').textContent = STATE.tipo==="adherencia"?"Sesiones":(STATE.tipo==="tamizaje"?"Edad":"Visitas");
+    renderChips(); renderTable();
+    // badge urgentes en la pill
+    const urgent = STATE.tipo==="adherencia"?(r.conteos.riesgo||0):(STATE.tipo==="tamizaje"?(r.conteos.lapsed||0):(r.conteos.vencido||0));
+    const b=document.getElementById('badge-'+STATE.prog); if(b){ if(urgent){ b.textContent=urgent; b.style.display='inline-block'; } else b.style.display='none'; }
+  } catch(e){ toast("Error: "+e.message,true); }
+}
+
+function renderChips(){
+  const order = STATE.tipo==="adherencia"?ORDER_ADH:(STATE.tipo==="tamizaje"?ORDER_TAM:ORDER_CTL);
+  const c=STATE.conteos; const total=Object.values(c).reduce((a,b)=>a+b,0);
+  const urgentKey = STATE.tipo==="adherencia"?"riesgo":(STATE.tipo==="tamizaje"?"lapsed":"vencido");
+  document.getElementById('chips').innerHTML = order.filter(k=>k==="todos"||c[k]).map(k=>{
+    const n=k==="todos"?total:(c[k]||0);
+    return `<div class="chip ${k===urgentKey?'urgent':''} ${STATE.estado===k?'active':''}" onclick="setEstado('${k}')">${k==="todos"?"Todos":EST_LABEL[k]}<span class="cnt">${n}</span></div>`;
+  }).join('');
+}
+
+function filtered(){ let p=STATE.pacientes; if(STATE.q){ const q=STATE.q.toLowerCase(); p=p.filter(x=>(x.paciente||'').toLowerCase().includes(q)); } return p; }
+
+function renderTable(){
+  const tb=document.getElementById('tbody'), empty=document.getElementById('empty');
+  const pac=filtered();
+  if(!pac.length){ tb.innerHTML=''; empty.style.display='block'; return; } empty.style.display='none';
+  tb.innerHTML=pac.map(p=>{
+    const dp=p.dias_sin_visita;
+    const isNunca = (STATE.tipo==="tamizaje" && p.estado==="nunca") || dp>=9999;
+    const dpCls = isNunca?'':(dp>=(STATE.tipo==="adherencia"?22:80)?'hot':(dp>=(STATE.tipo==="adherencia"?8:36)?'warm':''));
+    const diasTxt = isNunca?'—':`${dp} d`;
+    const sesTxt = (STATE.tipo==="tamizaje")?`${p.edad??p.sesiones} años`:(p.sesiones_plan?`${p.sesiones}/${p.sesiones_plan}`:`${p.sesiones}`);
+    return `<tr>
+      <td><div class="pac-name">${esc(p.paciente)}</div><div class="pac-meta">${esc(p.lugar||'—')}${p.notas?' · '+esc(p.notas):''}</div></td>
+      <td class="hide-sm" style="color:var(--mute);font-weight:600">${esc(p.profesional)}</td>
+      <td class="num"><div class="ses">${sesTxt}</div></td>
+      <td class="num"><span class="dias-pill ${dpCls}">${diasTxt}</span><div class="pac-meta">${p.ultima_visita}</div></td>
+      <td class="ctr"><span class="estado ${p.estado}"><span class="dot"></span>${esc(p.estado_label)}</span></td>
+      <td class="num"><div class="row-actions">
+        ${p.wa?`<a class="icon-btn wa" target="_blank" href="${p.wa}" title="WhatsApp"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 00-8.6 15l-1.3 4.7 4.8-1.3A10 10 0 1012 2z"/></svg></a>`:''}
+        <button class="icon-btn" title="Plan / acción" onclick='openPlan(${p.paciente_id})'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      </div></td></tr>`;
+  }).join('');
+}
+
+function setEstado(e){ STATE.estado=e; loadPacientes(); }
+let st; document.getElementById('search').addEventListener('input',e=>{ clearTimeout(st); st=setTimeout(()=>{ STATE.q=e.target.value.trim(); STATE.digest?renderDigest():renderTable(); },200); });
+function closeM(id){ document.getElementById(id).classList.remove('show'); }
+
+function openPlan(pid){
+  const p=STATE.pacientes.find(x=>x.paciente_id===pid); if(!p) return;
+  document.getElementById('pl-id').value=pid;
+  document.getElementById('plan-title').textContent=p.paciente;
+  if(STATE.tipo==="tamizaje"){
+    document.getElementById('pl-sub').innerHTML=`${p.edad??p.sesiones} años · ${p.estado_label} · último control: ${p.ultima_visita}`;
+  } else {
+    document.getElementById('pl-sub').innerHTML=`${p.sesiones} ${STATE.tipo==="adherencia"?'sesiones':'visitas'} · última ${p.ultima_visita} · ${p.dias_sin_visita} días sin venir`;
+  }
+  document.getElementById('pl-ses-wrap').style.display = STATE.tipo==="adherencia"?'block':'none';
+  document.getElementById('pl-ses').value=p.sesiones_plan||0;
+  document.getElementById('pl-estado').value=(['alta','no_contactar','pausa'].includes(p.estado)?p.estado:'');
+  document.getElementById('pl-notas').value=p.notas||'';
+  // mensaje sugerido (agéntico)
+  document.getElementById('pl-msg').textContent='Cargando…';
+  document.getElementById('pl-wa').style.display='none';
+  api("/"+STATE.prog+"/accion/"+pid).then(a=>{
+    document.getElementById('pl-msg').textContent=a.mensaje;
+    const wa=document.getElementById('pl-wa');
+    if(a.wa){ wa.href=a.wa; wa.style.display='inline-flex'; }
+  }).catch(()=>{ document.getElementById('pl-msg').textContent='(sin teléfono o no accionable)'; });
+  document.getElementById('m-plan').classList.add('show');
+}
+async function savePlan(){
+  const pid=document.getElementById('pl-id').value;
+  const body={ sesiones_plan:+document.getElementById('pl-ses').value||0, estado_manual:document.getElementById('pl-estado').value, notas:document.getElementById('pl-notas').value.trim() };
+  try { await api("/"+STATE.prog+"/plan/"+pid,{method:"PUT",body:JSON.stringify(body)}); closeM('m-plan'); toast("Guardado"); loadProg(); }
+  catch(e){ toast("Error: "+e.message,true); }
+}
+
+/* ── Lista de hoy (digest) ── */
+let DIGEST=[];
+async function toggleDigest(){
+  STATE.digest=!STATE.digest;
+  if(STATE.digest){ STATE.overview=false; document.getElementById('overviewBtn').classList.remove('on'); document.getElementById('view-overview').style.display='none'; }
+  document.getElementById('digestBtn').classList.toggle('on', STATE.digest);
+  document.getElementById('view-prog').style.display = STATE.digest?'none':'block';
+  document.getElementById('view-digest').style.display = STATE.digest?'block':'none';
+  renderPills();
+  if(STATE.digest){ await loadDigest(); }
+}
+async function loadDigest(){
+  try { const r=await api("/_/digest"); DIGEST=r.items; renderDigest(); if(r.source_status!=="ok") toast("BI no disponible",true); }
+  catch(e){ toast("Error: "+e.message,true); }
+}
+function renderDigest(){
+  const tb=document.getElementById('digest-tbody'), empty=document.getElementById('digest-empty');
+  let items=DIGEST; if(STATE.q){ const q=STATE.q.toLowerCase(); items=items.filter(x=>(x.paciente||'').toLowerCase().includes(q)); }
+  if(!items.length){ tb.innerHTML=''; empty.style.display='block'; return; } empty.style.display='none';
+  tb.innerHTML=items.map(p=>`<tr>
+    <td><div class="pac-name">${esc(p.paciente)}</div><div class="pac-meta">${p.telefono?esc(p.telefono):'sin teléfono'}</div></td>
+    <td><span class="pgtag">${esc(p.programa_label)}</span></td>
+    <td class="num"><span class="dias-pill ${p.estado_key==='riesgo'||p.estado_key==='vencido'?'hot':'warm'}">${p.dias_sin_visita} d</span></td>
+    <td class="ctr"><span class="estado ${p.estado_key}"><span class="dot"></span>${esc(p.estado)}</span></td>
+    <td class="num">${p.wa?`<a class="icon-btn wa" target="_blank" href="${p.wa}" title="WhatsApp"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 00-8.6 15l-1.3 4.7 4.8-1.3A10 10 0 1012 2z"/></svg></a>`:'—'}</td>
+  </tr>`).join('');
+}
+
+function exportCSV(){ if(STATE.prog) window.open(API+"/"+STATE.prog+"/export?token="+encodeURIComponent(TOKEN),"_blank"); }
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') document.querySelectorAll('.modal-bg.show').forEach(m=>m.classList.remove('show')); });
+document.querySelectorAll('.modal-bg').forEach(bg=>bg.addEventListener('click',e=>{ if(e.target===bg) bg.classList.remove('show'); }));
+init();
+</script>
+</body>
+</html>

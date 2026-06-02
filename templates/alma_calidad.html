@@ -1,0 +1,80 @@
+<!DOCTYPE html><html lang="es"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex,nofollow">
+<title>Calidad — Alma CMC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/alma_kit.css">
+</head><body>
+<div class="pg-topbar">
+  <h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7.4L12 17l-6.3 4.4L8 14 2 9.4h7.6z" stroke-linecap="round" stroke-linejoin="round"/></svg> Calidad e incidentes</h1>
+  <div class="spacer"></div>
+  <button class="btn-primary" onclick="openNew()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg> Registrar evento</button>
+</div>
+<div class="wrap">
+  <div class="kpis" id="kpis"></div>
+  <div class="chips" id="chips"></div>
+  <div class="card"><table><thead><tr>
+    <th>Evento</th><th class="hide-sm">Tipo</th><th>Gravedad</th><th class="hide-sm">Área</th><th>Estado</th><th class="num"></th>
+  </tr></thead><tbody id="tbody"></tbody></table>
+  <div id="empty" class="empty" style="display:none">Sin eventos</div></div>
+  <div class="note">Incluye el libro de reclamos digital (requisito legal). Registrar eventos adversos e incidentes es la base de una cultura de seguridad del paciente.</div>
+</div>
+
+<div class="modal-bg" id="m-e"><div class="modal">
+  <div class="modal-head"><h2 id="e-title">Registrar evento</h2><div class="x" onclick="AlmaKit.closeModal('m-e')">✕</div></div>
+  <div class="modal-body"><input type="hidden" id="e-id">
+    <div class="field-row"><div class="field"><label>Fecha</label><input id="e-fecha" type="date"></div><div class="field"><label>Tipo</label><select id="e-tipo"></select></div></div>
+    <div class="field"><label>Título</label><input id="e-titulo"></div>
+    <div class="field-row-3"><div class="field"><label>Gravedad</label><select id="e-grav"><option value="leve">Leve</option><option value="moderado">Moderado</option><option value="grave">Grave</option></select></div><div class="field"><label>Área</label><input id="e-area"></div><div class="field"><label>Estado</label><select id="e-estado"><option value="abierto">Abierto</option><option value="en_analisis">En análisis</option><option value="cerrado">Cerrado</option></select></div></div>
+    <div class="field"><label>Paciente (si aplica)</label><input id="e-pac"></div>
+    <div class="field"><label>Descripción</label><textarea id="e-desc" rows="2"></textarea></div>
+    <div class="field"><label>Acción correctiva / responsable</label><input id="e-accion" placeholder="Qué se hizo"></div>
+    <div class="field"><label>Responsable</label><input id="e-resp"></div>
+  </div>
+  <div class="modal-foot"><button class="btn-ghost" onclick="AlmaKit.closeModal('m-e')">Cancelar</button><button class="btn-primary" onclick="save()">Guardar</button></div>
+</div></div>
+
+<script>window.ALMA_TOKEN="__TOKEN__"; window.ALMA_API="/alma/api/calidad";</script>
+<script src="/static/alma_kit.js"></script>
+<script>
+const {api,esc,toast,openModal,closeModal,fdate}=AlmaKit;
+const TIPOS=["Incidente","Evento adverso","Reclamo","Sugerencia","Felicitación"];
+const GB={leve:'mute',moderado:'orange',grave:'red'};
+const EB={abierto:'orange',en_analisis:'aqua',cerrado:'green'};
+const TB={'Reclamo':'red','Evento adverso':'red','Incidente':'orange','Sugerencia':'aqua','Felicitación':'green'};
+let FILT="todos",ITEMS=[];
+async function loadKpis(){ const r=await api("/resumen");
+  document.getElementById('kpis').innerHTML=`
+   <div class="kpi alert"><div class="k-label">Abiertos</div><div class="k-val">${r.abiertos}</div><div class="k-sub">en gestión</div></div>
+   <div class="kpi bad"><div class="k-label">Graves abiertos</div><div class="k-val">${r.graves_abiertos}</div><div class="k-sub">prioridad</div></div>
+   <div class="kpi"><div class="k-label">Reclamos del mes</div><div class="k-val">${r.reclamos_mes}</div><div class="k-sub">libro de reclamos</div></div>
+   <div class="kpi"><div class="k-label">Total</div><div class="k-val">${r.total}</div><div class="k-sub">histórico</div></div>`; }
+async function load(){ const r=await api(FILT==='todos'?'':("?estado="+FILT)); ITEMS=r.eventos;
+  document.getElementById('chips').innerHTML=['todos','abierto','en_analisis','cerrado'].map(e=>`<div class="chip ${FILT===e?'active':''}" onclick="setF('${e}')">${e==='todos'?'Todos':e.replace('_',' ')}</div>`).join('');
+  const tb=document.getElementById('tbody'),em=document.getElementById('empty');
+  if(!ITEMS.length){tb.innerHTML='';em.style.display='block';return;} em.style.display='none';
+  tb.innerHTML=ITEMS.map(x=>`<tr>
+    <td><div class="t-strong">${esc(x.titulo)}</div><div class="t-meta">${fdate(x.fecha)} ${x.paciente_nombre?'· '+esc(x.paciente_nombre):''}</div></td>
+    <td class="hide-sm"><span class="badge ${TB[x.tipo]||'mute'}">${esc(x.tipo)}</span></td>
+    <td><span class="badge ${GB[x.gravedad]||'mute'}">${esc(x.gravedad)}</span></td>
+    <td class="hide-sm t-meta">${esc(x.area||'—')}</td>
+    <td><span class="badge ${EB[x.estado]||'mute'}">${esc(x.estado.replace('_',' '))}</span></td>
+    <td class="num"><div class="row-actions">
+      <button class="icon-btn" onclick='edit(${x.id})' title="Editar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke-linecap="round"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke-linecap="round"/></svg></button>
+      <button class="icon-btn danger" onclick='del(${x.id})' title="Eliminar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" stroke-linecap="round"/></svg></button>
+    </div></td></tr>`).join(''); }
+function setF(e){FILT=e;load();}
+const F=id=>document.getElementById(id);
+function fillTipos(){F('e-tipo').innerHTML=TIPOS.map(t=>`<option>${t}</option>`).join('');}
+function openNew(){ F('e-title').textContent='Registrar evento'; F('e-id').value=''; fillTipos();
+  F('e-fecha').value=new Date().toISOString().slice(0,10); ['e-titulo','e-area','e-pac','e-desc','e-accion','e-resp'].forEach(i=>F(i).value=''); F('e-grav').value='leve'; F('e-estado').value='abierto'; openModal('m-e'); }
+function edit(id){ const x=ITEMS.find(i=>i.id===id); if(!x)return; F('e-title').textContent='Editar evento'; F('e-id').value=id; fillTipos();
+  F('e-fecha').value=(x.fecha||'').slice(0,10); F('e-tipo').value=x.tipo; F('e-titulo').value=x.titulo; F('e-grav').value=x.gravedad; F('e-area').value=x.area||''; F('e-estado').value=x.estado;
+  F('e-pac').value=x.paciente_nombre||''; F('e-desc').value=x.descripcion||''; F('e-accion').value=x.accion||''; F('e-resp').value=x.responsable||''; openModal('m-e'); }
+async function save(){ const id=F('e-id').value; const body={fecha:F('e-fecha').value,tipo:F('e-tipo').value,titulo:F('e-titulo').value.trim(),gravedad:F('e-grav').value,area:F('e-area').value.trim(),
+  estado:F('e-estado').value,paciente_nombre:F('e-pac').value.trim(),descripcion:F('e-desc').value.trim(),accion:F('e-accion').value.trim(),responsable:F('e-resp').value.trim()};
+  if(!body.titulo){toast('El título es obligatorio',true);return;}
+  try{ if(id) await api("/"+id,{method:"PATCH",body:JSON.stringify(body)}); else await api("",{method:"POST",body:JSON.stringify(body)}); closeModal('m-e'); toast('Guardado'); loadKpis(); load(); }catch(e){toast(e.message,true);} }
+async function del(id){ if(!confirm('¿Eliminar evento?'))return; try{ await api("/"+id,{method:"DELETE"}); toast('Eliminado'); loadKpis(); load(); }catch(e){toast(e.message,true);} }
+loadKpis(); load();
+</script></body></html>

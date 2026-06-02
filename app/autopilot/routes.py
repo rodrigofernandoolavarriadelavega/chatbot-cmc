@@ -431,6 +431,12 @@ def seo_snapshot(token: str | None = Query(None), request: Request = None):
             "local_checklist": seo_audit.local_seo_checklist(),
             "opportunities": seo_audit.OPPORTUNITY_TEMPLATES,
         })
+    # coverage/checklist/oportunidades son cálculos puros (baratos): recalcular
+    # fresco para que un cambio de pesos se refleje sin re-auditar el sitio.
+    # Solo las páginas (requieren fetch de red) quedan cacheadas en el snapshot.
+    snap["coverage"] = seo_audit.coverage_matrix()
+    snap["local_checklist"] = seo_audit.local_seo_checklist()
+    snap["opportunities"] = seo_audit.OPPORTUNITY_TEMPLATES
     return JSONResponse(snap)
 
 

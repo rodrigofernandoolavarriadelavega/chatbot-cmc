@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orquestadores · Alma</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --aqua:#4FBECE; --blue:#1172AB; --navy:#0F3F68; --ink:#0F3F68;
+    --bg:#F4F8FB; --card:#FFFFFF; --line:#E3ECF3; --muted:#6B86A0;
+    --ok:#1FA97A; --warn:#E0A100; --off:#94A8BC; --danger:#D6584F;
+    --shadow:0 1px 2px rgba(15,63,104,.05),0 6px 20px rgba(15,63,104,.07);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Montserrat',system-ui,sans-serif;background:var(--bg);color:var(--ink);}
+  .wrap{max-width:1180px;margin:0 auto;padding:24px 20px 80px;}
+  header.top{display:flex;align-items:center;gap:14px;margin-bottom:6px;}
+  .tile{width:46px;height:46px;border-radius:13px;background:linear-gradient(135deg,var(--aqua),var(--blue));
+        display:grid;place-items:center;color:#fff;box-shadow:var(--shadow);flex:none;}
+  .tile svg{width:26px;height:26px;}
+  .brand h1{font-size:20px;font-weight:800;margin:0;letter-spacing:.2px;}
+  .brand .sub{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;}
+  .lead{color:var(--muted);font-size:13.5px;margin:14px 0 22px;max-width:760px;line-height:1.55;}
+  .lead b{color:var(--navy);}
+  .bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:20px;}
+  .btn{border:none;border-radius:11px;padding:10px 16px;font-family:inherit;font-weight:600;font-size:13px;
+       cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:.15s;}
+  .btn-primary{background:linear-gradient(135deg,var(--aqua),var(--blue));color:#fff;box-shadow:var(--shadow);}
+  .btn-primary:hover{filter:brightness(1.05);transform:translateY(-1px);}
+  .btn-ghost{background:#fff;color:var(--navy);border:1px solid var(--line);}
+  .btn-ghost:hover{border-color:var(--aqua);}
+  .btn-ok{background:var(--ok);color:#fff;}
+  .btn-rej{background:#fff;color:var(--danger);border:1px solid #F0D2CF;}
+  .btn-sm{padding:6px 11px;font-size:12px;border-radius:9px;}
+  .section-title{font-size:13px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:1px;
+                 margin:30px 0 14px;display:flex;align-items:center;gap:9px;}
+  .section-title .count{background:var(--navy);color:#fff;border-radius:20px;font-size:11px;padding:2px 9px;font-weight:700;}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+  .chip{border:1px solid var(--line);background:#fff;color:var(--navy);border-radius:20px;padding:5px 13px;
+        font-size:12px;font-weight:600;cursor:pointer;transition:.15s;font-family:inherit;}
+  .chip:hover{border-color:var(--aqua);}
+  .chip.active{background:linear-gradient(135deg,var(--aqua),var(--blue));color:#fff;border-color:transparent;}
+  .chip .c{opacity:.7;margin-left:5px;font-weight:700;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px;}
+  .card.hidden{display:none;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 16px 14px;box-shadow:var(--shadow);}
+  .card .hd{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+  .card .name{font-weight:700;font-size:14.5px;color:var(--navy);}
+  .card .dom{font-size:10.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-top:2px;}
+  .card .desc{font-size:12.5px;color:#3C5870;line-height:1.5;margin:9px 0 12px;}
+  .badge{font-size:10.5px;font-weight:700;border-radius:20px;padding:3px 10px;white-space:nowrap;}
+  .badge.off{background:#EEF3F8;color:var(--off);}
+  .badge.on{background:#E3F7EF;color:var(--ok);}
+  .card .ft{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:4px;}
+  .flag{font-family:ui-monospace,monospace;font-size:10.5px;color:var(--muted);background:#F4F8FB;border-radius:7px;padding:3px 7px;}
+  .dry{margin-top:12px;border-top:1px dashed var(--line);padding-top:11px;display:none;}
+  .dry.show{display:block;}
+  .prop{background:#F7FAFC;border:1px solid var(--line);border-radius:11px;padding:10px 12px;margin-bottom:8px;}
+  .prop .s{font-weight:600;font-size:12.5px;color:var(--navy);}
+  .prop .r{font-size:11.5px;color:var(--muted);line-height:1.45;margin-top:3px;}
+  .prop .meta{font-size:11px;color:var(--blue);margin-top:6px;font-weight:600;}
+  .empty{font-size:12px;color:var(--muted);font-style:italic;padding:6px 2px;}
+  .stat{font-size:11.5px;color:var(--muted);}
+  .inbox .prop{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;background:#fff;}
+  .inbox .actions{display:flex;gap:6px;flex:none;}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;
+         padding:11px 18px;border-radius:11px;font-size:13px;font-weight:600;box-shadow:var(--shadow);opacity:0;
+         transition:.25s;pointer-events:none;z-index:50;}
+  .toast.show{opacity:1;}
+  .note{font-size:11.5px;color:var(--warn);background:#FFF8E6;border:1px solid #F4E2AE;border-radius:10px;
+        padding:9px 12px;margin-bottom:16px;line-height:1.5;}
+  .brief{background:linear-gradient(135deg,#0F3F68,#1172AB);color:#fff;border-radius:16px;padding:18px 20px;
+         margin-bottom:18px;box-shadow:var(--shadow);}
+  .brief-hd{font-size:13px;font-weight:800;letter-spacing:.3px;margin-bottom:10px;}
+  .brief-kpis{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+  .brief-kpis span{background:rgba(255,255,255,.14);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600;}
+  .brief-pri-t{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;opacity:.8;margin-bottom:6px;}
+  .brief-pri{margin:0;padding-left:18px;}
+  .brief-pri li{font-size:12.5px;line-height:1.55;margin-bottom:3px;}
+  .brief .empty{color:rgba(255,255,255,.8);}
+  .spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;
+        border-radius:50%;animation:sp .7s linear infinite;}
+  @keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="tile">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"></path>
+      </svg>
+    </div>
+    <div class="brand">
+      <h1>Orquestadores</h1>
+      <div class="sub">Alma · Centro Médico Carampangue</div>
+    </div>
+  </header>
+
+  <p class="lead">
+    Cada orquestador <b>siente</b> una señal del centro médico y <b>propone</b> una acción concreta.
+    Las reglas mandan: nada se ejecuta solo. Acá puedes ver <b>qué propondría cada uno ahora mismo</b>
+    (modo dry, sin tocar nada) aunque estén apagados, y aprobar o descartar lo que llegue al inbox.
+  </p>
+
+  <div class="note">
+    🔒 Todos los orquestadores están <b>apagados</b> (kill-switch <code>ALMA_ORQ_*_ENABLED=false</code>).
+    El modo <b>dry-run</b> es solo lectura: no persiste ni contacta a nadie. Enciéndelos uno a uno tras Fase 0 (auth + auditoría).
+  </div>
+
+  <div class="brief" id="brief"></div>
+
+  <div class="bar">
+    <button class="btn btn-primary" onclick="refreshSnapshot()"><span id="dryAllLbl">Recalcular sugerencias (vivo)</span></button>
+    <button class="btn btn-ghost" onclick="loadInbox()">Refrescar inbox</button>
+    <span class="stat" id="globalStat"></span>
+  </div>
+
+  <div class="section-title">Inbox de propuestas <span class="count" id="inboxCount">0</span></div>
+  <div class="inbox" id="inbox"><div class="empty">Sin propuestas pendientes. (Los orquestadores encolan al correr en modo propose, hoy apagado.)</div></div>
+
+  <div class="section-title">Catálogo <span class="count" id="catCount">23</span></div>
+  <div class="chips" id="chips"></div>
+  <div class="grid" id="catalog"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const TOKEN = "__TOKEN__";
+const Q = (p) => p + (p.includes("?") ? "&" : "?") + "token=" + encodeURIComponent(TOKEN);
+const $ = (id) => document.getElementById(id);
+
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),2200); }
+function esc(s){ return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+async function api(path, opts){ const r = await fetch(Q(path), opts); if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); }
+
+function propHtml(p){
+  const wl = (p.params && (p.params.worklist || p.params.items)) || [];
+  const n = Array.isArray(wl) ? wl.length : 0;
+  const metaBits = [];
+  if(n) metaBits.push(n + " en worklist");
+  if(p.impact) metaBits.push("→ " + esc(p.impact));
+  return `<div class="prop"><div class="s">${esc(p.summary)}</div>
+    <div class="r">${esc(p.rationale)}</div>
+    ${metaBits.length?`<div class="meta">${metaBits.join(" · ")}</div>`:""}</div>`;
+}
+
+async function dryOne(name, btn){
+  const card = btn.closest(".card"); const box = card.querySelector(".dry");
+  box.classList.add("show"); box.innerHTML = '<div class="empty">Corriendo dry-run…</div>';
+  try{
+    const r = await api("/admin/api/orquestadores/dryrun?name="+encodeURIComponent(name));
+    const props = r.proposals || [];
+    const st = (r.signals && r.signals.source_status) || "?";
+    if(!props.length){ box.innerHTML = `<div class="empty">No propondría nada ahora (fuente: ${esc(st)}).</div>`; return; }
+    box.innerHTML = `<div class="stat" style="margin-bottom:7px">Propondría ${props.length} acción(es) · fuente: ${esc(st)}</div>` + props.map(propHtml).join("");
+  }catch(e){ box.innerHTML = `<div class="empty">Error: ${esc(e.message)}</div>`; }
+}
+
+function renderSnapshot(snap){
+  const res = (snap && snap.resultados) || [];
+  let total = 0;
+  res.forEach(o=>{
+    total += (o.proposals||[]).length;
+    const card = document.querySelector(`[data-orq="${o.name}"]`);
+    if(!card) return;
+    const box = card.querySelector(".dry"); box.classList.add("show");
+    const props = o.proposals||[]; const st=(o.signals&&o.signals.source_status)||"?";
+    box.innerHTML = props.length
+      ? `<div class="stat" style="margin-bottom:7px">Propondría ${props.length} · fuente: ${esc(st)}</div>`+props.map(propHtml).join("")
+      : `<div class="empty">No propondría nada ahora (fuente: ${esc(st)}).</div>`;
+  });
+  const when = snap && snap.generated_at ? new Date(snap.generated_at).toLocaleString("es-CL") : "";
+  $("globalStat").textContent = `${res.length} orquestadores · ${total} propuesta(s) potencial(es)`
+    + (when ? ` · snapshot ${when}` : "");
+}
+
+// Carga instantánea desde el snapshot persistido (no re-corre BI/Medilink).
+async function loadSnapshot(){
+  try{ renderSnapshot(await api("/admin/api/orquestadores/snapshot")); }
+  catch(e){ $("globalStat").textContent = "Sin snapshot — usa Recalcular."; }
+}
+
+// Recalcula en vivo (reconstruye el snapshot corriendo dry-run de todos).
+async function refreshSnapshot(){
+  const lbl=$("dryAllLbl"); lbl.innerHTML='<span class="spin"></span>';
+  try{ renderSnapshot(await api("/admin/api/orquestadores/snapshot?refresh=1")); toast("Sugerencias recalculadas"); }
+  catch(e){ toast("Error: "+e.message); }
+  lbl.textContent="Recalcular sugerencias (vivo)";
+}
+
+function catCard(o){
+  const on = o.enabled;
+  return `<div class="card" data-orq="${esc(o.name)}" data-dom="${esc(o.dominio||"")}">
+    <div class="hd">
+      <div><div class="name">${esc(o.name)}</div><div class="dom">${esc(o.dominio||"")} · ${esc(o.cadencia||"")}</div></div>
+      <span class="badge ${on?'on':'off'}">${on?'ENCENDIDO':'apagado'}</span>
+    </div>
+    <div class="desc">${esc(o.descripcion||"")}</div>
+    <div class="ft">
+      <span class="flag">${esc(o.flag||"")}</span>
+      <button class="btn btn-ghost btn-sm" onclick="dryOne('${esc(o.name)}',this)">Ver qué propondría</button>
+    </div>
+    <div class="dry"></div>
+  </div>`;
+}
+
+let _activeDom = "";
+function applyFilter(){
+  document.querySelectorAll("#catalog .card").forEach(c=>{
+    const show = !_activeDom || c.getAttribute("data-dom") === _activeDom;
+    c.classList.toggle("hidden", !show);
+  });
+  document.querySelectorAll("#chips .chip").forEach(ch=>
+    ch.classList.toggle("active", ch.getAttribute("data-dom") === _activeDom));
+}
+function filterDom(dom){ _activeDom = (_activeDom === dom) ? "" : dom; applyFilter(); }
+
+function renderChips(orqs){
+  const counts = {};
+  orqs.forEach(o=>{ const d=o.dominio||"—"; counts[d]=(counts[d]||0)+1; });
+  const chips = [`<button class="chip ${_activeDom===""?"active":""}" data-dom="" onclick="filterDom('')">Todos <span class="c">${orqs.length}</span></button>`];
+  Object.entries(counts).sort((a,b)=>b[1]-a[1]).forEach(([d,n])=>
+    chips.push(`<button class="chip" data-dom="${esc(d)}" onclick="filterDom('${esc(d)}')">${esc(d)} <span class="c">${n}</span></button>`));
+  $("chips").innerHTML = chips.join("");
+}
+
+async function loadCatalog(){
+  try{
+    const r = await api("/admin/api/orquestadores");
+    const orqs = r.orquestadores||[];
+    $("catCount").textContent = orqs.length;
+    $("catalog").innerHTML = orqs.map(catCard).join("");
+    renderChips(orqs); applyFilter();
+  }catch(e){ $("catalog").innerHTML = `<div class="empty">No pude cargar el catálogo: ${esc(e.message)}</div>`; }
+}
+
+function inboxItem(p){
+  return `<div class="prop"><div style="flex:1">
+      <div class="s">${esc(p.summary)}</div>
+      <div class="r">${esc(p.rationale)}</div>
+      <div class="meta">${esc(p.kind)} · ${esc(p.impact||"")}</div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-ok btn-sm" onclick="decide('${esc(p.id)}','approve',this)">Aprobar</button>
+      <button class="btn btn-rej btn-sm" onclick="decide('${esc(p.id)}','reject',this)">Descartar</button>
+    </div></div>`;
+}
+
+async function loadInbox(){
+  try{
+    const r = await api("/admin/api/orquestadores/propuestas");
+    const props = r.propuestas||[];
+    $("inboxCount").textContent = props.length;
+    $("inbox").innerHTML = props.length ? props.map(inboxItem).join("")
+      : '<div class="empty">Sin propuestas pendientes.</div>';
+  }catch(e){ $("inbox").innerHTML = `<div class="empty">No pude cargar el inbox: ${esc(e.message)}</div>`; }
+}
+
+async function decide(pid, action, btn){
+  btn.disabled = true; btn.innerHTML='<span class="spin"></span>';
+  try{
+    await api(`/admin/api/orquestadores/propuesta/${encodeURIComponent(pid)}/${action}`,
+              {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({by:"recepcion"})});
+    toast(action==="approve"?"Propuesta aprobada":"Propuesta descartada");
+    loadInbox();
+  }catch(e){ toast("Error: "+e.message); btn.disabled=false; btn.textContent=action==="approve"?"Aprobar":"Descartar"; }
+}
+
+async function loadBriefing(){
+  try{
+    const b = await api("/admin/api/orquestadores/briefing");
+    const dom = Object.entries(b.por_dominio||{}).map(([k,v])=>`${esc(k)}: ${v}`).join(" · ");
+    const pri = (b.prioritarias||[]).slice(0,6).map(it=>`<li><b>${esc(it.orquestador)}</b> — ${esc(it.summary)}</li>`).join("");
+    $("brief").innerHTML = `<div class="brief-hd">Briefing del día</div>
+      <div class="brief-kpis"><span>${b.n_acciones||0} acciones sugeridas</span><span>${b.n_personas||0} personas en worklists</span>${dom?`<span>${esc(dom)}</span>`:""}</div>
+      ${pri?`<div class="brief-pri-t">Prioritario hoy</div><ul class="brief-pri">${pri}</ul>`:'<div class="empty">Nada prioritario hoy. Todo en orden.</div>'}`;
+  }catch(e){ $("brief").innerHTML = `<div class="brief-hd">Briefing del día</div><div class="empty">Sin snapshot todavía — usa Recalcular.</div>`; }
+}
+
+loadCatalog().then(()=>{ loadSnapshot(); loadBriefing(); }); loadInbox();
+</script>
+</body>
+</html>

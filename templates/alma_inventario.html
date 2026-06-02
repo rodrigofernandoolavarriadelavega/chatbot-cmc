@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Inventario Dental — Alma CMC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --aqua:#4FBECE; --aqua-s:#e8f8fb; --blue:#1172AB; --navy:#0F3F68; --navy2:#0c3556;
+    --bg:#F7FBFD; --border:#d6e4ec; --text:#0F3F68; --mute:#62788a;
+    --red:#e84545; --red-s:#fdecec; --green:#23c25e; --green-s:#e7f9ee;
+    --orange:#f59e0b; --orange-s:#fef5e6;
+    --sh-sm:0 1px 3px rgba(15,63,104,.08); --sh-md:0 8px 30px rgba(15,63,104,.14);
+  }
+  * { box-sizing:border-box; }
+  html,body { height:100%; margin:0; }
+  body { font-family:'Montserrat',-apple-system,sans-serif; background:var(--bg); color:var(--text); font-size:13px; }
+
+  /* Topbar */
+  .pg-topbar { display:flex; align-items:center; gap:12px; background:#fff; border-bottom:1px solid var(--border);
+    padding:0 18px; height:56px; box-shadow:var(--sh-sm); position:sticky; top:0; z-index:20; }
+  .pg-topbar h1 { font-size:15px; font-weight:800; margin:0; color:var(--navy); display:flex; align-items:center; gap:9px; }
+  .pg-topbar h1 svg { width:20px; height:20px; color:var(--aqua); }
+  .pg-topbar .spacer { flex:1; }
+  .search-box { position:relative; }
+  .search-box input { font-family:inherit; font-size:12px; font-weight:500; border:1px solid var(--border);
+    border-radius:9px; padding:8px 12px 8px 32px; width:230px; color:var(--navy); background:var(--bg); transition:all .15s; }
+  .search-box input:focus { outline:none; border-color:var(--aqua); background:#fff; width:260px; }
+  .search-box svg { position:absolute; left:10px; top:50%; transform:translateY(-50%); width:15px; height:15px; color:var(--mute); }
+
+  .btn-primary { display:inline-flex; align-items:center; gap:6px; background:var(--aqua); color:#fff; border:0;
+    border-radius:9px; padding:9px 16px; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer;
+    transition:all .15s; box-shadow:0 2px 8px rgba(79,190,206,.3); }
+  .btn-primary:hover { background:var(--blue); box-shadow:0 4px 14px rgba(17,114,171,.35); }
+  .btn-primary svg { width:16px; height:16px; }
+  .btn-ghost { display:inline-flex; align-items:center; gap:6px; background:#fff; color:var(--blue);
+    border:1px solid var(--border); border-radius:9px; padding:8px 13px; font-family:inherit; font-size:12px;
+    font-weight:600; cursor:pointer; transition:all .15s; }
+  .btn-ghost:hover { background:var(--aqua-s); border-color:var(--aqua); }
+  .btn-ghost svg { width:14px; height:14px; }
+
+  .wrap { padding:18px; max-width:1320px; margin:0 auto; }
+
+  /* KPI cards */
+  .kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:18px; }
+  .kpi { background:#fff; border:1px solid var(--border); border-radius:16px; padding:16px 18px; box-shadow:var(--sh-sm);
+    position:relative; overflow:hidden; }
+  .kpi::after { content:''; position:absolute; right:-18px; top:-18px; width:70px; height:70px; border-radius:50%;
+    background:var(--aqua-s); opacity:.6; }
+  .kpi .k-label { font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--mute); }
+  .kpi .k-val { font-size:26px; font-weight:800; color:var(--navy); margin-top:6px; line-height:1; position:relative; z-index:1; }
+  .kpi .k-sub { font-size:11px; font-weight:600; color:var(--mute); margin-top:5px; }
+  .kpi.alert .k-val { color:var(--orange); }
+  .kpi.alert::after { background:var(--orange-s); }
+  .kpi.money .k-val { color:var(--blue); }
+
+  /* Category chips */
+  .chips { display:flex; flex-wrap:wrap; gap:7px; margin-bottom:14px; }
+  .chip { font-family:inherit; font-size:11.5px; font-weight:600; border:1px solid var(--border); background:#fff;
+    color:var(--blue); border-radius:999px; padding:6px 13px; cursor:pointer; transition:all .14s; }
+  .chip:hover { background:var(--aqua-s); border-color:var(--aqua); }
+  .chip.active { background:var(--navy); border-color:var(--navy); color:#fff; }
+  .chip .cnt { opacity:.6; margin-left:4px; font-weight:700; }
+
+  /* Table */
+  .card { background:#fff; border:1px solid var(--border); border-radius:16px; box-shadow:var(--sh-sm); overflow:hidden; }
+  table { width:100%; border-collapse:collapse; }
+  thead th { text-align:left; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
+    color:var(--mute); padding:12px 14px; background:var(--bg); border-bottom:1px solid var(--border); white-space:nowrap; }
+  thead th.num, td.num { text-align:right; }
+  tbody td { padding:11px 14px; border-bottom:1px solid #eef4f8; font-size:12.5px; vertical-align:middle; }
+  tbody tr:last-child td { border-bottom:0; }
+  tbody tr:hover { background:#fafdfe; }
+  .prod-name { font-weight:700; color:var(--navy); }
+  .prod-meta { font-size:11px; color:var(--mute); font-weight:500; margin-top:2px; }
+  .cat-tag { display:inline-block; font-size:10px; font-weight:700; color:var(--blue); background:var(--aqua-s);
+    border-radius:6px; padding:3px 8px; white-space:nowrap; }
+  .stock-badge { display:inline-flex; align-items:center; gap:5px; font-weight:800; font-size:13px; padding:3px 10px;
+    border-radius:8px; }
+  .stock-badge.ok { color:var(--green); background:var(--green-s); }
+  .stock-badge.bajo { color:var(--orange); background:var(--orange-s); }
+  .stock-badge.agotado { color:var(--red); background:var(--red-s); }
+  .price { font-weight:700; color:var(--navy); white-space:nowrap; }
+  .price-sub { font-size:10.5px; color:var(--mute); font-weight:500; }
+  .row-actions { display:flex; gap:5px; justify-content:flex-end; }
+  .icon-btn { width:30px; height:30px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px;
+    border:1px solid var(--border); background:#fff; color:var(--blue); cursor:pointer; transition:all .14s; }
+  .icon-btn:hover { background:var(--aqua-s); border-color:var(--aqua); }
+  .icon-btn.danger:hover { background:var(--red-s); border-color:var(--red); color:var(--red); }
+  .icon-btn svg { width:15px; height:15px; }
+  .icon-btn.plus { color:var(--green); }
+  .icon-btn.plus:hover { background:var(--green-s); border-color:var(--green); }
+  .icon-btn.minus { color:var(--orange); }
+  .icon-btn.minus:hover { background:var(--orange-s); border-color:var(--orange); }
+
+  .empty { text-align:center; padding:60px 20px; color:var(--mute); }
+  .empty svg { width:46px; height:46px; opacity:.4; margin-bottom:12px; }
+
+  /* Modal */
+  .modal-bg { position:fixed; inset:0; background:rgba(15,63,104,.45); backdrop-filter:blur(3px); display:none;
+    align-items:center; justify-content:center; z-index:100; padding:20px; }
+  .modal-bg.show { display:flex; }
+  .modal { background:#fff; border-radius:18px; box-shadow:var(--sh-md); width:100%; max-width:520px; max-height:90vh;
+    overflow-y:auto; }
+  .modal.wide { max-width:760px; }
+  .modal-head { display:flex; align-items:center; justify-content:space-between; padding:18px 22px;
+    border-bottom:1px solid var(--border); position:sticky; top:0; background:#fff; border-radius:18px 18px 0 0; }
+  .modal-head h2 { margin:0; font-size:16px; font-weight:800; color:var(--navy); }
+  .modal-head .x { cursor:pointer; color:var(--mute); width:26px; height:26px; display:flex; align-items:center;
+    justify-content:center; border-radius:7px; }
+  .modal-head .x:hover { background:var(--bg); color:var(--navy); }
+  .modal-body { padding:20px 22px; }
+  .modal-foot { padding:16px 22px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:flex-end; }
+  .field { margin-bottom:14px; }
+  .field label { display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
+    color:var(--mute); margin-bottom:6px; }
+  .field input, .field select, .field textarea { width:100%; font-family:inherit; font-size:13px; font-weight:500;
+    border:1px solid var(--border); border-radius:9px; padding:9px 11px; color:var(--navy); background:var(--bg); }
+  .field input:focus, .field select:focus, .field textarea:focus { outline:none; border-color:var(--aqua); background:#fff; }
+  .field-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .field-row-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+
+  /* Movimiento toggle */
+  .mov-types { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:16px; }
+  .mov-type { text-align:center; padding:12px 6px; border:1.5px solid var(--border); border-radius:11px; cursor:pointer;
+    transition:all .14s; font-weight:700; font-size:12px; color:var(--mute); background:var(--bg); }
+  .mov-type:hover { border-color:var(--aqua); }
+  .mov-type.active { color:#fff; border-color:transparent; }
+  .mov-type.active[data-t=entrada] { background:var(--green); }
+  .mov-type.active[data-t=salida] { background:var(--orange); }
+  .mov-type.active[data-t=merma] { background:var(--red); }
+  .mov-type.active[data-t=ajuste] { background:var(--blue); }
+  .mov-type small { display:block; font-size:9.5px; font-weight:600; opacity:.8; margin-top:2px; text-transform:none; letter-spacing:0; }
+  .mov-hint { font-size:11.5px; color:var(--mute); background:var(--bg); border-radius:9px; padding:10px 12px;
+    margin-bottom:14px; line-height:1.45; }
+  .mov-hist { margin-top:8px; max-height:200px; overflow-y:auto; border-top:1px solid var(--border); }
+  .mov-hist .mh { display:flex; align-items:center; gap:10px; padding:8px 2px; border-bottom:1px solid #eef4f8; font-size:12px; }
+  .mov-hist .mh-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .mov-hist .mh-dot.entrada { background:var(--green); }
+  .mov-hist .mh-dot.salida, .mov-hist .mh-dot.merma { background:var(--orange); }
+  .mov-hist .mh-dot.ajuste { background:var(--blue); }
+  .mov-hist .mh .mh-q { font-weight:700; margin-left:auto; }
+
+  /* Orden de compra */
+  .oc-total { display:flex; align-items:center; justify-content:space-between; background:var(--navy); color:#fff;
+    border-radius:12px; padding:14px 18px; margin-bottom:14px; }
+  .oc-total .t-lbl { font-size:11px; font-weight:600; opacity:.8; text-transform:uppercase; letter-spacing:.05em; }
+  .oc-total .t-val { font-size:24px; font-weight:800; }
+  .oc-row { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid #eef4f8; font-size:12.5px; }
+  .oc-row:last-child { border-bottom:0; }
+  .oc-row .oc-n { flex:1; }
+  .oc-row .oc-name { font-weight:700; color:var(--navy); }
+  .oc-row .oc-q { font-weight:800; color:var(--blue); white-space:nowrap; }
+  .oc-row .oc-st { font-size:10.5px; color:var(--mute); }
+
+  .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--navy);
+    color:#fff; padding:12px 22px; border-radius:11px; font-weight:600; font-size:13px; box-shadow:var(--sh-md);
+    opacity:0; transition:all .25s; z-index:200; pointer-events:none; }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+  .toast.err { background:var(--red); }
+
+  @media (max-width:860px){
+    .kpis { grid-template-columns:1fr 1fr; }
+    .search-box input { width:150px; }
+    .search-box input:focus { width:170px; }
+    .hide-sm { display:none; }
+  }
+</style>
+</head>
+<body>
+  <div class="pg-topbar">
+    <h1>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16.5 9.4L7.5 4.21" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Inventario Dental
+    </h1>
+    <div class="spacer"></div>
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3" stroke-linecap="round"/></svg>
+      <input id="search" type="text" placeholder="Buscar producto o marca…" autocomplete="off">
+    </div>
+    <button class="btn-ghost hide-sm" onclick="openOrden()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 6h18M16 10a4 4 0 01-8 0" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Orden de compra
+    </button>
+    <button class="btn-ghost hide-sm" onclick="exportCSV()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 10l5 5 5-5M12 15V3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      CSV
+    </button>
+    <button class="btn-primary" onclick="openProducto()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
+      Producto
+    </button>
+  </div>
+
+  <div class="wrap">
+    <div class="kpis" id="kpis"></div>
+    <div class="chips" id="chips"></div>
+    <div class="card">
+      <table>
+        <thead><tr>
+          <th>Producto</th>
+          <th class="hide-sm">Categoría</th>
+          <th class="num">Stock</th>
+          <th class="num hide-sm">Mín.</th>
+          <th class="num">Costo MayorDent</th>
+          <th class="num hide-sm">Valor stock</th>
+          <th class="num">Acciones</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div id="empty" class="empty" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div>No hay productos con ese filtro</div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--mute);margin-top:14px;line-height:1.5">
+      Costos de referencia capturados de <b>MayorDent</b> (mayordent.cl) el 02-06-2026 — incluyen IVA, cambian con
+      ofertas/cyber. Edítalos cuando compres a otro precio. El stock se controla con movimientos (entrada/salida/ajuste/merma).
+    </div>
+  </div>
+
+  <!-- Modal Producto -->
+  <div class="modal-bg" id="m-prod">
+    <div class="modal">
+      <div class="modal-head"><h2 id="prod-title">Nuevo producto</h2><div class="x" onclick="closeM('m-prod')">✕</div></div>
+      <div class="modal-body">
+        <input type="hidden" id="p-id">
+        <div class="field"><label>Nombre</label><input id="p-nombre" placeholder="Ej: Resina Z350 XT Jeringa 4grs"></div>
+        <div class="field-row">
+          <div class="field"><label>Marca</label><input id="p-marca" placeholder="3M, FGM, Kerr…"></div>
+          <div class="field"><label>Categoría</label><select id="p-categoria"></select></div>
+        </div>
+        <div class="field-row-3">
+          <div class="field"><label>Costo MayorDent (CLP)</label><input id="p-precio" type="number" min="0" value="0"></div>
+          <div class="field"><label>Unidad</label><input id="p-unidad" placeholder="caja, jeringa…" value="unidad"></div>
+          <div class="field"><label>Stock mínimo</label><input id="p-min" type="number" min="0" value="0"></div>
+        </div>
+        <div class="field" id="p-stock-row"><label>Stock inicial</label><input id="p-stock" type="number" min="0" value="0"></div>
+        <div class="field"><label>Notas (opcional)</label><textarea id="p-notas" rows="2" placeholder="Proveedor alternativo, observaciones…"></textarea></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn-ghost" onclick="closeM('m-prod')">Cancelar</button>
+        <button class="btn-primary" onclick="saveProducto()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Movimiento -->
+  <div class="modal-bg" id="m-mov">
+    <div class="modal">
+      <div class="modal-head"><h2 id="mov-title">Movimiento</h2><div class="x" onclick="closeM('m-mov')">✕</div></div>
+      <div class="modal-body">
+        <input type="hidden" id="mv-id">
+        <div class="mov-types" id="mov-types">
+          <div class="mov-type" data-t="entrada" onclick="selMov('entrada')">Entrada<small>compré stock</small></div>
+          <div class="mov-type" data-t="salida" onclick="selMov('salida')">Salida<small>se usó</small></div>
+          <div class="mov-type" data-t="merma" onclick="selMov('merma')">Merma<small>vencido/roto</small></div>
+          <div class="mov-type" data-t="ajuste" onclick="selMov('ajuste')">Ajuste<small>conteo físico</small></div>
+        </div>
+        <div class="mov-hint" id="mov-hint"></div>
+        <div class="field"><label id="mv-q-label">Cantidad</label><input id="mv-cant" type="number" min="0" value="1"></div>
+        <div class="field"><label>Motivo (opcional)</label><input id="mv-motivo" placeholder="Ej: pedido MayorDent, uso clínico…"></div>
+        <div style="font-size:11px;font-weight:700;color:var(--mute);text-transform:uppercase;letter-spacing:.05em;margin:18px 0 4px">Últimos movimientos</div>
+        <div class="mov-hist" id="mov-hist"></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn-ghost" onclick="closeM('m-mov')">Cancelar</button>
+        <button class="btn-primary" onclick="saveMov()">Registrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Orden de compra -->
+  <div class="modal-bg" id="m-oc">
+    <div class="modal wide">
+      <div class="modal-head"><h2>Orden de compra sugerida — MayorDent</h2><div class="x" onclick="closeM('m-oc')">✕</div></div>
+      <div class="modal-body" id="oc-body"></div>
+      <div class="modal-foot">
+        <button class="btn-ghost" onclick="copyOrden()">Copiar lista</button>
+        <button class="btn-primary" onclick="closeM('m-oc')">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+const TOKEN = "__TOKEN__";
+const API = "/alma/api/inventario";
+const H = { "Authorization": "Bearer " + TOKEN, "Content-Type": "application/json" };
+let STATE = { categoria: "Todas", q: "", productos: [], categorias: [], ordenCache: null };
+
+const clp = n => "$" + (n||0).toLocaleString("es-CL");
+function toast(msg, err){ const t=document.getElementById('toast'); t.textContent=msg; t.className='toast show'+(err?' err':''); setTimeout(()=>t.className='toast',2200); }
+async function api(path, opts){ const r = await fetch(API+path, {headers:H, ...opts}); if(!r.ok){ throw new Error((await r.json().catch(()=>({}))).detail || r.status); } return r.json(); }
+
+async function loadAll(){
+  await Promise.all([loadResumen(), loadProductos()]);
+}
+
+async function loadResumen(){
+  try {
+    const r = await api("/resumen");
+    document.getElementById('kpis').innerHTML = `
+      <div class="kpi"><div class="k-label">Productos</div><div class="k-val">${r.n_productos}</div><div class="k-sub">en catálogo activo</div></div>
+      <div class="kpi money"><div class="k-label">Valor en stock</div><div class="k-val">${clp(r.valor_total)}</div><div class="k-sub">a costo MayorDent</div></div>
+      <div class="kpi ${r.n_alertas?'alert':''}"><div class="k-label">Alertas de stock</div><div class="k-val">${r.n_alertas}</div><div class="k-sub">${r.n_agotado} agotados · ${r.n_bajo} bajo mínimo</div></div>
+      <div class="kpi"><div class="k-label">Reposición sugerida</div><div class="k-val" style="font-size:22px">${clp(r.valor_reposicion)}</div><div class="k-sub">para volver a stock seguro</div></div>`;
+  } catch(e){ toast("Error cargando KPIs: "+e.message, true); }
+}
+
+async function loadProductos(){
+  try {
+    const qs = new URLSearchParams();
+    if(STATE.categoria && STATE.categoria!=="Todas") qs.set("categoria", STATE.categoria);
+    if(STATE.q) qs.set("q", STATE.q);
+    const r = await api("?"+qs.toString());
+    STATE.productos = r.productos;
+    STATE.categorias = r.categorias;
+    renderChips();
+    renderTable();
+  } catch(e){ toast("Error: "+e.message, true); }
+}
+
+function renderChips(){
+  const all = STATE.productos.length;
+  const chips = [`<div class="chip ${STATE.categoria==='Todas'?'active':''}" onclick="setCat('Todas')">Todas</div>`];
+  STATE.categorias.forEach(c => {
+    chips.push(`<div class="chip ${STATE.categoria===c?'active':''}" onclick="setCat('${c.replace(/'/g,"\\'")}')">${c}</div>`);
+  });
+  document.getElementById('chips').innerHTML = chips.join('');
+}
+
+function renderTable(){
+  const tb = document.getElementById('tbody');
+  const empty = document.getElementById('empty');
+  if(!STATE.productos.length){ tb.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  tb.innerHTML = STATE.productos.map(p => {
+    const stClass = p.estado;
+    const stLabel = p.estado==='agotado'?'Agotado':(p.estado==='bajo'?'Bajo':'');
+    return `<tr>
+      <td><div class="prod-name">${esc(p.nombre)}</div><div class="prod-meta">${esc(p.marca||'—')} · ${esc(p.unidad)}</div></td>
+      <td class="hide-sm"><span class="cat-tag">${esc(p.categoria)}</span></td>
+      <td class="num"><span class="stock-badge ${stClass}">${p.stock_actual}${stLabel?` · ${stLabel}`:''}</span></td>
+      <td class="num hide-sm" style="color:var(--mute);font-weight:600">${p.stock_minimo}</td>
+      <td class="num"><div class="price">${clp(p.precio_mayordent)}</div></td>
+      <td class="num hide-sm"><div class="price">${clp(p.valor_stock)}</div></td>
+      <td class="num"><div class="row-actions">
+        <button class="icon-btn plus" title="Entrada" onclick='openMov(${p.id},"entrada")'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg></button>
+        <button class="icon-btn minus" title="Salida" onclick='openMov(${p.id},"salida")'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14" stroke-linecap="round"/></svg></button>
+        <button class="icon-btn" title="Editar" onclick='editProducto(${p.id})'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke-linecap="round" stroke-linejoin="round"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="icon-btn danger" title="Eliminar" onclick='delProducto(${p.id})'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function setCat(c){ STATE.categoria=c; loadProductos(); }
+
+let searchTimer;
+document.getElementById('search').addEventListener('input', e => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(()=>{ STATE.q = e.target.value.trim(); loadProductos(); }, 250);
+});
+
+function closeM(id){ document.getElementById(id).classList.remove('show'); }
+
+/* ── Producto modal ── */
+function fillCats(sel){ sel.innerHTML = STATE.categorias.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join(''); }
+function openProducto(){
+  document.getElementById('prod-title').textContent='Nuevo producto';
+  document.getElementById('p-id').value='';
+  ['p-nombre','p-marca','p-notas'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('p-precio').value=0; document.getElementById('p-unidad').value='unidad';
+  document.getElementById('p-min').value=0; document.getElementById('p-stock').value=0;
+  fillCats(document.getElementById('p-categoria'));
+  document.getElementById('p-stock-row').style.display='block';
+  document.getElementById('m-prod').classList.add('show');
+}
+function editProducto(id){
+  const p = STATE.productos.find(x=>x.id===id); if(!p) return;
+  document.getElementById('prod-title').textContent='Editar producto';
+  document.getElementById('p-id').value=p.id;
+  document.getElementById('p-nombre').value=p.nombre;
+  document.getElementById('p-marca').value=p.marca||'';
+  fillCats(document.getElementById('p-categoria'));
+  document.getElementById('p-categoria').value=p.categoria;
+  document.getElementById('p-precio').value=p.precio_mayordent;
+  document.getElementById('p-unidad').value=p.unidad;
+  document.getElementById('p-min').value=p.stock_minimo;
+  document.getElementById('p-notas').value=p.notas||'';
+  document.getElementById('p-stock-row').style.display='none'; // stock se cambia con movimientos
+  document.getElementById('m-prod').classList.add('show');
+}
+async function saveProducto(){
+  const id = document.getElementById('p-id').value;
+  const body = {
+    nombre: document.getElementById('p-nombre').value.trim(),
+    marca: document.getElementById('p-marca').value.trim(),
+    categoria: document.getElementById('p-categoria').value,
+    precio_mayordent: +document.getElementById('p-precio').value||0,
+    unidad: document.getElementById('p-unidad').value.trim()||'unidad',
+    stock_minimo: +document.getElementById('p-min').value||0,
+    notas: document.getElementById('p-notas').value.trim(),
+  };
+  if(!body.nombre){ toast("Ponle nombre al producto", true); return; }
+  try {
+    if(id){ await api("/"+id, {method:"PATCH", body:JSON.stringify(body)}); }
+    else { body.stock_actual = +document.getElementById('p-stock').value||0; await api("", {method:"POST", body:JSON.stringify(body)}); }
+    closeM('m-prod'); toast("Guardado"); loadAll();
+  } catch(e){ toast("Error: "+e.message, true); }
+}
+async function delProducto(id){
+  const p = STATE.productos.find(x=>x.id===id);
+  if(!confirm(`¿Eliminar "${p?p.nombre:''}" del inventario?`)) return;
+  try { await api("/"+id, {method:"DELETE"}); toast("Eliminado"); loadAll(); }
+  catch(e){ toast("Error: "+e.message, true); }
+}
+
+/* ── Movimiento modal ── */
+let movTipo = 'entrada';
+const MOV_HINTS = {
+  entrada: "Suma unidades al stock. Úsalo cuando llega un pedido de MayorDent.",
+  salida:  "Resta unidades. Úsalo cuando se consume en la clínica.",
+  merma:   "Resta unidades por producto vencido, roto o perdido.",
+  ajuste:  "Fija el stock al número del conteo físico (no suma ni resta).",
+};
+function selMov(t){
+  movTipo=t;
+  document.querySelectorAll('#mov-types .mov-type').forEach(el=>el.classList.toggle('active', el.dataset.t===t));
+  document.getElementById('mov-hint').textContent=MOV_HINTS[t];
+  document.getElementById('mv-q-label').textContent = (t==='ajuste')?'Stock real (conteo físico)':'Cantidad';
+}
+async function openMov(id, tipo){
+  const p = STATE.productos.find(x=>x.id===id); if(!p) return;
+  document.getElementById('mv-id').value=id;
+  document.getElementById('mov-title').textContent=p.nombre;
+  document.getElementById('mv-cant').value = (tipo==='ajuste')?p.stock_actual:1;
+  document.getElementById('mv-motivo').value='';
+  selMov(tipo||'entrada');
+  document.getElementById('m-mov').classList.add('show');
+  // historial
+  const hist = document.getElementById('mov-hist'); hist.innerHTML='<div style="padding:10px;color:var(--mute)">Cargando…</div>';
+  try {
+    const r = await api("/"+id+"/movimientos");
+    hist.innerHTML = r.movimientos.length ? r.movimientos.map(m=>`
+      <div class="mh"><span class="mh-dot ${m.tipo}"></span>
+        <span style="text-transform:capitalize;font-weight:600">${m.tipo}</span>
+        <span style="color:var(--mute)">${m.motivo?esc(m.motivo):''}</span>
+        <span class="mh-q">${m.stock_antes}→${m.stock_despues}</span></div>`).join('')
+      : '<div style="padding:10px;color:var(--mute)">Sin movimientos aún</div>';
+  } catch(e){ hist.innerHTML='<div style="padding:10px;color:var(--red)">Error</div>'; }
+}
+async function saveMov(){
+  const id = document.getElementById('mv-id').value;
+  const body = { tipo: movTipo, cantidad: +document.getElementById('mv-cant').value||0, motivo: document.getElementById('mv-motivo').value.trim() };
+  try { await api("/"+id+"/movimiento", {method:"POST", body:JSON.stringify(body)}); closeM('m-mov'); toast("Movimiento registrado"); loadAll(); }
+  catch(e){ toast("Error: "+e.message, true); }
+}
+
+/* ── Orden de compra ── */
+async function openOrden(){
+  document.getElementById('m-oc').classList.add('show');
+  const body = document.getElementById('oc-body'); body.innerHTML='<div style="padding:20px;color:var(--mute)">Calculando…</div>';
+  try {
+    const r = await api("/orden-compra"); STATE.ordenCache = r;
+    if(!r.items.length){ body.innerHTML='<div class="empty" style="padding:40px">✅ Todo el stock está sobre el mínimo. No hay nada que reponer.</div>'; return; }
+    body.innerHTML = `
+      <div class="oc-total"><div><div class="t-lbl">Total estimado · ${r.n_items} productos</div><div class="t-val">${clp(r.total)}</div></div>
+        <div style="font-size:11px;text-align:right;opacity:.8">Costos MayorDent<br>(referenciales c/IVA)</div></div>
+      ${r.items.map(i=>`<div class="oc-row">
+        <div class="oc-n"><div class="oc-name">${esc(i.nombre)}</div><div class="oc-st">${esc(i.marca||'')} · ${esc(i.categoria)} · stock ${i.stock_actual}/${i.stock_minimo} · ${i.estado}</div></div>
+        <div style="text-align:right"><div class="oc-q">${i.cantidad_sugerida} ${esc(i.unidad)}</div><div class="oc-st">${clp(i.subtotal)}</div></div>
+      </div>`).join('')}`;
+  } catch(e){ body.innerHTML='<div style="padding:20px;color:var(--red)">Error: '+e.message+'</div>'; }
+}
+function copyOrden(){
+  const r = STATE.ordenCache; if(!r||!r.items.length){ toast("Nada que copiar"); return; }
+  const txt = "ORDEN DE COMPRA — MayorDent\n" + r.items.map(i=>`${i.cantidad_sugerida} x ${i.nombre} (${i.marca}) — ${clp(i.subtotal)}`).join("\n") + `\n\nTOTAL: ${clp(r.total)}`;
+  navigator.clipboard.writeText(txt).then(()=>toast("Lista copiada")).catch(()=>toast("No se pudo copiar", true));
+}
+
+function exportCSV(){ window.open(API+"/export?token="+encodeURIComponent(TOKEN), "_blank"); }
+
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') document.querySelectorAll('.modal-bg.show').forEach(m=>m.classList.remove('show')); });
+document.querySelectorAll('.modal-bg').forEach(bg=>bg.addEventListener('click', e=>{ if(e.target===bg) bg.classList.remove('show'); }));
+
+loadAll();
+</script>
+</body>
+</html>

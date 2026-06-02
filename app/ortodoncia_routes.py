@@ -1,0 +1,335 @@
+"""
+Router /alma/api/ortodoncia — Módulo Seguimiento Ortodoncia en Alma.
+
+Refuerza una especialidad de ticket alto pero frágil: ortodoncia en el CMC es UNA
+sola profesional (Dra. Daniela Castillo, vive en Concepción), con tratamientos
+largos de 18-24 meses y controles mensuales. El riesgo del negocio es doble:
+  1. Un paciente que deja de venir a sus controles abandona un tratamiento ya
+     pagado en parte → mala terminación clínica + saldo que no se cobra.
+  2. Sin un seguimiento explícito, los controles vencidos pasan desapercibidos
+     porque "vienen solos cuando quieren".
+
+Qué hace este módulo:
+  - Lista los tratamientos activos con su avance (meses en tratamiento, nº de
+    controles) desde el historial real (bi.fact_atenciones, especialidad_id=19).
+  - Marca quién tiene su control VENCIDO (más de 45 días sin venir) → worklist
+    accionable con deep-link wa.me para citarlo.
+  - Plan de pago por paciente (valor total del tratamiento, cuota mensual,
+    abonado) → saldo pendiente y valor de la cartera.
+
+Fuentes de datos:
+  - bi.fact_atenciones + dim_paciente + dim_profesional + fact_ingresos  (historial
+    de controles, teléfono, monto por visita).
+  - sessions.db tabla ortodoncia_plan  (plan de pago + estado, llaveado por
+    bi.paciente_id). Distinto de la tabla legacy `ortodoncia_cache` (esa viene del
+    módulo admin clásico, llaveada por id de Medilink).
+
+Degradación elegante: si la BI no está disponible → listas vacías +
+source_status="bi_unavailable" (nunca 500).
+"""
+import csv
+import io
+import logging
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
+
+from fastapi import APIRouter, Cookie, HTTPException, Query, Request
+from fastapi.responses import StreamingResponse
+
+log = logging.getLogger("ortodoncia_routes")
+_CHILE_TZ = ZoneInfo("America/Santiago")
+
+router = APIRouter(prefix="/alma/api/ortodoncia", tags=["ortodoncia"])
+
+ESPECIALIDAD_ORTO = 19  # bi.dim_especialidad.especialidad_id
+
+# ── Umbrales (control mensual ≈ 30 días) ─────────────────────────────────────
+CONTROL_OK_MAX     = 35   # ≤ 35d desde el último control → al día
+CONTROL_PRONTO_MAX = 45   # 36-45d → toca/está por vencer
+                          # > 45d → control VENCIDO
+GAP_NUEVO_TRAT     = 150  # hueco > 150d → tratamiento nuevo (no es el mismo)
+
+# Clasificación de la visita por monto (convención CMC: instalación cara, control barato)
+MONTO_INSTALACION  = 80000   # >= → instalación / fase mayor
+MONTO_CONTROL_MIN  = 12000   # entre min y instalación → control
+
+
+# ── Auth ──────────────────────────────────────────────────────────────────────
+
+def _require_admin(request: Request, token: str | None, cmc_session: str | None) -> str:
+    import hmac as _hmac
+    from config import ADMIN_TOKEN
+    from admin_routes import _verify_cookie
+
+    auth_header = (request.headers.get("authorization", "") if request else "")
+    if auth_header.lower().startswith("bearer "):
+        tk = auth_header.split(None, 1)[1].strip()
+        if _hmac.compare_digest(tk, ADMIN_TOKEN):
+            return tk
+    if cmc_session:
+        role = _verify_cookie(cmc_session)
+        if role in ("admin", "ortodoncia"):
+            return ADMIN_TOKEN
+    if token and _hmac.compare_digest(token, ADMIN_TOKEN):
+        return token
+    raise HTTPException(status_code=401, detail="Token inválido")
+
+
+# ── Capa de gestión propia (sessions.db) ────────────────────────────────────
+
+def ensure_ortodoncia_plan_table() -> None:
+    """Plan de pago por paciente (llaveado por bi.paciente_id). Idempotente."""
+    from session import _conn
+    with _conn() as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS ortodoncia_plan (
+                paciente_id    INTEGER PRIMARY KEY,   -- bi.dim_paciente.paciente_id
+                valor_total    INTEGER DEFAULT 0,      -- valor total del tratamiento
+                cuota_mensual  INTEGER DEFAULT 0,
+                abonado        INTEGER DEFAULT 0,      -- pagado a la fecha
+                estado_manual  TEXT DEFAULT '',        -- '' | 'finalizado' | 'pausa'
+                notas          TEXT DEFAULT '',
+                updated_at     TEXT DEFAULT (datetime('now'))
+            )
+        """)
+        conn.commit()
+
+
+def _planes() -> dict[int, dict]:
+    ensure_ortodoncia_plan_table()
+    from session import _conn
+    with _conn() as conn:
+        rows = conn.execute("SELECT * FROM ortodoncia_plan").fetchall()
+    return {r["paciente_id"]: dict(r) for r in rows}
+
+
+# ── BI ──────────────────────────────────────────────────────────────────────
+
+def _bi_rows(meses: int) -> tuple[list[dict], str]:
+    sql = """
+        SELECT fa.paciente_id,
+               TRIM(COALESCE(p.nombre,'') || ' ' || COALESCE(p.apellido,'')) AS paciente,
+               p.telefono,
+               COALESCE(NULLIF(TRIM(p.localidad),''), p.comuna, '') AS lugar,
+               fa.fecha,
+               COALESCE(fi.monto_bruto, 0) AS monto
+        FROM bi.fact_atenciones fa
+        JOIN bi.dim_paciente p     ON p.paciente_id   = fa.paciente_id
+        JOIN bi.dim_profesional pr ON pr.profesional_id = fa.profesional_id
+        LEFT JOIN bi.fact_ingresos fi ON fi.atencion_id = fa.atencion_id
+        WHERE pr.especialidad_id = %s
+          AND fa.fecha >= (CURRENT_DATE - make_interval(months => %s))
+        ORDER BY fa.paciente_id, fa.fecha
+    """
+    try:
+        from main import _bi_pool
+        pool = _bi_pool()
+        conn = None
+        try:
+            conn = pool.getconn()
+            with conn.cursor() as cur:
+                cur.execute(sql, (ESPECIALIDAD_ORTO, meses))
+                cols = [d[0] for d in cur.description]
+                rows = [dict(zip(cols, r)) for r in cur.fetchall()]
+            return rows, "ok"
+        finally:
+            if conn is not None:
+                pool.putconn(conn)
+    except Exception as e:
+        log.warning("ortodoncia: BI no disponible (%s)", e)
+        return [], "bi_unavailable"
+
+
+def _today() -> date:
+    return datetime.now(_CHILE_TZ).date()
+
+
+def _clasificar(dias: int, plan: dict | None) -> tuple[str, str]:
+    if plan and plan.get("estado_manual") == "finalizado":
+        return "finalizado", "Finalizado"
+    if dias <= CONTROL_OK_MAX:
+        return "al_dia", "Al día"
+    if dias <= CONTROL_PRONTO_MAX:
+        return "pronto", "Control por vencer"
+    return "vencido", "Control vencido"
+
+
+def _compute(meses: int = 6):
+    rows, status = _bi_rows(max(meses, 24))  # ventana ancha: ortodoncia dura 18-24m
+    planes = _planes()
+    today = _today()
+
+    porpac: dict[int, dict] = {}
+    for r in rows:
+        f = r["fecha"]
+        if isinstance(f, str):
+            try:
+                f = datetime.strptime(f[:10], "%Y-%m-%d").date()
+            except Exception:
+                continue
+        pid = r["paciente_id"]
+        d = porpac.setdefault(pid, {
+            "paciente_id": pid, "paciente": r["paciente"], "telefono": r.get("telefono") or "",
+            "lugar": r.get("lugar") or "", "visitas": [],
+        })
+        d["visitas"].append((f, float(r.get("monto") or 0)))
+
+    pacientes = []
+    valor_cartera = 0
+    ingreso_total = 0.0
+    ventana_6m = today.toordinal() - meses * 30
+
+    for pid, d in porpac.items():
+        visitas = sorted(d["visitas"], key=lambda x: x[0])
+        if not visitas:
+            continue
+        fechas = [v[0] for v in visitas]
+        # tratamiento actual = visitas desde el último hueco grande
+        inicio_idx = 0
+        for i in range(1, len(fechas)):
+            if (fechas[i] - fechas[i - 1]).days > GAP_NUEVO_TRAT:
+                inicio_idx = i
+        tramo = visitas[inicio_idx:]
+        inicio = tramo[0][0]
+        last = tramo[-1][0]
+        dias = (today - last).days
+        n_visitas = len(tramo)
+        n_instalacion = sum(1 for _, m in tramo if m >= MONTO_INSTALACION)
+        n_controles = sum(1 for _, m in tramo if MONTO_CONTROL_MIN <= m < MONTO_INSTALACION)
+        meses_trat = round((today - inicio).days / 30.0, 1)
+        ingreso_pac = sum(m for f, m in visitas if f.toordinal() >= ventana_6m)
+        ingreso_total += ingreso_pac
+
+        plan = planes.get(pid)
+        estado, etiqueta = _clasificar(dias, plan)
+        valor_total = (plan or {}).get("valor_total", 0) or 0
+        abonado = (plan or {}).get("abonado", 0) or 0
+        cuota = (plan or {}).get("cuota_mensual", 0) or 0
+        saldo = max(valor_total - abonado, 0)
+        if estado != "finalizado":
+            valor_cartera += saldo
+
+        pacientes.append({
+            "paciente_id": pid,
+            "paciente": d["paciente"] or f"Paciente {pid}",
+            "telefono": d["telefono"],
+            "lugar": d["lugar"],
+            "inicio": inicio.isoformat(),
+            "meses_tratamiento": meses_trat,
+            "n_visitas": n_visitas,
+            "n_controles": n_controles,
+            "n_instalacion": n_instalacion,
+            "ultimo_control": last.isoformat(),
+            "dias_sin_control": dias,
+            "estado": estado,
+            "estado_label": etiqueta,
+            "valor_total": valor_total,
+            "abonado": abonado,
+            "cuota_mensual": cuota,
+            "saldo": saldo,
+            "notas": (plan or {}).get("notas", ""),
+        })
+
+    prio = {"vencido": 0, "pronto": 1, "al_dia": 2, "finalizado": 3}
+    pacientes.sort(key=lambda p: (prio.get(p["estado"], 9), -p["dias_sin_control"]))
+
+    activos     = [p for p in pacientes if p["estado"] != "finalizado"]
+    vencidos    = [p for p in pacientes if p["estado"] == "vencido"]
+    pronto      = [p for p in pacientes if p["estado"] == "pronto"]
+
+    kpis = {
+        "activos": len(activos),
+        "vencidos": len(vencidos),
+        "pronto": len(pronto),
+        "valor_cartera": valor_cartera,
+        "ingreso_orto": round(ingreso_total),
+        "n_pacientes": len(pacientes),
+    }
+    return {"kpis": kpis, "pacientes": pacientes, "source_status": status}
+
+
+# ── Endpoints ─────────────────────────────────────────────────────────────────
+
+@router.get("/resumen")
+async def resumen(meses: int = Query(6, ge=1, le=36),
+                  token: str | None = Query(None),
+                  cmc_session: str | None = Cookie(None),
+                  request: Request = None):
+    _require_admin(request, token, cmc_session)
+    data = _compute(meses)
+    return {"kpis": data["kpis"], "source_status": data["source_status"]}
+
+
+@router.get("/pacientes")
+async def pacientes(estado: str | None = Query(None),
+                    meses: int = Query(6, ge=1, le=36),
+                    token: str | None = Query(None),
+                    cmc_session: str | None = Cookie(None),
+                    request: Request = None):
+    _require_admin(request, token, cmc_session)
+    data = _compute(meses)
+    pac = data["pacientes"]
+    if estado and estado != "todos":
+        pac = [p for p in pac if p["estado"] == estado]
+    conteos: dict[str, int] = {}
+    for p in data["pacientes"]:
+        conteos[p["estado"]] = conteos.get(p["estado"], 0) + 1
+    return {"pacientes": pac, "conteos": conteos, "total": len(pac),
+            "source_status": data["source_status"]}
+
+
+@router.put("/plan/{paciente_id}")
+async def set_plan(paciente_id: int, request: Request,
+                   token: str | None = Query(None),
+                   cmc_session: str | None = Cookie(None)):
+    _require_admin(request, token, cmc_session)
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(400, "Body JSON inválido")
+    valor_total = int(body.get("valor_total") or 0)
+    cuota_mensual = int(body.get("cuota_mensual") or 0)
+    abonado = int(body.get("abonado") or 0)
+    estado_manual = (body.get("estado_manual") or "").strip()
+    if estado_manual not in ("", "finalizado", "pausa"):
+        estado_manual = ""
+    notas = (body.get("notas") or "").strip()
+    ensure_ortodoncia_plan_table()
+    from session import _conn
+    with _conn() as conn:
+        conn.execute("""
+            INSERT INTO ortodoncia_plan (paciente_id, valor_total, cuota_mensual, abonado, estado_manual, notas, updated_at)
+            VALUES (?,?,?,?,?,?, datetime('now'))
+            ON CONFLICT(paciente_id) DO UPDATE SET
+                valor_total=excluded.valor_total,
+                cuota_mensual=excluded.cuota_mensual,
+                abonado=excluded.abonado,
+                estado_manual=excluded.estado_manual,
+                notas=excluded.notas,
+                updated_at=excluded.updated_at
+        """, (paciente_id, valor_total, cuota_mensual, abonado, estado_manual, notas))
+        conn.commit()
+    return {"ok": True}
+
+
+@router.get("/export")
+async def export_csv(meses: int = Query(6, ge=1, le=36),
+                     token: str | None = Query(None),
+                     cmc_session: str | None = Cookie(None),
+                     request: Request = None):
+    _require_admin(request, token, cmc_session)
+    data = _compute(meses)
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["Paciente", "Teléfono", "Lugar", "Inicio", "Meses", "Controles",
+                "Último control", "Días sin control", "Estado",
+                "Valor total", "Abonado", "Saldo"])
+    for p in data["pacientes"]:
+        w.writerow([p["paciente"], p["telefono"], p["lugar"], p["inicio"],
+                    p["meses_tratamiento"], p["n_controles"], p["ultimo_control"],
+                    p["dias_sin_control"], p["estado_label"],
+                    p["valor_total"], p["abonado"], p["saldo"]])
+    buf.seek(0)
+    fname = f"ortodoncia_{_today().isoformat()}.csv"
+    return StreamingResponse(iter([buf.getvalue()]), media_type="text/csv",
+                             headers={"Content-Disposition": f'attachment; filename="{fname}"'})

@@ -310,6 +310,56 @@ Script standalone de conciliación de pagos del CMC. Cruza CSVs de las 6 fuentes
 - No toca el bot en ejecución; es una herramienta offline para el cierre mensual.
 
 ## Sesión en curso
+
+### 2026-06-02 (madrugada) — Motor de Programas Clínicos + Tamizaje (carril aislado)
+Sesión enfocada en programas por especialidad, 100% aislada a `programas.py`/`bi_helper.py`/templates propios para no colisionar con las sesiones paralelas (transversales + 18 agentes). **LOCAL OK + tests verdes + SQL validado vs BI viva. SIN commit, SIN deploy.**
+- `app/programas.py` → `/alma/programas`: motor genérico parametrizado, **11 programas de tratamiento** (adherencia: Nutrición/Psico/Fono/Odonto · control: Cardio/Gastro/Gineco/Matrona/Podología/Traumato/Med.General[1,10]) + **3 cohortes de tamizaje** (PAP, EMPAM, Cardiovascular). Agregar especialidad = entrada de config.
+- Agéntico: next-best-action WhatsApp, `build_digest` (lista de hoy unificada incl. Kine+Orto) → `/_/digest` + tool `get_worklist_hoy` del Copilot, `build_overview` → `/_/overview` (portfolio ranqueado por ingreso recuperable), KPI `valor_recuperable`, export con mensaje+wa por paciente.
+- ETL `health-bi-project/etl/transform.py::_canon_especialidad`: General→Medicina General (+ UPDATE aplicado en BI viva, esp 1 y 10).
+- `bi_helper.py` (bi_query compartido), `programas_report.py` (CLI), `docs/ALMA_PROGRAMAS.md`, `tests/test_alma_programas.py` (6 grupos). Tabla `programa_plan` en sessions.db.
+- Verificado: import main OK, 19 rutas mías, 9 endpoints HTTP 200, tests verdes. Deploy: `git add` SELECTIVO de archivos propios + hunks de wiring (NO -A). Ver memory/cmc_alma_kine_ortodoncia_modules.md.
+
+### 2026-06-02 (noche, ~4h autónomas) — Alma Agents: flota de 18 agentes autónomos
+Rodrigo: "crea todo lo agentico autonomo que puedas, máximo riesgo, dejalos apagados". **18 agentes que operan la clínica sola. SIN commit, SIN deploy. TODOS APAGADOS (inerte por defecto).**
+- Nuevo paquete `app/alma_agents/`: base (Agent+loop) + **guardrails** (authorize: gating cascada maestro→agente→execute→piso legal no-delegable: horas silencio, consent Ley 21.719, **presupuesto de contacto/paciente agregado anti-spam**, Medilink writes, riesgo extremo) + store + registry (autodescubre) + scheduler_hook (0 jobs si maestro off) + 18 agentes en `agents/`.
+- Agentes (riesgo): briefing/sre/supervisor/conciliacion/demanda_estrategia (bajo), pricing/seo/creativos/postconsulta/abandono/reputacion (medio), yield_agenda/control_cronico/adherencia_kine/winback/ads_executor/inventario (alto), **cobranza (extremo)**. Reusan winback/fidelizacion/autopilot/inventario/kine/google_rating/conciliacion/alma_brain.
+- UI `templates/alma_agents.html` (módulo "Flota de Agentes" /alma/agents, solo dueño, con **dry-run preview** por agente). Doc `docs/ALMA_AGENTS.md`. Tests `tests/test_alma_agents.py` (7 grupos OK).
+- Modificados (aditivos): main.py (router + register_agent_jobs gateado), config.py (módulo agentes), alma.html (icono robot).
+- Verificado: import main OK (con WIP paralelo), 3 rutas flota, hook 0 jobs con maestro off, dry-run bloquea todo con execute off.
+- **OJO COMMIT**: hubo múltiples sesiones paralelas esta noche → `git add` SELECTIVO de app/alma_agents/ + sus archivos + hunks míos de main/config/alma.html. NO `git add -A`. Ver memory/alma_agents_flota.md.
+
+
+### 2026-06-02 (noche) — Dos módulos Alma para reforzar especialidades: Kine + Ortodoncia
+Construido autónomo (Rodrigo durmiendo, "haz el 1 y luego el 2, ponle buen"). Tras analizar la nómina real (BI), se eligió reforzar **Kinesiología** (base sólida, 3 profs, multi-sesión → lever = adherencia) y **Ortodoncia** (ticket alto, 1 profesional, tratamiento largo → lever = controles). **LOCAL OK + test verde + SQL validado contra BI viva. SIN commit, SIN deploy.**
+- Nuevos `app/kine_routes.py` (`/alma/api/kine`) y `app/ortodoncia_routes.py` (`/alma/api/ortodoncia`): analítica BI-driven (bi.fact_atenciones esp=3 kine / esp=19 orto + fact_ingresos para monto + dim_paciente.telefono para wa.me). Detección de **episodios** (hueco>45d=nuevo), clasificación por días-sin-sesión (en_curso/riesgo/abandono), worklist accionable, plan opcional. Ortodoncia: meses de tratamiento, controles vencidos (>45d), **plan de pago** (saldo + cartera).
+- Capa de gestión propia en sessions.db: tablas nuevas `kine_plan` y `ortodoncia_plan`, **llaveadas por bi.paciente_id** (NO reusan kine_tracking/ortodoncia_cache que usan id Medilink — keyspaces distintos).
+- Templates premium `templates/alma_kine.html` + `templates/alma_ortodoncia.html` (clonan el sistema visual de alma_inventario.html: Montserrat + aqua/navy + cards 16px). KPIs, chips por estado, tabla, modal de plan, deep-link WhatsApp, export CSV.
+- Registro: main.py (2 routers + 2 ensure_table al arrancar + 2 page handlers /alma/kine y /alma/ortodoncia), config.py (2 entries en ALMA_MODULE_REGISTRY + agregados al perfil recepción), alma.html (íconos activity + smile).
+- Degradación elegante: si la BI no responde → listas vacías + source_status="bi_unavailable", nunca 500 (verificado local con BI caída: páginas HTTP 200, APIs JSON limpio).
+- Verificado: `import main` OK, 10 rutas alma kine/orto registradas; `tests/test_alma_kine_ortodoncia.py` verde (episodios, estados, override por plan, saldo/cartera); analista corrió el SQL exacto contra BI viva (kine 1.663 filas/221 pacientes, orto 583 filas, LEFT JOIN no duplica).
+- **Deploy pendiente (toca el shell que usa recepción)**: `git add app/kine_routes.py app/ortodoncia_routes.py templates/alma_kine.html templates/alma_ortodoncia.html tests/test_alma_kine_ortodoncia.py app/main.py app/config.py templates/alma.html` (add SELECTIVO — hay WIP de alma_brain/operativa sin commitear) → commit → push → ssh restart. Rutas live tras deploy: `/alma` (módulos Programa Kine + Ortodoncia en el sidebar de recepción).
+
+### 2026-06-02 — Alma operativa (Fase 4): relleno de cupos liberados por evento
+Cablea el pendiente "should_auto_confirm al waitlist". Cancelación → match candidatos en lista de espera → invitación → primero que acepta aparta (hold blando) → auto-confirma bajo riesgo o cae a recepción. **SIN commit, SIN deploy. Gateado OFF.**
+- Nuevo `app/alma_brain/operativa.py`: `fill_freed_slot` (match FIFO + respeta prof preferido + excluye cancelador → fan-out top-N), `accept_offer` (claim atómico + política), `_confirmar_en_medilink`.
+- `session.py`: tabla `waitlist_offers` + `claim_offer` ATÓMICO ("primero que acepta gana": SQLite single-writer serializa, el 2º ve el 'apartado' commiteado y pierde) + getters.
+- `policy.py`: `should_auto_confirm(OfferContext)` — requiere paciente conocido + RUT válido + esp coincide + inscripción formal; margen escalonado (escasas cardio/gastro/otorrino/gineco → 48h, resto → 24h). Flag dedicado angosto `ALMA_OPERATIVA_AUTOCONFIRM` (NO usa ALMA_BRAIN_ALLOW_MEDILINK_WRITES).
+- Enganches: `jobs.py` dispara fill SOLO en cancelación `anulada` (reasignada NO libera) + expiry TTL holds; `flows.py` handler de aceptación en IDLE (matcher angosto "TOMAR/sí"); `admin_routes.py` 3 endpoints recepción (`/admin/api/operativa/offers` + confirm + reject).
+- Template Meta `oferta_cupo` (botón "Tomar la hora", entrega fuera de 24h): `scripts/register_oferta_cupo_template.py` (PENDIENTE registrar+aprobar en Meta). `_enviar_invitacion` usa template si USE_TEMPLATES, fallback texto libre.
+- Tests: `tests/test_alma_operativa.py` 7/7 + `tests/test_alma_brain.py` 7/7. Import profundo de session/jobs/flows/admin_routes/operativa/policy OK.
+- **Kill-switches OFF por defecto**: `ALMA_OPERATIVA_ENABLED=false` (no contacta a nadie) + `ALMA_OPERATIVA_AUTOCONFIRM=false` (todo a recepción). Con flags off el bot es idéntico a hoy.
+- **Pendiente**: afinar regla bajo riesgo (Rodrigo); registrar+aprobar template Meta; UI del panel para los holds en recepción (endpoints listos, falta el front); encender flags solo tras Fase 0 (auth dura + auditoría).
+
+### 2026-06-02 (madrugada) — Alma Brain: capa agéntica de Alma
+Construido autónomo (Rodrigo durmiendo, "armalos todos"). **4 fases end-to-end, probadas con API real. SIN commit, SIN deploy. Gateado OFF.**
+- Nuevo paquete `app/alma_brain/`: sensors (Medilink-free: bi.fact_citas/fact_pagos/sessions.db/snapshots) → state (alertas cross-domain) → copilot (Claude Sonnet con tool-use REAL) → tools (cola de propuestas + executors) → policy (HardLimits + Ley 21.719 + should_auto_confirm).
+- UI `templates/alma_copilot.html` (módulo "Copilot Alma" en el shell, /alma/brain). Tests `tests/test_alma_brain.py` (6 OK). Doc `docs/ALMA_BRAIN.md`.
+- Modificados: main.py (router + cron 06:00), config.py (módulo cerebro), alma.html (icono sparkles).
+- Verificado: `import main` OK, 7 rutas registradas, copiloto encadenó tools y razonó cross-domain, policy bloqueó ejecución (EXECUTE=false → aprobada_manual).
+- **Pendiente (requiere aprobación, toca prod)**: cablear should_auto_confirm al waitlist; executors reales por kind; sensor agenda fino. Ver docs/ALMA_BRAIN.md y memory/alma_brain_agentico.md.
+
+---
+
 **Fecha**: 2026-04-27 / 2026-04-28 (sesión maratónica que cubrió varios frentes)
 **Historial completo**: ver claude-mem timeline o git log
 

@@ -1,0 +1,70 @@
+<!DOCTYPE html><html lang="es"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex,nofollow">
+<title>Liquidaciones — Alma CMC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/alma_kit.css">
+</head><body>
+<div class="pg-topbar">
+  <h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke-linecap="round" stroke-linejoin="round"/></svg> Liquidaciones de honorarios</h1>
+  <div class="spacer"></div>
+  <input id="mes" type="month" style="font-family:inherit;font-size:12px;font-weight:600;border:1px solid var(--border);border-radius:9px;padding:7px 10px;color:var(--navy)">
+  <button class="btn-primary" onclick="generar()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6M3 12a9 9 0 0115-6.7L21 8M3 22v-6h6M21 12a9 9 0 01-15 6.7L3 16" stroke-linecap="round" stroke-linejoin="round"/></svg> Calcular período</button>
+</div>
+<div class="wrap">
+  <div class="kpis" id="kpis"></div>
+  <div class="card"><div class="card-head">Honorarios por profesional <span id="per" class="badge mute"></span></div>
+    <table><thead><tr><th>Profesional</th><th class="num">Producción</th><th class="num hide-sm">%</th><th class="num hide-sm">Calculado</th><th class="num hide-sm">Ajuste</th><th class="num">A pagar</th><th>Estado</th><th class="num"></th></tr></thead>
+    <tbody id="tbody"></tbody></table>
+    <div id="empty" class="empty" style="display:none">Sin datos. Pulsa "Calcular período" para generar desde los pagos del mes.</div></div>
+  <div class="note">Producción = copago recaudado en caja (pagos del mes). Honorario = producción × % del módulo Equipo. Usa Ajuste para honorarios sobre arancel total u otros conceptos. El cuadre fino de Imed lo hace Conciliación.</div>
+</div>
+
+<div class="modal-bg" id="m-l"><div class="modal">
+  <div class="modal-head"><h2 id="l-title">Liquidación</h2><div class="x" onclick="AlmaKit.closeModal('m-l')">✕</div></div>
+  <div class="modal-body"><input type="hidden" id="l-id">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      <div class="kpi money" style="border-radius:12px"><div class="k-label">Producción</div><div class="k-val" id="l-prod" style="font-size:18px">$0</div></div>
+      <div class="kpi" style="border-radius:12px"><div class="k-label">A pagar</div><div class="k-val" id="l-final" style="font-size:18px">$0</div></div></div>
+    <div class="field-row"><div class="field"><label>% honorario</label><input id="l-pct" type="number" value="0"></div><div class="field"><label>Ajuste (CLP)</label><input id="l-ajuste" type="number" value="0"></div></div>
+    <div class="field"><label>Estado</label><select id="l-estado"><option value="pendiente">Pendiente</option><option value="pagado">Pagado</option></select></div>
+    <div class="field"><label>Notas</label><input id="l-notas" placeholder="Ej: incluye bono arancel total, retención…"></div>
+  </div>
+  <div class="modal-foot"><button class="btn-ghost" onclick="AlmaKit.closeModal('m-l')">Cancelar</button><button class="btn-primary" onclick="save()">Guardar</button></div>
+</div></div>
+
+<script>window.ALMA_TOKEN="__TOKEN__"; window.ALMA_API="/alma/api/liquidaciones";</script>
+<script src="/static/alma_kit.js"></script>
+<script>
+const {api,clp,esc,toast,openModal,closeModal}=AlmaKit;
+let MES=new Date().toISOString().slice(0,7), ITEMS=[];
+document.getElementById('mes').value=MES;
+document.getElementById('mes').addEventListener('change',e=>{MES=e.target.value;loadAll();});
+async function loadAll(){ await Promise.all([loadKpis(),load()]); }
+async function loadKpis(){ const r=await api("/resumen?periodo="+MES);
+  document.getElementById('per').textContent=MES;
+  document.getElementById('kpis').innerHTML=`
+   <div class="kpi"><div class="k-label">Profesionales</div><div class="k-val">${r.n_profesionales}</div><div class="k-sub">con honorarios</div></div>
+   <div class="kpi money"><div class="k-label">Total honorarios</div><div class="k-val">${clp(r.total_honorarios)}</div><div class="k-sub">del período</div></div>
+   <div class="kpi good"><div class="k-label">Pagado</div><div class="k-val">${clp(r.pagado)}</div><div class="k-sub">liquidado</div></div>
+   <div class="kpi alert"><div class="k-label">Pendiente</div><div class="k-val">${clp(r.pendiente)}</div><div class="k-sub">por pagar</div></div>`; }
+async function load(){ const r=await api("?periodo="+MES); ITEMS=r.liquidaciones;
+  const tb=document.getElementById('tbody'),em=document.getElementById('empty');
+  if(!ITEMS.length){tb.innerHTML='';em.style.display='block';return;} em.style.display='none';
+  tb.innerHTML=ITEMS.map(x=>`<tr>
+    <td class="t-strong">${esc(x.nombre)}</td>
+    <td class="num">${clp(x.produccion)}</td>
+    <td class="num hide-sm">${x.pct}%</td>
+    <td class="num hide-sm">${clp(x.monto_calculado)}</td>
+    <td class="num hide-sm" style="color:${x.ajuste?'var(--blue)':'var(--mute)'}">${x.ajuste?clp(x.ajuste):'—'}</td>
+    <td class="num t-strong">${clp(x.monto_final)}</td>
+    <td><span class="badge ${x.estado==='pagado'?'green':'orange'}">${x.estado}</span></td>
+    <td class="num"><button class="btn-ghost" onclick='edit(${x.id})'>Editar</button></td></tr>`).join(''); }
+async function generar(){ try{ const r=await api("/generar?periodo="+MES,{method:"POST"}); toast(`Calculado: ${r.profesionales} profesionales`); loadAll(); }catch(e){toast(e.message,true);} }
+const F=id=>document.getElementById(id);
+function edit(id){ const x=ITEMS.find(i=>i.id===id); if(!x)return; F('l-title').textContent=x.nombre; F('l-id').value=id;
+  F('l-prod').textContent=clp(x.produccion); F('l-final').textContent=clp(x.monto_final); F('l-pct').value=x.pct; F('l-ajuste').value=x.ajuste||0; F('l-estado').value=x.estado; F('l-notas').value=x.notas||''; openModal('m-l'); }
+async function save(){ const id=F('l-id').value; const body={pct:+F('l-pct').value||0,ajuste:+F('l-ajuste').value||0,estado:F('l-estado').value,notas:F('l-notas').value.trim()};
+  try{ await api("/"+id,{method:"PATCH",body:JSON.stringify(body)}); closeModal('m-l'); toast('Guardado'); loadAll(); }catch(e){toast(e.message,true);} }
+loadAll();
+</script></body></html>

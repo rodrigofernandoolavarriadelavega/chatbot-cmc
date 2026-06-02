@@ -606,13 +606,37 @@ def smart_select(slots_libres: list, horas_ocupadas: set, intervalo: int, n: int
     return sorted(slots_libres, key=score, reverse=True)[:n]
 
 
+def _filtrar_licencia(ids: list) -> list:
+    """Excluye profesionales marcados en licencia hoy en el módulo Equipo (Alma).
+
+    FAIL-SAFE: ante cualquier error o si no hay nadie de licencia, devuelve los
+    ids sin tocar — el agendamiento nunca debe caerse por esto.
+    """
+    if not ids:
+        return ids
+    try:
+        from equipo_routes import profesionales_en_licencia
+        en_lic = profesionales_en_licencia()
+        if not en_lic:
+            return ids
+        filtrados = [i for i in ids if i not in en_lic]
+        if len(filtrados) != len(ids):
+            log.info("medilink: %d profesional(es) excluidos por licencia: %s",
+                     len(ids) - len(filtrados), [i for i in ids if i in en_lic])
+        return filtrados
+    except Exception as e:  # noqa: BLE001
+        log.warning("medilink._filtrar_licencia falló (no filtra): %s", e)
+        return ids
+
+
 def _ids_para_especialidad(especialidad: str) -> list:
     ids = ESPECIALIDADES_MAP.get(especialidad.lower(), [])
     if not ids:
         for key, prof_ids in ESPECIALIDADES_MAP.items():
             if especialidad.lower() in key or key in especialidad.lower():
-                return prof_ids
-    return ids
+                ids = prof_ids
+                break
+    return _filtrar_licencia(ids)
 
 
 async def _get_horas_ocupadas(client: httpx.AsyncClient, id_prof: int, fecha: str) -> set:
@@ -843,7 +867,7 @@ async def buscar_primer_dia(especialidad: str, dias_adelante: int = 60,
     intervalo_override: {id_prof: minutos} para sobreescribir el intervalo de un profesional.
     solo_ids: si se pasa, restringe la búsqueda a esos IDs (ignora ESPECIALIDADES_MAP).
     """
-    ids = solo_ids if solo_ids else _ids_para_especialidad(especialidad)
+    ids = _filtrar_licencia(solo_ids) if solo_ids else _ids_para_especialidad(especialidad)
     if not ids:
         return [], []
 
@@ -970,6 +994,7 @@ async def buscar_slots_dia(especialidad: str, fecha: str,
 async def buscar_slots_dia_por_ids(ids: list, fecha: str,
                                    intervalo_override: dict = None) -> tuple[list, list]:
     """Retorna (smart_5, todos_libres) para una fecha y lista explícita de IDs de profesional."""
+    ids = _filtrar_licencia(ids)
     if not ids:
         return [], []
     client = _get_shared_client()
