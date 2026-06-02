@@ -176,6 +176,8 @@ def check_leak() -> list[dict]:
 def check_finanzas() -> list[dict]:
     con = _conn()
     try:
+        # Excluir FONASA: el bono se paga por Imed, no por caja → no es fuga.
+        # Quedan particulares/sin convenio que SÍ deberían registrar pago en caja.
         row = con.execute("""
             SELECT COUNT(*) n, COALESCE(SUM(a.total), 0) monto
             FROM bi_atenciones a
@@ -183,6 +185,7 @@ def check_finanzas() -> list[dict]:
             WHERE a.finalizado = 1
               AND a.fecha >= date('now','-30 days')
               AND p.pago_id IS NULL
+              AND (a.nombre_convenio IS NULL OR a.nombre_convenio NOT LIKE '%FONASA%')
         """).fetchone()
     except Exception as e:
         con.close()
@@ -197,10 +200,10 @@ def check_finanzas() -> list[dict]:
     if n >= 5:  # umbral para no alarmar por casos sueltos (Fonasa bono, etc.)
         return [{
             "severity": "medium", "category": "finanzas", "fix_type": "logic_review",
-            "issue": f"{n} atenciones finalizadas en 30d sin pago registrado en caja (monto bruto ${monto:,}). Revisar posibles atenciones no cobradas. Recordar factor 0.85 BI vs Caja.".replace(",", "."),
-            "evidence": f"atenciones_sin_pago={n} · monto_bruto={monto}",
+            "issue": f"{n} atenciones particulares finalizadas en 30d sin pago en caja (monto bruto ${monto:,}). Excluye FONASA. Revisar posibles atenciones no cobradas (factor 0.85 BI vs Caja).".replace(",", "."),
+            "evidence": f"particulares_sin_pago={n} · monto_bruto={monto}",
             "target_hint": "bi_atenciones vs bi_pagos_caja · auditor.py",
-            "dedup_key": f"finanzas|sin_pago|{_MONTH}",
+            "dedup_key": f"finanzas|particular_sin_pago|{_MONTH}",
         }]
     return []
 
