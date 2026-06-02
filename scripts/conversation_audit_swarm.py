@@ -128,18 +128,19 @@ def _fetch_conversations(since_min: int) -> dict[str, list[dict]]:
     for r in rows:
         convos[r["phone"]].append(dict(r))
 
-    # Filtrar: descartar conversaciones sin inbound (solo notificaciones del bot)
+    # Filtrar: descartar conversaciones sin inbound (solo notificaciones del bot).
+    # NOTA: en la tabla `messages` la dirección es "in"/"out", NO inbound/outbound.
     return {
         ph: msgs
         for ph, msgs in convos.items()
-        if any(m["direction"] == "inbound" for m in msgs)
+        if any(m["direction"] == "in" for m in msgs)
     }
 
 
 def _render_transcript(phone: str, msgs: list[dict]) -> str:
     lines = [f"### Conversación {phone}"]
     for m in msgs:
-        who = "PACIENTE" if m["direction"] == "inbound" else "BOT"
+        who = "PACIENTE" if m["direction"] == "in" else "BOT"
         txt = (m["text"] or "").strip().replace("\n", " ")
         if len(txt) > 400:
             txt = txt[:400] + "…"
