@@ -22,7 +22,7 @@ agregado, no la suma de piezas sueltas.
 import asyncio
 import logging
 
-from . import guardrails, registry, ledger
+from . import guardrails, registry, ledger, broker
 
 log = logging.getLogger("bot")
 
@@ -113,6 +113,21 @@ async def simulate_fleet(agents: dict | None = None) -> dict:
 
     patient_contacts_total = sum(len(a) for a in contacts_by_patient.values())
 
+    # Broker: ¿quién ganaría cada paciente disputado, por valor esperado?
+    proposals = []
+    for c in collected:
+        for a in c["actions"]:
+            proposals.append({"agent_id": c["agent_id"], "action": a})
+    try:
+        brk = broker.resolve(proposals)
+        broker_view = {
+            "n_suprimidos_por_valor": brk["n_suprimidos"],
+            "disputas": brk["by_patient"][:10],
+        }
+    except Exception as e:  # noqa: BLE001
+        log.warning("simulator: broker falló (%s)", e)
+        broker_view = {}
+
     return {
         "fleet_status": guardrails.fleet_status(),
         "totales": {
@@ -140,5 +155,6 @@ async def simulate_fleet(agents: dict | None = None) -> dict:
                 "Sin solapamiento por sobre el presupuesto de contacto en esta corrida."
             ),
         },
+        "broker": broker_view,
         "por_agente": sorted(by_agent, key=lambda x: x["n_actions"], reverse=True),
     }
