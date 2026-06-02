@@ -243,6 +243,22 @@ async def lifespan(app: FastAPI):
         id="alma_agents_ledger",
         replace_existing=True,
     )
+    # Capstone: latido diario que une cerebro + flota (intención simulada) +
+    # ledger en un digest unificado. No re-ejecuta agentes ni contacta a nadie;
+    # solo sensa/mide/reporta → corre SIEMPRE. 06:30 CLT (tras snapshot 06:00).
+    async def _job_alma_agents_capstone():
+        try:
+            from alma_agents import capstone
+            d = await capstone.run_cycle()
+            logging.getLogger("bot").info("[alma_agents] capstone — %s", d.get("headline"))
+        except Exception as e:  # noqa: BLE001
+            logging.getLogger("bot").error("[alma_agents] capstone falló: %s", e)
+    scheduler.add_job(
+        _job_alma_agents_capstone,
+        CronTrigger(hour=6, minute=30, timezone=_CLT),
+        id="alma_agents_capstone",
+        replace_existing=True,
+    )
     # Cola de publicación orgánica (segmento IG·FB·WhatsApp): publica las piezas
     # aprobadas que ya vencieron su hora. La escritura real a Meta está bloqueada
     # salvo ORGANIC_PUBLISH_EXECUTE=true (kill-switch). Cada 5 min.

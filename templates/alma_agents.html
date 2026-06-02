@@ -655,6 +655,11 @@ function renderPage(data){
   // FLEET BAR
   wrap.appendChild(renderFleetBar(fs));
 
+  // CYCLE BANNER — headline del ciclo autónomo (cerebro + flota + ledger)
+  const cycBan = el('div'); cycBan.id = 'cycleBanner';
+  cycBan.style.cssText = 'margin:12px 0;padding:12px 14px;border-radius:12px;background:linear-gradient(90deg,#0f3f68,#1172ab);color:#fff;font-size:13px;display:none';
+  wrap.appendChild(cycBan);
+
   // count header
   const secHd = el('div','section-hd');
   secHd.appendChild(el('h2',null,'Agentes de la flota'));
@@ -683,6 +688,26 @@ function renderPage(data){
 
   root.appendChild(wrap);
   loadEffectiveness();
+  loadCycle();
+}
+
+/* ---- CICLO AUTÓNOMO (capstone) ---- */
+function loadCycle(){
+  fetch(API_BASE + '/alma/agents/api/cycle?token=' + encodeURIComponent(TOKEN))
+    .then(r => r.json())
+    .then(d => {
+      const ban = $('cycleBanner');
+      if(!ban || !d.headline) return;
+      const alertas = (d.cerebro && d.cerebro.alertas_top) || [];
+      let extra = '';
+      if(alertas.length){
+        extra = ' &nbsp;·&nbsp; ' + alertas.slice(0,2).map(a =>
+          '<span style="opacity:.85">'+(a.severity||'')+': '+(a.message||'')+'</span>').join(' &nbsp;·&nbsp; ');
+      }
+      ban.innerHTML = '<strong>Ciclo autónomo</strong> &nbsp; ' + d.headline + extra;
+      ban.style.display = 'block';
+    })
+    .catch(() => {});
 }
 
 /* ---- EFFECTIVENESS LEDGER ---- */

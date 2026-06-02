@@ -16,7 +16,7 @@ from fastapi import APIRouter, Query, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from config import ADMIN_TOKEN, OLACORE_TOKEN, ALMA_PROFILES
-from . import guardrails, registry, store, ledger, simulator
+from . import guardrails, registry, store, ledger, simulator, capstone
 
 log = logging.getLogger("bot")
 router = APIRouter()
@@ -121,3 +121,14 @@ async def agents_simulate(token: str | None = Query(None), request: Request = No
     escrituras Medilink, qué se ejecutaría vs bloquearía). Read-only."""
     _check_owner(token, request)
     return JSONResponse(await simulator.simulate_fleet())
+
+
+@router.get("/alma/agents/api/cycle")
+async def agents_cycle(token: str | None = Query(None), request: Request = None,
+                       live: int = Query(0)):
+    """Ciclo capstone: cerebro + flota (intención) + ledger en un digest unificado.
+    `live=1` lo recalcula en vivo; por defecto devuelve el último persistido."""
+    _check_owner(token, request)
+    if live:
+        return JSONResponse(await capstone.run_cycle())
+    return JSONResponse(capstone.load_last() or await capstone.run_cycle())
