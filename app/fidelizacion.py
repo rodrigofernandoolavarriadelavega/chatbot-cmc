@@ -61,6 +61,22 @@ def _resolver_atendido(nombre: str | None) -> str:
     return "atendida" if sexo == "F" else "atendido"
 
 
+def _esp_display(especialidad: str | None, profesional: str | None) -> str:
+    """Etiqueta de especialidad para mostrar al paciente.
+
+    El Dr. Alonso Márquez (id 13) figura en Medilink como 'Medicina General'
+    para el ruteo (ver medilink.py), pero atiende como Medicina Familiar y su
+    consulta vale $30.000 (no $25.000). En textos al paciente lo mostramos como
+    'Medicina Familiar' para no confundir. Ver memory/cmc_precio_marquez_30k.
+    """
+    esp = (especialidad or "").strip()
+    prof_l = (profesional or "").lower()
+    if "márquez" in prof_l or "marquez" in prof_l:
+        if esp.lower() in ("medicina general", ""):
+            return "Medicina Familiar"
+    return esp
+
+
 def _msg_postconsulta(cita: dict) -> dict:
     """Mensaje interactivo con escala 1-5 — pide valoración de la experiencia
     siendo atendido en CMC (más amplio que solo 'cómo te sientes').
@@ -69,7 +85,7 @@ def _msg_postconsulta(cita: dict) -> dict:
     nombre = _nombre_corto(cita.get("nombre"))
     saludo = f"Hola *{nombre}* 😊 " if nombre else "Hola 😊 "
     prof = cita.get("profesional", "el profesional")
-    esp = cita.get("especialidad", "tu consulta")
+    esp = _esp_display(cita.get("especialidad"), cita.get("profesional")) or "tu consulta"
     atendido = _resolver_atendido(nombre or cita.get("nombre"))
     body = (
         f"{saludo}*¿Cómo te sentiste siendo {atendido} en el Centro Médico Carampangue?*\n\n"
@@ -203,7 +219,7 @@ async def enviar_seguimiento_postconsulta_dia_anterior(send_fn, send_template_fn
                 nombre_pc = _nombre_corto(cita.get("nombre")) or "paciente"
                 # A1: guard — especialidad vacía → "la consulta" para no dejar
                 # asteriscos huérfanos (*​* con Dr. X) en el template.
-                esp_pc = (cita.get("especialidad") or "").strip() or "la consulta"
+                esp_pc = _esp_display(cita.get("especialidad"), cita.get("profesional")) or "la consulta"
                 prof_pc = (cita.get("profesional") or "").strip() or "el profesional"
                 await send_template_fn(
                     cita["phone"],
@@ -329,7 +345,7 @@ async def enviar_seguimiento_postconsulta(send_fn, send_template_fn=None,
                 # definición), pero usamos template por consistencia y robustez.
                 # body_params: [nombre, especialidad, profesional]
                 nombre_pc = _nombre_corto(cita.get("nombre")) or "paciente"
-                esp_pc = (cita.get("especialidad") or "").strip() or "la consulta"
+                esp_pc = _esp_display(cita.get("especialidad"), cita.get("profesional")) or "la consulta"
                 prof_pc = (cita.get("profesional") or "").strip() or "el profesional"
                 await send_template_fn(
                     cita["phone"],

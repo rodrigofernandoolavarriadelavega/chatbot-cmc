@@ -663,6 +663,9 @@ import inventario_routes
 app.include_router(inventario_routes.router)
 inventario_routes.seed_if_empty()  # DDL + siembra catálogo MayorDent al arrancar
 
+import audit_routes  # vista /admin/auditoria — hallazgos del enjambre horario
+app.include_router(audit_routes.router)
+
 # Cargar HTML del panel admin y portal paciente
 _TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
 _ADMIN_HTML = (_TEMPLATE_DIR / "admin.html").read_text(encoding="utf-8")
