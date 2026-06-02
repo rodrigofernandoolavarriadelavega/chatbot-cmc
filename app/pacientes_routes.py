@@ -131,8 +131,25 @@ async def ficha(phone: str = Query(...),
             msg_n = mst["n"]; msg_ult = mst["ult"]
         except Exception:
             msg_n = 0; msg_ult = None
+        # interconsultas y exámenes del paciente (por rut exacto o nombre) — fail-safe
+        nom = prof.get("nombre") or ""
+        try:
+            ics = [dict(r) for r in conn.execute(
+                "SELECT fecha, origen_especialidad, destino_especialidad, prioridad, estado "
+                "FROM interconsultas WHERE (rut!='' AND rut=?) OR paciente_nombre=? "
+                "ORDER BY fecha DESC LIMIT 10", (rut, nom)).fetchall()]
+        except Exception:
+            ics = []
+        try:
+            exs = [dict(r) for r in conn.execute(
+                "SELECT fecha_solicitud, tipo, examen, estado FROM examenes_cmc "
+                "WHERE (rut!='' AND rut=?) OR paciente_nombre=? "
+                "ORDER BY fecha_solicitud DESC LIMIT 10", (rut, nom)).fetchall()]
+        except Exception:
+            exs = []
     return {
         "perfil": prof, "tags": tags, "citas": citas, "pagos": pagos,
         "total_pagado": total_pagado, "n_pagos": len(pagos),
         "n_mensajes": msg_n, "ultimo_mensaje": msg_ult,
+        "interconsultas": ics, "examenes": exs,
     }

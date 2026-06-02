@@ -53,6 +53,9 @@ async function ficha(ph){ try{ const r=await api("/ficha?phone="+ph);
   const tags=r.tags.map(t=>`<span class="badge aqua">${esc(t)}</span>`).join(' ')||'<span class="t-meta">sin etiquetas</span>';
   const citas=r.citas.length?r.citas.map(c=>`<div class="oc-row" style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #eef4f8;font-size:12.5px"><div style="flex:1"><b>${esc(c.especialidad||'')}</b> ${esc(c.profesional||'')}</div><div class="t-meta">${fdate(c.fecha)} ${esc(c.hora||'')}</div></div>`).join(''):'<div class="t-meta" style="padding:8px 0">Sin citas registradas</div>';
   const pagos=r.pagos.length?r.pagos.map(p=>`<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #eef4f8;font-size:12.5px"><div style="flex:1">${esc(p.area||p.profesional||'')} <span class="t-meta">${esc(p.prevision||'')}</span></div><div class="t-meta">${fdate(p.fecha)}</div><div class="t-strong">${clp(p.copago)}</div></div>`).join(''):'<div class="t-meta" style="padding:8px 0">Sin pagos registrados</div>';
+  const EB={pendiente:'orange',agendada:'aqua',completada:'green',rechazada:'mute',solicitado:'mute',tomado:'aqua',resultado_listo:'orange',entregado:'green'};
+  const ics=(r.interconsultas||[]).length?r.interconsultas.map(c=>`<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #eef4f8;font-size:12.5px"><div style="flex:1"><span class="t-meta">${esc(c.origen_especialidad||'')}</span> → <b>${esc(c.destino_especialidad||'')}</b></div><span class="badge ${EB[c.estado]||'mute'}">${esc(c.estado||'')}</span><span class="t-meta">${fdate(c.fecha)}</span></div>`).join(''):'<div class="t-meta" style="padding:8px 0">Sin interconsultas</div>';
+  const exs=(r.examenes||[]).length?r.examenes.map(x=>`<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #eef4f8;font-size:12.5px"><div style="flex:1"><b>${esc(x.examen||x.tipo||'')}</b> <span class="t-meta">${esc(x.tipo||'')}</span></div><span class="badge ${EB[x.estado]||'mute'}">${esc((x.estado||'').replace('_',' '))}</span><span class="t-meta">${fdate(x.fecha_solicitud)}</span></div>`).join(''):'<div class="t-meta" style="padding:8px 0">Sin exámenes</div>';
   document.getElementById('f-body').innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">
       <div class="kpi" style="border-radius:12px"><div class="k-label">RUT</div><div class="k-val" style="font-size:18px">${esc(r.perfil.rut||'—')}</div></div>
@@ -60,7 +63,9 @@ async function ficha(ph){ try{ const r=await api("/ficha?phone="+ph);
       <div class="kpi" style="border-radius:12px"><div class="k-label">Mensajes</div><div class="k-val" style="font-size:18px">${r.n_mensajes}</div></div></div>
     <div style="margin-bottom:14px">${tags}</div>
     <div class="card-head" style="padding:10px 0;border:0">Citas recientes</div>${citas}
-    <div class="card-head" style="padding:14px 0 10px;border:0">Pagos recientes</div>${pagos}`;
+    <div class="card-head" style="padding:14px 0 10px;border:0">Pagos recientes</div>${pagos}
+    <div class="card-head" style="padding:14px 0 10px;border:0">Interconsultas</div>${ics}
+    <div class="card-head" style="padding:14px 0 10px;border:0">Exámenes</div>${exs}`;
   openModal('m-ficha');
  }catch(e){toast(e.message,true);} }
 document.getElementById('search').addEventListener('input', debounce(e=>loadList(e.target.value.trim()),250));
