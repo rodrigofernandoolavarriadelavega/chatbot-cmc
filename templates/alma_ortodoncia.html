@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Seguimiento Ortodoncia — Alma CMC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --aqua:#4FBECE; --aqua-s:#e8f8fb; --blue:#1172AB; --navy:#0F3F68; --navy2:#0c3556;
+    --bg:#F7FBFD; --border:#d6e4ec; --text:#0F3F68; --mute:#62788a;
+    --red:#e84545; --red-s:#fdecec; --green:#23c25e; --green-s:#e7f9ee;
+    --orange:#f59e0b; --orange-s:#fef5e6; --violet:#7c6cf0; --violet-s:#efedfd;
+    --sh-sm:0 1px 3px rgba(15,63,104,.08); --sh-md:0 8px 30px rgba(15,63,104,.14);
+  }
+  * { box-sizing:border-box; }
+  html,body { height:100%; margin:0; }
+  body { font-family:'Montserrat',-apple-system,sans-serif; background:var(--bg); color:var(--text); font-size:13px; }
+
+  .pg-topbar { display:flex; align-items:center; gap:12px; background:#fff; border-bottom:1px solid var(--border);
+    padding:0 18px; height:56px; box-shadow:var(--sh-sm); position:sticky; top:0; z-index:20; }
+  .pg-topbar h1 { font-size:15px; font-weight:800; margin:0; color:var(--navy); display:flex; align-items:center; gap:9px; }
+  .pg-topbar h1 svg { width:21px; height:21px; color:var(--aqua); }
+  .pg-topbar .spacer { flex:1; }
+  .search-box { position:relative; }
+  .search-box input { font-family:inherit; font-size:12px; font-weight:500; border:1px solid var(--border);
+    border-radius:9px; padding:8px 12px 8px 32px; width:220px; color:var(--navy); background:var(--bg); transition:all .15s; }
+  .search-box input:focus { outline:none; border-color:var(--aqua); background:#fff; width:250px; }
+  .search-box svg { position:absolute; left:10px; top:50%; transform:translateY(-50%); width:15px; height:15px; color:var(--mute); }
+
+  .btn-ghost { display:inline-flex; align-items:center; gap:6px; background:#fff; color:var(--blue);
+    border:1px solid var(--border); border-radius:9px; padding:8px 13px; font-family:inherit; font-size:12px;
+    font-weight:600; cursor:pointer; transition:all .15s; text-decoration:none; }
+  .btn-ghost:hover { background:var(--aqua-s); border-color:var(--aqua); }
+  .btn-ghost svg { width:14px; height:14px; }
+  .btn-primary { display:inline-flex; align-items:center; gap:6px; background:var(--aqua); color:#fff; border:0;
+    border-radius:9px; padding:9px 16px; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer;
+    transition:all .15s; box-shadow:0 2px 8px rgba(79,190,206,.3); }
+  .btn-primary:hover { background:var(--blue); }
+
+  .wrap { padding:18px; max-width:1320px; margin:0 auto; }
+
+  .kpis { display:grid; grid-template-columns:repeat(5,1fr); gap:13px; margin-bottom:18px; }
+  .kpi { background:#fff; border:1px solid var(--border); border-radius:16px; padding:15px 17px; box-shadow:var(--sh-sm);
+    position:relative; overflow:hidden; }
+  .kpi::after { content:''; position:absolute; right:-18px; top:-18px; width:64px; height:64px; border-radius:50%;
+    background:var(--aqua-s); opacity:.6; }
+  .kpi .k-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--mute); }
+  .kpi .k-val { font-size:25px; font-weight:800; color:var(--navy); margin-top:6px; line-height:1; position:relative; z-index:1; }
+  .kpi .k-sub { font-size:10.5px; font-weight:600; color:var(--mute); margin-top:5px; }
+  .kpi.alert .k-val { color:var(--red); }
+  .kpi.alert::after { background:var(--red-s); }
+  .kpi.warn .k-val { color:var(--orange); }
+  .kpi.warn::after { background:var(--orange-s); }
+  .kpi.money .k-val { color:var(--blue); font-size:20px; }
+
+  .banner { display:flex; align-items:flex-start; gap:11px; background:linear-gradient(100deg,#fff,var(--aqua-s));
+    border:1px solid var(--border); border-left:4px solid var(--aqua); border-radius:13px; padding:13px 16px;
+    margin-bottom:16px; box-shadow:var(--sh-sm); }
+  .banner svg { width:20px; height:20px; color:var(--aqua); flex-shrink:0; margin-top:1px; }
+  .banner b { color:var(--navy); }
+  .banner .bt { font-size:12px; color:var(--mute); line-height:1.5; }
+
+  .toolbar { display:flex; align-items:center; gap:10px; margin-bottom:13px; flex-wrap:wrap; }
+  .chips { display:flex; flex-wrap:wrap; gap:7px; flex:1; }
+  .chip { font-family:inherit; font-size:11.5px; font-weight:600; border:1px solid var(--border); background:#fff;
+    color:var(--blue); border-radius:999px; padding:6px 13px; cursor:pointer; transition:all .14s; }
+  .chip:hover { background:var(--aqua-s); border-color:var(--aqua); }
+  .chip.active { background:var(--navy); border-color:var(--navy); color:#fff; }
+  .chip .cnt { opacity:.6; margin-left:4px; font-weight:700; }
+  .chip.v.active { background:var(--red); border-color:var(--red); }
+  .chip.p.active { background:var(--orange); border-color:var(--orange); }
+
+  .card { background:#fff; border:1px solid var(--border); border-radius:16px; box-shadow:var(--sh-sm); overflow:hidden; }
+  table { width:100%; border-collapse:collapse; }
+  thead th { text-align:left; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
+    color:var(--mute); padding:12px 14px; background:var(--bg); border-bottom:1px solid var(--border); white-space:nowrap; }
+  thead th.num, td.num { text-align:right; }
+  thead th.ctr, td.ctr { text-align:center; }
+  tbody td { padding:11px 14px; border-bottom:1px solid #eef4f8; font-size:12.5px; vertical-align:middle; }
+  tbody tr:last-child td { border-bottom:0; }
+  tbody tr:hover { background:#fafdfe; }
+  .pac-name { font-weight:700; color:var(--navy); }
+  .pac-meta { font-size:11px; color:var(--mute); font-weight:500; margin-top:2px; }
+  .estado { display:inline-flex; align-items:center; gap:6px; font-weight:700; font-size:11.5px; padding:4px 11px; border-radius:999px; white-space:nowrap; }
+  .estado .dot { width:7px; height:7px; border-radius:50%; }
+  .estado.al_dia { color:var(--green); background:var(--green-s); } .estado.al_dia .dot{ background:var(--green); }
+  .estado.pronto { color:var(--orange); background:var(--orange-s); } .estado.pronto .dot{ background:var(--orange); }
+  .estado.vencido { color:var(--red); background:var(--red-s); } .estado.vencido .dot{ background:var(--red); }
+  .estado.finalizado { color:var(--violet); background:var(--violet-s); } .estado.finalizado .dot{ background:var(--violet); }
+
+  .trat { font-weight:800; color:var(--navy); font-size:14px; }
+  .dias-pill { font-weight:700; }
+  .dias-pill.hot { color:var(--red); } .dias-pill.warm { color:var(--orange); }
+  .saldo { font-weight:800; color:var(--navy); }
+  .saldo.deuda { color:var(--orange); }
+  .pago-bar { width:90px; height:7px; background:var(--bg); border:1px solid var(--border); border-radius:999px; overflow:hidden; margin-top:4px; }
+  .pago-bar > i { display:block; height:100%; background:linear-gradient(90deg,var(--green),var(--aqua)); }
+  .row-actions { display:flex; gap:5px; justify-content:flex-end; }
+  .icon-btn { width:30px; height:30px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px;
+    border:1px solid var(--border); background:#fff; color:var(--blue); cursor:pointer; transition:all .14s; text-decoration:none; }
+  .icon-btn:hover { background:var(--aqua-s); border-color:var(--aqua); }
+  .icon-btn.wa { color:#25d366; } .icon-btn.wa:hover { background:#e7faef; border-color:#25d366; }
+  .icon-btn svg { width:15px; height:15px; }
+
+  .empty { text-align:center; padding:60px 20px; color:var(--mute); }
+  .empty svg { width:46px; height:46px; opacity:.4; margin-bottom:12px; }
+
+  .modal-bg { position:fixed; inset:0; background:rgba(15,63,104,.45); backdrop-filter:blur(3px); display:none;
+    align-items:center; justify-content:center; z-index:100; padding:20px; }
+  .modal-bg.show { display:flex; }
+  .modal { background:#fff; border-radius:18px; box-shadow:var(--sh-md); width:100%; max-width:500px; max-height:90vh; overflow-y:auto; }
+  .modal-head { display:flex; align-items:center; justify-content:space-between; padding:18px 22px; border-bottom:1px solid var(--border); }
+  .modal-head h2 { margin:0; font-size:16px; font-weight:800; color:var(--navy); }
+  .modal-head .x { cursor:pointer; color:var(--mute); width:26px; height:26px; display:flex; align-items:center; justify-content:center; border-radius:7px; }
+  .modal-head .x:hover { background:var(--bg); color:var(--navy); }
+  .modal-body { padding:20px 22px; }
+  .modal-foot { padding:16px 22px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:flex-end; }
+  .field { margin-bottom:14px; }
+  .field label { display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--mute); margin-bottom:6px; }
+  .field input, .field select, .field textarea { width:100%; font-family:inherit; font-size:13px; font-weight:500;
+    border:1px solid var(--border); border-radius:9px; padding:9px 11px; color:var(--navy); background:var(--bg); }
+  .field input:focus, .field select:focus, .field textarea:focus { outline:none; border-color:var(--aqua); background:#fff; }
+  .field-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .saldo-box { background:var(--navy); color:#fff; border-radius:12px; padding:12px 16px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; }
+  .saldo-box .sl { font-size:11px; opacity:.8; text-transform:uppercase; letter-spacing:.05em; }
+  .saldo-box .sv { font-size:22px; font-weight:800; }
+
+  .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--navy);
+    color:#fff; padding:12px 22px; border-radius:11px; font-weight:600; font-size:13px; box-shadow:var(--sh-md);
+    opacity:0; transition:all .25s; z-index:200; pointer-events:none; }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+  .toast.err { background:var(--red); }
+
+  @media (max-width:980px){ .kpis { grid-template-columns:repeat(2,1fr); } .hide-sm { display:none; } }
+</style>
+</head>
+<body>
+  <div class="pg-topbar">
+    <h1>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 9h.01M15 9h.01" stroke-linecap="round"/></svg>
+      Seguimiento Ortodoncia
+    </h1>
+    <div class="spacer"></div>
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3" stroke-linecap="round"/></svg>
+      <input id="search" type="text" placeholder="Buscar paciente…" autocomplete="off">
+    </div>
+    <button class="btn-ghost hide-sm" onclick="exportCSV()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 10l5 5 5-5M12 15V3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      CSV
+    </button>
+  </div>
+
+  <div class="wrap">
+    <div class="kpis" id="kpis"></div>
+
+    <div class="banner">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/><path d="M12 8v4M12 16h.01" stroke-linecap="round"/></svg>
+      <div class="bt"><b>Ortodoncia es ticket alto y tratamiento largo (18-24 meses):</b> un control vencido es un paciente que se está enfriando con un tratamiento a medio pagar.
+      La lista de <b>controles vencidos</b> son a quienes hay que citar para que no abandonen ni te queden saldos sin cobrar.</div>
+    </div>
+
+    <div class="toolbar"><div class="chips" id="chips"></div></div>
+
+    <div class="card">
+      <table>
+        <thead><tr>
+          <th>Paciente</th>
+          <th class="ctr hide-sm">Tratamiento</th>
+          <th class="num">Controles</th>
+          <th class="num">Sin control</th>
+          <th class="num hide-sm">Saldo</th>
+          <th class="ctr">Estado</th>
+          <th class="num">Acciones</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div id="empty" class="empty" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div>No hay pacientes con ese filtro</div>
+      </div>
+    </div>
+
+    <div style="font-size:11px;color:var(--mute);margin-top:14px;line-height:1.5">
+      Datos del historial real de atenciones de ortodoncia (Medilink → BI, Dra. Daniela Castillo). <b>Control vencido</b> = más de 45 días sin venir (el control es ~mensual).
+      El plan de pago es opcional: cárgalo para ver el saldo pendiente y el valor de la cartera. Las visitas se clasifican por monto (instalación vs control).
+    </div>
+  </div>
+
+  <!-- Modal Plan de pago -->
+  <div class="modal-bg" id="m-plan">
+    <div class="modal">
+      <div class="modal-head"><h2 id="plan-title">Plan de pago</h2><div class="x" onclick="closeM('m-plan')">✕</div></div>
+      <div class="modal-body">
+        <input type="hidden" id="pl-id">
+        <div class="saldo-box"><div><div class="sl">Saldo pendiente</div><div class="sv" id="pl-saldo">$0</div></div>
+          <div style="text-align:right;font-size:11px;opacity:.85" id="pl-sub"></div></div>
+        <div class="field-row">
+          <div class="field"><label>Valor total tratamiento</label><input id="pl-total" type="number" min="0" value="0" oninput="recalcSaldo()"></div>
+          <div class="field"><label>Abonado a la fecha</label><input id="pl-abonado" type="number" min="0" value="0" oninput="recalcSaldo()"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Cuota mensual</label><input id="pl-cuota" type="number" min="0" value="0"></div>
+          <div class="field"><label>Estado</label>
+            <select id="pl-estado"><option value="">En tratamiento</option><option value="finalizado">Finalizado</option><option value="pausa">En pausa</option></select>
+          </div>
+        </div>
+        <div class="field"><label>Notas (opcional)</label><textarea id="pl-notas" rows="2" placeholder="Tipo de aparato, fase, acuerdos de pago…"></textarea></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn-ghost" onclick="closeM('m-plan')">Cancelar</button>
+        <button class="btn-primary" onclick="savePlan()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+const TOKEN = "__TOKEN__";
+const API = "/alma/api/ortodoncia";
+const H = { "Authorization": "Bearer " + TOKEN, "Content-Type": "application/json" };
+let STATE = { estado: "todos", q: "", pacientes: [], conteos: {} };
+
+const clp = n => "$" + (n||0).toLocaleString("es-CL");
+function toast(msg, err){ const t=document.getElementById('toast'); t.textContent=msg; t.className='toast show'+(err?' err':''); setTimeout(()=>t.className='toast',2200); }
+function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+async function api(path, opts){ const r = await fetch(API+path, {headers:H, ...opts}); if(!r.ok){ throw new Error((await r.json().catch(()=>({}))).detail || r.status); } return r.json(); }
+
+const EST_LABEL = { al_dia:"Al día", pronto:"Por vencer", vencido:"Vencido", finalizado:"Finalizado" };
+const CHIP_ORDER = ["todos","vencido","pronto","al_dia","finalizado"];
+
+async function loadAll(){ await Promise.all([loadResumen(), loadPacientes()]); }
+
+async function loadResumen(){
+  try {
+    const r = await api("/resumen"); const k=r.kpis;
+    document.getElementById('kpis').innerHTML = `
+      <div class="kpi"><div class="k-label">Tratamientos activos</div><div class="k-val">${k.activos}</div><div class="k-sub">en curso</div></div>
+      <div class="kpi alert"><div class="k-label">Controles vencidos</div><div class="k-val">${k.vencidos}</div><div class="k-sub">citar ya (+45d)</div></div>
+      <div class="kpi warn"><div class="k-label">Por vencer</div><div class="k-val">${k.pronto}</div><div class="k-sub">36-45 días</div></div>
+      <div class="kpi money"><div class="k-label">Cartera por cobrar</div><div class="k-val">${clp(k.valor_cartera)}</div><div class="k-sub">saldos de planes</div></div>
+      <div class="kpi money"><div class="k-label">Ingreso ortodoncia</div><div class="k-val">${clp(k.ingreso_orto)}</div><div class="k-sub">últimos 6 meses</div></div>`;
+    if(r.source_status!=="ok"){ toast("BI no disponible — los datos se ven en producción", true); }
+  } catch(e){ toast("Error KPIs: "+e.message, true); }
+}
+
+async function loadPacientes(){
+  try {
+    const r = await api("/pacientes?estado="+encodeURIComponent(STATE.estado));
+    STATE.pacientes = r.pacientes; STATE.conteos = r.conteos;
+    renderChips(); renderTable();
+  } catch(e){ toast("Error: "+e.message, true); }
+}
+
+function renderChips(){
+  const c = STATE.conteos; const total = Object.values(c).reduce((a,b)=>a+b,0);
+  const chips = CHIP_ORDER.filter(k=> k==="todos" || c[k]).map(k=>{
+    const n = k==="todos"? total : (c[k]||0);
+    const cls = k==="vencido"?"v":(k==="pronto"?"p":"");
+    return `<div class="chip ${cls} ${STATE.estado===k?'active':''}" onclick="setEstado('${k}')">${k==="todos"?"Todos":EST_LABEL[k]}<span class="cnt">${n}</span></div>`;
+  });
+  document.getElementById('chips').innerHTML = chips.join('');
+}
+
+function filtered(){
+  let p = STATE.pacientes;
+  if(STATE.q){ const q=STATE.q.toLowerCase(); p=p.filter(x=>(x.paciente||'').toLowerCase().includes(q)); }
+  return p;
+}
+
+function waLink(tel, nombre){
+  let t=(tel||'').replace(/[^0-9]/g,'');
+  if(!t) return null;
+  if(t.length===9 && t.startsWith('9')) t='56'+t;
+  if(t.length===8) t='569'+t;
+  const primer=(nombre||'').split(' ')[0]||'';
+  const msg=encodeURIComponent(`Hola ${primer}, te saludamos del Centro Médico Carampangue 👋 Notamos que se acerca tu control de ortodoncia. ¿Coordinamos tu próxima hora con la Dra. Castillo?`);
+  return `https://wa.me/${t}?text=${msg}`;
+}
+
+function renderTable(){
+  const tb=document.getElementById('tbody'), empty=document.getElementById('empty');
+  const pac=filtered();
+  if(!pac.length){ tb.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  tb.innerHTML = pac.map(p=>{
+    const dpCls = p.dias_sin_control>45?'hot':(p.dias_sin_control>35?'warm':'');
+    const pagoPct = p.valor_total? Math.min(Math.round(p.abonado/p.valor_total*100),100) : 0;
+    const saldoCell = p.valor_total
+      ? `<div class="saldo ${p.saldo>0?'deuda':''}">${clp(p.saldo)}</div><div class="pago-bar"><i style="width:${pagoPct}%"></i></div>`
+      : `<span style="color:var(--mute)">—</span>`;
+    const wa = waLink(p.telefono, p.paciente);
+    return `<tr>
+      <td><div class="pac-name">${esc(p.paciente)}</div><div class="pac-meta">${esc(p.lugar||'—')}${p.notas?' · '+esc(p.notas):''}</div></td>
+      <td class="ctr hide-sm"><div class="trat">${p.meses_tratamiento} m</div><div class="pac-meta">desde ${p.inicio}</div></td>
+      <td class="num"><div class="trat">${p.n_controles}</div><div class="pac-meta">${p.n_visitas} visitas</div></td>
+      <td class="num"><span class="dias-pill ${dpCls}">${p.dias_sin_control} d</span><div class="pac-meta">${p.ultimo_control}</div></td>
+      <td class="num hide-sm">${saldoCell}</td>
+      <td class="ctr"><span class="estado ${p.estado}"><span class="dot"></span>${esc(p.estado_label)}</span></td>
+      <td class="num"><div class="row-actions">
+        ${wa?`<a class="icon-btn wa" target="_blank" href="${wa}" title="Citar por WhatsApp"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 00-8.6 15l-1.3 4.7 4.8-1.3A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-2.9.8.8-2.8-.2-.3A8 8 0 1112 20zm4.4-6c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1l-.7.9c-.1.2-.3.2-.5.1a6.5 6.5 0 01-3.2-2.8c-.2-.4.2-.4.6-1.2.1-.1 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.5-.4h-.5c-.2 0-.4.1-.6.3-.7.7-.9 1.7-.4 2.9a9 9 0 003.9 3.8c1.5.7 2.1.7 2.9.6.5-.1 1.4-.6 1.6-1.1.2-.5.2-1 .1-1.1-.1 0-.2-.1-.4-.2z"/></svg></a>`:''}
+        <button class="icon-btn" title="Plan de pago" onclick='openPlan(${p.paciente_id})'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 10h20" stroke-linecap="round"/></svg></button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+function setEstado(e){ STATE.estado=e; loadPacientes(); }
+let st; document.getElementById('search').addEventListener('input', e=>{ clearTimeout(st); st=setTimeout(()=>{ STATE.q=e.target.value.trim(); renderTable(); },200); });
+function closeM(id){ document.getElementById(id).classList.remove('show'); }
+
+function recalcSaldo(){
+  const total=+document.getElementById('pl-total').value||0, ab=+document.getElementById('pl-abonado').value||0;
+  document.getElementById('pl-saldo').textContent = clp(Math.max(total-ab,0));
+}
+function openPlan(pid){
+  const p=STATE.pacientes.find(x=>x.paciente_id===pid); if(!p) return;
+  document.getElementById('pl-id').value=pid;
+  document.getElementById('plan-title').textContent='Plan — '+p.paciente;
+  document.getElementById('pl-sub').innerHTML = `${p.meses_tratamiento} meses · ${p.n_controles} controles<br>último: ${p.ultimo_control}`;
+  document.getElementById('pl-total').value=p.valor_total||0;
+  document.getElementById('pl-abonado').value=p.abonado||0;
+  document.getElementById('pl-cuota').value=p.cuota_mensual||0;
+  document.getElementById('pl-estado').value=(p.estado==='finalizado'?'finalizado':'');
+  document.getElementById('pl-notas').value=p.notas||'';
+  recalcSaldo();
+  document.getElementById('m-plan').classList.add('show');
+}
+async function savePlan(){
+  const pid=document.getElementById('pl-id').value;
+  const body={
+    valor_total:+document.getElementById('pl-total').value||0,
+    abonado:+document.getElementById('pl-abonado').value||0,
+    cuota_mensual:+document.getElementById('pl-cuota').value||0,
+    estado_manual:document.getElementById('pl-estado').value,
+    notas:document.getElementById('pl-notas').value.trim(),
+  };
+  try { await api("/plan/"+pid, {method:"PUT", body:JSON.stringify(body)}); closeM('m-plan'); toast("Plan guardado"); loadAll(); }
+  catch(e){ toast("Error: "+e.message, true); }
+}
+
+function exportCSV(){ window.open(API+"/export?token="+encodeURIComponent(TOKEN), "_blank"); }
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') document.querySelectorAll('.modal-bg.show').forEach(m=>m.classList.remove('show')); });
+document.querySelectorAll('.modal-bg').forEach(bg=>bg.addEventListener('click', e=>{ if(e.target===bg) bg.classList.remove('show'); }));
+
+loadAll();
+</script>
+</body>
+</html>

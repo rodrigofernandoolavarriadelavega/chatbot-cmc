@@ -72,7 +72,12 @@ ALMA_MODULE_REGISTRY: dict[str, dict] = {
     "examenes":    {"label": "Exámenes",         "icon": "beaker",    "title": "Exámenes y resultados",          "sub": "Órdenes · seguimiento · entrega de resultados",    "src": "/alma/examenes"},
     "tareas":      {"label": "Tareas",           "icon": "listcheck", "title": "Tareas del equipo",              "sub": "Pendientes · asignación · vencimientos",           "src": "/alma/tareas"},
     "liquidaciones":{"label": "Liquidaciones",  "icon": "coins",     "title": "Liquidaciones de honorarios",    "sub": "Producción × % · pagado/pendiente por profesional","src": "/alma/liquidaciones"},
+    "programas":   {"label": "Programas Clínicos","icon":"heartpulse", "title": "Programas Clínicos",             "sub": "Adherencia y recall por especialidad · lista de hoy","src": "/alma/programas"},
+    "kine":        {"label": "Programa Kine",    "icon": "activity",  "title": "Programa Kinesiología",          "sub": "Adherencia · riesgo de abandono · plan de sesiones","src": "/alma/kine"},
+    "ortodoncia":  {"label": "Ortodoncia",       "icon": "smile",     "title": "Seguimiento Ortodoncia",         "sub": "Controles vencidos · avance · plan de pago",       "src": "/alma/ortodoncia"},
     "branding":    {"label": "Brand Board",      "icon": "palette",   "title": "Brand Board — Alma",             "sub": "Identidad visual · sistema de diseño Alma",        "src": "/alma/branding"},
+    "cerebro":     {"label": "Copilot Alma",      "icon": "sparkles",  "title": "Copilot de Alma",                "sub": "Pregúntale al negocio · estado · acciones propuestas","src": "/alma/brain"},
+    "agentes":     {"label": "Flota de Agentes",  "icon": "robot",     "title": "Flota de Agentes — Alma",        "sub": "Agentes autónomos que operan la clínica · kill-switches","src": "/alma/agents"},
 }
 
 # ── Mapa de perfiles Alma: token → {variante, modulos, boxes_financiero} ────────
@@ -93,7 +98,7 @@ ALMA_PROFILES: dict[str, dict] = {
     },
     "cmc_admin_2026": {
         "variante": "Recepción",
-        "modulos": ["inicio", "panel", "panel2", "agenda", "pagos", "inventario", "proveedores", "pacientes", "interconsultas", "esterilizacion", "documentos", "examenes", "tareas", "calidad", "boxes", "autopilot"],  # recepción
+        "modulos": ["inicio", "panel", "panel2", "agenda", "pagos", "inventario", "proveedores", "pacientes", "interconsultas", "esterilizacion", "documentos", "examenes", "tareas", "calidad", "programas", "kine", "ortodoncia", "boxes", "autopilot"],  # recepción
         "secciones": {"autopilot": ["disenos"]},  # de Autopilot solo ve Diseños
         "boxes_financiero": False,  # sin valores monetarios en Boxes
         "panel_profesional": False,

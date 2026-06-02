@@ -2741,3 +2741,196 @@ def api_cross_sell_funnel(
         },
         "pares": pares,
     }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Alma operativa (Fase 4): cola de cupos liberados pendientes de validación
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.get("/admin/api/operativa/offers")
+def admin_operativa_offers(_: str = Depends(require_admin)):
+    """Holds de cupo liberado que esperan validación de recepción (estado 'recepcion').
+    El paciente ya aceptó y tiene la hora apartada provisionalmente; falta confirmar."""
+    from session import get_offers_pendientes_recepcion
+    return {"offers": get_offers_pendientes_recepcion()}
+
+
+@router.post("/admin/api/operativa/offer/{offer_id}/confirm")
+async def admin_operativa_confirm(offer_id: int, _: str = Depends(require_admin)):
+    """Recepción valida un hold: crea la cita REAL en Medilink y avisa al paciente.
+    Esta es la escritura validada por humano (no depende del flag de auto-confirmación)."""
+    from session import get_offer_by_id, set_offer_estado, mark_waitlist_notified, log_event
+    from alma_brain import operativa
+    offer = get_offer_by_id(offer_id)
+    if not offer:
+        raise HTTPException(404, "oferta no encontrada")
+    if offer["estado"] != "recepcion":
+        raise HTTPException(409, f"la oferta está en estado '{offer['estado']}', no 'recepcion'")
+
+    res = await operativa._confirmar_en_medilink(offer)
+    if not res.get("ok"):
+        raise HTTPException(502, f"no se pudo crear la cita en Medilink: {res.get('error')}")
+
+    set_offer_estado(offer_id, "confirmada", id_cita=str(res.get("id_cita", "")))
+    if offer.get("waitlist_id"):
+        mark_waitlist_notified(int(offer["waitlist_id"]))
+    log_event(offer["phone"], "operativa_confirmada_recepcion",
+              {"offer_id": offer_id, "id_cita": res.get("id_cita")})
+
+    try:
+        from messaging import send_whatsapp
+        from session import log_message
+        msg = (f"¡Listo! Te confirmamos tu hora de *{offer['especialidad'].title()}* "
+               f"para el *{offer['fecha']}* a las *{offer['hora']}* ✅\n\n"
+               "Te esperamos en el Centro Médico Carampangue.")
+        await send_whatsapp(offer["phone"], msg)
+        log_message(offer["phone"], "out", msg, "IDLE")
+    except Exception:
+        pass  # la cita ya está creada; un fallo de aviso no la revierte
+    return {"ok": True, "estado": "confirmada", "id_cita": res.get("id_cita")}
+
+
+@router.post("/admin/api/operativa/offer/{offer_id}/reject")
+async def admin_operativa_reject(offer_id: int, _: str = Depends(require_admin)):
+    """Recepción descarta un hold: libera el cupo (no se agenda) y avisa al paciente."""
+    from session import get_offer_by_id, set_offer_estado, log_event
+    offer = get_offer_by_id(offer_id)
+    if not offer:
+        raise HTTPException(404, "oferta no encontrada")
+    if offer["estado"] not in ("recepcion", "apartado"):
+        raise HTTPException(409, f"la oferta está en estado '{offer['estado']}'")
+    set_offer_estado(offer_id, "cancelada")
+    log_event(offer["phone"], "operativa_rechazada_recepcion", {"offer_id": offer_id})
+    try:
+        from messaging import send_whatsapp
+        from session import log_message
+        msg = ("No pudimos confirmar esa hora esta vez. Sigues en nuestra lista de "
+               "espera y te avisamos apenas se libere otra. ¡Gracias por tu paciencia!")
+        await send_whatsapp(offer["phone"], msg)
+        log_message(offer["phone"], "out", msg, "IDLE")
+    except Exception:
+        pass
+    return {"ok": True, "estado": "cancelada"}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Orquestadores de Alma — catálogo + dry-run (preview seguro, no ejecuta)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.get("/admin/api/orquestadores")
+def admin_orquestadores(_: str = Depends(require_admin)):
+    """Catálogo de orquestadores con su flag y estado on/off."""
+    from alma_brain import orchestrators
+    return {"orquestadores": orchestrators.catalog()}
+
+
+@router.get("/admin/api/orquestadores/dryrun")
+async def admin_orquestadores_dryrun(name: str | None = None, _: str = Depends(require_admin)):
+    """Corre orquestadores en modo dry (sense+propose, NO persiste ni ejecuta).
+    Preview seguro de qué propondría cada uno aunque esté apagado. `name` opcional
+    para uno solo."""
+    from alma_brain import orchestrators
+    if name:
+        return await orchestrators.run_one(name, mode="dry")
+    return {"resultados": await orchestrators.run_all(mode="dry")}
+
+
+@router.post("/admin/api/resultados")
+async def admin_resultado_registrar(request: Request, _: str = Depends(require_admin)):
+    """Recepción registra que llegó un resultado de examen → lo toma el
+    orquestador resultados_examenes para proponer avisar al paciente."""
+    from session import add_resultado_pendiente
+    body = await request.json()
+    phone = (body.get("phone") or "").strip()
+    examen = (body.get("examen") or "").strip()
+    if not phone:
+        raise HTTPException(400, "phone requerido")
+    rid = add_resultado_pendiente(phone, examen, rut=body.get("rut", ""), nombre=body.get("nombre", ""))
+    return {"ok": True, "id": rid}
+
+
+@router.get("/admin/api/orquestadores/propuestas")
+def admin_orq_propuestas(estado: str = "pendiente", _: str = Depends(require_admin)):
+    """Inbox de propuestas generadas por los orquestadores (modo propose/execute).
+    Por defecto solo las pendientes de decisión humana."""
+    from alma_brain import tools
+    props = tools.load_proposals()
+    if estado and estado != "todas":
+        props = [p for p in props if p.get("estado") == estado]
+    props.sort(key=lambda p: p.get("created_at", ""), reverse=True)
+    return {"propuestas": props, "n": len(props)}
+
+
+@router.post("/admin/api/orquestadores/propuesta/{pid}/approve")
+async def admin_orq_aprobar(pid: str, request: Request, _: str = Depends(require_admin)):
+    """Aprueba una propuesta. Pasa por policy.check; ejecuta solo si hay executor
+    y los límites duros lo permiten; si no, queda aprobada-para-manual."""
+    from alma_brain import tools
+    by = "recepcion"
+    try:
+        body = await request.json()
+        by = (body.get("by") or by).strip()
+    except Exception:
+        pass
+    return await tools.approve_and_execute(pid, approved_by=by)
+
+
+@router.post("/admin/api/orquestadores/propuesta/{pid}/reject")
+def admin_orq_rechazar(pid: str, _: str = Depends(require_admin)):
+    from alma_brain import tools
+    return tools.reject_proposal(pid)
+
+
+@router.get("/alma/orquestadores", response_class=HTMLResponse)
+def alma_orquestadores_page(token: str | None = Query(None), cmc_session: str | None = Cookie(None)):
+    """Módulo de panel: inbox de propuestas + catálogo de orquestadores (dry-run preview).
+    Auth igual que el resto de Alma (token query o cookie firmada). No toca el shell."""
+    from pathlib import Path as _P
+    tpl = _P(__file__).parent.parent / "templates" / "alma_orquestadores.html"
+    if not tpl.exists():
+        raise HTTPException(404, "Orquestadores no disponible")
+    html = tpl.read_text(encoding="utf-8")
+    if token and _is_admin_token(token):
+        return HTMLResponse(html.replace("__TOKEN__", token))
+    if cmc_session and _verify_cookie(cmc_session):
+        # La cookie ya autentica; el JS usa el token para las APIs, así que
+        # inyectamos el token admin por defecto cuando la sesión es por cookie.
+        from config import ADMIN_TOKEN
+        return HTMLResponse(html.replace("__TOKEN__", ADMIN_TOKEN))
+    raise HTTPException(403, "No autorizado")
+
+
+@router.get("/admin/api/orquestadores/snapshot")
+async def admin_orq_snapshot(refresh: int = 0, _: str = Depends(require_admin)):
+    """Snapshot dry-run de los orquestadores. Por defecto lee el persistido (instantáneo).
+    `?refresh=1` lo reconstruye corriendo dry-run de todos (toca BI/Medilink, más lento)."""
+    from alma_brain.orchestrators import snapshot as snap
+    if refresh:
+        return await snap.build_and_save()
+    s = snap.load_snapshot()
+    if s is None:
+        # No hay snapshot aún → construir uno la primera vez.
+        return await snap.build_and_save()
+    return s
+
+
+@router.get("/admin/api/orquestadores/briefing")
+async def admin_orq_briefing(refresh: int = 0, _: str = Depends(require_admin)):
+    """Briefing diario: digest priorizado de todo lo que los orquestadores sugieren
+    hoy (lee el snapshot; ?refresh=1 lo reconstruye)."""
+    from alma_brain.orchestrators import briefing
+    return await briefing.build_briefing(refresh=bool(refresh))
+
+
+@router.get("/admin/api/orquestadores/metrics")
+def admin_orq_metrics(_: str = Depends(require_admin)):
+    """Conteos del catálogo de orquestadores: por dominio y por estado on/off."""
+    from alma_brain import orchestrators
+    cat = orchestrators.catalog()
+    por_dominio: dict = {}
+    for c in cat:
+        d = c.get("dominio") or "—"
+        por_dominio[d] = por_dominio.get(d, 0) + 1
+    encendidos = sum(1 for c in cat if c.get("enabled"))
+    return {"total": len(cat), "encendidos": encendidos, "apagados": len(cat) - encendidos,
+            "por_dominio": dict(sorted(por_dominio.items(), key=lambda kv: -kv[1]))}

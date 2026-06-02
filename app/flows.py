@@ -2433,6 +2433,20 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             # por log_message en el webhook antes de llegar acá.
             return None
 
+    # ── Fase 4 (Alma operativa): aceptación de cupo liberado ──────────────────
+    # Si este paciente tiene una oferta de cupo abierta (le ofrecimos una hora que
+    # se liberó por una cancelación) y responde aceptándola (TOMAR / sí), la
+    # resolvemos acá: claim atómico "primero que acepta gana" + política de
+    # confirmación. El matcher es angosto (no choca con emergencias ni con el
+    # flujo normal). Solo en IDLE; gateado internamente por ALMA_OPERATIVA_ENABLED.
+    if state == "IDLE":
+        try:
+            from alma_brain import operativa
+            if await operativa.maybe_accept_offer(phone, tl):
+                return None
+        except Exception as e:
+            log.warning("operativa: maybe_accept_offer falló phone=%s: %s", phone, e)
+
     # ── Comando admin: /status (y sinónimos) desde el celular del admin ───
     # Abre la ventana 24h de WhatsApp y devuelve el reporte EN VIVO. Útil
     # cuando el job periódico no llegó por "Re-engagement message" (131047).

@@ -197,6 +197,34 @@ async def lifespan(app: FastAPI):
         id="autopilot_dryrun",
         replace_existing=True,
     )
+    # Cerebro de Alma — snapshot del world-state global (Fase 1). Read-only y
+    # Medilink-free: lee BI + sessions.db + snapshots ya persistidos. Corre
+    # SIEMPRE (es solo lectura, no contacta a nadie); 06:00 CLT, tras el cierre
+    # diario de BI (23:59) para tener data fresca del día anterior.
+    async def _job_alma_brain_snapshot():
+        try:
+            from alma_brain.state import build_and_save
+            st = await asyncio.to_thread(build_and_save, 7)
+            logging.getLogger("bot").info(
+                "[alma_brain] snapshot OK — %d dominios · %d alertas",
+                len(st.get("domains_available", [])), len(st.get("alerts", [])))
+        except Exception as e:  # noqa: BLE001 — nunca tumbar el scheduler por el cerebro
+            logging.getLogger("bot").error("[alma_brain] snapshot falló: %s", e)
+    scheduler.add_job(
+        _job_alma_brain_snapshot,
+        CronTrigger(hour=6, minute=0, timezone=_CLT),
+        id="alma_brain_snapshot",
+        replace_existing=True,
+    )
+    # Flota de agentes autónomos (Alma Agents). INERTE por defecto: register_agent_jobs
+    # no agrega NI UN job si ALMA_AGENTS_ENABLED=false (default). Encender el maestro
+    # recién agenda los agentes, y aún así cada run() vuelve a chequear su propio flag
+    # + execute. Nunca tumba el scheduler (errores aislados por agente).
+    try:
+        from alma_agents.scheduler_hook import register_agent_jobs
+        register_agent_jobs(scheduler, _CLT)
+    except Exception as e:  # noqa: BLE001
+        logging.getLogger("bot").error("[alma_agents] registro de flota falló: %s", e)
     # Cola de publicación orgánica (segmento IG·FB·WhatsApp): publica las piezas
     # aprobadas que ya vencieron su hora. La escritura real a Meta está bloqueada
     # salvo ORGANIC_PUBLISH_EXECUTE=true (kill-switch). Cada 5 min.
@@ -644,6 +672,10 @@ app.add_middleware(
 app.include_router(admin_routes.router)
 from autopilot.routes import router as autopilot_router  # noqa: E402
 app.include_router(autopilot_router)
+from alma_brain.routes import router as alma_brain_router  # noqa: E402
+app.include_router(alma_brain_router)
+from alma_agents.routes import router as alma_agents_router  # noqa: E402
+app.include_router(alma_agents_router)
 app.include_router(portal_routes.router)
 
 import vuelos_routes
@@ -681,6 +713,18 @@ import tablero_routes; app.include_router(tablero_routes.router)
 
 import audit_routes  # vista /admin/auditoria — hallazgos del enjambre horario
 app.include_router(audit_routes.router)
+
+import kine_routes
+app.include_router(kine_routes.router)
+kine_routes.ensure_kine_plan_table()  # DDL plan de tratamiento
+
+import ortodoncia_routes
+app.include_router(ortodoncia_routes.router)
+ortodoncia_routes.ensure_ortodoncia_plan_table()  # DDL plan de pago ortodoncia
+
+import programas
+app.include_router(programas.router)
+programas.ensure_programa_plan_table()  # DDL motor genérico de programas por especialidad
 
 # Cargar HTML del panel admin y portal paciente
 _TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
@@ -2882,6 +2926,9 @@ for _ap, _ah, _al in [
     ("/alma/proveedores", _ALMA_PROVEEDORES_HTML, "Proveedores"),
 ]:
     app.add_api_route(_ap, _make_alma_page(_ah, _al), methods=["GET"], response_class=HTMLResponse, include_in_schema=False)
+_ALMA_KINE_HTML = (_TEMPLATE_DIR / "alma_kine.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_kine.html").exists() else ""
+_ALMA_ORTODONCIA_HTML = (_TEMPLATE_DIR / "alma_ortodoncia.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_ortodoncia.html").exists() else ""
+_ALMA_PROGRAMAS_HTML = (_TEMPLATE_DIR / "alma_programas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_programas.html").exists() else ""
 
 # ── Pool de conexiones BI para endpoints de boxes ────────────────────────────
 # Máximo 8 conexiones compartidas entre boxes-state, boxes-config y boxes-config-put.
@@ -3535,6 +3582,55 @@ def alma_inventario_page(token: str | None = Query(None),
         if role in ("admin", "ortodoncia"):
             return _ALMA_INVENTARIO_HTML.replace("__TOKEN__", ADMIN_TOKEN)
     return RedirectResponse(url="/admin/login", status_code=302)
+
+
+@app.get("/alma/kine", response_class=HTMLResponse)
+def alma_kine_page(token: str | None = Query(None),
+                   cmc_session: str | None = Cookie(None)):
+    """Modulo Programa Kinesiología — adherencia, riesgo de abandono, plan de sesiones."""
+    from admin_routes import _verify_cookie, _is_admin_token
+    if not _ALMA_KINE_HTML:
+        raise HTTPException(404, "Kine no disponible")
+    if token and _is_admin_token(token):
+        return _ALMA_KINE_HTML.replace("__TOKEN__", token)
+    if cmc_session:
+        role = _verify_cookie(cmc_session)
+        if role in ("admin", "ortodoncia"):
+            return _ALMA_KINE_HTML.replace("__TOKEN__", ADMIN_TOKEN)
+    return RedirectResponse(url="/admin/login", status_code=302)
+
+
+@app.get("/alma/ortodoncia", response_class=HTMLResponse)
+def alma_ortodoncia_page(token: str | None = Query(None),
+                         cmc_session: str | None = Cookie(None)):
+    """Modulo Seguimiento Ortodoncia — controles vencidos, avance, plan de pago."""
+    from admin_routes import _verify_cookie, _is_admin_token
+    if not _ALMA_ORTODONCIA_HTML:
+        raise HTTPException(404, "Ortodoncia no disponible")
+    if token and _is_admin_token(token):
+        return _ALMA_ORTODONCIA_HTML.replace("__TOKEN__", token)
+    if cmc_session:
+        role = _verify_cookie(cmc_session)
+        if role in ("admin", "ortodoncia"):
+            return _ALMA_ORTODONCIA_HTML.replace("__TOKEN__", ADMIN_TOKEN)
+    return RedirectResponse(url="/admin/login", status_code=302)
+
+
+@app.get("/alma/programas", response_class=HTMLResponse)
+def alma_programas_page(token: str | None = Query(None),
+                        cmc_session: str | None = Cookie(None)):
+    """Motor de Programas Clínicos por especialidad (adherencia + control/recall)."""
+    from admin_routes import _verify_cookie, _is_admin_token
+    if not _ALMA_PROGRAMAS_HTML:
+        raise HTTPException(404, "Programas no disponible")
+    if token and _is_admin_token(token):
+        return _ALMA_PROGRAMAS_HTML.replace("__TOKEN__", token)
+    if cmc_session:
+        role = _verify_cookie(cmc_session)
+        if role in ("admin", "ortodoncia"):
+            return _ALMA_PROGRAMAS_HTML.replace("__TOKEN__", ADMIN_TOKEN)
+    return RedirectResponse(url="/admin/login", status_code=302)
+
 
 
 @app.get("/anima", include_in_schema=False)

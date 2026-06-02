@@ -413,6 +413,48 @@ def _run_ddl_inline(conn) -> None:
     except Exception:
         pass  # columna ya existe
     conn.execute("CREATE INDEX IF NOT EXISTS idx_waitlist_active ON waitlist(canceled_at, notified_at)")
+    # Fase 4 (Alma operativa): ofertas de cupo liberado a la lista de espera.
+    # Una cancelación genera N ofertas (una por candidato compatible) para el
+    # MISMO slot_key. La carrera "primero que acepta" se resuelve atómicamente en
+    # claim_offer(): solo UNA oferta por slot_key llega a 'apartado'. El resto pasa
+    # a 'perdida'. Estados: enviada → apartado → (confirmada | recepcion) | perdida | expirada | cancelada.
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS waitlist_offers (
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            slot_key      TEXT NOT NULL,        -- "{id_prof}|{fecha}|{hora}" — identifica el cupo liberado
+            waitlist_id   INTEGER,              -- inscripción de waitlist invitada (NULL si ad-hoc)
+            phone         TEXT NOT NULL,
+            rut           TEXT,
+            nombre        TEXT,
+            especialidad  TEXT NOT NULL,
+            id_prof       INTEGER,
+            fecha         TEXT NOT NULL,
+            hora          TEXT NOT NULL,
+            estado        TEXT NOT NULL DEFAULT 'enviada',
+            created_at    TEXT DEFAULT (datetime('now')),
+            expires_at    TEXT,                 -- TTL del hold blando una vez apartado
+            claimed_at    TEXT,
+            resolved_at   TEXT,
+            id_cita       TEXT                  -- id de cita Medilink una vez confirmada
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_offers_slot ON waitlist_offers(slot_key, estado)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_offers_phone_open ON waitlist_offers(phone, estado)")
+    # Resultados de examen pendientes de avisar (tool del orquestador resultados_examenes).
+    # Recepción registra cuando llega un resultado; el orquestador propone avisar al paciente.
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS resultados_pendientes (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            phone        TEXT,
+            rut          TEXT DEFAULT '',
+            nombre       TEXT DEFAULT '',
+            examen       TEXT DEFAULT '',
+            recibido_at  TEXT DEFAULT (datetime('now')),
+            avisado_at   TEXT,
+            canceled_at  TEXT
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_resultados_open ON resultados_pendientes(avisado_at, canceled_at)")
     # Tracking de estados de entrega de mensajes salientes (sent/delivered/read/failed)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS message_statuses (
@@ -3018,6 +3060,59 @@ def get_nps_por_profesional(dias: int | None = None) -> dict:
         }
 
 
+def get_promotores_recientes(dias: int = 30, limit: int = 25) -> list[dict]:
+    """Pacientes que respondieron 'mejor' al seguimiento postconsulta en los
+    últimos `dias` — promotores candidatos a pedirles una reseña en Google.
+    Tool nueva para el orquestador `reputacion_nps`."""
+    with _conn() as conn:
+        rows = conn.execute("""
+            SELECT f.phone, cb.profesional, cb.especialidad, f.cita_id, f.enviado_en,
+                   COALESCE(cp.nombre, cb.paciente_nombre, '') AS nombre
+            FROM fidelizacion_msgs f
+            INNER JOIN citas_bot cb ON cb.id_cita = f.cita_id AND cb.phone = f.phone
+            LEFT JOIN contact_profiles cp ON cp.phone = f.phone
+            WHERE f.tipo = 'postconsulta' AND f.respuesta = 'mejor'
+              AND f.enviado_en >= datetime('now', ?)
+            ORDER BY f.enviado_en DESC
+            LIMIT ?
+        """, (f"-{int(dias)} days", limit)).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_cronicos_para_control(dias: int = 90) -> list[dict]:
+    """Pacientes con tag dx:* (patología crónica: HTA, DM2, etc.) cuya última cita
+    registrada por el bot es más vieja que `dias` (o que nunca registraron una) →
+    candidatos a recordarles su control crónico. Phone-keyed, todo en sessions.db.
+    Tool nueva para el orquestador `control_cronico`."""
+    from datetime import date
+    with _conn() as conn:
+        rows = conn.execute("""
+            SELECT ct.phone,
+                   COALESCE(cp.nombre, '') AS nombre,
+                   GROUP_CONCAT(DISTINCT REPLACE(ct.tag, 'dx:', '')) AS dxs,
+                   MAX(cb.fecha) AS ultima
+            FROM contact_tags ct
+            LEFT JOIN contact_profiles cp ON cp.phone = ct.phone
+            LEFT JOIN citas_bot cb        ON cb.phone = ct.phone
+            WHERE ct.tag LIKE 'dx:%'
+            GROUP BY ct.phone, cp.nombre
+        """).fetchall()
+    out = []
+    for r in rows:
+        ultima = r["ultima"]
+        vieja = True
+        if ultima:
+            try:
+                vieja = (date.today() - date.fromisoformat(ultima[:10])).days >= dias
+            except Exception:
+                vieja = True
+        if vieja:
+            out.append({"phone": r["phone"], "nombre": r["nombre"],
+                        "dxs": [d.upper() for d in (r["dxs"] or "").split(",") if d],
+                        "ultima": ultima})
+    return out
+
+
 def get_metricas(dias: int = 30) -> dict:
     """Resumen de métricas de los últimos N días."""
     with _conn() as conn:
@@ -3833,6 +3928,160 @@ def get_waitlist_by_especialidad(especialidad: str) -> list[dict]:
             (especialidad.lower(),)
         ).fetchall()
         return [dict(r) for r in rows]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Ofertas de cupo liberado (Fase 4 — Alma operativa)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def make_slot_key(id_prof, fecha: str, hora: str) -> str:
+    """Clave canónica de un cupo: identifica unívocamente el slot liberado.
+    Todas las ofertas que compiten por el mismo cupo comparten este slot_key."""
+    return f"{id_prof or 0}|{fecha}|{(hora or '')[:5]}"
+
+
+def create_offer(slot_key: str, phone: str, especialidad: str, id_prof,
+                 fecha: str, hora: str, *, waitlist_id: int | None = None,
+                 rut: str = "", nombre: str = "") -> int:
+    """Crea una oferta 'enviada' para un candidato. Idempotente por (slot_key, phone):
+    si ya existe una oferta abierta de ese paciente para ese cupo, no la duplica."""
+    with _conn() as conn:
+        dup = conn.execute(
+            "SELECT id FROM waitlist_offers WHERE slot_key=? AND phone=? "
+            "AND estado IN ('enviada','apartado') LIMIT 1",
+            (slot_key, phone)).fetchone()
+        if dup:
+            return int(dup["id"])
+        cur = conn.execute("""
+            INSERT INTO waitlist_offers
+                (slot_key, waitlist_id, phone, rut, nombre, especialidad, id_prof, fecha, hora)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (slot_key, waitlist_id, phone, rut, nombre, especialidad, id_prof, fecha, (hora or "")[:5]))
+        conn.commit()
+        return int(cur.lastrowid)
+
+
+def slot_has_winner(slot_key: str) -> bool:
+    """¿Ya hay un ganador (apartado/confirmado/en recepción) para este cupo?"""
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT 1 FROM waitlist_offers WHERE slot_key=? "
+            "AND estado IN ('apartado','confirmada','recepcion') LIMIT 1",
+            (slot_key,)).fetchone()
+        return row is not None
+
+
+def get_open_offer_for_phone(phone: str) -> dict | None:
+    """La oferta 'enviada' más reciente de un paciente (para resolver su aceptación).
+    SQLite serializa escrituras (single writer + WAL), así que el claim posterior
+    es la sección crítica real; esto solo localiza qué oferta reclamar."""
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM waitlist_offers WHERE phone=? AND estado='enviada' "
+            "ORDER BY id DESC LIMIT 1", (phone,)).fetchone()
+        return dict(row) if row else None
+
+
+def claim_offer(offer_id: int, ttl_minutes: int = 30) -> dict:
+    """Carrera 'primero que acepta', atómica. Marca la oferta como 'apartado' SOLO
+    si ningún otro candidato ya ganó el mismo slot_key. Como SQLite tiene un único
+    escritor, dos claims concurrentes se serializan: el segundo ve el 'apartado' ya
+    commiteado del primero y pierde. Devuelve {ok, reason, offer}."""
+    with _conn() as conn:
+        row = conn.execute("SELECT * FROM waitlist_offers WHERE id=?", (offer_id,)).fetchone()
+        if not row:
+            return {"ok": False, "reason": "not_found"}
+        if row["estado"] != "enviada":
+            return {"ok": False, "reason": f"estado_{row['estado']}", "offer": dict(row)}
+        slot_key = row["slot_key"]
+        taken = conn.execute(
+            "SELECT 1 FROM waitlist_offers WHERE slot_key=? "
+            "AND estado IN ('apartado','confirmada','recepcion') LIMIT 1",
+            (slot_key,)).fetchone()
+        if taken:
+            conn.execute(
+                "UPDATE waitlist_offers SET estado='perdida', resolved_at=datetime('now') "
+                "WHERE id=? AND estado='enviada'", (offer_id,))
+            conn.commit()
+            return {"ok": False, "reason": "slot_taken", "offer": dict(row)}
+        conn.execute(
+            "UPDATE waitlist_offers SET estado='apartado', claimed_at=datetime('now'), "
+            f"expires_at=datetime('now', '+{int(ttl_minutes)} minutes') WHERE id=?",
+            (offer_id,))
+        conn.commit()
+        return {"ok": True, "reason": "claimed", "offer": dict(
+            conn.execute("SELECT * FROM waitlist_offers WHERE id=?", (offer_id,)).fetchone())}
+
+
+def set_offer_estado(offer_id: int, estado: str, *, id_cita: str | None = None) -> dict | None:
+    """Transiciona una oferta (apartado→confirmada/recepcion, etc.) y opcionalmente
+    guarda el id de cita Medilink cuando se confirma."""
+    with _conn() as conn:
+        sets = ["estado=?", "resolved_at=datetime('now')"]
+        params: list = [estado]
+        if id_cita is not None:
+            sets.append("id_cita=?")
+            params.append(id_cita)
+        params.append(offer_id)
+        conn.execute(f"UPDATE waitlist_offers SET {', '.join(sets)} WHERE id=?", params)
+        conn.commit()
+        row = conn.execute("SELECT * FROM waitlist_offers WHERE id=?", (offer_id,)).fetchone()
+        return dict(row) if row else None
+
+
+def expire_stale_offers() -> int:
+    """Vence holds 'apartado' cuyo TTL pasó sin que recepción/auto confirmara, y
+    ofertas 'enviada' del mismo slot que quedaron colgadas. Devuelve cuántas venció.
+    Idempotente — lo llama el cron."""
+    with _conn() as conn:
+        cur = conn.execute(
+            "UPDATE waitlist_offers SET estado='expirada', resolved_at=datetime('now') "
+            "WHERE estado='apartado' AND expires_at IS NOT NULL AND expires_at < datetime('now')")
+        n = cur.rowcount or 0
+        conn.commit()
+        return n
+
+
+def get_offers_pendientes_recepcion(limit: int = 100) -> list[dict]:
+    """Holds que esperan validación humana (estado 'recepcion') — para el panel."""
+    with _conn() as conn:
+        rows = conn.execute(
+            "SELECT * FROM waitlist_offers WHERE estado='recepcion' "
+            "ORDER BY claimed_at ASC LIMIT ?", (limit,)).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_offer_by_id(offer_id: int) -> dict | None:
+    with _conn() as conn:
+        row = conn.execute("SELECT * FROM waitlist_offers WHERE id=?", (offer_id,)).fetchone()
+        return dict(row) if row else None
+
+
+# ── Resultados de examen pendientes de avisar (orquestador resultados_examenes) ──
+
+def add_resultado_pendiente(phone: str, examen: str, rut: str = "", nombre: str = "") -> int:
+    with _conn() as conn:
+        cur = conn.execute(
+            "INSERT INTO resultados_pendientes (phone, rut, nombre, examen) VALUES (?, ?, ?, ?)",
+            (phone, rut, nombre, examen))
+        conn.commit()
+        return int(cur.lastrowid)
+
+
+def get_resultados_para_avisar(limit: int = 50) -> list[dict]:
+    with _conn() as conn:
+        rows = conn.execute(
+            "SELECT * FROM resultados_pendientes "
+            "WHERE avisado_at IS NULL AND canceled_at IS NULL "
+            "ORDER BY recibido_at ASC LIMIT ?", (limit,)).fetchall()
+        return [dict(r) for r in rows]
+
+
+def mark_resultado_avisado(resultado_id: int) -> None:
+    with _conn() as conn:
+        conn.execute("UPDATE resultados_pendientes SET avisado_at = datetime('now') WHERE id = ?",
+                     (resultado_id,))
+        conn.commit()
 
 
 # ── Recordatorio 48h anti no-show ─────────────────────────────────────────
