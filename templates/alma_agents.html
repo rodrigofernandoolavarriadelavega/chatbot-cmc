@@ -656,7 +656,75 @@ function renderPage(data){
 
   // groups
   wrap.appendChild(renderGroups(data.agents));
+
+  // EFFECTIVENESS LEDGER — conversión real por agente (carga async)
+  const effSec = el('div','eff-section');
+  effSec.style.marginTop = '28px';
+  const effHd = el('div','section-hd');
+  effHd.appendChild(el('h2',null,'Efectividad'));
+  effHd.appendChild(el('span','cat-label','contactos → citas/respuestas medidos en sessions.db'));
+  effSec.appendChild(effHd);
+  const effBody = el('div','eff-body');
+  effBody.id = 'effBody';
+  effBody.appendChild(el('p','sub','Cargando…'));
+  effSec.appendChild(effBody);
+  wrap.appendChild(effSec);
+
   root.appendChild(wrap);
+  loadEffectiveness();
+}
+
+/* ---- EFFECTIVENESS LEDGER ---- */
+function fmtCLP(n){ try{ return '$' + (n||0).toLocaleString('es-CL'); }catch(e){ return '$'+(n||0); } }
+function loadEffectiveness(){
+  fetch(API_BASE + '/alma/agents/api/effectiveness?token=' + encodeURIComponent(TOKEN))
+    .then(r => r.json())
+    .then(d => {
+      const body = $('effBody');
+      if(!body) return;
+      body.innerHTML = '';
+      const rows = (d.per_agent || []).filter(a => a.contactos > 0);
+      if(!rows.length){
+        body.appendChild(el('p','sub','Aún no hay contactos registrados. Cuando la flota ejecute acciones de contacto, acá aparece su conversión real.'));
+        return;
+      }
+      const tbl = el('table','eff-table');
+      tbl.style.width = '100%';
+      tbl.style.borderCollapse = 'collapse';
+      tbl.style.fontSize = '13px';
+      tbl.innerHTML = '<thead><tr>' +
+        ['Agente','Contactos','Citas','Respuestas','Sin resp.','Pend.','Conversión','Ingreso recup.']
+          .map((h,i) => '<th style="text-align:'+(i===0?'left':'right')+';padding:8px 10px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600">'+h+'</th>').join('') +
+        '</tr></thead>';
+      const tb = el('tbody');
+      rows.forEach(a => {
+        const tr = el('tr');
+        const conv = Math.round((a.conversion||0)*100);
+        const cells = [
+          ['<strong>'+a.agent_id+'</strong>', 'left'],
+          [a.contactos, 'right'],
+          ['<strong style="color:#0f766e">'+a.citas+'</strong>', 'right'],
+          [a.respuestas, 'right'],
+          [a.sin_respuesta, 'right'],
+          [a.pendientes, 'right'],
+          [conv+'%', 'right'],
+          [fmtCLP(a.ingreso_recuperable_clp), 'right'],
+        ];
+        tr.innerHTML = cells.map(c => '<td style="text-align:'+c[1]+';padding:8px 10px;border-bottom:1px solid #f1f5f9">'+c[0]+'</td>').join('');
+        tb.appendChild(tr);
+      });
+      tbl.appendChild(tb);
+      body.appendChild(tbl);
+      const tot = d.totales || {};
+      const foot = el('p','sub');
+      foot.style.marginTop = '10px';
+      foot.innerHTML = 'Total: <strong>'+(tot.citas||0)+'</strong> citas de <strong>'+(tot.contactos||0)+'</strong> contactos ('+Math.round((tot.conversion_global||0)*100)+'%) · ingreso recuperable estimado <strong>'+fmtCLP(tot.ingreso_recuperable_clp)+'</strong>. <em>Estimación con ticket promedio $'+(d.avg_ticket_clp||0).toLocaleString('es-CL')+'; caja real en módulo Finanzas.</em>';
+      body.appendChild(foot);
+    })
+    .catch(() => {
+      const body = $('effBody');
+      if(body){ body.innerHTML=''; body.appendChild(el('p','sub','No se pudo cargar la efectividad.')); }
+    });
 }
 
 /* ---- DRY-RUN MODAL ---- */
