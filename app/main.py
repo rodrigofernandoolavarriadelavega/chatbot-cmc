@@ -225,6 +225,24 @@ async def lifespan(app: FastAPI):
         register_agent_jobs(scheduler, _CLT)
     except Exception as e:  # noqa: BLE001
         logging.getLogger("bot").error("[alma_agents] registro de flota falló: %s", e)
+    # Effectiveness Ledger: mide si los contactos de la flota convirtieron (cita/
+    # respuesta) dentro de su ventana. Solo LEE sessions.db y escribe su propia
+    # tabla — no contacta a nadie → corre SIEMPRE, independiente del maestro.
+    async def _job_alma_agents_ledger():
+        try:
+            from alma_agents import ledger
+            res = await asyncio.to_thread(ledger.measure_outcomes)
+            logging.getLogger("bot").info(
+                "[alma_agents] ledger medido — %d citas · %d respuestas · %d sin respuesta",
+                res.get("cita", 0), res.get("respuesta", 0), res.get("sin_respuesta", 0))
+        except Exception as e:  # noqa: BLE001
+            logging.getLogger("bot").error("[alma_agents] ledger falló: %s", e)
+    scheduler.add_job(
+        _job_alma_agents_ledger,
+        CronTrigger(hour=5, minute=30, timezone=_CLT),
+        id="alma_agents_ledger",
+        replace_existing=True,
+    )
     # Cola de publicación orgánica (segmento IG·FB·WhatsApp): publica las piezas
     # aprobadas que ya vencieron su hora. La escritura real a Meta está bloqueada
     # salvo ORGANIC_PUBLISH_EXECUTE=true (kill-switch). Cada 5 min.

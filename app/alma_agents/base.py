@@ -16,7 +16,7 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
-from . import guardrails, store
+from . import guardrails, store, ledger
 
 log = logging.getLogger("bot")
 
@@ -106,6 +106,10 @@ class Agent:
                            f"{len(result['actions_executed'])} ejecutadas · "
                            f"{len(result['actions_blocked'])} bloqueadas")
         store.record_run(result)
+        # Effectiveness Ledger: registra los contactos a pacientes para medir
+        # después si convirtieron (nunca lanza; no afecta el run).
+        if result["actions_executed"]:
+            ledger.record_result(result)
         log.info("alma_agents[%s]: %s", self.id, result["notes"])
         return result
 

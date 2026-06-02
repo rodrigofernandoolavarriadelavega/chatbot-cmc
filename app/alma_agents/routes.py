@@ -16,7 +16,7 @@ from fastapi import APIRouter, Query, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from config import ADMIN_TOKEN, OLACORE_TOKEN, ALMA_PROFILES
-from . import guardrails, registry, store
+from . import guardrails, registry, store, ledger
 
 log = logging.getLogger("bot")
 router = APIRouter()
@@ -96,3 +96,19 @@ async def agents_dryrun(agent_id: str, token: str | None = Query(None), request:
         })
     return JSONResponse({"agent_id": agent_id, "n_acciones": len(preview),
                          "acciones": preview})
+
+
+@router.get("/alma/agents/api/effectiveness")
+def agents_effectiveness(token: str | None = Query(None), request: Request = None):
+    """Conversión real por agente (Effectiveness Ledger): contactos → citas/
+    respuestas → ingreso recuperable estimado. Read-only."""
+    _check_owner(token, request)
+    return JSONResponse(ledger.effectiveness_summary())
+
+
+@router.post("/alma/agents/api/effectiveness/measure")
+def agents_effectiveness_measure(token: str | None = Query(None), request: Request = None):
+    """Resuelve las filas pendientes cuya ventana ya venció (idempotente)."""
+    _check_owner(token, request)
+    resolved = ledger.measure_outcomes()
+    return JSONResponse({"resolved": resolved, "summary": ledger.effectiveness_summary()})
