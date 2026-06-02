@@ -26,7 +26,7 @@ from session import (save_session, reset_session, get_session, save_tag, delete_
                      save_demanda_no_disponible, get_waitlist_by_especialidad,
                      mark_waitlist_notified, get_ultima_cita_paciente,
                      has_privacy_consent, save_privacy_consent, revoke_privacy_consent,
-                     get_citas_bot_futuras, contar_citas_bot_phone_prof_dia,
+                     get_citas_bot_futuras,
                      adquirir_slot_lock, liberar_slot_lock,
                      log_cross_sell, puede_cross_sell,
                      get_pending_crosssell, consume_pending_crosssell,
@@ -8495,38 +8495,41 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     log.warning("dup-check listar_citas falló: %s", e)
                     existing_citas = []
 
-                # 1) Límite anti-cascada: máx 2 horas activas con el MISMO
-                #    profesional el MISMO día por número de teléfono.
-                #    Cambio 2026-06-02: antes era bloqueo duro de UNA sola hora,
-                #    lo que impedía que un apoderado agendara para sí mismo y para
-                #    un hijo con el mismo doctor (dos mamás reportaron el bloqueo).
-                #    Ahora permitimos hasta 2 desde el mismo número y, al 3°,
-                #    ofrecemos cambiar la hora en vez de un mensaje sin salida.
-                _prof_nombre = slot.get("profesional", "")
-                _fecha_slot = slot.get("fecha", "")
-                try:
-                    _n_mismo_prof_dia = contar_citas_bot_phone_prof_dia(
-                        phone, _prof_nombre, _fecha_slot
-                    )
-                except Exception as _e_cnt:
-                    log.warning("conteo citas mismo prof/día falló: %s", _e_cnt)
-                    _n_mismo_prof_dia = 0
-                if _n_mismo_prof_dia >= 2:
-                    log_event(phone, "cita_bloqueada_max_dos_mismo_prof", {
+                # 1) Bloqueo quirúrgico por RUT: el MISMO paciente (RUT) ya tiene
+                #    una hora con el MISMO profesional el MISMO día.
+                #    NO limitamos por número de teléfono: un apoderado puede traer
+                #    varios hijos (RUTs distintos) en un mismo celular (caso real:
+                #    una mamá con sus 4 hijos), y una persona puede agendar con
+                #    distintos profesionales el mismo día. Solo cuando el mismo RUT
+                #    repite profesional+día no dejamos agendar y ofrecemos cambiar
+                #    esa hora. `existing_citas` es del paciente que se está
+                #    agendando (listar_citas_paciente por su id/rut) → es per-RUT.
+                same_prof_dia = next(
+                    (c for c in (existing_citas or [])
+                     if str(c.get("id_profesional", "")) == str(slot.get("id_profesional", ""))
+                     and c.get("fecha") == slot.get("fecha")),
+                    None,
+                )
+                if same_prof_dia:
+                    log_event(phone, "cita_bloqueada_mismo_rut_prof_dia", {
                         "id_profesional": slot.get("id_profesional"),
-                        "profesional": _prof_nombre,
-                        "fecha": _fecha_slot,
-                        "n_existentes": _n_mismo_prof_dia,
+                        "profesional": slot.get("profesional"),
+                        "fecha": slot.get("fecha"),
+                        "hora_existente": (same_prof_dia.get("hora_inicio", "") or "")[:5],
                     })
                     reset_session(phone)
+                    _nom_blk = _first_name(paciente.get("nombre"))
+                    _quien_blk = (
+                        f"{_nom_blk} ya tiene" if (es_tercero and _nom_blk) else "Ya tienes"
+                    )
                     return _btn_msg(
-                        f"📋 Ya tienes *2 horas reservadas* con "
-                        f"{_prof_nombre or 'este profesional'} para el "
-                        f"{slot.get('fecha_display','ese día')}.\n\n"
-                        "Para evitar reservas repetidas no agendamos una tercera "
-                        "con el mismo profesional el mismo día.\n\n"
-                        "¿Quieres *cambiar* una de tus horas?",
-                        [{"id": "reagendar", "title": "🔄 Cambiar mi hora"},
+                        f"📋 {_quien_blk} una hora con "
+                        f"{same_prof_dia.get('profesional','este profesional')} el "
+                        f"{slot.get('fecha_display','ese día')} a las "
+                        f"*{(same_prof_dia.get('hora_inicio','') or '')[:5]}*.\n\n"
+                        "No agendamos dos horas con el mismo profesional el mismo "
+                        "día.\n\n¿Quieres *cambiar* esa hora?",
+                        [{"id": "reagendar", "title": "🔄 Cambiar la hora"},
                          {"id": "accion_recepcion", "title": "📞 Recepción"}]
                     )
 

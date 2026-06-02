@@ -1658,32 +1658,6 @@ def get_citas_bot_futuras(phone: str, max_age_minutes: int = 10) -> list[dict]:
     return result
 
 
-def contar_citas_bot_phone_prof_dia(phone: str, profesional: str, fecha: str) -> int:
-    """Cuenta las citas creadas por el bot para un mismo número de teléfono con
-    el mismo profesional en la misma fecha.
-
-    Sostiene el límite anti-cascada (máx. 2 por número/profesional/día): permite
-    que un apoderado agende a varios familiares con el mismo doctor el mismo día
-    (caso real 2026-06-02: dos mamás bloqueadas al intentar agendar a sus hijos),
-    pero corta el auto-agendamiento repetido del mismo número (caso Yesenia:
-    19:20 + 19:40 + 20:00 con el mismo doctor).
-
-    `fecha` en ISO 'YYYY-MM-DD' (igual que slot['fecha']). No distingue citas
-    canceladas (citas_bot no las marca); el límite es deliberadamente permisivo
-    y la consecuencia es ofrecer reagendar, nunca un bloqueo duro.
-    """
-    if not (phone and profesional and fecha):
-        return 0
-    with _conn() as conn:
-        row = conn.execute(
-            """SELECT COUNT(*) AS n FROM citas_bot
-               WHERE phone=? AND profesional=? AND fecha=?
-                 AND id_cita IS NOT NULL AND id_cita != ''""",
-            (phone, profesional, fecha),
-        ).fetchone()
-    return int(row["n"]) if row else 0
-
-
 def _fmt_fecha_iso(fecha_iso: str) -> str:
     """Convierte 'YYYY-MM-DD' al formato display 'lunes 5 de mayo'."""
     try:
