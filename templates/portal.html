@@ -581,6 +581,17 @@ input{font-family:inherit;color:inherit}
 @media (max-width:360px){
   .otp-boxes input{width:38px; height:46px; font-size:18px}
 }
+/* ── Agendador embebido (overlay) ── */
+.ag-overlay{position:fixed;inset:0;z-index:1000;background:var(--bg);display:none;flex-direction:column}
+.ag-overlay.show{display:flex}
+.ag-head{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:13px 16px;padding-top:calc(13px + env(safe-area-inset-top));
+  background:var(--cmc-navy);color:#fff;flex:none;box-shadow:0 4px 14px -6px rgba(15,63,104,.5)}
+.ag-head .ag-title{font-weight:700;font-size:15.5px;letter-spacing:.2px}
+.ag-close{width:38px;height:38px;border-radius:10px;border:0;background:rgba(255,255,255,.16);
+  color:#fff;font-size:22px;line-height:1;cursor:pointer;display:grid;place-items:center;transition:.15s}
+.ag-close:hover{background:rgba(255,255,255,.28)}
+.ag-frame{flex:1;width:100%;border:0;background:var(--bg)}
 </style>
 </head>
 <body>
@@ -814,8 +825,24 @@ async function doLogout() {
   showLogin();
 }
 
-function agendar() {
+async function agendar() {
+  // Si el agendador premium está prendido → embebido; si no → WhatsApp (fallback).
+  try {
+    const s = await (await fetch('/agendar/api/status')).json();
+    if (s && s.enabled) { abrirAgendadorEmbed(); return; }
+  } catch (e) {}
   if (patientData && patientData.whatsapp_url) window.open(patientData.whatsapp_url, '_blank');
+}
+function abrirAgendadorEmbed() {
+  const rut = encodeURIComponent(currentRut || (patientData && patientData.rut) || '');
+  document.getElementById('agendar-frame').src = '/agendar?embed=1' + (rut ? '&rut=' + rut : '');
+  document.getElementById('agendar-overlay').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+function cerrarAgendar() {
+  document.getElementById('agendar-overlay').classList.remove('show');
+  document.getElementById('agendar-frame').src = 'about:blank';
+  document.body.style.overflow = '';
 }
 
 // ══ Date helpers ══
@@ -1343,5 +1370,14 @@ function hideMessages() {
   document.getElementById('info-msg').classList.remove('show');
 }
 </script>
+
+<!-- ===================== AGENDADOR EMBEBIDO ===================== -->
+<div id="agendar-overlay" class="ag-overlay" role="dialog" aria-modal="true" aria-label="Agendar una hora">
+  <div class="ag-head">
+    <div class="ag-title">Agendar una hora</div>
+    <button class="ag-close" onclick="cerrarAgendar()" aria-label="Cerrar">&times;</button>
+  </div>
+  <iframe id="agendar-frame" class="ag-frame" title="Agendar una hora" src="about:blank" allow="clipboard-write"></iframe>
+</div>
 </body>
 </html>

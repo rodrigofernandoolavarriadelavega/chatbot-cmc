@@ -196,6 +196,13 @@ async def _primer_dia_prof(id_prof: int, max_dias: int = 21) -> dict:
 # Endpoints
 # ════════════════════════════════════════════════════════════════════════════
 
+@router.get("/status")
+async def status():
+    """Sin gate: el portal lo consulta para decidir si embebe el agendador o
+    cae al fallback de WhatsApp. No expone nada sensible."""
+    return {"enabled": bool(config.AGENDADOR_PUBLICO_ENABLED)}
+
+
 @router.get("/catalogo")
 async def catalogo(request: Request, preview: str | None = Query(None)):
     _gate(request, preview)

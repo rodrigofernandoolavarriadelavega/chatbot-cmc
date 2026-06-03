@@ -472,6 +472,10 @@ a.fl:hover{color:var(--blue)}
   .has-mbar{padding-bottom:84px}
 }
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+/* modo embebido en el portal: el portal pone su propio header */
+body.embed{background:transparent}
+body.embed .topbar,body.embed .foot{display:none}
+body.embed .flow{padding-top:18px}
 </style>
 </head>
 <body>
@@ -1672,6 +1676,19 @@ setupRut('mis-rut','mis-rutwrap','mis-vmark','mis-hint',(ok)=>{ document.getElem
 ['cel'].forEach(id=>document.getElementById(id).addEventListener('input',e=>{ e.target.value=formatCel(e.target.value); validateId(); }));
 document.getElementById('mis-cel').addEventListener('input',e=>{ e.target.value=formatCel(e.target.value); });
 renderStepper();
+
+/* ── Modo embebido (dentro del portal del paciente) ── */
+(function(){
+  const q = new URLSearchParams(location.search);
+  if(q.get('embed')!=='1') return;
+  document.body.classList.add('embed');
+  const r = (q.get('rut')||'').trim();
+  if(r){
+    ['rut','mis-rut'].forEach(id=>{ const el=document.getElementById(id);
+      if(el){ el.value=r; el.dispatchEvent(new Event('input',{bubbles:true})); } });
+  }
+  startFlow();   // dentro del portal arrancamos directo en el flujo (sin la portada)
+})();
 </script>
 </body>
 </html>
