@@ -220,25 +220,35 @@ def _planes(prog: str) -> dict[int, dict]:
 
 # ── BI ──────────────────────────────────────────────────────────────────────
 
+# Mapa especialidad_id (BI) → ids de profesional (Medilink), para filtrar la CAJA REAL.
+# Derivado del roster medilink.PROFESIONALES (cambia lento). Ortodoncia/endo/implanto/
+# estética son módulos aparte; aquí solo las especialidades de programas de tratamiento.
+_ESP_TO_PROF = {
+    4:  [52],          # Nutrición — Gisela Pinto
+    5:  [74, 49],      # Psicología — Jorge Montalba, Juan Pablo Rodríguez
+    8:  [70],          # Fonoaudiología — Juana Arratia
+    9:  [55, 72],      # Odontología general — Javiera Burgos, Carlos Jiménez
+    12: [56],          # Podología — Andrea Guevara
+    16: [60],          # Cardiología — Miguel Millán
+    18: [65],          # Gastroenterología — Nicolás Quijano
+    14: [61],          # Ginecología — Tirso Rejón
+    11: [67],          # Matrona — Sarai Gómez
+    17: [64],          # Traumatología — Claudio Barraza
+    1:  [1, 73, 13],   # Medicina General — Olavarría, Abarca, Márquez
+    10: [1, 73, 13],   # Medicina General (especialidad 10 unificada)
+}
+
+
 def _bi_rows(especialidad_ids: list[int], meses: int) -> tuple[list[dict], str]:
-    ph = ",".join(["%s"] * len(especialidad_ids))
-    sql = f"""
-        SELECT fa.paciente_id,
-               TRIM(COALESCE(p.nombre,'') || ' ' || COALESCE(p.apellido,'')) AS paciente,
-               p.telefono,
-               COALESCE(NULLIF(TRIM(p.localidad),''), p.comuna, '') AS lugar,
-               fa.fecha,
-               TRIM(COALESCE(pr.nombre,'') || ' ' || COALESCE(pr.apellido,'')) AS profesional,
-               COALESCE(fi.monto_bruto, 0) AS monto
-        FROM bi.fact_atenciones fa
-        JOIN bi.dim_paciente p     ON p.paciente_id   = fa.paciente_id
-        JOIN bi.dim_profesional pr ON pr.profesional_id = fa.profesional_id
-        LEFT JOIN bi.fact_ingresos fi ON fi.atencion_id = fa.atencion_id
-        WHERE pr.especialidad_id IN ({ph})
-          AND fa.fecha >= (CURRENT_DATE - make_interval(months => %s))
-        ORDER BY fa.paciente_id, fa.fecha
-    """
-    return bi_query(sql, tuple(especialidad_ids) + (meses,))
+    """Visitas de tratamiento desde la CAJA REAL (fresca, sin Docker), no la BI vieja.
+    Resuelve especialidad → profesionales y delega en caja_helper. El TAMIZAJE
+    (cohortes poblacionales de quién NO vino) sigue en la BI — ver _compute_tamizaje."""
+    from caja_helper import caja_visitas
+    prof_ids: list[int] = []
+    for e in especialidad_ids:
+        prof_ids.extend(_ESP_TO_PROF.get(e, []))
+    prof_ids = list(dict.fromkeys(prof_ids))  # dedup preservando orden
+    return caja_visitas(prof_ids, meses)
 
 
 def _today() -> date:
