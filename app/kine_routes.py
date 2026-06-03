@@ -44,7 +44,9 @@ _CHILE_TZ = ZoneInfo("America/Santiago")
 
 router = APIRouter(prefix="/alma/api/kine", tags=["kine"])
 
-ESPECIALIDAD_KINE = 3  # bi.dim_especialidad.especialidad_id
+# Fuente = CAJA REAL (bi_pagos_caja, fresca, sin Docker), NO la BI vieja.
+# Kinesiología = Luis Armijo (77) + Leonardo Etcheverry (21). Ver memory/cmc_ventas_fuente_fiel.
+KINE_PROF_IDS = (77, 21)
 
 # ── Umbrales del programa (kinesiología, cadencia esperada ~7 días) ──────────
 GAP_NUEVO_EPISODIO = 45   # hueco > 45d → empieza un tratamiento nuevo
@@ -102,44 +104,14 @@ def _planes() -> dict[int, dict]:
     return {r["paciente_id"]: dict(r) for r in rows}
 
 
-# ── BI ──────────────────────────────────────────────────────────────────────
+# ── Fuente de datos: CAJA REAL (bi_pagos_caja) vía caja_helper ───────────────
+# Cada pago de kinesiología = una sesión; la clasificación por días la hace _compute.
+# Identidad (nombre/teléfono/localidad) y nombre de profesional las resuelve el helper.
 
 def _bi_rows(meses: int) -> tuple[list[dict], str]:
-    """Trae atenciones de kinesiología de los últimos `meses`. (rows, status)."""
-    sql = """
-        SELECT fa.paciente_id,
-               TRIM(COALESCE(p.nombre,'') || ' ' || COALESCE(p.apellido,'')) AS paciente,
-               p.telefono,
-               COALESCE(NULLIF(TRIM(p.localidad),''), p.comuna, '') AS lugar,
-               fa.fecha,
-               fa.profesional_id,
-               TRIM(COALESCE(pr.nombre,'') || ' ' || COALESCE(pr.apellido,'')) AS profesional,
-               COALESCE(fi.monto_bruto, 0) AS monto
-        FROM bi.fact_atenciones fa
-        JOIN bi.dim_paciente p     ON p.paciente_id   = fa.paciente_id
-        JOIN bi.dim_profesional pr ON pr.profesional_id = fa.profesional_id
-        LEFT JOIN bi.fact_ingresos fi ON fi.atencion_id = fa.atencion_id
-        WHERE pr.especialidad_id = %s
-          AND fa.fecha >= (CURRENT_DATE - make_interval(months => %s))
-        ORDER BY fa.paciente_id, fa.fecha
-    """
-    try:
-        from main import _bi_pool
-        pool = _bi_pool()
-        conn = None
-        try:
-            conn = pool.getconn()
-            with conn.cursor() as cur:
-                cur.execute(sql, (ESPECIALIDAD_KINE, meses))
-                cols = [d[0] for d in cur.description]
-                rows = [dict(zip(cols, r)) for r in cur.fetchall()]
-            return rows, "ok"
-        finally:
-            if conn is not None:
-                pool.putconn(conn)
-    except Exception as e:
-        log.warning("kine: BI no disponible (%s)", e)
-        return [], "bi_unavailable"
+    """Sesiones de kinesiología desde la caja real (fresca). (rows, status)."""
+    from caja_helper import caja_visitas
+    return caja_visitas(KINE_PROF_IDS, meses)
 
 
 def _today() -> date:
